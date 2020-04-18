@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dmcstyle - Support for C-style operator disassembly

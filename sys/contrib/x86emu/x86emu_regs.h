@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: x86emu_regs.h,v 1.1 2007/12/01 20:14:10 joerg Exp $	*/
 /*	$OpenBSD: x86emu_regs.h,v 1.2 2009/06/06 03:45:05 matthieu Exp $ */
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmcs.c 330713 2018-03-10 00:44:33Z tychon $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmcs.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/vmcs.c 330713 2018-03-10 00:44:33Z tychon $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmcs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

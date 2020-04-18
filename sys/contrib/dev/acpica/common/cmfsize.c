@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: cfsize - Common get file size function

@@ -36,7 +36,7 @@ function begin() {
 function first_entry() {
 	print "/* This file was created automatically"
 	print " * Source file: " id
-	print " * $FreeBSD: stable/10/sys/contrib/ngatm/netnatm/sig/genmsgcpyc.awk 131827 2004-07-08 16:39:03Z harti $"
+	print " * $FreeBSD: stable/11/sys/contrib/ngatm/netnatm/sig/genmsgcpyc.awk 131827 2004-07-08 16:39:03Z harti $"
 	print " */"
 	print ""
 	print "#include <netnatm/msg/unistruct.h>"

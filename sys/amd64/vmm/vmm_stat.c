@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_stat.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_stat.c 348271 2019-05-25 11:27:56Z rgrimes $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/vmm_stat.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_stat.c 348271 2019-05-25 11:27:56Z rgrimes $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -70,7 +69,7 @@ vmm_stat_register(void *arg)
 		return;
 
 	if (vst_num_elems + vst->nelems >= MAX_VMM_STAT_ELEMS) {
-		printf("Cannot accomodate vmm stat type \"%s\"!\n", vst->desc);
+		printf("Cannot accommodate vmm stat type \"%s\"!\n", vst->desc);
 		return;
 	}
 
@@ -87,7 +86,7 @@ vmm_stat_copy(struct vm *vm, int vcpu, int *num_stats, uint64_t *buf)
 	uint64_t *stats;
 	int i;
 
-	if (vcpu < 0 || vcpu >= VM_MAXCPU)
+	if (vcpu < 0 || vcpu >= vm_get_maxcpus(vm))
 		return (EINVAL);
 
 	/* Let stats functions update their counters */

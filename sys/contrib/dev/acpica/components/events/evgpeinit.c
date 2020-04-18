@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: evgpeinit - System GPE initialization and update

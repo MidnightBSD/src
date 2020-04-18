@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: adwalk - Application-level disassembler parse tree walk routines

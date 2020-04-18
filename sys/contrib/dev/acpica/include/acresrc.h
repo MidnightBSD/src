@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acresrc.h - Resource Manager function prototypes

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: tbxfroot - Find the root ACPI table (RSDT)

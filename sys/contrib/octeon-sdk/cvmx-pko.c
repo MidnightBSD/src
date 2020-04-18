@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2010  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -53,12 +52,12 @@
 #include <asm/octeon/cvmx-helper-cfg.h>
 #include <asm/octeon/cvmx-clock.h>
 #else
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 #include "executive-config.h"
 #endif
 #include "cvmx.h"
 #include "cvmx-sysinfo.h"
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 #include "cvmx-config.h"
 #endif
 #include "cvmx-pko.h"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1993 The Regents of the University of California.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/include/cpufunc.h 313150 2017-02-03 12:20:44Z kib $
+ * $FreeBSD: stable/11/sys/amd64/include/cpufunc.h 340545 2018-11-18 01:07:36Z jhb $
  */
 
 /*
@@ -112,6 +111,13 @@ clflushopt(u_long addr)
 {
 
 	__asm __volatile(".byte 0x66;clflush %0" : : "m" (*(char *)addr));
+}
+
+static __inline void
+clwb(u_long addr)
+{
+
+	__asm __volatile("clwb %0" : : "m" (*(char *)addr));
 }
 
 static __inline void
@@ -358,6 +364,15 @@ rdmsr(u_int msr)
 	return (low | ((uint64_t)high << 32));
 }
 
+static __inline uint32_t
+rdmsr32(u_int msr)
+{
+	uint32_t low;
+
+	__asm __volatile("rdmsr" : "=a" (low) : "c" (msr) : "rdx");
+	return (low);
+}
+
 static __inline uint64_t
 rdpmc(u_int pmc)
 {
@@ -504,7 +519,7 @@ invltlb(void)
  * Operations that Invalidate TLBs and Paging-Structure Caches.
  */
 static __inline void
-invltlb_globpcid(void)
+invltlb_glob(void)
 {
 	uint64_t cr4;
 
@@ -546,9 +561,8 @@ static __inline void
 invpcid(struct invpcid_descr *d, int type)
 {
 
-	/* invpcid (%rdx),%rax */
-	__asm __volatile(".byte 0x66,0x0f,0x38,0x82,0x02"
-	    : : "d" (d), "a" ((u_long)type) : "memory");
+	__asm __volatile("invpcid (%0),%1"
+	    : : "r" (d), "r" ((u_long)type) : "memory");
 }
 
 static __inline u_short
@@ -644,10 +658,66 @@ load_gs(u_short sel)
 }
 #endif
 
+static __inline uint64_t
+rdfsbase(void)
+{
+	uint64_t x;
+
+	__asm __volatile("rdfsbase %0" : "=r" (x));
+	return (x);
+}
+
+static __inline void
+wrfsbase(uint64_t x)
+{
+
+	__asm __volatile("wrfsbase %0" : : "r" (x));
+}
+
+static __inline uint64_t
+rdgsbase(void)
+{
+	uint64_t x;
+
+	__asm __volatile("rdgsbase %0" : "=r" (x));
+	return (x);
+}
+
+static __inline void
+wrgsbase(uint64_t x)
+{
+
+	__asm __volatile("wrgsbase %0" : : "r" (x));
+}
+
+static __inline void
+bare_lgdt(struct region_descriptor *addr)
+{
+	__asm __volatile("lgdt (%0)" : : "r" (addr));
+}
+
+static __inline void
+sgdt(struct region_descriptor *addr)
+{
+	char *loc;
+
+	loc = (char *)addr;
+	__asm __volatile("sgdt %0" : "=m" (*loc) : : "memory");
+}
+
 static __inline void
 lidt(struct region_descriptor *addr)
 {
 	__asm __volatile("lidt (%0)" : : "r" (addr));
+}
+
+static __inline void
+sidt(struct region_descriptor *addr)
+{
+	char *loc;
+
+	loc = (char *)addr;
+	__asm __volatile("sidt %0" : "=m" (*loc) : : "memory");
 }
 
 static __inline void
@@ -656,10 +726,28 @@ lldt(u_short sel)
 	__asm __volatile("lldt %0" : : "r" (sel));
 }
 
+static __inline u_short
+sldt(void)
+{
+	u_short sel;
+
+	__asm __volatile("sldt %0" : "=r" (sel));
+	return (sel);
+}
+
 static __inline void
 ltr(u_short sel)
 {
 	__asm __volatile("ltr %0" : : "r" (sel));
+}
+
+static __inline uint32_t
+read_tr(void)
+{
+	u_short sel;
+
+	__asm __volatile("str %0" : "=r" (sel));
+	return (sel);
 }
 
 static __inline uint64_t
@@ -790,6 +878,20 @@ intr_restore(register_t rflags)
 	write_rflags(rflags);
 }
 
+static __inline void
+stac(void)
+{
+
+	__asm __volatile("stac" : : : "cc");
+}
+
+static __inline void
+clac(void)
+{
+
+	__asm __volatile("clac" : : : "cc");
+}
+
 #else /* !(__GNUCLIKE_ASM && __CC_SUPPORTS___INLINE) */
 
 int	breakpoint(void);
@@ -841,6 +943,7 @@ u_long	rcr2(void);
 u_long	rcr3(void);
 u_long	rcr4(void);
 uint64_t rdmsr(u_int msr);
+uint32_t rdmsr32(u_int msr);
 uint64_t rdpmc(u_int pmc);
 uint64_t rdr0(void);
 uint64_t rdr1(void);

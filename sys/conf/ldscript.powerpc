@@ -1,7 +1,7 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/conf/ldscript.powerpc 217656 2011-01-20 19:24:50Z imp $ */
+/* $FreeBSD: stable/11/sys/conf/ldscript.powerpc 317145 2017-04-19 15:33:24Z emaste $ */
 
-OUTPUT_FORMAT("elf32-powerpc", "elf32-powerpc", "elf32-powerpc")
+OUTPUT_FORMAT("elf32-powerpc-freebsd", "elf32-powerpc-freebsd",
+	      "elf32-powerpc-freebsd")
 OUTPUT_ARCH(powerpc)
 ENTRY(__start)
 SEARCH_DIR(/usr/lib);
@@ -11,6 +11,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
 
   . = kernbase + SIZEOF_HEADERS;
+  PROVIDE (begin = . - SIZEOF_HEADERS);
 
   .text      :
   {
@@ -62,7 +63,6 @@ SECTIONS
   {
     *(.data)
     *(.gnu.linkonce.d*)
-    CONSTRUCTORS
   }
   .data1   : { *(.data1) }
   .got1           : { *(.got1) }

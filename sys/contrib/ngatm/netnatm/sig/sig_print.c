@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).

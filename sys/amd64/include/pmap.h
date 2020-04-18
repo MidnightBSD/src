@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1991 Regents of the University of California.
@@ -40,7 +39,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD: stable/10/sys/amd64/include/pmap.h 320432 2017-06-28 04:23:20Z alc $
+ * $FreeBSD: stable/11/sys/amd64/include/pmap.h 354651 2019-11-12 18:04:28Z kib $
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -221,6 +220,14 @@
 #define ISA_HOLE_START    0xa0000
 #define ISA_HOLE_LENGTH (0x100000-ISA_HOLE_START)
 
+#define	PMAP_PCID_NONE		0xffffffff
+#define	PMAP_PCID_KERN		0
+#define	PMAP_PCID_OVERMAX	0x1000
+#define	PMAP_PCID_OVERMAX_KERN	0x800
+#define	PMAP_PCID_USER_PT	0x800
+
+#define	PMAP_NO_CR3		(~0UL)
+
 #ifndef LOCORE
 
 #include <sys/queue.h>
@@ -298,6 +305,11 @@ enum pmap_type {
 	PT_RVI,			/* AMD's nested page tables */
 };
 
+struct pmap_pcids {
+	uint32_t	pm_pcid;
+	uint32_t	pm_gen;
+};
+
 /*
  * The kernel virtual address (KVA) of the level 4 page table page is always
  * within the direct map (DMAP) region.
@@ -305,16 +317,17 @@ enum pmap_type {
 struct pmap {
 	struct mtx		pm_mtx;
 	pml4_entry_t		*pm_pml4;	/* KVA of level 4 page table */
+	pml4_entry_t		*pm_pml4u;	/* KVA of user l4 page table */
 	uint64_t		pm_cr3;
+	uint64_t		pm_ucr3;
 	TAILQ_HEAD(,pv_chunk)	pm_pvchunk;	/* list of mappings in pmap */
 	cpuset_t		pm_active;	/* active on cpus */
-	cpuset_t		pm_save;	/* Context valid on cpus mask */
-	int			pm_pcid;	/* context id */
 	enum pmap_type		pm_type;	/* regular or nested tables */
 	struct pmap_statistics	pm_stats;	/* pmap statistics */
 	struct vm_radix		pm_root;	/* spare page table pages */
 	long			pm_eptgen;	/* EPT pmap generation id */
 	int			pm_flags;
+	struct pmap_pcids	pm_pcids[MAXCPU];
 };
 
 /* flags */
@@ -359,11 +372,18 @@ typedef struct pv_entry {
  */
 #define	_NPCM	3
 #define	_NPCPV	168
-struct pv_chunk {
-	pmap_t			pc_pmap;
-	TAILQ_ENTRY(pv_chunk)	pc_list;
-	uint64_t		pc_map[_NPCM];	/* bitmap; 1 = free */
+#define	PV_CHUNK_HEADER							\
+	pmap_t			pc_pmap;				\
+	TAILQ_ENTRY(pv_chunk)	pc_list;				\
+	uint64_t		pc_map[_NPCM];	/* bitmap; 1 = free */	\
 	TAILQ_ENTRY(pv_chunk)	pc_lru;
+
+struct pv_chunk_header {
+	PV_CHUNK_HEADER
+};
+
+struct pv_chunk {
+	PV_CHUNK_HEADER
 	struct pv_entry		pc_pventry[_NPCPV];
 };
 
@@ -376,12 +396,20 @@ extern vm_paddr_t dump_avail[];
 extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 extern vm_paddr_t dmaplimit;
+extern int pmap_pcid_enabled;
+extern int invpcid_works;
 
 #define	pmap_page_get_memattr(m)	((vm_memattr_t)(m)->md.pat_mode)
 #define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
 #define	pmap_unmapbios(va, sz)	pmap_unmapdev((va), (sz))
 
+struct thread;
+
+void	pmap_activate_boot(pmap_t pmap);
+void	pmap_activate_sw(struct thread *);
+void	pmap_allow_2m_x_ept_recalculate(void);
 void	pmap_bootstrap(vm_paddr_t *);
+int	pmap_cache_bits(pmap_t pmap, int mode, boolean_t is_pde);
 int	pmap_change_attr(vm_offset_t, vm_size_t, int);
 void	pmap_demote_DMAP(vm_paddr_t base, vm_size_t len, boolean_t invalidate);
 void	pmap_init_pat(void);
@@ -392,8 +420,11 @@ void	pmap_kremove(vm_offset_t);
 void	*pmap_mapbios(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev(vm_paddr_t, vm_size_t);
 void	*pmap_mapdev_attr(vm_paddr_t, vm_size_t, int);
+void	*pmap_mapdev_pciecfg(vm_paddr_t pa, vm_size_t size);
 boolean_t pmap_page_is_mapped(vm_page_t m);
 void	pmap_page_set_memattr(vm_page_t m, vm_memattr_t ma);
+void	pmap_pinit_pml4(vm_page_t);
+bool	pmap_ps_enabled(pmap_t pmap);
 void	pmap_unmapdev(vm_offset_t, vm_size_t);
 void	pmap_invalidate_page(pmap_t, vm_offset_t);
 void	pmap_invalidate_range(pmap_t, vm_offset_t, vm_offset_t);
@@ -403,7 +434,44 @@ void	pmap_invalidate_cache_pages(vm_page_t *pages, int count);
 void	pmap_invalidate_cache_range(vm_offset_t sva, vm_offset_t eva,
 	    boolean_t force);
 void	pmap_get_mapping(pmap_t pmap, vm_offset_t va, uint64_t *ptr, int *num);
+boolean_t pmap_map_io_transient(vm_page_t *, vm_offset_t *, int, boolean_t);
+void	pmap_unmap_io_transient(vm_page_t *, vm_offset_t *, int, boolean_t);
+void	pmap_pti_add_kva(vm_offset_t sva, vm_offset_t eva, bool exec);
+void	pmap_pti_remove_kva(vm_offset_t sva, vm_offset_t eva);
+void	pmap_pti_pcid_invalidate(uint64_t ucr3, uint64_t kcr3);
+void	pmap_pti_pcid_invlpg(uint64_t ucr3, uint64_t kcr3, vm_offset_t va);
+void	pmap_pti_pcid_invlrng(uint64_t ucr3, uint64_t kcr3, vm_offset_t sva,
+	    vm_offset_t eva);
 #endif /* _KERNEL */
+
+/* Return various clipped indexes for a given VA */
+static __inline vm_pindex_t
+pmap_pte_index(vm_offset_t va)
+{
+
+	return ((va >> PAGE_SHIFT) & ((1ul << NPTEPGSHIFT) - 1));
+}
+
+static __inline vm_pindex_t
+pmap_pde_index(vm_offset_t va)
+{
+
+	return ((va >> PDRSHIFT) & ((1ul << NPDEPGSHIFT) - 1));
+}
+
+static __inline vm_pindex_t
+pmap_pdpe_index(vm_offset_t va)
+{
+
+	return ((va >> PDPSHIFT) & ((1ul << NPDPEPGSHIFT) - 1));
+}
+
+static __inline vm_pindex_t
+pmap_pml4e_index(vm_offset_t va)
+{
+
+	return ((va >> PML4SHIFT) & ((1ul << NPML4EPGSHIFT) - 1));
+}
 
 #endif /* !LOCORE */
 

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/amd64/linux/linux_locore.s 300467 2016-05-23 05:31:53Z dchagin $ */
+/* $FreeBSD: stable/11/sys/amd64/linux/linux_locore.s 299249 2016-05-09 07:38:47Z dchagin $ */
 
 #include "linux_assym.h"			/* system definitions */
 #include <machine/asmacros.h>			/* miscellaneous asm macros */

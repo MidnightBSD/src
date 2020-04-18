@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Konstantin Belousov
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/linux32/linux32_support.s 169895 2007-05-23 08:33:06Z kib $
+ * $FreeBSD: stable/11/sys/amd64/linux32/linux32_support.s 337650 2018-08-11 17:52:58Z kib $
  */
 
 #include "linux32_assym.h"		/* system definitions */
@@ -51,6 +50,7 @@ ENTRY(futex_xchgl)
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%r8)
 	ret
+END(futex_xchgl)
 
 ENTRY(futex_addl)
 	movq	PCPU(CURPCB),%r8
@@ -66,6 +66,7 @@ ENTRY(futex_addl)
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%r8)
 	ret
+END(futex_addl)
 
 ENTRY(futex_orl)
 	movq	PCPU(CURPCB),%r8
@@ -85,6 +86,7 @@ ENTRY(futex_orl)
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%r8)
 	ret
+END(futex_orl)
 
 ENTRY(futex_andl)
 	movq	PCPU(CURPCB),%r8
@@ -104,6 +106,7 @@ ENTRY(futex_andl)
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%r8)
 	ret
+END(futex_andl)
 
 ENTRY(futex_xorl)
 	movq	PCPU(CURPCB),%r8
@@ -123,3 +126,4 @@ ENTRY(futex_xorl)
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%r8)
 	ret
+END(futex_xorl)

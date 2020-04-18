@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012, Qualcomm Atheros, Inc.  All rights reserved.
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acopcode.h - AML opcode information for the AML parser and interpreter

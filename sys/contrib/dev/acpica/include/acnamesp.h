@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acnamesp.h - Namespace subcomponent prototypes and defines
@@ -488,6 +487,11 @@ char *
 AcpiNsGetNormalizedPathname (
     ACPI_NAMESPACE_NODE     *Node,
     BOOLEAN                 NoTrailing);
+
+char *
+AcpiNsBuildPrefixedPathname (
+    ACPI_GENERIC_STATE      *PrefixScope,
+    const char              *InternalPath);
 
 char *
 AcpiNsNameOfCurrentScope (

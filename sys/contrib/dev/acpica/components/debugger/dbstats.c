@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dbstats - Generation and display of ACPI table statistics

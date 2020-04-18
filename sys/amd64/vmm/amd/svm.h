@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/amd/svm.h 285015 2015-07-01 19:46:57Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/amd/svm.h 336190 2018-07-11 07:19:42Z araujo $
  */
 
 #ifndef _SVM_H_
@@ -50,6 +51,18 @@ struct svm_regctx {
 	register_t	sctx_r13;
 	register_t	sctx_r14;
 	register_t	sctx_r15;
+	register_t	sctx_dr0;
+	register_t	sctx_dr1;
+	register_t	sctx_dr2;
+	register_t	sctx_dr3;
+
+	register_t	host_dr0;
+	register_t	host_dr1;
+	register_t	host_dr2;
+	register_t	host_dr3;
+	register_t	host_dr6;
+	register_t	host_dr7;
+	uint64_t	host_debugctl;
 };
 
 void svm_launch(uint64_t pa, struct svm_regctx *gctx, struct pcpu *pcpu);

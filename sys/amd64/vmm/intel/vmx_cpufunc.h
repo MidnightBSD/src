@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_cpufunc.h 245678 2013-01-20 03:42:49Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_cpufunc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_VMX_CPUFUNC_H_

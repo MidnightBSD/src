@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2010  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -58,13 +57,13 @@
 ** The FreeBSD kernel ifdefs elsewhere should mean that this is never even checked,
 ** and so does not need to be defined.
 */
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 #ifndef CVMX_USE_1_TO_1_TLB_MAPPINGS
 #define CVMX_USE_1_TO_1_TLB_MAPPINGS 1
 #endif
 #endif
 
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(__FreeBSD__) && defined(_KERNEL)
     #ifndef CVMX_ENABLE_PARAMETER_CHECKING
         #ifdef INVARIANTS
             #define CVMX_ENABLE_PARAMETER_CHECKING 1

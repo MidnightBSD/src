@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: rsirq - IRQ resource descriptors

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2011  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -74,7 +73,7 @@
 #include "cvmx-helper-util.h"
 #include "cvmx-helper-board.h"
 #include "cvmx-gpio.h"
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 #ifdef __U_BOOT__
 # include <libfdt.h>
 #else
@@ -94,7 +93,7 @@
  */
 CVMX_SHARED cvmx_helper_link_info_t (*cvmx_override_board_link_get)(int ipd_port) = NULL;
 
-#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__MidnightBSD__) || !defined(_KERNEL))
+#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__FreeBSD__) || !defined(_KERNEL))
 
 static void cvmx_retry_i2c_write(int twsi_id, uint8_t dev_addr, uint16_t internal_addr, int num_bytes, int ia_width_bytes, uint64_t data)
 {
@@ -373,7 +372,7 @@ int cvmx_helper_board_get_mii_address(int ipd_port)
      */
     if (cvmx_sysinfo_get()->board_type == CVMX_BOARD_TYPE_SIM)
         return -1;
-#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__MidnightBSD__) || !defined(_KERNEL))
+#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__FreeBSD__) || !defined(_KERNEL))
     if (cvmx_sysinfo_get()->fdt_addr)
     {
         cvmx_phy_info_t phy_info = __get_phy_info_from_dt(ipd_port);
@@ -599,6 +598,7 @@ int cvmx_helper_board_get_mii_address(int ipd_port)
 #endif
 #if defined(OCTEON_VENDOR_UBIQUITI)
 	case CVMX_BOARD_TYPE_CUST_UBIQUITI_E100:
+	case CVMX_BOARD_TYPE_CUST_UBIQUITI_USG:
 	    if (ipd_port > 2)
 		return -1;
 	    return (7 - ipd_port);
@@ -782,7 +782,7 @@ static cvmx_helper_link_info_t __get_inband_link_state(int ipd_port)
     return result;
 }
 
-#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__MidnightBSD__) || !defined(_KERNEL))
+#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__FreeBSD__) || !defined(_KERNEL))
 /**
  * @INTERNAL
  * Switch MDIO mux to the specified port.
@@ -988,7 +988,7 @@ cvmx_helper_link_info_t __cvmx_helper_board_link_get(int ipd_port)
     int phy_addr;
     int is_broadcom_phy = 0;
 
-#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__MidnightBSD__) || !defined(_KERNEL))
+#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__FreeBSD__) || !defined(_KERNEL))
     if (cvmx_sysinfo_get()->fdt_addr)
     {
         return __cvmx_helper_board_link_get_from_dt(ipd_port);
@@ -1500,7 +1500,8 @@ int __cvmx_helper_board_hardware_enable(int interface)
         }
     }
 #if defined(OCTEON_VENDOR_UBIQUITI)
-    else if (cvmx_sysinfo_get()->board_type == CVMX_BOARD_TYPE_CUST_UBIQUITI_E100)
+    else if (cvmx_sysinfo_get()->board_type == CVMX_BOARD_TYPE_CUST_UBIQUITI_E100 ||
+        cvmx_sysinfo_get()->board_type == CVMX_BOARD_TYPE_CUST_UBIQUITI_USG)
     {
 	/* Configure ASX cloks for all ports on interface 0.  */
 	if (interface == 0)
@@ -1527,7 +1528,7 @@ int __cvmx_helper_board_hardware_enable(int interface)
  */
 cvmx_helper_board_usb_clock_types_t __cvmx_helper_board_usb_get_clock_type(void)
 {
-#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__MidnightBSD__) || !defined(_KERNEL))
+#if !defined(CVMX_BUILD_FOR_LINUX_KERNEL) && (!defined(__FreeBSD__) || !defined(_KERNEL))
     const void *fdt_addr = CASTPTR(const void *, cvmx_sysinfo_get()->fdt_addr);
     int nodeoffset;
     const void *nodep;
@@ -1591,6 +1592,7 @@ cvmx_helper_board_usb_clock_types_t __cvmx_helper_board_usb_get_clock_type(void)
 #endif
 #if defined(OCTEON_VENDOR_UBIQUITI)
         case CVMX_BOARD_TYPE_CUST_UBIQUITI_E100:
+        case CVMX_BOARD_TYPE_CUST_UBIQUITI_USG:
 #endif
 #if defined(OCTEON_BOARD_CAPK_0100ND)
 	case CVMX_BOARD_TYPE_CN3010_EVB_HS5:

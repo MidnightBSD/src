@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2011  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -81,7 +80,7 @@
 extern "C" {
 #endif
 
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(__FreeBSD__) && defined(_KERNEL)
     /*
      * For the FreeBSD kernel, have POW consistency checks depend on
      * the setting of INVARIANTS.

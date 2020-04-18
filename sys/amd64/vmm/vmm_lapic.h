@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_lapic.h 266339 2014-05-17 19:11:08Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_lapic.h 351753 2019-09-03 16:23:46Z emaste $
  */
 
 #ifndef _VMM_LAPIC_H_
@@ -32,7 +31,7 @@
 
 struct vm;
 
-boolean_t lapic_msr(u_int num);
+bool	lapic_msr(u_int num);
 int	lapic_rdmsr(struct vm *vm, int cpu, u_int msr, uint64_t *rval,
 	    bool *retu);
 int	lapic_wrmsr(struct vm *vm, int cpu, u_int msr, uint64_t wval,

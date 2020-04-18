@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acuuid.h - ACPI-related UUID/GUID definitions

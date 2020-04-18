@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslhex - ASCII hex output file generation (C, ASM, and ASL)

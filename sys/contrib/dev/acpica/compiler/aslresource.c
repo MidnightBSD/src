@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslresource - Resource template/descriptor utilities
@@ -1148,6 +1147,14 @@ RsDoResourceTemplate (
     /* First Descriptor type is next */
 
     DescriptorTypeOp = ASL_GET_PEER_NODE (BufferOp);
+
+    /* DEFAULT_ARG indicates null template - ResourceTemplate(){} */
+
+    if (DescriptorTypeOp->Asl.ParseOpcode == PARSEOP_DEFAULT_ARG)
+    {
+        AslError (ASL_WARNING, ASL_MSG_NULL_RESOURCE_TEMPLATE,
+            DescriptorTypeOp, DescriptorTypeOp->Asl.Value.String);
+    }
 
     /*
      * Process all resource descriptors in the list

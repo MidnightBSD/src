@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003-2004
  *	Hartmut Brandt
@@ -43,7 +42,7 @@
 #include <netnatm/api/ccpriv.h>
 
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <machine/stdarg.h>
 #endif
 #else	/* !_KERNEL */

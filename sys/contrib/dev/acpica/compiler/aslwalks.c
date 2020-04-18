@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslwalks.c - Miscellaneous analytical parse tree walks

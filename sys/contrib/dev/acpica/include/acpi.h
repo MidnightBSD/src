@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acpi.h - Master public include file used to interface to ACPICA

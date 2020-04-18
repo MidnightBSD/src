@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Andrew Moore, Talke Studio
  * All rights reserved.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#) floatingpoint.h	1.0 (Berkeley) 9/23/93
- * $FreeBSD: stable/10/sys/amd64/include/floatingpoint.h 144544 2005-04-02 17:31:42Z netchild $
+ * $FreeBSD: stable/11/sys/amd64/include/floatingpoint.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FLOATINGPOINT_H_

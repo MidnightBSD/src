@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
@@ -25,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/io/vhpet.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/io/vhpet.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/io/vhpet.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/io/vhpet.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -52,7 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/io/vhpet.c 284900 2015-06-28 03:22:2
 
 static MALLOC_DEFINE(M_VHPET, "vhpet", "bhyve virtual hpet");
 
-#define	HPET_FREQ	10000000		/* 10.0 Mhz */
+#define	HPET_FREQ	16777216		/* 16.7 (2^24) Mhz */
 #define	FS_PER_S	1000000000000000ul
 
 /* Timer N Configuration and Capabilities Register */
@@ -164,7 +163,7 @@ vhpet_counter(struct vhpet *vhpet, sbintime_t *nowptr)
 		/*
 		 * The sbinuptime corresponding to the 'countbase' is
 		 * meaningless when the counter is disabled. Make sure
-		 * that the the caller doesn't want to use it.
+		 * that the caller doesn't want to use it.
 		 */
 		KASSERT(nowptr == NULL, ("vhpet_counter: nowptr must be NULL"));
 	}
@@ -716,8 +715,10 @@ vhpet_init(struct vm *vm)
 	vhpet->freq_sbt = bttosbt(bt);
 
 	pincount = vioapic_pincount(vm);
-	if (pincount >= 24)
-		allowed_irqs = 0x00f00000;	/* irqs 20, 21, 22 and 23 */
+	if (pincount >= 32)
+		allowed_irqs = 0xff000000;	/* irqs 24-31 */
+	else if (pincount >= 20)
+		allowed_irqs = 0xf << (pincount - 4);	/* 4 upper irqs */
 	else
 		allowed_irqs = 0;
 

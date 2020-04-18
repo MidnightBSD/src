@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: utstate - state object support procedures

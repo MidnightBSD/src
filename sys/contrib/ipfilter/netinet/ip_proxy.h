@@ -1,12 +1,11 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_proxy.h 305138 2016-08-31 18:00:41Z dim $	*/
+/*	$FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_proxy.h 348822 2019-06-08 22:29:51Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * $FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_proxy.h 305138 2016-08-31 18:00:41Z dim $
+ * $FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_proxy.h 348822 2019-06-08 22:29:51Z cy $
  * Id: ip_proxy.h,v 2.31.2.2 2005/03/12 19:33:48 darrenr Exp
  */
 
@@ -14,14 +13,14 @@
 #define	__IP_PROXY_H__
 
 #ifndef	SOLARIS
-# if defined(sun) && (defined(__svr4__) || defined(__SVR4))
+# if defined(sun) && defined(__SVR4))
 #  define	SOLARIS		1
 # else
 #  define	SOLARIS		0
 # endif
 #endif
 
-#if defined(__STDC__) || defined(__GNUC__) || defined(_AIX51)
+#if defined(__STDC__) || defined(__GNUC__)
 #define	SIOCPROXY	_IOWR('r', 64, struct ap_control)
 #else
 #define	SIOCPROXY	_IOWR(r, 64, struct ap_control)

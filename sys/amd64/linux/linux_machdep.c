@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Dmitry Chagin
  * Copyright (c) 2004 Tim J. Robbins
@@ -31,18 +30,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/linux/linux_machdep.c 321026 2017-07-15 18:25:59Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/linux/linux_machdep.c 346837 2019-04-28 14:11:21Z dchagin $");
 
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
 #include <sys/capsicum.h>
-#include <sys/dirent.h>
-#include <sys/file.h>
-#include <sys/fcntl.h>
-#include <sys/filedesc.h>
 #include <sys/clock.h>
+#include <sys/dirent.h>
+#include <sys/fcntl.h>
+#include <sys/file.h>
+#include <sys/filedesc.h>
 #include <sys/imgact.h>
+#include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
@@ -56,8 +54,9 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/linux/linux_machdep.c 321026 2017-07-15 
 #include <sys/sched.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
-#include <sys/vnode.h>
+#include <sys/systm.h>
 #include <sys/unistd.h>
+#include <sys/vnode.h>
 #include <sys/wait.h>
 
 #include <security/mac/mac_framework.h>
@@ -73,22 +72,23 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/linux/linux_machdep.c 321026 2017-07-15 
 #include <machine/segments.h>
 #include <machine/specialreg.h>
 
-#include <vm/vm.h>
 #include <vm/pmap.h>
+#include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_map.h>
 
 #include <amd64/linux/linux.h>
 #include <amd64/linux/linux_proto.h>
-#include <compat/linux/linux_ipc.h>
+#include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_file.h>
+#include <compat/linux/linux_ipc.h>
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
-#include <compat/linux/linux_emul.h>
 
+#include <x86/include/sysarch.h>
 
 int
 linux_execve(struct thread *td, struct linux_execve_args *args)
@@ -200,6 +200,7 @@ linux_sigaltstack(struct thread *td, struct linux_sigaltstack_args *uap)
 	l_stack_t lss;
 	int error;
 
+	memset(&lss, 0, sizeof(lss));
 	LINUX_CTR2(sigaltstack, "%p, %p", uap->uss, uap->uoss);
 
 	if (uap->uss != NULL) {
@@ -226,29 +227,38 @@ linux_sigaltstack(struct thread *td, struct linux_sigaltstack_args *uap)
 int
 linux_arch_prctl(struct thread *td, struct linux_arch_prctl_args *args)
 {
-	int error;
 	struct pcb *pcb;
+	int error;
 
+	pcb = td->td_pcb;
 	LINUX_CTR2(arch_prctl, "0x%x, %p", args->code, args->addr);
 
-	error = ENOTSUP;
-	pcb = td->td_pcb;
-
 	switch (args->code) {
-	case LINUX_ARCH_GET_GS:
-		error = copyout(&pcb->pcb_gsbase, (unsigned long *)args->addr,
-		    sizeof(args->addr));
-		break;
 	case LINUX_ARCH_SET_GS:
-		if (args->addr >= VM_MAXUSER_ADDRESS)
-			return(EPERM);
-		break;
-	case LINUX_ARCH_GET_FS:
-		error = copyout(&pcb->pcb_fsbase, (unsigned long *)args->addr,
-		    sizeof(args->addr));
+		if (args->addr < VM_MAXUSER_ADDRESS) {
+			set_pcb_flags(pcb, PCB_FULL_IRET);
+			pcb->pcb_gsbase = args->addr;
+			td->td_frame->tf_gs = _ugssel;
+			error = 0;
+		} else
+			error = EPERM;
 		break;
 	case LINUX_ARCH_SET_FS:
-		error = linux_set_cloned_tls(td, (void *)args->addr);
+		if (args->addr < VM_MAXUSER_ADDRESS) {
+			set_pcb_flags(pcb, PCB_FULL_IRET);
+			pcb->pcb_fsbase = args->addr;
+			td->td_frame->tf_fs = _ufssel;
+			error = 0;
+		} else
+			error = EPERM;
+		break;
+	case LINUX_ARCH_GET_FS:
+		error = copyout(&pcb->pcb_fsbase, PTRIN(args->addr),
+		    sizeof(args->addr));
+		break;
+	case LINUX_ARCH_GET_GS:
+		error = copyout(&pcb->pcb_gsbase, PTRIN(args->addr),
+		    sizeof(args->addr));
 		break;
 	default:
 		error = EINVAL;

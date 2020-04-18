@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: evxfregn - External Interfaces, ACPI Operation Regions and

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2011 Cavium Inc. (support@cavium.com). All rights 
  * reserved.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef	__AR9300_STUB_H__
 #define	__AR9300_STUB_H__
 

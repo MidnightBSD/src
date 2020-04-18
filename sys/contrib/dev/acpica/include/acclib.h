@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acclib.h -- C library support. Prototypes for the (optional) local

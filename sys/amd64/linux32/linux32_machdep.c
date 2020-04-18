@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Tim J. Robbins
  * Copyright (c) 2002 Doug Rabson
@@ -30,18 +29,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/linux32/linux32_machdep.c 302964 2016-07-17 15:23:32Z dchagin $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/linux32/linux32_machdep.c 346838 2019-04-28 14:16:00Z dchagin $");
 
 #include "opt_compat.h"
 
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/systm.h>
 #include <sys/capsicum.h>
-#include <sys/file.h>
-#include <sys/fcntl.h>
 #include <sys/clock.h>
+#include <sys/fcntl.h>
+#include <sys/file.h>
 #include <sys/imgact.h>
+#include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -53,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/linux32/linux32_machdep.c 302964 2016-07
 #include <sys/resourcevar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
+#include <sys/systm.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
 
@@ -62,19 +61,19 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/linux32/linux32_machdep.c 302964 2016-07
 #include <machine/segments.h>
 #include <machine/specialreg.h>
 
-#include <vm/vm.h>
 #include <vm/pmap.h>
+#include <vm/vm.h>
 #include <vm/vm_map.h>
 
 #include <compat/freebsd32/freebsd32_util.h>
 #include <amd64/linux32/linux.h>
 #include <amd64/linux32/linux32_proto.h>
+#include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_ipc.h>
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
-#include <compat/linux/linux_emul.h>
 
 static void	bsd_to_linux_rusage(struct rusage *ru, struct l_rusage *lru);
 
@@ -145,7 +144,7 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 
 CTASSERT(sizeof(struct l_iovec32) == 8);
 
-static int
+int
 linux32_copyinuio(struct l_iovec32 *iovp, l_ulong iovcnt, struct uio **uiop)
 {
 	struct l_iovec32 iov32;
@@ -256,7 +255,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		struct linux_semop_args a;
 
 		a.semid = args->arg1;
-		a.tsops = args->ptr;
+		a.tsops = PTRIN(args->ptr);
 		a.nsops = args->arg2;
 		return (linux_semop(td, &a));
 	}
@@ -275,7 +274,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		a.semid = args->arg1;
 		a.semnum = args->arg2;
 		a.cmd = args->arg3;
-		error = copyin(args->ptr, &a.arg, sizeof(a.arg));
+		error = copyin(PTRIN(args->ptr), &a.arg, sizeof(a.arg));
 		if (error)
 			return (error);
 		return (linux_semctl(td, &a));
@@ -284,7 +283,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		struct linux_msgsnd_args a;
 
 		a.msqid = args->arg1;
-		a.msgp = args->ptr;
+		a.msgp = PTRIN(args->ptr);
 		a.msgsz = args->arg2;
 		a.msgflg = args->arg3;
 		return (linux_msgsnd(td, &a));
@@ -301,13 +300,13 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 			if (args->ptr == 0)
 				return (EINVAL);
-			error = copyin(args->ptr, &tmp, sizeof(tmp));
+			error = copyin(PTRIN(args->ptr), &tmp, sizeof(tmp));
 			if (error)
 				return (error);
 			a.msgp = PTRIN(tmp.msgp);
 			a.msgtyp = tmp.msgtyp;
 		} else {
-			a.msgp = args->ptr;
+			a.msgp = PTRIN(args->ptr);
 			a.msgtyp = args->arg5;
 		}
 		return (linux_msgrcv(td, &a));
@@ -324,22 +323,29 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 		a.msqid = args->arg1;
 		a.cmd = args->arg2;
-		a.buf = args->ptr;
+		a.buf = PTRIN(args->ptr);
 		return (linux_msgctl(td, &a));
 	}
 	case LINUX_SHMAT: {
 		struct linux_shmat_args a;
+		l_uintptr_t addr;
+		int error;
 
 		a.shmid = args->arg1;
-		a.shmaddr = args->ptr;
+		a.shmaddr = PTRIN(args->ptr);
 		a.shmflg = args->arg2;
-		a.raddr = PTRIN((l_uint)args->arg3);
-		return (linux_shmat(td, &a));
+		error = linux_shmat(td, &a);
+		if (error != 0)
+			return (error);
+		addr = td->td_retval[0];
+		error = copyout(&addr, PTRIN(args->arg3), sizeof(addr));
+		td->td_retval[0] = 0;
+		return (error);
 	}
 	case LINUX_SHMDT: {
 		struct linux_shmdt_args a;
 
-		a.shmaddr = args->ptr;
+		a.shmaddr = PTRIN(args->ptr);
 		return (linux_shmdt(td, &a));
 	}
 	case LINUX_SHMGET: {
@@ -355,7 +361,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 		a.shmid = args->arg1;
 		a.cmd = args->arg2;
-		a.buf = args->ptr;
+		a.buf = PTRIN(args->ptr);
 		return (linux_shmctl(td, &a));
 	}
 	default:
@@ -646,7 +652,6 @@ linux_sigaltstack(struct thread *td, struct linux_sigaltstack_args *uap)
 int
 linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 {
-	struct ftruncate_args sa;
 
 #ifdef DEBUG
 	if (ldebug(ftruncate64))
@@ -654,9 +659,7 @@ linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 		    (intmax_t)args->length);
 #endif
 
-	sa.fd = args->fd;
-	sa.length = args->length;
-	return sys_ftruncate(td, &sa);
+	return (kern_ftruncate(td, args->fd, args->length));
 }
 
 int

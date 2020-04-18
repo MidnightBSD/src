@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslsupport.l - Flex/lex scanner C support routines.
@@ -383,7 +382,7 @@ AslPushInputFileStack (
     /* Reset the global line count and filename */
 
     Gbl_Files[ASL_FILE_INPUT].Filename =
-        UtStringCacheCalloc (strlen (Filename) + 1);
+        UtLocalCacheCalloc (strlen (Filename) + 1);
 
     strcpy (Gbl_Files[ASL_FILE_INPUT].Filename, Filename);
 
@@ -497,7 +496,7 @@ AslInsertLineBuffer (
             AslResetCurrentLineBuffer ();
         }
 
-        if (Gbl_CaptureComments)
+        if (AcpiGbl_CaptureComments)
         {
             CvProcessCommentState (SourceChar);
         }
@@ -526,7 +525,7 @@ static void
 count (
     int                 Type)
 {
-    int                 i;
+    char                *p;
 
 
     switch (Type)
@@ -548,9 +547,9 @@ count (
         break;
     }
 
-    for (i = 0; (yytext[i] != 0) && (yytext[i] != EOF); i++)
+    for (p = yytext; *p != '\0'; p++)
     {
-        AslInsertLineBuffer (yytext[i]);
+        AslInsertLineBuffer (*p);
         *Gbl_LineBufPtr = 0;
     }
 }
@@ -581,7 +580,7 @@ AslDoComment (
 
     AslInsertLineBuffer ('/');
     AslInsertLineBuffer ('*');
-    if (Gbl_CaptureComments && CurrentState.CaptureComments)
+    if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
     {
         *StringBuffer = '/';
         ++StringBuffer;
@@ -596,7 +595,7 @@ loop:
     while (((c = input ()) != '*') && (c != EOF))
     {
         AslInsertLineBuffer (c);
-        if (Gbl_CaptureComments && CurrentState.CaptureComments)
+        if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
         {
             *StringBuffer = c;
             ++StringBuffer;
@@ -624,7 +623,7 @@ loop:
     /* Comment is closed only if the NEXT character is a slash */
 
     AslInsertLineBuffer (c);
-    if (Gbl_CaptureComments && CurrentState.CaptureComments)
+    if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
     {
         *StringBuffer = c;
         ++StringBuffer;
@@ -699,7 +698,7 @@ AslDoCommentType2 (
 
     AslInsertLineBuffer ('/');
 
-    if (Gbl_CaptureComments && CurrentState.CaptureComments)
+    if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
     {
         AslInsertLineBuffer ('*');
         *StringBuffer = '/';
@@ -715,7 +714,7 @@ AslDoCommentType2 (
     while (((c = input ()) != '\n') && (c != EOF))
     {
         AslInsertLineBuffer (c);
-        if (Gbl_CaptureComments && CurrentState.CaptureComments)
+        if (AcpiGbl_CaptureComments && CurrentState.CaptureComments)
         {
             *StringBuffer = c;
             ++StringBuffer;
@@ -1010,7 +1009,7 @@ CompletedString:
      */
     *StringBuffer = 0;
 
-    CleanString = UtStringCacheCalloc (strlen (MsgBuffer) + 1);
+    CleanString = UtLocalCacheCalloc (strlen (MsgBuffer) + 1);
     strcpy (CleanString, MsgBuffer);
     AslCompilerlval.s = CleanString;
     return (TRUE);

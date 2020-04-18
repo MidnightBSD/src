@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_host.h 267427 2014-06-12 19:58:12Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_host.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_VMM_HOST_H_

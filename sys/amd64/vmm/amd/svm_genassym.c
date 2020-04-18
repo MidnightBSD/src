@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/amd/svm_genassym.c 285015 2015-07-01 19:46:57Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/amd/svm_genassym.c 336190 2018-07-11 07:19:42Z araujo $");
 
 #include <sys/param.h>
 #include <sys/assym.h>

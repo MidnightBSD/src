@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_lapic.c 284899 2015-06-28 01:21:55Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_lapic.c 351753 2019-09-03 16:23:46Z emaste $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/vmm_lapic.c 284899 2015-06-28 01:21:55Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_lapic.c 351753 2019-09-03 16:23:46Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,7 +37,6 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/vmm_lapic.c 284899 2015-06-28 01:21:
 #include <x86/apicreg.h>
 
 #include <machine/vmm.h>
-#include "vmm_ipi.h"
 #include "vmm_ktr.h"
 #include "vmm_lapic.h"
 #include "vlapic.h"
@@ -56,7 +54,7 @@ lapic_set_intr(struct vm *vm, int cpu, int vector, bool level)
 {
 	struct vlapic *vlapic;
 
-	if (cpu < 0 || cpu >= VM_MAXCPU)
+	if (cpu < 0 || cpu >= vm_get_maxcpus(vm))
 		return (EINVAL);
 
 	/*
@@ -79,7 +77,7 @@ lapic_set_local_intr(struct vm *vm, int cpu, int vector)
 	cpuset_t dmask;
 	int error;
 
-	if (cpu < -1 || cpu >= VM_MAXCPU)
+	if (cpu < -1 || cpu >= vm_get_maxcpus(vm))
 		return (EINVAL);
 
 	if (cpu == -1)
@@ -137,13 +135,10 @@ lapic_intr_msi(struct vm *vm, uint64_t addr, uint64_t msg)
 	return (0);
 }
 
-static boolean_t
+static bool
 x2apic_msr(u_int msr)
 {
-	if (msr >= 0x800 && msr <= 0xBFF)
-		return (TRUE);
-	else
-		return (FALSE);
+	return (msr >= 0x800 && msr <= 0xBFF);
 }
 
 static u_int
@@ -153,14 +148,11 @@ x2apic_msr_to_regoff(u_int msr)
 	return ((msr - 0x800) << 4);
 }
 
-boolean_t
+bool
 lapic_msr(u_int msr)
 {
 
-	if (x2apic_msr(msr) || (msr == MSR_APICBASE))
-		return (TRUE);
-	else
-		return (FALSE);
+	return (x2apic_msr(msr) || msr == MSR_APICBASE);
 }
 
 int

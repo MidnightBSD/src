@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This header comes from linux, but it has no license. The author
  * (Alan Cox @ Redhat) gave explicit permissions to use it in FreeBSD.

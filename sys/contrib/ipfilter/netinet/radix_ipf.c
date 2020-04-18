@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
@@ -10,12 +9,14 @@
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <net/if.h>
-#if !defined(_KERNEL)
+#ifdef _KERNEL
+#include <sys/systm.h>
+#else
 # include <stddef.h>
 # include <stdlib.h>
 # include <strings.h>
 # include <string.h>
-#endif
+#endif /* !_KERNEL */
 #include "netinet/ip_compat.h"
 #include "netinet/ip_fil.h"
 #ifdef RDX_DEBUG
@@ -1322,7 +1323,7 @@ dumptree(rnh)
 void
 test_addr(rnh, pref, addr, limit)
 	ipf_rdx_head_t *rnh;
-	int pref;
+	int pref, limit;
 	addrfamily_t *addr;
 {
 	static int extras[14] = { 0, -1, 1, 3, 5, 8, 9,

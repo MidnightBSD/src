@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 * Copyright (c) 2004
 *	Hartmut Brandt

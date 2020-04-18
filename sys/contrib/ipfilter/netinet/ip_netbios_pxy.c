@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Simple netbios-dgm transparent proxy for in-kernel use.
  * For use with the NAT code.

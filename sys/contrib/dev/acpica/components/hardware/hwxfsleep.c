@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: hwxfsleep.c - ACPI Hardware Sleep/Wake External Interfaces

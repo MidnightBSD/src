@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_util.h 245678 2013-01-20 03:42:49Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_util.h 351753 2019-09-03 16:23:46Z emaste $
  */
 
 #ifndef _VMM_UTIL_H_
@@ -32,9 +31,9 @@
 
 struct trapframe;
 
-boolean_t	vmm_is_intel(void);
-boolean_t	vmm_is_amd(void);
-boolean_t	vmm_supports_1G_pages(void);
+bool		vmm_is_intel(void);
+bool		vmm_is_amd(void);
+bool		vmm_supports_1G_pages(void);
 
 void		dump_trapframe(struct trapframe *tf);
 

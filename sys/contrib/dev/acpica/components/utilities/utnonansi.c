@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: utnonansi - Non-ansi C library functions
@@ -345,4 +344,17 @@ AcpiUtSafeStrncat (
     strncat (Dest, Source, MaxTransferLength);
     return (FALSE);
 }
+
+void
+AcpiUtSafeStrncpy (
+    char                    *Dest,
+    char                    *Source,
+    ACPI_SIZE               DestSize)
+{
+    /* Always terminate destination string */
+
+    strncpy (Dest, Source, DestSize);
+    Dest[DestSize - 1] = 0;
+}
+
 #endif

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: stable/10/sys/amd64/include/cpu.h 261275 2014-01-29 21:23:37Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/include/cpu.h 340270 2018-11-08 22:42:55Z jhb $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -64,7 +63,6 @@
 struct cpu_ops {
 	void (*cpu_init)(void);
 	void (*cpu_resume)(void);
-	void (*ipi_vectored)(u_int, int);
 };
 
 extern struct	cpu_ops cpu_ops;
@@ -75,6 +73,7 @@ extern char	etext[];
 extern	void (*vmm_resume_p)(void);
 
 void	cpu_halt(void);
+void	cpu_lock_delay(void);
 void	cpu_reset(void);
 void	fork_trampoline(void);
 void	swi_vm(void *);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: utdecode - Utility decoding routines (value-to-string)
@@ -559,11 +558,6 @@ AcpiUtGetReferenceName (
 }
 
 
-#if defined(ACPI_DEBUG_OUTPUT) || defined(ACPI_DEBUGGER)
-/*
- * Strings and procedures used for debug only
- */
-
 /*******************************************************************************
  *
  * FUNCTION:    AcpiUtGetMutexName
@@ -601,6 +595,12 @@ AcpiUtGetMutexName (
     return (AcpiGbl_MutexNames[MutexId]);
 }
 
+
+#if defined(ACPI_DEBUG_OUTPUT) || defined(ACPI_DEBUGGER)
+
+/*
+ * Strings and procedures used for debug only
+ */
 
 /*******************************************************************************
  *

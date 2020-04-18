@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014, Neel Natu (neel@freebsd.org)
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/amd/svm_msr.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/amd/svm_msr.c 349958 2019-07-12 22:31:12Z jhb $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -121,9 +122,8 @@ svm_rdmsr(struct svm_softc *sc, int vcpu, u_int num, uint64_t *result,
 	case MSR_MTRR16kBase ... MSR_MTRR16kBase + 1:
 	case MSR_MTRR64kBase:
 	case MSR_SYSCFG:
-		*result = 0;
-		break;
 	case MSR_AMDK8_IPM:
+	case MSR_EXTFEATURES:
 		*result = 0;
 		break;
 	default:
@@ -156,6 +156,13 @@ svm_wrmsr(struct svm_softc *sc, int vcpu, u_int num, uint64_t val, bool *retu)
 		/*
 		 * Ignore writes to the "Interrupt Pending Message" MSR.
 		 */
+		break;
+	case MSR_K8_UCODE_UPDATE:
+		/*
+		 * Ignore writes to microcode update register.
+		 */
+		break;
+	case MSR_EXTFEATURES:
 		break;
 	default:
 		error = EINVAL;

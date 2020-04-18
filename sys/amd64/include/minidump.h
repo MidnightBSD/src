@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/include/minidump.h 215133 2010-11-11 18:35:28Z avg $
+ * $FreeBSD: stable/11/sys/amd64/include/minidump.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_MACHINE_MINIDUMP_H_

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 328203 2018-01-20 18:00:42Z cy $	*/
+/*	$FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -9,7 +8,7 @@
  * Simple FTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * $FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 328203 2018-01-20 18:00:42Z cy $
+ * $FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 344833 2019-03-06 02:37:25Z cy $
  * Id: ip_ftp_pxy.c,v 2.88.2.19 2006/04/01 10:14:53 darrenr Exp $
  */
 
@@ -1309,11 +1308,7 @@ ipf_p_ftp_process(softf, fin, nat, ftp, rv)
 	t = &ftp->ftp_side[1 - rv];
 	thseq = ntohl(tcp->th_seq);
 	thack = ntohl(tcp->th_ack);
-#ifdef __sgi
-	mlen = fin->fin_plen - off;
-#else
 	mlen = MSGDSIZE(m) - off;
-#endif
 
 	DT3(process_debug, tcphdr_t *, tcp, int, off, int, mlen);
 	if (softf->ipf_p_ftp_debug & DEBUG_INFO)
@@ -1610,11 +1605,7 @@ whilemore:
 	if (tcp->th_flags & TH_FIN)
 		f->ftps_seq[1]++;
 	if (softf->ipf_p_ftp_debug & DEBUG_PARSE_INFO) {
-#ifdef __sgi
-		mlen = fin->fin_plen;
-#else
 		mlen = MSGDSIZE(m);
-#endif
 		mlen -= off;
 		printf("ftps_seq[1] = %x inc %d len %d\n",
 		       f->ftps_seq[1], inc, mlen);

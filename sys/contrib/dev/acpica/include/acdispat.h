@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acdispat.h - dispatcher (parser to interpreter interface)

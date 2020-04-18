@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003-2004
  *	Hartmut Brandt
@@ -35,7 +34,7 @@
  * Private declarations.
  */
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <netgraph/atm/ccatm/ng_ccatm_cust.h>
 #endif
 #else	/* !_KERNEL */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: hwesleep.c - ACPI Hardware Sleep/Wake Support functions for the

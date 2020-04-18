@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2010  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -140,7 +139,7 @@ static inline uint64_t cvmx_ptr_to_phys(void *ptr)
         return address + 0x400000000ull;   /* 256MB-512MB is a virtual mapping for the 2nd 256MB */
     else
         return address; /* Looks to be a 1:1 mapped userspace pointer */
-#elif defined(__MidnightBSD__) && defined(_KERNEL)
+#elif defined(__FreeBSD__) && defined(_KERNEL)
     return (pmap_kextract((vm_offset_t)ptr));
 #else
 #if CVMX_USE_1_TO_1_TLB_MAPPINGS
@@ -252,7 +251,7 @@ static inline void *cvmx_phys_to_ptr(uint64_t physical_address)
         return CASTPTR(void, physical_address - 0x400000000ull);
     else
         return CASTPTR(void, physical_address);
-#elif defined(__MidnightBSD__) && defined(_KERNEL)
+#elif defined(__FreeBSD__) && defined(_KERNEL)
 #if defined(__mips_n64)
     return CASTPTR(void, CVMX_ADD_SEG(CVMX_MIPS_SPACE_XKPHYS, physical_address));
 #else

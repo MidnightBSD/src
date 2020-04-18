@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: amlcode.h - Definitions for AML, as included in "definition blocks"

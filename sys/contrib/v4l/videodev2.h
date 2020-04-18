@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  *  Video for Linux Two header file
  *
@@ -54,12 +53,12 @@
  *              Hans Verkuil <hverkuil@xs4all.nl>
  *		et al.
  *
- * $FreeBSD: stable/10/sys/contrib/v4l/videodev2.h 253144 2013-07-10 10:40:52Z netchild $
+ * $FreeBSD: stable/11/sys/contrib/v4l/videodev2.h 253144 2013-07-10 10:40:52Z netchild $
  */
 #ifndef __LINUX_VIDEODEV2_H
 #define __LINUX_VIDEODEV2_H
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define __user
 typedef uint64_t	__u64;
 typedef int64_t		__s64;

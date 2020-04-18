@@ -2,7 +2,7 @@
 # WITHOUT_SOURCELESS_UCODE -- Disable drivers that include sourceless
 # microcode.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/conf/WITHOUT_SOURCELESS_UCODE 286472 2015-08-08 20:45:47Z rpaulo $
 
 nodevice	adw
 nodevice	bce
@@ -13,7 +13,6 @@ nodevice	mwlfw
 nodevice	ralfw
 nodevice	runfw
 nodevice	sf
-nodevice	sn
 nodevice	ti
 nodevice	txp
 nodevice	ce
@@ -21,6 +20,7 @@ nodevice	cp
 nodevice	ctau
 nodevice	ipwfw
 nodevice	iwifw
+nodevice	iwmfw
 nodevice	iwnfw
 nodevice	wpifw
 

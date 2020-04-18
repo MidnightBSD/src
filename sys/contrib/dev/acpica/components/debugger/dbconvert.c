@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: dbconvert - debugger miscellaneous conversion routines
@@ -430,9 +429,7 @@ AcpiDbConvertToObject (
     default:
 
         Object->Type = ACPI_TYPE_INTEGER;
-        Status = AcpiUtStrtoul64 (String,
-            (AcpiGbl_IntegerByteWidth | ACPI_STRTOUL_BASE16),
-            &Object->Integer.Value);
+        Status = AcpiUtStrtoul64 (String, &Object->Integer.Value);
         break;
     }
 

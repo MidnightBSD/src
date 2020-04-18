@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: nsutils - Utilities for accessing ACPI namespace, accessing

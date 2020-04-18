@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmcs.h 276403 2014-12-30 08:24:14Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmcs.h 346707 2019-04-25 21:09:07Z mav $
  */
 
 #ifndef _VMCS_H_
@@ -337,6 +336,14 @@ vmcs_write(uint32_t encoding, uint64_t val)
 #define EXIT_REASON_WBINVD		54
 #define EXIT_REASON_XSETBV		55
 #define	EXIT_REASON_APIC_WRITE		56
+#define	EXIT_REASON_RDRAND		57
+#define	EXIT_REASON_INVPCID		58
+#define	EXIT_REASON_VMFUNC		59
+#define	EXIT_REASON_ENCLS		60
+#define	EXIT_REASON_RDSEED		61
+#define	EXIT_REASON_PM_LOG_FULL		62
+#define	EXIT_REASON_XSAVES		63
+#define	EXIT_REASON_XRSTORS		64
 
 /*
  * NMI unblocking due to IRET.

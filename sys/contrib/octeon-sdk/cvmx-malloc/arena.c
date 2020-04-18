@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 Copyright (c) 2001 Wolfram Gloger
 Copyright (c) 2006 Cavium networks

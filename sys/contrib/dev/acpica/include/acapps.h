@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: acapps - common include for ACPI applications/tools
@@ -188,6 +187,9 @@
     Prefix, UtilityName, ((UINT32) ACPI_CA_VERSION), ACPI_WIDTH, \
     Prefix, ACPICA_COPYRIGHT, \
     Prefix
+
+#define ACPI_COMMON_BUILD_TIME \
+    "Build date/time: %s %s\n", __DATE__, __TIME__
 
 /* Macros for usage messages */
 

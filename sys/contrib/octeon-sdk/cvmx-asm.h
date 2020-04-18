@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2010  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -618,7 +617,7 @@ extern "C" {
 #define TLB_GLOBAL  (0x1ULL<<0)
 
 
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 /* Macros to PUSH and POP Octeon2 ISA. */
 #define CVMX_PUSH_OCTEON2    asm volatile (".set push\n.set arch=octeon2")
 #define CVMX_POP_OCTEON2     asm volatile (".set pop")

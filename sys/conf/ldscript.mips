@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: ldscript.mips,v 1.3 2006/10/11 06:12:04
- * $FreeBSD: stable/10/sys/conf/ldscript.mips 215251 2010-11-13 18:38:35Z imp $
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sys/conf/ldscript.mips 317145 2017-04-19 15:33:24Z emaste $
  */
 
 OUTPUT_ARCH(mips)
@@ -185,7 +184,6 @@ SECTIONS
     *(.data)
     *(.data.*)
     *(.gnu.linkonce.d.*)
-    SORT(CONSTRUCTORS)
   }
   .data1   : { *(.data1) }
   .eh_frame : { KEEP (*(.eh_frame)) }

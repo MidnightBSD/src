@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -37,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: stable/10/sys/amd64/include/param.h 286305 2015-08-05 07:21:44Z kib $
+ * $FreeBSD: stable/11/sys/amd64/include/param.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 
@@ -66,14 +65,14 @@
 
 #if defined(SMP) || defined(KLD_MODULE)
 #ifndef MAXCPU
-#define MAXCPU		64
+#define MAXCPU		256
 #endif
 #else
 #define MAXCPU		1
 #endif
 
 #ifndef MAXMEMDOM
-#define	MAXMEMDOM	1
+#define	MAXMEMDOM	8
 #endif
 
 #define	ALIGNBYTES		_ALIGNBYTES
@@ -121,6 +120,12 @@
 #define	MAXPAGESIZES	3	/* maximum number of supported page sizes */
 
 #define IOPAGES	2		/* pages of i/o permission bitmap */
+/*
+ * I/O permission bitmap has a bit for each I/O port plus an additional
+ * byte at the end with all bits set. See section "I/O Permission Bit Map"
+ * in the Intel SDM for more details.
+ */
+#define	IOPERM_BITMAP_SIZE	(IOPAGES * PAGE_SIZE + 1)
 
 #ifndef	KSTACK_PAGES
 #define	KSTACK_PAGES	4	/* pages of kstack (with pcb) */

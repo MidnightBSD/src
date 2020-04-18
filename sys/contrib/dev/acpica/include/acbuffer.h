@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acbuffer.h - Support for buffers returned by ACPI predefined names

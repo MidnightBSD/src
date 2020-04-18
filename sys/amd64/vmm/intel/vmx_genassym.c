@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_genassym.c 268953 2014-07-21 19:08:02Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_genassym.c 337794 2018-08-14 17:51:12Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_genassym.c 268953 2014-07-21 19:08:02Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_genassym.c 337794 2018-08-14 17:51:12Z kib $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,6 +36,7 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_genassym.c 268953 2014-07-
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
+#include <vm/vm_param.h>
 
 #include <machine/vmm.h>
 #include "vmx_cpufunc.h"
@@ -87,3 +87,6 @@ ASSYM(PM_EPTGEN, offsetof(struct pmap, pm_eptgen));
 
 ASSYM(KERNEL_SS, GSEL(GDATA_SEL, SEL_KPL));
 ASSYM(KERNEL_CS, GSEL(GCODE_SEL, SEL_KPL));
+
+ASSYM(PAGE_SIZE, PAGE_SIZE);
+ASSYM(KERNBASE, KERNBASE);

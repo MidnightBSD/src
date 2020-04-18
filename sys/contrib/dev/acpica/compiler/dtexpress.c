@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: dtexpress.c - Support for integer expressions and labels
@@ -151,7 +150,6 @@
  *****************************************************************************/
 
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
-#include <contrib/dev/acpica/compiler/dtcompiler.h>
 #include "dtparser.y.h"
 
 #define _COMPONENT          DT_COMPILER

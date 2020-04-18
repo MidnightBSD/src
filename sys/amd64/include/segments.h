@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1990 William F. Jolitz
  * Copyright (c) 1990 The Regents of the University of California.
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)segments.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: stable/10/sys/amd64/include/segments.h 258886 2013-12-03 19:41:48Z kib $
+ * $FreeBSD: stable/11/sys/amd64/include/segments.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MACHINE_SEGMENTS_H_

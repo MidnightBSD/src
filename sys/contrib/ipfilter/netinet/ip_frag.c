@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_frag.c 317241 2017-04-21 01:51:49Z cy $	*/
+/*	$FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_frag.c 348822 2019-06-08 22:29:51Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -17,39 +16,30 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/file.h>
-#ifdef __hpux
-# include <sys/timeout.h>
-#endif
 #if !defined(_KERNEL)
 # include <stdio.h>
 # include <string.h>
 # include <stdlib.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && \
-    defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && defined(__FreeBSD_version)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
 # include <sys/ioctl.h>
 #endif
-#if !defined(linux)
 # include <sys/protosw.h>
-#endif
 #include <sys/socket.h>
 #if defined(_KERNEL)
 # include <sys/systm.h>
-# if !defined(__SVR4) && !defined(__svr4__)
+# if !defined(__SVR4)
 #  include <sys/mbuf.h>
 # endif
 #endif
-#if !defined(__SVR4) && !defined(__svr4__)
-# if defined(_KERNEL) && !defined(__sgi) && !defined(AIX)
+#if !defined(__SVR4)
+# if defined(_KERNEL)
 #  include <sys/kernel.h>
 # endif
 #else
@@ -67,9 +57,7 @@ struct file;
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
-#if !defined(linux)
 # include <netinet/ip_var.h>
-#endif
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
@@ -87,7 +75,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_frag.c	1.11 3/24/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_frag.c 317241 2017-04-21 01:51:49Z cy $";
+static const char rcsid[] = "@(#)$FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_frag.c 348822 2019-06-08 22:29:51Z cy $";
 /* static const char rcsid[] = "@(#)$Id: ip_frag.c,v 2.77.2.12 2007/09/20 12:51:51 darrenr Exp $"; */
 #endif
 
@@ -738,6 +726,8 @@ ipf_frag_lookup(softc, softf, fin, table
 					FBUMP(ifs_overlap);
 					DT2(ifs_overlap, u_short, off,
 					    ipfr_t *, f);
+					DT3(ipf_fi_bad_ifs_overlap, fr_info_t *, fin, u_short, off,
+					    ipfr_t *, f);
 					fin->fin_flx |= FI_BAD;
 					break;
 				}
@@ -921,6 +911,7 @@ ipf_frag_known(fin, passp)
 		if (fin->fin_flx & FI_BAD) {
 			fr = &ipfr_block;
 			fin->fin_reason = FRB_BADFRAG;
+			DT2(ipf_frb_badfrag, fr_info_t *, fin, uint, fra);
 		} else {
 			fr = fra->ipfr_rule;
 		}

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/amd/npt.c 276403 2014-12-30 08:24:14Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/amd/npt.c 336190 2018-07-11 07:19:42Z araujo $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -36,8 +37,6 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/amd/npt.c 276403 2014-12-30 08:24:14
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
-
-#include <machine/pmap.h>
 
 #include "npt.h"
 

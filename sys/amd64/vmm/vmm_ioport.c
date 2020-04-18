@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/vmm_ioport.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_ioport.c 336190 2018-07-11 07:19:42Z araujo $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

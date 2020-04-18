@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/amd/npt.h 276403 2014-12-30 08:24:14Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/amd/npt.h 336190 2018-07-11 07:19:42Z araujo $
  */
 
 #ifndef _SVM_NPT_H_

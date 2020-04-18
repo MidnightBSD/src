@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Scott Long
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/include/bus_dma.h 148275 2005-07-22 04:03:25Z obrien $
+ * $FreeBSD: stable/11/sys/amd64/include/bus_dma.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _AMD64_BUS_DMA_H_

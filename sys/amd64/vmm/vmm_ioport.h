@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_ioport.h 276429 2014-12-30 22:22:46Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_ioport.h 336190 2018-07-11 07:19:42Z araujo $
  */
 
 #ifndef	_VMM_IOPORT_H_

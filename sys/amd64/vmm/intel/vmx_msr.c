@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,42 +23,38 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_msr.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.c 351753 2019-09-03 16:23:46Z emaste $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/vmx_msr.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/vmx_msr.c 351753 2019-09-03 16:23:46Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/proc.h>
 
 #include <machine/clock.h>
 #include <machine/cpufunc.h>
 #include <machine/md_var.h>
+#include <machine/pcb.h>
 #include <machine/specialreg.h>
 #include <machine/vmm.h>
 
 #include "vmx.h"
 #include "vmx_msr.h"
 
-static boolean_t
+static bool
 vmx_ctl_allows_one_setting(uint64_t msr_val, int bitpos)
 {
 
-	if (msr_val & (1UL << (bitpos + 32)))
-		return (TRUE);
-	else
-		return (FALSE);
+	return ((msr_val & (1UL << (bitpos + 32))) != 0);
 }
 
-static boolean_t
+static bool
 vmx_ctl_allows_zero_setting(uint64_t msr_val, int bitpos)
 {
 
-	if ((msr_val & (1UL << bitpos)) == 0)
-		return (TRUE);
-	else
-		return (FALSE);
+	return ((msr_val & (1UL << bitpos)) == 0);
 }
 
 uint32_t
@@ -86,16 +81,13 @@ vmx_set_ctlreg(int ctl_reg, int true_ctl_reg, uint32_t ones_mask,
 {
 	int i;
 	uint64_t val, trueval;
-	boolean_t true_ctls_avail, one_allowed, zero_allowed;
+	bool true_ctls_avail, one_allowed, zero_allowed;
 
 	/* We cannot ask the same bit to be set to both '1' and '0' */
 	if ((ones_mask ^ zeros_mask) != (ones_mask | zeros_mask))
 		return (EINVAL);
 
-	if (rdmsr(MSR_VMX_BASIC) & (1UL << 55))
-		true_ctls_avail = TRUE;
-	else
-		true_ctls_avail = FALSE;
+	true_ctls_avail = (rdmsr(MSR_VMX_BASIC) & (1UL << 55)) != 0;
 
 	val = rdmsr(ctl_reg);
 	if (true_ctls_avail)
@@ -357,7 +349,8 @@ vmx_msr_guest_enter(struct vmx *vmx, int vcpuid)
 {
 	uint64_t *guest_msrs = vmx->guest_msrs[vcpuid];
 
-	/* Save host MSRs (if any) and restore guest MSRs */
+	/* Save host MSRs (in particular, KGSBASE) and restore guest MSRs */
+	update_pcb_bases(curpcb);
 	wrmsr(MSR_LSTAR, guest_msrs[IDX_MSR_LSTAR]);
 	wrmsr(MSR_CSTAR, guest_msrs[IDX_MSR_CSTAR]);
 	wrmsr(MSR_STAR, guest_msrs[IDX_MSR_STAR]);

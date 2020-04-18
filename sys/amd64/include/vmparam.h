@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -39,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: stable/10/sys/amd64/include/vmparam.h 285634 2015-07-16 14:41:58Z kib $
+ * $FreeBSD: stable/11/sys/amd64/include/vmparam.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 
@@ -53,7 +52,7 @@
 /*
  * Virtual memory related constants, all in bytes
  */
-#define	MAXTSIZ		(128UL*1024*1024)	/* max text size */
+#define	MAXTSIZ		(32768UL*1024*1024)	/* max text size */
 #ifndef DFLDSIZ
 #define	DFLDSIZ		(32768UL*1024*1024)	/* initial data size limit */
 #endif
@@ -91,13 +90,12 @@
 #define	VM_PHYSSEG_MAX		63
 
 /*
- * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * Create two free page pools: VM_FREEPOOL_DEFAULT is the default pool
  * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
  * the pool from which physical pages for page tables and small UMA
  * objects are allocated.
  */
-#define	VM_NFREEPOOL		3
-#define	VM_FREEPOOL_CACHE	2
+#define	VM_NFREEPOOL		2
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	1
 
@@ -184,8 +182,24 @@
 #define	VM_MAX_ADDRESS		UPT_MAX_ADDRESS
 #define	VM_MIN_ADDRESS		(0)
 
-#define	PHYS_TO_DMAP(x)		((x) | DMAP_MIN_ADDRESS)
-#define	DMAP_TO_PHYS(x)		((x) & ~DMAP_MIN_ADDRESS)
+/*
+ * XXX Allowing dmaplimit == 0 is a temporary workaround for vt(4) efifb's
+ * early use of PHYS_TO_DMAP before the mapping is actually setup. This works
+ * because the result is not actually accessed until later, but the early
+ * vt fb startup needs to be reworked.
+ */
+#define	PHYS_TO_DMAP(x)	({						\
+	KASSERT(dmaplimit == 0 || (x) < dmaplimit,			\
+	    ("physical address %#jx not covered by the DMAP",		\
+	    (uintmax_t)x));						\
+	(x) | DMAP_MIN_ADDRESS; })
+
+#define	DMAP_TO_PHYS(x)	({						\
+	KASSERT((x) < (DMAP_MIN_ADDRESS + dmaplimit) &&			\
+	    (x) >= DMAP_MIN_ADDRESS,					\
+	    ("virtual address %#jx not covered by the DMAP",		\
+	    (uintmax_t)x));						\
+	(x) & ~DMAP_MIN_ADDRESS; })
 
 /*
  * How many physical pages per kmem arena virtual page.

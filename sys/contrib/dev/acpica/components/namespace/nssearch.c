@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: nssearch - Namespace search
@@ -546,6 +545,7 @@ AcpiNsSearchAndEnter (
         (WalkState && WalkState->Opcode == AML_SCOPE_OP))
     {
         NewNode->Flags |= ANOBJ_IS_EXTERNAL;
+        NewNode->Flags |= IMPLICIT_EXTERNAL;
     }
 #endif
 

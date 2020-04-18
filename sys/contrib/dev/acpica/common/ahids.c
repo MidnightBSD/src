@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: ahids - Table of ACPI/PNP _HID/_CID values

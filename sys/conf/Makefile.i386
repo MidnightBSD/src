@@ -1,8 +1,7 @@
 # Makefile.i386 -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: stable/10/sys/conf/Makefile.i386 250840 2013-05-21 03:05:49Z marcel $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/conf/Makefile.i386 276696 2015-01-05 12:28:22Z imp $
 #
 # Makefile for MidnightBSD
 #
@@ -18,7 +17,7 @@
 #
 
 # Which version of config(8) is required.
-%VERSREQ=	600004
+%VERSREQ=	600012
 
 STD8X16FONT?=	iso
 
@@ -33,14 +32,8 @@ S=	../../..
 
 INCLUDES+= -I$S/contrib/libfdt
 
-MACHINE=i386
-
-MKMODULESENV+=	MACHINE=${MACHINE}
-
-# XXX: clang integrated-as doesn't grok .codeNN directives yet
-ASM_CFLAGS.acpi_wakecode.S=	${CLANG_NO_IAS}
-ASM_CFLAGS.mpboot.s=		${CLANG_NO_IAS}
-ASM_CFLAGS+=			${ASM_CFLAGS.${.IMPSRC:T}}
+ASM_CFLAGS.acpi_wakecode.S=	${CLANG_NO_IAS34}
+ASM_CFLAGS.mpboot.s=		${CLANG_NO_IAS34}
 
 %BEFORE_DEPEND
 

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sys/conf/makeLINT.mk 354944 2019-11-21 12:29:01Z lwhsu $
 
 # The LINT files need to end up in the kernel source directory.
 .OBJDIR: ${.CURDIR}
@@ -10,6 +10,9 @@ clean:
 	rm -f LINT
 .if ${TARGET} == "amd64" || ${TARGET} == "i386"
 	rm -f LINT-VIMAGE LINT-NOINET LINT-NOINET6 LINT-NOIP
+.endif
+.if ${TARGET} == "powerpc"
+	rm -f LINT64
 .endif
 
 NOTES=	${.CURDIR}/../../conf/NOTES ${.CURDIR}/NOTES

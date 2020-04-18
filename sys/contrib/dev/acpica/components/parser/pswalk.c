@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: pswalk - Parser routines to walk parsed op tree(s)

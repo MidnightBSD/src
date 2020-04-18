@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/io/vlapic.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/io/vlapic.c 351757 2019-09-03 16:27:23Z emaste $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/io/vlapic.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/io/vlapic.c 351757 2019-09-03 16:27:23Z emaste $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -46,7 +45,6 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/io/vlapic.c 284900 2015-06-28 03:22:
 
 #include <machine/vmm.h>
 
-#include "vmm_ipi.h"
 #include "vmm_lapic.h"
 #include "vmm_ktr.h"
 #include "vmm_stat.h"
@@ -316,7 +314,7 @@ vlapic_get_lvtptr(struct vlapic *vlapic, uint32_t offset)
 		return (&lapic->lvt_cmci);
 	case APIC_OFFSET_TIMER_LVT ... APIC_OFFSET_ERROR_LVT:
 		i = (offset - APIC_OFFSET_TIMER_LVT) >> 2;
-		return ((&lapic->lvt_timer) + i);;
+		return ((&lapic->lvt_timer) + i);
 	default:
 		panic("vlapic_get_lvt: invalid LVT\n");
 	}
@@ -838,12 +836,13 @@ vlapic_calcdest(struct vm *vm, cpuset_t *dmask, uint32_t dest, bool phys,
 		 */
 		CPU_ZERO(dmask);
 		vcpuid = vm_apicid2vcpuid(vm, dest);
-		if (vcpuid < VM_MAXCPU)
+		amask = vm_active_cpus(vm);
+		if (vcpuid < vm_get_maxcpus(vm) && CPU_ISSET(vcpuid, &amask))
 			CPU_SET(vcpuid, dmask);
 	} else {
 		/*
 		 * In the "Flat Model" the MDA is interpreted as an 8-bit wide
-		 * bitmask. This model is only avilable in the xAPIC mode.
+		 * bitmask. This model is only available in the xAPIC mode.
 		 */
 		mda_flat_ldest = dest & 0xff;
 
@@ -965,6 +964,7 @@ vlapic_icrlo_write_handler(struct vlapic *vlapic, bool *retu)
 	struct vlapic *vlapic2;
 	struct vm_exit *vmexit;
 	struct LAPIC *lapic;
+	uint16_t maxcpus;
 
 	lapic = vlapic->apic_page;
 	lapic->icr_lo &= ~APIC_DELSTAT_PEND;
@@ -1026,11 +1026,12 @@ vlapic_icrlo_write_handler(struct vlapic *vlapic, bool *retu)
 		return (0);	/* handled completely in the kernel */
 	}
 
+	maxcpus = vm_get_maxcpus(vlapic->vm);
 	if (mode == APIC_DELMODE_INIT) {
 		if ((icrval & APIC_LEVEL_MASK) == APIC_LEVEL_DEASSERT)
 			return (0);
 
-		if (vlapic->vcpuid == 0 && dest != 0 && dest < VM_MAXCPU) {
+		if (vlapic->vcpuid == 0 && dest != 0 && dest < maxcpus) {
 			vlapic2 = vm_lapic(vlapic->vm, dest);
 
 			/* move from INIT to waiting-for-SIPI state */
@@ -1043,7 +1044,7 @@ vlapic_icrlo_write_handler(struct vlapic *vlapic, bool *retu)
 	}
 
 	if (mode == APIC_DELMODE_STARTUP) {
-		if (vlapic->vcpuid == 0 && dest != 0 && dest < VM_MAXCPU) {
+		if (vlapic->vcpuid == 0 && dest != 0 && dest < maxcpus) {
 			vlapic2 = vm_lapic(vlapic->vm, dest);
 
 			/*
@@ -1447,7 +1448,8 @@ void
 vlapic_init(struct vlapic *vlapic)
 {
 	KASSERT(vlapic->vm != NULL, ("vlapic_init: vm is not initialized"));
-	KASSERT(vlapic->vcpuid >= 0 && vlapic->vcpuid < VM_MAXCPU,
+	KASSERT(vlapic->vcpuid >= 0 &&
+	    vlapic->vcpuid < vm_get_maxcpus(vlapic->vm),
 	    ("vlapic_init: vcpuid is not initialized"));
 	KASSERT(vlapic->apic_page != NULL, ("vlapic_init: apic_page is not "
 	    "initialized"));

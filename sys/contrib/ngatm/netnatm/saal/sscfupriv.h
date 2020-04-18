@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -32,7 +31,7 @@
  * Private SSCF-UNI definitions.
  */
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <netgraph/atm/sscfu/ng_sscfu_cust.h>
 #endif
 #else

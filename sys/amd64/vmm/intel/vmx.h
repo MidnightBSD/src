@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/vmx.h 330713 2018-03-10 00:44:33Z tychon $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/vmx.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VMX_H_
@@ -51,6 +50,11 @@ struct vmxctx {
 	register_t	guest_r14;
 	register_t	guest_r15;
 	register_t	guest_cr2;
+	register_t	guest_dr0;
+	register_t	guest_dr1;
+	register_t	guest_dr2;
+	register_t	guest_dr3;
+	register_t	guest_dr6;
 
 	register_t	host_r15;		/* Host state */
 	register_t	host_r14;
@@ -59,9 +63,14 @@ struct vmxctx {
 	register_t	host_rbp;
 	register_t	host_rsp;
 	register_t	host_rbx;
-	/*
-	 * XXX todo debug registers and fpu state
-	 */
+	register_t	host_dr0;
+	register_t	host_dr1;
+	register_t	host_dr2;
+	register_t	host_dr3;
+	register_t	host_dr6;
+	register_t	host_dr7;
+	uint64_t	host_debugctl;
+	int		host_tf;
 
 	int		inst_fail_status;
 

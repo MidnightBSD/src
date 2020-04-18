@@ -3,7 +3,7 @@
 #	from: @(#)Makefile.i386	7.1 5/10/91
 # $FreeBSD: stable/11/sys/conf/Makefile.arm 344379 2019-02-20 19:32:02Z kevans $
 #
-# Makefile for FreeBSD
+# Makefile for MidnightBSD
 #
 # This makefile is constructed from a machine description:
 #	config machineid

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************license start***************
  * Copyright (c) 2003-2010  Cavium Inc. (support@cavium.com). All rights
  * reserved.
@@ -53,7 +52,7 @@
 #include <asm/octeon/cvmx-l2c.h>
 #include <asm/octeon/cvmx-spinlock.h>
 #else
-#if !defined(__MidnightBSD__) || !defined(_KERNEL)
+#if !defined(__FreeBSD__) || !defined(_KERNEL)
 #include "cvmx-config.h"
 #endif
 #include "cvmx.h"
@@ -340,7 +339,7 @@ uint64_t cvmx_l2c_read_perf(uint32_t counter)
 static void fault_in(uint64_t addr, int len)
 {
     volatile char *ptr;
-    volatile char dummy;
+    volatile char dummy = 0;
     /*
      * Adjust addr and length so we get all cache lines even for
      * small ranges spanning two cache lines.

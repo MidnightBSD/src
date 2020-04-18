@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -42,7 +41,7 @@
  * Define how a buffer looks like.
  */
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define SSCFU_MBUF_T mbuf
 #endif
 #else

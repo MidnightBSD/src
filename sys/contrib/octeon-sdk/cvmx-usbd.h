@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __CVMX_USBD_H__
 #define __CVMX_USBD_H__
 /***********************license start***************

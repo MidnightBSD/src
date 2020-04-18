@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/vmm_host.c 267427 2014-06-12 19:58:12Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/vmm_host.c 333167 2018-05-02 08:24:59Z kib $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/vmm_host.c 267427 2014-06-12 19:58:12Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/vmm_host.c 333167 2018-05-02 08:24:59Z kib $");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>
@@ -60,7 +59,16 @@ vmm_host_state_init(void)
 	 */
 	vmm_host_cr0 = rcr0() | CR0_TS;
 
-	vmm_host_cr4 = rcr4();
+	/*
+	 * On non-PCID or PCID but without INVPCID support machines,
+	 * we flush kernel i.e. global TLB entries, by temporary
+	 * clearing the CR4.PGE bit, see invltlb_glob().  If
+	 * preemption occurs at the wrong time, cached vmm_host_cr4
+	 * might store the value with CR4.PGE cleared.  Since FreeBSD
+	 * requires support for PG_G on amd64, just set it
+	 * unconditionally.
+	 */
+	vmm_host_cr4 = rcr4() | CR4_PGE;
 
 	/*
 	 * Only permit a guest to use XSAVE if the host is using

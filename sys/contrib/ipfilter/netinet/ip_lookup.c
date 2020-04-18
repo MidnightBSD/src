@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_lookup.c 255332 2013-09-06 23:11:19Z cy $ */
+/* $FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_lookup.c 344833 2019-03-06 02:37:25Z cy $ */
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
@@ -11,15 +10,12 @@
 # define        KERNEL	1
 # define        _KERNEL	1
 #endif
-#if defined(__osf__)
-# define _PROTO_NET_H_
-#endif
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 220000 && defined(_KERNEL)
+#if defined(__FreeBSD_version) && defined(_KERNEL)
 # include <sys/fcntl.h>
 # include <sys/filio.h>
 #else
@@ -30,21 +26,18 @@
 # include <string.h>
 # include <stdlib.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
 #include <sys/socket.h>
 #include <net/if.h>
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 # include <sys/cdefs.h>
 # include <sys/proc.h>
 #endif
 #if defined(_KERNEL)
 # include <sys/systm.h>
-# if !defined(__SVR4) && !defined(__svr4__)
+# if !defined(__SVR4)
 #  include <sys/mbuf.h>
 # endif
 #else

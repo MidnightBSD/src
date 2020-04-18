@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -36,7 +35,7 @@
 
 #include <sys/types.h>
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <sys/systm.h>
 #endif
 #include <sys/stdint.h>

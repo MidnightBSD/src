@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -33,7 +32,7 @@
  *
  */
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <netgraph/atm/sscop/ng_sscop_cust.h>
 #endif
 #else	/* !_KERNEL */

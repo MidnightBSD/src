@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/io/vlapic_priv.h 267447 2014-06-13 19:10:40Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/io/vlapic_priv.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _VLAPIC_PRIV_H_

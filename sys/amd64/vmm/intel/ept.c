@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/intel/ept.c 276349 2014-12-28 21:27:13Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/intel/ept.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/ept.c 276349 2014-12-28 21:27:13Z neel $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/intel/ept.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -44,7 +43,6 @@ __FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/intel/ept.c 276349 2014-12-28 21:27:
 #include <machine/vmm.h>
 
 #include "vmx_cpufunc.h"
-#include "vmm_ipi.h"
 #include "ept.h"
 
 #define	EPT_SUPPORTS_EXEC_ONLY(cap)	((cap) & (1UL << 0))

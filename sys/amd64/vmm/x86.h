@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/x86.h 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/x86.h 349958 2019-07-12 22:31:12Z jhb $
  */
 
 #ifndef _X86_H_
@@ -48,6 +47,8 @@
 #define CPUID_8000_0006	(0x80000006)
 #define CPUID_8000_0007	(0x80000007)
 #define CPUID_8000_0008	(0x80000008)
+#define CPUID_8000_001D	(0x8000001D)
+#define CPUID_8000_001E	(0x8000001E)
 
 /*
  * CPUID instruction Fn0000_0001:

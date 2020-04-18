@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*******************************************************************************
  *
  * Module Name: nsxfobj - Public interfaces to the ACPI subsystem

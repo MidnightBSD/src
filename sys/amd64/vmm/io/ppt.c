@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/io/ppt.c 325900 2017-11-16 18:22:03Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/vmm/io/ppt.c 351753 2019-09-03 16:23:46Z emaste $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sys/amd64/vmm/io/ppt.c 325900 2017-11-16 18:22:03Z jhb $");
+__FBSDID("$FreeBSD: stable/11/sys/amd64/vmm/io/ppt.c 351753 2019-09-03 16:23:46Z emaste $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,7 +100,9 @@ struct pptdev {
 		int num_msgs;
 		int startrid;
 		int msix_table_rid;
+		int msix_pba_rid;
 		struct resource *msix_table_res;
+		struct resource *msix_pba_res;
 		struct resource **res;
 		void **cookie;
 		struct pptintr_arg *arg;
@@ -291,6 +292,12 @@ ppt_teardown_msix(struct pptdev *ppt)
 	for (i = 0; i < ppt->msix.num_msgs; i++) 
 		ppt_teardown_msix_intr(ppt, i);
 
+	free(ppt->msix.res, M_PPTMSIX);
+	free(ppt->msix.cookie, M_PPTMSIX);
+	free(ppt->msix.arg, M_PPTMSIX);
+
+	pci_release_msi(ppt->dev);
+
 	if (ppt->msix.msix_table_res) {
 		bus_release_resource(ppt->dev, SYS_RES_MEMORY, 
 				     ppt->msix.msix_table_rid,
@@ -298,12 +305,13 @@ ppt_teardown_msix(struct pptdev *ppt)
 		ppt->msix.msix_table_res = NULL;
 		ppt->msix.msix_table_rid = 0;
 	}
-
-	free(ppt->msix.res, M_PPTMSIX);
-	free(ppt->msix.cookie, M_PPTMSIX);
-	free(ppt->msix.arg, M_PPTMSIX);
-
-	pci_release_msi(ppt->dev);
+	if (ppt->msix.msix_pba_res) {
+		bus_release_resource(ppt->dev, SYS_RES_MEMORY, 
+				     ppt->msix.msix_pba_rid,
+				     ppt->msix.msix_pba_res);
+		ppt->msix.msix_pba_res = NULL;
+		ppt->msix.msix_pba_rid = 0;
+	}
 
 	ppt->msix.num_msgs = 0;
 }
@@ -329,7 +337,7 @@ ppt_assigned_devices(struct vm *vm)
 	return (num);
 }
 
-boolean_t
+bool
 ppt_is_mmio(struct vm *vm, vm_paddr_t gpa)
 {
 	int i;
@@ -345,11 +353,22 @@ ppt_is_mmio(struct vm *vm, vm_paddr_t gpa)
 			if (seg->len == 0)
 				continue;
 			if (gpa >= seg->gpa && gpa < seg->gpa + seg->len)
-				return (TRUE);
+				return (true);
 		}
 	}
 
-	return (FALSE);
+	return (false);
+}
+
+static void
+ppt_pci_reset(device_t dev)
+{
+
+	if (pcie_flr(dev,
+	     max(pcie_get_max_completion_timeout(dev) / 1000, 10), true))
+		return;
+
+	pci_power_reset(dev);
 }
 
 int
@@ -367,9 +386,7 @@ ppt_assign_device(struct vm *vm, int bus, int slot, int func)
 			return (EBUSY);
 
 		pci_save_state(ppt->dev);
-		pcie_flr(ppt->dev,
-		    max(pcie_get_max_completion_timeout(ppt->dev) / 1000, 10),
-		    true);
+		ppt_pci_reset(ppt->dev);
 		pci_restore_state(ppt->dev);
 		ppt->vm = vm;
 		iommu_add_device(vm_iommu_domain(vm), pci_get_rid(ppt->dev));
@@ -392,9 +409,7 @@ ppt_unassign_device(struct vm *vm, int bus, int slot, int func)
 			return (EBUSY);
 
 		pci_save_state(ppt->dev);
-		pcie_flr(ppt->dev,
-		    max(pcie_get_max_completion_timeout(ppt->dev) / 1000, 10),
-		    true);
+		ppt_pci_reset(ppt->dev);
 		pci_restore_state(ppt->dev);
 		ppt_unmap_mmio(vm, ppt);
 		ppt_teardown_msi(ppt);
@@ -626,6 +641,19 @@ ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
 		}
 		ppt->msix.msix_table_rid = rid;
 
+		if (dinfo->cfg.msix.msix_table_bar !=
+		    dinfo->cfg.msix.msix_pba_bar) {
+			rid = dinfo->cfg.msix.msix_pba_bar;
+			ppt->msix.msix_pba_res = bus_alloc_resource_any(
+			    ppt->dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);
+
+			if (ppt->msix.msix_pba_res == NULL) {
+				ppt_teardown_msix(ppt);
+				return (ENOSPC);
+			}
+			ppt->msix.msix_pba_rid = rid;
+		}
+
 		alloced = numvec;
 		error = pci_alloc_msix(ppt->dev, &alloced);
 		if (error || alloced != numvec) {
@@ -657,7 +685,6 @@ ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
 				       &ppt->msix.cookie[idx]);
 	
 		if (error != 0) {
-			bus_teardown_intr(ppt->dev, ppt->msix.res[idx], ppt->msix.cookie[idx]);
 			bus_release_resource(ppt->dev, SYS_RES_IRQ, rid, ppt->msix.res[idx]);
 			ppt->msix.cookie[idx] = NULL;
 			ppt->msix.res[idx] = NULL;

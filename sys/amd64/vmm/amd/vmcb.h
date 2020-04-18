@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/amd/vmcb.h 328002 2018-01-15 12:17:26Z avg $
+ * $FreeBSD: stable/11/sys/amd64/vmm/amd/vmcb.h 336190 2018-07-11 07:19:42Z araujo $
  */
 
 #ifndef _VMCB_H_
@@ -314,7 +315,7 @@ struct vmcb_state {
 	uint64_t br_to;
 	uint64_t int_from;
 	uint64_t int_to;
-	uint8_t	 pad7[0x968];		/* Reserved upto end of VMCB */
+	uint8_t	 pad7[0x968];		/* Reserved up to end of VMCB */
 } __attribute__ ((__packed__));
 CTASSERT(sizeof(struct vmcb_state) == 0xC00);
 

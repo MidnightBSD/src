@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sys/contrib/ipfilter/netinet/ip_rules.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/sys/contrib/ipfilter/netinet/ip_rules.c 348822 2019-06-08 22:29:51Z cy $	*/
 
 /*
 * Copyright (C) 2012 by Darren Reed.
@@ -13,26 +12,31 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 40000)
+#if defined(__FreeBSD_version)
 # if defined(_KERNEL)
 #  include <sys/libkern.h>
 # else
 #  include <sys/unistd.h>
 # endif
-#endif
-#if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 399000000)
 #else
-# if !defined(__MidnightBSD__) && !defined(__OpenBSD__) && !defined(__sgi)
-#  include <sys/systm.h>
-# endif
+# include <sys/systm.h>
 #endif
 #include <sys/errno.h>
 #include <sys/param.h>
-#if !defined(__SVR4) && !defined(__svr4__) && !defined(__hpux)
+#if !defined(__SVR4)
 # include <sys/mbuf.h>
 #endif
-#if defined(__MidnightBSD__) && (__FreeBSD_version > 220000)
+#if defined(__FreeBSD__)
 # include <sys/sockio.h>
+#if defined(_KERNEL)
+#include <net/vnet.h>
+#else
+#define CURVNET_SET(arg)
+#define CURVNET_RESTORE()
+#define	VNET_DEFINE(_t, _v)	_t _v
+#define	VNET_DECLARE(_t, _v)	extern _t _v
+#define	VNET(arg)	arg
+#endif
 #else
 # include <sys/ioctl.h>
 #endif /* FreeBSD */
@@ -52,7 +56,8 @@
 
 #ifdef IPFILTER_COMPILED
 
-extern ipf_main_softc_t ipfmain;
+VNET_DECLARE(ipf_main_softc_t, ipfmain);
+#define	V_ipfmain		VNET(ipfmain)
 
 
 static u_long in_rule__0[] = {
@@ -130,8 +135,8 @@ int ipfrule_add_out_()
 	fp->fr_dsize = sizeof(ipf_rules_out_[0]);
 	fp->fr_family = AF_INET;
 	fp->fr_func = (ipfunc_t)ipfrule_match_out_;
-	err = frrequest(&ipfmain, IPL_LOGIPF, SIOCADDFR, (caddr_t)fp,
-			ipfmain.ipf_active, 0);
+	err = frrequest(&V_ipfmain, IPL_LOGIPF, SIOCADDFR, (caddr_t)fp,
+			V_ipfmain.ipf_active, 0);
 	return err;
 }
 
@@ -157,9 +162,9 @@ int ipfrule_remove_out_()
 		}
 	}
 	if (err == 0)
-		err = frrequest(&ipfmain, IPL_LOGIPF, SIOCDELFR,
+		err = frrequest(&V_ipfmain, IPL_LOGIPF, SIOCDELFR,
 				(caddr_t)&ipfrule_out_,
-				ipfmain.ipf_active, 0);
+				V_ipfmain.ipf_active, 0);
 	if (err)
 		return err;
 
@@ -199,8 +204,8 @@ int ipfrule_add_in_()
 	fp->fr_dsize = sizeof(ipf_rules_in_[0]);
 	fp->fr_family = AF_INET;
 	fp->fr_func = (ipfunc_t)ipfrule_match_in_;
-	err = frrequest(&ipfmain, IPL_LOGIPF, SIOCADDFR, (caddr_t)fp,
-			ipfmain.ipf_active, 0);
+	err = frrequest(&V_ipfmain, IPL_LOGIPF, SIOCADDFR, (caddr_t)fp,
+			V_ipfmain.ipf_active, 0);
 	return err;
 }
 
@@ -226,9 +231,9 @@ int ipfrule_remove_in_()
 		}
 	}
 	if (err == 0)
-		err = frrequest(&ipfmain, IPL_LOGIPF, SIOCDELFR,
+		err = frrequest(&V_ipfmain, IPL_LOGIPF, SIOCDELFR,
 				(caddr_t)&ipfrule_in_,
-				ipfmain.ipf_active, 0);
+				V_ipfmain.ipf_active, 0);
 	if (err)
 		return err;
 

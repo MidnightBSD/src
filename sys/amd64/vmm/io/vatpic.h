@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sys/amd64/vmm/io/vatpic.h 276429 2014-12-30 22:22:46Z neel $
+ * $FreeBSD: stable/11/sys/amd64/vmm/io/vatpic.h 273706 2014-10-26 19:03:06Z neel $
  */
 
 #ifndef _VATPIC_H_

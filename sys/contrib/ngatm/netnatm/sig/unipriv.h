@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -35,7 +34,7 @@
 #define unipriv_h
 
 #ifdef _KERNEL
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #include <netgraph/atm/uni/ng_uni_cust.h>
 #endif
 #else

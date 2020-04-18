@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sys/amd64/include/resource.h 280970 2015-04-01 21:48:54Z jhb $ */
+/* $FreeBSD: stable/11/sys/amd64/include/resource.h 261790 2014-02-12 04:30:37Z jhb $ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *

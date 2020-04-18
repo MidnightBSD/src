@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acrestyp.h - Defines, types, and structures for resource descriptors

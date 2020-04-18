@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name: acinterp.h - Interpreter subcomponent prototypes and defines
@@ -215,7 +214,7 @@ ACPI_STATUS
 AcpiExConvertToInteger (
     ACPI_OPERAND_OBJECT     *ObjDesc,
     ACPI_OPERAND_OBJECT     **ResultDesc,
-    UINT32                  Flags);
+    UINT32                  ImplicitConversion);
 
 ACPI_STATUS
 AcpiExConvertToBuffer (
@@ -683,9 +682,6 @@ AcpiExStoreObjectToNode (
     ACPI_NAMESPACE_NODE     *Node,
     ACPI_WALK_STATE         *WalkState,
     UINT8                   ImplicitConversion);
-
-#define ACPI_IMPLICIT_CONVERSION        TRUE
-#define ACPI_NO_IMPLICIT_CONVERSION     FALSE
 
 
 /*

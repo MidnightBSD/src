@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * IBM PC display definitions
  *
- * $FreeBSD: stable/10/sys/amd64/include/pc/display.h 139730 2005-01-05 20:11:13Z imp $
+ * $FreeBSD: stable/11/sys/amd64/include/pc/display.h 139730 2005-01-05 20:11:13Z imp $
  */
 
 /* Color attributes for foreground text */

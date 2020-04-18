@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: aslmaputils - Utilities for the resource descriptor/device maps
@@ -213,7 +212,7 @@ MpGetHidFromParseTree (
 
             /* Convert EISAID to a string */
 
-            HidString = UtStringCacheCalloc (ACPI_EISAID_STRING_SIZE);
+            HidString = UtLocalCacheCalloc (ACPI_EISAID_STRING_SIZE);
             AcpiExEisaIdToString (HidString, Arg->Asl.Value.Integer);
             return (HidString);
 
@@ -278,7 +277,7 @@ MpGetHidValue (
 
         /* Convert EISAID to a string */
 
-        HidString = UtStringCacheCalloc (ACPI_EISAID_STRING_SIZE);
+        HidString = UtLocalCacheCalloc (ACPI_EISAID_STRING_SIZE);
         AcpiExEisaIdToString (HidString, HidNode->Object->Integer.Value);
         return (HidString);
 

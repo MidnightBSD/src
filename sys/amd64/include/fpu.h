@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)npx.h	5.3 (Berkeley) 1/18/91
- * $FreeBSD: stable/10/sys/amd64/include/fpu.h 271999 2014-09-22 20:34:36Z jhb $
+ * $FreeBSD: stable/11/sys/amd64/include/fpu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -87,6 +86,7 @@ void	fpu_save_area_reset(struct savefpu *fsa);
 #define	FPU_KERN_NORMAL	0x0000
 #define	FPU_KERN_NOWAIT	0x0001
 #define	FPU_KERN_KTHR	0x0002
+#define	FPU_KERN_NOCTX	0x0004
 
 #endif
 

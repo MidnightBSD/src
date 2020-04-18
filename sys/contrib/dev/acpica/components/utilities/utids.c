@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Module Name: utids - support for device IDs - HID, UID, CID, SUB, CLS
