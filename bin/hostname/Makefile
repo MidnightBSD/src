@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/hostname/Makefile,v 1.8 2001/12/04 01:57:44 obrien Exp $
-# $MidnightBSD$ 
+# $FreeBSD: stable/11/bin/hostname/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=	hostname
 
 .include <bsd.prog.mk>

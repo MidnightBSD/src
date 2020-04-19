@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * This file is in the public domain
  *
- * $FreeBSD: stable/10/usr.sbin/config/configvers.h 269825 2014-08-11 18:42:20Z imp $
+ * $FreeBSD: stable/11/usr.sbin/config/configvers.h 337333 2018-08-04 21:57:17Z kevans $
  */
 
 /*
@@ -48,7 +47,10 @@
  *     %VERSREQ field in the Makefile.$ARCH of all the affected makefiles
  *     (typically all of them).
  *
- * $FreeBSD: stable/10/usr.sbin/config/configvers.h 269825 2014-08-11 18:42:20Z imp $
+ * $FreeBSD: stable/11/usr.sbin/config/configvers.h 337333 2018-08-04 21:57:17Z kevans $
  */
-#define	CONFIGVERS	600013
+#define	CONFIGVERS	600016
 #define	MAJOR_VERS(x)	((x) / 100000)
+
+/* Last config(8) version to require envmode/hintmode */
+#define	CONFIGVERS_ENVMODE_REQ	600015

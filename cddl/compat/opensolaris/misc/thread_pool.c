@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/cddl/compat/opensolaris/misc/thread_pool.c 277554 2015-01-23 00:54:56Z delphij $");
+__FBSDID("$FreeBSD: stable/11/cddl/compat/opensolaris/misc/thread_pool.c 275595 2014-12-08 06:10:47Z delphij $");
 
 #pragma ident	"%Z%%M%	%I%	%E% SMI"
 

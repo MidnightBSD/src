@@ -30,7 +30,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)nodetypes	8.2 (Berkeley) 5/4/95
-# $FreeBSD: stable/10/bin/sh/nodetypes 262951 2014-03-09 17:04:31Z jmmv $
+# $FreeBSD: stable/11/bin/sh/nodetypes 278820 2015-02-15 21:47:43Z jilles $
 
 # This file describes the nodes used in parse trees.  Unindented lines
 # contain a node type followed by a structure tag.  Subsequent indented
@@ -138,7 +138,7 @@ NXHERE nhere			# fd<<!
 	fd	  int			# file descriptor being redirected
 	next	  nodeptr		# next redirection in list
 	doc	  nodeptr		# input to command (NARG node)
-	expdoc    temp	char *expdoc	# actual document (for NXHERE)
+	expdoc    temp	const char *expdoc	# actual document (for NXHERE)
 
 NNOT nnot			# ! command  (actually pipeline)
 	type	int

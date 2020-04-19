@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)tunefs.c	8.2 (Berkeley) 4/19/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sbin/tunefs/tunefs.c 344864 2019-03-07 00:04:13Z mckusick $");
 
 /*
  * tunefs: change layout parameters to an existing file system.
@@ -184,10 +184,12 @@ main(int argc, char *argv[])
 			name = "volume label";
 			Lvalue = optarg;
 			i = -1;
-			while (isalnum(Lvalue[++i]));
+			while (isalnum(Lvalue[++i]) || Lvalue[i] == '_' ||
+			    Lvalue[i] == '-')
+				;
 			if (Lvalue[i] != '\0') {
-				errx(10,
-				"bad %s. Valid characters are alphanumerics.",
+				errx(10, "bad %s. Valid characters are "
+				    "alphanumerics, dashes, and underscores.",
 				    name);
 			}
 			if (strlen(Lvalue) >= MAXVOLLEN) {
@@ -316,7 +318,7 @@ main(int argc, char *argv[])
 	}
 	if (Lflag) {
 		name = "volume label";
-		strlcpy(sblock.fs_volname, Lvalue, MAXVOLLEN);
+		strncpy(sblock.fs_volname, Lvalue, MAXVOLLEN);
 	}
 	if (aflag) {
 		name = "POSIX.1e ACLs";
@@ -974,9 +976,9 @@ journal_alloc(int64_t size)
 		if (size / sblock.fs_fsize > sblock.fs_fpg)
 			size = sblock.fs_fpg * sblock.fs_fsize;
 		size = MAX(SUJ_MIN, size);
-		/* fsck does not support fragments in journal files. */
-		size = roundup(size, sblock.fs_bsize);
 	}
+	/* fsck does not support fragments in journal files. */
+	size = roundup(size, sblock.fs_bsize);
 	resid = blocks = size / sblock.fs_bsize;
 	if (sblock.fs_cstotal.cs_nbfree < blocks) {
 		warn("Insufficient free space for %jd byte journal", size);

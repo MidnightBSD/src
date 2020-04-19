@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/plockstat/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/plockstat/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/plockstat
 
@@ -19,9 +18,6 @@ CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 		-I${SRCTOP}/cddl/lib/libdtrace \
 		-I${SRCTOP}/sys
 
-DPADD=		${LIBPTHREAD} ${LIBDTRACE} ${LIBY} ${LIBL} ${LIBPROC} ${LIBCTF}\
-		${LIBELF} ${LIBZ} ${LIBRT} ${LIBRTLD_DB} ${LIBUTIL}
-LDADD=		-lpthread -ldtrace -ly -ll -lproc -lctf -lelf -lz -lrt \
-		-lrtld_db -lutil
+LIBADD=	dtrace proc
 
 .include <bsd.prog.mk>

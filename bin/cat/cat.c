@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -45,21 +44,21 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/cat/cat.c 306200 2016-09-22 16:46:59Z ache $");
+__FBSDID("$FreeBSD: stable/11/bin/cat/cat.c 337733 2018-08-14 01:45:22Z kevans $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 #ifndef NO_UDOM_SUPPORT
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <errno.h>
+#include <netdb.h>
 #endif
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <locale.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -170,6 +169,7 @@ scanfiles(char *argv[], int cooked)
 	FILE *fp;
 
 	i = 0;
+	fd = -1;
 	while ((path = argv[i]) != NULL || i == 0) {
 		if (path == NULL || strcmp(path, "-") == 0) {
 			filename = "stdin";
@@ -328,30 +328,40 @@ raw_cat(int rfd)
 static int
 udom_open(const char *path, int flags)
 {
-	struct sockaddr_un sou;
-	int fd;
-	unsigned int len;
-
-	bzero(&sou, sizeof(sou));
+	struct addrinfo hints, *res, *res0;
+	char rpath[PATH_MAX];
+	int fd = -1;
+	int error;
 
 	/*
-	 * Construct the unix domain socket address and attempt to connect
+	 * Construct the unix domain socket address and attempt to connect.
 	 */
-	fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd >= 0) {
-		sou.sun_family = AF_UNIX;
-		if ((len = strlcpy(sou.sun_path, path,
-		    sizeof(sou.sun_path))) >= sizeof(sou.sun_path)) {
-			errno = ENAMETOOLONG;
+	bzero(&hints, sizeof(hints));
+	hints.ai_family = AF_LOCAL;
+	if (realpath(path, rpath) == NULL)
+		return (-1);
+	error = getaddrinfo(rpath, NULL, &hints, &res0);
+	if (error) {
+		warn("%s", gai_strerror(error));
+		errno = EINVAL;
+		return (-1);
+	}
+	for (res = res0; res != NULL; res = res->ai_next) {
+		fd = socket(res->ai_family, res->ai_socktype,
+		    res->ai_protocol);
+		if (fd < 0) {
+			freeaddrinfo(res0);
 			return (-1);
 		}
-		len = offsetof(struct sockaddr_un, sun_path[len+1]);
-
-		if (connect(fd, (void *)&sou, len) < 0) {
+		error = connect(fd, res->ai_addr, res->ai_addrlen);
+		if (error == 0)
+			break;
+		else {
 			close(fd);
 			fd = -1;
 		}
 	}
+	freeaddrinfo(res0);
 
 	/*
 	 * handle the open flags by shutting down appropriate directions

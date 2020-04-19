@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 3/17/94
-# $FreeBSD: stable/10/sbin/bsdlabel/Makefile 219449 2011-03-10 08:24:33Z uqs $
+# $FreeBSD: stable/11/sbin/bsdlabel/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.PATH: ${.CURDIR}/../../sys/geom
+.PATH: ${SRCTOP}/sys/geom
 
+PACKAGE=runtime
 PROG=	bsdlabel
 SRCS=	bsdlabel.c geom_bsd_enc.c
 MAN+=	bsdlabel.8
@@ -13,7 +13,6 @@ LINKS=	${BINDIR}/bsdlabel ${BINDIR}/disklabel
 MLINKS=	bsdlabel.8 disklabel.8
 .endif
 
-DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
-LDADD=	-lgeom -lbsdxml -lsbuf
+LIBADD=	geom
 
 .include <bsd.prog.mk>

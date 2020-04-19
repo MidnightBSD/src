@@ -1,7 +1,6 @@
-.\" $MidnightBSD$
 .\"	$NetBSD: pkill.1,v 1.8 2003/02/14 15:59:18 grant Exp $
 .\"
-.\" $FreeBSD: stable/10/bin/pkill/pkill.1 307403 2016-10-16 22:02:50Z sevan $
+.\" $FreeBSD: stable/11/bin/pkill/pkill.1 330319 2018-03-03 10:29:29Z eadler $
 .\"
 .\" Copyright (c) 2002 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -30,7 +29,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd August 21, 2015
+.Dd June 5, 2017
 .Dt PKILL 1
 .Os
 .Sh NAME
@@ -177,6 +176,8 @@ Select only the newest (most recently started) of the matching processes.
 .It Fl o
 Select only the oldest (least recently started) of the matching processes.
 .It Fl q
+For
+.Nm pgrep ,
 Do not write anything to standard output.
 .It Fl s Ar sid
 Restrict matches to processes with a session ID in the comma-separated

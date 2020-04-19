@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/sbin/zpool/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/sbin/zpool/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zpool
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/stat/common
@@ -24,12 +23,9 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/cmd/stat/common
 
-DPADD=	${LIBAVL} ${LIBGEOM} ${LIBNVPAIR} \
-	${LIBUMEM} ${LIBUTIL} ${LIBUUTIL} ${LIBZFS_CORE} ${LIBZFS}
-LDADD=	-lavl -lgeom -lnvpair -lumem -lutil -luutil -lzfs_core -lzfs
+LIBADD=	geom nvpair uutil zfs
 
 .include <bsd.prog.mk>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)pwd.c	8.3 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/pwd/pwd.c,v 1.25 2005/02/09 17:37:38 ru Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/pwd/pwd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

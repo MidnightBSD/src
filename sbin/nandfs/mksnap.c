@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/nandfs/mksnap.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD: stable/11/sbin/nandfs/mksnap.c 330449 2018-03-05 07:26:05Z eadler $");
 #include <sys/types.h>
 
 #include <stdio.h>

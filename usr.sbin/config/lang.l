@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 1980, 1993
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)lang.l	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.sbin/config/lang.l 300449 2016-05-23 04:47:24Z truckman $
+ * $FreeBSD: stable/11/usr.sbin/config/lang.l 338227 2018-08-23 02:19:00Z kevans $
  */
 
 #include <assert.h>
@@ -69,6 +68,7 @@ struct kt {
 	{ "nodevice",	NODEVICE },
 	{ "nodevices",	NODEVICE },
 	{ "env",	ENV },
+	{ "envvar",	ENVVAR },
 	{ "hints",	HINTS },
 	{ "ident",	IDENT },
 	{ "machine",	ARCH }, /* MACHINE is defined in /sys/param.h */
@@ -104,7 +104,13 @@ int yyerror(const char *);
 ID	[A-Za-z_][-A-Za-z_0-9]*
 PATH	[./][-/.%^A-Za-z_0-9]+
 %START TOEOL
+%START ENVC
 %%
+<ENVC>[^#\n]*	{
+			BEGIN 0;
+			yylval.str = strdup(yytext);
+			return ENVLINE;
+		}
 {ID}		{
 			int i;
 
@@ -114,9 +120,12 @@ PATH	[./][-/.%^A-Za-z_0-9]+
 				yylval.str = strdup(yytext);
 				return ID;
 			}
+			/* We'll glom onto the rest of an envvar line */
+			if (i == ENVVAR)
+				BEGIN ENVC;
 			return i;
 		}
-\\\"[^"]+\\\"	{
+\\\"[^"]*\\\"	{
 			BEGIN 0;
 			yytext[yyleng-2] = '"';
 			yytext[yyleng-1] = '\0';

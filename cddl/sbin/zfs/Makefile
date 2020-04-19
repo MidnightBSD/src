@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/sbin/zfs/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/sbin/zfs/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zfs
 
 PROG=	zfs
-MAN=	zfs.8
+MAN=	zfs.8 zfs-program.8
 SRCS=	zfs_main.c zfs_iter.c
 
 WARNS?=	0
@@ -20,11 +19,8 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libumem/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 
-DPADD=	${LIBGEOM} ${LIBJAIL} ${LIBNVPAIR} ${LIBUMEM} \
-	${LIBUTIL} ${LIBUUTIL} ${LIBZFS_CORE} ${LIBZFS}
-LDADD=	-lgeom -ljail -lnvpair -lumem -lutil -luutil -lzfs_core -lzfs
+LIBADD=	jail nvpair uutil zfs_core zfs
 
 .include <bsd.prog.mk>

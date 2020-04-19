@@ -1,6 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/10/sbin/sunlabel/runtest.sh 113897 2003-04-23 08:25:44Z phk $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/sunlabel/runtest.sh 113897 2003-04-23 08:25:44Z phk $
 
 TMP=/tmp/$$.
 set -e

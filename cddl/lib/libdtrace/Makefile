@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libdtrace/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/libdtrace/Makefile 323814 2017-09-20 16:31:06Z gnn $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/common
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libgen/common
@@ -51,10 +50,16 @@ DSRCS=		errno.d			\
 		io.d			\
 		ip.d			\
 		psinfo.d		\
+		siftr.d			\
 		signal.d		\
 		tcp.d			\
+		socket.d		\
 		udp.d			\
 		unistd.d
+
+FILES=		${DSRCS}
+FILESDIR=	/usr/lib/dtrace
+FILESMODE=	${NOBINMODE}
 
 WARNS?=		1
 
@@ -69,15 +74,20 @@ CFLAGS+=	-I${.OBJDIR} -I${.CURDIR} \
 
 #CFLAGS+=	-DYYDEBUG
 
-.if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "aarch64"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/aarch64
+.PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/aarch64
+.PATH:		${SRCTOP}/sys/cddl/dev/dtrace/aarch64
+.elif ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 CFLAGS+=	-I${SRCTOP}/sys/cddl/dev/dtrace/x86
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/intel -DDIS_MEM
 .PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/i386
 .PATH:		${SRCTOP}/sys/cddl/dev/dtrace/${MACHINE_ARCH}
 .PATH:		${SRCTOP}/sys/cddl/dev/dtrace/x86
-.elif ${MACHINE_CPUARCH} == "sparc64"
-CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/sparc
-.PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/sparc
+.elif ${MACHINE_CPUARCH} == "arm"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/arm
+.PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/arm
+.PATH:		${SRCTOP}/sys/cddl/dev/dtrace/arm
 .elif ${MACHINE_CPUARCH} == "mips"
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/mips
 .PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/mips
@@ -86,6 +96,13 @@ CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/mips
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/powerpc
 .PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/powerpc
 .PATH:		${SRCTOP}/sys/cddl/dev/dtrace/powerpc
+.elif ${MACHINE_CPUARCH} == "riscv"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/riscv
+.PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/riscv
+.PATH:		${SRCTOP}/sys/cddl/dev/dtrace/riscv
+.elif ${MACHINE_CPUARCH} == "sparc64"
+CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/sparc
+.PATH:		${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/sparc
 .else
 # temporary hack
 CFLAGS+=	-I${OPENSOLARIS_SYS_DISTDIR}/uts/intel
@@ -100,21 +117,14 @@ LFLAGS+=-l
 
 YFLAGS+=-d
 
+LIBADD=	ctf elf proc pthread rtld_db
+
 CLEANFILES=	dt_errtags.c dt_names.c
 
-dt_errtags.c:
-	sh ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/mkerrtags.sh < ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/dt_errtags.h > dt_errtags.c
-
-dt_names.c:
-	sh ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/mknames.sh < ${OPENSOLARIS_SYS_DISTDIR}/uts/common/sys/dtrace.h > dt_names.c
-
-beforedepend:	dt_errtags.c dt_names.c
-
-beforeinstall:
-.if !defined(LIBRARIES_ONLY) && exists(${DESTDIR}/usr/lib/dtrace)
-.for file in ${DSRCS}
-	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} ${.CURDIR}/${file} ${DESTDIR}/usr/lib/dtrace
-.endfor
-.endif
-
 .include <bsd.lib.mk>
+
+dt_errtags.c: ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/dt_errtags.h
+	sh ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/mkerrtags.sh < ${.ALLSRC} > ${.TARGET}
+
+dt_names.c: ${OPENSOLARIS_SYS_DISTDIR}/uts/common/sys/dtrace.h
+	sh ${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common/mknames.sh < ${.ALLSRC} > ${.TARGET}

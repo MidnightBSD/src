@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -58,7 +57,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fsck.h	8.4 (Berkeley) 5/9/95
- * $FreeBSD: stable/10/sbin/fsck_ffs/fsck.h 307536 2016-10-17 22:34:41Z mckusick $
+ * $FreeBSD: stable/11/sbin/fsck_ffs/fsck.h 347475 2019-05-10 23:46:42Z mckusick $
  */
 
 #ifndef _FSCK_H_
@@ -230,7 +229,9 @@ struct inodesc {
 	ino_t id_parent;	/* for DATA nodes, their parent */
 	ufs_lbn_t id_lbn;	/* logical block number of current block */
 	ufs2_daddr_t id_blkno;	/* current block number being examined */
+	int id_level;		/* level of indirection of this block */
 	int id_numfrags;	/* number of frags contained in block */
+	ufs_lbn_t id_lballoc;	/* pass1: last LBN that is allocated */
 	off_t id_filesize;	/* for DATA nodes, the size of the directory */
 	ufs2_daddr_t id_entryno;/* for DATA nodes, current entry number */
 	int id_loc;		/* for DATA nodes, current location in dir */
@@ -283,12 +284,14 @@ struct inoinfo {
 	u_int	i_numblks;		/* size of block array in bytes */
 	ufs2_daddr_t i_blks[1];		/* actually longer */
 } **inphead, **inpsort;
-extern long numdirs, dirhash, listmax, inplast;
+extern long dirhash, inplast;
+extern unsigned long numdirs, listmax;
 extern long countdirs;		/* number of directories we actually found */
 
 #define MIBSIZE	3		/* size of fsck sysctl MIBs */
 extern int	adjrefcnt[MIBSIZE];	/* MIB command to adjust inode reference cnt */
 extern int	adjblkcnt[MIBSIZE];	/* MIB command to adjust inode block count */
+extern int	setsize[MIBSIZE];	/* MIB command to set inode size */
 extern int	adjndir[MIBSIZE];	/* MIB command to adjust number of directories */
 extern int	adjnbfree[MIBSIZE];	/* MIB command to adjust number of free blocks */
 extern int	adjnifree[MIBSIZE];	/* MIB command to adjust number of free inodes */
@@ -310,6 +313,7 @@ extern ufs2_daddr_t bflag;		/* location of alternate super block */
 extern int	debug;			/* output debugging info */
 extern int	Eflag;			/* delete empty data blocks */
 extern int	Zflag;			/* zero empty data blocks */
+extern int	zflag;			/* zero unused directory space */
 extern int	inoopt;			/* trim out unused inodes */
 extern char	ckclean;		/* only do work if not cleanly unmounted */
 extern int	cvtlevel;		/* convert to newer file system format */
@@ -362,6 +366,7 @@ extern struct	ufs2_dinode ufs2_zino;
 #define	FOUND	0x10
 
 #define	EEXIT	8		/* Standard error exit. */
+#define	ERERUN	16		/* fsck needs to be re-run. */
 #define	ERESTART -1
 
 int flushentry(void);
@@ -443,7 +448,7 @@ union dinode   *ginode(ino_t inumber);
 void		infohandler(int sig);
 void		alarmhandler(int sig);
 void		inocleanup(void);
-void		inodirty(void);
+void		inodirty(union dinode *);
 struct inostat *inoinfo(ino_t inum);
 void		IOstats(char *what);
 int		linkup(ino_t orphan, ino_t parentdir, char *name);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)ar_subs.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/pax/ar_subs.c 284008 2015-06-05 00:39:34Z delphij $");
+__FBSDID("$FreeBSD: stable/11/bin/pax/ar_subs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/time.h>

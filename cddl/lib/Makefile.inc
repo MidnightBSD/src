@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/Makefile.inc 195767 2009-07-19 17:25:24Z kensmith $
+# $FreeBSD: stable/11/cddl/lib/Makefile.inc 284421 2015-06-15 19:28:07Z bapt $
 
 SHLIBDIR?= /lib
 SHLIB_MAJOR?= 2

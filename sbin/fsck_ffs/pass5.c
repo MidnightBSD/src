@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass5.c 250057 2013-04-29 20:14:11Z des $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/pass5.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -83,7 +82,7 @@ pass5(void)
 			}
 		}
 		if (fs->fs_maxcontig > 1) {
-			const char *doit = 0;
+			const char *doit = NULL;
 
 			if (fs->fs_contigsumsize < 1) {
 				doit = "CREAT";

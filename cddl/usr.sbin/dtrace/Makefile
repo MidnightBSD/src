@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/dtrace/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/dtrace/Makefile 321268 2017-07-20 00:53:50Z ngie $
+
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/dtrace
 
@@ -21,9 +22,10 @@ CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 #CFLAGS+=	-DNEED_ERRLOC
 #YFLAGS+=	-d
 
-DPADD=		${LIBPTHREAD} ${LIBDTRACE} ${LIBY} ${LIBL} ${LIBPROC} \
-		${LIBCTF} ${LIBELF} ${LIBZ} ${LIBUTIL} ${LIBRTLD_DB}
-LDADD=		-lpthread -ldtrace -ly -ll -lproc -lctf -lelf -lz -lutil \
-		-lrtld_db
+LIBADD=	dtrace ctf elf proc
+
+.if ${MK_DTRACE_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

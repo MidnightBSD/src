@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.bin/Makefile 289813 2015-10-23 08:35:17Z avg $
+# $FreeBSD: stable/11/cddl/usr.bin/Makefile 288339 2015-09-28 12:38:57Z avg $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR= \
 	ctfconvert \

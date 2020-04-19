@@ -1,0 +1,12 @@
+/*
+ * $FreeBSD: stable/11/stand/pc98/boot0.5/ldscript 168457 2007-04-07 08:37:04Z kato $
+ */
+
+SECTIONS
+{
+	.text : { *(.text) }
+	.data : { *(.data) }
+	. = 0x1243;
+	.putssjis : { *(.putssjis) }
+	.bss : { *(.bss) }
+}

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2012 Stefan Bethke.
  * All rights reserved.
  *
@@ -24,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/etherswitchcfg/etherswitchcfg.c 255730 2013-09-20 15:57:50Z hiren $
+ * $FreeBSD: stable/11/sbin/etherswitchcfg/etherswitchcfg.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/etherswitchcfg/etherswitchcfg.c 255730 2013-09-20 15:57:50Z hiren $");
+__FBSDID("$FreeBSD: stable/11/sbin/etherswitchcfg/etherswitchcfg.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <ctype.h>
 #include <err.h>
@@ -236,6 +237,8 @@ set_port_media(struct cfg *cfg, char *argv[])
 	p.es_ifmr.ifm_count = IFMEDIAREQ_NULISTENTRIES;
 	if (ioctl(cfg->fd, IOETHERSWITCHGETPORT, &p) != 0)
 		err(EX_OSERR, "ioctl(IOETHERSWITCHGETPORT)");
+	if (p.es_ifmr.ifm_count == 0)
+		return;
 	subtype = get_media_subtype(IFM_TYPE(ifm_ulist[0]), argv[1]);
 	p.es_ifr.ifr_media = (p.es_ifmr.ifm_current & IFM_IMASK) |
 	        IFM_TYPE(ifm_ulist[0]) | subtype;
@@ -273,7 +276,8 @@ set_vlangroup_vid(struct cfg *cfg, char *argv[])
 {
 	int v;
 	etherswitch_vlangroup_t vg;
-	
+
+	memset(&vg, 0, sizeof(vg));
 	v = strtol(argv[1], NULL, 0);
 	if (v < 0 || v > IEEE802DOT1Q_VID_MAX)
 		errx(EX_USAGE, "vlan must be between 0 and %d", IEEE802DOT1Q_VID_MAX);
@@ -292,8 +296,9 @@ set_vlangroup_members(struct cfg *cfg, char *argv[])
 	int member, untagged;
 	char *c, *d;
 	int v;
-	
+
 	member = untagged = 0;
+	memset(&vg, 0, sizeof(vg));
 	if (strcmp(argv[1], "none") != 0) {
 		for (c=argv[1]; *c; c=d) {
 			v = strtol(c, &d, 0);

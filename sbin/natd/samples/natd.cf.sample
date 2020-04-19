@@ -1,5 +1,5 @@
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/natd/samples/natd.cf.sample 51242 1999-09-13 18:18:33Z ru $
 #
 #
 # Configuration file for natd.

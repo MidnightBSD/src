@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,12 +21,14 @@
  *
  * Portions Copyright 2006 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/10/cddl/lib/libdtrace/psinfo.d 305748 2016-09-12 17:05:42Z gnn $
+ * $FreeBSD: stable/11/cddl/lib/libdtrace/psinfo.d 333617 2018-05-15 00:00:44Z dteske $
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+
+#pragma D depends_on module kernel
 
 typedef struct psinfo {
 	int	pr_nlwp;	/* number of threads */
@@ -96,4 +97,3 @@ inline psinfo_t *curpsinfo = xlate <psinfo_t *> (curthread->td_proc);
 inline lwpsinfo_t *curlwpsinfo = xlate <lwpsinfo_t *> (curthread);
 #pragma D attributes Stable/Stable/Common curlwpsinfo
 #pragma D binding "1.0" curlwpsinfo
-

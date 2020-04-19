@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/lockstat/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/lockstat/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/lockstat
 
 PROG=		lockstat
-NO_MAN=
 SRCS=		lockstat.c sym.c
 BINDIR?=	/usr/sbin
 
@@ -23,10 +21,6 @@ CFLAGS+=	-DNEED_ERRLOC -g
 
 #YFLAGS+=	-d
 
-DPADD=		${LIBPTHREAD} ${LIBDTRACE} ${LIBY} ${LIBL} ${LIBPROC} \
-		${LIBCTF} ${LIBELF} ${LIBZ} ${LIBRT} ${LIBUTIL} \
-		${LIBRTLD_DB}
-LDADD=		-lpthread -ldtrace -ly -ll -lproc -lctf -lelf -lz -lrt -lutil \
-		-lrtld_db
+LIBADD=	elf dtrace rt
 
 .include <bsd.prog.mk>

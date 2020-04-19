@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/Makefile 289956 2015-10-25 22:34:49Z ngie $
+# $FreeBSD: stable/11/cddl/lib/Makefile 300618 2016-05-24 16:41:37Z br $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	${_drti} \
 	libavl \
@@ -27,14 +26,15 @@ _libzpool=	libzpool
 .endif
 .endif
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || \
-	${MACHINE_CPUARCH} == "mips" || ${MACHINE_CPUARCH} == "powerpc"
+.if ${MACHINE_CPUARCH} != "sparc64"
 _drti=		drti
 _libdtrace=	libdtrace
 .endif
 
 SUBDIR_DEPEND_libdtrace=	libctf
+SUBDIR_DEPEND_libzfs_core=	libnvpair
 SUBDIR_DEPEND_libzfs=	libavl libnvpair libumem libuutil libzfs_core
+SUBDIR_DEPEND_libzpool=	libavl libnvpair libumem
 
 SUBDIR_PARALLEL=
 

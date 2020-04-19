@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)alias.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/sh/alias.c 286813 2015-08-15 19:58:00Z jilles $");
+__FBSDID("$FreeBSD: stable/11/bin/sh/alias.c 295868 2016-02-21 20:58:24Z jilles $");
 
 #include <stdlib.h>
 #include "shell.h"
@@ -145,9 +144,11 @@ rmaliases(void)
 struct alias *
 lookupalias(const char *name, int check)
 {
-	struct alias *ap = *hashalias(name);
+	struct alias *ap;
 
-	for (; ap; ap = ap->next) {
+	if (aliases == 0)
+		return (NULL);
+	for (ap = *hashalias(name); ap; ap = ap->next) {
 		if (equal(name, ap->name)) {
 			if (check && (ap->flag & ALIASINUSE))
 				return (NULL);

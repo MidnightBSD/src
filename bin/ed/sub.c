@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* sub.c: This file contains the substitution routines for the ed
    line editor */
 /*-
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/sub.c 241720 2012-10-19 05:43:38Z ed $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/sub.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include "ed.h"
 

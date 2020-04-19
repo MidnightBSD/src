@@ -46,7 +46,8 @@ static char sccsid[] = "@(#)rcp.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/bin/rcp/rcp.c 297826 2016-04-11 17:24:26Z pfg $");
+
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -446,7 +447,7 @@ rsource(char *name, struct stat *statp)
 		return;
 	}
 	last = strrchr(name, '/');
-	if (last == 0)
+	if (last == NULL)
 		last = name;
 	else
 		last++;

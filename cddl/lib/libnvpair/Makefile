@@ -1,11 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libnvpair/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/libnvpair/Makefile 338080 2018-08-20 00:53:38Z kevans $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/nvpair
 
 LIB=	nvpair
 
+INCS=	libnvpair.h
 SRCS=	libnvpair.c \
 	nvpair_alloc_system.c \
 	nvpair_json.c \

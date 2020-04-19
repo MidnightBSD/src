@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/ggate/ggated/ggated.c 296815 2016-03-13 23:32:59Z ngie $
+ * $FreeBSD: stable/11/sbin/ggate/ggated/ggated.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

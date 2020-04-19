@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/bin/chflags/Makefile 326332 2017-11-28 18:18:39Z asomers $
+# $FreeBSD: stable/11/bin/chflags/Makefile 326299 2017-11-28 00:39:58Z asomers $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PACKAGE=runtime
 PROG=	chflags

@@ -1,8 +1,7 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 5/31/93
-# $FreeBSD: src/bin/Makefile.inc,v 1.22 2004/12/21 09:59:40 ru Exp $
-# $MidnightBSD: src/bin/Makefile.inc,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+# $FreeBSD: stable/11/bin/Makefile.inc 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 BINDIR?=	/bin
 WARNS?=		6

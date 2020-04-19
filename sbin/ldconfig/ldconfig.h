@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 John D. Polstra
  * All rights reserved.
  *
@@ -23,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/sbin/ldconfig/ldconfig.h,v 1.5 2002/03/21 13:14:19 imp Exp $
+ * $FreeBSD: stable/11/sbin/ldconfig/ldconfig.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef LDCONFIG_H

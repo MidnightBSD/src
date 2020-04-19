@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/fsck/preen.c 241807 2012-10-21 12:01:19Z uqs $
+ * $FreeBSD: stable/11/sbin/fsck/preen.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
@@ -107,7 +106,7 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 			warnx("Can't open checklist file: %s\n", _PATH_FSTAB);
 			return (8);
 		}
-		while ((fs = getfsent()) != 0) {
+		while ((fs = getfsent()) != NULL) {
 			name = fs->fs_spec;
 			if (fs->fs_passno > passno && fs->fs_passno < nextpass)
 				nextpass = fs->fs_passno;

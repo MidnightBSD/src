@@ -1,7 +1,4 @@
-/* 
-   $FreeBSD: src/bin/chio/defs.h,v 1.5 2005/01/10 08:39:20 imp Exp $
-   $MidnightBSD$
-*/
+/* $FreeBSD: stable/11/bin/chio/defs.h 139969 2005-01-10 08:39:26Z imp $	*/
 
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>

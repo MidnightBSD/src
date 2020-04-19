@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sbin/ggate/shared/ggate.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _GGATE_H_

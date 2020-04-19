@@ -5,8 +5,7 @@
  *
  * Largely rewritten by J.T. Conklin (jtc@wimsey.com)
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/bin/expr/expr.y 235771 2012-05-22 03:01:54Z kevlo $
+ * $FreeBSD: stable/11/bin/expr/expr.y 277798 2015-01-27 18:04:41Z se $
  */
 
 #include <sys/types.h>
@@ -445,14 +444,26 @@ op_minus(struct val *a, struct val *b)
 	return (r);
 }
 
+/*
+ * We depend on undefined behaviour giving a result (in r).
+ * To test this result, pass it as volatile.  This prevents
+ * optimizing away of the test based on the undefined behaviour.
+ */
 void
-assert_times(intmax_t a, intmax_t b, intmax_t r)
+assert_times(intmax_t a, intmax_t b, volatile intmax_t r)
 {
 	/*
-	 * if first operand is 0, no overflow is possible,
-	 * else result of division test must match second operand
+	 * If the first operand is 0, no overflow is possible, 
+	 * else the result of the division test must match the
+	 * second operand.
+	 *
+	 * Be careful to avoid overflow in the overflow test, as
+	 * in assert_div().  Overflow in division would kill us
+	 * with a SIGFPE before getting the test wrong.  In old
+	 * buggy versions, optimization used to give a null test
+	 * instead of a SIGFPE.
 	 */
-	if (a != 0 && r / a != b)
+	if ((a == -1 && b == INTMAX_MIN) || (a != 0 && r / a != b))
 		errx(ERR_EXIT, "overflow");
 }
 

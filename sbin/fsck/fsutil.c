@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fsutil.c,v 1.15 2006/06/05 16:52:05 christos Exp $	*/
 
 /*
@@ -34,7 +33,7 @@
 #ifndef lint
 __RCSID("$NetBSD: fsutil.c,v 1.15 2006/06/05 16:52:05 christos Exp $");
 #endif /* not lint */
-__FBSDID("$FreeBSD: stable/10/sbin/fsck/fsutil.c 241806 2012-10-21 12:01:11Z uqs $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck/fsutil.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

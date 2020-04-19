@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/mount/mount.c 319261 2017-05-30 22:36:24Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/mount/mount.c 346227 2019-04-15 13:12:54Z kib $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -145,7 +144,7 @@ use_mountprog(const char *vfstype)
 	unsigned int i;
 	const char *fs[] = {
 	"cd9660", "mfs", "msdosfs", "nfs",
-	"nullfs", "oldnfs", "smbfs", "udf", "unionfs",
+	"nullfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
 
@@ -225,6 +224,7 @@ restart_mountd(void)
 	struct pidfh *pfh;
 	pid_t mountdpid;
 
+	mountdpid = 0;
 	pfh = pidfile_open(_PATH_MOUNTDPID, 0600, &mountdpid);
 	if (pfh != NULL) {
 		/* Mountd is not running. */
@@ -235,6 +235,16 @@ restart_mountd(void)
 		/* Cannot open pidfile for some reason. */
 		return;
 	}
+
+	/*
+	 * Refuse to send broadcast or group signals, this has
+	 * happened due to the bugs in pidfile(3).
+	 */
+	if (mountdpid <= 0) {
+		warnx("mountd pid %d, refusing to send SIGHUP", mountdpid);
+		return;
+	}
+
 	/* We have mountd(8) PID in mountdpid varible, let's signal it. */
 	if (kill(mountdpid, SIGHUP) == -1)
 		err(1, "signal mountd");
@@ -398,7 +408,9 @@ main(int argc, char *argv[])
 					have_fstab = 1;
 					mntfromname = mntbuf->f_mntfromname;
 				} else if (argv[0][0] == '/' &&
-				    argv[0][1] == '\0') {
+				    argv[0][1] == '\0' &&
+				    strcmp(fs->fs_vfstype,
+				    mntbuf->f_fstypename) == 0) {
 					fs = getfsfile("/");
 					have_fstab = 1;
 					mntfromname = fs->fs_spec;
@@ -542,7 +554,7 @@ append_arg(struct cpa *sa, char *arg)
 {
 	if (sa->c + 1 == sa->sz) {
 		sa->sz = sa->sz == 0 ? 8 : sa->sz * 2;
-		sa->a = realloc(sa->a, sizeof(sa->a) * sa->sz);
+		sa->a = realloc(sa->a, sizeof(*sa->a) * sa->sz);
 		if (sa->a == NULL)
 			errx(1, "realloc failed");
 	}

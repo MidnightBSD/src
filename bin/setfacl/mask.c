@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/setfacl/mask.c 204819 2010-03-07 07:59:05Z joel $");
+__FBSDID("$FreeBSD: stable/11/bin/setfacl/mask.c 204819 2010-03-07 07:59:05Z joel $");
 
 #include <sys/types.h>
 #include <sys/acl.h>

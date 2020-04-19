@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,12 +30,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)trap.h	8.3 (Berkeley) 6/5/95
- * $FreeBSD: stable/10/bin/sh/trap.h 262951 2014-03-09 17:04:31Z jmmv $
+ * $FreeBSD: stable/11/bin/sh/trap.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 extern volatile sig_atomic_t pendingsig;
 extern volatile sig_atomic_t pendingsig_waitcmd;
-extern int in_dotrap;
 
 void clear_traps(void);
 int have_traps(void);

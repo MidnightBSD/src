@@ -1,7 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/fsck_ffs/Makefile 260178 2014-01-02 01:44:14Z scottl $
+# $FreeBSD: stable/11/sbin/fsck_ffs/Makefile 319185 2017-05-30 04:17:22Z ngie $
 #	@(#)Makefile	8.2 (Berkeley) 4/27/95
 
+PACKAGE=runtime
 PROG=	fsck_ffs
 LINKS+=	${BINDIR}/fsck_ffs ${BINDIR}/fsck_ufs
 LINKS+=	${BINDIR}/fsck_ffs ${BINDIR}/fsck_4.2bsd
@@ -10,11 +10,10 @@ MLINKS=	fsck_ffs.8 fsck_ufs.8 fsck_ffs.8 fsck_4.2bsd.8
 SRCS=	dir.c ea.c fsutil.c inode.c main.c pass1.c pass1b.c pass2.c pass3.c \
 	pass4.c pass5.c setup.c suj.c utilities.c gjournal.c getmntopts.c \
 	globs.c
-DPADD=	${LIBUFS}
-LDADD=	-lufs
+LIBADD=	ufs
 WARNS?=	2
-CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../mount
+CFLAGS+= -I${.CURDIR} -I${.CURDIR:H}/mount
 
-.PATH:	${.CURDIR}/../../sys/ufs/ffs ${.CURDIR}/../mount
+.PATH:	${SRCTOP}/sys/ufs/ffs ${.CURDIR:H}/mount
 
 .include <bsd.prog.mk>

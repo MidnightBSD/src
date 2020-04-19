@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fsck.c,v 1.30 2003/08/07 10:04:15 agc Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck/fsck.c 275179 2014-11-27 08:41:31Z ae $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck/fsck.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -201,7 +200,7 @@ main(int argc, char *argv[])
 		mntpt = NULL;
 		spec = *argv;
 		cp = strrchr(spec, '/');
-		if (cp == 0) {
+		if (cp == NULL) {
 			(void)snprintf(device, sizeof(device), "%s%s",
 				_PATH_DEV, spec);
 			spec = device;
@@ -216,7 +215,7 @@ main(int argc, char *argv[])
 			if (vfstype == NULL)
 				vfstype = getfstype(spec);
 			if (vfstype == NULL)
-				errx(1, "Could not determine filesystem type");
+				vfstype = "ufs";
 			type = vfstype;
 			devcheck(spec);
 		} else {

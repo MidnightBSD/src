@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/cddl/compat/opensolaris/misc/deviceid.c 238112 2012-07-04 17:36:26Z pjd $");
+__FBSDID("$FreeBSD: stable/11/cddl/compat/opensolaris/misc/deviceid.c 238112 2012-07-04 17:36:26Z pjd $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

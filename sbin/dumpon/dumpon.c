@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "From: @(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dumpon/dumpon.c 291480 2015-11-30 09:13:04Z smh $");
+__FBSDID("$FreeBSD: stable/11/sbin/dumpon/dumpon.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -73,7 +72,7 @@ static void
 check_size(int fd, const char *fn)
 {
 	int name[] = { CTL_HW, HW_PHYSMEM };
-	size_t namelen = sizeof(name) / sizeof(*name);
+	size_t namelen = nitems(name);
 	unsigned long physmem;
 	size_t len;
 	off_t mediasize;

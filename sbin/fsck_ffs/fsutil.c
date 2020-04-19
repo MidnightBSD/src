@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/fsutil.c 263629 2014-03-22 11:43:35Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/fsutil.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -185,7 +184,7 @@ bufinit(void)
 
 	pbp = pdirbp = (struct bufarea *)0;
 	bufp = Malloc((unsigned int)sblock.fs_bsize);
-	if (bufp == 0)
+	if (bufp == NULL)
 		errx(EEXIT, "cannot allocate buffer pool");
 	cgblk.b_un.b_buf = bufp;
 	initbarea(&cgblk, BT_CYLGRP);
@@ -366,8 +365,7 @@ flush(int fd, struct bufarea *bp)
 	for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
 		blwrite(fswritefd, (char *)sblock.fs_csp + i,
 		    fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
-		    sblock.fs_cssize - i < sblock.fs_bsize ?
-		    sblock.fs_cssize - i : sblock.fs_bsize);
+		    MIN(sblock.fs_cssize - i, sblock.fs_bsize));
 	}
 }
 
@@ -674,7 +672,7 @@ blzero(int fd, ufs2_daddr_t blk, long size)
 	if (lseek(fd, offset, 0) < 0)
 		rwerror("SEEK BLK", blk);
 	while (size > 0) {
-		len = size > ZEROBUFSIZE ? ZEROBUFSIZE : size;
+		len = MIN(ZEROBUFSIZE, size);
 		if (write(fd, zero, len) != len)
 			rwerror("WRITE BLK", blk);
 		blk += len / dev_bsize;
@@ -719,8 +717,7 @@ check_cgmagic(int cg, struct bufarea *cgbp)
 	cgp->cg_magic = CG_MAGIC;
 	cgp->cg_cgx = cg;
 	cgp->cg_niblk = sblock.fs_ipg;
-	cgp->cg_initediblk = sblock.fs_ipg < 2 * INOPB(&sblock) ?
-	    sblock.fs_ipg : 2 * INOPB(&sblock);
+	cgp->cg_initediblk = MIN(sblock.fs_ipg, 2 * INOPB(&sblock));
 	if (cgbase(&sblock, cg) + sblock.fs_fpg < sblock.fs_size)
 		cgp->cg_ndblk = sblock.fs_fpg;
 	else

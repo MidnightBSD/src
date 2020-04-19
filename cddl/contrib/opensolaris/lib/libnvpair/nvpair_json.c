@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * This file and its contents are supplied under the terms of the
  * Common Development and Distribution License ("CDDL"), version 1.0.
@@ -11,6 +10,7 @@
  */
 /*
  * Copyright (c) 2014, Joyent, Inc.
+ * Copyright (c) 2017 by Delphix. All rights reserved.
  */
 
 #include <stdio.h>
@@ -395,8 +395,10 @@ nvlist_print_json(FILE *fp, nvlist_t *nvl)
 		}
 
 		case DATA_TYPE_UNKNOWN:
+		case DATA_TYPE_DONTCARE:
 			return (-1);
 		}
+
 	}
 
 	FPRINTF(fp, "}");

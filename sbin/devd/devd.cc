@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2010 M. Warner Losh.
  * All rights reserved.
@@ -64,7 +63,7 @@
 //	  - devd.conf needs more details on the supported statements.
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/devd/devd.cc 321827 2017-07-31 22:28:33Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/devd/devd.cc 356133 2019-12-27 18:53:07Z mav $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -160,7 +159,7 @@ static const char *configfile = CF;
 static void devdlog(int priority, const char* message, ...)
 	__printflike(2, 3);
 static void event_loop(void);
-static void usage(void);
+static void usage(void) __dead2;
 
 template <class T> void
 delete_and_clear(vector<T *> &v)
@@ -281,7 +280,7 @@ bool
 action::do_action(config &c)
 {
 	string s = c.expand_string(_cmd.c_str());
-	devdlog(LOG_NOTICE, "Executing '%s'\n", s.c_str());
+	devdlog(LOG_INFO, "Executing '%s'\n", s.c_str());
 	my_system(s.c_str());
 	return (true);
 }
@@ -638,20 +637,20 @@ config::expand_one(const char *&src, string &dst)
 	// it through.
 	if (*src == '(') {
 		dst += '$';
-		count = 1;
+		count = 0;
 		/* If the string ends before ) is matched , return. */
-		while (count > 0 && *src) {
+		do {
 			if (*src == ')')
 				count--;
 			else if (*src == '(')
 				count++;
 			dst += *src++;
-		}
+		} while (count > 0 && *src);
 		return;
 	}
 
-	// $[^A-Za-z] -> $\1
-	if (!isalpha(*src)) {
+	// $[^-A-Za-z_*] -> $\1
+	if (!isalpha(*src) && *src != '_' && *src != '-' && *src != '*') {
 		dst += '$';
 		dst += *src++;
 		return;
@@ -790,15 +789,30 @@ process_event(char *buffer)
 {
 	char type;
 	char *sp;
+	struct timeval tv;
+	char *timestr;
 
 	sp = buffer + 1;
 	devdlog(LOG_INFO, "Processing event '%s'\n", buffer);
 	type = *buffer++;
 	cfg.push_var_table();
-	// No match doesn't have a device, and the format is a little
+	// $* is the entire line
+	cfg.set_variable("*", buffer - 1);
+	// $_ is the entire line without the initial character
+	cfg.set_variable("_", buffer);
+
+	// Save the time this happened (as approximated by when we got
+	// around to processing it).
+	gettimeofday(&tv, NULL);
+	asprintf(&timestr, "%jd.%06ld", (uintmax_t)tv.tv_sec, tv.tv_usec);
+	cfg.set_variable("timestamp", timestr);
+	free(timestr);
+
+	// Match doesn't have a device, and the format is a little
 	// different, so handle it separately.
 	switch (type) {
 	case notify:
+		//! (k=v)*
 		sp = cfg.set_vars(sp);
 		break;
 	case nomatch:
@@ -1180,7 +1194,7 @@ siginfohand(int)
 }
 
 /*
- * Local logging function.  Prints to syslog if we're daemonized; syslog
+ * Local logging function.  Prints to syslog if we're daemonized; stderr
  * otherwise.
  */
 static void

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libzfs/Makefile 325915 2017-11-16 23:36:19Z avg $
+# $FreeBSD: stable/11/cddl/lib/libzfs/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/compat/opensolaris/misc
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
@@ -8,13 +7,7 @@
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libcmdutils/common
 
 LIB=	zfs
-DPADD=	${LIBMD} ${LIBPTHREAD} ${LIBUMEM} ${LIBUTIL} ${LIBM} ${LIBNVPAIR} \
-	${LIBAVL} ${LIBZFS_CORE} ${LIBUUTIL} ${LIBBSDXML} ${LIBGEOM} \
-	${LIBNVPAIR} ${LIBZ}
-
-LDADD=	-lmd -lpthread -lumem -lutil -luutil -lm -lnvpair -lavl \
-	-lbsdxml -lgeom -lnvpair -lz -lzfs_core
-
+LIBADD=	md pthread umem util uutil m avl bsdxml geom nvpair z zfs_core
 SRCS=	deviceid.c \
 	fsshare.c \
 	mkdirp.c \
@@ -56,7 +49,6 @@ CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair

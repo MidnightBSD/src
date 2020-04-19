@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 1980, 1989, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -28,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)fsck.8	8.4 (Berkeley) 5/9/95
-.\" $FreeBSD: stable/10/sbin/fsck_ffs/fsck_ffs.8 307441 2016-10-16 23:49:09Z sevan $
+.\" $FreeBSD: stable/11/sbin/fsck_ffs/fsck_ffs.8 350852 2019-08-10 23:08:35Z mckusick $
 .\"
-.Dd October 5, 2016
+.Dd August 10, 2019
 .Dt FSCK_FFS 8
 .Os
 .Sh NAME
@@ -39,7 +38,7 @@
 .Nd file system consistency check and interactive repair
 .Sh SYNOPSIS
 .Nm
-.Op Fl BEFfnpRryZ
+.Op Fl BCdEFfnpRrSyZz
 .Op Fl b Ar block
 .Op Fl c Ar level
 .Op Fl m Ar mode
@@ -150,50 +149,11 @@ If unexpected errors are found,
 the file system is marked as needing a foreground check and
 .Nm
 exits without attempting any further cleaning.
-.It Fl E
-Clear unallocated blocks, notifying the underlying device that they
-are not used and that their contents may be discarded.
-This is useful for filesystems which have been mounted on systems
-without TRIM support, or with TRIM support disabled, as well as
-filesystems which have been copied from one device to another.
-.Pp
-See the
-.Fl E
-and
-.Fl t
-flags of
-.Xr newfs 8 ,
-and
-the
-.Fl t
-flag of
-.Xr tunefs 8 .
-.It Fl F
-Determine whether the file system needs to be cleaned immediately
-in foreground, or if its cleaning can be deferred to background.
-To be eligible for background cleaning it must have been running
-with soft updates, not have been marked as needing a foreground check,
-and be mounted and writable when the background check is to be done.
-If these conditions are met, then
-.Nm
-exits with a zero exit status.
-Otherwise it exits with a non-zero exit status.
-If the file system is clean,
-it will exit with a non-zero exit status so that the clean status
-of the file system can be verified and reported during the foreground
-checks.
-Note that when invoked with the
-.Fl F
-flag, no cleanups are done.
-The only thing that
-.Nm
-does is to determine whether a foreground or background
-check is needed and exit with an appropriate status code.
 .It Fl b
 Use the block specified immediately after the flag as
 the super block for the file system.
 An alternate super block is usually located at block 32 for UFS1,
-and block 160 for UFS2.
+and block 192 for UFS2.
 .Pp
 See the
 .Fl N
@@ -244,6 +204,47 @@ first line of output from
 This option implies the
 .Fl f
 flag.
+.It Fl d
+Enable debugging messages.
+.It Fl E
+Clear unallocated blocks, notifying the underlying device that they
+are not used and that their contents may be discarded.
+This is useful for filesystems which have been mounted on systems
+without TRIM support, or with TRIM support disabled, as well as
+filesystems which have been copied from one device to another.
+.Pp
+See the
+.Fl E
+and
+.Fl t
+flags of
+.Xr newfs 8 ,
+and
+the
+.Fl t
+flag of
+.Xr tunefs 8 .
+.It Fl F
+Determine whether the file system needs to be cleaned immediately
+in foreground, or if its cleaning can be deferred to background.
+To be eligible for background cleaning it must have been running
+with soft updates, not have been marked as needing a foreground check,
+and be mounted and writable when the background check is to be done.
+If these conditions are met, then
+.Nm
+exits with a zero exit status.
+Otherwise it exits with a non-zero exit status.
+If the file system is clean,
+it will exit with a non-zero exit status so that the clean status
+of the file system can be verified and reported during the foreground
+checks.
+Note that when invoked with the
+.Fl F
+flag, no cleanups are done.
+The only thing that
+.Nm
+does is to determine whether a foreground or background
+check is needed and exit with an appropriate status code.
 .It Fl f
 Force
 .Nm
@@ -300,6 +301,9 @@ If both
 and
 .Fl Z
 are specified, blocks are first zeroed and then erased.
+.It Fl z
+Clear unused directory space.
+The cleared space includes deleted file names and name padding.
 .El
 .Pp
 Inconsistencies checked are as follows:
@@ -375,11 +379,43 @@ contains default list of file systems to check.
 .Sh EXIT STATUS
 .Ex -std
 .Pp
-If the option
+Specific non-zero exit status values used are:
+.Bl -tag -width indent
+.It 1
+Usage error (missing or invalid command arguments).
+.It 2
+The
+.Fl p
+option was used and a
+.Dv SIGQUIT
+was received, indicating that the system should be returned to single
+user mode after the file system check.
+.It 3
+The file system superblock cannot be read.
+This could indicate that the file system device does not exist or is not yet
+ready.
+.It 4
+A mounted file system was modified; the system should be rebooted.
+.It 5
+The
+.Fl B
+option was used and soft updates are not enabled on the file system.
+.It 6
+The
+.Fl B
+option was used and the kernel lacks needed support.
+.It 7
+The
 .Fl F
-is used,
+option was used and the file system is clean.
+.It 8
+General error exit.
+.It 16
+The file system could not be completely repaired.
+The file system may be able to be repaired by running
 .Nm
-exits 7 if the file system is clean.
+on the file system again.
+.El
 .Sh DIAGNOSTICS
 The diagnostics produced by
 .Nm

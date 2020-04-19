@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)position.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/dd/position.c 321140 2017-07-18 17:36:25Z ngie $");
+__FBSDID("$FreeBSD: stable/11/bin/dd/position.c 338364 2018-08-29 02:18:13Z kevans $");
 
 #include <sys/types.h>
 #include <sys/mtio.h>
@@ -124,6 +123,8 @@ pos_in(void)
 				--cnt;
 			if (need_summary)
 				summary();
+			if (need_progress)
+				progress();
 			continue;
 		}
 

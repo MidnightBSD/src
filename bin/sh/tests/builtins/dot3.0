@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/builtins/dot3.0 219390 2011-03-07 23:52:23Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/builtins/dot3.0 219390 2011-03-07 23:52:23Z jilles $
 
 # . should return 0 if no command was executed.
 

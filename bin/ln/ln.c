@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1987, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)ln.c	8.2 (Berkeley) 3/31/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ln/ln.c 321094 2017-07-17 21:13:43Z ngie $");
+__FBSDID("$FreeBSD: stable/11/bin/ln/ln.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

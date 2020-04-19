@@ -1,6 +1,3 @@
-/* $MidnightBSD: src/bin/sync/sync.c,v 1.3 2007/07/26 20:13:02 laffer1 Exp $ */
-/* $FreeBSD: src/bin/sync/sync.c,v 1.16 2005/01/10 08:39:26 imp Exp $ */
-
 /*-
  * Copyright (c) 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,6 +39,7 @@ static char sccsid[] = "@(#)sync.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/bin/sync/sync.c 139969 2005-01-10 08:39:26Z imp $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -51,5 +49,4 @@ main(int argc __unused, char *argv[] __unused)
 {
 	sync();
 	exit(0);
-	/* NOTREACHED */
 }

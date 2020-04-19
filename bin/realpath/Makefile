@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/bin/realpath/Makefile,v 1.1 2002/02/11 07:32:17 mike Exp $
+# $FreeBSD: stable/11/bin/realpath/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=	realpath
 
 .include <bsd.prog.mk>

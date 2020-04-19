@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/setfacl/util.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 2001 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/setfacl/util.c,v 1.6 2005/01/10 08:39:25 imp Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/setfacl/util.c 204819 2010-03-07 07:59:05Z joel $");
 
 #include <err.h>
 #include <stdlib.h>

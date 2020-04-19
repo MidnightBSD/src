@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 John Birrell <jb@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/cddl/compat/opensolaris/include/libproc.h 179163 2008-05-21 00:26:38Z jb $
+ * $FreeBSD: stable/11/cddl/compat/opensolaris/include/libproc.h 179163 2008-05-21 00:26:38Z jb $
  *
  */
 

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Andrew Thompson. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/ifconfig/ifgre.c 300285 2016-05-20 07:14:03Z truckman $");
+__FBSDID("$FreeBSD: stable/11/sbin/ifconfig/ifgre.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>

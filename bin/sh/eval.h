@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,13 +30,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/eval.h 255215 2013-09-04 22:10:16Z jilles $
+ * $FreeBSD: stable/11/bin/sh/eval.h 289159 2015-10-11 21:33:00Z jilles $
  */
 
 extern char *commandname;	/* currently executing command */
 extern int exitstatus;		/* exit status of last command */
 extern int oexitstatus;		/* saved exit status */
-extern struct strlist *cmdenviron;  /* environment for builtin command */
+extern struct arglist *cmdenviron;  /* environment for builtin command */
 
 
 struct backcmd {		/* result of evalbackcmd */
@@ -54,7 +53,7 @@ void reseteval(void);
 #define EV_TESTED 02		/* exit status is checked; ignore -e flag */
 #define EV_BACKCMD 04		/* command executing within back quotes */
 
-void evalstring(char *, int);
+void evalstring(const char *, int);
 union node;	/* BLETCH for ansi C */
 void evaltree(union node *, int);
 void evalbackcmd(union node *, struct backcmd *);

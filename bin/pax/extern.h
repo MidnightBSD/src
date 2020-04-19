@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Keith Muller.
  * Copyright (c) 1992, 1993
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/18/94
- * $FreeBSD: stable/10/bin/pax/extern.h 281661 2015-04-17 18:33:59Z eadler $
+ * $FreeBSD: stable/11/bin/pax/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

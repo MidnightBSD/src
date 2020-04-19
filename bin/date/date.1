@@ -30,8 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)date.1	8.3 (Berkeley) 4/28/95
-.\" $FreeBSD: src/bin/date/date.1,v 1.72 2005/02/13 22:25:09 ru Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/bin/date/date.1 330639 2018-03-08 07:52:32Z eadler $
 .\"
 .Dd May 7, 2015
 .Dt DATE 1
@@ -132,7 +131,8 @@ The
 option suppresses this behavior and causes the time to be set only on the
 current machine.
 .It Fl R
-Use RFC 2822 date and time output format. This is equivalent to use
+Use RFC 2822 date and time output format.
+This is equivalent to using
 .Dq Li %a, %d %b %Y \&%T %z
 as
 .Ar output_fmt

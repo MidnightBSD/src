@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Andriy Gapon <avg@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/zfsbootcfg/zfsbootcfg.c 308089 2016-10-29 14:09:32Z avg $");
+__FBSDID("$FreeBSD: stable/11/sbin/zfsbootcfg/zfsbootcfg.c 308089 2016-10-29 14:09:32Z avg $");
 
 #include <sys/types.h>
 #include <errno.h>

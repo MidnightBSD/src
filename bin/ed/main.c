@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* main.c: This file contains the main control and user-interface routines
    for the ed line editor. */
 /*-
@@ -36,7 +35,7 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/main.c 292754 2015-12-26 18:37:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/main.c 310604 2016-12-26 16:27:01Z pfg $");
 
 /*
  * CREDITS
@@ -1357,7 +1356,7 @@ handle_hup(int signo)
 	char *hup = NULL;		/* hup filename */
 	char *s;
 	char ed_hup[] = "ed.hup";
-	int n;
+	size_t n;
 
 	if (!sigactive)
 		quit(1);

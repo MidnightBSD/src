@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,7 +20,7 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/10/cddl/lib/libdtrace/nfssrv.d 249600 2013-04-18 01:20:08Z pfg $
+ * $FreeBSD: stable/11/cddl/lib/libdtrace/nfssrv.d 286420 2015-08-07 19:56:22Z markj $
  */
 
 /*
@@ -31,7 +30,8 @@
 
 #pragma	D depends_on library ip.d
 #pragma	D depends_on library net.d
-#pragma	D depends_on module nfs.d
+#pragma	D depends_on library nfs.d
+#pragma	D depends_on module kernel
 #pragma D depends_on module nfssrv
 
 #pragma D binding "1.5" translator

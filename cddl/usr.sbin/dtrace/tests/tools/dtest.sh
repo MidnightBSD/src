@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/dtrace/tests/tools/dtest.sh 313485 2017-02-09 21:54:18Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/dtrace/tests/tools/dtest.sh 313126 2017-02-03 01:18:47Z markj $
 
 usage()
 {
@@ -71,7 +70,7 @@ runtest()
     err.*.ksh|tst.*.ksh)
         expr "$TFILE" : 'err.*' >/dev/null && exstatus=1
 
-        ksh "$TFILE" /usr/sbin/dtrace >$STDOUT 2>$STDERR
+        tst=$TFILE ksh "$TFILE" /usr/sbin/dtrace >$STDOUT 2>$STDERR
         status=$?
 
         if [ $status -ne $exstatus ]; then

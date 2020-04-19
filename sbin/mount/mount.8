@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1989, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: stable/10/sbin/mount/mount.8 332754 2018-04-19 05:52:47Z avg $
+.\" $FreeBSD: stable/11/sbin/mount/mount.8 332753 2018-04-19 05:37:32Z avg $
 .\"
 .Dd March 22, 2017
 .Dt MOUNT 8
@@ -462,7 +461,6 @@ However, for the following file system types:
 .Cm msdosfs ,
 .Cm nfs ,
 .Cm nullfs ,
-.Cm oldnfs ,
 .Cm smbfs ,
 .Cm udf ,
 and
@@ -554,6 +552,7 @@ support for a particular file system might be provided either on a static
 .Xr ext2fs 5 ,
 .Xr fstab 5 ,
 .Xr procfs 5 ,
+.Xr tmpfs 5 ,
 .Xr automount 8 ,
 .Xr fstyp 8 ,
 .Xr kldload 8 ,
@@ -564,7 +563,6 @@ support for a particular file system might be provided either on a static
 .Xr mount_smbfs 8 ,
 .Xr mount_udf 8 ,
 .Xr mount_unionfs 8 ,
-.Xr tmpfs 5 ,
 .Xr umount 8 ,
 .Xr zfs 8 ,
 .Xr zpool 8

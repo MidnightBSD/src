@@ -1,20 +1,19 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/cat/tests/Makefile 320710 2017-07-06 05:26:27Z ngie $
+# $FreeBSD: stable/11/bin/cat/tests/Makefile 330738 2018-03-10 08:51:02Z eadler $
+
+PACKAGE=	tests
 
 NETBSD_ATF_TESTS_SH=		cat_test
 
-FILESDIR=	${TESTSDIR}
-
-FILES+=		d_align.in
-FILES+=		d_align.out
-FILES+=		d_b_output.in
-FILES+=		d_b_output.out
-FILES+=		d_se_output.in
-FILES+=		d_se_output.out
-FILES+=		d_s_output.in
-FILES+=		d_s_output.out
-FILES+=		d_vt_output.in
-FILES+=		d_vt_output.out
+${PACKAGE}FILES+=		d_align.in
+${PACKAGE}FILES+=		d_align.out
+${PACKAGE}FILES+=		d_b_output.in
+${PACKAGE}FILES+=		d_b_output.out
+${PACKAGE}FILES+=		d_se_output.in
+${PACKAGE}FILES+=		d_se_output.out
+${PACKAGE}FILES+=		d_s_output.in
+${PACKAGE}FILES+=		d_s_output.out
+${PACKAGE}FILES+=		d_vt_output.in
+${PACKAGE}FILES+=		d_vt_output.out
 
 .include <netbsd-tests.test.mk>
 

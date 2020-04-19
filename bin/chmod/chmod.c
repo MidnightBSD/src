@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)chmod.c	8.8 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/chmod/chmod.c 306976 2016-10-10 16:07:23Z sevan $");
+__FBSDID("$FreeBSD: stable/11/bin/chmod/chmod.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -162,14 +161,16 @@ done:	argv += optind;
 			atflag = AT_SYMLINK_NOFOLLOW;
 
 		switch (p->fts_info) {
-		case FTS_D:			/* Change it at FTS_DP. */
+		case FTS_D:
 			if (!Rflag)
 				fts_set(ftsp, p, FTS_SKIP);
-			continue;
+			break;
 		case FTS_DNR:			/* Warn, chmod. */
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
 			rval = 1;
 			break;
+		case FTS_DP:			/* Already changed at FTS_D. */
+			continue;
 		case FTS_ERR:			/* Warn, continue. */
 		case FTS_NS:
 			warnx("%s: %s", p->fts_path, strerror(p->fts_errno));

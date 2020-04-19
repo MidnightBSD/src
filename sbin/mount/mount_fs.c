@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_fs.c	8.6 (Berkeley) 4/26/95";
 #endif
 static const char rcsid[] =
-	"$FreeBSD: stable/10/sbin/mount/mount_fs.c 230377 2012-01-20 12:59:12Z jh $";
+	"$FreeBSD: stable/11/sbin/mount/mount_fs.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/sh/tests/Makefile 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/bin/sh/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 .include <bsd.own.mk>
 

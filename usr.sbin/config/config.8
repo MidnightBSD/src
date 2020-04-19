@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)config.8	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/10/usr.sbin/config/config.8 264325 2014-04-10 19:51:33Z asomers $
+.\" $FreeBSD: stable/11/usr.sbin/config/config.8 277904 2015-01-29 22:49:30Z rodrigc $
 .\"
 .Dd May 8, 2007
 .Dt CONFIG 8
@@ -40,6 +39,7 @@
 .Op Fl CVgp
 .Op Fl I Ar path
 .Op Fl d Ar destdir
+.Op Fl s Ar srcdir
 .Ar SYSTEM_NAME
 .Nm
 .Op Fl x Ar kernel
@@ -74,7 +74,7 @@ This flag is kept for backward compatibility.
 .It Fl I Ar path
 Search in
 .Ar path
-for any file included by the 
+for any file included by the
 .Ic include
 directive.  This option may be specified more than once.
 .It Fl d Ar destdir
@@ -86,6 +86,10 @@ Note that
 does not append
 .Ar SYSTEM_NAME
 to the directory given.
+.It Fl s Ar srcdir
+Use
+.Ar srcdir
+as the source directory, instead of the default one.
 .It Fl m
 Print the MACHINE and MACHINE_ARCH values for this
 kernel and exit.
@@ -143,6 +147,14 @@ in building the system;
 header files,
 definitions of
 the number of various devices that will be compiled into the system.
+.Pp
+The
+.Nm
+utility looks for kernel sources in the directory
+.Pa ../..
+or the one given with the
+.Fl s
+option.
 .Pp
 After running
 .Nm ,

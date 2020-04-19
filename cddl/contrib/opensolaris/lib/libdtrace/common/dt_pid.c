@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -45,10 +44,15 @@
 #include <dt_program.h>
 #include <dt_pid.h>
 #include <dt_string.h>
-#ifndef illumos
-#include <libproc_compat.h>
-#endif
 #include <dt_module.h>
+
+#ifndef illumos
+#include <sys/sysctl.h>
+#include <unistd.h>
+#include <libproc_compat.h>
+#include <libelf.h>
+#include <gelf.h>
+#endif
 
 typedef struct dt_pid_probe {
 	dtrace_hdl_t *dpp_dtp;
@@ -435,15 +439,10 @@ static const prmap_t *
 dt_pid_fix_mod(dtrace_probedesc_t *pdp, struct ps_prochandle *P)
 {
 	char m[MAXPATHLEN];
-#ifdef illumos
 	Lmid_t lmid = PR_LMID_EVERY;
-#else
-	Lmid_t lmid = 0;
-#endif
 	const char *obj;
 	const prmap_t *pmp;
 
-#ifdef illumos
 	/*
 	 * Pick apart the link map from the library name.
 	 */
@@ -464,20 +463,17 @@ dt_pid_fix_mod(dtrace_probedesc_t *pdp, struct ps_prochandle *P)
 	} else {
 		obj = pdp->dtpd_mod;
 	}
-#else
-	obj = pdp->dtpd_mod;
-#endif
 
 	if ((pmp = Plmid_to_map(P, lmid, obj)) == NULL)
 		return (NULL);
 
-#ifdef illumos
 	(void) Pobjname(P, pmp->pr_vaddr, m, sizeof (m));
 	if ((obj = strrchr(m, '/')) == NULL)
 		obj = &m[0];
 	else
 		obj++;
 
+#ifdef illumos
 	(void) Plmid(P, pmp->pr_vaddr, &lmid);
 #endif
 
@@ -572,9 +568,7 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 {
 	struct ps_prochandle *P = data;
 	GElf_Sym sym;
-#ifdef illumos
 	prsyminfo_t sip;
-#endif
 	dof_helper_t dh;
 	GElf_Half e_type;
 	const char *mname;
@@ -610,13 +604,21 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 		dh.dofhp_addr = (e_type == ET_EXEC) ? 0 : pmp->pr_vaddr;
 
 		dt_pid_objname(dh.dofhp_mod, sizeof (dh.dofhp_mod),
-#ifdef illumos
 		    sip.prs_lmid, mname);
-#else
-		    0, mname);
-#endif
 
-#ifdef illumos
+#ifdef __FreeBSD__
+		dh.dofhp_pid = proc_getpid(P);
+
+		if (fd == -1 &&
+		    (fd = open("/dev/dtrace/helper", O_RDWR, 0)) < 0) {
+			dt_dprintf("open of helper device failed: %s\n",
+			    strerror(errno));
+			return (-1); /* errno is set for us */
+		}
+
+		if (ioctl(fd, DTRACEHIOC_ADDDOF, &dh, sizeof (dh)) < 0)
+			dt_dprintf("DOF was rejected for %s\n", dh.dofhp_mod);
+#else
 		if (fd == -1 &&
 		    (fd = pr_open(P, "/dev/dtrace/helper", O_RDWR, 0)) < 0) {
 			dt_dprintf("pr_open of helper device failed: %s\n",
@@ -629,8 +631,10 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 #endif
 	}
 
-#ifdef illumos
 	if (fd != -1)
+#ifdef __FreeBSD__
+		(void) close(fd);
+#else
 		(void) pr_close(P, fd);
 #endif
 
@@ -645,7 +649,6 @@ dt_pid_create_usdt_probes(dtrace_probedesc_t *pdp, dtrace_hdl_t *dtp,
 	int ret = 0;
 
 	assert(DT_MUTEX_HELD(&dpr->dpr_lock));
-#ifdef illumos
 	(void) Pupdate_maps(P);
 	if (Pobject_iter(P, dt_pid_usdt_mapping, P) != 0) {
 		ret = -1;
@@ -657,9 +660,6 @@ dt_pid_create_usdt_probes(dtrace_probedesc_t *pdp, dtrace_hdl_t *dtp,
 		    (int)proc_getpid(P), strerror(errno));
 #endif
 	}
-#else
-	ret = 0;
-#endif
 
 	/*
 	 * Put the module name in its canonical form.
@@ -853,11 +853,7 @@ dt_pid_get_types(dtrace_hdl_t *dtp, const dtrace_probedesc_t *pdp,
 	ctf_funcinfo_t f;
 	ctf_id_t argv[32];
 	GElf_Sym sym;
-#ifdef illumos
 	prsyminfo_t si;
-#else
-	void *si;
-#endif
 	struct ps_prochandle *p;
 	int i, args;
 	char buf[DTRACE_ARGTYPELEN];
@@ -942,13 +938,11 @@ dt_pid_get_types(dtrace_hdl_t *dtp, const dtrace_probedesc_t *pdp,
 		    pdp->dtpd_func, pdp->dtpd_provider, pdp->dtpd_mod);
 		goto out;
 	}
-#ifdef illumos
 	if (ctf_func_info(fp, si.prs_id, &f) == CTF_ERR) {
 		dt_dprintf("failed to get ctf information for %s in %s`%s\n",
 		    pdp->dtpd_func, pdp->dtpd_provider, pdp->dtpd_mod);
 		goto out;
 	}
-#endif
 
 	(void) snprintf(buf, sizeof (buf), "%s`%s", pdp->dtpd_provider,
 	    pdp->dtpd_mod);
@@ -978,7 +972,6 @@ dt_pid_get_types(dtrace_hdl_t *dtp, const dtrace_probedesc_t *pdp,
 		(void) ctf_type_qname(fp, f.ctc_return, adp->dtargd_native +
 		    ret, DTRACE_ARGTYPELEN - ret, buf);
 		*nargs = 2;
-#ifdef illumos
 	} else {
 		if (ctf_func_args(fp, si.prs_id, argc, argv) == CTF_ERR)
 			goto out;
@@ -994,7 +987,6 @@ dt_pid_get_types(dtrace_hdl_t *dtp, const dtrace_probedesc_t *pdp,
 			(void) ctf_type_qname(fp, argv[i], adp->dtargd_native +
 			    ret, DTRACE_ARGTYPELEN - ret, buf);
 		}
-#endif
 	}
 out:
 	dt_proc_unlock(dtp, p);

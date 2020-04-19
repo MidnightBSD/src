@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,12 +30,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)mystring.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/mystring.h 262951 2014-03-09 17:04:31Z jmmv $
+ * $FreeBSD: stable/11/bin/sh/mystring.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <string.h>
 
-int prefix(const char *, const char *);
 int number(const char *);
 int is_number(const char *);
 

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/builtins/trap6.0 217472 2011-01-16 13:56:41Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/builtins/trap6.0 217472 2011-01-16 13:56:41Z jilles $
 
 v=$(
 	${SH} -c 'trap "echo ok; exit" USR1; kill -USR1 $$' &

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/sh/input.c 262951 2014-03-09 17:04:31Z jmmv $");
+__FBSDID("$FreeBSD: stable/11/bin/sh/input.c 295937 2016-02-23 22:44:01Z jilles $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -114,33 +113,6 @@ resetinput(void)
 {
 	popallfiles();
 	parselleft = parsenleft = 0;	/* clear input buffer */
-}
-
-
-/*
- * Read a line from the script.
- */
-
-char *
-pfgets(char *line, int len)
-{
-	char *p = line;
-	int nleft = len;
-	int c;
-
-	while (--nleft > 0) {
-		c = pgetc_macro();
-		if (c == PEOF) {
-			if (p == line)
-				return NULL;
-			break;
-		}
-		*p++ = c;
-		if (c == '\n')
-			break;
-	}
-	*p = '\0';
-	return line;
 }
 
 
@@ -223,8 +195,7 @@ retry:
 int
 preadbuffer(void)
 {
-	char *p, *q;
-	int more;
+	char *p, *q, *r, *end;
 	char savec;
 
 	while (parsefile->strpush) {
@@ -241,8 +212,6 @@ preadbuffer(void)
 	}
 	if (parsenleft == EOF_NLEFT || parsefile->buf == NULL)
 		return PEOF;
-	flushout(&output);
-	flushout(&errout);
 
 again:
 	if (parselleft <= 0) {
@@ -252,34 +221,32 @@ again:
 		}
 	}
 
-	q = p = parsefile->buf + (parsenextc - parsefile->buf);
-
-	/* delete nul characters */
-	for (more = 1; more;) {
-		switch (*p) {
-		case '\0':
-			p++;	/* Skip nul */
-			goto check;
-
-		case '\n':
-			parsenleft = q - parsenextc;
-			more = 0; /* Stop processing here */
-			break;
-
-		default:
-			break;
+	p = parsefile->buf + (parsenextc - parsefile->buf);
+	end = p + parselleft;
+	*end = '\0';
+	q = strchrnul(p, '\n');
+	if (q != end && *q == '\0') {
+		/* delete nul characters */
+		for (r = q; q != end; q++) {
+			if (*q != '\0')
+				*r++ = *q;
 		}
-
-		*q++ = *p++;
-check:
-		if (--parselleft <= 0) {
-			parsenleft = q - parsenextc - 1;
-			if (parsenleft < 0)
-				goto again;
-			*q = '\0';
-			more = 0;
-		}
+		parselleft -= end - r;
+		if (parselleft == 0)
+			goto again;
+		end = p + parselleft;
+		*end = '\0';
+		q = strchrnul(p, '\n');
 	}
+	if (q == end) {
+		parsenleft = parselleft;
+		parselleft = 0;
+	} else /* *q == '\n' */ {
+		q++;
+		parsenleft = q - parsenextc;
+		parselleft -= parsenleft;
+	}
+	parsenleft--;
 
 	savec = *q;
 	*q = '\0';
@@ -339,7 +306,7 @@ pungetc(void)
  * We handle aliases this way.
  */
 void
-pushstring(char *s, int len, struct alias *ap)
+pushstring(const char *s, int len, struct alias *ap)
 {
 	struct strpush *sp;
 

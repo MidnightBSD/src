@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/swapon/swapon.c 316097 2017-03-28 10:43:20Z amdmi3 $");
+__FBSDID("$FreeBSD: stable/11/sbin/swapon/swapon.c 357133 2020-01-26 01:45:22Z truckman $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -221,7 +220,7 @@ main(int argc, char **argv)
 static const char *
 swap_on_off(const char *name, int doingall, char *mntops)
 {
-	char base[PATH_MAX];
+	char *base, *basebuf;
 
 	/* Swap on vnode-backed md(4) device. */
 	if (mntops != NULL &&
@@ -232,17 +231,23 @@ swap_on_off(const char *name, int doingall, char *mntops)
 	     strncmp(MD_NAME, name, sizeof(MD_NAME)) == 0))
 		return (swap_on_off_md(name, mntops, doingall));
 
-	basename_r(name, base);
+	basebuf = strdup(name);
+	base = basename(basebuf);
 
 	/* Swap on encrypted device by GEOM_BDE. */
-	if (fnmatch("*.bde", base, 0) == 0)
+	if (fnmatch("*.bde", base, 0) == 0) {
+		free(basebuf);
 		return (swap_on_off_gbde(name, doingall));
+	}
 
 	/* Swap on encrypted device by GEOM_ELI. */
-	if (fnmatch("*.eli", base, 0) == 0)
+	if (fnmatch("*.eli", base, 0) == 0) {
+		free(basebuf);
 		return (swap_on_off_geli(name, mntops, doingall));
+	}
 
 	/* Swap on special file. */
+	free(basebuf);
 	return (swap_on_off_sfile(name, doingall));
 }
 
@@ -318,7 +323,7 @@ static char *
 swap_on_geli_args(const char *mntops)
 {
 	const char *aalgo, *ealgo, *keylen_str, *sectorsize_str;
-	const char *aflag, *eflag, *lflag, *sflag;
+	const char *aflag, *eflag, *lflag, *Tflag, *sflag;
 	char *p, *args, *token, *string, *ops;
 	int pagesize;
 	size_t pagesize_len;
@@ -326,7 +331,7 @@ swap_on_geli_args(const char *mntops)
 
 	/* Use built-in defaults for geli(8). */
 	aalgo = ealgo = keylen_str = "";
-	aflag = eflag = lflag = "";
+	aflag = eflag = lflag = Tflag = "";
 
 	/* We will always specify sectorsize. */
 	sflag = " -s ";
@@ -370,6 +375,8 @@ swap_on_geli_args(const char *mntops)
 					free(ops);
 					return (NULL);
 				}
+			} else if (strcmp(token, "notrim") == 0) {
+				Tflag = " -T ";
 			} else if (strcmp(token, "late") == 0) {
 				/* ignore known option */
 			} else if (strcmp(token, "noauto") == 0) {
@@ -396,8 +403,8 @@ swap_on_geli_args(const char *mntops)
 		sectorsize_str = p;
 	}
 
-	(void)asprintf(&args, "%s%s%s%s%s%s%s%s -d",
-	    aflag, aalgo, eflag, ealgo, lflag, keylen_str,
+	(void)asprintf(&args, "%s%s%s%s%s%s%s%s%s -d",
+	    aflag, aalgo, eflag, ealgo, lflag, keylen_str, Tflag,
 	    sflag, sectorsize_str);
 
 	free(ops);
@@ -435,7 +442,7 @@ swap_on_off_geli(const char *name, char *mntops, int doingall)
 		free(args);
 
 		if (error) {
-			/* error occured during creation. */
+			/* error occurred during creation. */
 			if (qflag == 0)
 				warnx("%s: Invalid parameters", name);
 			return (NULL);
@@ -514,7 +521,7 @@ swap_on_off_md(const char *name, char *mntops, int doingall)
 				goto err;
 			}
 			p = fgetln(sfd, &linelen);
-			if (p == NULL &&
+			if (p == NULL ||
 			    (linelen < 2 || linelen > sizeof(linebuf))) {
 				warn("mdconfig (attach) unexpected output");
 				ret = NULL;

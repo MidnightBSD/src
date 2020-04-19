@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Peter Pentchev
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sbin/kldconfig/kldconfig.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -39,15 +41,6 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#if defined(__FreeBSD_version)
-#if __FreeBSD_version < 500000
-#define NEED_SLASHTERM
-#endif /* < 500000 */
-#else  /* defined(__FreeBSD_version) */
-/* just in case.. */
-#define NEED_SLASHTERM
-#endif /* defined(__FreeBSD_version) */
 
 /* the default sysctl name */
 #define PATHCTL	"kern.module_path"
@@ -94,7 +87,7 @@ getmib(void)
 	if (miblen != 0)
 		return;
 	
-	miblen = sizeof(mib) / sizeof(mib[0]);
+	miblen = nitems(mib);
 	if (sysctlnametomib(pathctl, mib, &miblen) != 0)
 		err(1, "sysctlnametomib(%s)", pathctl);
 }
@@ -163,18 +156,9 @@ addpath(struct pathhead *pathq, char *path, int force, int insert)
 		strlcpy(pathbuf, path, sizeof(pathbuf));
 
 	len = strlen(pathbuf);
-#ifdef NEED_SLASHTERM
-	/* slash-terminate, because the kernel linker said so. */
-	if ((len == 0) || (pathbuf[len-1] != '/')) {
-		if (len == sizeof(pathbuf) - 1)
-			errx(1, "path too long: %s", pathbuf);
-		pathbuf[len] = '/';
-	}
-#else  /* NEED_SLASHTERM */
 	/* remove a terminating slash if present */
 	if ((len > 0) && (pathbuf[len-1] == '/'))
 		pathbuf[--len] = '\0';
-#endif /* NEED_SLASHTERM */
 
 	/* is it already in there? */
 	TAILQ_FOREACH(pe, pathq, next)
@@ -219,18 +203,9 @@ rempath(struct pathhead *pathq, char *path, int force, int insert __unused)
 		strlcpy(pathbuf, path, sizeof(pathbuf));
 
 	len = strlen(pathbuf);
-#ifdef NEED_SLASHTERM
-	/* slash-terminate, because the kernel linker said so. */
-	if ((len == 0) || (pathbuf[len-1] != '/')) {
-		if (len == sizeof(pathbuf) - 1)
-			errx(1, "path too long: %s", pathbuf);
-		pathbuf[len] = '/';
-	}
-#else  /* NEED_SLASHTERM */
 	/* remove a terminating slash if present */
 	if ((len > 0) && (pathbuf[len-1] == '/'))
 		pathbuf[--len] = '\0';
-#endif /* NEED_SLASHTERM */
 
 	/* Is it in there? */
 	TAILQ_FOREACH(pe, pathq, next)

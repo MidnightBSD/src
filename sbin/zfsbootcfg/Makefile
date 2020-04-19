@@ -1,22 +1,15 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.4 (Berkeley) 6/22/95
-# $FreeBSD: stable/10/sbin/zfsbootcfg/Makefile 308915 2016-11-21 10:14:36Z avg $
+# $FreeBSD: stable/11/sbin/zfsbootcfg/Makefile 308089 2016-10-29 14:09:32Z avg $
 
 PROG=	zfsbootcfg
 WARNS?=	1
 MAN=	zfsbootcfg.8
 
-DPADD+=${LIBZFS}
-DPADD+=${LIBNVPAIR}
-DPADD+=${LIBUMEM}
-DPADD+=${LIBUUTIL}
-DPADD+=${LIBGEOM}
-
-LDADD+=-lzfs
-LDADD+=-lnvpair
-LDADD+=-lumem
-LDADD+=-luutil
-LDADD+=-lgeom
+LIBADD+=zfs
+LIBADD+=nvpair
+LIBADD+=umem
+LIBADD+=uutil
+LIBADD+=geom
 
 CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
 CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem

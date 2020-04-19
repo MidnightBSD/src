@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002 Poul-Henning Kamp
 .\" Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/gbde/gbde.8 307403 2016-10-16 22:02:50Z sevan $
+.\" $FreeBSD: stable/11/sbin/gbde/gbde.8 306989 2016-10-10 16:27:32Z sevan $
 .\"
 .Dd October 3, 2016
 .Dt GBDE 8
@@ -234,9 +233,23 @@ pass-phrase:
 .Pp
 .Dl "gbde setkey ada0s1f -n 2 -P foo -L key2.lockfile"
 .Pp
-To destroy all copies of the masterkey:
+To invalidate your own masterkey:
+.Pp
+.Dl "gbde nuke ada0s1f"
+.Pp
+This will overwrite your masterkey sector with zeros, and results in
+a diagnostic if you try to use the key again.
+You can also destroy the other three copies of the masterkey with the
+-n argument.
+.Pp
+You can also invalidate your masterkey without leaving a tell-tale sector
+full of zeros:
 .Pp
 .Dl "gbde destroy ada0s1f"
+.Pp
+This will overwrite the information fields in your masterkey sector,
+encrypt it and write it back.
+You get a (different) diagnostic if you try to use it.
 .Sh SEE ALSO
 .Xr gbde 4 ,
 .Xr geom 4

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tar.h	8.2 (Berkeley) 4/18/94
- * $MidnightBSD$
+ * $FreeBSD: stable/11/bin/pax/tar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

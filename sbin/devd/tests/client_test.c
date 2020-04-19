@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Spectra Logic Corporation. All rights reserved.
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/devd/tests/client_test.c 297970 2016-04-14 15:24:45Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/devd/tests/client_test.c 297838 2016-04-11 22:14:29Z asomers $");
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -54,7 +53,7 @@ create_two_events(void)
 	char destroy_cmd[80];
 	char *error;
 
-	create_stdout = popen("mdconfig -a -s 64 -t swap", "r");
+	create_stdout = popen("mdconfig -a -s 64 -t null", "r");
 	ATF_REQUIRE(create_stdout != NULL);
 	error = fgets(mdname, sizeof(mdname), create_stdout);
 	ATF_REQUIRE(error != NULL);

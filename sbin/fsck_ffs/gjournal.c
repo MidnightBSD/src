@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -53,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/gjournal.c 241012 2012-09-27 23:30:58Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/gjournal.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>

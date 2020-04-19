@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libctf/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/libctf/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/common/ctf
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libctf/common
@@ -17,6 +16,7 @@ SRCS=		ctf_create.c \
 		ctf_subr.c \
 		ctf_types.c \
 		ctf_util.c
+MAN=		ctf.5
 
 WARNS?=		2
 CFLAGS+=	-DCTF_OLD_VERSIONS
@@ -28,5 +28,6 @@ CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 		-I${OPENSOLARIS_USR_DISTDIR}/lib/libctf/common \
 		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common
 
-.include <bsd.lib.mk>
+LIBADD+=	z
 
+.include <bsd.lib.mk>

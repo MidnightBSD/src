@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fsdbutil.c,v 1.2 1995/10/08 23:18:12 thorpej Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *  Copyright (c) 1995 John T. Kohl
  *  All rights reserved.
  * 
@@ -31,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/fsdb/fsdbutil.c 247234 2013-02-24 19:32:43Z pluknet $";
+  "$FreeBSD: stable/11/sbin/fsdb/fsdbutil.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -311,7 +312,7 @@ printblocks(ino_t inum, union dinode *dp)
 	return;
 
     bufp = malloc((unsigned int)sblock.fs_bsize);
-    if (bufp == 0)
+    if (bufp == NULL)
 	errx(EEXIT, "cannot allocate indirect block buffer");
     printf("Indirect blocks:\n");
     for (i = 0; i < NIADDR; i++)

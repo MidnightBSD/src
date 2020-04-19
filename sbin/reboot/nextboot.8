@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2002 Gordon Tetlow
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/reboot/nextboot.8 307403 2016-10-16 22:02:50Z sevan $
+.\" $FreeBSD: stable/11/sbin/reboot/nextboot.8 297980 2016-04-14 18:03:55Z markj $
 .\"
-.Dd March 17, 2015
+.Dd April 9, 2016
 .Dt NEXTBOOT 8
 .Os
 .Sh NAME
@@ -33,8 +32,8 @@
 .Nd "specify an alternate kernel and boot flags for the next reboot"
 .Sh SYNOPSIS
 .Nm
+.Op Fl af
 .Op Fl e Ar variable=value
-.Op Fl f
 .Op Fl k Ar kernel
 .Op Fl o Ar options
 .Nm
@@ -54,6 +53,12 @@ configuration.
 .Pp
 The options are as follows:
 .Bl -tag -width ".Fl o Ar options"
+.It Fl a
+This option causes
+.Nm
+to append to an existing configuration in
+.Pa /boot/nextboot.conf .
+By default any existing configuration is overwritten.
 .It Fl D
 Invoking
 .Nm
@@ -136,4 +141,3 @@ If it scrambles your file system, do not blame me.
 is only able to read ZFS, not write to it.
 .Pa nextboot.conf
 will NOT be reset in case of a kernel boot failure.
-

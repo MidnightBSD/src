@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002 M. Warner Losh
 .\" All rights reserved.
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/devd/devd.conf.5 307446 2016-10-16 23:54:40Z sevan $
+.\" $FreeBSD: stable/11/sbin/devd/devd.conf.5 307447 2016-10-16 23:55:20Z sevan $
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -235,10 +234,19 @@ A partial list of variables and their possible values that can be used together
 with the
 .Ic match
 statement.
+The variables are published by the bus based on characteristics of the device
+that generated the event (for device events).
+Variables for other classes of events are dependent on those events.
 .Pp
 .Bl -tag -width ".Li manufacturer" -compact
 .It Ic Variable
 .Ic Description
+.It Li *
+The entire message from the current event
+.It Li _
+The entire message from the current event, after the initial type character
+.It Li timestamp
+The time this event was processed, in seconds since 1970 dot fraction
 .It Li bus
 Device name of parent bus.
 .It Li cdev
@@ -343,7 +351,7 @@ Thermal zone events.
 .Pp
 .It Li CARP
 Events related to the
-.Xr carp 8
+.Xr carp 4
 protocol.
 .Bl -tag -width ".Sy Subsystem" -compact
 .It Sy Subsystem

@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/adjkerntz/Makefile 202532 2010-01-17 21:56:27Z ed $
+# $FreeBSD: stable/11/sbin/adjkerntz/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=   adjkerntz
 MAN=	adjkerntz.8
 

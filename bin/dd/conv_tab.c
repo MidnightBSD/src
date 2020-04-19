@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)conv_tab.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/dd/conv_tab.c 250469 2013-05-10 18:43:36Z eadler $");
+__FBSDID("$FreeBSD: stable/11/bin/dd/conv_tab.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

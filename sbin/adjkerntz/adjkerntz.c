@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1993-1998 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
  *
@@ -33,7 +34,7 @@ static const char copyright[] =
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/adjkerntz/adjkerntz.c 253750 2013-07-28 18:44:17Z avg $");
+__FBSDID("$FreeBSD: stable/11/sbin/adjkerntz/adjkerntz.c 330449 2018-03-05 07:26:05Z eadler $");
 
 /*
  * Andrey A. Chernov   <ache@astral.msk.su>    Dec 20 1993

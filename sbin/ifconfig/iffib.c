@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Alexander V. Chernikov
  * Copyright (c) 2011 Christian S.J. Peron
  * Copyright (c) 2011 Bjoern A. Zeeb
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/ifconfig/iffib.c 300285 2016-05-20 07:14:03Z truckman $
+ * $FreeBSD: stable/11/sbin/ifconfig/iffib.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

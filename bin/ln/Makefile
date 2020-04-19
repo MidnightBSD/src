@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 5/31/93
-# $FreeBSD: stable/10/bin/ln/Makefile 321093 2017-07-17 21:12:02Z ngie $
+# $FreeBSD: stable/11/bin/ln/Makefile 320680 2017-07-05 15:58:23Z asomers $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	ln
 MAN=	ln.1 symlink.7
 

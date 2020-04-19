@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -67,6 +66,7 @@ extern "C" {
 #include <fsshare.h>
 #include <pthread.h>
 #include <sched.h>
+#include <setjmp.h>
 #include <sys/debug.h>
 #include <sys/note.h>
 #include <sys/types.h>
@@ -127,8 +127,8 @@ extern void dprintf_setup(int *argc, char **argv);
 
 extern void cmn_err(int, const char *, ...);
 extern void vcmn_err(int, const char *, __va_list);
-extern void panic(const char *, ...);
-extern void vpanic(const char *, __va_list);
+extern void panic(const char *, ...)  __NORETURN;
+extern void vpanic(const char *, __va_list)  __NORETURN;
 
 #define	fm_panic	panic
 
@@ -237,7 +237,7 @@ extern struct proc p0;
 
 #define	PS_NONE		-1
 
-extern kthread_t *zk_thread_create(void (*func)(), void *arg);
+extern kthread_t *zk_thread_create(void (*func)(void*), void *arg);
 
 #define	issig(why)	(FALSE)
 #define	ISSIG(thr, why)	(FALSE)
@@ -350,6 +350,7 @@ extern void cv_broadcast(kcondvar_t *cv);
 #define	KM_SLEEP		UMEM_NOFAIL
 #define	KM_PUSHPAGE		KM_SLEEP
 #define	KM_NOSLEEP		UMEM_DEFAULT
+#define	KM_NORMALPRI		0	/* not needed with UMEM_DEFAULT */
 #define	KMC_NODEBUG		UMC_NODEBUG
 #define	KMC_NOTOUCH		0	/* not needed for userland caches */
 #define	KM_NODEBUG		0
@@ -363,7 +364,8 @@ extern void cv_broadcast(kcondvar_t *cv);
 #define	kmem_cache_alloc(_c, _f) umem_cache_alloc(_c, _f)
 #define	kmem_cache_free(_c, _b)	umem_cache_free(_c, _b)
 #define	kmem_debugging()	0
-#define	kmem_cache_reap_now(_c)		/* nothing */
+#define	kmem_cache_reap_active()	(B_FALSE)
+#define	kmem_cache_reap_soon(_c)	/* nothing */
 #define	kmem_cache_set_move(_c, _cb)	/* nothing */
 #define	POINTER_INVALIDATE(_pp)		/* nothing */
 #define	POINTER_IS_VALID(_p)	0
@@ -406,6 +408,7 @@ typedef struct taskq_ent {
 #define	TQ_NOQUEUE	0x02		/* Do not enqueue if can't dispatch */
 #define	TQ_FRONT	0x08		/* Queue in front */
 
+#define TASKQID_INVALID         ((taskqid_t)0)
 
 extern taskq_t *system_taskq;
 
@@ -419,6 +422,7 @@ extern void	taskq_dispatch_ent(taskq_t *, task_func_t, void *, uint_t,
     taskq_ent_t *);
 extern void	taskq_destroy(taskq_t *);
 extern void	taskq_wait(taskq_t *);
+extern void	taskq_wait_id(taskq_t *, taskqid_t);
 extern int	taskq_member(taskq_t *, void *);
 extern void	system_taskq_init(void);
 extern void	system_taskq_fini(void);
@@ -547,7 +551,7 @@ extern vnode_t *rootdir;
 extern void delay(clock_t ticks);
 
 #define	SEC_TO_TICK(sec)	((sec) * hz)
-#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
+#define	NSEC_TO_TICK(nsec)	((nsec) / (NANOSEC / hz))
 
 #define	gethrestime_sec() time(NULL)
 #define	gethrestime(t) \
@@ -557,6 +561,7 @@ extern void delay(clock_t ticks);
 	} while (0);
 
 #define	max_ncpus	64
+#define	boot_ncpus	(sysconf(_SC_NPROCESSORS_ONLN))
 
 #define	minclsyspri	60
 #define	maxclsyspri	99
@@ -607,6 +612,7 @@ typedef struct callb_cpr {
 
 #define	zone_dataset_visible(x, y)	(1)
 #define	INGLOBALZONE(z)			(1)
+extern uint32_t zone_get_hostid(void *zonep);
 
 extern char *kmem_asprintf(const char *fmt, ...);
 #define	strfree(str) kmem_free((str), strlen(str) + 1)
@@ -663,6 +669,9 @@ extern zoneid_t getzoneid(void);
 #define	SIGPENDING(td)		(0)
 #define	root_mount_wait()	do { } while (0)
 #define	root_mounted()		(1)
+
+#define	noinline	__attribute__((noinline))
+#define	likely(x)	__builtin_expect((x), 1)
 
 struct file {
 	void *dummy;

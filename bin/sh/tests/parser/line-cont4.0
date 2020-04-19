@@ -1,0 +1,8 @@
+# $FreeBSD: stable/11/bin/sh/tests/parser/line-cont4.0 273276 2014-10-19 11:59:15Z jilles $
+
+v=abcd
+[ "$\
+v.$\
+{v}.${\
+v}.${v\
+}" = abcd.abcd.abcd.abcd ]

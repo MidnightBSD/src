@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dmesg/dmesg.c 288498 2015-10-02 14:24:39Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/sbin/dmesg/dmesg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/msgbuf.h>
@@ -112,8 +111,10 @@ main(int argc, char *argv[])
 
 	if (memf == NULL) {
 		/*
-		 * Running kernel.  Use sysctl.  This gives an unwrapped
-		 * buffer as a side effect.
+		 * Running kernel.  Use sysctl.  This gives an unwrapped buffer
+		 * as a side effect.  Remove nulterm (if present) so the value
+		 * returned by sysctl is formatted as the rest of the code
+		 * expects (the same as the value read from a core file below).
 		 */
 		if (sysctlbyname("kern.msgbuf", NULL, &buflen, NULL, 0) == -1)
 			err(1, "sysctl kern.msgbuf");
@@ -124,6 +125,8 @@ main(int argc, char *argv[])
 			errx(1, "malloc failed");
 		if (sysctlbyname("kern.msgbuf", bp, &buflen, NULL, 0) == -1)
 			err(1, "sysctl kern.msgbuf");
+		if (buflen > 0 && bp[buflen - 1] == '\0')
+			buflen--;
 		if (clear)
 			if (sysctlbyname("kern.msgbuf_clear", NULL, NULL, &clear, sizeof(int)))
 				err(1, "sysctl kern.msgbuf_clear");

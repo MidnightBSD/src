@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/10/bin/stty/extern.h 238508 2012-07-15 21:12:22Z jilles $
+ * $FreeBSD: stable/11/bin/stty/extern.h 238508 2012-07-15 21:12:22Z jilles $
  */
 
 int	c_cchars(const void *, const void *);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2003 M. Warner Losh.
  * All rights reserved.
  *
@@ -23,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/devd/devd.hh 247760 2013-03-04 02:21:24Z eadler $
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sbin/devd/devd.hh 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef DEVD_HH

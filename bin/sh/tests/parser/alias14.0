@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/parser/alias14.0 262951 2014-03-09 17:04:31Z jmmv $
+# $FreeBSD: stable/11/bin/sh/tests/parser/alias14.0 261192 2014-01-26 21:19:33Z jilles $
 
 alias command='command '
 alias alias0=exit

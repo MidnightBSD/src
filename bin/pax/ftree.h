@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ftree.h	8.1 (Berkeley) 5/31/93
- * $MidnightBSD$
+ * $FreeBSD: stable/11/bin/pax/ftree.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

@@ -1,0 +1,4 @@
+# $FreeBSD: stable/11/bin/sh/tests/execution/pipefail1.0 345561 2019-03-26 22:34:07Z jilles $
+
+set -o pipefail
+: && : | : && : | : | : && : | : | : | :

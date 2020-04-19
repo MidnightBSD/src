@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst10.0 216826 2010-12-30 22:33:55Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/expansion/cmdsubst10.0 216826 2010-12-30 22:33:55Z jilles $
 
 a1=$(alias)
 : $(alias testalias=abcd)

@@ -3,8 +3,8 @@
 #
 # Submitted by Edwin Groothuis <edwin@FreeBSD.org>
 #
-# $FreeBSD: stable/10/bin/date/tests/format_string_test.sh 270779 2014-08-29 02:21:02Z ngie $
-# $MidnightBSD$
+# $FreeBSD: stable/11/bin/date/tests/format_string_test.sh 269903 2014-08-13 04:43:29Z ngie $
+#
 
 #
 # These two date/times have been chosen carefully -- they

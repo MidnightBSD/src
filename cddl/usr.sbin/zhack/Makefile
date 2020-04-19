@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/zhack/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/zhack/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zhack
 
@@ -19,13 +18,10 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzfs_core/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 
-DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBPTHREAD} ${LIBUMEM} \
-	${LIBUUTIL} ${LIBZFS_CORE} ${LIBZFS} ${LIBZPOOL}
-LDADD=	-lgeom -lm -lnvpair -lpthread -lumem -luutil -lzfs_core -lzfs -lzpool
+LIBADD=	nvpair zfs zpool
 
 CFLAGS+=	-DDEBUG=1
 #DEBUG_FLAGS+=	-g

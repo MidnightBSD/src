@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2013 Marcel Moolenaar
 .\" Copyright (c) 2013 Craig Rodrigues
 .\" All rights reserved.
@@ -24,10 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/mount/mount.conf.8 316221 2017-03-30 05:17:23Z ngie $
+.\" $FreeBSD: stable/11/sbin/mount/mount.conf.8 316222 2017-03-30 05:17:27Z ngie $
 .\"
 .\"
-.Dd July 7, 2013
+.Dd October 17, 2013
 .Dt MOUNT.CONF 8
 .Os
 .Sh NAME
@@ -155,7 +154,7 @@ will direct the kernel to try mounting the root file system
 first as an ISO CD9660 file system on
 .Pa /dev/cd0 ,
 then if that does not work, as an ISO CD9660 file system on
-.Pa /dev/acd0 ,
+.Pa /dev/cd1 ,
 and then if that does not work, as a UFS file system on
 .Pa /dev/ada0s1a .
 If that does not work, a
@@ -168,7 +167,7 @@ Finally if that does not work, the kernel will panic.
 .Li .timeout 3
 cd9660:/dev/cd0 ro
 .Li .timeout 0
-cd9660:/dev/acd0 ro
+cd9660:/dev/cd1 ro
 .Li .timeout 3
 ufs:/dev/ada0s1a
 .Li .ask

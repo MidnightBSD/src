@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/af_inet.c 300285 2016-05-20 07:14:03Z truckman $";
+  "$FreeBSD: stable/11/sbin/ifconfig/af_inet.c 345397 2019-03-21 22:40:05Z asomers $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -47,7 +46,6 @@ static const char rcsid[] =
 #include <ifaddrs.h>
 
 #include <netinet/in.h>
-#include <net/if_var.h>		/* for struct ifaddr */
 #include <netinet/in_var.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -56,11 +54,14 @@ static const char rcsid[] =
 
 static struct in_aliasreq in_addreq;
 static struct ifreq in_ridreq;
+static char addr_buf[NI_MAXHOST];	/*for getnameinfo()*/
+extern char *f_inet, *f_addr;
 
 static void
 in_status(int s __unused, const struct ifaddrs *ifa)
 {
 	struct sockaddr_in *sin, null_sin;
+	int error, n_flags;
 	
 	memset(&null_sin, 0, sizeof(null_sin));
 
@@ -68,24 +69,52 @@ in_status(int s __unused, const struct ifaddrs *ifa)
 	if (sin == NULL)
 		return;
 
-	printf("\tinet %s ", inet_ntoa(sin->sin_addr));
+	if (f_addr != NULL && strcmp(f_addr, "fqdn") == 0)
+		n_flags = 0;
+	else if (f_addr != NULL && strcmp(f_addr, "host") == 0)
+		n_flags = NI_NOFQDN;
+	else
+		n_flags = NI_NUMERICHOST;
+
+	error = getnameinfo((struct sockaddr *)sin, sin->sin_len, addr_buf,
+			    sizeof(addr_buf), NULL, 0, n_flags);
+
+	if (error)
+		inet_ntop(AF_INET, &sin->sin_addr, addr_buf, sizeof(addr_buf));
+	
+	printf("\tinet %s", addr_buf);
 
 	if (ifa->ifa_flags & IFF_POINTOPOINT) {
 		sin = (struct sockaddr_in *)ifa->ifa_dstaddr;
 		if (sin == NULL)
 			sin = &null_sin;
-		printf("--> %s ", inet_ntoa(sin->sin_addr));
+		printf(" --> %s", inet_ntoa(sin->sin_addr));
 	}
 
 	sin = (struct sockaddr_in *)ifa->ifa_netmask;
 	if (sin == NULL)
 		sin = &null_sin;
-	printf("netmask 0x%lx ", (unsigned long)ntohl(sin->sin_addr.s_addr));
+	if (f_inet != NULL && strcmp(f_inet, "cidr") == 0) {
+		int cidr = 32;
+		unsigned long smask;
+
+		smask = ntohl(sin->sin_addr.s_addr);
+		while ((smask & 1) == 0) {
+			smask = smask >> 1;
+			cidr--;
+			if (cidr == 0)
+				break;
+		}
+		printf("/%d", cidr);
+	} else if (f_inet != NULL && strcmp(f_inet, "dotted") == 0)
+		printf(" netmask %s", inet_ntoa(sin->sin_addr));
+	else
+		printf(" netmask 0x%lx", (unsigned long)ntohl(sin->sin_addr.s_addr));
 
 	if (ifa->ifa_flags & IFF_BROADCAST) {
 		sin = (struct sockaddr_in *)ifa->ifa_broadaddr;
 		if (sin != NULL && sin->sin_addr.s_addr != 0)
-			printf("broadcast %s ", inet_ntoa(sin->sin_addr));
+			printf(" broadcast %s", inet_ntoa(sin->sin_addr));
 	}
 
 	print_vhid(ifa, " ");
@@ -135,10 +164,10 @@ in_getaddr(const char *s, int which)
 
 	if (inet_aton(s, &sin->sin_addr))
 		return;
-	if ((hp = gethostbyname(s)) != 0)
+	if ((hp = gethostbyname(s)) != NULL)
 		bcopy(hp->h_addr, (char *)&sin->sin_addr, 
 		    MIN((size_t)hp->h_length, sizeof(sin->sin_addr)));
-	else if ((np = getnetbyname(s)) != 0)
+	else if ((np = getnetbyname(s)) != NULL)
 		sin->sin_addr = inet_makeaddr(np->n_net, INADDR_ANY);
 	else
 		errx(1, "%s: bad value", s);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* io.c: This file contains the i/o routines for the ed line editor */
 /*-
  * Copyright (c) 1993 Andrew Moore, Talke Studio.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/io.c 301155 2016-06-01 17:47:34Z truckman $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/io.c 300692 2016-05-25 18:38:30Z truckman $");
 
 #include "ed.h"
 

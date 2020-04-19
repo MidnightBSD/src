@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)from: sysctl.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/sbin/sysctl/sysctl.c 344984 2019-03-10 20:58:24Z wulf $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -47,6 +47,7 @@ static const char rcsid[] =
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/vmmeter.h>
+#include <dev/evdev/input.h>
 
 #ifdef __amd64__
 #include <sys/efi.h>
@@ -57,11 +58,13 @@ static const char rcsid[] =
 #include <machine/pc/bios.h>
 #endif
 
+#include <assert.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,8 +73,8 @@ static const char rcsid[] =
 
 static const char *conffile;
 
-static int	aflag, bflag, dflag, eflag, hflag, iflag;
-static int	Nflag, nflag, oflag, qflag, Tflag, Wflag, xflag;
+static int	aflag, bflag, Bflag, dflag, eflag, hflag, iflag;
+static int	Nflag, nflag, oflag, qflag, tflag, Tflag, Wflag, xflag;
 
 static int	oidfmt(int *, int, char *, u_int *);
 static int	parsefile(const char *);
@@ -80,15 +83,57 @@ static int	show_var(int *, int);
 static int	sysctl_all(int *oid, int len);
 static int	name2oid(const char *, int *);
 
-static int	set_IK(const char *, int *);
+static int	strIKtoi(const char *, char **, const char *);
+
+static int ctl_sign[CTLTYPE+1] = {
+	[CTLTYPE_INT] = 1,
+	[CTLTYPE_LONG] = 1,
+	[CTLTYPE_S8] = 1,
+	[CTLTYPE_S16] = 1,
+	[CTLTYPE_S32] = 1,
+	[CTLTYPE_S64] = 1,
+};
+
+static int ctl_size[CTLTYPE+1] = {
+	[CTLTYPE_INT] = sizeof(int),
+	[CTLTYPE_UINT] = sizeof(u_int),
+	[CTLTYPE_LONG] = sizeof(long),
+	[CTLTYPE_ULONG] = sizeof(u_long),
+	[CTLTYPE_S8] = sizeof(int8_t),
+	[CTLTYPE_S16] = sizeof(int16_t),
+	[CTLTYPE_S32] = sizeof(int32_t),
+	[CTLTYPE_S64] = sizeof(int64_t),
+	[CTLTYPE_U8] = sizeof(uint8_t),
+	[CTLTYPE_U16] = sizeof(uint16_t),
+	[CTLTYPE_U32] = sizeof(uint32_t),
+	[CTLTYPE_U64] = sizeof(uint64_t),
+};
+
+static const char *ctl_typename[CTLTYPE+1] = {
+	[CTLTYPE_INT] = "integer",
+	[CTLTYPE_UINT] = "unsigned integer",
+	[CTLTYPE_LONG] = "long integer",
+	[CTLTYPE_ULONG] = "unsigned long",
+	[CTLTYPE_U8] = "uint8_t",
+	[CTLTYPE_U16] = "uint16_t",
+	[CTLTYPE_U32] = "uint32_t",
+	[CTLTYPE_U64] = "uint64_t",
+	[CTLTYPE_S8] = "int8_t",
+	[CTLTYPE_S16] = "int16_t",
+	[CTLTYPE_S32] = "int32_t",
+	[CTLTYPE_S64] = "int64_t",
+	[CTLTYPE_NODE] = "node",
+	[CTLTYPE_STRING] = "string",
+	[CTLTYPE_OPAQUE] = "opaque",
+};
 
 static void
 usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-	    "usage: sysctl [-bdehiNnoqTWx] [-f filename] name[=value] ...",
-	    "       sysctl [-bdehNnoqTWx] -a");
+	    "usage: sysctl [-bdehiNnoqTtWx] [ -B <bufsize> ] [-f filename] name[=value] ...",
+	    "       sysctl [-bdehNnoqTtWx] [ -B <bufsize> ] -a");
 	exit(1);
 }
 
@@ -102,7 +147,7 @@ main(int argc, char **argv)
 	setbuf(stdout,0);
 	setbuf(stderr,0);
 
-	while ((ch = getopt(argc, argv, "Aabdef:hiNnoqTwWxX")) != -1) {
+	while ((ch = getopt(argc, argv, "AabB:def:hiNnoqtTwWxX")) != -1) {
 		switch (ch) {
 		case 'A':
 			/* compatibility */
@@ -113,6 +158,9 @@ main(int argc, char **argv)
 			break;
 		case 'b':
 			bflag = 1;
+			break;
+		case 'B':
+			Bflag = strtol(optarg, NULL, 0);
 			break;
 		case 'd':
 			dflag = 1;
@@ -140,6 +188,9 @@ main(int argc, char **argv)
 			break;
 		case 'q':
 			qflag = 1;
+			break;
+		case 't':
+			tflag = 1;
 			break;
 		case 'T':
 			Tflag = 1;
@@ -183,6 +234,118 @@ main(int argc, char **argv)
 }
 
 /*
+ * Parse a single numeric value, append it to 'newbuf', and update
+ * 'newsize'.  Returns true if the value was parsed and false if the
+ * value was invalid.  Non-numeric types (strings) are handled
+ * directly in parse().
+ */
+static bool
+parse_numeric(const char *newvalstr, const char *fmt, u_int kind,
+    void **newbufp, size_t *newsizep)
+{
+	void *newbuf;
+	const void *newval;
+	int8_t i8val;
+	uint8_t u8val;
+	int16_t i16val;
+	uint16_t u16val;
+	int32_t i32val;
+	uint32_t u32val;
+	int intval;
+	unsigned int uintval;
+	long longval;
+	unsigned long ulongval;
+	int64_t i64val;
+	uint64_t u64val;
+	size_t valsize;
+	char *endptr = NULL;
+	
+	errno = 0;
+
+	switch (kind & CTLTYPE) {
+	case CTLTYPE_INT:
+		if (strncmp(fmt, "IK", 2) == 0)
+			intval = strIKtoi(newvalstr, &endptr, fmt);
+		else
+			intval = (int)strtol(newvalstr, &endptr, 0);
+		newval = &intval;
+		valsize = sizeof(intval);
+		break;
+	case CTLTYPE_UINT:
+		uintval = (int) strtoul(newvalstr, &endptr, 0);
+		newval = &uintval;
+		valsize = sizeof(uintval);
+		break;
+	case CTLTYPE_LONG:
+		longval = strtol(newvalstr, &endptr, 0);
+		newval = &longval;
+		valsize = sizeof(longval);
+		break;
+	case CTLTYPE_ULONG:
+		ulongval = strtoul(newvalstr, &endptr, 0);
+		newval = &ulongval;
+		valsize = sizeof(ulongval);
+		break;
+	case CTLTYPE_S8:
+		i8val = (int8_t)strtol(newvalstr, &endptr, 0);
+		newval = &i8val;
+		valsize = sizeof(i8val);
+		break;
+	case CTLTYPE_S16:
+		i16val = (int16_t)strtol(newvalstr, &endptr, 0);
+		newval = &i16val;
+		valsize = sizeof(i16val);
+		break;
+	case CTLTYPE_S32:
+		i32val = (int32_t)strtol(newvalstr, &endptr, 0);
+		newval = &i32val;
+		valsize = sizeof(i32val);
+		break;
+	case CTLTYPE_S64:
+		i64val = strtoimax(newvalstr, &endptr, 0);
+		newval = &i64val;
+		valsize = sizeof(i64val);
+		break;
+	case CTLTYPE_U8:
+		u8val = (uint8_t)strtoul(newvalstr, &endptr, 0);
+		newval = &u8val;
+		valsize = sizeof(u8val);
+		break;
+	case CTLTYPE_U16:
+		u16val = (uint16_t)strtoul(newvalstr, &endptr, 0);
+		newval = &u16val;
+		valsize = sizeof(u16val);
+		break;
+	case CTLTYPE_U32:
+		u32val = (uint32_t)strtoul(newvalstr, &endptr, 0);
+		newval = &u32val;
+		valsize = sizeof(u32val);
+		break;
+	case CTLTYPE_U64:
+		u64val = strtoumax(newvalstr, &endptr, 0);
+		newval = &u64val;
+		valsize = sizeof(u64val);
+		break;
+	default:
+		/* NOTREACHED */
+		abort();
+	}
+	
+	if (errno != 0 || endptr == newvalstr ||
+	    (endptr != NULL && *endptr != '\0'))
+		return (false);
+
+	newbuf = realloc(*newbufp, *newsizep + valsize);
+	if (newbuf == NULL)
+		err(1, "out of memory");
+	memcpy((char *)newbuf + *newsizep, newval, valsize);
+	*newbufp = newbuf;
+	*newsizep += valsize;
+	
+	return (true);
+}
+
+/*
  * Parse a name into a MIB entry.
  * Lookup and print out the MIB entry if it exists.
  * Set a new value if requested.
@@ -191,16 +354,12 @@ static int
 parse(const char *string, int lineno)
 {
 	int len, i, j;
-	void *newval = 0;
-	int intval;
-	unsigned int uintval;
-	long longval;
-	unsigned long ulongval;
-	size_t newsize = 0;
-	int64_t i64val;
-	uint64_t u64val;
+	const void *newval;
+	char *newvalstr = NULL;
+	void *newbuf;
+	size_t newsize = Bflag;
 	int mib[CTL_MAXNAME];
-	char *cp, *bufp, buf[BUFSIZ], *endptr, fmt[BUFSIZ], line[BUFSIZ];
+	char *cp, *bufp, buf[BUFSIZ], fmt[BUFSIZ], line[BUFSIZ];
 	u_int kind;
 
 	if (lineno)
@@ -230,7 +389,7 @@ parse(const char *string, int lineno)
 				cp[strlen(cp) - 1] = '\0';
 			cp++;
 		}
-		newval = cp;
+		newvalstr = cp;
 		newsize = strlen(cp);
 	}
 	/* Trim spaces */
@@ -264,7 +423,7 @@ parse(const char *string, int lineno)
 			exit(1);
 	}
 
-	if (newval == NULL || dflag) {
+	if (newvalstr == NULL || dflag) {
 		if ((kind & CTLTYPE) == CTLTYPE_NODE) {
 			if (dflag) {
 				i = show_var(mib, len);
@@ -292,101 +451,60 @@ parse(const char *string, int lineno)
 			return (1);
 		}
 
-		if ((kind & CTLTYPE) == CTLTYPE_INT ||
-		    (kind & CTLTYPE) == CTLTYPE_UINT ||
-		    (kind & CTLTYPE) == CTLTYPE_LONG ||
-		    (kind & CTLTYPE) == CTLTYPE_ULONG ||
-		    (kind & CTLTYPE) == CTLTYPE_S64 ||
-		    (kind & CTLTYPE) == CTLTYPE_U64) {
-			if (strlen(newval) == 0) {
+		switch (kind & CTLTYPE) {
+		case CTLTYPE_INT:
+		case CTLTYPE_UINT:
+		case CTLTYPE_LONG:
+		case CTLTYPE_ULONG:
+		case CTLTYPE_S8:
+		case CTLTYPE_S16:
+		case CTLTYPE_S32:
+		case CTLTYPE_S64:
+		case CTLTYPE_U8:
+		case CTLTYPE_U16:
+		case CTLTYPE_U32:
+		case CTLTYPE_U64:
+			if (strlen(newvalstr) == 0) {
 				warnx("empty numeric value");
 				return (1);
 			}
+			/* FALLTHROUGH */
+		case CTLTYPE_STRING:
+			break;
+		default:
+			warnx("oid '%s' is type %d,"
+				" cannot set that%s", bufp,
+				kind & CTLTYPE, line);
+			return (1);
 		}
 
+		newbuf = NULL;
+
 		switch (kind & CTLTYPE) {
-			case CTLTYPE_INT:
-				if (strcmp(fmt, "IK") == 0) {
-					if (!set_IK(newval, &intval)) {
-						warnx("invalid value '%s'%s",
-						    (char *)newval, line);
-						return (1);
-					}
- 				} else {
-					intval = (int)strtol(newval, &endptr,
-					    0);
-					if (endptr == newval || *endptr != '\0') {
-						warnx("invalid integer '%s'%s",
-						    (char *)newval, line);
-						return (1);
-					}
-				}
-				newval = &intval;
-				newsize = sizeof(intval);
-				break;
-			case CTLTYPE_UINT:
-				uintval = (int) strtoul(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0') {
-					warnx("invalid unsigned integer '%s'%s",
-					    (char *)newval, line);
+		case CTLTYPE_STRING:
+			newval = newvalstr;
+			break;
+		default:
+			newsize = 0;
+			while ((cp = strsep(&newvalstr, " ,")) != NULL) {
+				if (*cp == '\0')
+					continue;
+				if (!parse_numeric(cp, fmt, kind, &newbuf,
+				    &newsize)) {
+					warnx("invalid %s '%s'%s",
+					    ctl_typename[kind & CTLTYPE],
+					    cp, line);
+					free(newbuf);
 					return (1);
 				}
-				newval = &uintval;
-				newsize = sizeof(uintval);
-				break;
-			case CTLTYPE_LONG:
-				longval = strtol(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0') {
-					warnx("invalid long integer '%s'%s",
-					    (char *)newval, line);
-					return (1);
-				}
-				newval = &longval;
-				newsize = sizeof(longval);
-				break;
-			case CTLTYPE_ULONG:
-				ulongval = strtoul(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0') {
-					warnx("invalid unsigned long integer"
-					    " '%s'%s", (char *)newval, line);
-					return (1);
-				}
-				newval = &ulongval;
-				newsize = sizeof(ulongval);
-				break;
-			case CTLTYPE_STRING:
-				break;
-			case CTLTYPE_S64:
-				i64val = strtoimax(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0') {
-					warnx("invalid int64_t '%s'%s",
-					    (char *)newval, line);
-					return (1);
-				}
-				newval = &i64val;
-				newsize = sizeof(i64val);
-				break;
-			case CTLTYPE_U64:
-				u64val = strtoumax(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0') {
-					warnx("invalid uint64_t '%s'%s",
-					    (char *)newval, line);
-					return (1);
-				}
-				newval = &u64val;
-				newsize = sizeof(u64val);
-				break;
-			case CTLTYPE_OPAQUE:
-				/* FALLTHROUGH */
-			default:
-				warnx("oid '%s' is type %d,"
-					" cannot set that%s", bufp,
-					kind & CTLTYPE, line);
-				return (1);
+			}
+			newval = newbuf;
+			break;
 		}
 
 		i = show_var(mib, len);
 		if (sysctl(mib, len, 0, 0, newval, newsize) == -1) {
+			free(newbuf);
 			if (!i && !bflag)
 				putchar('\n');
 			switch (errno) {
@@ -407,6 +525,7 @@ parse(const char *string, int lineno)
 				return (1);
 			}
 		}
+		free(newbuf);
 		if (!bflag)
 			printf(" -> ");
 		i = nflag;
@@ -560,10 +679,23 @@ S_vmtotal(size_t l2, void *p)
 	return (0);
 }
 
-#ifdef __amd64__
-#define efi_next_descriptor(ptr, size) \
-	((struct efi_md *)(((uint8_t *) ptr) + size))
+static int
+S_input_id(size_t l2, void *p)
+{
+	struct input_id *id = p;
 
+	if (l2 != sizeof(*id)) {
+		warnx("S_input_id %zu != %zu", l2, sizeof(*id));
+		return (1);
+	}
+
+	printf("{ bustype = 0x%04x, vendor = 0x%04x, "
+	    "product = 0x%04x, version = 0x%04x }",
+	    id->bustype, id->vendor, id->product, id->version);
+	return (0);
+}
+
+#ifdef __amd64__
 static int
 S_efi_map(size_t l2, void *p)
 {
@@ -573,21 +705,22 @@ S_efi_map(size_t l2, void *p)
 	size_t efisz;
 	int ndesc, i;
 
-	static const char *types[] = {
-		"Reserved",
-		"LoaderCode",
-		"LoaderData",
-		"BootServicesCode",
-		"BootServicesData",
-		"RuntimeServicesCode",
-		"RuntimeServicesData",
-		"ConventionalMemory",
-		"UnusableMemory",
-		"ACPIReclaimMemory",
-		"ACPIMemoryNVS",
-		"MemoryMappedIO",
-		"MemoryMappedIOPortSpace",
-		"PalCode"
+	static const char * const types[] = {
+		[EFI_MD_TYPE_NULL] =	"Reserved",
+		[EFI_MD_TYPE_CODE] =	"LoaderCode",
+		[EFI_MD_TYPE_DATA] =	"LoaderData",
+		[EFI_MD_TYPE_BS_CODE] =	"BootServicesCode",
+		[EFI_MD_TYPE_BS_DATA] =	"BootServicesData",
+		[EFI_MD_TYPE_RT_CODE] =	"RuntimeServicesCode",
+		[EFI_MD_TYPE_RT_DATA] =	"RuntimeServicesData",
+		[EFI_MD_TYPE_FREE] =	"ConventionalMemory",
+		[EFI_MD_TYPE_BAD] =	"UnusableMemory",
+		[EFI_MD_TYPE_RECLAIM] =	"ACPIReclaimMemory",
+		[EFI_MD_TYPE_FIRMWARE] = "ACPIMemoryNVS",
+		[EFI_MD_TYPE_IOMEM] =	"MemoryMappedIO",
+		[EFI_MD_TYPE_IOPORT] =	"MemoryMappedIOPortSpace",
+		[EFI_MD_TYPE_PALCODE] =	"PalCode",
+		[EFI_MD_TYPE_PERSISTENT] = "PersistentMemory",
 	};
 
 	/*
@@ -600,7 +733,7 @@ S_efi_map(size_t l2, void *p)
 	}
 	efihdr = p;
 	efisz = (sizeof(struct efi_map_header) + 0xf) & ~0xf;
-	map = (struct efi_md *)((uint8_t *)efihdr + efisz); 
+	map = (struct efi_md *)((uint8_t *)efihdr + efisz);
 
 	if (efihdr->descriptor_size == 0)
 		return (0);
@@ -608,7 +741,7 @@ S_efi_map(size_t l2, void *p)
 		warnx("S_efi_map length mismatch %zu vs %zu", l2, efisz +
 		    efihdr->memory_size);
 		return (1);
-	}		
+	}
 	ndesc = efihdr->memory_size / efihdr->descriptor_size;
 
 	printf("\n%23s %12s %12s %8s %4s",
@@ -616,9 +749,10 @@ S_efi_map(size_t l2, void *p)
 
 	for (i = 0; i < ndesc; i++,
 	    map = efi_next_descriptor(map, efihdr->descriptor_size)) {
-		if (map->md_type <= EFI_MD_TYPE_PALCODE)
+		type = NULL;
+		if (map->md_type < nitems(types))
 			type = types[map->md_type];
-		else
+		if (type == NULL)
 			type = "<INVALID>";
 		printf("\n%23s %012lx %12p %08lx ", type, map->md_phys,
 		    map->md_virt, map->md_pages);
@@ -667,30 +801,59 @@ S_bios_smap_xattr(size_t l2, void *p)
 #endif
 
 static int
-set_IK(const char *str, int *val)
+strIKtoi(const char *str, char **endptrp, const char *fmt)
 {
+	int kelv;
 	float temp;
-	int len, kelv;
+	size_t len;
 	const char *p;
-	char *endptr;
+	int prec, i;
 
-	if ((len = strlen(str)) == 0)
-		return (0);
+	assert(errno == 0);
+
+	len = strlen(str);
+	/* caller already checked this */
+	assert(len > 0);
+
+	/*
+	 * A format of "IK" is in deciKelvin. A format of "IK3" is in
+	 * milliKelvin. The single digit following IK is log10 of the
+	 * multiplying factor to convert Kelvin into the untis of this sysctl,
+	 * or the dividing factor to convert the sysctl value to Kelvin. Numbers
+	 * larger than 6 will run into precision issues with 32-bit integers.
+	 * Characters that aren't ASCII digits after the 'K' are ignored. No
+	 * localization is present because this is an interface from the kernel
+	 * to this program (eg not an end-user interface), so isdigit() isn't
+	 * used here.
+	 */
+	if (fmt[2] != '\0' && fmt[2] >= '0' && fmt[2] <= '9')
+		prec = fmt[2] - '0';
+	else
+		prec = 1;
 	p = &str[len - 1];
-	if (*p == 'C' || *p == 'F') {
-		temp = strtof(str, &endptr);
-		if (endptr == str || endptr != p)
-			return (0);
-		if (*p == 'F')
-			temp = (temp - 32) * 5 / 9;
-		kelv = temp * 10 + 2732;
+	if (*p == 'C' || *p == 'F' || *p == 'K') {
+		temp = strtof(str, endptrp);
+		if (*endptrp != str && *endptrp == p && errno == 0) {
+			if (*p == 'F')
+				temp = (temp - 32) * 5 / 9;
+			*endptrp = NULL;
+			if (*p != 'K')
+				temp += 273.15;
+			for (i = 0; i < prec; i++)
+				temp *= 10.0;
+			return ((int)(temp + 0.5));
+		}
 	} else {
-		kelv = (int)strtol(str, &endptr, 10);
-		if (endptr == str || *endptr != '\0')
-			return (0);
+		/* No unit specified -> treat it as a raw number */
+		kelv = (int)strtol(str, endptrp, 10);
+		if (*endptrp != str && *endptrp == p && errno == 0) {
+			*endptrp = NULL;
+			return (kelv);
+		}
 	}
-	*val = kelv;
-	return (1);
+
+	errno = ERANGE;
+	return (0);
 }
 
 /*
@@ -745,21 +908,6 @@ oidfmt(int *oid, int len, char *fmt, u_int *kind)
 	return (0);
 }
 
-static int ctl_sign[CTLTYPE+1] = {
-	[CTLTYPE_INT] = 1,
-	[CTLTYPE_LONG] = 1,
-	[CTLTYPE_S64] = 1,
-};
-
-static int ctl_size[CTLTYPE+1] = {
-	[CTLTYPE_INT] = sizeof(int),
-	[CTLTYPE_UINT] = sizeof(u_int),
-	[CTLTYPE_LONG] = sizeof(long),
-	[CTLTYPE_ULONG] = sizeof(u_long),
-	[CTLTYPE_S64] = sizeof(int64_t),
-	[CTLTYPE_U64] = sizeof(int64_t),
-};
-
 /*
  * This formats and outputs the value of one variable
  *
@@ -772,7 +920,7 @@ show_var(int *oid, int nlen)
 {
 	u_char buf[BUFSIZ], *val, *oval, *p;
 	char name[BUFSIZ], fmt[BUFSIZ];
-	const char *sep, *sep1;
+	const char *sep, *sep1, *prntype;
 	int qoid[CTL_MAXNAME+2];
 	uintmax_t umv;
 	intmax_t mv;
@@ -780,7 +928,9 @@ show_var(int *oid, int nlen)
 	size_t intlen;
 	size_t j, len;
 	u_int kind;
+	float base;
 	int (*func)(size_t, void *);
+	int prec;
 
 	/* Silence GCC. */
 	umv = mv = intlen = 0;
@@ -816,26 +966,40 @@ show_var(int *oid, int nlen)
 	else
 		sep = ": ";
 
-	if (dflag) {	/* just print description */
+	ctltype = (kind & CTLTYPE);
+	if (tflag || dflag) {
+		if (!nflag)
+			printf("%s%s", name, sep);
+        	if (ctl_typename[ctltype] != NULL)
+            		prntype = ctl_typename[ctltype];
+        	else
+            		prntype = "unknown";
+		if (tflag && dflag)
+			printf("%s%s", prntype, sep);
+		else if (tflag) {
+			printf("%s", prntype);
+			return (0);
+		}
 		qoid[1] = 5;
 		j = sizeof(buf);
 		i = sysctl(qoid, nlen + 2, buf, &j, 0, 0);
-		if (!nflag)
-			printf("%s%s", name, sep);
 		printf("%s", buf);
 		return (0);
 	}
 	/* find an estimate of how much we need for this var */
-	j = 0;
-	i = sysctl(oid, nlen, 0, &j, 0, 0);
-	j += j; /* we want to be sure :-) */
+	if (Bflag)
+		j = Bflag;
+	else {
+		j = 0;
+		i = sysctl(oid, nlen, 0, &j, 0, 0);
+		j += j; /* we want to be sure :-) */
+	}
 
 	val = oval = malloc(j + 1);
 	if (val == NULL) {
 		warnx("malloc failed");
 		return (1);
 	}
-	ctltype = (kind & CTLTYPE);
 	len = j;
 	i = sysctl(oid, nlen, val, &len, 0, 0);
 	if (i != 0 || (len == 0 && ctltype != CTLTYPE_STRING)) {
@@ -865,7 +1029,13 @@ show_var(int *oid, int nlen)
 	case CTLTYPE_UINT:
 	case CTLTYPE_LONG:
 	case CTLTYPE_ULONG:
+	case CTLTYPE_S8:
+	case CTLTYPE_S16:
+	case CTLTYPE_S32:
 	case CTLTYPE_S64:
+	case CTLTYPE_U8:
+	case CTLTYPE_U16:
+	case CTLTYPE_U32:
 	case CTLTYPE_U64:
 		if (!nflag)
 			printf("%s%s", name, sep);
@@ -883,6 +1053,21 @@ show_var(int *oid, int nlen)
 				umv = *(u_long *)p;
 				mv = *(long *)p;
 				break;
+			case CTLTYPE_S8:
+			case CTLTYPE_U8:
+				umv = *(uint8_t *)p;
+				mv = *(int8_t *)p;
+				break;
+			case CTLTYPE_S16:
+			case CTLTYPE_U16:
+				umv = *(uint16_t *)p;
+				mv = *(int16_t *)p;
+				break;
+			case CTLTYPE_S32:
+			case CTLTYPE_U32:
+				umv = *(uint32_t *)p;
+				mv = *(int32_t *)p;
+				break;
 			case CTLTYPE_S64:
 			case CTLTYPE_U64:
 				umv = *(uint64_t *)p;
@@ -897,8 +1082,19 @@ show_var(int *oid, int nlen)
 			else if (fmt[1] == 'K') {
 				if (mv < 0)
 					printf("%jd", mv);
-				else
-					printf("%.1fC", (mv - 2732.0) / 10);
+				else {
+					/*
+					 * See strIKtoi for details on fmt.
+					 */
+					prec = 1;
+					if (fmt[2] != '\0')
+						prec = fmt[2] - '0';
+					base = 1.0;
+					for (int i = 0; i < prec; i++)
+						base *= 10.0;
+					printf("%.*fC", prec,
+					    (float)mv / base - 273.15);
+				}
 			} else
 				printf(hflag ? "%'jd" : "%jd", mv);
 			sep1 = " ";
@@ -918,6 +1114,8 @@ show_var(int *oid, int nlen)
 			func = S_loadavg;
 		else if (strcmp(fmt, "S,vmtotal") == 0)
 			func = S_vmtotal;
+		else if (strcmp(fmt, "S,input_id") == 0)
+			func = S_input_id;
 #ifdef __amd64__
 		else if (strcmp(fmt, "S,efi_map_header") == 0)
 			func = S_efi_map;

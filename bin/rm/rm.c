@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)rm.c	8.5 (Berkeley) 4/18/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/rm/rm.c 290634 2015-11-10 07:17:38Z bapt $");
+__FBSDID("$FreeBSD: stable/11/bin/rm/rm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -516,7 +515,7 @@ check(const char *path, const char *name, struct stat *sp)
 			    "%s: -P was specified, but file is not writable",
 			    path);
 		(void)fprintf(stderr, "override %s%s%s/%s %s%sfor %s? ",
-		    modep + 1, modep[9] == ' ' ? "" : " ",
+		    modep + 1, modep[10] == ' ' ? "" : " ",
 		    user_from_uid(sp->st_uid, 0),
 		    group_from_gid(sp->st_gid, 0),
 		    *flagsp ? flagsp : "", *flagsp ? " " : "",

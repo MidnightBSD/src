@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -26,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/cddl/compat/opensolaris/misc/thread_pool_impl.h 266612 2014-05-24 10:44:40Z mav $
+ * $FreeBSD: stable/11/cddl/compat/opensolaris/misc/thread_pool_impl.h 265689 2014-05-08 16:59:36Z mav $
  */
 
 #ifndef _THREAD_POOL_IMPL_H

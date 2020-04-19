@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/setfacl/file.c 301919 2016-06-15 06:33:40Z truckman $");
+__FBSDID("$FreeBSD: stable/11/bin/setfacl/file.c 301582 2016-06-08 05:32:39Z truckman $");
 
 #include <sys/types.h>
 #include <sys/acl.h>

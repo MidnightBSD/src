@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/pax/tests/legacy_test.pl 262951 2014-03-09 17:04:31Z jmmv $
+# $FreeBSD: stable/11/bin/pax/tests/legacy_test.pl 260634 2014-01-14 18:39:30Z jmmv $
 
 use strict;
 use warnings;

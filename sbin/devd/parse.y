@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * DEVD (Device action daemon)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2002 M. Warner Losh <imp@freebsd.org>.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/devd/parse.y 235789 2012-05-22 16:33:10Z bapt $
+ * $FreeBSD: stable/11/sbin/devd/parse.y 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/cdefs.h>

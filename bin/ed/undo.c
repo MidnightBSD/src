@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* undo.c: This file contains the undo routines for the ed line editor */
 /*-
  * Copyright (c) 1993 Andrew Moore, Talke Studio.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/undo.c 241720 2012-10-19 05:43:38Z ed $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/undo.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include "ed.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/10/bin/date/extern.h 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD: stable/11/bin/date/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 extern int retval;

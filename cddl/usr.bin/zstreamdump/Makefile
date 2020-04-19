@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.bin/zstreamdump/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.bin/zstreamdump/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zstreamdump
 
@@ -14,13 +13,10 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 
-DPADD=	${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
-	${LIBPTHREAD} ${LIBZ} ${LIBAVL}
-LDADD=	-lm -lnvpair -lumem -lzpool -lpthread -lz -lavl
+LIBADD=	m nvpair umem zpool pthread z avl
 
 CSTD=	c99
 

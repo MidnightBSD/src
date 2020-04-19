@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*-
  */
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/iflagg.c 319265 2017-05-30 22:45:01Z asomers $";
+  "$FreeBSD: stable/11/sbin/ifconfig/iflagg.c 318813 2017-05-24 20:52:47Z asomers $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -98,6 +97,19 @@ setlaggflowidshift(const char *val, int d, int s, const struct afswtch *afp)
 	
 	if (ioctl(s, SIOCSLAGGOPTS, &ro) != 0)
 		err(1, "SIOCSLAGGOPTS");
+}
+
+static void
+setlaggrr_limit(const char *val, int d, int s, const struct afswtch *afp)
+{
+	struct lagg_reqopts ro;
+	
+	bzero(&ro, sizeof(ro));
+	strlcpy(ro.ro_ifname, name, sizeof(ro.ro_ifname));
+	ro.ro_bkt = (int)strtol(val, NULL, 10);
+
+	if (ioctl(s, SIOCSLAGGOPTS, &ro) != 0)
+		err(1, "SIOCSLAGG");
 }
 
 static void
@@ -244,6 +256,8 @@ lagg_status(int s)
 			printb("\t\tflags", ro.ro_opts, LAGG_OPT_BITS);
 			putchar('\n');
 			printf("\t\tflowid_shift: %d\n", ro.ro_flowid_shift);
+			if (ra.ra_proto == LAGG_PROTO_ROUNDROBIN)
+				printf("\t\trr_limit: %d\n", ro.ro_bkt);
 			printf("\tlagg statistics:\n");
 			printf("\t\tactive ports: %d\n", ro.ro_active);
 			printf("\t\tflapping: %u\n", ro.ro_flapping);
@@ -268,7 +282,7 @@ lagg_status(int s)
 
 		if (0 /* XXX */) {
 			printf("\tsupported aggregation protocols:\n");
-			for (i = 0; i < (sizeof(lpr) / sizeof(lpr[0])); i++)
+			for (i = 0; i < nitems(lpr); i++)
 				printf("\t\tlaggproto %s\n", lpr[i].lpr_name);
 		}
 	}
@@ -290,6 +304,7 @@ static struct cmd lagg_cmds[] = {
 	DEF_CMD("lacp_fast_timeout",	LAGG_OPT_LACP_TIMEOUT,	setlaggsetopt),
 	DEF_CMD("-lacp_fast_timeout",	-LAGG_OPT_LACP_TIMEOUT,	setlaggsetopt),
 	DEF_CMD_ARG("flowid_shift",	setlaggflowidshift),
+	DEF_CMD_ARG("rr_limit",		setlaggrr_limit),
 };
 static struct afswtch af_lagg = {
 	.af_name	= "af_lagg",

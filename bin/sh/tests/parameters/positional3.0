@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/parameters/positional3.0 287755 2015-09-13 14:24:12Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/parameters/positional3.0 268436 2014-07-08 22:04:44Z jilles $
 
 r=$(${SH} -c 'echo ${01:+yes}${010:+yes}' '' a '' '' '' '' '' '' '' '' b)
 [ "$r" = yesyes ]

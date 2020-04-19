@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Ryan McBride. All rights reserved.
  * Copyright (c) 2004 Max Laier. All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/ifconfig/ifpfsync.c 319265 2017-05-30 22:45:01Z asomers $
+ * $FreeBSD: stable/11/sbin/ifconfig/ifpfsync.c 345397 2019-03-21 22:40:05Z asomers $
  */
 
 #include <sys/param.h>
@@ -194,16 +195,16 @@ pfsync_status(int s)
 		return;
 
 	if (preq.pfsyncr_syncdev[0] != '\0' ||
-	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+	    preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP))
 			printf("\t");
 
 	if (preq.pfsyncr_syncdev[0] != '\0')
 		printf("pfsync: syncdev: %s ", preq.pfsyncr_syncdev);
-	if (preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+	if (preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP))
 		printf("syncpeer: %s ", inet_ntoa(preq.pfsyncr_syncpeer));
 
 	if (preq.pfsyncr_syncdev[0] != '\0' ||
-	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP) {
+	    preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP)) {
 		printf("maxupd: %d ", preq.pfsyncr_maxupdates);
 		printf("defer: %s\n", preq.pfsyncr_defer ? "on" : "off");
 	}

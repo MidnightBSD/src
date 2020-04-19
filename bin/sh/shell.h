@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)shell.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/shell.h 253658 2013-07-25 19:48:15Z jilles $
+ * $FreeBSD: stable/11/bin/sh/shell.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef SHELL_H_

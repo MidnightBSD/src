@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 4/2/94
-# $FreeBSD: stable/10/bin/mv/Makefile 262951 2014-03-09 17:04:31Z jmmv $
+# $FreeBSD: stable/11/bin/mv/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	mv
 
 .if ${MK_TESTS} != "no"

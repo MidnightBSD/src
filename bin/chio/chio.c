@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: chio.c,v 1.6 1998/01/04 23:53:58 thorpej Exp $ */
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>
@@ -44,7 +43,7 @@ static const char copyright[] =
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/chio/chio.c 249658 2013-04-19 20:03:51Z ken $");
+__FBSDID("$FreeBSD: stable/11/bin/chio/chio.c 249658 2013-04-19 20:03:51Z ken $");
 
 #include <sys/param.h>
 #include <sys/chio.h> 

@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)umount.c	8.8 (Berkeley) 5/8/95";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/sbin/umount/umount.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -86,13 +86,13 @@ int	 xdr_dir (XDR *, char *);
 int
 main(int argc, char *argv[])
 {
-	int all, errs, ch, mntsize, error;
+	int all, errs, ch, mntsize, error, nfsforce, ret;
 	char **typelist = NULL;
 	struct statfs *mntbuf, *sfs;
 	struct addrinfo hints;
 
-	all = errs = 0;
-	while ((ch = getopt(argc, argv, "AaF:fh:t:v")) != -1)
+	nfsforce = all = errs = 0;
+	while ((ch = getopt(argc, argv, "AaF:fh:Nnt:v")) != -1)
 		switch (ch) {
 		case 'A':
 			all = 2;
@@ -104,11 +104,17 @@ main(int argc, char *argv[])
 			setfstab(optarg);
 			break;
 		case 'f':
-			fflag = MNT_FORCE;
+			fflag |= MNT_FORCE;
 			break;
 		case 'h':	/* -h implies -A. */
 			all = 2;
 			nfshost = optarg;
+			break;
+		case 'N':
+			nfsforce = 1;
+			break;
+		case 'n':
+			fflag |= MNT_NONBUSY;
 			break;
 		case 't':
 			if (typelist != NULL)
@@ -125,11 +131,17 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	if ((fflag & MNT_FORCE) != 0 && (fflag & MNT_NONBUSY) != 0)
+		err(1, "-f and -n are mutually exclusive");
+
 	/* Start disks transferring immediately. */
-	if ((fflag & MNT_FORCE) == 0)
+	if ((fflag & (MNT_FORCE | MNT_NONBUSY)) == 0 && nfsforce == 0)
 		sync();
 
 	if ((argc == 0 && !all) || (argc != 0 && all))
+		usage();
+
+	if (nfsforce != 0 && (argc == 0 || nfshost != NULL || typelist != NULL))
 		usage();
 
 	/* -h implies "-t nfs" if no -t flag. */
@@ -169,7 +181,20 @@ main(int argc, char *argv[])
 		break;
 	case 0:
 		for (errs = 0; *argv != NULL; ++argv)
-			if (checkname(*argv, typelist) != 0)
+			if (nfsforce != 0) {
+				/*
+				 * First do the nfssvc() syscall to shut down
+				 * the mount point and then do the forced
+				 * dismount.
+				 */
+				ret = nfssvc(NFSSVC_FORCEDISM, *argv);
+				if (ret >= 0)
+					ret = unmount(*argv, MNT_FORCE);
+				if (ret < 0) {
+					warn("%s", *argv);
+					errs = 1;
+				}
+			} else if (checkname(*argv, typelist) != 0)
 				errs = 1;
 		break;
 	}
@@ -454,7 +479,7 @@ getmntentry(const char *fromname, const char *onname, fsid_t *fsid, dowhat what)
 {
 	static struct statfs *mntbuf;
 	static size_t mntsize = 0;
-	static char *mntcheck = NULL;
+	static int *mntcheck = NULL;
 	struct statfs *sfs, *foundsfs;
 	int i, count;
 
@@ -629,7 +654,7 @@ usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-	    "usage: umount [-fv] special ... | node ... | fsid ...",
-	    "       umount -a | -A [-F fstab] [-fv] [-h host] [-t type]");
+	    "usage: umount [-fNnv] special ... | node ... | fsid ...",
+	    "       umount -a | -A [-F fstab] [-fnv] [-h host] [-t type]");
 	exit(1);
 }

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2001-2003
 .\"	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -27,7 +26,7 @@
 .\"
 .\" Author: Hartmut Brandt <harti@FreeBSD.org>
 .\"
-.\" $FreeBSD: stable/10/sbin/atm/atmconfig/atmconfig.8 307426 2016-10-16 23:27:03Z sevan $
+.\" $FreeBSD: stable/11/sbin/atm/atmconfig/atmconfig.8 307425 2016-10-16 23:26:11Z sevan $
 .\"
 .Dd October 5, 2016
 .Dt ATMCONFIG 8
@@ -91,7 +90,7 @@ To get a list of options and arguments for a command use:
 .Pp
 To get a list of common options use:
 .D1 Nm Ic help Cm options
-.Ss The Ic diag Ss Command
+.Ss The Ic diag Command
 The
 .Ic diag
 command allows the inspection of the ATM interfaces on the local host
@@ -202,7 +201,7 @@ Print traffic parameters: PCR, SCR, MBS, MCR.
 .It Nm Ic diag Cm stats Ar device
 Print driver specific statistics.
 .El
-.Ss The Ic natm Ss Command
+.Ss The Ic natm Command
 The
 .Ic natm
 command is used to change
@@ -314,8 +313,7 @@ List all NATM routes.
 .El
 .Sh SEE ALSO
 .Xr natm 4 ,
-.Xr natmip 4 ,
-.Xr atm 8
+.Xr natmip 4
 .Sh HISTORY
 An
 .Nm

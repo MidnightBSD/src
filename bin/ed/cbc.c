@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* cbc.c: This file contains the encryption routines for the ed line editor */
 /*-
  * Copyright (c) 1993 The Regents of the University of California.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/cbc.c 301233 2016-06-03 03:20:54Z pfg $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/cbc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <errno.h>

@@ -2,8 +2,6 @@
 # $FreeBSD: src/share/dict/Makefile,v 1.14 2004/12/21 08:46:52 ru Exp $
 # $MidnightBSD$
 
-NO_OBJ=
-
 .include "../../Makefile.inc"
 
 # XXX MISSING:	connectives words

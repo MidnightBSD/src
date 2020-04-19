@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -20,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: stable/10/cddl/compat/opensolaris/include/devid.h 178414 2008-04-22 07:43:00Z jb $
+ * $FreeBSD: stable/11/cddl/compat/opensolaris/include/devid.h 178414 2008-04-22 07:43:00Z jb $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.

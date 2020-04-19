@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,9 +33,10 @@ static const char sccsid[] = "@(#)setup.c	8.10 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/setup.c 322860 2017-08-24 21:44:23Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/setup.c 356905 2020-01-20 08:28:54Z eugen $");
 
 #include <sys/param.h>
+#include <sys/disk.h>
 #include <sys/stat.h>
 #define FSTYPENAMES
 #include <sys/disklabel.h>
@@ -135,6 +135,7 @@ setup(char *dev)
 		size = MIBSIZE;
 		if (sysctlnametomib("vfs.ffs.adjrefcnt", adjrefcnt, &size) < 0||
 		    sysctlnametomib("vfs.ffs.adjblkcnt", adjblkcnt, &size) < 0||
+		    sysctlnametomib("vfs.ffs.setsize", setsize, &size) < 0 ||
 		    sysctlnametomib("vfs.ffs.freefiles", freefiles, &size) < 0||
 		    sysctlnametomib("vfs.ffs.freedirs", freedirs, &size) < 0 ||
 		    sysctlnametomib("vfs.ffs.freeblks", freeblks, &size) < 0) {
@@ -252,8 +253,7 @@ setup(char *dev)
 		goto badsb;
 	}
 	for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
-		size = sblock.fs_cssize - i < sblock.fs_bsize ?
-		    sblock.fs_cssize - i : sblock.fs_bsize;
+		size = MIN(sblock.fs_cssize - i, sblock.fs_bsize);
 		readcnt[sblk.b_type]++;
 		if (blread(fsreadfd, (char *)sblock.fs_csp + i,
 		    fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
@@ -276,8 +276,7 @@ setup(char *dev)
 		    (unsigned)bmapsize);
 		goto badsb;
 	}
-	inostathead = Calloc((unsigned)(sblock.fs_ncg),
-	    sizeof(struct inostatlist));
+	inostathead = Calloc(sblock.fs_ncg, sizeof(struct inostatlist));
 	if (inostathead == NULL) {
 		printf("cannot alloc %u bytes for inostathead\n",
 		    (unsigned)(sizeof(struct inostatlist) * (sblock.fs_ncg)));
@@ -287,10 +286,8 @@ setup(char *dev)
 	dirhash = numdirs;
 	inplast = 0;
 	listmax = numdirs + 10;
-	inpsort = (struct inoinfo **)Calloc((unsigned)listmax,
-	    sizeof(struct inoinfo *));
-	inphead = (struct inoinfo **)Calloc((unsigned)numdirs,
-	    sizeof(struct inoinfo *));
+	inpsort = (struct inoinfo **)Calloc(listmax, sizeof(struct inoinfo *));
+	inphead = (struct inoinfo **)Calloc(numdirs, sizeof(struct inoinfo *));
 	if (inpsort == NULL || inphead == NULL) {
 		printf("cannot alloc %ju bytes for inphead\n",
 		    (uintmax_t)numdirs * sizeof(struct inoinfo *));
@@ -470,7 +467,9 @@ sblock_init(void)
 static int
 calcsb(char *dev, int devfd, struct fs *fs)
 {
-	struct fsrecovery fsr;
+	struct fsrecovery *fsr;
+	char *fsrbuf;
+	u_int secsize;
 
 	/*
 	 * We need fragments-per-group and the partition-size.
@@ -480,32 +479,62 @@ calcsb(char *dev, int devfd, struct fs *fs)
 	 * overwritten by a boot block, we fail. But usually they are
 	 * there and we can use them.
 	 */
-	if (blread(devfd, (char *)&fsr,
-	    (SBLOCK_UFS2 - sizeof(fsr)) / dev_bsize, sizeof(fsr)) ||
-	    fsr.fsr_magic != FS_UFS2_MAGIC)
+	if (ioctl(devfd, DIOCGSECTORSIZE, &secsize) == -1)
+		return (0);
+	fsrbuf = Malloc(secsize);
+	if (fsrbuf == NULL)
+		errx(EEXIT, "calcsb: cannot allocate recovery buffer");
+	if (blread(devfd, fsrbuf,
+	    (SBLOCK_UFS2 - secsize) / dev_bsize, secsize) != 0)
+		return (0);
+	fsr = (struct fsrecovery *)&fsrbuf[secsize - sizeof *fsr];
+	if (fsr->fsr_magic != FS_UFS2_MAGIC)
 		return (0);
 	memset(fs, 0, sizeof(struct fs));
-	fs->fs_fpg = fsr.fsr_fpg;
-	fs->fs_fsbtodb = fsr.fsr_fsbtodb;
-	fs->fs_sblkno = fsr.fsr_sblkno;
-	fs->fs_magic = fsr.fsr_magic;
-	fs->fs_ncg = fsr.fsr_ncg;
+	fs->fs_fpg = fsr->fsr_fpg;
+	fs->fs_fsbtodb = fsr->fsr_fsbtodb;
+	fs->fs_sblkno = fsr->fsr_sblkno;
+	fs->fs_magic = fsr->fsr_magic;
+	fs->fs_ncg = fsr->fsr_ncg;
+	free(fsrbuf);
 	return (1);
 }
 
 /*
  * Check to see if recovery information exists.
+ * Return 1 if it exists or cannot be created.
+ * Return 0 if it does not exist and can be created.
  */
 static int
 chkrecovery(int devfd)
 {
-	struct fsrecovery fsr;
+	struct fsrecovery *fsr;
+	char *fsrbuf;
+	u_int secsize;
 
-	if (blread(devfd, (char *)&fsr,
-	    (SBLOCK_UFS2 - sizeof(fsr)) / dev_bsize, sizeof(fsr)) ||
-	    fsr.fsr_magic != FS_UFS2_MAGIC)
-		return (0);
-	return (1);
+	/*
+	 * Could not determine if backup material exists, so do not
+	 * offer to create it.
+	 */
+	if (ioctl(devfd, DIOCGSECTORSIZE, &secsize) == -1 ||
+	    (fsrbuf = Malloc(secsize)) == NULL ||
+	    blread(devfd, fsrbuf, (SBLOCK_UFS2 - secsize) / dev_bsize,
+	      secsize) != 0)
+		return (1);
+	/*
+	 * Recovery material has already been created, so do not
+	 * need to create it again.
+	 */
+	fsr = (struct fsrecovery *)&fsrbuf[secsize - sizeof *fsr];
+	if (fsr->fsr_magic == FS_UFS2_MAGIC) {
+		free(fsrbuf);
+		return (1);
+	}
+	/*
+	 * Recovery material has not been created and can be if desired.
+	 */
+	free(fsrbuf);
+	return (0);
 }
 
 /*
@@ -516,17 +545,24 @@ chkrecovery(int devfd)
 static void
 saverecovery(int readfd, int writefd)
 {
-	struct fsrecovery fsr;
+	struct fsrecovery *fsr;
+	char *fsrbuf;
+	u_int secsize;
 
 	if (sblock.fs_magic != FS_UFS2_MAGIC ||
-	    blread(readfd, (char *)&fsr,
-	    (SBLOCK_UFS2 - sizeof(fsr)) / dev_bsize, sizeof(fsr)))
+	    ioctl(readfd, DIOCGSECTORSIZE, &secsize) == -1 ||
+	    (fsrbuf = Malloc(secsize)) == NULL ||
+	    blread(readfd, fsrbuf, (SBLOCK_UFS2 - secsize) / dev_bsize,
+	      secsize) != 0) {
+		printf("RECOVERY DATA COULD NOT BE CREATED\n");
 		return;
-	fsr.fsr_magic = sblock.fs_magic;
-	fsr.fsr_fpg = sblock.fs_fpg;
-	fsr.fsr_fsbtodb = sblock.fs_fsbtodb;
-	fsr.fsr_sblkno = sblock.fs_sblkno;
-	fsr.fsr_ncg = sblock.fs_ncg;
-	blwrite(writefd, (char *)&fsr, (SBLOCK_UFS2 - sizeof(fsr)) / dev_bsize,
-	    sizeof(fsr));
+	}
+	fsr = (struct fsrecovery *)&fsrbuf[secsize - sizeof *fsr];
+	fsr->fsr_magic = sblock.fs_magic;
+	fsr->fsr_fpg = sblock.fs_fpg;
+	fsr->fsr_fsbtodb = sblock.fs_fsbtodb;
+	fsr->fsr_sblkno = sblock.fs_sblkno;
+	fsr->fsr_ncg = sblock.fs_ncg;
+	blwrite(writefd, fsrbuf, (SBLOCK_UFS2 - secsize) / secsize, secsize);
+	free(fsrbuf);
 }

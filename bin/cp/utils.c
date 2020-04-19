@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)utils.c	8.3 (Berkeley) 4/1/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/cp/utils.c 297782 2016-04-10 15:02:29Z jilles $");
+__FBSDID("$FreeBSD: stable/11/bin/cp/utils.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -357,7 +356,7 @@ setfile(struct stat *fs, int fd)
 
 	tspec[0] = fs->st_atim;
 	tspec[1] = fs->st_mtim;
-	if (utimensat(AT_FDCWD, to.p_path, tspec,
+	if (fdval ? futimens(fd, tspec) : utimensat(AT_FDCWD, to.p_path, tspec,
 	    islink ? AT_SYMLINK_NOFOLLOW : 0)) {
 		warn("utimensat: %s", to.p_path);
 		rval = 1;

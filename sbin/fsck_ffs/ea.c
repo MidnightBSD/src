@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/ea.c 259223 2013-12-11 19:25:17Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/ea.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/time.h>

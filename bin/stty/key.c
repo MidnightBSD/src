@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/stty/key.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)key.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/stty/key.c,v 1.20 2004/11/06 13:56:18 ache Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/key.c 214680 2010-11-02 17:00:56Z ed $");
 
 #include <sys/types.h>
 

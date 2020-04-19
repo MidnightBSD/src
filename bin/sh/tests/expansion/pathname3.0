@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/expansion/pathname3.0 211155 2010-08-10 22:45:59Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/expansion/pathname3.0 211155 2010-08-10 22:45:59Z jilles $
 
 v=12345678
 v=$v$v$v$v

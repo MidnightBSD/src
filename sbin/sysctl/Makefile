@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/sbin/sysctl/Makefile 203917 2010-02-15 14:08:06Z uqs $
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/sysctl/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=	sysctl
 WARNS?=	3
 MAN=	sysctl.8

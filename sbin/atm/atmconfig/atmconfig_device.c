@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/atm/atmconfig/atmconfig_device.c 227081 2011-11-04 13:36:02Z ed $");
+__FBSDID("$FreeBSD: stable/11/sbin/atm/atmconfig/atmconfig_device.c 227081 2011-11-04 13:36:02Z ed $");
 
 #include "atmconfig.h"
 #include "atmconfig_device.h"

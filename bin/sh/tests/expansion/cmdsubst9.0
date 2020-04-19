@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst9.0 216819 2010-12-30 15:04:59Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/expansion/cmdsubst9.0 216819 2010-12-30 15:04:59Z jilles $
 
 set -e
 

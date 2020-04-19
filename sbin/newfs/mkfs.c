@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/newfs/mkfs.c 322860 2017-08-24 21:44:23Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/newfs/mkfs.c 356905 2020-01-20 08:28:54Z eugen $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -122,7 +121,8 @@ mkfs(struct partition *pp, char *fsys)
 	ino_t maxinum;
 	int minfragsperinode;	/* minimum ratio of frags to inodes */
 	char tmpbuf[100];	/* XXX this will break in about 2,500 years */
-	struct fsrecovery fsr;
+	struct fsrecovery *fsr;
+	char *fsrbuf;
 	union {
 		struct fs fdummy;
 		char cdummy[SBLOCKSIZE];
@@ -136,12 +136,10 @@ mkfs(struct partition *pp, char *fsys)
 	 */
 	disk.d_bsize = sectorsize;
 	disk.d_ufs = Oflag;
-	if (Rflag) {
+	if (Rflag)
 		utime = 1000000000;
-	} else {
+	else
 		time(&utime);
-		arc4random_stir();
-	}
 	sblock.fs_old_flags = FS_FLAGS_UPDATED;
 	sblock.fs_flags = 0;
 	if (Uflag)
@@ -445,6 +443,8 @@ restart:
 	sblock.fs_sbsize = fragroundup(&sblock, sizeof(struct fs));
 	if (sblock.fs_sbsize > SBLOCKSIZE)
 		sblock.fs_sbsize = SBLOCKSIZE;
+	if (sblock.fs_sbsize < realsectorsize)
+		sblock.fs_sbsize = realsectorsize;
 	sblock.fs_minfree = minfree;
 	if (metaspace > 0 && metaspace < sblock.fs_fpg / 2)
 		sblock.fs_metaspace = blknum(&sblock, metaspace);
@@ -516,7 +516,7 @@ restart:
 	/*
 	 * Wipe out old UFS1 superblock(s) if necessary.
 	 */
-	if (!Nflag && Oflag != 1) {
+	if (!Nflag && Oflag != 1 && realsectorsize <= SBLOCK_UFS1) {
 		i = bread(&disk, part_ofs + SBLOCK_UFS1 / disk.d_bsize, chdummy, SBLOCKSIZE);
 		if (i == -1)
 			err(1, "can't read old UFS1 superblock: %s", disk.d_error);
@@ -617,8 +617,7 @@ restart:
 	}
 	for (i = 0; i < sblock.fs_cssize; i += sblock.fs_bsize)
 		wtfs(fsbtodb(&sblock, sblock.fs_csaddr + numfrags(&sblock, i)),
-			sblock.fs_cssize - i < sblock.fs_bsize ?
-			sblock.fs_cssize - i : sblock.fs_bsize,
+			MIN(sblock.fs_cssize - i, sblock.fs_bsize),
 			((char *)fscs) + i);
 	/*
 	 * Read the last sector of the boot block, replace the last
@@ -626,18 +625,20 @@ restart:
 	 * The recovery information only works for UFS2 filesystems.
 	 */
 	if (sblock.fs_magic == FS_UFS2_MAGIC) {
-		i = bread(&disk,
-		    part_ofs + (SBLOCK_UFS2 - sizeof(fsr)) / disk.d_bsize,
-		    (char *)&fsr, sizeof(fsr));
-		if (i == -1)
+		if ((fsrbuf = malloc(realsectorsize)) == NULL || bread(&disk,
+		    part_ofs + (SBLOCK_UFS2 - realsectorsize) / disk.d_bsize,
+		    fsrbuf, realsectorsize) == -1)
 			err(1, "can't read recovery area: %s", disk.d_error);
-		fsr.fsr_magic = sblock.fs_magic;
-		fsr.fsr_fpg = sblock.fs_fpg;
-		fsr.fsr_fsbtodb = sblock.fs_fsbtodb;
-		fsr.fsr_sblkno = sblock.fs_sblkno;
-		fsr.fsr_ncg = sblock.fs_ncg;
-		wtfs((SBLOCK_UFS2 - sizeof(fsr)) / disk.d_bsize, sizeof(fsr),
-		    (char *)&fsr);
+		fsr =
+		    (struct fsrecovery *)&fsrbuf[realsectorsize - sizeof *fsr];
+		fsr->fsr_magic = sblock.fs_magic;
+		fsr->fsr_fpg = sblock.fs_fpg;
+		fsr->fsr_fsbtodb = sblock.fs_fsbtodb;
+		fsr->fsr_sblkno = sblock.fs_sblkno;
+		fsr->fsr_ncg = sblock.fs_ncg;
+		wtfs((SBLOCK_UFS2 - realsectorsize) / disk.d_bsize,
+		    realsectorsize, fsrbuf);
+		free(fsrbuf);
 	}
 	/*
 	 * Update information about this partition in pack
@@ -683,8 +684,7 @@ initcg(int cylno, time_t utime)
 	acg.cg_magic = CG_MAGIC;
 	acg.cg_cgx = cylno;
 	acg.cg_niblk = sblock.fs_ipg;
-	acg.cg_initediblk = sblock.fs_ipg < 2 * INOPB(&sblock) ?
-	    sblock.fs_ipg : 2 * INOPB(&sblock);
+	acg.cg_initediblk = MIN(sblock.fs_ipg, 2 * INOPB(&sblock));
 	acg.cg_ndblk = dmax - cbase;
 	if (sblock.fs_contigsumsize > 0)
 		acg.cg_nclusterblks = acg.cg_ndblk / sblock.fs_frag;
@@ -794,7 +794,7 @@ initcg(int cylno, time_t utime)
 	 * Write out the duplicate super block, the cylinder group map
 	 * and two blocks worth of inodes in a single write.
 	 */
-	start = sblock.fs_bsize > SBLOCKSIZE ? sblock.fs_bsize : SBLOCKSIZE;
+	start = MAX(sblock.fs_bsize, SBLOCKSIZE);
 	bcopy((char *)&acg, &iobuf[start], sblock.fs_cgsize);
 	start += sblock.fs_bsize;
 	dp1 = (struct ufs1_dinode *)(&iobuf[start]);

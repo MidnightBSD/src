@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/atm/atmconfig/atmconfig_device.h 145799 2005-05-02 10:31:27Z delphij $
+ * $FreeBSD: stable/11/sbin/atm/atmconfig/atmconfig_device.h 145799 2005-05-02 10:31:27Z delphij $
  */
 #ifndef ATMCONFIG_DEVICE_H_
 #define ATMCONFIG_DEVICE_H_

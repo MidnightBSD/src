@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/sh/main.c 255215 2013-09-04 22:10:16Z jilles $");
+__FBSDID("$FreeBSD: stable/11/bin/sh/main.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -141,11 +140,13 @@ main(int argc, char *argv[])
 #endif
 	rootpid = getpid();
 	rootshell = 1;
+	INTOFF;
 	initvar();
 	setstackmark(&smark);
 	setstackmark(&smark2);
 	procargs(argc, argv);
 	pwd_init(iflag);
+	INTON;
 	if (iflag)
 		chkmail(1);
 	if (argv[0] && argv[0][0] == '-') {

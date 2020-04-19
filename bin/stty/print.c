@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/stty/print.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/stty/print.c,v 1.20 2005/05/26 06:57:57 ache Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/print.c 182052 2008-08-23 13:28:55Z ed $");
 
 #include <sys/types.h>
 

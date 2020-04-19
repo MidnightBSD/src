@@ -23,8 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/bin/csh/iconv_stub.h 282275 2015-04-30 16:08:47Z tijl $
+ * $FreeBSD: stable/11/bin/csh/iconv_stub.h 281591 2015-04-16 07:17:00Z tijl $
  */
 
 #ifndef _ICONV_H_

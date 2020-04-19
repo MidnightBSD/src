@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -23,12 +22,13 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2011 Pawel Jakub Dawidek. All rights reserved.
- * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2017 by Delphix. All rights reserved.
  * Copyright (c) 2012, Joyent, Inc. All rights reserved.
  * Copyright (c) 2012 Martin Matuska <mm@FreeBSD.org>. All rights reserved.
  * Copyright (c) 2013 Steven Hartland. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  * Copyright 2016 Nexenta Systems, Inc.
+ * Copyright (c) 2017 Datto Inc.
  */
 
 #ifndef	_LIBZFS_H
@@ -130,8 +130,30 @@ typedef enum zfs_error {
 	EZFS_DIFF,		/* general failure of zfs diff */
 	EZFS_DIFFDATA,		/* bad zfs diff data */
 	EZFS_POOLREADONLY,	/* pool is in read-only mode */
+	EZFS_SCRUB_PAUSED,	/* scrub currently paused */
+	EZFS_NO_PENDING,	/* cannot cancel, no operation is pending */
+	EZFS_CHECKPOINT_EXISTS,	/* checkpoint exists */
+	EZFS_DISCARDING_CHECKPOINT,	/* currently discarding a checkpoint */
+	EZFS_NO_CHECKPOINT,	/* pool has no checkpoint */
+	EZFS_DEVRM_IN_PROGRESS,	/* a device is currently being removed */
+	EZFS_VDEV_TOO_BIG,	/* a device is too big to be used */
+	EZFS_TOOMANY,		/* argument list too long */
+	EZFS_INITIALIZING,	/* currently initializing */
+	EZFS_NO_INITIALIZE,	/* no active initialize */
 	EZFS_UNKNOWN
 } zfs_error_t;
+
+/*
+ * UEFI boot support parameters. When creating whole disk boot pool,
+ * zpool create should allow to create EFI System partition for UEFI boot
+ * program. In case of BIOS, the EFI System partition is not used
+ * even if it does exist.
+ */
+typedef enum zpool_boot_label {
+	ZPOOL_NO_BOOT_LABEL = 0,
+	ZPOOL_CREATE_BOOT_LABEL,
+	ZPOOL_COPY_BOOT_LABEL
+} zpool_boot_label_t;
 
 /*
  * The following data structures are all part
@@ -242,7 +264,9 @@ typedef struct splitflags {
 /*
  * Functions to manipulate pool and vdev state
  */
-extern int zpool_scan(zpool_handle_t *, pool_scan_func_t);
+extern int zpool_scan(zpool_handle_t *, pool_scan_func_t, pool_scrub_cmd_t);
+extern int zpool_initialize(zpool_handle_t *, pool_initialize_func_t,
+    nvlist_t *);
 extern int zpool_clear(zpool_handle_t *, const char *, nvlist_t *);
 extern int zpool_reguid(zpool_handle_t *);
 extern int zpool_reopen(zpool_handle_t *);
@@ -254,6 +278,8 @@ extern int zpool_vdev_attach(zpool_handle_t *, const char *,
     const char *, nvlist_t *, int);
 extern int zpool_vdev_detach(zpool_handle_t *, const char *);
 extern int zpool_vdev_remove(zpool_handle_t *, const char *);
+extern int zpool_vdev_remove_cancel(zpool_handle_t *);
+extern int zpool_vdev_indirect_size(zpool_handle_t *, const char *, uint64_t *);
 extern int zpool_vdev_split(zpool_handle_t *, char *, nvlist_t **, nvlist_t *,
     splitflags_t);
 
@@ -265,7 +291,8 @@ extern nvlist_t *zpool_find_vdev(zpool_handle_t *, const char *, boolean_t *,
     boolean_t *, boolean_t *);
 extern nvlist_t *zpool_find_vdev_by_physpath(zpool_handle_t *, const char *,
     boolean_t *, boolean_t *, boolean_t *);
-extern int zpool_label_disk(libzfs_handle_t *, zpool_handle_t *, const char *);
+extern int zpool_label_disk(libzfs_handle_t *, zpool_handle_t *, const char *,
+    zpool_boot_label_t, uint64_t, int *);
 
 /*
  * Functions to manage pool properties
@@ -348,6 +375,7 @@ extern nvlist_t *zpool_get_config(zpool_handle_t *, nvlist_t **);
 extern nvlist_t *zpool_get_features(zpool_handle_t *);
 extern int zpool_refresh_stats(zpool_handle_t *, boolean_t *);
 extern int zpool_get_errlog(zpool_handle_t *, nvlist_t **);
+extern boolean_t zpool_is_bootable(zpool_handle_t *);
 
 /*
  * Import and export functions
@@ -373,6 +401,7 @@ typedef struct importargs {
 	int can_be_active : 1;	/* can the pool be active?		*/
 	int unique : 1;		/* does 'poolname' already exist?	*/
 	int exists : 1;		/* set on return if pool already exists	*/
+	nvlist_t *policy;	/* load policy (max txg, rewind, etc.)	*/
 } importargs_t;
 
 extern nvlist_t *zpool_search_import(libzfs_handle_t *, importargs_t *);
@@ -401,6 +430,8 @@ extern int zfs_ioctl(libzfs_handle_t *, int request, struct zfs_cmd *);
 extern int zpool_get_physpath(zpool_handle_t *, char *, size_t);
 extern void zpool_explain_recover(libzfs_handle_t *, const char *, int,
     nvlist_t *);
+extern int zpool_checkpoint(zpool_handle_t *);
+extern int zpool_discard_checkpoint(zpool_handle_t *);
 
 /*
  * Basic handle manipulations.  These functions do not create or destroy the
@@ -548,12 +579,12 @@ typedef struct get_all_cb {
 	zfs_handle_t	**cb_handles;
 	size_t		cb_alloc;
 	size_t		cb_used;
-	boolean_t	cb_verbose;
-	int		(*cb_getone)(zfs_handle_t *, void *);
 } get_all_cb_t;
 
+void zfs_foreach_mountpoint(libzfs_handle_t *, zfs_handle_t **, size_t,
+    zfs_iter_f, void*, boolean_t);
+
 void libzfs_add_handle(get_all_cb_t *, zfs_handle_t *);
-int libzfs_dataset_cmp(const void *, const void *);
 
 /*
  * Functions to create and destroy datasets.
@@ -617,13 +648,19 @@ typedef struct sendflags {
 
 	/* WRITE_EMBEDDED records of type DATA are permitted */
 	boolean_t embed_data;
+
+	/* compressed WRITE records are permitted */
+	boolean_t compress;
+
+	/* show progress as process title(ie. -V) */
+	boolean_t progressastitle;
 } sendflags_t;
 
 typedef boolean_t (snapfilter_cb_t)(zfs_handle_t *, void *);
 
 extern int zfs_send(zfs_handle_t *, const char *, const char *,
     sendflags_t *, int, snapfilter_cb_t, void *, nvlist_t **);
-extern int zfs_send_one(zfs_handle_t *, const char *, int, enum lzc_send_flags);
+extern int zfs_send_one(zfs_handle_t *, const char *, int, sendflags_t flags);
 extern int zfs_send_resume(libzfs_handle_t *, sendflags_t *, int outfd,
     const char *);
 extern nvlist_t *zfs_send_resume_token_to_nvlist(libzfs_handle_t *hdl,
@@ -711,6 +748,7 @@ extern boolean_t zfs_bookmark_exists(const char *path);
 extern boolean_t is_mounted(libzfs_handle_t *, const char *special, char **);
 extern boolean_t zfs_is_mounted(zfs_handle_t *, char **);
 extern int zfs_mount(zfs_handle_t *, const char *, int);
+extern int zfs_mount_at(zfs_handle_t *, const char *, int, const char *);
 extern int zfs_unmount(zfs_handle_t *, const char *, int);
 extern int zfs_unmountall(zfs_handle_t *, int);
 
@@ -770,6 +808,7 @@ extern int zpool_in_use(libzfs_handle_t *, int, pool_state_t *, char **,
  * Label manipulation.
  */
 extern int zpool_read_label(int, nvlist_t **);
+extern int zpool_read_all_labels(int, nvlist_t **);
 extern int zpool_clear_label(int);
 
 /* is this zvol valid for use as a dump device? */
@@ -806,7 +845,19 @@ extern int zpool_fru_set(zpool_handle_t *, uint64_t, const char *);
 extern int zmount(const char *, const char *, int, char *, char *, int, char *,
     int);
 #endif
+extern int zfs_remap_indirects(libzfs_handle_t *hdl, const char *);
 
+/* Allow consumers to initialize libshare externally for optimal performance */
+extern int zfs_init_libshare_arg(libzfs_handle_t *, int, void *);
+/*
+ * For most consumers, zfs_init_libshare_arg is sufficient on its own, and
+ * zfs_uninit_libshare is unnecessary. zfs_uninit_libshare should only be called
+ * if the caller has already initialized libshare for one set of zfs handles,
+ * and wishes to share or unshare filesystems outside of that set. In that case,
+ * the caller should uninitialize libshare, and then re-initialize it with the
+ * new handles being shared or unshared.
+ */
+extern void zfs_uninit_libshare(libzfs_handle_t *);
 #ifdef	__cplusplus
 }
 #endif

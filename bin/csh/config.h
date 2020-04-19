@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/bin/csh/config.h 298626 2016-04-26 11:39:32Z andrew $ */
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.in by autoheader.  */
 
@@ -99,7 +99,7 @@
 #define HAVE_PATHS_H 1
 
 /* Define to 1 if you have the `sbrk' function. */
-#define HAVE_SBRK 1
+/* #undef HAVE_SBRK 1 */
 
 /* Define to 1 if you have the `setpgid' function. */
 #define HAVE_SETPGID 1

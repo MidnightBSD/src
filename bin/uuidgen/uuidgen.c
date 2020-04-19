@@ -26,8 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/uuidgen/uuidgen.c,v 1.3 2003/03/15 02:27:10 marcel Exp $");
-/* $MidnightBSD$ */
+__FBSDID("$FreeBSD: stable/11/bin/uuidgen/uuidgen.c 330329 2018-03-03 11:02:34Z eadler $");
 
 #include <err.h>
 #include <stdio.h>
@@ -48,7 +47,7 @@ main(int argc, char *argv[])
 	FILE *fp;
 	uuid_t *store, *uuid;
 	char *p;
-	int ch, count, i, iterate;
+	int ch, count, i, iterate, status;
 
 	count = -1;	/* no count yet */
 	fp = stdout;	/* default output file */
@@ -102,7 +101,9 @@ main(int argc, char *argv[])
 
 	uuid = store;
 	while (count--) {
-		uuid_to_string(uuid++, &p, NULL);
+		uuid_to_string(uuid++, &p, &status);
+		if (status != uuid_s_ok)
+		     err(1, "cannot stringify a UUID");
 		fprintf(fp, "%s\n", p);
 		free(p);
 	}

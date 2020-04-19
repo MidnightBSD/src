@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/ifclone.c 319265 2017-05-30 22:45:01Z asomers $";
+  "$FreeBSD: stable/11/sbin/ifconfig/ifclone.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

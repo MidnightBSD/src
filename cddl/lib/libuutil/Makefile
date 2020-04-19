@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libuutil/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/libuutil/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libuutil/common
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/avl

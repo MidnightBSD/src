@@ -29,10 +29,10 @@
  * getfacl -- POSIX.1e utility to extract ACLs from files and directories
  * and send the results to stdout
  */
-/* $FreeBSD: src/bin/getfacl/getfacl.c,v 1.10 2005/02/09 17:37:37 ru Exp $ */
+
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/bin/getfacl/getfacl.c 241720 2012-10-19 05:43:38Z ed $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -48,7 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-static int	more_than_one = 0;
+static int more_than_one = 0;
 
 static void
 usage(void)

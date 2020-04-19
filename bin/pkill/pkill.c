@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pkill.c,v 1.16 2005/10/10 22:13:20 kleink Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2002 The NetBSD Foundation, Inc.
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/pkill/pkill.c 287269 2015-08-29 02:41:59Z jamie $");
+__FBSDID("$FreeBSD: stable/11/bin/pkill/pkill.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -44,6 +45,7 @@ __FBSDID("$FreeBSD: stable/10/bin/pkill/pkill.c 287269 2015-08-29 02:41:59Z jami
 #include <sys/user.h>
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -72,7 +74,7 @@ __FBSDID("$FreeBSD: stable/10/bin/pkill/pkill.c 287269 2015-08-29 02:41:59Z jami
 
 /* Ignore system-processes (if '-S' flag is not specified) and myself. */
 #define	PSKIP(kp)	((kp)->ki_pid == mypid ||			\
-			 (!kthreads && ((kp)->ki_flag & P_KTHREAD) != 0))
+			 (!kthreads && ((kp)->ki_flag & P_KPROC) != 0))
 
 enum listtype {
 	LT_GENERIC,
@@ -320,7 +322,10 @@ main(int argc, char **argv)
 	 * Use KERN_PROC_PROC instead of KERN_PROC_ALL, since we
 	 * just want processes and not individual kernel threads.
 	 */
-	plist = kvm_getprocs(kd, KERN_PROC_PROC, 0, &nproc);
+	if (pidfromfile >= 0)
+		plist = kvm_getprocs(kd, KERN_PROC_PID, pidfromfile, &nproc);
+	else
+		plist = kvm_getprocs(kd, KERN_PROC_PROC, 0, &nproc);
 	if (plist == NULL) {
 		errx(STATUS_ERROR, "Cannot get process list (%s)",
 		    kvm_geterr(kd));
@@ -565,6 +570,8 @@ main(int argc, char **argv)
 			continue;
 		rv |= (*action)(kp);
 	}
+	if (rv && pgrep && !quiet)
+		putchar('\n');
 	if (!did_action && !pgrep && longfmt)
 		fprintf(stderr,
 		    "No matching processes belonging to you were found\n");
@@ -654,10 +661,12 @@ killact(const struct kinfo_proc *kp)
 static int
 grepact(const struct kinfo_proc *kp)
 {
+	static bool first = true;
 
-	show_process(kp);
-	if (!quiet)
+	if (!quiet && !first)
 		printf("%s", delim);
+	show_process(kp);
+	first = false;
 	return (1);
 }
 

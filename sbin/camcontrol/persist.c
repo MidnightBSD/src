@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Spectra Logic Corporation
  * All rights reserved.
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/camcontrol/persist.c 314221 2017-02-24 20:51:39Z ken $");
+__FBSDID("$FreeBSD: stable/11/sbin/camcontrol/persist.c 352289 2019-09-13 15:13:21Z mav $");
 
 #include <sys/ioctl.h>
 #include <sys/stdint.h>
@@ -242,9 +241,11 @@ persist_print_cap(struct scsi_per_res_cap *cap, uint32_t valid_len)
 {
 	uint32_t length;
 	int check_type_mask = 0;
+	uint32_t type_mask;
 
 	length = scsi_2btoul(cap->length);
 	length = MIN(length, valid_len);
+	type_mask = scsi_2btoul(cap->type_mask);
 
 	if (length < __offsetof(struct scsi_per_res_cap, type_mask)) {
 		fprintf(stdout, "Insufficient data (%u bytes) to report "
@@ -346,20 +347,20 @@ persist_print_cap(struct scsi_per_res_cap *cap, uint32_t valid_len)
 		fprintf(stdout, "Supported Persistent Reservation Types:\n");
 		fprintf(stdout, "    Write Exclusive - All Registrants "
 			"(WR_EX_AR): %d\n",
-			(cap->type_mask[0] & SPRI_TM_WR_EX_AR)? 1 : 0);
+			(type_mask & SPRI_TM_WR_EX_AR)? 1 : 0);
 		fprintf(stdout, "    Exclusive Access - Registrants Only "
 			"(EX_AC_RO): %d\n",
-			(cap->type_mask[0] & SPRI_TM_EX_AC_RO) ? 1 : 0);
+			(type_mask & SPRI_TM_EX_AC_RO) ? 1 : 0);
 		fprintf(stdout, "    Write Exclusive - Registrants Only "
 			"(WR_EX_RO): %d\n",
-			(cap->type_mask[0] & SPRI_TM_WR_EX_RO)? 1 : 0);
+			(type_mask & SPRI_TM_WR_EX_RO)? 1 : 0);
 		fprintf(stdout, "    Exclusive Access (EX_AC): %d\n",
-			(cap->type_mask[0] & SPRI_TM_EX_AC) ? 1 : 0);
+			(type_mask & SPRI_TM_EX_AC) ? 1 : 0);
 		fprintf(stdout, "    Write Exclusive (WR_EX): %d\n",
-			(cap->type_mask[0] & SPRI_TM_WR_EX) ? 1 : 0);
+			(type_mask & SPRI_TM_WR_EX) ? 1 : 0);
 		fprintf(stdout, "    Exclusive Access - All Registrants "
 			"(EX_AC_AR): %d\n",
-			(cap->type_mask[1] & SPRI_TM_EX_AC_AR) ? 1 : 0);
+			(type_mask & SPRI_TM_EX_AC_AR) ? 1 : 0);
 	} else {
 		fprintf(stdout, "Persistent Reservation Type Mask is NOT "
 			"valid\n");
@@ -434,7 +435,7 @@ scsipersist(struct cam_device *device, int argc, char **argv, char *combinedopt,
 	uint32_t res_len = 0;
 	unsigned long rel_tgt_port = 0;
 	uint8_t *res_buf = NULL;
-	int scope = SPR_LU_SCOPE, res_type = 0, key_set = 0, sa_key_set = 0;
+	int scope = SPR_LU_SCOPE, res_type = 0;
 	struct persist_transport_id *id, *id2;
 	STAILQ_HEAD(, persist_transport_id) transport_id_list;
 	uint64_t key = 0, sa_key = 0;
@@ -511,10 +512,8 @@ scsipersist(struct cam_device *device, int argc, char **argv, char *combinedopt,
 			}
 			if (c == 'k') {
 				key = tmpval;
-				key_set = 1;
 			} else {
 				sa_key = tmpval;
-				sa_key_set = 1;
 			}
 			break;
 		}
@@ -859,12 +858,6 @@ retry:
 	if (cam_send_ccb(device, ccb) < 0) {
 		warn("error sending PERSISTENT RESERVE %s", (in != 0) ?
 		    "IN" : "OUT");
-
-		if (verbosemode != 0) {
-			cam_error_print(device, ccb, CAM_ESF_ALL,
-					CAM_EPF_ALL, stderr);
-		}
-
 		error = 1;
 		goto bailout;
 	}

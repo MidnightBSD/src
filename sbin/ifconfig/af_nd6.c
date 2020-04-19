@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Hiroki Sato.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/af_nd6.c 319264 2017-05-30 22:44:05Z asomers $";
+  "$FreeBSD: stable/11/sbin/ifconfig/af_nd6.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -47,7 +48,6 @@ static const char rcsid[] =
 #include <arpa/inet.h>
 
 #include <netinet/in.h>
-#include <net/if_var.h>
 #include <netinet/in_var.h>
 #include <arpa/inet.h>
 #include <netdb.h>

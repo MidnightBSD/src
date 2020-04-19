@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/var.h 262951 2014-03-09 17:04:31Z jmmv $
+ * $FreeBSD: stable/11/bin/sh/var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -69,7 +68,7 @@ struct localvar {
 };
 
 
-struct localvar *localvars;
+extern struct localvar *localvars;
 extern int forcelocal;
 
 extern struct var vifs;
@@ -115,8 +114,8 @@ extern int initial_localeisutf8;
 void initvar(void);
 void setvar(const char *, const char *, int);
 void setvareq(char *, int);
-struct strlist;
-void listsetvar(struct strlist *, int);
+struct arglist;
+void listsetvar(struct arglist *, int);
 char *lookupvar(const char *);
 char *bltinlookup(const char *, int);
 void bltinsetlocale(void);

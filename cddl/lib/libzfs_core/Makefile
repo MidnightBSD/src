@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/libzfs_core/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/libzfs_core/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${SRCTOP}/cddl/compat/opensolaris/misc
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
@@ -8,9 +7,9 @@
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libzfs/common
 
 LIB=	zfs_core
-DPADD=	${LIBNVPAIR}
-LDADD=	-lnvpair
+LIBADD=	nvpair
 
+INCS=	libzfs_core.h
 SRCS=	libzfs_core.c \
 	libzfs_core_compat.c \
 	zfs_ioctl_compat.c
@@ -27,7 +26,6 @@ CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair

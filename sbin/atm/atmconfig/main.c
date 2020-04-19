@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2003
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -28,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/atm/atmconfig/main.c 270824 2014-08-29 18:26:55Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sbin/atm/atmconfig/main.c 270027 2014-08-15 21:22:49Z ngie $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

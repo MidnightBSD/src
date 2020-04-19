@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static const char sccsid[] = "@(#)pass2.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/pass2.c 241012 2012-09-27 23:30:58Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/pass2.c 344887 2019-03-07 13:53:59Z kib $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -111,7 +110,7 @@ pass2(void)
 		dp = ginode(ROOTINO);
 		DIP_SET(dp, di_mode, DIP(dp, di_mode) & ~IFMT);
 		DIP_SET(dp, di_mode, DIP(dp, di_mode) | IFDIR);
-		inodirty();
+		inodirty(dp);
 		break;
 
 	case DSTATE:
@@ -157,7 +156,7 @@ pass2(void)
 			if (reply("FIX") == 1) {
 				dp = ginode(inp->i_number);
 				DIP_SET(dp, di_size, inp->i_isize);
-				inodirty();
+				inodirty(dp);
 			}
 		} else if ((inp->i_isize & (DIRBLKSIZ - 1)) != 0) {
 			getpathname(pathbuf, inp->i_number, inp->i_number);
@@ -176,16 +175,14 @@ pass2(void)
 				dp = ginode(inp->i_number);
 				DIP_SET(dp, di_size,
 				    roundup(inp->i_isize, DIRBLKSIZ));
-				inodirty();
+				inodirty(dp);
 			}
 		}
 		dp = &dino;
 		memset(dp, 0, sizeof(struct ufs2_dinode));
 		DIP_SET(dp, di_mode, IFDIR);
 		DIP_SET(dp, di_size, inp->i_isize);
-		for (i = 0;
-		     i < (inp->i_numblks<NDADDR ? inp->i_numblks : NDADDR);
-		     i++)
+		for (i = 0; i < MIN(inp->i_numblks, NDADDR); i++)
 			DIP_SET(dp, di_db[i], inp->i_blks[i]);
 		if (inp->i_numblks > NDADDR)
 			for (i = 0; i < NIADDR; i++)

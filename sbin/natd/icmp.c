@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * natd - Network Address Translation Daemon for FreeBSD.
  *
@@ -10,7 +9,7 @@
  *
  * Ari Suutari <suutari@iki.fi>
  *
- * $FreeBSD: stable/10/sbin/natd/icmp.c 131567 2004-07-04 12:53:54Z phk $
+ * $FreeBSD: stable/11/sbin/natd/icmp.c 131567 2004-07-04 12:53:54Z phk $
  */
 
 #include <stdlib.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)modes.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/stty/modes.c 228406 2011-12-11 09:56:48Z ed $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/modes.c 228406 2011-12-11 09:56:48Z ed $");
 
 #include <sys/types.h>
 #include <stddef.h>

@@ -1,5 +1,3 @@
-/* $MidnightBSD: src/bin/sleep/sleep.c,v 1.3 2011/12/02 13:00:22 laffer1 Exp $ */
-
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -41,8 +39,9 @@ static char sccsid[] = "@(#)sleep.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sleep/sleep.c,v 1.19.2.1 2005/10/09 04:39:07 delphij Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/sleep/sleep.c 332463 2018-04-13 03:30:10Z kevans $");
 
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -70,6 +69,9 @@ main(int argc, char *argv[])
 	double d;
 	time_t original;
 	char buf[2];
+
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
 
 	if (argc != 2)
 		usage();

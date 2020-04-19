@@ -34,10 +34,9 @@
 .\"
 .\"     @(#)boot_i386.8	8.2 (Berkeley) 4/19/94
 .\"
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/sbin/reboot/boot_i386.8 293692 2016-01-11 20:10:14Z trasz $
+.\" $FreeBSD: stable/11/sbin/reboot/boot_i386.8 347705 2019-05-16 15:32:03Z ian $
 .\"
-.Dd July 1, 2013
+.Dd April 30, 2019
 .Dt BOOT 8 i386
 .Os
 .Sh NAME
@@ -56,6 +55,11 @@ known as drive C:, or as drive 0x80 to the BIOS).
 Some BIOSes allow
 you to change this default sequence, and may also include a CD-ROM
 drive as a boot device.
+.Pp
+Some newer PCs boot using UEFI firmware, not BIOS.
+That process is described
+in
+.Xr uefi 8 .
 .Pp
 By default, a three-stage bootstrap is employed, and control is
 automatically passed from the boot blocks (bootstrap stages one and
@@ -91,7 +95,7 @@ program is documented separately.
 After the boot blocks have been loaded,
 you should see a prompt similar to the following:
 .Bd -literal
->> FreeBSD/i386 BOOT
+>> FreeBSD/x86 BOOT
 Default: 0:ad(0,a)/boot/loader
 boot:
 .Ed
@@ -114,7 +118,6 @@ boot device, as a hint about available boot files.
 .Ic ?\&
 may also be specified as the last segment of a path, in which case
 the listing will be of the relevant subdirectory.)
-.Pp
 .It Xo
 .Sm off
 .Ar bios_drive : interface ( unit , Oo Ar slice , Oc Ar part )
@@ -230,7 +233,7 @@ regardless of the
 .Fl h
 option described here.
 .It Fl m
-mute the console to suppress all console input and output during the
+mute the console to suppress all kernel console input and output during the
 boot.
 .It Fl n
 ignore key press to interrupt boot before
@@ -357,7 +360,8 @@ requirement has not been adhered to.
 .Xr loader 8 ,
 .Xr nextboot 8 ,
 .Xr reboot 8 ,
-.Xr shutdown 8
+.Xr shutdown 8 ,
+.Xr uefi 8
 .Sh BUGS
 The bsdlabel format used by this version of
 .Bx

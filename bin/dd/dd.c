@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "@(#)dd.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/dd/dd.c 298258 2016-04-19 07:34:31Z thomas $");
+__FBSDID("$FreeBSD: stable/11/bin/dd/dd.c 342167 2018-12-17 15:19:48Z sobomax $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -63,6 +62,7 @@ __FBSDID("$FreeBSD: stable/10/bin/dd/dd.c 298258 2016-04-19 07:34:31Z thomas $")
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "dd.h"
@@ -83,16 +83,24 @@ size_t	cbsz;			/* conversion block size */
 uintmax_t files_cnt = 1;	/* # of files to copy */
 const	u_char *ctab;		/* conversion table */
 char	fill_char;		/* Character to fill with if defined */
+size_t	speed = 0;		/* maximum speed, in bytes per second */
 volatile sig_atomic_t need_summary;
+volatile sig_atomic_t need_progress;
 
 int
 main(int argc __unused, char *argv[])
 {
+	struct itimerval itv = { { 1, 0 }, { 1, 0 } }; /* SIGALARM every second, if needed */
+
 	(void)setlocale(LC_CTYPE, "");
 	jcl(argv);
 	setup();
 
 	(void)signal(SIGINFO, siginfo_handler);
+	if (ddflags & C_PROGRESS) {
+		(void)signal(SIGALRM, sigalarm_handler);
+		setitimer(ITIMER_REAL, &itv, NULL);
+	}
 	(void)signal(SIGINT, terminate);
 
 	atexit(summary);
@@ -125,7 +133,6 @@ static void
 setup(void)
 {
 	u_int cnt;
-	struct timeval tv;
 
 	if (in.name == NULL) {
 		in.name = "stdin";
@@ -244,8 +251,8 @@ setup(void)
 		ctab = casetab;
 	}
 
-	(void)gettimeofday(&tv, NULL);
-	st.start = tv.tv_sec + tv.tv_usec * 1e-6;
+	if (clock_gettime(CLOCK_MONOTONIC, &st.start))
+		err(1, "clock_gettime");
 }
 
 static void
@@ -278,6 +285,44 @@ getfdtype(IO *io)
 		io->flags |= ISSEEK;
 }
 
+/*
+ * Limit the speed by adding a delay before every block read.
+ * The delay (t_usleep) is equal to the time computed from block
+ * size and the specified speed limit (t_target) minus the time
+ * spent on actual read and write operations (t_io).
+ */
+static void
+speed_limit(void)
+{
+	static double t_prev, t_usleep;
+	double t_now, t_io, t_target;
+
+	t_now = secs_elapsed();
+	t_io = t_now - t_prev - t_usleep;
+	t_target = (double)in.dbsz / (double)speed;
+	t_usleep = t_target - t_io;
+	if (t_usleep > 0)
+		usleep(t_usleep * 1000000);
+	else
+		t_usleep = 0;
+	t_prev = t_now;
+}
+
+static void
+swapbytes(void *v, size_t len)
+{
+	unsigned char *p = v;
+	unsigned char t;
+
+	while (len > 1) {
+		t = p[0];
+		p[0] = p[1];
+		p[1] = t;
+		p += 2;
+		len -= 2;
+	}
+}
+
 static void
 dd_in(void)
 {
@@ -294,6 +339,9 @@ dd_in(void)
 				return;
 			break;
 		}
+
+		if (speed > 0)
+			speed_limit();
 
 		/*
 		 * Zero the buffer first if sync; if doing block operations,
@@ -375,14 +423,15 @@ dd_in(void)
 				++st.swab;
 				--n;
 			}
-			swab(in.dbp, in.dbp, (size_t)n);
+			swapbytes(in.dbp, (size_t)n);
 		}
 
 		in.dbp += in.dbrcnt;
 		(*cfunc)();
-		if (need_summary) {
+		if (need_summary)
 			summary();
-		}
+		if (need_progress)
+			progress();
 	}
 }
 
@@ -425,7 +474,7 @@ void
 dd_out(int force)
 {
 	u_char *outp;
-	size_t cnt, i, n;
+	size_t cnt, n;
 	ssize_t nw;
 	static int warned;
 	int sparse;
@@ -458,12 +507,8 @@ dd_out(int force)
 		do {
 			sparse = 0;
 			if (ddflags & C_SPARSE) {
-				sparse = 1;	/* Is buffer sparse? */
-				for (i = 0; i < cnt; i++)
-					if (outp[i] != 0) {
-						sparse = 0;
-						break;
-					}
+				/* Is buffer sparse? */
+				sparse = BISZERO(outp, cnt);
 			}
 			if (sparse && !force) {
 				pending += cnt;

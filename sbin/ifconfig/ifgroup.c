@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Max Laier. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/ifgroup.c 289986 2015-10-26 03:43:28Z ngie $";
+  "$FreeBSD: stable/11/sbin/ifconfig/ifgroup.c 345397 2019-03-21 22:40:05Z asomers $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -87,9 +88,6 @@ getifgroups(int s)
 	struct ifgroupreq	 ifgr;
 	struct ifg_req		*ifg;
 
-	if (!verbose)
-		return;
-
 	memset(&ifgr, 0, sizeof(ifgr));
 	strlcpy(ifgr.ifgr_name, name, IFNAMSIZ);
 
@@ -115,13 +113,15 @@ getifgroups(int s)
 		len -= sizeof(struct ifg_req);
 		if (strcmp(ifg->ifgrq_group, "all")) {
 			if (cnt == 0)
-				printf("\tgroups: ");
+				printf("\tgroups:");
 			cnt++;
-			printf("%s ", ifg->ifgrq_group);
+			printf(" %s", ifg->ifgrq_group);
 		}
 	}
 	if (cnt)
 		printf("\n");
+
+	free(ifgr.ifgr_groups);
 }
 
 static void

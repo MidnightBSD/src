@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/parameters/pwd1.0 213738 2010-10-12 18:20:38Z obrien $
+# $FreeBSD: stable/11/bin/sh/tests/parameters/pwd1.0 213738 2010-10-12 18:20:38Z obrien $
 # Check that bogus PWD values are not accepted from the environment.
 
 cd / || exit 3

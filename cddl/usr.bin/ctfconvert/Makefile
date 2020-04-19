@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.bin/ctfconvert/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.bin/ctfconvert/Makefile 327186 2017-12-26 03:59:49Z asomers $
+
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/common
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/cvt
-
-DEBUG_FLAGS=	-g
 
 PROG=		ctfconvert
 SRCS=		alist.c \
@@ -37,7 +36,9 @@ CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 		-I${OPENSOLARIS_USR_DISTDIR}/tools/ctf/cvt \
 		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common
 
-DPADD=		${LIBCTF} ${LIBDWARF} ${LIBELF} ${LIBZ} ${LIBPTHREAD}
-LDADD=		-lctf -ldwarf -lelf -lz -lpthread
+LIBADD=		dwarf elf z pthread
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

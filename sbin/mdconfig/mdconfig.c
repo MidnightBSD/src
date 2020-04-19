@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2004 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/mdconfig/mdconfig.c 293690 2016-01-11 20:01:50Z trasz $
+ * $FreeBSD: stable/11/sbin/mdconfig/mdconfig.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/main.c 324675 2017-10-16 21:55:31Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/main.c 356428 2020-01-06 21:23:14Z mckusick $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -81,12 +80,13 @@ main(int argc, char *argv[])
 	int ch;
 	struct rlimit rlimit;
 	struct itimerval itimerval;
+	int fsret;
 	int ret = 0;
 
 	sync();
 	skipclean = 1;
 	inoopt = 0;
-	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZ")) != -1) {
+	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZz")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
@@ -163,6 +163,10 @@ main(int argc, char *argv[])
 			Zflag++;
 			break;
 
+		case 'z':
+			zflag++;
+			break;
+
 		default:
 			usage();
 		}
@@ -195,8 +199,9 @@ main(int argc, char *argv[])
 		(void)setrlimit(RLIMIT_DATA, &rlimit);
 	}
 	while (argc > 0) {
-		if (checkfilesys(*argv) == ERESTART)
+		if ((fsret = checkfilesys(*argv)) == ERESTART)
 			continue;
+		ret |= fsret;
 		argc--;
 		argv++;
 	}
@@ -353,10 +358,10 @@ checkfilesys(char *filesys)
 					pfatal(
 	"CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
 					    snapname, strerror(errno));
-				} else if ((grp = getgrnam("operator")) == 0 ||
-				    mkdir(snapname, 0770) < 0 ||
-				    chown(snapname, -1, grp->gr_gid) < 0 ||
-				    chmod(snapname, 0770) < 0) {
+				} else if ((grp = getgrnam("operator")) == NULL ||
+					   mkdir(snapname, 0770) < 0 ||
+					   chown(snapname, -1, grp->gr_gid) < 0 ||
+					   chmod(snapname, 0770) < 0) {
 					bkgrdflag = 0;
 					pfatal(
 	"CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
@@ -415,13 +420,11 @@ checkfilesys(char *filesys)
 	 */
 	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
 		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
-			if (preen || reply("USE JOURNAL")) {
-				if (suj_check(filesys) == 0) {
-					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
-					if (chkdoreload(mntp) == 0)
-						exit(0);
-					exit(4);
-				}
+			if (suj_check(filesys) == 0) {
+				printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
+				if (chkdoreload(mntp) == 0)
+					exit(0);
+				exit(4);
 			}
 			printf("** Skipping journal, falling through to full fsck\n\n");
 		}
@@ -584,7 +587,7 @@ checkfilesys(char *filesys)
 		sync();
 		return (4);
 	}
-	return (0);
+	return (rerun ? ERERUN : 0);
 }
 
 static int
@@ -677,7 +680,7 @@ static void
 usage(void)
 {
 	(void) fprintf(stderr,
-"usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] filesystem ...\n",
+"usage: %s [-BCdEFfnpRrSyZ] [-b block] [-c level] [-m mode] filesystem ...\n",
 	    getprogname());
 	exit(1);
 }

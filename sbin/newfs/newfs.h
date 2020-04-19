@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -36,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/newfs/newfs.h 248623 2013-03-22 21:45:28Z mckusick $
+ * $FreeBSD: stable/11/sbin/newfs/newfs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <libufs.h>

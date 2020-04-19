@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/stty/gfmt.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)gfmt.c	8.6 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/stty/gfmt.c,v 1.20 2004/04/06 20:06:53 markm Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/gfmt.c 181269 2008-08-04 01:25:48Z cperciva $");
 
 #include <sys/types.h>
 

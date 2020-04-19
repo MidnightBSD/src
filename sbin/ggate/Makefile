@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/ggate/Makefile 177714 2008-03-29 17:44:40Z ru $
+# $FreeBSD: stable/11/sbin/ggate/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	${_ggatec} \
 	${_ggated} \

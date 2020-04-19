@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1988, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)shutdown.8	8.2 (Berkeley) 4/27/95
-.\" $FreeBSD: stable/10/sbin/shutdown/shutdown.8 316204 2017-03-30 02:28:49Z sevan $
+.\" $FreeBSD: stable/11/sbin/shutdown/shutdown.8 307414 2016-10-16 23:03:47Z sevan $
 .\"
 .Dd September 21, 2016
 .Dt SHUTDOWN 8
@@ -119,6 +118,15 @@ to the current system values.
 The first form brings the system down in
 .Ar number
 minutes and the second at the absolute time specified.
+.Ar +number
+may be specified in units other than minutes by appending the corresponding
+suffix:
+.Dq Li s ,
+.Dq Li sec ,
+.Dq Li m ,
+.Dq Li min .
+.Dq Li h ,
+.Dq Li hour .
 .It Ar warning-message
 Any other arguments comprise the warning message that is broadcast
 to users currently logged into the system.

@@ -23,8 +23,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/bin/chflags/tests/chflags_test.sh 323275 2017-09-07 16:54:47Z asomers $
-# $MidnightBSD$
+# $FreeBSD: stable/11/bin/chflags/tests/chflags_test.sh 323275 2017-09-07 16:54:47Z asomers $
+#
 
 usage_output='usage: chflags'
 

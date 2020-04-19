@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/ed/test/Makefile 50471 1999-08-27 23:15:48Z peter $
+# $FreeBSD: stable/11/bin/ed/test/Makefile 50471 1999-08-27 23:15:48Z peter $
 
 SHELL=	/bin/sh
 ED=	${.OBJDIR}/ed

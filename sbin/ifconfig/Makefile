@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/10/sbin/ifconfig/Makefile 286810 2015-08-15 17:52:55Z melifaro $
+# $FreeBSD: stable/11/sbin/ifconfig/Makefile 345173 2019-03-15 08:18:02Z avos $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	ifconfig
 
 SRCS=	ifconfig.c		# base support
@@ -22,7 +22,6 @@ SRCS+=	af_inet.c		# IPv4 support
 .if ${MK_INET6_SUPPORT} != "no"
 SRCS+=	af_inet6.c		# IPv6 support
 .endif
-SRCS+=	af_atalk.c		# AppleTalk support
 .if ${MK_INET6_SUPPORT} != "no"
 SRCS+=	af_nd6.c		# ND6 support
 .endif
@@ -35,14 +34,15 @@ SRCS+=	ifvlan.c		# SIOC[GS]ETVLAN support
 SRCS+=	ifvxlan.c		# VXLAN support
 SRCS+=	ifgre.c			# GRE keys etc
 SRCS+=	ifgif.c			# GIF reversed header workaround
+SRCS+=	ifipsec.c		# IPsec VTI
 
 SRCS+=	sfp.c			# SFP/SFP+ information
-DPADD+=	${LIBM}
-LDADD+=	-lm
+LIBADD+=	m
 
-SRCS+=	ifieee80211.c regdomain.c # SIOC[GS]IEEE80211 support
-DPADD+=	${LIBBSDXML} ${LIBSBUF}
-LDADD+=	-lbsdxml -lsbuf
+.if ${MK_WIRELESS_SUPPORT} != "no"
+SRCS+=	ifieee80211.c		# SIOC[GS]IEEE80211 support
+LIBADD+=	80211
+.endif
 
 SRCS+=	carp.c			# SIOC[GS]VH support
 SRCS+=	ifgroup.c		# ...
@@ -59,20 +59,18 @@ CFLAGS+= -DINET6
 .if ${MK_INET_SUPPORT} != "no"
 CFLAGS+= -DINET
 .endif
-.if ${MK_IPX_SUPPORT} != "no" && !defined(RELEASE_CRUNCH)
-SRCS+=	af_ipx.c		# IPX support
-DPADD+=	${LIBIPX}
-LDADD+=	-lipx
-.endif
 .if ${MK_JAIL} != "no" && !defined(RELEASE_CRUNCH) && !defined(RESCUE)
 CFLAGS+= -DJAIL
-DPADD+= ${LIBJAIL}
-LDADD+= -ljail
+LIBADD+=	jail
 .endif
 
 MAN=	ifconfig.8
 
 CFLAGS+= -Wall -Wmissing-prototypes -Wcast-qual -Wwrite-strings -Wnested-externs
 WARNS?=	2
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

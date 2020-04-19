@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/realpath/realpath.c,v 1.2 2007/07/26 20:13:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/realpath/realpath.c,v 1.6 2004/04/06 20:06:50 markm Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/realpath/realpath.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ps.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/10/bin/ps/ps.h 301148 2016-06-01 17:33:02Z truckman $
+ * $FreeBSD: stable/11/bin/ps/ps.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/queue.h>
@@ -66,6 +65,7 @@ typedef struct var {
 	const char *name;	/* name(s) of variable */
 	const char *header;	/* default header */
 	const char *alias;	/* aliases */
+	const char *field;	/* xo field name */
 #define	COMM	0x01		/* needs exec arguments and environment (XXX) */
 #define	LJUST	0x02		/* left adjust on output (trailing blanks) */
 #define	USER	0x04		/* needs user structure */

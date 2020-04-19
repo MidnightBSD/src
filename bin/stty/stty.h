@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stty.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: src/bin/stty/stty.h,v 1.9 2004/04/06 20:06:53 markm Exp $
+ * $FreeBSD: stable/11/bin/stty/stty.h 127958 2004-04-06 20:06:54Z markm $
  */
 
 #include <sys/ioctl.h>

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Written By Julian ELischer
  * Copyright julian Elischer 1993.
  * Permission is granted to use or redistribute this file in any way as long
@@ -44,7 +46,7 @@
  * from: scsi.c,v 1.17 1998/01/12 07:57:57 charnier Exp $";
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sbin/camcontrol/util.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/stdint.h>
 #include <sys/types.h>

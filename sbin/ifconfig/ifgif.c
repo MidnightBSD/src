@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Hiroki Sato.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +27,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/ifgif.c 288055 2015-09-21 03:03:57Z hrs $";
+  "$FreeBSD: stable/11/sbin/ifconfig/ifgif.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif
 
 #include <sys/param.h>
@@ -75,8 +76,6 @@ setgifopts(const char *val, int d, int s, const struct afswtch *afp)
 {
 	int opts;
 
-	if (d == 0)
-		return;
 	ifr.ifr_data = (caddr_t)&opts;
 	if (ioctl(s, GIFGOPTS, &ifr) == -1) {
 		warn("ioctl(GIFGOPTS)");
@@ -95,12 +94,8 @@ setgifopts(const char *val, int d, int s, const struct afswtch *afp)
 }
 
 static struct cmd gif_cmds[] = {
-	DEF_CMD("accept_rev_ethip_ver",	0,			setgifopts),
-	DEF_CMD("-accept_rev_ethip_ver",0,			setgifopts),
 	DEF_CMD("ignore_source",	GIF_IGNORE_SOURCE,	setgifopts),
 	DEF_CMD("-ignore_source",	-GIF_IGNORE_SOURCE,	setgifopts),
-	DEF_CMD("send_rev_ethip_ver",	0,			setgifopts),
-	DEF_CMD("-send_rev_ethip_ver",	0,			setgifopts),
 };
 
 static struct afswtch af_gif = {

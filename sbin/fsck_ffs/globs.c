@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/globs.c 307536 2016-10-17 22:34:41Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/globs.c 347475 2019-05-10 23:46:42Z mckusick $");
 
 #include <sys/param.h>
 #include <ufs/ufs/dinode.h>
@@ -57,10 +56,12 @@ struct bufarea sblk;		/* file system superblock */
 struct bufarea *pdirbp;		/* current directory contents */
 struct bufarea *pbp;		/* current inode block */
 ino_t cursnapshot;
-long numdirs, dirhash, listmax, inplast;
+long  dirhash, inplast;
+unsigned long  numdirs, listmax;
 long countdirs;		/* number of directories we actually found */
 int	adjrefcnt[MIBSIZE];	/* MIB command to adjust inode reference cnt */
 int	adjblkcnt[MIBSIZE];	/* MIB command to adjust inode block count */
+int	setsize[MIBSIZE];	/* MIB command to set inode size */
 int	adjndir[MIBSIZE];	/* MIB command to adjust number of directories */
 int	adjnbfree[MIBSIZE];	/* MIB command to adjust number of free blocks */
 int	adjnifree[MIBSIZE];	/* MIB command to adjust number of free inodes */
@@ -82,6 +83,7 @@ ufs2_daddr_t bflag;		/* location of alternate super block */
 int	debug;			/* output debugging info */
 int	Eflag;			/* delete empty data blocks */
 int	Zflag;			/* zero empty data blocks */
+int	zflag;			/* zero unused directory space */
 int	inoopt;			/* trim out unused inodes */
 char	ckclean;		/* only do work if not cleanly unmounted */
 int	cvtlevel;		/* convert to newer file system format */
@@ -119,15 +121,16 @@ fsckinit(void)
 	bzero(totalreadcnt, sizeof(long) * BT_NUMBUFTYPES);
 	bzero(readtime, sizeof(struct timespec) * BT_NUMBUFTYPES);
 	bzero(totalreadtime, sizeof(struct timespec) * BT_NUMBUFTYPES);
-	bzero(&startprog, sizeof(struct timespec));;
+	bzero(&startprog, sizeof(struct timespec));
 	bzero(&sblk, sizeof(struct bufarea));
 	pdirbp = NULL;
 	pbp = NULL;
 	cursnapshot = 0;
-	numdirs = dirhash = listmax = inplast = 0;
+	listmax = numdirs = dirhash = inplast = 0;
 	countdirs = 0;
 	bzero(adjrefcnt, sizeof(int) * MIBSIZE);
 	bzero(adjblkcnt, sizeof(int) * MIBSIZE);
+	bzero(setsize, sizeof(int) * MIBSIZE);
 	bzero(adjndir, sizeof(int) * MIBSIZE);
 	bzero(adjnbfree, sizeof(int) * MIBSIZE);
 	bzero(adjnifree, sizeof(int) * MIBSIZE);

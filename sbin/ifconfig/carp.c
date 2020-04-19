@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/sbin/ifconfig/carp.c 289986 2015-10-26 03:43:28Z ngie $ */
+/*	$FreeBSD: stable/11/sbin/ifconfig/carp.c 330449 2018-03-05 07:26:05Z eadler $ */
 /*	from $OpenBSD: ifconfig.c,v 1.82 2003/10/19 05:43:35 mcbride Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Michael Shalayeff. All rights reserved.
  * Copyright (c) 2003 Ryan McBride. All rights reserved.
  *
@@ -37,7 +38,6 @@
 #include <unistd.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <netinet/ip_carp.h>

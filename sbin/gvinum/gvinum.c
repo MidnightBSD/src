@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (c) 2004 Lukas Ertl
  *  Copyright (c) 2005 Chris Jones
  *  Copyright (c) 2007 Ulf Lilleengen
@@ -30,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/gvinum/gvinum.c 266043 2014-05-14 16:18:08Z marius $
+ * $FreeBSD: stable/11/sbin/gvinum/gvinum.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

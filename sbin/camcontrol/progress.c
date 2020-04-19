@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: progressbar.c,v 1.21 2009/04/12 10:18:52 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1997-2009 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -43,7 +44,7 @@
 #include <unistd.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/camcontrol/progress.c 287203 2015-08-27 13:17:05Z ken $");
+__FBSDID("$FreeBSD: stable/11/sbin/camcontrol/progress.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include "progress.h"
 
@@ -57,7 +58,7 @@ static const char * const suffixes[] = {
 	"EiB",	/* 2^60 Exbibyte */
 };
 
-#define NSUFFIXES	(sizeof(suffixes) / sizeof(suffixes[0]))
+#define NSUFFIXES	nitems(suffixes)
 #define SECSPERHOUR	(60 * 60)
 #define DEFAULT_TTYWIDTH	80
 

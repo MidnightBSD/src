@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -21,16 +20,14 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- * $FreeBSD: stable/10/cddl/lib/libdtrace/sched.d 179189 2008-05-22 04:26:42Z jb $
+ * $FreeBSD: stable/11/cddl/lib/libdtrace/sched.d 333617 2018-05-15 00:00:44Z dteske $
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
-#pragma D depends_on module unix
+#pragma D depends_on module kernel
 #pragma D depends_on provider sched
 
 struct cpuinfo {
@@ -84,4 +81,3 @@ inline chipid_t chip = curcpu->cpu_chip;
 inline lgrp_id_t lgrp = curcpu->cpu_lgrp;
 #pragma D attributes Stable/Stable/Common lgrp
 #pragma D binding "1.0" lgrp
-

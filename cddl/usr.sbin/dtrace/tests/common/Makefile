@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/dtrace/tests/common/Makefile 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/dtrace/tests/common/Makefile 295643 2016-02-16 02:13:59Z bdrewery $
 
 # We exclude several subdirectories: nfs and sysevent do not compile on
 # FreeBSD, and docsExamples doesn't seem amenable to automated testing.

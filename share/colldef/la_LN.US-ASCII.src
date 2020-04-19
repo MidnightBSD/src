@@ -1,6 +1,0 @@
-# ASCII
-#
-# $MidnightBSD$
-#
-order \
-	\x00;...;\xff

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*-
  * This program is in the public domain
  *
- * $FreeBSD: stable/10/bin/dd/gen.c 298258 2016-04-19 07:34:31Z thomas $
+ * $FreeBSD: stable/11/bin/dd/gen.c 295749 2016-02-18 08:44:16Z thomas $
  */
 
 #include <stdio.h>

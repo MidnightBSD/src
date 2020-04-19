@@ -1,7 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/10/bin/kill/Makefile 87323 2001-12-04 01:57:47Z obrien $
+# $FreeBSD: stable/11/bin/kill/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=	kill
 
 .include <bsd.prog.mk>

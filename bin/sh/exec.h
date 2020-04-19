@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 6/8/95
- * $FreeBSD: stable/10/bin/sh/exec.h 238468 2012-07-15 10:19:43Z jilles $
+ * $FreeBSD: stable/11/bin/sh/exec.h 238468 2012-07-15 10:19:43Z jilles $
  */
 
 /* values of cmdtype */

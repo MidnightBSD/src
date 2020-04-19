@@ -23,9 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/kldunload/Makefile 298107 2016-04-16 07:45:30Z gjb $
 #
 
+PACKAGE=runtime
 PROG=	kldunload
 MAN=	kldunload.8
 

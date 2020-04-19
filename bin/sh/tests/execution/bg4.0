@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/execution/bg4.0 223283 2011-06-19 00:00:36Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/execution/bg4.0 223283 2011-06-19 00:00:36Z jilles $
 
 x=''
 : ${x:=1} &

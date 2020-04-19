@@ -1,2 +1,2 @@
-# $FreeBSD: stable/10/bin/sh/tests/parser/only-redir4.0 254335 2013-08-14 19:34:13Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/parser/only-redir4.0 254335 2013-08-14 19:34:13Z jilles $
 case x in x) </dev/null ;& esac

@@ -24,8 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/sh/tests/functional_test.sh 291604 2015-12-01 18:27:38Z ngie $
+# $FreeBSD: stable/11/bin/sh/tests/functional_test.sh 270101 2014-08-17 14:26:12Z jilles $
 
 SRCDIR=$(atf_get_srcdir)
 

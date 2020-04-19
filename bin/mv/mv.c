@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/mv/mv.c 301147 2016-06-01 17:30:50Z truckman $");
+__FBSDID("$FreeBSD: stable/11/bin/mv/mv.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -279,6 +278,7 @@ fastcopy(const char *from, const char *to, struct stat *sbp)
 	static char *bp = NULL;
 	mode_t oldmode;
 	int nread, from_fd, to_fd;
+	struct stat tsb;
 
 	if ((from_fd = open(from, O_RDONLY, 0)) < 0) {
 		warn("fastcopy: open() failed (from): %s", from);
@@ -338,14 +338,22 @@ err:		if (unlink(to))
 	 * if the server supports flags and we were trying to *remove* flags
 	 * on a file that we copied, i.e., that we didn't create.)
 	 */
-	errno = 0;
-	if (fchflags(to_fd, sbp->st_flags))
-		if (errno != EOPNOTSUPP || sbp->st_flags != 0)
-			warn("%s: set flags (was: 0%07o)", to, sbp->st_flags);
+	if (fstat(to_fd, &tsb) == 0) {
+		if ((sbp->st_flags  & ~UF_ARCHIVE) !=
+		    (tsb.st_flags & ~UF_ARCHIVE)) {
+			if (fchflags(to_fd,
+			    sbp->st_flags | (tsb.st_flags & UF_ARCHIVE)))
+				if (errno != EOPNOTSUPP ||
+				    ((sbp->st_flags & ~UF_ARCHIVE) != 0))
+					warn("%s: set flags (was: 0%07o)",
+					    to, sbp->st_flags);
+		}
+	} else
+		warn("%s: cannot stat", to);
 
 	ts[0] = sbp->st_atim;
 	ts[1] = sbp->st_mtim;
-	if (utimensat(AT_FDCWD, to, ts, 0))
+	if (futimens(to_fd, ts))
 		warn("%s: set times", to);
 
 	if (close(to_fd)) {

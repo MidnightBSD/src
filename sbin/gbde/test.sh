@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/gbde/test.sh 168420 2007-04-06 11:16:11Z pjd $
 
 set -e
 

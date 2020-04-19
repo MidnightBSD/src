@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1997 Peter Wemm.
  * All rights reserved.
  *
@@ -32,7 +33,7 @@
  *
  * so there!
  *
- * $FreeBSD: stable/10/sbin/ifconfig/ifconfig.h 296425 2016-03-06 08:52:03Z kp $
+ * $FreeBSD: stable/11/sbin/ifconfig/ifconfig.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #define	__constructor	__attribute__((constructor))

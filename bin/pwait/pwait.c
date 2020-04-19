@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2009, Jilles Tjoelker
  * All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/pwait/pwait.c 245506 2013-01-16 18:15:25Z delphij $");
+__FBSDID("$FreeBSD: stable/11/bin/pwait/pwait.c 315723 2017-03-22 17:53:25Z bdrewery $");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -54,7 +53,7 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: pwait [-v] pid ...\n");
+	fprintf(stderr, "usage: pwait [-t timeout] [-v] pid ...\n");
 	exit(EX_USAGE);
 }
 
@@ -64,15 +63,46 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
+	struct itimerval itv;
 	int kq;
 	struct kevent *e;
-	int verbose = 0;
+	int tflag, verbose;
 	int opt, nleft, n, i, duplicate, status;
 	long pid;
 	char *s, *end;
+	double timeout;
 
-	while ((opt = getopt(argc, argv, "v")) != -1) {
+	tflag = verbose = 0;
+	memset(&itv, 0, sizeof(itv));
+	while ((opt = getopt(argc, argv, "t:v")) != -1) {
 		switch (opt) {
+		case 't':
+			tflag = 1;
+			errno = 0;
+			timeout = strtod(optarg, &end);
+			if (end == optarg || errno == ERANGE ||
+			    timeout < 0)
+				errx(EX_DATAERR, "timeout value");
+			switch(*end) {
+			case 0:
+			case 's':
+				break;
+			case 'h':
+				timeout *= 60;
+				/* FALLTHROUGH */
+			case 'm':
+				timeout *= 60;
+				break;
+			default:
+				errx(EX_DATAERR, "timeout unit");
+			}
+			if (timeout > 100000000L)
+				errx(EX_DATAERR, "timeout value");
+			itv.it_value.tv_sec = (time_t)timeout;
+			timeout -= (time_t)timeout;
+			itv.it_value.tv_usec =
+			    (suseconds_t)(timeout * 1000000UL);
+			break;
 		case 'v':
 			verbose = 1;
 			break;
@@ -92,7 +122,7 @@ main(int argc, char *argv[])
 	if (kq == -1)
 		err(1, "kqueue");
 
-	e = malloc(argc * sizeof(struct kevent));
+	e = malloc((argc + tflag) * sizeof(struct kevent));
 	if (e == NULL)
 		err(1, "malloc");
 	nleft = 0;
@@ -120,12 +150,30 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (tflag) {
+		/*
+		 * Explicitly detect SIGALRM so that an exit status of 124
+		 * can be returned rather than 142.
+		 */
+		EV_SET(e + nleft, SIGALRM, EVFILT_SIGNAL, EV_ADD, 0, 0, NULL);
+		if (kevent(kq, e + nleft, 1, NULL, 0, NULL) == -1)
+			err(EX_OSERR, "kevent");
+		/* Ignore SIGALRM to not interrupt kevent(2). */
+		signal(SIGALRM, SIG_IGN);
+		if (setitimer(ITIMER_REAL, &itv, NULL) == -1)
+			err(EX_OSERR, "setitimer");
+	}
 	while (nleft > 0) {
-		n = kevent(kq, NULL, 0, e, nleft, NULL);
+		n = kevent(kq, NULL, 0, e, nleft + tflag, NULL);
 		if (n == -1)
 			err(1, "kevent");
-		if (verbose)
-			for (i = 0; i < n; i++) {
+		for (i = 0; i < n; i++) {
+			if (e[i].filter == EVFILT_SIGNAL) {
+				if (verbose)
+					printf("timeout\n");
+				return (124);
+			}
+			if (verbose) {
 				status = e[i].data;
 				if (WIFEXITED(status))
 					printf("%ld: exited with status %d.\n",
@@ -139,7 +187,8 @@ main(int argc, char *argv[])
 					printf("%ld: terminated.\n",
 					    (long)e[i].ident);
 			}
-		nleft -= n;
+			--nleft;
+		}
 	}
 
 	exit(EX_OK);

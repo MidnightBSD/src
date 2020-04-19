@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/bin/sh/cd.h 223060 2011-06-13 21:03:27Z jilles $
+ * $FreeBSD: stable/11/bin/sh/cd.h 223060 2011-06-13 21:03:27Z jilles $
  */
 
 void	 pwd_init(int);

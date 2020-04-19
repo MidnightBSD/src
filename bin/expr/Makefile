@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/bin/expr/Makefile 281148 2015-04-06 14:45:40Z dim $
+# $FreeBSD: stable/11/bin/expr/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	expr
 SRCS=	expr.y
 YFLAGS=

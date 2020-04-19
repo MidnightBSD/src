@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #        @(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/10/bin/test/Makefile 262951 2014-03-09 17:04:31Z jmmv $
+# $FreeBSD: stable/11/bin/test/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	test
 LINKS=	${BINDIR}/test ${BINDIR}/[
 MLINKS=	test.1 [.1

@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/bin/stty/stty.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1989, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)stty.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/stty/stty.c,v 1.23 2005/02/09 17:37:39 ru Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/stty.c 285438 2015-07-13 05:59:41Z bapt $");
 
 #include <sys/types.h>
 
@@ -48,6 +47,7 @@ __FBSDID("$FreeBSD: src/bin/stty/stty.c,v 1.23 2005/02/09 17:37:39 ru Exp $");
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 	struct info i;
 	enum FMT fmt;
 	int ch;
-	const char *file;
+	const char *file, *errstr = NULL;
 
 	fmt = NOTSET;
 	i.fd = STDIN_FILENO;
@@ -131,7 +131,9 @@ args:	argc -= optind;
 		if (isdigit(**argv)) {
 			speed_t speed;
 
-			speed = atoi(*argv);
+			speed = strtonum(*argv, 0, UINT_MAX, &errstr);
+			if (errstr)
+				err(1, "speed");
 			cfsetospeed(&i.t, speed);
 			cfsetispeed(&i.t, speed);
 			i.set = 1;

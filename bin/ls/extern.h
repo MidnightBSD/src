@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: stable/10/bin/ls/extern.h 242807 2012-11-08 23:45:19Z grog $
+ * $FreeBSD: stable/11/bin/ls/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 int	 acccmp(const FTSENT *, const FTSENT *);
@@ -46,14 +45,17 @@ int	 revsizecmp(const FTSENT *, const FTSENT *);
 
 void	 printcol(const DISPLAY *);
 void	 printlong(const DISPLAY *);
-int	 printname(const char *);
+int	 printname(const char *, const char *);
 void	 printscol(const DISPLAY *);
 void	 printstream(const DISPLAY *);
 void	 usage(void);
-int	 prn_normal(const char *);
+int	 prn_normal(const char *, const char *);
+char *	 getname(const char *);
 size_t	 len_octal(const char *, int);
-int	 prn_octal(const char *);
-int	 prn_printable(const char *);
+int	 prn_octal(const char *, const char *);
+char *	 get_octal(const char *);
+int	 prn_printable(const char *, const char *);
+char *	 get_printable(const char *);
 #ifdef COLORLS
 void	 parsecolors(const char *cs);
 void	 colorquit(int);

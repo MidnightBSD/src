@@ -1,8 +1,8 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.3 (Berkeley) 5/8/95
-# $FreeBSD: stable/10/bin/df/Makefile 310380 2016-12-21 23:59:58Z brooks $
+# $FreeBSD: stable/11/bin/df/Makefile 319184 2017-05-30 04:15:40Z ngie $
 
-MOUNT=	${.CURDIR}/../../sbin/mount
+PACKAGE=runtime
+MOUNT=	${SRCTOP}/sbin/mount
 .PATH: ${MOUNT}
 
 PROG=	df
@@ -13,7 +13,6 @@ CFLAGS+= -I${MOUNT}
 CFLAGS+= -DMOUNT_CHAR_DEVS
 SRCS+=	getmntopts.c
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	xo util
 
 .include <bsd.prog.mk>

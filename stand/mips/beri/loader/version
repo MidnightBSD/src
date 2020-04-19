@@ -1,0 +1,6 @@
+$FreeBSD: stable/11/stand/mips/beri/loader/version 262197 2014-02-18 23:18:32Z rwatson $
+
+NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
+file is important.  Make sure the current version number is on line 6.
+
+0.1:	Initial MIPS version

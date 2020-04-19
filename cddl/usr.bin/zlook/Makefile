@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.bin/zlook/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.bin/zlook/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/zlook
 

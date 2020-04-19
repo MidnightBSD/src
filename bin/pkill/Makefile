@@ -1,13 +1,12 @@
-# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.1 2002/03/01 11:21:58 ad Exp $
-# $FreeBSD: stable/10/bin/pkill/Makefile 287269 2015-08-29 02:41:59Z jamie $
+# $FreeBSD: stable/11/bin/pkill/Makefile 319016 2017-05-28 00:13:44Z rgrimes $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	pkill
 
-DPADD=	${LIBKVM} ${LIBJAIL}
-LDADD=	-lkvm -ljail
+LIBADD=	kvm jail
 
 LINKS=	${BINDIR}/pkill ${BINDIR}/pgrep
 MLINKS=	pkill.1 pgrep.1
@@ -17,8 +16,8 @@ MLINKS=	pkill.1 pgrep.1
 # keep in mind that pkill is installed to /usr/bin in other
 # OS types, e.g., NetBSD, OpenBSD, Solaris, and Linux.
 #
-SYMLINKS=	${BINDIR}/pkill /usr/bin/pkill
-SYMLINKS+=	${BINDIR}/pgrep /usr/bin/pgrep
+SYMLINKS=	../..${BINDIR}/pkill /usr/bin/pkill
+SYMLINKS+=	../..${BINDIR}/pgrep /usr/bin/pgrep
 
 .if ${MK_TESTS} != "no"
 SUBDIR+= tests

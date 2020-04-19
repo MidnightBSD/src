@@ -1,13 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.sbin/Makefile 283853 2015-05-31 23:00:35Z ngie $
+# $FreeBSD: stable/11/cddl/usr.sbin/Makefile 333617 2018-05-15 00:00:44Z dteske $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	${_dtrace} \
-	${_dtruss} \
+	${_dwatch} \
 	${_lockstat} \
+	${_plockstat} \
 	${_tests} \
 	${_zdb} \
+	${_zfsd} \
 	${_zhack}
 
 .if ${MK_TESTS} != "no"
@@ -19,21 +20,33 @@ _tests=	tests
 _zdb=	zdb
 _zhack=	zhack
 .endif
+. if ${MK_CXX} != "no"
+_zfsd=	zfsd
+. endif
 .endif
 
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 _dtrace=	dtrace
-_dtruss=	dtruss
+_dwatch=	dwatch
+_lockstat=	lockstat
+_plockstat=	plockstat
+.endif
+
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "arm" || \
+    ${MACHINE_CPUARCH} == "riscv"
+_dtrace=	dtrace
+_dwatch=	dwatch
 _lockstat=	lockstat
 .endif
 
 .if ${MACHINE_CPUARCH} == "mips"
 _dtrace=	dtrace
+_dwatch=	dwatch
 .endif
 
 .if ${MACHINE_CPUARCH} == "powerpc"
 _dtrace=	dtrace
-_dtruss=	dtruss
+_dwatch=	dwatch
 _lockstat=	lockstat
 .endif
 

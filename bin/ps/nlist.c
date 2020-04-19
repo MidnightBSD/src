@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)nlist.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ps/nlist.c 127958 2004-04-06 20:06:54Z markm $");
+__FBSDID("$FreeBSD: stable/11/bin/ps/nlist.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

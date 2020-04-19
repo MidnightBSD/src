@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)util.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/stty/util.c,v 1.11 2004/04/06 20:06:53 markm Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/stty/util.c 127958 2004-04-06 20:06:54Z markm $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

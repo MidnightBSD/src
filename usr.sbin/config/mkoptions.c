@@ -33,7 +33,7 @@
 static char sccsid[] = "@(#)mkheaders.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/usr.sbin/config/mkoptions.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 /*
@@ -172,9 +172,9 @@ do_option(char *name)
 
 	remember(file);
 	inf = fopen(file, "r");
-	if (inf == 0) {
+	if (inf == NULL) {
 		outf = fopen(file, "w");
-		if (outf == 0)
+		if (outf == NULL)
 			err(1, "%s", file);
 
 		/* was the option in the config file? */
@@ -200,14 +200,14 @@ do_option(char *name)
 		char *invalue;
 
 		/* get the #define */
-		if ((inw = get_word(inf)) == 0 || inw == (char *)EOF)
+		if ((inw = get_word(inf)) == NULL || inw == (char *)EOF)
 			break;
 		/* get the option name */
-		if ((inw = get_word(inf)) == 0 || inw == (char *)EOF)
+		if ((inw = get_word(inf)) == NULL || inw == (char *)EOF)
 			break;
 		inw = ns(inw);
 		/* get the option value */
-		if ((cp = get_word(inf)) == 0 || cp == (char *)EOF)
+		if ((cp = get_word(inf)) == NULL || cp == (char *)EOF)
 			break;
 		/* option value */
 		invalue = ns(cp); /* malloced */
@@ -267,7 +267,7 @@ do_option(char *name)
 	}
 
 	outf = fopen(file, "w");
-	if (outf == 0)
+	if (outf == NULL)
 		err(1, "%s", file);
 	while (!SLIST_EMPTY(&op_head)) {
 		op = SLIST_FIRST(&op_head);
@@ -366,10 +366,10 @@ read_option_file(const char *fname, int flags)
 	char genopt[MAXPATHLEN];
 
 	fp = fopen(fname, "r");
-	if (fp == 0)
+	if (fp == NULL)
 		return (0);
 	while ((wd = get_word(fp)) != (char *)EOF) {
-		if (wd == 0)
+		if (wd == NULL)
 			continue;
 		if (wd[0] == '#') {
 			while (((wd = get_word(fp)) != (char *)EOF) && wd)
@@ -380,7 +380,7 @@ read_option_file(const char *fname, int flags)
 		val = get_word(fp);
 		if (val == (char *)EOF)
 			return (1);
-		if (val == 0) {
+		if (val == NULL) {
 			if (flags) {
 				fprintf(stderr, "%s: compat file requires two"
 				    " words per line at %s\n", fname, this);

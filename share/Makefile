@@ -1,17 +1,19 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $MidnightBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # Do not include `info' in the SUBDIR list, it is handled separately.
 
 SUBDIR=	${_colldef} \
+	${_ctypedef} \
 	${_dict} \
 	${_doc} \
 	${_dtrace} \
 	${_examples} \
 	${_i18n} \
 	${_man} \
+	${_me} \
 	misc \
 	${_mk} \
 	${_mklocale} \
@@ -45,6 +47,10 @@ _dict=		dict
 
 .if ${MK_EXAMPLES} != "no"
 _examples=	examples
+.endif
+
+.if ${MK_GROFF} != "no"
+_me=		me
 .endif
 
 .if ${MK_ICONV} != "no"

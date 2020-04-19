@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst21.0 316942 2017-04-14 21:42:27Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/expansion/cmdsubst21.0 315169 2017-03-12 18:38:03Z jilles $
 
 set -T
 trapped=''

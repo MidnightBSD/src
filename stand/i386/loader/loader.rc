@@ -1,0 +1,18 @@
+\ Loader.rc
+\ $FreeBSD: stable/11/stand/i386/loader/loader.rc 258270 2013-11-17 18:12:17Z dteske $
+\
+\ Includes additional commands
+include /boot/loader.4th
+try-include /boot/loader.rc.local
+
+\ Reads and processes loader.conf variables
+initialize
+
+\ Tests for password -- executes autoboot first if a password was defined
+check-password
+
+\ Load in the boot menu
+include /boot/beastie.4th
+
+\ Start the boot menu
+beastie-start

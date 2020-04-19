@@ -1,5 +1,6 @@
-# $MidnightBSD: src/bin/uuidgen/Makefile,v 1.2 2009/03/27 22:10:02 laffer1 Exp $
+# $FreeBSD: stable/11/bin/uuidgen/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=	uuidgen
 
 .include <bsd.prog.mk>

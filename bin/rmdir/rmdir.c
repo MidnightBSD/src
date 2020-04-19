@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)rmdir.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/rmdir/rmdir.c 140851 2005-01-26 06:51:28Z ssouhlal $");
+__FBSDID("$FreeBSD: stable/11/bin/rmdir/rmdir.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <stdio.h>

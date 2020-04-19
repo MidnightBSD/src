@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994
  *      The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mntopts.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: stable/10/sbin/mount/mntopts.h 310378 2016-12-21 23:16:58Z brooks $
+ * $FreeBSD: stable/11/sbin/mount/mntopts.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct mntopt {

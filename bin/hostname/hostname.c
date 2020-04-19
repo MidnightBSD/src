@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/bin/hostname/hostname.c,v 1.17 2005/01/10 08:39:22 imp Exp $ */
 
 #if 0
 #ifndef lint
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.4 2007/07/23 13:03:56 alex Exp $");
+__FBSDID("$FreeBSD: stable/11/bin/hostname/hostname.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 
@@ -50,16 +49,17 @@ __MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.4 2007/07/23 13:03:56 al
 #include <string.h>
 #include <unistd.h>
 
-static void usage(void);
+static void usage(void) __dead2;
 
 int
 main(int argc, char *argv[])
 {
-	int ch, sflag;
+	int ch, sflag, dflag;
 	char *p, hostname[MAXHOSTNAMELEN];
 
 	sflag = 0;
-	while ((ch = getopt(argc, argv, "fs")) != -1)
+	dflag = 0;
+	while ((ch = getopt(argc, argv, "fsd")) != -1)
 		switch (ch) {
 		case 'f':
 			/*
@@ -71,6 +71,9 @@ main(int argc, char *argv[])
 		case 's':
 			sflag = 1;
 			break;
+		case 'd':
+			dflag = 1;
+			break;
 		case '?':
 		default:
 			usage();
@@ -78,7 +81,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (argc > 1)
+	if (argc > 1 || (sflag && dflag))
 		usage();
 
 	if (*argv) {
@@ -91,6 +94,10 @@ main(int argc, char *argv[])
 			p = strchr(hostname, '.');
 			if (p != NULL)
 				*p = '\0';
+		} else if (dflag) {
+			p = strchr(hostname, '.');
+			if (p != NULL)
+				strcpy(hostname, ++p);
 		}
 		(void)printf("%s\n", hostname);
 	}
@@ -101,6 +108,6 @@ static void
 usage(void)
 {
 
-	(void)fprintf(stderr, "usage: hostname [-fs] [name-of-host]\n");
+	(void)fprintf(stderr, "usage: hostname [-f] [-s | -d] [name-of-host]\n");
 	exit(1);
 }

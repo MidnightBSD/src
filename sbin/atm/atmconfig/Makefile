@@ -1,13 +1,13 @@
-# $MidnightBSD$
 # Copyright (c) 2001-2003
 #	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
 #	All rights reserved.
 # Author: Harti Brandt <brandt@fokus.gmd.de>
 #
-# $FreeBSD: stable/10/sbin/atm/atmconfig/Makefile 291794 2015-12-04 18:21:05Z bdrewery $
+# $FreeBSD: stable/11/sbin/atm/atmconfig/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=atm
 PROG=	atmconfig
 SRCS=	main.c diag.c natm.c
 MAN=	atmconfig.8
@@ -18,11 +18,9 @@ CFLAGS+= -I${.OBJDIR}
 .if !defined(RESCUE) && ${MK_BSNMP} != "no"
 CFLAGS+=	-DWITH_BSNMP
 SRCS+=	oid.h atmconfig_device.c
-DPADD+=	${LIBBSNMP}
-LDADD+=	-lbsnmp
+LIBADD+=	bsnmp
 . if ${MK_DYNAMICROOT} == "no" && ${MK_OPENSSL} != "no"
-DPADD+=	${LIBCRYPTO}
-LDADD+= -lcrypto
+LIBADD+=	crypto
 . endif
 .endif
 
@@ -36,8 +34,8 @@ WARNS?= 3
 FILES=	atmconfig.help atmconfig_device.help
 FILESDIR= ${SHAREDIR}/doc/atm
 
-SNMP_ATM_DEF= ${.CURDIR}/../../../contrib/ngatm/snmp_atm/atm_tree.def	\
-	${.CURDIR}/../../../usr.sbin/bsnmpd/modules/snmp_atm/atm_freebsd.def
+SNMP_ATM_DEF= ${SRCTOP}/contrib/ngatm/snmp_atm/atm_tree.def	\
+	${SRCTOP}/usr.sbin/bsnmpd/modules/snmp_atm/atm_freebsd.def
 
 oid.h: atm_oid.list ${SNMP_ATM_DEF}
 	cat ${SNMP_ATM_DEF} | gensnmptree -e `tail -n +2 ${.CURDIR}/atm_oid.list` \

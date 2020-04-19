@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)vfslist.c	8.1 (Berkeley) 5/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/mount/vfslist.c 201227 2009-12-29 22:53:27Z ed $");
+__FBSDID("$FreeBSD: stable/11/sbin/mount/vfslist.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <stdlib.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/setfacl/merge.c 240087 2012-09-04 12:19:34Z trasz $");
+__FBSDID("$FreeBSD: stable/11/bin/setfacl/merge.c 240087 2012-09-04 12:19:34Z trasz $");
 
 #include <sys/types.h>
 #include <sys/acl.h>

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/spppcontrol/Makefile 198236 2009-10-19 16:00:24Z ru $
 
 PROG=	spppcontrol
 MAN=	spppcontrol.8

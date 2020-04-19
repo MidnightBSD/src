@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * Copyright (c) 2004,2005 Joerg Wunsch.
@@ -68,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/sunlabel/sunlabel.c 144328 2005-03-30 09:33:10Z joerg $");
+__FBSDID("$FreeBSD: stable/11/sbin/sunlabel/sunlabel.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -903,9 +902,7 @@ tagname(unsigned int tag)
 	size_t i;
 	struct tags *tp;
 
-	for (i = 0, tp = knowntags;
-	     i < sizeof(knowntags) / sizeof(struct tags);
-	     i++, tp++)
+	for (i = 0, tp = knowntags; i < nitems(knowntags); i++, tp++)
 		if (tp->id == tag)
 			return (tp->name);
 
@@ -921,9 +918,7 @@ flagname(unsigned int flag)
 	size_t i;
 	struct tags *tp;
 
-	for (i = 0, tp = knownflags;
-	     i < sizeof(knownflags) / sizeof(struct tags);
-	     i++, tp++)
+	for (i = 0, tp = knownflags; i < nitems(knownflags); i++, tp++)
 		if (tp->id == flag)
 			return (tp->name);
 
@@ -940,9 +935,7 @@ parse_tag(struct sun_disklabel *sl, int part, const char *tag)
 	size_t i;
 	unsigned long l;
 
-	for (i = 0, tp = knowntags;
-	     i < sizeof(knowntags) / sizeof(struct tags);
-	     i++, tp++)
+	for (i = 0, tp = knowntags; i < nitems(knowntags); i++, tp++)
 		if (strcmp(tp->name, tag) == 0) {
 			sl->sl_vtoc_map[part].svtoc_tag = (uint16_t)tp->id;
 			return (0);
@@ -965,9 +958,7 @@ parse_flag(struct sun_disklabel *sl, int part, const char *flag)
 	size_t i;
 	unsigned long l;
 
-	for (i = 0, tp = knownflags;
-	     i < sizeof(knownflags) / sizeof(struct tags);
-	     i++, tp++)
+	for (i = 0, tp = knownflags; i < nitems(knownflags); i++, tp++)
 		if (strcmp(tp->name, flag) == 0) {
 			sl->sl_vtoc_map[part].svtoc_flag = (uint16_t)tp->id;
 			return (0);

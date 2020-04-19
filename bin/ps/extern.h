@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
- * $FreeBSD: stable/10/bin/ps/extern.h 331471 2018-03-24 00:26:42Z jhb $
+ * $FreeBSD: stable/11/bin/ps/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct kinfo;

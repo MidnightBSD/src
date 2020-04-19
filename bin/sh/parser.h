@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/parser.h 289938 2015-10-25 17:17:50Z jilles $
+ * $FreeBSD: stable/11/bin/sh/parser.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* control characters in argument strings */

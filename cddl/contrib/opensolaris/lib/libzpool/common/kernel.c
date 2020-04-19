@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -46,7 +45,7 @@
  * Emulation of kernel services in userland.
  */
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 int aok;
 #endif
 uint64_t physmem;
@@ -95,6 +94,11 @@ kstat_create(char *module, int instance, char *name, char *class,
 {
 	return (NULL);
 }
+
+/*ARGSUSED*/
+void
+kstat_named_init(kstat_named_t *knp, const char *name, uchar_t type)
+{}
 
 /*ARGSUSED*/
 void
@@ -661,6 +665,9 @@ dprintf_setup(int *argc, char **argv)
 	 */
 	if (dprintf_find_string("on"))
 		dprintf_print_all = 1;
+
+	if (dprintf_string != NULL)
+		zfs_flags |= ZFS_DEBUG_DPRINTF;
 }
 
 int
@@ -698,7 +705,7 @@ __dprintf(const char *file, const char *func, int line, const char *fmt, ...)
 		if (dprintf_find_string("pid"))
 			(void) printf("%d ", getpid());
 		if (dprintf_find_string("tid"))
-			(void) printf("%ul ", thr_self());
+			(void) printf("%lu ", thr_self());
 #if 0
 		if (dprintf_find_string("cpu"))
 			(void) printf("%u ", getcpuid());
@@ -731,6 +738,7 @@ vpanic(const char *fmt, va_list adx)
 	char buf[512];
 	(void) vsnprintf(buf, 512, fmt, adx);
 	assfail(buf, NULL, 0);
+	abort(); /* necessary to make vpanic meet noreturn requirements */
 }
 
 void
@@ -999,6 +1007,16 @@ kernel_fini(void)
 	urandom_fd = -1;
 }
 
+/* ARGSUSED */
+uint32_t
+zone_get_hostid(void *zonep)
+{
+	/*
+	 * We're emulating the system's hostid in userland.
+	 */
+	return (strtoul(hw_serial, NULL, 10));
+}
+
 int
 z_uncompress(void *dst, size_t *dstlen, const void *src, size_t srclen)
 {
@@ -1149,7 +1167,7 @@ zfs_onexit_cb_data(minor_t minor, uint64_t action_handle, void **data)
 	return (0);
 }
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 /* ARGSUSED */
 int
 zvol_create_minors(const char *name)

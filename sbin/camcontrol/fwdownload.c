@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Sandvine Incorporated. All rights reserved.
  * Copyright (c) 2002-2011 Andre Albsmeier <andre@albsmeier.net>
  * All rights reserved.
@@ -49,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/camcontrol/fwdownload.c 319266 2017-05-30 22:46:00Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/camcontrol/fwdownload.c 352286 2019-09-13 14:43:05Z mav $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -211,13 +212,17 @@ static struct fw_vendor vendors_list[] = {
 	0x8000, 0x07, 0x07, 0, 1, FW_TUR_READY, WB_TIMEOUT, FW_TIMEOUT_DEFAULT},
 	{VENDOR_SMART,		"SmrtStor",	T_DIRECT,
 	0x8000, 0x07, 0x07, 0, 1, FW_TUR_READY, WB_TIMEOUT, FW_TIMEOUT_DEFAULT},
+	{VENDOR_HGST,	 	"WD",		T_DIRECT,
+	0x1000, 0x07, 0x07, 1, 0, FW_TUR_READY, WB_TIMEOUT, FW_TIMEOUT_DEFAULT},
+	{VENDOR_HGST,	 	"WDC",		T_DIRECT,
+	0x1000, 0x07, 0x07, 1, 0, FW_TUR_READY, WB_TIMEOUT, FW_TIMEOUT_DEFAULT},
 
 	/*
 	 * We match any ATA device.  This is really just a placeholder,
 	 * since we won't actually send a WRITE BUFFER with any of the
 	 * listed parameters.  If a SATA device is behind a SAS controller,
 	 * the SCSI to ATA translation code (at least for LSI) doesn't
-	 * generaly translate a SCSI WRITE BUFFER into an ATA DOWNLOAD
+	 * generally translate a SCSI WRITE BUFFER into an ATA DOWNLOAD
 	 * MICROCODE command.  So, we use the SCSI ATA PASS_THROUGH command
 	 * to send the ATA DOWNLOAD MICROCODE command instead.
 	 */
@@ -689,26 +694,35 @@ fw_check_device_ready(struct cam_device *dev, camcontrol_devtype devtype,
 		    		     /*sense_len*/ SSD_FULL_SIZE,
 				     /*timeout*/ 5000);
 		break;
-	case CC_DT_ATA_BEHIND_SCSI:
+	case CC_DT_SATL:
 	case CC_DT_ATA: {
-		build_ata_cmd(ccb,
+		retval = build_ata_cmd(ccb,
 			     /*retries*/ 1,
 			     /*flags*/ CAM_DIR_IN,
 			     /*tag_action*/ MSG_SIMPLE_Q_TAG,
 			     /*protocol*/ AP_PROTO_PIO_IN,
-			     /*ata_flags*/ AP_FLAG_BYT_BLOK_BYTES |
+			     /*ata_flags*/ AP_FLAG_BYT_BLOK_BLOCKS |
 					   AP_FLAG_TLEN_SECT_CNT |
 					   AP_FLAG_TDIR_FROM_DEV,
 			     /*features*/ 0,
-			     /*sector_count*/ (uint8_t) dxfer_len,
+			     /*sector_count*/ dxfer_len / 512,
 			     /*lba*/ 0,
 			     /*command*/ ATA_ATA_IDENTIFY,
+			     /*auxiliary*/ 0,
 			     /*data_ptr*/ (uint8_t *)ptr,
 			     /*dxfer_len*/ dxfer_len,
+			     /*cdb_storage*/ NULL,
+			     /*cdb_storage_len*/ 0,
 			     /*sense_len*/ SSD_FULL_SIZE,
 			     /*timeout*/ timeout ? timeout : 30 * 1000,
 			     /*is48bit*/ 0,
 			     /*devtype*/ devtype);
+		if (retval != 0) {
+			retval = -1;
+			warnx("%s: build_ata_cmd() failed, likely "
+			    "programmer error", __func__);
+			goto bailout;
+		}
 		break;
 	}
 	default:
@@ -839,12 +853,12 @@ fw_download_img(struct cam_device *cam_dev, struct fw_vendor *vp,
 			    timeout ? timeout : WB_TIMEOUT);	/* timeout*/
 			break;
 		case CC_DT_ATA:
-		case CC_DT_ATA_BEHIND_SCSI: {
+		case CC_DT_SATL: {
 			uint32_t	off;
 
 			off = (uint32_t)(pkt_ptr - buf);
 
-			build_ata_cmd(ccb,
+			retval = build_ata_cmd(ccb,
 			    /*retry_count*/ retry_count,
 			    /*flags*/ CAM_DIR_OUT | CAM_DEV_QFRZDIS,
 			    /*tag_action*/ CAM_TAG_ACTION_NONE,
@@ -856,12 +870,21 @@ fw_download_img(struct cam_device *cam_dev, struct fw_vendor *vp,
 			    /*sector_count*/ ATA_MAKE_SECTORS(pkt_size),
 			    /*lba*/ ATA_MAKE_LBA(off, pkt_size),
 			    /*command*/ ATA_DOWNLOAD_MICROCODE,
+			    /*auxiliary*/ 0,
 			    /*data_ptr*/ (uint8_t *)pkt_ptr,
 			    /*dxfer_len*/ pkt_size,
+			    /*cdb_storage*/ NULL,
+			    /*cdb_storage_len*/ 0,
 			    /*sense_len*/ SSD_FULL_SIZE,
 			    /*timeout*/ timeout ? timeout : WB_TIMEOUT,
 			    /*is48bit*/ 0,
 			    /*devtype*/ devtype);
+
+			if (retval != 0) {
+				warnx("%s: build_ata_cmd() failed, likely "
+				    "programmer error", __func__);
+				goto bailout;
+			}
 			break;
 		}
 		default:
@@ -946,7 +969,7 @@ fwdownload(struct cam_device *device, int argc, char **argv,
 		errx(1, "Unable to determine device type");
 
 	if ((devtype == CC_DT_ATA)
-	 || (devtype == CC_DT_ATA_BEHIND_SCSI)) {
+	 || (devtype == CC_DT_SATL)) {
 		ccb = cam_getccb(device);
 		if (ccb == NULL) {
 			warnx("couldn't allocate CCB");

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000  Peter Wemm <peter@freebsd.org>
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/kenv/kenv.c 309867 2016-12-12 02:14:42Z delphij $");
+__FBSDID("$FreeBSD: stable/11/bin/kenv/kenv.c 309866 2016-12-12 02:13:35Z delphij $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

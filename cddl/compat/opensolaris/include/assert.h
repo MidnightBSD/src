@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/cddl/compat/opensolaris/include/assert.h 222950 2011-06-10 20:10:30Z gibbs $
+ * $FreeBSD: stable/11/cddl/compat/opensolaris/include/assert.h 222950 2011-06-10 20:10:30Z gibbs $
  */
 
 #undef assert

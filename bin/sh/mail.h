@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mail.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/10/bin/sh/mail.h 127958 2004-04-06 20:06:54Z markm $
+ * $FreeBSD: stable/11/bin/sh/mail.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 void chkmail(int);

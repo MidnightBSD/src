@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/parser/dollar-quote12.0 287755 2015-09-13 14:24:12Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/parser/dollar-quote12.0 286971 2015-08-20 21:31:36Z jilles $
 
 # \u without any digits at all remains invalid.
 # Our choice is a parse error.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* buf.c: This file contains the scratch-file buffer routines for the
    ed line editor. */
 /*-
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/ed/buf.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD: stable/11/bin/ed/buf.c 241737 2012-10-19 14:49:42Z ed $");
 
 #include <sys/file.h>
 #include <sys/stat.h>

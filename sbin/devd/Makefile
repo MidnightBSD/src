@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/devd/Makefile 270242 2014-08-20 19:30:58Z asomers $
+# $FreeBSD: stable/11/sbin/devd/Makefile 352280 2019-09-13 07:21:06Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG_CXX=devd
 SRCS=	devd.cc token.l parse.y y.tab.h
 MAN=	devd.8 devd.conf.5
@@ -11,8 +11,7 @@ WARNS?=	3
 
 NO_SHARED?=YES
 
-DPADD=	${LIBL} ${LIBUTIL}
-LDADD=	-ll -lutil
+LIBADD=	util
 
 YFLAGS+=-v
 CFLAGS+=-I. -I${.CURDIR}

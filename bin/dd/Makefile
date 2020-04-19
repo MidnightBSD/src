@@ -1,11 +1,12 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: stable/10/bin/dd/Makefile 298258 2016-04-19 07:34:31Z thomas $
+# $FreeBSD: stable/11/bin/dd/Makefile 338364 2018-08-29 02:18:13Z kevans $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	dd
 SRCS=	args.c conv.c conv_tab.c dd.c misc.c position.c
+LIBADD= util
 
 #
 # Test the character conversion functions.  We have to be explicit about

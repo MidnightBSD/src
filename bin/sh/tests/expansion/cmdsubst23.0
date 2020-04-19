@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/expansion/cmdsubst23.0 320510 2017-06-30 21:32:48Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/expansion/cmdsubst23.0 315486 2017-03-18 16:07:28Z jilles $
 
 unset n
 x=abcd

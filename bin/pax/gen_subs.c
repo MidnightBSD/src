@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)gen_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/bin/pax/gen_subs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -109,7 +109,8 @@ ls_list(ARCHD *arcn, time_t now, FILE *fp)
 	 */
 	if (strftime(f_date,DATELEN,timefrmt,localtime(&(sbp->st_mtime))) == 0)
 		f_date[0] = '\0';
-	(void)fprintf(fp, "%s%2u %-12s %-12s ", f_mode, sbp->st_nlink,
+	(void)fprintf(fp, "%s%2ju %-12s %-12s ", f_mode,
+		(uintmax_t)sbp->st_nlink,
 		name_uid(sbp->st_uid, 1), name_gid(sbp->st_gid, 1));
 
 	/*

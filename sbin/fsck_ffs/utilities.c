@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/fsck_ffs/utilities.c 260178 2014-01-02 01:44:14Z scottl $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/utilities.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -69,7 +68,7 @@ blockcheck(char *origname)
 	newname = origname;
 	if (stat(newname, &stblock) < 0) {
 		cp = strrchr(newname, '/');
-		if (cp == 0) {
+		if (cp == NULL) {
 			(void)snprintf(device, sizeof(device), "%s%s",
 				_PATH_DEV, newname);
 			newname = device;

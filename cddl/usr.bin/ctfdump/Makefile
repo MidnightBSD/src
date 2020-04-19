@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/usr.bin/ctfdump/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/usr.bin/ctfdump/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/common
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/tools/ctf/dump
@@ -18,7 +17,6 @@ CFLAGS+=	-I${OPENSOLARIS_USR_DISTDIR} \
 		-I${OPENSOLARIS_USR_DISTDIR}/tools/ctf/common \
 		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common
 
-DPADD=		${LIBPTHREAD} ${LIBELF} ${LIBZ}
-LDADD=		-lpthread -lelf -lz
+LIBADD=		elf z
 
 .include <bsd.prog.mk>

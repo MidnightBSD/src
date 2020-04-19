@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * CDDL HEADER START
  *
@@ -22,9 +21,10 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013, Joyent, Inc. All rights reserved.
- * Copyright (c) 2011, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2018 Joyent, Inc.
+ * Copyright (c) 2011, 2017 by Delphix. All rights reserved.
  * Copyright 2016 Igor Kozhukhov <ikozhukhov@gmail.com>
+ * Copyright (c) 2017 Datto Inc.
  */
 
 /*
@@ -226,6 +226,9 @@ libzfs_error_description(libzfs_handle_t *hdl)
 	case EZFS_POSTSPLIT_ONLINE:
 		return (dgettext(TEXT_DOMAIN, "disk was split from this pool "
 		    "into a new one"));
+	case EZFS_SCRUB_PAUSED:
+		return (dgettext(TEXT_DOMAIN, "scrub is paused; "
+		    "use 'zpool scrub' to resume"));
 	case EZFS_SCRUBBING:
 		return (dgettext(TEXT_DOMAIN, "currently scrubbing; "
 		    "use 'zpool scrub -s' to cancel current scrub"));
@@ -237,6 +240,27 @@ libzfs_error_description(libzfs_handle_t *hdl)
 		return (dgettext(TEXT_DOMAIN, "invalid diff data"));
 	case EZFS_POOLREADONLY:
 		return (dgettext(TEXT_DOMAIN, "pool is read-only"));
+	case EZFS_NO_PENDING:
+		return (dgettext(TEXT_DOMAIN, "operation is not "
+		    "in progress"));
+	case EZFS_CHECKPOINT_EXISTS:
+		return (dgettext(TEXT_DOMAIN, "checkpoint exists"));
+	case EZFS_DISCARDING_CHECKPOINT:
+		return (dgettext(TEXT_DOMAIN, "currently discarding "
+		    "checkpoint"));
+	case EZFS_NO_CHECKPOINT:
+		return (dgettext(TEXT_DOMAIN, "checkpoint does not exist"));
+	case EZFS_DEVRM_IN_PROGRESS:
+		return (dgettext(TEXT_DOMAIN, "device removal in progress"));
+	case EZFS_VDEV_TOO_BIG:
+		return (dgettext(TEXT_DOMAIN, "device exceeds supported size"));
+	case EZFS_TOOMANY:
+		return (dgettext(TEXT_DOMAIN, "argument list too long"));
+	case EZFS_INITIALIZING:
+		return (dgettext(TEXT_DOMAIN, "currently initializing"));
+	case EZFS_NO_INITIALIZE:
+		return (dgettext(TEXT_DOMAIN, "there is no active "
+		    "initialization"));
 	case EZFS_UNKNOWN:
 		return (dgettext(TEXT_DOMAIN, "unknown error"));
 	default:
@@ -484,7 +508,25 @@ zpool_standard_error_fmt(libzfs_handle_t *hdl, int error, const char *fmt, ...)
 	case EROFS:
 		zfs_verror(hdl, EZFS_POOLREADONLY, fmt, ap);
 		break;
-
+	/* There is no pending operation to cancel */
+	case ESRCH:
+		zfs_verror(hdl, EZFS_NO_PENDING, fmt, ap);
+		break;
+	case ZFS_ERR_CHECKPOINT_EXISTS:
+		zfs_verror(hdl, EZFS_CHECKPOINT_EXISTS, fmt, ap);
+		break;
+	case ZFS_ERR_DISCARDING_CHECKPOINT:
+		zfs_verror(hdl, EZFS_DISCARDING_CHECKPOINT, fmt, ap);
+		break;
+	case ZFS_ERR_NO_CHECKPOINT:
+		zfs_verror(hdl, EZFS_NO_CHECKPOINT, fmt, ap);
+		break;
+	case ZFS_ERR_DEVRM_IN_PROGRESS:
+		zfs_verror(hdl, EZFS_DEVRM_IN_PROGRESS, fmt, ap);
+		break;
+	case ZFS_ERR_VDEV_TOO_BIG:
+		zfs_verror(hdl, EZFS_VDEV_TOO_BIG, fmt, ap);
+		break;
 	default:
 		zfs_error_aux(hdl, strerror(error));
 		zfs_verror(hdl, EZFS_UNKNOWN, fmt, ap);
@@ -641,6 +683,10 @@ libzfs_init(void)
 	zpool_feature_init();
 	libzfs_mnttab_init(hdl);
 
+	if (getenv("ZFS_PROP_DEBUG") != NULL) {
+		hdl->libzfs_prop_debug = B_TRUE;
+	}
+
 	return (hdl);
 }
 
@@ -685,7 +731,7 @@ zfs_get_pool_handle(const zfs_handle_t *zhp)
  * Given a name, determine whether or not it's a valid path
  * (starts with '/' or "./").  If so, walk the mnttab trying
  * to match the device number.  If not, treat the path as an
- * fs/vol/snap name.
+ * fs/vol/snap/bkmark name.
  */
 zfs_handle_t *
 zfs_path_to_zhandle(libzfs_handle_t *hdl, char *path, zfs_type_t argtype)
@@ -1188,6 +1234,7 @@ zprop_parse_value(libzfs_handle_t *hdl, nvpair_t *elem, int prop,
 	const char *propname;
 	char *value;
 	boolean_t isnone = B_FALSE;
+	boolean_t isauto = B_FALSE;
 
 	if (type == ZFS_TYPE_POOL) {
 		proptype = zpool_prop_get_type(prop);
@@ -1223,8 +1270,9 @@ zprop_parse_value(libzfs_handle_t *hdl, nvpair_t *elem, int prop,
 			(void) nvpair_value_string(elem, &value);
 			if (strcmp(value, "none") == 0) {
 				isnone = B_TRUE;
-			} else if (zfs_nicestrtonum(hdl, value, ivalp)
-			    != 0) {
+			} else if (strcmp(value, "auto") == 0) {
+				isauto = B_TRUE;
+			} else if (zfs_nicestrtonum(hdl, value, ivalp) != 0) {
 				goto error;
 			}
 		} else if (datatype == DATA_TYPE_UINT64) {
@@ -1254,6 +1302,31 @@ zprop_parse_value(libzfs_handle_t *hdl, nvpair_t *elem, int prop,
 		    prop == ZFS_PROP_SNAPSHOT_LIMIT)) {
 			*ivalp = UINT64_MAX;
 		}
+
+		/*
+		 * Special handling for setting 'refreservation' to 'auto'.  Use
+		 * UINT64_MAX to tell the caller to use zfs_fix_auto_resv().
+		 * 'auto' is only allowed on volumes.
+		 */
+		if (isauto) {
+			switch (prop) {
+			case ZFS_PROP_REFRESERVATION:
+				if ((type & ZFS_TYPE_VOLUME) == 0) {
+					zfs_error_aux(hdl, dgettext(TEXT_DOMAIN,
+					    "'%s=auto' only allowed on "
+					    "volumes"), nvpair_name(elem));
+					goto error;
+				}
+				*ivalp = UINT64_MAX;
+				break;
+			default:
+				zfs_error_aux(hdl, dgettext(TEXT_DOMAIN,
+				    "'auto' is invalid value for '%s'"),
+				    nvpair_name(elem));
+				goto error;
+			}
+		}
+
 		break;
 
 	case PROP_TYPE_INDEX:

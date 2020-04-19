@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright 2001 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -36,7 +37,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/ifconfig/ifbridge.c 289986 2015-10-26 03:43:28Z ngie $";
+  "$FreeBSD: stable/11/sbin/ifconfig/ifbridge.c 330469 2018-03-05 08:33:29Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -186,22 +187,19 @@ bridge_interfaces(int s, const char *prefix)
 		printf(" path cost %u", req->ifbr_path_cost);
 
 		if (req->ifbr_ifsflags & IFBIF_STP) {
-			if (req->ifbr_proto <
-			    sizeof(stpproto) / sizeof(stpproto[0]))
+			if (req->ifbr_proto < nitems(stpproto))
 				printf(" proto %s", stpproto[req->ifbr_proto]);
 			else
 				printf(" <unknown proto %d>",
 				    req->ifbr_proto);
 
 			printf("\n%s", pad);
-			if (req->ifbr_role <
-			    sizeof(stproles) / sizeof(stproles[0]))
+			if (req->ifbr_role < nitems(stproles))
 				printf("role %s", stproles[req->ifbr_role]);
 			else
 				printf("<unknown role %d>",
 				    req->ifbr_role);
-			if (req->ifbr_state <
-			    sizeof(stpstates) / sizeof(stpstates[0]))
+			if (req->ifbr_state < nitems(stpstates))
 				printf(" state %s", stpstates[req->ifbr_state]);
 			else
 				printf(" <unknown state %d>",
@@ -209,7 +207,7 @@ bridge_interfaces(int s, const char *prefix)
 		}
 		printf("\n");
 	}
-
+	free(pad);
 	free(inbuf);
 }
 

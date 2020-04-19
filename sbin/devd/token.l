@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * DEVD (Device action daemon)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2002 M. Warner Losh <imp@freebsd.org>.
  * All rights reserved.
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/devd/token.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD: stable/11/sbin/devd/token.l 352280 2019-09-13 07:21:06Z bapt $
  */
 
 #include <ctype.h>
@@ -49,6 +50,7 @@ update_lineno(const char *cp)
 
 %}
 
+%option noyywrap
 %option nounput
 %option noinput
 

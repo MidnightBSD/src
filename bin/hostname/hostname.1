@@ -27,10 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)hostname.1	8.2 (Berkeley) 4/28/95
-.\" $FreeBSD: src/bin/hostname/hostname.1,v 1.18 2005/04/17 23:22:22 keramida Exp $
-.\" $MidnightBSD: src/bin/hostname/hostname.1,v 1.2 2006/07/19 13:43:39 laffer1 Exp $
+.\" $FreeBSD: stable/11/bin/hostname/hostname.1 309130 2016-11-25 05:54:17Z araujo $
 .\"
-.Dd December 7, 2006
+.Dd November 10, 2016
 .Dt HOSTNAME 1
 .Os
 .Sh NAME
@@ -38,7 +37,8 @@
 .Nd set or print name of current host system
 .Sh SYNOPSIS
 .Nm
-.Op Fl fs
+.Op Fl f
+.Op Fl s | d
 .Op Ar name-of-host
 .Sh DESCRIPTION
 The
@@ -63,6 +63,8 @@ This is the default behavior.
 .It Fl s
 Trim off any domain information from the printed
 name.
+.It Fl d
+Only print domain information.
 .El
 .Sh SEE ALSO
 .Xr gethostname 3 ,

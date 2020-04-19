@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/cddl/lib/drti/Makefile 321270 2017-07-20 01:01:16Z ngie $
+# $FreeBSD: stable/11/cddl/lib/drti/Makefile 321268 2017-07-20 00:53:50Z ngie $
 
 .PATH: ${SRCTOP}/cddl/contrib/opensolaris/lib/libdtrace/common
 
@@ -10,8 +9,8 @@ FILESGRP=	${LIBGRP}
 FILESMODE=	${LIBMODE}
 FILESDIR=	${LIBDIR}/dtrace
 CLEANFILES=	${FILES}
-LIB=		drti-dummy
-INTERNALLIB=
+# These FILES qualify as libraries for the purpose of LIBRARIES_ONLY.
+.undef LIBRARIES_ONLY
 
 CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 		-I${SRCTOP}/cddl/compat/opensolaris/include \
@@ -20,11 +19,5 @@ CFLAGS+=	-I${SRCTOP}/sys/cddl/compat/opensolaris \
 		-I${OPENSOLARIS_USR_DISTDIR}/lib/libdtrace/common \
 		-I${OPENSOLARIS_SYS_DISTDIR}/uts/common \
 		-DPIC ${PICFLAG}
-
-.if make(install) && defined(LIBRARIES_ONLY)
-install:
-	${INSTALL} -o ${FILESOWN} -g ${FILESGRP} -m ${FILESMODE} \
-	    ${FILES} ${DESTDIR}${FILESDIR}
-.endif
 
 .include <bsd.lib.mk>

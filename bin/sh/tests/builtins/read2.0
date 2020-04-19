@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/builtins/read2.0 212187 2010-09-03 21:17:33Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/builtins/read2.0 212187 2010-09-03 21:17:33Z jilles $
 
 set -e
 {

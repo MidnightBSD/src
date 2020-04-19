@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sbin/atm/atmconfig/private.h 133565 2004-08-12 12:31:43Z harti $
  */
 #include <sys/param.h>
 #include <sys/socket.h>

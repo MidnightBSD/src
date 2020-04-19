@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 FreeBSD Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/mount/extern.h 152738 2005-11-23 23:22:56Z rodrigc $
+ * $FreeBSD: stable/11/sbin/mount/extern.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 /* vfslist.c */

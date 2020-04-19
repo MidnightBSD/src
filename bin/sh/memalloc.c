@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)memalloc.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/sh/memalloc.c 297749 2016-04-09 14:09:14Z jilles $");
+__FBSDID("$FreeBSD: stable/11/bin/sh/memalloc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include "shell.h"

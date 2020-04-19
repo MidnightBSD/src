@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/bin/sh/tests/parameters/env1.0 222957 2011-06-10 22:42:00Z jilles $
+# $FreeBSD: stable/11/bin/sh/tests/parameters/env1.0 222957 2011-06-10 22:42:00Z jilles $
 
 export key='must contain this'
 unset x

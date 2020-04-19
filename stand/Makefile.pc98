@@ -1,0 +1,4 @@
+# $FreeBSD: stable/11/stand/Makefile.pc98 331142 2018-03-18 19:05:06Z imp $
+
+# Need an empty file here so Makefile.i386 isn't used (which contains options
+# that don't work on pc98).

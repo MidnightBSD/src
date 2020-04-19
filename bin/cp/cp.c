@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/bin/cp/cp.c 291774 2015-12-04 17:36:35Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/bin/cp/cp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Cp copies source files to target files.

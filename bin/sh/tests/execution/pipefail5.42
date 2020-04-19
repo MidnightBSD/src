@@ -1,0 +1,5 @@
+# $FreeBSD: stable/11/bin/sh/tests/execution/pipefail5.42 345561 2019-03-26 22:34:07Z jilles $
+
+set -o pipefail
+(exit 42) | : &
+wait %+
