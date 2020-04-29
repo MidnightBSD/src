@@ -210,6 +210,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 		}
 
+		sqlite3_clear_bindings(stmnt);
 		sqlite3_reset(stmnt);
 	}
 
@@ -344,6 +345,7 @@ insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 			if (sqlite3_step(stmt) != SQLITE_DONE) {
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 			}
+			sqlite3_clear_bindings(stmt);
 			sqlite3_reset(stmt);
 		});
 		i++;
@@ -403,6 +405,7 @@ insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 				return;
 			}
+			sqlite3_clear_bindings(stmnt);
 			sqlite3_reset(stmnt);
 		});
 		conflict++;
@@ -489,6 +492,8 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 				return;
 			}
+
+			sqlite3_clear_bindings(stmnt);
 			sqlite3_reset(stmnt);
 		});
 		depend++;
