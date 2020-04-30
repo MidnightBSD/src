@@ -1,0 +1,9 @@
+/*
+ * $FreeBSD: stable/11/lib/libc/secure/Symbol.map 286782 2015-08-14 14:58:04Z pfg $
+ */
+
+FBSD_1.0 {
+	__chk_fail;
+	__stack_chk_fail;
+	__stack_chk_guard;
+};

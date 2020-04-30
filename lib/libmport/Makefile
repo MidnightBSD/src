@@ -1,4 +1,6 @@
-# $MidnightBSD$
+.include <src.opts.mk>
+
+PACKAGE=lib${LIB}
 
 LIB=	mport
 SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
@@ -17,11 +19,13 @@ MAN=	mport.3
 
 WARNS=	3
 
-NO_PROFILE=
+MK_PROFILE=no
 
-DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
-	${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
-LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
-	-lpthread -ldispatch -lBlocksRuntime
+#DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
+#	${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
+#LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
+#	-lpthread -ldispatch -lBlocksRuntime
+
+LIBADD=	md archive bz2 lzma z fetch sqlite3 pthread dispatch BlocksRuntime
 
 .include <bsd.lib.mk>

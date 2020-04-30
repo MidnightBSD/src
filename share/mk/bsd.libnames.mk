@@ -56,8 +56,8 @@ LIBDEVDCTL?=	${DESTDIR}${LIBDIR_BASE}/libdevdctl.a
 LIBDEVINFO?=	${DESTDIR}${LIBDIR_BASE}/libdevinfo.a
 LIBDEVSTAT?=	${DESTDIR}${LIBDIR_BASE}/libdevstat.a
 LIBDIALOG?=	${DESTDIR}${LIBDIR_BASE}/libdialog.a
-LIBDL?=		${DESTDIR}${LIBDIR_BASE}/libdl.a
 LIBDISPATCH?=	${DESTDIR}${LIBDIR_BASE}/libdispatch.a
+LIBDL?=		${DESTDIR}${LIBDIR_BASE}/libdl.a
 LIBDNS?=	${DESTDIR}${LIBDIR_BASE}/libdns.a
 LIBDNS_SD?=	${DESTDIR}${LIBDIR_BASE}/libdns_sd.a
 LIBDPV?=	${DESTDIR}${LIBDIR_BASE}/libdpv.a
@@ -115,13 +115,7 @@ LIBMILTER?=	${DESTDIR}${LIBDIR_BASE}/libmilter.a
 LIBMLX4?=	${DESTDIR}${LIBDIR_BASE}/libmlx4.a
 LIBMLX5?=	${DESTDIR}${LIBDIR_BASE}/libmlx5.a
 LIBMP?=		${DESTDIR}${LIBDIR_BASE}/libmp.a
-
 LIBMPORT?=	${DESTDIR}${LIBDIR_BASE}/libmport.a
-LIBMPORT+= 	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
-		${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
-MINUSLMPORT=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
-		-lpthread -ldispatch -lBlocksRuntime
-
 LIBMSEARCH?=	${DESTDIR}${LIBDIR_BASE}/libmsearch.a
 LIBMT?=		${DESTDIR}${LIBDIR_BASE}/libmt.a
 LIBNANDFS?=	${DESTDIR}${LIBDIR_BASE}/libnandfs.a
