@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/gnu/usr.bin/binutils/libbfd/elf-fbsd-brand.c 218822 2011-02-18 20:54:12Z dim $
  */
 
 #define ELF_OSABI				ELFOSABI_FREEBSD

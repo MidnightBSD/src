@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/libdecnumber/Makefile 245539 2013-01-17 05:56:28Z andrew $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/libdecnumber/Makefile 245539 2013-01-17 05:56:28Z andrew $
 
 .include <bsd.own.mk>
 

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Jonathan Belson <jon@witchspace.com>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/kbdmap/kbdmap.h 270309 2014-08-21 21:57:18Z se $
+ * $FreeBSD: stable/11/usr.sbin/kbdmap/kbdmap.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 

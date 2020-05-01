@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)lpf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/filters/lpf.c 242091 2012-10-25 20:16:38Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/filters/lpf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * 	filter which reads the output of nroff and converts lines

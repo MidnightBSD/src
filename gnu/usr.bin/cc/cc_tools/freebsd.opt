@@ -1,5 +1,4 @@
-; $MidnightBSD$
-; $FreeBSD: stable/10/gnu/usr.bin/cc/cc_tools/freebsd.opt 169718 2007-05-19 04:25:59Z kan $
+; $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/freebsd.opt 169718 2007-05-19 04:25:59Z kan $
 
 fformat-extensions
 Common Report Var(flag_format_extensions) Init(0)

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.sbin/pw/tests/master.passwd 272445 2014-10-02 19:53:37Z brd $
+# $FreeBSD: stable/11/usr.sbin/pw/tests/master.passwd 272445 2014-10-02 19:53:37Z brd $
 #
 root:*:0:0::0:0:Charlie &:/root:/bin/csh
 toor:*:0:0::0:0:Bourne-again Superuser:/root:

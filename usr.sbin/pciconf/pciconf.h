@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/pciconf/pciconf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __PCICONF_H__
@@ -37,6 +37,7 @@ void	list_caps(int fd, struct pci_conf *p);
 void	list_errors(int fd, struct pci_conf *p);
 uint8_t	pci_find_cap(int fd, struct pci_conf *p, uint8_t id);
 uint16_t pcie_find_cap(int fd, struct pci_conf *p, uint16_t id);
+void	print_bar(int fd, struct pci_conf *p, const char *label,  uint16_t bar);
 uint32_t read_config(int fd, struct pcisel *sel, long reg, int width);
 
 #endif

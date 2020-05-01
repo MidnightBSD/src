@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2001  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/chkprintcap/skimprintcap.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 

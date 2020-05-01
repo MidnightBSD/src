@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2001  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -29,7 +31,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/lpr/chkprintcap/skimprintcap.h 330449 2018-03-05 07:26:05Z eadler $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

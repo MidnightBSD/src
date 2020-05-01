@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/tzsetup/tzsetup.c 322376 2017-08-10 21:39:22Z marius $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/tzsetup/tzsetup.c 338440 2018-09-03 06:55:38Z delphij $");
 
 #include <err.h>
 #include <errno.h>
@@ -482,7 +481,7 @@ read_zones(void)
 	char		contbuf[16];
 	FILE		*fp;
 	struct continent *cont;
-	size_t		len;
+	size_t		len, contlen;
 	char		*line, *tlc, *file, *descr, *p;
 	int		lineno;
 
@@ -505,12 +504,16 @@ read_zones(void)
 			    path_zonetab, lineno, tlc);
 		/* coord = */ strsep(&line, "\t");	 /* Unused */
 		file = strsep(&line, "\t");
+		/* get continent portion from continent/country */
 		p = strchr(file, '/');
 		if (p == NULL)
 			errx(1, "%s:%d: invalid zone name `%s'", path_zonetab,
 			    lineno, file);
-		contbuf[0] = '\0';
-		strncat(contbuf, file, p - file);
+		contlen = p - file + 1;		/* trailing nul */
+		if (contlen > sizeof(contbuf))
+			errx(1, "%s:%d: continent name in zone name `%s' too long",
+			    path_zonetab, lineno, file);
+		strlcpy(contbuf, file, contlen);
 		cont = find_continent(contbuf);
 		if (!cont)
 			errx(1, "%s:%d: invalid region `%s'", path_zonetab,

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/iscsid/discovery.c 290145 2015-10-29 16:34:55Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/iscsid/discovery.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -206,6 +207,18 @@ discovery(struct connection *conn)
 
 	log_debugx("removing temporary discovery session");
 	kernel_remove(conn);
+
+#ifdef ICL_KERNEL_PROXY
+	if (conn->conn_conf.isc_iser == 1) {
+		/*
+		 * If we're going through the proxy, the kernel already
+		 * sent Logout PDU for us and destroyed the session,
+		 * so we can't send anything anymore.
+		 */
+		log_debugx("discovery session done");
+		return;
+	}
+#endif
 
 	log_debugx("discovery done; logging out");
 	request = logout_new_request(conn);

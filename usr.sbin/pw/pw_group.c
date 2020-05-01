@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/pw_group.c 309881 2016-12-12 07:03:10Z bapt $";
+  "$FreeBSD: stable/11/usr.sbin/pw/pw_group.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -262,7 +263,7 @@ pw_group_next(int argc, char **argv, char *arg1 __unused)
 	int ch;
 	bool quiet = false;
 
-	while ((ch = getopt(argc, argv, "Cq")) != -1) {
+	while ((ch = getopt(argc, argv, "C:q")) != -1) {
 		switch (ch) {
 		case 'C':
 			cfg = optarg;

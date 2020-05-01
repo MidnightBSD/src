@@ -23,7 +23,7 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 
-$MidnightBSD$
+$FreeBSD: stable/11/usr.sbin/ppp/README.changes 244040 2012-12-08 22:16:36Z eadler $
 
 This file summarises changes made to ppp that effect
 its configuration.
@@ -53,7 +53,7 @@ o Errors in `add' and `delete' are logged as warnings rather than being
   written to the TCP/IP log.
 o Any number of diagnostic prompts are allowed, and they are allowed in
   interactive mode.
-o The default `device' is cuad1, then cuad0
+o The default `device' is cuau1, then cuau0
 o A password of "*" in ppp.secret causes a passwd database lookup in
   pap mode.
 o The value of the CONNECT environment variable is logged in the

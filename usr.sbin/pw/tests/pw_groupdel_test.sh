@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.sbin/pw/tests/pw_groupdel_test.sh 316257 2017-03-30 06:20:58Z ngie $
+# $FreeBSD: stable/11/usr.sbin/pw/tests/pw_groupdel_test.sh 316256 2017-03-30 06:20:24Z ngie $
 
 # Import helper functions
 . $(atf_get_srcdir)/helper_functions.shin

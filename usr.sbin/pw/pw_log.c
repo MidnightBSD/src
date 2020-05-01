@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/pw_log.c 301557 2016-06-07 16:56:15Z truckman $";
+  "$FreeBSD: stable/11/usr.sbin/pw/pw_log.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <ctype.h>

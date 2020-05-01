@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/rpc.statd/Makefile 321274 2017-07-20 01:03:50Z ngie $
+# $FreeBSD: stable/11/usr.sbin/rpc.statd/Makefile 321273 2017-07-20 01:03:43Z ngie $
 
 PROG=	rpc.statd
 MAN=	rpc.statd.8
@@ -8,8 +7,7 @@ SRCS=	file.c sm_inter_svc.c sm_inter.h statd.c procs.c
 CFLAGS+= -I.
 WARNS?= 2
 
-DPADD=	${LIBRPCSVC}
-LDADD=	-lrpcsvc
+LIBADD=	rpcsvc
 
 CLEANFILES= sm_inter_svc.c sm_inter.h
 

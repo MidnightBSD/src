@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" vidcontrol - a utility for manipulating the syscons or vt video driver
 .\"
@@ -12,9 +11,9 @@
 .\"    documentation and/or other materials provided with the distribution.
 .\"
 .\"     @(#)vidcontrol.1
-.\" $FreeBSD: stable/10/usr.sbin/vidcontrol/vidcontrol.1 273921 2014-10-31 23:10:58Z dumbbell $
+.\" $FreeBSD: stable/11/usr.sbin/vidcontrol/vidcontrol.1 294321 2016-01-19 13:09:20Z trasz $
 .\"
-.Dd December 23, 2006
+.Dd January 19, 2016
 .Dt VIDCONTROL 1
 .Os
 .Sh NAME
@@ -34,7 +33,7 @@
 .Oc
 .Op Fl g Ar geometry
 .Op Fl h Ar size
-.Op Fl i Cm adapter | mode
+.Op Fl i Cm active | adapter | mode
 .Op Fl l Ar screen_map
 .Op Fl M Ar char
 .Op Fl m Cm on | off
@@ -199,6 +198,8 @@ below.
 Set the size of the history (scrollback) buffer to
 .Ar size
 lines.
+.It Fl i Cm active
+Shows the active vty number.
 .It Fl i Cm adapter
 Shows info about the current video adapter.
 .It Fl i Cm mode
@@ -267,7 +268,7 @@ option.
 However, you probably should not compile the kernel debugger on a box which
 is supposed to be physically secure.
 .It Fl s Ar number
-Set the current vty to
+Set the active vty to
 .Ar number .
 .It Fl T Cm xterm | cons25
 Switch between xterm and cons25 style terminal emulation.
@@ -573,8 +574,9 @@ and
 categories of the
 .Em "Ports Collection" .
 .Sh AUTHORS
-.An S\(/oren Schmidt Aq sos@FreeBSD.org
-.An Sascha Wildner
+.An S\(/oren Schmidt Aq Mt sos@FreeBSD.org
+.An Sascha Wildner Aq Mt saw@online.de
 .Sh CONTRIBUTORS
-.An Maxim Sobolev Aq sobomax@FreeBSD.org ,
-.An Nik Clayton Aq nik@FreeBSD.org
+.An -split
+.An Maxim Sobolev Aq Mt sobomax@FreeBSD.org
+.An Nik Clayton Aq Mt nik@FreeBSD.org

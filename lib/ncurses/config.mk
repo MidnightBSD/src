@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/ncurses/config.mk 313595 2017-02-11 06:25:47Z ngie $
+# $FreeBSD: stable/11/lib/ncurses/config.mk 313538 2017-02-10 07:32:40Z ngie $
 
 # This Makefile is shared by libncurses, libform, libmenu, libpanel.
 

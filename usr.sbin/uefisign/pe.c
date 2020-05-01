@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/uefisign/pe.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/uefisign/pe.c 332615 2018-04-16 17:13:54Z trasz $");
 
 #include <assert.h>
 #include <err.h>

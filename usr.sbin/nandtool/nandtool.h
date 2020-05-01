@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/nandtool/nandtool.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/usr.sbin/nandtool/nandtool.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	__UTILS_H

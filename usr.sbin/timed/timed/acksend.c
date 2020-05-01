@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)acksend.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/timed/timed/acksend.c 246209 2013-02-01 14:26:54Z charnier $";
+  "$FreeBSD: stable/11/usr.sbin/timed/timed/acksend.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include "globals.h"
@@ -91,7 +90,7 @@ acksend(struct tsp *message, struct sockaddr_in *addr, char *name,
 
 	msec = 200;
 	count = bad ? 1 : 5;	/* 5 packets in 6.4 seconds */
-	answer = 0;
+	answer = NULL;
 	do {
 		if (!answer) {
 			/* do not go crazy transmitting just because the
@@ -108,7 +107,7 @@ acksend(struct tsp *message, struct sockaddr_in *addr, char *name,
 
 		mstotvround(&twait, msec);
 		answer  = readmsg(ack, name, &twait, net);
-		if (answer != 0) {
+		if (answer != NULL) {
 			if (answer->tsp_seq != sequence) {
 				if (trace)
 					fprintf(fd,"acksend: seq # %u!=%u\n",

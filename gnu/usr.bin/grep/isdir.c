@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* isdir.c -- determine whether a directory exists
    Copyright (C) 1990, 1998 Free Software Foundation, Inc.
 

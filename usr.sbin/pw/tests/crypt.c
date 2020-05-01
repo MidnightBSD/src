@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pw/tests/crypt.c 305750 2016-09-12 17:35:45Z asomers $
+ * $FreeBSD: stable/11/usr.sbin/pw/tests/crypt.c 305741 2016-09-12 16:28:32Z asomers $
  */
 
 #include <err.h>

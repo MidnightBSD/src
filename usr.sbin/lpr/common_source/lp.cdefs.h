@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2003,2013  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/10/usr.sbin/lpr/common_source/lp.cdefs.h 251044 2013-05-27 22:19:01Z gad $
+ * $FreeBSD: stable/11/usr.sbin/lpr/common_source/lp.cdefs.h 330449 2018-03-05 07:26:05Z eadler $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

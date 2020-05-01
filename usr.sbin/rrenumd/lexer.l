@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: lexer.l,v 1.7 2000/11/08 02:40:53 itojun Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rrenumd/lexer.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD: stable/11/usr.sbin/rrenumd/lexer.l 352280 2019-09-13 07:21:06Z bapt $
  */
 
 %{
@@ -41,8 +40,6 @@
 #include <string.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
-
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
@@ -61,6 +58,7 @@ void yyerror(const char *);
 int yylex(void);
 %}
 
+%option noyywrap
 %option nounput
 
 /* common section */

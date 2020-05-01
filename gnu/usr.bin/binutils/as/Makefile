@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/as/Makefile 244377 2012-12-18 04:44:36Z ache $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/as/Makefile 265420 2014-05-06 04:22:01Z imp $
 
 
 # BINDIR
 .include "${.CURDIR}/../../Makefile.inc"
 .include "${.CURDIR}/../Makefile.inc0"
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCDIR}/gas ${SRCDIR}/gas/config
 

@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/groff/Makefile.inc 308805 2016-11-18 16:05:32Z emaste $
+# $FreeBSD: stable/11/gnu/usr.bin/groff/Makefile.inc 307631 2016-10-19 13:19:45Z emaste $
 
 BINDIR?=	/usr/bin
 SHELL=		/bin/sh
+PACKAGE=	groff
 
 # Define `page' to be letter if your PostScript printer uses 8.5x11
 # paper (USA) and define it to be A4, if it uses A4 paper (rest of the

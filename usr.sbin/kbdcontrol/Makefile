@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/kbdcontrol/Makefile 113091 2003-04-04 17:49:21Z obrien $
+# $FreeBSD: stable/11/usr.sbin/kbdcontrol/Makefile 352280 2019-09-13 07:21:06Z bapt $
 
 PROG=	kbdcontrol
 MAN=	kbdcontrol.1 kbdmap.5
@@ -8,8 +7,5 @@ SRCS=	kbdcontrol.c lex.l
 
 WARNS?=	4
 CFLAGS+= -I${.CURDIR}
-
-DPADD=	${LIBL}
-LDADD=	-ll
 
 .include <bsd.prog.mk>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 smh@freebsd.org
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfi_foreign.c 285950 2015-07-28 12:40:41Z emaste $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfi_foreign.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

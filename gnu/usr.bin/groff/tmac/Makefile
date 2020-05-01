@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/groff/tmac/Makefile 289638 2015-10-20 18:20:38Z bdrewery $
+# $FreeBSD: stable/11/gnu/usr.bin/groff/tmac/Makefile 288429 2015-09-30 20:47:27Z bdrewery $
 
 .include <bsd.own.mk>			# SHAREDIR
 
@@ -12,9 +11,8 @@ MDOCDIR?=	${TMACDIR}/mdoc
 MAN=		groff_ms.7 groff_man.7 groff_me.7 groff_mdoc.7
 MAN+=		groff_trace.7 groff_www.7
 MLINKS=		groff_ms.7 ms.7
-MLINKS+=	groff_man.7 man.7
 MLINKS+=	groff_me.7 me.7
-MLINKS+=	groff_mdoc.7 mdoc.7 groff_mdoc.7 mdoc.samples.7
+MLINKS+=	groff_mdoc.7 mdoc.samples.7
 
 CLEANFILES=	${MAN}
 

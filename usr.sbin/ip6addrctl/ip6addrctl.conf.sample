@@ -1,7 +1,7 @@
 # default policy table based on RFC 3484.
 # usage: ip6addrctl install path_to_this_file
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ip6addrctl/ip6addrctl.conf.sample 123872 2003-12-26 17:10:58Z ume $
 #
 #Format:
 #Prefix       Precedence Label

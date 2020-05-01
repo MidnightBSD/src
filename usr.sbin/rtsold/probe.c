@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: probe.c,v 1.17 2003/10/05 00:09:36 itojun Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rtsold/probe.c 254470 2013-08-17 22:13:26Z hrs $
+ * $FreeBSD: stable/11/usr.sbin/rtsold/probe.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -41,7 +40,6 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/if_dl.h>
 
 #include <netinet/in.h>
@@ -79,12 +77,6 @@ probe_init(void)
 
 	if ((probesock = socket(AF_INET6, SOCK_RAW, IPPROTO_NONE)) < 0) {
 		warnmsg(LOG_ERR, __func__, "socket: %s", strerror(errno));
-		return (-1);
-	}
-
-	/* make the socket send-only */
-	if (shutdown(probesock, 0)) {
-		warnmsg(LOG_ERR, __func__, "shutdown: %s", strerror(errno));
 		return (-1);
 	}
 

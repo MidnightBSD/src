@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfiutil.h 251516 2013-06-08 02:54:59Z sbruno $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfiutil.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef __MFIUTIL_H__

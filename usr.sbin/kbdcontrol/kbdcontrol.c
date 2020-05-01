@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/kbdcontrol/kbdcontrol.c 298297 2016-04-19 20:56:02Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/kbdcontrol/kbdcontrol.c 344124 2019-02-14 15:33:04Z se $");
 
 #include <ctype.h>
 #include <err.h>
@@ -960,6 +961,8 @@ set_bell_values(char *opt)
 	int bell, duration, pitch;
 
 	bell = 0;
+	duration = 0;
+	pitch = 0;
 	if (!strncmp(opt, "quiet.", 6)) {
 		bell = CONS_QUIET_BELL;
 		opt += 6;
@@ -990,8 +993,8 @@ badopt:
 	}
 
 	ioctl(0, CONS_BELLTYPE, &bell);
-	if (!(bell & CONS_VISUAL_BELL))
-		fprintf(stderr, "[=%d;%dB", pitch, duration);
+	if (duration > 0 && pitch > 0)
+		fprintf(stderr, "\e[=%d;%dB", pitch, duration);
 }
 
 static void

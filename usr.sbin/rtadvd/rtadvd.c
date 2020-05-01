@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/rtadvd.c 290149 2015-10-29 16:53:34Z delphij $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/rtadvd.c 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: rtadvd.c,v 1.82 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -52,7 +51,6 @@
 
 #include <arpa/inet.h>
 
-#include <net/if_var.h>
 #include <netinet/in_var.h>
 #include <netinet6/nd6.h>
 
@@ -1225,7 +1223,7 @@ udiff(uint32_t u, uint32_t v)
 	return (u >= v ? u - v : v - u);
 }
 
-/* return a non-zero value if the received prefix is inconsitent with ours */
+/* return a non-zero value if the received prefix is inconsistent with ours */
 static int
 prefix_check(struct nd_opt_prefix_info *pinfo,
 	struct rainfo *rai, struct sockaddr_in6 *from)

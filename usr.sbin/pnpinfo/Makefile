@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/pnpinfo/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/pnpinfo/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${.CURDIR}/../../contrib/pnpinfo
+.PATH: ${SRCTOP}/contrib/pnpinfo
 
 PROG=	pnpinfo
 MAN=	pnpinfo.8
 
-CFLAGS+= -I${.CURDIR}/../../sys
+CFLAGS+= -I${SRCTOP}/sys
 
 .if ${MACHINE} == "pc98"
 CFLAGS+= -DPC98

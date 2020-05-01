@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Portability cruft.  Include after config.h and sys/types.h.
    Copyright 1996, 1998, 1999, 2000 Free Software Foundation, Inc.
 

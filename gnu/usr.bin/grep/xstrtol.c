@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* A more useful interface to strtol.
    Copyright (C) 1995, 1996, 1998-2000 Free Software Foundation, Inc.
 

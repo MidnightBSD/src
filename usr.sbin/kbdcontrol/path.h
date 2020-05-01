@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.sbin/kbdcontrol/path.h 267540 2014-06-16 11:51:00Z ray $ */
+/* $FreeBSD: stable/11/usr.sbin/kbdcontrol/path.h 266839 2014-05-29 14:39:25Z ray $ */
 
 #define KEYMAP_PATH	"/usr/share/syscons/keymaps/"
 #define FONT_PATH	"/usr/share/syscons/fonts/"

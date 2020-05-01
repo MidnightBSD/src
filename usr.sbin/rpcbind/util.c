@@ -1,10 +1,11 @@
-/* $MidnightBSD$ */
 /*
  * $NetBSD: util.c,v 1.4 2000/08/03 00:04:30 fvdl Exp $
- * $FreeBSD: stable/10/usr.sbin/rpcbind/util.c 301646 2016-06-08 17:11:42Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/rpcbind/util.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
  * All rights reserved.
  *

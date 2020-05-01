@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * copy diverted (or tee'd) packets to a file in 'tcpdump' format
  * (ie. this uses the '-lpcap' routines).
@@ -22,7 +21,7 @@
  *
  * From: Header: /local/src/local.lib/SRC/ipfwpcap/RCS/ipfwpcap.c,v 1.4 2004/01/15 16:19:07 pkern Exp
  *
- * $FreeBSD: stable/10/usr.sbin/ipfwpcap/ipfwpcap.c 229403 2012-01-03 18:51:58Z ed $
+ * $FreeBSD: stable/11/usr.sbin/ipfwpcap/ipfwpcap.c 229403 2012-01-03 18:51:58Z ed $
  */
 
 #include <stdio.h>

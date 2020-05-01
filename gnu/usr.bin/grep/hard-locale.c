@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* hard-locale.c -- Determine whether a locale is hard.
    Copyright 1997, 1998, 1999 Free Software Foundation, Inc.
 
@@ -16,7 +15,7 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-/* $FreeBSD: src/gnu/usr.bin/grep/hard-locale.c,v 1.2 2004/07/04 10:22:50 tjr Exp $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/hard-locale.c 131560 2004-07-04 10:22:50Z tjr $ */
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -63,7 +62,7 @@ hard_locale (int category)
 
   if (p)
     {
-# if defined(__FreeBSD__) || (defined __GLIBC__ && __GLIBC__ >= 2)
+# if defined(__MidnightBSD__) || defined(__FreeBSD__) || (defined __GLIBC__ && __GLIBC__ >= 2)
       if (strcmp (p, "C") == 0 || strcmp (p, "POSIX") == 0)
 	hard = 0;
 # else

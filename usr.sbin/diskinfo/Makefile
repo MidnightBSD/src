@@ -1,10 +1,9 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/diskinfo/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	diskinfo
 MAN=	diskinfo.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .include <bsd.prog.mk>
 

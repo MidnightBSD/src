@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/pw/Makefile 287084 2015-08-23 21:42:27Z bapt $
-
-.include <bsd.own.mk>
+# $FreeBSD: stable/11/usr.sbin/pw/Makefile 286196 2015-08-02 12:47:50Z bapt $
 
 PROG=	pw
 MAN=	pw.conf.5 pw.8
@@ -11,8 +8,9 @@ SRCS=	pw.c pw_conf.c pw_user.c pw_group.c pw_log.c pw_nis.c pw_vpw.c \
 
 WARNS?=	3
 
-DPADD=	${LIBCRYPT} ${LIBUTIL} ${LIBSBUF}
-LDADD=	-lcrypt -lutil -lsbuf
+LIBADD=	crypt util sbuf
+
+.include <src.opts.mk>
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

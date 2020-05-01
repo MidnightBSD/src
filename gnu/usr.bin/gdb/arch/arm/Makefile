@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/arm/Makefile 181167 2008-08-02 12:33:39Z cognet $
+# $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/arm/Makefile 181167 2008-08-02 12:33:39Z cognet $
 
 GENSRCS+= xm.h
 LIBSRCS+= armfbsd-nat.c

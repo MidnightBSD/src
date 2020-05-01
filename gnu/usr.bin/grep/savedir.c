@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* savedir.c -- save the list of files in a directory in a string
    Copyright (C) 1990, 1997, 1998, 1999, 2000, 2001 Free Software Foundation, Inc.
 
@@ -19,7 +18,7 @@
 /* Written by David MacKenzie <djm@gnu.ai.mit.edu>. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/grep/savedir.c 187907 2009-01-30 00:22:08Z obrien $");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/grep/savedir.c 290350 2015-11-04 05:38:08Z rodrigc $");
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -72,6 +71,7 @@ char *stpcpy ();
 
 #include <fnmatch.h>
 #include "savedir.h"
+#include "system.h"
 
 char *path;
 size_t pathlen;

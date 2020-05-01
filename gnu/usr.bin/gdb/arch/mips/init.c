@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/mips/init.c 214960 2010-11-07 23:22:22Z gonzo $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/mips/init.c 214960 2010-11-07 23:22:22Z gonzo $ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */

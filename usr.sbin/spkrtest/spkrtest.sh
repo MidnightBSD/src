@@ -1,6 +1,8 @@
 #!/bin/sh
 
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2002  The FreeBSD Project
 # All rights reserved.
 #
@@ -29,7 +31,7 @@
 #
 # Inspired on spkrtest.pl, rewritten from scratch to remove perl dependency
 # $VER: spkrtest 0.3 (9.5.2002) Riccardo "VIC" Torrini <riccardo@torrini.org>
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/spkrtest/spkrtest.sh 330449 2018-03-05 07:26:05Z eadler $
 #
 
 cleanExit() {

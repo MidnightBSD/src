@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -51,7 +50,7 @@ static char sccsid[] = "@(#)lpr.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/lpr/lpr.c 241852 2012-10-22 03:31:22Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/lpr/lpr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  *      lpr -- off line print
@@ -388,8 +387,8 @@ main(int argc, char *argv[])
 			continue;	/* file unreasonable */
 
 		if (sflag && (cp = linked(arg)) != NULL) {
-			(void)snprintf(buf, sizeof(buf), "%u %ju",
-			    statb.st_dev, (uintmax_t)statb.st_ino);
+			(void)snprintf(buf, sizeof(buf), "%ju %ju",
+			    (uintmax_t)statb.st_dev, (uintmax_t)statb.st_ino);
 			card('S', buf);
 			if (format == 'p')
 				card('T', title ? title : arg);

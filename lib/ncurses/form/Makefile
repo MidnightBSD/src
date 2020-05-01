@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/ncurses/form/Makefile 313595 2017-02-11 06:25:47Z ngie $
+# $FreeBSD: stable/11/lib/ncurses/form/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 .include "${.CURDIR:H}/config.mk"
 
@@ -55,8 +54,7 @@ CLEANFILES=	ncurses_def.h
 CFLAGS+=	-I${SRCDIR}
 CFLAGS+=	-I${NCURSES_DIR}/menu
 
-DPADD=	${LIBNCURSES${LIB_SUFFIX:tu}}
-LDADD=	-lncurses${LIB_SUFFIX}
+LIBADD+=	ncurses${LIB_SUFFIX}
 
 .if defined(ENABLE_WIDEC)
 INCS=	form.h
@@ -85,6 +83,7 @@ MAN=	\
 	form_post.3 \
 	form_requestname.3 \
 	form_userptr.3 \
+	form_variables.3 \
 	form_win.3
 
 CLEANFILES+=	${MAN:M*.3}

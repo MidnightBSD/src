@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1997 Sean Eric Fagan
  *
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/procctl/procctl.c 114601 2003-05-03 21:06:42Z obrien $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/procctl/procctl.c 114601 2003-05-03 21:06:42Z obrien $");
 
 /*
  * procctl -- clear the event mask, and continue, any specified processes.

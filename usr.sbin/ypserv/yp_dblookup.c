@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ypserv/yp_dblookup.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <db.h>
 #include <errno.h>
@@ -103,13 +103,13 @@ yp_malloc_qent(void)
 {
 	register struct circleq_entry *q;
 
-	q = (struct circleq_entry *)malloc(sizeof(struct circleq_entry));
+	q = malloc(sizeof(struct circleq_entry));
 	if (q == NULL) {
 		yp_error("failed to malloc() circleq entry");
 		return(NULL);
 	}
 	bzero((char *)q, sizeof(struct circleq_entry));
-	q->dbptr = (struct dbent *)malloc(sizeof(struct dbent));
+	q->dbptr = malloc(sizeof(struct dbent));
 	if (q->dbptr == NULL) {
 		yp_error("failed to malloc() circleq entry");
 		free(q);
@@ -405,7 +405,7 @@ yp_open_db(const char *domain, const char *map)
 #ifdef DB_CACHE
 again:
 #endif
-	dbp = dbopen(buf,O_RDONLY, PERM_SECURE, DB_HASH, NULL);
+	dbp = dbopen(buf, O_RDONLY, PERM_SECURE, DB_HASH, NULL);
 
 	if (dbp == NULL) {
 		switch (errno) {

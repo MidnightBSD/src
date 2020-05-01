@@ -1,4 +1,4 @@
-# $MidnightBSD: src/gnu/usr.bin/groff/font/devkoi8-r/R.proto,v 1.6 2003/09/08 17:46:33 ru Exp $
+# $FreeBSD: stable/11/gnu/usr.bin/groff/font/devkoi8-r/R.proto 119887 2003-09-08 17:46:33Z ru $
 name R
 internalname 0
 spacewidth 24

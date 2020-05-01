@@ -11,11 +11,9 @@
 # AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
-#
-# $FreeBSD: src/usr.sbin/traceroute6/Makefile,v 1.11 2007/07/05 08:56:46 bz Exp $
-# $MidnightBSD: src/usr.sbin/traceroute6/Makefile,v 1.2 2008/11/19 23:40:41 laffer1 Exp $
+# $FreeBSD: stable/11/usr.sbin/traceroute6/Makefile 319191 2017-05-30 05:15:09Z ngie $
 
-TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
+TRACEROUTE_DISTDIR?= ${SRCTOP}/contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute6
@@ -29,7 +27,6 @@ CFLAGS+= -I${.CURDIR} -I${TRACEROUTE_DISTDIR} -I.
 
 WARNS?=	3
 
-DPADD=	${LIBIPSEC}
-LDADD=	-lipsec
+LIBADD=	ipsec
 
 .include <bsd.prog.mk>

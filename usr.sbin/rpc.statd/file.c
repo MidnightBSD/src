@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	A.R. Gordon (andrew.gordon@net-tel.co.uk).  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rpc.statd/file.c 300469 2016-05-23 05:38:40Z truckman $
+ * $FreeBSD: stable/11/usr.sbin/rpc.statd/file.c 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

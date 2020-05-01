@@ -1,6 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libreadline/Makefile,v 1.34 2000/01/29 12:01:51 obrien Exp $
+# $FreeBSD: stable/11/gnu/lib/libreadline/Makefile 268461 2014-07-09 15:52:30Z bapt $
 
-SUBDIR = history readline
+SUBDIR = readline
 
 .include <bsd.subdir.mk>

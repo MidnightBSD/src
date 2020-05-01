@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* exclude.c -- exclude file names
    Copyright 1992, 1993, 1994, 1997, 1999, 2000 Free Software Foundation, Inc.
 

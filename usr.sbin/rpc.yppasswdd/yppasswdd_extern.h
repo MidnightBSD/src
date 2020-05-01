@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/yppasswdd_extern.h 99824 2002-07-11 21:28:16Z alfred $
+ * $FreeBSD: stable/11/usr.sbin/rpc.yppasswdd/yppasswdd_extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _YPPASSWDD_EXTERN_H

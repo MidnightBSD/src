@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.3 2000/06/20 13:56:43 fvdl Exp $
-# $FreeBSD: stable/10/usr.sbin/rpcbind/Makefile 319243 2017-05-30 17:46:19Z ngie $
+# $FreeBSD: stable/11/usr.sbin/rpcbind/Makefile 319244 2017-05-30 17:47:19Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	rpcbind
 MAN=	rpcbind.8
@@ -21,16 +20,12 @@ CFLAGS+= -DWARMSTART
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+= -DLIBWRAP
-DPADD+=	${LIBWRAP}
-LDADD+=	-lwrap
+LIBADD+= wrap
 .endif
 
 .if ${MK_TESTS} != "no"
 SUBDIR+= tests
 .endif
-
-DPADD+=	${LIBUTIL}
-LDADD+=	-lutil
 
 WARNS?=	1
 

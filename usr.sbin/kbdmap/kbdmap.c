@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Jonathan Belson <jon@witchspace.com>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/kbdmap/kbdmap.c 293335 2016-01-07 17:03:26Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/kbdmap/kbdmap.c 358757 2020-03-08 18:13:40Z emaste $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -56,6 +57,7 @@ static const char *sysconfig = DEFAULT_SYSCONFIG;
 static const char *font_current;
 static const char *dir;
 static const char *menu = "";
+static const char *title = "Keyboard Menu";
 
 static int x11;
 static int using_vt;
@@ -360,8 +362,8 @@ show_dialog(struct keymap **km_sorted, int num_keymaps)
 		    tmp_name);
 		exit(1);
 	}
-	asprintf(&dialog, "/usr/bin/dialog --clear --title \"Keyboard Menu\" "
-			  "--menu \"%s\" 0 0 0", menu);
+	asprintf(&dialog, "/usr/bin/dialog --clear --title \"%s\" "
+			  "--menu \"%s\" 0 0 0", title, menu);
 
 	/* start right font, assume that current font is equal
 	 * to default font in /etc/rc.conf
@@ -627,8 +629,9 @@ menu_read(void)
 			matches = sscanf(p, "%64[^:]:%64[^:]:%256[^:\n]", 
 			    keym, lng, desc);
 			if (matches == 3) {
-				if (strcmp(keym, "FONT")
-				    && strcmp(keym, "MENU")) {
+				if (strcmp(keym, "FONT") != 0 &&
+				    strcmp(keym, "MENU") != 0 &&
+				    strcmp(keym, "TITLE") != 0) {
 					/* Check file exists & is readable */
 					if (check_file(keym) == -1)
 						continue;
@@ -693,7 +696,7 @@ menu_read(void)
 		fclose(fp);
 
 	} else
-		printf("Could not open file\n");
+		fprintf(stderr, "Could not open %s for reading\n", filename);
 
 	if (show) {
 		qsort(lang_list->sl_str, lang_list->sl_cur, sizeof(char*),
@@ -705,6 +708,10 @@ menu_read(void)
 		exit(0);
 	}
 
+	km = get_keymap("TITLE");
+	if (km)
+		/* Take note of dialog title */
+		title = strdup(km->desc);
 	km = get_keymap("MENU");
 	if (km)
 		/* Take note of menu title */
@@ -715,8 +722,9 @@ menu_read(void)
 		font = strdup(km->desc);
 
 	/* Remove unwanted items from list */
-	remove_keymap("MENU");
 	remove_keymap("FONT");
+	remove_keymap("MENU");
+	remove_keymap("TITLE");
 
 	/* Look for keymaps not in database */
 	dirp = opendir(dir);

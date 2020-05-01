@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/ncurses/panel/Makefile 313595 2017-02-11 06:25:47Z ngie $
+# $FreeBSD: stable/11/lib/ncurses/panel/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 .include "${.CURDIR:H}/config.mk"
 
@@ -30,8 +29,7 @@ CLEANFILES=	ncurses_def.h
 
 CFLAGS+=	-I${SRCDIR}
 
-DPADD=	${LIBNCURSES${LIB_SUFFIX:tu}}
-LDADD=	-lncurses${LIB_SUFFIX}
+LIBADD+=	ncurses${LIB_SUFFIX}
 
 .if defined(ENABLE_WIDEC)
 INCS=	panel.h

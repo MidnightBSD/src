@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/timer.h 253970 2013-08-05 20:13:02Z hrs $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/timer.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: timer.h,v 1.5 2002/05/31 13:30:38 jinmei Exp $	*/
 
 /*

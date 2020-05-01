@@ -117,7 +117,7 @@ Report problems and direct all questions to:
 
 static char const co[] = CO;
 
-mainProg(rcsmergeId, "rcsmerge", "$FreeBSD: src/gnu/usr.bin/rcs/rcsmerge/rcsmerge.c,v 1.7 1999/08/27 23:36:58 peter Exp $")
+mainProg(rcsmergeId, "rcsmerge", "$FreeBSD: stable/11/gnu/usr.bin/rcs/rcsmerge/rcsmerge.c 50472 1999-08-27 23:37:10Z peter $")
 {
 	static char const cmdusage[] =
 		"\nrcsmerge usage: rcsmerge -rrev1 [-rrev2] -ksubst -{pq}[rev] -Vn -xsuff -zzone file";

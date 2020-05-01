@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/11/usr.sbin/timed/timed/extern.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 1993
@@ -75,7 +75,7 @@ void	 print(struct tsp *, struct sockaddr_in *);
 void	 prthp(clock_t);
 void	 rmnetmachs(struct netinfo *);
 void	 setstatus(void);
-int	 slave(void);
+void	 slave(void) __dead2;
 void	 slaveack(void);
 void	 spreadtime(void);
 void	 suppress(struct sockaddr_in *, char *, struct netinfo *);

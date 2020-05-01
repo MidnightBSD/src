@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ngctl/Makefile 177714 2008-03-29 17:44:40Z ru $
+# $FreeBSD: stable/11/usr.sbin/ngctl/Makefile 275054 2014-11-25 16:57:27Z bapt $
 # $Whistle: Makefile,v 1.3 1999/01/16 00:10:11 archie Exp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	ngctl
 MAN=	ngctl.8
@@ -18,13 +17,11 @@ NGCTL_NO_LIBEDIT=
 NGCTL_NO_LIBEDIT=
 .endif
 
-DPADD=	${LIBNETGRAPH}
-LDADD=	-lnetgraph
+LIBADD=	netgraph
 
 .if !defined(NGCTL_NO_LIBEDIT)
 CFLAGS+= -DEDITLINE
-DPADD+=	${LIBPTHREAD} ${LIBEDIT} ${LIBTERMCAP}
-LDADD+=	-lpthread -ledit -ltermcap
+LIBADD+=	edit pthread
 .endif
 
 .include <bsd.prog.mk>

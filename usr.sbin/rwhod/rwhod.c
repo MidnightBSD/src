@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1993 The Regents of the University of California.
  * Copyright (c) 2013 Mariusz Zaborski <oshogbo@FreeBSD.org>
@@ -42,7 +41,7 @@ static char sccsid[] = "@(#)rwhod.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/rwhod/rwhod.c 312034 2017-01-13 08:40:58Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rwhod/rwhod.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
@@ -282,7 +281,7 @@ main(int argc, char *argv[])
 		} else if (pid_child_receiver == -1) {
 			if (errno == ENOSYS) {
 				syslog(LOG_ERR,
-				    "The pdfork(2) system call is not available; recompile the kernel with options PROCDESC");
+				    "The pdfork(2) system call is not available - kernel too old.");
 			} else {
 				syslog(LOG_ERR, "pdfork: %m");
 			}
@@ -489,7 +488,6 @@ sender_process(void)
 		for (we = mywd.wd_we; we < wend; we++) {
 			if (stat(we->we_utmp.out_line, &stb) >= 0)
 				we->we_idle = htonl(now - stb.st_atime);
-			we++;
 		}
 		(void) getloadavg(avenrun,
 		    sizeof(avenrun) / sizeof(avenrun[0]));

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/iscsid/log.c 270888 2014-08-31 20:21:08Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/iscsid/log.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <errno.h>
 #include <stdarg.h>
@@ -89,6 +90,7 @@ log_common(int priority, int log_errno, const char *fmt, va_list ap)
 {
 	static char msgbuf[MSGBUF_LEN];
 	static char msgbuf_strvised[MSGBUF_LEN * 4 + 1];
+	char *errstr;
 	int ret;
 
 	ret = vsnprintf(msgbuf, sizeof(msgbuf), fmt, ap);
@@ -122,21 +124,23 @@ log_common(int priority, int log_errno, const char *fmt, va_list ap)
 		}
 
 	} else {
+		errstr = strerror(log_errno);
+
 		if (peer_name != NULL) {
 			fprintf(stderr, "%s: %s (%s): %s: %s\n", getprogname(),
-			    peer_addr, peer_name, msgbuf_strvised, strerror(errno));
+			    peer_addr, peer_name, msgbuf_strvised, errstr);
 			syslog(priority, "%s (%s): %s: %s",
-			    peer_addr, peer_name, msgbuf_strvised, strerror(errno));
+			    peer_addr, peer_name, msgbuf_strvised, errstr);
 		} else if (peer_addr != NULL) {
 			fprintf(stderr, "%s: %s: %s: %s\n", getprogname(),
-			    peer_addr, msgbuf_strvised, strerror(errno));
+			    peer_addr, msgbuf_strvised, errstr);
 			syslog(priority, "%s: %s: %s",
-			    peer_addr, msgbuf_strvised, strerror(errno));
+			    peer_addr, msgbuf_strvised, errstr);
 		} else {
 			fprintf(stderr, "%s: %s: %s\n", getprogname(),
-			    msgbuf_strvised, strerror(errno));
+			    msgbuf_strvised, errstr);
 			syslog(priority, "%s: %s",
-			    msgbuf_strvised, strerror(errno));
+			    msgbuf_strvised, errstr);
 		}
 	}
 }

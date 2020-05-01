@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 Christopher G. Demetriou
  * All rights reserved.
  *
@@ -36,8 +38,7 @@ static const char copyright[] =
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/sa/main.c,v 1.18 2007/05/22 06:51:38 dds Exp $");
-__MBSDID("$MidnightBSD: src/usr.sbin/sa/main.c,v 1.2 2008/11/25 01:16:24 laffer1 Exp $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/sa/main.c 330449 2018-03-05 07:26:05Z eadler $");
 
 /*
  * sa:	system accounting

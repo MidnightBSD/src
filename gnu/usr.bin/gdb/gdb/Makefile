@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/gdb/gdb/Makefile 251512 2013-06-07 21:40:02Z emaste $
+# $FreeBSD: stable/11/gnu/usr.bin/gdb/gdb/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 PROG=	gdb${GDB_SUFFIX}
 SRCS=	gdb.c
@@ -12,8 +11,9 @@ GDBLIBS= ${OBJ_GDB}/libgdb/libgdb.a
 # global symbols visible.
 LDFLAGS+= -Wl,-E
 
-DPADD=	${GDBLIBS} ${BULIBS} ${LIBM} ${LIBREADLINE} ${LIBTERMCAP} ${LIBGNUREGEX}
-LDADD=	${GDBLIBS} ${BULIBS} -lm -lreadline -ltermcap -lgnuregex
+DPADD=	${GDBLIBS} ${BULIBS}
+LDADD=	${GDBLIBS} ${BULIBS}
+LIBADD+=	m readline ncursesw gnuregex
 
 .include <bsd.prog.mk>
 CFLAGS+=	-DDEBUGDIR=\"${DEBUGDIR}\"

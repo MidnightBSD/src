@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/rrenum.h 222732 2011-06-06 03:06:43Z hrs $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/rrenum.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: rrenum.h,v 1.3 2001/01/21 15:37:14 itojun Exp $	*/
 
 /*

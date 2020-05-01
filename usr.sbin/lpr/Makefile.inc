@@ -1,11 +1,9 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/lpr/Makefile.inc 275054 2014-11-25 16:57:27Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6
 .endif
-
-LIBLPR=	${.OBJDIR}/../common_source/liblpr.a
 
 .include "../Makefile.inc"

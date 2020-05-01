@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/route6d/misc/chkrt 122675 2003-11-14 16:57:04Z ume $
 #
 $dump="/var/tmp/route6d_dump";
 $pidfile="/var/run/route6d.pid";

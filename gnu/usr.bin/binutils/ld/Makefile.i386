@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/ld/Makefile.i386 219811 2011-03-21 04:03:55Z marcel $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/ld/Makefile.i386 219811 2011-03-21 04:03:55Z marcel $
 
 NATIVE_EMULATION= elf_i386_fbsd
 

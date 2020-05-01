@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*
  * sys-bsd.c - System-dependent procedures for setting up
  * PPP interfaces on bsd-4.4-ish systems (including 386BSD, NetBSD, etc.)
+ *
+ * SPDX-License-Identifier: MIT
  *
  * Copyright (c) 1989 Carnegie Mellon University.
  * All rights reserved.
@@ -18,7 +19,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/arp.c 246143 2013-01-31 08:55:21Z glebius $
+ * $FreeBSD: stable/11/usr.sbin/ppp/arp.c 330449 2018-03-05 07:26:05Z eadler $
  *
  */
 

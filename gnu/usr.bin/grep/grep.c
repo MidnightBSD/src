@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* grep.c - main driver file for grep.
    Copyright 1992, 1997-1999, 2000 Free Software Foundation, Inc.
 
@@ -20,7 +19,7 @@
 /* Written July 1992 by Mike Haertel.  */
 /* Builtin decompression 1997 by Wolfram Schneider <wosch@FreeBSD.org>.  */
 
-/* $FreeBSD: stable/10/gnu/usr.bin/grep/grep.c 254093 2013-08-08 11:53:47Z ache $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/grep.c 254093 2013-08-08 11:53:47Z ache $ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>

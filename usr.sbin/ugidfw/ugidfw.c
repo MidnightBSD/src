@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2004 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ugidfw/ugidfw.c 186480 2008-12-24 22:40:13Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ugidfw/ugidfw.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

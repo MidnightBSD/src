@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef __eval_expr_h__
 #define __eval_expr_h__
 /*-
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstudy/eval_expr.h 277177 2015-01-14 12:46:58Z rrs $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstudy/eval_expr.h 277177 2015-01-14 12:46:58Z rrs $");
 
 enum exptype {
 	TYPE_OP_PLUS,

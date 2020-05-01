@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/kthr.c 246893 2013-02-17 02:15:19Z marcel $");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/kthr.c 275644 2014-12-09 14:21:43Z dchagin $");
 
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -97,7 +96,7 @@ kgdb_thr_add_procs(uintptr_t paddr)
 			kt->kaddr = addr;
 			if (td.td_tid == dumptid)
 				kt->pcb = dumppcb;
-			else if (td.td_state == TDS_RUNNING &&
+			else if (td.td_oncpu != NOCPU &&
 			    CPU_ISSET(td.td_oncpu, &stopped_cpus))
 				kt->pcb = kgdb_trgt_core_pcb(td.td_oncpu);
 			else

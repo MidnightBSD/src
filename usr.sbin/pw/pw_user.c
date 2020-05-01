@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -28,12 +29,10 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/pw_user.c 330695 2018-03-09 14:45:47Z dab $";
+  "$FreeBSD: stable/11/usr.sbin/pw/pw_user.c 360326 2020-04-25 22:23:34Z dim $";
 #endif /* not lint */
 
 #include <sys/param.h>
-#include <sys/resource.h>
-#include <sys/time.h>
 #include <sys/types.h>
 
 #include <assert.h>
@@ -590,7 +589,7 @@ print_user(struct passwd * pwd, bool pretty, bool v7)
 	}
 	if (pwd->pw_expire > (time_t)0 && (tptr = localtime(&pwd->pw_expire)) != NULL)
 		strftime(acexpire, sizeof acexpire, "%c", tptr);
-		if (pwd->pw_change > (time_t)0 && (tptr = localtime(&pwd->pw_change)) != NULL)
+	if (pwd->pw_change > (time_t)0 && (tptr = localtime(&pwd->pw_change)) != NULL)
 		strftime(pwexpire, sizeof pwexpire, "%c", tptr);
 	printf("Login Name: %-15s   #%-12ju Group: %-15s   #%ju\n"
 	       " Full Name: %s\n"
@@ -747,7 +746,7 @@ pw_user_next(int argc, char **argv, char *name __unused)
 	bool quiet = false;
 	uid_t next;
 
-	while ((ch = getopt(argc, argv, "Cq")) != -1) {
+	while ((ch = getopt(argc, argv, "C:q")) != -1) {
 		switch (ch) {
 		case 'C':
 			cfg = optarg;

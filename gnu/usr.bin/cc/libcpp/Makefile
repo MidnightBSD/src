@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/libcpp/Makefile 259405 2013-12-15 03:47:31Z pfg $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/libcpp/Makefile 258507 2013-11-24 04:08:47Z pfg $
 
 .include <bsd.own.mk>
 

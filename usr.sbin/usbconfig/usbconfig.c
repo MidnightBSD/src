@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.sbin/usbconfig/usbconfig.c 248236 2013-03-13 12:23:14Z hselasky $ */
+/* $FreeBSD: stable/11/usr.sbin/usbconfig/usbconfig.c 356401 2020-01-06 09:24:47Z hselasky $ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,10 +77,12 @@ struct options {
 	uint8_t	got_power_on:1;
 	uint8_t	got_dump_device_quirks:1;
 	uint8_t	got_dump_quirk_names:1;
+	uint8_t	got_dump_all_desc:1;
 	uint8_t	got_dump_device_desc:1;
 	uint8_t	got_dump_curr_config:1;
 	uint8_t	got_dump_all_config:1;
 	uint8_t	got_dump_info:1;
+  	uint8_t	got_dump_stats:1;
 	uint8_t	got_show_iface_driver:1;
 	uint8_t	got_remove_device_quirk:1;
 	uint8_t	got_add_device_quirk:1;
@@ -87,6 +90,7 @@ struct options {
 	uint8_t	got_add_quirk:1;
 	uint8_t	got_dump_string:1;
 	uint8_t	got_do_request:1;
+	uint8_t	got_detach_kernel_driver:1;
 };
 
 struct token {
@@ -109,13 +113,16 @@ enum {
 	T_ADD_QUIRK,
 	T_REMOVE_QUIRK,
 	T_SHOW_IFACE_DRIVER,
+	T_DETACH_KERNEL_DRIVER,
 	T_DUMP_QUIRK_NAMES,
 	T_DUMP_DEVICE_QUIRKS,
+	T_DUMP_ALL_DESC,
 	T_DUMP_DEVICE_DESC,
 	T_DUMP_CURR_CONFIG_DESC,
 	T_DUMP_ALL_CONFIG_DESC,
 	T_DUMP_STRING,
 	T_DUMP_INFO,
+	T_DUMP_STATS,
 	T_SUSPEND,
 	T_RESUME,
 	T_POWER_OFF,
@@ -141,13 +148,16 @@ static const struct token token[] = {
 	{"remove_dev_quirk_vplh", T_REMOVE_DEVICE_QUIRK, 5},
 	{"add_quirk", T_ADD_QUIRK, 1},
 	{"remove_quirk", T_REMOVE_QUIRK, 1},
+	{"detach_kernel_driver", T_DETACH_KERNEL_DRIVER, 0},
 	{"dump_quirk_names", T_DUMP_QUIRK_NAMES, 0},
 	{"dump_device_quirks", T_DUMP_DEVICE_QUIRKS, 0},
+	{"dump_all_desc", T_DUMP_ALL_DESC, 0},
 	{"dump_device_desc", T_DUMP_DEVICE_DESC, 0},
 	{"dump_curr_config_desc", T_DUMP_CURR_CONFIG_DESC, 0},
 	{"dump_all_config_desc", T_DUMP_ALL_CONFIG_DESC, 0},
 	{"dump_string", T_DUMP_STRING, 1},
 	{"dump_info", T_DUMP_INFO, 0},
+	{"dump_stats", T_DUMP_STATS, 0},
 	{"show_ifdrv", T_SHOW_IFACE_DRIVER, 0},
 	{"suspend", T_SUSPEND, 0},
 	{"resume", T_RESUME, 0},
@@ -280,13 +290,16 @@ usage(void)
 	    "  remove_dev_quirk_vplh <vid> <pid> <lo_rev> <hi_rev> <quirk>" "\n"
 	    "  add_quirk <quirk>" "\n"
 	    "  remove_quirk <quirk>" "\n"
+	    "  detach_kernel_driver" "\n"
 	    "  dump_quirk_names" "\n"
 	    "  dump_device_quirks" "\n"
+	    "  dump_all_desc" "\n"
 	    "  dump_device_desc" "\n"
 	    "  dump_curr_config_desc" "\n"
 	    "  dump_all_config_desc" "\n"
 	    "  dump_string <index>" "\n"
 	    "  dump_info" "\n"
+	    "  dump_stats" "\n"
 	    "  show_ifdrv" "\n"
 	    "  suspend" "\n"
 	    "  resume" "\n"
@@ -487,11 +500,18 @@ flush_command(struct libusb20_backend *pbe, struct options *opt)
 				err(1, "could not set power ON");
 			}
 		}
+		if (opt->got_detach_kernel_driver) {
+			if (libusb20_dev_detach_kernel_driver(pdev, opt->iface)) {
+				err(1, "could not detach kernel driver");
+			}
+		}
 		dump_any =
-		    (opt->got_dump_device_desc ||
+		    (opt->got_dump_all_desc ||
+		    opt->got_dump_device_desc ||
 		    opt->got_dump_curr_config ||
 		    opt->got_dump_all_config ||
-		    opt->got_dump_info);
+		    opt->got_dump_info ||
+		    opt->got_dump_stats);
 
 		if (opt->got_list || dump_any) {
 			dump_device_info(pdev,
@@ -507,6 +527,14 @@ flush_command(struct libusb20_backend *pbe, struct options *opt)
 		} else if (opt->got_dump_curr_config) {
 			printf("\n");
 			dump_config(pdev, 0);
+		} else if (opt->got_dump_all_desc) {
+			printf("\n");
+			dump_device_desc(pdev);
+			dump_config(pdev, 1);
+		}
+		if (opt->got_dump_stats) {
+			printf("\n");
+			dump_device_stats(pdev);
 		}
 		if (dump_any) {
 			printf("\n");
@@ -598,6 +626,13 @@ main(int argc, char **argv)
 			opt->quirkname = argv[n + 5];
 			n += 5;
 			opt->got_remove_device_quirk = 1;
+			opt->got_any++;
+			break;
+
+		case T_DETACH_KERNEL_DRIVER:
+			if (opt->got_detach_kernel_driver)
+				duplicate_option(argv[n]);
+			opt->got_detach_kernel_driver = 1;
 			opt->got_any++;
 			break;
 
@@ -695,6 +730,12 @@ main(int argc, char **argv)
 			opt->got_get_template = 1;
 			opt->got_any++;
 			break;
+		case T_DUMP_ALL_DESC:
+			if (opt->got_dump_all_desc)
+				duplicate_option(argv[n]);
+			opt->got_dump_all_desc = 1;
+			opt->got_any++;
+			break;
 		case T_DUMP_DEVICE_DESC:
 			if (opt->got_dump_device_desc)
 				duplicate_option(argv[n]);
@@ -717,6 +758,12 @@ main(int argc, char **argv)
 			if (opt->got_dump_info)
 				duplicate_option(argv[n]);
 			opt->got_dump_info = 1;
+			opt->got_any++;
+			break;
+		case T_DUMP_STATS:
+			if (opt->got_dump_stats)
+				duplicate_option(argv[n]);
+			opt->got_dump_stats = 1;
 			opt->got_any++;
 			break;
 		case T_DUMP_STRING:

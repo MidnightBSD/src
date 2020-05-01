@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	A.R. Gordon (andrew.gordon@net-tel.co.uk).  All rights reserved.
@@ -37,7 +36,7 @@
 /* The actual program logic is in the file procs.c			*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.statd/statd.c 277859 2015-01-28 21:51:34Z rstone $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.statd/statd.c 355368 2019-12-03 22:54:24Z rpokala $");
 
 #include <err.h>
 #include <errno.h>
@@ -73,9 +72,9 @@ static int	create_service(struct netconfig *nconf);
 static void	complete_service(struct netconfig *nconf, char *port_str);
 static void	clearout_service(void);
 static void handle_sigchld(int sig);
-void out_of_mem(void);
+void out_of_mem(void) __dead2;
 
-static void usage(void);
+static void usage(void) __dead2;
 
 int
 main(int argc, char **argv)
@@ -87,14 +86,18 @@ main(int argc, char **argv)
   int ch, i, s;
   char *endptr, **hosts_bak;
   int have_v6 = 1;
+  int foreground = 0;
   int maxrec = RPC_MAXDATASIZE;
   int attempt_cnt, port_len, port_pos, ret;
   char **port_list;
 
-  while ((ch = getopt(argc, argv, "dh:p:")) != -1)
+  while ((ch = getopt(argc, argv, "dFh:p:")) != -1)
     switch (ch) {
     case 'd':
       debug = 1;
+      break;
+    case 'F':
+      foreground = 1;
       break;
     case 'h':
       ++nhosts;
@@ -151,7 +154,7 @@ main(int argc, char **argv)
    * list.
    */
   if (nhosts == 0) {
-	  hosts = malloc(sizeof(char**));
+	  hosts = malloc(sizeof(char *));
 	  if (hosts == NULL)
 		  out_of_mem();
 
@@ -286,7 +289,11 @@ main(int argc, char **argv)
 
   /* Note that it is NOT sensible to run this program from inetd - the 	*/
   /* protocol assumes that it will run immediately at boot time.	*/
-  daemon(0, 0);
+  if ((foreground == 0) && daemon(0, 0) < 0) {
+  	err(1, "cannot fork");
+  	/* NOTREACHED */
+  }
+
   openlog("rpc.statd", 0, LOG_DAEMON);
   if (debug) syslog(LOG_INFO, "Starting - debug enabled");
   else syslog(LOG_INFO, "Starting");
@@ -614,9 +621,9 @@ clearout_service(void)
 }
 
 static void
-usage()
+usage(void)
 {
-      fprintf(stderr, "usage: rpc.statd [-d] [-h <bindip>] [-p <port>]\n");
+      fprintf(stderr, "usage: rpc.statd [-d] [-F] [-h <bindip>] [-p <port>]\n");
       exit(1);
 }
 
@@ -648,7 +655,7 @@ static void handle_sigchld(int sig __unused)
  * Out of memory, fatal
  */
 void
-out_of_mem()
+out_of_mem(void)
 {
 
 	syslog(LOG_ERR, "out of memory");

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/cc/cc_tools/elfos-undef.h 182627 2008-09-01 18:46:03Z obrien $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/elfos-undef.h 182627 2008-09-01 18:46:03Z obrien $ */
 
 /* This header exists to avoid editing contrib/gcc/config/elfos.h - which
    isn't coded to be defensive as it should... */

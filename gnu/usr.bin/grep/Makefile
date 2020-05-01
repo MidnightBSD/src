@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/grep/Makefile 270776 2014-08-29 01:20:31Z gjb $
+# $FreeBSD: stable/11/gnu/usr.bin/grep/Makefile 277273 2015-01-16 21:39:08Z will $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 GREP_LIBZ=YES
 
@@ -23,8 +22,7 @@ LINKS+=	${BINDIR}/grep ${BINDIR}/egrep \
 MLINKS=	grep.1 egrep.1 grep.1 fgrep.1
 .endif
 
-DPADD=	${LIBGNUREGEX} ${LIBBZ2}
-LDADD=	-lgnuregex -lbz2
+LIBADD=	gnuregex bz2
 
 .if ${MK_BSD_GREP} != "yes"
 LINKS+=	${BINDIR}/grep ${BINDIR}/bzgrep \
@@ -34,8 +32,7 @@ MLINKS+=grep.1 bzgrep.1 grep.1 bzegrep.1 grep.1 bzfgrep.1
 .endif
 
 .if defined(GREP_LIBZ) && !empty(GREP_LIBZ)
-LDADD+=	-lz
-DPADD+=	${LIBZ}
+LIBADD+=	z
 CFLAGS+=-DHAVE_LIBZ=1
 .if ${MK_BSD_GREP} != "yes"
 LINKS+=	${BINDIR}/grep ${BINDIR}/zgrep \
@@ -46,9 +43,7 @@ MLINKS+=grep.1 zgrep.1 grep.1 zegrep.1 grep.1 zfgrep.1
 .endif
 
 gnugrep.1: grep.1
-	cp ${.ALLSRC} ${.TARGET}
-
-SUBDIR+=doc
+	${CP} ${.ALLSRC} ${.TARGET}
 
 check:	all
 	@failed=0; total=0; \

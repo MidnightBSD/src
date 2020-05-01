@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1999 Internet Business Solutions Ltd., Switzerland
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/radius.c 241844 2012-10-22 03:00:37Z eadler $
+ * $FreeBSD: stable/11/usr.sbin/ppp/radius.c 330449 2018-03-05 07:26:05Z eadler $
  *
  */
 
@@ -1151,7 +1152,7 @@ radius_Account(struct radius *r, struct radacct *ac, struct datalink *dl,
     snprintf(ac->multi_session_id, sizeof ac->multi_session_id, "%s",
              dl->bundle->ncp.mp.active ?
              dl->bundle->ncp.mp.server.socket.sun_path : "");
-  };
+  }
 
   if (rad_put_string(r->cx.rad, RAD_USER_NAME, ac->user_name) != 0 ||
       rad_put_int(r->cx.rad, RAD_SERVICE_TYPE, RAD_FRAMED) != 0 ||
@@ -1346,7 +1347,7 @@ radius_alive(void *v)
 void
 radius_StartTimer(struct bundle *bundle)
 {
-  if (bundle->radius.cfg.file && bundle->radius.alive.interval) {
+  if (*bundle->radius.cfg.file && bundle->radius.alive.interval) {
     bundle->radius.alive.timer.func = radius_alive;
     bundle->radius.alive.timer.name = "radius alive";
     bundle->radius.alive.timer.load = bundle->radius.alive.interval * SECTICKS;

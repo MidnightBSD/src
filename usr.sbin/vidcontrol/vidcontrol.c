@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994-1996 Søren Schmidt
  * All rights reserved.
  *
@@ -34,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/vidcontrol/vidcontrol.c 313552 2017-02-10 15:02:56Z emaste $";
+  "$FreeBSD: stable/11/usr.sbin/vidcontrol/vidcontrol.c 331183 2018-03-19 06:45:40Z eadler $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -199,7 +200,7 @@ usage(void)
 	if (vt4_mode)
 		fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n",
 "usage: vidcontrol [-CHPpx] [-b color] [-c appearance] [-f [[size] file]]",
-"                  [-g geometry] [-h size] [-i adapter | mode]",
+"                  [-g geometry] [-h size] [-i active | adapter | mode]",
 "                  [-M char] [-m on | off] [-r foreground background]",
 "                  [-S on | off] [-s number] [-T xterm | cons25] [-t N | off]",
 "                  [mode] [foreground [background]] [show]");
@@ -851,8 +852,7 @@ get_normal_colors(int argc, char **argv, int *_index)
 		normal_fore_color=color;
 		colors_changed = 1;
 		if (*_index < argc
-		    && (color = get_color_number(argv[*_index])) != -1
-		    && color < 8) {
+		    && (color = get_color_number(argv[*_index])) != -1) {
 			(*_index)++;
 			fprintf(stderr, "\033[=%dG", color);
 			normal_back_color=color;
@@ -875,8 +875,7 @@ get_reverse_colors(int argc, char **argv, int *_index)
 		revers_fore_color=color;
 		colors_changed = 1;
 		if (*_index < argc
-		    && (color = get_color_number(argv[*_index])) != -1
-		    && color < 8) {
+		    && (color = get_color_number(argv[*_index])) != -1) {
 			(*_index)++;
 			fprintf(stderr, "\033[=%dI", color);
 			revers_back_color=color;
@@ -1044,6 +1043,18 @@ static const char
 
 
 /*
+ * Show active VTY, ie current console number.
+ */
+
+static void
+show_active_info(void)
+{
+
+	printf("%d\n", cur_info.active_vty);
+}
+
+
+/*
  * Show graphics adapter information.
  */
 
@@ -1094,11 +1105,15 @@ show_mode_info(void)
 	printf("---------------------------------------"
 	       "---------------------------------------\n");
 
+	memset(&_info, 0, sizeof(_info));
 	for (mode = 0; mode <= M_VESA_MODE_MAX; ++mode) {
 		_info.vi_mode = mode;
 		if (ioctl(0, CONS_MODEINFO, &_info))
 			continue;
 		if (_info.vi_mode != mode)
+			continue;
+		if (_info.vi_width == 0 && _info.vi_height == 0 &&
+		    _info.vi_cwidth == 0 && _info.vi_cheight == 0)
 			continue;
 
 		printf("%3d (0x%03x)", mode, mode);
@@ -1158,13 +1173,16 @@ show_mode_info(void)
 static void
 show_info(char *arg)
 {
-	if (!strcmp(arg, "adapter")) {
+
+	if (!strcmp(arg, "active")) {
+		show_active_info();
+	} else if (!strcmp(arg, "adapter")) {
 		show_adapter_info();
 	} else if (!strcmp(arg, "mode")) {
 		show_mode_info();
 	} else {
 		revert();
-		errx(1, "argument to -i must be either adapter or mode");
+		errx(1, "argument to -i must be active, adapter, or mode");
 	}
 }
 
@@ -1469,18 +1487,8 @@ main(int argc, char **argv)
 
 	get_normal_colors(argc, argv, &optind);
 
-	if (colors_changed || video_mode_changed) {
-		if (!(new_mode_info.vi_flags & V_INFO_GRAPHICS)) {
-			if ((normal_back_color < 8) && (revers_back_color < 8)) {
-				set_colors();
-			} else {
-				revert();
-				errx(1, "bg color for text modes must be < 8");
-			}
-		} else {
-			set_colors();
-		}
-	}
+	if (colors_changed || video_mode_changed)
+		set_colors();
 
 	if ((optind != argc) || (argc == 1))
 		usage();

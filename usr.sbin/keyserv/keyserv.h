@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/keyserv/keyserv.h 173412 2007-11-07 10:53:41Z kevlo $
  */
 extern void setmodulus(char *modx);
 

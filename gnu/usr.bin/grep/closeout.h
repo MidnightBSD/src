@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #ifndef CLOSEOUT_H
 # define CLOSEOUT_H 1
 

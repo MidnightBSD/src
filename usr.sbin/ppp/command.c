@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/command.c 249582 2013-04-17 11:40:10Z gabor $
+ * $FreeBSD: stable/11/usr.sbin/ppp/command.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -652,7 +653,7 @@ ShellCommand(struct cmdargs const *arg, int bg)
   if ((shpid = fork()) == 0) {
     int i, fd;
 
-    if ((shell = getenv("SHELL")) == 0)
+    if ((shell = getenv("SHELL")) == NULL)
       shell = _PATH_BSHELL;
 
     timer_TermService();
@@ -2052,7 +2053,7 @@ SetVariable(struct cmdargs const *arg)
       res = 1;
     } else {
       arg->bundle->radius.alive.interval = atoi(argp);
-      if (arg->bundle->radius.alive.interval && !arg->bundle->radius.cfg.file) {
+      if (arg->bundle->radius.alive.interval && !*arg->bundle->radius.cfg.file) {
         log_Printf(LogWARN, "rad_alive requires radius to be configured\n");
 	res = 1;
       } else if (arg->bundle->ncp.ipcp.fsm.state == ST_OPENED) {
@@ -2336,7 +2337,7 @@ SetVariable(struct cmdargs const *arg)
 	   res = 1;
     }
 
-    if (arg->bundle->radius.port_id_type && !arg->bundle->radius.cfg.file) {
+    if (arg->bundle->radius.port_id_type && !*arg->bundle->radius.cfg.file) {
 	    log_Printf(LogWARN, "rad_port_id requires radius to be configured\n");
 	    res = 1;
     }

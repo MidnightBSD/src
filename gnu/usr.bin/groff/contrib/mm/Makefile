@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/groff/contrib/mm/Makefile 161282 2006-08-14 13:02:01Z ru $
 
 SCRIPTS=	mmroff.pl
 MAN=		mmroff.1

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/lpr/filters.ru/Makefile 95256 2002-04-22 10:46:12Z ru $
 
 SUBDIR=	koi2alt koi2855
 

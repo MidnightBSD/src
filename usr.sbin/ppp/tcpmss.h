@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/tcpmss.h 69303 2000-11-28 13:18:35Z brian $
+ * $FreeBSD: stable/11/usr.sbin/ppp/tcpmss.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 extern struct layer tcpmsslayer;

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2002,2011   - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -34,7 +35,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/common_source/matchjobs.c 220586 2011-04-13 00:36:19Z gad $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/common_source/matchjobs.c 330449 2018-03-05 07:26:05Z eadler $");
 
 /*
  * movejobs.c - The lpc commands which move jobs around.

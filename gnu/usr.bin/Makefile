@@ -1,61 +1,26 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/Makefile 322094 2017-08-05 12:33:00Z marius $
+# $FreeBSD: stable/11/gnu/usr.bin/Makefile 332485 2018-04-13 19:15:31Z ian $
 
-.include <bsd.own.mk>
-
-SUBDIR= ${_binutils} \
-	${_cc} \
-	${_dialog} \
-	diff \
-	${_dtc} \
-	${_gdb} \
-	${_gperf} \
-	grep \
-	${_groff} \
-	${_rcs} \
-	${_tests} \
-	${_tests} \
-	${_texinfo}
-
-SUBDIR_DEPEND_gdb=	${_binutils}
+.include <src.opts.mk>
 
 .if ${MK_CXX} != "no"
-_gperf=		gperf
+SUBDIR.${MK_GCC}+=	gperf
+SUBDIR.${MK_GROFF}+=	groff
 .endif
 
-.if ${MK_GROFF} != "no"
-_groff=		groff
-.endif
-
-.if ${MK_DIALOG} != "no"
-_dialog=	dialog
-.endif
-
-.if ${MK_GPL_DTC} != "no"
-_dtc=		dtc
-.endif
-
-.if ${MK_INFO} != "no"
-_texinfo=	texinfo
-.endif
-
-.if ${MK_RCS} != "no"
-_rcs=		rcs
-.endif
-
-.if ${MK_TESTS} != "no"
-_tests=		tests
-.endif
+SUBDIR.${MK_BINUTILS}+=	binutils
+SUBDIR.${MK_DIALOG}+=	dialog
 
 .if ${MK_BINUTILS} != "no"
-_binutils=	binutils
+SUBDIR.${MK_GDB}+=	gdb
+SUBDIR_DEPEND_gdb=	binutils
 .endif
-.if ${MK_GCC} != "no"
-_cc=		cc
-.endif
-.if ${MK_GDB} != "no"
-_gdb=		gdb
-.endif
+
+SUBDIR.${MK_GCC}+=	cc
+SUBDIR.${MK_GNU_DIFF}+=	diff
+SUBDIR.${MK_GNU_GREP}+=	grep
+SUBDIR.${MK_GPL_DTC}+=	dtc
+SUBDIR.${MK_RCS}+=	rcs
+SUBDIR.${MK_TESTS}+=	tests
 
 SUBDIR_PARALLEL=
 

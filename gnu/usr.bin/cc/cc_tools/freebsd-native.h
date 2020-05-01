@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/cc/cc_tools/freebsd-native.h 259563 2013-12-18 19:07:29Z pfg $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/cc/cc_tools/freebsd-native.h 314573 2017-03-03 00:39:29Z emaste $ */
 
 /* FREEBSD_NATIVE is defined when gcc is integrated into the FreeBSD
    source tree so it can be configured appropriately without using
@@ -8,8 +7,8 @@
 #define FREEBSD_NATIVE 1
 
 /* Fake out gcc/config/freebsd<version>.h.  */
-#define	FBSD_MAJOR	10
-#define	FBSD_CC_VER	1000001		/* form like __FreeBSD_version */
+#define	FBSD_MAJOR	11
+#define	FBSD_CC_VER	1100003		/* form like __FreeBSD_version */
 
 #undef SYSTEM_INCLUDE_DIR		/* We don't need one for now. */
 #undef TOOL_INCLUDE_DIR			/* We don't need one for now. */

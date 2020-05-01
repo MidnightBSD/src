@@ -20,7 +20,7 @@
    Boston, MA 02111-1307, USA.  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/gdbserver/fbsd-arm-low.c 185023 2008-11-17 16:32:57Z raj $");
 
 #include "server.h"
 #include "fbsd-low.h"

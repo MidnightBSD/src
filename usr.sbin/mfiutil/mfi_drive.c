@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfi_drive.c 254906 2013-08-26 12:05:38Z sbruno $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfi_drive.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>

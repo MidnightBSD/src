@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011 Hiroki Sato <hrs@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rtadvd/control_server.h 225519 2011-09-12 23:52:55Z hrs $
+ * $FreeBSD: stable/11/usr.sbin/rtadvd/control_server.h 330449 2018-03-05 07:26:05Z eadler $
  *
  */
 

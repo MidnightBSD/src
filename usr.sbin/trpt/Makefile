@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/trpt/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	trpt
 MAN=	trpt.8

@@ -1,7 +1,9 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/advcap.h 330449 2018-03-05 07:26:05Z eadler $	*/
 /*	$KAME: advcap.h,v 1.5 2003/06/09 05:40:54 t-momose Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1994,1995 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
  *

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/ipv6cp.c 330805 2018-03-12 17:37:38Z eugen $
+ * $FreeBSD: stable/11/usr.sbin/ppp/ipv6cp.c 330804 2018-03-12 17:36:37Z eugen $
  */
 
 #include <sys/param.h>
@@ -487,7 +488,7 @@ ipv6cp_LayerUp(struct fsm *fp)
    * evaluated.
    */
   if (!Enabled(fp->bundle, OPT_IPCP)) {
-    if (fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
+    if (*fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
       system_Select(fp->bundle, fp->bundle->radius.filterid, LINKUPFILE,
 		    NULL, NULL);
   }
@@ -540,7 +541,7 @@ ipv6cp_LayerDown(struct fsm *fp)
      * evaluated.
      */
     if (!Enabled(fp->bundle, OPT_IPCP)) {
-      if (fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
+      if (*fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
 	system_Select(fp->bundle, fp->bundle->radius.filterid, LINKDOWNFILE,
 		      NULL, NULL);
     }

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/cpp/Makefile 232322 2012-02-29 22:58:51Z dim $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/cpp/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"

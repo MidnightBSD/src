@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* obstack.c - subroutines used implicitly by object stack macros
    Copyright (C) 1988-1994,96,97,98,99 Free Software Foundation, Inc.
 

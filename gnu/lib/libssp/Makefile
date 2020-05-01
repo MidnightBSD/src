@@ -1,10 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/lib/libssp/Makefile 188995 2009-02-24 16:14:15Z ru $
+# $FreeBSD: stable/11/gnu/lib/libssp/Makefile 284421 2015-06-15 19:28:07Z bapt $
 
 SHLIBDIR?=	/lib
 
-.include <bsd.own.mk>
+MK_PROFILE=	no
 MK_SSP=		no
+
+.include <bsd.own.mk>
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -14,7 +15,7 @@ SRCDIR=	${GCCLIB}/libssp
 
 LIB=		ssp
 SHLIB_MAJOR=	0
-NO_PROFILE=
+LD_FATAL_WARNINGS=	no
 
 SRCS=	ssp.c gets-chk.c memcpy-chk.c memmove-chk.c mempcpy-chk.c \
 	memset-chk.c snprintf-chk.c sprintf-chk.c stpcpy-chk.c \

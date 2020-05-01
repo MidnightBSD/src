@@ -1,0 +1,6 @@
+# $FreeBSD: stable/11/usr.sbin/Makefile.arm64 290556 2015-11-08 20:56:04Z emaste $
+
+.if ${MK_ACPI} != "no"
+SUBDIR+=	acpi
+.endif
+SUBDIR+=	ofwdump

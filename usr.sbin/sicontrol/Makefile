@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/sicontrol/Makefile 179590 2008-06-06 03:23:34Z peter $
 
 PROG=	sicontrol
 MAN=	sicontrol.8

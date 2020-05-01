@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  *	This is an example of a mixer program for Linux
  *
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/mixer/mixer.c 317796 2017-05-04 14:55:07Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/mixer/mixer.c 317795 2017-05-04 14:54:22Z pfg $");
 
 #include <err.h>
 #include <fcntl.h>
@@ -27,11 +26,11 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/mixer/mixer.c 317796 2017-05-04 14:55:07Z
 
 static const char *names[SOUND_MIXER_NRDEVICES] = SOUND_DEVICE_NAMES;
 
-static void	usage(int devmask, int recmask);
+static void	usage(int devmask, int recmask) __dead2;
 static int	res_name(const char *name, int mask);
 static void	print_recsrc(int recsrc, int recmask, int sflag);
 
-static void
+static void __dead2
 usage(int devmask, int recmask)
 {
 	int	i, n;

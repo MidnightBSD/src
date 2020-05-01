@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: rtsold.h,v 1.19 2003/04/16 09:48:15 itojun Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rtsold/rtsold.h 293290 2016-01-07 00:40:51Z bdrewery $
+ * $FreeBSD: stable/11/usr.sbin/rtsold/rtsold.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct script_msg {

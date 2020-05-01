@@ -1,14 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/jail/Makefile 249657 2013-04-19 19:45:00Z ed $
+# $FreeBSD: stable/11/usr.sbin/jail/Makefile 352561 2019-09-20 19:50:44Z mizhka $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	jail
 MAN=	jail.8 jail.conf.5
 SRCS=	jail.c command.c config.c state.c jailp.h jaillex.l jailparse.y y.tab.h
 
-DPADD=	${LIBJAIL} ${LIBKVM} ${LIBUTIL} ${LIBL}
-LDADD=	-ljail -lkvm -lutil -ll
+LIBADD=	jail kvm util
+
+PACKAGE=jail
 
 NO_WMISSING_VARIABLE_DECLARATIONS=
 
@@ -23,5 +23,8 @@ CFLAGS+= -DINET
 .endif
 
 CLEANFILES= y.output
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

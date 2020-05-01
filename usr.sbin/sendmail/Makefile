@@ -1,17 +1,17 @@
 #	@(#)Makefile	8.8 (Berkeley) 3/28/97
-# $FreeBSD: stable/10/usr.sbin/sendmail/Makefile 313225 2017-02-04 16:45:44Z ngie $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/sendmail/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
+PACKAGE=sendmail
+SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 SMDIR=	${SENDMAIL_DIR}/src
 .PATH: ${SMDIR}
 
 BINDIR=	${LIBEXECDIR}/sendmail
 
 PROG=	sendmail
-MAN=	mailq.1 newaliases.1 aliases.5 sendmail.8 
+MAN=	mailq.1 newaliases.1 aliases.5 sendmail.8
 MLINKS+=sendmail.8 hoststat.8
 MLINKS+=sendmail.8 purgestat.8
 SRCS=	alias.c arpadate.c bf.c collect.c conf.c control.c \
@@ -41,37 +41,25 @@ CFLAGS+= -I${SMDIR} -I${SENDMAIL_DIR}/include -I.
 CFLAGS+= ${DBMDEF} ${NIS} ${MAPS}
 
 .if ${MK_INET6_SUPPORT} != "no"
-CFLAGS+= -DNETINET6 -DIPV6_FULL=0
+CFLAGS+= -DNETINET6
 .endif
 
 WARNS?=	0
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
-
-LIBSMDIR=	${.OBJDIR}/../../lib/libsm
-LIBSM=		${LIBSMDIR}/libsm.a
-
-LIBSMUTILDIR=	${.OBJDIR}/../../lib/libsmutil
-LIBSMUTIL=	${LIBSMUTILDIR}/libsmutil.a
-
-DPADD+=	${LIBSMUTIL} ${LIBSM}
-LDADD+=	${LIBSMUTIL} ${LIBSM}
+LIBADD=	util sm smutil
 
 SRCS+=	sm_os.h
 CLEANFILES+=sm_os.h
 
-.if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
+.if ${MK_OPENSSL} != "no"
 # STARTTLS support
 CFLAGS+=	-DSTARTTLS -D_FFR_TLS_1
-DPADD+=		${LIBSSL} ${LIBCRYPTO}
-LDADD+=		-lssl -lcrypto
+LIBADD+=	ssl crypto
 .endif
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DTCPWRAPPERS
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD+=	wrap
 .endif
 
 # User customizations to the sendmail build environment
@@ -80,7 +68,7 @@ DPADD+=${SENDMAIL_DPADD}
 LDADD+=${SENDMAIL_LDADD}
 LDFLAGS+=${SENDMAIL_LDFLAGS}
 
-sm_os.h:
-	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h
+sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.prog.mk>

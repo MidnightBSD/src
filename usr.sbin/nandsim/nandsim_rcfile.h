@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999, Boris Popov
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/nandsim/nandsim_rcfile.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/usr.sbin/nandsim/nandsim_rcfile.h 331722 2018-03-29 02:50:57Z eadler $
  *
  * from: FreeBSD: src/lib/libncp/ncpl_rcfile.c,v 1.5 2007/01/09 23:27:39 imp Exp
  */

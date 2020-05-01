@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1999, Boris Popov
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/nandsim/nandsim_rcfile.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/nandsim/nandsim_rcfile.c 331722 2018-03-29 02:50:57Z eadler $");
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <ctype.h>

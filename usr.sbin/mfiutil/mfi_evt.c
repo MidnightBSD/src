@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfi_evt.c 266400 2014-05-18 15:28:25Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfi_evt.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>
@@ -541,6 +542,7 @@ show_events(int ac, char **av)
 	char *cp;
 	ssize_t size;
 	uint32_t seq, start, stop;
+	uint16_t locale;
 	uint8_t status;
 	int ch, error, fd, num_events, verbose;
 	u_int i;
@@ -581,12 +583,13 @@ show_events(int ac, char **av)
 			}
 			break;
 		case 'l':
-			if (parse_locale(optarg, &filter.members.locale) < 0) {
+			if (parse_locale(optarg, &locale) < 0) {
 				error = errno;
 				warn("Error parsing event locale");
 				close(fd);
 				return (error);
 			}
+			filter.members.locale = locale;
 			break;
 		case 'n':
 			val = strtol(optarg, &cp, 0);

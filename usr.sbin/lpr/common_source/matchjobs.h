@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2002  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -31,7 +32,7 @@
  * or FreeBSD, Inc.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/10/usr.sbin/lpr/common_source/matchjobs.h 117541 2003-07-14 05:15:21Z gad $
+ * $FreeBSD: stable/11/usr.sbin/lpr/common_source/matchjobs.h 330449 2018-03-05 07:26:05Z eadler $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

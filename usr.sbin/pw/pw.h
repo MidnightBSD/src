@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pw/pw.h 326849 2017-12-14 13:10:22Z eugen $
+ * $FreeBSD: stable/11/usr.sbin/pw/pw.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/stat.h>

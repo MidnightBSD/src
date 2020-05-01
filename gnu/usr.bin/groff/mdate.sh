@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/groff/mdate.sh 307631 2016-10-19 13:19:45Z emaste $
 
 set -e
 test -r "$1"

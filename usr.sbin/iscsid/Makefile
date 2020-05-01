@@ -1,16 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/iscsid/Makefile 286219 2015-08-03 07:20:33Z trasz $
+# $FreeBSD: stable/11/usr.sbin/iscsid/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
+PACKAGE=	iscsi
 PROG=		iscsid
 SRCS=		chap.c discovery.c iscsid.c keys.c log.c login.c pdu.c
 CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-I${.CURDIR}/../../sys/cam
-CFLAGS+=	-I${.CURDIR}/../../sys/dev/iscsi
-#CFLAGS+=	-DICL_KERNEL_PROXY
+CFLAGS+=	-I${SRCTOP}/sys/cam
+CFLAGS+=	-I${SRCTOP}/sys/dev/iscsi
+CFLAGS+=	-DICL_KERNEL_PROXY
 MAN=		iscsid.8
 
-DPADD=		${LIBMD} ${LIBUTIL}
-LDADD=		-lmd -lutil
+LIBADD=		md util
 
 WARNS=		6
 

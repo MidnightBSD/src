@@ -1,5 +1,4 @@
-# $MidnightBSD: src/lib/ncurses/Makefile.inc,v 1.3 2012/08/18 20:18:27 laffer1 Exp $
-# $FreeBSD: src/lib/ncurses/Makefile.inc,v 1.2 2007/03/09 09:54:07 rafan Exp $
+# $FreeBSD: stable/11/lib/ncurses/Makefile.inc 201381 2010-01-02 09:58:07Z ed $
 
 # This is to include src/lib/Makefile.inc
 

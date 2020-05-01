@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Bjoern A. Zeeb <bz@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/traceroute/findsaddr-udp.c 201897 2010-01-09 15:37:24Z bz $
+ * $FreeBSD: stable/11/usr.sbin/traceroute/findsaddr-udp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <string.h>

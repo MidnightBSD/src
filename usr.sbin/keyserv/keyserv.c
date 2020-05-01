@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)keyserv.c	1.15	94/04/25 SMI";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/keyserv/keyserv.c 239991 2012-09-01 14:45:15Z ed $";
+  "$FreeBSD: stable/11/usr.sbin/keyserv/keyserv.c 298089 2016-04-15 22:31:22Z pfg $";
 #endif /* not lint */
 
 /*
@@ -441,7 +440,7 @@ key_net_put_2_svc_prog(uid, arg)
 			arg->st_netname, (int)sizeof (arg->st_pub_key),
 			arg->st_pub_key, (int)sizeof (arg->st_priv_key),
 			arg->st_priv_key);
-	};
+	}
 
 	status = pk_netput(uid, arg);
 

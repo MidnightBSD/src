@@ -1,9 +1,9 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/gdb/gdbserver/Makefile 313542 2017-02-10 07:58:45Z ngie $
 
 # Not elf specific so don't install in /usr/libexec/elf
 BINDIR=/usr/bin
 
-GDBDIR=	${.CURDIR}/../../../../contrib/gdb
+GDBDIR=	${SRCTOP}/contrib/gdb
 .PATH:	${GDBDIR}/gdb/signals
 .PATH:	${GDBDIR}/gdb/gdbserver
 .PATH:	${GDBDIR}/gdb

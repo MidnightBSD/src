@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/gdb/libgdb/Makefile 251858 2013-06-17 18:34:34Z emaste $
+# $FreeBSD: stable/11/gnu/usr.bin/gdb/libgdb/Makefile 300119 2016-05-18 06:01:18Z imp $
 
 # These assignments duplicate much of the functionality of
 # MACHINE_CPUARCH, but there's no easy way to export make functions...
@@ -73,9 +72,9 @@ GENSRCS= version.c
 version.c:
 	echo '#include "version.h"' >  ${.TARGET}
 	echo 'const char version[] = ${VERSION};' >> ${.TARGET}
-	echo 'const char host_name[] = "${MACHINE_ARCH}-${VENDOR}-midnightbsd";' \
+	echo 'const char host_name[] = "${MACHINE_ARCH}-${VENDOR}-freebsd";' \
 	    >> ${.TARGET}
-	echo 'const char target_name[] = "${TARGET_ARCH}-${VENDOR}-midnightbsd";' \
+	echo 'const char target_name[] = "${TARGET_ARCH}-${VENDOR}-freebsd";' \
 	    >> ${.TARGET}
 
 .include <bsd.lib.mk>

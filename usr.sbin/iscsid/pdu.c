@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,13 +31,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/iscsid/pdu.c 290145 2015-10-29 16:34:55Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/iscsid/pdu.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <assert.h>
-#include <stdint.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "iscsid.h"
@@ -81,11 +83,11 @@ pdu_new(struct connection *conn)
 {
 	struct pdu *pdu;
 
-	pdu = calloc(sizeof(*pdu), 1);
+	pdu = calloc(1, sizeof(*pdu));
 	if (pdu == NULL)
 		log_err(1, "calloc");
 
-	pdu->pdu_bhs = calloc(sizeof(*pdu->pdu_bhs), 1);
+	pdu->pdu_bhs = calloc(1, sizeof(*pdu->pdu_bhs));
 	if (pdu->pdu_bhs == NULL)
 		log_err(1, "calloc");
 
@@ -179,18 +181,23 @@ pdu_padding(const struct pdu *pdu)
 }
 
 static void
-pdu_read(int fd, char *data, size_t len)
+pdu_read(const struct connection *conn, char *data, size_t len)
 {
 	ssize_t ret;
 
 	while (len > 0) {
-		ret = read(fd, data, len);
+		ret = read(conn->conn_socket, data, len);
 		if (ret < 0) {
-			if (timed_out())
+			if (timed_out()) {
+				fail(conn, "Login Phase timeout");
 				log_errx(1, "exiting due to timeout");
+			}
+			fail(conn, strerror(errno));
 			log_err(1, "read");
-		} else if (ret == 0)
+		} else if (ret == 0) {
+			fail(conn, "connection lost");
 			log_errx(1, "read: connection lost");
+		}
 		len -= ret;
 		data += ret;
 	}
@@ -209,7 +216,7 @@ pdu_receive(struct pdu *pdu)
 
 	assert(pdu->pdu_connection->conn_conf.isc_iser == 0);
 
-	pdu_read(pdu->pdu_connection->conn_socket,
+	pdu_read(pdu->pdu_connection,
 	    (char *)pdu->pdu_bhs, sizeof(*pdu->pdu_bhs));
 
 	len = pdu_ahs_length(pdu);
@@ -229,13 +236,13 @@ pdu_receive(struct pdu *pdu)
 		if (pdu->pdu_data == NULL)
 			log_err(1, "malloc");
 
-		pdu_read(pdu->pdu_connection->conn_socket,
+		pdu_read(pdu->pdu_connection,
 		    (char *)pdu->pdu_data, pdu->pdu_data_len);
 
 		padding = pdu_padding(pdu);
 		if (padding != 0) {
 			assert(padding < sizeof(dummy));
-			pdu_read(pdu->pdu_connection->conn_socket,
+			pdu_read(pdu->pdu_connection,
 			    (char *)dummy, padding);
 		}
 	}

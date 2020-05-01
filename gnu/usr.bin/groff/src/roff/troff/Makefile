@@ -1,10 +1,11 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/groff/src/roff/troff/Makefile 291738 2015-12-04 03:17:47Z bdrewery $
 
 PROG_CXX=	troff
 SRCS=		dictionary.cpp div.cpp env.cpp input.cpp \
 		majorminor.cpp mtsm.cpp node.cpp number.cpp reg.cpp
-DPADD=		${LIBGROFF} ${LIBM}
-LDADD=		${LIBGROFF} -lm
+DPADD=		${LIBGROFF}
+LDADD=		${LIBGROFF}
+LIBADD=		m
 CLEANFILES=	majorminor.cpp ${MAN}
 
 .include <bsd.prog.mk>

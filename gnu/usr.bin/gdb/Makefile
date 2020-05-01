@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/gdb/Makefile,v 1.12 2006/10/21 17:27:36 jmg Exp $
+# $FreeBSD: stable/11/gnu/usr.bin/gdb/Makefile 276551 2015-01-02 18:45:03Z bapt $
 
-SUBDIR=	doc libgdb gdb gdbtui kgdb
+SUBDIR=	libgdb gdb gdbtui kgdb
 
 .if exists(${.CURDIR}/gdbserver/reg-${MACHINE_CPUARCH}.c)
 SUBDIR+=gdbserver

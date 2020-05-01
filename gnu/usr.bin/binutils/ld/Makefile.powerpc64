@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/ld/Makefile.powerpc64 289241 2015-10-13 18:31:23Z bdrewery $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/ld/Makefile.powerpc64 288233 2015-09-25 20:31:04Z bdrewery $
 
 NATIVE_EMULATION=	elf64ppc_fbsd
 

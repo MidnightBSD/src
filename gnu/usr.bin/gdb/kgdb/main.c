@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/main.c 246958 2013-02-19 02:09:18Z adrian $");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/main.c 298363 2016-04-20 20:22:48Z wma $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -475,7 +474,7 @@ main(int argc, char *argv[])
 	add_arg(&args, NULL);
 
 	init_ui_hook = kgdb_init;
-
+	frame_tdep_pc_fixup = kgdb_trgt_pc_fixup;
 	kgdb_sniffer_kluge = kgdb_trgt_trapframe_sniffer;
 
 	return (gdb_main(&args));

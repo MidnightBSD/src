@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright (c) 1996 WIDE Project. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -12,15 +11,15 @@
 # AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
-# $FreeBSD: stable/10/usr.sbin/ndp/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/ndp/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${.CURDIR}/../../contrib/tcpdump
+.PATH: ${SRCTOP}/contrib/tcpdump
 
 PROG=	ndp
 MAN=	ndp.8
 SRCS=	ndp.c gmt2local.c
 
-CFLAGS+= -I. -I${.CURDIR} -I${.CURDIR}/../../contrib/tcpdump
+CFLAGS+= -I. -I${.CURDIR} -I${SRCTOP}/contrib/tcpdump
 CFLAGS+= -D_U_=""
 
 WARNS?=	1

@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/groff/font/devlbp/Makefile 104869 2002-10-11 08:58:14Z ru $
 
 DEV=		lbp
 LBPPRINT=	${PSPRINT}

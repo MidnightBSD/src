@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: lockd.c,v 1.7 2000/08/12 18:08:44 thorpej Exp $	*/
-/*	$FreeBSD: stable/10/usr.sbin/rpc.lockd/lockd.c 320303 2017-06-24 07:44:05Z delphij $ */
+/*	$FreeBSD: stable/11/usr.sbin/rpc.lockd/lockd.c 355368 2019-12-03 22:54:24Z rpokala $ */
 
 /*
  * Copyright (c) 1995
@@ -102,10 +101,6 @@ static void	complete_service(struct netconfig *nconf, char *port_str);
 static void	clearout_service(void);
 static void	out_of_mem(void) __dead2;
 void	init_nsm(void);
-void	nlm_prog_0(struct svc_req *, SVCXPRT *);
-void	nlm_prog_1(struct svc_req *, SVCXPRT *);
-void	nlm_prog_3(struct svc_req *, SVCXPRT *);
-void	nlm_prog_4(struct svc_req *, SVCXPRT *);
 void	usage(void);
 
 void sigalarm_handler(void);
@@ -123,6 +118,7 @@ main(int argc, char **argv)
 	char *endptr, **hosts_bak;
 	struct sigaction sigalarm;
 	int grace_period = 30;
+	int foreground = 0;
 	struct netconfig *nconf;
 	int have_v6 = 1;
 	int maxrec = RPC_MAXDATASIZE;
@@ -130,7 +126,7 @@ main(int argc, char **argv)
 	int attempt_cnt, port_len, port_pos, ret;
 	char **port_list;
 
-	while ((ch = getopt(argc, argv, "d:g:h:p:")) != (-1)) {
+	while ((ch = getopt(argc, argv, "d:Fg:h:p:")) != (-1)) {
 		switch (ch) {
 		case 'd':
 			debug_level = atoi(optarg);
@@ -138,6 +134,9 @@ main(int argc, char **argv)
 				usage();
 				/* NOTREACHED */
 			}
+			break;
+		case 'F':
+			foreground = 1;
 			break;
 		case 'g':
 			grace_period = atoi(optarg);
@@ -222,11 +221,11 @@ main(int argc, char **argv)
 	 * list.
 	 */
 	if (nhosts == 0) {
-		hosts = malloc(sizeof(char**));
+		hosts = malloc(sizeof(char *));
 		if (hosts == NULL)
 			out_of_mem();
 
-		hosts[0] = "*";
+		hosts[0] = strdup("*");
 		nhosts = 1;
 	} else {
 		if (have_v6) {
@@ -241,7 +240,7 @@ main(int argc, char **argv)
 				hosts = hosts_bak;
 
 			nhosts += 2;
-			hosts[nhosts - 2] = "::1";
+			hosts[nhosts - 2] = strdup("::1");
 		} else {
 			hosts_bak = realloc(hosts, (nhosts + 1) * sizeof(char *));
 			if (hosts_bak == NULL) {
@@ -255,7 +254,7 @@ main(int argc, char **argv)
 				hosts = hosts_bak;
 			}
 		}
-		hosts[nhosts - 1] = "127.0.0.1";
+		hosts[nhosts - 1] = strdup("127.0.0.1");
 	}
 
 	if (kernel_lockd) {
@@ -425,7 +424,7 @@ main(int argc, char **argv)
 	 * Note that it is NOT sensible to run this program from inetd - the
 	 * protocol assumes that it will run immediately at boot time.
 	 */
-	if (daemon(0, debug_level > 0)) {
+	if ((foreground == 0) && daemon(0, debug_level > 0)) {
 		err(1, "cannot fork");
 		/* NOTREACHED */
 	}
@@ -847,7 +846,7 @@ void
 usage()
 {
 	errx(1, "usage: rpc.lockd [-d <debuglevel>]"
-	    " [-g <grace period>] [-h <bindip>] [-p <port>]");
+	    " [-F] [-g <grace period>] [-h <bindip>] [-p <port>]");
 }
 
 /*

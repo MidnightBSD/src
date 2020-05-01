@@ -1,4 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: src/gnu/lib/Makefile.inc,v 1.8 2002/09/25 09:55:19 markm Exp $
+# $FreeBSD: stable/11/gnu/lib/Makefile.inc 103959 2002-09-25 09:55:20Z markm $
 
 .include "../Makefile.inc"

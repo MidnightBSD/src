@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/c++/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/c++/Makefile 265420 2014-05-06 04:22:01Z imp $
 
 MAN=
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"

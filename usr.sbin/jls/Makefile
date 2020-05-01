@@ -1,12 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/jls/Makefile 222465 2011-05-29 21:03:40Z bz $
+# $FreeBSD: stable/11/usr.sbin/jls/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	jls
 MAN=	jls.8
-DPADD=	${LIBJAIL}
-LDADD=	-ljail
+LIBADD=	jail xo
+
+PACKAGE=jail
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6

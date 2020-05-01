@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /*
  * dot.c
@@ -36,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ngctl/dot.c 166529 2007-02-06 08:48:28Z kevlo $
+ * $FreeBSD: stable/11/usr.sbin/ngctl/dot.c 288082 2015-09-22 01:31:01Z cem $
  */
 
 #include <err.h>
@@ -188,7 +187,7 @@ DotCmd(int ac, char **av)
 		free(hlresp);
 	}
 
-	fprintf(f, "};\n");
+	fprintf(f, "}\n");
 
 	free(nlresp);
 	if (f != stdout)

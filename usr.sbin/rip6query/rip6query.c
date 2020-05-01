@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: rip6query.c,v 1.11 2001/05/08 04:36:37 itojun Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rip6query/rip6query.c 227258 2011-11-06 19:02:31Z ed $
+ * $FreeBSD: stable/11/usr.sbin/rip6query/rip6query.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <stdio.h>
@@ -47,9 +46,6 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
-#include <net/if_var.h>
-#endif /* __FreeBSD__ >= 3 */
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <arpa/inet.h>

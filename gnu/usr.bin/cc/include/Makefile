@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/include/Makefile 255185 2013-09-03 17:33:29Z jmg $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/include/Makefile 268351 2014-07-07 00:27:09Z marcel $
 
 .include <bsd.own.mk>
 
@@ -13,8 +12,6 @@ INCSDIR=${INCLUDEDIR}/gcc/${GCCVER}
 INCS=	ammintrin.h emmintrin.h mmintrin.h mm3dnow.h pmmintrin.h \
 	tmmintrin.h xmmintrin.h mm_malloc.h
 INCS+=	wmmintrin.h __wmmintrin_aes.h __wmmintrin_pclmul.h
-.elif ${TARGET_ARCH} == "ia64"
-INCS=	ia64intrin.h
 .elif ${TARGET_ARCH} == "arm"
 INCS=	mmintrin.h
 .elif ${TARGET_ARCH} == "powerpc" || ${TARGET_ARCH} == "powerpc64"

@@ -1,13 +1,11 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/usr.sbin/pmcstat/Makefile 265604 2014-05-07 20:20:52Z scottl $
+# $FreeBSD: stable/11/usr.sbin/pmcstat/Makefile 275054 2014-11-25 16:57:27Z bapt $
 #
 
 PROG=	pmcstat
 MAN=	pmcstat.8
 
-DPADD=	${LIBELF} ${LIBKVM} ${LIBPMC} ${LIBM} ${LIBNCURSES}
-LDADD=	-lelf -lkvm -lpmc -lm -lncurses
+LIBADD=	elf kvm pmc m ncursesw
 
 SRCS=	pmcstat.c pmcstat.h pmcstat_log.c \
 pmcpl_callgraph.c pmcpl_gprof.c pmcpl_annotate.c \

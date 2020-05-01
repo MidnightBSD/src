@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/gnu/usr.bin/groff/man/Makefile 104869 2002-10-11 08:58:14Z ru $
 
 MAN=		groff_font.5 groff_out.5 groff_tmac.5
 MLINKS=		groff_tmac.5 tmac.5

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2004  Sean M. Kelly <smkelly@FreeBSD.org>
  * Copyright (c) 2013 iXsystems.com,
  *                    author: Alfred Perlstein <alfred@freebsd.org>
@@ -33,7 +34,7 @@
  */
 
 #include <sys/types.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/watchdogd/watchdogd.c 313533 2017-02-10 06:53:48Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/watchdogd/watchdogd.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/mman.h>
 #include <sys/param.h>

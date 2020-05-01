@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/kbdcontrol/lex.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD: stable/11/usr.sbin/kbdcontrol/lex.l 352280 2019-09-13 07:21:06Z bapt $
  */
 
 %{
@@ -35,6 +36,7 @@
 
 %}
 
+%option noyywrap
 %option nounput
 %option noinput
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/yppasswdd_main.c 223492 2011-06-24 07:05:20Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.yppasswdd/yppasswdd_main.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -82,6 +81,7 @@ static int _rpcfdtype;
 #define	_IDLE 0
 #define	_SERVED 1
 #define	_SERVING 2
+int debug;
 
 static char _localhost[] = "localhost";
 static char _passwd_byname[] = "passwd.byname";
@@ -171,8 +171,6 @@ main(int argc, char *argv[])
 	char *mastername;
 	char myname[MAXHOSTNAMELEN + 2];
 	int maxrec = RPC_MAXDATASIZE;
-
-	extern int debug;
 
 	debug = 1;
 

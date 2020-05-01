@@ -1,8 +1,9 @@
 #!/bin/sh
 
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/service/service.sh 294100 2016-01-15 20:59:57Z allanjude $
+# $FreeBSD: stable/11/usr.sbin/service/service.sh 330449 2018-03-05 07:26:05Z eadler $
 
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 #  Copyright (c) 2009 Douglas Barton
 #  All rights reserved.
 #
@@ -33,12 +34,13 @@ load_rc_config 'XXX'
 usage () {
 	echo ''
 	echo 'Usage:'
-	echo "${0##*/} -e"
-	echo "${0##*/} -R"
-	echo "${0##*/} [-v] -l | -r"
-	echo "${0##*/} [-v] <rc.d script> start|stop|etc."
+	echo "${0##*/} [-j <jail name or id>] -e"
+	echo "${0##*/} [-j <jail name or id>] -R"
+	echo "${0##*/} [-j <jail name or id>] [-v] -l | -r"
+	echo "${0##*/} [-j <jail name or id>] [-v] <rc.d script> start|stop|etc."
 	echo "${0##*/} -h"
 	echo ''
+	echo "-j	Perform actions within the named jail"
 	echo '-e	Show services that are enabled'
 	echo "-R	Stop and start enabled $local_startup services"
 	echo "-l	List all scripts in /etc/rc.d and $local_startup"
@@ -47,8 +49,9 @@ usage () {
 	echo ''
 }
 
-while getopts 'ehlrRv' COMMAND_LINE_ARGUMENT ; do
+while getopts 'j:ehlrRv' COMMAND_LINE_ARGUMENT ; do
 	case "${COMMAND_LINE_ARGUMENT}" in
+	j)	JAIL="${OPTARG}" ;;
 	e)	ENABLED=eopt ;;
 	h)	usage ; exit 0 ;;
 	l)	LIST=lopt ;;
@@ -59,6 +62,22 @@ while getopts 'ehlrRv' COMMAND_LINE_ARGUMENT ; do
 	esac
 done
 shift $(( $OPTIND - 1 ))
+
+if [ -n "${JAIL}" ]; then
+	# We need to rebuild the command line before passing it on.
+	# We do not send the -j argument into the jail.
+	args=""
+	[ -n "${ENABLED}" ] && args="${args} -e"
+	[ -n "${LIST}" ] && args="${args} -l"
+	[ -n "${RCORDER}" ] && args="${args} -r"
+	[ -n "${RESTART}" ] && args="${args} -R"
+	[ -n "${VERBOSE}" ] && args="${args} -v"
+
+	# Call jexec(8) with the rebuild args and any positional args that
+	# were left in $@
+	/usr/sbin/jexec -l "${JAIL}" /usr/sbin/service $args "$@"
+	exit $?
+fi
 
 if [ -n "$RESTART" ]; then
 	skip="-s nostart"
@@ -152,5 +171,5 @@ done
 
 # If the script was not found
 echo "$script does not exist in /etc/rc.d or the local startup"
-echo "directories (${local_startup})"
+echo "directories (${local_startup}), or is not executable"
 exit 1

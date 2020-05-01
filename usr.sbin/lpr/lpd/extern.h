@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *      From: @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.sbin/lpr/lpd/extern.h 216372 2010-12-11 09:38:12Z joel $
+ * $FreeBSD: stable/11/usr.sbin/lpr/lpd/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */

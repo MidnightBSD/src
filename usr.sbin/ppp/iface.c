@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/iface.c 330805 2018-03-12 17:37:38Z eugen $
+ * $FreeBSD: stable/11/usr.sbin/ppp/iface.c 330804 2018-03-12 17:36:37Z eugen $
  */
 
 #include <sys/param.h>
@@ -32,9 +33,6 @@
 #include <netinet/in.h>
 #include <net/if.h>
 #include <net/if_dl.h>
-#ifdef __FreeBSD__
-#include <net/if_var.h>
-#endif
 #include <net/route.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>

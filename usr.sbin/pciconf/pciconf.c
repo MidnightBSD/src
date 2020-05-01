@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1996 Massachusetts Institute of Technology
  *
@@ -30,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pciconf/pciconf.c 308063 2016-10-28 19:46:08Z mav $";
+  "$FreeBSD: stable/11/usr.sbin/pciconf/pciconf.c 358362 2020-02-27 00:57:36Z kib $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -68,7 +67,7 @@ struct pci_vendor_info
     char				*desc;
 };
 
-TAILQ_HEAD(,pci_vendor_info)	pci_vendors;
+static TAILQ_HEAD(,pci_vendor_info)	pci_vendors;
 
 static struct pcisel getsel(const char *str);
 static void list_bridge(int fd, struct pci_conf *p);
@@ -242,9 +241,9 @@ list_devs(const char *name, int verbose, int bars, int bridge, int caps,
 		for (p = conf; p < &conf[pc.num_matches]; p++) {
 			printf("%s%d@pci%d:%d:%d:%d:\tclass=0x%06x card=0x%08x "
 			    "chip=0x%08x rev=0x%02x hdr=0x%02x\n",
-			    (p->pd_name && *p->pd_name) ? p->pd_name :
+			    *p->pd_name ? p->pd_name :
 			    "none",
-			    (p->pd_name && *p->pd_name) ? (int)p->pd_unit :
+			    *p->pd_name ? (int)p->pd_unit :
 			    none_count++, p->pc_sel.pc_domain,
 			    p->pc_sel.pc_bus, p->pc_sel.pc_dev,
 			    p->pc_sel.pc_func, (p->pc_class << 16) |
@@ -456,10 +455,7 @@ list_bridge(int fd, struct pci_conf *p)
 static void
 list_bars(int fd, struct pci_conf *p)
 {
-	struct pci_bar_io bar;
-	uint64_t base;
-	const char *type;
-	int i, range, max;
+	int i, max;
 
 	switch (p->pc_hdr & PCIM_HDRTYPE) {
 	case PCIM_HDRTYPE_NORMAL:
@@ -475,40 +471,50 @@ list_bars(int fd, struct pci_conf *p)
 		return;
 	}
 
-	for (i = 0; i <= max; i++) {
-		bar.pbi_sel = p->pc_sel;
-		bar.pbi_reg = PCIR_BAR(i);
-		if (ioctl(fd, PCIOCGETBAR, &bar) < 0)
-			continue;
-		if (PCI_BAR_IO(bar.pbi_base)) {
-			type = "I/O Port";
+	for (i = 0; i <= max; i++)
+		print_bar(fd, p, "bar   ", PCIR_BAR(i));
+}
+
+void
+print_bar(int fd, struct pci_conf *p, const char *label, uint16_t bar_offset)
+{
+	uint64_t base;
+	const char *type;
+	struct pci_bar_io bar;
+	int range;
+
+	bar.pbi_sel = p->pc_sel;
+	bar.pbi_reg = bar_offset;
+	if (ioctl(fd, PCIOCGETBAR, &bar) < 0)
+		return;
+	if (PCI_BAR_IO(bar.pbi_base)) {
+		type = "I/O Port";
+		range = 32;
+		base = bar.pbi_base & PCIM_BAR_IO_BASE;
+	} else {
+		if (bar.pbi_base & PCIM_BAR_MEM_PREFETCH)
+			type = "Prefetchable Memory";
+		else
+			type = "Memory";
+		switch (bar.pbi_base & PCIM_BAR_MEM_TYPE) {
+		case PCIM_BAR_MEM_32:
 			range = 32;
-			base = bar.pbi_base & PCIM_BAR_IO_BASE;
-		} else {
-			if (bar.pbi_base & PCIM_BAR_MEM_PREFETCH)
-				type = "Prefetchable Memory";
-			else
-				type = "Memory";
-			switch (bar.pbi_base & PCIM_BAR_MEM_TYPE) {
-			case PCIM_BAR_MEM_32:
-				range = 32;
-				break;
-			case PCIM_BAR_MEM_1MB:
-				range = 20;
-				break;
-			case PCIM_BAR_MEM_64:
-				range = 64;
-				break;
-			default:
-				range = -1;
-			}
-			base = bar.pbi_base & ~((uint64_t)0xf);
+			break;
+		case PCIM_BAR_MEM_1MB:
+			range = 20;
+			break;
+		case PCIM_BAR_MEM_64:
+			range = 64;
+			break;
+		default:
+			range = -1;
 		}
-		printf("    bar   [%02x] = type %s, range %2d, base %#jx, ",
-		    PCIR_BAR(i), type, range, (uintmax_t)base);
-		printf("size %ju, %s\n", (uintmax_t)bar.pbi_length,
-		    bar.pbi_enabled ? "enabled" : "disabled");
+		base = bar.pbi_base & ~((uint64_t)0xf);
 	}
+	printf("    %s[%02x] = type %s, range %2d, base %#jx, ",
+	    label, bar_offset, type, range, (uintmax_t)base);
+	printf("size %ju, %s\n", (uintmax_t)bar.pbi_length,
+	    bar.pbi_enabled ? "enabled" : "disabled");
 }
 
 static void
@@ -619,12 +625,17 @@ static struct
 	{PCIC_STORAGE,		PCIS_STORAGE_SATA,	"SATA"},
 	{PCIC_STORAGE,		PCIS_STORAGE_SAS,	"SAS"},
 	{PCIC_STORAGE,		PCIS_STORAGE_NVM,	"NVM"},
+	{PCIC_STORAGE,		PCIS_STORAGE_UFS,	"UFS"},
 	{PCIC_NETWORK,		-1,			"network"},
 	{PCIC_NETWORK,		PCIS_NETWORK_ETHERNET,	"ethernet"},
 	{PCIC_NETWORK,		PCIS_NETWORK_TOKENRING,	"token ring"},
 	{PCIC_NETWORK,		PCIS_NETWORK_FDDI,	"fddi"},
 	{PCIC_NETWORK,		PCIS_NETWORK_ATM,	"ATM"},
 	{PCIC_NETWORK,		PCIS_NETWORK_ISDN,	"ISDN"},
+	{PCIC_NETWORK,		PCIS_NETWORK_WORLDFIP,	"WorldFip"},
+	{PCIC_NETWORK,		PCIS_NETWORK_PICMG,	"PICMG"},
+	{PCIC_NETWORK,		PCIS_NETWORK_INFINIBAND,	"InfiniBand"},
+	{PCIC_NETWORK,		PCIS_NETWORK_HFC,	"host fabric"},
 	{PCIC_DISPLAY,		-1,			"display"},
 	{PCIC_DISPLAY,		PCIS_DISPLAY_VGA,	"VGA"},
 	{PCIC_DISPLAY,		PCIS_DISPLAY_XGA,	"XGA"},
@@ -647,6 +658,11 @@ static struct
 	{PCIC_BRIDGE,		PCIS_BRIDGE_NUBUS,	"PCI-NuBus"},
 	{PCIC_BRIDGE,		PCIS_BRIDGE_CARDBUS,	"PCI-CardBus"},
 	{PCIC_BRIDGE,		PCIS_BRIDGE_RACEWAY,	"PCI-RACEway"},
+	{PCIC_BRIDGE,		PCIS_BRIDGE_PCI_TRANSPARENT,
+	    "Semi-transparent PCI-to-PCI"},
+	{PCIC_BRIDGE,		PCIS_BRIDGE_INFINIBAND,	"InfiniBand-PCI"},
+	{PCIC_BRIDGE,		PCIS_BRIDGE_AS_PCI,
+	    "AdvancedSwitching-PCI"},
 	{PCIC_SIMPLECOMM,	-1,			"simple comms"},
 	{PCIC_SIMPLECOMM,	PCIS_SIMPLECOMM_UART,	"UART"},	/* could detect 16550 */
 	{PCIC_SIMPLECOMM,	PCIS_SIMPLECOMM_PAR,	"parallel port"},
@@ -660,6 +676,8 @@ static struct
 	{PCIC_BASEPERIPH,	PCIS_BASEPERIPH_PCIHOT,	"PCI hot-plug controller"},
 	{PCIC_BASEPERIPH,	PCIS_BASEPERIPH_SDHC,	"SD host controller"},
 	{PCIC_BASEPERIPH,	PCIS_BASEPERIPH_IOMMU,	"IOMMU"},
+	{PCIC_BASEPERIPH,	PCIS_BASEPERIPH_RCEC,
+	    "Root Complex Event Collector"},
 	{PCIC_INPUTDEV,		-1,			"input device"},
 	{PCIC_INPUTDEV,		PCIS_INPUTDEV_KEYBOARD,	"keyboard"},
 	{PCIC_INPUTDEV,		PCIS_INPUTDEV_DIGITIZER,"digitizer"},
@@ -675,10 +693,23 @@ static struct
 	{PCIC_SERIALBUS,	PCIS_SERIALBUS_USB,	"USB"},
 	{PCIC_SERIALBUS,	PCIS_SERIALBUS_FC,	"Fibre Channel"},
 	{PCIC_SERIALBUS,	PCIS_SERIALBUS_SMBUS,	"SMBus"},
+	{PCIC_SERIALBUS,	PCIS_SERIALBUS_INFINIBAND,	"InfiniBand"},
+	{PCIC_SERIALBUS,	PCIS_SERIALBUS_IPMI,	"IPMI"},
+	{PCIC_SERIALBUS,	PCIS_SERIALBUS_SERCOS,	"SERCOS"},
+	{PCIC_SERIALBUS,	PCIS_SERIALBUS_CANBUS,	"CANbus"},
+	{PCIC_SERIALBUS,	PCIS_SERIALBUS_MIPI_I3C,	"MIPI I3C"},
 	{PCIC_WIRELESS,		-1,			"wireless controller"},
 	{PCIC_WIRELESS,		PCIS_WIRELESS_IRDA,	"iRDA"},
 	{PCIC_WIRELESS,		PCIS_WIRELESS_IR,	"IR"},
 	{PCIC_WIRELESS,		PCIS_WIRELESS_RF,	"RF"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_BLUETOOTH,	"bluetooth"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_BROADBAND,	"broadband"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_80211A,	"ethernet 802.11a"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_80211B,	"ethernet 802.11b"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_CELL,
+	    "cellular controller/modem"},
+	{PCIC_WIRELESS,		PCIS_WIRELESS_CELL_E,
+	    "cellular controller/modem plus ethernet"},
 	{PCIC_INTELLIIO,	-1,			"intelligent I/O controller"},
 	{PCIC_INTELLIIO,	PCIS_INTELLIIO_I2O,	"I2O"},
 	{PCIC_SATCOM,		-1,			"satellite communication"},
@@ -694,6 +725,9 @@ static struct
 	{PCIC_DASP,		PCIS_DASP_PERFCNTRS,	"performance counters"},
 	{PCIC_DASP,		PCIS_DASP_COMM_SYNC,	"communication synchronizer"},
 	{PCIC_DASP,		PCIS_DASP_MGMT_CARD,	"signal processing management"},
+	{PCIC_ACCEL,		-1,			"processing accelerators"},
+	{PCIC_ACCEL,		PCIS_ACCEL_PROCESSING,	"processing accelerators"},
+	{PCIC_INSTRUMENT,	-1,			"non-essential instrumentation"},
 	{0, 0,		NULL}
 };
 
@@ -893,40 +927,36 @@ getdevice(const char *name)
 static struct pcisel
 parsesel(const char *str)
 {
-	char *ep = strchr(str, '@');
-	char *epbase;
+	const char *ep;
+	char *eppos;
 	struct pcisel sel;
 	unsigned long selarr[4];
 	int i;
 
-	if (ep == NULL)
-		ep = (char *)str;
-	else
+	ep = strchr(str, '@');
+	if (ep != NULL)
 		ep++;
-
-	epbase = ep;
+	else
+		ep = str;
 
 	if (strncmp(ep, "pci", 3) == 0) {
 		ep += 3;
 		i = 0;
-		do {
-			selarr[i++] = strtoul(ep, &ep, 10);
-		} while ((*ep == ':' || *ep == '.') && *++ep != '\0' && i < 4);
-
-		if (i > 2)
-			sel.pc_func = selarr[--i];
-		else
-			sel.pc_func = 0;
-		sel.pc_dev = selarr[--i];
-		sel.pc_bus = selarr[--i];
-		if (i > 0)
-			sel.pc_domain = selarr[--i];
-		else
-			sel.pc_domain = 0;
+		while (isdigit(*ep) && i < 4) {
+			selarr[i++] = strtoul(ep, &eppos, 10);
+			ep = eppos;
+			if (*ep == ':')
+				ep++;
+		}
+		if (i > 0 && *ep == '\0') {
+			sel.pc_func = (i > 2) ? selarr[--i] : 0;
+			sel.pc_dev = (i > 0) ? selarr[--i] : 0;
+			sel.pc_bus = (i > 0) ? selarr[--i] : 0;
+			sel.pc_domain = (i > 0) ? selarr[--i] : 0;
+			return (sel);
+		}
 	}
-	if (*ep != '\x0' || ep == epbase)
-		errx(1, "cannot parse selector %s", str);
-	return sel;
+	errx(1, "cannot parse selector %s", str);
 }
 
 static struct pcisel
@@ -999,6 +1029,7 @@ writeit(const char *name, const char *reg, const char *data, int width)
 
 	if (ioctl(fd, PCIOCWRITE, &pi) < 0)
 		err(1, "ioctl(PCIOCWRITE)");
+	close(fd);
 }
 
 static void
@@ -1018,4 +1049,5 @@ chkattached(const char *name)
 
 	exitstatus = pi.pi_data ? 0 : 2; /* exit(2), if NOT attached */
 	printf("%s: %s%s\n", name, pi.pi_data == 0 ? "not " : "", "attached");
+	close(fd);
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.sbin/pw/tests/pw_groupshow_test.sh 321163 2017-07-18 18:48:25Z ngie $
+# $FreeBSD: stable/11/usr.sbin/pw/tests/pw_groupshow_test.sh 321164 2017-07-18 18:48:58Z ngie $
 
 # Import helper functions
 . $(atf_get_srcdir)/helper_functions.shin

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/lib/libssp/libssp_nonshared/Makefile 195697 2009-07-14 21:19:13Z kan $
+# $FreeBSD: stable/11/gnu/lib/libssp/libssp_nonshared/Makefile 264928 2014-04-25 19:25:26Z imp $
 
 GCCDIR=	${.CURDIR}/../../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
@@ -8,7 +7,7 @@ GCCLIB=	${.CURDIR}/../../../../contrib/gcclibs
 
 LIB=	ssp_nonshared
 NO_PIC=
-NO_PROFILE=
+MK_PROFILE=no
 
 SRCS=	ssp-local.c
 

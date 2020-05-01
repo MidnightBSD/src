@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pmcstat/pmcstat.h 294046 2016-01-14 22:02:21Z jtl $
+ * $FreeBSD: stable/11/usr.sbin/pmcstat/pmcstat.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_PMCSTAT_H_

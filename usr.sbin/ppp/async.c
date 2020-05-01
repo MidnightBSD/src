@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -29,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ppp/async.c 134789 2004-09-05 01:46:52Z brian $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ppp/async.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 

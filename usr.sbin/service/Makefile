@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/service/Makefile,v 1.1.4.2 2009/12/30 19:38:57 dougb Exp $
+# $FreeBSD: stable/11/usr.sbin/service/Makefile 200743 2009-12-20 01:34:12Z dougb $
 
 SCRIPTS=service.sh
 MAN=	service.8

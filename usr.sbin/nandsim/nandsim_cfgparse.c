@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/nandsim/nandsim_cfgparse.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/nandsim/nandsim_cfgparse.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/errno.h>
 #include <sys/ioctl.h>
@@ -529,7 +530,7 @@ parse_config(char *cfgfname, const char *devfname)
 				error("Controller#%d already created\n",
 				    ctrls[i].num);
 			else if (err == EINVAL)
-				error("Incorrect controler number (%d)\n",
+				error("Incorrect controller number (%d)\n",
 				    ctrls[i].num);
 			else
 				error("Could not created controller#%d\n",

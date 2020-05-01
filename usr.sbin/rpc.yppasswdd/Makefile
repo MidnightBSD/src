@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/rpc.yppasswdd/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+# $FreeBSD: stable/11/usr.sbin/rpc.yppasswdd/Makefile 319191 2017-05-30 05:15:09Z ngie $
 
 RPCDIR=	${DESTDIR}/usr/include/rpcsvc
 
-.PATH: ${.CURDIR}/../../usr.sbin/ypserv ${.CURDIR}/../../usr.bin/chpass \
-       ${.CURDIR}/../../libexec/ypxfr ${RPCDIR}
+.PATH: ${SRCTOP}/usr.sbin/ypserv ${SRCTOP}/usr.bin/chpass \
+       ${SRCTOP}/libexec/ypxfr ${RPCDIR}
 
 PROG=	rpc.yppasswdd
 SCRIPTS=yppwupdate
@@ -17,12 +16,11 @@ GENSRCS=yp.h yp_clnt.c yppasswd.h yppasswd_private.h yppasswd_private_svc.c \
 
 WARNS?=	 5
 CFLAGS+= -fno-strict-aliasing
-CFLAGS+= -I${.CURDIR}/../../usr.sbin/vipw \
-	 -I${.CURDIR}/../../usr.sbin/ypserv \
-	 -I${.CURDIR}/../../libexec/ypxfr \
+CFLAGS+= -I${SRCTOP}/usr.sbin/vipw \
+	 -I${SRCTOP}/usr.sbin/ypserv \
+	 -I${SRCTOP}/libexec/ypxfr \
 	 -I${.CURDIR} -I.
-DPADD=	${LIBRPCSVC} ${LIBCRYPT} ${LIBUTIL}
-LDADD=	-lrpcsvc -lcrypt -lutil
+LIBADD=	rpcsvc crypt util
 
 CLEANFILES= ${GENSRCS}
 

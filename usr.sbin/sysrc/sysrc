@@ -1,6 +1,6 @@
 #!/bin/sh
 #-
-# Copyright (c) 2010-2015 Devin Teske
+# Copyright (c) 2010-2018 Devin Teske
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/sysrc/sysrc 292833 2015-12-28 17:50:31Z dteske $
+# $FreeBSD: stable/11/usr.sbin/sysrc/sysrc 337588 2018-08-10 20:07:59Z dteske $
 #
 ############################################################ INCLUDES
 
@@ -41,7 +40,7 @@ BSDCFG_SHARE="/usr/share/bsdconfig"
 #
 # Version information
 #
-SYSRC_VERSION="7.0 Sep-13,2015"
+SYSRC_VERSION="7.2 Jun-16,2018"
 
 #
 # Options
@@ -371,6 +370,18 @@ if [ "$LIST_SERVICE_CONFS" ]; then
 fi
 
 #
+# Validate arguments
+#
+for name in "$@"; do
+	# NB: shell expansion syntax removed first
+	name="${name%%:[+=-]*}"
+	name="${name%%[%#+=-]*}"
+	[ "$name" = "${name#*[!$VALID_VARNAME_CHARS]}" ] || die \
+		"%s: %s: name contains characters not allowed in shell" \
+		"$pgm" "$name"
+done
+
+#
 # Process `-s name' argument
 #
 if [ "$SERVICE" -a ! "${RC_CONFS+set}" ]; then
@@ -596,7 +607,7 @@ fi
 if [ "$SHOW_ALL" ]; then
 	#
 	# Get a list of variables that are currently set in the rc.conf(5)
-	# files (included `/etc/defaults/rc.conf') by performing a call to
+	# files (including `/etc/defaults/rc.conf') by performing a call to
 	# source_rc_confs() in a clean environment.
 	#
 	( # Operate in a sub-shell to protect the parent environment
@@ -791,7 +802,7 @@ while [ $# -gt 0 ]; do
 			delim="${add%"${add#?}"}" # first character
 			oldIFS="$IFS"
 			case "$delim" in
-			""|[$IFS]|[a-zA-Z0-9]) delim=" " ;;
+			""|[$IFS]|[a-zA-Z0-9./]) delim=" " ;;
 			*) IFS="$delim"
 			esac
 			new="$before"
@@ -813,7 +824,7 @@ while [ $# -gt 0 ]; do
 			delim="${remove%"${remove#?}"}" # first character
 			oldIFS="$IFS"
 			case "$delim" in
-			""|[$IFS]|[a-zA-Z0-9]) delim=" " ;;
+			""|[$IFS]|[a-zA-Z0-9./]) delim=" " ;;
 			*) IFS="$delim"
 			esac
 			new=
@@ -843,7 +854,7 @@ while [ $# -gt 0 ]; do
 		#
 		if [ ! "$SHOW_VALUE" ]; then
 			echo "$NAME"
-			f_sysrc_set "$NAME" "$new"
+			f_sysrc_set "$NAME" "$new" || status=$FAILURE
 		else
 			if f_sysrc_set "$NAME" "$new"; then
 				if [ "$SHOW_FILE" ]; then
@@ -855,13 +866,16 @@ while [ $# -gt 0 ]; do
 				echo -n "$before${SHOW_EQUALS:+\" #}"
 				echo -n " -> ${SHOW_EQUALS:+\"}$after"
 				echo "${SHOW_EQUALS:+\"}"
+			else
+				status=$FAILURE
 			fi
 		fi
 		;;
 	*)
 		if ! IGNORED=$( f_sysrc_get "$NAME?" ); then
 			[ "$IGNORE_UNKNOWNS" -o "$QUIET" ] ||
-				echo "$pgm: unknown variable '$NAME'"
+				f_err "%s: unknown variable '%s'\n" \
+					"$pgm" "$NAME"
 			shift 1
 			status=$FAILURE
 			continue

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2012 The FreeBSD Foundation
 .\" All rights reserved.
 .\"
@@ -26,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/iscsid/iscsid.8 271734 2014-09-18 03:02:00Z allanjude $
+.\" $FreeBSD: stable/11/usr.sbin/iscsid/iscsid.8 319628 2017-06-06 17:00:21Z trasz $
 .\"
-.Dd September 12, 2014
+.Dd May 28, 2017
 .Dt ISCSID 8
 .Os
 .Sh NAME
@@ -44,12 +43,15 @@
 .Sh DESCRIPTION
 The
 .Nm
-daemon is responsible for performing the Login Phase of iSCSI connections,
-as well as performing SendTargets discovery.
+daemon is the userspace component of the iSCSI initiator,
+responsible for performing the Login Phase
+of iSCSI connections and the SendTargets discovery.
 .Pp
 Upon startup, the
 .Nm
-daemon opens the iSCSI initiator device file and waits for kernel requests.
+daemon opens the iSCSI initiator device file and waits for requests
+from the kernel component,
+.Xr iscsi 4 .
 .Nm
 does not use any configuration files.
 All needed information is supplied by the kernel.
@@ -69,9 +71,9 @@ The default location is
 .Pa /var/run/iscsid.pid .
 .It Fl d
 Debug mode.
-The server sends verbose debug output to standard error, and does not
+The daemon sends verbose debug output to standard error, and does not
 put itself in the background.
-The server will also not fork and will exit after processing one connection.
+The daemon will also not fork and will exit after processing one connection.
 This option is only intended for debugging the initiator.
 .It Fl l Ar loglevel
 Specifies debug level.
@@ -112,5 +114,5 @@ command appeared in
 The
 .Nm
 utility was developed by
-.An Edward Tomasz Napierala Aq trasz@FreeBSD.org
+.An Edward Tomasz Napierala Aq Mt trasz@FreeBSD.org
 under sponsorship from the FreeBSD Foundation.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Netflix Inc.
  * All rights reserved.
@@ -34,7 +33,7 @@
 #include <strings.h>
 #include <ctype.h>
 #include "eval_expr.h"
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstudy/eval_expr.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstudy/eval_expr.c 289677 2015-10-21 05:37:09Z eadler $");
 
 static struct expression *
 alloc_and_hook_expr(struct expression **exp_p, struct expression **last_p)

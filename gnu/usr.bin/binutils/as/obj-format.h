@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/binutils/as/obj-format.h 84949 2001-10-15 01:43:23Z obrien $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/binutils/as/obj-format.h 84949 2001-10-15 01:43:23Z obrien $ */
 
 #include "obj-elf.h"

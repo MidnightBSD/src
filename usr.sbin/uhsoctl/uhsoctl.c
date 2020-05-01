@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2009 Fredrik Lindberg
  * All rights reserved.
  *
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/uhsoctl/uhsoctl.c 292855 2015-12-29 01:08:58Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/uhsoctl/uhsoctl.c 340280 2018-11-09 08:45:47Z hselasky $
  */
 
 #include <sys/types.h>
@@ -38,7 +39,6 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/route.h>
 #include <netinet/in.h>
@@ -360,7 +360,7 @@ logger(int pri, const char *fmt, ...)
 
 /* Add/remove IP address from an interface */
 static int
-ifaddr_ad(int d, const char *ifnam, struct sockaddr *sa, struct sockaddr *mask)
+ifaddr_ad(unsigned long d, const char *ifnam, struct sockaddr *sa, struct sockaddr *mask)
 {
 	struct ifaliasreq req;
 	int fd, error;

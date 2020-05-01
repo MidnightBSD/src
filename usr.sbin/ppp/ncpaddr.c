@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/ncpaddr.c 330805 2018-03-12 17:37:38Z eugen $
+ * $FreeBSD: stable/11/usr.sbin/ppp/ncpaddr.c 330804 2018-03-12 17:36:37Z eugen $
  */
 
 #include <sys/types.h>

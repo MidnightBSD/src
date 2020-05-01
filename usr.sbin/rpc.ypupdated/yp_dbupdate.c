@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.ypupdated/yp_dbupdate.c 351694 2019-09-02 10:20:57Z kib $");
 
 #include <sys/fcntl.h>
 
@@ -79,7 +79,7 @@ ypmap_update(char *netname, char *map, unsigned int op, unsigned int keylen,
 	DB *dbp;
 	DBT key = { NULL, 0 }, data = { NULL, 0 };
 	char *yp_last = "YP_LAST_MODIFIED";
-	char yplastbuf[YPMAXRECORD];
+	char yplastbuf[32];
 	char *domptr;
 	int rval = 0;
 

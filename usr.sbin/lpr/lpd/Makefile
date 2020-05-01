@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.sbin/lpr/lpd/Makefile 321275 2017-07-20 01:07:02Z ngie $
+# $FreeBSD: stable/11/usr.sbin/lpr/lpd/Makefile 321276 2017-07-20 01:07:15Z ngie $
 
 PROG=	lpd
 MAN=	lpd.8
@@ -10,7 +9,6 @@ CFLAGS+= -I${.CURDIR:H}/common_source
 
 WARNS?=	1
 
-DPADD=	${LIBLPR}
-LDADD=	${LIBLPR}
+LIBADD=	lpr
 
 .include <bsd.prog.mk>

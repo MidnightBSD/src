@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* search.c - searching subroutines using dfa, kwset and regex for grep.
    Copyright 1992, 1998, 2000 Free Software Foundation, Inc.
 
@@ -19,7 +18,7 @@
 
 /* Written August 1992 by Mike Haertel. */
 
-/* $FreeBSD: src/gnu/usr.bin/grep/search.c,v 1.23.2.2 2006/03/21 20:51:35 hrs Exp $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/search.c 343989 2019-02-10 23:47:37Z pfg $ */
 
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE 1
@@ -402,9 +401,12 @@ EGexecute (char const *buf, size_t size, size_t *match_size, int exact)
 			}
 
 		      if (mlen == (size_t) -2)
-			/* Offset points inside multibyte character:
-			 * no good. */
-			break;
+			{
+			  /* Offset points inside multibyte character:
+			   * no good. */
+			  memset (&mbs, '\0', sizeof (mbstate_t));
+			  break;
+			}
 
 		      beg += mlen;
 		      bytes_left -= mlen;
@@ -464,9 +466,12 @@ EGexecute (char const *buf, size_t size, size_t *match_size, int exact)
 			}
 
 		      if (mlen == (size_t) -2)
-			/* Offset points inside multibyte character:
-			 * no good. */
-			break;
+			{
+			  /* Offset points inside multibyte character:
+			   * no good. */
+			  memset (&mbs, '\0', sizeof (mbstate_t));
+			  break;
+			}
 
 		      beg += mlen;
 		      bytes_left -= mlen;
@@ -927,15 +932,21 @@ Fexecute (char const *buf, size_t size, size_t *match_size, int exact)
 		}
 
 	      if (mlen == (size_t) -2)
-		/* Offset points inside multibyte character: no good. */
-		break;
+		{
+		  /* Offset points inside multibyte character: no good. */
+		  memset (&mbs, '\0', sizeof (mbstate_t));
+		  break;
+		}
 
 	      beg += mlen;
 	      bytes_left -= mlen;
 	    }
 
 	  if (bytes_left)
-	    continue;
+	    {
+	      beg += bytes_left;
+	      continue;
+	    }
 	}
       else
 #endif /* MBS_SUPPORT */
@@ -1053,6 +1064,7 @@ Fexecute (char const *buf, size_t size, size_t *match_size, int exact)
 			    {
 			      /* Offset points inside multibyte character:
 			       * no good. */
+			      memset (&mbs, '\0', sizeof (mbstate_t));
 			      break;
 			    }
 

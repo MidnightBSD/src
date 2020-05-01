@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* kwset.h - header declaring the keyword set library.
    Copyright (C) 1989, 1998 Free Software Foundation, Inc.
 
@@ -21,7 +20,7 @@
    The author may be reached (Email) at the address mike@ai.mit.edu,
    or (US mail) as Mike Haertel c/o Free Software Foundation. */
 
-/* $FreeBSD: src/gnu/usr.bin/grep/kwset.h,v 1.5 2004/07/04 10:02:03 tjr Exp $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/kwset.h 131557 2004-07-04 10:02:03Z tjr $ */
 
 struct kwsmatch
 {

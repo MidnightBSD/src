@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/uathload/uathload.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 /*
@@ -140,23 +142,19 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 
-	if (argc == 1) {
+	if (argc == 1)
 		fwname = argv[0];
-		fw = open(fwname, O_RDONLY, 0);
-		if (fw < 0)
-			err(-1, "open(%s)", fwname);
-		if (fstat(fw, &sb) < 0)
-			err(-1, "fstat(%s)", fwname);
-		txdata = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fw, 0);
-		if (txdata == MAP_FAILED)
-			err(-1, "mmap(%s)", fwname);
-		len = sb.st_size;
-	} else {
-		fwname = "ar5523.bin (builtin)";
-		fw = -1;
-		txdata = &_binary_ar5523_bin_start;
-		len = &_binary_ar5523_bin_end - &_binary_ar5523_bin_start;
-	}
+	else
+		fwname = _PATH_FIRMWARE "/ar5523.bin";
+	fw = open(fwname, O_RDONLY, 0);
+	if (fw < 0)
+		err(-1, "open(%s)", fwname);
+	if (fstat(fw, &sb) < 0)
+		err(-1, "fstat(%s)", fwname);
+	txdata = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fw, 0);
+	if (txdata == MAP_FAILED)
+		err(-1, "mmap(%s)", fwname);
+	len = sb.st_size;
 	/* XXX verify device is an AR5005 part */
 	if (getdevname(devname, msgdev, datadev))
 		err(-1, "getdevname error");

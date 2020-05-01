@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/wlandebug/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	wlandebug
 MAN=	wlandebug.8

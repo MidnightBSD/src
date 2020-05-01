@@ -24,8 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/vigr/vigr.sh 275768 2014-12-14 16:40:46Z des $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/vigr/vigr.sh 275768 2014-12-14 16:40:46Z des $
+#
 
 error() {
 	echo "$@" >&2

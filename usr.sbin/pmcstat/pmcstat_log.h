@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * Copyright (c) 2009, Fabien Thomas
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pmcstat/pmcstat_log.h 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD: stable/11/usr.sbin/pmcstat/pmcstat_log.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_PMCSTAT_LOG_H_
@@ -77,7 +78,6 @@ enum pmcstat_image_type {
 
 struct pmcstat_image {
 	LIST_ENTRY(pmcstat_image) pi_next;	/* hash link */
-	TAILQ_ENTRY(pmcstat_image) pi_lru;	/* LRU list */
 	pmcstat_interned_string	pi_execpath;    /* cookie */
 	pmcstat_interned_string pi_samplename;  /* sample path name */
 	pmcstat_interned_string pi_fullpath;    /* path to FS object */

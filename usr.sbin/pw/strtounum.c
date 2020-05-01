@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2015 Baptiste Daroussin <bapt@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pw/strtounum.c 287084 2015-08-23 21:42:27Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pw/strtounum.c 286993 2015-08-21 14:28:14Z bapt $");
 
 #include <errno.h>
 #include <inttypes.h>

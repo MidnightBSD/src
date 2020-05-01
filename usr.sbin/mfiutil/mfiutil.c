@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfiutil.c 272041 2014-09-23 21:38:05Z smh $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfiutil.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/errno.h>
@@ -79,7 +80,7 @@ usage(void)
 	fprintf(stderr, "    name <volume> <name>\n");
 	fprintf(stderr, "    volume progress <volume>  - display status of active operations\n");
 	fprintf(stderr, "    clear                     - clear volume configuration\n");
-	fprintf(stderr, "    create <type> [-v] <drive>[,<drive>[,...]] [<drive>[,<drive>[,...]]\n");
+	fprintf(stderr, "    create <type> [-v] [-s stripe_size] <drive>[,<drive>[,...]] [<drive>[,<drive>[,...]]\n");
 	fprintf(stderr, "    delete <volume>\n");
 	fprintf(stderr, "    add <drive> [volume]      - add a hot spare\n");
 	fprintf(stderr, "    remove <drive>            - remove a hot spare\n");

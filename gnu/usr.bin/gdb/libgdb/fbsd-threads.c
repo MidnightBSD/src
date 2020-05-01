@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/gdb/libgdb/fbsd-threads.c 235714 2012-05-21 03:06:31Z davidxu $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/gdb/libgdb/fbsd-threads.c 235714 2012-05-21 03:06:31Z davidxu $ */
 /* FreeBSD libthread_db assisted debugging support.
    Copyright 1999, 2000, 2001 Free Software Foundation, Inc.
 

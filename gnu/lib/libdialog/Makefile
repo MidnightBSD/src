@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/lib/libdialog/Makefile 275040 2014-11-25 13:47:53Z dteske $
+# $FreeBSD: stable/11/gnu/lib/libdialog/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 DIALOG=		${.CURDIR}/../../../contrib/dialog
 
@@ -14,8 +13,7 @@ SRCS=		argv.c arrows.c buildlist.c buttons.c calendar.c checklist.c \
 INCS=		dialog.h dlg_colors.h dlg_config.h dlg_keys.h
 MAN=		dialog.3
 
-DPADD=		${LIBNCURSESW} ${LIBM}
-LDADD=		-lncursesw -lm
+LIBADD=		ncursesw m
 
 CFLAGS+= 	-I${.CURDIR} -I${DIALOG} -D_XOPEN_SOURCE_EXTENDED -DGCC_UNUSED=__unused
 .PATH:		${DIALOG}

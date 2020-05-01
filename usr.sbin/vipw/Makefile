@@ -1,11 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/vipw/Makefile,v 1.8 2003/04/04 17:49:20 obrien Exp $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/vipw/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	vipw
 MAN=	vipw.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .include <bsd.prog.mk>

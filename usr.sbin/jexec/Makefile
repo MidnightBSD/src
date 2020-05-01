@@ -1,9 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/jexec/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/jexec/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
 PROG=	jexec
 MAN=	jexec.8
-DPADD=	${LIBJAIL} ${LIBUTIL}
-LDADD=	-ljail -lutil
+LIBADD=	jail util
+
+PACKAGE=jail
 
 .include <bsd.prog.mk>

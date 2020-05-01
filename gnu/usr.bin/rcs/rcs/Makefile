@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/rcs/rcs/Makefile,v 1.8 2001/03/27 14:59:05 ru Exp $
+# $FreeBSD: stable/11/gnu/usr.bin/rcs/rcs/Makefile 74861 2001-03-27 14:59:06Z ru $
 
 PROG=	rcs
 MAN=	rcs.1 rcsintro.1 rcsfile.5

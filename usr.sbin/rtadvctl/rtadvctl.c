@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011 Hiroki Sato <hrs@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rtadvctl/rtadvctl.c 253970 2013-08-05 20:13:02Z hrs $
+ * $FreeBSD: stable/11/usr.sbin/rtadvctl/rtadvctl.c 330449 2018-03-05 07:26:05Z eadler $
  *
  */
 
@@ -37,7 +38,6 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#include <net/if_var.h>
 #include <net/ethernet.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>

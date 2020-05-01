@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 Geoffrey M. Rehmet
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lptcontrol/lptcontrol.c 140814 2005-01-25 14:25:18Z ssouhlal $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lptcontrol/lptcontrol.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <dev/ppbus/lptio.h>
 

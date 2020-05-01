@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Jakob Stoklund Olesen <stoklund@taxidriver.dk>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/atm.h 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD: stable/11/usr.sbin/ppp/atm.h 134789 2004-09-05 01:46:52Z brian $
  */
 
 struct physical;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +41,7 @@ static char sccsid[] = "@(#)lpd.c	8.7 (Berkeley) 5/10/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/lpd/lpd.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/lpd/lpd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * lpd -- line printer daemon.
@@ -658,11 +657,7 @@ chkhost(struct sockaddr *f, int ch_opts)
 	char hostbuf[NI_MAXHOST], ip[NI_MAXHOST];
 	char serv[NI_MAXSERV];
 	char *syserr, *usererr;
-	int error, errsav, fpass, good, wantsl;
-
-	wantsl = 0;
-	if (ch_opts & LPD_LOGCONNERR)
-		wantsl = 1;			/* also syslog the errors */
+	int error, errsav, fpass, good;
 
 	from_host = ".na.";
 

@@ -1,15 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ypserv/Makefile 313220 2017-02-04 16:34:44Z ngie $
+# $FreeBSD: stable/11/usr.sbin/ypserv/Makefile 319191 2017-05-30 05:15:09Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-RPCDIR=	${.CURDIR}/../../include/rpcsvc
-.PATH: ${RPCDIR}
+RPCDIR=	${SRCTOP}/include/rpcsvc
+.PATH: ${RPCDIR} ${.CURDIR}/common
 
 PROG=	ypserv
 MAN=	ypserv.8 ypinit.8
 SRCS=	yp_svc.c yp_server.c yp_dblookup.c yp_dnslookup.c \
-	ypxfr_clnt.c yp.h yp_main.c yp_error.c yp_access.c yp_svc_udp.c
+	ypxfr_clnt.c yp.h yp_main.c yp_error.c yp_access.c yp_svc_udp.c \
+	yplib_host.c
 
 CFLAGS+= -DDB_CACHE -I.
 
@@ -17,8 +17,7 @@ WARNS?=	0
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DTCP_WRAPPER
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD+=	wrap
 .endif
 
 CLEANFILES= yp_svc.c ypxfr_clnt.c yp.h

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/lib/libgomp/Makefile 283010 2015-05-16 15:44:13Z pfg $
+# $FreeBSD: stable/11/gnu/lib/libgomp/Makefile 282115 2015-04-27 21:27:51Z pfg $
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs

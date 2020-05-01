@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright (c) 1996 WIDE Project. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -13,15 +12,14 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: stable/10/usr.sbin/rtadvd/Makefile 290149 2015-10-29 16:53:34Z delphij $
+# $FreeBSD: stable/11/usr.sbin/rtadvd/Makefile 288963 2015-10-06 23:42:58Z delphij $
 
 PROG=	rtadvd
 MAN=	rtadvd.conf.5 rtadvd.8
 SRCS=	rtadvd.c rrenum.c advcap.c if.c config.c timer.c timer_subr.c	\
 	control.c control_server.c
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 WARNS?=	1
 

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * Copyright (c) 2014, Adrian Chadd, Netflix Inc.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate_cg.h 265604 2014-05-07 20:20:52Z scottl $
+ * $FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_annotate_cg.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_PMCSTAT_PL_ANNOTATE_CG_H_

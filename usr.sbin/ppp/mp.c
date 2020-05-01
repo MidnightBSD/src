@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/mp.c 228990 2011-12-30 10:58:14Z uqs $
+ * $FreeBSD: stable/11/usr.sbin/ppp/mp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

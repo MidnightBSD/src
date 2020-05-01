@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$FreeBSD: stable/10/usr.sbin/pciconf/err.c 283927 2015-06-02 19:20:39Z jhb $";
+    "$FreeBSD: stable/11/usr.sbin/pciconf/err.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

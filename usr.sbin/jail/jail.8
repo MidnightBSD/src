@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2000, 2003 Robert N. M. Watson
 .\" Copyright (c) 2008-2012 James Gritton
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/jail/jail.8 298889 2016-05-01 16:49:32Z jamie $
+.\" $FreeBSD: stable/11/usr.sbin/jail/jail.8 360112 2020-04-20 08:15:36Z eugen $
 .\"
-.Dd April 25, 2016
+.Dd April 17, 2020
 .Dt JAIL 8
 .Os
 .Sh NAME
@@ -60,10 +59,15 @@
 .Op Fl n Ar jailname
 .Op Fl s Ar securelevel
 .Op Ar path hostname [ Ar ip Ns [ Ns Ar ,... Ns ]] Ar command ...
+.Nm
+.Op Fl f Ar conf_file
+.Fl e
+.Ar separator
 .Sh DESCRIPTION
 The
 .Nm
 utility creates new jails, or modifies or removes existing jails.
+It can also print a list of configured jails and their parameters.
 A jail
 .Pq or Dq prison
 is specified via parameters on the command line, or in the
@@ -72,6 +76,7 @@ file.
 .Pp
 At least one of the options
 .Fl c ,
+.Fl e ,
 .Fl m
 or
 .Fl r
@@ -87,6 +92,15 @@ and
 .Va name
 parameters (if specified on the command line)
 must not refer to an existing jail.
+.It Fl e Ar separator
+Exhibit a list of all configured non-wildcard jails and their parameters.
+No jail creation, modification or removal performed if this option is used.
+The
+.Ar separator
+string is used to separate parameters.
+Use
+.Xr jls 8
+utility to list running jails.
 .It Fl m
 Modify an existing jail.
 One of the
@@ -608,6 +622,11 @@ within a jail.
 The jail root may administer quotas on the jail's filesystem(s).
 This includes filesystems that the jail may share with other jails or
 with non-jailed parts of the system.
+.It Va allow.read_msgbuf
+Jailed users may read the kernel message buffer.
+If the
+.Va security.bsd.unprivileged_read_msgbuf
+MIB entry is zero, this will be restricted to the root user.
 .It Va allow.socket_af
 Sockets within a jail are normally restricted to IPv4, IPv6, local
 (UNIX), and route.  This allows access to other protocol stacks that
@@ -769,7 +788,7 @@ jail is created, and will be removed from the interface after the
 jail is removed.
 .It Va ip4.addr
 In addition to the IP addresses that are passed to the kernel, an
-interface, netmask and additional paramters (as supported by
+interface, netmask and additional parameters (as supported by
 .Xr ifconfig 8 Ns )
 may also be specified, in the form
 .Dq Ar interface Ns | Ns Ar ip-address Ns / Ns Ar netmask param ... .
@@ -839,13 +858,14 @@ Allow making changes to a
 jail.
 .It Va depend
 Specify a jail (or jails) that this jail depends on.
-Any such jails must be fully created, up to the last
+When this jail is to be created, any jail(s) it depends on must already exist.
+If not, they will be created automatically, up to the completion of the last
 .Va exec.poststart
 command, before any action will taken to create this jail.
 When jails are removed the opposite is true:
-this jail must be fully removed, up to the last
+this jail will be removed, up to the last
 .Va exec.poststop
-command, before the jail(s) it depends on are stopped.
+command, before any jail(s) it depends on are stopped.
 .El
 .Sh EXAMPLES
 Jails are typically set up using one of two philosophies: either to
@@ -995,8 +1015,9 @@ or for running a virtual server.
 .Pp
 Start a shell in the jail:
 .Bd -literal -offset indent
-jail -c path=/data/jail/testjail mount.devfs host.hostname=testhostname \\
-	ip4.addr=192.0.2.100 command=/bin/sh
+jail -c path=/data/jail/testjail mount.devfs \\
+	host.hostname=testhostname ip4.addr=192.0.2.100 \\
+	command=/bin/sh
 .Ed
 .Pp
 Assuming no errors, you will end up with a shell prompt within the jail.
@@ -1270,25 +1291,24 @@ environment of the first jail.
 .Xr pkill 1 ,
 .Xr ps 1 ,
 .Xr quota 1 ,
-.Xr ifconfig 8 ,
 .Xr jail_set 2 ,
 .Xr devfs 5 ,
 .Xr fdescfs 5 ,
 .Xr jail.conf 5 ,
-.Xr procfs 5 ,
 .Xr linprocfs 5 ,
 .Xr linsysfs 5 ,
+.Xr procfs 5 ,
 .Xr rc.conf 5 ,
 .Xr sysctl.conf 5 ,
 .Xr chroot 8 ,
 .Xr devfs 8 ,
 .Xr halt 8 ,
+.Xr ifconfig 8 ,
 .Xr inetd 8 ,
 .Xr jexec 8 ,
 .Xr jls 8 ,
 .Xr mount 8 ,
 .Xr named 8 ,
-.Xr procfs 5 ,
 .Xr reboot 8 ,
 .Xr rpcbind 8 ,
 .Xr sendmail 8 ,
@@ -1310,7 +1330,6 @@ The configuration file was introduced in
 The jail feature was written by
 .An Poul-Henning Kamp
 for R&D Associates
-.Pa http://www.rndassociates.com/
 who contributed it to
 .Fx .
 .Pp

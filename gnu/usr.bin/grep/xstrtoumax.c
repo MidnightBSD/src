@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* xstrtoumax.c -- A more useful interface to strtoumax.
    Copyright 1999 Free Software Foundation, Inc.
 

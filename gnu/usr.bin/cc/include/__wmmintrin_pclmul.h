@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2013 John-Mark Gurney
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/gnu/usr.bin/cc/include/__wmmintrin_pclmul.h 255185 2013-09-03 17:33:29Z jmg $
+ * $FreeBSD: stable/11/gnu/usr.bin/cc/include/__wmmintrin_pclmul.h 255185 2013-09-03 17:33:29Z jmg $
  *
  */
 

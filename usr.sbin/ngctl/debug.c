@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /*
  * debug.c
@@ -35,7 +34,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ngctl/debug.c 160423 2006-07-17 08:35:47Z stefanf $
+ * $FreeBSD: stable/11/usr.sbin/ngctl/debug.c 160423 2006-07-17 08:35:47Z stefanf $
  */
 
 #include <netgraph.h>

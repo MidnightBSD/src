@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* xalloc.h -- malloc with out-of-memory checking
    Copyright (C) 1990-1998, 1999, 2000 Free Software Foundation, Inc.
 

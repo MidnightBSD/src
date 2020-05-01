@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/wlandebug/wlandebug.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 /*
@@ -145,7 +147,7 @@ setoid(char oid[], size_t oidlen, const char *wlan)
 #ifdef __linux__
 	if (wlan)
 		snprintf(oid, oidlen, "net.%s.debug", wlan);
-#elif __MidnightBSD__
+#elif __FreeBSD__
 	if (wlan)
 		snprintf(oid, oidlen, "net.wlan.%s.debug", wlan+4);
 	else
@@ -177,7 +179,7 @@ main(int argc, char *argv[])
 			setoid(oid, sizeof(oid), NULL);
 			argc -= 1, argv += 1;
 		} else if (strcmp(argv[1], "-i") == 0) {
-			if (argc < 2)
+			if (argc <= 2)
 				errx(1, "missing interface name for -i option");
 			if (strncmp(argv[2], "wlan", 4) != 0)
 				errx(1, "expecting a wlan interface name");

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/wlconfig/Makefile,v 1.8 2004/01/21 14:01:29 ru Exp $
+# $FreeBSD: stable/11/usr.sbin/wlconfig/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	wlconfig
 MAN=	wlconfig.8

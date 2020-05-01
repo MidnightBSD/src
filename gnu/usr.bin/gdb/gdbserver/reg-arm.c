@@ -23,7 +23,7 @@
 /* This file was created with the aid of ``regdat.sh'' and ``reg-arm.dat''.  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/gdbserver/reg-arm.c 185023 2008-11-17 16:32:57Z raj $");
 
 #include "regdef.h"
 #include "regcache.h"

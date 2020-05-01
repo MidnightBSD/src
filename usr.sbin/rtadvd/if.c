@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/if.c 308717 2016-11-16 03:54:41Z hrs $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/if.c 347353 2019-05-08 16:07:43Z markj $	*/
 /*	$KAME: if.c,v 1.17 2001/01/21 15:27:30 itojun Exp $	*/
 
 /*
@@ -39,7 +38,6 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#include <net/if_var.h>
 #include <net/ethernet.h>
 #include <net/route.h>
 #include <netinet/in.h>
@@ -408,6 +406,8 @@ update_ifinfo_nd_flags(struct ifinfo *ifi)
 	return (0);
 }
 
+#define MAX_SYSCTL_TRY 5
+
 struct ifinfo *
 update_ifinfo(struct ifilist_head_t *ifi_head, int ifindex)
 {
@@ -419,26 +419,43 @@ update_ifinfo(struct ifilist_head_t *ifi_head, int ifindex)
 	size_t len;
 	char *lim;
 	int mib[] = { CTL_NET, PF_ROUTE, 0, AF_INET6, NET_RT_IFLIST, 0 };
-	int error;
+	int error, ntry;
 
 	syslog(LOG_DEBUG, "<%s> enter", __func__);
 
-	if (sysctl(mib, sizeof(mib)/sizeof(mib[0]), NULL, &len, NULL, 0) <
-	    0) {
-		syslog(LOG_ERR,
-		    "<%s> sysctl: NET_RT_IFLIST size get failed", __func__);
-		exit(1);
-	}
-	if ((msg = malloc(len)) == NULL) {
-		syslog(LOG_ERR, "<%s> malloc failed", __func__);
-		exit(1);
-	}
-	if (sysctl(mib, sizeof(mib)/sizeof(mib[0]), msg, &len, NULL, 0) <
-	    0) {
-		syslog(LOG_ERR,
-		    "<%s> sysctl: NET_RT_IFLIST get failed", __func__);
-		exit(1);
-	}
+	ntry = 0;
+	do {
+		/*
+		 * We'll try to get addresses several times in case that
+		 * the number of addresses is unexpectedly increased during
+		 * the two sysctl calls.  This should rarely happen.
+		 * Portability note: since FreeBSD does not add margin of
+		 * memory at the first sysctl, the possibility of failure on
+		 * the second sysctl call is a bit higher.
+		 */
+
+		if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) < 0) {
+			syslog(LOG_ERR,
+			    "<%s> sysctl: NET_RT_IFLIST size get failed",
+			    __func__);
+			exit(1);
+		}
+		if ((msg = malloc(len)) == NULL) {
+			syslog(LOG_ERR, "<%s> malloc failed", __func__);
+			exit(1);
+		}
+		if (sysctl(mib, nitems(mib), msg, &len, NULL, 0) < 0) {
+			if (errno != ENOMEM || ++ntry >= MAX_SYSCTL_TRY) {
+				free(msg);
+				syslog(LOG_ERR,
+				    "<%s> sysctl: NET_RT_IFLIST get failed",
+				    __func__);
+				exit(1);
+			}
+			free(msg);
+			msg = NULL;
+		}
+	} while (msg == NULL);
 
 	lim = msg + len;
 	for (ifm = (struct if_msghdr *)msg;
@@ -476,11 +493,18 @@ update_ifinfo(struct ifilist_head_t *ifi_head, int ifindex)
 			    ifindex != ifm->ifm_index)
 				continue;
 
+			/* ifname */
+			if (if_indextoname(ifm->ifm_index, ifname) == NULL) {
+				syslog(LOG_WARNING,
+				    "<%s> ifname not found (idx=%d)",
+				    __func__, ifm->ifm_index);
+				continue;
+			}
+
 			/* lookup an entry with the same ifindex */
 			TAILQ_FOREACH(ifi, ifi_head, ifi_next) {
 				if (ifm->ifm_index == ifi->ifi_ifindex)
 					break;
-				if_indextoname(ifm->ifm_index, ifname);
 				if (strncmp(ifname, ifi->ifi_ifname,
 					sizeof(ifname)) == 0)
 					break;
@@ -499,15 +523,7 @@ update_ifinfo(struct ifilist_head_t *ifi_head, int ifindex)
 			ifi->ifi_ifindex = ifm->ifm_index;
 
 			/* ifname */
-			if_indextoname(ifm->ifm_index, ifi->ifi_ifname);
-			if (ifi->ifi_ifname == NULL) {
-				syslog(LOG_WARNING,
-				    "<%s> ifname not found (idx=%d)",
-				    __func__, ifm->ifm_index);
-				if (ifi_new)
-					free(ifi);
-				continue;
-			}
+			strlcpy(ifi->ifi_ifname, ifname, IFNAMSIZ);
 
 			if ((s = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 				syslog(LOG_ERR,

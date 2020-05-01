@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/gnu/usr.bin/gdb/kgdb/trgt_sparc64.c 246893 2013-02-17 02:15:19Z marcel $");
+__FBSDID("$FreeBSD: stable/11/gnu/usr.bin/gdb/kgdb/trgt_sparc64.c 298363 2016-04-20 20:22:48Z wma $");
 
 #include <sys/types.h>
 #include <machine/asm.h>
@@ -203,4 +202,17 @@ kgdb_trgt_trapframe_sniffer(struct frame_info *next_frame)
 		return (&kgdb_trgt_trapframe_unwind);
 	/* printf("%s: %lx =%s\n", __func__, pc, pname); */
 	return (NULL);
+}
+
+/*
+ * This function ensures, that the PC is inside the
+ * function section which is understood by GDB.
+ *
+ * Return 0 when fixup is necessary, -1 otherwise.
+ */
+int
+kgdb_trgt_pc_fixup(CORE_ADDR *pc __unused)
+{
+
+	return (-1);
 }

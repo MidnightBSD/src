@@ -19,8 +19,7 @@
 ## Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
 ## USA.
 
-## $MidnightBSD$
-## $FreeBSD: stable/10/gnu/lib/libsupc++/Version.map 301822 2016-06-11 03:58:59Z pfg $
+## $FreeBSD: stable/11/gnu/lib/libsupc++/Version.map 301570 2016-06-08 00:29:48Z pfg $
 
 
 # Symbols in the support library (libsupc++) have their own tag.

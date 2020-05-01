@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)trpt.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/trpt/trpt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -148,7 +148,8 @@ main(int argc, char **argv)
 		 * Discard setgid privileges if not the running kernel so that
 		 * bad guys can't print interesting stuff from kernel memory.
 		 */
-		setgid(getgid());
+		if (setgid(getgid()) != 0)
+			err(1, "setgid");
 	}
 	else
 		syst = getbootfile();
@@ -157,7 +158,8 @@ main(int argc, char **argv)
 		errx(1, "%s: no namelist", syst);
 	if ((memf = open(core, O_RDONLY)) < 0)
 		err(2, "%s", core);
-	setgid(getgid());
+	if (setgid(getgid()) != 0)
+		err(1, "setgid");
 	if (kflag)
 		errx(1, "can't do core files yet");
 	(void)klseek(memf, (off_t)nl[N_TCP_DEBX].n_value, L_SET);

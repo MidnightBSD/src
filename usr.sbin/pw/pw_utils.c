@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2015 Baptiste Daroussin <bapt@FreeBSD.org>
  * All rights reserved.
@@ -26,15 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pw/pw_utils.c 287084 2015-08-23 21:42:27Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pw/pw_utils.c 297290 2016-03-26 11:41:35Z bapt $");
 
-#include <sys/types.h>
 #include <sys/wait.h>
 
 #include <err.h>
-#include <inttypes.h>
 #include <sysexits.h>
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

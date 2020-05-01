@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/services_mkdb/extern.h 263028 2014-03-11 15:28:41Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/services_mkdb/extern.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 extern HASHINFO hinfo;

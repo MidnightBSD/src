@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Nokia Corporation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcannotate/pmcannotate.c 266889 2014-05-30 15:00:50Z gnn $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcannotate/pmcannotate.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -42,6 +43,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/pmcannotate/pmcannotate.c 266889 2014-05-
 
 #include <unistd.h>
 
+/* NB: Make sure FNBUFF is as large as LNBUFF, otherwise it could overflow */
 #define	FNBUFF	512
 #define	LNBUFF	512
 

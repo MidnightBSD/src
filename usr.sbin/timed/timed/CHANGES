@@ -1,5 +1,5 @@
 #	@(#)CHANGES	5.1 (Berkeley) 5/11/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/timed/timed/CHANGES 228990 2011-12-30 10:58:14Z uqs $
 
 This new version is almost identical to the timed and timedc code
 that has been shipped for years by a workstation vendor.
@@ -94,7 +94,7 @@ Practically any users can send to the master TSP messages and this
 	way corrupt the reliability of the system.  Authentication
 	of messages should be provided.  Unfortunately, that would
 	require changing the protocol with all of the implied
-	compatiblity problems.  Fortunately, the new -F and -G args
+	compatibility problems.  Fortunately, the new -F and -G args
 	can be used to cause the daemon to ignore time changes from
 	untrusted machines.
 

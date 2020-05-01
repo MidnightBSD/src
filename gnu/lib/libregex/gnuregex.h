@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David E. O'Brien
  * Copyright (c) 2004 Andrey A. Chernov
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/gnu/lib/libregex/gnuregex.h 126224 2004-02-25 10:56:54Z ache $
+ * $FreeBSD: stable/11/gnu/lib/libregex/gnuregex.h 126224 2004-02-25 10:56:54Z ache $
  */
 
 #ifdef __GNUC__

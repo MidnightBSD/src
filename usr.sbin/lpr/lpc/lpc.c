@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +41,7 @@ static char sccsid[] = "@(#)lpc.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/lpr/lpc/lpc.c 241852 2012-10-22 03:31:22Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/lpr/lpc/lpc.c 347610 2019-05-15 07:51:30Z ngie $");
 
 #include <sys/param.h>
 
@@ -104,7 +103,7 @@ main(int argc, char *argv[])
 			printf("?Ambiguous command\n");
 			exit(1);
 		}
-		if (c == 0) {
+		if (c == NULL) {
 			printf("?Invalid command\n");
 			exit(1);
 		}
@@ -113,7 +112,7 @@ main(int argc, char *argv[])
 			printf("?Privileged command\n");
 			exit(1);
 		}
-		if (c->c_generic != 0)
+		if (c->c_generic != NULL)
 			generic(c->c_generic, c->c_opts, c->c_handler,
 			    argc, argv);
 		else
@@ -183,7 +182,7 @@ cmdscanner(void)
 			if ((bp = el_gets(el, &num)) == NULL || num == 0)
 				quit(0, NULL);
 
-			len = (num > MAX_CMDLINE - 1) ? MAX_CMDLINE - 1 : num;
+			len = MIN(MAX_CMDLINE - 1, num);
 			memcpy(cmdline, bp, len);
 			cmdline[len] = 0; 
 			history(hist, &he, H_ENTER, bp);
@@ -198,7 +197,7 @@ cmdscanner(void)
 		makeargv();
 		if (margc == 0)
 			continue;
-		if (el != NULL && el_parse(el, margc, margv) != -1)
+		if (el != NULL && el_parse(el, margc, (const char **)margv) != -1)
 			continue;
 
 		c = getcmd(margv[0]);
@@ -206,7 +205,7 @@ cmdscanner(void)
 			printf("?Ambiguous command\n");
 			continue;
 		}
-		if (c == 0) {
+		if (c == NULL) {
 			printf("?Invalid command\n");
 			continue;
 		}
@@ -223,7 +222,7 @@ cmdscanner(void)
 		 * routine might also be set on a generic routine for
 		 * initial parameter processing.
 		 */
-		if (c->c_generic != 0)
+		if (c->c_generic != NULL)
 			generic(c->c_generic, c->c_opts, c->c_handler,
 			    margc, margv);
 		else
@@ -240,7 +239,7 @@ getcmd(const char *name)
 
 	longest = 0;
 	nmatches = 0;
-	found = 0;
+	found = NULL;
 	for (c = cmdtab; (p = c->c_name); c++) {
 		for (q = name; *q == *p++; q++)
 			if (*q == 0)		/* exact match? */
@@ -284,7 +283,7 @@ makeargv(void)
 			break;
 		*cp++ = '\0';
 	}
-	*argp++ = 0;
+	*argp++ = NULL;
 }
 
 #define HELPINDENT (sizeof ("directory"))

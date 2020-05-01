@@ -1,7 +1,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/usr.sbin/rpc.statd/test.c 50479 1999-08-28 01:35:59Z peter $";
 #endif /* not lint */
 
 #include <stdio.h>

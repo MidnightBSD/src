@@ -29,7 +29,7 @@ Report problems and direct all questions to:
 
 #include "rcsbase.h"
 
-libId(mapId, "$FreeBSD: src/gnu/usr.bin/rcs/lib/rcsmap.c,v 1.5 1999/08/27 23:36:47 peter Exp $")
+libId(mapId, "$FreeBSD: stable/11/gnu/usr.bin/rcs/lib/rcsmap.c 50472 1999-08-27 23:37:10Z peter $")
 
 /* map of character types */
 /* ISO 8859/1 (Latin-1) */

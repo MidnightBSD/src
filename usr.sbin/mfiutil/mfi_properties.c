@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Yahoo!, Inc.
  * All rights reserved.
  * 
@@ -25,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: stable/10/usr.sbin/mfiutil/mfi_properties.c 272041 2014-09-23 21:38:05Z smh $
+ * $FreeBSD: stable/11/usr.sbin/mfiutil/mfi_properties.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/errno.h>

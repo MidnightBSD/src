@@ -1,7 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/timed/timedc/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${.CURDIR}/../timed
+.PATH: ${.CURDIR:H}/timed
 
 PROG=	timedc
 MAN=	timedc.8

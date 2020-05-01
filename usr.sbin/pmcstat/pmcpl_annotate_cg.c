@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * Copyright (c) 2014, Adrian Chadd, Netflix Inc.
@@ -36,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/pmcstat/pmcpl_annotate_cg.c 265604 2014-05-07 20:20:52Z scottl $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/pmcstat/pmcpl_annotate_cg.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

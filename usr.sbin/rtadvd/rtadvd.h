@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/rtadvd.h 253970 2013-08-05 20:13:02Z hrs $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/rtadvd.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: rtadvd.h,v 1.26 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*

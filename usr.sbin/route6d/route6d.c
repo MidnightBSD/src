@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/route6d/route6d.c 314425 2017-02-28 22:18:05Z asomers $	*/
+/*	$FreeBSD: stable/11/usr.sbin/route6d/route6d.c 338279 2018-08-23 21:24:22Z markj $	*/
 /*	$KAME: route6d.c,v 1.104 2003/10/31 00:30:20 itojun Exp $	*/
 
 /*
@@ -43,7 +42,6 @@ static const char _rcsid[] = "$KAME: route6d.c,v 1.104 2003/10/31 00:30:20 itoju
 #include <sys/uio.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/route.h>
 #include <netinet/in.h>
 #include <netinet/in_var.h>
@@ -2205,8 +2203,10 @@ ifrt(struct ifc *ifcp, int again)
 					goto next;
 				}
 
-				TAILQ_REMOVE(&riprt_head, rrt, rrt_next);
-				delroute(&rrt->rrt_info, &rrt->rrt_gw);
+				TAILQ_REMOVE(&riprt_head, search_rrt, rrt_next);
+				delroute(&search_rrt->rrt_info,
+				    &search_rrt->rrt_gw);
+				free(search_rrt);
 			}
 			/* Attach the route to the list */
 			trace(1, "route: %s/%d: register route (%s)\n",
@@ -2560,9 +2560,6 @@ do { \
 	IFFLAG("POINTOPOINT", IFF_POINTOPOINT);
 #ifdef IFF_NOTRAILERS
 	IFFLAG("NOTRAILERS", IFF_NOTRAILERS);
-#endif
-#ifdef IFF_SMART
-	IFFLAG("SMART", IFF_SMART);
 #endif
 	IFFLAG("RUNNING", IFF_RUNNING);
 	IFFLAG("NOARP", IFF_NOARP);

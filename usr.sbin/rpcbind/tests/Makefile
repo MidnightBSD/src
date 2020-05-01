@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/rpcbind/tests/Makefile 296994 2016-03-17 20:00:49Z asomers $
+# $FreeBSD: stable/11/usr.sbin/rpcbind/tests/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH:	${.CURDIR}/..
 
 ATF_TESTS_C=	addrmerge_test
-CFLAGS+=	-I${.CURDIR}/.. -Wno-cast-qual
+CFLAGS+=	-I${.CURDIR:H} -Wno-cast-qual
 SRCS.addrmerge_test=	addrmerge_test.c util.c
 
 .if ${MK_INET6_SUPPORT} != "no"

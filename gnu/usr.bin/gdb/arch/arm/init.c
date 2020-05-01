@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/arm/init.c 173705 2007-11-17 21:30:03Z cognet $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/arm/init.c 173705 2007-11-17 21:30:03Z cognet $ */
 
 /* Do not modify this file.  */
 /* It is created automatically by the Makefile.  */

@@ -1,13 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/ncurses/Makefile 276678 2015-01-05 00:15:27Z ngie $
+# $FreeBSD: stable/11/lib/ncurses/Makefile 276320 2014-12-27 21:11:42Z ngie $
 
-.include <bsd.own.mk>
-
-SUBDIR=	ncurses form menu panel
-
-.if ${MK_NCURSESW} != "no"
-SUBDIR+=	ncursesw formw menuw panelw
-.endif
+SUBDIR=	ncurses form menu panel \
+	ncursesw formw menuw panelw
 
 SUBDIR_PARALLEL=
 

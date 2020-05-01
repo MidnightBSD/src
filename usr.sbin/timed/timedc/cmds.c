@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)cmds.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/timed/timedc/cmds.c 246209 2013-02-01 14:26:54Z charnier $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/timed/timedc/cmds.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "timedc.h"
 #include <sys/file.h>
@@ -278,7 +277,7 @@ msite(int argc, char *argv[])
 	}
 
 	srvp = getservbyname("timed", "udp");
-	if (srvp == 0) {
+	if (srvp == NULL) {
 		warnx("timed/udp: unknown service");
 		return;
 	}
@@ -291,7 +290,7 @@ msite(int argc, char *argv[])
 	do {
 		tgtname = (i >= argc) ? myname : argv[i];
 		hp = gethostbyname(tgtname);
-		if (hp == 0) {
+		if (hp == NULL) {
 			warnx("%s: %s", tgtname, hstrerror(h_errno));
 			continue;
 		}
@@ -379,7 +378,7 @@ testing(int argc, char *argv[])
 	}
 
 	srvp = getservbyname("timed", "udp");
-	if (srvp == 0) {
+	if (srvp == NULL) {
 		warnx("timed/udp: unknown service");
 		return;
 	}
@@ -433,7 +432,7 @@ tracing(int argc, char *argv[])
 	}
 
 	srvp = getservbyname("timed", "udp");
-	if (srvp == 0) {
+	if (srvp == NULL) {
 		warnx("timed/udp: unknown service");
 		return;
 	}

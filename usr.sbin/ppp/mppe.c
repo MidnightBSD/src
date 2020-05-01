@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Semen Ustimenko <semenu@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/mppe.c 134906 2004-09-07 15:48:27Z phk $
+ * $FreeBSD: stable/11/usr.sbin/ppp/mppe.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -169,7 +170,7 @@ MPPEOutput(void *v, struct ccp *ccp, struct link *l __unused, int pri __unused,
   dictinit = 0;
 
   log_Printf(LogDEBUG, "MPPE: Output: Proto %02x (%d bytes)\n", *proto, ilen);
-  if (*proto < 0x21 && *proto > 0xFA) {
+  if (*proto < 0x21 || *proto > 0xFA) {
     log_Printf(LogDEBUG, "MPPE: Output: Not encrypting\n");
     ccp->compout += ilen;
     ccp->uncompout += ilen;

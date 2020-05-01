@@ -1,11 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/services_mkdb/Makefile 241777 2012-10-20 10:33:15Z ed $
+# $FreeBSD: stable/11/usr.sbin/services_mkdb/Makefile 299284 2016-05-09 20:04:22Z bapt $
 
 PROG=	services_mkdb
 MAN=	services_mkdb.8
 SRCS=	services_mkdb.c uniq.c extern.h
-
-DPADD+=	${LIBUTIL}
-LDADD+=	-lutil
 
 .include <bsd.prog.mk>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/uefisign/magic.h 293290 2016-01-07 00:40:51Z bdrewery $
+ * $FreeBSD: stable/11/usr.sbin/uefisign/magic.h 332615 2018-04-16 17:13:54Z trasz $
  *
  */
 

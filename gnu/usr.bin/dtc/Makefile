@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/dtc/Makefile 210101 2010-07-15 02:22:50Z marcel $
+# $FreeBSD: stable/11/gnu/usr.bin/dtc/Makefile 317993 2017-05-08 23:57:54Z gonzo $
 
 .include <bsd.own.mk>
 
 DTCDIR=	${.CURDIR}/../../../contrib/dtc
-LIBFDTDIR= ${.CURDIR}/../../../sys/contrib/libfdt
-.PATH: ${DTCDIR} ${LIBFDTDIR}
+_LIBFDTDIR= ${.CURDIR}/../../../sys/contrib/libfdt
+.PATH: ${DTCDIR} ${_LIBFDTDIR}
 
 PROG=	dtc
 
@@ -15,7 +14,7 @@ SRCS=	dtc.c checks.c fstree.c livetree.c treesource.c data.c \
 	fdt_sw.c fdt_wip.c ${DTCVERSIONFILE}
 
 WARNS?=	2
-CFLAGS+= -I. -I${.CURDIR} -I${DTCDIR} -I${LIBFDTDIR}
+CFLAGS+= -I. -I${.CURDIR} -I${DTCDIR} -I${_LIBFDTDIR}
 
 VERSIONMAJ!= awk '/^VERSION =/ { print $$3 }' ${DTCDIR}/Makefile
 VERSIONMIN!= awk '/^PATCHLEVEL =/ { print $$3 }' ${DTCDIR}/Makefile
@@ -35,7 +34,7 @@ OBJS+= dtc-parser.tab.o dtc-lexer.lex.o
 CLEANFILES+= dtc-parser.tab.o dtc-lexer.lex.o dtc-parser.tab.c \
 		dtc-parser.tab.h dtc-lexer.lex.c ${DTCVERSIONFILE}
 
-${DTCVERSIONFILE}:
+${DTCVERSIONFILE}: ${DTCDIR}/Makefile
 	@echo '#define DTC_VERSION "DTC ${DTCVERSION}"' > ${DTCVERSIONFILE}
 
 dtc-parser.tab.o:	dtc-parser.tab.c dtc-parser.tab.h

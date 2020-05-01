@@ -16,9 +16,9 @@
 .R
 ..
 .de Id
-.ND \\$4
+.ND 1 June 1995
 ..
-.Id $FreeBSD: src/gnu/usr.bin/rcs/doc/rcs.ms,v 1.5 1999/08/27 23:36:41 peter Exp $
+.Id $FreeBSD: stable/11/gnu/usr.bin/rcs/doc/rcs.ms 295702 2016-02-17 14:34:01Z emaste $
 .RP
 .TL
 RCS\*-A System for Version Control

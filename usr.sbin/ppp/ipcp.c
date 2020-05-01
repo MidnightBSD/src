@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/ipcp.c 214011 2010-10-18 07:28:53Z glebius $
+ * $FreeBSD: stable/11/usr.sbin/ppp/ipcp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -881,7 +882,7 @@ IpcpLayerDown(struct fsm *fp)
     radius_Account(&fp->bundle->radius, &fp->bundle->radacct,
                    fp->bundle->links, RAD_STOP, &ipcp->throughput);
 
-    if (fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
+    if (*fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
       system_Select(fp->bundle, fp->bundle->radius.filterid, LINKDOWNFILE,
                     NULL, NULL);
     radius_StopTimer(&fp->bundle->radius);
@@ -950,7 +951,7 @@ IpcpLayerUp(struct fsm *fp)
   radius_Account(&fp->bundle->radius, &fp->bundle->radacct, fp->bundle->links,
                  RAD_START, &ipcp->throughput);
 
-  if (fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
+  if (*fp->bundle->radius.cfg.file && fp->bundle->radius.filterid)
     system_Select(fp->bundle, fp->bundle->radius.filterid, LINKUPFILE,
                   NULL, NULL);
   radius_StartTimer(fp->bundle);

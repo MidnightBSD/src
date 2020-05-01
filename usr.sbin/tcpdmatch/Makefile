@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/tcpdmatch/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+# $FreeBSD: stable/11/usr.sbin/tcpdmatch/Makefile 319191 2017-05-30 05:15:09Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH: ${.CURDIR}/../../contrib/tcp_wrappers
+.PATH: ${SRCTOP}/contrib/tcp_wrappers
 
 PROG=	tcpdmatch
 MAN=	tcpdmatch.8
@@ -17,7 +16,6 @@ CFLAGS+=-DINET6
 
 WARNS?=	0
 
-DPADD=	${LIBWRAP}
-LDADD=	-lwrap
+LIBADD=	wrap
 
 .include <bsd.prog.mk>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/pw.c 289436 2015-10-17 02:49:19Z wblock $";
+  "$FreeBSD: stable/11/usr.sbin/pw/pw.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <err.h>
@@ -121,8 +122,8 @@ main(int argc, char *argv[])
 	memset(&conf, 0, sizeof(conf));
 	strlcpy(conf.rootdir, "/", sizeof(conf.rootdir));
 	strlcpy(conf.etcpath, _PATH_PWD, sizeof(conf.etcpath));
-	conf.checkduplicate = true;
 	conf.fd = -1;
+	conf.checkduplicate = true;
 
 	setlocale(LC_ALL, "");
 

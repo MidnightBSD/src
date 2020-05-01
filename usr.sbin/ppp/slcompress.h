@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Definitions for tcp compression routines.
  *
@@ -32,7 +31,7 @@
  *	Van Jacobson (van@helios.ee.lbl.gov), Dec 31, 1989:
  *	- Initial distribution.
  *
- * $FreeBSD: stable/10/usr.sbin/ppp/slcompress.h 139979 2005-01-10 11:47:17Z brian $
+ * $FreeBSD: stable/11/usr.sbin/ppp/slcompress.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define MIN_VJ_STATES 3

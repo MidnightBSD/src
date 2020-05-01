@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/rm_r.c 303257 2016-07-24 08:21:21Z bapt $";
+  "$FreeBSD: stable/11/usr.sbin/pw/rm_r.c 359588 2020-04-03 05:06:08Z bapt $";
 #endif /* not lint */
 
 #include <sys/stat.h>
@@ -70,5 +71,8 @@ rm_r(int rootfd, const char *path, uid_t uid)
 	closedir(d);
 	if (fstatat(rootfd, path, &st, AT_SYMLINK_NOFOLLOW) != 0)
 		return;
-	unlinkat(rootfd, path, S_ISDIR(st.st_mode) ? AT_REMOVEDIR : 0);
+	if (S_ISLNK(st.st_mode))
+		unlinkat(rootfd, path, 0);
+	else if (st.st_uid == uid)
+		unlinkat(rootfd, path, AT_REMOVEDIR);
 }

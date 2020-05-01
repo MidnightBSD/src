@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/ppp/vjcomp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -137,7 +139,7 @@ VjUncompressTcp(struct ipcp *ipcp, struct mbuf *bp, u_char type)
   }
 
   /*
-   * Handle compressed packet. 1) Read upto MAX_VJHEADER bytes into work
+   * Handle compressed packet. 1) Read up to MAX_VJHEADER bytes into work
    * space. 2) Try to uncompress it. 3) Compute amount of necessary space. 4)
    * Copy unread data info there.
    */

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* dfa.c - deterministic extended regexp routines for GNU
    Copyright 1988, 1998, 2000 Free Software Foundation, Inc.
 
@@ -19,7 +18,7 @@
 /* Written June, 1988 by Mike Haertel
    Modified July, 1988 by Arthur David Olson to assist BMG speedups  */
 
-/* $FreeBSD: stable/10/gnu/usr.bin/grep/dfa.c 250823 2013-05-20 03:15:25Z pfg $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/dfa.c 250823 2013-05-20 03:15:25Z pfg $ */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/sparc64/config.h 251512 2013-06-07 21:40:02Z emaste $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/sparc64/config.h 251512 2013-06-07 21:40:02Z emaste $ */
 
 /* config.h.  Generated automatically by configure.  */
 /* config.in.  Generated automatically from configure.in by autoheader.  */

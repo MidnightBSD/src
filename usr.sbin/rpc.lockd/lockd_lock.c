@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: lockd_lock.c,v 1.5 2000/11/21 03:47:41 enami Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/rpc.lockd/lockd_lock.c 302455 2016-07-08 20:50:44Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rpc.lockd/lockd_lock.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define LOCKD_DEBUG
 

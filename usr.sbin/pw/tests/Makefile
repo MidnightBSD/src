@@ -1,10 +1,12 @@
-# $FreeBSD: stable/10/usr.sbin/pw/tests/Makefile 321163 2017-07-18 18:48:25Z ngie $
+# $FreeBSD: stable/11/usr.sbin/pw/tests/Makefile 321164 2017-07-18 18:48:58Z ngie $
+
+PACKAGE=	tests
 
 BINDIR=		${TESTSDIR}
 
 PROGS+=		crypt
-LDADD+=		-lcrypt
 WARNS?=		6
+LIBADD+=	crypt
 
 ATF_TESTS_SH=	pw_etcdir_test \
 		pw_lock_test \
@@ -23,8 +25,10 @@ ATF_TESTS_SH=	pw_etcdir_test \
 TEST_METADATA.${tp}+=	required_user="root"
 .endfor
 
-FILES=		group helper_functions.shin master.passwd pw.conf \
-		pw-modified.conf
-FILESDIR=       ${TESTSDIR}
+${PACKAGE}FILES+=	group
+${PACKAGE}FILES+=	helper_functions.shin
+${PACKAGE}FILES+=	master.passwd
+${PACKAGE}FILES+=	pw.conf
+${PACKAGE}FILES+=	pw-modified.conf
 
 .include <bsd.test.mk>

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ypserv/yp_main.c 359754 2020-04-09 20:38:36Z kevans $");
 
 /*
  * ypserv startup function.
@@ -72,13 +72,11 @@ __MBSDID("$MidnightBSD$");
 
 #define	_RPCSVC_CLOSEDOWN 120
 int _rpcpmstart;		/* Started by a port monitor ? */
-static int _rpcfdtype;
-		 /* Whether Stream or Datagram ? */
+static int _rpcfdtype;  /* Whether Stream or Datagram? */
 static int _rpcaf;
 static int _rpcfd;
 
-	/* States a server can be in wrt request */
-
+/* States a server can be in wrt request */
 #define	_IDLE 0
 #define	_SERVED 1
 #define	_SERVING 2
@@ -89,7 +87,7 @@ extern int _rpc_dtablesize(void);
 extern int _rpcsvcstate;	 /* Set when a request is serviced */
 char *progname = "ypserv";
 char *yp_dir = _PATH_YP;
-/*int debug = 0;*/
+int debug;
 int do_dns = 0;
 int resfd;
 

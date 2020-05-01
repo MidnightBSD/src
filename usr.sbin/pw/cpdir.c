@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -27,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/pw/cpdir.c 287084 2015-08-23 21:42:27Z bapt $";
+  "$FreeBSD: stable/11/usr.sbin/pw/cpdir.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <dirent.h>
@@ -38,7 +39,6 @@ static const char rcsid[] =
 #include <unistd.h>
 
 #include "pw.h"
-#include "pwupd.h"
 
 void
 copymkdir(int rootfd, char const * dir, int skelfd, mode_t mode, uid_t uid,

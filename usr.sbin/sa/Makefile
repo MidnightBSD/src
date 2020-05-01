@@ -1,12 +1,17 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/sa/Makefile 264996 2014-04-27 01:15:10Z jmmv $
+# $FreeBSD: stable/11/usr.sbin/sa/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH: ${.CURDIR}/../../usr.bin/lastcomm
+.PATH: ${SRCTOP}/usr.bin/lastcomm
 
 PROG=	sa
 MAN=	sa.8
 SRCS=	main.c db.c pdb.c usrdb.c readrec.c
+
+PACKAGE=acct
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>

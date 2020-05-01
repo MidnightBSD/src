@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)timedc.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/timed/timedc/timedc.c 246209 2013-02-01 14:26:54Z charnier $";
+  "$FreeBSD: stable/11/usr.sbin/timed/timedc/timedc.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include "timedc.h"
@@ -53,7 +52,7 @@ static const char rcsid[] =
 #include <unistd.h>
 
 int trace = 0;
-FILE *fd = 0;
+FILE *fd = NULL;
 int	margc;
 int	fromatty;
 #define	MAX_MARGV	20
@@ -67,7 +66,7 @@ main(int argc, char *argv[])
 {
 	register struct cmd *c;
 
-	openlog("timedc", LOG_ODELAY, LOG_AUTH);
+	openlog("timedc", 0, LOG_AUTH);
 
 	/*
 	 * security dictates!
@@ -83,7 +82,7 @@ main(int argc, char *argv[])
 			printf("?Ambiguous command\n");
 			exit(1);
 		}
-		if (c == 0) {
+		if (c == NULL) {
 			printf("?Invalid command\n");
 			exit(1);
 		}
@@ -109,14 +108,14 @@ main(int argc, char *argv[])
 		if (cmdline[0] == 0)
 			break;
 		makeargv();
-		if (margv[0] == 0)
+		if (margv[0] == NULL)
 			continue;
 		c = getcmd(margv[0]);
 		if (c == (struct cmd *)-1) {
 			printf("?Ambiguous command\n");
 			continue;
 		}
-		if (c == 0) {
+		if (c == NULL) {
 			printf("?Invalid command\n");
 			continue;
 		}
@@ -148,7 +147,7 @@ getcmd(char *name)
 
 	longest = 0;
 	nmatches = 0;
-	found = 0;
+	found = NULL;
 	for (c = cmdtab; c < &cmdtab[NCMDS]; c++) {
 		p = c->c_name;
 		for (q = name; *q == *p++; q++)
@@ -191,7 +190,7 @@ makeargv(void)
 			break;
 		*cp++ = '\0';
 	}
-	*argp++ = 0;
+	*argp++ = NULL;
 }
 
 #define HELPINDENT (sizeof ("directory"))

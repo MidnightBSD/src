@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* dfa.h - declarations for GNU deterministic regexp compiler
    Copyright (C) 1988, 1998 Free Software Foundation, Inc.
 
@@ -18,7 +17,7 @@
 
 /* Written June, 1988 by Mike Haertel */
 
-/* $FreeBSD: stable/10/gnu/usr.bin/grep/dfa.h 146199 2005-05-14 03:02:22Z tjr $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/grep/dfa.h 146199 2005-05-14 03:02:22Z tjr $ */
 
 /* FIXME:
    2.  We should not export so much of the DFA internals.

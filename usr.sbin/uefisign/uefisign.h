@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/uefisign/uefisign.h 279315 2015-02-26 09:15:24Z trasz $
+ * $FreeBSD: stable/11/usr.sbin/uefisign/uefisign.h 332615 2018-04-16 17:13:54Z trasz $
  */
 
 #ifndef EFISIGN_H

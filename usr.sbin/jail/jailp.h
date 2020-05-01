@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 James Gritton.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/jail/jailp.h 302958 2016-07-17 14:15:08Z jamie $
+ * $FreeBSD: stable/11/usr.sbin/jail/jailp.h 341790 2018-12-10 13:47:05Z eugen $
  */
 
 #include <sys/param.h>
@@ -66,6 +67,7 @@
 #define JF_TIMEOUT	0x0200	/* A command (or process kill) timed out */
 #define JF_SLEEPQ	0x0400	/* Waiting on a command and/or timeout */
 #define JF_FROM_RUNQ	0x0800	/* Has already been on the run queue */
+#define JF_SHOW		0x1000	/* -e Exhibit list of configured jails */
 
 #define JF_OP_MASK		(JF_START | JF_SET | JF_STOP)
 #define JF_RESTART		(JF_START | JF_STOP)

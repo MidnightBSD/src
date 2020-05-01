@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright (c) 1996 WIDE Project. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -13,7 +12,7 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: stable/10/usr.sbin/rtsold/Makefile 290149 2015-10-29 16:53:34Z delphij $
+# $FreeBSD: stable/11/usr.sbin/rtsold/Makefile 288963 2015-10-06 23:42:58Z delphij $
 
 PROG=	rtsold
 MAN=	rtsold.8
@@ -21,8 +20,5 @@ MLINKS=	rtsold.8 rtsol.8
 SRCS=	rtsold.c rtsol.c if.c probe.c dump.c rtsock.c
 
 WARNS?=	3
-CFLAGS+= -DHAVE_POLL_H
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
 
 .include <bsd.prog.mk>

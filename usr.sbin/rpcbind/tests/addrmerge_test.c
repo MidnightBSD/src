@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Spectra Logic Corporation
  * All rights reserved.
@@ -28,7 +27,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: stable/10/usr.sbin/rpcbind/tests/addrmerge_test.c 302676 2016-07-12 21:49:08Z asomers $
+ * $FreeBSD: stable/11/usr.sbin/rpcbind/tests/addrmerge_test.c 301967 2016-06-16 15:25:37Z asomers $
  */
 
 #include <rpc/rpc.h>

@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/libopcodes/Makefile.sparc 52923 1999-11-06 21:02:48Z jb $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/libopcodes/Makefile.sparc 52923 1999-11-06 21:02:48Z jb $
 #
 
 SRCS+=		sparc-dis.c sparc-opc.c

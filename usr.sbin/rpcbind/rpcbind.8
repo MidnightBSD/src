@@ -1,8 +1,7 @@
-.\" $MidnightBSD$
 .\" @(#)rpcbind.1m 1.19 92/09/14 SMI; from SVr4
 .\" Copyright 1989 AT&T
 .\" Copyright 1991 Sun Microsystems, Inc.
-.\" $FreeBSD: stable/10/usr.sbin/rpcbind/rpcbind.8 319242 2017-05-30 17:42:48Z ngie $
+.\" $FreeBSD: stable/11/usr.sbin/rpcbind/rpcbind.8 319232 2017-05-30 17:37:40Z ngie $
 .Dd April 19, 2017
 .Dt RPCBIND 8
 .Os
@@ -134,6 +133,8 @@ to use non-privileged ports for outgoing connections, preventing non-privileged
 clients from using
 .Nm
 to connect to services from a privileged port.
+.It Fl W
+Enable libwrap (TCP wrappers) support.
 .It Fl w
 Enable the warmstart feature.
 .Pp

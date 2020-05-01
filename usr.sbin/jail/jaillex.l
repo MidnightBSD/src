@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 James Gritton
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/jail/jaillex.l 316193 2017-03-30 01:37:37Z jamie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/jail/jaillex.l 352280 2019-09-13 07:21:06Z bapt $");
 
 #include <err.h>
 #include <stddef.h>
@@ -47,6 +48,7 @@ static int lineno = 1;
 #define YY_DECL int yylex(void)
 %}
 
+%option noyywrap
 %option noinput
 %option nounput
 

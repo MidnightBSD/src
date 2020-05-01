@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/cc/cc1/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+# $FreeBSD: stable/11/gnu/usr.bin/cc/cc1/Makefile 337477 2018-08-08 18:05:14Z bdrewery $
 
 MAN=
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .include "../Makefile.inc"
 
@@ -21,7 +20,7 @@ LDADD=	${LIBBACKEND} ${LIBCPP} ${LIBDECNUMBER} ${LIBIBERTY}
 
 DOBJS+=	${SRCS:N*.h:R:S/$/.o/g}
 ${PROG}-dummy:	${DOBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${DOBJS} ${LDADD}
+	${CC:N${CCACHE_BIN}} ${CFLAGS} ${LDFLAGS} -o ${.TARGET} ${DOBJS} ${LDADD}
 CLEANFILES+=	${PROG}-dummy
 
 ${PROG}-checksum.c:	${PROG}-dummy

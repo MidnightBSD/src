@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: 0BSD
+ *
  * Copyright (c) 1990, 1991, 1992, 1993, 1996
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -23,7 +24,7 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/rarpd/rarpd.c 300472 2016-05-23 05:43:59Z truckman $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/rarpd/rarpd.c 330449 2018-03-05 07:26:05Z eadler $");
 
 /*
  * rarpd - Reverse ARP Daemon

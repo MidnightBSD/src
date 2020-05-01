@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/gnu/usr.bin/binutils/libopcodes/Makefile 218822 2011-02-18 20:54:12Z dim $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/libopcodes/Makefile 218822 2011-02-18 20:54:12Z dim $
 
 .include "../Makefile.inc0"
 

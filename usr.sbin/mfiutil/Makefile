@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/mfiutil/Makefile 272041 2014-09-23 21:38:05Z smh $
+# $FreeBSD: stable/11/usr.sbin/mfiutil/Makefile 275054 2014-11-25 16:57:27Z bapt $
 PROG=	mfiutil
 
 SRCS=	mfiutil.c mfi_bbu.c mfi_cmd.c mfi_config.c mfi_drive.c mfi_evt.c \
@@ -9,8 +8,7 @@ MAN8=	mfiutil.8
 
 CFLAGS.gcc+= -fno-builtin-strftime
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 # Here be dragons
 .ifdef DEBUG

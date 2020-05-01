@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/gnu/usr.bin/gdb/arch/arm/armfbsd-tdep.c 173705 2007-11-17 21:30:03Z cognet $ */
+/* $FreeBSD: stable/11/gnu/usr.bin/gdb/arch/arm/armfbsd-tdep.c 173705 2007-11-17 21:30:03Z cognet $ */
 
 /* Target-specific functions for ARM running under NetBSD.
    Copyright 2002, 2003 Free Software Foundation, Inc.

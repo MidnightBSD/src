@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Michael Smith <msmith@freebsd.org>
  * All rights reserved.
  *
@@ -22,9 +24,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * 
- * $MidnightBSD$
- * $FreeBSD: stable/10/usr.sbin/memcontrol/memcontrol.c 241829 2012-10-22 02:12:15Z eadler $
+ *
+ * $FreeBSD: stable/11/usr.sbin/memcontrol/memcontrol.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>

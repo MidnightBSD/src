@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.sbin/rtadvd/if.h 224144 2011-07-17 19:24:54Z hrs $	*/
+/*	$FreeBSD: stable/11/usr.sbin/rtadvd/if.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: if.h,v 1.10 2003/02/24 11:29:10 ono Exp $	*/
 
 /*

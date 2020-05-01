@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #if !defined SAVEDIR_H_
 # define SAVEDIR_H_
 

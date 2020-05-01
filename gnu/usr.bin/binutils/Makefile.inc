@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: src/gnu/usr.bin/binutils/Makefile.inc,v 1.9 2006/09/12 19:24:01 obrien Exp $
+# $FreeBSD: stable/11/gnu/usr.bin/binutils/Makefile.inc 298107 2016-04-16 07:45:30Z gjb $
 
 WARNS?=	3
+PACKAGE=	binutils
 
 .include "../Makefile.inc"

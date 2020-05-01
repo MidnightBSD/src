@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/nandtool/nand_read.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/nandtool/nand_read.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +52,7 @@ int nand_read(struct cmd_param *params)
 	}
 
 	if ((out = param_get_string(params, "out"))) {
-		out_fd = open(out, O_WRONLY|O_CREAT);
+		out_fd = open(out, O_WRONLY|O_CREAT, 0666);
 		if (out_fd == -1) {
 			perrorf("Cannot open %s for writing", out);
 			return (1);

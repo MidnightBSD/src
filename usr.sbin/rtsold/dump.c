@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: dump.c,v 1.13 2003/10/05 00:09:36 itojun Exp $	*/
 
 /*
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/rtsold/dump.c 254462 2013-08-17 19:23:35Z hrs $
+ * $FreeBSD: stable/11/usr.sbin/rtsold/dump.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

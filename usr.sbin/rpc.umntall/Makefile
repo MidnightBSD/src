@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.4 (Berkeley) 6/22/95
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/rpc.umntall/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	rpc.umntall
 MAN=	rpc.umntall.8

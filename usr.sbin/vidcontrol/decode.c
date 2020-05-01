@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994 Søren Schmidt
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/vidcontrol/decode.c 228976 2011-12-30 00:59:08Z uqs $";
+  "$FreeBSD: stable/11/usr.sbin/vidcontrol/decode.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <stdio.h>
