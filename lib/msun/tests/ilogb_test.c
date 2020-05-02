@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Stefan Farfeleder
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/tests/ilogb_test.c 293267 2016-01-06 20:21:40Z ngie $
+ * $FreeBSD: stable/11/lib/msun/tests/ilogb_test.c 292328 2015-12-16 09:11:11Z ngie $
  */
 
 #include <assert.h>

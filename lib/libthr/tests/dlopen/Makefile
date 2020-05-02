@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libthr/tests/dlopen/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/lib/libthr/tests/dlopen/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSRC=	${SRCTOP}/contrib/netbsd-tests/lib/libpthread/dlopen
 
@@ -19,8 +18,7 @@ NETBSD_ATF_TESTS_C+=	main_pthread_create_test
 #NETBSD_ATF_TESTS_C+=	dso_pthread_create_test
 
 .for t in dlopen_test main_pthread_create_test
-DPADD.$t+=	${LIBPTHREAD}
-LDADD.$t+=	-lpthread
+LIBADD.${t}+=	pthread
 .endfor
 .endif
 

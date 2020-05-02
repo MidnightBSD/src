@@ -1,10 +1,11 @@
-# $FreeBSD: stable/10/kerberos5/tools/asn1_compile/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/kerberos5/tools/asn1_compile/Makefile 319183 2017-05-30 04:13:06Z ngie $
 
 PROG=	asn1_compile
 MAN=
-LIBROKEN_A=	${.OBJDIR}/../../lib/libroken/libroken.a
-LDADD=	${LIBROKEN_A} ${LIBVERS}
-DPADD=	${LIBROKEN_A} ${LIBVERS}
+LIBROKEN_A=	${.OBJDIR:H:H}/lib/libroken/libroken.a
+LIBADD=	vers
+LDADD=	${LIBROKEN_A}
+DPADD=	${LIBROKEN_A}
 
 SRCS=	\
 	asn1parse.y \

@@ -1,8 +1,8 @@
-#$FreeBSD: stable/10/kerberos5/lib/libheimbase/Makefile 236337 2012-05-30 22:21:25Z obrien $
+#$FreeBSD: stable/11/kerberos5/lib/libheimbase/Makefile 275022 2014-11-25 09:57:42Z bapt $
 
 LIB=	heimbase
 LDFLAGS=	-Wl,--no-undefined
-LDADD=	-lpthread
+LIBADD=	pthread
 VERSION_MAP= ${KRB5DIR}/base/version-script.map
 
 INCS=	heimbase.h

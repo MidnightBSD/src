@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_sqrt.c 1.3 95/01/18 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_sqrt.c 176720 2008-03-02 01:47:58Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_sqrt.c 176720 2008-03-02 01:47:58Z das $");
 
 /* __ieee754_sqrt(x)
  * Return correctly rounded sqrt.

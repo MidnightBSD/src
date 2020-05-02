@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Written by J.T. Conklin <jtc@netbsd.org>.
  * Public domain.
@@ -6,7 +5,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_copysignf.S 217108 2011-01-07 16:13:12Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/i387/s_copysignf.S 217108 2011-01-07 16:13:12Z kib $");
 /* RCSID("$NetBSD: s_copysignf.S,v 1.3 1995/05/08 23:53:25 jtc Exp $") */
 
 ENTRY(copysignf)

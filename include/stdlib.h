@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdlib.h	8.5 (Berkeley) 5/19/95
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/stdlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STDLIB_H_
@@ -36,6 +36,8 @@
 #include <sys/cdefs.h>
 #include <sys/_null.h>
 #include <sys/_types.h>
+
+__NULLABILITY_PRAGMA_PUSH
 
 #if __BSD_VISIBLE
 #ifndef _RUNE_T_DECLARED
@@ -81,31 +83,29 @@ extern int ___mb_cur_max(void);
 
 _Noreturn void	 abort(void);
 int	 abs(int) __pure2;
-int	 atexit(void (*)(void));
+int	 atexit(void (* _Nonnull)(void));
 double	 atof(const char *);
 int	 atoi(const char *);
 long	 atol(const char *);
 void	*bsearch(const void *, const void *, size_t,
-	    size_t, int (*)(const void *, const void *));
-void	*calloc(size_t, size_t) __malloc_like;
-int	clearenv(void);
+	    size_t, int (*)(const void * _Nonnull, const void *));
+void	*calloc(size_t, size_t) __malloc_like __result_use_check
+	     __alloc_size2(1, 2);
+-int    clearenv(void);
 div_t	 div(int, int) __pure2;
 _Noreturn void	 exit(int);
 void	 free(void *);
 char	*getenv(const char *);
 long	 labs(long) __pure2;
 ldiv_t	 ldiv(long, long) __pure2;
-void	*malloc(size_t) __malloc_like;
+void	*malloc(size_t) __malloc_like __result_use_check __alloc_size(1);
 int	 mblen(const char *, size_t);
 size_t	 mbstowcs(wchar_t * __restrict , const char * __restrict, size_t);
 int	 mbtowc(wchar_t * __restrict, const char * __restrict, size_t);
 void	 qsort(void *, size_t, size_t,
-	    int (*)(const void *, const void *));
+	    int (* _Nonnull)(const void *, const void *));
 int	 rand(void);
-void	*realloc(void *, size_t);
-#if __BSD_VISIBLE
-void    *reallocarray(void *, size_t, size_t);
-#endif
+void	*realloc(void *, size_t) __result_use_check __alloc_size(2);
 void	 srand(unsigned);
 double	 strtod(const char * __restrict, char ** __restrict);
 float	 strtof(const char * __restrict, char ** __restrict);
@@ -159,7 +159,8 @@ _Noreturn void	 _Exit(int);
  * If we're in a mode greater than C99, expose C11 functions.
  */
 #if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
-void *	aligned_alloc(size_t, size_t) __malloc_like;
+void *	aligned_alloc(size_t, size_t) __malloc_like __alloc_align(1)
+	    __alloc_size(2);
 int	at_quick_exit(void (*)(void));
 _Noreturn void
 	quick_exit(int);
@@ -261,6 +262,11 @@ void	 arc4random_buf(void *, size_t);
 void	 arc4random_stir(void);
 __uint32_t 
 	 arc4random_uniform(__uint32_t);
+#ifdef __BLOCKS__
+int	 atexit_b(void (^ _Nonnull)(void));
+void	*bsearch_b(const void *, const void *, size_t,
+	    size_t, int (^ _Nonnull)(const void *, const void *));
+#endif
 char	*getbsize(int *, long *);
 					/* getcap(3) functions */
 char	*cgetcap(char *, const char *, int);
@@ -276,23 +282,35 @@ int	 cgetustr(char *, const char *, char **);
 
 int	 daemon(int, int);
 char	*devname(__dev_t, __mode_t);
-char 	*devname_r(__dev_t, __mode_t, char *, int);
+char	*devname_r(__dev_t, __mode_t, char *, int);
 char	*fdevname(int);
-char 	*fdevname_r(int, char *, int);
+char	*fdevname_r(int, char *, int);
 int	 getloadavg(double [], int);
 const char *
 	 getprogname(void);
 
-int	 heapsort(void *, size_t, size_t, int (*)(const void *, const void *));
+int	 heapsort(void *, size_t, size_t,
+	    int (* _Nonnull)(const void *, const void *));
+#ifdef __BLOCKS__
+int	 heapsort_b(void *, size_t, size_t,
+	    int (^ _Nonnull)(const void *, const void *));
+void	 qsort_b(void *, size_t, size_t,
+	    int (^ _Nonnull)(const void *, const void *));
+#endif
 int	 l64a_r(long, char *, int);
 int	 mergesort(void *, size_t, size_t, int (*)(const void *, const void *));
+#ifdef __BLOCKS__
+int	 mergesort_b(void *, size_t, size_t, int (^)(const void *, const void *));
+#endif
 int	 mkostemp(char *, int);
 int	 mkostemps(char *, int, int);
 void	 qsort_r(void *, size_t, size_t, void *,
 	    int (*)(void *, const void *, const void *));
 int	 radixsort(const unsigned char **, int, const unsigned char *,
 	    unsigned);
-void    *reallocf(void *, size_t);
+void	*reallocarray(void *, size_t, size_t) __result_use_check
+	    __alloc_size2(2, 3);
+void	*reallocf(void *, size_t) __result_use_check __alloc_size(2);
 int	 rpmatch(const char *);
 void	 setprogname(const char *);
 int	 sradixsort(const unsigned char **, int, const unsigned char *,
@@ -310,6 +328,27 @@ __uint64_t
 
 extern char *suboptarg;			/* getsubopt(3) external variable */
 #endif /* __BSD_VISIBLE */
+
+#if __EXT1_VISIBLE
+
+#ifndef _ERRNO_T_DEFINED
+#define _ERRNO_T_DEFINED
+typedef int errno_t;
+#endif
+
+/* K.3.6 */
+typedef void (*constraint_handler_t)(const char * __restrict,
+    void * __restrict, errno_t);
+/* K.3.6.1.1 */
+constraint_handler_t set_constraint_handler_s(constraint_handler_t handler);
+/* K.3.6.1.2 */
+_Noreturn void abort_handler_s(const char * __restrict, void * __restrict,
+    errno_t);
+/* K3.6.1.3 */
+void ignore_handler_s(const char * __restrict, void * __restrict, errno_t);
+#endif /* __EXT1_VISIBLE */
+
 __END_DECLS
+__NULLABILITY_PRAGMA_POP
 
 #endif /* !_STDLIB_H_ */

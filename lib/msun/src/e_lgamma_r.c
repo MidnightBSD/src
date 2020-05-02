@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)e_lgamma_r.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_lgamma_r.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_lgamma_r.c 272845 2014-10-09 22:39:52Z kargl $");
 
 /* __ieee754_lgamma_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function

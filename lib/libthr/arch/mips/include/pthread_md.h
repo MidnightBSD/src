@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from: src/lib/libthr/arch/arm/include/pthread_md.h,v 1.3 2005/10/29 13:40:31 davidxu
- * $FreeBSD: stable/10/lib/libthr/arch/mips/include/pthread_md.h 232579 2012-03-06 03:27:58Z gonzo $
+ * $FreeBSD: stable/11/lib/libthr/arch/mips/include/pthread_md.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -51,12 +50,6 @@ struct tcb {
 	struct pthread		*tcb_thread;
 };
 
-/*
- * The tcb constructors.
- */
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *);
-
 /* Called from the thread to set its private data. */
 static __inline void
 _tcb_set(struct tcb *tcb)
@@ -76,8 +69,6 @@ _tcb_get(void)
 	sysarch(MIPS_GET_TLS, &tcb);
 	return tcb;
 }
-
-extern struct pthread *_thr_initial;
 
 static __inline struct pthread *
 _get_curthread(void)

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb10.c 345541 2019-03-26 13:46:47Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb10.c 353135 2019-10-06 03:59:05Z kevans $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
@@ -90,7 +89,8 @@ void
 libusb_set_debug(libusb_context *ctx, int level)
 {
 	ctx = GET_CONTEXT(ctx);
-	if (ctx)
+	/* debug_fixed is set when the environment overrides libusb_set_debug */
+	if (ctx && ctx->debug_fixed == 0)
 		ctx->debug = level;
 }
 
@@ -131,7 +131,7 @@ libusb_init(libusb_context **context)
 {
 	struct libusb_context *ctx;
 	pthread_condattr_t attr;
-	char *debug;
+	char *debug, *ep;
 	int ret;
 
 	ctx = malloc(sizeof(*ctx));
@@ -142,9 +142,23 @@ libusb_init(libusb_context **context)
 
 	debug = getenv("LIBUSB_DEBUG");
 	if (debug != NULL) {
-		ctx->debug = atoi(debug);
-		if (ctx->debug != 0)
+		/*
+		 * If LIBUSB_DEBUG is set, we'll honor that and use it to
+		 * override libusb_set_debug calls.
+		 */
+		errno = 0;
+		ctx->debug = strtol(debug, &ep, 10);
+		if (errno == 0 && *ep == '\0') {
 			ctx->debug_fixed = 1;
+		} else {
+			/*
+			 * LIBUSB_DEBUG conversion failed for some reason, but
+			 * we don't care about the specifics all that much.  We
+			 * can't use it either way.  Force it to the default,
+			 * 0, in case we had a partial number.
+			 */
+			ctx->debug = 0;
+		}
 	}
 	TAILQ_INIT(&ctx->pollfds);
 	TAILQ_INIT(&ctx->tr_done);
@@ -1083,7 +1097,6 @@ libusb10_isoc_proxy(struct libusb20_transfer *pxfer)
 	uint16_t iso_packets;
 	uint16_t i;
 	uint8_t status;
-	uint8_t flags;
 
 	status = libusb20_tr_get_status(pxfer);
 	sxfer = libusb20_tr_get_priv_sc1(pxfer);
@@ -1091,7 +1104,7 @@ libusb10_isoc_proxy(struct libusb20_transfer *pxfer)
 	iso_packets = libusb20_tr_get_max_frames(pxfer);
 
 	if (sxfer == NULL)
-		return;			/* cancelled - nothing to do */
+		return; /* cancelled - nothing to do */
 
 	uxfer = (struct libusb_transfer *)(
 	    ((uint8_t *)sxfer) + sizeof(*sxfer));
@@ -1100,16 +1113,13 @@ libusb10_isoc_proxy(struct libusb20_transfer *pxfer)
 		iso_packets = uxfer->num_iso_packets;
 
 	if (iso_packets == 0)
-		return;			/* nothing to do */
+		return; /* nothing to do */
 
 	/* make sure that the number of ISOCHRONOUS packets is valid */
 	uxfer->num_iso_packets = iso_packets;
 
-	flags = uxfer->flags;
-
 	switch (status) {
 	case LIBUSB20_TRANSFER_COMPLETED:
-
 		/* update actual length */
 		uxfer->actual_length = actlen;
 		for (i = 0; i != iso_packets; i++) {
@@ -1118,9 +1128,7 @@ libusb10_isoc_proxy(struct libusb20_transfer *pxfer)
 		}
 		libusb10_complete_transfer(pxfer, sxfer, LIBUSB_TRANSFER_COMPLETED);
 		break;
-
 	case LIBUSB20_TRANSFER_START:
-
 		/* setup length(s) */
 		actlen = 0;
 		for (i = 0; i != iso_packets; i++) {
@@ -1139,7 +1147,6 @@ libusb10_isoc_proxy(struct libusb20_transfer *pxfer)
 		/* fork another USB transfer, if any */
 		libusb10_submit_transfer_sub(libusb20_tr_get_priv_sc0(pxfer), uxfer->endpoint);
 		break;
-
 	default:
 		libusb10_complete_transfer(pxfer, sxfer, libusb10_convert_error(status));
 		break;

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/include/malloc.h,v 1.5 2001/11/07 23:14:31 obrien Exp $ */
+/* $FreeBSD: stable/11/include/malloc.h 86178 2001-11-07 23:14:31Z obrien $ */
 #if __STDC__
 #error "<malloc.h> has been replaced by <stdlib.h>"
 #else

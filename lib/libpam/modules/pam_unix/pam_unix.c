@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_unix/pam_unix.c 325802 2017-11-14 10:49:07Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_unix/pam_unix.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

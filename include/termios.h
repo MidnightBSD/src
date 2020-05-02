@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)termios.h	8.3 (Berkeley) 3/28/94
- * $FreeBSD: stable/10/include/termios.h 319653 2017-06-07 11:43:36Z kib $
+ * $FreeBSD: stable/11/include/termios.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _TERMIOS_H_
@@ -82,7 +81,7 @@ int	tcflow(int, int);
 int	tcflush(int, int);
 int	tcsendbreak(int, int);
 
-#if __POSIX_VISIBLE >= 200112 || __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200112
 pid_t	tcgetsid(int);
 #endif
 #if __BSD_VISIBLE

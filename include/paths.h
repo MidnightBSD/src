@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/include/paths.h 312382 2017-01-18 14:14:00Z avg $
+ * $FreeBSD: stable/11/include/paths.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PATHS_H_
@@ -37,7 +36,7 @@
 #include <sys/cdefs.h>
 
 /* Default search path. */
-#define	_PATH_DEFPATH	"/usr/bin:/bin"
+#define	_PATH_DEFPATH	"/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 /* All standard utilities path. */
 #define	_PATH_STDPATH	"/usr/bin:/bin:/usr/sbin:/sbin"
 /* Locate system binaries. */
@@ -57,6 +56,7 @@
 #define	_PATH_DRUM	"/dev/drum"
 #define	_PATH_ESDB	"/usr/share/i18n/esdb"
 #define	_PATH_ETC	"/etc"
+#define	_PATH_FIRMWARE	"/usr/share/firmware"
 #define	_PATH_FTPUSERS	"/etc/ftpusers"
 #define	_PATH_FWMEM	"/dev/fwmem"
 #define	_PATH_GBDE	"/sbin/gbde"
@@ -110,7 +110,7 @@ __END_DECLS
 
 #ifdef RESCUE
 #undef	_PATH_DEFPATH
-#define	_PATH_DEFPATH	"/rescue:/usr/bin:/bin"
+#define	_PATH_DEFPATH	"/rescue:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 #undef	_PATH_STDPATH
 #define	_PATH_STDPATH	"/rescue:/usr/bin:/bin:/usr/sbin:/sbin"
 #undef	_PATH_SYSPATH

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr.h,v 1.19 2000/07/17 05:00:45 matt Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)xdr.h 1.19 87/04/22 SMI
  *	from: @(#)xdr.h	2.2 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/include/rpc/xdr.h 297259 2016-03-25 00:39:01Z pfg $
+ * $FreeBSD: stable/11/include/rpc/xdr.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

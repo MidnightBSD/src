@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_log.c 1.3 95/01/18 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_log.c 251292 2013-06-03 09:14:31Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_log.c 251292 2013-06-03 09:14:31Z das $");
 
 /* __ieee754_log(x)
  * Return the logrithm of x

@@ -1,11 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libjail/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD: stable/11/lib/libjail/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=lib${LIB}
 LIB=	jail
 SHLIBDIR?= /lib
 SHLIB_MAJOR= 1
 SRCS=	jail.c jail_getid.c
 INCS=	jail.h
+
+PACKAGE=jail
 
 MAN=	jail.3
 

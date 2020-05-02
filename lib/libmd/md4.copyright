@@ -1,4 +1,4 @@
-.\" $FreeBSD: stable/10/lib/libmd/md4.copyright 50476 1999-08-28 00:22:10Z peter $
+.\" $FreeBSD: stable/11/lib/libmd/md4.copyright 50476 1999-08-28 00:22:10Z peter $
 Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 rights reserved.
 .Pp

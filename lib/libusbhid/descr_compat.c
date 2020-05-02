@@ -31,7 +31,7 @@
 #ifdef HID_COMPAT7
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libusbhid/descr_compat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

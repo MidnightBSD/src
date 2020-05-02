@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)talkd.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: stable/10/include/protocols/talkd.h 203965 2010-02-16 19:46:46Z imp $
+ * $FreeBSD: stable/11/include/protocols/talkd.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PROTOCOLS_TALKD_H_

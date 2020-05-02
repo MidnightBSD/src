@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_rem_pio2f.c -- float version of e_rem_pio2.c
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  * Debugged and optimized by Bruce D. Evans.
@@ -16,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_rem_pio2f.c 239195 2012-08-11 15:47:22Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_rem_pio2f.c 239195 2012-08-11 15:47:22Z dim $");
 
 /* __ieee754_rem_pio2f(x,y)
  *

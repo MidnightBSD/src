@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/librt/mq.c 213153 2010-09-25 01:57:47Z davidxu $
+ * $FreeBSD: stable/11/lib/librt/mq.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
@@ -273,8 +272,9 @@ __mq_unlink(const char *path)
 	return __sys_kmq_unlink(path);
 }
 
+#pragma weak mq_getfd_np
 int
-__mq_oshandle(mqd_t mqd)
+mq_getfd_np(mqd_t mqd)
 {
 
 	return (mqd->oshandle);

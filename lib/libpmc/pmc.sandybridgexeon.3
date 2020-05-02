@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2012 Hiren Panchasara <hiren.panchasara@gmail.com>
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libpmc/pmc.sandybridgexeon.3 320106 2017-06-19 15:13:20Z avg $
+.\" $FreeBSD: stable/11/lib/libpmc/pmc.sandybridgexeon.3 279832 2015-03-10 01:23:47Z rstone $
 .\"
 .Dd October 18, 2012
 .Dt PMC.SANDYBRIDGEXEON 3
@@ -975,23 +974,24 @@ Split locks in SQ.
 .Xr pmc 3 ,
 .Xr pmc.atom 3 ,
 .Xr pmc.core 3 ,
+.Xr pmc.corei7 3 ,
+.Xr pmc.corei7uc 3 ,
+.Xr pmc.haswelluc 3 ,
 .Xr pmc.iaf 3 ,
-.Xr pmc.ucf 3 ,
+.Xr pmc.ivybridge 3 ,
+.Xr pmc.ivybridgexeon 3 ,
 .Xr pmc.k7 3 ,
 .Xr pmc.k8 3 ,
 .Xr pmc.p4 3 ,
 .Xr pmc.p5 3 ,
 .Xr pmc.p6 3 ,
-.Xr pmc.corei7 3 ,
-.Xr pmc.corei7uc 3 ,
-.Xr pmc.ivybridge 3 ,
-.Xr pmc.ivybridgexeon 3 ,
 .Xr pmc.sandybridge 3 ,
 .Xr pmc.sandybridgeuc 3 ,
-.Xr pmc.westmere 3 ,
-.Xr pmc.westmereuc 3 ,
 .Xr pmc.soft 3 ,
 .Xr pmc.tsc 3 ,
+.Xr pmc.ucf 3 ,
+.Xr pmc.westmere 3 ,
+.Xr pmc.westmereuc 3 ,
 .Xr pmc_cpuinfo 3 ,
 .Xr pmclog 3 ,
 .Xr hwpmc 4
@@ -1001,12 +1001,11 @@ The
 library first appeared in
 .Fx 6.0 .
 .Sh AUTHORS
+.An -nosplit
 The
 .Lb libpmc
 library was written by
-.An "Joseph Koshy"
-.Aq jkoshy@FreeBSD.org .
+.An Joseph Koshy Aq Mt jkoshy@FreeBSD.org .
 The support for the Sandy Bridge Xeon
 microarchitecture was written by
-.An "Hiren Panchasara"
-.Aq hiren.panchasara@gmail.com .
+.An Hiren Panchasara Aq Mt hiren.panchasara@gmail.com .

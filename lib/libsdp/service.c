@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * service.c
  *
@@ -27,12 +26,13 @@
  * SUCH DAMAGE.
  *
  * $Id: service.c,v 1.1 2004/01/13 19:32:36 max Exp $
- * $FreeBSD: stable/10/lib/libsdp/service.c 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD: stable/11/lib/libsdp/service.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/uio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <string.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* from: FreeBSD: head/lib/msun/src/s_tanhl.c XXX */
 
 /* @(#)s_tanh.c 5.1 93/09/24 */
@@ -14,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tanhl.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tanhl.c 324006 2017-09-26 09:01:56Z dim $");
 
 /*
  * See s_tanh.c for complete comments.
@@ -114,7 +113,9 @@ long double
 tanhl(long double x)
 {
 	long double hi,lo,s,x2,x4,z;
+#if LDBL_MANT_DIG == 113
 	double dx2;
+#endif
 	int16_t jx,ix;
 
 	GET_LDBL_EXPSIGN(jx,x);

@@ -1,7 +1,4 @@
-/* $MidnightBSD$ */
 /*-
- * SPDX-License-Identifier: BSD-3-Clause
- *
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -31,7 +28,7 @@
  *
  *	@(#)stddef.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: stable/10/include/stddef.h 325090 2017-10-29 04:33:50Z cy $
+ * $FreeBSD: stable/11/include/stddef.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STDDEF_H_

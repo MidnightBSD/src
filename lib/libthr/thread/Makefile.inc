@@ -1,9 +1,10 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libthr/thread/Makefile.inc 296162 2016-02-28 17:52:33Z kib $
 
 # thr sources
 .PATH: ${.CURDIR}/thread
 
-SRCS+=  thr_affinity.c \
+SRCS+= \
+	thr_affinity.c \
 	thr_attr.c \
 	thr_barrier.c \
 	thr_barrierattr.c \
@@ -13,6 +14,7 @@ SRCS+=  thr_affinity.c \
 	thr_cond.c \
 	thr_condattr.c \
 	thr_create.c \
+	thr_ctrdtr.c \
 	thr_detach.c \
 	thr_equal.c \
 	thr_event.c \
@@ -34,6 +36,7 @@ SRCS+=  thr_affinity.c \
 	thr_mutexattr.c \
 	thr_once.c \
 	thr_printf.c \
+	thr_pshared.c \
 	thr_pspinlock.c \
 	thr_resume_np.c \
 	thr_rtld.c \

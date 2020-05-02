@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ====================================================
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -12,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: stable/10/lib/msun/src/math_private.h 284810 2015-06-25 13:01:10Z tijl $
+ * $FreeBSD: stable/11/lib/msun/src/math_private.h 336767 2018-07-27 17:39:36Z dim $
  */
 
 #ifndef _MATH_PRIVATE_H_
@@ -47,6 +46,47 @@
 #endif
 #else /* __arm__ */
 #define	IEEE_WORD_ORDER	BYTE_ORDER
+#endif
+
+/* A union which permits us to convert between a long double and
+   four 32 bit ints.  */
+
+#if IEEE_WORD_ORDER == BIG_ENDIAN
+
+typedef union
+{
+  long double value;
+  struct {
+    u_int32_t mswhi;
+    u_int32_t mswlo;
+    u_int32_t lswhi;
+    u_int32_t lswlo;
+  } parts32;
+  struct {
+    u_int64_t msw;
+    u_int64_t lsw;
+  } parts64;
+} ieee_quad_shape_type;
+
+#endif
+
+#if IEEE_WORD_ORDER == LITTLE_ENDIAN
+
+typedef union
+{
+  long double value;
+  struct {
+    u_int32_t lswlo;
+    u_int32_t lswhi;
+    u_int32_t mswlo;
+    u_int32_t mswhi;
+  } parts32;
+  struct {
+    u_int64_t lsw;
+    u_int64_t msw;
+  } parts64;
+} ieee_quad_shape_type;
+
 #endif
 
 #if IEEE_WORD_ORDER == BIG_ENDIAN
@@ -295,8 +335,9 @@ do {								\
 
 /* Support switching the mode to FP_PE if necessary. */
 #if defined(__i386__) && !defined(NO_FPSETPREC)
-#define	ENTERI()				\
-	long double __retval;			\
+#define	ENTERI() ENTERIT(long double)
+#define	ENTERIT(returntype)			\
+	returntype __retval;			\
 	fp_prec_t __oprec;			\
 						\
 	if ((__oprec = fpgetprec()) != FP_PE)	\
@@ -307,9 +348,22 @@ do {								\
 		fpsetprec(__oprec);		\
 	RETURNF(__retval);			\
 } while (0)
+#define	ENTERV()				\
+	fp_prec_t __oprec;			\
+						\
+	if ((__oprec = fpgetprec()) != FP_PE)	\
+		fpsetprec(FP_PE)
+#define	RETURNV() do {				\
+	if (__oprec != FP_PE)			\
+		fpsetprec(__oprec);		\
+	return;			\
+} while (0)
 #else
-#define	ENTERI(x)
+#define	ENTERI()
+#define	ENTERIT(x)
 #define	RETURNI(x)	RETURNF(x)
+#define	ENTERV()
+#define	RETURNV()	return
 #endif
 
 /* Default return statement if hack*_t() is not used. */

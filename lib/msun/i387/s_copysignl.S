@@ -1,11 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * Based on code written by J.T. Conklin <jtc@NetBSD.org>.
  * Public domain.
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_copysignl.S 217108 2011-01-07 16:13:12Z kib $")
+__FBSDID("$FreeBSD: stable/11/lib/msun/i387/s_copysignl.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(copysignl)
 	movl	24(%esp),%edx

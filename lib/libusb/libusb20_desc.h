@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb20_desc.h 277847 2015-01-28 19:49:53Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb20_desc.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  * Copyright (c) 2007-2008 Daniel Drake.  All rights reserved.

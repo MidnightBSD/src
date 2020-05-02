@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2011 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_fma.c 252170 2013-06-24 19:12:17Z eadler $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_fma.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <fenv.h>
 #include <float.h>

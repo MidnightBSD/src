@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* from: FreeBSD: head/lib/msun/ld128/s_expl.c 251345 2013-06-03 20:09:22Z kargl */
 
 /*-
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/ld128/k_expl.h 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/ld128/k_expl.h 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * ld128 version of k_expl.h.  See ../ld80/s_expl.c for most comments.

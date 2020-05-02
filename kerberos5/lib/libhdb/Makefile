@@ -1,11 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/libhdb/Makefile 287428 2015-09-03 11:33:33Z ume $
+# $FreeBSD: stable/11/kerberos5/lib/libhdb/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 LIB=	hdb
 LDFLAGS=	-Wl,--no-undefined ${LDAPLDFLAGS}
 VERSION_MAP=	${KRB5DIR}/lib/hdb/version-script.map
-LDADD=	-lasn1 -lcom_err -lkrb5 -lroken -lheimsqlite ${LDAPLDADD}
-DPADD=	${LIBASN1} ${LIBCOM_ERR} ${LIBKRB5} ${LIBROKEN} ${LIBHEIMSQLITE} ${LDAPDPADD}
+LIBADD=	asn1 com_err krb5 roken sqlite3
+LDADD=	${LDAPLDADD}
+DPADD=	${LDAPDPADD}
 
 MAN=	HDB.3 hdb_entry_ex.3
 
@@ -57,8 +57,9 @@ SRCS=	common.c \
 	${GEN:S/.x$/.c/:S/.hx$/.h/}
 
 CFLAGS+=-I${KRB5DIR}/lib/hdb -I${KRB5DIR}/lib/asn1 \
-	-I${KRB5DIR}/lib/roken -I${KRB5DIR}/lib/sqlite \
+	-I${KRB5DIR}/lib/roken -I${SRCTOP}/contrib/sqlite3/ \
 	-I${KRB5DIR}/lib/krb5 \
+	-I${SRCTOP}/contrib/com_err \
 	-I. ${LDAPCFLAGS}
 CFLAGS+=-DHDB_DB_DIR="\"/var/heimdal\""
 
@@ -86,16 +87,17 @@ CLEANFILES=	${GEN} ${GEN:S/.x$/.c/:S/.hx$/.h/} hdb_asn1_files \
 		hdb_asn1-template.[ch]*
 
 .ORDER: ${GEN}
+${GEN:[2..-1]}: .NOMETA
 ${GEN}: hdb.asn1
 	${ASN1_COMPILE} ${.ALLSRC:M*.asn1} hdb_asn1
 
 .SUFFIXES: .h .c .x .hx
 
 .x.c:   
-	cmp -s ${.IMPSRC} ${.TARGET} 2> /dev/null || cp ${.IMPSRC} ${.TARGET}
+	${CP} ${.IMPSRC} ${.TARGET}
 
 .hx.h:
-	cmp -s ${.IMPSRC} ${.TARGET} 2> /dev/null || cp ${.IMPSRC} ${.TARGET}
+	${CP} ${.IMPSRC} ${.TARGET}
 
 .include <bsd.lib.mk>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, Oracle America, Inc.
  *
@@ -36,7 +35,7 @@
 %/*static char sccsid[] = "from: @(#)nfs_prot.x	2.1 88/08/01 4.0 RPCSRC";*/
 %#endif /* not lint */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/nfs_prot.x 272850 2014-10-09 23:05:32Z hrs $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/nfs_prot.x 259117 2013-12-09 04:26:50Z hrs $");
 #endif
 
 const NFS_PORT          = 2049;

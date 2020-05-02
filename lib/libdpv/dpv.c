@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2016 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libdpv/dpv.c 295107 2016-02-01 00:44:29Z dteske $");
+__FBSDID("$FreeBSD: stable/11/lib/libdpv/dpv.c 294862 2016-01-27 00:02:51Z dteske $");
 
 #include <sys/stat.h>
 #include <sys/time.h>

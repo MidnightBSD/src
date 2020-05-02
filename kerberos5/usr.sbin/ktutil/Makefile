@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/usr.sbin/ktutil/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
+# $FreeBSD: stable/11/kerberos5/usr.sbin/ktutil/Makefile 288199 2015-09-24 23:15:24Z bdrewery $
 
 PROG=	ktutil
 MAN=	ktutil.8
@@ -18,10 +17,7 @@ SRCS=	add.c \
 	rename.c
 
 CFLAGS+=-I${KRB5DIR}/lib/roken -I${KRB5DIR}/lib/sl -I.
-DPADD=	${LIBKADM5CLNT} ${LIBKRB5} ${LIBSL} ${LIBROKEN} ${LIBVERS} \
-	${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBEDIT}
-LDADD=	-lkadm5clnt -lkrb5 ${LIBSL} -lroken ${LIBVERS} \
-	-lasn1 -lcrypto -lcrypt -ledit
+LIBADD=	kadm5clnt krb5 roken crypto edit sl vers
 
 CLEANFILES=	ktutil-commands.h ktutil-commands.c
 

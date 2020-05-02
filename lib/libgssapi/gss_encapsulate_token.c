@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libgssapi/gss_encapsulate_token.c 298314 2016-04-20 00:49:37Z pfg $
+ * $FreeBSD: stable/11/lib/libgssapi/gss_encapsulate_token.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <gssapi/gssapi.h>

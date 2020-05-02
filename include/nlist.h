@@ -33,7 +33,7 @@
  *
  *	@(#)nlist.h	8.2 (Berkeley) 1/21/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/nlist.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NLIST_H_

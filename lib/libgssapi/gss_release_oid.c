@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden). 
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: stable/10/lib/libgssapi/gss_release_oid.c 229784 2012-01-07 16:13:56Z uqs $ */
+/* $FreeBSD: stable/11/lib/libgssapi/gss_release_oid.c 331722 2018-03-29 02:50:57Z eadler $ */
 
 #include <gssapi/gssapi.h>
 #include <stdlib.h>

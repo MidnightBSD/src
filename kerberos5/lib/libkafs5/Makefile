@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/libkafs5/Makefile 323693 2017-09-18 00:13:48Z cy $
+# $FreeBSD: stable/11/kerberos5/lib/libkafs5/Makefile 323693 2017-09-18 00:13:48Z cy $
 
 LIB=	kafs5
-LDADD=	-lasn1 -lroken -lkrb5
 LDFLAGS=	-Wl,--no-undefined
-DPADD=	${LIBASN1} ${LIBKRB5} ${LIBROKEN}
+LIBADD=	asn1 krb5 roken
 INCS=	kafs.h
 MAN=	kafs5.3
 VERSION_MAP=	${.CURDIR}/version.map
@@ -24,13 +22,11 @@ MLINKS=	kafs5.3 k_afs_cell_of_file.3 \
 	kafs5.3 krb_afslog.3 \
 	kafs5.3 krb_afslog_uid.3
 
-SRCS=	afssys.c \
-	afskrb5.c \
-	common.c
+SRCS=	afssys.c afskrb5.c common.c
 
 CFLAGS+=	-I${KRB5DIR}/lib/kafs \
 		-I${KRB5DIR}/lib/krb5 \
-		-I${.OBJDIR}/../libkrb5/ \
+		-I${.OBJDIR:H}/libkrb5/ \
 		-I${KRB5DIR}/lib/roken
 
 CLEANFILES= kafs5.3

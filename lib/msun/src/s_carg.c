@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_carg.c 174561 2007-12-12 23:43:51Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_carg.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <complex.h>
 #include <math.h>

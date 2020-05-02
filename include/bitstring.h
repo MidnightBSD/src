@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/bitstring.h,v 1.3 2003/06/13 19:40:13 phk Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/bitstring.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BITSTRING_H_
 #define	_BITSTRING_H_
 
+#include <stdlib.h>
+#include <strings.h>
 #include <sys/bitstring.h>
 
 #endif /* _BITSTRING_H_ */

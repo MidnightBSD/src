@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_nextafter.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_nextafter.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_nextafter.c 176451 2008-02-22 02:30:36Z das $");
 
 /* IEEE functions
  *	nextafter(x,y)

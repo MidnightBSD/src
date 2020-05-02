@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1991-1997 Søren Schmidt
+ * Copyright (c) 1991-1997 SÃ¸ren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libvgl/mouse.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <sys/types.h>

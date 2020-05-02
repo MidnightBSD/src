@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/include/time.h 245428 2013-01-14 18:01:19Z dim $
+ * $FreeBSD: stable/11/include/time.h 332135 2018-04-06 19:17:59Z kevans $
  */
 
 #ifndef _TIME_H_
@@ -145,7 +144,9 @@ __BEGIN_DECLS
 char *asctime(const struct tm *);
 clock_t clock(void);
 char *ctime(const time_t *);
+#ifndef _STANDALONE
 double difftime(time_t, time_t);
+#endif
 /* XXX missing: getdate() */
 struct tm *gmtime(const time_t *);
 struct tm *localtime(const time_t *);
@@ -170,12 +171,12 @@ void tzset(void);
 int clock_getres(clockid_t, struct timespec *);
 int clock_gettime(clockid_t, struct timespec *);
 int clock_settime(clockid_t, const struct timespec *);
-/* XXX missing: clock_nanosleep() */
 int nanosleep(const struct timespec *, struct timespec *);
 #endif /* __POSIX_VISIBLE >= 199309 */
 
 #if __POSIX_VISIBLE >= 200112
 int clock_getcpuclockid(pid_t, clockid_t *);
+int clock_nanosleep(clockid_t, int, const struct timespec *, struct timespec *);
 #endif
 
 #if __POSIX_VISIBLE >= 199506
@@ -195,6 +196,7 @@ char *timezone(int, int);	/* XXX XSI conflict */
 void tzsetwall(void);
 time_t timelocal(struct tm * const);
 time_t timegm(struct tm * const);
+int timer_oshandle_np(timer_t timerid);
 #endif /* __BSD_VISIBLE */
 
 #if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)

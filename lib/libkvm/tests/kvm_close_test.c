@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2017 Ngie Cooper <ngie@freebsd.org>
- * All rights reserved.
+ * Copyright (c) 2017 Enji Cooper <ngie@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libkvm/tests/kvm_close_test.c 316099 2017-03-28 17:37:49Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libkvm/tests/kvm_close_test.c 346920 2019-04-29 19:36:46Z ngie $");
 
 #include <errno.h>
 #include <fcntl.h>

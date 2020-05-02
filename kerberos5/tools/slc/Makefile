@@ -1,9 +1,10 @@
-# $FreeBSD: stable/10/kerberos5/tools/slc/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/kerberos5/tools/slc/Makefile 319183 2017-05-30 04:13:06Z ngie $
 
 PROG=	slc
-LIBROKEN_A=     ${.OBJDIR}/../../lib/libroken/libroken.a
-LDADD=  ${LIBROKEN_A} ${LIBVERS}
-DPADD=  ${LIBROKEN_A} ${LIBVERS}
+LIBROKEN_A=     ${.OBJDIR:H:H}/lib/libroken/libroken.a
+LIBADD=	vers
+LDADD=  ${LIBROKEN_A}
+DPADD=  ${LIBROKEN_A}
 MAN=
 
 SRCS=	roken.h \
@@ -17,7 +18,7 @@ CLEANFILES= roken.h slc-gram.c slc-lex.c
 roken.h:
 	${MAKE_ROKEN} > ${.TARGET}
 
-#	${.OBJDIR}/../make-roken/make-roken > ${.TARGET}
+#	${.OBJDIR:H}/make-roken/make-roken > ${.TARGET}
 
 .include <bsd.prog.mk>
 

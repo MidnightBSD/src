@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_fabs.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_fabs.c 97413 2002-05-28 18:15:04Z alfred $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_fabs.c 324006 2017-09-26 09:01:56Z dim $");
 
 /*
  * fabs(x) returns the absolute value of x.

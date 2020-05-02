@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/Makefile 289252 2015-10-13 18:56:50Z bdrewery $
+# $FreeBSD: stable/11/kerberos5/Makefile 319183 2017-05-30 04:13:06Z ngie $
 
 SUBDIR=	lib .WAIT \
-	doc libexec tools usr.bin usr.sbin
+	libexec tools usr.bin usr.sbin
 SUBDIR_PARALLEL=
 
 # These are the programs which depend on Kerberos.
@@ -12,10 +11,9 @@ KPROGS=	lib/libpam \
 # This target is used to rebuild these programs WITH Kerberos.
 kerberize:
 .for entry in ${KPROGS}
-	cd ${.CURDIR}/../${entry}; \
+	cd ${.CURDIR:H}/${entry}; \
 	${MAKE} cleandir; \
 	${MAKE} obj; \
-	${MAKE} depend; \
 	${MAKE} all; \
 	${MAKE} install
 .endfor
@@ -23,12 +21,11 @@ kerberize:
 # This target is used to rebuild these programs WITHOUT Kerberos.
 dekerberize:
 .for entry in ${KPROGS}
-	cd ${.CURDIR}/../${entry}; \
-	${MAKE} -DWITHOUT_KERBEROS cleandir; \
-	${MAKE} -DWITHOUT_KERBEROS obj; \
-	${MAKE} -DWITHOUT_KERBEROS depend; \
-	${MAKE} -DWITHOUT_KERBEROS all; \
-	${MAKE} -DWITHOUT_KERBEROS install
+	cd ${.CURDIR:H}/${entry}; \
+	${MAKE} MK_KERBEROS=no cleandir; \
+	${MAKE} MK_KERBEROS=no obj; \
+	${MAKE} MK_KERBEROS=no all; \
+	${MAKE} MK_KERBEROS=no install
 .endfor
 
 .include <bsd.subdir.mk>

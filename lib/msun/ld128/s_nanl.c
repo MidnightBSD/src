@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 David Schultz
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/ld128/s_nanl.c 176747 2008-03-02 20:16:55Z das $
+ * $FreeBSD: stable/11/lib/msun/ld128/s_nanl.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <math.h>

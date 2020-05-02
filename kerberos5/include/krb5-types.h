@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*
  * generic krb5-types.h for cross compiling, assume system is posix/sus
  */
 
-/* $FreeBSD: stable/10/kerberos5/include/krb5-types.h 233294 2012-03-22 08:48:42Z stas $ */
+/* $FreeBSD: stable/11/kerberos5/include/krb5-types.h 233294 2012-03-22 08:48:42Z stas $ */
 
 #ifndef __krb5_types_h__
 #define __krb5_types_h__

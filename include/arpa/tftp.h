@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tftp.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/include/arpa/tftp.h 250887 2013-05-21 21:20:10Z ed $
+ * $FreeBSD: stable/11/include/arpa/tftp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARPA_TFTP_H_

@@ -1,15 +1,21 @@
-# $MidnightBSD$
-# $FreeBSD: head/lib/libz/Makefile 232263 2012-02-28 18:30:18Z dim $
+#
+# $FreeBSD: stable/11/lib/libz/Makefile 348261 2019-05-25 01:58:00Z delphij $
 #
 
+PACKAGE=lib${LIB}
 LIB=		z
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	6
-MAN=		zlib.3
+MAN=		zlib.3 zopen.3
 
-ZLIBSRC=	${SRCTOP}/contrib/zlib
+ZLIBSRC=	${SRCTOP}/sys/contrib/zlib
 
 .PATH:		${ZLIBSRC}
+
+#CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
+#CFLAGS=-g -DDEBUG
+#CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
+#           -Wstrict-prototypes -Wmissing-prototypes
 
 CFLAGS+=	-DHAS_snprintf -DHAS_vsnprintf -I${.CURDIR}
 
@@ -57,13 +63,10 @@ test: example minigzip
 	(export LD_LIBRARY_PATH=. ; \
 		echo hello world | ./minigzip | ./minigzip -d )
 
-.ifndef COMPAT_32BIT
 FILES=		zlib.pc
 FILESDIR=	${LIBDATADIR}/pkgconfig
-.endif
 
 .include <bsd.lib.mk>
 
 ## XXX: clang integrated-as doesn't grok .intel_syntax directives yet
 #ACFLAGS.gvmat64.S=	${CLANG_NO_IAS}
-#ACFLAGS+=		${ACFLAGS.${.IMPSRC:T}}

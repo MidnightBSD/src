@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2011 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/fenv-softfloat.h 266133 2014-05-15 15:02:48Z ian $
+ * $FreeBSD: stable/11/lib/msun/src/fenv-softfloat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_FENV_H_

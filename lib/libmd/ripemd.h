@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/ripemd/ripemd.h */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -58,7 +57,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/lib/libmd/ripemd.h 314157 2017-02-23 18:54:33Z avg $
+ * $FreeBSD: stable/11/lib/libmd/ripemd.h 310372 2016-12-21 18:42:04Z emaste $
  */
 
 #ifndef HEADER_RIPEMD_H
@@ -97,6 +96,12 @@ __BEGIN_DECLS
 #ifndef RIPEMD160_End
 #define RIPEMD160_End		_libmd_RIPEMD160_End
 #endif
+#ifndef RIPEMD160_Fd
+#define RIPEMD160_Fd		_libmd_RIPEMD160_Fd
+#endif
+#ifndef RIPEMD160_FdChunk
+#define RIPEMD160_FdChunk	_libmd_RIPEMD160_FdChunk
+#endif
 #ifndef RIPEMD160_File
 #define RIPEMD160_File		_libmd_RIPEMD160_File
 #endif
@@ -122,6 +127,8 @@ void	RIPEMD160_Update(RIPEMD160_CTX *c, const void *data,
 			 size_t len);
 void	RIPEMD160_Final(unsigned char *md, RIPEMD160_CTX *c);
 char   *RIPEMD160_End(RIPEMD160_CTX *, char *);
+char   *RIPEMD160_Fd(int, char *);
+char   *RIPEMD160_FdChunk(int, char *, off_t, off_t);
 char   *RIPEMD160_File(const char *, char *);
 char   *RIPEMD160_FileChunk(const char *, char *, off_t, off_t);
 char   *RIPEMD160_Data(const void *, unsigned int, char *);

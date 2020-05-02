@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/strings.h 267465 2014-06-14 02:57:40Z pfg $
+ * $FreeBSD: stable/11/include/strings.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STRINGS_H_
@@ -43,6 +42,9 @@ __BEGIN_DECLS
 int	 bcmp(const void *, const void *, size_t) __pure;	/* LEGACY */
 void	 bcopy(const void *, void *, size_t);			/* LEGACY */
 void	 bzero(void *, size_t);					/* LEGACY */
+#endif
+#if __BSD_VISIBLE
+void	 explicit_bzero(void *, size_t);
 #endif
 #if __XSI_VISIBLE
 int	 ffs(int) __pure2;

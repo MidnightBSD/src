@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)yp.x	2.1 88/08/01 4.0 RPCSRC */
 
 /*-
@@ -38,10 +37,10 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/yp.x 272850 2014-10-09 23:05:32Z hrs $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/yp.x 351694 2019-09-02 10:20:57Z kib $");
 #endif
 
-const YPMAXRECORD = 1024;
+const YPMAXRECORD = 16777216;
 const YPMAXDOMAIN = 64;
 const YPMAXMAP = 64;
 const YPMAXPEER = 64;

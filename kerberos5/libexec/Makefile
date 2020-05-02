@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/libexec/Makefile 311730 2017-01-09 01:31:12Z ngie $
+# $FreeBSD: stable/11/kerberos5/libexec/Makefile 311731 2017-01-09 01:31:16Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	digest-service ipropd-master ipropd-slave hprop hpropd kdc \
 	kdigest kfd kimpersonate kpasswdd kcm

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Joseph Koshy
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libpmc/libpmcinternal.h 185363 2008-11-27 09:00:47Z jkoshy $
+ * $FreeBSD: stable/11/lib/libpmc/libpmcinternal.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	LIBPMC_INTERNAL_H

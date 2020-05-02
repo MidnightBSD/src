@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libypclnt/ypclnt_free.c,v 1.1 2002/04/13 06:20:02 des Exp $
+ * $FreeBSD: stable/11/lib/libypclnt/ypclnt_free.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <stdlib.h>

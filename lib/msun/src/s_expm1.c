@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_expm1.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_expm1.c 251343 2013-06-03 19:51:32Z kargl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_expm1.c 352835 2019-09-28 08:57:29Z dim $");
 
 /* expm1(x)
  * Returns exp(x)-1, the exponential of x minus 1.
@@ -189,7 +188,7 @@ expm1(double x)
 	e  = hxs*((r1-t)/(6.0 - x*t));
 	if(k==0) return x - (x*e-hxs);		/* c is 0 */
 	else {
-	    INSERT_WORDS(twopk,0x3ff00000+(k<<20),0);	/* 2^k */
+	    INSERT_WORDS(twopk,((u_int32_t)(0x3ff+k))<<20,0);	/* 2^k */
 	    e  = (x*(e-c)-c);
 	    e -= hxs;
 	    if(k== -1) return 0.5*(x-e)-0.5;

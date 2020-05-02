@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/xlocale/_string.h 267465 2014-06-14 02:57:40Z pfg $
+ * $FreeBSD: stable/11/include/xlocale/_string.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _LOCALE_T_DEFINED

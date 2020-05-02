@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2004 by Peter Grehan. All rights reserved.
  *
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthr/arch/powerpc/include/pthread_md.h 211773 2010-08-24 20:50:08Z nwhitehorn $
+ * $FreeBSD: stable/11/lib/libthr/arch/powerpc/include/pthread_md.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -56,35 +55,30 @@ struct tcb {
 	struct pthread		*tcb_thread;
 };
 
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *);
-
 static __inline void
 _tcb_set(struct tcb *tcb)
 {
 #ifdef __powerpc64__
-	register uint8_t *_tp __asm__("%r13");
-#else
-	register uint8_t *_tp __asm__("%r2");
-#endif
-
-	__asm __volatile("mr %0,%1" : "=r"(_tp) :
+	__asm __volatile("mr 13,%0" ::
 	    "r"((uint8_t *)tcb + TP_OFFSET));
+#else
+	__asm __volatile("mr 2,%0" ::
+	    "r"((uint8_t *)tcb + TP_OFFSET));
+#endif
 }
 
 static __inline struct tcb *
 _tcb_get(void)
 {
+	register uint8_t *_tp;
 #ifdef __powerpc64__
-	register uint8_t *_tp __asm__("%r13");
+	__asm __volatile("mr %0,13" : "=r"(_tp));
 #else
-	register uint8_t *_tp __asm__("%r2");
+	__asm __volatile("mr %0,2" : "=r"(_tp));
 #endif
 
 	return ((struct tcb *)(_tp - TP_OFFSET));
 }
-
-extern struct pthread *_thr_initial;
 
 static __inline struct pthread *
 _get_curthread(void)

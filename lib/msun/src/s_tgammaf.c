@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tgammaf.c 176388 2008-02-18 17:27:11Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tgammaf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <math.h>
 

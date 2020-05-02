@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/lround_test.c 294243 2016-01-18 03:55:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/lround_test.c 292497 2015-12-20 05:06:44Z ngie $");
 
 #include <assert.h>
 #include <fenv.h>

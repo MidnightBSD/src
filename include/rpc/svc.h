@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc.h,v 1.17 2000/06/02 22:57:56 fvdl Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)svc.h 1.35 88/12/17 SMI
  *	from: @(#)svc.h      1.27    94/04/25 SMI
- * $FreeBSD: stable/10/include/rpc/svc.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/include/rpc/svc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -90,6 +89,7 @@ enum xprt_stat {
  */
 typedef struct __rpc_svcxprt {
 	int		xp_fd;
+#define	xp_sock		xp_fd
 	u_short		xp_port;	 /* associated port number */
 	const struct xp_ops {
 	    /* receive incoming requests */

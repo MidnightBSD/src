@@ -35,8 +35,7 @@
  */
 
 /*
- * $FreeBSD: src/include/timeconv.h,v 1.2 2002/08/21 16:19:55 mike Exp $
- * $MidnightBSD: src/include/timeconv.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ * $FreeBSD: stable/11/include/timeconv.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _TIMECONV_H_

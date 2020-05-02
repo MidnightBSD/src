@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libproc/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/lib/libproc/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=	proc
 
 SRCS=	proc_bkpt.c		\
@@ -16,18 +16,32 @@ INCS=	libproc.h
 
 CFLAGS+=	-I${.CURDIR}
 
-.if ${MK_LIBCPLUSPLUS} != "no"
-LDADD+=		-lcxxrt
-DPADD+=		${LIBCXXRT}
-.elif ${MK_GNUCXX} != "no"
-LDADD+=		-lsupc++
-DPADD+=		${LIBSTDCPLUSPLUS}
-.else
+.if ${MK_CXX} == "no"
 CFLAGS+=	-DNO_CXA_DEMANGLE
+.elif ${MK_LIBCPLUSPLUS} != "no"
+LIBADD+=		cxxrt
+.else
+LIBADD+=	supcplusplus
 .endif
 
-SHLIB_MAJOR=	2
+LIBADD+=	elf rtld_db util
+
+.if ${MK_CDDL} != "no"
+LIBADD+=	ctf
+IGNORE_PRAGMA=	YES
+CFLAGS+=	-I${SRCTOP}/cddl/contrib/opensolaris/lib/libctf/common \
+		-I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common \
+		-I${SRCTOP}/sys/cddl/compat/opensolaris
+.else
+CFLAGS+=	-DNO_CTF
+.endif
+
+SHLIB_MAJOR=	3
 
 MAN=
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>

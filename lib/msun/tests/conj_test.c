@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/conj_test.c 293267 2016-01-06 20:21:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/conj_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <assert.h>
 #include <complex.h>
@@ -72,7 +71,7 @@ static const double tests[] = {
 };
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	static const int ntests = sizeof(tests) / sizeof(tests[0]) / 2;
 	complex float in;
@@ -91,7 +90,7 @@ main(int argc, char *argv[])
 		assert(fpequal(libcreall(in), __real__ in));
 		assert(fpequal(libcimagf(in), __imag__ in));
 		assert(fpequal(libcimag(in), __imag__ in));
-		assert(fpequal(libcimagl(in), __imag__ in));		
+		assert(fpequal(libcimagl(in), __imag__ in));
 
 		feclearexcept(FE_ALL_EXCEPT);
 		if (!cfpequal(libconjf(in), expected)) {

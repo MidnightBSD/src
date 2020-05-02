@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@
  *
  *	@(#)dumprestore.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: stable/10/include/protocols/dumprestore.h 235601 2012-05-18 10:01:31Z gleb $
+ * $FreeBSD: stable/11/include/protocols/dumprestore.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PROTOCOLS_DUMPRESTORE_H_

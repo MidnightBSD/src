@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/nl_types.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NL_TYPES_H_

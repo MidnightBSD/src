@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/wordexp.h 131331 2004-06-30 13:55:08Z tjr $
+ * $FreeBSD: stable/11/include/wordexp.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _WORDEXP_H_

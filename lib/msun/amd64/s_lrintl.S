@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/amd64/s_lrintl.S 217108 2011-01-07 16:13:12Z kib $"); 
+__FBSDID("$FreeBSD: stable/11/lib/msun/amd64/s_lrintl.S 217108 2011-01-07 16:13:12Z kib $"); 
 	
 ENTRY(lrintl)
 	fldt	8(%rsp)

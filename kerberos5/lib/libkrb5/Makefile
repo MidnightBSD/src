@@ -1,11 +1,9 @@
-# $FreeBSD: stable/10/kerberos5/lib/libkrb5/Makefile 255455 2013-09-10 18:40:43Z des $
+# $FreeBSD: stable/11/kerberos5/lib/libkrb5/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 LIB=	krb5
 LDFLAGS=	-Wl,--no-undefined
 VERSION_MAP= ${KRB5DIR}/lib/krb5/version-script.map
-LDADD=	-lasn1 -lcom_err -lcrypt -lcrypto -lhx509 -lroken -lwind -lheimbase -lheimipcc
-DPADD=	${LIBASN1} ${LIBCOM_ERR} ${LIBCRYPT} ${LIBCRYPTO} ${LIBHX509} ${LIBROKEN} ${LIBWIND} ${LIBHEIMBASE} ${LIBHEIMIPCC}
-USEPRIVATELIB= heimipcc
+LIBADD=	asn1 com_err crypt crypto hx509 roken wind heimbase heimipcc
 
 INCS=	heim_err.h \
 	heim_threads.h \
@@ -623,8 +621,10 @@ CFLAGS+=	-I${KRB5DIR}/lib/krb5 \
 		-I${KRB5DIR}/lib/asn1 \
 		-I${KRB5DIR}/lib/roken \
 		-I${KRB5DIR}/lib/ipc \
-		-I${KRB5DIR}/base -I.
+		-I${KRB5DIR}/base \
+		-I${SRCTOP}/contrib/com_err \
+		-I.
 
 .include <bsd.lib.mk>
 
-.PATH: ${KRB5DIR}/lib/krb5 ${KRB5DIR}/lib/asn1 ${KRB5DIR}/include ${.CURDIR}/../../include ${KRB5DIR}/doc/doxyout/krb5/man/man3/
+.PATH: ${KRB5DIR}/lib/krb5 ${KRB5DIR}/lib/asn1 ${KRB5DIR}/include ${SRCTOP}/kerberos5/include ${KRB5DIR}/doc/doxyout/krb5/man/man3/

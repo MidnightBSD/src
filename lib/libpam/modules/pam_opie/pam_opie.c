@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2000 James Bloom
  * All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_opie/pam_opie.c 270125 2014-08-18 03:06:49Z ache $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_opie/pam_opie.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <opie.h>

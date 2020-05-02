@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_acosh.c 1.3 95/01/18 */
 /*
@@ -14,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_acosh.c 251599 2013-06-10 06:04:58Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_acosh.c 251599 2013-06-10 06:04:58Z das $");
 
 /* __ieee754_acosh(x)
  * Method :

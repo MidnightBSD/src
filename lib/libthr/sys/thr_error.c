@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthr/sys/thr_error.c 277317 2015-01-18 11:54:20Z kib $
+ * $FreeBSD: stable/11/lib/libthr/sys/thr_error.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <pthread.h>

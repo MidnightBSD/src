@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992/3 Theo de Raadt <deraadt@fsa.ca>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/rpcsvc/yp_prot.h,v 1.13 2005/12/06 02:01:06 peter Exp $
+ * $FreeBSD: stable/11/include/rpcsvc/yp_prot.h 351694 2019-09-02 10:20:57Z kib $
  */
 
 #ifndef _RPCSVC_YP_PROT_H_
@@ -78,7 +77,7 @@ typedef u_int bool;
 #define YPPROG		((u_long)100004)
 #define YPVERS		((u_long)2)
 #define YPVERS_ORIG	((u_long)1)
-#define YPMAXRECORD	((u_long)1024)
+#define YPMAXRECORD	((u_long)16 * 1024 * 1024)
 #define YPMAXDOMAIN	((u_long)64)
 #define YPMAXMAP	((u_long)64)
 #define YPMAXPEER	((u_long)256)

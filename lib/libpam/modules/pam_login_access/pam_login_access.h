@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
@@ -34,7 +33,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libpam/modules/pam_login_access/pam_login_access.h 92297 2002-03-14 23:27:59Z des $
+ * $FreeBSD: stable/11/lib/libpam/modules/pam_login_access/pam_login_access.h 359117 2020-03-19 03:37:02Z cy $
  */
 
-extern int login_access(const char *, const char *);
+#include <stdbool.h>
+
+struct pam_login_access_options {
+	bool		defgroup;
+	bool		audit;
+	const char	*accessfile;
+	/* Delimiters for fields and for lists of users, ttys or hosts. */
+	const char	*fieldsep; /* field separator */
+	const char	*listsep; /* list-element separator */
+};
+
+extern int login_access(const char *, const char *, struct pam_login_access_options *);

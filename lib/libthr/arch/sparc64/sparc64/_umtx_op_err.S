@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthr/arch/sparc64/sparc64/_umtx_op_err.S 223228 2011-06-18 11:07:09Z marius $");
+__FBSDID("$FreeBSD: stable/11/lib/libthr/arch/sparc64/sparc64/_umtx_op_err.S 223228 2011-06-18 11:07:09Z marius $");
 
 #include <sys/syscall.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Andrew Turner <andrew@FreeBSD.ORG>
  * All rights reserved.
@@ -24,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/arm/fenv-vfp.c 266314 2014-05-17 14:22:37Z ian $
+ * $FreeBSD: stable/11/lib/msun/arm/fenv-vfp.c 300119 2016-05-18 06:01:18Z imp $
  */
 
 #define	FENV_MANGLE(x)	__vfp_ ##x
 #include "fenv-mangle.h"
-#define	__ARM_PCS_VFP
+#ifndef __ARM_PCS_VFP
+#define	__ARM_PCS_VFP 1
+#endif
 #include "fenv.c"
 

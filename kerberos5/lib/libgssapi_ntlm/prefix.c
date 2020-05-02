@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/kerberos5/lib/libgssapi_ntlm/prefix.c 233294 2012-03-22 08:48:42Z stas $
+ * $FreeBSD: stable/11/kerberos5/lib/libgssapi_ntlm/prefix.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <gssapi/gssapi.h>

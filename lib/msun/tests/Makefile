@@ -1,16 +1,20 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/msun/tests/Makefile 319252 2017-05-30 21:03:44Z asomers $
+# $FreeBSD: stable/11/lib/msun/tests/Makefile 334771 2018-06-07 09:03:42Z dim $
+
+.include <bsd.own.mk>
 
 TESTSRC=	${SRCTOP}/contrib/netbsd-tests/lib/libm
 
-WARNS?=		0
-
 # All architectures on FreeBSD have fenv.h
 CFLAGS+=	-DHAVE_FENV_H
+
 # For isqemu.h
 CFLAGS+=	-I${TESTSRC:H}/libc/gen
 
-.if ${MACHINE} == "amd64" || ${MACHINE} == "i386"
+# Not sure why this isn't defined for all architectures, since most
+# have long double.
+.if ${MACHINE_CPUARCH} == "aarch64" || \
+    ${MACHINE_CPUARCH} == "amd64" || \
+    ${MACHINE_CPUARCH} == "i386"
 CFLAGS+=	-D__HAVE_LONG_DOUBLE
 .endif
 
@@ -42,8 +46,12 @@ NETBSD_ATF_TESTS_C+=	tanh_test
 
 TAP_TESTS_C+=	cexp_test
 TAP_TESTS_C+=	conj_test
+.if ${MACHINE_CPUARCH} != "aarch64"
+# Hits an assert in llvm when building for arm64:
+# https://llvm.org/bugs/show_bug.cgi?id=26081
 TAP_TESTS_C+=	csqrt_test
-TAP_TESTS_C+=	ctrig_test
+.endif
+ATF_TESTS_C+=	ctrig_test
 TAP_TESTS_C+=	exponential_test
 TAP_TESTS_C+=	fenv_test
 TAP_TESTS_C+=	fma_test
@@ -60,7 +68,7 @@ TAP_TESTS_C+=	nan_test
 TAP_TESTS_C+=	nearbyint_test
 TAP_TESTS_C+=	next_test
 TAP_TESTS_C+=	rem_test
-TAP_TESTS_C+=	trig_test
+ATF_TESTS_C+=	trig_test
 
 .if !empty(PROG) && !empty(TAP_TESTS_C:M${PROG})
 CFLAGS+=	-O0
@@ -68,13 +76,15 @@ CFLAGS+=	-O0
 
 CSTD=		c99
 
-LDADD+=		-lm
-DPADD+=		${LIBM}
 #COPTS+=	-Wfloat-equal
 
 IGNORE_PRAGMA=
 
 SRCS.ilogb2_test=	ilogb_test.c
+
+LIBADD+=	m
+
+WARNS?=		1
 
 # Copied from lib/msun/Makefile
 .if ${MACHINE_CPUARCH} == "i386"

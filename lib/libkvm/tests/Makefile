@@ -1,18 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libkvm/tests/Makefile 319012 2017-05-27 23:26:10Z ngie $
+# $FreeBSD: stable/11/lib/libkvm/tests/Makefile 316099 2017-03-28 17:37:49Z ngie $
 
 .include <bsd.own.mk>
 
 ATF_TESTS_C+=	kvm_close_test
 ATF_TESTS_C+=	kvm_geterr_test
 ATF_TESTS_C+=	kvm_open_test
-# NB: kvm_open2(3) isn't available on ^/stable/10
-#ATF_TESTS_C+=	kvm_open2_test
+ATF_TESTS_C+=	kvm_open2_test
 
 CFLAGS.kvm_geterr_test+=	-I${.CURDIR:H}
 
-DPADD+=		${LIBKVM}
-LDADD+=		-lkvm
+LIBADD+=	kvm
 
 WARNS?=		6
 

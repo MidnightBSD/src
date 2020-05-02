@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_auth.h,v 1.8 2000/06/02 22:57:57 fvdl Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)svc_auth.h 1.6 86/07/16 SMI
  *	@(#)svc_auth.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/include/rpc/svc_auth.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/include/rpc/svc_auth.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_atan2.c 1.3 95/01/18 */
 /*
@@ -14,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_atan2.c 181204 2008-08-02 19:17:00Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_atan2.c 336767 2018-07-27 17:39:36Z dim $");
 
 /* __ieee754_atan2(y,x)
  * Method :
@@ -72,7 +71,7 @@ __ieee754_atan2(double y, double x)
 	if(((ix|((lx|-lx)>>31))>0x7ff00000)||
 	   ((iy|((ly|-ly)>>31))>0x7ff00000))	/* x or y is NaN */
 	   return x+y;
-	if((hx-0x3ff00000|lx)==0) return atan(y);   /* x=1.0 */
+	if(hx==0x3ff00000&&lx==0) return atan(y);   /* x=1.0 */
 	m = ((hy>>31)&1)|((hx>>30)&2);	/* 2*sign(x)+sign(y) */
 
     /* when y = 0 */

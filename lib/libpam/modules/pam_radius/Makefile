@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright 1998 Juniper Networks, Inc.
 # All rights reserved.
 #
@@ -23,14 +22,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/libpam/modules/pam_radius/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_radius/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
 LIB=	pam_radius
 SRCS=	pam_radius.c
 MAN=	pam_radius.8
 WARNS?=	3
 
-DPADD=	${LIBRADIUS}
-LDADD=	-lradius
+LIBADD+=	radius
 
 .include <bsd.lib.mk>

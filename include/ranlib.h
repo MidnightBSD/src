@@ -28,7 +28,7 @@
  *
  *	@(#)ranlib.h	8.1 (Berkeley) 6/2/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/ranlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _RANLIB_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2010 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,8 +29,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/logarithm_test.c 319376 2017-06-01 06:34:14Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/logarithm_test.c 319377 2017-06-01 06:34:35Z ngie $");
 
+#include <sys/param.h>
 #include <assert.h>
 #include <fenv.h>
 #include <float.h>
@@ -99,7 +99,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/logarithm_test.c 319376 2017-06-01 
 	test(log1pl, x, result, exceptmask, excepts);			\
 } while (0)
 
-void
+static void
 run_generic_tests(void)
 {
 
@@ -128,10 +128,10 @@ run_generic_tests(void)
 	testall1(-1.0, -INFINITY, ALL_STD_EXCEPT & ~FE_INEXACT, FE_DIVBYZERO);
 }
 
-void
+static void
 run_log2_tests(void)
 {
-	int i;
+	unsigned i;
 
 	/*
 	 * We should insist that log2() return exactly the correct
@@ -155,7 +155,7 @@ run_log2_tests(void)
 	}
 }
 
-void
+static void
 run_roundingmode_tests(void)
 {
 
@@ -189,7 +189,7 @@ run_roundingmode_tests(void)
 	fesetround(FE_TONEAREST);
 }
 
-void
+static void
 run_accuracy_tests(void)
 {
 	static const struct {
@@ -220,9 +220,9 @@ run_accuracy_tests(void)
 		   7.229787154734166181706169344438271459e1L,
 		   3.139856666636059855894123306947856631e1L },
 	};
-        int i;
+        unsigned i;
 
-	for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+	for (i = 0; i < nitems(tests); i++) {
 		test_tol(log2, tests[i].x, tests[i].log2x, DBL_ULP());
 		test_tol(log2f, tests[i].x, tests[i].log2x, FLT_ULP());
 		test_tol(log2l, tests[i].x, tests[i].log2x, LDBL_ULP());
@@ -243,7 +243,7 @@ run_accuracy_tests(void)
 	}
 }
 
-void
+static void
 run_log1p_accuracy_tests(void)
 {
 
@@ -263,7 +263,7 @@ run_log1p_accuracy_tests(void)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..5\n");

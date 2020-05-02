@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_scalbn.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbn.c 143264 2005-03-07 21:27:37Z das $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_scalbn.c 324006 2017-09-26 09:01:56Z dim $");
 
 /*
  * scalbn (double x, int n)
@@ -22,7 +20,6 @@ static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbn.c 143264 2005-0
  * exponentiation or a multiplication.
  */
 
-#include <sys/cdefs.h>
 #include <float.h>
 
 #include "math.h"
@@ -52,10 +49,12 @@ scalbn (double x, int n)
         if (k >  0x7fe) return huge*copysign(huge,x); /* overflow  */
         if (k > 0) 				/* normal result */
 	    {SET_HIGH_WORD(x,(hx&0x800fffff)|(k<<20)); return x;}
-        if (k <= -54)
+        if (k <= -54) {
             if (n > 50000) 	/* in case integer overflow in n+k */
 		return huge*copysign(huge,x);	/*overflow*/
-	    else return tiny*copysign(tiny,x); 	/*underflow*/
+	    else
+		return tiny*copysign(tiny,x); 	/*underflow*/
+	}
         k += 54;				/* subnormal result */
 	SET_HIGH_WORD(x,(hx&0x800fffff)|(k<<20));
         return x*twom54;

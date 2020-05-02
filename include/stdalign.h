@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/stdalign.h 228879 2011-12-25 20:51:40Z ed $
+ * $FreeBSD: stable/11/include/stdalign.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __alignas_is_defined

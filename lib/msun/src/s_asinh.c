@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_asinh.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_asinh.c 251599 2013-06-10 06:04:58Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_asinh.c 251599 2013-06-10 06:04:58Z das $");
 
 /* asinh(x)
  * Method :

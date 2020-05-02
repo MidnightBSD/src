@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/usr.bin/string2key/Makefile 287428 2015-09-03 11:33:33Z ume $
+# $FreeBSD: stable/11/kerberos5/usr.bin/string2key/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 PROG=	string2key
 MAN=	string2key.8
@@ -7,10 +6,9 @@ CFLAGS+=	-I${KRB5DIR}/kdc \
 		-I${KRB5DIR}/lib/asn1 \
 		-I${KRB5DIR}/lib/krb5 \
 		-I${KRB5DIR}/lib/roken \
-		-I${KRB5DIR}/lib/windc
-DPADD=	${LIBKRB5} ${LIBROKEN} ${LIBASN1} ${LIBCRYPTO} \
-	${LIBCRYPT} ${LIBVERS}
-LDADD=	-lkrb5 -lroken -lasn1 -lcrypto -lcrypt ${LIBVERS}
+		-I${KRB5DIR}/lib/windc \
+		-I${SRCTOP}/contrib/com_err
+LIBADD=	krb5 roken crypto vers
 
 .include <bsd.prog.mk>
 

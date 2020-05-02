@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_exp.c 1.6 04/04/22 */
 /*
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_exp.c 251024 2013-05-27 08:50:10Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_exp.c 352835 2019-09-28 08:57:29Z dim $");
 
 /* __ieee754_exp(x)
  * Returns the exponential of x.
@@ -146,9 +145,9 @@ __ieee754_exp(double x)	/* default IEEE double exp */
     /* x is now in primary range */
 	t  = x*x;
 	if(k >= -1021)
-	    INSERT_WORDS(twopk,0x3ff00000+(k<<20), 0);
+	    INSERT_WORDS(twopk,((u_int32_t)(0x3ff+k))<<20, 0);
 	else
-	    INSERT_WORDS(twopk,0x3ff00000+((k+1000)<<20), 0);
+	    INSERT_WORDS(twopk,((u_int32_t)(0x3ff+(k+1000)))<<20, 0);
 	c  = x - t*(P1+t*(P2+t*(P3+t*(P4+t*P5))));
 	if(k==0) 	return one-((x*c)/(c-2.0)-x); 
 	else 		y = one-((lo-(x*c)/(2.0-c))-hi);

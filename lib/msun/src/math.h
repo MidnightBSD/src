@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ====================================================
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -12,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: stable/10/lib/msun/src/math.h 309510 2016-12-03 20:01:12Z trasz $
+ * $FreeBSD: stable/11/lib/msun/src/math.h 354596 2019-11-10 17:33:10Z dim $
  */
 
 #ifndef _MATH_H_
@@ -70,10 +69,6 @@ extern const union __nan_un {
 #define	math_errhandling	MATH_ERREXCEPT
 
 #define	FP_FAST_FMAF	1
-#ifdef __ia64__
-#define	FP_FAST_FMA	1
-#define	FP_FAST_FMAL	1
-#endif
 
 /* Symbolic constants to classify floating point numbers. */
 #define	FP_INFINITE	0x01
@@ -218,6 +213,12 @@ __inline_isnanl(__const long double __x)
 
 	return (__x != __x);
 }
+
+/*
+ * Define the following aliases, for compatibility with glibc and CUDA.
+ */
+#define __isnan __inline_isnan
+#define __isnanf __inline_isnanf
 
 /*
  * Version 2 of the Single UNIX Specification (UNIX98) defined isnan() and
@@ -505,6 +506,9 @@ long double	truncl(long double);
 
 #if __BSD_VISIBLE
 long double	lgammal_r(long double, int *);
+void		sincos(double, double *, double *);
+void		sincosf(float, float *, float *);
+void		sincosl(long double, long double *, long double *);
 #endif
 
 __END_DECLS

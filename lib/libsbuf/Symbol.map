@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libsbuf/Symbol.map 321108 2017-07-18 06:45:41Z ngie $
+/*
+ * $FreeBSD: stable/11/lib/libsbuf/Symbol.map 321107 2017-07-18 06:45:13Z ngie $
  */
 
 FBSD_1.2 {

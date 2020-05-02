@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_lgammaf_r.c -- float version of e_lgamma_r.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  * Conversion to float fixed By Steven G. Kargl.
@@ -16,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_lgammaf_r.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_lgammaf_r.c 324006 2017-09-26 09:01:56Z dim $");
 
 #include "math.h"
 #include "math_private.h"
@@ -123,7 +122,7 @@ sin_pif(float x)
 float
 __ieee754_lgammaf_r(float x, int *signgamp)
 {
-	float nadj,p,p1,p2,p3,q,r,t,w,y,z;
+	float nadj,p,p1,p2,q,r,t,w,y,z;
 	int32_t hx;
 	int i,ix;
 

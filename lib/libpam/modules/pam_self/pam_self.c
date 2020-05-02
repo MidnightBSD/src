@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_self/pam_self.c 94564 2002-04-12 22:27:25Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_self/pam_self.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define _BSD_SOURCE
 

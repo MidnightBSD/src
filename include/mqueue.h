@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/mqueue.h 240297 2012-09-10 05:12:45Z davidxu $
+ * $FreeBSD: stable/11/include/mqueue.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MQUEUE_H_
@@ -51,7 +50,9 @@ ssize_t	mq_timedreceive(mqd_t, char *__restrict, size_t,
 int	mq_timedsend(mqd_t, const char *, size_t, unsigned,
 		const struct timespec *);
 int	mq_unlink(const char *);
-int	__mq_oshandle(mqd_t mqd);
+#if __BSD_VISIBLE
+int	mq_getfd_np(mqd_t mqd);
+#endif /* __BSD_VISIBLE */
 
 __END_DECLS
 #endif

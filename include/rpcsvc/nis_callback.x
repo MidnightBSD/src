@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %/*-
 % * Copyright (c) 2010, Oracle America, Inc.
 % *
@@ -41,7 +40,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/nis_callback.x 272850 2014-10-09 23:05:32Z hrs $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/nis_callback.x 259117 2013-12-09 04:26:50Z hrs $");
 #endif
 
 /*

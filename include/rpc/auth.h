@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: auth.h,v 1.15 2000/06/02 22:57:55 fvdl Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  *	from: @(#)auth.h 1.17 88/02/08 SMI
  *	from: @(#)auth.h	2.3 88/08/07 4.0 RPCSRC
  *	from: @(#)auth.h	1.43 	98/02/02 SMI
- * $FreeBSD: stable/10/include/rpc/auth.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/include/rpc/auth.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

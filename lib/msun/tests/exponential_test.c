@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/exponential_test.c 294243 2016-01-18 03:55:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/exponential_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <assert.h>
 #include <fenv.h>
@@ -90,7 +89,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/exponential_test.c 294243 2016-01-1
 	test(expm1f, x, result, exceptmask, excepts);			\
 } while (0)
 
-void
+static void
 run_generic_tests(void)
 {
 
@@ -123,10 +122,10 @@ run_generic_tests(void)
 	testall1(-50000.0, -1.0, ALL_STD_EXCEPT, FE_INEXACT);
 }
 
-void
+static void
 run_exp2_tests(void)
 {
-	int i;
+	unsigned i;
 
 	/*
 	 * We should insist that exp2() return exactly the correct
@@ -149,7 +148,7 @@ run_exp2_tests(void)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..3\n");

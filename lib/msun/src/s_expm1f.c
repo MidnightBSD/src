@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_expm1f.c -- float version of s_expm1.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_expm1f.c 251024 2013-05-27 08:50:10Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_expm1f.c 352835 2019-09-28 08:57:29Z dim $");
 
 #include <float.h>
 
@@ -95,7 +94,7 @@ expm1f(float x)
 	e  = hxs*((r1-t)/((float)6.0 - x*t));
 	if(k==0) return x - (x*e-hxs);		/* c is 0 */
 	else {
-	    SET_FLOAT_WORD(twopk,0x3f800000+(k<<23));	/* 2^k */
+	    SET_FLOAT_WORD(twopk,((u_int32_t)(0x7f+k))<<23);	/* 2^k */
 	    e  = (x*(e-c)-c);
 	    e -= hxs;
 	    if(k== -1) return (float)0.5*(x-e)-(float)0.5;

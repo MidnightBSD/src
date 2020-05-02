@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jacques A. Vidrine <nectar@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_ksu/pam_ksu.c 233302 2012-03-22 11:18:14Z stas $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_ksu/pam_ksu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <errno.h>

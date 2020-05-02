@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_acos.c 1.3 95/01/18 */
 /* FreeBSD: head/lib/msun/src/e_acos.c 176451 2008-02-22 02:30:36Z das */
@@ -14,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_acosl.c 181152 2008-08-02 03:56:22Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_acosl.c 181152 2008-08-02 03:56:22Z das $");
 
 /*
  * See comments in e_acos.c.

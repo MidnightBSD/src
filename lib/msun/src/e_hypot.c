@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_hypot.c 1.3 95/01/18 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_hypot.c 226380 2011-10-15 07:00:28Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_hypot.c 355395 2019-12-04 17:45:34Z dim $");
 
 /* __ieee754_hypot(x,y)
  *
@@ -119,10 +118,8 @@ __ieee754_hypot(double x, double y)
 	    w  = sqrt(t1*y1-(w*(-w)-(t1*y2+t2*b)));
 	}
 	if(k!=0) {
-	    u_int32_t high;
-	    t1 = 1.0;
-	    GET_HIGH_WORD(high,t1);
-	    SET_HIGH_WORD(t1,high+(k<<20));
+	    t1 = 0.0;
+	    SET_HIGH_WORD(t1,(1023+k)<<20);
 	    return t1*w;
 	} else return w;
 }

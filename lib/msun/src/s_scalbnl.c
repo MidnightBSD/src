@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_scalbn.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -11,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbnl.c 143206 2005-03-07 04:52:58Z das $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_scalbnl.c 324006 2017-09-26 09:01:56Z dim $");
 
 /*
  * scalbnl (long double x, int n)
@@ -28,7 +26,6 @@ static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbnl.c 143206 2005-
  * for scalbn(), so we don't use this routine.
  */
 
-#include <sys/cdefs.h>
 #include <float.h>
 #include <math.h>
 
@@ -60,10 +57,12 @@ scalbnl (long double x, int n)
         if (k >= 0x7fff) return huge*copysignl(huge,x); /* overflow  */
         if (k > 0) 				/* normal result */
 	    {u.bits.exp = k; return u.e;}
-        if (k <= -128)
+        if (k <= -128) {
             if (n > 50000) 	/* in case integer overflow in n+k */
 		return huge*copysign(huge,x);	/*overflow*/
-	    else return tiny*copysign(tiny,x); 	/*underflow*/
+	    else
+		return tiny*copysign(tiny,x); 	/*underflow*/
+	}
         k += 128;				/* subnormal result */
 	u.bits.exp = k;
         return u.e*0x1p-128;

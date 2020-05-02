@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/s_signbit.c 132382 2004-07-19 08:16:10Z das $
+ * $FreeBSD: stable/11/lib/msun/src/s_signbit.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <math.h>

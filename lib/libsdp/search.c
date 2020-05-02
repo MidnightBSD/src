@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * search.c
  *
@@ -27,12 +26,13 @@
  * SUCH DAMAGE.
  *
  * $Id: search.c,v 1.2 2003/09/04 22:12:13 max Exp $
- * $FreeBSD: stable/10/lib/libsdp/search.c 173673 2007-11-16 15:13:12Z emax $
+ * $FreeBSD: stable/11/lib/libsdp/search.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/uio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <stdio.h>

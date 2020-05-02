@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -26,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_multi_np.c 165967 2007-01-12 07:26:21Z imp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_multi_np.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -38,7 +38,7 @@
 __weak_reference(_pthread_multi_np, pthread_multi_np);
 
 int
-_pthread_multi_np()
+_pthread_multi_np(void)
 {
 
 	/* Return to multi-threaded scheduling mode: */

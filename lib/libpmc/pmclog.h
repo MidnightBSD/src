@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libpmc/pmclog.h 233628 2012-03-28 20:58:30Z fabient $
+ * $FreeBSD: stable/11/lib/libpmc/pmclog.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_PMCLOG_H_

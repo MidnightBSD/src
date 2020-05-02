@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/fma_test.c 319379 2017-06-01 06:35:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/fma_test.c 319378 2017-06-01 06:35:37Z ngie $");
 
 #include <sys/param.h>
 #include <assert.h>
@@ -85,7 +84,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/fma_test.c 319379 2017-06-01 06:35:
  * This is needed because clang constant-folds fma in ways that are incorrect
  * in rounding modes other than FE_TONEAREST.
  */
-volatile double one = 1.0;
+static volatile double one = 1.0;
 
 static void
 test_zeroes(void)
@@ -473,10 +472,10 @@ test_double_rounding(void)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	int rmodes[] = { FE_TONEAREST, FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO };
-	int i, j;
+	unsigned i, j;
 
 #if defined(__i386__)
 	printf("1..0 # SKIP all testcases fail on i386\n");
@@ -509,7 +508,8 @@ main(int argc, char *argv[])
 
 	fesetround(FE_TONEAREST);
 	test_nans();
-	printf("ok 9 - fma NaNs\n");
+	printf("ok %d - fma NaNs\n", j);
+	j++;
 
 	for (i = 0; i < nitems(rmodes); i++, j++) {
 		printf("rmode = %d\n", rmodes[i]);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/lrint_test.c 293267 2016-01-06 20:21:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/lrint_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <assert.h>
 #include <fenv.h>
@@ -66,7 +65,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/lrint_test.c 293267 2016-01-06 20:2
 
 #pragma STDC FENV_ACCESS ON
 
-void
+static void
 run_tests(void)
 {
 
@@ -133,7 +132,7 @@ run_tests(void)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..1\n");

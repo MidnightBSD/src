@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libz/Symbol.map 313795 2017-02-16 06:16:23Z delphij $
  */
 
 ZLIB_1.2.9 {

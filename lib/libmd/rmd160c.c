@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* crypto/ripemd/rmd_dgst.c */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
@@ -58,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmd/rmd160c.c 314184 2017-02-23 22:10:37Z avg $");
+__FBSDID("$FreeBSD: stable/11/lib/libmd/rmd160c.c 282774 2015-05-11 16:45:33Z thomas $");
 
 #include <sys/types.h>
 

@@ -33,7 +33,7 @@
 
 /* @(#)log.c	8.2 (Berkeley) 11/30/93 */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/msun/bsdsrc/b_log.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <math.h>
 

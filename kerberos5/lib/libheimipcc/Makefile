@@ -1,10 +1,8 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/kerberos5/lib/libheimipcc/Makefile 291815 2015-12-04 18:59:20Z bdrewery $
+#$FreeBSD: stable/11/kerberos5/lib/libheimipcc/Makefile 284289 2015-06-11 21:13:05Z sjg $
 
 LIB=	heimipcc
 PRIVATELIB=
-LDADD=	-lheimbase -lroken -lpthread
-DPADD=	${LIBHEIMBASE} ${LIBROKEN} ${LIBPTHREAD}
+LIBADD=	heimbase roken pthread
 
 SRCS=	\
 	client.c \

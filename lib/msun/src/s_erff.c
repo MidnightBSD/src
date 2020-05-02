@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_erff.c -- float version of s_erf.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_erff.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_erff.c 268590 2014-07-13 16:24:16Z kargl $");
 
 #include "math.h"
 #include "math_private.h"

@@ -1,9 +1,8 @@
-# $FreeBSD: stable/10/kerberos5/lib/libkadm5clnt/Makefile 236337 2012-05-30 22:21:25Z obrien $
+# $FreeBSD: stable/11/kerberos5/lib/libkadm5clnt/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 LIB=	kadm5clnt
 LDFLAGS=	-Wl,--no-undefined
-LDADD=	-lcom_err -lkrb5 -lroken
-DPADD=	${LIBCOM_ERR} ${LIBKRB5} ${LIBROKEN}
+LIBADD=	com_err krb5 roken
 
 INCS=	admin.h \
 	kadm5-private.h \
@@ -35,7 +34,8 @@ SRCS=	ad.c \
 	rename_c.c \
 	send_recv.c
 
-CFLAGS+=-I${KRB5DIR}/lib/kadm5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken -I.
+CFLAGS+=-I${KRB5DIR}/lib/kadm5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
+	-I${SRCTOP}/contrib/com_err -I.
 
 .include <bsd.lib.mk>
 

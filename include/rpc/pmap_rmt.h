@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pmap_rmt.h,v 1.7 1998/02/11 23:01:23 lukem Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  *
  *	from: @(#)pmap_rmt.h 1.2 88/02/08 SMI
  *	from: @(#)pmap_rmt.h	2.1 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/include/rpc/pmap_rmt.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/include/rpc/pmap_rmt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

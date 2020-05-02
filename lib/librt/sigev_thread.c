@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/librt/sigev_thread.c 252412 2013-06-30 08:59:33Z ed $
+ * $FreeBSD: stable/11/lib/librt/sigev_thread.c 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 

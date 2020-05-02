@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* k_tanf.c -- float version of k_tan.c
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  * Optimized by Bruce D. Evans.
@@ -16,7 +15,7 @@
 
 #ifndef INLINE_KERNEL_TANDF
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_tanf.c 239192 2012-08-11 11:13:48Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/k_tanf.c 239192 2012-08-11 11:13:48Z dim $");
 #endif
 
 #include "math.h"

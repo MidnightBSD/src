@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_accept_sec_context.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/11/lib/libgssapi/gss_accept_sec_context.c 350474 2019-07-31 18:10:50Z brooks $
  */
 
 #include <gssapi/gssapi.h>
@@ -99,11 +98,11 @@ parse_header(const gss_buffer_t input_token, gss_OID mech_oid)
 }		       
 
 static gss_OID_desc krb5_mechanism =
-{9, (void *)(uintptr_t) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02"};
+{9, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02")};
 static gss_OID_desc ntlm_mechanism =
-{10, (void *)(uintptr_t) "\x2b\x06\x01\x04\x01\x82\x37\x02\x02\x0a"};
+{10, __DECONST(void *, "\x2b\x06\x01\x04\x01\x82\x37\x02\x02\x0a")};
 static gss_OID_desc spnego_mechanism =
-{6, (void *)(uintptr_t) "\x2b\x06\x01\x05\x05\x02"};
+{6, __DECONST(void *, "\x2b\x06\x01\x05\x05\x02")};
 
 static OM_uint32
 choose_mech(const gss_buffer_t input, gss_OID mech_oid)
@@ -136,7 +135,7 @@ choose_mech(const gss_buffer_t input, gss_OID mech_oid)
 		return (GSS_S_COMPLETE);
 	} else if (input->length == 0) {
 		/* 
-		 * There is the a wierd mode of SPNEGO (in CIFS and
+		 * There is the a weird mode of SPNEGO (in CIFS and
 		 * SASL GSS-SPENGO where the first token is zero
 		 * length and the acceptor returns a mech_list, lets
 		 * hope that is what is happening now.
@@ -166,7 +165,6 @@ OM_uint32 gss_accept_sec_context(OM_uint32 *minor_status,
 	struct _gss_mechanism_cred *mc;
 	gss_cred_id_t acceptor_mc, delegated_mc;
 	gss_name_t src_mn;
-	int allocated_ctx;
 
 	*minor_status = 0;
 	if (src_name)
@@ -207,11 +205,8 @@ OM_uint32 gss_accept_sec_context(OM_uint32 *minor_status,
 			free(ctx);
 			return (GSS_S_BAD_MECH);
 		}
-		allocated_ctx = 1;
-	} else {
+	} else
 		m = ctx->gc_mech;
-		allocated_ctx = 0;
-	}
 
 	if (cred) {
 		SLIST_FOREACH(mc, &cred->gc_mc, gmc_link)

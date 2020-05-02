@@ -1,7 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/atf/libatf-c/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/lib/atf/libatf-c/tests/Makefile 349053 2019-06-15 09:30:11Z emaste $
 
 .include <bsd.init.mk>
+
+PACKAGE=	tests
 
 TESTS_SUBDIRS=	detail
 
@@ -12,14 +13,8 @@ ATF=		${SRCTOP}/contrib/atf
 CFLAGS+=	-DATF_INCLUDEDIR='"${INCLUDEDIR}"'
 CFLAGS+=	-I${ATF}
 
-# macros_test.c contains a double 'const const' which will be gone with
-# the import of atf-0.18.
-# TODO(jmmv): Remove this workaround once we do that update.
-CFLAGS.clang+=	-Wno-duplicate-decl-specifier
-
-FILESDIR=	${TESTSDIR}
-FILES=		macros_h_test.c
-FILES+=		unused_test.c
+${PACKAGE}FILES+=	macros_h_test.c
+${PACKAGE}FILES+=	unused_test.c
 
 .for _T in	atf_c_test \
 		build_test \

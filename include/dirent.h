@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
- * $FreeBSD: stable/10/include/dirent.h 270002 2014-08-14 20:20:21Z jhb $
+ * $FreeBSD: stable/11/include/dirent.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DIRENT_H_
@@ -39,15 +38,23 @@
  * the getdirentries(2) system call.
  */
 #include <sys/cdefs.h>
+#include <sys/_types.h>
 #include <sys/dirent.h>
 
-#if __BSD_VISIBLE || __XSI_VISIBLE
+#if __XSI_VISIBLE
+
+#ifndef _INO_T_DECLARED
+typedef	__ino_t		ino_t;
+#define	_INO_T_DECLARED
+#endif
+
 /*
  * XXX this is probably illegal in the __XSI_VISIBLE case, but brings us closer
  * to the specification.
  */
 #define	d_ino		d_fileno	/* backward and XSI compatibility */
-#endif
+
+#endif /* __XSI_VISIBLE */
 
 #if __BSD_VISIBLE
 
@@ -97,6 +104,11 @@ void	 rewinddir(DIR *);
 int	 scandir(const char *, struct dirent ***,
 	    int (*)(const struct dirent *), int (*)(const struct dirent **,
 	    const struct dirent **));
+#ifdef __BLOCKS__
+int	 scandir_b(const char *, struct dirent ***,
+	    int (^)(const struct dirent *),
+	    int (^)(const struct dirent **, const struct dirent **));
+#endif
 #endif
 #if __XSI_VISIBLE
 void	 seekdir(DIR *, long);

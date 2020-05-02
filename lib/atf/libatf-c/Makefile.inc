@@ -1,4 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/atf/libatf-c/Makefile.inc 260024 2013-12-28 23:08:58Z jmmv $
+# $FreeBSD: stable/11/lib/atf/libatf-c/Makefile.inc 257853 2013-11-08 14:33:41Z jmmv $
 
 .include "../Makefile.inc"

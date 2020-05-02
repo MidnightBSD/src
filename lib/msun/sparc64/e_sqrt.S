@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/sparc64/e_sqrt.S 142182 2005-02-21 18:27:57Z das $")
+__FBSDID("$FreeBSD: stable/11/lib/msun/sparc64/e_sqrt.S 142182 2005-02-21 18:27:57Z das $")
 
 ENTRY(sqrt)
 	retl

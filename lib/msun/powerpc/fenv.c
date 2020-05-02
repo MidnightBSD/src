@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/powerpc/fenv.c 226415 2011-10-16 05:37:56Z das $
+ * $FreeBSD: stable/11/lib/msun/powerpc/fenv.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	__fenv_static

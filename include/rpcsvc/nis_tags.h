@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010, Oracle America, Inc.
  *
@@ -44,7 +43,7 @@
 #ifndef	_RPCSVC_NIS_TAGS_H
 #define	_RPCSVC_NIS_TAGS_H
 
-/* $FreeBSD: stable/10/include/rpcsvc/nis_tags.h 272850 2014-10-09 23:05:32Z hrs $ */
+/* $FreeBSD: stable/11/include/rpcsvc/nis_tags.h 331722 2018-03-29 02:50:57Z eadler $ */
 /* From: #pragma ident	"@(#)nis_tags.h	1.10	94/05/03 SMI" */
 /* from file: zns_tags.h	1.7 Copyright (c) 1990 Sun Microsystems */
 

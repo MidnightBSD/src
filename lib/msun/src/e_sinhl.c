@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* from: FreeBSD: head/lib/msun/src/e_sinhl.c XXX */
 
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_sinhl.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_sinhl.c 324006 2017-09-26 09:01:56Z dim $");
 
 /*
  * See e_sinh.c for complete comments.
@@ -86,7 +85,10 @@ long double
 sinhl(long double x)
 {
 	long double hi,lo,x2,x4;
-	double dx2,s;
+#if LDBL_MANT_DIG == 113
+	double dx2;
+#endif
+	double s;
 	int16_t ix,jx;
 
 	GET_LDBL_EXPSIGN(jx,x);

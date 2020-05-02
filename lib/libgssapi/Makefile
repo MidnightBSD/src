@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libgssapi/Makefile 313625 2017-02-11 07:01:17Z ngie $
+# $FreeBSD: stable/11/lib/libgssapi/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=		gssapi
 SHLIB_MAJOR=	10
 VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def

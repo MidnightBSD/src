@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,8 +23,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/atf/libatf-c/Makefile 305911 2016-09-18 02:51:18Z ngie $
+# $FreeBSD: stable/11/lib/atf/libatf-c/Makefile 305910 2016-09-18 02:45:35Z ngie $
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
 # Store the toolchain executable in ATF_BUILD_{CC,CPP,CXX} to ensure other

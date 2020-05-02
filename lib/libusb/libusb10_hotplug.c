@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb10_hotplug.c 349669 2019-07-03 18:26:07Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb10_hotplug.c 357438 2020-02-03 11:05:14Z hselasky $ */
 /*-
  * Copyright (c) 2016-2019 Hans Petter Selasky. All rights reserved.
  *
@@ -124,8 +123,10 @@ libusb_hotplug_scan(void *arg)
 		TAILQ_INIT(&hotplug_devs);
 
 		if (ctx->hotplug_handler != NO_THREAD) {
-			if (libusb_hotplug_enumerate(ctx, &hotplug_devs) < 0)
+			if (libusb_hotplug_enumerate(ctx, &hotplug_devs) < 0) {
+				HOTPLUG_UNLOCK(ctx);
 				continue;
+			}
 		} else {
 			do_loop = 0;
 		}

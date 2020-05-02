@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ieeefp.h,v 1.4 1998/01/09 08:03:43 perry Exp $	*/
-/* $FreeBSD: stable/10/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $ */
+/* $FreeBSD: stable/11/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $ */
 
 /* 
  * Written by J.T. Conklin, Apr 6, 1995

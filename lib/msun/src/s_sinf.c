@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_sinf.c -- float version of s_sin.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  * Optimized by Bruce D. Evans.
@@ -16,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_sinf.c 176569 2008-02-25 22:19:17Z bde $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_sinf.c 176569 2008-02-25 22:19:17Z bde $");
 
 #include <float.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,10 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_cancel.c 332633 2018-04-16 20:45:21Z jhb $
- *
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_cancel.c 358141 2020-02-20 01:24:45Z kib $");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -64,7 +63,7 @@ _pthread_cancel(pthread_t pthread)
 	 * _thr_find_thread and THR_THREAD_UNLOCK will enter and leave critical
 	 * region automatically.
 	 */
-	if ((ret = _thr_find_thread(curthread, pthread, 0)) == 0) {
+	if ((ret = _thr_find_thread(curthread, pthread, 1)) == 0) {
 		if (!pthread->cancel_pending) {
 			pthread->cancel_pending = 1;
 			if (pthread->state != PS_DEAD)

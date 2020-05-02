@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libmd/md5.h 314157 2017-02-23 18:54:33Z avg $ */
+/* $FreeBSD: stable/11/lib/libmd/md5.h 310372 2016-12-21 18:42:04Z emaste $ */
 
 #ifndef _MD5_H_
 #define _MD5_H_
@@ -25,6 +24,12 @@
 #endif
 #ifndef MD5End
 #define MD5End		_libmd_MD5End
+#endif
+#ifndef MD5Fd
+#define MD5Fd		_libmd_MD5Fd
+#endif
+#ifndef MD5FdChunk
+#define MD5FdChunk	_libmd_MD5FdChunk
 #endif
 #ifndef MD5File
 #define MD5File		_libmd_MD5File

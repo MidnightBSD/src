@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
  * Copyright (c) 2008 John Birrell (jb@freebsd.org)
  * All rights reserved.
- * 
+ *
  * Portions of this software were developed by Rui Paulo under sponsorship
  * from the FreeBSD Foundation.
  *
@@ -27,18 +26,21 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libproc/proc_util.c 269754 2014-08-09 15:00:03Z markj $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libproc/proc_util.c 316713 2017-04-11 17:36:19Z markj $");
 
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
+
 #include <err.h>
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "_libproc.h"
 
 int
@@ -59,13 +61,15 @@ proc_clearflags(struct proc_handle *phdl, int mask)
 int
 proc_continue(struct proc_handle *phdl)
 {
-	int pending = 0;
+	int pending;
 
 	if (phdl == NULL)
 		return (-1);
 
 	if (phdl->status == PS_STOP && WSTOPSIG(phdl->wstat) != SIGTRAP)
 		pending = WSTOPSIG(phdl->wstat);
+	else
+		pending = 0;
 	if (ptrace(PT_CONTINUE, phdl->pid, (caddr_t)(uintptr_t)1, pending) != 0)
 		return (-1);
 
@@ -105,7 +109,7 @@ proc_getflags(struct proc_handle *phdl)
 	if (phdl == NULL)
 		return (-1);
 
-	return(phdl->flags);
+	return (phdl->flags);
 }
 
 int

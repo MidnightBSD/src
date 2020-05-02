@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/rem_test.c 293267 2016-01-06 20:21:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/rem_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <assert.h>
 #include <float.h>
@@ -53,7 +52,7 @@ static void testf(float, float, float, int);
 } while (0)
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..3\n");

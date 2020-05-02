@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)k_rem_pio2.c 1.3 95/01/18 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_rem_pio2.c 242692 2012-11-07 07:00:59Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/k_rem_pio2.c 298896 2016-05-01 19:37:33Z pfg $");
 
 /*
  * __kernel_rem_pio2(x,y,e0,nx,prec)
@@ -84,7 +83,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/src/k_rem_pio2.c 242692 2012-11-07 07:00:
  *		jk+1 must be 2 larger than you might expect so that our
  *		recomputation test works. (Up to 24 bits in the integer
  *		part (the 24 bits of it that we compute) and 23 bits in
- *		the fraction part may be lost to cancelation before we
+ *		the fraction part may be lost to cancellation before we
  *		recompute.)
  *
  * 	jz	local integer variable indicating the number of 

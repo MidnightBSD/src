@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* From: @(#)k_sin.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/ld80/k_sinl.c 176357 2008-02-17 07:32:14Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/ld80/k_sinl.c 176357 2008-02-17 07:32:14Z das $");
 
 /*
  * ld80 version of k_sin.c.  See ../src/k_sin.c for most comments.

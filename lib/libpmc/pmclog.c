@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2007 Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpmc/pmclog.c 233628 2012-03-28 20:58:30Z fabient $");
+__FBSDID("$FreeBSD: stable/11/lib/libpmc/pmclog.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -334,6 +333,8 @@ pmclog_get_event(void *cookie, char **data, ssize_t *len,
 			ev->pl_u.pl_cc.pl_pc[npc] = (uintfptr_t) 0;
 		break;
 	case PMCLOG_TYPE_CLOSELOG:
+		ev->pl_state = PMCLOG_EOF;
+		return (-1);
 	case PMCLOG_TYPE_DROPNOTIFY:
 		/* nothing to do */
 		break;

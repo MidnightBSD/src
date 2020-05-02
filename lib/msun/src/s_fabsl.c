@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Dag-Erling Smørgrav
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/s_fabsl.c 234685 2012-04-25 18:07:35Z des $
+ * $FreeBSD: stable/11/lib/msun/src/s_fabsl.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <math.h>

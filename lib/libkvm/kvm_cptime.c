@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_cptime.c 217744 2011-01-23 11:08:28Z uqs $");
+__FBSDID("$FreeBSD: stable/11/lib/libkvm/kvm_cptime.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>
@@ -96,6 +95,12 @@ kvm_getcptime(kvm_t *kd, long *cp_time)
 	if (ISALIVE(kd))
 		return (getsysctl(kd, "kern.cp_time", cp_time, sizeof(long) *
 		    CPUSTATES));
+
+	if (!kd->arch->ka_native(kd)) {
+		_kvm_err(kd, kd->program,
+		    "cannot read cp_time from non-native core");
+		return (-1);
+	}
 
 	if (kvm_cp_time_cached == 0) {
 		if (_kvm_cp_time_init(kd) < 0)

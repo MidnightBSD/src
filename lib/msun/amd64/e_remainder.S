@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993,94 Winning Strategies, Inc.
  * All rights reserved.
@@ -37,7 +36,7 @@
 #include <machine/asm.h>
 
 RCSID("from: FreeBSD: src/lib/msun/i387/e_remainder.S,v 1.8 2005/02/04 14:08:32 das Exp")
-__FBSDID("$FreeBSD: stable/10/lib/msun/amd64/e_remainder.S 217108 2011-01-07 16:13:12Z kib $")
+__FBSDID("$FreeBSD: stable/11/lib/msun/amd64/e_remainder.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(remainder)
 	movsd	%xmm0,-8(%rsp)

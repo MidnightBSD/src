@@ -23,8 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- *	$FreeBSD: stable/10/lib/libgssapi/mech_switch.h 233294 2012-03-22 08:48:42Z stas $
+ *	$FreeBSD: stable/11/lib/libgssapi/mech_switch.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <unistd.h>

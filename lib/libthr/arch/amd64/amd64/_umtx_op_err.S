@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2008 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthr/arch/amd64/amd64/_umtx_op_err.S 217107 2011-01-07 16:09:33Z kib $
+ * $FreeBSD: stable/11/lib/libthr/arch/amd64/amd64/_umtx_op_err.S 217107 2011-01-07 16:09:33Z kib $
  */
 
 #include <sys/syscall.h>

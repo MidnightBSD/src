@@ -14,7 +14,7 @@ you didn't get a copy, you may request one from <license@inner.net>.
 		support. Fixed passwd bug.
 	Created by cmetz for OPIE 2.3 from passwd.c.
 
-$FreeBSD: stable/10/contrib/opie/libopie/writerec.c 148506 2005-07-29 09:59:24Z ache $
+$FreeBSD: stable/11/contrib/opie/libopie/writerec.c 148506 2005-07-29 09:59:24Z ache $
 */
 #include "opie_cfg.h"
 

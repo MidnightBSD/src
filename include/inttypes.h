@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/inttypes.h 264496 2014-04-15 09:41:52Z tijl $
+ * $FreeBSD: stable/11/include/inttypes.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _INTTYPES_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)k_tan.c 1.5 04/04/22 SMI */
 
 /*
@@ -13,7 +12,7 @@
 
 /* INDENT OFF */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_tan.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/k_tan.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __kernel_tan( x, y, k )
  * kernel tan function on ~[-pi/4, pi/4] (except on -0), pi/4 ~ 0.7854

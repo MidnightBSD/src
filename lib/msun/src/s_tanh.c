@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_tanh.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tanh.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tanh.c 270847 2014-08-30 17:31:53Z kargl $");
 
 /* Tanh(x)
  * Return the Hyperbolic Tangent of x

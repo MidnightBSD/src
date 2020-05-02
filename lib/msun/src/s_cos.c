@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_cos.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_cos.c 218509 2011-02-10 07:37:50Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_cos.c 218509 2011-02-10 07:37:50Z das $");
 
 /* cos(x)
  * Return cosine function of x.

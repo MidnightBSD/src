@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libnv/common_impl.h 258065 2013-11-12 19:39:14Z pjd $
+ * $FreeBSD: stable/11/lib/libnv/common_impl.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_COMMON_IMPL_H_

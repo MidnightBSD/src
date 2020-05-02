@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * sdp.h
  *
@@ -27,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdp.h,v 1.3 2003/09/05 00:33:59 max Exp $
- * $FreeBSD: stable/10/lib/libsdp/sdp.h 226426 2011-10-16 08:45:16Z ed $
+ * $FreeBSD: stable/11/lib/libsdp/sdp.h 343901 2019-02-08 10:27:02Z hselasky $
  */
 
 #ifndef _SDP_H_
@@ -562,7 +561,7 @@ void               sdp_print      (uint32_t level, uint8_t const *start,
  *	bdaddr_t	bdaddr;	local BD_ADDR (or ANY)
  *	profile data[pdu->len - sizeof(uuid) - sizeof(bdaddr)]
  *
- * in successful reponse additional data will contain 4 bytes record handle
+ * in successful response additional data will contain 4 bytes record handle
  *
  *
  * SDP_PDU_SERVICE_UNREGISTER_REQUEST
@@ -583,6 +582,24 @@ void               sdp_print      (uint32_t level, uint8_t const *start,
 #define SDP_PDU_SERVICE_REGISTER_REQUEST	0x81
 #define SDP_PDU_SERVICE_UNREGISTER_REQUEST	0x82
 #define SDP_PDU_SERVICE_CHANGE_REQUEST		0x83
+
+struct sdp_audio_sink_profile
+{
+	uint16_t psm;
+	uint16_t protover;
+	uint16_t features;
+};
+typedef struct sdp_audio_sink_profile	sdp_audio_sink_profile_t;
+typedef struct sdp_audio_sink_profile	*sdp_audio_sink_profile_p;
+
+struct sdp_audio_source_profile
+{
+	uint16_t psm;
+	uint16_t protover;
+	uint16_t features;
+};
+typedef struct sdp_audio_source_profile	sdp_audio_source_profile_t;
+typedef struct sdp_audio_source_profile *sdp_audio_source_profile_p;
 
 struct sdp_dun_profile
 {

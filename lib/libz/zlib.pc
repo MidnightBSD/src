@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libz/zlib.pc 313795 2017-02-16 06:16:23Z delphij $
 prefix=/usr
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib

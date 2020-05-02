@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Bruce D. Evans and Steven G. Kargl
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_csinhf.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_csinhf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <complex.h>
 #include <math.h>

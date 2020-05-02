@@ -1,5 +1,4 @@
-/*	$MidnightBSD$ */
-/*	$FreeBSD: stable/10/include/iconv.h 282275 2015-04-30 16:08:47Z tijl $	*/
+/*	$FreeBSD: stable/11/include/iconv.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$NetBSD: iconv.h,v 1.6 2005/02/03 04:39:32 perry Exp $	*/
 
 /*-

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ====================================================
  * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -11,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_nexttowardf.c 218511 2011-02-10 07:38:38Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_nexttowardf.c 218511 2011-02-10 07:38:38Z das $");
 
 #include <float.h>
 

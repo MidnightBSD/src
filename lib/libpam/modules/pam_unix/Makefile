@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright 1998 Juniper Networks, Inc.
 # All rights reserved.
 # Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -33,21 +32,20 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/libpam/modules/pam_unix/Makefile 230311 2012-01-18 18:26:56Z peter $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_unix/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
 LIB=	pam_unix
 SRCS=	pam_unix.c
 MAN=	pam_unix.8
 
-DPADD+= ${LIBUTIL} ${LIBCRYPT}
-LDADD+= -lutil -lcrypt
+LIBADD+=	util crypt
 
 .if ${MK_NIS} != "no"
 CFLAGS+= -DYP
-DPADD+= ${LIBYPCLNT}
-LDADD+= -lypclnt
+LIBADD+=	ypclnt
 .endif
 
 .include <bsd.lib.mk>

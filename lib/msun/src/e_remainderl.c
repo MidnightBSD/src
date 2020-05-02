@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_remainderl.c 177765 2008-03-30 20:47:42Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_remainderl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <math.h>
 

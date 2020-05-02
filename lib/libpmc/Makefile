@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libpmc/Makefile 266911 2014-05-31 00:40:13Z hiren $
+# $FreeBSD: stable/11/lib/libpmc/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=lib${LIB}
 LIB=	pmc
 
 SRCS=	libpmc.c pmclog.c
@@ -32,6 +32,7 @@ MAN+=	pmc.corei7.3
 MAN+=	pmc.corei7uc.3
 MAN+=	pmc.haswell.3
 MAN+=	pmc.haswelluc.3
+MAN+=	pmc.haswellxeon.3
 MAN+=	pmc.iaf.3
 MAN+=	pmc.ivybridge.3
 MAN+=	pmc.ivybridgexeon.3

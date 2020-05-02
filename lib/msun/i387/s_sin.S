@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 Winning Strategies, Inc.
  * All rights reserved.
@@ -35,7 +34,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/i387/s_sin.S 240566 2012-09-16 16:58:49Z tijl $")
+__FBSDID("$FreeBSD: stable/11/lib/msun/i387/s_sin.S 240566 2012-09-16 16:58:49Z tijl $")
 
 ENTRY(sin)
 	fldl	4(%esp)

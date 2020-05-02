@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/ld80/s_expl.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/ld80/s_expl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /**
  * Compute the exponential of x for Intel 80-bit format.  This is based on:

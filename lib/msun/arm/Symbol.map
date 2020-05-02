@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/msun/arm/Symbol.map 309740 2016-12-09 17:17:37Z emaste $
+/*
+ * $FreeBSD: stable/11/lib/msun/arm/Symbol.map 309741 2016-12-09 17:20:24Z emaste $
  */
 FBSD_1.0 {
 };

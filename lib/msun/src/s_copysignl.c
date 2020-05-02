@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Stefan Farfeleder
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/s_copysignl.c 165855 2007-01-07 07:54:21Z das $
+ * $FreeBSD: stable/11/lib/msun/src/s_copysignl.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <math.h>

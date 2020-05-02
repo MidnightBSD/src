@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003,2004 Joseph Koshy
  * All rights reserved.
@@ -24,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libpmc/pmc.h 294046 2016-01-14 22:02:21Z jtl $
+ * $FreeBSD: stable/11/lib/libpmc/pmc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PMC_H_
 #define _PMC_H_
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
 #include <sys/pmc.h>
 
 /*

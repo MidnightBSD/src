@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_asin.c 1.3 95/01/18 */
 /*
@@ -7,13 +6,13 @@
  *
  * Developed at SunSoft, a Sun Microsystems, Inc. business.
  * Permission to use, copy, modify, and distribute this
- * software is freely granted, provided that this notice 
+ * software is freely granted, provided that this notice
  * is preserved.
  * ====================================================
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_asin.c 218509 2011-02-10 07:37:50Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_asin.c 324006 2017-09-26 09:01:56Z dim $");
 
 /* __ieee754_asin(x)
  * Method :                  

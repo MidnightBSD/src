@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995, 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -67,16 +66,16 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: src/include/rpcsvc/ypxfrd.x,v 1.9 2003/05/04 02:51:42 obrien Exp $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/ypxfrd.x 351694 2019-09-02 10:20:57Z kib $");
 #endif
 
 /* XXX cribbed from yp.x */
-const _YPMAXRECORD = 1024;
+const _YPMAXRECORD = 16777216;
 const _YPMAXDOMAIN = 64;
 const _YPMAXMAP = 64;
 const _YPMAXPEER = 64;
 
-/* Suggested default -- not necesarrily the one used. */
+/* Suggested default -- not necessarily the one used. */
 const YPXFRBLOCK = 32767;
 
 /*

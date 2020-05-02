@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttyent.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: stable/10/include/ttyent.h 267236 2014-06-08 17:50:07Z nwhitehorn $
+ * $FreeBSD: stable/11/include/ttyent.h 333796 2018-05-18 14:57:58Z gjb $
  */
 
 #ifndef	_TTYENT_H_
@@ -39,6 +38,7 @@
 #define	_TTYS_OFF	"off"
 #define	_TTYS_ON	"on"
 #define	_TTYS_ONIFCONSOLE "onifconsole"
+#define	_TTYS_ONIFEXISTS "onifexists"
 #define	_TTYS_SECURE	"secure"
 #define	_TTYS_INSECURE	"insecure"
 #define	_TTYS_WINDOW	"window"
@@ -55,6 +55,8 @@ struct ttyent {
 #define	TTY_SECURE	0x02	/* allow uid of 0 to login */
 #define	TTY_DIALUP	0x04	/* is a dialup tty */
 #define	TTY_NETWORK	0x08	/* is a network tty */
+#define	TTY_IFEXISTS	0x10	/* configured as "onifexists" */
+#define	TTY_IFCONSOLE	0x20	/* configured as "onifconsole" */
 	int	ty_status;	/* status flags */
 	char 	*ty_window;	/* command to start up window manager */
 	char	*ty_comment;	/* comment field */

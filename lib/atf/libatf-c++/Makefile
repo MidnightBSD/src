@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,8 +23,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/atf/libatf-c++/Makefile 305911 2016-09-18 02:51:18Z ngie $
+# $FreeBSD: stable/11/lib/atf/libatf-c++/Makefile 305910 2016-09-18 02:45:35Z ngie $
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
 LIB_CXX=	atf-c++
@@ -33,8 +33,7 @@ PRIVATELIB=	true
 SHLIB_MAJOR=	2
 
 # libatf-c++ depends on the C version of the ATF library to build.
-DPADD=		${LIBATF_C}
-LDADD=		-latf-c
+LIBADD+=	atf_c
 
 LDFLAGS+=	-L${.OBJDIR:H}/libatf-c
 

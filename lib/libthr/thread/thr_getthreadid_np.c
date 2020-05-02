@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Jung-uk Kim <jkim@FreeBSD.org>
  *
@@ -22,9 +21,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_getthreadid_np.c 218414 2011-02-07 21:26:46Z jkim $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_getthreadid_np.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <pthread.h>

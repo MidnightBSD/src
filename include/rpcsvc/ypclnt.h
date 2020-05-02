@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992/3 Theo de Raadt <deraadt@fsa.ca>
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/rpcsvc/ypclnt.h,v 1.16 2003/10/26 16:35:11 peter Exp $
+ * $FreeBSD: stable/11/include/rpcsvc/ypclnt.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _RPCSVC_YPCLNT_H_

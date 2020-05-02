@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * drem() wrapper for remainder().
  *

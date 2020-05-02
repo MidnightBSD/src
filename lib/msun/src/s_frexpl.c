@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/s_frexpl.c 143213 2005-03-07 04:54:51Z das $
+ * $FreeBSD: stable/11/lib/msun/src/s_frexpl.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <float.h>

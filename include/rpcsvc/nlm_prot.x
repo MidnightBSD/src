@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Network lock manager protocol definition
  * Copyright (C) 1986 Sun Microsystems, Inc.
@@ -16,7 +15,7 @@
 %/*static char sccsid[] = "from: * @(#)nlm_prot.x	2.1 88/08/01 4.0 RPCSRC";*/
 %__RCSID("$NetBSD: nlm_prot.x,v 1.6 2000/06/07 14:30:15 bouyer Exp $");
 %#endif /* not lint */
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/nlm_prot.x 114629 2003-05-04 02:51:42Z obrien $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/nlm_prot.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 /*

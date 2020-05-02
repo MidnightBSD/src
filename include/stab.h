@@ -27,7 +27,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)stab.h	8.1 (Berkeley) 6/2/93
- * $MidnightBSD: src/include/stab.h,v 1.2 2012/03/09 03:51:10 laffer1 Exp $
+ *
+ * $FreeBSD: stable/11/include/stab.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STAB_H_

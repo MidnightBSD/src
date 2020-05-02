@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993,94 Winning Strategies, Inc.
  * All rights reserved.
@@ -36,7 +35,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/msun/amd64/e_remainderl.S 217108 2011-01-07 16:13:12Z kib $")
+__FBSDID("$FreeBSD: stable/11/lib/msun/amd64/e_remainderl.S 217108 2011-01-07 16:13:12Z kib $")
 
 ENTRY(remainderl)
 	fldt	24(%rsp)

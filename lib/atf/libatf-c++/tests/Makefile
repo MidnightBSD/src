@@ -1,7 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/atf/libatf-c++/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/lib/atf/libatf-c++/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 .include <bsd.init.mk>
+
+PACKAGE=	tests
 
 TESTS_SUBDIRS=	detail
 
@@ -13,9 +14,8 @@ CFLAGS+=	-DATF_C_TESTS_BASE='"${TESTSBASE}/lib/atf/libatf-c"'
 CFLAGS+=	-DATF_INCLUDEDIR='"${INCLUDEDIR}"'
 CFLAGS+=	-I${ATF}
 
-FILESDIR=	${TESTSDIR}
-FILES=		macros_hpp_test.cpp
-FILES+=		unused_test.cpp
+${PACKAGE}FILES+=	macros_hpp_test.cpp
+${PACKAGE}FILES+=	unused_test.cpp
 
 .for _T in	atf_c++_test \
 		build_test \

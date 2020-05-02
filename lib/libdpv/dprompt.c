@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2014 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libdpv/dprompt.c 284714 2015-06-23 04:03:54Z dteske $");
+__FBSDID("$FreeBSD: stable/11/lib/libdpv/dprompt.c 335406 2018-06-20 05:45:41Z dteske $");
 
 #include <sys/types.h>
 
@@ -90,7 +89,7 @@ spin_char(void)
 {
 	char ch;
 
-	if (spin_cp == '\0')
+	if (*spin_cp == '\0')
 		spin_cp = spin;
 	ch = *spin_cp;
 

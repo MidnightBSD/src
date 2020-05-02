@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2016 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libdpv/util.h 293620 2016-01-09 23:44:41Z dteske $
+ * $FreeBSD: stable/11/lib/libdpv/util.h 293379 2016-01-07 22:13:17Z dteske $
  */
 
 #ifndef _UTIL_H_

@@ -1,9 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/libroken/Makefile 319291 2017-05-31 06:26:37Z delphij $
+# $FreeBSD: stable/11/kerberos5/lib/libroken/Makefile 319285 2017-05-31 05:52:32Z delphij $
 
 LIB=	roken
-LDADD=	-lcrypt
-DPADD=	${LIBCRYPT}
+LIBADD=	crypt
 VERSION_MAP=	${KRB5DIR}/lib/roken/version-script.map
 INCS=	roken.h \
 	roken-common.h \

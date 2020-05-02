@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Daniel M. Eischen <deischen@freebsd.org>
  * Copyright (c) 1995-1998 John Birrell <jb@cimlogic.com.au>
@@ -30,9 +29,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_init.c 303709 2016-08-03 10:23:42Z kib $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_init.c 349688 2019-07-03 19:42:36Z kib $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -92,13 +92,17 @@ struct pthread_attr _pthread_attr_default = {
 struct pthread_mutex_attr _pthread_mutexattr_default = {
 	.m_type = PTHREAD_MUTEX_DEFAULT,
 	.m_protocol = PTHREAD_PRIO_NONE,
-	.m_ceiling = 0
+	.m_ceiling = 0,
+	.m_pshared = PTHREAD_PROCESS_PRIVATE,
+	.m_robust = PTHREAD_MUTEX_STALLED,
 };
 
 struct pthread_mutex_attr _pthread_mutexattr_adaptive_default = {
 	.m_type = PTHREAD_MUTEX_ADAPTIVE_NP,
 	.m_protocol = PTHREAD_PRIO_NONE,
-	.m_ceiling = 0
+	.m_ceiling = 0,
+	.m_pshared = PTHREAD_PROCESS_PRIVATE,
+	.m_robust = PTHREAD_MUTEX_STALLED,
 };
 
 /* Default condition variable attributes: */
@@ -169,7 +173,6 @@ STATIC_LIB_REQUIRE(_sigtimedwait);
 STATIC_LIB_REQUIRE(_sigwait);
 STATIC_LIB_REQUIRE(_sigwaitinfo);
 STATIC_LIB_REQUIRE(_spinlock);
-STATIC_LIB_REQUIRE(_spinlock_debug);
 STATIC_LIB_REQUIRE(_spinunlock);
 STATIC_LIB_REQUIRE(_thread_init_hack);
 
@@ -263,7 +266,11 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(__pthread_cleanup_pop_imp)},/* PJT_CLEANUP_POP_IMP */
 	{DUAL_ENTRY(__pthread_cleanup_push_imp)},/* PJT_CLEANUP_PUSH_IMP */
 	{DUAL_ENTRY(_pthread_cancel_enter)},	/* PJT_CANCEL_ENTER */
-	{DUAL_ENTRY(_pthread_cancel_leave)}		/* PJT_CANCEL_LEAVE */
+	{DUAL_ENTRY(_pthread_cancel_leave)},	/* PJT_CANCEL_LEAVE */
+	{DUAL_ENTRY(_pthread_mutex_consistent)},/* PJT_MUTEX_CONSISTENT */
+	{DUAL_ENTRY(_pthread_mutexattr_getrobust)},/* PJT_MUTEXATTR_GETROBUST */
+	{DUAL_ENTRY(_pthread_mutexattr_setrobust)},/* PJT_MUTEXATTR_SETROBUST */
+	{DUAL_ENTRY(_pthread_getthreadid_np)},	/* PJT_GETTHREADID_NP */
 };
 
 static int init_once = 0;
@@ -306,7 +313,7 @@ _libpthread_init(struct pthread *curthread)
 	int first, dlopened;
 
 	/* Check if this function has already been called: */
-	if ((_thr_initial != NULL) && (curthread == NULL))
+	if (_thr_initial != NULL && curthread == NULL)
 		/* Only initialize the threaded application once. */
 		return;
 
@@ -314,7 +321,7 @@ _libpthread_init(struct pthread *curthread)
 	 * Check the size of the jump table to make sure it is preset
 	 * with the correct number of entries.
 	 */
-	if (sizeof(jmp_table) != (sizeof(pthread_func_t) * PJT_MAX * 2))
+	if (sizeof(jmp_table) != sizeof(pthread_func_t) * PJT_MAX * 2)
 		PANIC("Thread jump table not properly initialized");
 	memcpy(__thr_jtable, jmp_table, sizeof(jmp_table));
 	__thr_interpose_libc();
@@ -366,6 +373,7 @@ static void
 init_main_thread(struct pthread *thread)
 {
 	struct sched_param sched_param;
+	int i;
 
 	/* Setup the thread attributes. */
 	thr_self(&thread->tid);
@@ -407,9 +415,9 @@ init_main_thread(struct pthread *thread)
 	thread->cancel_enable = 1;
 	thread->cancel_async = 0;
 
-	/* Initialize the mutex queue: */
-	TAILQ_INIT(&thread->mutexq);
-	TAILQ_INIT(&thread->pp_mutexq);
+	/* Initialize the mutex queues */
+	for (i = 0; i < TMQ_NITEMS; i++)
+		TAILQ_INIT(&thread->mq[i]);
 
 	thread->state = PS_RUNNING;
 
@@ -451,6 +459,7 @@ init_private(void)
 	 * e.g. after a fork().
 	 */
 	if (init_once == 0) {
+		__thr_pshared_init();
 		/* Find the stack top */
 		mib[0] = CTL_KERN;
 		mib[1] = KERN_USRSTACK;

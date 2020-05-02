@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/include/link.h,v 1.25 2002/09/17 01:48:50 peter Exp $
+ * $FreeBSD: stable/11/include/link.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/link_elf.h>

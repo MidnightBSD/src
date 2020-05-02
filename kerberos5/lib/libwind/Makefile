@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/libwind/Makefile 233294 2012-03-22 08:48:42Z stas $
+#$FreeBSD: stable/11/kerberos5/lib/libwind/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 LIB=	wind
 LDFLAGS=	-Wl,--no-undefined
 VERSION_MAP= ${KRB5DIR}/lib/wind/version-script.map
-LDADD=	-lcom_err -lroken
-DPADD=	${LIBCOM_ERR} ${LIBROKEN}
+LIBADD=	com_err roken
 
 INCS=	wind.h \
 	wind_err.h
@@ -29,7 +27,7 @@ SRCS=	bidi.c \
 SRCS+=	wind_err.c \
 	wind_err.h
 
-CFLAGS+=-I${KRB5DIR}/lib/roken -I.
+CFLAGS+=-I${KRB5DIR}/lib/roken -I${SRCTOP}/contrib/com_err -I.
 
 .include <bsd.lib.mk>
 

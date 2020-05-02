@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/input.c 295937 2016-02-23 22:44:01Z jilles $");
+__FBSDID("$FreeBSD: stable/11/bin/sh/input.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -101,8 +101,6 @@ static struct parsefile basepf = {	/* top level input file */
 };
 static struct parsefile *parsefile = &basepf;	/* current input file */
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
-
-EditLine *el;			/* cookie for editline package */
 
 static void pushfile(void);
 static int preadfd(void);

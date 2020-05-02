@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_floor.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_truncf.c 130767 2004-06-20 09:25:43Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_truncf.c 130767 2004-06-20 09:25:43Z das $");
 
 /*
  * truncf(x)

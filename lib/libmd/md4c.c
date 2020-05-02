@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /* MD4C.C - RSA Data Security, Inc., MD4 message-digest algorithm
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmd/md4c.c 314184 2017-02-23 22:10:37Z avg $");
+__FBSDID("$FreeBSD: stable/11/lib/libmd/md4c.c 282774 2015-05-11 16:45:33Z thomas $");
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
 

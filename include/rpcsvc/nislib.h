@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -27,7 +26,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $FreeBSD: stable/10/include/rpcsvc/nislib.h 93032 2002-03-23 17:24:55Z imp $
+ * $FreeBSD: stable/11/include/rpcsvc/nislib.h 93032 2002-03-23 17:24:55Z imp $
  */
 
 /*

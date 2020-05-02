@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/include/rpc/clnt_stat.h 74509 2001-03-20 08:20:50Z alfred $ */
+/*	$FreeBSD: stable/11/include/rpc/clnt_stat.h 74509 2001-03-20 08:20:50Z alfred $ */
 /*
  * Copyright (c) 1986 - 1991, 1994, 1996, 1997 by Sun Microsystems, Inc.
  * All rights reserved.

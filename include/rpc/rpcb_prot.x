@@ -1,6 +1,6 @@
 %/*-
-% * $FreeBSD: stable/10/include/rpc/rpcb_prot.x 261046 2014-01-22 23:45:27Z mav $
-% * $MidnightBSD$
+% * $FreeBSD: stable/11/include/rpc/rpcb_prot.x 258578 2013-11-25 19:04:36Z hrs $
+% *
 % * Copyright (c) 2009, Sun Microsystems, Inc.
 % * All rights reserved.
 % *

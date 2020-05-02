@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libsbuf/Makefile 321113 2017-07-18 08:23:21Z ngie $
+# $FreeBSD: stable/11/lib/libsbuf/Makefile 321114 2017-07-18 08:23:47Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=		sbuf
 SHLIBDIR?= 	/lib
 SRCS=		subr_prf.c subr_sbuf.c
@@ -10,12 +10,10 @@ SHLIB_MAJOR	= 6
 SYMBOL_MAPS=    ${.CURDIR}/Symbol.map
 VERSION_DEF=	${.CURDIR}/Version.def
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH:	${SRCTOP}/sys/kern
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.lib.mk>

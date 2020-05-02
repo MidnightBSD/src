@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libthr/Makefile 313602 2017-02-11 06:35:29Z ngie $
+# $FreeBSD: stable/11/lib/libthr/Makefile 346156 2019-04-12 15:15:27Z kib $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -9,23 +8,33 @@
 # (for system call stubs) to CFLAGS below.  -DSYSLIBC_SCCS affects just the
 # system call stubs.
 
+PACKAGE=	clibs
 SHLIBDIR?= /lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 MK_SSP=	no
 
 LIB=thr
 SHLIB_MAJOR= 3
 WARNS?=	3
+NO_WTHREAD_SAFETY=1
 CFLAGS+=-DPTHREAD_KERNEL
-CFLAGS+=-I${SRCTOP}/lib/libc/include -I${.CURDIR}/thread \
-	-I${SRCTOP}/include
+CFLAGS+=-I${SRCTOP}/lib/libc/include
+CFLAGS+=-I${SRCTOP}/lib/libc/${MACHINE_CPUARCH}
+CFLAGS+=-I${.CURDIR}/thread
+CFLAGS+=-I${SRCTOP}/include
 CFLAGS+=-I${.CURDIR}/arch/${MACHINE_CPUARCH}/include
 CFLAGS+=-I${.CURDIR}/sys
 CFLAGS+=-I${SRCTOP}/libexec/rtld-elf
 CFLAGS+=-I${SRCTOP}/libexec/rtld-elf/${MACHINE_CPUARCH}
 CFLAGS+=-I${SRCTOP}/lib/libthread_db
 CFLAGS+=-Winline
+
+CFLAGS.thr_stack.c+=	-Wno-cast-align
+.include <bsd.compiler.mk>
+.if !(${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} < 40300)
+CFLAGS.thr_symbols.c+=	-Wno-missing-variable-declarations
+.endif
 
 .ifndef NO_THREAD_UNWIND_STACK
 CFLAGS+=-fexceptions
@@ -46,7 +55,9 @@ PRECIOUSLIB=
 
 .PATH: ${.CURDIR}/arch/${MACHINE_CPUARCH}/${MACHINE_CPUARCH}
 
+.if exists(${.CURDIR}/arch/${MACHINE_CPUARCH}/Makefile.inc)
 .include "${.CURDIR}/arch/${MACHINE_CPUARCH}/Makefile.inc"
+.endif
 .include "${.CURDIR}/sys/Makefile.inc"
 .include "${.CURDIR}/thread/Makefile.inc"
 
@@ -58,10 +69,6 @@ SYMLINKS+=lib${LIB}.so ${LIBDIR}/libpthread.so
 .endif
 .if ${MK_PROFILE} != "no"
 SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
-.endif
-
-.if !defined(WITHOUT_SYSCALL_COMPAT)
-CFLAGS+=-DSYSCALL_COMPAT
 .endif
 
 .if ${MK_TESTS} != "no"

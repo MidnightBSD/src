@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/libexec/kdc/Makefile 287428 2015-09-03 11:33:33Z ume $
+# $FreeBSD: stable/11/kerberos5/libexec/kdc/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 PROG=	kdc
 MAN=	kdc.8
@@ -10,10 +9,8 @@ SRCS=	config.c \
 	main.c
 
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
-	-I${KRB5DIR}/kdc ${LDAPCFLAGS}
-DPADD=	${LIBKDC} ${LIBHDB} ${LIBKRB5} ${LIBROKEN} ${LIBASN1} \
-	${LIBCRYPTO} ${LIBCRYPT} ${LIBVERS}
-LDADD=	-lkdc -lhdb -lkrb5 -lroken -lasn1 -lcrypto -lcrypt ${LIBVERS}
+	-I${KRB5DIR}/kdc -I${SRCTOP}/contrib/com_err ${LDAPCFLAGS}
+LIBADD=	kdc hdb krb5 roken crypt vers
 LDFLAGS=${LDAPLDFLAGS}
 
 .include <bsd.prog.mk>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_log.c 1.3 95/01/18 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/k_log.h 226376 2011-10-15 05:23:28Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/k_log.h 226376 2011-10-15 05:23:28Z das $");
 
 /*
  * k_log1p(f):

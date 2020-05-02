@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008-2011 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/cexp_test.c 293267 2016-01-06 20:21:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/cexp_test.c 348787 2019-06-07 18:52:36Z dim $");
 
 #include <sys/param.h>
 
@@ -60,12 +59,20 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/cexp_test.c 293267 2016-01-06 20:21
  * XXX The volatile here is to avoid gcc's bogus constant folding and work
  *     around the lack of support for the FENV_ACCESS pragma.
  */
-#define	test(func, z, result, exceptmask, excepts, checksign)	do {	\
+#define	test_t(type, func, z, result, exceptmask, excepts, checksign)	\
+do {									\
 	volatile long double complex _d = z;				\
+	volatile type complex _r = result;				\
 	assert(feclearexcept(FE_ALL_EXCEPT) == 0);			\
-	assert(cfpequal_cs((func)(_d), (result), (checksign)));		\
+	assert(cfpequal_cs((func)(_d), (_r), (checksign)));		\
 	assert(((void)(func), fetestexcept(exceptmask) == (excepts)));	\
 } while (0)
+
+#define	test(func, z, result, exceptmask, excepts, checksign)		\
+	test_t(double, func, z, result, exceptmask, excepts, checksign)
+
+#define	test_f(func, z, result, exceptmask, excepts, checksign)		\
+	test_t(float, func, z, result, exceptmask, excepts, checksign)
 
 /* Test within a given tolerance. */
 #define	test_tol(func, z, result, tol)				do {	\
@@ -77,7 +84,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/cexp_test.c 293267 2016-01-06 20:21
 /* Test all the functions that compute cexp(x). */
 #define	testall(x, result, exceptmask, excepts, checksign)	do {	\
 	test(cexp, x, result, exceptmask, excepts, checksign);		\
-	test(cexpf, x, result, exceptmask, excepts, checksign);		\
+	test_f(cexpf, x, result, exceptmask, excepts, checksign);	\
 } while (0)
 
 /*
@@ -95,7 +102,7 @@ static const float finites[] =
 
 
 /* Tests for 0 */
-void
+static void
 test_zero(void)
 {
 
@@ -110,10 +117,10 @@ test_zero(void)
  * Tests for NaN.  The signs of the results are indeterminate unless the
  * imaginary part is 0.
  */
-void
-test_nan()
+static void
+test_nan(void)
 {
-	int i;
+	unsigned i;
 
 	/* cexp(x + NaNi) = NaN + NaNi and optionally raises invalid */
 	/* cexp(NaN + yi) = NaN + NaNi and optionally raises invalid (|y|>0) */
@@ -143,10 +150,10 @@ test_nan()
 		ALL_STD_EXCEPT, 0, 0);
 }
 
-void
+static void
 test_inf(void)
 {
-	int i;
+	unsigned i;
 
 	/* cexp(x + inf i) = NaN + NaNi and raises invalid */
 	for (i = 0; i < nitems(finites); i++) {
@@ -185,10 +192,10 @@ test_inf(void)
 		ALL_STD_EXCEPT, 0, 1);
 }
 
-void
+static void
 test_reals(void)
 {
-	int i;
+	unsigned i;
 
 	for (i = 0; i < nitems(finites); i++) {
 		/* XXX could check exceptions more meticulously */
@@ -199,19 +206,19 @@ test_reals(void)
 		test(cexp, CMPLXL(finites[i], -0.0),
 		     CMPLXL(exp(finites[i]), -0.0),
 		     FE_INVALID | FE_DIVBYZERO, 0, 1);
-		test(cexpf, CMPLXL(finites[i], 0.0),
+		test_f(cexpf, CMPLXL(finites[i], 0.0),
 		     CMPLXL(expf(finites[i]), 0.0),
 		     FE_INVALID | FE_DIVBYZERO, 0, 1);
-		test(cexpf, CMPLXL(finites[i], -0.0),
+		test_f(cexpf, CMPLXL(finites[i], -0.0),
 		     CMPLXL(expf(finites[i]), -0.0),
 		     FE_INVALID | FE_DIVBYZERO, 0, 1);
 	}
 }
 
-void
+static void
 test_imaginaries(void)
 {
-	int i;
+	unsigned i;
 
 	for (i = 0; i < nitems(finites); i++) {
 		printf("# Run %d..\n", i);
@@ -221,16 +228,16 @@ test_imaginaries(void)
 		test(cexp, CMPLXL(-0.0, finites[i]),
 		     CMPLXL(cos(finites[i]), sin(finites[i])),
 		     ALL_STD_EXCEPT & ~FE_INEXACT, 0, 1);
-		test(cexpf, CMPLXL(0.0, finites[i]),
+		test_f(cexpf, CMPLXL(0.0, finites[i]),
 		     CMPLXL(cosf(finites[i]), sinf(finites[i])),
 		     ALL_STD_EXCEPT & ~FE_INEXACT, 0, 1);
-		test(cexpf, CMPLXL(-0.0, finites[i]),
+		test_f(cexpf, CMPLXL(-0.0, finites[i]),
 		     CMPLXL(cosf(finites[i]), sinf(finites[i])),
 		     ALL_STD_EXCEPT & ~FE_INEXACT, 0, 1);
 	}
 }
 
-void
+static void
 test_small(void)
 {
 	static const double tests[] = {
@@ -243,7 +250,7 @@ test_small(void)
 	};
 	double a, b;
 	double x, y;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < nitems(tests); i += 4) {
 		printf("# Run %d..\n", i);
@@ -261,7 +268,7 @@ test_small(void)
 }
 
 /* Test inputs with a real part r that would overflow exp(r). */
-void
+static void
 test_large(void)
 {
 
@@ -289,7 +296,7 @@ test_large(void)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..7\n");
@@ -303,12 +310,8 @@ main(int argc, char *argv[])
 	test_inf();
 	printf("ok 3 - cexp inf\n");
 
-#if defined(__i386__)
-	printf("not ok 4 - cexp reals # TODO: PR # 191676 fails assertion on i386\n");
-#else
 	test_reals();
 	printf("ok 4 - cexp reals\n");
-#endif
 
 	test_imaginaries();
 	printf("ok 5 - cexp imaginaries\n");

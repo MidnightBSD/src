@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1991 Regents of the University of California.
 .\" All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     from: @(#)lgamma.3	6.6 (Berkeley) 12/3/92
-.\" $FreeBSD: stable/10/lib/msun/man/lgamma.3 326830 2017-12-13 18:38:02Z dim $
+.\" $FreeBSD: stable/11/lib/msun/man/lgamma.3 326830 2017-12-13 18:38:02Z dim $
 .\"
 .Dd December 8, 2017
 .Dt LGAMMA 3
@@ -103,7 +102,7 @@ returns the sign of \(*G(x).
 and
 .Fn lgammal_r x signgamp
 provide the same functionality as
-.Fn lgamma x , 
+.Fn lgamma x ,
 .Fn lgammaf x ,
 and
 .Fn lgammal x ,
@@ -129,7 +128,6 @@ are deprecated aliases for
 and
 .Fn lgammaf_r ,
 respectively.
-
 .Sh IDIOSYNCRASIES
 Do not use the expression
 .Dq Li signgam\(**exp(lgamma(x))

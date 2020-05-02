@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libypclnt/Makefile 313597 2017-02-11 06:30:25Z ngie $
+# $FreeBSD: stable/11/lib/libypclnt/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=	ypclnt
 SHLIB_MAJOR= 4
 SRCS=	ypclnt_connect.c \

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Stephen Montgomery-Smith <stephen@FreeBSD.ORG>
  * All rights reserved.
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/catrigf.c 318365 2017-05-16 18:54:25Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/catrigf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <complex.h>
 #include <float.h>

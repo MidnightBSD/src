@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2008 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_csqrtl.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_csqrtl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <complex.h>
 #include <float.h>
@@ -43,8 +42,16 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/src/s_csqrtl.c 284810 2015-06-25 13:01:10
  */
 #pragma	STDC CX_LIMITED_RANGE	ON
 
-/* We risk spurious overflow for components >= LDBL_MAX / (1 + sqrt(2)). */
-#define	THRESH	(LDBL_MAX / 2.414213562373095048801688724209698L)
+/*
+ * We risk spurious overflow for components >= LDBL_MAX / (1 + sqrt(2)).
+ * Rather than determining the fully precise value at which we might
+ * overflow, just use a threshold of approximately LDBL_MAX / 4.
+ */
+#if LDBL_MAX_EXP != 0x4000
+#error "Unsupported long double format"
+#else
+#define	THRESH	0x1p16382L
+#endif
 
 long double complex
 csqrtl(long double complex z)

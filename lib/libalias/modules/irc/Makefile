@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libalias/modules/irc/Makefile,v 1.2 2006/10/08 14:01:59 piso Exp $
+# $FreeBSD: stable/11/lib/libalias/modules/irc/Makefile 163128 2006-10-08 14:02:00Z piso $
 
 NAME=	irc
 SRCS=	alias_irc.c

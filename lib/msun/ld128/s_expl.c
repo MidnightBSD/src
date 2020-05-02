@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/ld128/s_expl.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/ld128/s_expl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * ld128 version of s_expl.c.  See ../ld80/s_expl.c for most comments.
@@ -132,7 +131,7 @@ T3 =  0.03125;
 /*
  * Domain [-0.1659, 0.03125], range ~[2.9134e-44, 1.8404e-37]:
  * |(exp(x)-1-x-x**2/2)/x - p(x)| < 2**-122.03
-/*
+ *
  * XXX none of the long double C or D coeffs except C10 is correctly printed.
  * If you re-print their values in %.35Le format, the result is always
  * different.  For example, the last 2 digits in C3 should be 59, not 67.

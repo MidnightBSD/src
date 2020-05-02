@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993,94 Winning Strategies, Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/amd64/s_rintl.S 217108 2011-01-07 16:13:12Z kib $
+ * $FreeBSD: stable/11/lib/msun/amd64/s_rintl.S 217108 2011-01-07 16:13:12Z kib $
  */
 
 /*

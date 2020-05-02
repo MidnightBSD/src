@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libthr/pthread.map 296732 2016-03-12 17:33:40Z kib $
+/*
+ * $FreeBSD: stable/11/lib/libthr/pthread.map 346156 2019-04-12 15:15:27Z kib $
  */
 
 /*
@@ -137,6 +137,7 @@ FBSDprivate_1.0 {
 	__pthread_mutex_lock;
 	__pthread_mutex_timedlock;
 	__pthread_mutex_trylock;
+	__pthread_distribute_static_tls;
 	_pthread_atfork;
 	_pthread_barrier_destroy;
 	_pthread_barrier_init;
@@ -314,4 +315,14 @@ FBSD_1.1 {
 
 FBSD_1.2 {
 	pthread_getthreadid_np;
+};
+
+FBSD_1.4 {
+	 pthread_mutex_consistent;
+	 pthread_mutexattr_getrobust;
+	 pthread_mutexattr_setrobust;
+};
+
+FBSD_1.5 {
+	 pthread_get_name_np;
 };

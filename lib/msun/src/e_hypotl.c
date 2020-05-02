@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* From: @(#)e_hypot.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_hypotl.c 226412 2011-10-16 05:36:39Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_hypotl.c 226412 2011-10-16 05:36:39Z das $");
 
 /* long double version of hypot().  See e_hypot.c for most comments. */
 

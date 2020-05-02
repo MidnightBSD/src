@@ -14,10 +14,13 @@ you didn't get a copy, you may request one from <license@inner.net>.
 	Modified by cmetz for OPIE 2.31. Added time.h.
 	Created by cmetz for OPIE 2.22.
 
-$FreeBSD: stable/10/contrib/opie/libopie/newseed.c 109680 2003-01-22 10:55:36Z des $
+$FreeBSD: stable/11/contrib/opie/libopie/newseed.c 257264 2013-10-28 18:24:31Z sbruno $
 */
 
 #include "opie_cfg.h"
+#ifndef HAVE_TIME_H
+#define HAVE_TIME_H 1
+#endif
 #if HAVE_TIME_H
 #include <time.h>
 #endif /* HAVE_TIME_H */
@@ -35,6 +38,8 @@ $FreeBSD: stable/10/contrib/opie/libopie/newseed.c 109680 2003-01-22 10:55:36Z d
 #if DEBUG
 #include <syslog.h>
 #endif /* DEBUG */
+#include <stdio.h>
+#include <stdlib.h>
 #include "opie.h"
 
 int opienewseed FUNCTION((seed), char *seed)

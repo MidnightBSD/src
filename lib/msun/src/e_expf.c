@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_expf.c -- float version of e_exp.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_expf.c 251024 2013-05-27 08:50:10Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_expf.c 352835 2019-09-28 08:57:29Z dim $");
 
 #include <float.h>
 
@@ -84,9 +83,9 @@ __ieee754_expf(float x)
     /* x is now in primary range */
 	t  = x*x;
 	if(k >= -125)
-	    SET_FLOAT_WORD(twopk,0x3f800000+(k<<23));
+	    SET_FLOAT_WORD(twopk,((u_int32_t)(0x7f+k))<<23);
 	else
-	    SET_FLOAT_WORD(twopk,0x3f800000+((k+100)<<23));
+	    SET_FLOAT_WORD(twopk,((u_int32_t)(0x7f+(k+100)))<<23);
 	c  = x - t*(P1+t*P2);
 	if(k==0) 	return one-((x*c)/(c-(float)2.0)-x);
 	else 		y = one-((lo-(x*c)/((float)2.0-c))-hi);

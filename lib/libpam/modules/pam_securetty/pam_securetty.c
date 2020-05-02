@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_securetty/pam_securetty.c 125650 2004-02-10 10:13:21Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_securetty/pam_securetty.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

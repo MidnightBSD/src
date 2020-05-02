@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * Public domain stdio wrapper for libz, written by Johan Danielsson.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libz/zopen.c 84228 2001-09-30 22:39:00Z dillon $");
+__FBSDID("$FreeBSD: stable/11/lib/libz/zopen.c 257462 2013-10-31 18:44:40Z emaste $");
 
 #include <stdio.h>
 #include <zlib.h>
@@ -30,6 +29,12 @@ xgzclose(void *cookie)
     return gzclose(cookie);
 }
 
+static fpos_t
+xgzseek(void *cookie,  fpos_t offset, int whence)
+{
+	return gzseek(cookie, (z_off_t)offset, whence);
+}
+
 FILE *
 zopen(const char *fname, const char *mode)
 {
@@ -38,7 +43,7 @@ zopen(const char *fname, const char *mode)
 	return NULL;
 
     if(*mode == 'r')
-	return (funopen(gz, xgzread, NULL, NULL, xgzclose));
+	return (funopen(gz, xgzread, NULL, xgzseek, xgzclose));
     else
-	return (funopen(gz, NULL, xgzwrite, NULL, xgzclose));
+	return (funopen(gz, NULL, xgzwrite, xgzseek, xgzclose));
 }

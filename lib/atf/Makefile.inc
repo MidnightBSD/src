@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/atf/Makefile.inc 275988 2014-12-21 08:30:18Z ngie $
+# $FreeBSD: stable/11/lib/atf/Makefile.inc 273929 2014-11-01 11:17:54Z jmmv $
 
 CFLAGS+=	-DHAVE_CONFIG_H
 

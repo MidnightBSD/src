@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /* include/config.h.  Generated from config.h.in by configure.  */
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* $FreeBSD: stable/10/kerberos5/include/config.h 234027 2012-04-08 08:19:17Z stas $ */
+/* $FreeBSD: stable/11/kerberos5/include/config.h 234027 2012-04-08 08:19:17Z stas $ */
 
 #ifndef RCSID
 #define RCSID(msg) \

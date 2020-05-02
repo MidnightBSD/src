@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 David Chisnall
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/src/imprecise.c 284810 2015-06-25 13:01:10Z tijl $
+ * $FreeBSD: stable/11/lib/msun/src/imprecise.c 336767 2018-07-27 17:39:36Z dim $
  */
 
 #include <float.h>
@@ -48,14 +47,6 @@
 #define	DECLARE_WEAK(x)\
 	__weak_reference(imprecise_## x, x);\
 	WARN_IMPRECISE(x)
-
-long double
-imprecise_powl(long double x, long double y)
-{
-
-	return pow(x, y);
-}
-DECLARE_WEAK(powl);
 
 #define DECLARE_IMPRECISE(f) \
 	long double imprecise_ ## f ## l(long double v) { return f(v); }\

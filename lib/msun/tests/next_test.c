@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/next_test.c 293267 2016-01-06 20:21:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/next_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <fenv.h>
 #include <float.h>
@@ -74,7 +73,7 @@ static double idd(double);
 static float idf(float);
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	static const int ex_under = FE_UNDERFLOW | FE_INEXACT;	/* shorthand */
 	static const int ex_over = FE_OVERFLOW | FE_INEXACT;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Portions Copyright (C) 2004, 2005, 2008, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1995-2003  Internet Software Consortium.
@@ -48,7 +47,7 @@
 /*%
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
  *	$Id: resolv.h,v 1.30 2009/03/03 01:52:48 each Exp $
- * $FreeBSD: stable/10/include/resolv.h 270838 2014-08-30 10:16:25Z ume $
+ * $FreeBSD: stable/11/include/resolv.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _RESOLV_H_

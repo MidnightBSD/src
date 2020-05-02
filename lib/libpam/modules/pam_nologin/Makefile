@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright 2001 Mark R V Murray
 # All rights reserved.
 #
@@ -23,13 +22,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/libpam/modules/pam_nologin/Makefile 112044 2003-03-09 20:06:38Z obrien $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_nologin/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
 LIB=	pam_nologin
 SRCS=	pam_nologin.c
 MAN=	pam_nologin.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD+=	util
 
 .include <bsd.lib.mk>

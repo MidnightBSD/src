@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Daniel Eischen <eischen@vigrid.com>.
  * All rights reserved.
@@ -29,9 +28,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_getschedparam.c 238645 2012-07-20 05:47:12Z davidxu $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_getschedparam.c 338707 2018-09-17 02:51:08Z pfg $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -45,8 +45,8 @@
 __weak_reference(_pthread_getschedparam, pthread_getschedparam);
 
 int
-_pthread_getschedparam(pthread_t pthread, int *policy, 
-	struct sched_param *param)
+_pthread_getschedparam(pthread_t pthread, int * __restrict policy, 
+    struct sched_param * __restrict param)
 {
 	struct pthread *curthread = _get_curthread();
 	int ret = 0;

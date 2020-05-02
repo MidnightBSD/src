@@ -1,10 +1,10 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/lib/libusb/Makefile 356399 2020-01-06 09:22:33Z hselasky $
+# $FreeBSD: stable/11/lib/libusb/Makefile 356398 2020-01-06 09:21:15Z hselasky $
 #
 # Makefile for the FreeBSD specific LibUSB 2.0
 #
 
+PACKAGE=lib${LIB}
 LIB=		usb
 SHLIB_MAJOR=	3
 SHLIB_MINOR=	0
@@ -20,8 +20,7 @@ PTHREAD_LIBS?=	-lpthread
 
 WARNS?=		2
 
-DPADD=		${LIBPTHREAD}
-LDADD=		${PTHREAD_LIBS}
+LIBADD=		pthread
 
 MLINKS+=	libusb.3 usb.3
 
@@ -38,10 +37,10 @@ SRCS+=		libusb10_io.c
 
 .if defined(COMPAT_32BIT)
 CFLAGS+=	-DCOMPAT_32BIT
-.else
+.endif
+
 FILES=		libusb-0.1.pc libusb-1.0.pc libusb-2.0.pc
 FILESDIR=	${LIBDATADIR}/pkgconfig
-.endif
 
 #
 # Cross platform support
@@ -65,8 +64,6 @@ CFLAGS+=	-DLIBUSB_GLOBAL_INCLUDE_FILE=\"${LIBUSB_GLOBAL_INCLUDE_FILE}\"
 CFLAGS+=	-DUSB_GLOBAL_INCLUDE_FILE=\"${LIBUSB_GLOBAL_INCLUDE_FILE}\"
 CFLAGS+=	-I ../../sys
 .endif
-
-.include <bsd.lib.mk>
 
 # LibUSB v1.0
 MLINKS += libusb.3 libusb_get_version.3
@@ -273,3 +270,5 @@ MLINKS += libusb20.3 libusb20_me_decode.3
 MLINKS += libusb20.3 libusb20_desc_foreach.3
 MLINKS += libusb20.3 libusb20_strerror.3
 MLINKS += libusb20.3 libusb20_error_name.3
+
+.include <bsd.lib.mk>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Andrew Turner <andrew@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/arm/fenv-softfp.c 266314 2014-05-17 14:22:37Z ian $
+ * $FreeBSD: stable/11/lib/msun/arm/fenv-softfp.c 263210 2014-03-15 21:58:07Z andrew $
  */
 
 #define	FENV_MANGLE(x)	__softfp_ ##x

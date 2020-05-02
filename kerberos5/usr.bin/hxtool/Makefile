@@ -1,14 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/usr.bin/hxtool/Makefile 289042 2015-10-08 17:49:14Z bdrewery $
+# $FreeBSD: stable/11/kerberos5/usr.bin/hxtool/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 PROG=	hxtool
 MAN=
 CFLAGS+=	-I${KRB5DIR}/lib/hx509 \
 		-I${KRB5DIR}/lib/asn1 \
 		-I${KRB5DIR}/lib/roken \
-		-I${KRB5DIR}/lib/sl -I.
-DPADD=	${LIBHX509} ${LIBROKEN} ${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBSL} ${LIBVERS} ${LIBEDIT}
-LDADD=	-lhx509 -lroken -lasn1 -lcrypto -lcrypt ${LIBSL} ${LIBVERS} -ledit
+		-I${KRB5DIR}/lib/sl \
+		-I${SRCTOP}/contrib/com_err \
+		-I.
+LIBADD=	hx509 roken asn1 crypto sl vers edit
 SRCS=	hxtool.c hxtool-commands.c hxtool-commands.h
 
 CLEANFILES=	hxtool-commands.h hxtool-commands.c

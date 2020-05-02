@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %/*-
 % * Copyright (c) 2010, Oracle America, Inc.
 % *
@@ -32,7 +31,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/nis.x 272850 2014-10-09 23:05:32Z hrs $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/nis.x 272808 2014-10-09 06:58:33Z bapt $");
 #endif
 
 /* 
@@ -401,10 +400,7 @@ program  NIS_PROG {
 %#define OARIGHTS(d, n) (((d)->do_armask.do_armask_val+n)->oa_rights)
 %#define WORLD_DEFAULT (NIS_READ_ACC)
 %#define GROUP_DEFAULT (NIS_READ_ACC << 8)
-%#define OWNER_DEFAULT ((NIS_READ_ACC +\
-			 NIS_MODIFY_ACC +\
-			 NIS_CREATE_ACC +\
-			 NIS_DESTROY_ACC) << 16)
+%#define OWNER_DEFAULT ((NIS_READ_ACC + NIS_MODIFY_ACC + NIS_CREATE_ACC + NIS_DESTROY_ACC) << 16)
 %#define DEFAULT_RIGHTS (WORLD_DEFAULT | GROUP_DEFAULT | OWNER_DEFAULT)
 %
 %/* Result manipulation defines ... */
@@ -433,10 +429,8 @@ program  NIS_PROG {
 % * these definitions they take an nis_object *, and an int and return
 % * a u_char * for Value, and an int for length.
 % */
-%#define ENTRY_VAL(obj, col) \
-	(obj)->EN_data.en_cols.en_cols_val[col].ec_value.ec_value_val
-%#define ENTRY_LEN(obj, col) \
-	(obj)->EN_data.en_cols.en_cols_val[col].ec_value.ec_value_len
+%#define ENTRY_VAL(obj, col) (obj)->EN_data.en_cols.en_cols_val[col].ec_value.ec_value_val
+%#define ENTRY_LEN(obj, col) (obj)->EN_data.en_cols.en_cols_val[col].ec_value.ec_value_len
 %
 %#ifdef __cplusplus
 %}

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004-2005 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/powerpc/fenv.h 226218 2011-10-10 15:43:09Z das $
+ * $FreeBSD: stable/11/lib/msun/powerpc/fenv.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_FENV_H_
@@ -98,8 +97,13 @@ extern const fenv_t	__fe_dfl_env;
 union __fpscr {
 	double __d;
 	struct {
+#if _BYTE_ORDER == _LITTLE_ENDIAN
+		fenv_t __reg;
+		__uint32_t __junk;
+#else
 		__uint32_t __junk;
 		fenv_t __reg;
+#endif
 	} __bits;
 };
 

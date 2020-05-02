@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Stefan Farfeleder.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/tgmath.h 249995 2013-04-27 21:18:34Z ed $
+ * $FreeBSD: stable/11/include/tgmath.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _TGMATH_H_

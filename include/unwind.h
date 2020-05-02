@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/include/unwind.h 213290 2010-09-30 03:16:35Z davidxu $ */
+/* $FreeBSD: stable/11/include/unwind.h 213290 2010-09-30 03:16:35Z davidxu $ */
 
 /* libunwind - a platform-independent unwind library
    Copyright (C) 2003 Hewlett-Packard Co

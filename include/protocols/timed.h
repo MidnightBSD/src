@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)timed.h	8.1 (Berkeley) 6/2/93
  *
- * $FreeBSD: stable/10/include/protocols/timed.h 249311 2013-04-09 16:16:34Z ed $
+ * $FreeBSD: stable/11/include/protocols/timed.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_PROTOCOLS_TIMED_H_

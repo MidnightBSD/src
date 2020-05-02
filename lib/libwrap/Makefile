@@ -1,10 +1,10 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/lib/libwrap/Makefile 313432 2017-02-08 08:35:05Z ngie $
+# $FreeBSD: stable/11/lib/libwrap/Makefile 313431 2017-02-08 08:34:59Z ngie $
 #
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=	wrap
 SHLIB_MAJOR= 6
 INCS=	tcpd.h

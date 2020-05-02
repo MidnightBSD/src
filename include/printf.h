@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/printf.h 238111 2012-07-04 17:35:07Z pjd $
+ * $FreeBSD: stable/11/include/printf.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _PRINTF_H_

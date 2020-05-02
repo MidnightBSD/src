@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -32,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libypclnt/ypclnt_passwd.c,v 1.7 2006/07/28 21:34:37 stefanf Exp $
+ * $FreeBSD: stable/11/lib/libypclnt/ypclnt_passwd.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>
@@ -66,7 +65,7 @@ int
 ypclnt_havepasswdd(ypclnt_t *ypclnt)
 {
 	struct netconfig *nc = NULL;
-	void *localhandle = 0;
+	void *localhandle = NULL;
 	CLIENT *clnt = NULL;
 	int ret;
 
@@ -140,7 +139,7 @@ yppasswd_local(ypclnt_t *ypclnt, const struct passwd *pwd)
 	struct master_yppasswd yppwd;
 	struct rpc_err rpcerr;
 	struct netconfig *nc = NULL;
-	void *localhandle = 0;
+	void *localhandle = NULL;
 	CLIENT *clnt = NULL;
 	int ret, *result;
 

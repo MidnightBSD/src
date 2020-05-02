@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 
 /* @(#)e_gamma.c 1.3 95/01/18 */
 /*
@@ -14,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_gamma.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_gamma.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_gamma(x)
  * Return the logarithm of the Gamma function of x.

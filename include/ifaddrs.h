@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/include/ifaddrs.h 250887 2013-05-21 21:20:10Z ed $	*/
+/*	$FreeBSD: stable/11/include/ifaddrs.h 250887 2013-05-21 21:20:10Z ed $	*/
 
 /*
  * Copyright (c) 1995, 1999

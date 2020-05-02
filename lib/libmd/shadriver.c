@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* SHADRIVER.C - test driver for SHA-1 (and SHA-2) */
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. Created 1990. All rights
@@ -13,7 +12,7 @@
  * documentation and/or software. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmd/shadriver.c 314332 2017-02-27 10:40:39Z avg $");
+__FBSDID("$FreeBSD: stable/11/lib/libmd/shadriver.c 300903 2016-05-28 16:06:07Z allanjude $");
 
 #include <sys/types.h>
 

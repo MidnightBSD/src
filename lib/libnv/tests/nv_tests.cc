@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014-2015 Sandvine Inc.  All rights reserved.
  * All rights reserved.
@@ -26,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnv/tests/nv_tests.cc 319370 2017-06-01 06:16:57Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libnv/tests/nv_tests.cc 319371 2017-06-01 06:17:01Z ngie $");
+
+#include <sys/nv.h>
 
 #include <atf-c++.hpp>
-#include <nv.h>
 
 #include <errno.h>
 #include <limits>
@@ -441,10 +441,44 @@ ATF_TEST_CASE_BODY(nvlist_pack__empty_nvlist)
 	packed = nvlist_pack(nvl, &packed_size);
 	ATF_REQUIRE(packed != NULL);
 
-	unpacked = nvlist_unpack(packed, packed_size);
+	unpacked = nvlist_unpack(packed, packed_size, 0);
 	ATF_REQUIRE(unpacked != NULL);
 	ATF_REQUIRE(unpacked != nvl);
 	ATF_REQUIRE(nvlist_empty(unpacked));
+
+	nvlist_destroy(unpacked);
+	nvlist_destroy(nvl);
+	free(packed);
+}
+
+ATF_TEST_CASE_WITHOUT_HEAD(nvlist_unpack__flags_nvlist);
+ATF_TEST_CASE_BODY(nvlist_unpack__flags_nvlist)
+{
+	nvlist_t *nvl, *unpacked;
+	void *packed;
+	size_t packed_size;
+
+	nvl = nvlist_create(NV_FLAG_NO_UNIQUE);
+	ATF_REQUIRE(nvl != NULL);
+
+	nvlist_add_bool(nvl, "name", true);
+	ATF_REQUIRE(!nvlist_empty(nvl));
+	ATF_REQUIRE(nvlist_exists_bool(nvl, "name"));
+
+	packed = nvlist_pack(nvl, &packed_size);
+	ATF_REQUIRE(packed != NULL);
+
+	unpacked = nvlist_unpack(packed, packed_size, 0);
+	ATF_REQUIRE(unpacked == NULL);
+
+	unpacked = nvlist_unpack(packed, packed_size, NV_FLAG_IGNORE_CASE);
+	ATF_REQUIRE(unpacked == NULL);
+
+	unpacked = nvlist_unpack(packed, packed_size, NV_FLAG_NO_UNIQUE);
+	ATF_REQUIRE(unpacked != NULL);
+	ATF_REQUIRE(unpacked != nvl);
+	ATF_REQUIRE(!nvlist_empty(unpacked));
+	ATF_REQUIRE(nvlist_exists_bool(unpacked, "name"));
 
 	nvlist_destroy(unpacked);
 	nvlist_destroy(nvl);
@@ -535,7 +569,7 @@ ATF_TEST_CASE_BODY(nvlist_pack__multiple_values)
 	packed = nvlist_pack(nvl, &packed_size);
 	ATF_REQUIRE(packed != NULL);
 
-	unpacked = nvlist_unpack(packed, packed_size);
+	unpacked = nvlist_unpack(packed, packed_size, 0);
 	ATF_REQUIRE(unpacked != 0);
 
 	it = NULL;
@@ -616,7 +650,7 @@ ATF_TEST_CASE_BODY(nvlist_unpack__duplicate_key)
 	ATF_REQUIRE(keypos != NULL);
 	memcpy(keypos, key2, keylen);
 
-	unpacked = nvlist_unpack(packed, size);
+	unpacked = nvlist_unpack(packed, size, 0);
 	ATF_REQUIRE(nvlist_error(unpacked) != 0);
 
 	free(packed);
@@ -1208,6 +1242,7 @@ ATF_INIT_TEST_CASES(tp)
 	ATF_ADD_TEST_CASE(tp, nvlist_pack__multiple_values);
 	ATF_ADD_TEST_CASE(tp, nvlist_pack__error_nvlist);
 	ATF_ADD_TEST_CASE(tp, nvlist_unpack__duplicate_key);
+	ATF_ADD_TEST_CASE(tp, nvlist_unpack__flags_nvlist);
 
 	ATF_ADD_TEST_CASE(tp, nvlist_move_string__single_insert);
 	ATF_ADD_TEST_CASE(tp, nvlist_move_nvlist__single_insert);

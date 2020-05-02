@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_atan.c 5.1 93/09/24 */
 /* FreeBSD: head/lib/msun/src/s_atan.c 176451 2008-02-22 02:30:36Z das */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_atanl.c 181074 2008-07-31 22:41:26Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_atanl.c 181074 2008-07-31 22:41:26Z das $");
 
 /*
  * See comments in s_atan.c.

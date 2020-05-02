@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libalias/Makefile,v 1.33 2006/09/27 12:30:27 ru Exp $
+# $FreeBSD: stable/11/lib/libalias/Makefile 162701 2006-09-27 12:30:27Z ru $
 
 SUBDIR=	libalias modules
 

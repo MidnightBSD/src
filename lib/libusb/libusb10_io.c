@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb10_io.c 339190 2018-10-05 07:50:44Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb10_io.c 339189 2018-10-05 07:49:01Z hselasky $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *

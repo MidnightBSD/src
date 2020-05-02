@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * This pam_krb5 module contains code that is:
  *   Copyright (c) Derrick J. Brashear, 1996. All rights reserved.
@@ -49,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_krb5/pam_krb5.c 315152 2017-03-12 13:23:23Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_krb5/pam_krb5.c 315151 2017-03-12 13:22:35Z des $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -863,7 +862,7 @@ verify_krb_v5_tgt(krb5_context context, krb5_ccache ccache,
 	services[0] = "host";
 	services[1] = pam_service;
 	services[2] = NULL;
-	keyblock = 0;
+	keyblock = NULL;
 	retval = -1;
 	for (service = &services[0]; *service != NULL; service++) {
 		retval = krb5_sname_to_principal(context, NULL, *service,

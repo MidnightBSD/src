@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/kerberos5/libexec/hprop/Makefile 236337 2012-05-30 22:21:25Z obrien $
+# $FreeBSD: stable/11/kerberos5/libexec/hprop/Makefile 344200 2019-02-16 03:18:52Z nyan $
 
 PROG=	hprop
 MAN=	hprop.8
@@ -9,11 +9,11 @@ CFLAGS+=-I${KRB5DIR}/lib/asn1
 CFLAGS+=-I${KRB5DIR}/lib/hx509
 CFLAGS+=-I${KRB5DIR}/lib/ntlm
 CFLAGS+=-I${KRB5DIR}/kdc
-CFLAGS+=-I${.OBJDIR}/../../lib/libkrb5
-DPADD=	${LIBHDB} ${LIBKRB5} ${LIBHX509} ${LIBROKEN} ${LIBVERS} \
-	${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBCOM_ERR} ${LDAPDPADD}
-LDADD=	-lhdb -lkrb5 -lhx509 -lroken ${LIBVERS} \
-	-lasn1 -lcrypto -lcrypt -lcom_err ${LDAPLDADD}
+CFLAGS+=-I${SRCTOP}/contrib/com_err
+CFLAGS+=-I${.OBJDIR:H:H}/lib/libkrb5
+LIBADD=	hdb krb5 roken vers
+DPADD=	${LDAPDPADD}
+LDADD=	${LDAPLDADD}
 LDFLAGS=${LDAPLDFLAGS}
 
 .include <bsd.prog.mk>

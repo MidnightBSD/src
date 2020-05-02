@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Stephen Montgomery-Smith <stephen@FreeBSD.ORG>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/catrig.c 318365 2017-05-16 18:54:25Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/catrig.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <complex.h>
 #include <float.h>
@@ -470,8 +469,13 @@ clog_for_large_values(double complex z)
 
 	/*
 	 * Avoid overflow in hypot() when x and y are both very large.
-	 * Divide x and y by E, and then add 1 to the logarithm.  This depends
-	 * on E being larger than sqrt(2).
+	 * Divide x and y by E, and then add 1 to the logarithm.  This
+	 * depends on E being larger than sqrt(2), since the return value of
+	 * hypot cannot overflow if neither argument is greater in magnitude
+	 * than 1/sqrt(2) of the maximum value of the return type.  Likewise
+	 * this determines the necessary threshold for using this method
+	 * (however, actually use 1/2 instead as it is simpler).
+	 *
 	 * Dividing by E causes an insignificant loss of accuracy; however
 	 * this method is still poor since it is uneccessarily slow.
 	 */
@@ -605,7 +609,7 @@ catanh(double complex z)
 	if (ax < SQRT_3_EPSILON / 2 && ay < SQRT_3_EPSILON / 2) {
 		/*
 		 * z = 0 was filtered out above.  All other cases must raise
-		 * inexact, but this is the only only that needs to do it
+		 * inexact, but this is the only case that needs to do it
 		 * explicitly.
 		 */
 		raise_inexact();
@@ -638,3 +642,12 @@ catan(double complex z)
 
 	return (CMPLX(cimag(w), creal(w)));
 }
+
+#if LDBL_MANT_DIG == 53
+__weak_reference(cacosh, cacoshl);
+__weak_reference(cacos, cacosl);
+__weak_reference(casinh, casinhl);
+__weak_reference(casin, casinl);
+__weak_reference(catanh, catanhl);
+__weak_reference(catan, catanl);
+#endif

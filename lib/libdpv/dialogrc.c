@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2015 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libdpv/dialogrc.c 293619 2016-01-09 23:33:44Z dteske $");
+__FBSDID("$FreeBSD: stable/11/lib/libdpv/dialogrc.c 290275 2015-11-02 20:03:59Z dteske $");
 
 #include <sys/types.h>
 

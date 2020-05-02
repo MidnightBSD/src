@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Daniel Eischen <deischen@freebsd.org>.
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthr/arch/i386/include/pthread_md.h 228536 2011-12-15 19:42:25Z dim $
+ * $FreeBSD: stable/11/lib/libthr/arch/i386/include/pthread_md.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -76,12 +75,6 @@ struct tcb {
 								\
 	__result;						\
 })
-
-/*
- * The constructors.
- */
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *tcb);
 
 /* Called from the thread to set its private data. */
 static __inline void

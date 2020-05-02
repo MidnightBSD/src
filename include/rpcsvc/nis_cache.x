@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %/*
 % * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
 % * unrestricted use provided that this legend is included on all tape
@@ -40,7 +39,7 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/nis_cache.x 114629 2003-05-04 02:51:42Z obrien $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/nis_cache.x 114629 2003-05-04 02:51:42Z obrien $");
 #endif
 
 #ifdef RPC_HDR

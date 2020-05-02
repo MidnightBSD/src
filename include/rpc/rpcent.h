@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpcent.h,v 1.1 2000/06/02 22:57:56 fvdl Exp $	*/
-/*	$FreeBSD: stable/10/include/rpc/rpcent.h 309502 2016-12-03 18:56:28Z ngie $ */
+/*	$FreeBSD: stable/11/include/rpc/rpcent.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.

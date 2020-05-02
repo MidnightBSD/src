@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013-2015 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libdpv/dialogrc.h 293619 2016-01-09 23:33:44Z dteske $
+ * $FreeBSD: stable/11/lib/libdpv/dialogrc.h 290275 2015-11-02 20:03:59Z dteske $
  */
 
 #ifndef _DIALOGRC_H_

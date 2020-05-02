@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_asinf.c -- float version of e_asin.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_asinf.c 181405 2008-08-08 00:21:27Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_asinf.c 181405 2008-08-08 00:21:27Z das $");
 
 #include "math.h"
 #include "math_private.h"

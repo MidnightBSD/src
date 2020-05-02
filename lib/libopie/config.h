@@ -1,4 +1,4 @@
-/* $FreeBSD: src/lib/libopie/config.h,v 1.4 2002/01/03 16:04:57 ache Exp $ */
+/* $FreeBSD: stable/11/lib/libopie/config.h 229831 2012-01-09 00:48:19Z eadler $ */
 /* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
 

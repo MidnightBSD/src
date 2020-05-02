@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1991 Regents of the University of California.
 .\" All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     from: @(#)j0.3	6.7 (Berkeley) 4/19/91
-.\" $FreeBSD: stable/10/lib/msun/man/j0.3 284810 2015-06-25 13:01:10Z tijl $
+.\" $FreeBSD: stable/11/lib/msun/man/j0.3 282013 2015-04-26 11:30:27Z bapt $
 .\"
 .Dd March 10, 2015
 .Dt J0 3
@@ -99,7 +98,7 @@ The functions
 .Fn y1 ,
 and
 .Fn y1f
-compute the linearly independent Bessel function of the second kind 
+compute the linearly independent Bessel function of the second kind
 of orders 0 and 1 for the positive
 .Em real
 value
@@ -136,12 +135,12 @@ is \*(Pm0, these routines
 will generate a divide-by-zero exception and return -\*(If.
 If
 .Fa x
-is a sufficiently small positive number, then 
+is a sufficiently small positive number, then
 .Fn y1 ,
 .Fn y1f ,
 .Fn yn ,
 and
-.Fn ynf 
+.Fn ynf
 will generate an overflow exception and return -\*(If.
 .Sh SEE ALSO
 .Xr math 3

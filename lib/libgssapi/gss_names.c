@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_names.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/11/lib/libgssapi/gss_names.c 350474 2019-07-31 18:10:50Z brooks $
  */
 
 #include <gssapi/gssapi.h>
@@ -48,7 +47,7 @@
  * to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_USER_NAME_storage =
-	{10, (void *)(uintptr_t)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x01"};
+	{10, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x01")};
 gss_OID GSS_C_NT_USER_NAME = &GSS_C_NT_USER_NAME_storage;
 
 /*
@@ -63,7 +62,7 @@ gss_OID GSS_C_NT_USER_NAME = &GSS_C_NT_USER_NAME_storage;
  * initialized to point to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_MACHINE_UID_NAME_storage =
-	{10, (void *)(uintptr_t)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x02"};
+	{10, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x02")};
 gss_OID GSS_C_NT_MACHINE_UID_NAME = &GSS_C_NT_MACHINE_UID_NAME_storage;
 
 /*
@@ -78,7 +77,7 @@ gss_OID GSS_C_NT_MACHINE_UID_NAME = &GSS_C_NT_MACHINE_UID_NAME_storage;
  * initialized to point to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_STRING_UID_NAME_storage =
-	{10, (void *)(uintptr_t)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x03"};
+	{10, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x03")};
 gss_OID GSS_C_NT_STRING_UID_NAME = &GSS_C_NT_STRING_UID_NAME_storage;
 
 /*
@@ -99,7 +98,7 @@ gss_OID GSS_C_NT_STRING_UID_NAME = &GSS_C_NT_STRING_UID_NAME_storage;
  * implementations
  */
 static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_X_storage =
-	{6, (void *)(uintptr_t)"\x2b\x06\x01\x05\x06\x02"};
+	{6, __DECONST(void *, "\x2b\x06\x01\x05\x06\x02")};
 gss_OID GSS_C_NT_HOSTBASED_SERVICE_X = &GSS_C_NT_HOSTBASED_SERVICE_X_storage;
 
 /*
@@ -114,7 +113,7 @@ gss_OID GSS_C_NT_HOSTBASED_SERVICE_X = &GSS_C_NT_HOSTBASED_SERVICE_X_storage;
  * to point to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_HOSTBASED_SERVICE_storage =
-	{10, (void *)(uintptr_t)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04"};
+	{10, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x01\x04")};
 gss_OID GSS_C_NT_HOSTBASED_SERVICE = &GSS_C_NT_HOSTBASED_SERVICE_storage;
 
 /*
@@ -128,7 +127,7 @@ gss_OID GSS_C_NT_HOSTBASED_SERVICE = &GSS_C_NT_HOSTBASED_SERVICE_storage;
  * to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_ANONYMOUS_storage =
-	{6, (void *)(uintptr_t)"\x2b\x06\01\x05\x06\x03"};
+	{6, __DECONST(void *, "\x2b\x06\01\x05\x06\x03")};
 gss_OID GSS_C_NT_ANONYMOUS = &GSS_C_NT_ANONYMOUS_storage;
 
 /*
@@ -142,7 +141,7 @@ gss_OID GSS_C_NT_ANONYMOUS = &GSS_C_NT_ANONYMOUS_storage;
  * to that gss_OID_desc.
  */
 static gss_OID_desc GSS_C_NT_EXPORT_NAME_storage =
-	{6, (void *)(uintptr_t)"\x2b\x06\x01\x05\x06\x04"};
+	{6, __DECONST(void *, "\x2b\x06\x01\x05\x06\x04")};
 gss_OID GSS_C_NT_EXPORT_NAME = &GSS_C_NT_EXPORT_NAME_storage;
 
 /*
@@ -152,7 +151,7 @@ gss_OID GSS_C_NT_EXPORT_NAME = &GSS_C_NT_EXPORT_NAME_storage;
  *   is "GSS_KRB5_NT_PRINCIPAL_NAME".
  */
 static gss_OID_desc GSS_KRB5_NT_PRINCIPAL_NAME_storage =
-        {10, (void *)(uintptr_t)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x02\x01"};
+        {10, __DECONST(void *, "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02\x01")};
 gss_OID GSS_KRB5_NT_PRINCIPAL_NAME = &GSS_KRB5_NT_PRINCIPAL_NAME_storage;
 
 /*

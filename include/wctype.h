@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c)1999 Citrus Project,
  * All rights reserved.
@@ -26,7 +25,7 @@
  *
  *	citrus Id: wctype.h,v 1.4 2000/12/21 01:50:21 itojun Exp
  *	$NetBSD: wctype.h,v 1.3 2000/12/22 14:16:16 itojun Exp $
- * $FreeBSD: stable/10/include/wctype.h 232498 2012-03-04 15:31:13Z theraven $
+ * $FreeBSD: stable/11/include/wctype.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _WCTYPE_H_
@@ -96,27 +95,27 @@ wint_t	nextwctype(wint_t, wctype_t);
 __END_DECLS
 
 #ifndef __cplusplus
-#define	iswalnum(wc)		__istype((wc), _CTYPE_A|_CTYPE_D)
+#define	iswalnum(wc)		__istype((wc), _CTYPE_A|_CTYPE_D|_CTYPE_N)
 #define	iswalpha(wc)		__istype((wc), _CTYPE_A)
 #define	iswblank(wc)		__istype((wc), _CTYPE_B)
 #define	iswcntrl(wc)		__istype((wc), _CTYPE_C)
 #define	iswctype(wc, charclass)	__istype((wc), (charclass))
-#define	iswdigit(wc)		__isctype((wc), _CTYPE_D)
+#define	iswdigit(wc)		__istype((wc), _CTYPE_D)
 #define	iswgraph(wc)		__istype((wc), _CTYPE_G)
 #define	iswlower(wc)		__istype((wc), _CTYPE_L)
 #define	iswprint(wc)		__istype((wc), _CTYPE_R)
 #define	iswpunct(wc)		__istype((wc), _CTYPE_P)
 #define	iswspace(wc)		__istype((wc), _CTYPE_S)
 #define	iswupper(wc)		__istype((wc), _CTYPE_U)
-#define	iswxdigit(wc)		__isctype((wc), _CTYPE_X)
+#define	iswxdigit(wc)		__istype((wc), _CTYPE_X)
 #define	towlower(wc)		__tolower(wc)
 #define	towupper(wc)		__toupper(wc)
 
 #if __BSD_VISIBLE
 #define	iswascii(wc)		(((wc) & ~0x7F) == 0)
-#define	iswhexnumber(wc)	__istype((wc), _CTYPE_X)
+#define	iswhexnumber(wc)	__istype((wc), _CTYPE_X) /* alias of iswxdigit */
 #define	iswideogram(wc)		__istype((wc), _CTYPE_I)
-#define	iswnumber(wc)		__istype((wc), _CTYPE_D)
+#define	iswnumber(wc)		__istype((wc), _CTYPE_D|_CTYPE_N)
 #define	iswphonogram(wc)	__istype((wc), _CTYPE_Q)
 #define	iswrune(wc)		__istype((wc), 0xFFFFFF00L)
 #define	iswspecial(wc)		__istype((wc), _CTYPE_T)

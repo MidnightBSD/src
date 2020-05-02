@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_gammaf_r.c -- float version of e_gamma_r.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_gammaf_r.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_gammaf_r.c 176451 2008-02-22 02:30:36Z das $");
 
 /* __ieee754_gammaf_r(x, signgamp)
  * Reentrant version of the logarithm of the Gamma function

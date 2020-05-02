@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/librt/timer.c 227661 2011-11-18 09:56:40Z kib $
+ * $FreeBSD: stable/11/lib/librt/timer.c 331722 2018-03-29 02:50:57Z eadler $
  *
  */
 
@@ -176,8 +175,9 @@ __timer_settime(timer_t timerid, int flags,
 		flags, value, ovalue);
 }
 
+#pragma weak timer_oshandle_np
 int
-__timer_oshandle(timer_t timerid)
+timer_oshandle_np(timer_t timerid)
 {
 
 	return (timerid->oshandle);

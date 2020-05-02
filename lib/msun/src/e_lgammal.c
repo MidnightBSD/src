@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)e_lgamma.c 1.3 95/01/18 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_lgammal.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_lgammal.c 271651 2014-09-15 23:21:57Z kargl $");
 
 #include "math.h"
 #include "math_private.h"

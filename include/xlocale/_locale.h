@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011, 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/xlocale/_locale.h 304862 2016-08-26 21:19:23Z ache $
+ * $FreeBSD: stable/11/include/xlocale/_locale.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _XLOCALE_LOCALE_H

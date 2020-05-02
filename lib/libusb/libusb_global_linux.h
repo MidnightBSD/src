@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb_global_linux.h 253339 2013-07-14 10:22:00Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb_global_linux.h 358948 2020-03-13 09:17:51Z hselasky $ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *
@@ -74,6 +73,13 @@
     strncpy(d,s,len);				\
     ((char *)d)[(len) - 1] = 0;			\
 } while (0)
+#endif
+
+#ifndef TAILQ_FOREACH_SAFE
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+	for ((var) = TAILQ_FIRST((head));				\
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1);		\
+	    (var) = (tvar))
 #endif
 
 #endif					/* _LIBUSB_GLOBAL_LINUX_H_ */

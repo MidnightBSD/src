@@ -1,11 +1,11 @@
-# $MidnightBSD$
 # Makefile for libopie
 #
-# $FreeBSD: stable/10/lib/libopie/Makefile 313614 2017-02-11 06:47:56Z ngie $
+# $FreeBSD: stable/11/lib/libopie/Makefile 313538 2017-02-10 07:32:40Z ngie $
 #
+PACKAGE=lib${LIB}
 OPIE_DIST?=	${SRCTOP}/contrib/opie
 DIST_DIR=	${OPIE_DIST}/${.CURDIR:T}
-SHLIB_MAJOR=    7
+SHLIB_MAJOR=    8
 
 KEYFILE?=	\"/etc/opiekeys\"
 
@@ -28,8 +28,7 @@ CFLAGS+=	-DINSECURE_OVERRIDE -DPATH_ACCESS_FILE=${ACCESSFILE}
 
 WARNS?=	0
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 MAN=	${OPIE_DIST}/opie.4 ${OPIE_DIST}/opiekeys.5 ${OPIE_DIST}/opieaccess.5
 

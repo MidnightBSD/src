@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_log1p.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_log1p.c 251292 2013-06-03 09:14:31Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_log1p.c 251292 2013-06-03 09:14:31Z das $");
 
 /* double log1p(double x)
  *

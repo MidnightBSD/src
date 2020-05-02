@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 The Regents of the University of Michigan.
  * All rights reserved.
@@ -31,7 +30,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/lib/libgssapi/gss_oid_to_str.c 178828 2008-05-07 13:53:12Z dfr $ */
+/* $FreeBSD: stable/11/lib/libgssapi/gss_oid_to_str.c 331722 2018-03-29 02:50:57Z eadler $ */
 
 #include <gssapi/gssapi.h>
 #include <stdio.h>

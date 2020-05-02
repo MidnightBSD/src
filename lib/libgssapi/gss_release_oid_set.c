@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libgssapi/gss_release_oid_set.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD: stable/11/lib/libgssapi/gss_release_oid_set.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <gssapi/gssapi.h>
@@ -33,15 +32,25 @@
 
 OM_uint32
 gss_release_oid_set(OM_uint32 *minor_status,
-    gss_OID_set *set)
+    gss_OID_set *setp)
 {
+	gss_OID_set set;
+	gss_OID o;
+	size_t i;
 
 	*minor_status = 0;
-	if (set && *set) {
-		if ((*set)->elements)
-			free((*set)->elements);
-		free(*set);
-		*set = GSS_C_NO_OID_SET;
+	if (setp) {
+		set = *setp;
+		if (set) {
+			for (i = 0; i < set->count; i++) {
+				o = &set->elements[i];
+				if (o->elements)
+					free(o->elements);
+			}
+			free(set->elements);
+			free(set);
+			*setp = GSS_C_NO_OID_SET;
+		}
 	}
 	return (GSS_S_COMPLETE);
 }

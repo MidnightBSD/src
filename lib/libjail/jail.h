@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 James Gritton.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libjail/jail.h 195870 2009-07-25 14:48:57Z jamie $
+ * $FreeBSD: stable/11/lib/libjail/jail.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _JAIL_H

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/kerberos5/usr.bin/ksu/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/kerberos5/usr.bin/ksu/Makefile 275022 2014-11-25 09:57:42Z bapt $
 
 PROG=	ksu
 .if defined(ENABLE_SUID_K5SU)
@@ -8,10 +8,7 @@ PRECIOUSPROG=
 MAN=
 SRCS=	su.c
 CFLAGS+=-I${KRB5DIR}/lib/roken
-DPADD=	${LIBKAFS5} ${LIBKRB5} ${LIBHX509} ${LIBROKEN} ${LIBVERS} \
-	${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} ${LIBCOM_ERR}
-LDADD=	-lkafs5 -lkrb5 -lhx509 -lroken ${LIBVERS} \
-	-lasn1 -lcrypto -lcrypt -lcom_err
+LIBADD=	kafs5 krb5 roken vers crypto crypt
 
 .include <bsd.prog.mk>
 

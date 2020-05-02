@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright 2002 FreeBSD, Inc.
 # All rights reserved.
 #
@@ -23,13 +22,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/libpam/modules/pam_ksu/Makefile 233302 2012-03-22 11:18:14Z stas $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_ksu/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
 LIB=	pam_ksu
 SRCS=	pam_ksu.c
 MAN=	pam_ksu.8
 
-DPADD=	${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBROKEN} ${LIBCOM_ERR} ${LIBCRYPT} ${LIBCRYPTO}
-LDADD=	-lkrb5 -lhx509 -lasn1 -lroken -lcom_err -lcrypt -lcrypto
+LIBADD+=	krb5
 
 .include <bsd.lib.mk>

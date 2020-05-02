@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fts.h	8.3 (Berkeley) 8/14/94
- * $FreeBSD: stable/10/include/fts.h 250887 2013-05-21 21:20:10Z ed $
+ * $FreeBSD: stable/11/include/fts.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_FTS_H_

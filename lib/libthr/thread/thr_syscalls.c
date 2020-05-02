@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
  * Copyright (C) 2005 David Xu <davidxu@freebsd.org>.
@@ -65,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthr/thread/thr_syscalls.c 296732 2016-03-12 17:33:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_syscalls.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -95,10 +94,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libthr/thread/thr_syscalls.c 296732 2016-03-12
 
 #include "libc_private.h"
 #include "thr_private.h"
-
-#ifdef SYSCALL_COMPAT
-extern int __fcntl_compat(int, int, ...);
-#endif
 
 static int
 __thr_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
@@ -204,18 +199,10 @@ __thr_fcntl(int fd, int cmd, ...)
 	va_start(ap, cmd);
 	if (cmd == F_OSETLKW || cmd == F_SETLKW) {
 		_thr_cancel_enter(curthread);
-#ifdef SYSCALL_COMPAT
-		ret = __fcntl_compat(fd, cmd, va_arg(ap, void *));
-#else
 		ret = __sys_fcntl(fd, cmd, va_arg(ap, void *));
-#endif
 		_thr_cancel_leave(curthread, ret == -1);
 	} else {
-#ifdef SYSCALL_COMPAT
-		ret = __fcntl_compat(fd, cmd, va_arg(ap, void *));
-#else
 		ret = __sys_fcntl(fd, cmd, va_arg(ap, void *));
-#endif
 	}
 	va_end(ap);
 
@@ -240,6 +227,20 @@ __thr_fsync(int fd)
 	return (ret);
 }
 
+static int
+__thr_fdatasync(int fd)
+{
+	struct pthread *curthread;
+	int ret;
+
+	curthread = _get_curthread();
+	_thr_cancel_enter2(curthread, 0);
+	ret = __sys_fdatasync(fd);
+	_thr_cancel_leave(curthread, 1);
+
+	return (ret);
+}
+
 /*
  * Cancellation behavior:
  *   Thread may be canceled after system call.
@@ -253,6 +254,22 @@ __thr_msync(void *addr, size_t len, int flags)
 	curthread = _get_curthread();
 	_thr_cancel_enter2(curthread, 0);
 	ret = __sys_msync(addr, len, flags);
+	_thr_cancel_leave(curthread, 1);
+
+	return (ret);
+}
+
+static int
+__thr_clock_nanosleep(clockid_t clock_id, int flags,
+    const struct timespec *time_to_sleep, struct timespec *time_remaining)
+{
+	struct pthread *curthread;
+	int ret;
+
+	curthread = _get_curthread();
+	_thr_cancel_enter(curthread);
+	ret = __sys_clock_nanosleep(clock_id, flags, time_to_sleep,
+	    time_remaining);
 	_thr_cancel_leave(curthread, 1);
 
 	return (ret);
@@ -666,6 +683,8 @@ __thr_interpose_libc(void)
 	SLOT(wait6);
 	SLOT(ppoll);
 	SLOT(map_stacks_exec);
+	SLOT(fdatasync);
+	SLOT(clock_nanosleep);
 #undef SLOT
 	*(__libc_interposing_slot(
 	    INTERPOS__pthread_mutex_init_calloc_cb)) =

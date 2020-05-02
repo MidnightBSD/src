@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*  @(#)des.h	2.2 88/08/10 4.0 RPCSRC; from 2.7 88/02/08 SMI  */
-/* $FreeBSD: stable/10/include/rpc/des.h 261046 2014-01-22 23:45:27Z mav $ */
+/* $FreeBSD: stable/11/include/rpc/des.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD$ */
+/* $FreeBSD: stable/11/lib/libmd/i386/sha.S 169547 2007-05-14 05:00:37Z cperciva $ */
 /* -*- Fundamental -*- Emacs' assembler mode hoses this file */
 #ifndef PIC
 /* Run the C pre-processor over this file with one of the following defined

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/kerberos5/include/crypto-headers.h 233294 2012-03-22 08:48:42Z stas $ */
+/* $FreeBSD: stable/11/kerberos5/include/crypto-headers.h 233294 2012-03-22 08:48:42Z stas $ */
 #ifndef __crypto_headers_h__
 #define __crypto_headers_h__
 

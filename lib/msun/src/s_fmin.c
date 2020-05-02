@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -26,8 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_fmin.c 131320 2004-06-30 07:04:01Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_fmin.c 331722 2018-03-29 02:50:57Z eadler $");
 
+#include <float.h>
 #include <math.h>
 
 #include "fpmath.h"
@@ -52,3 +52,7 @@ fmin(double x, double y)
 
 	return (x < y ? x : y);
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(fmin, fminl);
+#endif

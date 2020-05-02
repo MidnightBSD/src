@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libpam/modules/pam_opieaccess/Makefile 112044 2003-03-09 20:06:38Z obrien $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_opieaccess/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
 LIB=	pam_opieaccess
 SRCS=	${LIB}.c
 MAN=	pam_opieaccess.8
 
-DPADD=	${LIBOPIE}
-LDADD=	-lopie
+LIBADD+=	opie
 
 .include <bsd.lib.mk>

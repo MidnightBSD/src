@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* RIPEMD160DRIVER.C - test driver for RIPEMD160 */
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. Created 1990. All rights
@@ -13,7 +12,7 @@
  * documentation and/or software. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmd/rmddriver.c 220496 2011-04-09 13:56:29Z markm $");
+__FBSDID("$FreeBSD: stable/11/lib/libmd/rmddriver.c 220496 2011-04-09 13:56:29Z markm $");
 
 #include <sys/types.h>
 

@@ -1,5 +1,5 @@
 /* Generated file */
-/* $FreeBSD: stable/10/kerberos5/lib/libgssapi_krb5/gss_oid.c 233294 2012-03-22 08:48:42Z stas $ */
+/* $FreeBSD: stable/11/kerberos5/lib/libgssapi_krb5/gss_oid.c 233294 2012-03-22 08:48:42Z stas $ */
 #include <gssapi/gssapi.h>
 #include <roken.h>
 #include "config.h"

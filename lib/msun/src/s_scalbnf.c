@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_scalbnf.c -- float version of s_scalbn.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -14,11 +13,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_scalbnf.c 143205 2005-03-07 04:52:43Z das $";
-#endif
-
 #include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_scalbnf.c 324006 2017-09-26 09:01:56Z dim $");
 
 #include "math.h"
 #include "math_private.h"
@@ -47,10 +43,12 @@ scalbnf (float x, int n)
         if (k >  0xfe) return huge*copysignf(huge,x); /* overflow  */
         if (k > 0) 				/* normal result */
 	    {SET_FLOAT_WORD(x,(ix&0x807fffff)|(k<<23)); return x;}
-        if (k <= -25)
+        if (k <= -25) {
             if (n > 50000) 	/* in case integer overflow in n+k */
 		return huge*copysignf(huge,x);	/*overflow*/
-	    else return tiny*copysignf(tiny,x);	/*underflow*/
+	    else
+		return tiny*copysignf(tiny,x);	/*underflow*/
+	}
         k += 25;				/* subnormal result */
 	SET_FLOAT_WORD(x,(ix&0x807fffff)|(k<<23));
         return x*twom25;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c)1999 Citrus Project,
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/include/wchar.h 302008 2016-06-18 12:46:50Z ed $
+ * $FreeBSD: stable/11/include/wchar.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*-
@@ -212,7 +211,7 @@ int	wcwidth(wchar_t);
 #define	wcwidth(_c)	__wcwidth(_c)
 #endif
 
-#if __POSIX_VISIBLE >= 200809 || __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809
 size_t	mbsnrtowcs(wchar_t * __restrict, const char ** __restrict, size_t,
 	    size_t, mbstate_t * __restrict);
 FILE	*open_wmemstream(wchar_t **, size_t *);

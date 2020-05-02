@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,9 +23,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/atf/Makefile 260024 2013-12-28 23:08:58Z jmmv $
+# $FreeBSD: stable/11/lib/atf/Makefile 296704 2016-03-11 23:45:42Z bdrewery $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=		libatf-c \
 		libatf-c++ \
@@ -35,7 +34,5 @@ SUBDIR=		libatf-c \
 .if ${MK_TESTS} != "no"
 _tests= 	tests
 .endif
-
-.ORDER: ${SUBDIR}
 
 .include <bsd.subdir.mk>

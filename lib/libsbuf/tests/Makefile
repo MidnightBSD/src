@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libsbuf/tests/Makefile 321113 2017-07-18 08:23:21Z ngie $
+# $FreeBSD: stable/11/lib/libsbuf/tests/Makefile 316557 2017-04-06 05:29:28Z ngie $
 
 ATF_TESTS_C+=	sbuf_core_test
 ATF_TESTS_C+=	sbuf_stdio_test
 ATF_TESTS_C+=	sbuf_string_test
 
-LDADD+=		-lsbuf -lutil
+LIBADD+=	sbuf util
 
 WARNS?=		6
 

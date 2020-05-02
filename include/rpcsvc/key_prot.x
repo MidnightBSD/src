@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %/*-
 % * Copyright (c) 2010, Oracle America, Inc.
 % *
@@ -49,7 +48,7 @@
 %/* From: #pragma ident	"@(#)key_prot.x	1.7	94/04/29 SMI" */
 %/* Copyright (c)  1990, 1991 Sun Microsystems, Inc. */
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: stable/10/include/rpcsvc/key_prot.x 272850 2014-10-09 23:05:32Z hrs $");
+%__FBSDID("$FreeBSD: stable/11/include/rpcsvc/key_prot.x 259117 2013-12-09 04:26:50Z hrs $");
 %
 %/* 
 % * Compiled from key_prot.x using rpcgen.

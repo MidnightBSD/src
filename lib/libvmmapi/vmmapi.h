@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libvmmapi/vmmapi.h 295124 2016-02-01 14:56:11Z grehan $
+ * $FreeBSD: stable/11/lib/libvmmapi/vmmapi.h 348201 2019-05-23 21:23:18Z rgrimes $
  */
 
 #ifndef _VMMAPI_H_
@@ -37,7 +36,7 @@
  * API version for out-of-tree consumers like grub-bhyve for making compile
  * time decisions.
  */
-#define	VMMAPI_VERSION	0102	/* 2 digit major followed by 2 digit minor */
+#define	VMMAPI_VERSION	0103	/* 2 digit major followed by 2 digit minor */
 
 struct iovec;
 struct vmctx;
@@ -103,6 +102,7 @@ int	vm_mmap_memseg(struct vmctx *ctx, vm_paddr_t gpa, int segid,
 	    vm_ooffset_t segoff, size_t len, int prot);
 
 int	vm_create(const char *name);
+int	vm_get_device_fd(struct vmctx *ctx);
 struct vmctx *vm_open(const char *name);
 void	vm_destroy(struct vmctx *ctx);
 int	vm_parse_memsize(const char *optarg, size_t *memsize);
@@ -163,6 +163,8 @@ int	vm_setup_pptdev_msix(struct vmctx *ctx, int vcpu, int bus, int slot,
 int	vm_get_intinfo(struct vmctx *ctx, int vcpu, uint64_t *i1, uint64_t *i2);
 int	vm_set_intinfo(struct vmctx *ctx, int vcpu, uint64_t exit_intinfo);
 
+const cap_ioctl_t *vm_get_ioctls(size_t *len);
+
 /*
  * Return a pointer to the statistics buffer. Note that this is not MT-safe.
  */
@@ -177,7 +179,7 @@ int	vm_get_hpet_capabilities(struct vmctx *ctx, uint32_t *capabilities);
 
 /*
  * Translate the GLA range [gla,gla+len) into GPA segments in 'iov'.
- * The 'iovcnt' should be big enough to accomodate all GPA segments.
+ * The 'iovcnt' should be big enough to accommodate all GPA segments.
  *
  * retval	fault		Interpretation
  *   0		  0		Success
@@ -206,6 +208,12 @@ int	vcpu_reset(struct vmctx *ctx, int vcpu);
 int	vm_active_cpus(struct vmctx *ctx, cpuset_t *cpus);
 int	vm_suspended_cpus(struct vmctx *ctx, cpuset_t *cpus);
 int	vm_activate_cpu(struct vmctx *ctx, int vcpu);
+
+/* CPU topology */
+int	vm_set_topology(struct vmctx *ctx, uint16_t sockets, uint16_t cores,
+	    uint16_t threads, uint16_t maxcpus);
+int	vm_get_topology(struct vmctx *ctx, uint16_t *sockets, uint16_t *cores,
+	    uint16_t *threads, uint16_t *maxcpus);
 
 /*
  * FreeBSD specific APIs

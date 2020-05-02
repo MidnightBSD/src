@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * From: @(#)s_ilogb.c 5.1 93/09/24
  * ====================================================
@@ -11,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: stable/10/lib/msun/src/s_logbl.c 174698 2007-12-17 03:53:38Z das $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_logbl.c 324006 2017-09-26 09:01:56Z dim $");
 
 #include <float.h>
 #include <limits.h>

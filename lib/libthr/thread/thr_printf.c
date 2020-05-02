@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jonathan Mini <mini@freebsd.org>
  * All rights reserved.
@@ -23,9 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_printf.c 277317 2015-01-18 11:54:20Z kib $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_printf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdarg.h>
 #include <string.h>
@@ -52,23 +52,35 @@ static void	pstr(int fd, const char *s);
 void
 _thread_printf(int fd, const char *fmt, ...)
 {
+	va_list	ap;
+
+	va_start(ap, fmt);
+	_thread_vprintf(fd, fmt, ap);
+	va_end(ap);
+}
+
+void
+_thread_vprintf(int fd, const char *fmt, va_list ap)
+{
 	static const char digits[16] = "0123456789abcdef";
-	va_list	 ap;
 	char buf[20];
 	char *s;
 	unsigned long r, u;
 	int c;
 	long d;
-	int islong;
+	int islong, isalt;
 
-	va_start(ap, fmt);
 	while ((c = *fmt++)) {
+		isalt = 0;
 		islong = 0;
 		if (c == '%') {
 next:			c = *fmt++;
 			if (c == '\0')
-				goto out;
+				return;
 			switch (c) {
+			case '#':
+				isalt = 1;
+				goto next;
 			case 'c':
 				pchar(fd, va_arg(ap, int));
 				continue;
@@ -79,10 +91,13 @@ next:			c = *fmt++;
 				islong = 1;
 				goto next;
 			case 'p':
+				pstr(fd, "0x");
 				islong = 1;
 			case 'd':
 			case 'u':
 			case 'x':
+				if (c == 'x' && isalt)
+					pstr(fd, "0x");
 				r = ((c == 'u') || (c == 'd')) ? 10 : 16;
 				if (c == 'd') {
 					if (islong)
@@ -111,8 +126,6 @@ next:			c = *fmt++;
 		}
 		pchar(fd, c);
 	}
-out:	
-	va_end(ap);
 }
 
 /*

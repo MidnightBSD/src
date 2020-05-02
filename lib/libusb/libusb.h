@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb.h 302275 2016-06-29 10:58:36Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  *
@@ -389,6 +388,7 @@ typedef struct libusb_bos_descriptor {
 	uint8_t bNumDeviceCapabilities;
 	struct libusb_usb_2_0_device_capability_descriptor *usb_2_0_ext_cap;
 	struct libusb_ss_usb_device_capability_descriptor *ss_usb_cap;
+	struct libusb_bos_dev_capability_descriptor **dev_capability;
 }	libusb_bos_descriptor __aligned(sizeof(void *));
 
 typedef struct libusb_usb_2_0_extension_descriptor {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -26,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_resume_np.c 299521 2016-05-12 06:53:22Z kib $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_resume_np.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <errno.h>

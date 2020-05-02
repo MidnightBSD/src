@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David Schultz <das@FreeBSD.ORG>
  * Copyright (c) 2013 Andrew Turner <andrew@FreeBSD.ORG>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/msun/arm/fenv.c 273827 2014-10-29 16:24:02Z andrew $
+ * $FreeBSD: stable/11/lib/msun/arm/fenv.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	__fenv_static

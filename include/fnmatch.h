@@ -26,8 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/include/fnmatch.h,v 1.15 2003/12/18 10:41:39 jkh Exp $
+ * $FreeBSD: stable/11/include/fnmatch.h 331722 2018-03-29 02:50:57Z eadler $
  *	@(#)fnmatch.h	8.1 (Berkeley) 6/2/93
  */
 

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2009 Sylvestre Gallon
 .\"
@@ -25,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libusb/libusb.3 302275 2016-06-29 10:58:36Z hselasky $
+.\" $FreeBSD: stable/11/lib/libusb/libusb.3 302125 2016-06-23 07:12:22Z hselasky $
 .\"
 .Dd June 23, 2016
 .Dt LIBUSB 3
@@ -43,13 +42,13 @@ The
 .Nm
 library contains interfaces for directly managing a usb device.
 The current implementation supports v1.0 of the libusb API.
-.Sh LIBRARY INITIALISATION / DEINITIALISATION
+.Sh LIBRARY INITIALISATION AND DEINITIALISATION
 .Ft "const struct libusb_version *"
 .Fn libusb_get_version "void"
 This function returns version information about LibUSB.
 .Pp
 .Ft int
-.Fn libusb_init libusb_context **ctx
+.Fn libusb_init "libusb_context **ctx"
 This function initialises libusb.
 It must be called at the beginning
 of the program, before other libusb routines are used.

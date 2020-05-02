@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/lib/libgssapi/gss_pname_to_uid.c 181344 2008-08-06 14:02:05Z dfr $ */
+/* $FreeBSD: stable/11/lib/libgssapi/gss_pname_to_uid.c 331722 2018-03-29 02:50:57Z eadler $ */
 
 #include <unistd.h>
 #include <gssapi/gssapi.h>

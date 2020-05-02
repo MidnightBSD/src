@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_jnf.c -- float version of e_jn.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_jnf.c 284810 2015-06-25 13:01:10Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_jnf.c 279856 2015-03-10 17:10:54Z kargl $");
 
 /*
  * See e_jn.c for complete comments.

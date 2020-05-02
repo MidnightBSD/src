@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_tanhf.c -- float version of s_tanh.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tanhf.c 271779 2014-09-18 15:10:22Z tijl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tanhf.c 270847 2014-08-30 17:31:53Z kargl $");
 
 #include "math.h"
 #include "math_private.h"

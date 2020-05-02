@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libgssapi/Symbol.map 233294 2012-03-22 08:48:42Z stas $
+/*
+ * $FreeBSD: stable/11/lib/libgssapi/Symbol.map 233294 2012-03-22 08:48:42Z stas $
  */
 
 FBSD_1.1 {

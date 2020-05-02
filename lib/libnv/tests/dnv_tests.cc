@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014-2015 Sandvine Inc.  All rights reserved.
  * All rights reserved.
@@ -26,11 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnv/tests/dnv_tests.cc 319370 2017-06-01 06:16:57Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libnv/tests/dnv_tests.cc 319371 2017-06-01 06:17:01Z ngie $");
+
+#include <sys/types.h>
+#include <sys/dnv.h>
+#include <sys/nv.h>
 
 #include <atf-c++.hpp>
-#include <dnv.h>
-#include <nv.h>
 
 ATF_TEST_CASE_WITHOUT_HEAD(dnvlist_get_bool__present);
 ATF_TEST_CASE_BODY(dnvlist_get_bool__present)

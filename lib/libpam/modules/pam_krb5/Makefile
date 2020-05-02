@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # Copyright 2001 FreeBSD, Inc.
 # All rights reserved.
 #
@@ -23,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/lib/libpam/modules/pam_krb5/Makefile 233406 2012-03-24 01:02:03Z stas $
+# $FreeBSD: stable/11/lib/libpam/modules/pam_krb5/Makefile 275024 2014-11-25 11:07:26Z bapt $
 
 LIB=	pam_krb5
 SRCS=	pam_krb5.c
@@ -33,7 +32,6 @@ CFLAGS+=-D_FREEFALL_CONFIG
 WARNS?=	3
 .endif
 
-DPADD=	${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBROKEN} ${LIBCOM_ERR} ${LIBCRYPT} ${LIBCRYPTO}
-LDADD=	-lkrb5 -lhx509 -lasn1 -lroken -lcom_err -lcrypt -lcrypto
+LIBADD+=	krb5
 
 .include <bsd.lib.mk>

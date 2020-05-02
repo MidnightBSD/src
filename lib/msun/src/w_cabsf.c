@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * cabsf() wrapper for hypotf().
  *
@@ -8,7 +7,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/lib/msun/src/w_cabsf.c 78172 2001-06-13 15:16:30Z ru $";
+  "$FreeBSD: stable/11/lib/msun/src/w_cabsf.c 78172 2001-06-13 15:16:30Z ru $";
 #endif /* not lint */
 
 #include <complex.h>

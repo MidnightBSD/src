@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libusbhid/descr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 
@@ -159,7 +159,7 @@ hid_use_report_desc(unsigned char *data, unsigned int size)
 	report_desc_t r;
 
 	r = malloc(sizeof(*r) + size);
-	if (r == 0) {
+	if (r == NULL) {
 		errno = ENOMEM;
 		return (NULL);
 	}

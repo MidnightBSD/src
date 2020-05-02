@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Gleb Smirnoff <glebius@FreeBSD.org>
  * Copyright (c) 2010 Juniper Networks, Inc.
@@ -38,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libkvm/kvm_pcpu.c 262740 2014-03-04 14:49:05Z glebius $");
+__FBSDID("$FreeBSD: stable/11/lib/libkvm/kvm_pcpu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>
@@ -61,7 +60,7 @@ static struct nlist kvm_pcpu_nl[] = {
 
 /*
  * Kernel per-CPU data state.  We cache this stuff on the first
- * access.	
+ * access.
  *
  * XXXRW: Possibly, this (and kvmpcpu_nl) should be per-kvm_t, in case the
  * consumer has multiple handles in flight to differently configured
@@ -217,7 +216,7 @@ _kvm_dpcpu_setcpu(kvm_t *kd, u_int cpu, int report_error)
 static int
 _kvm_dpcpu_init(kvm_t *kd)
 {
-	struct nlist nl[] = {
+	struct kvm_nlist nl[] = {
 #define	NLIST_START_SET_PCPU	0
 		{ .n_name = "___start_" DPCPU_SETNAME },
 #define	NLIST_STOP_SET_PCPU	1
@@ -231,6 +230,12 @@ _kvm_dpcpu_init(kvm_t *kd)
 	uintptr_t *dpcpu_off_buf;
 	size_t len;
 	u_int dpcpu_maxcpus;
+
+	/*
+	 * XXX: This only works for native kernels for now.
+	 */
+	if (!kvm_native(kd))
+		return (-1);
 
 	/*
 	 * Locate and cache locations of important symbols using the internal
@@ -261,7 +266,7 @@ _kvm_dpcpu_init(kvm_t *kd)
 }
 
 /*
- * Check whether the dpcpu module has been initialized sucessfully or not,
+ * Check whether the dpcpu module has been initialized successfully or not,
  * initialize it if permitted.
  */
 int
@@ -280,8 +285,8 @@ _kvm_dpcpu_initialized(kvm_t *kd, int intialize)
  * Check whether the value is within the dpcpu symbol range and only if so
  * adjust the offset relative to the current offset.
  */
-uintptr_t
-_kvm_dpcpu_validaddr(kvm_t *kd, uintptr_t value)
+kvaddr_t
+_kvm_dpcpu_validaddr(kvm_t *kd, kvaddr_t value)
 {
 
 	if (value == 0)
@@ -320,6 +325,8 @@ ssize_t
 kvm_read_zpcpu(kvm_t *kd, u_long base, void *buf, size_t size, int cpu)
 {
 
+	if (!kvm_native(kd))
+		return (-1);
 	return (kvm_read(kd, (uintptr_t)(base + sizeof(struct pcpu) * cpu),
 	    buf, size));
 }

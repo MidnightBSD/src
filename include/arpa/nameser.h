@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Portions Copyright (C) 2004, 2005, 2008, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996-2003  Internet Software Consortium.
@@ -47,7 +46,7 @@
 
 /*
  *	$Id: nameser.h,v 1.16 2009/03/03 01:52:48 each Exp $
- * $FreeBSD: stable/10/include/arpa/nameser.h 270838 2014-08-30 10:16:25Z ume $
+ * $FreeBSD: stable/11/include/arpa/nameser.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _ARPA_NAMESER_H_
@@ -107,7 +106,7 @@ typedef enum __ns_sect {
 } ns_sect;
 
 /*%
- * Network name (compressed or not) type.  Equivilent to a pointer when used
+ * Network name (compressed or not) type.  Equivalent to a pointer when used
  * in a function prototype.  Can be const'd.
  */
 typedef u_char ns_nname[NS_MAXNNAME];

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  *
  *	from: @(#)auth_unix.h 1.8 88/02/08 SMI
  *	from: @(#)auth_unix.h	2.2 88/07/29 4.0 RPCSRC
- * $FreeBSD: stable/10/include/rpc/auth_unix.h 261046 2014-01-22 23:45:27Z mav $
+ * $FreeBSD: stable/11/include/rpc/auth_unix.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

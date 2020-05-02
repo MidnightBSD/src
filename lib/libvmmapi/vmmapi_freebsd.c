@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libvmmapi/vmmapi_freebsd.c 267399 2014-06-12 15:20:59Z jhb $
+ * $FreeBSD: stable/11/lib/libvmmapi/vmmapi_freebsd.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libvmmapi/vmmapi_freebsd.c 267399 2014-06-12 15:20:59Z jhb $");
+__FBSDID("$FreeBSD: stable/11/lib/libvmmapi/vmmapi_freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Danny Braniss
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libpam/modules/pam_rhosts/pam_rhosts.c 123448 2003-12-11 13:55:16Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_rhosts/pam_rhosts.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <pwd.h>
 #include <stddef.h>

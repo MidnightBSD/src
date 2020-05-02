@@ -1,12 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/kerberos5/lib/Makefile 311729 2017-01-09 01:29:20Z ngie $
+# $FreeBSD: stable/11/kerberos5/lib/Makefile 311728 2017-01-09 01:22:46Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	libasn1 libhdb \
-	libheimntlm libhx509 libkadm5clnt libkadm5srv libkafs5 libkrb5 \
-	libroken libsl libvers libkdc libwind libheimsqlite libheimbase libheimipcc libheimipcs
+	libheimntlm libhx509 libkadm5clnt libkadm5srv libkrb5 \
+	libroken libsl libvers libkdc libwind libheimbase libheimipcc libheimipcs
 
+SUBDIR+= libkafs5  # requires krb_err.h from libkrb5
 SUBDIR_DEPEND_libkafs5=	libkrb5
 
 .if ${MK_GSSAPI} != "no"

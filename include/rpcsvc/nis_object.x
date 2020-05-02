@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %/*-
 % * Copyright (c) 2010, Oracle America, Inc.
 % *
@@ -37,7 +36,7 @@
  *	All Rights Reserved.
  */
 
-/* $FreeBSD: stable/10/include/rpcsvc/nis_object.x 272850 2014-10-09 23:05:32Z hrs $ */
+/* $FreeBSD: stable/11/include/rpcsvc/nis_object.x 259117 2013-12-09 04:26:50Z hrs $ */
 /* From: %#pragma ident	"@(#)nis_object.x	1.10	94/05/03 SMI" */
 
 #if RPC_HDR

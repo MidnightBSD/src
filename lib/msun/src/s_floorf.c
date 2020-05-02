@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* s_floorf.c -- float version of s_floor.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_floorf.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_floorf.c 176451 2008-02-22 02:30:36Z das $");
 
 /*
  * floorf(x)

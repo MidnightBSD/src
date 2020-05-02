@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libusb/libusb01.c 264641 2014-04-18 07:50:25Z hselasky $ */
+/* $FreeBSD: stable/11/lib/libusb/libusb01.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * Copyright (c) 2013 Mariusz Zaborski <oshogbo@FreeBSD.org>
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnv/msgio.c 292632 2015-12-22 23:05:43Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libnv/msgio.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -300,7 +299,6 @@ fd_package_recv(int sock, int *fds, size_t nfds)
 	PJDLOG_ASSERT(nfds > 0);
 	PJDLOG_ASSERT(fds != NULL);
 
-	i = 0;
 	bzero(&msg, sizeof(msg));
 	bzero(&iov, sizeof(iov));
 

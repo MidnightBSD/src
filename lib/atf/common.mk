@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/atf/common.mk 275988 2014-12-21 08:30:18Z ngie $
+# $FreeBSD: stable/11/lib/atf/common.mk 273929 2014-11-01 11:17:54Z jmmv $
 #
 # Common Makefile code for all components of ATF.
 #

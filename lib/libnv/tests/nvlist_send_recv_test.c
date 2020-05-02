@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,12 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libnv/tests/nvlist_send_recv_test.c 292634 2015-12-22 23:08:50Z ngie $
+ * $FreeBSD: stable/11/lib/libnv/tests/nvlist_send_recv_test.c 285063 2015-07-02 21:58:10Z oshogbo $
  */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <sys/nv.h>
 
 #include <err.h>
 #include <errno.h>
@@ -40,8 +40,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <nv.h>
 
 static int ntest = 1;
 
@@ -96,7 +94,7 @@ parent(int sock)
 	int type, ctype;
 	size_t size;
 
-	nvl = nvlist_recv(sock);
+	nvl = nvlist_recv(sock, 0);
 	CHECK(nvlist_error(nvl) == 0);
 	if (nvlist_error(nvl) != 0)
 		err(1, "nvlist_recv() failed");

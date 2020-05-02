@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
@@ -27,16 +26,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libnv/tests/nvlist_move_test.c 269603 2014-08-05 18:41:27Z ngie $
+ * $FreeBSD: stable/11/lib/libnv/tests/nvlist_move_test.c 285063 2015-07-02 21:58:10Z oshogbo $
  */
+
+#include <sys/nv.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <nv.h>
 
 static int ntest = 1;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -23,9 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/libthr/thread/thr_sig.c 299521 2016-05-12 06:53:22Z kib $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_sig.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -441,7 +441,7 @@ _thr_signal_init(int dlopened)
 }
 
 void
-_thr_sigact_unload(struct dl_phdr_info *phdr_info)
+_thr_sigact_unload(struct dl_phdr_info *phdr_info __unused)
 {
 #if 0
 	struct pthread *curthread = _get_curthread();
@@ -736,8 +736,8 @@ __thr_setcontext(const ucontext_t *ucp)
 		errno = EINVAL;
 		return (-1);
 	}
-	if (!SIGISMEMBER(uc.uc_sigmask, SIGCANCEL))
-		return __sys_setcontext(ucp);
+	if (!SIGISMEMBER(ucp->uc_sigmask, SIGCANCEL))
+		return (__sys_setcontext(ucp));
 	(void) memcpy(&uc, ucp, sizeof(uc));
 	SIGDELSET(uc.uc_sigmask, SIGCANCEL);
 	return (__sys_setcontext(&uc));

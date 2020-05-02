@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthr/arch/arm/include/pthread_md.h 239270 2012-08-15 03:08:29Z gonzo $
+ * $FreeBSD: stable/11/lib/libthr/arch/arm/include/pthread_md.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -41,18 +40,13 @@
 #define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
 
 /*
- * Variant II tcb, first two members are required by rtld.
+ * Variant I tcb. The structure layout is fixed, don't blindly
+ * change it.
  */
 struct tcb {
 	void			*tcb_dtv;	/* required by rtld */
 	struct pthread		*tcb_thread;	/* our hook */
 };
-
-/*
- * The tcb constructors.
- */
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *);
 
 /* Called from the thread to set its private data. */
 static __inline void
@@ -81,8 +75,6 @@ _tcb_get(void)
 	return (tcb);
 #endif
 }
-
-extern struct pthread *_thr_initial;
 
 static __inline struct pthread *
 _get_curthread(void)

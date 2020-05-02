@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/tests/fmaxmin_test.c 314023 2017-02-21 03:50:57Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/tests/fmaxmin_test.c 315121 2017-03-12 04:52:09Z ngie $");
 
 #include <fenv.h>
 #include <float.h>
@@ -62,7 +61,7 @@ __FBSDID("$FreeBSD: stable/10/lib/msun/tests/fmaxmin_test.c 314023 2017-02-21 03
 	}								      \
 } while (0)
 
-int
+static int
 testall_r(long double big, long double small)
 {
 	int ok;
@@ -87,14 +86,14 @@ testall_r(long double big, long double small)
 	return (ok);
 }
 
-const char *comment = NULL;
+static const char *comment = NULL;
 
 /*
  * Test all the functions: fmaxf, fmax, fmaxl, fminf, fmin, and fminl,
  * in all rounding modes and with the arguments in different orders.
  * The input 'big' must be >= 'small'.
  */
-void
+static void
 testall(int testnum, long double big, long double small)
 {
 	static const int rmodes[] = {
@@ -123,7 +122,7 @@ testall(int testnum, long double big, long double small)
 #endif
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	printf("1..12\n");

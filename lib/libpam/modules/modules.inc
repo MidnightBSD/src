@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libpam/modules/modules.inc 278569 2015-02-11 08:52:29Z ngie $
+# $FreeBSD: stable/11/lib/libpam/modules/modules.inc 278182 2015-02-04 06:53:45Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 MODULES		 =
 MODULES		+= pam_chroot

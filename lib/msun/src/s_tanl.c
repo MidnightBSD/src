@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007 Steven G. Kargl
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/s_tanl.c 240828 2012-09-22 15:38:29Z kargl $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tanl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Limited testing on pseudorandom numbers drawn within [0:4e8] shows

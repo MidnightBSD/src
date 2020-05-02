@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* e_hypotf.c -- float version of e_hypot.c.
  * Conversion to float by Ian Lance Taylor, Cygnus Support, ian@cygnus.com.
  */
@@ -15,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/msun/src/e_hypotf.c 226380 2011-10-15 07:00:28Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_hypotf.c 355395 2019-12-04 17:45:34Z dim $");
 
 #include "math.h"
 #include "math_private.h"
@@ -78,7 +77,7 @@ __ieee754_hypotf(float x, float y)
 	    w  = __ieee754_sqrtf(t1*y1-(w*(-w)-(t1*y2+t2*b)));
 	}
 	if(k!=0) {
-	    SET_FLOAT_WORD(t1,0x3f800000+(k<<23));
+	    SET_FLOAT_WORD(t1,(127+k)<<23);
 	    return t1*w;
 	} else return w;
 }

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/lib/libthr/arch/amd64/Makefile.inc 290014 2015-10-26 16:21:56Z vangyzen $
+#$FreeBSD: stable/11/lib/libthr/arch/amd64/Makefile.inc 286317 2015-08-05 12:53:55Z vangyzen $
 
-SRCS+=	pthread_md.c _umtx_op_err.S
+SRCS+=	_umtx_op_err.S
 
 # With the current compiler and libthr code, using SSE in libthr
 # does not provide enough performance improvement to outweigh

@@ -23,8 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/spawn.h,v 1.3 2008/06/19 07:30:32 ed Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/11/include/spawn.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SPAWN_H_
