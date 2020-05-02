@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/11/lib/libipsec/libpfkey.h 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: libpfkey.h,v 1.6 2001/03/05 18:22:17 thorpej Exp $	*/
 
 /*

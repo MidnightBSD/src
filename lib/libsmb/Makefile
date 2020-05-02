@@ -1,15 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libsmb/Makefile 313606 2017-02-11 06:39:04Z ngie $
+# $FreeBSD: stable/11/lib/libsmb/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 CONTRIBDIR=	${SRCTOP}/contrib/smbfs
 .PATH: ${CONTRIBDIR}/lib/smb
 
 LIB=	smb
 SHLIB_MAJOR=	4
-DPADD=	${LIBKICONV}
-LDADD=	-lkiconv
+LIBADD=	kiconv
 
 SRCS=	rcfile.c ctx.c cfopt.c subr.c nls.c rap.c mbuf.c rq.c file.c \
 	print.c \

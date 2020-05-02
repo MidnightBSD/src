@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997, 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libcam/camlib.h 316316 2017-03-31 04:42:00Z ngie $
+ * $FreeBSD: stable/11/lib/libcam/camlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
  * Buffer encoding/decoding routines taken from the original FreeBSD SCSI

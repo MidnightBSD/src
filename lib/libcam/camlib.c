@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997, 1998, 1999, 2002 Kenneth D. Merry.
  * All rights reserved.
@@ -25,10 +24,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libcam/camlib.c 319023 2017-05-28 00:47:02Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libcam/camlib.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -131,6 +131,9 @@ cam_get_device(const char *path, char *dev_name, int devnamelen, int *unit)
 	 * it so we don't hose the user's string.
 	 */
 	newpath = (char *)strdup(path);
+	if (newpath == NULL)
+		return (-1);
+
 	tmpstr = newpath;
 
 	/*
@@ -139,8 +142,9 @@ cam_get_device(const char *path, char *dev_name, int devnamelen, int *unit)
 	if (*tmpstr == '/') {
 		tmpstr2 = tmpstr;
 		tmpstr = strrchr(tmpstr2, '/');
-		if ((tmpstr != NULL) && (*tmpstr != '\0'))
-			tmpstr++;
+		/* We know that tmpstr2 contains a '/', so strrchr can't fail */
+		assert(tmpstr != NULL && *tmpstr != '\0');
+		tmpstr++;
 	}
 
 	if (*tmpstr == '\0') {

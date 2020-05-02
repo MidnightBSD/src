@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libmilter/Makefile 313617 2017-02-11 06:51:53Z ngie $
+# $FreeBSD: stable/11/lib/libmilter/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=sendmail
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libmilter ${SENDMAIL_DIR}/libsm
 
@@ -30,7 +30,7 @@ CLEANFILES+=sm_os.h
 
 WARNS?=	0
 
-sm_os.h:
-	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h
+sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.lib.mk>

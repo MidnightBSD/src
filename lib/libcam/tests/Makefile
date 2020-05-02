@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libcam/tests/Makefile 315696 2017-03-22 01:11:13Z ngie $
+# $FreeBSD: stable/11/lib/libcam/tests/Makefile 326782 2017-12-11 20:47:26Z asomers $
 
 ATF_TESTS_C+=	libcam_test
+ATF_TESTS_C+=	cam_test
 
-LDADD+=		-lcam
-
-DPADD+=		${LIBCAM}
+LIBADD+=	cam
 
 WARNS?=		6
 

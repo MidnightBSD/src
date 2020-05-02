@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
 /*-
- * Copyright (c) 2017 Ngie Cooper <ngie@freebsd.org>
- * All rights reserved.
+ * Copyright (c) 2017 Enji Cooper <ngie@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +23,10 @@
  * SUCH DAMAGE.
  */
 
+/* Tests functions in lib/libcam/camlib.c */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libcam/tests/libcam_test.c 321122 2017-07-18 08:44:38Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libcam/tests/libcam_test.c 346920 2019-04-29 19:36:46Z ngie $");
 
 #include <errno.h>
 #include <fcntl.h>
@@ -126,6 +126,33 @@ ATF_TC_BODY(cam_get_device_positive_test, tc)
 	    "cam_get_device failed");
 	ATF_REQUIRE_STREQ(parsed_dev_name, expected_dev_name);
 	ATF_REQUIRE(parsed_unit == expected_unit);
+}
+
+/* 
+ * sa(4) uniquely creates nsa and esa device nodes for non-rewind operations
+ * and eject-on-close operations.  cam_get_device must special case these nodes
+ * to always return the base device.
+ */
+ATF_TC_WITHOUT_HEAD(cam_get_device_sa_test);
+ATF_TC_BODY(cam_get_device_sa_test, tc)
+{
+	char parsed_dev_name[DEV_IDLEN + 1];
+	int parsed_unit;
+
+	ATF_REQUIRE_MSG(cam_get_device("nsa99", parsed_dev_name,
+	    nitems(parsed_dev_name), &parsed_unit) == 0,
+	    "cam_get_device failed");
+	ATF_REQUIRE_STREQ(parsed_dev_name, "sa");
+	ATF_REQUIRE(parsed_unit == 99);
+
+	strcpy(parsed_dev_name, "");
+	parsed_unit = -1;
+
+	ATF_REQUIRE_MSG(cam_get_device("esa99", parsed_dev_name,
+	    nitems(parsed_dev_name), &parsed_unit) == 0,
+	    "cam_get_device failed");
+	ATF_REQUIRE_STREQ(parsed_dev_name, "sa");
+	ATF_REQUIRE(parsed_unit == 99);
 }
 
 ATF_TC(cam_open_device_negative_test_O_RDONLY);
@@ -281,6 +308,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, cam_get_device_negative_test_nul_path);
 	ATF_TP_ADD_TC(tp, cam_get_device_negative_test_root);
 	ATF_TP_ADD_TC(tp, cam_get_device_positive_test);
+	ATF_TP_ADD_TC(tp, cam_get_device_sa_test);
 	ATF_TP_ADD_TC(tp, cam_open_device_negative_test_O_RDONLY);
 	ATF_TP_ADD_TC(tp, cam_open_device_negative_test_nonexistent);
 	ATF_TP_ADD_TC(tp, cam_open_device_negative_test_unprivileged);

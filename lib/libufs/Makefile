@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libufs/Makefile 313600 2017-02-11 06:32:48Z ngie $
+# $FreeBSD: stable/11/lib/libufs/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=	ufs
 SHLIBDIR?= /lib
 SHLIB_MAJOR=	6
@@ -22,7 +22,6 @@ MLINKS+= ufs_disk_close.3 ufs_disk_write.3
 
 WARNS?=	2
 
-DEBUG_FLAGS = -g
 CFLAGS+= -D_LIBUFS
 .if defined(LIBUFS_DEBUG)
 CFLAGS+= -D_LIBUFS_DEBUGGING

@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libcam/Makefile 315696 2017-03-22 01:11:13Z ngie $
+# $FreeBSD: stable/11/lib/libcam/Makefile 315695 2017-03-22 01:04:20Z ngie $
 
+PACKAGE=	lib${LIB}
 LIB=		cam
 SHLIBDIR?=	/lib
 SRCS=		camlib.c scsi_cmdparse.c scsi_all.c scsi_da.c scsi_sa.c cam.c \
 		ata_all.c smp_all.c
 INCS=		camlib.h
 
-DPADD=		${LIBSBUF}
-LDADD=		-lsbuf
+LIBADD=		sbuf
 
 MAN=		cam.3 cam_cdbparse.3
 
@@ -42,9 +41,9 @@ MLINKS+=	cam.3 cam_open_device.3 \
 
 CFLAGS+=	-I${.CURDIR} -I${SRCTOP}/sys
 
-SHLIB_MAJOR=	6
+SHLIB_MAJOR=	7
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

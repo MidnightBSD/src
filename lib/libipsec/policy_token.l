@@ -1,4 +1,4 @@
-/*	$MidnightBSD$	*/
+/*	$FreeBSD: stable/11/lib/libipsec/policy_token.l 331722 2018-03-29 02:50:57Z eadler $	*/
 /*	$KAME: policy_token.l,v 1.13 2003/05/09 05:19:55 sakane Exp $	*/
 
 /*

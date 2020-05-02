@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $FreeBSD: stable/10/lib/libtelnet/Makefile 323043 2017-08-31 00:56:10Z cy $
+# $FreeBSD: stable/11/lib/libtelnet/Makefile 323030 2017-08-30 19:38:43Z cy $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 TELNETDIR=	${SRCTOP}/contrib/telnet
 .PATH:		${TELNETDIR}/libtelnet
 
@@ -16,7 +16,6 @@ CFLAGS+=	-I${TELNETDIR}
 
 WARNS?=		2
 
-.if !defined(RELEASE_CRUNCH)
 .if ${MK_OPENSSL} != "no"
 SRCS+=		encrypt.c auth.c enc_des.c sra.c pk.c
 CFLAGS+=	-DENCRYPTION -DAUTHENTICATION -DSRA
@@ -26,9 +25,5 @@ CFLAGS+=	-DENCRYPTION -DAUTHENTICATION -DSRA
 SRCS+=		kerberos5.c
 CFLAGS+=	-DKRB5 -DFORWARD -Dnet_write=telnet_net_write
 .endif
-.endif
-
-INCS=		${TELNETDIR}/arpa/telnet.h
-INCSDIR=	${INCLUDEDIR}/arpa
 
 .include <bsd.lib.mk>
