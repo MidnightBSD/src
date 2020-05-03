@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/bsnmp/snmp_usm/usm_snmp.c 313222 2017-02-04 16:37:43Z ngie $
+ * $FreeBSD: stable/11/contrib/bsnmp/snmp_usm/usm_snmp.c 313241 2017-02-04 17:18:49Z ngie $
  */
 #include <sys/queue.h>
 #include <sys/types.h>
