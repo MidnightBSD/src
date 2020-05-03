@@ -1,7 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libnetgraph/Makefile 326105 2017-11-22 21:24:47Z mav $
+# $FreeBSD: stable/11/lib/libnetgraph/Makefile 326104 2017-11-22 21:22:09Z mav $
 # $Whistle: Makefile,v 1.4 1999/01/17 03:41:02 julian Exp $
 
+PACKAGE=lib${LIB}
 LIB=		netgraph
 WARNS?=		3
 MAN=		netgraph.3

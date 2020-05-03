@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* 
  * Copyright (c) 2000 Peter Edwards
  * Copyright (c) 1988, 1993
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libprocstat/cd9660.c 235602 2012-05-18 10:15:46Z gleb $");
+__FBSDID("$FreeBSD: stable/11/lib/libprocstat/cd9660.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

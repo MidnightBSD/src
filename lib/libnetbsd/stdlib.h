@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libnetbsd/stdlib.h 244557 2012-12-21 20:37:38Z brooks $ */
+/* $FreeBSD: stable/11/lib/libnetbsd/stdlib.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2012 SRI International

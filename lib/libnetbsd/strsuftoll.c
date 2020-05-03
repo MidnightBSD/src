@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: strsuftoll.c,v 1.6 2004/03/05 05:58:29 lukem Exp $	*/
 /*-
  * Copyright (c) 2001-2002,2004 The NetBSD Foundation, Inc.
@@ -62,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnetbsd/strsuftoll.c 244557 2012-12-21 20:37:38Z brooks $");
+__FBSDID("$FreeBSD: stable/11/lib/libnetbsd/strsuftoll.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/time.h>

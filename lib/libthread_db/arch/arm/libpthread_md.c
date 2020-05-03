@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2007 Olivier Houchard
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/arch/arm/libpthread_md.c 254450 2013-08-17 14:42:40Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/arm/libpthread_md.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <string.h>
@@ -91,7 +90,9 @@ pt_fpreg_to_ucontext(const struct fpreg *r __unused, ucontext_t *uc)
 	mcontext_t *mc = &uc->uc_mcontext;
 
 	/* XXX */
-	memset(&mc->__fpu, 0, sizeof(mc->__fpu));
+	mc->mc_vfp_size = 0;
+	mc->mc_vfp_ptr = NULL;
+	memset(mc->mc_spare, 0, sizeof(mc->mc_spare));
 }
 
 void

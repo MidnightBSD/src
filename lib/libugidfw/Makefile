@@ -1,7 +1,8 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libugidfw/Makefile 325461 2017-11-05 22:36:02Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=		ugidfw
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 SRCS=		ugidfw.c
 INCS=		ugidfw.h
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/arch/i386/libpthread_md.c 181059 2008-07-31 16:26:58Z marcel $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/i386/libpthread_md.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <machine/npx.h>
@@ -73,7 +72,7 @@ pt_ucontext_to_fpreg(const ucontext_t *uc, struct fpreg *r)
 		memcpy(r, &uc->uc_mcontext.mc_fpstate, sizeof(struct save87));
 	else {
 		int i;
-		struct savexmm *sx = (struct savexmm *)&uc->uc_mcontext.mc_fpstate;
+		const struct savexmm *sx = (const struct savexmm *)&uc->uc_mcontext.mc_fpstate;
 		memcpy(&r->fpr_env, &sx->sv_env, sizeof(r->fpr_env));
 		for (i = 0; i < 8; ++i)
 			memcpy(&r->fpr_acc[i], &sx->sv_fp[i].fp_acc, 10);

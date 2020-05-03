@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * Copyright (c) 2011 Marius Strobl <marius@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/arch/sparc64/libpthread_md.c 253266 2013-07-12 14:24:52Z marius $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/sparc64/libpthread_md.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <string.h>

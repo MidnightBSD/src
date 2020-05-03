@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libthread_db/Makefile 313596 2017-02-11 06:27:42Z ngie $
+# $FreeBSD: stable/11/lib/libthread_db/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 .PATH:	${.CURDIR}/arch/${MACHINE_CPUARCH}
 
+PACKAGE=lib${LIB}
 LIB=	thread_db
 SHLIB_MAJOR= 3
 SRCS=	thread_db.c

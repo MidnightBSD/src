@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Dima Dorfman.
  * All rights reserved.
@@ -71,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmp/mpasbn.c 301806 2016-06-10 18:10:32Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libmp/mpasbn.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <err.h>

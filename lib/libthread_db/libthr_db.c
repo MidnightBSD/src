@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Marcel Moolenaar
  * Copyright (c) 2005 David Xu
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/libthr_db.c 241720 2012-10-19 05:43:38Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/libthr_db.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <proc_service.h>
 #include <stddef.h>

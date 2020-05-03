@@ -1,11 +1,11 @@
-# $MidnightBSD$
 #	from: @(#)Makefile    5.10 (Berkeley) 6/24/90
-# $FreeBSD: stable/10/lib/librpcsvc/Makefile 313610 2017-02-11 06:42:56Z ngie $
+# $FreeBSD: stable/11/lib/librpcsvc/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/include/rpcsvc
 
+PACKAGE=lib${LIB}
 LIB=    rpcsvc
 
 RPCSRCS= klm_prot.x mount.x nfs_prot.x nlm_prot.x rex.x rnusers.x \

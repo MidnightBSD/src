@@ -1,22 +1,57 @@
-# $MidnightBSD$
 # Makefile for libpcap
-# $FreeBSD: stable/10/lib/libpcap/Makefile 313613 2017-02-11 06:47:07Z ngie $
+# $FreeBSD: stable/11/lib/libpcap/Makefile 356341 2020-01-04 00:44:49Z cy $
 
 SHLIBDIR?= /lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=	pcap
-SRCS=	grammar.y tokdefs.h version.h pcap-bpf.c \
+
+SRCS=	bpf_dump.c \
+	bpf_filter.c \
+	bpf_image.c \
+	etherent.c \
+	fad-getad.c \
+	fmtutils.c \
+	gencode.c \
+	grammar.y \
+	nametoaddr.c \
+	optimize.c \
+	pcap-bpf.c \
+	pcap-common.c \
 	pcap-netmap.c \
-	pcap.c pcap-common.c inet.c fad-getad.c gencode.c optimize.c nametoaddr.c \
-	etherent.c savefile.c bpf_filter.c bpf_image.c bpf_dump.c \
-	scanner.l sf-pcap.c sf-pcap-ng.c version.c
+	pcap.c \
+	savefile.c \
+	scanner.l \
+	sf-pcap.c \
+	sf-pcapng.c \
+	tokdefs.h
 
 # Old compatibility headers
-INCS=	pcap.h pcap-int.h pcap-namedb.h pcap-bpf.h
+INCS=	fmtutils.h \
+	pcap-bpf.h \
+	pcap-namedb.h \
+	pcap-netmap.h \
+	pcap.h
 
-PCAPINCS=	pcap/pcap.h pcap/namedb.h pcap/bpf.h
+PCAPINCS= \
+	pcap/bluetooth.h \
+	pcap/bpf.h \
+	pcap/can_socketcan.h \
+	pcap/compiler-tests.h \
+	pcap/dlt.h \
+	pcap/funcattrs.h \
+	pcap/ipnet.h \
+	pcap/namedb.h \
+	pcap/nflog.h \
+	pcap/pcap-inttypes.h \
+	pcap/pcap.h \
+	pcap/socket.h \
+	pcap/sll.h \
+	pcap/usb.h \
+	pcap/vlan.h
+
 PCAPINCSDIR=	${INCLUDEDIR}/pcap
 INCSGROUPS=	INCS PCAPINCS
 
@@ -40,7 +75,9 @@ MAN=	pcap.3 \
 	pcap_fileno.3 \
 	pcap_findalldevs.3 \
 	pcap_freecode.3 \
+	pcap_get_required_select_timeout.3 \
 	pcap_get_selectable_fd.3 \
+	pcap_get_tstamp_precision.3 \
 	pcap_geterr.3 \
 	pcap_inject.3 \
 	pcap_is_swapped.3 \
@@ -62,6 +99,7 @@ MAN=	pcap.3 \
 	pcap_set_rfmon.3 \
 	pcap_set_snaplen.3 \
 	pcap_set_timeout.3 \
+	pcap_set_tstamp_precision.3 \
 	pcap_set_tstamp_type.3 \
 	pcap_setdirection.3 \
 	pcap_setfilter.3 \
@@ -70,12 +108,15 @@ MAN=	pcap.3 \
 	pcap_stats.3 \
 	pcap_statustostr.3 \
 	pcap_strerror.3 \
-	pcap-savefile.5 \
 	pcap_tstamp_type_name_to_val.3 \
 	pcap_tstamp_type_val_to_name.3 \
+	pcap-savefile.5 \
 	pcap-filter.7 \
-	pcap-linktype.7
-MLINKS=	pcap_datalink_val_to_name.3 pcap_datalink_val_to_description.3 \
+	pcap-linktype.7 \
+	pcap-tstamp.7
+
+MLINKS= \
+	pcap_datalink_val_to_name.3 pcap_datalink_val_to_description.3 \
 	pcap_dump_open.3 pcap_dump_fopen.3 \
 	pcap_findalldevs.3 pcap_freealldevs.3 \
 	pcap_geterr.3 pcap_perror.3 \
@@ -90,18 +131,28 @@ MLINKS=	pcap_datalink_val_to_name.3 pcap_datalink_val_to_description.3 \
 
 # Our man pages are a special copy from the distdir. See below.
 CLEANFILES+=${MAN}
-CLEANFILES+=tokdefs.h version.h version.c
+CLEANFILES+=tokdefs.h scanner.h 
 
-YFLAGS+=-p pcapyy
-LFLAGS+=-Ppcapyy
-CFLAGS+=-DHAVE_CONFIG_H -Dyylval=pcapyylval -I${.CURDIR} -I.
+YFLAGS+=-p pcap_
+LFLAGS+=-Ppcap_ --header-file=${.OBJDIR}/scanner.h --nounput
+CFLAGS+=-DHAVE_CONFIG_H -I${.CURDIR} -I${.OBJDIR}
 CFLAGS+=-D_U_="__attribute__((unused))"
 CFLAGS+=-DHAVE_SNPRINTF -DHAVE_VSNPRINTF
+CFLAGS+=-DBUILDING_PCAP
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
 .if ${MK_PF} != "no"
 CFLAGS+=-DHAVE_NET_PFVAR_H
+.endif
+
+CFLAGS+= -DPCAP_SUPPORT_NETMAP
+
+.if ${MK_OFED} != "no"
+SRCS+= pcap-rdmasniff.c
+LIBADD+= ibverbs
+LIBADD+= mlx5
+CFLAGS+= -DPCAP_SUPPORT_RDMASNIFF
 .endif
 
 WARNS?=	0
@@ -116,17 +167,8 @@ CFLAGS+=-I${PCAP_DISTDIR}
 .PATH:	${PCAP_DISTDIR}
 .PATH:	${PCAP_DISTDIR}/bpf/net
 
-version.c: ${PCAP_DISTDIR}/VERSION
-	@rm -f $@
-	sed 's/.*/char pcap_version[] = "&";/' ${PCAP_DISTDIR}/VERSION > $@
-
-version.h: ${PCAP_DISTDIR}/VERSION
-	@rm -f $@
-	sed 's/.*/char pcap_version_string[] = "libpcap version &";/' ${PCAP_DISTDIR}/VERSION > $@
-
-tokdefs.h: grammar.h
-	ln -sf grammar.h tokdefs.h
-
+tokdefs.h: grammar.h .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
 #
 # Magic to convert the man pages to something non Solarish
@@ -135,12 +177,21 @@ tokdefs.h: grammar.h
 ${_page}:
 	if [ -f ${PCAP_DISTDIR}/${_page:S/3$/3pcap/} ]; then		\
 		F=${_page:S/3$/3pcap/}; 				\
+	elif [ -f ${PCAP_DISTDIR}/${_page:S/3$/3pcap.in/} ]; then	\
+		F=${_page:S/3$/3pcap.in/}; 				\
+	elif [ -f ${PCAP_DISTDIR}/${_page:S/5$/manfile.in/} ]; then	\
+		F=${_page:S/5$/manfile.in/};				\
 	elif [ -f ${PCAP_DISTDIR}/${_page:S/5$/manfile/} ]; then	\
 		F=${_page:S/5$/manfile/};				\
 	else								\
-		F=${_page:S/7$/manmisc/};				\
+		F=${_page:S/7$/manmisc.in/};				\
 	fi;								\
-	sed -e 's/3PCAP/3/g' ${PCAP_DISTDIR}/$$F > ${_page}
+	sed \
+		-e 's/3PCAP/3/g' \
+		-e 's/@MAN_FILE_FORMATS@/5/g' \
+		-e 's/@MAN_MISC_INFO@/7/g' \
+		-e 's/@MAN_ADMIN_COMMANDS@/8/g' \
+		${PCAP_DISTDIR}/$$F > ${_page}
 .endfor
 
 .include <bsd.lib.mk>

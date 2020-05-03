@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libstdthreads/tss.c 228904 2011-12-26 21:51:53Z ed $
+ * $FreeBSD: stable/11/lib/libstdthreads/tss.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libstdthreads/tss.c 228904 2011-12-26 21:51:53Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libstdthreads/tss.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <pthread.h>
 

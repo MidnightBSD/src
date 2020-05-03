@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/lib/libmp/mp.h 189092 2009-02-26 21:43:15Z ed $ */
 
 #ifndef _MP_H_
 #define _MP_H_

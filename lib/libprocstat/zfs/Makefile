@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libprocstat/zfs/Makefile 313612 2017-02-11 06:46:16Z ngie $
+# $FreeBSD: stable/11/lib/libprocstat/zfs/Makefile 339118 2018-10-03 02:52:47Z mav $
 
 .PATH: ${.CURDIR:H}
 
@@ -14,7 +13,6 @@ CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
 CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/sys
 CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR:H}
 CFLAGS+= -DNEED_SOLARIS_BOOLEAN

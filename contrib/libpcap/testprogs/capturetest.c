@@ -19,44 +19,58 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include "varattrs.h"
+
 #ifndef lint
-static const char copyright[] =
+static const char copyright[] _U_ =
     "@(#) Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 2000\n\
 The Regents of the University of California.  All rights reserved.\n";
 #endif
 
-#include <pcap.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <unistd.h>
+#include <limits.h>
+#ifdef _WIN32
+  #include "getopt.h"
+#else
+  #include <unistd.h>
+#endif
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/select.h>
-#include <poll.h>
 
-char *program_name;
+#include <pcap.h>
+
+#include "pcap/funcattrs.h"
+
+#ifdef _WIN32
+  #include "portability.h"
+#endif
+
+static char *program_name;
 
 /* Forwards */
 static void countme(u_char *, const struct pcap_pkthdr *, const u_char *);
-static void usage(void) __attribute__((noreturn));
-static void error(const char *, ...);
-static void warning(const char *, ...);
+static void PCAP_NORETURN usage(void);
+static void PCAP_NORETURN error(const char *, ...) PCAP_PRINTFLIKE(1, 2);
+static void warning(const char *, ...) PCAP_PRINTFLIKE(1, 2);
 static char *copy_argv(char **);
 
 static pcap_t *pd;
-
-extern int optind;
-extern int opterr;
-extern char *optarg;
 
 int
 main(int argc, char **argv)
 {
 	register int op;
-	bpf_u_int32 localnet, netmask;
 	register char *cp, *cmdbuf, *device;
+	long longarg;
+	char *p;
+	int timeout = 1000;
+	int immediate = 0;
+	int nonblock = 0;
+	pcap_if_t *devlist;
+	bpf_u_int32 localnet, netmask;
 	struct bpf_program fcode;
 	char ebuf[PCAP_ERRBUF_SIZE];
 	int status;
@@ -69,11 +83,38 @@ main(int argc, char **argv)
 		program_name = argv[0];
 
 	opterr = 0;
-	while ((op = getopt(argc, argv, "i:")) != -1) {
+	while ((op = getopt(argc, argv, "i:mnt:")) != -1) {
 		switch (op) {
 
 		case 'i':
 			device = optarg;
+			break;
+
+		case 'm':
+			immediate = 1;
+			break;
+
+		case 'n':
+			nonblock = 1;
+			break;
+
+		case 't':
+			longarg = strtol(optarg, &p, 10);
+			if (p == optarg || *p != '\0') {
+				error("Timeout value \"%s\" is not a number",
+				    optarg);
+				/* NOTREACHED */
+			}
+			if (longarg < 0) {
+				error("Timeout value %ld is negative", longarg);
+				/* NOTREACHED */
+			}
+			if (longarg > INT_MAX) {
+				error("Timeout value %ld is too large (> %d)",
+				    longarg, INT_MAX);
+				/* NOTREACHED */
+			}
+			timeout = (int)longarg;
 			break;
 
 		default:
@@ -83,16 +124,46 @@ main(int argc, char **argv)
 	}
 
 	if (device == NULL) {
-		device = pcap_lookupdev(ebuf);
-		if (device == NULL)
+		if (pcap_findalldevs(&devlist, ebuf) == -1)
 			error("%s", ebuf);
+		if (devlist == NULL)
+			error("no interfaces available for capture");
+		device = strdup(devlist->name);
+		pcap_freealldevs(devlist);
 	}
 	*ebuf = '\0';
-	pd = pcap_open_live(device, 65535, 0, 1000, ebuf);
+	pd = pcap_create(device, ebuf);
 	if (pd == NULL)
 		error("%s", ebuf);
-	else if (*ebuf)
-		warning("%s", ebuf);
+	status = pcap_set_snaplen(pd, 65535);
+	if (status != 0)
+		error("%s: pcap_set_snaplen failed: %s",
+			    device, pcap_statustostr(status));
+	if (immediate) {
+		status = pcap_set_immediate_mode(pd, 1);
+		if (status != 0)
+			error("%s: pcap_set_immediate_mode failed: %s",
+			    device, pcap_statustostr(status));
+	}
+	status = pcap_set_timeout(pd, timeout);
+	if (status != 0)
+		error("%s: pcap_set_timeout failed: %s",
+		    device, pcap_statustostr(status));
+	status = pcap_activate(pd);
+	if (status < 0) {
+		/*
+		 * pcap_activate() failed.
+		 */
+		error("%s: %s\n(%s)", device,
+		    pcap_statustostr(status), pcap_geterr(pd));
+	} else if (status > 0) {
+		/*
+		 * pcap_activate() succeeded, but it's warning us
+		 * of a problem it had.
+		 */
+		warning("%s: %s\n(%s)", device,
+		    pcap_statustostr(status), pcap_geterr(pd));
+	}
 	if (pcap_lookupnet(device, &localnet, &netmask, ebuf) < 0) {
 		localnet = 0;
 		netmask = 0;
@@ -105,7 +176,7 @@ main(int argc, char **argv)
 
 	if (pcap_setfilter(pd, &fcode) < 0)
 		error("%s", pcap_geterr(pd));
-	if (pcap_setnonblock(pd, 1, ebuf) == -1)
+	if (pcap_setnonblock(pd, nonblock, ebuf) == -1)
 		error("pcap_setnonblock failed: %s", ebuf);
 	printf("Listening on %s\n", device);
 	for (;;) {
@@ -136,11 +207,13 @@ main(int argc, char **argv)
 		    program_name, pcap_geterr(pd));
 	}
 	pcap_close(pd);
+	pcap_freecode(&fcode);
+	free(cmdbuf);
 	exit(status == -1 ? 1 : 0);
 }
 
 static void
-countme(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
+countme(u_char *user, const struct pcap_pkthdr *h _U_, const u_char *sp _U_)
 {
 	int *counterp = (int *)user;
 
@@ -150,7 +223,7 @@ countme(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "Usage: %s [ -sptn ] [ -i interface ] [expression]\n",
+	(void)fprintf(stderr, "Usage: %s [ -mn ] [ -i interface ] [ -t timeout] [expression]\n",
 	    program_name);
 	exit(1);
 }

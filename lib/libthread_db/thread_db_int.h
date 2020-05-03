@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthread_db/thread_db_int.h 209689 2010-07-04 12:08:04Z kib $
+ * $FreeBSD: stable/11/lib/libthread_db/thread_db_int.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _THREAD_DB_INT_H_

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libnetbsd/sys/cdefs.h 313215 2017-02-04 16:09:07Z ngie $ */
+/* $FreeBSD: stable/11/lib/libnetbsd/sys/cdefs.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 2012 SRI International

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * msg.c
  *
@@ -40,11 +39,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnetgraph/msg.c 248159 2013-03-11 13:05:11Z glebius $");
+__FBSDID("$FreeBSD: stable/11/lib/libnetgraph/msg.c 353445 2019-10-11 18:05:06Z eugen $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <netgraph/ng_message.h>
 #include <netgraph/ng_socket.h>
 
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libnetgraph/msg.c 248159 2013-03-11 13:05:11Z 
 #include "internal.h"
 
 /* Next message token value */
-static int	gMsgId;
+static _Atomic(unsigned int) gMsgId;
 
 /* For delivering both messages and replies */
 static int	NgDeliverMsg(int cs, const char *path,
@@ -73,9 +73,7 @@ NgSendMsg(int cs, const char *path,
 	memset(&msg, 0, sizeof(msg));
 	msg.header.version = NG_VERSION;
 	msg.header.typecookie = cookie;
-	if (++gMsgId < 0)
-		gMsgId = 1;
-	msg.header.token = gMsgId;
+	msg.header.token = atomic_fetch_add(&gMsgId, 1) & INT_MAX;
 	msg.header.flags = NGF_ORIG;
 	msg.header.cmd = cmd;
 	snprintf((char *)msg.header.cmdstr, NG_CMDSTRSIZ, "cmd%d", cmd);
@@ -144,9 +142,7 @@ NgSendAsciiMsg(int cs, const char *path, const char *fmt, ...)
 
 	/* Now send binary version */
 	binary = (struct ng_mesg *)reply->data;
-	if (++gMsgId < 0)
-		gMsgId = 1;
-	binary->header.token = gMsgId;
+	binary->header.token = atomic_fetch_add(&gMsgId, 1) & INT_MAX;
 	binary->header.version = NG_VERSION;
 	if (NgDeliverMsg(cs,
 	    path, binary, binary->data, binary->header.arglen) < 0) {

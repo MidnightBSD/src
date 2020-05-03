@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libsmdb/Makefile 313607 2017-02-11 06:39:47Z ngie $
+# $FreeBSD: stable/11/lib/libsmdb/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsmdb
 
@@ -20,7 +20,7 @@ CLEANFILES+=sm_os.h
 
 INTERNALLIB=
 
-sm_os.h:
-	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h
+sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.lib.mk>

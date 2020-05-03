@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2006-2007, Juniper Networks, Inc.
  * All rights reserved.
@@ -29,9 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/arch/mips/libpthread_md.c 182372 2008-08-28 15:41:12Z obrien $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/mips/libpthread_md.c 351792 2019-09-03 20:19:43Z kevans $");
 
 #include <sys/types.h>
+#define	_WANT_MIPS_REGNUM
 #include <sys/procfs.h>
 #include <ucontext.h>
 #include <string.h>

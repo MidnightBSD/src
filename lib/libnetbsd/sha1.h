@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/lib/libnetbsd/sha1.h 314366 2017-02-28 00:56:33Z ngie $	*/
+/*	$FreeBSD: stable/11/lib/libnetbsd/sha1.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*-
  * Copyright (c) 2012 SRI International

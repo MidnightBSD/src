@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/librpcsvc/yp_update.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 #include <rpc/rpc.h>

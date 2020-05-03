@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libmp/Makefile 313616 2017-02-11 06:51:09Z ngie $
+# $FreeBSD: stable/11/lib/libmp/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=		mp
 SHLIB_MAJOR=	7
-DPADD=		${LIBCRYPTO}
-LDADD=		-lcrypto
+LIBADD=		crypto
 MAN=		libmp.3
 INCS=		mp.h
 SRCS=		mpasbn.c

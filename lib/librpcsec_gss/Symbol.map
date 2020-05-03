@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/librpcsec_gss/Symbol.map 181344 2008-08-06 14:02:05Z dfr $
+/*
+ * $FreeBSD: stable/11/lib/librpcsec_gss/Symbol.map 181344 2008-08-06 14:02:05Z dfr $
  */
 FBSD_1.1 {
 	rpc_gss_seccreate;

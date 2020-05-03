@@ -1,9 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libulog/Makefile 313599 2017-02-11 06:32:05Z ngie $
+# $FreeBSD: stable/11/lib/libulog/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 SHLIBDIR?=/lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 LIB=	ulog
 SHLIB_MAJOR= 0
@@ -20,8 +20,7 @@ MLINKS+=ulog_login.3 ulog_login_pseudo.3 \
 	utempter_remove_added_record.3 removeFromUtmp.3 \
 	utempter_remove_record.3 removeLineFromUtmp.3
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 VERSION_DEF= ${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS= ${.CURDIR}/Symbol.map

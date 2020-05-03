@@ -1,7 +1,6 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libprocstat/Symbol.map 324932 2017-10-23 18:25:21Z bdrewery $
  */
-
 FBSD_1.2 {
 	procstat_close;
 	procstat_freefiles;
@@ -36,4 +35,9 @@ FBSD_1.3 {
 	procstat_getumask;
 	procstat_getvmmap;
 	procstat_open_core;
+};
+
+FBSD_1.5 {
+	procstat_freeptlwpinfo;
+	procstat_getptlwpinfo;
 };

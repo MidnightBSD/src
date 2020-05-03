@@ -1,6 +1,6 @@
 /*
- * $MidnightBSD$
- */	
+ * $FreeBSD: stable/11/lib/libulog/Symbol.map 226111 2011-10-07 15:05:24Z ed $
+ */
 
 FBSD_1.2 {
 	ulog_login;

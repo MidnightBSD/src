@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/lib/libnetbsd/util.h 314366 2017-02-28 00:56:33Z ngie $	*/
+/*	$FreeBSD: stable/11/lib/libnetbsd/util.h 332979 2018-04-25 01:30:29Z benno $	*/
 
 /*-
  * Copyright (c) 2012 SRI International
@@ -37,7 +36,22 @@
 #include <sys/types.h>
 #include <libutil.h>
 
+void	(*esetfunc(void (*)(int, const char *, ...)))(int, const char *, ...);
+size_t	 estrlcpy(char *, const char *, size_t);
+size_t	 estrlcat(char *, const char *, size_t);
+char	*estrdup(const char *);
+char	*estrndup(const char *, size_t);
+void	*emalloc(size_t);
+void	*ecalloc(size_t, size_t);
+void	*erealloc(void *, size_t);
+struct __sFILE	*efopen(const char *, const char *);
+int	 easprintf(char ** __restrict, const char * __restrict, ...)
+	    __printflike(2, 3);
+int	 evasprintf(char ** __restrict, const char * __restrict, __va_list)
+	    __printflike(2, 0);
 char	*flags_to_string(u_long flags, const char *def);
+int	 sockaddr_snprintf(char *, size_t, const char *,
+			   const struct sockaddr *);
 int	 string_to_flags(char **stringp, u_long *setp, u_long *clrp);
 
 #endif

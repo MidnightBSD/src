@@ -1,37 +1,36 @@
-/* $MidnightBSD$ */
-/*
- * Copyright (c) 2010 The FreeBSD Foundation 
- * All rights reserved. 
- * 
+/*-
+ * Copyright (c) 2010 The FreeBSD Foundation
+ * All rights reserved.
+ *
  * This software was developed by Rui Paulo under sponsorship from the
- * FreeBSD Foundation. 
- *  
- * Redistribution and use in source and binary forms, with or without 
- * modification, are permitted provided that the following conditions 
- * are met: 
- * 1. Redistributions of source code must retain the above copyright 
- *    notice, this list of conditions and the following disclaimer. 
- * 2. Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in the 
- *    documentation and/or other materials provided with the distribution. 
- * 
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND 
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE 
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS 
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY 
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
- * SUCH DAMAGE. 
+ * FreeBSD Foundation.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */ 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/librtld_db/rtld_db.c 269720 2014-08-08 14:53:01Z markj $");
+__FBSDID("$FreeBSD: stable/11/lib/librtld_db/rtld_db.c 331722 2018-03-29 02:50:57Z eadler $");
 
-#include <machine/_inttypes.h>
-#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
 #include <sys/user.h>
 
 #include <err.h>
@@ -153,7 +152,7 @@ rd_loadobj_iter(rd_agent_t *rdap, rl_iter_f *cb, void *clnt_data)
 
 	DPRINTF("%s\n", __func__);
 
-        if ((kves = kinfo_getvmmap(proc_getpid(rdap->rda_php), &cnt)) == NULL) {
+	if ((kves = kinfo_getvmmap(proc_getpid(rdap->rda_php), &cnt)) == NULL) {
 		warn("ERROR: kinfo_getvmmap() failed");
 		return (RD_ERR);
 	}
@@ -238,14 +237,14 @@ rd_reset(rd_agent_t *rdap)
 	GElf_Sym sym;
 
 	if (proc_name2sym(rdap->rda_php, "ld-elf.so.1", "r_debug_state",
-	    &sym) < 0)
+	    &sym, NULL) < 0)
 		return (RD_ERR);
 	DPRINTF("found r_debug_state at 0x%lx\n", (unsigned long)sym.st_value);
 	rdap->rda_preinit_addr = sym.st_value;
 	rdap->rda_dlactivity_addr = sym.st_value;
 
 	if (proc_name2sym(rdap->rda_php, "ld-elf.so.1", "_r_debug_postinit",
-	    &sym) < 0)
+	    &sym, NULL) < 0)
 		return (RD_ERR);
 	DPRINTF("found _r_debug_postinit at 0x%lx\n",
 	    (unsigned long)sym.st_value);

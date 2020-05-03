@@ -24,13 +24,12 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libprocstat/udf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/vnode.h>
-#include <sys/buf.h>
 #define _KERNEL
 #include <sys/mount.h>
 #undef _KERNEL

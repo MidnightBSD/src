@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthread_db/libpthread_db.h 181059 2008-07-31 16:26:58Z marcel $
+ * $FreeBSD: stable/11/lib/libthread_db/libpthread_db.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _LIBPTHREAD_DB_H_
@@ -78,7 +77,7 @@ struct td_thragent {
 	int		thread_off_sigmask;
 	int		thread_off_sigpend;
 	struct pt_map	*map;
-	int		map_len;
+	unsigned int	map_len;
 };
 
 void pt_md_init(void);

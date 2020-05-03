@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libradius/radlib.h 315153 2017-03-12 13:36:14Z des $
+ *	$FreeBSD: stable/11/lib/libradius/radlib.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _RADLIB_H_

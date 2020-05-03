@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libprocstat/common_kvm.h 252356 2013-06-28 21:00:08Z davide $
+ * $FreeBSD: stable/11/lib/libprocstat/common_kvm.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_COMMON_KVM_H_

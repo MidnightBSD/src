@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Julian Elischer <julian@freebsd.org>
  * for the FreeBSD Foundation.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libthread_db/kse.h 177526 2008-03-23 09:38:11Z jeff $
+ * $FreeBSD: stable/11/lib/libthread_db/kse.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SYS_KSE_H_

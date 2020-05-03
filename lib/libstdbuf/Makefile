@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libstdbuf/Makefile 241695 2012-10-18 15:39:29Z ed $
+# $FreeBSD: stable/11/lib/libstdbuf/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
 .include <bsd.own.mk>
 
+PACKAGE=lib${LIB}
 LIB=		stdbuf
 SRCS=		stdbuf.c
 SHLIB_MAJOR=	1

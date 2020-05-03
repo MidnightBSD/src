@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2017 Dell, Inc.
  * All rights reserved.
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libnetbsd/sys/wait.h 314366 2017-02-28 00:56:33Z ngie $ *
+ * $FreeBSD: stable/11/lib/libnetbsd/sys/wait.h 314021 2017-02-21 03:46:43Z ngie $ *
  */
 
 #ifndef _LIBNETBSD_SYS_WAIT_H_

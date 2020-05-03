@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * debug.c
  *
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnetgraph/debug.c 279052 2015-02-20 11:52:46Z mav $");
+__FBSDID("$FreeBSD: stable/11/lib/libnetgraph/debug.c 278311 2015-02-06 09:41:16Z mav $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -71,7 +70,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libnetgraph/debug.c 279052 2015-02-20 11:52:46
 #include <netgraph/ng_eiface.h>
 #include <netgraph/ng_etf.h>
 #include <netgraph/ng_ether.h>
-#include <netgraph/ng_fec.h>
 #include <netgraph/ng_ether_echo.h>
 #include <netgraph/ng_frame_relay.h>
 #include <netgraph/ng_gif.h>
@@ -147,7 +145,6 @@ static const struct ng_cookie cookies[] = {
 	COOKIE(EIFACE),
 	COOKIE(ETF),
 	COOKIE(ETHER),
-	COOKIE(FEC),
 	COOKIE(ETHER_ECHO),
 	COOKIE(FRAMERELAY),
 	COOKIE(GIF),

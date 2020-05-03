@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Mikolaj Golub <trociny@FreeBSD.org>
+ * Copyright (c) 2017 Dell EMC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libprocstat/core.h 249681 2013-04-20 08:10:47Z trociny $
+ * $FreeBSD: stable/11/lib/libprocstat/core.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _CORE_H
@@ -42,6 +42,8 @@ enum psc_type {
 	PSC_TYPE_ARGV,
 	PSC_TYPE_ENVV,
 	PSC_TYPE_AUXV,
+	PSC_TYPE_PTLWPINFO,
+	PSC_TYPE_MAX
 };
 
 struct procstat_core;
@@ -49,6 +51,7 @@ struct procstat_core;
 void procstat_core_close(struct procstat_core *core);
 void *procstat_core_get(struct procstat_core *core, enum psc_type type,
     void * buf, size_t *lenp);
+int procstat_core_note_count(struct procstat_core *core, enum psc_type type);
 struct procstat_core *procstat_core_open(const char *filename);
 
 #endif 	/* !_CORE_H_ */

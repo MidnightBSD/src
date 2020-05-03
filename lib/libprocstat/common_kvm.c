@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 1988, 1993
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libprocstat/common_kvm.c 235602 2012-05-18 10:15:46Z gleb $");
+__FBSDID("$FreeBSD: stable/11/lib/libprocstat/common_kvm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/user.h>
@@ -46,6 +45,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libprocstat/common_kvm.c 235602 2012-05-18 10:
 #include <sys/mount.h>
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
+#include <ufs/ufs/extattr.h>
+#include <ufs/ufs/ufsmount.h>
 #include <fs/devfs/devfs.h>
 #include <fs/devfs/devfs_int.h>
 #undef _KERNEL
@@ -89,9 +90,14 @@ int
 ufs_filestat(kvm_t *kd, struct vnode *vp, struct vnstat *vn)
 {
 	struct inode inode;
+	struct ufsmount um;
 
 	if (!kvm_read_all(kd, (unsigned long)VTOI(vp), &inode, sizeof(inode))) {
 		warnx("can't read inode at %p", (void *)VTOI(vp));
+		return (1);
+	}
+	if (!kvm_read_all(kd, (unsigned long)inode.i_ump, &um, sizeof(um))) {
+		warnx("can't read ufsmount at %p", (void *)inode.i_ump);
 		return (1);
 	}
 	/*
@@ -99,7 +105,7 @@ ufs_filestat(kvm_t *kd, struct vnode *vp, struct vnstat *vn)
 	 * contain cdev pointers. We need to convert to dev_t to make
 	 * comparisons
 	 */
-	vn->vn_fsid = dev2udev(kd, inode.i_dev);
+	vn->vn_fsid = dev2udev(kd, um.um_dev);
 	vn->vn_fileid = inode.i_number;
 	vn->vn_mode = (mode_t)inode.i_mode;
 	vn->vn_size = inode.i_size;

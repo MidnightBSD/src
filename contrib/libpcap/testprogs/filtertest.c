@@ -19,16 +19,16 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include "varattrs.h"
+
 #ifndef lint
 static const char copyright[] _U_ =
     "@(#) Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 2000\n\
 The Regents of the University of California.  All rights reserved.\n";
-static const char rcsid[] _U_ =
-    "@(#) $Header: /tcpdump/master/libpcap/filtertest.c,v 1.2 2005-08-08 17:50:13 guy Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include <config.h>
 #endif
 
 #include <pcap.h>
@@ -36,27 +36,44 @@ static const char rcsid[] _U_ =
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <unistd.h>
+#ifdef _WIN32
+  #include "getopt.h"
+  #include "unix.h"
+#else
+  #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <errno.h>
-#include <arpa/inet.h>
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <sys/socket.h>
+  #include <arpa/inet.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifndef HAVE___ATTRIBUTE__
-#define __attribute__(x)
+#include "pcap/funcattrs.h"
+
+#ifdef BDEBUG
+/*
+ * We have pcap_set_optimizer_debug() and pcap_set_print_dot_graph() in
+ * libpcap; declare them (they're not declared by any libpcap header,
+ * because they're special hacks, only available if libpcap was configured
+ * to include them, and only intended for use by libpcap developers trying
+ * to debug the optimizer for filter expressions).
+ */
+PCAP_API void pcap_set_optimizer_debug(int);
+PCAP_API void pcap_set_print_dot_graph(int);
 #endif
 
 static char *program_name;
 
 /* Forwards */
-static void usage(void) __attribute__((noreturn));
-static void error(const char *, ...)
-    __attribute__((noreturn, format (printf, 1, 2)));
-
-extern int optind;
-extern int opterr;
-extern char *optarg;
+static void PCAP_NORETURN usage(void);
+static void PCAP_NORETURN error(const char *, ...) PCAP_PRINTFLIKE(1, 2);
+static void warn(const char *, ...) PCAP_PRINTFLIKE(1, 2);
 
 /*
  * On Windows, we need to open the file in binary mode, so that
@@ -122,6 +139,23 @@ error(const char *fmt, ...)
 	/* NOTREACHED */
 }
 
+/* VARARGS */
+static void
+warn(const char *fmt, ...)
+{
+	va_list ap;
+
+	(void)fprintf(stderr, "%s: WARNING: ", program_name);
+	va_start(ap, fmt);
+	(void)vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	if (*fmt) {
+		fmt += strlen(fmt);
+		if (fmt[-1] != '\n')
+			(void)fputc('\n', stderr);
+	}
+}
+
 /*
  * Copy arg vector into a new buffer, concatenating arguments with spaces.
  */
@@ -162,35 +196,49 @@ main(int argc, char **argv)
 	char *cp;
 	int op;
 	int dflag;
+	int gflag;
 	char *infile;
 	int Oflag;
 	long snaplen;
+	char *p;
 	int dlt;
+	int have_fcode = 0;
 	bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
 	char *cmdbuf;
 	pcap_t *pd;
 	struct bpf_program fcode;
 
-#ifdef WIN32
-	if(wsockinit() != 0) return 1;
-#endif /* WIN32 */
+#ifdef _WIN32
+	if (pcap_wsockinit() != 0)
+		return 1;
+#endif /* _WIN32 */
 
 	dflag = 1;
+	gflag = 0;
+
 	infile = NULL;
 	Oflag = 1;
 	snaplen = 68;
-  
+
 	if ((cp = strrchr(argv[0], '/')) != NULL)
 		program_name = cp + 1;
 	else
 		program_name = argv[0];
 
 	opterr = 0;
-	while ((op = getopt(argc, argv, "dF:m:Os:")) != -1) {
+	while ((op = getopt(argc, argv, "dF:gm:Os:")) != -1) {
 		switch (op) {
 
 		case 'd':
 			++dflag;
+			break;
+
+		case 'g':
+#ifdef BDEBUG
+			++gflag;
+#else
+			error("libpcap and filtertest not built with optimizer debugging enabled");
+#endif
 			break;
 
 		case 'F':
@@ -202,12 +250,23 @@ main(int argc, char **argv)
 			break;
 
 		case 'm': {
-			in_addr_t addr;
+			bpf_u_int32 addr;
 
-			addr = inet_addr(optarg);
-			if (addr == INADDR_NONE)
+			switch (inet_pton(AF_INET, optarg, &addr)) {
+
+			case 0:
 				error("invalid netmask %s", optarg);
-			netmask = addr;
+				break;
+
+			case -1:
+				error("invalid netmask %s: %s", optarg,
+				    pcap_strerror(errno));
+				break;
+
+			case 1:
+				netmask = addr;
+				break;
+			}
 			break;
 		}
 
@@ -235,13 +294,21 @@ main(int argc, char **argv)
 	}
 
 	dlt = pcap_datalink_name_to_val(argv[optind]);
-	if (dlt < 0)
-		error("invalid data link type %s", argv[optind]);
-	
+	if (dlt < 0) {
+		dlt = (int)strtol(argv[optind], &p, 10);
+		if (p == argv[optind] || *p != '\0')
+			error("invalid data link type %s", argv[optind]);
+	}
+
 	if (infile)
 		cmdbuf = read_infile(infile);
 	else
 		cmdbuf = copy_argv(&argv[optind+1]);
+
+#ifdef BDEBUG
+	pcap_set_optimizer_debug(dflag);
+	pcap_set_print_dot_graph(gflag);
+#endif
 
 	pd = pcap_open_dead(dlt, snaplen);
 	if (pd == NULL)
@@ -249,7 +316,29 @@ main(int argc, char **argv)
 
 	if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
 		error("%s", pcap_geterr(pd));
+
+	have_fcode = 1;
+	if (!bpf_validate(fcode.bf_insns, fcode.bf_len))
+		warn("Filter doesn't pass validation");
+
+#ifdef BDEBUG
+	if (cmdbuf != NULL) {
+		// replace line feed with space
+		for (cp = cmdbuf; *cp != '\0'; ++cp) {
+			if (*cp == '\r' || *cp == '\n') {
+				*cp = ' ';
+			}
+		}
+		// only show machine code if BDEBUG defined, since dflag > 3
+		printf("machine codes for filter: %s\n", cmdbuf);
+	} else
+		printf("machine codes for empty filter:\n");
+#endif
+
 	bpf_dump(&fcode, dflag);
+	free(cmdbuf);
+	if (have_fcode)
+		pcap_freecode (&fcode);
 	pcap_close(pd);
 	exit(0);
 }
@@ -260,7 +349,11 @@ usage(void)
 	(void)fprintf(stderr, "%s, with %s\n", program_name,
 	    pcap_lib_version());
 	(void)fprintf(stderr,
+#ifdef BDEBUG
+	    "Usage: %s [-dgO] [ -F file ] [ -m netmask] [ -s snaplen ] dlt [ expression ]\n",
+#else
 	    "Usage: %s [-dO] [ -F file ] [ -m netmask] [ -s snaplen ] dlt [ expression ]\n",
+#endif
 	    program_name);
 	exit(1);
 }

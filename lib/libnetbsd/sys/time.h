@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libnetbsd/sys/time.h 275996 2014-12-21 11:11:17Z ngie $ */
+/* $FreeBSD: stable/11/lib/libnetbsd/sys/time.h 274078 2014-11-04 02:00:07Z ngie $ */
 
 /*
  * Copyright (c) 1982, 1986, 1993

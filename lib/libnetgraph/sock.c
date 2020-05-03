@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * sock.c
  *
@@ -40,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnetgraph/sock.c 244538 2012-12-21 15:54:13Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/lib/libnetgraph/sock.c 260418 2014-01-07 23:01:05Z jmg $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -112,9 +111,12 @@ gotNode:
 		/* Save node name */
 		strlcpy(namebuf, name, sizeof(namebuf));
 	} else if (dsp != NULL) {
-		u_char rbuf[sizeof(struct ng_mesg) + sizeof(struct nodeinfo)];
-		struct ng_mesg *const resp = (struct ng_mesg *) rbuf;
-		struct nodeinfo *const ni = (struct nodeinfo *) resp->data;
+		union {
+			u_char rbuf[sizeof(struct ng_mesg) +
+			    sizeof(struct nodeinfo)];
+			struct ng_mesg res;
+		} res;
+		struct nodeinfo *const ni = (struct nodeinfo *) res.res.data;
 
 		/* Find out the node ID */
 		if (NgSendMsg(cs, ".", NGM_GENERIC_COOKIE,
@@ -124,7 +126,7 @@ gotNode:
 				NGLOG("send nodeinfo");
 			goto errout;
 		}
-		if (NgRecvMsg(cs, resp, sizeof(rbuf), NULL) < 0) {
+		if (NgRecvMsg(cs, &res.res, sizeof(res.rbuf), NULL) < 0) {
 			errnosv = errno;
 			if (_gNgDebugLevel >= 1)
 				NGLOG("recv nodeinfo");

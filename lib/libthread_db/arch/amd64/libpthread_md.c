@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 David Xu <davidxu@freebsd.org>
  * Copyright (c) 2004 Marcel Moolenaar
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libthread_db/arch/amd64/libpthread_md.c 224684 2011-08-06 17:49:21Z marius $");
+__FBSDID("$FreeBSD: stable/11/lib/libthread_db/arch/amd64/libpthread_md.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/procfs.h>
 #include <string.h>

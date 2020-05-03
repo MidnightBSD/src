@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Doug Rabson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/librpcsec_gss/svc_rpcsec_gss.c 241720 2012-10-19 05:43:38Z ed $
+ *	$FreeBSD: stable/11/lib/librpcsec_gss/svc_rpcsec_gss.c 331722 2018-03-29 02:50:57Z eadler $
  */
 /*
   svc_rpcsec_gss.c
@@ -632,11 +631,6 @@ svc_rpc_gss_accept_sec_context(struct svc_rpc_gss_client *client,
 					&ret_flags,
 					&cred_lifetime,
 					&client->cl_creds);
-				if (gr->gr_major == GSS_S_COMPLETE
-				    || gr->gr_major == GSS_S_CONTINUE_NEEDED) {
-					client->cl_sname = sname;
-					break;
-				}
 				client->cl_sname = sname;
 				break;
 			}

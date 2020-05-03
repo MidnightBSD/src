@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libstdthreads/Makefile 313604 2017-02-11 06:37:24Z ngie $
+# $FreeBSD: stable/11/lib/libstdthreads/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 LIB=	stdthreads
 SHLIB_MAJOR= 0
 
@@ -33,8 +33,7 @@ MLINKS=	thrd_create.3 call_once.3 \
 	thrd_create.3 tss_get.3 \
 	thrd_create.3 tss_set.3
 
-DPADD=	${LIBPTHREAD}
-LDADD=	-lpthread
+LIBADD=	pthread
 
 VERSION_DEF= ${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS= ${.CURDIR}/Symbol.map
