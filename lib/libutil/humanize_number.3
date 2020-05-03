@@ -1,6 +1,5 @@
-.\" $MidnightBSD$
 .\"	$NetBSD: humanize_number.3,v 1.4 2003/04/16 13:34:37 wiz Exp $
-.\" $FreeBSD: stable/10/lib/libutil/humanize_number.3 256130 2013-10-07 22:22:57Z jmg $
+.\" $FreeBSD: stable/11/lib/libutil/humanize_number.3 335890 2018-07-03 14:40:19Z robak $
 .\"
 .\" Copyright (c) 1999, 2002 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -201,3 +200,9 @@ The
 .Dv HN_IEC_PREFIXES
 flag was introduced in
 .Fx 9.0 .
+.Sh CAVEATS
+For numbers greater than 999 using buffer length of 4 and less can cause
+rounding errors.
+When using
+.Dv HN_IEC_PREFIXES
+the same error occurs for buffer length of 5 or less.

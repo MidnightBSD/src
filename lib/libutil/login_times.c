@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/login_times.c 252376 2013-06-29 15:52:48Z kientzle $");
 
 #include <sys/types.h>
 #include <ctype.h>

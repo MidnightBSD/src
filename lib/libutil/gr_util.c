@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/gr_util.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -205,7 +205,7 @@ gr_copy(int ffd, int tfd, const struct group *gr, struct group *old_gr)
 			if (eof)
 				break;
 			while ((size_t)(q - p) >= size) {
-				if ((tmp = realloc(buf, size * 2)) == NULL) {
+				if ((tmp = reallocarray(buf, 2, size)) == NULL) {
 					warnx("group line too long");
 					goto err;
 				}
@@ -380,8 +380,6 @@ gr_fini(void)
 int
 gr_equal(const struct group *gr1, const struct group *gr2)
 {
-	int gr1_ndx;
-	int gr2_ndx;
 
 	/* Check that the non-member information is the same. */
 	if (gr1->gr_name == NULL || gr2->gr_name == NULL) {
@@ -397,7 +395,8 @@ gr_equal(const struct group *gr1, const struct group *gr2)
 	if (gr1->gr_gid != gr2->gr_gid)
 		return (false);
 
-	/* Check all members in both groups.
+	/*
+	 * Check all members in both groups.
 	 * getgrnam can return gr_mem with a pointer to NULL.
 	 * gr_dup and gr_add strip out this superfluous NULL, setting
 	 * gr_mem to NULL for no members.
@@ -405,22 +404,18 @@ gr_equal(const struct group *gr1, const struct group *gr2)
 	if (gr1->gr_mem != NULL && gr2->gr_mem != NULL) {
 		int i;
 
-		for (i = 0; gr1->gr_mem[i] != NULL; i++) {
+		for (i = 0;
+		    gr1->gr_mem[i] != NULL && gr2->gr_mem[i] != NULL; i++) {
 			if (strcmp(gr1->gr_mem[i], gr2->gr_mem[i]) != 0)
 				return (false);
 		}
-	}
-	/* Count number of members in both structs */
-	gr2_ndx = 0;
-	if (gr2->gr_mem != NULL)
-		for(; gr2->gr_mem[gr2_ndx] != NULL; gr2_ndx++)
-			/* empty */;
-	gr1_ndx = 0;
-	if (gr1->gr_mem != NULL)
-		for(; gr1->gr_mem[gr1_ndx] != NULL; gr1_ndx++)
-			/* empty */;
-	if (gr1_ndx != gr2_ndx)
+		if (gr1->gr_mem[i] != NULL || gr2->gr_mem[i] != NULL)
+			return (false);
+	} else if (gr1->gr_mem != NULL && gr1->gr_mem[0] != NULL) {
 		return (false);
+	} else if (gr2->gr_mem != NULL && gr2->gr_mem[0] != NULL) {
+		return (false);
+	}
 
 	return (true);
 }

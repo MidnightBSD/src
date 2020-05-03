@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -27,10 +26,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libutil/tests/pidfile_test.c 269904 2014-08-13 04:56:27Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/tests/pidfile_test.c 335964 2018-07-04 18:01:53Z emaste $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
+#include <sys/event.h>
 
 #include <fcntl.h>
 #include <errno.h>
@@ -44,8 +44,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libutil/tests/pidfile_test.c 269904 2014-08-13
 #include <libutil.h>
 
 /*
- * We need a signal handler so kill(2) will interrupt our child's
- * select(2) instead of killing it.
+ * We need a signal handler so kill(2) will interrupt the child
+ * instead of killing it.
  */
 static void
 signal_handler(int sig)
@@ -130,7 +130,9 @@ common_test_pidfile_child(const char *fn, int parent_open)
 	struct pidfh *pf = NULL;
 	pid_t other = 0, pid = 0;
 	int fd[2], serrno, status;
+	struct kevent event, ke;
 	char ch;
+	int kq;
 
 	unlink(fn);
 	if (pipe(fd) != 0)
@@ -167,10 +169,20 @@ common_test_pidfile_child(const char *fn, int parent_open)
 		if (pf == NULL)
 			_exit(1);
 		if (pidfile_write(pf) != 0)
-			_exit(1);
+			_exit(2);
+		kq = kqueue();
+		if (kq == -1)
+			_exit(3);
+		EV_SET(&ke, SIGINT, EVFILT_SIGNAL, EV_ADD, 0, 0, NULL);
+		/* Attach event to the kqueue. */
+		if (kevent(kq, &ke, 1, NULL, 0, NULL) != 0)
+			_exit(4);
+		/* Inform the parent we are ready to receive SIGINT */
 		if (write(fd[1], "*", 1) != 1)
-			_exit(1);
-		select(0, 0, 0, 0, 0);
+			_exit(5);
+		/* Wait for SIGINT received */
+		if (kevent(kq, NULL, 0, &event, 1, NULL) != 1)
+			_exit(6);
 		_exit(0);
 	}
 	// parent

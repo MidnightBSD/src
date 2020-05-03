@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/login_cap.c 318121 2017-05-09 23:31:09Z pfg $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -86,7 +86,7 @@ allocarray(size_t sz)
 
     if (sz <= internal_arraysz)
 	p = internal_array;
-    else if ((p = realloc(internal_array, sz * sizeof(char*))) != NULL) {
+    else if ((p = reallocarray(internal_array, sz, sizeof(char*))) != NULL) {
 	internal_arraysz = sz;
 	internal_array = p;
     }
@@ -742,7 +742,7 @@ login_getcapsize(login_cap_t *lc, const char *cap, rlim_t def, rlim_t error)
 
 /*
  * login_getcapbool()
- * From the login_cap_t <lc>, check for the existance of the capability
+ * From the login_cap_t <lc>, check for the existence of the capability
  * of <cap>.  Return <def> if <lc>->lc_cap is NULL, otherwise return
  * the whether or not <cap> exists there.
  */

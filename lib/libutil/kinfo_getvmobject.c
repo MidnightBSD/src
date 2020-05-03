@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/kinfo_getvmobject.c 283624 2015-05-27 18:11:05Z jhb $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

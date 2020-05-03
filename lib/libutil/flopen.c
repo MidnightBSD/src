@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/flopen.c 193591 2009-06-06 18:47:03Z des $");
 
 #include <sys/file.h>
 #include <sys/stat.h>

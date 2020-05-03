@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/humanize_number.c 335890 2018-07-03 14:40:19Z robak $");
 
 #include <sys/types.h>
 #include <assert.h>
@@ -143,7 +143,8 @@ humanize_number(char *buf, size_t len, int64_t quotient,
 		 */
 		for (i = 0;
 		    (quotient >= max || (quotient == max - 1 &&
-		    remainder >= divisordeccut)) && i < maxscale; i++) {
+		    (remainder >= divisordeccut || remainder >=
+		    divisor / 2))) && i < maxscale; i++) {
 			remainder = quotient % divisor;
 			quotient /= divisor;
 		}

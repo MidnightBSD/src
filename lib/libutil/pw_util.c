@@ -39,7 +39,7 @@
 static const char sccsid[] = "@(#)pw_util.c	8.3 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/lib/libutil/pw_util.c 356461 2020-01-07 18:42:53Z ian $";
 #endif /* not lint */
 
 /*
@@ -58,7 +58,6 @@ static const char rcsid[] =
 #include <err.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <libgen.h>
 #include <paths.h>
 #include <pwd.h>
 #include <signal.h>
@@ -315,7 +314,7 @@ pw_edit(int notsetuid)
 			(void)setuid(getuid());
 		}
 		errno = 0;
-		execlp(editor, basename(editor), tempname, (char *)NULL);
+		execlp(editor, editor, tempname, (char *)NULL);
 		_exit(errno);
 	default:
 		/* parent */
@@ -469,7 +468,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 			if (eof)
 				break;
 			while ((size_t)(q - p) >= size) {
-				if ((tmp = realloc(buf, size * 2)) == NULL) {
+				if ((tmp = reallocarray(buf, 2, size)) == NULL) {
 					warnx("passwd line too long");
 					goto err;
 				}
@@ -655,8 +654,16 @@ pw_dup(const struct passwd *pw)
 #include "pw_scan.h"
 
 /*
- * Wrapper around an internal libc function
+ * Wrapper around some internal libc functions.
  */
+
+void
+pw_initpwd(struct passwd *pw)
+{
+
+	__pw_initpwd(pw);
+}
+
 struct passwd *
 pw_scan(const char *line, int flags)
 {
@@ -665,6 +672,7 @@ pw_scan(const char *line, int flags)
 
 	if ((bp = strdup(line)) == NULL)
 		return (NULL);
+	__pw_initpwd(&pw);
 	if (!__pw_scan(bp, &pw, flags)) {
 		free(bp);
 		return (NULL);

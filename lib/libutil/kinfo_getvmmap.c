@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/kinfo_getvmmap.c 312031 2017-01-13 08:39:23Z ngie $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>

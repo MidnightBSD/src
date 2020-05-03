@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/login_auth.c 300152 2016-05-18 15:25:45Z pfg $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -55,7 +55,7 @@ __MBSDID("$MidnightBSD$");
 
 /*
  * auth_checknologin()
- * Checks for the existance of a nologin file in the login_cap
+ * Checks for the existence of a nologin file in the login_cap
  * capability <lc>.  If there isn't one specified, then it checks
  * to see if this class should just ignore nologin files.  Lastly,
  * it tries to print out the default nologin file, and, if such

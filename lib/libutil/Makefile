@@ -1,9 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # 	$MidnightBSD$
 
+PACKAGE=lib${LIB}
 SHLIBDIR?= /lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+.PATH: ${SRCTOP}/lib/libc/gen # for pw_scan.c
 
 LIB=	util
 SHLIB_MAJOR= 9

@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libutil/kinfo_getfile.c 312032 2017-01-13 08:39:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libutil/kinfo_getfile.c 312031 2017-01-13 08:39:23Z ngie $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
