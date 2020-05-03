@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003,2010 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -18,7 +17,7 @@
  *
  * Command line interface for IP firewall facility
  *
- * $FreeBSD: stable/10/sbin/ipfw/main.c 229778 2012-01-07 16:09:33Z uqs $
+ * $FreeBSD: stable/11/sbin/ipfw/main.c 346212 2019-04-14 12:39:09Z ae $
  */
 
 #include <sys/wait.h>
@@ -263,7 +262,7 @@ ipfw_main(int oldac, char **oldav)
 	save_av = av;
 
 	optind = optreset = 1;	/* restart getopt() */
-	while ((ch = getopt(ac, av, "abcdefhinNp:qs:STtv")) != -1)
+	while ((ch = getopt(ac, av, "abcdDefhinNp:qs:STtv")) != -1)
 		switch (ch) {
 		case 'a':
 			do_acct = 1;
@@ -282,8 +281,12 @@ ipfw_main(int oldac, char **oldav)
 			co.do_dynamic = 1;
 			break;
 
+		case 'D':
+			co.do_dynamic = 2;
+			break;
+
 		case 'e':
-			co.do_expired = 1;
+			/* nop for compatibility */
 			break;
 
 		case 'f':
@@ -325,11 +328,11 @@ ipfw_main(int oldac, char **oldav)
 			break;
 
 		case 't':
-			co.do_time = 1;
+			co.do_time = TIMESTAMP_STRING;
 			break;
 
 		case 'T':
-			co.do_time = 2;	/* numeric timestamp */
+			co.do_time = TIMESTAMP_NUMERIC;
 			break;
 
 		case 'v': /* verbose */
@@ -426,6 +429,14 @@ ipfw_main(int oldac, char **oldav)
 	if (co.use_set || try_next) {
 		if (_substrcmp(*av, "delete") == 0)
 			ipfw_delete(av);
+		else if (!strncmp(*av, "nat64clat", strlen(*av)))
+			ipfw_nat64clat_handler(ac, av);
+		else if (!strncmp(*av, "nat64stl", strlen(*av)))
+			ipfw_nat64stl_handler(ac, av);
+		else if (!strncmp(*av, "nat64lsn", strlen(*av)))
+			ipfw_nat64lsn_handler(ac, av);
+		else if (!strncmp(*av, "nptv6", strlen(*av)))
+			ipfw_nptv6_handler(ac, av);
 		else if (_substrcmp(*av, "flush") == 0)
 			ipfw_flush(co.do_force);
 		else if (_substrcmp(*av, "zero") == 0)
@@ -437,6 +448,10 @@ ipfw_main(int oldac, char **oldav)
 			ipfw_list(ac, av, do_acct);
 		else if (_substrcmp(*av, "show") == 0)
 			ipfw_list(ac, av, 1 /* show counters */);
+		else if (_substrcmp(*av, "table") == 0)
+			ipfw_table_handler(ac, av);
+		else if (_substrcmp(*av, "internal") == 0)
+			ipfw_internal_handler(ac, av);
 		else
 			errx(EX_USAGE, "bad command `%s'", *av);
 	}

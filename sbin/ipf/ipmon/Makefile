@@ -1,9 +1,10 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/ipmon/Makefile 291814 2015-12-04 18:50:12Z bdrewery $
+#	$FreeBSD: stable/11/sbin/ipf/ipmon/Makefile 349715 2019-07-04 03:04:41Z cy $
 
+PACKAGE=	ipf
 PROG=		ipmon
 SRCS=		${GENHDRS} ipmon.c ipmon_y.c ipmon_l.c
-MAN=		ipmon.8
+MAN=		ipmon.5 ipmon.8
+MLINKS=		ipmon.5 ipmon.conf.5
 
 CFLAGS+=	-DLOGFAC=LOG_LOCAL0 -I.
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002-2003 Luigi Rizzo
  * Copyright (c) 1996 Alex Nash, Paul Traina, Poul-Henning Kamp
@@ -18,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: stable/10/sbin/ipfw/altq.c 220802 2011-04-18 21:18:22Z glebius $
+ * $FreeBSD: stable/11/sbin/ipfw/altq.c 270424 2014-08-23 17:37:18Z melifaro $
  *
  * altq interface
  */
@@ -138,15 +137,15 @@ altq_qid_to_name(u_int32_t qid)
 }
 
 void
-print_altq_cmd(ipfw_insn_altq *altqptr)
+print_altq_cmd(struct buf_pr *bp, ipfw_insn_altq *altqptr)
 {
 	if (altqptr) {
 		const char *qname;
 
 		qname = altq_qid_to_name(altqptr->qid);
 		if (qname == NULL)
-			printf(" altq ?<%u>", altqptr->qid);
+			bprintf(bp, " altq ?<%u>", altqptr->qid);
 		else
-			printf(" altq %s", qname);
+			bprintf(bp, " altq %s", qname);
 	}
 }

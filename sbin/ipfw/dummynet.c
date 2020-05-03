@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Codel/FQ_Codel and PIE/FQ_PIE Code:
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
@@ -18,7 +17,7 @@
  *
  * This software is provided ``AS IS'' without any warranties of any kind.
  *
- * $FreeBSD: stable/10/sbin/ipfw/dummynet.c 320782 2017-07-07 15:35:42Z asomers $
+ * $FreeBSD: stable/11/sbin/ipfw/dummynet.c 331194 2018-03-19 07:28:54Z eadler $
  *
  * dummynet support
  */
@@ -427,48 +426,44 @@ print_header(struct ipfw_flow_id *id)
 }
 
 static void
-list_flow(struct dn_flow *ni, int *print)
+list_flow(struct buf_pr *bp, struct dn_flow *ni)
 {
 	char buff[255];
 	struct protoent *pe = NULL;
 	struct in_addr ina;
 	struct ipfw_flow_id *id = &ni->fid;
 
-	if (*print) {
-		print_header(&ni->fid);
-		*print = 0;
-	}
 	pe = getprotobynumber(id->proto);
 		/* XXX: Should check for IPv4 flows */
-	printf("%3u%c", (ni->oid.id) & 0xff,
+	bprintf(bp, "%3u%c", (ni->oid.id) & 0xff,
 		id->extra ? '*' : ' ');
 	if (!IS_IP6_FLOW_ID(id)) {
 		if (pe)
-			printf("%-4s ", pe->p_name);
+			bprintf(bp, "%-4s ", pe->p_name);
 		else
-			printf("%4u ", id->proto);
+			bprintf(bp, "%4u ", id->proto);
 		ina.s_addr = htonl(id->src_ip);
-		printf("%15s/%-5d ",
+		bprintf(bp, "%15s/%-5d ",
 		    inet_ntoa(ina), id->src_port);
 		ina.s_addr = htonl(id->dst_ip);
-		printf("%15s/%-5d ",
+		bprintf(bp, "%15s/%-5d ",
 		    inet_ntoa(ina), id->dst_port);
 	} else {
 		/* Print IPv6 flows */
 		if (pe != NULL)
-			printf("%9s ", pe->p_name);
+			bprintf(bp, "%9s ", pe->p_name);
 		else
-			printf("%9u ", id->proto);
-		printf("%7d  %39s/%-5d ", id->flow_id6,
+			bprintf(bp, "%9u ", id->proto);
+		bprintf(bp, "%7d  %39s/%-5d ", id->flow_id6,
 		    inet_ntop(AF_INET6, &(id->src_ip6), buff, sizeof(buff)),
 		    id->src_port);
-		printf(" %39s/%-5d ",
+		bprintf(bp, " %39s/%-5d ",
 		    inet_ntop(AF_INET6, &(id->dst_ip6), buff, sizeof(buff)),
 		    id->dst_port);
 	}
-	pr_u64(&ni->tot_pkts, 4);
-	pr_u64(&ni->tot_bytes, 8);
-	printf("%2u %4u %3u\n",
+	pr_u64(bp, &ni->tot_pkts, 4);
+	pr_u64(bp, &ni->tot_bytes, 8);
+	bprintf(bp, "%2u %4u %3u",
 	    ni->length, ni->len_bytes, ni->drops);
 }
 
@@ -561,8 +556,10 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 {
     char buf[160];	/* pending buffer */
     int toPrint = 1;	/* print header */
+    struct buf_pr bp;
 
     buf[0] = '\0';
+    bp_alloc(&bp, 4096);
     for (; oid != end; oid = O_NEXT(oid, oid->len)) {
 	if (oid->len < sizeof(*oid))
 		errx(1, "invalid oid len %d\n", oid->len);
@@ -609,7 +606,13 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    break;
 
 	case DN_FLOW:
-	    list_flow((struct dn_flow *)oid, &toPrint);
+	    if (toPrint != 0) {
+		    print_header(&((struct dn_flow *)oid)->fid);
+		    toPrint = 0;
+	    }
+	    list_flow(&bp, (struct dn_flow *)oid);
+	    printf("%s\n", bp.buf);
+	    bp_flush(&bp);
 	    break;
 
 	case DN_LINK: {
@@ -623,6 +626,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	    /* data rate */
 	    if (b == 0)
 		sprintf(bwbuf, "unlimited     ");
+	    else if (b >= 1000000000)
+		sprintf(bwbuf, "%7.3f Gbit/s", b/1000000000);
 	    else if (b >= 1000000)
 		sprintf(bwbuf, "%7.3f Mbit/s", b/1000000);
 	    else if (b >= 1000)
@@ -647,6 +652,8 @@ list_pipes(struct dn_id *oid, struct dn_id *end)
 	}
 	flush_buf(buf); // XXX does it really go here ?
     }
+
+    bp_free(&bp);
 }
 
 /*
@@ -813,6 +820,9 @@ read_bandwidth(char *arg, int *bandwidth, char *if_name, int namelen)
 		} else if (*end == 'M' || *end == 'm') {
 			end++;
 			bw *= 1000000;
+		} else if (*end == 'G' || *end == 'g') {
+			end++;
+			bw *= 1000000000;
 		}
 		if ((*end == 'B' &&
 			_substrcmp2(end, "Bi", "Bit/s") != 0) ||
@@ -1877,7 +1887,7 @@ parse_range(int ac, char *av[], uint32_t *v, int len)
 			av--;
 		}
 		if (v[1] < v[0] ||
-			v[1] >= DN_MAX_ID-1 ||
+			v[0] >= DN_MAX_ID-1 ||
 			v[1] >= DN_MAX_ID-1) {
 			continue; /* invalid entry */
 		}

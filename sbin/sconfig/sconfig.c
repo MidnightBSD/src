@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/sbin/sconfig/sconfig.c 180132 2008-06-30 21:18:27Z rik $");
 
 #include <stdio.h>
 #include <stdlib.h>
