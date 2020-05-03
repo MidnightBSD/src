@@ -1,4 +1,4 @@
-$FreeBSD: stable/10/contrib/binutils/FREEBSD-deletelist 91056 2002-02-22 05:11:49Z obrien $
+$FreeBSD: stable/11/contrib/binutils/FREEBSD-deletelist 91056 2002-02-22 05:11:49Z obrien $
 CVS
 testsuite
 .cvsignore

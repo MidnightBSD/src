@@ -12,7 +12,7 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
-# $FreeBSD: stable/10/contrib/binutils/ld/Makefile.in 218822 2011-02-18 20:54:12Z dim $
+# $FreeBSD: stable/11/contrib/binutils/ld/Makefile.in 218822 2011-02-18 20:54:12Z dim $
 
 @SET_MAKE@
 

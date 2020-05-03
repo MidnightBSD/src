@@ -4391,12 +4391,29 @@ const template i386_optab[] =
   {"rdrand", 1, 0x0fc7, 0x6, CpuRdRnd,
     Modrm|NoSuf,
     { Reg16|Reg32|Reg64 } },
+  {"rdseed", 1, 0x0fc7, 0x7, CpuRdRnd,
+    Modrm|NoSuf,
+    { Reg16|Reg32|Reg64 } },
 
   /* Intel Supervisor Mode Access Prevention extensions */
   {"clac", 0, 0x0f01, 0xca, CpuSMAP,
     NoSuf|ImmExt, { 0, 0, 0 } },
   {"stac", 0, 0x0f01, 0xcb, CpuSMAP,
     NoSuf|ImmExt, { 0, 0, 0 } },
+
+  /* Read/write fs/gs segment base registers */
+  {"rdfsbase", 1, 0xf30fae, 0x0, CpuFSGSBase|Cpu64,
+    Modrm|No_bSuf|No_wSuf|No_sSuf|No_xSuf,
+    { Reg32|Reg64 } },
+  {"rdgsbase", 1, 0xf30fae, 0x1, CpuFSGSBase|Cpu64,
+    Modrm|No_bSuf|No_wSuf|No_sSuf|No_xSuf,
+    { Reg32|Reg64 } },
+  {"wrfsbase", 1, 0xf30fae, 0x2, CpuFSGSBase|Cpu64,
+    Modrm|No_bSuf|No_wSuf|No_sSuf|No_xSuf,
+    { Reg32|Reg64 } },
+  {"wrgsbase", 1, 0xf30fae, 0x3, CpuFSGSBase|Cpu64,
+    Modrm|No_bSuf|No_wSuf|No_sSuf|No_xSuf,
+    { Reg32|Reg64 } },
   
   { NULL, 0, 0, 0, 0, 0, { 0 } }
 };
