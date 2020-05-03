@@ -35,7 +35,7 @@
  *
  * File: am-utils/include/am_defs.h
  * $Id: am_defs.h,v 1.15.2.16 2004/05/12 15:54:31 ezk Exp $
- * $FreeBSD: stable/10/contrib/amd/include/am_defs.h 310490 2016-12-23 22:42:14Z cy $
+ * $FreeBSD: stable/11/contrib/amd/include/am_defs.h 310490 2016-12-23 22:42:14Z cy $
  *
  */
 

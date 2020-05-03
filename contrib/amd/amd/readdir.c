@@ -176,8 +176,9 @@ make_entry_chain(am_node *mp, const nfsentry *current_chain, int fully_browsable
 
       /* we have space.  put entry in next cell */
       ++last_cookie;
-      chain[num_entries].ne_fileid = (u_int) last_cookie;
-      *(u_int *) chain[num_entries].ne_cookie = (u_int) last_cookie;
+      chain[num_entries].ne_fileid = last_cookie;
+      (void)memcpy(chain[num_entries].ne_cookie, &last_cookie,
+	sizeof(last_cookie));
       chain[num_entries].ne_name = key;
       if (num_entries < max_entries - 1) {	/* link to next one */
 	chain[num_entries].ne_nextentry = &chain[num_entries + 1];
@@ -251,7 +252,7 @@ amfs_readdir_browsable(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *
     ep[0].ne_fileid = mp->am_gen;
     ep[0].ne_name = ".";
     ep[0].ne_nextentry = &ep[1];
-    *(u_int *) ep[0].ne_cookie = 0;
+    (void)memset(ep[0].ne_cookie, 0, sizeof(u_int));
 
     /* construct ".." */
     if (mp->am_parent)
@@ -298,9 +299,12 @@ amfs_readdir_browsable(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *
       nfsentry *ne;
       for (j = 0, ne = te; ne; ne = ne->ne_nextentry)
 	plog(XLOG_DEBUG, "gen2 key %4d \"%s\"", j++, ne->ne_name);
-      for (j = 0, ne = ep; ne; ne = ne->ne_nextentry)
+      for (j = 0, ne = ep; ne; ne = ne->ne_nextentry) {
+	u_int cookie;
+	(void)memcpy(&cookie, ne->ne_cookie, sizeof(cookie));
 	plog(XLOG_DEBUG, "gen2+ key %4d \"%s\" fi=%d ck=%d",
-	     j++, ne->ne_name, ne->ne_fileid, *(u_int *)ne->ne_cookie);
+	     j++, ne->ne_name, ne->ne_fileid, cookie);
+      }
       plog(XLOG_DEBUG, "EOF is %d", dp->dl_eof);
     }
     return 0;
@@ -398,7 +402,7 @@ amfs_readdir(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *ep, u_int 
     ep[0].ne_fileid = mp->am_gen;
     ep[0].ne_name = ".";
     ep[0].ne_nextentry = &ep[1];
-    *(u_int *) ep[0].ne_cookie = 0;
+    (void)memset(ep[0].ne_cookie, 0, sizeof(u_int));
 
     /* construct ".." */
     if (mp->am_parent)
@@ -416,9 +420,12 @@ amfs_readdir(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *ep, u_int 
     if (amuDebug(D_READDIR)) {
       nfsentry *ne;
       int j;
-      for (j = 0, ne = ep; ne; ne = ne->ne_nextentry)
+      for (j = 0, ne = ep; ne; ne = ne->ne_nextentry) {
+	u_int cookie;
+	(void)memcpy(&cookie, ne->ne_cookie, sizeof(cookie));
 	plog(XLOG_DEBUG, "gen1 key %4d \"%s\" fi=%d ck=%d",
-	     j++, ne->ne_name, ne->ne_fileid, *(u_int *)ne->ne_cookie);
+	     j++, ne->ne_name, ne->ne_fileid, cookie);
+      }
     }
     return 0;
   }
@@ -447,9 +454,9 @@ amfs_readdir(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *ep, u_int 
       am_node *xp_next = next_nonerror_node(xp->am_osib);
 
       if (xp_next) {
-	*(u_int *) ep->ne_cookie = xp_next->am_gen;
+	(void)memcpy(ep->ne_cookie, &xp_next->am_gen, sizeof(xp_next->am_gen));
       } else {
-	*(u_int *) ep->ne_cookie = DOT_DOT_COOKIE;
+	(void)memcpy(ep->ne_cookie, &dotdotcookie, sizeof(dotdotcookie));
 	dp->dl_eof = TRUE;
       }
 
@@ -475,9 +482,12 @@ amfs_readdir(am_node *mp, nfscookie cookie, nfsdirlist *dp, nfsentry *ep, u_int 
     if (amuDebug(D_READDIR)) {
       nfsentry *ne;
       int j;
-      for (j=0,ne=ep; ne; ne=ne->ne_nextentry)
+      for (j=0,ne=ep; ne; ne=ne->ne_nextentry) {
+	u_int cookie;
+	(void)memcpy(&cookie, ne->ne_cookie, sizeof(cookie));
 	plog(XLOG_DEBUG, "gen2 key %4d \"%s\" fi=%d ck=%d",
-	     j++, ne->ne_name, ne->ne_fileid, *(u_int *)ne->ne_cookie);
+	     j++, ne->ne_name, ne->ne_fileid, cookie);
+      }
     }
     return 0;
   }
