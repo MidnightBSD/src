@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cpio/test/test_option_c.c 302001 2016-06-17 22:40:10Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/test/test_option_c.c 348607 2019-06-04 10:35:54Z mm $");
 
 static int
 is_octal(const char *p, size_t l)
@@ -85,7 +85,7 @@ DEFINE_TEST(test_option_c)
 
 	/* "symlink" */
 	if (canSymlink()) {
-		assertMakeSymlink("symlink", "file");
+		assertMakeSymlink("symlink", "file", 0);
 		fprintf(filelist, "symlink\n");
 	}
 

@@ -1,12 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libarchive/Makefile 324418 2017-10-08 20:55:45Z mm $
-.include <bsd.own.mk>
+# $FreeBSD: stable/11/lib/libarchive/Makefile 348607 2019-06-04 10:35:54Z mm $
+.include <src.opts.mk>
 
-LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
+PACKAGE=lib${LIB}
+_LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 LIB=	archive
-DPADD=	${LIBZ} ${LIBBZ2} ${LIBLZMA} ${LIBPTHREAD} ${LIBBSDXML}
-LDADD=	-lz -lbz2 -llzma -lpthread -lbsdxml
+
+LIBADD=	z bz2 lzma bsdxml
 CFLAGS+= -DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
 # It has no real relation to the libarchive version number.
@@ -17,11 +17,9 @@ CFLAGS+=	-I${.OBJDIR}
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_OPENSSL
-DPADD+=	${LIBCRYPTO}
-LDADD+=	-lcrypto
+LIBADD+=	crypto
 .else
-DPADD+=	${LIBMD}
-LDADD+=	-lmd
+LIBADD+=	md
 .endif
 
 .if ${MK_ICONV} != "no"
@@ -31,7 +29,7 @@ SHARED_CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=
 .endif
 
 .if ${MACHINE_ARCH:Marm*} != "" || ${MACHINE_ARCH:Mmips*} != "" || \
-	${MACHINE_ARCH:Msparc64*} != "" || ${MACHINE_ARCH:Mia64*} != ""
+	${MACHINE_ARCH:Msparc64*} != ""
 NO_WCAST_ALIGN=	yes
 .if ${MACHINE_ARCH:M*64*} == ""
 CFLAGS+=	-DPPMD_32BIT
@@ -39,13 +37,15 @@ CFLAGS+=	-DPPMD_32BIT
 .endif
 NO_WCAST_ALIGN.clang=
 
-.PATH: ${LIBARCHIVEDIR}/libarchive
+.PATH: ${_LIBARCHIVEDIR}/libarchive
 
 # Headers to be installed in /usr/include
 INCS=	archive.h archive_entry.h
 
 # Sources to be compiled.
 SRCS=	archive_acl.c					\
+	archive_blake2sp_ref.c				\
+	archive_blake2s_ref.c				\
 	archive_check_magic.c				\
 	archive_cmdline.c				\
 	archive_cryptor.c				\
@@ -65,6 +65,7 @@ SRCS=	archive_acl.c					\
 	archive_pack_dev.c				\
 	archive_pathmatch.c				\
 	archive_ppmd7.c					\
+	archive_ppmd8.c					\
 	archive_random.c				\
 	archive_rb.c					\
 	archive_read.c					\
@@ -107,6 +108,7 @@ SRCS=	archive_acl.c					\
 	archive_read_support_format_lha.c		\
 	archive_read_support_format_mtree.c		\
 	archive_read_support_format_rar.c		\
+	archive_read_support_format_rar5.c		\
 	archive_read_support_format_raw.c		\
 	archive_read_support_format_tar.c		\
 	archive_read_support_format_warc.c		\
@@ -165,6 +167,7 @@ SRCS=	archive_acl.c					\
 MAN=	archive_entry.3					\
 	archive_entry_acl.3				\
 	archive_entry_linkify.3				\
+	archive_entry_misc.3				\
 	archive_entry_paths.3				\
 	archive_entry_perms.3				\
 	archive_entry_stat.3				\

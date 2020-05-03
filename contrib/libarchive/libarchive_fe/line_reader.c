@@ -26,7 +26,7 @@
  */
 
 #include "lafe_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive_fe/line_reader.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive_fe/line_reader.c 349524 2019-06-28 22:33:44Z mm $");
 
 #include <errno.h>
 #include <stdio.h>
@@ -49,11 +49,10 @@ __FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive_fe/line_reader.c 232
  */
 struct lafe_line_reader {
 	FILE *f;
-	char *buff, *buff_end, *line_start, *line_end, *p;
+	char *buff, *buff_end, *line_start, *line_end;
 	char *pathname;
 	size_t buff_length;
 	int nullSeparator; /* Lines separated by null, not CR/CRLF/etc. */
-	int ret;
 };
 
 struct lafe_line_reader *

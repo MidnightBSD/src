@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_support_format_cpio.c 324418 2017-10-08 20:55:45Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_cpio.c 344673 2019-02-28 22:56:15Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -955,8 +955,7 @@ archive_read_format_cpio_cleanup(struct archive_read *a)
         while (cpio->links_head != NULL) {
                 struct links_entry *lp = cpio->links_head->next;
 
-                if (cpio->links_head->name)
-                        free(cpio->links_head->name);
+                free(cpio->links_head->name);
                 free(cpio->links_head);
                 cpio->links_head = lp;
         }

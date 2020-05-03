@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_support_format_raw.c 302001 2016-06-17 22:40:10Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_raw.c 348607 2019-06-04 10:35:54Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -120,7 +120,9 @@ archive_read_format_raw_read_header(struct archive_read *a,
 	archive_entry_set_filetype(entry, AE_IFREG);
 	archive_entry_set_perm(entry, 0644);
 	/* I'm deliberately leaving most fields unset here. */
-	return (ARCHIVE_OK);
+
+	/* Let the filter fill out any fields it might have. */
+	return __archive_read_header(a, entry);
 }
 
 static int

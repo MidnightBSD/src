@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_random.c 316338 2017-03-31 20:17:30Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_random.c 316337 2017-03-31 20:16:24Z mm $");
 
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>

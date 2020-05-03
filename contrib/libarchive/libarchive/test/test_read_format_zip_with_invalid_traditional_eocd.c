@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_zip_with_invalid_traditional_eocd.c 318483 2017-05-18 19:50:15Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_zip_with_invalid_traditional_eocd.c 358088 2020-02-19 01:50:47Z mm $");
 
 /*
  * Issue 869: zip files without a valid EOCD header aren't loaded even if they
@@ -39,7 +39,7 @@ DEFINE_TEST(test_read_format_zip_with_invalid_traditional_eocd)
 	struct archive_entry *ae;
 
 	extract_reference_file(refname);
-	p = slurpfile(&s, refname);
+	p = slurpfile(&s, "%s", refname);
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip_seekable(a));

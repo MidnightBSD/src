@@ -22,8 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_private.h 302001 2016-06-17 22:40:10Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_private.h 358088 2020-02-19 01:50:47Z mm $
  */
+
+#ifndef ARCHIVE_WRITE_PRIVATE_H_INCLUDED
+#define ARCHIVE_WRITE_PRIVATE_H_INCLUDED
 
 #ifndef __LIBARCHIVE_BUILD
 #ifndef __LIBARCHIVE_TEST
@@ -31,12 +34,14 @@
 #endif
 #endif
 
-#ifndef ARCHIVE_WRITE_PRIVATE_H_INCLUDED
-#define	ARCHIVE_WRITE_PRIVATE_H_INCLUDED
-
 #include "archive.h"
 #include "archive_string.h"
 #include "archive_private.h"
+
+#define	ARCHIVE_WRITE_FILTER_STATE_NEW		1U
+#define	ARCHIVE_WRITE_FILTER_STATE_OPEN		2U
+#define	ARCHIVE_WRITE_FILTER_STATE_CLOSED	4U
+#define	ARCHIVE_WRITE_FILTER_STATE_FATAL	0x8000U
 
 struct archive_write;
 
@@ -55,6 +60,7 @@ struct archive_write_filter {
 	int	  code;
 	int	  bytes_per_block;
 	int	  bytes_in_last_block;
+	int	  state;
 };
 
 #if ARCHIVE_VERSION < 4000000
@@ -66,8 +72,6 @@ struct archive_write_filter *__archive_write_allocate_filter(struct archive *);
 int __archive_write_output(struct archive_write *, const void *, size_t);
 int __archive_write_nulls(struct archive_write *, size_t);
 int __archive_write_filter(struct archive_write_filter *, const void *, size_t);
-int __archive_write_open_filter(struct archive_write_filter *);
-int __archive_write_close_filter(struct archive_write_filter *);
 
 struct archive_write {
 	struct archive	archive;

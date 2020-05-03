@@ -22,13 +22,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_platform_xattr.h 316338 2017-03-31 20:17:30Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_platform_xattr.h 358088 2020-02-19 01:50:47Z mm $
  */
 
 /* !!ONLY FOR USE INTERNALLY TO LIBARCHIVE!! */
 
 #ifndef ARCHIVE_PLATFORM_XATTR_H_INCLUDED
 #define ARCHIVE_PLATFORM_XATTR_H_INCLUDED
+
+#ifndef __LIBARCHIVE_BUILD
+#ifndef __LIBARCHIVE_TEST_COMMON
+#error This header is only to be used internally to libarchive.
+#endif
+#endif
 
 /*
  * Determine if we support extended attributes

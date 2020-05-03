@@ -28,7 +28,7 @@
 #elif defined(HAVE_SYS_UTIME_H)
 #include <sys/utime.h>
 #endif
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cpio/test/test_option_a.c 318483 2017-05-18 19:50:15Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/test/test_option_a.c 348607 2019-06-04 10:35:54Z mm $");
 
 static struct {
 	const char *name;
@@ -71,8 +71,13 @@ test_create(void)
 		 * #ifdef this section out.  Most of the test below is
 		 * still valid. */
 		memset(&times, 0, sizeof(times));
+#if defined(_WIN32) && !defined(CYGWIN)
+		times.actime = 86400;
+		times.modtime = 86400;
+#else
 		times.actime = 1;
 		times.modtime = 3;
+#endif
 		assertEqualInt(0, utime(files[i].name, &times));
 
 		/* Record whatever atime the file ended up with. */

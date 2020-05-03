@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_zip_nofiletype.c 302001 2016-06-17 22:40:10Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_zip_nofiletype.c 358088 2020-02-19 01:50:47Z mm $");
 
 /*
  * Issue 332:  Some epub files (which are really Zip archives) have
@@ -40,7 +40,7 @@ DEFINE_TEST(test_read_format_zip_nofiletype)
 	char data[16];
 
 	extract_reference_file(refname);
-	p = slurpfile(&s, refname);
+	p = slurpfile(&s, "%s", refname);
 
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_zip_seekable(a));

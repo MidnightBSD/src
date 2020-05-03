@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/test/test_option_acls.c 328828 2018-02-03 02:17:25Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_option_acls.c 353376 2019-10-09 22:19:06Z mm $");
 
 #if ARCHIVE_ACL_FREEBSD || ARCHIVE_ACL_DARWIN || ARCHIVE_ACL_LIBACL
 static const acl_perm_t acl_perms[] = {
@@ -362,8 +362,10 @@ compare_acls(const char *path_a, const char *path_b)
 	if (richacl_a != NULL) {
 		richacl_b = richacl_get_file(path_b);
 		if (richacl_b == NULL &&
-		    (errno == ENODATA || errno == ENOTSUP || errno == ENOSYS))
+		    (errno == ENODATA || errno == ENOTSUP || errno == ENOSYS)) {
+			richacl_free(richacl_a);
 			return (0);
+		}
 		failure("richacl_get_file() error: %s (%s)", path_b,
 		    strerror(errno));
 		if (assert(richacl_b != NULL) == 0) {

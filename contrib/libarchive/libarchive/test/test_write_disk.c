@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_write_disk.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_disk.c 358088 2020-02-19 01:50:47Z mm $");
 
 #define UMASK 022
 /*
@@ -186,7 +186,7 @@ static void create_reg_file4(struct archive_entry *ae, const char *msg)
 #if !defined(_WIN32) || defined(__CYGWIN__)
 	assertEqualInt(st.st_mode, (archive_entry_mode(ae) & ~UMASK));
 #endif
-	failure(msg);
+	failure("%s", msg);
 	assertEqualInt(st.st_size, sizeof(data));
 }
 

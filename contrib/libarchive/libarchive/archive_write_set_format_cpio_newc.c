@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_set_format_cpio_newc.c 311042 2017-01-02 01:43:11Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_cpio_newc.c 358088 2020-02-19 01:50:47Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_set_fo
 #include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_write_private.h"
+#include "archive_write_set_format_private.h"
 
 static ssize_t	archive_write_newc_data(struct archive_write *,
 		    const void *buff, size_t s);
@@ -366,8 +367,7 @@ write_header(struct archive_write *a, struct archive_entry *entry)
 		}
 	}
 exit_write_header:
-	if (entry_main)
-		archive_entry_free(entry_main);
+	archive_entry_free(entry_main);
 	return (ret_final);
 }
 

@@ -24,7 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/util.c 315433 2017-03-16 23:08:18Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/util.c 358088 2020-02-19 01:50:47Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -666,6 +666,14 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 	const char		*fmt;
 	time_t			 tim;
 	static time_t		 now;
+	struct tm		*ltime;
+#if defined(HAVE_LOCALTIME_R) || defined(HAVE__LOCALTIME64_S)
+	struct tm		tmbuf;
+#endif
+#if defined(HAVE__LOCALTIME64_S)
+	errno_t			terr;
+	__time64_t		tmptime;
+#endif
 
 	/*
 	 * We avoid collecting the entire list in memory at once by
@@ -737,7 +745,19 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 		fmt = bsdtar->day_first ? DAY_FMT " %b  %Y" : "%b " DAY_FMT "  %Y";
 	else
 		fmt = bsdtar->day_first ? DAY_FMT " %b %H:%M" : "%b " DAY_FMT " %H:%M";
-	strftime(tmp, sizeof(tmp), fmt, localtime(&tim));
+#if defined(HAVE_LOCALTIME_R)
+	ltime = localtime_r(&tim, &tmbuf);
+#elif defined(HAVE__LOCALTIME64_S)
+	tmptime = tim;
+	terr = _localtime64_s(&tmbuf, &tmptime);
+	if (terr)
+		ltime = NULL;
+	else
+		ltime = &tmbuf;
+#else
+	ltime = localtime(&tim);
+#endif
+	strftime(tmp, sizeof(tmp), fmt, ltime);
 	fprintf(out, " %s ", tmp);
 	safe_fprintf(out, "%s", archive_entry_pathname(entry));
 

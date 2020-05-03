@@ -22,15 +22,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/filter_fork.h 248616 2013-03-22 13:36:03Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/filter_fork.h 358088 2020-02-19 01:50:47Z mm $
  */
+
+#ifndef FILTER_FORK_H
+#define FILTER_FORK_H
 
 #ifndef __LIBARCHIVE_BUILD
 #error This header is only to be used internally to libarchive.
 #endif
-
-#ifndef FILTER_FORK_H
-#define FILTER_FORK_H
 
 pid_t
 __archive_create_child(const char *cmd, int *child_stdin, int *child_stdout);

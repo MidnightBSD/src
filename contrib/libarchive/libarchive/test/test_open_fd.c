@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_open_fd.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_open_fd.c 358088 2020-02-19 01:50:47Z mm $");
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #define open _open
@@ -42,6 +42,7 @@ DEFINE_TEST(test_open_fd)
 	struct archive_entry *ae;
 	struct archive *a;
 	int fd;
+	const char *skip_open_fd_err_test;
 
 #if defined(__BORLANDC__)
 	fd = open("test.tar", O_RDWR | O_CREAT | O_BINARY);
@@ -116,16 +117,18 @@ DEFINE_TEST(test_open_fd)
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	close(fd);
 
-
-	/*
-	 * Verify some of the error handling.
-	 */
-	assert((a = archive_read_new()) != NULL);
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
-	/* FD 100 shouldn't be open. */
-	assertEqualIntA(a, ARCHIVE_FATAL,
-	    archive_read_open_fd(a, 100, 512));
-	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
-	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	skip_open_fd_err_test = getenv("SKIP_OPEN_FD_ERR_TEST");
+	if(skip_open_fd_err_test == NULL) {
+		/*
+		 * Verify some of the error handling.
+		 */
+		assert((a = archive_read_new()) != NULL);
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+		/* FD 100 shouldn't be open. */
+		assertEqualIntA(a, ARCHIVE_FATAL,
+		archive_read_open_fd(a, 100, 512));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+		assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	}
 }

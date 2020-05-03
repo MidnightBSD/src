@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_extract.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_extract.c 358088 2020-02-19 01:50:47Z mm $");
 
 #define BUFF_SIZE 1000000
 #define FILE_BUFF_SIZE 100000
@@ -120,7 +120,7 @@ DEFINE_TEST(test_read_extract)
 	assertA(0 == archive_read_support_filter_all(a));
 	assertA(0 == archive_read_open_memory(a, buff, BUFF_SIZE));
 	/* Restore first entry with _EXTRACT_PERM. */
-	failure("Error reading first entry", i);
+	failure("Error reading first entry");
 	assertA(0 == archive_read_next_header(a, &ae));
 	assertA(0 == archive_read_extract(a, ae, ARCHIVE_EXTRACT_PERM));
 	/* Rest of entries get restored with no flags. */
@@ -161,7 +161,7 @@ DEFINE_TEST(test_read_extract)
 	assertIsDir("dir4/b", 0755);
 	assertIsDir("dir4/c", 0711);
 	if (canSymlink())
-		assertIsSymlink("symlink", "file");
+		assertIsSymlink("symlink", "file", 0);
 
 	free(buff);
 	free(file_buff);

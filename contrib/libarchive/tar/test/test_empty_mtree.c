@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/test/test_empty_mtree.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_empty_mtree.c 228763 2011-12-21 11:13:29Z mm $");
 
 /*
  * Regression test:  We used to get a bogus error message when we

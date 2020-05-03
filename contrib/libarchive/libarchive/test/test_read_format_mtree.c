@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_mtree.c 318483 2017-05-18 19:50:15Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_mtree.c 348607 2019-06-04 10:35:54Z mm $");
 
 static void
 test_read_format_mtree1(void)
@@ -717,4 +717,28 @@ DEFINE_TEST(test_read_format_mtree_nonexistent_contents_file)
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
+/*
+ * Check mtree file with non-printable ascii characters
+ */
+DEFINE_TEST(test_read_format_mtree_noprint)
+{
+	const char reffile[] = "test_read_format_mtree_noprint.mtree";
+	struct archive_entry *ae;
+	struct archive *a;
 
+	extract_reference_file(reffile);
+
+	assert((a = archive_read_new()) != NULL);
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_support_filter_all(a));
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_support_format_all(a));
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_open_filename(a, reffile, 11));
+
+	assertEqualIntA(a, ARCHIVE_FATAL, archive_read_next_header(a, &ae));
+	assertEqualString("Can't parse line 3", archive_error_string(a));
+
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+}

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_zip_malformed.c 313571 2017-02-11 00:56:18Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_zip_malformed.c 358088 2020-02-19 01:50:47Z mm $");
 
 static void
 test_malformed1(void)
@@ -46,7 +46,7 @@ test_malformed1(void)
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_free(a));
 
 	/* Verify with streaming reader. */
-	p = slurpfile(&s, refname);
+	p = slurpfile(&s, "%s", refname);
 	assert((a = archive_read_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));

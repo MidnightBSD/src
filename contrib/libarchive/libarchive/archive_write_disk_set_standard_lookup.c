@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_disk_set_standard_lookup.c 311042 2017-01-02 01:43:11Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_disk_set_standard_lookup.c 344673 2019-02-28 22:56:15Z mm $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -114,8 +114,7 @@ lookup_gid(void *private_data, const char *gname, int64_t gid)
 		return ((gid_t)b->id);
 
 	/* Free the cache slot for a new entry. */
-	if (b->name != NULL)
-		free(b->name);
+	free(b->name);
 	b->name = strdup(gname);
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;
@@ -184,8 +183,7 @@ lookup_uid(void *private_data, const char *uname, int64_t uid)
 		return ((uid_t)b->id);
 
 	/* Free the cache slot for a new entry. */
-	if (b->name != NULL)
-		free(b->name);
+	free(b->name);
 	b->name = strdup(uname);
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;

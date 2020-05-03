@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_format_zip_nested.c 313571 2017-02-11 00:56:18Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_zip_nested.c 358088 2020-02-19 01:50:47Z mm $");
 
 DEFINE_TEST(test_read_format_zip_nested)
 {
@@ -34,7 +34,7 @@ DEFINE_TEST(test_read_format_zip_nested)
 	struct archive_entry *ae;
 
 	extract_reference_file(refname);
-	p = slurpfile(&s, refname);
+	p = slurpfile(&s, "%s", refname);
 
 	/* Inspect outer Zip */
 	assert((a = archive_read_new()) != NULL);

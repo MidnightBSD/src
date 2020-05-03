@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive_fe/err.h 302001 2016-06-17 22:40:10Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive_fe/err.h 358088 2020-02-19 01:50:47Z mm $
  */
 
 #ifndef LAFE_ERR_H
@@ -37,9 +37,14 @@
 
 #if defined(__GNUC__) && (__GNUC__ > 2 || \
 			  (__GNUC__ == 2 && __GNUC_MINOR__ >= 7))
-#define	__LA_PRINTFLIKE(f,a)	__attribute__((__format__(__printf__, f, a)))
+# ifdef __MINGW_PRINTF_FORMAT
+#  define __LA_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
+# else
+#  define __LA_PRINTF_FORMAT __printf__
+# endif
+# define __LA_PRINTFLIKE(f,a)	__attribute__((__format__(__LA_PRINTF_FORMAT, f, a)))
 #else
-#define	__LA_PRINTFLIKE(f,a)
+# define __LA_PRINTFLIKE(f,a)
 #endif
 
 void	lafe_warnc(int code, const char *fmt, ...) __LA_PRINTFLIKE(2, 3);

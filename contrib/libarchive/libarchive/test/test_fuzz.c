@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_fuzz.c 324418 2017-10-08 20:55:45Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_fuzz.c 358088 2020-02-19 01:50:47Z mm $");
 
 /*
  * This was inspired by an ISO fuzz tester written by Michal Zalewski
@@ -58,6 +58,14 @@ test_fuzz(const struct files *filesets)
 	size_t blk_size;
 	int64_t blk_offset;
 	int n;
+	const char *skip_fuzz_tests;
+
+	skip_fuzz_tests = getenv("SKIP_TEST_FUZZ");
+	if (skip_fuzz_tests != NULL) {
+		skipping("Skipping fuzz tests due to SKIP_TEST_FUZZ "
+		    "environment variable");
+		return;
+	}
 
 	for (n = 0; filesets[n].names != NULL; ++n) {
 		const size_t buffsize = 30000000;
@@ -111,7 +119,8 @@ test_fuzz(const struct files *filesets)
 			for (i = 0; filesets[n].names[i] != NULL; ++i)
 			{
 				char *newraw;
-				tmp = slurpfile(&size, filesets[n].names[i]);
+				tmp = slurpfile(&size, "%s",
+						filesets[n].names[i]);
 				newraw = realloc(rawimage, oldsize + size);
 				if (!assert(newraw != NULL))
 				{
@@ -433,7 +442,7 @@ DEFINE_TEST(test_fuzz_tar)
 		{0, fileset9}, /* Exercise lzo decompressor. */
 #endif
 #if HAVE_ZSTD_H && HAVE_LIBZSTD
-		{0, fileset10}, /* Excercise zstd decompressor. */
+		{0, fileset10}, /* Exercise zstd decompressor. */
 #endif
 		{1, NULL}
 	};

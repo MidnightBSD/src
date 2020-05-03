@@ -23,15 +23,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_disk_private.h 316338 2017-03-31 20:17:30Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_disk_private.h 358088 2020-02-19 01:50:47Z mm $
  */
+
+#ifndef ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
+#define ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
 
 #ifndef __LIBARCHIVE_BUILD
 #error This header is only to be used internally to libarchive.
 #endif
-
-#ifndef ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
-#define ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
 
 #include "archive_platform_acl.h"
 

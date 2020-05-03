@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_xattr_platform.c 316338 2017-03-31 20:17:30Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_xattr_platform.c 353376 2019-10-09 22:19:06Z mm $");
 
 DEFINE_TEST(test_xattr_platform)
 {
@@ -35,6 +35,7 @@ DEFINE_TEST(test_xattr_platform)
 	struct archive_entry *ae;
 	const char *name;
 	const void *value;
+	void *rvalue;
 	size_t size, insize;
 	int e, r;
 	const char *attrname = "user.libarchive.test";
@@ -95,8 +96,9 @@ DEFINE_TEST(test_xattr_platform)
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
-	value = getXattr("writetest", attrname, &insize);
+	rvalue = getXattr("writetest", attrname, &insize);
 	if (assertEqualInt(insize, strlen(writeval) + 1) != 0)
-		assertEqualMem(value, writeval, insize);
+		assertEqualMem(rvalue, writeval, insize);
+	free(rvalue);
 #endif
 }

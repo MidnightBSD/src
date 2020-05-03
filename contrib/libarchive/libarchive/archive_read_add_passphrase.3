@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_add_passphrase.3 302001 2016-06-17 22:40:10Z mm $
+.\" $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_add_passphrase.3 353376 2019-10-09 22:19:06Z mm $
 .\"
 .Dd September 14, 2014
 .Dt ARCHIVE_READ_ADD_PASSPHRASE 3
@@ -59,16 +59,16 @@ or empty, this function will do nothing and
 will be returned.
 Otherwise,
 .Cm ARCHIVE_OK
-will be returned. 
+will be returned.
 .It Fn archive_read_set_passphrase_callback
-Register callback function that will be invoked to get a passphrase 
-for decrption after trying all passphrases registered by the
+Register a callback function that will be invoked to get a passphrase 
+for decryption after trying all the passphrases registered by the
 .Fn archive_read_add_passphrase
 function failed.
 .El
 .\" .Sh ERRORS
 .Sh SEE ALSO
 .Xr tar 1 ,
-.Xr libarchive 3 ,
 .Xr archive_read 3 ,
-.Xr archive_read_set_options 3
+.Xr archive_read_set_options 3 ,
+.Xr libarchive 3

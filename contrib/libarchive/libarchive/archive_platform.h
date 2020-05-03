@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_platform.h 328828 2018-02-03 02:17:25Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_platform.h 348607 2019-06-04 10:35:54Z mm $
  */
 
 /* !!ONLY FOR USE INTERNALLY TO LIBARCHIVE!! */
@@ -69,6 +69,8 @@
  * either Windows or Posix APIs. */
 #if (defined(__WIN32__) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include "archive_windows.h"
+#else
+#define la_stat(path,stref)		stat(path,stref)
 #endif
 
 /*

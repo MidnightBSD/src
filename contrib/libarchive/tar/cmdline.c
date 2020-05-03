@@ -28,7 +28,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/tar/cmdline.c 324418 2017-10-08 20:55:45Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/cmdline.c 358088 2020-02-19 01:50:47Z mm $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -85,6 +85,7 @@ static const struct bsdtar_option {
 	{ "disable-copyfile",	  0, OPTION_NO_MAC_METADATA },
 	{ "exclude",              1, OPTION_EXCLUDE },
 	{ "exclude-from",         1, 'X' },
+	{ "exclude-vcs",	  0, OPTION_EXCLUDE_VCS },
 	{ "extract",              0, 'x' },
 	{ "fast-read",            0, 'q' },
 	{ "fflags",               0, OPTION_FFLAGS },
@@ -122,6 +123,7 @@ static const struct bsdtar_option {
 	{ "no-fflags",            0, OPTION_NO_FFLAGS },
 	{ "no-mac-metadata",      0, OPTION_NO_MAC_METADATA },
 	{ "no-recursion",         0, 'n' },
+	{ "no-safe-writes",	  0, OPTION_NO_SAFE_WRITES },
 	{ "no-same-owner",	  0, OPTION_NO_SAME_OWNER },
 	{ "no-same-permissions",  0, OPTION_NO_SAME_PERMISSIONS },
 	{ "no-xattr",             0, OPTION_NO_XATTRS },
@@ -143,6 +145,7 @@ static const struct bsdtar_option {
 	{ "posix",		  0, OPTION_POSIX },
 	{ "preserve-permissions", 0, 'p' },
 	{ "read-full-blocks",	  0, 'B' },
+	{ "safe-writes",	  0, OPTION_SAFE_WRITES },
 	{ "same-owner",	          0, OPTION_SAME_OWNER },
 	{ "same-permissions",     0, 'p' },
 	{ "strip-components",	  1, OPTION_STRIP_COMPONENTS },

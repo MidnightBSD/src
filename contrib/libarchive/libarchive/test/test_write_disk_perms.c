@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_write_disk_perms.c 328828 2018-02-03 02:17:25Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_disk_perms.c 342360 2018-12-21 23:33:05Z mm $");
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 
@@ -203,7 +203,7 @@ DEFINE_TEST(test_write_disk_perms)
 	failure("dir_overwrite_0744: st.st_mode=%o", st.st_mode);
 	assertEqualInt(st.st_mode & 0777, 0744);
 
-	/* For dir, the owner should get left when not overwritting. */
+	/* For dir, the owner should get left when not overwriting. */
 	assertMakeDir("dir_owner", 0744);
 
 	if (getuid() == 0) {

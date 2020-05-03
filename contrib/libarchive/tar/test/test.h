@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/tar/test/test.h 315433 2017-03-16 23:08:18Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/tar/test/test.h 315432 2017-03-16 23:07:35Z mm $
  */
 
 /* Every test program should #include "test.h" as the first thing. */

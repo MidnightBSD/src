@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_read_pax_truncated.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_pax_truncated.c 358088 2020-02-19 01:50:47Z mm $");
 
 DEFINE_TEST(test_read_pax_truncated)
 {
@@ -82,7 +82,7 @@ DEFINE_TEST(test_read_pax_truncated)
 			assertEqualIntA(a, ARCHIVE_FATAL, archive_read_next_header(a, &ae));
 			goto wrap_up;
 		} else {
-			failure("Archive truncated to %d bytes", i);
+			failure("Archive truncated to %zu bytes", i);
 			assertEqualIntA(a, 0, archive_read_next_header(a, &ae));
 		}
 
@@ -91,7 +91,7 @@ DEFINE_TEST(test_read_pax_truncated)
 			assertEqualIntA(a, ARCHIVE_FATAL, archive_read_data(a, filedata, filedata_size));
 			goto wrap_up;
 		} else {
-			failure("Archive truncated to %d bytes", i);
+			failure("Archive truncated to %zu bytes", i);
 			assertEqualIntA(a, filedata_size,
 			    archive_read_data(a, filedata, filedata_size));
 		}
@@ -103,7 +103,7 @@ DEFINE_TEST(test_read_pax_truncated)
 		 * does not return an error if it can't consume
 		 * it.) */
 		if (i < 1536 + 512*((filedata_size + 511)/512) + 512) {
-			failure("i=%d minsize=%d", i,
+			failure("i=%zu minsize=%zu", i,
 			    1536 + 512*((filedata_size + 511)/512) + 512);
 			assertEqualIntA(a, ARCHIVE_FATAL,
 			    archive_read_next_header(a, &ae));

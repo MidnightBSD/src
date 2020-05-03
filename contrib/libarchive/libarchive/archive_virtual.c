@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_virtual.c 328828 2018-02-03 02:17:25Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_virtual.c 337351 2018-08-05 14:35:30Z mm $");
 
 #include "archive.h"
 #include "archive_entry.h"
@@ -124,13 +124,13 @@ archive_write_finish_entry(struct archive *a)
 	return ((a->vtable->archive_write_finish_entry)(a));
 }
 
-ssize_t
+la_ssize_t
 archive_write_data(struct archive *a, const void *buff, size_t s)
 {
 	return ((a->vtable->archive_write_data)(a, buff, s));
 }
 
-ssize_t
+la_ssize_t
 archive_write_data_block(struct archive *a, const void *buff, size_t s,
     la_int64_t o)
 {

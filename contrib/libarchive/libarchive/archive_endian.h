@@ -23,21 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive/archive_endian.h 302001 2016-06-17 22:40:10Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_endian.h 358088 2020-02-19 01:50:47Z mm $
  *
  * Borrowed from FreeBSD's <sys/endian.h>
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
-#endif
+#ifndef ARCHIVE_ENDIAN_H_INCLUDED
+#define ARCHIVE_ENDIAN_H_INCLUDED
 
 /* Note:  This is a purely internal header! */
 /* Do not use this outside of libarchive internal code! */
 
-#ifndef ARCHIVE_ENDIAN_H_INCLUDED
-#define ARCHIVE_ENDIAN_H_INCLUDED
-
+#ifndef __LIBARCHIVE_BUILD
+#error This header is only to be used internally to libarchive.
+#endif
 
 /*
  * Disabling inline keyword for compilers known to choke on it:

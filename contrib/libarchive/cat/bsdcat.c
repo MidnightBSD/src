@@ -24,7 +24,7 @@
  */
 
 #include "bsdcat_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/cat/bsdcat.c 328828 2018-02-03 02:17:25Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cat/bsdcat.c 337351 2018-08-05 14:35:30Z mm $");
 
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
@@ -61,7 +61,7 @@ usage(FILE *stream, int eval)
 static void
 version(void)
 {
-	printf("bsdcat %s - %s\n",
+	printf("bsdcat %s - %s \n",
 	    BSDCAT_VERSION_STRING,
 	    archive_version_details());
 	exit(0);

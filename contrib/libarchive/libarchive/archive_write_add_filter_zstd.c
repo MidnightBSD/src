@@ -25,7 +25,7 @@
 
 #include "archive_platform.h"
 
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_write_add_filter_zstd.c 324418 2017-10-08 20:55:45Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_add_filter_zstd.c 358088 2020-02-19 01:50:47Z mm $");
 
 
 #ifdef HAVE_ERRNO_H
@@ -172,11 +172,6 @@ static int
 archive_compressor_zstd_open(struct archive_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
-	int ret;
-
-	ret = __archive_write_open_filter(f->next_filter);
-	if (ret != ARCHIVE_OK)
-		return (ret);
 
 	if (data->out.dst == NULL) {
 		size_t bs = ZSTD_CStreamOutSize(), bpb;
@@ -238,14 +233,9 @@ static int
 archive_compressor_zstd_close(struct archive_write_filter *f)
 {
 	struct private_data *data = (struct private_data *)f->data;
-	int r1, r2;
 
 	/* Finish zstd frame */
-	r1 = drive_compressor(f, data, 1, NULL, 0);
-
-	r2 = __archive_write_close_filter(f->next_filter);
-
-	return r1 < r2 ? r1 : r2;
+	return drive_compressor(f, data, 1, NULL, 0);
 }
 
 /*

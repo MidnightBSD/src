@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_ustar_filenames.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_ustar_filenames.c 248616 2013-03-22 13:36:03Z mm $");
 
 /*
  * Exercise various lengths of filenames in ustar archives.

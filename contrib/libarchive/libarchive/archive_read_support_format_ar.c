@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/archive_read_support_format_ar.c 311042 2017-01-02 01:43:11Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_ar.c 344673 2019-02-28 22:56:15Z mm $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -138,8 +138,7 @@ archive_read_format_ar_cleanup(struct archive_read *a)
 	struct ar *ar;
 
 	ar = (struct ar *)(a->format->data);
-	if (ar->strtab)
-		free(ar->strtab);
+	free(ar->strtab);
 	free(ar);
 	(a->format->data) = NULL;
 	return (ARCHIVE_OK);
@@ -388,9 +387,10 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 
 	/*
 	 * "/" is the SVR4/GNU archive symbol table.
+	 * "/SYM64/" is the SVR4/GNU 64-bit variant archive symbol table.
 	 */
-	if (strcmp(filename, "/") == 0) {
-		archive_entry_copy_pathname(entry, "/");
+	if (strcmp(filename, "/") == 0 || strcmp(filename, "/SYM64/") == 0) {
+		archive_entry_copy_pathname(entry, filename);
 		/* Parse the time, owner, mode, size fields. */
 		r = ar_parse_common_header(ar, entry, h);
 		/* Force the file type to a regular file. */
@@ -459,6 +459,7 @@ ar_parse_common_header(struct ar *ar, struct archive_entry *entry,
 	uint64_t n;
 
 	/* Copy remaining header */
+	archive_entry_set_filetype(entry, AE_IFREG);
 	archive_entry_set_mtime(entry,
 	    (time_t)ar_atol10(h + AR_date_offset, AR_date_size), 0L);
 	archive_entry_set_uid(entry,

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/libarchive/libarchive_fe/lafe_platform.h 228763 2011-12-21 11:13:29Z mm $
+ * $FreeBSD: stable/11/contrib/libarchive/libarchive_fe/lafe_platform.h 228763 2011-12-21 11:13:29Z mm $
  */
 
 /*

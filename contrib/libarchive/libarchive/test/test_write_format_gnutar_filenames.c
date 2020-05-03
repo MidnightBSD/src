@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/10/contrib/libarchive/libarchive/test/test_write_format_gnutar_filenames.c 306322 2016-09-25 22:04:02Z mm $");
+__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_format_gnutar_filenames.c 306321 2016-09-25 22:02:27Z mm $");
 
 /*
  * Inspired by Github issue #682, which reported that gnutar filenames
