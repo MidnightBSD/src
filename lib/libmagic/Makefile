@@ -1,20 +1,21 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libmagic/Makefile 313618 2017-02-11 06:54:42Z ngie $
+# $FreeBSD: stable/11/lib/libmagic/Makefile 354939 2019-11-21 07:39:33Z delphij $
 # Copyright (c) David E. O'Brien, 2000-2004, 2006, 2009
 
+PACKAGE=lib${LIB}
 CONTRDIR=	${SRCTOP}/contrib/file
 .PATH: ${CONTRDIR}/src
 .PATH: ${CONTRDIR}/doc
 
 LIB=	magic
 SHLIB_MAJOR=	4
-DPADD=	${LIBZ}
-LDADD=	-lz
+.if !make(build-tools)
+LIBADD=	z
+.endif
 MAN=	libmagic.3 magic.5
 
-SRCS=	apprentice.c apptype.c ascmagic.c cdf.c cdf_time.c compress.c \
-	der.c encoding.c fsmagic.c funcs.c \
-	is_tar.c magic.c print.c readcdf.c readelf.c softmagic.c
+SRCS=	apprentice.c apptype.c ascmagic.c buffer.c cdf.c cdf_time.c \
+	compress.c der.c encoding.c fsmagic.c funcs.c is_json.c \
+	is_tar.c magic.c print.c readcdf.c readelf.c seccomp.c softmagic.c
 INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
@@ -37,12 +38,12 @@ magic: ${MAGFILES}
 	cat ${.ALLSRC:O} > ${.TARGET}
 
 magic.mgc: mkmagic magic
-	./mkmagic magic
+	${BTOOLSPATH:U.}/mkmagic magic
 
 CLEANFILES+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c cdf_time.c encoding.c funcs.c magic.c print.c ${INCS}
-	${CC} ${CFLAGS} -DCOMPILE_ONLY ${LDFLAGS} -o ${.TARGET} ${.ALLSRC:N*.h} \
+mkmagic: apprentice.c cdf_time.c encoding.c funcs.c magic.c print.c ${INCS} ${BUILD_TOOLS_META}
+	${CC:N${CCACHE_BIN}} ${CFLAGS} -DCOMPILE_ONLY ${LDFLAGS} -o ${.TARGET} ${.ALLSRC:N*.h} \
 	    ${LDADD}
 
 FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
