@@ -17,7 +17,6 @@ _PRIVATELIBS=	\
 		atf_cxx \
 		bsdstat \
 		devdctl \
-		dispatch \
 		event \
 		heimipcc \
 		heimipcs \
@@ -92,6 +91,7 @@ _LIBRARIES=	\
 		devinfo \
 		devstat \
 		dialog \
+		dispatch \
 		dl \
 		dpv \
 		dtrace \
@@ -530,6 +530,7 @@ LIBATF_CXXDIR=	${OBJTOP}/lib/atf/libatf-c++
 LIBALIASDIR=	${OBJTOP}/lib/libalias/libalias
 LIBBLACKLISTDIR=	${OBJTOP}/lib/libblacklist
 LIBBLOCKSRUNTIMEDIR=	${OBJTOP}/lib/libblocksruntime
+LIBDISPATCHDIR=	${OBJTOP}/lib/libdispatch
 LIBBSNMPDIR=	${OBJTOP}/lib/libbsnmp/libbsnmp
 LIBCASPERDIR=	${OBJTOP}/lib/libcasper/libcasper
 LIBCAP_DNSDIR=	${OBJTOP}/lib/libcasper/services/cap_dns
