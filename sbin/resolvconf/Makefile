@@ -1,7 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/resolvconf/Makefile 305165 2016-08-31 22:18:50Z badger $
+# $FreeBSD: stable/11/sbin/resolvconf/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-DIST=		${.CURDIR}/../../contrib/openresolv
+PACKAGE=runtime
+DIST=		${SRCTOP}/contrib/openresolv
 .PATH:		${DIST}
 
 SCRIPTS=	resolvconf
@@ -20,16 +20,16 @@ SBINDIR=	/sbin
 
 # We don't assume to restart the services in /sbin.  So, though
 # our service(8) is in /usr/sbin, we can use it, here.
-CMD1=		\1 onestatus >/dev/null 2>\&1
-CMD2=		\1 restart
-RESTARTCMD=	/usr/sbin/service ${CMD1} \&\& /usr/sbin/service ${CMD2}
+CMD1=		\\$$1 onestatus >/dev/null 2>\&1
+CMD2=		\\$$1 restart
+RESTARTCMD=	"/usr/sbin/service ${CMD1} \&\& /usr/sbin/service ${CMD2}"
 
 .for f in ${SCRIPTS} ${FILES} ${MAN}
 ${f}:	${f}.in
 	sed	-e 's:@SYSCONFDIR@:${SYSCONFDIR}:g' \
 		-e 's:@LIBEXECDIR@:${FILESDIR}:g' \
 		-e 's:@VARDIR@:${VARDIR}:g' \
-		-e 's:@RESTARTCMD \(.*\)@:${RESTARTCMD}:g' \
+		-e 's:@RESTARTCMD@:${RESTARTCMD}:g' \
 		-e 's:@RCDIR@:${RCDIR}:g' \
 		-e 's:@SBINDIR@:${SBINDIR}:g' \
 		-e 's: vpn : ng[0-9]*&:g' \
