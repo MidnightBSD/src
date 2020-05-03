@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2011 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/pjdlog.h 242593 2012-11-05 00:38:14Z pjd $
+ * $FreeBSD: stable/11/sbin/hastd/pjdlog.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_PJDLOG_H_

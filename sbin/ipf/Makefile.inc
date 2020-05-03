@@ -1,16 +1,15 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/Makefile.inc 269696 2014-08-08 00:58:24Z cy $
+#	$FreeBSD: stable/11/sbin/ipf/Makefile.inc 319185 2017-05-30 04:17:22Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 WARNS?=		2
 NO_WFORMAT=
 NO_WARRAY_BOUNDS=
 
-CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter
-CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter/tools
-CFLAGS+=	-I${.CURDIR}/../../../sys
-CFLAGS+=	-I${.CURDIR}/../../../sys/contrib/ipfilter
+CFLAGS+=	-I${SRCTOP}/contrib/ipfilter
+CFLAGS+=	-I${SRCTOP}/contrib/ipfilter/tools
+CFLAGS+=	-I${SRCTOP}/sys
+CFLAGS+=	-I${SRCTOP}/sys/contrib/ipfilter
 CFLAGS+=	-DSTATETOP -D__UIO_EXPOSE
 
 .if ${MK_INET6_SUPPORT} != "no"
@@ -19,15 +18,15 @@ CFLAGS+=	-DUSE_INET6
 CFLAGS+=	-DNOINET6
 .endif
 
-LIBIPF=		${.OBJDIR}/../libipf/libipf.a
-DPADD+=		${LIBIPF} ${LIBKVM}
-LDADD+=		${LIBIPF} -lkvm
+.if ${.CURDIR:M*/libipf} == ""
+LIBADD+=	ipf
+.endif
 
 CLEANFILES+=	y.tab.c y.tab.h
 
-.PATH:	${.CURDIR}/../../../contrib/ipfilter	\
-	${.CURDIR}/../../../contrib/ipfilter/lib	\
-	${.CURDIR}/../../../contrib/ipfilter/tools	\
-	${.CURDIR}/../../../contrib/ipfilter/man
+.PATH:	${SRCTOP}/contrib/ipfilter		\
+	${SRCTOP}/contrib/ipfilter/lib		\
+	${SRCTOP}/contrib/ipfilter/tools	\
+	${SRCTOP}/contrib/ipfilter/man
 
 .include "../Makefile.inc"

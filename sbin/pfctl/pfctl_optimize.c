@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl_optimize.c,v 1.17 2008/05/06 03:45:21 mpf Exp $ */
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/pfctl/pfctl_optimize.c 328649 2018-02-01 02:00:36Z pfg $");
+__FBSDID("$FreeBSD: stable/11/sbin/pfctl/pfctl_optimize.c 328648 2018-02-01 01:59:37Z pfg $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

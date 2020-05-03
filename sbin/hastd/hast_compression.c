@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/hast_compression.c 229778 2012-01-07 16:09:33Z uqs $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/hast_compression.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/endian.h>
 

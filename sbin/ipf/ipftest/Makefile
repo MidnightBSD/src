@@ -1,6 +1,6 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/ipftest/Makefile 291814 2015-12-04 18:50:12Z bdrewery $
+#	$FreeBSD: stable/11/sbin/ipf/ipftest/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
+PACKAGE=	ipf
 PROG=		ipftest
 SRCS=		${GENHDRS} ipftest.c fil.c ip_frag.c ip_state.c ip_nat.c \
 		ip_nat6.c \
@@ -20,11 +20,11 @@ CFLAGS+=	-DIPFILTER_LOG -DIPFILTER_COMPILED -DIPFILTER_LOOKUP \
 # XXX CFLAGS+=		-DIPFILTER_SCAN
 
 
-.PATH:		${.CURDIR}/../../../sys/contrib/ipfilter/netinet
+.PATH:		${SRCTOP}/sys/contrib/ipfilter/netinet
 
 GENHDRS=	ipnat_l.h ipnat_y.h ippool_l.h ippool_y.h ipf_l.h ipf_y.h
 
-CLEANFILES+=	${GENHDRS} 
+CLEANFILES+=	${GENHDRS}
 CLEANFILES+=	ipf_y.c ipf_l.c
 CLEANFILES+=	ipf.tab.c ipf.tab.h
 CLEANFILES+=	ipnat_y.c ipnat_l.c

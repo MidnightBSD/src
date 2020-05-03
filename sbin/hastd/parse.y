@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/parse.y 250914 2013-05-22 17:47:45Z jkim $
+ * $FreeBSD: stable/11/sbin/hastd/parse.y 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>	/* MAXHOSTNAMELEN */

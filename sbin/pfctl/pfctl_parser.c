@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl_parser.c,v 1.240 2008/06/10 20:55:02 mcbride Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Daniel Hartmeier
  * Copyright (c) 2002,2003 Henning Brauer
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/pfctl/pfctl_parser.c 270047 2014-08-16 13:20:44Z bz $");
+__FBSDID("$FreeBSD: stable/11/sbin/pfctl/pfctl_parser.c 359573 2020-04-02 18:37:15Z kp $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -214,14 +215,12 @@ geticmptypebynumber(u_int8_t type, sa_family_t af)
 	unsigned int	i;
 
 	if (af != AF_INET6) {
-		for (i=0; i < (sizeof (icmp_type) / sizeof(icmp_type[0]));
-		    i++) {
+		for (i=0; i < nitems(icmp_type); i++) {
 			if (type == icmp_type[i].type)
 				return (&icmp_type[i]);
 		}
 	} else {
-		for (i=0; i < (sizeof (icmp6_type) /
-		    sizeof(icmp6_type[0])); i++) {
+		for (i=0; i < nitems(icmp6_type); i++) {
 			if (type == icmp6_type[i].type)
 				 return (&icmp6_type[i]);
 		}
@@ -235,14 +234,12 @@ geticmptypebyname(char *w, sa_family_t af)
 	unsigned int	i;
 
 	if (af != AF_INET6) {
-		for (i=0; i < (sizeof (icmp_type) / sizeof(icmp_type[0]));
-		    i++) {
+		for (i=0; i < nitems(icmp_type); i++) {
 			if (!strcmp(w, icmp_type[i].name))
 				return (&icmp_type[i]);
 		}
 	} else {
-		for (i=0; i < (sizeof (icmp6_type) /
-		    sizeof(icmp6_type[0])); i++) {
+		for (i=0; i < nitems(icmp6_type); i++) {
 			if (!strcmp(w, icmp6_type[i].name))
 				return (&icmp6_type[i]);
 		}
@@ -256,15 +253,13 @@ geticmpcodebynumber(u_int8_t type, u_int8_t code, sa_family_t af)
 	unsigned int	i;
 
 	if (af != AF_INET6) {
-		for (i=0; i < (sizeof (icmp_code) / sizeof(icmp_code[0]));
-		    i++) {
+		for (i=0; i < nitems(icmp_code); i++) {
 			if (type == icmp_code[i].type &&
 			    code == icmp_code[i].code)
 				return (&icmp_code[i]);
 		}
 	} else {
-		for (i=0; i < (sizeof (icmp6_code) /
-		    sizeof(icmp6_code[0])); i++) {
+		for (i=0; i < nitems(icmp6_code); i++) {
 			if (type == icmp6_code[i].type &&
 			    code == icmp6_code[i].code)
 				return (&icmp6_code[i]);
@@ -279,15 +274,13 @@ geticmpcodebyname(u_long type, char *w, sa_family_t af)
 	unsigned int	i;
 
 	if (af != AF_INET6) {
-		for (i=0; i < (sizeof (icmp_code) / sizeof(icmp_code[0]));
-		    i++) {
+		for (i=0; i < nitems(icmp_code); i++) {
 			if (type == icmp_code[i].type &&
 			    !strcmp(w, icmp_code[i].name))
 				return (&icmp_code[i]);
 		}
 	} else {
-		for (i=0; i < (sizeof (icmp6_code) /
-		    sizeof(icmp6_code[0])); i++) {
+		for (i=0; i < nitems(icmp6_code); i++) {
 			if (type == icmp6_code[i].type &&
 			    !strcmp(w, icmp6_code[i].name))
 				return (&icmp6_code[i]);
@@ -622,6 +615,12 @@ print_status(struct pf_status *s, int opts)
 }
 
 void
+print_running(struct pf_status *status)
+{
+	printf("%s\n", status->running ? "Enabled" : "Disabled");
+}
+
+void
 print_src_node(struct pf_src_node *sn, int opts)
 {
 	struct pf_addr_wrap aw;
@@ -850,6 +849,21 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 	}
 	if (r->tos)
 		printf(" tos 0x%2.2x", r->tos);
+	if (r->prio)
+		printf(" prio %u", r->prio == PF_PRIO_ZERO ? 0 : r->prio);
+	if (r->scrub_flags & PFSTATE_SETMASK) {
+		char *comma = "";
+		printf(" set (");
+		if (r->scrub_flags & PFSTATE_SETPRIO) {
+			if (r->set_prio[0] == r->set_prio[1])
+				printf("%s prio %u", comma, r->set_prio[0]);
+			else
+				printf("%s prio(%u, %u)", comma, r->set_prio[0],
+				    r->set_prio[1]);
+			comma = ",";
+		}
+		printf(" )");
+	}
 	if (!r->keep_state && r->action == PF_PASS && !anchor_call[0])
 		printf(" no state");
 	else if (r->keep_state == PF_STATE_NORMAL)
@@ -991,12 +1005,7 @@ print_rule(struct pf_rule *r, const char *anchor_call, int verbose, int numeric)
 		if (r->rule_flag & PFRULE_REASSEMBLE_TCP)
 			printf(" reassemble tcp");
 
-		if (r->rule_flag & PFRULE_FRAGDROP)
-			printf(" fragment drop-ovl");
-		else if (r->rule_flag & PFRULE_FRAGCROP)
-			printf(" fragment crop");
-		else
-			printf(" fragment reassemble");
+		printf(" fragment reassemble");
 	}
 	if (r->label[0])
 		printf(" label \"%s\"", r->label);
@@ -1395,6 +1404,7 @@ ifa_lookup(const char *ifa_name, int flags)
 				set_ipmask(n, 128);
 		}
 		n->ifindex = p->ifindex;
+		n->ifname = strdup(p->ifname);
 
 		n->next = NULL;
 		n->tail = n;
@@ -1455,16 +1465,17 @@ host(const char *s)
 		mask = -1;
 	}
 
-	/* interface with this name exists? */
-	if (cont && (h = host_if(ps, mask)) != NULL)
-		cont = 0;
-
 	/* IPv4 address? */
 	if (cont && (h = host_v4(s, mask)) != NULL)
 		cont = 0;
 
 	/* IPv6 address? */
 	if (cont && (h = host_v6(ps, v6mask)) != NULL)
+		cont = 0;
+
+	/* interface with this name exists? */
+	/* expensive with thousands of interfaces - prioritze IPv4/6 check */
+	if (cont && (h = host_if(ps, mask)) != NULL)
 		cont = 0;
 
 	/* dns lookup */

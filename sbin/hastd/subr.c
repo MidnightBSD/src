@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/subr.c 280250 2015-03-19 12:32:48Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/subr.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -248,7 +249,7 @@ drop_privs(const struct hast_resource *res)
 			    "Unable to limit capability rights on local descriptor");
 		}
 		if (cap_ioctls_limit(res->hr_localfd, geomcmds,
-		    sizeof(geomcmds) / sizeof(geomcmds[0])) == -1) {
+		    nitems(geomcmds)) == -1) {
 			pjdlog_errno(LOG_ERR,
 			    "Unable to limit allowed GEOM ioctls");
 		}
@@ -267,7 +268,7 @@ drop_privs(const struct hast_resource *res)
 				    "Unable to limit capability rights to CAP_IOCTL on ggate descriptor");
 			}
 			if (cap_ioctls_limit(res->hr_ggatefd, ggatecmds,
-			    sizeof(ggatecmds) / sizeof(ggatecmds[0])) == -1) {
+			    nitems(ggatecmds)) == -1) {
 				pjdlog_errno(LOG_ERR,
 				    "Unable to limit allowed ggate ioctls");
 			}

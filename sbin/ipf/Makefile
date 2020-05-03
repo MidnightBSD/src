@@ -1,8 +1,9 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/Makefile 289247 2015-10-13 18:43:49Z bdrewery $
+#	$FreeBSD: stable/11/sbin/ipf/Makefile 355131 2019-11-27 13:46:28Z cy $
 
 SUBDIR=		libipf .WAIT
-SUBDIR+=	ipf ipfs ipfstat ipftest ipmon ipnat ippool ipresend
+SUBDIR+=	ipf ipfs ipfstat ipmon ipnat ippool
+# XXX Temporarily disconnected.
+# SUBDIR+=	ipftest ipresend
 SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

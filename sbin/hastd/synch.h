@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/synch.h 236919 2012-06-11 20:27:52Z hselasky $
+ * $FreeBSD: stable/11/sbin/hastd/synch.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_SYNCH_H_
@@ -47,7 +48,7 @@
 #endif
 
 static __inline void
-mtx_init(pthread_mutex_t *lock)
+mtx_init(pthread_mutex_t *lock) __requires_unlocked(*lock)
 {
 	int error;
 
@@ -55,7 +56,7 @@ mtx_init(pthread_mutex_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-mtx_destroy(pthread_mutex_t *lock)
+mtx_destroy(pthread_mutex_t *lock) __requires_unlocked(*lock)
 {
 	int error;
 
@@ -63,7 +64,7 @@ mtx_destroy(pthread_mutex_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-mtx_lock(pthread_mutex_t *lock)
+mtx_lock(pthread_mutex_t *lock) __locks_exclusive(*lock)
 {
 	int error;
 
@@ -71,7 +72,7 @@ mtx_lock(pthread_mutex_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline bool
-mtx_trylock(pthread_mutex_t *lock)
+mtx_trylock(pthread_mutex_t *lock) __trylocks_exclusive(true, *lock)
 {
 	int error;
 
@@ -80,7 +81,7 @@ mtx_trylock(pthread_mutex_t *lock)
 	return (error == 0);
 }
 static __inline void
-mtx_unlock(pthread_mutex_t *lock)
+mtx_unlock(pthread_mutex_t *lock) __unlocks(*lock)
 {
 	int error;
 
@@ -95,7 +96,7 @@ mtx_owned(pthread_mutex_t *lock)
 }
 
 static __inline void
-rw_init(pthread_rwlock_t *lock)
+rw_init(pthread_rwlock_t *lock) __requires_unlocked(*lock)
 {
 	int error;
 
@@ -103,7 +104,7 @@ rw_init(pthread_rwlock_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-rw_destroy(pthread_rwlock_t *lock)
+rw_destroy(pthread_rwlock_t *lock) __requires_unlocked(*lock)
 {
 	int error;
 
@@ -111,7 +112,7 @@ rw_destroy(pthread_rwlock_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-rw_rlock(pthread_rwlock_t *lock)
+rw_rlock(pthread_rwlock_t *lock) __locks_shared(*lock)
 {
 	int error;
 
@@ -119,7 +120,7 @@ rw_rlock(pthread_rwlock_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-rw_wlock(pthread_rwlock_t *lock)
+rw_wlock(pthread_rwlock_t *lock) __locks_exclusive(*lock)
 {
 	int error;
 
@@ -127,7 +128,7 @@ rw_wlock(pthread_rwlock_t *lock)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-rw_unlock(pthread_rwlock_t *lock)
+rw_unlock(pthread_rwlock_t *lock) __unlocks(*lock)
 {
 	int error;
 
@@ -151,7 +152,7 @@ cv_init(pthread_cond_t *cv)
 	PJDLOG_ASSERT(error == 0);
 }
 static __inline void
-cv_wait(pthread_cond_t *cv, pthread_mutex_t *lock)
+cv_wait(pthread_cond_t *cv, pthread_mutex_t *lock) __requires_exclusive(*lock)
 {
 	int error;
 
@@ -160,6 +161,7 @@ cv_wait(pthread_cond_t *cv, pthread_mutex_t *lock)
 }
 static __inline bool
 cv_timedwait(pthread_cond_t *cv, pthread_mutex_t *lock, int timeout)
+    __requires_exclusive(*lock)
 {
 	struct timespec ts;
 	int error;

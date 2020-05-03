@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*-
  *  COPYRIGHT (C) 1986 Gary S. Brown.  You may use this program, or
  *  code or tables extracted from it, as desired without restriction.
  *
- * $FreeBSD: stable/10/sbin/hastd/crc32.h 219351 2011-03-06 22:56:14Z pjd $
+ * $FreeBSD: stable/11/sbin/hastd/crc32.h 219351 2011-03-06 22:56:14Z pjd $
  */
 
 #ifndef _CRC32_H_

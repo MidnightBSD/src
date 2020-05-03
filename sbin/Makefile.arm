@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/Makefile.arm 212527 2010-09-13 02:25:21Z imp $
+# $FreeBSD: stable/11/sbin/Makefile.arm 212527 2010-09-13 02:25:21Z imp $
 
 SUBDIR += bsdlabel
 SUBDIR += fdisk

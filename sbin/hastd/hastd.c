@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2010-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/hastd.c 260006 2013-12-28 19:21:22Z trociny $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/hastd.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -1091,7 +1092,7 @@ main_loop(void)
 			fd = proto_descriptor(lst->hl_conn);
 			PJDLOG_ASSERT(fd >= 0);
 			FD_SET(fd, &rfds);
-			maxfd = fd > maxfd ? fd : maxfd;
+			maxfd = MAX(fd, maxfd);
 		}
 		TAILQ_FOREACH(res, &cfg->hc_resources, hr_next) {
 			if (res->hr_event == NULL)
@@ -1099,14 +1100,14 @@ main_loop(void)
 			fd = proto_descriptor(res->hr_event);
 			PJDLOG_ASSERT(fd >= 0);
 			FD_SET(fd, &rfds);
-			maxfd = fd > maxfd ? fd : maxfd;
+			maxfd = MAX(fd, maxfd);
 			if (res->hr_role == HAST_ROLE_PRIMARY) {
 				/* Only primary workers asks for connections. */
 				PJDLOG_ASSERT(res->hr_conn != NULL);
 				fd = proto_descriptor(res->hr_conn);
 				PJDLOG_ASSERT(fd >= 0);
 				FD_SET(fd, &rfds);
-				maxfd = fd > maxfd ? fd : maxfd;
+				maxfd = MAX(fd, maxfd);
 			} else {
 				PJDLOG_ASSERT(res->hr_conn == NULL);
 			}

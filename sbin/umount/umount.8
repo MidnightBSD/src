@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)umount.8	8.2 (Berkeley) 5/8/95
-.\" $FreeBSD: stable/11/sbin/umount/umount.8 322910 2017-08-25 22:58:54Z rmacklem $
+.\" $FreeBSD: stable/11/sbin/umount/umount.8 360039 2020-04-17 07:41:27Z 0mp $
 .\"
-.Dd July 25, 2017
+.Dd April 14, 2020
 .Dt UMOUNT 8
 .Os
 .Sh NAME
@@ -52,7 +52,9 @@ utility calls the
 system call to remove a file system from the file system tree.
 The file system can be specified by its
 .Ar special
-device or remote node (rhost:path), the path to the mount point
+device or remote node
+.Pq Ar rhost Ns Cm \& : Ns Ar path ,
+the path to the mount point
 .Ar node
 or by the file system ID
 .Ar fsid
@@ -61,7 +63,7 @@ as reported by
 when run by root.
 .Pp
 The options are as follows:
-.Bl -tag -width indent
+.Bl -tag -width "-F fstab"
 .It Fl a
 All the file systems described in
 .Xr fstab 5

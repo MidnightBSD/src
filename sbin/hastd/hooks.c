@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/hooks.c 229945 2012-01-10 22:39:07Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/hooks.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -38,7 +39,6 @@ __FBSDID("$FreeBSD: stable/10/sbin/hastd/hooks.c 229945 2012-01-10 22:39:07Z pjd
 
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
 #include <paths.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -353,7 +353,7 @@ hook_execv(const char *path, va_list ap)
 		return;
 
 	memset(args, 0, sizeof(args));
-	args[0] = basename(path);
+	args[0] = __DECONST(char *, path);
 	for (ii = 1; ii < sizeof(args) / sizeof(args[0]); ii++) {
 		args[ii] = va_arg(ap, char *);
 		if (args[ii] == NULL)

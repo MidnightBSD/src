@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/refcnt.h 262192 2014-02-18 20:27:17Z jhb $
+ * $FreeBSD: stable/11/sbin/hastd/refcnt.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef __REFCNT_H__

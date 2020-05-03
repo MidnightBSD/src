@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 The FreeBSD Foundation
  * Copyright (c) 2010-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/primary.c 260006 2013-12-28 19:21:22Z trociny $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/primary.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -331,9 +332,8 @@ primary_exitx(int exitcode, const char *fmt, ...)
 	exit(exitcode);
 }
 
-/* Expects res->hr_amp locked, returns unlocked. */
 static int
-hast_activemap_flush(struct hast_resource *res)
+hast_activemap_flush(struct hast_resource *res) __unlocks(res->hr_amp_lock)
 {
 	const unsigned char *buf;
 	size_t size;

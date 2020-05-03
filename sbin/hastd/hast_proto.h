@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/hast_proto.h 220744 2011-04-17 16:18:45Z trociny $
+ * $FreeBSD: stable/11/sbin/hastd/hast_proto.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_HAST_PROTO_H_

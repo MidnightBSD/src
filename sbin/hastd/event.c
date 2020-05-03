@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/hastd/event.c 229945 2012-01-10 22:39:07Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sbin/hastd/event.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <errno.h>
 

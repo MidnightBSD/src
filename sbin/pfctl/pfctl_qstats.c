@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl_qstats.c,v 1.30 2004/04/27 21:47:32 kjc Exp $ */
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/pfctl/pfctl_qstats.c 298133 2016-04-16 22:02:32Z loos $");
+__FBSDID("$FreeBSD: stable/11/sbin/pfctl/pfctl_qstats.c 287009 2015-08-21 22:02:22Z loos $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -35,12 +34,12 @@ __FBSDID("$FreeBSD: stable/10/sbin/pfctl/pfctl_qstats.c 298133 2016-04-16 22:02:
 #include <string.h>
 #include <unistd.h>
 
-#include <altq/altq.h>
-#include <altq/altq_cbq.h>
-#include <altq/altq_codel.h>
-#include <altq/altq_priq.h>
-#include <altq/altq_hfsc.h>
-#include <altq/altq_fairq.h>
+#include <net/altq/altq.h>
+#include <net/altq/altq_cbq.h>
+#include <net/altq/altq_codel.h>
+#include <net/altq/altq_priq.h>
+#include <net/altq/altq_hfsc.h>
+#include <net/altq/altq_fairq.h>
 
 #include "pfctl.h"
 #include "pfctl_parser.h"

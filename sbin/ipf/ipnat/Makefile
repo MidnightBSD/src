@@ -1,6 +1,6 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/ipnat/Makefile 291814 2015-12-04 18:50:12Z bdrewery $
+#	$FreeBSD: stable/11/sbin/ipf/ipnat/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=	ipf
 PROG=		ipnat
 SRCS=		${GENHDRS} ipnat.c ipnat_y.c ipnat_l.c
 MAN=		ipnat.8 ipnat.4 ipnat.5

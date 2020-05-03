@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/hastd.h 218044 2011-01-28 21:56:47Z pjd $
+ * $FreeBSD: stable/11/sbin/hastd/hastd.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_HASTD_H_

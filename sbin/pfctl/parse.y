@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: parse.y,v 1.554 2008/10/17 12:59:53 henning Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Markus Friedl.  All rights reserved.
  * Copyright (c) 2001 Daniel Hartmeier.  All rights reserved.
  * Copyright (c) 2001 Theo de Raadt.  All rights reserved.
@@ -29,7 +30,7 @@
  */
 %{
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/pfctl/parse.y 326414 2017-11-30 21:32:28Z kp $");
+__FBSDID("$FreeBSD: stable/11/sbin/pfctl/parse.y 344020 2019-02-11 19:08:03Z kp $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -45,12 +46,12 @@ __FBSDID("$FreeBSD: stable/10/sbin/pfctl/parse.y 326414 2017-11-30 21:32:28Z kp 
 #include <netinet/icmp6.h>
 #include <net/pfvar.h>
 #include <arpa/inet.h>
-#include <altq/altq.h>
-#include <altq/altq_cbq.h>
-#include <altq/altq_codel.h>
-#include <altq/altq_priq.h>
-#include <altq/altq_hfsc.h>
-#include <altq/altq_fairq.h>
+#include <net/altq/altq.h>
+#include <net/altq/altq_cbq.h>
+#include <net/altq/altq_codel.h>
+#include <net/altq/altq_priq.h>
+#include <net/altq/altq_hfsc.h>
+#include <net/altq/altq_fairq.h>
 
 #include <stdio.h>
 #include <unistd.h>
@@ -78,6 +79,7 @@ static u_int16_t	 returnicmpdefault =
 static u_int16_t	 returnicmp6default =
 			    (ICMP6_DST_UNREACH << 8) | ICMP6_DST_UNREACH_NOPORT;
 static int		 blockpolicy = PFRULE_DROP;
+static int		 failpolicy = PFRULE_DROP;
 static int		 require_order = 1;
 static int		 default_statelock;
 
@@ -218,6 +220,8 @@ struct filter_opts {
 #define FOM_TOS		0x04
 #define FOM_KEEP	0x08
 #define FOM_SRCTRACK	0x10
+#define FOM_SETPRIO	0x0400
+#define FOM_PRIO	0x2000
 	struct node_uid		*uid;
 	struct node_gid		*gid;
 	struct {
@@ -241,6 +245,8 @@ struct filter_opts {
 	char			*match_tag;
 	u_int8_t		 match_tag_not;
 	u_int			 rtableid;
+	u_int8_t		 prio;
+	u_int8_t		 set_prio[2];
 	struct {
 		struct node_host	*addr;
 		u_int16_t		port;
@@ -448,13 +454,13 @@ int	parseport(char *, struct range *r, int);
 %token	MINTTL ERROR ALLOWOPTS FASTROUTE FILENAME ROUTETO DUPTO REPLYTO NO LABEL
 %token	NOROUTE URPFFAILED FRAGMENT USER GROUP MAXMSS MAXIMUM TTL TOS DROP TABLE
 %token	REASSEMBLE FRAGDROP FRAGCROP ANCHOR NATANCHOR RDRANCHOR BINATANCHOR
-%token	SET OPTIMIZATION TIMEOUT LIMIT LOGINTERFACE BLOCKPOLICY RANDOMID
-%token	REQUIREORDER SYNPROXY FINGERPRINTS NOSYNC DEBUG SKIP HOSTID
+%token	SET OPTIMIZATION TIMEOUT LIMIT LOGINTERFACE BLOCKPOLICY FAILPOLICY
+%token	RANDOMID REQUIREORDER SYNPROXY FINGERPRINTS NOSYNC DEBUG SKIP HOSTID
 %token	ANTISPOOF FOR INCLUDE
 %token	BITMASK RANDOM SOURCEHASH ROUNDROBIN STATICPORT PROBABILITY
 %token	ALTQ CBQ CODEL PRIQ HFSC FAIRQ BANDWIDTH TBRSIZE LINKSHARE REALTIME
 %token	UPPERLIMIT QUEUE PRIORITY QLIMIT HOGS BUCKETS RTABLE TARGET INTERVAL
-%token	LOAD RULESET_OPTIMIZATION
+%token	LOAD RULESET_OPTIMIZATION PRIO
 %token	STICKYADDRESS MAXSRCSTATES MAXSRCNODES SOURCETRACK GLOBAL RULE
 %token	MAXSRCCONN MAXSRCCONNRATE OVERLOAD FLUSH SLOPPY
 %token	TAGGED TAG IFBOUND FLOATING STATEPOLICY STATEDEFAULTS ROUTE SETTOS
@@ -469,7 +475,7 @@ int	parseport(char *, struct range *r, int);
 %type	<v.i>			no dir af fragcache optimizer
 %type	<v.i>			sourcetrack flush unaryop statelock
 %type	<v.b>			action nataction natpasslog scrubaction
-%type	<v.b>			flags flag blockspec
+%type	<v.b>			flags flag blockspec prio
 %type	<v.range>		portplain portstar portrange
 %type	<v.hashkey>		hashkey
 %type	<v.proto>		proto proto_list proto_item
@@ -505,6 +511,7 @@ int	parseport(char *, struct range *r, int);
 %type	<v.codel_opts>		codelopts_list codelopts_item codel_opts
 %type	<v.queue_bwspec>	bandwidth
 %type	<v.filter_opts>		filter_opts filter_opt filter_opts_l
+%type	<v.filter_opts>		filter_sets filter_set filter_sets_l
 %type	<v.antispoof_opts>	antispoof_opts antispoof_opt antispoof_opts_l
 %type	<v.queue_opts>		queue_opts queue_opt queue_opts_l
 %type	<v.scrub_opts>		scrub_opts scrub_opt scrub_opts_l
@@ -631,6 +638,20 @@ option		: SET OPTIMIZATION STRING		{
 			if (check_rulestate(PFCTL_STATE_OPTION))
 				YYERROR;
 			blockpolicy = PFRULE_RETURN;
+		}
+		| SET FAILPOLICY DROP	{
+			if (pf->opts & PF_OPT_VERBOSE)
+				printf("set fail-policy drop\n");
+			if (check_rulestate(PFCTL_STATE_OPTION))
+				YYERROR;
+			failpolicy = PFRULE_DROP;
+		}
+		| SET FAILPOLICY RETURN {
+			if (pf->opts & PF_OPT_VERBOSE)
+				printf("set fail-policy return\n");
+			if (check_rulestate(PFCTL_STATE_OPTION))
+				YYERROR;
+			failpolicy = PFRULE_RETURN;
 		}
 		| SET REQUIREORDER yesno {
 			if (pf->opts & PF_OPT_VERBOSE)
@@ -890,6 +911,17 @@ anchorrule	: ANCHOR anchorname dir quick interface af proto fromto
 					YYERROR;
 				}
 			r.match_tag_not = $9.match_tag_not;
+			if ($9.marker & FOM_PRIO) {
+				if ($9.prio == 0)
+					r.prio = PF_PRIO_ZERO;
+				else
+					r.prio = $9.prio;
+			}
+			if ($9.marker & FOM_SETPRIO) {
+				r.set_prio[0] = $9.set_prio[0];
+				r.set_prio[1] = $9.set_prio[1];
+				r.scrub_flags |= PFSTATE_SETPRIO;
+			}
 
 			decide_address_family($8.src.host, &r.af);
 			decide_address_family($8.dst.host, &r.af);
@@ -1198,8 +1230,8 @@ scrub_opt	: NODF	{
 		;
 
 fragcache	: FRAGMENT REASSEMBLE	{ $$ = 0; /* default */ }
-		| FRAGMENT FRAGCROP	{ $$ = PFRULE_FRAGCROP; }
-		| FRAGMENT FRAGDROP	{ $$ = PFRULE_FRAGDROP; }
+		| FRAGMENT FRAGCROP	{ $$ = 0; }
+		| FRAGMENT FRAGDROP	{ $$ = 0; }
 		;
 
 antispoof	: ANTISPOOF logquick antispoof_ifspc af antispoof_opts {
@@ -2015,6 +2047,18 @@ pfrule		: action dir logquick interface route af proto fromto
 			r.prob = $9.prob;
 			r.rtableid = $9.rtableid;
 
+			if ($9.marker & FOM_PRIO) {
+				if ($9.prio == 0)
+					r.prio = PF_PRIO_ZERO;
+				else
+					r.prio = $9.prio;
+			}
+			if ($9.marker & FOM_SETPRIO) {
+				r.set_prio[0] = $9.set_prio[0];
+				r.set_prio[1] = $9.set_prio[1];
+				r.scrub_flags |= PFSTATE_SETPRIO;
+			}
+
 			r.af = $6;
 			if ($9.tag)
 				if (strlcpy(r.tagname, $9.tag,
@@ -2435,6 +2479,18 @@ filter_opt	: USER uids {
 			filter_opts.marker |= FOM_ICMP;
 			filter_opts.icmpspec = $1;
 		}
+		| PRIO NUMBER {
+			if (filter_opts.marker & FOM_PRIO) {
+				yyerror("prio cannot be redefined");
+				YYERROR;
+			}
+			if ($2 < 0 || $2 > PF_PRIO_MAX) {
+				yyerror("prio must be 0 - %u", PF_PRIO_MAX);
+				YYERROR;
+			}
+			filter_opts.marker |= FOM_PRIO;
+			filter_opts.prio = $2;
+		}
 		| TOS tos {
 			if (filter_opts.marker & FOM_TOS) {
 				yyerror("tos cannot be redefined");
@@ -2533,6 +2589,42 @@ filter_opt	: USER uids {
 			filter_opts.divert.port = 1;	/* some random value */
 #endif
 		}
+		| filter_sets
+		;
+
+filter_sets	: SET '(' filter_sets_l ')'	{ $$ = filter_opts; }
+		| SET filter_set		{ $$ = filter_opts; }
+		;
+
+filter_sets_l	: filter_sets_l comma filter_set
+		| filter_set
+		;
+
+filter_set	: prio {
+			if (filter_opts.marker & FOM_SETPRIO) {
+				yyerror("prio cannot be redefined");
+				YYERROR;
+			}
+			filter_opts.marker |= FOM_SETPRIO;
+			filter_opts.set_prio[0] = $1.b1;
+			filter_opts.set_prio[1] = $1.b2;
+		}
+prio		: PRIO NUMBER {
+			if ($2 < 0 || $2 > PF_PRIO_MAX) {
+				yyerror("prio must be 0 - %u", PF_PRIO_MAX);
+				YYERROR;
+			}
+			$$.b1 = $$.b2 = $2;
+		}
+		| PRIO '(' NUMBER comma NUMBER ')' {
+			if ($3 < 0 || $3 > PF_PRIO_MAX ||
+			    $5 < 0 || $5 > PF_PRIO_MAX) {
+				yyerror("prio must be 0 - %u", PF_PRIO_MAX);
+				YYERROR;
+			}
+			$$.b1 = $3;
+			$$.b2 = $5;
+		}
 		;
 
 probability	: STRING				{
@@ -2557,7 +2649,12 @@ probability	: STRING				{
 		;
 
 
-action		: PASS			{ $$.b1 = PF_PASS; $$.b2 = $$.w = 0; }
+action		: PASS 			{
+			$$.b1 = PF_PASS;
+			$$.b2 = failpolicy;
+			$$.w = returnicmpdefault;
+			$$.w2 = returnicmp6default;
+		}
 		| BLOCK blockspec	{ $$ = $2; $$.b1 = PF_DROP; }
 		;
 
@@ -4116,7 +4213,7 @@ natrule		: nataction interface af proto fromto tag tagged rtable
 		}
 		;
 
-binatrule	: no BINAT natpasslog interface af proto FROM host toipspec tag
+binatrule	: no BINAT natpasslog interface af proto FROM ipspec toipspec tag
 		    tagged rtable redirection
 		{
 			struct pf_rule		binat;
@@ -4305,7 +4402,7 @@ route_host	: STRING			{
 			$$ = calloc(1, sizeof(struct node_host));
 			if ($$ == NULL)
 				err(1, "route_host: calloc");
-			$$->ifname = $1;
+			$$->ifname = strdup($1);
 			set_ipmask($$, 128);
 			$$->next = NULL;
 			$$->tail = $$;
@@ -4315,7 +4412,7 @@ route_host	: STRING			{
 
 			$$ = $3;
 			for (n = $3; n != NULL; n = n->next)
-				n->ifname = $2;
+				n->ifname = strdup($2);
 		}
 		;
 
@@ -4631,6 +4728,8 @@ process_tabledef(char *name, struct table_opts *opts)
 {
 	struct pfr_buffer	 ab;
 	struct node_tinit	*ti;
+	unsigned long		 maxcount;
+	size_t			 s = sizeof(maxcount);
 
 	bzero(&ab, sizeof(ab));
 	ab.pfrb_type = PFRB_ADDRS;
@@ -4658,8 +4757,19 @@ process_tabledef(char *name, struct table_opts *opts)
 	if (!(pf->opts & PF_OPT_NOACTION) &&
 	    pfctl_define_table(name, opts->flags, opts->init_addr,
 	    pf->anchor->name, &ab, pf->anchor->ruleset.tticket)) {
-		yyerror("cannot define table %s: %s", name,
-		    pfr_strerror(errno));
+
+		if (sysctlbyname("net.pf.request_maxcount", &maxcount, &s,
+		    NULL, 0) == -1)
+			maxcount = 65535;
+
+		if (ab.pfrb_size > maxcount)
+			yyerror("cannot define table %s: too many elements.\n"
+			    "Consider increasing net.pf.request_maxcount.",
+			    name);
+		else
+			yyerror("cannot define table %s: %s", name,
+			    pfr_strerror(errno));
+
 		goto _error;
 	}
 	pf->tdirty = 1;
@@ -5389,6 +5499,7 @@ lookup(char *s)
 		{ "drop",		DROP},
 		{ "drop-ovl",		FRAGDROP},
 		{ "dup-to",		DUPTO},
+		{ "fail-policy",	FAILPOLICY},
 		{ "fairq",		FAIRQ},
 		{ "fastroute",		FASTROUTE},
 		{ "file",		FILENAME},
@@ -5440,6 +5551,7 @@ lookup(char *s)
 		{ "overload",		OVERLOAD},
 		{ "pass",		PASS},
 		{ "port",		PORT},
+		{ "prio",		PRIO},
 		{ "priority",		PRIORITY},
 		{ "priq",		PRIQ},
 		{ "probability",	PROBABILITY},
@@ -5659,8 +5771,10 @@ top:
 					return (0);
 				if (next == quotec || c == ' ' || c == '\t')
 					c = next;
-				else if (next == '\n')
+				else if (next == '\n') {
+					file->lineno++;
 					continue;
+				}
 				else
 					lungetc(next);
 			} else if (c == quotec) {
@@ -5852,6 +5966,7 @@ parse_config(char *filename, struct pfctl *xpf)
 	returnicmp6default =
 	    (ICMP6_DST_UNREACH << 8) | ICMP6_DST_UNREACH_NOPORT;
 	blockpolicy = PFRULE_DROP;
+	failpolicy = PFRULE_DROP;
 	require_order = 1;
 
 	if ((file = pushfile(filename, 0)) == NULL) {
@@ -6187,7 +6302,7 @@ rt_tableid_max(void)
 	/*
 	 * As the OpenBSD code only compares > and not >= we need to adjust
 	 * here given we only accept values of 0..n and want to avoid #ifdefs
-	 * in the grammer.
+	 * in the grammar.
 	 */
 	return (fibs - 1);
 #else

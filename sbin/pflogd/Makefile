@@ -1,16 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/pflogd/Makefile 244929 2013-01-01 18:28:21Z antoine $
+# $FreeBSD: stable/11/sbin/pflogd/Makefile 319279 2017-05-31 05:20:59Z delphij $
 
-.PATH:	${.CURDIR}/../../contrib/pf/pflogd
+.PATH:	${SRCTOP}/contrib/pf/pflogd
 
+PACKAGE=pf
 PROG=	pflogd
 SRCS= 	pflogd.c pidfile.c privsep.c privsep_fdpass.c
 MAN=	pflogd.8
 
-CFLAGS+=-include ${.CURDIR}/../../lib/libpcap/config.h
+CFLAGS+=-include ${SRCTOP}/lib/libpcap/config.h
+CFLAGS+=-I${.CURDIR}/../../contrib/libpcap
 
-LDADD=	-lpcap
-DPADD=	${LIBPCAP}
+LIBADD=	pcap
 
 WARNS?=	2
 

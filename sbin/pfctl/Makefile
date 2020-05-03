@@ -1,11 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/pfctl/Makefile 270047 2014-08-16 13:20:44Z bz $
+# $FreeBSD: stable/11/sbin/pfctl/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # pf_ruleset.c is shared between kernel and pfctl
-.PATH: ${.CURDIR}/../../sys/netpfil/pf
+.PATH: ${SRCTOP}/sys/netpfil/pf
 
+PACKAGE=pf
 PROG=	pfctl
 MAN=	pfctl.8
 
@@ -29,7 +29,6 @@ CFLAGS+= -DWITH_INET
 
 YFLAGS=
 
-LDADD+=	-lm -lmd
-DPADD+=	${LIBM} ${LIBMD}
+LIBADD=	m md
 
 .include <bsd.prog.mk>

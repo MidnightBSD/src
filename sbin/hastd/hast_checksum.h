@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/hastd/hast_checksum.h 219351 2011-03-06 22:56:14Z pjd $
+ * $FreeBSD: stable/11/sbin/hastd/hast_checksum.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_HAST_CHECKSUM_H_

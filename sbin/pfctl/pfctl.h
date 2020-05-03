@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl.h,v 1.42 2007/12/05 12:01:47 chl Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/pfctl/pfctl.h 240494 2012-09-14 11:51:49Z glebius $
+ * $FreeBSD: stable/11/sbin/pfctl/pfctl.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _PFCTL_H_

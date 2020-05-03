@@ -1,6 +1,6 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/sbin/ipf/libipf/Makefile 255332 2013-09-06 23:11:19Z cy $
+#	$FreeBSD: stable/11/sbin/ipf/libipf/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=	ipf
 LIB=		ipf
 INTERNALLIB=
 
@@ -43,5 +43,7 @@ SRCS=		addicmp.c addipopt.c alist_free.c alist_new.c allocmbt.c \
 		save_execute.c save_file.c save_nothing.c save_syslog.c save_v1trap.c save_v2trap.c vtof.c \
 		tcp_flags.c tcpflags.c tcpoptnames.c v6ionames.c v6optvalue.c \
 		var.c verbose.c
+
+LIBADD=		kvm
 
 .include <bsd.lib.mk>

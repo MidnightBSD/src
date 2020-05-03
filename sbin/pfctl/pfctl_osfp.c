@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl_osfp.c,v 1.14 2006/04/08 02:13:14 ray Exp $ */
 
 /*

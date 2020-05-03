@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pfctl_table.c,v 1.67 2008/06/10 20:55:02 mcbride Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2002 Cedric Berger
  * All rights reserved.
  *
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/pfctl/pfctl_table.c 240494 2012-09-14 11:51:49Z glebius $");
+__FBSDID("$FreeBSD: stable/11/sbin/pfctl/pfctl_table.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
