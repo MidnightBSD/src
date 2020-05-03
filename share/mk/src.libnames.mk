@@ -63,7 +63,7 @@ _LIBRARIES=	\
 		avl \
 		be \
 		begemot \
-		blocksruntime \
+		BlocksRuntime \
 		bluetooth \
 		bsdxml \
 		bsm \
@@ -531,6 +531,8 @@ LIBALIASDIR=	${OBJTOP}/lib/libalias/libalias
 LIBBLACKLISTDIR=	${OBJTOP}/lib/libblacklist
 LIBBLOCKSRUNTIMEDIR=	${OBJTOP}/lib/libblocksruntime
 LIBDISPATCHDIR=	${OBJTOP}/lib/libdispatch
+LIBMPORTDIR=	${OBJTOP}/lib/libmport
+LIBMSEARCHDIR=	${OBJTOP}/lib/libmsearch
 LIBBSNMPDIR=	${OBJTOP}/lib/libbsnmp/libbsnmp
 LIBCASPERDIR=	${OBJTOP}/lib/libcasper/libcasper
 LIBCAP_DNSDIR=	${OBJTOP}/lib/libcasper/services/cap_dns
