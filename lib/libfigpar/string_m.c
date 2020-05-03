@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2014 Devin Teske <dteske@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libfigpar/string_m.c 274116 2014-11-04 23:46:01Z dteske $");
+__FBSDID("$FreeBSD: stable/11/lib/libfigpar/string_m.c 344127 2019-02-14 15:42:29Z se $");
 
 #include <sys/types.h>
 
@@ -121,9 +120,9 @@ replaceall(char *source, const char *find, const char *replace)
 	/* If replace is longer than find, we'll need to create a temp copy */
 	if (rlen > flen) {
 		temp = malloc(slen + 1);
-		if (errno != 0) /* could not allocate memory */
+		if (temp == NULL) /* could not allocate memory */
 			return (-1);
-		strcpy(temp, source);
+		memcpy(temp, source, slen + 1);
 	} else
 		temp = source;
 

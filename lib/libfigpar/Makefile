@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libfigpar/Makefile 274116 2014-11-04 23:46:01Z dteske $
+# $FreeBSD: stable/11/lib/libfigpar/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=lib${LIB}
 LIB=		figpar
 SHLIB_MAJOR=	0
 INCS=		figpar.h string_m.h
@@ -16,7 +16,5 @@ MLINKS=		figpar.3 get_config_option.3	\
 CFLAGS+=	-I${.CURDIR}
 
 SRCS=		figpar.c string_m.c
-
-WARNS?=		6
 
 .include <bsd.lib.mk>
