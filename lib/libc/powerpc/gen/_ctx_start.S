@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Suleiman Souhlal
  * All rights reserved.
@@ -27,7 +26,7 @@
 
  #include <machine/asm.h>
 
- __FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/gen/_ctx_start.S 217398 2011-01-14 11:33:40Z kib $");
+ __FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/gen/_ctx_start.S 272362 2014-10-01 15:00:21Z bapt $");
 
 	.globl  CNAME(_ctx_done)
 	.globl  CNAME(abort)
@@ -42,5 +41,6 @@
 	 * above branch.
 	 */
 	bl	PIC_PLT(CNAME(abort))	/* abort */
+ END(_cts_start)
 
 	.section .note.GNU-stack,"",%progbits

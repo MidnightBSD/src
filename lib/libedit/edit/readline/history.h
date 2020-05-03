@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 David E. O'Brien
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libedit/edit/readline/history.h 220370 2011-04-05 18:41:01Z obrien $
+ * $FreeBSD: stable/11/lib/libedit/edit/readline/history.h 220370 2011-04-05 18:41:01Z obrien $
  */
 
 #include <edit/readline/readline.h>

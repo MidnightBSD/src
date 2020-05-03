@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2011 Edward Tomasz Napierala
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/sys/getloginclass.2 219322 2011-03-06 08:35:50Z trasz $
+.\" $FreeBSD: stable/11/lib/libc/sys/getloginclass.2 308257 2016-11-03 14:49:26Z trasz $
 .\"
-.Dd March 6, 2011
+.Dd July 12, 2016
 .Dt GETLOGINCLASS 2
 .Os
 .Sh NAME
@@ -88,7 +87,10 @@ The caller tried to set the login class and was not the super-user.
 The size of the buffer is smaller than the result to be returned.
 .El
 .Sh SEE ALSO
-.Xr setusercontext 3
+.Xr ps 1 ,
+.Xr setusercontext 3 ,
+.Xr login.conf 5 ,
+.Xr rctl 8
 .Sh HISTORY
 The
 .Fn getloginclass

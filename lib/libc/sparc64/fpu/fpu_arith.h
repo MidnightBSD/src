@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  *
  *	@(#)fpu_arith.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: fpu_arith.h,v 1.3 2000/07/24 04:11:03 mycroft Exp $
- * $FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_arith.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_arith.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

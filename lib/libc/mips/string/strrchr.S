@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rindex.S,v 1.7 2003/08/07 16:42:16 agc Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/string/strrchr.S 229571 2012-01-05 10:32:53Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/string/strrchr.S 229571 2012-01-05 10:32:53Z ed $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	ASMSTR("from: @(#)rindex.s	8.1 (Berkeley) 6/4/93")

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Andrew Turner
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_vfp_float.S 273471 2014-10-22 13:50:38Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_vfp_float.S 288373 2015-09-29 16:09:58Z kib $");
 
 #include "aeabi_vfp.h"
 
@@ -63,6 +62,7 @@ AEABI_ENTRY(fcmpeq)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      ne
 	movne    r0, #0
 	moveq    r0, #1
 	RET
@@ -73,8 +73,9 @@ AEABI_ENTRY(fcmplt)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      cs
 	movcs    r0, #0
-	movlt    r0, #1
+	movcc    r0, #1
 	RET
 AEABI_END(fcmplt)
 
@@ -83,6 +84,7 @@ AEABI_ENTRY(fcmple)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      hi
 	movhi    r0, #0
 	movls    r0, #1
 	RET
@@ -93,6 +95,7 @@ AEABI_ENTRY(fcmpge)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      lt
 	movlt    r0, #0
 	movge    r0, #1
 	RET
@@ -103,6 +106,7 @@ AEABI_ENTRY(fcmpgt)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      le
 	movle    r0, #0
 	movgt    r0, #1
 	RET
@@ -113,6 +117,7 @@ AEABI_ENTRY(fcmpun)
 	LOAD_SREGS(s0, s1, r0, r1)
 	vcmp.f32 s0, s1
 	vmrs     APSR_nzcv, fpscr
+	ite      vc
 	movvc    r0, #0
 	movvs    r0, #1
 	RET
@@ -183,3 +188,4 @@ AEABI_ENTRY(fsub)
 	RET
 AEABI_END(fsub)
 
+	.section .note.GNU-stack,"",%progbits

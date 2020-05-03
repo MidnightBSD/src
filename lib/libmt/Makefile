@@ -1,13 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libmt/Makefile 279219 2015-02-23 21:59:30Z ken $
+# $FreeBSD: stable/11/lib/libmt/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=lib${LIB}
 LIB=		mt
 SHLIBDIR?=	/lib
 SRCS=		mtlib.c
 INCS=		mtlib.h
 
-DPADD=		${LIBSBUF}
-LDADD=		-lsbuf
+LIBADD=		sbuf bsdxml
 
 MAN=		mt.3
 

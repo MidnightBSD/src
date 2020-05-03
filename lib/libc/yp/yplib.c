@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992/3 Theo de Raadt <deraadt@fsa.ca>
  * Copyright (c) 1998 Bill Paul <wpaul@ctr.columbia.edu>
@@ -30,12 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/yp/yplib.c 292547 2015-12-21 14:32:29Z araujo $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/yp/yplib.c 352616 2019-09-23 07:23:29Z kib $");
 
 #include "namespace.h"
 #include "reentrant.h"
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/uio.h>
@@ -526,7 +524,7 @@ gotit:
 		tv.tv_usec = 0;
 		ysd->dom_socket = RPC_ANYSOCK;
 		ysd->dom_client = clntudp_bufcreate(&ysd->dom_server_addr,
-			YPPROG, YPVERS, tv, &ysd->dom_socket, 1280, 2304);
+		    YPPROG, YPVERS, tv, &ysd->dom_socket, 65507, 65507);
 		if (ysd->dom_client == NULL) {
 			clnt_pcreateerror("clntudp_create");
 			ysd->dom_vers = -1;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: compat_Ovfork.S,v 1.1 2005/09/17 11:49:39 tsutsui Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/sys/Ovfork.S 209231 2010-06-16 12:55:14Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/sys/Ovfork.S 209231 2010-06-16 12:55:14Z jchandra $");
 #include "SYS.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)

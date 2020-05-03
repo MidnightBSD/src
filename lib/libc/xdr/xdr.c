@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr.c,v 1.22 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@ static char *sccsid2 = "@(#)xdr.c 1.35 87/08/12";
 static char *sccsid = "@(#)xdr.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr.c 319615 2017-06-06 07:22:26Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/xdr/xdr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * xdr.c, Generic XDR routines implementation.
@@ -78,9 +77,7 @@ static const char xdr_zero[BYTES_PER_XDR_UNIT] = { 0, 0, 0, 0 };
  * Not a filter, but a convenient utility nonetheless
  */
 void
-xdr_free(proc, objp)
-	xdrproc_t proc;
-	void *objp;
+xdr_free(xdrproc_t proc, void *objp)
 {
 	XDR x;
 	
@@ -103,9 +100,7 @@ xdr_void(void)
  * XDR integers
  */
 bool_t
-xdr_int(xdrs, ip)
-	XDR *xdrs;
-	int *ip;
+xdr_int(XDR *xdrs, int *ip)
 {
 	long l;
 
@@ -133,9 +128,7 @@ xdr_int(xdrs, ip)
  * XDR unsigned integers
  */
 bool_t
-xdr_u_int(xdrs, up)
-	XDR *xdrs;
-	u_int *up;
+xdr_u_int(XDR *xdrs, u_int *up)
 {
 	u_long l;
 
@@ -165,9 +158,7 @@ xdr_u_int(xdrs, up)
  * same as xdr_u_long - open coded to save a proc call!
  */
 bool_t
-xdr_long(xdrs, lp)
-	XDR *xdrs;
-	long *lp;
+xdr_long(XDR *xdrs, long *lp)
 {
 	switch (xdrs->x_op) {
 	case XDR_ENCODE:
@@ -186,9 +177,7 @@ xdr_long(xdrs, lp)
  * same as xdr_long - open coded to save a proc call!
  */
 bool_t
-xdr_u_long(xdrs, ulp)
-	XDR *xdrs;
-	u_long *ulp;
+xdr_u_long(XDR *xdrs, u_long *ulp)
 {
 	switch (xdrs->x_op) {
 	case XDR_ENCODE:
@@ -208,9 +197,7 @@ xdr_u_long(xdrs, ulp)
  * same as xdr_u_int32_t - open coded to save a proc call!
  */
 bool_t
-xdr_int32_t(xdrs, int32_p)
-	XDR *xdrs;
-	int32_t *int32_p;
+xdr_int32_t(XDR *xdrs, int32_t *int32_p)
 {
 	long l;
 
@@ -239,9 +226,7 @@ xdr_int32_t(xdrs, int32_p)
  * same as xdr_int32_t - open coded to save a proc call!
  */
 bool_t
-xdr_u_int32_t(xdrs, u_int32_p)
-	XDR *xdrs;
-	u_int32_t *u_int32_p;
+xdr_u_int32_t(XDR *xdrs, u_int32_t *u_int32_p)
 {
 	u_long l;
 
@@ -270,9 +255,7 @@ xdr_u_int32_t(xdrs, u_int32_p)
  * same as xdr_int32_t - open coded to save a proc call!
  */
 bool_t
-xdr_uint32_t(xdrs, u_int32_p)
-	XDR *xdrs;
-	uint32_t *u_int32_p;
+xdr_uint32_t(XDR *xdrs, uint32_t *u_int32_p)
 {
 	u_long l;
 
@@ -300,9 +283,7 @@ xdr_uint32_t(xdrs, u_int32_p)
  * XDR short integers
  */
 bool_t
-xdr_short(xdrs, sp)
-	XDR *xdrs;
-	short *sp;
+xdr_short(XDR *xdrs, short *sp)
 {
 	long l;
 
@@ -330,9 +311,7 @@ xdr_short(xdrs, sp)
  * XDR unsigned short integers
  */
 bool_t
-xdr_u_short(xdrs, usp)
-	XDR *xdrs;
-	u_short *usp;
+xdr_u_short(XDR *xdrs, u_short *usp)
 {
 	u_long l;
 
@@ -361,9 +340,7 @@ xdr_u_short(xdrs, usp)
  * XDR 16-bit integers
  */
 bool_t
-xdr_int16_t(xdrs, int16_p)
-	XDR *xdrs;
-	int16_t *int16_p;
+xdr_int16_t(XDR *xdrs, int16_t *int16_p)
 {
 	long l;
 
@@ -391,9 +368,7 @@ xdr_int16_t(xdrs, int16_p)
  * XDR unsigned 16-bit integers
  */
 bool_t
-xdr_u_int16_t(xdrs, u_int16_p)
-	XDR *xdrs;
-	u_int16_t *u_int16_p;
+xdr_u_int16_t(XDR *xdrs, u_int16_t *u_int16_p)
 {
 	u_long l;
 
@@ -421,9 +396,7 @@ xdr_u_int16_t(xdrs, u_int16_p)
  * XDR unsigned 16-bit integers
  */
 bool_t
-xdr_uint16_t(xdrs, u_int16_p)
-	XDR *xdrs;
-	uint16_t *u_int16_p;
+xdr_uint16_t(XDR *xdrs, uint16_t *u_int16_p)
 {
 	u_long l;
 
@@ -452,9 +425,7 @@ xdr_uint16_t(xdrs, u_int16_p)
  * XDR a char
  */
 bool_t
-xdr_char(xdrs, cp)
-	XDR *xdrs;
-	char *cp;
+xdr_char(XDR *xdrs, char *cp)
 {
 	int i;
 
@@ -470,9 +441,7 @@ xdr_char(xdrs, cp)
  * XDR an unsigned char
  */
 bool_t
-xdr_u_char(xdrs, cp)
-	XDR *xdrs;
-	u_char *cp;
+xdr_u_char(XDR *xdrs, u_char *cp)
 {
 	u_int u;
 
@@ -488,9 +457,7 @@ xdr_u_char(xdrs, cp)
  * XDR booleans
  */
 bool_t
-xdr_bool(xdrs, bp)
-	XDR *xdrs;
-	bool_t *bp;
+xdr_bool(XDR *xdrs, bool_t *bp)
 {
 	long lb;
 
@@ -518,9 +485,7 @@ xdr_bool(xdrs, bp)
  * XDR enumerations
  */
 bool_t
-xdr_enum(xdrs, ep)
-	XDR *xdrs;
-	enum_t *ep;
+xdr_enum(XDR *xdrs, enum_t *ep)
 {
 	enum sizecheck { SIZEVAL };	/* used to find the size of an enum */
 
@@ -544,10 +509,7 @@ xdr_enum(xdrs, ep)
  * cp points to the opaque object and cnt gives the byte length.
  */
 bool_t
-xdr_opaque(xdrs, cp, cnt)
-	XDR *xdrs;
-	caddr_t cp;
-	u_int cnt;
+xdr_opaque(XDR *xdrs, caddr_t cp, u_int cnt)
 {
 	u_int rndup;
 	static int crud[BYTES_PER_XDR_UNIT];
@@ -596,11 +558,7 @@ xdr_opaque(xdrs, cp, cnt)
  * If *cpp is NULL maxsize bytes are allocated
  */
 bool_t
-xdr_bytes(xdrs, cpp, sizep, maxsize)
-	XDR *xdrs;
-	char **cpp;
-	u_int *sizep;
-	u_int maxsize;
+xdr_bytes(XDR *xdrs, char **cpp, u_int *sizep, u_int maxsize)
 {
 	char *sp = *cpp;  /* sp is the actual string pointer */
 	u_int nodesize;
@@ -661,9 +619,7 @@ xdr_bytes(xdrs, cpp, sizep, maxsize)
  * Implemented here due to commonality of the object.
  */
 bool_t
-xdr_netobj(xdrs, np)
-	XDR *xdrs;
-	struct netobj *np;
+xdr_netobj(XDR *xdrs, struct netobj *np)
 {
 
 	return (xdr_bytes(xdrs, &np->n_bytes, &np->n_len, MAX_NETOBJ_SZ));
@@ -681,12 +637,14 @@ xdr_netobj(xdrs, np)
  * If there is no specific or default routine an error is returned.
  */
 bool_t
-xdr_union(xdrs, dscmp, unp, choices, dfault)
-	XDR *xdrs;
-	enum_t *dscmp;		/* enum to decide which arm to work on */
-	char *unp;		/* the union itself */
-	const struct xdr_discrim *choices;	/* [value, xdr proc] for each arm */
-	xdrproc_t dfault;	/* default xdr routine */
+xdr_union(XDR *xdrs, enum_t *dscmp, char *unp, const struct xdr_discrim *choices, xdrproc_t dfault)
+/*
+ *	XDR *xdrs;
+ *	enum_t *dscmp;		// enum to decide which arm to work on 
+ *	char *unp;		// the union itself 
+ *	const struct xdr_discrim *choices;	// [value, xdr proc] for each arm 
+ *	xdrproc_t dfault;	// default xdr routine 
+ */
 {
 	enum_t dscm;
 
@@ -730,10 +688,7 @@ xdr_union(xdrs, dscmp, unp, choices, dfault)
  * of the string as specified by a protocol.
  */
 bool_t
-xdr_string(xdrs, cpp, maxsize)
-	XDR *xdrs;
-	char **cpp;
-	u_int maxsize;
+xdr_string(XDR *xdrs, char **cpp, u_int maxsize)
 {
 	char *sp = *cpp;  /* sp is the actual string pointer */
 	u_int size;
@@ -807,9 +762,7 @@ xdr_string(xdrs, cpp, maxsize)
  * routines like clnt_call
  */
 bool_t
-xdr_wrapstring(xdrs, cpp)
-	XDR *xdrs;
-	char **cpp;
+xdr_wrapstring(XDR *xdrs, char **cpp)
 {
 	return xdr_string(xdrs, cpp, RPC_MAXDATASIZE);
 }
@@ -826,9 +779,7 @@ xdr_wrapstring(xdrs, cpp)
  * XDR 64-bit integers
  */
 bool_t
-xdr_int64_t(xdrs, llp)
-	XDR *xdrs;
-	int64_t *llp;
+xdr_int64_t(XDR *xdrs, int64_t *llp)
 {
 	u_long ul[2];
 
@@ -859,9 +810,7 @@ xdr_int64_t(xdrs, llp)
  * XDR unsigned 64-bit integers
  */
 bool_t
-xdr_u_int64_t(xdrs, ullp)
-	XDR *xdrs;
-	u_int64_t *ullp;
+xdr_u_int64_t(XDR *xdrs, u_int64_t *ullp)
 {
 	u_long ul[2];
 
@@ -891,9 +840,7 @@ xdr_u_int64_t(xdrs, ullp)
  * XDR unsigned 64-bit integers
  */
 bool_t
-xdr_uint64_t(xdrs, ullp)
-	XDR *xdrs;
-	uint64_t *ullp;
+xdr_uint64_t(XDR *xdrs, uint64_t *ullp)
 {
 	u_long ul[2];
 
@@ -924,9 +871,7 @@ xdr_uint64_t(xdrs, ullp)
  * XDR hypers
  */
 bool_t
-xdr_hyper(xdrs, llp)
-	XDR *xdrs;
-	longlong_t *llp;
+xdr_hyper(XDR *xdrs, longlong_t *llp)
 {
 
 	/*
@@ -941,9 +886,7 @@ xdr_hyper(xdrs, llp)
  * XDR unsigned hypers
  */
 bool_t
-xdr_u_hyper(xdrs, ullp)
-	XDR *xdrs;
-	u_longlong_t *ullp;
+xdr_u_hyper(XDR *xdrs, u_longlong_t *ullp)
 {
 
 	/*
@@ -958,9 +901,7 @@ xdr_u_hyper(xdrs, ullp)
  * XDR longlong_t's
  */
 bool_t
-xdr_longlong_t(xdrs, llp)
-	XDR *xdrs;
-	longlong_t *llp;
+xdr_longlong_t(XDR *xdrs, longlong_t *llp)
 {
 
 	/*
@@ -975,9 +916,7 @@ xdr_longlong_t(xdrs, llp)
  * XDR u_longlong_t's
  */
 bool_t
-xdr_u_longlong_t(xdrs, ullp)
-	XDR *xdrs;
-	u_longlong_t *ullp;
+xdr_u_longlong_t(XDR *xdrs, u_longlong_t *ullp)
 {
 
 	/*

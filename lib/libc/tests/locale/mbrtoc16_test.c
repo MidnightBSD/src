@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/locale/mbrtoc16_test.c 291178 2015-11-23 08:31:41Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/locale/mbrtoc16_test.c 290843 2015-11-15 04:33:14Z ngie $");
 
 #include <errno.h>
 #include <limits.h>

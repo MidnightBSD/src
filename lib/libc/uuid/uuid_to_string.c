@@ -24,8 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/uuid/uuid_to_string.c 309485 2016-12-03 17:17:42Z ngie $
+ * $FreeBSD: stable/11/lib/libc/uuid/uuid_to_string.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <stdio.h>

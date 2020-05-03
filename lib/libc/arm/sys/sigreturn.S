@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: __sigreturn14.S,v 1.3 2003/08/07 16:42:03 agc Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/sys/sigreturn.S 129202 2004-05-14 12:04:31Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/sys/sigreturn.S 288373 2015-09-29 16:09:58Z kib $");
 #include "SYS.h"
 
 /*
@@ -41,3 +40,5 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/arm/sys/sigreturn.S 129202 2004-05-14 12:
  */
 
 RSYSCALL(sigreturn)
+
+	.section .note.GNU-stack,"",%progbits

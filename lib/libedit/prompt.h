@@ -1,4 +1,5 @@
-/* $MidnightBSD$ */
+/*	$NetBSD: prompt.h,v 1.13 2016/02/17 19:47:49 christos Exp $	*/
+
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,8 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)prompt.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: prompt.h,v 1.9 2009/03/31 17:38:27 christos Exp $
- * $FreeBSD: stable/10/lib/libedit/prompt.h 268782 2014-07-17 02:14:25Z pfg $
+ * $FreeBSD: stable/11/lib/libedit/prompt.h 313981 2017-02-20 03:33:59Z pfg $
  */
 
 /*
@@ -41,20 +41,18 @@
 #ifndef _h_el_prompt
 #define	_h_el_prompt
 
-#include "histedit.h"
-
-typedef char * (*el_pfunc_t)(EditLine*);
+typedef Char    *(*el_pfunc_t)(EditLine *);
 
 typedef struct el_prompt_t {
 	el_pfunc_t	p_func;		/* Function to return the prompt */
 	coord_t		p_pos;		/* position in the line after prompt */
-	char		p_ignore;	/* character to start/end literal 
-*/
+	Char		p_ignore;	/* character to start/end literal */
+	int		p_wide;
 } el_prompt_t;
 
 protected void	prompt_print(EditLine *, int);
-protected int	prompt_set(EditLine *, el_pfunc_t, char, int);
-protected int	prompt_get(EditLine *, el_pfunc_t *, char *, int);
+protected int	prompt_set(EditLine *, el_pfunc_t, Char, int, int);
+protected int	prompt_get(EditLine *, el_pfunc_t *, Char *, int);
 protected int	prompt_init(EditLine *);
 protected void	prompt_end(EditLine *);
 

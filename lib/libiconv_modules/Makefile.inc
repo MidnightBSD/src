@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libiconv_modules/Makefile.inc 313626 2017-02-11 07:02:04Z ngie $
+# $FreeBSD: stable/11/lib/libiconv_modules/Makefile.inc 313538 2017-02-10 07:32:40Z ngie $
 
 .PATH: ${SRCTOP}/lib/libc/iconv
 
@@ -15,4 +14,4 @@ SHLIBDIR= /usr/lib/i18n
 SHLIBDIR= /usr/lib32/i18n
 .endif
 LIBDIR=	 ${SHLIBDIR}
-NO_PROFILE=
+MK_PROFILE=	no

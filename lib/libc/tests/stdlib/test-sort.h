@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2004 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/tests/stdlib/test-sort.h 290876 2015-11-15 20:11:55Z ngie $
+ * $FreeBSD: stable/11/lib/libc/tests/stdlib/test-sort.h 290538 2015-11-08 07:03:17Z ngie $
  */
 
 #ifndef _TEST_SORT_H

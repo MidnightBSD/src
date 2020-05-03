@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/BIG5/citrus_big5.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/BIG5/citrus_big5.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_big5.c,v 1.13 2011/05/23 14:53:46 joerg Exp $	*/
 
 /*-

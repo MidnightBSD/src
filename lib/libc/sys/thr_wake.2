@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2016 The FreeBSD Foundation, Inc.
 .\" All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/sys/thr_wake.2 306626 2016-10-03 09:32:19Z kib $
+.\" $FreeBSD: stable/11/lib/libc/sys/thr_wake.2 343002 2019-01-13 18:47:37Z jilles $
 .\"
 .Dd September 23, 2016
 .Dt THR_WAKE 2
@@ -68,7 +67,7 @@ of that thread in the kernel to fail immediately with the
 .Er EINTR
 error.
 The flag is cleared by an interruptible sleep attempt or by a call to
-.Xr thr_suspend 2.
+.Xr thr_suspend 2 .
 This is used by the system threading library to implement cancellation.
 .Pp
 If
@@ -97,7 +96,7 @@ of the calling thread.
 .El
 .Sh SEE ALSO
 .Xr ps 1 ,
-.Xr thr_self 2
+.Xr thr_self 2 ,
 .Xr thr_suspend 2 ,
 .Xr pthread_cancel 3 ,
 .Xr pthread_resume_np 3 ,

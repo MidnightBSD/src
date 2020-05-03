@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $OpenBSD: sprintf_test.c,v 1.3 2004/09/16 20:22:26 otto Exp $ */
 
 /*
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/print_positional_test.c 301808 2016-06-10 18:13:41Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/print_positional_test.c 299511 2016-05-12 04:08:45Z cem $");
 
 #include <sys/param.h>
 #include <stdio.h>

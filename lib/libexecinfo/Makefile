@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libexecinfo/Makefile 313627 2017-02-11 07:03:10Z ngie $
+# $FreeBSD: stable/11/lib/libexecinfo/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=lib${LIB}
 LIBEXECINFO=	${SRCTOP}/contrib/libexecinfo
 
 LIB=		execinfo
@@ -11,8 +11,7 @@ SHLIB_MAJOR=	1
 INCS=		execinfo.h
 SRCS=		backtrace.c symtab.c unwind.c
 
-DPADD=		${LIBELF}
-LDADD=		-lelf
+LIBADD=		elf
 
 MAN=		backtrace.3
 

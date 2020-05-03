@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: strncmp.S,v 1.2 2003/04/05 23:08:52 bjh21 Exp $ */
 
 /*
@@ -31,26 +30,31 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/string/strncmp.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/strncmp.S 288373 2015-09-29 16:09:58Z kib $");
 
 ENTRY(strncmp)
 /* if (len == 0) return 0 */
 	cmp	r2, #0
+	itt	eq
 	moveq	r0, #0
 	moveq	pc, lr
 
 /* ip == last src address to compare */
 	adds	ip, r0, r2
 /* Use last possible address on overflow. */
+	it	cs
 	movcs	ip, #0
 	sub	ip, ip, #1
 1:
 	ldrb	r2, [r0], #1
 	ldrb	r3, [r1], #1
 	cmp	ip, r0
+	itt	cs
 	cmpcs	r2, #1
 	cmpcs	r2, r3
 	beq	1b
 	sub	r0, r2, r3
 	RET
 END(strncmp)
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr_reference.c,v 1.13 2000/01/22 22:19:18 mycroft Exp	$ */
 
 /*-
@@ -37,7 +36,7 @@ static char *sccsid2 = "@(#)xdr_reference.c 1.11 87/08/11 SMI";
 static char *sccsid = "@(#)xdr_reference.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr_reference.c 272850 2014-10-09 23:05:32Z hrs $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/xdr/xdr_reference.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * xdr_reference.c, Generic XDR routines impelmentation.
@@ -66,11 +65,13 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr_reference.c 272850 2014-10-09 23:
  * proc is the routine to handle the referenced structure.
  */
 bool_t
-xdr_reference(xdrs, pp, size, proc)
-	XDR *xdrs;
-	caddr_t *pp;		/* the pointer to work on */
-	u_int size;		/* size of the object pointed to */
-	xdrproc_t proc;		/* xdr routine to handle the object */
+xdr_reference(XDR *xdrs, caddr_t *pp, u_int size, xdrproc_t proc)
+/*
+ *	XDR *xdrs;
+ *	caddr_t *pp;		// the pointer to work on
+ *	u_int size;		// size of the object pointed to
+ *	xdrproc_t proc;		// xdr routine to handle the object
+ */
 {
 	caddr_t loc = *pp;
 	bool_t stat;
@@ -123,11 +124,7 @@ xdr_reference(xdrs, pp, size, proc)
  *
  */
 bool_t
-xdr_pointer(xdrs,objpp,obj_size,xdr_obj)
-	XDR *xdrs;
-	char **objpp;
-	u_int obj_size;
-	xdrproc_t xdr_obj;
+xdr_pointer(XDR *xdrs, char **objpp, u_int obj_size, xdrproc_t xdr_obj)
 {
 
 	bool_t more_data;

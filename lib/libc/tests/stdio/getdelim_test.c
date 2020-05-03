@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/getdelim_test.c 292152 2015-12-13 04:29:09Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/getdelim_test.c 291981 2015-12-08 04:51:21Z ngie $");
 
 #define	_WITH_GETLINE
 #include <errno.h>
@@ -166,7 +165,6 @@ ATF_TC_BODY(eof, tc)
 	ATF_REQUIRE(linecap > 0);
 	ATF_REQUIRE(errno == 0);
 	printf("feof\n");
-	errno = 0;
 	ATF_REQUIRE(feof(fp));
 	ATF_REQUIRE(!ferror(fp));
 	fclose(fp);

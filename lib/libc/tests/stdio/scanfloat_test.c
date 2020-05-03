@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2003, 2005 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/scanfloat_test.c 291870 2015-12-05 21:49:35Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/scanfloat_test.c 290860 2015-11-15 12:48:42Z bapt $");
 
 #include <fenv.h>
 #include <float.h>

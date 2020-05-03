@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -24,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libc/mips/gen/_set_tp.c 232581 2012-03-06 03:30:09Z gonzo $
+ *	$FreeBSD: stable/11/lib/libc/mips/gen/_set_tp.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <string.h>
 #include <stdint.h>
 
 #include <machine/sysarch.h>
+#include "libc_private.h"
 
 void
 _set_tp(void *tp)

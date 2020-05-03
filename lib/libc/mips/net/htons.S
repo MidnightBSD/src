@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: byte_swap_2.S,v 1.2 2006/02/08 21:52:36 simonb Exp $	*/
 
 /*-
@@ -32,7 +31,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/net/htons.S 251091 2013-05-29 01:54:10Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/net/htons.S 251091 2013-05-29 01:54:10Z emaste $");
 
 LEAF(htons)
 #ifdef __MIPSEB__

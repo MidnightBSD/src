@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/iconv_std/citrus_iconv_std.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/iconv_std/citrus_iconv_std.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_iconv_std.c,v 1.16 2012/02/12 13:51:29 wiz Exp $	*/
 
 /*-
@@ -544,6 +543,16 @@ _citrus_iconv_std_iconv_convert(struct _citrus_iconv * __restrict cv,
 		ret = do_conv(is, &csid, &idx);
 		if (ret) {
 			if (ret == E_NO_CORRESPONDING_CHAR) {
+				/*
+				 * GNU iconv returns EILSEQ when no
+				 * corresponding character in the output.
+				 * Some software depends on this behavior
+				 * though this is against POSIX specification.
+				 */
+				if (cv->cv_shared->ci_ilseq_invalid != 0) {
+					ret = EILSEQ;
+					goto err;
+				}
 				inval++;
 				szrout = 0;
 				if ((((flags & _CITRUS_ICONV_F_HIDE_INVALID) == 0) &&

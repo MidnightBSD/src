@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: sigsetjmp.S,v 1.6 2013/04/19 16:50:22 matt Exp $	*/
 
 /*
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/sigsetjmp.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/sigsetjmp.S 288373 2015-09-29 16:09:58Z kib $");
 
 #include <machine/setjmp.h>
 
@@ -67,3 +66,5 @@ ENTRY(siglongjmp)
 	beq	PIC_SYM(_C_LABEL(_longjmp), PLT)
 	b	PIC_SYM(_C_LABEL(longjmp), PLT)
 END(siglongjmp)
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libfetch/fetch.h 315904 2017-03-24 14:26:01Z des $
+ * $FreeBSD: stable/11/lib/libfetch/fetch.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _FETCH_H_INCLUDED

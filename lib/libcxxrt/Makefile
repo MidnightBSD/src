@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libcxxrt/Makefile 315965 2017-03-25 21:46:02Z dim $
+# $FreeBSD: stable/11/lib/libcxxrt/Makefile 350400 2019-07-29 06:13:22Z dim $
 
+PACKAGE=	clibs
 SRCDIR=		${SRCTOP}/contrib/libcxxrt
 
 SHLIB_MAJOR=	1
@@ -21,9 +21,9 @@ SRCS+=		libelftc_dem_gnu3.c\
 		guard.cc
 
 WARNS=		0
-CFLAGS+=	-I${SRCDIR} -nostdinc++
+CFLAGS+=	-isystem ${SRCDIR} -nostdinc++
 .if empty(CXXFLAGS:M-std=*)
-CXXFLAGS+=	-std=c++11
+CXXFLAGS+=	-std=c++14
 .endif
 VERSION_MAP=	${.CURDIR}/Version.map
 

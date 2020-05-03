@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libmemstat/memstat_internal.h 224569 2011-08-01 09:43:35Z pluknet $
+ * $FreeBSD: stable/11/lib/libmemstat/memstat_internal.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MEMSTAT_INTERNAL_H_
@@ -52,6 +51,7 @@ struct memory_type {
 	uint64_t	 mt_byteslimit;	/* 0, or maximum bytes. */
 	uint64_t	 mt_sizemask;	/* malloc: allocated size bitmask. */
 	uint64_t	 mt_size;	/* uma: size of objects. */
+	uint64_t	 mt_rsize;	/* uma: real size of objects. */
 
 	/*
 	 * Zone or type information that includes all caches and any central

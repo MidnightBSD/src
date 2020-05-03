@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: setjmp.S,v 1.17 2005/09/17 11:49:39 tsutsui Exp $	*/
 
 /*-
@@ -34,8 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/gen/setjmp.S 277537 2015-01-22 21:17:58Z brooks $");
-#include <machine/regnum.h>
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/gen/setjmp.S 351792 2019-09-03 20:19:43Z kevans $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	ASMSTR("from: @(#)setjmp.s	8.1 (Berkeley) 6/4/93")

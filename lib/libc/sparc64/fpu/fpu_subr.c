@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_subr.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_subr.c 165903 2007-01-09 00:28:16Z imp $");
 
 /*
  * FPU subroutines.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: brk.S,v 1.16 2003/08/07 16:42:17 agc Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/sys/brk.S 209521 2010-06-25 05:36:36Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/sys/brk.S 209521 2010-06-25 05:36:36Z jchandra $");
 #include "SYS.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)

@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/db/Makefile 313535 2017-02-10 07:13:16Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/db/Makefile 313680 2017-02-12 09:24:18Z ngie $
+
+PACKAGE=	tests
 
 BINDIR=		${TESTSDIR}
 
 PROGS=		h_db
 PROGS+=		h_lfsr
 
-FILESDIR=	${TESTSDIR}
-
-FILES+=		README
+${PACKAGE}FILES+=		README
 
 NETBSD_ATF_TESTS_C+=	db_hash_seq_test
 NETBSD_ATF_TESTS_SH+=	db_test

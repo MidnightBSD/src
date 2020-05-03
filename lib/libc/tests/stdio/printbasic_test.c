@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/printbasic_test.c 313723 2017-02-14 04:49:24Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/printbasic_test.c 313722 2017-02-14 04:49:06Z ngie $");
 
 #include <err.h>
 #include <limits.h>

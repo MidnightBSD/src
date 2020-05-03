@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc_nonshared/__stub.c 258283 2013-11-17 22:52:17Z peter $
+ * $FreeBSD: stable/11/lib/libc_nonshared/__stub.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 extern int __stub_N8TwezWFyocUB;

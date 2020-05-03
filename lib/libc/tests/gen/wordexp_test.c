@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Tim J. Robbins
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/wordexp_test.c 291190 2015-11-23 10:53:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/wordexp_test.c 290572 2015-11-09 06:24:11Z ngie $");
 
 #include <sys/wait.h>
 #include <errno.h>

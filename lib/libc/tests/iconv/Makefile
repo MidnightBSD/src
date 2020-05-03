@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/iconv/Makefile 319252 2017-05-30 21:03:44Z asomers $
-
-PACKAGE=	tests
+# $FreeBSD: stable/11/lib/libc/tests/iconv/Makefile 316381 2017-04-02 02:09:39Z asomers $
 
 TESTSDIR=	${TESTSBASE}/lib/libc/iconv
 

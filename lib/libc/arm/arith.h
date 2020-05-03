@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD: stable/10/lib/libc/arm/arith.h 255361 2013-09-07 14:04:10Z andrew $
+ * $FreeBSD: stable/11/lib/libc/arm/arith.h 255361 2013-09-07 14:04:10Z andrew $
  */
 
 /*

@@ -1,16 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/resolv/Makefile 292844 2015-12-28 23:05:13Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/resolv/Makefile 299094 2016-05-04 23:20:53Z ngie $
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/lib/libc/resolv
-BINDIR=		${TESTSDIR}
 
-FILES+=		mach
+${PACKAGE}FILES+=		mach
 
 ATF_TESTS_C+=	resolv_test
 
 # Note: this test relies on being dynamically linked.  You will get a
 # spurious PASS for a statically linked test.
-DPADD.resolv_test+=	${LIBPTHREAD}
-LDADD.resolv_test+=	-lpthread
+LIBADD.resolv_test+=	pthread
 
 .include <bsd.test.mk>

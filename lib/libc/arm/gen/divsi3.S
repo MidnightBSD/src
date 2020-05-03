@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: divsi3.S,v 1.4 2003/04/05 23:27:15 bjh21 Exp $	*/
 
 /*
@@ -16,7 +15,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/divsi3.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/divsi3.S 288373 2015-09-29 16:09:58Z kib $");
 
 /* 
  * stack is aligned as there's a possibility of branching to L_overflow
@@ -390,3 +389,5 @@ ENTRY(__divsi3)
 	mov	r0, r3
 	RET
 END(__divsi3)
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bzero.S,v 1.3 2003/10/14 07:51:45 scw Exp $	*/
 
 /*-
@@ -32,7 +31,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/string/bzero.S 204607 2010-03-02 22:16:40Z joel $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/bzero.S 204607 2010-03-02 22:16:40Z joel $");
 
 #define _BZERO
 #include "memset.S"

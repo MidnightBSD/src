@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libmemstat/memstat_uma.c 251894 2013-06-18 04:50:20Z jeff $
+ * $FreeBSD: stable/11/lib/libmemstat/memstat_uma.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -213,6 +212,7 @@ retry:
 		}
 
 		mtp->mt_size = uthp->uth_size;
+		mtp->mt_rsize = uthp->uth_rsize;
 		mtp->mt_memalloced = mtp->mt_numallocs * uthp->uth_size;
 		mtp->mt_memfreed = mtp->mt_numfrees * uthp->uth_size;
 		mtp->mt_bytes = mtp->mt_memalloced - mtp->mt_memfreed;
@@ -436,6 +436,7 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 			}
 skip_percpu:
 			mtp->mt_size = kz.uk_size;
+			mtp->mt_rsize = kz.uk_rsize;
 			mtp->mt_memalloced = mtp->mt_numallocs * mtp->mt_size;
 			mtp->mt_memfreed = mtp->mt_numfrees * mtp->mt_size;
 			mtp->mt_bytes = mtp->mt_memalloced - mtp->mt_memfreed;

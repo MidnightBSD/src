@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2014 Andrew Turner
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_asm_double.S 273471 2014-10-22 13:50:38Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_asm_double.S 288373 2015-09-29 16:09:58Z kib $");
 
 #define	PCR_Z	(1 << 30)
 #define	PCR_C	(1 << 29)
@@ -57,7 +56,7 @@ ENTRY(__aeabi_cdcmple)
 	cmp	r0, #1
 	bne	1f
 	/* Yes, clear Z and C */
-	msr	cpsr_c, #(0)
+	mov	ip, #(0)
 	b	99f
 
 1:
@@ -71,14 +70,15 @@ ENTRY(__aeabi_cdcmple)
 	cmp	r0, #1
 	bne	2f
 	/* Yes, set Z and C */
-	msr	cpsr_c, #(PCR_Z | PCR_C)
+	mov	ip, #(PCR_Z | PCR_C)
 	b 99f
 
 2:
 	/* Not less than or equal, set C and clear Z */
-	msr	cpsr_c, #(PCR_C)
+	mov	ip, #(PCR_C)
 
 99:
+	msr	cpsr_c, ip
 	pop	{r4, r5, r6, r7, ip, pc}
 END(__aeabi_cdcmple)
 
@@ -113,6 +113,9 @@ ENTRY(__aeabi_cdcmpeq)
 	RET
 
 1:
-	msr	cpsr_c, #(PCR_C)
+	mov	ip, #(PCR_C)
+	msr	cpsr_c, ip
 	RET
 END(__aeabi_cdcmpeq)
+
+	.section .note.GNU-stack,"",%progbits

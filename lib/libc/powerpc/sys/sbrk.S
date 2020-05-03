@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Peter Grehan.
  * All rights reserved.
@@ -27,7 +26,7 @@
 /*      $NetBSD: sbrk.S,v 1.8 2000/06/26 06:25:44 kleink Exp $  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/sys/sbrk.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/sys/sbrk.S 272362 2014-10-01 15:00:21Z bapt $");
 
 #include "SYS.h"
 
@@ -69,5 +68,6 @@ ENTRY(sbrk)
 	blr
 2:
 	b	PIC_PLT(HIDENAME(cerror))
+END(sbrk)
 
 	.section .note.GNU-stack,"",%progbits

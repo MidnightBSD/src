@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/_ctx_start.S 112963 2003-04-01 23:28:50Z jake $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/_ctx_start.S 112963 2003-04-01 23:28:50Z jake $");
 
 ENTRY(_ctx_start)
 	call	%g1

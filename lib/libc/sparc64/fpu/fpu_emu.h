@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  *
  *	@(#)fpu_emu.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: fpu_emu.h,v 1.4 2000/08/03 18:32:07 eeh Exp $
- * $FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_emu.h 230193 2012-01-16 04:09:45Z das $
+ * $FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_emu.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2017 Jan Kokemüller
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/realpath2_test.c 319419 2017-06-01 13:22:04Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/realpath2_test.c 319418 2017-06-01 13:20:47Z kib $");
 
 #include <sys/param.h>
 #include <errno.h>

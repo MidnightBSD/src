@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/rpc/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/rpc/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 SRCS.xdr_test=		${RPCSRC:.x=_xdr.c} t_xdr.c ${RPCSRC:.x=.h} \
 			h_testbits.h
@@ -19,8 +18,7 @@ h_testbits_xdr.c: ${RPCSRC} h_testbits.h
 CLEANFILES+=	${RPCSRC:.x=.h} ${RPCSRC:.x=.c} h_testbits_xdr.c
 CFLAGS+=	-I${.OBJDIR}
 
-LDADD+=		-lrpcsvc -lutil
-DPADD+=		${LIBRPCSVC} ${LIBUTIL}
+LIBADD+=	rpcsvc util
 
 .include "../Makefile.netbsd-tests"
 

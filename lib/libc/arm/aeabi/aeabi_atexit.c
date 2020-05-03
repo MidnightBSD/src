@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2012 Andrew Turner
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_atexit.c 245655 2013-01-19 05:33:55Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_atexit.c 331722 2018-03-29 02:50:57Z eadler $");
 
 int __cxa_atexit(void (*)(void *), void *, void *);
 

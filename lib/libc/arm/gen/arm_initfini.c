@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 The NetBSD Foundation, Inc.
  * Copyright (c) 2013 Andrew Turner
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/arm_initfini.c 251514 2013-06-07 22:01:06Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/arm_initfini.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * To properly implement setjmp/longjmp for the ARM AAPCS ABI, it has to be

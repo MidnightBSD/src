@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: syscall.S,v 1.4 2003/08/07 16:42:05 agc Exp $	*/
 
 /*-
@@ -33,7 +32,9 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/sys/syscall.S 129202 2004-05-14 12:04:31Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/sys/syscall.S 288373 2015-09-29 16:09:58Z kib $");
 #include "SYS.h"
 
 RSYSCALL(syscall)
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_dechanyu.c,v 1.4 2011/11/19 18:20:13 tnozaki Exp $ */
 
 /*-

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/sigprocmask.c 287480 2015-09-05 08:55:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/sigprocmask.c 287292 2015-08-29 14:25:01Z kib $");
 
 #include <sys/types.h>
 #include <signal.h>

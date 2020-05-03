@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libgeom/geom_ctl.c 319018 2017-05-28 00:25:44Z ngie $
+ * $FreeBSD: stable/11/lib/libgeom/geom_ctl.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

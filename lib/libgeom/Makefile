@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libgeom/Makefile 192376 2009-05-19 12:10:48Z trasz $
+# $FreeBSD: stable/11/lib/libgeom/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=lib${LIB}
 LIB=	geom
 SHLIBDIR?= /lib
 SRCS+=	geom_getxml.c
@@ -14,8 +14,7 @@ CFLAGS += -I${.CURDIR}
 
 WARNS?=	3
 
-DPADD=	${LIBBSDXML} ${LIBSBUF}
-LDADD=	-lbsdxml -lsbuf
+LIBADD+=	bsdxml sbuf
 
 MAN=	libgeom.3
 

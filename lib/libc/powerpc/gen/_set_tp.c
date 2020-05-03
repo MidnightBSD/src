@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -24,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libc/powerpc/gen/_set_tp.c 161853 2006-09-02 01:07:21Z marcel $
+ *	$FreeBSD: stable/11/lib/libc/powerpc/gen/_set_tp.c 331722 2018-03-29 02:50:57Z eadler $
  */
+#include "libc_private.h"
 
 void
 _set_tp(void *tpval)
 {
-	register void *tp __asm__("r2");
 
-	__asm __volatile("mr %0,%1" : "=r"(tp) : "r"((char*)tpval + 0x7008));
+	__asm __volatile("mr 2,%0" :: "r"((char*)tpval + 0x7008));
 }

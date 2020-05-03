@@ -1,9 +1,8 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/lib/libc/sys/ptrace.2 321146 2017-07-18 18:15:45Z ngie $
+.\" $FreeBSD: stable/11/lib/libc/sys/ptrace.2 334241 2018-05-26 14:31:54Z kib $
 .\"	$NetBSD: ptrace.2,v 1.2 1995/02/27 12:35:37 cgd Exp $
 .\"
 .\" This file is in the public domain.
-.Dd August 28, 2016
+.Dd May 22, 2018
 .Dt PTRACE 2
 .Os
 .Sh NAME
@@ -252,7 +251,7 @@ be ignored.
 If the child was created by
 .Xr vfork 2
 system call or
-.Xr rfork(2)
+.Xr rfork 2
 call with the
 .Dv RFMEM
 flag specified, the debugging events are reported to the parent
@@ -607,6 +606,7 @@ The return value from
 is the count of array entries filled in.
 .It Dv PT_SETSTEP
 This request will turn on single stepping of the specified process.
+Stepping is automatically disabled when a single step trap is caught.
 .It Dv PT_CLEARSTEP
 This request will turn off single stepping of the specified process.
 .It Dv PT_SUSPEND
@@ -644,6 +644,26 @@ and
 .Fa data
 arguments are used the same as for
 .Dv PT_CONTINUE.
+.It Dv PT_GET_SC_ARGS
+For the thread which is stopped in either
+.Dv PL_FLAG_SCE
+or
+.Dv PL_FLAG_SCX
+state, that is, on entry or exit to a syscall,
+this request fetches the syscall arguments.
+.Pp
+The arguments are copied out into the buffer pointed to by the
+.Fa addr
+pointer, sequentially.
+Each syscall argument is stored as the machine word.
+Kernel copies out as many arguments as the syscall accepts,
+see the
+.Va pl_syscall_narg
+member of the
+.Vt struct ptrace_lwpinfo ,
+but not more than the
+.Fa data
+bytes in total are copied.
 .It Dv PT_FOLLOW_FORK
 This request controls tracing for new child processes of a traced process.
 If
@@ -743,6 +763,28 @@ The
 .Fa data
 argument is ignored.
 .El
+.Sh ARM MACHINE-SPECIFIC REQUESTS
+.Bl -tag -width "Dv PT_SETVFPREGS"
+.It Dv PT_GETVFPREGS
+Return the thread's
+.Dv VFP
+machine state in the buffer pointed to by
+.Fa addr .
+.Pp
+The
+.Fa data
+argument is ignored.
+.It Dv PT_SETVFPREGS
+Set the thread's
+.Dv VFP
+machine state from the buffer pointed to by
+.Fa addr .
+.Pp
+The
+.Fa data
+argument is ignored.
+.El
+.Pp
 .Sh x86 MACHINE-SPECIFIC REQUESTS
 .Bl -tag -width "Dv PT_GETXSTATE_INFO"
 .It Dv PT_GETXMMREGS
@@ -901,19 +943,29 @@ argument is ignored.
 .Pp
 Additionally, other machine-specific requests can exist.
 .Sh RETURN VALUES
+Most requests return 0 on success and \-1 on error.
 Some requests can cause
 .Fn ptrace
 to return
 \-1
-as a non-error value; to disambiguate,
+as a non-error value, among them are
+.Dv PT_READ_I
+and
+.Dv PT_READ_D ,
+which return the value read from the process memory on success.
+To disambiguate,
 .Va errno
-is set to 0 in the libc wrapper for the
+can be set to 0 before the call and checked afterwards.
+.Pp
+The current
 .Fn ptrace
-system call and
-.Fn ptrace
-callers can reliably check
+implementation always sets
 .Va errno
-for non-zero value afterwards.
+to 0 before calling into the kernel, both for historic reasons and for
+consistency with other operating systems.
+It is recommended to assign zero to
+.Va errno
+explicitly for forward compatibility.
 .Sh ERRORS
 The
 .Fn ptrace
@@ -1054,4 +1106,4 @@ holds the minimum buffer size required on return.
 The
 .Fn ptrace
 function appeared in
-.At v7 .
+.At v6 .

@@ -1,11 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/stdlib/Makefile 313535 2017-02-10 07:13:16Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/stdlib/Makefile 317342 2017-04-23 20:32:46Z kib $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 ATF_TESTS_C+=		heapsort_test
 ATF_TESTS_C+=		mergesort_test
 ATF_TESTS_C+=		qsort_test
+ATF_TESTS_C+=		set_constraint_handler_s_test
+ATF_TESTS_C+=		tsearch_test
 .if ${COMPILER_FEATURES:Mc++11}
 ATF_TESTS_CXX+=		cxa_thread_atexit_test
 ATF_TESTS_CXX+=		cxa_thread_atexit_nothr_test
@@ -49,18 +50,15 @@ CFLAGS+=	-I${.CURDIR}
 
 CXXFLAGS.cxa_thread_atexit_test+=	-std=c++11
 CXXFLAGS.cxa_thread_atexit_nothr_test+=	-std=c++11
-DPADD.cxa_thread_atexit_test+=		${LIBPTHREAD}
-LDADD.cxa_thread_atexit_test+=		-lpthread
+LIBADD.cxa_thread_atexit_test+=		pthread
 
 .for t in h_getopt h_getopt_long
 CFLAGS.$t+=	-I${LIBNETBSD_SRCDIR} -I${SRCTOP}/contrib/netbsd-tests
 LDFLAGS.$t+=	-L${LIBNETBSD_OBJDIR}
 
-DPADD.$t+=	${LIBNETBSD} ${LIBUTIL}
-LDADD.$t+=	-lnetbsd -lutil
+LIBADD.${t}+=	netbsd util
 .endfor
 
-DPADD.strtod_test+=		${LIBM}
-LDADD.strtod_test+=		-lm
+LIBADD.strtod_test+=		m
 
 .include <bsd.test.mk>

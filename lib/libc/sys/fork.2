@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)fork.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/sys/fork.2 251194 2013-05-31 20:46:08Z jilles $
+.\" $FreeBSD: stable/11/lib/libc/sys/fork.2 282333 2015-05-02 00:29:27Z markj $
 .\"
-.Dd May 31, 2013
+.Dd May 1, 2015
 .Dt FORK 2
 .Os
 .Sh NAME
@@ -54,7 +53,10 @@ The child process has a unique process ID.
 The child process has a different parent
 process ID (i.e., the process ID of the parent process).
 .It
-The child process has its own copy of the parent's descriptors.
+The child process has its own copy of the parent's descriptors,
+except for descriptors returned by
+.Xr kqueue 2 ,
+which are not inherited from the parent process.
 These descriptors reference the same underlying objects, so that,
 for instance, file pointers in file objects are shared between
 the child and the parent, so that an

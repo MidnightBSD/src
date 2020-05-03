@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/UTF8/citrus_utf8.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/UTF8/citrus_utf8.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_utf8.c,v 1.17 2008/06/14 16:01:08 tnozaki Exp $	*/
 
 /*-

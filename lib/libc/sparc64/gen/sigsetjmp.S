@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 Paul Kranenburg
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/sigsetjmp.S 108736 2003-01-05 22:10:06Z tmm $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/sigsetjmp.S 108736 2003-01-05 22:10:06Z tmm $");
 
 #include "assym.s"
 

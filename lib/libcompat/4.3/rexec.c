@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libcompat/4.3/rexec.c 301152 2016-06-01 17:41:00Z truckman $
+ * $FreeBSD: stable/11/lib/libcompat/4.3/rexec.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
@@ -188,7 +187,7 @@ next:
 
 		case LOGIN:
 			if (token())
-				if (*aname == 0) {
+				if (*aname == NULL) {
 					*aname = malloc((unsigned) strlen(tokval) + 1);
 					(void) strcpy(*aname, tokval);
 				} else {
@@ -197,14 +196,14 @@ next:
 				}
 			break;
 		case PASSWD:
-			if ((*aname == 0 || strcmp(*aname, "anonymous")) &&
+			if ((*aname == NULL || strcmp(*aname, "anonymous")) &&
 			    fstat(fileno(cfile), &stb) >= 0 &&
 			    (stb.st_mode & 077) != 0) {
 	warnx("Error: .netrc file is readable by others.");
 	warnx("Remove password or make file unreadable by others.");
 				goto bad;
 			}
-			if (token() && *apass == 0) {
+			if (token() && *apass == NULL) {
 				*apass = malloc((unsigned) strlen(tokval) + 1);
 				(void) strcpy(*apass, tokval);
 			}
@@ -216,7 +215,7 @@ next:
 	warnx("Remove account or make file unreadable by others.");
 				goto bad;
 			}
-			if (token() && *aacct == 0) {
+			if (token() && *aacct == NULL) {
 				*aacct = malloc((unsigned) strlen(tokval) + 1);
 				(void) strcpy(*aacct, tokval);
 			}
@@ -306,7 +305,7 @@ rexec(ahost, rport, name, pass, cmd, fd2p)
 	char c, *acct;
 
 	hp = gethostbyname(*ahost);
-	if (hp == 0) {
+	if (hp == NULL) {
 		herror(*ahost);
 		return (-1);
 	}
@@ -334,10 +333,10 @@ retry:
 		(void) close(s);
 		return (-1);
 	}
-	if (fd2p == 0) {
-		(void) write(s, "", 1);
-		port = 0;
-	} else {
+	port = 0;
+	if (fd2p == 0)
+		(void) write(s, "", 1);	
+	else {
 		char num[8];
 		int s2, sin2len;
 
@@ -355,7 +354,7 @@ retry:
 			goto bad;
 		}
 		port = ntohs((u_short)sin2.sin_port);
-		(void) sprintf(num, "%u", port);
+		(void) sprintf(num, "%hu", port);
 		(void) write(s, num, strlen(num)+1);
 		{ int len = sizeof (from);
 		  s3 = accept(s2, (struct sockaddr *)&from, &len);

@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/mips/Symbol.map 226606 2011-10-21 06:40:36Z das $
+/*
+ * $FreeBSD: stable/11/lib/libc/mips/Symbol.map 352083 2019-09-09 17:37:52Z kevans $
  */
 
 /*
@@ -11,6 +11,7 @@ FBSD_1.0 {
 	/* PSEUDO syscalls */
 	_exit;
 
+	_mcount;
 	_setjmp;
 	_longjmp;
 	alloca;
@@ -28,7 +29,6 @@ FBSD_1.0 {
 	ntohs;
 	vfork;
 	brk;
-	cerror;		/* XXX - Should this be .cerror (see sys/cerror.S)? */
 	sbrk;
 };
 
@@ -52,8 +52,6 @@ FBSDprivate_1.0 {
 	__sys_vfork;
 	_vfork;
 	_end;
-	__curbrk;
-	minbrk;
 	_brk;
 	_sbrk;
 

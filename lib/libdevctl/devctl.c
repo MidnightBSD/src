@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libdevctl/devctl.c 306533 2016-09-30 22:05:47Z jhb $");
+__FBSDID("$FreeBSD: stable/11/lib/libdevctl/devctl.c 346384 2019-04-19 13:18:54Z kib $");
 
 #include <sys/types.h>
 #include <sys/bus.h>
@@ -94,6 +93,20 @@ devctl_disable(const char *device, bool force_detach)
 }
 
 int
+devctl_suspend(const char *device)
+{
+
+	return (devctl_simple_request(DEV_SUSPEND, device, 0));
+}
+
+int
+devctl_resume(const char *device)
+{
+
+	return (devctl_simple_request(DEV_RESUME, device, 0));
+}
+
+int
 devctl_set_driver(const char *device, const char *driver, bool force)
 {
 	struct devreq req;
@@ -116,4 +129,27 @@ devctl_clear_driver(const char *device, bool force)
 
 	return (devctl_simple_request(DEV_CLEAR_DRIVER, device, force ?
 	    DEVF_CLEAR_DRIVER_DETACH : 0));
+}
+
+int
+devctl_rescan(const char *device)
+{
+
+	return (devctl_simple_request(DEV_RESCAN, device, 0));
+}
+
+int
+devctl_delete(const char *device, bool force)
+{
+
+	return (devctl_simple_request(DEV_DELETE, device, force ?
+	    DEVF_FORCE_DELETE : 0));
+}
+
+int
+devctl_reset(const char *device, bool detach)
+{
+
+	return (devctl_simple_request(DEV_RESET, device, detach ?
+	    DEVF_RESET_DETACH : 0));
 }

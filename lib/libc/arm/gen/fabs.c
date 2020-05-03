@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fabs.c,v 1.2 2002/05/26 11:48:01 wiz Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
  * fabs(x) returns the absolute value of x.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/fabs.c 129202 2004-05-14 12:04:31Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/fabs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 double
 fabs(double x)

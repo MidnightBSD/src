@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libnandfs/nandfs.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD: stable/11/lib/libnandfs/nandfs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <assert.h>
 #include <stdarg.h>

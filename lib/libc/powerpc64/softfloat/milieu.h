@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $NetBSD: milieu.h,v 1.1 2000/12/29 20:13:54 bjh21 Exp $ */
-/* $FreeBSD: stable/10/lib/libc/powerpc64/softfloat/milieu.h 209878 2010-07-10 14:45:03Z nwhitehorn $ */
+/* $FreeBSD: stable/11/lib/libc/powerpc64/softfloat/milieu.h 209878 2010-07-10 14:45:03Z nwhitehorn $ */
 
 /*
 ===============================================================================

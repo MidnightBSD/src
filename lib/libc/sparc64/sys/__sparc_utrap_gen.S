@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/sys/__sparc_utrap_gen.S 221869 2011-05-14 01:53:38Z attilio $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/sys/__sparc_utrap_gen.S 221869 2011-05-14 01:53:38Z attilio $");
 
 	.register	%g2, #ignore
 	.register	%g3, #ignore

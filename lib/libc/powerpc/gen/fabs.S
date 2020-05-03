@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 Peter Grehan.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/gen/fabs.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/gen/fabs.S 272362 2014-10-01 15:00:21Z bapt $");
 
 /*
  * double fabs(double)
@@ -34,5 +33,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/gen/fabs.S 217398 2011-01-14 11:3
 ENTRY(fabs)
 	fabs	%f1,%f1
 	blr
+END(fabs)
 
 	.section .note.GNU-stack,"",%progbits

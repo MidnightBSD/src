@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Jilles Tjoelker
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/utimensat.c 294099 2016-01-15 20:55:44Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/utimensat.c 293783 2016-01-12 20:53:57Z jilles $");
 
 #include "namespace.h"
 #include <sys/stat.h>

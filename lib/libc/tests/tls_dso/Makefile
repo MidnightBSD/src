@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/tls_dso/Makefile 274075 2014-11-04 00:56:25Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/tls_dso/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 .include <bsd.own.mk>
 

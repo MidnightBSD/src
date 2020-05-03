@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/fabs.S 125669 2004-02-10 20:45:28Z cperciva $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/fabs.S 125669 2004-02-10 20:45:28Z cperciva $");
 
 /*
  * double fabs(double);

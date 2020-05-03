@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2011 Andrew Turner
  * All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_unwind_cpp.c 245655 2013-01-19 05:33:55Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_unwind_cpp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 

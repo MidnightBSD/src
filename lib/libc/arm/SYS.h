@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: SYS.h,v 1.8 2003/08/07 16:42:02 agc Exp $	*/
 
 /*-
@@ -33,22 +32,18 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: stable/10/lib/libc/arm/SYS.h 245650 2013-01-19 04:03:18Z andrew $
+ * $FreeBSD: stable/11/lib/libc/arm/SYS.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <machine/asm.h>
 #include <sys/syscall.h>
 #include <machine/swi.h>
 
-#ifdef __ARM_EABI__
 #define SYSTRAP(x)							\
 			mov ip, r7;					\
 			ldr r7, =SYS_ ## x;				\
 			swi 0;						\
 			mov r7, ip
-#else
-#define SYSTRAP(x)	swi 0 | SYS_ ## x
-#endif
 
 #define	CERROR		_C_LABEL(cerror)
 #define	CURBRK		_C_LABEL(curbrk)
@@ -63,6 +58,7 @@
 
 #define _SYSCALL(x)							\
 	_SYSCALL_NOERROR(x);						\
+	it	cs;							\
 	bcs PIC_SYM(CERROR, PLT)
 
 #define SYSCALL(x)							\
@@ -73,6 +69,7 @@
 	.weak _C_LABEL(__CONCAT(_,x));					\
 	.set _C_LABEL(__CONCAT(_,x)),_C_LABEL(__CONCAT(__sys_,x));	\
 	SYSTRAP(x);							\
+	it	cs;							\
 	bcs PIC_SYM(CERROR, PLT);					\
 	RET
 

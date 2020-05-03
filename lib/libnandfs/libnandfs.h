@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libnandfs/libnandfs.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD: stable/11/lib/libnandfs/libnandfs.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_LIBNANDFS_NANDFS_H

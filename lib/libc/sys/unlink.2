@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)unlink.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/sys/unlink.2 235140 2012-05-08 18:56:21Z gjb $
+.\" $FreeBSD: stable/11/lib/libc/sys/unlink.2 285990 2015-07-28 22:48:58Z bdrewery $
 .\"
-.Dd April 25, 2010
+.Dd July 28, 2015
 .Dt UNLINK 2
 .Os
 .Sh NAME
@@ -152,6 +151,9 @@ The
 .Fa path
 argument
 points outside the process's allocated address space.
+.It Bq Er ENOSPC
+On file systems supporting copy-on-write or snapshots, there was not enough
+free space to record metadata for the delete operation of the file.
 .El
 .Pp
 In addition to the errors returned by the

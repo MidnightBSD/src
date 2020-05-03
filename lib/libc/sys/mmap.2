@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mmap.2	8.4 (Berkeley) 5/11/95
-.\" $FreeBSD: stable/10/lib/libc/sys/mmap.2 321717 2017-07-30 10:36:20Z kib $
+.\" $FreeBSD: stable/11/lib/libc/sys/mmap.2 320887 2017-07-11 05:33:07Z kib $
 .\"
 .Dd June 22, 2017
 .Dt MMAP 2
@@ -54,9 +53,35 @@ starting at byte offset
 .Fa offset .
 If
 .Fa len
-is not a multiple of the pagesize, the mapped region may extend past the
+is not a multiple of the page size, the mapped region may extend past the
 specified range.
 Any such extension beyond the end of the mapped object will be zero-filled.
+.Pp
+If
+.Fa fd
+references a regular file or a shared memory object, the range of
+bytes starting at
+.Fa offset
+and continuing for
+.Fa len
+bytes must be legitimate for the possible (not necessarily
+current) offsets in the object.
+In particular, the
+.Fa offset
+value cannot be negative.
+If the object is truncated and the process later accesses a page that
+is wholly within the truncated region, the access is aborted and a
+.Dv SIGBUS
+signal is delivered to the process.
+.Pp
+If
+.Fa fd
+references a device file, the interpretation of the
+.Fa offset
+value is device specific and defined by the device driver.
+The virtual memory subsystem does not impose any restrictitions on the
+.Fa offset
+value in this case, passing it unchanged to the driver.
 .Pp
 If
 .Fa addr
@@ -158,10 +183,10 @@ If
 .Dv MAP_FIXED
 is specified,
 .Fa addr
-must be a multiple of the pagesize.
+must be a multiple of the page size.
 If
 .Dv MAP_EXCL
-is not specified, a successfull
+is not specified, a successful
 .Dv MAP_FIXED
 request replaces any previous mappings for the process'
 pages in the range from
@@ -202,6 +227,8 @@ this option any VM pages you dirty may be flushed to disk every so often
 (every 30-60 seconds usually) which can create performance problems if you
 do not need that to occur (such as when you are using shared file-backed
 mmap regions for IPC purposes).
+Dirty data will be flushed automatically when all mappings of an object are
+removed and all descriptors referencing the object are closed.
 Note that VM/file system coherency is
 maintained whether you use
 .Dv MAP_NOSYNC
@@ -238,7 +265,7 @@ it.
 You can test file fragmentation by observing the KB/t (kilobytes per
 transfer) results from an
 .Dq Li iostat 1
-while reading a large file sequentially, e.g.\& using
+while reading a large file sequentially, e.g.,\& using
 .Dq Li dd if=filename of=/dev/null bs=32k .
 .Pp
 The
@@ -379,6 +406,12 @@ The
 argument
 is not a valid open file descriptor.
 .It Bq Er EINVAL
+An invalid (negative) value was passed in the
+.Fa offset
+argument, when
+.Fa fd
+referenced a regular file or shared memory.
+.It Bq Er EINVAL
 An invalid value was passed in the
 .Fa prot
 argument.
@@ -488,17 +521,3 @@ was specified and insufficient memory was available.
 .Xr munmap 2 ,
 .Xr getpagesize 3 ,
 .Xr getpagesizes 3
-.Sh BUGS
-The
-.Fa len
-argument
-is limited to the maximum file size or available userland address
-space.
-Files may not be able to be made more than 1TB large on 32 bit systems
-due to file systems restrictions and bugs, but address space is far more
-restrictive.
-Larger files may be possible on 64 bit systems.
-.Pp
-The previous documented limit of 2GB was a documentation bug.
-That limit has not existed since
-.Fx 2.2 .

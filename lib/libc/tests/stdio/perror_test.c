@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/perror_test.c 291870 2015-12-05 21:49:35Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/perror_test.c 290860 2015-11-15 12:48:42Z bapt $");
 
 #include <err.h>
 #include <errno.h>

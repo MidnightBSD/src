@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/string/wcsnlen_test.c 290875 2015-11-15 20:08:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/string/wcsnlen_test.c 350539 2019-08-02 16:05:36Z brooks $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -66,7 +65,7 @@ test_wcsnlen(const wchar_t *s)
 	for (i = 0; i <= 1; i++) {
 		for (bufsize = 0; bufsize <= size + 10; bufsize++) {
 			s1 = makebuf(bufsize * sizeof(wchar_t), i);
-			wmemcpy(s1, s, bufsize);
+			wmemcpy(s1, s, bufsize <= size ? bufsize : size);
 			len = (size > bufsize) ? bufsize : size - 1;
 			ATF_CHECK(wcsnlen(s1, bufsize) == len);
 		}

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Ian Lepore <freebsd@damnhippie.dyndns.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/flt_rounds.c 266337 2014-05-17 18:53:36Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/flt_rounds.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <fenv.h>
 #include <float.h>

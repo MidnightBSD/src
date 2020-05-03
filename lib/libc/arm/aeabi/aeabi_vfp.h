@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Andrew Turner
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_vfp.h 273827 2014-10-29 16:24:02Z andrew $
+ * $FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_vfp.h 297620 2016-04-06 16:50:18Z andrew $
  *
  */
 

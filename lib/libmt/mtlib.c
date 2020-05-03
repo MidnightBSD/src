@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013, 2014, 2015 Spectra Logic Corporation
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libmt/mtlib.c 325496 2017-11-06 20:08:02Z ken $");
+__FBSDID("$FreeBSD: stable/11/lib/libmt/mtlib.c 347884 2019-05-16 18:42:27Z ken $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -643,6 +642,7 @@ static struct densities {
 	{ 0x54, 19686,  500024, "3592A4 (unencrypted)" },
 	{ 0x55, 20670,  525018, "3592A5 (unencrypted)" },
 	{ 0x56, 20670,  525018, "3592B5 (unencrypted)" },
+	{ 0x57, 21850,  554990, "3592A6 (unencrypted)" },
 	{ 0x58, 15142,  384607, "LTO-5" },
 	{ 0x5A, 15142,  384607, "LTO-6" },
 	{ 0x5C, 19107,  485318, "LTO-7" },
@@ -654,6 +654,7 @@ static struct densities {
 	{ 0x74, 19686,  500024, "3592A4 (encrypted)" },
 	{ 0x75, 20670,  525018, "3592A5 (encrypted)" },
 	{ 0x76, 20670,  525018, "3592B5 (encrypted)" },
+	{ 0x77, 21850,  554990, "3592A6 (encrypted)" },
 	{ 0x8c,  1789,   45434, "EXB-8500c" },
 	{ 0x90,  1703,   43245, "EXB-8200c" },
 	{ 0, 0, 0, NULL }

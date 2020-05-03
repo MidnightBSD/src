@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -32,7 +31,7 @@
  *
  *	@(#)SYS.h	5.5 (Berkeley) 5/7/91
  *	from: FreeBSD: src/lib/libc/i386/SYS.h,v 1.20 2001/01/29
- * $FreeBSD: stable/10/lib/libc/sparc64/SYS.h 171217 2007-07-04 23:18:38Z peter $
+ * $FreeBSD: stable/11/lib/libc/sparc64/SYS.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/syscall.h>

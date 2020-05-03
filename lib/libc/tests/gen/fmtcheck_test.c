@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: tfmtcheck.c,v 1.3 2008/04/28 20:23:04 martin Exp $	*/
 
 /*-
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/fmtcheck_test.c 291190 2015-11-23 10:53:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/fmtcheck_test.c 290572 2015-11-09 06:24:11Z ngie $");
 
 #include <sys/param.h>
 #include <err.h>

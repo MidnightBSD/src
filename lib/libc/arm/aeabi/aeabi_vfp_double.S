@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2013 Andrew Turner
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/aeabi/aeabi_vfp_double.S 273471 2014-10-22 13:50:38Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/aeabi/aeabi_vfp_double.S 288373 2015-09-29 16:09:58Z kib $");
 
 #include "aeabi_vfp.h"
 
@@ -67,6 +66,7 @@ AEABI_ENTRY(dcmpeq)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      ne
 	movne    r0, #0
 	moveq    r0, #1
 	RET
@@ -78,8 +78,9 @@ AEABI_ENTRY(dcmplt)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      cs
 	movcs    r0, #0
-	movlt    r0, #1
+	movcc    r0, #1
 	RET
 AEABI_END(dcmplt)
 
@@ -89,6 +90,7 @@ AEABI_ENTRY(dcmple)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      hi
 	movhi    r0, #0
 	movls    r0, #1
 	RET
@@ -100,6 +102,7 @@ AEABI_ENTRY(dcmpge)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      lt
 	movlt    r0, #0
 	movge    r0, #1
 	RET
@@ -111,6 +114,7 @@ AEABI_ENTRY(dcmpgt)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      le
 	movle    r0, #0
 	movgt    r0, #1
 	RET
@@ -122,6 +126,7 @@ AEABI_ENTRY(dcmpun)
 	LOAD_DREG(d1, r2, r3)
 	vcmp.f64 d0, d1
 	vmrs     APSR_nzcv, fpscr
+	ite      vc
 	movvc    r0, #0
 	movvs    r0, #1
 	RET
@@ -196,3 +201,4 @@ AEABI_ENTRY(dsub)
 	RET
 AEABI_END(dsub)
 
+	.section .note.GNU-stack,"",%progbits

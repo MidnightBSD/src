@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -23,14 +22,14 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_reg.h 91174 2002-02-23 21:37:18Z tmm $
+ * $FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_reg.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _LIBC_SPARC64_FPU_FPU_REG_H_
 #define _LIBC_SPARC64_FPU_FPU_REG_H_
 
 /*
- * These are not really of type char[]. They are are arrays of functions defined
+ * These are not really of type char[]. They are arrays of functions defined
  * in fpu_reg.S; each array member loads/stores a certain fpu register of the
  * given size.
  */
@@ -52,7 +51,7 @@ typedef void (fp_ldst64_fn)(u_int64_t *);
 /*
  * These are the functions that are actually used in the fpu emulation code to
  * access the fp registers. They are usually not used more than once, so
- * cacheing needs not be done here.
+ * caching needs not be done here.
  */
 static __inline u_int32_t
 __fpu_getreg(int r)

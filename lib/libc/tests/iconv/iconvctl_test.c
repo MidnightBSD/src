@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Eric van Gyzen
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/iconv/iconvctl_test.c 299704 2016-05-14 00:35:35Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/iconv/iconvctl_test.c 299704 2016-05-14 00:35:35Z vangyzen $");
 
 #include <iconv.h>
 

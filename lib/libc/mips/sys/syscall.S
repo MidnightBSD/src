@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: syscall.S,v 1.5 2003/08/07 16:42:18 agc Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/sys/syscall.S 178580 2008-04-26 12:08:02Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/sys/syscall.S 178580 2008-04-26 12:08:02Z imp $");
 #include "SYS.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Mahdi Mokhtari <mokhi64@gmail.com>
  * Copyright (c) 2016 The FreeBSD Foundation
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdlib/cxa_thread_atexit_nothr_test.cc 304527 2016-08-20 12:26:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdlib/cxa_thread_atexit_nothr_test.cc 304524 2016-08-20 11:58:23Z kib $");
 
 #include <dlfcn.h>
 #include <atf-c++.hpp>

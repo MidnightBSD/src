@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/uuid/Symbol.map 183192 2008-09-19 15:52:56Z emax $
  */
 
 FBSD_1.0 {

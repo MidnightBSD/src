@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/ISO2022/citrus_iso2022.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/ISO2022/citrus_iso2022.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_iso2022.c,v 1.20 2010/12/07 22:01:45 joerg Exp $	*/
 
 /*-
@@ -260,8 +259,8 @@ get_recommend(_ISO2022EncodingInfo * __restrict ei,
 	if (!ei->recommend[i])
 		ei->recommend[i] = malloc(sizeof(_ISO2022Charset));
 	else {
-		p = realloc(ei->recommend[i],
-		    sizeof(_ISO2022Charset) * (ei->recommendsize[i] + 1));
+		p = reallocarray(ei->recommend[i], ei->recommendsize[i] + 1,
+		    sizeof(_ISO2022Charset));
 		if (!p)
 			return (_PARSEFAIL);
 		ei->recommend[i] = p;
@@ -775,6 +774,7 @@ asis:
 	case CS94:
 		if (!(is94(string[0] & 0x7f)))
 			goto asis;
+		break;
 	case CS96:
 		if (!(is96(string[0] & 0x7f)))
 			goto asis;

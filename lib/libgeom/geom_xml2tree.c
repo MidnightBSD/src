@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libgeom/geom_xml2tree.c 287792 2015-09-14 18:05:27Z delphij $
+ * $FreeBSD: stable/11/lib/libgeom/geom_xml2tree.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <stdio.h>

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc_nonshared/Makefile.iconv 258750 2013-11-29 19:44:30Z gjb $
+# $FreeBSD: stable/11/lib/libc_nonshared/Makefile.iconv 258587 2013-11-25 20:17:55Z peter $
 
 .if ${MK_ICONV} == "yes"
 LIBC_NONSHARED_SRCS+=	\

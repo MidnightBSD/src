@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/pselect.c 277317 2015-01-18 11:54:20Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/pselect.c 276630 2015-01-03 18:38:46Z kib $");
 
 #include <sys/types.h>
 #include <sys/select.h>

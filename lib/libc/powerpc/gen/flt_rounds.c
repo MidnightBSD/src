@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: flt_rounds.c,v 1.4.10.3 2002/03/22 20:41:53 nathanw Exp $	*/
 
 /*
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/gen/flt_rounds.c 176530 2008-02-24 19:22:53Z raj $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/gen/flt_rounds.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <machine/float.h>

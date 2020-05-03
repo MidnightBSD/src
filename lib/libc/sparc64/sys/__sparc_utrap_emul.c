@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/sys/__sparc_utrap_emul.c 96422 2002-05-11 21:20:05Z jake $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/sys/__sparc_utrap_emul.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <machine/cpufunc.h>

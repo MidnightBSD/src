@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 davidxu@freebsd.org
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/sigwait.c 277317 2015-01-18 11:54:20Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/sigwait.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <signal.h>

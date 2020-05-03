@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 282275 2015-04-30 16:08:47Z tijl $ */
+/* $FreeBSD: stable/11/lib/libiconv_modules/GBK2K/citrus_gbk2k.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_gbk2k.c,v 1.7 2008/06/14 16:01:07 tnozaki Exp $ */
 
 /*-

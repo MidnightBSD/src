@@ -27,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libcrypt/crypt.3 348769 2019-06-07 02:36:26Z delphij $
 .\"
-.Dd March 9, 2014
+.Dd May 26, 2019
 .Dt CRYPT 3
 .Os
 .Sh NAME
@@ -220,7 +220,7 @@ This is currently
 .\" NOTICE: Also make sure to update this
 .\"
 DES
-if it is available, or MD5 if not.
+if it is available, or SHA-512 if not.
 .Pp
 How the salt is used will depend upon the algorithm for the hash.
 For
@@ -283,7 +283,7 @@ libcrypt encryption library.
 .Sh AUTHORS
 .An -nosplit
 Originally written by
-.An David Burren Aq davidb@werj.com.au ,
+.An David Burren Aq Mt davidb@werj.com.au ,
 later additions and changes by
 .An Poul-Henning Kamp ,
 .An Mark R V Murray ,

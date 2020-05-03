@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * infinity.c
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/gen/infinity.c 178580 2008-04-26 12:08:02Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/gen/infinity.c 178580 2008-04-26 12:08:02Z imp $");
 
 #include <math.h>
 

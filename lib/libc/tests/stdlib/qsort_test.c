@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2004 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdlib/qsort_test.c 290876 2015-11-15 20:11:55Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdlib/qsort_test.c 290538 2015-11-08 07:03:17Z ngie $");
 
 #include <assert.h>
 #include <stdio.h>

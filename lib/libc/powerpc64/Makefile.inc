@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/powerpc64/Makefile.inc 246117 2013-01-30 12:48:16Z kib $
+# $FreeBSD: stable/11/lib/libc/powerpc64/Makefile.inc 315044 2017-03-11 02:51:29Z brooks $
 
-SRCS+=	__vdso_gettc.c
+SRCS+=	trivial-vdso_tc.c
 
 # Long double is 64-bits
-MDSRCS+=machdep_ldisd.c
-SYM_MAPS+=${.CURDIR}/powerpc64/Symbol.map
+SRCS+=machdep_ldisd.c
+SYM_MAPS+=${LIBC_SRCTOP}/powerpc64/Symbol.map

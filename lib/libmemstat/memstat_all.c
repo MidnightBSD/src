@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libmemstat/memstat_all.c 148789 2005-08-06 13:54:03Z rwatson $
+ * $FreeBSD: stable/11/lib/libmemstat/memstat_all.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

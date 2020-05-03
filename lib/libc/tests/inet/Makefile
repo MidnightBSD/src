@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/inet/Makefile 313498 2017-02-10 01:13:12Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/inet/Makefile 309466 2016-12-03 02:47:16Z ngie $
 
 .include <bsd.own.mk>
 

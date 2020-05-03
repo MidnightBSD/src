@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2014 Dag-Erling Smørgrav
  * All rights reserved.
@@ -26,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libfetch/common.h 315904 2017-03-24 14:26:01Z des $
+ * $FreeBSD: stable/11/lib/libfetch/common.h 339250 2018-10-09 10:49:19Z des $
  */
 
 #ifndef _COMMON_H_INCLUDED
@@ -103,9 +102,16 @@ int		 fetch_no_proxy_match(const char *);
 #define url_seterr(n)	 fetch_seterr(url_errlist, n)
 
 #ifndef NDEBUG
-#define DEBUG(x) do { if (fetchDebug) { x; } } while (0)
+#define DEBUGF(...)							\
+	do {								\
+		if (fetchDebug)						\
+			fprintf(stderr, __VA_ARGS__);			\
+	} while (0)
 #else
-#define DEBUG(x) do { } while (0)
+#define DEBUGF(...)							\
+	do {								\
+		/* nothing */						\
+	} while (0)
 #endif
 
 /*

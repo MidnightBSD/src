@@ -1,16 +1,16 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/lib/libcrypt/Makefile 322105 2017-08-05 17:02:53Z ngie $
+# $FreeBSD: stable/11/lib/libcrypt/Makefile 322106 2017-08-05 17:02:57Z ngie $
 #
 
+PACKAGE=lib${LIB}
 SHLIBDIR?=	/lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SHLIB_MAJOR=	5
 LIB=		crypt
 
-.PATH:		${.CURDIR}/../libmd ${.CURDIR}/../../sys/crypto/sha2
+.PATH:		${SRCTOP}/lib/libmd ${SRCTOP}/sys/crypto/sha2
 SRCS=		crypt.c misc.c \
 		crypt-md5.c md5c.c \
 		crypt-nthash.c md4c.c \
@@ -18,11 +18,12 @@ SRCS=		crypt.c misc.c \
 		crypt-sha512.c sha512c.c
 MAN=		crypt.3
 MLINKS=		crypt.3 crypt_get_format.3 crypt.3 crypt_set_format.3
-CFLAGS+=	-I${.CURDIR}/../libmd -I${.CURDIR}/../libutil
+CFLAGS+=	-I${SRCTOP}/lib/libmd -I${SRCTOP}/lib/libutil \
+		-I${SRCTOP}/sys/crypto/sha2
 
 # Pull in the strong crypto, if it is present.
-.if exists(${.CURDIR}/../../secure/lib/libcrypt) && ${MK_CRYPT} != "no"
-.PATH:		${.CURDIR}/../../secure/lib/libcrypt
+.if exists(${SRCTOP}/secure/lib/libcrypt) && ${MK_CRYPT} != "no"
+.PATH:		${SRCTOP}/secure/lib/libcrypt
 SRCS+=		crypt-des.c crypt-blowfish.c blowfish.c
 CFLAGS+=	-I${.CURDIR} -DHAS_DES -DHAS_BLOWFISH
 .endif

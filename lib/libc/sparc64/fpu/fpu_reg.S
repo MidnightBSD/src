@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_reg.S 96129 2002-05-06 23:24:39Z obrien $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_reg.S 96129 2002-05-06 23:24:39Z obrien $");
 
 /*
  * Define arrays of leaf functions to load/store fp registers to memory. See

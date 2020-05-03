@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Olivier Houchard
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/string/strlen.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/strlen.S 288373 2015-09-29 16:09:58Z kib $");
 
 .syntax	unified
 
@@ -53,8 +52,10 @@ ENTRY(strlen)
 #else
 	ands	r3, r2, #0xff000000
 #endif
+	it	ne
 	addne	r1, r1, #1
 .Ldo_3:
+	itt	ne
 #ifndef __ARMEB__
 	andsne    r3, r2, #0x0000ff00
 #else
@@ -62,6 +63,7 @@ ENTRY(strlen)
 #endif  
 	addne     r1, r1, #1
 .Ldo_2:
+	itt	ne
 #ifndef __ARMEB__
 	andsne    r3, r2, #0x00ff0000
 #else
@@ -69,6 +71,7 @@ ENTRY(strlen)
 #endif  
 	addne	r1, r1, #1
 .Ldo_1:
+	ittt	ne
 #ifndef __ARMEB__
 	andsne	r3, r2, #0xff000000
 #else
@@ -80,3 +83,5 @@ ENTRY(strlen)
 	mov	r0, r1
 	RET
 END(strlen)
+
+	.section .note.GNU-stack,"",%progbits

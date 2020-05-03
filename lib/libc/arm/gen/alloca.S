@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: alloca.S,v 1.3 2003/04/05 23:08:51 bjh21 Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
 /* like alloc, but automatic automatic free in return */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/alloca.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/alloca.S 288373 2015-09-29 16:09:58Z kib $");
 
 ENTRY(alloca)
 	add	r0, r0, #0x00000007	/* round up to next 8 byte alignment */
@@ -45,3 +44,5 @@ ENTRY(alloca)
 	mov	r0, sp			/* r0 = base of new space */
 	RET
 END(alloca)
+
+	.section .note.GNU-stack,"",%progbits

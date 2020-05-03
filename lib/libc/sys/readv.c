@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,10 +31,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/readv.c 277317 2015-01-18 11:54:20Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/readv.c 288002 2015-09-20 03:45:57Z rodrigc $");
 
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/uio.h>
 #include <unistd.h>
 #include "libc_private.h"
 

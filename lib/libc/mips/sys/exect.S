@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: exect.S,v 1.9 2003/08/07 16:42:17 agc Exp $	*/
 /*-
  * Copyright (c) 1991, 1993
@@ -33,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/sys/exect.S 209231 2010-06-16 12:55:14Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/sys/exect.S 209231 2010-06-16 12:55:14Z jchandra $");
 #include "SYS.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)

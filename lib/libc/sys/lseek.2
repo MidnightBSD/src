@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)lseek.2	8.3 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/10/lib/libc/sys/lseek.2 236042 2012-05-26 05:25:55Z kib $
+.\" $FreeBSD: stable/11/lib/libc/sys/lseek.2 295765 2016-02-18 18:50:03Z bjk $
 .\"
-.Dd May 26, 2012
+.Dd February 18, 2016
 .Dt LSEEK 2
 .Os
 .Sh NAME
@@ -132,8 +131,14 @@ Applications can use
 .Dv SEEK_HOLE
 to optimise their behavior for ranges of zeros, but must not depend on it to
 find all such ranges in a file.
+Each file is presented as having a zero-size virtual hole at the very
+end of the file.
 The existence of a hole at the end of every data region allows for easy
-programming and implies that a virtual hole exists at the end of the file.
+programming and also provides compatibility to the original implementation
+in Solaris.
+It also causes the current file size (i.e., end-of-file offset) to be returned
+to indicate that there are no more holes past the supplied
+.Fa offset .
 Applications should use
 .Fn fpathconf _PC_MIN_HOLE_SIZE
 or
@@ -177,9 +182,11 @@ be negative for a non-character special file.
 For
 .Dv SEEK_DATA ,
 there are no more data regions past the supplied offset.
-For
-.Dv SEEK_HOLE ,
-there are no more holes past the supplied offset.
+Due to existence of the hole at the end of the file, for
+.Dv SEEK_HOLE
+this error is only returned when the
+.Fa offset
+already points to the end-of-file position.
 .It Bq Er EOVERFLOW
 The resulting file offset would be a value which cannot be represented
 correctly in an object of type

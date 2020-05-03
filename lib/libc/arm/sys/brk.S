@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: brk.S,v 1.6 2003/08/07 16:42:04 agc Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/sys/brk.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/sys/brk.S 288373 2015-09-29 16:09:58Z kib $");
 #include "SYS.h"
 
 	.globl	_C_LABEL(_end)
@@ -54,16 +53,10 @@ _C_LABEL(minbrk):
  * Change the data segment size
  */
 ENTRY(_brk)
-#ifdef PIC
 	/* Setup the GOT */
-	ldr	r3, .Lgot
-	add	r3, pc, r3
-.L1:
-	ldr	r1, .Lminbrk
-	ldr	r1, [r3, r1]
-#else
-	ldr	r1, .Lminbrk
-#endif
+	GOT_INIT(r3, .Lgot, .L1)
+	GOT_GET(r1, r3, .Lminbrk)
+
 	/* Get the minimum allowable brk address */
 	ldr	r1, [r1]
 
@@ -72,6 +65,7 @@ ENTRY(_brk)
 	 * if the address is below minbrk.
 	 */
 	cmp	r0, r1
+	it	lt
 	movlt	r0, r1
 	mov	r2, r0
 	SYSTRAP(break)
@@ -91,12 +85,11 @@ ENTRY(_brk)
 	RET
 
 	.align	2
-#ifdef PIC
-.Lgot:
-	.word	_GLOBAL_OFFSET_TABLE_ - (.L1+4)
-#endif
+	GOT_INITSYM(.Lgot, .L1)
 .Lminbrk:
 	.word	PIC_SYM(_C_LABEL(minbrk), GOT)
 .Lcurbrk:
 	.word	PIC_SYM(CURBRK, GOT)
 END(_brk)
+
+	.section .note.GNU-stack,"",%progbits

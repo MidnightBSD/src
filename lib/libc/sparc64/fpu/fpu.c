@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -64,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu.c 261455 2014-02-04 03:36:42Z eadler $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 
@@ -271,7 +270,7 @@ __fpu_execute(struct utrapframe *uf, struct fpemu *fe, u_int32_t insn,
     u_long tstate)
 {
 	struct fpn *fp;
-	int opf, rs1, rs2, rd, type, mask, cx, cond;
+	int opf, rs1, rs2, rd, type, mask, cx, cond __unused;
 	u_long reg, fsr;
 	u_int space[4];
 

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/ssp/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/ssp/Makefile 337473 2018-08-08 17:57:45Z bdrewery $
 
 .include <bsd.own.mk>
 
@@ -11,8 +10,7 @@ CFLAGS.h_raw+=	-fstack-protector-all -Wstack-protector
 CFLAGS.h_raw+=	-fsanitize=bounds
 .elif ${COMPILER_TYPE} == "gcc"
 CFLAGS.h_raw+=	--param ssp-buffer-size=1
-DPADD+=		${LIBSSP}
-LDADD+=		-lssp
+LDADD+=	-lssp
 .endif
 
 NETBSD_ATF_TESTS_SH=	ssp_test
@@ -27,8 +25,23 @@ PROGS+=		h_memmove
 PROGS+=		h_memset
 # This testcase doesn't run properly when not compiled with -fsantize=bounds
 # with clang, which is currently contingent on a compiler_rt update
-.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} < 30500
+#
+# XXX: the h_raw/h_read testcases don't cause a SIGABRT with in-tree gcc right
+# now on amd64 when it trips the stack bounds specified in t_ssp.sh . This
+# probably needs to be fixed as it's currently hardcoded.
+#
+# sanitizer is not tested or supported for ARM right now. sbruno
+.if ${COMPILER_TYPE} == "clang" && !defined(_SKIP_BUILD) && \
+    (!defined(_RECURSING_PROGS) || ${PROG} == "h_raw")
+.if !defined(_CLANG_RESOURCE_DIR)
+_CLANG_RESOURCE_DIR!=	${CC:N${CCACHE_BIN}} -print-resource-dir
+.export _CLANG_RESOURCE_DIR
+.endif
+_libclang_rt_arch=	${MACHINE_ARCH:S/amd64/x86_64/:C/hf$//:S/mipsn32/mips64/}
+_libclang_rt_ubsan=	${_CLANG_RESOURCE_DIR}/lib/freebsd/libclang_rt.ubsan_standalone-${_libclang_rt_arch}.a
+.if exists(${_libclang_rt_ubsan})
 PROGS+=		h_raw
+.endif
 .endif
 PROGS+=		h_read
 PROGS+=		h_readlink

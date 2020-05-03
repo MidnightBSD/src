@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/nss/getserv_test.c 319298 2017-05-31 08:30:37Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/nss/getserv_test.c 353589 2019-10-15 20:04:15Z brooks $");
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -154,7 +153,7 @@ compare_servent(struct servent *serv1, struct servent *serv2, void *mdata)
 		if (strcmp(*c1, *c2) != 0)
 			goto errfin;
 
-	if ((*c1 != '\0') || (*c2 != '\0'))
+	if ((*c1 != NULL) || (*c2 != NULL))
 		goto errfin;
 
 	return 0;
@@ -183,7 +182,7 @@ sdump_servent(struct servent *serv, char *buffer, size_t buflen)
 	buflen -= written;
 
 	if (serv->s_aliases != NULL) {
-		if (*(serv->s_aliases) != '\0') {
+		if (*(serv->s_aliases) != NULL) {
 			for (cp = serv->s_aliases; *cp; ++cp) {
 				written = snprintf(buffer, buflen, " %s", *cp);
 				buffer += written;

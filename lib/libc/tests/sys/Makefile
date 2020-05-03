@@ -1,9 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/sys/Makefile 313535 2017-02-10 07:13:16Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/sys/Makefile 344977 2019-03-10 16:13:00Z ngie $
+
+PACKAGE=			tests
 
 .include <bsd.own.mk>
 
 ATF_TESTS_C+=			queue_test
+ATF_TESTS_C+=			sendfile_test
 
 # TODO: clone, lwp_create, lwp_ctl, posix_fadvise, recvmmsg,
 # swapcontext
@@ -11,6 +13,7 @@ NETBSD_ATF_TESTS_C+=		access_test
 NETBSD_ATF_TESTS_C+=		bind_test
 NETBSD_ATF_TESTS_C+=		chroot_test
 NETBSD_ATF_TESTS_C+=		clock_gettime_test
+NETBSD_ATF_TESTS_C+=		clock_nanosleep_test
 NETBSD_ATF_TESTS_C+=		connect_test
 NETBSD_ATF_TESTS_C+=		dup_test
 NETBSD_ATF_TESTS_C+=		fsync_test
@@ -64,12 +67,10 @@ NETBSD_ATF_TESTS_C+=		wait_noproc_test
 NETBSD_ATF_TESTS_C+=		wait_noproc_wnohang_test
 NETBSD_ATF_TESTS_C+=		write_test
 
-DPADD.getpid_test+=	${LIBPTHREAD}
-LDADD.getpid_test+=	-lpthread
-DPADD.timer_create_test+=	${LIBRT}
-LDADD.timer_create_test+=	-lrt
-
 CSTD?=				c99
+
+LIBADD.getpid_test+=		pthread
+LIBADD.timer_create_test+=	rt
 
 .include "../Makefile.netbsd-tests"
 
@@ -82,16 +83,17 @@ WARNS?=			3
 WARNS?=			4
 .endif
 
-FILESGROUPS=		FILES truncate_test_FILES
+FILESGROUPS+=		truncate_test_FILES
 
 truncate_test_FILES=	truncate_test.root_owned
 truncate_test_FILESDIR=	${TESTSDIR}
 truncate_test_FILESMODE= 0600
-truncate_test_FILESOWNER= root
+truncate_test_FILESOWN= root
 truncate_test_FILESGRP= wheel
+truncate_test_FILESPACKAGE=	${PACKAGE}
 
 CLEANFILES=	truncate_test.root_owned
 truncate_test.root_owned:
-	dd if=/dev/null bs=1 count=1 of=${.TARGET}
+	dd if=/dev/null bs=1 count=1 of=${.TARGET} status=none
 
 .include <bsd.test.mk>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/kevent.c 281454 2015-04-12 06:52:43Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/kevent.c 280818 2015-03-29 19:14:41Z kib $");
 
 #include <sys/types.h>
 #include <sys/event.h>

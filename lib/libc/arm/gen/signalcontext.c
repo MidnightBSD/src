@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Olivier Houchard
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/signalcontext.c 137286 2004-11-05 23:53:02Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/signalcontext.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/signal.h>

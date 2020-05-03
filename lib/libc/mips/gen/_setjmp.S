@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: _setjmp.S,v 1.20.34.5 2010/02/03 23:46:47 matt Exp $	*/
 
 /*-
@@ -34,8 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/gen/_setjmp.S 277537 2015-01-22 21:17:58Z brooks $");
-#include <machine/regnum.h>
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/gen/_setjmp.S 351792 2019-09-03 20:19:43Z kevans $");
 
 #include "SYS.h"
 

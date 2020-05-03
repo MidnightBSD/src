@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/nss/getgr_test.c 319298 2017-05-31 08:30:37Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/nss/getgr_test.c 353589 2019-10-15 20:04:15Z brooks $");
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -154,7 +153,7 @@ compare_group(struct group *grp1, struct group *grp2, void *mdata)
 		if (strcmp(*c1, *c2) != 0)
 			goto errfin;
 
-	if (*c1 != '\0' || *c2 != '\0')
+	if (*c1 != NULL || *c2 != NULL)
 		goto errfin;
 
 	return 0;
@@ -175,7 +174,7 @@ sdump_group(struct group *grp, char *buffer, size_t buflen)
 	char **cp;
 	int written;
 
-	written = snprintf(buffer, buflen, "%s %s %d",
+	written = snprintf(buffer, buflen, "%s:%s:%d:",
 		grp->gr_name, grp->gr_passwd, grp->gr_gid);
 	buffer += written;
 	if (written > (int)buflen)
@@ -183,9 +182,10 @@ sdump_group(struct group *grp, char *buffer, size_t buflen)
 	buflen -= written;
 
 	if (grp->gr_mem != NULL) {
-		if (*(grp->gr_mem) != '\0') {
+		if (*(grp->gr_mem) != NULL) {
 			for (cp = grp->gr_mem; *cp; ++cp) {
-				written = snprintf(buffer, buflen, " %s",*cp);
+				written = snprintf(buffer, buflen, "%s%s",
+				    cp == grp->gr_mem ? "" : ",", *cp);
 				buffer += written;
 				if (written > (int)buflen)
 					return;
@@ -195,9 +195,9 @@ sdump_group(struct group *grp, char *buffer, size_t buflen)
 					return;
 			}
 		} else
-			snprintf(buffer, buflen, " nomem");
+			snprintf(buffer, buflen, "nomem");
 	} else
-		snprintf(buffer, buflen, " (null)");
+		snprintf(buffer, buflen, "(null)");
 }
 
 static int
@@ -205,6 +205,7 @@ group_read_snapshot_func(struct group *grp, char *line)
 {
 	StringList *sl;
 	char *s, *ps, *ts;
+	const char *sep;
 	int i;
 
 	printf("1 line read from snapshot:\n%s\n", line);
@@ -212,8 +213,9 @@ group_read_snapshot_func(struct group *grp, char *line)
 	i = 0;
 	sl = NULL;
 	ps = line;
+	sep = ":";
 	memset(grp, 0, sizeof(struct group));
-	while ((s = strsep(&ps, " ")) != NULL) {
+	while ((s = strsep(&ps, sep)) != NULL) {
 		switch (i) {
 		case 0:
 			grp->gr_name = strdup(s);
@@ -234,6 +236,8 @@ group_read_snapshot_func(struct group *grp, char *line)
 				grp->gr_passwd = NULL;
 				return (-1);
 			}
+			/* Change to parsing groups. */
+			sep = ",";
 			break;
 
 		default:

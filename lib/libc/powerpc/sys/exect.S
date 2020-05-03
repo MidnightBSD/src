@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Peter Grehan.
  * All rights reserved.
@@ -27,7 +26,7 @@
 /*      $NetBSD: exect.S,v 1.3 1998/05/25 15:28:03 ws Exp $     */
 	
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/sys/exect.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/sys/exect.S 272362 2014-10-01 15:00:21Z bapt $");
 
 #include "SYS.h"
 
@@ -38,5 +37,6 @@ ENTRY(exect)
 	blr
 1:
 	b	PIC_PLT(HIDENAME(cerror))
+END(exect)
 
 	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fpsetmask.c,v 1.3 2002/01/13 21:45:48 thorpej Exp $	*/
 
 /*
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc64/gen/fpsetmask.c 251091 2013-05-29 01:54:10Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/gen/fpsetmask.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <ieeefp.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Jilles Tjoelker
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/fopen_test.c 291840 2015-12-05 04:17:40Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/fopen_test.c 290537 2015-11-08 06:37:50Z ngie $");
 
 #include <fcntl.h>
 #include <paths.h>

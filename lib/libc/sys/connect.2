@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)connect.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/sys/connect.2 281030 2015-04-03 17:12:24Z bdrewery $
+.\" $FreeBSD: stable/11/lib/libc/sys/connect.2 295272 2016-02-04 18:03:06Z jgh $
 .\"
-.Dd September 29, 2014
+.Dd February 4, 2016
 .Dt CONNECT 2
 .Os
 .Sh NAME
@@ -59,6 +58,14 @@ another socket.
 The other socket is specified by
 .Fa name ,
 which is an address in the communications space of the socket.
+.Fa namelen
+indicates the amount of space pointed to by
+.Fa name ,
+in bytes; the
+.Fa sa_len
+member of
+.Fa name
+is ignored.
 Each communications space interprets the
 .Fa name
 argument in its own way.

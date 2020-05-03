@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/interposing_table.c 296732 2016-03-12 17:33:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/interposing_table.c 346156 2019-04-12 15:15:27Z kib $");
 
 #include <sys/types.h>
 #include "libc_private.h"
@@ -45,7 +44,7 @@ interpos_func_t __libc_interposing[INTERPOS_MAX] = {
 	SLOT(aio_suspend, __sys_aio_suspend),
 	SLOT(close, __sys_close),
 	SLOT(connect, __sys_connect),
-	SLOT(fcntl, __fcntl_compat),
+	SLOT(fcntl, __sys_fcntl),
 	SLOT(fsync, __sys_fsync),
 	SLOT(fork, __sys_fork),
 	SLOT(msync, __sys_msync),
@@ -80,6 +79,9 @@ interpos_func_t __libc_interposing[INTERPOS_MAX] = {
 	SLOT(wait6, __sys_wait6),
 	SLOT(ppoll, __sys_ppoll),
 	SLOT(map_stacks_exec, __libc_map_stacks_exec),
+	SLOT(fdatasync, __sys_fdatasync),
+	SLOT(clock_nanosleep, __sys_clock_nanosleep),
+	SLOT(distribute_static_tls, __libc_distribute_static_tls),
 };
 #undef SLOT
 

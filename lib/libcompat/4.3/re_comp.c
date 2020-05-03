@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libcompat/4.3/re_comp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Compatibility routines that implement the old re_comp/re_exec interface in

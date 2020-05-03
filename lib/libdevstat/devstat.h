@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1997, 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -26,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/lib/libdevstat/devstat.h 244270 2012-12-15 18:19:48Z trociny $
+ * $FreeBSD: stable/11/lib/libdevstat/devstat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEVSTAT_H

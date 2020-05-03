@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bcmp.S,v 1.9 2009/12/14 01:07:42 matt Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/string/bcmp.S 209231 2010-06-16 12:55:14Z jchandra $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/string/bcmp.S 209231 2010-06-16 12:55:14Z jchandra $");
 
 #define _LOCORE		/* XXX not really, just assembly-code source */
 #include <machine/endian.h>	/* LWLO/LWHI, SWLO/SWHI */

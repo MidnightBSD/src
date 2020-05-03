@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2014 John Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
@@ -24,19 +23,24 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libdevctl/devctl.3 306533 2016-09-30 22:05:47Z jhb $
+.\" $FreeBSD: stable/11/lib/libdevctl/devctl.3 346384 2019-04-19 13:18:54Z kib $
 .\"
-.Dd August 29, 2016
+.Dd April 4, 2019
 .Dt DEVCTL 3
 .Os
 .Sh NAME
 .Nm devctl ,
 .Nm devctl_attach ,
 .Nm devctl_clear_driver ,
+.Nm devctl_delete ,
 .Nm devctl_detach ,
 .Nm devctl_disable ,
 .Nm devctl_enable ,
-.Nm devctl_set_driver
+.Nm devctl_rescan ,
+.Nm devctl_reset ,
+.Nm devctl_resume ,
+.Nm devctl_set_driver ,
+.Nm devctl_suspend
 .Nd device control library
 .Sh LIBRARY
 .Lb libdevctl
@@ -47,13 +51,23 @@
 .Ft int
 .Fn devctl_clear_driver "const char *device" "bool force"
 .Ft int
+.Fn devctl_delete "const char *device" "bool force"
+.Ft int
 .Fn devctl_detach "const char *device" "bool force"
 .Ft int
 .Fn devctl_disable "const char *device" "bool force_detach"
 .Ft int
 .Fn devctl_enable "const char *device"
 .Ft int
+.Fn devctl_rescan "const char *device"
+.Ft int
+.Fn devctl_reset "const char *device" "bool detach"
+.Ft int
+.Fn devctl_resume "const char *device"
+.Ft int
 .Fn devctl_set_driver "const char *device" "const char *driver" "bool force"
+.Ft int
+.Fn devctl_suspend "const char *device"
 .Sh DESCRIPTION
 The
 .Nm
@@ -105,6 +119,15 @@ is true,
 the current device driver will be detached even if the device is busy.
 .Pp
 The
+.Fn devctl_delete
+function deletes a device from the device tree.
+No
+If
+.Fa force
+is true,
+the device is deleted even if the device is physically present.
+.Pp
+The
 .Fn devctl_disable
 function disables a device.
 If the device is currently attached to a device driver,
@@ -122,6 +145,16 @@ The
 .Fn devctl_enable
 function re-enables a disabled device.
 The device will probe and attach if a suitable device driver is found.
+.Pp
+The
+.Fn devctl_suspend
+function suspends a device.
+This may include placing the device in a reduced power state,
+but any device driver currently attached to the device will remain attached.
+.Pp
+The
+.Fn devctl_resume
+function resumes a suspended device to a fully working state.
 .Pp
 The
 .Fn devctl_set_driver
@@ -154,9 +187,24 @@ is true,
 the device will be detached from its current device driver.
 After the device's name is reset,
 it is reprobed and attached to a suitable device driver if one is found.
+.Pp
+The
+.Fn devctl_rescan
+function rescans a bus device checking for devices that have been added or
+removed.
+.Pp
+The
+.Fn devctl_reset
+function resets the specified device using bus-specific reset method.
+The
+.Fa detach
+argument, if true, specifies that the device driver is detached before
+the reset, and re-attached afterwards.
+If false, the device is suspended before the reset, and resumed after.
 .Sh RETURN VALUES
-.Rv -std devctl_attach  devctl_clear_driver devctl_detach \
-devctl_disable devctl_enable devctl_set_driver
+.Rv -std devctl_attach devctl_clear_driver devctl_delete devctl_detach \
+devctl_disable devctl_enable devctl_suspend devctl_rescan devctl_resume \
+devctl_set_driver
 .Sh ERRORS
 In addition to specific errors noted below,
 all of the
@@ -241,6 +289,26 @@ does not support detaching.
 .El
 .Pp
 The
+.Fn devctl_suspend
+function may fail if:
+.Bl -tag -width Er
+.It Bq Er EBUSY
+The device is already suspended.
+.It Bq Er EINVAL
+The device to be suspended is the root bus device.
+.El
+.Pp
+The
+.Fn devctl_resume
+function may fail if:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The device is not suspended.
+.It Bq Er EINVAL
+The device to be resumed is the root bus device.
+.El
+.Pp
+The
 .Fn devctl_set_driver
 function may fail if:
 .Bl -tag -width Er
@@ -283,6 +351,44 @@ The device is not configured for a specific device driver name.
 .It Bq Er ENXIO
 The device driver chosen after reprobing failed to attach.
 .El
+.Pp
+The
+.Fn devctl_rescan
+function may fail if:
+.Bl -tag -width Er
+.It Bq Er ENXIO
+The device is not attached to a driver.
+.It Bq Er ENXIO
+The bus driver does not support rescanning.
+.El
+.Pp
+The
+.Fn devctl_delete
+function may fail if:
+.Bl -tag -width Er
+.It Bq Er EBUSY
+The device is physically present and
+.Fa force
+is false.
+.It Bq Er EINVAL
+.Fa dev
+is the root device of the device tree.
+.El
+.Pp
+The
+.Fn devctl_reset
+function may fail if:
+.Bl -tag -width Er
+.It Bq Er ENXIO
+The bus does not implement the reset method.
+.It Bq Er ETIMEDOUT
+The device failed to respond after the reset in the time limits
+specific to the bus.
+.El
+The
+.Fn devctl_reset
+function may also return errors caused by the attach, detach, suspend,
+and resume methods of the device driver.
 .Sh SEE ALSO
 .Xr devinfo 3 ,
 .Xr devstat 3 ,
@@ -292,3 +398,25 @@ The
 .Nm
 library first appeared in
 .Fx 10.3 .
+.Sh BUGS
+If a device is suspended individually via
+.Fn devctl_suspend
+and the entire machine is subsequently suspended,
+the device will be resumed when the machine resumes.
+.Pp
+Similarly, if the device is suspended, and
+.Fn devctl_reset
+is called on the device with
+.Fa detach
+set to
+.Va false ,
+the device is resumed by the
+.Fn devctl_reset
+call.
+Or, if the driver for the device is detached manually, and
+.Fn devctl_reset
+is called on the device with
+.Fa detach
+set to
+.Va true ,
+device reset re-attaches the driver.

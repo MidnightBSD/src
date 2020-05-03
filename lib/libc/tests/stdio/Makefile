@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/stdio/Makefile 313498 2017-02-10 01:13:12Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/stdio/Makefile 332736 2018-04-18 19:18:14Z cy $
 
 .include <bsd.own.mk>
 
@@ -8,6 +7,7 @@ ATF_TESTS_C+=		fmemopen2_test
 ATF_TESTS_C+=		fopen2_test
 ATF_TESTS_C+=		freopen_test
 ATF_TESTS_C+=		getdelim_test
+ATF_TESTS_C+=		gets_s_test
 ATF_TESTS_C+=		mkostemp_test
 ATF_TESTS_C+=		open_memstream2_test
 ATF_TESTS_C+=		open_wmemstream_test
@@ -30,11 +30,8 @@ NETBSD_ATF_TESTS_C+=	popen_test
 NETBSD_ATF_TESTS_C+=	printf_test
 NETBSD_ATF_TESTS_C+=	scanf_test
 
-DPADD.printfloat_test+=	${LIBM}
-LDADD.printfloat_test+=	-lm
-
-DPADD.scanfloat_test+=	${LIBM}
-LDADD.scanfloat_test+=	-lm
+LIBADD.printfloat_test+= m
+LIBADD.scanfloat_test+=  m
 
 .if ${COMPILER_TYPE} == "gcc"
 # 90: use of assignment suppression and length modifier together in scanf format

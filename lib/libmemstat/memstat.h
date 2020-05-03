@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libmemstat/memstat.h 224569 2011-08-01 09:43:35Z pluknet $
+ * $FreeBSD: stable/11/lib/libmemstat/memstat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _MEMSTAT_H_
@@ -125,6 +124,7 @@ uint64_t	 memstat_get_countlimit(const struct memory_type *mtp);
 uint64_t	 memstat_get_byteslimit(const struct memory_type *mtp);
 uint64_t	 memstat_get_sizemask(const struct memory_type *mtp);
 uint64_t	 memstat_get_size(const struct memory_type *mtp);
+uint64_t	 memstat_get_rsize(const struct memory_type *mtp);
 uint64_t	 memstat_get_memalloced(const struct memory_type *mtp);
 uint64_t	 memstat_get_memfreed(const struct memory_type *mtp);
 uint64_t	 memstat_get_numallocs(const struct memory_type *mtp);

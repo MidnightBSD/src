@@ -1,7 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/nss/Makefile 321144 2017-07-18 18:09:26Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/nss/Makefile 321143 2017-07-18 18:09:16Z ngie $
 
 .PATH: ${.CURDIR:H}/resolv
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/lib/libc/nss
 
@@ -17,7 +18,7 @@ ATF_TESTS_C+=	getrpc_test
 ATF_TESTS_C+=	getserv_test
 ATF_TESTS_C+=	getusershell_test
 
-FILES+=		mach
+${PACKAGE}FILES+=	mach
 
 WARNS?=		3
 

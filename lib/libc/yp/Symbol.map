@@ -1,6 +1,5 @@
-/* 
- * $MidnightBSD$
- * $FreeBSD: src/lib/libc/yp/Symbol.map,v 1.2 2007/04/29 14:05:20 deischen Exp $
+/*
+ * $FreeBSD: stable/11/lib/libc/yp/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
  */
 
 FBSD_1.0 {

@@ -1,11 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * Written by J.T. Conklin, Apr 10, 1995
  * Public domain.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/flt_rounds.c 140424 2005-01-18 15:29:28Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/flt_rounds.c 140424 2005-01-18 15:29:28Z das $");
 
 #include <sys/types.h>
 #include <machine/float.h>

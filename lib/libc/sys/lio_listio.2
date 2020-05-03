@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2003 Tim J. Robbins
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/sys/lio_listio.2 303325 2016-07-25 23:38:14Z jhb $
+.\" $FreeBSD: stable/11/lib/libc/sys/lio_listio.2 359206 2020-03-22 02:54:59Z asomers $
 .\"
-.Dd July 15, 2016
+.Dd Dec 7, 2019
 .Dt LIO_LISTIO 2
 .Os
 .Sh NAME
@@ -162,7 +161,7 @@ function will fail if:
 There are not enough resources to enqueue the requests.
 .It Bq Er EAGAIN
 The request would cause the system-wide limit
-.Dv AIO_MAX
+.Dv {AIO_MAX}
 to be exceeded.
 .It Bq Er EINVAL
 The
@@ -174,7 +173,7 @@ nor
 or
 .Fa nent
 is greater than
-.Dv AIO_LISTIO_MAX .
+.Dv {AIO_LISTIO_MAX} .
 .It Bq Er EINVAL
 The asynchronous notification method in
 .Fa sig->sigev_notify
@@ -217,3 +216,8 @@ The
 .Fn lio_listio
 function is expected to conform to
 .St -p1003.1-2001 .
+.Sh HISTORY
+The
+.Fn lio_listio
+system call first appeared in
+.Fx 3.0 .

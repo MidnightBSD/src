@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Peter Grehan.
  * All rights reserved.
@@ -27,7 +26,7 @@
 /*      $NetBSD: cerror.S,v 1.5 2000/01/27 14:58:48 kleink Exp $        */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc64/sys/cerror.S 230400 2012-01-20 22:34:19Z andreast $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/sys/cerror.S 230400 2012-01-20 22:34:19Z andreast $");
 	
 #include "SYS.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Peter Grehan.
  * All rights reserved.
@@ -27,7 +26,7 @@
 /*      $NetBSD: brk.S,v 1.9 2000/06/26 06:25:43 kleink Exp $   */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc64/sys/brk.S 218824 2011-02-18 21:44:53Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc64/sys/brk.S 272362 2014-10-01 15:00:21Z bapt $");
 
 #include "SYS.h"
 
@@ -70,5 +69,6 @@ ENTRY(brk)
 	ld	%r0,16(%r1)
 	mtlr	%r0
 	blr
+END(brk)
 
 	.section .note.GNU-stack,"",%progbits

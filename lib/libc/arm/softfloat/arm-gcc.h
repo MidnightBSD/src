@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $NetBSD: arm-gcc.h,v 1.2 2001/02/21 18:09:25 bjh21 Exp $ */
-/* $FreeBSD: stable/10/lib/libc/arm/softfloat/arm-gcc.h 255361 2013-09-07 14:04:10Z andrew $ */
+/* $FreeBSD: stable/11/lib/libc/arm/softfloat/arm-gcc.h 255361 2013-09-07 14:04:10Z andrew $ */
 
 /*
 -------------------------------------------------------------------------------

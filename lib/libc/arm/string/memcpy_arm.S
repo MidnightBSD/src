@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: memcpy_arm.S,v 1.1 2003/10/14 07:51:45 scw Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/string/memcpy_arm.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/memcpy_arm.S 288373 2015-09-29 16:09:58Z kib $");
 
 .syntax	unified
 
@@ -335,3 +334,5 @@ ENTRY(memcpy)
 	sub	r1, r1, #1
 	b	.Lmemcpy_l4
 END(memcpy)
+
+	.section .note.GNU-stack,"",%progbits

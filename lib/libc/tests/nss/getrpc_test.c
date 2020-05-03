@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/nss/getrpc_test.c 319298 2017-05-31 08:30:37Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/nss/getrpc_test.c 353589 2019-10-15 20:04:15Z brooks $");
 
 #include <arpa/inet.h>
 #include <rpc/rpc.h>
@@ -148,7 +147,7 @@ compare_rpcent(struct rpcent *rpc1, struct rpcent *rpc2, void *mdata)
 		if (strcmp(*c1, *c2) != 0)
 			goto errfin;
 
-	if ((*c1 != '\0') || (*c2 != '\0'))
+	if ((*c1 != NULL) || (*c2 != NULL))
 		goto errfin;
 
 	return 0;
@@ -177,7 +176,7 @@ sdump_rpcent(struct rpcent *rpc, char *buffer, size_t buflen)
 	buflen -= written;
 
 	if (rpc->r_aliases != NULL) {
-		if (*(rpc->r_aliases) != '\0') {
+		if (*(rpc->r_aliases) != NULL) {
 			for (cp = rpc->r_aliases; *cp; ++cp) {
 				written = snprintf(buffer, buflen, " %s", *cp);
 				buffer += written;
@@ -316,8 +315,8 @@ errfin:
 }
 
 /* rpcent_check_ambiguity() is needed when one port+rpc is associated with
- * more than one peice (these cases are usually marked as PROBLEM in
- * /etc/peices. This functions is needed also when one peice+rpc is
+ * more than one piece (these cases are usually marked as PROBLEM in
+ * /etc/peices. This functions is needed also when one piece+rpc is
  * associated with several ports. We have to check all the rpcent structures
  * to make sure that rpc really exists and correct */
 static int

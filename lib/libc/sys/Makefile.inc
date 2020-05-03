@@ -1,20 +1,19 @@
-# $MidnightBSD$
 #	@(#)Makefile.inc	8.3 (Berkeley) 10/24/94
-# $FreeBSD: stable/10/lib/libc/sys/Makefile.inc 320150 2017-06-20 15:55:15Z jhb $
+# $FreeBSD: stable/11/lib/libc/sys/Makefile.inc 320150 2017-06-20 15:55:15Z jhb $
 
 # sys sources
-.PATH: ${.CURDIR}/${LIBC_ARCH}/sys ${.CURDIR}/sys
+.PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/sys ${LIBC_SRCTOP}/sys
 
 # Include the generated makefile containing the *complete* list
 # of syscall names in MIASM.
-.include "${.CURDIR}/../../sys/sys/syscall.mk"
+.include "${SRCTOP}/sys/sys/syscall.mk"
 
 # Include machine dependent definitions.
 #
 # MDASM names override the default syscall names in MIASM.
 # NOASM will prevent the default syscall code from being generated.
 #
-.sinclude "${.CURDIR}/${LIBC_ARCH}/sys/Makefile.inc"
+.sinclude "${LIBC_SRCTOP}/${LIBC_ARCH}/sys/Makefile.inc"
 
 SRCS+= clock_gettime.c gettimeofday.c __vdso_gettimeofday.c
 NOASM+=  clock_gettime.o gettimeofday.o
@@ -22,34 +21,24 @@ PSEUDO+= _clock_gettime.o _gettimeofday.o
 
 # Sources common to both syscall interfaces:
 SRCS+=	\
-	stack_protector.c \
-	stack_protector_compat.c \
 	__error.c \
 	interposing_table.c
-
-.if !defined(WITHOUT_SYSCALL_COMPAT)
-SYSCALL_COMPAT_SRCS= \
-	ftruncate.c \
-	lseek.c \
-	mmap.c \
-	pread.c \
-	pwrite.c \
-	truncate.c
-SRCS+=	${SYSCALL_COMPAT_SRCS}
-NOASM+=	${SYSCALL_COMPAT_SRCS:S/.c/.o/}
-.endif
 
 SRCS+= futimens.c utimensat.c
 NOASM+= futimens.o utimensat.o
 PSEUDO+= _futimens.o _utimensat.o
 
+SRCS+= pipe.c
+
 INTERPOSED = \
 	accept \
 	accept4 \
 	aio_suspend \
+	clock_nanosleep \
 	close \
 	connect \
 	fcntl \
+	fdatasync \
 	fsync \
 	fork \
 	kevent \
@@ -112,13 +101,13 @@ SPSEUDO= ${PSEUDO:S/.o/.S/}
 
 SRCS+=	${SASM} ${SPSEUDO}
 
-SYM_MAPS+=	${.CURDIR}/sys/Symbol.map
+SYM_MAPS+=	${LIBC_SRCTOP}/sys/Symbol.map
 
 # Generated files
 CLEANFILES+=	${SASM} ${SPSEUDO}
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386" || \
-    ${MACHINE_CPUARCH} == "powerpc"
+    ${MACHINE_CPUARCH} == "powerpc" || ${MACHINE_ARCH:Marmv6*}
 NOTE_GNU_STACK='\t.section .note.GNU-stack,"",%%progbits\n'
 .else
 NOTE_GNU_STACK=''
@@ -247,6 +236,7 @@ MAN+=	abort2.2 \
 	nanosleep.2 \
 	nfssvc.2 \
 	ntp_adjtime.2 \
+	numa_getaffinity.2 \
 	open.2 \
 	pathconf.2 \
 	pdfork.2 \
@@ -317,6 +307,11 @@ MAN+=	sctp_generic_recvmsg.2 \
 	sync.2 \
 	sysarch.2 \
 	syscall.2 \
+	thr_exit.2 \
+	thr_kill.2 \
+	thr_new.2 \
+	thr_self.2 \
+	thr_set_name.2 \
 	thr_suspend.2 \
 	thr_wake.2 \
 	timer_create.2 \
@@ -332,7 +327,8 @@ MAN+=	sctp_generic_recvmsg.2 \
 	uuidgen.2 \
 	vfork.2 \
 	wait.2 \
-	write.2
+	write.2 \
+	_umtx_op.2
 
 MLINKS+=accept.2 accept4.2
 MLINKS+=access.2 eaccess.2 \
@@ -353,6 +349,7 @@ MLINKS+=chown.2 fchown.2 \
 	chown.2 lchown.2
 MLINKS+=clock_gettime.2 clock_getres.2 \
 	clock_gettime.2 clock_settime.2
+MLINKS+=nanosleep.2 clock_nanosleep.2
 MLINKS+=cpuset.2 cpuset_getid.2 \
 	cpuset.2 cpuset_setid.2
 MLINKS+=cpuset_getaffinity.2 cpuset_setaffinity.2
@@ -374,6 +371,7 @@ MLINKS+=ffclock.2 ffclock_getcounter.2 \
 	ffclock.2 ffclock_getestimate.2 \
 	ffclock.2 ffclock_setestimate.2
 MLINKS+=fhopen.2 fhstat.2 fhopen.2 fhstatfs.2
+MLINKS+=fsync.2 fdatasync.2
 MLINKS+=getdirentries.2 getdents.2
 MLINKS+=getfh.2 lgetfh.2
 MLINKS+=getgid.2 getegid.2
@@ -409,6 +407,7 @@ MLINKS+=mount.2 nmount.2 \
 MLINKS+=mq_receive.2 mq_timedreceive.2
 MLINKS+=mq_send.2 mq_timedsend.2
 MLINKS+=ntp_adjtime.2 ntp_gettime.2
+MLINKS+=numa_getaffinity.2 numa_setaffinity.2
 MLINKS+=open.2 openat.2
 MLINKS+=pathconf.2 fpathconf.2
 MLINKS+=pathconf.2 lpathconf.2
@@ -460,6 +459,7 @@ MLINKS+=symlink.2 symlinkat.2
 MLINKS+=syscall.2 __syscall.2
 MLINKS+=timer_settime.2 timer_getoverrun.2 \
 	timer_settime.2 timer_gettime.2
+MLINKS+=thr_kill.2 thr_kill2.2
 MLINKS+=truncate.2 ftruncate.2
 MLINKS+=unlink.2 unlinkat.2
 MLINKS+=utimensat.2 futimens.2

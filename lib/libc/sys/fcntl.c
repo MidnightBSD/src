@@ -1,8 +1,13 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
+ *
+ * Copyright (c) 2014-2015 The FreeBSD Foundation.
+ * All rights reserved.
+ *
+ * Portions of this software were developed by Konstantin Belousov
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/fcntl.c 281256 2015-04-08 02:21:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/fcntl.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <fcntl.h>
 #include <stdarg.h>
@@ -49,59 +54,3 @@ fcntl(int fd, int cmd, ...)
 	return (((int (*)(int, int, ...))
 	    __libc_interposing[INTERPOS_fcntl])(fd, cmd, arg));
 }
-
-#ifdef SYSCALL_COMPAT
-__weak_reference(__fcntl_compat, __fcntl);
-
-int
-__fcntl_compat(int fd, int cmd, ...)
-{
-	va_list args;
-	long arg;
-	struct __oflock ofl;
-	struct flock *flp;
-	int res;
-
-	va_start(args, cmd);
-	arg = va_arg(args, long);
-	va_end(args);
-
-	if (__getosreldate() >= 800028) {
-		return (__sys_fcntl(fd, cmd, arg));
-	} else {
-		if (cmd == F_GETLK || cmd == F_SETLK || cmd == F_SETLKW) {
-			/*
-			 * Convert new-style struct flock (which
-			 * includes l_sysid) to old-style.
-			 */
-			flp = (struct flock *) (uintptr_t) arg;
-			ofl.l_start = flp->l_start;
-			ofl.l_len = flp->l_len;
-			ofl.l_pid = flp->l_pid;
-			ofl.l_type = flp->l_type;
-			ofl.l_whence = flp->l_whence;
-
-			switch (cmd) {
-			case F_GETLK:
-				res = __sys_fcntl(fd, F_OGETLK, &ofl);
-				if (res >= 0) {
-					flp->l_start = ofl.l_start;
-					flp->l_len = ofl.l_len;
-					flp->l_pid = ofl.l_pid;
-					flp->l_type = ofl.l_type;
-					flp->l_whence = ofl.l_whence;
-					flp->l_sysid = 0;
-				}
-				return (res);
-
-			case F_SETLK:
-				return (__sys_fcntl(fd, F_OSETLK, &ofl));
-
-			case F_SETLKW:
-				return (__sys_fcntl(fd, F_OSETLKW, &ofl));
-			}
-		}
-		return (__sys_fcntl(fd, cmd, arg));
-	}
-}
-#endif

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/resolv/mach 292317 2015-12-16 05:11:57Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/resolv/mach 292317 2015-12-16 05:11:57Z ngie $
 localhost
 anoncvs.cirr.com
 anoncvs.netbsd.se

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/tests/nss/testutil.h 300454 2016-05-23 05:11:31Z ngie $
+ * $FreeBSD: stable/11/lib/libc/tests/nss/testutil.h 299654 2016-05-13 10:52:02Z ngie $
  */
 
 #include <sys/queue.h>

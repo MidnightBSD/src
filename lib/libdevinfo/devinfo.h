@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/11/lib/libdevinfo/devinfo.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _DEVINFO_H_INCLUDED
@@ -50,14 +50,14 @@ struct devinfo_dev {
 	char			*dd_location;	/* Where bus thinks dev at */
 	uint32_t		dd_devflags;	/* API flags */
 	uint16_t		dd_flags;	/* internal dev flags */
-	devinfo_state_t		dd_state;	/* attacement state of dev */
+	devinfo_state_t		dd_state;	/* attachment state of dev */
 };
 
 struct devinfo_rman {
 	devinfo_handle_t	dm_handle;	/* resource manager handle */
 
-	unsigned long		dm_start;	/* resource start */
-	unsigned long		dm_size;	/* resource size */
+	rman_res_t		dm_start;	/* resource start */
+	rman_res_t		dm_size;	/* resource size */
     
 	char			*dm_desc;	/* resource description */
 };
@@ -67,8 +67,8 @@ struct devinfo_res {
 	devinfo_handle_t	dr_rman;	/* resource manager handle */
 	devinfo_handle_t	dr_device;	/* owning device */
 
-	unsigned long		dr_start;	/* region start */
-	unsigned long		dr_size;	/* region size */
+	rman_res_t		dr_start;	/* region start */
+	rman_res_t		dr_size;	/* region size */
 	/* XXX add flags */
 };
 

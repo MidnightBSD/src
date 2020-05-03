@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2016 Bryan Drewery <bdrewery@FreeBSD.org>
  * All rights reserved.
@@ -30,15 +29,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/sys/mlock_helper.c 315358 2017-03-16 02:04:16Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/sys/mlock_helper.c 327855 2018-01-12 00:25:56Z asomers $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
 #include <atf-c.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
+#include <limits.h>
 
 #define	VM_MAX_WIRED "vm.max_wired"
 

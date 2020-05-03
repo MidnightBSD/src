@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/signalcontext.c 253266 2013-07-12 14:24:52Z marius $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/signalcontext.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ucontext.h>

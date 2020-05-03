@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD: stable/10/lib/libc/mips/arith.h 178580 2008-04-26 12:08:02Z imp $
+ * $FreeBSD: stable/11/lib/libc/mips/arith.h 268351 2014-07-07 00:27:09Z marcel $
  */
 
 /*
@@ -19,9 +18,6 @@
 #define Double_Align
 #else
 /* TODO: Generate these values on a LE machine */
-/* Current values were stolen from ia64 except the
- * Xpointer define.
- */
 #define IEEE_8087
 #define Arith_Kind_ASL 1
 #define Long int

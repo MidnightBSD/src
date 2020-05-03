@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2015 The FreeBSD Foundation.
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sys/ppoll.c 281981 2015-04-25 08:14:08Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sys/ppoll.c 281712 2015-04-18 21:35:41Z kib $");
 
 #include <sys/types.h>
 #include <sys/poll.h>

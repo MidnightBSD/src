@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/Makefile 313489 2017-02-09 22:57:56Z ngie $
+# $FreeBSD: stable/11/lib/libc/tests/Makefile 309453 2016-12-03 00:38:35Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=		tls_dso
 
@@ -9,7 +8,6 @@ TESTS_SUBDIRS=	c063
 TESTS_SUBDIRS+=	db
 TESTS_SUBDIRS+=	gen
 TESTS_SUBDIRS+=	hash
-TESTS_SUBDIRS+=	iconv
 TESTS_SUBDIRS+=	inet
 TESTS_SUBDIRS+=	net
 TESTS_SUBDIRS+=	nss
@@ -24,6 +22,8 @@ TESTS_SUBDIRS+=	sys
 TESTS_SUBDIRS+=	termios
 TESTS_SUBDIRS+=	tls
 TESTS_SUBDIRS+=	ttyio
+
+SUBDIR_DEPEND_tls= tls_dso
 
 .if ${MK_ICONV} != "no"
 TESTS_SUBDIRS+=	iconv

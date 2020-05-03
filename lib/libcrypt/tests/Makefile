@@ -1,16 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libcrypt/tests/Makefile 319252 2017-05-30 21:03:44Z asomers $
+# $FreeBSD: stable/11/lib/libcrypt/tests/Makefile 316384 2017-04-02 02:11:53Z asomers $
 
-SRCTOP=		${.CURDIR:H:H:H}
-OBJTOP=		${.OBJDIR:H:H:H}
-TESTSRC=	${SRCTOP}/contrib/netbsd-tests/lib/libcrypt
+ATF_TESTS_C+= crypt_tests
 
 NETBSD_ATF_TESTS_C+= crypt_test
 
 WARNS?=		6
 CFLAGS+= -I${.CURDIR:H}
-DPADD+=	${LIBCRYPT}
-LDADD+= -lcrypt
+LIBADD=	crypt
 
 .include <netbsd-tests.test.mk>
 

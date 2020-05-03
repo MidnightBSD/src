@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/string/wcscasecmp_test.c 290875 2015-11-15 20:08:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/string/wcscasecmp_test.c 290539 2015-11-08 07:53:31Z ngie $");
 
 #include <assert.h>
 #include <locale.h>

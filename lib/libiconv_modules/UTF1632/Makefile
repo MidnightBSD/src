@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libiconv_modules/UTF1632/Makefile 260497 2014-01-09 23:08:56Z dim $
+# $FreeBSD: stable/11/lib/libiconv_modules/UTF1632/Makefile 285884 2015-07-26 00:11:04Z pfg $
 
 SHLIB=	UTF1632
 SRCS+=	citrus_utf1632.c
-CFLAGS.gcc+= --param max-inline-insns-single=32
+CFLAGS.gcc+= --param max-inline-insns-single=64
 
 .include <bsd.lib.mk>

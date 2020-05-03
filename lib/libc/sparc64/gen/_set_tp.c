@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -24,8 +23,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/lib/libc/sparc64/gen/_set_tp.c 163118 2006-10-08 02:50:34Z kmacy $
+ *	$FreeBSD: stable/11/lib/libc/sparc64/gen/_set_tp.c 331722 2018-03-29 02:50:57Z eadler $
  */
+#include "libc_private.h"
 
 void
 _set_tp(void *tpval)

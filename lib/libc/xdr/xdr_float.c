@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: xdr_float.c,v 1.23 2000/07/17 04:59:51 matt Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@ static char *sccsid2 = "@(#)xdr_float.c 1.12 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)xdr_float.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr_float.c 272850 2014-10-09 23:05:32Z hrs $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/xdr/xdr_float.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * xdr_float.c, Generic XDR routines implementation.
@@ -48,7 +47,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr_float.c 272850 2014-10-09 23:05:3
  */
 
 #include "namespace.h"
-#include <sys/types.h>
 #include <sys/param.h>
 
 #include <stdio.h>
@@ -62,13 +60,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/xdr/xdr_float.c 272850 2014-10-09 23:05:3
  * This routine works on machines with IEEE754 FP and Vaxen.
  */
 
-#if defined(__m68k__) || defined(__sparc__) || defined(__i386__) || \
-    defined(__mips__) || defined(__ns32k__) || defined(__alpha__) || \
-    defined(__arm__) || defined(__ppc__) || defined(__ia64__) || \
-    defined(__arm26__) || defined(__sparc64__) || defined(__amd64__)
 #include <machine/endian.h>
 #define IEEEFP
-#endif
 
 #if defined(__vax__)
 
@@ -102,15 +95,13 @@ static struct sgl_limits {
 #endif /* vax */
 
 bool_t
-xdr_float(xdrs, fp)
-	XDR *xdrs;
-	float *fp;
+xdr_float(XDR *xdrs, float *fp)
 {
 #ifndef IEEEFP
 	struct ieee_single is;
 	struct vax_single vs, *vsp;
 	struct sgl_limits *lim;
-	int i;
+	u_int i;
 #endif
 	switch (xdrs->x_op) {
 
@@ -119,9 +110,8 @@ xdr_float(xdrs, fp)
 		return (XDR_PUTINT32(xdrs, (int32_t *)fp));
 #else
 		vs = *((struct vax_single *)fp);
-		for (i = 0, lim = sgl_limits;
-			i < sizeof(sgl_limits)/sizeof(struct sgl_limits);
-			i++, lim++) {
+		for (i = 0, lim = sgl_limits; i < nitems(sgl_limits);
+		    i++, lim++) {
 			if ((vs.mantissa2 == lim->s.mantissa2) &&
 				(vs.exp == lim->s.exp) &&
 				(vs.mantissa1 == lim->s.mantissa1)) {
@@ -143,9 +133,8 @@ xdr_float(xdrs, fp)
 		vsp = (struct vax_single *)fp;
 		if (!XDR_GETINT32(xdrs, (int32_t *)&is))
 			return (FALSE);
-		for (i = 0, lim = sgl_limits;
-			i < sizeof(sgl_limits)/sizeof(struct sgl_limits);
-			i++, lim++) {
+		for (i = 0, lim = sgl_limits; i < nitems(sgl_limits);
+		    i++, lim++) {
 			if ((is.exp == lim->ieee.exp) &&
 				(is.mantissa == lim->ieee.mantissa)) {
 				*vsp = lim->s;
@@ -204,9 +193,7 @@ static struct dbl_limits {
 
 
 bool_t
-xdr_double(xdrs, dp)
-	XDR *xdrs;
-	double *dp;
+xdr_double(XDR *xdrs, double *dp)
 {
 #ifdef IEEEFP
 	int32_t *i32p;
@@ -216,7 +203,7 @@ xdr_double(xdrs, dp)
 	struct	ieee_double id;
 	struct	vax_double vd;
 	struct dbl_limits *lim;
-	int i;
+	u_int i;
 #endif
 
 	switch (xdrs->x_op) {
@@ -238,9 +225,8 @@ xdr_double(xdrs, dp)
 		return (rv);
 #else
 		vd = *((struct vax_double *)dp);
-		for (i = 0, lim = dbl_limits;
-			i < sizeof(dbl_limits)/sizeof(struct dbl_limits);
-			i++, lim++) {
+		for (i = 0, lim = dbl_limits; i < nitems(dbl_limits);
+		    i++, lim++) {
 			if ((vd.mantissa4 == lim->d.mantissa4) &&
 				(vd.mantissa3 == lim->d.mantissa3) &&
 				(vd.mantissa2 == lim->d.mantissa2) &&
@@ -280,9 +266,8 @@ xdr_double(xdrs, dp)
 		lp = (int32_t *)&id;
 		if (!XDR_GETINT32(xdrs, lp++) || !XDR_GETINT32(xdrs, lp))
 			return (FALSE);
-		for (i = 0, lim = dbl_limits;
-			i < sizeof(dbl_limits)/sizeof(struct dbl_limits);
-			i++, lim++) {
+		for (i = 0, lim = dbl_limits; i < nitems(dbl_limits);
+		    i++, lim++) {
 			if ((id.mantissa2 == lim->ieee.mantissa2) &&
 				(id.mantissa1 == lim->ieee.mantissa1) &&
 				(id.exp == lim->ieee.exp)) {

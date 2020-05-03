@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fpsetround.c,v 1.3 2002/01/13 21:45:48 thorpej Exp $	*/
 
 /*
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/gen/fpsetround.c 204606 2010-03-02 22:11:14Z joel $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/powerpc/gen/fpsetround.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <ieeefp.h>

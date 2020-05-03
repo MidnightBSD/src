@@ -1,10 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libkiconv/Makefile 313621 2017-02-11 06:57:22Z ngie $
+# $FreeBSD: stable/11/lib/libkiconv/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 SHLIBDIR?=	/lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=		kiconv
 SRCS=		kiconv_sysctl.c xlat16_iconv.c xlat16_sysctl.c
 SRCS+=		quirks.c

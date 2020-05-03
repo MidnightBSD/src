@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: SYS.h,v 1.19 2009/12/14 01:07:41 matt Exp $ */
-/* $FreeBSD: stable/10/lib/libc/mips/SYS.h 295020 2016-01-28 22:57:09Z brooks $ */
+/* $FreeBSD: stable/11/lib/libc/mips/SYS.h 331722 2018-03-29 02:50:57Z eadler $ */
 
 /*-
  * Copyright (c) 1996 Jonathan Stone

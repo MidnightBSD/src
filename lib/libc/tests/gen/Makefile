@@ -1,9 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/tests/gen/Makefile 321878 2017-08-01 16:00:21Z asomers $
+# $FreeBSD: stable/11/lib/libc/tests/gen/Makefile 355898 2019-12-19 02:09:16Z kevans $
 
 .include <bsd.own.mk>
 
 ATF_TESTS_C+=		arc4random_test
+ATF_TESTS_C+=		dir2_test
+ATF_TESTS_C+=		dlopen_empty_test
 ATF_TESTS_C+=		fmtcheck2_test
 ATF_TESTS_C+=		fmtmsg_test
 ATF_TESTS_C+=		fnmatch2_test
@@ -11,8 +12,9 @@ ATF_TESTS_C+=		fpclassify2_test
 ATF_TESTS_C+=		ftw_test
 ATF_TESTS_C+=		popen_test
 ATF_TESTS_C+=		posix_spawn_test
-ATF_TESTS_C+=		wordexp_test
 ATF_TESTS_C+=		realpath2_test
+ATF_TESTS_C+=		sigsetops_test
+ATF_TESTS_C+=		wordexp_test
 
 # TODO: t_closefrom, t_cpuset, t_fmtcheck, t_randomid,
 # TODO: t_siginfo (fixes require further inspection)
@@ -57,20 +59,14 @@ NETBSD_ATF_TESTS_C+=	vis_test
 
 .include "../Makefile.netbsd-tests"
 
-LDADD.humanize_number_test+=	-lutil
-DPADD.humanize_number_test+=	${LIBUTIL}
+LIBADD.humanize_number_test+=	util
 
-LDADD.fpclassify_test+=	-lm
-DPADD.fpclassify_test+=	${LIBM}
-LDADD.fpsetround_test+=	-lm
-DPADD.fpsetround_test+=	${LIBM}
-LDADD.siginfo_test+=	-lm
-DPADD.siginfo_test+=	${LIBM}
+LIBADD.fpclassify_test+=m
+LIBADD.fpsetround_test+=m
+LIBADD.siginfo_test+=	m
 
-LDADD.nice_test+=	-lpthread
-DPADD.nice_test+=	${LIBPTHREAD}
-LDADD.syslog_test+=	-lpthread
-DPADD.syslog_test+=	${LIBPTHREAD}
+LIBADD.nice_test+=	pthread
+LIBADD.syslog_test+=	pthread
 
 CFLAGS+=		-I${.CURDIR}
 

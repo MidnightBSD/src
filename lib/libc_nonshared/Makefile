@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc_nonshared/Makefile 313594 2017-02-11 06:23:07Z ngie $
+# $FreeBSD: stable/11/lib/libc_nonshared/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 # We're actually creating a libc_noshared.a that is PIC along side libc.so.*
 # It is used exclusively with libc.so.* - there is no need for any other
 # compile modes.
 # bsd.lib.mk doesn't have an easy way to express that.
-NO_PROFILE?=
-.include <bsd.own.mk>
+MK_PROFILE?=no
+.include <src.opts.mk>
 NO_PIC=
 # -fpic on some platforms, -fPIC on others.
 CFLAGS+=${PICFLAG} -DPIC -fvisibility=hidden

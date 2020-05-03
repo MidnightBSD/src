@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Oleksandr Tymoshenko
  * Copyright (c) 2012 Andrew Turner
@@ -27,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/__aeabi_read_tp.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/__aeabi_read_tp.S 288373 2015-09-29 16:09:58Z kib $");
 
 #include <machine/sysarch.h>
 
@@ -46,3 +45,4 @@ END(__aeabi_read_tp)
 	.word ARM_TP_ADDRESS
 #endif
 
+	.section .note.GNU-stack,"",%progbits

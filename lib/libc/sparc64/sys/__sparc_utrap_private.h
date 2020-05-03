@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/sparc64/sys/__sparc_utrap_private.h 96492 2002-05-13 04:35:08Z jake $
+ * $FreeBSD: stable/11/lib/libc/sparc64/sys/__sparc_utrap_private.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	___SPARC_UTRAP_PRIVATE_H_

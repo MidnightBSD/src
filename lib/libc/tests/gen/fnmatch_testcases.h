@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Jilles Tjoelker
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/fnmatch_testcases.h 324505 2017-10-10 21:04:40Z pfg $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/fnmatch_testcases.h 322524 2017-08-15 00:54:16Z pfg $");
 
 #include <fnmatch.h>
 

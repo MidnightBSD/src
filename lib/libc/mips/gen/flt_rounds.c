@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: flt_rounds.c,v 1.5 2005/12/24 23:10:08 perry Exp $	*/
 
 /*
@@ -7,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/mips/gen/flt_rounds.c 178580 2008-04-26 12:08:02Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/mips/gen/flt_rounds.c 178580 2008-04-26 12:08:02Z imp $");
 #if defined(LIBC_SCCS) && !defined(lint)
 __RCSID("$NetBSD: flt_rounds.c,v 1.5 2005/12/24 23:10:08 perry Exp $");
 #endif /* LIBC_SCCS and not lint */

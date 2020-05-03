@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fpgetsticky.c,v 1.2 2002/01/13 21:45:50 thorpej Exp $	*/
 
 /*
@@ -7,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/gen/fpgetsticky.c 103323 2002-09-14 18:06:21Z tmm $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/gen/fpgetsticky.c 103323 2002-09-14 18:06:21Z tmm $");
 
 #include <machine/fsr.h>
 #include <ieeefp.h>

@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * MD header for contrib/gdtoa
  *
- * $FreeBSD: stable/10/lib/libc/powerpc/arith.h 114839 2003-05-08 13:50:44Z das $
+ * $FreeBSD: stable/11/lib/libc/powerpc/arith.h 114839 2003-05-08 13:50:44Z das $
  */
 
 /*

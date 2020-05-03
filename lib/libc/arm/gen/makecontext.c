@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: makecontext.c,v 1.2 2003/01/18 11:06:24 thorpej Exp $	*/
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/makecontext.c 204607 2010-03-02 22:16:40Z joel $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/makecontext.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 #include <stddef.h>

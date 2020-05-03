@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libmemstat/memstat.c 224569 2011-08-01 09:43:35Z pluknet $
+ * $FreeBSD: stable/11/lib/libmemstat/memstat.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -252,6 +251,13 @@ memstat_get_size(const struct memory_type *mtp)
 {
 
 	return (mtp->mt_size);
+}
+
+uint64_t
+memstat_get_rsize(const struct memory_type *mtp)
+{
+
+	return (mtp->mt_rsize);
 }
 
 uint64_t

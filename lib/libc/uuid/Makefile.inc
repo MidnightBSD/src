@@ -1,13 +1,13 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libc/uuid/Makefile.inc 262722 2014-03-04 02:19:39Z marcel $
 
 # DCE 1.1 UUID implementation sources
 
-.PATH: ${.CURDIR}/uuid
+.PATH: ${LIBC_SRCTOP}/uuid
 
 SRCS+=	uuid_compare.c uuid_create.c uuid_create_nil.c uuid_equal.c \
 	uuid_from_string.c uuid_hash.c uuid_is_nil.c uuid_stream.c \
 	uuid_to_string.c
-SYM_MAPS+=	${.CURDIR}/uuid/Symbol.map
+SYM_MAPS+=	${LIBC_SRCTOP}/uuid/Symbol.map
 
 MAN+=	uuid.3
 MLINKS+=uuid.3 uuid_compare.3

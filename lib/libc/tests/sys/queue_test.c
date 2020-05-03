@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 EMC Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/sys/queue_test.c 291182 2015-11-23 09:22:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/sys/queue_test.c 290909 2015-11-16 04:15:39Z ngie $");
 
 #include <sys/queue.h>
 #include <stdio.h>

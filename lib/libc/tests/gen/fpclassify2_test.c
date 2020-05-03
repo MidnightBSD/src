@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/tests/gen/fpclassify2_test.c 277441 2015-01-20 21:42:40Z ngie $
+ * $FreeBSD: stable/11/lib/libc/tests/gen/fpclassify2_test.c 274595 2014-11-16 20:29:57Z ngie $
  */
 
 #include <math.h>

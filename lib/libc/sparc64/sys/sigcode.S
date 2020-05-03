@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/sys/sigcode.S 105709 2002-10-22 15:15:39Z jake $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/sys/sigcode.S 105709 2002-10-22 15:15:39Z jake $");
 
 #include "assym.s"
 

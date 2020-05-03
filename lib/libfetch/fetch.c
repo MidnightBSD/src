@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998-2004 Dag-Erling Smørgrav
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libfetch/fetch.c 315904 2017-03-24 14:26:01Z des $");
+__FBSDID("$FreeBSD: stable/11/lib/libfetch/fetch.c 357214 2020-01-28 18:42:06Z gordon $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -271,6 +270,7 @@ fetchMakeURL(const char *scheme, const char *host, int port, const char *doc,
 		fetch_syserr();
 		return (NULL);
 	}
+	u->netrcfd = -1;
 
 	if ((u->doc = strdup(doc ? doc : "/")) == NULL) {
 		fetch_syserr();
@@ -285,7 +285,6 @@ fetchMakeURL(const char *scheme, const char *host, int port, const char *doc,
 	seturl(pwd);
 #undef seturl
 	u->port = port;
-	u->netrcfd = -2;
 
 	return (u);
 }
@@ -353,7 +352,7 @@ fetchParseURL(const char *URL)
 		fetch_syserr();
 		return (NULL);
 	}
-	u->netrcfd = -2;
+	u->netrcfd = -1;
 
 	/* scheme name */
 	if ((p = strstr(URL, ":/"))) {
@@ -449,15 +448,14 @@ nohost:
 		goto ouch;
 	}
 
-	DEBUG(fprintf(stderr,
-		  "scheme:   \"%s\"\n"
-		  "user:     \"%s\"\n"
-		  "password: \"%s\"\n"
-		  "host:     \"%s\"\n"
-		  "port:     \"%d\"\n"
-		  "document: \"%s\"\n",
-		  u->scheme, u->user, u->pwd,
-		  u->host, u->port, u->doc));
+	DEBUGF("scheme:   \"%s\"\n"
+	    "user:     \"%s\"\n"
+	    "password: \"%s\"\n"
+	    "host:     \"%s\"\n"
+	    "port:     \"%d\"\n"
+	    "document: \"%s\"\n",
+	    u->scheme, u->user, u->pwd,
+	    u->host, u->port, u->doc);
 
 	return (u);
 

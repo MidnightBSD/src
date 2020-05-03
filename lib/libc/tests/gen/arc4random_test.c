@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 David Schultz
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/arc4random_test.c 290881 2015-11-15 20:30:54Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/arc4random_test.c 290571 2015-11-09 06:16:38Z ngie $");
 
 #include <sys/types.h>
 #include <sys/mman.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2014 Andrew Turner
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/gen/fpsetround_vfp.c 266370 2014-05-17 22:19:16Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/gen/fpsetround_vfp.c 264721 2014-04-21 09:43:22Z andrew $");
 
 #include <sys/types.h>
 #include <ieeefp.h>

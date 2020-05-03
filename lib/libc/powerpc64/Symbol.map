@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/powerpc64/Symbol.map 226606 2011-10-21 06:40:36Z das $
+/*
+ * $FreeBSD: stable/11/lib/libc/powerpc64/Symbol.map 297418 2016-03-30 14:42:09Z emaste $
  */
 
 /*
@@ -52,7 +52,4 @@ FBSDprivate_1.0 {
 	__signalcontext;
 	__syncicache;
 	_end;
-	_curbrk;
-	_minbrk;
-	_cerror;
 };

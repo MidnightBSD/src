@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: cerror.S,v 1.5 2003/08/07 16:42:04 agc Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/sys/cerror.S 271337 2014-09-09 22:24:01Z ian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/sys/cerror.S 288373 2015-09-29 16:09:58Z kib $");
 #include "SYS.h"
 
 .globl  _C_LABEL(__error)
@@ -48,3 +47,5 @@ ASENTRY(CERROR)
 	mvn	r1, #0x00000000
 	ldmfd	sp!, {r4, pc}
 END(CERROR)
+
+	.section .note.GNU-stack,"",%progbits

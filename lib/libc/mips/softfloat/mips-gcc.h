@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $NetBSD: arm-gcc.h,v 1.2 2001/02/21 18:09:25 bjh21 Exp $ */
-/* $FreeBSD: stable/10/lib/libc/mips/softfloat/mips-gcc.h 178580 2008-04-26 12:08:02Z imp $ */
+/* $FreeBSD: stable/11/lib/libc/mips/softfloat/mips-gcc.h 178580 2008-04-26 12:08:02Z imp $ */
 
 /*
 -------------------------------------------------------------------------------

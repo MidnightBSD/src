@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Jilles Tjoelker
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/gen/popen_test.c 291190 2015-11-23 10:53:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/gen/popen_test.c 290848 2015-11-15 05:02:41Z ngie $");
 
 #include <sys/param.h>
 #include <sys/wait.h>

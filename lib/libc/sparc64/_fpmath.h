@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 2002, 2003 David Schultz <das@FreeBSD.ORG>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/sparc64/_fpmath.h 175459 2008-01-18 21:25:51Z das $
+ * $FreeBSD: stable/11/lib/libc/sparc64/_fpmath.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 union IEEEl2bits {

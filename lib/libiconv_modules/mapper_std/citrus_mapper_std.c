@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libiconv_modules/mapper_std/citrus_mapper_std.c 264497 2014-04-15 09:49:44Z tijl $ */
-/*	$NetBSD: citrus_mapper_std.c,v 1.10 2011/11/19 18:48:39 tnozaki Exp $	*/
+/* $FreeBSD: stable/11/lib/libiconv_modules/mapper_std/citrus_mapper_std.c 336322 2018-07-16 00:20:18Z pfg $ */
+/*	$NetBSD: citrus_mapper_std.c,v 1.11 2018/06/11 18:03:38 kamil Exp $ */
 
 /*-
  * Copyright (c)2003, 2006 Citrus Project,
@@ -160,7 +159,7 @@ rowcol_parse_variable_compat(struct _citrus_mapper_std_rowcol *rc,
 	rc->rc_dst_invalid = be32toh(rcx->rcx_dst_invalid);
 	rc->rc_dst_unit_bits = be32toh(rcx->rcx_dst_unit_bits);
 	m = be32toh(rcx->rcx_src_col_bits);
-	n = 1 << (m - 1);
+	n = 1U << (m - 1);
 	n |= n - 1;
 	rc->rc_src_rowcol_bits = m;
 	rc->rc_src_rowcol_mask = n;

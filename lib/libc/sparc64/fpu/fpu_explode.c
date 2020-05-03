@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_explode.c 205410 2010-03-21 13:18:08Z marius $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_explode.c 205410 2010-03-21 13:18:08Z marius $");
 
 /*
  * FPU subroutines: `explode' the machine's `packed binary' format numbers

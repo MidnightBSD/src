@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1995-1997, 1999 Wolfgang Solfrank.
  * Copyright (C) 1995-1997, 1999 TooLs GmbH.
@@ -34,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/lib/libc/powerpc/gen/syncicache.c 253750 2013-07-28 18:44:17Z avg $";
+  "$FreeBSD: stable/11/lib/libc/powerpc/gen/syncicache.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -67,8 +66,8 @@ getcachelinesize()
 
 	clen = sizeof(cacheline_size);
 
-	if (sysctl(cachemib, sizeof(cachemib) / sizeof(cachemib[0]),
-	    &cacheline_size, &clen, NULL, 0) < 0 || !cacheline_size) {
+	if (sysctl(cachemib, nitems(cachemib), &cacheline_size, &clen,
+	    NULL, 0) < 0 || !cacheline_size) {
 		abort();
 	}
 }

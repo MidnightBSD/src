@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
 Copyright (C) 2013 Pietro Cerutti <gahr@FreeBSD.org>
 
@@ -30,7 +29,7 @@ SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/stdio/fmemopen2_test.c 299021 2016-05-04 00:30:36Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/stdio/fmemopen2_test.c 298311 2016-04-19 23:59:10Z ngie $");
 
 #include <errno.h>
 #include <stdio.h>
@@ -96,6 +95,7 @@ ATF_TC_BODY(test_preexisting, tc)
 
 	/* Close the FILE *. */
 	rc = fclose(fp);
+	ATF_REQUIRE(rc == 0);
 
 	/* Check that the string was not modified after the first 4 bytes. */
 	ATF_REQUIRE(strcmp(str, str3) == 0);

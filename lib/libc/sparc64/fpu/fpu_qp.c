@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Jake Burkholder.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/sparc64/fpu/fpu_qp.c 178138 2008-04-12 03:09:51Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/sparc64/fpu/fpu_qp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <machine/fsr.h>

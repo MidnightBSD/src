@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Michael Bushkov <bushman@freebsd.org>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/tests/nss/getusershell_test.c 319298 2017-05-31 08:30:37Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/tests/nss/getusershell_test.c 319299 2017-05-31 08:32:05Z ngie $");
 
 #include <assert.h>
 #include <errno.h>

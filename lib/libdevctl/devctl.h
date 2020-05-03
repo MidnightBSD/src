@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libdevctl/devctl.h 306533 2016-09-30 22:05:47Z jhb $
+ * $FreeBSD: stable/11/lib/libdevctl/devctl.h 346384 2019-04-19 13:18:54Z kib $
  */
 
 #ifndef __DEVCTL_H__
@@ -32,11 +31,18 @@
 
 #include <stdbool.h>
 
+__BEGIN_DECLS
 int	devctl_attach(const char *device);
 int	devctl_detach(const char *device, bool force);
 int	devctl_enable(const char *device);
 int	devctl_disable(const char *device, bool force_detach);
+int	devctl_suspend(const char *device);
+int	devctl_resume(const char *device);
 int	devctl_set_driver(const char *device, const char *driver, bool force);
 int	devctl_clear_driver(const char *device, bool force);
+int	devctl_rescan(const char *device);
+int	devctl_delete(const char *device, bool force);
+int	devctl_reset(const char *device, bool detach);
+__END_DECLS
 
 #endif /* !__DEVCTL_H__ */

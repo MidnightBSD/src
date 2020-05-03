@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ffs.S,v 1.5 2003/04/05 23:08:52 bjh21 Exp $	*/
 /*
  * Copyright (c) 2001 Christopher Gilbert
@@ -31,7 +30,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: stable/10/lib/libc/arm/string/ffs.S 275767 2014-12-14 16:28:53Z andrew $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/arm/string/ffs.S 288373 2015-09-29 16:09:58Z kib $");
 
 .syntax unified
 
@@ -79,8 +78,11 @@ ENTRY(ffs)
 	.byte	31,  0,  0,  0,  0, 24,  0, 20  /* 48-55 */
 	.byte   30,  0, 23, 19, 29, 18, 17,  0  /* 56-63 */
 #else
+	itt	ne
 	clzne	r0, r0
 	rsbne	r0, r0, #32
 	RET
 #endif
 END(ffs)
+
+	.section .note.GNU-stack,"",%progbits
