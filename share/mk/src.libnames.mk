@@ -17,6 +17,7 @@ _PRIVATELIBS=	\
 		atf_cxx \
 		bsdstat \
 		devdctl \
+		dispatch \
 		event \
 		heimipcc \
 		heimipcs \
