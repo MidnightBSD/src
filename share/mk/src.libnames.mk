@@ -21,6 +21,8 @@ _PRIVATELIBS=	\
 		heimipcc \
 		heimipcs \
 		ldns \
+		mport \
+		msearch \
 		sqlite3 \
 		ssh \
 		ucl \
@@ -61,6 +63,7 @@ _LIBRARIES=	\
 		avl \
 		be \
 		begemot \
+		blocksruntime \
 		bluetooth \
 		bsdxml \
 		bsm \

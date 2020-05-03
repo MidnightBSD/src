@@ -1,5 +1,3 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/liblzma/config.h 312518 2017-01-20 06:40:12Z delphij $ */
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -11,7 +9,7 @@
 
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef ENABLE_NLS */
 
 /* Define to 1 if bswap_16 is available. */
@@ -60,7 +58,7 @@
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef HAVE_DCGETTEXT */
 
 /* Define to 1 if you have the declaration of `CLOCK_MONOTONIC', and to 0 if
@@ -138,7 +136,7 @@
 #define HAVE_FCNTL_H 1
 
 /* Define to 1 if you have the `futimens' function. */
-/* #undef HAVE_FUTIMENS 1 */
+#define HAVE_FUTIMENS 1
 
 /* Define to 1 if you have the `futimes' function. */
 /* #undef HAVE_FUTIMES */
@@ -153,14 +151,14 @@
 #define HAVE_GETOPT_LONG 1
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef HAVE_GETTEXT */
 
 /* Define if you have the iconv() function and it works. */
 #define HAVE_ICONV 1
 
 /* Define to 1 if you have the <immintrin.h> header file. */
-/* FreeBSD - only with clang because the base gcc does not support it */
+/* MidnightBSD - only with clang because the base gcc does not support it */
 #if defined(__clang__) && defined(__MidnightBSD__) && defined(__amd64__)
 #define HAVE_IMMINTRIN_H 1
 #endif
@@ -208,15 +206,15 @@
 /* #undef HAVE_SHA256INIT */
 
 /* Define to 1 if the system has the type `SHA256_CTX'. */
-/* FreeBSD - disabled libmd SHA256 for now */
+/* MidnightBSD - disabled libmd SHA256 for now */
 /* #undef HAVE_SHA256_CTX */
 
 /* Define to 1 if you have the <sha256.h> header file. */
-/* FreeBSD - disabled libmd SHA256 for now */
+/* MidnightBSD - disabled libmd SHA256 for now */
 /* #undef HAVE_SHA256_H */
 
 /* Define to 1 if you have the `SHA256_Init' function. */
-/* FreeBSD - disabled libmd SHA256 for now */
+/* MidnightBSD - disabled libmd SHA256 for now */
 /* #undef HAVE_SHA256_INIT */
 
 /* Define to 1 if the system has the type `SHA2_CTX'. */
@@ -336,16 +334,16 @@
 #define PACKAGE_NAME "XZ Utils"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "XZ Utils 5.2.3"
+#define PACKAGE_STRING "XZ Utils 5.2.4"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "xz"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "http://tukaani.org/xz/"
+#define PACKAGE_URL "https://tukaani.org/xz/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.2.3"
+#define PACKAGE_VERSION "5.2.4"
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
@@ -379,7 +377,7 @@
 
 /* Define to 1 if the system supports fast unaligned access to 16-bit and
    32-bit integers. */
-/* FreeBSD - derive from __NO_STRICT_ALIGNMENT */
+/* MidnightBSD - derive from __NO_STRICT_ALIGNMENT */
 /* #undef TUKLIB_FAST_UNALIGNED_ACCESS */
 
 /* Define to 1 if the amount of physical memory can be detected with
@@ -433,7 +431,7 @@
 
 
 /* Version number of package */
-#define VERSION "5.2.3"
+#define VERSION "5.2.4"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

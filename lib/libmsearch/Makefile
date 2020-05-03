@@ -10,7 +10,6 @@ WFORMAT?=       1
 SHLIB_MAJOR=	1
 CSTD=	c99
 
-DPADD=  ${LIBSQLITE3} ${LIBMAGIC} ${LIBZ}
-LDADD=  -lsqlite3 -lmagic -lz
+LIBADD+=	sqlite3 magic z
 
 .include <bsd.lib.mk>
