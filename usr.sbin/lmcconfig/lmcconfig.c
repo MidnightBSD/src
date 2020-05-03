@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * First author: Michael Graff.
  * Copyright (c) 1997-2000 Lan Media Corp. (www.lanmedia.com).
@@ -63,7 +62,7 @@
  *    cc -o lmcconfig lmcconfig.c
  * Install the executable program in /usr/local/sbin/lmcconfig.
  *
- * $FreeBSD: stable/10/usr.sbin/lmcconfig/lmcconfig.c 300279 2016-05-20 06:56:43Z truckman $
+ * $FreeBSD: stable/11/usr.sbin/lmcconfig/lmcconfig.c 299866 2016-05-15 21:45:04Z truckman $
  */
 
 #include <sys/param.h>
@@ -1529,7 +1528,7 @@ print_test_pattern(int patt)
     case 11:
       printf("framed X^23+X^18+1\n");
       break;
-    case 12:;
+    case 12:
       printf("framed X^11+X^9+1 w/7ZS\n");
       break;
     case 13:
@@ -2009,7 +2008,7 @@ load_xilinx(char *name)
   int c;
 
   if (verbose) printf("Load firmware from file %s...\n", name);
-  if ((f = fopen(name, "r")) == 0)
+  if ((f = fopen(name, "r")) == NULL)
     {
     perror("Failed to open file");
     exit(1);

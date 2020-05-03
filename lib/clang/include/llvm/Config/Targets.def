@@ -1,10 +1,32 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/clang/include/llvm/Config/Targets.def 263763 2014-03-26 07:31:57Z dim $ */
+/* $FreeBSD: stable/11/lib/clang/include/llvm/Config/Targets.def 346891 2019-04-29 16:14:24Z mhorne $ */
 
+#ifndef LLVM_TARGET
+#  error Please define the macro LLVM_TARGET(TargetName)
+#endif
+
+#ifdef LLVM_TARGET_ENABLE_AARCH64
+LLVM_TARGET(AArch64)
+#endif
+#ifdef LLVM_TARGET_ENABLE_ARM
 LLVM_TARGET(ARM)
+#endif
+#ifdef LLVM_TARGET_ENABLE_BPF
+LLVM_TARGET(BPF)
+#endif
+#ifdef LLVM_TARGET_ENABLE_MIPS
 LLVM_TARGET(Mips)
+#endif
+#ifdef LLVM_TARGET_ENABLE_POWERPC
 LLVM_TARGET(PowerPC)
+#endif
+#ifdef LLVM_TARGET_ENABLE_RISCV
+LLVM_TARGET(RISCV)
+#endif
+#ifdef LLVM_TARGET_ENABLE_SPARC
 LLVM_TARGET(Sparc)
+#endif
+#ifdef LLVM_TARGET_ENABLE_X86
 LLVM_TARGET(X86)
+#endif
 
 #undef LLVM_TARGET

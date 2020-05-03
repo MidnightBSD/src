@@ -11,12 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CallGraph.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/Support/Process.h"
@@ -67,6 +69,25 @@ void ento::registerLiveVariablesDumper(CheckerManager &mgr) {
 }
 
 //===----------------------------------------------------------------------===//
+// LiveStatementsDumper
+//===----------------------------------------------------------------------===//
+
+namespace {
+class LiveStatementsDumper : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager& Mgr,
+                        BugReporter &BR) const {
+    if (LiveVariables *L = Mgr.getAnalysis<RelaxedLiveVariables>(D))
+      L->dumpStmtLiveness(Mgr.getSourceManager());
+  }
+};
+}
+
+void ento::registerLiveStatementsDumper(CheckerManager &mgr) {
+  mgr.registerChecker<LiveStatementsDumper>();
+}
+
+//===----------------------------------------------------------------------===//
 // CFGViewer
 //===----------------------------------------------------------------------===//
 
@@ -95,6 +116,11 @@ class CFGDumper : public Checker<check::ASTCodeBody> {
 public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
+    PrintingPolicy Policy(mgr.getLangOpts());
+    Policy.TerseOutput = true;
+    Policy.PolishForDeclaration = true;
+    D->print(llvm::errs(), Policy);
+
     if (CFG *cfg = mgr.getCFG(D)) {
       cfg->dump(mgr.getLangOpts(),
                 llvm::sys::Process::StandardErrHasColors());
@@ -175,7 +201,9 @@ public:
 
     llvm::errs() << "[config]\n";
     for (unsigned I = 0, E = Keys.size(); I != E; ++I)
-      llvm::errs() << Keys[I]->getKey() << " = " << Keys[I]->second << '\n';
+      llvm::errs() << Keys[I]->getKey() << " = "
+                   << (Keys[I]->second.empty() ? "\"\"" : Keys[I]->second)
+                   << '\n';
 
     llvm::errs() << "[stats]\n" << "num-entries = " << Keys.size() << '\n';
   }
@@ -204,3 +232,4 @@ public:
 void ento::registerExplodedGraphViewer(CheckerManager &mgr) {
   mgr.registerChecker<ExplodedGraphViewer>();
 }
+

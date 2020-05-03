@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/csu/mips/crti.S 205112 2010-03-13 02:10:20Z jmallett $");
+__FBSDID("$FreeBSD: stable/11/lib/csu/mips/crti.S 205112 2010-03-13 02:10:20Z jmallett $");
 
 	.section .init,"ax",%progbits
 	.align 4

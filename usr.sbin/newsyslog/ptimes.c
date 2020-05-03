@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Initial version of parse8601 was originally added to newsyslog.c in
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/newsyslog/ptimes.c 321263 2017-07-20 00:44:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/newsyslog/ptimes.c 321262 2017-07-20 00:41:46Z ngie $");
 
 #include <ctype.h>
 #include <limits.h>

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/10/contrib/openbsm/etc/audit_warn 293161 2016-01-04 16:32:21Z brueffer $
+# $FreeBSD: stable/11/contrib/openbsm/etc/audit_warn 292432 2015-12-18 09:48:01Z brueffer $
 #
 
 logger -p security.warning "audit warning: $@"

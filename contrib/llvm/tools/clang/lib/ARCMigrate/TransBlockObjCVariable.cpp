@@ -43,11 +43,11 @@ class RootBlockObjCVarRewriter :
 
   class BlockVarChecker : public RecursiveASTVisitor<BlockVarChecker> {
     VarDecl *Var;
-  
+
     typedef RecursiveASTVisitor<BlockVarChecker> base;
   public:
     BlockVarChecker(VarDecl *var) : Var(var) { }
-  
+
     bool TraverseImplicitCastExpr(ImplicitCastExpr *castE) {
       if (DeclRefExpr *
             ref = dyn_cast<DeclRefExpr>(castE->getSubExpr())) {
@@ -77,11 +77,10 @@ public:
 
   bool VisitBlockDecl(BlockDecl *block) {
     SmallVector<VarDecl *, 4> BlockVars;
-    
-    for (BlockDecl::capture_iterator
-           I = block->capture_begin(), E = block->capture_end(); I != E; ++I) {
-      VarDecl *var = I->getVariable();
-      if (I->isByRef() &&
+
+    for (const auto &I : block->captures()) {
+      VarDecl *var = I.getVariable();
+      if (I.isByRef() &&
           var->getType()->isObjCObjectPointerType() &&
           isImplicitStrong(var->getType())) {
         BlockVars.push_back(var);

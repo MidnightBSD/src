@@ -1,4 +1,4 @@
-//===--- PathDiagnosticClients.h - Path Diagnostic Clients ------*- C++ -*-===//
+//===--- PathDiagnosticConsumers.h - Path Diagnostic Clients ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_GR_PATH_DIAGNOSTIC_CLIENTS_H
-#define LLVM_CLANG_GR_PATH_DIAGNOSTIC_CLIENTS_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHDIAGNOSTICCONSUMERS_H
+#define LLVM_CLANG_STATICANALYZER_CORE_PATHDIAGNOSTICCONSUMERS_H
 
 #include <string>
 #include <vector>

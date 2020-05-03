@@ -1,4 +1,4 @@
-//===--- LangOptions.cpp - C Language Family Language Options ---*- C++ -*-===//
+//===- LangOptions.cpp - C Language Family Language Options ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,18 +10,15 @@
 //  This file defines the LangOptions class.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/Basic/LangOptions.h"
 
 using namespace clang;
-
-const SanitizerOptions SanitizerOptions::Disabled = {};
 
 LangOptions::LangOptions() {
 #define LANGOPT(Name, Bits, Default, Description) Name = Default;
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description) set##Name(Default);
 #include "clang/Basic/LangOptions.def"
-
-  Sanitize = SanitizerOptions::Disabled;
 }
 
 void LangOptions::resetNonModularOptions() {
@@ -31,10 +28,23 @@ void LangOptions::resetNonModularOptions() {
   Name = Default;
 #include "clang/Basic/LangOptions.def"
 
-  // FIXME: This should not be reset; modules can be different with different
-  // sanitizer options (this affects __has_feature(address_sanitizer) etc).
-  Sanitize = SanitizerOptions::Disabled;
+  // These options do not affect AST generation.
+  SanitizerBlacklistFiles.clear();
+  XRayAlwaysInstrumentFiles.clear();
+  XRayNeverInstrumentFiles.clear();
 
   CurrentModule.clear();
+  IsHeaderFile = false;
 }
 
+bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
+  for (unsigned i = 0, e = NoBuiltinFuncs.size(); i != e; ++i)
+    if (FuncName.equals(NoBuiltinFuncs[i]))
+      return true;
+  return false;
+}
+
+VersionTuple LangOptions::getOpenCLVersionTuple() const {
+  const int Ver = OpenCLCPlusPlus ? OpenCLCPlusPlusVersion : OpenCLVersion;
+  return VersionTuple(Ver / 100, (Ver % 100) / 10);
+}

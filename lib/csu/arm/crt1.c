@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* LINTLIBRARY */
 /*-
  * Copyright 2001 David E. O'Brien.
@@ -41,8 +40,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/csu/arm/crt1.c 300323 2016-05-20 19:14:15Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/csu/arm/crt1.c 339300 2018-10-11 00:26:15Z emaste $");
 
+#include <sys/param.h>
+#include <sys/elf_common.h>
 #include <stdlib.h>
 
 #include "libc_private.h"
@@ -114,13 +115,13 @@ static const struct {
 	int32_t	namesz;
 	int32_t	descsz;
 	int32_t	type;
-	char	name[sizeof(NOTE_FREEBSD_VENDOR)];
+	char	name[sizeof(NOTE_MIDNIGHTBSD_VENDOR)];
 	char	desc[sizeof(MACHINE_ARCH)];
 } archtag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
-	.namesz = sizeof(NOTE_FREEBSD_VENDOR),
+	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
 	.descsz = sizeof(MACHINE_ARCH),
-	.type = ARCH_NOTETYPE,
-	.name = NOTE_FREEBSD_VENDOR,
+	.type = NT_MIDNIGHTBSD_ARCH_TAG,
+	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = MACHINE_ARCH
 };
 

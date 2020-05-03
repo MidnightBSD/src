@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/lmcconfig/Makefile 216600 2010-12-20 19:08:15Z uqs $
+# $FreeBSD: stable/11/usr.sbin/lmcconfig/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	lmcconfig
 MAN=	lmcconfig.8
 
-DPADD=	${LIBNETGRAPH}
-LDADD=	-lnetgraph
+LIBADD=	netgraph
 
 WARNS?=	3
 

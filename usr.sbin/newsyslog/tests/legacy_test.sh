@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/newsyslog/tests/legacy_test.sh 321263 2017-07-20 00:44:01Z ngie $
+# $FreeBSD: stable/11/usr.sbin/newsyslog/tests/legacy_test.sh 321262 2017-07-20 00:41:46Z ngie $
 
 # A regular expression matching the format of an RFC-5424 log line header,
 # including the timestamp up through the seconds indicator; it does not include

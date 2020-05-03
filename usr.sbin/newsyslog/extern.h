@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2003  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -30,7 +31,7 @@
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/10/usr.sbin/newsyslog/extern.h 321263 2017-07-20 00:44:01Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/newsyslog/extern.h 330449 2018-03-05 07:26:05Z eadler $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

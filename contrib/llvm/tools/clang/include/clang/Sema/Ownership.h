@@ -1,4 +1,4 @@
-//===--- Ownership.h - Parser ownership helpers -----------------*- C++ -*-===//
+//===- Ownership.h - Parser ownership helpers -------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,26 +14,32 @@
 #ifndef LLVM_CLANG_SEMA_OWNERSHIP_H
 #define LLVM_CLANG_SEMA_OWNERSHIP_H
 
+#include "clang/AST/Expr.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm/Support/type_traits.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 //===----------------------------------------------------------------------===//
 // OpaquePtr
 //===----------------------------------------------------------------------===//
 
 namespace clang {
-  class CXXCtorInitializer;
-  class CXXBaseSpecifier;
-  class Decl;
-  class Expr;
-  class ParsedTemplateArgument;
-  class QualType;
-  class Stmt;
-  class TemplateName;
-  class TemplateParameterList;
 
-  /// \brief Wrapper for void* pointer.
+class CXXBaseSpecifier;
+class CXXCtorInitializer;
+class Decl;
+class Expr;
+class ParsedTemplateArgument;
+class QualType;
+class Stmt;
+class TemplateName;
+class TemplateParameterList;
+
+  /// Wrapper for void* pointer.
   /// \tparam PtrTy Either a pointer type like 'T*' or a type that behaves like
   ///               a pointer.
   ///
@@ -43,17 +49,18 @@ namespace clang {
   /// compatible with "Type" pointers for example.
   template <class PtrTy>
   class OpaquePtr {
-    void *Ptr;
+    void *Ptr = nullptr;
+
     explicit OpaquePtr(void *Ptr) : Ptr(Ptr) {}
 
-    typedef llvm::PointerLikeTypeTraits<PtrTy> Traits;
+    using Traits = llvm::PointerLikeTypeTraits<PtrTy>;
 
   public:
-    OpaquePtr() : Ptr(0) {}
+    OpaquePtr(std::nullptr_t = nullptr) {}
 
     static OpaquePtr make(PtrTy P) { OpaquePtr OP; OP.set(P); return OP; }
 
-    /// \brief Returns plain pointer to the entity pointed by this wrapper.
+    /// Returns plain pointer to the entity pointed by this wrapper.
     /// \tparam PointeeT Type of pointed entity.
     ///
     /// It is identical to getPtrAs<PointeeT*>.
@@ -61,7 +68,7 @@ namespace clang {
       return get();
     }
 
-    /// \brief Returns pointer converted to the specified type.
+    /// Returns pointer converted to the specified type.
     /// \tparam PtrT Result pointer type.  There must be implicit conversion
     ///              from PtrTy to PtrT.
     ///
@@ -79,7 +86,7 @@ namespace clang {
       Ptr = Traits::getAsVoidPointer(P);
     }
 
-    LLVM_EXPLICIT operator bool() const { return Ptr != 0; }
+    explicit operator bool() const { return Ptr != nullptr; }
 
     void *getAsOpaquePtr() const { return Ptr; }
     static OpaquePtr getFromOpaquePtr(void *P) { return OpaquePtr(P); }
@@ -103,27 +110,32 @@ namespace clang {
       return *this;
     }
   };
-}
+
+} // namespace clang
 
 namespace llvm {
+
   template <class T>
-  class PointerLikeTypeTraits<clang::OpaquePtr<T> > {
-  public:
+  struct PointerLikeTypeTraits<clang::OpaquePtr<T>> {
+    enum { NumLowBitsAvailable = 0 };
+
     static inline void *getAsVoidPointer(clang::OpaquePtr<T> P) {
       // FIXME: Doesn't work? return P.getAs< void >();
       return P.getAsOpaquePtr();
     }
+
     static inline clang::OpaquePtr<T> getFromVoidPointer(void *P) {
       return clang::OpaquePtr<T>::getFromOpaquePtr(P);
     }
-    enum { NumLowBitsAvailable = 0 };
   };
 
   template <class T>
-  struct isPodLike<clang::OpaquePtr<T> > { static const bool value = true; };
-}
+  struct isPodLike<clang::OpaquePtr<T>> { static const bool value = true; };
+
+} // namespace llvm
 
 namespace clang {
+
   // Basic
   class DiagnosticBuilder;
 
@@ -147,23 +159,20 @@ namespace clang {
     bool Invalid;
 
   public:
-    ActionResult(bool Invalid = false)
-      : Val(PtrTy()), Invalid(Invalid) {}
+    ActionResult(bool Invalid = false) : Val(PtrTy()), Invalid(Invalid) {}
     ActionResult(PtrTy val) : Val(val), Invalid(false) {}
     ActionResult(const DiagnosticBuilder &) : Val(PtrTy()), Invalid(true) {}
 
     // These two overloads prevent void* -> bool conversions.
-    ActionResult(const void *);
-    ActionResult(volatile void *);
+    ActionResult(const void *) = delete;
+    ActionResult(volatile void *) = delete;
 
     bool isInvalid() const { return Invalid; }
     bool isUsable() const { return !Invalid && Val; }
+    bool isUnset() const { return !Invalid && !Val; }
 
     PtrTy get() const { return Val; }
-    // FIXME: Replace with get.
-    PtrTy release() const { return Val; }
-    PtrTy take() const { return Val; }
-    template <typename T> T *takeAs() { return static_cast<T*>(get()); }
+    template <typename T> T *getAs() { return static_cast<T*>(get()); }
 
     void set(PtrTy V) { Val = V; }
 
@@ -181,33 +190,35 @@ namespace clang {
     // A pointer whose low bit is 1 if this result is invalid, 0
     // otherwise.
     uintptr_t PtrWithInvalid;
-    typedef llvm::PointerLikeTypeTraits<PtrTy> PtrTraits;
+
+    using PtrTraits = llvm::PointerLikeTypeTraits<PtrTy>;
+
   public:
     ActionResult(bool Invalid = false)
-      : PtrWithInvalid(static_cast<uintptr_t>(Invalid)) { }
+        : PtrWithInvalid(static_cast<uintptr_t>(Invalid)) {}
 
     ActionResult(PtrTy V) {
       void *VP = PtrTraits::getAsVoidPointer(V);
       PtrWithInvalid = reinterpret_cast<uintptr_t>(VP);
       assert((PtrWithInvalid & 0x01) == 0 && "Badly aligned pointer");
     }
-    ActionResult(const DiagnosticBuilder &) : PtrWithInvalid(0x01) { }
+
+    ActionResult(const DiagnosticBuilder &) : PtrWithInvalid(0x01) {}
 
     // These two overloads prevent void* -> bool conversions.
-    ActionResult(const void *);
-    ActionResult(volatile void *);
+    ActionResult(const void *) = delete;
+    ActionResult(volatile void *) = delete;
 
     bool isInvalid() const { return PtrWithInvalid & 0x01; }
     bool isUsable() const { return PtrWithInvalid > 0x01; }
+    bool isUnset() const { return PtrWithInvalid == 0; }
 
     PtrTy get() const {
       void *VP = reinterpret_cast<void *>(PtrWithInvalid & ~0x01);
       return PtrTraits::getFromVoidPointer(VP);
     }
-    // FIXME: Replace with get.
-    PtrTy take() const { return get(); }
-    PtrTy release() const { return get(); }
-    template <typename T> T *takeAs() { return static_cast<T*>(get()); }
+
+    template <typename T> T *getAs() { return static_cast<T*>(get()); }
 
     void set(PtrTy V) {
       void *VP = PtrTraits::getAsVoidPointer(V);
@@ -234,8 +245,8 @@ namespace clang {
 
   /// An opaque type for threading parsed type information through the
   /// parser.
-  typedef OpaquePtr<QualType> ParsedType;
-  typedef UnionOpaquePtr<QualType> UnionParsedType;
+  using ParsedType = OpaquePtr<QualType>;
+  using UnionParsedType = UnionOpaquePtr<QualType>;
 
   // We can re-use the low bit of expression, statement, base, and
   // member-initializer pointers for the "invalid" flag of
@@ -253,20 +264,21 @@ namespace clang {
     static const bool value = true;
   };
 
-  typedef ActionResult<Expr*> ExprResult;
-  typedef ActionResult<Stmt*> StmtResult;
-  typedef ActionResult<ParsedType> TypeResult;
-  typedef ActionResult<CXXBaseSpecifier*> BaseResult;
-  typedef ActionResult<CXXCtorInitializer*> MemInitResult;
+  using ExprResult = ActionResult<Expr *>;
+  using StmtResult = ActionResult<Stmt *>;
+  using TypeResult = ActionResult<ParsedType>;
+  using BaseResult = ActionResult<CXXBaseSpecifier *>;
+  using MemInitResult = ActionResult<CXXCtorInitializer *>;
 
-  typedef ActionResult<Decl*> DeclResult;
-  typedef OpaquePtr<TemplateName> ParsedTemplateTy;
+  using DeclResult = ActionResult<Decl *>;
+  using ParsedTemplateTy = OpaquePtr<TemplateName>;
+  using UnionParsedTemplateTy = UnionOpaquePtr<TemplateName>;
 
-  typedef llvm::MutableArrayRef<Expr*> MultiExprArg;
-  typedef llvm::MutableArrayRef<Stmt*> MultiStmtArg;
-  typedef llvm::MutableArrayRef<ParsedTemplateArgument> ASTTemplateArgsPtr;
-  typedef llvm::MutableArrayRef<ParsedType> MultiTypeArg;
-  typedef llvm::MutableArrayRef<TemplateParameterList*> MultiTemplateParamsArg;
+  using MultiExprArg = MutableArrayRef<Expr *>;
+  using MultiStmtArg = MutableArrayRef<Stmt *>;
+  using ASTTemplateArgsPtr = MutableArrayRef<ParsedTemplateArgument>;
+  using MultiTypeArg = MutableArrayRef<ParsedType>;
+  using MultiTemplateParamsArg = MutableArrayRef<TemplateParameterList *>;
 
   inline ExprResult ExprError() { return ExprResult(true); }
   inline StmtResult StmtError() { return StmtResult(true); }
@@ -286,6 +298,7 @@ namespace clang {
     assert(!R.isInvalid() && "operation was asserted to never fail!");
     return R.get();
   }
-}
 
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_SEMA_OWNERSHIP_H

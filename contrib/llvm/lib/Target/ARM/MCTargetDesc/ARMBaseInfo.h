@@ -14,77 +14,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ARMBASEINFO_H
-#define ARMBASEINFO_H
+#ifndef LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMBASEINFO_H
+#define LLVM_LIB_TARGET_ARM_MCTARGETDESC_ARMBASEINFO_H
 
 #include "ARMMCTargetDesc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "Utils/ARMBaseInfo.h"
 
 namespace llvm {
-
-// Enums corresponding to ARM condition codes
-namespace ARMCC {
-  // The CondCodes constants map directly to the 4-bit encoding of the
-  // condition field for predicated instructions.
-  enum CondCodes { // Meaning (integer)          Meaning (floating-point)
-    EQ,            // Equal                      Equal
-    NE,            // Not equal                  Not equal, or unordered
-    HS,            // Carry set                  >, ==, or unordered
-    LO,            // Carry clear                Less than
-    MI,            // Minus, negative            Less than
-    PL,            // Plus, positive or zero     >, ==, or unordered
-    VS,            // Overflow                   Unordered
-    VC,            // No overflow                Not unordered
-    HI,            // Unsigned higher            Greater than, or unordered
-    LS,            // Unsigned lower or same     Less than or equal
-    GE,            // Greater than or equal      Greater than or equal
-    LT,            // Less than                  Less than, or unordered
-    GT,            // Greater than               Greater than
-    LE,            // Less than or equal         <, ==, or unordered
-    AL             // Always (unconditional)     Always (unconditional)
-  };
-
-  inline static CondCodes getOppositeCondition(CondCodes CC) {
-    switch (CC) {
-    default: llvm_unreachable("Unknown condition code");
-    case EQ: return NE;
-    case NE: return EQ;
-    case HS: return LO;
-    case LO: return HS;
-    case MI: return PL;
-    case PL: return MI;
-    case VS: return VC;
-    case VC: return VS;
-    case HI: return LS;
-    case LS: return HI;
-    case GE: return LT;
-    case LT: return GE;
-    case GT: return LE;
-    case LE: return GT;
-    }
-  }
-} // namespace ARMCC
-
-inline static const char *ARMCondCodeToString(ARMCC::CondCodes CC) {
-  switch (CC) {
-  case ARMCC::EQ:  return "eq";
-  case ARMCC::NE:  return "ne";
-  case ARMCC::HS:  return "hs";
-  case ARMCC::LO:  return "lo";
-  case ARMCC::MI:  return "mi";
-  case ARMCC::PL:  return "pl";
-  case ARMCC::VS:  return "vs";
-  case ARMCC::VC:  return "vc";
-  case ARMCC::HI:  return "hi";
-  case ARMCC::LS:  return "ls";
-  case ARMCC::GE:  return "ge";
-  case ARMCC::LT:  return "lt";
-  case ARMCC::GT:  return "gt";
-  case ARMCC::LE:  return "le";
-  case ARMCC::AL:  return "al";
-  }
-  llvm_unreachable("Unknown condition code");
-}
 
 namespace ARM_PROC {
   enum IMod {
@@ -161,6 +98,20 @@ namespace ARM_MB {
   }
 } // namespace ARM_MB
 
+namespace ARM_TSB {
+  enum TraceSyncBOpt {
+    CSYNC = 0
+  };
+
+  inline static const char *TraceSyncBOptToString(unsigned val) {
+    switch (val) {
+    default:
+      llvm_unreachable("Unknown trace synchronization barrier operation");
+      case CSYNC: return "csync";
+    }
+  }
+} // namespace ARM_TSB
+
 namespace ARM_ISB {
   enum InstSyncBOpt {
     RESERVED_0 = 0,
@@ -183,7 +134,8 @@ namespace ARM_ISB {
 
   inline static const char *InstSyncBOptToString(unsigned val) {
     switch (val) {
-      default: llvm_unreachable("Unkown memory operation");
+    default:
+      llvm_unreachable("Unknown memory operation");
       case RESERVED_0:  return "#0x0";
       case RESERVED_1:  return "#0x1";
       case RESERVED_2:  return "#0x2";
@@ -248,7 +200,9 @@ namespace ARMII {
     AddrModeT2_so   = 13,
     AddrModeT2_pc   = 14, // +/- i12 for pc relative data
     AddrModeT2_i8s4 = 15, // i8 * 4
-    AddrMode_i12    = 16
+    AddrMode_i12    = 16,
+    AddrMode5FP16   = 17,  // i8 * 2
+    AddrModeT2_ldrex = 18, // i8 * 4, with unscaled offset in MCInst
   };
 
   inline static const char *AddrModeToString(AddrMode addrmode) {
@@ -259,6 +213,7 @@ namespace ARMII {
     case AddrMode3:       return "AddrMode3";
     case AddrMode4:       return "AddrMode4";
     case AddrMode5:       return "AddrMode5";
+    case AddrMode5FP16:   return "AddrMode5FP16";
     case AddrMode6:       return "AddrMode6";
     case AddrModeT1_1:    return "AddrModeT1_1";
     case AddrModeT1_2:    return "AddrModeT1_2";
@@ -270,6 +225,7 @@ namespace ARMII {
     case AddrModeT2_pc:   return "AddrModeT2_pc";
     case AddrModeT2_i8s4: return "AddrModeT2_i8s4";
     case AddrMode_i12:    return "AddrMode_i12";
+    case AddrModeT2_ldrex:return "AddrModeT2_ldrex";
     }
   }
 
@@ -278,42 +234,55 @@ namespace ARMII {
     //===------------------------------------------------------------------===//
     // ARM Specific MachineOperand flags.
 
-    MO_NO_FLAG,
+    MO_NO_FLAG = 0,
 
     /// MO_LO16 - On a symbol operand, this represents a relocation containing
     /// lower 16 bit of the address. Used only via movw instruction.
-    MO_LO16,
+    MO_LO16 = 0x1,
 
     /// MO_HI16 - On a symbol operand, this represents a relocation containing
     /// higher 16 bit of the address. Used only via movt instruction.
-    MO_HI16,
+    MO_HI16 = 0x2,
 
-    /// MO_LO16_NONLAZY - On a symbol operand "FOO", this represents a
-    /// relocation containing lower 16 bit of the non-lazy-ptr indirect symbol,
-    /// i.e. "FOO$non_lazy_ptr".
-    /// Used only via movw instruction.
-    MO_LO16_NONLAZY,
+    /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
+    /// just that part of the flag set.
+    MO_OPTION_MASK = 0x3,
 
-    /// MO_HI16_NONLAZY - On a symbol operand "FOO", this represents a
-    /// relocation containing lower 16 bit of the non-lazy-ptr indirect symbol,
-    /// i.e. "FOO$non_lazy_ptr". Used only via movt instruction.
-    MO_HI16_NONLAZY,
+    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the ".refptrp.FOO" symbol.  This is used for
+    /// stub symbols on windows.
+    MO_COFFSTUB = 0x4,
 
-    /// MO_LO16_NONLAZY_PIC - On a symbol operand "FOO", this represents a
-    /// relocation containing lower 16 bit of the PC relative address of the
-    /// non-lazy-ptr indirect symbol, i.e. "FOO$non_lazy_ptr - LABEL".
-    /// Used only via movw instruction.
-    MO_LO16_NONLAZY_PIC,
+    /// MO_GOT - On a symbol operand, this represents a GOT relative relocation.
+    MO_GOT = 0x8,
 
-    /// MO_HI16_NONLAZY_PIC - On a symbol operand "FOO", this represents a
-    /// relocation containing lower 16 bit of the PC relative address of the
-    /// non-lazy-ptr indirect symbol, i.e. "FOO$non_lazy_ptr - LABEL".
-    /// Used only via movt instruction.
-    MO_HI16_NONLAZY_PIC,
+    /// MO_SBREL - On a symbol operand, this represents a static base relative
+    /// relocation. Used in movw and movt instructions.
+    MO_SBREL = 0x10,
 
-    /// MO_PLT - On a symbol operand, this represents an ELF PLT reference on a
-    /// call operand.
-    MO_PLT
+    /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
+    /// to the symbol is for an import stub.  This is used for DLL import
+    /// storage class indication on Windows.
+    MO_DLLIMPORT = 0x20,
+
+    /// MO_SECREL - On a symbol operand this indicates that the immediate is
+    /// the offset from beginning of section.
+    ///
+    /// This is the TLS offset for the COFF/Windows TLS mechanism.
+    MO_SECREL = 0x40,
+
+    /// MO_NONLAZY - This is an independent flag, on a symbol operand "FOO" it
+    /// represents a symbol which, if indirect, will get special Darwin mangling
+    /// as a non-lazy-ptr indirect symbol (i.e. "L_FOO$non_lazy_ptr"). Can be
+    /// combined with MO_LO16, MO_HI16 or MO_NO_FLAG (in a constant-pool, for
+    /// example).
+    MO_NONLAZY = 0x80,
+
+    // It's undefined behaviour if an enum overflows the range between its
+    // smallest and largest values, but since these are |ed together, it can
+    // happen. Put a sentinel in (values of this enum are stored as "unsigned
+    // char").
+    MO_UNUSED_MAXIMUM = 0xff
   };
 
   enum {
@@ -400,6 +369,7 @@ namespace ARMII {
     NVExtFrm      = 39 << FormShift,
     NVMulSLFrm    = 40 << FormShift,
     NVTBLFrm      = 41 << FormShift,
+    N3RegCplxFrm  = 43 << FormShift,
 
     //===------------------------------------------------------------------===//
     // Misc flags.

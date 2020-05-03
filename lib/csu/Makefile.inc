@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/csu/Makefile.inc 249657 2013-04-19 19:45:00Z ed $
+# $FreeBSD: stable/11/lib/csu/Makefile.inc 288074 2015-09-21 18:39:13Z bdrewery $
 
 SSP_CFLAGS=
 

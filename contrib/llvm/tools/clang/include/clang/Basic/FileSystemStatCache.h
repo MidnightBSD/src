@@ -1,4 +1,4 @@
-//===--- FileSystemStatCache.h - Caching for 'stat' calls -------*- C++ -*-===//
+//===- FileSystemStatCache.h - Caching for 'stat' calls ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,50 +6,72 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
-/// \brief Defines the FileSystemStatCache interface.
-///
+/// Defines the FileSystemStatCache interface.
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_FILESYSTEMSTATCACHE_H
-#define LLVM_CLANG_FILESYSTEMSTATCACHE_H
+#ifndef LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H
+#define LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <string>
+#include <utility>
+
+namespace llvm {
+
+namespace vfs {
+
+class File;
+class FileSystem;
+
+} // namespace vfs
+} // namespace llvm
 
 namespace clang {
 
+// FIXME: should probably replace this with vfs::Status
 struct FileData {
-  uint64_t Size;
-  time_t ModTime;
+  std::string Name;
+  uint64_t Size = 0;
+  time_t ModTime = 0;
   llvm::sys::fs::UniqueID UniqueID;
-  bool IsDirectory;
-  bool IsNamedPipe;
-  bool InPCH;
+  bool IsDirectory = false;
+  bool IsNamedPipe = false;
+  bool InPCH = false;
+
+  // FIXME: remove this when files support multiple names
+  bool IsVFSMapped = false;
+
+  FileData() = default;
 };
 
-/// \brief Abstract interface for introducing a FileManager cache for 'stat'
+/// Abstract interface for introducing a FileManager cache for 'stat'
 /// system calls, which is used by precompiled and pretokenized headers to
 /// improve performance.
 class FileSystemStatCache {
   virtual void anchor();
-protected:
-  OwningPtr<FileSystemStatCache> NextStatCache;
-  
+
 public:
-  virtual ~FileSystemStatCache() {}
-  
+  virtual ~FileSystemStatCache() = default;
+
   enum LookupResult {
-    CacheExists,   ///< We know the file exists and its cached stat data.
-    CacheMissing   ///< We know that the file doesn't exist.
+    /// We know the file exists and its cached stat data.
+    CacheExists,
+
+    /// We know that the file doesn't exist.
+    CacheMissing
   };
 
-  /// \brief Get the 'stat' information for the specified path, using the cache
+  /// Get the 'stat' information for the specified path, using the cache
   /// to accelerate it if possible.
   ///
   /// \returns \c true if the path does not exist or \c false if it exists.
@@ -57,59 +79,40 @@ public:
   /// If isFile is true, then this lookup should only return success for files
   /// (not directories).  If it is false this lookup should only return
   /// success for directories (not files).  On a successful file lookup, the
-  /// implementation can optionally fill in FileDescriptor with a valid
-  /// descriptor and the client guarantees that it will close it.
-  static bool get(const char *Path, FileData &Data, bool isFile,
-                  int *FileDescriptor, FileSystemStatCache *Cache);
+  /// implementation can optionally fill in \p F with a valid \p File object and
+  /// the client guarantees that it will close it.
+  static bool get(StringRef Path, FileData &Data, bool isFile,
+                  std::unique_ptr<llvm::vfs::File> *F,
+                  FileSystemStatCache *Cache, llvm::vfs::FileSystem &FS);
 
-  /// \brief Sets the next stat call cache in the chain of stat caches.
-  /// Takes ownership of the given stat cache.
-  void setNextStatCache(FileSystemStatCache *Cache) {
-    NextStatCache.reset(Cache);
-  }
-  
-  /// \brief Retrieve the next stat call cache in the chain.
-  FileSystemStatCache *getNextStatCache() { return NextStatCache.get(); }
-  
-  /// \brief Retrieve the next stat call cache in the chain, transferring
-  /// ownership of this cache (and, transitively, all of the remaining caches)
-  /// to the caller.
-  FileSystemStatCache *takeNextStatCache() { return NextStatCache.take(); }
-  
 protected:
-  virtual LookupResult getStat(const char *Path, FileData &Data, bool isFile,
-                               int *FileDescriptor) = 0;
-
-  LookupResult statChained(const char *Path, FileData &Data, bool isFile,
-                           int *FileDescriptor) {
-    if (FileSystemStatCache *Next = getNextStatCache())
-      return Next->getStat(Path, Data, isFile, FileDescriptor);
-
-    // If we hit the end of the list of stat caches to try, just compute and
-    // return it without a cache.
-    return get(Path, Data, isFile, FileDescriptor, 0) ? CacheMissing
-                                                      : CacheExists;
-  }
+  // FIXME: The pointer here is a non-owning/optional reference to the
+  // unique_ptr. Optional<unique_ptr<vfs::File>&> might be nicer, but
+  // Optional needs some work to support references so this isn't possible yet.
+  virtual LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
+                               std::unique_ptr<llvm::vfs::File> *F,
+                               llvm::vfs::FileSystem &FS) = 0;
 };
 
-/// \brief A stat "cache" that can be used by FileManager to keep
+/// A stat "cache" that can be used by FileManager to keep
 /// track of the results of stat() calls that occur throughout the
 /// execution of the front end.
 class MemorizeStatCalls : public FileSystemStatCache {
 public:
-  /// \brief The set of stat() calls that have been seen.
+  /// The set of stat() calls that have been seen.
   llvm::StringMap<FileData, llvm::BumpPtrAllocator> StatCalls;
 
-  typedef llvm::StringMap<FileData, llvm::BumpPtrAllocator>::const_iterator
-  iterator;
+  using iterator =
+      llvm::StringMap<FileData, llvm::BumpPtrAllocator>::const_iterator;
 
   iterator begin() const { return StatCalls.begin(); }
   iterator end() const { return StatCalls.end(); }
 
-  virtual LookupResult getStat(const char *Path, FileData &Data, bool isFile,
-                               int *FileDescriptor);
+  LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
+                       std::unique_ptr<llvm::vfs::File> *F,
+                       llvm::vfs::FileSystem &FS) override;
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_BASIC_FILESYSTEMSTATCACHE_H

@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandObjectVersion_h_
 #define liblldb_CommandObjectVersion_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObject.h"
 
 namespace lldb_private {
@@ -22,22 +18,16 @@ namespace lldb_private {
 // CommandObjectVersion
 //-------------------------------------------------------------------------
 
-class CommandObjectVersion : public CommandObjectParsed
-{
+class CommandObjectVersion : public CommandObjectParsed {
 public:
+  CommandObjectVersion(CommandInterpreter &interpreter);
 
-    CommandObjectVersion (CommandInterpreter &interpreter);
-
-    virtual
-    ~CommandObjectVersion ();
+  ~CommandObjectVersion() override;
 
 protected:
-    virtual bool
-    DoExecute (Args& args,
-               CommandReturnObject &result);
-
+  bool DoExecute(Args &args, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectVersion_h_
+#endif // liblldb_CommandObjectVersion_h_

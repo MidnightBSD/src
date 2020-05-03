@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/10/contrib/openbsm/etc/audit_control 293161 2016-01-04 16:32:21Z brueffer $
+# $FreeBSD: stable/11/contrib/openbsm/etc/audit_control 292432 2015-12-18 09:48:01Z brueffer $
 #
 dir:/var/audit
 dist:off

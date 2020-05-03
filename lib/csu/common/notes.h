@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -23,18 +22,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/csu/common/notes.h 255874 2013-09-26 07:53:18Z andrew $
+ * $FreeBSD: stable/11/lib/csu/common/notes.h 339300 2018-10-11 00:26:15Z emaste $
  */
 
 #ifndef	CSU_COMMON_NOTES_H
 #define	CSU_COMMON_NOTES_H
 
+#define NOTE_FREEBSD_VENDOR	"FreeBSD"
 #define NOTE_MIDNIGHTBSD_VENDOR	"MidnightBSD"
 
 #define NOTE_SECTION		".note.tag"
-
-#define ABI_NOTETYPE		1
-#define	CRT_NOINIT_NOTETYPE	2
-#define	ARCH_NOTETYPE		3
 
 #endif

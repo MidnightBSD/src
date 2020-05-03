@@ -1,4 +1,4 @@
-//===--- PathDiagnostic.h - Path-Specific Diagnostic Handling ---*- C++ -*-===//
+//===- PathDiagnostic.h - Path-Specific Diagnostic Handling -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,40 +11,52 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_PATH_DIAGNOSTIC_H
-#define LLVM_CLANG_PATH_DIAGNOSTIC_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H
+#define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H
 
-#include "clang/Analysis/ProgramPoint.h"
+#include "clang/AST/Stmt.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include <cassert>
 #include <deque>
-#include <list>
 #include <iterator>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
 
 class AnalysisDeclContext;
 class BinaryOperator;
-class CompoundStmt;
+class CallEnter;
+class CallExitEnd;
+class CallExpr;
+class ConditionalOperator;
 class Decl;
+class Expr;
 class LocationContext;
 class MemberExpr;
-class ParentMap;
 class ProgramPoint;
 class SourceManager;
-class Stmt;
-class CallExpr;
 
 namespace ento {
 
 class ExplodedNode;
 class SymExpr;
-typedef const SymExpr* SymbolRef;
+
+using SymbolRef = const SymExpr *;
 
 //===----------------------------------------------------------------------===//
 // High-level interface for handlers of path-sensitive diagnostics.
@@ -58,32 +70,39 @@ public:
   public:
     PDFileEntry(llvm::FoldingSetNodeID &NodeID) : NodeID(NodeID) {}
 
-    typedef std::vector<std::pair<StringRef, StringRef> > ConsumerFiles;
-    
-    /// \brief A vector of <consumer,file> pairs.
+    using ConsumerFiles = std::vector<std::pair<StringRef, StringRef>>;
+
+    /// A vector of <consumer,file> pairs.
     ConsumerFiles files;
-    
-    /// \brief A precomputed hash tag used for uniquing PDFileEntry objects.
+
+    /// A precomputed hash tag used for uniquing PDFileEntry objects.
     const llvm::FoldingSetNodeID NodeID;
 
-    /// \brief Used for profiling in the FoldingSet.
+    /// Used for profiling in the FoldingSet.
     void Profile(llvm::FoldingSetNodeID &ID) { ID = NodeID; }
   };
-  
-  struct FilesMade : public llvm::FoldingSet<PDFileEntry> {
+
+  class FilesMade {
     llvm::BumpPtrAllocator Alloc;
-    
+    llvm::FoldingSet<PDFileEntry> Set;
+
+  public:
+    ~FilesMade();
+
+    bool empty() const { return Set.empty(); }
+
     void addDiagnostic(const PathDiagnostic &PD,
                        StringRef ConsumerName,
                        StringRef fileName);
-    
+
     PDFileEntry::ConsumerFiles *getFiles(const PathDiagnostic &PD);
   };
 
 private:
   virtual void anchor();
+
 public:
-  PathDiagnosticConsumer() : flushed(false) {}
+  PathDiagnosticConsumer() = default;
   virtual ~PathDiagnosticConsumer();
 
   void FlushDiagnostics(FilesMade *FilesMade);
@@ -92,19 +111,29 @@ public:
                                     FilesMade *filesMade) = 0;
 
   virtual StringRef getName() const = 0;
-  
-  void HandlePathDiagnostic(PathDiagnostic *D);
 
-  enum PathGenerationScheme { None, Minimal, Extensive, AlternateExtensive };
+  void HandlePathDiagnostic(std::unique_ptr<PathDiagnostic> D);
+
+  enum PathGenerationScheme {
+    /// Only runs visitors, no output generated.
+    None,
+
+    /// Used for HTML, SARIF, and text output.
+    Minimal,
+
+    /// Used for plist output, used for "arrows" generation.
+    Extensive,
+  };
+
   virtual PathGenerationScheme getGenerationScheme() const { return Minimal; }
   virtual bool supportsLogicalOpControlFlow() const { return false; }
-  
+
   /// Return true if the PathDiagnosticConsumer supports individual
   /// PathDiagnostics that span multiple files.
   virtual bool supportsCrossFileDiagnostics() const { return false; }
 
 protected:
-  bool flushed;
+  bool flushed = false;
   llvm::FoldingSet<PathDiagnostic> Diags;
 };
 
@@ -114,53 +143,46 @@ protected:
 
 class PathDiagnosticRange : public SourceRange {
 public:
-  bool isPoint;
+  bool isPoint = false;
 
-  PathDiagnosticRange(const SourceRange &R, bool isP = false)
-    : SourceRange(R), isPoint(isP) {}
-
-  PathDiagnosticRange() : isPoint(false) {}
+  PathDiagnosticRange(SourceRange R, bool isP = false)
+      : SourceRange(R), isPoint(isP) {}
+  PathDiagnosticRange() = default;
 };
 
-typedef llvm::PointerUnion<const LocationContext*, AnalysisDeclContext*>
-                                                   LocationOrAnalysisDeclContext;
+using LocationOrAnalysisDeclContext =
+    llvm::PointerUnion<const LocationContext *, AnalysisDeclContext *>;
 
 class PathDiagnosticLocation {
 private:
-  enum Kind { RangeK, SingleLocK, StmtK, DeclK } K;
-  const Stmt *S;
-  const Decl *D;
-  const SourceManager *SM;
+  enum Kind { RangeK, SingleLocK, StmtK, DeclK } K = SingleLocK;
+
+  const Stmt *S = nullptr;
+  const Decl *D = nullptr;
+  const SourceManager *SM = nullptr;
   FullSourceLoc Loc;
   PathDiagnosticRange Range;
 
-  PathDiagnosticLocation(SourceLocation L, const SourceManager &sm,
-                         Kind kind)
-    : K(kind), S(0), D(0), SM(&sm),
-      Loc(genLocation(L)), Range(genRange()) {
-  }
+  PathDiagnosticLocation(SourceLocation L, const SourceManager &sm, Kind kind)
+      : K(kind), SM(&sm), Loc(genLocation(L)), Range(genRange()) {}
 
-  FullSourceLoc
-    genLocation(SourceLocation L = SourceLocation(),
-                LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext*)0) const;
+  FullSourceLoc genLocation(
+      SourceLocation L = SourceLocation(),
+      LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext *)nullptr) const;
 
-  PathDiagnosticRange
-    genRange(LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext*)0) const;
+  PathDiagnosticRange genRange(
+      LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext *)nullptr) const;
 
 public:
   /// Create an invalid location.
-  PathDiagnosticLocation()
-    : K(SingleLocK), S(0), D(0), SM(0) {}
+  PathDiagnosticLocation() = default;
 
   /// Create a location corresponding to the given statement.
-  PathDiagnosticLocation(const Stmt *s,
-                         const SourceManager &sm,
+  PathDiagnosticLocation(const Stmt *s, const SourceManager &sm,
                          LocationOrAnalysisDeclContext lac)
-    : K(s->getLocStart().isValid() ? StmtK : SingleLocK),
-      S(K == StmtK ? s : 0),
-      D(0), SM(&sm),
-      Loc(genLocation(SourceLocation(), lac)),
-      Range(genRange(lac)) {
+      : K(s->getBeginLoc().isValid() ? StmtK : SingleLocK),
+        S(K == StmtK ? s : nullptr), SM(&sm),
+        Loc(genLocation(SourceLocation(), lac)), Range(genRange(lac)) {
     assert(K == SingleLocK || S);
     assert(K == SingleLocK || Loc.isValid());
     assert(K == SingleLocK || Range.isValid());
@@ -168,8 +190,7 @@ public:
 
   /// Create a location corresponding to the given declaration.
   PathDiagnosticLocation(const Decl *d, const SourceManager &sm)
-    : K(DeclK), S(0), D(d), SM(&sm),
-      Loc(genLocation()), Range(genRange()) {
+      : K(DeclK), D(d), SM(&sm), Loc(genLocation()), Range(genRange()) {
     assert(D);
     assert(Loc.isValid());
     assert(Range.isValid());
@@ -179,7 +200,7 @@ public:
   ///
   /// This should only be used if there are no more appropriate constructors.
   PathDiagnosticLocation(SourceLocation loc, const SourceManager &sm)
-    : K(SingleLocK), S(0), D(0), SM(&sm), Loc(loc, sm), Range(genRange()) {
+      : SM(&sm), Loc(loc, sm), Range(genRange()) {
     assert(Loc.isValid());
     assert(Range.isValid());
   }
@@ -193,6 +214,15 @@ public:
   /// Create a location for the beginning of the declaration.
   static PathDiagnosticLocation createBegin(const Decl *D,
                                             const SourceManager &SM);
+
+  /// Create a location for the beginning of the declaration.
+  /// The third argument is ignored, useful for generic treatment
+  /// of statements and declarations.
+  static PathDiagnosticLocation
+  createBegin(const Decl *D, const SourceManager &SM,
+              const LocationOrAnalysisDeclContext LAC) {
+    return createBegin(D, SM);
+  }
 
   /// Create a location for the beginning of the statement.
   static PathDiagnosticLocation createBegin(const Stmt *S,
@@ -210,6 +240,9 @@ public:
   /// Create the location for the operator of the binary expression.
   /// Assumes the statement has a valid location.
   static PathDiagnosticLocation createOperatorLoc(const BinaryOperator *BO,
+                                                  const SourceManager &SM);
+  static PathDiagnosticLocation createConditionalColonLoc(
+                                                  const ConditionalOperator *CO,
                                                   const SourceManager &SM);
 
   /// For member expressions, return the location of the '.' or '->'.
@@ -238,7 +271,7 @@ public:
                                                    const SourceManager &SM);
 
   /// Create a location corresponding to the given valid ExplodedNode.
-  static PathDiagnosticLocation create(const ProgramPoint& P,
+  static PathDiagnosticLocation create(const ProgramPoint &P,
                                        const SourceManager &SMng);
 
   /// Create a location corresponding to the next valid ExplodedNode as end
@@ -259,7 +292,7 @@ public:
   }
 
   bool isValid() const {
-    return SM != 0;
+    return SM != nullptr;
   }
 
   FullSourceLoc asLocation() const {
@@ -271,6 +304,12 @@ public:
   }
 
   const Stmt *asStmt() const { assert(isValid()); return S; }
+  const Stmt *getStmtOrNull() const {
+    if (!isValid())
+      return nullptr;
+    return asStmt();
+  }
+
   const Decl *asDecl() const { assert(isValid()); return D; }
 
   bool hasRange() const { return K == StmtK || K == RangeK || K == DeclK; }
@@ -282,26 +321,27 @@ public:
   void flatten();
 
   const SourceManager& getManager() const { assert(isValid()); return *SM; }
-  
+
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
   void dump() const;
 
-  /// \brief Given an exploded node, retrieve the statement that should be used 
+  /// Given an exploded node, retrieve the statement that should be used
   /// for the diagnostic location.
   static const Stmt *getStmt(const ExplodedNode *N);
 
-  /// \brief Retrieve the statement corresponding to the successor node.
+  /// Retrieve the statement corresponding to the successor node.
   static const Stmt *getNextStmt(const ExplodedNode *N);
 };
 
 class PathDiagnosticLocationPair {
 private:
   PathDiagnosticLocation Start, End;
+
 public:
   PathDiagnosticLocationPair(const PathDiagnosticLocation &start,
                              const PathDiagnosticLocation &end)
-    : Start(start), End(end) {}
+      : Start(start), End(end) {}
 
   const PathDiagnosticLocation &getStart() const { return Start; }
   const PathDiagnosticLocation &getEnd() const { return End; }
@@ -313,7 +353,7 @@ public:
     Start.flatten();
     End.flatten();
   }
-  
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Start.Profile(ID);
     End.Profile(ID);
@@ -324,9 +364,9 @@ public:
 // Path "pieces" for path-sensitive diagnostics.
 //===----------------------------------------------------------------------===//
 
-class PathDiagnosticPiece : public RefCountedBaseVPTR {
+class PathDiagnosticPiece: public llvm::FoldingSetNode {
 public:
-  enum Kind { ControlFlow, Event, Macro, Call };
+  enum Kind { ControlFlow, Event, Macro, Call, Note };
   enum DisplayHint { Above, Below };
 
 private:
@@ -334,10 +374,10 @@ private:
   const Kind kind;
   const DisplayHint Hint;
 
-  /// \brief In the containing bug report, this piece is the last piece from
+  /// In the containing bug report, this piece is the last piece from
   /// the main source file.
-  bool LastInMainSourceFile;
-  
+  bool LastInMainSourceFile = false;
+
   /// A constant string that can be used to tag the PathDiagnosticPiece,
   /// typically with the identification of the creator.  The actual pointer
   /// value is meant to be an identifier; the string itself is useful for
@@ -346,30 +386,28 @@ private:
 
   std::vector<SourceRange> ranges;
 
-  PathDiagnosticPiece() LLVM_DELETED_FUNCTION;
-  PathDiagnosticPiece(const PathDiagnosticPiece &P) LLVM_DELETED_FUNCTION;
-  void operator=(const PathDiagnosticPiece &P) LLVM_DELETED_FUNCTION;
-
 protected:
   PathDiagnosticPiece(StringRef s, Kind k, DisplayHint hint = Below);
-
   PathDiagnosticPiece(Kind k, DisplayHint hint = Below);
 
 public:
+  PathDiagnosticPiece() = delete;
+  PathDiagnosticPiece(const PathDiagnosticPiece &) = delete;
+  PathDiagnosticPiece &operator=(const PathDiagnosticPiece &) = delete;
   virtual ~PathDiagnosticPiece();
 
   StringRef getString() const { return str; }
 
   /// Tag this PathDiagnosticPiece with the given C-string.
   void setTag(const char *tag) { Tag = tag; }
-  
+
   /// Return the opaque tag (if any) on the PathDiagnosticPiece.
   const void *getTag() const { return Tag.data(); }
-  
+
   /// Return the string representation of the tag.  This is useful
   /// for debugging.
   StringRef getTagStr() const { return Tag; }
-  
+
   /// getDisplayHint - Return a hint indicating where the diagnostic should
   ///  be displayed by the PathDiagnosticConsumer.
   DisplayHint getDisplayHint() const { return Hint; }
@@ -406,60 +444,60 @@ public:
 
   virtual void dump() const = 0;
 };
-  
-  
-class PathPieces : public std::list<IntrusiveRefCntPtr<PathDiagnosticPiece> > {
+
+class PathPieces : public std::list<std::shared_ptr<PathDiagnosticPiece>> {
   void flattenTo(PathPieces &Primary, PathPieces &Current,
                  bool ShouldFlattenMacros) const;
-public:
-  ~PathPieces();
 
+public:
   PathPieces flatten(bool ShouldFlattenMacros) const {
     PathPieces Result;
     flattenTo(Result, Result, ShouldFlattenMacros);
     return Result;
   }
 
-  LLVM_ATTRIBUTE_USED void dump() const;
+  void dump() const;
 };
 
 class PathDiagnosticSpotPiece : public PathDiagnosticPiece {
 private:
   PathDiagnosticLocation Pos;
+
 public:
   PathDiagnosticSpotPiece(const PathDiagnosticLocation &pos,
                           StringRef s,
                           PathDiagnosticPiece::Kind k,
                           bool addPosRange = true)
-  : PathDiagnosticPiece(s, k), Pos(pos) {
+      : PathDiagnosticPiece(s, k), Pos(pos) {
     assert(Pos.isValid() && Pos.asLocation().isValid() &&
            "PathDiagnosticSpotPiece's must have a valid location.");
     if (addPosRange && Pos.hasRange()) addRange(Pos.asRange());
   }
 
-  PathDiagnosticLocation getLocation() const { return Pos; }
-  virtual void flattenLocations() { Pos.flatten(); }
+  PathDiagnosticLocation getLocation() const override { return Pos; }
+  void flattenLocations() override { Pos.flatten(); }
 
-  virtual void Profile(llvm::FoldingSetNodeID &ID) const;
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
 
   static bool classof(const PathDiagnosticPiece *P) {
-    return P->getKind() == Event || P->getKind() == Macro;
+    return P->getKind() == Event || P->getKind() == Macro ||
+           P->getKind() == Note;
   }
 };
 
-/// \brief Interface for classes constructing Stack hints.
+/// Interface for classes constructing Stack hints.
 ///
-/// If a PathDiagnosticEvent occurs in a different frame than the final 
+/// If a PathDiagnosticEvent occurs in a different frame than the final
 /// diagnostic the hints can be used to summarize the effect of the call.
 class StackHintGenerator {
 public:
   virtual ~StackHintGenerator() = 0;
 
-  /// \brief Construct the Diagnostic message for the given ExplodedNode.
+  /// Construct the Diagnostic message for the given ExplodedNode.
   virtual std::string getMessage(const ExplodedNode *N) = 0;
 };
 
-/// \brief Constructs a Stack hint for the given symbol.
+/// Constructs a Stack hint for the given symbol.
 ///
 /// The class knows how to construct the stack hint message based on
 /// traversing the CallExpr associated with the call and checking if the given
@@ -472,18 +510,20 @@ private:
 
 public:
   StackHintGeneratorForSymbol(SymbolRef S, StringRef M) : Sym(S), Msg(M) {}
-  virtual ~StackHintGeneratorForSymbol() {}
+  ~StackHintGeneratorForSymbol() override = default;
 
-  /// \brief Search the call expression for the symbol Sym and dispatch the
+  /// Search the call expression for the symbol Sym and dispatch the
   /// 'getMessageForX()' methods to construct a specific message.
-  virtual std::string getMessage(const ExplodedNode *N);
+  std::string getMessage(const ExplodedNode *N) override;
 
   /// Produces the message of the following form:
   ///   'Msg via Nth parameter'
   virtual std::string getMessageForArg(const Expr *ArgE, unsigned ArgIndex);
+
   virtual std::string getMessageForReturn(const CallExpr *CallExpr) {
     return Msg;
   }
+
   virtual std::string getMessageForSymbolNotFound() {
     return Msg;
   }
@@ -496,16 +536,15 @@ class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
   /// supply a message that will be used to construct an extra hint on the
   /// returns from all the calls on the stack from this event to the final
   /// diagnostic.
-  OwningPtr<StackHintGenerator> CallStackHint;
+  std::unique_ptr<StackHintGenerator> CallStackHint;
 
 public:
   PathDiagnosticEventPiece(const PathDiagnosticLocation &pos,
                            StringRef s, bool addPosRange = true,
-                           StackHintGenerator *stackHint = 0)
-    : PathDiagnosticSpotPiece(pos, s, Event, addPosRange),
-      CallStackHint(stackHint) {}
-
-  ~PathDiagnosticEventPiece();
+                           StackHintGenerator *stackHint = nullptr)
+      : PathDiagnosticSpotPiece(pos, s, Event, addPosRange),
+        CallStackHint(stackHint) {}
+  ~PathDiagnosticEventPiece() override;
 
   /// Mark the diagnostic piece as being potentially prunable.  This
   /// flag may have been previously set, at which point it will not
@@ -520,114 +559,112 @@ public:
   bool isPrunable() const {
     return IsPrunable.hasValue() ? IsPrunable.getValue() : false;
   }
-  
-  bool hasCallStackHint() {
-    return CallStackHint.isValid();
-  }
 
-  /// Produce the hint for the given node. The node contains 
+  bool hasCallStackHint() { return (bool)CallStackHint; }
+
+  /// Produce the hint for the given node. The node contains
   /// information about the call for which the diagnostic can be generated.
   std::string getCallStackMessage(const ExplodedNode *N) {
     if (CallStackHint)
       return CallStackHint->getMessage(N);
-    return "";  
+    return {};
   }
 
-  virtual void dump() const;
+  void dump() const override;
 
-  static inline bool classof(const PathDiagnosticPiece *P) {
+  static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == Event;
   }
 };
 
 class PathDiagnosticCallPiece : public PathDiagnosticPiece {
-  PathDiagnosticCallPiece(const Decl *callerD,
-                          const PathDiagnosticLocation &callReturnPos)
-    : PathDiagnosticPiece(Call), Caller(callerD), Callee(0),
-      NoExit(false), callReturn(callReturnPos) {}
-
-  PathDiagnosticCallPiece(PathPieces &oldPath, const Decl *caller)
-    : PathDiagnosticPiece(Call), Caller(caller), Callee(0),
-      NoExit(true), path(oldPath) {}
-  
   const Decl *Caller;
-  const Decl *Callee;
+  const Decl *Callee = nullptr;
 
   // Flag signifying that this diagnostic has only call enter and no matching
   // call exit.
   bool NoExit;
 
+  // Flag signifying that the callee function is an Objective-C autosynthesized
+  // property getter or setter.
+  bool IsCalleeAnAutosynthesizedPropertyAccessor = false;
+
   // The custom string, which should appear after the call Return Diagnostic.
   // TODO: Should we allow multiple diagnostics?
   std::string CallStackMessage;
 
+  PathDiagnosticCallPiece(const Decl *callerD,
+                          const PathDiagnosticLocation &callReturnPos)
+      : PathDiagnosticPiece(Call), Caller(callerD), NoExit(false),
+        callReturn(callReturnPos) {}
+  PathDiagnosticCallPiece(PathPieces &oldPath, const Decl *caller)
+      : PathDiagnosticPiece(Call), Caller(caller), NoExit(true),
+        path(oldPath) {}
+
 public:
   PathDiagnosticLocation callEnter;
   PathDiagnosticLocation callEnterWithin;
-  PathDiagnosticLocation callReturn;  
+  PathDiagnosticLocation callReturn;
   PathPieces path;
-  
-  virtual ~PathDiagnosticCallPiece();
-  
+
+  ~PathDiagnosticCallPiece() override;
+
   const Decl *getCaller() const { return Caller; }
-  
+
   const Decl *getCallee() const { return Callee; }
   void setCallee(const CallEnter &CE, const SourceManager &SM);
-  
+
   bool hasCallStackMessage() { return !CallStackMessage.empty(); }
-  void setCallStackMessage(StringRef st) {
-    CallStackMessage = st;
-  }
+  void setCallStackMessage(StringRef st) { CallStackMessage = st; }
 
-  virtual PathDiagnosticLocation getLocation() const {
-    return callEnter;
-  }
-  
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> getCallEnterEvent() const;
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece>
-    getCallEnterWithinCallerEvent() const;
-  IntrusiveRefCntPtr<PathDiagnosticEventPiece> getCallExitEvent() const;
+  PathDiagnosticLocation getLocation() const override { return callEnter; }
 
-  virtual void flattenLocations() {
+  std::shared_ptr<PathDiagnosticEventPiece> getCallEnterEvent() const;
+  std::shared_ptr<PathDiagnosticEventPiece>
+  getCallEnterWithinCallerEvent() const;
+  std::shared_ptr<PathDiagnosticEventPiece> getCallExitEvent() const;
+
+  void flattenLocations() override {
     callEnter.flatten();
     callReturn.flatten();
-    for (PathPieces::iterator I = path.begin(), 
-         E = path.end(); I != E; ++I) (*I)->flattenLocations();
+    for (const auto &I : path)
+      I->flattenLocations();
   }
-  
-  static PathDiagnosticCallPiece *construct(const ExplodedNode *N,
-                                            const CallExitEnd &CE,
-                                            const SourceManager &SM);
-  
+
+  static std::shared_ptr<PathDiagnosticCallPiece>
+  construct(const CallExitEnd &CE,
+            const SourceManager &SM);
+
   static PathDiagnosticCallPiece *construct(PathPieces &pieces,
                                             const Decl *caller);
-  
-  virtual void dump() const;
 
-  virtual void Profile(llvm::FoldingSetNodeID &ID) const;
+  void dump() const override;
 
-  static inline bool classof(const PathDiagnosticPiece *P) {
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
+
+  static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == Call;
   }
 };
 
 class PathDiagnosticControlFlowPiece : public PathDiagnosticPiece {
   std::vector<PathDiagnosticLocationPair> LPairs;
+
 public:
   PathDiagnosticControlFlowPiece(const PathDiagnosticLocation &startPos,
                                  const PathDiagnosticLocation &endPos,
                                  StringRef s)
-    : PathDiagnosticPiece(s, ControlFlow) {
-      LPairs.push_back(PathDiagnosticLocationPair(startPos, endPos));
-    }
+      : PathDiagnosticPiece(s, ControlFlow) {
+    LPairs.push_back(PathDiagnosticLocationPair(startPos, endPos));
+  }
 
   PathDiagnosticControlFlowPiece(const PathDiagnosticLocation &startPos,
                                  const PathDiagnosticLocation &endPos)
-    : PathDiagnosticPiece(ControlFlow) {
-      LPairs.push_back(PathDiagnosticLocationPair(startPos, endPos));
-    }
+      : PathDiagnosticPiece(ControlFlow) {
+    LPairs.push_back(PathDiagnosticLocationPair(startPos, endPos));
+  }
 
-  ~PathDiagnosticControlFlowPiece();
+  ~PathDiagnosticControlFlowPiece() override;
 
   PathDiagnosticLocation getStartLocation() const {
     assert(!LPairs.empty() &&
@@ -651,62 +688,84 @@ public:
 
   void push_back(const PathDiagnosticLocationPair &X) { LPairs.push_back(X); }
 
-  virtual PathDiagnosticLocation getLocation() const {
+  PathDiagnosticLocation getLocation() const override {
     return getStartLocation();
   }
 
-  typedef std::vector<PathDiagnosticLocationPair>::iterator iterator;
-  iterator begin() { return LPairs.begin(); }
-  iterator end()   { return LPairs.end(); }
+  using iterator = std::vector<PathDiagnosticLocationPair>::iterator;
 
-  virtual void flattenLocations() {
-    for (iterator I=begin(), E=end(); I!=E; ++I) I->flatten();
+  iterator begin() { return LPairs.begin(); }
+  iterator end() { return LPairs.end(); }
+
+  void flattenLocations() override {
+    for (auto &I : *this)
+      I.flatten();
   }
 
-  typedef std::vector<PathDiagnosticLocationPair>::const_iterator
-          const_iterator;
-  const_iterator begin() const { return LPairs.begin(); }
-  const_iterator end() const   { return LPairs.end(); }
+  using const_iterator =
+      std::vector<PathDiagnosticLocationPair>::const_iterator;
 
-  static inline bool classof(const PathDiagnosticPiece *P) {
+  const_iterator begin() const { return LPairs.begin(); }
+  const_iterator end() const { return LPairs.end(); }
+
+  static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == ControlFlow;
   }
 
-  virtual void dump() const;
+  void dump() const override;
 
-  virtual void Profile(llvm::FoldingSetNodeID &ID) const;
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
 class PathDiagnosticMacroPiece : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticMacroPiece(const PathDiagnosticLocation &pos)
-    : PathDiagnosticSpotPiece(pos, "", Macro) {}
-
-  ~PathDiagnosticMacroPiece();
+      : PathDiagnosticSpotPiece(pos, "", Macro) {}
+  ~PathDiagnosticMacroPiece() override;
 
   PathPieces subPieces;
-  
+
   bool containsEvent() const;
 
-  virtual void flattenLocations() {
+  void flattenLocations() override {
     PathDiagnosticSpotPiece::flattenLocations();
-    for (PathPieces::iterator I = subPieces.begin(), 
-         E = subPieces.end(); I != E; ++I) (*I)->flattenLocations();
+    for (const auto &I : subPieces)
+      I->flattenLocations();
   }
 
-  static inline bool classof(const PathDiagnosticPiece *P) {
+  static bool classof(const PathDiagnosticPiece *P) {
     return P->getKind() == Macro;
   }
 
-  virtual void dump() const;
+  void dump() const override;
 
-  virtual void Profile(llvm::FoldingSetNodeID &ID) const;
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
+
+class PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
+public:
+  PathDiagnosticNotePiece(const PathDiagnosticLocation &Pos, StringRef S,
+                               bool AddPosRange = true)
+      : PathDiagnosticSpotPiece(Pos, S, Note, AddPosRange) {}
+  ~PathDiagnosticNotePiece() override;
+
+  static bool classof(const PathDiagnosticPiece *P) {
+    return P->getKind() == Note;
+  }
+
+  void dump() const override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
+};
+
+/// File IDs mapped to sets of line numbers.
+using FilesToLineNumsMap = std::map<FileID, std::set<unsigned>>;
 
 /// PathDiagnostic - PathDiagnostic objects represent a single path-sensitive
 ///  diagnostic.  It represents an ordered-collection of PathDiagnosticPieces,
 ///  each which represent the pieces of the path.
 class PathDiagnostic : public llvm::FoldingSetNode {
+  std::string CheckName;
   const Decl *DeclWithIssue;
   std::string BugType;
   std::string VerboseDesc;
@@ -714,41 +773,44 @@ class PathDiagnostic : public llvm::FoldingSetNode {
   std::string Category;
   std::deque<std::string> OtherDesc;
 
-  /// \brief Loc The location of the path diagnostic report.
+  /// Loc The location of the path diagnostic report.
   PathDiagnosticLocation Loc;
 
   PathPieces pathImpl;
   SmallVector<PathPieces *, 3> pathStack;
-  
-  /// \brief Important bug uniqueing location.
+
+  /// Important bug uniqueing location.
   /// The location info is useful to differentiate between bugs.
   PathDiagnosticLocation UniqueingLoc;
   const Decl *UniqueingDecl;
 
-  PathDiagnostic() LLVM_DELETED_FUNCTION;
-public:
-  PathDiagnostic(const Decl *DeclWithIssue, StringRef bugtype,
-                 StringRef verboseDesc, StringRef shortDesc,
-                 StringRef category, PathDiagnosticLocation LocationToUnique,
-                 const Decl *DeclToUnique);
+  /// Lines executed in the path.
+  std::unique_ptr<FilesToLineNumsMap> ExecutedLines;
 
+public:
+  PathDiagnostic() = delete;
+  PathDiagnostic(StringRef CheckName, const Decl *DeclWithIssue,
+                 StringRef bugtype, StringRef verboseDesc, StringRef shortDesc,
+                 StringRef category, PathDiagnosticLocation LocationToUnique,
+                 const Decl *DeclToUnique,
+                 std::unique_ptr<FilesToLineNumsMap> ExecutedLines);
   ~PathDiagnostic();
-  
+
   const PathPieces &path;
 
-  /// Return the path currently used by builders for constructing the 
+  /// Return the path currently used by builders for constructing the
   /// PathDiagnostic.
   PathPieces &getActivePath() {
     if (pathStack.empty())
       return pathImpl;
     return *pathStack.back();
   }
-  
+
   /// Return a mutable version of 'path'.
   PathPieces &getMutablePieces() {
     return pathImpl;
   }
-    
+
   /// Return the unrolled size of the path.
   unsigned full_size();
 
@@ -757,34 +819,31 @@ public:
 
   bool isWithinCall() const { return !pathStack.empty(); }
 
-  void setEndOfPath(PathDiagnosticPiece *EndPiece) {
+  void setEndOfPath(std::shared_ptr<PathDiagnosticPiece> EndPiece) {
     assert(!Loc.isValid() && "End location already set!");
     Loc = EndPiece->getLocation();
     assert(Loc.isValid() && "Invalid location for end-of-path piece");
-    getActivePath().push_back(EndPiece);
+    getActivePath().push_back(std::move(EndPiece));
   }
 
   void appendToDesc(StringRef S) {
     if (!ShortDesc.empty())
-      ShortDesc.append(S);
-    VerboseDesc.append(S);
+      ShortDesc += S;
+    VerboseDesc += S;
   }
 
-  void resetPath() {
-    pathStack.clear();
-    pathImpl.clear();
-    Loc = PathDiagnosticLocation();
-  }
-
-  /// \brief If the last piece of the report point to the header file, resets
+  /// If the last piece of the report point to the header file, resets
   /// the location of the report to be the last location in the main source
   /// file.
   void resetDiagnosticLocationToMainFile();
 
   StringRef getVerboseDescription() const { return VerboseDesc; }
+
   StringRef getShortDescription() const {
     return ShortDesc.empty() ? VerboseDesc : ShortDesc;
   }
+
+  StringRef getCheckName() const { return CheckName; }
   StringRef getBugType() const { return BugType; }
   StringRef getCategory() const { return Category; }
 
@@ -793,30 +852,38 @@ public:
   /// where the bug manifests.
   const Decl *getDeclWithIssue() const { return DeclWithIssue; }
 
-  typedef std::deque<std::string>::const_iterator meta_iterator;
+  using meta_iterator = std::deque<std::string>::const_iterator;
+
   meta_iterator meta_begin() const { return OtherDesc.begin(); }
   meta_iterator meta_end() const { return OtherDesc.end(); }
   void addMeta(StringRef s) { OtherDesc.push_back(s); }
 
+  const FilesToLineNumsMap &getExecutedLines() const {
+    return *ExecutedLines;
+  }
+
+  FilesToLineNumsMap &getExecutedLines() {
+    return *ExecutedLines;
+  }
+
   PathDiagnosticLocation getLocation() const {
-    assert(Loc.isValid() && "No report location set yet!");
     return Loc;
   }
 
-  /// \brief Get the location on which the report should be uniqued.
+  /// Get the location on which the report should be uniqued.
   PathDiagnosticLocation getUniqueingLoc() const {
     return UniqueingLoc;
   }
 
-  /// \brief Get the declaration containing the uniqueing location.
+  /// Get the declaration containing the uniqueing location.
   const Decl *getUniqueingDecl() const {
     return UniqueingDecl;
   }
 
   void flattenLocations() {
     Loc.flatten();
-    for (PathPieces::iterator I = pathImpl.begin(), E = pathImpl.end(); 
-         I != E; ++I) (*I)->flattenLocations();
+    for (const auto &I : pathImpl)
+      I->flattenLocations();
   }
 
   /// Profiles the diagnostic, independent of the path it references.
@@ -830,10 +897,10 @@ public:
   /// Two diagnostics with the same issue along different paths will generate
   /// different profiles.
   void FullProfile(llvm::FoldingSetNodeID &ID) const;
-};  
+};
 
-} // end GR namespace
+} // namespace ento
 
-} //end clang namespace
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_PATHDIAGNOSTIC_H

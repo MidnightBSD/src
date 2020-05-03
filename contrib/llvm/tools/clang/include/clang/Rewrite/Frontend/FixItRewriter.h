@@ -1,4 +1,4 @@
-//===--- FixItRewriter.h - Fix-It Rewriter Diagnostic Client ----*- C++ -*-===//
+//===- FixItRewriter.h - Fix-It Rewriter Diagnostic Client ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,117 +12,124 @@
 // then forwards any diagnostics to the adapted diagnostic client.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_REWRITE_FIX_IT_REWRITER_H
-#define LLVM_CLANG_REWRITE_FIX_IT_REWRITER_H
+
+#ifndef LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H
+#define LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 
+class LangOptions;
 class SourceManager;
-class FileEntry;
 
 class FixItOptions {
 public:
-  FixItOptions() : FixWhatYouCan(false),
-                   FixOnlyWarnings(false), Silent(false) { }
-
+  FixItOptions() = default;
   virtual ~FixItOptions();
 
-  /// \brief This file is about to be rewritten. Return the name of the file
+  /// This file is about to be rewritten. Return the name of the file
   /// that is okay to write to.
   ///
   /// \param fd out parameter for file descriptor. After the call it may be set
   /// to an open file descriptor for the returned filename, or it will be -1
   /// otherwise.
-  ///
   virtual std::string RewriteFilename(const std::string &Filename, int &fd) = 0;
 
-  /// \brief Whether to abort fixing a file when not all errors could be fixed.
-  bool FixWhatYouCan;
+  /// True if files should be updated in place. RewriteFilename is only called
+  /// if this is false.
+  bool InPlace = false;
 
-  /// \brief Whether to only fix warnings and not errors.
-  bool FixOnlyWarnings;
+  /// Whether to abort fixing a file when not all errors could be fixed.
+  bool FixWhatYouCan = false;
 
-  /// \brief If true, only pass the diagnostic to the actual diagnostic consumer
+  /// Whether to only fix warnings and not errors.
+  bool FixOnlyWarnings = false;
+
+  /// If true, only pass the diagnostic to the actual diagnostic consumer
   /// if it is an error or a fixit was applied as part of the diagnostic.
   /// It basically silences warnings without accompanying fixits.
-  bool Silent;
+  bool Silent = false;
 };
 
 class FixItRewriter : public DiagnosticConsumer {
-  /// \brief The diagnostics machinery.
+  /// The diagnostics machinery.
   DiagnosticsEngine &Diags;
 
   edit::EditedSource Editor;
 
-  /// \brief The rewriter used to perform the various code
+  /// The rewriter used to perform the various code
   /// modifications.
   Rewriter Rewrite;
 
-  /// \brief The diagnostic client that performs the actual formatting
+  /// The diagnostic client that performs the actual formatting
   /// of error messages.
   DiagnosticConsumer *Client;
-  bool OwnsClient;
+  std::unique_ptr<DiagnosticConsumer> Owner;
 
-  /// \brief Turn an input path into an output path. NULL implies overwriting
+  /// Turn an input path into an output path. NULL implies overwriting
   /// the original.
   FixItOptions *FixItOpts;
 
-  /// \brief The number of rewriter failures.
-  unsigned NumFailures;
+  /// The number of rewriter failures.
+  unsigned NumFailures = 0;
 
-  /// \brief Whether the previous diagnostic was not passed to the consumer.
-  bool PrevDiagSilenced;
+  /// Whether the previous diagnostic was not passed to the consumer.
+  bool PrevDiagSilenced = false;
 
 public:
-  typedef Rewriter::buffer_iterator iterator;
-
-  /// \brief Initialize a new fix-it rewriter.
+  /// Initialize a new fix-it rewriter.
   FixItRewriter(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                 const LangOptions &LangOpts, FixItOptions *FixItOpts);
 
-  /// \brief Destroy the fix-it rewriter.
-  ~FixItRewriter();
+  /// Destroy the fix-it rewriter.
+  ~FixItRewriter() override;
 
-  /// \brief Check whether there are modifications for a given file.
+  /// Check whether there are modifications for a given file.
   bool IsModified(FileID ID) const {
-    return Rewrite.getRewriteBufferFor(ID) != NULL;
+    return Rewrite.getRewriteBufferFor(ID) != nullptr;
   }
+
+  using iterator = Rewriter::buffer_iterator;
 
   // Iteration over files with changes.
   iterator buffer_begin() { return Rewrite.buffer_begin(); }
   iterator buffer_end() { return Rewrite.buffer_end(); }
 
-  /// \brief Write a single modified source file.
+  /// Write a single modified source file.
   ///
   /// \returns true if there was an error, false otherwise.
   bool WriteFixedFile(FileID ID, raw_ostream &OS);
 
-  /// \brief Write the modified source files.
+  /// Write the modified source files.
   ///
   /// \returns true if there was an error, false otherwise.
   bool WriteFixedFiles(
-         std::vector<std::pair<std::string, std::string> > *RewrittenFiles = 0);
+    std::vector<std::pair<std::string, std::string>> *RewrittenFiles = nullptr);
 
   /// IncludeInDiagnosticCounts - This method (whose default implementation
   /// returns true) indicates whether the diagnostics handled by this
   /// DiagnosticConsumer should be included in the number of diagnostics
   /// reported by DiagnosticsEngine.
-  virtual bool IncludeInDiagnosticCounts() const;
+  bool IncludeInDiagnosticCounts() const override;
 
   /// HandleDiagnostic - Handle this diagnostic, reporting it to the user or
   /// capturing it to a log as needed.
-  virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                                const Diagnostic &Info);
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override;
 
-  /// \brief Emit a diagnostic via the adapted diagnostic client.
+  /// Emit a diagnostic via the adapted diagnostic client.
   void Diag(SourceLocation Loc, unsigned DiagID);
 };
 
-}
+} // namespace clang
 
-#endif // LLVM_CLANG_REWRITE_FIX_IT_REWRITER_H
+#endif // LLVM_CLANG_REWRITE_FRONTEND_FIXITREWRITER_H

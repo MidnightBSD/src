@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2001 David E. O'Brien
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/csu/powerpc/crtn.S 217399 2011-01-14 11:34:58Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/csu/powerpc/crtn.S 217399 2011-01-14 11:34:58Z kib $");
 
 	.section .init,"ax",@progbits
 	lwz 11,0(1)

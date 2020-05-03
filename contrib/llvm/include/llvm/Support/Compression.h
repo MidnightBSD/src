@@ -17,38 +17,28 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
-
-class MemoryBuffer;
-template<typename T> class OwningPtr;
+template <typename T> class SmallVectorImpl;
+class Error;
 class StringRef;
 
 namespace zlib {
 
-enum CompressionLevel {
-  NoCompression,
-  DefaultCompression,
-  BestSpeedCompression,
-  BestSizeCompression
-};
-
-enum Status {
-  StatusOK,
-  StatusUnsupported,  // zlib is unavaliable
-  StatusOutOfMemory,  // there was not enough memory
-  StatusBufferTooShort,  // there was not enough room in the output buffer
-  StatusInvalidArg,  // invalid input parameter
-  StatusInvalidData  // data was corrupted or incomplete
-};
+static constexpr int NoCompression = 0;
+static constexpr int BestSpeedCompression = 1;
+static constexpr int DefaultCompression = 6;
+static constexpr int BestSizeCompression = 9;
 
 bool isAvailable();
 
-Status compress(StringRef InputBuffer,
-                OwningPtr<MemoryBuffer> &CompressedBuffer,
-                CompressionLevel Level = DefaultCompression);
+Error compress(StringRef InputBuffer, SmallVectorImpl<char> &CompressedBuffer,
+               int Level = DefaultCompression);
 
-Status uncompress(StringRef InputBuffer,
-                  OwningPtr<MemoryBuffer> &UncompressedBuffer,
-                  size_t UncompressedSize);
+Error uncompress(StringRef InputBuffer, char *UncompressedBuffer,
+                 size_t &UncompressedSize);
+
+Error uncompress(StringRef InputBuffer,
+                 SmallVectorImpl<char> &UncompressedBuffer,
+                 size_t UncompressedSize);
 
 uint32_t crc32(StringRef Buffer);
 
@@ -57,4 +47,3 @@ uint32_t crc32(StringRef Buffer);
 } // End of namespace llvm
 
 #endif
-

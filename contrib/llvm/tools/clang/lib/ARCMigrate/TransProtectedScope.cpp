@@ -46,8 +46,8 @@ struct CaseInfo {
     St_CannotFix,
     St_Fixed
   } State;
-  
-  CaseInfo() : SC(0), State(St_Unchecked) {}
+
+  CaseInfo() : SC(nullptr), State(St_Unchecked) {}
   CaseInfo(SwitchCase *S, SourceRange Range)
     : SC(S), Range(Range), State(St_Unchecked) {}
 };
@@ -73,12 +73,13 @@ public:
       Curr = Curr->getNextSwitchCase();
     }
 
-    SourceLocation NextLoc = S->getLocEnd();
+    SourceLocation NextLoc = S->getEndLoc();
     Curr = S->getSwitchCaseList();
     // We iterate over case statements in reverse source-order.
     while (Curr) {
-      Cases.push_back(CaseInfo(Curr,SourceRange(Curr->getLocStart(), NextLoc)));
-      NextLoc = Curr->getLocStart();
+      Cases.push_back(
+          CaseInfo(Curr, SourceRange(Curr->getBeginLoc(), NextLoc)));
+      NextLoc = Curr->getBeginLoc();
       Curr = Curr->getNextSwitchCase();
     }
     return true;

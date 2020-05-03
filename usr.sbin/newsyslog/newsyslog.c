@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * ------+---------+---------+-------- + --------+---------+---------+---------*
  * This file includes significant modifications done by:
@@ -55,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/newsyslog/newsyslog.c 321263 2017-07-20 00:44:01Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/newsyslog/newsyslog.c 344881 2019-03-07 13:10:48Z dab $");
 
 #define	OSF
 
@@ -128,8 +127,8 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/newsyslog/newsyslog.c 321263 2017-07-20 0
 #define	CE_CREATE	0x0100	/* Create the log file if it does not exist. */
 #define	CE_NODUMP	0x0200	/* Set 'nodump' on newly created log file. */
 #define	CE_PID2CMD	0x0400	/* Replace PID file with a shell command.*/
-
-#define	CE_RFC5424	0x0800	/* Use RFC5424 format rotation message */
+#define	CE_PLAIN0	0x0800	/* Do not compress zero'th history file */
+#define	CE_RFC5424	0x1000	/* Use RFC5424 format rotation message */
 
 #define	MIN_PID         5	/* Don't touch pids lower than this */
 #define	MAX_PID		99999	/* was lower, see /usr/include/sys/proc.h */
@@ -255,12 +254,13 @@ static char daytime[DAYTIME_LEN];/* The current time in human readable form,
 static char daytime_rfc5424[DAYTIME_RFC5424_LEN];
 
 static char hostname[MAXHOSTNAMELEN]; /* hostname */
+static size_t hostname_shortlen;
 
 static const char *path_syslogpid = _PATH_SYSLOGPID;
 
 static struct cflist *get_worklist(char **files);
 static void parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
-		    struct conf_entry *defconf_p, struct ilist *inclist);
+		    struct conf_entry **defconf, struct ilist *inclist);
 static void add_to_queue(const char *fname, struct ilist *inclist);
 static char *sob(char *p);
 static char *son(char *p);
@@ -641,10 +641,7 @@ parse_args(int argc, char **argv)
 
 	/* Let's get our hostname */
 	(void)gethostname(hostname, sizeof(hostname));
-
-	/* Truncate domain */
-	if ((p = strchr(hostname, '.')) != NULL)
-		*p = '\0';
+	hostname_shortlen = strcspn(hostname, ".");
 
 	/* Parse command line options. */
 	while ((ch = getopt(argc, argv, "a:d:f:nrst:vCD:FNPR:S:")) != -1)
@@ -851,7 +848,7 @@ get_worklist(char **files)
 
 		if (verbose)
 			printf("Processing %s\n", inc->file);
-		parse_file(f, filelist, globlist, defconf, &inclist);
+		parse_file(f, filelist, globlist, &defconf, &inclist);
 		(void) fclose(f);
 	}
 
@@ -868,7 +865,6 @@ get_worklist(char **files)
 		if (defconf != NULL)
 			free_entry(defconf);
 		return (filelist);
-		/* NOTREACHED */
 	}
 
 	/*
@@ -925,7 +921,7 @@ get_worklist(char **files)
 		 * for a "glob" entry which does match.
 		 */
 		gmatch = 0;
-		if (verbose > 2 && globlist != NULL)
+		if (verbose > 2)
 			printf("\t+ Checking globs for %s\n", *given);
 		STAILQ_FOREACH(ent, globlist, cf_nextp) {
 			fnres = fnmatch(ent->log, *given, FNM_PATHNAME);
@@ -1056,7 +1052,7 @@ expand_globs(struct cflist *work_p, struct cflist *glob_p)
  */
 static void
 parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
-    struct conf_entry *defconf_p, struct ilist *inclist)
+    struct conf_entry **defconf_p, struct ilist *inclist)
 {
 	char line[BUFSIZ], *parse, *q;
 	char *cp, *errline, *group;
@@ -1147,12 +1143,12 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 		working = init_entry(q, NULL);
 		if (strcasecmp(DEFAULT_MARKER, q) == 0) {
 			special = 1;
-			if (defconf_p != NULL) {
+			if (*defconf_p != NULL) {
 				warnx("Ignoring duplicate entry for %s!", q);
 				free_entry(working);
 				continue;
 			}
-			defconf_p = working;
+			*defconf_p = working;
 		}
 
 		q = parse = missing_field(sob(parse + 1), errline);
@@ -1287,20 +1283,6 @@ no_trimat:
 				working->flags |= CE_BINARY;
 				break;
 			case 'c':
-				/*
-				 * XXX - 	Ick! Ugly! Remove ASAP!
-				 * We want `c' and `C' for "create".  But we
-				 * will temporarily treat `c' as `g', because
-				 * FreeBSD releases <= 4.8 have a typo of
-				 * checking  ('G' || 'c')  for CE_GLOB.
-				 */
-				if (*q == 'c') {
-					warnx("Assuming 'g' for 'c' in flags for line:\n%s",
-					    errline);
-					warnx("The 'c' flag will eventually mean 'CREATE'");
-					working->flags |= CE_GLOB;
-					break;
-				}
 				working->flags |= CE_CREATE;
 				break;
 			case 'd':
@@ -1314,6 +1296,9 @@ no_trimat:
 				break;
 			case 'n':
 				working->flags |= CE_NOSIGNAL;
+				break;
+			case 'p':
+				working->flags |= CE_PLAIN0;
 				break;
 			case 'r':
 				working->flags |= CE_PID2CMD;
@@ -1337,7 +1322,6 @@ no_trimat:
 				break;
 			case 'f':	/* Used by OpenBSD for "CE_FOLLOW" */
 			case 'm':	/* Used by OpenBSD for "CE_MONITOR" */
-			case 'p':	/* Used by NetBSD  for "CE_PLAIN0" */
 			default:
 				errx(1, "illegal flag in config file -- %c",
 				    *q);
@@ -1370,7 +1354,8 @@ no_trimat:
 			q = NULL;
 		else {
 			q = parse = sob(parse + 1);	/* Optional field */
-			*(parse = son(parse)) = '\0';
+			parse = son(parse);
+			*parse = '\0';
 		}
 
 		working->sig = SIGHUP;
@@ -1842,8 +1827,18 @@ do_rotate(const struct conf_entry *ent)
 		else {
 			/* XXX - Ought to be checking for failure! */
 			(void)rename(zfile1, zfile2);
+			change_attrs(zfile2, ent);
+			if (ent->compress && !strlen(logfile_suffix)) {
+				/* compress old rotation */
+				struct zipwork_entry zwork;
+
+				memset(&zwork, 0, sizeof(zwork));
+				zwork.zw_conf = ent;
+				zwork.zw_fsize = sizefile(zfile2);
+				strcpy(zwork.zw_fname, zfile2);
+				do_zipwork(&zwork);
+			}
 		}
-		change_attrs(zfile2, ent);
 	}
 
 	if (ent->numlogs > 0) {
@@ -1892,12 +1887,15 @@ do_rotate(const struct conf_entry *ent)
 	if (ent->pid_cmd_file != NULL)
 		swork = save_sigwork(ent);
 	if (ent->numlogs > 0 && ent->compress > COMPRESS_NONE) {
-		/*
-		 * The zipwork_entry will include a pointer to this
-		 * conf_entry, so the conf_entry should not be freed.
-		 */
-		free_or_keep = KEEP_ENT;
-		save_zipwork(ent, swork, ent->fsize, file1);
+		if (!(ent->flags & CE_PLAIN0) ||
+		    strcmp(&file1[strlen(file1) - 2], ".0") != 0) {
+			/*
+			 * The zipwork_entry will include a pointer to this
+			 * conf_entry, so the conf_entry should not be freed.
+			 */
+			free_or_keep = KEEP_ENT;
+			save_zipwork(ent, swork, ent->fsize, file1);
+		}
 	}
 
 	return (free_or_keep);
@@ -2298,14 +2296,20 @@ log_trim(const char *logname, const struct conf_entry *log_ent)
 		}
 	} else {
 		if (log_ent->firstcreate)
-			fprintf(f, "%s %s newsyslog[%d]: logfile first created%s\n",
-			    daytime, hostname, getpid(), xtra);
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile first created%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    xtra);
 		else if (log_ent->r_reason != NULL)
-			fprintf(f, "%s %s newsyslog[%d]: logfile turned over%s%s\n",
-			    daytime, hostname, getpid(), log_ent->r_reason, xtra);
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile turned over%s%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    log_ent->r_reason, xtra);
 		else
-			fprintf(f, "%s %s newsyslog[%d]: logfile turned over%s\n",
-			    daytime, hostname, getpid(), xtra);
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile turned over%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    xtra);
 	}
 	if (fclose(f) == EOF)
 		err(1, "log_trim: fclose");

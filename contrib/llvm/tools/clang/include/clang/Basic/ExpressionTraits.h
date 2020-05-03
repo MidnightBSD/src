@@ -8,12 +8,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines enumerations for expression traits intrinsics.
+/// Defines enumerations for expression traits intrinsics.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_EXPRESSIONTRAITS_H
-#define LLVM_CLANG_EXPRESSIONTRAITS_H
+#ifndef LLVM_CLANG_BASIC_EXPRESSIONTRAITS_H
+#define LLVM_CLANG_BASIC_EXPRESSIONTRAITS_H
 
 namespace clang {
 

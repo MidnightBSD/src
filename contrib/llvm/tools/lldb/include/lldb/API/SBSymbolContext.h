@@ -10,9 +10,9 @@
 #ifndef LLDB_SBSymbolContext_h_
 #define LLDB_SBSymbolContext_h_
 
-#include "lldb/API/SBDefines.h"
 #include "lldb/API/SBBlock.h"
 #include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFunction.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBModule.h"
@@ -20,74 +20,62 @@
 
 namespace lldb {
 
-class SBSymbolContext
-{
+class LLDB_API SBSymbolContext {
 public:
-    SBSymbolContext ();
+  SBSymbolContext();
 
-    SBSymbolContext (const lldb::SBSymbolContext& rhs);
+  SBSymbolContext(const lldb::SBSymbolContext &rhs);
 
-    ~SBSymbolContext ();
+  SBSymbolContext(const lldb_private::SymbolContext *sc_ptr);
 
-    bool
-    IsValid () const;
+  ~SBSymbolContext();
 
-    const lldb::SBSymbolContext &
-    operator = (const lldb::SBSymbolContext &rhs);
+  bool IsValid() const;
 
-    lldb::SBModule        GetModule ();
-    lldb::SBCompileUnit   GetCompileUnit ();
-    lldb::SBFunction      GetFunction ();
-    lldb::SBBlock         GetBlock ();
-    lldb::SBLineEntry     GetLineEntry ();
-    lldb::SBSymbol        GetSymbol ();
+  const lldb::SBSymbolContext &operator=(const lldb::SBSymbolContext &rhs);
 
-    void SetModule (lldb::SBModule module);
-    void SetCompileUnit (lldb::SBCompileUnit compile_unit);
-    void SetFunction (lldb::SBFunction function);
-    void SetBlock (lldb::SBBlock block);
-    void SetLineEntry (lldb::SBLineEntry line_entry);
-    void SetSymbol (lldb::SBSymbol symbol);
+  lldb::SBModule GetModule();
+  lldb::SBCompileUnit GetCompileUnit();
+  lldb::SBFunction GetFunction();
+  lldb::SBBlock GetBlock();
+  lldb::SBLineEntry GetLineEntry();
+  lldb::SBSymbol GetSymbol();
 
-    SBSymbolContext
-    GetParentOfInlinedScope (const SBAddress &curr_frame_pc, 
-                             SBAddress &parent_frame_addr) const;
+  void SetModule(lldb::SBModule module);
+  void SetCompileUnit(lldb::SBCompileUnit compile_unit);
+  void SetFunction(lldb::SBFunction function);
+  void SetBlock(lldb::SBBlock block);
+  void SetLineEntry(lldb::SBLineEntry line_entry);
+  void SetSymbol(lldb::SBSymbol symbol);
 
-    bool
-    GetDescription (lldb::SBStream &description);
+  SBSymbolContext GetParentOfInlinedScope(const SBAddress &curr_frame_pc,
+                                          SBAddress &parent_frame_addr) const;
+
+  bool GetDescription(lldb::SBStream &description);
 
 protected:
-    friend class SBAddress;
-    friend class SBFrame;
-    friend class SBModule;
-    friend class SBThread;
-    friend class SBTarget;
-    friend class SBSymbolContextList;
+  friend class SBAddress;
+  friend class SBFrame;
+  friend class SBModule;
+  friend class SBThread;
+  friend class SBTarget;
+  friend class SBSymbolContextList;
 
-    lldb_private::SymbolContext*
-    operator->() const;
+  lldb_private::SymbolContext *operator->() const;
 
-    lldb_private::SymbolContext&
-    operator*();
+  lldb_private::SymbolContext &operator*();
 
-    lldb_private::SymbolContext&
-    ref();
+  lldb_private::SymbolContext &ref();
 
-    const lldb_private::SymbolContext&
-    operator*() const;
+  const lldb_private::SymbolContext &operator*() const;
 
-    lldb_private::SymbolContext *
-    get() const;
+  lldb_private::SymbolContext *get() const;
 
-    SBSymbolContext (const lldb_private::SymbolContext *sc_ptr);
-
-    void
-    SetSymbolContext (const lldb_private::SymbolContext *sc_ptr);
+  void SetSymbolContext(const lldb_private::SymbolContext *sc_ptr);
 
 private:
-    std::unique_ptr<lldb_private::SymbolContext> m_opaque_ap;
+  std::unique_ptr<lldb_private::SymbolContext> m_opaque_ap;
 };
-
 
 } // namespace lldb
 

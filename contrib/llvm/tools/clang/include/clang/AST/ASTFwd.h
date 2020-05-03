@@ -8,9 +8,12 @@
 //===--------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Forward declaration of all AST node types.
+/// Forward declaration of all AST node types.
 ///
 //===-------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_AST_ASTFWD_H
+#define LLVM_CLANG_AST_ASTFWD_H
 
 namespace clang {
 
@@ -26,3 +29,5 @@ class Type;
 class CXXCtorInitializer;
 
 } // end namespace clang
+
+#endif

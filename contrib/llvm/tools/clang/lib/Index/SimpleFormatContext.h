@@ -9,12 +9,12 @@
 //
 /// \file
 ///
-/// \brief Defines a utility class for use of clang-format in libclang
+/// Defines a utility class for use of clang-format in libclang
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SIMPLE_FORM_CONTEXT_H
-#define LLVM_CLANG_SIMPLE_FORM_CONTEXT_H
+#ifndef LLVM_CLANG_LIB_INDEX_SIMPLEFORMATCONTEXT_H
+#define LLVM_CLANG_LIB_INDEX_SIMPLEFORMATCONTEXT_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -29,30 +29,25 @@
 namespace clang {
 namespace index {
 
-/// \brief A small class to be used by libclang clients to format
+/// A small class to be used by libclang clients to format
 /// a declaration string in memory. This object is instantiated once
 /// and used each time a formatting is needed.
 class SimpleFormatContext {
 public:
   SimpleFormatContext(LangOptions Options)
       : DiagOpts(new DiagnosticOptions()),
-        Diagnostics(new DiagnosticsEngine(new DiagnosticIDs,
-                                          DiagOpts.getPtr())),
-        Files((FileSystemOptions())),
-        Sources(*Diagnostics, Files),
-        Rewrite(Sources, Options) {
+        Diagnostics(new DiagnosticsEngine(new DiagnosticIDs, DiagOpts.get())),
+        InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+        Files(FileSystemOptions(), InMemoryFileSystem),
+        Sources(*Diagnostics, Files), Rewrite(Sources, Options) {
     Diagnostics->setClient(new IgnoringDiagConsumer, true);
   }
 
-  ~SimpleFormatContext() { }
-
   FileID createInMemoryFile(StringRef Name, StringRef Content) {
-    const llvm::MemoryBuffer *Source =
-        llvm::MemoryBuffer::getMemBuffer(Content);
-    const FileEntry *Entry =
-        Files.getVirtualFile(Name, Source->getBufferSize(), 0);
-    Sources.overrideFileContents(Entry, Source, true);
-    assert(Entry != NULL);
+    InMemoryFileSystem->addFile(Name, 0,
+                                llvm::MemoryBuffer::getMemBuffer(Content));
+    const FileEntry *Entry = Files.getFile(Name);
+    assert(Entry != nullptr);
     return Sources.createFileID(Entry, SourceLocation(), SrcMgr::C_User);
   }
 
@@ -66,6 +61,7 @@ public:
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager Files;
   SourceManager Sources;
   Rewriter Rewrite;

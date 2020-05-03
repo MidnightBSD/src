@@ -27,6 +27,8 @@
 #include <sys/cdefs.h>
 __MBSDID("$MidnightBSD$");
 
+#include <sys/param.h>
+#include <sys/elf_common.h>
 #include "notes.h"
 
 extern int main(int, char **, char **);

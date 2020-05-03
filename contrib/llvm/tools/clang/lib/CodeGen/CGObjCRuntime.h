@@ -13,10 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_CODEGEN_OBCJRUNTIME_H
-#define CLANG_CODEGEN_OBCJRUNTIME_H
+#ifndef LLVM_CLANG_LIB_CODEGEN_CGOBJCRUNTIME_H
+#define LLVM_CLANG_LIB_CODEGEN_CGOBJCRUNTIME_H
 #include "CGBuilder.h"
 #include "CGCall.h"
+#include "CGCleanup.h"
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
@@ -100,6 +101,10 @@ protected:
                         llvm::Constant *beginCatchFn,
                         llvm::Constant *endCatchFn,
                         llvm::Constant *exceptionRethrowFn);
+
+  void EmitInitOfCatchParam(CodeGenFunction &CGF, llvm::Value *exn,
+                            const VarDecl *paramDecl);
+
   /// Emits an \@synchronize() statement, using the \p syncEnterFn and
   /// \p syncExitFn arguments as the functions called to lock and unlock
   /// the object.  This function can be called by subclasses that use
@@ -116,11 +121,16 @@ public:
   /// this compilation unit with the runtime library.
   virtual llvm::Function *ModuleInitFunction() = 0;
 
-  /// Get a selector for the specified name and type values. The
-  /// return value should have the LLVM type for pointer-to
+  /// Get a selector for the specified name and type values.
+  /// The result should have the LLVM type for ASTContext::getObjCSelType().
+  virtual llvm::Value *GetSelector(CodeGenFunction &CGF, Selector Sel) = 0;
+
+  /// Get the address of a selector for the specified name and type values.
+  /// This is a rarely-used language extension, but sadly it exists.
+  ///
+  /// The result should have the LLVM type for a pointer to
   /// ASTContext::getObjCSelType().
-  virtual llvm::Value *GetSelector(CodeGenFunction &CGF,
-                                   Selector Sel, bool lval=false) = 0;
+  virtual Address GetAddrOfSelector(CodeGenFunction &CGF, Selector Sel) = 0;
 
   /// Get a typed selector.
   virtual llvm::Value *GetSelector(CodeGenFunction &CGF,
@@ -132,9 +142,11 @@ public:
   /// error to Sema.
   virtual llvm::Constant *GetEHType(QualType T) = 0;
 
+  virtual CatchTypeInfo getCatchAllTypeInfo() { return { nullptr, 0 }; }
+
   /// Generate a constant string object.
-  virtual llvm::Constant *GenerateConstantString(const StringLiteral *) = 0;
-  
+  virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
+
   /// Generate a category.  A category contains a list of methods (and
   /// accompanying metadata) and a list of protocols.
   virtual void GenerateCategory(const ObjCCategoryImplDecl *OCD) = 0;
@@ -156,8 +168,8 @@ public:
                       Selector Sel,
                       llvm::Value *Receiver,
                       const CallArgList &CallArgs,
-                      const ObjCInterfaceDecl *Class = 0,
-                      const ObjCMethodDecl *Method = 0) = 0;
+                      const ObjCInterfaceDecl *Class = nullptr,
+                      const ObjCMethodDecl *Method = nullptr) = 0;
 
   /// Generate an Objective-C message send operation to the super
   /// class initiated in a method for Class and with the given Self
@@ -175,7 +187,7 @@ public:
                            llvm::Value *Self,
                            bool IsClassMessage,
                            const CallArgList &CallArgs,
-                           const ObjCMethodDecl *Method = 0) = 0;
+                           const ObjCMethodDecl *Method = nullptr) = 0;
 
   /// Emit the code to return the named protocol as an object, as in a
   /// \@protocol expression.
@@ -202,7 +214,7 @@ public:
   virtual llvm::Constant *GetPropertySetFunction() = 0;
 
   /// Return the runtime function for optimized setting properties.
-  virtual llvm::Constant *GetOptimizedPropertySetFunction(bool atomic, 
+  virtual llvm::Constant *GetOptimizedPropertySetFunction(bool atomic,
                                                           bool copy) = 0;
 
   // API for atomic copying of qualified aggregates in getter.
@@ -215,17 +227,17 @@ public:
   /// API for atomic copying of qualified aggregates with non-trivial copy
   /// assignment (c++) in getter.
   virtual llvm::Constant *GetCppAtomicObjectGetFunction() = 0;
-  
+
   /// GetClass - Return a reference to the class for the given
   /// interface decl.
   virtual llvm::Value *GetClass(CodeGenFunction &CGF,
                                 const ObjCInterfaceDecl *OID) = 0;
-  
-  
+
+
   virtual llvm::Value *EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
     llvm_unreachable("autoreleasepool unsupported in this ABI");
   }
-  
+
   /// EnumerationMutationFunction - Return the function that's called by the
   /// compiler when a mutation is detected during foreach iteration.
   virtual llvm::Constant *EnumerationMutationFunction() = 0;
@@ -238,17 +250,17 @@ public:
                              const ObjCAtThrowStmt &S,
                              bool ClearInsertionPoint=true) = 0;
   virtual llvm::Value *EmitObjCWeakRead(CodeGen::CodeGenFunction &CGF,
-                                        llvm::Value *AddrWeakObj) = 0;
+                                        Address AddrWeakObj) = 0;
   virtual void EmitObjCWeakAssign(CodeGen::CodeGenFunction &CGF,
-                                  llvm::Value *src, llvm::Value *dest) = 0;
+                                  llvm::Value *src, Address dest) = 0;
   virtual void EmitObjCGlobalAssign(CodeGen::CodeGenFunction &CGF,
-                                    llvm::Value *src, llvm::Value *dest,
+                                    llvm::Value *src, Address dest,
                                     bool threadlocal=false) = 0;
   virtual void EmitObjCIvarAssign(CodeGen::CodeGenFunction &CGF,
-                                  llvm::Value *src, llvm::Value *dest,
+                                  llvm::Value *src, Address dest,
                                   llvm::Value *ivarOffset) = 0;
   virtual void EmitObjCStrongCastAssign(CodeGen::CodeGenFunction &CGF,
-                                        llvm::Value *src, llvm::Value *dest) = 0;
+                                        llvm::Value *src, Address dest) = 0;
 
   virtual LValue EmitObjCValueForIvar(CodeGen::CodeGenFunction &CGF,
                                       QualType ObjectTy,
@@ -259,16 +271,21 @@ public:
                                       const ObjCInterfaceDecl *Interface,
                                       const ObjCIvarDecl *Ivar) = 0;
   virtual void EmitGCMemmoveCollectable(CodeGen::CodeGenFunction &CGF,
-                                        llvm::Value *DestPtr,
-                                        llvm::Value *SrcPtr,
+                                        Address DestPtr,
+                                        Address SrcPtr,
                                         llvm::Value *Size) = 0;
   virtual llvm::Constant *BuildGCBlockLayout(CodeGen::CodeGenModule &CGM,
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
   virtual llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
+  virtual std::string getRCBlockLayoutStr(CodeGen::CodeGenModule &CGM,
+                                          const CGBlockInfo &blockInfo) {
+    return {};
+  }
+
+  /// Returns an i8* which points to the byref layout information.
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,
                                            QualType T) = 0;
-  virtual llvm::GlobalVariable *GetClassGlobal(const std::string &Name) = 0;
 
   struct MessageSendInfo {
     const CGFunctionInfo &CallInfo;

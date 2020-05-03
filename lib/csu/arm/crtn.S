@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/csu/arm/crtn.S 216338 2010-12-09 21:31:21Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/csu/arm/crtn.S 288373 2015-09-29 16:09:58Z kib $");
 
 	.section .init,"ax",%progbits
 	ldmea	fp, {fp, sp, pc}
@@ -9,3 +8,5 @@ __FBSDID("$FreeBSD: stable/10/lib/csu/arm/crtn.S 216338 2010-12-09 21:31:21Z dim
 	.section .fini,"ax",%progbits
 	ldmea	fp, {fp, sp, pc}
 	mov	pc, lr
+
+	.section .note.GNU-stack,"",%progbits

@@ -1,4 +1,5 @@
-//===-- CommandObjectCommands.h -----------------------------------*- C++ -*-===//
+//===-- CommandObjectCommands.h -----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,13 +11,9 @@
 #ifndef liblldb_CommandObjectCommands_h_
 #define liblldb_CommandObjectCommands_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Core/STLUtils.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
-#include "lldb/Core/STLUtils.h"
 
 namespace lldb_private {
 
@@ -24,17 +21,13 @@ namespace lldb_private {
 // CommandObjectMultiwordCommands
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordCommands : public CommandObjectMultiword
-{
+class CommandObjectMultiwordCommands : public CommandObjectMultiword {
 public:
+  CommandObjectMultiwordCommands(CommandInterpreter &interpreter);
 
-    CommandObjectMultiwordCommands (CommandInterpreter &interpreter);
-
-    virtual
-    ~CommandObjectMultiwordCommands ();
-
+  ~CommandObjectMultiwordCommands() override;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectCommands_h_
+#endif // liblldb_CommandObjectCommands_h_

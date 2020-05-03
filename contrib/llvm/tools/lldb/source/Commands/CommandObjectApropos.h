@@ -1,4 +1,5 @@
-//===-- CommandObjectApropos.h -----------------------------------*- C++ -*-===//
+//===-- CommandObjectApropos.h -----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,10 +11,6 @@
 #ifndef liblldb_CommandObjectApropos_h_
 #define liblldb_CommandObjectApropos_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObject.h"
 
 namespace lldb_private {
@@ -22,23 +19,16 @@ namespace lldb_private {
 // CommandObjectApropos
 //-------------------------------------------------------------------------
 
-class CommandObjectApropos : public CommandObjectParsed
-{
+class CommandObjectApropos : public CommandObjectParsed {
 public:
+  CommandObjectApropos(CommandInterpreter &interpreter);
 
-    CommandObjectApropos (CommandInterpreter &interpreter);
-
-    virtual
-    ~CommandObjectApropos ();
+  ~CommandObjectApropos() override;
 
 protected:
-    virtual bool
-    DoExecute (Args& command,
-             CommandReturnObject &result);
-
-
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectApropos_h_
+#endif // liblldb_CommandObjectApropos_h_

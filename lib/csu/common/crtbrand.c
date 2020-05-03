@@ -29,6 +29,7 @@
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
+#include <sys/elf_common.h>
 #include "notes.h"
 
 /*

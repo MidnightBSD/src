@@ -1,4 +1,4 @@
-//===--- TargetBuiltins.h - Target specific builtin IDs -------------------===//
+//===--- TargetBuiltins.h - Target specific builtin IDs ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,39 +8,52 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Enumerates target-specific builtins in their own namespaces within
+/// Enumerates target-specific builtins in their own namespaces within
 /// namespace ::clang.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_TARGET_BUILTINS_H
-#define LLVM_CLANG_BASIC_TARGET_BUILTINS_H
+#ifndef LLVM_CLANG_BASIC_TARGETBUILTINS_H
+#define LLVM_CLANG_BASIC_TARGETBUILTINS_H
 
+#include <stdint.h>
 #include "clang/Basic/Builtins.h"
 #undef PPC
 
 namespace clang {
 
-  /// \brief AArch64 builtins
-  namespace AArch64 {
+  namespace NEON {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsNEON.def"
+    FirstTSBuiltin
+  };
+  }
+
+  /// ARM builtins
+  namespace ARM {
     enum {
       LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+      LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsAArch64.def"
+#include "clang/Basic/BuiltinsARM.def"
       LastTSBuiltin
     };
   }
-  /// \brief ARM builtins
-  namespace ARM {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsARM.def"
-        LastTSBuiltin
-    };
+
+  /// AArch64 builtins
+  namespace AArch64 {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+    LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
+  #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  #include "clang/Basic/BuiltinsAArch64.def"
+    LastTSBuiltin
+  };
   }
 
-  /// \brief PPC builtins
+  /// PPC builtins
   namespace PPC {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
@@ -50,7 +63,7 @@ namespace clang {
     };
   }
 
-  /// \brief NVPTX builtins
+  /// NVPTX builtins
   namespace NVPTX {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
@@ -60,18 +73,31 @@ namespace clang {
     };
   }
 
-
-  /// \brief X86 builtins
-  namespace X86 {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsX86.def"
-        LastTSBuiltin
-    };
+  /// AMDGPU builtins
+  namespace AMDGPU {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+  #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  #include "clang/Basic/BuiltinsAMDGPU.def"
+    LastTSBuiltin
+  };
   }
 
-  /// \brief Flags to identify the types for overloaded Neon builtins.
+  /// X86 builtins
+  namespace X86 {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsX86.def"
+    FirstX86_64Builtin,
+    LastX86CommonBuiltin = FirstX86_64Builtin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsX86_64.def"
+    LastTSBuiltin
+  };
+  }
+
+  /// Flags to identify the types for overloaded Neon builtins.
   ///
   /// These must be kept in sync with the flags in utils/TableGen/NeonEmitter.h.
   class NeonTypeFlags {
@@ -91,6 +117,7 @@ namespace clang {
       Poly8,
       Poly16,
       Poly64,
+      Poly128,
       Float16,
       Float32,
       Float64
@@ -113,7 +140,7 @@ namespace clang {
     bool isQuad() const { return (Flags & QuadFlag) != 0; }
   };
 
-  /// \brief Hexagon builtins
+  /// Hexagon builtins
   namespace Hexagon {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
@@ -123,7 +150,7 @@ namespace clang {
     };
   }
 
-  /// \brief MIPS builtins
+  /// MIPS builtins
   namespace Mips {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
@@ -133,7 +160,7 @@ namespace clang {
     };
   }
 
-  /// \brief XCore builtins
+  /// XCore builtins
   namespace XCore {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
@@ -142,6 +169,37 @@ namespace clang {
         LastTSBuiltin
     };
   }
+
+  /// Le64 builtins
+  namespace Le64 {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+  #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  #include "clang/Basic/BuiltinsLe64.def"
+    LastTSBuiltin
+  };
+  }
+
+  /// SystemZ builtins
+  namespace SystemZ {
+    enum {
+        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsSystemZ.def"
+        LastTSBuiltin
+    };
+  }
+
+  /// WebAssembly builtins
+  namespace WebAssembly {
+    enum {
+      LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsWebAssembly.def"
+      LastTSBuiltin
+    };
+  }
+
 } // end namespace clang.
 
 #endif

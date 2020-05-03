@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_COMMENT_SEMA_H
-#define LLVM_CLANG_AST_COMMENT_SEMA_H
+#ifndef LLVM_CLANG_AST_COMMENTSEMA_H
+#define LLVM_CLANG_AST_COMMENTSEMA_H
 
 #include "clang/AST/Comment.h"
 #include "clang/Basic/Diagnostic.h"
@@ -31,8 +31,8 @@ namespace comments {
 class CommandTraits;
 
 class Sema {
-  Sema(const Sema &) LLVM_DELETED_FUNCTION;
-  void operator=(const Sema &) LLVM_DELETED_FUNCTION;
+  Sema(const Sema &) = delete;
+  void operator=(const Sema &) = delete;
 
   /// Allocator for AST nodes.
   llvm::BumpPtrAllocator &Allocator;
@@ -55,7 +55,7 @@ class Sema {
   /// Contains a valid value if \c DeclInfo->IsFilled is true.
   llvm::StringMap<TParamCommandComment *> TemplateParameterDocs;
 
-  /// AST node for the \\brief command and its aliases.
+  /// AST node for the \command and its aliases.
   const BlockCommandComment *BriefCommand;
 
   /// AST node for the \\headerfile command.
@@ -79,13 +79,9 @@ public:
   /// Returns a copy of array, owned by Sema's allocator.
   template<typename T>
   ArrayRef<T> copyArray(ArrayRef<T> Source) {
-    size_t Size = Source.size();
-    if (Size != 0) {
-      T *Mem = Allocator.Allocate<T>(Size);
-      std::uninitialized_copy(Source.begin(), Source.end(), Mem);
-      return llvm::makeArrayRef(Mem, Size);
-    } else
-      return llvm::makeArrayRef(static_cast<T *>(NULL), 0);
+    if (!Source.empty())
+      return Source.copy(Allocator);
+    return None;
   }
 
   ParagraphComment *actOnParagraphComment(
@@ -191,15 +187,15 @@ public:
   void checkReturnsCommand(const BlockCommandComment *Command);
 
   /// Emit diagnostics about duplicate block commands that should be
-  /// used only once per comment, e.g., \\brief and \\returns.
+  /// used only once per comment, e.g., \and \\returns.
   void checkBlockCommandDuplicate(const BlockCommandComment *Command);
 
   void checkDeprecatedCommand(const BlockCommandComment *Comment);
-  
+
   void checkFunctionDeclVerbatimLine(const BlockCommandComment *Comment);
-  
+
   void checkContainerDeclVerbatimLine(const BlockCommandComment *Comment);
-  
+
   void checkContainerDecl(const BlockCommandComment *Comment);
 
   /// Resolve parameter names to parameter indexes in function declaration.
@@ -212,6 +208,10 @@ public:
   /// \returns \c true if declaration that this comment is attached to declares
   /// a function pointer.
   bool isFunctionPointerVarDecl();
+  /// \returns \c true if the declaration that this comment is attached to
+  /// declares a variable or a field whose type is a function or a block
+  /// pointer.
+  bool isFunctionOrBlockPointerVarLikeDecl();
   bool isFunctionOrMethodVariadic();
   bool isObjCMethodDecl();
   bool isObjCPropertyDecl();

@@ -1,4 +1,4 @@
-//===--- DeltaTree.h - B-Tree for Rewrite Delta tracking --------*- C++ -*-===//
+//===- DeltaTree.h - B-Tree for Rewrite Delta tracking ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,10 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_REWRITE_DELTATREE_H
-#define CLANG_REWRITE_DELTATREE_H
-
-#include "llvm/Support/Compiler.h"
+#ifndef LLVM_CLANG_REWRITE_CORE_DELTATREE_H
+#define LLVM_CLANG_REWRITE_CORE_DELTATREE_H
 
 namespace clang {
 
@@ -27,12 +25,14 @@ namespace clang {
   /// as well, without traversing the whole tree.
   class DeltaTree {
     void *Root;    // "DeltaTreeNode *"
-    void operator=(const DeltaTree &) LLVM_DELETED_FUNCTION;
+
   public:
     DeltaTree();
 
     // Note: Currently we only support copying when the RHS is empty.
     DeltaTree(const DeltaTree &RHS);
+
+    DeltaTree &operator=(const DeltaTree &) = delete;
     ~DeltaTree();
 
     /// getDeltaAt - Return the accumulated delta at the specified file offset.
@@ -45,6 +45,7 @@ namespace clang {
     /// into the current DeltaTree at offset FileIndex.
     void AddDelta(unsigned FileIndex, int Delta);
   };
-}  // end namespace clang
 
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_REWRITE_CORE_DELTATREE_H

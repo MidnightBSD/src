@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* LINTLIBRARY */
 /*-
  * Copyright 2001 David E. O'Brien.
@@ -41,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/csu/powerpc64/crt1.c 300323 2016-05-20 19:14:15Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/csu/powerpc64/crt1.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 

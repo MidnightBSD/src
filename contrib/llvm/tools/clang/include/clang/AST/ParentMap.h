@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_PARENTMAP_H
-#define LLVM_CLANG_PARENTMAP_H
+#ifndef LLVM_CLANG_AST_PARENTMAP_H
+#define LLVM_CLANG_AST_PARENTMAP_H
 
 namespace clang {
 class Stmt;
@@ -24,7 +24,7 @@ public:
   ParentMap(Stmt* ASTRoot);
   ~ParentMap();
 
-  /// \brief Adds and/or updates the parent/child-relations of the complete
+  /// Adds and/or updates the parent/child-relations of the complete
   /// stmt tree of S. All children of S including indirect descendants are
   /// visited and updated or inserted but not the parents of S.
   void addStmt(Stmt* S);
@@ -53,7 +53,7 @@ public:
   }
 
   bool hasParent(Stmt* S) const {
-    return getParent(S) != 0;
+    return getParent(S) != nullptr;
   }
 
   bool isConsumedExpr(Expr *E) const;

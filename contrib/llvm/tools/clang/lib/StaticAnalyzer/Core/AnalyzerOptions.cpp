@@ -1,4 +1,4 @@
-//===-- AnalyzerOptions.cpp - Analysis Engine Options -----------*- C++ -*-===//
+//===- AnalyzerOptions.cpp - Analysis Engine Options ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,256 +13,144 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
+#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 using namespace clang;
+using namespace ento;
 using namespace llvm;
 
-AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
-  if (UserMode == UMK_NotSet) {
-    StringRef ModeStr(Config.GetOrCreateValue("mode", "deep").getValue());
-    UserMode = llvm::StringSwitch<UserModeKind>(ModeStr)
-      .Case("shallow", UMK_Shallow)
-      .Case("deep", UMK_Deep)
-      .Default(UMK_NotSet);
-    assert(UserMode != UMK_NotSet && "User mode is invalid.");
+std::vector<StringRef>
+AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
+  static const StringRef StaticAnalyzerChecks[] = {
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+  FULLNAME,
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+  };
+  std::vector<StringRef> Result;
+  for (StringRef CheckName : StaticAnalyzerChecks) {
+    if (!CheckName.startswith("debug.") &&
+        (IncludeExperimental || !CheckName.startswith("alpha.")))
+      Result.push_back(CheckName);
   }
-  return UserMode;
+  return Result;
 }
 
-IPAKind AnalyzerOptions::getIPAMode() {
-  if (IPAMode == IPAK_NotSet) {
+ExplorationStrategyKind
+AnalyzerOptions::getExplorationStrategy() const {
+  auto K =
+    llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(
+                                                            ExplorationStrategy)
+          .Case("dfs", ExplorationStrategyKind::DFS)
+          .Case("bfs", ExplorationStrategyKind::BFS)
+          .Case("unexplored_first",
+                ExplorationStrategyKind::UnexploredFirst)
+          .Case("unexplored_first_queue",
+                ExplorationStrategyKind::UnexploredFirstQueue)
+          .Case("unexplored_first_location_queue",
+                ExplorationStrategyKind::UnexploredFirstLocationQueue)
+          .Case("bfs_block_dfs_contents",
+                ExplorationStrategyKind::BFSBlockDFSContents)
+          .Default(None);
+  assert(K.hasValue() && "User mode is invalid.");
+  return K.getValue();
+}
 
-    // Use the User Mode to set the default IPA value.
-    // Note, we have to add the string to the Config map for the ConfigDumper
-    // checker to function properly.
-    const char *DefaultIPA = 0;
-    UserModeKind HighLevelMode = getUserMode();
-    if (HighLevelMode == UMK_Shallow)
-      DefaultIPA = "inlining";
-    else if (HighLevelMode == UMK_Deep)
-      DefaultIPA = "dynamic-bifurcate";
-    assert(DefaultIPA);
+IPAKind AnalyzerOptions::getIPAMode() const {
+  auto K = llvm::StringSwitch<llvm::Optional<IPAKind>>(IPAMode)
+          .Case("none", IPAK_None)
+          .Case("basic-inlining", IPAK_BasicInlining)
+          .Case("inlining", IPAK_Inlining)
+          .Case("dynamic", IPAK_DynamicDispatch)
+          .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
+          .Default(None);
+  assert(K.hasValue() && "IPA Mode is invalid.");
 
-    // Lookup the ipa configuration option, use the default from User Mode.
-    StringRef ModeStr(Config.GetOrCreateValue("ipa", DefaultIPA).getValue());
-    IPAKind IPAConfig = llvm::StringSwitch<IPAKind>(ModeStr)
-            .Case("none", IPAK_None)
-            .Case("basic-inlining", IPAK_BasicInlining)
-            .Case("inlining", IPAK_Inlining)
-            .Case("dynamic", IPAK_DynamicDispatch)
-            .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
-            .Default(IPAK_NotSet);
-    assert(IPAConfig != IPAK_NotSet && "IPA Mode is invalid.");
-
-    // Set the member variable.
-    IPAMode = IPAConfig;
-  }
-  
-  return IPAMode;
+  return K.getValue();
 }
 
 bool
-AnalyzerOptions::mayInlineCXXMemberFunction(CXXInlineableMemberKind K) {
+AnalyzerOptions::mayInlineCXXMemberFunction(
+                                          CXXInlineableMemberKind Param) const {
   if (getIPAMode() < IPAK_Inlining)
     return false;
 
-  if (!CXXMemberInliningMode) {
-    static const char *ModeKey = "c++-inlining";
-    
-    StringRef ModeStr(Config.GetOrCreateValue(ModeKey,
-                                              "destructors").getValue());
+  auto K =
+    llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(
+                                                          CXXMemberInliningMode)
+    .Case("constructors", CIMK_Constructors)
+    .Case("destructors", CIMK_Destructors)
+    .Case("methods", CIMK_MemberFunctions)
+    .Case("none", CIMK_None)
+    .Default(None);
 
-    CXXInlineableMemberKind &MutableMode =
-      const_cast<CXXInlineableMemberKind &>(CXXMemberInliningMode);
+  assert(K.hasValue() && "Invalid c++ member function inlining mode.");
 
-    MutableMode = llvm::StringSwitch<CXXInlineableMemberKind>(ModeStr)
-      .Case("constructors", CIMK_Constructors)
-      .Case("destructors", CIMK_Destructors)
-      .Case("none", CIMK_None)
-      .Case("methods", CIMK_MemberFunctions)
-      .Default(CXXInlineableMemberKind());
-
-    if (!MutableMode) {
-      // FIXME: We should emit a warning here about an unknown inlining kind,
-      // but the AnalyzerOptions doesn't have access to a diagnostic engine.
-      MutableMode = CIMK_None;
-    }
-  }
-
-  return CXXMemberInliningMode >= K;
+  return *K >= Param;
 }
 
-static StringRef toString(bool b) { return b ? "true" : "false"; }
+StringRef AnalyzerOptions::getCheckerStringOption(StringRef OptionName,
+                                                  StringRef DefaultVal,
+                                                  const CheckerBase *C,
+                                                  bool SearchInParents) const {
+  assert(C);
+  // Search for a package option if the option for the checker is not specified
+  // and search in parents is enabled.
+  StringRef CheckerName = C->getTagDescription();
 
-bool AnalyzerOptions::getBooleanOption(StringRef Name, bool DefaultVal) {
+  assert(!CheckerName.empty() &&
+         "Empty checker name! Make sure the checker object (including it's "
+         "bases!) if fully initialized before calling this function!");
+  ConfigTable::const_iterator E = Config.end();
+  do {
+    ConfigTable::const_iterator I =
+        Config.find((Twine(CheckerName) + ":" + OptionName).str());
+    if (I != E)
+      return StringRef(I->getValue());
+    size_t Pos = CheckerName.rfind('.');
+    if (Pos == StringRef::npos)
+      return DefaultVal;
+    CheckerName = CheckerName.substr(0, Pos);
+  } while (!CheckerName.empty() && SearchInParents);
+  return DefaultVal;
+}
+
+bool AnalyzerOptions::getCheckerBooleanOption(StringRef Name, bool DefaultVal,
+                                              const CheckerBase *C,
+                                              bool SearchInParents) const {
   // FIXME: We should emit a warning here if the value is something other than
   // "true", "false", or the empty string (meaning the default value),
   // but the AnalyzerOptions doesn't have access to a diagnostic engine.
-  StringRef V(Config.GetOrCreateValue(Name, toString(DefaultVal)).getValue());
-  return llvm::StringSwitch<bool>(V)
+  assert(C);
+  return llvm::StringSwitch<bool>(
+      getCheckerStringOption(Name, DefaultVal ? "true" : "false", C,
+                             SearchInParents))
       .Case("true", true)
       .Case("false", false)
       .Default(DefaultVal);
 }
 
-bool AnalyzerOptions::getBooleanOption(Optional<bool> &V, StringRef Name,
-                                       bool DefaultVal) {
-  if (!V.hasValue())
-    V = getBooleanOption(Name, DefaultVal);
-  return V.getValue();
+int AnalyzerOptions::getCheckerIntegerOption(StringRef Name, int DefaultVal,
+                                        const CheckerBase *C,
+                                        bool SearchInParents) const {
+  int Ret = DefaultVal;
+  bool HasFailed = getCheckerStringOption(Name, std::to_string(DefaultVal), C,
+                                          SearchInParents)
+                     .getAsInteger(10, Ret);
+  assert(!HasFailed && "analyzer-config option should be numeric");
+  (void)HasFailed;
+  return Ret;
 }
-
-bool AnalyzerOptions::includeTemporaryDtorsInCFG() {
-  return getBooleanOption(IncludeTemporaryDtorsInCFG,
-                          "cfg-temporary-dtors",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::mayInlineCXXStandardLibrary() {
-  return getBooleanOption(InlineCXXStandardLibrary,
-                          "c++-stdlib-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineTemplateFunctions() {
-  return getBooleanOption(InlineTemplateFunctions,
-                          "c++-template-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineCXXContainerCtorsAndDtors() {
-  return getBooleanOption(InlineCXXContainerCtorsAndDtors,
-                          "c++-container-inlining",
-                          /*Default=*/false);
-}
-
-bool AnalyzerOptions::mayInlineCXXSharedPtrDtor() {
-  return getBooleanOption(InlineCXXSharedPtrDtor,
-                          "c++-shared_ptr-inlining",
-                          /*Default=*/false);
-}
-
-
-bool AnalyzerOptions::mayInlineObjCMethod() {
-  return getBooleanOption(ObjCInliningMode,
-                          "objc-inlining",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldSuppressNullReturnPaths() {
-  return getBooleanOption(SuppressNullReturnPaths,
-                          "suppress-null-return-paths",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldAvoidSuppressingNullArgumentPaths() {
-  return getBooleanOption(AvoidSuppressingNullArgumentPaths,
-                          "avoid-suppressing-null-argument-paths",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldSuppressInlinedDefensiveChecks() {
-  return getBooleanOption(SuppressInlinedDefensiveChecks,
-                          "suppress-inlined-defensive-checks",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldSuppressFromCXXStandardLibrary() {
-  return getBooleanOption(SuppressFromCXXStandardLibrary,
-                          "suppress-c++-stdlib",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldReportIssuesInMainSourceFile() {
-  return getBooleanOption(ReportIssuesInMainSourceFile,
-                          "report-in-main-source-file",
-                          /* Default = */ false);
-}
-
-int AnalyzerOptions::getOptionAsInteger(StringRef Name, int DefaultVal) {
-  SmallString<10> StrBuf;
-  llvm::raw_svector_ostream OS(StrBuf);
-  OS << DefaultVal;
-  
-  StringRef V(Config.GetOrCreateValue(Name, OS.str()).getValue());
-  int Res = DefaultVal;
-  bool b = V.getAsInteger(10, Res);
-  assert(!b && "analyzer-config option should be numeric");
-  (void) b;
-  return Res;
-}
-
-unsigned AnalyzerOptions::getAlwaysInlineSize() {
-  if (!AlwaysInlineSize.hasValue())
-    AlwaysInlineSize = getOptionAsInteger("ipa-always-inline-size", 3);
-  return AlwaysInlineSize.getValue();
-}
-
-unsigned AnalyzerOptions::getMaxInlinableSize() {
-  if (!MaxInlinableSize.hasValue()) {
-
-    int DefaultValue = 0;
-    UserModeKind HighLevelMode = getUserMode();
-    switch (HighLevelMode) {
-      default:
-        llvm_unreachable("Invalid mode.");
-      case UMK_Shallow:
-        DefaultValue = 4;
-        break;
-      case UMK_Deep:
-        DefaultValue = 50;
-        break;
-    }
-
-    MaxInlinableSize = getOptionAsInteger("max-inlinable-size", DefaultValue);
-  }
-  return MaxInlinableSize.getValue();
-}
-
-unsigned AnalyzerOptions::getGraphTrimInterval() {
-  if (!GraphTrimInterval.hasValue())
-    GraphTrimInterval = getOptionAsInteger("graph-trim-interval", 1000);
-  return GraphTrimInterval.getValue();
-}
-
-unsigned AnalyzerOptions::getMaxTimesInlineLarge() {
-  if (!MaxTimesInlineLarge.hasValue())
-    MaxTimesInlineLarge = getOptionAsInteger("max-times-inline-large", 32);
-  return MaxTimesInlineLarge.getValue();
-}
-
-unsigned AnalyzerOptions::getMaxNodesPerTopLevelFunction() {
-  if (!MaxNodesPerTopLevelFunction.hasValue()) {
-    int DefaultValue = 0;
-    UserModeKind HighLevelMode = getUserMode();
-    switch (HighLevelMode) {
-      default:
-        llvm_unreachable("Invalid mode.");
-      case UMK_Shallow:
-        DefaultValue = 75000;
-        break;
-      case UMK_Deep:
-        DefaultValue = 150000;
-        break;
-    }
-    MaxNodesPerTopLevelFunction = getOptionAsInteger("max-nodes", DefaultValue);
-  }
-  return MaxNodesPerTopLevelFunction.getValue();
-}
-
-bool AnalyzerOptions::shouldSynthesizeBodies() {
-  return getBooleanOption("faux-bodies", true);
-}
-
-bool AnalyzerOptions::shouldPrunePaths() {
-  return getBooleanOption("prune-paths", true);
-}
-
-bool AnalyzerOptions::shouldConditionalizeStaticInitializers() {
-  return getBooleanOption("cfg-conditional-static-initializers", true);
-}
-

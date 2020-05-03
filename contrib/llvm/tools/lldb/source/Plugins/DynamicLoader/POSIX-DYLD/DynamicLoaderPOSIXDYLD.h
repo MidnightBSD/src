@@ -1,4 +1,4 @@
-//===-- DynamicLoaderPOSIX.h ------------------------------------*- C++ -*-===//
+//===-- DynamicLoaderPOSIXDYLD.h --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,169 +7,163 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_DynamicLoaderPOSIX_H_
-#define liblldb_DynamicLoaderPOSIX_H_
+#ifndef liblldb_DynamicLoaderPOSIXDYLD_h_
+#define liblldb_DynamicLoaderPOSIXDYLD_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "lldb/Breakpoint/StoppointCallbackContext.h"
-#include "lldb/Target/DynamicLoader.h"
+#include <map>
+#include <memory>
 
 #include "DYLDRendezvous.h"
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/ModuleList.h"
+#include "lldb/Target/DynamicLoader.h"
 
 class AuxVector;
 
-class DynamicLoaderPOSIXDYLD : public lldb_private::DynamicLoader
-{
+class DynamicLoaderPOSIXDYLD : public lldb_private::DynamicLoader {
 public:
+  DynamicLoaderPOSIXDYLD(lldb_private::Process *process);
 
-    static void
-    Initialize();
+  ~DynamicLoaderPOSIXDYLD() override;
 
-    static void
-    Terminate();
+  static void Initialize();
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static void Terminate();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    static lldb_private::DynamicLoader *
-    CreateInstance(lldb_private::Process *process, bool force);
+  static const char *GetPluginDescriptionStatic();
 
-    DynamicLoaderPOSIXDYLD(lldb_private::Process *process);
+  static lldb_private::DynamicLoader *
+  CreateInstance(lldb_private::Process *process, bool force);
 
-    virtual
-    ~DynamicLoaderPOSIXDYLD();
+  //------------------------------------------------------------------
+  // DynamicLoader protocol
+  //------------------------------------------------------------------
 
-    //------------------------------------------------------------------
-    // DynamicLoader protocol
-    //------------------------------------------------------------------
+  void DidAttach() override;
 
-    virtual void
-    DidAttach();
+  void DidLaunch() override;
 
-    virtual void
-    DidLaunch();
+  lldb::ThreadPlanSP GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
+                                                  bool stop_others) override;
 
-    virtual lldb::ThreadPlanSP
-    GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
-                                 bool stop_others);
+  lldb_private::Status CanLoadImage() override;
 
-    virtual lldb_private::Error
-    CanLoadImage();
+  lldb::addr_t GetThreadLocalData(const lldb::ModuleSP module,
+                                  const lldb::ThreadSP thread,
+                                  lldb::addr_t tls_file_addr) override;
 
-    virtual lldb::addr_t
-    GetThreadLocalData (const lldb::ModuleSP module, const lldb::ThreadSP thread);
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    virtual lldb_private::ConstString
-    GetPluginName();
-
-    virtual uint32_t
-    GetPluginVersion();
-
-    virtual void
-    GetPluginCommandHelp(const char *command, lldb_private::Stream *strm);
-
-    virtual lldb_private::Error
-    ExecutePluginCommand(lldb_private::Args &command, lldb_private::Stream *strm);
-
-    virtual lldb_private::Log *
-    EnablePluginLogging(lldb_private::Stream *strm, lldb_private::Args &command);
+  uint32_t GetPluginVersion() override;
 
 protected:
-    /// Runtime linker rendezvous structure.
-    DYLDRendezvous m_rendezvous;
+  /// Runtime linker rendezvous structure.
+  DYLDRendezvous m_rendezvous;
 
-    /// Virtual load address of the inferior process.
-    lldb::addr_t m_load_offset;
+  /// Virtual load address of the inferior process.
+  lldb::addr_t m_load_offset;
 
-    /// Virtual entry address of the inferior process.
-    lldb::addr_t m_entry_point;
+  /// Virtual entry address of the inferior process.
+  lldb::addr_t m_entry_point;
 
-    /// Auxiliary vector of the inferior process.
-    std::unique_ptr<AuxVector> m_auxv;
+  /// Auxiliary vector of the inferior process.
+  std::unique_ptr<AuxVector> m_auxv;
 
-    /// Rendezvous breakpoint.
-    lldb::break_id_t m_dyld_bid;
+  /// Rendezvous breakpoint.
+  lldb::break_id_t m_dyld_bid;
 
-    /// Loaded module list. (link map for each module)
-    std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>> m_loaded_modules;
+  /// Contains AT_SYSINFO_EHDR, which means a vDSO has been
+  /// mapped to the address space
+  lldb::addr_t m_vdso_base;
 
-    /// Enables a breakpoint on a function called by the runtime
-    /// linker each time a module is loaded or unloaded.
-    void
-    SetRendezvousBreakpoint();
+  /// Contains AT_BASE, which means a dynamic loader has been
+  /// mapped to the address space
+  lldb::addr_t m_interpreter_base;
 
-    /// Callback routine which updates the current list of loaded modules based
-    /// on the information supplied by the runtime linker.
-    static bool
-    RendezvousBreakpointHit(void *baton, 
-                            lldb_private::StoppointCallbackContext *context, 
-                            lldb::user_id_t break_id, 
-                            lldb::user_id_t break_loc_id);
-    
-    /// Helper method for RendezvousBreakpointHit.  Updates LLDB's current set
-    /// of loaded modules.
-    void
-    RefreshModules();
+  /// Loaded module list. (link map for each module)
+  std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>>
+      m_loaded_modules;
 
-    /// Updates the load address of every allocatable section in @p module.
-    ///
-    /// @param module The module to traverse.
-    ///
-    /// @param link_map_addr The virtual address of the link map for the @p module.
-    ///
-    /// @param base_addr The virtual base address @p module is loaded at.
-    virtual void
-    UpdateLoadedSections(lldb::ModuleSP module,
-                         lldb::addr_t link_map_addr,
-                         lldb::addr_t base_addr);
+  /// If possible sets a breakpoint on a function called by the runtime
+  /// linker each time a module is loaded or unloaded.
+  bool SetRendezvousBreakpoint();
 
-    /// Removes the loaded sections from the target in @p module.
-    ///
-    /// @param module The module to traverse.
-    virtual void
-    UnloadSections(const lldb::ModuleSP module);
+  /// Callback routine which updates the current list of loaded modules based
+  /// on the information supplied by the runtime linker.
+  static bool RendezvousBreakpointHit(
+      void *baton, lldb_private::StoppointCallbackContext *context,
+      lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
-    /// Resolves the entry point for the current inferior process and sets a
-    /// breakpoint at that address.
-    void
-    ProbeEntry();
+  /// Helper method for RendezvousBreakpointHit.  Updates LLDB's current set
+  /// of loaded modules.
+  void RefreshModules();
 
-    /// Callback routine invoked when we hit the breakpoint on process entry.
-    ///
-    /// This routine is responsible for resolving the load addresses of all
-    /// dependent modules required by the inferior and setting up the rendezvous
-    /// breakpoint.
-    static bool
-    EntryBreakpointHit(void *baton, 
-                       lldb_private::StoppointCallbackContext *context, 
-                       lldb::user_id_t break_id, 
-                       lldb::user_id_t break_loc_id);
+  /// Updates the load address of every allocatable section in @p module.
+  ///
+  /// @param module The module to traverse.
+  ///
+  /// @param link_map_addr The virtual address of the link map for the @p
+  /// module.
+  ///
+  /// @param base_addr The virtual base address @p module is loaded at.
+  void UpdateLoadedSections(lldb::ModuleSP module, lldb::addr_t link_map_addr,
+                            lldb::addr_t base_addr,
+                            bool base_addr_is_offset) override;
 
-    /// Helper for the entry breakpoint callback.  Resolves the load addresses
-    /// of all dependent modules.
-    void
-    LoadAllCurrentModules();
+  /// Removes the loaded sections from the target in @p module.
+  ///
+  /// @param module The module to traverse.
+  void UnloadSections(const lldb::ModuleSP module) override;
 
-    /// Computes a value for m_load_offset returning the computed address on
-    /// success and LLDB_INVALID_ADDRESS on failure.
-    lldb::addr_t
-    ComputeLoadOffset();
+  /// Resolves the entry point for the current inferior process and sets a
+  /// breakpoint at that address.
+  void ProbeEntry();
 
-    /// Computes a value for m_entry_point returning the computed address on
-    /// success and LLDB_INVALID_ADDRESS on failure.
-    lldb::addr_t
-    GetEntryPoint();
+  /// Callback routine invoked when we hit the breakpoint on process entry.
+  ///
+  /// This routine is responsible for resolving the load addresses of all
+  /// dependent modules required by the inferior and setting up the rendezvous
+  /// breakpoint.
+  static bool
+  EntryBreakpointHit(void *baton,
+                     lldb_private::StoppointCallbackContext *context,
+                     lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+
+  /// Helper for the entry breakpoint callback.  Resolves the load addresses
+  /// of all dependent modules.
+  virtual void LoadAllCurrentModules();
+
+  void LoadVDSO();
+
+  // Loading an interpreter module (if present) assumming m_interpreter_base
+  // already points to its base address.
+  lldb::ModuleSP LoadInterpreterModule();
+
+  /// Computes a value for m_load_offset returning the computed address on
+  /// success and LLDB_INVALID_ADDRESS on failure.
+  lldb::addr_t ComputeLoadOffset();
+
+  /// Computes a value for m_entry_point returning the computed address on
+  /// success and LLDB_INVALID_ADDRESS on failure.
+  lldb::addr_t GetEntryPoint();
+
+  /// Evaluate if Aux vectors contain vDSO and LD information
+  /// in case they do, read and assign the address to m_vdso_base
+  /// and m_interpreter_base.
+  void EvalSpecialModulesStatus();
+
+  /// Loads Module from inferior process.
+  void ResolveExecutableModule(lldb::ModuleSP &module_sp);
+
+  bool AlwaysRelyOnEHUnwindInfo(lldb_private::SymbolContext &sym_ctx) override;
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(DynamicLoaderPOSIXDYLD);
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderPOSIXDYLD);
 };
 
-#endif  // liblldb_DynamicLoaderPOSIXDYLD_H_
+#endif // liblldb_DynamicLoaderPOSIXDYLD_h_

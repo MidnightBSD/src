@@ -9,7 +9,6 @@
 
 #include "clang/AST/CommentBriefParser.h"
 #include "clang/AST/CommentCommandTraits.h"
-#include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
 namespace comments {
@@ -123,8 +122,8 @@ std::string BriefParser::Parse() {
       if (Tok.is(tok::newline)) {
         ConsumeToken();
         // We found a paragraph end.  This ends the brief description if
-        // \\brief command or its equivalent was explicitly used.
-        // Stop scanning text because an explicit \\brief paragraph is the
+        // \command or its equivalent was explicitly used.
+        // Stop scanning text because an explicit \paragraph is the
         // preffered one.
         if (InBrief)
           break;

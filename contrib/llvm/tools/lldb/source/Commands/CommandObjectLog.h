@@ -10,13 +10,9 @@
 #ifndef liblldb_CommandObjectLog_h_
 #define liblldb_CommandObjectLog_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
 namespace lldb_private {
@@ -25,24 +21,22 @@ namespace lldb_private {
 // CommandObjectLog
 //-------------------------------------------------------------------------
 
-class CommandObjectLog : public CommandObjectMultiword
-{
+class CommandObjectLog : public CommandObjectMultiword {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    CommandObjectLog(CommandInterpreter &interpreter);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  CommandObjectLog(CommandInterpreter &interpreter);
 
-    virtual
-    ~CommandObjectLog();
+  ~CommandObjectLog() override;
 
 private:
-    //------------------------------------------------------------------
-    // For CommandObjectLog only
-    //------------------------------------------------------------------
-    DISALLOW_COPY_AND_ASSIGN (CommandObjectLog);
+  //------------------------------------------------------------------
+  // For CommandObjectLog only
+  //------------------------------------------------------------------
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectLog);
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectLog_h_
+#endif // liblldb_CommandObjectLog_h_

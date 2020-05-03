@@ -14,26 +14,33 @@ using namespace ento;
 
 void AnalysisManager::anchor() { }
 
-AnalysisManager::AnalysisManager(ASTContext &ctx, DiagnosticsEngine &diags,
-                                 const LangOptions &lang,
+AnalysisManager::AnalysisManager(ASTContext &ASTCtx, DiagnosticsEngine &diags,
                                  const PathDiagnosticConsumers &PDC,
                                  StoreManagerCreator storemgr,
-                                 ConstraintManagerCreator constraintmgr, 
+                                 ConstraintManagerCreator constraintmgr,
                                  CheckerManager *checkerMgr,
-                                 AnalyzerOptions &Options)
-  : AnaCtxMgr(Options.UnoptimizedCFG,
-              /*AddImplicitDtors=*/true,
-              /*AddInitializers=*/true,
-              Options.includeTemporaryDtorsInCFG(),
-              Options.shouldSynthesizeBodies(),
-              Options.shouldConditionalizeStaticInitializers()),
-    Ctx(ctx),
-    Diags(diags),
-    LangOpts(lang),
-    PathConsumers(PDC),
-    CreateStoreMgr(storemgr), CreateConstraintMgr(constraintmgr),
-    CheckerMgr(checkerMgr),
-    options(Options) {
+                                 AnalyzerOptions &Options,
+                                 CodeInjector *injector)
+    : AnaCtxMgr(
+          ASTCtx, Options.UnoptimizedCFG,
+          Options.ShouldIncludeImplicitDtorsInCFG,
+          /*AddInitializers=*/true,
+          Options.ShouldIncludeTemporaryDtorsInCFG,
+          Options.ShouldIncludeLifetimeInCFG,
+          // Adding LoopExit elements to the CFG is a requirement for loop
+          // unrolling.
+          Options.ShouldIncludeLoopExitInCFG ||
+            Options.ShouldUnrollLoops,
+          Options.ShouldIncludeScopesInCFG,
+          Options.ShouldSynthesizeBodies,
+          Options.ShouldConditionalizeStaticInitializers,
+          /*addCXXNewAllocator=*/true,
+          Options.ShouldIncludeRichConstructorsInCFG,
+          Options.ShouldElideConstructors, injector),
+      Ctx(ASTCtx), Diags(diags), LangOpts(ASTCtx.getLangOpts()),
+      PathConsumers(PDC), CreateStoreMgr(storemgr),
+      CreateConstraintMgr(constraintmgr), CheckerMgr(checkerMgr),
+      options(Options) {
   AnaCtxMgr.getCFGBuildOptions().setAllAlwaysAdd();
 }
 

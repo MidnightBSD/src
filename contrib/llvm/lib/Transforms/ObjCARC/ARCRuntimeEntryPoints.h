@@ -1,4 +1,4 @@
-//===- ARCRuntimeEntryPoints.h - ObjC ARC Optimization --*- C++ -*---------===//
+//===- ARCRuntimeEntryPoints.h - ObjC ARC Optimization ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file contains a class ARCRuntimeEntryPoints for use in
 /// creating/managing references to entry points to the arc objective c runtime.
@@ -16,85 +17,85 @@
 /// WARNING: This file knows about how certain Objective-C library functions are
 /// used. Naive LLVM IR transformations which would otherwise be
 /// behavior-preserving may break these assumptions.
-///
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_ARCRUNTIMEENTRYPOINTS_H
-#define LLVM_TRANSFORMS_SCALAR_ARCRUNTIMEENTRYPOINTS_H
+#ifndef LLVM_LIB_TRANSFORMS_OBJCARC_ARCRUNTIMEENTRYPOINTS_H
+#define LLVM_LIB_TRANSFORMS_OBJCARC_ARCRUNTIMEENTRYPOINTS_H
 
-#include "ObjCARC.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 namespace llvm {
+
+class Constant;
+class LLVMContext;
+
 namespace objcarc {
+
+enum class ARCRuntimeEntryPointKind {
+  AutoreleaseRV,
+  Release,
+  Retain,
+  RetainBlock,
+  Autorelease,
+  StoreStrong,
+  RetainRV,
+  RetainAutorelease,
+  RetainAutoreleaseRV,
+};
 
 /// Declarations for ObjC runtime functions and constants. These are initialized
 /// lazily to avoid cluttering up the Module with unused declarations.
 class ARCRuntimeEntryPoints {
 public:
-  enum EntryPointType {
-    EPT_AutoreleaseRV,
-    EPT_Release,
-    EPT_Retain,
-    EPT_RetainBlock,
-    EPT_Autorelease,
-    EPT_StoreStrong,
-    EPT_RetainRV,
-    EPT_RetainAutorelease,
-    EPT_RetainAutoreleaseRV
-  };
+  ARCRuntimeEntryPoints() = default;
 
-  ARCRuntimeEntryPoints() : TheModule(0),
-                            AutoreleaseRV(0),
-                            Release(0),
-                            Retain(0),
-                            RetainBlock(0),
-                            Autorelease(0),
-                            StoreStrong(0),
-                            RetainRV(0),
-                            RetainAutorelease(0),
-                            RetainAutoreleaseRV(0) { }
-
-  ~ARCRuntimeEntryPoints() { }
-
-  void Initialize(Module *M) {
+  void init(Module *M) {
     TheModule = M;
-    AutoreleaseRV = 0;
-    Release = 0;
-    Retain = 0;
-    RetainBlock = 0;
-    Autorelease = 0;
-    StoreStrong = 0;
-    RetainRV = 0;
-    RetainAutorelease = 0;
-    RetainAutoreleaseRV = 0;
+    AutoreleaseRV = nullptr;
+    Release = nullptr;
+    Retain = nullptr;
+    RetainBlock = nullptr;
+    Autorelease = nullptr;
+    StoreStrong = nullptr;
+    RetainRV = nullptr;
+    RetainAutorelease = nullptr;
+    RetainAutoreleaseRV = nullptr;
   }
 
-  Constant *get(const EntryPointType entry) {
-    assert(TheModule != 0 && "Not initialized.");
+  Constant *get(ARCRuntimeEntryPointKind kind) {
+    assert(TheModule != nullptr && "Not initialized.");
 
-    switch (entry) {
-    case EPT_AutoreleaseRV:
-      return getI8XRetI8XEntryPoint(AutoreleaseRV,
-                                    "objc_autoreleaseReturnValue", true);
-    case EPT_Release:
-      return getVoidRetI8XEntryPoint(Release, "objc_release");
-    case EPT_Retain:
-      return getI8XRetI8XEntryPoint(Retain, "objc_retain", true);
-    case EPT_RetainBlock:
-      return getI8XRetI8XEntryPoint(RetainBlock, "objc_retainBlock", false);
-    case EPT_Autorelease:
-      return getI8XRetI8XEntryPoint(Autorelease, "objc_autorelease", true);
-    case EPT_StoreStrong:
-      return getI8XRetI8XXI8XEntryPoint(StoreStrong, "objc_storeStrong");
-    case EPT_RetainRV:
-      return getI8XRetI8XEntryPoint(RetainRV,
-                                    "objc_retainAutoreleasedReturnValue", true);
-    case EPT_RetainAutorelease:
-      return getI8XRetI8XEntryPoint(RetainAutorelease, "objc_retainAutorelease",
-                                    true);
-    case EPT_RetainAutoreleaseRV:
-      return getI8XRetI8XEntryPoint(RetainAutoreleaseRV,
-                                    "objc_retainAutoreleaseReturnValue", true);
+    switch (kind) {
+    case ARCRuntimeEntryPointKind::AutoreleaseRV:
+      return getIntrinsicEntryPoint(AutoreleaseRV,
+                                    Intrinsic::objc_autoreleaseReturnValue);
+    case ARCRuntimeEntryPointKind::Release:
+      return getIntrinsicEntryPoint(Release, Intrinsic::objc_release);
+    case ARCRuntimeEntryPointKind::Retain:
+      return getIntrinsicEntryPoint(Retain, Intrinsic::objc_retain);
+    case ARCRuntimeEntryPointKind::RetainBlock:
+      return getIntrinsicEntryPoint(RetainBlock, Intrinsic::objc_retainBlock);
+    case ARCRuntimeEntryPointKind::Autorelease:
+      return getIntrinsicEntryPoint(Autorelease, Intrinsic::objc_autorelease);
+    case ARCRuntimeEntryPointKind::StoreStrong:
+      return getIntrinsicEntryPoint(StoreStrong, Intrinsic::objc_storeStrong);
+    case ARCRuntimeEntryPointKind::RetainRV:
+      return getIntrinsicEntryPoint(RetainRV,
+                                Intrinsic::objc_retainAutoreleasedReturnValue);
+    case ARCRuntimeEntryPointKind::RetainAutorelease:
+      return getIntrinsicEntryPoint(RetainAutorelease,
+                                    Intrinsic::objc_retainAutorelease);
+    case ARCRuntimeEntryPointKind::RetainAutoreleaseRV:
+      return getIntrinsicEntryPoint(RetainAutoreleaseRV,
+                                Intrinsic::objc_retainAutoreleaseReturnValue);
     }
 
     llvm_unreachable("Switch should be a covered switch.");
@@ -102,85 +103,45 @@ public:
 
 private:
   /// Cached reference to the module which we will insert declarations into.
-  Module *TheModule;
+  Module *TheModule = nullptr;
 
   /// Declaration for ObjC runtime function objc_autoreleaseReturnValue.
-  Constant *AutoreleaseRV;
+  Constant *AutoreleaseRV = nullptr;
+
   /// Declaration for ObjC runtime function objc_release.
-  Constant *Release;
+  Constant *Release = nullptr;
+
   /// Declaration for ObjC runtime function objc_retain.
-  Constant *Retain;
+  Constant *Retain = nullptr;
+
   /// Declaration for ObjC runtime function objc_retainBlock.
-  Constant *RetainBlock;
+  Constant *RetainBlock = nullptr;
+
   /// Declaration for ObjC runtime function objc_autorelease.
-  Constant *Autorelease;
+  Constant *Autorelease = nullptr;
+
   /// Declaration for objc_storeStrong().
-  Constant *StoreStrong;
+  Constant *StoreStrong = nullptr;
+
   /// Declaration for objc_retainAutoreleasedReturnValue().
-  Constant *RetainRV;
+  Constant *RetainRV = nullptr;
+
   /// Declaration for objc_retainAutorelease().
-  Constant *RetainAutorelease;
+  Constant *RetainAutorelease = nullptr;
+
   /// Declaration for objc_retainAutoreleaseReturnValue().
-  Constant *RetainAutoreleaseRV;
+  Constant *RetainAutoreleaseRV = nullptr;
 
-  Constant *getVoidRetI8XEntryPoint(Constant *&Decl,
-                                    const char *Name) {
+  Constant *getIntrinsicEntryPoint(Constant *&Decl, Intrinsic::ID IntID) {
     if (Decl)
       return Decl;
 
-    LLVMContext &C = TheModule->getContext();
-    Type *Params[] = { PointerType::getUnqual(Type::getInt8Ty(C)) };
-    AttributeSet Attr =
-      AttributeSet().addAttribute(C, AttributeSet::FunctionIndex,
-                                  Attribute::NoUnwind);
-    FunctionType *Fty = FunctionType::get(Type::getVoidTy(C), Params,
-                                          /*isVarArg=*/false);
-    return Decl = TheModule->getOrInsertFunction(Name, Fty, Attr);
+    return Decl = Intrinsic::getDeclaration(TheModule, IntID);
   }
+};
 
-  Constant *getI8XRetI8XEntryPoint(Constant *& Decl,
-                                   const char *Name,
-                                   bool NoUnwind = false) {
-    if (Decl)
-      return Decl;
+} // end namespace objcarc
 
-    LLVMContext &C = TheModule->getContext();
-    Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-    Type *Params[] = { I8X };
-    FunctionType *Fty = FunctionType::get(I8X, Params, /*isVarArg=*/false);
-    AttributeSet Attr = AttributeSet();
+} // end namespace llvm
 
-    if (NoUnwind)
-      Attr = Attr.addAttribute(C, AttributeSet::FunctionIndex,
-                               Attribute::NoUnwind);
-
-    return Decl = TheModule->getOrInsertFunction(Name, Fty, Attr);
-  }
-
-  Constant *getI8XRetI8XXI8XEntryPoint(Constant *&Decl,
-                                       const char *Name) {
-    if (Decl)
-      return Decl;
-
-    LLVMContext &C = TheModule->getContext();
-    Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-    Type *I8XX = PointerType::getUnqual(I8X);
-    Type *Params[] = { I8XX, I8X };
-
-    AttributeSet Attr =
-      AttributeSet().addAttribute(C, AttributeSet::FunctionIndex,
-                                  Attribute::NoUnwind);
-    Attr = Attr.addAttribute(C, 1, Attribute::NoCapture);
-
-    FunctionType *Fty = FunctionType::get(Type::getVoidTy(C), Params,
-                                          /*isVarArg=*/false);
-
-    return Decl = TheModule->getOrInsertFunction(Name, Fty, Attr);
-  }
-
-}; // class ARCRuntimeEntryPoints
-
-} // namespace objcarc
-} // namespace llvm
-
-#endif // LLVM_TRANSFORMS_SCALAR_ARCRUNTIMEENTRYPOINTS_H
+#endif // LLVM_LIB_TRANSFORMS_OBJCARC_ARCRUNTIMEENTRYPOINTS_H

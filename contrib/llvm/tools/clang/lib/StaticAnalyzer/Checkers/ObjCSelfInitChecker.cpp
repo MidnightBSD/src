@@ -36,7 +36,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -62,7 +62,13 @@ class ObjCSelfInitChecker : public Checker<  check::PostObjCMessage,
                                              check::PostCall,
                                              check::Location,
                                              check::Bind > {
+  mutable std::unique_ptr<BugType> BT;
+
+  void checkForInvalidSelf(const Expr *E, CheckerContext &C,
+                           const char *errorStr) const;
+
 public:
+  ObjCSelfInitChecker() {}
   void checkPostObjCMessage(const ObjCMethodCall &Msg, CheckerContext &C) const;
   void checkPostStmt(const ObjCIvarRefExpr *E, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
@@ -74,28 +80,17 @@ public:
   void checkPostCall(const CallEvent &CE, CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) const;
+                  const char *NL, const char *Sep) const override;
 };
-} // end anonymous namespace
-
-namespace {
-
-class InitSelfBug : public BugType {
-  const std::string desc;
-public:
-  InitSelfBug() : BugType("Missing \"self = [(super or self) init...]\"",
-                          categories::CoreFoundationObjectiveC) {}
-};
-
 } // end anonymous namespace
 
 namespace {
 enum SelfFlagEnum {
-  /// \brief No flag set.
+  /// No flag set.
   SelfFlag_None = 0x0,
-  /// \brief Value came from 'self'.
+  /// Value came from 'self'.
   SelfFlag_Self    = 0x1,
-  /// \brief Value came from the result of an initializer (e.g. [super init]).
+  /// Value came from the result of an initializer (e.g. [super init]).
   SelfFlag_InitRes = 0x2
 };
 }
@@ -103,7 +98,7 @@ enum SelfFlagEnum {
 REGISTER_MAP_WITH_PROGRAMSTATE(SelfFlag, SymbolRef, unsigned)
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CalledInit, bool)
 
-/// \brief A call receiving a reference to 'self' invalidates the object that
+/// A call receiving a reference to 'self' invalidates the object that
 /// 'self' contains. This keeps the "self flags" assigned to the 'self'
 /// object before the call so we can assign them to the new object that 'self'
 /// points to after the call.
@@ -133,11 +128,11 @@ static bool hasSelfFlag(SVal val, SelfFlagEnum flag, CheckerContext &C) {
   return getSelfFlags(val, C) & flag;
 }
 
-/// \brief Returns true of the value of the expression is the object that 'self'
+/// Returns true of the value of the expression is the object that 'self'
 /// points to and is an object that did not come from the result of calling
 /// an initializer.
 static bool isInvalidSelf(const Expr *E, CheckerContext &C) {
-  SVal exprVal = C.getState()->getSVal(E, C.getLocationContext());
+  SVal exprVal = C.getSVal(E);
   if (!hasSelfFlag(exprVal, SelfFlag_Self, C))
     return false; // value did not come from 'self'.
   if (hasSelfFlag(exprVal, SelfFlag_InitRes, C))
@@ -146,25 +141,26 @@ static bool isInvalidSelf(const Expr *E, CheckerContext &C) {
   return true;
 }
 
-static void checkForInvalidSelf(const Expr *E, CheckerContext &C,
-                                const char *errorStr) {
+void ObjCSelfInitChecker::checkForInvalidSelf(const Expr *E, CheckerContext &C,
+                                              const char *errorStr) const {
   if (!E)
     return;
-  
+
   if (!C.getState()->get<CalledInit>())
     return;
-  
+
   if (!isInvalidSelf(E, C))
     return;
-  
+
   // Generate an error node.
-  ExplodedNode *N = C.generateSink();
+  ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
 
-  BugReport *report =
-    new BugReport(*new InitSelfBug(), errorStr, N);
-  C.emitReport(report);
+  if (!BT)
+    BT.reset(new BugType(this, "Missing \"self = [(super or self) init...]\"",
+                         categories::CoreFoundationObjectiveC));
+  C.emitReport(llvm::make_unique<BugReport>(*BT, errorStr, N));
 }
 
 void ObjCSelfInitChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
@@ -181,13 +177,13 @@ void ObjCSelfInitChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
   if (isInitMessage(Msg)) {
     // Tag the return value as the result of an initializer.
     ProgramStateRef state = C.getState();
-    
+
     // FIXME this really should be context sensitive, where we record
     // the current stack frame (for IPA).  Also, we need to clean this
     // value out when we return from this method.
     state = state->set<CalledInit>(true);
-    
-    SVal V = state->getSVal(Msg.getOriginExpr(), C.getLocationContext());
+
+    SVal V = C.getSVal(Msg.getOriginExpr());
     addSelfFlag(state, V, SelfFlag_InitRes, C);
     return;
   }
@@ -205,9 +201,10 @@ void ObjCSelfInitChecker::checkPostStmt(const ObjCIvarRefExpr *E,
                                  C.getCurrentAnalysisDeclContext()->getDecl())))
     return;
 
-  checkForInvalidSelf(E->getBase(), C,
-    "Instance variable used while 'self' is not set to the result of "
-                                                 "'[(super or self) init...]'");
+  checkForInvalidSelf(
+      E->getBase(), C,
+      "Instance variable used while 'self' is not set to the result of "
+      "'[(super or self) init...]'");
 }
 
 void ObjCSelfInitChecker::checkPreStmt(const ReturnStmt *S,
@@ -218,8 +215,8 @@ void ObjCSelfInitChecker::checkPreStmt(const ReturnStmt *S,
     return;
 
   checkForInvalidSelf(S->getRetValue(), C,
-    "Returning 'self' while it is not set to the result of "
-                                                 "'[(super or self) init...]'");
+                      "Returning 'self' while it is not set to the result of "
+                      "'[(super or self) init...]'");
 }
 
 // When a call receives a reference to 'self', [Pre/Post]Call pass
@@ -321,7 +318,7 @@ void ObjCSelfInitChecker::checkBind(SVal loc, SVal val, const Stmt *S,
                                     CheckerContext &C) const {
   // Allow assignment of anything to self. Self is a local variable in the
   // initializer, so it is legal to assign anything to it, like results of
-  // static functions/method calls. After self is assigned something we cannot 
+  // static functions/method calls. After self is assigned something we cannot
   // reason about, stop enforcing the rules.
   // (Only continue checking if the assigned value should be treated as self.)
   if ((isSelfVar(loc, C)) &&
@@ -347,7 +344,7 @@ void ObjCSelfInitChecker::printState(raw_ostream &Out, ProgramStateRef State,
   if (FlagMap.isEmpty() && !DidCallInit && !PreCallFlags)
     return;
 
-  Out << Sep << NL << "ObjCSelfInitChecker:" << NL;
+  Out << Sep << NL << *this << " :" << NL;
 
   if (DidCallInit)
     Out << "  An init method has been called." << NL;
@@ -407,15 +404,12 @@ static bool shouldRunOnFunctionOrMethod(const NamedDecl *ND) {
     if (II == NSObjectII)
       break;
   }
-  if (!ID)
-    return false;
-
-  return true;
+  return ID != nullptr;
 }
 
-/// \brief Returns true if the location is 'self'.
+/// Returns true if the location is 'self'.
 static bool isSelfVar(SVal location, CheckerContext &C) {
-  AnalysisDeclContext *analCtx = C.getCurrentAnalysisDeclContext(); 
+  AnalysisDeclContext *analCtx = C.getCurrentAnalysisDeclContext();
   if (!analCtx->getSelfDecl())
     return false;
   if (!location.getAs<loc::MemRegionVal>())

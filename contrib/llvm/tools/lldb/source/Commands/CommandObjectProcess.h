@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandObjectProcess_h_
 #define liblldb_CommandObjectProcess_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
 namespace lldb_private {
@@ -22,16 +18,13 @@ namespace lldb_private {
 // CommandObjectMultiwordProcess
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordProcess : public CommandObjectMultiword
-{
+class CommandObjectMultiwordProcess : public CommandObjectMultiword {
 public:
-    CommandObjectMultiwordProcess (CommandInterpreter &interpreter);
+  CommandObjectMultiwordProcess(CommandInterpreter &interpreter);
 
-    virtual
-    ~CommandObjectMultiwordProcess ();
-
+  ~CommandObjectMultiwordProcess() override;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectProcess_h_
+#endif // liblldb_CommandObjectProcess_h_

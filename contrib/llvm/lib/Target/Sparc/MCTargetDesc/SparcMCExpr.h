@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SPARCMCEXPR_H
-#define LLVM_SPARCMCEXPR_H
+#ifndef LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCMCEXPR_H
+#define LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCMCEXPR_H
 
 #include "SparcFixupKinds.h"
 #include "llvm/MC/MCExpr.h"
@@ -36,6 +36,8 @@ public:
     VK_Sparc_PC10,
     VK_Sparc_GOT22,
     VK_Sparc_GOT10,
+    VK_Sparc_GOT13,
+    VK_Sparc_13,
     VK_Sparc_WPLT30,
     VK_Sparc_R_DISP32,
     VK_Sparc_TLS_GD_HI22,
@@ -62,14 +64,14 @@ private:
   const VariantKind Kind;
   const MCExpr *Expr;
 
-  explicit SparcMCExpr(VariantKind _Kind, const MCExpr *_Expr)
-    : Kind(_Kind), Expr(_Expr) {}
+  explicit SparcMCExpr(VariantKind Kind, const MCExpr *Expr)
+      : Kind(Kind), Expr(Expr) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const SparcMCExpr *Create(VariantKind Kind, const MCExpr *Expr,
+  static const SparcMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                  MCContext &Ctx);
   /// @}
   /// @name Accessors
@@ -85,15 +87,16 @@ public:
   Sparc::Fixups getFixupKind() const { return getFixupKind(Kind); }
 
   /// @}
-  void PrintImpl(raw_ostream &OS) const;
-  bool EvaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout) const;
-  void AddValueSymbols(MCAssembler *) const;
-  const MCSection *FindAssociatedSection() const {
-    return getSubExpr()->FindAssociatedSection();
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAsmLayout *Layout,
+                                 const MCFixup *Fixup) const override;
+  void visitUsedExpr(MCStreamer &Streamer) const override;
+  MCFragment *findAssociatedFragment() const override {
+    return getSubExpr()->findAssociatedFragment();
   }
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const;
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

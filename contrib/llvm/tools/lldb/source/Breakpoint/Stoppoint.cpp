@@ -7,13 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/lldb-private.h"
 #include "lldb/Breakpoint/Stoppoint.h"
+#include "lldb/lldb-private.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 using namespace lldb;
 using namespace lldb_private;
@@ -21,26 +17,13 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // Stoppoint constructor
 //----------------------------------------------------------------------
-Stoppoint::Stoppoint() :
-    m_bid (LLDB_INVALID_BREAK_ID)
-{
-}
+Stoppoint::Stoppoint() : m_bid(LLDB_INVALID_BREAK_ID) {}
 
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-Stoppoint::~Stoppoint()
-{
-}
+Stoppoint::~Stoppoint() {}
 
-break_id_t
-Stoppoint::GetID () const
-{
-    return m_bid;
-}
+break_id_t Stoppoint::GetID() const { return m_bid; }
 
-void
-Stoppoint::SetID (break_id_t bid)
-{
-    m_bid = bid;
-}
+void Stoppoint::SetID(break_id_t bid) { m_bid = bid; }

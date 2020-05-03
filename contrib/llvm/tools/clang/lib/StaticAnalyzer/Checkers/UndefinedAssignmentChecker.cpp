@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -24,7 +24,7 @@ using namespace ento;
 namespace {
 class UndefinedAssignmentChecker
   : public Checker<check::Bind> {
-  mutable OwningPtr<BugType> BT;
+  mutable std::unique_ptr<BugType> BT;
 
 public:
   void checkBind(SVal location, SVal val, const Stmt *S,
@@ -46,25 +46,35 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     if (C.getCalleeName(EnclosingFunctionDecl) == "swap")
       return;
 
-  ExplodedNode *N = C.generateSink();
+  ExplodedNode *N = C.generateErrorNode();
 
   if (!N)
     return;
 
-  const char *str = "Assigned value is garbage or undefined";
-
+  static const char *const DefaultMsg =
+      "Assigned value is garbage or undefined";
   if (!BT)
-    BT.reset(new BuiltinBug(str));
+    BT.reset(new BuiltinBug(this, DefaultMsg));
 
   // Generate a report for this bug.
-  const Expr *ex = 0;
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+
+  const Expr *ex = nullptr;
 
   while (StoreE) {
+    if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
+      OS << "The expression is an uninitialized value. "
+            "The computed value will also be garbage";
+
+      ex = U->getSubExpr();
+      break;
+    }
+
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
-        ProgramStateRef state = C.getState();
-        if (state->getSVal(B->getLHS(), C.getLocationContext()).isUndef()) {
-          str = "The left expression of the compound assignment is an "
+        if (C.getSVal(B->getLHS()).isUndef()) {
+          OS << "The left expression of the compound assignment is an "
                 "uninitialized value. The computed value will also be garbage";
           ex = B->getLHS();
           break;
@@ -80,15 +90,31 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
       ex = VD->getInit();
     }
 
+    if (const auto *CD =
+            dyn_cast<CXXConstructorDecl>(C.getStackFrame()->getDecl())) {
+      if (CD->isImplicit()) {
+        for (auto I : CD->inits()) {
+          if (I->getInit()->IgnoreImpCasts() == StoreE) {
+            OS << "Value assigned to field '" << I->getMember()->getName()
+               << "' in implicit constructor is garbage or undefined";
+            break;
+          }
+        }
+      }
+    }
+
     break;
   }
 
-  BugReport *R = new BugReport(*BT, str, N);
+  if (OS.str().empty())
+    OS << DefaultMsg;
+
+  auto R = llvm::make_unique<BugReport>(*BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
-    bugreporter::trackNullOrUndefValue(N, ex, *R);
+    bugreporter::trackExpressionValue(N, ex, *R);
   }
-  C.emitReport(R);
+  C.emitReport(std::move(R));
 }
 
 void ento::registerUndefinedAssignmentChecker(CheckerManager &mgr) {

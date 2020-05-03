@@ -10,24 +10,17 @@
 #ifndef liblldb_CommandObjectMemory_h_
 #define liblldb_CommandObjectMemory_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
 namespace lldb_private {
 
-class CommandObjectMemory : public CommandObjectMultiword
-{
+class CommandObjectMemory : public CommandObjectMultiword {
 public:
-    CommandObjectMemory (CommandInterpreter &interpreter);
+  CommandObjectMemory(CommandInterpreter &interpreter);
 
-    virtual
-    ~CommandObjectMemory ();
+  ~CommandObjectMemory() override;
 };
-
 
 } // namespace lldb_private
 
-#endif  // liblldb_CommandObjectMemory_h_
+#endif // liblldb_CommandObjectMemory_h_

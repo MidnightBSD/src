@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/SchedulerRegistry.h ------------------------*- C++ -*-===//
+//===- llvm/CodeGen/SchedulerRegistry.h -------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,7 +16,7 @@
 #define LLVM_CODEGEN_SCHEDULERREGISTRY_H
 
 #include "llvm/CodeGen/MachinePassRegistry.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
@@ -26,39 +26,35 @@ namespace llvm {
 ///
 //===----------------------------------------------------------------------===//
 
-class SelectionDAGISel;
 class ScheduleDAGSDNodes;
-class SelectionDAG;
-class MachineBasicBlock;
+class SelectionDAGISel;
 
-class RegisterScheduler : public MachinePassRegistryNode {
+class RegisterScheduler
+    : public MachinePassRegistryNode<
+          ScheduleDAGSDNodes *(*)(SelectionDAGISel *, CodeGenOpt::Level)> {
 public:
-  typedef ScheduleDAGSDNodes *(*FunctionPassCtor)(SelectionDAGISel*,
-                                                  CodeGenOpt::Level);
+  using FunctionPassCtor = ScheduleDAGSDNodes *(*)(SelectionDAGISel*,
+                                                   CodeGenOpt::Level);
 
-  static MachinePassRegistry Registry;
+  static MachinePassRegistry<FunctionPassCtor> Registry;
 
   RegisterScheduler(const char *N, const char *D, FunctionPassCtor C)
-  : MachinePassRegistryNode(N, D, (MachinePassCtor)C)
-  { Registry.Add(this); }
+      : MachinePassRegistryNode(N, D, C) {
+    Registry.Add(this);
+  }
   ~RegisterScheduler() { Registry.Remove(this); }
 
 
   // Accessors.
-  //
   RegisterScheduler *getNext() const {
     return (RegisterScheduler *)MachinePassRegistryNode::getNext();
   }
+
   static RegisterScheduler *getList() {
     return (RegisterScheduler *)Registry.getList();
   }
-  static FunctionPassCtor getDefault() {
-    return (FunctionPassCtor)Registry.getDefault();
-  }
-  static void setDefault(FunctionPassCtor C) {
-    Registry.setDefault((MachinePassCtor)C);
-  }
-  static void setListener(MachinePassRegistryListener *L) {
+
+  static void setListener(MachinePassRegistryListener<FunctionPassCtor> *L) {
     Registry.setListener(L);
   }
 };
@@ -109,4 +105,4 @@ ScheduleDAGSDNodes *createDAGLinearizer(SelectionDAGISel *IS,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_SCHEDULERREGISTRY_H

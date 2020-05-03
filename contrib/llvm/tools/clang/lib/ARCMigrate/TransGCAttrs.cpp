@@ -23,7 +23,7 @@ using namespace trans;
 
 namespace {
 
-/// \brief Collects all the places where GC attributes __strong/__weak occur.
+/// Collects all the places where GC attributes __strong/__weak occur.
 class GCAttrsCollector : public RecursiveASTVisitor<GCAttrsCollector> {
   MigrationContext &MigrateCtx;
   bool FullyMigratable;
@@ -48,7 +48,7 @@ public:
       return true;
 
     SaveAndRestore<bool> Save(FullyMigratable, isMigratable(D));
-    
+
     if (ObjCPropertyDecl *PropD = dyn_cast<ObjCPropertyDecl>(D)) {
       lookForAttribute(PropD, PropD->getTypeSourceInfo());
       AllProps.push_back(PropD);
@@ -80,11 +80,12 @@ public:
     }
   }
 
-  bool handleAttr(AttributedTypeLoc TL, Decl *D = 0) {
-    if (TL.getAttrKind() != AttributedType::attr_objc_ownership)
+  bool handleAttr(AttributedTypeLoc TL, Decl *D = nullptr) {
+    auto *OwnershipAttr = TL.getAttrAs<ObjCOwnershipAttr>();
+    if (!OwnershipAttr)
       return false;
 
-    SourceLocation Loc = TL.getAttrNameLoc();
+    SourceLocation Loc = OwnershipAttr->getLocation();
     unsigned RawLoc = Loc.getRawEncoding();
     if (MigrateCtx.AttrSet.count(RawLoc))
       return true;
@@ -92,14 +93,8 @@ public:
     ASTContext &Ctx = MigrateCtx.Pass.Ctx;
     SourceManager &SM = Ctx.getSourceManager();
     if (Loc.isMacroID())
-      Loc = SM.getImmediateExpansionRange(Loc).first;
-    SmallString<32> Buf;
-    bool Invalid = false;
-    StringRef Spell = Lexer::getSpelling(
-                                  SM.getSpellingLoc(TL.getAttrEnumOperandLoc()),
-                                  Buf, SM, Ctx.getLangOpts(), &Invalid);
-    if (Invalid)
-      return false;
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    StringRef Spell = OwnershipAttr->getKind()->getName();
     MigrationContext::GCAttrOccurrence::AttrKind Kind;
     if (Spell == "strong")
       Kind = MigrationContext::GCAttrOccurrence::Strong;
@@ -107,7 +102,7 @@ public:
       Kind = MigrationContext::GCAttrOccurrence::Weak;
     else
       return false;
- 
+
     MigrateCtx.AttrSet.insert(RawLoc);
     MigrateCtx.GCAttrs.push_back(MigrationContext::GCAttrOccurrence());
     MigrationContext::GCAttrOccurrence &Attr = MigrateCtx.GCAttrs.back();
@@ -134,8 +129,7 @@ public:
       return hasObjCImpl(ContD);
 
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D)) {
-      for (CXXRecordDecl::method_iterator
-             MI = RD->method_begin(), ME = RD->method_end(); MI != ME; ++MI) {
+      for (const auto *MI : RD->methods()) {
         if (MI->isOutOfLine())
           return true;
       }
@@ -150,12 +144,10 @@ public:
       return false;
     if (ObjCContainerDecl *ContD = dyn_cast<ObjCContainerDecl>(D)) {
       if (ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(ContD))
-        return ID->getImplementation() != 0;
+        return ID->getImplementation() != nullptr;
       if (ObjCCategoryDecl *CD = dyn_cast<ObjCCategoryDecl>(ContD))
-        return CD->getImplementation() != 0;
-      if (isa<ObjCImplDecl>(ContD))
-        return true;
-      return false;
+        return CD->getImplementation() != nullptr;
+      return isa<ObjCImplDecl>(ContD);
     }
     return false;
   }
@@ -164,11 +156,10 @@ public:
     if (!D)
       return false;
 
-    for (Decl::redecl_iterator
-           I = D->redecls_begin(), E = D->redecls_end(); I != E; ++I)
+    for (auto I : D->redecls())
       if (!isInMainFile(I->getLocation()))
         return false;
-    
+
     return true;
   }
 
@@ -288,10 +279,11 @@ static void checkAllAtProps(MigrationContext &MigrateCtx,
   }
 
   for (unsigned i = 0, e = ATLs.size(); i != e; ++i) {
-    SourceLocation Loc = ATLs[i].first.getAttrNameLoc();
+    SourceLocation Loc = ATLs[i].first.getAttr()->getLocation();
     if (Loc.isMacroID())
       Loc = MigrateCtx.Pass.Ctx.getSourceManager()
-                                         .getImmediateExpansionRange(Loc).first;
+                .getImmediateExpansionRange(Loc)
+                .getBegin();
     TA.remove(Loc);
     TA.clearDiagnostic(diag::err_objc_property_attr_mutually_exclusive, AtLoc);
     TA.clearDiagnostic(diag::err_arc_inconsistent_property_ownership,
@@ -343,7 +335,7 @@ void MigrationContext::dumpGCAttrs() {
     llvm::errs() << "KIND: "
         << (Attr.Kind == GCAttrOccurrence::Strong ? "strong" : "weak");
     llvm::errs() << "\nLOC: ";
-    Attr.Loc.dump(Pass.Ctx.getSourceManager());
+    Attr.Loc.print(llvm::errs(), Pass.Ctx.getSourceManager());
     llvm::errs() << "\nTYPE: ";
     Attr.ModifiedType.dump();
     if (Attr.Dcl) {
