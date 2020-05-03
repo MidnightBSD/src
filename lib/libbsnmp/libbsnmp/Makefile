@@ -1,23 +1,22 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libbsnmp/libbsnmp/Makefile 313589 2017-02-11 05:59:39Z ngie $
+# $FreeBSD: stable/11/lib/libbsnmp/libbsnmp/Makefile 318101 2017-05-09 19:42:36Z bdrewery $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 CONTRIB= ${SRCTOP}/contrib/bsnmp/lib
 .PATH: ${CONTRIB}
 
 LIB=	bsnmp
 SHLIB_MAJOR=	6
+LD_FATAL_WARNINGS=	no
 
 CFLAGS+= -I${CONTRIB} -DHAVE_ERR_H -DHAVE_GETADDRINFO -DHAVE_STRLCPY
 CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DQUADFMT='"llu"' -DQUADXFMT='"llx"'
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+= -DHAVE_LIBCRYPTO
-DPADD+= ${LIBCRYPTO}
-LDADD+= -lcrypto
+LIBADD=	crypto
 .endif
 
 SRCS=	asn1.c snmp.c snmpagent.c snmpclient.c snmpcrypto.c support.c
@@ -73,7 +72,6 @@ MLINKS+=	bsnmpagent.3	snmp_make_errresp.3
 MLINKS+=	bsnmpagent.3	snmp_op_t.3
 MLINKS+=	bsnmpagent.3	snmp_set.3
 MLINKS+=	bsnmpagent.3	snmp_trace.3
-MLINKS+=	bsnmpagent.3	tree.3
 MLINKS+=	bsnmpagent.3	tree_size.3
 
 MLINKS+=	bsnmpclient.3	snmp_add_binding.3
