@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 .PATH: ${SRCTOP}/contrib/libdispatch/src
 SRCDIR=	${SRCTOP}/contrib/libdispatch/src
@@ -80,7 +79,6 @@ MLINKS= dispatch_after.3 dispatch_after_f.3 \
         dispatch_source_create.3 dispatch_source_set_timer.3 \
         dispatch_time.3 dispatch_walltime.3
 
-DPADD=	${LIBPTHREAD} ${LIBBLOCKSRUNTIME}
-LDADD=	-lpthread -lBlocksRuntime
+LIBADD+=	pthread blocksruntime
 
 .include <bsd.lib.mk>
