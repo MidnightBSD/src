@@ -1,2 +1,2 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/lib/libc++/libc++.ldscript 253917 2013-08-03 16:23:43Z dim $ */
 GROUP ( @@SHLIB@@ @@LIBDIR@@/libcxxrt.so )
