@@ -349,6 +349,11 @@ _DP_opensm=	pthread
 _DP_osmvendor=	ibumad pthread
 .endif
 
+_DP_msearch=	sqlite3
+_DP_mport=	bzip2 fetch dispatch sqlite3 BlocksRuntime pthread
+_DP_dispatch=	BlocksRuntime pthread
+_DP_blocksruntime=
+
 # Define special cases
 LDADD_supcplusplus=	-lsupc++
 LIBATF_C=	${DESTDIR}${LIBDIR_BASE}/libprivateatf-c.a

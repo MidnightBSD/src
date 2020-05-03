@@ -79,6 +79,6 @@ MLINKS= dispatch_after.3 dispatch_after_f.3 \
         dispatch_source_create.3 dispatch_source_set_timer.3 \
         dispatch_time.3 dispatch_walltime.3
 
-LIBADD+=	pthread blocksruntime
+LIBADD+=	BlocksRuntime pthread
 
 .include <bsd.lib.mk>
