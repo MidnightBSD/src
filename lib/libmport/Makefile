@@ -26,6 +26,6 @@ MK_PROFILE=no
 #LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
 #	-lpthread -ldispatch -lBlocksRuntime
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 pthread dispatch blocksruntime
+LIBADD=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
 
 .include <bsd.lib.mk>

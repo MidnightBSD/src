@@ -764,7 +764,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			    return;
 		    }
 
-		    sqlite3_clear_bindings(stmnt);
+		    sqlite3_clear_bindings(insert);
 		    sqlite3_reset(insert);
 		});
 

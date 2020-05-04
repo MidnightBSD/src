@@ -23,7 +23,6 @@ _PRIVATELIBS=	\
 		ldns \
 		mport \
 		msearch \
-		sqlite3 \
 		ssh \
 		ucl \
 		unbound
@@ -163,6 +162,7 @@ _LIBRARIES=	\
 		stdthreads \
 		supcplusplus \
 		sysdecode \
+		sqlite3 \
 		tacplus \
 		termcap \
 		termcapw \
@@ -350,7 +350,7 @@ _DP_osmvendor=	ibumad pthread
 .endif
 
 _DP_msearch=	sqlite3
-_DP_mport=	bzip2 fetch dispatch sqlite3 BlocksRuntime pthread
+_DP_mport=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
 _DP_dispatch=	BlocksRuntime pthread
 _DP_blocksruntime=
 
