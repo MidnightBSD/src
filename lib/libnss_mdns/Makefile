@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
 SRCDIR=	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
