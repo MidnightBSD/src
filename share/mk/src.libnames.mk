@@ -349,7 +349,7 @@ _DP_opensm=	pthread
 _DP_osmvendor=	ibumad pthread
 .endif
 
-_DP_msearch=	sqlite3
+_DP_msearch=	sqlite3 magic z
 _DP_mport=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
 _DP_dispatch=	BlocksRuntime pthread
 _DP_blocksruntime=
