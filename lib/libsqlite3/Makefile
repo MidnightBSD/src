@@ -1,6 +1,3 @@
-#	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $MidnightBSD$
-
 SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 .PATH:		${SQLITEDIR}
 
@@ -16,12 +13,11 @@ CFLAGS+=	-I${SQLITEDIR} -DSQLITE_ENABLE_FTS3 -DSQLITE_OS_UNIX=1 \
 
 WARNS?=		0
 
-NO_MAN=
+MK_MAN=	no
 
 INCS=		${SQLITEDIR}/sqlite3.h ${SQLITEDIR}/sqlite3ext.h
 
-DPADD=	${LIBPTHREAD} ${LIBM}
-LDADD=	-lpthread -lm
+LIBADD+= m pthread
 
 .if !defined(COMPAT_32BIT)
 afterinstall: 
