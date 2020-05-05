@@ -19,6 +19,8 @@ SUBDIR_BOOTSTRAP= \
 	${_libcplusplus} \
 	${_libcxxrt} \
 	libelf \
+	libssp \
+	libssp_nonshared \
 	msun
 
 # The main list; please keep these sorted alphabetically.
@@ -128,7 +130,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libxo \
 	liby \
 	${_libypclnt} \
-	libyaml \
 	libz \
 	ncurses \
 	${_atf} \
@@ -144,7 +145,7 @@ SUBDIR_DEPEND_libatm= libmd
 SUBDIR_DEPEND_libauditdm= libbsm
 SUBDIR_DEPEND_libbsnmp= ${_libnetgraph}
 SUBDIR_DEPEND_libc++:= libcxxrt
-SUBDIR_DEPEND_libc= libcompiler_rt
+SUBDIR_DEPEND_libc= libcompiler_rt libssp_nonshared
 SUBDIR_DEPEND_libcam= libsbuf
 SUBDIR_DEPEND_libcasper= libnv
 SUBDIR_DEPEND_libdevstat= libkvm
