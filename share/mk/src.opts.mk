@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/src.opts.mk 357082 2020-01-24 15:29:33Z kevans $
+# $FreeBSD: stable/11/share/mk/src.opts.mk 360290 2020-04-25 05:51:58Z delphij $
 #
 # Option file for FreeBSD /usr/src builds.
 #
@@ -48,6 +48,7 @@ __DEFAULT_YES_OPTIONS = \
     ACPI \
     AMD \
     APM \
+    ASH \
     AT \
     ATM \
     AUDIT \
@@ -197,6 +198,7 @@ __DEFAULT_NO_OPTIONS = \
     HESIOD \
     LIBSOFT \
     LINT \
+    LLVM_ASSERTIONS \
     LOADER_FIREWIRE \
     LOADER_FORCE_LE \
     LOADER_VERBOSE \
@@ -209,7 +211,6 @@ __DEFAULT_NO_OPTIONS = \
     SORT_THREADS \
     SVN \
     ZONEINFO_LEAPSECONDS_SUPPORT \
-    ZONEINFO_OLD_TIMEZONES_SUPPORT \
 
 
 #
@@ -456,7 +457,6 @@ MK_GROFF:=	no
 
 .if ${MK_ZONEINFO} == "no"
 MK_ZONEINFO_LEAPSECONDS_SUPPORT:= no
-MK_ZONEINFO_OLD_TIMEZONES_SUPPORT:= no
 .endif
 
 .if ${MK_CROSS_COMPILER} == "no"
