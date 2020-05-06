@@ -1,0 +1,5 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ELFCOPY_AS_OBJCOPY 296193 2016-02-29 16:39:38Z emaste $
+Set to build and install
+.Xr objcopy 1
+from GNU Binutils, instead of the one from ELF Tool Chain.
+This option is provided as a transition aid and will be removed in due time.

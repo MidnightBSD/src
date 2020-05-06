@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_GNU_GREP_COMPAT 273421 2014-10-21 20:44:33Z emaste $
+Set this option to omit the gnu extensions to grep from being included in
+BSD grep.

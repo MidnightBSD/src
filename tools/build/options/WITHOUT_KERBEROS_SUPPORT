@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_KERBEROS_SUPPORT 251794 2013-06-15 20:29:07Z eadler $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_KERBEROS_SUPPORT 251794 2013-06-15 20:29:07Z eadler $
 Set to build some programs without Kerberos support, like
 .Xr ssh 1 ,
 .Xr telnet 1 ,

@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLD_IS_LD 316423 2017-04-02 17:24:58Z dim $
+Set to use GNU binutils ld as the system linker, instead of LLVM's LLD.

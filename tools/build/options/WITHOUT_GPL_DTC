@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_GPL_DTC 278559 2015-02-11 07:38:07Z ngie $
-Set to build the BSD licensed version of the device tree compiler, instead of the
-GPL'd one from elinux.org.
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_GPL_DTC 319247 2017-05-30 18:04:55Z ngie $
+Set to build the BSD licensed version of the device tree compiler rather
+than the GPLed one from elinux.org.

@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_AUTOFS 278558 2015-02-11 07:30:20Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_AUTOFS 296264 2016-03-01 11:36:10Z trasz $
 Set to not build
-.Xr autofs 4
+.Xr autofs 5
 related programs, libraries, and kernel modules.

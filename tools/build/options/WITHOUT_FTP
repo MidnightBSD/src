@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FTP 279505 2015-03-01 22:03:52Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_FTP 278192 2015-02-04 10:19:32Z ngie $
 Set to not build or install
 .Xr ftp 1
 and

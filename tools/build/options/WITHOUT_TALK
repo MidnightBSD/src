@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_TALK 278710 2015-02-13 21:19:54Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TALK 277676 2015-01-25 04:37:44Z ngie $
 Set to not build or install
 .Xr talk 1
 and

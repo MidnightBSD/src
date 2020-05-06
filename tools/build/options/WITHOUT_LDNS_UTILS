@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_LDNS_UTILS 255850 2013-09-24 14:33:31Z des $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LDNS_UTILS 255850 2013-09-24 14:33:31Z des $
 Setting this variable will prevent building the LDNS utilities
 .Xr drill 1
 and

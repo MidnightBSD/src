@@ -1,3 +1,9 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_TESTS 260013 2013-12-28 20:05:31Z jmmv $
-Set to not build any test programs nor install them in /usr/tests.
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TESTS 268778 2014-07-16 21:40:11Z jmmv $
+Set to not build nor install the
+.Fx
+Test Suite in
+.Pa /usr/tests/ .
+See
+.Xr tests 7
+for more details.
+This also disables the build of all test-related dependencies, including ATF.

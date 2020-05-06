@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_NETGRAPH_SUPPORT 183305 2008-09-23 16:11:15Z sam $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_NETGRAPH_SUPPORT 183305 2008-09-23 16:11:15Z sam $
 Set to build libraries, programs, and kernel modules without netgraph support.

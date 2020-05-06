@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LINT 327909 2018-01-13 03:12:21Z ian $
+Set to not build the lint binaries and library.

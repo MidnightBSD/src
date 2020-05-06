@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CCD 278717 2015-02-13 21:32:05Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CCD 277678 2015-01-25 04:52:48Z ngie $
 Set to not build
 .Xr geom_ccd 4
 and related utilities.

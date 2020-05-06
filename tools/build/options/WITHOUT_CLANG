@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CLANG 208971 2010-06-10 06:20:26Z ed $
-Set to not build the Clang C/C++ compiler.
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CLANG 264660 2014-04-18 17:03:58Z imp $
+Set to not build the Clang C/C++ compiler during the regular phase of the build.

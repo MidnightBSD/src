@@ -1,0 +1,9 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_MANDOCDB 311528 2017-01-06 18:08:42Z emaste $
+Use the version of
+.Xr makewhatis 1
+introduced in
+.Fx 2.1 ,
+instead of the
+.Xr makewhatis 8
+database and utilities from
+.Xr mandoc 1 .

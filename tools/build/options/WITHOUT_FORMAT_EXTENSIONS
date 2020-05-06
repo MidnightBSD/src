@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FORMAT_EXTENSIONS 250658 2013-05-15 13:04:10Z brooks $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_FORMAT_EXTENSIONS 250658 2013-05-15 13:04:10Z brooks $
 Set to not enable
 .Fl fformat-extensions
 when compiling the kernel.

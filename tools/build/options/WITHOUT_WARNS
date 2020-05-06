@@ -1,0 +1,5 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_WARNS 276559 2015-01-02 18:57:58Z bapt $
+Set this to not add warning flags to the compiler invocations.
+Useful as a temporary workaround when code enters the tree
+which triggers warnings in environments that differ from the
+original developer.

@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_AT 183242 2008-09-21 22:02:26Z sam $
 Set to not build
 .Xr at 1
 and related utilities.

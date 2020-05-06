@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLDB 289275 2015-10-14 00:23:31Z emaste $
+Set to not build the LLDB debugger.

@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_PAM 174550 2007-12-12 16:43:17Z ru $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_PAM 174550 2007-12-12 16:43:17Z ru $
 Set to not build PAM library and modules.
 .Bf -symbolic
 This option is deprecated and does nothing.

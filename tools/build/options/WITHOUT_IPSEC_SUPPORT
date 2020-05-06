@@ -1,0 +1,8 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_IPSEC_SUPPORT 316250 2017-03-30 06:09:39Z ngie $
+Set to not build the kernel with
+.Xr ipsec 4
+support.
+This option is needed for
+.Xr ipsec 4
+and
+.Xr tcpmd5 4 .

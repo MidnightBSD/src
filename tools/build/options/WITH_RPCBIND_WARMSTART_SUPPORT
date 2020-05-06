@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITH_RPCBIND_WARMSTART_SUPPORT 319243 2017-05-30 17:46:19Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITH_RPCBIND_WARMSTART_SUPPORT 319244 2017-05-30 17:47:19Z ngie $
 Set to build
 .Xr rpcbind 8
 with warmstart support.

@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_GCC 255326 2013-09-06 20:49:48Z zeising $
-Set to not build and install gcc and g++.
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_GCC 264660 2014-04-18 17:03:58Z imp $
+Set to not build and install gcc and g++ as part of the normal build process.

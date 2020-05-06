@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_CXX 281891 2015-04-23 15:15:45Z bdrewery $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_CXX 281053 2015-04-03 23:55:04Z bdrewery $
 Set to not build
 .Xr c++ 1
 and related libraries.

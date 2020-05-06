@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_ISCSI 278555 2015-02-11 07:08:32Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ISCSI 277675 2015-01-25 04:20:11Z ngie $
 Set to not build
 .Xr iscid 8
 and related utilities.

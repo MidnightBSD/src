@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_LIBPTHREAD 188848 2009-02-20 11:09:55Z mtm $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LIBPTHREAD 188848 2009-02-20 11:09:55Z mtm $
 Set to not build the
 .Nm libpthread
 providing library,

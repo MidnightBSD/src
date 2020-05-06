@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_HYPERV 272322 2014-09-30 17:54:57Z delphij $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_HYPERV 271493 2014-09-13 02:15:31Z delphij $
 Set to not build or install HyperV utilities.

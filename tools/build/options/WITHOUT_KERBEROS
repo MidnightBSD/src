@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_KERBEROS 174549 2007-12-12 16:42:03Z ru $
-Set this if you do not want to build Kerberos 5 (KTH Heimdal).
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_KERBEROS 319247 2017-05-30 18:04:55Z ngie $
+Set this to not build Kerberos 5 (KTH Heimdal).

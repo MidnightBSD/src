@@ -1,0 +1,7 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ELFTOOLCHAIN_BOOTSTRAP 295491 2016-02-11 00:14:00Z emaste $
+Set to not build ELF Tool Chain tools
+(addr2line, nm, size, strings and strip)
+as part of the bootstrap process.
+.Bf -symbolic
+An alternate bootstrap tool chain must be provided.
+.Ef

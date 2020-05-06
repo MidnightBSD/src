@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_DEBUG_FILES 290059 2015-10-27 20:49:56Z emaste $
+Set to avoid building or installing standalone debug files for each
+executable binary and shared library.

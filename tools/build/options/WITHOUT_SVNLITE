@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_SVNLITE 252561 2013-07-03 12:36:47Z zeising $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_SVNLITE 252561 2013-07-03 12:36:47Z zeising $
 Set to not build
 .Xr svnlite 1
 and related programs.

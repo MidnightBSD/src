@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_BHYVE 278557 2015-02-11 07:21:16Z ngie $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BHYVE 277727 2015-01-26 06:44:48Z ngie $
 Set to not build or install
 .Xr bhyve 8 ,
 associated utilities, and examples.

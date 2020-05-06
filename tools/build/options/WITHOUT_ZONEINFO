@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_ZONEINFO 235342 2012-05-12 16:12:36Z gjb $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ZONEINFO 235342 2012-05-12 16:12:36Z gjb $
 Set to not build the timezone database.

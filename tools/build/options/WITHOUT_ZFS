@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_ZFS 168409 2007-04-06 02:13:30Z pjd $
-Set to not build ZFS file system.
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_ZFS 344399 2019-02-20 23:55:35Z kevans $
+Set to not build ZFS file system kernel module, libraries, and user commands.

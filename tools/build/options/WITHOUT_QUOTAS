@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_QUOTAS 183242 2008-09-21 22:02:26Z sam $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_QUOTAS 296264 2016-03-01 11:36:10Z trasz $
 Set to not build
-.Xr quota 8
+.Xr quota 1
 and related programs.

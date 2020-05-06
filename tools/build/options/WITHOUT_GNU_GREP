@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_GNU_GREP 331460 2018-03-23 20:20:04Z ian $
+Set to not build GNU
+.Xr grep 1 .

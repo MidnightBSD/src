@@ -1,3 +1,2 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_SSP 180012 2008-06-25 21:33:28Z ru $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_SSP 180012 2008-06-25 21:33:28Z ru $
 Set to not build world with propolice stack smashing protection.

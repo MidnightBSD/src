@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_EXAMPLES 156938 2006-03-21 09:06:24Z ru $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_EXAMPLES 156938 2006-03-21 09:06:24Z ru $
 Set to avoid installing examples to
 .Pa /usr/share/examples/ .

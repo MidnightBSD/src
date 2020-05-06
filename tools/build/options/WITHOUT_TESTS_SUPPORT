@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_TESTS_SUPPORT 274665 2014-11-18 17:06:50Z imp $
+Set to disables the build of all test-related dependencies, including ATF.

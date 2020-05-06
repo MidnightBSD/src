@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_GROFF 218941 2011-02-22 08:13:49Z uqs $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_GROFF 218941 2011-02-22 08:13:49Z uqs $
 Set to not build
 .Xr groff 1
 and

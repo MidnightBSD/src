@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_MAN_UTILS 208322 2010-05-20 00:07:21Z jkim $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_MAN_UTILS 208322 2010-05-20 00:07:21Z jkim $
 Set to not build utilities for manual pages,
 .Xr apropos 1 ,
 .Xr catman 1 ,

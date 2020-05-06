@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_FMTREE 262650 2014-03-01 04:25:52Z brooks $
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_FMTREE 261299 2014-01-30 21:37:43Z brooks $
 Set to not build and install
 .Pa /usr/sbin/fmtree .
