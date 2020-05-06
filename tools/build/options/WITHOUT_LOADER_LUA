@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LOADER_LUA 353801 2019-10-21 17:54:53Z dim $
+Set to not build LUA bindings for the boot loader.

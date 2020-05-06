@@ -1,0 +1,5 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_BSD_GREP_FASTMATCH 322582 2017-08-16 17:38:37Z kevans $
+Set this option to exclude the fastmatch implementation from
+.Xr bsdgrep 1 ,
+instead using only
+.Xr regex 3 .

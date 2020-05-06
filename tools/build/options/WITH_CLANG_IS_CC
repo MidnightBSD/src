@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITH_CLANG_IS_CC 235342 2012-05-12 16:12:36Z gjb $
+.\" $FreeBSD: stable/11/tools/build/options/WITH_CLANG_IS_CC 235342 2012-05-12 16:12:36Z gjb $
 Set to install the Clang C/C++ compiler as
 .Pa /usr/bin/cc ,
 .Pa /usr/bin/c++

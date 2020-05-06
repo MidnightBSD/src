@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_STALE_STAGED 284708 2015-06-22 20:21:57Z sjg $
+Check staged files are not stale.

@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLVM_TARGET_ARM 335875 2018-07-02 21:20:36Z dim $
+Set to not build LLVM target support for ARM.

@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_LINT 327909 2018-01-13 03:12:21Z ian $
+Set to build the lint binaries and library.

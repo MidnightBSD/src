@@ -1,0 +1,5 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_EFI 318618 2017-05-22 06:15:50Z ngie $
+Set to build
+.Xr efivar 3
+and
+.Xr efivar 8 .

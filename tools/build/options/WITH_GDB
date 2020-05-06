@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_GDB 295493 2016-02-11 00:30:51Z emaste $
+Set to build
+.Xr gdb 1 .

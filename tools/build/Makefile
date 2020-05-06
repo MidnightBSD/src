@@ -1,16 +1,17 @@
-# $MidnightBSD$
-# $FreeBSD: src/tools/build/Makefile,v 1.12 2005/05/16 09:32:41 ru Exp $
+# $FreeBSD: stable/11/tools/build/Makefile 337333 2018-08-04 21:57:17Z kevans $
 
 .PATH: ${.CURDIR}/../../include
 
 LIB=		egacy
-SRCS=
-INCSGROUPS=	INCS
-INCS=		
+SRC=
+INCSGROUPS=	INCS SYSINCS
+INCS=
+
+SYSINCSDIR=	${INCLUDEDIR}/sys
 
 BOOTSTRAPPING?=	0
 
-_WITH_PWCACHEDB!= grep -c pwcache_groupdb /usr/include/pwd.h || true
+_WITH_PWCACHEDB!= grep -c pwcache_groupdb /usr/include/grp.h || true
 .if ${_WITH_PWCACHEDB} == 0
 .PATH: ${.CURDIR}/../../contrib/libc-pwcache
 CFLAGS+=	-I${.CURDIR}/../../contrib/libc-pwcache \
@@ -26,6 +27,20 @@ CFLAGS+=	-I${.CURDIR}/../../contrib/libc-vis \
 		-I${.CURDIR}/../../lib/libc/include
 .endif
 
+_WITH_REALLOCARRAY!= grep -c reallocarray /usr/include/stdlib.h || true
+.if ${_WITH_REALLOCARRAY} == 0
+.PATH: ${.CURDIR}/../../lib/libc/stdlib
+INCS+=		stdlib.h
+SRCS+=		reallocarray.c
+CFLAGS+=	-I${.CURDIR}/../../lib/libc/include
+.endif
+
+_WITH_UTIMENS!= grep -c utimensat /usr/include/sys/stat.h || true
+.if ${_WITH_UTIMENS} == 0
+SYSINCS+=	stat.h
+SRCS+=		futimens.c utimensat.c
+.endif
+
 .if empty(SRCS)
 SRCS=		dummy.c
 .endif
@@ -33,5 +48,8 @@ SRCS=		dummy.c
 .if defined(CROSS_BUILD_TESTING)
 SUBDIR=		cross-build
 .endif
+
+# Needed to build config (since it uses libnv)
+SYSINCS+=	${SRCTOP}/sys/sys/nv.h ${SRCTOP}/sys/sys/cnv.h
 
 .include <bsd.lib.mk>

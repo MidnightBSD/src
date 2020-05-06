@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_LOADER_UBOOT 332162 2018-04-07 02:56:59Z kevans $
+Set to build ubldr.

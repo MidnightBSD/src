@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_LOADER_GELI 353801 2019-10-21 17:54:53Z dim $
+Set to build GELI bootloader support.

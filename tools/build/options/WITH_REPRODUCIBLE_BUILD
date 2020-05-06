@@ -1,0 +1,4 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_REPRODUCIBLE_BUILD 318289 2017-05-15 13:50:21Z emaste $
+Set to exclude build metadata (such as the build time, user, or host)
+from the kernel, boot loaders, and uname output, so that builds produce
+bit-for-bit identical output.

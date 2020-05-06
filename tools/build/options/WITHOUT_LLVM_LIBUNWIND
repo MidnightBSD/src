@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_LLVM_LIBUNWIND 293450 2016-01-09 00:42:07Z emaste $
+Set to use GCC's stack unwinder (instead of LLVM's libunwind).

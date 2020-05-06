@@ -1,0 +1,2 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_EISA 264654 2014-04-18 16:53:06Z imp $
+Set to build EISA kernel modules.

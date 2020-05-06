@@ -1,0 +1,3 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_BSD_GREP_FASTMATCH 331540 2018-03-26 00:30:46Z kevans $
+Set this option to use the fastmatch implementation in
+.Xr bsdgrep 1 .

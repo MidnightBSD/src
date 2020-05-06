@@ -1,0 +1,5 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_LOADER_VERBOSE 346482 2019-04-21 04:26:02Z kevans $
+Set to build with extra verbose debugging in the loader.
+May explode already nearly too large loader over the limit.
+Use with care.
+

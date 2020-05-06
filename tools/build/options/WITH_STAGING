@@ -1,0 +1,7 @@
+.\" $FreeBSD: stable/11/tools/build/options/WITH_STAGING 290816 2015-11-14 03:24:48Z sjg $
+Enable staging of files to a stage tree.
+This can be best thought of as auto-install to
+.Va DESTDIR
+with some extra meta data to ensure dependencies can be tracked.
+Depends on
+.Va WITH_DIRDEPS_BUILD .
