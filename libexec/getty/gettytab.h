@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)gettytab.h	8.2 (Berkeley) 3/30/94
- * $FreeBSD: stable/10/libexec/getty/gettytab.h 262435 2014-02-24 08:21:49Z brueffer $
+ * $FreeBSD: stable/11/libexec/getty/gettytab.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -89,6 +88,7 @@ struct gettyflags {
 #define AC	gettystrs[28].value
 #define AL	gettystrs[29].value
 #define DF	gettystrs[30].value
+#define IMP	gettystrs[31].value
 
 /*
  * Numeric definitions.

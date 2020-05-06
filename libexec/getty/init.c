@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)from: init.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/getty/init.c 262435 2014-02-24 08:21:49Z brueffer $";
+  "$FreeBSD: stable/11/libexec/getty/init.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 /*
@@ -83,6 +82,7 @@ struct	gettystrs gettystrs[] = {
 	{ "ac" },			/* modem answer-chat */
 	{ "al" },			/* user to auto-login */
 	{ "df", datefmt},		/* format for strftime() */
+	{ "iM" },			/* initial message program */
 	{ 0 }
 };
 

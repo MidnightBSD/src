@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)from: main.c	8.1 (Berkeley) 6/20/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/getty/main.c 262435 2014-02-24 08:21:49Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/libexec/getty/main.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -188,7 +187,7 @@ main(int argc, char *argv[])
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);
 
-	openlog("getty", LOG_ODELAY|LOG_CONS|LOG_PID, LOG_AUTH);
+	openlog("getty", LOG_CONS|LOG_PID, LOG_AUTH);
 	gethostname(hostname, sizeof(hostname) - 1);
 	hostname[sizeof(hostname) - 1] = '\0';
 	if (hostname[0] == '\0')
@@ -325,6 +324,8 @@ main(int argc, char *argv[])
 		}
 		first_time = 0;
 
+		if (IMP && *IMP && !(PL && PP))
+			system(IMP);
 		if (IM && *IM && !(PL && PP))
 			putf(IM);
 		if (setjmp(timeout)) {
