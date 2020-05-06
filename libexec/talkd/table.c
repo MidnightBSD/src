@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)table.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/talkd/table.c 311751 2017-01-09 05:52:30Z delphij $";
+  "$FreeBSD: stable/11/libexec/talkd/table.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 /*
@@ -200,7 +199,6 @@ delete_invite(u_int32_t id_num)
 {
 	TABLE_ENTRY *ptr;
 
-	ptr = table;
 	if (debug)
 		syslog(LOG_DEBUG, "delete_invite(%d)", id_num);
 	for (ptr = table; ptr != NIL; ptr = ptr->next) {

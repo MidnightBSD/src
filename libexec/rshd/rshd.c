@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1988, 1989, 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -48,7 +47,7 @@ static const char sccsid[] = "@(#)rshd.c	8.2 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/rshd/rshd.c 321069 2017-07-17 06:37:46Z delphij $");
+__FBSDID("$FreeBSD: stable/11/libexec/rshd/rshd.c 330322 2018-03-03 10:35:00Z eadler $");
 
 /*
  * remote shell server:
@@ -89,6 +88,10 @@ __FBSDID("$FreeBSD: stable/10/libexec/rshd/rshd.c 321069 2017-07-17 06:37:46Z de
 #include <security/openpam.h>
 #include <sys/wait.h>
 
+#ifdef USE_BLACKLIST
+#include <blacklist.h>
+#endif
+
 static struct pam_conv pamc = { openpam_nullconv, NULL };
 static pam_handle_t *pamh;
 static int pam_err;
@@ -128,7 +131,7 @@ main(int argc, char *argv[])
 	int ch, on = 1;
 	struct sockaddr_storage from;
 
-	openlog("rshd", LOG_PID | LOG_ODELAY, LOG_DAEMON);
+	openlog("rshd", LOG_PID, LOG_DAEMON);
 
 	opterr = 0;
 	while ((ch = getopt(argc, argv, OPTIONS)) != -1)
@@ -188,7 +191,7 @@ doit(struct sockaddr *fromp)
 	struct passwd *pwd;
 	u_short port;
 	fd_set ready, readfrom;
-	int cc, fd, nfd, pv[2], pid, s;
+	int cc, nfd, pv[2], pid, s;
 	int one = 1;
 	const char *cp, *errorstr;
 	char sig, buf[BUFSIZ];
@@ -253,6 +256,9 @@ doit(struct sockaddr *fromp)
 		    "connection from %s on illegal port %u",
 		    numericname,
 		    srcport);
+#ifdef USE_BLACKLIST
+		blacklist(1, STDIN_FILENO, "illegal port");
+#endif
 		exit(1);
 	}
 
@@ -286,6 +292,9 @@ doit(struct sockaddr *fromp)
 			    "2nd socket from %s on unreserved port %u",
 			    numericname,
 			    port);
+#ifdef USE_BLACKLIST
+			blacklist(1, STDIN_FILENO, "unreserved port");
+#endif
 			exit(1);
 		}
 		*((in_port_t *)&fromp->sa_data) = htons(port);
@@ -310,6 +319,9 @@ doit(struct sockaddr *fromp)
 	if (pam_err != PAM_SUCCESS) {
 		syslog(LOG_ERR|LOG_AUTH, "pam_start(): %s",
 		    pam_strerror(pamh, pam_err));
+#ifdef USE_BLACKLIST
+		blacklist(1, STDIN_FILENO, "login incorrect");
+#endif
 		rshd_errx(1, "Login incorrect.");
 	}
 
@@ -317,6 +329,9 @@ doit(struct sockaddr *fromp)
 	    (pam_err = pam_set_item(pamh, PAM_RHOST, rhost)) != PAM_SUCCESS) {
 		syslog(LOG_ERR|LOG_AUTH, "pam_set_item(): %s",
 		    pam_strerror(pamh, pam_err));
+#ifdef USE_BLACKLIST
+		blacklist(1, STDIN_FILENO, "login incorrect");
+#endif
 		rshd_errx(1, "Login incorrect.");
 	}
 
@@ -332,6 +347,9 @@ doit(struct sockaddr *fromp)
 		syslog(LOG_INFO|LOG_AUTH,
 		    "%s@%s as %s: permission denied (%s). cmd='%.80s'",
 		    ruser, rhost, luser, pam_strerror(pamh, pam_err), cmdbuf);
+#ifdef USE_BLACKLIST
+		blacklist(1, STDIN_FILENO, "permission denied");
+#endif
 		rshd_errx(1, "Login incorrect.");
 	}
 
@@ -341,6 +359,9 @@ doit(struct sockaddr *fromp)
 		syslog(LOG_INFO|LOG_AUTH,
 		    "%s@%s as %s: unknown login. cmd='%.80s'",
 		    ruser, rhost, luser, cmdbuf);
+#ifdef USE_BLACKLIST
+		blacklist(1, STDIN_FILENO, "unknown login");
+#endif
 		if (errorstr == NULL)
 			errorstr = "Login incorrect.";
 		rshd_errx(1, errorstr, rhost);
@@ -371,6 +392,9 @@ doit(struct sockaddr *fromp)
 			    "%s@%s as %s: permission denied (%s). cmd='%.80s'",
 			    ruser, rhost, luser, __rcmd_errstr,
 			    cmdbuf);
+#ifdef USE_BLACKLIST
+			blacklist(1, STDIN_FILENO, "permission denied");
+#endif
 			rshd_errx(1, "Login incorrect.");
 		}
 		if (!auth_timeok(lc, time(NULL)))
@@ -466,8 +490,10 @@ doit(struct sockaddr *fromp)
 		}
 	}
 
-	for (fd = getdtablesize(); fd > 2; fd--)
-		(void) close(fd);
+#ifdef USE_BLACKLIST
+	blacklist(0, STDIN_FILENO, "success");
+#endif
+	closefrom(3);
 	if (setsid() == -1)
 		syslog(LOG_ERR, "setsid() failed: %m");
 	if (setlogin(pwd->pw_name) < 0)
@@ -532,8 +558,12 @@ getstr(char *buf, int cnt, const char *error)
 		if (read(STDIN_FILENO, &c, 1) != 1)
 			exit(1);
 		*buf++ = c;
-		if (--cnt == 0)
+		if (--cnt == 0) {
+#ifdef USE_BLACKLIST
+			blacklist(1, STDIN_FILENO, "buffer overflow");
+#endif
 			rshd_errx(1, "%s too long", error);
+		}
 	} while (c != 0);
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/revnetgroup/parse_netgroup.c 262435 2014-02-24 08:21:49Z brueffer $";
+  "$FreeBSD: stable/11/libexec/revnetgroup/parse_netgroup.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 /*

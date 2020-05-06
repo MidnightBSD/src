@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftp-utils.c 241720 2012-10-19 05:43:38Z ed $");
+__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-utils.c 345389 2019-03-21 21:45:18Z asomers $");
 
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -236,14 +235,15 @@ const char *
 debug_show(int d)
 {
 	static char s[100];
+	size_t space = sizeof(s);
 	int i = 0;
 
 	s[0] = '\0';
 	while (debugs[i].name != NULL) {
 		if (d&debugs[i].value) {
-			if (s[0] != '\0') 
-				strcat(s, " ");
-			strcat(s, debugs[i].name);
+			if (s[0] != '\0')
+				strlcat(s, " ", space);
+			strlcat(s, debugs[i].name, space);
 		}
 		i++;
 	}
@@ -269,11 +269,13 @@ char *
 rp_strerror(int error)
 {
 	static char s[100];
+	size_t space = sizeof(s);
 	int i = 0;
 
 	while (rp_errors[i].desc != NULL) {
 		if (rp_errors[i].error == error) {
-			strcpy(s, rp_errors[i].desc);
+			strlcpy(s, rp_errors[i].desc, space);
+			space -= strlen(rp_errors[i].desc);
 		}
 		i++;
 	}

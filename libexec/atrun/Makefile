@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/atrun/Makefile 321267 2017-07-20 00:52:11Z ngie $
+# $FreeBSD: stable/11/libexec/atrun/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
+PACKAGE=at
 MAINSRC=${SRCTOP}/usr.bin/at
 
 .include "${MAINSRC}/Makefile.inc"
@@ -18,8 +18,7 @@ CFLAGS+=-DLOGIN_CAP -DPAM
 WARNS?=	2
 WFORMAT=0
 
-DPADD=	${LIBPAM} ${LIBUTIL}
-LDADD=	${MINUSLPAM} -lutil
+LIBADD=	pam util
 
 atrun.8: atrun.man
 	@${ECHO} Making ${.TARGET:T} from ${.ALLSRC:T}; \

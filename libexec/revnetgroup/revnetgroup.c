@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -39,7 +38,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/revnetgroup/revnetgroup.c 141589 2005-02-09 20:36:12Z ru $";
+  "$FreeBSD: stable/11/libexec/revnetgroup/revnetgroup.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <err.h>

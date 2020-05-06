@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/10/libexec/tftpd/Makefile 313226 2017-02-04 16:47:35Z ngie $
+# $FreeBSD: stable/11/libexec/tftpd/Makefile 332608 2018-04-16 16:32:00Z asomers $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	tftpd
 MAN=	tftpd.8
@@ -12,8 +11,10 @@ WFORMAT=0
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DLIBWRAP
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD=	wrap
 .endif
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

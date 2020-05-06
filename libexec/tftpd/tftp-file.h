@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftp-file.h 207614 2010-05-04 13:07:40Z imp $");
+__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-file.h 207614 2010-05-04 13:07:40Z imp $");
 
 int	write_init(int fd, FILE *f, const char *mode);
 size_t	write_file(char *buffer, int count);

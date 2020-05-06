@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,8 +23,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/libexec/atf/atf-check/Makefile 307722 2016-10-21 08:36:30Z ngie $
+# $FreeBSD: stable/11/libexec/atf/atf-check/Makefile 307721 2016-10-21 08:35:20Z ngie $
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
 ATF=		${SRCTOP}/contrib/atf
@@ -38,11 +38,7 @@ MAN=		atf-check.1
 CFLAGS+=	-I${ATF}
 CFLAGS+=	-DATF_SHELL='"/bin/sh"'
 
-LDFLAGS+=	-L${.OBJDIR}/../../../lib/atf/libatf-c++
-LDFLAGS+=	-L${.OBJDIR}/../../../lib/atf/libatf-c
-DPADD+=		${LIBATF_CXX} ${LIBATF_C}
-LDADD+=		-latf-c++ -latf-c
-USEPRIVATELIB=	atf-c++ atf-c
+LIBADD=		atf_cxx
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

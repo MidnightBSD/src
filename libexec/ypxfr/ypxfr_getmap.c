@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/ypxfr/ypxfr_getmap.c 228600 2011-12-16 22:05:10Z dim $");
+__FBSDID("$FreeBSD: stable/11/libexec/ypxfr/ypxfr_getmap.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <time.h>
@@ -44,8 +43,8 @@ __FBSDID("$FreeBSD: stable/10/libexec/ypxfr/ypxfr_getmap.c 228600 2011-12-16 22:
 
 extern bool_t xdr_ypresp_all_seq(XDR *, unsigned long *);
 
-int (*ypresp_allfn)();
-void *ypresp_data;
+extern int (*ypresp_allfn)();
+extern void *ypresp_data;
 extern DB *specdbp;
 extern enum ypstat yp_errno;
 

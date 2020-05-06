@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)tftpd.c	8.1 (Berkeley) 6/4/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftpd.c 313226 2017-02-04 16:47:35Z ngie $");
+__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftpd.c 339051 2018-10-01 15:47:34Z asomers $");
 
 /*
  * Trivial file transfer protocol server.
@@ -373,7 +372,10 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 		chdir("/");
-		setgroups(1, &nobody->pw_gid);
+		if (setgroups(1, &nobody->pw_gid) != 0) {
+			tftp_log(LOG_ERR, "setgroups failed");
+			exit(1);
+		}
 		if (setuid(nobody->pw_uid) != 0) {
 			tftp_log(LOG_ERR, "setuid failed");
 			exit(1);
@@ -420,8 +422,7 @@ main(int argc, char *argv[])
 			    "%s read access denied", peername);
 			exit(1);
 		}
-	}
-	if (tp->th_opcode == WRQ) {
+	} else if (tp->th_opcode == WRQ) {
 		if (allow_wo)
 			tftp_wrq(peer, tp->th_stuff, n - 1);
 		else {
@@ -429,7 +430,8 @@ main(int argc, char *argv[])
 			    "%s write access denied", peername);
 			exit(1);
 		}
-	}
+	} else
+		send_error(peer, EBADOP);
 	exit(1);
 }
 
@@ -521,7 +523,7 @@ tftp_wrq(int peer, char *recvbuffer, ssize_t size)
 	cp = parse_header(peer, recvbuffer, size, &filename, &mode);
 	size -= (cp - recvbuffer) + 1;
 
-	strcpy(fnbuf, filename);
+	strlcpy(fnbuf, filename, sizeof(fnbuf));
 	reduce_path(fnbuf);
 	filename = fnbuf;
 
@@ -544,6 +546,10 @@ tftp_wrq(int peer, char *recvbuffer, ssize_t size)
 			    filename, errtomsg(ecode));
 	}
 
+	if (ecode) {
+		send_error(peer, ecode);
+		exit(1);
+	}
 	tftp_recvfile(peer, mode);
 	exit(0);
 }
@@ -562,7 +568,7 @@ tftp_rrq(int peer, char *recvbuffer, ssize_t size)
 	cp = parse_header(peer, recvbuffer, size, &filename, &mode);
 	size -= (cp - recvbuffer) + 1;
 
-	strcpy(fnbuf, filename);
+	strlcpy(fnbuf, filename, sizeof(fnbuf));
 	reduce_path(fnbuf);
 	filename = fnbuf;
 
@@ -742,8 +748,12 @@ validate_access(int peer, char **filep, int mode)
 				dirp->name, filename);
 			if (stat(pathname, &stbuf) == 0 &&
 			    (stbuf.st_mode & S_IFMT) == S_IFREG) {
-				if ((stbuf.st_mode & S_IROTH) != 0) {
-					break;
+				if (mode == RRQ) {
+					if ((stbuf.st_mode & S_IROTH) != 0)
+						break;
+				} else {
+					if ((stbuf.st_mode & S_IWOTH) != 0)
+						break;
 				}
 				err = EACCESS;
 			}
@@ -751,6 +761,8 @@ validate_access(int peer, char **filep, int mode)
 		if (dirp->name != NULL)
 			*filep = filename = pathname;
 		else if (mode == RRQ)
+			return (err);
+		else if (err != ENOTFOUND || !create_new)
 			return (err);
 	}
 
@@ -793,6 +805,7 @@ tftp_xmitfile(int peer, const char *mode)
 	time_t now;
 	struct tftp_stats ts;
 
+	memset(&ts, 0, sizeof(ts));
 	now = time(NULL);
 	if (debug&DEBUG_SIMPLE)
 		tftp_log(LOG_DEBUG, "Transmitting file");
@@ -822,7 +835,6 @@ tftp_recvfile(int peer, const char *mode)
 	block = 0;
 	tftp_receive(peer, &block, &ts, NULL, 0);
 
-	write_close();
 	gettimeofday(&now2, NULL);
 
 	if (debug&DEBUG_SIMPLE) {

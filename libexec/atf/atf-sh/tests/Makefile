@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/atf/atf-sh/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/libexec/atf/atf-sh/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 .include <bsd.init.mk>
 

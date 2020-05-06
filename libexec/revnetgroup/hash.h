@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/revnetgroup/hash.h 90377 2002-02-07 23:57:01Z imp $
+ * $FreeBSD: stable/11/libexec/revnetgroup/hash.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* Groupname entry hung off a member_entry node. */

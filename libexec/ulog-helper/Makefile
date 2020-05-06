@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/ulog-helper/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/libexec/ulog-helper/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 PROG=	ulog-helper
 BINOWN=	root
 BINMODE=4555
 MAN=
 
-DPADD=	${LIBULOG}
-LDADD=	-lulog
+LIBADD=	ulog
 
 .include <bsd.prog.mk>

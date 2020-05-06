@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #-
 # Copyright (c) 2011 Google, Inc.
 # All rights reserved.
@@ -24,8 +23,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/libexec/atf/atf-sh/Makefile 321755 2017-07-31 03:59:07Z ngie $
+# $FreeBSD: stable/11/libexec/atf/atf-sh/Makefile 321754 2017-07-31 03:58:58Z ngie $
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
 ATF=		${SRCTOP}/contrib/atf
@@ -65,9 +65,7 @@ CFLAGS+=	-DATF_PKGDATADIR='"${SHAREDIR}/atf"'
 CFLAGS+=	-DATF_SHELL='"/bin/sh"'
 CFLAGS+=	-I${ATF}
 
-DPADD+=		${LIBATF_C} ${LIBATF_CXX}
-LDADD+=		-latf-c++ -latf-c
-USEPRIVATELIB=	atf-c++ atf-c
+LIBADD=		atf_cxx
 
 FILESGROUPS=	SUBR
 

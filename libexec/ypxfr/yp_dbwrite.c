@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/ypxfr/yp_dbwrite.c 228599 2011-12-16 21:57:44Z dim $");
+__FBSDID("$FreeBSD: stable/11/libexec/ypxfr/yp_dbwrite.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <db.h>
 #include <errno.h>

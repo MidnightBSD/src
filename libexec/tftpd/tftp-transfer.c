@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/tftpd/tftp-transfer.c 224536 2011-07-31 03:12:20Z rodrigc $");
+__FBSDID("$FreeBSD: stable/11/libexec/tftpd/tftp-transfer.c 339049 2018-10-01 15:43:56Z asomers $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -278,6 +277,8 @@ tftp_receive(int peer, uint16_t *block, struct tftp_stats *ts,
 					send_error(peer, ENOSPACE);
 				goto abort;
 			}
+			if (n_data != segsize)
+				write_close();
 		}
 
 send_ack:

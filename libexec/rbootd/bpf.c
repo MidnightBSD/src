@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
@@ -46,7 +45,7 @@
 static const char sccsid[] = "@(#)bpf.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/rbootd/bpf.c 262435 2014-02-24 08:21:49Z brueffer $";
+  "$FreeBSD: stable/11/libexec/rbootd/bpf.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -234,23 +233,15 @@ BpfGetIntfName(char **errmsg)
 	ifc.ifc_len = sizeof ibuf;
 	ifc.ifc_buf = (caddr_t)ibuf;
 
-#ifdef OSIOCGIFCONF
-	if (ioctl(fd, OSIOCGIFCONF, (char *)&ifc) < 0 ||
-	    ifc.ifc_len < sizeof(struct ifreq)) {
-		(void) strcpy(errbuf, "bpf: ioctl(OSIOCGIFCONF): %m");
-		return(NULL);
-	}
-#else
 	if (ioctl(fd, SIOCGIFCONF, (char *)&ifc) < 0 ||
 	    ifc.ifc_len < sizeof(struct ifreq)) {
 		(void) strcpy(errbuf, "bpf: ioctl(SIOCGIFCONF): %m");
 		return(NULL);
 	}
-#endif
 	ifrp = ibuf;
 	ifend = (struct ifreq *)((char *)ibuf + ifc.ifc_len);
 
-	mp = 0;
+	mp = NULL;
 	minunit = 666;
 	for (; ifrp < ifend; ++ifrp) {
 		if (ioctl(fd, SIOCGIFFLAGS, (char *)ifrp) < 0) {
@@ -280,7 +271,7 @@ BpfGetIntfName(char **errmsg)
 	}
 
 	(void) close(fd);
-	if (mp == 0) {
+	if (mp == NULL) {
 		(void) strcpy(errbuf, "bpf: no interfaces found");
 		return(NULL);
 	}

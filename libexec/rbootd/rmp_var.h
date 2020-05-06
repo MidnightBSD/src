@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1992 The University of Utah and the Center
  *	for Software Science (CSS).
@@ -40,7 +39,7 @@
  * from: Utah Hdr: rmp_var.h 3.1 92/07/06
  * Author: Jeff Forys, University of Utah CSS
  *
- * $FreeBSD: stable/10/libexec/rbootd/rmp_var.h 262435 2014-02-24 08:21:49Z brueffer $
+ * $FreeBSD: stable/11/libexec/rbootd/rmp_var.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

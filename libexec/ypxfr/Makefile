@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/ypxfr/Makefile 321267 2017-07-20 00:52:11Z ngie $
+# $FreeBSD: stable/11/libexec/ypxfr/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
 PROG=	ypxfr
 SRCS=	yp_dblookup.c yp_dbwrite.c yp_error.c \
@@ -17,8 +16,7 @@ CFLAGS+= -I.
 WARNS?=	2
 WFORMAT=0
 
-DPADD=	${LIBRPCSVC}
-LDADD=	-lrpcsvc
+LIBADD=	rpcsvc
 
 CLEANFILES= ${GENSRCS}
 

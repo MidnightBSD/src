@@ -1,0 +1,5 @@
+# $FreeBSD: stable/11/libexec/Makefile.i386 273155 2014-10-16 00:33:06Z imp $
+
+.if ${MK_HYPERV} != "no"
+SUBDIR+=	hyperv
+.endif
