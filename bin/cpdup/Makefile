@@ -5,16 +5,17 @@ PROG=	cpdup
 SRCS=	cpdup.c hcproto.c hclink.c misc.c fsmid.c
 
 .if !defined(NOPTHREADS) && !defined(BOOTSTRAPPING)
-CFLAGS += -DUSE_PTHREADS=1 -pthread
+CFLAGS += -DUSE_PTHREADS=1
+LIBADD+=	pthread
 .endif
 
 .if !defined(NOMD5)
 SRCS+=	md5.c
 .endif
 
-LDADD+= -lmd
-DPADD+= ${LIBMD}
 WARNS?= 1
+
+LIBADD+=	md
 
 .include <bsd.prog.mk>
 
