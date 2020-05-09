@@ -1,9 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/pppoed/Makefile 201380 2010-01-02 09:50:19Z ed $
+# $FreeBSD: stable/11/libexec/pppoed/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 PROG=	pppoed
-DPADD=	${LIBNETGRAPH}
-LDADD=	-lnetgraph
+LIBADD=	netgraph
 MAN=	pppoed.8
 
 WARNS?=	1
