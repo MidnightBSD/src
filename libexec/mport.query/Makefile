@@ -1,13 +1,10 @@
-# $MidnightBSD$
-
 PROG= mport.query
 
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
 WARNS?= 	4
 
-NO_MAN=		yes
+MK_MAN= no
 
-LDADD= 	-lmport -ldispatch -lBlocksRuntime -lsqlite3
-DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME} ${LIBSQLITE3}
+LIBADD= mport dispatch BlocksRuntime pthread
 
 .include <bsd.prog.mk>

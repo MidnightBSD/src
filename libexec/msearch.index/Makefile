@@ -6,9 +6,9 @@ CFLAGS+=-I${.CURDIR}/../../lib/libmsearch
 WARNS?=	6
 CSTD=	c99
 
-NO_MAN=	yes
+MK_MAN= no
 
-LDADD=	-lmsearch -lz -lsqlite3
-DPADD=	${LIBMPORT} ${LIBZ} ${LIBSQLITE3}
+LIBADD= msearch z sqlite3
+
 
 .include <bsd.prog.mk>

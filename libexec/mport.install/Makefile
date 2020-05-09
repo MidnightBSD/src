@@ -1,13 +1,10 @@
-# $MidnightBSD$
-
 PROG= mport.install
 
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
 WARNS?= 	6
 
-NO_MAN=		yes
+MK_MAN= no
 
-LDADD= 	-lmport -ldispatch -lBlocksRuntime
-DPADD= 	${LIBMPORT}  ${LIBBLOCKSRUNTIME} ${LIBDISPATCH}
+LIBADD= mport dispatch BlocksRuntime pthread
 
 .include <bsd.prog.mk>
