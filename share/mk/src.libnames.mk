@@ -21,8 +21,6 @@ _PRIVATELIBS=	\
 		heimipcc \
 		heimipcs \
 		ldns \
-		mport \
-		msearch \
 		ssh \
 		ucl \
 		unbound
@@ -127,6 +125,8 @@ _LIBRARIES=	\
 		md \
 		memstat \
 		mp \
+		mport \
+		msearch \
 		mt \
 		nandfs \
 		ncurses \

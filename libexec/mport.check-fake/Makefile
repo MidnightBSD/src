@@ -1,13 +1,10 @@
-# $MidnightBSD$
-
 PROG= mport.check-fake
 
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
 WARNS?= 	6
 
-NO_MAN=		yes
+MK_MAN=	no
 
-LDADD= 	-lmport -pthread -ldispatch -lBlocksRuntime
-DPADD= 	${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
+LIBADD=	mport dispatch BlocksRuntime pthread
 
 .include <bsd.prog.mk>
