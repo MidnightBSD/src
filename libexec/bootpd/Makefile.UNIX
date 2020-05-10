@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/bootpd/Makefile.UNIX 50476 1999-08-28 00:22:10Z peter $
+# $FreeBSD: stable/11/libexec/bootpd/Makefile.UNIX 50476 1999-08-28 00:22:10Z peter $
 #
 # Makefile for the BOOTP programs:
 #   bootpd	- BOOTP server daemon

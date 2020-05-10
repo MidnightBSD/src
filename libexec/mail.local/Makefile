@@ -1,7 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: stable/10/libexec/mail.local/Makefile 321267 2017-07-20 00:52:11Z ngie $
+# $FreeBSD: stable/11/libexec/mail.local/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
+PACKAGE=sendmail
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/mail.local
 
@@ -13,11 +13,7 @@ CFLAGS+=-I${SENDMAIL_DIR}/include -I.
 WARNS?=	2
 WFORMAT=0
 
-LIBSMDIR=	${.OBJDIR}/../../lib/libsm
-LIBSM=		${LIBSMDIR}/libsm.a
-
-DPADD=	${LIBSM}
-LDADD=	${LIBSM}
+LIBADD=	sm
 
 SRCS+=	sm_os.h
 CLEANFILES+=sm_os.h
@@ -28,7 +24,7 @@ DPADD+=${SENDMAIL_DPADD}
 LDADD+=${SENDMAIL_LDADD}
 LDFLAGS+=${SENDMAIL_LDFLAGS}
 
-sm_os.h:
-	ln -sf ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h sm_os.h
+sm_os.h: ${SENDMAIL_DIR}/include/sm/os/sm_os_freebsd.h .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
 .include <bsd.prog.mk>

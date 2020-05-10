@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: stable/10/libexec/ftpd/Makefile 321267 2017-07-20 00:52:11Z ngie $
+# $FreeBSD: stable/11/libexec/ftpd/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	ftpd
 MAN=	ftpd.8 ftpchroot.5
@@ -14,18 +13,22 @@ YFLAGS=
 WARNS?=	2
 WFORMAT=0
 
-DPADD=	${LIBUTIL} ${LIBCRYPT}
-LDADD=	-lutil -lcrypt
+LIBADD=	crypt xo util
 
 # XXX Kluge! Conversation mechanism needs to be fixed.
-DPADD+=	${LIBOPIE} ${LIBMD}
-LDADD+=	-lopie -lmd
+LIBADD+=	opie md
 
 .PATH:	${SRCTOP}/bin/ls
 SRCS+=	ls.c cmp.c print.c util.c
 CFLAGS+=-Dmain=ls_main -I${SRCTOP}/bin/ls
-DPADD+=	${LIBM}
-LDADD+=	-lm
+LIBADD+=	m
+
+.if ${MK_BLACKLIST_SUPPORT} != "no"
+CFLAGS+= -DUSE_BLACKLIST -I${SRCTOP}/contrib/blacklist/include
+SRCS+= blacklist.c
+LIBADD+= blacklist
+LDFLAGS+=-L${LIBBLACKLISTDIR}
+.endif
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
@@ -33,8 +36,7 @@ CFLAGS+=-DINET6
 
 .if ${MK_PAM_SUPPORT} != "no"
 CFLAGS+=-DUSE_PAM
-DPADD+= ${LIBPAM}
-LDADD+= ${MINUSLPAM}
+LIBADD+=	pam
 .endif
 
 .include <bsd.prog.mk>

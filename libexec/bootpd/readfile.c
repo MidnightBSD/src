@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /************************************************************************
           Copyright 1988, 1991 by Carnegie Mellon University
 
@@ -20,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: stable/10/libexec/bootpd/readfile.c 102411 2002-08-25 13:10:45Z charnier $
+ $FreeBSD: stable/11/libexec/bootpd/readfile.c 297866 2016-04-12 18:24:02Z pfg $
 
 ************************************************************************/
 
@@ -1306,7 +1305,7 @@ process_generic(src, dest, tagvalue)
 
 PRIVATE boolean
 goodname(hostname)
-	register char *hostname;
+	char *hostname;
 {
 	do {
 		if (!isalpha(*hostname++)) {	/* First character must be a letter */
@@ -1525,7 +1524,7 @@ PRIVATE void
 adjust(s)
 	char **s;
 {
-	register char *t;
+	char *t;
 
 	t = *s;
 	while (*t && (*t != ':')) {
@@ -1550,7 +1549,7 @@ PRIVATE void
 eat_whitespace(s)
 	char **s;
 {
-	register char *t;
+	char *t;
 
 	t = *s;
 	while (*t && isspace(*t)) {
@@ -1669,7 +1668,7 @@ prs_inetaddr(src, result)
 	u_int32 *result;
 {
 	char tmpstr[MAXSTRINGLEN];
-	register u_int32 value;
+	u_int32 value;
 	u_int32 parts[4], *pp;
 	int n;
 	char *s, *t;
@@ -1854,7 +1853,7 @@ PRIVATE u_int32
 get_u_long(src)
 	char **src;
 {
-	register u_int32 value, base;
+	u_int32 value, base;
 	char c;
 
 	/*

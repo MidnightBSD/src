@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/4/94
- * $FreeBSD: stable/10/libexec/ftpd/extern.h 262435 2014-02-24 08:21:49Z brueffer $
+ * $FreeBSD: stable/11/libexec/ftpd/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>
@@ -43,7 +42,7 @@ void	fatalerror(char *);
 void    ftpd_logwtmp(char *, char *, struct sockaddr *addr);
 int	ftpd_pclose(FILE *);
 FILE   *ftpd_popen(char *, char *);
-int	getline(char *, int, FILE *);
+int	get_line(char *, int, FILE *);
 void	lreply(int, const char *, ...) __printflike(2, 3);
 void	makedir(char *);
 void	nack(char *);

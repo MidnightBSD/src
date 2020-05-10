@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * bootpgw.c - BOOTP GateWay
  * This program forwards BOOTP Request packets to a BOOTP server.
@@ -32,7 +31,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07 16:09:54Z uqs $");
+__FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpgw/bootpgw.c 229780 2012-01-07 16:09:54Z uqs $");
 
 #include <sys/types.h>
 #include <sys/param.h>

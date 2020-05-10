@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * trylook.c - test program for lookup.c
  *
- * $FreeBSD: stable/10/libexec/bootpd/trylook.c 50476 1999-08-28 00:22:10Z peter $
+ * $FreeBSD: stable/11/libexec/bootpd/trylook.c 50476 1999-08-28 00:22:10Z peter $
  */
 
 #include <sys/types.h>

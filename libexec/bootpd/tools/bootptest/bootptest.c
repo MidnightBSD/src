@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * bootptest.c - Test out a bootp server.
  *
@@ -35,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/bootpd/tools/bootptest/bootptest.c 229780 2012-01-07 16:09:54Z uqs $");
+__FBSDID("$FreeBSD: stable/11/libexec/bootpd/tools/bootptest/bootptest.c 297865 2016-04-12 18:18:26Z pfg $");
 
 char *usage = "bootptest [-h] server-name [vendor-data-template-file]";
 
@@ -467,9 +466,9 @@ send_request(s)
  */
 int
 printfn(s, ep)
-	register u_char *s, *ep;
+	u_char *s, *ep;
 {
-	register u_char c;
+	u_char c;
 
 	putchar('"');
 	while ((c = *s++) != '\0') {

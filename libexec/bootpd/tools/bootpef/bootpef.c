@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /************************************************************************
           Copyright 1988, 1991 by Carnegie Mellon University
 
@@ -20,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: stable/10/libexec/bootpd/tools/bootpef/bootpef.c 97419 2002-05-28 18:39:53Z alfred $
+ $FreeBSD: stable/11/libexec/bootpd/tools/bootpef/bootpef.c 97419 2002-05-28 18:39:53Z alfred $
 
 ************************************************************************/
 

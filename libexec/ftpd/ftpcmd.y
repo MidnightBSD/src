@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "@(#)ftpcmd.y	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/ftpd/ftpcmd.y 262435 2014-02-24 08:21:49Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/libexec/ftpd/ftpcmd.y 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -1159,10 +1158,10 @@ lookup(struct tab *p, char *cmd)
 #include <arpa/telnet.h>
 
 /*
- * getline - a hacked up version of fgets to ignore TELNET escape codes.
+ * get_line - a hacked up version of fgets to ignore TELNET escape codes.
  */
 int
-getline(char *s, int n, FILE *iop)
+get_line(char *s, int n, FILE *iop)
 {
 	int c;
 	register char *cs;
@@ -1281,7 +1280,7 @@ yylex(void)
 		case CMD:
 			(void) signal(SIGALRM, toolong);
 			(void) alarm(timeout);
-			n = getline(cbuf, sizeof(cbuf)-1, stdin);
+			n = get_line(cbuf, sizeof(cbuf)-1, stdin);
 			if (n == -1) {
 				reply(221, "You could at least say goodbye.");
 				dologout(0);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)comsat.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/comsat/comsat.c 262435 2014-02-24 08:21:49Z brueffer $";
+  "$FreeBSD: stable/11/libexec/comsat/comsat.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

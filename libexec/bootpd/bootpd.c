@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /************************************************************************
           Copyright 1988, 1991 by Carnegie Mellon University
 
@@ -39,7 +38,7 @@ SOFTWARE.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/bootpd/bootpd.c 229780 2012-01-07 16:09:54Z uqs $");
+__FBSDID("$FreeBSD: stable/11/libexec/bootpd/bootpd.c 342229 2018-12-19 18:19:15Z emaste $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -637,6 +636,10 @@ handle_request()
 	char *homedir, *bootfile;
 	int n;
 
+	if (bp->bp_htype >= hwinfocnt) {
+		report(LOG_NOTICE, "bad hw addr type %u", bp->bp_htype);
+		return;
+	}
 	bp->bp_file[sizeof(bp->bp_file)-1] = '\0';
 
 	/* XXX - SLIP init: Set bp_ciaddr = recv_addr here? */

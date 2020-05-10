@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)logwtmp.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/ftpd/logwtmp.c 262435 2014-02-24 08:21:49Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/libexec/ftpd/logwtmp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

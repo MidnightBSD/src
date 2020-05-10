@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * getether.c : get the ethernet address of an interface
  *
@@ -8,7 +7,7 @@
  * If you figure out how to do this on another system,
  * please let me know.  <gwr@mc.com>
  *
- * $FreeBSD: stable/10/libexec/bootpd/getether.c 108470 2002-12-30 21:18:15Z schweikh $
+ * $FreeBSD: stable/11/libexec/bootpd/getether.c 297865 2016-04-12 18:18:26Z pfg $
  */
 
 #include <sys/types.h>
@@ -111,7 +110,7 @@ getether(ifname, eap)
 #endif /* SUNOS */
 
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__MidnightBSD__)
 /* Thanks to John Brezak <brezak@ch.hp.com> for this code. */
 #include <sys/ioctl.h>
 #include <sys/time.h>
@@ -125,10 +124,10 @@ getether(ifname, eap)
 	char *eap;					/* Ether address (output) */
 {
 	int fd, rc = -1;
-	register int n;
+	int n;
 	struct ifreq ibuf[16];
 	struct ifconf ifc;
-	register struct ifreq *ifrp, *ifend;
+	struct ifreq *ifrp, *ifend;
 
 	/* Fetch the interface configuration */
 	fd = socket(AF_INET, SOCK_DGRAM, 0);

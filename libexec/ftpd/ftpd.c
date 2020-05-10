@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1988, 1990, 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)ftpd.c	8.4 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/ftpd/ftpd.c 327019 2017-12-20 07:18:07Z delphij $");
+__FBSDID("$FreeBSD: stable/11/libexec/ftpd/ftpd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * FTP server.
@@ -94,6 +93,7 @@ __FBSDID("$FreeBSD: stable/10/libexec/ftpd/ftpd.c 327019 2017-12-20 07:18:07Z de
 #include <security/pam_appl.h>
 #endif
 
+#include "blacklist_client.h"
 #include "pathnames.h"
 #include "extern.h"
 
@@ -141,6 +141,7 @@ int	noretr = 0;		/* RETR command is disabled.	*/
 int	noguestretr = 0;	/* RETR command is disabled for anon users. */
 int	noguestmkd = 0;		/* MKD command is disabled for anon users. */
 int	noguestmod = 1;		/* anon users may not modify existing files. */
+int	use_blacklist = 0;
 
 off_t	file_size;
 off_t	byte_count;
@@ -265,7 +266,7 @@ int
 main(int argc, char *argv[], char **envp)
 {
 	socklen_t addrlen;
-	int ch, on = 1, tos;
+	int ch, on = 1, tos, s = STDIN_FILENO;
 	char *cp, line[LINE_MAX];
 	FILE *fd;
 	char	*bindname = NULL;
@@ -302,7 +303,7 @@ main(int argc, char *argv[], char **envp)
 	openlog("ftpd", LOG_PID | LOG_NDELAY, LOG_FTP);
 
 	while ((ch = getopt(argc, argv,
-	                    "468a:AdDEhlmMoOp:P:rRSt:T:u:UvW")) != -1) {
+	                    "468a:ABdDEhlmMoOp:P:rRSt:T:u:UvW")) != -1) {
 		switch (ch) {
 		case '4':
 			family = (family == AF_INET6) ? AF_UNSPEC : AF_INET;
@@ -322,6 +323,14 @@ main(int argc, char *argv[], char **envp)
 
 		case 'A':
 			anon_only = 1;
+			break;
+
+		case 'B':
+#ifdef USE_BLACKLIST
+			use_blacklist = 1;
+#else
+			syslog(LOG_WARNING, "not compiled with USE_BLACKLIST support");
+#endif
 			break;
 
 		case 'd':
@@ -505,8 +514,8 @@ main(int argc, char *argv[], char **envp)
 					switch (pid = fork()) {
 					case 0:
 						/* child */
-						(void) dup2(fd, 0);
-						(void) dup2(fd, 1);
+						(void) dup2(fd, s);
+						(void) dup2(fd, STDOUT_FILENO);
 						(void) close(fd);
 						for (i = 1; i <= *ctl_sock; i++)
 							close(ctl_sock[i]);
@@ -523,7 +532,7 @@ main(int argc, char *argv[], char **envp)
 		}
 	} else {
 		addrlen = sizeof(his_addr);
-		if (getpeername(0, (struct sockaddr *)&his_addr, &addrlen) < 0) {
+		if (getpeername(s, (struct sockaddr *)&his_addr, &addrlen) < 0) {
 			syslog(LOG_ERR, "getpeername (%s): %m",argv[0]);
 			exit(1);
 		}
@@ -558,7 +567,7 @@ gotchild:
 	(void)sigaction(SIGPIPE, &sa, NULL);
 
 	addrlen = sizeof(ctrl_addr);
-	if (getsockname(0, (struct sockaddr *)&ctrl_addr, &addrlen) < 0) {
+	if (getsockname(s, (struct sockaddr *)&ctrl_addr, &addrlen) < 0) {
 		syslog(LOG_ERR, "getsockname (%s): %m",argv[0]);
 		exit(1);
 	}
@@ -571,7 +580,7 @@ gotchild:
 	if (ctrl_addr.su_family == AF_INET)
       {
 	tos = IPTOS_LOWDELAY;
-	if (setsockopt(0, IPPROTO_IP, IP_TOS, &tos, sizeof(int)) < 0)
+	if (setsockopt(s, IPPROTO_IP, IP_TOS, &tos, sizeof(int)) < 0)
 		syslog(LOG_WARNING, "control setsockopt (IP_TOS): %m");
       }
 #endif
@@ -579,7 +588,7 @@ gotchild:
 	 * Disable Nagle on the control channel so that we don't have to wait
 	 * for peer's ACK before issuing our next reply.
 	 */
-	if (setsockopt(0, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)) < 0)
+	if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)) < 0)
 		syslog(LOG_WARNING, "control setsockopt (TCP_NODELAY): %m");
 
 	data_source.su_port = htons(ntohs(ctrl_addr.su_port) - 1);
@@ -588,12 +597,12 @@ gotchild:
 
 	/* Try to handle urgent data inline */
 #ifdef SO_OOBINLINE
-	if (setsockopt(0, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(on)) < 0)
+	if (setsockopt(s, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(on)) < 0)
 		syslog(LOG_WARNING, "control setsockopt (SO_OOBINLINE): %m");
 #endif
 
 #ifdef	F_SETOWN
-	if (fcntl(fileno(stdin), F_SETOWN, getpid()) == -1)
+	if (fcntl(s, F_SETOWN, getpid()) == -1)
 		syslog(LOG_ERR, "fcntl F_SETOWN: %m");
 #endif
 	dolog((struct sockaddr *)&his_addr);
@@ -645,6 +654,7 @@ gotchild:
 		reply(220, "%s FTP server (%s) ready.", hostname, version);
 	else
 		reply(220, "FTP server ready.");
+	BLACKLIST_INIT();
 	for (;;)
 		(void) yyparse();
 	/* NOTREACHED */
@@ -1420,6 +1430,7 @@ skip:
 		 */
 		if (rval) {
 			reply(530, "Login incorrect.");
+			BLACKLIST_NOTIFY(BLACKLIST_AUTH_FAIL, STDIN_FILENO, "Login incorrect");
 			if (logging) {
 				syslog(LOG_NOTICE,
 				    "FTP LOGIN FAILED FROM %s",
@@ -1436,6 +1447,8 @@ skip:
 				exit(0);
 			}
 			return;
+		} else {
+			BLACKLIST_NOTIFY(BLACKLIST_AUTH_OK, STDIN_FILENO, "Login successful");
 		}
 	}
 	login_attempts = 0;		/* this time successful */
@@ -2057,7 +2070,7 @@ pdata_err:
 	} while (0)
 
 /*
- * Tranfer the contents of "instr" to "outstr" peer using the appropriate
+ * Transfer the contents of "instr" to "outstr" peer using the appropriate
  * encapsulation of the data subject to Mode, Structure, and Type.
  *
  * NB: Form isn't handled.
@@ -2834,7 +2847,7 @@ myoob(void)
 		return (0);
 	}
 	cp = tmpline;
-	ret = getline(cp, 7, stdin);
+	ret = get_line(cp, 7, stdin);
 	if (ret == -1) {
 		reply(221, "You could at least say goodbye.");
 		dologout(0);

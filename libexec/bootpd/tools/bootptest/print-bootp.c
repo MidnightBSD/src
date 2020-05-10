@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988-1990
  *      The Regents of the University of California.  All rights reserved.
@@ -23,7 +22,7 @@
  * This file was copied from tcpdump-2.1.1 and modified.
  * There is an e-mail list for tcpdump: <tcpdump@ee.lbl.gov>
  *
- * $FreeBSD: stable/10/libexec/bootpd/tools/bootptest/print-bootp.c 263830 2014-03-27 20:13:53Z brueffer $
+ * $FreeBSD: stable/11/libexec/bootpd/tools/bootptest/print-bootp.c 297865 2016-04-12 18:18:26Z pfg $
  */
 
 #include <stdio.h>
@@ -101,8 +100,8 @@ bootp_print(bp, length, sport, dport)
 
 	/* Client's Hardware address */
 	if (bp->bp_hlen) {
-		register struct ether_header *eh;
-		register char *e;
+		struct ether_header *eh;
+		char *e;
 
 		TCHECK(bp->bp_chaddr[0], 6);
 		eh = (struct ether_header *) packetp;
@@ -111,8 +110,8 @@ bootp_print(bp, length, sport, dport)
 		else if (bp->bp_op == BOOTREPLY)
 			e = (char *) EDST(eh);
 		else
-			e = 0;
-		if (e == 0 || bcmp((char *) bp->bp_chaddr, e, 6))
+			e = NULL;
+		if (e == NULL || bcmp((char *) bp->bp_chaddr, e, 6))
 			dump_hex(bp->bp_chaddr, bp->bp_hlen);
 	}
 	/* Only print interesting fields */
@@ -275,12 +274,12 @@ rfc1048_opts[] = {
 
 static void
 rfc1048_print(bp, length)
-	register u_char *bp;
+	u_char *bp;
 	int length;
 {
 	u_char tag;
 	u_char *ep;
-	register int len;
+	int len;
 	u_int32 ul;
 	u_short us;
 	struct in_addr ia;
@@ -377,11 +376,10 @@ rfc1048_print(bp, length)
 
 static void
 cmu_print(bp, length)
-	register u_char *bp;
+	u_char *bp;
 	int length;
 {
 	struct cmu_vend *v;
-	u_char *ep;
 
 	printf("-cmu");
 
@@ -390,8 +388,6 @@ cmu_print(bp, length)
 		printf(" |L=%d", length);
 		return;
 	}
-	/* Setup end pointer */
-	ep = bp + length;
 
 	/* Subnet mask */
 	if (v->v_flags & VF_SMASK) {
@@ -428,7 +424,7 @@ cmu_print(bp, length)
 
 static void
 other_print(bp, length)
-	register u_char *bp;
+	u_char *bp;
 	int length;
 {
 	u_char *ep;					/* end pointer */

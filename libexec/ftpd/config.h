@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/libexec/ftpd/config.h 79979 2001-07-19 17:45:14Z obrien $ */
+/* $FreeBSD: stable/11/libexec/ftpd/config.h 79979 2001-07-19 17:45:14Z obrien $ */
 
 
 /* config.h.  Generated automatically by configure.  */
