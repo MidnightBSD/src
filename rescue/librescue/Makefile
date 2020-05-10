@@ -1,9 +1,9 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/rescue/librescue/Makefile 188895 2009-02-21 15:04:31Z ru $
+# $FreeBSD: stable/11/rescue/librescue/Makefile 298107 2016-04-16 07:45:30Z gjb $
 #
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+PACKAGE=	rescue
 MK_SSP=		no
 
 # Certain library entries have hard-coded references to

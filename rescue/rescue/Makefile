@@ -1,10 +1,10 @@
-# $MidnightBSD$
-#$FreeBSD: stable/10/rescue/rescue/Makefile 315781 2017-03-23 04:47:43Z ngie $
+#$FreeBSD: stable/11/rescue/rescue/Makefile 346429 2019-04-20 04:16:51Z kevans $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
-MAN=
+.include <src.opts.mk>
 
-.include <bsd.own.mk>
+PACKAGE=rescue
+MAN=
 MK_SSP=	no
 
 PROG=	rescue
@@ -54,7 +54,7 @@ CRUNCH_PROGS_bin= cat chflags chio chmod cp date dd df echo 	\
 	 ed expr getfacl hostname kenv kill ln ls mkdir mv	\
 	 pkill ps pwd realpath rm rmdir setfacl sh sleep stty	\
 	 sync test
-CRUNCH_LIBS+= -lcrypt -ledit -ljail -lkvm -ll -ltermcap -lutil
+CRUNCH_LIBS+= -lcrypt -ledit -ljail -lkvm -lelf -ll -ltermcapw -lutil -lxo
 CRUNCH_BUILDTOOLS+= bin/sh
 
 # Additional options for specific programs
@@ -123,6 +123,7 @@ CRUNCH_PROGS_sbin+= routed rtquery
 .endif
 
 .if ${MK_ZFS} != "no"
+CRUNCH_PROGS_sbin+= bectl
 CRUNCH_PROGS_sbin+= zfs
 CRUNCH_PROGS_sbin+= zpool
 CRUNCH_PROGS_usr.sbin+= zdb
@@ -131,12 +132,10 @@ CRUNCH_PROGS_usr.sbin+= zdb
 # crunchgen does not like C++ programs; this should be fixed someday
 # CRUNCH_PROGS+= devd
 
-CRUNCH_LIBS+= -lalias -lcam -lcurses -ldevstat -lipsec -llzma
-.if ${MK_IPX} != "no"
-CRUNCH_LIBS+= -lipx
-.endif
+CRUNCH_LIBS+= -l80211 -lalias -lcam -lncursesw -ldevstat -lipsec -llzma
 .if ${MK_ZFS} != "no"
 CRUNCH_LIBS+= -lavl -lzpool -lzfs_core -lzfs -lnvpair -lpthread -luutil -lumem
+CRUNCH_LIBS+= -lbe
 .else
 # liblzma needs pthread
 CRUNCH_LIBS+= -lpthread
@@ -156,10 +155,6 @@ CRUNCH_ALIAS_bsdlabel= disklabel
 
 .if ${MACHINE} == "pc98"
 CRUNCH_SRCDIR_fdisk= $(.CURDIR)/../../sbin/fdisk_pc98
-.endif
-
-.if ${MACHINE_CPUARCH} == "ia64"
-CRUNCH_PROGS_sbin+= mca
 .endif
 
 .if ${MACHINE_CPUARCH} == "sparc64"
@@ -224,8 +219,10 @@ CRUNCH_LIBS+= -lmd
 CRUNCH_PROGS_usr.bin+=	nc
 .endif
 
+.if ${MK_VI} != "no"
 CRUNCH_PROGS_usr.bin+= vi
 CRUNCH_ALIAS_vi= ex
+.endif
 
 CRUNCH_PROGS_usr.bin+= id
 CRUNCH_ALIAS_id= groups whoami
