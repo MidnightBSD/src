@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -54,7 +53,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/dumpfs/dumpfs.c 283899 2015-06-02 01:55:54Z ae $";
+  "$FreeBSD: stable/11/sbin/dumpfs/dumpfs.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -354,8 +353,7 @@ dumpcg(void)
 		for (i = 1; i < afs.fs_contigsumsize; i++) {
 			if ((i - 1) % 8 == 0)
 				printf("\nclusters %d-%d:", i,
-				    afs.fs_contigsumsize - 1 < i + 7 ?
-				    afs.fs_contigsumsize - 1 : i + 7);
+				    MIN(afs.fs_contigsumsize - 1, i + 7));
 			printf("\t%d", cg_clustersum(&acg)[i]);
 		}
 		printf("\nclusters size %d and over: %d\n",
