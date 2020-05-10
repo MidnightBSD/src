@@ -1,7 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
-# $FreeBSD: stable/10/sbin/md5/Makefile 314332 2017-02-27 10:40:39Z avg $
+# $FreeBSD: stable/11/sbin/md5/Makefile 300921 2016-05-29 01:15:36Z allanjude $
 
+PACKAGE=runtime
 PROG=	md5
 
 LINKS=	${BINDIR}/md5 ${BINDIR}/rmd160 \
@@ -9,16 +9,21 @@ LINKS=	${BINDIR}/md5 ${BINDIR}/rmd160 \
 	${BINDIR}/md5 ${BINDIR}/sha256 \
 	${BINDIR}/md5 ${BINDIR}/sha384 \
 	${BINDIR}/md5 ${BINDIR}/sha512 \
-	${BINDIR}/md5 ${BINDIR}/sha512t256
+	${BINDIR}/md5 ${BINDIR}/sha512t256 \
+	${BINDIR}/md5 ${BINDIR}/skein256 \
+	${BINDIR}/md5 ${BINDIR}/skein512 \
+	${BINDIR}/md5 ${BINDIR}/skein1024
 
 MLINKS=	md5.1 rmd160.1 \
 	md5.1 sha1.1 \
 	md5.1 sha256.1 \
 	md5.1 sha384.1 \
 	md5.1 sha512.1 \
-	md5.1 sha512t256.1
+	md5.1 sha512t256.1 \
+	md5.1 skein256.1 \
+	md5.1 skein512.1 \
+	md5.1 skein1024.1
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.prog.mk>
