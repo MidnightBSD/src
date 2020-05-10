@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/4/93
  *
- * $FreeBSD: stable/10/libexec/fingerd/pathnames.h 262435 2014-02-24 08:21:49Z brueffer $
+ * $FreeBSD: stable/11/libexec/fingerd/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	_PATH_FINGER	"/usr/bin/finger"
