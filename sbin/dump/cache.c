@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * CACHE.C
  *
  *	Block cache for dump
  *
- * $FreeBSD: stable/10/sbin/dump/cache.c 109825 2003-01-25 19:06:30Z dillon $
+ * $FreeBSD: stable/11/sbin/dump/cache.c 109825 2003-01-25 19:06:30Z dillon $
  */
 
 #include <sys/param.h>

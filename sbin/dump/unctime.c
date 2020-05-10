@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)unctime.c	8.2 (Berkeley) 6/14/94";
 #endif
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/sbin/dump/unctime.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <time.h>

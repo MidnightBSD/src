@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)optr.c	8.2 (Berkeley) 1/6/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/dump/optr.c 217769 2011-01-24 06:17:05Z mckusick $";
+  "$FreeBSD: stable/11/sbin/dump/optr.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -404,7 +403,7 @@ lastdump(int arg)	/* w ==> just what to do; W ==> most recent dumps */
 		    dumpme = tnow > (dtwalk->dd_ddate - (tlast->tm_hour * 3600)
 				     - (tlast->tm_min * 60) - tlast->tm_sec
 				     + (dt->fs_freq * 86400));
-		};
+		}
 		if (arg != 'w' || dumpme)
 			(void) printf(
 			    "%c %8s\t(%6s) Last dump: Level %d, Date %s\n",

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD: stable/10/sbin/dump/dump.h 243665 2012-11-29 05:16:50Z eadler $
+ * $FreeBSD: stable/11/sbin/dump/dump.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

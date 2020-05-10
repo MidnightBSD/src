@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)traverse.c	8.7 (Berkeley) 6/15/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/dump/traverse.c 272867 2014-10-09 23:43:13Z hrs $";
+  "$FreeBSD: stable/11/sbin/dump/traverse.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -929,7 +928,7 @@ loop:
 		if (cnt == size)
 			return;
 	} else {
-		if (tmpbuf == NULL && (tmpbuf = malloc(secsize)) == 0)
+		if (tmpbuf == NULL && (tmpbuf = malloc(secsize)) == NULL)
 			quit("buffer malloc failed\n");
 		xfer = 0;
 		bytes = size;

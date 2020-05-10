@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/dump/main.c 229403 2012-01-03 18:51:58Z ed $";
+  "$FreeBSD: stable/11/sbin/dump/main.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -268,7 +267,7 @@ main(int argc, char *argv[])
 	}
 
 	if (blocksperfile)
-		blocksperfile = blocksperfile / ntrec * ntrec; /* round down */
+		blocksperfile = rounddown(blocksperfile, ntrec);
 	else if (!unlimited) {
 		/*
 		 * Determine how to default tape size and density
@@ -341,7 +340,7 @@ main(int argc, char *argv[])
 	spcl.c_dev[NAMELEN-1]='\0';
 	spcl.c_filesys[NAMELEN-1]='\0';
 
-	if ((mntpt = getmntpt(disk, &mntflags)) != 0) {
+	if ((mntpt = getmntpt(disk, &mntflags)) != NULL) {
 		if (mntflags & MNT_RDONLY) {
 			if (snapdump != 0) {
 				msg("WARNING: %s\n",
