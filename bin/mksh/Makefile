@@ -1,10 +1,9 @@
-# $MidnightBSD$
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
 
+PACKAGE=	mksh
 PROG=	mksh
 
 SRCS=	lalloc.c eval.c exec.c expr.c funcs.c histrap.c jobs.c lex.c \
