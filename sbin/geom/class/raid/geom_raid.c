@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/raid/geom_raid.c 234940 2012-05-03 05:32:56Z mav $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/raid/geom_raid.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <errno.h>

@@ -1,10 +1,10 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/sbin/geom/class/raid/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.PATH:	${.CURDIR}/../../misc
+PACKAGE=runtime
+.PATH: ${.CURDIR:H:H}/misc
 
 GEOM_CLASS=	raid
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.lib.mk>

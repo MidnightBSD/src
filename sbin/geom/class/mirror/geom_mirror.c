@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/mirror/geom_mirror.c 330737 2018-03-10 04:17:01Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/mirror/geom_mirror.c 330726 2018-03-10 02:15:45Z asomers $");
 
 #include <sys/param.h>
 #include <err.h>
@@ -79,6 +80,16 @@ struct g_command class_commands[] = {
 	    },
 	    "[-adfFhnv] [-b balance] [-s slice] name\n"
 	    "[-v] -p priority name prov"
+	},
+	{ "create", G_FLAG_VERBOSE, NULL,
+	    {
+		{ 'b', "balance", GMIRROR_BALANCE, G_TYPE_STRING },
+		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
+		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
+		{ 's', "slice", GMIRROR_SLICE, G_TYPE_NUMBER },
+		G_OPT_SENTINEL
+	    },
+	    "[-Fnv] [-b balance] [-s slice] name prov ..."
 	},
 	{ "deactivate", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
 	    "[-v] name prov ..."

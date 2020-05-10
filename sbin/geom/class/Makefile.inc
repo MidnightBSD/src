@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/geom/class/Makefile.inc 249657 2013-04-19 19:45:00Z ed $
+# $FreeBSD: stable/11/sbin/geom/class/Makefile.inc 319185 2017-05-30 04:17:22Z ngie $
 
 SHLIBDIR?=${GEOM_CLASS_DIR}
 SHLIB_NAME?=geom_${GEOM_CLASS}.so
@@ -9,6 +8,6 @@ SRCS+=	geom_${GEOM_CLASS}.c subr.c
 
 NO_WMISSING_VARIABLE_DECLARATIONS=
 
-CFLAGS+= -I${.CURDIR}/../..
+CFLAGS+= -I${.CURDIR:H:H}
 
 .include "../Makefile.inc"

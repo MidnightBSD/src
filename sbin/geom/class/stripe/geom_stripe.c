@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/stripe/geom_stripe.c 330737 2018-03-10 04:17:01Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/stripe/geom_stripe.c 330726 2018-03-10 02:15:45Z asomers $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -63,7 +64,7 @@ struct g_command class_commands[] = {
 		{ 's', "stripesize", GSTRIPE_STRIPESIZE, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] [-s stripesize] name prov prov ..."
+	    "[-v] [-s stripesize] name prov prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {

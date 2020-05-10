@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/geom/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/sbin/geom/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 .if defined(RESCUE) || defined(RELEASE_CRUNCH)
 
 .PATH:	${.CURDIR}/class/part \
@@ -15,8 +15,7 @@ MAN=
 WARNS?=	2
 CFLAGS+=-I${.CURDIR} -I${.CURDIR}/core -DSTATIC_GEOM_CLASSES
 
-DPADD=	${LIBGEOM} ${LIBSBUF} ${LIBBSDXML} ${LIBUTIL}
-LDADD=	-lgeom -lsbuf -lbsdxml -lutil
+LIBADD=	geom util
 
 .include <bsd.prog.mk>
 

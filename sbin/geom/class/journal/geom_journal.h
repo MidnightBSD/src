@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/geom/class/journal/geom_journal.h 163838 2006-10-31 21:32:54Z pjd $
+ * $FreeBSD: stable/11/sbin/geom/class/journal/geom_journal.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_GEOM_JOURNAL_H_

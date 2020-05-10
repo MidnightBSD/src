@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/journal/geom_journal_ufs.c 245074 2013-01-05 21:52:38Z kib $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/journal/geom_journal_ufs.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>

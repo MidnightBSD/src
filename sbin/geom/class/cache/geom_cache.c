@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/cache/geom_cache.c 330737 2018-03-10 04:17:01Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/cache/geom_cache.c 330726 2018-03-10 02:15:45Z asomers $");
 
 #include <errno.h>
 #include <stdio.h>

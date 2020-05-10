@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Mathew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/multipath/geom_multipath.c 292395 2015-12-17 06:31:55Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/multipath/geom_multipath.c 330449 2018-03-05 07:26:05Z eadler $");
 #include <sys/param.h>
 #include <errno.h>
 #include <paths.h>

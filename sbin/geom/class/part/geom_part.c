@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/part/geom_part.c 319258 2017-05-30 22:33:24Z asomers $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/part/geom_part.c 346753 2019-04-26 16:26:01Z mav $");
 
 #include <sys/stat.h>
 #include <sys/vtoc.h>
@@ -74,6 +75,7 @@ volatile sig_atomic_t undo_restore;
 
 static struct gclass *find_class(struct gmesh *, const char *);
 static struct ggeom * find_geom(struct gclass *, const char *);
+static int geom_is_withered(struct ggeom *);
 static const char *find_geomcfg(struct ggeom *, const char *);
 static const char *find_provcfg(struct gprovider *, const char *);
 static struct gprovider *find_provider(struct ggeom *, off_t);
@@ -216,12 +218,24 @@ find_geom(struct gclass *classp, const char *name)
 	LIST_FOREACH(gp, &classp->lg_geom, lg_geom) {
 		if (strcmp(gp->lg_name, name) != 0)
 			continue;
-		if (find_geomcfg(gp, "wither") == NULL)
+		if (!geom_is_withered(gp))
 			return (gp);
 		else
 			wgp = gp;
 	}
 	return (wgp);
+}
+
+static int
+geom_is_withered(struct ggeom *gp)
+{
+	struct gconfig *gc;
+
+	LIST_FOREACH(gc, &gp->lg_config, lg_config) {
+		if (!strcmp(gc->lg_name, "wither"))
+			return (1);
+	}
+	return (0);
 }
 
 static const char *
@@ -460,8 +474,19 @@ gpart_autofill(struct gctl_req *req)
 	if (s == NULL)
 		abort();
 	gp = find_geom(cp, s);
-	if (gp == NULL)
-		errx(EXIT_FAILURE, "No such geom: %s.", s);
+	if (gp == NULL) {
+		if (g_device_path(s) == NULL) {
+			errx(EXIT_FAILURE, "No such geom %s.", s);
+		} else {
+			/*
+			 * We don't free memory allocated by g_device_path() as
+			 * we are about to exit.
+			 */
+			errx(EXIT_FAILURE,
+			    "No partitioning scheme found on geom %s. Create one first using 'gpart create'.",
+			    s);
+		}
+	}
 	pp = LIST_FIRST(&gp->lg_consumer)->lg_provider;
 	if (pp == NULL)
 		errx(EXIT_FAILURE, "Provider for geom %s not found.", s);
@@ -524,7 +549,7 @@ gpart_autofill(struct gctl_req *req)
 	last = (off_t)strtoimax(s, NULL, 0);
 	grade = ~0ULL;
 	a_first = ALIGNUP(first + offset, alignment);
-	last = ALIGNDOWN(last + offset, alignment);
+	last = ALIGNDOWN(last + offset + 1, alignment) - 1;
 	if (a_first < start)
 		a_first = start;
 	while ((pp = find_provider(gp, first)) != NULL) {
@@ -604,7 +629,7 @@ gpart_show_geom(struct ggeom *gp, const char *element, int show_providers)
 	off_t length, secsz;
 	int idx, wblocks, wname, wmax;
 
-	if (find_geomcfg(gp, "wither"))
+	if (geom_is_withered(gp))
 		return;
 	scheme = find_geomcfg(gp, "scheme");
 	if (scheme == NULL)

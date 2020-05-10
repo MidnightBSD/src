@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/core/geom.c 297019 2016-03-18 13:29:43Z mav $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/core/geom.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -640,6 +641,11 @@ get_class(int *argc, char ***argv)
 #endif /* !STATIC_GEOM_CLASSES */
 
 	set_class_name();
+
+	/* If we can't load or list, it's not a class. */
+	if (!std_available("load") && !std_available("list"))
+		errx(EXIT_FAILURE, "Invalid class name.");
+
 	if (*argc < 1)
 		usage();
 }

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/geom/class/nop/gnop.8 307403 2016-10-16 22:02:50Z sevan $
+.\" $FreeBSD: stable/11/sbin/geom/class/nop/gnop.8 329789 2018-02-22 02:12:47Z asomers $
 .\"
-.Dd October 10, 2015
+.Dd January 17, 2018
 .Dt GNOP 8
 .Os
 .Sh NAME
@@ -43,6 +42,7 @@
 .Op Fl s Ar size
 .Op Fl S Ar secsize
 .Op Fl w Ar wfailprob
+.Op Fl z Ar physpath
 .Ar dev ...
 .Nm
 .Cm configure
@@ -133,6 +133,8 @@ Sector size of the transparent provider.
 Specifies write failure probability in percent.
 .It Fl v
 Be more verbose.
+.It Fl z Ar physpath
+Physical path of the transparent provider.
 .El
 .Sh SYSCTL VARIABLES
 The following

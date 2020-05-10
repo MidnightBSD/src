@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/geom/class/nop/geom_nop.c 289520 2015-10-18 15:02:07Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sbin/geom/class/nop/geom_nop.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <stdio.h>
 #include <stdint.h>
@@ -50,10 +51,12 @@ struct g_command class_commands[] = {
 		{ 's', "size", "0", G_TYPE_NUMBER },
 		{ 'S', "secsize", "0", G_TYPE_NUMBER },
 		{ 'w', "wfailprob", "-1", G_TYPE_NUMBER },
+		{ 'z', "physpath", G_NOP_PHYSPATH_PASSTHROUGH, G_TYPE_STRING },
 		G_OPT_SENTINEL
 	    },
 	    "[-v] [-e error] [-o offset] [-p stripesize] [-P stripeoffset] "
-	    "[-r rfailprob] [-s size] [-S secsize] [-w wfailprob] dev ..."
+	    "[-r rfailprob] [-s size] [-S secsize] [-w wfailprob] "
+	    "[-z physpath] dev ..."
 	},
 	{ "configure", G_FLAG_VERBOSE, NULL,
 	    {

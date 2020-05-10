@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/geom/class/journal/Makefile 216468 2010-12-15 23:24:34Z obrien $
+# $FreeBSD: stable/11/sbin/geom/class/journal/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.PATH: ${.CURDIR}/../../misc
+PACKAGE=runtime
+.PATH: ${.CURDIR:H:H}/misc
 
 GEOM_CLASS=	journal
 SRCS+=	geom_journal_ufs.c
 
-DPADD=	${LIBMD} ${LIBUFS}
-LDADD=	-lmd -lufs
+LIBADD=	ufs md
 
-CFLAGS+=-I${.CURDIR}/../../../../sys
+CFLAGS+=-I${SRCTOP}/sys
 
 .include <bsd.lib.mk>
