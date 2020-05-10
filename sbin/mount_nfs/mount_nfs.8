@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1992, 1993, 1994, 1995
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mount_nfs.8	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: stable/10/sbin/mount_nfs/mount_nfs.8 317526 2017-04-27 21:45:50Z rmacklem $
+.\" $FreeBSD: stable/11/sbin/mount_nfs/mount_nfs.8 317521 2017-04-27 20:21:29Z rmacklem $
 .\"
 .Dd April 13, 2017
 .Dt MOUNT_NFS 8
@@ -63,12 +62,6 @@ This command is normally executed by
 It implements the mount protocol as described in RFC 1094, Appendix A and
 .%T "NFS: Network File System Version 3 Protocol Specification" ,
 Appendix I.
-.Pp
-If the file system type is specified as ``oldnfs'', which implies this
-command is run as ``mount_oldnfs'', then it forces use of the old NFS
-client, which does not support the
-.Cm nfsv4
-option.
 .Pp
 By default,
 .Nm
@@ -402,7 +395,7 @@ Use the specified version number for NFS requests.
 See the
 .Cm nfsv2 ,
 .Cm nfsv3 ,
-and 
+and
 .Cm nfsv4
 options for details.
 .It Cm wcommitsize Ns = Ns Aq Ar value

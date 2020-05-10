@@ -1,18 +1,15 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
 #
-# $FreeBSD: stable/10/sbin/mount_nfs/Makefile 275257 2014-11-29 15:57:31Z trasz $
+# $FreeBSD: stable/11/sbin/mount_nfs/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
+PACKAGE=runtime
 PROG=	mount_nfs
 SRCS=	mount_nfs.c getmntopts.c mounttab.c
 MAN=	mount_nfs.8
-MLINKS=	mount_nfs.8 mount_oldnfs.8
 
-MOUNT=	${.CURDIR}/../mount
-UMNTALL= ${.CURDIR}/../../usr.sbin/rpc.umntall
+MOUNT=	${.CURDIR:H}/mount
+UMNTALL= ${SRCTOP}/usr.sbin/rpc.umntall
 CFLAGS+= -DNFS -I${MOUNT} -I${UMNTALL}
-
-LINKS=	${BINDIR}/mount_nfs ${BINDIR}/mount_oldnfs
 
 .PATH: ${MOUNT} ${UMNTALL}
 

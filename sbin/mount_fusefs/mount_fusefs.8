@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1989, 1991, 1993
 .\"	The Regents of the University of California.
 .\" Copyright (c) 2005, 2006 Csaba Henk
@@ -28,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/mount_fusefs/mount_fusefs.8 306996 2016-10-10 16:38:07Z sevan $
+.\" $FreeBSD: stable/11/sbin/mount_fusefs/mount_fusefs.8 345391 2019-03-21 21:56:03Z asomers $
 .\"
-.Dd October 3, 2016
+.Dd November 17, 2018
 .Dt MOUNT_FUSEFS 8
 .Os
 .Sh NAME
@@ -155,7 +154,6 @@ Do not refuse unmounting if there are secondary mounts
 .It Cm push_symlinks_in
 Prefix absolute symlinks with the mountpoint
 .El
-.Pp
 .El
 .Pp
 Besides the above mount options, there is a set of pseudo-mount options which
@@ -337,16 +335,20 @@ does not call any external utility and also provides a hacky
 .Sh SEE ALSO
 .Xr fstat 1 ,
 .Xr mount 8 ,
-.Xr umount 8 ,
-.Xr sudo 8
+.Xr sudo 8 ,
+.Xr umount 8
 .Sh HISTORY
 .Nm
-appeared in
-.Fx 10.0
-as the part of the
+was written as the part of the
 .Fx
-implementation of the Fuse userspace filesystem
-framework (see http://fuse.sourceforge.net).
+implementation of the Fuse userspace filesystem framework (see
+.Xr https://github.com/libfuse/libfuse )
+and first appeared in the
+.Pa sysutils/fusefs-kmod
+port, supporting
+.Fx 6.0 .
+It was added to the base system in
+.Fx 10.0 .
 .Sh CAVEATS
 This user interface is
 .Fx

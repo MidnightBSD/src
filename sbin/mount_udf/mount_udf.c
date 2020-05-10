@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993, 1994
  *      The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/mount_udf/mount_udf.c 261741 2014-02-11 08:20:45Z brueffer $
+ * $FreeBSD: stable/11/sbin/mount_udf/mount_udf.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*

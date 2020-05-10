@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)mount_nfs.c	8.11 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/mount_nfs/mount_nfs.c 318683 2017-05-22 21:52:06Z rmacklem $");
+__FBSDID("$FreeBSD: stable/11/sbin/mount_nfs/mount_nfs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -477,7 +476,8 @@ main(int argc, char *argv[])
 	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
 
 	if (nmount(iov, iovlen, 0))
-		err(1, "%s, %s", mntpath, errmsg);
+		err(1, "nmount: %s%s%s", mntpath, errmsg[0] ? ", " : "",
+		    errmsg);
 
 	exit(0);
 }
@@ -1027,7 +1027,7 @@ xdr_fh(XDR *xdrsp, struct nfhret *np)
 		if (!authfnd && (authcnt > 0 || np->auth != AUTH_SYS))
 			np->stat = EAUTH;
 		return (1);
-	};
+	}
 	return (0);
 }
 

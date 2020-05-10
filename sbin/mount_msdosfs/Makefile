@@ -1,15 +1,14 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/sbin/mount_msdosfs/Makefile 198236 2009-10-19 16:00:24Z ru $
+# $FreeBSD: stable/11/sbin/mount_msdosfs/Makefile 319185 2017-05-30 04:17:22Z ngie $
 #
 
+PACKAGE=runtime
 PROG=	mount_msdosfs
 SRCS=	mount_msdosfs.c getmntopts.c
 MAN=	mount_msdosfs.8
-DPADD=	${LIBKICONV}
-LDADD=	-lkiconv
+LIBADD=	kiconv
 
-MOUNT=	${.CURDIR}/../mount
+MOUNT=	${.CURDIR:H}/mount
 CFLAGS+= -I${MOUNT}
 
 # Needs to be dynamically linked for optional dlopen() access to

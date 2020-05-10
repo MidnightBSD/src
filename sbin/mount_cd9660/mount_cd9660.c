@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1992, 1993, 1994
  *      The Regents of the University of California.  All rights reserved.
@@ -46,7 +45,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_cd9660.c	8.7 (Berkeley) 5/1/95";
 */
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/mount_cd9660/mount_cd9660.c 247856 2013-03-05 22:41:35Z jkim $";
+  "$FreeBSD: stable/11/sbin/mount_cd9660/mount_cd9660.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/cdio.h>

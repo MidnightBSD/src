@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.
@@ -45,7 +44,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_union.c	8.5 (Berkeley) 3/27/94";
 #else
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/mount_unionfs/mount_unionfs.c 247856 2013-03-05 22:41:35Z jkim $";
+  "$FreeBSD: stable/11/sbin/mount_unionfs/mount_unionfs.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif
 #endif /* not lint */
 
