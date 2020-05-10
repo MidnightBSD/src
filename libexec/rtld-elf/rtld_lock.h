@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2003 Alexander Kabaev.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/rtld_lock.h 281453 2015-04-12 06:45:40Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/rtld_lock.h 280816 2015-03-29 18:53:21Z kib $
  */
 
 #ifndef _RTLD_LOCK_H_

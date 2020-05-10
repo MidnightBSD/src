@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/arm/rtld_machdep.h 309061 2016-11-23 17:48:43Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/arm/rtld_machdep.h 319434 2017-06-01 15:12:51Z vangyzen $
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -39,9 +38,8 @@ struct Struct_Obj_Entry;
 #define rtld_dynamic(obj) (&_DYNAMIC)
 
 Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
-		       const struct Struct_Obj_Entry *defobj,
-		       const struct Struct_Obj_Entry *obj,
-		       const Elf_Rel *rel);
+    const struct Struct_Obj_Entry *defobj, const struct Struct_Obj_Entry *obj,
+    const Elf_Rel *rel);
 
 #define make_function_pointer(def, defobj) \
 	((defobj)->relocbase + (def)->st_value)
@@ -69,14 +67,14 @@ typedef struct {
     round(prev_offset + prev_size, align)
 #define calculate_tls_end(off, size)    ((off) + (size))
 	
-/*
- * Lazy binding entry point, called via PLT.
- */
-void _rtld_bind_start(void);
-
 extern void *__tls_get_addr(tls_index *ti);
 
 #define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
 #define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
+
+extern void arm_abi_variant_hook(Elf_Auxinfo **);
+
+#define md_abi_variant_hook(x)		arm_abi_variant_hook(x)
+#define RTLD_VARIANT_ENV_NAMES
 
 #endif

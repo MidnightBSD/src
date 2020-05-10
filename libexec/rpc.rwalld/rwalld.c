@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Christopher G. Demetriou
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/rpc.rwalld/rwalld.c 216560 2010-12-19 13:05:17Z charnier $");
+__FBSDID("$FreeBSD: stable/11/libexec/rpc.rwalld/rwalld.c 216560 2010-12-19 13:05:17Z charnier $");
 
 #include <err.h>
 #include <pwd.h>

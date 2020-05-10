@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/libexec/rtld-elf/Symbol.map 276908 2015-01-10 09:22:17Z kib $
+/*
+ * $FreeBSD: stable/11/libexec/rtld-elf/Symbol.map 276627 2015-01-03 18:09:53Z kib $
  */
 
 FBSD_1.0 {

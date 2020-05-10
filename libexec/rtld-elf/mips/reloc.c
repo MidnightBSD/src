@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mips_reloc.c,v 1.58 2010/01/14 11:57:06 skrll Exp $	*/
 
 /*
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/libexec/rtld-elf/mips/reloc.c 331206 2018-03-19 14:28:58Z marius $");
+__FBSDID("$FreeBSD: stable/11/libexec/rtld-elf/mips/reloc.c 331205 2018-03-19 14:28:20Z marius $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -142,7 +141,7 @@ store_ptr(void *where, Elf_Sxword val, size_t len)
 void
 _rtld_relocate_nonplt_self(Elf_Dyn *dynp, Elf_Addr relocbase)
 {
-	const Elf_Rel *rel = 0, *rellim;
+	const Elf_Rel *rel = NULL, *rellim;
 	Elf_Addr relsz = 0;
 	const Elf_Sym *symtab = NULL, *sym;
 	Elf_Addr *where;
@@ -241,10 +240,17 @@ _mips_rtld_bind(Obj_Entry *obj, Elf_Size reloff)
         Elf_Addr *got = obj->pltgot;
         const Elf_Sym *def;
         const Obj_Entry *defobj;
+        Elf_Addr *where;
         Elf_Addr target;
+        RtldLockState lockstate;
 
+	rlock_acquire(rtld_bind_lock, &lockstate);
+	if (sigsetjmp(lockstate.env, 0) != 0)
+		lock_upgrade(rtld_bind_lock, &lockstate);
+
+	where = &got[obj->local_gotno + reloff - obj->gotsym];
         def = find_symdef(reloff, obj, &defobj, SYMLOOK_IN_PLT, NULL,
-	    NULL);
+           &lockstate);
         if (def == NULL)
 		rtld_die();
 
@@ -252,9 +258,10 @@ _mips_rtld_bind(Obj_Entry *obj, Elf_Size reloff)
         dbg("bind now/fixup at %s sym # %jd in %s --> was=%p new=%p",
 	    obj->path,
 	    (intmax_t)reloff, defobj->strtab + def->st_name, 
-	    (void *)got[obj->local_gotno + reloff - obj->gotsym],
-	    (void *)target);
-        got[obj->local_gotno + reloff - obj->gotsym] = target;
+	    (void *)*where, (void *)target);
+	if (!ld_bind_not)
+		*where = target;
+	lock_release(rtld_bind_lock, &lockstate);
 	return (Elf_Addr)target;
 }
 

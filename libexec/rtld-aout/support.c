@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Generic "support" routines to replace those obtained from libiberty for ld.
  *
@@ -29,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: stable/10/libexec/rtld-aout/support.c 201217 2009-12-29 21:07:17Z ed $
+ * $FreeBSD: stable/11/libexec/rtld-aout/support.c 201217 2009-12-29 21:07:17Z ed $
  */
 #include <sys/types.h>
 #include <string.h>

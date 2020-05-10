@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/libexec/rtld-elf/i386/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
+/*
+ * $FreeBSD: stable/11/libexec/rtld-elf/i386/Symbol.map 169092 2007-04-29 14:05:22Z deischen $
  */
 
 FBSD_1.0 {

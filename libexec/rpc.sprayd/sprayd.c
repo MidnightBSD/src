@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: sprayd.c,v 1.14 2006/05/09 20:18:07 mrg Exp $	*/
 
 /*
@@ -33,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/libexec/rpc.sprayd/sprayd.c 327793 2018-01-10 21:24:03Z pfg $";
+  "$FreeBSD: stable/11/libexec/rpc.sprayd/sprayd.c 332605 2018-04-16 16:27:08Z asomers $";
 #endif /* not lint */
 
 #include <rpc/rpc.h>
@@ -62,21 +61,21 @@ static int from_inetd = 1;
 
 #define TIMEOUT 120
 
-void
+static void
 cleanup(int sig __unused)
 {
 	(void)rpcb_unset(SPRAYPROG, SPRAYVERS, NULL);
 	exit(0);
 }
 
-void
+static void
 die(int sig __unused)
 {
 	exit(0);
 }
 
 int
-main(int argc, char *argv[])
+main(int argc __unused, char *argv[] __unused)
 {
 	SVCXPRT *transp;
 	int ok;

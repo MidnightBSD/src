@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-aout/shlib.c 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD: stable/11/libexec/rtld-aout/shlib.c 241737 2012-10-19 14:49:42Z ed $
  */
 
 #include <sys/param.h>

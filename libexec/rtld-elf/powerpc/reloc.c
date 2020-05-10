@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: ppc_reloc.c,v 1.10 2001/09/10 06:09:41 mycroft Exp $   */
 
 /*-
@@ -27,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/powerpc/reloc.c 331206 2018-03-19 14:28:58Z marius $
+ * $FreeBSD: stable/11/libexec/rtld-elf/powerpc/reloc.c 331205 2018-03-19 14:28:20Z marius $
  */
 
 #include <sys/param.h>
@@ -127,7 +126,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 void
 reloc_non_plt_self(Elf_Dyn *dynp, Elf_Addr relocbase)
 {
-	const Elf_Rela *rela = 0, *relalim;
+	const Elf_Rela *rela = NULL, *relalim;
 	Elf_Addr relasz = 0;
 	Elf_Addr *where;
 
@@ -469,13 +468,16 @@ reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
  */
 Elf_Addr
 reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *defobj,
-	      const Obj_Entry *obj, const Elf_Rel *rel)
+    const Obj_Entry *obj, const Elf_Rel *rel)
 {
 	Elf_Addr offset;
 	const Elf_Rela *rela = (const Elf_Rela *) rel;
 
 	dbg(" reloc_jmpslot: where=%p, target=%p",
 	    (void *)wherep, (void *)target);
+
+	if (ld_bind_not)
+		goto out;
 
 	/*
 	 * At the PLT entry pointed at by `wherep', construct
@@ -484,7 +486,7 @@ reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *defobj,
 	 */
 	offset = target - (Elf_Addr)wherep;
 
-	if (abs(offset) < 32*1024*1024) {     /* inside 32MB? */
+	if (abs((int)offset) < 32*1024*1024) {     /* inside 32MB? */
 		/* b    value   # branch directly */
 		*wherep = 0x48000000 | (offset & 0x03fffffc);
 		__syncicache(wherep, 4);
@@ -520,6 +522,7 @@ reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *defobj,
 		}
 	}
 
+out:
 	return (target);
 }
 
@@ -635,8 +638,7 @@ pre_init(void)
 void
 allocate_initial_tls(Obj_Entry *list)
 {
-	register Elf_Addr **tp __asm__("r2");
-	Elf_Addr **_tp;
+	Elf_Addr **tp;
 
 	/*
 	* Fix the size of the static TLS block by using the maximum
@@ -646,22 +648,23 @@ allocate_initial_tls(Obj_Entry *list)
 
 	tls_static_space = tls_last_offset + tls_last_size + RTLD_STATIC_TLS_EXTRA;
 
-	_tp = (Elf_Addr **) ((char *) allocate_tls(list, NULL, TLS_TCB_SIZE, 8) 
+	tp = (Elf_Addr **) ((char *) allocate_tls(list, NULL, TLS_TCB_SIZE, 8) 
 	    + TLS_TP_OFFSET + TLS_TCB_SIZE);
 
 	/*
 	 * XXX gcc seems to ignore 'tp = _tp;' 
 	 */
 	 
-	__asm __volatile("mr %0,%1" : "=r"(tp) : "r"(_tp));
+	__asm __volatile("mr 2,%0" :: "r"(tp));
 }
 
 void*
 __tls_get_addr(tls_index* ti)
 {
-	register Elf_Addr **tp __asm__("r2");
+	register Elf_Addr **tp;
 	char *p;
 
+	__asm __volatile("mr %0,2" : "=r"(tp));
 	p = tls_get_addr_common((Elf_Addr**)((Elf_Addr)tp - TLS_TP_OFFSET 
 	    - TLS_TCB_SIZE), ti->ti_module, ti->ti_offset);
 

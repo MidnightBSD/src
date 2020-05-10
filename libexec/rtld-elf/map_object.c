@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/map_object.c 296939 2016-03-16 15:34:16Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/map_object.c 320667 2017-07-05 06:32:53Z kib $
  */
 
 #include <sys/param.h>
@@ -39,8 +38,10 @@
 #include "debug.h"
 #include "rtld.h"
 
-static Elf_Ehdr *get_elf_header(int, const char *);
+static Elf_Ehdr *get_elf_header(int, const char *, const struct stat *);
 static int convert_flags(int); /* Elf flags -> mmap flags */
+
+int __getosreldate(void);
 
 /*
  * Map a shared object into memory.  The "fd" argument is a file descriptor,
@@ -91,7 +92,7 @@ map_object(int fd, const char *path, const struct stat *sb)
     char *note_map;
     size_t note_map_len;
 
-    hdr = get_elf_header(fd, path);
+    hdr = get_elf_header(fd, path, sb);
     if (hdr == NULL)
 	return (NULL);
 
@@ -191,9 +192,13 @@ map_object(int fd, const char *path, const struct stat *sb)
     base_vlimit = round_page(segs[nsegs]->p_vaddr + segs[nsegs]->p_memsz);
     mapsize = base_vlimit - base_vaddr;
     base_addr = (caddr_t) base_vaddr;
-    base_flags = MAP_PRIVATE | MAP_ANON | MAP_NOCORE;
+    base_flags = __getosreldate() >= P_OSREL_MAP_GUARD ||
+      (P_OSREL_MAJOR(__getosreldate()) == 11 && __getosreldate() >=
+      P_OSREL_MAP_GUARD_11) ? MAP_GUARD : MAP_PRIVATE | MAP_ANON | MAP_NOCORE;
     if (npagesizes > 1 && round_page(segs[0]->p_filesz) >= pagesizes[1])
 	base_flags |= MAP_ALIGNED_SUPER;
+    if (base_vaddr != 0)
+	base_flags |= MAP_FIXED | MAP_EXCL;
 
     mapbase = mmap(base_addr, mapsize, PROT_NONE, base_flags, -1, 0);
     if (mapbase == (caddr_t) -1) {
@@ -324,9 +329,15 @@ error:
 }
 
 static Elf_Ehdr *
-get_elf_header(int fd, const char *path)
+get_elf_header(int fd, const char *path, const struct stat *sbp)
 {
 	Elf_Ehdr *hdr;
+
+	/* Make sure file has enough data for the ELF header */
+	if (sbp != NULL && sbp->st_size < sizeof(Elf_Ehdr)) {
+		_rtld_error("%s: invalid file format", path);
+		return (NULL);
+	}
 
 	hdr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_PRIVATE | MAP_PREFAULT_READ,
 	    fd, 0);

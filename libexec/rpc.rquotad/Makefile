@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/rpc.rquotad/Makefile 207736 2010-05-07 00:41:12Z mckusick $
+# $FreeBSD: stable/11/libexec/rpc.rquotad/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 PROG =	rpc.rquotad
 SRCS =	rquotad.c
 MAN  =	rpc.rquotad.8
 
-DPADD=	${LIBRPCSVC} ${LIBUTIL}
-LDADD=	-lrpcsvc -lutil
+LIBADD=	rpcsvc util
 
 .include <bsd.prog.mk>

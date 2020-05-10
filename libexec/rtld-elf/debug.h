@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/debug.h 287331 2015-08-31 19:20:18Z emaste $
+ * $FreeBSD: stable/11/libexec/rtld-elf/debug.h 346485 2019-04-21 09:13:56Z kib $
  */
 
 /*
@@ -38,10 +37,10 @@
 #include <string.h>
 #include <unistd.h>
 
-extern void debug_printf(const char *, ...) __printflike(1, 2);
+void debug_printf(const char *, ...) __printflike(1, 2);
 extern int debug;
 
-#ifdef DEBUG
+#ifndef NO_LD_DEBUG
 #define dbg(...)	debug_printf(__VA_ARGS__)
 #else
 #define dbg(...)	((void) 0)

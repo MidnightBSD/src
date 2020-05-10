@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2011 Konstantin Belousov <kib@FreeBSD.org>.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/rtld_printf.h 225152 2011-08-24 20:05:13Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/rtld_printf.h 267678 2014-06-20 17:08:32Z jonathan $
  */
 
 #ifndef RTLD_PRINTF_H
@@ -32,6 +31,8 @@
 #include <sys/cdefs.h>
 #include <unistd.h>
 
+int rtld_snprintf(char *buf, size_t bufsize, const char *fmt, ...)
+    __printflike(3, 4);
 int rtld_vsnprintf(char *buf, size_t bufsize, const char *fmt, va_list ap);
 int rtld_vfdprintf(int fd, const char *fmt, va_list ap);
 int rtld_fdprintf(int fd, const char *fmt, ...) __printflike(2, 3);

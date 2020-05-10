@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996, 1997, 1998, 1999 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/i386/reloc.c 331206 2018-03-19 14:28:58Z marius $
+ * $FreeBSD: stable/11/libexec/rtld-elf/i386/reloc.c 331205 2018-03-19 14:28:20Z marius $
  */
 
 /*
@@ -343,6 +342,20 @@ reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
 
     obj->jmpslots_done = true;
     return 0;
+}
+
+/* Fixup the jump slot at "where" to transfer control to "target". */
+Elf_Addr
+reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
+    const struct Struct_Obj_Entry *obj, const struct Struct_Obj_Entry *refobj,
+    const Elf_Rel *rel)
+{
+#ifdef dbg
+	dbg("reloc_jmpslot: *%p = %p", where, (void *)target);
+#endif
+	if (!ld_bind_not)
+		*where = target;
+	return (target);
 }
 
 int

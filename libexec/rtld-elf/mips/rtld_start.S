@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rtld_start.S,v 1.10 2009/12/14 00:41:19 matt Exp $	*/
 
 /*
@@ -28,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/mips/rtld_start.S 233378 2012-03-23 17:54:06Z gonzo $
+ * $FreeBSD: stable/11/libexec/rtld-elf/mips/rtld_start.S 233378 2012-03-23 17:54:06Z gonzo $
  */
 
 #include <machine/asm.h>

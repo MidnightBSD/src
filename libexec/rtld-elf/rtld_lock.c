@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/libexec/rtld-elf/sparc64/lockdflt.c,v 1.3 2002/10/09
- * $FreeBSD: stable/10/libexec/rtld-elf/rtld_lock.c 312701 2017-01-24 17:30:13Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/rtld_lock.c 312693 2017-01-24 11:13:41Z kib $
  */
 
 /*

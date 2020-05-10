@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1986, 1988, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/rtld_printf.c 232729 2012-03-09 16:21:40Z kib $
+ * $FreeBSD: stable/11/libexec/rtld-elf/rtld_printf.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -427,6 +426,18 @@ number:
 		}
 	}
 #undef PCHAR
+}
+
+int
+rtld_snprintf(char *buf, size_t bufsize, const char *fmt, ...)
+{
+	va_list ap;
+	int retval;
+
+	va_start(ap, fmt);
+	retval = rtld_vsnprintf(buf, bufsize, fmt, ap);
+	va_end(ap);
+	return (retval);
 }
 
 int

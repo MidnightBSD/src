@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1996, 1997, 1998, 1999 John D. Polstra.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/libexec/rtld-elf/amd64/reloc.c 331206 2018-03-19 14:28:58Z marius $
+ * $FreeBSD: stable/11/libexec/rtld-elf/amd64/reloc.c 340937 2018-11-26 10:53:17Z kib $
  */
 
 /*
@@ -34,8 +33,9 @@
 
 #include <sys/param.h>
 #include <sys/mman.h>
-#include <machine/sysarch.h>
 #include <machine/cpufunc.h>
+#include <machine/specialreg.h>
+#include <machine/sysarch.h>
 
 #include <dlfcn.h>
 #include <err.h>
@@ -136,6 +136,9 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 	int r;
 
 	r = -1;
+	symval = 0;
+	def = NULL;
+
 	/*
 	 * The dynamic loader may be called from a thread, we have
 	 * limited amounts of stack available so we cannot use alloca().
@@ -231,8 +234,8 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 			/*
 			 * These are deferred until all other relocations have
 			 * been done.  All we do here is make sure that the COPY
-			 * relocation is not in a shared library.  They are allowed
-			 * only in executable files.
+			 * relocation is not in a shared library.  They are
+			 * allowed only in executable files.
 			 */
 			if (!obj->mainprog) {
 				_rtld_error("%s: Unexpected R_X86_64_COPY "
@@ -388,6 +391,20 @@ reloc_jmpslots(Obj_Entry *obj, int flags, RtldLockState *lockstate)
     return 0;
 }
 
+/* Fixup the jump slot at "where" to transfer control to "target". */
+Elf_Addr
+reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
+    const struct Struct_Obj_Entry *obj, const struct Struct_Obj_Entry *refobj,
+    const Elf_Rel *rel)
+{
+#ifdef dbg
+	dbg("reloc_jmpslot: *%p = %p", where, (void *)target);
+#endif
+	if (!ld_bind_not)
+		*where = target;
+	return (target);
+}
+
 int
 reloc_iresolve(Obj_Entry *obj, RtldLockState *lockstate)
 {
@@ -477,17 +494,26 @@ pre_init(void)
 
 }
 
+int __getosreldate(void);
+
 void
 allocate_initial_tls(Obj_Entry *objs)
 {
-    /*
-     * Fix the size of the static TLS block by using the maximum
-     * offset allocated so far and adding a bit for dynamic modules to
-     * use.
-     */
-    tls_static_space = tls_last_offset + RTLD_STATIC_TLS_EXTRA;
-    amd64_set_fsbase(allocate_tls(objs, 0,
-				  3*sizeof(Elf_Addr), sizeof(Elf_Addr)));
+	void *addr;
+
+	/*
+	 * Fix the size of the static TLS block by using the maximum
+	 * offset allocated so far and adding a bit for dynamic
+	 * modules to use.
+	 */
+	tls_static_space = tls_last_offset + RTLD_STATIC_TLS_EXTRA;
+
+	addr = allocate_tls(objs, 0, 3 * sizeof(Elf_Addr), sizeof(Elf_Addr));
+	if (__getosreldate() >= P_OSREL_WRFSBASE &&
+	    (cpu_stdext_feature & CPUID_STDEXT_FSGSBASE) != 0)
+		wrfsbase((uintptr_t)addr);
+	else
+		sysarch(AMD64_SET_FSBASE, &addr);
 }
 
 void *__tls_get_addr(tls_index *ti)
