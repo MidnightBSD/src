@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003 Poul-Henning Kamp
  * Copyright (c) 1995 Jason R. Thorpe.
  * All rights reserved.
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/ccdconfig/ccdconfig.c 241848 2012-10-22 03:07:05Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sbin/ccdconfig/ccdconfig.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/linker.h>

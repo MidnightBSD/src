@@ -2,7 +2,6 @@
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/bectl/bectl.c 353784 2019-10-20 22:05:57Z kevans $");
+__FBSDID("$FreeBSD: stable/11/sbin/bectl/bectl.c 357667 2020-02-07 21:57:27Z kevans $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

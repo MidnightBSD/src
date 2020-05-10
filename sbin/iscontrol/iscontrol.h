@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/iscontrol/iscontrol.h 211095 2010-08-09 12:36:36Z des $
+ * $FreeBSD: stable/11/sbin/iscontrol/iscontrol.h 359754 2020-04-09 20:38:36Z kevans $
  */
 /*
  | $Id: iscontrol.h,v 2.3 2007/04/27 08:36:49 danny Exp danny $
@@ -148,8 +149,8 @@ int	recvpdu(isess_t *sess, pdu_t *pp);
 
 int	lookup(token_t *tbl, char *m);
 
-int	vflag;
-char	*iscsidev;
+extern int	vflag;
+extern char	*iscsidev;
 
 void	parseArgs(int nargs, char **args, isc_opt_t *op);
 void	parseConfig(FILE *fd, char *key, isc_opt_t *op);

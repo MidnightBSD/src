@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: fsirand.c,v 1.9 1997/02/28 00:46:33 millert Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
  * All rights reserved.
  *
@@ -33,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/fsirand/fsirand.c 322860 2017-08-24 21:44:23Z mckusick $";
+  "$FreeBSD: stable/11/sbin/fsirand/fsirand.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

@@ -1,11 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/iscontrol/Makefile 277173 2015-01-14 11:29:16Z trasz $
+# $FreeBSD: stable/11/sbin/iscontrol/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
+PACKAGE=iscsi_legacy
 SRCS= iscontrol.c pdu.c fsm.c config.c login.c auth_subr.c misc.c
 PROG= iscontrol
-DPADD= ${LIBCAM} ${LIBMD}
-LDADD= -lcam -lmd
-S= ${.CURDIR}/../../sys
+LIBADD=	cam md
+S= ${SRCTOP}/sys
 
 WARNS?=	3
 CFLAGS+=	-I$S

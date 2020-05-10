@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -33,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/iscontrol/iscontrol.c 254657 2013-08-22 14:02:34Z trasz $");
+__FBSDID("$FreeBSD: stable/11/sbin/iscontrol/iscontrol.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -80,6 +81,9 @@ token_t	DigestMethods[] = {
      {"CRC32C",	1},
      {0, 0}
 };
+
+int	vflag;
+char	*iscsidev;
 
 u_char	isid[6 + 6];
 /*
