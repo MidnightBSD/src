@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/libexec/tcpd/Makefile 321267 2017-07-20 00:52:11Z ngie $
+# $FreeBSD: stable/11/libexec/tcpd/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/contrib/tcp_wrappers
 
@@ -16,8 +15,7 @@ CFLAGS+=-DREAL_DAEMON_DIR=\"${LIBEXECDIR}\" \
 CFLAGS+=-DINET6
 .endif
 
-DPADD=	${LIBWRAP}
-LDADD=	-lwrap
+LIBADD=	wrap
 
 WARNS?=	1
 
