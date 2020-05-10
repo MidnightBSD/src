@@ -1,17 +1,23 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/10/libexec/rlogind/Makefile 160742 2006-07-27 12:05:05Z yar $
+# $FreeBSD: stable/11/libexec/rlogind/Makefile 301417 2016-06-05 01:42:58Z lidl $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=rcmds
 PROG=	rlogind
 MAN=	rlogind.8
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+PACKAGE=rcmds
+LIBADD=	util
 WARNS?=	2
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6
+.endif
+
+.if ${MK_BLACKLIST_SUPPORT} != "no"
+CFLAGS+= -DUSE_BLACKLIST -I${SRCTOP}/contrib/blacklist/include
+LIBADD+= blacklist
+LDFLAGS+=-L${LIBBLACKLISTDIR}
 .endif
 
 .include <bsd.prog.mk>
