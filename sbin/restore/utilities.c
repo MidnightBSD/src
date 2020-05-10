@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)utilities.c	8.5 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/restore/utilities.c 236213 2012-05-29 01:48:06Z kevlo $";
+  "$FreeBSD: stable/11/sbin/restore/utilities.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -63,7 +62,7 @@ pathcheck(char *name)
 	char *start;
 
 	start = strchr(name, '/');
-	if (start == 0)
+	if (start == NULL)
 		return;
 	for (cp = start; *cp != '\0'; cp++) {
 		if (*cp != '/')

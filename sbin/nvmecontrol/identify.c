@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/nvmecontrol/identify.c 253476 2013-07-19 21:40:57Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/identify.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 
@@ -45,6 +46,7 @@ static void
 print_controller(struct nvme_controller_data *cdata)
 {
 	uint8_t str[128];
+	char cbuf[UINT128_DIG + 1];
 
 	printf("Controller Capabilities/Features\n");
 	printf("================================\n");
@@ -66,6 +68,7 @@ print_controller(struct nvme_controller_data *cdata)
 		printf("Unlimited\n");
 	else
 		printf("%d\n", PAGE_SIZE * (1 << cdata->mdts));
+	printf("Controller ID:              0x%02x\n", cdata->ctrlr_id);
 	printf("\n");
 
 	printf("Admin Command Set Attributes\n");
@@ -76,6 +79,8 @@ print_controller(struct nvme_controller_data *cdata)
 		cdata->oacs.format ? "Supported" : "Not Supported");
 	printf("Firmware Activate/Download:  %s\n",
 		cdata->oacs.firmware ? "Supported" : "Not Supported");
+	printf("Namespace Managment:         %s\n",
+		   cdata->oacs.nsmgmt ? "Supported" : "Not Supported");
 	printf("Abort Command Limit:         %d\n", cdata->acl+1);
 	printf("Async Event Request Limit:   %d\n", cdata->aerl+1);
 	printf("Number of Firmware Slots:    ");
@@ -92,8 +97,8 @@ print_controller(struct nvme_controller_data *cdata)
 		cdata->lpa.ns_smart ? "Yes" : "No");
 	printf("Error Log Page Entries:      %d\n", cdata->elpe+1);
 	printf("Number of Power States:      %d\n", cdata->npss+1);
-	printf("\n");
 
+	printf("\n");
 	printf("NVM Command Set Attributes\n");
 	printf("==========================\n");
 	printf("Submission Queue Entry Size\n");
@@ -111,6 +116,16 @@ print_controller(struct nvme_controller_data *cdata)
 		cdata->oncs.dsm ? "Supported" : "Not Supported");
 	printf("Volatile Write Cache:        %s\n",
 		cdata->vwc.present ? "Present" : "Not Present");
+
+	if (cdata->oacs.nsmgmt) {
+		printf("\n");
+		printf("Namespace Drive Attributes\n");
+		printf("==========================\n");
+		printf("NVM total cap:               %s\n",
+			   uint128_to_str(to128(cdata->untncap.tnvmcap), cbuf, sizeof(cbuf)));
+		printf("NVM unallocated cap:         %s\n",
+			   uint128_to_str(to128(cdata->untncap.unvmcap), cbuf, sizeof(cbuf)));
+	}
 }
 
 static void

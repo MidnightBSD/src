@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)symtab.c	8.3 (Berkeley) 4/28/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/restore/symtab.c 299148 2016-05-06 01:37:06Z pfg $";
+  "$FreeBSD: stable/11/sbin/restore/symtab.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 /*
@@ -373,7 +372,7 @@ struct strhdr {
 };
 
 #define STRTBLINCR	(sizeof(struct strhdr))
-#define allocsize(size)	(((size) + 1 + STRTBLINCR - 1) & ~(STRTBLINCR - 1))
+#define	allocsize(size)	roundup2((size) + 1, STRTBLINCR)
 
 static struct strhdr strtblhdr[allocsize(NAME_MAX) / STRTBLINCR];
 
@@ -385,7 +384,7 @@ char *
 savename(char *name)
 {
 	struct strhdr *np;
-	long len;
+	size_t len;
 	char *cp;
 
 	if (name == NULL)
@@ -396,7 +395,7 @@ savename(char *name)
 		strtblhdr[len / STRTBLINCR].next = np->next;
 		cp = (char *)np;
 	} else {
-		cp = malloc((unsigned)allocsize(len));
+		cp = malloc(allocsize(len));
 		if (cp == NULL)
 			panic("no space for string table\n");
 	}
@@ -536,9 +535,8 @@ initsymtable(char *filename)
 	vprintf(stdout, "Initialize symbol table.\n");
 	if (filename == NULL) {
 		entrytblsize = maxino / HASHFACTOR;
-		entry = (struct entry **)
-			calloc((unsigned)entrytblsize, sizeof(struct entry *));
-		if (entry == (struct entry **)NULL)
+		entry = calloc((unsigned)entrytblsize, sizeof(struct entry *));
+		if (entry == NULL)
 			panic("no memory for entry table\n");
 		ep = addentry(".", ROOTINO, NODE);
 		ep->e_flags |= NEW;

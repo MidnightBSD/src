@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/growfs/tests/legacy_test.pl 324690 2017-10-17 15:49:36Z ngie $
+# $FreeBSD: stable/11/sbin/growfs/tests/legacy_test.pl 324691 2017-10-17 15:52:02Z ngie $
 
 use strict;
 use warnings;

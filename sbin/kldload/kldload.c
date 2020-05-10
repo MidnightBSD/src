@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/kldload/kldload.c 313682 2017-02-12 09:27:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/sbin/kldload/kldload.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -70,7 +71,7 @@ path_check(const char *kldname, int quiet)
 	dev = sb.st_dev;
 	ino = sb.st_ino;
 
-	miblen = sizeof(mib) / sizeof(mib[0]);
+	miblen = nitems(mib);
 	if (sysctlnametomib(PATHCTL, mib, &miblen) != 0)
 		err(1, "sysctlnametomib(%s)", PATHCTL);
 	if (sysctl(mib, miblen, NULL, &pathlen, NULL, 0) == -1)

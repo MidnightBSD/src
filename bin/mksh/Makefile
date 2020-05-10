@@ -3,7 +3,7 @@
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
 
-PACKAGE=	mksh
+PACKAGE=	runtime
 PROG=	mksh
 
 SRCS=	lalloc.c eval.c exec.c expr.c funcs.c histrap.c jobs.c lex.c \

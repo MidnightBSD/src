@@ -28,7 +28,7 @@
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sbin/routed/radix.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __RADIX_H_

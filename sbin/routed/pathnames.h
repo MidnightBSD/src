@@ -28,7 +28,7 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/sbin/routed/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <paths.h>

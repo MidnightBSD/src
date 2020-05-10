@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)route.8	8.3 (Berkeley) 3/19/94
-.\" $FreeBSD: stable/10/sbin/route/route.8 322652 2017-08-18 11:22:49Z kib $
+.\" $FreeBSD: stable/11/sbin/route/route.8 344040 2019-02-12 03:13:10Z ngie $
 .\"
-.Dd May 8, 2014
+.Dd January 9, 2019
 .Dt ROUTE 8
 .Os
 .Sh NAME
@@ -145,7 +144,6 @@ will ``flush'' the routing tables of all gateway entries.
 When the address family may is specified by any of the
 .Fl osi ,
 .Fl xns ,
-.Fl atalk ,
 .Fl inet6 ,
 or
 .Fl inet
@@ -256,14 +254,12 @@ if the local or remote addresses change.
 The optional modifiers
 .Fl xns ,
 .Fl osi ,
-.Fl atalk ,
 and
 .Fl link
 specify that all subsequent addresses are in the
-.Tn XNS ,
-.Tn OSI ,
+.Tn XNS
 or
-.Tn AppleTalk
+.Tn OSI
 address families,
 or are specified as link-level addresses,
 and the names must be numeric specifications rather than
@@ -294,14 +290,14 @@ is available instead of the
 qualifier because non-continuous masks are not allowed in IPv6.
 For example,
 .Fl prefixlen Li 32
-specifies network mask of
+specifies that a network mask of
 .Li ffff:ffff:0000:0000:0000:0000:0000:0000
-to be used.
-The default value of prefixlen is 64 to get along with
-the aggregatable address.
-But 0 is assumed if
+will be used.
+The default prefixlen is 64.
+However, it is assumed to be 0 if
 .Cm default
-is specified.
+is specified for
+.Ar destination .
 Note that the qualifier works only for
 .Dv AF_INET6
 address family.
@@ -319,7 +315,6 @@ by indicating the following corresponding modifiers:
 -blackhole RTF_BLACKHOLE  - silently discard pkts (during updates)
 -proto1    RTF_PROTO1     - set protocol specific routing flag #1
 -proto2    RTF_PROTO2     - set protocol specific routing flag #2
--proto3    RTF_PROTO3     - set protocol specific routing flag #3
 .Ed
 .Pp
 The optional modifiers
@@ -488,7 +483,6 @@ The next-hop gateway should be reachable through a different route.
 .Xr netintro 4 ,
 .Xr route 4 ,
 .Xr arp 8 ,
-.Xr IPXrouted 8 ,
 .Xr routed 8
 .\".Xr XNSrouted 8
 .Sh HISTORY

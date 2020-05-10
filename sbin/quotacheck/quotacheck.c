@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)quotacheck.c	8.3 (Berkeley) 1/29/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/quotacheck/quotacheck.c 241013 2012-09-27 23:31:06Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sbin/quotacheck/quotacheck.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Fix up / report on disk quotas & usage
@@ -544,7 +543,7 @@ lookup(u_long id, int type)
 {
 	struct fileusage *fup;
 
-	for (fup = fuhead[type][id & (FUHASH-1)]; fup != 0; fup = fup->fu_next)
+	for (fup = fuhead[type][id & (FUHASH-1)]; fup != NULL; fup = fup->fu_next)
 		if (fup->fu_id == id)
 			return (fup);
 	return (NULL);

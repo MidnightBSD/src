@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000 Christoph Herrmann, Thomas-Henning von Kamptz
  * Copyright (c) 1980, 1989, 1993 The Regents of the University of California.
@@ -42,7 +41,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/sbin/growfs/debug.c 259223 2013-12-11 19:25:17Z pfg $";
+  "$FreeBSD: stable/11/sbin/growfs/debug.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -519,7 +518,8 @@ dbg_dump_frmap(struct fs *sb, const char *comment, struct cg *cgr)
 
 	cp = (unsigned char *)cg_blksfree(cgr);
 	if (sb->fs_old_nspf)
-		e = howmany((sb->fs_old_cpg * sb->fs_old_spc / sb->fs_old_nspf), CHAR_BIT);
+		e = howmany(sb->fs_old_cpg * sb->fs_old_spc / sb->fs_old_nspf,
+		    CHAR_BIT);
 	else
 		e = 0;
 	for (j = 0; j < e; j += 32) {

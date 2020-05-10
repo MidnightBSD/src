@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 1/7/94
- * $FreeBSD: stable/10/sbin/restore/extern.h 299954 2016-05-16 16:29:56Z pfg $
+ * $FreeBSD: stable/11/sbin/restore/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct entry	*addentry(char *, ino_t, int);

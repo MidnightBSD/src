@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)interactive.c	8.5 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/restore/interactive.c 241013 2012-09-27 23:31:06Z mdf $");
+__FBSDID("$FreeBSD: stable/11/sbin/restore/interactive.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -55,8 +54,6 @@ __FBSDID("$FreeBSD: stable/10/sbin/restore/interactive.c 241013 2012-09-27 23:31
 
 #include "restore.h"
 #include "extern.h"
-
-#define round(a, b) (((a) + (b) - 1) / (b) * (b))
 
 /*
  * Things to handle interruptions.
@@ -672,7 +669,7 @@ formatf(struct afile *list, int nentry)
 	columns = 81 / width;
 	if (columns == 0)
 		columns = 1;
-	lines = (nentry + columns - 1) / columns;
+	lines = howmany(nentry, columns);
 	for (i = 0; i < lines; i++) {
 		for (j = 0; j < columns; j++) {
 			fp = &list[j * lines + i];

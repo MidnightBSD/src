@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
-# $FreeBSD: stable/10/sbin/Makefile 324139 2017-09-30 20:44:25Z ngie $
+# $FreeBSD: stable/11/sbin/Makefile 346429 2019-04-20 04:16:51Z kevans $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # XXX MISSING:		icheck ncheck
 
@@ -69,66 +68,29 @@ SUBDIR=adjkerntz \
 	swapon \
 	sysctl \
 	tunefs \
-	umount \
+	umount
 
-.if ${MK_ATM} != "no"
-SUBDIR+=	atm
-.endif
+SUBDIR.${MK_ATM}+=	atm
+SUBDIR.${MK_CCD}+=	ccdconfig
+SUBDIR.${MK_CXX}+=	devd
+SUBDIR.${MK_HAST}+=	hastctl
+SUBDIR.${MK_HAST}+=	hastd
+SUBDIR.${MK_INET6}+=	ping6
+SUBDIR.${MK_INET6}+=	rtsol
+SUBDIR.${MK_IPFILTER}+=	ipf
+SUBDIR.${MK_IPFW}+=	ipfw
+SUBDIR.${MK_IPFW}+=	natd
+SUBDIR.${MK_ISCSI}+=	iscontrol
+SUBDIR.${MK_NAND}+=	nandfs
+SUBDIR.${MK_NAND}+=	newfs_nandfs
+SUBDIR.${MK_PF}+=	pfctl
+SUBDIR.${MK_PF}+=	pflogd
+SUBDIR.${MK_QUOTAS}+=	quotacheck
+SUBDIR.${MK_ROUTED}+=	routed
+SUBDIR.${MK_ZFS}+=	bectl
 SUBDIR.${MK_ZFS}+=	zfsbootcfg
 
-.if ${MK_CCD} != "no"
-SUBDIR+=	ccdconfig
-.endif
-
-.if ${MK_CXX} != "no"
-SUBDIR+=	devd
-.endif
-
-.if ${MK_HAST} != "no"
-SUBDIR+=	hastctl
-SUBDIR+=	hastd
-.endif
-
-.if ${MK_INET6} != "no"
-SUBDIR+=	dhcp6c
-SUBDIR+=	ping6
-SUBDIR+=	rtsol
-.endif
-	
-.if ${MK_IPFILTER} != "no"
-SUBDIR+=	ipf
-.endif
-
-.if ${MK_IPFW} != "no"
-SUBDIR+=	ipfw
-SUBDIR+=	natd
-.endif
-
-.if ${MK_ISCSI} != "no"
-SUBDIR+=	iscontrol
-.endif
-
-.if ${MK_NAND} != "no"
-SUBDIR+=	nandfs
-SUBDIR+=	newfs_nandfs
-.endif
-
-.if ${MK_PF} != "no"
-SUBDIR+=	pfctl
-SUBDIR+=	pflogd
-.endif
-
-.if ${MK_QUOTAS} != "no"
-SUBDIR+=	quotacheck
-.endif
-
-.if ${MK_ROUTED} != "no"
-SUBDIR+=	routed
-.endif
-
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.arch.inc.mk>
 

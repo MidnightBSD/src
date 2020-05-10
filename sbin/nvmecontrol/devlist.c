@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/nvmecontrol/devlist.c 265568 2014-05-07 16:53:42Z jimharris $");
+__FBSDID("$FreeBSD: stable/11/sbin/nvmecontrol/devlist.c 350960 2019-08-12 20:34:56Z mav $");
 
 #include <sys/param.h>
 
@@ -49,6 +50,8 @@ devlist_usage(void)
 	fprintf(stderr, DEVLIST_USAGE);
 	exit(1);
 }
+
+#define NVME_MAX_UNIT 256
 
 static inline uint32_t
 ns_get_sector_size(struct nvme_namespace_data *nsdata)
@@ -77,19 +80,17 @@ devlist(int argc, char *argv[])
 	ctrlr = -1;
 	found = 0;
 
-	while (1) {
+	while (ctrlr < NVME_MAX_UNIT) {
 		ctrlr++;
 		sprintf(name, "%s%d", NVME_CTRLR_PREFIX, ctrlr);
 
 		ret = open_dev(name, &fd, 0, 0);
 
-		if (ret != 0) {
-			if (ret == EACCES) {
-				warnx("could not open "_PATH_DEV"%s\n", name);
-				continue;
-			} else
-				break;
-		}
+		if (ret == EACCES) {
+			warnx("could not open "_PATH_DEV"%s\n", name);
+			continue;
+		} else if (ret != 0)
+			continue;
 
 		found++;
 		read_controller_data(fd, &cdata);
