@@ -1,9 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/hastctl/Makefile 250503 2013-05-11 09:51:44Z trociny $
+# $FreeBSD: stable/11/sbin/hastctl/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH:	${.CURDIR}/../hastd
+PACKAGE=hast
+.PATH:	${.CURDIR:H}/hastd
 
 PROG=	hastctl
 SRCS=	activemap.c
@@ -23,7 +23,7 @@ MAN=	hastctl.8
 NO_WFORMAT=
 NO_WCAST_ALIGN=
 NO_WMISSING_VARIABLE_DECLARATIONS=
-CFLAGS+=-I${.CURDIR}/../hastd
+CFLAGS+=-I${.CURDIR:H}/hastd
 CFLAGS+=-DHAVE_CAPSICUM
 CFLAGS+=-DINET
 .if ${MK_INET6_SUPPORT} != "no"
@@ -33,11 +33,9 @@ CFLAGS+=-DINET6
 CFLAGS+=-DYY_NO_UNPUT
 CFLAGS+=-DYY_NO_INPUT
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 .if ${MK_OPENSSL} != "no"
-DPADD+=	${LIBCRYPTO}
-LDADD+=	-lcrypto
+LIBADD+=	crypto
 CFLAGS+=-DHAVE_CRYPTO
 .endif
 

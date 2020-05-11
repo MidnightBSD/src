@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/mdmfs/Makefile 198236 2009-10-19 16:00:24Z ru $
+# $FreeBSD: stable/11/sbin/mdmfs/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=		mdmfs
 LINKS=		${BINDIR}/${PROG} ${BINDIR}/mount_mfs
 MAN=		mdmfs.8

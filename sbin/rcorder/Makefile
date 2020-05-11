@@ -1,15 +1,15 @@
 #       $NetBSD: Makefile,v 1.1 1999/11/23 05:28:20 mrg Exp $
-# $FreeBSD: src/sbin/rcorder/Makefile,v 1.5.8.1 2006/01/26 01:30:12 dougb Exp $
+# $FreeBSD: stable/11/sbin/rcorder/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=runtime
 PROG=   rcorder
 SRCS=   hash.c rcorder.c
 MAN=	rcorder.8
 
-LDADD=	-lutil
-DPADD=	${LIBUTIL}
+LIBADD=	util
 
-WARNS?=	6
-# XXX hack for make's hash.[ch]
-CFLAGS+= -DORDER  -I. -std=c99
+CFLAGS+= -DORDER
+
+#CFLAGS+= -DDEBUG
 
 .include <bsd.prog.mk>
