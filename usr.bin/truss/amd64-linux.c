@@ -30,9 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/amd64-linux.c 331722 2018-03-29 02:50:57Z eadler $");
 
-/* Linux/i386-specific system call handling. */
+/* Linux/x86_64-specific system call handling. */
 
 #include <sys/ptrace.h>
 
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50
 #include "truss.h"
 
 static int
-i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
+amd64_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
 {
 	struct reg regs;
 	struct current_syscall *cs;
@@ -59,33 +59,26 @@ i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
 		return (-1);
 	}
 
-	/*
-	 * Linux passes syscall arguments in registers, not
-	 * on the stack.  Fortunately, we've got access to the
-	 * register set.  Note that we don't bother checking the
-	 * number of arguments.	And what does linux do for syscalls
-	 * that have more than five arguments?
-	 */
 	switch (narg) {
 	default:
-		cs->args[5] = regs.r_ebp;	/* Unconfirmed */
+		cs->args[5] = regs.r_r9;
 	case 5:
-		cs->args[4] = regs.r_edi;
+		cs->args[4] = regs.r_r8;
 	case 4:
-		cs->args[3] = regs.r_esi;
+		cs->args[3] = regs.r_rcx;
 	case 3:
-		cs->args[2] = regs.r_edx;
+		cs->args[2] = regs.r_rdx;
 	case 2:
-		cs->args[1] = regs.r_ecx;
+		cs->args[1] = regs.r_rsi;
 	case 1:
-		cs->args[0] = regs.r_ebx;
+		cs->args[0] = regs.r_rdi;
 	}
 
 	return (0);
 }
 
 static int
-i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
+amd64_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 {
 	struct reg regs;
 	lwpid_t tid;
@@ -96,19 +89,19 @@ i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 		return (-1);
 	}
 
-	retval[0] = regs.r_eax;
-	retval[1] = regs.r_edx;
-	*errorp = !!(regs.r_eflags & PSL_C);
+	retval[0] = regs.r_rax;
+	retval[1] = regs.r_rdx;
+	*errorp = !!(regs.r_rflags & PSL_C);
 	return (0);
 }
 
-static struct procabi i386_linux = {
-	"Linux ELF",
+static struct procabi amd64_linux = {
+	"Linux ELF64",
 	SYSDECODE_ABI_LINUX,
-	i386_linux_fetch_args,
-	i386_linux_fetch_retval,
-	STAILQ_HEAD_INITIALIZER(i386_linux.extra_syscalls),
+	amd64_linux_fetch_args,
+	amd64_linux_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(amd64_linux.extra_syscalls),
 	{ NULL }
 };
 
-PROCABI(i386_linux);
+PROCABI(amd64_linux);

@@ -1,5 +1,5 @@
 /*
- * Copyright 1997 Sean Eric Fagan
+ * Copyright 1998 Sean Eric Fagan
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/mips-freebsd.c 351798 2019-09-03 21:11:04Z kevans $");
 
-/* Linux/i386-specific system call handling. */
+/* FreeBSD/mips-specific system call handling. */
 
+#define	_WANT_MIPS_REGNUM
 #include <sys/ptrace.h>
+#include <sys/syscall.h>
 
+#include <machine/frame.h>
 #include <machine/reg.h>
-#include <machine/psl.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -46,11 +48,13 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50
 #include "truss.h"
 
 static int
-i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
+mips_fetch_args(struct trussinfo *trussinfo, u_int narg)
 {
+	struct ptrace_io_desc iorequest;
 	struct reg regs;
 	struct current_syscall *cs;
 	lwpid_t tid;
+	u_int i, reg;
 
 	tid = trussinfo->curthread->tid;
 	cs = &trussinfo->curthread->cs;
@@ -60,32 +64,51 @@ i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
 	}
 
 	/*
-	 * Linux passes syscall arguments in registers, not
-	 * on the stack.  Fortunately, we've got access to the
-	 * register set.  Note that we don't bother checking the
-	 * number of arguments.	And what does linux do for syscalls
-	 * that have more than five arguments?
+	 * FreeBSD has two special kinds of system call redirections --
+	 * SYS_syscall, and SYS___syscall.  The former is the old syscall()
+	 * routine, basically; the latter is for quad-aligned arguments.
+	 *
+	 * The system call argument count and code from ptrace() already
+	 * account for these, but we need to skip over the first argument.
 	 */
-	switch (narg) {
-	default:
-		cs->args[5] = regs.r_ebp;	/* Unconfirmed */
-	case 5:
-		cs->args[4] = regs.r_edi;
-	case 4:
-		cs->args[3] = regs.r_esi;
-	case 3:
-		cs->args[2] = regs.r_edx;
-	case 2:
-		cs->args[1] = regs.r_ecx;
-	case 1:
-		cs->args[0] = regs.r_ebx;
+	reg = A0;
+	switch (regs.r_regs[V0]) {
+	case SYS_syscall:
+		reg = A1;
+		break;
+	case SYS___syscall:
+#if defined(__mips_n32) || defined(__mips_n64)
+		reg = A1;
+#else
+		reg = A2;
+#endif
+		break;
+	}
+
+#if defined(__mips_n32) || defined(__mips_n64)
+#define	MAXREG		A7
+#else
+#define	MAXREG		A3
+#endif
+
+	for (i = 0; i < narg && reg <= MAXREG; i++, reg++)
+		cs->args[i] = regs.r_regs[reg];
+	if (narg > i) {
+		iorequest.piod_op = PIOD_READ_D;
+		iorequest.piod_offs = (void *)((uintptr_t)regs.r_regs[SP] +
+		    4 * sizeof(cs->args[0]));
+		iorequest.piod_addr = &cs->args[i];
+		iorequest.piod_len = (narg - i) * sizeof(cs->args[0]);
+		ptrace(PT_IO, tid, (caddr_t)&iorequest, 0);
+		if (iorequest.piod_len == 0)
+			return (-1);
 	}
 
 	return (0);
 }
 
 static int
-i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
+mips_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 {
 	struct reg regs;
 	lwpid_t tid;
@@ -96,19 +119,25 @@ i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 		return (-1);
 	}
 
-	retval[0] = regs.r_eax;
-	retval[1] = regs.r_edx;
-	*errorp = !!(regs.r_eflags & PSL_C);
+	/* XXX: Does not have special handling for __syscall(). */
+	retval[0] = regs.r_regs[V0];
+	retval[1] = regs.r_regs[V1];
+	*errorp = !!regs.r_regs[A3];
 	return (0);
 }
 
-static struct procabi i386_linux = {
-	"Linux ELF",
-	SYSDECODE_ABI_LINUX,
-	i386_linux_fetch_args,
-	i386_linux_fetch_retval,
-	STAILQ_HEAD_INITIALIZER(i386_linux.extra_syscalls),
+
+static struct procabi mips_freebsd = {
+#ifdef __mips_n64
+	"FreeBSD ELF64",
+#else
+	"FreeBSD ELF32",
+#endif
+	SYSDECODE_ABI_FREEBSD,
+	mips_fetch_args,
+	mips_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(mips_freebsd.extra_syscalls),
 	{ NULL }
 };
 
-PROCABI(i386_linux);
+PROCABI(mips_freebsd);

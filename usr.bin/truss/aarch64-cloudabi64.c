@@ -1,5 +1,5 @@
-/*
- * Copyright 1997 Sean Eric Fagan
+/*-
+ * Copyright (c) 2015 Nuxi, https://nuxi.nl/
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -9,12 +9,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by Sean Eric Fagan
- * 4. Neither the name of the author may be used to endorse or promote
- *    products derived from this software without specific prior written
- *    permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,14 +24,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/aarch64-cloudabi64.c 312084 2017-01-13 21:30:18Z jhb $");
 
-/* Linux/i386-specific system call handling. */
-
+#include <sys/param.h>
 #include <sys/ptrace.h>
 
-#include <machine/reg.h>
-#include <machine/psl.h>
+#include <machine/armreg.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -46,69 +38,51 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50
 #include "truss.h"
 
 static int
-i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
+aarch64_cloudabi64_fetch_args(struct trussinfo *trussinfo, unsigned int narg)
 {
-	struct reg regs;
 	struct current_syscall *cs;
+	struct reg regs;
 	lwpid_t tid;
+	unsigned int i;
 
 	tid = trussinfo->curthread->tid;
-	cs = &trussinfo->curthread->cs;
-	if (ptrace(PT_GETREGS, tid, (caddr_t)&regs, 0) < 0) {
+	if (ptrace(PT_GETREGS, tid, (caddr_t)&regs, 0) == -1) {
 		fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
 		return (-1);
 	}
 
-	/*
-	 * Linux passes syscall arguments in registers, not
-	 * on the stack.  Fortunately, we've got access to the
-	 * register set.  Note that we don't bother checking the
-	 * number of arguments.	And what does linux do for syscalls
-	 * that have more than five arguments?
-	 */
-	switch (narg) {
-	default:
-		cs->args[5] = regs.r_ebp;	/* Unconfirmed */
-	case 5:
-		cs->args[4] = regs.r_edi;
-	case 4:
-		cs->args[3] = regs.r_esi;
-	case 3:
-		cs->args[2] = regs.r_edx;
-	case 2:
-		cs->args[1] = regs.r_ecx;
-	case 1:
-		cs->args[0] = regs.r_ebx;
-	}
-
+	cs = &trussinfo->curthread->cs;
+	for (i = 0; i < narg && i < 8; i++)
+		cs->args[i] = regs.x[i];
 	return (0);
 }
 
 static int
-i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
+aarch64_cloudabi64_fetch_retval(struct trussinfo *trussinfo, long *retval,
+    int *errorp)
 {
 	struct reg regs;
 	lwpid_t tid;
 
 	tid = trussinfo->curthread->tid;
-	if (ptrace(PT_GETREGS, tid, (caddr_t)&regs, 0) < 0) {
+	if (ptrace(PT_GETREGS, tid, (caddr_t)&regs, 0) == -1) {
 		fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
 		return (-1);
 	}
 
-	retval[0] = regs.r_eax;
-	retval[1] = regs.r_edx;
-	*errorp = !!(regs.r_eflags & PSL_C);
+	retval[0] = regs.x[0];
+	retval[1] = regs.x[1];
+	*errorp = (regs.spsr & PSR_C) != 0;
 	return (0);
 }
 
-static struct procabi i386_linux = {
-	"Linux ELF",
-	SYSDECODE_ABI_LINUX,
-	i386_linux_fetch_args,
-	i386_linux_fetch_retval,
-	STAILQ_HEAD_INITIALIZER(i386_linux.extra_syscalls),
+static struct procabi aarch64_cloudabi64 = {
+	"CloudABI ELF64",
+	SYSDECODE_ABI_CLOUDABI64,
+	aarch64_cloudabi64_fetch_args,
+	aarch64_cloudabi64_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(aarch64_cloudabi64.extra_syscalls),
 	{ NULL }
 };
 
-PROCABI(i386_linux);
+PROCABI(aarch64_cloudabi64);

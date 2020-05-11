@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1997 Sean Eric Fagan
  *
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/truss/amd64-linux32.c 296010 2016-02-24 22:01:45Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/amd64-linux32.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /* Linux/i386-specific system call handling. */
 
@@ -40,11 +39,11 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/truss/amd64-linux32.c 296010 2016-02-24 22
 #include <machine/reg.h>
 #include <machine/psl.h>
 
+#include <stdbool.h>
 #include <stdio.h>
+#include <sysdecode.h>
 
 #include "truss.h"
-
-#include "linux32_syscalls.h"
 
 static int
 amd64_linux32_fetch_args(struct trussinfo *trussinfo, u_int narg)
@@ -85,28 +84,12 @@ amd64_linux32_fetch_args(struct trussinfo *trussinfo, u_int narg)
 	return (0);
 }
 
-/*
- * Linux syscalls return negative errno's, we do positive and map them
- */
-static const int bsd_to_linux_errno[] = {
-	-0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,  -8,  -9,
-	-10, -35, -12, -13, -14, -15, -16, -17, -18, -19,
-	-20, -21, -22, -23, -24, -25, -26, -27, -28, -29,
-	-30, -31, -32, -33, -34, -11,-115,-114, -88, -89,
-	-90, -91, -92, -93, -94, -95, -96, -97, -98, -99,
-	-100,-101,-102,-103,-104,-105,-106,-107,-108,-109,
-	-110,-111, -40, -36,-112,-113, -39, -11, -87,-122,
-	-116, -66,  -6,  -6,  -6,  -6,  -6, -37, -38,  -9,
-	-6,
-};
-
 static int
 amd64_linux32_fetch_retval(struct trussinfo *trussinfo, long *retval,
     int *errorp)
 {
 	struct reg regs;
 	lwpid_t tid;
-	size_t i;
 
 	tid = trussinfo->curthread->tid;
 	if (ptrace(PT_GETREGS, tid, (caddr_t)&regs, 0) < 0) {
@@ -119,26 +102,16 @@ amd64_linux32_fetch_retval(struct trussinfo *trussinfo, long *retval,
 	*errorp = !!(regs.r_rflags & PSL_C);
 	if (*errorp)
 		retval[0] = (int)retval[0];
-
-	if (*errorp) {
-		for (i = 0; i < nitems(bsd_to_linux_errno); i++) {
-			if (retval[0] == bsd_to_linux_errno[i]) {
-				retval[0] = i;
-				return (0);
-			}
-		}
-
-		/* XXX: How to handle unknown errors? */
-	}
 	return (0);
 }
 
 static struct procabi amd64_linux32 = {
 	"Linux ELF32",
-	linux32_syscallnames,
-	nitems(linux32_syscallnames),
+	SYSDECODE_ABI_LINUX32,
 	amd64_linux32_fetch_args,
-	amd64_linux32_fetch_retval
+	amd64_linux32_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(amd64_linux32.extra_syscalls),
+	{ NULL }
 };
 
 PROCABI(amd64_linux32);

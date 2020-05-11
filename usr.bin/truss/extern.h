@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1997 Sean Eric Fagan
  *
@@ -29,13 +28,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/truss/extern.h 298427 2016-04-21 18:44:53Z jhb $
+ * $FreeBSD: stable/11/usr.bin/truss/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 extern int print_line_prefix(struct trussinfo *);
 extern void setup_and_wait(struct trussinfo *, char **);
 extern void start_tracing(struct trussinfo *, pid_t);
 extern void restore_proc(int);
+extern void decode_siginfo(FILE *, siginfo_t *);
 extern void eventloop(struct trussinfo *);
-extern const char *ioctlname(unsigned long val);
-extern char *strsig(int sig);

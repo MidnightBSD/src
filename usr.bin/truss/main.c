@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1997 Sean Eric Fagan
  *
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/truss/main.c 324779 2017-10-20 00:33:49Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/main.c 342708 2019-01-02 20:49:41Z jhb $");
 
 /*
  * The main module for truss.  Surprisingly simple, but, then, the other
@@ -43,8 +42,10 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/truss/main.c 324779 2017-10-20 00:33:49Z e
 
 #include <err.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sysdecode.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -61,18 +62,6 @@ usage(void)
 	exit(1);
 }
 
-char *
-strsig(int sig)
-{
-	static char tmp[64];
-
-	if (sig > 0 && sig < NSIG) {
-		snprintf(tmp, sizeof(tmp), "SIG%s", sys_signame[sig]);
-		return (tmp);
-	}
-	return (NULL);
-}
-
 int
 main(int ac, char **av)
 {
@@ -80,6 +69,7 @@ main(int ac, char **av)
 	struct trussinfo *trussinfo;
 	char *fname;
 	char **command;
+	const char *errstr;
 	pid_t pid;
 	int c;
 
@@ -127,7 +117,9 @@ main(int ac, char **av)
 			fname = optarg;
 			break;
 		case 's':	/* Specified string size */
-			trussinfo->strsize = atoi(optarg);
+			trussinfo->strsize = strtonum(optarg, 0, INT_MAX, &errstr);
+			if (errstr)
+				errx(1, "maximum string size is %s: %s", errstr, optarg);
 			break;
 		case 'S':	/* Don't trace signals */
 			trussinfo->flags |= NOSIGS;

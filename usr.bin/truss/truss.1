@@ -1,7 +1,6 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/usr.bin/truss/truss.1 298427 2016-04-21 18:44:53Z jhb $
+.\" $FreeBSD: stable/11/usr.bin/truss/truss.1 322091 2017-08-05 09:45:48Z trasz $
 .\"
-.Dd February 23, 2016
+.Dd July 24, 2017
 .Dt TRUSS 1
 .Os
 .Sh NAME
@@ -93,16 +92,20 @@ and
 options are mutually exclusive.)
 .El
 .Sh EXAMPLES
-# Follow the system calls used in echoing "hello"
+Follow the system calls used in echoing "hello":
 .Dl $ truss /bin/echo hello
-# Do the same, but put the output into a file
+.Pp
+Do the same, but put the output into a file:
 .Dl $ truss -o /tmp/truss.out /bin/echo hello
-# Follow an already-running process
+.Pp
+Follow an already-running process:
 .Dl $ truss -p 34
 .Sh SEE ALSO
+.Xr dtrace 1 ,
 .Xr kdump 1 ,
 .Xr ktrace 1 ,
-.Xr ptrace 2
+.Xr ptrace 2 ,
+.Xr utrace 2
 .Sh HISTORY
 The
 .Nm

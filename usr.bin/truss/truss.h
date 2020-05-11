@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2001 Jamey Wood
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/truss/truss.h 298427 2016-04-21 18:44:53Z jhb $
+ * $FreeBSD: stable/11/usr.bin/truss/truss.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/linker_set.h>
@@ -39,14 +40,29 @@
 #define	DISPLAYTIDS		0x00000080
 
 struct procinfo;
+struct syscall;
 struct trussinfo;
+
+/*
+ * The lookup of normal system calls are optimized by using a fixed
+ * array for the first 1024 system calls that can be indexed directly.
+ * Unknown system calls with other IDs are stored in a linked list.
+ */
+#define	SYSCALL_NORMAL_COUNT	1024
+
+struct extra_syscall {
+	STAILQ_ENTRY(extra_syscall) entries;
+	struct syscall *sc;
+	u_int number;
+};
 
 struct procabi {
 	const char *type;
-	const char **syscallnames;
-	int nsyscalls;
+	enum sysdecode_abi abi;
 	int (*fetch_args)(struct trussinfo *, u_int);
 	int (*fetch_retval)(struct trussinfo *, long *, int *);
+	STAILQ_HEAD(, extra_syscall) extra_syscalls;
+	struct syscall *syscalls[SYSCALL_NORMAL_COUNT];
 };
 
 #define	PROCABI(abi)	DATA_SET(procabi, abi)
@@ -66,16 +82,15 @@ struct procabi {
  */
 struct current_syscall {
 	struct syscall *sc;
-	const char *name;
-	int number;
-	unsigned long args[10];
+	unsigned int number;
 	unsigned int nargs;
+	unsigned long args[10];
 	char *s_args[10];	/* the printable arguments */
 };
 
 struct threadinfo
 {
-	SLIST_ENTRY(threadinfo) entries;
+	LIST_ENTRY(threadinfo) entries;
 	struct procinfo *proc;
 	lwpid_t tid;
 	int in_syscall;
@@ -89,7 +104,7 @@ struct procinfo {
 	pid_t pid;
 	struct procabi *abi;
 
-	SLIST_HEAD(, threadinfo) threadlist;
+	LIST_HEAD(, threadinfo) threadlist;
 };
 
 struct trussinfo

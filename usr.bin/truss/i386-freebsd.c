@@ -30,11 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-freebsd.c 331722 2018-03-29 02:50:57Z eadler $");
 
-/* Linux/i386-specific system call handling. */
+/* FreeBSD/i386-specific system call handling. */
 
 #include <sys/ptrace.h>
+#include <sys/syscall.h>
 
 #include <machine/reg.h>
 #include <machine/psl.h>
@@ -46,11 +47,13 @@ __FBSDID("$FreeBSD: stable/11/usr.bin/truss/i386-linux.c 331722 2018-03-29 02:50
 #include "truss.h"
 
 static int
-i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
+i386_fetch_args(struct trussinfo *trussinfo, u_int narg)
 {
+	struct ptrace_io_desc iorequest;
 	struct reg regs;
 	struct current_syscall *cs;
 	lwpid_t tid;
+	unsigned int parm_offset;
 
 	tid = trussinfo->curthread->tid;
 	cs = &trussinfo->curthread->cs;
@@ -58,34 +61,38 @@ i386_linux_fetch_args(struct trussinfo *trussinfo, u_int narg)
 		fprintf(trussinfo->outfile, "-- CANNOT READ REGISTERS --\n");
 		return (-1);
 	}
+	parm_offset = regs.r_esp + sizeof(int);
 
 	/*
-	 * Linux passes syscall arguments in registers, not
-	 * on the stack.  Fortunately, we've got access to the
-	 * register set.  Note that we don't bother checking the
-	 * number of arguments.	And what does linux do for syscalls
-	 * that have more than five arguments?
+	 * FreeBSD has two special kinds of system call redirections --
+	 * SYS_syscall, and SYS___syscall.  The former is the old syscall()
+	 * routine, basically; the latter is for quad-aligned arguments.
+	 *
+	 * The system call argument count and code from ptrace() already
+	 * account for these, but we need to skip over the first argument.
 	 */
-	switch (narg) {
-	default:
-		cs->args[5] = regs.r_ebp;	/* Unconfirmed */
-	case 5:
-		cs->args[4] = regs.r_edi;
-	case 4:
-		cs->args[3] = regs.r_esi;
-	case 3:
-		cs->args[2] = regs.r_edx;
-	case 2:
-		cs->args[1] = regs.r_ecx;
-	case 1:
-		cs->args[0] = regs.r_ebx;
+	switch (regs.r_eax) {
+	case SYS_syscall:
+		parm_offset += sizeof(int);
+		break;
+	case SYS___syscall:
+		parm_offset += sizeof(quad_t);
+		break;
 	}
+
+	iorequest.piod_op = PIOD_READ_D;
+	iorequest.piod_offs = (void *)parm_offset;
+	iorequest.piod_addr = cs->args;
+	iorequest.piod_len = narg * sizeof(unsigned long);
+	ptrace(PT_IO, tid, (caddr_t)&iorequest, 0);
+	if (iorequest.piod_len == 0)
+		return (-1);
 
 	return (0);
 }
 
 static int
-i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
+i386_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 {
 	struct reg regs;
 	lwpid_t tid;
@@ -102,13 +109,25 @@ i386_linux_fetch_retval(struct trussinfo *trussinfo, long *retval, int *errorp)
 	return (0);
 }
 
-static struct procabi i386_linux = {
-	"Linux ELF",
-	SYSDECODE_ABI_LINUX,
-	i386_linux_fetch_args,
-	i386_linux_fetch_retval,
-	STAILQ_HEAD_INITIALIZER(i386_linux.extra_syscalls),
+static struct procabi i386_freebsd = {
+	"FreeBSD ELF32",
+	SYSDECODE_ABI_FREEBSD,
+	i386_fetch_args,
+	i386_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(i386_freebsd.extra_syscalls),
 	{ NULL }
 };
 
-PROCABI(i386_linux);
+PROCABI(i386_freebsd);
+
+static struct procabi i386_freebsd_aout = {
+	"FreeBSD a.out",
+	SYSDECODE_ABI_FREEBSD,
+	i386_fetch_args,
+	i386_fetch_retval,
+	STAILQ_HEAD_INITIALIZER(i386_freebsd_aout.extra_syscalls),
+	{ NULL }
+};
+
+PROCABI(i386_freebsd_aout);
+
