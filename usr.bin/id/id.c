@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)id.c	8.2 (Berkeley) 2/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/id/id.c 227203 2011-11-06 09:09:45Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/id/id.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/mac.h>
@@ -53,6 +52,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/id/id.c 227203 2011-11-06 09:09:45Z ed $")
 #include <errno.h>
 #include <grp.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -347,14 +347,14 @@ auditid(void)
 		    "mask.success=0x%08x\n"
 		    "mask.failure=0x%08x\n"
 		    "asid=%d\n"
-		    "termid_addr.port=0x%08x\n"
+		    "termid_addr.port=0x%08jx\n"
 		    "termid_addr.addr[0]=0x%08x\n"
 		    "termid_addr.addr[1]=0x%08x\n"
 		    "termid_addr.addr[2]=0x%08x\n"
 		    "termid_addr.addr[3]=0x%08x\n",
 			ainfo_addr.ai_auid, ainfo_addr.ai_mask.am_success,
 			ainfo_addr.ai_mask.am_failure, ainfo_addr.ai_asid,
-			ainfo_addr.ai_termid.at_port,
+			(uintmax_t)ainfo_addr.ai_termid.at_port,
 			ainfo_addr.ai_termid.at_addr[0],
 			ainfo_addr.ai_termid.at_addr[1],
 			ainfo_addr.ai_termid.at_addr[2],
@@ -364,11 +364,11 @@ auditid(void)
 		    "mask.success=0x%08x\n"
 		    "mask.failure=0x%08x\n"
 		    "asid=%d\n"
-		    "termid.port=0x%08x\n"
+		    "termid.port=0x%08jx\n"
 		    "termid.machine=0x%08x\n",
 			auditinfo.ai_auid, auditinfo.ai_mask.am_success,
 			auditinfo.ai_mask.am_failure,
-			auditinfo.ai_asid, auditinfo.ai_termid.port,
+			auditinfo.ai_asid, (uintmax_t)auditinfo.ai_termid.port,
 			auditinfo.ai_termid.machine);
 	}
 }
