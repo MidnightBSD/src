@@ -1,7 +1,7 @@
 # $MidnightBSD$
 # $FreeBSD: stable/10/secure/lib/libssh/Makefile 323124 2017-09-01 22:52:18Z des $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 LIB=	ssh
 PRIVATELIB=	true
@@ -41,12 +41,10 @@ SRCS+=	bcrypt_pbkdf.c blowfish.c bsd-misc.c bsd-signal.c explicit_bzero.c \
 .if ${MK_LDNS} == "no"
 SRCS+=	getrrsetbyname.c
 .else
-LDNSDIR=	${.CURDIR}/../../../contrib/ldns
+LDNSDIR=	${SRCTOP}/contrib/ldns
 CFLAGS+=	-DHAVE_LDNS=1 -I${LDNSDIR}
 SRCS+=	getrrsetbyname-ldns.c
-DPADD+=	${LIBLDNS}
-LDADD+=	-lldns
-USEPRIVATELIB+= ldns
+LIBADD+=	ldns
 .endif
 
 CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
@@ -55,14 +53,11 @@ SRCS+=	 ssh_namespace.h
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
 SRCS+=	 krb5_config.h
-DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
-LDADD+=	-lgssapi -lkrb5 -lhx509 -lasn1 -lcom_err -lmd -lroken
 .endif
 
 NO_LINT=
 
-DPADD+=	${LIBCRYPTO} ${LIBCRYPT} ${LIBZ}
-LDADD+=	-lcrypto -lcrypt -lz
+LIBADD+=	crypto crypt z
 
 .include <bsd.lib.mk>
 
