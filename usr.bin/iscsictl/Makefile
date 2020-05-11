@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/iscsictl/Makefile 277173 2015-01-14 11:29:16Z trasz $
+# $FreeBSD: stable/11/usr.bin/iscsictl/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
+PACKAGE=	iscsi
 PROG=		iscsictl
 SRCS=		iscsictl.c periphs.c parse.y token.l y.tab.h
 CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-I${.CURDIR}/../../sys/dev/iscsi
+CFLAGS+=	-I${SRCTOP}/sys/dev/iscsi
 MAN=		iscsi.conf.5 iscsictl.8
 
-DPADD=		${LIBCAM} ${LIBUTIL}
-LDADD=		-lcam -lutil
+LIBADD=		xo
 
 YFLAGS+=	-v
 LFLAGS+=	-i

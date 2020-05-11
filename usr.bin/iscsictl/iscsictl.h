@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/iscsictl/iscsictl.h 255570 2013-09-14 15:29:06Z trasz $
+ * $FreeBSD: stable/11/usr.bin/iscsictl/iscsictl.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef ISCSICTL_H
@@ -41,7 +42,6 @@
 #define	DEFAULT_IQN			"iqn.1994-09.org.freebsd:"
 
 #define	MAX_NAME_LEN			223
-#define	MAX_DATA_SEGMENT_LENGTH		65536
 
 #define	AUTH_METHOD_UNSPECIFIED		0
 #define	AUTH_METHOD_NONE		1
@@ -59,6 +59,10 @@
 #define	PROTOCOL_ISCSI			1
 #define	PROTOCOL_ISER			2
 
+#define	ENABLE_UNSPECIFIED		0
+#define	ENABLE_ON			1
+#define	ENABLE_OFF			2
+
 struct target {
 	TAILQ_ENTRY(target)	t_next;
 	struct conf		*t_conf;
@@ -72,7 +76,9 @@ struct target {
 	int			t_data_digest;
 	int			t_auth_method;
 	int			t_session_type;
+	int			t_enable;
 	int			t_protocol;
+	char			*t_offload;
 	char			*t_user;
 	char			*t_secret;
 	char			*t_mutual_user;
@@ -81,23 +87,6 @@ struct target {
 
 struct conf {
 	TAILQ_HEAD(, target)	conf_targets;
-};
-
-#define	CONN_SESSION_TYPE_NONE		0
-#define	CONN_SESSION_TYPE_DISCOVERY	1
-#define	CONN_SESSION_TYPE_NORMAL	2
-
-struct connection {
-	struct target		*conn_target;
-	int			conn_socket;
-	int			conn_session_type;
-	uint32_t		conn_cmdsn;
-	uint32_t		conn_statsn;
-	size_t			conn_max_data_segment_length;
-	size_t			conn_max_burst_length;
-	size_t			conn_max_outstanding_r2t;
-	int			conn_header_digest;
-	int			conn_data_digest;
 };
 
 struct conf	*conf_new(void);
@@ -111,7 +100,7 @@ void		target_delete(struct target *ic);
 
 void		print_periphs(int session_id);
 
-char		*checked_strdup(const char *);
 bool		valid_iscsi_name(const char *name);
+int		parse_enable(const char *enable);
 
 #endif /* !ISCSICTL_H */
