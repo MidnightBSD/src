@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1981, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -28,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mt.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: stable/10/usr.bin/mt/mt.1 325496 2017-11-06 20:08:02Z ken $
+.\" $FreeBSD: stable/11/usr.bin/mt/mt.1 347884 2019-05-16 18:42:27Z ken $
 .\"
-.Dd November 3, 2017
+.Dd March 4, 2019
 .Dt MT 1
 .Os
 .Sh NAME
@@ -274,12 +273,12 @@ status command, this will be the same XML output via
 .Do
 .Nm
 status
-.Fl x 
+.Fl x
 .Dc
 .El
 .It Cm param
 Display or set parameters.
-One of 
+One of
 .Fl l ,
 .Fl s ,
 or
@@ -297,7 +296,7 @@ To display a specific parameter, specify the parameter with
 .It Fl p Ar name
 Specify the parameter name to list (with
 .Fl l )
-or set (with 
+or set (with
 .Fl s ) .
 .It Fl q
 Enable quiet mode for parameter listing.
@@ -365,11 +364,11 @@ The drive will verify the checksum before writing the block to tape.
 .El
 .It Cm locate
 Set the tape drive's logical position.
-One of 
+One of
 .Fl b ,
 .Fl e ,
 .Fl f ,
-or 
+or
 .Fl s
 must be specified to indicate the type of position.
 If the partition number is specified, the drive will first relocate to the
@@ -520,6 +519,7 @@ Value  Width        Tracks    Density         Code Type Reference   Note
 0x54   12.7  (0.5) 2560      19,686 (500,024)       C   3592A4 (unencrypted)
 0x55   12.7  (0.5) 5120      20,670 (525,018)       C   3592A5 (unencrypted)
 0x56   12.7  (0.5) 7680      20,670 (525,018)       C   3592B5 (unencrypted)
+0x57   12.7  (0.5) 8704      21,850 (554,990)       C   3592A6 (unencrypted)
 0x58   12.7  (0.5) 1280      15,142 (384,607)       C   LTO-5
 0x5A   12.7  (0.5) 2176      15,142 (384,607)       C   LTO-6
 0x5C   12.7  (0.5) 3584      19,107 (485,318)       C   LTO-7
@@ -531,6 +531,7 @@ Value  Width        Tracks    Density         Code Type Reference   Note
 0x74   12.7  (0.5) 2560      19,686 (500,024)       C   3592A4 (encrypted)
 0x75   12.7  (0.5) 5120      20,670 (525,018)       C   3592A5 (encrypted)
 0x76   12.7  (0.5) 7680      20,670 (525,018)       C   3592B5 (encrypted)
+0x77   12.7  (0.5) 8704      21,850 (554,990)       C   3592A6 (encrypted)
 0x8c    8.0  (0.315)  1      1,789  (45,434)  RLL   CS  EXB-8500c    5,9
 0x90    8.0  (0.315)  1      1,703  (43,245)  RLL   CS  EXB-8200c    5,9
 .Ed

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -72,7 +71,7 @@ static char sccsid[] = "@(#)mt.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mt/mt.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mt/mt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * mt --
@@ -82,7 +81,6 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/mt/mt.c 293290 2016-01-07 00:40:51Z bdrewe
 #include <sys/ioctl.h>
 #include <sys/mtio.h>
 #include <sys/queue.h>
-#include <sys/sbuf.h>
 
 #include <ctype.h>
 #include <err.h>
