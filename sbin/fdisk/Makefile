@@ -8,7 +8,7 @@ MAN=	fdisk.8
 
 .PATH:	${SRCTOP}/sys/geom
 
-LIBADD=	geom
+LIBADD+=	geom
 
 .include <bsd.prog.mk>
 
