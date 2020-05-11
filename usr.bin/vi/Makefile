@@ -1,11 +1,11 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/usr.bin/vi/Makefile 262643 2014-03-01 03:09:16Z brooks $
+# $FreeBSD: stable/11/usr.bin/vi/Makefile 319186 2017-05-30 04:27:05Z ngie $
 #
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-SRCDIR=		${.CURDIR}/../../contrib/nvi
+PACKAGE=	vi
+SRCDIR=		${SRCTOP}/contrib/nvi
 SUBDIR+=	catalog
 
 WARNS?=	0	# some warn issues on 32 bit machines
@@ -22,7 +22,7 @@ LINKS=	${BINDIR}/${VI} ${BINDIR}/${EX} ${BINDIR}/${VI} ${BINDIR}/${VIEW}
 LINKS+= ${BINDIR}/${VI} ${BINDIR}/vi ${BINDIR}/${EX} ${BINDIR}/ex
 LINKS+= ${BINDIR}/${VI} ${BINDIR}/view
 
-MAN=	${SRCDIR}/docs/USD.doc/vi.man/vi.1
+MAN=	${SRCDIR}/docs/man/vi.1
 MLINKS+=vi.1 ex.1 vi.1 view.1
 MLINKS+=vi.1 nex.1 vi.1 nview.1 vi.1 nvi.1
 
@@ -34,17 +34,8 @@ MLINKS+=vi.1 nex.1 vi.1 nview.1 vi.1 nvi.1
 
 CFLAGS+=-I${.CURDIR} -I${SRCDIR} -I${SRCDIR}/regex
 
-DPADD=		${LIBUTIL}
-LDADD=		-lutil
-
-.if defined(RESCUE) || defined(RELEASE_CRUNCH) || ${MK_NCURSESW} == "no"
-DPADD+=		${LIBNCURSES}
-LDADD+=		-lncurses
-.else
+LIBADD=	util ncursesw
 CFLAGS+=	-DUSE_WIDECHAR
-DPADD+=		${LIBNCURSESW}
-LDADD+=		-lncursesw
-.endif
 
 .if ${MK_ICONV} == "yes" && !defined(RESCUE) && !defined(RELEASE_CRUNCH)
 CFLAGS+=	-DUSE_ICONV

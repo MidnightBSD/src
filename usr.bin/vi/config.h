@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $Id: config.h.in,v 9.5 2013/03/11 01:20:53 zy Exp $ */
-/* $FreeBSD: stable/10/usr.bin/vi/config.h 254225 2013-08-11 20:03:12Z peter $ */
+/* $FreeBSD: stable/11/usr.bin/vi/config.h 254225 2013-08-11 20:03:12Z peter $ */
 
 /* Define if you want a debugging version. */
 /* #undef DEBUG */

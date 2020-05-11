@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /* $Id: pathnames.h.in,v 8.7 2012/04/23 08:34:52 zy Exp $ */
-/* $FreeBSD: stable/10/usr.bin/vi/pathnames.h 254225 2013-08-11 20:03:12Z peter $ */
+/* $FreeBSD: stable/11/usr.bin/vi/pathnames.h 254225 2013-08-11 20:03:12Z peter $ */
 
 /* Read standard system paths first. */
 #include <paths.h>
