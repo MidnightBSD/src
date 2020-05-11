@@ -27,7 +27,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.bin/newkey/extern.h 141480 2005-02-07 21:40:24Z stefanf $
  */
 
 #ifdef YP

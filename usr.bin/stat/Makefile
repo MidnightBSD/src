@@ -1,15 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/stat/Makefile 321085 2017-07-17 21:01:07Z ngie $
+# $FreeBSD: stable/11/usr.bin/stat/Makefile 321086 2017-07-17 21:01:10Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	stat
 
 LINKS=	${BINDIR}/stat ${BINDIR}/readlink
 MLINKS=	stat.1 readlink.1
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.prog.mk>

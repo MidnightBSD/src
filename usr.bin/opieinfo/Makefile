@@ -1,17 +1,16 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/opieinfo/Makefile 319186 2017-05-30 04:27:05Z ngie $
 #
-OPIE_DIST?=	${.CURDIR}/../../contrib/opie
+OPIE_DIST?=	${SRCTOP}/contrib/opie
 
 PROG=	opieinfo
 
-CFLAGS+=-I${.CURDIR}/../../lib/libopie
+CFLAGS+=-I${SRCTOP}/lib/libopie
 CFLAGS+=-I${OPIE_DIST}
 CFLAGS+=-DINSECURE_OVERRIDE
 
 WARNS?=	0
 
-DPADD=	${LIBOPIE} ${LIBMD}
-LDADD=	-lopie -lmd
+LIBADD=	opie
 
 BINOWN=	root
 BINMODE=4555

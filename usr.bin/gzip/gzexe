@@ -2,7 +2,7 @@
 #
 # $NetBSD: gzexe,v 1.3 2004/05/01 08:22:41 wiz Exp $
 # $OpenBSD: gzexe,v 1.3 2003/08/05 18:22:17 deraadt Exp $
-# $MidnightBSD$
+#
 #-
 #  Copyright (c) 2003 Otto Moerbeek <otto@drijf.net>
 #
@@ -18,7 +18,7 @@
 #  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# $FreeBSD: stable/10/usr.bin/gzip/gzexe 166255 2007-01-26 10:19:08Z delphij $
+# $FreeBSD: stable/11/usr.bin/gzip/gzexe 166255 2007-01-26 10:19:08Z delphij $
 
 # The number of lines plus one in the on-the-fly decompression script
 lines=19

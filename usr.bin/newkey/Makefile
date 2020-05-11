@@ -1,6 +1,6 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/newkey/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	newkey
 SRCS=	newkey.c generic.c update.c
@@ -8,7 +8,6 @@ SRCS=	newkey.c generic.c update.c
 CFLAGS+= -DYP
 .endif
 MAN=	newkey.8
-DPADD=	${LIBRPCSVC} ${LIBMP} ${LIBCRYPTO}
-LDADD=	-lrpcsvc -lmp -lcrypto
+LIBADD=	rpcsvc mp
 
 .include <bsd.prog.mk>

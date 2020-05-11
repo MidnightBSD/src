@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/sort.c 309862 2016-12-12 00:47:12Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sort/sort.c 335742 2018-06-27 21:11:28Z kevans $");
 
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -522,7 +523,7 @@ check_mutually_exclusive_flags(char c, bool *mef_flags)
 	int fo_index, mec;
 	bool found_others, found_this;
 
-	found_others = found_this =false;
+	found_others = found_this = false;
 	fo_index = 0;
 
 	for (int i = 0; i < NUMBER_OF_MUTUALLY_EXCLUSIVE_FLAGS; i++) {
@@ -1163,6 +1164,11 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	if (argv_from_file0) {
+		argc = argc_from_file0;
+		argv = argv_from_file0;
+	}
+
 #ifndef WITHOUT_NLS
 	catalog = catopen("sort", NL_CAT_LOCALE);
 #endif
@@ -1198,11 +1204,6 @@ main(int argc, char **argv)
 		}
 
 		ks->sm.func = get_sort_func(&(ks->sm));
-	}
-
-	if (argv_from_file0) {
-		argc = argc_from_file0;
-		argv = argv_from_file0;
 	}
 
 	if (debug_sort) {
@@ -1298,7 +1299,11 @@ main(int argc, char **argv)
 		struct file_list fl;
 
 		file_list_init(&fl, false);
-		file_list_populate(&fl, argc, argv, true);
+		/* No file arguments remaining means "read from stdin." */
+		if (argc == 0)
+			file_list_add(&fl, "-", true);
+		else
+			file_list_populate(&fl, argc, argv, true);
 		merge_files(&fl, outfile);
 		file_list_clean(&fl);
 	}

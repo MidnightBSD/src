@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.bin/sort/file.h 281535 2015-04-14 18:57:50Z pfg $	*/
+/*	$FreeBSD: stable/11/usr.bin/sort/file.h 335742 2018-06-27 21:11:28Z kevans $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -56,7 +57,7 @@ struct sort_list
 };
 
 /*
- * File reader object 
+ * File reader object
  */
 struct file_reader;
 
@@ -65,7 +66,7 @@ struct file_reader;
  */
 struct file_list
 {
-	char			**fns;
+	const char *		*fns;
 	size_t			 count;
 	size_t			 sz;
 	bool			 tmp;
@@ -107,7 +108,7 @@ char *new_tmp_file_name(void);
 void tmp_file_atexit(const char *tmp_file);
 
 void file_list_init(struct file_list *fl, bool tmp);
-void file_list_add(struct file_list *fl, char *fn, bool allocate);
+void file_list_add(struct file_list *fl, const char *fn, bool allocate);
 void file_list_populate(struct file_list *fl, int argc, char **argv, bool allocate);
 void file_list_clean(struct file_list *fl);
 

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.bin/bc/extern.h 292753 2015-12-26 18:26:44Z pfg $						*/
+/*	$FreeBSD: stable/11/usr.bin/bc/extern.h 291155 2015-11-22 02:43:14Z pfg $						*/
 /*      $OpenBSD: extern.h,v 1.12 2014/04/17 19:07:14 otto Exp $	*/
 
 /*

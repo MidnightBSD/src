@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/talk/get_addrs.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/talk/get_addrs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)get_addrs.c	8.1 (Berkeley) 6/6/93";
@@ -60,7 +59,7 @@ get_addrs(const char *my_machine_name __unused, const char *his_machine_name)
 		err(1, "failed to find my interface address");
 	/* find the server's port */
 	sp = getservbyname("ntalk", "udp");
-	if (sp == 0)
+	if (sp == NULL)
 		errx(1, "ntalk/udp: service is not registered");
 	daemon_port = sp->s_port;
 }

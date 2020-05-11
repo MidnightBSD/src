@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/talk/talk_ctl.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: stable/11/usr.bin/talk/talk_ctl.h 331722 2018-03-29 02:50:57Z eadler $
  *
  *	@(#)talk_ctl.h	8.1 (Berkeley) 6/6/93
  */

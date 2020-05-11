@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*	$OpenBSD: bc.y,v 1.44 2013/11/20 21:33:54 deraadt Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/bc/bc.y 292753 2015-12-26 18:26:44Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/bc/bc.y 343491 2019-01-27 13:58:06Z nyan $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -81,7 +80,7 @@ static void		 grow(void);
 static ssize_t		 cs(const char *);
 static ssize_t		 as(const char *);
 static ssize_t		 node(ssize_t, ...);
-static void		 emit(ssize_t);
+static void		 emit(ssize_t, int);
 static void		 emit_macro(int, ssize_t);
 static void		 free_tree(void);
 static ssize_t		 numnode(int);
@@ -197,7 +196,7 @@ program		: /* empty */
 
 input_item	: semicolon_list NEWLINE
 			{
-				emit($1);
+				emit($1, 0);
 				macro_char = reset_macro_char;
 				putchar('\n');
 				free_tree();
@@ -827,13 +826,18 @@ node(ssize_t arg, ...)
 }
 
 static void
-emit(ssize_t i)
+emit(ssize_t i, int level)
 {
 
-	if (instructions[i].index >= 0)
-		while (instructions[i].index != END_NODE)
-			emit(instructions[i++].index);
-	else
+	if (level > 1000)
+		errx(1, "internal error: tree level > 1000");
+	if (instructions[i].index >= 0) {
+		while (instructions[i].index != END_NODE &&
+		    instructions[i].index != i)  {
+			emit(instructions[i].index, level + 1);
+			i++;
+		}
+	} else if (instructions[i].index != END_NODE)
 		fputs(instructions[i].u.cstr, stdout);
 }
 
@@ -842,7 +846,7 @@ emit_macro(int nodeidx, ssize_t code)
 {
 
 	putchar('[');
-	emit(code);
+	emit(code, 0);
 	printf("]s%s\n", instructions[nodeidx].u.cstr);
 	nesting--;
 }
@@ -979,7 +983,7 @@ yyerror(const char *s)
 	    !isprint((unsigned char)yytext[0]))
 		n = asprintf(&str,
 		    "%s: %s:%d: %s: ascii char 0x%02x unexpected",
-		    __progname, filename, lineno, s, yytext[0]);
+		    __progname, filename, lineno, s, yytext[0] & 0xff);
 	else
 		n = asprintf(&str, "%s: %s:%d: %s: %s unexpected",
 		    __progname, filename, lineno, s, yytext);
@@ -992,7 +996,7 @@ yyerror(const char *s)
 			putchar('\\');
 		putchar(*p);
 	}
-	fputs("]pc\n", stdout);
+	fputs("]ec\n", stdout);
 	free(str);
 }
 
@@ -1169,7 +1173,8 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	interactive = isatty(STDIN_FILENO);
+	interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO) &&
+	    isatty(STDERR_FILENO);
 	for (i = 0; i < argc; i++)
 		sargv[sargc++] = argv[i];
 

@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
-/*	$FreeBSD: stable/10/usr.bin/sort/radixsort.h 265160 2014-04-30 20:39:08Z pfg $	*/
+/*	$FreeBSD: stable/11/usr.bin/sort/radixsort.h 330449 2018-03-05 07:26:05Z eadler $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * Copyright (C) 2012 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/awk/Makefile 314014 2017-02-21 02:34:59Z ngie $
+# $FreeBSD: stable/11/usr.bin/awk/Makefile 314012 2017-02-21 02:33:28Z ngie $
 
 AWKSRC=	${SRCTOP}/contrib/one-true-awk
 .PATH: ${AWKSRC}
@@ -11,21 +10,22 @@ CFLAGS+= -DHAS_ISBLANK -I. -I${AWKSRC} -DFOPEN_MAX=64
 
 WARNS?=	1
 
-DPADD=	${LIBM}
-LDADD=	-lm
+LIBADD=	m
 
 LINKS=	${BINDIR}/awk ${BINDIR}/nawk
 MLINKS=	awk.1 nawk.1
 
 CLEANFILES= maketab proctab.c ytab.h
 
-ytab.h: awkgram.h
-	ln -sf ${.ALLSRC} ${.TARGET}
+# XXX: awkgram.c isn't really needed here but it is added to keep
+# awkgram.h: .NOMETA respected.
+ytab.h: awkgram.c awkgram.h .NOMETA
+	ln -sf ${.ALLSRC:M*.h} ${.TARGET}
 
 proctab.c: maketab
-	./maketab > proctab.c
+	${BTOOLSPATH:U.}/maketab > proctab.c
 
 build-tools: maketab
-maketab: ytab.h maketab.c
+maketab: ytab.h maketab.c ${BUILD_TOOLS_META}
 
 .include <bsd.prog.mk>

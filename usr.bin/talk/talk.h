@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)talk.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/talk/talk.h 273496 2014-10-23 00:39:19Z ngie $
+ * $FreeBSD: stable/11/usr.bin/talk/talk.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/bwstring.c 309862 2016-12-12 00:47:12Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sort/bwstring.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <ctype.h>
 #include <errno.h>
@@ -228,7 +229,7 @@ bwsdup(const struct bwstring *s)
 }
 
 /*
- * Create a new binary string from a raw binary buffer.
+ * Create a new binary string from a wide character buffer.
  */
 struct bwstring *
 bwssbdup(const wchar_t *str, size_t len)
@@ -298,7 +299,7 @@ bwscsbdup(const unsigned char *str, size_t len)
 						/* NOTREACHED */
 						err(2, "mbrtowc error");
 					cptr += charlen;
-				};
+				}
 			}
 
 			ret->len = chars;

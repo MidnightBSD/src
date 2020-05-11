@@ -1,5 +1,9 @@
-/* $MidnightBSD$ */
+/*	$FreeBSD: stable/11/usr.bin/gzip/unpack.c 330449 2018-03-05 07:26:05Z eadler $	*/
+/*	$NetBSD: unpack.c,v 1.3 2017/08/04 07:27:08 mrg Exp $	*/
+
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Xin LI <delphij@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/gzip/unpack.c 309789 2016-12-10 06:27:45Z delphij $
+ * $FreeBSD: stable/11/usr.bin/gzip/unpack.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 /* This file is #included by gzip.c */
@@ -153,6 +157,9 @@ unpack_parse_header(int in, int out, char *pre, size_t prelen, off_t *bytes_in,
 	ssize_t bytesread;		/* Bytes read from the file */
 	int i, j, thisbyte;
 
+	if (prelen > sizeof hdr)
+		maybe_err("prelen too long");
+
 	/* Prepend the header buffer if we already read some data */
 	if (prelen != 0)
 		memcpy(hdr, pre, prelen);
@@ -161,6 +168,7 @@ unpack_parse_header(int in, int out, char *pre, size_t prelen, off_t *bytes_in,
 	bytesread = read(in, hdr + prelen, PACK_HEADER_LENGTH - prelen);
 	if (bytesread < 0)
 		maybe_err("Error reading pack header");
+	infile_newdata(bytesread);
 
 	accepted_bytes(bytes_in, PACK_HEADER_LENGTH);
 
@@ -207,6 +215,7 @@ unpack_parse_header(int in, int out, char *pre, size_t prelen, off_t *bytes_in,
 	accepted_bytes(bytes_in, unpackd->treelevels);
 	if (unpackd->symbol_size > 256)
 		maybe_errx("Bad symbol table");
+	infile_newdata(unpackd->treelevels);
 
 	/* Allocate for the symbol table, point symbol_eob at the beginning */
 	unpackd->symbol_eob = unpackd->symbol = calloc(1, unpackd->symbol_size);
@@ -230,6 +239,7 @@ unpack_parse_header(int in, int out, char *pre, size_t prelen, off_t *bytes_in,
 				maybe_errx("Symbol table truncated");
 			*unpackd->symbol_eob++ = (char)thisbyte;
 		}
+		infile_newdata(unpackd->symbolsin[i]);
 		accepted_bytes(bytes_in, unpackd->symbolsin[i]);
 	}
 
@@ -267,6 +277,8 @@ unpack_decode(const unpack_descriptor_t *unpackd, off_t *bytes_in)
 
 	while ((thisbyte = fgetc(unpackd->fpIn)) != EOF) {
 		accepted_bytes(bytes_in, 1);
+		infile_newdata(1);
+		check_siginfo();
 
 		/*
 		 * Split one bit from thisbyte, from highest to lowest,

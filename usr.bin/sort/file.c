@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/file.c 281535 2015-04-14 18:57:50Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sort/file.c 335742 2018-06-27 21:11:28Z kevans $");
 
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -226,7 +227,7 @@ file_list_init(struct file_list *fl, bool tmp)
  * Add a file name to the list
  */
 void
-file_list_add(struct file_list *fl, char *fn, bool allocate)
+file_list_add(struct file_list *fl, const char *fn, bool allocate)
 {
 
 	if (fl && fn) {
@@ -1092,7 +1093,7 @@ file_headers_merge(size_t fnum, struct file_header **fh, FILE *f_out)
 	memset(&lp, 0, sizeof(lp));
 
 	/*
-	 * construct the initial sort structure 
+	 * construct the initial sort structure
 	 */
 	for (i = 0; i < fnum; i++)
 		file_header_list_push(fh[i], fh, i);
@@ -1115,7 +1116,7 @@ file_headers_merge(size_t fnum, struct file_header **fh, FILE *f_out)
  * stdout.
  */
 static void
-merge_files_array(size_t argc, char **argv, const char *fn_out)
+merge_files_array(size_t argc, const char **argv, const char *fn_out)
 {
 
 	if (argv && fn_out) {
@@ -1259,7 +1260,7 @@ sort_list_to_file(struct sort_list *list, const char *outfile)
 			break;
 		default:
 			errx(2, "%s", getstr(10));
-		};
+		}
 	}
 
 	if (sort_opts_vals.sort_method == SORT_DEFAULT)

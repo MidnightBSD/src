@@ -2,7 +2,7 @@
 #
 # $NetBSD: zforce,v 1.2 2003/12/28 12:43:43 wiz Exp $
 # $OpenBSD: zforce,v 1.2 2003/08/05 18:22:17 deraadt Exp $
-# $MidnightBSD$
+#
 #-
 # Copyright (c) 2003 Otto Moerbeek <otto@drijf.net>
 #
@@ -18,7 +18,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# $FreeBSD: stable/10/usr.bin/gzip/zforce 166255 2007-01-26 10:19:08Z delphij $
+# $FreeBSD: stable/11/usr.bin/gzip/zforce 166255 2007-01-26 10:19:08Z delphij $
 prog=`basename $0`
 USAGE="usage: $prog file ..."
 if test $# -eq 0; then

@@ -3,7 +3,7 @@
 # $NetBSD: zdiff,v 1.5 2010/04/14 20:30:28 joerg Exp $
 #
 # $OpenBSD: zdiff,v 1.2 2003/07/29 07:42:44 otto Exp $
-# $MidnightBSD$
+#
 #-
 # Copyright (c) 2003 Todd C. Miller <Todd.Miller@courtesan.com>
 # Copyright (c) 2010 Joerg Sonnenberger <joerg@NetBSD.org>
@@ -24,7 +24,7 @@
 # Agency (DARPA) and Air Force Research Laboratory, Air Force
 # Materiel Command, USAF, under agreement number F39502-99-1-0512.
 #
-# $FreeBSD: stable/10/usr.bin/gzip/zdiff 222210 2011-05-23 09:02:44Z delphij $
+# $FreeBSD: stable/11/usr.bin/gzip/zdiff 222210 2011-05-23 09:02:44Z delphij $
 
 # Set $prog based on $0
 case $0 in

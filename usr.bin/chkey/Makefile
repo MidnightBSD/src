@@ -1,16 +1,15 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/chkey/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH: ${.CURDIR}/../newkey
+.PATH: ${SRCTOP}/usr.bin/newkey
 
 PROG=	chkey
 SRCS=	chkey.c generic.c update.c
-CFLAGS+= -I${.CURDIR}/../newkey
+CFLAGS+= -I${SRCTOP}/usr.bin/newkey
 .if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .endif
-DPADD=	${LIBRPCSVC} ${LIBMP} ${LIBCRYPTO}
-LDADD=	-lrpcsvc -lmp -lcrypto
+LIBADD+=	rpcsvc mp
 
 .include <bsd.prog.mk>

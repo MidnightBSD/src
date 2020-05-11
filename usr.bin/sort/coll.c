@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/coll.c 318152 2017-05-10 20:29:01Z marius $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sort/coll.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 
@@ -79,7 +80,7 @@ keys_array_alloc(void)
 }
 
 /*
- * Calculate whether we need key hint space 
+ * Calculate whether we need key hint space
  */
 static size_t
 key_hint_size(void)
@@ -614,12 +615,12 @@ list_coll(struct sort_list_item **ss1, struct sort_list_item **ss2)
 	return (list_coll_offset(ss1, ss2, 0));
 }
 
-#define LSCDEF(N) 											\
-static int 												\
-list_coll_##N(struct sort_list_item **ss1, struct sort_list_item **ss2)					\
-{													\
-													\
-	return (list_coll_offset(ss1, ss2, N));								\
+#define	LSCDEF(N)							\
+static int 								\
+list_coll_##N(struct sort_list_item **ss1, struct sort_list_item **ss2)	\
+{									\
+									\
+	return (list_coll_offset(ss1, ss2, N));				\
 }
 
 LSCDEF(1)
@@ -707,7 +708,7 @@ static void setsuffix(wchar_t c, unsigned char *si)
 		break;
 	default:
 		*si = 0;
-	};
+	}
 }
 
 /*

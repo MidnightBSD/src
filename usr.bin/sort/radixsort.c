@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * Copyright (C) 2012 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sort/radixsort.c 318152 2017-05-10 20:29:01Z marius $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sort/radixsort.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <errno.h>
 #include <err.h>
@@ -128,11 +129,19 @@ have_sort_left(void)
 
 #endif /* SORT_THREADS */
 
+static void
+_push_ls(struct level_stack *ls)
+{
+
+	ls->next = g_ls;
+	g_ls = ls;
+}
+
 /*
  * Push sort level to the stack
  */
 static inline void
-push_ls(struct sort_level* sl)
+push_ls(struct sort_level *sl)
 {
 	struct level_stack *new_ls;
 
@@ -140,22 +149,14 @@ push_ls(struct sort_level* sl)
 	new_ls->sl = sl;
 
 #if defined(SORT_THREADS)
-	if (nthreads > 1)
+	if (nthreads > 1) {
 		pthread_mutex_lock(&g_ls_mutex);
-#endif
-
-	new_ls->next = g_ls;
-	g_ls = new_ls;
-
-#if defined(SORT_THREADS)
-	if (nthreads > 1)
+		_push_ls(new_ls);
 		pthread_cond_signal(&g_ls_cond);
-#endif
-
-#if defined(SORT_THREADS)
-	if (nthreads > 1)
 		pthread_mutex_unlock(&g_ls_mutex);
+	} else
 #endif
+		_push_ls(new_ls);
 }
 
 /*
@@ -324,7 +325,7 @@ run_sort_level_next(struct sort_level *sl)
 		sl->sublevels = NULL;
 	}
 
-	switch (sl->tosort_num){
+	switch (sl->tosort_num) {
 	case 0:
 		goto end;
 	case (1):

@@ -18,8 +18,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# $FreeBSD: stable/10/usr.bin/gzip/znew 180136 2008-06-30 23:53:15Z delphij $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/gzip/znew 180136 2008-06-30 23:53:15Z delphij $
 
 # Return 0 if the first arg file size is smaller than the second, 1 otherwise.
 smaller () {
