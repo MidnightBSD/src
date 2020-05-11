@@ -1,7 +1,5 @@
-# $MidnightBSD$
-
 WARNS=0
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
 
@@ -34,8 +32,7 @@ CFLAGS+=	-DHAVE_IPV6=1
 YFLAGS+=-v
 CLEANFILES= y.output dnsextd_parser.h
 
-DPADD=	${LIBL} ${LIBPTHREAD}
-LDADD=	-ll -lpthread
+LIBADD+=	l pthread
 
 dnsextd_parser.h:
 	mv y.tab.h ${.TARGET}
