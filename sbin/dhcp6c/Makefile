@@ -1,5 +1,8 @@
 # $MidnightBSD: src/sbin/dhcp6c/Makefile,v 1.1 2012/01/14 15:18:41 laffer1 Exp $
 
+.include <src.opts.mk>
+
+PACKAGE=	runtime
 PROG=	dhcp6c
 
 CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../contrib/wide-dhcpv6 -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" \
@@ -17,7 +20,7 @@ CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../contrib/wide-dhcpv6 -DPACKAGE_NAME=\"\"
 	-DHAVE_TAILQ_FOREACH_REVERSE_OLD=1 -DHAVE_SA_LEN=1 -DHAVE_STDARG_H=1 \
 	-DSYSCONFDIR=\"/etc\" -DLOCALDBDIR=\"/var/db\"
 
-.PATH: ${.CURDIR}/../../contrib/wide-dhcpv6
+.PATH: ${SRCTOP}/contrib/wide-dhcpv6
 
 SRCS=	cfparse.y cftoken.l dhcp6c.c common.c config.c prefixconf.c dhcp6c_ia.c timer.c \
         dhcp6c_script.c if.c base64.c auth.c dhcp6_ctl.c addrconf.c lease.c
@@ -26,7 +29,6 @@ MAN=	dhcp6c.8 dhcp6c.conf.5
 
 WARNS?=	0
 
-LDADD=  -ll 
-DPADD=  ${LIBL} 
+LIBADD+=	l
 
 .include <bsd.prog.mk>

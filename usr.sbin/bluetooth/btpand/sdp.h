@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: sdp.h,v 1.2 2008/12/06 20:01:15 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/sdp.h 187938 2009-01-30 22:23:21Z emax $ */
+/* $FreeBSD: stable/11/usr.sbin/bluetooth/btpand/sdp.h 330449 2018-03-05 07:26:05Z eadler $ */
 
 #include <bluetooth.h>
 #include <sdp.h>

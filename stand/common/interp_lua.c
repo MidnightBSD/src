@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/interp_lua.c 355345 2019-12-03 18:25:16Z kevans $");
+__FBSDID("$FreeBSD: stable/11/stand/common/interp_lua.c 358442 2020-02-28 18:35:36Z kevans $");
 
 #include <stand.h>
 #include "bootstrap.h"
@@ -124,10 +124,11 @@ interp_init(void)
 
 	filename = LOADER_LUA;
 	if (interp_include(filename) != 0) {
-                const char *errstr = lua_tostring(luap, -1);
-                errstr = errstr == NULL ? "unknown" : errstr;
-                printf("Startup error in %s:\nLUA ERROR: %s.\n", filename, errstr);
-                lua_pop(luap, 1);
+		const char *errstr = lua_tostring(luap, -1);
+		errstr = errstr == NULL ? "unknown" : errstr;
+		printf("Startup error in %s:\nLUA ERROR: %s.\n", filename, errstr);
+		lua_pop(luap, 1);
+		setenv("autoboot_delay", "NO", 1);
 	}
 }
 
@@ -143,7 +144,7 @@ interp_run(const char *line)
 	luap = softc->luap;
 	LDBG("executing line...");
 	if ((status = luaL_dostring(luap, line)) != 0) {
-                lua_pop(luap, 1);
+		lua_pop(luap, 1);
 		/*
 		 * The line wasn't executable as lua; run it through parse to
 		 * to get consistent parsing of command line arguments, then

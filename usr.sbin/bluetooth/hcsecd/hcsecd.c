@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * hcsecd.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: hcsecd.c,v 1.6 2003/08/18 19:19:55 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/hcsecd/hcsecd.c 188130 2009-02-04 22:04:06Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/hcsecd/hcsecd.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

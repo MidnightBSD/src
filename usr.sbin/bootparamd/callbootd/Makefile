@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: stable/10/usr.sbin/bootparamd/callbootd/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bootparamd/callbootd/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	callbootd
 MAN=

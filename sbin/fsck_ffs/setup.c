@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)setup.c	8.10 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/setup.c 356905 2020-01-20 08:28:54Z eugen $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/setup.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -54,6 +54,8 @@ __FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/setup.c 356905 2020-01-20 08:28:54Z 
 #include <string.h>
 
 #include "fsck.h"
+
+struct inoinfo **inphead, **inpsort;
 
 struct bufarea asblk;
 #define altsblock (*asblk.b_un.b_fs)

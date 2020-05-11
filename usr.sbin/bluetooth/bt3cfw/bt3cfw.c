@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * bt3cfw.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bt3cfw.c,v 1.2 2003/05/21 22:40:29 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bt3cfw/bt3cfw.c 227876 2011-11-23 10:27:18Z kevlo $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bt3cfw/bt3cfw.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/autofs/common.h 283239 2015-05-21 13:37:48Z trasz $
+ * $FreeBSD: stable/11/usr.sbin/autofs/common.h 332597 2018-04-16 16:16:24Z trasz $
  */
 
 #ifndef AUTOMOUNTD_H

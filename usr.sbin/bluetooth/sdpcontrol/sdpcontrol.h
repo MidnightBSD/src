@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * sdpcontrol.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sdpcontrol.h,v 1.1 2003/09/08 02:27:27 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.h 121054 2003-10-12 22:04:24Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef __SDPCONTROL_H__

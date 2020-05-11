@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -27,11 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nap.c,v 1.1 2013-01-01 17:42:08 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: nap.c,v 1.1 2008/03/11 00:02:42 max Exp $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpd/nap.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <string.h>

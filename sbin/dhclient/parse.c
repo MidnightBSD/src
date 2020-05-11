@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: parse.c,v 1.11 2004/05/05 23:07:47 deraadt Exp $	*/
 
 /* Common parser code for dhcpd and dhclient. */
@@ -42,7 +41,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/parse.c 228615 2011-12-17 01:29:46Z dim $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/parse.c 331722 2018-03-29 02:50:57Z eadler $");
+
+#include <stdbool.h>
 
 #include "dhcpd.h"
 #include "dhctoken.h"
@@ -155,7 +156,8 @@ void
 parse_hardware_param(FILE *cfile, struct hardware *hardware)
 {
 	unsigned char *t;
-	int token, hlen;
+	int token;
+	size_t hlen;
 	char *val;
 
 	token = next_token(&val, cfile);
@@ -239,13 +241,13 @@ parse_lease_time(FILE *cfile, time_t *timep)
  * tokenized.
  */
 unsigned char *
-parse_numeric_aggregate(FILE *cfile, unsigned char *buf, int *max,
-    int separator, int base, int size)
+parse_numeric_aggregate(FILE *cfile, unsigned char *buf, size_t *max,
+    int separator, unsigned base, int size)
 {
 	unsigned char *bufp = buf, *s = NULL;
-	int token, count = 0;
+	int token;
 	char *val, *t;
-	size_t valsize;
+	size_t valsize, count = 0;
 	pair c = NULL;
 
 	if (!bufp && *max) {
@@ -322,14 +324,15 @@ parse_numeric_aggregate(FILE *cfile, unsigned char *buf, int *max,
 }
 
 void
-convert_num(unsigned char *buf, char *str, int base, int size)
+convert_num(unsigned char *buf, char *str, unsigned base, int size)
 {
-	int negative = 0, tval, max;
+	bool negative = false;
+	unsigned tval, max;
 	u_int32_t val = 0;
 	char *ptr = str;
 
 	if (*ptr == '-') {
-		negative = 1;
+		negative = true;
 		ptr++;
 	}
 

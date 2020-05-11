@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: options.c,v 1.15 2004/12/26 03:17:07 deraadt Exp $	*/
 
 /* DHCP options parsing and reassembly. */
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/options.c 229778 2012-01-07 16:09:33Z uqs $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/options.c 349633 2019-07-03 00:36:34Z markj $");
 
 #include <ctype.h>
 
@@ -54,11 +53,11 @@ int bad_options_max = 5;
 
 void	parse_options(struct packet *);
 void	parse_option_buffer(struct packet *, unsigned char *, int);
-int	store_options(unsigned char *, int, struct tree_cache **,
+unsigned store_options(unsigned char *, int, struct tree_cache **,
 	    unsigned char *, int, int, int, int);
 void	expand_domain_search(struct packet *packet);
-int	find_search_domain_name_len(struct option_data *option, int *offset);
-void	expand_search_domain_name(struct option_data *option, int *offset,
+int	find_search_domain_name_len(struct option_data *option, size_t *offset);
+void	expand_search_domain_name(struct option_data *option, size_t *offset,
 	    unsigned char **domain_search);
 
 
@@ -212,7 +211,8 @@ parse_option_buffer(struct packet *packet,
 void
 expand_domain_search(struct packet *packet)
 {
-	int offset, expanded_len, next_domain_len;
+	size_t offset;
+	int expanded_len, next_domain_len;
 	struct option_data *option;
 	unsigned char *domain_search, *cursor;
 
@@ -256,9 +256,10 @@ expand_domain_search(struct packet *packet)
 }
 
 int
-find_search_domain_name_len(struct option_data *option, int *offset)
+find_search_domain_name_len(struct option_data *option, size_t *offset)
 {
-	int domain_name_len, i, label_len, pointer, pointed_len;
+	int domain_name_len, label_len, pointed_len;
+	size_t i, pointer;
 
 	domain_name_len = 0;
 
@@ -323,10 +324,11 @@ find_search_domain_name_len(struct option_data *option, int *offset)
 }
 
 void
-expand_search_domain_name(struct option_data *option, int *offset,
+expand_search_domain_name(struct option_data *option, size_t *offset,
     unsigned char **domain_search)
 {
-	int i, label_len, pointer;
+	int label_len;
+	size_t i, pointer;
 	unsigned char *cursor;
 
 	/*
@@ -380,8 +382,10 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
     int terminate, int bootpp, u_int8_t *prl, int prl_len)
 {
 	unsigned char priority_list[300], buffer[4096];
-	int priority_len, main_buffer_size, mainbufix, bufix;
-	int option_size, length;
+	unsigned priority_len;
+	size_t main_buffer_size;
+	unsigned option_size, bufix, mainbufix;
+	int length;
 
 	/*
 	 * If the client has provided a maximum DHCP message size, use
@@ -423,7 +427,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	 */
 	if (inpacket &&
 	    inpacket->options[DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
-		int prlen =
+		unsigned prlen =
 		    inpacket->options[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
 		if (prlen + priority_len > sizeof(priority_list))
 			prlen = sizeof(priority_list) - priority_len;
@@ -517,7 +521,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 /*
  * Store all the requested options into the requested buffer.
  */
-int
+unsigned
 store_options(unsigned char *buffer, int buflen, struct tree_cache **options,
     unsigned char *priority_list, int priority_len, int first_cutoff,
     int second_cutoff, int terminate)
@@ -622,7 +626,7 @@ store_options(unsigned char *buffer, int buflen, struct tree_cache **options,
 /*
  * Format the specified option so that a human can easily read it.
  */
-char *
+const char *
 pretty_print_option(unsigned int code, unsigned char *data, int len,
     int emit_commas, int emit_quotes)
 {
@@ -784,7 +788,7 @@ pretty_print_option(unsigned int code, unsigned char *data, int len,
 				dp += 4;
 				break;
 			case 'L':
-				opcount = snprintf(op, opleft, "%ld",
+				opcount = snprintf(op, opleft, "%lu",
 				    (unsigned long)getULong(dp));
 				if (opcount >= opleft || opcount == -1)
 					goto toobig;
@@ -800,7 +804,7 @@ pretty_print_option(unsigned int code, unsigned char *data, int len,
 				dp += 2;
 				break;
 			case 'S':
-				opcount = snprintf(op, opleft, "%d",
+				opcount = snprintf(op, opleft, "%u",
 				    getUShort(dp));
 				if (opcount >= opleft || opcount == -1)
 					goto toobig;
@@ -890,6 +894,5 @@ do_packet(struct interface_info *interface, struct dhcp_packet *packet,
 
 	/* Free the data associated with the options. */
 	for (i = 0; i < 256; i++)
-		if (tp.options[i].len && tp.options[i].data)
-			free(tp.options[i].data);
+		free(tp.options[i].data);
 }

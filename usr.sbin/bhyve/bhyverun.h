@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/bhyverun.h 302705 2016-07-13 06:09:34Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/bhyverun.h 348269 2019-05-25 10:17:03Z rgrimes $
  */
 
 #ifndef	_FBSDRUN_H_
@@ -35,6 +36,7 @@
 
 struct vmctx;
 extern int guest_ncpus;
+extern uint16_t cores, sockets, threads;
 extern char *guest_uuid_str;
 extern char *vmname;
 

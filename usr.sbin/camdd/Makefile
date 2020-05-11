@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/camdd/Makefile 291716 2015-12-03 20:54:55Z ken $
+# $FreeBSD: stable/11/usr.sbin/camdd/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	camdd
 SRCS=	camdd.c
-SDIR=	${.CURDIR}/../../sys
-DPADD=	${LIBCAM} ${LIBMT} ${LIBSBUF} ${LIBBSDXML} ${LIBUTIL} ${LIBTHR}
-LDADD=	-lcam -lmt -lsbuf -lbsdxml -lutil -lthr
+SDIR=	${SRCTOP}/sys
+LIBADD=	cam mt util pthread
 NO_WTHREAD_SAFETY=	1
 MAN=	camdd.8
 

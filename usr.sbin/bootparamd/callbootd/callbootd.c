@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -10,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/bootparamd/callbootd/callbootd.c 324142 2017-09-30 20:50:31Z ngie $";
+  "$FreeBSD: stable/11/usr.sbin/bootparamd/callbootd/callbootd.c 256506 2013-10-15 07:37:30Z kevlo $";
 #endif /* not lint */
 
 #include "bootparam_prot.h"
@@ -33,12 +32,15 @@ int broadcast;
 char cln[MAX_MACHINE_NAME+1];
 char dmn[MAX_MACHINE_NAME+1];
 char path[MAX_PATH_LEN+1];
+extern char *inet_ntoa();
 static void usage(void);
 int printgetfile(bp_getfile_res *);
 int printwhoami(bp_whoami_res *);
 
-static bool_t
-eachres_whoami(bp_whoami_res *resultp, struct sockaddr_in *raddr)
+bool_t
+eachres_whoami(resultp, raddr)
+bp_whoami_res *resultp;
+struct sockaddr_in *raddr;
 {
   struct hostent *he;
 
@@ -49,8 +51,10 @@ eachres_whoami(bp_whoami_res *resultp, struct sockaddr_in *raddr)
   return(0);
 }
 
-static bool_t
-eachres_getfile(bp_getfile_res *resultp, struct sockaddr_in *raddr)
+bool_t
+eachres_getfile(resultp, raddr)
+bp_getfile_res *resultp;
+struct sockaddr_in *raddr;
 {
   struct hostent *he;
 
@@ -63,7 +67,9 @@ eachres_getfile(bp_getfile_res *resultp, struct sockaddr_in *raddr)
 
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
   char *server;
 
@@ -98,7 +104,7 @@ main(int argc, char **argv)
   case 3:
     whoami_arg.client_address.address_type = IP_ADDR_TYPE;
     the_inet_addr = inet_addr(argv[2]);
-    if ( the_inet_addr == -1)
+    if ( the_inet_addr == INADDR_NONE)
       errx(2, "bogus addr %s", argv[2]);
     bcopy(&the_inet_addr,&whoami_arg.client_address.bp_address_u.ip_addr,4);
 

@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 %{
-/*
+/*-
  * parser.y
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -28,11 +29,12 @@
  * SUCH DAMAGE.
  *
  * $Id: parser.y,v 1.5 2003/06/07 21:22:30 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/hcsecd/parser.y 235789 2012-05-22 16:33:10Z bapt $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/hcsecd/parser.y 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/fcntl.h>
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <limits.h>

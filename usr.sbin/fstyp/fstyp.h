@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/fstyp/fstyp.h 293776 2016-01-12 16:38:09Z allanjude $
+ * $FreeBSD: stable/11/usr.sbin/fstyp/fstyp.h 316470 2017-04-03 21:04:14Z trasz $
  */
 
 #ifndef FSTYP_H
@@ -40,6 +39,7 @@ char	*checked_strdup(const char *s);
 void	rtrim(char *label, size_t size);
 
 int	fstyp_cd9660(FILE *fp, char *label, size_t size);
+int	fstyp_exfat(FILE *fp, char *label, size_t size);
 int	fstyp_ext2fs(FILE *fp, char *label, size_t size);
 int	fstyp_geli(FILE *fp, char *label, size_t size);
 int	fstyp_msdosfs(FILE *fp, char *label, size_t size);

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/mptbl.h 259301 2013-12-13 06:59:18Z grehan $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/mptbl.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _MPTBL_H_

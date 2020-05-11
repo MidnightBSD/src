@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$NetBSD: fsck_msdos.8,v 1.9 1997/10/17 11:19:58 ws Exp $
 .\"
 .\" Copyright (C) 1995 Wolfgang Solfrank
@@ -24,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/sbin/fsck_msdosfs/fsck_msdosfs.8 306984 2016-10-10 16:21:34Z sevan $
+.\" $FreeBSD: stable/11/sbin/fsck_msdosfs/fsck_msdosfs.8 360490 2020-04-30 06:34:34Z delphij $
 .\"
-.Dd October 3, 2016
+.Dd January 6, 2020
 .Dt FSCK_MSDOSFS 8
 .Os
 .Sh NAME
@@ -38,7 +37,7 @@
 .Op Fl Cf
 .Ar filesystem ...
 .Nm
-.Op Fl Cny
+.Op Fl CMny
 .Ar filesystem ...
 .Sh DESCRIPTION
 The
@@ -85,6 +84,21 @@ which seeks to determine whether the file system needs to be cleaned
 immediately in foreground, or if its cleaning can be deferred to background.
 FAT (MS-DOS) file systems must always be cleaned in the foreground.
 A non-zero exit code is always returned for this option.
+.It Fl M
+Causes
+.Nm
+to not use
+.Xr mmap 2
+when checking a FAT32 file system.
+This option is mainly for debugging purposes and is not normally necessary.
+The
+.Nm
+utility will automatically fall back to use a simple LRU cache of 4 MiB
+when it failed to perform
+.Xr mmap 2 ,
+or when
+.Fl M
+is specified.
 .It Fl f
 Force
 .Nm

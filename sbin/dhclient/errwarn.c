@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: errwarn.c,v 1.7 2004/05/04 22:23:01 mickey Exp $	*/
 
 /* Errors and warnings... */
@@ -42,13 +41,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/errwarn.c 226345 2011-10-13 17:20:45Z des $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/errwarn.c 332602 2018-04-16 16:23:32Z asomers $");
 
 #include <errno.h>
 
 #include "dhcpd.h"
 
-static void do_percentm(char *obuf, size_t size, char *ibuf);
+static void do_percentm(char *obuf, size_t size, const char *ibuf);
 
 static char mbuf[1024];
 static char fbuf[1024];
@@ -59,7 +58,7 @@ int warnings_occurred;
  * Log an error message, then exit.
  */
 void
-error(char *fmt, ...)
+error(const char *fmt, ...)
 {
 	va_list list;
 
@@ -93,7 +92,7 @@ error(char *fmt, ...)
  * Log a warning message...
  */
 int
-warning(char *fmt, ...)
+warning(const char *fmt, ...)
 {
 	va_list list;
 
@@ -119,7 +118,7 @@ warning(char *fmt, ...)
  * Log a note...
  */
 int
-note(char *fmt, ...)
+note(const char *fmt, ...)
 {
 	va_list list;
 
@@ -145,7 +144,7 @@ note(char *fmt, ...)
  * Log a debug message...
  */
 int
-debug(char *fmt, ...)
+debug(const char *fmt, ...)
 {
 	va_list list;
 
@@ -171,10 +170,10 @@ debug(char *fmt, ...)
  * Find %m in the input string and substitute an error message string.
  */
 static void
-do_percentm(char *obuf, size_t size, char *ibuf)
+do_percentm(char *obuf, size_t size, const char *ibuf)
 {
 	char ch;
-	char *s = ibuf;
+	const char *s = ibuf;
 	char *t = obuf;
 	size_t prlen;
 	size_t fmt_left;
@@ -204,7 +203,7 @@ do_percentm(char *obuf, size_t size, char *ibuf)
 }
 
 int
-parse_warn(char *fmt, ...)
+parse_warn(const char *fmt, ...)
 {
 	va_list list;
 	static char spaces[] =

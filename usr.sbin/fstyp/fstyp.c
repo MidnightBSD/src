@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
@@ -30,9 +29,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/fstyp.c 293776 2016-01-12 16:38:09Z allanjude $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/fstyp.c 318489 2017-05-18 20:36:07Z trasz $");
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/disk.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -58,6 +57,7 @@ static struct {
 	bool		unmountable;
 } fstypes[] = {
 	{ "cd9660", &fstyp_cd9660, false },
+	{ "exfat", &fstyp_exfat, false },
 	{ "ext2fs", &fstyp_ext2fs, false },
 	{ "geli", &fstyp_geli, true },
 	{ "msdosfs", &fstyp_msdosfs, false },
@@ -83,7 +83,7 @@ read_buf(FILE *fp, off_t off, size_t len)
 	}
 
 	buf = malloc(len);
-	if (buf == 0) {
+	if (buf == NULL) {
 		warn("cannot malloc %zd bytes of memory", len);
 		return (NULL);
 	}

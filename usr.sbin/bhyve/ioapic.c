@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,14 +28,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/ioapic.c 283927 2015-06-02 19:20:39Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/ioapic.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
+#include <stdio.h>
 
 #include <machine/vmm.h>
 #include <vmmapi.h>
 
 #include "ioapic.h"
+#include "pci_emul.h"
+#include "pci_lpc.h"
 
 /*
  * Assign PCI INTx interrupts to I/O APIC pins in a round-robin
@@ -65,11 +69,15 @@ ioapic_init(struct vmctx *ctx)
 }
 
 int
-ioapic_pci_alloc_irq(void)
+ioapic_pci_alloc_irq(struct pci_devinst *pi)
 {
 	static int last_pin;
 
 	if (pci_pins == 0)
 		return (-1);
+	if (lpc_bootrom()) {
+		/* For external bootrom use fixed mapping. */
+		return (16 + (4 + pi->pi_slot + pi->pi_lintr.pin) % 8);
+	}
 	return (16 + (last_pin++ % pci_pins));
 }

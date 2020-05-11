@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Allan Jude <allanjude@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/geli.c 293776 2016-01-12 16:38:09Z allanjude $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/geli.c 292829 2015-12-28 08:53:31Z delphij $");
 
 #include <sys/disk.h>
 #include <sys/types.h>

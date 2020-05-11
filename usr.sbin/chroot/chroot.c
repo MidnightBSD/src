@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)chroot.c	8.1 (Berkeley) 6/9/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/chroot/chroot.c 227223 2011-11-06 16:40:17Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/chroot/chroot.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

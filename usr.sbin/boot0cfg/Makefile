@@ -1,10 +1,9 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/boot0cfg/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	boot0cfg
 MAN=	boot0cfg.8
 
-DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
-LDADD=	-lgeom -lbsdxml -lsbuf
+LIBADD=	geom
 
 NO_WCAST_ALIGN=
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Allan Jude <allanjude@FreeBSD.org>
  * Copyright (c) 2015 Xin LI <delphij@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/zfs.c 293776 2016-01-12 16:38:09Z allanjude $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/zfs.c 292757 2015-12-26 19:48:36Z allanjude $");
 
 #include <sys/types.h>
 #include <cddl/compat/opensolaris/sys/types.h>

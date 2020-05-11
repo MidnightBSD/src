@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,24 +25,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_net.c 307183 2016-10-13 06:32:21Z np $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_net.c 349740 2019-07-04 18:21:01Z vmaffione $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_net.c 307183 2016-10-13 06:32:21Z np $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_net.c 349740 2019-07-04 18:21:01Z vmaffione $");
 
 #include <sys/param.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/linker_set.h>
 #include <sys/select.h>
 #include <sys/uio.h>
 #include <sys/ioctl.h>
-#include <machine/atomic.h>
 #include <net/ethernet.h>
 #ifndef NETMAP_WITH_LIBS
 #define NETMAP_WITH_LIBS
 #endif
 #include <net/netmap_user.h>
 
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -54,11 +58,13 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_net.c 307183 2016-10-13 
 #include <md5.h>
 #include <pthread.h>
 #include <pthread_np.h>
+#include <sysexits.h>
 
 #include "bhyverun.h"
 #include "pci_emul.h"
 #include "mevent.h"
 #include "virtio.h"
+#include "net_utils.h"
 
 #define VTNET_RINGSZ	1024
 
@@ -141,14 +147,13 @@ struct pci_vtnet_softc {
 	struct nm_desc	*vsc_nmd;
 
 	int		vsc_rx_ready;
-	volatile int	resetting;	/* set and checked outside lock */
+	int		resetting;	/* protected by tx_mtx */
 
 	uint64_t	vsc_features;	/* negotiated features */
 	
 	struct virtio_net_config vsc_config;
 
 	pthread_mutex_t	rx_mtx;
-	int		rx_in_progress;
 	int		rx_vhdrlen;
 	int		rx_merge;	/* merged rx bufs in use */
 
@@ -180,38 +185,6 @@ static struct virtio_consts vtnet_vi_consts = {
 	VTNET_S_HOSTCAPS,	/* our capabilities */
 };
 
-/*
- * If the transmit thread is active then stall until it is done.
- */
-static void
-pci_vtnet_txwait(struct pci_vtnet_softc *sc)
-{
-
-	pthread_mutex_lock(&sc->tx_mtx);
-	while (sc->tx_in_progress) {
-		pthread_mutex_unlock(&sc->tx_mtx);
-		usleep(10000);
-		pthread_mutex_lock(&sc->tx_mtx);
-	}
-	pthread_mutex_unlock(&sc->tx_mtx);
-}
-
-/*
- * If the receive thread is active then stall until it is done.
- */
-static void
-pci_vtnet_rxwait(struct pci_vtnet_softc *sc)
-{
-
-	pthread_mutex_lock(&sc->rx_mtx);
-	while (sc->rx_in_progress) {
-		pthread_mutex_unlock(&sc->rx_mtx);
-		usleep(10000);
-		pthread_mutex_lock(&sc->rx_mtx);
-	}
-	pthread_mutex_unlock(&sc->rx_mtx);
-}
-
 static void
 pci_vtnet_reset(void *vsc)
 {
@@ -219,23 +192,32 @@ pci_vtnet_reset(void *vsc)
 
 	DPRINTF(("vtnet: device reset requested !\n"));
 
-	sc->resetting = 1;
+	/* Acquire the RX lock to block RX processing. */
+	pthread_mutex_lock(&sc->rx_mtx);
 
-	/*
-	 * Wait for the transmit and receive threads to finish their
-	 * processing.
-	 */
-	pci_vtnet_txwait(sc);
-	pci_vtnet_rxwait(sc);
+	/* Set sc->resetting and give a chance to the TX thread to stop. */
+	pthread_mutex_lock(&sc->tx_mtx);
+	sc->resetting = 1;
+	while (sc->tx_in_progress) {
+		pthread_mutex_unlock(&sc->tx_mtx);
+		usleep(10000);
+		pthread_mutex_lock(&sc->tx_mtx);
+	}
 
 	sc->vsc_rx_ready = 0;
 	sc->rx_merge = 1;
 	sc->rx_vhdrlen = sizeof(struct virtio_net_rxhdr);
 
-	/* now reset rings, MSI-X vectors, and negotiated capabilities */
+	/*
+	 * Now reset rings, MSI-X vectors, and negotiated capabilities.
+	 * Do that with the TX lock held, since we need to reset
+	 * sc->resetting.
+	 */
 	vi_reset_dev(&sc->vsc_vs);
 
 	sc->resetting = 0;
+	pthread_mutex_unlock(&sc->tx_mtx);
+	pthread_mutex_unlock(&sc->rx_mtx);
 }
 
 /*
@@ -309,9 +291,9 @@ pci_vtnet_tap_rx(struct pci_vtnet_softc *sc)
 
 	/*
 	 * But, will be called when the rx ring hasn't yet
-	 * been set up or the guest is resetting the device.
+	 * been set up.
 	 */
-	if (!sc->vsc_rx_ready || sc->resetting) {
+	if (!sc->vsc_rx_ready) {
 		/*
 		 * Drop the packet and try later.
 		 */
@@ -382,7 +364,7 @@ pci_vtnet_tap_rx(struct pci_vtnet_softc *sc)
 	vq_endchains(vq, 1);
 }
 
-static int
+static __inline int
 pci_vtnet_netmap_writev(struct nm_desc *nmd, struct iovec *iov, int iovcnt)
 {
 	int r, i;
@@ -397,7 +379,7 @@ pci_vtnet_netmap_writev(struct nm_desc *nmd, struct iovec *iov, int iovcnt)
 			r++;
 			if (r > nmd->last_tx_ring)
 				r = nmd->first_tx_ring;
-			if (r == nmd->cur_rx_ring)
+			if (r == nmd->cur_tx_ring)
 				break;
 			continue;
 		}
@@ -406,6 +388,8 @@ pci_vtnet_netmap_writev(struct nm_desc *nmd, struct iovec *iov, int iovcnt)
 		buf = NETMAP_BUF(ring, idx);
 
 		for (i = 0; i < iovcnt; i++) {
+			if (len + iov[i].iov_len > 2048)
+				break;
 			memcpy(&buf[len], iov[i].iov_base, iov[i].iov_len);
 			len += iov[i].iov_len;
 		}
@@ -419,7 +403,7 @@ pci_vtnet_netmap_writev(struct nm_desc *nmd, struct iovec *iov, int iovcnt)
 	return (len);
 }
 
-static inline int
+static __inline int
 pci_vtnet_netmap_readv(struct nm_desc *nmd, struct iovec *iov, int iovcnt)
 {
 	int len = 0;
@@ -504,9 +488,9 @@ pci_vtnet_netmap_rx(struct pci_vtnet_softc *sc)
 
 	/*
 	 * But, will be called when the rx ring hasn't yet
-	 * been set up or the guest is resetting the device.
+	 * been set up.
 	 */
-	if (!sc->vsc_rx_ready || sc->resetting) {
+	if (!sc->vsc_rx_ready) {
 		/*
 		 * Drop the packet and try later.
 		 */
@@ -549,6 +533,7 @@ pci_vtnet_netmap_rx(struct pci_vtnet_softc *sc)
 			 * No more packets, but still some avail ring
 			 * entries.  Interrupt if needed/appropriate.
 			 */
+			vq_retchain(vq);
 			vq_endchains(vq, 0);
 			return;
 		}
@@ -582,9 +567,7 @@ pci_vtnet_rx_callback(int fd, enum ev_type type, void *param)
 	struct pci_vtnet_softc *sc = param;
 
 	pthread_mutex_lock(&sc->rx_mtx);
-	sc->rx_in_progress = 1;
 	sc->pci_vtnet_rx(sc);
-	sc->rx_in_progress = 0;
 	pthread_mutex_unlock(&sc->rx_mtx);
 
 }
@@ -597,10 +580,12 @@ pci_vtnet_ping_rxq(void *vsc, struct vqueue_info *vq)
 	/*
 	 * A qnotify means that the rx process can now begin
 	 */
+	pthread_mutex_lock(&sc->rx_mtx);
 	if (sc->vsc_rx_ready == 0) {
 		sc->vsc_rx_ready = 1;
-		vq->vq_used->vu_flags |= VRING_USED_F_NO_NOTIFY;
+		vq_kick_disable(vq);
 	}
+	pthread_mutex_unlock(&sc->rx_mtx);
 }
 
 static void
@@ -645,7 +630,7 @@ pci_vtnet_ping_txq(void *vsc, struct vqueue_info *vq)
 
 	/* Signal the tx thread for processing */
 	pthread_mutex_lock(&sc->tx_mtx);
-	vq->vq_used->vu_flags |= VRING_USED_F_NO_NOTIFY;
+	vq_kick_disable(vq);
 	if (sc->tx_in_progress == 0)
 		pthread_cond_signal(&sc->tx_cond);
 	pthread_mutex_unlock(&sc->tx_mtx);
@@ -674,8 +659,7 @@ pci_vtnet_tx_thread(void *param)
 	for (;;) {
 		/* note - tx mutex is locked here */
 		while (sc->resetting || !vq_has_descs(vq)) {
-			vq->vq_used->vu_flags &= ~VRING_USED_F_NO_NOTIFY;
-			mb();
+			vq_kick_enable(vq);
 			if (!sc->resetting && vq_has_descs(vq))
 				break;
 
@@ -683,7 +667,7 @@ pci_vtnet_tx_thread(void *param)
 			error = pthread_cond_wait(&sc->tx_cond, &sc->tx_mtx);
 			assert(error == 0);
 		}
-		vq->vq_used->vu_flags |= VRING_USED_F_NO_NOTIFY;
+		vq_kick_disable(vq);
 		sc->tx_in_progress = 1;
 		pthread_mutex_unlock(&sc->tx_mtx);
 
@@ -714,33 +698,13 @@ pci_vtnet_ping_ctlq(void *vsc, struct vqueue_info *vq)
 }
 #endif
 
-static int
-pci_vtnet_parsemac(char *mac_str, uint8_t *mac_addr)
-{
-        struct ether_addr *ea;
-        char *tmpstr;
-        char zero_addr[ETHER_ADDR_LEN] = { 0, 0, 0, 0, 0, 0 };
-
-        tmpstr = strsep(&mac_str,"=");
-       
-        if ((mac_str != NULL) && (!strcmp(tmpstr,"mac"))) {
-                ea = ether_aton(mac_str);
-
-                if (ea == NULL || ETHER_IS_MULTICAST(ea->octet) ||
-                    memcmp(ea->octet, zero_addr, ETHER_ADDR_LEN) == 0) {
-			fprintf(stderr, "Invalid MAC %s\n", mac_str);
-                        return (EINVAL);
-                } else
-                        memcpy(mac_addr, ea->octet, ETHER_ADDR_LEN);
-        }
-
-        return (0);
-}
-
 static void
 pci_vtnet_tap_setup(struct pci_vtnet_softc *sc, char *devname)
 {
 	char tbuf[80];
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+#endif
 
 	strcpy(tbuf, "/dev/");
 	strlcat(tbuf, devname, sizeof(tbuf));
@@ -764,6 +728,12 @@ pci_vtnet_tap_setup(struct pci_vtnet_softc *sc, char *devname)
 		close(sc->vsc_tapfd);
 		sc->vsc_tapfd = -1;
 	}
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_EVENT, CAP_READ, CAP_WRITE);
+	if (cap_rights_limit(sc->vsc_tapfd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	sc->vsc_mevp = mevent_add(sc->vsc_tapfd,
 				  EVF_READ,
@@ -802,9 +772,6 @@ pci_vtnet_netmap_setup(struct pci_vtnet_softc *sc, char *ifname)
 static int
 pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 {
-	MD5_CTX mdctx;
-	unsigned char digest[16];
-	char nstr[80];
 	char tname[MAXCOMLEN + 1];
 	struct pci_vtnet_softc *sc;
 	char *devname;
@@ -841,7 +808,7 @@ pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 		(void) strsep(&vtopts, ",");
 
 		if (vtopts != NULL) {
-			err = pci_vtnet_parsemac(vtopts, sc->vsc_config.mac);
+			err = net_parsemac(vtopts, sc->vsc_config.mac);
 			if (err != 0) {
 				free(devname);
 				return (err);
@@ -851,31 +818,15 @@ pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 
 		if (strncmp(devname, "vale", 4) == 0)
 			pci_vtnet_netmap_setup(sc, devname);
-		if ((strncmp(devname, "tap", 3) == 0) ||
-		    (strncmp(devname, "vmnet", 5) == 0))
+		if (strncmp(devname, "tap", 3) == 0 ||
+		    strncmp(devname, "vmnet", 5) == 0)
 			pci_vtnet_tap_setup(sc, devname);
 
 		free(devname);
 	}
 
-	/*
-	 * The default MAC address is the standard NetApp OUI of 00-a0-98,
-	 * followed by an MD5 of the PCI slot/func number and dev name
-	 */
 	if (!mac_provided) {
-		snprintf(nstr, sizeof(nstr), "%d-%d-%s", pi->pi_slot,
-		    pi->pi_func, vmname);
-
-		MD5Init(&mdctx);
-		MD5Update(&mdctx, nstr, strlen(nstr));
-		MD5Final(digest, &mdctx);
-
-		sc->vsc_config.mac[0] = 0x00;
-		sc->vsc_config.mac[1] = 0xa0;
-		sc->vsc_config.mac[2] = 0x98;
-		sc->vsc_config.mac[3] = digest[0];
-		sc->vsc_config.mac[4] = digest[1];
-		sc->vsc_config.mac[5] = digest[2];
+		net_genmac(pi, sc->vsc_config.mac);
 	}
 
 	/* initialize config space */
@@ -885,8 +836,9 @@ pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	pci_set_cfgdata16(pi, PCIR_SUBDEV_0, VIRTIO_TYPE_NET);
 	pci_set_cfgdata16(pi, PCIR_SUBVEND_0, VIRTIO_VENDOR);
 
-	/* Link is up if we managed to open tap device. */
-	sc->vsc_config.status = (opts == NULL || sc->vsc_tapfd >= 0);
+	/* Link is up if we managed to open tap device or vale port. */
+	sc->vsc_config.status = (opts == NULL || sc->vsc_tapfd >= 0 ||
+	    sc->vsc_nmd != NULL);
 	
 	/* use BAR 1 to map MSI-X table and PBA, if we're using MSI-X */
 	if (vi_intr_init(&sc->vsc_vs, 1, fbsdrun_virtio_msix()))
@@ -899,7 +851,6 @@ pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 
 	sc->rx_merge = 1;
 	sc->rx_vhdrlen = sizeof(struct virtio_net_rxhdr);
-	sc->rx_in_progress = 0;
 	pthread_mutex_init(&sc->rx_mtx, NULL); 
 
 	/* 
@@ -913,7 +864,7 @@ pci_vtnet_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	pthread_create(&sc->tx_tid, NULL, pci_vtnet_tx_thread, (void *)sc);
 	snprintf(tname, sizeof(tname), "vtnet-%d:%d tx", pi->pi_slot,
 	    pi->pi_func);
-        pthread_set_name_np(sc->tx_tid, tname);
+	pthread_set_name_np(sc->tx_tid, tname);
 
 	return (0);
 }

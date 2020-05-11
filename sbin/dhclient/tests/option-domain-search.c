@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sbin/dhclient/tests/option-domain-search.c 228259 2011-12-04 14:44:31Z dumbbell $ */
+/* $FreeBSD: stable/11/sbin/dhclient/tests/option-domain-search.c 228259 2011-12-04 14:44:31Z dumbbell $ */
 
 #include <setjmp.h>
 #include <stdlib.h>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_irq.h 283927 2015-06-02 19:20:39Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_irq.h 336189 2018-07-11 07:16:13Z araujo $
  */
 
 #ifndef __PCI_IRQ_H__
@@ -38,7 +39,7 @@ void	pci_irq_deassert(struct pci_devinst *pi);
 void	pci_irq_init(struct vmctx *ctx);
 void	pci_irq_reserve(int irq);
 void	pci_irq_use(int irq);
-int	pirq_alloc_pin(struct vmctx *ctx);
+int	pirq_alloc_pin(struct pci_devinst *pi);
 int	pirq_irq(int pin);
 uint8_t	pirq_read(int pin);
 void	pirq_write(struct vmctx *ctx, int pin, uint8_t val);

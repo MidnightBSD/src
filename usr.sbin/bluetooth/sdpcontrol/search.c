@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * search.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: search.c,v 1.2 2003/09/08 17:35:15 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/sdpcontrol/search.c 290395 2015-11-05 16:08:38Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpcontrol/search.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <netinet/in.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <ctype.h>
 #include <sdp.h>

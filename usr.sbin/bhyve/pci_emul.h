@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_emul.h 304421 2016-08-18 11:45:46Z mav $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_emul.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _PCI_EMUL_H_

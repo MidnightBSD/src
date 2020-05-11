@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * kbd.h
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: kbd.h,v 1.3 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/kbd.h 162128 2006-09-07 21:47:49Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidd/kbd.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _KBD_H_

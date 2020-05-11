@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * bcmfw.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bcmfw.c,v 1.4 2003/04/27 19:28:09 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bcmfw/bcmfw.c 188945 2009-02-23 18:36:54Z thompsa $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bcmfw/bcmfw.c 330449 2018-03-05 07:26:05Z eadler $
  *
  * Based on Linux BlueZ BlueFW-0.9 package
  *

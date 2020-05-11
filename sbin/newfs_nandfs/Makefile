@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/newfs_nandfs/Makefile 235537 2012-05-17 10:11:18Z gber $
+# $FreeBSD: stable/11/sbin/newfs_nandfs/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
+PACKAGE=nandfs
 PROG=	newfs_nandfs
 MAN=	newfs_nandfs.8
 
-LDADD+= -lgeom
-DPADD+= ${LIBGEOM}
+LIBADD=	geom
 
 .include <bsd.prog.mk>

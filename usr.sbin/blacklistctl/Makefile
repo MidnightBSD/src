@@ -1,0 +1,22 @@
+# $FreeBSD: stable/11/usr.sbin/blacklistctl/Makefile 301226 2016-06-02 19:06:04Z lidl $
+
+BLACKLIST_DIR=${SRCTOP}/contrib/blacklist
+.PATH: ${BLACKLIST_DIR}/bin ${BLACKLIST_DIR}/port
+
+PROG=	blacklistctl
+SRCS=	blacklistctl.c conf.c state.c support.c internal.c \
+	sockaddr_snprintf.c pidfile.c strtoi.c popenve.c
+MAN=	blacklistctl.8
+
+LDFLAGS+=-L${LIBBLACKLISTDIR}
+LIBADD+= blacklist util
+
+CFLAGS+=-I${BLACKLIST_DIR}/include -I${BLACKLIST_DIR}/port \
+	-D_PATH_BLCONTROL=\"/usr/libexec/blacklistd-helper\" \
+	-DHAVE_CONFIG_H -DHAVE_DB_H -DHAVE_LIBUTIL_H \
+	-DHAVE_CLOCK_GETTIME -DHAVE_FGETLN -DHAVE_FPARSELN \
+	-DHAVE_GETPROGNAME -DHAVE_STRLCAT -DHAVE_STRLCPY \
+	-DHAVE_STRUCT_SOCKADDR_SA_LEN
+# CFLAGS+= -D_REENTRANT
+
+.include <bsd.prog.mk>

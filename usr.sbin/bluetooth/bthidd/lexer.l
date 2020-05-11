@@ -1,10 +1,11 @@
-/* $MidnightBSD$ */
 %{
 /*
  * lexer.l
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -30,9 +31,9 @@
  * SUCH DAMAGE.
  *
  * $Id: lexer.l,v 1.3 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/lexer.l 250926 2013-05-23 05:42:35Z jkim $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidd/lexer.l 330449 2018-03-05 07:26:05Z eadler $
  */
-
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <stdlib.h>
 #include "parser.h"

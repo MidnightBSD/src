@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 2005 Colin Percival
  * All rights reserved
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/portsnap/phttpget/phttpget.c 306428 2016-09-29 01:53:29Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/portsnap/phttpget/phttpget.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/time.h>

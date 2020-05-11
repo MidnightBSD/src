@@ -1,5 +1,7 @@
-/*
+/*-
  * uuid-private.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2005 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: uuid-private.h,v 1.2 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: uuid-private.h,v 1.1 2004/12/09 18:20:26 max Exp $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpd/uuid-private.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _UUID_PRIVATE_H_

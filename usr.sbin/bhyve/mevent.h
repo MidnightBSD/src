@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/mevent.h 261090 2014-01-23 20:35:32Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/mevent.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_MEVENT_H_

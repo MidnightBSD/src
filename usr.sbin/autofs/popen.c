@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2014 The FreeBSD Foundation
@@ -38,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/popen.c 283231 2015-05-21 13:25:28Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/popen.c 332597 2018-04-16 16:16:24Z trasz $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

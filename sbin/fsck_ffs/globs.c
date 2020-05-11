@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/globs.c 347475 2019-05-10 23:46:42Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/globs.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/param.h>
 #include <ufs/ufs/dinode.h>
@@ -113,6 +113,10 @@ volatile sig_atomic_t	got_siginfo;	/* received a SIGINFO */
 volatile sig_atomic_t	got_sigalarm;	/* received a SIGALRM */
 struct	ufs1_dinode ufs1_zino;
 struct	ufs2_dinode ufs2_zino;
+
+struct dups *duplist;
+struct dups *muldup;
+struct inostatlist *inostathead;
 
 void
 fsckinit(void)

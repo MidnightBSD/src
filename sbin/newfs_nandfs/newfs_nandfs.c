@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010-2012 Semihalf.
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/newfs_nandfs/newfs_nandfs.c 316772 2017-04-13 17:11:50Z dim $");
+__FBSDID("$FreeBSD: stable/11/sbin/newfs_nandfs/newfs_nandfs.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/fdcio.h>
@@ -133,7 +134,7 @@ static uint32_t nuserfiles;
 static uint32_t seg_nblocks;
 static uint32_t seg_endblock;
 
-#define SIZE_TO_BLOCK(size) (((size) + (blocksize - 1)) / blocksize)
+#define SIZE_TO_BLOCK(size) howmany(size, blocksize)
 
 static uint32_t
 nandfs_first_block(void)
@@ -811,7 +812,7 @@ create_fs(void)
 	char *data;
 	int i;
 
-	nuserfiles = (sizeof(user_files) / sizeof(user_files[0]));
+	nuserfiles = nitems(user_files);
 
 	/* Count and assign blocks */
 	count_seg_blocks();

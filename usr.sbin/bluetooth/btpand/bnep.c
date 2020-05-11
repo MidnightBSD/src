@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bnep.c,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -26,12 +27,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/bnep.c 305287 2016-09-02 17:24:16Z dim $ */
+/* $FreeBSD: stable/11/usr.sbin/bluetooth/btpand/bnep.c 330449 2018-03-05 07:26:05Z eadler $ */
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: bnep.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");
 
 #include <sys/uio.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <stdarg.h>

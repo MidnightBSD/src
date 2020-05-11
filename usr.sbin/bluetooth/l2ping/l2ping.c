@@ -1,5 +1,7 @@
-/*
+/*-
  * l2ping.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: l2ping.c,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: l2ping.c,v 1.5 2003/05/16 19:54:40 max Exp $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/l2ping/l2ping.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/ioctl.h>
@@ -34,6 +36,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

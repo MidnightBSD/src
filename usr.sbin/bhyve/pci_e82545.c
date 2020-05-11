@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2015 Peter Grehan <grehan@freebsd.org>
  * Copyright (c) 2013 Jeremiah Lott, Avere Systems
@@ -29,9 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_e82545.c 304425 2016-08-18 11:56:07Z mav $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_e82545.c 350619 2019-08-05 22:04:16Z jhb $");
 
 #include <sys/types.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/limits.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
@@ -39,12 +43,14 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_e82545.c 304425 2016-08-18 11:5
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <md5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <pthread_np.h>
@@ -56,6 +62,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_e82545.c 304425 2016-08-18 11:5
 #include "bhyverun.h"
 #include "pci_emul.h"
 #include "mevent.h"
+#include "net_utils.h"
 
 /* Hardware/register definitions XXX: move some to common code. */
 #define E82545_VENDOR_ID_INTEL			0x8086
@@ -338,8 +345,8 @@ struct e82545_softc {
 #define E82545_NVM_MODE_OPADDR  0x0
 #define E82545_NVM_MODE_DATAIN  0x1
 #define E82545_NVM_MODE_DATAOUT 0x2
-        /* EEPROM data */
-        uint16_t eeprom_data[E82545_NVM_EEPROM_SIZE];
+	/* EEPROM data */
+	uint16_t eeprom_data[E82545_NVM_EEPROM_SIZE];
 };
 
 static void e82545_reset(struct e82545_softc *sc, int dev);
@@ -1072,8 +1079,9 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	struct ck_info ckinfo[2];
 	struct iovec *iov;
 	union  e1000_tx_udesc *dsc;
-	int desc, dtype, len, ntype, iovcnt, tlen, hdrlen, vlen, tcp, tso;
+	int desc, dtype, len, ntype, iovcnt, tlen, tcp, tso;
 	int mss, paylen, seg, tiovcnt, left, now, nleft, nnow, pv, pvoff;
+	unsigned hdrlen, vlen;
 	uint32_t tcpsum, tcpseq;
 	uint16_t ipcs, tcpcs, ipid, ohead;
 
@@ -1217,6 +1225,68 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	} else {
 		/* In case of TSO header length provided by software. */
 		hdrlen = sc->esc_txctx.tcp_seg_setup.fields.hdr_len;
+
+		/*
+		 * Cap the header length at 240 based on 7.2.4.5 of
+		 * the Intel 82576EB (Rev 2.63) datasheet.
+		 */
+		if (hdrlen > 240) {
+			WPRINTF("TSO hdrlen too large: %d\r\n", hdrlen);
+			goto done;
+		}
+
+		/*
+		 * If VLAN insertion is requested, ensure the header
+		 * at least holds the amount of data copied during
+		 * VLAN insertion below.
+		 *
+		 * XXX: Realistic packets will include a full Ethernet
+		 * header before the IP header at ckinfo[0].ck_start,
+		 * but this check is sufficient to prevent
+		 * out-of-bounds access below.
+		 */
+		if (vlen != 0 && hdrlen < ETHER_ADDR_LEN*2) {
+			WPRINTF("TSO hdrlen too small for vlan insertion "
+			    "(%d vs %d) -- dropped\r\n", hdrlen,
+			    ETHER_ADDR_LEN*2);
+			goto done;
+		}
+
+		/*
+		 * Ensure that the header length covers the used fields
+		 * in the IP and TCP headers as well as the IP and TCP
+		 * checksums.  The following fields are accessed below:
+		 *
+		 * Header | Field | Offset | Length
+		 * -------+-------+--------+-------
+		 * IPv4   | len   | 2      | 2
+		 * IPv4   | ID    | 4      | 2
+		 * IPv6   | len   | 4      | 2
+		 * TCP    | seq # | 4      | 4
+		 * TCP    | flags | 13     | 1
+		 * UDP    | len   | 4      | 4
+		 */
+		if (hdrlen < ckinfo[0].ck_start + 6 ||
+		    hdrlen < ckinfo[0].ck_off + 2) {
+			WPRINTF("TSO hdrlen too small for IP fields (%d) "
+			    "-- dropped\r\n", hdrlen);
+			goto done;
+		}
+		if (sc->esc_txctx.cmd_and_length & E1000_TXD_CMD_TCP) {
+			if (hdrlen < ckinfo[1].ck_start + 14 ||
+			    (ckinfo[1].ck_valid &&
+			    hdrlen < ckinfo[1].ck_off + 2)) {
+				WPRINTF("TSO hdrlen too small for TCP fields "
+				    "(%d) -- dropped\r\n", hdrlen);
+				goto done;
+			}
+		} else {
+			if (hdrlen < ckinfo[1].ck_start + 8) {
+				WPRINTF("TSO hdrlen too small for UDP fields "
+				    "(%d) -- dropped\r\n", hdrlen);
+				goto done;
+			}
+		}
 	}
 
 	/* Allocate, fill and prepend writable header vector. */
@@ -1238,7 +1308,8 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 		iovcnt++;
 		iov->iov_base = hdr;
 		iov->iov_len = hdrlen;
-	}
+	} else
+		hdr = NULL;
 
 	/* Insert VLAN tag. */
 	if (vlen != 0) {
@@ -1280,7 +1351,9 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	DPRINTF("tx %s segmentation offload %d+%d/%d bytes %d iovs\r\n",
 	    tcp ? "TCP" : "UDP", hdrlen, paylen, mss, iovcnt);
 	ipid = ntohs(*(uint16_t *)&hdr[ckinfo[0].ck_start + 4]);
-	tcpseq = ntohl(*(uint32_t *)&hdr[ckinfo[1].ck_start + 4]);
+	tcpseq = 0;
+	if (tcp)
+		tcpseq = ntohl(*(uint32_t *)&hdr[ckinfo[1].ck_start + 4]);
 	ipcs = *(uint16_t *)&hdr[ckinfo[0].ck_off];
 	tcpcs = 0;
 	if (ckinfo[1].ck_valid)	/* Save partial pseudo-header checksum. */
@@ -1401,7 +1474,7 @@ e82545_tx_run(struct e82545_softc *sc)
 	    sc->esc_TDH, sc->esc_TDHr, sc->esc_TDT);
 }
 
-static void *
+static _Noreturn void *
 e82545_tx_thread(void *param)
 {
 	struct e82545_softc *sc = param;
@@ -1466,7 +1539,7 @@ e82545_rx_disable(struct e82545_softc *sc)
 static void
 e82545_write_ra(struct e82545_softc *sc, int reg, uint32_t wval)
 {
-        struct eth_uni *eu;
+	struct eth_uni *eu;
 	int idx;
 
 	idx = reg >> 1;
@@ -1492,7 +1565,7 @@ e82545_write_ra(struct e82545_softc *sc, int reg, uint32_t wval)
 static uint32_t
 e82545_read_ra(struct e82545_softc *sc, int reg)
 {
-        struct eth_uni *eu;
+	struct eth_uni *eu;
 	uint32_t retval;
 	int idx;
 
@@ -1736,12 +1809,12 @@ e82545_read_register(struct e82545_softc *sc, uint32_t offset)
 {
 	uint32_t retval;
 	int ridx;
-	
+
 	if (offset & 0x3) {
 		DPRINTF("Unaligned register read offset:0x%x\r\n", offset);
 		return 0;
 	}
-		
+
 	DPRINTF("Register read: 0x%x\r\n", offset);
 
 	switch (offset) {
@@ -2203,6 +2276,9 @@ static void
 e82545_open_tap(struct e82545_softc *sc, char *opts)
 {
 	char tbuf[80];
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+#endif
 	
 	if (opts == NULL) {
 		sc->esc_tapfd = -1;
@@ -2215,7 +2291,7 @@ e82545_open_tap(struct e82545_softc *sc, char *opts)
 	sc->esc_tapfd = open(tbuf, O_RDWR);
 	if (sc->esc_tapfd == -1) {
 		DPRINTF("unable to open tap device %s\n", opts);
-		exit(1);
+		exit(4);
 	}
 
 	/*
@@ -2229,6 +2305,12 @@ e82545_open_tap(struct e82545_softc *sc, char *opts)
 		sc->esc_tapfd = -1;
 	}
 
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_EVENT, CAP_READ, CAP_WRITE);
+	if (cap_rights_limit(sc->esc_tapfd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
+	
 	sc->esc_mevp = mevent_add(sc->esc_tapfd,
 				  EVF_READ,
 				  e82545_tap_callback,
@@ -2241,40 +2323,18 @@ e82545_open_tap(struct e82545_softc *sc, char *opts)
 }
 
 static int
-e82545_parsemac(char *mac_str, uint8_t *mac_addr)
-{
-	struct ether_addr *ea;
-	char *tmpstr;
-	char zero_addr[ETHER_ADDR_LEN] = { 0, 0, 0, 0, 0, 0 };
-
-	tmpstr = strsep(&mac_str,"=");
-	if ((mac_str != NULL) && (!strcmp(tmpstr,"mac"))) {
-		ea = ether_aton(mac_str);
-		if (ea == NULL || ETHER_IS_MULTICAST(ea->octet) ||
-		    memcmp(ea->octet, zero_addr, ETHER_ADDR_LEN) == 0) {
-			fprintf(stderr, "Invalid MAC %s\n", mac_str);
-			return (1);
-		} else
-			memcpy(mac_addr, ea->octet, ETHER_ADDR_LEN);
-	}
-	return (0);
-}
-
-static int
 e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 {
-	DPRINTF("Loading with options: %s\r\n", opts);
-
-	MD5_CTX mdctx;
-	unsigned char digest[16];
 	char nstr[80];
 	struct e82545_softc *sc;
 	char *devname;
 	char *vtopts;
 	int mac_provided;
 
+	DPRINTF("Loading with options: %s\r\n", opts);
+
 	/* Setup our softc */
-	sc = calloc(sizeof(*sc), 1);
+	sc = calloc(1, sizeof(*sc));
 
 	pi->pi_arg = sc;
 	sc->esc_pi = pi;
@@ -2322,7 +2382,7 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 		(void) strsep(&vtopts, ",");
 
 		if (vtopts != NULL) {
-			err = e82545_parsemac(vtopts, sc->esc_mac.octet);
+			err = net_parsemac(vtopts, sc->esc_mac.octet);
 			if (err != 0) {
 				free(devname);
 				return (err);
@@ -2337,24 +2397,8 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 		free(devname);
 	}
 
-	/*
-	 * The default MAC address is the standard NetApp OUI of 00-a0-98,
-	 * followed by an MD5 of the PCI slot/func number and dev name
-	 */
 	if (!mac_provided) {
-		snprintf(nstr, sizeof(nstr), "%d-%d-%s", pi->pi_slot,
-		    pi->pi_func, vmname);
-
-		MD5Init(&mdctx);
-		MD5Update(&mdctx, nstr, strlen(nstr));
-		MD5Final(digest, &mdctx);
-
-		sc->esc_mac.octet[0] = 0x00;
-		sc->esc_mac.octet[1] = 0xa0;
-		sc->esc_mac.octet[2] = 0x98;
-		sc->esc_mac.octet[3] = digest[0];
-		sc->esc_mac.octet[4] = digest[1];
-		sc->esc_mac.octet[5] = digest[2];
+		net_genmac(pi, sc->esc_mac.octet);
 	}
 
 	/* H/w initiated reset */

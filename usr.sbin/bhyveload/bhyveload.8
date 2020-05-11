@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2012 NetApp Inc
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/bhyveload/bhyveload.8 295124 2016-02-01 14:56:11Z grehan $
+.\" $FreeBSD: stable/11/usr.sbin/bhyveload/bhyveload.8 302211 2016-06-26 14:44:01Z novel $
 .\"
-.Dd October 7, 2015
+.Dd June 24, 2016
 .Dt BHYVELOAD 8
 .Os
 .Sh NAME
@@ -36,13 +35,14 @@
 guest inside a bhyve virtual machine
 .Sh SYNOPSIS
 .Nm
+.Op Fl C
 .Op Fl S
 .Op Fl c Ar cons-dev
 .Op Fl d Ar disk-path
 .Op Fl e Ar name=value
 .Op Fl h Ar host-path
 .Op Fl l Ar os-loader
-.Op Fl m Ar mem-size
+.Op Fl m Ar memsize Ns Op Ar K|k|M|m|G|g|T|t
 .Ar vmname
 .Sh DESCRIPTION
 .Nm
@@ -103,16 +103,12 @@ will use
 which presents a standard
 .Fx
 loader.
-.It Fl m Ar mem-size Xo
-.Sm off
-.Op Cm K | k | M | m | G | g | T | t
-.Xc
-.Sm on
-.Ar mem-size
+.It Fl m Ar memsize Ns Op Ar K|k|M|m|G|g|T|t
+.Ar memsize
 is the amount of memory allocated to the guest.
 .Pp
 The
-.Ar mem-size
+.Ar memsize
 argument may be suffixed with one of
 .Cm K ,
 .Cm M ,
@@ -123,13 +119,18 @@ or
 Kilobytes, Megabytes, Gigabytes or Terabytes
 respectively.
 .Pp
-The default value of
-.Ar mem-size
-is 256M.
+.Ar memsize
+defaults to 256M.
+.It Fl C
+Include guest memory in the core file when
+.Nm
+dumps core.
+This is intended for debugging an OS loader as it allows inspection of
+the guest memory.
 .It Fl S
 Wire guest memory.
-.Sh EXAMPLES
 .El
+.Sh EXAMPLES
 To create a virtual machine named
 .Ar freebsd-vm
 that boots off the ISO image
@@ -164,9 +165,9 @@ and was developed at NetApp Inc.
 .Nm
 was developed by
 .An -nosplit
-.An "Neel Natu" Aq neel@FreeBSD.org
+.An Neel Natu Aq Mt neel@FreeBSD.org
 at NetApp Inc with a lot of help from
-.An Doug Rabson Aq dfr@FreeBSD.org
+.An Doug Rabson Aq Mt dfr@FreeBSD.org .
 .Sh BUGS
 .Nm
 can only load

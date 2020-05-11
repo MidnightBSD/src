@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/sbin/dhclient/tests/fake.c 315610 2017-03-20 03:06:41Z ngie $ */
+/* $FreeBSD: stable/11/sbin/dhclient/tests/fake.c 332602 2018-04-16 16:23:32Z asomers $ */
 
 #include <setjmp.h>
 #include <stdarg.h>
@@ -10,7 +9,7 @@
 extern jmp_buf env;
 
 void
-error(char *fmt, ...)
+error(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -23,7 +22,7 @@ error(char *fmt, ...)
 }
 
 int
-warning(char *fmt, ...)
+warning(const char *fmt, ...)
 {
 	va_list ap;
 
@@ -40,7 +39,7 @@ warning(char *fmt, ...)
 }
 
 int
-note(char *fmt, ...)
+note(const char *fmt, ...)
 {
 	int ret;
 	va_list ap;

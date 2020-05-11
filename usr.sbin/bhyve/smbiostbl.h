@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/smbiostbl.h 267450 2014-06-13 21:30:40Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/smbiostbl.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _SMBIOSTBL_H_

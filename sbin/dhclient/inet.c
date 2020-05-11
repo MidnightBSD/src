@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: inet.c,v 1.7 2004/05/04 21:48:16 deraadt Exp $	*/
 
 /*
@@ -44,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/inet.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/inet.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "dhcpd.h"
 
@@ -55,7 +54,7 @@ struct iaddr
 subnet_number(struct iaddr addr, struct iaddr mask)
 {
 	struct iaddr rv;
-	int i;
+	unsigned i;
 
 	rv.len = 0;
 
@@ -78,7 +77,7 @@ struct iaddr
 broadcast_addr(struct iaddr subnet, struct iaddr mask)
 {
 	struct iaddr rv;
-	int i;
+	unsigned i;
 
 	if (subnet.len != mask.len) {
 		rv.len = 0;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: privsep.c,v 1.7 2004/05/10 18:34:42 deraadt Exp $ */
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/privsep.c 252626 2013-07-03 22:12:54Z pjd $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/privsep.c 332602 2018-04-16 16:23:32Z asomers $");
 
 #include "dhcpd.h"
 #include "privsep.h"
@@ -40,7 +39,7 @@ buf_open(size_t len)
 }
 
 int
-buf_add(struct buf *buf, void *data, size_t len)
+buf_add(struct buf *buf, const void *data, size_t len)
 {
 	if (buf->wpos + len > buf->size)
 		return (-1);
@@ -77,7 +76,8 @@ buf_close(int sock, struct buf *buf)
 ssize_t
 buf_read(int sock, void *buf, size_t nbytes)
 {
-	ssize_t	n, r = 0;
+	ssize_t	n;
+	size_t r = 0;
 	char *p = buf;
 
 	do {
@@ -85,7 +85,7 @@ buf_read(int sock, void *buf, size_t nbytes)
 		if (n == 0)
 			error("connection closed");
 		if (n != -1) {
-			r += n;
+			r += (size_t)n;
 			p += n;
 			nbytes -= n;
 		}
@@ -108,10 +108,11 @@ dispatch_imsg(struct interface_info *ifi, int fd)
 	char			*medium, *reason, *filename,
 				*servername, *prefix;
 	size_t			 medium_len, reason_len, filename_len,
-				 servername_len, prefix_len, totlen;
+				 servername_len, optlen, prefix_len, totlen;
 	struct client_lease	 lease;
-	int			 ret, i, optlen;
+	int			 ret, i;
 	struct buf		*buf;
+	u_int16_t		mtu;
 
 	buf_read(fd, &hdr, sizeof(hdr));
 
@@ -235,6 +236,13 @@ dispatch_imsg(struct interface_info *ifi, int fd)
 		break;
 	case IMSG_SEND_PACKET:
 		send_packet_priv(ifi, &hdr, fd);
+		break;
+	case IMSG_SET_INTERFACE_MTU:
+		if (hdr.len < sizeof(hdr) + sizeof(u_int16_t))
+			error("corrupted message received");	
+	
+		buf_read(fd, &mtu, sizeof(u_int16_t));
+		interface_set_mtu_priv(ifi->name, mtu);
 		break;
 	default:
 		error("received unknown message, code %d", hdr.code);

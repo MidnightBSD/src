@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Dima Dorfman.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/sbin/devfs/extern.h 130021 2004-06-02 23:02:31Z stefanf $
+ * $FreeBSD: stable/11/sbin/devfs/extern.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef __DEVFS_H__

@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/boot98cfg/Makefile 148064 2005-07-15 15:32:52Z nyan $
+# $FreeBSD: stable/11/usr.sbin/boot98cfg/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	boot98cfg
 MAN=	boot98cfg.8
 
 WARNS?=	2
 
-DPADD=	${LIBGEOM}
-LDADD=	-lgeom
+LIBADD=	geom
 
 .include <bsd.prog.mk>

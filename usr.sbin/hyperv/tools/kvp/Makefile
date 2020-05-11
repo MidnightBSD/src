@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/hyperv/tools/kvp/Makefile 308664 2016-11-15 02:36:12Z sephe $
+# $FreeBSD: stable/11/usr.sbin/hyperv/tools/kvp/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 .include <bsd.own.mk>
 
-HV_KVP_DAEMON_DISTDIR?= ${.CURDIR}/../../../../contrib/hyperv/tools
-.PATH: ${HV_KVP_DAEMON_DISTDIR} 
+HV_KVP_DAEMON_DISTDIR?= ${SRCTOP}/contrib/hyperv/tools
+.PATH: ${HV_KVP_DAEMON_DISTDIR}
 
 PROG= 	hv_kvp_daemon
-MAN= 	hv_kvp_daemon.8	
+MAN= 	hv_kvp_daemon.8
 
-CFLAGS+=	-I${.CURDIR}/../../../../sys/dev/hyperv/utilities
+CFLAGS+=	-I${SRCTOP}/sys/dev/hyperv/utilities
 
 .include <bsd.prog.mk>

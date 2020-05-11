@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
  *
@@ -24,13 +25,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/block_if.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:07Z jhb $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/block_if.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/block_if.c 348375 2019-05-29 23:11:07Z jhb $");
 
 #include <sys/param.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/queue.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
@@ -38,6 +42,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/block_if.c 284900 2015-06-28 03:22:
 #include <sys/disk.h>
 
 #include <assert.h>
+#include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +50,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/block_if.c 284900 2015-06-28 03:22:
 #include <pthread.h>
 #include <pthread_np.h>
 #include <signal.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include <machine/atomic.h>
@@ -56,7 +62,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/block_if.c 284900 2015-06-28 03:22:
 #define BLOCKIF_SIG	0xb109b109
 
 #define BLOCKIF_NUMTHR	8
-#define BLOCKIF_MAXREQ	(64 + BLOCKIF_NUMTHR)
+#define BLOCKIF_MAXREQ	(BLOCKIF_RING_MAX + BLOCKIF_NUMTHR)
 
 enum blockop {
 	BOP_READ,
@@ -95,8 +101,8 @@ struct blockif_ctxt {
 	int			bc_psectoff;
 	int			bc_closing;
 	pthread_t		bc_btid[BLOCKIF_NUMTHR];
-        pthread_mutex_t		bc_mtx;
-        pthread_cond_t		bc_cond;
+	pthread_mutex_t		bc_mtx;
+	pthread_cond_t		bc_cond;
 
 	/* Request elements and free/pending/busy queues */
 	TAILQ_HEAD(, blockif_elem) bc_freeq;       
@@ -400,6 +406,10 @@ blockif_open(const char *optstr, const char *ident)
 	off_t size, psectsz, psectoff;
 	int extra, fd, i, sectsz;
 	int nocache, sync, ro, candelete, geom, ssopt, pssopt;
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+	cap_ioctl_t cmds[] = { DIOCGFLUSH, DIOCGDELETE };
+#endif
 
 	pthread_once(&blockif_once, blockif_init);
 
@@ -448,14 +458,24 @@ blockif_open(const char *optstr, const char *ident)
 	}
 
 	if (fd < 0) {
-		perror("Could not open backing file");
+		warn("Could not open backing file: %s", nopt);
 		goto err;
 	}
 
         if (fstat(fd, &sbuf) < 0) {
-                perror("Could not stat backing file");
+		warn("Could not stat backing file %s", nopt);
 		goto err;
         }
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_FSYNC, CAP_IOCTL, CAP_READ, CAP_SEEK,
+	    CAP_WRITE);
+	if (ro)
+		cap_rights_clear(&rights, CAP_FSYNC, CAP_WRITE);
+
+	if (cap_rights_limit(fd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
         /*
 	 * Deal with raw devices
@@ -482,6 +502,11 @@ blockif_open(const char *optstr, const char *ident)
 			geom = 1;
 	} else
 		psectsz = sbuf.st_blksize;
+
+#ifndef WITHOUT_CAPSICUM
+	if (cap_ioctls_limit(fd, cmds, nitems(cmds)) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	if (ssopt != 0) {
 		if (!powerof2(ssopt) || !powerof2(pssopt) || ssopt < 512 ||
@@ -693,9 +718,7 @@ int
 blockif_close(struct blockif_ctxt *bc)
 {
 	void *jval;
-	int err, i;
-
-	err = 0;
+	int i;
 
 	assert(bc->bc_magic == BLOCKIF_SIG);
 

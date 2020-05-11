@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/loader/main.c 346482 2019-04-21 04:26:02Z kevans $");
+__FBSDID("$FreeBSD: stable/11/stand/efi/loader/main.c 358208 2020-02-21 04:42:16Z kevans $");
 
 #include <stand.h>
 
@@ -169,8 +169,17 @@ static void
 set_currdev(const char *devname)
 {
 
-	env_setenv("currdev", EV_VOLATILE, devname, efi_setcurrdev, env_nounset);
-	env_setenv("loaddev", EV_VOLATILE, devname, env_noset, env_nounset);
+	/*
+	 * Don't execute hooks here; we may need to try setting these more than
+	 * once here if we're probing for the ZFS pool we're supposed to boot.
+	 * The currdev hook is intended to just validate user input anyways,
+	 * while the loaddev hook makes it immutable once we've determined what
+	 * the proper currdev is.
+	 */
+	env_setenv("currdev", EV_VOLATILE | EV_NOHOOK, devname, efi_setcurrdev,
+	    env_nounset);
+	env_setenv("loaddev", EV_VOLATILE | EV_NOHOOK, devname, env_noset,
+	    env_nounset);
 }
 
 static void

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/fwctl.h 295124 2016-02-01 14:56:11Z grehan $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/fwctl.h 336189 2018-07-11 07:16:13Z araujo $
  */
 
 #ifndef _FWCTL_H_

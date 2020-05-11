@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -35,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/defined.c 270897 2014-08-31 21:48:12Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/defined.c 332597 2018-04-16 16:16:24Z trasz $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -52,6 +53,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/defined.c 270897 2014-08-31 21:48:
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <libutil.h>
 #include <netdb.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -60,8 +62,6 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/defined.c 270897 2014-08-31 21:48:
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <libutil.h>
 
 #include "common.h"
 

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/mevent.c 268953 2014-07-21 19:08:02Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/mevent.c 336161 2018-07-10 04:26:32Z araujo $
  */
 
 /*
@@ -33,16 +34,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/mevent.c 268953 2014-07-21 19:08:02Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/mevent.c 336161 2018-07-10 04:26:32Z araujo $");
 
 #include <assert.h>
+#include <err.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include <sys/types.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/event.h>
 #include <sys/time.h>
 
@@ -65,7 +71,7 @@ static int mevent_timid = 43;
 static int mevent_pipefd[2];
 static pthread_mutex_t mevent_lmutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct mevent {	
+struct mevent {
 	void	(*me_func)(int, enum ev_type, void *);
 #define me_msecs me_fd
 	int	me_fd;
@@ -75,7 +81,7 @@ struct mevent {
 	int	me_cq;
 	int	me_state;
 	int	me_closefd;
-	LIST_ENTRY(mevent) me_list;			   
+	LIST_ENTRY(mevent) me_list;
 };
 
 static LIST_HEAD(listhead, mevent) global_head, change_head;
@@ -402,12 +408,21 @@ mevent_dispatch(void)
 	int mfd;
 	int numev;
 	int ret;
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+#endif
 
 	mevent_tid = pthread_self();
 	mevent_set_name();
 
 	mfd = kqueue();
 	assert(mfd > 0);
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_KQUEUE);
+	if (cap_rights_limit(mfd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	/*
 	 * Open the pipe that will be used for other threads to force
@@ -419,6 +434,14 @@ mevent_dispatch(void)
 		perror("pipe");
 		exit(0);
 	}
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_EVENT, CAP_READ, CAP_WRITE);
+	if (cap_rights_limit(mevent_pipefd[0], &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+	if (cap_rights_limit(mevent_pipefd[1], &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	/*
 	 * Add internal event handler for the pipe write fd

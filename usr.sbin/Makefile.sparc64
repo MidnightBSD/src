@@ -1,5 +1,0 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/Makefile.sparc64 294364 2016-01-19 23:36:49Z ian $
-
-SUBDIR+=	eeprom
-SUBDIR+=	ofwdump

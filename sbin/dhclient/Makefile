@@ -1,6 +1,5 @@
-# $MidnightBSD$
 # $OpenBSD: Makefile,v 1.9 2004/05/04 12:52:05 henning Exp $
-# $FreeBSD: stable/10/sbin/dhclient/Makefile 264996 2014-04-27 01:15:10Z jmmv $
+# $FreeBSD: stable/11/sbin/dhclient/Makefile 332602 2018-04-16 16:23:32Z asomers $
 #
 # Copyright (c) 1996, 1997 The Internet Software Consortium.
 # All rights reserved.
@@ -32,8 +31,9 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 SRCS=	dhclient.c clparse.c alloc.c dispatch.c hash.c bpf.c options.c \
 	tree.c conflex.c errwarn.c inet.c packet.c convert.c tables.c \
 	parse.c privsep.c
@@ -42,10 +42,10 @@ PROG=	dhclient
 SCRIPTS=dhclient-script
 MAN=	dhclient.8 dhclient.conf.5 dhclient.leases.5 dhcp-options.5 \
 	dhclient-script.8
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
-WARNS?=	2
+WARNS?=	4
+NO_WCAST_ALIGN=	yes
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=    tests

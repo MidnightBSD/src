@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright 2004-2005 Colin Percival
 .\" All rights reserved
@@ -24,7 +23,7 @@
 .\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/portsnap/portsnap/portsnap.8 296638 2016-03-11 01:39:28Z jgh $
+.\" $FreeBSD: stable/11/usr.sbin/portsnap/portsnap/portsnap.8 296280 2016-03-01 22:13:20Z jgh $
 .\"
 .Dd March 1, 2016
 .Dt PORTSNAP 8
@@ -162,6 +161,18 @@ or
 commands.
 Again, note that in the parts of the ports tree which are being
 updated, any local changes or additions will be removed.
+.It auto
+Run
+.Cm fetch
+or
+.Cm cron
+depending on whether stdin is a terminal; then run
+.Cm update
+or
+.Cm extract
+depending on whether
+.Ar portsdir
+exists.
 .El
 .Sh TIPS
 .Bl -bullet
@@ -265,4 +276,4 @@ Default location where the ports tree is extracted.
 .Xr pkg 7 ,
 .Xr pkg-version 8
 .Sh AUTHORS
-.An Colin Percival Aq cperciva@FreeBSD.org
+.An Colin Percival Aq Mt cperciva@FreeBSD.org

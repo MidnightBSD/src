@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_lpc.h 295124 2016-02-01 14:56:11Z grehan $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_lpc.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _LPC_H_

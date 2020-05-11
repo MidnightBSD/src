@@ -1,7 +1,9 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
+ * Copyright (c) 2019 Joyent, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,11 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_block.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_block.c 348375 2019-05-29 23:11:07Z jhb $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_block.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_virtio_block.c 348375 2019-05-29 23:11:07Z jhb $");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>
@@ -54,13 +56,15 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_virtio_block.c 284900 2015-06-2
 #include "virtio.h"
 #include "block_if.h"
 
-#define VTBLK_RINGSZ	64
+#define VTBLK_RINGSZ	128
+
+_Static_assert(VTBLK_RINGSZ <= BLOCKIF_RING_MAX, "Each ring entry must be able to queue a request");
 
 #define VTBLK_S_OK	0
 #define VTBLK_S_IOERR	1
 #define	VTBLK_S_UNSUPP	2
 
-#define	VTBLK_BLK_ID_BYTES	20
+#define	VTBLK_BLK_ID_BYTES	20 + 1
 
 /* Capability bits */
 #define	VTBLK_F_SEG_MAX		(1 << 2)	/* Maximum request segments */
@@ -201,7 +205,6 @@ pci_vtblk_proc(struct pci_vtblk_softc *sc, struct vqueue_info *vq)
 	int err;
 	ssize_t iolen;
 	int writeop, type;
-	off_t offset;
 	struct iovec iov[BLOCKIF_IOV_MAX + 2];
 	uint16_t idx, flags[BLOCKIF_IOV_MAX + 2];
 
@@ -250,7 +253,8 @@ pci_vtblk_proc(struct pci_vtblk_softc *sc, struct vqueue_info *vq)
 	io->io_req.br_resid = iolen;
 
 	DPRINTF(("virtio-block: %s op, %zd bytes, %d segs, offset %ld\n\r", 
-		 writeop ? "write" : "read/ident", iolen, i - 1, offset));
+		 writeop ? "write" : "read/ident", iolen, i - 1,
+		 io->io_req.br_offset));
 
 	switch (type) {
 	case VBH_OP_READ:
@@ -343,13 +347,22 @@ pci_vtblk_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	MD5Init(&mdctx);
 	MD5Update(&mdctx, opts, strlen(opts));
 	MD5Final(digest, &mdctx);	
-	sprintf(sc->vbsc_ident, "BHYVE-%02X%02X-%02X%02X-%02X%02X",
+	snprintf(sc->vbsc_ident, VTBLK_BLK_ID_BYTES,
+	    "BHYVE-%02X%02X-%02X%02X-%02X%02X",
 	    digest[0], digest[1], digest[2], digest[3], digest[4], digest[5]);
 
 	/* setup virtio block config space */
 	sc->vbsc_cfg.vbc_capacity = size / DEV_BSIZE; /* 512-byte units */
 	sc->vbsc_cfg.vbc_size_max = 0;	/* not negotiated */
-	sc->vbsc_cfg.vbc_seg_max = BLOCKIF_IOV_MAX;
+
+	/*
+	 * If Linux is presented with a seg_max greater than the virtio queue
+	 * size, it can stumble into situations where it violates its own
+	 * invariants and panics.  For safety, we keep seg_max clamped, paying
+	 * heed to the two extra descriptors needed for the header and status
+	 * of a request.
+	 */
+	sc->vbsc_cfg.vbc_seg_max = MIN(VTBLK_RINGSZ - 2, BLOCKIF_IOV_MAX);
 	sc->vbsc_cfg.vbc_geometry.cylinders = 0;	/* no geometry */
 	sc->vbsc_cfg.vbc_geometry.heads = 0;
 	sc->vbsc_cfg.vbc_geometry.sectors = 0;

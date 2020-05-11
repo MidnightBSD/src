@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * hid.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: hid.c,v 1.3 2004/02/17 22:14:57 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidcontrol/hid.c 163811 2006-10-31 00:26:58Z markus $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidcontrol/hid.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <dev/usb/usb.h>
 #include <dev/usb/usbhid.h>

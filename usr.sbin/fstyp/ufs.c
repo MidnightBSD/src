@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * Copyright (c) 2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/ufs.c 275680 2014-12-10 14:14:16Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/ufs.c 275680 2014-12-10 14:14:16Z trasz $");
 
 #include <sys/types.h>
 #include <stdint.h>

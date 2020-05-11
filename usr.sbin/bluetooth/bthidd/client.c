@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * client.c
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,11 +30,12 @@
  * SUCH DAMAGE.
  *
  * $Id: client.c,v 1.7 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/client.c 163918 2006-11-02 18:57:09Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidd/client.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -237,7 +239,9 @@ client_socket(bdaddr_p bdaddr, uint16_t psm)
 	l2addr.l2cap_family = AF_BLUETOOTH;
 	memset(&l2addr.l2cap_bdaddr, 0, sizeof(l2addr.l2cap_bdaddr));
 	l2addr.l2cap_psm = 0;
-
+	l2addr.l2cap_bdaddr_type = BDADDR_BREDR;
+	l2addr.l2cap_cid = 0;
+	
 	if (bind(s, (struct sockaddr *) &l2addr, sizeof(l2addr)) < 0) {
 		close(s);
 		return (-1);

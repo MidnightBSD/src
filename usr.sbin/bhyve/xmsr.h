@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/xmsr.h 276349 2014-12-28 21:27:13Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/xmsr.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef	_XMSR_H_

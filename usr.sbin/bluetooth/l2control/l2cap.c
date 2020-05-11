@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * l2cap.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: l2cap.c,v 1.5 2003/05/16 19:52:37 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/l2control/l2cap.c 121054 2003-10-12 22:04:24Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/l2control/l2cap.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/ioctl.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <stdio.h>

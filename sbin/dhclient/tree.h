@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: tree.h,v 1.5 2004/05/06 22:29:15 deraadt Exp $	*/
 
 /* Definitions for address trees... */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +39,8 @@
  * Enterprises.  To learn more about the Internet Software Consortium,
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
+ *
+ * $FreeBSD: stable/11/sbin/dhclient/tree.h 332602 2018-04-16 16:23:32Z asomers $
  */
 
 /* A pair of pointers, suitable for making a linked list. */
@@ -54,14 +57,14 @@ struct tree_cache {
 };
 
 struct universe {
-	char *name;
+	const char *name;
 	struct hash_table *hash;
 	struct option *options[256];
 };
 
 struct option {
-	char *name;
-	char *format;
+	const char *name;
+	const char *format;
 	struct universe *universe;
 	unsigned char code;
 };

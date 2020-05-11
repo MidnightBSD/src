@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1998 Robert Nordier
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-	"$MidnightBSD$";
+  "$FreeBSD: stable/11/usr.sbin/btxld/btxld.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -67,8 +69,6 @@ static const char rcsid[] =
 
 #define IMPURE	1		/* Writable text */
 #define MAXU32	0xffffffff	/* Maximum unsigned 32-bit quantity */
-
-#define align(x, y) (((x) + (y) - 1) & ~((y) - 1))
 
 struct hdr {
     uint32_t fmt;		/* Format */
@@ -425,7 +425,7 @@ puthdr(int fd, struct hdr *hdr)
 	eh.p[1].p_offset = htole32(le32toh(eh.p[0].p_offset) +
 	    le32toh(eh.p[0].p_filesz));
 	eh.p[1].p_vaddr = eh.p[1].p_paddr =
-	    htole32(align(le32toh(eh.p[0].p_paddr) + le32toh(eh.p[0].p_memsz),
+	    htole32(roundup2(le32toh(eh.p[0].p_paddr) + le32toh(eh.p[0].p_memsz),
 	    4096));
 	eh.p[1].p_filesz = eh.p[1].p_memsz = htole32(hdr->data);
 	eh.sh[2].sh_addr = eh.p[0].p_vaddr;

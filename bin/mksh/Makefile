@@ -1,6 +1,6 @@
 .include <src.opts.mk>
 
-MKSHDIR= ${.CURDIR}/../../contrib/mksh
+MKSHDIR= ${SRCTOP}/contrib/mksh
 .PATH: ${MKSHDIR}
 
 PACKAGE=	runtime

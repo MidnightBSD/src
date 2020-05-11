@@ -1,5 +1,4 @@
-$MidnightBSD$
-$FreeBSD: stable/10/usr.sbin/bluetooth/bcmfw/BCM-LEGAL.txt 114881 2003-05-10 22:03:45Z julian $
+$FreeBSD: stable/11/usr.sbin/bluetooth/bcmfw/BCM-LEGAL.txt 114881 2003-05-10 22:03:45Z julian $
 
 BCM firmware version 2.15
 Copyright (c) 2000-2002 Broadcom Corporation

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
  *
@@ -28,11 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/chkgrp/chkgrp.c 284994 2015-07-01 07:31:39Z des $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/chkgrp/chkgrp.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <err.h>
 #include <errno.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -106,7 +108,8 @@ main(int argc, char *argv[])
 		/*
 		 * Hack: special case for + line
 		 */
-		if (strncmp(line, "+:::", len) == 0)
+		if (strncmp(line, "+:::", len) == 0 ||
+		    strncmp(line, "+:*::", len) == 0)
 			continue;
 
 		/*

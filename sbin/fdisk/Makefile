@@ -1,15 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/fdisk/Makefile 183296 2008-09-23 13:12:51Z ru $
+# $FreeBSD: stable/11/sbin/fdisk/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
+PACKAGE=runtime
 PROG=	fdisk
 SRCS=	fdisk.c geom_mbr_enc.c
 WARNS?=	4
 MAN=	fdisk.8
 
-.PATH:	${.CURDIR}/../../sys/geom
+.PATH:	${SRCTOP}/sys/geom
 
-DPADD+=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF}
-LDADD+=	-lgeom -lbsdxml -lsbuf
+LIBADD=	geom
 
 .include <bsd.prog.mk>
 

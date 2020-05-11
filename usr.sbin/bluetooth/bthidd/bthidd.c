@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * bthidd.c
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,12 +30,13 @@
  * SUCH DAMAGE.
  *
  * $Id: bthidd.c,v 1.8 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidd/bthidd.c 162128 2006-09-07 21:47:49Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidd/bthidd.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

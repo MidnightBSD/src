@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_uart.c 267393 2014-06-12 13:13:15Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_uart.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_uart.c 267393 2014-06-12 13:13:15Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_uart.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 

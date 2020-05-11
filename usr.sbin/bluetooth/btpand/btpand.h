@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: btpand.h,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/btpand.h 305287 2016-09-02 17:24:16Z dim $ */
+/* $FreeBSD: stable/11/usr.sbin/bluetooth/btpand/btpand.h 330449 2018-03-05 07:26:05Z eadler $ */
 
 #include <sys/types.h>
 #include <sys/queue.h>

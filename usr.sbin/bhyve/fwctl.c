@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2015  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/fwctl.c 295124 2016-02-01 14:56:11Z grehan $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/fwctl.c 341486 2018-12-04 18:32:50Z gordon $
  */
 
 /*
@@ -32,7 +33,7 @@
  * but with a request/response messaging protocol.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/fwctl.c 295124 2016-02-01 14:56:11Z grehan $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/fwctl.c 341486 2018-12-04 18:32:50Z gordon $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -78,8 +79,8 @@ static u_int ident_idx;
 
 struct op_info {
 	int op;
-	int  (*op_start)(int len);
-	void (*op_data)(uint32_t data, int len);
+	int  (*op_start)(uint32_t len);
+	void (*op_data)(uint32_t data, uint32_t len);
 	int  (*op_result)(struct iovec **data);
 	void (*op_done)(struct iovec *data);
 };
@@ -118,7 +119,7 @@ errop_set(int err)
 }
 
 static int
-errop_start(int len)
+errop_start(uint32_t len)
 {
 	errop_code = ENOENT;
 
@@ -127,7 +128,7 @@ errop_start(int len)
 }
 
 static void
-errop_data(uint32_t data, int len)
+errop_data(uint32_t data, uint32_t len)
 {
 
 	/* ignore */
@@ -187,7 +188,7 @@ static int fget_cnt;
 static size_t fget_size;
 
 static int
-fget_start(int len)
+fget_start(uint32_t len)
 {
 
 	if (len > FGET_STRSZ)
@@ -199,7 +200,7 @@ fget_start(int len)
 }
 
 static void
-fget_data(uint32_t data, int len)
+fget_data(uint32_t data, uint32_t len)
 {
 
 	*((uint32_t *) &fget_str[fget_cnt]) = data;
@@ -284,8 +285,8 @@ static struct req_info {
 	struct op_info *req_op;
 	int	 resp_error;
 	int	 resp_count;
-	int	 resp_size;
-	int	 resp_off;
+	size_t	 resp_size;
+	size_t	 resp_off;
 	struct iovec *resp_biov;
 } rinfo;
 
@@ -345,13 +346,14 @@ fwctl_request_start(void)
 static int
 fwctl_request_data(uint32_t value)
 {
-	int remlen;
 
 	/* Make sure remaining size is >= 0 */
-	rinfo.req_size -= sizeof(uint32_t);
-	remlen = (rinfo.req_size > 0) ? rinfo.req_size: 0;
+	if (rinfo.req_size <= sizeof(uint32_t))
+		rinfo.req_size = 0;
+	else
+		rinfo.req_size -= sizeof(uint32_t);
 
-	(*rinfo.req_op->op_data)(value, remlen);
+	(*rinfo.req_op->op_data)(value, rinfo.req_size);
 
 	if (rinfo.req_size < sizeof(uint32_t)) {
 		fwctl_request_done();
@@ -374,7 +376,7 @@ fwctl_request(uint32_t value)
 		/* Verify size */
 		if (value < 12) {
 			printf("msg size error");
-			exit(1);
+			exit(4);
 		}
 		rinfo.req_size = value;
 		rinfo.req_count = 1;
@@ -400,7 +402,7 @@ static int
 fwctl_response(uint32_t *retval)
 {
 	uint32_t *dp;
-	int remlen;
+	ssize_t remlen;
 
 	switch(rinfo.resp_count) {
 	case 0:
@@ -435,7 +437,7 @@ fwctl_response(uint32_t *retval)
 	}
 
 	if (rinfo.resp_count > 3 &&
-	    rinfo.resp_size - rinfo.resp_off <= 0) {
+	    rinfo.resp_off >= rinfo.resp_size) {
 		fwctl_response_done();
 		return (1);
 	}

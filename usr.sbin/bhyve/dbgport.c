@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,20 +25,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/dbgport.c 309401 2016-12-02 08:21:25Z julian $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/dbgport.c 336704 2018-07-25 04:33:56Z araujo $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/dbgport.c 309401 2016-12-02 08:21:25Z julian $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/dbgport.c 336704 2018-07-25 04:33:56Z araujo $");
 
 #include <sys/types.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/uio.h>
 
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sysexits.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -126,12 +132,15 @@ void
 init_dbgport(int sport)
 {
 	int reuse;
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+#endif
 
 	conn_fd = -1;
 
 	if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket");
-		exit(1);
+		perror("cannot create socket");
+		exit(4);
 	}
 
 	sin.sin_len = sizeof(sin);
@@ -142,19 +151,25 @@ init_dbgport(int sport)
 	reuse = 1;
 	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse,
 	    sizeof(reuse)) < 0) {
-		perror("setsockopt");
-		exit(1);
+		perror("cannot set socket options");
+		exit(4);
 	}
 
 	if (bind(listen_fd, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
-		perror("bind");
-		exit(1);
+		perror("cannot bind socket");
+		exit(4);
 	}
 
 	if (listen(listen_fd, 1) < 0) {
-		perror("listen");
-		exit(1);
+		perror("cannot listen socket");
+		exit(4);
 	}
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_ACCEPT, CAP_READ, CAP_WRITE);
+	if (cap_rights_limit(listen_fd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	register_inout(&dbgport);
 }

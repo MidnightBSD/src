@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/uart_emul.h 257396 2013-10-30 20:42:09Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/uart_emul.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _UART_EMUL_H_

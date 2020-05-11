@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD: stable/11/usr.sbin/bootparamd/bootparamd/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	bootparamd
 MAN=	bootparams.5 bootparamd.8

@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * sdpcontrol.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: sdpcontrol.c,v 1.1 2003/09/08 02:27:27 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.c 133178 2004-08-05 16:32:41Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

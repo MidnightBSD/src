@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -10,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/main.c 291042 2015-11-19 00:14:23Z ngie $";
+  "$FreeBSD: stable/11/usr.sbin/bootparamd/bootparamd/main.c 290645 2015-11-10 11:19:36Z ngie $";
 #endif /* not lint */
 
 #include <ctype.h>
@@ -84,7 +83,7 @@ main(int argc, char **argv)
 	if ( stat(bootpfile, &buf ) )
 	  err(1, "%s", bootpfile);
 
-	if (route_addr == -1) {
+	if (route_addr == INADDR_NONE) {
 	  get_myaddress(&my_addr);
 	  bcopy(&my_addr.sin_addr.s_addr, &route_addr, sizeof (route_addr));
 	}

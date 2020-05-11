@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2007 Kenneth D. Merry
  * Copyright (c) 2013, 2014, 2015 Spectra Logic Corporation
@@ -39,7 +38,7 @@
  * - An example of how to use the asynchronous pass(4) driver interface.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/camdd/camdd.c 314438 2017-02-28 23:56:14Z asomers $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/camdd/camdd.c 356692 2020-01-13 18:22:51Z kevans $");
 
 #include <sys/ioctl.h>
 #include <sys/stdint.h>
@@ -447,7 +446,7 @@ static sig_atomic_t need_status = 0;
 #endif
 
 
-/* Generically usefull offsets into the peripheral private area */
+/* Generically useful offsets into the peripheral private area */
 #define ppriv_ptr0 periph_priv.entries[0].ptr
 #define ppriv_ptr1 periph_priv.entries[1].ptr
 #define ppriv_field0 periph_priv.entries[0].field
@@ -592,13 +591,11 @@ camdd_alloc_dev(camdd_dev_type dev_type, struct kevent *new_ke, int num_ke,
 	size_t ke_size;
 	int retval = 0;
 
-	dev = malloc(sizeof(*dev));
+	dev = calloc(1, sizeof(*dev));
 	if (dev == NULL) {
 		warn("%s: unable to malloc %zu bytes", __func__, sizeof(*dev));
 		goto bailout;
 	}
-
-	bzero(dev, sizeof(*dev));
 
 	dev->dev_type = dev_type;
 	dev->io_timeout = timeout;
@@ -632,12 +629,11 @@ camdd_alloc_dev(camdd_dev_type dev_type, struct kevent *new_ke, int num_ke,
 	}
 
 	ke_size = sizeof(struct kevent) * (num_ke + 4);
-	ke = malloc(ke_size);
+	ke = calloc(1, ke_size);
 	if (ke == NULL) {
 		warn("%s: unable to malloc %zu bytes", __func__, ke_size);
 		goto bailout;
 	}
-	bzero(ke, ke_size);
 	if (num_ke > 0)
 		bcopy(new_ke, ke, num_ke * sizeof(struct kevent));
 
@@ -684,13 +680,12 @@ camdd_alloc_buf(struct camdd_dev *dev, camdd_buf_type buf_type)
 		break;
 	}
 	
-	buf = malloc(sizeof(*buf));
+	buf = calloc(1, sizeof(*buf));
 	if (buf == NULL) {
 		warn("unable to allocate %zu bytes", sizeof(*buf));
 		goto bailout_error;
 	}
 
-	bzero(buf, sizeof(*buf));
 	buf->buf_type = buf_type;
 	buf->dev = dev;
 	switch (buf_type) {
@@ -1005,8 +1000,7 @@ camdd_probe_tape(int fd, char *filename, uint64_t *max_iosize,
 		goto bailout;
 	}
 
-	for (i = 0; i < sizeof(req_status_items) /
-	     sizeof(req_status_items[0]); i++) {
+	for (i = 0; i < nitems(req_status_items); i++) {
                 char *name;
 
 		name = __DECONST(char *, req_status_items[i].name);
@@ -1289,6 +1283,7 @@ camdd_probe_pass(struct cam_device *cam_dev, struct camdd_io_opts *io_opts,
 	case T_CDROM:
 	case T_OPTICAL:
 	case T_RBC:
+	case T_ZBC_HM:
 		break;
 	default:
 		errx(1, "Unsupported SCSI device type %d", scsi_dev_type);
@@ -2989,13 +2984,13 @@ camdd_rw(struct camdd_io_opts *io_opts, int num_io_opts, uint64_t max_io,
 	int error = 0;
 	int i;
 
+	bzero(devs, sizeof(devs));
+
 	if (num_io_opts != 2) {
 		warnx("Must have one input and one output path");
 		error = 1;
 		goto bailout;
 	}
-
-	bzero(devs, sizeof(devs));
 
 	for (i = 0; i < num_io_opts; i++) {
 		switch (io_opts[i].dev_type) {

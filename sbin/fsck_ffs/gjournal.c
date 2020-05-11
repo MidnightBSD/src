@@ -52,7 +52,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/gjournal.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD: stable/11/sbin/fsck_ffs/gjournal.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>
@@ -91,7 +91,6 @@ static LIST_HEAD(, cgchain) cglist = LIST_HEAD_INITIALIZER(cglist);
 static const char *devnam;
 static struct uufsd *disk = NULL;
 static struct fs *fs = NULL;
-struct ufs2_dinode ufs2_zino;
 
 static void putcgs(void);
 

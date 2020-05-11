@@ -1,11 +1,12 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/usr.sbin/bhyve/Makefile 304569 2016-08-21 17:57:32Z mav $
+# $FreeBSD: stable/11/usr.sbin/bhyve/Makefile 349739 2019-07-04 18:20:02Z vmaffione $
 #
+
+.include <src.opts.mk>
+CFLAGS+=-I${SRCTOP}/sys
 
 PROG=	bhyve
-
-DEBUG_FLAGS= -g -O0 
+PACKAGE=	bhyve
 
 MAN=	bhyve.8
 
@@ -14,9 +15,11 @@ BHYVE_SYSDIR?=${SRCTOP}
 SRCS=	\
 	atkbdc.c		\
 	acpi.c			\
+	bhyvegc.c		\
 	bhyverun.c		\
 	block_if.c		\
 	bootrom.c		\
+	console.c		\
 	consport.c		\
 	dbgport.c		\
 	fwctl.c			\
@@ -25,32 +28,54 @@ SRCS=	\
 	mem.c			\
 	mevent.c		\
 	mptbl.c			\
+	net_utils.c		\
 	pci_ahci.c		\
 	pci_e82545.c		\
 	pci_emul.c		\
+	pci_fbuf.c		\
 	pci_hostbridge.c	\
 	pci_irq.c		\
 	pci_lpc.c		\
 	pci_passthru.c		\
 	pci_virtio_block.c	\
+	pci_virtio_console.c	\
 	pci_virtio_net.c	\
 	pci_virtio_rnd.c	\
 	pci_uart.c		\
+	pci_xhci.c		\
 	pm.c			\
 	post.c			\
+	ps2kbd.c		\
+	ps2mouse.c		\
+	rfb.c			\
 	rtc.c			\
 	smbiostbl.c		\
+	sockstream.c		\
 	task_switch.c		\
 	uart_emul.c		\
+	usb_emul.c		\
+	usb_mouse.c		\
 	virtio.c		\
+	vga.c			\
 	xmsr.c			\
 	spinup_ap.c
 
 .PATH:  ${BHYVE_SYSDIR}/sys/amd64/vmm
 SRCS+=	vmm_instruction_emul.c
 
-DPADD=	${LIBVMMAPI} ${LIBMD} ${LIBUTIL} ${LIBPTHREAD}
-LDADD=	-lvmmapi -lmd -lutil -lpthread
+LIBADD=	vmmapi md pthread z
+
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+=-DINET
+.endif
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=-DINET6
+.endif
+.if ${MK_OPENSSL} == "no"
+CFLAGS+=-DNO_OPENSSL
+.else
+LIBADD+=	crypto
+.endif
 
 CFLAGS+= -I${BHYVE_SYSDIR}/sys/dev/e1000
 CFLAGS+= -I${BHYVE_SYSDIR}/sys/dev/mii

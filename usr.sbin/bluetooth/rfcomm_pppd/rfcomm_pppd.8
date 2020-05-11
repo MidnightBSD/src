@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: rfcomm_pppd.8,v 1.3 2013-01-01 17:41:47 laffer1 Exp $
-.\" $MidnightBSD$
+.\" $Id: rfcomm_pppd.8,v 1.7 2003/09/07 18:32:11 max Exp $
+.\" $FreeBSD: stable/11/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.8 322393 2017-08-11 07:27:55Z avos $
 .\"
 .Dd February 4, 2003
 .Dt RFCOMM_PPPD 8
@@ -343,12 +343,12 @@ label.
 .Xr sdpcontrol 8 ,
 .Xr sdpd 8
 .Sh AUTHORS
-.An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
+.An Maksim Yevmenkin Aq Mt m_evmenkin@yahoo.com
 .Sh CAVEATS
 The
 .Nm
 utility in server mode will try to register the Bluetooth LAN Access Over PPP
-service with the local SPD daemon.
+service with the local SDP daemon.
 If the local SDP daemon is not running,
 .Nm
 will exit with an error.

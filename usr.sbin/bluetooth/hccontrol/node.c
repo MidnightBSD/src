@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * node.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: node.c,v 1.6 2003/07/22 21:14:02 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/hccontrol/node.c 299826 2016-05-15 03:15:36Z pfg $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/hccontrol/node.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/ioctl.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <netgraph/ng_message.h>

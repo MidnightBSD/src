@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -25,16 +26,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/ioapic.h 283927 2015-06-02 19:20:39Z jhb $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/ioapic.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _IOAPIC_H_
 #define	_IOAPIC_H_
 
+struct pci_devinst;
+
 /*
  * Allocate a PCI IRQ from the I/O APIC.
  */
 void	ioapic_init(struct vmctx *ctx);
-int	ioapic_pci_alloc_irq(void);
+int	ioapic_pci_alloc_irq(struct pci_devinst *pi);
 
 #endif

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND BSD-2-Clause
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyveload/bhyveload.c 323739 2017-09-19 08:19:20Z avg $
+ * $FreeBSD: stable/11/usr.sbin/bhyveload/bhyveload.c 344413 2019-02-21 03:18:12Z kevans $
  */
 
 /*-
@@ -52,11 +53,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyveload/bhyveload.c 323739 2017-09-19 08:19:20Z avg $
+ * $FreeBSD: stable/11/usr.sbin/bhyveload/bhyveload.c 344413 2019-02-21 03:18:12Z kevans $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyveload/bhyveload.c 323739 2017-09-19 08:19:20Z avg $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyveload/bhyveload.c 344413 2019-02-21 03:18:12Z kevans $");
 
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -74,6 +75,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyveload/bhyveload.c 323739 2017-09-19 0
 #include <getopt.h>
 #include <libgen.h>
 #include <limits.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -96,6 +98,13 @@ static struct termios term, oldterm;
 static int disk_fd[NDISKS];
 static int ndisks;
 static int consin_fd, consout_fd;
+
+static int need_reinit;
+
+static void *loader_hdl;
+static char *loader;
+static int explicit_loader;
+static jmp_buf jb;
 
 static char *vmname, *progname;
 static struct vmctx *ctx;
@@ -153,7 +162,6 @@ struct cb_file {
 static int
 cb_open(void *arg, const char *filename, void **hp)
 {
-	struct stat st;
 	struct cb_file *cf;
 	char path[PATH_MAX];
 
@@ -170,7 +178,7 @@ cb_open(void *arg, const char *filename, void **hp)
 		return (errno);
 	}
 
-	cf->cf_size = st.st_size;
+	cf->cf_size = cf->cf_stat.st_size;
 	if (S_ISDIR(cf->cf_stat.st_mode)) {
 		cf->cf_isdir = 1;
 		cf->cf_u.dir = opendir(path);
@@ -365,7 +373,7 @@ cb_setreg(void *arg, int r, uint64_t v)
 {
 	int error;
 	enum vm_reg_name vmreg;
-	
+
 	vmreg = VM_REG_LAST;
 
 	switch (r) {
@@ -513,14 +521,14 @@ cb_getmem(void *arg, uint64_t *ret_lowmem, uint64_t *ret_highmem)
 }
 
 struct env {
-	const char *str;	/* name=value */
+	char *str;	/* name=value */
 	SLIST_ENTRY(env) next;
 };
 
 static SLIST_HEAD(envhead, env) envhead;
 
 static void
-addenv(const char *str)
+addenv(char *str)
 {
 	struct env *env;
 
@@ -529,7 +537,7 @@ addenv(const char *str)
 	SLIST_INSERT_HEAD(&envhead, env, next);
 }
 
-static const char *
+static char *
 cb_getenv(void *arg, int num)
 {
 	int i;
@@ -543,6 +551,45 @@ cb_getenv(void *arg, int num)
 	}
 
 	return (NULL);
+}
+
+static int
+cb_vm_set_register(void *arg, int vcpu, int reg, uint64_t val)
+{
+
+	return (vm_set_register(ctx, vcpu, reg, val));
+}
+
+static int
+cb_vm_set_desc(void *arg, int vcpu, int reg, uint64_t base, u_int limit,
+    u_int access)
+{
+
+	return (vm_set_desc(ctx, vcpu, reg, base, limit, access));
+}
+
+static void
+cb_swap_interpreter(void *arg, const char *interp_req)
+{
+
+	/*
+	 * If the user specified a loader but we detected a mismatch, we should
+	 * not try to pivot to a different loader on them.
+	 */
+	free(loader);
+	if (explicit_loader == 1) {
+		perror("requested loader interpreter does not match guest userboot");
+		cb_exit(NULL, 1);
+	}
+	if (interp_req == NULL || *interp_req == '\0') {
+		perror("guest failed to request an interpreter");
+		cb_exit(NULL, 1);
+	}
+
+	if (asprintf(&loader, "/boot/userboot_%s.so", interp_req) == -1)
+		err(EX_OSERR, "malloc");
+	need_reinit = 1;
+	longjmp(jb, 1);
 }
 
 static struct loader_callbacks cb = {
@@ -574,6 +621,13 @@ static struct loader_callbacks cb = {
 	.getmem = cb_getmem,
 
 	.getenv = cb_getenv,
+
+	/* Version 4 additions */
+	.vm_set_register = cb_vm_set_register,
+	.vm_set_desc = cb_vm_set_desc,
+
+	/* Version 5 additions */
+	.swap_interpreter = cb_swap_interpreter,
 };
 
 static int
@@ -633,7 +687,7 @@ usage(void)
 
 	fprintf(stderr,
 	    "usage: %s [-S][-c <console-device>] [-d <disk-path>] [-e <name=value>]\n"
-	    "       %*s [-h <host-path>] [-m mem-size] <vmname>\n",
+	    "       %*s [-h <host-path>] [-m memsize[K|k|M|m|G|g|T|t]] <vmname>\n",
 	    progname,
 	    (int)strlen(progname), "");
 	exit(1);
@@ -642,15 +696,11 @@ usage(void)
 int
 main(int argc, char** argv)
 {
-	char *loader;
-	void *h;
 	void (*func)(struct loader_callbacks *, void *, int, int);
 	uint64_t mem_size;
-	int opt, error, need_reinit, memflags;
+	int opt, error, memflags;
 
 	progname = basename(argv[0]);
-
-	loader = NULL;
 
 	memflags = 0;
 	mem_size = 256 * MB;
@@ -658,7 +708,7 @@ main(int argc, char** argv)
 	consin_fd = STDIN_FILENO;
 	consout_fd = STDOUT_FILENO;
 
-	while ((opt = getopt(argc, argv, "Sc:d:e:h:l:m:")) != -1) {
+	while ((opt = getopt(argc, argv, "CSc:d:e:h:l:m:")) != -1) {
 		switch (opt) {
 		case 'c':
 			error = altcons_open(optarg);
@@ -686,12 +736,16 @@ main(int argc, char** argv)
 			loader = strdup(optarg);
 			if (loader == NULL)
 				err(EX_OSERR, "malloc");
+			explicit_loader = 1;
 			break;
 
 		case 'm':
 			error = vm_parse_memsize(optarg, &mem_size);
 			if (error != 0)
 				errx(EX_USAGE, "Invalid memsize '%s'", optarg);
+			break;
+		case 'C':
+			memflags |= VM_MEM_F_INCORE;
 			break;
 		case 'S':
 			memflags |= VM_MEM_F_WIRED;
@@ -725,6 +779,13 @@ main(int argc, char** argv)
 		exit(1);
 	}
 
+	/*
+	 * setjmp in the case the guest wants to swap out interpreter,
+	 * cb_swap_interpreter will swap out loader as appropriate and set
+	 * need_reinit so that we end up in a clean state once again.
+	 */
+	setjmp(jb);
+
 	if (need_reinit) {
 		error = vm_reinit(ctx);
 		if (error) {
@@ -745,13 +806,15 @@ main(int argc, char** argv)
 		if (loader == NULL)
 			err(EX_OSERR, "malloc");
 	}
-	h = dlopen(loader, RTLD_LOCAL);
-	if (!h) {
+	if (loader_hdl != NULL)
+		dlclose(loader_hdl);
+	loader_hdl = dlopen(loader, RTLD_LOCAL);
+	if (!loader_hdl) {
 		printf("%s\n", dlerror());
 		free(loader);
 		return (1);
 	}
-	func = dlsym(h, "loader_main");
+	func = dlsym(loader_hdl, "loader_main");
 	if (!func) {
 		printf("%s\n", dlerror());
 		free(loader);
@@ -768,7 +831,7 @@ main(int argc, char** argv)
 	addenv("smbios.bios.vendor=BHYVE");
 	addenv("boot_serial=1");
 
-	func(&cb, NULL, USERBOOT_VERSION_3, ndisks);
+	func(&cb, NULL, USERBOOT_VERSION_5, ndisks);
 
 	free(loader);
 	return (0);

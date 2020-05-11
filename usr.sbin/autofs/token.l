@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/autofs/token.l 274499 2014-11-14 10:53:55Z trasz $
+ * $FreeBSD: stable/11/usr.sbin/autofs/token.l 332597 2018-04-16 16:16:24Z trasz $
  */
 
 #include <stdio.h>

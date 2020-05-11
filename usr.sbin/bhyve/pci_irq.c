@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +29,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_irq.c 283927 2015-06-02 19:20:39Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_irq.c 336189 2018-07-11 07:16:13Z araujo $");
 
 #include <sys/param.h>
 #include <machine/vmm.h>
@@ -194,19 +195,25 @@ pci_irq_deassert(struct pci_devinst *pi)
 }
 
 int
-pirq_alloc_pin(struct vmctx *ctx)
+pirq_alloc_pin(struct pci_devinst *pi)
 {
+	struct vmctx *ctx = pi->pi_vmctx;
 	int best_count, best_irq, best_pin, irq, pin;
 
 	pirq_cold = 0;
 
-	/* First, find the least-used PIRQ pin. */
-	best_pin = 0;
-	best_count = pirqs[0].use_count;
-	for (pin = 1; pin < nitems(pirqs); pin++) {
-		if (pirqs[pin].use_count < best_count) {
-			best_pin = pin;
-			best_count = pirqs[pin].use_count;
+	if (lpc_bootrom()) {
+		/* For external bootrom use fixed mapping. */
+		best_pin = (4 + pi->pi_slot + pi->pi_lintr.pin) % 8;
+	} else {
+		/* Find the least-used PIRQ pin. */
+		best_pin = 0;
+		best_count = pirqs[0].use_count;
+		for (pin = 1; pin < nitems(pirqs); pin++) {
+			if (pirqs[pin].use_count < best_count) {
+				best_pin = pin;
+				best_count = pirqs[pin].use_count;
+			}
 		}
 	}
 	pirqs[best_pin].use_count++;

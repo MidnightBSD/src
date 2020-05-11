@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/userboot/userboot/libuserboot.h 261504 2014-02-05 04:39:03Z jhb $
+ * $FreeBSD: stable/11/stand/userboot/userboot/libuserboot.h 359754 2020-04-09 20:38:36Z kevans $
  */
 
 #include "userboot.h"
@@ -43,7 +43,7 @@ extern int userboot_disk_maxunit;
 extern struct devsw host_dev;
 
 /* access to host filesystem */
-struct fs_ops host_fsops;
+extern struct fs_ops host_fsops;
 
 struct bootinfo;
 struct preloaded_file;

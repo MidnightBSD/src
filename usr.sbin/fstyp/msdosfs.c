@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/msdosfs.c 286193 2015-08-02 10:08:57Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/msdosfs.c 284582 2015-06-18 21:55:55Z trasz $");
 
 #include <stdio.h>
 #include <stdlib.h>

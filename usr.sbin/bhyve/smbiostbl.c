@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/smbiostbl.c 272147 2014-09-25 23:09:35Z grehan $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/smbiostbl.c 348269 2019-05-25 10:17:03Z rgrimes $");
 
 #include <sys/param.h>
 
@@ -635,7 +636,7 @@ smbios_type4_initializer(struct smbios_structure *template_entry,
 {
 	int i;
 
-	for (i = 0; i < guest_ncpus; i++) {
+	for (i = 0; i < sockets; i++) {
 		struct smbios_table_type4 *type4;
 		char *p;
 		int nstrings, len;
@@ -654,6 +655,16 @@ smbios_type4_initializer(struct smbios_structure *template_entry,
 		*(*endaddr) = '\0';
 		(*endaddr)++;
 		type4->socket = nstrings + 1;
+		/* Revise cores and threads after update to smbios 3.0 */
+		if (cores > 254)
+			type4->cores = 0;
+		else
+			type4->cores = cores;
+		/* This threads is total threads in a socket */
+		if ((cores * threads) > 254)
+			type4->threads = 0;
+		else
+			type4->threads = (cores * threads);
 		curaddr = *endaddr;
 	}
 

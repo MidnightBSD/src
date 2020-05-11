@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994 Christopher G. Demetriou
  * Copyright (c) 1994 Simon J. Gerraty
  * Copyright (c) 2012 Ed Schouten <ed@FreeBSD.org>
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ac/ac.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/queue.h>
 #include <sys/time.h>

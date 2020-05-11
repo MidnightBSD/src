@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/uboot/lib/glue.h 329175 2018-02-12 17:44:35Z kevans $
+ * $FreeBSD: stable/11/stand/uboot/lib/glue.h 359761 2020-04-10 00:23:34Z kevans $
  */
 
 /*
@@ -56,7 +56,7 @@
 #endif
 
 int syscall(int, int *, ...);
-void *syscall_ptr;
+extern void *syscall_ptr;
 
 int api_parse_cmdline_sig(int argc, char **argv, struct api_signature **sig);
 int api_search_sig(struct api_signature **sig);

@@ -1,9 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/cdcontrol/Makefile 201724 2010-01-07 09:40:34Z dwmalone $
+# $FreeBSD: stable/11/usr.sbin/cdcontrol/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG= cdcontrol
 
-DPADD=	${LIBEDIT} ${LIBTERMCAP}
-LDADD=	-ledit -ltermcap
+LIBADD=	edit
 
 .include <bsd.prog.mk>

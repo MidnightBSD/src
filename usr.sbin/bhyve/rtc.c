@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/rtc.c 284894 2015-06-27 22:48:22Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/rtc.c 336161 2018-07-10 04:26:32Z araujo $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/rtc.c 284894 2015-06-27 22:48:22Z neel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/rtc.c 336161 2018-07-10 04:26:32Z araujo $");
 
 #include <sys/types.h>
 
@@ -50,7 +51,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/rtc.c 284894 2015-06-27 22:48:22Z n
 #define	RTC_HMEM_SB	0x5c
 #define	RTC_HMEM_MSB	0x5d
 
-#define m_64KB		(64*1024)
+#define	m_64KB		(64*1024)
 #define	m_16MB		(16*1024*1024)
 #define	m_4GB		(4ULL*1024*1024*1024)
 

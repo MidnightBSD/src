@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,13 +25,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/pci_passthru.c 302705 2016-07-13 06:09:34Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/pci_passthru.c 351059 2019-08-14 23:28:43Z jhb $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_passthru.c 302705 2016-07-13 06:09:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pci_passthru.c 351059 2019-08-14 23:28:43Z jhb $");
 
 #include <sys/param.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/pciio.h>
@@ -45,7 +49,9 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pci_passthru.c 302705 2016-07-13 06
 #include <stdlib.h>
 #include <string.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include <machine/vmm.h>
@@ -286,7 +292,7 @@ msix_table_read(struct passthru_softc *sc, uint64_t offset, int size)
 	int index;
 
 	pi = sc->psc_pi;
-	if (offset >= pi->pi_msix.pba_offset &&
+	if (pi->pi_msix.pba_page != NULL && offset >= pi->pi_msix.pba_offset &&
 	    offset < pi->pi_msix.pba_offset + pi->pi_msix.pba_size) {
 		switch(size) {
 		case 1:
@@ -365,7 +371,7 @@ msix_table_write(struct vmctx *ctx, int vcpu, struct passthru_softc *sc,
 	int index;
 
 	pi = sc->psc_pi;
-	if (offset >= pi->pi_msix.pba_offset &&
+	if (pi->pi_msix.pba_page != NULL && offset >= pi->pi_msix.pba_offset &&
 	    offset < pi->pi_msix.pba_offset + pi->pi_msix.pba_size) {
 		switch(size) {
 		case 1:
@@ -640,9 +646,18 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 {
 	int bus, slot, func, error, memflags;
 	struct passthru_softc *sc;
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+	cap_ioctl_t pci_ioctls[] = { PCIOCREAD, PCIOCWRITE, PCIOCGETBAR };
+	cap_ioctl_t io_ioctls[] = { IODEV_PIO };
+#endif
 
 	sc = NULL;
 	error = 1;
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_IOCTL, CAP_READ, CAP_WRITE);
+#endif
 
 	memflags = vm_get_memflags(ctx);
 	if (!(memflags & VM_MEM_F_WIRED)) {
@@ -658,6 +673,13 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 		}
 	}
 
+#ifndef WITHOUT_CAPSICUM
+	if (cap_rights_limit(pcifd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+	if (cap_ioctls_limit(pcifd, pci_ioctls, nitems(pci_ioctls)) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
+
 	if (iofd < 0) {
 		iofd = open(_PATH_DEVIO, O_RDWR, 0);
 		if (iofd < 0) {
@@ -666,6 +688,13 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 		}
 	}
 
+#ifndef WITHOUT_CAPSICUM
+	if (cap_rights_limit(iofd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+	if (cap_ioctls_limit(iofd, io_ioctls, nitems(io_ioctls)) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
+
 	if (memfd < 0) {
 		memfd = open(_PATH_MEM, O_RDWR, 0);
 		if (memfd < 0) {
@@ -673,6 +702,13 @@ passthru_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 			goto done;
 		}
 	}
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_clear(&rights, CAP_IOCTL);
+	cap_rights_set(&rights, CAP_MMAP_RW);
+	if (cap_rights_limit(memfd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	if (opts == NULL ||
 	    sscanf(opts, "%d/%d/%d", &bus, &slot, &func) != 3) {

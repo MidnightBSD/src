@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 
 This code is not copyright, and is placed in the public domain. Feel free to
@@ -10,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/bootparamd/bootparamd/bootparamd.c 320780 2017-07-07 15:09:08Z asomers $";
+  "$FreeBSD: stable/11/usr.sbin/bootparamd/bootparamd/bootparamd.c 323296 2017-09-08 04:32:02Z ngie $";
 #endif /* not lint */
 
 #ifdef YP
@@ -240,6 +239,8 @@ int blen;
         warnx("could not close %s", bootpfile);
       return(1);
 #else
+      if (fclose(bpf))
+        warnx("could not close %s", bootpfile);
       return(0);	/* ENOTSUP */
 #endif
     }

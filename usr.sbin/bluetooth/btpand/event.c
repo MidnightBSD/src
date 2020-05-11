@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * event.h
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: stable/10/usr.sbin/bluetooth/btpand/event.c 191232 2009-04-17 23:33:30Z emax $ */
+/* $FreeBSD: stable/11/usr.sbin/bluetooth/btpand/event.c 330449 2018-03-05 07:26:05Z eadler $ */
 
 /*
  * Hack to provide libevent (see devel/libevent port) like API.
@@ -46,6 +47,7 @@
 #include <syslog.h>
 
 #include "event.h"
+#define L2CAP_SOCKET_CHECKED
 #include "btpand.h"
 
 #define		__event_link(ev) \

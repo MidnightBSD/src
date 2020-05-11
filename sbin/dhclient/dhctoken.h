@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: dhctoken.h,v 1.2 2004/02/04 12:16:56 henning Exp $	*/
 
 /* Tokens for config file lexer and parser. */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995, 1996, 1997, 1998, 1999
  * The Internet Software Consortium.  All rights reserved.
  *
@@ -39,6 +40,8 @@
  * Enterprises.  To learn more about the Internet Software Consortium,
  * see ``http://www.vix.com/isc''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.
+ *
+ * $FreeBSD: stable/11/sbin/dhclient/dhctoken.h 330897 2018-03-14 03:19:51Z eadler $
  */
 
 #define SEMI ';'

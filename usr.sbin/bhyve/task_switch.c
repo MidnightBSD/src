@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Neel Natu <neel@freebsd.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/task_switch.c 302705 2016-07-13 06:09:34Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/task_switch.c 336189 2018-07-11 07:16:13Z araujo $");
 
 #include <sys/param.h>
 #include <sys/_iovec.h>

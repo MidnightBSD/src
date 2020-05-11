@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/autofs/Makefile 270096 2014-08-17 09:44:42Z trasz $
+# $FreeBSD: stable/11/usr.sbin/autofs/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
+PACKAGE=autofs
 PROG=	automountd
 SRCS=	automount.c
 SRCS+=	automountd.c
@@ -13,15 +13,14 @@ SRCS+=	popen.c
 SRCS+=	token.l
 
 CFLAGS+=-I${.CURDIR}
-CFLAGS+=-I${.CURDIR}/../../sys/fs/autofs
+CFLAGS+=-I${SRCTOP}/sys/fs/autofs
 
 MAN=	automount.8 automountd.8 autounmountd.8 auto_master.5
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 # Needed for getmntopts.c
-MOUNT=  ${.CURDIR}/../../sbin/mount
+MOUNT=  ${SRCTOP}/sbin/mount
 CFLAGS+=-I${MOUNT}
 
 WARNS=	6

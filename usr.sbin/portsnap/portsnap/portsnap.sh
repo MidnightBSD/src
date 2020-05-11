@@ -1,6 +1,8 @@
 #!/bin/sh
 
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright 2004-2005 Colin Percival
 # All rights reserved
 #
@@ -25,8 +27,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: stable/10/usr.sbin/portsnap/portsnap/portsnap.sh 306697 2016-10-05 00:33:06Z emaste $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/portsnap/portsnap/portsnap.sh 330449 2018-03-05 07:26:05Z eadler $
 
 #### Usage function -- called from command-line handling code.
 
@@ -62,6 +63,8 @@ Commands:
                   files and directories.
   update       -- Update ports tree to match current snapshot, replacing
                   files and directories which have changed.
+  auto         -- Fetch updates, and either extract a new ports tree or
+                  update an existing tree.
 EOF
 	exit 0
 }
@@ -148,11 +151,14 @@ parse_cmdline() {
 			if [ ! -z "${SERVERNAME}" ]; then usage; fi
 			shift; SERVERNAME="$1"
 			;;
-		cron | extract | fetch | update | alfred)
+		cron | extract | fetch | update | auto)
 			COMMANDS="${COMMANDS} $1"
 			;;
 		up)
 			COMMANDS="${COMMANDS} update"
+			;;
+		alfred)
+			COMMANDS="${COMMANDS} auto"
 			;;
 		*)
 			if [ $# -gt 1 ]; then usage; fi
@@ -615,8 +621,10 @@ fetch_progress() {
 
 pct_fmt()
 {
-	printf "                                     \r"
-	printf "($1/$2) %02.2f%% " `echo "scale=4;$LNC / $TOTAL * 100"|bc`
+	if [ $TOTAL -gt 0 ]; then
+		printf "                                     \r"
+		printf "($1/$2) %02.2f%% " `echo "scale=4;$LNC / $TOTAL * 100"|bc`
+	fi
 }
 
 fetch_progress_percent() {
@@ -687,8 +695,9 @@ fetch_snapshot() {
 	fetch_index_sanity || return 1
 # Verify the snapshot contents
 	cut -f 2 -d '|' INDEX.new | fetch_snapshot_verify || return 1
-	cut -f 2 -d '|' tINDEX.new INDEX.new | sort -u > files.expected
-	find snap -mindepth 1 | sed -E 's^snap/(.*)\.gz^\1^' | sort > files.snap
+	cut -f 2 -d '|' tINDEX.new INDEX.new | sort -u |
+	    lam -s 'snap/' - -s '.gz' > files.expected
+	find snap -mindepth 1 | sort > files.snap
 	if ! cmp -s files.expected files.snap; then
 		echo "unexpected files in snapshot."
 		return 1
@@ -955,7 +964,7 @@ extract_run() {
 			cat ${WORKDIR}/INDEX
 		fi | while read FILE HASH; do
 		echo ${PORTSDIR}/${FILE}
-		if ! [ -r "${WORKDIR}/files/${HASH}.gz" ]; then
+		if ! [ -s "${WORKDIR}/files/${HASH}.gz" ]; then
 			echo "files/${HASH}.gz not found -- snapshot corrupt."
 			return 1
 		fi
@@ -999,7 +1008,7 @@ update_run_extract() {
 	    comm -13 ${PORTSDIR}/.portsnap.INDEX - |
 	    while read FILE HASH; do
 		echo ${PORTSDIR}/${FILE}
-		if ! [ -r "${WORKDIR}/files/${HASH}.gz" ]; then
+		if ! [ -s "${WORKDIR}/files/${HASH}.gz" ]; then
 			echo "files/${HASH}.gz not found -- snapshot corrupt."
 			return 1
 		fi
@@ -1112,10 +1121,10 @@ cmd_update() {
 	update_run || exit 1
 }
 
-# Alfred command.  Run 'fetch' or 'cron' depending on
+# Auto command.  Run 'fetch' or 'cron' depending on
 # whether stdin is a terminal; then run 'update' or
 # 'extract' depending on whether ${PORTSDIR} exists.
-cmd_alfred() {
+cmd_auto() {
 	if [ "${INTERACTIVE}" = "YES" ]; then
 		cmd_fetch
 	else

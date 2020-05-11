@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$OpenBSD: dhclient.conf.5,v 1.5 2004/11/01 23:10:18 henning Exp $
 .\"
 .\" Copyright (c) 1997 The Internet Software Consortium.
@@ -37,9 +36,9 @@
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $FreeBSD: stable/10/sbin/dhclient/dhclient.conf.5 307403 2016-10-16 22:02:50Z sevan $
+.\" $FreeBSD: stable/11/sbin/dhclient/dhclient.conf.5 334787 2018-06-07 15:03:47Z marius $
 .\"
-.Dd January 1, 1997
+.Dd May 31, 2018
 .Dt DHCLIENT.CONF 5
 .Os
 .Sh NAME
@@ -228,6 +227,14 @@ rather than any value supplied by the server, these values can be defined
 in the
 .Ic supersede
 statement.
+.Pp
+Some options values have special meaning:
+.Bl -tag -width indent
+.It Ar interface-mtu
+Any server-supplied interface MTU is ignored by the client if a
+.Ic supersede
+zero value is configured.
+.El
 .It Xo
 .Ic prepend No { Op Ar option declaration
 .Oo , Ar ... option declaration Oc }
@@ -525,8 +532,8 @@ In many cases, it is sufficient to just create an empty
 file - the defaults are usually fine.
 .Sh SEE ALSO
 .Xr dhclient.leases 5 ,
-.Xr dhcpd.conf 5 ,
 .Xr dhcp-options 5 ,
+.Xr dhcpd.conf 5 ,
 .Xr dhclient 8 ,
 .Xr dhcpd 8
 .Rs

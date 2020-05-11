@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/pm.c 283927 2015-06-02 19:20:39Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/pm.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <machine/vmm.h>

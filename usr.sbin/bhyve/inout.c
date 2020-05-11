@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -24,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/inout.c 284900 2015-06-28 03:22:26Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/inout.c 336161 2018-07-10 04:26:32Z araujo $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/bhyve/inout.c 284900 2015-06-28 03:22:26Z neel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bhyve/inout.c 336161 2018-07-10 04:26:32Z araujo $");
 
 #include <sys/param.h>
 #include <sys/linker_set.h>
@@ -67,21 +68,21 @@ static int
 default_inout(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
               uint32_t *eax, void *arg)
 {
-        if (in) {
-                switch (bytes) {
-                case 4:
-                        *eax = 0xffffffff;
-                        break;
-                case 2:
-                        *eax = 0xffff;
-                        break;
-                case 1:
-                        *eax = 0xff;
-                        break;
-                }
-        }
-        
-        return (0);
+	if (in) {
+		switch (bytes) {
+		case 4:
+			*eax = 0xffffffff;
+			break;
+		case 2:
+			*eax = 0xffff;
+			break;
+		case 1:
+			*eax = 0xff;
+			break;
+		}
+	}
+
+	return (0);
 }
 
 static void 

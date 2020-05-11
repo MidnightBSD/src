@@ -1,14 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/sbin/dhclient/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/sbin/dhclient/tests/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-.PATH:	${.CURDIR}/..
+.PATH:	${.CURDIR:H}
 
 PLAIN_TESTS_C=				option-domain-search_test
 SRCS.option-domain-search_test=		alloc.c convert.c hash.c options.c \
 					tables.c fake.c option-domain-search.c
-CFLAGS.option-domain-search_test+=	-I${.CURDIR}/..
-DPADD.option-domain-search_test=	${LIBUTIL}
-LDADD.option-domain-search_test=	-lutil
+CFLAGS.option-domain-search_test+=	-I${.CURDIR:H}
+LIBADD.option-domain-search_test=	util
 
 WARNS?=	2
 

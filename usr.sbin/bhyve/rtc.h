@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bhyve/rtc.h 284894 2015-06-27 22:48:22Z neel $
+ * $FreeBSD: stable/11/usr.sbin/bhyve/rtc.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef _RTC_H_

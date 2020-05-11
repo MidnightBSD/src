@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
-/*
+/*-
  * bthidcontrol.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: bthidcontrol.h,v 1.1 2004/02/12 23:25:51 max Exp $
- * $FreeBSD: stable/10/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.h 128080 2004-04-10 00:18:00Z emax $
+ * $FreeBSD: stable/11/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #ifndef __BTHIDCONTROL_H__

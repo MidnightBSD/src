@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: alloc.c,v 1.9 2004/05/04 20:28:40 deraadt Exp $	*/
 
 /* Memory allocation... */
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/alloc.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/alloc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "dhcpd.h"
 

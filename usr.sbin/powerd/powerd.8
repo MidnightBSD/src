@@ -22,10 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/powerd/powerd.8,v 1.10.2.2 2009/01/09 22:10:07 mav Exp $
-.\" $MidnightBSD: src/usr.sbin/powerd/powerd.8,v 1.3 2010/01/17 14:42:44 laffer1 Exp $
+.\" $FreeBSD: stable/11/usr.sbin/powerd/powerd.8 342982 2019-01-13 02:23:18Z avos $
 .\"
-.Dd July 4, 2013
+.Dd January 13, 2019
 .Dt POWERD 8
 .Os
 .Sh NAME
@@ -42,6 +41,7 @@
 .Op Fl p Ar ival
 .Op Fl P Ar pidfile
 .Op Fl r Ar percent
+.Op Fl s Ar source
 .Op Fl v
 .Sh DESCRIPTION
 The
@@ -118,6 +118,14 @@ The default is
 Specifies the CPU load percent level where adaptive
 mode should consider the CPU running and increase performance.
 The default is 75% or higher.
+.It Fl s Ar source
+Enforces method for AC line state refresh; by default, it is chosen
+automatically.
+The set of valid methods is
+.Cm sysctl , devd
+and
+.Cm apm
+(i386 only).
 .It Fl v
 Verbose mode.
 Messages about power changes will be printed to stdout and
@@ -127,7 +135,6 @@ will operate in the foreground.
 .Sh SEE ALSO
 .Xr acpi 4 ,
 .Xr apm 4 ,
-.Xr cpufreq 1 ,
 .Xr cpufreq 4
 .Sh HISTORY
 The

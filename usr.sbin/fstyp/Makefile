@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fstyp/Makefile 293776 2016-01-12 16:38:09Z allanjude $
+# $FreeBSD: stable/11/usr.sbin/fstyp/Makefile 339118 2018-10-03 02:52:47Z mav $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	fstyp
-SRCS=	cd9660.c ext2fs.c fstyp.c geli.c msdosfs.c ntfs.c ufs.c
+SRCS=	cd9660.c exfat.c ext2fs.c fstyp.c geli.c msdosfs.c ntfs.c ufs.c
 
 .if ${MK_ZFS} != "no"
 SRCS +=	zfs.c
@@ -14,33 +13,31 @@ MAN=	fstyp.8
 
 WARNS?=	2
 
+
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests
 .endif
-
-CFLAGS+=-I${.CURDIR}/../../sys
 
 .if ${MK_ZFS} != "no"
 IGNORE_PRAGMA=  YES
 
 CFLAGS+= -DNEED_SOLARIS_BOOLEAN -DHAVE_ZFS
-CFLAGS+= -I${.CURDIR}/../../sys/cddl/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../cddl/compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../cddl/compat/opensolaris/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../cddl/contrib/opensolaris/lib/libnvpair
-CFLAGS+= -I${.CURDIR}/../../cddl/contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${.CURDIR}/../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../sys/cddl/contrib/opensolaris/uts/common/sys
-CFLAGS+= -I${.CURDIR}/../../cddl/contrib/opensolaris/head
+CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
+CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
+CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 .endif
 
-DPADD=   ${LIBGEOM} ${LIBMD}
-LDADD=   -lgeom -lmd
+CFLAGS+=-I${SRCTOP}/sys
+
+LIBADD=	geom md
 
 .if ${MK_ZFS} != "no"
-DPADD += ${LIBNVPAIR} ${LIBZFS}
-LDADD += -lnvpair -lzfs
+LIBADD+=nvpair zfs
 .endif
 
 .include <bsd.prog.mk>

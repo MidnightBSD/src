@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: tables.c,v 1.4 2004/05/04 20:28:40 deraadt Exp $	*/
 
 /* Tables of information... */
@@ -42,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/tables.c 228259 2011-12-04 14:44:31Z dumbbell $");
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/tables.c 332602 2018-04-16 16:23:32Z asomers $");
 
 #include "dhcpd.h"
 
@@ -438,11 +437,11 @@ initialize_universes(void)
 	for (i = 0; i < 256; i++) {
 		dhcp_universe.options[i] = &dhcp_options[i];
 		add_hash(dhcp_universe.hash,
-		    (unsigned char *)dhcp_options[i].name, 0,
+		    (const unsigned char *)dhcp_options[i].name, 0,
 		    (unsigned char *)&dhcp_options[i]);
 	}
 	universe_hash.hash_count = DEFAULT_HASH_SIZE;
 	add_hash(&universe_hash,
-	    (unsigned char *)dhcp_universe.name, 0,
+	    (const unsigned char *)dhcp_universe.name, 0,
 	    (unsigned char *)&dhcp_universe);
 }

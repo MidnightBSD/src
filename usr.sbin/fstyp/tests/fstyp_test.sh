@@ -23,8 +23,8 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fstyp/tests/fstyp_test.sh 312270 2017-01-16 07:11:37Z ngie $
+
+# $FreeBSD: stable/11/usr.sbin/fstyp/tests/fstyp_test.sh 312271 2017-01-16 07:11:47Z ngie $
 
 atf_test_case cd9660
 cd9660_head() {

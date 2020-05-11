@@ -1,4 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/hyperv/Makefile.inc 271493 2014-09-13 02:15:31Z delphij $
+# $FreeBSD: stable/11/usr.sbin/hyperv/Makefile.inc 286992 2015-08-21 14:15:54Z imp $
 
+CFLAGS.gcc+= -Wno-uninitialized
 .include "../Makefile.inc"

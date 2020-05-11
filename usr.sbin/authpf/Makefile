@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/authpf/Makefile 253138 2013-07-10 07:40:30Z des $
+# $FreeBSD: stable/11/usr.sbin/authpf/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH:	${.CURDIR}/../../contrib/pf/authpf
+.PATH:	${SRCTOP}/contrib/pf/authpf
 
 PROG=	authpf
 MAN=	authpf.8
@@ -14,8 +13,7 @@ SRCS=   authpf.c
 # XXX ALTQ:
 CFLAGS+= -DENABLE_ALTQ
 
-LDADD+= -lm -lmd -lutil
-DPADD+= ${LIBM} ${LIBMD} ${LIBUTIL}
+LIBADD=	m util
 
 WARNS?=	3
 

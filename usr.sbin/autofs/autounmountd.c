@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/autounmountd.c 309509 2016-12-03 19:55:55Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/autofs/autounmountd.c 332597 2018-04-16 16:16:24Z trasz $");
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -38,13 +39,13 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/autofs/autounmountd.c 309509 2016-12-03 1
 #include <sys/time.h>
 #include <assert.h>
 #include <errno.h>
+#include <libutil.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <libutil.h>
 
 #include "common.h"
 
@@ -162,7 +163,7 @@ unmount_by_fsid(const fsid_t fsid, const char *mountpoint)
 	if (ret < 0)
 		log_err(1, "asprintf");
 
-	error = unmount(fsid_str, MNT_BYFSID);
+	error = unmount(fsid_str, MNT_NONBUSY | MNT_BYFSID);
 	if (error != 0) {
 		if (errno == EBUSY) {
 			log_debugx("cannot unmount %s (%s): %s",

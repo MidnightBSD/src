@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Takanori Watanabe
  * Copyright (c) 2014 The FreeBSD Foundation
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fstyp/ntfs.c 277436 2015-01-20 20:42:55Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fstyp/ntfs.c 276704 2015-01-05 15:34:23Z trasz $");
 
 #include <stdint.h>
 #include <stdio.h>

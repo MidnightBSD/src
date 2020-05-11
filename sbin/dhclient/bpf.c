@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: bpf.c,v 1.13 2004/05/05 14:28:58 deraadt Exp $	*/
 
 /* BPF socket interface code, originally contributed by Archie Cobbs. */
@@ -42,9 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/sbin/dhclient/bpf.c 280250 2015-03-19 12:32:48Z rwatson $");
-
-#include <sys/capsicum.h>
+__FBSDID("$FreeBSD: stable/11/sbin/dhclient/bpf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "dhcpd.h"
 #include "privsep.h"

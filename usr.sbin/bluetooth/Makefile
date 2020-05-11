@@ -1,8 +1,7 @@
-# $MidnightBSD$
 # $Id: Makefile,v 1.5 2003/09/08 02:28:35 max Exp $
-# $FreeBSD: stable/10/usr.sbin/bluetooth/Makefile 282835 2015-05-13 10:07:50Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bluetooth/Makefile 282054 2015-04-27 06:34:51Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR= \
 	bt3cfw \
