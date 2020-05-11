@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/lib/libssl/Makefile.man 296317 2016-03-02 15:43:01Z delphij $
+# $FreeBSD: stable/11/secure/lib/libssl/Makefile.man 337982 2018-08-17 18:32:53Z jkim $
 # DO NOT EDIT: generated from man-makefile-update target
 MAN+= SSL_CIPHER_get_name.3
 MAN+= SSL_COMP_add_compression_method.3

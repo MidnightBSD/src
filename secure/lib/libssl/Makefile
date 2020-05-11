@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/lib/libssl/Makefile 246772 2013-02-13 23:07:20Z jkim $
+# $FreeBSD: stable/11/secure/lib/libssl/Makefile 290460 2015-11-06 17:39:17Z jkim $
 
 LIB=		ssl
 SHLIB_MAJOR=	8
@@ -22,8 +21,9 @@ SRCS=	bio_ssl.c d1_both.c d1_clnt.c d1_lib.c d1_meth.c d1_pkt.c d1_srtp.c \
 INCS=	dtls1.h kssl.h srtp.h ssl.h ssl2.h ssl23.h ssl3.h tls1.h
 INCSDIR=${INCLUDEDIR}/openssl
 
-DPADD=	${LIBCRYPTO}
-LDADD=	-lcrypto
+LIBADD=	crypto
+
+CFLAGS+=	-I${LCRYPTO_SRC}/crypto
 
 .include <bsd.lib.mk>
 
