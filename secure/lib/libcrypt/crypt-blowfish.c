@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: bcrypt.c,v 1.29 2014/02/24 19:45:43 tedu Exp $	*/
 
 /*
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/secure/lib/libcrypt/crypt-blowfish.c 266816 2014-05-28 18:51:49Z delphij $");
+__FBSDID("$FreeBSD: stable/11/secure/lib/libcrypt/crypt-blowfish.c 284483 2015-06-16 23:57:29Z allanjude $");
 
 /* This password hashing algorithm was designed by David Mazieres
  * <dm@lcs.mit.edu> and works as follows:

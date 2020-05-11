@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Blowfish block cipher
  * Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/secure/lib/libcrypt/blowfish.c,v 1.4 2003/06/02 19:17:24 markm Exp $");
+__FBSDID("$FreeBSD: stable/11/secure/lib/libcrypt/blowfish.c 115719 2003-06-02 19:17:24Z markm $");
 
 /*
  * This code is derived from section 14.3 and the given source

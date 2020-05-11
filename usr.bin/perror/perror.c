@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: George V. Neville-Neil <gnn@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/perror/perror.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <stdio.h>
 #include <stdlib.h>

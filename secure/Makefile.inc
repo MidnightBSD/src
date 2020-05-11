@@ -1,16 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/Makefile.inc 249971 2013-04-27 05:44:39Z ed $
+# $FreeBSD: stable/11/secure/Makefile.inc 319189 2017-05-30 04:42:36Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.if exists(${.CURDIR}/../../lib/libcrypt/obj)
-CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt/obj
+.if exists(${.CURDIR:H:H}/lib/libcrypt/obj)
+CRYPTOBJDIR=	${.CURDIR:H:H}/lib/libcrypt/obj
 .else
-CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt
+CRYPTOBJDIR=	${.CURDIR:H:H}/lib/libcrypt
 .endif
 
 .if ${MK_OPENSSH} != "no"
-SSHDIR=		${.CURDIR}/../../../crypto/openssh
+SSHDIR=		${SRCTOP}/crypto/openssh
 .endif
 
 WARNS?=		0

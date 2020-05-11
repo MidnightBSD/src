@@ -1,6 +1,4 @@
-# $MidnightBSD$
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 LIB=	netpgp
 SHLIB_MAJOR=	1
@@ -21,8 +19,7 @@ CFLAGS+= -I${.CURDIR} -I${NETPGP_SRC}/include
 MAN= libnetpgp.3
 WARNS=4
 
-DPADD=	${LIBCRYPTO} ${LIBZ} ${LIBBZ2}
-LDADD=	-lcrypto -lz -lbz2
+LIBADD+=	bz2 crypto z 
 
 .include <bsd.lib.mk>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * FreeSec: libcrypt for NetBSD
  *
@@ -58,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/secure/lib/libcrypt/crypt-des.c,v 1.16 2002/03/06 17:18:09 markm Exp $");
+__FBSDID("$FreeBSD: stable/11/secure/lib/libcrypt/crypt-des.c 236304 2012-05-30 12:01:28Z bz $");
 
 #include <sys/types.h>
 #include <sys/param.h>
