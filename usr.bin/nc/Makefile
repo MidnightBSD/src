@@ -1,13 +1,12 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/nc/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.PATH: ${.CURDIR}/../../contrib/netcat
+.PATH: ${SRCTOP}/contrib/netcat
 
 PROG=	nc
 SRCS=	netcat.c atomicio.c socks.c
 
 CFLAGS+=-DIPSEC
-LDADD=	-lipsec
-DPADD=	${LIBIPSEC}
+LIBADD=	ipsec
 
 WARNS?=	2
 
