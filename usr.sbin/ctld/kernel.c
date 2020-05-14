@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003, 2004 Silicon Graphics International Corp.
  * Copyright (c) 1997-2007 Kenneth D. Merry
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -36,13 +37,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/kernel.c 316253 2017-03-30 06:13:54Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/kernel.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/callout.h>
 #include <sys/ioctl.h>
 #include <sys/linker.h>
+#include <sys/module.h>
 #include <sys/queue.h>
 #include <sys/sbuf.h>
 #include <sys/stat.h>
@@ -91,6 +93,14 @@ kernel_init(void)
 	}
 	if (ctl_fd < 0)
 		log_err(1, "failed to open %s", CTL_DEFAULT_DEV);
+#ifdef	WANT_ISCSI
+	else {
+		saved_errno = errno;
+		if (modfind("cfiscsi") == -1 && kldload("cfiscsi") == -1)
+			log_warn("couldn't load cfiscsi");
+		errno = saved_errno;
+	}
+#endif
 }
 
 /*
@@ -515,15 +525,20 @@ retry_port:
 	STAILQ_FOREACH(port, &devlist.port_list, links) {
 		if (strcmp(port->port_frontend, "ha") == 0)
 			continue;
-		if (name)
-			free(name);
-		if (port->pp == 0 && port->vp == 0)
+		free(name);
+		if (port->pp == 0 && port->vp == 0) {
 			name = checked_strdup(port->port_name);
-		else if (port->vp == 0)
-			asprintf(&name, "%s/%d", port->port_name, port->pp);
-		else
-			asprintf(&name, "%s/%d/%d", port->port_name, port->pp,
-			    port->vp);
+		} else if (port->vp == 0) {
+			retval = asprintf(&name, "%s/%d",
+			    port->port_name, port->pp);
+			if (retval <= 0)
+				log_err(1, "asprintf");
+		} else {
+			retval = asprintf(&name, "%s/%d/%d",
+			    port->port_name, port->pp, port->vp);
+			if (retval <= 0)
+				log_err(1, "asprintf");
+		}
 
 		if (port->cfiscsi_target == NULL) {
 			log_debugx("CTL port %u \"%s\" wasn't managed by ctld; ",
@@ -583,8 +598,7 @@ retry_port:
 		}
 		cp->p_ctl_port = port->port_id;
 	}
-	if (name)
-		free(name);
+	free(name);
 
 	STAILQ_FOREACH(lun, &devlist.lun_list, links) {
 		struct cctl_lun_nv *nv;
@@ -872,6 +886,11 @@ kernel_handoff(struct connection *conn)
 	    sizeof(req.data.handoff.initiator_isid));
 	strlcpy(req.data.handoff.target_name,
 	    conn->conn_target->t_name, sizeof(req.data.handoff.target_name));
+	if (conn->conn_portal->p_portal_group->pg_offload != NULL) {
+		strlcpy(req.data.handoff.offload,
+		    conn->conn_portal->p_portal_group->pg_offload,
+		    sizeof(req.data.handoff.offload));
+	}
 #ifdef ICL_KERNEL_PROXY
 	if (proxy_mode)
 		req.data.handoff.connection_id = conn->conn_socket;
@@ -891,6 +910,7 @@ kernel_handoff(struct connection *conn)
 	req.data.handoff.max_recv_data_segment_length =
 	    conn->conn_max_data_segment_length;
 	req.data.handoff.max_burst_length = conn->conn_max_burst_length;
+	req.data.handoff.first_burst_length = conn->conn_first_burst_length;
 	req.data.handoff.immediate_data = conn->conn_immediate_data;
 
 	if (ioctl(ctl_fd, CTL_ISCSI, &req) == -1) {
@@ -901,6 +921,39 @@ kernel_handoff(struct connection *conn)
 	if (req.status != CTL_ISCSI_OK) {
 		log_errx(1, "error returned from CTL iSCSI handoff request: "
 		    "%s; dropping connection", req.error_str);
+	}
+}
+
+void
+kernel_limits(const char *offload, size_t *max_data_segment_length)
+{
+	struct ctl_iscsi req;
+
+	bzero(&req, sizeof(req));
+
+	req.type = CTL_ISCSI_LIMITS;
+	if (offload != NULL) {
+		strlcpy(req.data.limits.offload, offload,
+		    sizeof(req.data.limits.offload));
+	}
+
+	if (ioctl(ctl_fd, CTL_ISCSI, &req) == -1) {
+		log_err(1, "error issuing CTL_ISCSI ioctl; "
+		    "dropping connection");
+	}
+
+	if (req.status != CTL_ISCSI_OK) {
+		log_errx(1, "error returned from CTL iSCSI limits request: "
+		    "%s; dropping connection", req.error_str);
+	}
+
+	*max_data_segment_length = req.data.limits.data_segment_limit;
+	if (offload != NULL) {
+		log_debugx("MaxRecvDataSegment kernel limit for offload "
+		    "\"%s\" is %zd", offload, *max_data_segment_length);
+	} else {
+		log_debugx("MaxRecvDataSegment kernel limit is %zd",
+		    *max_data_segment_length);
 	}
 }
 
@@ -1217,8 +1270,8 @@ kernel_capsicate(void)
 	if (error != 0 && errno != ENOSYS)
 		log_err(1, "cap_rights_limit");
 
-	error = cap_ioctls_limit(ctl_fd, cmds,
-	    sizeof(cmds) / sizeof(cmds[0]));
+	error = cap_ioctls_limit(ctl_fd, cmds, nitems(cmds));
+
 	if (error != 0 && errno != ENOSYS)
 		log_err(1, "cap_ioctls_limit");
 

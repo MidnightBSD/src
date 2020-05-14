@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/asf/asf_kvm.c 338868 2018-09-21 21:15:43Z markj $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -35,6 +37,7 @@ __MBSDID("$MidnightBSD$");
 #include <kvm.h>
 #include <limits.h>
 #include <nlist.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 

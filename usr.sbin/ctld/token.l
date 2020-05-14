@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ctld/token.l 288810 2015-10-05 11:30:18Z mav $
+ * $FreeBSD: stable/11/usr.sbin/ctld/token.l 352280 2019-09-13 07:21:06Z bapt $
  */
 
 #include <stdio.h>
@@ -44,6 +45,7 @@ extern int	yylex(void);
 
 %}
 
+%option noyywrap
 %option noinput
 %option nounput
 
@@ -68,6 +70,7 @@ listen			{ return LISTEN; }
 listen-iser		{ return LISTEN_ISER; }
 lun			{ return LUN; }
 maxproc			{ return MAXPROC; }
+offload			{ return OFFLOAD; }
 option			{ return OPTION; }
 path			{ return PATH; }
 pidfile			{ return PIDFILE; }

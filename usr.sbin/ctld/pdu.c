@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/pdu.c 288704 2015-10-05 07:42:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/pdu.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -82,11 +83,11 @@ pdu_new(struct connection *conn)
 {
 	struct pdu *pdu;
 
-	pdu = calloc(sizeof(*pdu), 1);
+	pdu = calloc(1, sizeof(*pdu));
 	if (pdu == NULL)
 		log_err(1, "calloc");
 
-	pdu->pdu_bhs = calloc(sizeof(*pdu->pdu_bhs), 1);
+	pdu->pdu_bhs = calloc(1, sizeof(*pdu->pdu_bhs));
 	if (pdu->pdu_bhs == NULL)
 		log_err(1, "calloc");
 

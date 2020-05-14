@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2003 Greg Lehey
  * All rights reserved.
  *
@@ -23,10 +25,10 @@
  * negligence or otherwise) arising in any way out of the use of this
  * software, even if advised of the possibility of such damage.
  */
-/* $Id: asf.c,v 1.3 2012-12-01 14:51:31 laffer1 Exp $ */
+/* $Id: asf.c,v 1.4 2003/05/04 02:55:20 grog Exp grog $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/asf/asf.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <sys/queue.h>

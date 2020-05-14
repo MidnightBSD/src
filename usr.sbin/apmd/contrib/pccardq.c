@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/usr.sbin/apmd/contrib/pccardq.c 208075 2010-05-14 14:26:56Z uqs $ */
 
 #include <err.h>
 #include <errno.h>

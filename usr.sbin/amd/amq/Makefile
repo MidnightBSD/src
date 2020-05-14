@@ -1,10 +1,9 @@
-# $MidnightBSD$
 # ex:ts=8
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD: stable/10/usr.sbin/amd/amq/Makefile 80029 2001-07-20 06:20:32Z obrien $
+# $FreeBSD: stable/11/usr.sbin/amd/amq/Makefile 275054 2014-11-25 16:57:27Z bapt $
 #
 
 .PATH: ${.CURDIR}/../../../contrib/amd/amq
@@ -15,7 +14,6 @@ SRCS=	amq.c amq_clnt.c amq_xdr.c
 
 CFLAGS+= -I${.CURDIR}/../../../contrib/amd/amq
 
-DPADD=	${LIBAMU}
-LDADD=	${LIBAMU}
+LIBADD=	amu
 
 .include <bsd.prog.mk>

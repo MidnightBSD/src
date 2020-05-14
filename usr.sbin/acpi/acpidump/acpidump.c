@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$MidnightBSD$
+ *	$FreeBSD: stable/11/usr.sbin/acpi/acpidump/acpidump.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -55,7 +57,8 @@ int
 main(int argc, char *argv[])
 {
 	ACPI_TABLE_HEADER *rsdt, *sdt;
-	char	c, *progname;
+	int	c;
+	char	*progname;
 	char	*dsdt_input_file, *dsdt_output_file;
 
 	dsdt_input_file = dsdt_output_file = NULL;

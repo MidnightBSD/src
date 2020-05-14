@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1997, 1998, 1999
  *	Bill Paul <wpaul@ee.columbia.edu>.  All rights reserved.
@@ -38,7 +37,7 @@ static const char copyright[] = "@(#) Copyright (c) 1997, 1998, 1999\
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ancontrol/ancontrol.c 305619 2016-09-08 15:27:42Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ancontrol/ancontrol.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -47,7 +46,6 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/ancontrol/ancontrol.c 305619 2016-09-08 1
 #include <arpa/inet.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/ethernet.h>
 
 #include <dev/an/if_aironet_ieee.h>

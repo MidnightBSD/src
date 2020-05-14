@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/amd/scripts/Makefile 80029 2001-07-20 06:20:32Z obrien $
+# $FreeBSD: stable/11/usr.sbin/amd/scripts/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 .PATH: ${.CURDIR}/../../../contrib/amd/scripts
 

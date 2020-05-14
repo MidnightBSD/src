@@ -1,12 +1,11 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ancontrol/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	ancontrol
 MAN=	ancontrol.8
 
 WARNS?=	3
-CFLAGS+= -DANCACHE -I${.CURDIR}/../../sys
+CFLAGS+= -DANCACHE -I${SRCTOP}/sys
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.prog.mk>

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/chap.c 286219 2015-08-03 07:20:33Z trasz $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/chap.c 332595 2018-04-16 16:14:05Z trasz $");
 
 #include <assert.h>
 #include <stdlib.h>
@@ -233,7 +234,7 @@ chap_new(void)
 {
 	struct chap *chap;
 
-	chap = calloc(sizeof(*chap), 1);
+	chap = calloc(1, sizeof(*chap));
 	if (chap == NULL)
 		log_err(1, "calloc");
 
@@ -334,7 +335,7 @@ rchap_new(const char *secret)
 {
 	struct rchap *rchap;
 
-	rchap = calloc(sizeof(*rchap), 1);
+	rchap = calloc(1, sizeof(*rchap));
 	if (rchap == NULL)
 		log_err(1, "calloc");
 

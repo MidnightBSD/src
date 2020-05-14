@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * APM (Advanced Power Management) Event Dispatcher
  *
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -29,9 +31,10 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$FreeBSD: stable/11/usr.sbin/apmd/apmd.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif /* not lint */
 
+#include <sys/types.h>
 #include <assert.h>
 #include <bitstring.h>
 #include <err.h>
@@ -45,7 +48,6 @@ static const char rcsid[] =
 #include <syslog.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <machine/apm_bios.h>

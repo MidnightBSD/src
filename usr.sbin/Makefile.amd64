@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/Makefile.amd64 294364 2016-01-19 23:36:49Z ian $
+# $FreeBSD: stable/11/usr.sbin/Makefile.amd64 292553 2015-12-21 17:41:08Z ian $
 
 # kgzip: builds, but missing support files
 # mptable: broken (not 64 bit clean)

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/discovery.c 288704 2015-10-05 07:42:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/discovery.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <assert.h>
 #include <stdio.h>
@@ -70,7 +71,7 @@ text_receive(struct connection *conn)
 		    "was %u, is %u", conn->conn_cmdsn, ntohl(bhstr->bhstr_cmdsn));
 	}
 	if (ntohl(bhstr->bhstr_expstatsn) != conn->conn_statsn) {
-		log_errx(1, "received Text PDU with wrong StatSN: "
+		log_errx(1, "received Text PDU with wrong ExpStatSN: "
 		    "is %u, should be %u", ntohl(bhstr->bhstr_expstatsn),
 		    conn->conn_statsn);
 	}
@@ -128,7 +129,7 @@ logout_receive(struct connection *conn)
 		    ntohl(bhslr->bhslr_cmdsn));
 	}
 	if (ntohl(bhslr->bhslr_expstatsn) != conn->conn_statsn) {
-		log_errx(1, "received Logout PDU with wrong StatSN: "
+		log_errx(1, "received Logout PDU with wrong ExpStatSN: "
 		    "is %u, should be %u", ntohl(bhslr->bhslr_expstatsn),
 		    conn->conn_statsn);
 	}

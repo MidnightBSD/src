@@ -1,10 +1,9 @@
-/* $MidnightBSD$ */
 /*
  * This file is _NOT_ automatically generated.  It must agree with the
  * Virtual Function register map definitions in t4vf_defs.h in the common
  * code.
  */
-__FBSDID("$FreeBSD: stable/10/usr.sbin/cxgbetool/reg_defs_t4vf.c 296471 2016-03-07 21:11:35Z np $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/cxgbetool/reg_defs_t4vf.c 296471 2016-03-07 21:11:35Z np $");
 
 struct reg_info t4vf_sge_regs[] = {
 	{ "SGE_KDOORBELL",			0x000, 0 },

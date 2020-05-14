@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,12 +31,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/keys.c 288704 2015-10-05 07:42:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/keys.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "ctld.h"
 
 struct keys *
@@ -43,7 +45,7 @@ keys_new(void)
 {
 	struct keys *keys;
 
-	keys = calloc(sizeof(*keys), 1);
+	keys = calloc(1, sizeof(*keys));
 	if (keys == NULL)
 		log_err(1, "calloc");
 
@@ -137,7 +139,7 @@ keys_save(struct keys *keys, struct pdu *pdu)
 		if (keys->keys_names[i] == NULL)
 			break;
 		data += sprintf(data, "%s=%s",
-		        keys->keys_names[i], keys->keys_values[i]);
+		    keys->keys_names[i], keys->keys_values[i]);
 		data += 1; /* for '\0'. */
 	}
 }

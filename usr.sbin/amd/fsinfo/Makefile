@@ -1,10 +1,9 @@
-# $MidnightBSD$
 # ex:ts=8
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD: stable/10/usr.sbin/amd/fsinfo/Makefile 310490 2016-12-23 22:42:14Z cy $
+# $FreeBSD: stable/11/usr.sbin/amd/fsinfo/Makefile 310490 2016-12-23 22:42:14Z cy $
 
 .PATH: ${.CURDIR}/../../../contrib/amd/fsinfo
 
@@ -13,11 +12,10 @@ MAN=	fsinfo.8
 SRCS=	fsi_analyze.c fsi_dict.c fsi_util.c fsinfo.c
 SRCS+=	wr_atab.c wr_bparam.c wr_dumpset.c wr_exportfs.c wr_fstab.c
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/amd/fsinfo \
-	 -I${.CURDIR}/../../../contrib/amd/inculde
+CFLAGS+= -I${SRCTOP}/contrib/amd/fsinfo \
+	 -I${SRCTOP}/contrib/amd/inculde
 
-DPADD=	${LIBAMU}
-LDADD=	${LIBAMU}
+LIBADD=	amu
 
 SRCS+=		fsi_gram.c fsi_gram.h fsi_lex.c
 SRCS+=		null_gram.c null_gram.h null_lex.c

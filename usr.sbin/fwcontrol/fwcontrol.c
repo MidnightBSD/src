@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2002
  * 	Hidetoshi Shimokawa. All rights reserved.
@@ -35,7 +34,7 @@
 
 #if defined(__FreeBSD__)
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fwcontrol/fwcontrol.c 228990 2011-12-30 10:58:14Z uqs $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fwcontrol/fwcontrol.c 353589 2019-10-15 20:04:15Z brooks $");
 #endif
 
 #include <sys/param.h>
@@ -128,7 +127,7 @@ str2node(int fd, const char *nodestr)
 	char *endptr;
 	int i, node;
 
-	if (nodestr == '\0')
+	if (nodestr == NULL || *nodestr == '\0')
 		return (-1);
 
 	/*

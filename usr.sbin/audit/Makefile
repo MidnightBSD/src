@@ -1,8 +1,8 @@
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/audit/Makefile 319119 2017-05-29 10:15:41Z ngie $
 #
 
-OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
+OPENBSMDIR=${SRCTOP}/contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/audit
 
 CFLAGS+=	-I${OPENBSMDIR}
@@ -10,8 +10,7 @@ CFLAGS+=	-I${OPENBSMDIR}
 PROG=	audit
 MAN=	audit.8
 
-DPADD=	${LIBBSM}
-LDADD=	-lbsm
+LIBADD=	bsm
 
 WARNS?=	5
 

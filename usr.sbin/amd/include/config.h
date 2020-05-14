@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * $FreeBSD: stable/10/usr.sbin/amd/include/config.h 313212 2017-02-04 16:00:51Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/amd/include/config.h 313211 2017-02-04 16:00:19Z ngie $
  *
  * portions derived from
  *      $NetBSD: config.h,v 1.11 1998/08/08 22:33:37 christos Exp $
@@ -712,7 +711,7 @@
 #define HAVE_NET_IF_H 1
 
 /* Define to 1 if you have the <net/if_var.h> header file. */
-#define HAVE_NET_IF_VAR_H 1
+/* #undef HAVE_NET_IF_VAR_H */
 
 /* Define to 1 if you have the <net/route.h> header file. */
 #define HAVE_NET_ROUTE_H 1

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000-2002 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: stable/10/usr.sbin/acpi/acpidb/acpidb.c 306536 2016-09-30 22:40:58Z jkim $
+ *	$FreeBSD: stable/11/usr.sbin/acpi/acpidb/acpidb.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

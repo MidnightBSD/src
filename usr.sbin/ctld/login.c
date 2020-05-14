@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/login.c 300450 2016-05-23 04:50:01Z truckman $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/login.c 332583 2018-04-16 15:53:44Z trasz $");
 
 #include <assert.h>
 #include <stdbool.h>
@@ -436,7 +437,7 @@ login_chap(struct connection *conn, struct auth_group *ag)
 	 * Yay, authentication succeeded!
 	 */
 	log_debugx("authentication succeeded for user \"%s\"; "
-	    "transitioning to Negotiation Phase", auth->a_user);
+	    "transitioning to operational parameter negotiation", auth->a_user);
 	login_send_chap_success(request, auth);
 	pdu_delete(request);
 
@@ -451,7 +452,8 @@ static void
 login_negotiate_key(struct pdu *request, const char *name,
     const char *value, bool skipped_security, struct keys *response_keys)
 {
-	int which, tmp;
+	int which;
+	size_t tmp;
 	struct connection *conn;
 
 	conn = request->pdu_connection;
@@ -550,13 +552,13 @@ login_negotiate_key(struct pdu *request, const char *name,
 			log_errx(1, "received invalid "
 			    "MaxRecvDataSegmentLength");
 		}
-		if (tmp > MAX_DATA_SEGMENT_LENGTH) {
+		if (tmp > conn->conn_data_segment_limit) {
 			log_debugx("capping MaxRecvDataSegmentLength "
-			    "from %d to %d", tmp, MAX_DATA_SEGMENT_LENGTH);
-			tmp = MAX_DATA_SEGMENT_LENGTH;
+			    "from %zd to %zd", tmp, conn->conn_data_segment_limit);
+			tmp = conn->conn_data_segment_limit;
 		}
 		conn->conn_max_data_segment_length = tmp;
-		keys_add_int(response_keys, name, MAX_DATA_SEGMENT_LENGTH);
+		keys_add_int(response_keys, name, conn->conn_data_segment_limit);
 	} else if (strcmp(name, "MaxBurstLength") == 0) {
 		tmp = strtoul(value, NULL, 10);
 		if (tmp <= 0) {
@@ -564,28 +566,24 @@ login_negotiate_key(struct pdu *request, const char *name,
 			log_errx(1, "received invalid MaxBurstLength");
 		}
 		if (tmp > MAX_BURST_LENGTH) {
-			log_debugx("capping MaxBurstLength from %d to %d",
+			log_debugx("capping MaxBurstLength from %zd to %d",
 			    tmp, MAX_BURST_LENGTH);
 			tmp = MAX_BURST_LENGTH;
 		}
 		conn->conn_max_burst_length = tmp;
-		keys_add(response_keys, name, value);
+		keys_add_int(response_keys, name, tmp);
 	} else if (strcmp(name, "FirstBurstLength") == 0) {
 		tmp = strtoul(value, NULL, 10);
 		if (tmp <= 0) {
 			login_send_error(request, 0x02, 0x00);
-			log_errx(1, "received invalid "
-			    "FirstBurstLength");
+			log_errx(1, "received invalid FirstBurstLength");
 		}
-		if (tmp > MAX_DATA_SEGMENT_LENGTH) {
-			log_debugx("capping FirstBurstLength from %d to %d",
-			    tmp, MAX_DATA_SEGMENT_LENGTH);
-			tmp = MAX_DATA_SEGMENT_LENGTH;
+		if (tmp > FIRST_BURST_LENGTH) {
+			log_debugx("capping FirstBurstLength from %zd to %d",
+			    tmp, FIRST_BURST_LENGTH);
+			tmp = FIRST_BURST_LENGTH;
 		}
-		/*
-		 * We don't pass the value to the kernel; it only enforces
-		 * hardcoded limit anyway.
-		 */
+		conn->conn_first_burst_length = tmp;
 		keys_add_int(response_keys, name, tmp);
 	} else if (strcmp(name, "DefaultTime2Wait") == 0) {
 		keys_add(response_keys, name, value);
@@ -682,6 +680,18 @@ login_negotiate(struct connection *conn, struct pdu *request)
 	struct keys *request_keys, *response_keys;
 	int i;
 	bool redirected, skipped_security;
+
+	if (conn->conn_session_type == CONN_SESSION_TYPE_NORMAL) {
+		/*
+		 * Query the kernel for MaxDataSegmentLength it can handle.
+		 * In case of offload, it depends on hardware capabilities.
+		 */
+		assert(conn->conn_target != NULL);
+		kernel_limits(conn->conn_portal->p_portal_group->pg_offload,
+		    &conn->conn_data_segment_limit);
+	} else {
+		conn->conn_data_segment_limit = MAX_DATA_SEGMENT_LENGTH;
+	}
 
 	if (request == NULL) {
 		log_debugx("beginning operational parameter negotiation; "

@@ -1,7 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/Makefile.mips 233644 2012-03-29 02:54:35Z jmallett $
+# $FreeBSD: stable/11/usr.sbin/Makefile.mips 291139 2015-11-21 16:37:11Z imp $
 
-# uathload broken for n32 and n64 due to toolchain issues, only build for o32
-.if ${MACHINE_ARCH} != "mips" && ${MACHINE_ARCH} != "mipsel"
-SUBDIR:=	${SUBDIR:Nuathload}
-.endif
+SUBDIR+=	ofwdump

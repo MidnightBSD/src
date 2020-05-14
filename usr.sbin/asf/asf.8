@@ -21,7 +21,7 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/usr.sbin/asf/asf.8 335518 2018-06-22 00:27:31Z emaste $
 .\"
 .Dd December 20, 2006
 .Dt ASF 8
@@ -37,6 +37,13 @@
 .Op Fl o Ar outfile
 .Op Fl X Ar suffix
 .Op Ar modules-path Op Ar outfile
+.Sh DEPRECATION NOTICE
+The
+.Nm
+utility will be removed in a future release.
+The
+.Xr kgdb 1
+debugger handles kernel module state internally.
 .Sh DESCRIPTION
 By default,
 .Nm
@@ -170,7 +177,7 @@ The
 utility first appeared in
 .Fx 5.2 .
 .Sh AUTHORS
-.An Greg Lehey Aq grog@FreeBSD.org
+.An Greg Lehey Aq Mt grog@FreeBSD.org
 .Sh BUGS
 Module paths are guessed in a rather naive way by default.
 It is likely to lag behind the changes to the build tree layout.

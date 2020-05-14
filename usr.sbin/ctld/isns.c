@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctld/isns.c 288704 2015-10-05 07:42:05Z mav $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctld/isns.c 332595 2018-04-16 16:14:05Z trasz $");
 
 #include <sys/types.h>
 #include <sys/time.h>

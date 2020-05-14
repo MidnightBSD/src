@@ -1,9 +1,8 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/usr.sbin/auditreduce/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/auditreduce/Makefile 319119 2017-05-29 10:15:41Z ngie $
 #
 
-OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
+OPENBSMDIR=${SRCTOP}/contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/auditreduce
 
 CFLAGS+=	-I${OPENBSMDIR}
@@ -11,8 +10,7 @@ CFLAGS+=	-I${OPENBSMDIR}
 PROG=	auditreduce
 MAN=	auditreduce.1
 
-DPADD=	${LIBBSM}
-LDADD=	-lbsm
+LIBADD=	bsm
 
 WARNS?=	3
 

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/nfsrevoke/nfsrevoke.c 193070 2009-05-29 22:19:45Z delphij $");
 
 #include <sys/param.h>
 #include <sys/linker.h>

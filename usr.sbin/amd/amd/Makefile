@@ -1,13 +1,12 @@
-# $MidnightBSD$
 # ex:ts=8
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998
 #
-# $FreeBSD: stable/10/usr.sbin/amd/amd/Makefile 313212 2017-02-04 16:00:51Z ngie $
+# $FreeBSD: stable/11/usr.sbin/amd/amd/Makefile 319119 2017-05-29 10:15:41Z ngie $
 #
 
-.include <bsd.own.mk>
+.include <bsd.init.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/amd/amd
 
@@ -29,10 +28,9 @@ SRCS+=	srvr_amfs_auto.c srvr_nfs.c sun_map.c
 
 CFLAGS+= -I${.CURDIR}/../../../contrib/amd/amd \
 	 -I${SRCTOP}/contrib/amd/include \
-	 -I${.OBJDIR}/../../../include/rpcsvc
+	 -I${OBJTOP}/include/rpcsvc
 
-DPADD=	${LIBAMU}
-LDADD=	${LIBAMU}
+LIBADD=	amu
 
 SRCS+=		conf_parse.c conf_parse.h conf_tok.c
 SRCS+=		sun_map_parse.c sun_map_parse.h sun_map_tok.c
@@ -64,7 +62,7 @@ SRCS+=		mount_xdr.c
 CLEANFILES+=	mount_xdr.c
 
 mount_xdr.c: ${MOUNT_X}
-	${RPCCOM} -c -DWANT_NFS3 ${MOUNT_X} -o ${.TARGET}
+	${RPCCOM} -c -DWANT_NFS3 ${.ALLSRC} -o ${.TARGET}
 
 .if ${MK_HESIOD} != "no"
 SRCS+=	info_hesiod.c
@@ -77,8 +75,7 @@ SRCS+=	info_nis.c
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DHAVE_LIBWRAP -DHAVE_TCPD_H
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD+=	wrap
 .endif
 
 .include <bsd.prog.mk>

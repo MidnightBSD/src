@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/Makefile.i386 294364 2016-01-19 23:36:49Z ian $
+# $FreeBSD: stable/11/usr.sbin/Makefile.i386 292553 2015-12-21 17:41:08Z ian $
 
 .if ${MK_APM} != "no"
 SUBDIR+=	apm
@@ -10,9 +9,6 @@ SUBDIR+=	asf
 SUBDIR+=	btxld
 .endif
 SUBDIR+=	cpucontrol
-.if ${MK_HYPERV} != "no"
-SUBDIR+=	hyperv
-.endif
 SUBDIR+=	kgmon
 SUBDIR+=	kgzip
 SUBDIR+=	lptcontrol
@@ -31,6 +27,9 @@ SUBDIR+=	zzz
 SUBDIR+=	acpi
 .endif
 SUBDIR+=	boot0cfg
+.if ${MK_HYPERV} != "no"
+SUBDIR+=	hyperv
+.endif
 .if ${MK_WIRELESS} != "no"
 SUBDIR+=	wlconfig
 .endif

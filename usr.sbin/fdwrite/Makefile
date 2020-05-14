@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # ----------------------------------------------------------------------------
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <phk@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -6,7 +5,7 @@
 # this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 # ----------------------------------------------------------------------------
 #
-# $FreeBSD: stable/10/usr.sbin/fdwrite/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/fdwrite/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	fdwrite
 

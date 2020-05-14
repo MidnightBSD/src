@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * APM (Advanced Power Management) Event Dispatcher
  *
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -28,9 +29,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/apmd/apmdlex.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD: stable/11/usr.sbin/apmd/apmdlex.l 352280 2019-09-13 07:21:06Z bapt $
  */
 
+#include <sys/types.h>
 #include <string.h>
 #include <syslog.h>
 #include <bitstring.h>
@@ -42,6 +44,7 @@ int first_time;
 %}
 
 /* We don't need it, avoid the warning. */
+%option noyywrap
 %option nounput
 %option noinput
 

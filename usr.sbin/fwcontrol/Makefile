@@ -1,14 +1,13 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fwcontrol/Makefile 204585 2010-03-02 16:58:04Z uqs $
+# $FreeBSD: stable/11/usr.sbin/fwcontrol/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	fwcontrol
 SRCS=	fwcontrol.c fwcrom.c fwdv.c fwmpegts.c
 MAN=	fwcontrol.8
 WARNS?=	3
 
-.PATH:	${.CURDIR}/../../sys/dev/firewire
+.PATH:	${SRCTOP}/sys/dev/firewire
 
-SDIR= ${.CURDIR}/../../sys
+SDIR= ${SRCTOP}/sys
 CFLAGS+=-I${.CURDIR} -I${SDIR}
 
 .include <bsd.prog.mk>
