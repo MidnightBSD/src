@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/tools/ipf_y.y 317314 2017-04-23 03:16:38Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/tools/ipf_y.y 319175 2017-05-30 03:22:18Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -2195,7 +2195,7 @@ char *phrase;
 
 			for (i = 0, s = strtok(phrase, " \r\n\t"); s != NULL;
 			     s = strtok(NULL, " \r\n\t"), i++) {
-				fb = realloc(fb, (i / 4 + 1) * sizeof(*fb));
+				fb = reallocarray(fb, i / 4 + 1, sizeof(*fb));
 				if (fb == NULL) {
 					warnx("memory allocation error at %d in %s in %s", __LINE__, __FUNCTION__, __FILE__);
 					abort();

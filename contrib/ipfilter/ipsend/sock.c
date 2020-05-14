@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/10/contrib/ipfilter/ipsend/sock.c 255332 2013-09-06 23:11:19Z cy $ */
+/* $FreeBSD: stable/11/contrib/ipfilter/ipsend/sock.c 344833 2019-03-06 02:37:25Z cy $ */
 /*
  * sock.c (C) 1995-1998 Darren Reed
  *
@@ -29,7 +29,6 @@ typedef int     boolean_t;
 #else
 # include <sys/dir.h>
 #endif
-#if !defined(__osf__)
 # ifdef __NetBSD__
 #  include <machine/lock.h>
 # endif
@@ -50,7 +49,6 @@ typedef int     boolean_t;
 #  undef  _KERNEL
 #  undef  KERNEL
 # endif
-#endif
 #include <nlist.h>
 #include <sys/user.h>
 #include <sys/socket.h>
@@ -74,9 +72,7 @@ typedef int     boolean_t;
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
-#ifndef __osf__
 # include <net/route.h>
-#endif
 #include <netinet/ip_var.h>
 #include <netinet/in_pcb.h>
 #include <netinet/tcp_timer.h>
@@ -226,7 +222,7 @@ struct	tcpcb	*find_tcp(fd, ti)
 	    }
 #endif
 
-	o = (struct file **)calloc(1, sizeof(*o) * (up->u_lastfile + 1));
+	o = (struct file **)calloc(up->u_lastfile + 1, sizeof(*o));
 	if (KMCPY(o, up->u_ofile, (up->u_lastfile + 1) * sizeof(*o)) == -1)
 	    {
 		fprintf(stderr, "read(%#x,%#x,%d) - u_ofile - failed\n",
@@ -330,7 +326,7 @@ struct	tcpcb	*find_tcp(tfd, ti)
 	i = NULL;
 	t = NULL;
 
-	o = (struct file **)calloc(1, sizeof(*o) * (fd->fd_lastfile + 1));
+	o = (struct file **)calloc(fd->fd_lastfile + 1, sizeof(*o));
 	if (KMCPY(o, fd->fd_ofiles, (fd->fd_lastfile + 1) * sizeof(*o)) == -1)
 	    {
 		fprintf(stderr, "read(%#lx,%#lx,%lu) - u_ofile - failed\n",

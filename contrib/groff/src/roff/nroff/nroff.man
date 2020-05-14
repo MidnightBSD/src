@@ -16,7 +16,7 @@ versions, except that this permission notice may be included in
 translations approved by the Free Software Foundation instead of in
 the original English.
 
-	$FreeBSD: release/10.0.0/contrib/groff/src/roff/nroff/nroff.man 151503 2005-10-20 10:53:15Z ru $
+	$FreeBSD: stable/11/contrib/groff/src/roff/nroff/nroff.man 151503 2005-10-20 10:53:15Z ru $
 
 ..
 .

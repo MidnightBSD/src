@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/ipsopt.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/ipsend/ipsopt.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -20,9 +20,7 @@ static const char rcsid[] = "@(#)$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#ifndef	linux
 #include <netinet/ip_var.h>
-#endif
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include "ipsend.h"

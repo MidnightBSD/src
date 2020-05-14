@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/tools/ipnat_y.y 272990 2014-10-12 17:03:47Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/tools/ipnat_y.y 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -6,15 +6,6 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 %{
-#ifdef  __FreeBSD__
-# ifndef __FreeBSD_cc_version
-#  include <osreldate.h>
-# else
-#  if __FreeBSD_cc_version < 430000
-#   include <osreldate.h>
-#  endif
-# endif
-#endif
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -35,9 +26,6 @@
 #include <sys/time.h>
 #include <syslog.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <netdb.h>
 #include <arpa/nameser.h>
 #include <resolv.h>

@@ -1,19 +1,10 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/tools/ipf.c 313461 2017-02-09 02:08:42Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/tools/ipf.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
-#ifdef	__FreeBSD__
-# ifndef __FreeBSD_cc_version
-#  include <osreldate.h>
-# else
-#  if __FreeBSD_cc_version < 430000
-#   include <osreldate.h>
-#  endif
-# endif
-#endif
 #include "ipf.h"
 #include <fcntl.h>
 #include <ctype.h>

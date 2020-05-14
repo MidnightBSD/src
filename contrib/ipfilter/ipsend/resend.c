@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/resend.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/ipsend/resend.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * resend.c (C) 1995-1998 Darren Reed
@@ -19,13 +19,8 @@ static const char rcsid[] = "@(#)$Id$";
 #include <arpa/inet.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
-#ifndef	linux
 # include <netinet/ip_var.h>
 # include <netinet/if_ether.h>
-# if __FreeBSD_version >= 300000
-#  include <net/if_var.h>
-# endif
-#endif
 #include <stdio.h>
 #include <netdb.h>
 #include <string.h>
@@ -100,7 +95,7 @@ int	ip_resend(dev, mtu, r, gwip, datain)
 		return -2;
 	    }
 
-	bzero((char *)A_A eh->ether_shost, sizeof(eh->ether_shost));
+	bzero((char *) &eh->ether_shost, sizeof(eh->ether_shost));
 	if (gwip.s_addr && (arp((char *)&gwip, dhost) == -1))
 	    {
 		perror("arp");
@@ -116,12 +111,12 @@ int	ip_resend(dev, mtu, r, gwip, datain)
 			eh->ether_type = htons((u_short)ETHERTYPE_IP);
 			if (!gwip.s_addr) {
 				if (arp((char *)&gwip,
-					(char *)A_A eh->ether_dhost) == -1) {
+					(char *) &eh->ether_dhost) == -1) {
 					perror("arp");
 					continue;
 				}
 			} else
-				bcopy(dhost, (char *)A_A eh->ether_dhost,
+				bcopy(dhost, (char *) &eh->ether_dhost,
 				      sizeof(dhost));
 			if (!ip->ip_sum)
 				ip->ip_sum = chksum((u_short *)ip,

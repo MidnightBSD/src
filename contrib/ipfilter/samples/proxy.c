@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/samples/proxy.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/samples/proxy.c 255332 2013-09-06 23:11:19Z cy $	*/
 
 /*
  * Sample transparent proxy program.

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getifname.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/lib/getifname.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -24,9 +24,6 @@ char *getifname(ptr)
 # if SOLARIS
 #  include <sys/mutex.h>
 #  include <sys/condvar.h>
-# endif
-# ifdef __hpux
-#  include "compat.h"
 # endif
 # include "../pfil/qif.h"
 	char *ifname;

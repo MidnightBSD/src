@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/iplang/iplang_l.l 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/iplang/iplang_l.l 319175 2017-05-30 03:22:18Z cy $	*/
 
 %{
 /*
@@ -195,7 +195,8 @@ void push_proto()
 	if (!prstack)
 		prstack = (int *)malloc(sizeof(int));
 	else
-		prstack = (int *)realloc((char *)prstack, numpr * sizeof(int));
+		prstack = (int *)reallocarray((char *)prstack, numpr,
+		    sizeof(int));
 	prstack[numpr - 1] = oldipproto;
 }
 

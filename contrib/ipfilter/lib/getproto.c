@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/lib/getproto.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/lib/getproto.c 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -23,14 +23,6 @@ int getproto(name)
 	if (*s == '\0')
 		return atoi(name);
 
-#ifdef _AIX51
-	/*
-	 * For some bogus reason, "ip" is 252 in /etc/protocols on AIX 5
-	 * The IANA has doubled up on the definition of 0 - it is now also
-	 * used for IPv6 hop-opts, so we can no longer rely on /etc/protocols
-	 * providing the correct name->number mapping
-	 */
-#endif
 	if (!strcasecmp(name, "ip"))
 		return 0;
 

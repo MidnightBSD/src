@@ -20,7 +20,7 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
-/* $FreeBSD: stable/10/contrib/gcc/c-opts.c 261188 2014-01-26 19:49:54Z pfg $ */
+/* $FreeBSD: stable/11/contrib/gcc/c-opts.c 260311 2014-01-05 00:43:28Z pfg $ */
 /* Merged C99 inline changes from gcc trunk 122565 2007-03-05 */
 
 #include "config.h"

@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/tools/ipnat.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/tools/ipnat.c 359754 2020-04-09 20:38:36Z kevans $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
-#if !defined(__SVR4) && !defined(__svr4__)
+#if !defined(__SVR4)
 #include <strings.h>
 #else
 #include <sys/byteorder.h>
@@ -28,7 +28,7 @@
 #undef _KERNEL
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#if defined(sun) && (defined(__svr4__) || defined(__SVR4))
+#if defined(sun) && defined(__SVR4)
 # include <sys/ioccom.h>
 # include <sys/sysmacros.h>
 #endif
@@ -37,33 +37,18 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <netdb.h>
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
 #include <resolv.h>
 #include <ctype.h>
-#if defined(linux)
-# include <linux/a.out.h>
-#else
 # include <nlist.h>
-#endif
 #include "ipf.h"
 #include "netinet/ipl.h"
 #include "kmem.h"
 
-#ifdef	__hpux
-# define	nlist	nlist64
-#endif
 
-#if	defined(sun) && !SOLARIS2
-# define	STRERROR(x)	sys_errlist[x]
-extern	char	*sys_errlist[];
-#else
 # define	STRERROR(x)	strerror(x)
-#endif
 
 #if !defined(lint)
 static const char sccsid[] ="@(#)ipnat.c	1.9 6/5/96 (C) 1993 Darren Reed";
@@ -75,7 +60,6 @@ static const char rcsid[] = "@(#)$Id$";
 #define	bzero(a,b)	memset(a,0,b)
 #endif
 int	use_inet6 = 0;
-char	thishost[MAXHOSTNAMELEN];
 
 extern	char	*optarg;
 

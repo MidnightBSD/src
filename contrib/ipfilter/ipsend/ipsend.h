@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/ipsend/ipsend.h 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/ipsend/ipsend.h 344833 2019-03-06 02:37:25Z cy $	*/
 
 /*
  * ipsend.h (C) 1997-1998 Darren Reed
@@ -26,9 +26,6 @@
 #include <net/if.h>
 
 #include "ipf.h"
-#ifdef	linux
-#include <linux/sockios.h>
-#endif
 /* XXX:	The following is needed by tcpip.h */
 #include <netinet/ip_var.h>
 #include "netinet/tcpip.h"
@@ -49,11 +46,7 @@ extern	u_32_t	buildopts __P((char *, char *, int));
 extern	int	addipopt __P((char *, struct ipopt_names *, int, char *));
 extern	int	initdevice __P((char *, int));
 extern	int	sendip __P((int, char *, int));
-#ifdef	linux
-extern	struct	sock	*find_tcp __P((int, struct tcpiphdr *));
-#else
 extern	struct	tcpcb	*find_tcp __P((int, struct tcpiphdr *));
-#endif
 extern	int	ip_resend __P((char *, int, struct ipread *, struct in_addr, char *));
 
 extern	void	ip_test1 __P((char *, int, ip_t *, struct in_addr, int));

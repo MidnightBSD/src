@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/lib/printhostmask.c 268563 2014-07-12 05:59:19Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/lib/printhostmask.c 268286 2014-07-05 07:15:19Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.

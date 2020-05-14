@@ -1,4 +1,4 @@
-/*	$FreeBSD: stable/10/contrib/ipfilter/lib/gethost.c 272986 2014-10-12 16:48:22Z cy $	*/
+/*	$FreeBSD: stable/11/contrib/ipfilter/lib/gethost.c 271971 2014-09-22 16:06:37Z cy $	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.

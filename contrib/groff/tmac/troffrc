@@ -1,5 +1,5 @@
 .\" Startup file for troff.
-.\" $FreeBSD: release/10.0.0/contrib/groff/tmac/troffrc 222648 2011-06-03 12:02:53Z ru $
+.\" $FreeBSD: stable/11/contrib/groff/tmac/troffrc 222648 2011-06-03 12:02:53Z ru $
 .
 .\" This is tested by pic.
 .nr 0p 0

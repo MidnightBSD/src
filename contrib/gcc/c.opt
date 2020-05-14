@@ -20,7 +20,7 @@
 
 ; See the GCC internals manual for a description of this file's format.
 
-; $FreeBSD: stable/10/contrib/gcc/c.opt 261306 2014-01-31 03:30:09Z pfg $
+; $FreeBSD: stable/11/contrib/gcc/c.opt 261178 2014-01-26 02:36:06Z pfg $
 ; Please try to keep this file in ASCII collating order.
 
 Language
