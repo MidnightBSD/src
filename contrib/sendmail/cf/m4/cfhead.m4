@@ -9,7 +9,7 @@
 # forth in the LICENSE file which can be found at the top level of
 # the sendmail distribution.
 #
-# $FreeBSD: stable/10/contrib/sendmail/cf/m4/cfhead.m4 285303 2015-07-09 05:23:17Z gshapiro $
+# $FreeBSD: stable/11/contrib/sendmail/cf/m4/cfhead.m4 285229 2015-07-07 02:59:02Z gshapiro $
 #
 
 ######################################################################
@@ -20,7 +20,7 @@
 ifdef(`_NO_MAKEINFO_', `dnl', `dnl
 ifdef(`TEMPFILE', `dnl', `define(`TEMPFILE', maketemp(/tmp/cfXXXXXX))dnl
 syscmd(sh _CF_DIR_`'sh/makeinfo.sh _CF_DIR_ > TEMPFILE)dnl
-include(TEMPFILE)dnl
+ifdef(`_NO_MAKEINFO_',, `include(TEMPFILE)')dnl
 syscmd(rm -f TEMPFILE)dnl')')
 #####
 ######################################################################

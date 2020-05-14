@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2002, Boris Popov
  * All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: mount_smbfs.c,v 1.17 2002/04/10 04:17:51 bp Exp $
- * $FreeBSD: stable/10/contrib/smbfs/mount_smbfs/mount_smbfs.c 272118 2014-09-25 17:47:26Z trasz $
+ * $FreeBSD: stable/11/contrib/smbfs/mount_smbfs/mount_smbfs.c 271258 2014-09-08 10:57:43Z trasz $
  */
 #include <sys/param.h>
 #include <sys/stat.h>

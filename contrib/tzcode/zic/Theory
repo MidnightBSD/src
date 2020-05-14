@@ -1,7 +1,7 @@
 @(#)Theory	8.4
 This file is in the public domain, so clarified as of
 2009-05-17 by Arthur David Olson.
-$FreeBSD: stable/10/contrib/tzcode/zic/Theory 200832 2009-12-22 11:17:10Z edwin $
+$FreeBSD: stable/11/contrib/tzcode/zic/Theory 200832 2009-12-22 11:17:10Z edwin $
 
 ----- Outline -----
 

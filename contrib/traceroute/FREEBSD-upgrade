@@ -1,4 +1,4 @@
-$FreeBSD: stable/10/contrib/traceroute/FREEBSD-upgrade 100787 2002-07-28 02:26:31Z fenner $
+$FreeBSD: stable/11/contrib/traceroute/FREEBSD-upgrade 100787 2002-07-28 02:26:31Z fenner $
 
 This directory contains virgin copies of the original distribution files
 on a "vendor" branch.  Do not, under any circumstances, attempt to upgrade

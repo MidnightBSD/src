@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/contrib/smbfs/smbutil/dumptree.c 148496 2005-07-28 22:35:38Z imura $ */
+/* $FreeBSD: stable/11/contrib/smbfs/smbutil/dumptree.c 148496 2005-07-28 22:35:38Z imura $ */
 
 #include <sys/param.h>
 #include <sys/time.h>

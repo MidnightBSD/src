@@ -12,7 +12,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/10/contrib/tcp_wrappers/tcpdmatch.c 63158 2000-07-14 17:15:34Z ume $
+  * $FreeBSD: stable/11/contrib/tcp_wrappers/tcpdmatch.c 350345 2019-07-26 02:49:34Z brooks $
   */
 
 #ifndef lint
@@ -30,11 +30,9 @@ static char sccsid[] = "@(#) tcpdmatch.c 1.5 96/02/11 17:01:36";
 #include <stdio.h>
 #include <syslog.h>
 #include <setjmp.h>
+#include <stdlib.h>
 #include <string.h>
-
-extern void exit();
-extern int optind;
-extern char *optarg;
+#include <unistd.h>
 
 #ifndef	INADDR_NONE
 #define	INADDR_NONE	(-1)		/* XXX should be 0xffffffff */
@@ -50,8 +48,8 @@ extern char *optarg;
 #include "inetcf.h"
 #include "scaffold.h"
 
-static void usage();
-static void tcpdmatch();
+static void usage(char *myname);
+static void tcpdmatch(struct request_info *request);
 
 /* The main program */
 

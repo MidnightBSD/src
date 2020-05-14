@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/telnet/telnet/baud.h 275508 2014-12-05 12:23:29Z ngie $
+ * $FreeBSD: stable/11/contrib/telnet/telnet/baud.h 274364 2014-11-11 04:06:05Z ngie $
  */
 
 /*

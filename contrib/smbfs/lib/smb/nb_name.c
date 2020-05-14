@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/contrib/smbfs/lib/smb/nb_name.c 294364 2016-01-19 23:36:49Z ian $");
+__FBSDID("$FreeBSD: stable/11/contrib/smbfs/lib/smb/nb_name.c 292552 2015-12-21 17:17:00Z ian $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

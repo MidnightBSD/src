@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: nbns_rq.c,v 1.5 2001/02/17 03:07:24 bp Exp $
- * $FreeBSD: stable/10/contrib/smbfs/lib/smb/nbns_rq.c 150802 2005-10-02 08:32:49Z bp $
+ * $FreeBSD: stable/11/contrib/smbfs/lib/smb/nbns_rq.c 335774 2018-06-28 20:33:12Z brooks $
  */
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -74,7 +74,7 @@ nbns_resolvename(const char *name, struct nb_ctx *ctx, struct sockaddr **adpp)
 	if (error)
 		return error;
 	bzero(&nn, sizeof(nn));
-	strcpy(nn.nn_name, name);
+	strlcpy(nn.nn_name, name, sizeof(nn.nn_name));
 	nn.nn_scope = ctx->nb_scope;
 	nn.nn_type = NBT_SERVER;
 	rqp->nr_nmflags = NBNS_NMFLAG_RD;

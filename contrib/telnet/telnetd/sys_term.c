@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)sys_term.c	8.4+1 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/contrib/telnet/telnetd/sys_term.c 309642 2016-12-06 18:52:18Z glebius $");
+__FBSDID("$FreeBSD: stable/11/contrib/telnet/telnetd/sys_term.c 359754 2020-04-09 20:38:36Z kevans $");
 
 #include <sys/types.h>
 #include <sys/tty.h>
@@ -380,8 +376,6 @@ spcset(int func, cc_t *valp, cc_t **valpp)
  *
  * Returns the file descriptor of the opened pty.
  */
-char line[32];
-
 int
 getpty(int *ptynum __unused)
 {
@@ -1004,11 +998,11 @@ start_login(char *host undef1, int autologin undef1, char *name undef1)
 	 */
 	if ((auth_level < 0) || (autologin != AUTH_VALID))
 # endif
+#endif /* AUTHENTICATION */
 	{
 		argv = addarg(argv, "-h");
 		argv = addarg(argv, host);
 	}
-#endif /* AUTHENTICATION */
 #endif
 #if	!defined(NO_LOGIN_P)
 	argv = addarg(argv, "-p");

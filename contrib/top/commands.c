@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: stable/10/contrib/top/commands.c 301836 2016-06-12 05:57:42Z ngie $
+ * $FreeBSD: stable/11/contrib/top/commands.c 307757 2016-10-22 00:35:40Z des $
  */
 
 /*
@@ -104,6 +104,7 @@ S       - toggle the displaying of system processes\n\
 a       - toggle the displaying of process titles\n\
 t       - toggle the display of this process\n\
 u       - display processes for only one user (+ selects all users)\n\
+w       - toggle the display of swap use for each process\n\
 z       - toggle the displaying of the system idle process\n\
 \n\
 \n", stdout);

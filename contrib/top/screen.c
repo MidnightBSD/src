@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: stable/10/contrib/top/screen.c 301836 2016-06-12 05:57:42Z ngie $
+ * $FreeBSD: stable/11/contrib/top/screen.c 332948 2018-04-24 17:37:29Z lidl $
  */
 
 /*  This file contains the routines that interface to termcap and stty/gtty.
@@ -45,6 +45,8 @@
 #  endif
 # endif
 #endif
+#include <curses.h>
+#include <termcap.h>
 #include "screen.h"
 #include "boolean.h"
 
@@ -432,10 +434,7 @@ get_screensize()
 }
 
 void
-standout(msg)
-
-char *msg;
-
+top_standout(char *msg)
 {
     if (smart_terminal)
     {
@@ -450,8 +449,7 @@ char *msg;
 }
 
 void
-clear()
-
+top_clear()
 {
     if (smart_terminal)
     {
@@ -460,10 +458,7 @@ clear()
 }
 
 int
-clear_eol(len)
-
-int len;
-
+clear_eol(int len)
 {
     if (smart_terminal && !overstrike && len > 0)
     {
@@ -496,12 +491,8 @@ go_home()
 
 /* This has to be defined as a subroutine for tputs (instead of a macro) */
 
-void
-putstdout(ch)
-
-char ch;
-
+int
+putstdout(int ch)
 {
-    putchar(ch);
+    return putchar(ch);
 }
-

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: kiconv.c,v 1.3 2001/08/22 03:31:36 bp Exp $
- * $FreeBSD: stable/10/contrib/smbfs/lib/smb/kiconv.c 149415 2005-08-24 12:38:26Z imura $
+ * $FreeBSD: stable/11/contrib/smbfs/lib/smb/kiconv.c 149415 2005-08-24 12:38:26Z imura $
  */
 
 #include <sys/types.h>

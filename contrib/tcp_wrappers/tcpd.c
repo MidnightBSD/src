@@ -9,7 +9,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/10/contrib/tcp_wrappers/tcpd.c 56977 2000-02-03 10:27:03Z shin $
+  * $FreeBSD: stable/11/contrib/tcp_wrappers/tcpd.c 350345 2019-07-26 02:49:34Z brooks $
   */
 
 #ifndef lint
@@ -26,6 +26,7 @@ static char sccsid[] = "@(#) tcpd.c 1.10 96/02/11 17:01:32";
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifndef MAXPATHNAMELEN
 #define MAXPATHNAMELEN	BUFSIZ
@@ -62,10 +63,10 @@ char  **argv;
      */
 
     if (argv[0][0] == '/') {
-	strcpy(path, argv[0]);
+	strlcpy(path, argv[0], sizeof(path));
 	argv[0] = strrchr(argv[0], '/') + 1;
     } else {
-	sprintf(path, "%s/%s", REAL_DAEMON_DIR, argv[0]);
+	snprintf(path, sizeof(path), "%s/%s", REAL_DAEMON_DIR, argv[0]);
     }
 
     /*

@@ -9,7 +9,7 @@
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *  Copyright (c) 2016, Randy Westlund
  *
- * $FreeBSD: stable/10/contrib/top/username.h 301836 2016-06-12 05:57:42Z ngie $
+ * $FreeBSD: stable/11/contrib/top/username.h 300395 2016-05-22 04:17:00Z ngie $
  */
 #ifndef USERNAME_H
 #define USERNAME_H

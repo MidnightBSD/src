@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $Id: Makefile,v 1.5 2001/02/24 15:56:04 bp Exp $
 
 .ifmake !clean && !cleandepend

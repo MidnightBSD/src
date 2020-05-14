@@ -11,7 +11,7 @@ static const char	elsieid[] = "@(#)ialloc.c	8.30";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: stable/10/contrib/tzcode/zic/ialloc.c 192625 2009-05-23 06:31:50Z edwin $";
+  "$FreeBSD: stable/11/contrib/tzcode/zic/ialloc.c 192625 2009-05-23 06:31:50Z edwin $";
 #endif /* not lint */
 
 /*LINTLIBRARY*/

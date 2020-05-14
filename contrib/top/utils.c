@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: stable/10/contrib/top/utils.c 206842 2010-04-19 14:34:44Z nwhitehorn $
+ * $FreeBSD: stable/11/contrib/top/utils.c 278560 2015-02-11 07:44:53Z jmg $
  */
 
 /*
@@ -58,6 +58,7 @@ char *str;
 				 * ever convert will be 2^32-1, which is 10
 				 * digits.
 				 */
+_Static_assert(sizeof(int) <= 4, "buffer too small for this sized int");
 
 char *itoa(val)
 

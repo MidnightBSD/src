@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/traceroute/findsaddr-socket.c 132796 2004-07-28 14:21:25Z mux $
+ * $FreeBSD: stable/11/contrib/traceroute/findsaddr-socket.c 132796 2004-07-28 14:21:25Z mux $
  */
 
 /* XXX Yes this is WAY too complicated */

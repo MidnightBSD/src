@@ -3,7 +3,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/10/contrib/tcp_wrappers/scaffold.c 323744 2017-09-19 08:34:13Z avg $
+  * $FreeBSD: stable/11/contrib/tcp_wrappers/scaffold.c 350345 2019-07-26 02:49:34Z brooks $
   */
 
 #ifndef lint
@@ -21,7 +21,9 @@ static char sccs_id[] = "@(#) scaffold.c 1.6 97/03/21 19:27:24";
 #include <stdio.h>
 #include <syslog.h>
 #include <setjmp.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef INADDR_NONE
 #define	INADDR_NONE	(-1)		/* XXX should be 0xffffffff */
@@ -37,7 +39,6 @@ static char sccs_id[] = "@(#) scaffold.c 1.6 97/03/21 19:27:24";
   */
 int     allow_severity = SEVERITY;
 int     deny_severity = LOG_WARNING;
-int     rfc931_timeout = RFC931_TIMEOUT;
 
 #ifndef INET6
 /* dup_hostent - create hostent in one memory block */

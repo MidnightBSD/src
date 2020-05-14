@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #include <sys/param.h>
 #include <sys/time.h>
 #include <stdio.h>

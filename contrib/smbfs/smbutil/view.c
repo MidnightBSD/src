@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2002, Boris Popov
  * All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/contrib/smbfs/smbutil/view.c 202980 2010-01-25 18:35:58Z yongari $");
+__FBSDID("$FreeBSD: stable/11/contrib/smbfs/smbutil/view.c 202980 2010-01-25 18:35:58Z yongari $");
 
 #include <sys/endian.h>
 #include <sys/param.h>
