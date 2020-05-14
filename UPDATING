@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20200514:
+        Fixed a security issue in libalias.
+
+        The FTP packet handler in libalias incorrectly calculates some packet
+        lengths.  This may result in disclosing small amounts of memory from the
+        kernel (for the in-kernel NAT implementation) or from the process space for
+        natd (for the userspace implementation).
+
+        Updated tzdata to 2020a.
+
+	Updated subversion to 1.9.x
+
+	bzip 1.0.8
 
 20191112:
 	Fixed a bug where packages wouldn't get removed on mport clean.  While there
