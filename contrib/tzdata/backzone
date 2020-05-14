@@ -16,13 +16,13 @@
 # the file 'backward'.
 
 # Although zones in this file may be of some use for analyzing
-# pre-1970 time stamps, they are less reliable, cover only a tiny
+# pre-1970 timestamps, they are less reliable, cover only a tiny
 # sliver of the pre-1970 era, and cannot feasibly be improved to cover
 # most of the era.  Because the zones are out of normal scope for the
 # database, less effort is put into maintaining this file.  Many of
 # the zones were formerly in other source files, but were removed or
 # replaced by links as their data entries were questionable and/or they
-# differed from other zones only in pre-1970 time stamps.
+# differed from other zones only in pre-1970 timestamps.
 
 # Unless otherwise specified, the source for data through 1990 is:
 # Thomas G. Shanks and Rique Pottenger, The International Atlas (6th edition),
@@ -33,12 +33,41 @@
 # assumes rules from other files.  In the tz distribution, use
 # 'make PACKRATDATA=backzone zones' to compile and install this file.
 
+
+# From Paul Eggert (2020-04-15):
+# The following remarks should be incorporated into this table sometime.
+# Patches in 'git format-patch' format would be welcome.
+#
+# From Phake Nick (2020-04-15):
+# ... the historical timezone data for those China zones seems to be
+# incorrect.  The transition to GMT+8 date given there for these zones
+# were 1980 which also contradict the file description that they do
+# not disagree with normal zone after 1970.  According to sources that
+# have also been cited in the asia file, except Xinjiang and Tibet,
+# they should have adopted the Beijing Time from around 1949/1950
+# depends on exactly when each of those cities were taken over by the
+# communist army.  And they should also follow the DST setting of
+# Asia/Shanghai after that point of time.  In addition,
+# http://gaz.ncl.edu.tw/detail.jsp?sysid=E1091792 the document from
+# Chongqing Nationalist government say in year 1945 all of China
+# should adopt summer time due to the war (not sure whether it
+# continued after WWII ends)(Probably only enforced in area under
+# their rule at the time?)  The Asia/Harbin's 1932 and 1940 entry
+# should also be incorrect.  As per sources recorded at
+# https://wiki.suikawiki.org/n/%E6%BA%80%E5%B7%9E%E5%9B%BD%E3%81%AE%E6%A8%99%E6%BA%96%E6%99%82
+# , in 1932 Harbin should have adopted UTC+8:00 instead of data
+# currently listed in the tz database according to official
+# announcement from Manchuko.  And they should have adopted GMT+9 in
+# 1937 January 1st according to official announcement at the time
+# being cited on the webpage.
+
+
 # Zones are sorted by zone name.  Each zone is preceded by the
 # name of the country that the zone is in, along with any other
 # commentary and rules associated with the entry.
 #
 # As explained in the zic man page, the zone columns are:
-# Zone	NAME		GMTOFF	RULES	FORMAT	[UNTIL]
+# Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
 
 # Ethiopia
 # From Paul Eggert (2014-07-31):
@@ -204,7 +233,7 @@ Zone	Africa/Maseru	1:50:00 -	LMT	1903 Mar
 			2:00	1:00	SAST	1944 Mar 19  2:00
 			2:00	-	SAST
 
-# Swaziland
+# Eswatini (formerly Swaziland)
 Zone	Africa/Mbabane	2:04:24 -	LMT	1903 Mar
 			2:00	-	SAST
 
@@ -507,19 +536,35 @@ Zone	Asia/Muscat	3:54:24 -	LMT	1920
 #Zone	Asia/Panaji	[not enough info to complete]
 
 # Cambodia
-# From Paul Eggert (2014-10-11):
-# See Asia/Ho_Chi_Minh for the source for most of this data.  Also, guess
-# (1) Cambodia reverted to UT +07 on 1945-09-02, when Vietnam did, and
-# (2) they also reverted to +07 on 1953-11-09, the date of independence.
-# These guesses are probably wrong but they're better than guessing no
-# transitions there.
+
+# From an adoptive daughter of the late Cambodian ruler Prince Sihanouk,
+# via Alois Treindl (2019-08-08):
+#
+# King Sihanouk said that, during the Japanese occupation, starting with
+# what historians refer to as "le coup de force du 9 mars 1945", Cambodia,
+# like the entire French Indochina, used Tokyo time zone. After Japan
+# surrendered, 2 September 1945, Cambodia fell under French rule again and
+# adopted Hanoi time zone again.
+#
+# However, on 7 January 1946, Sihanouk and Tioulong managed to obtain a
+# status of "internal autonomy" from the government of Charles de Gaulle.
+# Although many fields remained under the administration of the French
+# (customs, taxes, justice, defence, foreign affairs, etc.), the Cambodian
+# administration was responsible for religious matters and traditional
+# celebrations, which included our calendar and time.  The time zone was GMT
+# + 7 and _no_ DST was applied.
+#
+# After Sihanouk and Tioulong achieved full independence, on 9 November 1953,
+# GMT + 7 was maintained.
+
+# From Paul Eggert (2019-08-26):
+# See Asia/Ho_Chi_Minh for the source for most of rest of this data.
+
 Zone	Asia/Phnom_Penh	6:59:40 -	LMT	1906 Jul  1
 			7:06:30	-	PLMT	1911 May  1
 			7:00	-	+07	1942 Dec 31 23:00
 			8:00	-	+08	1945 Mar 14 23:00
 			9:00	-	+09	1945 Sep  2
-			7:00	-	+07	1947 Apr  1
-			8:00	-	+08	1953 Nov  9
 			7:00	-	+07
 
 # Israel
@@ -625,7 +670,7 @@ Zone	Europe/Sarajevo	1:13:40	-	LMT	1884
 			1:00	-	CET	1982 Nov 27
 			1:00	EU	CE%sT
 
-# Macedonia
+# North Macedonia
 Zone	Europe/Skopje	1:25:44	-	LMT	1884
 			1:00	-	CET	1941 Apr 18 23:00
 			1:00	C-Eur	CE%sT	1945 May  8  2:00s
@@ -646,7 +691,7 @@ Zone	Europe/Tiraspol	1:58:32	-	LMT	1880
 
 # Liechtenstein
 Zone	Europe/Vaduz	0:38:04 -	LMT	1894 Jun
-			1:00	-	CET	1981
+			1:00	Swiss	CE%sT	1981
 			1:00	EU	CE%sT
 
 # Croatia

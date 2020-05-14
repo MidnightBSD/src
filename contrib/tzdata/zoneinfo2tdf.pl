@@ -1,4 +1,5 @@
 #! /usr/bin/perl -w
+# Summarize .zi input in a .zi-like format.
 
 # Courtesy Ken Pizzini.
 
@@ -27,7 +28,7 @@ while (<>) {
 
   $contZone = '';
   if ($type eq 'zone') {
-    # Zone  NAME  GMTOFF  RULES/SAVE  FORMAT  [UNTIL]
+    # Zone  NAME  STDOFF  RULES/SAVE  FORMAT  [UNTIL]
     my $nfields = @fields;
     $nfields >= 5 or warn "bad zone line";
     if ($nfields > 6) {
