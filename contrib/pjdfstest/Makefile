@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/contrib/pjdfstest/Makefile 271294 2014-09-09 02:50:09Z ngie $
+# $FreeBSD: stable/11/contrib/pjdfstest/Makefile 271294 2014-09-09 02:50:09Z ngie $
 
 PROG=	pjdfstest
 

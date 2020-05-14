@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: authpf.c,v 1.112 2009/01/10 19:08:53 miod Exp $	*/
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/contrib/pf/authpf/authpf.c 223637 2011-06-28 11:57:25Z bz $");
 
 #include <sys/types.h>
 #include <sys/file.h>

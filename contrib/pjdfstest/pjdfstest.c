@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/contrib/pjdfstest/pjdfstest.c 271294 2014-09-09 02:50:09Z ngie $
+ * $FreeBSD: stable/11/contrib/pjdfstest/pjdfstest.c 271294 2014-09-09 02:50:09Z ngie $
  */
 
 #include <sys/param.h>

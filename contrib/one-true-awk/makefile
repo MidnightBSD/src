@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # /****************************************************************
 # Copyright (C) Lucent Technologies 1997
 # All Rights Reserved

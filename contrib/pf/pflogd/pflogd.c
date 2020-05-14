@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pflogd.c,v 1.46 2008/10/22 08:16:49 henning Exp $	*/
 
 /*
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/contrib/pf/pflogd/pflogd.c 293110 2016-01-03 17:23:16Z dim $");
+__FBSDID("$FreeBSD: stable/11/contrib/pf/pflogd/pflogd.c 293015 2015-12-31 22:52:11Z dim $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

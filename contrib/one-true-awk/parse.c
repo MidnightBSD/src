@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /****************************************************************
 Copyright (C) Lucent Technologies 1997
 All Rights Reserved
@@ -260,7 +259,7 @@ int isarg(const char *s)		/* is s in argument list for current function? */
 	Node *p = arglist;
 	int n;
 
-	for (n = 0; p != 0; p = p->nnext, n++)
+	for (n = 0; p != NULL; p = p->nnext, n++)
 		if (strcmp(((Cell *)(p->narg[0]))->nval, s) == 0)
 			return n;
 	return -1;

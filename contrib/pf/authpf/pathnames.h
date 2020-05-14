@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pathnames.h,v 1.8 2008/02/14 01:49:17 mcbride Exp $	*/
 
 /*
