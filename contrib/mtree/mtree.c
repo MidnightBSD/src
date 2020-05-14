@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mtree.c,v 1.49 2014/04/24 17:22:41 christos Exp $	*/
 
 /*-

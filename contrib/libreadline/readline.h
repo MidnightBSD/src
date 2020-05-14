@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/11/contrib/libreadline/readline.h 165675 2006-12-31 09:22:31Z ache $ */
 /* Readline.h -- the names of functions callable from within readline. */
 
 /* Copyright (C) 1987-2005 Free Software Foundation, Inc.

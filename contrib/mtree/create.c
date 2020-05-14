@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: create.c,v 1.73 2014/04/24 17:22:41 christos Exp $	*/
 
 /*-
@@ -118,7 +117,7 @@ cwalk(FILE *fp)
 	host[sizeof(host) - 1] = '\0';
 	if ((user = getlogin()) == NULL) {
 		struct passwd *pw;
-		user = (pw = getpwuid(getuid())) == NULL ? pw->pw_name :
+		user = (pw = getpwuid(getuid())) != NULL ? pw->pw_name :
 		    "<unknown>";
 	}
 
@@ -225,7 +224,8 @@ statf(FILE *fp, int indent, FTSENT *p)
 		output(fp, indent, &offset, "device=%#jx",
 		    (uintmax_t)p->fts_statp->st_rdev);
 	if (keys & F_NLINK && p->fts_statp->st_nlink != 1)
-		output(fp, indent, &offset, "nlink=%u", p->fts_statp->st_nlink);
+		output(fp, indent, &offset, "nlink=%ju",
+		    (uintmax_t)p->fts_statp->st_nlink);
 	if (keys & F_SIZE &&
 	    (flavor == F_FREEBSD9 || S_ISREG(p->fts_statp->st_mode)))
 		output(fp, indent, &offset, "size=%ju",

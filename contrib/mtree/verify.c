@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: verify.c,v 1.44 2013/02/03 19:15:17 christos Exp $	*/
 
 /*-

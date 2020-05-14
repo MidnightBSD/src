@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: extern.h,v 1.39 2014/04/24 17:22:41 christos Exp $	*/
 
 /*-

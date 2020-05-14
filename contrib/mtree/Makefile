@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.34 2013/02/03 19:15:16 christos Exp $
 #	from: @(#)Makefile	8.2 (Berkeley) 4/27/95
 

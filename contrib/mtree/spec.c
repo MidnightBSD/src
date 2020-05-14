@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: spec.c,v 1.89 2014/04/24 17:22:41 christos Exp $	*/
 
 /*-
@@ -364,7 +363,8 @@ dump_nodes(FILE *fp, const char *dir, NODE *root, int pathlast)
 			appendfield(fp, pathlast, "device=%#jx",
 			    (uintmax_t)cur->st_rdev);
 		if (MATCHFLAG(F_NLINK))
-			appendfield(fp, pathlast, "nlink=%d", cur->st_nlink);
+			appendfield(fp, pathlast, "nlink=%ju",
+			    (uintmax_t)cur->st_nlink);
 		if (MATCHFLAG(F_SLINK))
 			appendfield(fp, pathlast, "link=%s",
 			    vispath(cur->slink));

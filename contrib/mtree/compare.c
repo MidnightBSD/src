@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: compare.c,v 1.58 2013/11/21 18:39:50 christos Exp $	*/
 
 /*-

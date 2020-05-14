@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: excludes.c,v 1.13 2004/06/20 22:20:18 jmc Exp $	*/
 
 /*
