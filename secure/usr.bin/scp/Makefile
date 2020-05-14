@@ -1,26 +1,20 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/usr.bin/scp/Makefile 296781 2016-03-12 23:53:20Z des $
+# $FreeBSD: stable/11/secure/usr.bin/scp/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	scp
 SRCS=	scp.c
+PACKAGE=	ssh
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 SRCS+=	ssh_namespace.h
 
-DPADD=	${LIBSSH}
-LDADD=	-lssh
-USEPRIVATELIB= ssh
+LIBADD=	ssh
 
 .if ${MK_LDNS} != "no"
 CFLAGS+=	-DHAVE_LDNS=1
 #DPADD+=	${LIBLDNS}
 #LDADD+=	-lldns
-#USEPRIVATELIB+= ldns
 .endif
-
-DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD+= -lcrypt -lcrypto -lz
 
 .include <bsd.prog.mk>
 

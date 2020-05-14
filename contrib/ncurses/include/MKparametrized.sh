@@ -26,7 +26,7 @@
 # use or other dealings in this Software without prior written               #
 # authorization.                                                             #
 ##############################################################################
-# $Id: MKparametrized.sh,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $
+# $Id: MKparametrized.sh,v 1.6 2006/04/22 21:36:16 tom Exp $
 #
 # MKparametrized.sh -- generate indirection vectors for various sort methods
 #

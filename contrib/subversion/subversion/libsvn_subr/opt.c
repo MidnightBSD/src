@@ -186,7 +186,7 @@ format_option(const char **string,
     opts = apr_psprintf(pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
+    opts = apr_pstrcat(pool, opts, _(" ARG"), SVN_VA_NULL);
 
   if (doc)
     opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
@@ -783,7 +783,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
           if (svn_path_is_url(path))
             {
               /* URLs are URI-encoded, so we look for dates with
-                 URI-encoded delimeters.  */
+                 URI-encoded delimiters.  */
               size_t rev_len = strlen(rev_str);
               if (rev_len > 6
                   && rev_str[0] == '%'
@@ -935,7 +935,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
             }
         }
 
-      target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
+      target = apr_pstrcat(pool, true_target, peg_rev, SVN_VA_NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
@@ -1012,13 +1012,6 @@ svn_opt__split_arg_at_peg_revision(const char **true_target,
 
   if (peg_start)
     {
-      /* Error out if target is the empty string. */
-      if (ptr == utf8_target)
-        return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 _("'%s' is just a peg revision. "
-                                   "Maybe try '%s@' instead?"),
-                                 utf8_target, utf8_target);
-
       *true_target = apr_pstrmemdup(pool, utf8_target, ptr - utf8_target);
       if (peg_revision)
         *peg_revision = apr_pstrdup(pool, peg_start);
@@ -1117,10 +1110,8 @@ svn_opt__print_version_info(const char *pgm_name,
     return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
-                                     "   compiled %s, %s on %s\n\n"),
+                                     "   compiled on %s\n\n"),
                              pgm_name, SVN_VERSION,
-                             svn_version_ext_build_date(info),
-                             svn_version_ext_build_time(info),
                              svn_version_ext_build_host(info)));
   SVN_ERR(svn_cmdline_printf(pool, "%s\n", svn_version_ext_copyright(info)));
 

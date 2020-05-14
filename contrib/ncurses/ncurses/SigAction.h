@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /*
- * $Id: SigAction.h,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+ * $Id: SigAction.h,v 1.8 2005/08/06 20:05:32 tom Exp $
  *
  * This file exists to handle non-POSIX systems which don't have <unistd.h>,
  * and usually no sigaction() nor <termios.h>

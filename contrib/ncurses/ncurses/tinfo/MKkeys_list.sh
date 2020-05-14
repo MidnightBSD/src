@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: MKkeys_list.sh,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: MKkeys_list.sh,v 1.4 2003/10/25 16:19:54 tom Exp $
 ##############################################################################
 # Copyright (c) 2001,2003 Free Software Foundation, Inc.                     #
 #                                                                            #

@@ -47,6 +47,7 @@
 #include <unistd.h>
 
 #include <sys/ipc.h>
+#include <sys/mman.h>
 #include <sys/msg.h>
 #include <sys/param.h>
 #include <sys/sem.h>
@@ -72,7 +73,7 @@ void	sharer(void);
 
 #define	MESSAGE_TEXT_LEN	256
 
-struct mymsg {
+struct testmsg {
 	long	mtype;
 	char	mtext[MESSAGE_TEXT_LEN];
 };
@@ -94,11 +95,13 @@ key_t	msgkey, semkey, shmkey;
 
 int	maxloop = 1;
 
+#ifndef __FreeBSD__
 union semun {
 	int	val;		/* value for SETVAL */
 	struct	semid_ds *buf;	/* buffer for IPC_{STAT,SET} */
 	u_short	*array;		/* array for GETALL & SETALL */
 };
+#endif
 
 
 /* Writes an integer to a file.  To be used from the body of the test
@@ -127,7 +130,8 @@ read_int(const char *path)
 		return -1;
 	else {
 		int value;
-		read(input, &value, sizeof(value));
+		ATF_REQUIRE_EQ(read(input, &value, sizeof(value)), sizeof(value));
+		close(input);
 		return value;
 	}
 }
@@ -174,7 +178,7 @@ key_t get_ftok(int id)
 
 	/* Create the file, since ftok() requires it to exist! */
 
-	fd = open(token_key, O_RDWR | O_CREAT | O_EXCL);
+	fd = open(token_key, O_RDWR | O_CREAT | O_EXCL, 0600);
 	if (fd == -1) {
 		rmdir(tmpdir);
 		atf_tc_fail("open() of temp file failed: %d", errno);
@@ -202,7 +206,7 @@ ATF_TC_BODY(msg, tc)
 {
 	struct sigaction sa;
 	struct msqid_ds m_ds;
-	struct mymsg m;
+	struct testmsg m;
 	sigset_t sigmask;
 	int sender_msqid;
 	int loop;
@@ -282,7 +286,7 @@ ATF_TC_BODY(msg, tc)
 		 * Send the first message to the receiver and wait for the ACK.
 		 */
 		m.mtype = MTYPE_1;
-		strcpy(m.mtext, m1_str);
+		strlcpy(m.mtext, m1_str, sizeof(m.mtext));
 		ATF_REQUIRE_MSG(msgsnd(sender_msqid, &m, MESSAGE_TEXT_LEN,
 		    0) != -1, "sender: msgsnd 1: %d", errno);
 
@@ -296,7 +300,7 @@ ATF_TC_BODY(msg, tc)
 		 * Send the second message to the receiver and wait for the ACK.
 		 */
 		m.mtype = MTYPE_2;
-		strcpy(m.mtext, m2_str);
+		strlcpy(m.mtext, m2_str, sizeof(m.mtext));
 		ATF_REQUIRE_MSG(msgsnd(sender_msqid, &m, MESSAGE_TEXT_LEN, 0) != -1,
 		    "sender: msgsnd 2: %d", errno);
 
@@ -347,9 +351,7 @@ ATF_TC_CLEANUP(msg, tc)
 }
 
 void
-print_msqid_ds(mp, mode)
-	struct msqid_ds *mp;
-	mode_t mode;
+print_msqid_ds(struct msqid_ds *mp, mode_t mode)
 {
 	uid_t uid = geteuid();
 	gid_t gid = getegid();
@@ -381,9 +383,9 @@ print_msqid_ds(mp, mode)
 }
 
 void
-receiver()
+receiver(void)
 {
-	struct mymsg m;
+	struct testmsg m;
 	int msqid, loop;
 
 	if ((msqid = msgget(msgkey, 0)) == -1)
@@ -588,9 +590,7 @@ ATF_TC_CLEANUP(sem, tc)
 }
 
 void
-print_semid_ds(sp, mode)
-	struct semid_ds *sp;
-	mode_t mode;
+print_semid_ds(struct semid_ds *sp, mode_t mode)
 {
 	uid_t uid = geteuid();
 	gid_t gid = getegid();
@@ -620,7 +620,7 @@ print_semid_ds(sp, mode)
 }
 
 void
-waiter()
+waiter(void)
 {
 	struct sembuf s;
 	int semid;
@@ -775,23 +775,29 @@ ATF_TC_BODY(shm, tc)
 		atf_tc_fail("sender: received unexpected signal");
 }
 
-ATF_TC_CLEANUP(shm, tc)
+static void
+shmid_cleanup(const char *name)
 {
-	int sender_shmid;
+	int shmid;
 
 	/*
 	 * Remove the shared memory area if it exists.
 	 */
-	sender_shmid = read_int("sender_shmid");
-	if (sender_shmid != -1)
-		if (shmctl(sender_shmid, IPC_RMID, NULL) == -1)
+	shmid = read_int(name);
+	if (shmid != -1) {
+		if (shmctl(shmid, IPC_RMID, NULL) == -1)
 			err(1, "shmctl IPC_RMID");
+	}
+}
+
+ATF_TC_CLEANUP(shm, tc)
+{
+
+	shmid_cleanup("sender_shmid");
 }
 
 void
-print_shmid_ds(sp, mode)
-	struct shmid_ds *sp;
-	mode_t mode;
+print_shmid_ds(struct shmid_ds *sp, mode_t mode)
 {
 	uid_t uid = geteuid();
 	gid_t gid = getegid();
@@ -823,7 +829,7 @@ print_shmid_ds(sp, mode)
 }
 
 void
-sharer()
+sharer(void)
 {
 	int shmid;
 	void *shm_buf;
@@ -842,12 +848,53 @@ sharer()
 	exit(0);
 }
 
+#ifdef SHM_REMAP
+ATF_TC_WITH_CLEANUP(shm_remap);
+ATF_TC_HEAD(shm_remap, tc)
+{
+
+	atf_tc_set_md_var(tc, "descr", "Checks SHM_REMAP");
+}
+
+ATF_TC_BODY(shm_remap, tc)
+{
+	char *shm_buf;
+	int shmid_remap;
+
+	pgsize = sysconf(_SC_PAGESIZE);
+
+	shmkey = get_ftok(4160);
+	ATF_REQUIRE_MSG(shmkey != (key_t)-1, "get_ftok failed");
+
+	ATF_REQUIRE_MSG((shmid_remap = shmget(shmkey, pgsize,
+	    IPC_CREAT | 0640)) != -1, "shmget: %d", errno);
+	write_int("shmid_remap", shmid_remap);
+
+	ATF_REQUIRE_MSG((shm_buf = mmap(NULL, pgsize, PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_PRIVATE, -1, 0)) != MAP_FAILED, "mmap: %d", errno);
+
+	ATF_REQUIRE_MSG(shmat(shmid_remap, shm_buf, 0) == (void *)-1,
+	    "shmat without MAP_REMAP succeeded");
+	ATF_REQUIRE_MSG(shmat(shmid_remap, shm_buf, SHM_REMAP) == shm_buf,
+	    "shmat(SHM_REMAP): %d", errno);
+}
+
+ATF_TC_CLEANUP(shm_remap, tc)
+{
+
+	shmid_cleanup("shmid_remap");
+}
+#endif	/* SHM_REMAP */
+
 ATF_TP_ADD_TCS(tp)
 {
 
-	ATF_TP_ADD_TC(tp, msg); 
-	ATF_TP_ADD_TC(tp, sem); 
-	ATF_TP_ADD_TC(tp, shm); 
+	ATF_TP_ADD_TC(tp, msg);
+	ATF_TP_ADD_TC(tp, sem);
+	ATF_TP_ADD_TC(tp, shm);
+#ifdef SHM_REMAP
+	ATF_TP_ADD_TC(tp, shm_remap);
+#endif
 
 	return atf_no_error();
 }

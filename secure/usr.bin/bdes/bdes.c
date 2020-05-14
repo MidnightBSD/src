@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -82,7 +81,7 @@ static char sccsid[] = "@(#)bdes.c	8.1 (Berkeley) 6/6/93";
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/secure/usr.bin/bdes/bdes.c 198856 2009-11-03 18:40:42Z jhb $");
+__FBSDID("$FreeBSD: stable/11/secure/usr.bin/bdes/bdes.c 198856 2009-11-03 18:40:42Z jhb $");
 
 #include <sys/types.h>
 

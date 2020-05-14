@@ -32,7 +32,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: version.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: version.c,v 1.6 2005/01/02 01:23:54 tom Exp $")
 
 NCURSES_EXPORT(const char *)
 curses_version(void)

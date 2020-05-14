@@ -1,6 +1,6 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/secure/usr.bin/Makefile 289393 2015-10-15 22:55:08Z bdrewery $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=
 .if ${MK_OPENSSL} != "no"

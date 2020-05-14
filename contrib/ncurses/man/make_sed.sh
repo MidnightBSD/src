@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: make_sed.sh,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: make_sed.sh,v 1.9 2005/07/16 18:15:31 tom Exp $
 ##############################################################################
 # Copyright (c) 1998-2003,2005 Free Software Foundation, Inc.                #
 #                                                                            #

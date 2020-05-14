@@ -30,7 +30,7 @@
  *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
-/* $Id: eti.h,v 1.1.1.2 2008-10-05 15:21:41 laffer1 Exp $ */
+/* $Id: eti.h,v 1.8 2003/10/25 15:24:29 tom Exp $ */
 
 #ifndef NCURSES_ETI_H_incl
 #define NCURSES_ETI_H_incl 1

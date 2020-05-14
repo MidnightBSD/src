@@ -25,7 +25,7 @@
 -- sale, use or other dealings in this Software without prior written        --
 -- authorization.                                                            --
 -------------------------------------------------------------------------------
--- $Id: AUTHORS,v 1.1.1.1 2008-10-05 15:21:39 laffer1 Exp $
+-- $Id: AUTHORS,v 1.2 2006/10/28 21:44:52 tom Exp $
 -------------------------------------------------------------------------------
 These are the principal authors/contributors of ncurses since 1.9.9e,
 in decreasing order of their contribution:

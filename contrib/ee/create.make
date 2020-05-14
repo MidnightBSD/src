@@ -4,7 +4,7 @@
 #	This script will determine if the system is a System V or BSD based
 #	UNIX system and create a makefile for ee appropriate for the system.
 #
-# $Header: /home/cvs/src/contrib/ee/create.make,v 1.1.1.1 2012-12-31 07:46:38 laffer1 Exp $
+# $Header: /home/hugh/sources/old_ae/RCS/create.make,v 1.13 2002/09/23 04:18:13 hugh Exp $
 #
 
 #set -x

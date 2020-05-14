@@ -134,6 +134,8 @@ ATF_TC_BODY(seekdir_basic, tc)
 	free(wasname);
 }
 
+/* There is no sbrk on AArch64 and RISC-V */
+#if !defined(__aarch64__) && !defined(__riscv__)
 ATF_TC(telldir_leak);
 ATF_TC_HEAD(telldir_leak, tc)
 {
@@ -177,12 +179,15 @@ ATF_TC_BODY(telldir_leak, tc)
 		(void)printf("OK: used %td bytes\n", (char *)(sbrk(0))-memused);
 	}
 }
+#endif
 
 ATF_TP_ADD_TCS(tp)
 {
 
 	ATF_TP_ADD_TC(tp, seekdir_basic);
+#if !defined(__aarch64__) && !defined(__riscv__)
 	ATF_TP_ADD_TC(tp, telldir_leak);
+#endif
 
 	return atf_no_error();
 }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2012,2013 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -30,13 +30,14 @@
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
  *     and: Thomas E. Dickey                        1996-on                 *
+ *     and: Juergen Pfeifer                                                 *
  *                                                                          *
  * some of the code in here was contributed by:                             *
  * Magnus Bengtsson, d6mbeng@dtek.chalmers.se (Nov'93)                      *
  * (but it has changed a lot)                                               *
  ****************************************************************************/
 
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/contrib/ncurses/ncurses/tinfo/lib_termcap.c 262685 2014-03-02 08:58:21Z delphij $ */
 
 #define __INTERNAL_CAPS_VISIBLE
 #include <curses.priv.h>
@@ -45,9 +46,11 @@
 #include <tic.h>
 #include <ctype.h>
 
-#include <term_entry.h>
+#ifndef CUR
+#define CUR SP_TERMTYPE
+#endif
 
-MODULE_ID("$Id: lib_termcap.c,v 1.2 2008-10-05 15:34:49 laffer1 Exp $")
+MODULE_ID("$Id: lib_termcap.c,v 1.80 2013/06/08 16:48:47 tom Exp $")
 
 NCURSES_EXPORT_VAR(char *) UP = 0;
 NCURSES_EXPORT_VAR(char *) BC = 0;
@@ -56,21 +59,24 @@ NCURSES_EXPORT_VAR(char *) BC = 0;
 extern char _nc_termcap[];	/* buffer to copy out */
 #endif
 
-typedef struct {
-    long sequence;
-    char *fix_sgr0;		/* this holds the filtered sgr0 string */
-    char *last_bufp;		/* help with fix_sgr0 leak */
-    TERMINAL *last_term;
-} CACHE;
+#define MyCache  _nc_globals.tgetent_cache
+#define CacheInx _nc_globals.tgetent_index
+#define CacheSeq _nc_globals.tgetent_sequence
 
-#define MAX_CACHE 4
-static CACHE cache[MAX_CACHE];
-static int in_cache = 0;
+#define FIX_SGR0 MyCache[CacheInx].fix_sgr0
+#define LAST_TRM MyCache[CacheInx].last_term
+#define LAST_BUF MyCache[CacheInx].last_bufp
+#define LAST_USE MyCache[CacheInx].last_used
+#define LAST_SEQ MyCache[CacheInx].sequence
 
-#define FIX_SGR0 cache[in_cache].fix_sgr0
-#define LAST_TRM cache[in_cache].last_term
-#define LAST_BUF cache[in_cache].last_bufp
-#define LAST_SEQ cache[in_cache].sequence
+/*
+ * Termcap names are matched only using the first two bytes.
+ * Ignore any extended names longer than two bytes, to avoid problems
+ * with legacy code which passes in parameters whose use is long forgotten.
+ */
+#define ValidCap(cap) (((cap)[0] != '\0') && ((cap)[1] != '\0'))
+#define SameCap(a,b)  (((a)[0] == (b)[0]) && ((a)[1] == (b)[1]))
+#define ValidExt(ext) (ValidCap(ext) && (ext)[2] == '\0')
 
 /***************************************************************************
  *
@@ -88,42 +94,56 @@ static int in_cache = 0;
  ***************************************************************************/
 
 NCURSES_EXPORT(int)
-tgetent(char *bufp, const char *name)
+NCURSES_SP_NAME(tgetent) (NCURSES_SP_DCLx char *bufp, const char *name)
 {
-    static long sequence;
-
-    int errcode;
+    int rc = ERR;
     int n;
     bool found_cache = FALSE;
+#ifdef USE_TERM_DRIVER
+    TERMINAL *termp = 0;
+#endif
 
     START_TRACE();
     T((T_CALLED("tgetent()")));
 
-    _nc_setupterm((NCURSES_CONST char *) name, STDOUT_FILENO, &errcode, TRUE);
+    TINFO_SETUP_TERM(&termp, (NCURSES_CONST char *) name,
+		     STDOUT_FILENO, &rc, TRUE);
+
+#ifdef USE_TERM_DRIVER
+    if (termp == 0 ||
+	!((TERMINAL_CONTROL_BLOCK *) termp)->drv->isTerminfo)
+	returnCode(rc);
+#endif
 
     /*
      * In general we cannot tell if the fixed sgr0 is still used by the
      * caller, but if tgetent() is called with the same buffer, that is
      * good enough, since the previous data would be invalidated by the
      * current call.
+     *
+     * bufp may be a null pointer, e.g., GNU termcap.  That allocates data,
+     * which is good until the next tgetent() call.  The conventional termcap
+     * is inconvenient because of the fixed buffer size, but because it uses
+     * caller-supplied buffers, can have multiple terminal descriptions in
+     * use at a given time.
      */
-    for (n = 0; n < MAX_CACHE; ++n) {
-	bool same_result = (bufp != 0 && cache[n].last_bufp == bufp);
+    for (n = 0; n < TGETENT_MAX; ++n) {
+	bool same_result = (MyCache[n].last_used && MyCache[n].last_bufp == bufp);
 	if (same_result) {
-	    in_cache = n;
+	    CacheInx = n;
 	    if (FIX_SGR0 != 0) {
 		FreeAndNull(FIX_SGR0);
 	    }
 	    /*
 	     * Also free the terminfo data that we loaded (much bigger leak).
 	     */
-	    if (LAST_TRM != 0 && LAST_TRM != cur_term) {
+	    if (LAST_TRM != 0 && LAST_TRM != TerminalOf(SP_PARM)) {
 		TERMINAL *trm = LAST_TRM;
-		del_curterm(LAST_TRM);
-		for (in_cache = 0; in_cache < MAX_CACHE; ++in_cache)
+		NCURSES_SP_NAME(del_curterm) (NCURSES_SP_ARGx LAST_TRM);
+		for (CacheInx = 0; CacheInx < TGETENT_MAX; ++CacheInx)
 		    if (LAST_TRM == trm)
 			LAST_TRM = 0;
-		in_cache = n;
+		CacheInx = n;
 	    }
 	    found_cache = TRUE;
 	    break;
@@ -132,25 +152,25 @@ tgetent(char *bufp, const char *name)
     if (!found_cache) {
 	int best = 0;
 
-	for (in_cache = 0; in_cache < MAX_CACHE; ++in_cache) {
-	    if (LAST_SEQ < cache[best].sequence) {
-		best = in_cache;
+	for (CacheInx = 0; CacheInx < TGETENT_MAX; ++CacheInx) {
+	    if (LAST_SEQ < MyCache[best].sequence) {
+		best = CacheInx;
 	    }
 	}
-	in_cache = best;
+	CacheInx = best;
     }
-    LAST_TRM = cur_term;
-    LAST_SEQ = ++sequence;
+    LAST_TRM = TerminalOf(SP_PARM);
+    LAST_SEQ = ++CacheSeq;
 
     PC = 0;
     UP = 0;
     BC = 0;
     FIX_SGR0 = 0;		/* don't free it - application may still use */
 
-    if (errcode == 1) {
+    if (rc == 1) {
 
 	if (cursor_left)
-	    if ((backspaces_with_bs = !strcmp(cursor_left, "\b")) == 0)
+	    if ((backspaces_with_bs = (char) !strcmp(cursor_left, "\b")) == 0)
 		backspace_if_not_bs = cursor_left;
 
 	/* we're required to export these */
@@ -161,7 +181,7 @@ tgetent(char *bufp, const char *name)
 	if (backspace_if_not_bs != NULL)
 	    BC = backspace_if_not_bs;
 
-	if ((FIX_SGR0 = _nc_trim_sgr0(&(cur_term->type))) != 0) {
+	if ((FIX_SGR0 = _nc_trim_sgr0(&(TerminalOf(SP_PARM)->type))) != 0) {
 	    if (!strcmp(FIX_SGR0, exit_attribute_mode)) {
 		if (FIX_SGR0 != exit_attribute_mode) {
 		    free(FIX_SGR0);
@@ -170,8 +190,10 @@ tgetent(char *bufp, const char *name)
 	    }
 	}
 	LAST_BUF = bufp;
+	LAST_USE = TRUE;
 
-	(void) baudrate();	/* sets ospeed as a side-effect */
+	SetNoPadding(SP_PARM);
+	(void) NCURSES_SP_NAME(baudrate) (NCURSES_SP_ARG);	/* sets ospeed as a side-effect */
 
 /* LINT_PREPRO
 #if 0*/
@@ -190,8 +212,29 @@ tgetent(char *bufp, const char *name)
 	strncpy(bufp, _nc_termcap, 1024);
 #endif
 
-    returnCode(errcode);
+    returnCode(rc);
 }
+
+#if NCURSES_SP_FUNCS
+NCURSES_EXPORT(int)
+tgetent(char *bufp, const char *name)
+{
+    return NCURSES_SP_NAME(tgetent) (CURRENT_SCREEN, bufp, name);
+}
+#endif
+
+#if 0
+static bool
+same_tcname(const char *a, const char *b)
+{
+    bool code = SameCap(a, b);
+    fprintf(stderr, "compare(%s,%s) %s\n", a, b, code ? "same" : "diff");
+    return code;
+}
+
+#else
+#define same_tcname(a,b) SameCap(a,b)
+#endif
 
 /***************************************************************************
  *
@@ -203,23 +246,47 @@ tgetent(char *bufp, const char *name)
  ***************************************************************************/
 
 NCURSES_EXPORT(int)
-tgetflag(NCURSES_CONST char *id)
+NCURSES_SP_NAME(tgetflag) (NCURSES_SP_DCLx NCURSES_CONST char *id)
 {
-    unsigned i;
+    int result = 0;		/* Solaris returns zero for missing flag */
+    int j = -1;
 
-    T((T_CALLED("tgetflag(%s)"), id));
-    if (cur_term != 0) {
-	TERMTYPE *tp = &(cur_term->type);
-	for_each_boolean(i, tp) {
-	    const char *capname = ExtBoolname(tp, i, boolcodes);
-	    if (!strncmp(id, capname, 2)) {
-		/* setupterm forces invalid booleans to false */
-		returnCode(tp->Booleans[i]);
+    T((T_CALLED("tgetflag(%p, %s)"), (void *) SP_PARM, id));
+    if (HasTInfoTerminal(SP_PARM) && ValidCap(id)) {
+	TERMTYPE *tp = &(TerminalOf(SP_PARM)->type);
+	struct name_table_entry const *entry_ptr;
+
+	entry_ptr = _nc_find_type_entry(id, BOOLEAN, TRUE);
+	if (entry_ptr != 0) {
+	    j = entry_ptr->nte_index;
+	}
+#if NCURSES_XNAMES
+	else {
+	    int i;
+	    for_each_ext_boolean(i, tp) {
+		const char *capname = ExtBoolname(tp, i, boolcodes);
+		if (same_tcname(id, capname) && ValidExt(capname)) {
+		    j = i;
+		    break;
+		}
 	    }
 	}
+#endif
+	if (j >= 0) {
+	    /* note: setupterm forces invalid booleans to false */
+	    result = tp->Booleans[j];
+	}
     }
-    returnCode(0);		/* Solaris does this */
+    returnCode(result);
 }
+
+#if NCURSES_SP_FUNCS
+NCURSES_EXPORT(int)
+tgetflag(NCURSES_CONST char *id)
+{
+    return NCURSES_SP_NAME(tgetflag) (CURRENT_SCREEN, id);
+}
+#endif
 
 /***************************************************************************
  *
@@ -231,24 +298,47 @@ tgetflag(NCURSES_CONST char *id)
  ***************************************************************************/
 
 NCURSES_EXPORT(int)
-tgetnum(NCURSES_CONST char *id)
+NCURSES_SP_NAME(tgetnum) (NCURSES_SP_DCLx NCURSES_CONST char *id)
 {
-    unsigned i;
+    int result = ABSENT_NUMERIC;
+    int j = -1;
 
-    T((T_CALLED("tgetnum(%s)"), id));
-    if (cur_term != 0) {
-	TERMTYPE *tp = &(cur_term->type);
-	for_each_number(i, tp) {
-	    const char *capname = ExtNumname(tp, i, numcodes);
-	    if (!strncmp(id, capname, 2)) {
-		if (!VALID_NUMERIC(tp->Numbers[i]))
-		    returnCode(ABSENT_NUMERIC);
-		returnCode(tp->Numbers[i]);
+    T((T_CALLED("tgetnum(%p, %s)"), (void *) SP_PARM, id));
+    if (HasTInfoTerminal(SP_PARM) && ValidCap(id)) {
+	TERMTYPE *tp = &(TerminalOf(SP_PARM)->type);
+	struct name_table_entry const *entry_ptr;
+
+	entry_ptr = _nc_find_type_entry(id, NUMBER, TRUE);
+	if (entry_ptr != 0) {
+	    j = entry_ptr->nte_index;
+	}
+#if NCURSES_XNAMES
+	else {
+	    int i;
+	    for_each_ext_number(i, tp) {
+		const char *capname = ExtNumname(tp, i, numcodes);
+		if (same_tcname(id, capname) && ValidExt(capname)) {
+		    j = i;
+		    break;
+		}
 	    }
 	}
+#endif
+	if (j >= 0) {
+	    if (VALID_NUMERIC(tp->Numbers[j]))
+		result = tp->Numbers[j];
+	}
     }
-    returnCode(ABSENT_NUMERIC);
+    returnCode(result);
 }
+
+#if NCURSES_SP_FUNCS
+NCURSES_EXPORT(int)
+tgetnum(NCURSES_CONST char *id)
+{
+    return NCURSES_SP_NAME(tgetnum) (CURRENT_SCREEN, id);
+}
+#endif
 
 /***************************************************************************
  *
@@ -260,47 +350,70 @@ tgetnum(NCURSES_CONST char *id)
  ***************************************************************************/
 
 NCURSES_EXPORT(char *)
-tgetstr(NCURSES_CONST char *id, char **area)
+NCURSES_SP_NAME(tgetstr) (NCURSES_SP_DCLx NCURSES_CONST char *id, char **area)
 {
-    unsigned i;
     char *result = NULL;
+    int j = -1;
 
-    T((T_CALLED("tgetstr(%s,%p)"), id, area));
-    if (cur_term != 0) {
-	TERMTYPE *tp = &(cur_term->type);
-	for_each_string(i, tp) {
-	    const char *capname = ExtStrname(tp, i, strcodes);
-	    if (!strncmp(id, capname, 2)) {
-		result = tp->Strings[i];
-		TR(TRACE_DATABASE, ("found match : %s", _nc_visbuf(result)));
-		/* setupterm forces canceled strings to null */
-		if (VALID_STRING(result)) {
-		    if (result == exit_attribute_mode
-			&& FIX_SGR0 != 0) {
-			result = FIX_SGR0;
-			TR(TRACE_DATABASE, ("altered to : %s", _nc_visbuf(result)));
-		    }
-		    if (area != 0
-			&& *area != 0) {
-			(void) strcpy(*area, result);
-			result = *area;
-			*area += strlen(*area) + 1;
-		    }
+    T((T_CALLED("tgetstr(%s,%p)"), id, (void *) area));
+    if (HasTInfoTerminal(SP_PARM) && ValidCap(id)) {
+	TERMTYPE *tp = &(TerminalOf(SP_PARM)->type);
+	struct name_table_entry const *entry_ptr;
+
+	entry_ptr = _nc_find_type_entry(id, STRING, TRUE);
+	if (entry_ptr != 0) {
+	    j = entry_ptr->nte_index;
+	}
+#if NCURSES_XNAMES
+	else {
+	    int i;
+	    for_each_ext_string(i, tp) {
+		const char *capname = ExtStrname(tp, i, strcodes);
+		if (same_tcname(id, capname) && ValidExt(capname)) {
+		    j = i;
+		    break;
 		}
-		break;
+	    }
+	}
+#endif
+	if (j >= 0) {
+	    result = tp->Strings[j];
+	    TR(TRACE_DATABASE, ("found match %d: %s", j, _nc_visbuf(result)));
+	    /* setupterm forces canceled strings to null */
+	    if (VALID_STRING(result)) {
+		if (result == exit_attribute_mode
+		    && FIX_SGR0 != 0) {
+		    result = FIX_SGR0;
+		    TR(TRACE_DATABASE, ("altered to : %s", _nc_visbuf(result)));
+		}
+		if (area != 0
+		    && *area != 0) {
+		    _nc_STRCPY(*area, result, 1024);
+		    result = *area;
+		    *area += strlen(*area) + 1;
+		}
 	    }
 	}
     }
     returnPtr(result);
 }
 
+#if NCURSES_SP_FUNCS
+NCURSES_EXPORT(char *)
+tgetstr(NCURSES_CONST char *id, char **area)
+{
+    return NCURSES_SP_NAME(tgetstr) (CURRENT_SCREEN, id, area);
+}
+#endif
+
 #if NO_LEAKS
 NCURSES_EXPORT(void)
 _nc_tgetent_leaks(void)
 {
-    for (in_cache = 0; in_cache < MAX_CACHE; ++in_cache) {
+    for (CacheInx = 0; CacheInx < TGETENT_MAX; ++CacheInx) {
 	FreeIfNeeded(FIX_SGR0);
-	del_curterm(LAST_TRM);
+	if (LAST_TRM != 0)
+	    del_curterm(LAST_TRM);
     }
 }
 #endif

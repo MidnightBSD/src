@@ -32,7 +32,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: charable.c,v 1.1.1.2 2012-07-21 14:51:30 laffer1 Exp $")
+MODULE_ID("$Id: charable.c,v 1.5 2008/07/05 20:51:41 tom Exp $")
 
 NCURSES_EXPORT(bool) _nc_is_charable(wchar_t ch)
 {

@@ -1,4 +1,4 @@
-# $FreeBSD: src/secure/usr.sbin/Makefile.inc,v 1.5 2003/04/30 07:54:39 ru Exp $
+# $FreeBSD: stable/11/secure/usr.sbin/Makefile.inc 114283 2003-04-30 07:54:39Z ru $
 
 BINDIR?=	/usr/sbin
 

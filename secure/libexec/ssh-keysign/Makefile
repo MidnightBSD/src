@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/libexec/ssh-keysign/Makefile 296781 2016-03-12 23:53:20Z des $
+# $FreeBSD: stable/11/secure/libexec/ssh-keysign/Makefile 296633 2016-03-11 00:15:29Z des $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	ssh-keysign
 SRCS=	ssh-keysign.c readconf.c uidswap.c
@@ -10,19 +9,15 @@ CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 SRCS+=	ssh_namespace.h
 BINMODE=4555
 
-DPADD=	${LIBSSH}
-LDADD=	-lssh
-USEPRIVATELIB= ssh
+LIBADD=	ssh
 
 .if ${MK_LDNS} != "no"
 CFLAGS+=	-DHAVE_LDNS=1
 #DPADD+=	${LIBLDNS}
 #LDADD+=	-lldns
-#USEPRIVATELIB+= ldns
 .endif
 
-DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD+= -lcrypt -lcrypto -lz
+LIBADD+=	crypto
 
 .include <bsd.prog.mk>
 

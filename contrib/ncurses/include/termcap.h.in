@@ -31,7 +31,7 @@
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
  ****************************************************************************/
 
-/* $Id: termcap.h.in,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $ */
+/* $Id: termcap.h.in,v 1.16 2001/03/24 21:53:27 tom Exp $ */
 
 #ifndef NCURSES_TERMCAP_H_incl
 #define NCURSES_TERMCAP_H_incl	1

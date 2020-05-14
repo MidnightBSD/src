@@ -25,7 +25,7 @@
 # use or other dealings in this Software without prior written               #
 # authorization.                                                             #
 ##############################################################################
-# $Id: MKcaptab.awk,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $
+# $Id: MKcaptab.awk,v 1.20 2007/08/12 00:26:15 tom Exp $
 function add_string(text) {
     if (text != "IGNORE") {
 	offsets[num_strings] = offset;

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998-2000,2004 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2004,2009 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -41,12 +41,12 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_move.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_move.c,v 1.13 2009/10/24 22:34:07 tom Exp $")
 
 NCURSES_EXPORT(int)
 wmove(WINDOW *win, int y, int x)
 {
-    T((T_CALLED("wmove(%p,%d,%d)"), win, y, x));
+    T((T_CALLED("wmove(%p,%d,%d)"), (void *) win, y, x));
 
     if (LEGALYX(win, y, x)) {
 	win->_curx = (NCURSES_SIZE_T) x;

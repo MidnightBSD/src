@@ -35,14 +35,14 @@
  |	
  |	All are rights reserved.
  |
- |	$Header: /home/cvs/src/contrib/ee/new_curse.c,v 1.1.1.1 2012-12-31 07:46:38 laffer1 Exp $
+ |	$Header: /home/hugh/sources/old_ae/RCS/new_curse.c,v 1.54 2002/09/21 00:47:14 hugh Exp $
  |
  */
 
 char *copyright_message[] = { "Copyright (c) 1986, 1987, 1988, 1991, 1992, 1993, 1994, 1995, 2009 Hugh Mahon",
 				"All rights are reserved."};
 
-char * new_curse_name= "@(#) new_curse.c $Revision: 1.1.1.1 $";
+char * new_curse_name= "@(#) new_curse.c $Revision: 1.54 $";
 
 #include "new_curse.h"
 #include <signal.h>

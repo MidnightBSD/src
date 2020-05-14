@@ -35,7 +35,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_key_name.c,v 1.1.1.1 2012-07-21 14:51:30 laffer1 Exp $")
+MODULE_ID("$Id: lib_key_name.c,v 1.3 2008/10/11 20:15:14 tom Exp $")
 
 NCURSES_EXPORT(NCURSES_CONST char *)
 key_name(wchar_t c)

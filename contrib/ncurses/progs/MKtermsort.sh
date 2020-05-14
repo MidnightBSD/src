@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: MKtermsort.sh,v 1.1.1.4 2012-07-21 14:51:30 laffer1 Exp $
+# $Id: MKtermsort.sh,v 1.10 2008/07/12 20:22:54 tom Exp $
 #
 # MKtermsort.sh -- generate indirection vectors for the various sort methods
 #

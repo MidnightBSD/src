@@ -1,6 +1,6 @@
 extproc perl -S -w
 
-# $Id: convert_configure.pl,v 1.1.1.2 2008-10-05 15:21:39 laffer1 Exp $
+# $Id: convert_configure.pl,v 1.3 2006/04/22 23:04:06 tom Exp $
 ##############################################################################
 # Copyright (c) 1998-2000,2006 Free Software Foundation, Inc.                #
 #                                                                            #

@@ -270,7 +270,7 @@ first_non_fsm_start_char(const char *data, apr_size_t max_len)
 
   /* The remaining odd bytes will be examined the naive way: */
   for (; max_len > 0; ++data, --max_len)
-    if (*data < 0 || *data >= 0x80)
+    if ((unsigned char)*data >= 0x80)
       break;
 
   return data;

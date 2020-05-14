@@ -26,7 +26,7 @@
 # use or other dealings in this Software without prior written               #
 # authorization.                                                             #
 ##############################################################################
-# $Id: MKhashsize.sh,v 1.1.1.2 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: MKhashsize.sh,v 1.7 2006/10/22 00:45:39 tom Exp $
 #
 # MKhashsize.sh --- generate size include for hash functions
 #

@@ -1,4 +1,4 @@
-# $Id: manlinks.sed,v 1.1.1.4 2012-07-21 14:51:29 laffer1 Exp $
+# $Id: manlinks.sed,v 1.13 2008/01/19 23:31:17 tom Exp $
 ##############################################################################
 # Copyright (c) 2000-2003,2008 Free Software Foundation, Inc.                #
 #                                                                            #

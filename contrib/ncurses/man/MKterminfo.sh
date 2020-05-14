@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: MKterminfo.sh,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
+# $Id: MKterminfo.sh,v 1.12 2003/01/11 21:42:12 tom Exp $
 #
 # MKterminfo.sh -- generate terminfo.5 from Caps tabular data
 #

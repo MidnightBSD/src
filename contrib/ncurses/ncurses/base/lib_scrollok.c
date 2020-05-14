@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2009 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -40,12 +40,12 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_scrollok.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_scrollok.c,v 1.5 2009/10/24 22:35:38 tom Exp $")
 
 NCURSES_EXPORT(int)
 scrollok(WINDOW *win, bool flag)
 {
-    T((T_CALLED("scrollok(%p,%d)"), win, flag));
+    T((T_CALLED("scrollok(%p,%d)"), (void *) win, flag));
 
     if (win) {
 	win->_scroll = flag;

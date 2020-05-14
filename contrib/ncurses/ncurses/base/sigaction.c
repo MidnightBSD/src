@@ -35,7 +35,7 @@
 /* This file provides sigaction() emulation using sigvec() */
 /* Use only if this is non POSIX system */
 
-MODULE_ID("$Id: sigaction.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: sigaction.c,v 1.14 2003/12/07 01:06:52 tom Exp $")
 
 static int
 _nc_sigaction(int sig, sigaction_t * sigact, sigaction_t * osigact)
