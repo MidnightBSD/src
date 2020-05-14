@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/procstat/Makefile 321084 2017-07-17 20:57:38Z ngie $
+# $FreeBSD: stable/11/usr.bin/procstat/Makefile 324932 2017-10-23 18:25:21Z bdrewery $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	procstat
 MAN=	procstat.1
@@ -14,14 +13,14 @@ SRCS=	procstat.c		\
 	procstat_cs.c		\
 	procstat_files.c	\
 	procstat_kstack.c	\
+	procstat_ptlwpinfo.c	\
 	procstat_rlimit.c	\
 	procstat_rusage.c	\
 	procstat_sigs.c		\
 	procstat_threads.c	\
 	procstat_vm.c
 
-LDADD+=	-lutil -lprocstat -lkvm
-DPADD+=	${LIBUTIL} ${LIBPROCSTAT} ${LIBKVM}
+LIBADD+=	procstat xo util sbuf
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

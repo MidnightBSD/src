@@ -1,4 +1,4 @@
-/* $FreeBSD$ */
+/* $FreeBSD: stable/11/usr.bin/svn/lib/libapr/apr.h 286503 2015-08-09 05:14:25Z peter $ */
 
 /* Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -118,7 +118,7 @@
  * or the extern "C" namespace 
  */
 
-#if APR_HAVE_WINDOWS_H
+#if APR_HAVE_WINDOWS_H && defined(WIN32)
 /* If windows.h was already included, our preferences don't matter.
  * If not, include a restricted set of windows headers to our tastes.
  */
@@ -219,10 +219,10 @@ extern "C" {
 #define APR_HAVE_SHMEM_BEOS         0
 
 #define APR_USE_SHMEM_MMAP_TMP     0
-#define APR_USE_SHMEM_MMAP_SHM     0
+#define APR_USE_SHMEM_MMAP_SHM     1
 #define APR_USE_SHMEM_MMAP_ZERO    0
 #define APR_USE_SHMEM_SHMGET_ANON  0
-#define APR_USE_SHMEM_SHMGET       1
+#define APR_USE_SHMEM_SHMGET       0
 #define APR_USE_SHMEM_MMAP_ANON    1
 #define APR_USE_SHMEM_BEOS         0
 
@@ -373,7 +373,13 @@ typedef  apr_uint32_t            apr_uintptr_t;
 #endif
 
 /* Are we big endian? */
+#if _BYTE_ORDER == _LITTLE_ENDIAN
 #define APR_IS_BIGENDIAN	0
+#elif _BYTE_ORDER == _BIG_ENDIAN
+#define APR_IS_BIGENDIAN	1
+#else
+#error Unknown byte order.
+#endif
 
 /* Mechanisms to properly type numeric literals */
 #define APR_INT64_C(val) INT64_C(val)
@@ -460,6 +466,8 @@ typedef  apr_uint32_t            apr_uintptr_t;
  */
 #define APR_THREAD_FUNC       
 
+#if defined(DOXYGEN) || !defined(WIN32)
+
 /**
  * The public APR functions are declared with APR_DECLARE(), so they may
  * use the most appropriate calling convention.  Public APR functions with 
@@ -511,6 +519,20 @@ typedef  apr_uint32_t            apr_uintptr_t;
  * </PRE>
  */
 #define APR_DECLARE_DATA
+
+#elif defined(APR_DECLARE_STATIC)
+#define APR_DECLARE(type)            type __stdcall
+#define APR_DECLARE_NONSTD(type)     type __cdecl
+#define APR_DECLARE_DATA
+#elif defined(APR_DECLARE_EXPORT)
+#define APR_DECLARE(type)            __declspec(dllexport) type __stdcall
+#define APR_DECLARE_NONSTD(type)     __declspec(dllexport) type __cdecl
+#define APR_DECLARE_DATA             __declspec(dllexport)
+#else
+#define APR_DECLARE(type)            __declspec(dllimport) type __stdcall
+#define APR_DECLARE_NONSTD(type)     __declspec(dllimport) type __cdecl
+#define APR_DECLARE_DATA             __declspec(dllimport)
+#endif
 
 /* Define APR_SSIZE_T_FMT.  
  * If ssize_t is an integer we define it to be "d",

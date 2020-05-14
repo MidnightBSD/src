@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/svn/lib/libserf/Makefile 264925 2014-04-25 19:25:05Z imp $
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -6,15 +6,13 @@ INTERNALLIB=	yes
 LIB=		serf
 
 SRCS=		aggregate_buckets.c allocator.c auth.c auth_basic.c \
-		auth_digest.c barrier_buckets.c \
+		auth_digest.c auth_spnego.c auth_spnego_gss.c barrier_buckets.c \
 		buckets.c bwtp_buckets.c chunk_buckets.c context.c \
 		dechunk_buckets.c deflate_buckets.c file_buckets.c \
 		headers_buckets.c incoming.c iovec_buckets.c limit_buckets.c \
 		mmap_buckets.c outgoing.c request_buckets.c \
 		response_body_buckets.c response_buckets.c simple_buckets.c \
 		socket_buckets.c ssl_buckets.c ssltunnel.c
-
-NOMAN=		internalonly
 
 .PATH:		${SERF}/buckets ${SERF}/auth ${SERF}
 

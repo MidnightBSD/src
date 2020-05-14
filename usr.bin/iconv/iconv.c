@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.bin/iconv/iconv.c 287794 2015-09-14 18:52:41Z delphij $ */
+/* $FreeBSD: stable/11/usr.bin/iconv/iconv.c 330449 2018-03-05 07:26:05Z eadler $ */
 /* $NetBSD: iconv.c,v 1.16 2009/02/20 15:28:21 yamt Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *

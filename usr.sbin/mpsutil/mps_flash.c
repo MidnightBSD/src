@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Baptiste Daroussin <bapt@FreeBSD.org>
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.sbin/mpsutil/mps_flash.c 297590 2016-04-05 20:34:20Z sbruno $");
+__RCSID("$FreeBSD: stable/11/usr.sbin/mpsutil/mps_flash.c 298374 2016-04-20 21:11:49Z bapt $");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -84,6 +83,7 @@ flash_save(int argc, char **argv)
 
 	if ((size = mps_firmware_get(fd, &firmware_buffer, bios)) < 0) {
 		warnx("Fail to save %s", argv[1]);
+		close(fd);
 		return (1);
 	}
 
@@ -101,6 +101,7 @@ flash_save(int argc, char **argv)
 				error = errno;
 				warn("write");
 				free(firmware_buffer);
+				close(fd);
 				return (error);
 			}
 			written += ret;
@@ -190,12 +191,14 @@ flash_update(int argc, char **argv)
 			warnx("Invalid bios: no boot record magic number");
 			munmap(mem, st.st_size);
 			close(fd);
+			free(facts);
 			return (1);
 		}
 		if ((st.st_size % 512) != 0) {
 			warnx("Invalid bios: size not a multiple of 512");
 			munmap(mem, st.st_size);
 			close(fd);
+			free(facts);
 			return (1);
 		}
 	} else {
@@ -207,6 +210,7 @@ flash_update(int argc, char **argv)
 			warnx("  Image Vendor ID: %04x", fwheader->VendorID);
 			munmap(mem, st.st_size);
 			close(fd);
+			free(facts);
 			return (1);
 		}
 
@@ -216,6 +220,7 @@ flash_update(int argc, char **argv)
 			warnx("  Image Product ID: %04x", fwheader->ProductID);
 			munmap(mem, st.st_size);
 			close(fd);
+			free(facts);
 			return (1);
 		}
 	}
@@ -225,11 +230,13 @@ flash_update(int argc, char **argv)
 		warnx("Fail to update %s", argv[1]);
 		munmap(mem, st.st_size);
 		close(fd);
+		free(facts);
 		return (1);
 	}
 
 	munmap(mem, st.st_size);
 	close(fd);
+	free(facts);
 	printf("%s successfully updated\n", argv[1]);
 	return (0);
 }

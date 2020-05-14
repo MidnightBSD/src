@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (c) 2017 Ngie Cooper <ngie@FreeBSD.org>
- * All rights reserved.
+ * Copyright (c) 2017 Enji Cooper <ngie@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.bin/procstat/tests/while1.c 318325 2017-05-15 22:52:25Z ngie $");
+__RCSID("$FreeBSD: stable/11/usr.bin/procstat/tests/while1.c 352492 2019-09-18 19:28:17Z jilles $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -35,7 +33,8 @@ int
 main(void)
 {
 
+	if (write(STDOUT_FILENO, "started\n", 8) != 8)
+		abort();
 	for (;;)
-		usleep(100);
-	exit(1);
+		pause();
 }

@@ -1,29 +1,27 @@
-# $MidnightBSD$
+.include <src.opts.mk>
 
-.include <bsd.own.mk>
-
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSPosix
 
 PROG=   mdnsd
 
 WARNS=	2
 
 SRCS=	PosixDaemon.c mDNSPosix.c mDNSUNP.c 
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSCore
 SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSShared
 SRCS+=	 uds_daemon.c \
 	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
 	PlatformCommon.c CryptoAlg.c anonymous.c
 
-SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
-	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
-	${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
+SRCDIRS= ${SRCTOP}/contrib/mDNSResponder/mDNSShared \
+	${SRCTOP}/contrib/mDNSResponder/mDNSPosix \
+	${SRCTOP}/contrib/mDNSResponder/mDNSCore
 MAN=    mDNSResponder.8
 
-CFLAGS+= -I. -I${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
-CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
-CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+CFLAGS+= -I. -I${SRCTOP}/contrib/mDNSResponder/mDNSPosix
+CFLAGS+= -I${SRCTOP}/contrib/mDNSResponder/mDNSCore
+CFLAGS+= -I${SRCTOP}/contrib/mDNSResponder/mDNSShared
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
 CFLAGS+= -D_REENTRANT

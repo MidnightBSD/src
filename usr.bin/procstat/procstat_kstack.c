@@ -1,6 +1,8 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Robert N. M. Watson
+ * Copyright (c) 2015 Allan Jude <allanjude@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/procstat/procstat_kstack.c 310121 2016-12-15 16:52:17Z vangyzen $
+ * $FreeBSD: stable/11/usr.bin/procstat/procstat_kstack.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -106,6 +108,42 @@ kstack_cleanup(const char *old, char *new, int kflag)
 	*cp_new = '\0';
 }
 
+static void
+kstack_cleanup_encoded(const char *old, char *new, int kflag)
+{
+	enum trace_state old_ts, ts;
+	const char *cp_old;
+	char *cp_new, *cp_loop, *cp_tofree, *cp_line;
+
+	ts = TS_FRAMENUM;
+	if (kflag == 1) {
+		for (cp_old = old, cp_new = new; *cp_old != '\0'; cp_old++) {
+			switch (*cp_old) {
+			case '\n':
+				*cp_new = *cp_old;
+				cp_new++;
+			case ' ':
+			case '+':
+				old_ts = ts;
+				ts = kstack_nextstate(old_ts);
+				continue;
+			}
+			if (ts == TS_FUNC) {
+				*cp_new = *cp_old;
+				cp_new++;
+			}
+		}
+		*cp_new = '\0';
+		cp_tofree = cp_loop = strdup(new);
+	} else
+		cp_tofree = cp_loop = strdup(old);
+        while ((cp_line = strsep(&cp_loop, "\n")) != NULL) {
+		if (strlen(cp_line) != 0 && *cp_line != 127)
+			xo_emit("{le:token/%s}", cp_line);
+	}
+	free(cp_tofree);
+}
+
 /*
  * Sort threads by tid.
  */
@@ -130,12 +168,12 @@ procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
 {
 	struct kinfo_kstack *kkstp, *kkstp_free;
 	struct kinfo_proc *kip, *kip_free;
-	char trace[KKST_MAXLEN];
+	char trace[KKST_MAXLEN], encoded_trace[KKST_MAXLEN];
 	unsigned int i, j;
 	unsigned int kip_count, kstk_count;
 
 	if (!hflag)
-		printf("%5s %6s %-19s %-19s %-29s\n", "PID", "TID", "COMM",
+		xo_emit("{T:/%5s %6s %-19s %-19s %-29s}\n", "PID", "TID", "COMM",
 		    "TDNAME", "KSTACK");
 
 	kkstp = kkstp_free = procstat_getkstack(procstat, kipp, &kstk_count);
@@ -170,25 +208,26 @@ procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
 		if (kipp == NULL)
 			continue;
 
-		printf("%5d ", kipp->ki_pid);
-		printf("%6d ", kkstp->kkst_tid);
-		printf("%-19s ", kipp->ki_comm);
-		printf("%-19s ", kinfo_proc_thread_name(kipp));
+		xo_emit("{k:process_id/%5d/%d} ", kipp->ki_pid);
+		xo_emit("{:thread_id/%6d/%d} ", kkstp->kkst_tid);
+		xo_emit("{:command/%-19s/%s} ", kipp->ki_comm);
+		xo_emit("{:thread_name/%-19s/%s} ",
+                    kinfo_proc_thread_name(kipp));
 
 		switch (kkstp->kkst_state) {
 		case KKST_STATE_RUNNING:
-			printf("%-29s\n", "<running>");
+			xo_emit("{:state/%-29s/%s}\n", "<running>");
 			continue;
 
 		case KKST_STATE_SWAPPED:
-			printf("%-29s\n", "<swapped>");
+			xo_emit("{:state/%-29s/%s}\n", "<swapped>");
 			continue;
 
 		case KKST_STATE_STACKOK:
 			break;
 
 		default:
-			printf("%-29s\n", "<unknown>");
+			xo_emit("{:state/%-29s/%s}\n", "<unknown>");
 			continue;
 		}
 
@@ -198,7 +237,10 @@ procstat_kstack(struct procstat *procstat, struct kinfo_proc *kipp, int kflag)
 		 * returns to spaces.
 		 */
 		kstack_cleanup(kkstp->kkst_trace, trace, kflag);
-		printf("%-29s\n", trace);
+		xo_open_list("trace");
+		kstack_cleanup_encoded(kkstp->kkst_trace, encoded_trace, kflag);
+		xo_close_list("trace");
+		xo_emit("{d:trace/%-29s}\n", trace);
 	}
 	procstat_freekstack(procstat, kkstp_free);
 	procstat_freeprocs(procstat, kip_free);

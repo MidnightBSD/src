@@ -1,10 +1,7 @@
-# $MidnightBSD$
-
 PROG= mport
 
-CFLAGS= -I${.CURDIR}/../../lib/libmport/ -fblocks -g
+CFLAGS= -I${SRCTOP}/lib/libmport/ -fblocks -g
 
-DPADD=  ${LIBMPORT} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
-LDADD=  -lmport -ldispatch -lBlocksRuntime
+LIBADD+=	mport dispatch BlocksRuntime
 
 .include <bsd.prog.mk>

@@ -1,20 +1,17 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 7/19/93
-# $FreeBSD: stable/10/usr.bin/su/Makefile 226428 2011-10-16 09:09:33Z ed $
+# $FreeBSD: stable/11/usr.bin/su/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	su
 
 WARNS?=	5
 
-DPADD=	${LIBUTIL} ${LIBPAM}
-LDADD=	-lutil ${MINUSLPAM}
+LIBADD=	util pam
 
 .if ${MK_AUDIT} != "no"
 CFLAGS+= -DUSE_BSM_AUDIT
-DPADD+=  ${LIBBSM}
-LDADD+=  -lbsm
+LIBADD+=	bsm
 .endif
 
 BINOWN=	root

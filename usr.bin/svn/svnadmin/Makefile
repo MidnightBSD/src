@@ -1,8 +1,8 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/usr.bin/svn/svnadmin/Makefile 314011 2017-02-21 02:30:26Z ngie $
 
-NO_MAN=	svnadmin.1
+MAN=
 
-.include "${.CURDIR}/../Makefile.inc"
+.include "${.CURDIR:H}/Makefile.inc"
 
 .PATH:	${SVNDIR}/svnadmin
 
@@ -10,30 +10,27 @@ PROG=	svn${SVNLITE}admin
 
 SRCS=	svnadmin.c
 
-CFLAGS+=-I${SVNDIR}/include -I${SVNDIR} -I${.CURDIR}/.. \
-	-I${.CURDIR}/../lib/libapr \
+CFLAGS+=-I${SVNDIR}/include -I${SVNDIR} -I${.CURDIR:H} \
+	-I${.CURDIR:H}/lib/libapr \
 	-I${APR}/include/arch/unix \
 	-I${APR}/include \
-	-I${.CURDIR}/../lib/libapr_util \
+	-I${.CURDIR:H}/lib/libapr_util \
 	-I${APRU}/include/private \
 	-I${APRU}/include
 
 LDADD=	-L${LIBSVN_REPOSDIR} -lsvn_repos \
 	-L${LIBSVN_FSDIR} -lsvn_fs \
 	-L${LIBSVN_FS_FSDIR} -lsvn_fs_fs \
+	-L${LIBSVN_FS_XDIR} -lsvn_fs_x \
 	-L${LIBSVN_FS_UTILDIR} -lsvn_fs_util \
 	-L${LIBSVN_DELTADIR} -lsvn_delta \
 	-L${LIBSVN_SUBRDIR} -lsvn_subr \
 	-L${LIBAPR_UTILDIR} -lapr-util \
-	-lbsdxml \
-	-L${LIBAPRDIR} -lapr \
-	-L${LIBSQLITEDIR} -lsqlite3 \
-	-lz -lcrypt \
-	-pthread
+	-L${LIBAPRDIR} -lapr
+LIBADD+=	bsdxml sqlite3 z pthread
 
 DPADD=	${LIBSVN_REPOS} ${LIBSVN_FS} ${LIBSVN_FS_FS} ${LIBSVN_FS_UTIL} \
 	${LIBSVN_DELTA} ${LIBSVN_SUBR} ${LIBAPR_UTIL} \
-	${LIBBSDXML} ${LIBAPR} ${LIBSQLITE} ${LIBZ} ${LIBCRYPT} \
-	${LIBPTHREAD}
+	${LIBAPR}
 
 .include <bsd.prog.mk>

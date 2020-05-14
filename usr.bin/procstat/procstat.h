@@ -1,6 +1,9 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Robert N. M. Watson
+ * Copyright (c) 2015 Allan Jude <allanjude@freebsd.org>
+ * Copyright (c) 2017 Dell EMC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,11 +27,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/procstat/procstat.h 310121 2016-12-15 16:52:17Z vangyzen $
+ * $FreeBSD: stable/11/usr.bin/procstat/procstat.h 330449 2018-03-05 07:26:05Z eadler $
  */
+
+#include <libxo/xo.h>
 
 #ifndef PROCSTAT_H
 #define	PROCSTAT_H
+
+#define PROCSTAT_XO_VERSION "1"
 
 extern int	hflag, nflag, Cflag, Hflag;
 
@@ -46,6 +53,7 @@ void	procstat_env(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_files(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_kstack(struct procstat *prstat, struct kinfo_proc *kipp,
     int kflag);
+void	procstat_ptlwpinfo(struct procstat *prstat);
 void	procstat_rlimit(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_rusage(struct procstat *prstat, struct kinfo_proc *kipp);
 void	procstat_sigs(struct procstat *prstat, struct kinfo_proc *kipp);

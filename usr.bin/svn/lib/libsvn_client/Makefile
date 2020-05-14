@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/usr.bin/svn/lib/libsvn_client/Makefile 289180 2015-10-12 09:53:55Z peter $
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -12,7 +12,7 @@ SRCS=		add.c blame.c cat.c changelist.c checkout.c cleanup.c \
 		copy_foreign.c ctx.c delete.c deprecated.c diff.c \
 		diff_local.c diff_summarize.c export.c externals.c import.c \
 		info.c iprops.c list.c locking_commands.c log.c merge.c \
-		mergeinfo.c patch.c log.c prop_commands.c \
+		mergeinfo.c mtcc.c patch.c log.c prop_commands.c \
 		ra.c relocate.c repos_diff.c resolved.c revert.c revisions.c \
 		status.c switch.c update.c upgrade.c url.c util.c version.c
 

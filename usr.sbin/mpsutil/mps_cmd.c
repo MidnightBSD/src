@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Baptiste Daroussin <bapt@FreeBSD.org>
  *
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.sbin/mpsutil/mps_cmd.c 315600 2017-03-20 00:55:24Z pfg $");
+__RCSID("$FreeBSD: stable/11/usr.sbin/mpsutil/mps_cmd.c 315599 2017-03-20 00:54:45Z pfg $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

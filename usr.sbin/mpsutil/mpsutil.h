@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/mpsutil/mpsutil.h 297590 2016-04-05 20:34:20Z sbruno $
+ * $FreeBSD: stable/11/usr.sbin/mpsutil/mpsutil.h 291002 2015-11-17 20:42:59Z bapt $
  */
 
 #ifndef __MPSUTIL_H__

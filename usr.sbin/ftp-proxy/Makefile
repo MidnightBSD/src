@@ -1,6 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/ftp-proxy/Makefile,v 1.1 2007/07/03 12:46:07 mlaier Exp $
+# $FreeBSD: stable/11/usr.sbin/ftp-proxy/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-SUBDIR= libevent ftp-proxy
+.PATH:	${SRCTOP}/contrib/pf/ftp-proxy
 
-.include <bsd.subdir.mk>
+PROG=	ftp-proxy
+MAN=	ftp-proxy.8
+
+SRCS=	ftp-proxy.c filter.c
+
+CFLAGS+=-I${SRCTOP}/contrib/pf/libevent
+
+LIBADD=	event
+
+WARNS?=	3
+
+.include <bsd.prog.mk>

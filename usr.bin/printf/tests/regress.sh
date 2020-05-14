@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/printf/tests/regress.sh 262954 2014-03-09 19:37:01Z jmmv $
+# $FreeBSD: stable/11/usr.bin/printf/tests/regress.sh 338181 2018-08-22 04:27:33Z pfg $
 
 REGRESSION_START($1)
 
-echo '1..15'
+echo '1..24'
 
 REGRESSION_TEST(`b', `printf "abc%b%b" "def\n" "\cghi"')
 REGRESSION_TEST(`d', `printf "%d,%5d,%.5d,%0*d,%.*d\n" 123 123 123 5 123 5 123')
@@ -20,5 +19,14 @@ REGRESSION_TEST('zero', `printf "%u%u\n" 15')
 REGRESSION_TEST('zero', `printf "%d%d\n" 15')
 REGRESSION_TEST('zero', `printf "%d%u\n" 15')
 REGRESSION_TEST('zero', `printf "%u%d\n" 15')
+REGRESSION_TEST(`missingpos1', `printf "%1\$*s" 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%*1\$s" 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%1\$*.*s" 1 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%*1\$.*s" 1 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%*.*1\$s" 1 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%1\$*2\$.*s" 1 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%*1\$.*2\$s" 1 1 1 2>&1')
+REGRESSION_TEST(`missingpos1', `printf "%1\$*.*2\$s" 1 1 1 2>&1')
+REGRESSION_TEST(`bwidth', `printf "%8.2b" "a\nb\n"')
 
 REGRESSION_END()

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 Netflix, Inc.
  * All rights reserved.
@@ -34,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.sbin/mpsutil/mpsutil.c 297590 2016-04-05 20:34:20Z sbruno $");
+__RCSID("$FreeBSD: stable/11/usr.sbin/mpsutil/mpsutil.c 290061 2015-10-27 20:56:57Z scottl $");
 
 #include <sys/param.h>
 #include <sys/errno.h>

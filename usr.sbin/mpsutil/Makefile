@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/mpsutil/Makefile 297590 2016-04-05 20:34:20Z sbruno $
+# $FreeBSD: stable/11/usr.sbin/mpsutil/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	mpsutil
 SRCS=	mps_cmd.c mps_flash.c mps_show.c mpsutil.c
@@ -11,8 +10,9 @@ WARNS?= 3
 LINKS=	${BINDIR}/mpsutil ${BINDIR}/mprutil
 MLINKS=	mpsutil.8 mprutil.8
 
-CFLAGS+= -I${.CURDIR}/../../sys -I. -DUSE_MPT_IOCTLS
-
+CFLAGS+= -I${SRCTOP}/sys -I. -DUSE_MPT_IOCTLS
+# Avoid dirdep dependency on libutil
+CFLAGS+= -I${SRCTOP}/lib/libutil
 
 # Here be dragons
 .ifdef DEBUG
