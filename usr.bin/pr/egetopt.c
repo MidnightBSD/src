@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Keith Muller.
  * Copyright (c) 1993
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)egetopt.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/pr/egetopt.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/pr/egetopt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <stdio.h>

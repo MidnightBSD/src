@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
@@ -10,10 +9,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ministat/ministat.c 243079 2012-11-15 15:06:12Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ministat/ministat.c 291231 2015-11-24 02:30:59Z araujo $");
 
 #include <stdio.h>
 #include <math.h>
+#include <ctype.h>
 #include <err.h>
 #include <string.h>
 #include <stdlib.h>
@@ -192,8 +192,10 @@ Avg(struct dataset *ds)
 static double
 Median(struct dataset *ds)
 {
-
-	return (ds->points[ds->n / 2]);
+	if ((ds->n % 2) == 0)
+		return ((ds->points[ds->n / 2] + (ds->points[(ds->n / 2) - 1])) / 2);
+    	else
+		return (ds->points[ds->n / 2]);
 }
 
 static double
@@ -329,10 +331,8 @@ PlotSet(struct dataset *ds, int val)
 	else
 		bar = 0;
 
-	if (pl->bar == NULL) {
-		pl->bar = malloc(sizeof(char *) * pl->num_datasets);
-		memset(pl->bar, 0, sizeof(char*) * pl->num_datasets);
-	}
+	if (pl->bar == NULL)
+		pl->bar = calloc(sizeof(char *), pl->num_datasets);
 	if (pl->bar[bar] == NULL) {
 		pl->bar[bar] = malloc(pl->width);
 		memset(pl->bar[bar], 0, pl->width);
@@ -476,8 +476,8 @@ ReadSet(const char *n, int column, const char *delim)
 		line++;
 
 		i = strlen(buf);
-		if (buf[i-1] == '\n')
-			buf[i-1] = '\0';
+		while (i > 0 && isspace(buf[i - 1]))
+			buf[--i] = '\0';
 		for (i = 1, t = strtok(buf, delim);
 		     t != NULL && *t != '#';
 		     i++, t = strtok(NULL, delim)) {
@@ -489,7 +489,7 @@ ReadSet(const char *n, int column, const char *delim)
 
 		d = strtod(t, &p);
 		if (p != NULL && *p != '\0')
-			err(2, "Invalid data on line %d in %s\n", line, n);
+			errx(2, "Invalid data on line %d in %s", line, n);
 		if (*buf != '\0')
 			AddPoint(s, d);
 	}

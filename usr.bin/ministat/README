@@ -1,4 +1,4 @@
-$MidnightBSD$
+$FreeBSD: stable/11/usr.bin/ministat/README 118856 2003-08-13 07:21:54Z phk $
 
 A small tool to do the statistics legwork on benchmarks etc.
 

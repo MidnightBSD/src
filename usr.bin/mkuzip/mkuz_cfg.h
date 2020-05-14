@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2016 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/mkuzip/mkuz_cfg.h 303095 2016-07-20 16:36:17Z sobomax $
+ * $FreeBSD: stable/11/usr.bin/mkuzip/mkuz_cfg.h 322983 2017-08-28 20:55:13Z sobomax $
  */
 
 struct mkuz_conveyor;
@@ -37,5 +36,7 @@ struct mkuz_cfg {
     int en_dedup;
     int nworkers;
     int blksz;
+    const char *iname;
+    off_t isize;
     const struct mkuz_format *handler;
 };

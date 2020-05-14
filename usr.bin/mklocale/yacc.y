@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*-
  * Copyright (c) 1993
@@ -39,7 +38,7 @@ static char sccsid[] = "@(#)yacc.y	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mklocale/yacc.y 300265 2016-05-20 06:02:44Z truckman $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mklocale/yacc.y 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <arpa/inet.h>
 

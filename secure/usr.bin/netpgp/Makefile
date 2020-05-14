@@ -4,12 +4,11 @@
 
 PROG=	netpgp
 
-NETPGP_SRC=     ${.CURDIR}/../../../crypto/netpgp
+NETPGP_SRC=     ${SRCTOP}/crypto/netpgp
 
 CFLAGS+=-I${NETPGP_SRC}
 
-DPADD=  ${LIBCRYPTO} ${LIBZ} ${LIBBZ2} ${LIBNETPGP}
-LDADD=  -lcrypto -lz -lbz2 -lnetpgp
+LIBADD+=	crypto z bz2 netpgp
 
 MAN=	netpgp.1
 

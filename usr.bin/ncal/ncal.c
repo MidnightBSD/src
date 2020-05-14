@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Wolfgang Helbig
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ncal/ncal.c 309336 2016-11-30 20:51:51Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ncal/ncal.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <calendar.h>
 #include <ctype.h>

@@ -30,8 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ldef.h	8.1 (Berkeley) 6/6/93
- *	$FreeBSD: stable/10/usr.bin/mklocale/ldef.h 216370 2010-12-11 08:32:16Z joel $
- *	$MidnightBSD$
+ *	$FreeBSD: stable/11/usr.bin/mklocale/ldef.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

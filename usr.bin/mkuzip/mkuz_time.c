@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2016 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkuzip/mkuz_time.c 303095 2016-07-20 16:36:17Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkuzip/mkuz_time.c 298504 2016-04-23 07:23:43Z sobomax $");
 
 #include <math.h>
 #include <stdint.h>

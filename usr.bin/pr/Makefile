@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/pr/Makefile 319257 2017-05-30 22:02:55Z asomers $
+# $FreeBSD: stable/11/usr.bin/pr/Makefile 317439 2017-04-26 14:44:39Z asomers $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	pr
 SRCS=	pr.c egetopt.c

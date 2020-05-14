@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004-2016 Maxim Sobolev <sobomax@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/mkuzip/mkuz_zlib.h 303095 2016-07-20 16:36:17Z sobomax $
+ * $FreeBSD: stable/11/usr.bin/mkuzip/mkuz_zlib.h 298504 2016-04-23 07:23:43Z sobomax $
  */
 
 #define DEFAULT_SUFX_ZLIB       ".uzip"

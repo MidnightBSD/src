@@ -132,6 +132,7 @@ _LIBRARIES=	\
 		ncurses \
 		ncursesw \
 		netgraph \
+		netpgp \
 		ngatm \
 		nv \
 		nvpair \
@@ -558,6 +559,7 @@ LIBNCURSESWDIR=	${OBJTOP}/lib/ncurses/ncursesw
 LIBPANELDIR=	${OBJTOP}/lib/ncurses/panel
 LIBPANELWDIR=	${OBJTOP}/lib/ncurses/panelw
 LIBCRYPTODIR=	${OBJTOP}/secure/lib/libcrypto
+LIBNETPGPDIR=	${OBJTOP}/secure/lib/libnetpgp
 LIBSSHDIR=	${OBJTOP}/secure/lib/libssh
 LIBSSLDIR=	${OBJTOP}/secure/lib/libssl
 LIBTEKENDIR=	${OBJTOP}/sys/teken/libteken

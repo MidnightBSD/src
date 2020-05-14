@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Gleb Smirnoff <glebius@FreeBSD.org>
  *
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/netstat/flowtable.c 293307 2016-01-07 07:21:37Z markj $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/netstat/flowtable.c 287649 2015-09-11 04:37:01Z markj $");
 
 #include <sys/param.h>
 
@@ -36,6 +35,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/netstat/flowtable.c 293307 2016-01-07 07:2
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "netstat.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 Keith Muller.
  * Copyright (c) 1993
@@ -36,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/pr/extern.h 227175 2011-11-06 08:16:24Z ed $
+ * $FreeBSD: stable/11/usr.bin/pr/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 extern int eopterr;

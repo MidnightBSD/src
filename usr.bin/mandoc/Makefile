@@ -1,15 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: head/usr.bin/mandoc/Makefile 321810 2017-07-31 19:34:38Z bapt $
+# $FreeBSD: stable/11/usr.bin/mandoc/Makefile 322249 2017-08-08 11:35:27Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-MDOCMLDIR=	${.CURDIR}/../../contrib/mandoc
+MDOCMLDIR=	${SRCTOP}/contrib/mdocml
 .PATH: ${MDOCMLDIR}
 
 PROG=	mandoc
 MAN=	mandoc.1 eqn.7 mandoc_char.7 tbl.7 man.7 mdoc.7 # roff.7
 MLINKS=	mandoc.1 mdocml.1
-.if ${MK_MAN_UTILS} != no
+.if ${MK_MANDOCDB} != no
 MAN+=	apropos.1 makewhatis.8
 MLINKS+=	apropos.1 whatis.1
 LINKS=	${BINDIR}/mandoc ${BINDIR}/whatis \
@@ -52,23 +51,7 @@ LIB_SRCS=	${LIBMAN_SRCS} \
 		msec.c \
 		preconv.c \
 		read.c \
-                   compat_err.c \
-                   compat_fts.c \
-                   compat_getline.c \
-                   compat_getsubopt.c \
-                   compat_isblank.c \
-                   compat_mkdtemp.c \
-                   compat_ohash.c \
-                   compat_progname.c \
-                   compat_reallocarray.c \
-                   compat_recallocarray.c \
-                   compat_strcasestr.c \
-                   compat_stringlist.c \
-                   compat_strlcat.c \
-                   compat_strlcpy.c \
-                   compat_strsep.c \
-                   compat_strtonum.c \
-                   compat_vasprintf.c \
+		compat_recallocarray.c \
 
 HTML_SRCS=	eqn_html.c \
 		html.c \
@@ -110,8 +93,9 @@ SRCS=		${LIB_SRCS} \
 		tree.c
 
 WARNS?=	3
-CFLAGS+= -DHAVE_CONFIG_H
-DPADD=	${LIBZ}
-LDADD=	${LIBZ}
+CFLAGS+= -DHAVE_CONFIG_H \
+	 -D_WITH_GETLINE \
+	 -I${SRCTOP}/lib/libopenbsd/
+LIBADD=	openbsd z
 
 .include <bsd.prog.mk>
