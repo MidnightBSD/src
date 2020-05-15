@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/wp-x86_64.S 305153 2016-08-31 20:33:59Z jkim $ */
 /* Do not modify. This file is auto-generated from wp-x86_64.pl. */
 .text	

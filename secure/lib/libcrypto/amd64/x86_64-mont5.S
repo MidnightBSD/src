@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/x86_64-mont5.S 337982 2018-08-17 18:32:53Z jkim $ */
 /* Do not modify. This file is auto-generated from x86_64-mont5.pl. */
 .text	

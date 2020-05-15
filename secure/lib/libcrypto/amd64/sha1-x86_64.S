@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/sha1-x86_64.S 306195 2016-09-22 14:57:48Z jkim $ */
 /* Do not modify. This file is auto-generated from sha1-x86_64.pl. */
 .text	

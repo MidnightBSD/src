@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/ecp_nistz256-x86_64.S 325337 2017-11-02 18:30:41Z jkim $ */
 /* Do not modify. This file is auto-generated from ecp_nistz256-x86_64.pl. */
 .text	

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/i386/ghash-x86.S 305153 2016-08-31 20:33:59Z jkim $ */
 /* Do not modify. This file is auto-generated from ghash-x86.pl. */
 #ifdef PIC
