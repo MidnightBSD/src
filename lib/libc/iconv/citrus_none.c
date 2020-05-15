@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_none.c 326241 2017-11-27 02:44:36Z pfg $ */
-/* $NetBSD: citrus_none.c,v 1.18 2008/06/14 16:01:07 tnozaki Exp $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_none.c 349624 2019-07-03 00:03:14Z emaste $ */
+/*	$NetBSD: citrus_none.c,v 1.22 2017/07/13 16:00:30 christos Exp $	*/
 
 /*-
  * Copyright (c) 2002 Citrus Project,
@@ -143,7 +142,7 @@ _citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,
 		s[2] = (char)(idx >> 16);
 		*nresult = 3;
 	} else {
-		if (n < 3) {
+		if (n < 4) {
 			*nresult = (size_t)-1;
 			return (E2BIG);
 		}

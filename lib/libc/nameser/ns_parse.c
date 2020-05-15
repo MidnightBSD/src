@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996,1999 by Internet Software Consortium.
@@ -20,7 +19,7 @@
 static const char rcsid[] = "$Id: ns_parse.c,v 1.10 2009/01/23 19:59:16 each Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/nameser/ns_parse.c 270838 2014-08-30 10:16:25Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/nameser/ns_parse.c 269867 2014-08-12 12:36:06Z ume $");
 
 /* Import. */
 

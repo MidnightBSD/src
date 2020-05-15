@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_dtablesize.c,v 1.14 1998/11/15 17:32:43 christos Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)rpc_dtablesize.c 1.2 87/08/11 Copyr 1987 Sun Micro";
 static char *sccsid = "@(#)rpc_dtablesize.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpc_dtablesize.c 261046 2014-01-22 23:45:27Z mav $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_dtablesize.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <unistd.h>

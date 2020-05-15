@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
@@ -32,7 +31,7 @@
 
 #ident	"@(#)key_call.c	1.25	94/04/24 SMI"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/key_call.c 309495 2016-12-03 18:21:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/key_call.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * key_call.c, Interface to keyserver

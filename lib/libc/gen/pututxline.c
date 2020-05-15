@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/pututxline.c 249593 2013-04-17 21:08:15Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/pututxline.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/endian.h>

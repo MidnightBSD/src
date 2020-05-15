@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Gleb Kurtsou <gleb@FreeBSD.org>
  * All rights reserved.
@@ -24,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/gen/dirfd.c 235649 2012-05-19 14:30:49Z gleb $
+ * $FreeBSD: stable/11/lib/libc/gen/dirfd.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/dirfd.c 235649 2012-05-19 14:30:49Z gleb $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/dirfd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>

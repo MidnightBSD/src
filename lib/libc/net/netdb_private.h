@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 The FreeBSD Project.  All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/net/netdb_private.h 293023 2016-01-01 00:35:06Z ume $
+ * $FreeBSD: stable/11/lib/libc/net/netdb_private.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _NETDB_PRIVATE_H_
@@ -140,5 +139,24 @@ void _sethostdnsent(int);
 void _sethosthtent(int, struct hostent_data *);
 void _setnetdnsent(int);
 void _setnethtent(int, struct netent_data *);
+
+struct hostent *__dns_getanswer(const char *, int, const char *, int);
+int _dns_gethostbyaddr(void *, void *, va_list);
+int _dns_gethostbyname(void *, void *, va_list);
+int _dns_getnetbyaddr(void *, void *, va_list);
+int _dns_getnetbyname(void *, void *, va_list);
+int _ht_gethostbyaddr(void *, void *, va_list);
+int _ht_gethostbyname(void *, void *, va_list);
+int _ht_getnetbyaddr(void *, void *, va_list);
+int _ht_getnetbyname(void *, void *, va_list);
+int _nis_gethostbyaddr(void *, void *, va_list);
+int _nis_gethostbyname(void *, void *, va_list);
+int _nis_getnetbyaddr(void *, void *, va_list);
+int _nis_getnetbyname(void *, void *, va_list);
+#ifdef NS_CACHING
+int __proto_id_func(char *, size_t *, va_list, void *);
+int __proto_marshal_func(char *, size_t *, void *, va_list, void *);
+int __proto_unmarshal_func(char *, size_t, void *, va_list, void *);
+#endif
 
 #endif /* _NETDB_PRIVATE_H_ */

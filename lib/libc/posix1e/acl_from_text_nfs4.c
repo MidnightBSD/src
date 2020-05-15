@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008, 2009 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_from_text_nfs4.c 209736 2010-07-06 17:20:08Z trasz $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/acl_from_text_nfs4.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <stdlib.h>

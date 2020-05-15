@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)ualarm.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/ualarm.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/ualarm.c 357837 2020-02-12 18:48:39Z brooks $");
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -45,9 +44,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/ualarm.c 165903 2007-01-09 00:28:16Z 
  * every ``reload'' microseconds after the first signal.
  */
 useconds_t
-ualarm(usecs, reload)
-	useconds_t usecs;
-	useconds_t reload;
+ualarm(useconds_t usecs, useconds_t reload)
 {
 	struct itimerval new, old;
 
@@ -59,6 +56,5 @@ ualarm(usecs, reload)
 
 	if (setitimer(ITIMER_REAL, &new, &old) == 0)
 		return (old.it_value.tv_sec * USPS + old.it_value.tv_usec);
-	/* else */
-		return (-1);
+	return (-1);
 }

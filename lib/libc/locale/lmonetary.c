@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/lmonetary.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/lmonetary.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <limits.h>
 #include <stddef.h>
@@ -193,7 +192,7 @@ printf(	"int_curr_symbol = %s\n"
 	"n_cs_precedes = %d\n"
 	"n_sep_by_space = %d\n"
 	"p_sign_posn = %d\n"
-	"n_sign_posn = %d\n",
+	"n_sign_posn = %d\n"
 	"int_p_cs_precedes = %d\n"
 	"int_p_sep_by_space = %d\n"
 	"int_n_cs_precedes = %d\n"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Robert N. M. Watson
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/extattr.c 150065 2005-09-12 19:52:42Z stefanf $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/extattr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/extattr.h>

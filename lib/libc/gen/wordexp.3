@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2002 Tim J. Robbins
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/gen/wordexp.3 289938 2015-10-25 17:17:50Z jilles $
+.\" $FreeBSD: stable/11/lib/libc/gen/wordexp.3 288430 2015-09-30 21:32:29Z jilles $
 .\"
 .Dd September 30, 2015
 .Dt WORDEXP 3
@@ -133,9 +132,10 @@ argument contains one of the following unquoted characters:
 .Ql { ,
 .Ql } .
 .It Dv WRDE_BADVAL
-An attempt was made to expand an undefined shell variable and
+An error after successful parsing,
+such as an attempt to expand an undefined shell variable with
 .Dv WRDE_UNDEF
-is set in
+set in
 .Fa flags .
 .It Dv WRDE_CMDSUB
 An attempt was made to use command substitution and
@@ -143,7 +143,9 @@ An attempt was made to use command substitution and
 is set in
 .Fa flags .
 .It Dv WRDE_NOSPACE
-Not enough memory to store the result.
+Not enough memory to store the result or
+an error during
+.Xr fork 2 .
 .It Dv WRDE_SYNTAX
 Shell syntax error in
 .Fa words .

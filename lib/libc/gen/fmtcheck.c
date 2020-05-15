@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: fmtcheck.c,v 1.8 2008/04/28 20:22:59 martin Exp $	*/
 
 /*-
@@ -30,13 +29,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fmtcheck.c 194800 2009-06-23 23:52:12Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/fmtcheck.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
 __weak_reference(__fmtcheck, fmtcheck);
+const char * __fmtcheck(const char *, const char *);
 
 enum __e_fmtcheck_types {
 	FMTCHECK_START,

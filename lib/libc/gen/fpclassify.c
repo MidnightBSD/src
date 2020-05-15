@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Mike Barcroft <mike@FreeBSD.org>
  * Copyright (c) 2002, 2003 David Schultz <das@FreeBSD.ORG>
@@ -25,10 +24,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/gen/fpclassify.c 141379 2005-02-06 03:23:31Z das $
+ * $FreeBSD: stable/11/lib/libc/gen/fpclassify.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/endian.h>
+
+#include <machine/float.h>
 
 #include <math.h>
 #include <stdint.h>
@@ -85,10 +86,18 @@ __fpclassifyl(long double e)
 		return (FP_SUBNORMAL);
 	}
 	mask_nbit_l(u);		/* Mask normalization bit if applicable. */
+#if LDBL_MANT_DIG == 53
+	if (u.bits.exp == 2047) {
+		if ((u.bits.manl | u.bits.manh) == 0)
+			return (FP_INFINITE);
+		return (FP_NAN);
+	}
+#else
 	if (u.bits.exp == 32767) {
 		if ((u.bits.manl | u.bits.manh) == 0)
 			return (FP_INFINITE);
 		return (FP_NAN);
 	}
+#endif
 	return (FP_NORMAL);
 }

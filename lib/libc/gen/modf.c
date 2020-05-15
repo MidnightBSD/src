@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_modf.c 5.1 93/09/24 */
 /*
  * ====================================================
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/modf.c 226606 2011-10-21 06:40:36Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/modf.c 226606 2011-10-21 06:40:36Z das $");
 
 /*
  * modf(double x, double *iptr)

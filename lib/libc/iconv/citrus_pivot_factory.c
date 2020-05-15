@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_pivot_factory.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_pivot_factory.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_pivot_factory.c,v 1.7 2009/04/12 14:20:19 lukem Exp $ */
 
 /*-

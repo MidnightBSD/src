@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2013 Hudson River Trading LLC
 .\" Written by: John H. Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/stdio/open_memstream.3 288464 2015-10-01 21:57:15Z jhb $
+.\" $FreeBSD: stable/11/lib/libc/stdio/open_memstream.3 297355 2016-03-28 16:48:28Z trasz $
 .\"
 .Dd August 1, 2015
 .Dt OPEN_MEMSTREAM 3
@@ -145,8 +144,8 @@ Memory for the stream or buffer could not be allocated.
 .Xr fopen 3 ,
 .Xr free 3 ,
 .Xr fseek 3 ,
-.Xr sbuf 3 ,
-.Xr stdio 3
+.Xr stdio 3 ,
+.Xr sbuf 9
 .Sh STANDARDS
 The
 .Fn open_memstream

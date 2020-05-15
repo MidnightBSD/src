@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpcb_clnt.c,v 1.6 2000/07/16 06:41:43 itojun Exp $	*/
 
 /*-
@@ -36,7 +35,7 @@
 static char sccsid[] = "@(#)rpcb_clnt.c 1.30 89/06/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpcb_clnt.c 320325 2017-06-25 05:46:03Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpcb_clnt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * rpcb_clnt.c

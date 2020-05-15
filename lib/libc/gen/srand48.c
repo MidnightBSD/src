@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Martin Birgmeier
  * All rights reserved.

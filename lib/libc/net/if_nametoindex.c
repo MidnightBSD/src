@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: if_nametoindex.c,v 1.6 2000/11/24 08:18:54 itojun Exp $	*/
 
 /*-
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/if_nametoindex.c 294156 2016-01-16 14:56:30Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/if_nametoindex.c 287619 2015-09-10 10:23:23Z tuexen $");
 
 #include "namespace.h"
 #include <sys/types.h>

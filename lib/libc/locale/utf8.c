@@ -1,5 +1,5 @@
-/* $MidnightBSD$ */
 /*-
+ * Copyright 2013 Garrett D'Amore <garrett@damore.org>
  * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2002-2004 Tim J. Robbins
  * All rights reserved.
@@ -32,7 +32,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/utf8.c 287393 2015-09-02 05:55:57Z bapt $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/utf8.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <limits.h>
@@ -71,7 +71,7 @@ _UTF8_init(struct xlocale_ctype *l, _RuneLocale *rl)
 	l->__mbsnrtowcs = _UTF8_mbsnrtowcs;
 	l->__wcsnrtombs = _UTF8_wcsnrtombs;
 	l->runes = rl;
-	l->__mb_cur_max = 6;
+	l->__mb_cur_max = 4;
 	/*
 	 * UCS-4 encoding used as the internal representation, so
 	 * slots 0x0080-0x00FF are occuped and must be excluded
@@ -166,6 +166,7 @@ _UTF8_mbrtowc(wchar_t * __restrict pwc, const char * __restrict s, size_t n,
 		wch = (unsigned char)*s++ & mask;
 	else
 		wch = us->ch;
+
 	for (i = (us->want == 0) ? 1 : 0; i < MIN(want, n); i++) {
 		if ((*s & 0xc0) != 0x80) {
 			/*

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)linkaddr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/linkaddr.c 309690 2016-12-07 23:20:26Z glebius $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/linkaddr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -52,9 +51,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/net/linkaddr.c 309690 2016-12-07 23:20:26
 #define LETTER	(4*3)
 
 void
-link_addr(addr, sdl)
-	const char *addr;
-	struct sockaddr_dl *sdl;
+link_addr(const char *addr, struct sockaddr_dl *sdl)
 {
 	char *cp = sdl->sdl_data;
 	char *cplim = sdl->sdl_len + (char *)sdl;
@@ -123,8 +120,7 @@ link_addr(addr, sdl)
 static const char hexlist[] = "0123456789abcdef";
 
 char *
-link_ntoa(sdl)
-	const struct sockaddr_dl *sdl;
+link_ntoa(const struct sockaddr_dl *sdl)
 {
 	static char obuf[64];
 	_Static_assert(sizeof(obuf) >= IFNAMSIZ + 20, "obuf is too small");

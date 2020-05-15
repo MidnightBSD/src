@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 1996 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/collcmp.c 303191 2016-07-22 16:48:39Z ache $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/collcmp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <string.h>
 #include <wchar.h>

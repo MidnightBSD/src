@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Portions Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996, 1997, 1988, 1999, 2001, 2003  Internet Software Consortium.
@@ -70,10 +69,9 @@ static const char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: res_mkquery.c,v 1.10 2008/12/11 09:59:00 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_mkquery.c 292430 2015-12-18 06:58:44Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_mkquery.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "port_before.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/nameser.h>
@@ -134,7 +132,7 @@ res_nmkquery(res_state statp,
 	dpp = dnptrs;
 	*dpp++ = buf;
 	*dpp++ = NULL;
-	lastdnptr = dnptrs + sizeof dnptrs / sizeof dnptrs[0];
+	lastdnptr = dnptrs + nitems(dnptrs);
 	/*
 	 * perform opcode specific processing
 	 */

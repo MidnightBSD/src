@@ -1,5 +1,3 @@
-# $MidnightBSD$
-
-.PATH: ${.CURDIR}/../libmd
+.PATH: ${SRCTOP}/lib/libmd
 
 SRCS+=	md5c.c

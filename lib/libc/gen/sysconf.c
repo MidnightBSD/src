@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,8 +34,9 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysconf.c 317131 2017-04-19 10:57:57Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/sysconf.c 331722 2018-03-29 02:50:57Z eadler $");
 
+#include "namespace.h"
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/sysctl.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysconf.c 317131 2017-04-19 10:57:57Z
 #include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
+#include "un-namespace.h"
 
 #include "../stdlib/atexit.h"
 #include "tzfile.h"		/* from ../../../contrib/tzcode/stdtime */
@@ -71,8 +72,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysconf.c 317131 2017-04-19 10:57:57Z
  * less useful than returning up-to-date values, however.
  */
 long
-sysconf(name)
-	int name;
+sysconf(int name)
 {
 	struct rlimit rl;
 	size_t len;
@@ -574,10 +574,10 @@ yesno:
 	case _SC_IPV6:
 #if _POSIX_IPV6 == 0
 		sverrno = errno;
-		value = socket(PF_INET6, SOCK_DGRAM, 0);
+		value = _socket(PF_INET6, SOCK_DGRAM, 0);
 		errno = sverrno;
 		if (value >= 0) {
-			close(value);
+			_close(value);
 			return (200112L);
 		} else
 			return (0);

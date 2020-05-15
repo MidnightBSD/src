@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/_strtoul.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/_strtoul.h 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: _strtoul.h,v 1.1 2008/08/20 12:42:26 joerg Exp $ */
 
 /*-

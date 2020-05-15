@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * Copyright 2013 Garrett D'Amore <garrett@damore.org>
+ * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2002-2004 Tim J. Robbins.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/mbsnrtowcs.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/mbsnrtowcs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <limits.h>
@@ -57,20 +58,20 @@ mbsnrtowcs(wchar_t * __restrict dst, const char ** __restrict src,
 
 size_t
 __mbsnrtowcs_std(wchar_t * __restrict dst, const char ** __restrict src,
-    size_t nms, size_t len, mbstate_t * __restrict ps)
+    size_t nms, size_t len, mbstate_t * __restrict ps,
+    mbrtowc_pfn_t pmbrtowc)
 {
 	const char *s;
 	size_t nchr;
 	wchar_t wc;
 	size_t nb;
-	struct xlocale_ctype *ct = XLOCALE_CTYPE(__get_locale());
 
 	s = *src;
 	nchr = 0;
 
 	if (dst == NULL) {
 		for (;;) {
-			if ((nb = ct->__mbrtowc(&wc, s, nms, ps)) == (size_t)-1)
+			if ((nb = pmbrtowc(&wc, s, nms, ps)) == (size_t)-1)
 				/* Invalid sequence - mbrtowc() sets errno. */
 				return ((size_t)-1);
 			else if (nb == 0 || nb == (size_t)-2)
@@ -83,7 +84,7 @@ __mbsnrtowcs_std(wchar_t * __restrict dst, const char ** __restrict src,
 	}
 
 	while (len-- > 0) {
-		if ((nb = ct->__mbrtowc(dst, s, nms, ps)) == (size_t)-1) {
+		if ((nb = pmbrtowc(dst, s, nms, ps)) == (size_t)-1) {
 			*src = s;
 			return ((size_t)-1);
 		} else if (nb == (size_t)-2) {

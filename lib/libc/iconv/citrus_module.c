@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_module.c 228843 2011-12-23 15:00:37Z cperciva $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_module.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_module.c,v 1.9 2009/01/11 02:46:24 christos Exp $ */
 
 /*-

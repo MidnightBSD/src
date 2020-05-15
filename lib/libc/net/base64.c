@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996, 1998 by Internet Software Consortium.
  *
@@ -42,9 +41,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/base64.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/base64.c 298226 2016-04-18 21:05:15Z avos $");
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 

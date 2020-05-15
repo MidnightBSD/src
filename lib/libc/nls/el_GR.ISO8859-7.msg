@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/el_GR.ISO8859-7.msg 192653 2009-05-23 17:13:35Z des $
 $
 $ Message catalog for C locale (template)
 $

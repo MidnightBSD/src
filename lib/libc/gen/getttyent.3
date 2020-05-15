@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1989, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getttyent.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/gen/getttyent.3 202275 2010-01-14 05:37:43Z ed $
+.\" $FreeBSD: stable/11/lib/libc/gen/getttyent.3 333796 2018-05-18 14:57:58Z gjb $
 .\"
 .Dd November 17, 1996
 .Dt GETTTYENT 3
@@ -76,6 +75,8 @@ struct ttyent {
 #define	TTY_SECURE	0x02	/* allow uid of 0 to login */
 #define	TTY_DIALUP	0x04	/* is a dialup tty */
 #define	TTY_NETWORK	0x08	/* is a network tty */
+#define	TTY_IFEXISTS	0x10	/* configured as "onifexists" */
+#define	TTY_IFCONSOLE	0x20	/* configured as "onifconsole" */
 	int	ty_status;	/* status flags */
 	char	*ty_window;	/* command to start up window manager */
 	char	*ty_comment;	/* comment field */
@@ -116,6 +117,10 @@ Identifies a tty used for network connections.
 If this flag is set, then
 .Fn isnettty
 will return a non-zero value.
+.It Dv TTY_IFEXISTS
+Identifies a tty that does not neccessarily exist.
+.It Dv TTY_IFCONSOLE
+Identifies a tty that might be a system console.
 .El
 .It Fa ty_window
 The command to execute for a window system associated with the line.

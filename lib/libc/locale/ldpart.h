@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/locale/ldpart.h 116274 2003-06-13 00:14:07Z jkh $
+ * $FreeBSD: stable/11/lib/libc/locale/ldpart.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _LDPART_H_

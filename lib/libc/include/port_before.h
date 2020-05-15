@@ -1,12 +1,11 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/include/port_before.h 270838 2014-08-30 10:16:25Z ume $ */
+/* $FreeBSD: stable/11/lib/libc/include/port_before.h 269867 2014-08-12 12:36:06Z ume $ */
 
 #ifndef _PORT_BEFORE_H_
 #define _PORT_BEFORE_H_
 
 #define _LIBC		1
 #define DO_PTHREADS	1
-#define USE_KQUEUE	1
+#define USE_POLL	1
 #define HAVE_MD5	1
 
 #define ISC_SOCKLEN_T	socklen_t

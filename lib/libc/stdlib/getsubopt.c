@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)getsubopt.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/getsubopt.c 251069 2013-05-28 20:57:40Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/getsubopt.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -46,9 +45,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/getsubopt.c 251069 2013-05-28 20:5
 char *suboptarg;
 
 int
-getsubopt(optionp, tokens, valuep)
-	char **optionp, **valuep;
-	char * const *tokens;
+getsubopt(char **optionp, char * const *tokens, char **valuep)
 {
 	int cnt;
 	char *p;

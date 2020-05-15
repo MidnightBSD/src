@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-1999 by Internet Software Consortium.
@@ -20,11 +19,10 @@
 static const char rcsid[] = "$Id: res_data.c,v 1.7 2008/12/11 09:59:00 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_data.c 292461 2015-12-19 02:35:32Z vangyzen $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_data.c 298226 2016-04-18 21:05:15Z avos $");
 
 #include "port_before.h"
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>

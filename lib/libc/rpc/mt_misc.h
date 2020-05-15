@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 2006 The FreeBSD Project. All rights reserved.
  * 
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/rpc/mt_misc.h 204950 2010-03-10 13:23:25Z jhb $
+ * $FreeBSD: stable/11/lib/libc/rpc/mt_misc.h 331722 2018-03-29 02:50:57Z eadler $
  */
 #ifndef _MT_MISC_H
 #define	_MT_MISC_H

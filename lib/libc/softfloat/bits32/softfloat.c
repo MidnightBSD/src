@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: softfloat.c,v 1.1 2002/05/21 23:51:07 bjh21 Exp $ */
 
 /*
@@ -53,7 +52,7 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/bits32/softfloat.c 230189 2012-01-16 04:05:53Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/bits32/softfloat.c 230189 2012-01-16 04:05:53Z das $");
 
 #ifdef SOFTFLOAT_FOR_GCC
 #include "softfloat-for-gcc.h"

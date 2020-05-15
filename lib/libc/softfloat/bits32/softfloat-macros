@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/10/lib/libc/softfloat/bits32/softfloat-macros 230363 2012-01-20 06:16:14Z das $ */
+/* $FreeBSD: stable/11/lib/libc/softfloat/bits32/softfloat-macros 230363 2012-01-20 06:16:14Z das $ */
 
 /*
 ===============================================================================

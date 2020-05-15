@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: timesoftfloat.c,v 1.1 2000/06/06 08:15:11 bjh21 Exp $ */
 
 /*
@@ -32,7 +31,7 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/timesoftfloat.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/timesoftfloat.c 297790 2016-04-10 19:33:58Z pfg $");
 
 #include <stdlib.h>
 #include <stdarg.h>

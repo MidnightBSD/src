@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)hash_bigkey.c	8.3 (Berkeley) 5/31/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash_bigkey.c 190494 2009-03-28 06:47:05Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/hash/hash_bigkey.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PACKAGE: hash

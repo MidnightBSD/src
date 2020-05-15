@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: hesiod.c,v 1.9 1999/02/11 06:16:38 simonb Exp $	*/
 
 /* Copyright (c) 1996 by Internet Software Consortium.
@@ -50,9 +49,8 @@
 static char *orig_rcsid = "$NetBSD: hesiod.c,v 1.9 1999/02/11 06:16:38 simonb Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/hesiod.c 254700 2013-08-23 13:59:47Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/hesiod.c 298226 2016-04-18 21:05:15Z avos $");
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/nameser.h>

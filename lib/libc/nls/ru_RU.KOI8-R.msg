@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/ru_RU.KOI8-R.msg 209360 2010-06-20 06:52:10Z maxim $
 $
 $ Message catalog for ru_RU.KOI8-R locale
 $

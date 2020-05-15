@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc_raw.c,v 1.14 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -38,7 +37,7 @@
 static char sccsid[] = "@(#)svc_raw.c 1.25 89/01/31 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/svc_raw.c 309487 2016-12-03 17:27:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/svc_raw.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc_raw.c,   This a toy for simple testing and timing.

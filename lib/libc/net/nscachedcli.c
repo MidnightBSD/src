@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Michael Bushkov <bushman@rsu.ru>
  * All rights reserved.
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/nscachedcli.c 255328 2013-09-06 21:02:06Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/nscachedcli.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -96,7 +95,7 @@ safe_write(struct cached_connection_ *connection, const void *data,
 
 /*
  * safe_read reads data from connection and tries to do it in the very safe
- * and stable way. It uses kevent to ensure, that the data are availabe for
+ * and stable way. It uses kevent to ensure, that the data are available for
  * reading. If the amount of data to be read is too large, then they would
  * be splitted.
  */

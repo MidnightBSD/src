@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)syslog.c	8.5 (Berkeley) 4/29/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/syslog.c 320312 2017-06-24 14:44:59Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/syslog.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -363,9 +362,9 @@ connectlog(void)
 	struct sockaddr_un SyslogAddr;	/* AF_UNIX address of local logger */
 
 	if (LogFile == -1) {
-		if ((LogFile = _socket(AF_UNIX, SOCK_DGRAM, 0)) == -1)
+		if ((LogFile = _socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC,
+		    0)) == -1)
 			return;
-		(void)_fcntl(LogFile, F_SETFD, FD_CLOEXEC);
 	}
 	if (LogFile != -1 && status == NOCONN) {
 		SyslogAddr.sun_len = sizeof(SyslogAddr);

@@ -1,5 +1,4 @@
-$MidnightBSD$
-$FreeBSD: stable/10/lib/libc/rpc/README 74462 2001-03-19 12:50:13Z alfred $
+$FreeBSD: stable/11/lib/libc/rpc/README 298830 2016-04-30 01:24:24Z pfg $
 
 PLEASE READ THE DISCLAIMER FILE.  DO NOT CALL THE SUN MICROSYSTEMS SUPPORT
 LINE WITH QUESTIONS ON THIS RELEASE.  THEY CANNOT ANSWER QUESTIONS ABOUT THIS
@@ -73,7 +72,7 @@ WHAT'S NEW IN THIS RELEASE: TIRPCSRC 2.3
 The previous release was TIRPCSRC 2.0.
 
 1.      This release is based on Solaris 2.3.  The previous release was
-	based on Solaris 2.0.  This release contains a siginificant number of
+	based on Solaris 2.0.  This release contains a significant number of
 	bug fixes and other enhancements over TIRPCSRC 2.0.
 
 2.      The RPC library is thread safe for all client-side interfaces

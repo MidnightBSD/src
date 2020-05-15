@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/mbtowc.c 297440 2016-03-31 01:36:50Z pfg $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/mbtowc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <stdlib.h>

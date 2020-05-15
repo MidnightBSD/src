@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/fr_FR.ISO8859-1.msg 249471 2013-04-14 11:44:47Z jilles $
 $
 $ Message catalog for fr_FR.ISO8859-1 locale
 $

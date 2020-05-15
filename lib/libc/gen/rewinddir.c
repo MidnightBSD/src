@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)rewinddir.c	8.1 (Berkeley) 6/8/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/rewinddir.c 282979 2015-05-15 15:49:24Z julian $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/rewinddir.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -46,8 +45,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/rewinddir.c 282979 2015-05-15 15:49:2
 #include "telldir.h"
 
 void
-rewinddir(dirp)
-	DIR *dirp;
+rewinddir(DIR *dirp)
 {
 
 	if (__isthreaded)

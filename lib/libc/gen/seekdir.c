@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)seekdir.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/seekdir.c 235647 2012-05-19 12:44:27Z gleb $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/seekdir.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -49,9 +48,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/seekdir.c 235647 2012-05-19 12:44:27Z
  * _seekdir is in telldir.c so that it can share opaque data structures.
  */
 void
-seekdir(dirp, loc)
-	DIR *dirp;
-	long loc;
+seekdir(DIR *dirp, long loc)
 {
 	if (__isthreaded)
 		_pthread_mutex_lock(&dirp->dd_lock);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)bt_overflow.c	8.5 (Berkeley) 7/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/btree/bt_overflow.c 189387 2009-03-05 00:57:01Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/btree/bt_overflow.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 

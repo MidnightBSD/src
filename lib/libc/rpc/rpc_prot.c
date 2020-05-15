@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_prot.c,v 1.16 2000/06/02 23:11:13 fvdl Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)rpc_prot.c 1.36 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)rpc_prot.c	2.3 88/08/07 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpc_prot.c 309494 2016-12-03 18:17:06Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_prot.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * rpc_prot.c

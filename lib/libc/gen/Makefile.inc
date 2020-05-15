@@ -1,9 +1,8 @@
-# $MidnightBSD$
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
-# $FreeBSD: stable/10/lib/libc/gen/Makefile.inc 277317 2015-01-18 11:54:20Z kib $
+# $FreeBSD: stable/11/lib/libc/gen/Makefile.inc 355898 2019-12-19 02:09:16Z kevans $
 
 # machine-independent gen sources
-.PATH: ${.CURDIR}/${LIBC_ARCH}/gen ${.CURDIR}/gen
+.PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/gen ${LIBC_SRCTOP}/gen
 
 SRCS+=	__getosreldate.c \
 	__pthread_mutex_init_calloc_cb_stub.c \
@@ -50,7 +49,6 @@ SRCS+=	__getosreldate.c \
 	fstab.c \
 	ftok.c \
 	fts.c \
-	fts-compat.c \
 	ftw.c \
 	getbootfile.c \
 	getbsize.c \
@@ -100,11 +98,13 @@ SRCS+=	__getosreldate.c \
 	raise.c \
 	readdir.c \
 	readpassphrase.c \
+	recvmmsg.c \
 	rewinddir.c \
 	scandir.c \
 	seed48.c \
 	seekdir.c \
 	semctl.c \
+	sendmmsg.c \
 	setdomainname.c \
 	sethostname.c \
 	setjmperr.c \
@@ -136,7 +136,6 @@ SRCS+=	__getosreldate.c \
 	ualarm.c \
 	ulimit.c \
 	uname.c \
-	unvis-compat.c \
 	usleep.c \
 	utime.c \
 	utxdb.c \
@@ -146,12 +145,16 @@ SRCS+=	__getosreldate.c \
 	waitpid.c \
 	waitid.c \
 	wordexp.c
+.if ${MK_SYMVER} == yes
+SRCS+=	fts-compat.c \
+	unvis-compat.c
+.endif
 
-.PATH: ${.CURDIR}/../../contrib/libc-pwcache
+.PATH: ${SRCTOP}/contrib/libc-pwcache
 SRCS+=	pwcache.c pwcache.h
 
-.PATH: ${.CURDIR}/../../contrib/libc-vis
-CFLAGS+=	-I${.CURDIR}/../../contrib/libc-vis
+.PATH: ${SRCTOP}/contrib/libc-vis
+CFLAGS+=	-I${SRCTOP}/contrib/libc-vis
 SRCS+=	unvis.c vis.c
 
 MISRCS+=modf.c
@@ -160,14 +163,14 @@ CANCELPOINTS_SRCS=sem.c sem_new.c
 .for src in ${CANCELPOINTS_SRCS}
 SRCS+=cancelpoints_${src}
 CLEANFILES+=cancelpoints_${src}
-cancelpoints_${src}:
-	ln -sf ${.CURDIR}/gen/${src} ${.TARGET}
+cancelpoints_${src}: ${LIBC_SRCTOP}/gen/${src} .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 .endfor
 
-SYM_MAPS+=${.CURDIR}/gen/Symbol.map
+SYM_MAPS+=${LIBC_SRCTOP}/gen/Symbol.map
 
 # machine-dependent gen sources
-.sinclude "${.CURDIR}/${LIBC_ARCH}/gen/Makefile.inc"
+.sinclude "${LIBC_SRCTOP}/${LIBC_ARCH}/gen/Makefile.inc"
 
 MAN+=	alarm.3 \
 	arc4random.3 \
@@ -387,6 +390,7 @@ MLINKS+=getgrent.3 endgrent.3 \
 	getgrent.3 getgrgid_r.3
 MLINKS+=gethostname.3 sethostname.3
 MLINKS+=getnetgrent.3 endnetgrent.3 \
+	getnetgrent.3 getnetgrent_r.3 \
 	getnetgrent.3 innetgr.3 \
 	getnetgrent.3 setnetgrent.3
 MLINKS+=getprogname.3 setprogname.3
@@ -452,10 +456,13 @@ MLINKS+=rand48.3 _rand48.3 \
 	rand48.3 nrand48.3 \
 	rand48.3 seed48.3 \
 	rand48.3 srand48.3
+MLINKS+=recv.2 recvmmsg.2
 MLINKS+=scandir.3 alphasort.3
 MLINKS+=sem_open.3 sem_close.3 \
 	sem_open.3 sem_unlink.3
 MLINKS+=sem_wait.3 sem_trywait.3
+MLINKS+=sem_timedwait.3 sem_clockwait_np.3
+MLINKS+=send.2 sendmmsg.2
 MLINKS+=setjmp.3 _longjmp.3 \
 	setjmp.3 _setjmp.3 \
 	setjmp.3 longjmp.3 \
@@ -464,11 +471,15 @@ MLINKS+=setjmp.3 _longjmp.3 \
 	setjmp.3 siglongjmp.3 \
 	setjmp.3 sigsetjmp.3
 MLINKS+=setmode.3 getmode.3
+MLINKS+=setproctitle.3 setproctitle_fast.3
 MLINKS+=sigsetops.3 sigaddset.3 \
+	sigsetops.3 sigandset.3 \
 	sigsetops.3 sigdelset.3 \
 	sigsetops.3 sigemptyset.3 \
 	sigsetops.3 sigfillset.3 \
-	sigsetops.3 sigismember.3
+	sigsetops.3 sigisemptyset.3 \
+	sigsetops.3 sigismember.3 \
+	sigsetops.3 sigorset.3
 MLINKS+=statvfs.3 fstatvfs.3
 MLINKS+=stringlist.3 sl_add.3 \
 	stringlist.3 sl_find.3 \

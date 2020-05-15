@@ -16,10 +16,10 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_neta.c,v 1.3 2013-01-04 23:44:54 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_neta.c,v 1.3 2005/04/27 04:56:20 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_neta.c 288038 2015-09-20 20:50:56Z rodrigc $");
 
 #include "port_before.h"
 
@@ -52,10 +52,7 @@ __MBSDID("$MidnightBSD$");
  *	Paul Vixie (ISC), July 1996
  */
 char *
-inet_neta(src, dst, size)
-	in_addr_t src;
-	char *dst;
-	size_t size;
+inet_neta(in_addr_t src, char *dst, size_t size)
 {
 	char *odst = dst;
 	char *tp;

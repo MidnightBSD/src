@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/toupper.c 235239 2012-05-10 20:03:34Z dim $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/toupper.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <stdio.h>
@@ -46,9 +45,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/locale/toupper.c 235239 2012-05-10 20:03:
 #include "mblocal.h"
 
 __ct_rune_t
-___toupper_l(c, l)
-	__ct_rune_t c;
-	locale_t l;
+___toupper_l(__ct_rune_t c, locale_t l)
 {
 	size_t lim;
 	FIX_LOCALE(l);
@@ -75,8 +72,7 @@ ___toupper_l(c, l)
 	return(c);
 }
 __ct_rune_t
-___toupper(c)
-	__ct_rune_t c;
+___toupper(__ct_rune_t c)
 {
 	return ___toupper_l(c, __get_locale());
 }

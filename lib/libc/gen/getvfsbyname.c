@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)kvm_getvfsbyname.c	8.1 (Berkeley) 4/3/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getvfsbyname.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getvfsbyname.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -46,9 +45,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/getvfsbyname.c 165903 2007-01-09 00:2
  * and if it is resident, return its xvfsconf structure.
  */
 int
-getvfsbyname(fsname, vfcp)
-	const char *fsname;
-	struct xvfsconf *vfcp;
+getvfsbyname(const char *fsname, struct xvfsconf *vfcp)
 {
 	struct xvfsconf *xvfsp;
 	size_t buflen;

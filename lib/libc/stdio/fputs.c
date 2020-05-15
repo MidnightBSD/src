@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,9 +34,10 @@
 static char sccsid[] = "@(#)fputs.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fputs.c 321074 2017-07-17 14:09:34Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/fputs.c 357852 2020-02-13 03:13:29Z kevans $");
 
 #include "namespace.h"
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include "un-namespace.h"
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fputs.c 321074 2017-07-17 14:09:34Z
  * Write the given string to the given file.
  */
 int
-fputs(const char * __restrict s, FILE * __restrict fp)
+fputs_unlocked(const char * __restrict s, FILE * __restrict fp)
 {
 	int retval;
 	struct __suio uio;
@@ -59,9 +59,20 @@ fputs(const char * __restrict s, FILE * __restrict fp)
 	uio.uio_resid = iov.iov_len = strlen(s);
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
-	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, -1);
 	retval = __sfvwrite(fp, &uio);
+	if (retval == 0)
+		return (iov.iov_len > INT_MAX ? INT_MAX : iov.iov_len);
+	return (retval);
+}
+
+int
+fputs(const char * __restrict s, FILE * __restrict fp)
+{
+	int retval;
+
+	FLOCKFILE_CANCELSAFE(fp);
+	retval = fputs_unlocked(s, fp);
 	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }

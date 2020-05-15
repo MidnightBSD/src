@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: ltsf2.c,v 1.1 2000/06/06 08:15:06 bjh21 Exp $ */
 
 /*
@@ -10,7 +9,7 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/ltsf2.c 129203 2004-05-14 12:13:06Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/ltsf2.c 129203 2004-05-14 12:13:06Z cognet $");
 
 flag __ltsf2(float32, float32);
 

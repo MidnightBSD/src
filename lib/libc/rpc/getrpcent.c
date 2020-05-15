@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: getrpcent.c,v 1.17 2000/01/22 22:19:17 mycroft Exp $	*/
 
 /*-
@@ -33,14 +32,13 @@
 static char *sccsid = "@(#)getrpcent.c 1.14 91/03/11 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/getrpcent.c 309502 2016-12-03 18:56:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getrpcent.c 360415 2020-04-27 23:49:13Z brooks $");
 
 /*
  * Copyright (c) 1984 by Sun Microsystems, Inc.
  */
 
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <assert.h>
@@ -227,7 +225,7 @@ files_rpcent(void *retval, void *mdata, va_list ap)
 	int stayopen;
 	enum nss_lookup_type how;
 
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how)
 	{
 	case nss_lt_name:
@@ -347,7 +345,7 @@ files_setrpcent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata)
+	switch ((enum constants)(uintptr_t)mdata)
 	{
 	case SETRPCENT:
 		f = va_arg(ap,int);
@@ -400,14 +398,14 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 	char	*lastkey;
 	char	*resultbuf;
 	int	resultbuflen;
-	char	buf[YPMAXRECORD + 2];
+	char	*buf;
 
 	struct nis_state	*st;
 	int		rv;
 	enum nss_lookup_type	how;
 	int	no_name_active;
 
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how)
 	{
 	case nss_lt_name:
@@ -422,6 +420,7 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		return (NS_NOTFOUND);
 	}
 
+	buf = NULL;
 	rpc = va_arg(ap, struct rpcent *);
 	buffer = va_arg(ap, char *);
 	bufsize = va_arg(ap, size_t);
@@ -445,7 +444,10 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		case nss_lt_name:
 			if (!st->no_name_map)
 			{
-				snprintf(buf, sizeof buf, "%s", name);
+				free(buf);
+				asprintf(&buf, "%s", name);
+				if (buf == NULL)
+					return (NS_TRYAGAIN);
 				rv = yp_match(st->domain, "rpc.byname", buf,
 			    		strlen(buf), &resultbuf, &resultbuflen);
 
@@ -473,7 +475,10 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 			}
 		break;
 		case nss_lt_id:
-			snprintf(buf, sizeof buf, "%d", number);
+			free(buf);
+			asprintf(&buf, "%d", number);
+			if (buf == NULL)
+				return (NS_TRYAGAIN);
 			if (yp_match(st->domain, "rpc.bynumber", buf,
 			    	strlen(buf), &resultbuf, &resultbuflen)) {
 				rv = NS_NOTFOUND;
@@ -560,6 +565,7 @@ done:
 	} while (!(rv & NS_TERMINATE) && (how == nss_lt_all));
 
 fin:
+	free(buf);
 	if ((rv == NS_SUCCESS) && (retval != NULL))
 		*((struct rpcent **)retval) = rpc;
 
@@ -576,7 +582,7 @@ nis_setrpcent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata)
+	switch ((enum constants)(uintptr_t)mdata)
 	{
 	case SETRPCENT:
 	case ENDRPCENT:
@@ -603,7 +609,7 @@ rpc_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	enum nss_lookup_type lookup_type;
 	int res = NS_UNAVAIL;
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -660,7 +666,7 @@ rpc_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -746,7 +752,7 @@ rpc_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;

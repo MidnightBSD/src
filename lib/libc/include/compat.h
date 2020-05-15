@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -25,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/include/compat.h 283927 2015-06-02 19:20:39Z jhb $
+ * $FreeBSD: stable/11/lib/libc/include/compat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
- * This file defines compatiblity symbol versions for old system calls.  It
+ * This file defines compatibility symbol versions for old system calls.  It
  * is included in all generated system call files.
  */
 
@@ -39,18 +38,18 @@
 #define	__sym_compat(sym,impl,verid)	\
 	.symver impl, sym@verid
 
+#ifndef NO_COMPAT7
 __sym_compat(__semctl, freebsd7___semctl, FBSD_1.0);
 __sym_compat(msgctl, freebsd7_msgctl, FBSD_1.0);
 __sym_compat(shmctl, freebsd7_shmctl, FBSD_1.0);
+#endif
 
 #undef __sym_compat
 
 #define	__weak_reference(sym,alias)	\
 	.weak	alias;.equ	alias,sym
 
-#ifndef SYSCALL_COMPAT
 __weak_reference(__sys_fcntl,__fcntl_compat)
-#endif
 
 #undef __weak_reference
 

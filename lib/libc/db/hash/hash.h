@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)hash.h	8.3 (Berkeley) 5/31/94
- * $FreeBSD: stable/10/lib/libc/db/hash/hash.h 206178 2010-04-05 10:12:21Z avg $
+ * $FreeBSD: stable/11/lib/libc/db/hash/hash.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* Operations */
@@ -139,11 +138,11 @@ typedef struct htab	 {		/* Memory resident data structure */
 #define ALL_SET			((u_int32_t)0xFFFFFFFF)
 #define ALL_CLEAR		0
 
-#define PTROF(X)	((BUFHEAD *)((ptrdiff_t)(X)&~0x3))
-#define ISMOD(X)	((u_int32_t)(ptrdiff_t)(X)&0x1)
-#define DOMOD(X)	((X) = (char *)((ptrdiff_t)(X)|0x1))
-#define ISDISK(X)	((u_int32_t)(ptrdiff_t)(X)&0x2)
-#define DODISK(X)	((X) = (char *)((ptrdiff_t)(X)|0x2))
+#define PTROF(X)	((BUFHEAD *)((intptr_t)(X)&~0x3))
+#define ISMOD(X)	((u_int32_t)(intptr_t)(X)&0x1)
+#define DOMOD(X)	((X) = (char *)((intptr_t)(X)|0x1))
+#define ISDISK(X)	((u_int32_t)(intptr_t)(X)&0x2)
+#define DODISK(X)	((X) = (char *)((intptr_t)(X)|0x2))
 
 #define BITS_PER_MAP	32
 

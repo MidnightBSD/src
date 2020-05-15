@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 The FreeBSD Foundation
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/locale/xlocale.c 284524 2015-06-17 19:12:18Z delphij $
+ * $FreeBSD: stable/11/lib/libc/locale/xlocale.c 359584 2020-04-03 00:38:12Z markj $
  */
 
 #include <pthread.h>
@@ -162,7 +161,7 @@ set_thread_locale(locale_t loc)
 	if (NULL != l) {
 		xlocale_retain((struct xlocale_refcounted*)l);
 	}
-	locale_t old = pthread_getspecific(locale_info_key);
+	locale_t old = get_thread_locale();
 	if ((NULL != old) && (l != old)) {
 		xlocale_release((struct xlocale_refcounted*)old);
 	}

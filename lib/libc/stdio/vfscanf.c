@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@
 static char sccsid[] = "@(#)vfscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/vfscanf.c 321074 2017-07-17 14:09:34Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/vfscanf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <ctype.h>
@@ -865,7 +864,7 @@ doswitch:
 			 * z', but treats `a-a' as `the letter a, the
 			 * character -, and the letter a'.
 			 *
-			 * For compatibility, the `-' is not considerd
+			 * For compatibility, the `-' is not considered
 			 * to define a range if the character following
 			 * it is either a close bracket (required by ANSI)
 			 * or is not numerically greater than the character

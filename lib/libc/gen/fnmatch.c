@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@
 static char sccsid[] = "@(#)fnmatch.c	8.2 (Berkeley) 4/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fnmatch.c 324505 2017-10-10 21:04:40Z pfg $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/fnmatch.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
@@ -77,9 +76,7 @@ static int fnmatch1(const char *, const char *, const char *, int, mbstate_t,
 		mbstate_t);
 
 int
-fnmatch(pattern, string, flags)
-	const char *pattern, *string;
-	int flags;
+fnmatch(const char *pattern, const char *string, int flags)
 {
 	static const mbstate_t initial;
 
@@ -87,10 +84,8 @@ fnmatch(pattern, string, flags)
 }
 
 static int
-fnmatch1(pattern, string, stringstart, flags, patmbs, strmbs)
-	const char *pattern, *string, *stringstart;
-	int flags;
-	mbstate_t patmbs, strmbs;
+fnmatch1(const char *pattern, const char *string, const char *stringstart,
+    int flags, mbstate_t patmbs, mbstate_t strmbs)
 {
 	const char *bt_pattern, *bt_string;
 	mbstate_t bt_patmbs, bt_strmbs;
@@ -237,12 +232,8 @@ fnmatch1(pattern, string, stringstart, flags, patmbs, strmbs)
 }
 
 static int
-rangematch(pattern, test, flags, newp, patmbs)
-	const char *pattern;
-	wchar_t test;
-	int flags;
-	char **newp;
-	mbstate_t *patmbs;
+rangematch(const char *pattern, wchar_t test, int flags, char **newp,
+    mbstate_t *patmbs)
 {
 	int negate, ok;
 	wchar_t c, c2;
@@ -258,7 +249,7 @@ rangematch(pattern, test, flags, newp, patmbs)
 	 * consistency with the regular expression syntax.
 	 * J.T. Conklin (conklin@ngai.kaleida.com)
 	 */
-	if ( (negate = (*pattern == '!' || *pattern == '^')) )
+	if ((negate = (*pattern == '!' || *pattern == '^')))
 		++pattern;
 
 	if (flags & FNM_CASEFOLD)

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/open_wmemstream.c 292150 2015-12-13 04:24:15Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/open_wmemstream.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <assert.h>
@@ -64,7 +63,7 @@ wmemstream_grow(struct wmemstream *ms, fpos_t newoff)
 	else
 		newsize = newoff;
 	if (newsize > ms->len) {
-		buf = realloc(*ms->bufp, (newsize + 1) * sizeof(wchar_t));
+		buf = reallocarray(*ms->bufp, newsize + 1, sizeof(wchar_t));
 		if (buf != NULL) {
 #ifdef DEBUG
 			fprintf(stderr, "WMS: %p growing from %zd to %zd\n",

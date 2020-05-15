@@ -1,6 +1,9 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/db/mpool/Makefile.inc,v 1.4 2002/11/18 09:50:55 ru Exp $
+# $FreeBSD: stable/11/lib/libc/db/mpool/Makefile.inc 296915 2016-03-15 19:26:32Z emaste $
 
-.PATH: ${.CURDIR}/db/mpool
+.PATH: ${LIBC_SRCTOP}/db/mpool
 
-SRCS+=	mpool.c mpool-compat.c
+SRCS+=	mpool.c
+.if ${MK_SYMVER} == yes
+SRCS+=	mpool-compat.c
+.endif

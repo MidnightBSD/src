@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)stat_flags.c	8.1 (Berkeley) 5/31/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/strtofflags.c 254627 2013-08-21 23:04:48Z ken $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/strtofflags.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -95,14 +94,13 @@ static struct {
  *	are set, return the empty string.
  */
 char *
-fflagstostr(flags)
-	u_long flags;
+fflagstostr(u_long flags)
 {
 	char *string;
 	const char *sp;
 	char *dp;
 	u_long setflags;
-	int i;
+	u_int i;
 
 	if ((string = (char *)malloc(nmappings * (longestflaglen + 1))) == NULL)
 		return (NULL);
@@ -129,9 +127,7 @@ fflagstostr(flags)
  *	to the offending token.
  */
 int
-strtofflags(stringp, setp, clrp)
-	char **stringp;
-	u_long *setp, *clrp;
+strtofflags(char **stringp, u_long *setp, u_long *clrp)
 {
 	char *string, *p;
 	int i;

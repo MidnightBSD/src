@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/gai_strerror.c 199083 2009-11-09 12:46:59Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/gai_strerror.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <netdb.h>

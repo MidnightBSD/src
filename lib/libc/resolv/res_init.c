@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1985, 1989, 1993
  *    The Regents of the University of California.  All rights reserved.
@@ -70,13 +69,12 @@ static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
 static const char rcsid[] = "$Id: res_init.c,v 1.26 2008/12/11 09:59:00 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_init.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_init.c 340058 2018-11-02 15:02:44Z bz $");
 
 #include "port_before.h"
 
 #include "namespace.h"
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -146,7 +144,7 @@ static u_int32_t net_mask(struct in_addr);
  * there will have precedence.  Otherwise, the server address is set to
  * INADDR_ANY and the default domain name comes from the gethostname().
  *
- * An interrim version of this code (BIND 4.9, pre-4.4BSD) used 127.0.0.1
+ * An interim version of this code (BIND 4.9, pre-4.4BSD) used 127.0.0.1
  * rather than INADDR_ANY ("0.0.0.0") as the default name server address
  * since it was noted that INADDR_ANY actually meant ``the first interface
  * you "ifconfig"'d at boot time'' and if this was a SLIP or PPP interface,
@@ -169,7 +167,7 @@ res_ninit(res_state statp) {
 	return (__res_vinit(statp, 0));
 }
 
-/*% This function has to be reachable by res_data.c but not publically. */
+/*% This function has to be reachable by res_data.c but not publicly. */
 int
 __res_vinit(res_state statp, int preinit) {
 	FILE *fp;
@@ -679,6 +677,8 @@ res_setoptions(res_state statp, const char *options, const char *source)
 		       statp->options |= RES_INSECURE2;
 		} else if (!strncmp(cp, "rotate", sizeof("rotate") - 1)) {
 			statp->options |= RES_ROTATE;
+		} else if (!strncmp(cp, "usevc", sizeof("usevc") - 1)) {
+			statp->options |= RES_USEVC;
 		} else if (!strncmp(cp, "no-check-names",
 				    sizeof("no-check-names") - 1)) {
 			statp->options |= RES_NOCHECKNAME;
@@ -740,8 +740,7 @@ res_setoptions(res_state statp, const char *options, const char *source)
 #ifdef RESOLVSORT
 /* XXX - should really support CIDR which means explicit masks always. */
 static u_int32_t
-net_mask(in)		/*!< XXX - should really use system's version of this  */
-	struct in_addr in;
+net_mask(struct in_addr in)		/*!< XXX - should really use system's version of this  */
 {
 	u_int32_t i = ntohl(in.s_addr);
 

@@ -1,9 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: mt_misc.c,v 1.1 2000/06/02 23:11:11 fvdl Exp $	*/
 
 /* #pragma ident	"@(#)mt_misc.c	1.24	93/04/29 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/mt_misc.c 309487 2016-12-03 17:27:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/mt_misc.c 297790 2016-04-10 19:33:58Z pfg $");
 
 #include "namespace.h"
 #include "reentrant.h"

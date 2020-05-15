@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Jilles Tjoelker
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/include/errlst.h 255108 2013-08-31 22:32:42Z jilles $
+ * $FreeBSD: stable/11/lib/libc/include/errlst.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef __ERRLST_H__

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +32,7 @@
  * Compatibility shims for the GNU C Library-style nsswitch interface.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/nss_compat.c 127625 2004-03-30 15:56:15Z nectar $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/nss_compat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -80,6 +79,16 @@ do {									\
 
 DECLARE_TERMINATOR(group);
 
+int __nss_compat_getgrnam_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_getgrgid_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_getgrent_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_setgrent(void *retval, void *mdata, va_list ap);
+int __nss_compat_endgrent(void *retval, void *mdata, va_list ap);
+int __nss_compat_getpwnam_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_getpwuid_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_getpwent_r(void *retval, void *mdata, va_list ap);
+int __nss_compat_setpwent(void *retval, void *mdata, va_list ap);
+int __nss_compat_endpwent(void *retval, void *mdata, va_list ap);
 
 int
 __nss_compat_getgrnam_r(void *retval, void *mdata, va_list ap)

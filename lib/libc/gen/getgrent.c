@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -32,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getgrent.c 328943 2018-02-06 19:09:49Z mckusick $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getgrent.c 360415 2020-04-27 23:49:13Z brooks $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -76,6 +75,7 @@ static const ns_src defaultsrc[] = {
 	{ NULL, 0 }
 };
 
+int	 __getgroupmembership(const char *, gid_t, gid_t *, int, int *);
 int	 __gr_match_entry(const char *, size_t, enum nss_lookup_type,
 	    const char *, gid_t);
 int	 __gr_parse_entry(char *, size_t, struct group *, char *, size_t,
@@ -164,7 +164,7 @@ grp_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	enum nss_lookup_type lookup_type;
 
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -218,7 +218,7 @@ grp_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	size_t desired_size, size, mem_size;
 	char *p, **mem;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -313,7 +313,7 @@ grp_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	char *p;
 	char **mem;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -804,7 +804,7 @@ files_setgrent(void *retval, void *mdata, va_list ap)
 	rv = files_getstate(&st);
 	if (rv != 0) 
 		return (NS_UNAVAIL);
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETGRENT:
 		stayopen = va_arg(ap, int);
 		if (st->fp != NULL)
@@ -840,7 +840,7 @@ files_group(void *retval, void *mdata, va_list ap)
 
 	name = NULL;
 	gid = (gid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -896,7 +896,7 @@ files_group(void *retval, void *mdata, va_list ap)
 			break;
 		pos = ftello(st->fp);
 	}
-	if (!stayopen && st->fp != NULL) {
+	if (st->fp != NULL && !stayopen) {
 		fclose(st->fp);
 		st->fp = NULL;
 	}
@@ -1087,7 +1087,7 @@ nis_group(void *retval, void *mdata, va_list ap)
 	
 	name = NULL;
 	gid = (gid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -1173,8 +1173,10 @@ nis_group(void *retval, void *mdata, va_list ap)
 		 * terminator, alignment padding, and one (char *)
 		 * pointer for the member list terminator.
 		 */
-		if (resultlen >= bufsize - _ALIGNBYTES - sizeof(char *))
+		if (resultlen >= bufsize - _ALIGNBYTES - sizeof(char *)) {
+			free(result);
 			goto erange;
+		}
 		memcpy(buffer, result, resultlen);
 		buffer[resultlen] = '\0';
 		free(result);
@@ -1237,15 +1239,14 @@ compat_setgrent(void *retval, void *mdata, va_list ap)
 
 #define set_setent(x, y) do {	 				\
 	int i;							\
-								\
-	for (i = 0; i < (sizeof(x)/sizeof(x[0])) - 1; i++)	\
+	for (i = 0; i < (int)(nitems(x) - 1); i++)		\
 		x[i].mdata = (void *)y;				\
 } while (0)
 
 	rv = compat_getstate(&st);
-	if (rv != 0) 
+	if (rv != 0)
 		return (NS_UNAVAIL);
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETGRENT:
 		stayopen = va_arg(ap, int);
 		if (st->fp != NULL)
@@ -1307,14 +1308,13 @@ compat_group(void *retval, void *mdata, va_list ap)
 
 #define set_lookup_type(x, y) do { 				\
 	int i;							\
-								\
-	for (i = 0; i < (sizeof(x)/sizeof(x[0])) - 1; i++)	\
+	for (i = 0; i < (int)(nitems(x) - 1); i++)		\
 		x[i].mdata = (void *)y;				\
 } while (0)
 
 	name = NULL;
 	gid = (gid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -1450,7 +1450,7 @@ docompat:
 		pos = ftello(st->fp);
 	}
 fin:
-	if (!stayopen && st->fp != NULL) {
+	if (st->fp != NULL && !stayopen) {
 		fclose(st->fp);
 		st->fp = NULL;
 	}

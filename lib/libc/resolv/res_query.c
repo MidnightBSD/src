@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Portions Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996-2001, 2003  Internet Software Consortium.
@@ -70,10 +69,9 @@ static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: res_query.c,v 1.11 2008/11/14 02:36:51 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_query.c 300286 2016-05-20 07:18:33Z truckman $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_query.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "port_before.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

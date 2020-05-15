@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)bt_open.c	8.10 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/btree/bt_open.c 287480 2015-09-05 08:55:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/btree/bt_open.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Implementation of btree access method for 4.4BSD.
@@ -278,7 +277,7 @@ __bt_open(const char *fname, int flags, int mode, const BTREEINFO *openinfo, int
 		b.cachesize = b.psize * MINCACHE;
 
 	/* Calculate number of pages to cache. */
-	ncache = (b.cachesize + t->bt_psize - 1) / t->bt_psize;
+	ncache = howmany(b.cachesize, t->bt_psize);
 
 	/*
 	 * The btree data structure requires that at least two keys can fit on

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)ndbm.c	8.4 (Berkeley) 7/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/ndbm.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/hash/ndbm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This package provides a dbm compatible interface to the new hashing
@@ -57,9 +56,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/ndbm.c 165903 2007-01-09 00:28:16
  *	 NULL on failure
  */
 extern DBM *
-dbm_open(file, flags, mode)
-	const char *file;
-	int flags, mode;
+dbm_open(const char *file, int flags, mode_t mode)
 {
 	HASHINFO info;
 	char path[MAXPATHLEN];
@@ -81,8 +78,7 @@ dbm_open(file, flags, mode)
 }
 
 extern void
-dbm_close(db)
-	DBM *db;
+dbm_close(DBM *db)
 {
 	(void)(db->close)(db);
 }
@@ -93,9 +89,7 @@ dbm_close(db)
  *	NULL on failure
  */
 extern datum
-dbm_fetch(db, key)
-	DBM *db;
-	datum key;
+dbm_fetch(DBM *db, datum key)
 {
 	datum retdata;
 	int status;
@@ -119,8 +113,7 @@ dbm_fetch(db, key)
  *	NULL on failure
  */
 extern datum
-dbm_firstkey(db)
-	DBM *db;
+dbm_firstkey(DBM *db)
 {
 	int status;
 	datum retkey;
@@ -140,8 +133,7 @@ dbm_firstkey(db)
  *	NULL on failure
  */
 extern datum
-dbm_nextkey(db)
-	DBM *db;
+dbm_nextkey(DBM *db)
 {
 	int status;
 	datum retkey;
@@ -161,9 +153,7 @@ dbm_nextkey(db)
  *	<0 failure
  */
 extern int
-dbm_delete(db, key)
-	DBM *db;
-	datum key;
+dbm_delete(DBM *db, datum key)
 {
 	int status;
 	DBT dbtkey;
@@ -184,10 +174,7 @@ dbm_delete(db, key)
  *	 1 if DBM_INSERT and entry exists
  */
 extern int
-dbm_store(db, key, data, flags)
-	DBM *db;
-	datum key, data;
-	int flags;
+dbm_store(DBM *db, datum key, datum data, int flags)
 {
 	DBT dbtkey, dbtdata;
 
@@ -200,8 +187,7 @@ dbm_store(db, key, data, flags)
 }
 
 extern int
-dbm_error(db)
-	DBM *db;
+dbm_error(DBM *db)
 {
 	HTAB *hp;
 
@@ -210,8 +196,7 @@ dbm_error(db)
 }
 
 extern int
-dbm_clearerr(db)
-	DBM *db;
+dbm_clearerr(DBM *db)
 {
 	HTAB *hp;
 
@@ -221,8 +206,7 @@ dbm_clearerr(db)
 }
 
 extern int
-dbm_dirfno(db)
-	DBM *db;
+dbm_dirfno(DBM *db)
 {
 	return(((HTAB *)db->internal)->fp);
 }

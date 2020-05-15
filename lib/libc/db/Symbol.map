@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/lib/libc/db/Symbol.map,v 1.2 2007/04/29 14:05:16 deischen Exp $
+ * $FreeBSD: stable/11/lib/libc/db/Symbol.map 190498 2009-03-28 07:31:02Z delphij $
  */
 
 FBSD_1.0 {

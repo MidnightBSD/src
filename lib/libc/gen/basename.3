@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" $OpenBSD: basename.3,v 1.20 2007/05/31 19:19:28 jmc Exp $
 .\"
 .\" Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -15,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/gen/basename.3 223216 2011-06-18 00:33:34Z delphij $
+.\" $FreeBSD: stable/11/lib/libc/gen/basename.3 303762 2016-08-05 05:50:27Z ed $
 .\"
-.Dd March 31, 2010
+.Dd July 29, 2016
 .Dt BASENAME 3
 .Os
 .Sh NAME
@@ -62,8 +61,16 @@ function
 returns a pointer to internal storage space allocated on the first call
 that will be overwritten
 by subsequent calls.
+.Pp
+Other vendor implementations of
+.Fn basename
+may store their result in the input buffer,
+making it safe to use in multithreaded applications.
+Future versions of
+.Fx
+will follow this approach as well.
 .Fn basename_r
-is therefore preferred for threaded applications.
+will then become obsolete.
 .Sh RETURN VALUES
 On successful completion,
 .Fn basename

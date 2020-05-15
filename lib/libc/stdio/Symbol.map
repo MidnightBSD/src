@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/stdio/Symbol.map 291602 2015-12-01 18:19:23Z ngie $
+/*
+ * $FreeBSD: stable/11/lib/libc/stdio/Symbol.map 357852 2020-02-13 03:13:29Z kevans $
  */
 
 FBSD_1.0 {
@@ -164,6 +164,19 @@ FBSD_1.3 {
 
 FBSD_1.4 {
 	fdclose;
+	fopencookie;
+};
+
+FBSD_1.5 {
+	gets_s;
+};
+
+FBSD_1.6 {
+	fflush_unlocked;
+	fputc_unlocked;
+	fputs_unlocked;
+	fread_unlocked;
+	fwrite_unlocked;
 };
 
 FBSDprivate_1.0 {

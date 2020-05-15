@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/wctype.c 228269 2011-12-05 00:00:47Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/wctype.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <string.h>
@@ -74,9 +73,10 @@ wctype_l(const char *property, locale_t locale)
 		"ideogram\0"	/* BSD extension */
 		"special\0"	/* BSD extension */
 		"phonogram\0"	/* BSD extension */
+		"number\0"	/* BSD extension */
 		"rune\0";	/* BSD extension */
 	static const wctype_t propmasks[] = {
-		_CTYPE_A|_CTYPE_D,
+		_CTYPE_A|_CTYPE_N,
 		_CTYPE_A,
 		_CTYPE_B,
 		_CTYPE_C,
@@ -91,6 +91,7 @@ wctype_l(const char *property, locale_t locale)
 		_CTYPE_I,
 		_CTYPE_T,
 		_CTYPE_Q,
+		_CTYPE_N,
 		0xFFFFFF00L
 	};
 	size_t len1, len2;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,12 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/feature_present.c 175220 2008-01-10 22:11:21Z jhb $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/feature_present.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /*
  * Returns true if the named feature is present in the currently

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_bcs.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_bcs.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_bcs.c,v 1.5 2005/05/14 17:55:42 tshiozak Exp $ */
 
 /*-

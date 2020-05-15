@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
 .\" All rights reserved.
 .\"
@@ -24,7 +23,7 @@
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 .\" ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/gen/ftok.3 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: stable/11/lib/libc/gen/ftok.3 276006 2014-12-21 12:36:36Z brueffer $
 .Dd July 9, 2009
 .Dt FTOK 3
 .Os
@@ -65,16 +64,16 @@ function will return -1 if
 .Fa path
 does not exist or if it cannot be accessed by the calling process.
 .Sh SEE ALSO
+.Xr msgget 2 ,
 .Xr semget 2 ,
-.Xr shmget 2 ,
-.Xr msgget 2
+.Xr shmget 2
 .Sh HISTORY
 The
 .Fn ftok
 function originates with System V and is typically used by programs
 that use the System V IPC routines.
 .Sh AUTHORS
-.An Thorsten Lockert Aq tholo@sigmasoft.com
+.An Thorsten Lockert Aq Mt tholo@sigmasoft.com
 .Sh BUGS
 The returned key is computed based on the device minor number and inode of the
 specified

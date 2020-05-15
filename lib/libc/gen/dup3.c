@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Jukka A. Ukkonen
  * All rights reserved.
@@ -28,13 +27,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/dup3.c 254409 2013-08-16 13:10:30Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/dup3.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include "un-namespace.h"
+
+int __dup3(int, int, int);
 
 int
 __dup3(int oldfd, int newfd, int flags)

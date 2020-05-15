@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2002 William C. Fenner.  All rights reserved.
  *
@@ -23,15 +22,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/net/sockatmark.c 107836 2002-12-13 22:22:55Z fenner $
+ * $FreeBSD: stable/11/lib/libc/net/sockatmark.c 331722 2018-03-29 02:50:57Z eadler $
  */
+#include "namespace.h"
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include "un-namespace.h"
 
 int sockatmark(int s)
 {
 	int atmark;
 
-	if (ioctl(s, SIOCATMARK, &atmark) == -1)
+	if (_ioctl(s, SIOCATMARK, &atmark) == -1)
 		return -1;
 	return atmark;
 }

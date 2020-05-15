@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2004 The Aerospace Corporation.  All rights reserved.
  *
@@ -69,15 +68,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/eui64.c 254700 2013-08-23 13:59:47Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/eui64.c 298226 2016-04-18 21:05:15Z avos $");
 
 #include <stdio.h>
 #include <paths.h>
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/eui64.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/param.h>
 #ifdef YP
 #include <rpc/rpc.h>
 #include <rpcsvc/yp_prot.h>
@@ -133,6 +131,7 @@ eui64_line(const char *l, struct eui64 *e, char *hostname, size_t len)
 			goto bad;
 	}
 
+	free(linehead);
 	return (0);
 
 bad:

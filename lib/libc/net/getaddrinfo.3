@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$KAME: getaddrinfo.3,v 1.36 2005/01/05 03:23:05 itojun Exp $
 .\"	$OpenBSD: getaddrinfo.3,v 1.35 2004/12/21 03:40:31 jaredy Exp $
 .\"
@@ -17,9 +16,9 @@
 .\" OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 .\" PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/net/getaddrinfo.3 292760 2015-12-27 00:37:04Z ume $
+.\" $FreeBSD: stable/11/lib/libc/net/getaddrinfo.3 323857 2017-09-21 10:16:25Z kib $
 .\"
-.Dd December 21, 2015
+.Dd September 13, 2017
 .Dt GETADDRINFO 3
 .Os
 .Sh NAME
@@ -41,7 +40,6 @@
 The
 .Fn getaddrinfo
 function is used to get a list of
-.Tn IP
 addresses and port numbers for host
 .Fa hostname
 and service
@@ -60,7 +58,9 @@ arguments are either pointers to NUL-terminated strings or the null pointer.
 An acceptable value for
 .Fa hostname
 is either a valid host name or a numeric host address string consisting
-of a dotted decimal IPv4 address or an IPv6 address.
+of a dotted decimal IPv4 address,
+an IPv6 address,
+or a UNIX-domain address.
 The
 .Fa servname
 is either a decimal port number or a service name listed in
@@ -106,6 +106,7 @@ operating system.
 Denotes the type of socket that is wanted:
 .Dv SOCK_STREAM ,
 .Dv SOCK_DGRAM ,
+.Dv SOCK_SEQPACKET ,
 or
 .Dv SOCK_RAW .
 When
@@ -113,9 +114,11 @@ When
 is zero the caller will accept any socket type.
 .It Fa ai_protocol
 Indicates which transport protocol is desired,
-.Dv IPPROTO_UDP
+.Dv IPPROTO_UDP ,
+.Dv IPPROTO_TCP ,
+.Dv IPPROTO_SCTP ,
 or
-.Dv IPPROTO_TCP .
+.Dv IPPROTO_UDPLITE .
 If
 .Fa ai_protocol
 is zero the caller will accept any protocol.
@@ -134,6 +137,9 @@ or be the bitwise-inclusive OR of one or more of the values
 .Dv AI_PASSIVE
 and
 .Dv AI_V4MAPPED .
+For a UNIX-domain address,
+.Fa ai_flags
+is ignored.
 .Bl -tag -width "AI_CANONNAMEXX"
 .It Dv AI_ADDRCONFIG
 If the
@@ -281,8 +287,8 @@ Each returned
 .Li addrinfo
 structure contains three members that are suitable for a call to
 .Xr socket 2 :
-.Fa ai_family,
-.Fa ai_socktype,
+.Fa ai_family ,
+.Fa ai_socktype ,
 and
 .Fa ai_protocol .
 For each
@@ -345,6 +351,17 @@ pointer should be a
 .Li addrinfo
 structure created by a call to
 .Fn getaddrinfo .
+.Sh IMPLEMENTATION NOTES
+The behavior of
+.Li freeadrinfo(NULL)
+is left unspecified by both
+.St -susv4
+and
+.Dv "RFC 3493" .
+The current implementation ignores a
+.Dv NULL
+argument for compatibility with programs that rely on the implementation
+details of other operating systems.
 .Sh RETURN VALUES
 .Fn getaddrinfo
 returns zero on success or one of the error codes listed in
@@ -459,6 +476,9 @@ freeaddrinfo(res0);
 .Xr getnameinfo 3 ,
 .Xr getservbyname 3 ,
 .Xr resolver 3 ,
+.Xr inet 4 ,
+.Xr inet6 4 ,
+.Xr unix 4 ,
 .Xr hosts 5 ,
 .Xr resolv.conf 5 ,
 .Xr services 5 ,

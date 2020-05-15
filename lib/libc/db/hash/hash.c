@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)hash.c	8.9 (Berkeley) 6/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/hash/hash.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -161,8 +160,7 @@ __hash_open(const char *file, int flags, int mode,
 		 * maximum bucket number, so the number of buckets is
 		 * max_bucket + 1.
 		 */
-		nsegs = (hashp->MAX_BUCKET + 1 + hashp->SGSIZE - 1) /
-			 hashp->SGSIZE;
+		nsegs = howmany(hashp->MAX_BUCKET + 1, hashp->SGSIZE);
 		if (alloc_segs(hashp, nsegs))
 			/*
 			 * If alloc_segs fails, table will have been destroyed
@@ -814,7 +812,7 @@ __expand_table(HTAB *hashp)
 			hashp->DSIZE = dirsize << 1;
 		}
 		if ((hashp->dir[new_segnum] =
-		    (SEGMENT)calloc(hashp->SGSIZE, sizeof(SEGMENT))) == NULL)
+		    calloc(hashp->SGSIZE, sizeof(SEGMENT))) == NULL)
 			return (-1);
 		hashp->exsegs++;
 		hashp->nsegs++;
@@ -883,7 +881,7 @@ alloc_segs(HTAB *hashp, int nsegs)
 	int save_errno;
 
 	if ((hashp->dir =
-	    (SEGMENT *)calloc(hashp->DSIZE, sizeof(SEGMENT *))) == NULL) {
+	    calloc(hashp->DSIZE, sizeof(SEGMENT *))) == NULL) {
 		save_errno = errno;
 		(void)hdestroy(hashp);
 		errno = save_errno;
@@ -893,8 +891,7 @@ alloc_segs(HTAB *hashp, int nsegs)
 	if (nsegs == 0)
 		return (0);
 	/* Allocate segments */
-	if ((store = (SEGMENT)calloc(nsegs << hashp->SSHIFT,
-	    sizeof(SEGMENT))) == NULL) {
+	if ((store = calloc(nsegs << hashp->SSHIFT, sizeof(SEGMENT))) == NULL) {
 		save_errno = errno;
 		(void)hdestroy(hashp);
 		errno = save_errno;

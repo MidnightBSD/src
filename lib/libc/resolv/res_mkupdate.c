@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-1999 by Internet Software Consortium.
@@ -26,11 +25,10 @@
 static const char rcsid[] = "$Id: res_mkupdate.c,v 1.10 2008/12/11 09:59:00 marka Exp $";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_mkupdate.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_mkupdate.c 298226 2016-04-18 21:05:15Z avos $");
 
 #include "port_before.h"
 
-#include <sys/types.h>
 #include <sys/param.h>
 
 #include <netinet/in.h>
@@ -128,7 +126,7 @@ res_nmkupdate(res_state statp, ns_updrec *rrecp_in, u_char *buf, int buflen) {
 	dpp = dnptrs;
 	*dpp++ = buf;
 	*dpp++ = NULL;
-	lastdnptr = dnptrs + sizeof dnptrs / sizeof dnptrs[0];
+	lastdnptr = dnptrs + nitems(dnptrs);
 
 	if (rrecp_start == NULL)
 		return (-5);
@@ -976,7 +974,7 @@ struct valuelist {
 static struct valuelist *servicelist, *protolist;
 
 static void
-res_buildservicelist() {
+res_buildservicelist(void) {
 	struct servent *sp;
 	struct valuelist *slp;
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/strfmon.c 268881 2014-07-19 15:12:38Z pfg $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/strfmon.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -51,7 +50,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/strfmon.c 268881 2014-07-19 15:12:
 #define	SIGN_POSN_USED		0x02	/* '+' or '(' usage flag */
 #define	LOCALE_POSN		0x04	/* use locale defined +/- (default) */
 #define	PARENTH_POSN		0x08	/* enclose negative amount in () */
-#define	SUPRESS_CURR_SYMBOL	0x10	/* supress the currency from output */
+#define	SUPRESS_CURR_SYMBOL	0x10	/* suppress the currency from output */
 #define	LEFT_JUSTIFY		0x20	/* left justify */
 #define	USE_INTL_CURRENCY	0x40	/* use international currency symbol */
 #define IS_NEGATIVE		0x80	/* is argument value negative ? */
@@ -581,7 +580,7 @@ __format_grouped_double(double value, int *flags,
 	}
 	bufend = rslt + bufsize - 1;	/* reserve space for trailing '\0' */
 
-	/* skip spaces at beggining */
+	/* skip spaces at beginning */
 	padded = 0;
 	while (avalue[padded] == ' ') {
 		padded++;

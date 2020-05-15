@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/regex/grot/split.c 292170 2015-12-13 21:15:03Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/regex/grot/split.c 291837 2015-12-05 02:23:44Z ngie $");
 
 #include <stdio.h>
 #include <string.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: fpgetmask.c,v 1.4 2008/04/28 20:23:00 martin Exp $ */
 
 /*-
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/softfloat/fpgetmask.c 189647 2009-03-10 21:13:26Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/fpgetmask.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 

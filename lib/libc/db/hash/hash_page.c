@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)hash_page.c	8.7 (Berkeley) 8/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/db/hash/hash_page.c 313532 2017-02-10 06:34:52Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/hash/hash_page.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * PACKAGE:  hashing
@@ -683,7 +682,7 @@ overflow_page(HTAB *hashp)
 			bit = hashp->LAST_FREED &
 			    ((hashp->BSIZE << BYTE_SHIFT) - 1);
 			j = bit / BITS_PER_MAP;
-			bit = bit & ~(BITS_PER_MAP - 1);
+			bit = rounddown2(bit, BITS_PER_MAP);
 		} else {
 			bit = 0;
 			j = 0;

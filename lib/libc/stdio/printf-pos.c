@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/printf-pos.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/printf-pos.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This is the code responsible for handling positional arguments
@@ -634,7 +633,7 @@ __grow_type_table(struct typetable *types)
 			return (-1);
 		bcopy(oldtable, newtable, oldsize * sizeof(enum typeid));
 	} else {
-		newtable = realloc(oldtable, newsize * sizeof(enum typeid));
+		newtable = reallocarray(oldtable, newsize, sizeof(enum typeid));
 		if (newtable == NULL)
 			return (-1);
 	}

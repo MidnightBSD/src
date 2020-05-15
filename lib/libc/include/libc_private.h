@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/include/libc_private.h 321074 2017-07-17 14:09:34Z kib $
+ * $FreeBSD: stable/11/lib/libc/include/libc_private.h 349688 2019-07-03 19:42:36Z kib $
  *
  * Private definitions for libc, libc_r and libpthread.
  *
@@ -43,7 +42,10 @@
  * or more threads. It is used to avoid calling locking functions
  * when they are not required.
  */
+#ifndef __LIBC_ISTHREADED_DECLARED
+#define __LIBC_ISTHREADED_DECLARED
 extern int	__isthreaded;
+#endif
 
 /*
  * Elf_Auxinfo *__elf_aux_vector, the pointer to the ELF aux vector
@@ -169,6 +171,10 @@ typedef enum {
 	PJT_CLEANUP_PUSH_IMP,
 	PJT_CANCEL_ENTER,
 	PJT_CANCEL_LEAVE,
+	PJT_MUTEX_CONSISTENT,
+	PJT_MUTEXATTR_GETROBUST,
+	PJT_MUTEXATTR_SETROBUST,
+	PJT_GETTHREADID_NP,
 	PJT_MAX
 } pjt_index_t;
 
@@ -226,6 +232,9 @@ enum {
 	INTERPOS_wait6,
 	INTERPOS_ppoll,
 	INTERPOS_map_stacks_exec,
+	INTERPOS_fdatasync,
+	INTERPOS_clock_nanosleep,
+	INTERPOS_distribute_static_tls,
 	INTERPOS_MAX
 };
 
@@ -288,20 +297,11 @@ extern void (*__cleanup)(void) __hidden;
 
 /*
  * Get kern.osreldate to detect ABI revisions.  Explicitly
- * ignores value of $OSVERSION and caches result.  Prototypes
- * for the wrapped "new" pad-less syscalls are here for now.
+ * ignores value of $OSVERSION and caches result.
  */
 int __getosreldate(void);
 #include <sys/_types.h>
 #include <sys/_sigset.h>
-
-/* With pad */
-__off_t	__sys_freebsd6_lseek(int, int, __off_t, int);
-int	__sys_freebsd6_ftruncate(int, int, __off_t);
-int	__sys_freebsd6_truncate(const char *, int, __off_t);
-__ssize_t __sys_freebsd6_pread(int, void *, __size_t, int, __off_t);
-__ssize_t __sys_freebsd6_pwrite(int, const void *, __size_t, int, __off_t);
-void *	__sys_freebsd6_mmap(void *, __size_t, int, int, int, int, __off_t);
 
 struct aiocb;
 struct fd_set;
@@ -324,9 +324,12 @@ int		__sys_aio_suspend(const struct aiocb * const[], int,
 int		__sys_accept(int, struct sockaddr *, __socklen_t *);
 int		__sys_accept4(int, struct sockaddr *, __socklen_t *, int);
 int		__sys_clock_gettime(__clockid_t, struct timespec *ts);
+int		__sys_clock_nanosleep(__clockid_t, int,
+		    const struct timespec *, struct timespec *);
 int		__sys_close(int);
 int		__sys_connect(int, const struct sockaddr *, __socklen_t);
 int		__sys_fcntl(int, int, ...);
+int		__sys_fdatasync(int);
 int		__sys_fsync(int);
 __pid_t		__sys_fork(void);
 int		__sys_ftruncate(int, __off_t);
@@ -402,6 +405,8 @@ struct dl_phdr_info;
 int __elf_phdr_match_addr(struct dl_phdr_info *, void *);
 void __init_elf_aux_vector(void);
 void __libc_map_stacks_exec(void);
+void __libc_distribute_static_tls(__size_t, void *, __size_t, __size_t);
+__uintptr_t __libc_static_tls_base(__size_t);
 
 void	_pthread_cancel_enter(int);
 void	_pthread_cancel_leave(int);
@@ -410,5 +415,7 @@ struct _pthread_cleanup_info;
 void	___pthread_cleanup_push_imp(void (*)(void *), void *,
 	    struct _pthread_cleanup_info *);
 void	___pthread_cleanup_pop_imp(int);
+
+void __throw_constraint_handler_s(const char * restrict msg, int error);
 
 #endif /* _LIBC_PRIVATE_H_ */

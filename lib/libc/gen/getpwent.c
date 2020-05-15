@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -32,7 +31,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getpwent.c 158115 2006-04-28 12:03:38Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getpwent.c 360415 2020-04-27 23:49:13Z brooks $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -94,8 +93,6 @@ static const ns_src defaultsrc[] = {
 int	__pw_match_entry(const char *, size_t, enum nss_lookup_type,
 	    const char *, uid_t);
 int	__pw_parse_entry(char *, size_t, struct passwd *, int, int *errnop);
-
-static	void	 pwd_init(struct passwd *);
 
 union key {
 	const char	*name;
@@ -214,7 +211,7 @@ pwd_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	int	res = NS_UNAVAIL;
 	enum nss_lookup_type lookup_type;
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -268,7 +265,7 @@ pwd_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	size_t desired_size, size;
 	char *p;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -371,7 +368,7 @@ pwd_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 
 	char *p;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -526,7 +523,7 @@ getpwent_r(struct passwd *pwd, char *buffer, size_t bufsize,
 	};
 	int	rv, ret_errno;
 
-	pwd_init(pwd);
+	__pw_initpwd(pwd);
 	ret_errno = 0;
 	*result = NULL;
 	rv = _nsdispatch(result, dtab, NSDB_PASSWD, "getpwent_r", defaultsrc,
@@ -565,7 +562,7 @@ getpwnam_r(const char *name, struct passwd *pwd, char *buffer, size_t bufsize,
 	};
 	int	rv, ret_errno;
 
-	pwd_init(pwd);
+	__pw_initpwd(pwd);
 	ret_errno = 0;
 	*result = NULL;
 	rv = _nsdispatch(result, dtab, NSDB_PASSWD, "getpwnam_r", defaultsrc,
@@ -604,7 +601,7 @@ getpwuid_r(uid_t uid, struct passwd *pwd, char *buffer, size_t bufsize,
 	};
 	int	rv, ret_errno;
 
-	pwd_init(pwd);
+	__pw_initpwd(pwd);
 	ret_errno = 0;
 	*result = NULL;
 	rv = _nsdispatch(result, dtab, NSDB_PASSWD, "getpwuid_r", defaultsrc,
@@ -613,23 +610,6 @@ getpwuid_r(uid_t uid, struct passwd *pwd, char *buffer, size_t bufsize,
 		return (0);
 	else
 		return (ret_errno);
-}
-
-
-static void
-pwd_init(struct passwd *pwd)
-{
-	static char nul[] = "";
-
-	memset(pwd, 0, sizeof(*pwd));
-	pwd->pw_uid = (uid_t)-1;  /* Considered least likely to lead to */
-	pwd->pw_gid = (gid_t)-1;  /* a security issue.                  */
-	pwd->pw_name = nul;
-	pwd->pw_passwd = nul;
-	pwd->pw_class = nul;
-	pwd->pw_gecos = nul;
-	pwd->pw_dir = nul;
-	pwd->pw_shell = nul;
 }
 
 
@@ -749,7 +729,7 @@ pwdbopen(int *version)
 	else
 		*version = 3;
 	if (*version < 3 ||
-	    *version >= sizeof(pwdb_versions)/sizeof(pwdb_versions[0])) {
+	    *version >= nitems(pwdb_versions)) {
 		syslog(LOG_CRIT, "Unsupported password database version %d",
 		    *version);
 		res->close(res);
@@ -782,7 +762,7 @@ files_setpwent(void *retval, void *mdata, va_list ap)
 	rv = files_getstate(&st);
 	if (rv != 0)
 		return (NS_UNAVAIL);
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETPWENT:
 		stayopen = va_arg(ap, int);
 		st->keynum = 0;
@@ -816,11 +796,11 @@ files_passwd(void *retval, void *mdata, va_list ap)
 	size_t			 bufsize, namesize;
 	uid_t			 uid;
 	uint32_t		 store;
-	int			 rv, stayopen, *errnop;
+	int			 rv, stayopen = 0, *errnop;
 
 	name = NULL;
 	uid = (uid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -922,7 +902,7 @@ files_passwd(void *retval, void *mdata, va_list ap)
 		    errnop);
 	} while (how == nss_lt_all && !(rv & NS_TERMINATE));
 fin:
-	if (!stayopen && st->db != NULL) {
+	if (st->db != NULL && !stayopen) {
 		(void)st->db->close(st->db);
 		st->db = NULL;
 	}
@@ -1312,7 +1292,7 @@ nis_passwd(void *retval, void *mdata, va_list ap)
 
 	name = NULL;
 	uid = (uid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -1393,8 +1373,10 @@ nis_passwd(void *retval, void *mdata, va_list ap)
 				continue;
 			}
 		}
-		if (resultlen >= bufsize)
+		if (resultlen >= bufsize) {
+			free(result);
 			goto erange;
+		}
 		memcpy(buffer, result, resultlen);
 		buffer[resultlen] = '\0';
 		free(result);
@@ -1606,12 +1588,12 @@ compat_redispatch(struct compat_state *st, enum nss_lookup_type how,
 		{ NULL, NULL, NULL }
 	};
 	void		*discard;
-	int		 rv, e, i;
+	int		 e, i, rv;
 
-	for (i = 0; i < sizeof(dtab)/sizeof(dtab[0]) - 1; i++)
+	for (i = 0; i < (int)(nitems(dtab) - 1); i++)
 		dtab[i].mdata = (void *)lookup_how;
 more:
-	pwd_init(pwd);
+	__pw_initpwd(pwd);
 	switch (lookup_how) {
 	case nss_lt_all:
 		rv = _nsdispatch(&discard, dtab, NSDB_PASSWD_COMPAT,
@@ -1702,15 +1684,14 @@ compat_setpwent(void *retval, void *mdata, va_list ap)
 
 #define set_setent(x, y) do {	 				\
 	int i;							\
-								\
-	for (i = 0; i < (sizeof(x)/sizeof(x[0])) - 1; i++)	\
+	for (i = 0; i < (int)(nitems(x) - 1); i++)		\
 		x[i].mdata = (void *)y;				\
 } while (0)
 
 	rv = compat_getstate(&st);
 	if (rv != 0)
 		return (NS_UNAVAIL);
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETPWENT:
 		stayopen = va_arg(ap, int);
 		st->keynum = 0;
@@ -1757,7 +1738,7 @@ compat_passwd(void *retval, void *mdata, va_list ap)
 	from_compat = 0;
 	name = NULL;
 	uid = (uid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);
@@ -1941,7 +1922,7 @@ docompat:
 			break;
 	}
 fin:
-	if (!stayopen && st->db != NULL) {
+	if (st->db != NULL && !stayopen) {
 		(void)st->db->close(st->db);
 		st->db = NULL;
 	}

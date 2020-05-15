@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)exit.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/exit.c 304527 2016-08-20 12:26:44Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/exit.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <stdlib.h>
@@ -57,8 +56,7 @@ int	__isthreaded	= 0;
  * Exit, flushing stdio buffers if necessary.
  */
 void
-exit(status)
-	int status;
+exit(int status)
 {
 	/* Ensure that the auto-initialization routine is linked in: */
 	extern int _thread_autoinit_dummy_decl;

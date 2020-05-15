@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
 static char sccsid[] = "@(#)publickey.c 1.10 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/getpublickey.c 309495 2016-12-03 18:21:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getpublickey.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * publickey.c

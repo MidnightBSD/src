@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/regex/grot/Makefile 313221 2017-02-04 16:36:07Z ngie $
+# $FreeBSD: stable/11/lib/libc/regex/grot/Makefile 313240 2017-02-04 17:17:38Z ngie $
 # You probably want to take -DREDEBUG out of CFLAGS, and put something like
 # -O in, *after* testing (-DREDEBUG strengthens testing by enabling a lot of
 # internal assertion checking).  Take -Dconst= out for an ANSI compiler.
 # Do not take -DPOSIX_MISTAKE out.  REGCFLAGS isn't important to you (it's
 # for my use in some special contexts).
 
-PATHS= ${.CURDIR:H} ${.CURDIR:H:H}/locale ${SRCTOP}/include
+PATHS= ${LIBC_SRCTOP}/regex ${LIBC_SRCTOP}/locale ${SRCTOP}/include
 .PATH: ${PATHS}
 
 CFLAGS+= -static -DPOSIX_MISTAKE -DREDEBUG $(REGCFLAGS)

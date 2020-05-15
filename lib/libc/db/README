@@ -1,6 +1,5 @@
 #	@(#)README	8.27 (Berkeley) 9/1/94
-# $FreeBSD: stable/10/lib/libc/db/README 190482 2009-03-28 04:00:46Z delphij $
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libc/db/README 190482 2009-03-28 04:00:46Z delphij $
 
 This is version 1.85 of the Berkeley DB code.
 

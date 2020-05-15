@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012 David Xu <davidxu@FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/clock_getcpuclockid.c 239485 2012-08-21 09:17:13Z davidxu $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/clock_getcpuclockid.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <time.h>

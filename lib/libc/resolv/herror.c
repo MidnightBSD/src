@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1987, 1993
  *    The Regents of the University of California.  All rights reserved.
@@ -50,12 +49,11 @@ static const char sccsid[] = "@(#)herror.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: herror.c,v 1.4 2005/04/27 04:56:41 sra Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/herror.c 270838 2014-08-30 10:16:25Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/herror.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "port_before.h"
 
 #include "namespace.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/uio.h>
 
@@ -77,7 +75,7 @@ const char *h_errlist[] = {
 	"Unknown server error",			/*%< 3 NO_RECOVERY */
 	"No address associated with name",	/*%< 4 NO_ADDRESS */
 };
-const int h_nerr = { sizeof h_errlist / sizeof h_errlist[0] };
+const int h_nerr = { nitems(h_errlist) };
 
 #undef	h_errno
 int	h_errno;

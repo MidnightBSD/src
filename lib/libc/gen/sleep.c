@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)sleep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/sleep.c 277317 2015-01-18 11:54:20Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/sleep.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <errno.h>
@@ -42,6 +41,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/sleep.c 277317 2015-01-18 11:54:20Z k
 #include "un-namespace.h"
 
 #include "libc_private.h"
+
+unsigned int __sleep(unsigned int);
 
 unsigned int
 __sleep(unsigned int seconds)

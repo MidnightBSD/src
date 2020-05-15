@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
  * All rights reserved.
@@ -27,21 +26,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/ftok.c 129926 2004-06-01 06:53:07Z tjr $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/ftok.c 338124 2018-08-21 01:17:28Z pfg $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ipc.h>
 
 key_t
-ftok(path, id)
-	const char *path;
-	int id;
+ftok(const char *path, int id)
 {
 	struct stat st;
 
 	if (stat(path, &st) < 0)
 		return (key_t)-1;
 
-	return (key_t) (id << 24 | (st.st_dev & 0xff) << 16 | (st.st_ino & 0xffff));
+	return ((key_t)((unsigned int)id << 24 | (st.st_dev & 0xff) << 16 |
+	    (st.st_ino & 0xffff)));
 }

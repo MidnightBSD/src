@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)db.c	8.4 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/db/db.c,v 1.3 2007/01/09 00:27:50 imp Exp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/db/db.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 
@@ -44,6 +44,10 @@ __FBSDID("$FreeBSD: src/lib/libc/db/db/db.c,v 1.3 2007/01/09 00:27:50 imp Exp $"
 
 static int __dberr(void);
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 DB *
 dbopen(const char *fname, int flags, int mode, DBTYPE type, const void *openinfo)
 {
@@ -51,7 +55,7 @@ dbopen(const char *fname, int flags, int mode, DBTYPE type, const void *openinfo
 #define	DB_FLAGS	(DB_LOCK | DB_SHMEM | DB_TXN)
 #define	USE_OPEN_FLAGS							\
 	(O_CREAT | O_EXCL | O_EXLOCK | O_NOFOLLOW | O_NONBLOCK | 	\
-	 O_RDONLY | O_RDWR | O_SHLOCK | O_SYNC | O_TRUNC)
+	 O_RDONLY | O_RDWR | O_SHLOCK | O_SYNC | O_TRUNC | O_CLOEXEC)
 
 	if ((flags & ~(USE_OPEN_FLAGS | DB_FLAGS)) == 0)
 		switch (type) {

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 Jukka A. Ukkonen
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/waitid.c 281981 2015-04-25 08:14:08Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/waitid.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -39,6 +38,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/waitid.c 281981 2015-04-25 08:14:08Z 
 #include <errno.h>
 #include "un-namespace.h"
 #include "libc_private.h"
+
+int __waitid(idtype_t, id_t, siginfo_t *, int);
 
 int
 __waitid(idtype_t idtype, id_t id, siginfo_t *info, int flags)

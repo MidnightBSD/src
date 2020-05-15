@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -32,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regex2.h	8.4 (Berkeley) 3/20/94
- * $FreeBSD: stable/10/lib/libc/regex/regex2.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD: stable/11/lib/libc/regex/regex2.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -74,7 +73,7 @@
  * immediately *preceding* "execution" of that operator.
  */
 typedef unsigned long sop;	/* strip operator */
-typedef long sopno;
+typedef unsigned long sopno;
 #define	OPRMASK	0xf8000000L
 #define	OPDMASK	0x07ffffffL
 #define	OPSHIFT	((unsigned)27)
@@ -114,11 +113,11 @@ typedef struct {
 typedef struct {
 	unsigned char	bmp[NC / 8];
 	wctype_t	*types;
-	int		ntypes;
+	unsigned int	ntypes;
 	wint_t		*wides;
-	int		nwides;
+	unsigned int	nwides;
 	crange		*ranges;
-	int		nranges;
+	unsigned int	nranges;
 	int		invert;
 	int		icase;
 } cset;
@@ -126,7 +125,7 @@ typedef struct {
 static int
 CHIN1(cset *cs, wint_t ch)
 {
-	int i;
+	unsigned int i;
 
 	assert(ch >= 0);
 	if (ch < NC)
@@ -166,7 +165,7 @@ struct re_guts {
 	int magic;
 #		define	MAGIC2	((('R'^0200)<<8)|'E')
 	sop *strip;		/* malloced area for strip */
-	int ncsets;		/* number of csets in use */
+	unsigned int ncsets;	/* number of csets in use */
 	cset *sets;		/* -> cset [ncsets] */
 	int cflags;		/* copy of regcomp() cflags argument */
 	sopno nstates;		/* = number of sops */
@@ -190,4 +189,5 @@ struct re_guts {
 
 /* misc utilities */
 #define	OUT	(CHAR_MIN - 1)	/* a non-character value */
+#define	IGN	(CHAR_MIN - 2)
 #define ISWORD(c)       (iswalnum((uch)(c)) || (c) == '_')

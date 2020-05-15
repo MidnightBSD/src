@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt_bcast.c,v 1.3 2000/07/06 03:05:20 christos Exp $	*/
 
 /*-
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)clnt_bcast.c 1.15 89/04/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/clnt_bcast.c 309499 2016-12-03 18:45:12Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/clnt_bcast.c 331722 2018-03-29 02:50:57Z eadler $");
 
 
 /*
@@ -471,7 +470,7 @@ rpc_broadcast_exp(rpcprog_t prog, rpcvers_t vers, rpcproc_t proc,
 						      "broadcast packet");
 						stat = RPC_CANTSEND;
 						continue;
-					};
+					}
 #ifdef RPC_DEBUG
 				if (!__rpc_lowvers)
 					fprintf(stderr, "Broadcast packet sent "
