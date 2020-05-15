@@ -1,10 +1,7 @@
 #!/usr/sbin/dtrace -s
 /*
- * Copyright (c) 2012 Robert N. M. Watson
+ * Copyright (c) 2015 George V. Neville-Neil
  * All rights reserved.
- *
- * This software was developed at the University of Cambridge Computer
- * Laboratory with support from a grant from Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +24,23 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/nfsclienttime 287544 2015-09-08 00:30:10Z gnn $
+ * $FreeBSD: stable/11/share/dtrace/tcpstate 279765 2015-03-08 02:47:38Z gnn $
  *
- * This script measures all time spent waiting on RPC replies for each
- * system call, and then generates a histogram of those times sorted by
- * system call name.
+ * The tcpstate D script shows TCP sockets transitioning between states.
  *
- * Currently only supports NFSv3
- *
- * Usage: nfsclienttime
- *
- * Press Ctrl-C to exit and display statistics.
+ * Usage: tcpstate
  */
 
 #pragma D option quiet
-
-dtrace:::BEGIN
+BEGIN
 {
-	printf("Collecting data...press Ctrl-C to exit.\n");
+	printf("Old State\t\tNew State\n");
 }
 
-syscall:::entry
+tcp:kernel::state-change
 {
-
-        self->count = 0;
-}
-
-nfscl:nfs3::start
-{
-
-        self->timestamp = timestamp;
-}
-
-nfscl:nfs3::done
-{
-
-        self->count += (timestamp - self->timestamp);
-}
-
-syscall:::return
-/self->count != 0/  {
-
-        @syscalls[probefunc] = quantize(self->count);
+	newstate = args[3]->tcps_state;
+	oldstate = args[5]->tcps_state;
+	printf("%s\t\t%s\n", tcp_state_string[oldstate],
+			     tcp_state_string[newstate]);
 }

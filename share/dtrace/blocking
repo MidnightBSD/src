@@ -1,10 +1,7 @@
 #!/usr/sbin/dtrace -s
-/*
- * Copyright (c) 2012 Robert N. M. Watson
+/*-
+ * Copyright (c) 2015 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
- *
- * This software was developed at the University of Cambridge Computer
- * Laboratory with support from a grant from Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -27,46 +24,34 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/nfsclienttime 287544 2015-09-08 00:30:10Z gnn $
+ * $FreeBSD: stable/11/share/dtrace/blocking 288644 2015-10-04 00:40:12Z pjd $
  *
- * This script measures all time spent waiting on RPC replies for each
- * system call, and then generates a histogram of those times sorted by
- * system call name.
+ * This little script is for use with programs that use event loop and should
+ * sleep only when waiting for events (eg. via kevent(2)). When a program is
+ * going to sleep in the kernel, the script will show its name, PID, kernel
+ * stack trace and userland stack trace. Sleeping in kevent(2) is ignored.
  *
- * Currently only supports NFSv3
- *
- * Usage: nfsclienttime
- *
- * Press Ctrl-C to exit and display statistics.
+ * usage: blocking <execname>
  */
 
 #pragma D option quiet
 
-dtrace:::BEGIN
+syscall::kevent:entry
+/execname == $$1/
 {
-	printf("Collecting data...press Ctrl-C to exit.\n");
+	self->inkevent = 1;
 }
 
-syscall:::entry
+fbt::sleepq_add:entry
+/!self->inkevent && execname == $$1/
 {
-
-        self->count = 0;
+	printf("\n%s(%d) is blocking...\n", execname, pid);
+	stack();
+	ustack();
 }
 
-nfscl:nfs3::start
+syscall::kevent:return
+/execname == $$1/
 {
-
-        self->timestamp = timestamp;
-}
-
-nfscl:nfs3::done
-{
-
-        self->count += (timestamp - self->timestamp);
-}
-
-syscall:::return
-/self->count != 0/  {
-
-        @syscalls[probefunc] = quantize(self->count);
+	self->inkevent = 0;
 }

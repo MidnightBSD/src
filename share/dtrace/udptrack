@@ -1,10 +1,7 @@
 #!/usr/sbin/dtrace -s
 /*
- * Copyright (c) 2012 Robert N. M. Watson
+ * Copyright (c) 2015 George V. Neville-Neil
  * All rights reserved.
- *
- * This software was developed at the University of Cambridge Computer
- * Laboratory with support from a grant from Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +24,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/nfsclienttime 287544 2015-09-08 00:30:10Z gnn $
+ * $FreeBSD: stable/11/share/dtrace/udptrack 279769 2015-03-08 04:33:53Z gnn $
  *
- * This script measures all time spent waiting on RPC replies for each
- * system call, and then generates a histogram of those times sorted by
- * system call name.
+ * The udptrack D script shows various information about UDP
+ * data that are sent and received on the host.
  *
- * Currently only supports NFSv3
- *
- * Usage: nfsclienttime
- *
- * Press Ctrl-C to exit and display statistics.
+ * Usage: udptrack
  */
 
 #pragma D option quiet
-
-dtrace:::BEGIN
+udp:kernel::receive
 {
-	printf("Collecting data...press Ctrl-C to exit.\n");
+	printf("Received %d bytes of data from %s:%d\n",
+	       args[4]->udp_length,
+	       args[2]->ip_saddr,
+	       args[4]->udp_sport);
+	tracemem(args[4]->udp_hdr, 64);
 }
 
-syscall:::entry
+udp:kernel::send
 {
-
-        self->count = 0;
+	printf("Sent %d bytes of data to %s:%d\n", 
+	       args[4]->udp_length,
+	       args[2]->ip_daddr,
+	       args[4]->udp_dport);
+	tracemem(args[4]->udp_hdr, 64);
 }
 
-nfscl:nfs3::start
-{
-
-        self->timestamp = timestamp;
-}
-
-nfscl:nfs3::done
-{
-
-        self->count += (timestamp - self->timestamp);
-}
-
-syscall:::return
-/self->count != 0/  {
-
-        @syscalls[probefunc] = quantize(self->count);
-}

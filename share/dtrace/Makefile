@@ -1,24 +1,30 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/dtrace/Makefile 333617 2018-05-15 00:00:44Z dteske $
 #
 # Hand installing our scripts and optionally (based on MK_CDDL) installing
 # the DTraceToolkit.
 #
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-SUBDIR= ${_toolkit}
-
-.if ${MK_CDDL} != "no"
-_toolkit=	toolkit
-.endif
-
-SCRIPTS=	nfsclienttime hotopen \
-		watch_execve \
-		watch_kill \
-		watch_vop_remove
+SCRIPTS=	blocking \
+		disklatency \
+		disklatencycmd \
+		hotopen \
+		nfsattrstats \
+		nfsclienttime \
+		siftr \
+		tcpconn \
+		tcpdebug \
+		tcpstate \
+		tcptrack \
+		udptrack
 
 SCRIPTSDIR= ${SHAREDIR}/dtrace
 
-NO_OBJ=
+DSRCS=		mbuf.d
+
+FILES=		${DSRCS}
+FILESDIR=	/usr/lib/dtrace
+FILESMODE=	${NOBINMODE}
 
 .include <bsd.prog.mk>

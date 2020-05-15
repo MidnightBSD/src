@@ -1,10 +1,7 @@
 #!/usr/sbin/dtrace -s
 /*
- * Copyright (c) 2012 Robert N. M. Watson
+ * Copyright (c) 2015 George V. Neville-Neil
  * All rights reserved.
- *
- * This software was developed at the University of Cambridge Computer
- * Laboratory with support from a grant from Google, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,46 +24,60 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/share/dtrace/nfsclienttime 287544 2015-09-08 00:30:10Z gnn $
+ * $FreeBSD: stable/11/share/dtrace/tcptrack 279739 2015-03-07 19:16:09Z gnn $
  *
- * This script measures all time spent waiting on RPC replies for each
- * system call, and then generates a histogram of those times sorted by
- * system call name.
+ * The tcptrack D script shows various information about TCP
+ * connections including acceptance and refusal of inbound and
+ * outbound connections as well as state changes.
  *
- * Currently only supports NFSv3
- *
- * Usage: nfsclienttime
- *
- * Press Ctrl-C to exit and display statistics.
+ * Usage: tcptrack
  */
 
 #pragma D option quiet
-
-dtrace:::BEGIN
+tcp:kernel::accept-established
 {
-	printf("Collecting data...press Ctrl-C to exit.\n");
+	printf("Accept connection from %s:%d\tto %s:%d\n",
+		       args[2]->ip_saddr,
+		       args[4]->tcp_sport,
+		       args[2]->ip_daddr,
+		       args[4]->tcp_dport);
+
 }
 
-syscall:::entry
+tcp:kernel::accept-refused
 {
+	printf("Refused connection from %s:%d\tto %s:%d\n", 
+		       args[2]->ip_daddr,
+		       args[4]->tcp_dport,
+		       args[2]->ip_saddr,
+		       args[4]->tcp_sport);
 
-        self->count = 0;
 }
 
-nfscl:nfs3::start
+tcp:kernel::connect-established
 {
+	printf("Connection established to %s:%d from %s:%d\n",
+		       args[2]->ip_saddr,
+		       args[4]->tcp_sport,
+		       args[2]->ip_daddr,
+		       args[4]->tcp_dport);
 
-        self->timestamp = timestamp;
 }
 
-nfscl:nfs3::done
+tcp:kernel::connect-refused
 {
-
-        self->count += (timestamp - self->timestamp);
+	printf("Connection refused by %s:%d from %s:%d\n", 
+		       args[2]->ip_saddr,
+		       args[4]->tcp_sport,
+		       args[2]->ip_daddr,
+		       args[4]->tcp_dport);
 }
 
-syscall:::return
-/self->count != 0/  {
-
-        @syscalls[probefunc] = quantize(self->count);
+tcp:kernel::state-change
+{
+	newstate = args[3]->tcps_state;
+	oldstate = args[5]->tcps_state;
+	printf("State changed from %s\t\t%s\n", tcp_state_string[oldstate],
+				     tcp_state_string[newstate]);
 }
+
