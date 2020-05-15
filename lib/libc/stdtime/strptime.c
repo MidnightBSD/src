@@ -43,7 +43,7 @@ static char copyright[] __unused =
 static char sccsid[] __unused = "@(#)strptime.c	0.1 (Powerdog) 94/03/27";
 #endif /* !defined NOID */
 #endif /* not lint */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdtime/strptime.c 339359 2018-10-15 10:50:04Z kib $");
 
 #include "namespace.h"
 #include <time.h>
@@ -417,7 +417,7 @@ label:
 				i += *buf - '0';
 				len--;
 			}
-			if (i > 31)
+			if (i == 0 || i > 31)
 				return (NULL);
 
 			tm->tm_mday = i;

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991 The Regents of the University of California.
  * All rights reserved.
@@ -35,15 +34,14 @@
 	.asciz "@(#)setlogin.s	5.2 (Berkeley) 4/12/91"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/sys/setlogin.S 258447 2013-11-21 21:25:58Z andreast $");
 
 #include "SYS.h"
 
 .globl	CNAME(_logname_valid)		/* in _getlogin() */
 
-	.weak	_setlogin
-	.set	_setlogin,__sys_setlogin
-	.weak	setlogin
-	.set	setlogin,__sys_setlogin
+	WEAK_REFERENCE(__sys_setlogin, _setlogin)
+	WEAK_REFERENCE(__sys_setlogin, setlogin)
 ENTRY(__sys_setlogin)
 	mov	$SYS_setlogin,%rax
 	KERNCALL

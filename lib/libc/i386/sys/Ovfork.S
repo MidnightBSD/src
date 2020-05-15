@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,14 +34,12 @@
 	.asciz "@(#)Ovfork.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/Ovfork.S 240152 2012-09-05 21:41:05Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/sys/Ovfork.S 258451 2013-11-21 22:31:18Z andreast $");
 
 #include "SYS.h"
 
-	.weak	_vfork
-	.set	_vfork,__sys_vfork
-	.weak	vfork
-	.set	vfork,__sys_vfork
+	WEAK_REFERENCE(__sys_vfork, _vfork)
+	WEAK_REFERENCE(__sys_vfork, vfork)
 ENTRY(__sys_vfork)
 	popl	%ecx		/* my rta into ecx */
 	mov	$SYS_vfork,%eax

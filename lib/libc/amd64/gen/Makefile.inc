@@ -1,6 +1,5 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/10/lib/libc/amd64/gen/Makefile.inc 230429 2012-01-21 18:00:28Z kib $
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libc/amd64/gen/Makefile.inc 230429 2012-01-21 18:00:28Z kib $
 
 SRCS+=	_setjmp.S _set_tp.c rfork_thread.S setjmp.S sigsetjmp.S \
 	fabs.S getcontextx.c \

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,7 +34,7 @@
 	.asciz "@(#)setjmp.s	5.1 (Berkeley) 4/23/90"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/setjmp.S 287480 2015-09-05 08:55:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/setjmp.S 287292 2015-08-29 14:25:01Z kib $");
 
 /*
  * C library -- _setjmp, _longjmp
@@ -70,8 +69,7 @@ ENTRY(setjmp)
 	ret
 END(setjmp)
 
-	.weak CNAME(longjmp)
-	.set CNAME(longjmp),CNAME(__longjmp)
+	WEAK_REFERENCE(__longjmp, longjmp)
 ENTRY(__longjmp)
 	movl	4(%esp),%edx
 	pushl	$0			/* (sigset_t*)oset */

@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)strcpy.3	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libc/string/strcpy.3 343326 2019-01-22 21:52:07Z rgrimes $
 .\"
 .Dd February 28, 2009
 .Dt STRCPY 3
@@ -63,6 +63,11 @@ to
 (including the terminating
 .Ql \e0
 character.)
+If
+.Fa src
+and
+.Fa dst
+overlap, the results are undefined.
 .Pp
 The
 .Fn stpncpy
@@ -89,6 +94,11 @@ Otherwise,
 is
 .Em not
 terminated.
+If
+.Fa src
+and
+.Fa dst
+overlap, the results are undefined.
 .Sh RETURN VALUES
 The
 .Fn strcpy
@@ -210,7 +220,3 @@ The
 function is easily misused in a manner which enables malicious users
 to arbitrarily change a running program's functionality through a
 buffer overflow attack.
-(See
-the FSA
-and
-.Sx EXAMPLES . )

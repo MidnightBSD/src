@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,7 +34,7 @@
 	.asciz "@(#)fabs.s	5.2 (Berkeley) 12/17/90"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/fabs.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/fabs.S 217106 2011-01-07 16:08:40Z kib $");
 
 ENTRY(fabs)
 	fldl	4(%esp)

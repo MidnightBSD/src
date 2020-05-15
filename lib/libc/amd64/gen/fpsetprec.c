@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/amd64/gen/fpsetprec.c 117864 2003-07-22 06:46:17Z peter $ */
+/* $FreeBSD: stable/11/lib/libc/amd64/gen/fpsetprec.c 117864 2003-07-22 06:46:17Z peter $ */
 #define __IEEEFP_NOINLINES__ 1
 #include <ieeefp.h>
 

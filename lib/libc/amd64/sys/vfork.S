@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,13 +34,12 @@
 	.asciz "@(#)Ovfork.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/sys/vfork.S 258447 2013-11-21 21:25:58Z andreast $");
 
 #include "SYS.h"
 
-	.weak	_vfork
-	.set	_vfork,__sys_vfork
-	.weak	vfork
-	.set	vfork,__sys_vfork
+	WEAK_REFERENCE(__sys_vfork, _vfork)
+	WEAK_REFERENCE(__sys_vfork, vfork)
 ENTRY(__sys_vfork)
 	popq	%rsi		/* fetch return address (%rsi preserved) */
 	mov	$SYS_vfork,%rax

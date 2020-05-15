@@ -1,4 +1,6 @@
-/* $MidnightBSD$ */
+/*
+ * $FreeBSD: stable/11/lib/libc/stdlib/jemalloc/Symbol.map 296221 2016-02-29 19:10:32Z jasone $
+ */
 
 FBSD_1.0 {
 	_malloc_options;
@@ -19,6 +21,12 @@ FBSD_1.3 {
 	mallctl;
 	mallctlnametomib;
 	mallctlbymib;
+	mallocx;
+	rallocx;
+	xallocx;
+	sallocx;
+	dallocx;
+	nallocx;
 	allocm;
 	rallocm;
 	sallocm;
@@ -30,11 +38,27 @@ FBSD_1.3 {
 	__free;
 	__posix_memalign;
 	__malloc_usable_size;
+	__mallocx;
+	__rallocx;
+	__xallocx;
+	__sallocx;
+	__dallocx;
+	__nallocx;
 	__allocm;
 	__rallocm;
 	__sallocm;
 	__dallocm;
 	__nallocm;
+};
+
+FBSD_1.4 {
+	sdallocx;
+	__sdallocx;
+	__aligned_alloc;
+	__malloc_stats_print;
+	__mallctl;
+	__mallctlnametomib;
+	__mallctlbymib;
 };
 
 FBSDprivate_1.0 {

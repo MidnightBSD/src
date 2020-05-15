@@ -30,8 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)strchr.3	8.2 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/10/lib/libc/string/strchr.3 251069 2013-05-28 20:57:40Z emaste $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libc/string/strchr.3 284001 2015-06-04 21:54:46Z jilles $
 .\"
 .Dd February 13, 2013
 .Dt STRCHR 3
@@ -114,10 +113,12 @@ and
 .Fn strrchr
 conform to
 .St -isoC .
-The
+The function
 .Fn strchrnul
-is a GNU extension .
-.Sh History
+is a
+.Tn GNU
+extension.
+.Sh HISTORY
 The
 .Fn strchrnul
 function first appeared in glibc 2.1.1 and was added in

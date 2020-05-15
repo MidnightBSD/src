@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,12 +33,11 @@
 static char sccsid[] = "@(#)rand.c	8.1 (Berkeley) 6/14/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/rand.c 301445 2016-06-05 14:31:36Z ache $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/rand.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include "un-namespace.h"
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: reallocarray.c,v 1.2 2014/12/08 03:45:00 bcook Exp $	*/
 /*
  * Copyright (c) 2008 Otto Moerbeek <otto@drijf.net>
@@ -16,6 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/reallocarray.c 282314 2015-05-01 18:32:16Z bapt $");
+
 #include <sys/types.h>
 #include <errno.h>
 #include <stdint.h>
@@ -30,10 +32,11 @@
 void *
 reallocarray(void *optr, size_t nmemb, size_t size)
 {
+
 	if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
 	    nmemb > 0 && SIZE_MAX / nmemb < size) {
 		errno = ENOMEM;
-		return NULL;
+		return (NULL);
 	}
-	return realloc(optr, size * nmemb);
+	return (realloc(optr, size * nmemb));
 }

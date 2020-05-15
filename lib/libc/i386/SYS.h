@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,28 +30,25 @@
  * SUCH DAMAGE.
  *
  *	@(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: stable/10/lib/libc/i386/SYS.h 240152 2012-09-05 21:41:05Z jilles $
+ * $FreeBSD: stable/11/lib/libc/i386/SYS.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/syscall.h>
 #include <machine/asm.h>
 
-#define	SYSCALL(x)	ENTRY(__CONCAT(__sys_,x));			\
-			.weak CNAME(x);					\
-			.set CNAME(x),CNAME(__CONCAT(__sys_,x));	\
-			.weak CNAME(__CONCAT(_,x));			\
-			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
-			mov __CONCAT($SYS_,x),%eax; KERNCALL;		\
- 			jb HIDENAME(cerror)
+#define	SYSCALL(name)	ENTRY(__sys_##name);				\
+			WEAK_REFERENCE(__sys_##name, name);		\
+			WEAK_REFERENCE(__sys_##name, _##name);		\
+			mov $SYS_##name,%eax; KERNCALL;			\
+			jb HIDENAME(cerror)
 
-#define	RSYSCALL(x)	SYSCALL(x); ret; END(__CONCAT(__sys_,x))
+#define	RSYSCALL(name)	SYSCALL(name); ret; END(__sys_##name)
 
-#define	PSEUDO(x)	ENTRY(__CONCAT(__sys_,x));			\
-			.weak CNAME(__CONCAT(_,x));			\
-			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
-			mov __CONCAT($SYS_,x),%eax; KERNCALL;		\
- 			jb HIDENAME(cerror); ret; \
-			END(__CONCAT(__sys_,x))
+#define	PSEUDO(name)	ENTRY(__sys_##name);				\
+			WEAK_REFERENCE(__sys_##name, _##name);		\
+			mov $SYS_##name,%eax; KERNCALL;			\
+			jb HIDENAME(cerror); ret;			\
+			END(__sys_##name)
 
 /* gas messes up offset -- although we don't currently need it, do for BCS */
 #define	LCALL(x,y)	.byte 0x9a ; .long y; .word x

@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/amd64/Symbol.map 240178 2012-09-06 20:59:49Z jilles $
+/*
+ * $FreeBSD: stable/11/lib/libc/amd64/Symbol.map 297238 2016-03-24 18:47:19Z emaste $
  */
 
 /*
@@ -63,8 +63,6 @@ FBSDprivate_1.0 {
 	__signalcontext;
 	signalcontext;
 	__siglongjmp;
-	.curbrk;
-	.minbrk;
 	_brk;
 	_end;
 	__sys_vfork;

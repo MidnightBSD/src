@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Eischen <deischen@freebsd.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/_ctx_start.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/_ctx_start.S 217106 2011-01-07 16:08:40Z kib $");
 
 /*
  * _ctx_start((void *func)(int arg1, ..., argn),

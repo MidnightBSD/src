@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2011 George V. Neville-Neil. All rights reserved.
  *
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/string/strcpy.c 224246 2011-07-21 16:32:13Z gnn $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/string/strcpy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 char *__stpcpy(char * __restrict, const char * __restrict);
 
