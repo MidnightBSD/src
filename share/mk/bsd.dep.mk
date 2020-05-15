@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.dep.mk 337481 2018-08-08 18:50:32Z bdrewery $
+# $FreeBSD: stable/11/share/mk/bsd.dep.mk 359713 2020-04-07 19:40:14Z bdrewery $
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #
@@ -177,7 +177,7 @@ DEPEND_MP?=	-MP
 # avoid collisions.
 DEPEND_FILTER=	C,/,_,g
 DEPENDSRCS=	${SRCS:M*.[cSC]} ${SRCS:M*.cxx} ${SRCS:M*.cpp} ${SRCS:M*.cc}
-DEPENDSRCS+=	${DPSRCS:M*.[cSC]} ${SRCS:M*.cxx} ${SRCS:M*.cpp} ${SRCS:M*.cc}
+DEPENDSRCS+=	${DPSRCS:M*.[cSC]} ${DPSRCS:M*.cxx} ${DPSRCS:M*.cpp} ${DPSRCS:M*.cc}
 .if !empty(DEPENDSRCS)
 DEPENDOBJS+=	${DEPENDSRCS:R:S,$,.o,}
 .endif

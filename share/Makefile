@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/Makefile 302329 2016-07-03 18:21:11Z bapt $
 
 .include <src.opts.mk>
 
@@ -16,7 +16,6 @@ SUBDIR=	${_colldef} \
 	${_me} \
 	misc \
 	${_mk} \
-	${_mklocale} \
 	${_monetdef} \
 	${_msgdef} \
 	${_numericdef} \
@@ -58,12 +57,12 @@ _i18n=		i18n
 .endif
 
 .if ${MK_LOCALES} != "no"
-_colldef =	colldef
-_mklocale =	mklocale
-_monetdef =	monetdef
-_msgdef =	msgdef
-_numericdef =	numericdef
-_timedef =	timedef
+_colldef=	colldef
+_ctypedef=	ctypedef
+_monetdef=	monetdef
+_msgdef=	msgdef
+_numericdef=	numericdef
+_timedef=	timedef
 .endif
 
 .if ${MK_MAKE} != "no"
