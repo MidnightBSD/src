@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/doc/pjdfstest/Makefile 274016 2014-11-03 07:18:42Z ngie $
-
-NO_OBJ=
+# $FreeBSD: stable/11/share/doc/pjdfstest/Makefile 284321 2015-06-12 14:30:27Z sjg $
 
 FILESDIR=	${SHAREDIR}/doc/pjdfstest
 FILES=		README

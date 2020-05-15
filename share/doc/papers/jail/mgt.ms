@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/doc/papers/jail/mgt.ms,v 1.3 2002/01/16 06:55:29 arr Exp $
+.\" $FreeBSD: stable/11/share/doc/papers/jail/mgt.ms 215334 2010-11-15 05:25:51Z dougb $
 .\"
 .NH
 Managing Jails and the Jail File System Environment
@@ -56,8 +56,6 @@ FreeBSD build environment.
 .PP
 One notable difference from the default FreeBSD install is that only
 a limited set of device nodes should be created.
-MAKEDEV(8) has been modified to accept a ``jail'' argument that creates
-the correct set of nodes. 
 .PP
 To improve storage efficiency, a fair number of the binaries in the system tree
 may be deleted, as they are not relevant in a jail environment.

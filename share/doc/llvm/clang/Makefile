@@ -1,10 +1,8 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/doc/llvm/clang/Makefile 284321 2015-06-12 14:30:27Z sjg $
 
 SRCDIR=		${.CURDIR}/../../../../contrib/llvm/tools/clang
 
 .PATH: ${SRCDIR}
-
-NO_OBJ=
 
 FILESGROUPS=	TOP
 TOP=		LICENSE.TXT

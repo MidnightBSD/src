@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"	$MidnightBSD$
+.\"	$FreeBSD: stable/11/share/doc/smm/03.fsck/2.t 216178 2010-12-04 10:11:20Z uqs $
 .\"	@(#)2.t	8.1 (Berkeley) 6/5/93
 .\"
 .ds RH Overview of the file system

@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: src/share/doc/legal/intel_wpi/Makefile,v 1.1.2.1 2007/12/08 12:44:56 benjsc Exp $
+# $FreeBSD: stable/11/share/doc/legal/intel_wpi/Makefile 289399 2015-10-16 00:38:05Z bdrewery $
 
-NO_OBJ=
 FILES=          ${.CURDIR}/../../../../sys/contrib/dev/wpi/LICENSE
-FILESDIR=       ${SHAREDIR}/doc/legal/intel_wpi
+FILESDIR=       ${SHAREDIR}/doc/legal
+FILESNAME=	intel_wpi.LICENSE
 
 .include <bsd.prog.mk>
 

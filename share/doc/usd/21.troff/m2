@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)m2	8.1 (Berkeley) 8/14/93
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/share/doc/usd/21.troff/m2 108533 2003-01-01 18:49:04Z schweikh $
 .tr |
 .rm mx
 .br

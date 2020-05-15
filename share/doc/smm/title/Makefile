@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/smm/title/Makefile,v 1.9 2002/10/29 16:13:21 ru Exp $
+# $FreeBSD: stable/11/share/doc/smm/title/Makefile 106151 2002-10-29 16:13:21Z ru $
 
 VOLUME=	smm
 DOC=	Title

@@ -1,8 +1,7 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
-# $FreeBSD: stable/10/share/doc/smm/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/doc/smm/Makefile 289393 2015-10-15 22:55:08Z bdrewery $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # The following modules do not describe FreeBSD:
 # 14.uucpimpl, 15.uucpnet

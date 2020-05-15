@@ -1,5 +1,5 @@
 .\" format with ditroff -me
-.\" $FreeBSD: src/share/doc/papers/devfs/paper.me,v 1.2 2002/02/18 16:22:23 sobomax Exp $
+.\" $FreeBSD: stable/11/share/doc/papers/devfs/paper.me 218965 2011-02-23 09:22:33Z brucec $
 .\" format made to look as a paper for the proceedings is to look
 .\" (as specified in the text)
 .if n \{ .po 0
@@ -779,7 +779,7 @@ The entry points to the device driver are stored in the specinfo
 structure, removing the need for the devsw[] array and allowing
 device drivers to use separate entrypoints for various minor numbers.
 .lp
-This is is very convenient for devices which have a ``control''
+This is very convenient for devices which have a ``control''
 device for management and tuning.  The control device, almost always
 have entirely separate open/close/ioctl implementations [MD.C].
 .lp

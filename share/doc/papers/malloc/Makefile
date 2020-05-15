@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	6.3 (Berkeley) 6/8/93
-# $FreeBSD: src/share/doc/papers/malloc/Makefile,v 1.5 2002/10/29 15:01:55 ru Exp $
+# $FreeBSD: stable/11/share/doc/papers/malloc/Makefile 106146 2002-10-29 15:01:59Z ru $
 
 VOLUME=	papers
 DOC=	malloc

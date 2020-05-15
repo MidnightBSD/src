@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)m5	8.1 (Berkeley) 8/14/93
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/share/doc/usd/21.troff/m5 96992 2002-05-20 13:52:35Z ru $
 .ds H T
 .tr |
 .tr ~|
