@@ -66,6 +66,7 @@
 #include <stdio.h>
 #include "cryptlib.h"
 #include "bn_lcl.h"
+#include "constant_time_locl.h"
 
 const char BN_version[] = "Big Number" OPENSSL_VERSION_PTEXT;
 
@@ -187,13 +188,57 @@ int BN_num_bits_word(BN_ULONG l)
     return bits;
 }
 
+/*
+ * This function still leaks `a->dmax`: it's caller's responsibility to
+ * expand the input `a` in advance to a public length.
+ */
+static inline
+int bn_num_bits_consttime(const BIGNUM *a)
+{
+    int j, ret;
+    unsigned int mask, past_i;
+    int i = a->top - 1;
+    bn_check_top(a);
+
+    for (j = 0, past_i = 0, ret = 0; j < a->dmax; j++) {
+        mask = constant_time_eq_int(i, j); /* 0xff..ff if i==j, 0x0 otherwise */
+
+        ret += BN_BITS2 & (~mask & ~past_i);
+        ret += BN_num_bits_word(a->d[j]) & mask;
+
+        past_i |= mask; /* past_i will become 0xff..ff after i==j */
+    }
+
+    /*
+     * if BN_is_zero(a) => i is -1 and ret contains garbage, so we mask the
+     * final result.
+     */
+    mask = ~(constant_time_eq_int(i, ((int)-1)));
+
+    return ret & mask;
+}
+
 int BN_num_bits(const BIGNUM *a)
 {
     int i = a->top - 1;
     bn_check_top(a);
 
+    if (a->flags & BN_FLG_CONSTTIME) {
+        /*
+         * We assume that BIGNUMs flagged as CONSTTIME have also been expanded
+         * so that a->dmax is not leaking secret information.
+         *
+         * In other words, it's the caller's responsibility to ensure `a` has
+         * been preallocated in advance to a public length if we hit this
+         * branch.
+         *
+         */
+        return bn_num_bits_consttime(a);
+    }
+
     if (BN_is_zero(a))
         return 0;
+
     return ((i * BN_BITS2) + BN_num_bits_word(a->d[i]));
 }
 
@@ -613,30 +658,54 @@ BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
     return (ret);
 }
 
+typedef enum {big, little} endianess_t;
+
 /* ignore negative */
-static int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen)
+static
+int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen, endianess_t endianess)
 {
     int n;
-    size_t i, inc, lasti, j;
+    size_t i, lasti, j, atop, mask;
     BN_ULONG l;
 
+    /*
+     * In case |a| is fixed-top, BN_num_bytes can return bogus length,
+     * but it's assumed that fixed-top inputs ought to be "nominated"
+     * even for padded output, so it works out...
+     */
     n = BN_num_bytes(a);
-    if (tolen == -1)
+    if (tolen == -1) {
         tolen = n;
-    else if (tolen < n)
-        return -1;
+    } else if (tolen < n) {     /* uncommon/unlike case */
+        BIGNUM temp = *a;
 
-    if (n == 0) {
+        bn_correct_top(&temp);
+        n = BN_num_bytes(&temp);
+        if (tolen < n)
+            return -1;
+    }
+
+    /* Swipe through whole available data and don't give away padded zero. */
+    atop = a->dmax * BN_BYTES;
+    if (atop == 0) {
         OPENSSL_cleanse(to, tolen);
         return tolen;
     }
 
-    lasti = n - 1;
-    for (i = 0, inc = 1, j = tolen; j > 0;) {
+    lasti = atop - 1;
+    atop = a->top * BN_BYTES;
+    if (endianess == big)
+        to += tolen; /* start from the end of the buffer */
+    for (i = 0, j = 0; j < (size_t)tolen; j++) {
+        unsigned char val;
         l = a->d[i / BN_BYTES];
-        to[--j] = (unsigned char)(l >> (8 * (i % BN_BYTES)) & (0 - inc));
-        inc = (i - lasti) >> (8 * sizeof(i) - 1);
-        i += inc; /* stay on top limb */
+        mask = 0 - ((j - atop) >> (8 * sizeof(i) - 1));
+        val = (unsigned char)(l >> (8 * (i % BN_BYTES)) & mask);
+        if (endianess == big)
+            *--to = val;
+        else
+            *to++ = val;
+        i += (i - lasti) >> (8 * sizeof(i) - 1); /* stay on last limb */
     }
 
     return tolen;
@@ -646,21 +715,66 @@ int bn_bn2binpad(const BIGNUM *a, unsigned char *to, int tolen)
 {
     if (tolen < 0)
         return -1;
-    return bn2binpad(a, to, tolen);
+    return bn2binpad(a, to, tolen, big);
 }
 
 int BN_bn2bin(const BIGNUM *a, unsigned char *to)
 {
-    int n, i;
-    BN_ULONG l;
+    return bn2binpad(a, to, -1, big);
+}
 
-    bn_check_top(a);
-    n = i = BN_num_bytes(a);
-    while (i--) {
-        l = a->d[i / BN_BYTES];
-        *(to++) = (unsigned char)(l >> (8 * (i % BN_BYTES))) & 0xff;
+BIGNUM *bn_lebin2bn(const unsigned char *s, int len, BIGNUM *ret)
+{
+    unsigned int i, m;
+    unsigned int n;
+    BN_ULONG l;
+    BIGNUM *bn = NULL;
+
+    if (ret == NULL)
+        ret = bn = BN_new();
+    if (ret == NULL)
+        return NULL;
+    bn_check_top(ret);
+    s += len;
+    /* Skip trailing zeroes. */
+    for ( ; len > 0 && s[-1] == 0; s--, len--)
+        continue;
+    n = len;
+    if (n == 0) {
+        ret->top = 0;
+        return ret;
     }
-    return (n);
+    i = ((n - 1) / BN_BYTES) + 1;
+    m = ((n - 1) % (BN_BYTES));
+    if (bn_wexpand(ret, (int)i) == NULL) {
+        BN_free(bn);
+        return NULL;
+    }
+    ret->top = i;
+    ret->neg = 0;
+    l = 0;
+    while (n--) {
+        s--;
+        l = (l << 8L) | *s;
+        if (m-- == 0) {
+            ret->d[--i] = l;
+            l = 0;
+            m = BN_BYTES - 1;
+        }
+    }
+    /*
+     * need to call this due to clear byte at top if avoiding having the top
+     * bit set (-ve number)
+     */
+    bn_correct_top(ret);
+    return ret;
+}
+
+int bn_bn2lebinpad(const BIGNUM *a, unsigned char *to, int tolen)
+{
+    if (tolen < 0)
+        return -1;
+    return bn2binpad(a, to, tolen, little);
 }
 
 int BN_ucmp(const BIGNUM *a, const BIGNUM *b)
@@ -822,6 +936,9 @@ int bn_cmp_words(const BN_ULONG *a, const BN_ULONG *b, int n)
     int i;
     BN_ULONG aa, bb;
 
+    if (n == 0)
+        return 0;
+
     aa = a[n - 1];
     bb = b[n - 1];
     if (aa != bb)
@@ -888,6 +1005,38 @@ void BN_consttime_swap(BN_ULONG condition, BIGNUM *a, BIGNUM *b, int nwords)
     t = (a->top ^ b->top) & condition;
     a->top ^= t;
     b->top ^= t;
+
+    t = (a->neg ^ b->neg) & condition;
+    a->neg ^= t;
+    b->neg ^= t;
+
+    /*-
+     * BN_FLG_STATIC_DATA: indicates that data may not be written to. Intention
+     * is actually to treat it as it's read-only data, and some (if not most)
+     * of it does reside in read-only segment. In other words observation of
+     * BN_FLG_STATIC_DATA in BN_consttime_swap should be treated as fatal
+     * condition. It would either cause SEGV or effectively cause data
+     * corruption.
+     *
+     * BN_FLG_MALLOCED: refers to BN structure itself, and hence must be
+     * preserved.
+     *
+     * BN_FLG_SECURE: must be preserved, because it determines how x->d was
+     * allocated and hence how to free it.
+     *
+     * BN_FLG_CONSTTIME: sufficient to mask and swap
+     *
+     * BN_FLG_FIXED_TOP: indicates that we haven't called bn_correct_top() on
+     * the data, so the d array may be padded with additional 0 values (i.e.
+     * top could be greater than the minimal value that it could be). We should
+     * be swapping it
+     */
+
+#define BN_CONSTTIME_SWAP_FLAGS (BN_FLG_CONSTTIME | BN_FLG_FIXED_TOP)
+
+    t = ((a->flags ^ b->flags) & BN_CONSTTIME_SWAP_FLAGS) & condition;
+    a->flags ^= t;
+    b->flags ^= t;
 
 #define BN_CONSTTIME_SWAP(ind) \
         do { \
