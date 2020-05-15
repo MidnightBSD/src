@@ -1,17 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/usr.bin/openssl/Makefile 238405 2012-07-12 19:30:53Z jkim $
+# $FreeBSD: stable/11/secure/usr.bin/openssl/Makefile 290460 2015-11-06 17:39:17Z jkim $
 
 PROG=	openssl
 
-DPADD=	${LIBSSL} ${LIBCRYPTO}
-LDADD=	-lssl -lcrypto
+LIBADD=	ssl crypto
 
 .if exists(Makefile.man)
 .include "Makefile.man"
 .endif
 .include "../../lib/libcrypto/Makefile.inc"
 
-CFLAGS+=-DMONOLITH -I${.CURDIR}
+CFLAGS+=	-DMONOLITH
 
 SRCS+=	app_rand.c apps.c asn1pars.c ca.c ciphers.c cms.c crl.c crl2p7.c \
 	dgst.c dh.c dhparam.c dsa.c dsaparam.c ec.c ecparam.c enc.c engine.c \
