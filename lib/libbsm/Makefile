@@ -1,15 +1,15 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/lib/libbsm/Makefile 313588 2017-02-11 05:58:20Z ngie $
+# $FreeBSD: stable/11/lib/libbsm/Makefile 313538 2017-02-10 07:32:40Z ngie $
 #
 
+PACKAGE=	lib${LIB}
 OPENBSMDIR=		${SRCTOP}/contrib/openbsm
-LIBBSMDIR=		${OPENBSMDIR}/libbsm
+_LIBBSMDIR=		${OPENBSMDIR}/libbsm
 
 LIB=		bsm
 SHLIB_MAJOR=	3
 
-.PATH:		${LIBBSMDIR}
+.PATH:		${_LIBBSMDIR}
 .PATH:		${OPENBSMDIR}/bsm
 .PATH:		${OPENBSMDIR}/man
 
@@ -32,7 +32,7 @@ SRCS=	bsm_audit.c							\
 #
 # Must use BSM include files from within the contrib area, not the system.
 #
-CFLAGS+=	-I${OPENBSMDIR} -I${LIBBSMDIR}
+CFLAGS+=	-I${OPENBSMDIR} -I${_LIBBSMDIR}
 
 WARNS?=		1
 

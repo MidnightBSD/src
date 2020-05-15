@@ -1,6 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libbz2/Makefile 313591 2017-02-11 06:19:25Z ngie $
+# $FreeBSD: stable/11/lib/libbz2/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
+PACKAGE=	lib${LIB}
 BZ2DIR=	${SRCTOP}/contrib/bzip2
 .PATH: ${BZ2DIR}
 

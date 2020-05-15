@@ -27,22 +27,24 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bluetooth.h,v 1.3 2012-11-25 21:59:52 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: bluetooth.h,v 1.5 2003/09/14 23:28:42 max Exp $
+ * $FreeBSD: stable/11/lib/libbluetooth/bluetooth.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _BLUETOOTH_H_
 #define _BLUETOOTH_H_
 
 #include <sys/types.h>
-#include <sys/bitstring.h>
 #include <sys/endian.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/un.h>
+
 #include <errno.h>
 #include <netdb.h>
+#include <bitstring.h>
+
 #include <netgraph/ng_message.h>
 #include <netgraph/bluetooth/include/ng_hci.h>
 #include <netgraph/bluetooth/include/ng_l2cap.h>
@@ -178,7 +180,7 @@ int		bt_devfilter_evt_tst(struct bt_devfilter const *filter, uint8_t event);
 int		bt_devinquiry(char const *devname, time_t length, int num_rsp,
 			      struct bt_devinquiry **ii);
 int		bt_devinfo (struct bt_devinfo *di);
-int		bt_devenum (bt_devenum_cb_t *cb, void *arg);
+int		bt_devenum (bt_devenum_cb_t cb, void *arg);
 
 /*
  * bdaddr utility functions (from NetBSD)

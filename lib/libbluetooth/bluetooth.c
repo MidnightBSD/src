@@ -27,10 +27,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bluetooth.c,v 1.3 2012-11-25 21:59:52 laffer1 Exp $
- * $MidnightBSD$
+ * $Id: bluetooth.c,v 1.3 2003/05/20 23:04:30 max Exp $
+ * $FreeBSD: stable/11/lib/libbluetooth/bluetooth.c 331722 2018-03-29 02:50:57Z eadler $
  */
-
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,7 +67,7 @@ bt_gethostbyname(char const *name)
 	while ((p = bt_gethostent()) != NULL) {
 		if (strcasecmp(p->h_name, name) == 0)
 			break;
-		for (cp = p->h_aliases; *cp != 0; cp++)
+		for (cp = p->h_aliases; *cp != NULL; cp++)
 			if (strcasecmp(*cp, name) == 0)
 				goto found;
 	}
@@ -180,7 +180,7 @@ bt_getprotobyname(char const *name)
 	while ((p = bt_getprotoent()) != NULL) {
 		if (strcmp(p->p_name, name) == 0)
 			break;
-		for (cp = p->p_aliases; *cp != 0; cp++)
+		for (cp = p->p_aliases; *cp != NULL; cp++)
 			if (strcmp(*cp, name) == 0)
 				goto found;
 	}
