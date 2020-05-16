@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/JIS/charset.pivot.JIS.src 258293 2013-11-18 04:42:58Z hrs $ 
+# $FreeBSD: stable/11/share/i18n/csmapper/JIS/charset.pivot.JIS.src 257636 2013-11-04 15:49:36Z hrs $ 
 # $NetBSD: charset.pivot.JIS.src,v 1.4 2007/03/05 16:58:34 tnozaki Exp $
 
 JISX0201-KANA		UCS			1

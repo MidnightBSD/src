@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/kk.pt154.io.kbd 125208 2004-01-29 16:28:22Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/kk.pt154.io.kbd 125208 2004-01-29 16:28:22Z ache $
 # KST KazSSR 903-90 with CYRILLIC LETTER IO
 # Birsh T <birsh@mail.kz>, 2003-12-02
 #                                                         alt

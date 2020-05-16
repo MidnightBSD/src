@@ -1,35 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/zoneinfo/Makefile 322100 2017-08-05 16:55:07Z ngie $
-
-#
-# HOW TO UPDATE THE ZONEINFO DATA
-#
-# With the use of subversion, this is a little bit simpler than the CVS method.
-#
-# Import the new sources to the vendor branch:
-#
-# $ cd ~/svn/vendor/tzdata/dist
-# $ tar zxvf /usr/mports/Distfiles/tzdata2008X.tar.gz
-#   (check with "svn stat" and "svn diff" if it all makes sense)
-# $ svn commit	# Commit message: "Vendor import of tzdata2008X (+details)" 
-#
-# Tag it
-#
-# $ cd ~/svn/vendor/tzdata
-# $ svn cp svn+ssh://svn.midnightbsd.org/svn/src/vendor/tzdata/dist \
-#	svn+ssh://svn.midnightbsd.org/svn/src/vendor/tzdata/tzdata2008X
-# $ svn update	# Commit message: "Tag of tzdata2008X"
-#
-# Merge-from-vendor
-#
-# $ cd ~/svn/head/share/zoneinfo
-# $ svn update
-# $ svn merge -c X --accept=postpone \
-#	svn+ssh://svn.midnightbsd.org/svn/src/vendor/tzdata/dist .
-# $ svn update	# Commit message: "MFV of tzdata2008X"
-#
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 CLEANFILES+=	yearistype
 CLEANDIRS+=	builddir
@@ -41,11 +10,6 @@ CONTRIBDIR=	${.CURDIR}/../../contrib/tzdata/
 MK_ZONEINFO_LEAPSECONDS_SUPPORT= yes
 .endif
 
-.if defined(OLDTIMEZONES)
-.warning "Using backwards compatibility variable for OLDTIMEZONES; please use WITH_ZONEINFO_OLD_TIMEZONES_SUPPORT instead"
-MK_ZONEINFO_OLD_TIMEZONES_SUPPORT= yes
-.endif
-
 .if ${MK_ZONEINFO_LEAPSECONDS_SUPPORT} != "no"
 LEAPFILE=	-L ${CONTRIBDIR}leapseconds
 .else
@@ -54,11 +18,8 @@ LEAPFILE=
 
 TZFILES=	africa antarctica asia australasia etcetera europe \
 		factory northamerica southamerica
-POSIXRULES=	America/New_York
-
-.if ${MK_ZONEINFO_OLD_TIMEZONES_SUPPORT} != "no"
 TZFILES+=	backward systemv
-.endif
+POSIXRULES=	America/New_York
 
 TZFILES:=	${TZFILES:S/^/${CONTRIBDIR}/}
 
@@ -79,14 +40,13 @@ TZBUILDSUBDIRS=	\
 		Indian \
 		Pacific \
 		SystemV
-
-.if ${MK_ZONEINFO_OLD_TIMEZONES_SUPPORT} != "no"
 TZBUILDSUBDIRS+= US Mexico Chile Canada Brazil
-.endif
 
+.if !defined(_SKIP_BUILD)
 all: zoneinfo
+.endif
+META_TARGETS+=	zoneinfo install-zoneinfo
 
-.PHONY: zoneinfo
 zoneinfo: yearistype ${TDATA}
 	mkdir -p ${TZBUILDDIR}
 	cd ${TZBUILDDIR}; mkdir -p ${TZBUILDSUBDIRS}
@@ -94,14 +54,15 @@ zoneinfo: yearistype ${TDATA}
 	zic -D -d ${TZBUILDDIR} -p ${POSIXRULES} -m ${NOBINMODE} \
 	    ${LEAPFILE} -y ${.OBJDIR}/yearistype ${TZFILES}
 
-beforeinstall:
+beforeinstall: install-zoneinfo
+install-zoneinfo:
 	mkdir -p ${DESTDIR}/usr/share/zoneinfo
 	cd ${DESTDIR}/usr/share/zoneinfo;  mkdir -p ${TZBUILDSUBDIRS}
 	cd ${TZBUILDDIR} && \
-	    find -s * -type f -print -exec ${INSTALL} \
+	    find -s * -type f -print -exec ${INSTALL} ${TAG_ARGS} \
 	    -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
 	    \{} ${DESTDIR}/usr/share/zoneinfo/\{} \;
-	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
+	${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m ${NOBINMODE} \
 	    ${CONTRIBDIR}/zone.tab ${DESTDIR}/usr/share/zoneinfo/
 
 afterinstall:

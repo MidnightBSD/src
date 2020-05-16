@@ -1,4 +1,4 @@
-# $MidnightBSD$ 
+# $FreeBSD: stable/11/share/i18n/esdb/EUC/EUC-JP.src 257636 2013-11-04 15:49:36Z hrs $ 
 # $NetBSD: EUC-JP.src,v 1.2 2003/07/16 06:57:35 tshiozak Exp $
 
 NAME		"EUC-JP"

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/hy.armscii-8.kbd 117260 2003-07-05 12:38:18Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/hy.armscii-8.kbd 117260 2003-07-05 12:38:18Z ache $
 #
 # FreeBSD Armenian Phonetic keyboard layout
 # by Vahe Khachikyan <vahe@khachikyan.de>

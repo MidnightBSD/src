@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/csmapper/BIG5/Makefile 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: Makefile.inc,v 1.2 2007/03/05 16:57:10 tnozaki Exp $
 
 CODE=	Big5

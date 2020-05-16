@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/csmapper/MISC/DECMCS%UCS.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: DECMCS%UCS.src,v 1.1 2007/04/01 18:52:29 tnozaki Exp $
 
 TYPE		ROWCOL
@@ -10,7 +10,7 @@ DST_UNIT_BITS	8
 
 BEGIN_MAP
 #
-# $Id: DECMCS%UCS.src,v 1.1 2012-07-04 16:33:45 laffer1 Exp $
+# $Id: DECMCS%UCS.src,v 1.1 2007/04/01 18:52:29 tnozaki Exp $
 #
 #	Name:             DEC Multinational Character Set (1987) to Unicode
 #	Unicode version:  2.1

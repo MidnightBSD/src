@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/GB/GB2312GBK%UCS.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: stable/11/share/i18n/csmapper/GB/GB2312GBK%UCS.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: GB2312%UCS.src,v 1.4 2006/08/19 10:58:41 tnozaki Exp $
 
 TYPE		ROWCOL

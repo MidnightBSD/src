@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/JIS/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: stable/11/share/i18n/csmapper/JIS/Makefile 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: Makefile.inc,v 1.6 2007/03/05 16:58:33 tnozaki Exp $
 
 CODE=	JIS

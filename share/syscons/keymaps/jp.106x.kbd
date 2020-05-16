@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/jp.106x.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/jp.106x.kbd 74119 2001-03-11 23:41:19Z ache $
 #
 # (this one has capslock and control swapped)
 #                                                         alt

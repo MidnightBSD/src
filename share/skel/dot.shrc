@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/skel/dot.shrc 313288 2017-02-05 15:46:05Z jilles $
+# $FreeBSD: stable/11/share/skel/dot.shrc 327659 2018-01-07 00:31:45Z eadler $
 #
 # .shrc - bourne shell startup file 
 #
@@ -22,7 +21,7 @@
 # some useful aliases
 alias h='fc -l'
 alias j=jobs
-alias m=$PAGER
+alias m="$PAGER"
 alias ll='ls -laFo'
 alias l='ls -l'
 alias g='egrep -i'

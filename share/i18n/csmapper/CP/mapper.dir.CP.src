@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/csmapper/CP/mapper.dir.CP.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: mapper.dir.CP.src,v 1.13 2008/09/13 13:08:36 tnozaki Exp $
 
 CP50220/CP51932		mapper_zone	0x2121 - 0x7C7E

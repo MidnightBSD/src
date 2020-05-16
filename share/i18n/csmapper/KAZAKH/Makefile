@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/csmapper/KAZAKH/Makefile 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: Makefile.inc,v 1.1 2007/03/13 16:34:37 tnozaki Exp $
 
 CODE=	KAZAKH

@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/csmapper/KS/charset.pivot.KS.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: charset.pivot.KS.src,v 1.2 2006/10/18 17:54:55 tnozaki Exp $
 
 JOHAB			UCS			1

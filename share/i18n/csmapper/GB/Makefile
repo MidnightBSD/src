@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/GB/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD: stable/11/share/i18n/csmapper/GB/Makefile 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: Makefile.inc,v 1.7 2006/11/23 03:25:24 tnozaki Exp $
 
 CODE=	GB

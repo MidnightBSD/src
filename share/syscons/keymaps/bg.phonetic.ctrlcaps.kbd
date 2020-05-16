@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/bg.phonetic.ctrlcaps.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/bg.phonetic.ctrlcaps.kbd 74119 2001-03-11 23:41:19Z ache $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

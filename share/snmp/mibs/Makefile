@@ -1,7 +1,6 @@
-# $FreeBSD: src/share/snmp/mibs/Makefile,v 1.3 2004/12/21 08:46:55 ru Exp $
+# $FreeBSD: stable/11/share/snmp/mibs/Makefile 284255 2015-06-11 04:22:17Z sjg $
 
 FILES=	FREEBSD-MIB.txt
-NO_OBJ=
 FILESDIR=	${SHAREDIR}/snmp/mibs
 
 .include <bsd.prog.mk>

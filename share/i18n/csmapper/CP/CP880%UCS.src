@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/csmapper/CP/CP880%UCS.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: CP880%UCS.src,v 1.2 2003/07/12 16:11:04 tshiozak Exp $
 
 TYPE		ROWCOL

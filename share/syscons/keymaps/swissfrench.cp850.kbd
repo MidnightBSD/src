@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/swissfrench.cp850.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/swissfrench.cp850.kbd 74119 2001-03-11 23:41:19Z ache $
 #
 # swiss-french cp850 keymap
 # original 13.06.1998 by Francois Tamone <tamone@eig.unige.ch>

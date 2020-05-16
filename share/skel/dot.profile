@@ -49,4 +49,7 @@ if [ -z "$SSH_AUTH_SOCK" -a -x "$SSHAGENT" ]; then
   trap "kill $SSH_AGENT_PID" 0
 fi
 
+# Query terminal size; useful for serial lines.
+if [ -x /usr/bin/resizewin ] ; then /usr/bin/resizewin -z ; fi
+
 if [ -x /usr/games/fortune ] ; then  /usr/games/fortune fortunes; fi

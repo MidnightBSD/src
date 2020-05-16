@@ -1,19 +1,18 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/zoneinfo/tests/Makefile 322100 2017-08-05 16:55:07Z ngie $
+# $FreeBSD: stable/11/share/zoneinfo/tests/Makefile 360290 2020-04-25 05:51:58Z delphij $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/contrib/tzdata
 
-FILESGROUPS=	FILES
+PACKAGE=	tests
+
 FILESGROUPS+=	TESTFILES
 
-.if ${MK_ZONEINFO_OLD_TIMEZONES_SUPPORT} != "no"
 ATF_TESTS_SH+=	backward_test
 TESTFILES+=	backward
-.endif
 
 TESTFILES+=	zoneinfo_common.sh
+TESTFILESPACKAGE= ${PACKAGE}
 TESTFILESDIR=	${TESTSDIR}
 
 .include <bsd.test.mk>

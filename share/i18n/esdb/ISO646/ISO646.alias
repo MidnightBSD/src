@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/esdb/ISO646/ISO646.alias 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: ISO646.alias,v 1.2 2006/07/05 15:31:50 tnozaki Exp $
 
 BASIC:1983	iso_646.basic:1983 ref

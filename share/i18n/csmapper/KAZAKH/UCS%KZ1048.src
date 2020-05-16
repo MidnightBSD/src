@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/KAZAKH/UCS%KZ1048.src 249588 2013-04-17 11:56:11Z gabor $ 
+# $FreeBSD: stable/11/share/i18n/csmapper/KAZAKH/UCS%KZ1048.src 249588 2013-04-17 11:56:11Z gabor $ 
 # $NetBSD: UCS%KZ1048.src,v 1.1 2007/03/13 16:34:37 tnozaki Exp $
 
 TYPE		ROWCOL

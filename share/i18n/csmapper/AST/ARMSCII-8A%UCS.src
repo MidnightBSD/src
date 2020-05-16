@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/csmapper/AST/ARMSCII-8A%UCS.src 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: ARMSCII-8A%UCS.src,v 1.1 2006/04/01 04:13:21 tnozaki Exp $
 
 TYPE		ROWCOL

@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/esdb/BIG5/Big5.variable 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: Big5.variable,v 1.2 2007/03/05 16:58:34 tnozaki Exp $
 
 2003	row=0x81-0xFE;col=0x40-0x7E,0xA1-0xFE;

@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/csmapper/MISC/mapper.dir.MISC.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: mapper.dir.MISC.src,v 1.12 2007/07/15 14:44:37 tnozaki Exp $
 
 ATARIST/UCS			mapper_std	MISC/ATARIST%UCS.mps

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/spanish.dvorak.kbd 244164 2012-12-13 00:44:23Z eadler $
+# $FreeBSD: stable/11/share/syscons/keymaps/spanish.dvorak.kbd 244164 2012-12-13 00:44:23Z eadler $
 #
 # Submitted by:	Álvaro Castillo <netsys@fedoraproject.org>
 #                                                         alt

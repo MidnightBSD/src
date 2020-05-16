@@ -1,10 +1,9 @@
-# $MidnightBSD$
 # Keyboard map for Central European languages under FreeBSD.
 # Created by G. Adam Stanislav <adam@whizkidtech.net>
 #
 # Version 1.0 - 1999-03-18
 #
-# $FreeBSD: stable/10/share/syscons/keymaps/ce.iso2.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/ce.iso2.kbd 74119 2001-03-11 23:41:19Z ache $
 #
 # This map uses the US QWERTY keyboard for its basic layout.
 # It adds a "third row" to the top of the PC keyboard. To
