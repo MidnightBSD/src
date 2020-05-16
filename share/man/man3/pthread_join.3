@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1996-1998 John Birrell <jb@cimlogic.com.au>.
 .\" All rights reserved.
 .\"
@@ -29,9 +28,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man3/pthread_join.3 209588 2010-06-29 14:32:01Z jhb $
+.\" $FreeBSD: stable/11/share/man/man3/pthread_join.3 331089 2018-03-17 06:05:33Z eadler $
 .\"
-.Dd January 23, 2010
+.Dd February 3, 2018
 .Dt PTHREAD_JOIN 3
 .Os
 .Sh NAME
@@ -44,6 +43,7 @@
 .In pthread.h
 .Ft int
 .Fn pthread_join "pthread_t thread" "void **value_ptr"
+.In pthread_np.h
 .Ft int
 .Fn pthread_timedjoin_np "pthread_t thread" "void **value_ptr" "const struct timespec *abstime"
 .Sh DESCRIPTION

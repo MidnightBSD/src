@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$OpenBSD: tree.3,v 1.7 2002/06/12 01:09:20 provos Exp $
 .\"
 .\" Copyright 2002 Niels Provos <provos@citi.umich.edu>
@@ -29,7 +28,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man3/tree.3 278344 2015-02-07 08:14:20Z kib $
+.\" $FreeBSD: stable/11/share/man/man3/tree.3 301591 2016-06-08 09:36:07Z trasz $
 .\"
 .Dd January 24, 2015
 .Dt TREE 3
@@ -89,8 +88,10 @@
 .Nm RB_RIGHT ,
 .Nm RB_PARENT ,
 .Nm RB_FOREACH ,
+.Nm RB_FOREACH_FROM ,
 .Nm RB_FOREACH_SAFE ,
 .Nm RB_FOREACH_REVERSE ,
+.Nm RB_FOREACH_REVERSE_FROM ,
 .Nm RB_FOREACH_REVERSE_SAFE ,
 .Nm RB_INIT ,
 .Nm RB_INSERT ,
@@ -174,8 +175,10 @@
 .Ft "struct TYPE *"
 .Fn RB_PARENT "struct TYPE *elm" "RB_ENTRY NAME"
 .Fn RB_FOREACH VARNAME NAME "RB_HEAD *head"
+.Fn RB_FOREACH_FROM "VARNAME" "NAME" "POS_VARNAME"
 .Fn RB_FOREACH_SAFE "VARNAME" "NAME" "RB_HEAD *head" "TEMP_VARNAME"
 .Fn RB_FOREACH_REVERSE VARNAME NAME "RB_HEAD *head"
+.Fn RB_FOREACH_REVERSE_FROM "VARNAME" "NAME" "POS_VARNAME"
 .Fn RB_FOREACH_REVERSE_SAFE "VARNAME" "NAME" "RB_HEAD *head" "TEMP_VARNAME"
 .Ft void
 .Fn RB_INIT "RB_HEAD *head"
@@ -421,12 +424,14 @@ Individual prototypes can be declared with
 .Fn RB_PROTOTYPE_PREV ,
 and
 .Fn RB_PROTOTYPE_MINMAX
-in case not all functions are required.  The individual prototype macros expect
+in case not all functions are required.
+The individual prototype macros expect
 .Fa NAME ,
 .Fa TYPE ,
 and
 .Fa ATTR
-arguments.  The
+arguments.
+The
 .Fa ATTR
 argument must be empty for global functions or
 .Fa static
@@ -539,6 +544,17 @@ However, unlike their unsafe counterparts,
 they permit both the removal of np
 as well as freeing it from within the loop safely
 without interfering with the traversal.
+.Pp
+Both
+.Fn RB_FOREACH_FROM
+and
+.Fn RB_FOREACH_REVERSE_FROM
+may be used to continue an interrupted traversal
+in a forward or reverse direction respectively.
+The head pointer is not required.
+The pointer to the node from where to resume the traversal
+should be passed as their last argument,
+and will be overwritten to provide safe traversal.
 .Pp
 The
 .Fn RB_EMPTY

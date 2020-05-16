@@ -1,8 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 12/13/93
-# $FreeBSD: stable/10/share/man/man3/Makefile 303325 2016-07-25 23:38:14Z jhb $
+# $FreeBSD: stable/11/share/man/man3/Makefile 338405 2018-08-31 05:21:33Z kib $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+PACKAGE=runtime-manuals
 
 MAN=		assert.3 \
 		ATOMIC_VAR_INIT.3 \
@@ -48,7 +49,9 @@ MLINKS+=	bitstring.3 bit_alloc.3 \
 		bitstring.3 bit_clear.3 \
 		bitstring.3 bit_decl.3 \
 		bitstring.3 bit_ffc.3 \
+		bitstring.3 bit_ffc_at.3 \
 		bitstring.3 bit_ffs.3 \
+		bitstring.3 bit_ffs_at.3 \
 		bitstring.3 bit_nclear.3 \
 		bitstring.3 bit_nset.3 \
 		bitstring.3 bit_set.3 \
@@ -72,6 +75,7 @@ MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
 		queue.3 LIST_ENTRY.3 \
 		queue.3 LIST_FIRST.3 \
 		queue.3 LIST_FOREACH.3 \
+		queue.3 LIST_FOREACH_FROM.3 \
 		queue.3 LIST_FOREACH_FROM_SAFE.3 \
 		queue.3 LIST_FOREACH_SAFE.3 \
 		queue.3 LIST_HEAD.3 \
@@ -90,6 +94,7 @@ MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
 		queue.3 SLIST_ENTRY.3 \
 		queue.3 SLIST_FIRST.3 \
 		queue.3 SLIST_FOREACH.3 \
+		queue.3 SLIST_FOREACH_FROM.3 \
 		queue.3 SLIST_FOREACH_FROM_SAFE.3 \
 		queue.3 SLIST_FOREACH_SAFE.3 \
 		queue.3 SLIST_HEAD.3 \
@@ -109,6 +114,7 @@ MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
 		queue.3 STAILQ_ENTRY.3 \
 		queue.3 STAILQ_FIRST.3 \
 		queue.3 STAILQ_FOREACH.3 \
+		queue.3 STAILQ_FOREACH_FROM.3 \
 		queue.3 STAILQ_FOREACH_FROM_SAFE.3 \
 		queue.3 STAILQ_FOREACH_SAFE.3 \
 		queue.3 STAILQ_HEAD.3 \
@@ -130,8 +136,10 @@ MLINKS+=	queue.3 LIST_CLASS_ENTRY.3 \
 		queue.3 TAILQ_ENTRY.3 \
 		queue.3 TAILQ_FIRST.3 \
 		queue.3 TAILQ_FOREACH.3 \
+		queue.3 TAILQ_FOREACH_FROM.3 \
 		queue.3 TAILQ_FOREACH_FROM_SAFE.3 \
 		queue.3 TAILQ_FOREACH_REVERSE.3 \
+		queue.3 TAILQ_FOREACH_REVERSE_FROM.3 \
 		queue.3 TAILQ_FOREACH_REVERSE_FROM_SAFE.3 \
 		queue.3 TAILQ_FOREACH_REVERSE_SAFE.3 \
 		queue.3 TAILQ_FOREACH_SAFE.3 \
@@ -233,6 +241,7 @@ PTHREAD_MAN=	pthread.3 \
 		pthread_multi_np.3 \
 		pthread_mutexattr.3 \
 		pthread_mutexattr_getkind_np.3 \
+		pthread_mutex_consistent.3 \
 		pthread_mutex_destroy.3 \
 		pthread_mutex_init.3 \
 		pthread_mutex_lock.3 \
@@ -307,16 +316,19 @@ PTHREAD_MLINKS+=pthread_multi_np.3 pthread_single_np.3
 PTHREAD_MLINKS+=pthread_mutexattr.3 pthread_mutexattr_destroy.3 \
 		pthread_mutexattr.3 pthread_mutexattr_getprioceiling.3 \
 		pthread_mutexattr.3 pthread_mutexattr_getprotocol.3 \
+		pthread_mutexattr.3 pthread_mutexattr_getrobust.3 \
 		pthread_mutexattr.3 pthread_mutexattr_gettype.3 \
 		pthread_mutexattr.3 pthread_mutexattr_init.3 \
 		pthread_mutexattr.3 pthread_mutexattr_setprioceiling.3 \
 		pthread_mutexattr.3 pthread_mutexattr_setprotocol.3 \
+		pthread_mutexattr.3 pthread_mutexattr_setrobust.3 \
 		pthread_mutexattr.3 pthread_mutexattr_settype.3
 PTHREAD_MLINKS+=pthread_mutexattr_getkind_np.3 pthread_mutexattr_setkind_np.3
 PTHREAD_MLINKS+=pthread_rwlock_rdlock.3 pthread_rwlock_tryrdlock.3
 PTHREAD_MLINKS+=pthread_rwlock_wrlock.3 pthread_rwlock_trywrlock.3
 PTHREAD_MLINKS+=pthread_schedparam.3 pthread_getschedparam.3 \
 		pthread_schedparam.3 pthread_setschedparam.3
+PTHREAD_MLINKS+=pthread_set_name_np.3 pthread_get_name_np.3
 PTHREAD_MLINKS+=pthread_spin_init.3 pthread_spin_destroy.3 \
 		pthread_spin_lock.3 pthread_spin_trylock.3 \
 		pthread_spin_lock.3 pthread_spin_unlock.3
