@@ -1,6 +1,5 @@
-.\" $MidnightBSD$
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/lmc.4 233510 2012-03-26 15:18:14Z joel $
+.\" $FreeBSD: stable/11/share/man/man4/lmc.4 333412 2018-05-09 14:50:32Z emaste $
 .\"
 .\" Copyright (c) 2002-2005 David Boggs. (boggs@boggs.palo-alto.ca.us)
 .\" All rights reserved.
@@ -44,7 +43,7 @@
 .\" this program; if not, write to the Free Software Foundation, Inc., 59
 .\" Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 .\"
-.Dd February 8, 2012
+.Dd May 9, 2018
 .Dt LMC 4
 .Os
 .\"
@@ -89,6 +88,13 @@ SPPP nor Netgraph are configured into the kernel.
 Netgraph and SPPP can both be enabled; Netgraph will be used if the
 .Va rawdata
 hook is connected.
+.\"
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 12.0
+and later.
 .\"
 .Sh DESCRIPTION
 .\"
@@ -762,4 +768,4 @@ rewrote everything and now feels responsible for it.
 .\"
 .Sh AUTHORS
 .\"
-.An "David Boggs" Aq boggs@boggs.palo-alto.ca.us
+.An David Boggs Aq Mt boggs@boggs.palo-alto.ca.us

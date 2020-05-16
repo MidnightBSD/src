@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2016 Andriy Gapon <avg@FreeBSD.org>
 .\" All rights reserved.
@@ -23,9 +22,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/jedec_ts.4 308371 2016-11-06 13:56:34Z avg $
+.\" $FreeBSD: stable/11/share/man/man4/jedec_ts.4 336976 2018-07-31 16:08:38Z rpokala $
 .\"
-.Dd October 13, 2016
+.Dd July 24, 2018
 .Dt JEDEC_TS 4
 .Os
 .Sh NAME
@@ -64,6 +63,18 @@ In
 .Cd hint.jedec_ts.7.at="smbus0"
 .Cd hint.jedec_ts.7.addr="0x3E"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 12.0
+and later.
+A superset of its functionality is available in the
+.Xr jedec_dimm 4
+driver.
+That driver's manpage includes instructions on updating
+.Pa /boot/device.hints
+accordingly.
 .Sh DESCRIPTION
 The
 .Nm
@@ -122,7 +133,7 @@ dev.jedec_ts.1.temp: 40.7500C
 The
 .Nm
 driver first appeared in
-.Fx 12.0 .
+.Fx 11.1 .
 .Sh AUTHORS
 .An -nosplit
 The

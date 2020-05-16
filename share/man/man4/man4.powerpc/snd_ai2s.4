@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2009 Nathan Whitehorn <nwhitehorn@FreeBSD.org>
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/man4.powerpc/snd_ai2s.4 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD: stable/11/share/man/man4/man4.powerpc/snd_ai2s.4 276292 2014-12-27 07:07:37Z joel $
 .\"
 .Dd January 20, 2009
 .Dt SND_AI2S 4
@@ -66,8 +65,8 @@ Apple Tumbler Audio
 Apple Snapper Audio
 .El
 .Sh SEE ALSO
-.Xr sound 4 ,
-.Xr snd_davbus 4
+.Xr snd_davbus 4 ,
+.Xr sound 4
 .Sh HISTORY
 The
 .Nm
@@ -80,10 +79,10 @@ and then in
 The
 .Nm
 driver was written by
-.An Tsubai Masanari
-.Aq tsubai@netbsd.org ,
-and ported to FreeBSD by
-.An Marco Trillo
-.Aq marcotrillo@gmail.com .
+.An Tsubai Masanari Aq Mt tsubai@netbsd.org ,
+and ported to
+.Fx
+by
+.An Marco Trillo Aq Mt marcotrillo@gmail.com .
 .Sh BUGS
 Recording and operation with non-44.1 Khz audio are not currently supported.

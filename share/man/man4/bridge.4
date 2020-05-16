@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$NetBSD: bridge.4,v 1.5 2004/01/31 20:14:11 jdc Exp $
 .\"
 .\" Copyright 2001 Wasabi Systems, Inc.
@@ -34,9 +33,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/bridge.4 253843 2013-07-31 16:26:41Z hrs $
+.\" $FreeBSD: stable/11/share/man/man4/bridge.4 324908 2017-10-23 07:39:04Z mav $
 .\"
-.Dd July 27, 2013
+.Dd October 16, 2017
 .Dt IF_BRIDGE 4
 .Os
 .Sh NAME
@@ -130,8 +129,11 @@ in
 The MTU of the first member interface to be added is used as the bridge MTU.
 All additional members are required to have exactly the same value.
 .Pp
-The TXCSUM capability is disabled for any interface added to the bridge, and it
-is restored when the interface is removed again.
+The TOE, TSO, TXCSUM and TXCSUM6 capabilities on all interfaces added to the
+bridge are disabled if any of the interfaces doesn't support/enable them.
+The LRO capability is always disabled.
+All the capabilities are restored when the interface is removed from bridge.
+Changing capabilities in run time may cause NIC reinit and the link flap.
 .Pp
 The bridge supports
 .Dq monitor mode ,
@@ -426,8 +428,8 @@ cloned_interfaces="bridge0"
 ifconfig_bridge0="addm wlan0 addm fxp0 up"
 .Ed
 .Pp
-For the bridge to forward packets all member interfaces and the bridge need
-to be up.
+For the bridge to forward packets,
+all member interfaces and the bridge need to be up.
 The above example would also require:
 .Bd -literal -offset indent
 create_args_wlan0="wlanmode hostap"
@@ -501,20 +503,17 @@ driver first appeared in
 The
 .Nm bridge
 driver was originally written by
-.An Jason L. Wright
-.Aq jason@thought.net
+.An Jason L. Wright Aq Mt jason@thought.net
 as part of an undergraduate independent study at the University of
 North Carolina at Greensboro.
 .Pp
 This version of the
 .Nm
 driver has been heavily modified from the original version by
-.An Jason R. Thorpe
-.Aq thorpej@wasabisystems.com .
+.An Jason R. Thorpe Aq Mt thorpej@wasabisystems.com .
 .Pp
 Rapid Spanning Tree Protocol (RSTP) support was added by
-.An Andrew Thompson
-.Aq thompsa@FreeBSD.org .
+.An Andrew Thompson Aq Mt thompsa@FreeBSD.org .
 .Sh BUGS
 The
 .Nm

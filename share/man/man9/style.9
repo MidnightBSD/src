@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 1995-2005 The FreeBSD Project
 .\" All rights reserved.
@@ -25,9 +24,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	From: @(#)style	1.14 (Berkeley) 4/28/95
-.\" $FreeBSD: stable/10/share/man/man9/style.9 291754 2015-12-04 09:07:18Z ngie $
+.\" $FreeBSD: stable/11/share/man/man9/style.9 291861 2015-12-05 17:01:38Z cem $
 .\"
-.Dd November 22, 2015
+.Dd December 5, 2015
 .Dt STYLE 9
 .Os
 .Sh NAME
@@ -47,7 +46,7 @@ is silent on an issue.
  * Style guide for FreeBSD.  Based on the CSRG's KNF (Kernel Normal Form).
  *
  *	@(#)style	1.14 (Berkeley) 4/28/95
- * $FreeBSD: stable/10/share/man/man9/style.9 291754 2015-12-04 09:07:18Z ngie $
+ * $FreeBSD: stable/11/share/man/man9/style.9 291861 2015-12-05 17:01:38Z cem $
  */
 
 /*
@@ -112,7 +111,7 @@ static char sccsid[] = "@(#)style	1.14 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/share/man/man9/style.9 291754 2015-12-04 09:07:18Z ngie $");
+__FBSDID("$FreeBSD: stable/11/share/man/man9/style.9 291861 2015-12-05 17:01:38Z cem $");
 .Ed
 .Pp
 Leave another blank line before the header files.
@@ -288,6 +287,30 @@ there is no overriding reason to prefer the older
 Like white-space commits, care should be taken in making
 .Vt uintXX_t
 only commits.
+.Pp
+Similarly, the project is slowly moving to use the
+.St -isoC-99
+.Vt bool
+in preference to the older
+.Vt int
+or
+.Vt boolean_t .
+New code should use
+.Vt bool ,
+and old code may be converted if it is
+reasonable to do so.
+Literal values are named
+.Dv true
+and
+.Dv false .
+These are preferred to the old spellings
+.Dv TRUE
+and
+.Dv FALSE .
+Userspace code should include
+.In stdbool.h ,
+while kernel code should include
+.In sys/types.h .
 .Pp
 Enumeration values are all uppercase.
 .Bd -literal

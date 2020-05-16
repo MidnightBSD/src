@@ -1,8 +1,8 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-#	$FreeBSD: stable/10/share/man/man5/Makefile 318623 2017-05-22 06:20:58Z ngie $
-# $MidnightBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+PACKAGE=runtime-manuals
 
 #MISSING: dump.5 plot.5
 MAN=	acct.5 \
@@ -50,13 +50,14 @@ MAN=	acct.5 \
 	pbm.5 \
 	periodic.conf.5 \
 	phones.5 \
+	portindex.5 \
+	portsnap.conf.5 \
 	procfs.5 \
 	protocols.5 \
 	quota.user.5 \
 	rc.conf.5 \
 	rctl.conf.5 \
 	regdomain.5 \
-	reiserfs.5 \
 	remote.5 \
 	resolver.5 \
 	services.5 \
@@ -72,9 +73,11 @@ MLINKS+=fs.5 inode.5
 MLINKS+=hosts.equiv.5 rhosts.5
 MLINKS+=msdosfs.5 msdos.5
 MLINKS+=passwd.5 master.passwd.5
+MLINKS+=portindex.5 INDEX.5
 MLINKS+=quota.user.5 quota.group.5
 MLINKS+=rc.conf.5 rc.conf.local.5
 MLINKS+=resolver.5 resolv.conf.5
+MLINKS+=src.conf.5 src-env.conf.5
 
 .if ${MK_AUTOFS} != "no"
 MAN+=	autofs.5

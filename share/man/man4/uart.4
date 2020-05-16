@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2003 Marcel Moolenaar
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/uart.4 294229 2016-01-17 18:18:01Z ian $
+.\" $FreeBSD: stable/11/share/man/man4/uart.4 318493 2017-05-18 20:45:09Z trasz $
 .\"
-.Dd December 9, 2015
+.Dd April 26, 2017
 .Dt UART 4
 .Os
 .Sh NAME
@@ -157,7 +156,7 @@ The
 .Nm
 driver can capture PPS timing information as defined in RFC 2783.
 The API, accessed via
-.Xr ioctl 8 ,
+.Xr ioctl 2 ,
 is available on the tty device.
 To use the PPS capture feature with
 .Xr ntpd 8 ,
@@ -189,7 +188,7 @@ Capture pulses on the CTS line.
 Capture pulses on the DCD line.
 .El
 .Pp
-The following values may be ORed with the capture mode to configure 
+The following values may be ORed with the capture mode to configure
 capture processing options:
 .Bl -tag -compact -offset "mmmm" -width "mmmm"
 .It 0x10
@@ -227,7 +226,7 @@ level signal at up to 12 volts.
 A connection to header pins or an edge-connector on an embedded board
 is typically a TTL signal at 3.3 or 5 volts.
 .Sh FILES
-.Bl -tag -width ".Pa /dev/ttyu?.init" -compact
+.Bl -tag -width "/dev/ttyu?.init" -compact
 .It Pa /dev/ttyu?
 for callin ports
 .It Pa /dev/ttyu?.init
@@ -253,4 +252,4 @@ device driver first appeared in
 The
 .Nm
 device driver and this manual page were written by
-.An Marcel Moolenaar Aq marcel@xcllnt.net .
+.An Marcel Moolenaar Aq Mt marcel@xcllnt.net .

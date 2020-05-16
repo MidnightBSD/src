@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2005 Nuno Antunes <nuno.antunes@gmail.com>
 .\" Copyright (c) 2007 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/ng_car.4 299386 2016-05-10 20:12:27Z wblock $
+.\" $FreeBSD: stable/11/share/man/man4/ng_car.4 301589 2016-06-08 08:50:35Z trasz $
 .\"
 .Dd November 13, 2012
 .Dt NG_CAR 4
@@ -110,7 +109,8 @@ links with bandwidth * delay product less than 6-8 TCP segments, but it
 consumes additional system resources for queue processing.
 .El
 By default, all information rates are measured in bits per second and bursts
-are measured in bytes. But when NG_CAR_COUNT_PACKETS option is enabled,
+are measured in bytes.
+But when NG_CAR_COUNT_PACKETS option is enabled,
 rates are measured in packets per second and bursts are in packets.
 .Sh CONTROL MESSAGES
 This node type supports the generic control messages and the following
@@ -209,7 +209,7 @@ SEQ
 .%O RFC 2698
 .Re
 .Sh AUTHORS
-.An Nuno Antunes Aq nuno.antunes@gmail.com
-.An Alexander Motin Aq mav@FreeBSD.org
+.An Nuno Antunes Aq Mt nuno.antunes@gmail.com
+.An Alexander Motin Aq Mt mav@FreeBSD.org
 .Sh BUGS
 At this moment only DROP and FORWARD actions are implemented.

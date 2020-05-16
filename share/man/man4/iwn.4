@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2004-2006
 .\"	Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
 .\"
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/iwn.4 261971 2014-02-16 11:11:41Z brueffer $
+.\" $FreeBSD: stable/11/share/man/man4/iwn.4 270842 2014-08-30 13:47:05Z brueffer $
 .\"
-.Dd February 9, 2014
+.Dd August 30, 2014
 .Dt IWN 4
 .Os
 .Sh NAME
@@ -47,6 +46,9 @@ You also need to select a firmware for your device.
 Choose one from:
 .Bd -ragged -offset indent
 .Cd "device iwn1000fw"
+.Cd "device iwn100fw"
+.Cd "device iwn105fw"
+.Cd "device iwn135fw"
 .Cd "device iwn2000fw"
 .Cd "device iwn2030fw"
 .Cd "device iwn4965fw"
@@ -71,6 +73,9 @@ module at boot time, place the following lines in
 .Bd -literal -offset indent
 if_iwn_load="YES"
 iwn1000fw_load="YES"
+iwn100fw_load="YES"
+iwn105fw_load="YES"
+iwn135fw_load="YES"
 iwn2000fw_load="YES"
 iwn2030fw_load="YES"
 iwn4965fw_load="YES"
@@ -90,11 +95,23 @@ driver provides support for:
 .It Intel Centrino Advanced-N 6200
 .It Intel Centrino Advanced-N 6205
 .It Intel Centrino Advanced-N 6230
+.It Intel Centrino Advanced-N 6235
 .It Intel Centrino Advanced-N + WiMAX 6250
 .It Intel Centrino Ultimate-N 6300
+.It Intel Centrino Wireless-N 100
+.It Intel Centrino Wireless-N 105
 .It Intel Centrino Wireless-N 130
+.It Intel Centrino Wireless-N 135
 .It Intel Centrino Wireless-N 1000
 .It Intel Centrino Wireless-N 1030
+.It Intel Centrino Wireless-N 2200
+.It Intel Centrino Wireless-N 2230
+.It Intel Centrino Wireless-N 4965
+.It Intel Centrino Wireless-N 5100
+.It Intel Centrino Wireless-N 6150
+.It Intel Centrino Wireless-N 6200
+.It Intel Centrino Wireless-N 6250
+.It Intel Centrino Wireless-N 6250
 .It Intel Centrino Wireless-N + WiMAX 6150
 .It Intel Ultimate N WiFi Link 5300
 .It Intel Wireless WiFi Link 4965
@@ -183,4 +200,4 @@ This should not happen.
 The original
 .Nm
 driver was written by
-.An Damien Bergamini Aq damien.bergamini@free.fr .
+.An Damien Bergamini Aq Mt damien.bergamini@free.fr .

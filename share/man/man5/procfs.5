@@ -1,9 +1,8 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/share/man/man5/procfs.5 249778 2013-04-22 20:14:57Z joel $
+.\" $FreeBSD: stable/11/share/man/man5/procfs.5 292748 2015-12-26 14:23:35Z bapt $
 .\" Written by Garrett Wollman
 .\" This file is in the public domain.
 .\"
-.Dd April 22, 2013
+.Dd December 26, 2015
 .Dt PROCFS 5
 .Os
 .Sh NAME
@@ -18,11 +17,7 @@ The process file system, or
 .Nm ,
 implements a view of the system process table inside the file system.
 It is normally mounted on
-.Pa /proc ,
-and is required for the complete operation of programs such as
-.Xr ps 1
-and
-.Xr w 1 .
+.Pa /proc .
 .Pp
 The
 .Nm

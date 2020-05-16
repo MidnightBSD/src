@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1995
 .\"	Jordan K. Hubbard
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man5/rc.conf.5 325799 2017-11-14 09:31:56Z eugen $
+.\" $FreeBSD: stable/11/share/man/man5/rc.conf.5 359391 2020-03-28 08:17:00Z 0mp $
 .\"
-.Dd February 28, 2016
+.Dd March 25, 2020
 .Dt RC.CONF 5
 .Os
 .Sh NAME
@@ -193,7 +192,8 @@ to this directory before running the service.
 Run the service under this user account.
 .It Ao Ar name Ac Ns Va _group
 .Pq Vt str
-Run the chrooted service under this system group. Unlike the _user
+Run the chrooted service under this system group.
+Unlike the _user
 setting, this setting has no effect if the service is not chrooted.
 .It Ao Ar name Ac Ns Va _fib
 .Pq Vt int
@@ -568,9 +568,11 @@ equivalent of
 .Va natd_enable .
 Setting this to
 .Dq Li YES
-enables kernel NAT.
+will automatically load the
+.Xr ipfw 8
+NAT kernel module if
 .Va firewall_enable
-must also be set to
+is also set to
 .Dq Li YES .
 .It Va firewall_nat_interface
 .Pq Vt str
@@ -583,6 +585,36 @@ kernel NAT should run.
 .It Va firewall_nat_flags
 .Pq Vt str
 Additional configuration parameters for kernel NAT should be placed here.
+.It Va firewall_nat64_enable
+.Pq Vt bool
+Setting this to
+.Dq Li YES
+will automatically load the
+.Xr ipfw 8
+NAT64 kernel module if
+.Va firewall_enable
+is also set to
+.Dq Li YES .
+.It Va firewall_nptv6_enable
+.Pq Vt bool
+Setting this to
+.Dq Li YES
+will automatically load the
+.Xr ipfw 8
+NPTv6 kernel module if
+.Va firewall_enable
+is also set to
+.Dq Li YES .
+.It Va firewall_pmod_enable
+.Pq Vt bool
+Setting this to
+.Dq Li YES
+will automatically load the
+.Xr ipfw 8
+pmod kernel module if
+.Va firewall_enable
+is also set to
+.Dq Li YES .
 .It Va dummynet_enable
 .Pq Vt bool
 Setting this to
@@ -594,6 +626,44 @@ module if
 is also set to
 .Dq Li YES .
 .\" -------------------------------------------------------------------
+.It Va ipfw_netflow_enable
+.Pq Vt bool
+Setting this to
+.Dq Li YES
+will enable netflow logging via
+.Xr ng_netflow 4
+.Pp
+By default a ipfw rule is inserted and all packets are duplicated with
+the ngtee command and netflow packets are sent to 127.0.0.1 on the netflow
+port using protocol version 5.
+.It Va ipfw_netflow_hook
+.Pq Vt int
+netflow hook name, must be numerical
+(default
+.Pa 9995 ) .
+.It Va ipfw_netflow_rule
+.Pq Vt int
+ipfw rule number
+(default
+.Pa 1000 ) .
+.It Va ipfw_netflow_ip
+.Pq Vt str
+Destination server ip for receiving netflow data
+(default
+.Pa 127.0.0.1 ) .
+.It Va ipfw_netflow_port
+.Pq Vt int
+Destination server port for receiving netflow data
+(default
+.Pa 9995 ) .
+.It Va ipfw_netflow_version
+.Pq Vt int
+Do not set for using version 5 of the netflow protocol, set it to 9 for using version 9.
+.It Va ipfw_netflow_fib
+.Pq Vt int
+Only match packet in FIB
+.Pa ipfw_netflow_fib
+(default is undefined meaning all FIBs).
 .It Va natd_program
 .Pq Vt str
 Path to
@@ -942,13 +1012,14 @@ This variable contains additional flags passed to the
 program.
 .It Va pflog_instances
 .Pq Vt str
-If logging to more than one 
+If logging to more than one
 .Xr pflog 4
-interface is desired, 
+interface is desired,
 .Va pflog_instances
 is set to the list of
 .Xr pflogd 8
-instances that should be started at system boot time. If 
+instances that should be started at system boot time.
+If
 .Va pflog_instances
 is set, for each whitespace-seperated
 .Ar element
@@ -987,11 +1058,13 @@ This variable contains additional flags passed to the
 program.
 .It Va ftpproxy_instances
 .Pq Vt str
-Empty by default. If multiple instances of
+Empty by default.
+If multiple instances of
 .Xr ftp-proxy 8
-are desired at boot time, 
+are desired at boot time,
 .Va ftpproxy_instances
-should contain a whitespace-seperated list of instance names. For each
+should contain a whitespace-seperated list of instance names.
+For each
 .Ar element
 in the list, a variable named
 .Ao Ar element Ac Ns Va _flags
@@ -1207,12 +1280,12 @@ Note that the maximum number of the generated addresses from a range
 specification is limited to an integer value specified in
 .Va netif_ipexpand_max
 in
-.Xr rc.conf 5
+.Nm
 because a small typo can unexpectedly generate a large number of addresses.
 The default value is
 .Li 2048 .
 It can be increased by adding the following line into
-.Xr rc.conf 5 :
+.Nm :
 .Bd -literal
 netif_ipexpand_max="4096"
 .Ed
@@ -1534,7 +1607,6 @@ interface as described in RFC 4941.
 This is the IPv6 equivalent of
 .Va network_interfaces .
 Normally manual configuration of this variable is not needed.
-.Pp
 .It Va ipv6_cpe_wanif
 .Pq Vt str
 If the variable is set to an interface name,
@@ -1769,33 +1841,6 @@ Even if this variable is specified to
 .Dq YES ,
 .Dq :nosticky
 keyword can be used to override it on per interface basis.
-.It Va fec_interfaces
-.Pq Vt str
-Set to the list of
-.Xr ng_fec 4
-Fast EtherChannel interfaces to configure on this host.
-A
-.Va fecconfig_ Ns Aq Ar interface
-variable is assumed to exist for each value of
-.Ar interface .
-The value of this variable is used to configure link aggregated interfaces
-according to the syntax of the
-.Cm NGM_FEC_ADD_IFACE
-to
-.Xr ngctl 8
-msg.
-Additionally, this option ensures that each listed interface is created
-via the
-.Cm mkpeer
-command to
-.Xr ngctl 8
-before attempting to configure it.
-For example:
-.Bd -literal
-fec_interfaces="fec0"
-fecconfig_fec0="em0 em1"
-ifconfig_fec0="DHCP"
-.Ed
 .It Va gif_interfaces
 .Pq Vt str
 This variable is deprecated in favor of
@@ -1803,21 +1848,40 @@ This variable is deprecated in favor of
 Set to the list of
 .Xr gif 4
 tunnel interfaces to configure on this host.
-A
-.Va gifconfig_ Ns Aq Ar interface
-variable is assumed to exist for each value of
-.Ar interface .
+For each
+.Xr gif
+tunnel interface, set a variable named
+.Va ifconfig_ Ns Aq Ar interface
+with the parameters for the
+.Xr ifconfig 8
+command to configure the link level for
+.Ar interface
+with the
+.Cm tunnel
+option.
 The value of this variable is used to configure the link layer of the
-tunnel according to the syntax of the
+tunnel using the
 .Cm tunnel
 option to
-.Xr ifconfig 8 .
+.Xr ifconfig .
+For example, configure two
+.Xr gif
+interfaces with:
+.Bd -literal -offset indent
+gif_interfaces="gif0 gif1"
+ifconfig_gif0="tunnel src_addr0 dst_addr0"
+ifconfig_gif1="tunnel src_addr1 dst_addr1"
+.Ed
+.Pp
 Additionally, this option ensures that each listed interface is created
 via the
 .Cm create
 option to
-.Xr ifconfig 8
-before attempting to configure it.
+.Xr ifconfig .
+This example also works with
+.Va cloned_interfaces
+instead of
+.Va gif_interfaces .
 .It Va sppp_interfaces
 .Pq Vt str
 Set to the list of
@@ -2343,14 +2407,6 @@ is set to
 these are the flags to pass to the
 .Xr nfscbd 8
 daemon.
-.It Va oldnfs_server_enable
-.Pq Vt bool
-If
-.Va oldnfs_server_enable
-is set to
-.Dq Li YES ,
-force the NFS server daemons to run the old NFS server code
-that does not support NFSv4.
 .It Va mountd_enable
 .Pq Vt bool
 If set to
@@ -2616,6 +2672,22 @@ is set to
 these are the flags to pass to the
 .Xr ypbind 8
 service.
+.It Va nis_ypldap_enable
+.Pq Vt bool
+If set to
+.Dq Li YES ,
+run the
+.Xr ypldap 8
+daemon at system boot time.
+.It Va nis_ypldap_flags
+.Pq Vt str
+If
+.Va nis.ypldap_enable
+is set to
+.Dq Li YES ,
+these are the flags to pass to the
+.Xr ypldap 8
+daemon.
 .It Va nis_ypset_enable
 .Pq Vt bool
 If set to
@@ -2855,16 +2927,8 @@ these are the flags to pass to the routing daemon.
 .Pq Vt str
 The IPv6 equivalent of
 .Va routed_flags .
-.It Va mrouted_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-run the multicast routing daemon,
-.Xr mrouted 8 .
 .It Va mroute6d_enable
 .Pq Vt bool
-The IPv6 equivalent of
-.Va mrouted_enable .
 If set to
 .Dq Li YES ,
 run the IPv6 multicast routing daemon.
@@ -2878,19 +2942,8 @@ and
 may be installed from the
 .Fx
 Ports Collection.
-.It Va mrouted_flags
-.Pq Vt str
-If
-.Va mrouted_enable
-is set to
-.Dq Li YES ,
-these are the flags to pass to the
-.Xr mrouted 8
-daemon.
 .It Va mroute6d_flags
 .Pq Vt str
-The IPv6 equivalent of
-.Va mrouted_flags .
 If
 .Va mroute6d_enable
 is set to
@@ -2925,27 +2978,6 @@ If
 is set to
 .Dq Li YES
 this is the list of interfaces to use.
-.It Va ipxgateway_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-enable the routing of IPX traffic.
-.It Va ipxrouted_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-run the
-.Xr IPXrouted 8
-daemon at system boot time.
-.It Va ipxrouted_flags
-.Pq Vt str
-If
-.Va ipxrouted_enable
-is set to
-.Dq Li YES ,
-these are the flags to pass to the
-.Xr IPXrouted 8
-daemon.
 .It Va arpproxy_all
 .Pq Vt bool
 If set to
@@ -3018,15 +3050,6 @@ This can be set to
 .Pq Vt str
 IPv6 Site Level Aggregator for
 .Xr stf 4 .
-.It Va ipv6_faith_prefix
-.Pq Vt str
-If not set to
-.Dq Li NO ,
-this is the faith prefix to enable a FAITH IPv6-to-IPv4 TCP
-translator.
-You also need
-.Xr faithd 8
-setup.
 .It Va ipv6_ipv4mapping
 .Pq Vt bool
 If set to
@@ -3617,6 +3640,12 @@ to not run
 at boot time when
 .Va dumpdir
 is set.
+.It Va savecore_enable
+.Pq Vt bool
+If set to
+.Dq Li NO ,
+disable automatic extraction of the crash dump from the
+.Va dumpdev .
 .It Va savecore_flags
 .Pq Vt str
 If crash dumps are enabled, these are the flags to pass to the
@@ -3968,6 +3997,9 @@ The names specified in this list control the jail startup order.
 instances missing from
 .Va jail_list
 must be started manually.
+Note that a jail's
+.Va depend
+parameter in the configuration file may override this list.
 .It Va jail_reverse_stop
 .Pq Vt bool
 When set to
@@ -3975,9 +4007,9 @@ When set to
 all configured jails in
 .Va jail_list
 are stopped in reverse order.
-.It Va jail_* variables
+.It Va jail_ Ns * variables
 Note that older releases supported per-jail configuration via
-.Xr rc.conf 5
+.Nm
 variables.
 For example,
 hostname of a jail named
@@ -4103,27 +4135,11 @@ set from
 .Va jail_ Ns Ao Ar jname Ac Ns Va _sysvipc_allow
 .El
 .\" -----------------------------------------------------
-.It Va harvest_interrupt
-.Pq Vt bool
-Set to
-.Dq Li YES
-to use hardware interrupts as an entropy source.
-Refer to
-.Xr random 4
-for more information.
-.It Va harvest_ethernet
-.Pq Vt bool
-Set to
-.Dq Li YES
-to use LAN traffic as an entropy source.
-Refer to
-.Xr random 4
-for more information.
-.It Va harvest_p_to_p
-.Pq Vt bool
-Set to
-.Dq Li YES
-to use serial line traffic as an entropy source.
+.It Va harvest_mask
+.Pq Vt int
+Set to a bit-mask
+representing the entropy sources
+you wish to harvest.
 Refer to
 .Xr random 4
 for more information.
@@ -4133,17 +4149,54 @@ Set to
 .Dq Li NO
 to disable caching entropy via
 .Xr cron 8 .
-Otherwise set to the directory used to store entropy files in.
+Otherwise set to the directory
+in which the entropy files are stored.
+To be useful,
+there must be
+a system cron job
+that regularly writes and rotates
+files here.
+All files found
+will be used at boot time.
+The default is
+.Pa /var/db/entropy .
 .It Va entropy_file
 .Pq Vt str
 Set to
 .Dq Li NO
 to disable caching entropy through reboots.
-Otherwise set to the filename used to store cached entropy through
-reboots.
-This file should be located on the root file system to seed the
-.Xr random 4
-device as early as possible in the boot process.
+Otherwise set to the name
+of a file used to store cached entropy.
+This file should be located
+on a file system that is readable
+before all the volumes specified in
+.Xr fstab 5
+are mounted.
+By default,
+.Pa /entropy
+is used,
+but if
+.Pa /var/db/entropy-file
+is found it will also be used.
+This will be of some use to
+.Xr bsdinstall 8 .
+.It Va entropy_boot_file
+.Pq Vt str
+Set to
+.Dq Li NO
+to disable
+very early caching entropy
+through reboots.
+Otherwise set to the filename
+used to read
+very early reboot cached entropy.
+This file should be located where
+.Xr loader 8
+can read it.
+See also
+.Xr loader.conf 5 .
+The default location is
+.Pa /boot/entropy .
 .It Va entropy_save_sz
 .Pq Vt int
 Size of the entropy cache files saved by
@@ -4547,6 +4600,11 @@ This variables contains the
 .Xr rctl.conf 5
 ruleset to load for
 .Xr rctl 8 .
+.It Va iovctl_files
+.Pq Vt str
+A space-separated list of configuration files used by
+.Xr iovctl 8 .
+The default value is an empty string.
 .It Va autofs_enable
 .Pq Vt bool
 If set to
@@ -4657,6 +4715,7 @@ configuration file.
 .Xr ipf 5 ,
 .Xr ipnat 5 ,
 .Xr jail.conf 5 ,
+.Xr loader.conf 5 ,
 .Xr motd 5 ,
 .Xr newsyslog.conf 5 ,
 .Xr pf.conf 5 ,
@@ -4665,6 +4724,7 @@ configuration file.
 .Xr amd 8 ,
 .Xr apm 8 ,
 .Xr atm 8 ,
+.Xr bsdinstall 8 ,
 .Xr bthidd 8 ,
 .Xr chkprintcap 8 ,
 .Xr chown 8 ,
@@ -4676,18 +4736,19 @@ configuration file.
 .Xr hcsecd 8 ,
 .Xr ifconfig 8 ,
 .Xr inetd 8 ,
+.Xr iovctl 8 ,
 .Xr ipf 8 ,
 .Xr ipfw 8 ,
 .Xr ipnat 8 ,
 .Xr jail 8 ,
 .Xr kldxref 8 ,
+.Xr loader 8 ,
 .Xr lpd 8 ,
 .Xr mdconfig 8 ,
 .Xr mdmfs 8 ,
 .Xr mixer 8 ,
 .Xr mountd 8 ,
 .Xr moused 8 ,
-.Xr mrouted 8 ,
 .Xr newfs 8 ,
 .Xr newsyslog 8 ,
 .Xr nfsd 8 ,
@@ -4704,9 +4765,9 @@ configuration file.
 .Xr rfcomm_pppd 8 ,
 .Xr route 8 ,
 .Xr routed 8 ,
-.Xr rpcbind 8 ,
 .Xr rpc.lockd 8 ,
 .Xr rpc.statd 8 ,
+.Xr rpcbind 8 ,
 .Xr rwhod 8 ,
 .Xr savecore 8 ,
 .Xr sdpd 8 ,

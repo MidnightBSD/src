@@ -1,13 +1,18 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/man/man4/man4.arm/Makefile 273674 2014-10-26 03:55:55Z ian $
+# $FreeBSD: stable/11/share/man/man4/man4.arm/Makefile 346526 2019-04-22 05:00:29Z ian $
+
+PACKAGE=runtime-manuals
 
 MAN=	cgem.4 \
 	devcfg.4 \
+	imx6_ahci.4 \
+	imx6_snvs.4 \
+	imx_wdog.4 \
 	mge.4 \
 	npe.4 \
 	ti_adc.4
 
 MLINKS= cgem.4 if_cgem.4
+MLINKS+= imx_wdog.4 imxwdt.4
 MLINKS+= mge.4 if_mge.4
 MLINKS+=npe.4 if_npe.4
 

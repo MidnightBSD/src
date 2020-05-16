@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$NetBSD: altq.9,v 1.8 2002/05/28 11:41:45 wiz Exp $
 .\"	$OpenBSD: altq.9,v 1.4 2001/07/12 12:41:42 itojun Exp $
 .\"
@@ -27,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/altq.9 331512 2018-03-25 01:17:40Z sevan $
+.\" $FreeBSD: stable/11/share/man/man9/altq.9 331511 2018-03-25 01:03:26Z sevan $
 .\"
 .Dd March 20, 2018
 .Dt ALTQ 9
@@ -238,7 +237,7 @@ sets a flag to indicate that a driver was converted to use the new macros.
 .Nm
 can be enabled only on interfaces with this flag.
 .Sh COMPATIBILITY
-.Ss Vt ifaltq Ss structure
+.Ss Vt ifaltq structure
 In order to keep compatibility with the existing code, the new
 output queue structure
 .Vt ifaltq
@@ -257,7 +256,6 @@ still work with
     struct mbuf *ifq_tail;             |    struct mbuf *ifq_tail;
     int          ifq_len;              |    int          ifq_len;
     int          ifq_maxlen;           |    int          ifq_maxlen;
-    int          ifq_drops;            |    int          ifq_drops;
  };                                    |    /* driver queue fields */
                                        |    ......
                                        |    /* altq related fields */

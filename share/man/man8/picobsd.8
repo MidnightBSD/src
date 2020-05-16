@@ -1,7 +1,6 @@
-.\" $MidnightBSD$
 .\" -*- nroff-fill -*-
-.\" $FreeBSD: stable/10/share/man/man8/picobsd.8 293692 2016-01-11 20:10:14Z trasz $
-.Dd October 1, 2013
+.\" $FreeBSD: stable/11/share/man/man8/picobsd.8 354051 2019-10-24 21:43:01Z kevans $
+.Dd October 20, 2019
 .Dt PICOBSD 8
 .Os
 .Sh NAME
@@ -12,6 +11,10 @@
 .Op Ar options
 .Op Ar config-name Op Ar site-name
 .Sh DESCRIPTION
+.Nm
+is deprecated and will be removed in
+.Fx 13.0 .
+.Pp
 The
 .Nm
 utility is a script which produces a minimal implementation of
@@ -651,13 +654,13 @@ already exists on disk (e.g.\& as a result of a previous update).
 .Xr swapon 8
 .Sh AUTHORS
 .An -nosplit
-.An Andrzej Bialecki Aq abial@FreeBSD.org ,
+.An Andrzej Bialecki Aq Mt abial@FreeBSD.org ,
 with subsequent work on the scripts by
-.An Luigi Rizzo Aq luigi@iet.unipi.it
+.An Luigi Rizzo Aq Mt luigi@iet.unipi.it
 and others.
 Man page and
 .Pa Makefiles
 created by
-.An Greg Lehey Aq grog@lemis.com .
+.An Greg Lehey Aq Mt grog@lemis.com .
 .Sh BUGS
 Documentation is still incomplete.

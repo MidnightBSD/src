@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2013 Gleb Smirnoff <glebius@FreeBSD.org>
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/counter.9 299386 2016-05-10 20:12:27Z wblock $
+.\" $FreeBSD: stable/11/share/man/man9/counter.9 321231 2017-07-19 19:02:06Z ngie $
 .\"
-.Dd February 7, 2014
+.Dd March 22, 2017
 .Dt COUNTER 9
 .Os
 .Sh NAME
@@ -55,6 +54,8 @@
 .In sys/sysctl.h
 .Fn SYSCTL_COUNTER_U64 parent nbr name access ptr descr
 .Fn SYSCTL_ADD_COUNTER_U64 ctx parent nbr name access ptr descr
+.Fn SYSCTL_COUNTER_U64_ARRAY parent nbr name access ptr len descr
+.Fn SYSCTL_ADD_COUNTER_U64_ARRAY ctx parent nbr name access ptr len descr
 .Sh DESCRIPTION
 .Nm
 is a generic facility to create counters
@@ -81,7 +82,7 @@ Thus
 is considered suitable for accounting in the performance-critical
 code paths.
 .Bl -tag -width indent
-.It Fn counter_u64_alloc how
+.It Fn counter_u64_alloc wait
 Allocate a new 64-bit unsigned counter.
 The
 .Fa wait
@@ -104,7 +105,7 @@ to
 .Fa c .
 The KPI does not guarantee any protection from wraparound.
 .It Fn counter_enter
-Enter mode that would allow to safely update several counters via
+Enter mode that would allow the safe update of several counters via
 .Fn counter_u64_add_protected .
 On some machines this expands to
 .Xr critical 9
@@ -129,7 +130,7 @@ Clear the counter
 and set it to zero.
 .It Fn SYSCTL_COUNTER_U64 parent nbr name access ptr descr
 Declare a static
-.Xr sysctl
+.Xr sysctl 9
 oid that would represent a
 .Nm .
 The
@@ -141,7 +142,7 @@ A read of the oid returns value obtained through
 Any write to the oid zeroes it.
 .It Fn SYSCTL_ADD_COUNTER_U64 ctx parent nbr name access ptr descr
 Create a
-.Xr sysctl
+.Xr sysctl 9
 oid that would represent a
 .Nm .
 The
@@ -151,6 +152,40 @@ argument should be a pointer to allocated
 A read of the oid returns value obtained through
 .Fn counter_u64_fetch .
 Any write to the oid zeroes it.
+.It Fn SYSCTL_COUNTER_U64_ARRAY parent nbr name access ptr len descr
+Declare a static
+.Xr sysctl 9
+oid that would represent an array of
+.Nm .
+The
+.Fa ptr
+argument should be a pointer to allocated array of
+.Vt counter_u64_t's .
+The
+.Fa len
+argument should specify number of elements in the array.
+A read of the oid returns len-sized array of
+.Vt uint64_t
+values  obtained through
+.Fn counter_u64_fetch .
+Any write to the oid zeroes all array elements.
+.It Fn SYSCTL_ADD_COUNTER_U64_ARRAY ctx parent nbr name access ptr len descr
+Create a
+.Xr sysctl 9
+oid that would represent an array of
+.Nm .
+The
+.Fa ptr
+argument should be a pointer to allocated array of
+.Vt counter_u64_t's .
+The
+.Fa len
+argument should specify number of elements in the array.
+A read of the oid returns len-sized array of
+.Vt uint64_t
+values obtained through
+.Fn counter_u64_fetch .
+Any write to the oid zeroes all array elements.
 .El
 .Sh IMPLEMENTATION DETAILS
 On all architectures
@@ -180,6 +215,15 @@ amd64 single-instruction implementation.
 On some architectures updating a counter require a
 .Xr critical 9
 section.
+.Sh EXAMPLES
+The following example creates a static counter array exported to
+userspace through a sysctl:
+.Bd -literal -offset indent
+#define MY_SIZE 8
+static counter_u64_t array[MY_SIZE];
+SYSCTL_COUNTER_U64_ARRAY(_debug, OID_AUTO, counter_array, CTLFLAG_RW,
+    &array[0], MY_SIZE, "Test counter array");
+.Ed
 .Sh SEE ALSO
 .Xr atomic 9 ,
 .Xr critical 9 ,

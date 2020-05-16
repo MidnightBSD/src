@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2006 Wilko Bulte
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/geom_fox.4 293691 2016-01-11 20:03:58Z trasz $
+.\" $FreeBSD: stable/11/share/man/man4/geom_fox.4 332519 2018-04-16 00:12:03Z kevans $
 .\"
 .Dd September 12, 2015
 .Dt GEOM_FOX 4
@@ -52,6 +51,8 @@ This driver is obsolete.
 Users are advised to use
 .Xr gmultipath 8
 instead.
+This driver will be removed in
+.Fx 12 .
 .Ef
 .Pp
 The intent of the
@@ -189,9 +190,9 @@ da2.fox     N/A  da2
 The
 .Nm
 driver was written by
-.An "Poul-Henning Kamp" Aq phk@FreeBSD.org .
+.An Poul-Henning Kamp Aq Mt phk@FreeBSD.org .
 This manual page was written by
-.An "Wilko Bulte" Aq wilko@FreeBSD.org .
+.An Wilko Bulte Aq Mt wilko@FreeBSD.org .
 .Sh CAVEATS
 The
 .Nm

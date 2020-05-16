@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 2000 Doug Rabson
@@ -27,9 +26,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/taskqueue.9 306947 2016-10-10 11:25:11Z hselasky $
+.\" $FreeBSD: stable/11/share/man/man9/taskqueue.9 341154 2018-11-28 17:00:18Z markj $
 .\"
-.Dd January 24, 2014
+.Dd November 21, 2018
 .Dt TASKQUEUE 9
 .Os
 .Sh NAME
@@ -69,6 +68,11 @@ struct timeout_task;
 .Fn taskqueue_create_fast "const char *name" "int mflags" "taskqueue_enqueue_fn enqueue" "void *context"
 .Ft int
 .Fn taskqueue_start_threads "struct taskqueue **tqp" "int count" "int pri" "const char *name" "..."
+.Ft int
+.Fo taskqueue_start_threads_pinned
+.Fa "struct taskqueue **tqp" "int count" "int pri" "int cpu_id"
+.Fa "const char *name" "..."
+.Fc
 .Ft void
 .Fn taskqueue_set_callback "struct taskqueue *queue" "enum taskqueue_callback_type cb_type" "taskqueue_callback_fn callback" "void *context"
 .Ft void
@@ -76,9 +80,9 @@ struct timeout_task;
 .Ft int
 .Fn taskqueue_enqueue "struct taskqueue *queue" "struct task *task"
 .Ft int
-.Fn taskqueue_enqueue_fast "struct taskqueue *queue" "struct task *task"
-.Ft int
 .Fn taskqueue_enqueue_timeout "struct taskqueue *queue" "struct timeout_task *timeout_task" "int ticks"
+.Ft int
+.Fn taskqueue_enqueue_timeout_sbt "struct taskqueue *queue" "struct timeout_task *timeout_task" "sbintime_t sbt" "sbintime_t pr" "int flags"
 .Ft int
 .Fn taskqueue_cancel "struct taskqueue *queue" "struct task *task" "u_int *pendp"
 .Ft int
@@ -89,6 +93,8 @@ struct timeout_task;
 .Fn taskqueue_drain_timeout "struct taskqueue *queue" "struct timeout_task *timeout_task"
 .Ft void
 .Fn taskqueue_drain_all "struct taskqueue *queue"
+.Ft void
+.Fn taskqueue_quiesce "struct taskqueue *queue"
 .Ft void
 .Fn taskqueue_block "struct taskqueue *queue"
 .Ft void
@@ -146,7 +152,14 @@ Any tasks that are on the queue will be executed at this time after
 which the thread servicing the queue will be signaled that it should exit.
 .Pp
 Once a taskqueue has been created, its threads should be started using
-.Fn taskqueue_start_threads .
+.Fn taskqueue_start_threads
+or
+.Fn taskqueue_start_threads_pinned .
+.Fn taskqueue_start_threads_pinned
+takes a
+.Va cpu_id
+argument which will cause the threads which are started for the taskqueue
+to be pinned to run on the given CPU.
 Callbacks may optionally be registered using
 .Fn taskqueue_set_callback .
 Currently, callbacks may be registered for the following purposes:
@@ -180,14 +193,6 @@ This function will return
 .Er EPIPE
 if the queue is being freed.
 .Pp
-The function
-.Fn taskqueue_enqueue_fast
-should be used in place of
-.Fn taskqueue_enqueue
-when the enqueuing must happen from a fast interrupt handler.
-This method uses spin locks to avoid the possibility of sleeping in the fast
-interrupt context.
-.Pp
 When a task is executed,
 first it is removed from the queue,
 the value of
@@ -210,8 +215,17 @@ is called on the task pointer passed to
 .Pp
 The
 .Fn taskqueue_enqueue_timeout
-is used to schedule the enqueue after the specified amount of
+function is used to schedule the enqueue after the specified number of
 .Va ticks .
+The
+.Fn taskqueue_enqueue_timeout_sbt
+function provides finer control over the scheduling based on
+.Va sbt ,
+.Va pr ,
+and
+.Va flags ,
+as detailed in
+.Xr timeout 9 .
 Only non-fast task queues can be used for
 .Va timeout_task
 scheduling.
@@ -276,10 +290,22 @@ The
 .Fn taskqueue_drain_all
 function is used to wait for all pending and running tasks that
 are enqueued on the taskqueue to finish.
-The caller must arrange that the tasks are not re-enqueued.
-Note that
+Tasks posted to the taskqueue after
 .Fn taskqueue_drain_all
-currently does not handle tasks with delayed enqueueing.
+begins processing,
+including pending enqueues scheduled by a previous call to
+.Fn taskqueue_enqueue_timeout ,
+do not extend the wait time of
+.Fn taskqueue_drain_all
+and may complete after
+.Fn taskqueue_drain_all
+returns.
+The
+.Fn taskqueue_quiesce
+function is used to wait for the queue to become empty and for all
+running tasks to finish.
+To avoid blocking indefinitely, the caller must ensure by some mechanism
+that tasks will eventually stop being posted to the queue.
 .Pp
 The
 .Fn taskqueue_block
@@ -452,15 +478,7 @@ To use these queues,
 call
 .Fn taskqueue_enqueue
 with the value of the global taskqueue variable for the queue you wish to
-use
-.Va ( taskqueue_swi ,
-.Va taskqueue_swi_giant ,
-or
-.Va taskqueue_thread ) .
-Use
-.Fn taskqueue_enqueue_fast
-for the global taskqueue variable
-.Va taskqueue_fast .
+use.
 .Pp
 The software interrupt queues can be used,
 for instance, for implementing interrupt handlers which must perform a
@@ -484,6 +502,7 @@ be created with a dedicated processing thread.
 .Xr ithread 9 ,
 .Xr kthread 9 ,
 .Xr swi 9
+.Xr timeout 9
 .Sh HISTORY
 This interface first appeared in
 .Fx 5.0 .

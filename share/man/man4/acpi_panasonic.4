@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2004 OGAWA Takaya <t-ogawa@triaez.kaisei.org>
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/acpi_panasonic.4 286262 2015-08-03 23:08:40Z delphij $
+.\" $FreeBSD: stable/11/share/man/man4/acpi_panasonic.4 294118 2016-01-16 00:45:48Z imp $
 .\"
 .Dd June 19, 2015
 .Dt ACPI_PANASONIC 4
@@ -143,11 +142,11 @@ The following MIBs are available:
 .Bl -tag -width indent
 .It Va hw.acpi.panasonic.lcd_brightness_max
 The maximum level of brightness.
-The value is read only and
+This read-only value is
 automatically set according to hardware model.
 .It Va hw.acpi.panasonic.lcd_brightness_min
 The minimum level of brightness.
-The value is read only and
+This read-only value is
 automatically set according to hardware model.
 .It Va hw.acpi.panasonic.lcd_brightness
 Current brightness level of the LCD (read-write).
@@ -174,6 +173,6 @@ driver first appeared in
 The
 .Nm
 driver and this manual page were written by
-.An OGAWA Takaya Aq t\-ogawa@triaez.kaisei.org
+.An OGAWA Takaya Aq Mt t-ogawa@triaez.kaisei.org
 and
-.An TAKAHASHI Yoshihiro Aq nyan@FreeBSD.org .
+.An TAKAHASHI Yoshihiro Aq Mt nyan@FreeBSD.org .

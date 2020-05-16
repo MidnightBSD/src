@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2014 Edward Tomasz Napierala
 .\" All rights reserved.
 .\"
@@ -23,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/iscsi.4 286186 2015-08-02 09:27:07Z trasz $
-.Dd July 11, 2015
+.\" $FreeBSD: stable/11/share/man/man4/iscsi.4 319628 2017-06-06 17:00:21Z trasz $
+.Dd May 28, 2017
 .Dt ISCSI 4
 .Os
 .Sh NAME
@@ -47,18 +46,14 @@ iscsi_load="YES"
 .Sh DESCRIPTION
 The
 .Nm
-subsystem provides the kernel component of an iSCSI initiator.
+subsystem provides the kernel component of an iSCSI initiator,
+responsible for implementing the Full Feature Phase of the iSCSI protocol.
 The initiator is the iSCSI client, which connects to an iSCSI target,
 providing local access to a remote block device.
 The userland component is provided by
 .Xr iscsid 8
 and both the kernel and userland are configured using
 .Xr iscsictl 8 .
-The
-.Nm
-subsystem is responsible for implementing the
-.Qq Full Feature Phase
-of the iSCSI protocol.
 .Sh SYSCTL VARIABLES
 The following variables are available as both
 .Xr sysctl 8
@@ -108,6 +103,7 @@ While the connection is down all input/output operations are suspended, to be
 retried after the connection is reestablished.
 .El
 .Sh SEE ALSO
+.Xr iser 4 ,
 .Xr iscsi.conf 5 ,
 .Xr iscsictl 8 ,
 .Xr iscsid 8

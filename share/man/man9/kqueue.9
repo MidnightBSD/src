@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright 2006,2011 John-Mark Gurney
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/kqueue.9 297560 2016-04-04 16:41:35Z wblock $
+.\" $FreeBSD: stable/11/share/man/man9/kqueue.9 301598 2016-06-08 10:38:00Z trasz $
 .\"
 .Dd March 26, 2012
 .Dt KQUEUE 9
@@ -346,12 +345,12 @@ will have
 .Dv EV_ONESHOT
 set so that the
 .Vt knote
-will be returned and removed durning the next scan.
+will be returned and removed during the next scan.
 The
 .Va f_detach
 function will be called when the
 .Vt knote
-is deleted durning the next scan.
+is deleted during the next scan.
 This function must not be used when
 .Va f_isfd
 is set in
@@ -396,8 +395,9 @@ There must be no
 .Vt knotes
 associated with the
 .Vt knlist
-.Fn ( knlist_empty
-returns true)
+.Po Fn knlist_empty
+returns true
+.Pc
 and no more
 .Vt knotes
 may be attached to the object.
@@ -464,4 +464,4 @@ by
 .Sh AUTHORS
 This
 manual page was written by
-.An John-Mark Gurney Aq jmg@FreeBSD.org .
+.An John-Mark Gurney Aq Mt jmg@FreeBSD.org .

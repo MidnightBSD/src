@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2010 Konstantin Belousov <kib@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/aesni.4 212388 2010-09-09 21:37:05Z brueffer $
+.\" $FreeBSD: stable/11/share/man/man4/aesni.4 292181 2015-12-14 07:08:17Z kevlo $
 .\"
-.Dd September 6, 2010
+.Dd December 14, 2015
 .Dt AESNI 4
 .Os
 .Sh NAME
@@ -37,6 +36,7 @@ place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device crypto"
+.Cd "device cryptodev"
 .Cd "device aesni"
 .Ed
 .Pp
@@ -88,7 +88,7 @@ driver first appeared in
 The
 .Nm
 driver was written by
-.An Konstantin Belousov Aq kib@FreeBSD.org .
+.An Konstantin Belousov Aq Mt kib@FreeBSD.org .
 The key schedule calculation code was adopted from the sample provided
 by Intel and used in the analogous
 .Ox

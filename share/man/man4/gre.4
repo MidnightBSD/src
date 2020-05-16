@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" $NetBSD: gre.4,v 1.28 2002/06/10 02:49:35 itojun Exp $
 .\"
 .\" Copyright 1998 (c) The NetBSD Foundation, Inc.
@@ -28,7 +27,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/gre.4 306378 2016-09-27 19:00:22Z pluknet $
+.\" $FreeBSD: stable/11/share/man/man4/gre.4 286663 2015-08-12 11:56:19Z brueffer $
 .\"
 .Dd June 2, 2015
 .Dt GRE 4
@@ -73,7 +72,7 @@ This driver corresponds to RFC 2784.
 Encapsulated datagrams are prepended an outer datagram and a GRE header.
 The GRE header specifies
 the type of the encapsulated datagram and thus allows for tunneling other
-protocols than IP like e.g.\& AppleTalk.
+protocols than IP.
 GRE mode is also the default tunnel mode on Cisco routers.
 .Nm
 also supports Cisco WCCP protocol, both version 1 and version 2.
@@ -155,7 +154,6 @@ ifconfig greN create
 ifconfig greN inet 198.51.100.1 203.0.113.1
 ifconfig greN inet tunnel 198.51.100.1 203.0.113.1 tunnelfib 1
 .Ed
-.Pp
 .Sh NOTES
 The MTU of
 .Nm
@@ -175,7 +173,6 @@ The kernel must be set to forward datagrams by setting the
 .Xr sysctl 8
 variable to non-zero.
 .Sh SEE ALSO
-.\" Xr atalk 4 ,
 .Xr gif 4 ,
 .Xr inet 4 ,
 .Xr ip 4 ,

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2012 Konstantin Belousov <kib@FreeBSD.org>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -21,7 +20,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/aout.4 239306 2012-08-15 18:00:52Z kib $
+.\" $FreeBSD: stable/11/share/man/man4/aout.4 275990 2014-12-21 09:53:29Z brueffer $
 .\"
 .Dd August 14, 2012
 .Dt AOUT 4
@@ -41,7 +40,7 @@ executable format was used before the release of
 Since i386 was the only supported architecture at that time,
 .Xr a.out 5
 executables can only be activated on platforms that support
-execution of i386 code, such as i386, amd64 and (partially) ia64.
+execution of i386 code, such as i386 and amd64.
 .Pp
 To add kernel support for old syscalls and old syscall invocation methods,
 place the following options in the kernel configuration file:
@@ -124,7 +123,7 @@ non-executable mappings.
 .Xr execve 2 ,
 .Xr a.out 5 ,
 .Xr elf 5 ,
-.Xr sysctl 8 .
+.Xr sysctl 8
 .Sh HISTORY
 The
 .Xr a.out 5
@@ -142,6 +141,6 @@ it was superseded by
 The
 .Nm
 manual page was written by
-.An Konstantin Belousov Aq kib@FreeBSD.org .
+.An Konstantin Belousov Aq Mt kib@FreeBSD.org .
 .Sh BUGS
 On 64bit architectures, not all wrappers for older syscalls are implemented.

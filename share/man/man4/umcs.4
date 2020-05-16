@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2010 Lev Serebryakov <lev@FreeBSD.org>.
 .\" All rights reserved.
@@ -27,9 +26,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/umcs.4 235317 2012-05-12 03:25:46Z gjb $
+.\" $FreeBSD: stable/11/share/man/man4/umcs.4 318493 2017-05-18 20:45:09Z trasz $
 .\"
-.Dd February 25, 2012
+.Dd April 26, 2017
 .Dt UMCS 4
 .Os
 .Sh NAME
@@ -81,6 +80,20 @@ ST Lab U-360 two-port serial USB adapter
 .It
 ST Lab U-400 four-port serial USB adapter
 .El
+.Sh FILES
+.Bl -tag -width "/dev/ttyU*.*.init" -compact
+.It Pa /dev/ttyU*.*
+for callin ports
+.It Pa /dev/ttyU*.*.init
+.It Pa /dev/ttyU*.*.lock
+corresponding callin initial-state and lock-state devices
+.Pp
+.It Pa /dev/cuaU*.*
+for callout ports
+.It Pa /dev/cuaU*.*.init
+.It Pa /dev/cuaU*.*.lock
+corresponding callout initial-state and lock-state devices
+.El
 .Sh SEE ALSO
 .Xr tty 4 ,
 .Xr ucom 4 ,
@@ -95,8 +108,7 @@ appeared in ports since December of 2010.
 The
 .Nm
 driver was written by
-.An Lev Serebryakov
-.Aq lev@FreeBSD.org .
+.An Lev Serebryakov Aq Mt lev@FreeBSD.org .
 .Sh BUGS
 This driver doesn't support access to any fine tunes of
 chip, like RS522/RS485 mode, non-standard baudrates, etc.

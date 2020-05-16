@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2011-2016 Solarflare Communications Inc.
 .\" All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" those of the authors and should not be interpreted as representing official
 .\" policies, either expressed or implied, of the FreeBSD Project.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/sfxge.4 312169 2017-01-14 10:59:25Z arybchik $
+.\" $FreeBSD: stable/11/share/man/man4/sfxge.4 312161 2017-01-14 10:20:27Z arybchik $
 .\"
 .Dd February 22, 2015
 .Dt SFXGE 4
@@ -154,8 +153,8 @@ from loss, because reducing the ACK rate can damage performance.
 .It Va hw.sfxge.mcdi_logging
 Enable logging of MCDI protocol messages  (only available if enabled at compile-time).
 .It Va hw.sfxge.N.mcdi_logging
-Enable or disable logging of MCDI protocol messages on a per-port basis. The default for each
-port will be the value of
+Enable or disable logging of MCDI protocol messages on a per-port basis.
+The default for each port will be the value of
 .Va hw.sfxge.mcdi_logging.
 The logging may also be enabled or disabled after the driver is loaded using the sysctl
 .Va dev.sfxge.%d.mcdi_logging.
@@ -175,11 +174,11 @@ For general information and support,
 go to the Solarflare support website at:
 .Pa https://support.solarflare.com .
 .Sh SEE ALSO
+.Xr cpuset 1 ,
 .Xr arp 4 ,
 .Xr netintro 4 ,
 .Xr ng_ether 4 ,
 .Xr vlan 4 ,
-.Xr cpuset 1 ,
 .Xr ifconfig 8
 .Sh AUTHORS
 The

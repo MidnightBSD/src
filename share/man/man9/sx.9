@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (C) 2001 Jason Evans <jasone@FreeBSD.org>.  All rights reserved.
 .\"
@@ -25,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/sx.9 323870 2017-09-21 19:24:11Z marius $
+.\" $FreeBSD: stable/11/share/man/man9/sx.9 326305 2017-11-28 01:15:53Z markj $
 .\"
-.Dd March 13, 2016
+.Dd November 11, 2017
 .Dt SX 9
 .Os
 .Sh NAME
@@ -50,7 +49,8 @@
 .Nm sx_xholder ,
 .Nm sx_xlocked ,
 .Nm sx_assert ,
-.Nm SX_SYSINIT
+.Nm SX_SYSINIT ,
+.Nm SX_SYSINIT_FLAGS
 .Nd kernel shared/exclusive lock
 .Sh SYNOPSIS
 .In sys/param.h
@@ -96,7 +96,8 @@
 .Ft void
 .Fn sx_assert "const struct sx *sx" "int what"
 .In sys/kernel.h
-.Fn SX_SYSINIT "name" "struct sx *sx" "const char *description"
+.Fn SX_SYSINIT "name" "struct sx *sx" "const char *desc"
+.Fn SX_SYSINIT_FLAGS "name" "struct sx *sx" "const char *desc" "int flags"
 .Sh DESCRIPTION
 Shared/exclusive locks are used to protect data that are read far more often
 than they are written.
@@ -296,6 +297,12 @@ but with an additional argument,
 .Fa name ,
 that is used in generating unique variable names for the related
 structures associated with the lock and the sysinit routine.
+The
+.Fn SX_SYSINIT_FLAGS
+macro can similarly be used to initialize a given
+.Fa sx
+lock using
+.Fn sx_init_flags .
 .Pp
 A thread may not hold both a shared lock and an exclusive lock on the same
 lock simultaneously;
@@ -314,23 +321,23 @@ lock while another thread blocked on the same
 lock after acquiring a mutex, then the second thread would effectively
 end up sleeping while holding a mutex, which is not allowed.
 .Sh SEE ALSO
-.Xr locking 9 ,
 .Xr lock 9 ,
+.Xr locking 9 ,
 .Xr mutex 9 ,
 .Xr panic 9 ,
 .Xr rwlock 9 ,
 .Xr sema 9
 .Sh BUGS
-Currently there is no way to assert that a lock is not held.
-This is not possible in the
-.No non- Ns Dv WITNESS
-case for asserting that this thread
-does not hold a shared lock.
-In the
-.No non- Ns Dv WITNESS
-case, the
+A kernel without
+.Dv WITNESS
+cannot assert whether the current thread does or does not hold a shared lock.
 .Dv SA_LOCKED
 and
 .Dv SA_SLOCKED
-assertions merely check that some thread holds a shared lock.
-They do not ensure that the current thread holds a shared lock.
+can only assert that
+.Em any
+thread holds a shared lock.
+They cannot ensure that the current thread holds a shared lock.
+Further,
+.Dv SA_UNLOCKED
+can only assert that the current thread does not hold an exclusive lock.

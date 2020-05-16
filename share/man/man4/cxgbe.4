@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2011-2016, Chelsio Inc
 .\" All rights reserved.
 .\"
@@ -30,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/cxgbe.4 318809 2017-05-24 20:29:20Z np $
+.\" $FreeBSD: stable/11/share/man/man4/cxgbe.4 355251 2019-11-30 20:43:30Z np $
 .\"
-.Dd December 22, 2016
+.Dd Oct 25, 2019
 .Dt CXGBE 4
 .Os
 .Sh NAME
@@ -77,7 +76,6 @@ driver uses different names for devices based on the associated ASIC:
 .It T5 Ta cxl Ta t5nex Ta vcxl
 .It T6 Ta cc Ta t6nex Ta vcc
 .El
-
 .Pp
 Loader tunables with the hw.cxgbe prefix apply to all cards.
 The driver provides sysctl MIBs for both ports and parent devices using
@@ -174,37 +172,22 @@ types.
 A negative value for such a tunable instructs the driver to create
 up to that many queues if there are enough CPU cores available.
 .Bl -tag -width indent
-.It Va hw.cxgbe.ntxq10g
-Number of tx queues used for a 10Gb or higher-speed port.
+.It Va hw.cxgbe.ntxq
+Number of NIC tx queues used for a port.
 The default is 16 or the number
 of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nrxq10g
-Number of rx queues used for a 10Gb or higher-speed port.
+.It Va hw.cxgbe.nrxq
+Number of NIC rx queues used for a port.
 The default is 8 or the number
 of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.ntxq1g
-Number of tx queues used for a 1Gb port.
-The default is 4 or the number
-of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nrxq1g
-Number of rx queues used for a 1Gb port.
-The default is 2 or the number
-of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nofldtxq10g
-Number of TOE tx queues used for a 10Gb or higher-speed port.
+.It Va hw.cxgbe.nofldtxq
+Number of TOE tx queues used for a port.
 The default is 8 or the
 number of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nofldrxq10g
-Number of TOE rx queues used for a 10Gb or higher-speed port.
+.It Va hw.cxgbe.nofldrxq
+Number of TOE rx queues used for a port.
 The default is 2 or the
 number of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nofldtxq1g
-Number of TOE tx queues used for a 1Gb port.
-The default is 2 or the
-number of CPU cores in the system, whichever is less.
-.It Va hw.cxgbe.nofldrxq1g
-Number of TOE rx queues used for a 1Gb port.
-The default is 1.
 .It Va hw.cxgbe.num_vis
 Number of virtual interfaces (VIs) created for each port.
 Each virtual interface creates a separate network interface.
@@ -215,25 +198,27 @@ name from the table above.
 Additional virtual interfaces use a single pair of queues
 for rx and tx as well an additional pair of queues for TOE rx and tx.
 The default is 1.
-.It Va hw.cxgbe.holdoff_timer_idx_10G
-.It Va hw.cxgbe.holdoff_timer_idx_1G
+.It Va hw.cxgbe.holdoff_timer_idx
+.It Va hw.cxgbe.holdoff_timer_idx_ofld
 Timer index value used to delay interrupts.
 The holdoff timer list has the values 1, 5, 10, 50, 100, and 200
 by default (all values are in microseconds) and the index selects a
 value from this list.
+holdoff_timer_idx_ofld applies to queues used for TOE rx.
 The default value is 1 which means the timer value is 5us.
 Different interfaces can be assigned different values at any time via the
-dev.<port>.X.holdoff_tmr_idx sysctl.
-.It Va hw.cxgbe.holdoff_pktc_idx_10G
-.It Va hw.cxgbe.holdoff_pktc_idx_1G
+dev.<port>.X.holdoff_tmr_idx and dev.<port>.X.holdoff_tmr_idx_ofld sysctls.
+.It Va hw.cxgbe.holdoff_pktc_idx
+.It Va hw.cxgbe.holdoff_pktc_idx_ofld
 Packet-count index value used to delay interrupts.
 The packet-count list has the values 1, 8, 16, and 32 by default,
 and the index selects a value from this list.
+holdoff_pktc_idx_ofld applies to queues used for TOE rx.
 The default value is -1 which means packet counting is disabled and interrupts
 are generated based solely on the holdoff timer value.
 Different interfaces can be assigned different values via the
-dev.<port>.X.holdoff_pktc_idx sysctl.
-This sysctl works only when the interface has never been marked up (as done by
+dev.<port>.X.holdoff_pktc_idx and dev.<port>.X.holdoff_pktc_idx_ofld sysctls.
+These sysctls work only when the interface has never been marked up (as done by
 ifconfig up).
 .It Va hw.cxgbe.qsize_txq
 Number of entries in a transmit queue's descriptor ring.
@@ -258,6 +243,13 @@ Permitted interrupt types.
 Bit 0 represents INTx (line interrupts), bit 1 MSI, and bit 2 MSI-X.
 The default is 7 (all allowed).
 The driver selects the best possible type out of the allowed types.
+.It Va hw.cxgbe.pcie_relaxed_ordering
+PCIe Relaxed Ordering.
+-1 indicates the driver should determine whether to enable or disable PCIe RO.
+0 disables PCIe RO.
+1 enables PCIe RO.
+2 indicates the driver should not modify the PCIe RO setting.
+The default is -1.
 .It Va hw.cxgbe.fw_install
 0 prohibits the driver from installing a firmware on the card.
 1 allows the driver to install a new firmware if internal driver
@@ -286,19 +278,21 @@ This usually results in the port emitting PAUSE frames.
 1 instructs the hardware to drop frames destined for congested queues.
 .It Va hw.cxgbe.pause_settings
 PAUSE frame settings.
-Bit 0 is rx_pause, bit 1 is tx_pause.
+Bit 0 is rx_pause, bit 1 is tx_pause, bit 2 is pause_autoneg.
 rx_pause = 1 instructs the hardware to heed incoming PAUSE frames, 0 instructs
 it to ignore them.
 tx_pause = 1 allows the hardware to emit PAUSE frames when its receive FIFO
 reaches a high threshold, 0 prohibits the hardware from emitting PAUSE frames.
-The default is 3 (both rx_pause and tx_pause = 1).
+pause_autoneg = 1 overrides the rx_pause and tx_pause bits and instructs the
+hardware to negotiate PAUSE settings with the link peer.
+The default is 7 (all three = 1).
 This tunable establishes the default PAUSE settings for all ports.
 Settings can be displayed and controlled on a per-port basis via the
 dev.<port>.X.pause_settings sysctl.
 .It Va hw.cxgbe.fec
 FEC (Forward Error Correction) settings.
-0 diables FEC.
-Bit 0 enables RS FEC, bit 1 enables BASE-R RS, bit 3 is reserved.
+0 disables FEC.
+Bit 0 enables RS FEC, bit 1 enables BASE-R FEC (aka Firecode FEC).
 The default is -1 which lets the driver pick a value.
 This tunable establishes the default FEC settings for all ports.
 Settings can be displayed and controlled on a per-port basis via the
@@ -320,11 +314,13 @@ The default is -1 which lets the driver decide.
 0 or 1 explicitly disable or enable this feature.
 .It Va hw.cxgbe.allow_mbufs_in_cluster
 1 allows the driver to lay down one or more mbufs within the receive buffer
-opportunistically.  This is the default.
+opportunistically.
+This is the default.
 0 prohibits the driver from doing so.
 .It Va hw.cxgbe.largest_rx_cluster
 .It Va hw.cxgbe.safest_rx_cluster
-Sizes of rx clusters.  Each of these must be set to one of the sizes available
+Sizes of rx clusters.
+Each of these must be set to one of the sizes available
 (usually 2048, 4096, 9216, and 16384) and largest_rx_cluster must be greater
 than or equal to safest_rx_cluster.
 The defaults are 16384 and 4096 respectively.
@@ -363,10 +359,11 @@ go to the Chelsio support website at:
 .Pp
 If an issue is identified with this driver with a supported adapter,
 email all the specific information related to the issue to
-.Aq support@chelsio.com .
+.Aq Mt support@chelsio.com .
 .Sh SEE ALSO
 .Xr altq 4 ,
 .Xr arp 4 ,
+.Xr ccr 4 ,
 .Xr cxgb 4 ,
 .Xr cxgbev 4 ,
 .Xr netintro 4 ,
@@ -390,4 +387,4 @@ and
 The
 .Nm
 driver was written by
-.An Navdeep Parhar Aq np@FreeBSD.org .
+.An Navdeep Parhar Aq Mt np@FreeBSD.org .

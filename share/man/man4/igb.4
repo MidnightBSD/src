@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2001-2003, Intel Corporation
 .\" All rights reserved.
 .\"
@@ -30,9 +29,9 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/igb.4 250371 2013-05-08 16:29:12Z sbruno $
+.\" $FreeBSD: stable/11/share/man/man4/igb.4 273197 2014-10-16 23:07:09Z gavin $
 .\"
-.Dd March 25, 2013
+.Dd October 17, 2014
 .Dt IGB 4
 .Os
 .Sh NAME
@@ -56,7 +55,8 @@ if_igb_load="YES"
 The
 .Nm
 driver provides support for PCI Express Gigabit Ethernet adapters
-based on the Intel 82575 and 82576 Ethernet controller chips.
+based on the Intel 82575, 82576, 82580, i21x and i35x
+Ethernet controller chips.
 The driver supports Transmit/Receive checksum offload and Jumbo
 Frames.
 Furthermore it supports TCP segmentation offload (TSO) on all
@@ -143,6 +143,12 @@ driver supports Gigabit Ethernet adapters based on the Intel 82575 and
 Intel Gigabit ET Dual Port Server Adapter (82576)
 .It
 Intel Gigabit VT Quad Port Server Adapter (82575)
+.It
+Intel Single, Dual and Quad Gigabit Ethernet Controller (82580)
+.It
+Intel i210 and i211 Gigabit Ethernet Controller
+.It
+Intel i350 and i354 Gigabit Ethernet Controller
 .El
 .Sh LOADER TUNABLES
 Tunables can be set at the
@@ -206,7 +212,7 @@ go to the Intel support website at:
 If an issue is identified with the released source code on the supported kernel
 with a supported adapter, email the specific information related to the
 issue to
-.Aq freebsd@intel.com .
+.Aq Mt freebsd@intel.com .
 .Sh SEE ALSO
 .Xr altq 4 ,
 .Xr arp 4 ,
@@ -226,4 +232,4 @@ device driver first appeared in
 The
 .Nm
 driver was written by
-.An Intel Corporation Aq freebsd@intel.com .
+.An Intel Corporation Aq Mt freebsd@intel.com .

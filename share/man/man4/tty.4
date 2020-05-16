@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1991, 1992, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -10,11 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -31,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)tty.4	8.3 (Berkeley) 4/19/94
-.\" $FreeBSD: stable/10/share/man/man4/tty.4 201118 2009-12-28 09:41:13Z trasz $
+.\" $FreeBSD: stable/11/share/man/man4/tty.4 357660 2020-02-07 19:00:43Z kevans $
 .\"
-.Dd December 26, 2009
+.Dd November 27, 2019
 .Dt TTY 4
 .Os
 .Sh NAME
@@ -132,7 +127,6 @@ Before
 .Fx 8.0 ,
 it would change to the new line discipline pointed to by
 .Fa ldisc .
-.Pp
 .It Dv TIOCGETD Fa int *ldisc
 Return the current line discipline in the integer pointed to by
 .Fa ldisc .
@@ -202,7 +196,6 @@ Simulate typed input.
 Pretend as if the terminal received the character pointed to by
 .Fa cp .
 .It Dv TIOCNOTTY Fa void
-This call is obsolete but left for compatibility.
 In the past, when a process that did not have a controlling terminal (see
 .Em The Controlling Terminal
 in
@@ -211,7 +204,7 @@ first opened a terminal device, it acquired that terminal as its
 controlling terminal.
 For some programs this was a hazard as they
 did not want a controlling terminal in the first place, and this
-provided a mechanism to disassociate the controlling terminal from
+provides a mechanism to disassociate the controlling terminal from
 the calling process.
 It
 .Em must
@@ -236,6 +229,14 @@ system call which will place the process into its own session - which
 has the effect of disassociating it from the controlling terminal.
 This is the new and preferred method for programs to lose their controlling
 terminal.
+.Pp
+However, environmental restrictions may prohibit the process from being able to
+.Fn fork
+and call the
+.Fn setsid
+system call to disassociate it from the controlling terminal.
+In this case, it must use
+.Dv TIOCNOTTY .
 .It Dv TIOCSTOP Fa void
 Stop output on the terminal (like typing ^S at the keyboard).
 .It Dv TIOCSTART Fa void
@@ -244,7 +245,16 @@ Start output on the terminal (like typing ^Q at the keyboard).
 Make the terminal the controlling terminal for the process (the process
 must not currently have a controlling terminal).
 .It Dv TIOCDRAIN Fa void
-Wait until all output is drained.
+Wait until all output is drained, or until the drain wait timeout expires.
+.It Dv TIOCGDRAINWAIT Fa int *timeout
+Return the current drain wait timeout in seconds.
+.It Dv TIOCSDRAINWAIT Fa int *timeout
+Set the drain wait timeout in seconds.
+A value of zero disables timeouts.
+The default drain wait timeout is controlled by the tunable
+.Xr sysctl 8
+OID
+.Va kern.tty_drainwait .
 .It Dv TIOCEXCL Fa void
 Set exclusive use on the terminal.
 No further opens are permitted except by root.
@@ -357,9 +367,9 @@ is cleared in the terminal.
 The total number of input and output bytes
 through all terminal devices
 are available via the
-.Va kern.tk_nin
+.Va kern.tty_nin
 and
-.Va kern.tk_nout
+.Va kern.tty_nout
 read-only
 .Xr sysctl 8
 variables.

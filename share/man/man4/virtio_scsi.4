@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2012 Bryan Venteicher
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/virtio_scsi.4 252707 2013-07-04 17:57:26Z bryanv $
+.\" $FreeBSD: stable/11/share/man/man4/virtio_scsi.4 301589 2016-06-08 08:50:35Z trasz $
 .\"
 .Dd June 24, 2012
 .Dt VIRTIO_SCSI 4
@@ -58,8 +57,9 @@ prompt before booting the kernel or stored in
 .It Va hw.vtscsi.bus_reset_disable
 In the initial QEMU release with VirtIO SCSI support, in-flight
 operations were not aborted when stopping the device, rendering
-bus reset ineffective. This tunable disables attempts to issue
-reset bus commands. The default value is 1.
+bus reset ineffective.
+This tunable disables attempts to issue reset bus commands.
+The default value is 1.
 .El
 .Sh DEBUGGING
 To enable debugging prints from the
@@ -88,6 +88,6 @@ Enable tracing prints.
 The
 .Nm
 driver was written by
-.An Bryan Venteicher Aq bryanv@FreeBSD.org .
+.An Bryan Venteicher Aq Mt bryanv@FreeBSD.org .
 It first appeared in
 .Fx 10.0 .

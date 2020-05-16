@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1997, 1998 Nick Hibma <n_hibma@FreeBSD.org>
 .\" Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/usb.4 318187 2017-05-11 13:50:16Z hselasky $
+.\" $FreeBSD: stable/11/share/man/man4/usb.4 318624 2017-05-22 06:24:43Z ngie $
 .\"
-.Dd November 26, 2013
+.Dd April 29, 2017
 .Dt USB 4
 .Os
 .Sh NAME
@@ -79,8 +78,7 @@ bus.
 .Pp
 The
 .Nm uhub
-device will always be present as it is needed for the
-root hub.
+device will always be present as it is needed for the root hub.
 .Sh INTRODUCTION TO USB
 The
 .Tn USB
@@ -95,38 +93,34 @@ The most common USB speeds are:
 Each
 .Tn USB
 has a USB controller that is the master of the bus.
-The physical communication is simplex which means the host controller only communicates with one USB device at a time.
+The physical communication is simplex which means the host controller only
+communicates with one USB device at a time.
 .Pp
 There can be up to 127 devices connected to an USB HUB tree.
-The addresses are assigned
-dynamically by the host when each device is attached to the bus.
+The addresses are assigned dynamically by the host when each device is
+attached to the bus.
 .Pp
 Within each device there can be up to 16 endpoints.
-Each endpoint
-is individually addressed and the addresses are static.
+Each endpoint is individually addressed and the addresses are static.
 Each of these endpoints will communicate in one of four different modes:
 .Em control , isochronous , bulk ,
 or
 .Em interrupt .
 A device always has at least one endpoint.
-This endpoint has address 0 and is a control
-endpoint and is used to give commands to and extract basic data,
-such as descriptors, from the device.
+This endpoint has address 0 and is a control endpoint and is used to give
+commands to and extract basic data, such as descriptors, from the device.
 Each endpoint, except the control endpoint, is unidirectional.
 .Pp
 The endpoints in a device are grouped into interfaces.
-An interface is a logical unit within a device; e.g.\&
-a compound device with both a keyboard and a trackball would present
-one interface for each.
-An interface can sometimes be set into different modes,
-called alternate settings, which affects how it operates.
-Different alternate settings can have different endpoints
-within it.
+An interface is a logical unit within a device, e.g., a compound device with
+both a keyboard and a trackball, would present one interface for each.
+An interface can sometimes be set into different modes, called alternate
+settings, which affects how it operates.
+Different alternate settings can have different endpoints within it.
 .Pp
 A device may operate in different configurations.
-Depending on the
-configuration, the device may present different sets of endpoints
-and interfaces.
+Depending on the configuration, the device may present different sets of
+endpoints and interfaces.
 .Pp
 The bus enumeration of the
 .Tn USB
@@ -145,7 +139,6 @@ specifications can be found at:
 .D1 Pa http://www.usb.org/developers/docs/
 .Pp
 .Xr libusb 3 ,
-.Xr usbdi 9 ,
 .Xr aue 4 ,
 .Xr axe 4 ,
 .Xr axge 4 ,
@@ -167,8 +160,9 @@ specifications can be found at:
 .Xr uplcom 4 ,
 .Xr urio 4 ,
 .Xr uvscom 4 ,
-.Xr usbconfig 8 ,
 .Xr xhci 4
+.Xr usbconfig 8 ,
+.Xr usbdi 9 ,
 .Sh STANDARDS
 The
 .Nm
@@ -176,8 +170,11 @@ module complies with the USB 2.0 standard.
 .Sh HISTORY
 The
 .Nm
-module has been inspired by the NetBSD USB stack initially written by
-Lennart Augustsson. The
+module has been inspired by the
+.Nx
+USB stack initially written by
+.An Lennart Augustsson .
+The
 .Nm
 module was written by
-.An Hans Petter Selasky Aq hselasky@FreeBSD.org .
+.An Hans Petter Selasky Aq Mt hselasky@FreeBSD.org .

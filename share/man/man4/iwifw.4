@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2009 Sam Leffler, Errno Consulting
 .\" All rights reserved.
 .\"
@@ -21,9 +20,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/iwifw.4 202317 2010-01-14 22:21:43Z brueffer $
+.\" $FreeBSD: stable/11/share/man/man4/iwifw.4 289399 2015-10-16 00:38:05Z bdrewery $
 .\"
-.Dd January 14, 2010
+.Dd October 15, 2015
 .Dt IWIFW 4
 .Os
 .Sh NAME
@@ -60,14 +59,14 @@ Intel PRO/Wireless 2200BG/2225BG/2915ABG series of IEEE 802.11 adapters.
 It may be statically linked into the kernel, or loaded as a module.
 .Pp
 For the loaded firmware to be enabled for use the license at
-.Pa /usr/share/doc/legal/intel_iwi/LICENSE
+.Pa /usr/share/doc/legal/intel_iwi.LICENSE
 must be agreed to by adding the following line to
 .Xr loader.conf 5 :
 .Pp
 .Dl "legal.intel_iwi.license_ack=1"
 .Sh FILES
-.Bl -tag -width ".Pa /usr/share/doc/legal/intel_iwi/LICENSE" -compact
-.It Pa /usr/share/doc/legal/intel_iwi/LICENSE
+.Bl -tag -width ".Pa /usr/share/doc/legal/intel_iwi.LICENSE" -compact
+.It Pa /usr/share/doc/legal/intel_iwi.LICENSE
 .Nm
 firmware license
 .El
