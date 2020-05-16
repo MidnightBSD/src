@@ -1,0 +1,13 @@
+/* $FreeBSD: stable/11/usr.bin/indent/tests/struct.0 313544 2017-02-10 09:31:39Z pstef $ */
+/* See r303485 */
+void
+t(void)
+{
+	static const struct {
+		int	a;
+		int	b;
+	} c[] = {
+		{ D, E },
+		{ F, G }
+	};
+}

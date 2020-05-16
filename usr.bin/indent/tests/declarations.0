@@ -1,0 +1,21 @@
+/* $FreeBSD: stable/11/usr.bin/indent/tests/declarations.0 313544 2017-02-10 09:31:39Z pstef $ */
+/* See r303570 */
+void t(void) {
+	int a,
+	b,
+	c;
+	int
+	*d,
+	*e,
+	*f;
+	int (*g)(),
+	(*h)(),
+	(*i)();
+	int j,
+	k,
+	l;
+	int m
+	,n
+	,o
+	;
+}
