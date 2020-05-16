@@ -26,6 +26,8 @@ CFLAGS+=	-DTARGET_OS_FREEBSD
 CFLAGS+=	-DHAVE_IPV6
 .endif
 
-NO_MAN=
+MK_MAN=no
+
+LIBADD+=	pthread
 
 .include <bsd.lib.mk>

@@ -90,6 +90,7 @@ _LIBRARIES=	\
 		dialog \
 		dispatch \
 		dl \
+		dns_sd \
 		dpv \
 		dtrace \
 		dwarf \
@@ -334,6 +335,7 @@ _DP_zfs_core=	nvpair
 _DP_zpool=	md pthread z nvpair avl umem
 _DP_be=		zfs nvpair
 _DP_netpgp=	bz2 crypto z
+_DP_dns_sd=	pthread
 
 # OFED support
 .if ${MK_OFED} != "no"
