@@ -1,7 +1,8 @@
 # Makefile for kld char device driver.
-# $FreeBSD: src/share/examples/kld/cdev/module/Makefile,v 1.6 2003/08/03 10:39:28 mbr Exp $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/kld/cdev/module/Makefile 299293 2016-05-10 00:51:50Z gjb $
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld/${KMOD}/module
 KMOD=	cdev
 SRCS=	cdev.c cdevmod.c
 

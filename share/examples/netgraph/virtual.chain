@@ -12,7 +12,7 @@
 # the author assume any responsibility for damages incurred with
 # its use.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/netgraph/virtual.chain 222179 2011-05-22 14:23:48Z uqs $
 #
 # This script creates and connects n router like nodes. Complex wide
 # area topologies can be created with the help of script.

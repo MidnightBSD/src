@@ -12,8 +12,8 @@
 #  3) If no label has been found, use MYADDR if it exists.
 #
 #
-# $FreeBSD: stable/10/share/examples/ppp/ppp.linkup.sample 192799 2009-05-26 07:40:32Z brian $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/ppp/ppp.linkup.sample 192799 2009-05-26 07:40:32Z brian $
+#
 #########################################################################
 
 # It is no longer necessary to re-add the default route here as our

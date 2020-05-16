@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/ses/Makefile 299293 2016-05-10 00:51:50Z gjb $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -32,6 +32,8 @@
 # mjacob@feral.com
 #
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/ses
 UNUSED	= getobjmap getnobj getobjstat
 SUBDIR	= getencstat setencstat setobjstat sesd
 

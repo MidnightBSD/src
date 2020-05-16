@@ -64,9 +64,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/share/examples/kld/Makefile,v 1.3.14.1 2006/02/23 02:13:28 mlaier Exp $
-# $MIdnightBSD$
+#	$FreeBSD: stable/11/share/examples/kld/Makefile 299293 2016-05-10 00:51:50Z gjb $
+#
 
-SUBDIR=	cdev dyn_sysctl fdclone firmware khelp syscall
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld
+SUBDIR=	cdev dyn_sysctl firmware khelp random_adaptor syscall
 
 .include <bsd.subdir.mk>

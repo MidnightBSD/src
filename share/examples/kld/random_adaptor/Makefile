@@ -1,6 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/kld/random_adaptor/Makefile 254784 2013-08-24 13:54:56Z markm $
+# $FreeBSD: stable/11/share/examples/kld/random_adaptor/Makefile 299293 2016-05-10 00:51:50Z gjb $
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld/${KMOD}
 KMOD=  random_adaptor_example
 SRCS=  ${KMOD}.c
 

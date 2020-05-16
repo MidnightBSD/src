@@ -4,8 +4,8 @@
 #
 #           Originally written by Toshiharu OHNO
 #
-# $FreeBSD: stable/10/share/examples/ppp/ppp.conf.sample 331513 2018-03-25 01:24:02Z sevan $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/ppp/ppp.conf.sample 331514 2018-03-25 01:24:52Z sevan $
+#
 #################################################################
 
 # This file is separated into sections.  Each section is named with

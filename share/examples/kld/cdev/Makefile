@@ -1,5 +1,7 @@
-# $MidnightBSD: src/share/examples/kld/cdev/Makefile,v 1.2 2009/12/13 01:09:42 laffer1 Exp $
+# $FreeBSD: stable/11/share/examples/kld/cdev/Makefile 299293 2016-05-10 00:51:50Z gjb $
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld/cdev
 SUBDIR=	module test
 
 load unload: _SUBDIR

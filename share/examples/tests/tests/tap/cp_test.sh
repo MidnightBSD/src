@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2017 Ngie Cooper <ngie@FreeBSD.org>
-# All rights reserved.
+# Copyright (c) 2017 Enji Cooper <ngie@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,8 +23,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/share/examples/tests/tests/tap/cp_test.sh 320443 2017-06-28 08:22:04Z ngie $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/tests/tests/tap/cp_test.sh 346920 2019-04-29 19:36:46Z ngie $
+#
 
 #
 # INTRODUCTION

@@ -68,7 +68,7 @@
  * SUCH DAMAGE.
  *
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/share/examples/kld/cdev/test/testcdev.c 202603 2010-01-18 23:13:22Z wkoszek $
  */
 #include <sys/types.h>
 #include <sys/ioccom.h>

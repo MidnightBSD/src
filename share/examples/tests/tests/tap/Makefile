@@ -1,5 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/tests/tests/tap/Makefile 321646 2017-07-28 03:30:46Z ngie $
+# $FreeBSD: stable/11/share/examples/tests/tests/tap/Makefile 320443 2017-06-28 08:22:04Z ngie $
+
+# The release package to use for the tests contained within the directory
+#
+# This applies to components which rely on ^/projects/release-pkg support
+# (see UPDATING XXXXXXXXX / svn revision r298107).
+PACKAGE=	tests
 
 # Directory into which the Kyuafile provided by this directory will be
 # installed.
@@ -26,10 +31,17 @@ TAP_TESTS_SH=	cp_test
 # definitions from above.
 KYUAFILE=	yes
 
-# Install file1 and file2 as files via bsd.prog.mk.
-FILES+=		file1
-FILESDIR=	${TESTSDIR}
-CLEANFILES+=	file1
+# Install file1 and file2 as files via bsd.prog.mk. Please note the intentional
+# ${PACKAGE} namespace of files.
+#
+# The basic semantics of this are the same as FILES in bsd.prog.mk, e.g. the
+# installation of the files can be manipulated via ${PACKAGE}FILESDIR,
+# ${PACKAGE}FILESMODE, etc.
+#
+# Please see comment above about ${PACKAGE}. Feel free to omit the ${PACKAGE}
+# namespace if release package support isn't needed.
+${PACKAGE}FILES+=	file1
+CLEANFILES+=		file1
 
 file1:
 	@echo "File 1" > ${.TARGET}

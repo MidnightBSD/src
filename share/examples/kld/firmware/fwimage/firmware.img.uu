@@ -1,4 +1,4 @@
-$MidnightBSD$
+$FreeBSD: stable/11/share/examples/kld/firmware/fwimage/firmware.img.uu 220256 2011-04-01 23:47:10Z emaste $
 begin 644 firmware.img
 M("`@("`@("`@("`@("`L("`@("`@("`L"B`@("`@("`@("`@("`O*"`@("`@
 M("`@*0H@("`@("`@("`@("`@7"!<7U]?("`@+R!\"B`@("`@("`@("`@("`O

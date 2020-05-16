@@ -29,7 +29,7 @@
 .\" Feral Software
 .\" mjacob@feral.com
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/share/examples/ses/sesd/sesd.0 242638 2012-11-06 00:22:33Z mav $
 .\"
 .Dd November 5, 2012
 .Dt SESD 8

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* ----------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42) (by Poul-Henning Kamp):
  * <joerg@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
@@ -6,7 +5,7 @@
  * this stuff is worth it, you can buy me a beer in return.        Joerg Wunsch
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/share/examples/libusb20/util.c 269879 2014-08-12 14:53:02Z emaste $
+ * $FreeBSD: stable/11/share/examples/libusb20/util.c 257779 2013-11-07 07:22:51Z hselasky $
  */
 
 /*

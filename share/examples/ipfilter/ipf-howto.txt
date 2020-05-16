@@ -8,7 +8,7 @@
 
               Brendan Conoboy <synk@swcp.com>
             Erik Fichtner <emf@obfuscation.org>
-            $MidnightBSD$
+            $FreeBSD: stable/11/share/examples/ipfilter/ipf-howto.txt 298882 2016-05-01 16:29:02Z pfg $
 
                 Fri Apr 20 09:31:14 EDT 2001
 

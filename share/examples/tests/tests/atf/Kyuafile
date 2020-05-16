@@ -1,5 +1,4 @@
--- $MidnightBSD$
--- $FreeBSD: stable/10/share/examples/tests/tests/atf/Kyuafile 258299 2013-11-18 12:57:46Z jmmv $
+-- $FreeBSD: stable/11/share/examples/tests/tests/atf/Kyuafile 258299 2013-11-18 12:57:46Z jmmv $
 --
 -- Copyright 2013 Google Inc.
 -- All rights reserved.

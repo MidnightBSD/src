@@ -1,6 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/scsi_target/Makefile 125429 2004-02-04 10:15:26Z ru $
+# $FreeBSD: stable/11/share/examples/scsi_target/Makefile 299293 2016-05-10 00:51:50Z gjb $
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/${PROG}
 PROG=	scsi_target
 SRCS=	scsi_target.h scsi_target.c scsi_cmds.c
 DPADD=	${LIBCAM} ${LIBSBUF}

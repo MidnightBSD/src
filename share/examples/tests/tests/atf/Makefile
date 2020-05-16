@@ -1,5 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/tests/tests/atf/Makefile 321753 2017-07-31 03:57:45Z ngie $
+# $FreeBSD: stable/11/share/examples/tests/tests/atf/Makefile 321647 2017-07-28 03:32:36Z ngie $
+
+# The release package to use for the tests contained within the directory
+#
+# This applies to components which rely on ^/projects/release-pkg support
+# (see UPDATING XXXXXXXXX / svn revision r298107).
+PACKAGE=	tests
 
 # Directory into which the Kyuafile provided by this directory will be
 # installed.
@@ -25,5 +30,20 @@ ATF_TESTS_SH=	cp_test
 # bsd.test.mk auto-generate one for you based on the ATF_TESTS_*
 # definitions from above.
 KYUAFILE=	yes
+
+# Install file1 and file2 as files via bsd.progs.mk. Please note the intentional
+# ${PACKAGE} namespace of files.
+#
+# The basic semantics of this are the same as FILES in bsd.progs.mk, e.g. the
+# installation of the files can be manipulated via ${PACKAGE}FILESDIR,
+# ${PACKAGE}FILESMODE, etc.
+#
+# Please see comment above about ${PACKAGE}. Feel free to omit the ${PACKAGE}
+# namespace if release package support isn't needed.
+${PACKAGE}FILES+=	file1
+CLEANFILES+=		file1
+
+file1:
+	@echo "File 1" > ${.TARGET}
 
 .include <bsd.test.mk>
