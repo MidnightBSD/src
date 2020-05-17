@@ -39,12 +39,13 @@ static char sccsid[] = "@(#)head.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/head/head.c 332482 2018-04-13 17:57:00Z kevans $");
 
 #include <sys/types.h>
 
 #include <ctype.h>
 #include <err.h>
+#include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +63,13 @@ static void head_bytes(FILE *, off_t);
 static void obsolete(char *[]);
 static void usage(void);
 
+static const struct option long_opts[] =
+{
+	{"bytes",	required_argument,	NULL, 'c'},
+	{"lines",	required_argument,	NULL, 'n'},
+	{NULL,		no_argument,		NULL, 0}
+};
+
 int
 main(int argc, char *argv[])
 {
@@ -72,7 +80,7 @@ main(int argc, char *argv[])
 	char *ep;
 
 	obsolete(argv);
-	while ((ch = getopt(argc, argv, "n:c:")) != -1)
+	while ((ch = getopt_long(argc, argv, "+n:c:", long_opts, NULL)) != -1)
 		switch(ch) {
 		case 'c':
 			bytecnt = strtoimax(optarg, &ep, 10);
