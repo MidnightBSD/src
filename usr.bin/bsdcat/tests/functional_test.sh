@@ -24,8 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/bsdcat/tests/functional_test.sh 299529 2016-05-12 10:16:16Z mm $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/bsdcat/tests/functional_test.sh 299529 2016-05-12 10:16:16Z mm $
 
 SRCDIR=$(atf_get_srcdir)
 TESTER="${SRCDIR}/bsdcat_test"

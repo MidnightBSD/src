@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/bsdcat/tests/Makefile 328828 2018-02-03 02:17:25Z mm $
+# $FreeBSD: stable/11/usr.bin/bsdcat/tests/Makefile 328827 2018-02-03 02:17:04Z mm $
+
+PACKAGE=	tests
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
@@ -58,16 +59,16 @@ list.h: ${TESTS_SRCS} Makefile
 
 CLEANFILES+=	list.h list.h.tmp
 
-FILES+=	test_empty.gz.uu
-FILES+=	test_empty.lz4.uu
-FILES+=	test_empty.xz.uu
-FILES+=	test_empty.zst.uu
-FILES+=	test_expand.Z.uu
-FILES+=	test_expand.bz2.uu
-FILES+=	test_expand.gz.uu
-FILES+=	test_expand.lz4.uu
-FILES+=	test_expand.plain.uu
-FILES+=	test_expand.xz.uu
-FILES+=	test_expand.zst.uu
+${PACKAGE}FILES+=	test_empty.gz.uu
+${PACKAGE}FILES+=	test_empty.lz4.uu
+${PACKAGE}FILES+=	test_empty.xz.uu
+${PACKAGE}FILES+=	test_empty.zst.uu
+${PACKAGE}FILES+=	test_expand.Z.uu
+${PACKAGE}FILES+=	test_expand.bz2.uu
+${PACKAGE}FILES+=	test_expand.gz.uu
+${PACKAGE}FILES+=	test_expand.lz4.uu
+${PACKAGE}FILES+=	test_expand.plain.uu
+${PACKAGE}FILES+=	test_expand.xz.uu
+${PACKAGE}FILES+=	test_expand.zst.uu
 
 .include <bsd.test.mk>
