@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/cmp/Makefile 276490 2015-01-01 02:04:44Z ngie $
+# $FreeBSD: stable/11/usr.bin/cmp/Makefile 272780 2014-10-09 00:50:33Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	cmp
 SRCS=	cmp.c link.c misc.c regular.c special.c

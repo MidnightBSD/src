@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/cmp/tests/Makefile 314425 2017-02-28 22:18:05Z asomers $
+# $FreeBSD: stable/11/usr.bin/cmp/tests/Makefile 314427 2017-02-28 22:49:41Z asomers $
 
 .include <bsd.own.mk>
 

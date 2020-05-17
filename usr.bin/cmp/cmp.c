@@ -40,8 +40,7 @@ static char sccsid[] = "@(#)cmp.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/cmp/cmp.c,v 1.18 2010/12/11 08:32:16 joel Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/cmp/cmp.c 335738 2018-06-27 21:00:09Z kevans $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +57,14 @@ __MBSDID("$MidnightBSD$");
 #include "extern.h"
 
 int	lflag, sflag, xflag, zflag;
+
+static const struct option long_opts[] =
+{
+	{"verbose",	no_argument,		NULL, 'l'},
+	{"silent",	no_argument,		NULL, 's'},
+	{"quiet",	no_argument,		NULL, 's'},
+	{NULL,		no_argument,		NULL, 0}
+};
 
 static void usage(void);
 
@@ -69,7 +77,7 @@ main(int argc, char *argv[])
 	const char *file1, *file2;
 
 	oflag = O_RDONLY;
-	while ((ch = getopt(argc, argv, "hlsxz")) != -1)
+	while ((ch = getopt_long(argc, argv, "+hlsxz", long_opts, NULL)) != -1)
 		switch (ch) {
 		case 'h':		/* Don't follow symlinks */
 			oflag |= O_NOFOLLOW;

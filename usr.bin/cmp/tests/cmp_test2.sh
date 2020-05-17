@@ -22,8 +22,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/cmp/tests/cmp_test2.sh 314425 2017-02-28 22:18:05Z asomers $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/cmp/tests/cmp_test2.sh 314427 2017-02-28 22:49:41Z asomers $
 
 atf_test_case special
 special_head() {
