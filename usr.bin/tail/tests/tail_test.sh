@@ -22,8 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/tail/tests/tail_test.sh 332610 2018-04-16 16:42:16Z asomers $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/tail/tests/tail_test.sh 332600 2018-04-16 16:20:39Z asomers $
 
 atf_test_case empty_r
 empty_r_head()

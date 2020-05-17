@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@ static char sccsid[] = "@(#)reverse.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tail/reverse.c 332610 2018-04-16 16:42:16Z asomers $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tail/reverse.c 332600 2018-04-16 16:20:39Z asomers $");
 
 #include <sys/param.h>
 #include <sys/queue.h>

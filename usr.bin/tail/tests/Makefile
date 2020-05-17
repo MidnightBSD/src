@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/tail/tests/Makefile 311895 2017-01-10 20:43:32Z asomers $
+# $FreeBSD: stable/11/usr.bin/tail/tests/Makefile 311895 2017-01-10 20:43:32Z asomers $
 
 PACKAGE=	tests
 

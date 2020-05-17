@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/tail/Makefile 314425 2017-02-28 22:18:05Z asomers $
+# $FreeBSD: stable/11/usr.bin/tail/Makefile 314427 2017-02-28 22:49:41Z asomers $
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	tail
 SRCS=	forward.c misc.c read.c reverse.c tail.c
