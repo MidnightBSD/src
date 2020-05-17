@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/wall/ttymsg.c 286269 2015-08-04 03:06:23Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/wall/ttymsg.c 335059 2018-06-13 13:41:23Z ed $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)ttymsg.c	8.2 (Berkeley) 11/16/93";
@@ -60,7 +59,7 @@ static const char sccsid[] = "@(#)ttymsg.c	8.2 (Berkeley) 11/16/93";
 const char *
 ttymsg(struct iovec *iov, int iovcnt, const char *line, int tmout)
 {
-	struct iovec localiov[7];
+	struct iovec localiov[TTYMSG_IOV_MAX];
 	ssize_t left, wret;
 	int cnt, fd;
 	char device[MAXNAMLEN] = _PATH_DEV;

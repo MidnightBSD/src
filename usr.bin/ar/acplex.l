@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Kai Wang
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ar/acplex.l 250926 2013-05-23 05:42:35Z jkim $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ar/acplex.l 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <err.h>
 #include <errno.h>

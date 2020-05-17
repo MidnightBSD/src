@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/wall/wall.c 241848 2012-10-22 03:07:05Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/wall/wall.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 static const char copyright[] =

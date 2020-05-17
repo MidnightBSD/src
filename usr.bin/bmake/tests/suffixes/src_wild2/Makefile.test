@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.bin/bmake/tests/suffixes/src_wild2/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/suffixes/src_wild2/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
 #
 # Source expansion with the source in a macro
 #

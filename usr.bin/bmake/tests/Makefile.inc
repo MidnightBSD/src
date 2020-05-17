@@ -1,4 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/bmake/tests/Makefile.inc 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/Makefile.inc 295643 2016-02-16 02:13:59Z bdrewery $
 
 SUBDIR_PARALLEL= t

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)hexdump.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/hexdump/hexdump.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD: stable/11/usr.bin/hexdump/hexdump.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <wchar.h>
@@ -83,9 +82,9 @@ enum _vflag { ALL, DUP, FIRST, WAIT };	/* -v values */
 extern enum _vflag vflag;
 
 void	 add(const char *);
-void	 addfile(char *);
-void	 badcnt(char *);
-void	 badconv(char *);
+void	 addfile(const char *);
+void	 badcnt(const char *);
+void	 badconv(const char *);
 void	 badfmt(const char *);
 void	 badsfmt(void);
 void	 bpad(PR *);

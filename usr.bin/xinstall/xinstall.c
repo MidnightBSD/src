@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2012, 2013 SRI International
  * Copyright (c) 1987, 1993
@@ -12,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -42,7 +41,7 @@ static char sccsid[] = "@(#)xinstall.c	8.1 (Berkeley) 7/21/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/xinstall/xinstall.c 318096 2017-05-09 19:14:26Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xinstall/xinstall.c 344206 2019-02-16 04:49:10Z kevans $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -63,6 +62,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/xinstall/xinstall.c 318096 2017-05-09 19:1
 #include <sha.h>
 #include <sha256.h>
 #include <sha512.h>
+#include <spawn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,11 +72,6 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/xinstall/xinstall.c 318096 2017-05-09 19:1
 #include <vis.h>
 
 #include "mtree.h"
-
-/* Bootstrap aid - this doesn't exist in most older releases */
-#ifndef MAP_FAILED
-#define MAP_FAILED ((void *)-1)	/* from <sys/mman.h> */
-#endif
 
 #define MAX_CMP_SIZE	(16 * 1024 * 1024)
 
@@ -108,6 +103,8 @@ static enum {
 	DIGEST_SHA512,
 } digesttype = DIGEST_NONE;
 
+extern char **environ;
+
 static gid_t gid;
 static uid_t uid;
 static int dobackup, docompare, dodir, dolink, dopreserve, dostrip, dounpriv,
@@ -127,14 +124,14 @@ static int	create_tempfile(const char *, char *, size_t);
 static char	*quiet_mktemp(char *template);
 static char	*digest_file(const char *);
 static void	digest_init(DIGEST_CTX *);
-static void	digest_update(DIGEST_CTX *, const unsigned char *, size_t);
+static void	digest_update(DIGEST_CTX *, const char *, size_t);
 static char	*digest_end(DIGEST_CTX *, char *);
 static int	do_link(const char *, const char *, const struct stat *);
 static void	do_symlink(const char *, const char *, const struct stat *);
 static void	makelink(const char *, const char *, const struct stat *);
 static void	install(const char *, const char *, u_long, u_int);
 static void	install_dir(char *);
-static void	metadata_log(const char *, const char *, struct timeval *,
+static void	metadata_log(const char *, const char *, struct timespec *,
 		    const char *, const char *, off_t);
 static int	parseid(const char *, id_t *);
 static void	strip(const char *);
@@ -433,7 +430,7 @@ digest_init(DIGEST_CTX *c)
 }
 
 static void
-digest_update(DIGEST_CTX *c, const unsigned char *data, size_t len)
+digest_update(DIGEST_CTX *c, const char *data, size_t len)
 {
 
 	switch (digesttype) {
@@ -670,7 +667,15 @@ makelink(const char *from_name, const char *to_name,
 	}
 
 	if (dolink & LN_RELATIVE) {
-		char *to_name_copy, *cp, *d, *s;
+		char *to_name_copy, *cp, *d, *ld, *ls, *s;
+
+		if (*from_name != '/') {
+			/* this is already a relative link */
+			do_symlink(from_name, to_name, target_sb);
+			/* XXX: from_name may point outside of destdir. */
+			metadata_log(to_name, "link", NULL, from_name, NULL, 0);
+			return;
+		}
 
 		/* Resolve pathnames. */
 		if (realpath(from_name, src) == NULL)
@@ -698,8 +703,19 @@ makelink(const char *from_name, const char *to_name,
 		free(to_name_copy);
 
 		/* Trim common path components. */
-		for (s = src, d = dst; *s == *d; s++, d++)
+		ls = ld = NULL;
+		for (s = src, d = dst; *s == *d; ls = s, ld = d, s++, d++)
 			continue;
+		/*
+		 * If we didn't end after a directory separator, then we've
+		 * falsely matched the last component.  For example, if one
+		 * invoked install -lrs /lib/foo.so /libexec/ then the source
+		 * would terminate just after the separator while the
+		 * destination would terminate in the middle of 'libexec',
+		 * leading to a full directory getting falsely eaten.
+		 */
+		if ((ls != NULL && *ls != '/') || (ld != NULL && *ld != '/'))
+			s--, d--;
 		while (*s != '/')
 			s--, d--;
 
@@ -733,7 +749,7 @@ static void
 install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 {
 	struct stat from_sb, temp_sb, to_sb;
-	struct timeval tvb[2];
+	struct timespec tsb[2];
 	int devnull, files_match, from_fd, serrno, target;
 	int tempcopy, temp_fd, to_fd;
 	char backup[MAXPATHLEN], *p, pathbuf[MAXPATHLEN], tempfile[MAXPATHLEN];
@@ -755,8 +771,9 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 		}
 		/* Build the target path. */
 		if (flags & DIRECTORY) {
-			(void)snprintf(pathbuf, sizeof(pathbuf), "%s/%s",
+			(void)snprintf(pathbuf, sizeof(pathbuf), "%s%s%s",
 			    to_name,
+			    to_name[strlen(to_name) - 1] == '/' ? "" : "/",
 			    (p = strrchr(from_name, '/')) ? ++p : from_name);
 			to_name = pathbuf;
 		}
@@ -868,11 +885,9 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 			 * Need to preserve target file times, though.
 			 */
 			if (to_sb.st_nlink != 1) {
-				tvb[0].tv_sec = to_sb.st_atime;
-				tvb[0].tv_usec = 0;
-				tvb[1].tv_sec = to_sb.st_mtime;
-				tvb[1].tv_usec = 0;
-				(void)utimes(tempfile, tvb);
+				tsb[0] = to_sb.st_atim;
+				tsb[1] = to_sb.st_mtim;
+				(void)utimensat(AT_FDCWD, tempfile, tsb, 0);
 			} else {
 				files_match = 1;
 				(void)unlink(tempfile);
@@ -937,11 +952,9 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 	 * Preserve the timestamp of the source file if necessary.
 	 */
 	if (dopreserve && !files_match && !devnull) {
-		tvb[0].tv_sec = from_sb.st_atime;
-		tvb[0].tv_usec = 0;
-		tvb[1].tv_sec = from_sb.st_mtime;
-		tvb[1].tv_usec = 0;
-		(void)utimes(to_name, tvb);
+		tsb[0] = from_sb.st_atim;
+		tsb[1] = from_sb.st_mtim;
+		(void)utimensat(AT_FDCWD, to_name, tsb, 0);
 	}
 
 	if (fstat(to_fd, &to_sb) == -1) {
@@ -1010,7 +1023,7 @@ install(const char *from_name, const char *to_name, u_long fset, u_int flags)
 	if (!devnull)
 		(void)close(from_fd);
 
-	metadata_log(to_name, "file", tvb, NULL, digestresult, to_sb.st_size);
+	metadata_log(to_name, "file", tsb, NULL, digestresult, to_sb.st_size);
 	free(digestresult);
 }
 
@@ -1039,11 +1052,11 @@ compare(int from_fd, const char *from_name __unused, size_t from_len,
 		if (trymmap(from_fd) && trymmap(to_fd)) {
 			p = mmap(NULL, from_len, PROT_READ, MAP_SHARED,
 			    from_fd, (off_t)0);
-			if (p == (char *)MAP_FAILED)
+			if (p == MAP_FAILED)
 				goto out;
 			q = mmap(NULL, from_len, PROT_READ, MAP_SHARED,
 			    to_fd, (off_t)0);
-			if (q == (char *)MAP_FAILED) {
+			if (q == MAP_FAILED) {
 				munmap(p, from_len);
 				goto out;
 			}
@@ -1177,7 +1190,8 @@ copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
 {
 	int nr, nw;
 	int serrno;
-	char *p, buf[MAXBSIZE];
+	char *p;
+	char buf[MAXBSIZE];
 	int done_copy;
 	DIGEST_CTX ctx;
 
@@ -1197,7 +1211,7 @@ copy(int from_fd, const char *from_name, int to_fd, const char *to_name,
 	done_copy = 0;
 	if (size <= 8 * 1048576 && trymmap(from_fd) &&
 	    (p = mmap(NULL, (size_t)size, PROT_READ, MAP_SHARED,
-		    from_fd, (off_t)0)) != (char *)MAP_FAILED) {
+		    from_fd, (off_t)0)) != MAP_FAILED) {
 		nw = write(to_fd, p, size);
 		if (nw != size) {
 			serrno = errno;
@@ -1250,27 +1264,33 @@ static void
 strip(const char *to_name)
 {
 	const char *stripbin;
-	int serrno, status;
+	const char *args[3];
+	pid_t pid;
+	int error, status;
 
-	switch (fork()) {
-	case -1:
-		serrno = errno;
+	stripbin = getenv("STRIPBIN");
+	if (stripbin == NULL)
+		stripbin = "strip";
+	args[0] = stripbin;
+	args[1] = to_name;
+	args[2] = NULL;
+	error = posix_spawnp(&pid, stripbin, NULL, NULL,
+	    __DECONST(char **, args), environ);
+	if (error != 0) {
 		(void)unlink(to_name);
-		errno = serrno;
-		err(EX_TEMPFAIL, "fork");
-	case 0:
-		stripbin = getenv("STRIPBIN");
-		if (stripbin == NULL)
-			stripbin = "strip";
-		execlp(stripbin, stripbin, to_name, (char *)NULL);
-		err(EX_OSERR, "exec(%s)", stripbin);
-	default:
-		if (wait(&status) == -1 || status) {
-			serrno = errno;
-			(void)unlink(to_name);
-			errc(EX_SOFTWARE, serrno, "wait");
-			/* NOTREACHED */
-		}
+		errc(error == EAGAIN || error == EPROCLIM || error == ENOMEM ?
+		    EX_TEMPFAIL : EX_OSERR, error, "spawn %s", stripbin);
+	}
+	if (waitpid(pid, &status, 0) == -1) {
+		error = errno;
+		(void)unlink(to_name);
+		errc(EX_SOFTWARE, error, "wait");
+		/* NOTREACHED */
+	}
+	if (status != 0) {
+		(void)unlink(to_name);
+		errx(EX_SOFTWARE, "strip command %s failed on %s",
+		    stripbin, to_name);
 	}
 }
 
@@ -1283,19 +1303,26 @@ install_dir(char *path)
 {
 	char *p;
 	struct stat sb;
-	int ch;
+	int ch, tried_mkdir;
 
 	for (p = path;; ++p)
 		if (!*p || (p != path && *p  == '/')) {
+			tried_mkdir = 0;
 			ch = *p;
 			*p = '\0';
-			if (stat(path, &sb)) {
-				if (errno != ENOENT || mkdir(path, 0755) < 0) {
+again:
+			if (stat(path, &sb) < 0) {
+				if (errno != ENOENT || tried_mkdir)
+					err(EX_OSERR, "stat %s", path);
+				if (mkdir(path, 0755) < 0) {
+					tried_mkdir = 1;
+					if (errno == EEXIST)
+						goto again;
 					err(EX_OSERR, "mkdir %s", path);
-					/* NOTREACHED */
-				} else if (verbose)
+				}
+				if (verbose)
 					(void)printf("install: mkdir %s\n",
-						     path);
+					    path);
 			} else if (!S_ISDIR(sb.st_mode))
 				errx(EX_OSERR, "%s exists but is not a directory", path);
 			if (!(*p = ch))
@@ -1320,7 +1347,7 @@ install_dir(char *path)
  *	or to allow integrity checks to be performed.
  */
 static void
-metadata_log(const char *path, const char *type, struct timeval *tv,
+metadata_log(const char *path, const char *type, struct timespec *ts,
 	const char *slink, const char *digestresult, off_t size)
 {
 	static const char extra[] = { ' ', '\t', '\n', '\\', '#', '\0' };
@@ -1374,9 +1401,9 @@ metadata_log(const char *path, const char *type, struct timeval *tv,
 	}
 	if (*type == 'f') /* type=file */
 		fprintf(metafp, " size=%lld", (long long)size);
-	if (tv != NULL && dopreserve)
-		fprintf(metafp, " time=%lld.%ld",
-			(long long)tv[1].tv_sec, (long)tv[1].tv_usec);
+	if (ts != NULL && dopreserve)
+		fprintf(metafp, " time=%lld.%09ld",
+			(long long)ts[1].tv_sec, ts[1].tv_nsec);
 	if (digestresult && digest)
 		fprintf(metafp, " %s=%s", digest, digestresult);
 	if (fflags)

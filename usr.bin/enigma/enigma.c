@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  *	"enigma.c" is in file cbw.tar from
  *	anonymous FTP host watmsg.waterloo.edu: pub/crypt/cbw.tar.Z
@@ -12,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/enigma/enigma.c 231994 2012-02-22 06:27:20Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/enigma/enigma.c 279296 2015-02-25 20:47:25Z delphij $");
 
 #include <sys/types.h>
 
@@ -43,6 +42,11 @@ setup(char *pw)
 	unsigned rnd;
 	int32_t seed;
 	char *cryptpw;
+
+	if (crypt_set_format("des") == 0) {
+		fprintf(stderr, "crypt_set_format(\"des\") failed.\n");
+		exit(1);
+	}
 
 	strlcpy(salt, pw, sizeof(salt));
 	cryptpw = crypt(pw, salt);

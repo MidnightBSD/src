@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/bmake/tests/Makefile 266074 2014-05-14 18:43:13Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
-TESTSDIR=	${TESTSBASE}/usr.bin/bmake
+PACKAGE=	tests
 
-FILESDIR=	${TESTSDIR}
-FILES=		common.sh
-FILES+=		test-new.mk
+${PACKAGE}FILES+=	common.sh
+${PACKAGE}FILES+=	test-new.mk
 
 TESTS_SUBDIRS=	archives
 TESTS_SUBDIRS+=	basic

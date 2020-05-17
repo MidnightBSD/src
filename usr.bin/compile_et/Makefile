@@ -1,15 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/compile_et/Makefile 233294 2012-03-22 08:48:42Z stas $
+# $FreeBSD: stable/11/usr.bin/compile_et/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.PATH: ${.CURDIR}/../../contrib/com_err
-
-LIBVERS=	${.OBJDIR}/../../kerberos5/lib/libvers/libvers.a
+.PATH: ${SRCTOP}/contrib/com_err
 
 PROG=	compile_et
 SRCS=	compile_et.c parse.y lex.l
-LDADD=	-lroken ${LIBVERS}
-DPADD=	${LIBROKEN} ${LIBVERS}
-CFLAGS+=-I. -I${.CURDIR}/../../contrib/com_err
+LIBADD=	roken vers
+CFLAGS+=-I. -I${SRCTOP}/contrib/com_err
 
 WARNS?=	0
 
