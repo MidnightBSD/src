@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/tr/str.c 229403 2012-01-03 18:51:58Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tr/str.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)str.c	8.2 (Berkeley) 4/28/95";

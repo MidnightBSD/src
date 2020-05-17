@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$OpenBSD: cu.1,v 1.3 2006/06/07 06:35:59 mbalmer Exp $
 .\"
 .\" Copyright (c) 1980, 1990, 1993
@@ -29,9 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tip.1	8.4 (Berkeley) 4/18/94
-.\" $FreeBSD: stable/10/usr.bin/tip/tip/cu.1 244040 2012-12-08 22:16:36Z eadler $
+.\" $FreeBSD: stable/11/usr.bin/tip/tip/cu.1 318487 2017-05-18 20:32:12Z trasz $
 .\"
-.Dd September 1, 2006
+.Dd April 22, 2017
 .Dt CU 1
 .Os
 .Sh NAME
@@ -495,6 +494,11 @@ line access log
 lock file to avoid conflicts with
 .Xr uucp 1 Pq Pa ports/net/freebsd-uucp
 .El
+.Sh EXAMPLES
+Connect to the first USB serial port at the speed of 115200 baud:
+.Bd -literal -offset indent
+cu -s 115200 -l /dev/cuaU0
+.Ed
 .Sh SEE ALSO
 .Xr tip 1
 .Sh HISTORY

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Baptiste Daroussin <bapt@FreeBSD.org>
  * Copyright (c) 2014 Vsevolod Stakhov <vsevolod@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/timeout/timeout.c 290040 2015-10-27 07:08:47Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/timeout/timeout.c 298879 2016-05-01 16:13:05Z pfg $");
 
 #include <sys/procctl.h>
 #include <sys/time.h>
@@ -228,7 +227,7 @@ main(int argc, char **argv)
 	argv++;
 
 	if (!foreground) {
-		/* Aquire a reaper */
+		/* Acquire a reaper */
 		if (procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == -1)
 			err(EX_OSERR, "Fail to acquire the reaper");
 	}

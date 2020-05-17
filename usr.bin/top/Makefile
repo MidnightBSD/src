@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/top/Makefile 284484 2015-06-17 02:30:12Z marcel $
+# $FreeBSD: stable/11/usr.bin/top/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-TOPDIR=	${.CURDIR}/../../contrib/top
+TOPDIR=	${SRCTOP}/contrib/top
 .PATH: ${TOPDIR}
 
 PROG=	top
@@ -22,12 +21,12 @@ WARNS?=	0
 CFLAGS+= -D"Table_size=${TOP_TABLE_SIZE}"
 .endif
 
-DPADD=	${LIBTERMCAP} ${LIBM} ${LIBKVM} ${LIBJAIL}
-LDADD=	-ltermcap -lm -lkvm -ljail
+LIBADD=	ncursesw m kvm jail
 
 CLEANFILES= sigdesc.h
-SIGCONV_AWK= ${.CURDIR}/../../contrib/top/sigconv.awk
-SIGNAL_H= ${DESTDIR}/usr/include/sys/signal.h
+SIGCONV_AWK= ${SRCTOP}/contrib/top/sigconv.awk
+STAGED_INCLUDE_DIR?= ${DESTDIR}/usr/include
+SIGNAL_H= ${STAGED_INCLUDE_DIR}/sys/signal.h
 sigdesc.h: ${SIGCONV_AWK} ${SIGNAL_H}
 	awk -f ${SIGCONV_AWK} < ${SIGNAL_H} > ${.TARGET}
 

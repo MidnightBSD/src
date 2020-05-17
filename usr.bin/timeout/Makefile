@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/timeout/Makefile 287392 2015-09-02 05:45:47Z bapt $
+# $FreeBSD: stable/11/usr.bin/timeout/Makefile 273771 2014-10-28 10:39:41Z bapt $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	timeout
 

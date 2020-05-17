@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	$OpenBSD: Makefile,v 1.11 2006/05/25 08:41:52 jmc Exp $
-# $FreeBSD: stable/10/usr.bin/tip/tip/Makefile 173716 2007-11-18 00:29:36Z jb $
+# $FreeBSD: stable/11/usr.bin/tip/tip/Makefile 287970 2015-09-18 21:01:52Z bdrewery $
 #
 # Files are:
 #	/etc/remote		remote host description file
@@ -54,5 +53,5 @@ acutab.o log.o remote.o: Makefile
 # is no cu(1) with the schg-bit set.
 beforeinstall:
 .if exists(${DESTDIR}${BINDIR}/cu)
-	-@chflags noschg ${DESTDIR}${BINDIR}/cu
+	-chflags noschg ${DESTDIR}${BINDIR}/cu
 .endif

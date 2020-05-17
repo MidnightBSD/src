@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Sheldon Hearn <sheldonh@FreeBSD.org>.
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$FreeBSD: stable/10/usr.bin/truncate/truncate.c 275585 2014-12-07 22:30:54Z jilles $";
+    "$FreeBSD: stable/11/usr.bin/truncate/truncate.c 330449 2018-03-05 07:26:05Z eadler $";
 #endif
 
 #include <sys/stat.h>

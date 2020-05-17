@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: acu.c,v 1.12 2006/03/17 14:43:06 moritz Exp $	*/
 /*	$NetBSD: acu.c,v 1.4 1996/12/29 10:34:03 cgd Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/acu.c 169514 2007-05-12 23:29:33Z pav $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/acu.c 353589 2019-10-15 20:04:15Z brooks $");
 
 #ifndef lint
 #if 0
@@ -189,7 +188,7 @@ acutype(char *s)
 	acu_t *p;
 	extern acu_t acutable[];
 
-	for (p = acutable; p->acu_name != '\0'; p++)
+	for (p = acutable; p->acu_name != NULL; p++)
 		if (!strcmp(s, p->acu_name))
 			return (p);
 	return (NOACU);

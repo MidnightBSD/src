@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: cmds.c,v 1.26 2006/06/06 23:24:52 deraadt Exp $	*/
 /*	$NetBSD: cmds.c,v 1.7 1997/02/11 09:24:03 mrg Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/cmds.c 178736 2008-05-03 02:29:02Z bms $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/cmds.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 #if 0
