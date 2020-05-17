@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1987, 1988, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -46,7 +45,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/login/login.c 288164 2015-09-24 00:54:46Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/login/login.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * login [ name ]
@@ -105,8 +104,8 @@ static void		 usage(void);
 #define	DEFAULT_PASSWD_PROMPT	"Password:"
 #define	TERM_UNKNOWN		"su"
 #define	DEFAULT_WARN		(2L * 7L * 86400L)	/* Two weeks */
-#define NO_SLEEP_EXIT		0
-#define SLEEP_EXIT		5
+#define	NO_SLEEP_EXIT		0
+#define	SLEEP_EXIT		5
 
 /*
  * This bounds the time given to login.  Not a define so it can
@@ -198,7 +197,7 @@ main(int argc, char *argv[])
 	(void)alarm(timeout);
 	(void)setpriority(PRIO_PROCESS, 0, 0);
 
-	openlog("login", LOG_ODELAY, LOG_AUTH);
+	openlog("login", 0, LOG_AUTH);
 
 	uid = getuid();
 	euid = geteuid();
@@ -395,12 +394,12 @@ main(int argc, char *argv[])
 		au_login_success();
 #endif
 
-        /*
-         * This needs to happen before login_getpwclass to support
-         * home directories on GSS-API authenticated NFS where the
-         * kerberos credentials need to be saved so that the kernel
-         * can authenticate to the NFS server.
-         */
+	/*
+	 * This needs to happen before login_getpwclass to support
+	 * home directories on GSS-API authenticated NFS where the
+	 * kerberos credentials need to be saved so that the kernel
+	 * can authenticate to the NFS server.
+	 */
 	pam_err = pam_setcred(pamh, pam_silent|PAM_ESTABLISH_CRED);
 	if (pam_err != PAM_SUCCESS) {
 		pam_syslog("pam_setcred()");
@@ -488,14 +487,6 @@ main(int argc, char *argv[])
 	    (gr = getgrnam(TTYGRPNAME)) ? gr->gr_gid : pwd->pw_gid))
 		if (errno != EROFS)
 			syslog(LOG_ERR, "chown(%s): %m", ttyn);
-
-	/*
-	 * Exclude cons/vt/ptys only, assume dialup otherwise
-	 * TODO: Make dialup tty determination a library call
-	 * for consistency (finger etc.)
-	 */
-	if (hflag && isdialuptty(tty))
-		syslog(LOG_INFO, "DIALUP %s, %s", tty, pwd->pw_name);
 
 #ifdef LOGALL
 	/*

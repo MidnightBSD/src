@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -36,7 +35,7 @@ static char sccsid[] = "@(#)rpc_scan.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_scan.c 223922 2011-07-11 05:31:52Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/rpcgen/rpc_scan.c 223922 2011-07-11 05:31:52Z delphij $");
 
 /*
  * rpc_scan.c, Scanner for the RPC protocol compiler

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: main1.c,v 1.17 2006/11/08 18:31:15 christos Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: main1.c,v 1.17 2006/11/08 18:31:15 christos Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/main1.c 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint1/main1.c 280387 2015-03-23 18:45:29Z pfg $");
 
 #include <sys/types.h>
 #include <stdio.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -36,7 +35,7 @@ static char sccsid[] = "@(#)rpc_util.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_util.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/rpcgen/rpc_util.c 299509 2016-05-12 03:49:05Z cem $");
 
 /*
  * rpc_util.c, Utility routines for the RPC protocol compiler
@@ -262,7 +261,7 @@ error(const char *msg)
  * Something went wrong, unlink any files that we may have created and then
  * die.
  */
-void
+void __dead2
 crash(void)
 {
 	int i;
@@ -455,7 +454,7 @@ add_type(int len, const char *type)
 	{
 		typ_list_t->next = ptr;
 		typ_list_t = ptr;
-	};
+	}
 }
 
 
@@ -471,7 +470,7 @@ find_type(const char *type)
 			return (ptr);
 		else
 			ptr = ptr->next;
-	};
+	}
 	return (NULL);
 }
 

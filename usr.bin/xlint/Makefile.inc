@@ -1,23 +1,14 @@
-# $MidnightBSD$
 #	$NetBSD: Makefile.inc,v 1.8 2002/02/04 00:18:32 thorpej Exp $
-# $FreeBSD: stable/10/usr.bin/xlint/Makefile.inc 239272 2012-08-15 03:21:56Z gonzo $
+# $FreeBSD: stable/11/usr.bin/xlint/Makefile.inc 279907 2015-03-12 08:32:24Z imp $
 
 WARNS?=		0
 
 .PATH:		${.CURDIR}/../common
 
-# These assignments duplicate much of the functionality of
-# MACHINE_CPUARCH, but there's no easy way to export make functions...
-.if defined(TARGET_ARCH)
-TARGET_CPUARCH=	${TARGET_ARCH:C/mips(n32|64)?(el)?/mips/:C/arm(v6)?(eb)?/arm/}
+.if exists(${.CURDIR}/../arch/${MACHINE_ARCH})
+CFLAGS+=	-I${.CURDIR}/../arch/${MACHINE_ARCH}
 .else
-TARGET_CPUARCH=	${MACHINE_CPUARCH}
-TARGET_ARCH=	${MACHINE_ARCH}
-.endif
-.if exists(${.CURDIR}/../arch/${TARGET_ARCH})
-CFLAGS+=	-I${.CURDIR}/../arch/${TARGET_ARCH}
-.else
-CFLAGS+=	-I${.CURDIR}/../arch/${TARGET_CPUARCH}
+CFLAGS+=	-I${.CURDIR}/../arch/${MACHINE_CPUARCH}
 .endif
 CFLAGS+=	-I${.CURDIR}/../common
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /* $NetBSD: cgram.y,v 1.40 2008/04/25 17:18:24 christos Exp $ */
 
@@ -38,7 +37,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: cgram.y,v 1.40 2008/04/25 17:18:24 christos Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/cgram.y 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint1/cgram.y 280387 2015-03-23 18:45:29Z pfg $");
 
 #include <stdlib.h>
 #include <string.h>

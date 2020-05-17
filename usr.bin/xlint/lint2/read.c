@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: read.c,v 1.19 2007/09/28 21:53:50 uwe Exp $ */
 
 /*
@@ -37,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: read.c,v 1.19 2007/09/28 21:53:50 uwe Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint2/read.c 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint2/read.c 286614 2015-08-11 02:58:33Z pfg $");
 
 #include <ctype.h>
 #include <err.h>
@@ -144,7 +143,7 @@ readfile(const char *name)
 		/* line number in csrcfile */
 		cline = (int)strtol(cp, &eptr, 10);
 		if (cp == eptr) {
-		        cline = -1;
+			cline = -1;
 		} else {
 			cp = eptr;
 		}

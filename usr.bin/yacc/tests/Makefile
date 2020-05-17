@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/yacc/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/usr.bin/yacc/tests/Makefile 319349 2017-05-31 19:16:22Z jkim $
 
 .include <bsd.own.mk>
 
@@ -18,12 +17,17 @@ SCRIPTSDIR=	${TESTSDIR}
 
 CLEANFILES=	run_test
 
-FILESGROUPS=	FILES FILEStest FILEStest_yacc
+FILESGROUPS+=	FILEStest FILEStest_yacc
+FILEStestPACKAGE=${PACKAGE}
+FILEStest_yaccPACKAGE=${PACKAGE}
 
 FILEStestDIR=	${TESTSDIR}
 
 FILEStest+=	btyacc_calc1.y
 FILEStest+=	btyacc_demo.y
+FILEStest+=	btyacc_destroy1.y
+FILEStest+=	btyacc_destroy2.y
+FILEStest+=	btyacc_destroy3.y
 FILEStest+=	calc.y
 FILEStest+=	calc1.y
 FILEStest+=	calc2.y
@@ -68,6 +72,7 @@ FILEStest+=	err_syntax8.y
 FILEStest+=	err_syntax8a.y
 FILEStest+=	err_syntax9.y
 FILEStest+=	error.y
+FILEStest+=	expr.oxout.y
 FILEStest+=	grammar.y
 FILEStest+=	inherit0.y
 FILEStest+=	inherit1.y
@@ -241,6 +246,10 @@ FILEStest_yacc+=	error.error
 FILEStest_yacc+=	error.output
 FILEStest_yacc+=	error.tab.c
 FILEStest_yacc+=	error.tab.h
+FILEStest_yacc+=	expr.oxout.error
+FILEStest_yacc+=	expr.oxout.output
+FILEStest_yacc+=	expr.oxout.tab.c
+FILEStest_yacc+=	expr.oxout.tab.h
 FILEStest_yacc+=	grammar.dot
 FILEStest_yacc+=	grammar.error
 FILEStest_yacc+=	grammar.output

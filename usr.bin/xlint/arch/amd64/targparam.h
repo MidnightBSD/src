@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: targparam.h,v 1.2 2002/01/30 06:55:00 thorpej Exp $	*/
 
 /*

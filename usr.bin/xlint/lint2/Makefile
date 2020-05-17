@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	$NetBSD: Makefile,v 1.2 1995/07/03 21:24:39 cgd Exp $
-# $FreeBSD: stable/10/usr.bin/xlint/lint2/Makefile 291819 2015-12-04 19:16:56Z bdrewery $
+# $FreeBSD: stable/11/usr.bin/xlint/lint2/Makefile 291348 2015-11-26 01:14:40Z bdrewery $
 
 .PATH:	${.CURDIR}/../lint1
 

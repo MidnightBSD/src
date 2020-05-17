@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: xlint.c,v 1.36 2005/02/09 21:24:48 dsl Exp $ */
 
 /*
@@ -37,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: xlint.c,v 1.36 2005/02/09 21:24:48 dsl Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/xlint/xlint.c 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/xlint/xlint.c 280387 2015-03-23 18:45:29Z pfg $");
 
 #include <sys/param.h>
 #include <sys/wait.h>

@@ -1,9 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/vtfontcvt/Makefile 267337 2014-06-10 18:29:45Z emaste $
+# $FreeBSD: stable/11/usr.bin/vtfontcvt/Makefile 284062 2015-06-06 12:34:59Z bapt $
 
 PROG=	vtfontcvt
 MAN8=	vtfontcvt.8
-
-WARNS?=	6
 
 .include <bsd.prog.mk>

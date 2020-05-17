@@ -1,6 +1,5 @@
 #	$NetBSD: Makefile,v 1.2 1995/07/03 21:23:45 cgd Exp $
-# $FreeBSD: src/usr.bin/xlint/Makefile,v 1.14 2003/06/15 13:03:37 markm Exp $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/xlint/Makefile 116402 2003-06-15 13:03:37Z markm $
 
 .if ${LINT} == "lint"
 _llib=	llib

@@ -63,6 +63,7 @@ SUBDIR+=alias \
 	fsync \
 	gcore \
 	gencat \
+	getaddrinfo \
 	getconf \
 	getent \
 	getopt \
@@ -144,8 +145,10 @@ SUBDIR+=alias \
 	rpcinfo \
 	rs \
 	rup \
+	ruptime \
 	rusers \
 	rwall \
+	rwho \
 	script \
 	sdiff \
 	sed \
@@ -153,6 +156,7 @@ SUBDIR+=alias \
 	shar \
 	showmount \
 	sockstat \
+	soelim \
 	sort \
 	spell \
 	split \
@@ -223,14 +227,6 @@ SUBDIR+=	dtc
 .endif
 
 SUBDIR.${MK_MAKE}+=   bmake
-
-.if ${MK_RCMDS} != "no"
-SUBDIR+=	rlogin
-SUBDIR+=	rsh
-SUBDIR+=	ruptime
-SUBDIR+=	rwho
-.endif
-
 SUBDIR.${MK_GROFF}+=	vgrind
 SUBDIR.${MK_HESIOD}+=	hesinfo
 SUBDIR.${MK_ICONV}+=	iconv

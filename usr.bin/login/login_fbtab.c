@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /************************************************************************
 * Copyright 1995 by Wietse Venema.  All rights reserved.
 *
@@ -60,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/login/login_fbtab.c 288164 2015-09-24 00:54:46Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/login/login_fbtab.c 298181 2016-04-18 05:26:32Z araujo $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -97,15 +96,15 @@ login_fbtab(char *tty, uid_t uid, gid_t gid)
     while (fgets(buf, sizeof(buf), fp)) {
 	if ((cp = strchr(buf, '#')))
 	    *cp = 0;				/* strip comment */
-	if ((cp = devname = strtok(buf, WSPACE)) == 0)
+	if ((cp = devname = strtok(buf, WSPACE)) == NULL)
 	    continue;				/* empty or comment */
 	if (strncmp(devname, _PATH_DEV, sizeof _PATH_DEV - 1) != 0
-	       || (cp = strtok(NULL, WSPACE)) == 0
+	       || (cp = strtok(NULL, WSPACE)) == NULL
 	       || *cp != '0'
 	       || sscanf(cp, "%o", &prot) == 0
 	       || prot == 0
 	       || (prot & 0777) != prot
-	       || (cp = strtok(NULL, WSPACE)) == 0) {
+	       || (cp = strtok(NULL, WSPACE)) == NULL) {
 	    syslog(LOG_ERR, "%s: bad entry: %s", table, cp ? cp : "(null)");
 	    continue;
 	}

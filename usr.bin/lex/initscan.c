@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $FreeBSD: stable/11/usr.bin/lex/initscan.c 298241 2016-04-19 02:05:32Z araujo $ */
 
 #line 3 "<stdout>"
 
@@ -16,7 +16,7 @@
 
 /* First, we deal with  platform-specific or compiler-specific issues. */
 
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #ifndef __STDC_LIMIT_MACROS
 #define	__STDC_LIMIT_MACROS
 #endif
@@ -41,7 +41,7 @@
 
 /* C99 systems have <inttypes.h>. Non-C99 systems may or may not. */
 
-#if defined(__MidnightBSD__) || \
+#if defined(__FreeBSD__) || \
     (defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 
 /* C99 says to define __STDC_LIMIT_MACROS before including stdint.h,
@@ -3455,7 +3455,7 @@ YY_RULE_SETUP
  			 }
 nmstr[yyleng - 2 - end_is_ws] = '\0';  /* chop trailing brace */
 
-			if ( (nmdefptr = ndlookup( nmstr )) == 0 )
+			if ( (nmdefptr = ndlookup( nmstr )) == NULL )
 				format_synerr(
 					_( "undefined definition {%s}" ),
 						nmstr );

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
  * unrestricted use provided that this legend is included on all tape
@@ -36,7 +35,7 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/rpcgen/rpc_svcout.c 312386 2017-01-18 15:23:40Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/rpcgen/rpc_svcout.c 312385 2017-01-18 15:22:54Z pfg $");
 
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
@@ -552,7 +551,7 @@ write_program(definition *def, const char *storage)
 			(void) sprintf(_errbuf, "unable to free results");
 			print_err_message("\t\t");
 			f_print(fout, "\n");
-		};
+		}
 		print_return("\t");
 		f_print(fout, "}\n");
 	}

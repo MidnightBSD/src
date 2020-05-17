@@ -9,4 +9,4 @@ The following defines can be used:
 
 -Guido
 
-$MidnightBSD$
+$FreeBSD: stable/11/usr.bin/login/README 156347 2006-03-06 12:56:35Z yar $

@@ -1,5 +1,5 @@
 #!/bin/sh
-#	$MidnightBSD$
+#	$NetBSD$
 #
 # Copyright (c) 2000 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -59,7 +59,7 @@ cat << \__EOF
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.bin/xlint/lint1/makeman 281168 2015-04-06 19:56:27Z pfg $
+.\" $FreeBSD: stable/11/usr.bin/xlint/lint1/makeman 280387 2015-03-23 18:45:29Z pfg $
 .\"
 .Dd July 5, 2000
 .Dt LINT 7

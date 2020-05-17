@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: targparam.h,v 1.1 2002/01/18 20:39:20 thorpej Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/xlint/arch/powerpc64/targparam.h 209921 2010-07-12 00:54:41Z nwhitehorn $
+ * $FreeBSD: stable/11/usr.bin/xlint/arch/powerpc64/targparam.h 209921 2010-07-12 00:54:41Z nwhitehorn $
  */
 
 /*

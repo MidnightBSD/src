@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: emit.c,v 1.2 1995/07/03 21:24:00 cgd Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/xlint/lint1/emit.c 165628 2006-12-29 13:08:46Z yar $
+ * $FreeBSD: stable/11/usr.bin/xlint/lint1/emit.c 165628 2006-12-29 13:08:46Z yar $
  */
 
 #ifndef lint
