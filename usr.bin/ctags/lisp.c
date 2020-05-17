@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)lisp.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ctags/lisp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <limits.h>
@@ -99,7 +99,7 @@ l_entries(void)
 		*cp = EOS;
 		(void)strlcpy(tok, lbp, sizeof(tok));	/* possible trunc */
 		*cp = savedc;
-		getline();
+		get_line();
 		pfnote(tok, lineno);
 	}
 	/*NOTREACHED*/

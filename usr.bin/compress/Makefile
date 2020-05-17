@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 4/17/94
-# $FreeBSD: stable/10/usr.bin/compress/Makefile 320518 2017-06-30 22:16:28Z jilles $
+# $FreeBSD: stable/11/usr.bin/compress/Makefile 319163 2017-05-29 21:48:02Z jilles $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	compress
 SRCS=	compress.c zopen.c

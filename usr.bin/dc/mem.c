@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: mem.c,v 1.5 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/dc/mem.c 203443 2010-02-03 21:06:13Z gabor $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/dc/mem.c 203443 2010-02-03 21:06:13Z gabor $");
 
 #include <openssl/err.h>
 

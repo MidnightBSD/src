@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/cpio/tests/Makefile 324418 2017-10-08 20:55:45Z mm $
+# $FreeBSD: stable/11/usr.bin/cpio/tests/Makefile 324417 2017-10-08 20:54:53Z mm $
 
-SRCTOP=		${.CURDIR:H:H:H}
-TESTSDIR=	${TESTSBASE}/usr.bin/cpio
+PACKAGE=	tests
 
-LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
+_LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 ATF_TESTS_SH+=	functional_test
 
@@ -16,21 +14,21 @@ CFLAGS+=	-DPLATFORM_CONFIG_H=\"${SRCTOP}/lib/libarchive/config_freebsd.h\"
 CFLAGS+=	-I${SRCTOP}/lib/libarchive -I${.OBJDIR}
 
 CFLAGS+=	-I${.OBJDIR}
-CFLAGS+=	-I${LIBARCHIVEDIR}/cpio -I${LIBARCHIVEDIR}/cpio/test
-CFLAGS+=	-I${LIBARCHIVEDIR}/libarchive
-CFLAGS+=	-I${LIBARCHIVEDIR}/libarchive_fe -I${LIBARCHIVEDIR}/test_utils
+CFLAGS+=	-I${_LIBARCHIVEDIR}/cpio -I${_LIBARCHIVEDIR}/cpio/test
+CFLAGS+=	-I${_LIBARCHIVEDIR}/libarchive
+CFLAGS+=	-I${_LIBARCHIVEDIR}/libarchive_fe -I${_LIBARCHIVEDIR}/test_utils
 
 # Uncomment to link against dmalloc
 #LDADD+= -L/usr/local/lib -ldmalloc
 #CFLAGS+= -I/usr/local/include -DUSE_DMALLOC
 
-.PATH:	${LIBARCHIVEDIR}/cpio
+.PATH:	${_LIBARCHIVEDIR}/cpio
 CPIO_SRCS= cmdline.c
 
-.PATH:	${LIBARCHIVEDIR}/libarchive_fe
+.PATH:	${_LIBARCHIVEDIR}/libarchive_fe
 CPIO_SRCS+= err.c
 
-.PATH:	${LIBARCHIVEDIR}/cpio/test
+.PATH:	${_LIBARCHIVEDIR}/cpio/test
 TESTS_SRCS=	\
 	test_0.c				\
 	test_basic.c				\
@@ -85,44 +83,43 @@ SRCS.bsdcpio_test= list.h			\
 	${CPIO_SRCS}				\
 	${TESTS_SRCS}
 
-.PATH:	${LIBARCHIVEDIR}/test_utils
+.PATH:	${_LIBARCHIVEDIR}/test_utils
 SRCS.bsdcpio_test+=	test_main.c		\
 			test_utils.c
 
-DPADD.bsdcpio_test=	${LIBARCHIVE}
-LDADD.bsdcpio_test=	-larchive
+LIBADD.bsdcpio_test=	archive
 
 list.h: ${TESTS_SRCS} Makefile
-	@(cd ${LIBARCHIVEDIR}/tar/test && \
+	@(cd ${_LIBARCHIVEDIR}/tar/test && \
 	grep -h DEFINE_TEST ${.ALLSRC:N*Makefile}) > ${.TARGET}.tmp
 	@mv ${.TARGET}.tmp ${.TARGET}
 
 CLEANFILES+=	list.h list.h.tmp
 
-FILES+= test_extract.cpio.Z.uu
-FILES+= test_extract.cpio.bz2.uu
-FILES+= test_extract.cpio.grz.uu
-FILES+= test_extract.cpio.gz.uu
-FILES+= test_extract.cpio.lrz.uu
-FILES+= test_extract.cpio.lz.uu
-FILES+=	test_extract.cpio.lz4.uu
-FILES+= test_extract.cpio.lzma.uu
-FILES+= test_extract.cpio.lzo.uu
-FILES+= test_extract.cpio.xz.uu
-FILES+= test_extract.cpio.zst.uu
-FILES+= test_gcpio_compat_ref.bin.uu
-FILES+= test_gcpio_compat_ref.crc.uu
-FILES+= test_gcpio_compat_ref.newc.uu
-FILES+= test_gcpio_compat_ref.ustar.uu
-FILES+= test_gcpio_compat_ref_nosym.bin.uu
-FILES+= test_gcpio_compat_ref_nosym.crc.uu
-FILES+= test_gcpio_compat_ref_nosym.newc.uu
-FILES+= test_gcpio_compat_ref_nosym.ustar.uu
-FILES+= test_option_f.cpio.uu
-FILES+= test_option_m.cpio.uu
-FILES+=	test_option_passphrase.zip.uu
-FILES+= test_option_t.cpio.uu
-FILES+= test_option_t.stdout.uu
-FILES+= test_option_tv.stdout.uu
+${PACKAGE}FILES+= test_extract.cpio.Z.uu
+${PACKAGE}FILES+= test_extract.cpio.bz2.uu
+${PACKAGE}FILES+= test_extract.cpio.grz.uu
+${PACKAGE}FILES+= test_extract.cpio.gz.uu
+${PACKAGE}FILES+= test_extract.cpio.lrz.uu
+${PACKAGE}FILES+= test_extract.cpio.lz.uu
+${PACKAGE}FILES+= test_extract.cpio.lz4.uu
+${PACKAGE}FILES+= test_extract.cpio.lzma.uu
+${PACKAGE}FILES+= test_extract.cpio.lzo.uu
+${PACKAGE}FILES+= test_extract.cpio.xz.uu
+${PACKAGE}FILES+= test_extract.cpio.zst.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref.bin.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref.crc.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref.newc.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref.ustar.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref_nosym.bin.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref_nosym.crc.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref_nosym.newc.uu
+${PACKAGE}FILES+= test_gcpio_compat_ref_nosym.ustar.uu
+${PACKAGE}FILES+= test_option_f.cpio.uu
+${PACKAGE}FILES+= test_option_m.cpio.uu
+${PACKAGE}FILES+= test_option_passphrase.zip.uu
+${PACKAGE}FILES+= test_option_t.cpio.uu
+${PACKAGE}FILES+= test_option_t.stdout.uu
+${PACKAGE}FILES+= test_option_tv.stdout.uu
 
 .include <bsd.test.mk>

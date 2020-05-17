@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)print.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ctags/print.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <limits.h>
 #include <stdio.h>
@@ -43,12 +43,12 @@ __MBSDID("$MidnightBSD$");
 #include "ctags.h"
 
 /*
- * getline --
+ * get_line --
  *	get the line the token of interest occurred on,
  *	prepare it for printing.
  */
 void
-getline(void)
+get_line(void)
 {
 	long	saveftell;
 	int	c;

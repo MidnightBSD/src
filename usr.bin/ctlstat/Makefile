@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/ctlstat/Makefile 229997 2012-01-12 00:34:33Z ken $
+# $FreeBSD: stable/11/usr.bin/ctlstat/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
 PROG=		ctlstat
 MAN=		ctlstat.8
-SDIR=		${.CURDIR}/../../sys
+SDIR=		${SRCTOP}/sys
 CFLAGS+=	-I${SDIR}
 
 .include <bsd.prog.mk>
