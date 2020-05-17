@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)chpass.h	8.4 (Berkeley) 4/2/94
- * $FreeBSD: stable/10/usr.bin/chpass/chpass.h 227228 2011-11-06 17:20:44Z ed $
+ * $FreeBSD: stable/11/usr.bin/chpass/chpass.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 struct passwd;
