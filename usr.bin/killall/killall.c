@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * Copyright (c) 2000 Paul Saab <ps@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/killall/killall.c 274471 2014-11-13 16:40:15Z smh $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/killall/killall.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -38,6 +39,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/killall/killall.c 274471 2014-11-13 16:40:
 #include <fcntl.h>
 #include <dirent.h>
 #include <jail.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -263,7 +265,7 @@ main(int ac, char **av)
 			errx(1, "%s: not a character device", buf);
 		tdev = sb.st_rdev;
 		if (dflag)
-			printf("ttydev:0x%x\n", tdev);
+			printf("ttydev:0x%jx\n", (uintmax_t)tdev);
 	}
 	if (user) {
 		uid = strtol(user, &ep, 10);
@@ -411,8 +413,9 @@ main(int ac, char **av)
 		if (matched == 0)
 			continue;
 		if (dflag)
-			printf("sig:%d, cmd:%s, pid:%d, dev:0x%x uid:%d\n", sig,
-			    thiscmd, thispid, thistdev, thisuid);
+			printf("sig:%d, cmd:%s, pid:%d, dev:0x%jx uid:%d\n",
+			    sig, thiscmd, thispid, (uintmax_t)thistdev,
+			    thisuid);
 
 		if (vflag || sflag)
 			printf("kill -%s %d\n", sys_signame[sig], thispid);
