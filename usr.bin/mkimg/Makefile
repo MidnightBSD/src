@@ -1,5 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/mkimg/Makefile 284773 2015-06-24 18:40:34Z marcel $
+
+.include <src.opts.mk>
 
 PROG=	mkimg
 SRCS=	format.c image.c mkimg.c scheme.c
@@ -30,8 +30,7 @@ SRCS+=	\
 
 BINDIR?=/usr/bin
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD+=	util
 
 WARNS?=	6
 
