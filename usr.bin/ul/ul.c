@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -11,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -39,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ul.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.bin/ul/ul.c 303075 2016-07-20 07:33:48Z gahr $";
+  "$FreeBSD: stable/11/usr.bin/ul/ul.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <err.h>
@@ -116,9 +115,8 @@ main(int argc, char **argv)
 	termtype = getenv("TERM");
 	if (termtype == NULL || (argv[0][0] == 'c' && !isatty(1)))
 		termtype = "lpr";
-	while ((c=getopt(argc, argv, "it:T:")) != -1)
-		switch(c) {
-
+	while ((c = getopt(argc, argv, "it:T:")) != -1)
+		switch (c) {
 		case 't':
 		case 'T': /* for nroff compatibility */
 			termtype = optarg;
@@ -130,24 +128,21 @@ main(int argc, char **argv)
 			usage();
 		}
 
-	switch(tgetent(termcap, termtype)) {
-
+	switch (tgetent(termcap, termtype)) {
 	case 1:
 		break;
-
 	default:
 		warnx("trouble reading termcap");
 		/* FALLTHROUGH */
-
 	case 0:
 		/* No such terminal type - assume dumb */
 		(void)strcpy(termcap, "dumb:os:col#80:cr=^M:sf=^J:am:");
 		break;
 	}
 	initcap();
-	if (    (tgetflag("os") && ENTER_BOLD==NULL ) ||
-		(tgetflag("ul") && ENTER_UNDERLINE==NULL && UNDER_CHAR==NULL))
-			must_overstrike = 1;
+	if ((tgetflag("os") && ENTER_BOLD == NULL ) ||
+	    (tgetflag("ul") && ENTER_UNDERLINE == NULL && UNDER_CHAR == NULL))
+		must_overstrike = 1;
 	initbuf();
 	if (optind == argc)
 		filter(stdin);
@@ -333,7 +328,7 @@ flushln(void)
 	int hadmodes = 0;
 
 	lastmode = NORMAL;
-	for (i=0; i<maxcol; i++) {
+	for (i = 0; i < maxcol; i++) {
 		if (obuf[i].c_mode != lastmode) {
 			hadmodes++;
 			setnewmode(obuf[i].c_mode);

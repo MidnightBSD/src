@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
 /*      $NetBSD: usbhidaction.c,v 1.8 2002/06/11 06:06:21 itojun Exp $ */
-/*	$FreeBSD: stable/10/usr.bin/usbhidaction/usbhidaction.c 289218 2015-10-13 08:21:15Z hselasky $ */
+/*	$FreeBSD: stable/11/usr.bin/usbhidaction/usbhidaction.c 330449 2018-03-05 07:26:05Z eadler $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2000, 2002 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
