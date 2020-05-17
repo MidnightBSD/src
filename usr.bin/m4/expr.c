@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $OpenBSD: expr.c,v 1.18 2010/09/07 19:58:09 marco Exp $ */
 /*
  * Copyright (c) 2004 Marc Espie <espie@cvs.openbsd.org>
@@ -16,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/m4/expr.c 241777 2012-10-20 10:33:15Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/m4/expr.c 241777 2012-10-20 10:33:15Z ed $");
 
 #include <stdint.h>
 #include <stdio.h>

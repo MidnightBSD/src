@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$OpenBSD: pathnames.h,v 1.5 2003/06/03 02:56:10 millert Exp $	*/
+/*	$OpenBSD: pathnames.h,v 1.6 2015/11/03 16:21:47 deraadt Exp $	*/
 /*	$NetBSD: pathnames.h,v 1.6 1995/09/29 00:27:55 cgd Exp $	*/
 
 /*
@@ -34,25 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/m4/pathnames.h 228063 2011-11-28 13:32:39Z bapt $
+ * $FreeBSD: stable/11/usr.bin/m4/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
-/*
- * Definitions of diversion files.  If the name of the file is changed,
- * adjust UNIQUE to point to the wildcard (*) character in the filename.
- */
-
-#ifdef msdos
-#define _PATH_DIVNAME	"\\M4*XXXXXX"		/* msdos diversion files */
-#define	UNIQUE		3			/* unique char location */
-#endif
-
-#if defined(unix) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define _PATH_DIVNAME	"/tmp/m4.0XXXXXXXXXX"	/* unix diversion files */
-#define UNIQUE		8			/* unique char location */
-#endif
-
-#ifdef vms
-#define _PATH_DIVNAME	"sys$login:m4*XXXXXX"	/* vms diversion files */
-#define UNIQUE		12			/* unique char location */
-#endif

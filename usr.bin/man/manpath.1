@@ -23,10 +23,9 @@
 .\"  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\"  SUCH DAMAGE.
 .\"
-.\" $FreeBSD: head/usr.bin/man/manpath.1 315142 2017-03-12 10:56:19Z tijl $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/usr.bin/man/manpath.1 213460 2010-10-05 20:39:36Z brueffer $
 .\"
-.Dd March 11, 2017
+.Dd September 1, 2010
 .Dt MANPATH 1
 .Os
 .Sh NAME
@@ -67,10 +66,15 @@ for the first of:
 .Pa pathname/MAN
 .It
 If pathname ends with /bin:
-.Pa pathname/../share/man
-and
 .Pa pathname/../man
 .El
+Note: Special logic exists to make
+.Pa /bin
+and
+.Pa /usr/bin
+look in
+.Pa /usr/share/man
+for manual files.
 .It
 The configuration files listed in the
 .Sx FILES

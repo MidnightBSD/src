@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/host/Makefile 270776 2014-08-29 01:20:31Z gjb $
+# $FreeBSD: stable/11/usr.bin/host/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-LDNSDIR=	${.CURDIR}/../../contrib/ldns
-LDNSHOSTDIR=	${.CURDIR}/../../contrib/ldns-host
+LDNSDIR=	${SRCTOP}/contrib/ldns
+LDNSHOSTDIR=	${SRCTOP}/contrib/ldns-host
 
 .PATH:		${LDNSHOSTDIR}
 
@@ -16,8 +15,6 @@ host.1: ldns-host.1
 		(rm -rf ${.TARGET} ; false)
 
 CFLAGS+=	-I${LDNSDIR}
-DPADD+=		${LIBLDNS} ${LIBCRYPTO}
-LDADD+=		-lldns -lcrypto
-USEPRIVATELIB=	ldns
+LIBADD=		ldns
 
 .include <bsd.prog.mk>

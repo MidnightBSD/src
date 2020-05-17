@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /* $OpenBSD: parser.y,v 1.7 2012/04/12 17:00:11 espie Exp $ */
 /*
@@ -16,19 +15,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/usr.bin/m4/parser.y 250226 2013-05-03 23:29:38Z jkim $
+ * $FreeBSD: stable/11/usr.bin/m4/parser.y 283089 2015-05-18 22:40:12Z bapt $
  */
 
 #include <math.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <stdint.h>
-
-#include "mdef.h"
-#include "extern.h"
-
 #define YYSTYPE	int32_t
-
+extern int32_t end_result;
 extern int yylex(void);
 extern int yyerror(const char *);
 %}
