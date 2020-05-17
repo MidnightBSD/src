@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"-
 .\" Copyright (c) 2002 Chad David
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.bin/ktrdump/ktrdump.8 280255 2015-03-19 13:08:17Z jhb $
+.\" $FreeBSD: stable/11/usr.bin/ktrdump/ktrdump.8 342706 2019-01-02 19:48:17Z jhb $
 .\"
-.Dd February 6, 2015
+.Dd October 22, 2018
 .Dt KTRDUMP 8
 .Os
 .Sh NAME
@@ -34,7 +33,7 @@
 .Nd print kernel ktr trace buffer
 .Sh SYNOPSIS
 .Nm
-.Op Fl cfqrtH
+.Op Fl cflqrtH
 .Op Fl i Ar ktrfile
 .Op Fl M Ar core
 .Op Fl N Ar system
@@ -48,6 +47,9 @@ The following options are available:
 .Bl -tag -width ".Fl i Ar ktrfile"
 .It Fl c
 Print the CPU number that each entry was logged from.
+.It Fl l
+Poll the kernel ktr trace buffer periodically dumping any new events after
+each poll.
 .It Fl f
 Print the file and line number that each entry was logged from.
 .It Fl q
@@ -87,7 +89,7 @@ utility first appeared in
 The
 .Nm
 utility was implemented by
-.An Jake Burkholder Aq jake@FreeBSD.org .
+.An Jake Burkholder Aq Mt jake@FreeBSD.org .
 .Pp
 This manual page was written by
-.An Chad David Aq davidc@FreeBSD.org .
+.An Chad David Aq Mt davidc@FreeBSD.org .

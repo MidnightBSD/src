@@ -1,8 +1,9 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/lastcomm/Makefile 264996 2014-04-27 01:15:10Z jmmv $
+# $FreeBSD: stable/11/usr.bin/lastcomm/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+PACKAGE=acct
 
 PROG=	lastcomm
 SRCS=	lastcomm.c readrec.c

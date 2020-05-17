@@ -37,8 +37,9 @@ static const char copyright[] =
 static const char sccsid[] = "@(#)dirname.c	8.4 (Berkeley) 5/4/95";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/dirname/dirname.c 332463 2018-04-13 03:30:10Z kevans $");
 
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -52,6 +53,9 @@ main(int argc, char **argv)
 {
 	char *p;
 	int ch;
+
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
 
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch(ch) {

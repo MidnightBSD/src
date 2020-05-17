@@ -1,8 +1,8 @@
 %{
 /*
  * Copyright is disclaimed as to the contents of this file.
- * $MidnightBSD$
- * $FreeBSD: stable/10/usr.bin/getconf/sysconf.gperf 324124 2017-09-30 17:30:22Z jhb $
+ *
+ * $FreeBSD: stable/11/usr.bin/getconf/sysconf.gperf 345015 2019-03-11 18:17:12Z ngie $
  */
 
 #include <sys/types.h>
@@ -63,6 +63,8 @@ SYMLOOP_MAX, _SC_SYMLOOP_MAX
 TIMER_MAX, _SC_TIMER_MAX
 TTY_NAME_MAX, _SC_TTY_NAME_MAX 
 TZNAME_MAX, _SC_TZNAME_MAX
+_NPROCESSORS_CONF, _SC_NPROCESSORS_CONF
+_NPROCESSORS_ONLN, _SC_NPROCESSORS_ONLN
 _POSIX2_CHAR_TERM, _SC_2_CHAR_TERM
 _POSIX2_C_BIND, _SC_2_C_BIND
 _POSIX2_C_DEV, _SC_2_C_DEV

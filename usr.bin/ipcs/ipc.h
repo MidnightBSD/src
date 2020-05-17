@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  * The split of ipcs.c into ipcs.c and ipc.c to accommodate the
  * changes in ipcrm.c was done by Edwin Groothuis <edwin@FreeBSD.org>
  *
- * $FreeBSD: stable/10/usr.bin/ipcs/ipc.h 228992 2011-12-30 11:02:40Z uqs $
+ * $FreeBSD: stable/11/usr.bin/ipcs/ipc.h 347995 2019-05-20 16:31:45Z kib $
  */
 
 /* Part of struct nlist symbols[] */
@@ -53,7 +54,7 @@
 /* SysCtlGatherStruct structure. */
 struct scgs_vector {
 	const char *sysctl;
-	off_t offset;
+	size_t offset;
 	size_t size;
 };
 
@@ -65,8 +66,8 @@ extern struct nlist symbols[];
 extern kvm_t *kd;
 
 extern struct semid_kernel	*sema;
-extern struct seminfo		seminfo;
-extern struct msginfo		msginfo;
 extern struct msqid_kernel	*msqids;
-extern struct shminfo		shminfo;
 extern struct shmid_kernel	*shmsegs;
+extern struct seminfo		 seminfo;
+extern struct msginfo		 msginfo;
+extern struct shminfo		 shminfo;

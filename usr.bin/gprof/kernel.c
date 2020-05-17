@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/kernel.c 246783 2013-02-14 08:16:03Z charnier $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/gprof/kernel.c 246783 2013-02-14 08:16:03Z charnier $");
 
 #include <sys/param.h>
 #include <sys/linker.h>

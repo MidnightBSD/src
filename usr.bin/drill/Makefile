@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/drill/Makefile 255801 2013-09-22 20:30:55Z des $
+# $FreeBSD: stable/11/usr.bin/drill/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
 # Vendor sources and generated files
-LDNSDIR= ${.CURDIR}/../../contrib/ldns
+LDNSDIR= ${SRCTOP}/contrib/ldns
 
 .PATH: ${LDNSDIR}/drill
 
@@ -13,8 +12,6 @@ CFLAGS+= -I${LDNSDIR}
 NO_WERROR= true
 MAN=	drill.1
 
-DPADD+=	${LIBLDNS} ${LIBCRYPTO}
-LDADD+=	-lldns -lcrypto
-USEPRIVATELIB= ldns
+LIBADD=	ldns crypto
 
 .include <bsd.prog.mk>

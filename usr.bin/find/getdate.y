@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*
 **  Originally written by Steven M. Bellovin <smb@research.att.com> while
@@ -14,7 +13,7 @@
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/find/getdate.y 235789 2012-05-22 16:33:10Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/find/getdate.y 235789 2012-05-22 16:33:10Z bapt $");
 
 #include <stdio.h>
 #include <ctype.h>

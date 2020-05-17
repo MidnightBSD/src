@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static const char sccsid[] = "@(#)du.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/du/du.c 321097 2017-07-17 21:18:44Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/du/du.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -52,6 +51,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/du/du.c 321097 2017-07-17 21:18:44Z ngie $
 #include <errno.h>
 #include <fnmatch.h>
 #include <fts.h>
+#include <getopt.h>
 #include <libutil.h>
 #include <locale.h>
 #include <stdint.h>
@@ -60,6 +60,11 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/du/du.c 321097 2017-07-17 21:18:44Z ngie $
 #include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
+
+#define SI_OPT	(CHAR_MAX + 1)
+
+#define UNITS_2		1
+#define UNITS_SI	2
 
 static SLIST_HEAD(ignhead, ignentry) ignores;
 struct ignentry {
@@ -76,9 +81,15 @@ static int	ignorep(FTSENT *);
 static void	siginfo(int __unused);
 
 static int	nodumpflag = 0;
-static int	Aflag;
+static int	Aflag, hflag;
 static long	blocksize, cblocksize;
 static volatile sig_atomic_t info;
+
+static const struct option long_options[] =
+{
+	{ "si", no_argument, NULL, SI_OPT },
+	{ NULL, no_argument, NULL, 0 },
+};
 
 int
 main(int argc, char *argv[])
@@ -90,14 +101,13 @@ main(int argc, char *argv[])
 	int		ftsoptions;
 	int		depth;
 	int		Hflag, Lflag, aflag, sflag, dflag, cflag;
-	int		hflag, lflag, ch, notused, rval;
+	int		lflag, ch, notused, rval;
 	char 		**save;
 	static char	dot[] = ".";
 
 	setlocale(LC_ALL, "");
 
-	Hflag = Lflag = aflag = sflag = dflag = cflag = hflag =
-	    lflag = Aflag = 0;
+	Hflag = Lflag = aflag = sflag = dflag = cflag = lflag = Aflag = 0;
 
 	save = argv;
 	ftsoptions = FTS_PHYSICAL;
@@ -109,7 +119,8 @@ main(int argc, char *argv[])
 	depth = INT_MAX;
 	SLIST_INIT(&ignores);
 
-	while ((ch = getopt(argc, argv, "AB:HI:LPasd:cghklmnrt:x")) != -1)
+	while ((ch = getopt_long(argc, argv, "+AB:HI:LPasd:cghklmnrt:x",
+	    long_options, NULL)) != -1)
 		switch (ch) {
 		case 'A':
 			Aflag = 1;
@@ -161,7 +172,7 @@ main(int argc, char *argv[])
 			blocksize = 1073741824;
 			break;
 		case 'h':
-			hflag = 1;
+			hflag = UNITS_2;
 			break;
 		case 'k':
 			hflag = 0;
@@ -189,6 +200,9 @@ main(int argc, char *argv[])
 			break;
 		case 'x':
 			ftsoptions |= FTS_XDEV;
+			break;
+		case SI_OPT:
+			hflag = UNITS_SI;
 			break;
 		case '?':
 		default:
@@ -271,7 +285,7 @@ main(int argc, char *argv[])
 			if (p->fts_level <= depth && threshold <=
 			    threshold_sign * howmany(p->fts_bignum *
 			    cblocksize, blocksize)) {
-				if (hflag) {
+				if (hflag > 0) {
 					prthumanval(p->fts_bignum);
 					(void)printf("\t%s\n", p->fts_path);
 				} else {
@@ -307,7 +321,7 @@ main(int argc, char *argv[])
 			    howmany(p->fts_statp->st_blocks, cblocksize);
 
 			if (aflag || p->fts_level == 0) {
-				if (hflag) {
+				if (hflag > 0) {
 					prthumanval(curblocks);
 					(void)printf("\t%s\n", p->fts_path);
 				} else {
@@ -327,7 +341,7 @@ main(int argc, char *argv[])
 		err(1, "fts_read");
 
 	if (cflag) {
-		if (hflag) {
+		if (hflag > 0) {
 			prthumanval(savednumber);
 			(void)printf("\ttotal\n");
 		} else {
@@ -376,7 +390,7 @@ linkchk(FTSENT *p)
 	/* If the hash table is getting too full, enlarge it. */
 	if (number_entries > number_buckets * 10 && !stop_allocating) {
 		new_size = number_buckets * 2;
-		new_buckets = malloc(new_size * sizeof(struct links_entry *));
+		new_buckets = calloc(new_size, sizeof(struct links_entry *));
 
 		/* Try releasing the free list to see if that helps. */
 		if (new_buckets == NULL && free_list != NULL) {
@@ -385,16 +399,13 @@ linkchk(FTSENT *p)
 				free_list = le->next;
 				free(le);
 			}
-			new_buckets = malloc(new_size *
-			    sizeof(new_buckets[0]));
+			new_buckets = calloc(new_size, sizeof(new_buckets[0]));
 		}
 
 		if (new_buckets == NULL) {
 			stop_allocating = 1;
 			warnx("No more memory for tracking hard links");
 		} else {
-			memset(new_buckets, 0,
-			    new_size * sizeof(struct links_entry *));
 			for (i = 0; i < number_buckets; i++) {
 				while (buckets[i] != NULL) {
 					/* Remove entry from old bucket. */
@@ -478,13 +489,16 @@ static void
 prthumanval(int64_t bytes)
 {
 	char buf[5];
+	int flags;
 
 	bytes *= cblocksize;
+	flags = HN_B | HN_NOSPACE | HN_DECIMAL;
 	if (!Aflag)
 		bytes *= DEV_BSIZE;
+	if (hflag == UNITS_SI)
+		flags |= HN_DIVISOR_1000;
 
-	humanize_number(buf, sizeof(buf), bytes, "", HN_AUTOSCALE,
-	    HN_B | HN_NOSPACE | HN_DECIMAL);
+	humanize_number(buf, sizeof(buf), bytes, "", HN_AUTOSCALE, flags);
 
 	(void)printf("%4s", buf);
 }

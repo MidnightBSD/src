@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2000 Massachusetts Institute of Technology
  *
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/getconf/getconf.c 324124 2017-09-30 17:30:22Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/getconf/getconf.c 324124 2017-09-30 17:30:22Z jhb $");
 
 #include <sys/types.h>
 

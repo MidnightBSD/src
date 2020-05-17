@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/getconf/Makefile 319385 2017-06-01 06:41:27Z ngie $
+# $FreeBSD: stable/11/usr.bin/getconf/Makefile 319384 2017-06-01 06:41:24Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	getconf
 

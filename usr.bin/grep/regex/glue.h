@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.bin/grep/regex/glue.h 303882 2016-08-09 18:49:19Z dim $ */
+/* $FreeBSD: stable/11/usr.bin/grep/regex/glue.h 296799 2016-03-13 14:53:12Z ian $ */
 
 #ifndef GLUE_H
 #define GLUE_H

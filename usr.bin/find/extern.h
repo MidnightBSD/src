@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/16/94
- *	$FreeBSD: stable/10/usr.bin/find/extern.h 287266 2015-08-28 20:53:08Z jilles $
+ *	$FreeBSD: stable/11/usr.bin/find/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
@@ -119,6 +118,7 @@ extern int ftsoptions, ignore_readdir_race, isdeprecated, isdepth, isoutput;
 extern int issort, isxargs;
 extern int mindepth, maxdepth;
 extern int regexp_flags;
+extern int exitstatus;
 extern time_t now;
 extern int dotfd;
 extern FTS *tree;

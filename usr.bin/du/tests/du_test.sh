@@ -1,6 +1,5 @@
 #
-# Copyright (c) 2017 Ngie Cooper <ngie@FreeBSD.org>
-# All rights reserved.
+# Copyright (c) 2017 Enji Cooper <ngie@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,8 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/du/tests/du_test.sh 319850 2017-06-12 07:43:58Z ngie $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/du/tests/du_test.sh 346920 2019-04-29 19:36:46Z ngie $
 
 atf_test_case A_flag
 A_flag_head()
@@ -142,6 +140,20 @@ m_flag_body()
 	atf_check -o inline:'1\tA\n1\tB\n1024\tC\n' du -Am A B C
 }
 
+atf_test_case si_flag
+si_flag_head()
+{
+	atf_set "descr" "Verify --si output"
+}
+si_flag_body()
+{
+	atf_check truncate -s 1500000 A
+	atf_check truncate -s 1572864 B
+
+	atf_check -o inline:'1.4M\tA\n1.5M\tB\n' du -Ah A B
+	atf_check -o inline:'1.5M\tA\n1.6M\tB\n' du -A --si A B
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case A_flag
@@ -151,4 +163,5 @@ atf_init_test_cases()
 	atf_add_test_case h_flag
 	atf_add_test_case k_flag
 	atf_add_test_case m_flag
+	atf_add_test_case si_flag
 }

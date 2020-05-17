@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "@(#)fold.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/fold/fold.c 227165 2011-11-06 08:15:23Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/fold/fold.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <limits.h>

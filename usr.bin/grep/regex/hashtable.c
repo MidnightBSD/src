@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
-/*      $FreeBSD: stable/10/usr.bin/grep/regex/hashtable.c 226035 2011-10-05 09:56:43Z gabor $       */
+/*      $FreeBSD: stable/11/usr.bin/grep/regex/hashtable.c 330449 2018-03-05 07:26:05Z eadler $       */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
  *

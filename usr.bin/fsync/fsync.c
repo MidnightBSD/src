@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Paul Saab <ps@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 #ifndef lint
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/fsync/fsync.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <err.h>
 #include <fcntl.h>

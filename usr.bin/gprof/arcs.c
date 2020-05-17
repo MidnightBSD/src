@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)arcs.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/gprof/arcs.c 246783 2013-02-14 08:16:03Z charnier $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/gprof/arcs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include "gprof.h"
@@ -377,7 +376,7 @@ cyclelink(void)
 	 *	i.e. it is origin 1, not origin 0.
 	 */
     cyclenl = (nltype *) calloc( ncycle + 1 , sizeof( nltype ) );
-    if ( cyclenl == 0 )
+    if ( cyclenl == NULL )
 	errx( 1 , "no room for %zu bytes of cycle headers" ,
 		   ( ncycle + 1 ) * sizeof( nltype ) );
 	/*
@@ -480,7 +479,7 @@ cycleanalyze(void)
 	    continue;
 	done = FALSE;
         cyclestack = (arctype **) calloc( size + 1 , sizeof( arctype *) );
-	if ( cyclestack == 0 )
+	if ( cyclestack == NULL )
 	    errx( 1, "no room for %zu bytes of cycle stack" ,
 			   ( size + 1 ) * sizeof( arctype * ) );
 #	ifdef DEBUG
@@ -593,7 +592,7 @@ addcycle(arctype **stkstart, arctype **stkend)
     }
     clp = (cltype *)
 	calloc( 1 , sizeof ( cltype ) + ( size - 1 ) * sizeof( arctype * ) );
-    if ( clp == 0 ) {
+    if ( clp == NULL ) {
 	warnx( "no room for %zu bytes of subcycle storage" ,
 	    sizeof ( cltype ) + ( size - 1 ) * sizeof( arctype * ) );
 	return( FALSE );

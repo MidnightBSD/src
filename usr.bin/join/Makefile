@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/join/Makefile 264996 2014-04-27 01:15:10Z jmmv $
+# $FreeBSD: stable/11/usr.bin/join/Makefile 265420 2014-05-06 04:22:01Z imp $
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	join
 

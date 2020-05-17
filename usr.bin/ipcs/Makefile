@@ -1,11 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/ipcs/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: stable/11/usr.bin/ipcs/Makefile 281501 2015-04-13 19:58:11Z eadler $
 
 PROG=	ipcs
 SRCS=	ipcs.c ipc.c
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
-
-WARNS?=	1
+LIBADD=	kvm
 
 .include <bsd.prog.mk>

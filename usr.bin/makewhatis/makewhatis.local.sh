@@ -32,9 +32,8 @@
 # time! So use this wrapper instead calling makewhatis directly.
 #
 # PS: this wrapper works also for catman(1)
-# 
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/makewhatis/makewhatis.local.sh 50472 1999-08-27 23:37:10Z peter $
+#
+# $FreeBSD: stable/11/usr.bin/makewhatis/makewhatis.local.sh 50472 1999-08-27 23:37:10Z peter $
 
 PATH=/bin:/usr/bin:$PATH; export PATH
 opt= dirs= localdirs=

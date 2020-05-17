@@ -1,16 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/ee/Makefile 246592 2013-02-09 13:31:59Z antoine $
+# $FreeBSD: stable/11/usr.bin/ee/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.PATH:	${.CURDIR}/../../contrib/ee
+.PATH:	${SRCTOP}/contrib/ee
 
 CFLAGS+= -DHAS_NCURSES -DHAS_UNISTD -DHAS_STDARG -DHAS_STDLIB \
 	 -DHAS_SYS_WAIT
 
+PACKAGE=ee
 PROG=	ee
 LINKS=	${BINDIR}/ee ${BINDIR}/ree ${BINDIR}/ee ${BINDIR}/edit
 MLINKS=	ee.1 ree.1 ee.1 edit.1
-DPADD=	${LIBNCURSES}
-LDADD=	-lncurses
+LIBADD=	ncursesw
 
 WARNS?=	2
 
@@ -30,7 +29,7 @@ NLSSRCFILES=ee.msg
 . if exists(${.CURDIR}/nls/${lang}/ee.msg)
 NLSSRCDIR_${lang}= ${.CURDIR}/nls/${lang}
 . else
-NLSSRCDIR_${lang}= ${.CURDIR}/../../contrib/ee
+NLSSRCDIR_${lang}= ${SRCTOP}/contrib/ee
 . endif
 .endfor
 

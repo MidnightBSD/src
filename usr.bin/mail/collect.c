@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)collect.c	8.2 (Berkeley) 4/19/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mail/collect.c 303280 2016-07-25 00:46:01Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mail/collect.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Mail -- a mail program
@@ -48,7 +47,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/mail/collect.c 303280 2016-07-25 00:46:01Z
 #include "extern.h"
 
 /*
- * Read a message from standard output and return a read file to it
+ * Read a message from standard input and return a read file to it
  * or NULL on error.
  */
 
@@ -132,7 +131,6 @@ collect(struct header *hp, int printheaders)
 		escape = ESCAPE;
 	eofcount = 0;
 	hadintr = 0;
-	lastlong = 0;
 	longline = 0;
 
 	if (!setjmp(colljmp)) {

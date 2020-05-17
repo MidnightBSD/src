@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)sprint.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/finger/sprint.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -149,7 +149,7 @@ office:
 				else if (pn->officephone)
 					(void)printf(" %-7.7s", " ");
 				if (pn->officephone)
-					(void)printf(" %-.9s",
+					(void)printf(" %-.15s",
 					    prphone(pn->officephone));
 			} else
 				(void)printf(" %.*s", MAXHOSTNAME, w->host);

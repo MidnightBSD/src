@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * lsvfs - list loaded VFSes
  * Garrett A. Wollman, September 1994
@@ -7,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/lsvfs/lsvfs.c 251580 2013-06-09 16:33:32Z hrs $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/lsvfs/lsvfs.c 251580 2013-06-09 16:33:32Z hrs $");
 
 #include <sys/param.h>
 #include <sys/mount.h>

@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/dpv/Makefile 275040 2014-11-25 13:47:53Z dteske $
+# $FreeBSD: stable/11/usr.bin/dpv/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=		dpv
 
 CFLAGS+=	-I${.CURDIR}
 
-DPADD=		${LIBDPV} ${LIBDIALOG} ${LIBFIGPAR} ${LIBNCURSESW} ${LIBUTIL} ${LIBM}
-LDADD=		-ldpv -ldialog -lfigpar -lncursesw -lutil -lm
+LIBADD=		dpv dialog
 
 WARNS?=		6
 

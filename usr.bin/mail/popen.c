@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)popen.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mail/popen.c 252679 2013-07-04 03:24:58Z kevlo $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mail/popen.c 336953 2018-07-31 00:37:25Z markj $");
 
 #include "rcv.h"
 #include <sys/wait.h>

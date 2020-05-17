@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/ldd/Makefile 211725 2010-08-23 22:24:11Z imp $
+# $FreeBSD: stable/11/usr.bin/ldd/Makefile 211725 2010-08-23 22:24:11Z imp $
 
 PROG?=		ldd
 SRCS=		ldd.c

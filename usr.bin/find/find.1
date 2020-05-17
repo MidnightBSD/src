@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -30,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $FreeBSD: stable/10/usr.bin/find/find.1 316197 2017-03-30 02:00:42Z sevan $
+.\" $FreeBSD: stable/11/usr.bin/find/find.1 360195 2020-04-22 13:53:22Z 0mp $
 .\"
-.Dd January 24, 2017
+.Dd April 18, 2020
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -385,6 +384,12 @@ is replaced with as many pathnames as possible for each invocation of
 .Ar utility .
 This behaviour is similar to that of
 .Xr xargs 1 .
+The primary always returns true;
+if at least one invocation of
+.Ar utility
+returns a non-zero exit status,
+.Nm
+will return a non-zero exit status.
 .It Ic -execdir Ar utility Oo Ar argument ... Oc Li \&;
 The
 .Ic -execdir
@@ -407,6 +412,12 @@ is replaced with as many pathnames as possible for each invocation of
 .Ar utility .
 This behaviour is similar to that of
 .Xr xargs 1 .
+The primary always returns true;
+if at least one invocation of
+.Ar utility
+returns a non-zero exit status,
+.Nm
+will return a non-zero exit status.
 .It Ic -flags Oo Cm - Ns | Ns Cm + Oc Ns Ar flags , Ns Ar notflags
 The flags are specified using symbolic names (see
 .Xr chflags 1 ) .
@@ -469,7 +480,7 @@ is being executed and the latter matches any file system which is
 mounted read-only.
 .It Ic -gid Ar gname
 The same thing as
-.Ar -group Ar gname
+.Ic -group Ar gname
 for compatibility with GNU find.
 GNU find imposes a restriction that
 .Ar gname
@@ -768,7 +779,7 @@ option was specified.
 .It Ic -quit
 Causes
 .Nm
-to immediately terminate successfully.
+to terminate immediately.
 .It Ic -regex Ar pattern
 True if the whole path of the file matches
 .Ar pattern

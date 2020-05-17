@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2000 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/getconf/getconf.h 324124 2017-09-30 17:30:22Z jhb $
+ * $FreeBSD: stable/11/usr.bin/getconf/getconf.h 324124 2017-09-30 17:30:22Z jhb $
  */
 
 #ifdef STABLE

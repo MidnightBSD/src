@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,9 +33,11 @@ static char sccsid[] = "@(#)aux.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mail/util.c 246860 2013-02-15 23:59:57Z dim $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mail/util.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/time.h>
+
+#include <fcntl.h>
 
 #include "rcv.h"
 #include "extern.h"
@@ -320,15 +321,13 @@ unstack(void)
 void
 alter(char *name)
 {
-	struct stat sb;
-	struct timeval tv[2];
+	struct timespec ts[2];
 
-	if (stat(name, &sb))
-		return;
-	(void)gettimeofday(&tv[0], NULL);
-	tv[0].tv_sec++;
-	TIMESPEC_TO_TIMEVAL(&tv[1], &sb.st_mtim);
-	(void)utimes(name, tv);
+	(void)clock_gettime(CLOCK_REALTIME, &ts[0]);
+	ts[0].tv_sec++;
+	ts[1].tv_sec = 0;
+	ts[1].tv_nsec = UTIME_OMIT;
+	(void)utimensat(AT_FDCWD, name, ts, 0);
 }
 
 /*

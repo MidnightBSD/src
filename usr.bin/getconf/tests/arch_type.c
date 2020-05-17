@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
 /*
- * Copyright (c) 2017 Ngie Cooper <ngie@FreeBSD.org>
- * All rights reserved.
+ * Copyright (c) 2017 Enji Cooper <ngie@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.bin/getconf/tests/arch_type.c 318436 2017-05-18 01:43:30Z ngie $");
+__RCSID("$FreeBSD: stable/11/usr.bin/getconf/tests/arch_type.c 346920 2019-04-29 19:36:46Z ngie $");
 
 #include <assert.h>
 #include <stdbool.h>

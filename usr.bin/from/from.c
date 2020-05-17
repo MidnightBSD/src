@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)from.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/from/from.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -51,7 +51,7 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-int match(const char *, const char *);
+static int match(const char *, const char *);
 static void usage(void);
 
 int
@@ -81,8 +81,7 @@ main(int argc, char **argv)
 		case 's':
 			sender = optarg;
 			for (p = sender; *p; ++p)
-				if (isupper(*p))
-					*p = tolower(*p);
+				*p = tolower(*p);
 			break;
 		case '?':
 		default:
@@ -142,7 +141,7 @@ usage(void)
 	exit(1);
 }
 
-int
+static int
 match(const char *line, const char *sender)
 {
 	char ch, pch, first;
@@ -152,15 +151,14 @@ match(const char *line, const char *sender)
 		if (isspace(ch = *line))
 			return(0);
 		++line;
-		if (isupper(ch))
-			ch = tolower(ch);
+		ch = tolower(ch);
 		if (ch != first)
 			continue;
 		for (p = sender, t = line;;) {
 			if (!(pch = *p++))
 				return(1);
-			if (isupper(ch = *t++))
-				ch = tolower(ch);
+			ch = tolower(*t);
+			t++;
 			if (ch != pch)
 				break;
 		}

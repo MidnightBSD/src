@@ -1,8 +1,9 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: queue.c,v 1.5 2011/08/31 16:24:57 plunky Exp $	*/
-/*	$FreeBSD: stable/10/usr.bin/grep/queue.c 268966 2014-07-21 22:59:40Z pfg $	*/
+/*	$FreeBSD: stable/11/usr.bin/grep/queue.c 330449 2018-03-05 07:26:05Z eadler $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
  * All rights reserved.
  *
@@ -34,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/grep/queue.c 268966 2014-07-21 22:59:40Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/grep/queue.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -50,11 +51,14 @@ struct qentry {
 };
 
 static STAILQ_HEAD(, qentry)	queue = STAILQ_HEAD_INITIALIZER(queue);
-static unsigned long long	count;
+static long long		count;
 
 static struct qentry	*dequeue(void);
 
-void
+/*
+ * Enqueue another line; return true if we've dequeued a line as a result
+ */
+bool
 enqueue(struct str *x)
 {
 	struct qentry *item;
@@ -63,6 +67,7 @@ enqueue(struct str *x)
 	item->data.dat = grep_malloc(sizeof(char) * x->len);
 	item->data.len = x->len;
 	item->data.line_no = x->line_no;
+	item->data.boff = x->boff;
 	item->data.off = x->off;
 	memcpy(item->data.dat, x->dat, x->len);
 	item->data.file = x->file;
@@ -73,7 +78,9 @@ enqueue(struct str *x)
 		item = dequeue();
 		free(item->data.dat);
 		free(item);
+		return (true);
 	}
+	return (false);
 }
 
 static struct qentry *
@@ -96,7 +103,7 @@ printqueue(void)
 	struct qentry *item;
 
 	while ((item = dequeue()) != NULL) {
-		printline(&item->data, '-', NULL, 0);
+		grep_printline(&item->data, '-');
 		free(item->data.dat);
 		free(item);
 	}

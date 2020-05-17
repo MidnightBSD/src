@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 David Chisnall
  * All rights reserved.
  *
@@ -28,15 +29,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/dtc/dtb.hh 293290 2016-01-07 00:40:51Z bdrewery $
+ * $FreeBSD: stable/11/usr.bin/dtc/dtb.hh 345881 2019-04-04 17:27:01Z kevans $
  */
 
 #ifndef _DTB_HH_
 #define _DTB_HH_
 #include <map>
-#include "string.hh"
+#include <string>
 
 #include <assert.h>
+
+#include "input_buffer.hh"
+#include "util.hh"
 
 namespace dtc
 {
@@ -105,6 +109,8 @@ inline const char *token_type_name(token_type t)
 			return "FDT_END";
 	}
 	assert(0);
+	// Not reached.
+	return nullptr;
 }
 
 /**
@@ -122,16 +128,16 @@ struct output_writer
 	 * assembly output, where the labels become symbols that can be
 	 * resolved at link time.
 	 */
-	virtual void write_label(string name)   = 0;
+	virtual void write_label(const std::string &name)   = 0;
 	/**
 	 * Writes a comment into the output stream.  Useful only when debugging
 	 * the output.
 	 */
-	virtual void write_comment(string name) = 0;
+	virtual void write_comment(const std::string &name) = 0;
 	/**
 	 * Writes a string.  A nul terminator is implicitly added.
 	 */
-	virtual void write_string(string name)  = 0;
+	virtual void write_string(const std::string &name)  = 0;
 	/**
 	 * Writes a single 8-bit value.
 	 */
@@ -187,17 +193,17 @@ class binary_writer : public output_writer
 	 *  The binary format does not support labels, so this method
 	 * does nothing.
 	 */
-	virtual void write_label(string name) {}
+	void write_label(const std::string &) override {}
 	/**
 	 * Comments are ignored by the binary writer.
 	 */
-	virtual void write_comment(string name) {}
-	virtual void write_string(string name);
-	virtual void write_data(uint8_t v);
-	virtual void write_data(uint32_t v);
-	virtual void write_data(uint64_t v);
-	virtual void write_to_file(int fd);
-	virtual uint32_t size();
+	void write_comment(const std::string&)  override {}
+	void write_string(const std::string &name) override;
+	void write_data(uint8_t v) override;
+	void write_data(uint32_t v) override;
+	void write_data(uint64_t v) override;
+	void write_to_file(int fd) override;
+	uint32_t size() override;
 };
 /**
  * Assembly writer.  This class is responsible for writing the output in an
@@ -225,10 +231,14 @@ class asm_writer : public output_writer
 	uint32_t bytes_written;
 
 	/**
-	 * Writes a C string directly to the output as-is.  This is mainly used
-	 * for writing directives.
+	 * Writes a string directly to the output as-is.  This is the function that
+	 * performs the real output.
 	 */
 	void write_string(const char *c);
+	/**
+	 * Write a string to the output.
+	 */
+	void write_string(const std::string &c) override;
 	/**
 	 * Writes the string, starting on a new line.  
 	 */
@@ -240,14 +250,13 @@ class asm_writer : public output_writer
 	void write_byte(uint8_t b);
 	public:
 	asm_writer() : byte_count(0), bytes_written(0) {}
-	virtual void write_label(string name);
-	virtual void write_comment(string name);
-	virtual void write_string(string name);
-	virtual void write_data(uint8_t v);
-	virtual void write_data(uint32_t v);
-	virtual void write_data(uint64_t v);
-	virtual void write_to_file(int fd);
-	virtual uint32_t size();
+	void write_label(const std::string &name) override;
+	void write_comment(const std::string &name) override;
+	void write_data(uint8_t v) override;
+	void write_data(uint32_t v) override;
+	void write_data(uint64_t v) override;
+	void write_to_file(int fd) override;
+	uint32_t size() override;
 };
 
 /**
@@ -329,14 +338,14 @@ class string_table {
 	/**
 	 * Map from strings to their offset. 
 	 */
-	std::map<string, uint32_t> string_offsets;
+	std::map<std::string, uint32_t> string_offsets;
 	/**
 	 * The strings, in the order in which they should be written to the
 	 * output.  The order must be stable - adding another string must not
 	 * change the offset of any that we have already referenced - and so we
 	 * simply write the strings in the order that they are passed.
 	 */
-	std::vector<string> strings;
+	std::vector<std::string> strings;
 	/**
 	 * The current size of the strings section.
 	 */
@@ -352,7 +361,7 @@ class string_table {
 	 * will return its existing offset, otherwise it will return a new
 	 * offset.
 	 */
-	uint32_t add_string(string str);
+	uint32_t add_string(const std::string &str);
 	/**
 	 * Writes the strings table to the specified output.
 	 */
