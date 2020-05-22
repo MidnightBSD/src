@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1997 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/locale/setlocale.h 117270 2003-07-06 02:03:37Z ache $
+ * $FreeBSD: stable/11/lib/libc/locale/setlocale.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SETLOCALE_H_

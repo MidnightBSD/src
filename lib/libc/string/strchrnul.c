@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Niclas Zeising
  * All rights reserved.
@@ -27,12 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/string/strchrnul.c 246766 2013-02-13 15:46:33Z zeising $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/string/strchrnul.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stddef.h>
 #include <string.h>
 
 __weak_reference(__strchrnul, strchrnul);
+
+char *__strchrnul(const char *, int);
 
 char *
 __strchrnul(const char *p, int ch)

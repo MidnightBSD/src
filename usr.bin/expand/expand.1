@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)expand.1	8.1 (Berkeley) 6/9/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/usr.bin/expand/expand.1 313868 2017-02-17 11:20:55Z bapt $
 .\"
-.Dd October 13, 2006
+.Dd June 6, 2015
 .Dt EXPAND 1
 .Os
 .Sh NAME
@@ -81,7 +81,7 @@ If the
 .Fl a
 option is given, then tabs are inserted whenever they would compress the
 resultant file by replacing two or more characters.
-.It Fl t Sm Ar tab1 , tab2 , ... , tabn Sm
+.It Fl t \&Sm Ar tab1 , tab2 , ... , tabn \&Sm
 Set tab stops at column positions
 .Ar tab1 , tab2 , ... , tabn .
 If only a single number is given, tab stops are set that number of
@@ -110,5 +110,5 @@ utilities conform to
 .Sh HISTORY
 The
 .Nm
-command appeared in
-.Bx 3.0 .
+utility first appeared in
+.Bx 1 .

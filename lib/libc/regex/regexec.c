@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -38,7 +37,7 @@
 static char sccsid[] = "@(#)regexec.c	8.3 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/regex/regexec.c 170528 2007-06-11 03:05:54Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/regex/regexec.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * the outer shell of regexec()
@@ -226,9 +225,9 @@ regexec(const regex_t * __restrict preg,
 	eflags = GOODFLAGS(eflags);
 
 	if (MB_CUR_MAX > 1)
-		return(mmatcher(g, (char *)string, nmatch, pmatch, eflags));
+		return(mmatcher(g, string, nmatch, pmatch, eflags));
 	else if (g->nstates <= CHAR_BIT*sizeof(states1) && !(eflags&REG_LARGE))
-		return(smatcher(g, (char *)string, nmatch, pmatch, eflags));
+		return(smatcher(g, string, nmatch, pmatch, eflags));
 	else
-		return(lmatcher(g, (char *)string, nmatch, pmatch, eflags));
+		return(lmatcher(g, string, nmatch, pmatch, eflags));
 }

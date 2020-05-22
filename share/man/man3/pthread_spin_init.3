@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2004 Michael Telahun Makonnen
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man3/pthread_spin_init.3 302010 2016-06-18 13:42:33Z jilles $
+.\" $FreeBSD: stable/11/share/man/man3/pthread_spin_init.3 301077 2016-05-31 21:16:34Z jilles $
 .\"
-.Dd January 22, 2004
+.Dd May 31, 2016
 .Dt PTHREAD_SPIN_INIT 3
 .Os
 .Sh NAME
@@ -122,16 +121,5 @@ and in
 .Lb libthr
 in
 .Fx 5.3 .
-.Sh BUGS
-The implementation of
-.Fn pthread_spin_init
-does not fully conform to
-.St -p1003.2
-because the
-.Fa pshared
-argument is ignored in
-.Lb libthr ;
-if any value other than
-.Dv PTHREAD_PROCESS_PRIVATE
-is specified, it returns
-.Er EINVAL .
+Support for process-shared spinlocks appeared in
+.Fx 11.0 .

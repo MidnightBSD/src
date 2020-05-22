@@ -1,7 +1,7 @@
 #       from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/db/man/Makefile.inc,v 1.11 2002/11/18 09:50:54 ru Exp $
+# $FreeBSD: stable/11/lib/libc/db/man/Makefile.inc 262722 2014-03-04 02:19:39Z marcel $
 
-.PATH: ${.CURDIR}/db/man
+.PATH: ${LIBC_SRCTOP}/db/man
 
 MAN+=	btree.3 dbm.3 dbopen.3 hash.3 mpool.3 recno.3
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Written by J.T. Conklin <jtc@NetBSD.org>.
  * Public domain.
@@ -6,7 +5,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/string/memcmp.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/string/memcmp.S 217106 2011-01-07 16:08:40Z kib $");
 
 #if 0
 	RCSID("$NetBSD: memcmp.S,v 1.2 2003/07/26 19:24:39 salo Exp $")

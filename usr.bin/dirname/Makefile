@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/dirname/Makefile 276490 2015-01-01 02:04:44Z ngie $
+# $FreeBSD: stable/11/usr.bin/dirname/Makefile 272781 2014-10-09 00:55:04Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	dirname
 MAN=

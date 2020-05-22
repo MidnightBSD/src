@@ -1,13 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/bsdcat/Makefile 321304 2017-07-20 20:16:18Z mm $
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
-LIBARCHIVECONFDIR=      ${.CURDIR}/../../lib/libarchive
+_LIBARCHIVECONFDIR=	${SRCTOP}/lib/libarchive
 
 PROG=	bsdcat
-BSDCAT_VERSION_STRING=	3.3.2
+BSDCAT_VERSION_STRING=	3.4.2
 
 .PATH:	${_LIBARCHIVEDIR}/cat
 SRCS=	bsdcat.c cmdline.c
@@ -16,18 +13,10 @@ SRCS=	bsdcat.c cmdline.c
 SRCS+=	err.c
 
 CFLAGS+= -DBSDCAT_VERSION_STRING=\"${BSDCAT_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"${LIBARCHIVECONFDIR}/config_midnightbsd.h\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${_LIBARCHIVECONFDIR}/config_midnightbsd.h\"
 CFLAGS+= -I${_LIBARCHIVEDIR}/cat -I${_LIBARCHIVEDIR}/libarchive_fe
 
-DPADD=  ${LIBARCHIVE} ${LIBBZ2} ${LIBZ} ${LIBLZMA} ${LIBPTHREAD} ${LIBBSDXML}
-LDADD=  -larchive -lbz2 -lz -llzma -lpthread -lbsdxml
-.if ${MK_OPENSSL} != "no"
-DPADD+= ${LIBCRYPTO}
-LDADD+= -lcrypto
-.else
-DPADD+= ${LIBMD}
-LDADD+= -lmd
-.endif
+LIBADD=	archive
 
 .if ${MK_ICONV} != "no"
 CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=const

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt_generic.c,v 1.18 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
@@ -36,7 +35,7 @@ static char *sccsid2 = "from: @(#)clnt_generic.c 1.4 87/08/11 (C) 1987 SMI";
 static char *sccsid = "from: @(#)clnt_generic.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/clnt_generic.c 261046 2014-01-22 23:45:27Z mav $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/clnt_generic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Copyright (c) 1986-1996,1998 by Sun Microsystems, Inc.
@@ -403,7 +402,7 @@ clnt_tli_create(int fd, const struct netconfig *nconf,
 	if (madefd) {
 		(void) CLNT_CONTROL(cl, CLSET_FD_CLOSE, NULL);
 /*		(void) CLNT_CONTROL(cl, CLSET_POP_TIMOD, NULL);  */
-	};
+	}
 
 	return (cl);
 

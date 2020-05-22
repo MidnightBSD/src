@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * The contents of this file are in the public domain.
  * Written by Garrett A. Wollman, 2000-10-07.
@@ -6,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/pmadvise.c 261560 2014-02-06 19:47:17Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/pmadvise.c 261290 2014-01-30 18:04:39Z kib $");
 
 #include <sys/mman.h>
 #include <errno.h>

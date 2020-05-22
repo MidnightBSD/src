@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Eischen <deischen@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_thread_init.c 218824 2011-02-18 21:44:53Z nwhitehorn $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/_thread_init.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

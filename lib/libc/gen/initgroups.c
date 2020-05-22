@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)initgroups.c	8.1 (Berkeley) 6/4/93";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/initgroups.c 194494 2009-06-19 15:58:24Z brooks $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/initgroups.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 
@@ -45,9 +44,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/initgroups.c 194494 2009-06-19 15:58:
 #include <unistd.h>
 
 int
-initgroups(uname, agroup)
-	const char *uname;
-	gid_t agroup;
+initgroups(const char *uname, gid_t agroup)
 {
 	int ngroups, ret;
 	long ngroups_max;

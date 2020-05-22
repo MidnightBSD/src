@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2012-2016 Intel Corporation
 .\" All rights reserved.
@@ -32,7 +31,7 @@
 .\"
 .\" Author: Jim Harris <jimharris@FreeBSD.org>
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/nvd.4 295705 2016-02-17 15:38:05Z jimharris $
+.\" $FreeBSD: stable/11/share/man/man4/nvd.4 301589 2016-06-08 08:50:35Z trasz $
 .\"
 .Dd January 28, 2016
 .Dt NVD 4
@@ -78,8 +77,9 @@ disks and cannot be partitioned.
 .Sh CONFIGURATION
 The
 .Nm
-driver defines a system-wide maximum delete size for NVMe devices.  The
-default is 1GB.  To select a different value, set the following tunable in
+driver defines a system-wide maximum delete size for NVMe devices.
+The default is 1GB.
+To select a different value, set the following tunable in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 hw.nvd.delete_max=<delete size in bytes>
@@ -94,14 +94,14 @@ hw.nvd.delete_max=<delete size in bytes>
 The
 .Nm
 driver first appeared in
-.Fx 9.2.
+.Fx 9.2 .
 .Sh AUTHORS
 .An -nosplit
 The
 .Nm
 driver was developed by Intel and originally written by
-.An Jim Harris Aq jimharris@FreeBSD.org ,
+.An Jim Harris Aq Mt jimharris@FreeBSD.org ,
 with contributions from Joe Golio at EMC.
 .Pp
 This man page was written by
-.An Jim Harris Aq jimharris@FreeBSD.org .
+.An Jim Harris Aq Mt jimharris@FreeBSD.org .

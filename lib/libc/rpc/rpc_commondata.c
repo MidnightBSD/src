@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_commondata.c,v 1.7 2000/06/02 23:11:13 fvdl Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
 static char *sccsid = "@(#)rpc_commondata.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpc_commondata.c 261046 2014-01-22 23:45:27Z mav $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_commondata.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <rpc/rpc.h>

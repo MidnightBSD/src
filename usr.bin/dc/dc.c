@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: dc.c,v 1.11 2009/10/27 23:59:37 deraadt Exp $	*/
 
 /*
@@ -19,13 +18,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/dc/dc.c 315135 2017-03-12 05:36:31Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/dc/dc.c 332463 2018-04-13 03:30:10Z kevans $");
 
 #include <sys/stat.h>
 
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,11 +60,11 @@ usage(void)
 }
 
 static void
-procfile(char *fname) {
+procfd(int fd, char *fname) {
 	struct stat st;
 	FILE *file;
 
-	file = fopen(fname, "r");
+	file = fdopen(fd, "r");
 	if (file == NULL)
 		err(1, "cannot open file %s", fname);
 	if (fstat(fileno(file), &st) == -1)
@@ -81,7 +82,7 @@ procfile(char *fname) {
 int
 main(int argc, char *argv[])
 {
-	int ch;
+	int ch, fd;
 	bool extended_regs = false, preproc_done = false;
 
 	/* accept and ignore a single dash to be 4.4BSD dc(1) compatible */
@@ -98,7 +99,10 @@ main(int argc, char *argv[])
 		case 'f':
 			if (!preproc_done)
 				init_bmachine(extended_regs);
-			procfile(optarg);
+			fd = open(optarg, O_RDONLY);
+			if (fd < 0)
+				err(1, "cannot open file %s", optarg);
+			procfd(fd, optarg);
 			preproc_done = true;
 			break;
 		case 'x':
@@ -127,12 +131,23 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		usage();
 	if (argc == 1) {
-		procfile(argv[0]);
+		fd = open(argv[0], O_RDONLY);
+		if (fd < 0)
+			err(1, "cannot open file %s", argv[0]);
+
+		if (caph_limit_stream(fd, CAPH_READ) < 0 ||
+		    caph_limit_stdio() < 0 ||
+		    (cap_enter() < 0 && errno != ENOSYS))
+			err(1, "capsicum");
+
+		procfd(fd, argv[0]);
 		preproc_done = true;
 	}
 	if (preproc_done)
 		return (0);
 
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
 	src_setstream(&src, stdin);
 	reset_bmachine(&src);
 	eval();

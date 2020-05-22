@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/usr.sbin/sshd/Makefile 313234 2017-02-04 17:00:47Z ngie $
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 CONFS=	moduli sshd_config
 CONFSDIR=	/etc/ssh
@@ -29,50 +26,39 @@ MAN=	sshd.8 sshd_config.5
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 SRCS+=	ssh_namespace.h
 
-DPADD=	${LIBSSH} ${LIBUTIL} ${LIBPAM}
-LDADD=	-lssh -lutil ${MINUSLPAM}
-USEPRIVATELIB= ssh
+# pam should always happen before ssh here for static linking
+LIBADD=	pam ssh util
 
 .if ${MK_LDNS} != "no"
 CFLAGS+=	-DHAVE_LDNS=1
 #DPADD+=	${LIBLDNS}
 #LDADD+=	-lldns
-#USEPRIVATELIB+= ldns
 .endif
 
 .if ${MK_AUDIT} != "no"
 CFLAGS+= -DUSE_BSM_AUDIT=1 -DHAVE_GETAUDIT_ADDR=1
-DPADD+=  ${LIBBSM}
-LDADD+=  -lbsm
+LIBADD+=	bsm
+.endif
+
+.if ${MK_BLACKLIST_SUPPORT} != "no"
+CFLAGS+= -DUSE_BLACKLIST=1 -I${SRCTOP}/contrib/blacklist/include
+SRCS+=	blacklist.c
+LIBADD+= blacklist
+LDFLAGS+=-L${LIBBLACKLISTDIR}
 .endif
 
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
 SRCS+=	krb5_config.h
-DPADD+=	 ${LIBGSSAPI_KRB5} ${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBASN1} \
-	${LIBCOM_ERR} ${LIBROKEN} ${LIBWIND} ${LIBHEIMBASE} ${LIBHEIMIPCC}
-LDADD+=	 -lgssapi_krb5 -lgssapi -lkrb5 -lhx509 -lasn1 \
-	-lcom_err -lroken -lwind -lheimbase -lheimipcc
+LIBADD+=	gssapi_krb5 gssapi krb5
 .endif
 
 .if ${MK_TCP_WRAPPERS} != "no"
-CFLAGS+=	-DLIBWRAP
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+CFLAGS+=	-DLIBWRAP=1
+LIBADD+=	wrap
 .endif
 
-DPADD+= ${LIBCRYPT} ${LIBCRYPTO} ${LIBZ}
-LDADD+= -lcrypt -lcrypto -lz
-
-# Fix the order of NEEDED entries for libthr and libc. The libthr
-# needs to interpose libc symbols, leaving the libthr loading as
-# dependency of krb causes reversed order and broken interposing. Put
-# the threading library last on the linker command line, just before
-# the -lc added by a compiler driver.
-.if ${MK_KERBEROS_SUPPORT} != "no"
-DPADD+= ${LIBPTHREAD}
-LDADD+= -lpthread
-.endif
+LIBADD+=	crypto
 
 .if defined(LOCALBASE)
 CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"

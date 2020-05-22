@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$OpenBSD: extern.h,v 1.52 2012/04/12 17:00:11 espie Exp $	*/
+/*	$OpenBSD: extern.h,v 1.55 2017/06/15 13:48:42 bcallah Exp $	*/
 /*	$NetBSD: extern.h,v 1.3 1996/01/13 23:25:24 pk Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/m4/extern.h 250226 2013-05-03 23:29:38Z jkim $
+ * $FreeBSD: stable/11/usr.bin/m4/extern.h 352281 2019-09-13 07:22:09Z bapt $
  */
 
 /* eval.c */
@@ -44,7 +43,6 @@ extern unsigned long expansion_id;
 
 /* expr.c */
 extern int	expr(const char *);
-extern int32_t end_result;
 
 /* gnum4.c */
 extern void	addtoincludepath(const char *);
@@ -60,6 +58,8 @@ extern void doprintfilename(struct input_file *);
 extern void doesyscmd(const char *);
 extern void getdivfile(const char *);
 extern void doformat(const char *[], int);
+
+extern void m4_warnx(const char *, ...);
 
 /* look.c */
 
@@ -105,8 +105,10 @@ extern void	pbnumbase(int, int, int);
 extern void	pbunsigned(unsigned long);
 extern void	pbstr(const char *);
 extern void	pushback(int);
-extern void	*xalloc(size_t, const char *fmt, ...);
-extern void	*xrealloc(void *, size_t, const char *fmt, ...);
+extern void	*xalloc(size_t, const char *, ...);
+extern void	*xcalloc(size_t, size_t, const char *, ...);
+extern void	*xrealloc(void *, size_t, const char *, ...);
+extern void	*xreallocarray(void *, size_t, size_t, const char *, ...);
 extern char	*xstrdup(const char *);
 extern void	usage(void);
 extern void	resizedivs(int);
@@ -176,4 +178,5 @@ extern int  synch_lines;	/* line synchronisation directives */
 
 extern int mimic_gnu;		/* behaves like gnu-m4 */
 extern int prefix_builtins;	/* prefix builtin macros with m4_ */
-
+extern int error_warns;		/* make warnings cause exit_code = 1 */
+extern int fatal_warns;		/* make warnings fatal */

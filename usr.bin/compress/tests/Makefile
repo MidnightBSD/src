@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/compress/tests/Makefile 318591 2017-05-21 14:05:32Z jilles $
+# $FreeBSD: stable/11/usr.bin/compress/tests/Makefile 318591 2017-05-21 14:05:32Z jilles $
 
 PACKAGE=	tests
 

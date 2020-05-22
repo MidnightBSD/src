@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$OpenBSD: misc.c,v 1.42 2010/09/07 19:58:09 marco Exp $	*/
+/*	$OpenBSD: misc.c,v 1.47 2017/06/15 13:48:42 bcallah Exp $	*/
 /*	$NetBSD: misc.c,v 1.6 1995/09/28 05:37:41 tls Exp $	*/
 
 /*
@@ -33,14 +32,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/m4/misc.c 228063 2011-11-28 13:32:39Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/m4/misc.c 352281 2019-09-13 07:22:09Z bapt $");
 
 #include <sys/types.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -166,7 +167,7 @@ initspaces(void)
 	strspace = xalloc(strsize+1, NULL);
 	ep = strspace;
 	endest = strspace+strsize;
-	buf = (unsigned char *)xalloc(bufsize, NULL);
+	buf = xalloc(bufsize, NULL);
 	bufbase = buf;
 	bp = buf;
 	endpbb = buf + bufsize;
@@ -186,7 +187,7 @@ enlarge_strspace(void)
 		errx(1, "string space overflow");
 	memcpy(newstrspace, strspace, strsize/2);
 	for (i = 0; i <= sp; i++)
-		if (sstack[i])
+		if (sstack[i] == STORAGE_STRSPACE)
 			mstack[i].sstr = (mstack[i].sstr - strspace)
 			    + newstrspace;
 	ep = (ep-strspace) + newstrspace;
@@ -240,7 +241,7 @@ getdiv(int n)
 }
 
 void
-onintr(__unused int signo)
+onintr(int signo __unused)
 {
 #define intrmessage	"m4: interrupted.\n"
 	write(STDERR_FILENO, intrmessage, sizeof(intrmessage)-1);
@@ -264,7 +265,7 @@ killdiv(void)
 extern char *__progname;
 
 void
-m4errx(int evaluation, const char *fmt, ...)
+m4errx(int eval, const char *fmt, ...)
 {
 	fprintf(stderr, "%s: ", __progname);
 	fprintf(stderr, "%s at line %lu: ", CURRENT_NAME, CURRENT_LINE);
@@ -276,7 +277,7 @@ m4errx(int evaluation, const char *fmt, ...)
 		va_end(ap);
 	}
 	fprintf(stderr, "\n");
-	exit(evaluation);
+	exit(eval);
 }
 
 /*
@@ -286,7 +287,7 @@ resizedivs(int n)
 {
 	int i;
 
-	outfile = (FILE **)xrealloc(outfile, sizeof(FILE *) * n,
+	outfile = xreallocarray(outfile, n, sizeof(FILE *),
 	    "too many diverts %d", n);
 	for (i = maxout; i < n; i++)
 		outfile[i] = NULL;
@@ -301,6 +302,25 @@ xalloc(size_t n, const char *fmt, ...)
 	if (p == NULL) {
 		if (fmt == NULL)
 			err(1, "malloc");
+		else {
+			va_list va;
+
+			va_start(va, fmt);
+			verr(1, fmt, va);
+			va_end(va);
+		}
+	}
+	return p;
+}
+
+void *
+xcalloc(size_t n, size_t s, const char *fmt, ...)
+{
+	void *p = calloc(n, s);
+
+	if (p == NULL) {
+		if (fmt == NULL)
+			err(1, "calloc");
 		else {
 			va_list va;
 
@@ -332,6 +352,26 @@ xrealloc(void *old, size_t n, const char *fmt, ...)
 	return p;
 }
 
+void *
+xreallocarray(void *old, size_t s1, size_t s2, const char *fmt, ...)
+{
+	void *p = reallocarray(old, s1, s2);
+
+	if (p == NULL) {
+		free(old);
+		if (fmt == NULL)
+			err(1, "reallocarray");
+		else {
+			va_list va;
+
+			va_start(va, fmt);
+			verr(1, fmt, va);
+			va_end(va);
+		}
+	}
+	return p;
+}
+
 char *
 xstrdup(const char *s)
 {
@@ -344,7 +384,7 @@ xstrdup(const char *s)
 void
 usage(void)
 {
-	fprintf(stderr, "usage: m4 [-gPs] [-Dname[=value]] [-d flags] "
+	fprintf(stderr, "usage: m4 [-EgPs] [-Dname[=value]] [-d flags] "
 			"[-I dirname] [-o filename]\n"
 			"\t[-t macro] [-Uname] [file ...]\n");
 	exit(1);
@@ -384,6 +424,8 @@ do_emit_synchline(void)
 void
 release_input(struct input_file *f)
 {
+	if (ferror(f->file))
+		errx(1, "Fatal error reading from %s\n", f->name);
 	if (f->file != stdin)
 	    fclose(f->file);
 	f->c = EOF;

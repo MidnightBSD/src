@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Jake Burkholder
  * Copyright (c) 2004 Robert Watson
  * All rights reserved.
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ktrdump/ktrdump.c 280255 2015-03-19 13:08:17Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ktrdump/ktrdump.c 342706 2019-01-02 19:48:17Z jhb $");
 
 #include <sys/types.h>
 #include <sys/ktr.h>
@@ -47,7 +48,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/ktrdump/ktrdump.c 280255 2015-03-19 13:08:
 
 #define	SBUFLEN	128
 #define	USAGE \
-	"usage: ktrdump [-cfqrtH] [-i ktrfile] [-M core] [-N system] [-o outfile]\n"
+	"usage: ktrdump [-cflqrtH] [-i ktrfile] [-M core] [-N system] [-o outfile]\n"
 
 static void usage(void);
 
@@ -61,6 +62,7 @@ static struct nlist nl[] = {
 
 static int cflag;
 static int fflag;
+static int lflag;
 static int Mflag;
 static int Nflag;
 static int qflag;
@@ -94,7 +96,8 @@ main(int ac, char **av)
 	char *p;
 	int version;
 	int entries;
-	int index;
+	int count;
+	int index, index2;
 	int parm;
 	int in;
 	int c;
@@ -104,7 +107,7 @@ main(int ac, char **av)
 	 * Parse commandline arguments.
 	 */
 	out = stdout;
-	while ((c = getopt(ac, av, "cfqrtHe:i:m:M:N:o:")) != -1)
+	while ((c = getopt(ac, av, "cflqrtHe:i:m:M:N:o:")) != -1)
 		switch (c) {
 		case 'c':
 			cflag = 1;
@@ -123,6 +126,9 @@ main(int ac, char **av)
 			iflag = 1;
 			if ((in = open(optarg, O_RDONLY)) == -1)
 				err(1, "%s", optarg);
+			break;
+		case 'l':
+			lflag = 1;
 			break;
 		case 'M':
 		case 'm':
@@ -163,8 +169,12 @@ main(int ac, char **av)
 	if ((kd = kvm_openfiles(Nflag ? execfile : NULL,
 	    Mflag ? corefile : NULL, NULL, O_RDONLY, errbuf)) == NULL)
 		errx(1, "%s", errbuf);
-	if (kvm_nlist(kd, nl) != 0 ||
-	    kvm_read(kd, nl[0].n_value, &version, sizeof(version)) == -1)
+	count = kvm_nlist(kd, nl);
+	if (count == -1)
+		errx(1, "%s", kvm_geterr(kd));
+	if (count > 0)
+		errx(1, "failed to resolve ktr symbols");
+	if (kvm_read(kd, nl[0].n_value, &version, sizeof(version)) == -1)
 		errx(1, "%s", kvm_geterr(kd));
 	if (version != KTR_VERSION)
 		errx(1, "ktr version mismatch");
@@ -185,7 +195,8 @@ main(int ac, char **av)
 		if (kvm_read(kd, nl[2].n_value, &index, sizeof(index)) == -1 ||
 		    kvm_read(kd, nl[3].n_value, &bufptr,
 		    sizeof(bufptr)) == -1 ||
-		    kvm_read(kd, bufptr, buf, sizeof(*buf) * entries) == -1)
+		    kvm_read(kd, bufptr, buf, sizeof(*buf) * entries) == -1 ||
+		    kvm_read(kd, nl[2].n_value, &index2, sizeof(index2)) == -1)
 			errx(1, "%s", kvm_geterr(kd));
 	}
 
@@ -219,12 +230,29 @@ main(int ac, char **av)
 		fprintf(out, "\n");
 	}
 
+	tlast = -1;
 	/*
 	 * Now tear through the trace buffer.
+	 *
+	 * In "live" mode, find the oldest entry (first non-NULL entry
+	 * after index2) and walk forward.  Otherwise, start with the
+	 * most recent entry and walk backwards.
 	 */
-	if (!iflag)
-		i = (index - 1) % entries;
-	tlast = -1;
+	if (!iflag) {
+		if (lflag) {
+			i = index2 + 1 % entries;
+			while (buf[i].ktr_desc == NULL && i != index) {
+				i++;
+				if (i == entries)
+					i = 0;
+			}
+		} else {
+			i = index - 1;
+			if (i < 0)
+				i = entries - 1;
+		}
+	}
+dump_entries:
 	for (;;) {
 		if (buf[i].ktr_desc == NULL)
 			break;
@@ -239,7 +267,7 @@ main(int ac, char **av)
 next:			if ((c = *p++) == '\0')
 				break;
 			if (parm == KTR_PARMS)
-				errx(1, "too many parameters");
+				errx(1, "too many parameters in \"%s\"", desc);
 			switch (c) {
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
@@ -289,13 +317,47 @@ next:			if ((c = *p++) == '\0')
 		    parms[4], parms[5]);
 		fprintf(out, "\n");
 		if (!iflag) {
-			if (i == index)
-				break;
-			i = (i - 1) % entries;
+			/*
+			 * 'index' and 'index2' are the values of 'ktr_idx'
+			 * before and after the KTR buffer was copied into
+			 * 'buf'. Since the KTR entries between 'index' and
+			 * 'index2' were in flux while the KTR buffer was
+			 * being copied to userspace we don't dump them.
+			 */
+			if (lflag) {
+				if (++i == entries)
+					i = 0;
+				if (i == index)
+					break;
+			} else {
+				if (i == index2)
+					break;
+				if (--i < 0)
+					i = entries - 1;
+			}
 		} else {
 			if (++i == entries)
 				break;
 		}
+	}
+
+	/*
+	 * In "live" mode, poll 'ktr_idx' periodically and dump any
+	 * new entries since our last pass through the ring.
+	 */
+	if (lflag && !iflag) {
+		while (index == index2) {
+			usleep(50 * 1000);
+			if (kvm_read(kd, nl[2].n_value, &index2,
+			    sizeof(index2)) == -1)
+				errx(1, "%s", kvm_geterr(kd));
+		}
+		i = index;
+		index = index2;
+		if (kvm_read(kd, bufptr, buf, sizeof(*buf) * entries) == -1 ||
+		    kvm_read(kd, nl[2].n_value, &index2, sizeof(index2)) == -1)
+			errx(1, "%s", kvm_geterr(kd));
+		goto dump_entries;
 	}
 
 	return (0);

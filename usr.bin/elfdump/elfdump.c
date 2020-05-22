@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 David O'Brien.  All rights reserved.
  * Copyright (c) 2001 Jake Burkholder
  * All rights reserved.
@@ -27,11 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/elfdump/elfdump.c 307834 2016-10-24 00:46:38Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/elfdump/elfdump.c 335375 2018-06-19 17:11:53Z emaste $");
 
 #include <sys/types.h>
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/elf32.h>
 #include <sys/elf64.h>
 #include <sys/endian.h>
@@ -45,6 +46,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/elfdump/elfdump.c 307834 2016-10-24 00:46:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 
 #define	ED_DYN		(1<<0)
@@ -297,7 +299,7 @@ static const char *ei_data[] = {
 };
 
 static const char *ei_abis[256] = {
-	"ELFOSABI_SYSV", "ELFOSABI_HPUX", "ELFOSABI_NETBSD", "ELFOSABI_LINUX",
+	"ELFOSABI_NONE", "ELFOSABI_HPUX", "ELFOSABI_NETBSD", "ELFOSABI_LINUX",
 	"ELFOSABI_HURD", "ELFOSABI_86OPEN", "ELFOSABI_SOLARIS", "ELFOSABI_AIX",
 	"ELFOSABI_IRIX", "ELFOSABI_FREEBSD", "ELFOSABI_TRU64",
 	"ELFOSABI_MODESTO", "ELFOSABI_OPENBSD",
@@ -409,9 +411,27 @@ static const char *sh_flags[] = {
 	"SHF_WRITE|SHF_ALLOC|SHF_EXECINSTR"
 };
 
-static const char *st_types[] = {
-	"STT_NOTYPE", "STT_OBJECT", "STT_FUNC", "STT_SECTION", "STT_FILE"
-};
+static const char *
+st_type(unsigned int mach, unsigned int type)
+{
+        static char s_type[32];
+
+        switch (type) {
+        case STT_NOTYPE: return "STT_NOTYPE";
+        case STT_OBJECT: return "STT_OBJECT";
+        case STT_FUNC: return "STT_FUNC";
+        case STT_SECTION: return "STT_SECTION";
+        case STT_FILE: return "STT_FILE";
+        case STT_COMMON: return "STT_COMMON";
+        case STT_TLS: return "STT_TLS";
+        case 13:
+                if (mach == EM_SPARCV9)
+                        return "STT_SPARC_REGISTER";
+                break;
+        }
+        snprintf(s_type, sizeof(s_type), "<unknown: %#x>", type);
+        return (s_type);
+}
 
 static const char *st_bindings[] = {
 	"STB_LOCAL", "STB_GLOBAL", "STB_WEAK"
@@ -487,6 +507,7 @@ main(int ac, char **av)
 	u_int64_t name;
 	u_int64_t type;
 	struct stat sb;
+	unsigned long cmd;
 	u_int flags;
 	Elf32_Ehdr *e;
 	void *p;
@@ -555,11 +576,13 @@ main(int ac, char **av)
 	if (cap_rights_limit(fd, &rights) < 0 && errno != ENOSYS)
 		err(1, "unable to limit rights for %s", *av);
 	close(STDIN_FILENO);
-	cap_rights_init(&rights, CAP_WRITE);
-	if (cap_rights_limit(STDOUT_FILENO, &rights) < 0 && errno != ENOSYS)
-		err(1, "unable to limit rights for stdout");
-	if (cap_rights_limit(STDERR_FILENO, &rights) < 0 && errno != ENOSYS)
-		err(1, "unable to limit rights for stderr");
+	cap_rights_init(&rights, CAP_FSTAT, CAP_IOCTL, CAP_WRITE);
+	cmd = TIOCGETA; /* required by isatty(3) in printf(3) */
+	if ((cap_rights_limit(STDOUT_FILENO, &rights) < 0 && errno != ENOSYS) ||
+	    (cap_ioctls_limit(STDOUT_FILENO, &cmd, 1) < 0 && errno != ENOSYS) ||
+	    (cap_rights_limit(STDERR_FILENO, &rights) < 0 && errno != ENOSYS) ||
+	    (cap_ioctls_limit(STDERR_FILENO, &cmd, 1) < 0 && errno != ENOSYS))
+		err(1, "unable to limit rights for stdout/stderr");
 	if (cap_enter() < 0 && errno != ENOSYS)
 		err(1, "unable to enter capability mode");
 	e = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
@@ -640,7 +663,7 @@ main(int ac, char **av)
 		case SHT_NOTE:
 			name = elf_get_word(e, v, SH_NAME);
 			if (flags & ED_NOTE &&
-			    strcmp(shstrtab + name, ".note.ABI-tag") == 0)
+			    strcmp(shstrtab + name, ".note.tag") == 0)
 				elf_print_note(e, v);
 			break;
 		case SHT_DYNSYM:
@@ -825,6 +848,7 @@ elf_print_shdr(Elf32_Ehdr *e, void *sh)
 static void
 elf_print_symtab(Elf32_Ehdr *e, void *sh, char *str)
 {
+	u_int64_t machine;
 	u_int64_t offset;
 	u_int64_t entsize;
 	u_int64_t size;
@@ -836,6 +860,7 @@ elf_print_symtab(Elf32_Ehdr *e, void *sh, char *str)
 	int len;
 	int i;
 
+	machine = elf_get_quarter(e, e, E_MACHINE);
 	offset = elf_get_off(e, sh, SH_OFFSET);
 	entsize = elf_get_size(e, sh, SH_ENTSIZE);
 	size = elf_get_size(e, sh, SH_SIZE);
@@ -855,7 +880,7 @@ elf_print_symtab(Elf32_Ehdr *e, void *sh, char *str)
 		fprintf(out, "\tst_value: %#jx\n", value);
 		fprintf(out, "\tst_size: %jd\n", (intmax_t)size);
 		fprintf(out, "\tst_info: %s %s\n",
-		    st_types[ELF32_ST_TYPE(info)],
+		    st_type(machine, ELF32_ST_TYPE(info)),
 		    st_bindings[ELF32_ST_BIND(info)]);
 		fprintf(out, "\tst_shndx: %jd\n", (intmax_t)shndx);
 	}

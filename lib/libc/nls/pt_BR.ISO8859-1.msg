@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/pt_BR.ISO8859-1.msg 189963 2009-03-18 14:33:10Z gabor $
 $
 $ Message catalog for pt_BR.ISO8859-1 locale
 $

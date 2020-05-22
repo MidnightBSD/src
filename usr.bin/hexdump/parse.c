@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)parse.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/hexdump/parse.c 262926 2014-03-08 12:24:47Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/hexdump/parse.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 
@@ -49,7 +48,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/hexdump/parse.c 262926 2014-03-08 12:24:47
 FU *endfu;					/* format at end-of-data */
 
 void
-addfile(char *name)
+addfile(const char *name)
 {
 	unsigned char *p;
 	FILE *fp;
@@ -492,7 +491,7 @@ escape(char *p1)
 }
 
 void
-badcnt(char *s)
+badcnt(const char *s)
 {
 	errx(1, "%s: bad byte count", s);
 }
@@ -510,7 +509,7 @@ badfmt(const char *fmt)
 }
 
 void
-badconv(char *ch)
+badconv(const char *ch)
 {
 	errx(1, "%%%s: bad conversion character", ch);
 }

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)ungetc.c	8.2 (Berkeley) 11/3/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/ungetc.c 321074 2017-07-17 14:09:34Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/ungetc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -74,14 +73,14 @@ __submore(FILE *fp)
 		return (0);
 	}
 	i = fp->_ub._size;
-	p = realloc(fp->_ub._base, (size_t)(i << 1));
+	p = reallocarray(fp->_ub._base, i, 2);
 	if (p == NULL)
 		return (EOF);
 	/* no overlap (hence can use memcpy) because we doubled the size */
 	(void)memcpy((void *)(p + i), (void *)p, (size_t)i);
 	fp->_p = p + i;
 	fp->_ub._base = p;
-	fp->_ub._size = i << 1;
+	fp->_ub._size = i * 2;
 	return (0);
 }
 

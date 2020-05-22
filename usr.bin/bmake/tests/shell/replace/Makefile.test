@@ -8,7 +8,7 @@
 # XXX There seems to be a problem here in -j1 mode: for the line without
 # @- make should switch on echoing again, but it doesn't.
 #
-# $FreeBSD: stable/10/usr.bin/bmake/tests/shell/replace/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/shell/replace/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
 
 .SHELL: name="shell" path="${.CURDIR}/shell"			\
 	quiet="be quiet" echo="be verbose" filter="be verbose"	\

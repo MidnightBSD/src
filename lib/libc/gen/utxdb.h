@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/gen/utxdb.h 202530 2010-01-17 21:40:05Z ed $
+ * $FreeBSD: stable/11/lib/libc/gen/utxdb.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _UTXDB_H_

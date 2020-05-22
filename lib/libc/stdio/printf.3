@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -31,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)printf.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/stdio/printf.3 242738 2012-11-08 02:01:04Z grog $
+.\" $FreeBSD: stable/11/lib/libc/stdio/printf.3 334655 2018-06-05 13:53:37Z kib $
 .\"
-.Dd December 2, 2009
+.Dd May 22, 2018
 .Dt PRINTF 3
 .Os
 .Sh NAME
@@ -643,6 +642,12 @@ integer indicated by the
 .Vt "int *"
 (or variant) pointer argument.
 No argument is converted.
+.It Cm m
+Print the string representation of the error code stored in the
+.Dv errno
+variable at the beginning of the call, as returned by
+.Xr strerror 3 .
+No argument is taken.
 .It Cm %
 A
 .Ql %
@@ -750,6 +755,12 @@ and
 .Cm \&%U
 are not standard and
 are provided only for backward compatibility.
+The conversion format
+.Cm \&%m
+is also not standard and provides the popular extension from the
+.Tn GNU C
+library.
+.Pp
 The effect of padding the
 .Cm %p
 format with zeros (either by the
@@ -787,9 +798,11 @@ or the return value would be too large to be represented by an
 .El
 .Sh SEE ALSO
 .Xr printf 1 ,
+.Xr errno 2 ,
 .Xr fmtcheck 3 ,
 .Xr scanf 3 ,
 .Xr setlocale 3 ,
+.Xr strerror 3 ,
 .Xr wprintf 3
 .Sh STANDARDS
 Subject to the caveats noted in the
@@ -828,20 +841,26 @@ first appeared in the
 .Tn GNU C
 library.
 These were implemented by
-.An Peter Wemm Aq peter@FreeBSD.org
+.An Peter Wemm Aq Mt peter@FreeBSD.org
 in
 .Fx 2.2 ,
 but were later replaced with a different implementation
 from
 .Ox 2.3
 by
-.An Todd C. Miller Aq Todd.Miller@courtesan.com .
+.An Todd C. Miller Aq Mt Todd.Miller@courtesan.com .
 The
 .Fn dprintf
 and
 .Fn vdprintf
 functions were added in
 .Fx 8.0 .
+The
+.Cm \&%m
+format extension first appeared in the
+.Tn GNU C
+library, and was implemented in
+.Fx 12.0 .
 .Sh BUGS
 The
 .Nm

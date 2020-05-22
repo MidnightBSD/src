@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2007-2010 Daniel Braniss <danny@cs.huji.ac.il>
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/iscsi_initiator.4 297560 2016-04-04 16:41:35Z wblock $
+.\" $FreeBSD: stable/11/share/man/man4/iscsi_initiator.4 297364 2016-03-28 19:55:30Z wblock $
 .\"
 .Dd October 9, 2014
 .Dt ISCSI_INITIATOR 4
@@ -48,7 +47,7 @@ iscsi_initiator_load="YES"
 .Sh DESCRIPTION
 .Bf -symbolic
 This driver, along with its userspace counterpart
-.Xr iscontrol 8 , 
+.Xr iscontrol 8 ,
 is obsolete.
 Users are advised to use
 .Xr iscsi 4
@@ -113,6 +112,7 @@ for each new session.
 iSCSI RFC 3720
 .\" .Sh HISTORY
 .Sh AUTHORS
-This software was written by Daniel Braniss <danny@cs.huji.ac.il>
+This software was written by
+.An Daniel Braniss Aq Mt danny@cs.huji.ac.il
 .Sh BUGS
 The lun discovery method is old-fashioned.

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2000
 .\"	Mike W. Meyer
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man5/make.conf.5 296288 2016-03-02 01:24:41Z bdrewery $
+.\" $FreeBSD: stable/11/share/man/man5/make.conf.5 329145 2018-02-12 01:08:44Z kevans $
 .\"
-.Dd February 24, 2016
+.Dd March 29, 2016
 .Dt MAKE.CONF 5
 .Os
 .Sh NAME
@@ -156,13 +155,9 @@ to contain the appropriate optimization directive to
 .Xr cc 1 .
 The automatic setting of
 .Va CFLAGS
-and
-.Va COPTFLAGS
 may be overridden using the
 .Va NO_CPU_CFLAGS
-and
-.Va NO_CPU_COPTFLAGS
-variables, respectively.
+variable.
 Refer to
 .Pa /usr/share/examples/etc/make.conf
 for a list of recognized
@@ -221,12 +216,6 @@ to follow symlinks.
 Setting this variable will prevent CPU specific compiler flags
 from being automatically added to
 .Va CFLAGS
-during compile time.
-.It Va NO_CPU_COPTFLAGS
-.Pq Vt str
-Setting this variable will prevent CPU specific compiler flags
-from being automatically added to
-.Va COPTFLAGS
 during compile time.
 .It Va NO_DOCUPDATE
 .Pq Vt bool
@@ -305,12 +294,6 @@ Set this to skip running
 .Xr config 8
 during
 .Dq Li "${MAKE} buildkernel" .
-.It Va NO_KERNELDEPEND
-.Pq Vt bool
-Set this to skip running
-.Dq Li "${MAKE} depend"
-during
-.Dq Li "${MAKE} buildkernel" .
 .It Va NO_KERNELOBJ
 .Pq Vt bool
 Set this to skip running
@@ -386,7 +369,7 @@ By default the
 .Xr pxeboot 8
 loader retrieves the kernel via NFS.
 Defining this and recompiling
-.Pa /usr/src/sys/boot
+.Pa /usr/src/stand
 will cause it to retrieve the kernel via TFTP.
 This allows
 .Xr pxeboot 8
@@ -397,7 +380,7 @@ rather than load the server's kernel.
 .It Va LOADER_FIREWIRE_SUPPORT
 .Pq Vt bool
 Defining this and recompiling
-.Pa /usr/src/sys/boot/i386
+.Pa /usr/src/stand/i386
 will add
 .Xr dcons 4
 console driver to
@@ -425,8 +408,11 @@ Set this to run
 .Dq Li "${MAKE} clean"
 instead of
 .Dq Li "${MAKE} cleandir" .
-.It Va NO_MANCOMPRESS
-.Pq Vt bool
+.It Va WITH_MANCOMPRESS
+.Pq Vt defined
+Set to install manual pages compressed.
+.It Va WITHOUT_MANCOMPRESS
+.Pq Vt defined
 Set to install manual pages uncompressed.
 .It Va NO_SHARE
 .Pq Vt bool
@@ -680,7 +666,7 @@ file appeared sometime before
 .Sh AUTHORS
 This
 manual page was written by
-.An Mike W. Meyer Aq mwm@mired.org .
+.An Mike W. Meyer Aq Mt mwm@mired.org .
 .Sh CAVEATS
 Note, that
 .Ev MAKEOBJDIRPREFIX

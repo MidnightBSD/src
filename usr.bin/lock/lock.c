@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1987, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +42,7 @@ static char sccsid[] = "@(#)lock.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/lock/lock.c 241848 2012-10-22 03:07:05Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/lock/lock.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Lock a terminal up until the given key is entered or the given
@@ -98,7 +97,7 @@ main(int argc, char **argv)
 	char *ap, *cryptpw, *mypw, *ttynam, *tzn;
 	char hostname[MAXHOSTNAMELEN], s[BUFSIZ], s1[BUFSIZ];
 
-	openlog("lock", LOG_ODELAY, LOG_AUTH);
+	openlog("lock", 0, LOG_AUTH);
 
 	sectimeout = TIMEOUT;
 	pw = NULL;

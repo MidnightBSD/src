@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)floatdisf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/quad/floatdisf.c 358230 2020-02-21 21:57:24Z dim $");
 
 #include "quad.h"
 
@@ -67,7 +67,7 @@ __floatdisf(x)
 	 *
 	 * Using double here may be excessive paranoia.
 	 */
-	f = (double)u.ul[H] * ((1 << (LONG_BITS - 2)) * 4.0);
+	f = (double)u.ul[H] * ((1L << (LONG_BITS - 2)) * 4.0);
 	f += u.ul[L];
 
 	return (neg ? -f : f);

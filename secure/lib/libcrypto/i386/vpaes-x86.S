@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/i386/vpaes-x86.S 305153 2016-08-31 20:33:59Z jkim $ */
 /* Do not modify. This file is auto-generated from vpaes-x86.pl. */
 #ifdef PIC

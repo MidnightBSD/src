@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* @(#)s_scalbn.c 5.1 93/09/24 */
 /* @(#)fdlibm.h 5.1 93/09/24 */
 /*
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/ldexp.c 140607 2005-01-22 06:03:40Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/ldexp.c 140607 2005-01-22 06:03:40Z das $");
 
 #include <sys/types.h>
 #include <machine/endian.h>

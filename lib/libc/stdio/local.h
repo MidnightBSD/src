@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -36,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)local.h	8.3 (Berkeley) 7/3/94
- * $FreeBSD: stable/10/lib/libc/stdio/local.h 321074 2017-07-17 14:09:34Z kib $
+ * $FreeBSD: stable/11/lib/libc/stdio/local.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _STDIO_LOCAL_H

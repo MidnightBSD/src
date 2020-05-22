@@ -13,10 +13,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/db/man/dbm.3 280394 2015-03-23 19:50:21Z pfg $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libc/db/man/dbm.3 301066 2016-05-31 18:32:57Z ed $
 .\"
-.Dd February 19, 2015
+.Dd May 30, 2016
 .Dt DBM 3
 .Os
 .Sh NAME
@@ -35,7 +34,7 @@
 .In fcntl.h
 .In ndbm.h
 .Ft DBM *
-.Fn dbm_open "const char *base" "int flags" "int mode"
+.Fn dbm_open "const char *base" "int flags" "mode_t mode"
 .Ft void
 .Fn dbm_close "DBM *db"
 .Ft int
@@ -67,7 +66,7 @@ is declared in
 .In ndbm.h :
 .Bd -literal
 typedef struct {
-	char *dptr;
+	void *dptr;
 	int dsize;
 } datum;
 .Ed

@@ -1,16 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/fetch/Makefile 240496 2012-09-14 13:00:43Z des $
-
-.include <bsd.own.mk>
+# $FreeBSD: stable/11/usr.bin/fetch/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=		fetch
 CSTD?=		c99
-.if ${MK_OPENSSL} != "no"
-DPADD=		${LIBFETCH} ${LIBSSL} ${LIBCRYPTO}
-LDADD=		-lfetch -lssl -lcrypto
-.else
-DPADD=		${LIBFETCH} ${LIBMD}
-LDADD=		-lfetch -lmd
-.endif
+LIBADD=		fetch
 
 .include <bsd.prog.mk>

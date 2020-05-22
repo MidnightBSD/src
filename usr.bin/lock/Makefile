@@ -1,11 +1,10 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/lock/Makefile 209567 2010-06-28 08:30:10Z gavin $
+# $FreeBSD: stable/11/usr.bin/lock/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=	lock
 BINOWN=	root
 BINMODE=4555
-DPADD=	${LIBCRYPT}
-LDADD=	-lcrypt
+
+LIBADD=	crypt
 
 .include <bsd.prog.mk>

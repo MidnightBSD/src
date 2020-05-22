@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)yacc.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ctags/yacc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <limits.h>
@@ -98,7 +98,7 @@ y_entries(void)
 			while (GETC(!=, EOF) && (intoken(c) || c == '.'))
 				*sp++ = c;
 			*sp = EOS;
-			getline();		/* may change before ':' */
+			get_line();		/* may change before ':' */
 			while (iswhite(c)) {
 				if (c == '\n')
 					SETLINE;

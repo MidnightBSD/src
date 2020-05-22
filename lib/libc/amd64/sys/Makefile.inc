@@ -1,17 +1,17 @@
 #	from: Makefile.inc,v 1.1 1993/09/03 19:04:23 jtc Exp
-# $FreeBSD: stable/10/lib/libc/amd64/sys/Makefile.inc 305341 2016-09-03 11:09:47Z kib $
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libc/amd64/sys/Makefile.inc 323538 2017-09-13 11:29:48Z kib $
 
-SRCS+=	amd64_get_fsbase.c amd64_get_gsbase.c amd64_set_fsbase.c \
-	amd64_set_gsbase.c __vdso_gettc.c
+SRCS+=	\
+	amd64_detect_rdfsgsbase.c \
+	amd64_get_fsbase.c \
+	amd64_get_gsbase.c \
+	amd64_set_fsbase.c \
+	amd64_set_gsbase.c
 
-MDASM=	vfork.S brk.S cerror.S exect.S getcontext.S pipe.S \
+MDASM=	vfork.S brk.S cerror.S exect.S getcontext.S \
 	sbrk.S setlogin.S sigreturn.S
 
 # Don't generate default code for these syscalls:
 NOASM=	break.o exit.o getlogin.o openbsd_poll.o sstk.o vfork.o yield.o
 
 PSEUDO=	_getlogin.o _exit.o
-.if !defined(WITHOUT_SYSCALL_COMPAT)
-PSEUDO+= _pread.o _pwrite.o _lseek.o _mmap.o _ftruncate.o _truncate.o
-.endif

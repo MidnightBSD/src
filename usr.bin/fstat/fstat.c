@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 1988, 1993
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/fstat/fstat.c 250223 2013-05-03 21:11:57Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/fstat/fstat.c 341779 2018-12-10 01:39:40Z kib $");
 
 #include <sys/param.h>
 #include <sys/user.h>
@@ -299,6 +298,8 @@ print_file_info(struct procstat *procstat, struct filestat *fst,
 		break;
 	case PS_FST_TYPE_SEM:
 		print_sem_info(procstat, fst);
+		break;
+	case PS_FST_TYPE_DEV:
 		break;
 	default:	
 		if (vflg)

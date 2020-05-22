@@ -1,4 +1,4 @@
-$FreeBSD: stable/10/usr.bin/lastcomm/tests/README 169927 2007-05-24 06:57:50Z dds $
+$FreeBSD: stable/11/usr.bin/lastcomm/tests/README 169927 2007-05-24 06:57:50Z dds $
 
 To create the files for regression testing do the following.
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/string/strrchr.S 249582 2013-04-17 11:40:10Z gabor $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/string/strrchr.S 258451 2013-11-21 22:31:18Z andreast $");
 
 /*
  * strrchr(s, c)
@@ -65,6 +64,6 @@ L2:
 	ret
 END(strrchr)
 
-WEAK_ALIAS(rindex, strrchr)
+WEAK_REFERENCE(strrchr, rindex)
 
 	.section .note.GNU-stack,"",%progbits

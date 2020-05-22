@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)getbsize.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getbsize.c 181280 2008-08-04 06:53:13Z cperciva $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getbsize.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <stdio.h>
@@ -40,9 +39,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/getbsize.c 181280 2008-08-04 06:53:13
 #include <string.h>
 
 char *
-getbsize(headerlenp, blocksizep)
-	int *headerlenp;
-	long *blocksizep;
+getbsize(int *headerlenp, long *blocksizep)
 {
 	static char header[20];
 	long n, max, mul, blocksize;

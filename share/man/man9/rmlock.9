@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2007 Stephan Uphoff <ups@FreeBSD.org>
 .\" Copyright (c) 2006 Gleb Smirnoff <glebius@FreeBSD.org>
 .\" All rights reserved.
@@ -24,10 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/rmlock.9 323870 2017-09-21 19:24:11Z marius $
+.\" $FreeBSD: stable/11/share/man/man9/rmlock.9 326305 2017-11-28 01:15:53Z markj $
 .\"
 .\" Based on rwlock.9 man page
-.Dd December 13, 2014
+.Dd November 11, 2017
 .Dt RMLOCK 9
 .Os
 .Sh NAME
@@ -43,7 +42,8 @@
 .Nm rm_wowned ,
 .Nm rm_sleep ,
 .Nm rm_assert ,
-.Nm RM_SYSINIT
+.Nm RM_SYSINIT ,
+.Nm RM_SYSINIT_FLAGS
 .Nd kernel reader/writer lock optimized for read-mostly access patterns
 .Sh SYNOPSIS
 .In sys/param.h
@@ -75,7 +75,8 @@
 .Ft void
 .Fn rm_assert "struct rmlock *rm" "int what"
 .In sys/kernel.h
-.Fn RM_SYSINIT "name" "struct rmlock *rm" "const char *desc" "int opts"
+.Fn RM_SYSINIT "name" "struct rmlock *rm" "const char *desc"
+.Fn RM_SYSINIT_FLAGS "name" "struct rmlock *rm" "const char *desc" "int flags"
 .Sh DESCRIPTION
 Read-mostly locks allow shared access to protected data by multiple threads,
 or exclusive access by a single thread.
@@ -290,8 +291,8 @@ Assert that the current thread does not hold a recursive lock of
 .Xr mutex 9 ,
 .Xr panic 9 ,
 .Xr rwlock 9 ,
-.Xr sleep 9 ,
 .Xr sema 9 ,
+.Xr sleep 9 ,
 .Xr sx 9
 .Sh HISTORY
 These

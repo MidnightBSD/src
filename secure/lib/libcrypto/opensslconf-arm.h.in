@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/secure/lib/libcrypto/opensslconf-arm.h.in 312851 2017-01-26 23:29:30Z jkim $ */
+/* $FreeBSD: stable/11/secure/lib/libcrypto/opensslconf-arm.h.in 305150 2016-08-31 20:21:03Z jkim $ */
 /* opensslconf.h */
 /* WARNING: Generated automatically from opensslconf.h.in by Configure. */
 

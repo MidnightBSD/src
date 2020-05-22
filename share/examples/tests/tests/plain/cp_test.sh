@@ -1,6 +1,5 @@
 #! /bin/sh
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/tests/tests/plain/cp_test.sh 291603 2015-12-01 18:21:25Z ngie $
+# $FreeBSD: stable/11/share/examples/tests/tests/plain/cp_test.sh 299094 2016-05-04 23:20:53Z ngie $
 #
 # Copyright 2013 Google Inc.
 # All rights reserved.
@@ -58,17 +57,16 @@ verify_copy() {
 }
 
 simple_test() {
-	echo 'File 1' >file1
+	cp "$(dirname "${0}")/file1" .
 	cp file1 file2 || err "cp failed"
 	verify_copy file1 file2
 }
 
 force_test() {
-	echo 'File 1' >file1
-	echo 'File 2' >file2
-	chmod 400 file2
-	cp -f file1 file2 || err "cp failed"
-	verify_copy file1 file2
+	echo 'File 3' >file3
+	chmod 400 file3
+	cp -f file1 file3 || err "cp failed"
+	verify_copy file1 file3
 }
 
 # If you have read the cp_test.sh counterpart in the atf/ directory, you

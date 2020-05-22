@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: bindresvport.c,v 1.19 2000/07/06 03:03:59 christos Exp $	*/
 
 /*-
@@ -35,7 +34,7 @@ static char *sccsid = "from: @(#)bindresvport.c	2.2 88/07/29 4.0 RPCSRC";
 #endif
 /* from: $OpenBSD: bindresvport.c,v 1.7 1996/07/30 16:25:47 downsj Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/bindresvport.c 309487 2016-12-03 17:27:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/bindresvport.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Copyright (c) 1987 by Sun Microsystems, Inc.

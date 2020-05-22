@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/limits/Makefile 290898 2015-11-16 00:58:31Z ngie $
+# $FreeBSD: stable/11/usr.bin/limits/Makefile 290567 2015-11-09 01:05:31Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	limits
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

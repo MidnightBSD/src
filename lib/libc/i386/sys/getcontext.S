@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/getcontext.S 240152 2012-09-05 21:41:05Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/sys/getcontext.S 258451 2013-11-21 22:31:18Z andreast $");
 
 #include <SYS.h>
 
@@ -35,10 +34,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/getcontext.S 240152 2012-09-05 2
  * Otherwise, the setcontext() syscall will return here and we'll
  * pop off the return address and go to the *setcontext* call.
  */
-	.weak	_getcontext
-	.set	_getcontext,__sys_getcontext
-	.weak	getcontext
-	.set	getcontext,__sys_getcontext
+	WEAK_REFERENCE(__sys_getcontext, _getcontext) 
+	WEAK_REFERENCE(__sys_getcontext, getcontext)
 ENTRY(__sys_getcontext)
 	movl	(%esp),%ecx	/* save getcontext return address */
 	mov	$SYS_getcontext,%eax

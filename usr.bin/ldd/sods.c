@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996-1997 John D. Polstra.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ldd/sods.c 264785 2014-04-22 21:25:03Z brueffer $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ldd/sods.c 335521 2018-06-22 00:30:24Z emaste $");
 
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -202,7 +203,7 @@ dump_file(const char *fname)
     file_base = (const char *) objbase;	/* Makes address arithmetic easier */
 
     if (IS_ELF(*(const Elf32_Ehdr*) align_struct(file_base))) {
-	warnx("%s: this is an ELF program; use objdump to examine", fname);
+	warnx("%s: this is an ELF program; use readelf to examine", fname);
 	++error_count;
 	munmap(objbase, sb.st_size);
 	return;

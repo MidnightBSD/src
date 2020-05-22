@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/gethostbynis.c 293023 2016-01-01 00:35:06Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/gethostbynis.c 351694 2019-09-02 10:20:57Z kib $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -57,7 +56,7 @@ _gethostbynis(const char *name, char *map, int af, struct hostent *he,
 	char *cp, **q;
 	char *result;
 	int resultlen, size, addrok = 0;
-	char ypbuf[YPMAXRECORD + 2];
+	char *ypbuf;
 	res_state statp;
 
 	statp = __res_state();
@@ -87,10 +86,11 @@ _gethostbynis(const char *name, char *map, int af, struct hostent *he,
 	}
 
 	/* avoid potential memory leak */
-	bcopy((char *)result, (char *)&ypbuf, resultlen);
+	ypbuf = alloca(resultlen + 2);
+	bcopy(result, ypbuf, resultlen);
 	ypbuf[resultlen] = '\0';
 	free(result);
-	result = (char *)&ypbuf;
+	result = ypbuf;
 
 	if ((cp = strchr(result, '\n')))
 		*cp = '\0';

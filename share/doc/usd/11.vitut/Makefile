@@ -1,11 +1,10 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/doc/usd/11.vitut/Makefile 281994 2015-04-26 07:52:43Z bapt $
 
 VOLUME=		usd/11.edit
 SRCS=		edittut.ms
 MACROS=		-ms
 USE_TBL=
-SRCDIR=		${.CURDIR}/../../../../contrib/nvi/docs/USD.doc/edit
 
 # index for versatec is different from the one in edit.tut
 # because the fonts are different and entries reference page

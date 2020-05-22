@@ -2,8 +2,7 @@
 /*
  * Copyright is disclaimed as to the contents of this file.
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/usr.bin/getconf/confstr.gperf 324124 2017-09-30 17:30:22Z jhb $
+ * $FreeBSD: stable/11/usr.bin/getconf/confstr.gperf 324124 2017-09-30 17:30:22Z jhb $
  */
 
 #include <sys/types.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Poul-Henning Kamp
  * Copyright (c) 1990, 1993
@@ -31,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/stdio/xprintf_int.c 330097 2018-02-28 02:49:48Z pfg $
+ * $FreeBSD: stable/11/lib/libc/stdio/xprintf_int.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <namespace.h>

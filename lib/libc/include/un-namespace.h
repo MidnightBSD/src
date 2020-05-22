@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/include/un-namespace.h 338405 2018-08-31 05:21:33Z kib $
  */
 
 #ifndef _UN_NAMESPACE_H_
@@ -37,6 +37,7 @@
 #undef		bind
 #undef		__cap_get_fd
 #undef		__cap_set_fd
+#undef		clock_nanosleep
 #undef		close
 #undef		connect
 #undef		dup
@@ -112,6 +113,7 @@
 #undef		pthread_detach
 #undef		pthread_equal
 #undef		pthread_exit
+#undef		pthread_get_name_np
 #undef		pthread_getaffinity_np
 #undef		pthread_getconcurrency
 #undef		pthread_getcpuclockid
@@ -189,6 +191,7 @@
 #undef		readv
 #undef		recvfrom
 #undef		recvmsg
+#undef		recvmmsg
 #undef		select
 #undef		sem_close
 #undef		sem_destroy
@@ -197,10 +200,12 @@
 #undef		sem_open
 #undef		sem_post
 #undef		sem_timedwait
+#undef		sem_clockwait_np
 #undef		sem_trywait
 #undef		sem_unlink
 #undef		sem_wait
 #undef		sendmsg
+#undef		sendmmsg
 #undef		sendto
 #undef		setsockopt
 #undef		sigaction

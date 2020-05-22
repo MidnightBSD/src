@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2004 Roman Kurakin <rik@cronyx.ru>
 .\" Copyright (c) 2004 Cronyx Engineering
 .\" All rights reserved.
@@ -12,9 +11,9 @@
 .\" works or modified versions.
 .\"
 .\" Cronyx Id: ct.4,v 1.1.2.6 2004/06/21 17:56:40 rik Exp $
-.\" $FreeBSD: stable/10/share/man/man4/man4.i386/ctau.4 134825 2004-09-05 22:09:53Z simon $
+.\" $FreeBSD: stable/11/share/man/man4/man4.i386/ctau.4 358804 2020-03-09 13:06:02Z emaste $
 .\"
-.Dd September 6, 2004
+.Dd March 2, 2020
 .Dt CTAU 4 i386
 .Os
 .Sh NAME
@@ -34,6 +33,12 @@ In
 .Cd hint.ctau.0.port="0x240"
 .Cd hint.ctau.0.irq="15"
 .Cd hint.ctau.0.drq="7"
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
 .Sh DESCRIPTION
 The
 .Nm

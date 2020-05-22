@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: stack.c,v 1.12 2014/11/26 15:05:51 otto Exp $	*/
 
 /*
@@ -18,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/dc/stack.c 315135 2017-03-12 05:36:31Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/dc/stack.c 315134 2017-03-12 05:35:28Z pfg $");
 
 #include <err.h>
 #include <stdlib.h>

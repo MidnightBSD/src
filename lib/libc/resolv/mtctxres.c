@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/mtctxres.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/mtctxres.c 297790 2016-04-10 19:33:58Z pfg $");
 
 #include <port_before.h>
 #ifdef DO_PTHREADS

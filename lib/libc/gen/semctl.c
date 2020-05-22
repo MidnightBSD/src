@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Doug Rabson
  * All rights reserved.
@@ -28,9 +27,11 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/semctl.c 194910 2009-06-24 21:10:52Z jhb $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/semctl.c 331722 2018-03-29 02:50:57Z eadler $");
 
+#ifndef NO_COMPAT7
 #define _WANT_SEMUN_OLD
+#endif
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -39,7 +40,10 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/semctl.c 194910 2009-06-24 21:10:52Z 
 #include <stdlib.h>
 
 int	__semctl(int semid, int semnum, int cmd, union semun *arg);
+#ifndef NO_COMPAT7
 int	freebsd7___semctl(int semid, int semnum, int cmd, union semun_old *arg);
+int	freebsd7_semctl(int semid, int semnum, int cmd, ...);
+#endif
 
 int
 semctl(int semid, int semnum, int cmd, ...)
@@ -61,6 +65,7 @@ semctl(int semid, int semnum, int cmd, ...)
 	return (__semctl(semid, semnum, cmd, semun_ptr));
 }
 
+#ifndef NO_COMPAT7
 int
 freebsd7_semctl(int semid, int semnum, int cmd, ...)
 {
@@ -82,3 +87,4 @@ freebsd7_semctl(int semid, int semnum, int cmd, ...)
 }
 
 __sym_compat(semctl, freebsd7_semctl, FBSD_1.0);
+#endif

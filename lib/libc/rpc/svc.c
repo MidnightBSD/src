@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: svc.c,v 1.21 2000/07/06 03:10:35 christos Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)svc.c 1.44 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc.c	2.4 88/08/11 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/svc.c 318327 2017-05-15 23:13:49Z brooks $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/svc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * svc.c, Server-side remote procedure call interface.
@@ -75,7 +74,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/rpc/svc.c 318327 2017-05-15 23:13:49Z bro
  * The services list
  * Each entry represents a set of procedures (an rpc program).
  * The dispatch routine takes request structs and runs the
- * apropriate procedure.
+ * appropriate procedure.
  */
 static struct svc_callout {
 	struct svc_callout *sc_next;

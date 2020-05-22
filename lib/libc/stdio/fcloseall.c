@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2006 Daniel M. Eischen.  All rights reserved.
  * 
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fcloseall.c 157963 2006-04-22 16:47:59Z deischen $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/fcloseall.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include "local.h"

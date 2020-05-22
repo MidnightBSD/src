@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Olivier Houchard
  * All rights reserved.
@@ -26,9 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/ntoh.c 164053 2006-11-06 22:07:47Z cognet $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/ntoh.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/endian.h>
+#define _BYTEORDER_FUNC_DEFINED
+#include <arpa/inet.h>
 
 uint32_t
 htonl(uint32_t hl)

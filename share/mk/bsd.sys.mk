@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.sys.mk 352023 2019-09-07 20:01:26Z imp $
+# $FreeBSD: stable/11/share/mk/bsd.sys.mk 359715 2020-04-07 19:44:40Z bdrewery $
 #
 # This file contains common settings used for building MidnightBSD
 # sources.
@@ -104,6 +104,11 @@ CWARNFLAGS.clang+=	-Wno-parentheses
 .if defined(NO_WARRAY_BOUNDS)
 CWARNFLAGS.clang+=	-Wno-array-bounds
 .endif # NO_WARRAY_BOUNDS
+.if defined(NO_WMISLEADING_INDENTATION) && \
+    ((${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 100000) || \
+     (${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100))
+CWARNFLAGS+=		-Wno-misleading-indentation
+.endif # NO_WMISLEADING_INDENTATION
 .endif # WARNS
 
 .if defined(FORMAT_AUDIT)
@@ -146,16 +151,15 @@ CWARNFLAGS+=	-Wno-error=address			\
 
 # GCC 6.1.0
 .if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100
-CWARNFLAGS+=	-Wno-error=misleading-indentation	\
-		-Wno-error=nonnull-compare		\
+CWARNFLAGS+=	-Wno-error=nonnull-compare		\
 		-Wno-error=shift-negative-value		\
 		-Wno-error=tautological-compare		\
 		-Wno-error=unused-const-variable
 .endif
 
-# How to handle BSD custom printf format specifiers.
+# How to handle MidnightBSD custom printf format specifiers.
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30600
-FORMAT_EXTENSIONS=	-D__printf__=__freebsd_kprintf__
+FORMAT_EXTENSIONS=	-D__printf__=__midnightbsd_kprintf__
 .else
 FORMAT_EXTENSIONS=	-fformat-extensions
 .endif
@@ -240,7 +244,7 @@ PHONY_NOTMAIN = analyze afterdepend afterinstall all beforedepend beforeinstall 
 .NOTMAIN: ${PHONY_NOTMAIN:Nall}
 
 .if ${MK_STAGING} != "no"
-.if defined(_SKIP_BUILD) || (!make(all) && !make(clean*))
+.if defined(_SKIP_BUILD) || (!make(all) && !make(clean*) && !make(*clean))
 _SKIP_STAGING?= yes
 .endif
 .if ${_SKIP_STAGING:Uno} == "yes"

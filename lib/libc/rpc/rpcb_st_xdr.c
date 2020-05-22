@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpcb_st_xdr.c,v 1.3 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpcb_st_xdr.c 319615 2017-06-06 07:22:26Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpcb_st_xdr.c 358122 2020-02-19 16:18:27Z markj $");
 
 #include "namespace.h"
 #include <rpc/rpc.h>
@@ -53,29 +52,28 @@ xdr_rpcbs_addrlist(XDR *xdrs, rpcbs_addrlist *objp)
 {
 	struct rpcbs_addrlist **pnext;
 
-	    if (!xdr_rpcprog(xdrs, &objp->prog)) {
+	if (!xdr_rpcprog(xdrs, &objp->prog)) {
 		return (FALSE);
-	    }
-	    if (!xdr_rpcvers(xdrs, &objp->vers)) {
+	}
+	if (!xdr_rpcvers(xdrs, &objp->vers)) {
 		return (FALSE);
-	    }
-	    if (!xdr_int(xdrs, &objp->success)) {
+	}
+	if (!xdr_int(xdrs, &objp->success)) {
 		return (FALSE);
-	    }
-	    if (!xdr_int(xdrs, &objp->failure)) {
+	}
+	if (!xdr_int(xdrs, &objp->failure)) {
 		return (FALSE);
-	    }
-	    if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
+	}
+	if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
 		return (FALSE);
-	    }
+	}
 
-	    pnext = &objp->next;
-
-	    if (!xdr_pointer(xdrs, (char **) pnext,
+	pnext = &objp->next;
+	if (!xdr_pointer(xdrs, (char **) pnext,
 			sizeof (rpcbs_addrlist),
 			(xdrproc_t)xdr_rpcbs_addrlist)) {
 		return (FALSE);
-	    }
+	}
 
 	return (TRUE);
 }
@@ -85,86 +83,86 @@ xdr_rpcbs_addrlist(XDR *xdrs, rpcbs_addrlist *objp)
 bool_t
 xdr_rpcbs_rmtcalllist(XDR *xdrs, rpcbs_rmtcalllist *objp)
 {
-	int32_t *buf;
 	struct rpcbs_rmtcalllist **pnext;
+	int32_t *buf;
 
-	if (xdrs->x_op == XDR_ENCODE) {
-	buf = XDR_INLINE(xdrs, 6 * BYTES_PER_XDR_UNIT);
-	if (buf == NULL) {
-		if (!xdr_rpcprog(xdrs, &objp->prog)) {
-			return (FALSE);
-		}
-		if (!xdr_rpcvers(xdrs, &objp->vers)) {
-			return (FALSE);
-		}
-		if (!xdr_rpcproc(xdrs, &objp->proc)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->success)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->failure)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->indirect)) {
-			return (FALSE);
-		}
-	} else {
-		IXDR_PUT_U_INT32(buf, objp->prog);
-		IXDR_PUT_U_INT32(buf, objp->vers);
-		IXDR_PUT_U_INT32(buf, objp->proc);
-		IXDR_PUT_INT32(buf, objp->success);
-		IXDR_PUT_INT32(buf, objp->failure);
-		IXDR_PUT_INT32(buf, objp->indirect);
-	}
-	if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
-		return (FALSE);
-	}
 	pnext = &objp->next;
-	if (!xdr_pointer(xdrs, (char **) pnext,
-			sizeof (rpcbs_rmtcalllist),
-			(xdrproc_t)xdr_rpcbs_rmtcalllist)) {
-		return (FALSE);
-	}
-	return (TRUE);
+	if (xdrs->x_op == XDR_ENCODE) {
+		buf = XDR_INLINE(xdrs, 6 * BYTES_PER_XDR_UNIT);
+		if (buf == NULL) {
+			if (!xdr_rpcprog(xdrs, &objp->prog)) {
+				return (FALSE);
+			}
+			if (!xdr_rpcvers(xdrs, &objp->vers)) {
+				return (FALSE);
+			}
+			if (!xdr_rpcproc(xdrs, &objp->proc)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->success)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->failure)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->indirect)) {
+				return (FALSE);
+			}
+		} else {
+			IXDR_PUT_U_INT32(buf, objp->prog);
+			IXDR_PUT_U_INT32(buf, objp->vers);
+			IXDR_PUT_U_INT32(buf, objp->proc);
+			IXDR_PUT_INT32(buf, objp->success);
+			IXDR_PUT_INT32(buf, objp->failure);
+			IXDR_PUT_INT32(buf, objp->indirect);
+		}
+		if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
+			return (FALSE);
+		}
+		if (!xdr_pointer(xdrs, (char **) pnext,
+				sizeof (rpcbs_rmtcalllist),
+				(xdrproc_t)xdr_rpcbs_rmtcalllist)) {
+			return (FALSE);
+		}
+		return (TRUE);
 	} else if (xdrs->x_op == XDR_DECODE) {
-	buf = XDR_INLINE(xdrs, 6 * BYTES_PER_XDR_UNIT);
-	if (buf == NULL) {
-		if (!xdr_rpcprog(xdrs, &objp->prog)) {
+		buf = XDR_INLINE(xdrs, 6 * BYTES_PER_XDR_UNIT);
+		if (buf == NULL) {
+			if (!xdr_rpcprog(xdrs, &objp->prog)) {
+				return (FALSE);
+			}
+			if (!xdr_rpcvers(xdrs, &objp->vers)) {
+				return (FALSE);
+			}
+			if (!xdr_rpcproc(xdrs, &objp->proc)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->success)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->failure)) {
+				return (FALSE);
+			}
+			if (!xdr_int(xdrs, &objp->indirect)) {
+				return (FALSE);
+			}
+		} else {
+			objp->prog = (rpcprog_t)IXDR_GET_U_INT32(buf);
+			objp->vers = (rpcvers_t)IXDR_GET_U_INT32(buf);
+			objp->proc = (rpcproc_t)IXDR_GET_U_INT32(buf);
+			objp->success = (int)IXDR_GET_INT32(buf);
+			objp->failure = (int)IXDR_GET_INT32(buf);
+			objp->indirect = (int)IXDR_GET_INT32(buf);
+		}
+		if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
 			return (FALSE);
 		}
-		if (!xdr_rpcvers(xdrs, &objp->vers)) {
+		if (!xdr_pointer(xdrs, (char **) pnext,
+				sizeof (rpcbs_rmtcalllist),
+				(xdrproc_t)xdr_rpcbs_rmtcalllist)) {
 			return (FALSE);
 		}
-		if (!xdr_rpcproc(xdrs, &objp->proc)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->success)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->failure)) {
-			return (FALSE);
-		}
-		if (!xdr_int(xdrs, &objp->indirect)) {
-			return (FALSE);
-		}
-	} else {
-		objp->prog = (rpcprog_t)IXDR_GET_U_INT32(buf);
-		objp->vers = (rpcvers_t)IXDR_GET_U_INT32(buf);
-		objp->proc = (rpcproc_t)IXDR_GET_U_INT32(buf);
-		objp->success = (int)IXDR_GET_INT32(buf);
-		objp->failure = (int)IXDR_GET_INT32(buf);
-		objp->indirect = (int)IXDR_GET_INT32(buf);
-	}
-	if (!xdr_string(xdrs, &objp->netid, RPC_MAXDATASIZE)) {
-		return (FALSE);
-	}
-	if (!xdr_pointer(xdrs, (char **) pnext,
-			sizeof (rpcbs_rmtcalllist),
-			(xdrproc_t)xdr_rpcbs_rmtcalllist)) {
-		return (FALSE);
-	}
-	return (TRUE);
+		return (TRUE);
 	}
 	if (!xdr_rpcprog(xdrs, &objp->prog)) {
 		return (FALSE);

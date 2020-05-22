@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Tim J. Robbins.
  * All rights reserved.
  *
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tr/cmap.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tr/cmap.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <assert.h>
 #include <limits.h>

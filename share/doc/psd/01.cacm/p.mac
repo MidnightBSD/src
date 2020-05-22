@@ -4,7 +4,7 @@
 .\"
 .\"	@(#)p.mac	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: src/share/doc/psd/01.cacm/p.mac,v 1.1 2002/05/19 05:31:37 grog Exp $
+.\" $FreeBSD: stable/11/share/doc/psd/01.cacm/p.mac 96914 2002-05-19 05:31:37Z grog $
 .de P1
 .DS
 ..

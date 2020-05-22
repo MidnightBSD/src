@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/misc/iso639 249824 2013-04-24 00:41:36Z eadler $
+# $FreeBSD: stable/11/share/misc/iso639 331051 2018-03-16 08:44:44Z eadler $
 #
 # ISO 639-2 language codes
 #
@@ -128,6 +127,7 @@ cu	chu	chu	Church Slavic; Old Slavonic; Church Slavonic; Old Bulgarian; Old Chur
 cv	chv	chv	Chuvash
 	chy	chy	Cheyenne
 	cmc	cmc	Chamic languages
+	cnr	cnr	Montenegrin
 	cop	cop	Coptic
 kw	cor	cor	Cornish
 co	cos	cos	Corsican

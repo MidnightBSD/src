@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/if_ntb.4 304405 2016-08-18 11:00:48Z mav $
+.\" $FreeBSD: stable/11/share/man/man4/if_ntb.4 323453 2017-09-11 18:48:09Z mav $
 .\"
-.Dd July 29, 2016
+.Dd September 2, 2017
 .Dt IF_NTB 4
 .Os
 .Sh NAME
@@ -36,6 +35,8 @@
 To compile this driver into your kernel,
 place the following lines in your kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device ntb"
+.Cd "device ntb_transport"
 .Cd "device if_ntb"
 .Ed
 .Pp
@@ -49,7 +50,7 @@ The following tunables are settable from the
 .Xr loader 8 :
 .Bl -ohang
 .It Va hw.if_ntb.num_queues
-Number of transport queues to use per interface.
+Limits maximal number of queues per interface.
 Default is unlimited.
 .El
 .Sh DESCRIPTION
@@ -57,12 +58,10 @@ The
 .Nm
 driver attaches on top of the
 .Xr ntb_transport 4
-driver to utilize its resources to create virtual Ethernet interface between
-the systems.
-Interface capabilities depend on the underlying transport.
-Typical MTU is about 64KB to reduce overhead.
-By default one queue is used, but more may be configured.
-The MAC address for interface is randomly generated.
+driver to utilize one or more of its packet queues to create virtual
+Ethernet network interface between the systems.
+Typical MTU for the interface is about 64KB to reduce overhead.
+Default MAC address for the interface is randomly generated.
 .Pp
 The
 .Nm

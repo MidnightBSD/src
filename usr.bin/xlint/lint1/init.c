@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: init.c,v 1.10 2002/01/31 19:36:54 tv Exp $	*/
 
 /*
@@ -36,7 +35,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: init.c,v 1.10 2002/01/31 19:36:54 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/init.c 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint1/init.c 286614 2015-08-11 02:58:33Z pfg $");
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -545,7 +544,7 @@ mkinit(tnode_t *tn)
 		goto end;
 
 	/*
-	 * Store the tree memory. This is nessesary because otherwise
+	 * Store the tree memory. This is necessary because otherwise
 	 * expr() would free it.
 	 */
 	tmem = tsave();

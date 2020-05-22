@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Apple Computer, Inc.
  * All rights reserved.
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/login/login_audit.c 191297 2009-04-19 23:34:22Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/login/login_audit.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

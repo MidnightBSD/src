@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Kai Wang
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ar/acpyacc.y 248612 2013-03-22 10:17:42Z mm $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ar/acpyacc.y 346901 2019-04-29 18:28:34Z emaste $");
 
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -253,7 +254,8 @@ arscp_open(char *fname)
 	archive_read_support_format_ar(a);
 	AC(archive_read_open_filename(a, fname, DEF_BLKSZ));
 	if ((r = archive_read_next_header(a, &entry)))
-		bsdar_warnc(bsdar, 0, "%s", archive_error_string(a));
+		bsdar_warnc(bsdar, archive_errno(a), "%s",
+		    archive_error_string(a));
 	AC(archive_read_close(a));
 	AC(archive_read_free(a));
 	if (r != ARCHIVE_OK)

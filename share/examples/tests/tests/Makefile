@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/examples/tests/tests/Makefile 321648 2017-07-28 03:33:09Z ngie $
+# $FreeBSD: stable/11/share/examples/tests/tests/Makefile 321647 2017-07-28 03:32:36Z ngie $
 
 # Directory into which the Kyuafile provided by this directory will be
 # installed.

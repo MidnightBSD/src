@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/Makefile 243935 2012-12-06 01:44:19Z eadler $
+# $FreeBSD: stable/11/share/syscons/keymaps/Makefile 284255 2015-06-11 04:22:17Z sjg $
 
 FILES=	INDEX.keymaps \
 	be.iso.kbd be.iso.acc.kbd \
@@ -52,7 +51,5 @@ FILES=	INDEX.keymaps \
 	us.dvorakx.kbd us.emacs.kbd us.pc-ctrl.kbd us.unix.kbd us.iso.acc.kbd
 
 FILESDIR= ${SHAREDIR}/syscons/keymaps
-
-NO_OBJ=
 
 .include <bsd.prog.mk>

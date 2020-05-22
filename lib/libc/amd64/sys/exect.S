@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -35,7 +34,7 @@
 	.asciz "@(#)exect.s	5.1 (Berkeley) 4/23/90"
 #endif /* SYSLIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/sys/exect.S 240178 2012-09-06 20:59:49Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/sys/exect.S 240178 2012-09-06 20:59:49Z jilles $");
 
 #include "SYS.h"
 #include <machine/psl.h>

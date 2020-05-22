@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: rpc_generic.c,v 1.4 2000/09/28 09:07:04 kleink Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpc_generic.c 319615 2017-06-06 07:22:26Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/rpc_generic.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -43,7 +42,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/rpc/rpc_generic.c 319615 2017-06-06 07:22
 
 #include "namespace.h"
 #include "reentrant.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>

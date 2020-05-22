@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/string/Symbol.map 319292 2017-05-31 06:47:56Z delphij $
  */
 
 FBSD_1.0 {
@@ -40,7 +40,6 @@ FBSD_1.0 {
 	strncat;
 	strncmp;
 	strncpy;
-	strndup;
 	strnstr;
 	strpbrk;
 	strsep;
@@ -83,6 +82,7 @@ FBSD_1.1 {
 	flsll;
 	memrchr;
 	stpncpy;
+	strndup;
 	strnlen;
 	wcpcpy;
 	wcpncpy;
@@ -98,6 +98,16 @@ FBSD_1.3 {
 	strncasecmp_l;
 	wcswidth_l;
 	wcwidth_l;
+};
+
+FBSD_1.4 {
+	explicit_bzero;
+};
+
+FBSD_1.5 {
+	memset_s;
+	timingsafe_bcmp;
+	timingsafe_memcmp;
 };
 
 FBSDprivate_1.0 {

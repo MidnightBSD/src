@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: cmdtab.c,v 1.7 2006/03/17 14:43:06 moritz Exp $	*/
 /*	$NetBSD: cmdtab.c,v 1.3 1994/12/08 09:30:46 jtc Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/cmdtab.c 161781 2006-08-31 19:19:44Z ru $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/cmdtab.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 #if 0

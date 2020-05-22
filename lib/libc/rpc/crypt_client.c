@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1996
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/crypt_client.c 309497 2016-12-03 18:26:41Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/crypt_client.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <err.h>

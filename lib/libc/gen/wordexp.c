@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
@@ -42,7 +41,7 @@
 #include "un-namespace.h"
 #include "libc_private.h"
 
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/wordexp.c 289938 2015-10-25 17:17:50Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/wordexp.c 331722 2018-03-29 02:50:57Z eadler $");
 
 static int	we_askshell(const char *, wordexp_t *, int);
 static int	we_check(const char *);
@@ -209,9 +208,7 @@ we_askshell(const char *words, wordexp_t *we, int flags)
 	 */
 	switch (we_read_fully(pdes[0], buf, 34)) {
 	case 1:
-		error = buf[0] == 'C' ? WRDE_CMDSUB :
-		    flags & WRDE_UNDEF ? WRDE_BADVAL :
-		    WRDE_SYNTAX;
+		error = buf[0] == 'C' ? WRDE_CMDSUB : WRDE_BADVAL;
 		serrno = errno;
 		goto cleanup;
 	case 34:
@@ -237,8 +234,8 @@ we_askshell(const char *words, wordexp_t *we, int flags)
 		vofs += we->we_offs;
 	we->we_wordc += nwords;
 	we->we_nbytes += nbytes;
-	if ((nwv = realloc(we->we_wordv, (we->we_wordc + 1 +
-	    (flags & WRDE_DOOFFS ?  we->we_offs : 0)) *
+	if ((nwv = reallocarray(we->we_wordv, (we->we_wordc + 1 +
+	    (flags & WRDE_DOOFFS ? we->we_offs : 0)),
 	    sizeof(char *))) == NULL) {
 		error = WRDE_NOSPACE;
 		goto cleanup;
@@ -254,7 +251,7 @@ we_askshell(const char *words, wordexp_t *we, int flags)
 	we->we_strings = nstrings;
 
 	if (we_read_fully(pdes[0], we->we_strings + sofs, nbytes) != nbytes) {
-		error = flags & WRDE_UNDEF ? WRDE_BADVAL : WRDE_SYNTAX;
+		error = WRDE_NOSPACE; /* abort for unknown reason */
 		serrno = errno;
 		goto cleanup;
 	}
@@ -271,7 +268,7 @@ cleanup:
 		return (error);
 	}
 	if (wpid < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
-		return (flags & WRDE_UNDEF ? WRDE_BADVAL : WRDE_SYNTAX);
+		return (WRDE_NOSPACE); /* abort for unknown reason */
 
 	/*
 	 * Break the null-terminated expanded word strings out into

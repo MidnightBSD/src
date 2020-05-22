@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,13 +31,12 @@
 static char sccsid[] = "@(#)labs.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdlib/labs.c 251672 2013-06-13 00:19:30Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdlib/labs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdlib.h>
 
 long
-labs(j)
-	long j;
+labs(long j)
 {
 	return(j < 0 ? -j : j);
 }

@@ -1,5 +1,5 @@
-$NetBSD: softfloat-source.txt,v 1.1 2000/06/06 08:15:10 bjh21 Exp $
-$FreeBSD: src/lib/libc/softfloat/softfloat-source.txt,v 1.1 2004/05/14 12:13:04 cognet Exp $
+$NetBSD: softfloat-source.txt,v 1.2 2006/11/24 19:46:58 christos Exp $
+$FreeBSD: stable/11/lib/libc/softfloat/softfloat-source.txt 230363 2012-01-20 06:16:14Z das $
 
 SoftFloat Release 2a Source Documentation
 
@@ -33,7 +33,7 @@ C Compiler (`gcc') for several platforms.
 Limitations
 
 SoftFloat as written requires an ISO/ANSI-style C compiler.  No attempt has
-been made to accomodate compilers that are not ISO-conformant.  Older ``K&R-
+been made to accommodate compilers that are not ISO-conformant.  Older ``K&R-
 style'' compilers are not adequate for compiling SoftFloat.  All testing I
 have done so far has been with the GNU C Compiler.  Compilation with other
 compilers should be possible but has not been tested.

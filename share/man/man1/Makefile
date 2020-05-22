@@ -1,9 +1,11 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/man/man1/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 MAN=	builtin.1 intro.1
+
+PACKAGE=runtime-manuals
 
 .if ${MK_TESTS} != "no"
 ATF=	${.CURDIR}/../../../contrib/atf

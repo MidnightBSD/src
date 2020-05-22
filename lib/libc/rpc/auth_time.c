@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* #pragma ident	"@(#)auth_time.c	1.4	92/11/10 SMI" */
 
 /*
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/auth_time.c 309489 2016-12-03 17:40:58Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/auth_time.c 287348 2015-09-01 07:33:36Z rodrigc $");
 
 #include "namespace.h"
 #include <stdio.h>

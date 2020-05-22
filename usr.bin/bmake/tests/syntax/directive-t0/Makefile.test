@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/usr.bin/bmake/tests/syntax/directive-t0/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/syntax/directive-t0/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
 #
 # A typo'ed directive.
 #

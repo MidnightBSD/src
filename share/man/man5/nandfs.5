@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2010 Semihalf
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man5/nandfs.5 235542 2012-05-17 11:29:22Z joel $
+.\" $FreeBSD: stable/11/share/man/man5/nandfs.5 301591 2016-06-08 09:36:07Z trasz $
 .\"
 .Dd Nov 11, 2010
 .Dt NANDFS 5
@@ -110,20 +109,24 @@ partition at the specified mount point during system boot.
 .Xr umount_nandfs 8
 .Sh HISTORY
 The NAND FS concepts are based on NILFS principles and initial implementation
-was derived from early NILFS NetBSD code (read only). Since then the NAND FS
+was derived from early read-only NILFS NetBSD code.
+Since then the NAND FS
 code diverged significantly and is by no means compatible with NILFS.
 .Pp
 The NAND Flash file system first appeared in
 .Fx 10.0 .
-.Sh AUTHOR
+.Sh AUTHORS
+.An -nosplit
 The NAND FS was written by
-.An Grzegorz Bernacki with the help of
+.An Grzegorz Bernacki
+with the help of
 .An Mateusz Guzik ,
 based on the NetBSD code created by
 .An Reinoud Zandijk .
 Additional help and support by
 .An Lukasz Plachno ,
-.An Jan Sieka and
+.An Jan Sieka
+and
 .An Lukasz Wojcik .
 This manual page was written by
 .An Rafal Jaworowski .

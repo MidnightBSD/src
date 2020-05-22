@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1997 Brian Cully <shmit@kublai.com>
 .\" All rights reserved.
 .\"
@@ -26,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man3/pthread_cond_wait.3 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD: stable/11/share/man/man3/pthread_cond_wait.3 350835 2019-08-10 08:34:56Z kib $
 .\"
-.Dd February 16, 2006
+.Dd August 7, 2019
 .Dt PTHREAD_COND_WAIT 3
 .Os
 .Sh NAME
@@ -39,7 +38,7 @@
 .Sh SYNOPSIS
 .In pthread.h
 .Ft int
-.Fn pthread_cond_wait "pthread_cond_t *cond" "pthread_mutex_t *mutex"
+.Fn pthread_cond_wait "pthread_cond_t *restrict cond" "pthread_mutex_t *restrict mutex"
 .Sh DESCRIPTION
 The
 .Fn pthread_cond_wait
@@ -76,13 +75,25 @@ is invalid.
 The specified
 .Fa mutex
 was not locked by the calling thread.
+.It Bq Er EOWNERDEAD
+The argument
+.Fa mutex
+points to a robust mutex and the process containing the previous owning
+thread terminated while holding the mutex lock.
+The lock was granted to the caller and it is up to the new owner
+to make the state consistent.
+.It Bq Er ENOTRECOVERABLE
+The state protected by the
+.Fa mutex
+is not recoverable.
 .El
 .Sh SEE ALSO
 .Xr pthread_cond_broadcast 3 ,
 .Xr pthread_cond_destroy 3 ,
 .Xr pthread_cond_init 3 ,
 .Xr pthread_cond_signal 3 ,
-.Xr pthread_cond_timedwait 3
+.Xr pthread_cond_timedwait 3 ,
+.Xr pthread_mutex_consistent 3
 .Sh STANDARDS
 The
 .Fn pthread_cond_wait

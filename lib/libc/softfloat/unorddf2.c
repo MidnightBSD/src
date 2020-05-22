@@ -9,7 +9,7 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/softfloat/unorddf2.c,v 1.1 2004/05/14 12:13:04 cognet Exp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/softfloat/unorddf2.c 129203 2004-05-14 12:13:06Z cognet $");
 
 flag __unorddf2(float64, float64);
 

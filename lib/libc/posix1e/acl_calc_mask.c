@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_calc_mask.c 196740 2009-09-01 18:30:17Z trasz $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/acl_calc_mask.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -105,6 +104,7 @@ acl_calc_mask(acl_t *acl_p)
 		/* if no mask exists, check acl_cnt... */
 		if (acl_int_new->acl_cnt == ACL_MAX_ENTRIES) {
 			errno = ENOMEM;
+			acl_free(acl_new);
 			return (-1);
 		}
 		/* ...and add the mask entry */

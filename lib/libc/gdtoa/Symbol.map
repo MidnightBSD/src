@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/gdtoa/Symbol.map 174681 2007-12-16 21:15:57Z das $
  */
 
 FBSD_1.0 {

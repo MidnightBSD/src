@@ -1,10 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	5.3 (Berkeley) 5/12/90
-# $FreeBSD: stable/10/usr.bin/yacc/Makefile 277086 2015-01-12 20:14:31Z jkim $
+# $FreeBSD: stable/11/usr.bin/yacc/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-BYACC_SRC=	${.CURDIR}/../../contrib/byacc
+BYACC_SRC=	${SRCTOP}/contrib/byacc
 .PATH: ${BYACC_SRC}
 
 PROG=	yacc

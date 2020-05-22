@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: stable/10/share/doc/psd/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
+# $FreeBSD: stable/11/share/doc/psd/Makefile 289393 2015-10-15 22:55:08Z bdrewery $
 
 # The following modules do not build/install:
 # 10.gdb

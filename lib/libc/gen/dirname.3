@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" $OpenBSD: dirname.3,v 1.17 2007/05/31 19:19:28 jmc Exp $
 .\"
 .\" Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -15,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/10/lib/libc/gen/dirname.3 184578 2008-11-03 05:19:45Z delphij $
+.\" $FreeBSD: stable/11/lib/libc/gen/dirname.3 303762 2016-08-05 05:50:27Z ed $
 .\"
-.Dd October 12, 2006
+.Dd July 29, 2016
 .Dt DIRNAME 3
 .Os
 .Sh NAME
@@ -57,10 +56,11 @@ by subsequent calls.
 .Pp
 Other vendor implementations of
 .Fn dirname
-may modify the contents of the string passed to
-.Fn dirname ;
-this should be taken into account when writing code which calls this function
-if portability is desired.
+may store their result in the input buffer,
+making it safe to use in multithreaded applications.
+Future versions of
+.Fx
+will follow this approach as well.
 .Sh RETURN VALUES
 On successful completion,
 .Fn dirname

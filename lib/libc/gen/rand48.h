@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Martin Birgmeier
  * All rights reserved.
@@ -11,7 +10,7 @@
  * of any kind. I shall in no event be liable for anything that happens
  * to anyone/anything when using this software.
  *
- * $FreeBSD: stable/10/lib/libc/gen/rand48.h 90045 2002-02-01 01:32:19Z obrien $
+ * $FreeBSD: stable/11/lib/libc/gen/rand48.h 90045 2002-02-01 01:32:19Z obrien $
  */
 
 #ifndef _RAND48_H_

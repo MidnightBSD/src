@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2004 Roland Smith <rsmith@xs4all.nl>
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man5/devfs.rules.5 236278 2012-05-30 02:29:47Z gjb $
+.\" $FreeBSD: stable/11/share/man/man5/devfs.rules.5 301591 2016-06-08 09:36:07Z trasz $
 .\"
 .Dd February 21, 2010
 .Dt DEVFS.RULES 5
@@ -91,7 +90,8 @@ configuration file.
 .It Pa /etc/devfs.rules
 Local
 .Nm
-configuration file. Rulesets in here override those in
+configuration file.
+Rulesets in here override those in
 .Pa /etc/defaults/devfs.rules
 with the same ruleset number, otherwise the two files are effectively merged.
 .El
@@ -125,4 +125,4 @@ group, a similar rule may be used:
 .Xr devfs 8
 .Sh AUTHORS
 This manual page was written by
-.An "Roland Smith" Aq rsmith@xs4all.nl .
+.An Roland Smith Aq Mt rsmith@xs4all.nl .

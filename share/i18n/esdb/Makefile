@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/esdb/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
+# $FreeBSD: stable/11/share/i18n/esdb/Makefile 296281 2016-03-01 22:25:49Z bdrewery $
 # $NetBSD: Makefile,v 1.14 2007/04/01 18:52:30 tnozaki Exp $
 
 FILESDIR= ${ESDBDIR}
@@ -28,9 +27,6 @@ esdb.alias: ${SUBDIR}
 		printf '%s\n' "$$newfile" >${.TARGET}
 esdb.alias.db: esdb.alias
 	${MKESDB} -m -o ${.TARGET} ${.ALLSRC}
-
-all: ${FILES}
-realall: ${FILES}
 
 .include "./Makefile.inc"
 .include <bsd.prog.mk>

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sysctl.3	8.4 (Berkeley) 5/9/95
-.\" $FreeBSD: stable/10/lib/libc/gen/sysctl.3 309072 2016-11-23 23:53:52Z jhb $
+.\" $FreeBSD: stable/11/lib/libc/gen/sysctl.3 345827 2019-04-03 03:30:57Z rpokala $
 .\"
-.Dd May 17, 2013
+.Dd March 22, 2019
 .Dt SYSCTL 3
 .Os
 .Sh NAME
@@ -285,6 +284,7 @@ privilege may change the value.
 .It Dv HW_FLOATINGPT Ta integer Ta no
 .It Dv HW_MACHINE_ARCH Ta string Ta no
 .It Dv HW_REALMEM Ta integer Ta no
+.It Dv HW_AVAILPAGES Ta integer Ta no
 .El
 .Bl -tag -width 6n
 .It Li HW_MACHINE
@@ -296,9 +296,10 @@ The number of cpus.
 .It Li HW_BYTEORDER
 The byteorder (4321 or 1234).
 .It Li HW_PHYSMEM
-The bytes of physical memory.
+Amount of physical memory (in bytes), minus the amount used by the kernel,
+pre-loaded modules, and (on x86) the dcons buffer.
 .It Li HW_USERMEM
-The bytes of non-kernel memory.
+Amount of memory (in bytes) which is not wired.
 .It Li HW_PAGESIZE
 The software page size.
 .\".It Fa HW_DISKNAMES
@@ -308,7 +309,13 @@ Nonzero if the floating point support is in hardware.
 .It Li HW_MACHINE_ARCH
 The machine dependent architecture type.
 .It Li HW_REALMEM
-The bytes of real memory.
+Amount of memory (in bytes) reported by the firmware.
+That value is sometimes not sane; in that case, the kernel reports the max
+memory address instead.
+.It Li HW_AVAILPAGES
+The same value as
+.Li HW_PHYSMEM ,
+measured in pages rather than bytes.
 .El
 .Ss CTL_KERN
 The string and integer information available for the CTL_KERN level
@@ -737,13 +744,12 @@ privilege may change the value.
 .It Dv VM_LOADAVG Ta struct loadavg Ta no
 .It Dv VM_TOTAL Ta struct vmtotal Ta no
 .It Dv VM_SWAPPING_ENABLED Ta integer Ta maybe
-.It Dv VM_V_CACHE_MAX Ta integer Ta yes
-.It Dv VM_V_CACHE_MIN Ta integer Ta yes
 .It Dv VM_V_FREE_MIN Ta integer Ta yes
 .It Dv VM_V_FREE_RESERVED Ta integer Ta yes
 .It Dv VM_V_FREE_TARGET Ta integer Ta yes
 .It Dv VM_V_INACTIVE_TARGET Ta integer Ta yes
 .It Dv VM_V_PAGEOUT_FREE_MIN Ta integer Ta yes
+.It Dv VM_OVERCOMMIT Ta integer Ta yes
 .El
 .Bl -tag -width 6n
 .It Li VM_LOADAVG
@@ -758,12 +764,6 @@ The returned data consists of a
 1 if process swapping is enabled or 0 if disabled.
 This variable is
 permanently set to 0 if the kernel was built with swapping disabled.
-.It Li VM_V_CACHE_MAX
-Maximum desired size of the cache queue.
-.It Li VM_V_CACHE_MIN
-Minimum desired size of the cache queue.
-If the cache queue size
-falls very far below this value, the pageout daemon is awakened.
 .It Li VM_V_FREE_MIN
 Minimum amount of memory (cache memory plus free memory)
 required to be available before a process waiting on memory will be
@@ -782,6 +782,9 @@ process address space when needed.
 .It Li VM_V_PAGEOUT_FREE_MIN
 If the amount of free and cache memory falls below this value, the
 pageout daemon will enter "memory conserving mode" to avoid deadlock.
+.It Li VM_OVERCOMMIT
+Overcommit behaviour, as described in
+.Xr tuning 7 .
 .El
 .Sh RETURN VALUES
 .Rv -std

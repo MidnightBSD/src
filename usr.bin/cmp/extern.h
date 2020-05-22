@@ -28,8 +28,8 @@
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  *
- * $FreeBSD: src/usr.bin/cmp/extern.h,v 1.7 2011/11/06 08:14:16 ed Exp $
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.bin/cmp/extern.h 331722 2018-03-29 02:50:57Z eadler $
+ *
  */
 
 #define OK_EXIT		0

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: lint.h,v 1.7 2003/10/27 00:12:44 lukem Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/xlint/common/lint.h 281168 2015-04-06 19:56:27Z pfg $
+ * $FreeBSD: stable/11/usr.bin/xlint/common/lint.h 280387 2015-03-23 18:45:29Z pfg $
  */
 
 #if HAVE_CONFIG_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_once_stub.c 283927 2015-06-02 19:20:39Z jhb $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/_once_stub.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <pthread.h>

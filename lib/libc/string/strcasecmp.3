@@ -28,8 +28,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)strcasecmp.3	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: stable/10/lib/libc/string/strcasecmp.3 267465 2014-06-14 02:57:40Z pfg $
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libc/string/strcasecmp.3 266865 2014-05-30 01:09:07Z pfg $
 .\"
 .Dd May 29, 2014
 .Dt STRCASECMP 3
@@ -51,7 +50,7 @@
 .Ft int
 .Fn strcasecmp_l "const char *s1" "const char *s2" "locale_t loc"
 .Ft int
-.Fn strncasecmp_l "const char *s1" "const char *s2" "site_t len" "locale_t loc"
+.Fn strncasecmp_l "const char *s1" "const char *s2" "size_t len" "locale_t loc"
 .Sh DESCRIPTION
 The
 .Fn strcasecmp

@@ -628,8 +628,6 @@ typedef struct ssl3_state_st {
     unsigned char *alpn_selected;
     unsigned alpn_selected_len;
 #  endif                        /* OPENSSL_NO_TLSEXT */
-    /* Count of the number of consecutive warning alerts received */
-    unsigned int alert_count;
 } SSL3_STATE;
 
 # endif

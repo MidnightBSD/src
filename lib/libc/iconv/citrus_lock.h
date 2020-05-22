@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_lock.h 252584 2013-07-03 18:35:21Z peter $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_lock.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (C) 2010 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.

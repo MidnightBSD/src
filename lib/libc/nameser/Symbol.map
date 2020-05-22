@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/nameser/Symbol.map 270838 2014-08-30 10:16:25Z ume $
+/*
+ * $FreeBSD: stable/11/lib/libc/nameser/Symbol.map 269867 2014-08-12 12:36:06Z ume $
  */
 
 FBSD_1.0 {

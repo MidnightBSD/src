@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/logger/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: stable/11/usr.bin/logger/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	logger
 

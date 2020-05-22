@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$KAME: getifaddrs.c,v 1.9 2001/08/20 02:31:20 itojun Exp $	*/
 
 /*
@@ -31,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/getifaddrs.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/getifaddrs.c 297790 2016-04-10 19:33:58Z pfg $");
 
 #include "namespace.h"
 #include <sys/types.h>

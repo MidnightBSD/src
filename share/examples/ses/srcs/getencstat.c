@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/share/examples/ses/srcs/getencstat.c 291429 2015-11-28 17:26:46Z mav $ */
+/* $FreeBSD: stable/11/share/examples/ses/srcs/getencstat.c 291126 2015-11-21 10:22:01Z mav $ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

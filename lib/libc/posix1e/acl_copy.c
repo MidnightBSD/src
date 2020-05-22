@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_copy.c 194955 2009-06-25 12:46:59Z trasz $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/acl_copy.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include "namespace.h"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010 Konstantin Belousov <kib@freebsd.org>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/gen/elf_utils.c 296732 2016-03-12 17:33:40Z kib $
+ * $FreeBSD: stable/11/lib/libc/gen/elf_utils.c 350305 2019-07-24 21:40:34Z brooks $
  */
 
 #include <sys/types.h>
@@ -33,7 +32,12 @@
 #include <sys/sysctl.h>
 #include <link.h>
 #include <stddef.h>
+#include <string.h>
 #include "libc_private.h"
+#include "static_tls.h"
+
+void __pthread_map_stacks_exec(void);
+void __pthread_distribute_static_tls(size_t, void *, size_t, size_t);
 
 int
 __elf_phdr_match_addr(struct dl_phdr_info *phdr_info, void *addr)
@@ -79,4 +83,25 @@ __pthread_map_stacks_exec(void)
 {
 
 	((void (*)(void))__libc_interposing[INTERPOS_map_stacks_exec])();
+}
+
+void
+__libc_distribute_static_tls(size_t offset, void *src, size_t len,
+    size_t total_len)
+{
+	uintptr_t tlsbase;
+
+	tlsbase = _libc_get_static_tls_base(offset);
+	memcpy((void *)tlsbase, src, len);
+	memset((char *)tlsbase + len, 0, total_len - len);
+}
+
+#pragma weak __pthread_distribute_static_tls
+void
+__pthread_distribute_static_tls(size_t offset, void *src, size_t len,
+    size_t total_len)
+{
+
+	((void (*)(size_t, void *, size_t, size_t))__libc_interposing[
+	    INTERPOS_distribute_static_tls])(offset, src, len, total_len);
 }

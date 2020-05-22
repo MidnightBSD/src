@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 John Birrell <jb@cimlogic.com.au>.
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_spinlock_stub.c 279518 2015-03-02 09:15:50Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/_spinlock_stub.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 
@@ -39,7 +38,6 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/_spinlock_stub.c 279518 2015-03-02 09
 long _atomic_lock_stub(volatile long *);
 void _spinlock_stub(spinlock_t *);
 void _spinunlock_stub(spinlock_t *);
-void _spinlock_debug_stub(spinlock_t *, char *, int);
 
 __weak_reference(_atomic_lock_stub, _atomic_lock);
 
@@ -49,7 +47,6 @@ _atomic_lock_stub(volatile long *lck __unused)
 	return (0L);
 }
 
-__weak_reference(_spinlock, _spinlock_debug);
 #pragma weak _spinlock
 void
 _spinlock(spinlock_t *lck)

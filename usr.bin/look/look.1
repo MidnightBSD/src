@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)look.1	8.1 (Berkeley) 6/14/93
-.\" $FreeBSD: stable/10/usr.bin/look/look.1 216370 2010-12-11 08:32:16Z joel $
+.\" $FreeBSD: stable/11/usr.bin/look/look.1 289677 2015-10-21 05:37:09Z eadler $
 .\"
 .Dd July 17, 2004
 .Dt LOOK 1
@@ -64,12 +63,12 @@ alphabetic characters is ignored.
 .Pp
 The following options are available:
 .Bl -tag -width indent
-.It Fl d
+.It Fl d , -alphanum
 Dictionary character set and order, i.e., only alphanumeric characters
 are compared.
-.It Fl f
+.It Fl f , -ignore-case
 Ignore the case of alphabetic characters.
-.It Fl t
+.It Fl t , -terminate Ar termchar
 Specify a string termination character, i.e., only the characters
 in
 .Ar string
@@ -104,6 +103,12 @@ in comparisons when the
 option was specified.
 This was incorrect and the current man page matches the historic
 implementation.
+.Pp
+The
+.Fl a
+and
+.Fl -alternative
+flags are ignored for compatibility.
 .Sh SEE ALSO
 .Xr grep 1 ,
 .Xr sort 1

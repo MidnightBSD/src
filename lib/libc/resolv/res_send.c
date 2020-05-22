@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Portions Copyright (C) 2004-2009  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1996-2003  Internet Software Consortium.
@@ -70,7 +69,7 @@ static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
 static const char rcsid[] = "$Id: res_send.c,v 1.22 2009/01/22 23:49:23 tbox Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_send.c 292430 2015-12-18 06:58:44Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_send.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*! \file
  * \brief
@@ -78,12 +77,11 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/resolv/res_send.c 292430 2015-12-18 06:58
  */
 
 #include "port_before.h"
-#ifndef USE_KQUEUE
+#if !defined(USE_KQUEUE) && !defined(USE_POLL)
 #include "fd_setsize.h"
 #endif
 
 #include "namespace.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -577,8 +575,7 @@ res_nsend(res_state statp,
 /* Private */
 
 static int
-get_salen(sa)
-	const struct sockaddr *sa;
+get_salen(const struct sockaddr *sa)
 {
 
 #ifdef HAVE_SA_LEN
@@ -599,9 +596,7 @@ get_salen(sa)
  * pick appropriate nsaddr_list for use.  see res_init() for initialization.
  */
 static struct sockaddr *
-get_nsaddr(statp, n)
-	res_state statp;
-	size_t n;
+get_nsaddr(res_state statp, size_t n)
 {
 
 	if (!statp->nsaddr_list[n].sin_family && EXT(statp).ext) {
@@ -966,7 +961,7 @@ send_dg(res_state statp,
 		timeout.tv_nsec/1000000;
 	pollfd.fd = s;
 	pollfd.events = POLLRDNORM;
-	n = poll(&pollfd, 1, polltimeout);
+	n = _poll(&pollfd, 1, polltimeout);
 #endif /* USE_POLL */
 
 	if (n == 0) {

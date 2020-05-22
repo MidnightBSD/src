@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/share/examples/tests/tests/atf/printf_test.c 292656 2015-12-23 10:34:11Z ngie $
+/* $FreeBSD: stable/11/share/examples/tests/tests/atf/printf_test.c 331722 2018-03-29 02:50:57Z eadler $
  *
  * Copyright 2013 Google Inc.
  * All rights reserved.

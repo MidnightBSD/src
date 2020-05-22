@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/latinamerican.kbd 116762 2003-06-23 21:01:57Z ache $
+# $FreeBSD: stable/11/share/syscons/keymaps/latinamerican.kbd 116762 2003-06-23 21:01:57Z ache $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.2 (Berkeley) 1/25/94
-# $FreeBSD: stable/10/usr.bin/mail/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: stable/11/usr.bin/mail/Makefile 284070 2015-06-06 13:13:39Z bapt $
 
 PROG=	mail
 SRCS=	version.c cmd1.c cmd2.c cmd3.c cmdtab.c collect.c edit.c fio.c \
@@ -12,7 +11,7 @@ EFILES=	mail.rc
 LINKS=	${BINDIR}/mail ${BINDIR}/Mail ${BINDIR}/mail ${BINDIR}/mailx
 MLINKS=	mail.1 Mail.1 mail.1 mailx.1
 
-WARNS?=	1
+WARNS?=	2
 
 .PATH: ${.CURDIR}/misc
 

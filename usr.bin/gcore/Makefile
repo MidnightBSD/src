@@ -1,11 +1,9 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/gcore/Makefile 283909 2015-06-02 13:07:22Z jhb $
+# $FreeBSD: stable/11/usr.bin/gcore/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=	gcore
 SRCS=	elfcore.c gcore.c
-DPADD=	${LIBSBUF} ${LIBUTIL}
-LDADD=	-lsbuf -lutil
+LIBADD=	sbuf util
 
 .if ${MACHINE_ARCH} == "amd64"
 SRCS+=	elf32core.c

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/papers/contents/Makefile,v 1.6 2001/12/17 13:45:49 ru Exp $
+# $FreeBSD: stable/11/share/doc/papers/contents/Makefile 88052 2001-12-17 13:45:56Z ru $
 
 VOLUME=	papers
 DOC=	contents

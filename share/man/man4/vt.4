@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2014 Warren Block
 .\" All rights reserved.
 .\"
@@ -23,10 +22,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/vt.4 321198 2017-07-19 13:11:35Z emaste $
+.\" $FreeBSD: stable/11/share/man/man4/vt.4 336805 2018-07-28 07:37:01Z eadler $
 .\"
-.Dd July 19, 2017
-.Dt "VIRTUAL TERMINALS" 4
+.Dd December 28, 2017
+.Dt "VT" 4
 .Os
 .Sh NAME
 .Nm vt
@@ -45,7 +44,9 @@
 In
 .Xr loader.conf 5 :
 .Cd hw.vga.textmode=1
+.Cd hw.vga.acpi_ignore_no_vga=1
 .Cd kern.vty=vt
+.Cd kern.vt.color.<colornum>.rgb="<colorspec>"
 .Cd kern.vt.fb.default_mode="<X>x<Y>"
 .Cd kern.vt.fb.modes.<connector>="<X>x<Y>"
 .Pp
@@ -196,17 +197,30 @@ prompt or in
 Set to 1 to use virtual terminals in text mode instead of graphics mode.
 Features that require graphics mode, like loadable fonts, will be
 disabled.
+.It Va hw.vga.acpi_ignore_no_vga
+Set to 1 to force the usage of the VGA driver regardless of whether
+ACPI IAPC_BOOT_ARCH signals no VGA support.
+Can be used to workaround firmware bugs in the ACPI tables.
 .It Va kern.vty
 Set this value to
 .Ql vt
 or
 .Ql sc
-to override the default driver used for the system console.
-By default,
-.Xr sc 4
-is used on computers that boot from BIOS, and
-.Nm
-is used on computers that boot from UEFI.
+to choose a specific system console, overriding the default.
+If not set, the default in the
+.Pa GENERIC
+kernel is
+.Nm .
+.It Va kern.vt.color. Ns Ar colornum Ns Va .rgb
+Set this value to override default palette entry for color
+.Pa colornum
+which should be in a range from 0 to 15 inclusive.
+The value should be either a comma-separated triplet of
+red, green, and blue values in a range from 0 to 255 or
+HTML-like hex triplet.
+See
+.Sx EXAMPLES
+below.
 .It Va kern.vt.fb.default_mode
 Set this value to a graphic mode to override the default mode picked by the
 .Nm
@@ -311,12 +325,18 @@ The connector name was found in
 .Dl info: [drm] Connector LVDS-1: get mode from tunables:
 .Dl info: [drm]   - kern.vt.fb.modes.LVDS-1
 .Dl info: [drm]   - kern.vt.fb.default_mode
+.Pp
+To set black and white colors of console palette
+.Pp
+.Dl kern.vt.color.0.rgb="10,10,10"
+.Dl kern.vt.color.15.rgb="#f0f0f0"
 .Sh SEE ALSO
 .Xr kbdcontrol 1 ,
 .Xr login 1 ,
 .Xr vidcontrol 1 ,
 .Xr atkbd 4 ,
 .Xr atkbdc 4 ,
+.Xr kbdmux 4 ,
 .Xr keyboard 4 ,
 .Xr screen 4 ,
 .Xr splash 4 ,
@@ -327,7 +347,6 @@ The connector name was found in
 .Xr ttys 5 ,
 .Xr config 8 ,
 .Xr getty 8 ,
-.Xr kbdmux 8 ,
 .Xr kldload 8 ,
 .Xr moused 8 ,
 .Xr vtfontcvt 8
@@ -341,15 +360,15 @@ driver first appeared in
 The
 .Nm
 device driver was developed by
-.An Ed Schouten Aq ed@FreeBSD.org ,
-.An Ed Maste Aq emaste@FreeBSD.org ,
+.An \&Ed Schouten Aq Mt ed@FreeBSD.org ,
+.An \&Ed Maste Aq Mt emaste@FreeBSD.org ,
 and
-.An Aleksandr Rybalko Aq ray@FreeBSD.org ,
+.An Aleksandr Rybalko Aq Mt ray@FreeBSD.org ,
 with sponsorship provided by the
 .Fx
 Foundation.
 This manual page was written by
-.An Warren Block <wblock@FreeBSD.org>.
+.An Warren Block Aq Mt wblock@FreeBSD.org .
 .Sh CAVEATS
 Paste buffer size is limited by the system value
 .Brq Dv MAX_INPUT ,

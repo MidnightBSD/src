@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1993 Paul Kranenburg
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/ldd/ldd.c 300458 2016-05-23 05:19:37Z truckman $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ldd/ldd.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/wait.h>
 
@@ -38,7 +39,6 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/ldd/ldd.c 300458 2016-05-23 05:19:37Z truc
 
 #include <arpa/inet.h>
 
-#include <a.out.h>
 #include <dlfcn.h>
 #include <err.h>
 #include <errno.h>
@@ -49,6 +49,12 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/ldd/ldd.c 300458 2016-05-23 05:19:37Z truc
 #include <unistd.h>
 
 #include "extern.h"
+
+/* We don't support a.out executables on arm64 and riscv */
+#if !defined(__aarch64__) && !defined(__riscv__)
+#include <a.out.h>
+#define	AOUT_SUPPORTED
+#endif
 
 /*
  * 32-bit ELF data structures can only be used if the system header[s] declare
@@ -275,7 +281,9 @@ static int
 is_executable(const char *fname, int fd, int *is_shlib, int *type)
 {
 	union {
+#ifdef AOUT_SUPPORTED
 		struct exec aout;
+#endif
 #if __ELF_WORD_SIZE > 32 && defined(ELF32_SUPPORTED)
 		Elf32_Ehdr elf32;
 #endif
@@ -291,6 +299,7 @@ is_executable(const char *fname, int fd, int *is_shlib, int *type)
 		return (0);
 	}
 
+#ifdef AOUT_SUPPORTED
 	if ((size_t)n >= sizeof(hdr.aout) && !N_BADMAG(hdr.aout)) {
 		/* a.out file */
 		if ((N_GETFLAG(hdr.aout) & EX_DPMASK) != EX_DYNAMIC
@@ -304,6 +313,7 @@ is_executable(const char *fname, int fd, int *is_shlib, int *type)
 		*type = TYPE_AOUT;
 		return (1);
 	}
+#endif
 
 #if __ELF_WORD_SIZE > 32 && defined(ELF32_SUPPORTED)
 	if ((size_t)n >= sizeof(hdr.elf32) && IS_ELF(hdr.elf32) &&
@@ -386,7 +396,8 @@ is_executable(const char *fname, int fd, int *is_shlib, int *type)
 			case ELFOSABI_NONE:
 				if (hdr.elf.e_machine != EM_ARM)
 					break;
-				if (((hdr.elf.e_flags & 0xff000000) >> 24) < 4)
+				if (EF_ARM_EABI_VERSION(hdr.elf.e_flags) <
+				    EF_ARM_EABI_FREEBSD_MIN)
 					break;
 				*is_shlib = 1;
 				return (1);

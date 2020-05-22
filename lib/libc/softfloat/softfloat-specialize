@@ -1,5 +1,5 @@
 /*	$NetBSD: softfloat-specialize,v 1.6 2011/03/06 10:27:37 martin Exp $	*/
-/* $FreeBSD: stable/10/lib/libc/softfloat/softfloat-specialize 230363 2012-01-20 06:16:14Z das $ */
+/* $FreeBSD: stable/11/lib/libc/softfloat/softfloat-specialize 230363 2012-01-20 06:16:14Z das $ */
 
 /* This is a derivative work. */
 

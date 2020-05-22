@@ -1,7 +1,6 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: pathnames.h,v 1.3 2003/06/03 02:56:18 millert Exp $	*/
 /*	$NetBSD: pathnames.h,v 1.3 1994/12/08 09:30:59 jtc Exp $	*/
-/*	$FreeBSD: stable/10/usr.bin/tip/tip/pathnames.h 161754 2006-08-31 14:14:30Z ru $	*/
+/*	$FreeBSD: stable/11/usr.bin/tip/tip/pathnames.h 331722 2018-03-29 02:50:57Z eadler $	*/
 
 /*
  * Copyright (c) 1989, 1993

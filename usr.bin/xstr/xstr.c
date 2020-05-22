@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/xstr/xstr.c 227247 2011-11-06 18:50:39Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xstr/xstr.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 static const char copyright[] =
@@ -140,7 +139,7 @@ main(int argc, char *argv[])
 			argc--, argv++;
 		else
 			readstd = 0;
-	};
+	}
 	flushsh();
 	if (cflg == 0)
 		xsdotc();

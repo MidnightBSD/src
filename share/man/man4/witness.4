@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2001 John H. Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/witness.4 321279 2017-07-20 01:12:31Z ngie $
+.\" $FreeBSD: stable/11/share/man/man4/witness.4 301719 2016-06-09 06:55:00Z trasz $
 .\"
-.Dd May 30, 2012
+.Dd November 18, 2015
 .Dt WITNESS 4
 .Os
 .Sh NAME
@@ -48,7 +47,8 @@ Each time a lock is acquired,
 uses these two lists to verify that a lock is not being acquired in the
 wrong order.
 If a lock order violation is detected, then a message is output to the
-kernel console detailing the locks involved and the locations in question.
+kernel console or log detailing the locks involved and the locations in
+question.
 Witness can also be configured to drop into the kernel debugger when an order
 violation occurs.
 .Pp
@@ -62,7 +62,7 @@ If any of these checks fail, then the kernel will panic.
 The
 .Dv WITNESS_COUNT
 kernel option controls the maximum number of
-.Xr witness 4
+.Nm
 entries that are tracked in the kernel.
 The maximum number of entries can be queried via the
 .Va debug.witness.count
@@ -76,7 +76,7 @@ environment variable.
 The
 .Dv WITNESS_NO_VNODE
 kernel option tells
-.Xr witness 4
+.Nm
 to ignore locking issues between
 .Xr vnode 9
 objects.
@@ -118,12 +118,28 @@ The sysctl
 specifies the level of witness involvement in the system.
 A value of 1 specifies that witness is enabled.
 A value of 0 specifies that witness is disabled, but that can be enabled
-again.  This will maintain a small amount of overhead in the system.
+again.
+This will maintain a small amount of overhead in the system.
 A value of -1 specifies that witness is disabled permanently and
 cannot be enabled again.
 The sysctl
 .Va debug.witness.watch
 can be set via
+.Xr loader 8 .
+.Pp
+The sysctl
+.Va debug.witness.output_channel
+specifies the output channel used to display warnings emitted by
+.Nm .
+The possible values are
+.Ql console ,
+indicating that warnings are to be printed to the system console,
+.Ql log ,
+indicating that warnings are to be logged via
+.Xr log 9 ,
+and
+.Ql none .
+This sysctl can be set via
 .Xr loader 8 .
 .Pp
 The

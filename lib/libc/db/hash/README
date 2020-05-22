@@ -1,6 +1,5 @@
 #	@(#)README	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/10/lib/libc/db/hash/README 190498 2009-03-28 07:31:02Z delphij $
-# $MidnightBSD$
+# $FreeBSD: stable/11/lib/libc/db/hash/README 190498 2009-03-28 07:31:02Z delphij $
 
 This package implements a superset of the hsearch and dbm/ndbm libraries.
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: pmap_prot2.c,v 1.14 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
@@ -34,7 +33,7 @@ static char *sccsid2 = "@(#)pmap_prot2.c 1.3 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)pmap_prot2.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/pmap_prot2.c 309487 2016-12-03 17:27:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/pmap_prot2.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * pmap_prot2.c

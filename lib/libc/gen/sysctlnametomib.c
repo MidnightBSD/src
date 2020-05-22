@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2001 The FreeBSD Project. All Rights Reserved.
  *
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/sysctlnametomib.c 204170 2010-02-21 13:57:02Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/sysctlnametomib.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

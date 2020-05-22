@@ -1,15 +1,18 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: stable/10/share/man/man7/Makefile 284009 2015-06-05 00:46:49Z cperciva $
+# $FreeBSD: stable/11/share/man/man7/Makefile 319227 2017-05-30 17:07:40Z emaste $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+PACKAGE=runtime-manuals
 
 #MISSING: eqnchar.7 ms.7 term.7
 MAN=	adding_user.7 \
+	arch.7 \
 	ascii.7 \
 	bsd.snmpmod.mk.7 \
 	build.7 \
 	clocks.7 \
+	crypto.7 \
 	c99.7 \
 	development.7 \
 	environ.7 \

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (C) 2001 Chad David <davidc@acns.ab.ca>. All rights reserved.
 .\"
@@ -25,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/ucred.9 194507 2009-06-19 19:16:35Z brooks $
+.\" $FreeBSD: stable/11/share/man/man9/ucred.9 343558 2019-01-29 18:13:46Z brooks $
 .\"
-.Dd June 19, 2009
+.Dd January 23, 2019
 .Dt UCRED 9
 .Os
 .Sh NAME
@@ -38,8 +37,7 @@
 .Nm crshared ,
 .Nm crcopy ,
 .Nm crdup ,
-.Nm cru2x ,
-.Nm cred_update_thread
+.Nm cru2x
 .Nd "functions related to user credentials"
 .Sh SYNOPSIS
 .In sys/param.h
@@ -62,8 +60,6 @@
 .Fn crsetgroups "struct ucred *cr" "int ngrp" "gid_t *groups"
 .Ft void
 .Fn cru2x "struct ucred *cr" "struct xucred *xcr"
-.Ft void
-.Fn cred_update_thread "struct thread *td"
 .Sh DESCRIPTION
 The
 .Nm
@@ -157,11 +153,6 @@ the former
 (e.g.,
 .Va cr_version ) .
 .Pp
-The
-.Fn cred_update_thread
-function sets the credentials of
-.Fa td
-to that of its process, freeing its old credential if required.
 .Sh RETURN VALUES
 .Fn crget ,
 .Fn crhold ,
@@ -234,4 +225,4 @@ accepts a target process, not a target thread, for access control purposes.
 .Xr uihold 9
 .Sh AUTHORS
 This manual page was written by
-.An Chad David Aq davidc@acns.ab.ca .
+.An Chad David Aq Mt davidc@acns.ab.ca .

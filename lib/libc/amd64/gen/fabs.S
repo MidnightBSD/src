@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Peter Wemm
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/gen/fabs.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/gen/fabs.S 217106 2011-01-07 16:08:40Z kib $");
 
 /*
  * Return floating point absolute value of a double.

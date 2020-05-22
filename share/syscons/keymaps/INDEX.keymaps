@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/INDEX.keymaps 283164 2015-05-21 01:47:12Z emaste $
+# $FreeBSD: stable/11/share/syscons/keymaps/INDEX.keymaps 282902 2015-05-14 14:07:44Z emaste $
 #
 # database for kbdmap(8) 
 #

@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_network.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_network.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "port_before.h"
 
@@ -48,8 +48,7 @@ __MBSDID("$MidnightBSD$");
  * network numbers.
  */
 in_addr_t
-inet_network(cp)
-	const char *cp;
+inet_network(const char *cp)
 {
 	in_addr_t val, base, n;
 	char c;

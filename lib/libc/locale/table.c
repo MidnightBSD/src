@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@
 static char sccsid[] = "@(#)table.c	8.1 (Berkeley) 6/27/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/table.c 232498 2012-03-04 15:31:13Z theraven $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/table.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <runetype.h>
@@ -102,16 +101,16 @@ const _RuneLocale _DefaultRuneLocale = {
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,
-	/*30*/	_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|0,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|1,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|2,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|3,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|4,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|5,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|6,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|7,
-	/*38*/	_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|8,
-		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|9,
+	/*30*/	_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|0,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|1,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|2,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|3,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|4,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|5,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|6,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|7,
+	/*38*/	_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|8,
+		_CTYPE_D|_CTYPE_R|_CTYPE_G|_CTYPE_X|_CTYPE_N|9,
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,
 		_CTYPE_P|_CTYPE_R|_CTYPE_G,

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2014
 .\"	Konstantin Belousov <kib@FreeBSD.org>.  All rights reserved.
 .\"
@@ -22,9 +21,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/fpu_kern.9 299386 2016-05-10 20:12:27Z wblock $
+.\" $FreeBSD: stable/11/share/man/man9/fpu_kern.9 306314 2016-09-25 17:24:10Z kib $
 .\"
-.Dd June 23, 2014
+.Dd October 23, 2014
 .Dt FPU_KERN 9
 .Os
 .Sh NAME
@@ -121,6 +120,16 @@ could be used from both kernel thread and syscall contexts.
 The
 .Fn fpu_kern_leave
 function correctly handles such contexts.
+.It Dv FPU_KERN_NOCTX
+Avoid nesting save area.
+If the flag is specified, the
+.Fa ctx
+must be passed as
+.Va NULL .
+The flag should only be used for really short code blocks
+which can be executed in a critical section.
+It avoids the need to allocate the FPU context by the cost
+of increased system latency.
 .El
 .El
 .Pp
@@ -158,12 +167,17 @@ There are no errors defined for the function, it always returns 0.
 .Pp
 The
 .Fn fpu_kern_thread
-function provides an optimization for threads which never leave to
+function enables an optimization for threads which never leave to
 the usermode.
-Such thread can reuse the usermode save area for the FPU state,
-which is allowed by the function call.
-There is no flags defined for the function, and no error states
+The current thread will reuse the usermode save area for the kernel FPU state
+instead of requiring an explicitly allocated context.
+There are no flags defined for the function, and no error states
 that the function returns.
+Once this function has been called, neither
+.Fn fpu_kern_enter
+nor
+.Fn fpu_kern_leave
+is required to be called and the fpu is available for use in the calling thread.
 .Pp
 The
 .Fn is_fpu_kern_thread

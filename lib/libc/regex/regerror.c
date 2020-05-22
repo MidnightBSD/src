@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -38,7 +37,7 @@
 static char sccsid[] = "@(#)regerror.c	8.4 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/regex/regerror.c 170528 2007-06-11 03:05:54Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/regex/regerror.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -55,7 +54,7 @@ extern "C" {
 #endif
 
 /* === regerror.c === */
-static char *regatoi(const regex_t *preg, char *localbuf);
+static const char *regatoi(const regex_t *preg, char *localbuf);
 
 #ifdef __cplusplus
 }
@@ -84,8 +83,8 @@ static char *regatoi(const regex_t *preg, char *localbuf);
  */
 static struct rerr {
 	int code;
-	char *name;
-	char *explain;
+	const char *name;
+	const char *explain;
 } rerrs[] = {
 	{REG_NOMATCH,	"REG_NOMATCH",	"regexec() failed to match"},
 	{REG_BADPAT,	"REG_BADPAT",	"invalid regular expression"},
@@ -121,7 +120,7 @@ regerror(int errcode,
 	struct rerr *r;
 	size_t len;
 	int target = errcode &~ REG_ITOA;
-	char *s;
+	const char *s;
 	char convbuf[50];
 
 	if (errcode == REG_ATOI)
@@ -159,7 +158,7 @@ regerror(int errcode,
  - regatoi - internal routine to implement REG_ATOI
  == static char *regatoi(const regex_t *preg, char *localbuf);
  */
-static char *
+static const char *
 regatoi(const regex_t *preg, char *localbuf)
 {
 	struct rerr *r;

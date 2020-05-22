@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1996 Doug Rabson
 .\"
 .\" All rights reserved.
@@ -25,7 +24,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/vnode.9 269286 2014-07-30 04:03:59Z kib $
+.\" $FreeBSD: stable/11/share/man/man9/vnode.9 275993 2014-12-21 10:57:42Z brueffer $
 .\"
 .Dd February 12, 2014
 .Dt VNODE 9
@@ -159,6 +158,7 @@ interlock, will cause a LOR (Lock Order Reversal) due to the
 intertwining of VM Objects and Vnodes.
 .Sh SEE ALSO
 .Xr malloc 9 ,
+.Xr VFS 9 ,
 .Xr VOP_ACCESS 9 ,
 .Xr VOP_ACLCHECK 9 ,
 .Xr VOP_ADVISE 9 ,
@@ -191,8 +191,7 @@ intertwining of VM Objects and Vnodes.
 .Xr VOP_SETEXTATTR 9 ,
 .Xr VOP_STRATEGY 9 ,
 .Xr VOP_VPTOCNP 9 ,
-.Xr VOP_VPTOFH 9 ,
-.Xr VFS 9
+.Xr VOP_VPTOFH 9
 .Sh AUTHORS
 This manual page was written by
 .An Doug Rabson .

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
@@ -58,7 +57,7 @@
 static char sccsid[] = 	"@(#)auth_des.c	2.2 88/07/29 4.0 RPCSRC; from 1.9 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/auth_des.c 309489 2016-12-03 17:40:58Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/auth_des.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define USEC_PER_SEC		1000000
 #define RTIME_TIMEOUT		5	/* seconds to wait for sync */

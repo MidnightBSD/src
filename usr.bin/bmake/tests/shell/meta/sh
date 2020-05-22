@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/10/usr.bin/bmake/tests/shell/meta/sh 146822 2005-05-31 14:13:07Z harti $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/shell/meta/sh 146822 2005-05-31 14:13:07Z harti $
 echo "$@"
 if ! test -t 0 ; then
 	cat

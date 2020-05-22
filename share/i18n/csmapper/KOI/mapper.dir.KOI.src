@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/csmapper/KOI/mapper.dir.KOI.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: mapper.dir.KOI.src,v 1.1 2006/09/16 08:38:20 tnozaki Exp $
 
 GOST19768-74/UCS		mapper_std		KOI/GOST19768-74%UCS.mps

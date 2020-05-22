@@ -1,14 +1,12 @@
-# $MidnightBSD$
-
-NO_MAN=
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
 
 PROG=   mDNSResponderPosix
 
 WARNS=	1
+
+MK_MAN=	no
 
 SRCS=	Responder.c mDNSPosix.c mDNSUNP.c 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore

@@ -1,10 +1,11 @@
-/* $MidnightBSD$ */
 /* ex:ts=4
  */
 
 /*	$NetBSD: gencat.c,v 1.18 2003/10/27 00:12:43 lukem Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD AND MIT
+ *
  * Copyright (c) 1996 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -66,7 +67,7 @@ up-to-date.  Many thanks.
 ******************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/gencat/gencat.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/gencat/gencat.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #define _NLS_PRIVATE
 
@@ -105,7 +106,7 @@ static long lineno = 0;
 
 static	char   *cskip(char *);
 static	void	error(const char *);
-static	char   *getline(int);
+static	char   *get_line(int);
 static	char   *getmsg(int, char *, char);
 static	void	warning(const char *, const char *);
 static	char   *wskip(char *);
@@ -232,7 +233,7 @@ xstrdup(const char *str)
 }
 
 static char *
-getline(int fd)
+get_line(int fd)
 {
 	static long curlen = BUFSIZ;
 	static char buf[BUFSIZ], *bptr = buf, *bend = buf;
@@ -335,7 +336,7 @@ getmsg(int fd, char *cptr, char quote)
 				++cptr;
 				switch (*cptr) {
 				case '\0':
-					cptr = getline(fd);
+					cptr = get_line(fd);
 					if (!cptr)
 						error("premature end of file");
 					msglen += strlen(cptr);
@@ -395,7 +396,7 @@ MCParse(int fd)
 
 	/* XXX: init sethead? */
 
-	while ((cptr = getline(fd))) {
+	while ((cptr = get_line(fd))) {
 		if (*cptr == '$') {
 			++cptr;
 			if (strncmp(cptr, "set", 3) == 0) {

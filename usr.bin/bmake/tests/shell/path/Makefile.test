@@ -7,7 +7,7 @@
 # Be sure to include a meta-character into the command line, so that
 # really our shell is executed.
 #
-# $FreeBSD: stable/10/usr.bin/bmake/tests/shell/path/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/shell/path/Makefile.test 263346 2014-03-19 12:29:20Z jmmv $
 #
 
 .ifmake sh_test

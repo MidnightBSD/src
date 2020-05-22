@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Peter Wemm
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/iconv/iconv.c 282275 2015-04-30 16:08:47Z tijl $
+ * $FreeBSD: stable/11/lib/libc/iconv/iconv.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

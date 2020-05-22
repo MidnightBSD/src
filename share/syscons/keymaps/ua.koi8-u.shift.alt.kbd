@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/ua.koi8-u.shift.alt.kbd 86366 2001-11-14 21:14:39Z sobomax $
+# $FreeBSD: stable/11/share/syscons/keymaps/ua.koi8-u.shift.alt.kbd 86366 2001-11-14 21:14:39Z sobomax $
 #
 # keyboard mapping for both Ukrainian and Russian languages, koi8-u charset.
 #   by sia@lot.cs.kiev.ua

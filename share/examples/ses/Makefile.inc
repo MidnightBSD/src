@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/ses/Makefile.inc 235911 2012-05-24 14:07:44Z mav $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.

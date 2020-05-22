@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_iconv.c 267665 2014-06-20 07:32:03Z tijl $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_iconv.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_iconv.c,v 1.10 2011/11/19 18:34:21 tnozaki Exp $	*/
 
 /*-
@@ -279,7 +278,9 @@ _citrus_iconv_open(struct _citrus_iconv * __restrict * __restrict rcv,
 	struct _citrus_iconv *cv = NULL;
 	struct _citrus_iconv_shared *ci = NULL;
 	char realdst[PATH_MAX], realsrc[PATH_MAX];
+#ifdef _PATH_ICONV
 	char buf[PATH_MAX], path[PATH_MAX];
+#endif
 	int ret;
 
 	init_cache();
@@ -291,10 +292,16 @@ _citrus_iconv_open(struct _citrus_iconv * __restrict * __restrict rcv,
 		dst = nl_langinfo(CODESET);
 
 	/* resolve codeset name aliases */
+#ifdef _PATH_ICONV
+	snprintf(path, sizeof(path), "%s/%s", _PATH_ICONV, _CITRUS_ICONV_ALIAS);
 	strlcpy(realsrc, _lookup_alias(path, src, buf, (size_t)PATH_MAX,
 	    _LOOKUP_CASE_IGNORE), (size_t)PATH_MAX);
 	strlcpy(realdst, _lookup_alias(path, dst, buf, (size_t)PATH_MAX,
 	    _LOOKUP_CASE_IGNORE), (size_t)PATH_MAX);
+#else
+	strlcpy(realsrc, src, (size_t)PATH_MAX);
+	strlcpy(realdst, dst, (size_t)PATH_MAX);
+#endif
 
 	/* sanity check */
 	if (strchr(realsrc, '/') != NULL || strchr(realdst, '/'))

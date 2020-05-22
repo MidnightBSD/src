@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)scandir.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/gen/scandir.3 208734 2010-06-02 10:20:38Z uqs $
+.\" $FreeBSD: stable/11/lib/libc/gen/scandir.3 276006 2014-12-21 12:36:36Z brueffer $
 .\"
 .Dd January 3, 2010
 .Dt SCANDIR 3
@@ -42,6 +41,8 @@
 .In dirent.h
 .Ft int
 .Fn scandir "const char *dirname" "struct dirent ***namelist" "int \*(lp*select\*(rp\*(lpconst struct dirent *\*(rp" "int \*(lp*compar\*(rp\*(lpconst struct dirent **, const struct dirent **\*(rp"
+.Ft int
+.Fn scandir_b "const char *dirname" "struct dirent ***namelist" "int \*(lp*select\^(rp\*(lpconst struct dirent *\*(rp" "int \*(lp^compar\*(rp\*(lpconst struct dirent **, const struct dirent **\*(rp"
 .Ft int
 .Fn alphasort "const struct dirent **d1" "const struct dirent **d2"
 .Sh DESCRIPTION
@@ -88,6 +89,15 @@ argument to sort the array alphabetically using
 The memory allocated for the array can be deallocated with
 .Xr free 3 ,
 by freeing each pointer in the array and then the array itself.
+.Pp
+The
+.Fn scandir_b
+function behaves in the same way as
+.Fn scandir ,
+but takes blocks as arguments instead of function pointers and calls
+.Fn qsort_b
+rather than
+.Fn qsort .
 .Sh DIAGNOSTICS
 Returns \-1 if the directory cannot be opened for reading or if
 .Xr malloc 3
@@ -96,8 +106,8 @@ cannot allocate enough memory to hold all the data structures.
 .Xr directory 3 ,
 .Xr malloc 3 ,
 .Xr qsort 3 ,
-.Xr dir 5 ,
-.Xr strcoll 3
+.Xr strcoll 3 ,
+.Xr dir 5
 .Sh HISTORY
 The
 .Fn scandir

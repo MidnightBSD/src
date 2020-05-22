@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Kai Wang
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/ar/ar.h 241827 2012-10-22 02:12:06Z eadler $
+ * $FreeBSD: stable/11/usr.bin/ar/ar.h 346903 2019-04-29 18:37:39Z emaste $
  */
 
 #define	BSDAR_VERSION	"1.1.0"
@@ -51,10 +52,10 @@
 /*
  * Convenient wrapper for general libarchive error handling.
  */
-#define	AC(CALL) do {					\
-	if ((CALL))					\
-		bsdar_errc(bsdar, EX_SOFTWARE, 0, "%s",	\
-		    archive_error_string(a));		\
+#define	AC(CALL) do {							\
+	if ((CALL))							\
+		bsdar_errc(bsdar, EX_SOFTWARE, archive_errno(a), "%s",	\
+		    archive_error_string(a));				\
 } while (0)
 
 /*
@@ -99,9 +100,11 @@ struct bsdar {
 	/*
 	 * Fields for the archive symbol table.
 	 */
-	uint32_t	  s_cnt;	/* current number of symbols. */
-	uint32_t	 *s_so;		/* symbol offset table. */
+	uint64_t	  s_cnt;	/* current number of symbols. */
+	uint64_t	 *s_so;		/* symbol offset table. */
+	uint64_t	  s_so_max;     /* maximum symbol offset. */
 	size_t		  s_so_cap;	/* capacity of so table buffer. */
+
 	char		 *s_sn;		/* symbol name table */
 	size_t		  s_sn_cap;	/* capacity of sn table buffer. */
 	size_t		  s_sn_sz;	/* current size of sn table. */

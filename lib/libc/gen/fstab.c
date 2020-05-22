@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)fstab.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fstab.c 243865 2012-12-04 16:54:43Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/fstab.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -182,7 +181,7 @@ fstabscan(void)
 			if (cp != NULL)
 				_fs_fstab.fs_passno = atoi(cp);
 		}
-		strcpy(subline, _fs_fstab.fs_mntops);
+		(void)strlcpy(subline, _fs_fstab.fs_mntops, sizeof(subline));
 		p = subline;
 		for (typexx = 0, cp = strsep(&p, ","); cp;
 		     cp = strsep(&p, ",")) {

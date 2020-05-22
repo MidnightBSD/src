@@ -1,5 +1,7 @@
-/*
- * Copyright © 2002, Jörg Wunsch
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright Â© 2002, JÃ¶rg Wunsch
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,12 +24,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.bin/whereis/pathnames.h,v 1.4 2012/11/23 01:59:03 laffer1 Exp $
+ * $FreeBSD: stable/11/usr.bin/whereis/pathnames.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
-/* Where to look for libexec and games */
+/* Where to look for libexec */
 #define PATH_LIBEXEC "/usr/libexec"
-#define PATH_GAMES "/usr/games"
 
 /* Where to look for sources. */
 #define PATH_SOURCES					\
@@ -42,7 +43,7 @@
 "/usr/src/games"
 
 /* Each subdirectory of PATH_PORTS will be appended to PATH_SOURCES. */
-#define PATH_PORTS "/usr/mports"
+#define PATH_PORTS "/usr/ports"
 
 /* How to query the current manpath. */
 #define MANPATHCMD "manpath -q"

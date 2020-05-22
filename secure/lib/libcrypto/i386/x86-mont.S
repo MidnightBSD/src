@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/i386/x86-mont.S 337982 2018-08-17 18:32:53Z jkim $ */
 /* Do not modify. This file is auto-generated from x86-mont.pl. */
 #ifdef PIC

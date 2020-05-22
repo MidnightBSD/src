@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /* $NetBSD: scan.l,v 1.37 2007/02/06 00:08:31 he Exp $ */
 
@@ -38,7 +37,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: scan.l,v 1.37 2007/02/06 00:08:31 he Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/scan.l 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint1/scan.l 286614 2015-08-11 02:58:33Z pfg $");
 
 #include <stdlib.h>
 #include <string.h>
@@ -260,7 +259,7 @@ uint64_t qumasks[sizeof(uint64_t) * CHAR_BIT + 1];
 /* free list for sbuf structures */
 static	sbuf_t	 *sbfrlst;
 
-/* Typ of next expected symbol */
+/* type of next expected symbol */
 symt_t	symtyp;
 
 
@@ -519,7 +518,7 @@ icon(int base)
 		warning(252);
 
 	/*
-	 * If the value is to big for the current type, we must choose
+	 * If the value is too big for the current type, we must choose
 	 * another type.
 	 */
 	ansiu = 0;

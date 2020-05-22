@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/Makefile 291792 2015-12-04 18:14:31Z bdrewery $
+# $FreeBSD: stable/11/share/i18n/csmapper/Makefile 296281 2016-03-01 22:25:49Z bdrewery $
 # $NetBSD: Makefile,v 1.13 2007/03/13 16:34:37 tnozaki Exp $
 
 FILESDIR= ${CSMAPPERDIR}
@@ -31,9 +30,6 @@ charset.pivot.pvdb: charset.pivot
 
 FILES+=	charset.pivot charset.pivot.pvdb
 CLEANFILES+= charset.pivot charset.pivot.pvdb
-
-all: ${FILES}
-realall: ${FILES}
 
 .include "./Makefile.inc"
 .include <bsd.prog.mk>

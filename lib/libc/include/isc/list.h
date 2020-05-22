@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1997,1999 by Internet Software Consortium.
@@ -16,7 +15,7 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $FreeBSD: stable/10/lib/libc/include/isc/list.h 270838 2014-08-30 10:16:25Z ume $ */
+/* $FreeBSD: stable/11/lib/libc/include/isc/list.h 269867 2014-08-12 12:36:06Z ume $ */
 
 #ifndef LIST_H
 #define LIST_H 1

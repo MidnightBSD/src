@@ -1,6 +1,5 @@
-/* $MidnightBSD$ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getprogname.c 93399 2002-03-29 22:43:43Z markm $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getprogname.c 93399 2002-03-29 22:43:43Z markm $");
 
 #include "namespace.h"
 #include <stdlib.h>

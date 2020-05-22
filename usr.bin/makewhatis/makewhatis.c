@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 John Rochester
  * All rights reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/makewhatis/makewhatis.c 263104 2014-03-13 04:25:59Z eadler $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/makewhatis/makewhatis.c 262540 2014-02-27 00:52:34Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

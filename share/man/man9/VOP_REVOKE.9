@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" -*- nroff -*-
 .\"
 .\" Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -33,9 +32,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/VOP_REVOKE.9 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD: stable/11/share/man/man9/VOP_REVOKE.9 350127 2019-07-19 14:25:49Z asomers $
 .\"
-.Dd February 5, 2002
+.Dd June 20, 2019
 .Dt VOP_REVOKE 9
 .Os
 .Sh NAME
@@ -62,7 +61,7 @@ to signify that all access will be revoked; any other value is invalid.
 .Sh LOCKS
 The
 .Fa vp
-must be unlocked on entry, and will remain unlocked upon return.
+must be exclusively locked on entry, and will remain locked upon return.
 .Sh SEE ALSO
 .Xr make_dev_alias 9 ,
 .Xr vnode 9

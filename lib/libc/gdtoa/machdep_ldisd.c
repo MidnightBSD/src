@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gdtoa/machdep_ldisd.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "gdtoaimp.h"
 #undef strtold_l

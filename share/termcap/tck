@@ -32,7 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)tck	8.1 (Berkeley) 6/8/93
-# $MidnightBSD$
+#
 
 # Look for default (and termcap-only?) capabilities.
 # Defaults should be removed to save space.

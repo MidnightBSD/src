@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/lex/lib/Makefile 250881 2013-05-21 19:32:35Z jkim $
+# $FreeBSD: stable/11/usr.bin/lex/lib/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH:	${.CURDIR}/../../../contrib/flex
+.PATH:	${SRCTOP}/contrib/flex
 
 LIB=    ln
 SRCS=   libmain.c libyywrap.c

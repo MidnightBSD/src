@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/dirname/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
-
-.include <bsd.own.mk>
+# $FreeBSD: stable/11/usr.bin/dirname/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 NETBSD_ATF_TESTS_SH=	dirname_test
 

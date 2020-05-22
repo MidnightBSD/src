@@ -26,8 +26,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/truncate/tests/truncate_test.sh 294850 2016-01-26 20:45:41Z asomers $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/truncate/tests/truncate_test.sh 294347 2016-01-19 22:07:39Z asomers $
+#
 
 # Helper function that is always used to create and fill stderr.txt for these
 # tests.

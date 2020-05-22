@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/find/main.c 246628 2013-02-10 18:56:37Z jilles $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/find/main.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -73,6 +72,7 @@ int issort;         		/* do hierarchies in lexicographical order */
 int isxargs;			/* don't permit xargs delimiting chars */
 int mindepth = -1, maxdepth = -1; /* minimum and maximum depth */
 int regexp_flags = REG_BASIC;	/* use the "basic" regexp by default*/
+int exitstatus;
 
 static void usage(void);
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/doc/psd/13.rcs/Makefile.inc,v 1.2 1999/08/28 00:18:21 peter Exp $
+# $FreeBSD: stable/11/share/doc/psd/13.rcs/Makefile.inc 50476 1999-08-28 00:22:10Z peter $
 
 VOLUME=	psd/13.rcs
 MACROS=	-ms

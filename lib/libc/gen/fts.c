@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +36,7 @@ static char sccsid[] = "@(#)fts.c	8.6 (Berkeley) 8/14/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/fts.c 301405 2016-06-04 17:40:23Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/fts.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -110,10 +109,8 @@ static const char *ufslike_filesystems[] = {
 };
 
 FTS *
-fts_open(argv, options, compar)
-	char * const *argv;
-	int options;
-	int (*compar)(const FTSENT * const *, const FTSENT * const *);
+fts_open(char * const *argv, int options,
+    int (*compar)(const FTSENT * const *, const FTSENT * const *))
 {
 	struct _fts_private *priv;
 	FTS *sp;
@@ -1105,8 +1102,7 @@ fts_padjust(FTS *sp, FTSENT *head)
 }
 
 static size_t
-fts_maxarglen(argv)
-	char * const *argv;
+fts_maxarglen(char * const *argv)
 {
 	size_t len, max;
 

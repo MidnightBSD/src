@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_esdb.c 291799 2015-12-04 18:24:47Z bdrewery $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_esdb.c 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_esdb.c,v 1.5 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-
@@ -264,8 +263,6 @@ _citrus_esdb_get_list(char ***rlist, size_t *rnum, bool sorted)
 	size_t num;
 	int ret;
 
-	num = 0;
-
 	ret = _lookup_seq_open(&cla, _PATH_ESDB "/" ESDB_ALIAS,
 	    _LOOKUP_CASE_IGNORE);
 	if (ret)
@@ -292,18 +289,12 @@ _citrus_esdb_get_list(char ***rlist, size_t *rnum, bool sorted)
 
 	/* get alias entries */
 	while ((ret = _lookup_seq_next(cla, &key, &data)) == 0) {
-		if (sorted)
-			snprintf(buf, sizeof(buf), "%.*s/%.*s",
-			    (int)_region_size(&data),
-			    (const char *)_region_head(&data),
-			    (int)_region_size(&key),
-			    (const char *)_region_head(&key));
-		else
-			snprintf(buf, sizeof(buf), "%.*s/%.*s",
-			    (int)_region_size(&data),
-			    (const char *)_region_head(&data),
-			    (int)_region_size(&key),
-			    (const char *)_region_head(&key));
+		/* XXX: sorted? */
+		snprintf(buf, sizeof(buf), "%.*s/%.*s",
+		    (int)_region_size(&data),
+		    (const char *)_region_head(&data),
+		    (int)_region_size(&key),
+		    (const char *)_region_head(&key));
 		_bcs_convert_to_upper(buf);
 		list[num] = strdup(buf);
 		if (list[num] == NULL) {
@@ -356,7 +347,7 @@ _citrus_esdb_get_list(char ***rlist, size_t *rnum, bool sorted)
 	ret = 0;
 	/* XXX: why reallocing the list space posteriorly?
 	    shouldn't be done earlier? */
-	q = realloc(list, num * sizeof(char *));
+	q = reallocarray(list, num, sizeof(char *));
 	if (!q) {
 		ret = ENOMEM;
 		goto quit3;

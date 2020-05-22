@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_lnaof.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_lnaof.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "port_before.h"
 
@@ -47,8 +47,7 @@ __MBSDID("$MidnightBSD$");
  * number formats.
  */
 in_addr_t
-inet_lnaof(in)
-	struct in_addr in;
+inet_lnaof(struct in_addr in)
 {
 	in_addr_t i = ntohl(in.s_addr);
 

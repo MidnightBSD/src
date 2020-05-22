@@ -1,4 +1,4 @@
-# $FreeBSD$ 
+# $FreeBSD: stable/11/share/i18n/csmapper/KS/KSC5601HANGUL%UCS.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: KSC5601HANGUL%UCS.src,v 1.1 2006/10/18 17:54:54 tnozaki Exp $
 
 TYPE		ROWCOL

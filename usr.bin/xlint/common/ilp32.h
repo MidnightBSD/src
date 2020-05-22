@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ilp32.h,v 1.1 2002/01/18 20:39:23 thorpej Exp $	*/
 
 /*

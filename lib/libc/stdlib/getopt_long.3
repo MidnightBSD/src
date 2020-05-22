@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"	$OpenBSD: getopt_long.3,v 1.10 2004/01/06 23:44:28 fgsch Exp $
 .\"	$NetBSD: getopt_long.3,v 1.14 2003/08/07 16:43:40 agc Exp $
 .\"
@@ -30,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)getopt.3	8.5 (Berkeley) 4/27/95
-.\" $FreeBSD: stable/10/lib/libc/stdlib/getopt_long.3 228885 2011-12-26 03:14:37Z gjb $
+.\" $FreeBSD: stable/11/lib/libc/stdlib/getopt_long.3 338079 2018-08-20 00:51:19Z kevans $
 .\"
-.Dd December 25, 2011
+.Dd May 2, 2018
 .Dt GETOPT_LONG 3
 .Os
 .Sh NAME
@@ -131,11 +130,11 @@ field should be one of:
 .Pp
 .Bl -tag -width ".Dv optional_argument" -offset indent -compact
 .It Dv no_argument
-no argument to the option is expect
+no argument to the option is expected
 .It Dv required_argument
 an argument to the option is required
 .It Dv optional_argument
-an argument to the option may be presented.
+an argument to the option may be presented
 .El
 .Pp
 If
@@ -208,12 +207,53 @@ these functions return 0 and store
 .Fa val
 in the location pointed to by
 .Fa flag .
+.Pp
 These functions return
 .Ql \&:
-if there was a missing option argument,
+if there was a missing option argument and error messages are suppressed,
 .Ql \&?
 if the user specified an unknown or ambiguous option, and
 \-1 when the argument list has been exhausted.
+The default behavior when a missing option argument is encountered is to write
+an error and return
+.Ql \&? .
+Specifying
+.Ql \&:
+in
+.Fa optstr
+will cause the error message to be suppressed and
+.Ql \&:
+to be returned instead.
+.Pp
+In addition to
+.Ql \&: ,
+a leading
+.Ql \&+
+or
+.Ql \&-
+in
+.Fa optstr
+also has special meaning.
+If either of these are specified, they must appear before
+.Ql \&: .
+.Pp
+A leading
+.Ql \&+
+indicates that processing should be halted at the first non-option argument,
+matching the default behavior of
+.Xr getopt 3 .
+The default behavior without
+.Ql \&+
+is to permute non-option argments to the end of
+.Fa argv .
+.Pp
+A leading
+.Ql \&-
+indicates that all non-option arguments should be treated as if they are
+arguments to a literal
+.Ql \&1
+flag (i.e., the function call will return the value 1, rather than the char
+literal '1').
 .Sh ENVIRONMENT
 .Bl -tag -width ".Ev POSIXLY_CORRECT"
 .It Ev POSIXLY_CORRECT

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/aesni-sha256-x86_64.S 325335 2017-11-02 18:22:53Z jkim $ */
 /* Do not modify. This file is auto-generated from aesni-sha256-x86_64.pl. */
 .text	

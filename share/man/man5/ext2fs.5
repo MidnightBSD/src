@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2006 Craig Rodrigues
 .\" All rights reserved.
@@ -25,14 +24,14 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man5/ext2fs.5 255977 2013-10-01 18:41:53Z pluknet $
+.\" $FreeBSD: stable/11/share/man/man5/ext2fs.5 294627 2016-01-23 12:25:24Z trasz $
 .\"
-.Dd October 1, 2013
+.Dd January 23, 2016
 .Dt EXT2FS 5
 .Os
 .Sh NAME
 .Nm ext2fs
-.Nd "Ext2fs file system"
+.Nd "ext2/ext3/ext4 file system"
 .Sh SYNOPSIS
 To link into the kernel:
 .Bd -ragged -offset indent
@@ -48,8 +47,14 @@ The
 driver will permit the
 .Fx
 kernel to access
-.Tn Ext2
+.Tn ext2 ,
+.Tn ext3 ,
+and
+.Tn ext4
 file systems.
+The
+.Tn ext4
+support is read-only.
 .Sh EXAMPLES
 To mount a
 .Nm
@@ -81,4 +86,4 @@ and others in the
 Project made modifications.
 .Pp
 This manual page was written by
-.An Craig Rodrigues Aq rodrigc@FreeBSD.org .
+.An Craig Rodrigues Aq Mt rodrigc@FreeBSD.org .

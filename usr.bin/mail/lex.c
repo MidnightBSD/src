@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)lex.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mail/lex.c 228468 2011-12-13 13:32:56Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mail/lex.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "rcv.h"
 #include <errno.h>

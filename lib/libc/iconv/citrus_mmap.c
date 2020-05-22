@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_mmap.c 264497 2014-04-15 09:49:44Z tijl $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_mmap.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_mmap.c,v 1.4 2011/10/15 23:00:01 christos Exp $	*/
 
 /*-
@@ -28,6 +27,7 @@
  * SUCH DAMAGE.
  */
 
+#include "namespace.h"
 #include <sys/cdefs.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "un-namespace.h"
 
 #include "citrus_namespace.h"
 #include "citrus_region.h"
@@ -58,10 +59,10 @@ _citrus_map_file(struct _citrus_region * __restrict r,
 
 	_region_init(r, NULL, 0);
 
-	if ((fd = open(path, O_RDONLY | O_CLOEXEC)) == -1)
+	if ((fd = _open(path, O_RDONLY | O_CLOEXEC)) == -1)
 		return (errno);
 
-	if (fstat(fd, &st)  == -1) {
+	if (_fstat(fd, &st)  == -1) {
 		ret = errno;
 		goto error;
 	}
@@ -79,7 +80,7 @@ _citrus_map_file(struct _citrus_region * __restrict r,
 	_region_init(r, head, (size_t)st.st_size);
 
 error:
-	(void)close(fd);
+	(void)_close(fd);
 	return (ret);
 }
 

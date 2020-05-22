@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/28/95
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.bin/finger/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef	_EXTERN_H_

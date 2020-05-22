@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/mbrtoc32.c 250883 2013-05-21 19:59:37Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/mbrtoc32.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <uchar.h>
 #include <wchar.h>

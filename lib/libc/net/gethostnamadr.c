@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/gethostnamadr.c 211276 2010-08-13 06:39:54Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/gethostnamadr.c 360415 2020-04-27 23:49:13Z brooks $");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -49,17 +48,10 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/net/gethostnamadr.c 211276 2010-08-13 06:
 #include "nscache.h"
 #endif
 
-extern int _ht_gethostbyname(void *, void *, va_list);
-extern int _dns_gethostbyname(void *, void *, va_list);
-extern int _nis_gethostbyname(void *, void *, va_list);
-extern int _ht_gethostbyaddr(void *, void *, va_list);
-extern int _dns_gethostbyaddr(void *, void *, va_list);
-extern int _nis_gethostbyaddr(void *, void *, va_list);
-
 static int gethostbyname_internal(const char *, int, struct hostent *, char *,
     size_t, struct hostent **, int *, res_state);
 
-/* Host lookup order if nsswitch.conf is broken or nonexistant */
+/* Host lookup order if nsswitch.conf is broken or nonexistent */
 static const ns_src default_src[] = {
 	{ NSSRC_FILES, NS_SUCCESS },
 	{ NSSRC_DNS, NS_SUCCESS },
@@ -183,7 +175,7 @@ host_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	res_options = statp->options & (RES_RECURSE | RES_DEFNAMES |
 	    RES_DNSRCH | RES_NOALIASES | RES_USE_INET6);
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		str = va_arg(ap, char *);
@@ -274,7 +266,7 @@ host_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	size_t desired_size, aliases_size, addr_size, size;
 	char *p, **iter;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		str = va_arg(ap, char *);
 		type = va_arg(ap, int);
@@ -381,7 +373,7 @@ host_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	char *orig_buf;
 	size_t orig_buf_size;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		str = va_arg(ap, char *);
 		type = va_arg(ap, int);

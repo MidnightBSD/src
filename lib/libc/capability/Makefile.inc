@@ -1,12 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libc/capability/Makefile.inc 257771 2013-11-06 23:59:19Z pjd $
+# $FreeBSD: stable/11/lib/libc/capability/Makefile.inc 313240 2017-02-04 17:17:38Z ngie $
 
 # capability sources
-.PATH: ${.CURDIR}/../../sys/kern ${.CURDIR}/capability
+.PATH: ${SRCTOP}/sys/kern ${LIBC_SRCTOP}/capability
 
 SRCS+=	subr_capability.c
 
-SYM_MAPS+=	${.CURDIR}/capability/Symbol.map
+SYM_MAPS+=	${LIBC_SRCTOP}/capability/Symbol.map
 
 MAN+=	cap_rights_init.3
 

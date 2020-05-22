@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: src/share/doc/psd/02.implement/Makefile,v 1.8 2004/10/24 15:32:41 ru Exp $
+# $FreeBSD: stable/11/share/doc/psd/02.implement/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 VOLUME=		psd/02.implement
 SRCS=		stubs implement

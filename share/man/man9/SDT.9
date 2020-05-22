@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\" Copyright (c) 2013 Mark Johnston <markj@freebsd.org>
+.\" Copyright (c) 2013-2015 Mark Johnston <markj@freebsd.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/SDT.9 282444 2015-05-05 03:13:02Z markj $
+.\" $FreeBSD: stable/11/share/man/man9/SDT.9 285186 2015-07-05 23:23:12Z markj $
 .\"
 .Dd April 18, 2015
 .Dt SDT 9
@@ -305,15 +304,21 @@ SDT_PROBE_DEFINE1_XLATE(ip, , , receive, "struct icmp *",
     "struct icmp_hdr_dt *");
 .Ed
 .Sh SEE ALSO
-.Xr dtrace 1
+.Xr dtrace 1 ,
+.Xr dtrace_io 4 ,
+.Xr dtrace_ip 4 ,
+.Xr dtrace_proc 4 ,
+.Xr dtrace_sched 4 ,
+.Xr dtrace_tcp 4 ,
+.Xr dtrace_udp 4
 .Sh AUTHORS
 .An -nosplit
 DTrace and the
 .Nm
 framework were originally ported to FreeBSD from Solaris by
-.An John Birrell Aq jb@FreeBSD.org .
+.An John Birrell Aq Mt jb@FreeBSD.org .
 This manual page was written by
-.An Mark Johnston Aq markj@FreeBSD.org .
+.An Mark Johnston Aq Mt markj@FreeBSD.org .
 .Sh BUGS
 The
 .Nm

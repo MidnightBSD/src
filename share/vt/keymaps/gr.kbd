@@ -1,7 +1,7 @@
 # Greek keyboard for FreeBSD
 # by Basileios Anastasatos <B.Anastasatos@Freemail.gr>
 #
-# $FreeBSD: stable/10/share/vt/keymaps/gr.kbd 270310 2014-08-21 22:04:17Z se $
+# $FreeBSD: stable/11/share/vt/keymaps/gr.kbd 270114 2014-08-17 19:54:21Z se $
 #
 # English/Greek keyboard lock:  (Left)Alt+(Left|Right)Shift
 # English/Greek keyboard shift: (Right)AltGr

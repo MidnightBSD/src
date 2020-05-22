@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: inittyp.c,v 1.3 2002/01/30 06:55:02 thorpej Exp $	*/
 
 /*

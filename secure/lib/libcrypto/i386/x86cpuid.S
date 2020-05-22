@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/i386/x86cpuid.S 325335 2017-11-02 18:22:53Z jkim $ */
 /* Do not modify. This file is auto-generated from x86cpuid.pl. */
 #ifdef PIC

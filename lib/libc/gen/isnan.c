@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/gen/isnan.c 242894 2012-11-11 13:28:04Z dim $
+ * $FreeBSD: stable/11/lib/libc/gen/isnan.c 354596 2019-11-10 17:33:10Z dim $
  */
 
 #include <math.h>
@@ -42,6 +41,13 @@
  */
 
 #ifdef PIC
+/*
+ * Because math.h defines __isnan and __isnanf as aliases for compatibility with
+ * glibc and CUDA, we have to undefine them here to avoid redefinition errors.
+ */
+#undef __isnan
+#undef __isnanf
+
 __weak_reference(__isnan, isnan);
 __weak_reference(__isnanf, isnanf);
 

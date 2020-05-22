@@ -23,14 +23,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/share/doc/atf/Makefile 241823 2012-10-22 01:18:41Z marcel $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/doc/atf/Makefile 284321 2015-06-12 14:30:27Z sjg $
 
 ATF=		${.CURDIR}/../../../contrib/atf
 .PATH:		${ATF}
 .PATH:		${ATF}/doc
-
-NO_OBJ=
 
 FILESGROUPS=	TOP
 

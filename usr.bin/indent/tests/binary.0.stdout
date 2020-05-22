@@ -1,0 +1,12 @@
+/* $FreeBSD: stable/11/usr.bin/indent/tests/binary.0.stdout 331147 2018-03-18 22:19:52Z eadler $ */
+#define b00101010 -1
+void 
+t(void)
+{
+	unsigned	a[] = {0b00101010, 0x00005678, 02, 17U};
+	float		x[] = {.7f, 0.7f};
+	unsigned long	ul[] = {0b00001111UL, 0x01010101UL, 02UL, 17UL};
+
+	if (0 b00101010)
+		return;
+}

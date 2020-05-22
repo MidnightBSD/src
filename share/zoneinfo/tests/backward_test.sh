@@ -1,6 +1,5 @@
 #
-# Copyright (c) 2017 Ngie Cooper <ngie@FreeBSD.org>
-# All rights reserved.
+# Copyright (c) 2017 Enji Cooper <ngie@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,8 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/zoneinfo/tests/backward_test.sh 320703 2017-07-06 04:30:06Z ngie $
+# $FreeBSD: stable/11/share/zoneinfo/tests/backward_test.sh 346920 2019-04-29 19:36:46Z ngie $
 
 atf_test_case links
 links_head()

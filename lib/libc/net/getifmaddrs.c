@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003 Bruce M. Simpson.
  * All rights reserved
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/getifmaddrs.c 251475 2013-06-06 21:09:27Z emaste $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/getifmaddrs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/param.h>

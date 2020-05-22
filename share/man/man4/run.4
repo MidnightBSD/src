@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" $OpenBSD: run.4,v 1.22 2009/11/23 06:16:32 jmc Exp $
 .\"
 .\" Copyright (c) 2008 Damien Bergamini <damien.bergamini@free.fr>
@@ -15,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/run.4 281878 2015-04-23 01:52:07Z kevlo $
+.\" $FreeBSD: stable/11/share/man/man4/run.4 340369 2018-11-12 16:43:53Z bz $
 .\"
-.Dd April 19, 2015
+.Dd November 8, 2018
 .Dt RUN 4
 .Os
 .Sh NAME
@@ -145,7 +144,7 @@ driver supports the following wireless adapters:
 .It Corega CG-WLUSB300AGN
 .It Corega CG-WLUSB300GNM
 .It D-Link DWA-130 rev B1
-.It D-Link DWA-140 rev B1, B2, B3, D1
+.It D-Link DWA-140 rev B1, B2, B3, \&D1
 .It D-Link DWA-160 rev B2
 .It D-Link DWA-162
 .It DrayTek Vigor N61
@@ -176,6 +175,7 @@ driver supports the following wireless adapters:
 .It Sweex LW303
 .It Sweex LW313
 .It TP-LINK TL-WDN3200
+.It TP-LINK TL-WN321G v4
 .It TP-LINK TL-WN727N v3
 .It Unex DNUR-81
 .It Unex DNUR-82
@@ -221,9 +221,9 @@ The driver will reset the hardware.
 This should not happen.
 .El
 .Sh SEE ALSO
-.Xr runfw 4 ,
 .Xr intro 4 ,
 .Xr netintro 4 ,
+.Xr runfw 4 ,
 .Xr usb 4 ,
 .Xr wlan 4 ,
 .Xr wlan_amrr 4 ,
@@ -231,8 +231,8 @@ This should not happen.
 .Xr wlan_tkip 4 ,
 .Xr wlan_wep 4 ,
 .Xr wlan_xauth 4 ,
-.Xr ifconfig 8 ,
 .Xr hostapd 8 ,
+.Xr ifconfig 8 ,
 .Xr wpa_supplicant 8
 .Pp
 Ralink Technology:
@@ -246,7 +246,7 @@ driver first appeared in
 The
 .Nm
 driver was written by
-.An Damien Bergamini Aq damien@openbsd.org .
+.An Damien Bergamini Aq Mt damien@openbsd.org .
 .Sh CAVEATS
 The
 .Nm

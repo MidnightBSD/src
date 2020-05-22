@@ -12,7 +12,7 @@
 # the author assume any responsibility for damages incurred with
 # its use.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/netgraph/virtual.lan 222179 2011-05-22 14:23:48Z uqs $
 #
 # This script adds virtual nodes to one of the physical interfaces
 # visible on your local area network (LAN). Virtual nodes seems real

@@ -1,8 +1,5 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/timeout/tests/Makefile 273771 2014-10-28 10:39:41Z bapt $
+# $FreeBSD: stable/11/usr.bin/timeout/tests/Makefile 315723 2017-03-22 17:53:25Z bdrewery $
 
-TESTSDIR=	${TESTSBASE}/usr.bin/timeout
-
-ATF_TESTS_SH=	timeout
+ATF_TESTS_SH=	timeout_test
 
 .include <bsd.test.mk>

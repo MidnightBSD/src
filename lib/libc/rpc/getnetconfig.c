@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: getnetconfig.c,v 1.3 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)getnetconfig.c	1.12 91/12/19 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/getnetconfig.c 320582 2017-07-03 02:14:42Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getnetconfig.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Copyright (c) 1989 by Sun Microsystems, Inc.
@@ -406,7 +405,7 @@ endnetconfig(void *handlep)
     }
 
     /*
-     * Noone needs these entries anymore, then frees them.
+     * No one needs these entries anymore, then frees them.
      * Make sure all info in netconfig_info structure has been reinitialized.
      */
     q = ni.head;
@@ -631,8 +630,8 @@ parse_ncp(char *stringp, struct netconfig *ncp)
 	ncp->nc_lookups = NULL;
 	ncp->nc_nlookups = 0;
 	while ((cp = tokenp) != NULL) {
-	    if ((nc_lookups = realloc(ncp->nc_lookups,
-		(ncp->nc_nlookups + 1) * sizeof *ncp->nc_lookups)) == NULL) {
+	    if ((nc_lookups = reallocarray(ncp->nc_lookups,
+		ncp->nc_nlookups + 1, sizeof(*ncp->nc_lookups))) == NULL) {
 		    free(ncp->nc_lookups);
 		    ncp->nc_lookups = NULL;
 		    return (-1);

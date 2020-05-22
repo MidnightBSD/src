@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: hayes.c,v 1.13 2006/03/17 19:17:13 moritz Exp $	*/
 /*	$NetBSD: hayes.c,v 1.6 1997/02/11 09:24:17 mrg Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/libacu/hayes.c 161781 2006-08-31 19:19:44Z ru $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/libacu/hayes.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 #if 0

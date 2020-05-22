@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/10/usr.bin/m4/tests/quotes.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD: stable/11/usr.bin/m4/tests/quotes.m4 234852 2012-04-30 22:00:34Z bapt $
 dnl $OpenBSD: src/regress/usr.bin/m4/quotes.m4,v 1.2 2005/09/06 15:33:21 espie Exp $
 dnl Checking the way changequote() is supposed to work
 define(`string',`STRING')dnl

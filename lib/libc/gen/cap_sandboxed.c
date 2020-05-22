@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/cap_sandboxed.c 280250 2015-03-19 12:32:48Z rwatson $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/cap_sandboxed.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/capsicum.h>
 

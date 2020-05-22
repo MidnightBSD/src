@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/*	$NetBSD: targparam.h,v 1.2 2002/01/30 06:55:00 thorpej Exp $	*/
+/*	$NetBSD: targparam.h,v 1.3 2002/01/31 23:31:34 he Exp $	*/
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -30,6 +29,8 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: stable/11/usr.bin/xlint/arch/sparc64/targparam.h 280387 2015-03-23 18:45:29Z pfg $
  */
 
 /*

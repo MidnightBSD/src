@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /***********************************************************
 Copyright 1990, by Alfalfa Software Incorporated, Cambridge, Massachusetts.
 Copyright 2010, Gabor Kovesdan <gabor@FreeBSD.org>
@@ -33,7 +32,7 @@ up-to-date.  Many thanks.
 ******************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/nls/msgcat.c 304862 2016-08-26 21:19:23Z ache $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/nls/msgcat.c 304863 2016-08-26 21:23:38Z ache $");
 
 #define _NLS_PRIVATE
 
@@ -326,6 +325,21 @@ notfound:
 	return ((char *)s);
 }
 
+static void
+catfree(struct catentry *np)
+{
+
+	if (np->catd != NULL && np->catd != NLERR) {
+		munmap(np->catd->__data, (size_t)np->catd->__size);
+		free(np->catd);
+	}
+	SLIST_REMOVE(&cache, np, catentry, list);
+	free(np->name);
+	free(np->path);
+	free(np->lang);
+	free(np);
+}
+
 int
 catclose(nl_catd catd)
 {
@@ -342,15 +356,8 @@ catclose(nl_catd catd)
 	SLIST_FOREACH(np, &cache, list) {
 		if (catd == np->catd) {
 			np->refcount--;
-			if (np->refcount == 0) {
-				munmap(catd->__data, (size_t)catd->__size);
-				free(catd);
-				SLIST_REMOVE(&cache, np, catentry, list);
-				free(np->name);
-				free(np->path);
-				free(np->lang);
-				free(np);
-			}
+			if (np->refcount == 0)
+				catfree(np);
 			break;
 		}
 	}

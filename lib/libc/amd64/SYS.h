@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -31,26 +30,23 @@
  * SUCH DAMAGE.
  *
  *	@(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: stable/10/lib/libc/amd64/SYS.h 240178 2012-09-06 20:59:49Z jilles $
+ * $FreeBSD: stable/11/lib/libc/amd64/SYS.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/syscall.h>
 #include <machine/asm.h>
 
-#define	RSYSCALL(x)	ENTRY(__CONCAT(__sys_,x));			\
-			.weak CNAME(x);					\
-			.set CNAME(x),CNAME(__CONCAT(__sys_,x));	\
-			.weak CNAME(__CONCAT(_,x));			\
-			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
-			mov __CONCAT($SYS_,x),%eax; KERNCALL;		\
+#define	RSYSCALL(name)	ENTRY(__sys_##name);				\
+			WEAK_REFERENCE(__sys_##name, name);		\
+			WEAK_REFERENCE(__sys_##name, _##name);		\
+			mov $SYS_##name,%eax; KERNCALL;			\
 			jb HIDENAME(cerror); ret;			\
-			END(__CONCAT(__sys_,x))
+			END(__sys_##name)
 
-#define	PSEUDO(x)	ENTRY(__CONCAT(__sys_,x));			\
-			.weak CNAME(__CONCAT(_,x));			\
-			.set CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)); \
-			mov __CONCAT($SYS_,x),%eax; KERNCALL;		\
+#define	PSEUDO(name)	ENTRY(__sys_##name);				\
+			WEAK_REFERENCE(__sys_##name, _##name);		\
+			mov $SYS_##name,%eax; KERNCALL;			\
 			jb HIDENAME(cerror); ret;			\
-			END(__CONCAT(__sys_,x))
+			END(__sys_##name)
 
-#define KERNCALL	movq %rcx, %r10; syscall
+#define	KERNCALL	movq %rcx, %r10; syscall

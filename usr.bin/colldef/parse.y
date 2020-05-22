@@ -1,6 +1,7 @@
-/* $MidnightBSD$ */
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1995 Alex Tatmanjants <alex@elvisti.kiev.ua>
  *		at Electronni Visti IA, Kiev, Ukraine.
  *			All rights reserved.
@@ -28,17 +29,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/colldef/parse.y 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/colldef/parse.y 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <err.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sysexits.h>
-#include "collate.h"
 #include "common.h"
 
 extern FILE *yyin;
@@ -47,6 +49,24 @@ int yyparse(void);
 int yylex(void);
 static void usage(void);
 static void collate_print_tables(void);
+
+#undef STR_LEN
+#define STR_LEN 10
+#undef TABLE_SIZE
+#define TABLE_SIZE 100
+#undef COLLATE_VERSION
+#define COLLATE_VERSION    "1.0\n"
+#undef COLLATE_VERSION_2
+#define COLLATE_VERSION1_2 "1.2\n"
+
+struct __collate_st_char_pri {
+	int prim, sec;
+};
+
+struct __collate_st_chain_pri {
+	u_char str[STR_LEN];
+	int prim, sec;
+};
 
 char map_name[FILENAME_MAX] = ".";
 char curr_chain[STR_LEN];

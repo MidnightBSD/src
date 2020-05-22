@@ -1,4 +1,4 @@
-/* $FreeBSD: src/lib/libc/softfloat/templates/softfloat.h,v 1.1 2004/05/14 12:13:06 cognet Exp $ */
+/* $FreeBSD: stable/11/lib/libc/softfloat/templates/softfloat.h 129203 2004-05-14 12:13:06Z cognet $ */
 
 /*
 ===============================================================================

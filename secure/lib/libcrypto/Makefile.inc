@@ -1,17 +1,16 @@
-# $MidnightBSD$
-# $FreeBSD: stable/11/secure/lib/libcrypto/Makefile.inc 340704 2018-11-20 21:26:25Z jkim $
+# $FreeBSD: stable/11/secure/lib/libcrypto/Makefile.inc 356290 2020-01-02 21:35:28Z jkim $
 
 .include <bsd.own.mk>
 
 # OpenSSL version used for manual page generation
-OPENSSL_VER=	1.0.2q
-OPENSSL_DATE=	2018-11-20
+OPENSSL_VER=	1.0.2u
+OPENSSL_DATE=	2019-12-20
 
-LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
-LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
+LCRYPTO_SRC=	${SRCTOP}/crypto/openssl
+LCRYPTO_DOC=	${LCRYPTO_SRC}/doc
 
+CFLAGS+=	-I${LCRYPTO_SRC}
 CFLAGS+=	-DTERMIOS -DANSI_SOURCE
-CFLAGS+=	-I${LCRYPTO_SRC} -I${LCRYPTO_SRC}/crypto -I${.OBJDIR}
 CFLAGS+=	-DOPENSSL_THREADS -DDSO_DLFCN -DHAVE_DLFCN_H
 
 .include <bsd.endian.mk>
@@ -65,9 +64,6 @@ MANDIR=	${SHAREDIR}/openssl/man/man
 
 .if defined(LIB)
 _docs=	${LIB}
-.if ${LIB} == crypto
-_docs+=	man3
-.endif
 _skip=	SSLeay_version des_modes
 _sec=	3
 .else

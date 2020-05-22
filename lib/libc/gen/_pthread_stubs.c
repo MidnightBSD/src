@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Daniel Eischen <deischen@FreeBSD.org>.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/_pthread_stubs.c 320823 2017-07-09 03:57:24Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/_pthread_stubs.c 349688 2019-07-03 19:42:36Z kib $");
 
 #include <signal.h>
 #include <pthread.h>
@@ -126,6 +125,10 @@ pthread_func_entry_t __thr_jtable[PJT_MAX] = {
 	{PJT_DUAL_ENTRY(stub_zero)},    /* PJT_CLEANUP_PUSH_IMP */
 	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CANCEL_ENTER */
 	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_CANCEL_LEAVE */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_MUTEX_CONSISTENT */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_MUTEXATTR_GETROBUST */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_MUTEXATTR_SETROBUST */
+	{PJT_DUAL_ENTRY(stub_zero)},	/* PJT_GETTHREADID_NP */
 };
 
 /*
@@ -227,9 +230,14 @@ STUB_FUNC2(pthread_mutex_init,	PJT_MUTEX_INIT, int, void *, void *)
 STUB_FUNC1(pthread_mutex_lock,	PJT_MUTEX_LOCK, int, void *)
 STUB_FUNC1(pthread_mutex_trylock, PJT_MUTEX_TRYLOCK, int, void *)
 STUB_FUNC1(pthread_mutex_unlock, PJT_MUTEX_UNLOCK, int, void *)
+STUB_FUNC1(pthread_mutex_consistent, PJT_MUTEX_CONSISTENT, int, void *)
 STUB_FUNC1(pthread_mutexattr_destroy, PJT_MUTEXATTR_DESTROY, int, void *)
 STUB_FUNC1(pthread_mutexattr_init, PJT_MUTEXATTR_INIT, int, void *)
 STUB_FUNC2(pthread_mutexattr_settype, PJT_MUTEXATTR_SETTYPE, int, void *, int)
+STUB_FUNC2(pthread_mutexattr_getrobust, PJT_MUTEXATTR_GETROBUST, int, void *,
+    int *)
+STUB_FUNC2(pthread_mutexattr_setrobust, PJT_MUTEXATTR_SETROBUST, int, void *,
+    int)
 STUB_FUNC2(pthread_once, 	PJT_ONCE, int, void *, void *)
 STUB_FUNC1(pthread_rwlock_destroy, PJT_RWLOCK_DESTROY, int, void *)
 STUB_FUNC2(pthread_rwlock_init,	PJT_RWLOCK_INIT, int, void *, void *)
@@ -239,6 +247,7 @@ STUB_FUNC1(pthread_rwlock_trywrlock, PJT_RWLOCK_TRYWRLOCK, int, void *)
 STUB_FUNC1(pthread_rwlock_unlock, PJT_RWLOCK_UNLOCK, int, void *)
 STUB_FUNC1(pthread_rwlock_wrlock, PJT_RWLOCK_WRLOCK, int, void *)
 STUB_FUNC(pthread_self,		PJT_SELF, pthread_t)
+STUB_FUNC(pthread_getthreadid_np, PJT_GETTHREADID_NP, int)
 STUB_FUNC2(pthread_setspecific, PJT_SETSPECIFIC, int, pthread_key_t, void *)
 STUB_FUNC3(pthread_sigmask, PJT_SIGMASK, int, int, void *, void *)
 STUB_FUNC3(pthread_atfork, PJT_ATFORK, int, void *, void *, void*)

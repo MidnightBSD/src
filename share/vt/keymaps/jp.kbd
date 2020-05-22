@@ -1,4 +1,4 @@
-# $FreeBSD: stable/10/share/vt/keymaps/jp.kbd 270310 2014-08-21 22:04:17Z se $
+# $FreeBSD: stable/11/share/vt/keymaps/jp.kbd 359075 2020-03-18 17:42:18Z hrs $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state
@@ -115,4 +115,4 @@
   115   '\'    '_'    fs     us     '\'    '_'    fs     us      O
   121   ' '    ' '    nul    ' '    ' '    ' '    susp   ' '     O
   123   ' '    ' '    nul    ' '    ' '    ' '    susp   ' '     O
-  125   0xa5   '|'    fs     us     0xa5   '|'    fs     us      O
+  125   '\'    '|'    fs     us     0xa5   '|'    fs     us      O

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_stdenc.c 264497 2014-04-15 09:49:44Z tijl $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_stdenc.c 331722 2018-03-29 02:50:57Z eadler $ */
 /*	$NetBSD: citrus_stdenc.c,v 1.4 2011/11/19 18:39:58 tnozaki Exp $	*/
 
 /*-
@@ -41,7 +40,7 @@
 #include "citrus_none.h"
 #include "citrus_stdenc.h"
 
-static struct _citrus_stdenc _citrus_stdenc_default = {
+struct _citrus_stdenc _citrus_stdenc_default = {
 	&_citrus_NONE_stdenc_ops,	/* ce_ops */
 	NULL,				/* ce_closure */
 	NULL,				/* ce_module */

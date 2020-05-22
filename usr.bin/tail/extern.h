@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
  *
- * $FreeBSD: stable/10/usr.bin/tail/extern.h 251565 2013-06-09 08:06:26Z jh $
+ * $FreeBSD: stable/11/usr.bin/tail/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	WR(p, size) do { \

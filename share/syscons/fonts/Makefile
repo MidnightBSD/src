@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/syscons/fonts/Makefile 284255 2015-06-11 04:22:17Z sjg $
 
 FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	cp437-8x8.fnt cp437-8x14.fnt cp437-8x16.fnt \
@@ -31,7 +31,5 @@ FILES=	armscii8-8x8.fnt armscii8-8x14.fnt armscii8-8x16.fnt \
 	INDEX.fonts
 
 FILESDIR= ${SHAREDIR}/syscons/fonts
-
-NO_OBJ=
 
 .include <bsd.prog.mk>

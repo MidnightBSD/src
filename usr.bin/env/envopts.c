@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
  *
@@ -30,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/env/envopts.c 280027 2015-03-15 11:43:51Z jilles $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/env/envopts.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/stat.h>
 #include <sys/param.h>

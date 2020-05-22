@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1995 Bill Paul <wpaul@ctr.columbia.edu>.
  * Copyright (c) 2007 Robert N. M. Watson
@@ -39,9 +38,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/ether_addr.c 264592 2014-04-17 11:49:19Z jmmv $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/ether_addr.c 331722 2018-03-29 02:50:57Z eadler $");
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 

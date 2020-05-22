@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/rsaz-avx2.S 326663 2017-12-07 18:04:48Z jkim $ */
 /* Do not modify. This file is auto-generated from rsaz-avx2.pl. */
 .text	

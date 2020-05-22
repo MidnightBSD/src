@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1985, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -59,7 +58,7 @@
 static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetbydns.c 211276 2010-08-13 06:39:54Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/getnetbydns.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -456,7 +455,7 @@ _setnetdnsent(int stayopen)
 }
 
 void
-_endnetdnsent()
+_endnetdnsent(void)
 {
 	res_state statp;
 

@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2011 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -23,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/apic.4 229657 2012-01-05 21:43:33Z uqs $
+.\" $FreeBSD: stable/11/share/man/man4/apic.4 301589 2016-06-08 08:50:35Z trasz $
 .\"
 .Dd December 20, 2011
 .Dt APIC 4
@@ -44,7 +43,8 @@ The following tunable is settable from the
 .Xr loader 8 :
 .Bl -ohang
 .It Va hint.apic. Ns Ar X Ns Va .clock
-controls event timers functionality support. Setting to 0, disables it.
+controls event timers functionality support.
+Setting to 0, disables it.
 Default value is 1.
 .It Va hint.apic. Ns Ar X Ns Va .disabled
 Set this to 1 to disable APIC support, falling back to the legacy PIC.

@@ -1,10 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/lzmainfo/Makefile 292588 2015-12-22 08:03:23Z delphij $
+# $FreeBSD: stable/11/usr.bin/lzmainfo/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
 PROG=	lzmainfo
 
-XZDIR=	${.CURDIR}/../../contrib/xz/src
-LZMALIBDIR=	${.CURDIR}/../../lib/liblzma
+XZDIR=	${SRCTOP}/contrib/xz/src
+LZMALIBDIR=	${SRCTOP}/lib/liblzma
 
 .PATH: ${XZDIR}/lzmainfo
 SRCS+=	lzmainfo.c
@@ -17,7 +16,6 @@ CFLAGS+=	-DHAVE_CONFIG_H \
 		-I${LZMALIBDIR} \
 		-I${XZDIR}/common
 
-DPADD=	${LIBLZMA} ${LIBPTHREAD}
-LDADD=	-llzma -lpthread
+LIBADD=	lzma
 
 .include <bsd.prog.mk>

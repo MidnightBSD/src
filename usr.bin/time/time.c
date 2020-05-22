@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1987, 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)time.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.bin/time/time.c 244034 2012-12-08 17:41:39Z jilles $";
+  "$FreeBSD: stable/11/usr.bin/time/time.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -66,6 +65,7 @@ static void showtime(FILE *, struct timeval *, struct timeval *,
 static void siginfo(int);
 static void usage(void);
 
+static sig_atomic_t siginfo_recvd;
 static char decimal_point;
 static struct timeval before_tv;
 static int hflag, pflag;
@@ -131,8 +131,17 @@ main(int argc, char **argv)
 	/* parent */
 	(void)signal(SIGINT, SIG_IGN);
 	(void)signal(SIGQUIT, SIG_IGN);
+	siginfo_recvd = 0;
 	(void)signal(SIGINFO, siginfo);
-	while (wait4(pid, &status, 0, &ru) != pid);
+	(void)siginterrupt(SIGINFO, 1);
+	while (wait4(pid, &status, 0, &ru) != pid) {
+		if (siginfo_recvd) {
+			siginfo_recvd = 0;
+			(void)gettimeofday(&after, NULL);
+			getrusage(RUSAGE_CHILDREN, &ru);
+			showtime(stdout, &before_tv, &after, &ru);
+		}
+	}
 	(void)gettimeofday(&after, NULL);
 	if ( ! WIFEXITED(status))
 		warnx("command terminated abnormally");
@@ -293,10 +302,6 @@ showtime(FILE *out, struct timeval *before, struct timeval *after,
 static void
 siginfo(int sig __unused)
 {
-	struct timeval after;
-	struct rusage ru;
 
-	(void)gettimeofday(&after, NULL);
-	getrusage(RUSAGE_CHILDREN, &ru);
-	showtime(stdout, &before_tv, &after, &ru);
+	siginfo_recvd = 1;
 }

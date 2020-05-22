@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2011-2013 Alexander Motin <mav@FreeBSD.org>
 .\" All rights reserved.
@@ -23,7 +22,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/eventtimers.9 266347 2014-05-17 20:10:12Z ian $
+.\" $FreeBSD: stable/11/share/man/man9/eventtimers.9 275993 2014-12-21 10:57:42Z brueffer $
 .\"
 .Dd April 2, 2014
 .Dt EVENTTIMERS 9
@@ -180,13 +179,13 @@ methods control timers associated with the current CPU.
 Driver may deregister its functionality by calling
 .Fn et_deregister .
 .Pp
-If the frequency of the clock hardware can change while it is 
+If the frequency of the clock hardware can change while it is
 running (for example, during power-saving modes), the driver must call
 .Fn et_change_frequency
 on each change.
 If the given event timer is the active timer,
 .Fn et_change_frequency
-stops the timer on all CPUs, updates 
+stops the timer on all CPUs, updates
 .Va et->frequency ,
 then restarts the timer on all CPUs so that all
 current events are rescheduled using the new frequency.
@@ -251,4 +250,4 @@ timer hardware access.
 .Sh SEE ALSO
 .Xr eventtimers 4
 .Sh AUTHORS
-.An Alexander Motin Aq mav@FreeBSD.org
+.An Alexander Motin Aq Mt mav@FreeBSD.org

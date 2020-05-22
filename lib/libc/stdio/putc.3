@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1990, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -31,13 +30,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)putc.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: stable/10/lib/libc/stdio/putc.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD: stable/11/lib/libc/stdio/putc.3 357852 2020-02-13 03:13:29Z kevans $
 .\"
-.Dd January 10, 2003
+.Dd January 23, 2020
 .Dt PUTC 3
 .Os
 .Sh NAME
 .Nm fputc ,
+.Nm fputc_unlocked ,
 .Nm putc ,
 .Nm putc_unlocked ,
 .Nm putchar ,
@@ -50,6 +50,8 @@
 .In stdio.h
 .Ft int
 .Fn fputc "int c" "FILE *stream"
+.Ft int
+.Fn fputc_unlocked "int c" "FILE *stream"
 .Ft int
 .Fn putc "int c" "FILE *stream"
 .Ft int
@@ -98,11 +100,13 @@ to the named output
 .Fa stream .
 .Pp
 The
-.Fn putc_unlocked
+.Fn fputc_unlocked ,
+.Fn putc_unlocked ,
 and
 .Fn putchar_unlocked
 functions are equivalent to
-.Fn putc
+.Fn fputc ,
+.Fn putc ,
 and
 .Fn putchar
 respectively,

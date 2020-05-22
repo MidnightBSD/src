@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)memcpy.3	8.1 (Berkeley) 6/4/93
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/lib/libc/string/memcpy.3 343326 2019-01-22 21:52:07Z rgrimes $
 .\"
 .Dd June 4, 1993
 .Dt MEMCPY 3
@@ -54,6 +54,11 @@ bytes from string
 .Fa src
 to string
 .Fa dst .
+If
+.Fa src
+and
+.Fa dst
+overlap, the results are not defined.
 .Sh RETURN VALUES
 The
 .Fn memcpy

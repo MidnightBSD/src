@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: readpassphrase.c,v 1.24 2013/11/24 23:51:29 deraadt Exp $	*/
 
 /*
@@ -23,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/readpassphrase.c 295055 2016-01-30 00:09:30Z sobomax $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/readpassphrase.c 294691 2016-01-24 22:20:13Z sobomax $");
 
 #include "namespace.h"
 #include <ctype.h>

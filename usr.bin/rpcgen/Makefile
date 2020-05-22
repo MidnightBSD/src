@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/rpcgen/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: stable/11/usr.bin/rpcgen/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 PROG=	rpcgen
 SRCS=	rpc_main.c  rpc_clntout.c rpc_cout.c rpc_hout.c rpc_parse.c \

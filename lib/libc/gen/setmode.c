@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)setmode.c	8.2 (Berkeley) 3/25/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/setmode.c 287480 2015-09-05 08:55:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/setmode.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -156,7 +155,7 @@ common:			if (set->cmd2 & CMD2_CLR) {
 	if (set >= endset) {						\
 		BITCMD *newset;						\
 		setlen += SET_LEN_INCR;					\
-		newset = realloc(saveset, sizeof(BITCMD) * setlen);	\
+		newset = reallocarray(saveset, setlen, sizeof(BITCMD));	\
 		if (newset == NULL)					\
 			goto out;					\
 		set = newset + (set - saveset);				\
@@ -176,7 +175,7 @@ setmode(const char *p)
 	mode_t mask, perm, permXbits, who;
 	long perml;
 	int equalopdone;
-	int setlen;
+	u_int setlen;
 
 	if (!*p) {
 		errno = EINVAL;
@@ -191,7 +190,7 @@ setmode(const char *p)
 
 	setlen = SET_LEN + 2;
 
-	if ((set = malloc((u_int)(sizeof(BITCMD) * setlen))) == NULL)
+	if ((set = malloc(setlen * sizeof(BITCMD))) == NULL)
 		return (NULL);
 	saveset = set;
 	endset = set + (setlen - 2);

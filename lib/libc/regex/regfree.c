@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -38,7 +37,7 @@
 static char sccsid[] = "@(#)regfree.c	8.3 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/regex/regfree.c 170528 2007-06-11 03:05:54Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/regex/regfree.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -59,7 +58,7 @@ void
 regfree(regex_t *preg)
 {
 	struct re_guts *g;
-	int i;
+	unsigned int i;
 
 	if (preg->re_magic != MAGIC1)	/* oops */
 		return;			/* nice to complain, but hard */

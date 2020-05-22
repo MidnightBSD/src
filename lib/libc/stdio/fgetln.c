@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@
 static char sccsid[] = "@(#)fgetln.c	8.2 (Berkeley) 1/2/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/fgetln.c 321074 2017-07-17 14:09:34Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/fgetln.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <errno.h>

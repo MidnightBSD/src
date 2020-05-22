@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/vt/keymaps/Makefile 322225 2017-08-08 10:45:22Z se $
+# $FreeBSD: stable/11/share/vt/keymaps/Makefile 342254 2018-12-19 22:48:27Z dab $
 
 FILES=	INDEX.keymaps \
 	am.kbd \
@@ -77,6 +76,7 @@ FILES=	INDEX.keymaps \
 	uk.capsctrl.kbd \
 	uk.dvorak.kbd \
 	uk.kbd \
+	uk.macbook.kbd \
 	us.acc.kbd \
 	us.ctrl.kbd \
 	us.dvorak.kbd \
@@ -89,7 +89,5 @@ FILES=	INDEX.keymaps \
 	us.unix.kbd \
 
 FILESDIR= ${SHAREDIR}/vt/keymaps
-
-NO_OBJ=
 
 .include <bsd.prog.mk>

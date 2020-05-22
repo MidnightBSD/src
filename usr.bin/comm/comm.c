@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "From: @(#)comm.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/comm/comm.c 227235 2011-11-06 18:49:10Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/comm/comm.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <limits.h>

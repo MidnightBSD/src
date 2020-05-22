@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: clnt_vc.c,v 1.4 2000/07/14 08:40:42 fvdl Exp $	*/
 
 /*-
@@ -35,7 +34,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/clnt_vc.c 309498 2016-12-03 18:40:39Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/clnt_vc.c 331722 2018-03-29 02:50:57Z eadler $");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -142,7 +141,6 @@ static cond_t   *vc_cv;
 
 static const char clnt_vc_errstr[] = "%s : %s";
 static const char clnt_vc_str[] = "clnt_vc_create";
-static const char clnt_read_vc_str[] = "read_vc";
 static const char __no_mem_str[] = "out of memory";
 
 /*
@@ -603,7 +601,7 @@ clnt_vc_control(CLIENT *cl, u_int request, void *info)
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the version number field is the fifth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		ntohlp(info, ct->ct_u.ct_mcallc + 4 * BYTES_PER_XDR_UNIT);
@@ -617,7 +615,7 @@ clnt_vc_control(CLIENT *cl, u_int request, void *info)
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the program number field is the fourth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		ntohlp(info, ct->ct_u.ct_mcallc + 3 * BYTES_PER_XDR_UNIT);

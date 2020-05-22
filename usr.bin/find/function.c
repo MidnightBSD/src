@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -38,7 +37,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/find/function.c 326790 2017-12-12 04:08:30Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/find/function.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -225,7 +224,7 @@ nextarg(OPTION *option, char ***argvp)
 {
 	char *arg;
 
-	if ((arg = **argvp) == 0)
+	if ((arg = **argvp) == NULL)
 		errx(1, "%s: requires additional arguments", option->name);
 	(*argvp)++;
 	return arg;
@@ -671,7 +670,13 @@ doexec:	if ((plan->flags & F_NEEDOK) && !queryuser(plan->e_argv))
 		plan->e_psize = plan->e_pbsize;
 	}
 	pid = waitpid(pid, &status, 0);
-	return (pid != -1 && WIFEXITED(status) && !WEXITSTATUS(status));
+	if (pid != -1 && WIFEXITED(status) && !WEXITSTATUS(status))
+		return (1);
+	if (plan->flags & F_EXECPLUS) {
+		exitstatus = 1;
+		return (1);
+	}
+	return (0);
 }
 
 /*
@@ -897,8 +902,13 @@ f_fstype(PLAN *plan, FTSENT *entry)
 		} else
 			p = NULL;
 
-		if (statfs(entry->fts_accpath, &sb))
-			err(1, "%s", entry->fts_accpath);
+		if (statfs(entry->fts_accpath, &sb)) {
+			if (!ignore_readdir_race || errno != ENOENT) {
+				warn("statfs: %s", entry->fts_accpath);
+				exitstatus = 1;
+			}
+			return 0;
+		}
 
 		if (p) {
 			p[0] = save[0];
@@ -1552,7 +1562,12 @@ c_sparse(OPTION *option, char ***argvp __unused)
 int
 f_type(PLAN *plan, FTSENT *entry)
 {
-	return (entry->fts_statp->st_mode & S_IFMT) == plan->m_data;
+	if (plan->m_data == S_IFDIR)
+		return (entry->fts_info == FTS_D || entry->fts_info == FTS_DC ||
+		    entry->fts_info == FTS_DNR || entry->fts_info == FTS_DOT ||
+		    entry->fts_info == FTS_DP);
+	else
+		return (entry->fts_statp->st_mode & S_IFMT) == plan->m_data;
 }
 
 PLAN *
@@ -1563,7 +1578,8 @@ c_type(OPTION *option, char ***argvp)
 	mode_t  mask;
 
 	typestring = nextarg(option, argvp);
-	ftsoptions &= ~FTS_NOSTAT;
+	if (typestring[0] != 'd')
+		ftsoptions &= ~FTS_NOSTAT;
 
 	switch (typestring[0]) {
 	case 'b':
@@ -1769,7 +1785,7 @@ int
 f_quit(PLAN *plan __unused, FTSENT *entry __unused)
 {
 	finish_execplus();
-	exit(0);
+	exit(exitstatus);
 }
 
 /* c_quit == c_simple */

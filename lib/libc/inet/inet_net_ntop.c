@@ -16,10 +16,10 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_net_ntop.c,v 1.3 2013-01-04 23:44:54 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_net_ntop.c,v 1.5 2006/06/20 02:50:14 marka Exp $";
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/inet/inet_net_ntop.c 288038 2015-09-20 20:50:56Z rodrigc $");
 
 #include "port_before.h"
 
@@ -57,12 +57,7 @@ static char *	inet_net_ntop_ipv6(const u_char *src, int bits, char *dst,
  *	Paul Vixie (ISC), July 1996
  */
 char *
-inet_net_ntop(af, src, bits, dst, size)
-	int af;
-	const void *src;
-	int bits;
-	char *dst;
-	size_t size;
+inet_net_ntop(int af, const void *src, int bits, char *dst, size_t size)
 {
 	switch (af) {
 	case AF_INET:
@@ -89,11 +84,7 @@ inet_net_ntop(af, src, bits, dst, size)
  *	Paul Vixie (ISC), July 1996
  */
 static char *
-inet_net_ntop_ipv4(src, bits, dst, size)
-	const u_char *src;
-	int bits;
-	char *dst;
-	size_t size;
+inet_net_ntop_ipv4(const u_char *src, int bits, char *dst, size_t size)
 {
 	char *odst = dst;
 	char *t;

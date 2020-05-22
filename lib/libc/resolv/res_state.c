@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 The FreeBSD Project. All rights reserved.
  *
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/resolv/res_state.c 292462 2015-12-19 02:41:31Z vangyzen $
+ * $FreeBSD: stable/11/lib/libc/resolv/res_state.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/types.h>

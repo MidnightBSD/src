@@ -1,4 +1,4 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/share/i18n/esdb/UTF/Makefile 296702 2016-03-11 23:45:36Z bdrewery $
 # $NetBSD: Makefile.inc,v 1.5 2008/10/25 22:27:36 apb Exp $
 
 CODE=	UTF
@@ -36,6 +36,6 @@ ${EPREFIX}${i}.src: ${CODE}.src
 	sed -e 's/UTF-x/UTF-${i}/' \
 		-e 's/UTF-mod/${UTF-${i}-mod}/' \
 		-e 's/UTF-var/${UTF-${i}-var}/' \
-		${.CURDIR}/${CODE}.src > ${EPREFIX}${i:S/:/@/}.src
-	@echo ${EPREFIX}${i:S/:/@/}.src >>.tmpfiles
+		${.ALLSRC} > ${.TARGET}
+	@echo ${.TARGET} >>.tmpfiles
 .endfor

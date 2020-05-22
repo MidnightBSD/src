@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/file2c/file2c.c 200462 2009-12-13 03:14:06Z delphij $");
 
 #include <limits.h>
 #include <stdio.h>

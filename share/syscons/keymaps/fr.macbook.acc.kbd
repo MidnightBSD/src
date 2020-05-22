@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/fr.macbook.acc.kbd 180949 2008-07-29 08:07:27Z roberto $
+# $FreeBSD: stable/11/share/syscons/keymaps/fr.macbook.acc.kbd 180949 2008-07-29 08:07:27Z roberto $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

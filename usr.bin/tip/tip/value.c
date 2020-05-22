@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: value.c,v 1.14 2006/03/17 22:02:58 moritz Exp $	*/
 /*	$NetBSD: value.c,v 1.6 1997/02/11 09:24:09 mrg Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/value.c 166911 2007-02-23 18:41:12Z jls $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/value.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 #if 0

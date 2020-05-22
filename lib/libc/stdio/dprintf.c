@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 David Schultz <das@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/stdio/dprintf.c 189356 2009-03-04 03:38:51Z das $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/stdio/dprintf.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #define	_WITH_DPRINTF
 #include "namespace.h"

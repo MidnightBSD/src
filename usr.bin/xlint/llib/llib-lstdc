@@ -1,5 +1,4 @@
 /*	$NetBSD: llib-lstdc,v 1.2 1995/07/03 21:25:11 cgd Exp $	*/
-/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl
@@ -31,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/xlint/llib/llib-lstdc,v 1.7 2002/03/03 15:12:43 markm Exp $
+ * $FreeBSD: stable/11/usr.bin/xlint/llib/llib-lstdc 91592 2002-03-03 15:12:50Z markm $
  */
 
 /* LINTLIBRARY */

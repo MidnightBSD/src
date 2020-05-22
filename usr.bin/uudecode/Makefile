@@ -1,13 +1,11 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/uudecode/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/usr.bin/uudecode/Makefile 265420 2014-05-06 04:22:01Z imp $
 
-MAN=
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	uudecode
 LINKS=	${BINDIR}/uudecode ${BINDIR}/b64decode
+MAN=
 
 .if ${MK_TESTS} != "no"
 SUBDIR+= tests

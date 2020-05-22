@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: getnetpath.c,v 1.3 2000/07/06 03:10:34 christos Exp $	*/
 
 /*-
@@ -33,7 +32,7 @@
 static char sccsid[] = "@(#)getnetpath.c	1.11 91/12/19 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/getnetpath.c 309487 2016-12-03 17:27:28Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/getnetpath.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Copyright (c) 1989 by Sun Microsystems, Inc.

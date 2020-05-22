@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/20/95 
  *
- * $FreeBSD: stable/10/usr.bin/mail/extern.h 228468 2011-12-13 13:32:56Z ed $
+ * $FreeBSD: stable/11/usr.bin/mail/extern.h 336953 2018-07-31 00:37:25Z markj $
  */
 
 struct name *cat(struct name *, struct name *);

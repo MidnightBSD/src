@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/lib/libc/i386/_fpmath.h 175402 2008-01-17 16:39:07Z bde $
+ * $FreeBSD: stable/11/lib/libc/i386/_fpmath.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 union IEEEl2bits {

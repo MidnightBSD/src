@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/uk.iso.kbd 270307 2014-08-21 21:48:33Z se $
+# $FreeBSD: stable/11/share/syscons/keymaps/uk.iso.kbd 270153 2014-08-18 20:58:17Z se $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

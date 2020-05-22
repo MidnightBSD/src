@@ -30,11 +30,11 @@ extern "C" {
  * (Prior to 0.9.5a beta1, a different scheme was used: MMNNFFRBB for
  *  major minor fix final patch/beta)
  */
-# define OPENSSL_VERSION_NUMBER  0x1000210fL
+# define OPENSSL_VERSION_NUMBER  0x1000215fL
 # ifdef OPENSSL_FIPS
-#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.2p-fips  14 Aug 2018"
+#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.2u-fips  20 Dec 2019"
 # else
-#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.2p  14 Aug 2018"
+#  define OPENSSL_VERSION_TEXT    "OpenSSL 1.0.2u-freebsd  20 Dec 2019"
 # endif
 # define OPENSSL_VERSION_PTEXT   " part of " OPENSSL_VERSION_TEXT
 
@@ -88,7 +88,7 @@ extern "C" {
  * should only keep the versions that are binary compatible with the current.
  */
 # define SHLIB_VERSION_HISTORY ""
-# define SHLIB_VERSION_NUMBER "7"
+# define SHLIB_VERSION_NUMBER "8"
 
 
 #ifdef  __cplusplus

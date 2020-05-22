@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)rec_open.c	8.10 (Berkeley) 9/1/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/recno/rec_open.c,v 1.7 2007/01/09 00:27:51 imp Exp $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/db/recno/rec_open.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -64,7 +64,7 @@ __rec_open(const char *fname, int flags, int mode, const RECNOINFO *openinfo,
 	int rfd, sverrno;
 
 	/* Open the user's file -- if this fails, we're done. */
-	if (fname != NULL && (rfd = _open(fname, flags, mode)) < 0)
+	if (fname != NULL && (rfd = _open(fname, flags | O_CLOEXEC, mode)) < 0)
 		return (NULL);
 
 	/* Create a btree in memory (backed by disk). */

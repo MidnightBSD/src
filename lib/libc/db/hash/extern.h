@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.4 (Berkeley) 6/16/94
- * $FreeBSD: stable/10/lib/libc/db/hash/extern.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD: stable/11/lib/libc/db/hash/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 BUFHEAD	*__add_ovflpage(HTAB *, BUFHEAD *);

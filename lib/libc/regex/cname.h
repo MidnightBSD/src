@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993, 1994 Henry Spencer.
  * Copyright (c) 1992, 1993, 1994
@@ -32,12 +31,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)cname.h	8.3 (Berkeley) 3/20/94
- * $FreeBSD: stable/10/lib/libc/regex/cname.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD: stable/11/lib/libc/regex/cname.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /* character-name table */
 static struct cname {
-	char *name;
+	const char *name;
 	char code;
 } cnames[] = {
 	{"NUL",			'\0'},

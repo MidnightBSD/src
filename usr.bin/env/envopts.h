@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
  *
@@ -28,7 +29,7 @@
  * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: src/usr.bin/env/envopts.h,v 1.1 2005/06/20 03:43:25 gad Exp $
+ * $FreeBSD: stable/11/usr.bin/env/envopts.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 void		 search_paths(char *path, char **argv);

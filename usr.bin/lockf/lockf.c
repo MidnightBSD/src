@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1997 John D. Polstra.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/lockf/lockf.c 281896 2015-04-23 15:24:33Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/lockf/lockf.c 345569 2019-03-27 08:55:59Z avos $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -173,6 +174,8 @@ acquire_lock(const char *name, int flags)
 	if ((fd = open(name, O_RDONLY|O_EXLOCK|flags, 0666)) == -1) {
 		if (errno == EAGAIN || errno == EINTR)
 			return (-1);
+		else if (errno == ENOENT && (flags & O_CREAT) == 0)
+			err(EX_UNAVAILABLE, "%s", name);
 		err(EX_CANTCREAT, "cannot open %s", name);
 	}
 	return (fd);

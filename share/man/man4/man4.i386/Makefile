@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/man/man4/man4.i386/Makefile 221961 2011-05-15 14:01:23Z brix $
+# $FreeBSD: stable/11/share/man/man4/man4.i386/Makefile 298107 2016-04-16 07:45:30Z gjb $
+
+PACKAGE=runtime-manuals
 
 MAN=	aic.4 \
 	apm.4 \

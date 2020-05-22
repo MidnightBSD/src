@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: chk.c,v 1.15 2002/01/21 19:49:52 tv Exp $ */
 
 /*
@@ -37,7 +36,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: chk.c,v 1.15 2002/01/21 19:49:52 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint2/chk.c 228992 2011-12-30 11:02:40Z uqs $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint2/chk.c 298879 2016-05-01 16:13:05Z pfg $");
 
 #include <ctype.h>
 #include <err.h>
@@ -460,7 +459,7 @@ chkau(hte_t *hte, int n, sym_t *def, sym_t *decl, pos_t *pos1p,
 	promote = def != NULL && def->s_osdef;
 
 	/*
-	 * If we compair with a definition or declaration, we must perform
+	 * If we compare with a definition or declaration, we must perform
 	 * the same checks for qualifiers in indirected types as in
 	 * assignments.
 	 */

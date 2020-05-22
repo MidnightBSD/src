@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/usr.bin/openssl/Makefile.man 273149 2014-10-15 19:59:43Z jkim $
+# $FreeBSD: stable/11/secure/usr.bin/openssl/Makefile.man 329242 2018-02-13 21:11:27Z jkim $
 # DO NOT EDIT: generated from man-makefile-update target
 MAN+= CA.pl.1
 MAN+= asn1parse.1

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/lex/Makefile 250881 2013-05-21 19:32:35Z jkim $
+# $FreeBSD: stable/11/usr.bin/lex/Makefile 357521 2020-02-04 19:42:57Z dim $
 #
 # By default, flex will be configured to generate 8-bit scanners only if the
 # -8 flag is given.  If you want it to always generate 8-bit scanners, add
@@ -15,7 +14,7 @@ LINKS+=	${BINDIR}/lex ${BINDIR}/lex++
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex++
 
-FLEXDIR=	${.CURDIR}/../../contrib/flex
+FLEXDIR=	${SRCTOP}/contrib/flex
 
 .PATH:		${FLEXDIR}
 
@@ -31,7 +30,9 @@ MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
 
-WARNS?=		1
+WARNS?=		3
+
+NO_WMISLEADING_INDENTATION=
 
 CLEANFILES=	scan.c skel.c
 GENFILES=	parse.c parse.h scan.c skel.c
@@ -49,17 +50,17 @@ skel.c: config.h mkskel.sh flex.skl version.awk
 
 bootstrap: ${GENFILES:S/^/init/g}
 .for _f in ${GENFILES}
-	@diff -I '^#line ' -I '\$$MidnightBS[D]: .*\$$' -q \
+	@diff -I '^#line ' -I '\$$FreeBS[D]: .*\$$' -q \
 	    ${.CURDIR}/init${_f} ${_f} 2> /dev/null || { \
 		echo "Bootstrapping ${_f}" ; \
-		cp -f ${.CURDIR}/init${_f} ${_f} ; \
+		${CP} ${.CURDIR}/init${_f} ${_f} ; \
 	}
 .endfor
 
 test: check
 check: ${PROG}
 	./${PROG} ${LFLAGS} -t ${COMPRESSION} ${FLEXDIR}/scan.l | \
-	diff -I '^#line ' -I '\$$MidnightBS[D]: .*\$$' ${.CURDIR}/initscan.c -
+	diff -I '^#line ' -I '\$$FreeBS[D]: .*\$$' ${.CURDIR}/initscan.c -
 	@echo "Check successful"
 
 .include <bsd.prog.mk>

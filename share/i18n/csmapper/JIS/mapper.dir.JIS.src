@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/i18n/csmapper/JIS/mapper.dir.JIS.src 258293 2013-11-18 04:42:58Z hrs $ 
+# $FreeBSD: stable/11/share/i18n/csmapper/JIS/mapper.dir.JIS.src 257636 2013-11-04 15:49:36Z hrs $ 
 # $NetBSD: mapper.dir.JIS.src,v 1.5 2007/03/05 16:58:34 tnozaki Exp $
 
 JISX0201-KANA/UCS		mapper_std	JIS/JISX0201-KANA%UCS.mps

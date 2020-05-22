@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $NetBSD: lint1.h,v 1.16 2002/10/21 22:44:08 christos Exp $ */
 
 /*
@@ -33,7 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/xlint/lint1/lint1.h 281168 2015-04-06 19:56:27Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xlint/lint1/lint1.h 286614 2015-08-11 02:58:33Z pfg $");
 
 #include "lint.h"
 #include "op.h"
@@ -274,7 +273,7 @@ typedef	struct tnode {
 	op_t	tn_op;		/* operator */
 	type_t	*tn_type;	/* type */
 	u_int	tn_lvalue : 1;	/* node is lvalue */
-	u_int	tn_cast : 1;	/* if tn_op == CVT its an explizit cast */
+	u_int	tn_cast : 1;	/* if tn_op == CVT its an explicit cast */
 	u_int	tn_parn : 1;	/* node parenthesized */
 	union {
 		struct {

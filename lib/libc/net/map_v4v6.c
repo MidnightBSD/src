@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * ++Copyright++ 1985, 1988, 1993
  * -
@@ -54,9 +53,8 @@
 static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/map_v4v6.c 292850 2015-12-29 00:42:35Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/map_v4v6.c 331722 2018-03-29 02:50:57Z eadler $");
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -69,6 +67,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/net/map_v4v6.c 292850 2015-12-29 00:42:35
 #include <resolv.h>
 #include <ctype.h>
 #include <syslog.h>
+#include "netdb_private.h"
 
 typedef union {
 	int32_t al;

@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/gmon/Symbol.map 169525 2007-05-13 14:16:55Z deischen $
  */
 
 FBSD_1.0 {

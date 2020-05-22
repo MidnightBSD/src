@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990 The Regents of the University of California.
  * All rights reserved.
@@ -38,7 +37,7 @@
 	.asciz "$Id: sigsetjmp.S,v 1.1 1993/12/05 13:01:05 ats Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/amd64/gen/sigsetjmp.S 287480 2015-09-05 08:55:51Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/gen/sigsetjmp.S 287292 2015-08-29 14:25:01Z kib $");
 
 #include "SYS.h"
 
@@ -81,8 +80,7 @@ ENTRY(sigsetjmp)
 	ret
 END(sigsetjmp)
 
-	.weak CNAME(siglongjmp)
-	.set CNAME(siglongjmp),CNAME(__siglongjmp)
+	WEAK_REFERENCE(__siglongjmp, siglongjmp)
 ENTRY(__siglongjmp)
 	cmpl	$0,88(%rdi)
 	jz	2f
@@ -107,7 +105,6 @@ ENTRY(__siglongjmp)
 	movq	40(%rdx),%r13
 	movq	48(%rdx),%r14
 	movq	56(%rdx),%r15
-	fninit
 	fldcw	64(%rdx)
 	testq	%rax,%rax
 	jnz	1f

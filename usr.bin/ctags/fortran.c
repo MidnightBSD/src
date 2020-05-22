@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)fortran.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/ctags/fortran.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <limits.h>
@@ -124,7 +124,7 @@ PF_funcs(void)
 			continue;
 		*cp = EOS;
 		(void)strlcpy(tok, lbp, sizeof(tok));	/* possible trunc */
-		getline();			/* process line for ex(1) */
+		get_line();			/* process line for ex(1) */
 		pfnote(tok, lineno);
 		pfcnt = YES;
 	}

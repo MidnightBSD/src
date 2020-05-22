@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1980, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\" Copyright (c) 1976 Board of Trustees of the University of Illinois.
@@ -12,11 +11,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -33,9 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)indent.1	8.1 (Berkeley) 7/1/93
-.\" $FreeBSD: stable/10/usr.bin/indent/indent.1 293290 2016-01-07 00:40:51Z bdrewery $
+.\" $FreeBSD: stable/11/usr.bin/indent/indent.1 328138 2018-01-18 21:29:46Z kevans $
 .\"
-.Dd March 3, 2012
+.Dd August 7, 2017
 .Dt INDENT 1
 .Os
 .Sh NAME
@@ -118,7 +113,10 @@ If
 is named
 .Sq Pa /blah/blah/file ,
 the backup file is named
-.Sq Pa file.BAK .
+.Sq Pa file.BAK
+by default. The extension used for the backup file may be overridden using the
+.Ev SIMPLE_BACKUP_SUFFIX
+environment variable.
 .Pp
 If
 .Ar output-file
@@ -185,7 +183,6 @@ if (...) {
   code
 }
 .Ed
-.Pp
 .It Fl c Ns Ar n
 The column in which comments on code start.
 The default is 33.

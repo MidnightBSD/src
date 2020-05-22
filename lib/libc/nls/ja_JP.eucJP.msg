@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/ja_JP.eucJP.msg 199128 2009-11-10 03:56:51Z ume $
 $
 $ Message catalog for ja_JP.eucJP locale
 $

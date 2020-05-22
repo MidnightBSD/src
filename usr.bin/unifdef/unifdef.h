@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 - 2013 Tony Finch <dot@dotat.at>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/unifdef/unifdef.h 279639 2015-03-05 09:39:29Z hselasky $
+ * $FreeBSD: stable/11/usr.bin/unifdef/unifdef.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/stat.h>
@@ -37,7 +38,7 @@
 #include <string.h>
 #include <unistd.h>
 
-/* portabiity stubs */
+/* portability stubs */
 
 #define fbinmode(fp) (fp)
 

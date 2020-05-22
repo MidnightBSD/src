@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: partab.c,v 1.5 2003/06/03 02:56:18 millert Exp $	*/
 /*	$NetBSD: partab.c,v 1.4 1996/12/29 10:38:21 cgd Exp $	*/
 
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tip/tip/partab.c 161754 2006-08-31 14:14:30Z ru $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tip/tip/partab.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 #if 0

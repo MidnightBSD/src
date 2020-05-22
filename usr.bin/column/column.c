@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)column.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/column/column.c 227159 2011-11-06 08:14:34Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/column/column.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -234,18 +233,18 @@ maketbl(void)
 	wchar_t *last;
 
 	if ((t = tbl = calloc(entries, sizeof(TBL))) == NULL)
-		err(1, (char *)NULL);
+		err(1, NULL);
 	if ((cols = calloc((maxcols = DEFCOLS), sizeof(*cols))) == NULL)
-		err(1, (char *)NULL);
+		err(1, NULL);
 	if ((lens = calloc(maxcols, sizeof(int))) == NULL)
-		err(1, (char *)NULL);
+		err(1, NULL);
 	for (cnt = 0, lp = list; cnt < entries; ++cnt, ++lp, ++t) {
 		for (coloff = 0, p = *lp;
 		    (cols[coloff] = wcstok(p, separator, &last));
 		    p = NULL)
 			if (++coloff == maxcols) {
 				if (!(cols = realloc(cols, ((u_int)maxcols +
-				    DEFCOLS) * sizeof(char *))) ||
+				    DEFCOLS) * sizeof(wchar_t *))) ||
 				    !(lens = realloc(lens,
 				    ((u_int)maxcols + DEFCOLS) * sizeof(int))))
 					err(1, NULL);
@@ -254,9 +253,9 @@ maketbl(void)
 				maxcols += DEFCOLS;
 			}
 		if ((t->list = calloc(coloff, sizeof(*t->list))) == NULL)
-			err(1, (char *)NULL);
+			err(1, NULL);
 		if ((t->len = calloc(coloff, sizeof(int))) == NULL)
-			err(1, (char *)NULL);
+			err(1, NULL);
 		for (t->cols = coloff; --coloff >= 0;) {
 			t->list[coloff] = cols[coloff];
 			t->len[coloff] = width(cols[coloff]);
@@ -285,7 +284,7 @@ input(FILE *fp)
 	if (!list)
 		if ((list = calloc((maxentry = DEFNUM), sizeof(*list))) ==
 		    NULL)
-			err(1, (char *)NULL);
+			err(1, NULL);
 	while (fgetws(buf, MAXLINELEN, fp)) {
 		for (p = buf; *p && iswspace(*p); ++p);
 		if (!*p)

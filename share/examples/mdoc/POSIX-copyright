@@ -1,5 +1,4 @@
 .\" Copyright (c) [year] [your name]
-.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -32,5 +31,5 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $MidnightBSD$
+.\" $FreeBSD: stable/11/share/examples/mdoc/POSIX-copyright 342664 2019-01-01 00:42:51Z delphij $
 .\"

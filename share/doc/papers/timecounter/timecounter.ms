@@ -9,7 +9,7 @@ delim רר
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: src/share/doc/papers/timecounter/timecounter.ms,v 1.3 2004/02/23 23:39:42 phk Exp $
+.\" $FreeBSD: stable/11/share/doc/papers/timecounter/timecounter.ms 160964 2006-08-04 07:56:35Z yar $
 .\"
 .if n .ND
 .TI
@@ -72,7 +72,7 @@ Despite the fact that time is the physical quantity (or maybe entity
 ?) about which we know the least, it is at the same time [sic!] what we
 can measure with the highest precision of all physical quantities.
 .LP
-The current crop of atomic clocks will neither gain nor loose a
+The current crop of atomic clocks will neither gain nor lose a
 second in the next couple hundred million years, provided we
 stick to the preventative maintenance schedules.  This is a feat
 roughly in line with to knowing the circumference of the Earth

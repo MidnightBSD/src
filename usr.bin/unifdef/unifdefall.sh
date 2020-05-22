@@ -2,6 +2,8 @@
 #
 # unifdefall: remove all the #if's from a source file
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2002 - 2013 Tony Finch <dot@dotat.at>
 # Copyright (c) 2009 - 2010 Jonathan Nieder <jrnieder@gmail.com>
 #
@@ -26,8 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/unifdef/unifdefall.sh 279639 2015-03-05 09:39:29Z hselasky $
+# $FreeBSD: stable/11/usr.bin/unifdef/unifdefall.sh 330449 2018-03-05 07:26:05Z eadler $
 
 set -e
 

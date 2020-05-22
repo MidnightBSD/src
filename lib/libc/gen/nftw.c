@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: nftw.c,v 1.7 2006/03/31 19:41:44 millert Exp $	*/
 
 /*
@@ -22,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/nftw.c 239160 2012-08-09 22:05:40Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/nftw.c 239160 2012-08-09 22:05:40Z jilles $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

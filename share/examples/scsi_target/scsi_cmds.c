@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * SCSI Disk Emulator
  *
@@ -26,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/share/examples/scsi_target/scsi_cmds.c 229997 2012-01-12 00:34:33Z ken $
+ * $FreeBSD: stable/11/share/examples/scsi_target/scsi_cmds.c 229997 2012-01-12 00:34:33Z ken $
  */
 
 #include <stdio.h>

@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	6.3 (Berkeley) 6/8/93
-# $FreeBSD: src/share/doc/papers/diskperf/Makefile,v 1.7 2004/10/24 15:32:39 ru Exp $
+# $FreeBSD: stable/11/share/doc/papers/diskperf/Makefile 136910 2004-10-24 15:33:08Z ru $
 
 VOLUME=		papers
 DOC=		diskperf

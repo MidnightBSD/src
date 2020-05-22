@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.2 2013-02-18 00:12:22 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.13 2005/04/27 04:56:43 sra Exp $";
 #endif /* not lint */
 
 /*
@@ -26,7 +26,7 @@ static const char rcsid[] = "$Id: res_update.c,v 1.2 2013-02-18 00:12:22 laffer1
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/resolv/res_update.c 269867 2014-08-12 12:36:06Z ume $");
 
 #include "port_before.h"
 

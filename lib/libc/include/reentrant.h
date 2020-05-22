@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/lib/libc/include/reentrant.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -49,7 +49,7 @@
  * One approach for thread safety is to provide discrete versions of the
  * library: one thread safe, the other not.  The disadvantage of this is
  * that libc is rather large, and two copies of a library which are 99%+
- * identical is not an efficent use of resources.
+ * identical is not an efficient use of resources.
  * 
  * Another approach is to provide a single thread safe library.  However,
  * it should not add significant run time or code size overhead to non-
@@ -65,7 +65,7 @@
  * Implementation Details:
  * 
  * The mutex primitives used by the library (mutex_t, mutex_lock, etc.)
- * are macros which expand to the cooresponding primitives provided by
+ * are macros which expand to the corresponding primitives provided by
  * the thread engine or to nothing.  The latter is used so that code is
  * not unreasonably cluttered with #ifdefs when all thread safe support
  * is removed.

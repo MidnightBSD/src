@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/10/usr.bin/yacc/tests/yacc_tests.sh 272973 2014-10-11 23:31:44Z rodrigc $
+# $FreeBSD: stable/11/usr.bin/yacc/tests/yacc_tests.sh 269884 2014-08-12 17:51:26Z ngie $
 
 set -e
 

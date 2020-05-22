@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/fix_grouping.c 116875 2003-06-26 10:46:16Z phantom $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/fix_grouping.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <ctype.h>
 #include <limits.h>

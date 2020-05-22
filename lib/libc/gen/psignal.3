@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1983, 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)psignal.3	8.2 (Berkeley) 2/27/95
-.\" $FreeBSD: stable/10/lib/libc/gen/psignal.3 233510 2012-03-26 15:18:14Z joel $
+.\" $FreeBSD: stable/11/lib/libc/gen/psignal.3 300997 2016-05-30 13:51:27Z ed $
 .\"
-.Dd February 4, 2011
+.Dd May 30, 2016
 .Dt PSIGNAL 3
 .Os
 .Sh NAME
@@ -43,7 +42,7 @@
 .Sh SYNOPSIS
 .In signal.h
 .Ft void
-.Fn psignal "unsigned sig" "const char *s"
+.Fn psignal "int sig" "const char *s"
 .Vt extern const char * const sys_siglist[] ;
 .Vt extern const char * const sys_signame[] ;
 .In string.h

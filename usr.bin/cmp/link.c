@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Brian Somers <brian@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,8 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/usr.bin/cmp/link.c,v 1.1 2005/08/23 13:13:13 brian Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/cmp/link.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/types.h>
 #include <err.h>

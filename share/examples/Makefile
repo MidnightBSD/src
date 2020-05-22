@@ -1,8 +1,17 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/Makefile 335480 2018-06-21 14:21:11Z dteske $
 #
 # Doing a make install builds /usr/share/examples
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+PACKAGE=examples
+FILESDIR=	${SHAREDIR}/examples
+
+.for _XFILE in ${XFILES}
+FILESGROUPS+=	${_XFILE}
+PACKAGE_${_XFILE}?=examples
+${_XFILE}DIR=	${SHAREDIR}/examples/${_XFILE:H}
+.endfor
 
 LDIRS=	IPv6 \
 	MidnightBSD_version \
@@ -28,12 +37,14 @@ LDIRS=	IPv6 \
 	ses \
 	scsi_target \
 	sunrpc \
-	uefisign
+	uefisign \
+	ypldap
 
-XFILES=	IPv6/USAGE \
+XFILES=	\
 	MidnightBSD_version/MidnightBSD_version.c \
 	MidnightBSD_version/Makefile \
 	MidnightBSD_version/README \
+	IPv6/USAGE \
 	bootforth/README \
 	bootforth/boot.4th \
 	bootforth/frames.4th \
@@ -60,6 +71,12 @@ XFILES=	IPv6/USAGE \
 	indent/indent.pro \
 	ipfw/change_rules.sh \
 	jails/README \
+	jails/VIMAGE \
+	jails/jail.xxx.conf \
+	jails/jib \
+	jails/jng \
+	jails/rc.conf.jails \
+	jails/rcjail.xxx.conf \
 	kld/Makefile \
 	kld/cdev/Makefile \
 	kld/cdev/README \
@@ -178,11 +195,10 @@ XFILES=	IPv6/USAGE \
 	sunrpc/sort/rsort.c \
 	sunrpc/sort/sort.x \
 	sunrpc/sort/sort_proc.c \
-	uefisign/uefikeys
+	uefisign/uefikeys \
+	ypldap/ypldap.conf
 
 BINDIR= ${SHAREDIR}/examples
-
-NO_OBJ=
 
 .if ${MK_HAST} != "no"
 LDIRS+=		hast
@@ -207,6 +223,7 @@ XFILES+=	libusb20/Makefile \
 .if ${MK_BHYVE} != "no"
 LDIRS+=		bhyve
 XFILES+=	bhyve/vmrun.sh
+PACKAGE_bhyve/vmrun.sh=	bhyve
 .endif
 .endif
 
@@ -216,6 +233,7 @@ XFILES+=	bhyve/vmrun.sh
 SHARED?=	copies
 
 beforeinstall: ${SHARED} etc-examples
+META_TARGETS+=	copies symlinks
 .ORDER: ${SHARED} etc-examples
 
 copies:
@@ -227,19 +245,19 @@ copies:
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../../etc/mtree/BSD.usr.dist -p ${DESTDIR}/usr
 .for file in ${XFILES}
-	${INSTALL} -o ${SHAREOWN} -g ${SHAREGRP} -m ${SHAREMODE} \
+	${INSTALL} -T package=${PACKAGE_${file}:Uexamples} -o ${SHAREOWN} -g ${SHAREGRP} -m ${SHAREMODE} \
 		${.CURDIR}/${file} ${DESTDIR}${BINDIR}/${file}
 .endfor
 
 symlinks:
 .for i in ${LDIRS}
 	rm -rf ${DESTDIR}${BINDIR}/$i
-	ln -s ${.CURDIR}/$i ${DESTDIR}${BINDIR}/$i
+	${INSTALL} ${TAG_ARGS} -l s ${.CURDIR}/$i ${DESTDIR}${BINDIR}/$i
 .endfor
 
 etc-examples:
 .if ${SHARED} != "symlinks"
-	(cd ${.CURDIR}/../../etc; ${MAKE} etc-examples)
+	${_+_}(cd ${.CURDIR}/../../etc; ${MAKE} etc-examples)
 .endif
 
 .if ${SHARED} != "symlinks"
@@ -258,4 +276,4 @@ SUBDIR+=tests
 
 SUBDIR_PARALLEL=
 
-.include <bsd.subdir.mk>
+.include <bsd.prog.mk>

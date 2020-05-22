@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/lib/libc/iconv/citrus_fix_grouping.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD: stable/11/lib/libc/iconv/citrus_fix_grouping.h 331722 2018-03-29 02:50:57Z eadler $ */
 /* $NetBSD: citrus_fix_grouping.h,v 1.2 2009/01/11 02:46:24 christos Exp $ */
 
 /*-

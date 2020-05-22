@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@
 static char sccsid[] = "@(#)glob.c	8.3 (Berkeley) 10/13/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/glob.c 304203 2016-08-16 07:14:09Z ache $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/glob.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * glob(3) -- a superset of the one defined in POSIX 1003.2.
@@ -851,7 +850,7 @@ globextend(const Char *path, glob_t *pglob, struct glob_limit *limit,
     const char *origpat)
 {
 	char **pathv;
-	size_t i, newsize, len;
+	size_t i, newn, len;
 	char *copy;
 	const Char *p;
 
@@ -861,9 +860,9 @@ globextend(const Char *path, glob_t *pglob, struct glob_limit *limit,
 		return (GLOB_NOSPACE);
 	}
 
-	newsize = sizeof(*pathv) * (2 + pglob->gl_pathc + pglob->gl_offs);
-	/* realloc(NULL, newsize) is equivalent to malloc(newsize). */
-	pathv = realloc((void *)pglob->gl_pathv, newsize);
+	newn = 2 + pglob->gl_pathc + pglob->gl_offs;
+	/* reallocarray(NULL, newn, size) is equivalent to malloc(newn*size). */
+	pathv = reallocarray(pglob->gl_pathv, newn, sizeof(*pathv));
 	if (pathv == NULL)
 		return (GLOB_NOSPACE);
 

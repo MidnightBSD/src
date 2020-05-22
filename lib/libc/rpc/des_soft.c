@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009, Sun Microsystems, Inc.
  * All rights reserved.
@@ -31,7 +30,7 @@
 static char sccsid[] = "@(#)des_soft.c	2.2 88/08/10 4.0 RPCSRC; from 1.13 88/02/08 SMI";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/rpc/des_soft.c 309489 2016-12-03 17:40:58Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/rpc/des_soft.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Table giving odd parity in the low bit for ASCII characters

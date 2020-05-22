@@ -35,11 +35,11 @@
 static char sccsid[] = "@(#)fixunsdfdi.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/lib/libc/quad/fixunsdfdi.c 358230 2020-02-21 21:57:24Z dim $");
 
 #include "quad.h"
 
-#define	ONE_FOURTH	(1 << (LONG_BITS - 2))
+#define	ONE_FOURTH	(1L << (LONG_BITS - 2))
 #define	ONE_HALF	(ONE_FOURTH * 2.0)
 #define	ONE		(ONE_FOURTH * 4.0)
 
@@ -83,11 +83,11 @@ __fixunsdfdi(x)
 	x -= (double)t.uq;
 	if (x < 0) {
 		t.ul[H]--;
-		x += ULONG_MAX;
+		x += (double)ULONG_MAX;
 	}
-	if (x > ULONG_MAX) {
+	if (x > (double)ULONG_MAX) {
 		t.ul[H]++;
-		x -= ULONG_MAX;
+		x -= (double)ULONG_MAX;
 	}
 	t.ul[L] = (u_long)x;
 	return (t.uq);

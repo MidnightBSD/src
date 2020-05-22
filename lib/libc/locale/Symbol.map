@@ -1,5 +1,5 @@
-/* $MidnightBSD$
- * $FreeBSD: stable/10/lib/libc/locale/Symbol.map 250883 2013-05-21 19:59:37Z ed $
+/*
+ * $FreeBSD: stable/11/lib/libc/locale/Symbol.map 250883 2013-05-21 19:59:37Z ed $
  */
 
 FBSD_1.0 {

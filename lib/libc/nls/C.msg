@@ -1,4 +1,4 @@
-$ $MidnightBSD$
+$ $FreeBSD: stable/11/lib/libc/nls/C.msg 250250 2013-05-04 19:07:22Z pluknet $
 $
 $ Message catalog for C locale (template)
 $

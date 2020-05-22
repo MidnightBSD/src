@@ -1,6 +1,6 @@
 # A left handed Dvorak keyboard for US English
 #
-# $FreeBSD: stable/10/share/vt/keymaps/us.dvorakl.kbd 270310 2014-08-21 22:04:17Z se $
+# $FreeBSD: stable/11/share/vt/keymaps/us.dvorakl.kbd 270114 2014-08-17 19:54:21Z se $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

@@ -1,32 +1,33 @@
-# $FreeBSD: stable/10/usr.bin/bmake/tests/archives/fmt_44bsd/Makefile 266074 2014-05-14 18:43:13Z jmmv $
+# $FreeBSD: stable/11/usr.bin/bmake/tests/archives/fmt_44bsd/Makefile 299094 2016-05-04 23:20:53Z ngie $
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/usr.bin/bmake/archives/fmt_44bsd
 
 TAP_TESTS_SH=	legacy_test
 
-FILESDIR=	${TESTSDIR}
-FILES=		Makefile.test
-FILES+=		expected.status.1
-FILES+=		expected.status.2
-FILES+=		expected.status.3
-FILES+=		expected.status.4
-FILES+=		expected.status.5
-FILES+=		expected.status.6
-FILES+=		expected.status.7
-FILES+=		expected.stderr.1
-FILES+=		expected.stderr.2
-FILES+=		expected.stderr.3
-FILES+=		expected.stderr.4
-FILES+=		expected.stderr.5
-FILES+=		expected.stderr.6
-FILES+=		expected.stderr.7
-FILES+=		expected.stdout.1
-FILES+=		expected.stdout.2
-FILES+=		expected.stdout.3
-FILES+=		expected.stdout.4
-FILES+=		expected.stdout.5
-FILES+=		expected.stdout.6
-FILES+=		expected.stdout.7
-FILES+=		libtest.a
+${PACKAGE}FILES+=	Makefile.test
+${PACKAGE}FILES+=	expected.status.1
+${PACKAGE}FILES+=	expected.status.2
+${PACKAGE}FILES+=	expected.status.3
+${PACKAGE}FILES+=	expected.status.4
+${PACKAGE}FILES+=	expected.status.5
+${PACKAGE}FILES+=	expected.status.6
+${PACKAGE}FILES+=	expected.status.7
+${PACKAGE}FILES+=	expected.stderr.1
+${PACKAGE}FILES+=	expected.stderr.2
+${PACKAGE}FILES+=	expected.stderr.3
+${PACKAGE}FILES+=	expected.stderr.4
+${PACKAGE}FILES+=	expected.stderr.5
+${PACKAGE}FILES+=	expected.stderr.6
+${PACKAGE}FILES+=	expected.stderr.7
+${PACKAGE}FILES+=	expected.stdout.1
+${PACKAGE}FILES+=	expected.stdout.2
+${PACKAGE}FILES+=	expected.stdout.3
+${PACKAGE}FILES+=	expected.stdout.4
+${PACKAGE}FILES+=	expected.stdout.5
+${PACKAGE}FILES+=	expected.stdout.6
+${PACKAGE}FILES+=	expected.stdout.7
+${PACKAGE}FILES+=	libtest.a
 
 .include <bsd.test.mk>

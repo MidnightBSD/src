@@ -1,38 +1,29 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/cpio/Makefile 321304 2017-07-20 20:16:18Z mm $
+# $FreeBSD: stable/11/usr.bin/cpio/Makefile 358088 2020-02-19 01:50:47Z mm $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-LIBARCHIVEDIR=	${.CURDIR}/../../contrib/libarchive
-LIBARCHIVECONFDIR=	${.CURDIR}/../../lib/libarchive
+_LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
+_LIBARCHIVECONFDIR=	${SRCTOP}/lib/libarchive
 
 PROG=	bsdcpio
-BSDCPIO_VERSION_STRING=	3.3.2
+BSDCPIO_VERSION_STRING=	3.4.2
 
-.PATH:	${LIBARCHIVEDIR}/cpio
+.PATH:	${_LIBARCHIVEDIR}/cpio
 SRCS=	cpio.c cmdline.c
 
-.PATH:	${LIBARCHIVEDIR}/libarchive_fe
+.PATH:	${_LIBARCHIVEDIR}/libarchive_fe
 SRCS+=	err.c line_reader.c passphrase.c
 
 CFLAGS+= -DBSDCPIO_VERSION_STRING=\"${BSDCPIO_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"${LIBARCHIVECONFDIR}/config_midnightbsd.h\"
-CFLAGS+= -I${LIBARCHIVEDIR}/cpio -I${LIBARCHIVEDIR}/libarchive_fe
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${_LIBARCHIVECONFDIR}/config_midnightbsd.h\"
+CFLAGS+= -I${_LIBARCHIVEDIR}/cpio -I${_LIBARCHIVEDIR}/libarchive_fe
 
 .ifdef RELEASE_CRUNCH
 # FreeBSD's installer uses cpio in crunched binaries that are
 # statically linked, cannot use -lcrypto, and are size sensitive.
 CFLAGS+= -DSMALLER
 .endif
-DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2} ${LIBLZMA} ${LIBPTHREAD} ${LIBBSDXML}
-LDADD=	-larchive -lz -lbz2 -llzma -lpthread -lbsdxml
-.if ${MK_OPENSSL} != "no"
-DPADD+=	${LIBCRYPTO}
-LDADD+= -lcrypto
-.else
-DPADD+= ${LIBMD}
-LDADD+= -lmd
-.endif
+LIBADD=	archive
 
 .if ${MK_ICONV} != "no"
 CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=const

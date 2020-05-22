@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/share/syscons/keymaps/us.emacs.kbd 60107 2000-05-06 18:31:10Z obrien $
+# $FreeBSD: stable/11/share/syscons/keymaps/us.emacs.kbd 60107 2000-05-06 18:31:10Z obrien $
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

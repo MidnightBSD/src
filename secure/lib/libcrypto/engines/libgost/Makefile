@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $FreeBSD: stable/11/secure/lib/libcrypto/engines/libgost/Makefile 290207 2015-10-30 20:51:33Z jkim $
 
 SHLIB_NAME?= libgost.so

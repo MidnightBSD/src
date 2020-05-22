@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)getmntinfo.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/getmntinfo.c 309485 2016-12-03 17:17:42Z ngie $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/getmntinfo.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -43,9 +42,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/getmntinfo.c 309485 2016-12-03 17:17:
  * Return information about mounted filesystems.
  */
 int
-getmntinfo(mntbufp, flags)
-	struct statfs **mntbufp;
-	int flags;
+getmntinfo(struct statfs **mntbufp, int mode)
 {
 	static struct statfs *mntbuf;
 	static int mntsize;
@@ -53,7 +50,7 @@ getmntinfo(mntbufp, flags)
 
 	if (mntsize <= 0 && (mntsize = getfsstat(0, 0, MNT_NOWAIT)) < 0)
 		return (0);
-	if (bufsize > 0 && (mntsize = getfsstat(mntbuf, bufsize, flags)) < 0)
+	if (bufsize > 0 && (mntsize = getfsstat(mntbuf, bufsize, mode)) < 0)
 		return (0);
 	while (bufsize <= mntsize * sizeof(struct statfs)) {
 		if (mntbuf)
@@ -61,7 +58,7 @@ getmntinfo(mntbufp, flags)
 		bufsize = (mntsize + 1) * sizeof(struct statfs);
 		if ((mntbuf = malloc(bufsize)) == NULL)
 			return (0);
-		if ((mntsize = getfsstat(mntbuf, bufsize, flags)) < 0)
+		if ((mntsize = getfsstat(mntbuf, bufsize, mode)) < 0)
 			return (0);
 	}
 	*mntbufp = mntbuf;

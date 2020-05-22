@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.bin/gcore/extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #define	PFLAGS_FULL	0x01

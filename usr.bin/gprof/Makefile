@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/29/93
-#	$FreeBSD: stable/10/usr.bin/gprof/Makefile 201386 2010-01-02 10:27:05Z ed $
+#	$FreeBSD: stable/11/usr.bin/gprof/Makefile 201386 2010-01-02 10:27:05Z ed $
 
 PROG=	gprof
 SRCS=	gprof.c aout.c arcs.c dfn.c elf.c lookup.c hertz.c \

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/sctp_sys_calls.c 294911 2016-01-27 14:01:21Z tuexen $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/sctp_sys_calls.c 347664 2019-05-16 09:03:48Z tuexen $");
 
 #include <stdio.h>
 #include <string.h>
@@ -414,7 +413,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		return (-1);
 	}
 	/* size required is returned in 'asoc' */
-	opt_len = (socklen_t) ((size_t)asoc + sizeof(struct sctp_getaddresses));
+	opt_len = (socklen_t) ((size_t)asoc + sizeof(sctp_assoc_t));
 	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		errno = ENOMEM;
@@ -474,9 +473,7 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		errno = ENOTCONN;
 		return (-1);
 	}
-	opt_len = (socklen_t) (size_of_addresses +
-	    sizeof(struct sockaddr_storage) +
-	    sizeof(struct sctp_getaddresses));
+	opt_len = (socklen_t) (size_of_addresses + sizeof(sctp_assoc_t));
 	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		errno = ENOMEM;
@@ -798,7 +795,7 @@ sctp_sendmsgx(int sd,
 	memset((void *)&sinfo, 0, sizeof(struct sctp_sndrcvinfo));
 	sinfo.sinfo_ppid = ppid;
 	sinfo.sinfo_flags = flags;
-	sinfo.sinfo_ssn = stream_no;
+	sinfo.sinfo_stream = stream_no;
 	sinfo.sinfo_timetolive = timetolive;
 	sinfo.sinfo_context = context;
 	return (sctp_sendx(sd, msg, len, addrs, addrcnt, &sinfo, 0));

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999, 2000, 2001 Robert N. M. Watson
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_init.c 194955 2009-06-25 12:46:59Z trasz $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/acl_init.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -68,8 +67,10 @@ acl_init(int count)
 
 	error = posix_memalign((void *)&acl, 1 << _ACL_T_ALIGNMENT_BITS,
 	    sizeof(struct acl_t_struct));
-	if (error)
+	if (error) {
+		errno = error;
 		return (NULL);
+	}
 
 	bzero(acl, sizeof(struct acl_t_struct));
 	acl->ats_brand = ACL_BRAND_UNKNOWN;

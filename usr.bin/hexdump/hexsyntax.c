@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +33,7 @@ static char sccsid[] = "@(#)hexsyntax.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/hexdump/hexsyntax.c 229403 2012-01-03 18:51:58Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/hexdump/hexsyntax.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 

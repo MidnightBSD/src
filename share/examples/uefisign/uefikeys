@@ -2,8 +2,8 @@
 #
 # See uefisign(8) manual page for usage instructions.
 #
-# $FreeBSD: stable/10/share/examples/uefisign/uefikeys 282976 2015-05-15 15:12:12Z trasz $
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/uefisign/uefikeys 279321 2015-02-26 14:22:27Z trasz $
+#
 
 die() {
 	echo "$*" > /dev/stderr

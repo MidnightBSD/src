@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/usr.bin/grep/regex/tre-fastmatch.h 226035 2011-10-05 09:56:43Z gabor $ */
+/* $FreeBSD: stable/11/usr.bin/grep/regex/tre-fastmatch.h 226035 2011-10-05 09:56:43Z gabor $ */
 
 #ifndef TRE_FASTMATCH_H
 #define TRE_FASTMATCH_H 1

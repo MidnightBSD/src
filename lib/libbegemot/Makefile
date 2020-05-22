@@ -1,8 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/lib/libbegemot/Makefile 313585 2017-02-11 05:55:25Z ngie $
+# $FreeBSD: stable/11/lib/libbegemot/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 LIBBEGEMOT_DIR=${SRCTOP}/contrib/libbegemot
 
+PACKAGE=lib${LIB}
 .PATH: ${LIBBEGEMOT_DIR}
 
 LIB=	begemot

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2007-2009 Bruce Simpson.
  * All rights reserved.
@@ -26,11 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/sourcefilter.c 269480 2014-08-03 18:03:00Z pfg $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/sourcefilter.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>

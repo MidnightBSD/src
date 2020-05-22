@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2006 Max Laier <mlaier@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -22,7 +21,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/firmware.9 256114 2013-10-07 16:49:53Z jmg $
+.\" $FreeBSD: stable/11/share/man/man9/firmware.9 301590 2016-06-08 09:19:47Z trasz $
 .\"
 .Dd August 2, 2008
 .Dt FIRMWARE 9
@@ -98,7 +97,8 @@ by calling the function
 .Fn firmware_get
 with the
 .Nm imagename
-they want as an argument. If a matching image is not already registered,
+they want as an argument.
+If a matching image is not already registered,
 the firmware subsystem will try to load it using the
 mechanisms specified below (typically, a kernel module
 with
@@ -128,7 +128,8 @@ pointer to the image requested.
 .Fn firmware_unregister
 tries to unregister the firmware image
 .Nm imagename
-from the system. The function is successful and returns 0
+from the system.
+The function is successful and returns 0
 if there are no pending references to the image, otherwise
 it does not unregister the image and returns EBUSY.
 .Pp
@@ -149,7 +150,8 @@ already mounted.
 On success,
 .Fn firmware_get
 returns a pointer to the image description and increases the reference count
-for this image. On failure, the function returns NULL.
+for this image.
+On failure, the function returns NULL.
 .Pp
 .Fn firmware_put
 drops a reference to a firmware image.
@@ -270,4 +272,4 @@ system was introduced in
 .Fx 6.1 .
 .Sh AUTHORS
 This manual page was written by
-.An Max Laier Aq mlaier@FreeBSD.org .
+.An Max Laier Aq Mt mlaier@FreeBSD.org .

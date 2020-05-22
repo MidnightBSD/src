@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "@(#)uuencode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/uuencode/uuencode.c 297960 2016-04-14 11:45:52Z gahr $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/uuencode/uuencode.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * uuencode [input] output
@@ -161,7 +160,7 @@ base64_encode(void)
 		fprintf(output, "begin-base64 %o %s\n", mode, *av);
 	while ((n = fread(buf, 1, sizeof(buf), stdin))) {
 		++sequence;
-		rv = b64_ntop(buf, n, buf2, (sizeof(buf2) / sizeof(buf2[0])));
+		rv = b64_ntop(buf, n, buf2, nitems(buf2));
 		if (rv == -1)
 			errx(1, "b64_ntop: error encoding base64");
 		fprintf(output, "%s%s", buf2, (sequence % GROUPS) ? "" : "\n");

@@ -1,9 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/cpuset/Makefile 336039 2018-07-06 19:10:07Z jamie $
+# $FreeBSD: stable/11/usr.bin/cpuset/Makefile 336040 2018-07-06 19:10:11Z jamie $
 
 PROG=   cpuset
 
-DPADD=	${LIBJAIL}
-LDADD=	-ljail
+LIBADD=	jail
 
 .include <bsd.prog.mk>

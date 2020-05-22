@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -32,7 +31,7 @@
 static char sccsid[] = "@(#)creat.c	8.1 (Berkeley) 6/2/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/compat-43/creat.c 277317 2015-01-18 11:54:20Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/compat-43/creat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include "namespace.h"
 #include <fcntl.h>
@@ -41,6 +40,8 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/compat-43/creat.c 277317 2015-01-18 11:54
 
 __weak_reference(__creat, creat);
 __weak_reference(__creat, _creat);
+
+int __creat(const char *path, mode_t mode);
 
 #pragma weak creat
 int

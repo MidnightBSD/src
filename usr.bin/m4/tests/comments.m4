@@ -1,4 +1,4 @@
-dnl $FreeBSD: stable/10/usr.bin/m4/tests/comments.m4 234852 2012-04-30 22:00:34Z bapt $
+dnl $FreeBSD: stable/11/usr.bin/m4/tests/comments.m4 234852 2012-04-30 22:00:34Z bapt $
 dnl $OpenBSD: src/regress/usr.bin/m4/comments.m4,v 1.1 2005/09/06 15:33:21 espie Exp $
 dnl checking the way changecom works.
 1: normal

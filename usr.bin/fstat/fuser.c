@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2009 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/fstat/fuser.c 227239 2011-11-06 18:49:36Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/fstat/fuser.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/queue.h>
 #include <sys/stat.h>

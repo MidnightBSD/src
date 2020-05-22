@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/share/examples/tests/tests/tap/printf_test.c 320443 2017-06-28 08:22:04Z ngie $
+/* $FreeBSD: stable/11/share/examples/tests/tests/tap/printf_test.c 320443 2017-06-28 08:22:04Z ngie $
  *
  * Copyright 2013 Google Inc.
  * All rights reserved.

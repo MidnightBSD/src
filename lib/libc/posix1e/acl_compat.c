@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Edward Tomasz Napierała <trasz@FreeBSD.org>
  * All rights reserved.
@@ -26,9 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/posix1e/acl_compat.c 192804 2009-05-26 11:42:06Z trasz $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/posix1e/acl_compat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/acl.h>
+
+int __oldacl_get_perm_np(acl_permset_t, oldacl_perm_t);
+int __oldacl_add_perm(acl_permset_t, oldacl_perm_t);
+int __oldacl_delete_perm(acl_permset_t, oldacl_perm_t);
 
 /*
  * Compatibility wrappers for applications compiled against libc from before

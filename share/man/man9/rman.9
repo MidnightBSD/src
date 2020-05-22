@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2003 Bruce M Simpson <bms@spc.org>
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man9/rman.9 303254 2016-07-24 04:38:50Z jhb $
+.\" $FreeBSD: stable/11/share/man/man9/rman.9 321229 2017-07-19 18:59:26Z ngie $
 .\"
-.Dd May 19, 2016
+.Dd May 20, 2016
 .Dt RMAN 9
 .Os
 .Sh NAME
@@ -50,6 +49,8 @@
 .Nm rman_get_device ,
 .Nm rman_get_size ,
 .Nm rman_get_flags ,
+.Nm rman_set_mapping ,
+.Nm rman_get_mapping ,
 .Nm rman_set_virtual ,
 .Nm rman_get_virtual ,
 .Nm rman_set_bustag ,
@@ -65,7 +66,7 @@
 .Ft int
 .Fn rman_activate_resource "struct resource *r"
 .Ft int
-.Fn rman_adjust_resource "struct resource *r" "u_long start" "u_long end"
+.Fn rman_adjust_resource "struct resource *r" "rman_res_t start" "rman_res_t end"
 .Ft int
 .Fn rman_deactivate_resource "struct resource *r"
 .Ft int
@@ -77,35 +78,39 @@
 .Ft int
 .Fn rman_is_region_manager "struct resource *r" "struct rman *rm"
 .Ft int
-.Fn rman_manage_region "struct rman *rm" "u_long start" "u_long end"
+.Fn rman_manage_region "struct rman *rm" "rman_res_t start" "rman_res_t end"
 .Ft int
-.Fn rman_first_free_region "struct rman *rm" "u_long *start" "u_long *end"
+.Fn rman_first_free_region "struct rman *rm" "rman_res_t *start" "rman_res_t *end"
 .Ft int
-.Fn rman_last_free_region "struct rman *rm" "u_long *start" "u_long *end"
+.Fn rman_last_free_region "struct rman *rm" "rman_res_t *start" "rman_res_t *end"
 .Ft int
 .Fn rman_release_resource "struct resource *r"
 .Ft "struct resource *"
 .Fo rman_reserve_resource
-.Fa "struct rman *rm" "u_long start" "u_long end" "u_long count"
+.Fa "struct rman *rm" "rman_res_t start" "rman_res_t end" "rman_res_t count"
 .Fa "u_int flags" "struct device *dev"
 .Fc
 .Ft "struct resource *"
 .Fo rman_reserve_resource_bound
-.Fa "struct rman *rm" "u_long start" "u_long end" "u_long count"
-.Fa "u_long bound" "u_int flags" "struct device *dev"
+.Fa "struct rman *rm" "rman_res_t start" "rman_res_t end" "rman_res_t count"
+.Fa "rman_res_t bound" "u_int flags" "struct device *dev"
 .Fc
 .Ft uint32_t
 .Fn rman_make_alignment_flags "uint32_t size"
-.Ft u_long
+.Ft rman_res_t
 .Fn rman_get_start "struct resource *r"
-.Ft u_long
+.Ft rman_res_t
 .Fn rman_get_end "struct resource *r"
 .Ft "struct device *"
 .Fn rman_get_device "struct resource *r"
-.Ft u_long
+.Ft rman_res_t
 .Fn rman_get_size "struct resource *r"
 .Ft u_int
 .Fn rman_get_flags "struct resource *r"
+.Ft void
+.Fn rman_set_mapping "struct resource *r" "struct resource_map *map"
+.Ft void
+.Fn rman_get_mapping "struct resource *r" "struct resource_map *map"
 .Ft void
 .Fn rman_set_virtual "struct resource *r" "void *v"
 .Ft "void *"
@@ -141,6 +146,7 @@ represented by a 16-bit flag register, as follows.
 #define RF_SHAREABLE    0x0004 /* resource permits contemporaneous sharing */
 #define RF_FIRSTSHARE   0x0020 /* first in sharing list */
 #define RF_PREFETCHABLE 0x0040 /* resource is prefetchable */
+#define RF_UNMAPPED     0x0100 /* don't map resource when activating */
 .Ed
 .Pp
 Bits 15:10  of the flag register are used to represent the desired alignment
@@ -425,6 +431,26 @@ The
 function can be used to retrieve the KVA once set.
 .Pp
 The
+.Fn rman_set_mapping
+function is used to associate a resource mapping with a resource
+.Fa r .
+The mapping must cover the entire resource.
+Setting a mapping sets the associated
+.Xr bus_space 9
+handle and tag for
+.Fa r
+as well as the kernel virtual address if the mapping contains one.
+These individual values can be retrieved via
+.Fn rman_get_bushandle ,
+.Fn rman_get_bustag ,
+and
+.Fn rman_get_virtual .
+.Pp
+The
+.Fn rman_get_mapping
+function can be used to retrieve the associated resource mapping once set.
+.Pp
+The
 .Fn rman_set_rid
 function associates a resource identifier with a resource
 .Fa r .
@@ -440,9 +466,11 @@ function returns a pointer to the device which reserved the resource
 .Xr bus_activate_resource 9 ,
 .Xr bus_adjust_resource 9 ,
 .Xr bus_alloc_resource 9 ,
+.Xr bus_map_resource 9 ,
 .Xr bus_release_resource 9 ,
 .Xr bus_set_resource 9 ,
+.Xr bus_space 9 ,
 .Xr mutex 9
 .Sh AUTHORS
 This manual page was written by
-.An Bruce M Simpson Aq bms@spc.org .
+.An Bruce M Simpson Aq Mt bms@spc.org .

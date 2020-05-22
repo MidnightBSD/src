@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2013, Luiz Otavio O Souza <loos@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -23,37 +22,41 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/share/man/man4/gpioled.4 266106 2014-05-15 01:37:17Z loos $
+.\" $FreeBSD: stable/11/share/man/man4/gpioled.4 349208 2019-06-19 20:12:00Z avg $
 .\"
-.Dd May 14, 2014
+.Dd May 23, 2019
 .Dt GPIOLED 4
 .Os
 .Sh NAME
 .Nm gpioled
-.Nd GPIO led generic device driver
+.Nd GPIO LED generic device driver
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device gpio"
 .Cd "device gpioled"
-.Pp
-This driver attaches a
-.Xr led 4
-device to a GPIO pin.
+.Ed
 .Sh DESCRIPTION
 The
-.Em gpioled
-driver provides a glue to attach a
+.Nm
+driver provides glue to attach a
 .Xr led 4
 compatible device to a GPIO pin.
-Each led on the system has a
+Each LED in the system has a
 .Pa name
-which is used to export a device in
+which is used to export a device as
 .Pa /dev/led/<name> .
 The GPIO pin can then be controlled by writing to this device as described
-on
+in
 .Xr led 4 .
 .Pp
-On a hint based system, like
-.Li MIPS , these values are configureable for
+On a
+.Xr device.hints 5
+based system, like
+.Li MIPS ,
+these values are configurable for
 .Nm :
 .Bl -tag -width ".Va hint.gpioiic.%d.atXXX"
 .It Va hint.gpioled.%d.at
@@ -67,13 +70,18 @@ to create for
 .It Va hint.gpioled.%d.pins
 Which pin on the GPIO interface to map to this instance.
 Please note that this mask should only ever have one bit set
-(any others bits - i.e., pins - will be ignored).
+(any other bits - i.e., pins - will be ignored).
+.It Va hint.gpioled.%d.state
+The initial state of the LED when the driver takes control over it.
+If set to 1 or 0, the LED will be on or off correspondingly.
+If set to -1, the LED will be kept in its original state.
 .El
 .Pp
 On a
 .Xr FDT 4
 based system, like
-.Li ARM , the dts part for a
+.Li ARM ,
+the DTS part for a
 .Nm gpioled
 device usually looks like:
 .Bd -literal
@@ -96,7 +104,7 @@ gpio: gpio {
 };
 .Ed
 .Pp
-And optionally, you can choose combine all the leds under a single
+Optionally, you can choose to combine all the LEDs under a single
 .Dq gpio-leds
 compatible node:
 .Bd -literal
@@ -120,7 +128,7 @@ simplebus0 {
 };
 .Ed
 .Pp
-Both methods are equally supported and it is possible to have the leds
+Both methods are equally supported and it is possible to have the LEDs
 defined with any sort of mix between the methods.
 The only restriction is that a GPIO pin cannot be mapped by two different
 (gpio)leds.
@@ -132,15 +140,15 @@ property, please consult
 .Pp
 The property
 .Va name
-is the arbitrary name of device in
+is the arbitrary name of the device in
 .Pa /dev/led/
 to create for
 .Xr led 4 .
 .Sh SEE ALSO
 .Xr fdt 4 ,
 .Xr gpio 4 ,
-.Xr led 4 ,
-.Xr gpioiic 4
+.Xr gpioiic 4 ,
+.Xr led 4
 .Sh HISTORY
 The
 .Nm

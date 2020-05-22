@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetnamadr.c 211276 2010-08-13 06:39:54Z ume $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/net/getnetnamadr.c 360415 2020-04-27 23:49:13Z brooks $");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -47,14 +46,7 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/net/getnetnamadr.c 211276 2010-08-13 06:3
 #include "nscache.h"
 #endif
 
-extern int _ht_getnetbyname(void *, void *, va_list);
-extern int _dns_getnetbyname(void *, void *, va_list);
-extern int _nis_getnetbyname(void *, void *, va_list);
-extern int _ht_getnetbyaddr(void *, void *, va_list);
-extern int _dns_getnetbyaddr(void *, void *, va_list);
-extern int _nis_getnetbyaddr(void *, void *, va_list);
-
-/* Network lookup order if nsswitch.conf is broken or nonexistant */
+/* Network lookup order if nsswitch.conf is broken or nonexistent */
 static const ns_src default_src[] = {
 	{ NSSRC_FILES, NS_SUCCESS },
 	{ NSSRC_DNS, NS_SUCCESS },
@@ -76,7 +68,7 @@ net_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	enum nss_lookup_type lookup_type;
 	int res = NS_UNAVAIL;
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -139,7 +131,7 @@ net_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -227,7 +219,7 @@ net_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;

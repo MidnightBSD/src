@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/share/examples/ses/setencstat/Makefile 299293 2016-05-10 00:51:50Z gjb $
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -34,6 +34,8 @@
 
 .PATH: ${.CURDIR}/../srcs
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/ses/${PROG}
 PROG=	setencstat
 SRCS=	setencstat.c eltsub.c
 MAN=	setencstat.8

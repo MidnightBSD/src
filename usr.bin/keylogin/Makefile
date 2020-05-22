@@ -1,11 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/keylogin/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD: stable/11/usr.bin/keylogin/Makefile 284069 2015-06-06 13:09:49Z bapt $
 
 PROG=	keylogin
 
-DPADD=	${LIBRPCSVC}
-LDADD=	-lrpcsvc
-
-WARNS?=	0
+LIBADD=	rpcsvc
 
 .include <bsd.prog.mk>

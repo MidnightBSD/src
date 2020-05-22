@@ -1,14 +1,11 @@
-# $MidnightBSD$
-
-NO_MAN=	
-
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/Clients
 
 PROG=   dns-sd
 
 WARNS=	2
+MK_MAN=	no
 
 SRCS=	dns-sd.c ClientCommon.c
 
@@ -23,8 +20,7 @@ CFLAGS+= -ITARGET_OS_FREEBSD
 CFLAGS+=	-DHAVE_IPV6
 .endif
 
-DPADD=	${LIBPTHREAD}
-LDADD=	-lpthread -ldns_sd
+LIBADD+=	dns_sd pthread
 
 .include <bsd.prog.mk>
 

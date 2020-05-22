@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/rfork_thread.S 240152 2012-09-05 21:41:05Z jilles $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/rfork_thread.S 240152 2012-09-05 21:41:05Z jilles $");
 
 /*
  * With thanks to John Dyson for the original version of this.

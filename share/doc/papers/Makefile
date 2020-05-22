@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: src/share/doc/papers/Makefile,v 1.15.2.1 2005/08/16 22:39:27 phk Exp $
+# $FreeBSD: stable/11/share/doc/papers/Makefile 289393 2015-10-15 22:55:08Z bdrewery $
 
 SUBDIR=	beyond4.3 \
 	bufbio \
 	contents \
 	devfs \
 	diskperf \
-	hwpmc \
 	fsinterface \
 	jail \
 	kernmalloc \
@@ -16,5 +14,7 @@ SUBDIR=	beyond4.3 \
 	relengr \
 	sysperf \
 	timecounter
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

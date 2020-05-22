@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1990, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -28,11 +27,11 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)pw_scan.c	8.3 (Berkeley) 4/2/94";
-#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/pw_scan.c 195827 2009-07-22 20:46:17Z kensmith $");
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] __unused = "@(#)pw_scan.c	8.3 (Berkeley) 4/2/94";
+#endif /* LIBC_SCCS and not lint */
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/pw_scan.c 356461 2020-01-07 18:42:53Z ian $");
 
 /*
  * This module is used to "verify" password entries by chpass(1) and
@@ -67,6 +66,22 @@ __FBSDID("$FreeBSD: stable/10/lib/libc/gen/pw_scan.c 195827 2009-07-22 20:46:17Z
  * system lag behind.
  */
 static int	pw_big_ids_warning = 0;
+
+void
+__pw_initpwd(struct passwd *pwd)
+{
+	static char nul[] = "";
+
+	memset(pwd, 0, sizeof(*pwd));
+	pwd->pw_uid = (uid_t)-1;  /* Considered least likely to lead to */
+	pwd->pw_gid = (gid_t)-1;  /* a security issue.                  */
+	pwd->pw_name = nul;
+	pwd->pw_passwd = nul;
+	pwd->pw_class = nul;
+	pwd->pw_gecos = nul;
+	pwd->pw_dir = nul;
+	pwd->pw_shell = nul;
+}
 
 int
 __pw_scan(char *bp, struct passwd *pw, int flags)

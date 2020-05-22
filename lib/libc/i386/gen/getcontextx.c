@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2011 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/gen/getcontextx.c 251047 2013-05-28 04:54:16Z kib $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/gen/getcontextx.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1993 Martin Birgmeier
  * All rights reserved.
@@ -13,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/jrand48.c 310320 2016-12-20 07:50:49Z ed $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/jrand48.c 310319 2016-12-20 07:42:15Z ed $");
 
 #include <stdint.h>
 

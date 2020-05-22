@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* $xMach: strnsubst.c,v 1.3 2002/02/23 02:10:24 jmallett Exp $ */
 
 /*
@@ -10,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/xargs/strnsubst.c 245050 2013-01-05 00:23:58Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/xargs/strnsubst.c 245050 2013-01-05 00:23:58Z delphij $");
 
 #include <err.h>
 #include <stdlib.h>

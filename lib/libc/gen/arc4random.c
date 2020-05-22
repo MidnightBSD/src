@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$OpenBSD: arc4random.c,v 1.24 2013/06/11 16:59:50 deraadt Exp $	*/
 
 /*
@@ -31,14 +30,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/gen/arc4random.c 315227 2017-03-14 06:12:51Z delphij $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/gen/arc4random.c 315226 2017-03-14 06:10:40Z delphij $");
 
 #include "namespace.h"
 #include <fcntl.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>

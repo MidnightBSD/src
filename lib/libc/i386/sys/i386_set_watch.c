@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 2000  Brian S. Dean <bsd@bsdhome.com>
  * All Rights Reserved.
@@ -28,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/i386/sys/i386_set_watch.c 105604 2002-10-21 03:47:22Z sam $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/i386/sys/i386_set_watch.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <machine/reg.h>
 #include <machine/sysarch.h>

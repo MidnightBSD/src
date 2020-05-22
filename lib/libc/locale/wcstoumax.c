@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -40,7 +39,7 @@ static char sccsid[] = "from @(#)strtoul.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 __FBSDID("FreeBSD: src/lib/libc/stdlib/strtoumax.c,v 1.8 2002/09/06 11:23:59 tjr Exp ");
 #endif
-__FBSDID("$FreeBSD: stable/10/lib/libc/locale/wcstoumax.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD: stable/11/lib/libc/locale/wcstoumax.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <errno.h>
 #include <inttypes.h>

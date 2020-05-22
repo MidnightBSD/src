@@ -3,8 +3,8 @@ $ ee.i18n.guide for more information
 $ 
 $ For ee patchlevel 3
 $ 
-$ $Header: /home/cvs/src/usr.bin/ee/nls/pt_BR.ISO8859-1/ee.msg,v 1.1 2012-12-31 07:53:13 laffer1 Exp $
-$ $MidnightBSD$
+$ $Header: /home/hugh/sources/old_ae/RCS/ee.msg,v 1.8 1996/11/30 03:23:40 hugh Exp $
+$ $FreeBSD: stable/11/usr.bin/ee/nls/pt_BR.ISO8859-1/ee.msg 203699 2010-02-09 10:47:44Z gabor $
 $ 
 $ 
 $set 1
