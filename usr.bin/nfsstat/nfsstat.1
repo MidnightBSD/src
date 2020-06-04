@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1989, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)nfsstat.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: stable/10/usr.bin/nfsstat/nfsstat.1 250158 2013-05-01 22:16:29Z rmacklem $
+.\" $FreeBSD: stable/11/usr.bin/nfsstat/nfsstat.1 309832 2016-12-10 21:13:50Z rmacklem $
 .\"
-.Dd May 1, 2013
+.Dd November 23, 2016
 .Dt NFSSTAT 1
 .Os
 .Sh NAME
@@ -39,7 +38,7 @@
 statistics
 .Sh SYNOPSIS
 .Nm
-.Op Fl cemoszW
+.Op Fl cdEemszW
 .Op Fl M Ar core
 .Op Fl N Ar system
 .Op Fl w Ar wait
@@ -58,11 +57,41 @@ The options are as follows:
 .Bl -tag -width indent
 .It Fl c
 Only display client side statistics.
+.It Fl d
+Display statistics for the new NFS server that are similar to those
+displayed by
+.Xr iostat 8 .
+This includes kilobytes per transfer, transfers per second, and megabytes per
+second for read, write, and all operations.
+It also includes the current queue depth, the busy percentage, and latency
+for all operations.
+If the
+.Fl W
+flag is added, commits per second, commit latency, read latency, and write
+latency are also added to the display.
+The busy percentage shown can exceed 100 at times.
+This is because of the way busy percentages are calculated.
+The busy time is calculated by adding the elapsed time between the
+last time an operation started or finished,
+and the current time.
+If there is only one operation outstanding, the "busy time" time
+will get updated with the total time of that operation.
+That means that the difference in the busy time between the two
+measurement intervals (often 1 second)
+will increase by more than the measurement interval.
 .It Fl e
-Report the extra statistics collected by the new NFS client and
+Report the extra statistics collected by the NFS client and
 server for NFSv4.
-This option is incompatible with
-.Fl o .
+.It Fl E
+Similar to
+.Fl e
+except that the statistics include NFSv4.1 and the numbers aren't clipped
+at one billion.
+Only one of
+.Fl e
+or
+.Fl E
+can be specified.
 .It Fl M
 Extract values associated with the name list from the specified core
 instead of the default
@@ -76,17 +105,14 @@ This option is only supported by the new NFS client.
 .It Fl N
 Extract the name list from the specified system instead of the default
 .Pa /boot/kernel/kernel .
-.It Fl o
-Report statistics for the old NFS client and/or server.
-Without this
-option statistics for the new NFS client and/or server will be reported.
 .It Fl s
 Only display server side statistics.
 .It Fl W
 Use wide format with interval short summary.
 This option is especially
 useful when combined with
-.Fl c
+.Fl c ,
+.Fl d ,
 or
 .Fl s
 and a time delay.
