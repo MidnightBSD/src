@@ -1,9 +1,10 @@
-/* $MidnightBSD$ */
 /*
  * rfcomm_sppd.c
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,11 +30,12 @@
  * SUCH DAMAGE.
  *
  * $Id: rfcomm_sppd.c,v 1.4 2003/09/07 18:15:55 max Exp $
- * $FreeBSD: stable/10/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c 274182 2014-11-06 16:32:00Z emax $
+ * $FreeBSD: stable/11/usr.bin/bluetooth/rfcomm_sppd/rfcomm_sppd.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <ctype.h>
 #include <err.h>
