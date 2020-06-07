@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/rctl/Makefile 222772 2011-06-06 20:24:17Z ed $
+# $FreeBSD: stable/11/usr.bin/rctl/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=   rctl
 MAN=	rctl.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .include <bsd.prog.mk>
