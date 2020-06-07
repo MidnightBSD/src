@@ -1,20 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llvm-diff/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/llvm-diff/Makefile 331838 2018-03-31 11:38:16Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-diff
 
-PROG_CXX=llvm-diff
+SRCDIR=		tools/llvm-diff
+SRCS+=		DiffConsumer.cpp
+SRCS+=		DiffLog.cpp
+SRCS+=		DifferenceEngine.cpp
+SRCS+=		llvm-diff.cpp
 
-SRCDIR=	tools/llvm-diff
-SRCS=	llvm-diff.cpp \
-	DiffConsumer.cpp \
-	DiffLog.cpp \
-	DifferenceEngine.cpp
-
-LIBDEPS=llvmirreader \
-	llvmbitreader \
-	llvmasmparser \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

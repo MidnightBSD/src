@@ -1,60 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llc/Makefile 263763 2014-03-26 07:31:57Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/llc/Makefile 310618 2016-12-26 20:36:37Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	llc
 
-PROG_CXX=llc
+SRCDIR=		tools/llc
+SRCS+=		llc.cpp
 
-SRCDIR=	tools/llc
-SRCS=	llc.cpp
+LIBADD+=	z
 
-LIBDEPS=llvmirreader \
-	llvmasmparser \
-	llvmbitreader \
-	llvmarmdisassembler \
-	llvmarmcodegen \
-	llvmarmasmparser \
-	llvmarmdesc \
-	llvmarminfo \
-	llvmarminstprinter \
-	llvmmipsdisassembler \
-	llvmmipscodegen \
-	llvmmipsasmparser \
-	llvmmipsdesc \
-	llvmmipsinfo \
-	llvmmipsinstprinter \
-	llvmpowerpccodegen \
-	llvmpowerpcasmparser \
-	llvmpowerpcdesc \
-	llvmpowerpcinfo \
-	llvmpowerpcinstprinter \
-	llvmsparcdisassembler \
-	llvmsparccodegen \
-	llvmsparcasmparser \
-	llvmsparcdesc \
-	llvmsparcinfo \
-	llvmsparcinstprinter \
-	llvmx86disassembler \
-	llvmx86asmparser \
-	llvmx86codegen \
-	llvmselectiondag \
-	llvmasmprinter \
-	llvmmcparser \
-	llvmcodegen \
-	llvmobjcarcopts \
-	llvmscalaropts \
-	llvminstcombine \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmx86desc \
-	llvmx86info \
-	llvmtarget \
-	llvmx86instprinter \
-	llvmmc \
-	llvmobject \
-	llvmx86utils \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

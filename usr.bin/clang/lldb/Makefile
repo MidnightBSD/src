@@ -1,145 +1,45 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/lldb/Makefile 285952 2015-07-28 12:46:37Z emaste $
+# $FreeBSD: stable/11/usr.bin/clang/lldb/Makefile 346296 2019-04-16 20:05:24Z dim $
 
-.include <bsd.own.mk>
+.include "${SRCTOP}/lib/clang/lldb.pre.mk"
 
-PROG_CXX=lldb
-
-LLDB_SRCS=${.CURDIR}/../../../contrib/llvm/tools/lldb
+PACKAGE=	lldb
+PROG_CXX=	lldb
+# Man page directory
+.PATH:		${LLDB_SRCS}/docs
 
 CFLAGS+=	-I${LLDB_SRCS}/include
-CXXFLAGS+=	-std=c++11
+CFLAGS+=	-I${.OBJDIR}
 
-SRCDIR=	tools/lldb/tools/driver
-SRCS=	Driver.cpp \
-	Platform.cpp
+SRCDIR=		tools/lldb/tools/driver
+SRCS+=		Driver.cpp
 
-# Man page directory
-.PATH: ${LLDB_SRCS}/docs
+.include "${SRCTOP}/lib/clang/clang.build.mk"
 
-DPADD=	${LIBEDIT} ${LIBNCURSESW} ${LIBEXECINFO} ${LIBPANEL}
-LDADD=	-ledit -lncursesw -lexecinfo -lpanel
+LIBDEPS+=	lldb
+LIBDEPS+=	clang
+LIBDEPS+=	llvm
 
-LLDB_LIBS=\
-	lldb \
-	\
-	lldbAPI \
-	lldbBreakpoint \
-	lldbCommands \
-	lldbCore \
-	lldbDataFormatters \
-	lldbExpression \
-	lldbHostFreeBSD \
-	lldbHostCommon \
-	lldbInterpreter \
-	lldbSymbol \
-	lldbTarget \
-	lldbUtility \
-	\
-	lldbPluginABISysV_x86_64 \
-	lldbPluginCXXItaniumABI \
-	lldbPluginDisassemblerLLVM \
-	lldbPluginInstructionARM \
-	lldbPluginSymbolFileDWARF \
-	lldbPluginSymbolFileSymtab \
-	lldbPluginDynamicLoaderStatic \
-	lldbPluginDynamicLoaderPosixDYLD \
-	lldbPluginObjectContainerBSDArchive \
-	lldbPluginObjectFileELF \
-	lldbPluginSymbolVendorELF \
-	lldbPluginPlatformFreeBSD \
-	lldbPluginPlatformGDB \
-	lldbPluginProcessElfCore \
-	lldbPluginProcessFreeBSD \
-	lldbPluginProcessGDBRemote \
-	lldbPluginProcessUtility \
-	lldbPluginProcessPOSIX \
-	lldbPluginProcessFreeBSD \
-	lldbPluginUnwindAssemblyInstEmulation \
-	lldbPluginUnwindAssemblyX86
-
-LDADD+=	-Wl,--start-group
-.for lib in ${LLDB_LIBS}
-DPADD+=	${.OBJDIR}/../../../lib/clang/lib${lib}/lib${lib}.a
-LDADD+=	${.OBJDIR}/../../../lib/clang/lib${lib}/lib${lib}.a
+.for lib in ${LIBDEPS}
+DPADD+=		${OBJTOP}/lib/clang/lib${lib}/lib${lib}.a
+LDADD+=		${OBJTOP}/lib/clang/lib${lib}/lib${lib}.a
 .endfor
-LDADD+=	-Wl,--end-group
 
-# Clang and LLVM libraries
-LIBDEPS=\
-	clangfrontend \
-	clangdriver \
-	clangserialization \
-	clangcodegen \
-	clangparse \
-	clangsema \
-	clanganalysis \
-	clangedit \
-	clangast \
-	clangbasic \
-	clanglex \
-	\
-	llvmoption \
-	llvmarmasmparser \
-	llvmarmcodegen \
-	llvminstrumentation \
-	llvmirreader \
-	llvmlinker \
-	llvmmipsasmparser \
-	llvmmipscodegen \
-	llvmmipsdisassembler \
-	llvmobjcarcopts \
-	llvmpowerpccodegen \
-	llvmx86asmparser \
-	llvmx86codegen \
-	llvmx86disassembler \
-	llvmmcjit \
-	llvmmcdisassembler \
-	llvmarmdisassembler \
-	llvmselectiondag \
-	llvmipo \
-	llvmbitwriter \
-	llvmbitreader \
-	llvmasmparser \
-	llvminterpreter \
-	llvmjit \
-	llvmarmdesc \
-	llvmasmprinter \
-	llvmmipsdesc \
-	llvmmipsinstprinter \
-	llvmpowerpcdesc \
-	llvmpowerpcinstprinter \
-	llvmpowerpcasmparser \
-	llvmruntimedyld \
-	llvmvectorize \
-	llvmx86desc \
-	llvmx86instprinter \
-	llvmexecutionengine \
-	llvmcodegen \
-	llvmscalaropts \
-	llvmsparcdisassembler \
-	llvmsparccodegen \
-	llvmsparcasmparser \
-	llvmsparcdesc \
-	llvmsparcinfo \
-	llvmsparcinstprinter \
-	llvmarminfo \
-	llvmarminstprinter \
-	llvmmcparser \
-	llvmmipsinfo \
-	llvmpowerpcinfo \
-	llvmx86info \
-	llvmx86utils \
-	llvmobject \
-	llvminstcombine \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmtarget \
-	llvmcore \
-	llvmmc \
-	llvmsupport
+LLVM_TBLGEN?=	llvm-tblgen
+INCFILE=	Options.inc
+TDFILE=		${LLDB_SRCS}/tools/driver/Options.td
+GENOPT=		-gen-opt-parser-defs
+${INCFILE}: ${TDFILE}
+	${LLVM_TBLGEN} ${GENOPT} -I ${LLVM_SRCS}/include -d ${.TARGET:C/$/.d/} \
+	    -o ${.TARGET} ${TDFILE}
+TGHDRS+=	${INCFILE}
 
-.include "../clang.prog.mk"
+DPSRCS+=	${TGHDRS}
+CLEANFILES+=	${TGHDRS} ${TGHDRS:C/$/.d/}
 
-LDADD+=	-lpthread
+LIBADD+=	edit
+LIBADD+=	panel
+LIBADD+=	ncursesw
+LIBADD+=	pthread
+LIBADD+=	z
+
+.include <bsd.prog.mk>

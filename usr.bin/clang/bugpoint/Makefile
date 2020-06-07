@@ -1,40 +1,18 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/bugpoint/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/bugpoint/Makefile 310618 2016-12-26 20:36:37Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	bugpoint
 
-PROG_CXX=bugpoint
+SRCDIR=		tools/bugpoint
+SRCS+=		BugDriver.cpp
+SRCS+=		CrashDebugger.cpp
+SRCS+=		ExecutionDriver.cpp
+SRCS+=		ExtractFunction.cpp
+SRCS+=		FindBugs.cpp
+SRCS+=		Miscompilation.cpp
+SRCS+=		OptimizerDriver.cpp
+SRCS+=		ToolRunner.cpp
+SRCS+=		bugpoint.cpp
 
-SRCDIR=	tools/bugpoint
-SRCS=	BugDriver.cpp \
-	CrashDebugger.cpp \
-	ExecutionDriver.cpp \
-	ExtractFunction.cpp \
-	FindBugs.cpp \
-	Miscompilation.cpp \
-	OptimizerDriver.cpp \
-	ToolRunner.cpp \
-	bugpoint.cpp
+LIBADD+=	z
 
-TGHDRS=	Intrinsics
-LIBDEPS=llvmirreader \
-	llvmbitwriter \
-	llvmbitreader \
-	llvmlinker \
-	llvmipo \
-	llvmobjcarcopts \
-	llvmvectorize \
-	llvmscalaropts \
-	llvminstcombine \
-	llvminstrumentation \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmtarget \
-	llvmmc \
-	llvmobject \
-	llvmasmparser \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

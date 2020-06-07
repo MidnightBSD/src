@@ -1,65 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llvm-objdump/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/usr.bin/clang/llvm-objdump/Makefile 346296 2019-04-16 20:05:24Z dim $
 
-MAN=
-.include <bsd.own.mk>
+PROG_CXX=	llvm-objdump
 
-PROG_CXX=llvm-objdump
-DPADD=	${LIBZ}
-LDADD=	-lz
+SRCDIR=		tools/llvm-objdump
+SRCS+=		COFFDump.cpp
+SRCS+=		ELFDump.cpp
+SRCS+=		MachODump.cpp
+SRCS+=		WasmDump.cpp
+SRCS+=		llvm-objdump.cpp
 
-SRCDIR=	tools/llvm-objdump
-SRCS=	llvm-objdump.cpp \
-	COFFDump.cpp \
-	ELFDump.cpp \
-	MachODump.cpp
+LIBADD+=	z
 
-LIBDEPS=llvmmcdisassembler \
-	llvmdebuginfo \
-	llvmarmdisassembler \
-	llvmarmcodegen \
-	llvmarmasmparser \
-	llvmarmdesc \
-	llvmarminfo \
-	llvmarminstprinter \
-	llvmmipsdisassembler \
-	llvmmipscodegen \
-	llvmmipsasmparser \
-	llvmmipsdesc \
-	llvmmipsinfo \
-	llvmmipsinstprinter \
-	llvmpowerpccodegen \
-	llvmpowerpcasmparser \
-	llvmpowerpcdesc \
-	llvmpowerpcinfo \
-	llvmpowerpcinstprinter \
-	llvmsparcdisassembler \
-	llvmsparccodegen \
-	llvmsparcasmparser \
-	llvmsparcdesc \
-	llvmsparcinfo \
-	llvmsparcinstprinter \
-	llvmx86disassembler \
-	llvmx86asmparser \
-	llvmx86codegen \
-	llvmselectiondag \
-	llvmasmprinter \
-	llvmmcparser \
-	llvmcodegen \
-	llvmobjcarcopts \
-	llvmscalaropts \
-	llvminstcombine \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmx86desc \
-	llvmx86info \
-	llvmtarget \
-	llvmx86instprinter \
-	llvmmc \
-	llvmobject \
-	llvmx86utils \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

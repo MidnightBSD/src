@@ -1,29 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llvm-extract/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/llvm-extract/Makefile 310618 2016-12-26 20:36:37Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-extract
 
-PROG_CXX=llvm-extract
+SRCDIR=		tools/llvm-extract
+SRCS+=		llvm-extract.cpp
 
-SRCDIR=	tools/llvm-extract
-SRCS=	llvm-extract.cpp
+LIBADD+=	z
 
-LIBDEPS=llvmirreader \
-	llvmasmparser \
-	llvmbitwriter \
-	llvmbitreader \
-	llvmipo \
-	llvmobjcarcopts \
-	llvmvectorize \
-	llvmscalaropts \
-	llvminstcombine \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmtarget \
-	llvmmc \
-	llvmobject \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"
