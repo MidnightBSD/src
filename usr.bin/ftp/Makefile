@@ -20,7 +20,7 @@ CFLAGS+= -DINET6
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=        -DWITH_SSL
-LIBADD+=	ssl crytpto
+LIBADD+=	ssl crypto
 SRCS+=		ssl.c
 .endif
 
