@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -35,7 +34,7 @@ static char sccsid[] = "@(#)pigs.c	8.2 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/pigs.c 288163 2015-09-24 00:50:17Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/pigs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Pigs display from Bill Reeves at Lucasfilm

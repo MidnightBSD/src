@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/systat/Makefile 303684 2016-08-02 22:33:29Z mr $
+# $FreeBSD: stable/11/usr.bin/systat/Makefile 289873 2015-10-24 09:34:40Z tuexen $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	systat
 SRCS=	cmds.c cmdtab.c devs.c fetch.c iostat.c keyboard.c main.c \
@@ -15,18 +14,8 @@ SRCS+=	icmp6.c ip6.c
 CFLAGS+= -DINET6
 .endif
 
-WARNS?=	0
+WARNS?=	1
 
-DPADD=	${LIBM} ${LIBDEVSTAT} ${LIBKVM}
-LDADD=	-lm -ldevstat -lkvm
-
-.if ${MK_NCURSESW} == "no"
-DPADD+=		${LIBNCURSES}
-LDADD+=		-lncurses
-.else
-CFLAGS+=	-DUSE_WIDECHAR
-DPADD+=		${LIBNCURSESW}
-LDADD+=		-lncursesw
-.endif
+LIBADD=	ncursesw m devstat kvm
 
 .include <bsd.prog.mk>

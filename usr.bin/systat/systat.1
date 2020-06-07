@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 1985, 1990, 1993
 .\"	The Regents of the University of California.  All rights reserved.
 .\"
@@ -27,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)systat.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: stable/10/usr.bin/systat/systat.1 316194 2017-03-30 01:48:36Z sevan $
+.\" $FreeBSD: stable/11/usr.bin/systat/systat.1 318716 2017-05-23 07:27:30Z markj $
 .\"
 .Dd December 5, 2016
 .Dt SYSTAT 1
@@ -38,6 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl display
+.Op Ar display-commands
 .Op Ar refresh-interval
 .Sh DESCRIPTION
 The
@@ -414,7 +414,7 @@ as amounts of memory in kilobytes,
 pages wired down (`wire'),
 active pages (`act'),
 inactive pages (`inact'),
-pages on the cache queue (`cache'),
+dirty pages queued for laundering (`laund'),
 and
 free pages (`free').
 Note that the values displayed are the current transient ones;

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003, Trent Nelson, <trent@arpa.com>.
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/systat/convtbl.c 175387 2008-01-16 19:27:43Z delphij $
+ * $FreeBSD: stable/11/usr.bin/systat/convtbl.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>

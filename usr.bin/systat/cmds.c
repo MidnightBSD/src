@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/cmds.c 240605 2012-09-17 13:36:47Z melifaro $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/cmds.c 336119 2018-07-09 05:56:13Z delphij $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)cmds.c	8.2 (Berkeley) 4/29/95";
@@ -60,7 +59,7 @@ command(const char *cmd)
 	if (*cp)
 		*cp++ = '\0';
 	if (*tmpstr1 == '\0')
-		return;
+		goto done;
 	for (; *cp && isspace(*cp); cp++)
 		;
 	if (strcmp(tmpstr1, "quit") == 0 || strcmp(tmpstr1, "q") == 0)
@@ -121,10 +120,10 @@ command(const char *cmd)
 		(*curcmd->c_close)(wnd);
 		curcmd->c_flags &= ~CF_INIT;
 		wnd = (*p->c_open)();
-		if (wnd == 0) {
+		if (wnd == NULL) {
 			error("Couldn't open new display");
 			wnd = (*curcmd->c_open)();
-			if (wnd == 0) {
+			if (wnd == NULL) {
 				error("Couldn't change back to previous cmd");
 				exit(1);
 			}
@@ -142,7 +141,7 @@ command(const char *cmd)
 		status();
 		goto done;
 	}
-	if (curcmd->c_cmd == 0 || !(*curcmd->c_cmd)(tmpstr1, cp))
+	if (curcmd->c_cmd == NULL || !(*curcmd->c_cmd)(tmpstr1, cp))
 		error("%s: Unknown command.", tmpstr1);
 done:
 	free(tmpstr);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/zarc.c 303684 2016-08-02 22:33:29Z mr $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/zarc.c 288306 2015-09-27 09:15:54Z mr $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

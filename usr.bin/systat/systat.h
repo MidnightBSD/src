@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -28,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)systat.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/10/usr.bin/systat/systat.h 303684 2016-08-02 22:33:29Z mr $
+ * $FreeBSD: stable/11/usr.bin/systat/systat.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <curses.h>
