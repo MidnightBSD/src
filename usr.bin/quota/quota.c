@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -45,7 +44,7 @@ static const char sccsid[] = "from: @(#)quota.c	8.1 (Berkeley) 6/6/93";
  * Disk quota reporting program.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/quota/quota.c 285725 2015-07-20 21:52:05Z gjb $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/quota/quota.c 352576 2019-09-21 14:06:16Z hrs $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -97,7 +96,7 @@ static int getufsquota(struct fstab *fs, struct quotause *qup, long id,
 	int quotatype);
 static int getnfsquota(struct statfs *fst, struct quotause *qup, long id,
 	int quotatype);
-static int callaurpc(char *host, int prognum, int versnum, int procnum, 
+static enum clnt_stat callaurpc(char *host, int prognum, int versnum, int procnum, 
 	xdrproc_t inproc, char *in, xdrproc_t outproc, char *out);
 static int alldigits(char *s);
 
@@ -267,8 +266,8 @@ prthumanval(int len, u_int64_t bytes)
 	/*
 	 * Limit the width to 5 bytes as that is what users expect.
 	 */
-	humanize_number(buf, sizeof(buf) < 5 ? sizeof(buf) : 5, bytes, "",
-	    HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
+	humanize_number(buf, MIN(sizeof(buf), 5), bytes, "",
+			HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 
 	(void)printf(" %*s", len, buf);
 }
@@ -567,19 +566,15 @@ getufsquota(struct fstab *fs, struct quotause *qup, long id, int quotatype)
 static int
 getnfsquota(struct statfs *fst, struct quotause *qup, long id, int quotatype)
 {
-	struct getquota_args gq_args;
+	struct ext_getquota_args gq_args;
+	struct getquota_args old_gq_args;
 	struct getquota_rslt gq_rslt;
 	struct dqblk *dqp = &qup->dqblk;
 	struct timeval tv;
 	char *cp, host[NI_MAXHOST];
+	enum clnt_stat call_stat;
 
 	if (fst->f_flags & MNT_LOCAL)
-		return (0);
-
-	/*
-	 * rpc.rquotad does not support group quotas
-	 */
-	if (quotatype != USRQUOTA)
 		return (0);
 
 	/*
@@ -603,11 +598,26 @@ getnfsquota(struct statfs *fst, struct quotause *qup, long id, int quotatype)
 		return (0);
 
 	gq_args.gqa_pathp = cp + 1;
-	gq_args.gqa_uid = id;
-	if (callaurpc(host, RQUOTAPROG, RQUOTAVERS,
-	    RQUOTAPROC_GETQUOTA, (xdrproc_t)xdr_getquota_args, (char *)&gq_args,
-	    (xdrproc_t)xdr_getquota_rslt, (char *)&gq_rslt) != 0)
-		return (0);
+	gq_args.gqa_id = id;
+	gq_args.gqa_type = quotatype;
+
+	call_stat = callaurpc(host, RQUOTAPROG, EXT_RQUOTAVERS,
+			      RQUOTAPROC_GETQUOTA, (xdrproc_t)xdr_ext_getquota_args, (char *)&gq_args,
+			      (xdrproc_t)xdr_getquota_rslt, (char *)&gq_rslt);
+	if (call_stat == RPC_PROGVERSMISMATCH || call_stat == RPC_PROGNOTREGISTERED) {
+		if (quotatype == USRQUOTA) {
+			old_gq_args.gqa_pathp = cp + 1;
+			old_gq_args.gqa_uid = id;
+			call_stat = callaurpc(host, RQUOTAPROG, RQUOTAVERS,
+					      RQUOTAPROC_GETQUOTA, (xdrproc_t)xdr_getquota_args, (char *)&old_gq_args,
+					      (xdrproc_t)xdr_getquota_rslt, (char *)&gq_rslt);
+		} else {
+			/* Old rpc quota does not support group type */
+			return (0);
+		}
+	}
+	if (call_stat != 0)
+		return (call_stat);
 
 	switch (gq_rslt.status) {
 	case Q_NOQUOTA:
@@ -649,7 +659,7 @@ getnfsquota(struct statfs *fst, struct quotause *qup, long id, int quotatype)
 	return (0);
 }
  
-static int
+static enum clnt_stat
 callaurpc(char *host, int prognum, int versnum, int procnum,
     xdrproc_t inproc, char *in, xdrproc_t outproc, char *out)
 {
@@ -670,8 +680,7 @@ callaurpc(char *host, int prognum, int versnum, int procnum,
 	tottimeout.tv_usec = 0;
 	clnt_stat = clnt_call(client, procnum, inproc, in,
 	    outproc, out, tottimeout);
- 
-	return ((int) clnt_stat);
+	return (clnt_stat);
 }
 
 static int
