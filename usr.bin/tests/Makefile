@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/tests/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/usr.bin/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
-.include <bsd.own.mk>
+PACKAGE=	tests
 
 .PATH:		${SRCTOP}/tests
 KYUAFILE=	yes
 
-FILESDIR=	${TESTSDIR}
-FILES=		regress.m4
+${PACKAGE}FILES+=		regress.m4
 
 .include <bsd.test.mk>
