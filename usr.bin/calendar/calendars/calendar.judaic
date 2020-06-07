@@ -1,12 +1,12 @@
 /*
  * Judaic Calendar. Maintained by Josef Grosch <jgrosch@mooseriver.com>.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.judaic 213875 2010-10-14 21:53:25Z edwin $
  *
  */
 
 /*
- * $Id: calendar.judaic,v 1.2 2012-11-23 01:13:49 laffer1 Exp $
+ * $Id: calendar.judaic,v 1.45 2007/01/01 22:24:53 jgrosch Exp $
  */
 
 #ifndef _calendar_judaic_

@@ -1,8 +1,7 @@
 /*
  * Holiday
  *
- * $MidnightBSD$
- * $FreeBSD: stable/10/usr.bin/calendar/calendars/calendar.holiday 326955 2017-12-19 01:02:58Z grog $
+ * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.holiday 284249 2015-06-11 00:12:33Z brueffer $
  */
 
 #ifndef _calendar_holiday_
@@ -145,8 +144,8 @@
 04/26	Confederate Memorial Day in Florida & Georgia
 04/26	Union Day in Tanzania
 04/27	Independence Day in Togo
+04/27	King's Birthday in the Netherlands, the Netherlands Antilles
 04/29	Showa Day in Japan
-04/30	Queen's Birthday in the Netherlands, the Netherlands Antilles
 04/30	The Workers Day in Uruguay
 04/MonLast	Arbor Day in Wyoming (last Monday)
 04/MonLast	Confederate Memorial Day in Alabama & Mississippi (last Monday)
@@ -357,7 +356,7 @@
 08/30	Victory Day in Turkey
 08/31	Independence Day (Merdeka) in Malaysia
 08/31	Independence Day in Trinidad and Tobago
-08/31	Pashtunistan Day in Afghanistan
+08/31	Pashtoonian Day in Afghanistan
 08/FriThird	Admission Day in Hawaii, 1959 (3rd Friday)
 09/01	Army Day in Chile
 09/03	Independence Day in Qatar
@@ -448,7 +447,7 @@
 10/20	Kenyatta Day in Kenya
 10/21	Armed Forces Day in Honduras
 10/21	Revolution Days (2 days) in Somalia
-10/23	King Chulalongkorn Day in Thailand
+10/23	Chulalongkron's Day in Thailand
 10/24	Independence Day in Zambia
 10/24	United Nations Day
 10/25	Taiwan Restoration Day in Taiwan

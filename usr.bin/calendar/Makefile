@@ -1,14 +1,12 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/calendar/Makefile 285291 2015-07-08 21:06:19Z bapt $
+# $FreeBSD: stable/11/usr.bin/calendar/Makefile 308238 2016-11-03 00:34:37Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	calendar
 SRCS=	calendar.c locale.c events.c dates.c parsedata.c io.c day.c \
 	ostern.c paskha.c pom.c sunpos.c
-DPADD=	${LIBM}
-LDADD=	-lm
+LIBADD=	m
 INTER=          de_AT.ISO_8859-15 de_DE.ISO8859-1 fr_FR.ISO8859-1 \
 		hr_HR.ISO8859-2 hu_HU.ISO8859-2 pt_BR.ISO8859-1 \
 		pt_BR.UTF-8 ru_RU.KOI8-R ru_RU.UTF-8 uk_UA.KOI8-U
@@ -17,21 +15,22 @@ FR_LINKS=       fr_FR.ISO8859-15
 TEXTMODE?=	444
 
 beforeinstall:
-	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${TEXTMODE} \
+	${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m ${TEXTMODE} \
 	    ${.CURDIR}/calendars/calendar.* ${DESTDIR}${SHAREDIR}/calendar
 .for lang in ${INTER}
-	mkdir -p ${DESTDIR}${SHAREDIR}/calendar/${lang}
-	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m ${TEXTMODE} \
+	${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m ${TEXTMODE} \
 		${.CURDIR}/calendars/${lang}/calendar.* \
 		${DESTDIR}${SHAREDIR}/calendar/${lang} 
 .endfor
 .for link in ${DE_LINKS}
 	rm -rf ${DESTDIR}${SHAREDIR}/calendar/${link}
-	ln -s de_DE.ISO8859-1 ${DESTDIR}${SHAREDIR}/calendar/${link}
+	${INSTALL} ${TAG_ARGS} -l s de_DE.ISO8859-1 \
+	    ${DESTDIR}${SHAREDIR}/calendar/${link}
 .endfor
 .for link in ${FR_LINKS}
 	rm -rf ${DESTDIR}${SHAREDIR}/calendar/${link}
-	ln -s fr_FR.ISO8859-1 ${DESTDIR}${SHAREDIR}/calendar/${link}
+	${INSTALL} ${TAG_ARGS} -l s fr_FR.ISO8859-1 \
+	    ${DESTDIR}${SHAREDIR}/calendar/${link}
 .endfor
 
 .if ${MK_TESTS} != "no"

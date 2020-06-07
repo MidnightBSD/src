@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 Wolfram Schneider <wosch@FreeBSD.org>. Berlin.
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/ostern.c 205821 2010-03-29 06:49:20Z edwin $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/ostern.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <stdio.h>
 #include <stdlib.h>

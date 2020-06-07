@@ -27,10 +27,9 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.bin/calendar/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <paths.h>
 
-#define	_PATH_CPP	"/usr/bin/cpp"
 #define	_PATH_INCLUDE	"/usr/share/calendar"

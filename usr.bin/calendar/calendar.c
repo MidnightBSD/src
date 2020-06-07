@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)calendar.c	8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/calendar.c 285291 2015-07-08 21:06:19Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/calendar.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <errno.h>

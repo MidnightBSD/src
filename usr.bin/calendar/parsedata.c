@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1992-2009 Edwin Groothuis <edwin@FreeBSD.org>.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/parsedata.c 293290 2016-01-07 00:40:51Z bdrewery $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/parsedata.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <ctype.h>
 #include <math.h>
