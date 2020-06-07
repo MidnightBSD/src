@@ -1,13 +1,15 @@
-# $MidnightBSD: src/usr.bin/sdiff/Makefile,v 1.1 2007/06/24 04:53:23 laffer1 Exp $
-#	$OpenBSD: Makefile,v 1.4 2006/02/20 08:38:18 otto Exp $
+# $FreeBSD: stable/11/usr.bin/sdiff/Makefile 307772 2016-10-22 13:15:19Z bapt $
 
-PROG=sdiff
-SRCS=common.c edit.c sdiff.c
-COPTS+=-Wall -W
+.include <src.opts.mk>
 
-WARNS?=	0
+PROG=	sdiff
+SRCS=	edit.c sdiff.c
+WARNS=	3
 
-LDADD+=	-lutil
-DPADD+=	${LIBUTIL}
+MAN1=	sdiff.1
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>

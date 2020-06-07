@@ -1,10 +1,10 @@
-.\" $MidnightBSD$
-.\" $OpenBSD: sdiff.1,v 1.11 2007/02/22 02:50:56 ray Exp $
+.\" $FreeBSD: stable/11/usr.bin/sdiff/sdiff.1 316705 2017-04-11 16:32:46Z bapt $
+.\" $OpenBSD: sdiff.1,v 1.15 2007/06/29 14:48:07 jmc Exp $
 .\"
 .\" Written by Raymond Lai <ray@cyth.net>.
 .\" Public domain.
 .\"
-.Dd February 21, 2007
+.Dd April 8, 2017
 .Dt SDIFF 1
 .Os
 .Sh NAME
@@ -12,7 +12,7 @@
 .Nd side-by-side diff
 .Sh SYNOPSIS
 .Nm
-.Op Fl abdilstW
+.Op Fl abdilstHW
 .Op Fl I Ar regexp
 .Op Fl o Ar outfile
 .Op Fl w Ar width
@@ -38,9 +38,9 @@ option for an explanation.
 .Pp
 The options are:
 .Bl -tag -width Ds
-.It Fl l
+.It Fl l -left-column
 Only print the left column for identical lines.
-.It Fl o Ar outfile
+.It Fl o -output Ar outfile
 Interactively merge
 .Ar file1
 and
@@ -57,9 +57,9 @@ for details of which editor, if any, is invoked.
 .Pp
 The commands are as follows:
 .Bl -tag -width Ds
-.It Cm l
+.It Cm l | 1
 Choose left set of diffs.
-.It Cm r
+.It Cm r | 2
 Choose right set of diffs.
 .It Cm s
 Silent mode \(en identical lines are not printed.
@@ -79,9 +79,9 @@ Start editing file with both sets of diffs.
 Quit
 .Nm .
 .El
-.It Fl s
+.It Fl s -suppress-common-lines
 Skip identical lines.
-.It Fl w Ar width
+.It Fl w -width Ar width
 Print a maximum of
 .Ar width
 characters on each line.
@@ -92,32 +92,44 @@ Options passed to
 .Xr diff 1
 are:
 .Bl -tag -width Ds
-.It Fl a
+.It Fl a -text
 Treat
 .Ar file1
 and
 .Ar file2
 as text files.
-.It Fl b
+.It Fl b -ignore-space-change
 Ignore trailing blank spaces.
-.It Fl d
+.It Fl d -minimal
 Minimize diff size.
-.It Fl I Ar regexp
+.It Fl I -ignore-matching-lines Ar regexp
 Ignore line changes matching
 .Ar regexp .
 All lines in the change must match
 .Ar regexp
 for the change to be ignored.
-.It Fl i
+.It Fl i -ignore-case
 Do a case-insensitive comparison.
-.It Fl t
+.It Fl t -expand-tabs
 Expand tabs to spaces.
-.It Fl W
-Ignore all spaces
-(the
-.Fl w
-flag is passed to
-.Xr diff 1 ) .
+.It Fl W -ignore-all-space
+Ignore all spaces.
+.It Fl B -ignore-blank-lines
+Ignore blank lines.
+.It Fl E -ignore-tab-expansion
+Treat tabs and eight spaces as the same.
+.It Fl t -ignore-tabs
+Ignore tabs.
+.It Fl H -speed-large-files
+Assume scattered small changes in a large file.
+.It Fl -ignore-file-name-case
+Ignore the case of file names.
+.It Fl -no-ignore-file-name-case
+Do not ignore file name case.
+.It Fl -strip-trailing-cr
+Skip identical lines.
+.It Fl -tabsize Ar NUM
+Change the size of tabs (default is 8.)
 .El
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
@@ -155,14 +167,6 @@ The default is
 was written from scratch for the public domain by
 .An Ray Lai Aq ray@cyth.net .
 .Sh CAVEATS
-Although undocumented,
-.Nm
-supports all options supported by GNU sdiff.
-Some options require GNU diff.
-.Pp
 Tabs are treated as anywhere from one to eight characters wide,
 depending on the current column.
 Terminals that treat tabs as eight characters wide will look best.
-.Sh BUGS
-.Nm
-may not work with binary data.
