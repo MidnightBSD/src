@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1989, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -42,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)showmount.c	8.3 (Berkeley) 3/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.bin/showmount/showmount.c 308292 2016-11-04 14:06:21Z trasz $";
+  "$FreeBSD: stable/11/usr.bin/showmount/showmount.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -195,7 +194,7 @@ main(int argc, char **argv)
 		default:
 			printf("Hosts on %s:\n", host);
 			break;
-		};
+		}
 		print_dump(mntdump);
 	}
 	if (rpcs & DOEXPORTS) {
@@ -318,7 +317,7 @@ xdr_mntdump(XDR *xdrsp, struct mountlist **mlp)
 						goto next;
 					}
 					break;
-				};
+				}
 				if (val < 0) {
 					otp = &tp->ml_left;
 					tp = tp->ml_left;
@@ -408,7 +407,7 @@ print_dump(struct mountlist *mp)
 	default:
 		printf("%s\n", mp->ml_host);
 		break;
-	};
+	}
 	if (mp->ml_right)
 		print_dump(mp->ml_right);
 }
