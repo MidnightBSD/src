@@ -1,6 +1,6 @@
 # This is ksb's infamous sed calculator.		(ksb@sa.fedex.com)
 #
-# $FreeBSD: stable/10/usr.bin/sed/tests/math.sed 228975 2011-12-30 00:04:11Z uqs $
+# $FreeBSD: stable/11/usr.bin/sed/tests/math.sed 228975 2011-12-30 00:04:11Z uqs $
 #
 # $Id: math.sed,v 2.5 1998/08/02 13:23:34 ksb Exp ksb $
 # expr ::= (expr) | expr! |

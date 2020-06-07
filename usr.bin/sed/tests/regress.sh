@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/sed/tests/regress.sh 263227 2014-03-16 08:04:06Z jmmv $
+# $FreeBSD: stable/11/usr.bin/sed/tests/regress.sh 263227 2014-03-16 08:04:06Z jmmv $
 
 REGRESSION_START($1)
 

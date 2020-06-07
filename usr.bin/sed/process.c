@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Diomidis Spinellis.
  * Copyright (c) 1992, 1993, 1994
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sed/process.c 303065 2016-07-20 04:49:01Z pfg $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sed/process.c 338462 2018-09-05 00:30:34Z markj $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)process.c	8.6 (Berkeley) 4/20/94";
@@ -64,6 +63,7 @@ static SPACE HS, PS, SS, YS;
 #define	pd		PS.deleted
 #define	ps		PS.space
 #define	psl		PS.len
+#define	psanl		PS.append_newline
 #define	hs		HS.space
 #define	hsl		HS.len
 
@@ -77,8 +77,8 @@ static void		 regsub(SPACE *, char *, char *);
 static int		 substitute(struct s_command *);
 
 struct s_appends *appends;	/* Array of pointers to strings to append. */
-static int appendx;		/* Index into appends array. */
-int appendnum;			/* Size of appends array. */
+static unsigned int appendx;	/* Index into appends array. */
+unsigned int appendnum;		/* Size of appends array. */
 
 static int lastaddr;		/* Set by applies if last address of a range. */
 static int sdone;		/* If any substitutes since last line input. */
@@ -87,7 +87,10 @@ static regex_t *defpreg;
 size_t maxnsub;
 regmatch_t *match;
 
-#define OUT() do {fwrite(ps, 1, psl, outfile); fputc('\n', outfile);} while (0)
+#define OUT() do {							\
+	fwrite(ps, 1, psl, outfile);					\
+	if (psanl) fputc('\n', outfile);				\
+} while (0)
 
 void
 process(void)
@@ -96,6 +99,7 @@ process(void)
 	SPACE tspace;
 	size_t oldpsl = 0;
 	char *p;
+	int oldpsanl;
 
 	p = NULL;
 
@@ -192,17 +196,25 @@ redirect:
 					break;
 				if ((p = memchr(ps, '\n', psl)) != NULL) {
 					oldpsl = psl;
+					oldpsanl = psanl;
 					psl = p - ps;
+					psanl = 1;
 				}
 				OUT();
-				if (p != NULL)
+				if (p != NULL) {
 					psl = oldpsl;
+					psanl = oldpsanl;
+				}
 				break;
 			case 'q':
-				if (!nflag && !pd)
-					OUT();
-				flush_appends();
-				exit(0);
+				if (inplace == NULL) {
+					if (!nflag && !pd)
+						OUT();
+					flush_appends();
+					exit(0);
+				}
+				quit = 1;
+				break;
 			case 'r':
 				if (appendx >= appendnum)
 					if ((appends = realloc(appends,
@@ -246,6 +258,7 @@ redirect:
 					cspace(&HS, "", 0, REPLACE);
 				tspace = PS;
 				PS = HS;
+				psanl = tspace.append_newline;
 				HS = tspace;
 				break;
 			case 'y':
@@ -373,7 +386,7 @@ substitute(struct s_command *cp)
 	regex_t *re;
 	regoff_t slen;
 	int lastempty, n;
-	size_t le = 0;
+	regoff_t le = 0;
 	char *s;
 
 	s = ps;
@@ -454,6 +467,7 @@ substitute(struct s_command *cp)
 	 */
 	tspace = PS;
 	PS = SS;
+	psanl = tspace.append_newline;
 	SS = tspace;
 	SS.space = SS.back;
 
@@ -523,6 +537,7 @@ do_tr(struct s_tr *y)
 		/* Swap the translation space and the pattern space. */
 		tmp = PS;
 		PS = YS;
+		psanl = tmp.append_newline;
 		YS = tmp;
 		YS.space = YS.back;
 	}
@@ -536,13 +551,13 @@ static void
 flush_appends(void)
 {
 	FILE *f;
-	int count, i;
+	unsigned int count, idx;
 	char buf[8 * 1024];
 
-	for (i = 0; i < appendx; i++)
-		switch (appends[i].type) {
+	for (idx = 0; idx < appendx; idx++)
+		switch (appends[idx].type) {
 		case AP_STRING:
-			fwrite(appends[i].s, sizeof(char), appends[i].len,
+			fwrite(appends[idx].s, sizeof(char), appends[idx].len,
 			    outfile);
 			break;
 		case AP_FILE:
@@ -554,7 +569,7 @@ flush_appends(void)
 			 * would be truly bizarre, but possible.  It's probably
 			 * not that big a performance win, anyhow.
 			 */
-			if ((f = fopen(appends[i].s, "r")) == NULL)
+			if ((f = fopen(appends[idx].s, "r")) == NULL)
 				break;
 			while ((count = fread(buf, sizeof(char), sizeof(buf), f)))
 				(void)fwrite(buf, sizeof(char), count, outfile);
