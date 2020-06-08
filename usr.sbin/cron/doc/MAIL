@@ -3,8 +3,7 @@
   version of cron.  it is presented here for its entertainment value.
   --vix ]
 
-$MidnightBSD$
-$FreeBSD: src/usr.sbin/cron/doc/MAIL,v 1.4 1999/08/28 01:15:53 peter Exp $
+$FreeBSD: stable/11/usr.sbin/cron/doc/MAIL 228990 2011-12-30 10:58:14Z uqs $
 
 From ptsfa!lll-crg!ames!acornrc!bob Wed Dec 31 10:07:08 1986
 Date: Wed, 31 Dec 86 08:59:31 pst
@@ -187,7 +186,7 @@ five fields.  Examples:
 
 (run command if day-of-month AND day-of-week are true)
 
-Get the picture?  This would be compatable with existing versions of
+Get the picture?  This would be compatible with existing versions of
 cron (which wouldn't currently be using any special characters, so
 that old crontabs would be handled correctly).
 

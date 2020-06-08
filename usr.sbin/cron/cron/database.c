@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -18,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/cron/database.c 321242 2017-07-19 20:24:38Z ngie $";
+  "$FreeBSD: stable/11/usr.sbin/cron/cron/database.c 346586 2019-04-23 02:29:08Z kevans $";
 #endif
 
 /* vix 26jan87 [RCS has the log]
@@ -57,7 +56,7 @@ load_database(old_db)
 		{ SYSCRONTABS },
 		{ LOCALSYSCRONTABS }
 	};
-	int i;
+	int i, ret;
 
 	Debug(DLOAD, ("[%d] load_database()\n", getpid()))
 
@@ -80,6 +79,18 @@ load_database(old_db)
 	for (i = 0; i < nitems(syscrontabs); i++) {
 		if (stat(syscrontabs[i].name, &syscrontabs[i].st) != -1) {
 			maxmtime = TMAX(syscrontabs[i].st.st_mtime, maxmtime);
+			/* Traverse into directory */
+			if (!(dir = opendir(syscrontabs[i].name)))
+				continue;
+			while (NULL != (dp = readdir(dir))) {
+				if (dp->d_name[0] == '.')
+					continue;
+				ret = fstatat(dirfd(dir), dp->d_name, &st, 0);
+				if (ret != 0 || !S_ISREG(st.st_mode))
+					continue;
+				maxmtime = TMAX(st.st_mtime, maxmtime);
+			}
+			closedir(dir);
 		} else {
 			syscrontabs[i].st.st_mtime = 0;
 		}
@@ -248,6 +259,8 @@ process_crontab(uname, fname, tabname, statbuf, new_db, old_db)
 	struct passwd	*pw = NULL;
 	int		crontab_fd = OK - 1;
 	user		*u;
+	entry		*e;
+	time_t		now;
 
 	if (strcmp(fname, SYS_NAME) && !(pw = getpwnam(uname))) {
 		/* file doesn't have a user in passwd file.
@@ -296,6 +309,21 @@ process_crontab(uname, fname, tabname, statbuf, new_db, old_db)
 	u = load_user(crontab_fd, pw, fname);
 	if (u != NULL) {
 		u->mtime = statbuf->st_mtime;
+		/*
+		 * TargetTime == 0 when we're initially populating the database,
+		 * and TargetTime > 0 any time after that (i.e. we're reloading
+		 * cron.d/ files because they've been created/modified).  In the
+		 * latter case, we should check for any interval jobs and run
+		 * them 'n' seconds from the time the job was loaded/reloaded.
+		 * Otherwise, they will not be run until cron is restarted.
+		 */
+		if (TargetTime != 0) {
+			now = time(NULL);
+			for (e = u->crontab; e != NULL; e = e->next) {
+				if ((e->flags & INTERVAL) != 0)
+					e->lastexit = now;
+			}
+		}
 		link_user(new_db, u);
 	}
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -19,7 +18,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/crontab/crontab.c 321243 2017-07-19 20:26:35Z ngie $";
+  "$FreeBSD: stable/11/usr.sbin/cron/crontab/crontab.c 321241 2017-07-19 20:22:16Z ngie $";
 #endif
 
 /* crontab - install and manage per-user crontab files

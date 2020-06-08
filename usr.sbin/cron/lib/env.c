@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -18,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/lib/env.c 110638 2003-02-10 11:20:58Z thomas $";
+  "$FreeBSD: stable/11/usr.sbin/cron/lib/env.c 110638 2003-02-10 11:20:58Z thomas $";
 #endif
 
 

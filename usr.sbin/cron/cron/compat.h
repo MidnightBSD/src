@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -17,7 +16,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/usr.sbin/cron/cron/compat.h 50479 1999-08-28 01:35:59Z peter $
+ * $FreeBSD: stable/11/usr.sbin/cron/cron/compat.h 50479 1999-08-28 01:35:59Z peter $
  */
 
 #ifndef __P

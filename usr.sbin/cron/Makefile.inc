@@ -1,6 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/cron/Makefile.inc,v 1.4 2005/06/10 06:12:52 des Exp $
-
-LIBCRON= ${.OBJDIR}/../lib/libcron.a
+# $FreeBSD: stable/11/usr.sbin/cron/Makefile.inc 275218 2014-11-28 22:03:35Z bapt $
 
 .include "../Makefile.inc"
