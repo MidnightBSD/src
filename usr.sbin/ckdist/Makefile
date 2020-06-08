@@ -1,11 +1,10 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ckdist/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${.CURDIR}/../../usr.bin/cksum
+.PATH: ${SRCTOP}/usr.bin/cksum
 
 PROG=	ckdist
 SRCS=   ckdist.c crc.c
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.prog.mk>
