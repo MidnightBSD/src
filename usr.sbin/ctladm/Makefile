@@ -1,10 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ctladm/Makefile 274870 2014-11-22 17:50:14Z trasz $
+# $FreeBSD: stable/11/usr.sbin/ctladm/Makefile 319152 2017-05-29 18:17:34Z ngie $
+
+.include <src.opts.mk>
 
 PROG=		ctladm
 SRCS=		ctladm.c util.c ctl_util.c ctl_scsi_all.c
-.PATH:		${.CURDIR}/../../sys/cam/ctl
-SDIR=		${.CURDIR}/../../sys
+.PATH:		${SRCTOP}/sys/cam/ctl
+SDIR=		${SRCTOP}/sys
 CFLAGS+=	-I${SDIR}
 # This is necessary because of these warnings:
 # warning: cast increases required alignment of target type
@@ -15,8 +16,11 @@ CFLAGS+=	-I${SDIR}
 WARNS?= 3
 .endif
 
-DPADD=		${LIBCAM} ${LIBSBUF} ${LIBBSDXML} ${LIBUTIL}
-LDADD=		-lcam -lsbuf -lbsdxml -lutil
+LIBADD=		cam sbuf bsdxml util
 MAN=		ctladm.8
+
+.if ${MK_ISCSI} != "no"
+CFLAGS+=	-DWANT_ISCSI
+.endif
 
 .include <bsd.prog.mk>

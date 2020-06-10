@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998 Kenneth D. Merry.
  * All rights reserved.
  *
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $Id: ctladm.h,v 1.1 2013-01-30 12:43:58 laffer1 Exp $
+ * $FreeBSD: stable/11/usr.sbin/ctladm/ctladm.h 330449 2018-03-05 07:26:05Z eadler $
+ * $Id: //depot/users/kenm/FreeBSD-test2/usr.sbin/ctladm/ctladm.h#1 $
  */
 
 #ifndef _CTLADM_H

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003, 2004 Silicon Graphics International Corp.
  * Copyright (c) 1997-2007 Kenneth D. Merry
@@ -42,12 +41,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ctladm/ctladm.c 316253 2017-03-30 06:13:54Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ctladm/ctladm.c 322815 2017-08-23 15:47:42Z benno $");
 
 #include <sys/param.h>
 #include <sys/callout.h>
 #include <sys/ioctl.h>
 #include <sys/linker.h>
+#include <sys/module.h>
 #include <sys/queue.h>
 #include <sys/sbuf.h>
 #include <sys/stat.h>
@@ -2794,7 +2794,10 @@ struct cctl_islist_conn {
 	char *target_alias;
 	char *header_digest;
 	char *data_digest;
-	char *max_data_segment_length;;
+	char *max_data_segment_length;
+	char *max_burst_length;
+	char *first_burst_length;
+	char *offload;
 	int immediate_data;
 	int iser;
 	STAILQ_ENTRY(cctl_islist_conn) links;
@@ -2908,6 +2911,15 @@ cctl_islist_end_element(void *user_data, const char *name)
 	} else if (strcmp(name, "max_data_segment_length") == 0) {
 		cur_conn->max_data_segment_length = str;
 		str = NULL;
+	} else if (strcmp(name, "max_burst_length") == 0) {
+		cur_conn->max_burst_length = str;
+		str = NULL;
+	} else if (strcmp(name, "first_burst_length") == 0) {
+		cur_conn->first_burst_length = str;
+		str = NULL;
+	} else if (strcmp(name, "offload") == 0) {
+		cur_conn->offload = str;
+		str = NULL;
 	} else if (strcmp(name, "immediate_data") == 0) {
 		cur_conn->immediate_data = atoi(str);
 	} else if (strcmp(name, "iser") == 0) {
@@ -2918,7 +2930,7 @@ cctl_islist_end_element(void *user_data, const char *name)
 		/* Nothing. */
 	} else {
 		/*
-		 * Unknown element; ignore it for forward compatiblity.
+		 * Unknown element; ignore it for forward compatibility.
 		 */
 	}
 
@@ -3027,8 +3039,11 @@ retry:
 			printf("Header digest:    %s\n", conn->header_digest);
 			printf("Data digest:      %s\n", conn->data_digest);
 			printf("DataSegmentLen:   %s\n", conn->max_data_segment_length);
+			printf("MaxBurstLen:      %s\n", conn->max_burst_length);
+			printf("FirstBurstLen:    %s\n", conn->first_burst_length);
 			printf("ImmediateData:    %s\n", conn->immediate_data ? "Yes" : "No");
 			printf("iSER (RDMA):      %s\n", conn->iser ? "Yes" : "No");
+			printf("Offload driver:   %s\n", conn->offload);
 			printf("\n");
 		}
 	} else {
@@ -3943,7 +3958,7 @@ usage(int error)
 "-q                       : omit header in list output\n"
 "-x                       : output port list in XML format\n"
 "portlist options:\n"
-"-f fronetnd              : specify frontend type\n"
+"-f frontend              : specify frontend type\n"
 "-i                       : report target and initiators addresses\n"
 "-l                       : report LUN mapping\n"
 "-p targ_port             : specify target port number\n"
@@ -4133,6 +4148,13 @@ main(int argc, char **argv)
 			retval = 1;
 			goto bailout;
 		}
+#ifdef	WANT_ISCSI
+		else {
+			if (modfind("cfiscsi") == -1 &&
+			    kldload("cfiscsi") == -1)
+				warn("couldn't load cfiscsi");
+		}
+#endif
 	} else if ((command != CTLADM_CMD_HELP)
 		&& ((cmdargs & CTLADM_ARG_DEVICE) == 0)) {
 		fprintf(stderr, "%s: you must specify a device with the "
