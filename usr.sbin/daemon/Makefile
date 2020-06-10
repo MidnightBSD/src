@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/daemon/Makefile,v 1.3 2005/08/24 17:24:39 pjd Exp $
+# $FreeBSD: stable/11/usr.sbin/daemon/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	daemon
 MAN=	daemon.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .include <bsd.prog.mk>
