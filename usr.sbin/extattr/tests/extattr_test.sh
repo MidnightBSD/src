@@ -22,9 +22,8 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-# 
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/extattr/tests/extattr_test.sh 319550 2017-06-03 18:25:36Z ngie $
+#
+# $FreeBSD: stable/11/usr.sbin/extattr/tests/extattr_test.sh 319555 2017-06-03 20:39:48Z ngie $
 
 atf_test_case bad_namespace
 bad_namespace_head() {

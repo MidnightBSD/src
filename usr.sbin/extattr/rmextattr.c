@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
  * Copyright (c) 2002 Poul-Henning Kamp.
  * Copyright (c) 1999, 2000, 2001, 2002 Robert N. M. Watson
@@ -34,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/extattr/rmextattr.c 301145 2016-06-01 17:22:15Z asomers $
+ * $FreeBSD: stable/11/usr.sbin/extattr/rmextattr.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>
