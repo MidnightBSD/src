@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fifolog/Makefile 289252 2015-10-13 18:56:50Z bdrewery $
+# $FreeBSD: stable/11/usr.sbin/fifolog/Makefile 288266 2015-09-26 14:13:51Z bdrewery $
 
 SUBDIR=	lib .WAIT \
 	fifolog_create fifolog_writer fifolog_reader

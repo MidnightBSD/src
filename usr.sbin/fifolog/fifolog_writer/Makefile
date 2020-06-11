@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fifolog/fifolog_writer/Makefile 321272 2017-07-20 01:02:37Z ngie $
+# $FreeBSD: stable/11/usr.sbin/fifolog/fifolog_writer/Makefile 321271 2017-07-20 01:02:30Z ngie $
 
 PROG=	fifolog_writer
 
@@ -7,8 +6,7 @@ CFLAGS+= -I${.CURDIR:H}/lib
 
 MAN=
 
-DPADD=	${LIBFIFOLOG} ${LIBUTIL} ${LIBZ}
-LDADD=	${LIBFIFOLOG} -lutil -lz
+LIBADD=	fifolog
 
 regress:
 	date | ./${PROG} -z 0 /tmp/fifolog.0

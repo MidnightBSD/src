@@ -24,9 +24,8 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-# 
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/etcupdate/tests/tzsetup_test.sh 283927 2015-06-02 19:20:39Z jhb $
+#
+# $FreeBSD: stable/11/usr.sbin/etcupdate/tests/tzsetup_test.sh 297606 2016-04-06 03:12:44Z ngie $
 
 # Various regression tests for the tzsetup handling in the 'update' command.
 
@@ -197,7 +196,7 @@ $COMMAND -nr -d $WORKDIR -D $TEST > $WORKDIR/testn.out
 
 cat > $WORKDIR/correct.out <<EOF
 Warnings:
-  Needs update: /etc/localtime (required manual update via tzsetup(1))
+  Needs update: /etc/localtime (required manual update via tzsetup(8))
 EOF
 
 echo "Differences for missing /var/db/zoneinfo with -n:"

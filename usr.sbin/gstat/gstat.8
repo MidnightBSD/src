@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2003 Giorgos Keramidas
 .\" All rights reserved.
 .\"
@@ -23,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/gstat/gstat.8 268791 2014-07-17 06:36:22Z delphij $
+.\" $FreeBSD: stable/11/usr.sbin/gstat/gstat.8 309130 2016-11-25 05:54:17Z araujo $
 .\"
-.Dd July 3, 2014
+.Dd November 10, 2016
 .Dt GSTAT 8
 .Os
 .Sh NAME
@@ -33,7 +32,7 @@
 .Nd print statistics about GEOM disks
 .Sh SYNOPSIS
 .Nm
-.Op Fl abcdop
+.Op Fl abBcdops
 .Op Fl f Ar filter
 .Op Fl I Ar interval
 .Sh DESCRIPTION
@@ -51,6 +50,10 @@ Only display providers that are at least 0.1% busy.
 Batch mode.
 Collect numbers, print and exit.
 Default if stdout is not a tty.
+.It Fl B
+Endless batch mode.
+Same as batch mode, but does not exit after collecting
+the first set of data.
 .It Fl c
 Enable display of
 .Xr geom 4
@@ -73,6 +76,8 @@ The format of the regular expression is described in
 .It Fl o
 Enable display of statistics for other operations
 .Pq Dv BIO_FLUSH .
+.It Fl s
+Enable blocks' size statistics.
 .It Fl I Ar interval
 Refresh the
 .Nm

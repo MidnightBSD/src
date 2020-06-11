@@ -28,8 +28,9 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ifmcstat/printb.c 331722 2018-03-29 02:50:57Z eadler $");
 
+#include <assert.h>
 #include <stdio.h>
 
 /*
@@ -41,7 +42,8 @@ printb(const char *s, unsigned int v, const char *bits)
 	int i, any = 0;
 	char c;
 
-	if (bits && *bits == 8)
+	assert(bits != NULL);
+	if (*bits == 8)
 		printf("%s=%o", s, v);
 	else
 		printf("%s=%x", s, v);

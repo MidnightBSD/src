@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Marius Strobl
  * All rights reserved.
  *
@@ -25,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/eeprom/ofw_options.c 263763 2014-03-26 07:31:57Z dim $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/eeprom/ofw_options.c 330449 2018-03-05 07:26:05Z eadler $");
 
 /*
  * Handlers for Open Firmware /options node.

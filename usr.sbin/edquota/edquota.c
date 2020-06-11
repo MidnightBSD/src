@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1980, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -44,7 +43,7 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/edquota/edquota.c 300270 2016-05-20 06:27:58Z truckman $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/edquota/edquota.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * Disk quota editor.
@@ -285,7 +284,7 @@ main(int argc, char *argv[])
 			freeprivs(protoprivs);
 		exit(0);
 	}
-	tmpfd = mkstemp(tmpfil);
+	tmpfd = mkostemp(tmpfil, O_CLOEXEC);
 	fchown(tmpfd, getuid(), getgid());
 	if (tflag) {
 		if ((protoprivs = getprivs(0, quotatype, fspath)) != NULL) {

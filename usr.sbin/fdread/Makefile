@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fdread/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD: stable/11/usr.sbin/fdread/Makefile 201390 2010-01-02 11:07:44Z ed $
 
 PROG=	fdread
 SRCS=	fdread.c fdutil.c

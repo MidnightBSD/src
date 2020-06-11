@@ -1,6 +1,8 @@
 #!/bin/sh
 #
-# Copyright (c) 2010-2013 Advanced Computing Technologies LLC
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
+# Copyright (c) 2010-2013 Hudson River Trading LLC
 # Written by: John H. Baldwin <jhb@FreeBSD.org>
 # All rights reserved.
 #
@@ -25,8 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/9/usr.sbin/etcupdate/etcupdate.sh 260650 2014-01-14 21:20:51Z jhb $
+# $FreeBSD: stable/11/usr.sbin/etcupdate/etcupdate.sh 357082 2020-01-24 15:29:33Z kevans $
 
 # This is a tool to manage updating files that are not updated as part
 # of 'make installworld' such as files in /etc.  Unlike other tools,
@@ -185,7 +186,7 @@ build_tree()
 {
 	local destdir dir file make
 
-	make="make $MAKE_OPTIONS"
+	make="make $MAKE_OPTIONS -DNO_FILEMON"
 
 	log "Building tree at $1 with $make"
 	mkdir -p $1/usr/obj >&3 2>&1
@@ -214,7 +215,8 @@ build_tree()
 
 	# Purge auto-generated files.  Only the source files need to
 	# be updated after which these files are regenerated.
-	rm -f $1/etc/*.db $1/etc/passwd >&3 2>&1 || return 1
+	rm -f $1/etc/*.db $1/etc/passwd $1/var/db/services.db >&3 2>&1 || \
+	    return 1
 
 	# Remove empty files.  These just clutter the output of 'diff'.
 	find $1 -type f -size 0 -delete >&3 2>&1 || return 1
@@ -515,7 +517,7 @@ post_update()
 			fi
 		else
 			warn "Needs update: /etc/localtime (required" \
-			    "manual update via tzsetup(1))"
+			    "manual update via tzsetup(8))"
 		fi
 	fi
 }
@@ -591,6 +593,12 @@ post_install_file()
 				fi
 			else
 				NEWALIAS_WARN=yes
+			fi
+			;;
+		/usr/share/certs/trusted/* | /usr/share/certs/blacklisted/*)
+			log "certctl rehash"
+			if [ -z "$dryrun" ]; then
+				env DESTDIR=${DESTDIR} certctl rehash >&3 2>&1
 			fi
 			;;
 		/etc/login.conf)
@@ -814,15 +822,19 @@ merge_file()
 	local res
 
 	# Try the merge to see if there is a conflict.
-	merge -q -p ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1 >/dev/null 2>&3
+	diff3 -E -m ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1 > /dev/null 2>&3
 	res=$?
 	case $res in
 		0)
 			# No conflicts, so just redo the merge to the
 			# real file.
-			log "merge ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1"
+			log "diff3 -E -m ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1"
 			if [ -z "$dryrun" ]; then
-				merge ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1
+				temp=$(mktemp -t etcupdate)
+				diff3 -E -m ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1 > ${temp}
+				# Use "cat >" to preserve metadata.
+				cat ${temp} > ${DESTDIR}$1
+				rm -f ${temp}
 			fi
 			post_install_file $1
 			echo "  M $1"
@@ -832,10 +844,10 @@ merge_file()
 			# the conflicts directory.
 			if [ -z "$dryrun" ]; then
 				install_dirs $NEWTREE $CONFLICTS $1
-				log "cp -Rp ${DESTDIR}$1 ${CONFLICTS}$1"
-				cp -Rp ${DESTDIR}$1 ${CONFLICTS}$1 >&3 2>&1
-				merge -A -q -L "yours" -L "original" -L "new" \
-				    ${CONFLICTS}$1 ${OLDTREE}$1 ${NEWTREE}$1
+				log "diff3 -m -A ${DESTDIR}$1 ${CONFLICTS}$1"
+				diff3 -m -A -L "yours" -L "original" -L "new" \
+				    ${DESTDIR}$1 ${OLDTREE}$1 ${NEWTREE}$1 > \
+				    ${CONFLICTS}$1
 			fi
 			echo "  C $1"
 			;;

@@ -25,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/etcupdate/tests/preworld_test.sh 283927 2015-06-02 19:20:39Z jhb $
+# $FreeBSD: stable/11/usr.sbin/etcupdate/tests/preworld_test.sh 281887 2015-04-23 14:22:20Z jhb $
 
 # Regression tests for the pre-world (-p) mode 
 

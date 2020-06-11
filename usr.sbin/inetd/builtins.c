@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1983, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -26,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/inetd/builtins.c 326761 2017-12-11 05:10:11Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/inetd/builtins.c 356388 2020-01-05 21:35:02Z kevans $");
 
 #include <sys/filio.h>
 #include <sys/ioccom.h>
@@ -53,25 +54,24 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/inetd/builtins.c 326761 2017-12-11 05:10:
 
 #include "inetd.h"
 
-void		chargen_dg(int, struct servtab *);
-void		chargen_stream(int, struct servtab *);
-void		daytime_dg(int, struct servtab *);
-void		daytime_stream(int, struct servtab *);
-void		discard_dg(int, struct servtab *);
-void		discard_stream(int, struct servtab *);
-void		echo_dg(int, struct servtab *);
-void		echo_stream(int, struct servtab *);
-static int	getline(int, char *, int);
-void		iderror(int, int, int, const char *);
-void		ident_stream(int, struct servtab *);
-void		initring(void);
-uint32_t	machtime(void);
-void		machtime_dg(int, struct servtab *);
-void		machtime_stream(int, struct servtab *);
+static void	chargen_dg(int, struct servtab *);
+static void	chargen_stream(int, struct servtab *);
+static void	daytime_dg(int, struct servtab *);
+static void	daytime_stream(int, struct servtab *);
+static void	discard_dg(int, struct servtab *);
+static void	discard_stream(int, struct servtab *);
+static void	echo_dg(int, struct servtab *);
+static void	echo_stream(int, struct servtab *);
+static int	get_line(int, char *, int);
+static void	iderror(int, int, int, const char *);
+static void	ident_stream(int, struct servtab *);
+static void	initring(void);
+static uint32_t	machtime(void);
+static void	machtime_dg(int, struct servtab *);
+static void	machtime_stream(int, struct servtab *);
 
-char ring[128];
-char *endring;
-
+static char ring[128];
+static char *endring;
 
 struct biltin biltins[] = {
 	/* Echo received data */
@@ -106,7 +106,7 @@ struct biltin biltins[] = {
  * any regard for input.
  */
 
-void
+static void
 initring(void)
 {
 	int i;
@@ -123,7 +123,7 @@ initring(void)
  * characters chosen from the range 0 to 512. We send LINESIZ+2.
  */
 /* ARGSUSED */
-void
+static void
 chargen_dg(int s, struct servtab *sep)
 {
 	struct sockaddr_storage ss;
@@ -132,10 +132,10 @@ chargen_dg(int s, struct servtab *sep)
 	socklen_t size;
 	char text[LINESIZ+2];
 
-	if (endring == 0) {
+	if (endring == NULL)
 		initring();
+	if (rs == NULL)
 		rs = ring;
-	}
 
 	size = sizeof(ss);
 	if (recvfrom(s, text, sizeof(text), 0,
@@ -160,7 +160,7 @@ chargen_dg(int s, struct servtab *sep)
 
 /* Character generator */
 /* ARGSUSED */
-void
+static void
 chargen_stream(int s, struct servtab *sep)
 {
 	int len;
@@ -195,7 +195,7 @@ chargen_stream(int s, struct servtab *sep)
 
 /* Return human-readable time of day */
 /* ARGSUSED */
-void
+static void
 daytime_dg(int s, struct servtab *sep)
 {
 	char buffer[256];
@@ -220,7 +220,7 @@ daytime_dg(int s, struct servtab *sep)
 
 /* Return human-readable time of day */
 /* ARGSUSED */
-void
+static void
 daytime_stream(int s, struct servtab *sep __unused)
 {
 	char buffer[256];
@@ -239,7 +239,7 @@ daytime_stream(int s, struct servtab *sep __unused)
 
 /* Discard service -- ignore data */
 /* ARGSUSED */
-void
+static void
 discard_dg(int s, struct servtab *sep __unused)
 {
 	char buffer[BUFSIZE];
@@ -249,7 +249,7 @@ discard_dg(int s, struct servtab *sep __unused)
 
 /* Discard service -- ignore data */
 /* ARGSUSED */
-void
+static void
 discard_stream(int s, struct servtab *sep)
 {
 	int ret;
@@ -272,7 +272,7 @@ discard_stream(int s, struct servtab *sep)
 
 /* Echo service -- echo data back */
 /* ARGSUSED */
-void
+static void
 echo_dg(int s, struct servtab *sep)
 {
 	char buffer[65536]; /* Should be sizeof(max datagram). */
@@ -293,7 +293,7 @@ echo_dg(int s, struct servtab *sep)
 
 /* Echo service -- echo data back */
 /* ARGSUSED */
-void
+static void
 echo_stream(int s, struct servtab *sep)
 {
 	char buffer[BUFSIZE];
@@ -321,7 +321,7 @@ echo_stream(int s, struct servtab *sep)
 
 /* Generic ident_stream error-sending func */
 /* ARGSUSED */
-void
+static void
 iderror(int lport, int fport, int s, const char *er)
 {
 	char *p;
@@ -339,7 +339,7 @@ iderror(int lport, int fport, int s, const char *er)
 
 /* Ident service (AKA "auth") */
 /* ARGSUSED */
-void
+static void
 ident_stream(int s, struct servtab *sep)
 {
 	struct utsname un;
@@ -649,8 +649,14 @@ ident_stream(int s, struct servtab *sep)
 			goto fakeid_fail;
 		if (!Fflag) {
 			if (iflag) {
-				if (p[strspn(p, "0123456789")] == '\0' &&
-				    getpwuid(atoi(p)) != NULL)
+				const char *errstr;
+				uid_t uid;
+
+				uid = strtonum(p, 0, UID_MAX, &errstr);
+				if (errstr != NULL)
+					goto fakeid_fail;
+
+				if (getpwuid(uid) != NULL)
 					goto fakeid_fail;
 			} else {
 				if (getpwnam(p) != NULL)
@@ -687,7 +693,7 @@ printit:
  * some seventy years Bell Labs was asleep.
  */
 
-uint32_t
+static uint32_t
 machtime(void)
 {
 
@@ -697,7 +703,7 @@ machtime(void)
 }
 
 /* ARGSUSED */
-void
+static void
 machtime_dg(int s, struct servtab *sep)
 {
 	uint32_t result;
@@ -718,7 +724,7 @@ machtime_dg(int s, struct servtab *sep)
 }
 
 /* ARGSUSED */
-void
+static void
 machtime_stream(int s, struct servtab *sep __unused)
 {
 	uint32_t result;
@@ -739,7 +745,7 @@ machtime_stream(int s, struct servtab *sep __unused)
 #define strwrite(fd, buf)	(void) write(fd, buf, sizeof(buf)-1)
 
 static int		/* # of characters up to \r,\n or \0 */
-getline(int fd, char *buf, int len)
+get_line(int fd, char *buf, int len)
 {
 	int count = 0, n;
 	struct sigaction sa;
@@ -774,7 +780,7 @@ tcpmux(int s)
 	int len;
 
 	/* Get requested service name */
-	if ((len = getline(s, service, MAX_SERV_LEN)) < 0) {
+	if ((len = get_line(s, service, MAX_SERV_LEN)) < 0) {
 		strwrite(s, "-Error reading service name\r\n");
 		return (NULL);
 	}

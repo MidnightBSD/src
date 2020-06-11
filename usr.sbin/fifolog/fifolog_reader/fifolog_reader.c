@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/fifolog/fifolog_reader/fifolog_reader.c 219027 2011-02-25 09:40:17Z phk $
+ * $FreeBSD: stable/11/usr.sbin/fifolog/fifolog_reader/fifolog_reader.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <stdio.h>

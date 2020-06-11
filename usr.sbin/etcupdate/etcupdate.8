@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\" Copyright (c) 2010-2013 Hudson River Trading LLC
 .\" Written by: John H. Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
@@ -24,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/etcupdate/etcupdate.8 288505 2015-10-02 16:21:14Z bdrewery $
+.\" $FreeBSD: stable/11/usr.sbin/etcupdate/etcupdate.8 298658 2016-04-26 18:54:44Z bhd $
 .\"
 .Dd September 29, 2015
 .Dt ETCUPDATE 8
@@ -758,7 +757,7 @@ has been removed from the
 tree,
 but it has been locally modified.
 The modified version of the file remains in the destination directory.
-.It "Needs update: /etc/localtime (required manual update via tzsetup(1))"
+.It "Needs update: /etc/localtime (required manual update via tzsetup(8))"
 The
 .Fa /var/db/zoneinfo
 file does not exist,
@@ -769,7 +768,7 @@ was not able to refresh
 from its source file in
 .Fa /usr/share/zoneinfo .
 Running
-.Xr tzsetup 1
+.Xr tzsetup 8
 will both refresh
 .Fa /etc/localtime
 and generate
@@ -866,12 +865,12 @@ utility first appeared in
 The
 .Nm
 utility was written by
-.An John Baldwin Aq jhb@FreeBSD.org .
+.An John Baldwin Aq Mt jhb@FreeBSD.org .
 .Sh BUGS
 Rerunning a merge does not automatically delete conflicts left over from a
 previous merge.
 Any conflicts must be resolved before the merge can be rerun.
-It it is not clear if this is a feature or a bug.
+It is not clear if this is a feature or a bug.
 .Pp
 There is no way to easily automate conflict resolution for specific files.
 For example, one can imagine a syntax along the lines of
