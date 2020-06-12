@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 %{
 /*
  * Copyright (c) 2003
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/inf-parse.y 243906 2012-12-05 20:28:44Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ndiscvt/inf-parse.y 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <stdio.h>
 #include <sys/types.h>

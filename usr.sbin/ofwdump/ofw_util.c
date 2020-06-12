@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ofwdump/ofw_util.c 129589 2004-05-22 16:51:11Z marius $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ofwdump/ofw_util.c 129589 2004-05-22 16:51:11Z marius $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

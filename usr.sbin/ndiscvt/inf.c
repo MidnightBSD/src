@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -32,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/ndiscvt/inf.c 288924 2015-10-06 15:30:41Z amdmi3 $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/ndiscvt/inf.c 343730 2019-02-04 03:44:07Z avos $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,9 +60,9 @@ static struct assign
 				(struct assign *);
 static struct section
 		*find_section	(const char *);
-static void	dump_deviceids_pci	(void);
-static void	dump_deviceids_pcmcia	(void);
-static void	dump_deviceids_usb	(void);
+static int	dump_deviceids_pci	(void);
+static int	dump_deviceids_pcmcia	(void);
+static int	dump_deviceids_usb	(void);
 static void	dump_pci_id	(const char *);
 static void	dump_pcmcia_id	(const char *);
 static void	dump_usb_id	(const char *);
@@ -84,9 +83,11 @@ inf_parse (FILE *fp, FILE *outfp)
 	yyin = fp;
 	yyparse();
 
-	dump_deviceids_pci();
-	dump_deviceids_pcmcia();
-	dump_deviceids_usb();
+	if (dump_deviceids_pci() == 0 &&
+	    dump_deviceids_pcmcia() == 0 &&
+	    dump_deviceids_usb() == 0)
+		return (-1);
+
 	fprintf(outfp, "#ifdef NDIS_REGVALS\n");
 	dump_regvals();
 	fprintf(outfp, "#endif /* NDIS_REGVALS */\n");
@@ -279,7 +280,7 @@ dump_usb_id(const char *s)
 	fprintf(ofp, "\t\\\n\t{ %s, %s, ", vidstr, pidstr);
 }
 
-static void
+static int
 dump_deviceids_pci()
 {
 	struct assign *manf, *dev;
@@ -369,10 +370,10 @@ done:
 
 	fprintf(ofp, "\n\n");
 
-	return;
+	return (found);
 }
 
-static void
+static int
 dump_deviceids_pcmcia()
 {
 	struct assign *manf, *dev;
@@ -462,10 +463,10 @@ done:
 
 	fprintf(ofp, "\n\n");
 
-	return;
+	return (found);
 }
 
-static void
+static int
 dump_deviceids_usb()
 {
 	struct assign *manf, *dev;
@@ -555,7 +556,7 @@ done:
 
 	fprintf(ofp, "\n\n");
 
-	return;
+	return (found);
 }
 
 static void

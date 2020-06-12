@@ -30,8 +30,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/ndiscvt/ndisgen.sh 261021 2014-01-22 10:35:30Z glebius $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ndiscvt/ndisgen.sh 331722 2018-03-29 02:50:57Z eadler $
+#
 
 header () {
 clear
@@ -67,17 +67,17 @@ echo "				General information"
 echo ""
 echo "	The NDIS compatibility system is designed to let you use Windows(r)"
 echo "	binary drivers for networking devices with MidnightBSD, in cases where"
-echo "	a native BSD driver is not available due to hardware manufacturer"
+echo "	a native MidnightBSD driver is not available due to hardware manufacturer"
 echo "	oversight or stupidity. NDIS stands for Network Driver Interface"
 echo "	Standard, and refers to the programming model used to write Windows(r)"
 echo "	network drivers. (These are often called \"NDIS miniport\" drivers.)"
 echo ""
 echo "	In order to use your network device in NDIS compatibility mode,"
 echo "	you need the Windows(r) driver that goes with it. Also, the driver"
-echo "	must be compiled for the same architecture as the release of BSD"
+echo "	must be compiled for the same architecture as the release of MidnightBSD"
 echo "	you have installed. At this time, the i386 and amd64 architectures"
 echo "	are both supported. Note that you cannot use a Windows/i386 driver"
-echo "	with BSD/amd64: you must obtain a Windows/amd64 driver."
+echo "	with MidnightBSD/amd64: you must obtain a Windows/amd64 driver."
 echo ""
 echo -n "	Press return to continue... "
 read KEYPRESS
@@ -139,7 +139,7 @@ header
 echo "				How does it all work?"
 echo ""
 echo "	The installer script uses the ndiscvt(1) utility to convert the .INF,"
-echo "	.SYS and optional firmware files into a BSD kernel loadable module"
+echo "	.SYS and optional firmware files into a MidnightBSD kernel loadable module"
 echo "	(.ko) file. This module can be loaded via the kldload(8) utility or"
 echo "	loaded automatically via the /boot/loader.conf file. The ndiscvt(1)"
 echo "	utility extracts the device ID information and registry key data"
@@ -147,8 +147,8 @@ echo "	from the .INF file and converts it into a C header file. It also uses"
 echo "	the objcopy(1) utility to convert the .SYS file and optional firmware"
 echo "	files into ELF objects. The header file is compiled into a small C"
 echo "	stub file which contains a small amount of code to interface with"
-echo "	the BSD module system. This stub is linked together with the"
-echo "	converted ELF objects to form a BSD kernel module. A static ELF"
+echo "	the MidnightBSD module system. This stub is linked together with the"
+echo "	converted ELF objects to form a MidnightBSD kernel module. A static ELF"
 echo "	object (.o) file is also created. This file can be linked into a"
 echo "	static kernel image for those who want/need a fully linked kernel"
 echo "	image (possibly for embedded bootstrap purposes, or just plain old"
@@ -165,8 +165,8 @@ echo "				Prerequisites"
 echo ""
 echo "	Converting a driver requires the following utilities:"
 echo ""
-echo "	- The BSD C compiler, cc(1) (part of the base install)."
-echo "	- The BSD linker, ld(1) (part of the base install)."
+echo "	- The MidnightBSD C compiler, cc(1) (part of the base install)."
+echo "	- The MidnightBSD linker, ld(1) (part of the base install)."
 echo "	- The objcopy(1) utility (part of the base install)."
 echo "	- The ndiscvt(1) utility (part of the base install)."
 echo ""
@@ -268,10 +268,10 @@ if [ ! -r "$SYSPATH" ]; then
 	echo ""
 	echo ""
 	echo "	Now you need to specify the name of the Windows(r) driver .SYS"
-	echo "	file for your device. Note that if you are running BSD/amd64,"
+	echo "	file for your device. Note that if you are running MidnightBSD/amd64,"
 	echo "	then you must provide a driver that has been compiled for the"
 	echo "	64-bit Windows(r) platform. If a 64-bit driver is not available"
-	echo "	for your device, you must install BSD/i386 and use the"
+	echo "	for your device, you must install MidnightBSD/i386 and use the"
 	echo "	32-bit driver instead."
 	echo ""
 	echo "	Please type in the path to the Windows(r) driver .SYS file now."
@@ -402,7 +402,7 @@ echo ""
 echo ""
 echo "	The script will now try to generate the kernel driver module."
 echo "	This is the last step. Once this module is generated, you should"
-echo "	be able to load it just like any other BSD driver module."
+echo "	be able to load it just like any other MidnightBSD driver module."
 echo ""
 echo "	Press enter to compile the stub module and generate the driver"
 echo -n "	module now: "
@@ -432,11 +432,6 @@ fi
 echo -n "	Building kernel module... "
 echo "" > bus_if.h
 echo "" > device_if.h
-if ! ${MAKE} -f ${MAKEFILE} depend > /dev/null; then
-	echo "build failed. Exiting."
-	echo ""
-	exit
-fi
 if ! ${MAKE} -f ${MAKEFILE} all > /dev/null; then
 	echo "build failed. Exiting."
 	echo ""

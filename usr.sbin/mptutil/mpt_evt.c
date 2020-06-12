@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.sbin/mptutil/mpt_evt.c 215046 2010-11-09 19:28:06Z jhb $");
+__RCSID("$FreeBSD: stable/11/usr.sbin/mptutil/mpt_evt.c 332603 2018-04-16 16:24:36Z asomers $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -123,6 +122,8 @@ show_events(int ac, char **av)
 			break;
 		case '?':
 		default:
+			free(log);
+			close(fd);
 			return (EINVAL);
 		}
 	}
@@ -131,8 +132,11 @@ show_events(int ac, char **av)
 
 	/* Build a list of valid entries and sort them by sequence. */
 	entries = malloc(sizeof(MPI_LOG_0_ENTRY *) * log->NumLogEntries);
-	if (entries == NULL)
+	if (entries == NULL) {
+		free(log);
+		close(fd);
 		return (ENOMEM);
+	}
 	num_events = 0;
 	for (i = 0; i < log->NumLogEntries; i++) {
 		if (log->LogEntry[i].LogEntryQualifier ==
@@ -153,6 +157,7 @@ show_events(int ac, char **av)
 	}
 	
 	free(entries);
+	free(log);
 	close(fd);
 
 	return (0);
