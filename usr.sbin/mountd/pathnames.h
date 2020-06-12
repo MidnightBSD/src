@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/mountd/pathnames.h 349772 2019-07-05 22:48:31Z rmacklem $
  */
 #include <paths.h>
 
 #define	_PATH_EXPORTS		"/etc/exports"
 #define	_PATH_RMOUNTLIST	"/var/db/mountdtab"
 #define _PATH_MOUNTDPID		"/var/run/mountd.pid"
+#define	_PATH_MOUNTDDEBUG	"/var/log/mountd.debug"
