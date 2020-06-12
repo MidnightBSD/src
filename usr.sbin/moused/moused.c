@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /**
+ ** SPDX-License-Identifier: BSD-4-Clause
+ **
  ** Copyright (c) 1995 Michael Smith, All rights reserved.
  **
  ** Redistribution and use in source and binary forms, with or without
@@ -46,7 +47,7 @@
  **/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/moused/moused.c 248478 2013-03-18 23:22:47Z jkim $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/moused/moused.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/param.h>
 #include <sys/consio.h>
@@ -247,6 +248,7 @@ static symtab_t	rmodels[] = {
     { "4D+ Mouse",		MOUSE_MODEL_4DPLUS,		0 },
     { "Synaptics Touchpad",	MOUSE_MODEL_SYNAPTICS,		0 },
     { "TrackPoint",		MOUSE_MODEL_TRACKPOINT,		0 },
+    { "Elantech Touchpad",	MOUSE_MODEL_ELANTECH,		0 },
     { "generic",		MOUSE_MODEL_GENERIC,		0 },
     { NULL,			MOUSE_MODEL_UNKNOWN,		0 },
 };
@@ -2987,7 +2989,7 @@ pnpgets(char *buf)
 connect_idle:
 
     /* we may still have something in the buffer */
-    return ((i > 0) ? i : 0);
+    return (MAX(i, 0));
 }
 
 static int

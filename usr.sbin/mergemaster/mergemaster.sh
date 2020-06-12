@@ -489,7 +489,8 @@ fi
 SOURCEDIR=$(realpath "$SOURCEDIR")
 
 # Setup make to use system files from SOURCEDIR
-MM_MAKE="make ${ARCHSTRING} -m ${SOURCEDIR}/share/mk"
+MM_MAKE="make ${ARCHSTRING} -m ${SOURCEDIR}/share/mk -DNO_FILEMON"
+MM_MAKE="${MM_MAKE} -j$(/sbin/sysctl -n hw.ncpu)"
 
 # Check DESTDIR against the mergemaster mtree database to see what
 # files the user changed from the reference files.
@@ -702,7 +703,8 @@ case "${RERUN}" in
   # or spwd.db.  Instead, we want to compare the text versions, and run *_mkdb.
   # Prompt the user to do so below, as needed.
   #
-  rm -f ${TEMPROOT}/etc/*.db ${TEMPROOT}/etc/passwd
+  rm -f ${TEMPROOT}/etc/*.db ${TEMPROOT}/etc/passwd \
+      ${TEMPROOT}/var/db/services.db
 
   # We only need to compare things like freebsd.cf once
   find ${TEMPROOT}/usr/obj -type f -delete 2>/dev/null
@@ -762,7 +764,7 @@ CONFIRMED_UMASK=${NEW_UMASK:-0022}
 # Warn users who still have old rc files
 #
 for file in atm devfs diskless1 diskless2 network network6 pccard \
-  serial syscons sysctl alpha amd64 i386 ia64 sparc64; do
+  serial syscons sysctl alpha amd64 i386 sparc64; do
   if [ -f "${DESTDIR}/etc/rc.${file}" ]; then
     OLD_RC_PRESENT=1
     break
@@ -788,7 +790,7 @@ case "${OLD_RC_PRESENT}" in
     *)
       mkdir -p /var/tmp/mergemaster/old_rc
         for file in atm devfs diskless1 diskless2 network network6 pccard \
-          serial syscons sysctl alpha amd64 i386 ia64 sparc64; do
+          serial syscons sysctl alpha amd64 i386 sparc64; do
           if [ -f "${DESTDIR}/etc/rc.${file}" ]; then
             mv ${DESTDIR}/etc/rc.${file} /var/tmp/mergemaster/old_rc/
           fi
@@ -863,6 +865,9 @@ mm_install () {
     case "${1#.}" in
     /etc/mail/aliases)
       NEED_NEWALIASES=yes
+      ;;
+    /usr/share/certs/trusted/* | /usr/share/certs/blacklisted/*)
+      NEED_CERTCTL=yes
       ;;
     /etc/login.conf)
       NEED_CAP_MKDB=yes
@@ -1332,6 +1337,23 @@ case "${NEED_PWD_MKDB}" in
     echo "    '/usr/sbin/pwd_mkdb -p /etc/master.passwd'"
     echo "     to rebuild your password files"
     run_it_now '/usr/sbin/pwd_mkdb -p /etc/master.passwd'
+  fi
+  ;;
+esac
+
+case "${NEED_CERTCTL}" in
+'') ;;
+*)
+  echo ''
+  echo "*** You installed files in /etc/ssl/certs, so make sure that you run"
+  if [ -n "${DESTDIR}" ]; then
+    echo "    'env DESTDIR=${DESTDIR} /usr/sbin/certctl rehash'"
+    echo "     to rebuild your certificate authority database"
+    run_it_now "env DESTDIR=${DESTDIR} /usr/sbin/certctl rehash"
+  else
+    echo "    '/usr/sbin/certctl rehash'"
+    echo "     to rebuild your certificate authority database"
+    run_it_now "/usr/sbin/certctl rehash"
   fi
   ;;
 esac
