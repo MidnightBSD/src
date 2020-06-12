@@ -1,13 +1,11 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/makefs/tests/Makefile 296788 2016-03-13 01:20:20Z ngie $
-
-TESTSDIR=	${TESTSBASE}/usr.sbin/makefs
+# $FreeBSD: stable/11/usr.sbin/makefs/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 ATF_TESTS_SH+=	makefs_cd9660_tests
 ATF_TESTS_SH+=	makefs_ffs_tests
 
 BINDIR=		${TESTSDIR}
 
+# XXX: PACKAGE support for SCRIPTS
 SCRIPTS+=	makefs_tests_common.sh
 SCRIPTSNAME_makefs_tests_common.sh=	makefs_tests_common.sh
 

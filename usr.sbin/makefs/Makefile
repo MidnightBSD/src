@@ -1,5 +1,4 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/usr.sbin/makefs/Makefile 290586 2015-11-09 07:56:06Z ngie $
+#	$FreeBSD: stable/11/usr.sbin/makefs/Makefile 330976 2018-03-15 09:04:23Z eadler $
 
 SRCDIR:=${.PARSEDIR:tA}
 

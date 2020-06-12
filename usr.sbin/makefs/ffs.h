@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
-/*	$NetBSD: ffs.h,v 1.1 2004/12/20 20:51:42 jmc Exp $	*/
+/*	$NetBSD: ffs.h,v 1.2 2004/12/20 20:51:42 jmc Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001-2003 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -35,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/makefs/ffs.h 226169 2011-10-09 16:22:31Z nwhitehorn $
+ * $FreeBSD: stable/11/usr.sbin/makefs/ffs.h 330976 2018-03-15 09:04:23Z eadler $
  */
 
 #ifndef _FFS_H

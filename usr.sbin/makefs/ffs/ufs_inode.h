@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ufs_inode.h,v 1.3 2003/08/07 11:25:34 agc Exp $	*/
 /* From:  NetBSD: inode.h,v 1.27 2001/12/18 10:57:23 fvdl Exp $ */
 
@@ -36,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: stable/10/usr.sbin/makefs/ffs/ufs_inode.h 186334 2008-12-19 18:45:43Z sam $
+ * $FreeBSD: stable/11/usr.sbin/makefs/ffs/ufs_inode.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 union dinode {

@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/makefs/tests/makefs_ffs_tests.sh 321820 2017-07-31 21:52:08Z asomers $
+# $FreeBSD: stable/11/usr.sbin/makefs/tests/makefs_ffs_tests.sh 339048 2018-10-01 15:40:06Z asomers $
 #
 
 MAKEFS="makefs -t ffs"
@@ -51,6 +51,29 @@ check_ffs_image_contents()
 	    tunefs -p /dev/$(cat $TEST_MD_DEVICE_FILE)
 
 	check_image_contents "$@"
+}
+
+# With no -M, -m, or -s options, makefs should autocalculate the image size
+atf_test_case autocalculate_image_size cleanup
+autocalculate_image_size_body()
+{
+	atf_expect_fail "PR 229929 makefs(8) can underestimate image size"
+	create_test_inputs
+
+	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
+	    mtree -c -k "$DEFAULT_MTREE_KEYWORDS" -p $TEST_INPUTS_DIR
+
+	cd $TEST_INPUTS_DIR
+	atf_check -e empty -o not-empty -s exit:0 \
+	    $MAKEFS $TEST_IMAGE $TEST_SPEC_FILE
+	cd -
+
+	mount_image
+	check_ffs_image_contents
+}
+autocalculate_image_size_cleanup()
+{
+	common_cleanup
 }
 
 atf_test_case D_flag cleanup
@@ -109,7 +132,7 @@ from_mtree_spec_file_body()
 
 	cd $TEST_INPUTS_DIR
 	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS $TEST_IMAGE $TEST_SPEC_FILE
+	    $MAKEFS -M 1m $TEST_IMAGE $TEST_SPEC_FILE
 	cd -
 
 	mount_image
@@ -132,7 +155,7 @@ from_multiple_dirs_body()
 	    touch $test_inputs_dir2/multiple_dirs_test_file
 
 	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS $TEST_IMAGE $TEST_INPUTS_DIR $test_inputs_dir2
+	    $MAKEFS -M 1m $TEST_IMAGE $TEST_INPUTS_DIR $test_inputs_dir2
 
 	mount_image
 	check_image_contents -d $test_inputs_dir2
@@ -224,6 +247,8 @@ o_flag_version_2_cleanup()
 
 atf_init_test_cases()
 {
+
+	atf_add_test_case autocalculate_image_size
 
 	atf_add_test_case D_flag
 	atf_add_test_case F_flag

@@ -1,7 +1,8 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ffs_bswap.c,v 1.28 2004/05/25 14:54:59 hannken Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 Manuel Bouyer.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,24 +33,25 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_bswap.c 301784 2016-06-10 14:13:24Z ngie $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/ffs/ffs_bswap.c 332980 2018-04-25 01:35:06Z benno $");
 
 #include <sys/param.h>
 #if defined(_KERNEL)
 #include <sys/systm.h>
 #endif
 
-#include <ufs/ufs/dinode.h>
-#include "ffs/ufs_bswap.h"
-#include <ufs/ffs/fs.h>
-
 #if !defined(_KERNEL)
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #define panic(x)	printf("%s\n", (x)), abort()
 #endif
+
+#include <ufs/ufs/dinode.h>
+#include "ffs/ufs_bswap.h"
+#include <ufs/ffs/fs.h>
 
 #define	fs_old_postbloff	fs_spare5[0]
 #define	fs_old_rotbloff		fs_spare5[1]
