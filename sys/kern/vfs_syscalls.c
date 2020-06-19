@@ -4748,6 +4748,8 @@ kern_posix_fadvise(struct thread *td, int fd, off_t offset, off_t len,
 		new = NULL;
 		break;
 	default:
+		if (bufseg == UIO_SYSSPACE)
+			*buf = NULL;
 		return (EINVAL);
 	}
 	/* XXX: CAP_POSIX_FADVISE? */
