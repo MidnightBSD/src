@@ -1,20 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llvm-dis/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/llvm-dis/Makefile 310618 2016-12-26 20:36:37Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-dis
 
-PROG_CXX=llvm-dis
+SRCDIR=		tools/llvm-dis
+SRCS+=		llvm-dis.cpp
 
-SRCDIR=	tools/llvm-dis
-SRCS=	llvm-dis.cpp
-
-TGHDRS=	Intrinsics
-LIBDEPS=llvmanalysis \
-	llvmtarget \
-	llvmmc \
-	llvmobject \
-	llvmbitreader \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

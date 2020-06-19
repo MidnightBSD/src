@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1998 Kenneth D. Merry.
  * All rights reserved.
@@ -57,7 +56,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/devs.c 229403 2012-01-03 18:51:58Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/devs.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)disks.c	8.1 (Berkeley) 6/6/93";

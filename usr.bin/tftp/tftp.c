@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)tftp.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tftp/tftp.c 345389 2019-03-21 21:45:18Z asomers $");
 
 /* Many bug fixes are from Jim Guyton <guyton@rand-unix> */
 
@@ -48,6 +48,7 @@ __MBSDID("$MidnightBSD$");
 
 #include <arpa/tftp.h>
 
+#include <assert.h>
 #include <err.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -83,6 +84,7 @@ xmitfile(int peer, char *port, int fd, char *name, char *mode)
 	if (port == NULL) {
 		struct servent *se;
 		se = getservbyname("tftp", "udp");
+		assert(se != NULL);
 		((struct sockaddr_in *)&peer_sock)->sin_port = se->s_port;
 	} else
 		((struct sockaddr_in *)&peer_sock)->sin_port =
@@ -182,6 +184,7 @@ recvfile(int peer, char *port, int fd, char *name, char *mode)
 	if (port == NULL) {
 		struct servent *se;
 		se = getservbyname("tftp", "udp");
+		assert(se != NULL);
 		((struct sockaddr_in *)&peer_sock)->sin_port = se->s_port;
 	} else
 		((struct sockaddr_in *)&peer_sock)->sin_port =
@@ -263,7 +266,6 @@ recvfile(int peer, char *port, int fd, char *name, char *mode)
 		tftp_receive(peer, &block, &tftp_stats, rp, n);
 	}
 
-	write_close();
 	if (tftp_stats.amount > 0)
 		printstats("Received", verbose, &tftp_stats);
 	return;

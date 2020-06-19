@@ -1,8 +1,7 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.bin/tabs/Makefile,v 1.1 2002/05/21 02:33:25 tjr Exp $
+# $FreeBSD: stable/11/usr.bin/tabs/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=	tabs
-DPADD=	${LIBTERMCAP}
-LDADD=	-ltermcap
+
+LIBADD=	ncursesw
 
 .include <bsd.prog.mk>

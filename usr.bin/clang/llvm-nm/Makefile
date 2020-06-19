@@ -1,16 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/llvm-nm/Makefile 263508 2014-03-21 17:53:59Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/llvm-nm/Makefile 310618 2016-12-26 20:36:37Z dim $
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-nm
 
-PROG_CXX=llvm-nm
+SRCDIR=		tools/llvm-nm
+SRCS+=		llvm-nm.cpp
 
-SRCDIR=	tools/llvm-nm
-SRCS=	llvm-nm.cpp
+LIBADD+=	z
 
-LIBDEPS=llvmobject \
-	llvmbitreader \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -18,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/lib/misc.c 321242 2017-07-19 20:24:38Z ngie $";
+  "$FreeBSD: stable/11/usr.sbin/cron/lib/misc.c 308720 2016-11-16 07:03:24Z bapt $";
 #endif
 
 /* vix 26jan87 [RCS has the rest of the log]

@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/makefs/tests/makefs_cd9660_tests.sh 290594 2015-11-09 09:20:01Z ngie $
+# $FreeBSD: stable/11/usr.sbin/makefs/tests/makefs_cd9660_tests.sh 322690 2017-08-19 01:45:02Z ngie $
 #
 
 # A note on specs:
@@ -264,6 +264,10 @@ o_flag_isolevel_3_cleanup()
 }
 
 atf_test_case o_flag_preparer
+o_flag_preparer_head()
+{
+	atf_set "require.progs" "strings"
+}
 o_flag_preparer_body()
 {
 	create_test_dirs
@@ -279,6 +283,10 @@ o_flag_preparer_body()
 }
 
 atf_test_case o_flag_publisher
+o_flag_publisher_head()
+{
+	atf_set "require.progs" "strings"
+}
 o_flag_publisher_body()
 {
 	create_test_dirs

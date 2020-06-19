@@ -1,8 +1,7 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
 # $FreeBSD: stable/10/usr.sbin/chown/Makefile 321130 2017-07-18 16:27:10Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	chown
 LINKS=	${BINDIR}/chown /usr/bin/chgrp

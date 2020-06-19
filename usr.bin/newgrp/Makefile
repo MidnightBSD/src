@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/newgrp/Makefile 137164 2004-11-03 18:01:21Z ru $
+# $FreeBSD: stable/11/usr.bin/newgrp/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=	newgrp
-DPADD=	${LIBCRYPT} ${LIBUTIL}
-LDADD=	-lcrypt -lutil
+
+LIBADD=	crypt util
 
 .if defined(ENABLE_SUID_NEWGRP)
 BINMODE=	4555

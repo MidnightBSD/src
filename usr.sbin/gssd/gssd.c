@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/gssd/gssd.c 293446 2016-01-08 23:58:32Z jpaetzel $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/gssd/gssd.c 346768 2019-04-26 21:34:08Z mav $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -65,7 +66,7 @@ __FBSDID("$FreeBSD: stable/10/usr.sbin/gssd/gssd.c 293446 2016-01-08 23:58:32Z j
 
 struct gss_resource {
 	LIST_ENTRY(gss_resource) gr_link;
-	uint64_t	gr_id;	/* indentifier exported to kernel */
+	uint64_t	gr_id;	/* identifier exported to kernel */
 	void*		gr_res;	/* GSS-API resource pointer */
 };
 LIST_HEAD(gss_resource_list, gss_resource) gss_resources;
@@ -194,12 +195,14 @@ main(int argc, char **argv)
 	gssd_load_mech();
 
 	if (!debug_level) {
-		daemon(0, 0);
+		if (daemon(0, 0) != 0)
+			err(1, "Can't daemonize");
 		signal(SIGINT, SIG_IGN);
 		signal(SIGQUIT, SIG_IGN);
 		signal(SIGHUP, SIG_IGN);
 	}
 	signal(SIGTERM, gssd_terminate);
+	signal(SIGPIPE, gssd_terminate);
 
 	memset(&sun, 0, sizeof sun);
 	sun.sun_family = AF_LOCAL;
@@ -207,7 +210,7 @@ main(int argc, char **argv)
 	strcpy(sun.sun_path, _PATH_GSSDSOCK);
 	sun.sun_len = SUN_LEN(&sun);
 	fd = socket(AF_LOCAL, SOCK_STREAM, 0);
-	if (!fd) {
+	if (fd < 0) {
 		if (debug_level == 0) {
 			syslog(LOG_ERR, "Can't create local gssd socket");
 			exit(1);

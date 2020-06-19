@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2003, Trent Nelson, <trent@arpa.com>.
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/systat/ifstat.c 279473 2015-03-01 04:36:20Z rstone $
+ * $FreeBSD: stable/11/usr.bin/systat/ifstat.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>
@@ -78,7 +79,7 @@ struct if_stat {
 	uint64_t if_in_pps_peak;
 	uint64_t if_out_pps_peak;
 	u_int	if_row;			/* Index into ifmib sysctl */
-	u_int	if_ypos;		/* 0 if not being displayed */
+	int 	if_ypos;		/* -1 if not being displayed */
 	u_int	display;
 	u_int	match;
 };
@@ -211,13 +212,19 @@ showifstat(void)
 	struct	if_stat *ifp = NULL;
 	
 	SLIST_FOREACH(ifp, &curlist, link) {
-		if (ifp->display == 0 || (ifp->match == 0) ||
-			ifp->if_ypos > LINES - 3 - 1)
-			continue;
-		PUTNAME(ifp);
-		PUTRATE(col2, ifp->if_ypos);
-		PUTRATE(col3, ifp->if_ypos);
-		PUTTOTAL(col4, ifp->if_ypos);
+		if (ifp->if_ypos < LINES - 3 && ifp->if_ypos != -1)
+			if (ifp->display == 0 || ifp->match == 0) {
+					wmove(wnd, ifp->if_ypos, 0);
+					wclrtoeol(wnd);
+					wmove(wnd, ifp->if_ypos + 1, 0);
+					wclrtoeol(wnd);
+			}
+			else {
+				PUTNAME(ifp);
+				PUTRATE(col2, ifp->if_ypos);
+				PUTRATE(col3, ifp->if_ypos);
+				PUTTOTAL(col4, ifp->if_ypos);
+			}
 	}
 
 	return;
@@ -426,6 +433,8 @@ sort_interface_list(void)
 			ifp->if_ypos = y;
 			y += ROW_SPACING;
 		}
+		else
+			ifp->if_ypos = -1;
 	}
 	
 	needsort = 0;
@@ -477,14 +486,13 @@ cmdifstat(const char *cmd, const char *args)
 	retval = ifcmd(cmd, args);
 	/* ifcmd() returns 1 on success */
 	if (retval == 1) {
-		showifstat();
-		refresh();
 		if (needclear) {
+			showifstat();
+			refresh();
 			werase(wnd);
 			labelifstat();
 			needclear = 0;
 		}
 	}
-
 	return (retval);
 }

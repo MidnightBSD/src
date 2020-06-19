@@ -1,12 +1,9 @@
-# $MidnightBSD$
-
 PROG=	msearch
 
 CFLAGS+= -I${.CURDIR}/../../lib/libsearch
 
 CSTD=	c99
 
-DPADD=  ${LIBMSEARCH} ${LIBZ} ${LIBSQLITE3}
-LDADD=  -lmsearch -lz -lsqlite3
+LIBADD+=	msearch sqlite3 z
 
 .include <bsd.prog.mk>

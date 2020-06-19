@@ -1,7 +1,7 @@
 /*
  * Calibration calendar for calendar(1)
- * $MidnightBSD$
- * $FreeBSD: stable/10/usr.bin/calendar/tests/calendar.calibrate 170448 2007-06-09 06:01:24Z grog $
+ *
+ * $FreeBSD: stable/11/usr.bin/calendar/tests/calendar.calibrate 170448 2007-06-09 06:01:24Z grog $
  */
 
 LANG=C

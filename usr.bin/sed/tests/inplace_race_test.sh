@@ -25,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.bin/sed/tests/inplace_race_test.sh 263227 2014-03-16 08:04:06Z jmmv $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.bin/sed/tests/inplace_race_test.sh 263227 2014-03-16 08:04:06Z jmmv $
 
 : "${SED=sed}"
 

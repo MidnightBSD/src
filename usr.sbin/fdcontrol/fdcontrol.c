@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1994, 2001 by Joerg Wunsch, Dresden
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/fdcontrol/fdcontrol.c 194892 2009-06-24 19:47:53Z joerg $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/fdcontrol/fdcontrol.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <sys/fdcio.h>
 #include <sys/file.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ufs_bmap.c,v 1.14 2004/06/20 22:20:18 jmc Exp $	*/
 /* From: NetBSD: ufs_bmap.c,v 1.14 2001/11/08 05:00:51 chs Exp */
 
@@ -39,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ufs_bmap.c 239359 2012-08-17 17:45:27Z mjg $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/ffs/ufs_bmap.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/time.h>

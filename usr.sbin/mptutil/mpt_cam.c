@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Yahoo!, Inc.
  * All rights reserved.
@@ -30,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: stable/10/usr.sbin/mptutil/mpt_cam.c 302377 2016-07-06 17:45:38Z truckman $");
+__RCSID("$FreeBSD: stable/11/usr.sbin/mptutil/mpt_cam.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <err.h>

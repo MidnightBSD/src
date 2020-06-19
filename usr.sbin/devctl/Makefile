@@ -1,10 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/devctl/Makefile 295131 2016-02-01 23:07:31Z jhb $
+# $FreeBSD: stable/11/usr.sbin/devctl/Makefile 278830 2015-02-16 02:20:11Z jmg $
 
 PROG=	devctl
 MAN=	devctl.8
 
-DPADD=	${LIBDEVCTL}
-LDADD=	-ldevctl
+LIBADD=	devctl
 
 .include <bsd.prog.mk>

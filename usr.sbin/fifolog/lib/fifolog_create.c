@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/fifolog/lib/fifolog_create.c 306910 2016-10-09 19:58:27Z pfg $
+ * $FreeBSD: stable/11/usr.sbin/fifolog/lib/fifolog_create.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <assert.h>

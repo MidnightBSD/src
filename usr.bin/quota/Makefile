@@ -1,12 +1,10 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.bin/quota/Makefile 207736 2010-05-07 00:41:12Z mckusick $
+# $FreeBSD: stable/11/usr.bin/quota/Makefile 275042 2014-11-25 14:29:10Z bapt $
 
 PROG=	quota
 BINOWN=	root
 BINMODE=4555
 
-DPADD=	${LIBRPCSVC} ${LIBUTIL}
-LDADD=	-lrpcsvc -lutil
+LIBADD=	rpcsvc util
 
 .include <bsd.prog.mk>

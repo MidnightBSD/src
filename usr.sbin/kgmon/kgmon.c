@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)kgmon.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/kgmon/kgmon.c 246792 2013-02-14 14:44:08Z charnier $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/kgmon/kgmon.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -356,7 +355,7 @@ dumpstate(struct kvmvars *kvp)
 
 	setprof(kvp, GMON_PROF_OFF);
 	fp = fopen("gmon.out", "w");
-	if (fp == 0) {
+	if (fp == NULL) {
 		warn("gmon.out");
 		return;
 	}

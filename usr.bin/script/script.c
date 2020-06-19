@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2010, 2012  David E. O'Brien
  * Copyright (c) 1980, 1992, 1993
@@ -30,8 +29,7 @@
  */
 
 #include <sys/param.h>
-__MBSDID("$MidnightBSD$");
-
+__FBSDID("$FreeBSD: stable/11/usr.bin/script/script.c 331722 2018-03-29 02:50:57Z eadler $");
 #ifndef lint
 static const char copyright[] =
 "@(#) Copyright (c) 1980, 1992, 1993\n\
@@ -99,11 +97,11 @@ main(int argc, char *argv[])
 	char obuf[BUFSIZ];
 	char ibuf[BUFSIZ];
 	fd_set rfd;
-	int aflg, kflg, pflg, ch, k, n;
+	int aflg, Fflg, kflg, pflg, ch, k, n;
 	int flushtime, readstdin;
 	int fm_fd, fm_log;
 
-	aflg = kflg = pflg = 0;
+	aflg = Fflg = kflg = pflg = 0;
 	usesleep = 1;
 	rawout = 0;
 	flushtime = 30;
@@ -111,13 +109,16 @@ main(int argc, char *argv[])
 			   warning. (not needed w/clang) */
 	showexit = 0;
 
-	while ((ch = getopt(argc, argv, "adfkpqrt:")) != -1)
+	while ((ch = getopt(argc, argv, "adFfkpqrt:")) != -1)
 		switch(ch) {
 		case 'a':
 			aflg = 1;
 			break;
 		case 'd':
 			usesleep = 0;
+			break;
+		case 'F':
+			Fflg = 1;
 			break;
 		case 'f':
 			fflg = 1;
@@ -292,6 +293,8 @@ main(int argc, char *argv[])
 			fflush(fscript);
 			start = tvec;
 		}
+		if (Fflg)
+			fflush(fscript);
 	}
 	finish();
 	done(0);

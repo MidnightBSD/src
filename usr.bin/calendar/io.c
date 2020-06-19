@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)calendar.c  8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/io.c 285291 2015-07-08 21:06:19Z bapt $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/io.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -58,6 +57,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/calendar/io.c 285291 2015-07-08 21:06:19Z 
 #include <stdlib.h>
 #include <string.h>
 #include <stringlist.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "pathnames.h"
@@ -88,11 +88,16 @@ static void
 trimlr(char **buf)
 {
 	char *walk = *buf;
+	char *last;
 
 	while (isspace(*walk))
 		walk++;
-	while (isspace(walk[strlen(walk) -1]))
-		walk[strlen(walk) -1] = '\0';
+	if (*walk != '\0') {
+		last = walk + strlen(walk) - 1;
+		while (last > walk && isspace(*last))
+			last--;
+		*(last+1) = 0;
+	}
 
 	*buf = walk;
 }
@@ -114,7 +119,7 @@ cal_fopen(const char *file)
 		return (NULL);
 	}
 
-	for (i = 0; i < sizeof(calendarHomes)/sizeof(calendarHomes[0]) ; i++) {
+	for (i = 0; i < nitems(calendarHomes); i++) {
 		if (chdir(calendarHomes[i]) != 0)
 			continue;
 
@@ -258,9 +263,6 @@ cal_parse(FILE *in, FILE *out)
 		return (1);
 
 	while ((linelen = getline(&line, &linecap, in)) > 0) {
-		if (linelen == 0)
-			continue;
-
 		if (*line == '#') {
 			switch (token(line+1, out, &skip)) {
 			case T_ERR:
@@ -468,7 +470,7 @@ closecal(FILE *fp)
 		if (setuid(getuid()) < 0) {
 			warnx("setuid failed");
 			_exit(1);
-		};
+		}
 		if (setgid(getegid()) < 0) {
 			warnx("setgid failed");
 			_exit(1);

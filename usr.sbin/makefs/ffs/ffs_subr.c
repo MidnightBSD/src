@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ffs_subr.c,v 1.32 2003/12/30 12:33:24 pk Exp $	*/
 
 /*
@@ -33,9 +32,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_subr.c 228990 2011-12-30 10:58:14Z uqs $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/makefs/ffs/ffs_subr.c 332980 2018-04-25 01:35:06Z benno $");
 
 #include <sys/param.h>
+#include <sys/types.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>

@@ -1,12 +1,11 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/dconschat/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	dconschat
 MAN=	dconschat.8
 
-CFLAGS+= -I${.CURDIR}/../../sys
+CFLAGS+= -I${SRCTOP}/sys
 
-DPADD=  ${LIBKVM}
-LDADD=  -lkvm
+LIBADD=	kvm
 
 WARNS?=	1
 

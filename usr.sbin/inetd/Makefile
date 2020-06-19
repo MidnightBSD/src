@@ -1,15 +1,13 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.sbin/inetd/Makefile 313206 2017-02-04 15:52:08Z ngie $
+# $FreeBSD: stable/11/usr.sbin/inetd/Makefile 356388 2020-01-05 21:35:02Z kevans $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	inetd
 MAN=	inetd.8
 MLINKS=	inetd.8 inetd.conf.5
 SRCS=	inetd.c builtins.c
 
-WARNS?=	3
 CFLAGS+= -DLOGIN_CAP
 #CFLAGS+= -DSANITY_CHECK
 
@@ -17,20 +15,17 @@ CFLAGS+= -DLOGIN_CAP
 CFLAGS+= -DINET6
 .endif
 
-DPADD+=		${LIBUTIL}
-LDADD+=		-lutil
+LIBADD=	util
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DLIBWRAP
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD+=	wrap
 .endif
 
 # XXX for src/release/picobsd
 .if !defined(RELEASE_CRUNCH)
 CFLAGS+= -DIPSEC
-DPADD+=	${LIBIPSEC}
-LDADD+=	-lipsec
+LIBADD+=	ipsec
 .endif
 
 .include <bsd.prog.mk>

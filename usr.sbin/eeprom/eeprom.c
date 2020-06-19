@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1996 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -31,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/eeprom/eeprom.c 203972 2010-02-16 21:47:05Z imp $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/eeprom/eeprom.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <err.h>
 #include <stdio.h>

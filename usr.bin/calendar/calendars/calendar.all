@@ -1,7 +1,7 @@
 /*
  * International and national calendar files
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/usr.bin/calendar/calendars/calendar.all 219937 2011-03-23 21:22:03Z edwin $
  */
 
 #ifndef _calendar_all_

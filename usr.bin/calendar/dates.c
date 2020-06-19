@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1992-2009 Edwin Groothuis <edwin@FreeBSD.org>.
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/dates.c 251647 2013-06-12 07:52:49Z grog $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/dates.c 330449 2018-03-05 07:26:05Z eadler $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -382,7 +383,7 @@ walkthrough_dates(struct event **e)
 		d = m->days;
 		*e = d->events;
 		return (1);
-	};
+	}
 	if (d->nextday != NULL) {
 		d = d->nextday;
 		*e = d->events;

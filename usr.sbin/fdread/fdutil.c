@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Joerg Wunsch
  *
  * All rights reserved.
@@ -24,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/fdread/fdutil.c 274024 2014-11-03 10:26:29Z nyan $
+ * $FreeBSD: stable/11/usr.sbin/fdread/fdutil.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <dev/ic/nec765.h>
@@ -201,10 +202,10 @@ parse_fmt(const char *s, enum fd_drivetype type,
 	*out = in;
 
 	for (i = 0;; i++) {
-		if (s == 0)
+		if (s == NULL)
 			break;
 
-		if ((cp = strchr(s, ',')) == 0) {
+		if ((cp = strchr(s, ',')) == NULL) {
 			s1 = strdup(s);
 			if (s1 == NULL)
 				abort();

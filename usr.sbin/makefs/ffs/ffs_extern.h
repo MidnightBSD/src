@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ffs_extern.h,v 1.6 2003/08/07 11:25:33 agc Exp $	*/
 /* From: NetBSD: ffs_extern.h,v 1.19 2001/08/17 02:18:48 lukem Exp */
 
@@ -31,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: stable/10/usr.sbin/makefs/ffs/ffs_extern.h 239359 2012-08-17 17:45:27Z mjg $
+ * $FreeBSD: stable/11/usr.sbin/makefs/ffs/ffs_extern.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include "ffs/buf.h"

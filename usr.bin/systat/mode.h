@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright 1997 Massachusetts Institute of Technology
  *
@@ -27,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/systat/mode.h 226396 2011-10-15 13:20:36Z ed $
+ * $FreeBSD: stable/11/usr.bin/systat/mode.h 226396 2011-10-15 13:20:36Z ed $
  */
 
 /*

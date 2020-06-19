@@ -1,12 +1,10 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/fifolog/fifolog_create/Makefile 321272 2017-07-20 01:02:37Z ngie $
+# $FreeBSD: stable/11/usr.sbin/fifolog/fifolog_create/Makefile 321271 2017-07-20 01:02:30Z ngie $
 
 PROG=	fifolog_create
 
 CFLAGS+= -I${.CURDIR:H}/lib
 
-DPADD=	${LIBFIFOLOG} ${LIBUTIL}
-LDADD=	${LIBFIFOLOG} -lutil
+LIBADD=	util fifolog
 
 MAN=	fifolog.1
 MLINKS=	fifolog.1 fifolog_create.1 \

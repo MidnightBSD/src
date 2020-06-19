@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1983, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -41,7 +40,7 @@ static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/tftp/main.c 287795 2015-09-14 18:57:50Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/tftp/main.c 345389 2019-03-21 21:45:18Z asomers $");
 
 /* Many bug fixes are from Jim Guyton <guyton@rand-unix> */
 
@@ -75,7 +74,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/tftp/main.c 287795 2015-09-14 18:57:50Z de
 #include "tftp-options.h"
 #include "tftp.h"
 
-#define	MAXLINE		200
+#define	MAXLINE		(2 * MAXPATHLEN)
 #define	TIMEOUT		5		/* secs between rexmt's */
 
 typedef struct	sockaddr_storage peeraddr;
@@ -406,7 +405,7 @@ static void
 settftpmode(const char *newmode)
 {
 
-	strcpy(mode, newmode);
+	strlcpy(mode, newmode, sizeof(mode));
 	if (verbose)
 		printf("mode set to %s\n", mode);
 }
@@ -466,13 +465,17 @@ put(int argc, char *argv[])
 			return;
 		}
 
-		stat(cp, &sb);
+		if (fstat(fd, &sb) < 0) {
+			warn("%s", cp);
+			return;
+		}
 		asprintf(&options[OPT_TSIZE].o_request, "%ju", sb.st_size);
 
 		if (verbose)
 			printf("putting %s to %s:%s [%s]\n",
 			    cp, hostname, targ, mode);
 		xmitfile(peer, port, fd, targ, mode);
+		close(fd);
 		return;
 	}
 				/* this assumes the target is a directory */
@@ -487,7 +490,10 @@ put(int argc, char *argv[])
 			continue;
 		}
 
-		stat(cp, &sb);
+		if (fstat(fd, &sb) < 0) {
+			warn("%s", argv[n]);
+			continue;
+		}
 		asprintf(&options[OPT_TSIZE].o_request, "%ju", sb.st_size);
 
 		if (verbose)
@@ -728,7 +734,7 @@ command(void)
 		if (vrbose) {
                         if ((bp = el_gets(el, &num)) == NULL || num == 0)
                                 exit(0);
-                        len = (num > MAXLINE) ? MAXLINE : num;
+                        len = MIN(MAXLINE, num);
                         memcpy(line, bp, len);
                         line[len] = '\0';
                         history(hist, &he, H_ENTER, bp);
@@ -754,7 +760,7 @@ command(void)
 			printf("?Ambiguous command\n");
 			continue;
 		}
-		if (c == 0) {
+		if (c == NULL) {
 			printf("?Invalid command\n");
 			continue;
 		}

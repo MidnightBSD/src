@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ndiscvt/Makefile 291795 2015-12-04 18:22:31Z bdrewery $
+# $FreeBSD: stable/11/usr.sbin/ndiscvt/Makefile 352280 2019-09-13 07:21:06Z bapt $
 
-.PATH:	${.CURDIR}/../../sys/compat/ndis
+.PATH:	${SRCTOP}/sys/compat/ndis
 
 PROG=	ndiscvt
 SRCS=	ndiscvt.c
@@ -14,12 +13,9 @@ MAN+=	ndisgen.8
 WARNS?=	4
 NO_WCAST_ALIGN=
 
-DPADD=  ${LIBL}
-LDADD=  -ll
-
 YFLAGS+=-v
 
-CFLAGS+=-I. -I${.CURDIR} -I${.CURDIR}/../../sys
+CFLAGS+=-I. -I${.CURDIR} -I${SRCTOP}/sys
 
 CLEANFILES= y.output
 

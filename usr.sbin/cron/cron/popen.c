@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 1988 The Regents of the University of California.
  * All rights reserved.
@@ -29,7 +28,7 @@
 static char sccsid[] = "@(#)popen.c	5.7 (Berkeley) 2/14/89";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/cron/popen.c 293132 2016-01-04 03:20:41Z pfg $";
+  "$FreeBSD: stable/11/usr.sbin/cron/cron/popen.c 353134 2019-10-06 03:56:02Z kevans $";
 #endif /* not lint */
 
 #include "cron.h"
@@ -48,7 +47,7 @@ static const char rcsid[] =
 #define WANT_GLOBBING 0
 
 /*
- * Special version of popen which avoids call to shell.  This insures noone
+ * Special version of popen which avoids call to shell.  This insures no one
  * may create a pipe to a hidden program as a side effect of a list or dir
  * command.
  */
@@ -56,9 +55,10 @@ static PID_T *pids;
 static int fds;
 
 FILE *
-cron_popen(program, type, e)
+cron_popen(program, type, e, pidptr)
 	char *program, *type;
 	entry *e;
+	PID_T *pidptr;
 {
 	register char *cp;
 	FILE *iop;
@@ -219,6 +219,9 @@ pfree:
 		free((char *)argv[argc]);
 	}
 #endif
+
+	*pidptr = pid;
+
 	return(iop);
 }
 

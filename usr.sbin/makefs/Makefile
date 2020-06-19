@@ -1,11 +1,12 @@
-# $MidnightBSD$
-#	$FreeBSD: stable/10/usr.sbin/makefs/Makefile 290586 2015-11-09 07:56:06Z ngie $
+#	$FreeBSD: stable/11/usr.sbin/makefs/Makefile 330976 2018-03-15 09:04:23Z eadler $
 
-.include <bsd.own.mk>
+SRCDIR:=${.PARSEDIR:tA}
+
+.include <src.opts.mk>
 
 PROG=	makefs
 
-CFLAGS+=-I${.CURDIR}
+CFLAGS+=-I${SRCDIR}
 
 SRCS=	cd9660.c ffs.c \
 	makefs.c \
@@ -15,31 +16,25 @@ MAN=	makefs.8
 
 WARNS?=	2
 
-.include "${.CURDIR}/cd9660/Makefile.inc"
-.include "${.CURDIR}/ffs/Makefile.inc"
+.include "${SRCDIR}/cd9660/Makefile.inc"
+.include "${SRCDIR}/ffs/Makefile.inc"
 
 CFLAGS+=-DHAVE_STRUCT_STAT_ST_FLAGS=1
 CFLAGS+=-DHAVE_STRUCT_STAT_ST_GEN=1
 
-.PATH: ${.CURDIR}/../../contrib/mtree
-CFLAGS+=-I${.CURDIR}/../../contrib/mtree
+.PATH: ${SRCTOP}/contrib/mtree
+CFLAGS+=-I${SRCTOP}/contrib/mtree
 SRCS+=	getid.c misc.c spec.c
 
-.PATH: ${.CURDIR}/../../contrib/mknod
-CFLAGS+=-I${.CURDIR}/../../contrib/mknod
+.PATH: ${SRCTOP}/contrib/mknod
+CFLAGS+=-I${SRCTOP}/contrib/mknod
 SRCS+=	pack_dev.c
 
-.PATH:	${.CURDIR}/../../sys/ufs/ffs
+.PATH:	${SRCTOP}/sys/ufs/ffs
 SRCS+=	ffs_tables.c
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libnetbsd
-LIBNETBSDDIR=	${.OBJDIR}/../../lib/libnetbsd
-LIBNETBSD=	${LIBNETBSDDIR}/libnetbsd.a
-DPADD+=		${LIBNETBSD}
-LDADD+=		${LIBNETBSD}
-
-DPADD+=  ${LIBSBUF} ${LIBUTIL}
-LDADD+=  -lsbuf -lutil
+CFLAGS+=	-I${SRCTOP}/lib/libnetbsd
+LIBADD=		netbsd util sbuf
 
 .if ${MK_TESTS} != "no"
 SUBDIR+=	tests

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1989, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/vmstat.c 288163 2015-09-24 00:50:17Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/vmstat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)vmstat.c	8.2 (Berkeley) 1/12/94";
@@ -93,7 +92,7 @@ static struct Info {
 	u_int v_vnodepgsin;	/* vnode_pager pages paged in */
 	u_int v_vnodepgsout;	/* vnode pager pages paged out */
 	u_int v_intrans;	/* intransit blocking page faults */
-	u_int v_reactivated;	/* number of pages reactivated from free list */
+	u_int v_reactivated;	/* number of pages reactivated by pagedaemon */
 	u_int v_pdwakeups;	/* number of times daemon has awaken from sleep */
 	u_int v_pdpages;	/* number of pages analyzed by daemon */
 
@@ -108,7 +107,8 @@ static struct Info {
 	u_int v_wire_count;	/* number of pages wired down */
 	u_int v_active_count;	/* number of pages active */
 	u_int v_inactive_count;	/* number of pages inactive */
-	u_int v_cache_count;	/* number of pages on buffer cache queue */
+	u_int v_laundry_count;	/* number of pages in laundry queue */
+	u_long v_kmem_map_size;	/* Current kmem allocation size */
 	struct	vmtotal Total;
 	struct	nchstats nchstats;
 	long	nchcount;
@@ -119,6 +119,8 @@ static struct Info {
 	long	freevnodes;
 	int	numdirtybuffers;
 } s, s1, s2, z;
+static u_long kmem_size;
+static u_int v_page_count;
 
 struct statinfo cur, last, run;
 
@@ -279,6 +281,8 @@ initkre(void)
 		allocinfo(&s2);
 		allocinfo(&z);
 	}
+	GETSYSCTL("vm.kmem_size", kmem_size);
+	GETSYSCTL("vm.stats.vm.v_page_count", v_page_count);
 	getinfo(&s2);
 	copyinfo(&s2, &s1);
 	return(1);
@@ -308,7 +312,8 @@ labelkre(void)
 
 	clear();
 	mvprintw(STATROW, STATCOL + 6, "users    Load");
-	mvprintw(MEMROW, MEMCOL, "Mem:KB    REAL            VIRTUAL");
+	mvprintw(STATROW + 1, STATCOL + 3, "Mem usage:    %%Phy   %%Kmem");
+	mvprintw(MEMROW, MEMCOL, "Mem: KB    REAL            VIRTUAL");
 	mvprintw(MEMROW + 1, MEMCOL, "        Tot   Share      Tot    Share");
 	mvprintw(MEMROW + 2, MEMCOL, "Act");
 	mvprintw(MEMROW + 3, MEMCOL, "All");
@@ -338,7 +343,7 @@ labelkre(void)
 	mvprintw(VMSTATROW + 12, VMSTATCOL + 9, "wire");
 	mvprintw(VMSTATROW + 13, VMSTATCOL + 9, "act");
 	mvprintw(VMSTATROW + 14, VMSTATCOL + 9, "inact");
-	mvprintw(VMSTATROW + 15, VMSTATCOL + 9, "cache");
+	mvprintw(VMSTATROW + 15, VMSTATCOL + 9, "laund");
 	mvprintw(VMSTATROW + 16, VMSTATCOL + 9, "free");
 	if (LINES - 1 > VMSTATROW + 17)
 		mvprintw(VMSTATROW + 17, VMSTATCOL + 9, "buf");
@@ -479,6 +484,11 @@ showkre(void)
 	putfloat(avenrun[2], STATROW, STATCOL + 32, 5, 2, 0);
 	mvaddstr(STATROW, STATCOL + 55, buf);
 #define pgtokb(pg)	((pg) * (s.v_page_size / 1024))
+	putfloat(100.0 * (v_page_count - total.t_free) / v_page_count,
+	   STATROW + 1, STATCOL + 15, 2, 0, 1);
+	putfloat(100.0 * s.v_kmem_map_size / kmem_size,
+	   STATROW + 1, STATCOL + 22, 2, 0, 1);
+
 	putint(pgtokb(total.t_arm), MEMROW + 2, MEMCOL + 4, 7);
 	putint(pgtokb(total.t_armshr), MEMROW + 2, MEMCOL + 12, 7);
 	putint(pgtokb(total.t_avm), MEMROW + 2, MEMCOL + 20, 8);
@@ -509,7 +519,7 @@ showkre(void)
 	putint(pgtokb(s.v_wire_count), VMSTATROW + 12, VMSTATCOL, 8);
 	putint(pgtokb(s.v_active_count), VMSTATROW + 13, VMSTATCOL, 8);
 	putint(pgtokb(s.v_inactive_count), VMSTATROW + 14, VMSTATCOL, 8);
-	putint(pgtokb(s.v_cache_count), VMSTATROW + 15, VMSTATCOL, 8);
+	putint(pgtokb(s.v_laundry_count), VMSTATROW + 15, VMSTATCOL, 8);
 	putint(pgtokb(s.v_free_count), VMSTATROW + 16, VMSTATCOL, 8);
 	if (LINES - 1 > VMSTATROW + 17)
 		putint(s.bufspace / 1024, VMSTATROW + 17, VMSTATCOL, 8);
@@ -784,13 +794,14 @@ getinfo(struct Info *ls)
 	GETSYSCTL("vm.stats.vm.v_wire_count", ls->v_wire_count);
 	GETSYSCTL("vm.stats.vm.v_active_count", ls->v_active_count);
 	GETSYSCTL("vm.stats.vm.v_inactive_count", ls->v_inactive_count);
-	GETSYSCTL("vm.stats.vm.v_cache_count", ls->v_cache_count);
+	GETSYSCTL("vm.stats.vm.v_laundry_count", ls->v_laundry_count);
 	GETSYSCTL("vfs.bufspace", ls->bufspace);
 	GETSYSCTL("kern.maxvnodes", ls->desiredvnodes);
 	GETSYSCTL("vfs.numvnodes", ls->numvnodes);
 	GETSYSCTL("vfs.freevnodes", ls->freevnodes);
 	GETSYSCTL("vfs.cache.nchstats", ls->nchstats);
 	GETSYSCTL("vfs.numdirtybuffers", ls->numdirtybuffers);
+	GETSYSCTL("vm.kmem_map_size", ls->v_kmem_map_size);
 	getsysctl("hw.intrcnt", ls->intrcnt, nintr * sizeof(u_long));
 
 	size = sizeof(ls->Total);

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1992 Diomidis Spinellis.
  * Copyright (c) 1992, 1993
@@ -33,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/sed/misc.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/sed/misc.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifndef lint
 static const char sccsid[] = "@(#)misc.c	8.1 (Berkeley) 6/6/93";

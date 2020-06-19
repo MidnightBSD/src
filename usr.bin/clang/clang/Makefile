@@ -1,17 +1,21 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.bin/clang/clang/Makefile 293782 2016-01-12 19:33:43Z dim $
+# $FreeBSD: stable/11/usr.bin/clang/clang/Makefile 344213 2019-02-16 15:57:29Z dim $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-PROG_CXX=clang
+PROG_CXX=	clang
 
-SRCDIR=	tools/clang/tools/driver
-SRCS=	cc1_main.cpp \
-	cc1as_main.cpp \
-	driver.cpp
+SRCDIR=		tools/clang/tools/driver
+SRCS+=		cc1_main.cpp
+SRCS+=		cc1as_main.cpp
+SRCS+=		cc1gen_reproducer_main.cpp
+SRCS+=		driver.cpp
 
 .if ${MK_SHARED_TOOLCHAIN} == "no"
 NO_SHARED?= yes
+
+.if ${MACHINE_CPUARCH} == "arm"
+CFLAGS+= -mlong-calls
+.endif
 .endif
 
 LINKS=	${BINDIR}/clang ${BINDIR}/clang++ \
@@ -31,94 +35,6 @@ MLINKS+= clang.1 cc.1 \
 	clang.1 cpp.1
 .endif
 
-TGHDRS=	CC1AsOptions \
-	DiagnosticCommonKinds \
-	DiagnosticDriverKinds \
-	DiagnosticFrontendKinds \
-	DiagnosticLexKinds \
-	DiagnosticSemaKinds \
-	Options
-
-.if !defined(EARLY_BUILD) && defined(MK_CLANG_FULL) && ${MK_CLANG_FULL} != "no"
-_clangstaticanalyzer= \
-	clangstaticanalyzerfrontend \
-	clangstaticanalyzercheckers \
-	clangstaticanalyzercore
-_clangarcmigrate= \
-	clangarcmigrate
-_clangrewriter= \
-	clangrewritefrontend \
-	clangrewritecore
-.endif # !EARLY_BUILD && MK_CLANG_FULL
-
-LIBDEPS=clangfrontendtool \
-	clangfrontend \
-	clangdriver \
-	clangserialization \
-	clangcodegen \
-	clangparse \
-	clangsema \
-	${_clangstaticanalyzer} \
-	${_clangarcmigrate} \
-	${_clangrewriter} \
-	clanganalysis \
-	clangedit \
-	clangast \
-	clangbasic \
-	clanglex \
-	llvmoption \
-	llvmlinker \
-	llvmirreader \
-	llvmipo \
-	llvmvectorize \
-	llvminstrumentation \
-	llvmbitwriter \
-	llvmbitreader \
-	llvmasmparser \
-	llvmarmdisassembler \
-	llvmarmcodegen \
-	llvmarmasmparser \
-	llvmarmdesc \
-	llvmarminfo \
-	llvmarminstprinter \
-	llvmmipsdisassembler \
-	llvmmipscodegen \
-	llvmmipsasmparser \
-	llvmmipsdesc \
-	llvmmipsinfo \
-	llvmmipsinstprinter \
-	llvmpowerpccodegen \
-	llvmpowerpcasmparser \
-	llvmpowerpcdesc \
-	llvmpowerpcinfo \
-	llvmpowerpcinstprinter \
-	llvmsparcdisassembler \
-	llvmsparccodegen \
-	llvmsparcasmparser \
-	llvmsparcdesc \
-	llvmsparcinfo \
-	llvmsparcinstprinter \
-	llvmx86disassembler \
-	llvmx86asmparser \
-	llvmx86codegen \
-	llvmselectiondag \
-	llvmasmprinter \
-	llvmmcparser \
-	llvmcodegen \
-	llvmobjcarcopts \
-	llvmscalaropts \
-	llvminstcombine \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmx86desc \
-	llvmx86info \
-	llvmtarget \
-	llvmx86instprinter \
-	llvmmc \
-	llvmobject \
-	llvmx86utils \
-	llvmcore \
-	llvmsupport
+LIBADD+=	z
 
 .include "../clang.prog.mk"

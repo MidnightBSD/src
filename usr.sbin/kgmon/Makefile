@@ -1,6 +1,5 @@
-# $MidnightBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: stable/10/usr.sbin/kgmon/Makefile 134506 2004-08-30 03:12:49Z marcel $
+# $FreeBSD: stable/11/usr.sbin/kgmon/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	kgmon
 MAN=	kgmon.8
@@ -12,7 +11,6 @@ WARNS?=	2
 #BINOWN=root
 #BINMODE=4555
 
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
+LIBADD=	kvm
 
 .include <bsd.prog.mk>

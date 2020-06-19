@@ -1,5 +1,4 @@
-.\" $MidnightBSD$
-.\"	$NetBSD: makefs.8,v 1.32 2009/01/20 20:47:25 bjh21 Exp $
+.\"	$NetBSD: makefs.8,v 1.33 2011/05/22 21:51:39 christos Exp $
 .\"
 .\" Copyright (c) 2001-2003 Wasabi Systems, Inc.
 .\" All rights reserved.
@@ -34,9 +33,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/makefs/makefs.8 316800 2017-04-14 00:15:34Z brooks $
+.\" $FreeBSD: stable/11/usr.sbin/makefs/makefs.8 332983 2018-04-25 01:59:15Z benno $
 .\"
-.Dd April 6, 2017
+.Dd March 30, 2018
 .Dt MAKEFS 8
 .Os
 .Sh NAME
@@ -57,6 +56,7 @@
 .Op Fl R Ar roundup-size
 .Op Fl S Ar sector-size
 .Op Fl s Ar image-size
+.Op Fl T Ar timestamp
 .Op Fl t Ar fs-type
 .Ar image-file
 .Ar directory | manifest
@@ -219,6 +219,18 @@ Defaults to 512.
 .It Fl s Ar image-size
 Set the size of the file system image to
 .Ar image-size .
+.It Fl T Ar timestamp
+Specify a timestamp to be set for all filesystem files and directories
+created so that repeatable builds are possible.
+The
+.Ar timestamp
+can be a
+.Pa pathname ,
+where the timestamps are derived from that file, or an integer
+value interpreted as the number of seconds from the Epoch.
+Note that timestamps specified in an
+.Xr mtree 5
+spec file, override the default timestamp.
 .It Fl t Ar fs-type
 Create an
 .Ar fs-type
@@ -374,6 +386,8 @@ ElTorito image.
 Do not pad the image (apparently Linux needs the padding).
 .It Sy omit-trailing-period
 Omit trailing periods in filenames.
+.It Sy platformid
+Set platform ID of section header entry of the boot image.
 .It Sy preparer
 Preparer ID of the image.
 .It Sy publisher
@@ -395,7 +409,8 @@ The
 utility appeared in
 .Nx 1.6 .
 .Sh AUTHORS
-.An Luke Mewburn Aq Mt lukem@NetBSD.org
+.An Luke Mewburn
+.Aq Mt lukem@NetBSD.org
 (original program),
 .An Daniel Watt ,
 .An Walter Deignan ,

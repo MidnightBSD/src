@@ -1,9 +1,12 @@
-/*	$OpenBSD: sdiff.c,v 1.20 2006/09/19 05:52:23 otto Exp $ */
+/*	$OpenBSD: sdiff.c,v 1.36 2015/12/29 19:04:46 gsoares Exp $ */
 
 /*
  * Written by Raymond Lai <ray@cyth.net>.
  * Public domain.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/usr.bin/sdiff/sdiff.c 316705 2017-04-11 16:32:46Z bapt $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -12,29 +15,32 @@
 #include <sys/wait.h>
 
 #include <ctype.h>
-__MBSDID("$MidnightBSD$");
-
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <limits.h>
 #include <paths.h>
+#include <stdint.h>
+#define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <libutil.h>
 
-#include "common.h"
 #include "extern.h"
 
-#define WIDTH 130
+#define DIFF_PATH	"/usr/bin/diff"
+
+#define WIDTH 126
 /*
  * Each column must be at least one character wide, plus three
  * characters between the columns (space, [<|>], space).
  */
 #define WIDTH_MIN 5
+
+/* 3 kilobytes of chars */
+#define MAX_CHECK 768
 
 /* A single diff line. */
 struct diffline {
@@ -47,6 +53,8 @@ struct diffline {
 static void astrcat(char **, const char *);
 static void enqueue(char *, char, char *);
 static char *mktmpcpy(const char *);
+static int istextfile(FILE *);
+static void binexec(char *, char *, char *) __dead2;
 static void freediff(struct diffline *);
 static void int_usage(void);
 static int parsecmd(FILE *, FILE *, FILE *);
@@ -57,36 +65,80 @@ static void printd(FILE *, size_t);
 static void println(const char *, const char, const char *);
 static void processq(void);
 static void prompt(const char *, const char *);
-__dead2 static void usage(void);
+static void usage(void) __dead2;
 static char *xfgets(FILE *);
 
-STAILQ_HEAD(, diffline) diffhead = STAILQ_HEAD_INITIALIZER(diffhead);
-size_t	 line_width;	/* width of a line (two columns and divider) */
-size_t	 width;		/* width of each column */
-size_t	 file1ln, file2ln;	/* line number of file1 and file2 */
-int	 Iflag = 0;	/* ignore sets matching regexp */
-int	 lflag;		/* print only left column for identical lines */
-int	 sflag;		/* skip identical lines */
-FILE	*outfile;	/* file to save changes to */
+static STAILQ_HEAD(, diffline) diffhead = STAILQ_HEAD_INITIALIZER(diffhead);
+static size_t line_width;	/* width of a line (two columns and divider) */
+static size_t width;		/* width of each column */
+static size_t file1ln, file2ln;	/* line number of file1 and file2 */
+static int Iflag = 0;	/* ignore sets matching regexp */
+static int	lflag;		/* print only left column for identical lines */
+static int	sflag;		/* skip identical lines */
+FILE *outfp;		/* file to save changes to */
 const char *tmpdir;	/* TMPDIR or /tmp */
 
+enum {
+	HELP_OPT = CHAR_MAX + 1,
+	NORMAL_OPT,
+	FCASE_SENSITIVE_OPT,
+	FCASE_IGNORE_OPT,
+	STRIPCR_OPT,
+	TSIZE_OPT,
+	DIFFPROG_OPT,
+};
+
 static struct option longopts[] = {
+	/* options only processed in sdiff */
+	{ "suppress-common-lines",	no_argument,		NULL,	's' },
+	{ "width",			required_argument,	NULL,	'w' },
+
+	{ "output",			required_argument,	NULL,	'o' },
+	{ "diff-program",		required_argument,	NULL,	DIFFPROG_OPT },
+
+	/* Options processed by diff. */
+	{ "ignore-file-name-case",	no_argument,		NULL,	FCASE_IGNORE_OPT },
+	{ "no-ignore-file-name-case",	no_argument,		NULL,	FCASE_SENSITIVE_OPT },
+	{ "strip-trailing-cr",		no_argument,		NULL,	STRIPCR_OPT },
+	{ "tabsize",			required_argument,	NULL,	TSIZE_OPT },
+	{ "help",			no_argument,		NULL,	HELP_OPT },
 	{ "text",			no_argument,		NULL,	'a' },
 	{ "ignore-blank-lines",		no_argument,		NULL,	'B' },
 	{ "ignore-space-change",	no_argument,		NULL,	'b' },
 	{ "minimal",			no_argument,		NULL,	'd' },
 	{ "ignore-tab-expansion",	no_argument,		NULL,	'E' },
-	{ "diff-program",		required_argument,	NULL,	'F' },
-	{ "speed-large-files",		no_argument,		NULL,	'H' },
 	{ "ignore-matching-lines",	required_argument,	NULL,	'I' },
+	{ "ignore-case",		no_argument,		NULL,	'i' },
 	{ "left-column",		no_argument,		NULL,	'l' },
-	{ "output",			required_argument,	NULL,	'o' },
-	{ "strip-trailing-cr",		no_argument,		NULL,	'S' },
-	{ "suppress-common-lines",	no_argument,		NULL,	's' },
 	{ "expand-tabs",		no_argument,		NULL,	't' },
+	{ "speed-large-files",		no_argument,		NULL,	'H' },
 	{ "ignore-all-space",		no_argument,		NULL,	'W' },
-	{ "width",			required_argument,	NULL,	'w' },
-	{ NULL,				0,			NULL,	 0  }
+
+	{ NULL,				0,			NULL,	'\0'}
+};
+
+static const char *help_msg[] = {
+	"usage: sdiff [-abdilstW] [-I regexp] [-o outfile] [-w width] file1 file2\n",
+	"-l, --left-column: only print the left column for identical lines.",
+	"-o OUTFILE, --output=OUTFILE: interactively merge file1 and file2 into outfile.",
+	"-s, --suppress-common-lines: skip identical lines.",
+	"-w WIDTH, --width=WIDTH: print a maximum of WIDTH characters on each line.",
+	"",
+	"Options passed to diff(1) are:",
+	"\t-a, --text: treat file1 and file2 as text files.",
+	"\t-b, --ignore-trailing-cr: ignore trailing blank spaces.",
+	"\t-d, --minimal: minimize diff size.",
+	"\t-I RE, --ignore-matching-lines=RE: ignore changes whose line matches RE.",
+	"\t-i, --ignore-case: do a case-insensitive comparison.",
+	"\t-t, --expand-tabs: sxpand tabs to spaces.",
+	"\t-W, --ignore-all-spaces: ignore all spaces.",
+	"\t--speed-large-files: assume large file with scattered changes.",
+	"\t--strip-trailing-cr: strip trailing carriage return.",
+	"\t--ignore-file-name-case: ignore case of file names.",
+	"\t--no-ignore-file-name-case: do not ignore file name case",
+	"\t--tabsize NUM: change size of tabs (default 8.)",
+
+	NULL,
 };
 
 /*
@@ -110,8 +162,10 @@ mktmpcpy(const char *source_file)
 			err(2, "error getting file status from %s", source_file);
 
 		/* Regular file. */
-		if (S_ISREG(sb.st_mode))
+		if (S_ISREG(sb.st_mode)) {
+			close(ifd);
 			return (NULL);
+		}
 	} else {
 		/* If ``-'' does not exist the user meant stdin. */
 		if (errno == ENOENT && strcmp(source_file, "-") == 0)
@@ -155,12 +209,14 @@ FAIL:
 int
 main(int argc, char **argv)
 {
-	FILE *diffpipe, *file1, *file2;
+	FILE *diffpipe=NULL, *file1, *file2;
 	size_t diffargc = 0, wflag = WIDTH;
-	int ch, fd[2], status;
-	pid_t pid;
-	char **diffargv, *diffprog = "diff", *filename1, *filename2,
-	    *tmp1, *tmp2, *s1, *s2;
+	int ch, fd[2] = {-1}, status;
+	pid_t pid=0;
+	const char *outfile = NULL;
+	char **diffargv, *diffprog = DIFF_PATH, *filename1, *filename2,
+	     *tmp1, *tmp2, *s1, *s2;
+	int i;
 
 	/*
 	 * Process diff flags.
@@ -173,64 +229,65 @@ main(int argc, char **argv)
 	 * waste some memory; however we need an extra space for the
 	 * NULL at the end, so it sort of works out.
 	 */
-	if (!(diffargv = malloc(sizeof(char **) * argc * 2)))
+	if (!(diffargv = calloc(argc, sizeof(char **) * 2)))
 		err(2, "main");
 
 	/* Add first argument, the program name. */
 	diffargv[diffargc++] = diffprog;
+
+	/* create a dynamic string for merging single-switch options */
+	if ( asprintf(&diffargv[diffargc++], "-")  < 0 )
+		err(2, "main");
 
 	while ((ch = getopt_long(argc, argv, "aBbdEHI:ilo:stWw:",
 	    longopts, NULL)) != -1) {
 		const char *errstr;
 
 		switch (ch) {
+		/* only compatible --long-name-form with diff */
+		case FCASE_IGNORE_OPT:
+		case FCASE_SENSITIVE_OPT:
+		case STRIPCR_OPT:
+		case TSIZE_OPT:
+		case 'S':
+		break;
+		/* combine no-arg single switches */
 		case 'a':
-			diffargv[diffargc++] = "-a";
-			break;
 		case 'B':
-			diffargv[diffargc++] = "-B";
-			break;
 		case 'b':
-			diffargv[diffargc++] = "-b";
-			break;
 		case 'd':
-			diffargv[diffargc++] = "-d";
-			break;
 		case 'E':
-			diffargv[diffargc++] = "-E";
-			break;
-		case 'F':
-			diffargv[0] = diffprog = optarg;
+		case 'i':
+		case 't':
+		case 'W':
+			diffargv[1]  = realloc(diffargv[1], sizeof(char) * strlen(diffargv[1]) + 2);
+			/*
+			 * In diff, the 'W' option is 'w' and the 'w' is 'W'.
+			 */
+			if (ch == 'W')
+				sprintf(diffargv[1], "%sw", diffargv[1]);
+			else
+				sprintf(diffargv[1], "%s%c", diffargv[1], ch);
 			break;
 		case 'H':
-			diffargv[diffargc++] = "-H";
+			diffargv[diffargc++] = "--speed-large-files";
+			break;
+		case DIFFPROG_OPT:
+			diffargv[0] = diffprog = optarg;
 			break;
 		case 'I':
 			Iflag = 1;
 			diffargv[diffargc++] = "-I";
 			diffargv[diffargc++] = optarg;
 			break;
-		case 'i':
-			diffargv[diffargc++] = "-i";
-			break;
 		case 'l':
 			lflag = 1;
 			break;
 		case 'o':
-			if ((outfile = fopen(optarg, "w")) == NULL)
-				err(2, "could not open: %s", optarg);
-			break;
-		case 'S':
-			diffargv[diffargc++] = "--strip-trailing-cr";
+			outfile = optarg;
 			break;
 		case 's':
 			sflag = 1;
-			break;
-		case 't':
-			diffargv[diffargc++] = "-t";
-			break;
-		case 'W':
-			diffargv[diffargc++] = "-w";
 			break;
 		case 'w':
 			wflag = strtonum(optarg, WIDTH_MIN,
@@ -238,18 +295,36 @@ main(int argc, char **argv)
 			if (errstr)
 				errx(2, "width is %s: %s", errstr, optarg);
 			break;
+		case HELP_OPT:
+			for (i = 0; help_msg[i] != NULL; i++)
+				printf("%s\n", help_msg[i]);
+			exit(0);
+			break;
 		default:
 			usage();
+			break;
 		}
-
 	}
+
+	/* no single switches were used */
+	if (strcmp(diffargv[1], "-") == 0 ) {
+		for ( i = 1; i < argc-1; i++) {
+			diffargv[i] = diffargv[i+1];
+		}
+		diffargv[diffargc-1] = NULL;
+		diffargc--;
+	}
+
 	argc -= optind;
 	argv += optind;
 
 	if (argc != 2)
 		usage();
 
-	if ((tmpdir = getenv("TMPDIR")) == NULL)                       
+	if (outfile && (outfp = fopen(outfile, "w")) == NULL)
+		err(2, "could not open: %s", optarg);
+
+	if ((tmpdir = getenv("TMPDIR")) == NULL || *tmpdir == '\0')
 		tmpdir = _PATH_TMP;
 
 	filename1 = argv[0];
@@ -284,14 +359,14 @@ main(int argc, char **argv)
 	/* Subtract column divider and divide by two. */
 	width = (wflag - 3) / 2;
 	/* Make sure line_width can fit in size_t. */
-	if (width > (SIZE_T_MAX - 3) / 2)
+	if (width > (SIZE_MAX - 3) / 2)
 		errx(2, "width is too large: %zu", width);
 	line_width = width * 2 + 3;
 
 	if (pipe(fd))
 		err(2, "pipe");
 
-	switch(pid = fork()) {
+	switch (pid = fork()) {
 	case 0:
 		/* child */
 		/* We don't read from the pipe. */
@@ -300,11 +375,12 @@ main(int argc, char **argv)
 			err(2, "child could not duplicate descriptor");
 		/* Free unused descriptor. */
 		close(fd[1]);
-
 		execvp(diffprog, diffargv);
 		err(2, "could not execute diff: %s", diffprog);
+		break;
 	case -1:
 		err(2, "could not fork");
+		break;
 	}
 
 	/* parent */
@@ -314,11 +390,27 @@ main(int argc, char **argv)
 	/* Open pipe to diff command. */
 	if ((diffpipe = fdopen(fd[0], "r")) == NULL)
 		err(2, "could not open diff pipe");
+
 	if ((file1 = fopen(filename1, "r")) == NULL)
 		err(2, "could not open %s", filename1);
 	if ((file2 = fopen(filename2, "r")) == NULL)
 		err(2, "could not open %s", filename2);
-
+	if (!istextfile(file1) || !istextfile(file2)) {
+		/* Close open files and pipe, delete temps */
+		fclose(file1);
+		fclose(file2);
+		if (diffpipe != NULL)
+			fclose(diffpipe);
+		if (tmp1)
+			if (unlink(tmp1))
+				warn("Error deleting %s.", tmp1);
+		if (tmp2)
+			if (unlink(tmp2))
+				warn("Error deleting %s.", tmp2);
+		free(tmp1);
+		free(tmp2);
+		binexec(diffprog, filename1, filename2);
+	}
 	/* Line numbers start at one. */
 	file1ln = file2ln = 1;
 
@@ -330,15 +422,15 @@ main(int argc, char **argv)
 	/* Wait for diff to exit. */
 	if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status) ||
 	    WEXITSTATUS(status) >= 2)
-		err(2, "diff exited abnormally");
+		err(2, "diff exited abnormally.");
 
 	/* Delete and free unneeded temporary files. */
 	if (tmp1)
 		if (unlink(tmp1))
-			warn("error deleting %s", tmp1);
+			warn("Error deleting %s.", tmp1);
 	if (tmp2)
 		if (unlink(tmp2))
-			warn("error deleting %s", tmp2);
+			warn("Error deleting %s.", tmp2);
 	free(tmp1);
 	free(tmp2);
 	filename1 = filename2 = tmp1 = tmp2 = NULL;
@@ -366,6 +458,45 @@ main(int argc, char **argv)
 }
 
 /*
+ * When sdiff detects a binary file as input, executes them with
+ * diff to maintain the same behavior as GNU sdiff with binary input.
+ */
+static void
+binexec(char *diffprog, char *f1, char *f2)
+{
+
+	char *args[] = {diffprog, f1, f2, (char *) 0};
+	execv(diffprog, args);
+
+	/* If execv() fails, sdiff's execution will continue below. */
+	errx(1, "Could not execute diff process.\n");
+}
+
+/*
+ * Checks whether a file appears to be a text file.
+ */
+static int
+istextfile(FILE *f)
+{
+	int	ch, i;
+
+	if (f == NULL)
+		return (1);
+	rewind(f);
+	for (i = 0; i <= MAX_CHECK; i++) {
+		ch = fgetc(f);
+		if (ch == '\0') {
+			rewind(f);
+			return (0);
+		}
+		if (ch == EOF)
+			break;
+	}
+	rewind(f);
+	return (1);
+}
+
+/*
  * Prints an individual column (left or right), taking into account
  * that tabs are variable-width.  Takes a string, the current column
  * the cursor is on the screen, and the maximum value of the column.
@@ -384,7 +515,7 @@ printcol(const char *s, size_t *col, const size_t col_max)
 			 * If rounding to next multiple of eight causes
 			 * an integer overflow, just return.
 			 */
-			if (*col > SIZE_T_MAX - 8)
+			if (*col > SIZE_MAX - 8)
 				return;
 
 			/* Round to next multiple of eight. */
@@ -398,11 +529,9 @@ printcol(const char *s, size_t *col, const size_t col_max)
 				return;
 			*col = new_col;
 			break;
-
 		default:
 			++(*col);
 		}
-
 		putchar(*s);
 	}
 }
@@ -426,43 +555,35 @@ prompt(const char *s1, const char *s2)
 		/* Skip leading whitespace. */
 		for (p = cmd; isspace(*p); ++p)
 			;
-
 		switch (*p) {
 		case 'e':
 			/* Skip `e'. */
 			++p;
-
 			if (eparse(p, s1, s2) == -1)
 				goto USAGE;
 			break;
-
 		case 'l':
+		case '1':
 			/* Choose left column as-is. */
 			if (s1 != NULL)
-				fprintf(outfile, "%s\n", s1);
-
+				fprintf(outfp, "%s\n", s1);
 			/* End of command parsing. */
 			break;
-
 		case 'q':
 			goto QUIT;
-
 		case 'r':
+		case '2':
 			/* Choose right column as-is. */
 			if (s2 != NULL)
-				fprintf(outfile, "%s\n", s2);
-
+				fprintf(outfp, "%s\n", s2);
 			/* End of command parsing. */
 			break;
-
 		case 's':
 			sflag = 1;
 			goto PROMPT;
-
 		case 'v':
 			sflag = 0;
 			/* FALLTHROUGH */
-
 		default:
 			/* Interactive usage help. */
 USAGE:
@@ -473,7 +594,6 @@ PROMPT:
 			/* Prompt user again. */
 			continue;
 		}
-
 		free(cmd);
 		return;
 	}
@@ -483,7 +603,7 @@ PROMPT:
 	 * should quit.
 	 */
 QUIT:
-	fclose(outfile);
+	fclose(outfp);
 	exit(0);
 }
 
@@ -509,15 +629,15 @@ println(const char *s1, const char div, const char *s2)
 
 	}
 
-	/* Only print left column. */
-	if (div == ' ' && !s2) {
-		putchar('\n');
-		return;
-	}
-
 	/* Otherwise, we pad this column up to width. */
 	for (; col < width; ++col)
 		putchar(' ');
+
+	/* Only print left column. */
+	if (div == ' ' && !s2) {
+		printf(" (\n");
+		return;
+	}
 
 	/*
 	 * Print column divider.  If there is no second column, we don't
@@ -543,19 +663,22 @@ println(const char *s1, const char div, const char *s2)
 static char *
 xfgets(FILE *file)
 {
-	const char delim[3] = {'\0', '\0', '\0'};
+	size_t linecap;
+	ssize_t l;
 	char *s;
 
-	/* XXX - Is this necessary? */
 	clearerr(file);
+	linecap = 0;
+	s = NULL;
 
-	if (!(s = fparseln(file, NULL, NULL, delim, 0)) &&
-	    ferror(file))
-		err(2, "error reading file");
-
-	if (!s) {
+	if ((l = getline(&s, &linecap, file)) == -1) {
+		if (ferror(file))
+			err(2, "error reading file");
 		return (NULL);
 	}
+
+	if (s[l-1] == '\n')
+		s[l-1] = '\0';
 
 	return (s);
 }
@@ -590,7 +713,6 @@ parsecmd(FILE *diffpipe, FILE *file1, FILE *file2)
 
 	/* A range is specified for file1. */
 	if (c == ',') {
-
 		q = p;
 		/* Go to character after file2end. */
 		while (isdigit(*p))
@@ -602,7 +724,6 @@ parsecmd(FILE *diffpipe, FILE *file1, FILE *file2)
 			errx(2, "file1 end is %s: %s", errstr, line);
 		if (file1start > file1end)
 			errx(2, "invalid line range in file1: %s", line);
-
 	} else
 		file1end = file1start;
 
@@ -643,7 +764,7 @@ parsecmd(FILE *diffpipe, FILE *file1, FILE *file2)
 		if (file1start != file1end)
 			errx(2, "append cannot have a file1 range: %s",
 			    line);
-		if (file1start == SIZE_T_MAX)
+		if (file1start == SIZE_MAX)
 			errx(2, "file1 line range too high: %s", line);
 		file1start = ++file1end;
 	}
@@ -655,7 +776,7 @@ parsecmd(FILE *diffpipe, FILE *file1, FILE *file2)
 		if (file2start != file2end)
 			errx(2, "delete cannot have a file2 range: %s",
 			    line);
-		if (file2start == SIZE_T_MAX)
+		if (file2start == SIZE_MAX)
 			errx(2, "file2 line range too high: %s", line);
 		file2start = ++file2end;
 	}
@@ -721,25 +842,25 @@ parsecmd(FILE *diffpipe, FILE *file1, FILE *file2)
 		printa(file2, file2end);
 		n = file2end - file2start + 1;
 		break;
-
 	case 'c':
 		printc(file1, file1end, file2, file2end);
 		n = file1end - file1start + 1 + 1 + file2end - file2start + 1;
 		break;
-
 	case 'd':
 		printd(file1, file1end);
 		n = file1end - file1start + 1;
 		break;
-
 	default:
 		errx(2, "invalid diff command: %c: %s", cmd, line);
 	}
+	free(line);
 
 	/* Skip to next ed line. */
-	while (n--)
-		if (!xfgets(diffpipe))
+	while (n--) {
+		if (!(line = xfgets(diffpipe)))
 			errx(2, "diff ended early");
+		free(line);
+	}
 
 	return (0);
 }
@@ -766,6 +887,7 @@ enqueue(char *left, char div, char *right)
 static void
 freediff(struct diffline *diffp)
 {
+
 	free(diffp->left);
 	free(diffp->right);
 	free(diffp);
@@ -787,7 +909,6 @@ astrcat(char **s, const char *append)
 	 */
 	static const char *oldstr = NULL;
 	char *newstr;
-
 
 	/*
 	 * First string is NULL, so just copy append.
@@ -883,11 +1004,11 @@ processq(void)
 		freediff(diffp);
 	}
 
-	/* Write to outfile, prompting user if lines are different. */
-	if (outfile)
+	/* Write to outfp, prompting user if lines are different. */
+	if (outfp)
 		switch (divc) {
 		case ' ': case '(': case ')':
-			fprintf(outfile, "%s\n", left);
+			fprintf(outfp, "%s\n", left);
 			break;
 		case '|': case '<': case '>':
 			prompt(left, right);
@@ -914,7 +1035,6 @@ printa(FILE *file, size_t line2)
 			errx(2, "append ended early");
 		enqueue(NULL, '>', line);
 	}
-
 	processq();
 }
 
@@ -1002,7 +1122,6 @@ printd(FILE *file1, size_t file1end)
 
 	/* Print out lines file1ln to line2. */
 	for (; file1ln <= file1end; ++file1ln) {
-		/* XXX - Why can't this handle stdin? */
 		if (!(line1 = xfgets(file1)))
 			errx(2, "file1 ended early in delete");
 		enqueue(line1, '<', NULL);
@@ -1016,12 +1135,13 @@ printd(FILE *file1, size_t file1end)
 static void
 int_usage(void)
 {
+
 	puts("e:\tedit blank diff\n"
 	    "eb:\tedit both diffs concatenated\n"
 	    "el:\tedit left diff\n"
 	    "er:\tedit right diff\n"
-	    "l:\tchoose left diff\n"
-	    "r:\tchoose right diff\n"
+	    "l | 1:\tchoose left diff\n"
+	    "r | 2:\tchoose right diff\n"
 	    "s:\tsilent mode--don't print identical lines\n"
 	    "v:\tverbose mode--print identical lines\n"
 	    "q:\tquit");
@@ -1030,10 +1150,9 @@ int_usage(void)
 static void
 usage(void)
 {
-	extern char *__progname;
 
 	fprintf(stderr,
-	    "usage: %s [-abdilstW] [-I regexp] [-o outfile] [-w width] file1 file2\n",
-	    __progname);
+	    "usage: sdiff [-abdilstHW] [-I regexp] [-o outfile] [-w width] file1"
+	    " file2\n");
 	exit(2);
 }

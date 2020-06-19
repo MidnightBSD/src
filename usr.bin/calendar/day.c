@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -29,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/calendar/day.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/calendar/day.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #include <err.h>
 #include <locale.h>

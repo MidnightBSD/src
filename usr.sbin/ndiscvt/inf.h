@@ -1,8 +1,7 @@
-/* $MidnightBSD$ */
 /*
  * $Id: inf.h,v 1.3 2003/11/30 21:58:16 winter Exp $
  *
- * $FreeBSD: stable/10/usr.sbin/ndiscvt/inf.h 288924 2015-10-06 15:30:41Z amdmi3 $
+ * $FreeBSD: stable/11/usr.sbin/ndiscvt/inf.h 288120 2015-09-22 16:59:41Z amdmi3 $
  */
 
 #define W_MAX	32

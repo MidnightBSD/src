@@ -15,8 +15,7 @@
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
 
-$MidnightBSD$
-$FreeBSD: src/usr.sbin/cron/doc/INSTALL,v 1.4 1999/08/28 01:15:53 peter Exp $
+$FreeBSD: stable/11/usr.sbin/cron/doc/INSTALL 50479 1999-08-28 01:35:59Z peter $
 
 Read the comments at the top of the Makefile, then edit the area marked
 'configurable stuff'.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1980, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/10/usr.bin/systat/netstat.c 288163 2015-09-24 00:50:17Z delphij $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/systat/netstat.c 331722 2018-03-29 02:50:57Z eadler $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)netstat.c	8.1 (Berkeley) 6/6/93";
@@ -60,10 +59,10 @@ static const char sccsid[] = "@(#)netstat.c	8.1 (Berkeley) 6/6/93";
 #include <netinet/tcp.h>
 #include <netinet/tcpip.h>
 #include <netinet/tcp_seq.h>
-#include <netinet/tcp_var.h>
 #define TCPSTATES
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_timer.h>
+#include <netinet/tcp_var.h>
 #include <netinet/tcp_debug.h>
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
@@ -334,8 +333,8 @@ enter_kvm(struct inpcb *inp, struct socket *so, int state, const char *proto)
 	struct netinfo *p;
 
 	if ((p = enter(inp, state, proto)) != NULL) {
-		p->ni_rcvcc = so->so_rcv.sb_cc;
-		p->ni_sndcc = so->so_snd.sb_cc;
+		p->ni_rcvcc = so->so_rcv.sb_ccc;
+		p->ni_sndcc = so->so_snd.sb_ccc;
 	}
 }
 
@@ -606,7 +605,7 @@ inetname(struct sockaddr *sa)
 			if (np)
 				cp = np->n_name;
 		}
-		if (cp == 0) {
+		if (cp == NULL) {
 			hp = gethostbyaddr((char *)&in, sizeof (in), AF_INET);
 			if (hp)
 				cp = hp->h_name;

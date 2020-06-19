@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -18,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: stable/10/usr.sbin/cron/cron/job.c 50479 1999-08-28 01:35:59Z peter $";
+  "$FreeBSD: stable/11/usr.sbin/cron/cron/job.c 50479 1999-08-28 01:35:59Z peter $";
 #endif
 
 

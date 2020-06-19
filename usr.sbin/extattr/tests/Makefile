@@ -1,7 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/extattr/tests/Makefile 301145 2016-06-01 17:22:15Z asomers $
-
-TESTSDIR=	${TESTSBASE}/usr.sbin/extattr
+# $FreeBSD: stable/11/usr.sbin/extattr/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 ATF_TESTS_SH=	extattr_test
 

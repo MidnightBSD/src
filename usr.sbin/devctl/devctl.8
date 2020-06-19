@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2015 John Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
@@ -24,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/devctl/devctl.8 306533 2016-09-30 22:05:47Z jhb $
+.\" $FreeBSD: stable/11/usr.sbin/devctl/devctl.8 346384 2019-04-19 13:18:54Z kib $
 .\"
-.Dd August 29, 2016
+.Dd April 4, 2019
 .Dt DEVCTL 8
 .Os
 .Sh NAME
@@ -52,9 +51,26 @@
 .Cm enable
 .Ar device
 .Nm
+.Cm suspend
+.Ar device
+.Nm
+.Cm resume
+.Ar device
+.Nm
 .Cm set driver
 .Op Fl f
 .Ar device driver
+.Nm
+.Cm rescan
+.Ar device
+.Nm
+.Cm delete
+.Op Fl f
+.Ar device
+.Nm
+.Cm reset
+.Op Fl d
+.Ar device
 .Sh DESCRIPTION
 The
 .Nm
@@ -105,6 +121,11 @@ Enable a device.
 The device will probe and attach if a suitable device driver is found.
 Note that this can re-enable a device disabled at boot time via a
 loader tunable.
+.It Cm suspend Ar device
+Suspend a device.
+This may include placing the device in a reduced power state.
+.It Cm resume Ar device
+Resume a suspended device to a fully working state.
 .It Xo Cm set driver
 .Op Fl f
 .Ar device driver
@@ -135,7 +156,50 @@ If the device is currently attached to a device driver and the
 .Fl f
 flag is not specified,
 the device will not be changed.
+.It Cm rescan Ar device
+Rescan a bus device checking for devices that have been added or
+removed.
+.It Xo Cm delete
+.Op Fl
+.Ar device
+.Xc
+Delete the device from the device tree.
+If the
+.Fl f
+flag is specified,
+the device will be deleted even if it is physically present.
+This command should be used with care as a device that is deleted but present
+can no longer be used unless the parent bus device rediscovers the device via
+a rescan request.
+.It Xo Cm reset
+.Op Fl d
+.Ar device
+.Xc
+Reset the device, using bus-specific reset method.
+Drivers for the devices being reset are suspended around the reset.
+If the
+.Fl d
+option is specified, drivers are detached instead.
+.Pp
+Currently, resets are implemented for PCIe buses and PCI devices.
+For PCIe bus, the link is disabled and then re-trained, causing all
+children of the bus to reset.
+Use
+.Fl p
+option of
+.Xr devinfo 8
+tool to report parent bus for the device.
+For PCI device, if Function-Level Reset is implemented by it, FLR is
+tried first; if failed or not implemented, power reset is tried.
+.Pp
+If you have detached or suspended a child device explicitly and then
+do a reset, the child device will end up attached.
 .El
+.Sh BUGS
+Currently there is no administrative flag to prevent re-attach or resume
+of the manually detached or suspended devices after reset.
+Similarly, there is no flag to prevent un-suspending of the the manually
+suspended devices after system resume.
 .Sh SEE ALSO
 .Xr devctl 3 ,
 .Xr devinfo 8

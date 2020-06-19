@@ -1,16 +1,17 @@
-/*	$OpenBSD: edit.c,v 1.16 2007/04/25 05:02:17 ray Exp $ */
+/*	$OpenBSD: edit.c,v 1.19 2009/06/07 13:29:50 ray Exp $ */
 
 /*
  * Written by Raymond Lai <ray@cyth.net>.
  * Public domain.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: stable/11/usr.bin/sdiff/edit.c 307772 2016-10-22 13:15:19Z bapt $");
+
 #include <sys/types.h>
 #include <sys/wait.h>
 
 #include <ctype.h>
-__MBSDID("$MidnightBSD$");
-
 #include <err.h>
 #include <errno.h>
 #include <paths.h>
@@ -20,69 +21,63 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 
-#include "common.h"
 #include "extern.h"
 
-int editit(const char *);
+static void
+cleanup(const char *filename)
+{
+
+	if (unlink(filename))
+		err(2, "could not delete: %s", filename);
+	exit(2);
+}
 
 /*
- * Takes the name of a file and opens it with an editor.
+ * Execute an editor on the specified pathname, which is interpreted
+ * from the shell.  This means flags may be included.
+ *
+ * Returns -1 on error, or the exit value on success.
  */
-int
+static int
 editit(const char *pathname)
 {
-	char *argp[] = {"sh", "-c", NULL, NULL}, *ed, *p;
-	sig_t sighup, sigint, sigquit;
+	sig_t sighup, sigint, sigquit, sigchld;
 	pid_t pid;
-	int st;
+	int saved_errno, st, ret = -1;
+	const char *ed;
 
 	ed = getenv("VISUAL");
-	if (ed == NULL || ed[0] == '\0')
+	if (ed == NULL)
 		ed = getenv("EDITOR");
-	if (ed == NULL || ed[0] == '\0')
+	if (ed == NULL)
 		ed = _PATH_VI;
-	if (asprintf(&p, "%s %s", ed, pathname) == -1)
-		return (-1);
-	argp[2] = p;
 
- top:
 	sighup = signal(SIGHUP, SIG_IGN);
 	sigint = signal(SIGINT, SIG_IGN);
 	sigquit = signal(SIGQUIT, SIG_IGN);
-	if ((pid = fork()) == -1) {
-		int saved_errno = errno;
-
-		(void)signal(SIGHUP, sighup);
-		(void)signal(SIGINT, sigint);
-		(void)signal(SIGQUIT, sigquit);
-		if (saved_errno == EAGAIN) {
-			sleep(1);
-			goto top;
-		}
-		free(p);
-		errno = saved_errno;
-		return (-1);
-	}
+	sigchld = signal(SIGCHLD, SIG_DFL);
+	if ((pid = fork()) == -1)
+		goto fail;
 	if (pid == 0) {
-		execv(_PATH_BSHELL, argp);
+		execlp(ed, ed, pathname, (char *)NULL);
 		_exit(127);
 	}
-	free(p);
-	for (;;) {
-		if (waitpid(pid, &st, 0) == -1) {
-			if (errno != EINTR)
-				return (-1);
-		} else
-			break;
-	}
+	while (waitpid(pid, &st, 0) == -1)
+		if (errno != EINTR)
+			goto fail;
+	if (!WIFEXITED(st))
+		errno = EINTR;
+	else
+		ret = WEXITSTATUS(st);
+
+ fail:
+	saved_errno = errno;
 	(void)signal(SIGHUP, sighup);
 	(void)signal(SIGINT, sigint);
 	(void)signal(SIGQUIT, sigquit);
-	if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
-		errno = ECHILD;
-		return (-1);
-	}
-	return (0);
+	(void)signal(SIGCHLD, sigchld);
+	errno = saved_errno;
+	return (ret);
 }
 
 /*
@@ -151,12 +146,12 @@ RIGHT:
 	if ((fd = mkstemp(filename)) == -1)
 		err(2, "mkstemp");
 	if (text != NULL) {
-		ssize_t len;
+		size_t len;
 		ssize_t nwritten;
 
 		len = strlen(text);
 		if ((nwritten = write(fd, text, len)) == -1 ||
-		    nwritten != len) {
+		    (size_t)nwritten != len) {
 			warn("error writing to temp file");
 			cleanup(filename);
 		}
@@ -168,10 +163,7 @@ RIGHT:
 
 	/* Edit temp file. */
 	if (editit(filename) == -1) {
-		if (errno == ECHILD)
-			warnx("editor terminated abnormally");
-		else
-			warn("error editing %s", filename);
+		warn("error editing %s", filename);
 		cleanup(filename);
 	}
 
@@ -201,7 +193,7 @@ RIGHT:
 			break;
 
 		/* Write data we just read. */
-		nwritten = fwrite(buf, sizeof(*buf), nread, outfile);
+		nwritten = fwrite(buf, sizeof(*buf), nread, outfp);
 		if (nwritten != nread) {
 			warnx("error writing to output file");
 			cleanup(filename);

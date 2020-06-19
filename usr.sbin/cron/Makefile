@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/usr.sbin/cron/Makefile,v 1.2 2001/07/20 06:19:42 obrien Exp $
+# $FreeBSD: stable/11/usr.sbin/cron/Makefile 80029 2001-07-20 06:20:32Z obrien $
 
 SUBDIR=	lib cron crontab
 

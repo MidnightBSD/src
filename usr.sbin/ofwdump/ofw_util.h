@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 by Thomas Moestl <tmm@FreeBSD.org>.
  * All rights reserved.
@@ -23,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/ofwdump/ofw_util.h 129589 2004-05-22 16:51:11Z marius $
+ * $FreeBSD: stable/11/usr.sbin/ofwdump/ofw_util.h 129589 2004-05-22 16:51:11Z marius $
  */
 
 #ifndef OFW_UTIL_H

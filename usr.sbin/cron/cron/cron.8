@@ -1,4 +1,3 @@
-.\" $MidnightBSD$
 .\"/* Copyright 1988,1990,1993 by Paul Vixie
 .\" * All rights reserved
 .\" *
@@ -16,9 +15,9 @@
 .\" * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
 .\" */
 .\"
-.\" $FreeBSD: stable/10/usr.sbin/cron/cron/cron.8 321389 2017-07-23 18:00:11Z ngie $
+.\" $FreeBSD: stable/11/usr.sbin/cron/cron/cron.8 346514 2019-04-22 03:06:12Z kevans $
 .\"
-.Dd July 19, 2017
+.Dd April 15, 2019
 .Dt CRON 8
 .Os
 .Sh NAME
@@ -80,6 +79,9 @@ commands, any output is mailed to the owner of the crontab (or to the user
 named in the
 .Ev MAILTO
 environment variable in the crontab, if such exists).
+The from address of this mail may be set with the
+.Ev MAILFROM
+environment variable.
 .Pp
 Additionally,
 .Nm
@@ -230,4 +232,4 @@ Directory for personal crontab files
 .Xr crontab 5 ,
 .Xr pam.conf 5
 .Sh AUTHORS
-.An Paul Vixie Aq paul@vix.com
+.An Paul Vixie Aq Mt paul@vix.com

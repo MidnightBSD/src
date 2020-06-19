@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.sbin/devctl/devctl.c 306533 2016-09-30 22:05:47Z jhb $");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/devctl/devctl.c 346384 2019-04-19 13:18:54Z kib $");
 
 #include <sys/linker_set.h>
 #include <devctl.h>
@@ -72,13 +71,19 @@ DEVCTL_TABLE(top, set);
 static void
 usage(void)
 {
-	fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n%s\n",
+	fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
 	    "usage: devctl attach device",
 	    "       devctl detach [-f] device",
 	    "       devctl disable [-f] device",
 	    "       devctl enable device",
+	    "       devctl suspend device",
+	    "       devctl resume device",
 	    "       devctl set driver [-f] device driver",
-	    "       devctl clear driver [-f] device");
+	    "       devctl clear driver [-f] device",
+	    "       devctl rescan device",
+	    "       devctl delete [-f] device",
+	    "       devctl reset [-d] device"
+	    );
 	exit(1);
 }
 
@@ -202,6 +207,30 @@ enable(int ac, char **av)
 }
 DEVCTL_COMMAND(top, enable, enable);
 
+static int
+suspend(int ac, char **av)
+{
+
+	if (ac != 2)
+		usage();
+	if (devctl_suspend(av[1]) < 0)
+		err(1, "Failed to suspend %s", av[1]);
+	return (0);
+}
+DEVCTL_COMMAND(top, suspend, suspend);
+
+static int
+resume(int ac, char **av)
+{
+
+	if (ac != 2)
+		usage();
+	if (devctl_resume(av[1]) < 0)
+		err(1, "Failed to resume %s", av[1]);
+	return (0);
+}
+DEVCTL_COMMAND(top, resume, resume);
+
 static void
 set_driver_usage(void)
 {
@@ -269,6 +298,86 @@ clear_driver(int ac, char **av)
 	return (0);
 }
 DEVCTL_COMMAND(clear, driver, clear_driver);
+
+static int
+rescan(int ac, char **av)
+{
+
+	if (ac != 2)
+		usage();
+	if (devctl_rescan(av[1]) < 0)
+		err(1, "Failed to rescan %s", av[1]);
+	return (0);
+}
+DEVCTL_COMMAND(top, rescan, rescan);
+
+static void
+delete_usage(void)
+{
+
+	fprintf(stderr, "usage: devctl delete [-f] device\n");
+	exit(1);
+}
+
+static int
+delete(int ac, char **av)
+{
+	bool force;
+	int ch;
+
+	force = false;
+	while ((ch = getopt(ac, av, "f")) != -1)
+		switch (ch) {
+		case 'f':
+			force = true;
+			break;
+		default:
+			delete_usage();
+		}
+	ac -= optind;
+	av += optind;
+
+	if (ac != 1)
+		delete_usage();
+	if (devctl_delete(av[0], force) < 0)
+		err(1, "Failed to delete %s", av[0]);
+	return (0);
+}
+DEVCTL_COMMAND(top, delete, delete);
+
+static void
+reset_usage(void)
+{
+
+	fprintf(stderr, "usage: devctl reset [-d] device\n");
+	exit(1);
+}
+
+static int
+reset(int ac, char **av)
+{
+	bool detach_drv;
+	int ch;
+
+	detach_drv = false;
+	while ((ch = getopt(ac, av, "d")) != -1)
+		switch (ch) {
+		case 'd':
+			detach_drv = true;
+			break;
+		default:
+			reset_usage();
+		}
+	ac -= optind;
+	av += optind;
+
+	if (ac != 1)
+		reset_usage();
+	if (devctl_reset(av[0], detach_drv) < 0)
+		err(1, "Failed to reset %s", av[0]);
+	return (0);
+}
+DEVCTL_COMMAND(top, reset, reset);
 
 int
 main(int ac, char *av[])
