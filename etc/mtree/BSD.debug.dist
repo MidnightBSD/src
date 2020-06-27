@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/etc/mtree/BSD.debug.dist 274344 2014-11-10 14:26:56Z emaste $
+# $FreeBSD: stable/11/etc/mtree/BSD.debug.dist 350259 2019-07-23 20:31:54Z dim $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -10,8 +9,14 @@
         bin
         ..
         boot
+            kernel
+            ..
+            modules
+            ..
         ..
         lib
+            casper
+            ..
             geom
             ..
         ..
@@ -25,17 +30,17 @@
             games
             ..
             lib
+                clang
+                    8.0.1
+                        lib
+                            freebsd
+                            ..
+                        ..
+                    ..
+                ..
                 engines
                 ..
                 i18n
-                ..
-                private
-                ..
-            ..
-            lib32
-                i18n
-                ..
-                private
                 ..
             ..
             libexec
@@ -51,6 +56,8 @@
                 ..
             ..
             sbin
+            ..
+            tests
             ..
         ..
     ..

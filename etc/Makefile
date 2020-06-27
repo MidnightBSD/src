@@ -1,7 +1,11 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-# $MidnightBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+FILESGROUPS=	FILES
+
+# No need as it is empty and just causes rebuilds since this file does so much.
+UPDATE_DEPENDFILE=	no
 
 .if ${MK_SENDMAIL} != "no"
 SUBDIR+=sendmail
@@ -47,11 +51,7 @@ BIN1=	crontab \
 	shells \
 	sysctl.conf \
 	syslog.conf \
-	termcap.small \
-
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
-BIN1+=	libmap32.conf
-.endif
+	termcap.small
 
 .if exists(${.CURDIR}/etc.${MACHINE}/ttys)
 BIN1+=	etc.${MACHINE}/ttys
@@ -82,8 +82,12 @@ BIN1+= apmd.conf
 .endif
 
 .if ${MK_AUTOFS} != "no"
-BIN1+= auto_master
+BIN1+=	auto_master
 .endif
+
+.if ${MK_BLACKLIST} != "no"
+BIN1+=	blacklistd.conf
+.endi
 
 .if ${MK_FTP} != "no"
 BIN1+= ftpusers
@@ -178,19 +182,19 @@ afterinstall:
 .endif
 
 distribute:
-	${_+_}cd ${.CURDIR} ; ${MAKE} -DNO_TESTS install DESTDIR=${DISTDIR}/${DISTRIBUTION}
+	# Avoid installing tests here; "make distribution" will do this and
+	# correctly place them in the right location.
+	${_+_}cd ${.CURDIR} ; ${MAKE} MK_TESTS=no install \
+	    DESTDIR=${DISTDIR}/${DISTRIBUTION}
 	${_+_}cd ${.CURDIR} ; ${MAKE} distribution DESTDIR=${DISTDIR}/${DISTRIBUTION}
 
 .include <bsd.endian.mk>
 .if ${TARGET_ENDIANNESS} == "1234"
 CAP_MKDB_ENDIAN?= -l
-PWD_MKDB_ENDIAN?= -L
 .elif ${TARGET_ENDIANNESS} == "4321"
 CAP_MKDB_ENDIAN?= -b
-PWD_MKDB_ENDIAN?= -B
 .else
 CAP_MKDB_ENDIAN?=
-PWD_MKDB_ENDIAN?=
 .endif
 
 .if defined(NO_ROOT)
@@ -206,6 +210,8 @@ distribution:
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		${BIN1} ${DESTDIR}/etc; \
 	    cap_mkdb ${CAP_MKDB_ENDIAN} ${DESTDIR}/etc/login.conf; \
+	    services_mkdb ${CAP_MKDB_ENDIAN} -q -o ${DESTDIR}/var/db/services.db \
+		${DESTDIR}/etc/services; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 755 \
 		${BIN2} ${DESTDIR}/etc; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 600 \
@@ -221,8 +227,7 @@ distribution:
 .if ${MK_TCSH} == "no"
 	sed -i "" -e 's;/bin/csh;/bin/sh;' ${DESTDIR}/etc/master.passwd
 .endif
-	pwd_mkdb ${PWD_MKDB_ENDIAN} -i -p -d ${DESTDIR}/etc \
-	    ${DESTDIR}/etc/master.passwd
+	pwd_mkdb -i -p -d ${DESTDIR}/etc ${DESTDIR}/etc/master.passwd
 .if defined(NO_ROOT)
 	( \
 		echo "./etc/login.conf.db type=file mode=0644 uname=root gname=wheel"; \
@@ -237,9 +242,13 @@ distribution:
 .if ${MK_BLUETOOTH} != "no"
 	${_+_}cd ${.CURDIR}/bluetooth; ${MAKE} install
 .endif
+.if ${MK_CASPER} != "no"
+	${_+_}cd ${.CURDIR}/casper; ${MAKE} install
+.endif
 	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install
 	${_+_}cd ${.CURDIR}/devd; ${MAKE} install
 	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
+	${_+_}cd ${.CURDIR}/mtree; ${MAKE} install
 	${_+_}cd ${.CURDIR}/newsyslog.conf.d; ${MAKE} install
 	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
 	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
@@ -334,8 +343,17 @@ MTREES=		mtree/BSD.root.dist		/		\
 .if ${MK_GROFF} != "no"
 MTREES+=	mtree/BSD.groff.dist		/usr
 .endif
+.if ${MK_LIB32} != "no"
+MTREES+=	mtree/BSD.lib32.dist		/usr
+MTREES+=	mtree/BSD.lib32.dist		/usr/lib/debug/usr
+.endif
+.if ${MK_LIBSOFT} != "no"
+MTREES+=	mtree/BSD.libsoft.dist		/usr
+MTREES+=	mtree/BSD.libsoft.dist		/usr/lib/debug/usr
+.endif
 .if ${MK_TESTS} != "no"
 MTREES+=	mtree/BSD.tests.dist		${TESTSBASE}
+MTREES+=	mtree/BSD.tests.dist		/usr/lib/debug/${TESTSBASE}
 .endif
 .if ${MK_SENDMAIL} != "no"
 MTREES+=	mtree/BSD.sendmail.dist		/
@@ -344,16 +362,31 @@ MTREES+=	mtree/BSD.sendmail.dist		/
 MTREES+=	../${mtree}			/
 .endfor
 
-distrib-dirs: ${MTREES:N/*}
+# Clean up some directories that where mistakenly created as files that
+# should not have been as part of the nvi update in r281994.
+# This should be removed after 11.0-RELEASE.
+DISTRIB_CLEANUP_SHARE_FILES=	${SHAREDIR}/doc/usd/10.exref ${SHAREDIR}/doc/usd/11.edit
+DISTRIB_CLEANUP_SHARE_FILES+=	${SHAREDIR}/doc/usd/12.vi ${SHAREDIR}/doc/usd/13.viref
+distrib-cleanup: .PHONY
+	for file in ${DISTRIB_CLEANUP_SHARE_FILES}; do \
+		if [ -f ${DESTDIR}/$${file} ]; then \
+			rm -f ${DESTDIR}/$${file}; \
+		fi; \
+	done
+
+distrib-dirs: ${MTREES:N/*} distrib-cleanup .PHONY
 	@set ${MTREES}; \
 	while test $$# -ge 2; do \
 		m=${.CURDIR}/$$1; \
 		shift; \
 		d=${DESTDIR}$$1; \
 		shift; \
-		${ECHO} ${MTREE_CMD} -deU ${MTREE_FOLLOWS_SYMLINKS} \
-		    -f $$m -p $$d; \
-		${MTREE_CMD} -deU ${MTREE_FOLLOWS_SYMLINKS} -f $$m -p $$d; \
+		test -d $$d || mkdir -p $$d; \
+		${ECHO} ${MTREE_CMD} -deU ${MTREE_FSCHG} \
+		    ${MTREE_FOLLOWS_SYMLINKS} -f $$m -p $$d; \
+		${MTREE_FILTER} $$m | \
+		${MTREE_CMD} -deU ${MTREE_FSCHG} ${MTREE_FOLLOWS_SYMLINKS} \
+		    -p $$d; \
 	done; true
 .if defined(NO_ROOT)
 	@set ${MTREES}; \
@@ -364,9 +397,11 @@ distrib-dirs: ${MTREES:N/*}
 		test "$$d" == "/" && d=""; \
 		d=${DISTBASE}$$d; \
 		shift; \
-		${ECHO} "${MTREE_CMD:N-W} -C -f $$m -K uname,gname | " \
+		test -d ${DESTDIR}/$$d || mkdir -p ${DESTDIR}/$$d; \
+		${ECHO} "${MTREE_CMD:N-W} -C -f $$m -K all | " \
 		    "sed s#^\.#.$$d# | ${METALOG.add}" ; \
-		${MTREE_CMD:N-W} -C -f $$m -K uname,gname | sed s#^\.#.$$d# | \
+		${MTREE_FILTER} $$m | \
+		${MTREE_CMD:N-W} -C -K all | sed s#^\.#.$$d# | \
 		    ${METALOG.add} ; \
 	done; true
 .endif
@@ -385,14 +420,16 @@ distrib-dirs: ${MTREES:N/*}
 		${INSTALL_SYMLINK} ../$$mandir \
 		    ${DESTDIR}${SHAREDIR}/openssl/man/en.ISO8859-1/; \
 	done
+.endif
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/man.alias`; \
 	while [ $$# -gt 0 ] ; do \
 		${INSTALL_SYMLINK} "$$2" "${DESTDIR}${SHAREDIR}/man/$$1"; \
-		${INSTALL_SYMLINK} "$$2" \
-		    "${DESTDIR}${SHAREDIR}/openssl/man/$$1"; \
+		if [ "${MK_OPENSSL}" != "no" ]; then \
+			${INSTALL_SYMLINK} "$$2" \
+			    "${DESTDIR}${SHAREDIR}/openssl/man/$$1"; \
+		fi; \
 		shift; shift; \
 	done
-.endif
 .endif
 .if ${MK_NLS} != "no"
 	set - `grep "^[a-zA-Z]" ${.CURDIR}/nls.alias`; \
@@ -402,11 +439,27 @@ distrib-dirs: ${MTREES:N/*}
 	done
 .endif
 
-etc-examples:
-	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
+etc-examples-install: ${META_DEPS}
+	cd ${.CURDIR}; ${INSTALL} ${TAG_ARGS} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${BIN1} ${BIN2} nsmb.conf opieaccess \
 	    ${DESTDIR}${SHAREDIR}/examples/etc
-	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install \
+
+etc-examples: etc-examples-install
+	${_+_}cd ${.CURDIR}/defaults; \
+	    ${MAKE} ${${MK_STAGING} == "yes":?all:install} \
 	    DESTDIR=${DESTDIR}${SHAREDIR}/examples
 
 .include <bsd.prog.mk>
+
+.if ${MK_INSTALL_AS_USER} == "yes" && ${_uid} != 0
+MTREE_FILTER= sed -e 's,\([gu]\)name=,\1id=,g' \
+	-e 's,\(uid=\)[^ ]* ,\1${_uid} ,' \
+	-e 's,\(gid=\)[^ ]* ,\1${_gid} ,' \
+	-e 's,\(uid=\)[^ ]*$$,\1${_uid},' \
+	-e 's,\(gid=\)[^ ]*$$,\1${_gid},'
+.else
+MTREE_FILTER= cat
+.if !defined(NO_FSCHG)
+MTREE_FSCHG=	-i
+.endif
+.endif
