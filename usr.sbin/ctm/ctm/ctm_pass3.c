@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD$
+ * $FreeBSD: stable/11/usr.sbin/ctm/ctm/ctm_pass3.c 93150 2002-03-25 13:53:46Z phk $
  *
  */
 
