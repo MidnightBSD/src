@@ -1,0 +1,14 @@
+# $FreeBSD: stable/11/etc/mtree/BSD.libsoft.dist 293068 2016-01-03 04:32:05Z imp $
+#
+# Please see the file src/etc/mtree/README before making changes to this file.
+#
+
+/set type=dir uname=root gname=wheel mode=0755
+.
+    libsoft
+        dtrace
+        ..
+        i18n
+        ..
+    ..
+..

@@ -1,0 +1,14 @@
+# $FreeBSD: stable/11/etc/mtree/BSD.lib32.dist 289662 2015-10-20 20:35:34Z jmmv $
+#
+# Please see the file src/etc/mtree/README before making changes to this file.
+#
+
+/set type=dir uname=root gname=wheel mode=0755
+.
+    lib32
+        dtrace
+        ..
+        i18n
+        ..
+    ..
+..
