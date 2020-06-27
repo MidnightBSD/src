@@ -1,15 +1,15 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/Makefile.inc 301669 2016-06-08 18:05:52Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/Makefile.inc 319119 2017-05-29 10:15:41Z ngie $
 # Author: Shteryana Shopova <syrinx@FreeBSD.org>
 
 BINDIR?= /usr/bin
+PACKAGE=	bsnmp
 
 CFLAGS+= -I. -I${.CURDIR}
 
-.if exists(${.OBJDIR}/../libbsnmptools)
-LIBBSNMPTOOLSDIR=      ${.OBJDIR}/../libbsnmptools
+.if exists(${.OBJDIR:H}/libbsnmptools)
+LIBBSNMPTOOLSDIR=      ${.OBJDIR:H}/libbsnmptools
 .else
-LIBBSNMPTOOLSDIR=      ${.CURDIR}/../libbsnmptools
+LIBBSNMPTOOLSDIR=      ${.CURDIR:H}/libbsnmptools
 .endif
 LIBBSNMPTOOLS=         ${LIBBSNMPTOOLSDIR}/libbsnmptools.a
 

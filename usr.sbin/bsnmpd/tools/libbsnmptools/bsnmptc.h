@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * Textual conventions for snmp
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.h 216295 2010-12-08 14:30:25Z syrinx $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.h 216295 2010-12-08 14:30:25Z syrinx $
  */
 
 #ifndef	_BSNMP_TEXT_CONV_H_

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
  /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 325396 2017-11-04 14:56:58Z pfg $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 325395 2017-11-04 14:49:22Z pfg $
  */
 
 /*

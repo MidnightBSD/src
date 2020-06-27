@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -38,7 +37,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.c 310900 2016-12-31 10:30:56Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.c 310899 2016-12-31 10:28:59Z ngie $
  */
 
 /*

@@ -26,8 +26,8 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/BEGEMOT-HOSTRES-MIB.txt 312257 2017-01-16 06:54:07Z ngie $
--- $MidnightBSD$
+-- $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/BEGEMOT-HOSTRES-MIB.txt 312256 2017-01-16 06:53:58Z ngie $
+--
 -- Additional stuff for the HOST-RESOURCES MIB.
 --
 BEGEMOT-HOSTRES-MIB DEFINITIONS ::= BEGIN

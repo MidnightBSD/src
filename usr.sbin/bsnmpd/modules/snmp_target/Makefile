@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_target/Makefile 312055 2017-01-13 09:07:25Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_target/Makefile 312056 2017-01-13 09:07:29Z ngie $
 #
 # Author: Shteryana Shopova <syrinx@freebsd.org>
 

@@ -1,11 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/bsnmpd/Makefile 311218 2017-01-04 00:54:34Z ngie $
-#
-# Author: Harti Brandt <harti@freebsd.org>
+.include <src.opts.mk>
 
-.include <bsd.own.mk>
-
-CONTRIB=${.CURDIR}/../../../contrib/bsnmp
+CONTRIB=${SRCTOP}/contrib/bsnmp
 .PATH: ${CONTRIB}/snmpd
 
 PROG=	bsnmpd
@@ -127,8 +122,7 @@ DEFSDIR= ${SHAREDIR}/snmp/defs
 CFLAGS+= -DSNMPTREE_TYPES
 CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd -I. -DUSE_LIBBEGEMOT
 CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DHAVE_ERR_H -DHAVE_STRLCPY
-DPADD=	${LIBBEGEMOT} ${LIBBSNMP}
-LDADD=	-lbegemot -lbsnmp
+LIBADD=	begemot bsnmp
 
 LDFLAGS= -Wl,-export-dynamic
 
@@ -138,14 +132,14 @@ CFLAGS+= -DHAVE_LIBCRYPTO
 
 .if ${MK_TCP_WRAPPERS} != "no"
 CFLAGS+=	-DUSE_TCPWRAPPERS
-DPADD+=		${LIBWRAP}
-LDADD+=		-lwrap
+LIBADD+=	wrap
 .endif
 
 oid.h: tree.def Makefile
 	gensnmptree -e ${XSYM} < ${.ALLSRC:M*.def} > ${.TARGET}
 
 .ORDER: tree.c tree.h
+tree.h: .NOMETA
 tree.c tree.h: tree.def
 	gensnmptree -l < ${.ALLSRC}
 

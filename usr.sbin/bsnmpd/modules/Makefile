@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/Makefile 313223 2017-02-04 16:40:28Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/Makefile 313239 2017-02-04 17:10:19Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCTOP}/contrib/bsnmp/snmpd
 
@@ -12,6 +11,7 @@ _snmp_atm= snmp_atm
 SUBDIR=	${_snmp_atm} \
 	snmp_bridge \
 	snmp_hostres \
+	snmp_lm75 \
 	snmp_mibII \
 	snmp_target \
 	snmp_usm \

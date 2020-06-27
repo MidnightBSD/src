@@ -1,3 +1,2 @@
-# $MidnightBSD$
-
+PACKAGE=	bsnmp
 .include "../Makefile.inc"

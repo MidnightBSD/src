@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmpmap.c 310903 2016-12-31 10:34:09Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmpmap.c 310901 2016-12-31 10:32:49Z ngie $
  */
 
 #include <sys/param.h>

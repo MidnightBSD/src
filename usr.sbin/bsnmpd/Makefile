@@ -1,5 +1,3 @@
-# $MidnightBSD$
-
 SUBDIR=	gensnmptree	\
 	bsnmpd		\
 	modules		\

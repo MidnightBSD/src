@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * Textual conventions for OctetStrings
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.c 311595 2017-01-07 08:46:16Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.c 311594 2017-01-07 08:44:43Z ngie $
  */
 
 #include <sys/param.h>

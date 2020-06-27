@@ -23,8 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_pf/pf_tree.def 240233 2012-09-08 06:41:54Z glebius $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_pf/pf_tree.def 240233 2012-09-08 06:41:54Z glebius $
 #
 
 (1 internet

@@ -1,7 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 312055 2017-01-13 09:07:25Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 312056 2017-01-13 09:07:29Z ngie $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH:	${SRCTOP}/sbin/hastd
 
@@ -30,8 +29,7 @@ CFLAGS+=-DYY_NO_UNPUT
 CFLAGS+=-DYY_NO_INPUT
 CFLAGS+= -DSNMPTREE_TYPES
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 XSYM=	begemotHast
 DEFS=	${MOD}_tree.def

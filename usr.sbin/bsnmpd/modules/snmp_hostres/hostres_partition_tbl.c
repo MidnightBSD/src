@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_partition_tbl.c 310900 2016-12-31 10:30:56Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_partition_tbl.c 344747 2019-03-04 03:38:43Z avos $
  */
 
 /*
@@ -317,7 +316,7 @@ handle_chunk(int32_t ds_index, const char *chunk_name, off_t chunk_size)
 
 	assert(chunk_name != NULL);
 	assert(chunk_name[0] != '\0');
-	if (chunk_name == NULL || chunk_name == '\0')
+	if (chunk_name == NULL || chunk_name[0] == '\0')
 		return;
 
 	HRDBG("ANALYZE chunk %s", chunk_name);

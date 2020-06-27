@@ -1,14 +1,13 @@
-# $MidnightBSD$
 #
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/Makefile 216377 2010-12-11 13:24:01Z syrinx $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/Makefile 313242 2017-02-04 17:21:17Z ngie $
 #
 
 .PATH: ${.CURDIR}
 
 LIB=	bsnmptools
-#INTERNALLIB=
+
 SRCS=	bsnmpimport.c bsnmpmap.c bsnmptools.c bsnmptc.c
 
-SHLIB_MAJOR=	0
+INTERNALLIB=
 
 .include <bsd.lib.mk>

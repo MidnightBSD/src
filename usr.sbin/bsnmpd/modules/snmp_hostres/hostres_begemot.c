@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006.
  *	Hartmut Brandt.
@@ -28,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_begemot.c 154137 2006-01-09 13:01:26Z harti $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_begemot.c 154137 2006-01-09 13:01:26Z harti $
  */
 
 #include <stdlib.h>
