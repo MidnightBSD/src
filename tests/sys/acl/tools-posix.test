@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/acl/tools-posix.test 196938 2009-09-07 16:26:03Z trasz $
 #
 
 # This is a tools-level test for POSIX.1e ACL functionality.  Run it as root

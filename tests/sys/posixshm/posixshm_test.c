@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Robert N. M. Watson
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/posixshm/posixshm_test.c 299058 2016-05-04 07:37:02Z ngie $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/posixshm/posixshm_test.c 351794 2019-09-03 20:26:08Z kevans $");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -610,6 +609,27 @@ ATF_TC_BODY(shm_functionality_across_fork, tc)
 	shm_unlink(test_path);
 }
 
+ATF_TC_WITHOUT_HEAD(cloexec);
+ATF_TC_BODY(cloexec, tc)
+{
+	int fd;
+
+	gen_test_path();
+
+	/* shm_open(2) is required to set FD_CLOEXEC */
+	fd = shm_open(SHM_ANON, O_RDWR, 0777);
+	ATF_REQUIRE_MSG(fd >= 0, "shm_open failed; errno=%d", errno);
+	ATF_REQUIRE((fcntl(fd, F_GETFD) & FD_CLOEXEC) != 0);
+	close(fd);
+
+	/* Also make sure that named shm is correct */
+	fd = shm_open(test_path, O_CREAT | O_RDWR, 0600);
+	ATF_REQUIRE_MSG(fd >= 0, "shm_open failed; errno=%d", errno);
+	ATF_REQUIRE((fcntl(fd, F_GETFD) & FD_CLOEXEC) != 0);
+	close(fd);
+}
+
+
 ATF_TP_ADD_TCS(tp)
 {
 
@@ -631,6 +651,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, unlink_bad_path_pointer);
 	ATF_TP_ADD_TC(tp, unlink_path_too_long);
 	ATF_TP_ADD_TC(tp, object_resize);
+	ATF_TP_ADD_TC(tp, cloexec);
 
 	return (atf_no_error());
 }

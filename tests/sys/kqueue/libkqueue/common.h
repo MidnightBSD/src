@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Mark Heily <mark@heily.com>
  *
@@ -14,12 +13,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/common.h 305467 2016-09-06 08:45:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/common.h 341275 2018-11-30 02:06:30Z dab $
  */
 
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include "config.h" /* Needed for HAVE_* defines */
 
 #if HAVE_ERR_H
 # include <err.h>
@@ -40,12 +40,10 @@
 
 #include <sys/event.h>
 
-#include "config.h"
-
 extern char *cur_test_id;
 int vnode_fd;
 
-extern const char * kevent_to_str(struct kevent *);
+extern char * kevent_to_str(struct kevent *);
 struct kevent * kevent_get(int);
 struct kevent * kevent_get_timeout(int, int);
 
@@ -73,6 +71,7 @@ kevent_add(int kqfd, struct kevent *kev,
 
 /* Checks if any events are pending, which is an error. */
 extern void test_no_kevents(void);
+extern void test_no_kevents_quietly(void);
 
 extern void test_begin(const char *);
 extern void success(void);

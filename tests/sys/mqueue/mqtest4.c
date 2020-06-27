@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/tests/sys/mqueue/mqtest4.c 282858 2015-05-13 12:09:01Z ngie $ */
+/* $FreeBSD: stable/11/tests/sys/mqueue/mqtest4.c 306905 2016-10-09 12:34:56Z kib $ */
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -58,7 +57,7 @@ main(void)
 		mq = mq_open(MQNAME, O_RDWR);
 		if (mq == (mqd_t)-1)
 			err(1, "child: mq_open");
-		EV_SET(&kev, __mq_oshandle(mq), EVFILT_READ, EV_ADD, 0, 0, 0);
+		EV_SET(&kev, mq_getfd_np(mq), EVFILT_READ, EV_ADD, 0, 0, 0);
 		status = kevent(kq, &kev, 1, NULL, 0, NULL);
 		if (status == -1)
 			err(1, "child: kevent");
@@ -90,7 +89,7 @@ main(void)
 
 		signal(SIGALRM, sighandler);
 		kq = kqueue();
-		EV_SET(&kev, __mq_oshandle(mq), EVFILT_WRITE, EV_ADD, 0, 0, 0);
+		EV_SET(&kev, mq_getfd_np(mq), EVFILT_WRITE, EV_ADD, 0, 0, 0);
 		status = kevent(kq, &kev, 1, NULL, 0, NULL);
 		if (status == -1)
 			err(1, "kevent");

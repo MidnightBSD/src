@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * $OpenBSD: dup2test.c,v 1.3 2003/07/31 21:48:08 deraadt Exp $
  * $OpenBSD: dup2_self.c,v 1.3 2003/07/31 21:48:08 deraadt Exp $
@@ -6,7 +5,7 @@
  *
  * Written by Artur Grabowski <art@openbsd.org> 2002 Public Domain.
  *
- * $FreeBSD: stable/10/tests/sys/file/dup_test.c 281432 2015-04-11 10:14:59Z ngie $
+ * $FreeBSD: stable/11/tests/sys/file/dup_test.c 281432 2015-04-11 10:14:59Z ngie $
  */
 
 /*

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/mac/Makefile 292570 2015-12-21 21:24:03Z ngie $
+# $FreeBSD: stable/11/tests/sys/mac/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/mac
 

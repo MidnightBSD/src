@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/vm/Makefile 288465 2015-10-01 22:08:16Z jhb $
+# $FreeBSD: stable/11/tests/sys/vm/Makefile 299094 2016-05-04 23:20:53Z ngie $
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/sys/vm
 

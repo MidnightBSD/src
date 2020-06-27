@@ -1,12 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/Makefile 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/tests/sys/Makefile 342860 2019-01-08 09:44:00Z vmaffione $
 
-.include <bsd.own.mk>
-
-TESTSDIR= ${TESTSBASE}/sys
+TESTSDIR=		${TESTSBASE}/sys
 
 TESTS_SUBDIRS+=		acl
 TESTS_SUBDIRS+=		aio
+TESTS_SUBDIRS+=		audit
+TESTS_SUBDIRS+=		auditpipe
+TESTS_SUBDIRS+=		capsicum
 TESTS_SUBDIRS+=		fifo
 TESTS_SUBDIRS+=		file
 TESTS_SUBDIRS+=		fs
@@ -16,7 +16,10 @@ TESTS_SUBDIRS+=		kqueue
 TESTS_SUBDIRS+=		mac
 TESTS_SUBDIRS+=		mqueue
 TESTS_SUBDIRS+=		netinet
+TESTS_SUBDIRS+=		netmap
+TESTS_SUBDIRS+=		opencrypto
 TESTS_SUBDIRS+=		posixshm
+TESTS_SUBDIRS+=		sys
 TESTS_SUBDIRS+=		vfs
 TESTS_SUBDIRS+=		vm
 

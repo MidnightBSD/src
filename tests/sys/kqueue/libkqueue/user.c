@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Mark Heily <mark@heily.com>
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/user.c 305467 2016-09-06 08:45:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/user.c 341275 2018-11-30 02:06:30Z dab $
  */
 
 #include "common.h"
@@ -118,7 +117,7 @@ oneshot(void)
 void
 test_evfilt_user()
 {
-	kqfd = kqueue();
+    kqfd = kqueue();
 
     add_and_delete();
     event_wait();
@@ -126,5 +125,5 @@ test_evfilt_user()
     oneshot();
     /* TODO: try different fflags operations */
 
-	close(kqfd);
+    close(kqfd);
 }

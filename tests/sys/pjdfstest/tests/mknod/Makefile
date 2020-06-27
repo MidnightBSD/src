@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/pjdfstest/tests/mknod/Makefile 274016 2014-11-03 07:18:42Z ngie $
+# $FreeBSD: stable/11/tests/sys/pjdfstest/tests/mknod/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TAP_TESTS_SH=	00
 TAP_TESTS_SH+=	01

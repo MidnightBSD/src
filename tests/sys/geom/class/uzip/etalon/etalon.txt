@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/10/tests/sys/geom/class/uzip/etalon/etalon.txt 133641 2004-08-13 09:53:52Z fjoe $
+# $FreeBSD: stable/11/tests/sys/geom/class/uzip/etalon/etalon.txt 133641 2004-08-13 09:53:52Z fjoe $
 #
 
 JABBERWOCKY

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 EMC Corp.
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/kern/kern_descrip_test.c 301805 2016-06-10 18:07:35Z ngie $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/kern/kern_descrip_test.c 299508 2016-05-12 03:44:29Z cem $");
 
 #include <sys/param.h>
 #include <errno.h>

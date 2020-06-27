@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 EMC / Isilon Storage Division
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/freebsd_test_suite/macros.h 292655 2015-12-23 10:31:46Z ngie $
+ * $FreeBSD: stable/11/tests/freebsd_test_suite/macros.h 292319 2015-12-16 05:44:53Z ngie $
  */
 
 #ifndef	_FREEBSD_TEST_MACROS_H_

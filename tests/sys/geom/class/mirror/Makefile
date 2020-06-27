@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/geom/class/mirror/Makefile 293821 2016-01-13 09:14:27Z ngie $
+# $FreeBSD: stable/11/tests/sys/geom/class/mirror/Makefile 328334 2018-01-24 15:16:17Z markj $
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/sys/geom/class/${.CURDIR:T}
 
@@ -10,10 +11,16 @@ TAP_TESTS_SH+=	4_test
 TAP_TESTS_SH+=	5_test
 TAP_TESTS_SH+=	6_test
 TAP_TESTS_SH+=	7_test
+TAP_TESTS_SH+=	8_test
+TAP_TESTS_SH+=	9_test
+TAP_TESTS_SH+=	10_test
+TAP_TESTS_SH+=	11_test
+TAP_TESTS_SH+=	12_test
+TAP_TESTS_SH+=	13_test
 
-FILES+=		conf.sh
-FILESNAME_conf.sh=	conf.sh
-FILESDIR=	${TESTSDIR}
+ATF_TESTS_SH+=	sync_error
+
+${PACKAGE}FILES+=		conf.sh
 
 .for t in ${TAP_TESTS_SH}
 TEST_METADATA.$t+=	required_user="root"

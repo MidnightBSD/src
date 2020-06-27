@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 Jilles Tjoelker
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/kern/pipe/pipe_reverse2_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_reverse2_test.c 290914 2015-11-16 05:38:40Z ngie $
  */
 
 #include <sys/select.h>

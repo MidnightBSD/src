@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/geom/class/nop/Makefile 312828 2017-01-26 20:10:31Z asomers $
+# $FreeBSD: stable/11/tests/sys/geom/class/nop/Makefile 312829 2017-01-26 20:15:14Z asomers $
+
+PACKAGE=	tests
 
 TESTSDIR=	${TESTSBASE}/sys/geom/class/${.CURDIR:T}
 

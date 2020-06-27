@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/geom/class/concat/conf.sh 293434 2016-01-08 19:10:52Z ngie $
 
 name="$(mktemp -u concat.XXXXXX)"
 class="concat"

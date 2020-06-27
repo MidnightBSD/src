@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/file/flock_helper.c 298490 2016-04-22 21:30:42Z ngie $
+ * $FreeBSD: stable/11/tests/sys/file/flock_helper.c 298024 2016-04-15 02:53:52Z ngie $
  */
 
 #include <sys/param.h>

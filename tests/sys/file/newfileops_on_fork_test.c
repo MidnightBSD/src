@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Robert N. M. Watson
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/file/newfileops_on_fork_test.c 319301 2017-05-31 08:36:47Z ngie $
+ * $FreeBSD: stable/11/tests/sys/file/newfileops_on_fork_test.c 319300 2017-05-31 08:36:43Z ngie $
  */
 
 /*

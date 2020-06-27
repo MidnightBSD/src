@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/geom/Makefile 293821 2016-01-13 09:14:27Z ngie $
+# $FreeBSD: stable/11/tests/sys/geom/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/geom
 

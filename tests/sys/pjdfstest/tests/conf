@@ -1,13 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
-
-: ${PJDFSTEST_TEST_PATH=.}
-if ! cd ${PJDFSTEST_TEST_PATH}/; then
-	echo 'Please set PJDFSTEST_TEST_PATH to a valid filesystem path'
-	echo 'Bail out!'
-	exit 1
-fi
+# $FreeBSD: stable/11/tests/sys/pjdfstest/tests/conf 316390 2017-04-02 03:00:50Z asomers $
 
 GREP=grep
 mountpoint=$(df . | tail -1 | awk '{print $6}')

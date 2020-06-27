@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Jilles Tjoelker
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/kern/waitpid_nohang.c 307065 2016-10-11 18:51:03Z jilles $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/kern/waitpid_nohang.c 307004 2016-10-10 20:24:32Z jilles $");
 
 #include <sys/wait.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Mark Heily <mark@heily.com>
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/signal.c 305467 2016-09-06 08:45:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/signal.c 341275 2018-11-30 02:06:30Z dab $
  */
 
 #include "common.h"
@@ -189,12 +188,12 @@ test_kevent_signal_oneshot(void)
 void
 test_evfilt_signal()
 {
-	kqfd = kqueue();
-        test_kevent_signal_add();
-        test_kevent_signal_del();
-        test_kevent_signal_get();
-        test_kevent_signal_disable();
-        test_kevent_signal_enable();
-        test_kevent_signal_oneshot();
-	close(kqfd);
+    kqfd = kqueue();
+    test_kevent_signal_add();
+    test_kevent_signal_del();
+    test_kevent_signal_get();
+    test_kevent_signal_disable();
+    test_kevent_signal_enable();
+    test_kevent_signal_oneshot();
+    close(kqfd);
 }

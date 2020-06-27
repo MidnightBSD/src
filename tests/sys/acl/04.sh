@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/acl/04.sh 305912 2016-09-18 02:56:16Z ngie $
 #
 
 # This is a wrapper script to run tools-nfs4-trivial.test on ZFS filesystem.

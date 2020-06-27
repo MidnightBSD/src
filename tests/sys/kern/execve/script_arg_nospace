@@ -1,4 +1,4 @@
 #!/bin/sh -x
-# $MidnightBSD$
+# $FreeBSD$
 
 echo succeeded

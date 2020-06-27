@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/fs/Makefile 313519 2017-02-10 03:17:11Z ngie $
+# $FreeBSD: stable/11/tests/sys/fs/Makefile 307702 2016-10-21 05:24:08Z ngie $
+
+PACKAGE=		tests
 
 TESTSDIR=		${TESTSBASE}/sys/fs
 
@@ -8,8 +9,8 @@ TESTSRC=		${SRCTOP}/contrib/netbsd-tests/fs
 #TESTS_SUBDIRS+=	nullfs	# XXX: needs rump
 TESTS_SUBDIRS+=		tmpfs
 
-FILES+=			h_funcs.subr
-FILESDIR=		${TESTSDIR}
+${PACKAGE}FILES+=	h_funcs.subr
+${PACKAGE}FILESDIR=	${TESTSDIR}
 
 CLEANFILES+=		h_funcs.subr
 CLEANFILES+=		h_funcs.subr.tmp

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009	Simon L. Nielsen <simon@FreeBSD.org>,
  * 			Bjoern A. Zeeb <bz@FreeBSD.org>
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/vm/mmap_test.c 313217 2017-02-04 16:16:41Z ngie $
+ * $FreeBSD: stable/11/tests/sys/vm/mmap_test.c 313233 2017-02-04 16:58:06Z ngie $
  */
 
 #include <sys/param.h>
@@ -135,13 +134,6 @@ ATF_TC_BODY(mmap__bad_arguments, tc)
 	checked_mmap(PROT_READ, MAP_SHARED, devstatfd, 0,
 	    "simple /dev/devstat shared");
 
-#if 0
-	/*
-	 * These tests do not fail without r271635 and followup fixes.
-	 * Those changes will not be merged to stable/10 since they
-	 * are potentially disruptive.
-	 */
-
 	/* Extra PROT flags. */
 	checked_mmap(PROT_READ | PROT_WRITE | 0x100000, MAP_ANON, -1, EINVAL,
 	    "MAP_ANON with extra PROT flags");
@@ -161,7 +153,6 @@ ATF_TC_BODY(mmap__bad_arguments, tc)
 	/* At least one of MAP_SHARED or MAP_PRIVATE without ANON */
 	checked_mmap(PROT_READ | PROT_WRITE, 0, shmfd, EINVAL,
 	    "shm fd without sharing flag");
-#endif
 
 	/* MAP_ANON with either sharing flag (impacts fork). */
 	checked_mmap(PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0,

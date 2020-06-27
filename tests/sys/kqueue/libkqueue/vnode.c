@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Mark Heily <mark@heily.com>
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/vnode.c 305467 2016-09-06 08:45:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/vnode.c 341275 2018-11-30 02:06:30Z dab $
  */
 
 #include "common.h"
@@ -252,16 +251,16 @@ test_kevent_vnode_dispatch(void)
 void
 test_evfilt_vnode()
 {
-	kqfd = kqueue();
-        test_kevent_vnode_add();
-        test_kevent_vnode_del();
-        test_kevent_vnode_disable_and_enable();
+    kqfd = kqueue();
+    test_kevent_vnode_add();
+    test_kevent_vnode_del();
+    test_kevent_vnode_disable_and_enable();
 #if HAVE_EV_DISPATCH
-        test_kevent_vnode_dispatch();
+    test_kevent_vnode_dispatch();
 #endif
-        test_kevent_vnode_note_write();
-        test_kevent_vnode_note_attrib();
-        test_kevent_vnode_note_rename();
-        test_kevent_vnode_note_delete();
-	close(kqfd);
+    test_kevent_vnode_note_write();
+    test_kevent_vnode_note_attrib();
+    test_kevent_vnode_note_rename();
+    test_kevent_vnode_note_delete();
+    close(kqfd);
 }

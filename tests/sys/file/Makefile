@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/file/Makefile 282067 2015-04-27 08:15:17Z ngie $
+# $FreeBSD: stable/11/tests/sys/file/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/file
 
@@ -14,13 +13,10 @@ PLAIN_TESTS_C+=	newfileops_on_fork_test
 
 PROGS+=		flock_helper
 
-DPADD.closefrom_test=	${LIBUTIL}
-LDADD.closefrom_test=	-lutil
+LIBADD.closefrom_test=	util
 
-DPADD.flock_helper=	${LIBPTHREAD}
-LDADD.flock_helper=	-lpthread
+LIBADD.flock_helper=	pthread
 
-DPADD.newfileops_on_fork_test=	${LIBPTHREAD}
-LDADD.newfileops_on_fork_test=	-lpthread
+LIBADD.newfileops_on_fork_test=	pthread
 
 .include <bsd.test.mk>

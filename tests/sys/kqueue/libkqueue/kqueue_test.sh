@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/kqueue_test.sh 324404 2017-10-07 23:10:16Z ngie $
 
 i=1
 "$(dirname $0)/kqtest" | while read line; do

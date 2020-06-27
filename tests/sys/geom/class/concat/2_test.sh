@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/geom/class/concat/2_test.sh 293821 2016-01-13 09:14:27Z ngie $
 
 . `dirname $0`/conf.sh
 

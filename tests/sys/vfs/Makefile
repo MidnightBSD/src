@@ -1,5 +1,6 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/vfs/Makefile 321644 2017-07-28 03:26:05Z ngie $
+# $FreeBSD: stable/11/tests/sys/vfs/Makefile 321643 2017-07-28 03:25:58Z ngie $
+
+PACKAGE=	tests
 
 TESTSDIR=		${TESTSBASE}/sys/vfs
 

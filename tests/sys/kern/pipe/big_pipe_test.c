@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #include <sys/select.h>
 #include <err.h>
 #include <errno.h>
@@ -14,7 +13,7 @@
  * Test for the non-blocking big pipe bug (write(2) returning
  * EAGAIN while select(2) returns the descriptor as ready for write).
  *
- * $FreeBSD: stable/10/tests/sys/kern/pipe/big_pipe_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/big_pipe_test.c 290914 2015-11-16 05:38:40Z ngie $
  */
 
 static void

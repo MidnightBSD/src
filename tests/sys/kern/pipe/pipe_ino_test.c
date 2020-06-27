@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Giovanni Trematerra <giovanni.trematerra@gmail.com>
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 /*
- * $FreeBSD: stable/10/tests/sys/kern/pipe/pipe_ino_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_ino_test.c 312072 2017-01-13 13:37:09Z kib $
  * Test conformance to stat(2) SUSv4 description:
  *  "For all other file types defined in this volume of POSIX.1-2008, the
  *  structure members st_mode, st_ino, st_dev, st_uid, st_gid, st_atim,
@@ -54,9 +53,11 @@ main(void)
 	if (fstat(pipefd[1], &st2) == -1)
 		err(1, "FAIL: fstat st2");
 	if (st1.st_dev != st2.st_dev || st1.st_dev == 0 || st2.st_dev == 0)
-		errx(1, "FAIL: wrong dev number %d %d", st1.st_dev, st2.st_dev);
+		errx(1, "FAIL: wrong dev number %ju %ju",
+		    (uintmax_t)st1.st_dev, (uintmax_t)st2.st_dev);
 	if (st1.st_ino == st2.st_ino)
-		errx(1, "FAIL: inode numbers are equal: %d", st1.st_ino);
+		errx(1, "FAIL: inode numbers are equal: %ju",
+		    (uintmax_t)st1.st_ino);
 
 	close(pipefd[0]);
 	close(pipefd[1]);

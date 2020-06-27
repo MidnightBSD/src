@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
 Copyright (C) 2004 Michael J. Silbersack. All rights reserved.
  
@@ -37,7 +36,7 @@ SUCH DAMAGE.
 #include <unistd.h>
 
 /*
- * $FreeBSD: stable/10/tests/sys/kern/pipe/pipe_fstat_bug_test.c 309662 2016-12-07 00:57:15Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_fstat_bug_test.c 309661 2016-12-07 00:55:36Z ngie $
  * The goal of this program is to see if fstat reports the correct
  * data count for a pipe.  Prior to revision 1.172 of sys_pipe.c,
  * 0 would be returned once the pipe entered direct write mode.

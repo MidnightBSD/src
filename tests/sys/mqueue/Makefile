@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/mqueue/Makefile 313488 2017-02-09 22:49:48Z ngie $
+# $FreeBSD: stable/11/tests/sys/mqueue/Makefile 306905 2016-10-09 12:34:56Z kib $
 
 TESTSDIR=	${TESTSBASE}/sys/mqueue
 
@@ -15,8 +14,7 @@ PROGS+=		mqtest3
 PROGS+=		mqtest4
 PROGS+=		mqtest5
 
-LDADD+=		-lrt
-DPADD+=		${LIBRT}
+LIBADD+=	rt
 
 WARNS?=		6
 

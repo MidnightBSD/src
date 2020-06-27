@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/config.h 305467 2016-09-06 08:45:29Z ngie $ */
+/* $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/config.h 305467 2016-09-06 08:45:29Z ngie $ */
 
 #define HAVE_ERR_H 1
 #define HAVE_SYS_EVENT_H 1

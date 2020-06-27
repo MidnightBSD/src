@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/Makefile 305467 2016-09-06 08:45:29Z ngie $
+# $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/Makefile 305467 2016-09-06 08:45:29Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/kqueue/libkqueue
 BINDIR=		${TESTSDIR}

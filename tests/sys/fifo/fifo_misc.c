@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Robert N. M. Watson
  * Copyright (c) 2012 Jilles Tjoelker
@@ -25,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/fifo/fifo_misc.c 286612 2015-08-11 01:51:38Z rodrigc $
+ * $FreeBSD: stable/11/tests/sys/fifo/fifo_misc.c 285891 2015-07-26 14:46:42Z rodrigc $
  */
 
 #include <sys/types.h>

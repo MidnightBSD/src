@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/mac/portacl/root_test.sh 324404 2017-10-07 23:10:16Z ngie $
 
 dir=`dirname $0`
 . ${dir}/misc.sh
