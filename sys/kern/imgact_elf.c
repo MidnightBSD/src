@@ -177,10 +177,16 @@ Elf_Brandnote __elfN(freebsd_brandnote) = {
 	.trans_osrel	= __elfN(freebsd_trans_osrel)
 };
 
-static boolean_t
-freebsd_trans_osrel(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
+static bool
+freebsd_trans_osrel(const Elf_Note *note, int32_t *osrel)
 {
 	uintptr_t p;
+	const Elf32_Word *desc;
+
+	desc = (const Elf32_Word *)p;
+	if (desc[0] != GNU_KFREEBSD_ABI_DESC)
+		return (false);
+
 
 	p = (uintptr_t)(note + 1);
 	p += roundup2(note->n_namesz, ELF_NOTE_ROUNDSIZE);
