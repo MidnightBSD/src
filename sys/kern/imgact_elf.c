@@ -95,10 +95,9 @@ static int __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
     caddr_t vmaddr, size_t memsz, size_t filsz, vm_prot_t prot,
     size_t pagesize);
 static int __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp);
-static boolean_t __elfN(midnightbsd_trans_osrel)(const Elf_Note *note,
+static bool __elfN(midnightbsd_trans_osrel)(const Elf_Note *note,
     int32_t *osrel);
-static boolean_t __elfN(freebsd_trans_osrel)(const Elf_Note *note,
-    int32_t *osrel);
+static bool freebsd_trans_osrel(const Elf_Note *note, int32_t *osrel);
 static boolean_t __elfN(check_note)(struct image_params *imgp,
     Elf_Brandnote *checknote, int32_t *osrel);
 static vm_prot_t __elfN(trans_prot)(Elf_Word);
@@ -179,7 +178,7 @@ Elf_Brandnote __elfN(freebsd_brandnote) = {
 };
 
 static boolean_t
-__elfN(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
+freebsd_trans_osrel(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)
 {
 	uintptr_t p;
 
