@@ -1,5 +1,7 @@
 #!/bin/sh
 #-
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2013 Dag-Erling Smørgrav
 # All rights reserved.
 #
@@ -24,8 +26,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/unbound/local-setup/local-unbound-setup.sh 295691 2016-02-17 11:38:43Z des $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/unbound/setup/local-unbound-setup.sh 339268 2018-10-09 20:29:04Z des $
+#
 
 #
 # Configuration variables
@@ -251,6 +253,18 @@ gen_unbound_conf() {
 }
 
 #
+# Rename a file we are about to replace.
+#
+backup() {
+	local file="$1"
+	if [ -f "${file}" ] ; then
+		local bkfile="${file}.${bkext}"
+		echo "Original ${file} saved as ${bkfile}"
+		mv "${file}" "${bkfile}"
+	fi
+}
+
+#
 # Replace one file with another, making a backup copy of the first,
 # but only if the new file is different from the old.
 #
@@ -261,9 +275,7 @@ replace() {
 		echo "${file} created"
 		mv "${newfile}" "${file}"
 	elif ! cmp -s "${file}" "${newfile}" ; then
-		local oldfile="${file}.${bkext}"
-		echo "original ${file} saved as ${oldfile}"
-		mv "${file}" "${oldfile}"
+		backup "${file}"
 		mv "${newfile}" "${file}"
 	else
 		echo "${file} not modified"
@@ -357,13 +369,20 @@ main() {
 	# from resolv.conf.
 	#
 	forwarders="$@"
-	if [ -z "$forwarders" ] ; then
+	case "${forwarders}" in
+	[Nn][Oo][Nn][Ee])
+		forwarders="none"
+		style=recursing
+		;;
+	"")
 		echo "Extracting forwarders from ${resolv_conf}."
 		forwarders=$(get_nameservers <"${resolv_conf}")
 		style=dynamic
-	else
+		;;
+	*)
 		style=static
-	fi
+		;;
+	esac
 
 	#
 	# Generate forward.conf.
@@ -375,6 +394,9 @@ main() {
 		else
 			echo "unbound will recurse."
 		fi
+	elif [ "${forwarders}" = "none" ] ; then
+		echo "Forwarding disabled, unbound will recurse."
+		backup "${forward_conf}"
 	else
 		local tmp_forward_conf=$(mktemp -u "${forward_conf}.XXXXX")
 		gen_forward_conf ${forwarders} | unexpand >"${tmp_forward_conf}"

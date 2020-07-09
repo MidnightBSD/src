@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20200709:
 	Security update for sqlite3. Update to  3.32.3
 
+	Update unbound to 1.10.1
+
 20200514:
 	MidnightBSD 1.2.2 release
 

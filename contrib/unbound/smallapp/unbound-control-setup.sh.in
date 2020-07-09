@@ -107,14 +107,14 @@ else
 fi
 
 # create self-signed cert for server
-echo "[req]\n" > request.cfg
-echo "default_bits=$BITS\n" >> request.cfg
-echo "default_md=$HASH\n" >> request.cfg
-echo "prompt=no\n" >> request.cfg
-echo "distinguished_name=req_distinguished_name\n" >> request.cfg
-echo "\n" >> request.cfg
-echo "[req_distinguished_name]\n" >> request.cfg
-echo "commonName=$SERVERNAME\n" >> request.cfg
+echo "[req]" > request.cfg
+echo "default_bits=$BITS" >> request.cfg
+echo "default_md=$HASH" >> request.cfg
+echo "prompt=no" >> request.cfg
+echo "distinguished_name=req_distinguished_name" >> request.cfg
+echo "" >> request.cfg
+echo "[req_distinguished_name]" >> request.cfg
+echo "commonName=$SERVERNAME" >> request.cfg
 
 test -f request.cfg || error "could not create request.cfg"
 
@@ -124,13 +124,13 @@ openssl req -key $SVR_BASE.key -config request.cfg  -new -x509 -days $DAYS -out 
 openssl x509 -in $SVR_BASE.pem -addtrust serverAuth -out $SVR_BASE"_trust.pem"
 
 # create client request and sign it, piped
-echo "[req]\n" > request.cfg
-echo "default_bits=$BITS\n" >> request.cfg
-echo "default_md=$HASH\n" >> request.cfg
-echo "prompt=no\n" >> request.cfg
-echo "distinguished_name=req_distinguished_name\n" >> request.cfg
-echo "\n" >> request.cfg
-echo "[req_distinguished_name]\n" >> request.cfg
+echo "[req]" > request.cfg
+echo "default_bits=$BITS" >> request.cfg
+echo "default_md=$HASH" >> request.cfg
+echo "prompt=no" >> request.cfg
+echo "distinguished_name=req_distinguished_name" >> request.cfg
+echo "" >> request.cfg
+echo "[req_distinguished_name]" >> request.cfg
 echo "commonName=$CLIENTNAME" >> request.cfg
 
 test -f request.cfg || error "could not create request.cfg"
@@ -148,8 +148,8 @@ test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # echo "empty password is used, simply click OK on the password dialog box."
 # openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
 
-# remove unused permissions
-chmod o-rw $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
+# set desired permissions
+chmod 0640 $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
 
 # remove crap
 rm -f request.cfg
