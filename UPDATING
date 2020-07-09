@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20200709:
+	Security update for sqlite3. Update to  3.32.3
+
 20200514:
+	MidnightBSD 1.2.2 release
+
 	Fixed a security issue in libalias.
 
 	The FTP packet handler in libalias incorrectly calculates some packet
@@ -9,6 +14,11 @@ Updating Information for MidnightBSD users.
 	natd (for the userspace implementation).
 
 	Updated tzdata to 2020a. 
+
+20200317:
+	MidnightBSD 1.2.1 release
+
+	Bugfixes for package management and module builds.
 
 20191031:
 	1.2 release
