@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20200709:
+	Update SQLite3 to 3.32.3.
+
+	Update unbound to fix several security issues.
+
+	posix_spawnp security patch:
+	posix_spawnp spawns a new thread with a limited stack allocated on the heap
+	before delegating to execvp for the final execution within that thread.
+	execvp would previously make unbounded allocations on the stack, directly
+	proportional to the length of the user-controlled PATH environment variable.
+
+	ip6_output security patch
+	The IPV6_2292PKTOPTIONS set handler was missing synchronization,
+	so racing accesses could modify freed memory.
+	
+
 20200514:
         Fixed a security issue in libalias.
 
