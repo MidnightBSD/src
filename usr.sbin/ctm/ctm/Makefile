@@ -5,7 +5,7 @@
 # this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 # ----------------------------------------------------------------------------
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ctm/ctm/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	ctm
 MAN=	ctm.1 ctm.5
@@ -14,12 +14,11 @@ SRCS=  	ctm.c ctm_input.c ctm_pass1.c ctm_pass2.c ctm_pass3.c \
 
 NOTYET=	ctm_ed.c
 
-LDADD=	-lmd
-DPADD=	${LIBMD}
+LIBADD=	md
 
 WARNS?=	2
 
-.if exists(${.CURDIR}/../../Makefile.inc)
-.include "${.CURDIR}/../../Makefile.inc"
+.if exists(${.CURDIR:H:H}/Makefile.inc)
+.include "${.CURDIR:H:H}/Makefile.inc"
 .endif
 .include <bsd.prog.mk>

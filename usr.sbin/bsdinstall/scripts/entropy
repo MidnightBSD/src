@@ -24,7 +24,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/entropy 256719 2013-10-18 07:42:50Z dteske $
+# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/entropy 292832 2015-12-28 17:27:20Z dteske $
 
-dd if=/dev/random of=$BSDINSTALL_CHROOT/entropy bs=4096 count=1
+umask 077
+for i in /entropy /boot/entropy; do
+	i="$BSDINSTALL_CHROOT/$i"
+	dd if=/dev/random of="$i" bs=4096 count=1
+	chown 0:0 "$i"
+done

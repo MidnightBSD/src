@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2016 Jilles Tjoelker
  * All rights reserved.
@@ -26,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/kern/reaper.c 313303 2017-02-05 21:31:40Z jilles $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/kern/reaper.c 313302 2017-02-05 20:55:01Z jilles $");
 
 #include <sys/procctl.h>
 #include <sys/wait.h>

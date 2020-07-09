@@ -12,8 +12,12 @@
         defaults
         ..
         dtb
+            overlays              tags=package=runtime
+            ..
         ..
         firmware
+        ..
+        lua
         ..
         kernel
         ..
@@ -31,11 +35,15 @@
         ..
         bluetooth
         ..
+        casper
+        ..
         cron.d
         ..
         defaults
         ..
         devd
+        ..
+        dma
         ..
         gss
         ..
@@ -59,6 +67,8 @@
             weekly
             ..
         ..
+        pkg
+        ..
         ppp
         ..
         rc.conf.d
@@ -81,6 +91,8 @@
         ..
     ..
     lib
+        casper
+        ..
         geom
         ..
     ..
@@ -91,6 +103,8 @@
     media
     ..
     mnt
+    ..
+    net
     ..
     proc            mode=0555
     ..

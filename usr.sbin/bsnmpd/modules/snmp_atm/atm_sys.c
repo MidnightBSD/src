@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002
  *	Fraunhofer Institute for Open Communication Systems (FhG Fokus).
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_atm/atm_sys.c 310903 2016-12-31 10:34:09Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_atm/atm_sys.c 310901 2016-12-31 10:32:49Z ngie $
  *
  * SNMP module for ATM hardware interfaces - FreeBSD/Ng specific part.
  */

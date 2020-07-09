@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * Host Resources MIB for SNMPd.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.h 228990 2011-12-30 10:58:14Z uqs $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.h 295435 2016-02-09 16:30:16Z kib $
  */
 
 #ifndef HOSTRES_SNMP_H_1132245017
@@ -86,7 +85,7 @@ struct statfs;
 /* path to devd(8) output pipe */
 #define	PATH_DEVD_PIPE	"/var/run/devd.pipe"
 
-#define	IS_KERNPROC(kp)	(((kp)->ki_flag & P_KTHREAD) == P_KTHREAD)
+#define	IS_KERNPROC(kp)	(((kp)->ki_flag & P_KPROC) == P_KPROC)
 
 enum snmpTCTruthValue {
 	SNMP_TRUE = 1,

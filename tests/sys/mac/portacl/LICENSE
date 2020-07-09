@@ -1,4 +1,4 @@
-$MidnightBSD$
+$FreeBSD: stable/11/tests/sys/mac/portacl/LICENSE 292570 2015-12-21 21:24:03Z ngie $
 
 License for all mac_portacl regression tests:
 

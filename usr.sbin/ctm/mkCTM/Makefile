@@ -1,11 +1,9 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ctm/mkCTM/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/usr.sbin/ctm/mkCTM/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	mkctm
 MAN=
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 test:	mkctm
 	rm -f tst.out*

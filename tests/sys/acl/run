@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/acl/run 334541 2018-06-02 21:46:48Z eadler $
 #
 
 #
@@ -70,7 +70,7 @@ for (;;) {
   if (defined $line) {
     # Substitute %VAR and %{VAR} with environment variables.
     $line =~ s[%(\w+)][$ENV{$1}]eg;
-    $line =~ s[%{(\w+)}][$ENV{$1}]eg;
+    $line =~ s[%\{(\w+)\}][$ENV{$1}]eg;
   }
   if (defined $line) {
     if ($line =~ s/^\s*< ?//) {

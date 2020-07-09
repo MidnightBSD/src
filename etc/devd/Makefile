@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/etc/devd/Makefile 278246 2015-02-05 10:36:38Z ngie $
+# $FreeBSD: stable/11/etc/devd/Makefile 298140 2016-04-17 03:45:45Z gjb $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-FILES=
+FILEGROUPS=	FILES
 
 .if ${MACHINE} == "powerpc"
 FILES+=	apple.conf
@@ -17,8 +16,9 @@ FILES+=	asus.conf
 FILES+=	hyperv.conf
 .endif
 .endif
+
 .if ${MK_USB} != "no"
-FILES+=	uath.conf usb.conf
+FILES+=	uath.conf ulpt.conf usb.conf
 .endif
 
 .if ${MK_ZFS} != "no"

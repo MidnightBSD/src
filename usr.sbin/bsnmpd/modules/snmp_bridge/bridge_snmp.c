@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +27,7 @@
  *
  * Bridge MIB implementation for SNMPd.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_snmp.c 165253 2006-12-15 20:01:57Z syrinx $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_snmp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>

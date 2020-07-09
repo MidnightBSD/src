@@ -28,11 +28,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/file/flock_test.sh 324404 2017-10-07 23:10:16Z ngie $
 
 # Testcase # 11 is racy; uses an undocumented kernel interface for testing
 #            locking
-# Testcase # 16 is racy/doesn't handle EINTR properly
 last_testcase=16
 
 echo "1..$last_testcase"
@@ -42,10 +41,6 @@ for n in `seq 1 $last_testcase`; do
 
 	if [ $n -eq 11 ]; then
 		todomsg=" # TODO: racy testcase"
-	# Test 16 fails:
-	# F_SETLKW on locked region by two threads: FAIL ((uintptr_t)res != 0)
-	elif [ $n -eq 16 ]; then
-		todomsg=" # TODO: racy testcase (doesn't handle EINTR properly)"
 	fi
 
 	output=$($(dirname $0)/flock_helper . $n)

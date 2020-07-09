@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -29,7 +28,7 @@
  *
  * Helper functions common for all tools.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.h 301657 2016-06-08 17:34:37Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.h 299701 2016-05-13 21:26:12Z ngie $
  */
 
 #ifndef	_BSNMP_TOOLS_H_

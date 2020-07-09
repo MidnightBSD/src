@@ -26,8 +26,8 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_atm/BEGEMOT-ATM-FREEBSD-MIB.txt 312259 2017-01-16 06:55:19Z ngie $
--- $MidnightBSD$
+-- $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_atm/BEGEMOT-ATM-FREEBSD-MIB.txt 312258 2017-01-16 06:55:11Z ngie $
+--
 -- Private Begemot MIB for ATM interfaces on FreeBSD
 --
 BEGEMOT-ATM-FREEBSD-MIB DEFINITIONS ::= BEGIN

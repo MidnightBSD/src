@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/tests/sys/mqueue/mqtest2.c 282858 2015-05-13 12:09:01Z ngie $ */
+/* $FreeBSD: stable/11/tests/sys/mqueue/mqtest2.c 282137 2015-04-28 10:56:59Z ngie $ */
 
 #include <sys/types.h>
 #include <sys/wait.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2006 The FreeBSD Project
  * All rights reserved.
@@ -27,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 310900 2016-12-31 10:30:56Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 317062 2017-04-17 18:55:54Z araujo $
  */
 
 /*
@@ -144,7 +143,7 @@ static const struct {
 	{ "hpfs",	&OIDX_hrFSHPFS_c },
 	{ "smbfs",	&OIDX_hrFSOther_c },
 };
-#define	N_FS_TYPE_MAP	(sizeof(fs_type_map) / sizeof(fs_type_map[0]))
+#define	N_FS_TYPE_MAP	nitems(fs_type_map)
 
 /**
  * Create an entry into the FS table and an entry in the map (if needed).

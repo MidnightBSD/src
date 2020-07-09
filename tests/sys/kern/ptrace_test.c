@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2015 John Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
@@ -26,13 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/kern/ptrace_test.c 328384 2018-01-25 00:08:13Z jhb $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/kern/ptrace_test.c 354134 2019-10-28 13:06:01Z lwhsu $");
 
-#include <sys/param.h>
+#include <sys/types.h>
 #include <sys/cpuset.h>
 #include <sys/event.h>
+#include <sys/file.h>
 #include <sys/time.h>
 #include <sys/procctl.h>
+#define	_WANT_MIPS_REGNUM
 #include <sys/ptrace.h>
 #include <sys/queue.h>
 #include <sys/runq.h>
@@ -50,6 +51,37 @@ __FBSDID("$FreeBSD: stable/10/tests/sys/kern/ptrace_test.c 328384 2018-01-25 00:
 #include <stdlib.h>
 #include <unistd.h>
 #include <atf-c.h>
+
+/*
+ * Architectures with a user-visible breakpoint().
+ */
+#if defined(__aarch64__) || defined(__amd64__) || defined(__arm__) ||	\
+    defined(__i386__) || defined(__mips__) || defined(__riscv) ||	\
+    defined(__sparc64__)
+#define	HAVE_BREAKPOINT
+#endif
+
+/*
+ * Adjust PC to skip over a breakpoint when stopped for a breakpoint trap.
+ */
+#ifdef HAVE_BREAKPOINT
+#if defined(__aarch64__)
+#define	SKIP_BREAK(reg)	((reg)->elr += 4)
+#elif defined(__amd64__) || defined(__i386__)
+#define	SKIP_BREAK(reg)
+#elif defined(__arm__)
+#define	SKIP_BREAK(reg)	((reg)->r_pc += 4)
+#elif defined(__mips__)
+#define	SKIP_BREAK(reg)	((reg)->r_regs[PC] += 4)
+#elif defined(__riscv)
+#define	SKIP_BREAK(reg)	((reg)->sepc += 4)
+#elif defined(__sparc64__)
+#define	SKIP_BREAK(reg)	do {						\
+	(reg)->r_tpc = (reg)->r_tnpc + 4;				\
+	(reg)->r_tnpc += 8;						\
+} while (0)
+#endif
+#endif
 
 /*
  * A variant of ATF_REQUIRE that is suitable for use in child
@@ -227,6 +259,9 @@ ATF_TC_BODY(ptrace__parent_sees_exit_after_child_debugger, tc)
 	pid_t child, debugger, wpid;
 	int cpipe[2], dpipe[2], status;
 	char c;
+
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/239399");
 
 	ATF_REQUIRE(pipe(cpipe) == 0);
 	ATF_REQUIRE((child = fork()) != -1);
@@ -419,6 +454,67 @@ ATF_TC_BODY(ptrace__parent_sees_exit_after_unrelated_debugger, tc)
 	ATF_REQUIRE(wpid == child);
 	ATF_REQUIRE(WIFEXITED(status));
 	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+}
+
+/*
+ * Make sure that we can collect the exit status of an orphaned process.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__parent_exits_before_child);
+ATF_TC_BODY(ptrace__parent_exits_before_child, tc)
+{
+	ssize_t n;
+	int cpipe1[2], cpipe2[2], gcpipe[2], status;
+	pid_t child, gchild;
+
+	ATF_REQUIRE(pipe(cpipe1) == 0);
+	ATF_REQUIRE(pipe(cpipe2) == 0);
+	ATF_REQUIRE(pipe(gcpipe) == 0);
+
+	ATF_REQUIRE(procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == 0);
+
+	ATF_REQUIRE((child = fork()) != -1);
+	if (child == 0) {
+		CHILD_REQUIRE((gchild = fork()) != -1);
+		if (gchild == 0) {
+			status = 1;
+			do {
+				n = read(gcpipe[0], &status, sizeof(status));
+			} while (n == -1 && errno == EINTR);
+			_exit(status);
+		}
+
+		CHILD_REQUIRE(write(cpipe1[1], &gchild, sizeof(gchild)) ==
+		    sizeof(gchild));
+		CHILD_REQUIRE(read(cpipe2[0], &status, sizeof(status)) ==
+		    sizeof(status));
+		_exit(status);
+	}
+
+	ATF_REQUIRE(read(cpipe1[0], &gchild, sizeof(gchild)) == sizeof(gchild));
+
+	ATF_REQUIRE(ptrace(PT_ATTACH, gchild, NULL, 0) == 0);
+
+	status = 0;
+	ATF_REQUIRE(write(cpipe2[1], &status, sizeof(status)) ==
+	    sizeof(status));
+	ATF_REQUIRE(waitpid(child, &status, 0) == child);
+	ATF_REQUIRE(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+
+	status = 0;
+	ATF_REQUIRE(write(gcpipe[1], &status, sizeof(status)) ==
+	    sizeof(status));
+	ATF_REQUIRE(waitpid(gchild, &status, 0) == gchild);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(ptrace(PT_DETACH, gchild, (caddr_t)1, 0) == 0);
+	ATF_REQUIRE(waitpid(gchild, &status, 0) == gchild);
+	ATF_REQUIRE(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+
+	ATF_REQUIRE(close(cpipe1[0]) == 0);
+	ATF_REQUIRE(close(cpipe1[1]) == 0);
+	ATF_REQUIRE(close(cpipe2[0]) == 0);
+	ATF_REQUIRE(close(cpipe2[1]) == 0);
+	ATF_REQUIRE(close(gcpipe[0]) == 0);
+	ATF_REQUIRE(close(gcpipe[1]) == 0);
 }
 
 /*
@@ -708,6 +804,9 @@ ATF_TC_BODY(ptrace__follow_fork_both_attached_unrelated_debugger, tc)
 	pid_t children[2], fpid, wpid;
 	int cpipe[2], status;
 
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/239397");
+
 	ATF_REQUIRE(pipe(cpipe) == 0);
 	ATF_REQUIRE((fpid = fork()) != -1);
 	if (fpid == 0) {
@@ -776,6 +875,9 @@ ATF_TC_BODY(ptrace__follow_fork_child_detached_unrelated_debugger, tc)
 	pid_t children[2], fpid, wpid;
 	int cpipe[2], status;
 
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/239292");
+
 	ATF_REQUIRE(pipe(cpipe) == 0);
 	ATF_REQUIRE((fpid = fork()) != -1);
 	if (fpid == 0) {
@@ -839,6 +941,9 @@ ATF_TC_BODY(ptrace__follow_fork_parent_detached_unrelated_debugger, tc)
 	pid_t children[2], fpid, wpid;
 	int cpipe[2], status;
 
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/239425");
+
 	ATF_REQUIRE(pipe(cpipe) == 0);
 	ATF_REQUIRE((fpid = fork()) != -1);
 	if (fpid == 0) {
@@ -888,6 +993,96 @@ ATF_TC_BODY(ptrace__follow_fork_parent_detached_unrelated_debugger, tc)
 	wpid = wait(&status);
 	ATF_REQUIRE(wpid == -1);
 	ATF_REQUIRE(errno == ECHILD);
+}
+
+/*
+ * Verify that a child process does not see an unrelated debugger as its
+ * parent but sees its original parent process.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__getppid);
+ATF_TC_BODY(ptrace__getppid, tc)
+{
+	pid_t child, debugger, ppid, wpid;
+	int cpipe[2], dpipe[2], status;
+	char c;
+
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/240510");
+
+
+	ATF_REQUIRE(pipe(cpipe) == 0);
+	ATF_REQUIRE((child = fork()) != -1);
+
+	if (child == 0) {
+		/* Child process. */
+		close(cpipe[0]);
+
+		/* Wait for parent to be ready. */
+		CHILD_REQUIRE(read(cpipe[1], &c, sizeof(c)) == sizeof(c));
+
+		/* Report the parent PID to the parent. */
+		ppid = getppid();
+		CHILD_REQUIRE(write(cpipe[1], &ppid, sizeof(ppid)) ==
+		    sizeof(ppid));
+
+		_exit(1);
+	}
+	close(cpipe[1]);
+
+	ATF_REQUIRE(pipe(dpipe) == 0);
+	ATF_REQUIRE((debugger = fork()) != -1);
+
+	if (debugger == 0) {
+		/* Debugger process. */
+		close(dpipe[0]);
+
+		CHILD_REQUIRE(ptrace(PT_ATTACH, child, NULL, 0) != -1);
+
+		wpid = waitpid(child, &status, 0);
+		CHILD_REQUIRE(wpid == child);
+		CHILD_REQUIRE(WIFSTOPPED(status));
+		CHILD_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+		CHILD_REQUIRE(ptrace(PT_CONTINUE, child, (caddr_t)1, 0) != -1);
+
+		/* Signal parent that debugger is attached. */
+		CHILD_REQUIRE(write(dpipe[1], &c, sizeof(c)) == sizeof(c));
+
+		/* Wait for traced child to exit. */
+		wpid = waitpid(child, &status, 0);
+		CHILD_REQUIRE(wpid == child);
+		CHILD_REQUIRE(WIFEXITED(status));
+		CHILD_REQUIRE(WEXITSTATUS(status) == 1);
+
+		_exit(0);
+	}
+	close(dpipe[1]);
+
+	/* Parent process. */
+
+	/* Wait for the debugger to attach to the child. */
+	ATF_REQUIRE(read(dpipe[0], &c, sizeof(c)) == sizeof(c));
+
+	/* Release the child. */
+	ATF_REQUIRE(write(cpipe[0], &c, sizeof(c)) == sizeof(c));
+
+	/* Read the parent PID from the child. */
+	ATF_REQUIRE(read(cpipe[0], &ppid, sizeof(ppid)) == sizeof(ppid));
+	close(cpipe[0]);
+
+	ATF_REQUIRE(ppid == getpid());
+
+	/* Wait for the debugger. */
+	wpid = waitpid(debugger, &status, 0);
+	ATF_REQUIRE(wpid == debugger);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 0);
+
+	/* The child process should now be ready. */
+	wpid = waitpid(child, &status, WNOHANG);
+	ATF_REQUIRE(wpid == child);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
 }
 
 /*
@@ -1602,11 +1797,7 @@ ATF_TC_BODY(ptrace__ptrace_vfork_follow, tc)
 	ATF_REQUIRE(errno == ECHILD);
 }
 
-/*
- * XXX: There's nothing inherently platform specific about this test, however a
- * userspace visible breakpoint() is a prerequisite.
- */
- #if defined(__amd64__) || defined(__i386__) || defined(__sparc64__)
+#ifdef HAVE_BREAKPOINT
 /*
  * Verify that no more events are reported after PT_KILL except for the
  * process exit when stopped due to a breakpoint trap.
@@ -1652,7 +1843,7 @@ ATF_TC_BODY(ptrace__PT_KILL_breakpoint, tc)
 	ATF_REQUIRE(wpid == -1);
 	ATF_REQUIRE(errno == ECHILD);
 }
-#endif /* defined(__amd64__) || defined(__i386__) || defined(__sparc64__) */
+#endif /* HAVE_BREAKPOINT */
 
 /*
  * Verify that no more events are reported after PT_KILL except for the
@@ -1787,7 +1978,12 @@ mask_usr1_thread(void *arg)
  * Verify that the SIGKILL from PT_KILL takes priority over other signals
  * and prevents spurious stops due to those other signals.
  */
-ATF_TC_WITHOUT_HEAD(ptrace__PT_KILL_competing_signal);
+ATF_TC(ptrace__PT_KILL_competing_signal);
+ATF_TC_HEAD(ptrace__PT_KILL_competing_signal, tc)
+{
+
+	atf_tc_set_md_var(tc, "require.user", "root");
+}
 ATF_TC_BODY(ptrace__PT_KILL_competing_signal, tc)
 {
 	pid_t fpid, wpid;
@@ -1881,7 +2077,12 @@ ATF_TC_BODY(ptrace__PT_KILL_competing_signal, tc)
  * Verify that the SIGKILL from PT_KILL takes priority over other stop events
  * and prevents spurious stops caused by those events.
  */
-ATF_TC_WITHOUT_HEAD(ptrace__PT_KILL_competing_stop);
+ATF_TC(ptrace__PT_KILL_competing_stop);
+ATF_TC_HEAD(ptrace__PT_KILL_competing_stop, tc)
+{
+
+	atf_tc_set_md_var(tc, "require.user", "root");
+}
 ATF_TC_BODY(ptrace__PT_KILL_competing_stop, tc)
 {
 	pid_t fpid, wpid;
@@ -1892,6 +2093,9 @@ ATF_TC_BODY(ptrace__PT_KILL_competing_stop, tc)
 	lwpid_t main_lwp;
 	struct ptrace_lwpinfo pl;
 	struct sched_param sched_param;
+
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/220841");
 
 	ATF_REQUIRE((fpid = fork()) != -1);
 	if (fpid == 0) {
@@ -2311,6 +2515,106 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_with_signal_full_sigqueue, tc)
 	ATF_REQUIRE(errno == ECHILD);
 }
 
+static sem_t sigusr1_sem;
+static int got_usr1;
+
+static void
+sigusr1_sempost_handler(int sig __unused)
+{
+
+	got_usr1++;
+	CHILD_REQUIRE(sem_post(&sigusr1_sem) == 0);
+}
+
+/*
+ * Verify that even if the signal queue is full for a child process,
+ * and the signal is masked, a PT_CONTINUE with a signal will not
+ * result in loss of that signal.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__PT_CONTINUE_with_signal_masked_full_sigqueue);
+ATF_TC_BODY(ptrace__PT_CONTINUE_with_signal_masked_full_sigqueue, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status, err;
+	int max_pending_per_proc;
+	size_t len;
+	int i;
+	sigset_t sigmask;
+
+	ATF_REQUIRE(signal(SIGUSR2, handler) != SIG_ERR);
+	ATF_REQUIRE(sem_init(&sigusr1_sem, 0, 0) == 0);
+	ATF_REQUIRE(signal(SIGUSR1, sigusr1_sempost_handler) != SIG_ERR);
+
+	got_usr1 = 0;
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		CHILD_REQUIRE(sigemptyset(&sigmask) == 0);
+		CHILD_REQUIRE(sigaddset(&sigmask, SIGUSR1) == 0);
+		CHILD_REQUIRE(sigprocmask(SIG_BLOCK, &sigmask, NULL) == 0);
+
+		trace_me();
+		CHILD_REQUIRE(got_usr1 == 0);
+
+		/* Allow the pending SIGUSR1 in now. */
+		CHILD_REQUIRE(sigprocmask(SIG_UNBLOCK, &sigmask, NULL) == 0);
+		/* Wait to receive the SIGUSR1. */
+		do {
+			err = sem_wait(&sigusr1_sem);
+			CHILD_REQUIRE(err == 0 || errno == EINTR);
+		} while (err != 0 && errno == EINTR);
+		CHILD_REQUIRE(got_usr1 == 1);
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+	len = sizeof(max_pending_per_proc);
+	ATF_REQUIRE(sysctlbyname("kern.sigqueue.max_pending_per_proc",
+	    &max_pending_per_proc, &len, NULL, 0) == 0);
+
+	/* Fill the signal queue. */
+	for (i = 0; i < max_pending_per_proc; ++i)
+		ATF_REQUIRE(kill(fpid, SIGUSR2) == 0);
+
+	/* Continue with signal. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, SIGUSR1) == 0);
+
+	/* Collect and ignore all of the SIGUSR2. */
+	for (i = 0; i < max_pending_per_proc; ++i) {
+		wpid = waitpid(fpid, &status, 0);
+		ATF_REQUIRE(wpid == fpid);
+		ATF_REQUIRE(WIFSTOPPED(status));
+		ATF_REQUIRE(WSTOPSIG(status) == SIGUSR2);
+		ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+	}
+
+	/* Now our PT_CONTINUE'd SIGUSR1 should cause a stop after unmask. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGUSR1);
+	ATF_REQUIRE(ptrace(PT_LWPINFO, fpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGUSR1);
+
+	/* Continue the child, ignoring the SIGUSR1. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The last wait() should report exit after receiving SIGUSR1. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+
 /*
  * Verify that, after stopping due to a signal, that signal can be
  * replaced with another signal.
@@ -2376,12 +2680,16 @@ ATF_TC_WITHOUT_HEAD(ptrace__PT_CONTINUE_with_sigtrap_system_call_entry);
 ATF_TC_BODY(ptrace__PT_CONTINUE_with_sigtrap_system_call_entry, tc)
 {
 	struct ptrace_lwpinfo pl;
+	struct rlimit rl;
 	pid_t fpid, wpid;
 	int status;
 
 	ATF_REQUIRE((fpid = fork()) != -1);
 	if (fpid == 0) {
 		trace_me();
+		/* SIGTRAP expected to cause exit on syscall entry. */
+		rl.rlim_cur = rl.rlim_max = 0;
+		ATF_REQUIRE(setrlimit(RLIMIT_CORE, &rl) == 0);
 		getpid();
 		exit(1);
 	}
@@ -2579,15 +2887,6 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_with_signal_kqueue, tc)
 	ATF_REQUIRE(errno == ECHILD);
 }
 
-static sem_t sigusr1_sem;
-
-static void
-sigusr1_sempost_handler(int sig __unused)
-{
-
-	CHILD_REQUIRE(sem_post(&sigusr1_sem) == 0);
-}
-
 static void *
 signal_thread(void *arg)
 {
@@ -2620,6 +2919,148 @@ signal_thread(void *arg)
 	pthread_barrier_wait(pbarrier);
 
 	return (NULL);
+}
+
+/*
+ * Verify that a traced process with blocked signal received the
+ * signal from kill() once unmasked.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__killed_with_sigmask);
+ATF_TC_BODY(ptrace__killed_with_sigmask, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status, err;
+	sigset_t sigmask;
+
+	ATF_REQUIRE(sem_init(&sigusr1_sem, 0, 0) == 0);
+	ATF_REQUIRE(signal(SIGUSR1, sigusr1_sempost_handler) != SIG_ERR);
+	got_usr1 = 0;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		CHILD_REQUIRE(sigemptyset(&sigmask) == 0);
+		CHILD_REQUIRE(sigaddset(&sigmask, SIGUSR1) == 0);
+		CHILD_REQUIRE(sigprocmask(SIG_BLOCK, &sigmask, NULL) == 0);
+
+		trace_me();
+		CHILD_REQUIRE(got_usr1 == 0);
+
+		/* Allow the pending SIGUSR1 in now. */
+		CHILD_REQUIRE(sigprocmask(SIG_UNBLOCK, &sigmask, NULL) == 0);
+		/* Wait to receive a SIGUSR1. */
+		do {
+			err = sem_wait(&sigusr1_sem);
+			CHILD_REQUIRE(err == 0 || errno == EINTR);
+		} while (err != 0 && errno == EINTR);
+		CHILD_REQUIRE(got_usr1 == 1);
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+	ATF_REQUIRE(ptrace(PT_LWPINFO, fpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGSTOP);
+
+	/* Send blocked SIGUSR1 which should cause a stop. */
+	ATF_REQUIRE(kill(fpid, SIGUSR1) == 0);
+
+	/* Continue the child ignoring the SIGSTOP. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The next wait() should report the kill(SIGUSR1) was received. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGUSR1);
+	ATF_REQUIRE(ptrace(PT_LWPINFO, fpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGUSR1);
+
+	/* Continue the child, allowing in the SIGUSR1. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, SIGUSR1) == 0);
+
+	/* The last wait() should report normal exit with code 1. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+
+/*
+ * Verify that a traced process with blocked signal received the
+ * signal from PT_CONTINUE once unmasked.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__PT_CONTINUE_with_sigmask);
+ATF_TC_BODY(ptrace__PT_CONTINUE_with_sigmask, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status, err;
+	sigset_t sigmask;
+
+	ATF_REQUIRE(sem_init(&sigusr1_sem, 0, 0) == 0);
+	ATF_REQUIRE(signal(SIGUSR1, sigusr1_sempost_handler) != SIG_ERR);
+	got_usr1 = 0;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		CHILD_REQUIRE(sigemptyset(&sigmask) == 0);
+		CHILD_REQUIRE(sigaddset(&sigmask, SIGUSR1) == 0);
+		CHILD_REQUIRE(sigprocmask(SIG_BLOCK, &sigmask, NULL) == 0);
+
+		trace_me();
+		CHILD_REQUIRE(got_usr1 == 0);
+
+		/* Allow the pending SIGUSR1 in now. */
+		CHILD_REQUIRE(sigprocmask(SIG_UNBLOCK, &sigmask, NULL) == 0);
+		/* Wait to receive a SIGUSR1. */
+		do {
+			err = sem_wait(&sigusr1_sem);
+			CHILD_REQUIRE(err == 0 || errno == EINTR);
+		} while (err != 0 && errno == EINTR);
+
+		CHILD_REQUIRE(got_usr1 == 1);
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+	ATF_REQUIRE(ptrace(PT_LWPINFO, fpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGSTOP);
+
+	/* Continue the child replacing SIGSTOP with SIGUSR1. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, SIGUSR1) == 0);
+
+	/* The next wait() should report the SIGUSR1 was received. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGUSR1);
+	ATF_REQUIRE(ptrace(PT_LWPINFO, fpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGUSR1);
+
+	/* Continue the child, ignoring the SIGUSR1. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The last wait() should report normal exit with code 1. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
 }
 
 /*
@@ -2859,13 +3300,24 @@ terminate_with_pending_sigstop(bool sigstop_from_main_thread)
  * to the older thread (the second test). This behavior has changed in the
  * past, so make no assumption.
  */
-ATF_TC_WITHOUT_HEAD(ptrace__parent_terminate_with_pending_sigstop1);
+ATF_TC(ptrace__parent_terminate_with_pending_sigstop1);
+ATF_TC_HEAD(ptrace__parent_terminate_with_pending_sigstop1, tc)
+{
+
+	atf_tc_set_md_var(tc, "require.user", "root");
+}
 ATF_TC_BODY(ptrace__parent_terminate_with_pending_sigstop1, tc)
 {
 
 	terminate_with_pending_sigstop(true);
 }
-ATF_TC_WITHOUT_HEAD(ptrace__parent_terminate_with_pending_sigstop2);
+
+ATF_TC(ptrace__parent_terminate_with_pending_sigstop2);
+ATF_TC_HEAD(ptrace__parent_terminate_with_pending_sigstop2, tc)
+{
+
+	atf_tc_set_md_var(tc, "require.user", "root");
+}
 ATF_TC_BODY(ptrace__parent_terminate_with_pending_sigstop2, tc)
 {
 
@@ -2945,11 +3397,290 @@ ATF_TC_BODY(ptrace__event_mask_sigkill_discard, tc)
 	ATF_REQUIRE(errno == ECHILD);
 }
 
-#if defined(__amd64__) || defined(__i386__)
+static void *
+flock_thread(void *arg)
+{
+	int fd;
+
+	fd = *(int *)arg;
+	(void)flock(fd, LOCK_EX);
+	(void)flock(fd, LOCK_UN);
+	return (NULL);
+}
+
 /*
- * Only x86 both define breakpoint() and have a PC after breakpoint so
- * that restarting doesn't retrigger the breakpoint.
+ * Verify that PT_ATTACH will suspend threads sleeping in an SBDRY section.
+ * We rely on the fact that the lockf implementation sets SBDRY before blocking
+ * on a lock. This is a regression test for r318191.
  */
+ATF_TC_WITHOUT_HEAD(ptrace__PT_ATTACH_with_SBDRY_thread);
+ATF_TC_BODY(ptrace__PT_ATTACH_with_SBDRY_thread, tc)
+{
+	pthread_barrier_t barrier;
+	pthread_barrierattr_t battr;
+	char tmpfile[64];
+	pid_t child, wpid;
+	int error, fd, i, status;
+
+	ATF_REQUIRE(pthread_barrierattr_init(&battr) == 0);
+	ATF_REQUIRE(pthread_barrierattr_setpshared(&battr,
+	    PTHREAD_PROCESS_SHARED) == 0);
+	ATF_REQUIRE(pthread_barrier_init(&barrier, &battr, 2) == 0);
+
+	(void)snprintf(tmpfile, sizeof(tmpfile), "./ptrace.XXXXXX");
+	fd = mkstemp(tmpfile);
+	ATF_REQUIRE(fd >= 0);
+
+	ATF_REQUIRE((child = fork()) != -1);
+	if (child == 0) {
+		pthread_t t[2];
+		int cfd;
+
+		error = pthread_barrier_wait(&barrier);
+		if (error != 0 && error != PTHREAD_BARRIER_SERIAL_THREAD)
+			_exit(1);
+
+		cfd = open(tmpfile, O_RDONLY);
+		if (cfd < 0)
+			_exit(1);
+
+		/*
+		 * We want at least two threads blocked on the file lock since
+		 * the SIGSTOP from PT_ATTACH may kick one of them out of
+		 * sleep.
+		 */
+		if (pthread_create(&t[0], NULL, flock_thread, &cfd) != 0)
+			_exit(1);
+		if (pthread_create(&t[1], NULL, flock_thread, &cfd) != 0)
+			_exit(1);
+		if (pthread_join(t[0], NULL) != 0)
+			_exit(1);
+		if (pthread_join(t[1], NULL) != 0)
+			_exit(1);
+		_exit(0);
+	}
+
+	ATF_REQUIRE(flock(fd, LOCK_EX) == 0);
+
+	error = pthread_barrier_wait(&barrier);
+	ATF_REQUIRE(error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD);
+
+	/*
+	 * Give the child some time to block. Is there a better way to do this?
+	 */
+	sleep(1);
+
+	/*
+	 * Attach and give the child 3 seconds to stop.
+	 */
+	ATF_REQUIRE(ptrace(PT_ATTACH, child, NULL, 0) == 0);
+	for (i = 0; i < 3; i++) {
+		wpid = waitpid(child, &status, WNOHANG);
+		if (wpid == child && WIFSTOPPED(status) &&
+		    WSTOPSIG(status) == SIGSTOP)
+			break;
+		sleep(1);
+	}
+	ATF_REQUIRE_MSG(i < 3, "failed to stop child process after PT_ATTACH");
+
+	ATF_REQUIRE(ptrace(PT_DETACH, child, NULL, 0) == 0);
+
+	ATF_REQUIRE(flock(fd, LOCK_UN) == 0);
+	ATF_REQUIRE(unlink(tmpfile) == 0);
+	ATF_REQUIRE(close(fd) == 0);
+}
+
+static void
+sigusr1_step_handler(int sig)
+{
+
+	CHILD_REQUIRE(sig == SIGUSR1);
+	raise(SIGABRT);
+}
+
+/*
+ * Verify that PT_STEP with a signal invokes the signal before
+ * stepping the next instruction (and that the next instruction is
+ * stepped correctly).
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__PT_STEP_with_signal);
+ATF_TC_BODY(ptrace__PT_STEP_with_signal, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		trace_me();
+		signal(SIGUSR1, sigusr1_step_handler);
+		raise(SIGABRT);
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The next stop should report the SIGABRT in the child body. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGABRT);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_flags & PL_FLAG_SI);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGABRT);
+
+	/* Step the child process inserting SIGUSR1. */
+	ATF_REQUIRE(ptrace(PT_STEP, fpid, (caddr_t)1, SIGUSR1) == 0);
+
+	/* The next stop should report the SIGABRT in the signal handler. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGABRT);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_flags & PL_FLAG_SI);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGABRT);
+
+	/* Continue the child process discarding the signal. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The next stop should report a trace trap from PT_STEP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGTRAP);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_flags & PL_FLAG_SI);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGTRAP);
+	ATF_REQUIRE(pl.pl_siginfo.si_code == TRAP_TRACE);
+
+	/* Continue the child to let it exit. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The last event should be for the child process's exit. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+
+#ifdef HAVE_BREAKPOINT
+/*
+ * Verify that a SIGTRAP event with the TRAP_BRKPT code is reported
+ * for a breakpoint trap.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__breakpoint_siginfo);
+ATF_TC_BODY(ptrace__breakpoint_siginfo, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		trace_me();
+		breakpoint();
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+	/* Continue the child ignoring the SIGSTOP. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The second wait() should report hitting the breakpoint. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGTRAP);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE((pl.pl_flags & PL_FLAG_SI) != 0);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGTRAP);
+	ATF_REQUIRE(pl.pl_siginfo.si_code == TRAP_BRKPT);
+
+	/* Kill the child process. */
+	ATF_REQUIRE(ptrace(PT_KILL, fpid, 0, 0) == 0);
+
+	/* The last wait() should report the SIGKILL. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSIGNALED(status));
+	ATF_REQUIRE(WTERMSIG(status) == SIGKILL);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+#endif /* HAVE_BREAKPOINT */
+
+/*
+ * Verify that a SIGTRAP event with the TRAP_TRACE code is reported
+ * for a single-step trap from PT_STEP.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__step_siginfo);
+ATF_TC_BODY(ptrace__step_siginfo, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int status;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		trace_me();
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+	/* Step the child ignoring the SIGSTOP. */
+	ATF_REQUIRE(ptrace(PT_STEP, fpid, (caddr_t)1, 0) == 0);
+
+	/* The second wait() should report a single-step trap. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGTRAP);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE((pl.pl_flags & PL_FLAG_SI) != 0);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGTRAP);
+	ATF_REQUIRE(pl.pl_siginfo.si_code == TRAP_TRACE);
+
+	/* Continue the child process. */
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The last event should be for the child process's exit. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+
+#if defined(HAVE_BREAKPOINT) && defined(SKIP_BREAK)
 static void *
 continue_thread(void *arg __unused)
 {
@@ -2983,6 +3714,7 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_different_thread, tc)
 	pid_t fpid, wpid;
 	lwpid_t lwps[2];
 	bool hit_break[2];
+	struct reg reg;
 	int i, j, status;
 
 	ATF_REQUIRE((fpid = fork()) != -1);
@@ -3056,6 +3788,9 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_different_thread, tc)
 	else
 		i = 1;
 	hit_break[i] = true;
+	ATF_REQUIRE(ptrace(PT_GETREGS, pl.pl_lwpid, (caddr_t)&reg, 0) != -1);
+	SKIP_BREAK(&reg);
+	ATF_REQUIRE(ptrace(PT_SETREGS, pl.pl_lwpid, (caddr_t)&reg, 0) != -1);
 
 	/*
 	 * Resume both threads but pass the other thread's LWPID to
@@ -3093,6 +3828,11 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_different_thread, tc)
 			ATF_REQUIRE_MSG(!hit_break[i],
 			    "double breakpoint event");
 			hit_break[i] = true;
+			ATF_REQUIRE(ptrace(PT_GETREGS, pl.pl_lwpid, (caddr_t)&reg,
+			    0) != -1);
+			SKIP_BREAK(&reg);
+			ATF_REQUIRE(ptrace(PT_SETREGS, pl.pl_lwpid, (caddr_t)&reg,
+			    0) != -1);
 		}
 
 		ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
@@ -3113,6 +3853,78 @@ ATF_TC_BODY(ptrace__PT_CONTINUE_different_thread, tc)
 }
 #endif
 
+/*
+ * Verify that PT_LWPINFO doesn't return stale siginfo.
+ */
+ATF_TC_WITHOUT_HEAD(ptrace__PT_LWPINFO_stale_siginfo);
+ATF_TC_BODY(ptrace__PT_LWPINFO_stale_siginfo, tc)
+{
+	struct ptrace_lwpinfo pl;
+	pid_t fpid, wpid;
+	int events, status;
+
+	ATF_REQUIRE((fpid = fork()) != -1);
+	if (fpid == 0) {
+		trace_me();
+		raise(SIGABRT);
+		exit(1);
+	}
+
+	/* The first wait() should report the stop from SIGSTOP. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGSTOP);
+
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The next stop should report the SIGABRT in the child body. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGABRT);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_flags & PL_FLAG_SI);
+	ATF_REQUIRE(pl.pl_siginfo.si_signo == SIGABRT);
+
+	/*
+	 * Continue the process ignoring the signal, but enabling
+	 * syscall traps.
+	 */
+	ATF_REQUIRE(ptrace(PT_SYSCALL, fpid, (caddr_t)1, 0) == 0);
+
+	/*
+	 * The next stop should report a system call entry from
+	 * exit().  PL_FLAGS_SI should not be set.
+	 */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(wpid == fpid);
+	ATF_REQUIRE(WIFSTOPPED(status));
+	ATF_REQUIRE(WSTOPSIG(status) == SIGTRAP);
+
+	ATF_REQUIRE(ptrace(PT_LWPINFO, wpid, (caddr_t)&pl, sizeof(pl)) != -1);
+	ATF_REQUIRE(pl.pl_flags & PL_FLAG_SCE);
+	ATF_REQUIRE((pl.pl_flags & PL_FLAG_SI) == 0);
+
+	/* Disable syscall tracing and continue the child to let it exit. */
+	ATF_REQUIRE(ptrace(PT_GET_EVENT_MASK, fpid, (caddr_t)&events,
+	    sizeof(events)) == 0);
+	events &= ~PTRACE_SYSCALL;
+	ATF_REQUIRE(ptrace(PT_SET_EVENT_MASK, fpid, (caddr_t)&events,
+	    sizeof(events)) == 0);
+	ATF_REQUIRE(ptrace(PT_CONTINUE, fpid, (caddr_t)1, 0) == 0);
+
+	/* The last event should be for the child process's exit. */
+	wpid = waitpid(fpid, &status, 0);
+	ATF_REQUIRE(WIFEXITED(status));
+	ATF_REQUIRE(WEXITSTATUS(status) == 1);
+
+	wpid = wait(&status);
+	ATF_REQUIRE(wpid == -1);
+	ATF_REQUIRE(errno == ECHILD);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 
@@ -3120,6 +3932,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, ptrace__parent_wait_after_attach);
 	ATF_TP_ADD_TC(tp, ptrace__parent_sees_exit_after_child_debugger);
 	ATF_TP_ADD_TC(tp, ptrace__parent_sees_exit_after_unrelated_debugger);
+	ATF_TP_ADD_TC(tp, ptrace__parent_exits_before_child);
 	ATF_TP_ADD_TC(tp, ptrace__follow_fork_both_attached);
 	ATF_TP_ADD_TC(tp, ptrace__follow_fork_child_detached);
 	ATF_TP_ADD_TC(tp, ptrace__follow_fork_parent_detached);
@@ -3128,6 +3941,7 @@ ATF_TP_ADD_TCS(tp)
 	    ptrace__follow_fork_child_detached_unrelated_debugger);
 	ATF_TP_ADD_TC(tp,
 	    ptrace__follow_fork_parent_detached_unrelated_debugger);
+	ATF_TP_ADD_TC(tp, ptrace__getppid);
 	ATF_TP_ADD_TC(tp, ptrace__new_child_pl_syscall_code_fork);
 	ATF_TP_ADD_TC(tp, ptrace__new_child_pl_syscall_code_vfork);
 	ATF_TP_ADD_TC(tp, ptrace__new_child_pl_syscall_code_thread);
@@ -3139,7 +3953,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, ptrace__event_mask);
 	ATF_TP_ADD_TC(tp, ptrace__ptrace_vfork);
 	ATF_TP_ADD_TC(tp, ptrace__ptrace_vfork_follow);
-#if defined(__amd64__) || defined(__i386__) || defined(__sparc64__)
+#ifdef HAVE_BREAKPOINT
 	ATF_TP_ADD_TC(tp, ptrace__PT_KILL_breakpoint);
 #endif
 	ATF_TP_ADD_TC(tp, ptrace__PT_KILL_system_call);
@@ -3151,17 +3965,27 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp,
 	    ptrace__PT_CONTINUE_with_signal_system_call_entry_and_exit);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_signal_full_sigqueue);
+	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_signal_masked_full_sigqueue);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_change_sig);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_sigtrap_system_call_entry);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_signal_mix);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_signal_kqueue);
+	ATF_TP_ADD_TC(tp, ptrace__killed_with_sigmask);
+	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_sigmask);
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_with_signal_thread_sigmask);
 	ATF_TP_ADD_TC(tp, ptrace__parent_terminate_with_pending_sigstop1);
 	ATF_TP_ADD_TC(tp, ptrace__parent_terminate_with_pending_sigstop2);
 	ATF_TP_ADD_TC(tp, ptrace__event_mask_sigkill_discard);
-#if defined(__amd64__) || defined(__i386__)
+	ATF_TP_ADD_TC(tp, ptrace__PT_ATTACH_with_SBDRY_thread);
+	ATF_TP_ADD_TC(tp, ptrace__PT_STEP_with_signal);
+#ifdef HAVE_BREAKPOINT
+	ATF_TP_ADD_TC(tp, ptrace__breakpoint_siginfo);
+#endif
+	ATF_TP_ADD_TC(tp, ptrace__step_siginfo);
+#if defined(HAVE_BREAKPOINT) && defined(SKIP_BREAK)
 	ATF_TP_ADD_TC(tp, ptrace__PT_CONTINUE_different_thread);
 #endif
+	ATF_TP_ADD_TC(tp, ptrace__PT_LWPINFO_stale_siginfo);
 
 	return (atf_no_error());
 }

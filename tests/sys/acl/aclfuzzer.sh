@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/acl/aclfuzzer.sh 324404 2017-10-07 23:10:16Z ngie $
 #
 
 # This is an NFSv4 ACL fuzzer.  It expects to be run by non-root in a scratch

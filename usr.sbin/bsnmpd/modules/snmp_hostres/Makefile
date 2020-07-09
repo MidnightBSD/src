@@ -1,4 +1,3 @@
-# $MidnightBSD$
 #
 # Copyright (c) 2005-2006 The FreeBSD Project
 # All rights reserved.
@@ -26,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile 313223 2017-02-04 16:40:28Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile 313239 2017-02-04 17:10:19Z ngie $
 #
 
 LPRSRC=	${SRCTOP}/usr.sbin/lpr/common_source
@@ -70,10 +69,9 @@ MAN=	snmp_hostres.3
 DEFS=	${MOD}_tree.def
 BMIBS=	BEGEMOT-HOSTRES-MIB.txt
 
-DPADD=	${LIBKVM} ${LIBDEVINFO} ${LIBM} ${LIBGEOM} ${LIBMEMSTAT}
-LDADD=	-lkvm -ldevinfo -lm -lgeom -lmemstat
+LIBADD=	kvm devinfo m geom memstat
 
 .include <bsd.snmpmod.mk>
 
-printcap.So: printcap.c
+printcap.pico: printcap.c
 	${CC} ${PICFLAG} -DPIC ${CFLAGS:C/^-W.*//} -c ${.IMPSRC} -o ${.TARGET}

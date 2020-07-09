@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013 Jilles Tjoelker
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/file/fcntlflags_test.c 281432 2015-04-11 10:14:59Z ngie $
+ * $FreeBSD: stable/11/tests/sys/file/fcntlflags_test.c 281432 2015-04-11 10:14:59Z ngie $
  */
 
 #include <sys/cdefs.h>

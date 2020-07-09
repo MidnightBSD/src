@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/geom/class/raid3/conf.sh 293438 2016-01-08 19:47:49Z ngie $
 
 name="$(mktemp -u graid3.XXXXXX)"
 class="raid3"

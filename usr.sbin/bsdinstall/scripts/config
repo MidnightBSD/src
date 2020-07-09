@@ -25,18 +25,23 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/config 323571 2017-09-14 01:24:17Z emaste $
+# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/config 353047 2019-10-03 14:39:15Z gjb $
 #
 ############################################################ MAIN
 
 cat $BSDINSTALL_TMPETC/rc.conf.* >> $BSDINSTALL_TMPETC/rc.conf
 rm $BSDINSTALL_TMPETC/rc.conf.*
 
+cat $BSDINSTALL_CHROOT/etc/sysctl.conf $BSDINSTALL_TMPETC/sysctl.conf.* >> $BSDINSTALL_TMPETC/sysctl.conf
+rm $BSDINSTALL_TMPETC/sysctl.conf.*
+
 cp $BSDINSTALL_TMPETC/* $BSDINSTALL_CHROOT/etc
 
 cat $BSDINSTALL_TMPBOOT/loader.conf.* >> $BSDINSTALL_TMPBOOT/loader.conf
 rm $BSDINSTALL_TMPBOOT/loader.conf.*
+# The 'opensolaris_load' line is a workaround for arm64, which does not
+# automatically load opensolaris.ko with zfs.ko.
+df -t zfs $BSDINSTALL_CHROOT > /dev/null && echo "opensolaris_load=\"YES\"" >> $BSDINSTALL_TMPBOOT/loader.conf
 df -t zfs $BSDINSTALL_CHROOT > /dev/null && echo "zfs_load=\"YES\"" >> $BSDINSTALL_TMPBOOT/loader.conf
 
 cp $BSDINSTALL_TMPBOOT/* $BSDINSTALL_CHROOT/boot

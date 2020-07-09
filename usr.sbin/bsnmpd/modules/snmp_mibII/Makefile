@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile 313223 2017-02-04 16:40:28Z ngie $
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile 313239 2017-02-04 17:10:19Z ngie $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

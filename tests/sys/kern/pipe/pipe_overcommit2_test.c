@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 Michael J. Silbersack <silby@freebsd.org> 
  *  All rights reserved.
@@ -36,7 +35,7 @@
 #include <unistd.h>
 
 /*
- * $FreeBSD: stable/10/tests/sys/kern/pipe/pipe_overcommit2_test.c 290914 2015-11-16 05:38:40Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_overcommit2_test.c 290914 2015-11-16 05:38:40Z ngie $
  * This program tests how sys_pipe.c handles the case where there
  * is ample memory to allocate a pipe, but the file descriptor
  * limit for that user has been exceeded.

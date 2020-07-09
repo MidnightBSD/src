@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/10/tests/sys/geom/class/uzip/test-1.img.uzip.uue 150734 2005-09-29 22:41:20Z fjoe $
+# $FreeBSD: stable/11/tests/sys/geom/class/uzip/test-1.img.uzip.uue 150734 2005-09-29 22:41:20Z fjoe $
 #
 
 begin 755 test-1.img.uzip

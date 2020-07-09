@@ -101,8 +101,12 @@
     cam
         ata
         ..
+        nvme
+        ..
         scsi
         ..
+    ..
+    casper
     ..
     clang
         3.4.1
@@ -120,6 +124,8 @@
         bktr
         ..
         ciss
+        ..
+        evdev
         ..
         filemon
         ..
@@ -140,6 +146,8 @@
         lmc
         ..
         mfi
+        ..
+        mlx5
         ..
         mmc
         ..
@@ -174,6 +182,8 @@
         wi
         ..
     ..
+    devdctl
+    ..
     dispatch
     ..
     edit
@@ -181,6 +191,8 @@
         ..
     ..
     fs
+        cuse
+        ..
         devfs
         ..
         fdescfs
@@ -264,7 +276,11 @@
     ..
     krb5
     ..
+    lib80211
+    ..
     libmilter
+    ..
+    libxo
     ..
     lzma
     ..
@@ -286,8 +302,6 @@
     ..
     net80211
     ..
-    netatalk
-    ..
     netgraph
         atm
         ..
@@ -303,8 +317,6 @@
     netinet6
     ..
     netipsec
-    ..
-    netipx
     ..
     netnatm
         api
@@ -371,6 +383,8 @@
         ..
         mach_debug
         ..
+    ..
+    teken
     ..
     ufs
         ffs

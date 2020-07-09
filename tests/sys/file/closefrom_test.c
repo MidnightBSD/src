@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -27,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/file/closefrom_test.c 282067 2015-04-27 08:15:17Z ngie $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/file/closefrom_test.c 282067 2015-04-27 08:15:17Z ngie $");
 
 /*
  * Regression tests for the closefrom(2) system call.

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2009 Mark Heily <mark@heily.com>
  *
@@ -14,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: stable/10/tests/sys/kqueue/libkqueue/proc.c 305467 2016-09-06 08:45:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kqueue/libkqueue/proc.c 341275 2018-11-30 02:06:30Z dab $
  */
 
 #include <sys/stat.h>
@@ -46,7 +45,7 @@ add_and_delete(void)
         struct stat s;
         if (fstat(kqfd, &s) != -1)
             errx(1, "kqueue inherited across fork! (%s() at %s:%d)",
-	        __func__, __FILE__, __LINE__);
+                __func__, __FILE__, __LINE__);
 
         pause();
         exit(2);
@@ -173,6 +172,7 @@ proc_track(int sleep_time)
         int gchild_note = 0;
         pid_t gchild_pid = -1;
         int done = 0;
+        char *kev_str;
         
         while (!done)
         {
@@ -183,7 +183,9 @@ proc_track(int sleep_time)
             if (kevp == NULL) {
                 done = 1;
             } else {
-                printf(" -- Received kevent: %s\n", kevent_to_str(kevp));
+                kev_str = kevent_to_str(kevp);
+                printf(" -- Received kevent: %s\n", kev_str);
+                free(kev_str);
             
                 if ((kevp->fflags & NOTE_CHILD) && (kevp->fflags & NOTE_EXIT)) {
                     errx(1, "NOTE_CHILD and NOTE_EXIT in same kevent: %s", kevent_to_str(kevp));

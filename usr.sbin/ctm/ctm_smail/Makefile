@@ -1,13 +1,12 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/usr.sbin/ctm/ctm_smail/Makefile 276486 2014-12-31 23:25:37Z ngie $
+# $FreeBSD: stable/11/usr.sbin/ctm/ctm_smail/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${.CURDIR}/../ctm_rmail
+.PATH: ${.CURDIR:H}/ctm_rmail
 
 PROG=	ctm_smail
 MAN=
 SRCS=	ctm_smail.c error.c
 
-CFLAGS+= -I${.CURDIR}/../ctm_rmail
+CFLAGS+= -I${.CURDIR:H}/ctm_rmail
 
 WARNS?=	2
 

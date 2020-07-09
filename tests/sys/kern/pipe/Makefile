@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/kern/pipe/Makefile 290914 2015-11-16 05:38:40Z ngie $
+# $FreeBSD: stable/11/tests/sys/kern/pipe/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/kern/pipe
 

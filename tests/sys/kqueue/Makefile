@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/kqueue/Makefile 313508 2017-02-10 02:29:39Z ngie $
+# $FreeBSD: stable/11/tests/sys/kqueue/Makefile 309469 2016-12-03 02:55:19Z ngie $
 
 TESTSRC=	${SRCTOP}/contrib/netbsd-tests/kernel/kqueue
 

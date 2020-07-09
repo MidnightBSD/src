@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2011 Giorgos Keramidas. All rights reserved.
  * Copyright (c) 2007 Diomidis Spinellis. All rights reserved.
@@ -25,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tests/sys/kern/acct/acct_test.c 305228 2016-09-01 19:08:07Z ngie $");
+__FBSDID("$FreeBSD: stable/11/tests/sys/kern/acct/acct_test.c 304947 2016-08-28 07:10:48Z ngie $");
 
 #include <sys/types.h>
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2005 Michael J. Silbersack <silby@freebsd.org> 
  *  All rights reserved.
@@ -33,7 +32,7 @@
 #include <unistd.h>
 
 /*
- * $FreeBSD: stable/10/tests/sys/kern/pipe/pipe_overcommit1_test.c 293144 2016-01-04 07:09:29Z ngie $
+ * $FreeBSD: stable/11/tests/sys/kern/pipe/pipe_overcommit1_test.c 292822 2015-12-28 02:36:57Z ngie $
  * This program just allocates as many pipes as it can to ensure
  * that using up all pipe memory doesn't cause a panic.
  */

@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/fs/tmpfs/Makefile 319007 2017-05-27 23:04:48Z ngie $
+# $FreeBSD: stable/11/tests/sys/fs/tmpfs/Makefile 319005 2017-05-27 22:59:23Z ngie $
 
 PACKAGE=		tests
 
@@ -36,8 +35,8 @@ NETBSD_ATF_TESTS_SH+=	truncate_test
 NETBSD_ATF_TESTS_SH+=	vnd_test
 NETBSD_ATF_TESTS_SH+=	vnode_leak_test
 
-FILES+=			h_funcs.subr
-FILESDIR=		${TESTSDIR}
+${PACKAGE}FILES+=	h_funcs.subr
+${PACKAGE}FILESDIR=	${TESTSDIR}
 
 PROGS+=			h_tools
 BINDIR.h_tools=		${TESTSDIR}

@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +28,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge ports.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 310903 2016-12-31 10:34:09Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/geom/class/uzip/1_test.sh 293821 2016-01-13 09:14:27Z ngie $
 
 testsdir=$(dirname $0)
 . $testsdir/conf.sh
@@ -14,7 +14,7 @@ sleep 1
 mount -o ro /dev/${us0}.uzip "${mntpoint}" || exit 1
 
 #cat "${mntpoint}/etalon.txt"
-diff -I '\$MidnightBSD.*\$' -u $testsdir/etalon/etalon.txt "${mntpoint}/etalon.txt"
+diff -I '\$FreeBSD.*\$' -u $testsdir/etalon/etalon.txt "${mntpoint}/etalon.txt"
 if [ $? -eq 0 ]; then
 	echo "ok 1"
 else

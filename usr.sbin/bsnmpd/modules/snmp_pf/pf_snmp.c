@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Philip Paeps <philip@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 310913 2016-12-31 10:45:01Z ngie $
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_pf/pf_snmp.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>

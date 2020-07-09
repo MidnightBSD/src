@@ -10,9 +10,27 @@
     games
     ..
     include
+        private
+            bsdstat
+            ..
+            ucl
+            ..
+        ..
     ..
     lib
         aout
+        ..
+        clang
+            8.0.1
+                include
+                    sanitizer
+                    ..
+                ..
+                lib
+                    freebsd
+                    ..
+                ..
+            ..
         ..
         compat
             aout
@@ -24,15 +42,9 @@
         ..
         i18n
         ..
-        private
-        ..
-    ..
-    lib32
-        dtrace
-        ..
-        i18n
-        ..
-        private
+        libxo
+            encoder
+            ..
         ..
     ..
     libdata
@@ -108,6 +120,8 @@
         ..
         bsdinstall
         ..
+        dwatch
+        ..
         hyperv
         ..
         lpr
@@ -166,9 +180,13 @@
             uk_UA.KOI8-U
             ..
         ..
+        certs
+            blacklisted
+            ..
+            trusted
+            ..
+        ..
         dict
-		special
-		..
         ..
         doc
             IPv6
@@ -178,12 +196,6 @@
             atm
             ..
             legal
-                intel_ipw
-                ..
-                intel_iwi
-                ..
-                intel_wpi
-                ..
             ..
             llvm
                 clang
@@ -307,8 +319,6 @@
             ..
         ..
         dtrace
-            toolkit
-            ..
         ..
         examples
             IPv6
@@ -329,7 +339,11 @@
             ..
             diskless
             ..
+            dma
+            ..
             drivers
+            ..
+            dwatch
             ..
             etc
                 defaults

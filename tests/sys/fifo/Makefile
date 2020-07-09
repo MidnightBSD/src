@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/fifo/Makefile 282067 2015-04-27 08:15:17Z ngie $
+# $FreeBSD: stable/11/tests/sys/fifo/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/sys/fifo
 

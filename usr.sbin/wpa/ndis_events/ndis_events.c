@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/wpa/ndis_events/ndis_events.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This program simulates the behavior of the ndis_events utility
@@ -49,7 +49,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/sysctl.h>
 #include <net/if.h>
 #include <net/if_dl.h>
-#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>

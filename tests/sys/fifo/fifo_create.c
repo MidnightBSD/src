@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005-2008 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/tests/sys/fifo/fifo_create.c 281450 2015-04-12 06:18:24Z ngie $
+ * $FreeBSD: stable/11/tests/sys/fifo/fifo_create.c 281450 2015-04-12 06:18:24Z ngie $
  */
 
 #include <sys/stat.h>

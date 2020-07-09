@@ -1,8 +1,4 @@
-# $MidnightBSD$
-#
-# Author: Harti Brandt <harti@freebsd.org>
-
-CONTRIB=${.CURDIR}/../../../contrib/bsnmp
+CONTRIB=${SRCTOP}/contrib/bsnmp
 .PATH: ${CONTRIB}/gensnmptree
 
 PROG=	gensnmptree

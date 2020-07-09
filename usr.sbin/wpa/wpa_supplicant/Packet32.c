@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/wpa/wpa_supplicant/Packet32.c 331722 2018-03-29 02:50:57Z eadler $");
 
 /*
  * This file implements a small portion of the Winpcap API for the
@@ -49,7 +49,6 @@ __MBSDID("$MidnightBSD$");
 #include <sys/fcntl.h>
 #include <net/if.h>
 #include <net/if_dl.h>
-#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -104,7 +103,7 @@ struct adapter {
 PCHAR
 PacketGetVersion(void)
 {
-	return("MidnightBSD WinPcap compatibility shim v1.0");
+	return("FreeBSD WinPcap compatibility shim v1.0");
 }
 
 void *
@@ -363,7 +362,13 @@ PacketCloseAdapter(void *iface)
 	return;
 }
 
-#if __MidnightBSD_version < 1000
+#if __FreeBSD_version < 600000
+
+/*
+ * The version of libpcap in FreeBSD 5.2.1 doesn't have these routines.
+ * Call me insane if you will, but I still run 5.2.1 on my laptop, and
+ * I'd like to use WPA there.
+ */
 
 int
 pcap_get_selectable_fd(pcap_t *p)

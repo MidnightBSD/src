@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/tests/sys/mac/bsdextended/matches_test.sh 307715 2016-10-21 08:22:39Z ngie $
 #
 
 uidrange="60000:100000"

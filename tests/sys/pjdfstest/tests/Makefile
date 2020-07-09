@@ -1,15 +1,14 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/pjdfstest/tests/Makefile 313791 2017-02-16 05:17:40Z ngie $
+# $FreeBSD: stable/11/tests/sys/pjdfstest/tests/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
+PACKAGE=	tests
 PJDFSTEST_SRCDIR=	${SRCTOP}/contrib/pjdfstest
 
 TESTSDIR=	${TESTSBASE}/sys/pjdfstest
 
 .PATH: ${.CURDIR}
 
-FILESDIR=	${TESTSDIR}
-FILES=		conf
-FILES+=		misc.sh
+${PACKAGE}FILES+=	conf
+${PACKAGE}FILES+=	misc.sh
 CLEANFILES+=	misc.sh misc.sh.tmp
 
 misc.sh: ${PJDFSTEST_SRCDIR}/tests/misc.sh

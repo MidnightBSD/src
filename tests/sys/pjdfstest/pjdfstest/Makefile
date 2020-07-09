@@ -1,9 +1,8 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/sys/pjdfstest/pjdfstest/Makefile 291815 2015-12-04 18:59:20Z bdrewery $
+# $FreeBSD: stable/11/tests/sys/pjdfstest/pjdfstest/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
-TOP=		${.CURDIR:H:H:H:H}
+PACKAGE=	tests
 
-.PATH: ${TOP}/contrib/pjdfstest
+.PATH: ${SRCTOP}/contrib/pjdfstest
 
 BINDIR=		${TESTSBASE}/sys/pjdfstest
 PROG=		pjdfstest

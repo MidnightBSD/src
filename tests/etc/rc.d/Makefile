@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tests/etc/rc.d/Makefile 281491 2015-04-13 10:30:30Z ngie $
+# $FreeBSD: stable/11/tests/etc/rc.d/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 TESTSDIR=	${TESTSBASE}/etc/rc.d
 

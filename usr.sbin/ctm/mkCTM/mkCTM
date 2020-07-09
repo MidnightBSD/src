@@ -1,6 +1,6 @@
 #!/usr/local/bin/tclsh7.4
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/ctm/mkCTM/mkCTM 108533 2003-01-01 18:49:04Z schweikh $
 
 #############################################################################
 ### Do we already have this delta ?
