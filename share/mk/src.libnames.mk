@@ -221,7 +221,7 @@ _DP_archive+=	crypto
 .else
 _DP_archive+=	md
 .endif
-_DP_sqlite3=	m pthread
+_DP_sqlite3=	m pthread z
 _DP_ssl=	crypto
 _DP_ssh=	crypto crypt z
 .if ${MK_LDNS} != "no"
