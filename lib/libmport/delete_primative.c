@@ -89,8 +89,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 
     /* get the file count for the progress meter */
     if (mport_db_prepare(mport->db, &stmt,
-                         "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE,
-                         ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pack->name) != MPORT_OK)
+                         "SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q", ASSET_FILE,
+                         ASSET_SAMPLE, ASSET_SAMPLE_OWNER_MODE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pack->name) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
     switch (sqlite3_step(stmt)) {
@@ -163,6 +163,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
             case ASSET_SHELL:
                 /* falls through */
             case ASSET_SAMPLE:
+		/* falls through */
+            case ASSET_SAMPLE_OWNER_MODE:
                 (mport->progress_step_cb)(++current, total, file);
 
                 if (lstat(file, &st) != 0) {
@@ -177,7 +179,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
                     if (checksum == NULL || md5 == NULL || strcmp(md5, checksum) != 0)
                         mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 
-                    if (type == ASSET_SAMPLE) {
+                    if (type == ASSET_SAMPLE || type == ASSET_SAMPLE_OWNER_MODE) {
                         char sample_md5[33];
                         char nonSample[FILENAME_MAX];
                         strlcpy(nonSample, file, FILENAME_MAX);

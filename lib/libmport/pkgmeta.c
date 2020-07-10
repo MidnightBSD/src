@@ -55,24 +55,34 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 
 	free(pack->name);
 	pack->name = NULL;
+
 	free(pack->version);
 	pack->version = NULL;
+
 	free(pack->lang);
 	pack->lang = NULL;
+
 	free(pack->comment);
 	pack->comment = NULL;
+	
 	free(pack->desc);
 	pack->desc = NULL;
+
 	free(pack->prefix);
 	pack->prefix = NULL;
+
 	free(pack->origin);
 	pack->origin = NULL;
+
 	free(pack->os_release);
 	pack->os_release = NULL;
+
 	free(pack->cpe);
 	pack->cpe = NULL;
+
 	free(pack->deprecated);
 	pack->deprecated = NULL;
+
 	free(pack->flavor);
 	pack->flavor = NULL;
 
@@ -84,8 +94,8 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 			i++;
 		}
 	}
-
 	free(pack->categories);
+	pack->categories = NULL;
 	free(pack);
 }
 
@@ -94,11 +104,16 @@ MPORT_PUBLIC_API void
 mport_pkgmeta_vec_free(mportPackageMeta **vec)
 {
     int i;
+
+    if (vec == NULL) 
+	return;
+
     for (i = 0; *(vec + i) != NULL; i++) {
-        mport_pkgmeta_free(*(vec + i));
+	mportPackageMeta *pack = *(vec + i);
+        mport_pkgmeta_free(pack);
     }
 
-    free(vec);
+//    free(vec);
 }
 
 

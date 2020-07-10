@@ -121,13 +121,15 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
             if (cmnd == NULL)
                 RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
 
-			entry->checksum = NULL; /* checksum is only used by bundle read install */
+		entry->checksum = NULL; /* checksum is only used by bundle read install */
 			entry->type = parse_command(cmnd);
 		if (entry->type == ASSET_FILE_OWNER_MODE)
 			parse_file_owner_mode(&entry, cmnd);
 		if (entry->type == ASSET_DIR_OWNER_MODE) {
 			parse_file_owner_mode(&entry, &cmnd[3]);
 		}
+		if (entry->type == ASSET_SAMPLE_OWNER_MODE)
+			parse_file_owner_mode(&entry, &cmnd[6]);
         } else {
             entry->type = ASSET_FILE;
         }
@@ -276,6 +278,8 @@ parse_command(const char *s) {
         return ASSET_OPTION;
     if (STRING_EQ(s, "sample"))
         return ASSET_SAMPLE;
+    if (strncmp(s, "sample(", 7) == 0)
+	return ASSET_SAMPLE_OWNER_MODE;
     if (STRING_EQ(s, "shell"))
         return ASSET_SHELL;
 

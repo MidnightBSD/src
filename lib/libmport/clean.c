@@ -77,12 +77,18 @@ mport_clean_oldpackages(mportInstance *mport)
 			    continue;
 
 		    if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK) {
+ 		  	    mport_call_msg_cb(mport, "failed to search index %s: ",  mport_err_string());
 			    continue;
 		    }
 
+		    asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
+		    if (path == NULL) {
+                        if (indexEntry != NULL)
+			    mport_index_entry_free_vec(indexEntry); 
+                        continue;                                                                                               
+                    }   
+                                  
 		    if (indexEntry == NULL || *indexEntry == NULL) {
-			    asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-			    if (path != NULL) {
 				    if (unlink(path) < 0) {
 					    error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",
 					                            path, strerror(errno));
@@ -90,11 +96,26 @@ mport_clean_oldpackages(mportInstance *mport)
 				    } else {
 					    deleted++;
 				    }
-				    free(path);
-			    }
+                    } else if (mport_verify_hash(path, (*indexEntry)->hash) == 0) {
+                    		    if (unlink(path) < 0) {                                                                                                               
+
+                                            error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",                                                      
+
+                                                                    path, strerror(errno));                                                                               
+
+                                            mport_call_msg_cb(mport, "%s\n", mport_err_string());                                                                         
+
+                                    } else {                                                                                                                              
+
+                                            deleted++;                                                                                                                    
+
+                                    }                                                                                                                                     
+			    mport_index_entry_free_vec(indexEntry);
 		    } else {
 			    mport_index_entry_free_vec(indexEntry);
 		    }
+
+		    free(path);
 	    }
 
 	    closedir(d);
