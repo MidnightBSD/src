@@ -197,18 +197,18 @@ mport_rmtree(const char *filename)
  * Copy file fromname to toname 
  */
 int
-mport_copy_file(const char *fromname, const char *toname)
+mport_copy_file(const char *fromName, const char *toName)
 {
     char buf[BUFSIZ];
     size_t size;
 
-    FILE *fsrc = fopen(fromname, "rb");
+    FILE *fsrc = fopen(fromName, "re");
     if (fsrc == NULL)
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open source file for copying %s: %s", fromname, strerror(errno));
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open source file for copying %s: %s", fromName, strerror(errno));
 
-    FILE *fdest = fopen(toname, "wb");
+    FILE *fdest = fopen(toName, "we");
     if (fdest == NULL)
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open destination file for copying %s: %s", toname, strerror(errno));
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open destination file for copying %s: %s", toName, strerror(errno));
 
     while ((size = fread(buf, 1, BUFSIZ, fsrc)) > 0) {
         fwrite(buf, 1, size, fdest);

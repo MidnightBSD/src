@@ -149,8 +149,9 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 	__block char *err;
 
 	if (mport_db_prepare(mport->db, &count,
-	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK) {
+	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, ASSET_SAMPLE_OWNER_MODE,
+                             pkg_name) != MPORT_OK) {
 		sqlite3_finalize(count);
 		RETURN_CURRENT_ERROR;
 	}
@@ -258,8 +259,9 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 		if (sptr != NULL) {
 			sptr[0] = '\0'; /* hack off .sample */
 			if (!mport_file_exists(nonSample)) {
-				if (mport_copy_file(file, nonSample) != MPORT_OK)
+				if (mport_copy_file(file, nonSample) != MPORT_OK) {
 					RETURN_CURRENT_ERROR;
+				}
 			}
 		}
 	}
@@ -496,6 +498,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			case ASSET_SHELL:
 				/* FALLS THROUGH */
 			case ASSET_SAMPLE:
+				/* FALLS THROUGH */
+			case ASSET_SAMPLE_OWNER_MODE:
 				if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
 					goto ERROR;
 
@@ -505,7 +509,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
 				}
 
-				if (e->type == ASSET_SAMPLE)
+				if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE)
 					for (int ch = 0; ch < FILENAME_MAX; ch++) {
 						if (file[ch] == '\0')
 							break;
@@ -531,7 +535,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				}
 
 				if (S_ISREG(sb.st_mode)) {
-					if (e->type == ASSET_FILE_OWNER_MODE) {
+					if (e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 						/* Test for owner and group settings, otherwise roll with our default. */
 						if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' &&
 						    e->group[0] != '\0') {
@@ -581,7 +585,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
 							goto ERROR;
 						}
-						if (e->type == ASSET_FILE_OWNER_MODE && e->mode != NULL) {
+						if ((e->type == ASSET_SAMPLE_OWNER_MODE ||
+						     e->type == ASSET_FILE_OWNER_MODE) && e->mode != NULL) {
 							if ((set = setmode(e->mode)) == NULL) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
 								goto ERROR;
@@ -604,14 +609,16 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					if (e->type == ASSET_SHELL && mport_shell_register(file) != MPORT_OK) {
 						goto ERROR;
 					}
+				}
 
 					/* for sample files, if we don't have an existing file, make a new one */
-					if (e->type == ASSET_SAMPLE && create_sample_file(mport, cwd, e->data) != MPORT_OK) {
+					if ((e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) && 
+					    create_sample_file(mport, cwd, e->data) != MPORT_OK) {
 						SET_ERRORX(MPORT_ERR_FATAL, "Unable to create sample file from %s",
 						           file);
 						goto ERROR;
 					}
-				}
+
 
 				(mport->progress_step_cb)(++file_count, file_total, file);
 
@@ -634,7 +641,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			    return;
 		    }
 		    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
-		        e->type == ASSET_FILE_OWNER_MODE) {
+		        e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 			    /* don't put the root in the database! */
 			    if (sqlite3_bind_text(insert, 2, filePtr + strlen(mport->root), -1, SQLITE_STATIC) !=
 			        SQLITE_OK) {
@@ -764,6 +771,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			    return;
 		    }
 
+		    sqlite3_clear_bindings(insert);
 		    sqlite3_reset(insert);
 		});
 
@@ -952,7 +960,7 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 		/* if we couldn't stat the file, we assume there isn't a pkg-msg */
 		return MPORT_OK;
 
-	if ((file = fopen(filename, "r")) == NULL)
+	if ((file = fopen(filename, "re")) == NULL)
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
 	if ((buf = (char *) calloc((size_t) (st.st_size + 1), sizeof(char))) == NULL)

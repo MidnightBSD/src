@@ -89,6 +89,8 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 			case ASSET_FILE:
 				/* FALLS THROUGH */
 			case ASSET_SAMPLE:
+				/* FALLS THROUGH */
+			case ASSET_SAMPLE_OWNER_MODE:
 				if (lstat(file, &st) != 0) {
 					mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
 					break; /* next asset */
