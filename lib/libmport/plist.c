@@ -276,6 +276,8 @@ parse_command(const char *s) {
         return ASSET_OPTION;
     if (STRING_EQ(s, "sample"))
         return ASSET_SAMPLE;
+    if (strncmp(s, "sample(", 7) == 0)
+	return ASSET_SAMPLE_OWNER_MODE;
     if (STRING_EQ(s, "shell"))
         return ASSET_SHELL;
 

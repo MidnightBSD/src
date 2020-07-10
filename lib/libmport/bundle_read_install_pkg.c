@@ -149,8 +149,9 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 	__block char *err;
 
 	if (mport_db_prepare(mport->db, &count,
-	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, pkg_name) != MPORT_OK) {
+	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, ASSET_SAMPLE_OWNER_MODE,
+                             pkg_name) != MPORT_OK) {
 		sqlite3_finalize(count);
 		RETURN_CURRENT_ERROR;
 	}
@@ -496,6 +497,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			case ASSET_SHELL:
 				/* FALLS THROUGH */
 			case ASSET_SAMPLE:
+				/* FALLS THROUGH */
+			case ASSET_SAMPLE_OWNER_MODE:
 				if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
 					goto ERROR;
 
@@ -505,7 +508,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					(void) snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, e->data);
 				}
 
-				if (e->type == ASSET_SAMPLE)
+				if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE)
 					for (int ch = 0; ch < FILENAME_MAX; ch++) {
 						if (file[ch] == '\0')
 							break;
@@ -606,7 +609,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					}
 
 					/* for sample files, if we don't have an existing file, make a new one */
-					if (e->type == ASSET_SAMPLE && create_sample_file(mport, cwd, e->data) != MPORT_OK) {
+					if ((e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) && 
+					    create_sample_file(mport, cwd, e->data) != MPORT_OK) {
 						SET_ERRORX(MPORT_ERR_FATAL, "Unable to create sample file from %s",
 						           file);
 						goto ERROR;
@@ -634,7 +638,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			    return;
 		    }
 		    if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
-		        e->type == ASSET_FILE_OWNER_MODE) {
+		        e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 			    /* don't put the root in the database! */
 			    if (sqlite3_bind_text(insert, 2, filePtr + strlen(mport->root), -1, SQLITE_STATIC) !=
 			        SQLITE_OK) {

@@ -169,7 +169,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 		}
 
 		if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
-		    e->type == ASSET_FILE_OWNER_MODE) {
+		    e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 			/* Don't prepend cwd onto absolute file paths (this is useful for update) */
 			if (e->data[0] == '/') {
 				(void) snprintf(file, FILENAME_MAX, "%s%s", extra->sourcedir, e->data);
@@ -177,7 +177,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 				(void) snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
 			}
 
-			if (e->type == ASSET_SAMPLE) {
+			if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 				for (int ch = 0; ch < FILENAME_MAX; ch++) {
 					if (file[ch] == '\0')
 						break;
@@ -584,7 +584,7 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 		if (e->type == ASSET_CWD)
 			cwd = e->data == NULL ? pack->prefix : e->data;
 
-		if (e->type != ASSET_FILE && e->type != ASSET_SAMPLE && 
+		if (e->type != ASSET_FILE && e->type != ASSET_SAMPLE && e->type != ASSET_SAMPLE_OWNER_MODE &&
 		    e->type != ASSET_SHELL && e->type != ASSET_FILE_OWNER_MODE) {
 			continue;
 		}
@@ -596,7 +596,7 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 			(void) snprintf(filename, FILENAME_MAX, "%s/%s/%s", extra->sourcedir, cwd, e->data);
 		}
 
-		if (e->type == ASSET_SAMPLE) {
+		if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 			// eat the second filename if it exists.
 			for (int ch = 0; ch < FILENAME_MAX; ch++) {
 				if (filename[ch] == '\0')
