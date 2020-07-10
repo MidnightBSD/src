@@ -32,7 +32,7 @@
 # $MidnightBSD$
 
 TYPE="MidnightBSD"
-REVISION="1.1.3"
+REVISION="1.1.4"
 RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
 

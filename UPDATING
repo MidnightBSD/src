@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20200710:
+	MidnightBSD 1.1.4 RELEASE
+	update libmport to fix several package installation bugs.
+
 20191018:
 	Update acpi ibm module to support some newer thinkpads. 
 
