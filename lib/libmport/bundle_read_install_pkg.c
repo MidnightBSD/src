@@ -534,7 +534,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				}
 
 				if (S_ISREG(sb.st_mode)) {
-					if (e->type == ASSET_FILE_OWNER_MODE) {
+					if (e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
 						/* Test for owner and group settings, otherwise roll with our default. */
 						if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' &&
 						    e->group[0] != '\0') {
@@ -584,7 +584,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
 							goto ERROR;
 						}
-						if (e->type == ASSET_FILE_OWNER_MODE && e->mode != NULL) {
+						if ((e->type == ASSET_SAMPLE_OWNER_MODE || 
+						     e->type == ASSET_FILE_OWNER_MODE) && e->mode != NULL) {
 							if ((set = setmode(e->mode)) == NULL) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
 								goto ERROR;
