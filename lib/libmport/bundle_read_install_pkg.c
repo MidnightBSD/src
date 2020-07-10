@@ -259,8 +259,9 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 		if (sptr != NULL) {
 			sptr[0] = '\0'; /* hack off .sample */
 			if (!mport_file_exists(nonSample)) {
-				if (mport_copy_file(file, nonSample) != MPORT_OK)
+				if (mport_copy_file(file, nonSample) != MPORT_OK) {
 					RETURN_CURRENT_ERROR;
+				}
 			}
 		}
 	}
@@ -584,7 +585,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
 							goto ERROR;
 						}
-						if ((e->type == ASSET_SAMPLE_OWNER_MODE || 
+						if ((e->type == ASSET_SAMPLE_OWNER_MODE ||
 						     e->type == ASSET_FILE_OWNER_MODE) && e->mode != NULL) {
 							if ((set = setmode(e->mode)) == NULL) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
@@ -608,6 +609,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					if (e->type == ASSET_SHELL && mport_shell_register(file) != MPORT_OK) {
 						goto ERROR;
 					}
+				}
 
 					/* for sample files, if we don't have an existing file, make a new one */
 					if ((e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) && 
@@ -616,7 +618,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						           file);
 						goto ERROR;
 					}
-				}
+
 
 				(mport->progress_step_cb)(++file_count, file_total, file);
 
@@ -958,7 +960,7 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 		/* if we couldn't stat the file, we assume there isn't a pkg-msg */
 		return MPORT_OK;
 
-	if ((file = fopen(filename, "r")) == NULL)
+	if ((file = fopen(filename, "re")) == NULL)
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
 	if ((buf = (char *) calloc((size_t) (st.st_size + 1), sizeof(char))) == NULL)
