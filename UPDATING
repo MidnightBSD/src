@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20200710:
+        MidnightBSD 1.2.4 RELEASE
+        update libmport to fix several package installation bugs
+
 20200709:
+	MidnightBSD 1.2.3 RELEASE
+
 	Security update for sqlite3. Update to  3.32.3
 
 	Update unbound to 1.10.1
