@@ -580,7 +580,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 					}
 
 					/* Set the file permissions, assumes non NFSv4 */
-					if (mode != NULL) {
+					if (mode != NULL || e->type == ASSET_SAMPLE_OWNER_MODE || e->type == ASSET_FILE_OWNER_MODE) {
 						if (stat(file, &sb)) {
 							SET_ERRORX(MPORT_ERR_FATAL, "Unable to stat file %s", file);
 							goto ERROR;
@@ -599,6 +599,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						}
 						newmode = getmode(set, sb.st_mode);
 						free(set);
+
 						if (chmod(file, newmode)) {
 							SET_ERROR(MPORT_ERR_FATAL, "Unable to set file permissions");
 							goto ERROR;
