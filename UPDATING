@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20200723:
+	Fix a 30 year old bug in mountd.
+
 20200710:
         MidnightBSD 1.2.4 RELEASE
         update libmport to fix several package installation bugs
