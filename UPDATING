@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20200807:
+	A missing length validation code common to these three drivers means that a
+	malicious USB device could write beyond the end of an allocated network
+	packet buffer.
+
+	- smsc(4), supporting SMSC (now Microchip) devices
+	- muge(4), supporting Microchip devices
+	- cdceem(4), supporting USB Communication Device Class compatible devices
+
 20200709:
 	Update SQLite3 to 3.32.3.
 
