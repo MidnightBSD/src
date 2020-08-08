@@ -9,6 +9,16 @@ Updating Information for MidnightBSD users.
 	- muge(4), supporting Microchip devices
 	- cdceem(4), supporting USB Communication Device Class compatible devices
 
+	sendmsg security fix
+
+	When handling a 32-bit sendmsg(2) call, the compat32 subsystem copies the
+	control message to be transmitted (if any) into kernel memory, and adjusts
+	alignment of control message headers.  The code which performs this work
+	contained a time-of-check to time-of-use (TOCTOU) vulnerability which allows a
+	malicious userspace program to modify control message headers after they were
+	validated by the kernel.
+
+
 20200723:
 	MidnightBSD 1.2.5 RELEASE
 	Fix a 30 year old bug in mountd.
