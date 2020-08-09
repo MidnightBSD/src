@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.resume 340966 2018-11-26 13:30:00Z eugen $
 #
 
 # sample run command file for APM Resume Event
@@ -54,5 +54,23 @@ fi
 
 /usr/bin/logger -t $subsystem resumed at `/bin/date +'%Y%m%d %H:%M:%S'`
 /bin/sync && /bin/sync && /bin/sync
+
+. /etc/rc.subr
+
+load_rc_config
+
+rcorder_opts="-k resume"
+
+case ${local_startup} in
+[Nn][Oo] | '') ;;
+*)     find_local_scripts_new ;;
+esac
+
+files=`rcorder ${rcorder_opts} /etc/rc.d/* ${local_rc} 2>/dev/null`
+
+for _rc_elem in $files; do
+	debug "run_rc_script $_rc_elem resume"
+	run_rc_script $_rc_elem resume
+done
 
 exit 0
