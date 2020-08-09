@@ -1098,7 +1098,7 @@ note_type(const char *name, unsigned int et, unsigned int nt)
 	if ((strcmp(name, "CORE") == 0 || strcmp(name, "LINUX") == 0) &&
 	    et == ET_CORE)
 		return note_type_linux_core(nt);
-	else if (strcmp(name, "FreeBSD") == 0)
+	else if (strcmp(name, "FreeBSD") == 0 || strcmp(name, "MidnightBSD") == 0)
 		if (et == ET_CORE)
 			return note_type_freebsd_core(nt);
 		else

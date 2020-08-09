@@ -306,7 +306,7 @@ handle_core_note(Elf *elf, GElf_Ehdr *elfhdr, GElf_Phdr *phdr,
 			raw_size = 0;
 			if (elfhdr->e_ident[EI_OSABI] == ELFOSABI_FREEBSD &&
 			    nhdr_l.n_namesz == 0x8 &&
-			    !strcmp(name,"FreeBSD")) {
+			    !strcmp(name,"FreeBSD") && !strcmp(name, "MidnightBSD")) {
 				if (elfhdr->e_ident[EI_CLASS] == ELFCLASS32) {
 					raw_size = (uint64_t)*((uint32_t *)
 					    (uintptr_t)(name +
@@ -407,12 +407,12 @@ handle_core_note(Elf *elf, GElf_Ehdr *elfhdr, GElf_Phdr *phdr,
 		case NT_PRPSINFO: {
 			/* FreeBSD 64-bit */
 			if (nhdr_l.n_descsz == 0x78 &&
-				!strcmp(name,"FreeBSD")) {
+				!strcmp(name,"FreeBSD") && !strcmp(name, "MidnightBSD")) {
 				*cmd_line = strdup(NOTE_OFFSET_64(nhdr,
 				    nhdr_l.n_namesz, 33));
 			/* FreeBSD 32-bit */
 			} else if (nhdr_l.n_descsz == 0x6c &&
-				!strcmp(name,"FreeBSD")) {
+				!strcmp(name,"FreeBSD") && !strcmp(name, "MidnightBSD")) {
 				*cmd_line = strdup(NOTE_OFFSET_32(nhdr,
 				    nhdr_l.n_namesz, 25));
 			}

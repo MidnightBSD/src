@@ -40,7 +40,7 @@
 
 #endif	/* __DragonFly__ */
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 
 /*
  * Define LIBELF_{ARCH,BYTEORDER,CLASS} based on the machine architecture.

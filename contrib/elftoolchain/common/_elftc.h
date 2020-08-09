@@ -290,8 +290,12 @@ struct name {							\
 #define	ELFTC_VCSID(ID)		__RCSID(ID)
 #endif
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) 
 #define	ELFTC_VCSID(ID)		__FBSDID(ID)
+#endif
+
+#if defined(__MidnightBSD__) 
+#define	ELFTC_VCSID(ID)		__MBSDID(ID)
 #endif
 
 #if defined(__APPLE__) || defined(__GLIBC__) || defined(__GNU__) || \
@@ -332,13 +336,13 @@ struct name {							\
 #ifndef	ELFTC_GETPROGNAME
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || \
-    defined(__minix) || defined(__NetBSD__)
+    defined(__minix) || defined(__NetBSD__) || defined(__MidnightBSD__)
 
 #include <stdlib.h>
 
 #define	ELFTC_GETPROGNAME()	getprogname()
 
-#endif	/* __DragonFly__ || __FreeBSD__ || __minix || __NetBSD__ */
+#endif	/* __DragonFly__ || __FreeBSD__ || __minix || __NetBSD__ || __MidnightBSD__ */
 
 
 #if defined(__GLIBC__) || defined(__linux__)
@@ -423,7 +427,7 @@ extern const char *__progname;
 #endif	/* __GLIBC__ || __linux__ */
 
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 
 #include <osreldate.h>
 #include <sys/endian.h>
