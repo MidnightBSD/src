@@ -384,6 +384,7 @@ enum	roff_tok {
 	MDOC_Eo,
 	MDOC_Fx,
 	MDOC_Ms,
+	MDOC_Mx,
 	MDOC_No,
 	MDOC_Ns,
 	MDOC_Nx,
