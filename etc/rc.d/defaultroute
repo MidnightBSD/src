@@ -2,17 +2,18 @@
 #
 # Wait for the default route to be up if DHCP is in use
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/defaultroute 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: defaultroute
-# REQUIRE: devd faith netif stf
+# REQUIRE: devd netif stf
 # KEYWORD: nojail
 
 . /etc/rc.subr
 . /etc/network.subr
 
 name="defaultroute"
+desc="Setup default router"
 start_cmd="defaultroute_start"
 stop_cmd=":"
 

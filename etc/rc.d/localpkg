@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/localpkg 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: localpkg
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="localpkg"
+desc="Run local init scripts"
 start_cmd="pkg_start"
 stop_cmd="pkg_stop"
 

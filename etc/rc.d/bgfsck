@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/bgfsck 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: bgfsck
@@ -9,7 +9,8 @@
 
 . /etc/rc.subr
 
-name="background-fsck"
+name="background_fsck"
+desc="Run fsck in background"
 rcvar="background_fsck"
 start_cmd="bgfsck_start"
 start_precmd="bgfsck_start_precmd"

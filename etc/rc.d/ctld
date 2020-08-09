@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ctld 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: ctld
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="ctld"
+desc="CAM Target Layer / iSCSI target daemon"
 rcvar="ctld_enable"
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/${name}"

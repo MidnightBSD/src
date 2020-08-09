@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/newsyslog 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: newsyslog
 # REQUIRE: FILESYSTEMS mountcritremote
@@ -8,6 +9,7 @@
 . /etc/rc.subr
 
 name="newsyslog"
+desc="Logfile rotation"
 rcvar="newsyslog_enable"
 required_files="/etc/newsyslog.conf"
 command="/usr/sbin/${name}"

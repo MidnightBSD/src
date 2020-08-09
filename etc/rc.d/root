@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/root 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: root
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="root"
+desc="Mount root filesystem read/write"
 start_cmd="root_start"
 stop_cmd=":"
 

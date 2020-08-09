@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/swaplate 308865 2016-11-19 20:02:49Z jilles $
+#
 
 # PROVIDE: swaplate
 # REQUIRE: mountlate
@@ -9,6 +10,7 @@
 . /etc/rc.subr
 
 name="swaplate"
+desc="Setup late swap space"
 start_cmd='/sbin/swapon -aLq'
 stop_cmd='/sbin/swapoff -aLq'
 

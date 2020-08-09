@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ftpd 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: ftpd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="ftpd"
+desc="Internet File Transfer Protocol daemon"
 rcvar="ftpd_enable"
 command="/usr/libexec/${name}"
 pidfile="/var/run/${name}.pid"

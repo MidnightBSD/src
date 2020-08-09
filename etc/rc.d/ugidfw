@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ugidfw 298514 2016-04-23 16:10:54Z lme $
 
 # PROVIDE: ugidfw
 # REQUIRE: FILESYSTEMS
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="ugidfw"
+desc="Firewall-like access controls for file system objects"
 rcvar="ugidfw_enable"
 start_cmd="ugidfw_start"
 stop_cmd="ugidfw_stop"

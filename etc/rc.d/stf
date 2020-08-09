@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/stf 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: stf
@@ -10,6 +10,7 @@
 . /etc/network.subr
 
 name="stf"
+desc="6to4 tunnel interface"
 start_cmd="stf_up"
 stop_cmd="stf_down"
 

@@ -1,15 +1,17 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/autounmountd 332584 2018-04-16 15:54:38Z trasz $
 #
 
 # PROVIDE: autounmountd
-# REQUIRE: DAEMON
+# REQUIRE: FILESYSTEMS
+# BEFORE: DAEMON
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 name="autounmountd"
+desc="daemon unmounting automounted filesystems"
 rcvar="autofs_enable"
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/${name}"

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/devfs 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: devfs
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="devfs"
+desc="Device filesystem"
 start_cmd='devfs_start'
 stop_cmd=':'
 

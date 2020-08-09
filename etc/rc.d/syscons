@@ -24,7 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/syscons 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: syscons
 # REQUIRE: LOGIN
@@ -33,6 +34,7 @@
 . /etc/rc.subr
 
 name="syscons"
+desc="Configure the system console"
 extra_commands="setkeyboard"
 setkeyboard_cmd="syscons_setkeyboard"
 start_precmd="syscons_precmd"
@@ -138,7 +140,7 @@ uk.*)				echo uk;;
 us.iso.acc)			echo us.acc;;
 us.pc-ctrl)			echo us.ctrl;;
 us.iso)				echo us;;
-    esac
+	esac
 }
 
 kbdcontrol_load_keymap()

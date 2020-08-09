@@ -3,8 +3,8 @@
 # This file, originally written by Garrett A. Wollman, is in the public
 # domain.
 #
-# $FreeBSD: src/etc/rc.d/gbde,v 1.12.2.1 2005/08/16 08:39:36 pjd Exp $
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/gbde 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: disks
 # KEYWORD: nojail
@@ -12,6 +12,7 @@
 . /etc/rc.subr
 
 name="gbde"
+desc="GEOM Based Disk Encryption"
 start_precmd="find_gbde_devices start"
 stop_precmd="find_gbde_devices stop"
 start_cmd="gbde_start"

@@ -22,17 +22,18 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/bridge 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: bridge
-# REQUIRE: netif faith ppp stf
+# REQUIRE: netif ppp stf
 # KEYWORD: nojail
 
 . /etc/rc.subr
 . /etc/network.subr
 
 name="bridge"
+desc="Network bridge setup"
 start_cmd="bridge_start"
 stop_cmd="bridge_stop"
 cmd=""

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/auditd 298514 2016-04-23 16:10:54Z lme $
 #
 # Start up for the Audit daemon.
 #
@@ -13,6 +13,7 @@
 . /etc/rc.subr
 
 name="auditd"
+desc="Audit daemon"
 stop_cmd="auditd_stop"
 command="/usr/sbin/${name}"
 rcvar="auditd_enable"

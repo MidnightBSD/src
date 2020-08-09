@@ -1,10 +1,11 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/automount 332584 2018-04-16 15:54:38Z trasz $
 #
 
 # PROVIDE: automount
 # REQUIRE: nfsclient automountd
+# BEFORE: DAEMON
 # KEYWORD: nojail shutdown
 
 . /etc/rc.subr

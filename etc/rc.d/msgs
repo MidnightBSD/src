@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/msgs 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: msgs
 # REQUIRE: LOGIN
@@ -8,6 +9,7 @@
 . /etc/rc.subr
 
 name="msgs"
+desc="Make a bounds file for msgs(1)"
 start_cmd="msgs_start"
 stop_cmd=":"
 

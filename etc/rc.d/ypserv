@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ypserv 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: ypserv
 # REQUIRE: rpcbind
@@ -9,6 +10,7 @@
 . /etc/rc.subr
 
 name="ypserv"
+desc="NIS database server"
 rcvar="nis_server_enable"
 
 load_rc_config $name

@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# $FreeBSD: stable/11/etc/rc.d/zfsd 300906 2016-05-28 17:43:40Z asomers $
+#
+
+# PROVIDE: zfsd
+# REQUIRE: devd zfs
+# KEYWORD: nojail shutdown
+
+. /etc/rc.subr
+
+name="zfsd"
+rcvar="zfsd_enable"
+command="/usr/sbin/${name}"
+
+load_rc_config $name
+run_rc_command "$1"

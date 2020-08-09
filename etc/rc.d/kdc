@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/kdc 298844 2016-04-30 09:50:08Z ngie $
 #
 
 # PROVIDE: kdc
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name=kdc
+desc="Kerberos 5 server"
 rcvar=${name}_enable
 start_precmd=${name}_start_precmd
 

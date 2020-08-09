@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/dumpon 299839 2016-05-15 04:38:50Z ngie $
+#
 
 # PROVIDE: dumpon
 # BEFORE: disks
@@ -9,6 +10,7 @@
 . /etc/rc.subr
 
 name="dumpon"
+desc="Dump kernel corefiles from swap to disk"
 start_cmd="dumpon_start"
 stop_cmd="dumpon_stop"
 

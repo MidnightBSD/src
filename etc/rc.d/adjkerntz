@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/adjkerntz 273957 2014-11-02 01:47:27Z des $
 #
 
 # PROVIDE: adjkerntz
-# REQUIRE: FILESYSTEMS postrandom
+# REQUIRE: FILESYSTEMS
 # BEFORE: netif
 # KEYWORD: nojail
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/sysctl 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: sysctl
@@ -8,6 +8,7 @@
 . /etc/rc.subr
 
 name="sysctl"
+desc="Set sysctl variables from /etc/sysctl.conf and /etc/sysctl.conf.local"
 command="/sbin/sysctl"
 stop_cmd=":"
 start_cmd="sysctl_start"

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ypset 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: ypset
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="ypset"
+desc="tell ypbind(8) which YP server process to use"
 rcvar="nis_ypset_enable"
 
 load_rc_config $name

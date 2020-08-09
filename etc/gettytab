@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/gettytab 262955 2014-03-09 20:51:14Z marcel $
 #	from: @(#)gettytab	5.14 (Berkeley) 3/27/91
 #
 # Most of the table entries here are just copies of the old getty table,
@@ -216,6 +216,8 @@ al.115200:\
 	:al=root:tc=std.115200:
 al.230400:\
 	:al=root:tc=std.230400:
+al.Pc:\
+	:al=root:tc=Pc
 
 #
 # Entries for 3-wire serial terminals.  These don't supply carrier, so

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/local 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: local
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="local"
+desc="Run /etc/rc.local and /etc/shutdown.local"
 start_cmd="local_start"
 stop_cmd="local_stop"
 

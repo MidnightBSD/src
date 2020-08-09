@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/kld 298514 2016-04-23 16:10:54Z lme $
 #
 # PROVIDE: kld
 # REQUIRE: kldxref
@@ -33,6 +33,7 @@
 . /etc/rc.subr
 
 name="kld"
+desc="Load kernel modules"
 
 start_cmd="${name}_start"
 stop_cmd=':'

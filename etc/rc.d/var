@@ -24,7 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/var 299839 2016-05-15 04:38:50Z ngie $
+#
 
 # PROVIDE: var
 # REQUIRE: mountcritlocal
@@ -34,18 +35,19 @@
 . /etc/rc.subr
 
 name="var"
+desc="Populate /var directory"
 stop_cmd=':'
 
 load_rc_config $name
 
 populate_var()
 {
-	/usr/sbin/mtree -deU -f /etc/mtree/BSD.var.dist -p /var > /dev/null
+	/usr/sbin/mtree -deiU -f /etc/mtree/BSD.var.dist -p /var > /dev/null
 	case ${sendmail_enable} in
 	[Nn][Oo][Nn][Ee])
 		;;
 	*)
-		/usr/sbin/mtree -deU -f /etc/mtree/BSD.sendmail.dist -p / > /dev/null
+		/usr/sbin/mtree -deiU -f /etc/mtree/BSD.sendmail.dist -p / > /dev/null
 		;;
 	esac
 }

@@ -1,14 +1,16 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/pflog 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: pflog
-# REQUIRE: FILESYSTEMS netif FILESYSTEMS
+# REQUIRE: FILESYSTEMS netif
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 name="pflog"
+desc="Packet filter logging interface"
 rcvar="pflog_enable"
 command="/sbin/pflogd"
 pidfile="/var/run/pflogd.pid"

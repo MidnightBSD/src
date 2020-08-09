@@ -24,7 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/mdconfig 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: mdconfig
 # REQUIRE: swap root
@@ -32,6 +33,7 @@
 . /etc/rc.subr
 
 name="mdconfig"
+desc="Create and control memory disks"
 stop_cmd="mdconfig_stop"
 start_cmd="mdconfig_start"
 start_precmd='[ -n "${_mdconfig_list}" ]'

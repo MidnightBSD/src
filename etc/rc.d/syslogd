@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/syslogd 298514 2016-04-23 16:10:54Z lme $
+#
 
 # netif is required for lo0 because syslogd tries to open a local socket
 #
@@ -11,6 +12,7 @@
 . /etc/rc.subr
 
 name="syslogd"
+desc="System log daemon"
 rcvar="syslogd_enable"
 pidfile="/var/run/syslog.pid"
 command="/usr/sbin/${name}"

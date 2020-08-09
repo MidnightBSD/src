@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD$
+# $FreeBSD: stable/11/etc/rc.d/auditdistd 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: auditdistd
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="auditdistd"
+desc="Audit trail files distribution daemon"
 rcvar="${name}_enable"
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/${name}"

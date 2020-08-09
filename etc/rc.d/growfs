@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/growfs 332731 2018-04-18 16:22:23Z gjb $
 #
 
 # PROVIDE: growfs
@@ -41,6 +41,7 @@
 . /etc/rc.subr
 
 name="growfs"
+desc="Grow root partition to fill device"
 start_cmd="growfs_start"
 stop_cmd=":"
 rcvar="growfs_enable"

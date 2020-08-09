@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/zfs 308243 2016-11-03 08:34:24Z avg $
+#
 
 # PROVIDE: zfs
 # REQUIRE: zfsbe
@@ -9,6 +10,7 @@
 . /etc/rc.subr
 
 name="zfs"
+desc="Mount and share ZFS datasets"
 rcvar="zfs_enable"
 start_cmd="zfs_start"
 stop_cmd="zfs_stop"

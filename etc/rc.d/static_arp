@@ -26,7 +26,7 @@
 #
 # Configure static ARP table
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/static_arp 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: static_arp
@@ -37,6 +37,7 @@
 . /etc/network.subr
 
 name="static_arp"
+desc="Static ARP Configuration"
 start_cmd="static_arp_start"
 stop_cmd="static_arp_stop"
 

@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/securelevel 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: securelevel
 # REQUIRE: adjkerntz ipfw ipfilter pf
@@ -8,6 +9,7 @@
 . /etc/rc.subr
 
 name="securelevel"
+desc="Securelevel configuration"
 rcvar='kern_securelevel_enable'
 start_cmd="securelevel_start"
 stop_cmd=":"

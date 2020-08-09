@@ -1,5 +1,5 @@
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/etc.aarch64/ttys 333673 2018-05-16 13:18:37Z imp $
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
 # This file specifies various information about terminals on the system.
@@ -29,21 +29,21 @@
 # when going to single-user mode.
 console	none				unknown	off secure
 #
-ttyv0	"/usr/libexec/getty Pc"		xterm	off secure
+ttyv0	"/usr/libexec/getty Pc"		xterm	onifexists secure
 # Virtual terminals
-ttyv1	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv2	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv3	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv4	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv5	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv6	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv7	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv8	"/usr/local/bin/xdm -nodaemon"	xterm	off secure
-# Serial terminals. The 'dialup' keyword identifies dialin lines to login,
-# fingerd etc.
-ttyu0	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
-ttyu1	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
-ttyu2	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
-ttyu3	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyv1	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv2	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv3	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv4	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv5	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv6	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv7	"/usr/libexec/getty Pc"		xterm	onifexists secure
+#ttyv8	"/usr/local/bin/xdm -nodaemon"	xterm	onifexists secure
+# Serial terminals
+# The 'dialup' keyword identifies dialin lines to login, fingerd etc.
+ttyu0	"/usr/libexec/getty 3wire"	vt100	onifconsole  secure
+ttyu1	"/usr/libexec/getty 3wire"	vt100	onifconsole  secure
+ttyu2	"/usr/libexec/getty 3wire"	vt100	onifconsole  secure
+ttyu3	"/usr/libexec/getty 3wire"	vt100	onifconsole  secure
 # Dumb console
 dcons	"/usr/libexec/getty std.9600"	vt100	off secure
