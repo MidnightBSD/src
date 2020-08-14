@@ -1,6 +1,24 @@
 Updating Information for MidnightBSD users.
 
+20200813:
+	Fix several bugs with the base system.
+
+	Don't attempt to measure TSC skew in VMs with dtrace.
+
+	Fix a bug with em(4) driver for Intel Gigabit NICs related to link state.
+
+	Fix a crash with NFSv4 server.
+
+	USB xhci: Remove power bit from super speed root hub port status register to fix warm reset. 
+	Also set the max exit latency to 0 because we don't support link power management. 
+
+	Don't report stale signal info in ptrace_lwpinfo.
+
+	Audio: change default mic level to 25. 
+
 20200807:
+	MidnightBSD 1.2.6 RELEASE
+
 	A missing length validation code common to these three drivers means that a
 	malicious USB device could write beyond the end of an allocated network
 	packet buffer.
