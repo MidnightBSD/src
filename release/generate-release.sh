@@ -54,10 +54,10 @@ if [ $# -lt 2 ]; then
 	usage
 fi
 
-: ${SVNROOTBASE:=svn://svn.midnightbsd.org/svn/}
-: ${SVNROOTSRC:=${SVNROOTBASE}/src}
-: ${SVNROOTDOC:=${SVNROOTBASE}/doc}
-: ${SVNROOTPORTS:=${SVNROOTBASE}/mports}
+: ${SVNROOTBASE:=https://github.com/midnightbsd/}
+: ${SVNROOTSRC:=${SVNROOTBASE}/src.git}
+: ${SVNROOTDOC:=${SVNROOTBASE}/doc.git}
+: ${SVNROOTPORTS:=${SVNROOTBASE}/mports.git}
 : ${SVNROOT:=${SVNROOTSRC}} # for backward compatibility
 : ${SVN_CMD:=/usr/local/bin/svn}
 BRANCHSRC=$1
