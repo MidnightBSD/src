@@ -1,6 +1,15 @@
-This is the top level of the MidnightBSD source directory.  This file
-was last revised on:
-$MidnightBSD$
+This is the top level of the MidnightBSD source directory.  
+
+Source code is now on github at:
+https://github.com/MidnightBSD/src/
+
+Most users want to checkout a stable branch rather than use the current
+development branch called master. Look at the stable branches. 
+
+e.g. 
+cd /usr
+git clone https://github.com/midnightbsd/src.git
+git checkout stable/1.2
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
