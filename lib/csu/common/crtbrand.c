@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2008 Lucas Holt
  * Copyright 2000 David E. O'Brien, John D. Polstra.
@@ -26,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/elf_common.h>

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2012 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -25,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/elf_common.h>
