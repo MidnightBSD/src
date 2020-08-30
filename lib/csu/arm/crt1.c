@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/csu/arm/crt1.c 339300 2018-10-11 00:26:15Z emaste $");
 
 #include <sys/param.h>
 #include <sys/elf_common.h>
@@ -120,7 +119,7 @@ static const struct {
 } archtag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
 	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
 	.descsz = sizeof(MACHINE_ARCH),
-	.type = NT_MIDNIGHTBSD_ARCH_TAG,
+	.type = ARCH_NOTETYPE,
 	.name = NOTE_MIDNIGHTBSD_VENDOR,
 	.desc = MACHINE_ARCH
 };
