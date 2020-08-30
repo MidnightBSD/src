@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -594,6 +593,14 @@
  *    #define	__IDSTRING(name,string)	struct __hack
  */
 #define	__IDSTRING(name,string)	static const char name[] __unused = string
+#endif
+
+#ifndef	__MBSDID
+#if !defined(lint) && !defined(STRIP_MBSDID)
+#define	__MBSDID(s)	__IDSTRING(__CONCAT(__rcsid_,__LINE__),s)
+#else
+#define	__MBSDID(s)	struct __hack
+#endif
 #endif
 
 /*
