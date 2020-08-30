@@ -91,7 +91,7 @@ void	*bsearch(const void *, const void *, size_t,
 	    size_t, int (*)(const void * _Nonnull, const void *));
 void	*calloc(size_t, size_t) __malloc_like __result_use_check
 	     __alloc_size2(1, 2);
--int    clearenv(void);
+int	 clearenv(void);
 div_t	 div(int, int) __pure2;
 _Noreturn void	 exit(int);
 void	 free(void *);
