@@ -2296,7 +2296,7 @@ kerberos5/lib/libheimbase__L: lib/libthr__L
 kerberos5/lib/libheimipcc__L: kerberos5/lib/libroken__L kerberos5/lib/libheimbase__L lib/libthr__L
 .endif
 
-lib/libsqlite3__L: lib/libthr__L
+lib/libsqlite3__L: lib/libthr__L lib/msun__L lib/libz__L
 
 .if ${MK_GSSAPI} != "no"
 _lib_libgssapi=	lib/libgssapi
