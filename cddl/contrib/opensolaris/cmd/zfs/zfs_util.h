@@ -33,7 +33,7 @@ extern "C" {
 
 void * safe_malloc(size_t size);
 void nomem(void);
-extern libzfs_handle_t *g_zfs;
+libzfs_handle_t *g_zfs;
 
 #ifdef	__cplusplus
 }
