@@ -112,7 +112,7 @@ make an error
 #undef buttons			/* symbol conflict in consio.h */
 #undef mouse_info		/* symbol conflict in consio.h */
 #include <osreldate.h>
-#if defined(__DragonFly_version) || (defined(__FreeBSD__) && (__FreeBSD_version >= 400017))
+#if defined(__DragonFly_version) || defined(__MidnightBSD__) || (defined(__FreeBSD__) && (__FreeBSD_version >= 400017))
 #include <sys/consio.h>
 #include <sys/fbio.h>
 #else
