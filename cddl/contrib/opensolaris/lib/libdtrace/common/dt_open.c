@@ -313,7 +313,7 @@ static const dt_ident_t _dtrace_globals[] = {
 	DT_VERS_1_5, &dt_idops_func, "string(int, void *)" },
 { "ipl", DT_IDENT_SCALAR, 0, DIF_VAR_IPL, DT_ATTR_STABCMN, DT_VERS_1_0,
 	&dt_idops_type, "uint_t" },
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 { "jailname", DT_IDENT_SCALAR, 0, DIF_VAR_JAILNAME,
 	DT_ATTR_STABCMN, DT_VERS_1_13, &dt_idops_type, "string" },
 { "jid", DT_IDENT_SCALAR, 0, DIF_VAR_JID, DT_ATTR_STABCMN, DT_VERS_1_13,
@@ -1110,7 +1110,7 @@ dt_vopen(int version, int flags, int *errp,
 
 	dtfd = open("/dev/dtrace/dtrace", O_RDWR | O_CLOEXEC);
 	err = errno; /* save errno from opening dtfd */
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	/*
 	 * Automatically load the 'dtraceall' module if we couldn't open the
 	 * char device.
@@ -1185,7 +1185,7 @@ alloc:
 #endif
 	dtp->dt_modbuckets = _dtrace_strbuckets;
 	dtp->dt_mods = calloc(dtp->dt_modbuckets, sizeof (dt_module_t *));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	dtp->dt_kmods = calloc(dtp->dt_modbuckets, sizeof (dt_module_t *));
 #endif
 	dtp->dt_provbuckets = _dtrace_strbuckets;
@@ -1197,7 +1197,7 @@ alloc:
 	dtp->dt_cpp_argc = 1;
 	dtp->dt_cpp_args = 1;
 	dtp->dt_ld_path = strdup(_dtrace_defld);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	dtp->dt_objcopy_path = strdup(_dtrace_defobjcopy);
 #endif
 	dtp->dt_provmod = provmod;
@@ -1208,7 +1208,7 @@ alloc:
 
 	if (dtp->dt_mods == NULL || dtp->dt_provs == NULL ||
 	    dtp->dt_procs == NULL || dtp->dt_ld_path == NULL ||
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	    dtp->dt_kmods == NULL ||
 	    dtp->dt_objcopy_path == NULL ||
 #endif
@@ -1593,7 +1593,7 @@ alloc:
 	 * compile, and to provide better error reporting (because the full
 	 * reporting of compiler errors requires dtrace_open() to succeed).
 	 */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef __LP64__
 	if ((dtp->dt_oflags & DTRACE_O_ILP32) != 0) {
 		if (dtrace_setopt(dtp, "libdir", _dtrace_libdir32) != 0)
@@ -1632,7 +1632,7 @@ dtrace_close(dtrace_hdl_t *dtp)
 	dtrace_prog_t *pgp;
 	dt_xlator_t *dxp;
 	dt_dirpath_t *dirp;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	dt_kmodule_t *dkm;
 	uint_t h;
 #endif
@@ -1663,7 +1663,7 @@ dtrace_close(dtrace_hdl_t *dtp)
 	if (dtp->dt_tls != NULL)
 		dt_idhash_destroy(dtp->dt_tls);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	for (h = 0; h < dtp->dt_modbuckets; h++)
 		while ((dkm = dtp->dt_kmods[h]) != NULL) {
 			dtp->dt_kmods[h] = dkm->dkm_next;
@@ -1716,12 +1716,12 @@ dtrace_close(dtrace_hdl_t *dtp)
 	free(dtp->dt_cpp_argv);
 	free(dtp->dt_cpp_path);
 	free(dtp->dt_ld_path);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	free(dtp->dt_objcopy_path);
 #endif
 
 	free(dtp->dt_mods);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	free(dtp->dt_kmods);
 #endif
 	free(dtp->dt_provs);

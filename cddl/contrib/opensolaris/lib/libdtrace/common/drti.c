@@ -147,7 +147,7 @@ dtrace_dof_init(void)
 
 	dh.dofhp_dof = (uintptr_t)dof;
 	dh.dofhp_addr = elf->e_type == ET_DYN ? (uintptr_t) lmp->l_addr : 0;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	dh.dofhp_pid = getpid();
 #endif
 
@@ -186,7 +186,7 @@ dtrace_dof_init(void)
 		dbg_printf(1, "DTrace ioctl failed for DOF at %p", dof);
 	else {
 		dbg_printf(1, "DTrace ioctl succeeded for DOF at %p\n", dof);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		gen = dh.dofhp_gen;
 #endif
 	}

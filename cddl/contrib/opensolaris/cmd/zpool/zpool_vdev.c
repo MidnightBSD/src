@@ -478,7 +478,7 @@ make_leaf_vdev(const char *arg, uint64_t is_log)
 		}
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (S_ISCHR(statbuf.st_mode)) {
 		statbuf.st_mode &= ~S_IFCHR;
 		statbuf.st_mode |= S_IFBLK;

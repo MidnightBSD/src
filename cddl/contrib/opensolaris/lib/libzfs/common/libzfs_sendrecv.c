@@ -58,7 +58,7 @@
 #include <sys/zio_checksum.h>
 #include <sys/ddt.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 extern int zfs_ioctl_version;
 #endif
 
@@ -3242,7 +3242,7 @@ zfs_receive_one(libzfs_handle_t *hdl, int infd, const char *tosnap,
 	 */
 	(void) strcpy(zc.zc_value, tosnap);
 	(void) strncat(zc.zc_value, chopprefix, sizeof (zc.zc_value));
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (zfs_ioctl_version == ZFS_IOCVER_UNDEF)
 		zfs_ioctl_version = get_zfs_ioctl_version();
 	/*

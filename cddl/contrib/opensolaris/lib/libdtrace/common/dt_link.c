@@ -553,7 +553,7 @@ dump_elf32(dtrace_hdl_t *dtp, const dof_hdr_t *dof, int fd)
 #else
 	elf_file.ehdr.e_ident[EI_DATA] = ELFDATA2LSB;
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	elf_file.ehdr.e_ident[EI_OSABI] = ELFOSABI_FREEBSD;
 #endif
 	elf_file.ehdr.e_type = ET_REL;
@@ -699,7 +699,7 @@ dump_elf64(dtrace_hdl_t *dtp, const dof_hdr_t *dof, int fd)
 #else
 	elf_file.ehdr.e_ident[EI_DATA] = ELFDATA2LSB;
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	elf_file.ehdr.e_ident[EI_OSABI] = ELFOSABI_FREEBSD;
 #endif
 	elf_file.ehdr.e_type = ET_REL;
@@ -1934,7 +1934,7 @@ dtrace_program_link(dtrace_hdl_t *dtp, dtrace_prog_t *pgp, uint_t dflags,
 		}
 		(void) close(fd); /* release temporary file */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		/*
 		 * Now that we've linked drti.o, reduce the global __SUNW_dof
 		 * symbol to a local symbol. This is needed to so that multiple
@@ -1969,7 +1969,7 @@ dtrace_program_link(dtrace_hdl_t *dtp, dtrace_prog_t *pgp, uint_t dflags,
 		}
 #endif
 	} else {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (rename(tfile, file) != 0) {
 			ret = dt_link_error(dtp, NULL, fd, NULL,
 			    "failed to rename %s to %s: %s", tfile, file,
@@ -1983,7 +1983,7 @@ dtrace_program_link(dtrace_hdl_t *dtp, dtrace_prog_t *pgp, uint_t dflags,
 done:
 	dtrace_dof_destroy(dtp, dof);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	if (!dtp->dt_lazyload)
 		(void) unlink(tfile);
 #endif

@@ -156,7 +156,7 @@ typedef struct dt_module {
 #define	DT_DM_KERNEL	0x2	/* module is associated with a kernel object */
 #define	DT_DM_PRIMARY	0x4	/* module is a krtld primary kernel object */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /*
  * A representation of a FreeBSD kernel module, used when checking module
  * dependencies.  This differs from dt_module_t, which refers to a KLD in the
@@ -250,7 +250,7 @@ struct dtrace_hdl {
 	dt_idhash_t *dt_tls;	/* hash table of thread-local identifiers */
 	dt_list_t dt_modlist;	/* linked list of dt_module_t's */
 	dt_module_t **dt_mods;	/* hash table of dt_module_t's */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	dt_kmodule_t **dt_kmods; /* hash table of dt_kmodule_t's */
 #endif
 	uint_t dt_modbuckets;	/* number of module hash buckets */
@@ -293,7 +293,7 @@ struct dtrace_hdl {
 	int dt_cpp_argc;	/* count of initialized cpp(1) arguments */
 	int dt_cpp_args;	/* size of dt_cpp_argv[] array */
 	char *dt_ld_path;	/* pathname of ld(1) to invoke if needed */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	char *dt_objcopy_path;	/* pathname of objcopy(1) to invoke if needed */
 #endif
 	dt_list_t dt_lib_path;	/* linked-list forming library search path */
@@ -744,7 +744,7 @@ extern int _dtrace_argmax;		/* default maximum probe arguments */
 extern const char *_dtrace_libdir;	/* default library directory */
 extern const char *_dtrace_moddir;	/* default kernel module directory */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 extern int gmatch(const char *, const char *);
 extern int yylex(void);
 #endif

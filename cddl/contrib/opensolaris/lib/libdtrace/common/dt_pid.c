@@ -606,7 +606,7 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 		dt_pid_objname(dh.dofhp_mod, sizeof (dh.dofhp_mod),
 		    sip.prs_lmid, mname);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		dh.dofhp_pid = proc_getpid(P);
 
 		if (fd == -1 &&
@@ -632,7 +632,7 @@ dt_pid_usdt_mapping(void *data, const prmap_t *pmp, const char *oname)
 	}
 
 	if (fd != -1)
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		(void) close(fd);
 #else
 		(void) pr_close(P, fd);
