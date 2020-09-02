@@ -1,6 +1,19 @@
 Updating Information for MidnightBSD users.
 
+20200902:
+	MidnightBSD 1.2.8 RELEASE
+
+	dhclient
+
+        When parsing option 119 data, dhclient(8) computes the uncompressed domain
+        list length so that it can allocate an appropriately sized buffer to store
+        the uncompressed list.  The code to compute the length failed to handle
+        certain malformed input, resulting in a heap overflow when the uncompressed
+        list is copied into in inadequately sized buffer.
+
 20200813:
+	MidnightBSD 1.2.7 RELEASE
+
 	Fix several bugs with the base system.
 
 	Don't attempt to measure TSC skew in VMs with dtrace.
