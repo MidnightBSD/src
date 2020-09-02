@@ -1,5 +1,29 @@
 Updating Information for MidnightBSD users.
 
+20200902:
+	Fix several security vulnerabilities:
+
+	sctp use after free
+	Due to improper handling in the kernel, a use-after-free bug can be triggered
+	by sending large user messages from multiple threads on the same socket.
+
+	IPv6 hop after hop
+	Due to improper mbuf handling in the kernel, a use-after-free bug might be
+	triggered by sending IPv6 Hop-by-Hop options over the loopback interface.
+	
+	linux ABI kernel panic
+	The kernel function handling exec(3) of a Linux binary did not correctly
+	handle a calling process with multiple threads.
+	A multithread non-Linux process execing a Linux binary would fail a kernel
+	assertion, resuting in a kernel panic "thread_detach: emuldata not found."
+
+	dhclient
+	When parsing option 119 data, dhclient(8) computes the uncompressed domain
+	list length so that it can allocate an appropriately sized buffer to store
+	the uncompressed list.  The code to compute the length failed to handle
+	certain malformed input, resulting in a heap overflow when the uncompressed
+	list is copied into in inadequately sized buffer.
+
 20200807:
 	A missing length validation code common to these three drivers means that a
 	malicious USB device could write beyond the end of an allocated network
