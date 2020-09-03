@@ -1,5 +1,5 @@
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/release/Makefile.vm 356770 2020-01-16 01:13:32Z gjb $
 #
 #
 # Makefile for building virtual machine and cloud provider disk images.
@@ -7,7 +7,7 @@
 
 VMTARGETS=	vm-image
 VMFORMATS?=	vhd vmdk qcow2 raw
-VMSIZE?=	30G
+VMSIZE?=	4096M
 SWAPSIZE?=	1G
 VMBASE?=	vm
 
@@ -39,6 +39,27 @@ VAGRANT-VMWARE_FORMAT=	vmdk
 VAGRANT-VMWARE_DESC=	Vagrant Image for VMWare
 VAGRANT-VMWARE_DISK=	${OSRELEASE}.vmware.${VAGRANT_FORMAT}
 
+.for _V in TYPE BRANCH REVISION
+. if !defined(${_V}) || empty(${_V})
+${_V}!=	eval $$(awk '/^${_V}=/{print}' ${.CURDIR}/../sys/conf/newvers.sh); echo $$${_V}
+. endif
+.endfor
+
+emulator-portinstall:
+.if ${TARGET_ARCH} != ${MACHINE_ARCH}
+.if ( ${TARGET_ARCH} != "i386" ) || ( ${MACHINE_ARCH} != "amd64" )
+.if !exists(/usr/local/bin/qemu-${TARGET_ARCH}-static)
+.if exists(${PORTSDIR}/emulators/qemu-user-static/Makefile)
+	env - PATH=$$PATH make -C ${PORTSDIR}/emulators/qemu-user-static BATCH=1 all install clean
+.else
+	env ASSUME_ALWAYS_YES=yes mport install emulators/qemu-user-static
+.endif
+.endif
+
+QEMUSTATIC=/usr/local/bin/qemu-${TARGET_ARCH}-static
+.endif
+.endif
+
 .if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE) && !empty(CLOUDWARE)
 . for _CW in ${CLOUDWARE}
 CLOUDTARGETS+=	cw-${_CW:tl}
@@ -47,30 +68,21 @@ CLEANFILES+=	${_CW:tl}.img \
 		${_CW:tl}.${${_CW:tu}_FORMAT} \
 		${_CW:tl}.${${_CW:tu}_FORMAT}.raw \
 		cw${_CW:tl}-package
-CLOUDINSTALL+=	cw${_CW:tl}-install
 CLOUDPACKAGE+=	cw${_CW:tl}-package
 ${_CW:tu}IMAGE=	${_CW:tl}.${${_CW:tu}_FORMAT}
 .  if exists(${.CURDIR}/tools/${_CW:tl}.conf) && !defined(${_CW:tu}CONF)
 ${_CW:tu}CONF?=	${.CURDIR}/tools/${_CW:tl}.conf
 .  endif
 
-cw-${_CW:tl}:
+cw-${_CW:tl}: emulator-portinstall
 	mkdir -p ${.OBJDIR}/${.TARGET}
 	env TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} SWAPSIZE=${SWAPSIZE} \
+		QEMUSTATIC=${QEMUSTATIC} \
 		${.CURDIR}/scripts/mk-vmimage.sh \
 		-C ${.CURDIR}/tools/vmimage.subr -d ${.OBJDIR}/${.TARGET} \
 		-i ${.OBJDIR}/${_CW:tl}.img -s ${VMSIZE} -f ${${_CW:tu}_FORMAT} \
 		-S ${WORLDDIR} -o ${.OBJDIR}/${${_CW:tu}IMAGE} -c ${${_CW:tu}CONF}
 	touch ${.TARGET}
-
-cw${_CW:tl}-install:
-	mkdir -p ${DESTDIR}/${_CW:tl}
-	cp -p ${${_CW}IMAGE} \
-		${DESTDIR}/${_CW:tl}/${${_CW}_DISK}
-	cd ${DESTDIR}/${_CW:tl} && sha512 ${${_CW}_DISK}* > \
-		${DESTDIR}/${_CW:tl}/CHECKSUM.SHA512
-	cd ${DESTDIR}/${_CW:tl} && sha256 ${${_CW}_DISK}* > \
-		${DESTDIR}/${_CW:tl}/CHECKSUM.SHA256
 
 cw${_CW:tl}-package:
 	@# Special target to handle packaging cloud images in the formats
@@ -153,11 +165,6 @@ vm-release:
 cloudware-release:
 .if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE) && !empty(CLOUDWARE)
 	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} ${CLOUDTARGETS}
-.endif
-
-cloudware-install:
-.if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE) && !empty(CLOUDWARE)
-	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} ${CLOUDINSTALL}
 .endif
 
 .include "${.CURDIR}/Makefile.ec2"
