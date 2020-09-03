@@ -606,7 +606,6 @@
 /*
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
- D: stable/11/sys/sys/cdefs.h 331722 2018-03-29 02:50:57Z eadler $");
  */
 #ifndef	__FBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)
