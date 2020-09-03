@@ -188,6 +188,7 @@ SUBDIR.${MK_NIS}+=	yppush
 SUBDIR.${MK_NIS}+=	ypserv
 SUBDIR.${MK_NIS}+=	ypset
 SUBDIR.${MK_NTP}+=	ntpd
+SUBDIR.${MK_NTP}+=	rdate
 SUBDIR.${MK_OPENSSL}+=	keyserv
 SUBDIR.${MK_PC_SYSINSTALL}+=	pc-sysinstall
 SUBDIR.${MK_PF}+=	ftp-proxy
