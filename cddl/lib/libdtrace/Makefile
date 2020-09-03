@@ -61,7 +61,7 @@ FILES=		${DSRCS}
 FILESDIR=	/usr/lib/dtrace
 FILESMODE=	${NOBINMODE}
 
-WARNS?=		1
+WARNS?=		0
 
 CFLAGS+=	-I${.OBJDIR} -I${.CURDIR} \
 		-I${SRCTOP}/sys/cddl/dev/dtrace/${MACHINE_ARCH} \
