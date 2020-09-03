@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -24,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_x86.c 321202 2017-07-19 14:15:49Z emaste $
+ * $FreeBSD: stable/11/usr.sbin/bsdinstall/partedit/partedit_x86.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>
@@ -56,7 +57,10 @@ x86_bootmethod(void)
 const char *
 default_scheme(void)
 {
-	return ("GPT");
+	if (strcmp(x86_bootmethod(), "UEFI") == 0)
+		return ("GPT");
+	else
+		return ("MBR");
 }
 
 int
