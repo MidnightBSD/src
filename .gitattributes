@@ -80849,3 +80849,9 @@ usr.sbin/zic/zic/Makefile -text
 usr.sbin/zzz/Makefile -text
 usr.sbin/zzz/zzz.8 -text
 usr.sbin/zzz/zzz.sh -text
+*.c    diff=cpp
+*.h    diff=cpp
+*.cpp  diff=cpp
+*.hpp  diff=cpp
+*.py   diff=python
+.clang-format svn-properties=svn:keywords=MidnightBSD=%H
