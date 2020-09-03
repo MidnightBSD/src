@@ -290,10 +290,6 @@ struct name {							\
 #define	ELFTC_VCSID(ID)		__RCSID(ID)
 #endif
 
-#if defined(__FreeBSD__) 
-#define	ELFTC_VCSID(ID)		__FBSDID(ID)
-#endif
-
 #if defined(__MidnightBSD__) 
 #define	ELFTC_VCSID(ID)		__MBSDID(ID)
 #endif
