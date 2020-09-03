@@ -102,6 +102,9 @@ env_setup() {
 	NODOC=
 	NOPORTS=
 
+	# Set to non-empty value to disable distributing source tree.
+	NOSRC=
+
 	# Set to non-empty value to build dvd1.iso as part of the release.
 	WITH_DVD=
 	WITH_COMPRESSED_IMAGES=
@@ -161,15 +164,18 @@ env_check() {
 		NODOC=yes
 	fi
 
-	# If NOPORTS and/or NODOC are unset, they must not pass to make as
-	# variables.  The release makefile verifies definedness of the
+	# If NOSRC, NOPORTS and/or NODOC are unset, they must not pass to make
+	# as variables.  The release makefile verifies definedness of the
 	# NOPORTS/NODOC variables instead of their values.
-	DOCPORTS=
+	SRCDOCPORTS=
 	if [ -n "${NOPORTS}" ]; then
-		DOCPORTS="NOPORTS=yes "
+		SRCDOCPORTS="NOPORTS=yes"
 	fi
 	if [ -n "${NODOC}" ]; then
-		DOCPORTS="${DOCPORTS}NODOC=yes"
+		SRCDOCPORTS="${SRCDOCPORTS}${SRCDOCPORTS:+ }NODOC=yes"
+	fi
+	if [ -n "${NOSRC}" ]; then
+		SRCDOCPORTS="${SRCDOCPORTS}${SRCDOCPORTS:+ }NOSRC=yes"
 	fi
 
 	# The aggregated build-time flags based upon variables defined within
@@ -212,7 +218,7 @@ env_check() {
 	RELEASE_KMAKEFLAGS="${MAKE_FLAGS} ${KERNEL_FLAGS} \
 		KERNCONF=\"${KERNEL}\" ${ARCH_FLAGS} ${CONF_FILES}"
 	RELEASE_RMAKEFLAGS="${ARCH_FLAGS} \
-		KERNCONF=\"${KERNEL}\" ${CONF_FILES} ${DOCPORTS} \
+		KERNCONF=\"${KERNEL}\" ${CONF_FILES} ${SRCDOCPORTS} \
 		WITH_DVD=${WITH_DVD} WITH_VMIMAGES=${WITH_VMIMAGES} \
 		WITH_CLOUDWARE=${WITH_CLOUDWARE} XZ_THREADS=${XZ_THREADS}"
 
@@ -281,9 +287,9 @@ extra_chroot_setup() {
 			PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
 			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
 			PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
-			chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
+			chroot ${CHROOTDIR} env ${PBUILD_FLAGS} \
+				OPTIONS_UNSET="AVAHI FOP IGOR" make -C \
 				/usr/mports/textproc/docproj \
-				OPTIONS_UNSET="FOP IGOR" \
 				FORCE_PKG_REGISTER=1 \
 				install clean distclean
 		fi
@@ -352,6 +358,21 @@ chroot_build_release() {
 	return 0
 } # chroot_build_release()
 
+efi_boot_name()
+{
+	case $1 in
+		arm)
+			echo "bootarm.efi"
+			;;
+		arm64)
+			echo "bootaa64.efi"
+			;;
+		amd64)
+			echo "bootx86.efi"
+			;;
+	esac
+}
+
 # chroot_arm_build_release(): Create arm SD card image.
 chroot_arm_build_release() {
 	load_target_env
@@ -379,6 +400,7 @@ chroot_arm_build_release() {
 		mdconfig -f ${IMGBASE##${CHROOTDIR}} ${MD_ARGS})
 	arm_create_disk
 	arm_install_base
+	arm_install_boot
 	arm_install_uboot
 	mdconfig -d -u ${mddev}
 	chroot ${CHROOTDIR} rmdir ${DESTDIR}

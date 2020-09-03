@@ -3,6 +3,12 @@
 # $MidnightBSD$
 #
 
+## Redefine environment variables here to override prototypes
+## defined in release.sh.
+#load_chroot_env() { }
+#load_target_env() { }
+#buildenv_setup() { }
+
 ## Set the directory within which the release will be built.
 CHROOTDIR="/scratch"
 
@@ -16,6 +22,13 @@ PORTBRANCH="mports/trunk@rHEAD"
 
 ## Run svn co --force for src checkout.
 #SRC_FORCE_CHECKOUT=yes
+
+## Sample configuration for using git instead of svn.
+#VCSCMD="/usr/local/bin/git clone --branch master"
+#SVNROOT=""
+#SRCBRANCH="https://github.com/midnightbsd/src"
+#DOCBRANCH="https://github.com/midnightbsd/midnightbsd-doc"
+#PORTBRANCH="https://github.com/midnightbsd/mports"
 
 ## Set to override the default target architecture.
 #TARGET="amd64"
@@ -38,8 +51,12 @@ PORTBRANCH="mports/trunk@rHEAD"
 ## Set miscellaneous 'make release' settings.
 #NODOC=
 #NOPORTS=
+#NOSRC=
 #WITH_DVD=
 #WITH_COMPRESSED_IMAGES=
+
+## Set to '1' to disable multi-threaded xz(1) compression.
+#XZ_THREADS=0
 
 ## Set when building embedded images.
 #EMBEDDEDBUILD=
@@ -107,4 +124,4 @@ PORTBRANCH="mports/trunk@rHEAD"
 
 ## If WITH_CLOUDWARE is set to a non-empty value, this is a list of providers
 ## to create disk images.
-#CLOUDWARE="AZURE OPENSTACK"
+#CLOUDWARE="EC2 GCE VAGRANT-VIRTUALBOX VAGRANT-VMWARE"
