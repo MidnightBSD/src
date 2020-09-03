@@ -25,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/usr.sbin/bsdinstall/scripts/script 290286 2015-11-02 22:03:24Z dteske $
-# $MidnightBSD$
+# $FreeBSD: stable/11/usr.sbin/bsdinstall/scripts/script 319124 2017-05-29 11:37:08Z royger $
 #
 ############################################################ INCLUDES
 
@@ -43,6 +42,11 @@ f_include $BSDCFG_SHARE/variable.subr
 # DISTRIBUTIONS
 # BSDINSTALL_DISTDIR
 
+#
+# Default name of the ZFS boot-pool
+#
+: ${ZFSBOOT_POOL_NAME:=zroot}
+
 ############################################################ GLOBALS
 
 #
@@ -54,14 +58,19 @@ msg_installation_error="Installation Error!"
 
 error()
 {
-	[ -f "$PATH_FSTAB" ] && bsdinstall umount
-	
 	local file
 	f_getvar "$VAR_DEBUG_FILE#+" file
 	if [ "$file" ]; then
 		f_dialog_title "$msg_installation_error"
 		f_dialog_textbox "$file"
 		# No need to restore title, pining for the fjords
+	fi
+
+	[ -f "$PATH_FSTAB" ] || exit
+	if [ "$ZFSBOOT_DISKS" ]; then
+		zpool export $ZFSBOOT_POOL_NAME
+	else
+		bsdinstall umount
 	fi
 
 	exit 1
@@ -100,12 +109,15 @@ if [ "$ZFSBOOT_DISKS" ]; then
 	bsdinstall zfsboot
 else
 	bsdinstall scriptedpart "$PARTITIONS"
+	bsdinstall mount
 fi
-bsdinstall mount
 
 # Unpack distributions
 bsdinstall checksum
-bsdinstall distextract
+for set in $DISTRIBUTIONS; do
+	f_dprintf "Extracting $BSDINSTALL_DISTDIR/$set"
+	tar -xf "$BSDINSTALL_DISTDIR/$set" -C $BSDINSTALL_CHROOT
+done
 
 # Finalize install
 bsdinstall config
@@ -126,7 +138,11 @@ if [ -f /tmp/bsdinstall-installscript-ab ]; then
 fi
 
 bsdinstall entropy
-bsdinstall umount
+if [ "$ZFSBOOT_DISKS" ]; then
+	zpool export $ZFSBOOT_POOL_NAME
+else
+	bsdinstall umount
+fi
 
 f_dprintf "Installation Completed at %s" "$( date )"
 
