@@ -109,7 +109,7 @@ arm_install_base() {
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 	echo "/dev/msdosfs/MSDOSBOOT /boot/msdos msdosfs rw,noatime 0 0" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-	echo "tmpfs /tmp tmpfs rw,mode=1777,size=30m 0 0" \
+	echo "tmpfs /tmp tmpfs rw,mode=1777,size=50m 0 0" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 
 	local hostname
@@ -122,11 +122,45 @@ arm_install_base() {
 	echo 'sendmail_outbound_enable="NO"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
 	echo 'sendmail_msp_queue_enable="NO"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
 	echo 'growfs_enable="YES"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
+	echo 'kldxref_enable="YES"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
 
 	sync
 	umount_loop ${CHROOTDIR}/${DESTDIR}
 
 	return 0
+}
+
+arm_install_boot() {
+	FATMOUNT="${DESTDIR%${KERNEL}}/fat"
+	UFSMOUNT="${DESTDIR%${KERNEL}}/ufs"
+	chroot ${CHROOTDIR} mkdir -p "${FATMOUNT}" "${UFSMOUNT}"
+	chroot ${CHROOTDIR} mount_msdosfs /dev/${mddev}s1 ${FATMOUNT}
+	chroot ${CHROOTDIR} mount /dev/${mddev}s2a ${UFSMOUNT}
+
+	if [ "${EMBEDDED_TARGET}" == "arm" ]; then
+	chroot ${CHROOTDIR} cp -p ${UFSMOUNT}/boot/ubldr.bin \
+		${FATMOUNT}/ubldr.bin
+	fi
+
+	# Ensure the correct .OBJDIR is used for BOOTFILES.
+	_OBJDIR="$(chroot ${CHROOTDIR} make -C /usr/src -V .OBJDIR)"
+	if [ -d "/${CHROOTDIR}/${_OBJDIR%%/usr/src}/${EMBEDDED_TARGET}.${EMBEDDED_TARGET_ARCH}/usr/src/stand" ]; then
+		BOOTFILES=/${_OBJDIR%%/usr/src}/${EMBEDDED_TARGET}.${EMBEDDED_TARGET_ARCH}/usr/src/stand
+	else
+		BOOTFILES=/${_OBJDIR}/stand
+	fi
+	BOOTFILES="$(chroot ${CHROOTDIR} realpath ${BOOTFILES})"
+
+	chroot ${CHROOTDIR} mkdir -p ${FATMOUNT}/EFI/BOOT
+	chroot ${CHROOTDIR} cp -p ${BOOTFILES}/efi/loader_lua/loader_lua.efi \
+		${FATMOUNT}/EFI/BOOT/$(efi_boot_name ${EMBEDDED_TARGET})
+
+	chroot ${CHROOTDIR} touch ${UFSMOUNT}/firstboot
+	sync
+	umount_loop ${CHROOTDIR}/${FATMOUNT}
+	umount_loop ${CHROOTDIR}/${UFSMOUNT}
+	chroot ${CHROOTDIR} rmdir ${FATMOUNT}
+	chroot ${CHROOTDIR} rmdir ${UFSMOUNT}
 }
 
 arm_install_uboot() {

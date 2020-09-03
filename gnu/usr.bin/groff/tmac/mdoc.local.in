@@ -54,7 +54,7 @@
 .ds doc-str-Lb-libstdthreads C11 Threads Library (libstdthreads, \-lstdthreads)
 .
 .\" Default .Os value
-.ds doc-default-operating-system MidnightBSD\~1.3
+.ds doc-default-operating-system MidnightBSD\~2.0
 .
 .\" MidnightBSD releases not found in doc-common
 .ds doc-operating-system-MidnightBSD-0.1   0.1
@@ -72,6 +72,7 @@
 .ds doc-operating-system-MidnightBSD-1.1   1.1
 .ds doc-operating-system-MidnightBSD-1.2   1.2
 .ds doc-operating-system-MidnightBSD-1.3   1.3
+.ds doc-operating-system-MidnightBSD-2.0   2.0
 .
 .\" FreeBSD releases not found in doc-common
 .ds doc-operating-system-FreeBSD-5.5    5.5

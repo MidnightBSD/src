@@ -72,6 +72,7 @@ SUBDIR=	adduser \
 	pwd_mkdb \
 	quot \
 	rarpd \
+	rdate \
 	rmt \
 	rpcbind \
 	rpc.lockd \
