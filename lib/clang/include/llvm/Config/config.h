@@ -6,7 +6,7 @@
 #include "llvm/Config/llvm-config.h"
 
 /* Bug report URL. */
-#define BUG_REPORT_URL "https://bugs.freebsd.org/submit/"
+#define BUG_REPORT_URL "https://bugreport.midnightbsd.org"
 
 /* Define to 1 to enable backtraces, and to 0 otherwise. */
 #define ENABLE_BACKTRACES 0
@@ -75,7 +75,7 @@
 /* #undef HAVE_FFI_H */
 
 /* Define to 1 if you have the `futimens' function. */
-#if __FreeBSD__ >= 11
+#if __MidnightBSD__ >= 2
 #define HAVE_FUTIMENS 1
 #endif
 
