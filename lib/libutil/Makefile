@@ -11,12 +11,12 @@ SHLIBDIR?= /lib
 LIB=	util
 SHLIB_MAJOR= 9
 SRCS=	_secure_path.c auth.c expand_number.c flopen.c efun.c fparseln.c gr_util.c \
-	hexdump.c humanize_number.c kinfo_getfile.c kinfo_getfile.c \
+	hexdump.c humanize_number.c kinfo_getfile.c \
 	kinfo_getallproc.c kinfo_getproc.c kinfo_getvmmap.c \
 	kinfo_getvmobject.c kld.c \
 	login_auth.c login_cap.c \
 	login_class.c login_crypt.c login_ok.c login_times.c login_tty.c \
-	pidfile.c property.c pty.c pw_util.c quotafile.c realhostname.c \
+	pidfile.c property.c pty.c pw_scan.c pw_util.c quotafile.c realhostname.c \
 	stub.c trimdomain.c uucplock.c
 INCS=	libutil.h login_cap.h
 
