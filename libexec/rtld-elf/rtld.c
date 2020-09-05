@@ -1490,22 +1490,22 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 		if (note->n_namesz != sizeof(NOTE_MIDNIGHTBSD_VENDOR) ||
 		    note->n_descsz != sizeof(int32_t))
 			continue;
-		if (note->n_type != NT_MIDNIGHTBSD_ABI_TAG &&
-		    note->n_type != NT_MIDNIGHTBSD_NOINIT_TAG)
+		if (note->n_type != NT_FREEBSD_ABI_TAG &&
+		    note->n_type != NT_FREEBSD_NOINIT_TAG)
 			continue;
 		note_name = (const char *)(note + 1);
 		if (strncmp(NOTE_MIDNIGHTBSD_VENDOR, note_name,
 		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0)
 			continue;
 		switch (note->n_type) {
-		case NT_MIDNIGHTBSD_ABI_TAG:
+		case NT_FREEBSD_ABI_TAG:
 			/* MidnightBSD osrel note */
 			p = (uintptr_t)(note + 1);
 			p += roundup2(note->n_namesz, sizeof(Elf32_Addr));
 			obj->osrel = *(const int32_t *)(p);
 			dbg("note osrel %d", obj->osrel);
 			break;
-		case NT_MIDNIGHTBSD_NOINIT_TAG:
+		case NT_FREEBSD_NOINIT_TAG:
 			/* MidnightBSD 'crt does not call init' note */
 			obj->crt_no_init = true;
 			dbg("note crt_no_init");
