@@ -440,7 +440,7 @@ hc_readdir(struct HostConf *hc, DIR *dir)
     den = hcc_get_descriptor(hc, (intptr_t)dir, HC_DESC_DIR);
     if (den == NULL)
 	return(NULL);	/* XXX errno */
-    if (den->d_name)
+    if (den->d_name != NULL)
 	den->d_name[0] = 0;
     for (item = hcc_firstitem(head); item; item = hcc_nextitem(head, item)) {
 	switch(item->leafid) {
