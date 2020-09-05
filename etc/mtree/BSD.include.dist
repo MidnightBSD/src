@@ -6,8 +6,6 @@
 
 /set type=dir uname=root gname=wheel mode=0755
 .
-    altq
-    ..
     apple
         sys
             _pthread
@@ -299,6 +297,8 @@
         ..
     ..
     net
+        altq
+        ..
     ..
     net80211
     ..
