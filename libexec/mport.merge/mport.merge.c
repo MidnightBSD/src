@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 {
   int ch, i;
   const char *outfile = NULL;
-  char **inputfiles;
+  const char **inputfiles;
   if (argc == 1)
     usage();
     
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   if (outfile == NULL)
     usage();
 
-  if ((inputfiles = (char **)malloc((argc + 1) * sizeof(char **))) == NULL)
+  if ((inputfiles = (const char **)malloc((argc + 1) * sizeof(char **))) == NULL)
     err(EX_OSERR, "Couldn't allocate input array");
   
   for (i = 0; i < argc; i++) { 
@@ -81,9 +81,6 @@ int main(int argc, char *argv[])
 
   if (mport_merge_primative((const char **)inputfiles, outfile) != MPORT_OK) 
     errx(EX_SOFTWARE, "Could not merge package files: %s", mport_err_string());
-   
-  for (i = 0; i <= argc; i++) 
-    free(inputfiles[i]);
    
   free(inputfiles); 
     
