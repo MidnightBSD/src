@@ -40,12 +40,13 @@ CFLAGS+= -DUSE_BSM_AUDIT=1 -DHAVE_GETAUDIT_ADDR=1
 LIBADD+=	bsm
 .endif
 
-.if ${MK_BLACKLIST_SUPPORT} != "no"
-CFLAGS+= -DUSE_BLACKLIST=1 -I${SRCTOP}/contrib/blacklist/include
-SRCS+=	blacklist.c
-LIBADD+= blacklist
-LDFLAGS+=-L${LIBBLACKLISTDIR}
-.endif
+# TODO: LAH: good idea but openssh source not patched for it yet
+#.if ${MK_BLACKLIST_SUPPORT} != "no"
+#CFLAGS+= -DUSE_BLACKLIST=1 -I${SRCTOP}/contrib/blacklist/include
+#SRCS+=	blacklist.c
+#LIBADD+= blacklist
+#LDFLAGS+=-L${LIBBLACKLISTDIR}
+#.endif
 
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
