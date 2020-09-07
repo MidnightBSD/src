@@ -30,7 +30,7 @@ MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
 
-WARNS?=		3
+WARNS?=		0
 
 NO_WMISLEADING_INDENTATION=
 
