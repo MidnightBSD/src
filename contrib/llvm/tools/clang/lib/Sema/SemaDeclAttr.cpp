@@ -3288,6 +3288,7 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
       .Case("kprintf", SupportedFormat)         // OpenBSD.
       .Case("freebsd_kprintf", SupportedFormat) // FreeBSD.
+      .Case("midnightbsd_kprintf", SupportedFormat) // FreeBSD.
       .Case("os_trace", SupportedFormat)
       .Case("os_log", SupportedFormat)
 
