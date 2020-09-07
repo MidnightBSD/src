@@ -3,7 +3,7 @@
 SQLITEDIR=	${SRCTOP}/contrib/sqlite3
 .PATH:		${SQLITEDIR}
 
-CFLAGS+=	-DHAVE_READLINE=1 -DSQLITE_ENABLE_FTS3
+CFLAGS+=	-DHAVE_READLINE=0 -DSQLITE_ENABLE_FTS3
 
 WARNS?=		0
 
@@ -11,6 +11,7 @@ PROG=		sqlite3
 
 SRCS=		shell.c
 		
-LIBADD+=	sqlite3 readline
+LIBADD+=	sqlite3
+# readline
 
 .include <bsd.prog.mk>
