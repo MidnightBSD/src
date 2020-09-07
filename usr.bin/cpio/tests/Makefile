@@ -10,7 +10,7 @@ BINDIR=		${TESTSDIR}
 
 PROGS+=		bsdcpio_test
 
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"${SRCTOP}/lib/libarchive/config_freebsd.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${SRCTOP}/lib/libarchive/config_midnightbsd.h\"
 CFLAGS+=	-I${SRCTOP}/lib/libarchive -I${.OBJDIR}
 
 CFLAGS+=	-I${.OBJDIR}
