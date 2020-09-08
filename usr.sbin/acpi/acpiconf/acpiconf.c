@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	$Id: acpiconf.c,v 1.5 2000/08/08 14:12:19 iwasaki Exp $
- *	$FreeBSD: stable/11/usr.sbin/acpi/acpiconf/acpiconf.c 359076 2020-03-18 18:02:33Z hrs $
+ *	$FreeBSD: stable/11/usr.sbin/acpi/acpiconf/acpiconf.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -96,61 +96,34 @@ acpi_battinfo(int num)
 
 	/* Print battery design information. */
 	battio.unit = num;
-	if (ioctl(acpifd, ACPIIO_BATT_GET_BIX, &battio) == -1)
+	if (ioctl(acpifd, ACPIIO_BATT_GET_BIF, &battio) == -1)
 		err(EX_IOERR, "get battery info (%d) failed", num);
-	amp = battio.bix.units;
+	amp = battio.bif.units;
 	pwr_units = amp ? "mA" : "mW";
-	if (battio.bix.dcap == UNKNOWN_CAP)
+	if (battio.bif.dcap == UNKNOWN_CAP)
 		printf("Design capacity:\tunknown\n");
 	else
-		printf("Design capacity:\t%d %sh\n", battio.bix.dcap,
+		printf("Design capacity:\t%d %sh\n", battio.bif.dcap,
 		    pwr_units);
-	if (battio.bix.lfcap == UNKNOWN_CAP)
+	if (battio.bif.lfcap == UNKNOWN_CAP)
 		printf("Last full capacity:\tunknown\n");
 	else
-		printf("Last full capacity:\t%d %sh\n", battio.bix.lfcap,
+		printf("Last full capacity:\t%d %sh\n", battio.bif.lfcap,
 		    pwr_units);
-	printf("Technology:\t\t%s\n", battio.bix.btech == 0 ?
+	printf("Technology:\t\t%s\n", battio.bif.btech == 0 ?
 	    "primary (non-rechargeable)" : "secondary (rechargeable)");
-	if (ACPI_BIX_REV_MIN_CHECK(battio.bix.rev, ACPI_BIX_REV_1)) {
-		printf("Battery Swappable Capability:\t");
-		if (battio.bix.scap == ACPI_BIX_SCAP_NO)
-			printf("Non-swappable\n");
-		else if (battio.bix.scap == ACPI_BIX_SCAP_COLD)
-			printf("cold swap\n");
-		else if (battio.bix.scap == ACPI_BIX_SCAP_HOT)
-			printf("hot swap\n");
-		else
-			printf("unknown\n");
-	}
-	if (battio.bix.dvol == UNKNOWN_CAP)
+	if (battio.bif.dvol == UNKNOWN_CAP)
 		printf("Design voltage:\t\tunknown\n");
 	else
-		printf("Design voltage:\t\t%d mV\n", battio.bix.dvol);
-	printf("Capacity (warn):\t%d %sh\n", battio.bix.wcap, pwr_units);
-	printf("Capacity (low):\t\t%d %sh\n", battio.bix.lcap, pwr_units);
-	if (ACPI_BIX_REV_MIN_CHECK(battio.bix.rev, ACPI_BIX_REV_0)) {
-		if (battio.bix.cycles != ACPI_BATT_UNKNOWN)
-			printf("Cycle Count:\t\t%d\n", battio.bix.cycles);
-		printf("Mesurement Accuracy:\t%d %%\n",
-		    battio.bix.accuracy / 1000);
-		if (battio.bix.stmax != ACPI_BATT_UNKNOWN)
-			printf("Max Sampling Time:\t%d ms\n",
-			    battio.bix.stmax);
-		if (battio.bix.stmin != ACPI_BATT_UNKNOWN)
-			printf("Min Sampling Time:\t%d ms\n",
-			    battio.bix.stmin);
-		printf("Max Average Interval:\t%d ms\n",
-		    battio.bix.aimax);
-		printf("Min Average Interval:\t%d ms\n",
-		    battio.bix.aimin);
-	}
-	printf("Low/warn granularity:\t%d %sh\n", battio.bix.gra1, pwr_units);
-	printf("Warn/full granularity:\t%d %sh\n", battio.bix.gra2, pwr_units);
-	printf("Model number:\t\t%s\n", battio.bix.model);
-	printf("Serial number:\t\t%s\n", battio.bix.serial);
-	printf("Type:\t\t\t%s\n", battio.bix.type);
-	printf("OEM info:\t\t%s\n", battio.bix.oeminfo);
+		printf("Design voltage:\t\t%d mV\n", battio.bif.dvol);
+	printf("Capacity (warn):\t%d %sh\n", battio.bif.wcap, pwr_units);
+	printf("Capacity (low):\t\t%d %sh\n", battio.bif.lcap, pwr_units);
+	printf("Low/warn granularity:\t%d %sh\n", battio.bif.gra1, pwr_units);
+	printf("Warn/full granularity:\t%d %sh\n", battio.bif.gra2, pwr_units);
+	printf("Model number:\t\t%s\n", battio.bif.model);
+	printf("Serial number:\t\t%s\n", battio.bif.serial);
+	printf("Type:\t\t\t%s\n", battio.bif.type);
+	printf("OEM info:\t\t%s\n", battio.bif.oeminfo);
 
 	/* Fetch battery voltage information. */
 	volt = UNKNOWN_VOLTAGE;
