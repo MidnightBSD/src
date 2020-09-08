@@ -447,6 +447,10 @@
             ..
             uefisign
             ..
+            ypldap
+            ..
+        ..
+        firmware
         ..
         games
             atc
