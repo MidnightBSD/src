@@ -1,4 +1,5 @@
 \ Copyright (c) 2006-2015 Devin Teske <dteske@FreeBSD.org>
+\ Copyright (c) 2018 Lucas Holt <luke@MidnightBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -21,8 +22,9 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/brand-fbsd.4th 280975 2015-04-02 01:48:12Z dteske $
+\
+\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/forth/brand-fbsd.4th 281843 2015-04-22 01:08:40Z dteske $
 
 2 brandX ! 1 brandY ! \ Initialize brand placement defaults
 
@@ -32,15 +34,15 @@
 	1+ \ increase y for next time we're called
 ;
 
-: brand ( x y -- ) \ "FreeBSD" [wide] logo in B/W (7 rows x 42 columns)
+: brand ( x y -- ) \ "MidnightBSD" [wide] logo in B/W (7 rows x 42 columns)
 
-	s"  ______               ____   _____ _____  " brand+
-	s" |  ____|             |  _ \ / ____|  __ \ " brand+
-	s" | |___ _ __ ___  ___ | |_) | (___ | |  | |" brand+
-	s" |  ___| '__/ _ \/ _ \|  _ < \___ \| |  | |" brand+
-	s" | |   | | |  __/  __/| |_) |____) | |__| |" brand+
-	s" | |   | | |    |    ||     |      |      |" brand+
-	s" |_|   |_|  \___|\___||____/|_____/|_____/ " brand+
+	s"                       ____   _____ _____  " brand+
+	s"                      |  _ \ / ____|  __ \ " brand+
+	s"                      | |_) | (___ | |  | |" brand+
+	s"      M i d n i g h t |  _ < \___ \| |  | |" brand+
+	s"                      | |_) |____) | |__| |" brand+
+	s"                      |     |      |      |" brand+
+	s"                      |____/|_____/|_____/ " brand+
 
 	2drop
 ;

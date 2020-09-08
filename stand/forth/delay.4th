@@ -21,8 +21,9 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/delay.4th 298831 2016-04-30 02:47:41Z pfg $
+\
+\ $MidnightBSD$ 
+\ $FreeBSD: stable/10/sys/boot/forth/delay.4th 299706 2016-05-14 00:44:23Z pfg $
 
 marker task-delay.4th
 

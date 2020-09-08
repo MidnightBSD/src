@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/11/stand/forth/shortcuts.4th 238431 2012-07-14 01:45:35Z dteske $
+\ $MidnightBSD$
 
 \ FICL words intended to be used as shortcuts for carrying out common tasks or
 \ producing common results. Generally, words defined here are simply groupings
@@ -43,7 +43,7 @@ marker task-shortcuts.4th
 : menu ( -- )
 	clear           \ Clear the screen (in screen.4th)
 	print_version   \ print version string (bottom-right; see version.4th)
-	draw-beastie    \ Draw FreeBSD logo at right (in beastie.4th)
+	draw-beastie    \ Draw MidnightBSD logo at right (in beastie.4th)
 	draw-brand      \ Draw FIS logo at top (in brand.4th)
 	menu-init       \ Initialize menu and draw bounding box (in menu.4th)
 	menu-display    \ Launch interactive menu (in menu.4th)

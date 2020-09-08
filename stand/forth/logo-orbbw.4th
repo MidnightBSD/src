@@ -21,8 +21,9 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/logo-orbbw.4th 280975 2015-04-02 01:48:12Z dteske $
+\
+\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/forth/logo-orbbw.4th 281843 2015-04-22 01:08:40Z dteske $
 
 46 logoX ! 7 logoY ! \ Initialize logo placement defaults
 
@@ -34,21 +35,22 @@
 
 : logo ( x y -- ) \ B/W Orb mascot (15 rows x 32 columns)
 
-	s"  ```                        `"  logo+
-	s" s` `.....---.......--.```   -/" logo+
-	s" +o   .--`         /y:`      +." logo+
-	s"  yo`:.            :o      `+-"  logo+
-	s"   y/               -/`   -o/"   logo+
-	s"  .-                  ::/sy+:."  logo+
-	s"  /                     `--  /"  logo+
-	s" `:                          :`" logo+
-	s" `:                          :`" logo+
-	s"  /                          /"  logo+
-	s"  .-                        -."  logo+
-	s"   --                      -."   logo+
-	s"    `:`                  `:`"    logo+
-	s"      .--             `--."      logo+
-	s"         .---.....----."         logo+
+        s"       ;00#.      " logo+
+        s"     00.   :0'    " logo+
+        s"    0 `0     :0   " logo+
+        s"   0 #0       .0  " logo+
+        s"  0 #0`        +. " logo+
+        s"  0 00          0 " logo+
+        s" I #00          0 " logo+
+        s" 0 000       +  : " logo+
+        s" 0 000      #0  : " logo+
+        s" # 000'  : #00  + " logo+
+        s" .::000  .000#  0 " logo+
+        s"  0 0000  000   0 " logo+
+        s"  ':`0000000,: 0  " logo+
+        s"   0. 0000000 #:  " logo+
+        s"    0+  :+:  0:   " logo+
+        s"     .00::+00     " logo+
 
 	2drop
 ;

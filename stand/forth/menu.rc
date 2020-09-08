@@ -14,8 +14,8 @@ include /boot/shortcuts.4th
 \ Screen prep
 clear         \ clear the screen (see `screen.4th')
 print_version \ print version string (bottom-right; see `version.4th')
-draw-beastie  \ draw freebsd mascot (on right; see `beastie.4th')
-draw-brand    \ draw the FreeBSD title (top-left; see `brand.4th')
+draw-beastie  \ draw bsd mascot (on right; see `beastie.4th')
+draw-brand    \ draw the BSD title (top-left; see `brand.4th')
 menu-init     \ initialize the menu area (see `menu.4th')
 
 \ Initialize main menu constructs (see `menu.4th')

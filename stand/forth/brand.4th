@@ -21,8 +21,9 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/brand.4th 280933 2015-04-01 01:14:19Z dteske $
+\
+\ $MidnightBSD$ 
+\ $FreeBSD: stable/10/sys/boot/forth/brand.4th 281843 2015-04-22 01:08:40Z dteske $
 
 marker task-brand.4th
 
@@ -58,7 +59,7 @@ variable brandY
 		drop ( xt = 0 ) \ cruft
 		s" loader_brand" getenv dup -1 = over 0= or if
 			dup 0= if 2drop else drop then \ getenv result unused
-			s" try-include /boot/brand-fbsd.4th"
+			s" try-include /boot/brand-mbsd.4th"
 		else
 			2drop ( c-addr/u -- ) \ getenv result unused
 			s" try-include /boot/brand-${loader_brand}.4th"

@@ -22,14 +22,14 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/stand/forth/brand.4th.8 276292 2014-12-27 07:07:37Z joel $
+.\" $MidnightBSD$
 .\"
 .Dd May 18, 2011
 .Dt BRAND.4TH 8
 .Os
 .Sh NAME
 .Nm brand.4th
-.Nd FreeBSD ASCII art boot module
+.Nd MidnightBSD ASCII art boot module
 .Sh DESCRIPTION
 The file that goes by the name of
 .Nm
@@ -65,7 +65,7 @@ The brand that is drawn is configured by setting the
 variable in
 .Xr loader.conf 5
 to one of
-.Dq Li fbsd
+.Dq Li mbsd
 (the default) or
 .Dq Li none .
 .Pp
@@ -82,7 +82,7 @@ The environment variables that effect its behavior are:
 .Bl -tag -width bootfile -offset indent
 .It Va loader_brand
 Selects the desired brand in the beastie boot menu. Possible values are:
-.Dq Li fbsd
+.Dq Li mbsd
 (default) or
 .Dq Li none .
 .It Va loader_brand_x
@@ -103,15 +103,15 @@ itself.
 bootstrapping script.
 .El
 .Sh EXAMPLES
-Set FreeBSD brand in
+Set MidnightBSD brand in
 .Xr loader.conf 5 :
 .Pp
 .Bd -literal -offset indent -compact
-loader_brand="fbsd"
+loader_brand="mbsd"
 .Ed
 .Sh SEE ALSO
 .Xr loader.conf 5 ,
-.Xr loader 8
+.Xr loader 8 ,
 .Sh HISTORY
 The
 .Nm

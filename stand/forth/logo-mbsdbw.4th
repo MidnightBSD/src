@@ -1,5 +1,6 @@
 \ Copyright (c) 2003 Scott Long <scottl@FreeBSD.org>
 \ Copyright (c) 2006-2015 Devin Teske <dteske@FreeBSD.org>
+\ Copyright (c) 2018 Lucas Holt <luke@MidnightBSD.org>
 \ All rights reserved.
 \ 
 \ Redistribution and use in source and binary forms, with or without
@@ -22,8 +23,8 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/logo-fbsdbw.4th 280975 2015-04-02 01:48:12Z dteske $
+\
+\ $MidnightBSD$ 
 
 52 logoX ! 9 logoY ! \ Initialize logo placement defaults
 
@@ -33,14 +34,12 @@
 	1+ \ increase y for next time we're called
 ;
 
-: logo ( x y -- ) \ "FreeBSD" logo in B/W (13 rows x 21 columns)
+: logo ( x y -- ) \ "MidnightBSD" logo in B/W (13 rows x 21 columns)
 
-	s"  ______"               logo+
-	s" |  ____| __ ___  ___ " logo+
-	s" | |__ | '__/ _ \/ _ \" logo+
-	s" |  __|| | |  __/  __/" logo+
-	s" | |   | | |    |    |" logo+
-	s" |_|   |_|  \___|\___|" logo+
+	s"                      " logo+
+	s"                      " logo+
+	s"    M i d n i g h t   " logo+
+	s"                      " logo+
 	s"  ____   _____ _____"   logo+
 	s" |  _ \ / ____|  __ \"  logo+
 	s" | |_) | (___ | |  | |" logo+
@@ -48,6 +47,8 @@
 	s" | |_) |____) | |__| |" logo+
 	s" |     |      |      |" logo+
 	s" |____/|_____/|_____/"  logo+
+	s"                      " logo+
+	s"                      " logo+
 
 	2drop
 ;

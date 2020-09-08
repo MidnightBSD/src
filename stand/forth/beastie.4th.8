@@ -1,4 +1,4 @@
-.\" Copyright (c) 2011-2012 Devin Teske
+.\" Copyright (c) 2011 Devin Teske
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,21 +22,21 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/stand/forth/beastie.4th.8 329099 2018-02-10 04:37:44Z kevans $
+.\" $MidnightBSD$
 .\"
-.Dd January 6, 2016
+.Dd May 16, 2011
 .Dt BEASTIE.4TH 8
 .Os
 .Sh NAME
 .Nm beastie.4th
-.Nd FreeBSD ASCII art boot module
+.Nd MidnightBSD ASCII art boot module
 .Sh DESCRIPTION
 The file that goes by the name of
 .Nm
-is a set of commands designed to draw the ASCII art FreeBSD mascot
-\(en known simply as
-.Em beastie
-\(en to the right of the boot loader menu.
+is a set of commands designed to draw the ASCII art MidnightBSD mascot
+.Nd known simply as
+.Ic beastie
+.Nd to the right of the boot loader menu.
 The commands of
 .Nm
 by themselves are not enough for most uses.
@@ -60,7 +60,7 @@ The commands provided by it are:
 .Pp
 .Bl -tag -width disable-module_module -compact -offset indent
 .It Ic draw-beastie
-Draws the FreeBSD logo.
+Draws the MidnightBSD logo.
 .Pp
 The logo that is drawn is configured by setting the
 .Ic loader_logo
@@ -69,7 +69,7 @@ variable in
 to one of
 .Dq Li beastie ,
 .Dq Li beastiebw ,
-.Dq Li fbsdbw ,
+.Dq Li mbsdbw ,
 .Dq Li orb ,
 and
 .Dq Li orbbw
@@ -94,9 +94,8 @@ The
 variable can be configured in
 .Xr loader.conf 5
 to the number of seconds you would like to delay loading the boot menu.
-During the delay the user can press Ctrl-C to fall back to
-.Ic autoboot
-or ENTER to proceed.
+During the delay the user can press Ctrl-C to fall back to autoboot or ENTER
+to proceed.
 The default behavior is to not delay.
 .El
 .Pp
@@ -104,7 +103,7 @@ The environment variables that effect its behavior are:
 .Bl -tag -width bootfile -offset indent
 .It Va loader_logo
 Selects the desired logo in the beastie boot menu. Possible values are:
-.Dq Li fbsdbw ,
+.Dq Li mbsdbw ,
 .Dq Li beastie ,
 .Dq Li beastiebw ,
 .Dq Li orb ,
@@ -119,7 +118,6 @@ Sets the desired row position of the logo. Default is 4.
 If set to
 .Dq YES ,
 the beastie boot menu will be skipped.
-The beastie boot menu is always skipped if running non-x86 hardware.
 .It Va loader_delay
 If set to a number higher than zero, introduces a delay before starting the
 beastie boot menu. During the delay the user can press either Ctrl-C to skip
@@ -170,4 +168,4 @@ set of commands was written by
 .An Scott Long Aq scottl@FreeBSD.org ,
 .An Aleksander Fafula Aq alex@fafula.com
 and
-.An Devin Teske Aq dteske@FreeBSD.org .
+.An Devin Teske Aq devinteske@hotmail.com .

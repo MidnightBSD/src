@@ -24,7 +24,8 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/11/stand/forth/menu.4th 298831 2016-04-30 02:47:41Z pfg $
+\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/forth/menu.4th 299706 2016-05-14 00:44:23Z pfg $
 
 marker task-menu.4th
 
@@ -470,7 +471,7 @@ also menu-infrastructure definitions
 
 	\ Print the frame caption at (x,y)
 	s" loader_menu_title" getenv dup -1 = if
-		drop s" Welcome to FreeBSD"
+		drop s" Welcome to MidnightBSD"
 	then
 	TRUE ( use default alignment )
 	s" loader_menu_title_align" getenv dup -1 <> if

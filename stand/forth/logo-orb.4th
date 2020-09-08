@@ -21,35 +21,38 @@
 \ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
-\ 
-\ $FreeBSD: stable/11/stand/forth/logo-orb.4th 281275 2015-04-08 20:10:42Z dteske $
+\
+\ $MidnightBSD$
+\ $FreeBSD: stable/10/sys/boot/forth/logo-orbbw.4th 281843 2015-04-22 01:08:40Z dteske $
 
 46 logoX ! 7 logoY ! \ Initialize logo placement defaults
 
 : logo+ ( x y c-addr/u -- x y' )
 	2swap 2dup at-xy 2swap \ position the cursor
 	[char] @ escc! \ replace @ with Esc
+
 	type \ print to the screen
 	1+ \ increase y for next time we're called
 ;
 
-: logo ( x y -- ) \ color Orb mascot (15 rows x 30 columns)
+: logo ( x y -- ) \ B/W Orb mascot (15 rows x 32 columns)
 
-	s"  @[31m```                        @[31;1m`@[31m" logo+
-	s" s` `.....---...@[31;1m....--.```   -/@[31m"     logo+
-	s" +o   .--`         @[31;1m/y:`      +.@[31m"     logo+
-	s"  yo`:.            @[31;1m:o      `+-@[31m"      logo+
-	s"   y/               @[31;1m-/`   -o/@[31m"       logo+
-	s"  .-                  @[31;1m::/sy+:.@[31m"      logo+
-	s"  /                     @[31;1m`--  /@[31m"      logo+
-	s" `:                          @[31;1m:`@[31m"     logo+
-	s" `:                          @[31;1m:`@[31m"     logo+
-	s"  /                          @[31;1m/@[31m"      logo+
-	s"  .-                        @[31;1m-.@[31m"      logo+
-	s"   --                      @[31;1m-.@[31m"       logo+
-	s"    `:`                  @[31;1m`:`"             logo+
-	s"      @[31;1m.--             `--."               logo+
-	s"         .---.....----.@[m"                      logo+
+        s"       ;00#.      " logo+
+        s"     00.   :0'    " logo+
+        s"    0 `0     :0   " logo+
+        s"   0 #0       .0  " logo+
+        s"  0 #0`        +. " logo+
+        s"  0 00          0 " logo+
+        s" I #00          0 " logo+
+        s" 0 000       +  : " logo+
+        s" 0 000      #0  : " logo+
+        s" # 000'  : #00  + " logo+
+        s" .::000  .000#  0 " logo+
+        s"  0 0000  000   0 " logo+
+        s"  ':`0000000,: 0  " logo+
+        s"   0. 0000000 #:  " logo+
+        s"    0+  :+:  0:   " logo+
+        s"     .00::+00     " logo+
 
 	2drop
 ;
