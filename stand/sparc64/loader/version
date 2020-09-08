@@ -1,6 +1,0 @@
-$FreeBSD: stable/11/stand/sparc64/loader/version 99541 2002-07-07 18:23:10Z jake $
-
-NOTE ANY CHANGES YOU MAKE TO THE BOOTBLOCKS HERE.  The format of this
-file is important.  Make sure the current version number is on line 6.
-
-1.0:	I hate the loader.
