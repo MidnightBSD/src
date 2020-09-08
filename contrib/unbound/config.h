@@ -16,6 +16,9 @@
 /* Do sha512 definitions in config.h */
 /* #undef COMPAT_SHA512 */
 
+/* Command line arguments used with configure */
+#define CONFCMDLINE "--build=amd64-midnight-freebsd10.4 --host=amd64-midnight-freebsd10.4"
+
 /* Pathname to the Unbound configuration file */
 #define CONFIGFILE "/var/unbound/unbound.conf"
 
