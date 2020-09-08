@@ -97,6 +97,8 @@ static int __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 static int __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp);
 static bool __elfN(midnightbsd_trans_osrel)(const Elf_Note *note,
     int32_t *osrel);
+static bool __elfN(freebsd_trans_osrel)(const Elf_Note *note,
+    int32_t *osrel);
 static boolean_t __elfN(check_note)(struct image_params *imgp,
     Elf_Brandnote *checknote, int32_t *osrel);
 static vm_prot_t __elfN(trans_prot)(Elf_Word);
