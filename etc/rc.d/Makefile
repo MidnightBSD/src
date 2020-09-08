@@ -68,8 +68,6 @@ FILES=	DAEMON \
 	mdnsd \
 	mdnsresponder \
 	mountd \
-	mroute6d \
-	mrouted \
 	msgs \
 	natd \
 	netif \
@@ -96,7 +94,6 @@ FILES=	DAEMON \
 	rctl \
 	rdate \
 	resolv \
-	rfcomm_pppd_server \
 	root \
 	route6d \
 	routing \
@@ -120,7 +117,6 @@ FILES=	DAEMON \
 	tmp \
 	${_ubthidhci} \
 	ugidfw \
-	${_unbound} \
 	${_utx} \
 	var \
 	virecover \
