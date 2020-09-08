@@ -150,7 +150,7 @@ boolean_t zfs_abd_scatter_enabled = B_TRUE;
  */
 size_t zfs_abd_chunk_size = 4096;
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 SYSCTL_DECL(_vfs_zfs);
 
 SYSCTL_INT(_vfs_zfs, OID_AUTO, abd_scatter_enabled, CTLFLAG_RWTUN,

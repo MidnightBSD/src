@@ -104,7 +104,7 @@
 #include <util/sscanf.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #define	ECHRNG	EDOM
 #define	ETIME	ETIMEDOUT
 #endif

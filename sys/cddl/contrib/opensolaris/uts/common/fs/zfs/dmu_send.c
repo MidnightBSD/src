@@ -57,7 +57,7 @@
 #include <sys/zfeature.h>
 #include <sys/bqueue.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #undef dump_write
 #define dump_write dmu_dump_write
 #endif

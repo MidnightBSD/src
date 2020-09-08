@@ -4217,7 +4217,7 @@ spa_open_common(const char *pool, spa_t **spapp, void *tag, nvlist_t *nvpolicy,
 		spa->spa_last_ubsync_txg = 0;
 		spa->spa_load_txg = 0;
 		mutex_exit(&spa_namespace_lock);
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 		if (firstopen)
 			zvol_create_minors(spa->spa_name);
@@ -5573,7 +5573,7 @@ spa_import(const char *pool, nvlist_t *config, nvlist_t *props, uint64_t flags)
 
 	mutex_exit(&spa_namespace_lock);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #ifdef _KERNEL
 	zvol_create_minors(pool);
 #endif

@@ -51,7 +51,7 @@
 #include <sys/zil_impl.h>
 #include <sys/dsl_userhold.h>
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -169,7 +169,7 @@ int zfs_zil_clean_taskq_nthr_pct = 100;
 int zfs_zil_clean_taskq_minalloc = 1024;
 int zfs_zil_clean_taskq_maxalloc = 1024 * 1024;
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 
 extern int zfs_vdev_async_write_active_max_dirty_percent;
 

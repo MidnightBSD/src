@@ -409,7 +409,7 @@ static int sysctl_vfs_zfs_arc_max(SYSCTL_HANDLER_ARGS);
 static int sysctl_vfs_zfs_arc_min(SYSCTL_HANDLER_ARGS);
 static int sysctl_vfs_zfs_arc_no_grow_shift(SYSCTL_HANDLER_ARGS);
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static void
 arc_free_target_init(void *unused __unused)
 {
@@ -1140,7 +1140,7 @@ struct arc_buf_hdr {
 	l1arc_buf_hdr_t		b_l1hdr;
 };
 
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if defined(__MidnightBSD__) && defined(_KERNEL)
 static int
 sysctl_vfs_zfs_arc_meta_limit(SYSCTL_HANDLER_ARGS)
 {
@@ -4343,7 +4343,7 @@ arc_available_memory(void)
 	free_memory_reason_t r = FMR_UNKNOWN;
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * Cooperate with pagedaemon when it's time for it to scan
 	 * and reclaim some pages.
@@ -4405,7 +4405,7 @@ arc_available_memory(void)
 		r = FMR_PAGES_PP_MAXIMUM;
 	}
 
-#endif	/* __FreeBSD__ */
+#endif	/* __MidnightBSD__ */
 #if defined(__i386) || !defined(UMA_MD_SMALL_ALLOC)
 	/*
 	 * If we're on an i386 platform, it's possible that we'll exhaust the

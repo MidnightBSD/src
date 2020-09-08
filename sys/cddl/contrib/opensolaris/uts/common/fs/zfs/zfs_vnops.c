@@ -800,11 +800,11 @@ zfs_read(vnode_t *vp, uio_t *uio, int ioflag, cred_t *cr, caller_context_t *ct)
 		nbytes = MIN(n, zfs_read_chunk_size -
 		    P2PHASE(uio->uio_loffset, zfs_read_chunk_size));
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		if (uio->uio_segflg == UIO_NOCOPY)
 			error = mappedread_sf(vp, nbytes, uio);
 		else
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 		if (vn_has_cached_data(vp)) {
 			error = mappedread(vp, nbytes, uio);
 		} else {
@@ -1225,7 +1225,7 @@ zfs_write(vnode_t *vp, uio_t *uio, int ioflag, cred_t *cr, caller_context_t *ct)
 		return (error);
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * EFAULT means that at least one page of the source buffer was not
 	 * available.  VFS will re-try remaining I/O upon this error.
