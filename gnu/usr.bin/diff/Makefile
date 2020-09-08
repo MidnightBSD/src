@@ -2,6 +2,6 @@
 
 .include <src.opts.mk>
 
-SUBDIR=	libdiffutils libver diff diff3 doc
+SUBDIR=	libdiffutils libver diff diff3
 
 .include <bsd.subdir.mk>
