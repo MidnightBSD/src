@@ -6,4 +6,6 @@ CFLAGS+=-Wall -ansi -pedantic -std=c99 -DNO_UTIL
 
 MAN=	rdate.8
 
+WARNS=	0
+
 .include <bsd.prog.mk>
