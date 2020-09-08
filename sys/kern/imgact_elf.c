@@ -97,7 +97,6 @@ static int __elfN(load_section)(struct image_params *imgp, vm_ooffset_t offset,
 static int __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp);
 static bool __elfN(midnightbsd_trans_osrel)(const Elf_Note *note,
     int32_t *osrel);
-static bool freebsd_trans_osrel(const Elf_Note *note, int32_t *osrel);
 static boolean_t __elfN(check_note)(struct image_params *imgp,
     Elf_Brandnote *checknote, int32_t *osrel);
 static vm_prot_t __elfN(trans_prot)(Elf_Word);
@@ -177,23 +176,18 @@ Elf_Brandnote __elfN(freebsd_brandnote) = {
 	.trans_osrel	= __elfN(freebsd_trans_osrel)
 };
 
-static bool
-freebsd_trans_osrel(const Elf_Note *note, int32_t *osrel)
-{
+static bool                                                                                                                                                               
+__elfN(freebsd_trans_osrel)(const Elf_Note *note, int32_t *osrel)                                                                                                     
+{                                                                                                                                                                         
 	uintptr_t p;
-	const Elf32_Word *desc;
-
-	desc = (const Elf32_Word *)p;
-	if (desc[0] != GNU_KFREEBSD_ABI_DESC)
-		return (false);
-
 
 	p = (uintptr_t)(note + 1);
 	p += roundup2(note->n_namesz, ELF_NOTE_ROUNDSIZE);
 	*osrel = *(const int32_t *)(p);
 
-	return (true);
+	return (true);                                                                                                                                                    
 }
+
 
 int
 __elfN(insert_brand_entry)(Elf_Brandinfo *entry)
