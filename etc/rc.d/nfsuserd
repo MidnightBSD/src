@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/nfsuserd 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: nfsuserd
 # REQUIRE: NETWORKING
@@ -9,6 +10,7 @@
 . /etc/rc.subr
 
 name="nfsuserd"
+desc="Load user and group information into the kernel for NFSv4 services and support manage-gids for all NFS versions"
 rcvar="nfsuserd_enable"
 command="/usr/sbin/${name}"
 sig_stop="USR1"

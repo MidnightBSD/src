@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/ppp 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: ppp
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="ppp"
+desc="Point to Point Protocol"
 rcvar="ppp_enable"
 command="/usr/sbin/${name}"
 start_cmd="ppp_start"

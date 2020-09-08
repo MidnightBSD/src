@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/nscd 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: nscd
@@ -19,6 +19,7 @@
 . /etc/rc.subr
 
 name="nscd"
+desc="Name-service caching daemon"
 rcvar="nscd_enable"
 
 command=/usr/sbin/nscd
@@ -38,9 +39,9 @@ _nscd_set_option() {
 	if [ -n "$_cached_opt_val" -a "$_nscd_opt_val" != "$_defoptval" ]; then
 		warn "You should use nscd_${_optname} instead of" \
 		    "cached_${_optname}"
-		eval export "nscd_${_optname}"="$_cached_opt_val"
+		setvar "nscd_${_optname}" "$_cached_opt_val"
 	else
-		eval export "nscd_${_optname}"="${_nscd_opt_val:-$_defoptval}"
+		setvar "nscd_${_optname}" "${_nscd_opt_val:-$_defoptval}"
 	fi
 }
 

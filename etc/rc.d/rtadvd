@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/rtadvd 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: rtadvd
 # REQUIRE: DAEMON
@@ -11,6 +12,7 @@
 . /etc/network.subr
 
 name="rtadvd"
+desc="Router advertisement daemon"
 rcvar="rtadvd_enable"
 command="/usr/sbin/${name}"
 extra_commands="reload"

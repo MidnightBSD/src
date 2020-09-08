@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/nisdomain 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: nisdomain
@@ -33,6 +33,7 @@
 . /etc/rc.subr
 
 name="nisdomain"
+desc="Set NIS domain name"
 start_cmd="nisdomain_start"
 stop_cmd=":"
 

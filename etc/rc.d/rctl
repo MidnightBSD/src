@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/rctl 298514 2016-04-23 16:10:54Z lme $
+#
 
 # PROVIDE: rctl
 # BEFORE: LOGIN
@@ -9,6 +10,8 @@
 . /etc/rc.subr
 
 name="rctl"
+desc="Manage resource limits"
+rcvar="rctl_enable"
 start_cmd="rctl_start"
 stop_cmd="rctl_stop"
 
@@ -21,10 +24,10 @@ rctl_start()
 			\#*|'')
 				;;
 			*)
-				rctl -a "${var}"
+				echo "${var}"
 				;;
 			esac
-		done < ${rctl_rules}
+		done < ${rctl_rules} | xargs rctl -a
 	fi
 }
 

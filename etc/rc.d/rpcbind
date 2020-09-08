@@ -1,15 +1,16 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $FreeBSD: stable/11/etc/rc.d/rpcbind 298514 2016-04-23 16:10:54Z lme $
 #
 
 # PROVIDE: rpcbind
-# REQUIRE: NETWORKING rdate syslogd
+# REQUIRE: NETWORKING ntpdate syslogd
 # KEYWORD: shutdown
 
 . /etc/rc.subr
 
 name="rpcbind"
+desc="Universal addresses to RPC program number mapper"
 rcvar="rpcbind_enable"
 command="/usr/sbin/${name}"
 
