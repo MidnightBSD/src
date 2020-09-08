@@ -385,7 +385,6 @@ KNOWN_ARCHES?=	aarch64/arm64 \
 		armeb/arm \
 		armv6/arm \
 		i386 \
-		i386/pc98 \
 		mips \
 		mipsel/mips \
 		mips64el/mips \
@@ -394,8 +393,7 @@ KNOWN_ARCHES?=	aarch64/arm64 \
 		mipsn32/mips \
 		powerpc \
 		powerpc64/powerpc \
-		riscv64/riscv \
-		sparc64
+		riscv64/riscv
 
 .if ${TARGET} == ${TARGET_ARCH}
 _t=		${TARGET}
@@ -2245,9 +2243,7 @@ cddl/lib/libctf__L: lib/libz__L
 .endif
 # cddl/lib/libdtrace requires lib/libproc and lib/librtld_db; it's only built
 # on select architectures though (see cddl/lib/Makefile)
-.if ${MACHINE_CPUARCH} != "sparc64"
 _prebuild_libs+=	lib/libproc lib/librtld_db
-.endif
 
 .if ${MK_CRYPT} != "no"
 .if ${MK_OPENSSL} != "no"
