@@ -13,9 +13,9 @@ _tests=	tests
 SUBDIR.${MK_CAROOT}+= caroot
 
 # These are the programs which depend on crypto, but not Kerberos.
-SPROGS=	lib/libfetch lib/libpam lib/libradius lib/libtelnet	\
-	bin/ed libexec/telnetd usr.bin/fetch usr.bin/telnet	\
-	usr.sbin/ppp usr.sbin/tcpdump/tcpdump
+SPROGS=	lib/libfetch lib/libmport lib/libpam lib/libradius lib/libtelnet	\
+	bin/ed libexec/telnetd usr.bin/fetch usr.bin/perl usr.bin/telnet	\
+	usr.sbin/mport usr.sbin/ppp usr.sbin/tcpdump/tcpdump
 .if ${MK_SENDMAIL} != "no"
 SPROGS+=usr.sbin/sendmail
 .endif
