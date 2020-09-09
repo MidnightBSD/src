@@ -8,8 +8,11 @@
 # Moved to secure: bdes
 #
 
+# perl depends on libdl.so and that is turned off without filter
+.if defined(LINKER_FEATURES) && ${LINKER_FEATURES:Mfilter}
 SUBDIR= perl \
 	.WAIT
+.endif
 
 SUBDIR+=alias \
 	apply \
