@@ -1194,7 +1194,7 @@ int
 cdnropen(dev, flag, fmt, p)
 	dev_t dev;
 	int flag, fmt;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1216,7 +1216,7 @@ int
 cdnrclose(dev, flag, fmt, p)
 	dev_t dev;
 	int flag, fmt;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1242,7 +1242,7 @@ cdnrioctl(dev, cmd, addr, flag, p)
 	ioctlcmd_t cmd;
 	caddr_t addr;
 	int flag;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1257,9 +1257,9 @@ cdnrioctl(dev, cmd, addr, flag, p)
 	case CDNR_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 700000)
+#if (__MidnightBSD_version > 4000)
 		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
-#elsif (__FreeBSD_version > 400000)
+#elsif (__MidnightBSD_version > 1000)
 		if ((error = suser(p)) != 0)
 #else
 		if ((error = suser(p->p_ucred, &p->p_acflag)) != 0)

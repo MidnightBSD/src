@@ -992,7 +992,7 @@ int
 cbqopen(dev, flag, fmt, p)
 	dev_t dev;
 	int flag, fmt;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1005,7 +1005,7 @@ int
 cbqclose(dev, flag, fmt, p)
 	dev_t dev;
 	int flag, fmt;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1032,7 +1032,7 @@ cbqioctl(dev, cmd, addr, flag, p)
 	ioctlcmd_t cmd;
 	caddr_t addr;
 	int flag;
-#if (__FreeBSD_version > 500000)
+#if (__MidnightBSD_version > 1000)
 	struct thread *p;
 #else
 	struct proc *p;
@@ -1046,9 +1046,9 @@ cbqioctl(dev, cmd, addr, flag, p)
 		/* currently only command that an ordinary user can call */
 		break;
 	default:
-#if (__FreeBSD_version > 700000)
+#if (__MidnightBSD_version > 4000)
 		error = priv_check(p, PRIV_ALTQ_MANAGE);
-#elsif (__FreeBSD_version > 400000)
+#elsif (__MidnightBSD_version > 1000)
 		error = suser(p);
 #else
 		error = suser(p->p_ucred, &p->p_acflag);
