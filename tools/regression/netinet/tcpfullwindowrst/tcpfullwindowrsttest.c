@@ -24,7 +24,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/tools/regression/netinet/tcpfullwindowrst/tcpfullwindowrsttest.c,v 1.1 2004/12/01 12:12:12 nik Exp $
+$FreeBSD: stable/11/tools/regression/netinet/tcpfullwindowrst/tcpfullwindowrsttest.c 222485 2011-05-30 09:06:24Z rwatson $
 
 */
 
@@ -35,6 +35,7 @@ $FreeBSD: src/tools/regression/netinet/tcpfullwindowrst/tcpfullwindowrsttest.c,v
 #include <poll.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

@@ -1,9 +1,9 @@
 #
-# $FreeBSD: src/tools/regression/sockets/listenclose/Makefile,v 1.3 2005/01/22 22:41:46 rwatson Exp $
+# $FreeBSD: stable/11/tools/regression/sockets/listenclose/Makefile 281361 2015-04-10 09:27:23Z ngie $
 #
 
 PROG=	listenclose
-NO_MAN=	yes
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

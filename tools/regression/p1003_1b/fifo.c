@@ -29,19 +29,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/p1003_1b/fifo.c,v 1.1 2000/02/16 14:28:40 dufault Exp $
+ * $FreeBSD: stable/11/tools/regression/p1003_1b/fifo.c 331722 2018-03-29 02:50:57Z eadler $
  */
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <err.h>
-#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
 volatile int ticked;
 #define CAN_USE_ALARMS
@@ -109,7 +109,7 @@ int fifo(int argc, char *argv[])
 	fifo_param.sched_priority = 1;
 
 	p = (long *)mmap(0, sizeof(*p),
-	PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED|MAP_INHERIT, -1, 0);
+	PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
 
 	if (p == (long *)-1)
 		err(errno, "mmap");

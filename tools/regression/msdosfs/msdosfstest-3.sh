@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/msdosfs/msdosfstest-3.sh,v 1.1 2005/04/18 13:06:43 avatar Exp $
+# $FreeBSD: stable/11/tools/regression/msdosfs/msdosfstest-3.sh 229656 2012-01-05 21:36:53Z uqs $
 # A really simple script to create a swap-backed msdosfs filesystem, then
 # test to make sure the mbnambuf optimisation(msdosfs_conv.c rev 1.40)
 # doesn't break multi-byte characters.
@@ -9,8 +9,10 @@ mdconfig -a -t swap -s 128m -u 10
 bsdlabel -w md10 auto
 newfs_msdos -F 16 -b 8192 /dev/md10a
 mount_msdosfs -L zh_TW.Big5 -D CP950 /dev/md10a /tmp/msdosfstest/
-mkdir /tmp/msdosfstest/012345678_¨¸´c¤§¬ü
-cd /tmp/msdosfstest/012345678_¨¸´c¤§¬ü
+# The comment is UTF-8, the actual command uses the Big5 representation.
+# mkdir /tmp/msdosfstest/012345678_é‚ªæƒ¡ä¹‹ç¾Ž
+mkdir /tmp/msdosfstest/012345678_$'\250\270\264\143\244\247\254\374'
+cd /tmp/msdosfstest/012345678_$'\250\270\264\143\244\247\254\374'
 if [ $? -eq 0 ]; then
 	echo "ok 3";
 else

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/p1003_1b/p26.c,v 1.1 2000/02/16 14:28:41 dufault Exp $
+ * $FreeBSD: stable/11/tools/regression/p1003_1b/p26.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #define _POSIX_SOURCE
 #define _POSIX_C_SOURCE 199309L

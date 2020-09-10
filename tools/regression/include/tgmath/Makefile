@@ -1,7 +1,8 @@
-# $FreeBSD: src/tools/regression/include/tgmath/Makefile,v 1.3 2004/12/21 08:47:21 ru Exp $
+# $FreeBSD: stable/11/tools/regression/include/tgmath/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	tgmath
-CFLAGS+= -fno-builtin -std=c99
-NO_MAN=
+CSTD=	c99
+CFLAGS+= -fno-builtin
+MAN=
 
 .include <bsd.prog.mk>

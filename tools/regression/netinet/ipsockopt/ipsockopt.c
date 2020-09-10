@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/netinet/ipsockopt/ipsockopt.c,v 1.4 2004/11/11 19:47:53 nik Exp $
+ * $FreeBSD: stable/11/tools/regression/netinet/ipsockopt/ipsockopt.c 170613 2007-06-12 16:24:56Z bms $
  */
 
 #include <sys/types.h>
@@ -32,13 +32,19 @@
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
+#include <arpa/inet.h>
 
 #include <err.h>
 #include <errno.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+static int dorandom = 0;
+static int nmcastgroups = IP_MAX_MEMBERSHIPS;
+static int verbose = 0;
 
 /*
  * The test tool exercises IP-level socket options by interrogating the
@@ -627,6 +633,81 @@ test_ip_boolean(int sock, const char *socktypename, int option,
 }
 
 /*
+ * Test the IP_ADD_MEMBERSHIP socket option, and the dynamic allocator
+ * for the imo_membership vector which now hangs off struct ip_moptions.
+ * We then call IP_DROP_MEMBERSHIP for each group so joined.
+ */
+static void
+test_ip_multicast_membership(int sock, const char *socktypename)
+{
+    char addrbuf[16];
+    struct ip_mreq mreq;
+    uint32_t basegroup;
+    uint16_t i;
+    int sotype;
+    socklen_t sotypelen;
+
+    sotypelen = sizeof(sotype);
+    if (getsockopt(sock, SOL_SOCKET, SO_TYPE, &sotype, &sotypelen) < 0)
+	err(-1, "test_ip_multicast_membership(%s): so_type getsockopt()",
+	    socktypename);
+    /*
+     * Do not perform the test for SOCK_STREAM sockets, as this makes
+     * no sense.
+     */
+    if (sotype == SOCK_STREAM)
+	return;
+    /*
+     * The 224/8 range is administratively scoped and has special meaning,
+     * therefore it is not used for this test.
+     * If we were not told to be non-deterministic:
+     * Join multicast groups from 238.1.1.0 up to nmcastgroups.
+     * Otherwise, pick a multicast group ID in subnet 238/5 with 11 random
+     * bits in the middle, and join groups in linear order up to nmcastgroups.
+     */
+    if (dorandom) {
+	/* be non-deterministic (for interactive operation; a fuller test) */
+	srandomdev();
+	basegroup = 0xEE000000;	/* 238.0.0.0 */
+	basegroup |= ((random() % ((1 << 11) - 1)) << 16);	/* 11 bits */
+    } else {
+	/* be deterministic (for automated operation) */
+	basegroup = 0xEE010100;	/* 238.1.1.0 */
+    }
+    /*
+     * Join the multicast group(s) on the default multicast interface;
+     * this usually maps to the interface to which the default
+     * route is pointing.
+     */
+    for (i = 1; i < nmcastgroups+1; i++) {
+	mreq.imr_multiaddr.s_addr = htonl((basegroup + i));
+	mreq.imr_interface.s_addr = INADDR_ANY;
+	inet_ntop(AF_INET, &mreq.imr_multiaddr, addrbuf, sizeof(addrbuf));
+	if (verbose)
+		fprintf(stderr, "IP_ADD_MEMBERSHIP %s INADDR_ANY\n", addrbuf);
+	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+		       sizeof(mreq)) < 0) {
+		err(-1,
+"test_ip_multicast_membership(%d, %s): failed IP_ADD_MEMBERSHIP (%s, %s)",
+		    sock, socktypename, addrbuf, "INADDR_ANY");
+	}
+    }
+    for (i = 1; i < nmcastgroups+1; i++) {
+	mreq.imr_multiaddr.s_addr = htonl((basegroup + i));
+	mreq.imr_interface.s_addr = INADDR_ANY;
+	inet_ntop(AF_INET, &mreq.imr_multiaddr, addrbuf, sizeof(addrbuf));
+	if (verbose)
+		fprintf(stderr, "IP_DROP_MEMBERSHIP %s INADDR_ANY\n", addrbuf);
+	if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq,
+		       sizeof(mreq)) < 0) {
+		err(-1,
+"test_ip_multicast_membership(%d, %s): failed IP_DROP_MEMBERSHIP (%s, %s)",
+		    sock, socktypename, addrbuf, "INADDR_ANY");
+	}
+    }
+}
+
+/*
  * XXX: For now, nothing here.
  */
 static void
@@ -650,15 +731,6 @@ test_ip_multicast_vif(int sock, const char *socktypename)
 	 * This requires some knowledge of the number of virtual interfaces,
 	 * and what is valid.
 	 */
-}
-
-/*
- * XXX: For now, nothing here.
- */
-static void
-test_ip_multicast_membership(int sock, const char *socktypename)
-{
-
 }
 
 static void
@@ -791,15 +863,29 @@ testsuite(int priv)
 		//test_ip_options(sock, socktypename);
 		close(sock);
 
+		sock = get_socket(socktype, priv);
+		if (sock == -1)
+			err(-1, "get_socket(%s, %d) for test_ip_options",
+			    socktypename, priv);
+		test_ip_multicast_membership(sock, socktypename);
+		close(sock);
+
 		test_ip_multicast_if(0, NULL);
 		test_ip_multicast_vif(0, NULL);
-		test_ip_multicast_membership(0, NULL);
 		/*
 		 * XXX: Still need to test:
 		 * IP_PORTRANGE
 		 * IP_IPSEC_POLICY?
 		 */
 	}
+}
+
+static void
+usage()
+{
+
+	fprintf(stderr, "usage: ipsockopt [-M ngroups] [-r] [-v]\n");
+	exit(EXIT_FAILURE);
 }
 
 /*
@@ -809,8 +895,26 @@ testsuite(int priv)
 int
 main(int argc, char *argv[])
 {
+	int ch;
+
+	while ((ch = getopt(argc, argv, "M:rv")) != -1) {
+		switch (ch) {
+		case 'M':
+			nmcastgroups = atoi(optarg);
+			break;
+		case 'r':
+			dorandom = 1;	/* introduce non-determinism */
+			break;
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			usage();
+		}
+	}
 
 	printf("1..1\n");
+
 	if (geteuid() != 0) {
 		warnx("Not running as root, can't run tests as root");
 		fprintf(stderr, "\n");

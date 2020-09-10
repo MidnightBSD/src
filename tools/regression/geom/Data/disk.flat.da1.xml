@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <DISKIMAGE>
   <comment>
-    $FreeBSD: src/tools/regression/geom/Data/disk.flat.da1.xml,v 1.1 2002/03/17 18:53:45 phk Exp $
+    $FreeBSD: stable/11/tools/regression/geom/Data/disk.flat.da1.xml 92512 2002-03-17 18:53:58Z phk $
     This image contains an interesting setup: there is an MBR+BSD
     but also another BSD at sector one which is valid but bogus.
   </comment>

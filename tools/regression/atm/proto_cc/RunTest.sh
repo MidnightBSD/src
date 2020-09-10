@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/atm/proto_cc/RunTest.sh,v 1.1 2004/08/13 09:27:21 harti Exp $
+# $FreeBSD: stable/11/tools/regression/atm/proto_cc/RunTest.sh 133639 2004-08-13 09:27:21Z harti $
 
 . ../Funcs.sh
 

@@ -1,9 +1,9 @@
 #
-# $FreeBSD: src/tools/regression/sockets/reconnect/Makefile,v 1.2 2005/01/22 22:41:46 rwatson Exp $
+# $FreeBSD: stable/11/tools/regression/sockets/reconnect/Makefile 281411 2015-04-11 07:37:21Z ngie $
 #
 
 PROG=	reconnect
-NO_MAN=	yes
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

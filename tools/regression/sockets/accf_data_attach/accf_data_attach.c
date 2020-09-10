@@ -23,10 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/sockets/accf_data_attach/accf_data_attach.c,v 1.4 2005/06/11 11:59:48 maxim Exp $
+ * $FreeBSD: stable/11/tools/regression/sockets/accf_data_attach/accf_data_attach.c 294103 2016-01-15 21:59:18Z ngie $
  */
 
 #include <sys/types.h>
+#include <sys/module.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
@@ -58,12 +59,22 @@
  *   make sure it is removed.
  */
 int
-main(int argc, char *argv[])
+main(void)
 {
 	struct accept_filter_arg afa;
 	struct sockaddr_in sin;
 	socklen_t len;
 	int lso, ret;
+
+	/* XXX: PLAIN_TEST_REQUIRE_MODULE "backport" for stable/9 */
+	const char *_mod_name = "accf_data";
+
+	if (modfind(_mod_name) == -1) {
+		printf("1..0 # SKIP - module %s could not be resolved: %s\n",
+		    _mod_name, strerror(errno));
+		_exit(0);
+	}
+	/* XXX: PLAIN_TEST_REQUIRE_MODULE for stable/9 */
 
 	printf("1..11\n");
 
@@ -119,7 +130,7 @@ main(int argc, char *argv[])
 	 * yet a listen() socket.
 	 */
 	bzero(&afa, sizeof(afa));
-	strcpy(afa.af_name, ACCF_NAME);
+	strncpy(afa.af_name, ACCF_NAME, sizeof(afa.af_name));
 	ret = setsockopt(lso, SOL_SOCKET, SO_ACCEPTFILTER, &afa, sizeof(afa));
 	if (ret == 0)
 		errx(-1, "not ok 5 - setsockopt() before listen() succeeded");
@@ -164,14 +175,11 @@ main(int argc, char *argv[])
 	 * Step 8: After listen().  This call to setsockopt() should succeed.
 	 */
 	bzero(&afa, sizeof(afa));
-	strcpy(afa.af_name, ACCF_NAME);
+	strncpy(afa.af_name, ACCF_NAME, sizeof(afa.af_name));
 	ret = setsockopt(lso, SOL_SOCKET, SO_ACCEPTFILTER, &afa, sizeof(afa));
 	if (ret != 0)
 		errx(-1, "not ok 9 - setsockopt() after listen() failed with %d "
 		    "(%s)", errno, strerror(errno));
-	if (len != sizeof(afa))
-		errx(-1, "not ok 9 - setsockopt() after listen() returned wrong "
-		    "size (%d vs expected %d)", len, sizeof(afa));
 	printf("ok 9 - setsockopt\n");
 
 	/*
@@ -186,7 +194,7 @@ main(int argc, char *argv[])
 		    "failed with %d (%s)", errno, strerror(errno));
 	if (len != sizeof(afa))
 		errx(-1, "not ok 10 - getsockopt() after setsockopet()  after "
-		    "listen() returned wrong size (got %d expected %d)", len,
+		    "listen() returned wrong size (got %d expected %zd)", len,
 		    sizeof(afa));
 	if (strcmp(afa.af_name, ACCF_NAME) != 0)
 		errx(-1, "not ok 10 - getsockopt() after setsockopt() after "

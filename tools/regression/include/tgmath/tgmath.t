@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/include/tgmath/tgmath.t,v 1.1 2004/11/11 19:47:51 nik Exp $
+# $FreeBSD: stable/11/tools/regression/include/tgmath/tgmath.t 137587 2004-11-11 19:47:55Z nik $
 
 cd `dirname $0`
 

@@ -1,0 +1,16 @@
+#
+# $FreeBSD: stable/11/tools/regression/environ/Makefile.retention 264400 2014-04-13 05:21:56Z imp $
+#
+SRCS=	retention.c
+PROG=	retention
+
+CFLAGS+=-Wall -I../../../include
+
+CLEANFILES=	*~ ${PROG}.core
+
+MAN=
+
+.include <bsd.prog.mk>
+
+test: ${PROG}
+	@./${PROG}

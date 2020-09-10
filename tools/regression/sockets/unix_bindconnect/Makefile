@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/sockets/unix_bindconnect/Makefile,v 1.1 2005/02/20 22:21:53 rwatson Exp $
+# $FreeBSD: stable/11/tools/regression/sockets/unix_bindconnect/Makefile 281399 2015-04-11 03:38:49Z ngie $
 
 PROG=	unix_bindconnect
-NO_MAN=
-WARNS=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

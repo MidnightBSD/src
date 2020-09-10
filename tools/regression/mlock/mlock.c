@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/mlock/mlock.c,v 1.1 2005/01/03 19:56:20 rwatson Exp $
+ * $FreeBSD: stable/11/tools/regression/mlock/mlock.c 139651 2005-01-03 19:56:20Z rwatson $
  */
 
 #include <sys/types.h>

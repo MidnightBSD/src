@@ -1,5 +1,9 @@
-/* $FreeBSD: src/tools/regression/p1003_1b/main.c,v 1.1 2000/02/16 14:28:40 dufault Exp $ */
+/* $FreeBSD: stable/11/tools/regression/p1003_1b/main.c 287297 2015-08-29 19:47:20Z rodrigc $ */
+
+#include <sys/param.h>
+
 #include <stdio.h>
+#include <string.h>
 
 int fifo(int argc, char *argv[]);
 int memlock(int argc, char *argv[]);
@@ -18,8 +22,6 @@ static struct {
 	{ "sched", sched, 1 },
 	{ "yield", yield, 1 },
 };
-
-#define N(T) (sizeof (T)/ sizeof(T[0]))
 
 static int usage(int argc, char *argv[])
 {
@@ -46,14 +48,14 @@ int main(int argc, char *argv[])
 			" (my notes say \"because things detach\");\n"
 			"meanwhile do these individual tests and look"
 			" for a non-zero exit code:\n");
-		for (i = 0; i < N(tab); i++)
+		for (i = 0; i < nitems(tab); i++)
 			if (tab[i].works)
 				fprintf(stderr, "p1003_1b %s\n", tab[i].t);
 		return -1;
 #else
 		{
 			int r;
-			for (i = 0; i < N(tab); i++) {
+			for (i = 0; i < nitems(tab); i++) {
 				if (tab[i].works) {
 					if ( (r =
 					(*tab[i].f)(argc - 1, argv + 1)) ) {
@@ -69,7 +71,7 @@ int main(int argc, char *argv[])
 	}
 	
 	if (argc > 1) {
-		for (i = 0; i < N(tab); i++)
+		for (i = 0; i < nitems(tab); i++)
 			if (strcmp(tab[i].t, argv[1]) == 0)
 				return (*tab[i].f)(argc - 1, argv + 1);
 	}

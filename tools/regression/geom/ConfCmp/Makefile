@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/geom/ConfCmp/Makefile,v 1.8 2004/12/21 08:46:55 ru Exp $
+# $FreeBSD: stable/11/tools/regression/geom/ConfCmp/Makefile 291738 2015-12-04 03:17:47Z bdrewery $
 
 PROG=	ConfCmp
 SRCS+=	ConfCmp.c
@@ -12,10 +12,9 @@ CFLAGS+=	 -g -W -Wall -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -
 # Uncomment for ElectricFence
 #LDADD += -lefence -L/usr/local/lib
 
-DPADD += ${LIBBSDXML}
-LDADD += -lbsdxml
+LIBADD= bsdxml
 
-NO_MAN=
+MAN=
 CLEANFILES	+= _*
 
 .include <bsd.prog.mk>

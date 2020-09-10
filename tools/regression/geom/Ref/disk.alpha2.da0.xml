@@ -1,4 +1,4 @@
-$FreeBSD: src/tools/regression/geom/Ref/disk.alpha2.da0.xml,v 1.1 2003/04/09 12:40:12 phk Exp $
+$FreeBSD: stable/11/tools/regression/geom/Ref/disk.alpha2.da0.xml 113291 2003-04-09 12:40:12Z phk $
 /dev/md34	512	5120	10
 /dev/md34a	512	24675840	48195
 /dev/md34b	512	4178442240	8161020

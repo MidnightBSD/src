@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/gaithrstress/Makefile,v 1.3 2004/12/21 08:47:20 ru Exp $
+# $FreeBSD: stable/11/tools/regression/gaithrstress/Makefile 291738 2015-12-04 03:17:47Z bdrewery $
 
 PROG=	gaithrstress
-LDADD+=	-pthread
+LIBADD=	pthread
 
-NO_MAN=
+MAN=
 .include <bsd.prog.mk>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/sockets/sigpipe/sigpipe.c,v 1.2 2005/03/11 13:05:18 rwatson Exp $
+ * $FreeBSD: stable/11/tools/regression/sockets/sigpipe/sigpipe.c 281397 2015-04-11 03:24:49Z ngie $
  */
 
 #include <sys/types.h>
@@ -69,7 +69,7 @@ got_signal(void)
 }
 
 static void
-signal_handler(int signum)
+signal_handler(int signum __unused)
 {
 
 	signaled = 1;
@@ -97,7 +97,7 @@ test_send(const char *testname, int sock)
 			return;
 		err(-1, "%s: send", testname);
 	}
-	errx(-1, "%s: send: returned %d", testname, len);
+	errx(-1, "%s: send: returned %zd", testname, len);
 }
 
 static void
@@ -113,7 +113,7 @@ test_write(const char *testname, int sock)
 			return;
 		err(-1, "%s: write", testname);
 	}
-	errx(-1, "%s: write: returned %d", testname, len);
+	errx(-1, "%s: write: returned %zd", testname, len);
 }
 
 static void

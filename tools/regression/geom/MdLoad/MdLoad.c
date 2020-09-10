@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/geom/MdLoad/MdLoad.c,v 1.1 2003/04/09 12:34:20 phk Exp $
+ * $FreeBSD: stable/11/tools/regression/geom/MdLoad/MdLoad.c 181463 2008-08-09 11:14:05Z des $
  */
 
 #include <stdio.h>
@@ -208,7 +208,7 @@ g_simdisk_xml_load(const char *file)
 	int fd, i;
 
 	sc = calloc(1, sizeof *sc);
-	sc->sbuf = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sc->sbuf = sbuf_new_auto();
 	LIST_INIT(&sc->sectors);
 	XML_SetUserData(parser, sc);
 	XML_SetElementHandler(parser, startElement, endElement);

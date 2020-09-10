@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/p1003_1b/Makefile,v 1.4 2004/12/21 08:47:22 ru Exp $
+# $FreeBSD: stable/11/tools/regression/p1003_1b/Makefile 282072 2015-04-27 08:34:46Z ngie $
 
 PROG=p1003_1b
 
@@ -11,7 +11,8 @@ SRCS=\
 	sched.c \
 	yield.c
 
-NO_MAN=
+MAN=
 
 CFLAGS+=-DNO_MEMLOCK
+
 .include <bsd.prog.mk>

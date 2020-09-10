@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/security/access/Makefile,v 1.3 2004/12/21 08:47:23 ru Exp $
+# $FreeBSD: stable/11/tools/regression/security/access/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	testaccess
-NO_MAN=
+MAN=
 
 SRCS=	testaccess.c
 CFLAGS	+= -Wall

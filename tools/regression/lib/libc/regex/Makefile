@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/lib/libc/regex/Makefile,v 1.1 2004/07/19 09:00:26 tjr Exp $
+# $FreeBSD: stable/11/tools/regression/lib/libc/regex/Makefile 132392 2004-07-19 09:00:26Z tjr $
 
 GROT=	../../../../../lib/libc/regex/grot
 

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/tools/regression/ccd/layout/Makefile,v 1.1 2003/01/17 12:23:44 phk Exp $
+# $FreeBSD: stable/11/tools/regression/ccd/layout/Makefile 109416 2003-01-17 12:23:44Z phk $
 #
 # Regression test for ccd's layout.
 #

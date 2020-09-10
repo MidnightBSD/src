@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/regression/usr.bin/env/Makefile,v 1.1 2005/06/20 04:17:12 gad Exp $
+# $FreeBSD: stable/11/tools/regression/usr.bin/env/Makefile 203952 2010-02-16 09:10:21Z uqs $
 
 TESTPGM?=TestProgramNotSpecifed
 

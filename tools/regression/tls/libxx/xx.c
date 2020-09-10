@@ -1,4 +1,4 @@
-/* $FreeBSD: src/tools/regression/tls/libxx/xx.c,v 1.1 2004/08/03 09:04:00 dfr Exp $ */
+/* $FreeBSD: stable/11/tools/regression/tls/libxx/xx.c 133066 2004-08-03 09:04:01Z dfr $ */
 
 extern int __thread yy1;
 int __thread xx1 = 1;

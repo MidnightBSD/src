@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/zfs/zpool/create/cache.t,v 1.1.2.1 2009/08/03 08:13:06 kensmith Exp $
+# $FreeBSD: stable/11/tools/regression/zfs/zpool/create/cache.t 185029 2008-11-17 20:49:29Z pjd $
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh

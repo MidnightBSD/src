@@ -1,8 +1,8 @@
 #
-# $FreeBSD: src/tools/regression/netinet/ipsockopt/Makefile,v 1.3 2004/12/21 08:47:21 ru Exp $
+# $FreeBSD: stable/11/tools/regression/netinet/ipsockopt/Makefile 264400 2014-04-13 05:21:56Z imp $
 #
 
 PROG=	ipsockopt
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>

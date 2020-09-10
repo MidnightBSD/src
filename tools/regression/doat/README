@@ -1,0 +1,7 @@
+$FreeBSD: stable/11/tools/regression/doat/README 179084 2008-05-18 08:34:04Z rdivacky $
+
+This is a simple testing program for *at family of syscalls. It creates
+"tmp" subdirectory in a current directory and creates files etc. in it.
+
+It prints OK for every successful test. This testing program only covers
+correct error values.

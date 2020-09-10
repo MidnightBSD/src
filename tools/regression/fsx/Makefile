@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/regression/fsx/Makefile,v 1.3 2004/12/21 08:47:20 ru Exp $
+# $FreeBSD: stable/11/tools/regression/fsx/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	fsx
 
-NO_MAN=
+MAN=
 
 .include <bsd.prog.mk>

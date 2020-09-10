@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/sockets/accf_data_attach/accf_data_attach.t,v 1.1 2004/11/11 19:47:53 nik Exp $
+# $FreeBSD: stable/11/tools/regression/sockets/accf_data_attach/accf_data_attach.t 137587 2004-11-11 19:47:55Z nik $
 
 cd `dirname $0`
 

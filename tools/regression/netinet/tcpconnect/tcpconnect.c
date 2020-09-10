@@ -23,28 +23,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/netinet/tcpconnect/tcpconnect.c,v 1.4 2005/05/16 00:54:47 rwatson Exp $
+ * $FreeBSD: stable/11/tools/regression/netinet/tcpconnect/tcpconnect.c 222483 2011-05-30 08:54:32Z rwatson $
  */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <arpa/inet.h>
 
+#include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 
 static void
 usage(void)
 {
 
 	fprintf(stderr, "tcpconnect server port\n");
-	fprintf(stderr, "tcpconnect client ip port count\n");
+	fprintf(stderr, "tcpconnect client ip port count [nonblock] [tcpmd5]\n");
 	exit(-1);
 }
 
@@ -71,13 +75,13 @@ tcpconnect_server(int argc, char *argv[])
 
 	listen_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (listen_sock == -1)
-		errx(-1, "socket: %s", strerror(errno));
+		err(-1, "socket");
 
 	if (bind(listen_sock, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-		errx(-1, "bind: %s", strerror(errno));
+		err(-1, "bind");
 
 	if (listen(listen_sock, -1) == -1)
-		errx(-1, "listen: %s", strerror(errno));
+		err(-1, "listen");
 
 	while (1) {
 		accept_sock = accept(listen_sock, NULL, NULL);
@@ -92,15 +96,22 @@ tcpconnect_client(int argc, char *argv[])
 	long count, i, port;
 	char *dummy;
 	int sock;
+	int nonblock = 0, md5enable = 0;
 
-	if (argc != 3)
+	if (argc < 3 || argc > 5)
 		usage();
+	for (i=3; i < argc; i++) {
+		if (strcmp(argv[i], "nonblock") == 0)
+			nonblock = 1;
+		if (strcmp(argv[i], "tcpmd5") == 0)
+			md5enable = 1;
+	}
 
 	bzero(&sin, sizeof(sin));
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
 	if (inet_aton(argv[0], &sin.sin_addr) == 0)
-		errx(-1, "listen: %x", strerror(errno));
+		err(-1, "listen");
 
 	port = strtoul(argv[1], &dummy, 10);
 	if (port < 1 || port > 65535 || *dummy != '\0')
@@ -114,19 +125,29 @@ tcpconnect_client(int argc, char *argv[])
 	for (i = 0; i < count; i++) {
 		sock = socket(PF_INET, SOCK_STREAM, 0);
 		if (sock == -1)
-			errx(-1, "socket: %s", strerror(errno));
+			err(-1, "socket");
 
-#ifdef NONBLOCK
-		if (fcntl(sock, F_SETFL, O_NONBLOCK) != 0)
-			errx(-1, "fcntl(F_SETFL): %s", strerror(errno));
+		/* No warning in default case on ENOPROTOOPT. */
+		if (setsockopt(sock, IPPROTO_TCP, TCP_MD5SIG,
+		    &md5enable, sizeof(md5enable)) != 0) {
+			if (errno == ENOPROTOOPT && md5enable > 0)
+				err(-1, "setsockopt(TCP_MD5SIG)");
+			else if (errno != ENOPROTOOPT)
+				warn("setsockopt(TCP_MD5SIG)");
+		}
 
-		if (connect(sock, (struct sockaddr *)&sin, sizeof(sin)) == -1
-		    && errno != EINPROGRESS)
-			errx(-1, "connect: %s", strerror(errno));
-#else
-		if (connect(sock, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-			errx(-1, "connect: %s", strerror(errno));
-#endif
+		if (nonblock) {
+			if (fcntl(sock, F_SETFL, O_NONBLOCK) != 0)
+				err(-1, "fcntl(F_SETFL)");
+
+			if (connect(sock, (struct sockaddr *)&sin,
+			    sizeof(sin)) == -1 && errno != EINPROGRESS)
+				err(-1, "connect");
+		} else {
+			if (connect(sock, (struct sockaddr *)&sin,
+			    sizeof(sin)) == -1)
+				err(-1, "connect");
+		}
 
 		close(sock);
 	}

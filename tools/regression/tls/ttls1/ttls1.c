@@ -1,4 +1,4 @@
-/* $FreeBSD: src/tools/regression/tls/ttls1/ttls1.c,v 1.2 2004/08/05 08:07:40 dfr Exp $ */
+/* $FreeBSD: stable/11/tools/regression/tls/ttls1/ttls1.c 133162 2004-08-05 08:07:40Z dfr $ */
 
 #include <stdio.h>
 

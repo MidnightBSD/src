@@ -24,7 +24,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 # -------+---------+---------+-------- + --------+---------+---------+---------+
-# $FreeBSD: src/tools/regression/usr.bin/env/regress-sb.rb,v 1.1 2005/06/20 04:17:12 gad Exp $
+# $FreeBSD: stable/11/tools/regression/usr.bin/env/regress-sb.rb 279779 2015-03-08 14:12:43Z jilles $
 # -------+---------+---------+-------- + --------+---------+---------+---------+
 #   This script was written to provide a battery of regression-tests for some
 # changes I am making to the `env' command.  I wrote a new script for this
@@ -341,11 +341,12 @@ class RGTestOptions
 	#   for test data.  Format of all recognized values should be:
 	#		[%-object.value-%]
 	#   which is hopefully distinctive-enough that they will never
-	#   conflict with any naturally-occuring string.  Also note that
+	#   conflict with any naturally-occurring string.  Also note that
 	#   we only match the specific values that we recognize, and not
 	#   "just anything" that matches the general pattern.  There are
 	#   no blanks in the recognized values, but I use an x-tended
 	#   regexp and then add blanks to make it more readable.
+	optval.gsub!(/\[%- testpgm\.pathname -%\]/x, $testpgm)
 	optval.gsub!(/\[%- testpgm\.basename -%\]/x, File.basename($testpgm))
 	optval.gsub!(/\[%- script\.pathname  -%\]/x, $scriptfile)
 

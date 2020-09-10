@@ -1,10 +1,9 @@
-# $FreeBSD: src/tools/regression/geom/MdLoad/Makefile,v 1.5 2004/12/21 08:47:21 ru Exp $
+# $FreeBSD: stable/11/tools/regression/geom/MdLoad/Makefile 291738 2015-12-04 03:17:47Z bdrewery $
 
 PROG=	MdLoad
-DPADD=	${LIBSBUF} ${LIBBSDXML}
-LDADD=	-lsbuf -lbsdxml
+LIBADD=	sbuf bsdxml
 
-NO_MAN=
+MAN=
 
 
 WARNS?=	4

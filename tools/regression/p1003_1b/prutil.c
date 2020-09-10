@@ -1,18 +1,19 @@
+#include <err.h>
 #include <errno.h>
-#include <unistd.h>
 #include <sched.h>
 #include <stdio.h>
-
-#include <err.h>
+#include <stdlib.h>
 #include <sysexits.h>
+#include <unistd.h>
+
 #include "prutil.h"
 
 /*
- * $FreeBSD: src/tools/regression/p1003_1b/prutil.c,v 1.1 2000/02/16 14:28:41 dufault Exp $
+ * $FreeBSD: stable/11/tools/regression/p1003_1b/prutil.c 283018 2015-05-16 22:53:26Z ngie $
  */
 void quit(const char *text)
 {
-	err(errno, text);
+	err(errno, "%s", text);
 }
 
 char *sched_text(int scheduler)

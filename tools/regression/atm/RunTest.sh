@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/atm/RunTest.sh,v 1.3 2004/08/13 09:27:21 harti Exp $
+# $FreeBSD: stable/11/tools/regression/atm/RunTest.sh 170737 2007-06-14 20:11:48Z harti $
 
 . ./Funcs.sh
 
@@ -39,7 +39,7 @@ done
 (cd proto_uni ; sh ./RunTest.sh -u $options)
 (cd proto_cc ; sh ./RunTest.sh -u $options)
 
-(cd proto_uni ; sh ./RunTest.sh $options)
 (cd proto_sscop ; sh ./RunTest.sh $options)
 (cd proto_sscfu ; sh ./RunTest.sh $options)
+(cd proto_uni ; sh ./RunTest.sh $options)
 (cd proto_cc ; sh ./RunTest.sh $options)

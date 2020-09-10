@@ -1,10 +1,8 @@
-# $FreeBSD: src/tools/regression/tls/libyy/Makefile,v 1.3 2004/12/21 08:47:25 ru Exp $
+# $FreeBSD: stable/11/tools/regression/tls/libyy/Makefile 204311 2010-02-25 14:42:26Z ru $
 
-LIB=		yy
-SHLIB_MAJOR=	1
+SHLIB_NAME=	libyy.so
 
 SRCS=	yy.c
 CFLAGS+=-fpic
-NO_MAN=
 
 .include <bsd.lib.mk>

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/p1003_1b/memlock.c,v 1.1 2000/02/16 14:28:40 dufault Exp $
+ * $FreeBSD: stable/11/tools/regression/p1003_1b/memlock.c 331722 2018-03-29 02:50:57Z eadler $
  */
 #include <unistd.h>
 #include <stdio.h>

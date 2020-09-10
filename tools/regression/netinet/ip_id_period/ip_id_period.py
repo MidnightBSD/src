@@ -21,12 +21,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/9.2.0/tools/regression/netinet/ip_id_period/ip_id_period.py 242041 2012-10-25 03:15:24Z eadler $
+# $FreeBSD: stable/11/tools/regression/netinet/ip_id_period/ip_id_period.py 291041 2015-11-19 00:01:52Z rodrigc $
 #
 # This is a regression test to verify the proper behavior of IP ID generation
 # code.  It will push 200000 packets, then report back what the min and max
 # periods it saw for different IDs were.
 
+from __future__ import print_function
 import os
 import signal
 import subprocess

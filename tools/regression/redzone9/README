@@ -1,0 +1,10 @@
+$FreeBSD: stable/11/tools/regression/redzone9/README 155087 2006-01-31 11:20:13Z pjd $
+
+To verify that redzone(9) works properly:
+
+	# make
+	# make install
+	# kldload redzone
+	# sh test.sh
+
+And look at the logs/console output.

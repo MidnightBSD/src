@@ -1,4 +1,4 @@
-/* $FreeBSD: src/tools/regression/ccd/layout/a.c,v 1.1 2003/01/17 12:23:44 phk Exp $ */
+/* $FreeBSD: stable/11/tools/regression/ccd/layout/a.c 109416 2003-01-17 12:23:44Z phk $ */
 #include <unistd.h>
 
 static uint32_t buf[512/4];

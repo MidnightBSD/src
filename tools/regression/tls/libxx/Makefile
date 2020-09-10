@@ -1,10 +1,8 @@
-# $FreeBSD: src/tools/regression/tls/libxx/Makefile,v 1.3 2004/12/21 08:47:24 ru Exp $
+# $FreeBSD: stable/11/tools/regression/tls/libxx/Makefile 204311 2010-02-25 14:42:26Z ru $
 
-LIB=		xx
-SHLIB_MAJOR=	1
+SHLIB_NAME=	libxx.so
 
 SRCS=	xx.c
 #CFLAGS+=-mtls-dialect=sun
-NO_MAN=
 
 .include <bsd.lib.mk>

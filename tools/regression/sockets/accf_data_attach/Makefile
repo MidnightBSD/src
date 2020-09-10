@@ -1,11 +1,9 @@
 #
-# $FreeBSD: src/tools/regression/sockets/accf_data_attach/Makefile,v 1.3 2004/12/21 08:47:23 ru Exp $
+# $FreeBSD: stable/11/tools/regression/sockets/accf_data_attach/Makefile 281355 2015-04-10 07:59:46Z ngie $
 #
 
 PROG=	accf_data_attach
-NO_MAN=
-
-accf_data_attach: accf_data_attach.c
-	gcc -Wall -o accf_data_attach accf_data_attach.c
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

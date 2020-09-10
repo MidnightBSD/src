@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/sockets/listenclose/listenclose.c,v 1.2 2005/05/16 00:53:38 rwatson Exp $
+ * $FreeBSD: stable/11/tools/regression/sockets/listenclose/listenclose.c 281361 2015-04-10 09:27:23Z ngie $
  */
 
 #include <sys/types.h>
@@ -52,7 +52,7 @@
  */
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	int listen_sock, connect_sock;
 	struct sockaddr_in sin;

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: src/tools/regression/zfs/zpool/add/files.t,v 1.1.2.1 2009/08/03 08:13:06 kensmith Exp $
+# $FreeBSD: stable/11/tools/regression/zfs/zpool/add/files.t 274620 2014-11-17 11:35:30Z smh $
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh

@@ -1,4 +1,4 @@
-$FreeBSD: src/tools/regression/zfs/LICENSE,v 1.1.2.1 2009/08/03 08:13:06 kensmith Exp $
+$FreeBSD: stable/11/tools/regression/zfs/LICENSE 185029 2008-11-17 20:49:29Z pjd $
 
 License for all ZFS regression tests:
 

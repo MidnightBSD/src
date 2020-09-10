@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/regression/sockets/kqueue/kqueue.c,v 1.3 2004/11/11 19:47:53 nik Exp $
+ * $FreeBSD: stable/11/tools/regression/sockets/kqueue/kqueue.c 281356 2015-04-10 08:01:49Z ngie $
  */
 
 #include <sys/types.h>
@@ -250,9 +250,9 @@ test_evfilt_write(int kq, int fd[2], const char *socktype)
  * sockets, and confirm that we can register for various events on them.
  */
 int
-main(int argc, char *argv[])
+main(void)
 {
-	int i, kq, sv[2];
+	int kq, sv[2];
 
 	printf("1..49\n");
 
