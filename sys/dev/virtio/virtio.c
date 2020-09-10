@@ -155,7 +155,7 @@ virtio_describe(device_t dev, const char *msg,
 	if (n > 0)
 		sbuf_cat(&sb, ">");
 
-#if __FreeBSD_version < 900020
+#if __MidnightBSD_version < 8000
 	sbuf_finish(&sb);
 	if (sbuf_overflowed(&sb) == 0)
 #else
