@@ -1,6 +1,6 @@
-#!/bin/sh -
+#!/bin/sh
 #
-# Copyright 2004 John-Mark Gurney
+# Copyright (c) 2011 Max Khon, The FreeBSD Project
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,44 +24,38 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/tools/debugscripts/kgdb 143864 2005-03-20 02:08:21Z jmg $
+# $FreeBSD: stable/11/tools/tinder.sh 297434 2016-03-30 23:50:23Z bdrewery $
+#
 
-crashpath="/var/crash"
-kld_debpy="kld_deb.py"
+#
+# Utility script to build specific parts of the source tree on all arches
+#
+# Example:
+#
+# cd /usr/src
+# make toolchains		# build toolchain for all arches
+# sh tools/tinder.sh gnu/lib/libdialog usr.sbin/sade NO_CLEAN=yes
+#				# build libdialog and sade for all architectures
+#				# without making clean
+# sh tools/tinder.sh gnu/lib/libdialog usr.sbin/sade TARGETS="amd64 i386"
+#				# build libdialog and sade only for amd64 and i386
+#
 
-if [ x"$1" = x"-?" -o x"$1" = x"-h" ]; then
-	echo "Usage: $0 <corenum> [ <gdbcmdfile> [ <modulepaths> ] ]"
-	echo ""
-	echo "Path for crash dumps: $crashpath"
+if [ $# -eq 0 ]; then
+	echo 1>&2 "Usage: `basename $0` [MAKEVAR=value...] path..."
 	exit 1
 fi
 
-if [ x"$1" = x"" ]; then
-	echo "Need core number."
-	exit 1
-fi
-corenum="$1"
-shift
-
-cmd_file=""
-if [ x"$2" != x"" ]; then
-	cmd_file="-x $2"
-	shift
-fi
-
-core="$crashpath/vmcore.$corenum"
-info="$crashpath/info.$corenum"
-
-#Get the kernel source compile dir from the info file
-kernsrc="`awk 'i == 1 { split($0, a, ":"); print a[2]; i = 0 } $1 == "Versionstring:" { i = 1 }' < "$info"`"
-
-tmpfile="/tmp/kgdb.asf.$$"
-# -mapped (broken?)
-# -x command_file
-echo "Kernel Source:	$kernsrc"
-echo "Getting KLD information and locations..."
-python $kld_debpy "$kernsrc" "$core" $@ > "$tmpfile" &&
-echo "Please run the following command to load module symbols:"
-echo "source $tmpfile"
-(cd "$kernsrc"; kgdb "$kernsrc/kernel.debug" "$core")
-rm "$tmpfile"
+# MAKE_ARGS is intentionally not reset to allow caller to specify additional MAKE_ARGS
+SUBDIR=
+for i in "$@"; do
+	case "$i" in
+	*=*)
+		MAKE_ARGS="$MAKE_ARGS $i"
+		;;
+	*)
+		SUBDIR="$SUBDIR $i"
+		;;
+	esac
+done
+make tinderbox UNIVERSE_TARGET="_cleanobj _obj everything" $MAKE_ARGS SUBDIR_OVERRIDE="$SUBDIR"

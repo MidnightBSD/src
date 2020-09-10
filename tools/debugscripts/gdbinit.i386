@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/debugscripts/gdbinit.i386,v 1.4 2004/11/20 02:32:42 das Exp $
+# $FreeBSD: stable/11/tools/debugscripts/gdbinit.i386 228975 2011-12-30 00:04:11Z uqs $
 # Assembler-level macros for i386
 # Disassemble the next 10 instructions.
 define xi
@@ -268,7 +268,7 @@ while (*(int *) $frame > 0xc0000000)
 end
 end
 document btr
-Show a backtrace from the ebp address specified.  This can be used to get a backtrace from any stack resident in memory.  It's the user's responsiblity to ensure that the address is meaningful.
+Show a backtrace from the ebp address specified.  This can be used to get a backtrace from any stack resident in memory.  It's the user's responsibility to ensure that the address is meaningful.
 end
 
 # btp <pid>
