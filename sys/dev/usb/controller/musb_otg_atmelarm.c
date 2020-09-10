@@ -172,7 +172,7 @@ musbotg_attach(device_t dev)
 	sc->sc_otg.sc_platform_data = sc;
 	sc->sc_otg.sc_mode = MUSB2_DEVICE_MODE;
 
-#if (__FreeBSD_version >= 700031)
+#if (__MidnightBSD_version >= 4000)
 	err = bus_setup_intr(dev, sc->sc_otg.sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
 	    NULL, (driver_intr_t *)musbotg_wrapper_interrupt, sc, &sc->sc_otg.sc_intr_hdl);
 #else
