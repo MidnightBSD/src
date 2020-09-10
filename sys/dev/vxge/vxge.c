@@ -649,7 +649,7 @@ vxge_send_locked(ifnet_t ifp, vxge_vpath_t *vpath)
 	}
 }
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 
 int
 vxge_mq_send(ifnet_t ifp, mbuf_t m_head)
@@ -1069,7 +1069,7 @@ vxge_rx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_rxd_h rxdh,
 		 */
 		vxge_rx_checksum(ext_info, mbuf_up);
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 		M_HASHTYPE_SET(mbuf_up, M_HASHTYPE_OPAQUE);
 		mbuf_up->m_pkthdr.flowid = vpath->vp_index;
 #endif
@@ -1383,7 +1383,7 @@ vxge_ifp_setup(device_t ndev)
 	ifp->if_ioctl = vxge_ioctl;
 	ifp->if_start = vxge_send;
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 	ifp->if_transmit = vxge_mq_send;
 	ifp->if_qflush = vxge_mq_qflush;
 #endif
@@ -2289,7 +2289,7 @@ vxge_vpath_open(vxge_dev_t *vdev)
 			    "failed to create dma tags\n");
 			break;
 		}
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 		vpath->br = buf_ring_alloc(VXGE_DEFAULT_BR_SIZE, M_DEVBUF,
 		    M_WAITOK, &vpath->mtx_tx);
 		if (vpath->br == NULL) {
@@ -2359,7 +2359,7 @@ vxge_tso_config(vxge_dev_t *vdev)
 			vdev->ifp->if_capabilities &= ~IFCAP_TSO4;
 	}
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 	if (vdev->ifp->if_capabilities & IFCAP_TSO4)
 		vdev->ifp->if_capabilities |= IFCAP_VLAN_HWTSO;
 #endif
@@ -2427,7 +2427,7 @@ vxge_vpath_close(vxge_dev_t *vdev)
 		if (vpath->handle)
 			vxge_hal_vpath_close(vpath->handle);
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 		if (vpath->br != NULL)
 			buf_ring_free(vpath->br, M_DEVBUF);
 #endif
@@ -3484,7 +3484,7 @@ vxge_pmd_port_type_get(vxge_dev_t *vdev, u32 port_type,
 		break;
 
 	case VXGE_HAL_DEVICE_PMD_TYPE_10G_BASE_T:
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 		vdev->ifm_optics = IFM_10G_T;
 #endif
 		strlcpy(ifm_name, "10GbE baseT", ifm_len);
@@ -3665,7 +3665,7 @@ vxge_ioctl(ifnet_t ifp, u_long command, caddr_t data)
 		if (mask & IFCAP_VLAN_HWCSUM)
 			ifp->if_capenable ^= IFCAP_VLAN_HWCSUM;
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 		if (mask & IFCAP_VLAN_HWTSO)
 			ifp->if_capenable ^= IFCAP_VLAN_HWTSO;
 #endif

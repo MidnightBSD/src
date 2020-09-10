@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: stable/11/sys/nlm/nlm_prot_impl.c 302216 2016-06-26 20:08:42
 #include <sys/lockf.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 #include <sys/priv.h>
 #endif
 #include <sys/proc.h>
@@ -93,7 +93,7 @@ static SYSCTL_NODE(_vfs_nlm, OID_AUTO, sysid, CTLFLAG_RW, NULL, "");
  */
 static int nlm_syscall_offset = SYS_nlm_syscall;
 static struct sysent nlm_syscall_prev_sysent;
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
 static struct sysent nlm_syscall_sysent = {
 	(sizeof(struct nlm_syscall_args) / sizeof(register_t)) | SYF_MPSAFE,
 	(sy_call_t *) nlm_syscall
@@ -1700,7 +1700,7 @@ sys_nlm_syscall(struct thread *td, struct nlm_syscall_args *uap)
 {
 	int error;
 
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	error = priv_check(td, PRIV_NFS_LOCKD);
 #else
 	error = suser(td);
@@ -1809,7 +1809,7 @@ nlm_get_vfs_state(struct nlm_host *host, struct svc_req *rqstp,
 			goto out;
 	}
 
-#if __FreeBSD_version < 800011
+#if __MidnightBSD_version < 9000
 	VOP_UNLOCK(vs->vs_vp, 0, curthread);
 #else
 	VOP_UNLOCK(vs->vs_vp, 0);

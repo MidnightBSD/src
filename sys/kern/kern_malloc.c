@@ -277,7 +277,7 @@ SYSCTL_INT(_debug_malloc, OID_AUTO, numzones, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
  * Any number that changes regularly is an okay choice for the
  * offset.  Build numbers are pretty good of you have them.
  */
-static u_int zone_offset = __FreeBSD_version;
+static u_int zone_offset = __MidnightBSD_version;
 TUNABLE_INT("debug.malloc.zone_offset", &zone_offset);
 SYSCTL_UINT(_debug_malloc, OID_AUTO, zone_offset, CTLFLAG_RDTUN,
     &zone_offset, 0, "Separate malloc types by examining the "

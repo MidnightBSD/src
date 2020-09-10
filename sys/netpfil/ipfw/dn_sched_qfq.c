@@ -82,7 +82,7 @@ int fls(unsigned int n)
 }
 #endif
 
-#if !defined(_KERNEL) || defined( __FreeBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
+#if !defined(_KERNEL) || defined( __MidnightBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
 static inline unsigned long __fls(unsigned long word)
 {
 	return fls(word) - 1;
