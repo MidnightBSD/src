@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/xen/netback/netback.c 346817 2019-04-28 13
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/if_ether.h>
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4001
 #include <netinet/tcp.h>
 #endif
 #include <netinet/ip_icmp.h>

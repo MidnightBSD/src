@@ -81,14 +81,8 @@
 
 #define WI_DEFAULT_AUTHTYPE	1
 
-#ifdef __NetBSD__
-#define OS_STRING_NAME	"NetBSD"
-#endif
-#ifdef __FreeBSD__
-#define OS_STRING_NAME	"FreeBSD"
-#endif
-#ifdef __OpenBSD__
-#define OS_STRING_NAME	"OpenBSD"
+#ifdef __MidnightBSD__
+#define OS_STRING_NAME	"MidnightBSD"
 #endif
 
 #define WI_DEFAULT_NODENAME	OS_STRING_NAME " WaveLAN/IEEE node"
