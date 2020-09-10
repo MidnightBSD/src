@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1986, Larry Wall
  * 
@@ -25,11 +24,10 @@
  * behaviour
  *
  * $OpenBSD: util.h,v 1.16 2014/12/13 10:31:07 tobias Exp $
- * $FreeBSD: stable/10/usr.bin/patch/util.h 276807 2015-01-08 03:44:54Z pfg $
+ * $FreeBSD: stable/11/usr.bin/patch/util.h 286795 2015-08-15 00:42:33Z delphij $
  */
 
 char		*fetchname(const char *, bool *, int);
-char		*checked_in(char *);
 int		backup_file(const char *);
 int		move_file(const char *, const char *);
 int		copy_file(const char *, const char *);

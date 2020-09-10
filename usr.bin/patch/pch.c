@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1986, Larry Wall
  * 
@@ -25,7 +24,7 @@
  * behaviour
  *
  * $OpenBSD: pch.c,v 1.43 2014/11/18 17:03:35 tobias Exp $
- * $FreeBSD: stable/10/usr.bin/patch/pch.c 320086 2017-06-18 21:48:33Z pfg $
+ * $FreeBSD: stable/11/usr.bin/patch/pch.c 355351 2019-12-03 18:55:09Z kevans $
  */
 
 #include <sys/types.h>
@@ -70,6 +69,8 @@ static LINENUM	p_efake = -1;	/* end of faked up lines--don't free */
 static LINENUM	p_bfake = -1;	/* beg of faked up lines */
 static FILE	*pfp = NULL;	/* patch file pointer */
 static char	*bestguess = NULL;	/* guess at correct filename */
+
+char		*source_file;
 
 static void	grow_hunkmax(void);
 static int	intuit_diff_type(void);
@@ -180,6 +181,9 @@ there_is_another_patch(void)
 			say("done\n");
 		return false;
 	}
+	if (p_filesize == 0)
+		return false;
+	nonempty_patchf_seen = true;
 	if (verbose)
 		say("Hmm...");
 	diff_type = intuit_diff_type();
@@ -216,7 +220,12 @@ there_is_another_patch(void)
 			bestguess = xstrdup(buf);
 			filearg[0] = fetchname(buf, &exists, 0);
 		}
-		if (!exists) {
+		/*
+		 * fetchname can now return buf = NULL, exists = true, to
+		 * indicate to the caller that /dev/null was specified.  Retain
+		 * previous behavior for now until this can be better evaluted.
+		 */
+		if (filearg[0] == NULL || !exists) {
 			int def_skip = *bestguess == '\0';
 			ask("No file found--skip this patch? [%c] ",
 			    def_skip  ? 'y' : 'n');
@@ -265,6 +274,7 @@ intuit_diff_type(void)
 	char	*s, *t;
 	int	indent, retval;
 	struct file_name names[MAX_FILE];
+	int	piece_of_git = 0;
 
 	memset(names, 0, sizeof(names));
 	ok_to_create_file = false;
@@ -309,14 +319,22 @@ intuit_diff_type(void)
 		if (!stars_last_line && strnEQ(s, "*** ", 4))
 			names[OLD_FILE].path = fetchname(s + 4,
 			    &names[OLD_FILE].exists, strippath);
-		else if (strnEQ(s, "--- ", 4))
-			names[NEW_FILE].path = fetchname(s + 4,
+		else if (strnEQ(s, "--- ", 4)) {
+			size_t off = 4;
+			if (piece_of_git && strippath == 957 &&
+			    strnEQ(s, "--- a/", 6))
+				off = 6;
+			names[NEW_FILE].path = fetchname(s + off,
 			    &names[NEW_FILE].exists, strippath);
-		else if (strnEQ(s, "+++ ", 4))
+		} else if (strnEQ(s, "+++ ", 4)) {
 			/* pretend it is the old name */
-			names[OLD_FILE].path = fetchname(s + 4,
+			size_t off = 4;
+			if (piece_of_git && strippath == 957 &&
+			    strnEQ(s, "+++ b/", 6))
+				off = 6;
+			names[OLD_FILE].path = fetchname(s + off,
 			    &names[OLD_FILE].exists, strippath);
-		else if (strnEQ(s, "Index:", 6))
+		} else if (strnEQ(s, "Index:", 6))
 			names[INDEX_FILE].path = fetchname(s + 6,
 			    &names[INDEX_FILE].exists, strippath);
 		else if (strnEQ(s, "Prereq:", 7)) {
@@ -331,6 +349,9 @@ intuit_diff_type(void)
 				free(revision);
 				revision = NULL;
 			}
+		} else if (strnEQ(s, "diff --git a/", 13)) {
+			/* Git-style diffs. */
+			piece_of_git = 1;
 		} else if (strnEQ(s, "==== ", 5)) {
 			/* Perforce-style diffs. */
 			if ((t = strstr(s + 5, " - ")) != NULL)
@@ -388,6 +409,24 @@ scan_exit:
 		struct file_name tmp = names[OLD_FILE];
 		names[OLD_FILE] = names[NEW_FILE];
 		names[NEW_FILE] = tmp;
+	}
+
+	/* Invalidated */
+	free(source_file);
+	source_file = NULL;
+
+	if (retval != 0) {
+		/*
+		 * If we've successfully determined a diff type, stored in
+		 * retval, path == NULL means _PATH_DEVNULL if exists is set.
+		 * Explicitly specify it here to make it easier to detect later
+		 * on that we're actually creating a file and not that we've
+		 * just goofed something up.
+		 */
+		if (names[OLD_FILE].path != NULL)
+			source_file = xstrdup(names[OLD_FILE].path);
+		else if (names[OLD_FILE].exists)
+			source_file = xstrdup(_PATH_DEVNULL);
 	}
 	if (filearg[0] == NULL) {
 		if (posix)
@@ -1126,7 +1165,12 @@ hunk_done:
 			if (*buf != '>')
 				fatal("> expected at line %ld of patch\n",
 				    p_input_line);
-			p_line[i] = savestr(buf + 2);
+			/* Don't overrun if we don't have enough line */
+			if (len > 2)
+				p_line[i] = savestr(buf + 2);
+			else
+				p_line[i] = savestr("");
+
 			if (out_of_mem) {
 				p_end = i - 1;
 				return false;
@@ -1504,17 +1548,8 @@ posix_name(const struct file_name *names, bool assume_exists)
 	}
 	if (path == NULL && !assume_exists) {
 		/*
-		 * No files found, look for something we can checkout from
-		 * RCS/SCCS dirs.  Same order as above.
-		 */
-		for (i = 0; i < MAX_FILE; i++) {
-			if (names[i].path != NULL &&
-			    (path = checked_in(names[i].path)) != NULL)
-				break;
-		}
-		/*
-		 * Still no match?  Check to see if the diff could be creating
-		 * a new file.
+		 * No files found, check to see if the diff could be
+		 * creating a new file.
 		 */
 		if (path == NULL && ok_to_create_file &&
 		    names[NEW_FILE].path != NULL)
@@ -1525,7 +1560,7 @@ posix_name(const struct file_name *names, bool assume_exists)
 }
 
 static char *
-compare_names(const struct file_name *names, bool assume_exists, int phase)
+compare_names(const struct file_name *names, bool assume_exists)
 {
 	size_t min_components, min_baselen, min_len, tmp;
 	char *best = NULL;
@@ -1542,9 +1577,7 @@ compare_names(const struct file_name *names, bool assume_exists, int phase)
 	min_components = min_baselen = min_len = SIZE_MAX;
 	for (i = INDEX_FILE; i >= OLD_FILE; i--) {
 		path = names[i].path;
-		if (path == NULL ||
-		    (phase == 1 && !names[i].exists && !assume_exists) ||
-		    (phase == 2 && checked_in(path) == NULL))
+		if (path == NULL || (!names[i].exists && !assume_exists))
 			continue;
 		if ((tmp = num_components(path)) > min_components)
 			continue;
@@ -1575,17 +1608,11 @@ best_name(const struct file_name *names, bool assume_exists)
 {
 	char *best;
 
-	best = compare_names(names, assume_exists, 1);
-	if (best == NULL) {
-		best = compare_names(names, assume_exists, 2);
-		/*
-		 * Still no match?  Check to see if the diff could be creating
-		 * a new file.
-		 */
-		if (best == NULL && ok_to_create_file &&
-		    names[NEW_FILE].path != NULL)
-			best = names[NEW_FILE].path;
-	}
+	best = compare_names(names, assume_exists);
+
+	/* No match?  Check to see if the diff could be creating a new file. */
+	if (best == NULL && ok_to_create_file)
+		best = names[NEW_FILE].path;
 
 	return best ? xstrdup(best) : NULL;
 }

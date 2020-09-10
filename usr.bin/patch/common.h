@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 1986, Larry Wall
  * 
@@ -25,7 +24,7 @@
  * behaviour
  *
  * $OpenBSD: common.h,v 1.26 2006/03/11 19:41:30 otto Exp $
- * $FreeBSD: stable/10/usr.bin/patch/common.h 306914 2016-10-09 20:13:53Z pfg $
+ * $FreeBSD: stable/11/usr.bin/patch/common.h 345878 2019-04-04 17:21:30Z kevans $
  */
 
 #include <sys/types.h>
@@ -42,12 +41,6 @@
 #define	INITLINELEN 4096
 #define	BUFFERSIZE 4096
 #define	LINENUM_MAX LONG_MAX
-
-#define	SCCSPREFIX "s."
-
-#define	RCSSUFFIX ",v"
-#define	CHECKOUT "/usr/bin/co"
-#define	RCSDIFF "/usr/bin/rcsdiff"
 
 #define	ORIGEXT ".orig"
 #define	REJEXT ".rej"
@@ -71,6 +64,7 @@ extern size_t	buf_size;	/* size of general purpose buffer */
 
 extern bool	using_plan_a;	/* try to keep everything in memory */
 extern bool	out_of_mem;	/* ran out of memory in plan a */
+extern bool	nonempty_patchf_seen;	/* seen a non-zero-length patch file? */
 
 #define	MAXFILEC 2
 
