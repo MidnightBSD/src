@@ -351,7 +351,7 @@ getkeyserv_handle(int vers)
 		return ((CLIENT *) NULL);
 	}
         tpconf = NULL;
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	if (uname(&u) == -1)
 #else
 #if defined(i386)

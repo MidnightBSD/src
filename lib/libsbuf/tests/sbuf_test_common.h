@@ -30,7 +30,7 @@
 
 #include <sys/param.h>
 
-#if __FreeBSD_version > 1100064
+#if __MidnightBSD_version > 200000
 #define	HAVE_SBUF_GET_FLAGS
 #define	HAVE_SBUF_CLEAR_FLAGS
 #define	HAVE_SBUF_SET_FLAGS

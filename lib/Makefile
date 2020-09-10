@@ -53,7 +53,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdispatch \
 	${_libdl} \
 	libdns_sd \
-	${_libdpv} \
 	libdwarf \
 	libedit \
 	${_libefivar} \

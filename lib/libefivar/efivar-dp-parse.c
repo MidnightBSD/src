@@ -322,7 +322,7 @@ GetNextDeviceNodeStr (
 }
 
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 /**
   Return whether the integer string is a hex string.
 
@@ -3024,7 +3024,7 @@ DevPathFromTextFilePath (
 {
   FILEPATH_DEVICE_PATH  *File;
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
   File = (FILEPATH_DEVICE_PATH *) CreateDeviceNode (
                                     MEDIA_DEVICE_PATH,
                                     MEDIA_FILEPATH_DP,

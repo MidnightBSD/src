@@ -139,7 +139,7 @@ bwrite(struct uufsd *disk, ufs2_daddr_t blockno, const void *data, size_t size)
 	return (cnt);
 }
 
-#ifdef __FreeBSD_kernel__
+#ifdef __MidnightBSD_kernel__
 
 static int
 berase_helper(struct uufsd *disk, ufs2_daddr_t blockno, ufs2_daddr_t size)
