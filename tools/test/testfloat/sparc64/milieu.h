@@ -25,7 +25,7 @@ this code that are retained.
 ===============================================================================
 */
 
-/* $FreeBSD: release/9.2.0/tools/test/testfloat/sparc64/milieu.h 207151 2010-04-24 12:11:41Z marius $ */
+/* $FreeBSD: stable/11/tools/test/testfloat/sparc64/milieu.h 207151 2010-04-24 12:11:41Z marius $ */
 
 /*
 -------------------------------------------------------------------------------

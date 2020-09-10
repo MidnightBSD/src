@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/tools/test/iconv/gnu/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	gnu
-NO_MAN=	yes
+MAN=
 
 WARNS?=	3
 CFLAGS+= -L/usr/local/lib -I/usr/local/include

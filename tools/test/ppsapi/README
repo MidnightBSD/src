@@ -1,4 +1,4 @@
-# $FreeBSD: src/tools/test/ppsapi/README,v 1.2 2004/11/19 17:30:48 obrien Exp $
+# $FreeBSD: stable/11/tools/test/ppsapi/README 244040 2012-12-08 22:16:36Z eadler $
 
 This is a small test program which I have had around since we wrote
 the RFC 2783 API.
@@ -16,7 +16,7 @@ Options:
 
 The output looks like:
 
-# ./ppsapitest -C /dev/cuad4
+# ./ppsapitest -C /dev/cuau4
 1070915603 .703680117 119 1070915940 .902275676 121
 1070915941 .703657317 120 1070915941 .902327516 122
 1070915942 .703657077 121 1070915942 .902367957 123
@@ -36,7 +36,7 @@ Columns:
 (If the -C option had not been specified, twice as many lines would
 be output:
 
-# ./ppsapitest /dev/cuad4
+# ./ppsapitest /dev/cuau4
 1070916432 .703624557 125 1070915945 .902527078 126
 1070916432 .703624557 125 1070916432 .902303156 127
 1070916433 .703624557 126 1070916432 .902303156 127

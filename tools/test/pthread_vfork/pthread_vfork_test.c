@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/9.2.0/tools/test/pthread_vfork/pthread_vfork_test.c 246405 2013-02-06 13:53:59Z kib $");
+__FBSDID("$FreeBSD: stable/11/tools/test/pthread_vfork/pthread_vfork_test.c 246119 2013-01-30 13:14:34Z kib $");
 
 #include <sys/types.h>
 #include <sys/wait.h>

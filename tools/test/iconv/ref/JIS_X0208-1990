@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/11/tools/test/iconv/ref/JIS_X0208-1990 219019 2011-02-25 00:04:39Z gabor $
 0x2121 = 0x3000
 0x2122 = 0x25C6
 0x2124 = 0x3041

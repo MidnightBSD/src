@@ -1,4 +1,4 @@
-$FreeBSD$
+$FreeBSD: stable/11/tools/test/iconv/ref/CP862 219019 2011-02-25 00:04:39Z gabor $
 0x0000 = 0x0000
 0x0001 = 0x0001
 0x0002 = 0x0002

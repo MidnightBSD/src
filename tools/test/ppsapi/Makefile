@@ -1,11 +1,13 @@
-# $FreeBSD: src/tools/test/ppsapi/Makefile,v 1.4 2004/12/21 08:47:26 ru Exp $
+# $FreeBSD: stable/11/tools/test/ppsapi/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	ppsapitest
-NO_MAN=
+MAN=
 
 WARNS?=	5
 
 .include <bsd.prog.mk>
 
+CFLAGS+=-Wno-format-security
+
 test:	${PROG}
-	./${PROG} /dev/cuad0
+	./${PROG} /dev/cuau0

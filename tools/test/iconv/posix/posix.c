@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/tools/test/iconv/posix/posix.c 219019 2011-02-25 00:04:39Z gabor $");
 
 #include <sys/endian.h>
 #include <sys/types.h>

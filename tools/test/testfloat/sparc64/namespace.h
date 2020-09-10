@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/9.2.0/tools/test/testfloat/sparc64/namespace.h 207151 2010-04-24 12:11:41Z marius $
+ * $FreeBSD: stable/11/tools/test/testfloat/sparc64/namespace.h 207151 2010-04-24 12:11:41Z marius $
  */
 /*
  * This file has no content and is solely to satisfy a #include in

@@ -1,7 +1,7 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/tools/test/iconv/tablegen/Makefile 264400 2014-04-13 05:21:56Z imp $
 
 PROG=	tablegen
-NO_MAN=	yes
+MAN=
 
 WARNS?=	3
 
