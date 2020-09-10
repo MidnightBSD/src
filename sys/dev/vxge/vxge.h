@@ -77,7 +77,7 @@
 #define	VXGE_DEFAULT_CONFIG_ENABLE		1
 #define	VXGE_DEFAULT_CONFIG_DISABLE		0
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 #define	VXGE_DEFAULT_CONFIG_MQ_ENABLE		1
 #else
 #define	VXGE_DEFAULT_CONFIG_MQ_ENABLE		0
@@ -336,7 +336,7 @@ typedef struct _vxge_vpath_t {
 	struct		mtx mtx_tx;
 	struct		lro_ctrl lro;
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 	struct		buf_ring *br;
 #endif
 
@@ -519,7 +519,7 @@ int	vxge_dma_tags_create(vxge_vpath_t *);
 void	vxge_device_hw_info_print(vxge_dev_t *);
 int	vxge_driver_config(vxge_dev_t *);
 
-#if __FreeBSD_version >= 800000
+#if __MidnightBSD_version >= 9000
 
 int
 vxge_mq_send(ifnet_t, mbuf_t);

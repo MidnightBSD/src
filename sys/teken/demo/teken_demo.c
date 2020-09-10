@@ -37,7 +37,7 @@
 #include <unistd.h>
 
 #include <ncurses.h>
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <libutil.h>
 #elif defined(__linux__)
 #include <pty.h>
