@@ -4330,7 +4330,7 @@ ixl_stat_update48(struct i40e_hw *hw, u32 hireg, u32 loreg,
 {
 	u64 new_data;
 
-#if defined(__FreeBSD__) && (__FreeBSD_version >= 1000000) && defined(__amd64__)
+#if defined(__MidnightBSD__) && (__FreeBSD_version >= 1000000) && defined(__amd64__)
 	new_data = rd64(hw, loreg);
 #else
 	/*

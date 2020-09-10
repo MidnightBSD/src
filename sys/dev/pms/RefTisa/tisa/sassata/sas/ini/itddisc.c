@@ -1089,7 +1089,7 @@ osGLOBAL void tiIniGetDirectSataSasAddr(tiRoot_t * tiRoot, bit32 phyId, bit8 **s
  	}
 	if(status == IOCTL_CALL_FAIL)
 	{
-#if !(defined(__FreeBSD__))
+#if !(defined(__MidnightBSD__))
 	   printk("Error getting Adapter WWN\n");
 #else
 	   printf("Error getting Adapter WWN\n");

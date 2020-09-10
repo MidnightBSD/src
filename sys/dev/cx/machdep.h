@@ -68,7 +68,7 @@
 /*
  * FreeBSD and BSD/OS
  */
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #   include <sys/param.h>
 #   include <machine/cpufunc.h>
 #   include <sys/libkern.h>

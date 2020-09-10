@@ -1110,7 +1110,7 @@ static struct drm_driver driver = {
 	.gem_free_object = i915_gem_free_object,
 #if defined(__linux__)
 	.gem_vm_ops = &i915_gem_vm_ops,
-#elif defined(__FreeBSD__)
+#elif defined(__MidnightBSD__)
 	.gem_pager_ops	= &i915_gem_pager_ops,
 #endif
 
@@ -1132,7 +1132,7 @@ static struct drm_driver driver = {
 #ifdef __linux__
 	.fops = &i915_driver_fops,
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	.sysctl_init	= i915_sysctl_init,
 	.sysctl_cleanup	= i915_sysctl_cleanup,
 #endif

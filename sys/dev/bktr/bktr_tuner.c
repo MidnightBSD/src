@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/bktr/bktr_tuner.c 331722 2018-03-29 02:50:
 #include <sys/proc.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #if (__FreeBSD_version < 500000)
 #include <machine/clock.h>              /* for DELAY */
 #include <pci/pcivar.h>

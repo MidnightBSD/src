@@ -26,7 +26,7 @@
 
 /* $FreeBSD: stable/11/sys/dev/netmap/netmap_offloadings.c 344047 2019-02-12 09:26:05Z vmaffione $ */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 
 #include <sys/types.h>

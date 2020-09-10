@@ -32,7 +32,7 @@
  * Portability and compatibility interfaces.
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 /******************************************************************************
  * FreeBSD
  */

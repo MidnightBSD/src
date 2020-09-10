@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/ncr/ncr.c 335138 2018-06-14 14:46:20Z mav 
 
 #define NCR_GETCC_WITHMSG
 
-#if defined (__FreeBSD__) && defined(_KERNEL)
+#if defined (__MidnightBSD__) && defined(_KERNEL)
 #include "opt_ncr.h"
 #endif
 

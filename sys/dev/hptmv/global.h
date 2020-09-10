@@ -196,7 +196,7 @@ int HPTLIBAPI fDeSetReadAhead(PDevice pDev, int enable);
 #include <dev/hptmv/raid5n.h>
 #include <dev/hptmv/vdevice.h>
 
-#if defined(__FreeBSD__) && defined(HPTLIBAPI)
+#if defined(__MidnightBSD__) && defined(HPTLIBAPI)
 #undef HPTLIBAPI
 #define HPTLIBAPI 
 #endif

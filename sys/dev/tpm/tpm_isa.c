@@ -25,7 +25,7 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/tpm/tpm_isa.c 211201 2010-08-12 00:16:18Z 
 #include <sys/malloc.h>
 #include <sys/proc.h>
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/uio.h>

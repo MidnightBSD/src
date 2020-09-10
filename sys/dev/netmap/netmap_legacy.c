@@ -25,7 +25,7 @@
  */
 /* $FreeBSD: stable/11/sys/dev/netmap/netmap_legacy.c 344047 2019-02-12 09:26:05Z vmaffione $ */
 
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/cdefs.h> /* prerequisite */
 #include <sys/types.h>
 #include <sys/param.h>	/* defines used in kernel.h */
@@ -391,7 +391,7 @@ netmap_ioctl_legacy(struct netmap_priv_d *priv, u_long cmd, caddr_t data,
 		break;
 	}
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	case FIONBIO:
 	case FIOASYNC:
 		/* FIONBIO/FIOASYNC are no-ops. */

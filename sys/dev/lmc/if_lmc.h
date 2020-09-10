@@ -1260,7 +1260,7 @@ static void check_intr_status(softc_t *);
 static void core_interrupt(void *, int);
 static void user_interrupt(softc_t *, int);
 #if BSD
-# if (defined(__FreeBSD__) && defined(DEVICE_POLLING))
+# if (defined(__MidnightBSD__) && defined(DEVICE_POLLING))
 static int fbsd_poll(struct ifnet *, enum poll_cmd, int);
 # endif
 static intr_return_t bsd_interrupt(void *);

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 __FBSDID("$FreeBSD: stable/11/sys/dev/malo/if_malohal.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif
 

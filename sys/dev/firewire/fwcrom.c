@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: stable/11/sys/dev/firewire/fwcrom.c 331722 2018-03-29 02:50:57Z eadler $");
 #endif

@@ -47,7 +47,7 @@
 /******************************/
 /* *** Memory Allocation  *** */
 /******************************/
-#if (defined(__FreeBSD__) || defined(__bsdi__))
+#if (defined(__MidnightBSD__) || defined(__bsdi__))
 vm_offset_t     get_bktr_mem( int unit, unsigned size );
 #endif
 
@@ -59,7 +59,7 @@ void            free_bktr_mem(bktr_ptr_t, bus_dmamap_t, vm_offset_t);
 /************************************/
 /* *** Interrupt Enable/Disable *** */
 /************************************/
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #if (__FreeBSD_version >=500000)
 #define USE_VBIMUTEX
 #define	DECLARE_INTR_MASK(s)	/* no need to declare 's' */

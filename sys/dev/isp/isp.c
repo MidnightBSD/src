@@ -46,7 +46,7 @@
 __KERNEL_RCSID(0, "$NetBSD$");
 #include <dev/ic/isp_netbsd.h>
 #endif
-#ifdef	__FreeBSD__
+#ifdef	__MidnightBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: stable/11/sys/dev/isp/isp.c 348483 2019-05-31 20:36:32Z ken $");
 #include <dev/isp/isp_freebsd.h>

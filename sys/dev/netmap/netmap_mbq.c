@@ -33,13 +33,13 @@
 #include "bsd_glue.h"
 #elif defined (_WIN32)
 #include "win_glue.h"
-#else   /* __FreeBSD__ */
+#else   /* __MidnightBSD__ */
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
-#endif  /* __FreeBSD__ */
+#endif  /* __MidnightBSD__ */
 
 #include "netmap_mbq.h"
 
