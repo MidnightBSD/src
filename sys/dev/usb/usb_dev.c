@@ -90,8 +90,7 @@ SYSCTL_INT(_hw_usb_dev, OID_AUTO, debug, CTLFLAG_RWTUN,
     &usb_fifo_debug, 0, "Debug Level");
 #endif
 
-#if ((__FreeBSD_version >= 700001) || (__FreeBSD_version == 0) || \
-     ((__FreeBSD_version >= 600034) && (__MidnightBSD_version < 4000)))
+#if (__MidnightBSD_version >= 4000)
 #define	USB_UCRED struct ucred *ucred,
 #else
 #define	USB_UCRED

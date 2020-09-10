@@ -65,13 +65,13 @@
 #define	thread_unlock(td) mtx_unlock_spin(&sched_lock)
 #endif
 
-#if (__FreeBSD_version >= 800000)
+#if (__MidnightBSD_version >= 4000)
 static struct proc *usbproc;
 static int usb_pcount;
 #define	USB_THREAD_CREATE(f, s, p, ...) \
 		kproc_kthread_add((f), (s), &usbproc, (p), RFHIGHPID, \
 		    0, "usb", __VA_ARGS__)
-#if (__FreeBSD_version >= 900000)
+#if (__MidnightBSD_version >= 8000)
 #define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check()
 #else
 #define	USB_THREAD_SUSPEND_CHECK() kthread_suspend_check(curthread)
@@ -196,7 +196,7 @@ usb_process(void *arg)
 	up->up_ptr = NULL;
 	cv_signal(&up->up_cv);
 	mtx_unlock(up->up_mtx);
-#if (__FreeBSD_version >= 800000)
+#if (__MidnightBSD_version >= 8000)
 	/* Clear the proc pointer if this is the last thread. */
 	if (--usb_pcount == 0)
 		usbproc = NULL;
@@ -236,7 +236,7 @@ usb_proc_create(struct usb_process *up, struct mtx *p_mtx,
 		up->up_ptr = NULL;
 		goto error;
 	}
-#if (__FreeBSD_version >= 800000)
+#if (__MidnightBSD_version >= 8000)
 	usb_pcount++;
 #endif
 	return (0);

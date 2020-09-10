@@ -179,7 +179,7 @@ static miibus_readreg_t smsc_miibus_readreg;
 static miibus_writereg_t smsc_miibus_writereg;
 static miibus_statchg_t smsc_miibus_statchg;
 
-#if __FreeBSD_version > 1000000
+#if __MidnightBSD_version > 9000
 static int smsc_attach_post_sub(struct usb_ether *ue);
 #endif
 static uether_fn_t smsc_attach_post;
@@ -226,7 +226,7 @@ static const struct usb_config smsc_config[SMSC_N_TRANSFER] = {
 
 static const struct usb_ether_methods smsc_ue_methods = {
 	.ue_attach_post = smsc_attach_post,
-#if __FreeBSD_version > 1000000
+#if __MidnightBSD_version > 9000
 	.ue_attach_post_sub = smsc_attach_post_sub,
 #endif
 	.ue_start = smsc_start,
@@ -913,7 +913,7 @@ smsc_init(struct usb_ether *ue)
 	/* Cancel pending I/O */
 	smsc_stop(ue);
 
-#if __FreeBSD_version <= 1000000
+#if __MidnightBSD_version <= 9000
 	/* On earlier versions this was the first place we could tell the system
 	 * that we supported h/w csuming, however this is only called after the
 	 * the interface has been brought up - not ideal.  
@@ -1553,7 +1553,7 @@ smsc_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		
 		SMSC_UNLOCK(sc);
 		if (reinit)
-#if __FreeBSD_version > 1000000
+#if __MidnightBSD_version > 9000
 			uether_init(ue);
 #else
 			ifp->if_init(ue);
@@ -1780,7 +1780,7 @@ smsc_attach_post(struct usb_ether *ue)
  *	RETURNS:
  *	Returns 0 on success or a negative error code.
  */
-#if __FreeBSD_version > 1000000
+#if __MidnightBSD_version > 9000
 static int
 smsc_attach_post_sub(struct usb_ether *ue)
 {
@@ -1820,7 +1820,7 @@ smsc_attach_post_sub(struct usb_ether *ue)
 
 	return (error);
 }
-#endif /* __FreeBSD_version > 1000000 */
+#endif /* __MidnightBSD_version > 9000 */
 
 
 /**
