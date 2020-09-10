@@ -43,10 +43,10 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/at/at.c 272438 2014-10-02 18:26:40Z delphi
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <getopt.h>
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <locale.h>
 #endif
 #include <pwd.h>
@@ -219,7 +219,7 @@ writefile(time_t runtimer, char queue)
     mode_t cmask;
     struct flock lock;
     
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
     (void) setlocale(LC_TIME, "");
 #endif
 
@@ -469,7 +469,7 @@ list_jobs(long *joblist, int len)
     char timestr[TIMESIZE];
     int first=1;
     
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
     (void) setlocale(LC_TIME, "");
 #endif
 

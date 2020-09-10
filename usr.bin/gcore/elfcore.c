@@ -414,13 +414,13 @@ elf_putnote(int type, notefunc_t notefunc, void *arg, struct sbuf *sb)
 	void *desc;
 
 	desc = notefunc(arg, &descsz);
-	note.n_namesz = 8; /* strlen("FreeBSD") + 1 */
+	note.n_namesz = 12; /* strlen("MidnightBSD") + 1 */
 	note.n_descsz = descsz;
 	note.n_type = type;
 
 	sbuf_bcat(sb, &note, sizeof(note));
 	sbuf_start_section(sb, &old_len);
-	sbuf_bcat(sb, "FreeBSD", note.n_namesz);
+	sbuf_bcat(sb, "MidnightBSD", note.n_namesz);
 	sbuf_end_section(sb, old_len, sizeof(Elf32_Size), 0);
 	if (descsz == 0)
 		return;
@@ -630,7 +630,7 @@ elf_note_prstatus(void *arg, size_t *sizep)
 	status->pr_statussz = sizeof(*status);
 	status->pr_gregsetsz = sizeof(elfcore_gregset_t);
 	status->pr_fpregsetsz = sizeof(elfcore_fpregset_t);
-	status->pr_osreldate = __FreeBSD_version;
+	status->pr_osreldate = __MidnightBSD_version;
 	status->pr_pid = tid;
 	ptrace(PT_GETREGS, tid, (void *)&greg, 0);
 	elf_convert_gregset(&status->pr_reg, &greg);

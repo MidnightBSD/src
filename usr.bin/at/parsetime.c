@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/at/parsetime.c 241230 2012-10-05 17:54:27Z
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <getopt.h>
 #endif
 
