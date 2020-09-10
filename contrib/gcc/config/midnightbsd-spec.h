@@ -51,7 +51,7 @@ Boston, MA 02110-1301, USA.  */
 #define MNBSD_TARGET_OS_CPP_BUILTINS()					\
   do									\
     {									\
-	builtin_define_with_int_value ("__MidnightBSD__", 1);		\
+	builtin_define_with_int_value ("__MidnightBSD__", 2);		\
 	builtin_define_std ("unix");					\
 	builtin_define ("__KPRINTF_ATTRIBUTE__");		       	\
 	builtin_assert ("system=unix");					\
