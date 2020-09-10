@@ -35,7 +35,7 @@ __MBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/callout.h>
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #endif
@@ -91,7 +91,7 @@ _scsi_encap(struct cam_sim *sim, union ccb *ccb)
 {
      int		ret;
 
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
      ret = scsi_encap(sim, ccb);
 #else
      isc_session_t	*sp = cam_sim_softc(sim);
@@ -272,7 +272,7 @@ ic_action(struct cam_sim *sim, union ccb *ccb)
 	  ccb_h->status = CAM_REQ_INVALID;
 	  break;
      }
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
      XPT_DONE(sp, ccb);
 #else
      xpt_done(ccb);
@@ -335,7 +335,7 @@ ic_init(isc_session_t *sp)
      if((devq = cam_simq_alloc(256)) == NULL)
 	  return ENOMEM;
 
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
      mtx_init(&sp->cam_mtx, "isc-cam", NULL, MTX_DEF);
 #else
      isp->cam_mtx = Giant;
@@ -345,7 +345,7 @@ ic_init(isc_session_t *sp)
 			 "iscsi",
 			 sp,
 			 sp->sid,	// unit
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 			 &sp->cam_mtx,
 #endif
 			 1,		// max_dev_transactions
@@ -353,7 +353,7 @@ ic_init(isc_session_t *sp)
 			 devq);
      if(sim == NULL) {
 	  cam_simq_free(devq);
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	  mtx_destroy(&sp->cam_mtx);
 #endif
 	  return ENXIO;
@@ -361,14 +361,14 @@ ic_init(isc_session_t *sp)
 
      CAM_LOCK(sp);
      if(xpt_bus_register(sim,
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 			 NULL,
 #endif
 			 0/*bus_number*/) != CAM_SUCCESS) {
 
 	  cam_sim_free(sim, /*free_devq*/TRUE);
 	  CAM_UNLOCK(sp);
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	  mtx_destroy(&sp->cam_mtx);
 #endif
 	  return ENXIO;

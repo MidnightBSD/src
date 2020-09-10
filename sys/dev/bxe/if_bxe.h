@@ -397,7 +397,7 @@ struct bxe_type {
  * ToDo: Consider adding IFCAP_WOL_MAGIC, IFCAP_TOE4,
  * IFCAP_TSO6, IFCAP_WOL_UCAST.
  */
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
 #define	BXE_IF_CAPABILITIES					\
 	(IFCAP_VLAN_MTU | IFCAP_VLAN_HWTAGGING | IFCAP_HWCSUM |		\
 	IFCAP_JUMBO_MTU)

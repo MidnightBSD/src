@@ -60,7 +60,7 @@
 #include <sys/sched.h>
 #endif			/* USB_GLOBAL_INCLUDE_FILE */
 
-#if (__FreeBSD_version < 700000)
+#if (__MidnightBSD_version < 4000)
 #define	thread_lock(td) mtx_lock_spin(&sched_lock)
 #define	thread_unlock(td) mtx_unlock_spin(&sched_lock)
 #endif

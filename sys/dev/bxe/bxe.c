@@ -13088,7 +13088,7 @@ bxe_init_ifnet(struct bxe_softc *sc)
                         CSUM_UDP_IPV6));
 
     capabilities =
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
         (IFCAP_VLAN_MTU       |
          IFCAP_VLAN_HWTAGGING |
          IFCAP_HWCSUM         |

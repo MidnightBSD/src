@@ -111,7 +111,7 @@ static void aac_cam_action(struct cam_sim *, union ccb *);
 static void aac_cam_poll(struct cam_sim *);
 static void aac_cam_complete(struct aac_command *);
 static void aac_container_complete(struct aac_command *);
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 static void aac_cam_rescan(struct aac_softc *sc, uint32_t channel,
 	uint32_t target_id);
 #endif
@@ -177,7 +177,7 @@ aac_set_scsi_error(struct aac_softc *sc, union ccb *ccb, u_int8_t status,
 	}
 }
 
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 static void
 aac_cam_rescan(struct aac_softc *sc, uint32_t channel, uint32_t target_id)
 {
@@ -325,7 +325,7 @@ aac_cam_attach(device_t dev)
 		return (EIO);
 	}
 
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	inf->aac_sc->cam_rescan_cb = aac_cam_rescan;
 #endif
 	mtx_unlock(&inf->aac_sc->aac_io_lock);

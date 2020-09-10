@@ -6797,7 +6797,7 @@ bce_rx_intr(struct bce_softc *sc)
 			DBRUN(sc->vlan_tagged_frames_rcvd++);
 			if (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) {
 				DBRUN(sc->vlan_tagged_frames_stripped++);
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
 				VLAN_INPUT_TAG(ifp, m0,
 				    l2fhdr->l2_fhdr_vlan_tag, continue);
 #else

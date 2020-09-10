@@ -129,7 +129,7 @@ struct error_desc {
 
 
 /* ------------------------ */
-#if (__FreeBSD_version >= 700000)
+#if (__MidnightBSD_version >= 4000)
 #include <sys/clock.h>
 #define TWS_LOCAL_TIME (time_second - utc_offset())
 #else

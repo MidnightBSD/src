@@ -6334,7 +6334,7 @@ struct fw_info {
 #define BCE_IF_HWASSIST	(CSUM_TCP | CSUM_UDP)
 #endif
 
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
 #define BCE_IF_CAPABILITIES (IFCAP_VLAN_MTU | 			\
     IFCAP_VLAN_HWTAGGING | IFCAP_HWCSUM | IFCAP_JUMBO_MTU)
 #else

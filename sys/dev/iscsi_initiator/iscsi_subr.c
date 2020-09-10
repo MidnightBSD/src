@@ -104,7 +104,7 @@ iscsi_r2t(isc_session_t *sp, pduq_t *opq, pduq_t *pq)
 
 			 while((wpq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 			      sdebug(2, "waiting...");
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 			      pause("isc_r2t", 5*hz);
 #else
 			      tsleep(sp->isc, 0, "isc_r2t", 5*hz);
@@ -469,7 +469,7 @@ scsi_encap(struct cam_sim *sim, union ccb *ccb)
 		 sp->isc->npdu_max, sp->isc->npdu_alloc);
 	  while((pq = pdu_alloc(sp->isc, M_NOWAIT)) == NULL) {
 	       sdebug(2, "waiting...");
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	       pause("isc_encap", 5*hz);
 #else
 	       tsleep(sp->isc, 0, "isc_encap", 5*hz);

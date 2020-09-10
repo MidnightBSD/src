@@ -4478,7 +4478,7 @@ static u_int32_t arcmsr_initialize(device_t dev)
 			return ENOMEM;
 		}
 	}
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
 	if(bus_dma_tag_create(  /*PCI parent*/		bus_get_dma_tag(dev),
 #else
 	if(bus_dma_tag_create(  /*PCI parent*/		NULL,

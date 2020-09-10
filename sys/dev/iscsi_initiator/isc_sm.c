@@ -569,7 +569,7 @@ ism_out(void *vp)
      wakeup(&sp->soc);
      wakeup(sp); // XXX: do we need this one?
 
-#if __FreeBSD_version >= 700000
+#if __MidnightBSD_version >= 4000
      destroy_dev(sp->dev);
 #endif
 
@@ -710,7 +710,7 @@ ism_stop(isc_session_t *sp)
      sc->nsess--;
      mtx_unlock(&sc->isc_mtx);
 
-#if __FreeBSD_version < 700000
+#if __MidnightBSD_version < 4000
      destroy_dev(sp->dev);
 #endif
 

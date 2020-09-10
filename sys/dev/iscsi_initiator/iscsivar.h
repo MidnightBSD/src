@@ -276,7 +276,7 @@ XPT_DONE(isc_session_t *sp, union ccb *ccb)
      xpt_done(ccb);
      mtx_unlock(&Giant);
 }
-#elif __FreeBSD_version >= 700000
+#elif __MidnightBSD_version >= 4000
 #define CAM_LOCK(arg)	mtx_lock(&arg->cam_mtx)
 #define CAM_UNLOCK(arg)	mtx_unlock(&arg->cam_mtx)
 
