@@ -404,7 +404,7 @@ fetchname(const char *at, bool *exists, int strip_leading)
 void
 version(void)
 {
-	printf("patch 2.0-12u11 FreeBSD\n");
+	printf("patch 2.0-12u11 MidnightBSD\n");
 	my_exit(EXIT_SUCCESS);
 }
 

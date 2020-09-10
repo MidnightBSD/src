@@ -225,6 +225,10 @@ SUBDIR.${MK_FILE}+=	file
 SUBDIR.${MK_FINGER}+=	finger
 SUBDIR.${MK_FTP}+=	ftp
 
+.if ${MK_GNU_DIFF} == "no"
+SUBDIR+=	diff
+.endif 
+
 .if ${MK_GPL_DTC} != "yes"
 SUBDIR+=	dtc
 .endif
