@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/tools/kerneldoc/subsys/notreviewed.dox,v 1.2 2006/07/08 12:31:33 netchild Exp $ */
+/* $MidnightBSD: stable/11/tools/kerneldoc/subsys/notreviewed.dox 160171 2006-07-08 12:31:33Z netchild $ */
 
 /** @mainpage
  * <b>IMPORTANT:</b> This API documentation may contain both functions which

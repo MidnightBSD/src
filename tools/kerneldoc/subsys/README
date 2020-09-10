@@ -29,5 +29,4 @@ Programs needed to generate the API docs:
  - graphics/graphviz
 
 -- 
-$MidnightBSD$
-$FreeBSD: src/tools/kerneldoc/subsys/README,v 1.2 2006/07/08 12:31:33 netchild Exp $
+$MidnightBSD: stable/11/tools/kerneldoc/subsys/README 160171 2006-07-08 12:31:33Z netchild $

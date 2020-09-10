@@ -1,3 +1,0 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_IPX 156932 2006-03-21 07:50:50Z ru $
-Set to not build programs and libraries related to IPX networking.

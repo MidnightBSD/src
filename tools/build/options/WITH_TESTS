@@ -1,8 +1,0 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITH_TESTS 264572 2014-04-16 23:12:35Z jmmv $
-Set to install the
-.Fx
-Test Suite.
-See
-.Xr tests 7
-for more details.

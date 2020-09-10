@@ -1,5 +1,0 @@
-.\" $MidnightBSD$
-.\" $FreeBSD: stable/10/tools/build/options/WITHOUT_NCURSESW 262644 2014-03-01 03:11:26Z brooks $
-Set to not build or depend on the
-.Nm libncursesw
-library.

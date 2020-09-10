@@ -1,2 +1,0 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITH_LLVM_ASSERTIONS 359748 2020-04-09 15:58:06Z kevans $
-Set to enable debugging assertions in LLVM.

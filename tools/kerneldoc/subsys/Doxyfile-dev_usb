@@ -1,7 +1,6 @@
-# Doxyfile 1.4.1
+# Doxyfile 1.5.2
 
-# $MidnightBSD$
-# $FreeBSD: src/tools/kerneldoc/subsys/Doxyfile-dev_usb,v 1.3 2006/07/08 12:31:33 netchild Exp $
+# $MidnightBSD: stable/11/tools/kerneldoc/subsys/Doxyfile-dev_usb 230479 2012-01-23 11:37:40Z netchild $
 
 #---------------------------------------------------------------------------
 # Project related configuration options
