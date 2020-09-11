@@ -38,7 +38,7 @@
 
 #define	USB_PAGE_SIZE PAGE_SIZE		/* use system PAGE_SIZE */
 
-#if (__MidightBSD_version >= 4000)
+#if (__MidnightBSD_version >= 4000)
 #define	USB_GET_DMA_TAG(dev) bus_get_dma_tag(dev)
 #else
 #define	USB_GET_DMA_TAG(dev) NULL	/* XXX */
