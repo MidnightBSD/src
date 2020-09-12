@@ -149,17 +149,7 @@ BIN1+= regdomain.xml
 # -rwxr-xr-x root:wheel, for the new cron root:wheel
 BIN2=	netstart pccard_ether rc.suspend rc.resume
 
-MTREE=	BSD.debug.dist BSD.include.dist BSD.local.dist BSD.root.dist BSD.usr.dist \
-	BSD.var.dist BSD.x11.dist BSD.x11-4.dist
-.if ${MK_GROFF} != "no"
-MTREE+=	BSD.groff.dist
-.endif
-.if ${MK_TESTS} != "no"
-MTREE+=	BSD.tests.dist
-.endif
-.if ${MK_SENDMAIL} != "no"
-MTREE+=	BSD.sendmail.dist
-.endif
+PPPCNF=       ppp.conf
 
 .if ${MK_SENDMAIL} == "no"
 ETCMAIL=mailer.conf aliases
