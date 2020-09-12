@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
-# $FreeBSD: src/etc/periodic/daily/430.status-rwho,v 1.5 2000/09/14 17:19:10 brian Exp $
+# $FreeBSD: stable/11/etc/periodic/daily/430.status-uptime 290252 2015-11-02 01:05:34Z ngie $
 #
 
 # If there is a global system configuration file, suck it in.
@@ -12,7 +11,7 @@ then
     source_periodic_confs
 fi
 
-case "$daily_status_rwho_enable" in
+case "$daily_status_uptime_enable" in
     [Yy][Ee][Ss])
 	rwho=$(echo /var/rwho/*)
         if [ -f "${rwho%% *}" ]
