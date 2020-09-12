@@ -1,6 +1,6 @@
 # $MidnightBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 BINDIR=		/etc/newsyslog.conf.d
 
