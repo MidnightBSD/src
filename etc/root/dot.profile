@@ -9,3 +9,6 @@ TERM=${TERM:-xterm}
 export TERM
 PAGER=more
 export PAGER
+
+# Query terminal size; useful for serial lines.
+if [ -x /usr/bin/resizewin ] ; then /usr/bin/resizewin -z ; fi
