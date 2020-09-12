@@ -1,6 +1,6 @@
 # $MidnightBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 FILES=	340.noid \
 	350.msearch \
