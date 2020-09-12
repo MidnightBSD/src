@@ -93,6 +93,10 @@ MAN+=	bluetooth.device.conf.5 \
 MAN+=	hesiod.conf.5 
 .endif
 
+.if ${MK_MIDNIGHTBSD_UPDATE} != "no"
+MAN+=	midnightbsd-update.conf.5
+.endif
+
 .if ${MK_NAND} != "no"
 MAN+=	nandfs.5
 .endif

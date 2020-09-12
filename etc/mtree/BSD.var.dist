@@ -45,6 +45,8 @@
         ..
         ipf             mode=0700
         ..
+	midnightbsd-update  mode=0700
+	..
         mport
             downloads
             ..

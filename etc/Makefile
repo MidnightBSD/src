@@ -109,6 +109,10 @@ BIN1+=	hosts.lpd printcap
 BIN1+=	${.CURDIR}/../usr.bin/mail/misc/mail.rc
 .endif
 
+.if ${MK_MIDNIGHTBSD_UPDATE} != "no"
+BIN1+= midnightbsd-update.conf
+.endif
+
 .if ${MK_NTP} != "no"
 BIN1+=	ntpd.conf
 .endif

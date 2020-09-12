@@ -2353,12 +2353,12 @@ OLD_FILES+=usr/share/man/man8/menusets.4th.8.gz
 OLD_FILES+=usr/share/man/man8/version.4th.8.gz
 .endif
 
-.if ${MK_FREEBSD_UPDATE} == no
-OLD_FILES+=etc/freebsd-update.conf
-OLD_FILES+=usr/sbin/freebsd-update
-OLD_FILES+=usr/share/examples/etc/freebsd-update.conf
-OLD_FILES+=usr/share/man/man5/freebsd-update.conf.5.gz
-OLD_FILES+=usr/share/man/man8/freebsd-update.8.gz
+.if ${MK_MIDNIGHTBSD_UPDATE} == no
+OLD_FILES+=etc/midnightbsd-update.conf
+OLD_FILES+=usr/sbin/midnightbsd-update
+OLD_FILES+=usr/share/examples/etc/midnightbsd-update.conf
+OLD_FILES+=usr/share/man/man5/midnightbsd-update.conf.5.gz
+OLD_FILES+=usr/share/man/man8/midnightbsd-update.8.gz
 .endif
 
 .if ${MK_GAMES} == no

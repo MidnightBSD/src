@@ -96,7 +96,6 @@ __DEFAULT_YES_OPTIONS = \
     FMTREE \
     FORTH \
     FP_LIBC \
-    FREEBSD_UPDATE \
     FTP \
     GAMES \
     GCOV \
@@ -141,6 +140,7 @@ __DEFAULT_YES_OPTIONS = \
     MAILWRAPPER \
     MAKE \
     MANDOCDB \
+    MIDNIGHTBSD-UPDATE \
     NDIS \
     NETCAT \
     NETGRAPH \

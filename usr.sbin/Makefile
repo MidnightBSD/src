@@ -172,6 +172,7 @@ SUBDIR.${MK_NS_CACHING}+=	nscd
 .endif
 SUBDIR.${MK_LPR}+=	lpr
 SUBDIR.${MK_MAN_UTILS}+=	manctl
+SUBDIR.${MK_MIDNIGHTBSD_UPDATE}+=	midnightbsd-update
 SUBDIR.${MK_NAND}+=	nandsim
 SUBDIR.${MK_NAND}+=	nandtool
 SUBDIR.${MK_NETGRAPH}+=	flowctl
