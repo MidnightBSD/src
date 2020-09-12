@@ -1,13 +1,17 @@
 # $MidnightBSD$
 # $FreeBSD: stable/10/etc/periodic/daily/Makefile 295461 2016-02-10 07:16:17Z cy $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+FILESGROUPS=FILES
 
 FILES=	100.clean-disks \
 	110.clean-tmps \
 	120.clean-preserve \
+	140.clean-rwho \
 	200.backup-passwd \
 	210.backup-aliases \
+	220.backup-pkgdb \
 	330.news \
 	400.status-disks \
 	401.status-graid \
@@ -15,16 +19,23 @@ FILES=	100.clean-disks \
 	407.status-graid3 \
 	408.status-gstripe \
 	409.status-gconcat \
+	410.status-mfi \
 	420.status-network \
+	430.status-uptime \
 	450.status-security \
+	490.status-pkg-changes \
 	510.status-world-kernel \
 	999.local
 
 # NB: keep these sorted by MK_* knobs
 
 .if ${MK_ACCT} != "no"
-FILES+=	310.accounting
+FILESGROUPS+=	ACCT
+ACCT+=		310.accounting
 .endif
+ACCTDIR=	/etc/periodic/daily
+ACCTMODE=	${BINMODE}
+ACCTPACKAGE=	acct
 
 .if ${MK_CALENDAR} != "no"
 FILES+=	300.calendar
@@ -32,14 +43,6 @@ FILES+=	300.calendar
 
 .if ${MK_MAIL} != "no"
 FILES+=	130.clean-msgs
-.endif
-
-FILES+=	220.backup-pkgdb \
-	490.status-pkg-changes
-
-.if ${MK_RCMDS} != "no"
-FILES+=	140.clean-rwho \
-	430.status-rwho
 .endif
 
 .if ${MK_SENDMAIL} != "no"
