@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/etc/mtree/BSD.tests.dist 326332 2017-11-28 18:18:39Z asomers $
+# $FreeBSD: stable/11/etc/mtree/BSD.tests.dist 355351 2019-12-03 18:55:09Z kevans $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -33,6 +32,8 @@
         ..
         pkill
         ..
+        pwait
+        ..
         rcp
         ..
         rmdir
@@ -64,6 +65,8 @@
         sbin
         ..
         usr.bin
+            ctfconvert
+            ..
         ..
         usr.sbin
             dtrace
@@ -228,6 +231,8 @@
                     ..
                 ..
             ..
+            zfsd
+            ..
         ..
     ..
     etc
@@ -258,6 +263,8 @@
             ..
         ..
         libarchive
+        ..
+        libbe
         ..
         libc
             c063
@@ -321,7 +328,21 @@
         ..
         libcam
         ..
+        libcasper
+            services
+                cap_dns
+                ..
+                cap_grp
+                ..
+                cap_pwd
+                ..
+                cap_sysctl
+                ..
+            ..
+        ..
         libcrypt
+        ..
+        libdevdctl
         ..
         libkvm
         ..
@@ -330,6 +351,8 @@
         libnv
         ..
         libpam
+        ..
+        libproc
         ..
         librt
         ..
@@ -341,6 +364,8 @@
         ..
         libutil
         ..
+        libxo
+        ..
         msun
         ..
     ..
@@ -351,13 +376,21 @@
             atf-sh
             ..
         ..
+        rtld-elf
+        ..
+        tftpd
+        ..
     ..
     sbin
+        bectl
+        ..
         dhclient
         ..
         devd
         ..
         growfs
+        ..
+        ifconfig
         ..
         mdconfig
         ..
@@ -391,6 +424,12 @@
         ..
         aio
         ..
+        audit
+        ..
+        auditpipe
+        ..
+        capsicum
+        ..
         fifo
         ..
         file
@@ -412,6 +451,8 @@
                 mirror
                 ..
                 nop
+                ..
+                part
                 ..
                 raid3
                 ..
@@ -445,7 +486,13 @@
         ..
         mqueue
         ..
+        net
+        ..
         netinet
+        ..
+        netmap
+        ..
+        opencrypto
         ..
         pjdfstest
             chflags
@@ -480,6 +527,8 @@
             ..
         ..
         posixshm
+        ..
+        sys
         ..
         vfs
         ..
@@ -611,11 +660,21 @@
         ..
         file2c
         ..
+        fold
+        ..
         getconf
         ..
         grep
         ..
         gzip
+        ..
+        head
+        ..
+        hexdump
+        ..
+        ident
+        ..
+        indent
         ..
         join
         ..
@@ -627,9 +686,13 @@
         ..
         m4
         ..
+        mkimg
+        ..
         ncal
         ..
         opensm
+        ..
+        patch
         ..
         pr
         ..
@@ -637,9 +700,17 @@
         ..
         procstat
         ..
+        rs
+        ..
+        sdiff
+        ..
         sed
             regress.multitest.out
             ..
+        ..
+        seq
+        ..
+        soelim
         ..
         stat
         ..
@@ -653,6 +724,8 @@
         ..
         truncate
         ..
+        units
+        ..
         uudecode
         ..
         uuencode
@@ -660,6 +733,10 @@
         uniq
         ..
         xargs
+        ..
+        xinstall
+        ..
+        xo
         ..
         yacc
             yacc
@@ -675,11 +752,15 @@
         ..
         fstyp
         ..
+        jail
+        ..
         makefs
         ..
         newsyslog
         ..
         nmtree
+        ..
+        praudit
         ..
         pw
         ..
