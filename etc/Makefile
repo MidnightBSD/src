@@ -289,8 +289,6 @@ distribution:
 	    ln ${DESTDIR}/root/.cshrc ${DESTDIR}/.cshrc; \
 	    ln ${DESTDIR}/root/.profile ${DESTDIR}/.profile; \
             ln ${DESTDIR}/root/.mkshrc ${DESTDIR}/.mkshrc
-	cd ${.CURDIR}/mtree; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
-	    ${MTREE} ${DESTDIR}/etc/mtree
 .if ${MK_MAIL} != "no"
 	cd ${.CURDIR}/mail; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${ETCMAIL} ${DESTDIR}/etc/mail
