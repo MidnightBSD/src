@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# $FreeBSD: stable/11/etc/autofs/include_nis 332588 2018-04-16 15:59:51Z trasz $
+#
+
+if [ -n "$2" ]; then
+	ypmatch $2 $1
+	exit 0
+fi
+
+if [ -n "$1" ]; then
+	ypcat -k $1
+	exit 0
+fi

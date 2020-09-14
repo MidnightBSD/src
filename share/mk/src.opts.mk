@@ -1,6 +1,6 @@
 # $FreeBSD: stable/11/share/mk/src.opts.mk 360290 2020-04-25 05:51:58Z delphij $
 #
-# Option file for FreeBSD /usr/src builds.
+# Option file for MidnightBSD /usr/src builds.
 #
 # Users define WITH_FOO and WITHOUT_FOO on the command line or in /etc/src.conf
 # and /etc/make.conf files. These translate in the build system to MK_FOO={yes,no}
@@ -19,8 +19,7 @@
 # bsd.{subdir,lib.bin}.mk is traditionally included.
 #
 # The old-style YES_FOO and NO_FOO are being phased out. No new instances of them
-# should be added. Old instances should be removed since they were just to
-# bridge the gap between FreeBSD 4 and FreeBSD 5.
+# should be added. Old instances should be removed.
 #
 # Makefiles should never test WITH_FOO or WITHOUT_FOO directly (although an
 # exception is made for _WITHOUT_SRCONF which turns off this mechanism
@@ -140,7 +139,7 @@ __DEFAULT_YES_OPTIONS = \
     MAILWRAPPER \
     MAKE \
     MANDOCDB \
-    MIDNIGHTBSD-UPDATE \
+    MIDNIGHTBSD_UPDATE \
     NDIS \
     NETCAT \
     NETGRAPH \
@@ -290,7 +289,7 @@ __DEFAULT_YES_OPTIONS+=LLDB
 .else
 __DEFAULT_NO_OPTIONS+=LLDB
 .endif
-# LLVM lacks support for FreeBSD 64-bit atomic operations for ARMv4/ARMv5
+# LLVM lacks support for MidnightBSD 64-bit atomic operations for ARMv4/ARMv5
 .if ${__T} == "arm" || ${__T} == "armeb"
 BROKEN_OPTIONS+=LLDB
 .endif
