@@ -40,6 +40,7 @@ FBSD_1.0 {
 	strncat;
 	strncmp;
 	strncpy;
+	strndup;
 	strnstr;
 	strpbrk;
 	strsep;
@@ -82,7 +83,6 @@ FBSD_1.1 {
 	flsll;
 	memrchr;
 	stpncpy;
-	strndup;
 	strnlen;
 	wcpcpy;
 	wcpncpy;
