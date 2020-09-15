@@ -1,8 +1,8 @@
 # $MidnightBSD$
 
 .if !defined(PORTSDIR)
-# Autodetect if the command is being run in a ports tree that's not rooted
-# in the default /usr/ports.  The ../../.. case is in case ports ever grows
+# Autodetect if the command is being run in a mports tree that's not rooted
+# in the default /usr/mports.  The ../../.. case is in case ports ever grows
 # a third level.
 .for RELPATH in . .. ../.. ../../..
 .if !defined(_PORTSDIR) && exists(${.CURDIR}/${RELPATH}/Mk/bsd.port.mk)
