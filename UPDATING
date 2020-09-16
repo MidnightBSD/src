@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20200915:
+	ftpd
+	A ftpd(8) bug in the implementation of the file system sandbox, combined
+	with capabilities available to an authenticated FTP user, can be used to
+	escape the file system restriction configured in ftpchroot(5).
+	Moreover, the bug allows a malicious client to gain root privileges.	
+
 20200902:
 	MidnightBSD 1.2.8 RELEASE
 
