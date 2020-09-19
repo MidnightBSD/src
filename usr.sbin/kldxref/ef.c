@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000, Boris Popov
  * All rights reserved.
@@ -30,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/kldxref/ef.c 313848 2017-02-17 00:49:01Z emaste $
+ * $FreeBSD: stable/11/usr.sbin/kldxref/ef.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/param.h>
@@ -89,6 +88,8 @@ static int ef_read_entry(elf_file_t ef, Elf_Off offset, size_t len, void **ptr);
 static int ef_seg_read(elf_file_t ef, Elf_Off offset, size_t len, void *dest);
 static int ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len,
     void *dest);
+static int ef_seg_read_string(elf_file_t ef, Elf_Off offset, size_t len,
+    char *dest);
 static int ef_seg_read_entry(elf_file_t ef, Elf_Off offset, size_t len,
     void **ptr);
 static int ef_seg_read_entry_rel(elf_file_t ef, Elf_Off offset, size_t len,
@@ -105,6 +106,7 @@ static struct elf_file_ops ef_file_ops = {
 	ef_read_entry,
 	ef_seg_read,
 	ef_seg_read_rel,
+	ef_seg_read_string,
 	ef_seg_read_entry,
 	ef_seg_read_entry_rel,
 	ef_symaddr,
@@ -474,7 +476,7 @@ ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len, void*dest)
 
 	if (ofs == 0) {
 		if (ef->ef_verbose)
-			warnx("ef_seg_read(%s): zero offset (%lx:%ld)",
+			warnx("ef_seg_read_rel(%s): zero offset (%lx:%ld)",
 			    ef->ef_name, (long)offset, ofs);
 		return EFAULT;
 	}
@@ -493,6 +495,28 @@ ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len, void*dest)
 		if (error != 0)
 			return (error);
 	}
+	return (0);
+}
+
+static int
+ef_seg_read_string(elf_file_t ef, Elf_Off offset, size_t len, char *dest)
+{
+	u_long ofs = ef_get_offset(ef, offset);
+	ssize_t r;
+
+	if (ofs == 0 || ofs == (Elf_Off)-1) {
+		if (ef->ef_verbose)
+			warnx("ef_seg_read_string(%s): bad offset (%lx:%ld)",
+			    ef->ef_name, (long)offset, ofs);
+		return (EFAULT);
+	}
+
+	r = pread(ef->ef_fd, dest, len, ofs);
+	if (r < 0)
+		return (errno);
+	if (strnlen(dest, len) == len)
+		return (EFAULT);
+
 	return (0);
 }
 
