@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20200918:
+	Added experimental support for intel 8265 bluetooth. (wifi/bt combo card) 
+	Needs firmware from mports/comms though.
+	
+
 20200902:
 	Fix several security vulnerabilities:
 
