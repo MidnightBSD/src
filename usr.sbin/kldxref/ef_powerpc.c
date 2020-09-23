@@ -1,5 +1,6 @@
-/* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Peter Grehan.
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/kldxref/ef_powerpc.c 153504 2005-12-18 04:52:37Z marcel $
+ * $FreeBSD: stable/11/usr.sbin/kldxref/ef_powerpc.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/types.h>

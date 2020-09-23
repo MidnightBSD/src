@@ -1,6 +1,4 @@
-
-$FreeBSD: stable/10/usr.sbin/kldxref/fileformat 186824 2009-01-06 14:10:30Z luigi $
-$MidnightBSD$
+$FreeBSD: stable/11/usr.sbin/kldxref/fileformat 186824 2009-01-06 14:10:30Z luigi $
 
 linker.hints file consists from the one or more records,
 and is processed by sys/kern/kern_linker.c::linker_hints_lookup()
