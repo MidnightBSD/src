@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20200923:
+	udf: Validate the full file entry length
+
+	Otherwise a corrupted file entry containing invalid extended attribute
+	lengths or allocation descriptor lengths can trigger an overflow when
+	the file entry is loaded.
+
 20200902:
 	Fix several security vulnerabilities:
 
