@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20200924:
+	Add support for SIOCGIFMEDIA
+
 20200923:
 	udf: Validate the full file entry length
 
