@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20200927:
+	llvm-symbolizer added when CLANG_EXTRAS are turned on
+
 20200923:
 	MidnightBSD 1.2.10
 
