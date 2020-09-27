@@ -3458,6 +3458,9 @@ roff_setstr(struct roff *r, const char *name, const char *string,
 {
 	size_t	 namesz;
 
+	if (name == NULL)
+		return;
+
 	namesz = strlen(name);
 	roff_setstrn(&r->strtab, name, namesz, string,
 	    string ? strlen(string) : 0, append);

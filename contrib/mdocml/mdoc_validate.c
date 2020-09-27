@@ -351,7 +351,7 @@ mdoc_node_validate(struct roff_man *mdoc)
 
 		assert(n->tok >= MDOC_Dd && n->tok < MDOC_MAX);
 		p = mdoc_valids + n->tok;
-		if (*p)
+		if (*p != NULL)
 			(*p)(mdoc);
 		if (mdoc->last == n)
 			mdoc_state(mdoc, n);
@@ -1979,8 +1979,10 @@ post_rs(POST_ARGS)
 			mandoc_msg(MANDOCERR_RS_BAD, mdoc->parse,
 			    nch->line, nch->pos, roff_name[nch->tok]);
 			i = -1;
-		} else if (nch->tok == MDOC__J || nch->tok == MDOC__B)
-			np->norm->Rs.quote_T++;
+		} else if (nch->tok == MDOC__J || nch->tok == MDOC__B) {
+			if (np != NULL && np->norm != NULL)
+				np->norm->Rs.quote_T++;
+		}
 
 		/*
 		 * Remove this child from the chain.  This somewhat
