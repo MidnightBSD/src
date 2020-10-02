@@ -28,7 +28,7 @@
 .\"
 .\" $FreeBSD: stable/11/share/man/man9/ifnet.9 341479 2018-12-04 17:46:06Z vmaffione $
 .\"
-.Dd November 14, 2018
+.Dd September 23, 2020
 .Dt IFNET 9
 .Os
 .Sh NAME
@@ -1277,12 +1277,13 @@ list.
 Caller must have appropriate privilege.
 (No call-down to driver.)
 .It Dv SIOCGIFCAP
+.It Dv SIOCGIFDATA
 .It Dv SIOCGIFFIB
 .It Dv SIOCGIFFLAGS
 .It Dv SIOCGIFMETRIC
 .It Dv SIOCGIFMTU
 .It Dv SIOCGIFPHYS
-Get interface capabilities, FIB, flags, metric, MTU, medium selection.
+Get interface capabilities, data, FIB, flags, metric, MTU, medium selection.
 (No call-down to driver.)
 .Pp
 .It Dv SIOCSIFCAP
