@@ -212,8 +212,9 @@ S_mul128(pTHX_ SV *sv, U8 m)
 
 /* Explosives and implosives. */
 
-#define ISUUCHAR(ch)    (NATIVE_TO_LATIN1(ch) >= NATIVE_TO_LATIN1(' ')  \
-                      && NATIVE_TO_LATIN1(ch) <  NATIVE_TO_LATIN1('a'))
+#define ISUUCHAR(ch)    inRANGE(NATIVE_TO_LATIN1(ch),               \
+                                NATIVE_TO_LATIN1(' '),              \
+                                NATIVE_TO_LATIN1('a') - 1)
 
 /* type modifiers */
 #define TYPE_IS_SHRIEKING	0x100
@@ -290,7 +291,7 @@ S_utf8_to_bytes(pTHX_ const char **s, const char *end, const char *buf, SSize_t 
 	if (from >= end) return FALSE;
 	val = utf8n_to_uvchr((U8 *) from, end-from, &retlen, flags);
 	if (retlen == (STRLEN) -1) {
-	    from += UTF8SKIP(from);
+	    from += UTF8_SAFE_SKIP(from, end);
 	    bad |= 1;
 	} else from += retlen;
 	if (val >= 0x100) {
@@ -1378,8 +1379,7 @@ S_unpack_rec(pTHX_ tempsym_t* symptr, const char *s, const char *strbeg, const c
 #if SHORTSIZE != SIZE16
 	    while (len-- > 0) {
 		unsigned short aushort;
-                SHIFT_VAR(utf8, s, strend, aushort, datumtype, needs_swap,
-                          needs_swap);
+		SHIFT_VAR(utf8, s, strend, aushort, datumtype, needs_swap);
 		if (!checksum)
 		    mPUSHu(aushort);
 		else if (checksum > bits_in_uv)
@@ -1727,7 +1727,10 @@ S_unpack_rec(pTHX_ tempsym_t* symptr, const char *s, const char *strbeg, const c
 	    if (!checksum) {
                 const STRLEN l = (STRLEN) (strend - s) * 3 / 4;
 		sv = sv_2mortal(newSV(l));
-		if (l) SvPOK_on(sv);
+		if (l) {
+                    SvPOK_on(sv);
+                    *SvEND(sv) = '\0';
+                }
 	    }
 
             /* Note that all legal uuencoded strings are ASCII printables, so
@@ -1777,9 +1780,9 @@ S_unpack_rec(pTHX_ tempsym_t* symptr, const char *s, const char *strbeg, const c
 	} /* End of switch */
 
 	if (checksum) {
-	    if (strchr("fFdD", TYPE_NO_MODIFIERS(datumtype)) ||
+	    if (memCHRs("fFdD", TYPE_NO_MODIFIERS(datumtype)) ||
 	      (checksum > bits_in_uv &&
-	       strchr("cCsSiIlLnNUWvVqQjJ", TYPE_NO_MODIFIERS(datumtype))) ) {
+	       memCHRs("cCsSiIlLnNUWvVqQjJ", TYPE_NO_MODIFIERS(datumtype))) ) {
 		NV trouble, anv;
 
                 anv = (NV) (1 << (checksum & 15));
@@ -2133,7 +2136,7 @@ S_pack_rec(pTHX_ SV *cat, tempsym_t* symptr, SV **beglist, SV **endlist )
 
         switch (howlen) {
 	  case e_star:
-	    len = strchr("@Xxu", TYPE_NO_MODIFIERS(datumtype)) ?
+	    len = memCHRs("@Xxu", TYPE_NO_MODIFIERS(datumtype)) ?
 		0 : items;
 	    break;
 	  default:
@@ -2158,7 +2161,7 @@ S_pack_rec(pTHX_ SV *cat, tempsym_t* symptr, SV **beglist, SV **endlist )
 	if (symptr->flags & FLAG_SLASH) {
 	    IV count;
 	    if (!found) Perl_croak(aTHX_ "Code missing after '/' in pack");
-	    if (strchr("aAZ", lookahead.code)) {
+	    if (memCHRs("aAZ", lookahead.code)) {
 		if (lookahead.howlen == e_number) count = lookahead.length;
 		else {
 		    if (items > 0) {
@@ -3146,6 +3149,21 @@ PP(pp_pack)
     SvUTF8_off(cat);
 
     packlist(cat, pat, patend, MARK, SP + 1);
+
+    if (SvUTF8(cat)) {
+        STRLEN result_len;
+        const char * result = SvPV_nomg(cat, result_len);
+        const U8 * error_pos;
+
+        if (! is_utf8_string_loc((U8 *) result, result_len, &error_pos)) {
+            _force_out_malformed_utf8_message(error_pos,
+                                              (U8 *) result + result_len,
+                                              0, /* no flags */
+                                              1 /* Die */
+                                            );
+            NOT_REACHED; /* NOTREACHED */
+        }
+    }
 
     SvSETMAGIC(cat);
     SP = ORIGMARK;

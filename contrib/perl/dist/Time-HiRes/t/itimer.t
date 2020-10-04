@@ -13,15 +13,15 @@ use Config;
 BEGIN {
     require Time::HiRes;
     unless(defined &Time::HiRes::setitimer
-	    && defined &Time::HiRes::getitimer
-	    && has_symbol('ITIMER_VIRTUAL')
-	    && $Config{sig_name} =~ m/\bVTALRM\b/
-	    && $^O ne 'nto' # nto: QNX 6 has the API but no implementation
-	    && $^O ne 'haiku' # haiku: has the API but no implementation
-	    && $^O ne 'gnu' # GNU/Hurd: has the API but no implementation
+            && defined &Time::HiRes::getitimer
+            && has_symbol('ITIMER_VIRTUAL')
+            && $Config{sig_name} =~ m/\bVTALRM\b/
+            && $^O ne 'nto' # nto: QNX 6 has the API but no implementation
+            && $^O ne 'haiku' # haiku: has the API but no implementation
+            && $^O ne 'gnu' # GNU/Hurd: has the API but no implementation
     ) {
-	require Test::More;
-	Test::More::plan(skip_all => "no itimer");
+        require Test::More;
+        Test::More::plan(skip_all => "no itimer");
     }
 }
 
@@ -37,7 +37,7 @@ my $r = [Time::HiRes::gettimeofday()];
 $SIG{VTALRM} = sub {
     $i ? $i-- : Time::HiRes::setitimer(&Time::HiRes::ITIMER_VIRTUAL, 0);
     printf("# Tick! $i %s\n", Time::HiRes::tv_interval($r));
-};	
+};
 
 printf("# setitimer: %s\n", join(" ",
        Time::HiRes::setitimer(&Time::HiRes::ITIMER_VIRTUAL, 0.5, 0.4)));
@@ -51,7 +51,9 @@ ok(defined $virt && abs($virt / 0.5) - 1 < $limit,
 printf("# getitimer: %s\n", join(" ",
        Time::HiRes::getitimer(&Time::HiRes::ITIMER_VIRTUAL)));
 
-while (Time::HiRes::getitimer(&Time::HiRes::ITIMER_VIRTUAL)) {
+# burn CPU until the VTALRM signal handler sets the repeat interval to
+# zero, indicating that the timer has fired 4 times.
+while ((Time::HiRes::getitimer(&Time::HiRes::ITIMER_VIRTUAL))[1]) {
     my $j;
     for (1..1000) { $j++ } # Can't be unbreakable, must test getitimer().
 }

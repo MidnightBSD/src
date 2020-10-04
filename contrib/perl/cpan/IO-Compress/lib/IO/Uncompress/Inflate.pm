@@ -5,15 +5,15 @@ use strict ;
 use warnings;
 use bytes;
 
-use IO::Compress::Base::Common  2.074 qw(:Status );
-use IO::Compress::Zlib::Constants 2.074 ;
+use IO::Compress::Base::Common  2.093 qw(:Status );
+use IO::Compress::Zlib::Constants 2.093 ;
 
-use IO::Uncompress::RawInflate  2.074 ;
+use IO::Uncompress::RawInflate  2.093 ;
 
 require Exporter ;
 our ($VERSION, @ISA, @EXPORT_OK, %EXPORT_TAGS, $InflateError);
 
-$VERSION = '2.074';
+$VERSION = '2.093';
 $InflateError = '';
 
 @ISA    = qw(IO::Uncompress::RawInflate Exporter);
@@ -208,7 +208,7 @@ IO::Uncompress::Inflate - Read RFC 1950 files/buffers
     my $status = inflate $input => $output [,OPTS]
         or die "inflate failed: $InflateError\n";
 
-    my $z = new IO::Uncompress::Inflate $input [OPTS] 
+    my $z = new IO::Uncompress::Inflate $input [OPTS]
         or die "inflate failed: $InflateError\n";
 
     $status = $z->read($buffer)
@@ -262,7 +262,7 @@ section.
 
     use IO::Uncompress::Inflate qw(inflate $InflateError) ;
 
-    inflate $input_filename_or_reference => $output_filename_or_reference [,OPTS] 
+    inflate $input_filename_or_reference => $output_filename_or_reference [,OPTS]
         or die "inflate failed: $InflateError\n";
 
 The functional interface needs Perl5.005 or better.
@@ -270,12 +270,13 @@ The functional interface needs Perl5.005 or better.
 =head2 inflate $input_filename_or_reference => $output_filename_or_reference [, OPTS]
 
 C<inflate> expects at least two parameters,
-C<$input_filename_or_reference> and C<$output_filename_or_reference>.
+C<$input_filename_or_reference> and C<$output_filename_or_reference>
+and zero or more optional parameters (see L</Optional Parameters>)
 
 =head3 The C<$input_filename_or_reference> parameter
 
 The parameter, C<$input_filename_or_reference>, is used to define the
-source of the compressed data. 
+source of the compressed data.
 
 It can take one of the following forms:
 
@@ -283,7 +284,7 @@ It can take one of the following forms:
 
 =item A filename
 
-If the <$input_filename_or_reference> parameter is a simple scalar, it is
+If the C<$input_filename_or_reference> parameter is a simple scalar, it is
 assumed to be a filename. This file will be opened for reading and the
 input data will be read from it.
 
@@ -293,17 +294,17 @@ If the C<$input_filename_or_reference> parameter is a filehandle, the input
 data will be read from it.  The string '-' can be used as an alias for
 standard input.
 
-=item A scalar reference 
+=item A scalar reference
 
 If C<$input_filename_or_reference> is a scalar reference, the input data
 will be read from C<$$input_filename_or_reference>.
 
-=item An array reference 
+=item An array reference
 
 If C<$input_filename_or_reference> is an array reference, each element in
 the array must be a filename.
 
-The input data will be read from each file in turn. 
+The input data will be read from each file in turn.
 
 The complete array will be walked to ensure that it only
 contains valid filenames before any data is uncompressed.
@@ -311,8 +312,8 @@ contains valid filenames before any data is uncompressed.
 =item An Input FileGlob string
 
 If C<$input_filename_or_reference> is a string that is delimited by the
-characters "<" and ">" C<inflate> will assume that it is an 
-I<input fileglob string>. The input is the list of files that match the 
+characters "<" and ">" C<inflate> will assume that it is an
+I<input fileglob string>. The input is the list of files that match the
 fileglob.
 
 See L<File::GlobMapper|File::GlobMapper> for more details.
@@ -333,7 +334,7 @@ these forms.
 =item A filename
 
 If the C<$output_filename_or_reference> parameter is a simple scalar, it is
-assumed to be a filename.  This file will be opened for writing and the 
+assumed to be a filename.  This file will be opened for writing and the
 uncompressed data will be written to it.
 
 =item A filehandle
@@ -342,14 +343,14 @@ If the C<$output_filename_or_reference> parameter is a filehandle, the
 uncompressed data will be written to it.  The string '-' can be used as
 an alias for standard output.
 
-=item A scalar reference 
+=item A scalar reference
 
 If C<$output_filename_or_reference> is a scalar reference, the
 uncompressed data will be stored in C<$$output_filename_or_reference>.
 
 =item An Array Reference
 
-If C<$output_filename_or_reference> is an array reference, 
+If C<$output_filename_or_reference> is an array reference,
 the uncompressed data will be pushed onto the array.
 
 =item An Output FileGlob
@@ -380,15 +381,15 @@ files/buffers.
 
 =head2 Optional Parameters
 
-Unless specified below, the optional parameters for C<inflate>,
-C<OPTS>, are the same as those used with the OO interface defined in the
-L</"Constructor Options"> section below.
+The optional parameters for the one-shot function C<inflate>
+are (for the most part) identical to those used with the OO interface defined in the
+L</"Constructor Options"> section. The exceptions are listed below
 
 =over 5
 
 =item C<< AutoClose => 0|1 >>
 
-This option applies to any input or output data streams to 
+This option applies to any input or output data streams to
 C<inflate> that are filehandles.
 
 If C<AutoClose> is specified, and the value is true, it will result in all
@@ -399,10 +400,7 @@ This parameter defaults to 0.
 
 =item C<< BinModeOut => 0|1 >>
 
-When writing to a file or filehandle, set C<binmode> before writing to the
-file.
-
-Defaults to 0.
+This option is now a no-op. All files will be written  in binmode.
 
 =item C<< Append => 0|1 >>
 
@@ -431,7 +429,7 @@ written to it.  Otherwise the file pointer will not be moved.
 
 =back
 
-When C<Append> is specified, and set to true, it will I<append> all uncompressed 
+When C<Append> is specified, and set to true, it will I<append> all uncompressed
 data to the output data stream.
 
 So when the output is a filehandle it will carry out a seek to the eof
@@ -459,7 +457,7 @@ Defaults to 0.
 =item C<< TrailingData => $scalar >>
 
 Returns the data, if any, that is present immediately after the compressed
-data stream once uncompression is complete. 
+data stream once uncompression is complete.
 
 This option can be used when there is useful information immediately
 following the compressed data stream, and you don't know the length of the
@@ -471,7 +469,7 @@ end of the compressed data stream to the end of the buffer.
 If the input is a filehandle, C<trailingData> will return the data that is
 left in the filehandle input buffer once the end of the compressed data
 stream has been reached. You can then use the filehandle to read the rest
-of the input file. 
+of the input file.
 
 Don't bother using C<trailingData> if the input is a filename.
 
@@ -506,7 +504,7 @@ uncompressed data to a buffer, C<$buffer>.
     my $input = new IO::File "<file1.txt.1950"
         or die "Cannot open 'file1.txt.1950': $!\n" ;
     my $buffer ;
-    inflate $input => \$buffer 
+    inflate $input => \$buffer
         or die "inflate failed: $InflateError\n";
 
 To uncompress all files in the directory "/my/home" that match "*.txt.1950" and store the compressed data in the same directory
@@ -528,7 +526,7 @@ and if you want to compress each file one at a time, this will do the trick
     {
         my $output = $input;
         $output =~ s/.1950// ;
-        inflate $input => $output 
+        inflate $input => $output
             or die "Error compressing '$input': $InflateError\n";
     }
 
@@ -569,7 +567,7 @@ If the C<$input> parameter is a filehandle, the compressed data will be
 read from it.
 The string '-' can be used as an alias for standard input.
 
-=item A scalar reference 
+=item A scalar reference
 
 If C<$input> is a scalar reference, the compressed data will be read from
 C<$$input>.
@@ -644,7 +642,7 @@ When present this option will limit the number of compressed bytes read
 from the input file/buffer to C<$size>. This option can be used in the
 situation where there is useful data directly after the compressed data
 stream and you know beforehand the exact length of the compressed data
-stream. 
+stream.
 
 This option is mostly used when reading from a filehandle, in which case
 the file pointer will be left pointing to the first byte directly after the
@@ -691,7 +689,7 @@ uncompressed data actually contained in the file.
 
 TODO
 
-=head1 Methods 
+=head1 Methods
 
 =head2 read
 
@@ -735,16 +733,16 @@ Usage is
     $line = $z->getline()
     $line = <$z>
 
-Reads a single line. 
+Reads a single line.
 
 This method fully supports the use of the variable C<$/> (or
 C<$INPUT_RECORD_SEPARATOR> or C<$RS> when C<English> is in use) to
 determine what constitutes an end of line. Paragraph mode, record mode and
-file slurp mode are all supported. 
+file slurp mode are all supported.
 
 =head2 getc
 
-Usage is 
+Usage is
 
     $char = $z->getc()
 
@@ -827,7 +825,7 @@ This is a noop provided for completeness.
 
     $z->opened()
 
-Returns true if the object currently refers to a opened file/buffer. 
+Returns true if the object currently refers to a opened file/buffer.
 
 =head2 autoflush
 
@@ -874,7 +872,7 @@ C<undef>.
     $z->close() ;
     close $z ;
 
-Closes the output file/buffer. 
+Closes the output file/buffer.
 
 For most versions of Perl this method will be automatically invoked if
 the IO::Uncompress::Inflate object is destroyed (either explicitly or by the
@@ -928,7 +926,7 @@ end of the compressed data stream to the end of the buffer.
 If the input is a filehandle, C<trailingData> will return the data that is
 left in the filehandle input buffer once the end of the compressed data
 stream has been reached. You can then use the filehandle to read the rest
-of the input file. 
+of the input file.
 
 Don't bother using C<trailingData> if the input is a filename.
 
@@ -936,9 +934,9 @@ If you know the length of the compressed data stream before you start
 uncompressing, you can avoid having to use C<trailingData> by setting the
 C<InputLength> option in the constructor.
 
-=head1 Importing 
+=head1 Importing
 
-No symbolic constants are required by this IO::Uncompress::Inflate at present. 
+No symbolic constants are required by this IO::Uncompress::Inflate at present.
 
 =over 5
 
@@ -957,9 +955,15 @@ Same as doing this
 
 See L<IO::Compress::FAQ|IO::Compress::FAQ/"Compressed files and Net::FTP">
 
+=head1 SUPPORT
+
+General feedback/questions/bug reports should be sent to 
+L<https://github.com/pmqs/IO-Compress/issues> (preferred) or
+L<https://rt.cpan.org/Public/Dist/Display.html?Name=IO-Compress>.
+
 =head1 SEE ALSO
 
-L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Compress::RawDeflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
+L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Compress::RawDeflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzip>, L<IO::Uncompress::UnLzip>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Compress::Zstd>, L<IO::Uncompress::UnZstd>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
 
 L<IO::Compress::FAQ|IO::Compress::FAQ>
 
@@ -967,7 +971,7 @@ L<File::GlobMapper|File::GlobMapper>, L<Archive::Zip|Archive::Zip>,
 L<Archive::Tar|Archive::Tar>,
 L<IO::Zlib|IO::Zlib>
 
-For RFC 1950, 1951 and 1952 see 
+For RFC 1950, 1951 and 1952 see
 L<http://www.faqs.org/rfcs/rfc1950.html>,
 L<http://www.faqs.org/rfcs/rfc1951.html> and
 L<http://www.faqs.org/rfcs/rfc1952.html>
@@ -982,7 +986,7 @@ The primary site for gzip is L<http://www.gzip.org>.
 
 =head1 AUTHOR
 
-This module was written by Paul Marquess, C<pmqs@cpan.org>. 
+This module was written by Paul Marquess, C<pmqs@cpan.org>.
 
 =head1 MODIFICATION HISTORY
 
@@ -990,7 +994,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2017 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2019 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

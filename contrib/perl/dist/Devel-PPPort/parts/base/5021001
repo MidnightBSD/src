@@ -1,13 +1,15 @@
 5.021001
-_is_in_locale_category         # U
-_is_utf8_char_slow             # U
-_is_utf8_idcont                # U
-_is_utf8_idstart               # U
-_is_utf8_xidcont               # U
-_is_utf8_xidstart              # U
-isALNUM_lazy                   # U
-isIDFIRST_lazy                 # U
 isUTF8_CHAR                    # U
 markstack_grow                 # E (Perl_markstack_grow)
-my_strerror                    # U
-PERL_UNUSED_RESULT             # added by devel/scanprov
+WARN_EXPERIMENTAL__WIN32_PERLIO # E
+PERL_UNUSED_RESULT             # M added by devel/scanprov
+add_above_Latin1_folds         # F added by devel/scanprov
+construct_ahocorasick_from_trie # F added by devel/scanprov
+dump_c_backtrace               # F added by devel/scanprov
+free_c_backtrace               # F added by devel/scanprov
+get_c_backtrace                # F added by devel/scanprov
+get_c_backtrace_dump           # F added by devel/scanprov
+_is_cur_LC_category_utf8       # F added by devel/scanprov
+_is_in_locale_category         # F added by devel/scanprov
+my_strerror                    # F added by devel/scanprov
+should_warn_nl                 # F added by devel/scanprov

@@ -1,6 +1,7 @@
 5.011001
 ck_warner                      # U
 ck_warner_d                    # U
-is_utf8_perl_space             # U
-is_utf8_perl_word              # U
-is_utf8_posix_digit            # U
+add_utf16_textfilter           # F added by devel/scanprov
+ckwarn_common                  # F added by devel/scanprov
+package_version                # F added by devel/scanprov
+utf16_textfilter               # F added by devel/scanprov

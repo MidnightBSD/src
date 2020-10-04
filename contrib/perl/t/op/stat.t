@@ -51,6 +51,8 @@ my $Is_Dosish  = $Is_Dos || $Is_OS2 || $Is_MSWin32 || $Is_NetWare;
 
 my $ufs_no_ctime = ($Is_Dfly || $Is_Darwin) && (() = `df -t ufs . 2>/dev/null`) == 2;
 
+my $Is_linux_container = is_linux_container();
+
 if ($Is_Cygwin && !is_miniperl) {
   require Win32;
   Win32->import;
@@ -193,10 +195,8 @@ SKIP: {
         # Going to try to switch away from root.  Might not work.
         my $olduid = $>;
         eval { $> = 1; };
-	skip "Can't test if an admin user in miniperl", 2,
-	  if $Is_Cygwin && is_miniperl();
         skip "Can't test -r or -w meaningfully if you're superuser", 2
-          if ($> == 0);
+          if ($Is_Cygwin ? _ingroup(544, 1) : $> == 0);
 
         SKIP: {
             skip "Can't test -r meaningfully?", 1 if $Is_Dos;
@@ -357,6 +357,7 @@ SKIP: {
 # can be set to skip the tests that need a tty.
 SKIP: {
     skip "These tests require a TTY", 4 if $ENV{PERL_SKIP_TTY_TEST};
+    skip "Skipping TTY tests on linux containers", 4 if $Is_linux_container;
 
     my $TTY = "/dev/tty";
 
@@ -646,4 +647,18 @@ SKIP: {
 END {
     chmod 0666, $tmpfile;
     unlink_all $tmpfile;
+}
+
+sub _ingroup {
+    my ($gid, $eff)   = @_;
+
+    $^O eq "VMS"    and return $_[0] == $);
+
+    my ($egid, @supp) = split " ", $);
+    my ($rgid)        = split " ", $(;
+
+    $gid == ($eff ? $egid : $rgid)  and return 1;
+    grep $gid == $_, @supp          and return 1;
+
+    return "";
 }

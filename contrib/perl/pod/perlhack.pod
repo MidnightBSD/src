@@ -11,7 +11,7 @@ perlhack - How to hack on Perl
 =head1 DESCRIPTION
 
 This document explains how Perl development works.  It includes details
-about the Perl 5 Porters email list, the Perl repository, the Perlbug
+about the Perl 5 Porters email list, the Perl repository, the Perl
 bug tracker, patch guidelines, and commentary on Perl development
 philosophy.
 
@@ -27,7 +27,7 @@ for a bug, comment fixes, etc., it's easy! Here's how:
 The perl source is in a git repository.  You can clone the repository
 with the following command:
 
-  % git clone git://perl5.git.perl.org/perl.git perl
+  % git clone https://github.com/Perl/perl5.git perl
 
 =item * Ensure you're following the latest advice
 
@@ -35,6 +35,13 @@ In case the advice in this guide has been updated recently, read the
 latest version directly from the perl source:
 
   % perldoc pod/perlhack.pod
+
+=item * Create a branch for your change
+
+Create a branch based on blead to commit your change to, which will
+later be used to send it to the Perl issue tracker.
+
+  % git checkout -b mychange
 
 =item * Make your change
 
@@ -61,29 +68,23 @@ Committing your work will save the change I<on your local system>:
 Make sure the commit message describes your change in a single
 sentence.  For example, "Fixed spelling errors in perlhack.pod".
 
-=item * Send your change to perlbug
+=item * Send your change to the Perl issue tracker
 
-The next step is to submit your patch to the Perl core ticket system
-via email.
+The next step is to submit your patch to the Perl core ticket system.
 
-If your changes are in a single git commit, run the following commands
-to generate the patch file and attach it to your bug report:
+Create a GitHub fork of the perl5 repository and add it as a remote,
+if you haven't already, as described in the GitHub documentation at
+L<https://help.github.com/en/articles/working-with-forks>.
 
-  % git format-patch -1
-  % ./perl -Ilib utils/perlbug -p 0001-*.patch
+  % git remote add fork git@github.com:MyUser/perl5.git
 
-The perlbug program will ask you a few questions about your email
-address and the patch you're submitting.  Once you've answered them it
-will submit your patch via email.
+Then, push your new branch to your fork.
 
-If your changes are in multiple commits, generate a patch file for each
-one and provide them to perlbug's C<-p> option separated by commas:
+  % git push -u fork mychange
 
-  % git format-patch -3
-  % ./perl -Ilib utils/perlbug -p 0001-fix1.patch,0002-fix2.patch,\
-  > 0003-fix3.patch
-
-When prompted, pick a subject that summarizes your changes.
+Finally, create a Pull Request on GitHub from your branch to blead as
+described in the GitHub documentation at
+L<https://help.github.com/en/articles/creating-a-pull-request-from-a-fork>.
 
 =item * Thank you
 
@@ -107,6 +108,7 @@ latest perl in a pristine state.  Check you don't have any local changes
 or added files in your perl check-out which you wish to keep, then run
 these commands:
 
+  % git checkout blead
   % git pull
   % git reset --hard origin/blead
   % git clean -dxf
@@ -115,12 +117,9 @@ these commands:
 
 =head1 BUG REPORTING
 
-If you want to report a bug in Perl, you must use the F<perlbug>
-command line tool.  This tool will ensure that your bug report includes
-all the relevant system and configuration information.
-
-To browse existing Perl bugs and patches, you can use the web interface
-at L<http://rt.perl.org/>.
+If you want to report a bug in Perl, or browse existing Perl bugs and
+patches, use the GitHub issue tracker at
+L<https://github.com/perl/perl5/issues>.
 
 Please check the archive of the perl5-porters list (see below) and/or
 the bug tracking system before submitting a bug report.  Often, you'll
@@ -138,14 +137,14 @@ are also referred to as the "Perl 5 Porters", "p5p" or just the
 "porters".
 
 A searchable archive of the list is available at
-L<http://markmail.org/search/?q=perl5-porters>.  There is also an archive at
-L<http://archive.develooper.com/perl5-porters@perl.org/>.
+L<https://markmail.org/search/?q=perl5-porters>.  There is also an archive at
+L<https://archive.develooper.com/perl5-porters@perl.org/>.
 
 =head2 perl-changes mailing list
 
 The perl5-changes mailing list receives a copy of each patch that gets
 submitted to the maintenance and development branches of the perl
-repository.  See L<http://lists.perl.org/list/perl5-changes.html> for
+repository.  See L<https://lists.perl.org/list/perl5-changes.html> for
 subscription and archive information.
 
 =head2 #p5p on IRC
@@ -157,7 +156,7 @@ Perl core.
 =head1 GETTING THE PERL SOURCE
 
 All of Perl's source code is kept centrally in a Git repository at
-I<perl5.git.perl.org>.  The repository contains many Perl revisions
+I<github.com>.  The repository contains many Perl revisions
 from Perl 1 onwards and all the revisions from Perforce, the previous
 version control system.
 
@@ -169,23 +168,22 @@ L<perlgit>.
 You will need a copy of Git for your computer.  You can fetch a copy of
 the repository using the git protocol:
 
-  % git clone git://perl5.git.perl.org/perl.git perl
+  % git clone git://github.com/Perl/perl5.git perl
 
 This clones the repository and makes a local copy in the F<perl>
 directory.
 
 If you cannot use the git protocol for firewall reasons, you can also
-clone via http, though this is much slower:
+clone via http:
 
-  % git clone http://perl5.git.perl.org/perl.git perl
+  % git clone https://github.com/Perl/perl5.git perl
 
 =head2 Read access via the web
 
 You may access the repository over the web.  This allows you to browse
-the tree, see recent commits, subscribe to RSS feeds for the changes,
+the tree, see recent commits, subscribe to repository notifications,
 search for particular commits and more.  You may access it at
-L<http://perl5.git.perl.org/perl.git>.  A mirror of the repository is
-found at L<https://github.com/Perl/perl5>.
+L<https://github.com/Perl/perl5>.
 
 =head2 Read access via rsync
 
@@ -219,27 +217,15 @@ Perl source.
 
 =head2 Submitting patches
 
-If you have a small patch to submit, please submit it via perlbug.  You
-can also send email directly to perlbug@perl.org.  Please note that
-messages sent to perlbug may be held in a moderation queue, so you
-won't receive a response immediately.
+If you have a small patch to submit, please submit it via the GitHub
+Pull Request workflow.  You may also send patches to the p5p list.
 
-You'll know your submission has been processed when you receive an
-email from our ticket tracking system.  This email will give you a
-ticket number.  Once your patch has made it to the ticket tracking
-system, it will also be sent to the perl5-porters@perl.org list.
-
-If your patch is related to an already-opened ticket you can also
-attach your patch to that ticket, without having to use perlbug.
-
-Patches are reviewed and discussed on the p5p list.  Simple,
+Patches are reviewed and discussed on GitHub or the p5p list.  Simple,
 uncontroversial patches will usually be applied without any discussion.
 When the patch is applied, the ticket will be updated and you will
-receive email.  In addition, an email will be sent to the p5p list.
+receive email.
 
-In other cases, the patch will need more work or discussion.  That will
-happen on the p5p list.
-
+In other cases, the patch will need more work or discussion.
 You are encouraged to participate in the discussion and advocate for
 your patch.  Sometimes your patch may get lost in the shuffle.  It's
 appropriate to send a reminder email to p5p if no action has been taken
@@ -258,6 +244,10 @@ If you are submitting a code patch there are several things that you
 can do to help the Perl 5 Porters accept your patch.
 
 =head3 Patch style
+
+Using the GitHub Pull Request workflow, your patch will automatically
+be available in a suitable format.  If you wish to submit a patch to
+the p5p list for review, make sure to create it appropriately.
 
 If you used git to check out the Perl source, then using C<git
 format-patch> will produce a patch in a style suitable for Perl.  The
@@ -537,7 +527,7 @@ consideration.
 Modules in the F<cpan/> directory of the source tree are maintained
 outside of the Perl core.  When the author updates the module, the
 updates are simply copied into the core.  See that module's
-documentation or its listing on L<http://search.cpan.org/> for more
+documentation or its listing on L<https://metacpan.org/> for more
 information on reporting bugs and submitting patches.
 
 In most cases, patches to modules in F<cpan/> should be sent upstream
@@ -761,7 +751,7 @@ L<Test::More>, but avoids loading most modules and uses as few core
 features as possible.
 
 If you write your own test, use the L<Test Anything
-Protocol|http://testanything.org>.
+Protocol|https://testanything.org>.
 
 =over 4
 
@@ -773,18 +763,22 @@ tested.  Tests in F<t/opbasic>, for instance, have been placed there
 rather than in F<t/op> because they test functionality which
 F<t/test.pl> presumes has already been demonstrated to work.
 
-=item * F<t/cmd>, F<t/run>, F<t/io> and F<t/op>
+=item * All other subdirectories of F<t/>
 
 Now that basic require() and subroutines are tested, you can use the
 F<t/test.pl> library.
 
-You can also use certain libraries like Config conditionally, but be
+You can also use certain libraries like L<Config> conditionally, but be
 sure to skip the test gracefully if it's not there.
 
-=item * Everything else
+=item * Test files not found under F<t/>
 
-Now that the core of Perl is tested, L<Test::More> can and should be
-used.  You can also use the full suite of core modules in the tests.
+This category includes F<.t> files underneath directories such as F<dist>,
+F<ext> and F<lib>.  Since the core of Perl has now been tested, L<Test::More>
+can and now should be used.  You can also use the full suite of core modules
+in the tests.  (As noted in L<"Patching a core module"> above, changes to
+F<.t> files found under F<cpan/> should be submitted to the upstream
+maintainers of those modules.)
 
 =back
 
@@ -818,7 +812,7 @@ code point.  This function returns C<"\xC2\xA0"> on an ASCII platform, and
 C<"\x80\x41"> on an EBCDIC 1047 one.
 
 But easiest is, if the character is specifiable as a literal, like
-C<"A"> or C<"%">, to use that; if not so specificable, you can use use
+C<"A"> or C<"%">, to use that; if not so specificable, you can use
 C<\N{}> , if the side effects aren't troublesome.  Simply specify all
 your characters in hex, using C<\N{U+ZZ}> instead of C<\xZZ>.  C<\N{}>
 is the Unicode name, and so it
@@ -868,6 +862,12 @@ basic errors before you submit a patch.
 
 Run F<miniperl> on F<t/base>, F<t/comp>, F<t/cmd>, F<t/run>, F<t/io>,
 F<t/op>, F<t/uni> and F<t/mro> tests.
+
+F<miniperl> is a minimalistic perl built to bootstrap building
+extensions, utilties, documentation etc.  It doesn't support dynamic
+loading and depending on the point in the build process will only have
+access to a limited set of core modules.  F<miniperl> is not intended
+for day to day use.
 
 =item * test.valgrind check.valgrind
 
@@ -1063,7 +1063,7 @@ situation by using the Devel::PatchPerl library from CPAN (not included in the
 core) to bring the source code at that commit to a buildable state.
 
 Here's a real world example, taken from work done to resolve
-L<perl #72414|https://rt.perl.org/Ticket/Display.html?id=72414>.
+L<perl #10118|https://github.com/Perl/perl5/issues/10118>.
 Use of F<Porting/bisect.pl> had identified commit
 C<ba77e4cc9d1ceebf472c9c5c18b2377ee47062e6> as the commit in which a bug was
 corrected.  To confirm, a P5P developer wanted to configure and build perl at
@@ -1144,7 +1144,7 @@ source, and we'll do that later on.
 Gisle Aas's "illustrated perlguts", also known as I<illguts>, has very
 helpful pictures:
 
-L<http://search.cpan.org/dist/illguts/>
+L<https://search.cpan.org/dist/illguts/>
 
 =item * L<perlxstut> and L<perlxs>
 
@@ -1169,21 +1169,21 @@ wanting to go about Perl development.
 
 =head1 CPAN TESTERS AND PERL SMOKERS
 
-The CPAN testers ( L<http://testers.cpan.org/> ) are a group of volunteers
+The CPAN testers ( L<http://cpantesters.org/> ) are a group of volunteers
 who test CPAN modules on a variety of platforms.
 
-Perl Smokers ( L<http://www.nntp.perl.org/group/perl.daily-build/> and
-L<http://www.nntp.perl.org/group/perl.daily-build.reports/> )
+Perl Smokers ( L<https://www.nntp.perl.org/group/perl.daily-build/> and
+L<https://www.nntp.perl.org/group/perl.daily-build.reports/> )
 automatically test Perl source releases on platforms with various
 configurations.
 
 Both efforts welcome volunteers.  In order to get involved in smoke
 testing of the perl itself visit
-L<http://search.cpan.org/dist/Test-Smoke/>.  In order to start smoke
+L<https://metacpan.org/release/Test-Smoke>.  In order to start smoke
 testing CPAN modules visit
-L<http://search.cpan.org/dist/CPANPLUS-YACSmoke/> or
-L<http://search.cpan.org/dist/minismokebox/> or
-L<http://search.cpan.org/dist/CPAN-Reporter/>.
+L<https://metacpan.org/release/CPANPLUS-YACSmoke> or
+L<https://metacpan.org/release/minismokebox> or
+L<https://metacpan.org/release/CPAN-Reporter>.
 
 =head1 WHAT NEXT?
 

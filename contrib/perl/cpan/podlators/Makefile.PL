@@ -4,19 +4,40 @@
 # which only supports that build method, and because it is a dependency of
 # other build systems like Module::Build.
 #
-# Copyright 1999, 2000, 2001, 2008, 2010, 2012, 2014, 2015, 2016
+# Copyright 1999-2001, 2008, 2010, 2012, 2014-2016, 2018-2019
 #     Russ Allbery <rra@cpan.org>
 #
 # This program is free software; you may redistribute it and/or modify it
 # under the same terms as Perl itself.
+#
+# SPDX-License-Identifier: GPL-1.0-or-later OR Artistic-1.0-Perl
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 
 use Config;
 use ExtUtils::MakeMaker;
 use File::Spec;
+
+# Determine the version of the distribution so that we can construct the
+# provides metadata that unfortunately ExtUtils::MakeMaker does not build.
+# This is a very simple $VERSION parser, since it only has to handle the
+# syntax Pod::Man uses.
+#
+# Returns: Distribution version as a string
+sub dist_version {
+    open(my $fh, '<', File::Spec->catfile('lib', 'Pod', 'Man.pm'))
+      or die "$0: cannot open lib/Pod/Man.pm: $!\n";
+    while (defined(my $line = <$fh>)) {
+        if ($line =~ m{ \A \$VERSION \s+ = \s+ '([^\']+)' }xms) {
+            close($fh) or die "$0: cannot close lib/Pod/Man.pm\n";
+            return $1;
+        }
+    }
+    close($fh) or die "$0: cannot close lib/Pod/Man.pm\n";
+    die "$0: cannot find version in lib/Pod/Man.pm\n";
+}
 
 # Generate full paths for scripts distributed in the bin directory.  Appends
 # the .com extension to scripts on VMS, unless they already have the .PL
@@ -59,7 +80,8 @@ sub man1pod {
 
 # The hash of all the metadata.  This will be modified before WriteMakefile to
 # remove keys not supported by the local version of ExtUtils::MakeMaker.
-my %metadata = (
+my $dist_version = dist_version();
+my %metadata     = (
     NAME             => 'Pod',
     DISTNAME         => 'podlators',
     ABSTRACT         => 'Convert POD data to various other formats',
@@ -67,7 +89,7 @@ my %metadata = (
     LICENSE          => 'perl_5',
     EXE_FILES        => [scripts('pod2text', 'pod2man')],
     VERSION_FROM     => 'lib/Pod/Man.pm',
-    MIN_PERL_VERSION => '5.006',
+    MIN_PERL_VERSION => '5.008',
 
     # Use *.PL files to generate the driver scripts so that we get the correct
     # invocation of Perl on non-UNIX platforms.
@@ -89,10 +111,7 @@ my %metadata = (
     realclean => { FILES => scalar(scripts('pod2text', 'pod2man')) },
 
     # Dependencies on other modules.
-    PREREQ_PM => {
-        'Encode'      => 0,
-        'Pod::Simple' => 3.06,
-    },
+    PREREQ_PM => { 'Pod::Simple' => 3.06 },
 
     # Older versions of ExtUtils::MakeMaker don't pick up nested test
     # directories by default.
@@ -106,14 +125,40 @@ my %metadata = (
     # Additional metadata.
     META_ADD => {
         'meta-spec' => { version => 2 },
-        resources   => {
+        provides    => {
+            'Pod::Man' => {
+                file    => 'lib/Pod/Man.pm',
+                version => $dist_version,
+            },
+            'Pod::ParseLink' => {
+                file    => 'lib/Pod/ParseLink.pm',
+                version => $dist_version,
+            },
+            'Pod::Text' => {
+                file    => 'lib/Pod/Text.pm',
+                version => $dist_version,
+            },
+            'Pod::Text::Color' => {
+                file    => 'lib/Pod/Text/Color.pm',
+                version => $dist_version,
+            },
+            'Pod::Text::Overstrike' => {
+                file    => 'lib/Pod/Text/Overstrike.pm',
+                version => $dist_version,
+            },
+            'Pod::Text::Termcap' => {
+                file    => 'lib/Pod/Text/Termcap.pm',
+                version => $dist_version,
+            },
+        },
+        resources => {
             bugtracker => {
                 mailto => 'bug-podlators@rt.cpan.org',
                 web => 'https://rt.cpan.org/Dist/Display.html?Name=podlators',
             },
-            homepage   => 'http://www.eyrie.org/~eagle/software/podlators/',
+            homepage   => 'https://www.eyrie.org/~eagle/software/podlators/',
             repository => {
-                url  => 'git://github.com/rra/podlators.git',
+                url  => 'https://github.com/rra/podlators.git',
                 web  => 'https://github.com/rra/podlators',
                 type => 'git',
             },

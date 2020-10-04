@@ -437,12 +437,11 @@ is the subversion / 1e6.  For example, Perl v5.10.1 would be "5.010001".
 This variable can be used to determine whether the Perl interpreter
 executing a script is in the right range of versions:
 
-    warn "No PerlIO!\n" if $] lt '5.008';
+    warn "No PerlIO!\n" if "$]" < 5.008;
 
-When comparing C<$]>, string comparison operators are B<highly
-recommended>.  The inherent limitations of binary floating point
-representation can sometimes lead to incorrect comparisons for some
-numbers on some architectures.
+When comparing C<$]>, numeric comparison operators should be used, but the
+variable should be stringified first to avoid issues where its original
+numeric value is inaccurate.
 
 See also the documentation of C<use VERSION> and C<require VERSION>
 for a convenient way to fail if the running Perl interpreter is too old.
@@ -453,9 +452,10 @@ object, which allows more flexible string comparisons.
 The main advantage of C<$]> over C<$^V> is that it works the same on any
 version of Perl.  The disadvantages are that it can't easily be compared
 to versions in other formats (e.g. literal v-strings, "v1.2.3" or
-version objects) and numeric comparisons can occasionally fail; it's good
-for string literal version checks and bad for comparing to a variable
-that hasn't been sanity-checked.
+version objects) and numeric comparisons are subject to the binary
+floating point representation; it's good for numeric literal version
+checks and bad for comparing to a variable that hasn't been
+sanity-checked.
 
 The C<$OLD_PERL_VERSION> form was added in Perl v5.20.0 for historical
 reasons but its use is discouraged. (If your reason to use C<$]> is to
@@ -483,9 +483,9 @@ time of the C<exec()>.
 X<@F>
 
 The array C<@F> contains the fields of each line read in when autosplit
-mode is turned on.  See L<perlrun> for the B<-a> switch.  This array
-is package-specific, and must be declared or given a full package name
-if not in package main when running under C<strict 'vars'>.
+mode is turned on.  See L<perlrun|perlrun/-a> for the B<-a> switch.  This
+array is package-specific, and must be declared or given a full package
+name if not in package main when running under C<strict 'vars'>.
 
 =item @INC
 X<@INC>
@@ -494,12 +494,13 @@ The array C<@INC> contains the list of places that the C<do EXPR>,
 C<require>, or C<use> constructs look for their library files.  It
 initially consists of the arguments to any B<-I> command-line
 switches, followed by the default Perl library, probably
-F</usr/local/lib/perl>, followed by ".", to represent the current
-directory.  ("." will not be appended if taint checks are enabled,
-either by C<-T> or by C<-t>, or if configured not to do so by the
-C<-Ddefault_inc_excludes_dot> compile time option.)  If you need to
-modify this at runtime, you should use the C<use lib> pragma to get
-the machine-dependent library properly loaded also:
+F</usr/local/lib/perl>.
+Prior to Perl 5.26, C<.> -which represents the current directory, was included
+in C<@INC>; it has been removed. This change in behavior is documented
+in L<C<PERL_USE_UNSAFE_INC>|perlrun/PERL_USE_UNSAFE_INC> and it is
+not recommended that C<.> be re-added to C<@INC>.
+If you need to modify C<@INC> at runtime, you should use the C<use lib> pragma
+to get the machine-dependent library properly loaded as well:
 
     use lib '/mypath/libdir/';
     use SomeMod;
@@ -576,7 +577,7 @@ built, as determined during the configuration process.  For examples
 see L<perlport/PLATFORMS>.
 
 The value is identical to C<$Config{'osname'}>.  See also L<Config>
-and the B<-V> command-line switch documented in L<perlrun>.
+and the B<-V> command-line switch documented in L<perlrun|perlrun/-V>.
 
 In Windows platforms, C<$^O> is not very helpful: since it is always
 C<MSWin32>, it doesn't tell the difference between
@@ -606,7 +607,8 @@ The hash C<%SIG> contains signal handlers for signals.  For example:
 
 Using a value of C<'IGNORE'> usually has the effect of ignoring the
 signal, except for the C<CHLD> signal.  See L<perlipc> for more about
-this special case.
+this special case.  Using an empty string or C<undef> as the value has
+the same effect as C<'DEFAULT'>.
 
 Here are some other examples:
 
@@ -620,6 +622,11 @@ Here are some other examples:
 
 Be sure not to use a bareword as the name of a signal handler,
 lest you inadvertently call it.
+
+Using a string that doesn't correspond to any existing function or a
+glob that doesn't contain a code slot is equivalent to C<'IGNORE'>,
+but a warning is emitted when the handler is being called (the warning
+is not emitted for the internal hooks described below).
 
 If your system has the C<sigaction()> function then signal handlers
 are installed using it.  This means you get reliable signal handling.
@@ -639,8 +646,9 @@ errors, like this:
     local $SIG{__WARN__} = sub { die $_[0] };
     eval $proggie;
 
-As the C<'IGNORE'> hook is not supported by C<__WARN__>, you can
-disable warnings using the empty subroutine:
+As the C<'IGNORE'> hook is not supported by C<__WARN__>, its effect is
+the same as using C<'DEFAULT'>.  You can disable warnings using the
+empty subroutine:
 
     local $SIG{__WARN__} = sub {};
 
@@ -659,6 +667,9 @@ this possible. This used to be deprecated, as it allowed strange action
 at a distance like rewriting a pending exception in C<$@>. Plans to
 rectify this have been scrapped, as users found that rewriting a 
 pending exception is actually a useful feature, and not a bug.
+
+The C<$SIG{__DIE__}> doesn't support C<'IGNORE'>; it has the same
+effect as C<'DEFAULT'>.
 
 C<__DIE__>/C<__WARN__> handlers are very special in one respect: they
 may be called to report (probable) errors found by the parser.  In such
@@ -699,6 +710,14 @@ and B<-C> filetests are based on this value.
 
 =item $^V
 X<$^V> X<$PERL_VERSION>
+
+=for comment
+These are documented in the generated file lib/Config.pod.  This looks
+like as good a place as any to give notice that they are documented.
+
+=for apidoc hAmn|int|PERL_VERSION
+=for apidoc hAmn|int|PERL_REVISION
+=for apidoc hAmn|int|PERL_SUBVERSION
 
 The revision, version, and subversion of the Perl interpreter,
 represented as a L<version> object.
@@ -743,9 +762,8 @@ is considerably faster, especially for files on network drives.
 
 This variable could be set in the F<sitecustomize.pl> file to
 configure the local Perl installation to use "sloppy" C<stat()> by
-default.  See the documentation for B<-f> in
-L<perlrun|perlrun/"Command Switches"> for more information about site
-customization.
+default.  See the documentation for B<-f> in L<perlrun|perlrun/-f>
+for more information about site customization.
 
 This variable was added in Perl v5.10.0.
 
@@ -931,7 +949,8 @@ is equivalent to $2, etc.
 
 should output "f-o-a-l".
 
-See also L</$I<digits>>, L</%{^CAPTURE}> and L</%{^CAPTURE_ALL}>.
+See also L<<< /$<I<digits>> ($1, $2, ...) >>>, L</%{^CAPTURE}> and
+L</%{^CAPTURE_ALL}>.
 
 Note that unlike most other regex magic variables there is no single
 letter equivalent to C<@{^CAPTURE}>.
@@ -1046,7 +1065,10 @@ This variable is read-only and dynamically-scoped.
 =item $+
 X<$+> X<$LAST_PAREN_MATCH>
 
-The text matched by the last bracket of the last successful search pattern.
+The text matched by the highest used capture group of the last
+successful search pattern.  It is logically equivalent to the highest
+numbered capture variable (C<$1>, C<$2>, ...) which has a defined value.
+
 This is useful if you don't know which one of a set of alternative patterns
 matched.  For example:
 
@@ -1063,7 +1085,15 @@ X<$^N> X<$LAST_SUBMATCH_RESULT>
 
 The text matched by the used group most-recently closed (i.e. the group
 with the rightmost closing parenthesis) of the last successful search
-pattern.
+pattern. This is subtly different from C<$+>. For example in
+
+    "ab" =~ /^((.)(.))$/
+
+we have
+
+    $1,$^N   have the value "ab"
+    $2       has  the value "a"
+    $3,$+    have the value "b"
 
 This is primarily used inside C<(?{...})> blocks for examining text
 recently matched.  For example, to effectively capture text to a variable
@@ -1137,7 +1167,7 @@ This variable is read-only and dynamically-scoped.
 X<@-> X<@LAST_MATCH_START>
 
 C<$-[0]> is the offset of the start of the last successful match.
-C<$-[>I<n>C<]> is the offset of the start of the substring matched by
+C<$-[I<n>]> is the offset of the start of the substring matched by
 I<n>-th subpattern, or undef if the subpattern did not match.
 
 Thus, after a match against C<$_>, C<$&> coincides with C<substr $_, $-[0],
@@ -1236,6 +1266,17 @@ The result of evaluation of the last successful C<(?{ code })>
 regular expression assertion (see L<perlre>).  May be written to.
 
 This variable was added in Perl 5.005.
+
+=item ${^RE_COMPILE_RECURSION_LIMIT}
+X<${^RE_COMPILE_RECURSION_LIMIT}>
+
+The current value giving the maximum number of open but unclosed
+parenthetical groups there may be at any point during a regular
+expression compilation.  The default is currently 1000 nested groups.
+You may adjust it depending on your needs and the amount of memory
+available.
+
+This variable was added in Perl v5.30.0.
 
 =item ${^RE_DEBUG_FLAGS}
 X<${^RE_DEBUG_FLAGS}>
@@ -1394,7 +1435,7 @@ X<ARGVOUT>
 The special filehandle that points to the currently open output file
 when doing edit-in-place processing with B<-i>.  Useful when you have
 to do a lot of inserting and don't want to keep modifying C<$_>.  See
-L<perlrun> for the B<-i> switch.
+L<perlrun|perlrun/-i[extension]> for the B<-i> switch.
 
 =item IO::Handle->output_field_separator( EXPR )
 
@@ -1475,6 +1516,44 @@ the next paragraph, even if it's a newline.
 
 Remember: the value of C<$/> is a string, not a regex.  B<awk> has to
 be better for something. :-)
+
+Setting C<$/> to an empty string -- the so-called I<paragraph mode> -- merits
+special attention.  When C<$/> is set to C<""> and the entire file is read in
+with that setting, any sequence of consecutive newlines C<"\n\n"> at the
+beginning of the file is discarded.  With the exception of the final record in
+the file, each sequence of characters ending in two or more newlines is
+treated as one record and is read in to end in exactly two newlines.  If the
+last record in the file ends in zero or one consecutive newlines, that record
+is read in with that number of newlines.  If the last record ends in two or
+more consecutive newlines, it is read in with two newlines like all preceding
+records.
+
+Suppose we wrote the following string to a file:
+
+    my $string = "\n\n\n";
+    $string .= "alpha beta\ngamma delta\n\n\n";
+    $string .= "epsilon zeta eta\n\n";
+    $string .= "theta\n";
+
+    my $file = 'simple_file.txt'; 
+    open my $OUT, '>', $file or die;
+    print $OUT $string;
+    close $OUT or die;
+
+Now we read that file in paragraph mode:
+
+    local $/ = ""; # paragraph mode
+    open my $IN, '<', $file or die;
+    my @records = <$IN>;
+    close $IN or die;
+
+C<@records> will consist of these 3 strings:
+
+    (
+      "alpha beta\ngamma delta\n\n",
+      "epsilon zeta eta\n\n",
+      "theta\n",
+    )
 
 Setting C<$/> to a reference to an integer, scalar containing an
 integer, or scalar that's convertible to an integer will attempt to
@@ -2164,9 +2243,29 @@ This variable was added in Perl v5.6.0.
 =item ${^OPEN}
 X<${^OPEN}>
 
-An internal variable used by PerlIO.  A string in two parts, separated
+An internal variable used by L<PerlIO>.  A string in two parts, separated
 by a C<\0> byte, the first part describes the input layers, the second
 part describes the output layers.
+
+This is the mechanism that applies the lexical effects of the L<open>
+pragma, and the main program scope effects of the C<io> or C<D> options
+for the L<-C command-line switch|perlrun/-C [I<numberE<sol>list>]> and
+L<PERL_UNICODE environment variable|perlrun/PERL_UNICODE>.
+
+The functions C<accept()>, C<open()>, C<pipe()>, C<readpipe()> (as well
+as the related C<qx> and C<`STRING`> operators), C<socket()>,
+C<socketpair()>, and C<sysopen()> are affected by the lexical value of
+this variable.  The implicit L</ARGV> handle opened by C<readline()> (or
+the related C<< <> >> and C<<< <<>> >>> operators) on passed filenames is
+also affected (but not if it opens C<STDIN>).  If this variable is not
+set, these functions will set the default layers as described in
+L<PerlIO/Defaults and how to override them>.
+
+C<open()> ignores this variable (and the default layers) when called with
+3 arguments and explicit layers are specified.  Indirect calls to these
+functions via modules like L<IO::Handle> are not affected as they occur
+in a different lexical scope.  Directory handles such as opened by
+C<opendir()> are not currently affected.
 
 This variable was added in Perl v5.8.0.
 
@@ -2270,9 +2369,9 @@ This variable was added in Perl v5.28.0.
 =item ${^UNICODE}
 X<${^UNICODE}>
 
-Reflects certain Unicode settings of Perl.  See L<perlrun>
-documentation for the C<-C> switch for more information about
-the possible values.
+Reflects certain Unicode settings of Perl.  See
+L<perlrun|perlrun/-C [numberE<sol>list]> documentation for the C<-C>
+switch for more information about the possible values.
 
 This variable is set during Perl startup and is thereafter read-only.
 
@@ -2295,7 +2394,8 @@ X<${^UTF8LOCALE}>
 This variable indicates whether a UTF-8 locale was detected by perl at
 startup.  This information is used by perl when it's in
 adjust-utf8ness-to-locale mode (as when run with the C<-CL> command-line
-switch); see L<perlrun> for more info on this.
+switch); see L<perlrun|perlrun/-C [numberE<sol>list]> for more info on
+this.
 
 This variable was added in Perl v5.8.8.
 
@@ -2360,18 +2460,15 @@ scopes in the same file, unlike other compile-time directives (such as
 L<strict>).  Using local() on it would bind its value strictly to a lexical
 block.  Now it is always lexically scoped.
 
-As of Perl v5.16.0, it is implemented by the L<arybase> module.  See
-L<arybase> for more details on its behaviour.
+As of Perl v5.16.0, it is implemented by the L<arybase> module.
 
-Under C<use v5.16>, or C<no feature "array_base">, C<$[> no longer has any
-effect, and always contains 0.  Assigning 0 to it is permitted, but any
-other value will produce an error.
+As of Perl v5.30.0, or under C<use v5.16>, or C<no feature "array_base">,
+C<$[> no longer has any effect, and always contains 0.
+Assigning 0 to it is permitted, but any other value will produce an error.
 
 Mnemonic: [ begins subscripts.
 
 Deprecated in Perl v5.12.0.
-
-Assigning a non-zero value be fatal in Perl v5.30.0.
 
 =back
 

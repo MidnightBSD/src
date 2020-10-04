@@ -12,7 +12,7 @@ my $no_endianness = $] > 5.009 ? '' :
 my $no_signedness = $] > 5.009 ? '' :
   "Signed/unsigned pack modifiers not available on this perl";
 
-plan tests => 14717;
+plan tests => 14718;
 
 use strict;
 use warnings qw(FATAL all);
@@ -955,15 +955,11 @@ is("@{[unpack('U*', pack('U*', 100, 200))]}", "100 200");
     is("@{[pack('C0U*', map { utf8::native_to_unicode($_) } 64, 202)]}",
        pack("C*", 64, @bytes202));
 
-    # does unpack U0U on byte data warn?
-    {
-	use warnings qw(NONFATAL all);;
-
-        my $bad = pack("U0C", 202);
-        local $SIG{__WARN__} = sub { $@ = "@_" };
-        my @null = unpack('U0U', $bad);
-        like($@, qr/^Malformed UTF-8 character: /);
-    }
+    # does unpack U0U on byte data fail?
+    fresh_perl_like('my $bad = pack("U0C", 202); my @null = unpack("U0U", $bad);',
+                    qr/^Malformed UTF-8 character: /,
+                    {},
+                    "pack doesn't return malformed UTF-8");
 }
 
 {
@@ -2080,4 +2076,11 @@ SKIP:
 
     fresh_perl_like('pack "c10f1073741824"', qr/Out of memory during pack/, { stderr => 1 },
 		    "integer overflow calculating allocation (multiply)");
+}
+
+{
+    # [perl #132655] heap-buffer-overflow READ of size 11
+    # only expect failure under ASAN (and maybe valgrind)
+    fresh_perl_is('0.0 + unpack("u", "ab")', "", { stderr => 1 },
+                  "ensure unpack u of invalid data nul terminates result");
 }

@@ -1,4 +1,4 @@
-# Pod::Man -- Convert POD data to formatted *roff input.
+# Convert POD data to formatted *roff input.
 #
 # This module translates POD documentation into *roff markup using the man
 # macro set, and is intended for converting POD documents written as Unix
@@ -6,18 +6,7 @@
 # a replacement for the pod2man command distributed with versions of Perl
 # prior to 5.6.
 #
-# Perl core hackers, please note that this module is also separately
-# maintained outside of the Perl core as part of the podlators.  Please send
-# me any patches at the address above in addition to sending them to the
-# standard Perl mailing lists.
-#
-# Written by Russ Allbery <rra@cpan.org>
-# Substantial contributions by Sean Burke <sburke@cpan.org>
-# Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-#     2010, 2012, 2013, 2014, 2015, 2016, 2017 Russ Allbery <rra@cpan.org>
-#
-# This program is free software; you may redistribute it and/or modify it
-# under the same terms as Perl itself.
+# SPDX-License-Identifier: GPL-1.0-or-later OR Artistic-1.0-Perl
 
 ##############################################################################
 # Modules and declarations
@@ -25,7 +14,7 @@
 
 package Pod::Man;
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 
@@ -35,7 +24,9 @@ use vars qw(@ISA %ESCAPES $PREAMBLE $VERSION);
 use Carp qw(carp croak);
 use Pod::Simple ();
 
-# Conditionally import Encode and set $HAS_ENCODE if it is available.
+# Conditionally import Encode and set $HAS_ENCODE if it is available.  This is
+# required to support building as part of Perl core, since podlators is built
+# before Encode is.
 our $HAS_ENCODE;
 BEGIN {
     $HAS_ENCODE = eval { require Encode };
@@ -43,7 +34,7 @@ BEGIN {
 
 @ISA = qw(Pod::Simple);
 
-$VERSION = '4.10';
+$VERSION = '4.14';
 
 # Set the debugging level.  If someone has inserted a debug function into this
 # class already, use that.  Otherwise, use any Pod::Simple debug function
@@ -140,6 +131,7 @@ sub new {
         $self->no_errata_section (0);
         $self->complain_stderr (0);
     } elsif ($$self{errors} eq 'none') {
+        $self->no_errata_section (1);
         $self->no_whining (1);
     } else {
         croak (qq(Invalid errors setting: "$$self{errors}"));
@@ -255,13 +247,8 @@ sub init_quotes {
 sub init_page {
     my ($self) = @_;
 
-    # We used to try first to get the version number from a local binary, but
-    # we shouldn't need that any more.  Get the version from the running Perl.
-    # Work a little magic to handle subversions correctly under both the
-    # pre-5.6 and the post-5.6 version numbering schemes.
-    my @version = ($] =~ /^(\d+)\.(\d{3})(\d{0,3})$/);
-    $version[2] ||= 0;
-    $version[2] *= 10 ** (3 - length $version[2]);
+    # Get the version from the running Perl.
+    my @version = ($] =~ /^(\d+)\.(\d{3})(\d+)$/);
     for (@version) { $_ += 0 }
     my $version = join ('.', @version);
 
@@ -809,7 +796,7 @@ sub start_document {
         eval {
             my @options = (output => 1, details => 1);
             my @layers = PerlIO::get_layers (*{$$self{output_fh}}, @options);
-            if ($layers[-1] & PerlIO::F_UTF8 ()) {
+            if ($layers[-1] && ($layers[-1] & PerlIO::F_UTF8 ())) {
                 $$self{ENCODE} = 0;
             }
         }
@@ -1651,9 +1638,9 @@ sub preamble_template {
 __END__
 
 =for stopwords
-en em ALLCAPS teeny fixedbold fixeditalic fixedbolditalic stderr utf8
-UTF-8 Allbery Sean Burke Ossanna Solaris formatters troff uppercased
-Christiansen nourls parsers Kernighan lquote rquote
+en em ALLCAPS teeny fixedbold fixeditalic fixedbolditalic stderr utf8 UTF-8
+Allbery Sean Burke Ossanna Solaris formatters troff uppercased Christiansen
+nourls parsers Kernighan lquote rquote
 
 =head1 NAME
 
@@ -1891,7 +1878,9 @@ being the file to write the formatted output to.
 You can also call parse_lines() to parse an array of lines or
 parse_string_document() to parse a document already in memory.  As with
 parse_file(), parse_lines() and parse_string_document() default to sending
-their output to C<STDOUT> unless changed with the output_fh() method.
+their output to C<STDOUT> unless changed with the output_fh() method.  Be
+aware that parse_lines() and parse_string_document() both expect raw bytes,
+not decoded characters.
 
 To put the output from any parse method into a string instead of a file
 handle, call the output_string() method instead of output_fh().
@@ -2014,16 +2003,17 @@ only matters for troff output.
 
 =head1 AUTHOR
 
-Russ Allbery <rra@cpan.org>, based I<very> heavily on the original
-B<pod2man> by Tom Christiansen <tchrist@mox.perl.com>.  The modifications to
-work with Pod::Simple instead of Pod::Parser were originally contributed by
-Sean Burke (but I've since hacked them beyond recognition and all bugs are
-mine).
+Russ Allbery <rra@cpan.org>, based I<very> heavily on the original B<pod2man>
+by Tom Christiansen <tchrist@mox.perl.com>.  The modifications to work with
+Pod::Simple instead of Pod::Parser were originally contributed by Sean Burke
+<sburke@cpan.org> (but I've since hacked them beyond recognition and all bugs
+are mine).
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-2009, 2010, 2012, 2013, 2014, 2015, 2016, 2017 Russ Allbery <rra@cpan.org>
+Copyright 1999-2010, 2012-2019 Russ Allbery <rra@cpan.org>
+
+Substantial contributions by Sean Burke <sburke@cpan.org>.
 
 This program is free software; you may redistribute it and/or modify it
 under the same terms as Perl itself.
@@ -2044,7 +2034,11 @@ documentation on writing manual pages if you've not done it before and
 aren't familiar with the conventions.
 
 The current version of this module is always available from its web site at
-L<http://www.eyrie.org/~eagle/software/podlators/>.  It is also part of the
+L<https://www.eyrie.org/~eagle/software/podlators/>.  It is also part of the
 Perl core distribution as of 5.6.0.
 
 =cut
+
+# Local Variables:
+# copyright-at-end-flag: t
+# End:

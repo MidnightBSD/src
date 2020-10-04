@@ -533,7 +533,7 @@ Perl_new_version(pTHX_ SV *ver)
 	    under = ninstr(raw, raw+len, underscore, underscore + 1);
 	    if (under) {
 		Move(under + 1, under, raw + len - under - 1, char);
-		SvCUR(rv)--;
+		SvCUR_set(rv, SvCUR(rv) - 1);
 		*SvEND(rv) = '\0';
 	    }
 	    /* this is for consistency with the pure Perl class */
@@ -571,6 +571,11 @@ Perl_upg_version2(pTHX_ SV *ver, bool qv)
 Perl_upg_version(pTHX_ SV *ver, bool qv)
 #endif
 {
+
+#ifdef dVAR
+    dVAR;
+#endif
+
     const char *version, *s;
 #ifdef SvVOK
     const MAGIC *mg;
@@ -638,6 +643,8 @@ VER_NV:
             if (   strNE(locale_name_on_entry, "C")
                 && strNE(locale_name_on_entry, "POSIX"))
             {
+                /* the setlocale() call might free or overwrite the name */
+                locale_name_on_entry = savepv(locale_name_on_entry);
                 setlocale(LC_NUMERIC, "C");
             }
             else {  /* This value indicates to the restore code that we didn't
@@ -661,6 +668,8 @@ VER_NV:
                 if (   strNE(locale_name_on_entry, "C")
                     && strNE(locale_name_on_entry, "POSIX"))
                 {
+                    /* the setlocale() call might free or overwrite the name */
+                    locale_name_on_entry = savepv(locale_name_on_entry);
                     setlocale(LC_NUMERIC, "C");
                 }
                 else {  /* This value indicates to the restore code that we
@@ -710,6 +719,7 @@ VER_NV:
 
             if (locale_name_on_entry) {
                 setlocale(LC_NUMERIC, locale_name_on_entry);
+                Safefree(locale_name_on_entry);
             }
 
             LC_NUMERIC_UNLOCK;  /* End critical section */
@@ -718,6 +728,7 @@ VER_NV:
 
             if (locale_name_on_entry) {
                 setlocale(LC_NUMERIC, locale_name_on_entry);
+                Safefree(locale_name_on_entry);
                 LC_NUMERIC_UNLOCK;
             }
             else if (locale_obj_on_entry == PL_underlying_numeric_obj) {

@@ -51,7 +51,7 @@ sub Test {
     my %basegroup = basegroups( $pwgid, $pwgnam );
     my @extracted_supplementary_groups = remove_basegroup( \ %basegroup, \ @extracted_groups );
 
-    plan 2;
+    plan 3;
 
 
     # Test: The supplementary groups in $( should match the
@@ -120,6 +120,26 @@ sub Test {
     # multiple 0's indicate GROUPSTYPE is currently long but should be short
     $gid_count->{0} //= 0;
     ok 0 == $pwgid || $gid_count->{0} < 2, "groupstype should be type short, not long";
+
+    SKIP: {
+        # try to add a group as supplementary group
+        my $root_uid = 0;
+        skip "uid!=0", 1 if $< != $root_uid and $> != $root_uid;
+        my @groups = split ' ', $);
+        my @sup_group;
+        setgrent;
+        while(my @ent = getgrent) {
+            next if grep { $_ == $ent[2] } @groups;
+            @sup_group = @ent;
+            last;
+        }
+        endgrent;
+        skip "No group found we could add as a supplementary group", 1
+            if (!@sup_group);
+        $) = "$) @sup_group[2]";
+        my $ok = grep { $_ == $sup_group[2] } split ' ', $);
+        ok $ok, "Group `$sup_group[0]' added as supplementary group";
+    }
 
     return;
 }
@@ -214,7 +234,7 @@ sub _system_groups {
 #
 # If these tests fail, report the particular incantation you use
 # on this platform to find *all* the groups that an arbitrary
-# user may belong to, using the 'perlbug' program.
+# user may belong to, using the issue tracker.
 EOM
         }
         return ( $cmd, $str );
@@ -293,7 +313,7 @@ sub perl_groups {
 
         # Why does this test prefer to not test groups which we don't have
         # a name for? One possible answer is that my primary group comes
-        # from from my entry in the user database but isn't mentioned in
+        # from my entry in the user database but isn't mentioned in
         # the group database.  Are there more reasons?
         next if ! defined $group;
 

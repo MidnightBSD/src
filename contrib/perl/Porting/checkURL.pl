@@ -56,6 +56,10 @@ foreach my $filename (@filenames) {
         next
             if $uri =~ m{^https?://rt.perl.org/(?:rt3/)?Ticket/Display.html?id=\d+$};
 
+        # no need to hit github
+        next
+            if $uri =~ m{^https?://(?:www\.)?github\.com/[pP]erl/perl5/issues/\d+$};
+
         # no need to hit rt.cpan.org
         next
             if $uri =~ m{^https?://rt.cpan.org/Public/Bug/Display.html?id=\d+$};
@@ -229,6 +233,28 @@ http://aspn.activestate.com/ASPN/Mail/Message/perl6-internals/2746631
 http://my.smithmicro.com/mac/stuffit/
 http://www.wg.omron.co.jp/cgi-bin/j-e/jfriedl.html
 http://persephone.cps.unizar.es/general/gente/spd/gzip/gzip.html
+http://www.openzaurus.org/
+http://Casbah.org/
+http://download.microsoft.com/download/vc15/Patch/1.52/W95/EN-US/nmake15.exe
+http://www.pvhp.com/~pvhp/
+http://www.pvhp.com/%7Epvhp/
+http://www.pvhp.com/%7epvhp/
+http://www.leo.org
+http://www.madgoat.com
+http://www.mks.com/s390/gnu/
+http://www.research.att.com/sw/tools/uwin/
+http://www.tpj.com/
+http://safaribooksonline.com/
+http://use.perl.org/~autrijus/journal/25768
+http://www.s390.ibm.com/products/oe/bpxqp1.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg01396.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg01489.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg01491.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg01608.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg02144.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1998-02/msg02998.html
+http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/1999-03/msg00520.html
+http://www.w3.org/Security/Faq/
 
 # these are URI extraction bugs
 http://www.perl.org/E
