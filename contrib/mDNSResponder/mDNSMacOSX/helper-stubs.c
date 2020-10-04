@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007-2012 Apple Inc. All rights reserved.
+ * Copyright (c) 2007-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@
 #include <servers/bootstrap.h>
 #include <IOKit/IOReturn.h>
 #include <CoreFoundation/CoreFoundation.h>
-#include "mDNSDebug.h"
 #include "helper.h"
-#include "helpermsg.h"
 #include <dispatch/dispatch.h>
 #include <arpa/inet.h>
+#include <xpc/private.h>
+#include <Block.h>
 
 //
 // Implementation Notes about the HelperQueue:
@@ -39,15 +39,136 @@
 // an argument to the function, the blocks can reference them as they are passed in as pointers. But care should
 // be taken to copy them locally as they may cease to exist when the function returns.
 //
+
+
+//*************************************************************************************************************
+// Globals
 static dispatch_queue_t HelperQueue;
 
-#define ERROR(x, y) y,
-static const char *errorstring[] =
+static int64_t maxwait_secs = 5LL;
+
+#define mDNSHELPER_DEBUG LogOperation
+
+//*************************************************************************************************************
+// Utility Functions
+
+static void HelperLog(const char *prefix, xpc_object_t o)
 {
-    #include "helper-error.h"
-    NULL
-};
-#undef ERROR
+    char *desc = xpc_copy_description(o);
+    mDNSHELPER_DEBUG("HelperLog %s: %s", prefix, desc);
+    free(desc);
+}
+
+//*************************************************************************************************************
+// XPC Funcs:
+//*************************************************************************************************************
+
+
+mDNSlocal xpc_connection_t Create_Connection(void)
+{
+    xpc_connection_t connection = xpc_connection_create_mach_service(kHelperService, HelperQueue,
+        XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+    if (connection)
+    {
+        xpc_connection_set_event_handler(connection, ^(xpc_object_t event)
+        {
+            mDNSHELPER_DEBUG("Create_Connection xpc: [%s] \n", xpc_dictionary_get_string(event, XPC_ERROR_KEY_DESCRIPTION));
+        });
+        xpc_connection_activate(connection);
+    }
+    return connection;
+}
+
+mDNSlocal int SendDict_ToServer(xpc_object_t msg, xpc_object_t *out_reply)
+{
+    xpc_connection_t connection;
+    dispatch_semaphore_t sem = NULL;
+    __block xpc_object_t reply = NULL;
+    __block int errorcode = kHelperErr_NoResponse;
+    
+    HelperLog("SendDict_ToServer Sending msg to Daemon", msg);
+    
+    connection = Create_Connection();
+    if (!connection)
+    {
+        goto exit;
+    }
+
+    sem = dispatch_semaphore_create(0);
+    if (!sem)
+    {
+        goto exit;
+    }
+    
+    dispatch_retain(sem); // for the block below
+    xpc_connection_send_message_with_reply(connection, msg, HelperQueue, ^(xpc_object_t recv_msg)
+    {
+        const xpc_type_t type = xpc_get_type(recv_msg);
+                                               
+        if (type == XPC_TYPE_DICTIONARY)
+        {
+            HelperLog("SendDict_ToServer Received reply msg from Daemon", recv_msg);
+            uint64_t reply_status = xpc_dictionary_get_uint64(recv_msg, kHelperReplyStatus);
+            errorcode = (int)xpc_dictionary_get_int64(recv_msg, kHelperErrCode);
+            
+            switch (reply_status)
+            {
+                case kHelperReply_ACK:
+                    mDNSHELPER_DEBUG("NoError: successful reply");
+                    break;
+                default:
+                    LogMsg("default: Unexpected reply from Helper");
+                    break;
+            }
+            reply = recv_msg;
+            xpc_retain(reply);
+        }
+        else
+        {
+            LogMsg("SendDict_ToServer Received unexpected reply from daemon [%s]",
+                    xpc_dictionary_get_string(recv_msg, XPC_ERROR_KEY_DESCRIPTION));
+            HelperLog("SendDict_ToServer Unexpected Reply contents", recv_msg);
+        }
+        
+        dispatch_semaphore_signal(sem);
+        dispatch_release(sem);
+    });
+    
+    if (dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, (maxwait_secs * NSEC_PER_SEC))) != 0)
+    {
+        LogMsg("SendDict_ToServer: UNEXPECTED WAIT_TIME in dispatch_semaphore_wait");
+
+        // If we insist on using a semaphore timeout, then cancel the connection if the timeout is reached.
+        // This forces the reply block to be called if a reply wasn't received to keep things serialized.
+        xpc_connection_cancel(connection);
+        dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+    }
+    if (out_reply)
+    {
+        *out_reply = reply;
+        reply = NULL;
+    }
+    
+    mDNSHELPER_DEBUG("SendDict_ToServer returning with errorcode[%d]", errorcode);
+    
+exit:
+    if (connection)
+    {
+        xpc_connection_cancel(connection);
+        xpc_release(connection);
+    }
+    if (sem)
+    {
+        dispatch_release(sem);
+    }
+    if (reply)
+    {
+        xpc_release(reply);
+    }
+    return errorcode;
+}
+
+//**************************************************************************************************************
 
 mDNSexport mStatus mDNSHelperInit()
 {
@@ -60,46 +181,10 @@ mDNSexport mStatus mDNSHelperInit()
     return mStatus_NoError;
 }
 
-static mach_port_t getHelperPort(int retry)
-{
-    static mach_port_t port = MACH_PORT_NULL;
-    if (retry) port = MACH_PORT_NULL;
-    if (port == MACH_PORT_NULL && BOOTSTRAP_SUCCESS != bootstrap_look_up(bootstrap_port, kmDNSHelperServiceName, &port))
-        LogMsg("%s: cannot contact helper", __func__);
-    return port;
-}
-
-const char *mDNSHelperError(int err)
-{
-    static const char *p = "<unknown error>";
-    if (mDNSHelperErrorBase < err && mDNSHelperErrorEnd > err)
-        p = errorstring[err - mDNSHelperErrorBase - 1];
-    return p;
-}
-
-/* Ugly but handy. */
-// We don't bother reporting kIOReturnNotReady because that error code occurs in "normal" operation
-// and doesn't indicate anything unexpected that needs to be investigated
-
-#define MACHRETRYLOOP_BEGIN(kr, retry, err, fin)                                            \
-    for (;;)                                                                                \
-    {
-#define MACHRETRYLOOP_END(kr, retry, err, fin)                                              \
-    if (KERN_SUCCESS == (kr)) break;                                                                                             \
-    else if (MACH_SEND_INVALID_DEST == (kr) && 0 == (retry)++) continue;                                                                                             \
-    else                                                                                \
-    {                                                                               \
-        (err) = kmDNSHelperCommunicationFailed;                                         \
-        LogMsg("%s: Mach communication failed: %d %X %s", __func__, kr, kr, mach_error_string(kr)); \
-        goto fin;                                                                       \
-    }                                                                               \
-    }                                                                                   \
-    if (0 != (err) && kIOReturnNotReady != (err))                                           \
-    { LogMsg("%s: %d 0x%X (%s)", __func__, (err), (err), mDNSHelperError(err)); goto fin; }
-
 void mDNSPreferencesSetName(int key, domainlabel *old, domainlabel *new)
 {
-    struct {
+    struct
+    {
         char oldname[MAX_DOMAIN_LABEL+1];
         char newname[MAX_DOMAIN_LABEL+1];
     } names;
@@ -108,248 +193,193 @@ void mDNSPreferencesSetName(int key, domainlabel *old, domainlabel *new)
     mDNSPlatformMemZero(names.newname, MAX_DOMAIN_LABEL + 1);
 
     ConvertDomainLabelToCString_unescaped(old, names.oldname);
-    if (new) ConvertDomainLabelToCString_unescaped(new, names.newname);
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_FAILURE;
-        int retry = 0;
-        int err = 0;
-
-        LogInfo("%s: oldname %s newname %s", __func__, names.oldname, names.newname);
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSPreferencesSetName(getHelperPort(retry), key, names.oldname, names.newname);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-
-fin:
-        (void)err;
-    });
+    
+    if (new)
+        ConvertDomainLabelToCString_unescaped(new, names.newname);
+    
+    
+    mDNSHELPER_DEBUG("mDNSPreferencesSetName: XPC IPC Test oldname %s newname %s", names.oldname, names.newname);
+     
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, set_name);
+    
+    xpc_dictionary_set_uint64(dict, kPrefsNameKey, key);
+    xpc_dictionary_set_string(dict, kPrefsOldName, names.oldname);
+    xpc_dictionary_set_string(dict, kPrefsNewName, names.newname);
+    
+    SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
 }
 
-void mDNSRequestBPF(void)
+void mDNSRequestBPF()
 {
-    dispatch_async(HelperQueue, ^{
+     mDNSHELPER_DEBUG("mDNSRequestBPF: Using XPC IPC");
+     
+     // Create Dictionary To Send
+     xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+     xpc_dictionary_set_uint64(dict, kHelperMode, bpf_request);
+     SendDict_ToServer(dict, NULL);
+     xpc_release(dict);
+     dict = NULL;
 
-        kern_return_t kr = KERN_FAILURE;
-        int retry = 0, err = 0;
-        LogInfo("%s: BPF", __func__);
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSRequestBPF(getHelperPort(retry));
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        (void)err;
-    });
 }
 
 int mDNSPowerRequest(int key, int interval)
 {
-    kern_return_t kr = KERN_FAILURE;
-    int retry = 0, err = 0;
-    MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-    kr = proxy_mDNSPowerRequest(getHelperPort(retry), key, interval, &err);
-    MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-    return err;
+    int err_code = kHelperErr_NotConnected;
+    
+    mDNSHELPER_DEBUG("mDNSPowerRequest: Using XPC IPC calling out to Helper key is [%d] interval is [%d]", key, interval);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, power_req);
+    xpc_dictionary_set_uint64(dict, "powerreq_key", key);
+    xpc_dictionary_set_uint64(dict, "powerreq_interval", interval);
+    
+    err_code = SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
+    mDNSHELPER_DEBUG("mDNSPowerRequest: Using XPC IPC returning error_code %d", err_code);
+    return err_code;
 }
 
 int mDNSSetLocalAddressCacheEntry(int ifindex, int family, const v6addr_t ip, const ethaddr_t eth)
 {
-    kern_return_t kr = KERN_FAILURE;
-    int retry = 0, err = 0;
-    MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-    kr = proxy_mDNSSetLocalAddressCacheEntry(getHelperPort(retry), ifindex, family, (uint8_t*)ip, (uint8_t*)eth, &err);
-    MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-    return err;
+    int err_code = kHelperErr_NotConnected;
+    
+    mDNSHELPER_DEBUG("mDNSSetLocalAddressCacheEntry: Using XPC IPC calling out to Helper: ifindex is [%d] family is [%d]", ifindex, family);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, set_localaddr_cacheentry);
+    
+    xpc_dictionary_set_uint64(dict, "slace_ifindex", ifindex);
+    xpc_dictionary_set_uint64(dict, "slace_family", family);
+    
+    xpc_dictionary_set_data(dict, "slace_ip", (uint8_t*)ip, sizeof(v6addr_t));
+    xpc_dictionary_set_data(dict, "slace_eth", (uint8_t*)eth, sizeof(ethaddr_t));
+    
+    err_code = SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
+    mDNSHELPER_DEBUG("mDNSSetLocalAddressCacheEntry: Using XPC IPC returning error_code %d", err_code);
+    return err_code;
 }
+
 
 void mDNSNotify(const char *title, const char *msg) // Both strings are UTF-8 text
 {
-    char *titleCopy = NULL;
-    char *msgCopy = NULL;
-
-    if (title)
-    {
-        int len = strlen(title);
-        titleCopy = mDNSPlatformMemAllocate(len + 1);
-        if (!titleCopy)
-        {
-            LogMsg("mDNSNotify: titleCopy NULL for %s", msg);
-            return;
-        }
-        mDNSPlatformMemCopy(titleCopy, title, len);
-        titleCopy[len] = 0;
-    }
-    if (msg)
-    {
-        int len = strlen(msg);
-        msgCopy = mDNSPlatformMemAllocate(len + 1);
-        if (!msgCopy)
-        {
-            LogMsg("mDNSNotify: msgCopy NULL for %s", msg);
-            return;
-        }
-        mDNSPlatformMemCopy(msgCopy, msg, len);
-        msgCopy[len] = 0;
-    }
-        
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_FAILURE;
-        int retry = 0, err = 0;
-
-        LogInfo("%s: title %s, msg %s", __func__, titleCopy, msgCopy);
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSNotify(getHelperPort(retry), titleCopy, msgCopy);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        if (titleCopy)
-            mDNSPlatformMemFree(titleCopy);
-        if (msgCopy)
-            mDNSPlatformMemFree(msgCopy);
-        (void)err;
-    });
+    mDNSHELPER_DEBUG("mDNSNotify() calling out to Helper XPC IPC title[%s] msg[%s]", title, msg);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, user_notify);
+    
+    xpc_dictionary_set_string(dict, "notify_title", title);
+    xpc_dictionary_set_string(dict, "notify_msg", msg);
+    
+    SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
 }
+
 
 int mDNSKeychainGetSecrets(CFArrayRef *result)
 {
+    
     CFPropertyListRef plist = NULL;
     CFDataRef bytes = NULL;
-    kern_return_t kr = KERN_FAILURE;
     unsigned int numsecrets = 0;
-    vm_offset_t secrets = 0;
-    mach_msg_type_number_t secretsCnt = 0;
-    int retry = 0, err = 0;
+    size_t secretsCnt = 0;
+    int error_code = kHelperErr_NotConnected;
+    xpc_object_t reply_dict = NULL;
+    const void *sec = NULL;
+    
+    mDNSHELPER_DEBUG("mDNSKeychainGetSecrets: Using XPC IPC calling out to Helper");
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, keychain_getsecrets);
 
-    MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-    kr = proxy_mDNSKeychainGetSecrets(getHelperPort(retry), &numsecrets, &secrets, &secretsCnt, &err);
-    MACHRETRYLOOP_END(kr, retry, err, fin);
-
-    if (NULL == (bytes = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, (void*)secrets, secretsCnt, kCFAllocatorNull)))
+    SendDict_ToServer(dict, &reply_dict);
+ 
+    if (reply_dict != NULL)
     {
-        err = kmDNSHelperCreationFailed;
-        LogMsg("%s: CFDataCreateWithBytesNoCopy failed", __func__);
+        numsecrets = xpc_dictionary_get_uint64(reply_dict, "keychain_num_secrets");
+        sec = xpc_dictionary_get_data(reply_dict, "keychain_secrets", &secretsCnt);
+        error_code = xpc_dictionary_get_int64(reply_dict,   kHelperErrCode);
+    }
+ 
+    mDNSHELPER_DEBUG("mDNSKeychainGetSecrets: Using XPC IPC calling out to Helper: numsecrets is %u, secretsCnt is %u error_code is %d",
+                     numsecrets, (unsigned int)secretsCnt, error_code);
+     
+    if (NULL == (bytes = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, (void*)sec, secretsCnt, kCFAllocatorNull)))
+    {
+        error_code = kHelperErr_ApiErr;
+        LogMsg("mDNSKeychainGetSecrets: CFDataCreateWithBytesNoCopy failed");
         goto fin;
     }
-    if (NULL == (plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, bytes, kCFPropertyListImmutable, NULL)))
+    
+    if (NULL == (plist = CFPropertyListCreateWithData(kCFAllocatorDefault, bytes, kCFPropertyListImmutable, NULL, NULL)))
     {
-        err = kmDNSHelperInvalidPList;
-        LogMsg("%s: CFPropertyListCreateFromXMLData failed", __func__);
+        error_code = kHelperErr_ApiErr;
+        LogMsg("mDNSKeychainGetSecrets: CFPropertyListCreateFromXMLData failed");
         goto fin;
     }
+    
     if (CFArrayGetTypeID() != CFGetTypeID(plist))
     {
-        err = kmDNSHelperTypeError;
-        LogMsg("%s: Unexpected result type", __func__);
+        error_code = kHelperErr_ApiErr;
+        LogMsg("mDNSKeychainGetSecrets: Unexpected result type");
         CFRelease(plist);
         plist = NULL;
         goto fin;
     }
+    
     *result = (CFArrayRef)plist;
-
+    
+    
 fin:
-    if (bytes) CFRelease(bytes);
-    if (secrets) vm_deallocate(mach_task_self(), secrets, secretsCnt);
-    return err;
+    if (bytes)
+        CFRelease(bytes);
+    if (dict)
+        xpc_release(dict);
+    if (reply_dict)
+        xpc_release(reply_dict);
+    
+    dict = NULL;
+    reply_dict = NULL;
+    
+    return error_code;
 }
 
-void mDNSConfigureServer(int updown, const char *const prefix, const domainname *const fqdn)
+void mDNSSendWakeupPacket(unsigned int ifid, char *eth_addr, char *ip_addr, int iteration)
 {
-    struct
-    {
-        // Assume the prefix is no larger than 10 chars
-        char fqdnStr[MAX_ESCAPED_DOMAIN_NAME + 10];
-    } name;
+    // (void) ip_addr; // unused
+    // (void) iteration; // unused
 
-    mDNSPlatformMemZero(name.fqdnStr, MAX_DOMAIN_LABEL + 10);
+    mDNSHELPER_DEBUG("mDNSSendWakeupPacket: Entered ethernet address[%s],ip_address[%s], interface_id[%d], iteration[%d]",
+           eth_addr, ip_addr, ifid, iteration);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, send_wakepkt);
+    
+    xpc_dictionary_set_uint64(dict, "interface_index", ifid);
+    xpc_dictionary_set_string(dict, "ethernet_address", eth_addr);
+    xpc_dictionary_set_string(dict, "ip_address", ip_addr);
+    xpc_dictionary_set_uint64(dict, "swp_iteration", iteration);
+    
+    SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
 
-    if (fqdn)
-    {
-        mDNSPlatformStrCopy(name.fqdnStr, prefix);
-        ConvertDomainNameToCString(fqdn, name.fqdnStr + mDNSPlatformStrLen(prefix));
-    }
-
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_SUCCESS;
-        int retry = 0, err = 0;
-
-        LogInfo("%s: fqdnStr %s", __func__, name.fqdnStr);
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSConfigureServer(getHelperPort(retry), updown, name.fqdnStr);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        (void)err;
-
-    });
-}
-
-int mDNSAutoTunnelSetKeys(int replacedelete, v6addr_t local_inner,
-                          v6addr_t local_outer, short local_port, v6addr_t remote_inner,
-                          v6addr_t remote_outer, short remote_port, const char* const prefix, const domainname *const fqdn)
-{
-    kern_return_t kr = KERN_SUCCESS;
-    int retry = 0, err = 0;
-    char fqdnStr[MAX_ESCAPED_DOMAIN_NAME + 10] = { 0 }; // Assume the prefix is no larger than 10 chars
-    if (fqdn)
-    {
-        mDNSPlatformStrCopy(fqdnStr, prefix);
-        ConvertDomainNameToCString(fqdn, fqdnStr + mDNSPlatformStrLen(prefix));
-    }
-    MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-    kr = proxy_mDNSAutoTunnelSetKeys(getHelperPort(retry), replacedelete, local_inner, local_outer, local_port, remote_inner, remote_outer, remote_port, fqdnStr, &err);
-    MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-    return err;
-}
-
-void mDNSSendWakeupPacket(unsigned ifid, char *eth_addr, char *ip_addr, int iteration)
-{
-    char *ip_addr_copy = NULL;
-    char *eth_addr_copy = NULL;
-
-    if (eth_addr)
-    {
-        int len = strlen(eth_addr);
-        eth_addr_copy = mDNSPlatformMemAllocate(len + 1);
-        if (!eth_addr_copy)
-        {
-            LogMsg("mDNSSendWakeupPacket: eth_addr_copy NULL for %s", eth_addr);
-            return;
-        }
-        mDNSPlatformMemCopy(eth_addr_copy, eth_addr, len);
-        eth_addr_copy[len] = 0;
-    }
-    if (ip_addr)
-    {
-        int len = strlen(ip_addr);
-        ip_addr_copy = mDNSPlatformMemAllocate(len + 1);
-        if (!ip_addr_copy)
-        {
-            LogMsg("mDNSSendWakeupPacket: ip_addr_copy NULL for %s", ip_addr);
-            return;
-        }
-        mDNSPlatformMemCopy(ip_addr_copy, ip_addr, len);
-        ip_addr_copy[len] = 0;
-    }
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_SUCCESS;
-        int retry = 0, err = 0;
-
-        LogInfo("%s: Entered ethernet address %s, ip address %s", __func__, eth_addr_copy, ip_addr_copy);
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSSendWakeupPacket(getHelperPort(retry), ifid, eth_addr_copy, ip_addr_copy, iteration);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        if (eth_addr_copy)
-            mDNSPlatformMemFree(eth_addr_copy);
-        if (ip_addr_copy)
-            mDNSPlatformMemFree(ip_addr_copy);
-        (void) err;
-    });
 }
 
 void mDNSPacketFilterControl(uint32_t command, char * ifname, uint32_t count, pfArray_t portArray, pfArray_t protocolArray)
@@ -359,138 +389,124 @@ void mDNSPacketFilterControl(uint32_t command, char * ifname, uint32_t count, pf
         pfArray_t portArray;
         pfArray_t protocolArray;
     } pfa;
-    char *ifnameCopy = NULL;
     
     mDNSPlatformMemCopy(pfa.portArray, portArray, sizeof(pfArray_t));
     mDNSPlatformMemCopy(pfa.protocolArray, protocolArray, sizeof(pfArray_t));
+
+    mDNSHELPER_DEBUG("mDNSPacketFilterControl: XPC IPC, ifname %s", ifname);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, p2p_packetfilter);
+    
+    xpc_dictionary_set_uint64(dict, "pf_opcode", command);
     if (ifname)
-    {
-        int len = strlen(ifname);
-        ifnameCopy = mDNSPlatformMemAllocate(len + 1);
-        if (!ifnameCopy)
-        {
-            LogMsg("mDNSPacketFilterControl: ifnameCopy NULL");
-            return;
-        }
-        mDNSPlatformMemCopy(ifnameCopy, ifname, len);
-        ifnameCopy[len] = 0;
+        xpc_dictionary_set_string(dict, "pf_ifname", ifname);
+
+    xpc_object_t xpc_obj_portArray = xpc_array_create(NULL, 0);
+    xpc_object_t xpc_obj_protocolArray = xpc_array_create(NULL, 0);
+
+    for (size_t i = 0; i < count && i < PFPortArraySize; i++) {
+        xpc_array_set_uint64(xpc_obj_portArray, XPC_ARRAY_APPEND, pfa.portArray[i]);
+        xpc_array_set_uint64(xpc_obj_protocolArray, XPC_ARRAY_APPEND, pfa.protocolArray[i]);
     }
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_SUCCESS;
-        int retry = 0, err = 0;
-
-        LogInfo("%s, ifname %s", __func__, ifnameCopy);
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSPacketFilterControl(getHelperPort(retry), command, ifnameCopy, count, (uint16_t *)pfa.portArray, (uint16_t *)pfa.protocolArray);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        if (ifnameCopy)
-            mDNSPlatformMemFree(ifnameCopy);
-        (void) err;
-    });
+    xpc_dictionary_set_value(dict, "xpc_obj_array_port", xpc_obj_portArray);
+    xpc_dictionary_set_value(dict, "xpc_obj_array_protocol", xpc_obj_protocolArray);
+    xpc_release(xpc_obj_portArray);
+    xpc_release(xpc_obj_protocolArray);
+    
+    SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
+    mDNSHELPER_DEBUG("mDNSPacketFilterControl: portArray0[%d] portArray1[%d] portArray2[%d] portArray3[%d] protocolArray0[%d] protocolArray1[%d] protocolArray2[%d] protocolArray3[%d]",
+            pfa.portArray[0], pfa.portArray[1], pfa.portArray[2], pfa.portArray[3], pfa.protocolArray[0], pfa.protocolArray[1], pfa.protocolArray[2], pfa.protocolArray[3]);
+    
 }
 
-void mDNSSendKeepalive(v6addr_t sadd, v6addr_t dadd, uint16_t lport, uint16_t rport, unsigned seq, unsigned ack, uint16_t win)
+void mDNSSendKeepalive(const v6addr_t sadd, const v6addr_t dadd, uint16_t lport, uint16_t rport, uint32_t seq, uint32_t ack, uint16_t win)
 {
-    struct
-    {
-        v6addr_t sadd;
-        v6addr_t dadd;
-    } addr;
 
-    mDNSPlatformMemCopy(addr.sadd, sadd, sizeof(v6addr_t));
-    mDNSPlatformMemCopy(addr.dadd, dadd, sizeof(v6addr_t));
-
-    dispatch_async(HelperQueue, ^{
-
-        kern_return_t kr = KERN_FAILURE;
-        int retry = 0, err = 0;
-        char buf1[INET6_ADDRSTRLEN];
-        char buf2[INET6_ADDRSTRLEN];
-
-        buf1[0] = 0;
-        buf2[0] = 0;
-
-        inet_ntop(AF_INET6, addr.sadd, buf1, sizeof(buf1));
-        inet_ntop(AF_INET6, addr.dadd, buf2, sizeof(buf2));
-        LogInfo("%s: sadd is %s, dadd is %s", __func__, buf1, buf2);
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSSendKeepalive(getHelperPort(retry), (uint8_t *)addr.sadd, (uint8_t *)addr.dadd, lport, rport, seq, ack, win);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        (void) err;
-    });
+    mDNSHELPER_DEBUG("mDNSSendKeepalive: Using XPC IPC calling out to Helper: lport is[%d] rport is[%d] seq is[%d] ack is[%d] win is[%d]",
+           lport, rport, seq, ack, win);
+    
+    char buf1[INET6_ADDRSTRLEN];
+    char buf2[INET6_ADDRSTRLEN];
+    
+    buf1[0] = 0;
+    buf2[0] = 0;
+    
+    inet_ntop(AF_INET6, sadd, buf1, sizeof(buf1));
+    inet_ntop(AF_INET6, dadd, buf2, sizeof(buf2));
+    mDNSHELPER_DEBUG("mDNSSendKeepalive: Using XPC IPC calling out to Helper: sadd is %s, dadd is %s", buf1, buf2);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, send_keepalive);
+    
+    xpc_dictionary_set_data(dict, "send_keepalive_sadd", (uint8_t*)sadd, sizeof(v6addr_t));
+    xpc_dictionary_set_data(dict, "send_keepalive_dadd", (uint8_t*)dadd, sizeof(v6addr_t));
+    
+    xpc_dictionary_set_uint64(dict, "send_keepalive_lport", lport);
+    xpc_dictionary_set_uint64(dict, "send_keepalive_rport", rport);
+    xpc_dictionary_set_uint64(dict, "send_keepalive_seq", seq);
+    xpc_dictionary_set_uint64(dict, "send_keepalive_ack", ack);
+    xpc_dictionary_set_uint64(dict, "send_keepalive_win", win);
+    
+    SendDict_ToServer(dict, NULL);
+    xpc_release(dict);
+    dict = NULL;
+    
 }
 
 int mDNSRetrieveTCPInfo(int family, v6addr_t laddr, uint16_t lport, v6addr_t raddr, uint16_t rport, uint32_t *seq, uint32_t *ack, uint16_t *win, int32_t *intfid)
 {
-    kern_return_t kr = KERN_FAILURE;
-    int retry = 0, err = 0;
-    MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-    kr = proxy_mDNSRetrieveTCPInfo(getHelperPort(retry), family, (uint8_t *)laddr, lport, (uint8_t *)raddr, rport, seq, ack, win, intfid);
-    MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-    return err;
-}
+    int error_code = kHelperErr_NotConnected;
+    xpc_object_t reply_dict = NULL;
+    
+    mDNSHELPER_DEBUG("mDNSRetrieveTCPInfo: Using XPC IPC calling out to Helper: lport is[%d] rport is[%d] family is[%d]",
+           lport, rport, family);
+    
+    char buf1[INET6_ADDRSTRLEN];
+    char buf2[INET6_ADDRSTRLEN];
+    buf1[0] = 0;
+    buf2[0] = 0;
+    
+    inet_ntop(AF_INET6, laddr, buf1, sizeof(buf1));
+    inet_ntop(AF_INET6, raddr, buf2, sizeof(buf2));
+    mDNSHELPER_DEBUG("mDNSRetrieveTCPInfo:: Using XPC IPC calling out to Helper: laddr is %s, raddr is %s", buf1, buf2);
+    
+    // Create Dictionary To Send
+    xpc_object_t dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_uint64(dict, kHelperMode, retreive_tcpinfo);
+    
+    xpc_dictionary_set_data(dict, "retreive_tcpinfo_laddr", (uint8_t*)laddr, sizeof(v6addr_t));
+    xpc_dictionary_set_data(dict, "retreive_tcpinfo_raddr", (uint8_t*)raddr, sizeof(v6addr_t));
+    
+    xpc_dictionary_set_uint64(dict, "retreive_tcpinfo_family", family);
+    xpc_dictionary_set_uint64(dict, "retreive_tcpinfo_lport", lport);
+    xpc_dictionary_set_uint64(dict, "retreive_tcpinfo_rport", rport);
+    
+    SendDict_ToServer(dict, &reply_dict);
+    
+    if (reply_dict != NULL)
+    {
+        *seq = xpc_dictionary_get_uint64(reply_dict, "retreive_tcpinfo_seq");
+        *ack = xpc_dictionary_get_uint64(reply_dict, "retreive_tcpinfo_ack");
+        *win = xpc_dictionary_get_uint64(reply_dict, "retreive_tcpinfo_win");
+        *intfid = (int32_t)xpc_dictionary_get_uint64(reply_dict, "retreive_tcpinfo_ifid");
+        error_code = xpc_dictionary_get_int64(reply_dict, kHelperErrCode);
+    }
+    
+    mDNSHELPER_DEBUG("mDNSRetrieveTCPInfo: Using XPC IPC calling out to Helper: seq is %d, ack is %d, win is %d, intfid is %d, error is %d",
+           *seq, *ack, *win, *intfid, error_code);
+    
+    if (dict)
+        xpc_release(dict);
+    if (reply_dict)
+        xpc_release(reply_dict);
+    dict = NULL;
+    reply_dict = NULL;
 
-void mDNSGetRemoteMAC(mDNS *const m, int family, v6addr_t raddr)
-{
-    struct {
-        v6addr_t addr;
-    } dst;
-
-    mDNSPlatformMemCopy(dst.addr, raddr, sizeof(v6addr_t));
-    dispatch_async(HelperQueue, ^{
-        kern_return_t        kr    = KERN_FAILURE;
-        int                  retry = 0, err = 0;
-        ethaddr_t            eth;
-        IPAddressMACMapping *addrMapping;
-
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSGetRemoteMAC(getHelperPort(retry), family, (uint8_t *)dst.addr, eth);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-        // If the call to get the remote MAC address succeeds, allocate and copy
-        // the values and schedule a task to update the MAC address in the TCP Keepalive record.
-        if (kr == KERN_SUCCESS)
-        {
-            addrMapping = (IPAddressMACMapping *)malloc(sizeof(IPAddressMACMapping));
-            snprintf(addrMapping->ethaddr, sizeof(addrMapping->ethaddr), "%02x:%02x:%02x:%02x:%02x:%02x",
-                     eth[0], eth[1], eth[2], eth[3], eth[4], eth[5]);
-            if (family == AF_INET)
-            {
-                addrMapping->ipaddr.type = mDNSAddrType_IPv4;
-                mDNSPlatformMemCopy(addrMapping->ipaddr.ip.v4.b,  dst.addr, sizeof(v6addr_t));
-            }
-            else
-            {
-                addrMapping->ipaddr.type = mDNSAddrType_IPv6;
-                mDNSPlatformMemCopy(addrMapping->ipaddr.ip.v6.b,  dst.addr, sizeof(v6addr_t));
-            }
-            mDNSPlatformDispatchAsync(m, addrMapping, UpdateRMACCallback);
-        }
-fin:
-            (void) err;
-    });
-
-}
-
-void mDNSStoreSPSMACAddress(int family, v6addr_t spsaddr, char *ifname)
-{
-    struct {
-        v6addr_t saddr;
-    } addr;
-    mDNSPlatformMemCopy(addr.saddr, spsaddr, sizeof(v6addr_t));
-
-    dispatch_async(HelperQueue, ^{
-        kern_return_t kr = KERN_FAILURE;
-        int retry = 0, err = 0;
-        MACHRETRYLOOP_BEGIN(kr, retry, err, fin);
-        kr = proxy_mDNSStoreSPSMACAddress(getHelperPort(retry), family, (uint8_t *)addr.saddr, ifname);
-        MACHRETRYLOOP_END(kr, retry, err, fin);
-fin:
-        (void)err;
-    });
+    return error_code;
 }

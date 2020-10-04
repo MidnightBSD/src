@@ -1,6 +1,5 @@
-/* -*- Mode: C; tab-width: 4 -*-
- *
- * Copyright (c) 2002-2004 Apple Computer, Inc. All rights reserved.
+/*
+ * Copyright (c) 2002-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -302,7 +301,7 @@ mDNSlocal TCPSocket *ConnectToServer(DaemonInfo *d)
         mDNSIPPort port = zeroIPPort;
         int fd;
 
-        TCPSocket *sock = mDNSPlatformTCPSocket( NULL, 0, &port, mDNSfalse );
+        TCPSocket *sock = mDNSPlatformTCPSocket(0, mDNSAddrType_IPv4, &port, NULL, mDNSfalse );
         if ( !sock ) { LogErr("ConnectToServer", "socket");  return NULL; }
         fd = mDNSPlatformTCPGetFD( sock );
         if (!connect( fd, (struct sockaddr *)&d->ns_addr, sizeof(d->ns_addr))) return sock;
@@ -560,6 +559,7 @@ mDNSlocal mDNSBool IsLLQRequest(PktMsg *pkt)
     ptr = LocateAdditionals(&pkt->msg, end);
     if (!ptr) goto end;
 
+    bzero(&lcr, sizeof(lcr));
     // find last Additional info.
     for (i = 0; i < pkt->msg.h.numAdditionals; i++)
     {
@@ -628,7 +628,6 @@ SetZone
 )
 {
     domainname zname;
-    mDNSu8 QR_OP;
     const mDNSu8    *   ptr = pkt->msg.data;
     mDNSBool exception = mDNSfalse;
 
@@ -640,15 +639,13 @@ SetZone
 
     // Figure out what type of packet this is
 
-    QR_OP = ( mDNSu8 ) ( pkt->msg.h.flags.b[0] & kDNSFlag0_QROP_Mask );
-
     if ( IsQuery( pkt ) )
     {
         DNSQuestion question;
 
         // It's a query
 
-        ptr = getQuestion( &pkt->msg, ptr, ( ( mDNSu8* ) &pkt->msg ) + pkt->len, NULL, &question );
+        getQuestion( &pkt->msg, ptr, ( ( mDNSu8* ) &pkt->msg ) + pkt->len, NULL, &question );
 
         AppendDomainName( &zname, &question.qname );
 
@@ -661,7 +658,7 @@ SetZone
         // It's an update.  The format of the zone section is the same as the format for the question section
         // according to RFC 2136, so we'll just treat this as a question so we can get at the zone.
 
-        ptr = getQuestion( &pkt->msg, ptr, ( ( mDNSu8* ) &pkt->msg ) + pkt->len, NULL, &question );
+        getQuestion( &pkt->msg, ptr, ( ( mDNSu8* ) &pkt->msg ) + pkt->len, NULL, &question );
 
         AppendDomainName( &zname, &question.qname );
 
@@ -1373,8 +1370,7 @@ mDNSlocal void DeleteRecords(DaemonInfo *d, mDNSBool DeleteAll)
 // Add, delete, or refresh records in table based on contents of a successfully completed dynamic update
 mDNSlocal void UpdateLeaseTable(PktMsg *pkt, DaemonInfo *d, mDNSs32 lease)
 {
-    RRTableElem **rptr, *tmp;
-    int i, allocsize, bucket;
+    int i, allocsize;
     LargeCacheRecord lcr;
     ResourceRecord *rr = &lcr.r.resrec;
     const mDNSu8 *ptr, *end;
@@ -1397,8 +1393,8 @@ mDNSlocal void UpdateLeaseTable(PktMsg *pkt, DaemonInfo *d, mDNSs32 lease)
 
         ptr = GetLargeResourceRecord(NULL, &pkt->msg, ptr, end, 0, kDNSRecordTypePacketAns, &lcr);
         if (!ptr || lcr.r.resrec.RecordType == kDNSRecordTypePacketNegative) { Log("UpdateLeaseTable: GetLargeResourceRecord failed"); goto cleanup; }
-        bucket = rr->namehash % d->nbuckets;
-        rptr = &d->table[bucket];
+        int bucket = rr->namehash % d->nbuckets;
+        RRTableElem *tmp, **rptr = &d->table[bucket];
 
         // handle deletions
         if (rr->rrtype == kDNSQType_ANY && !rr->rroriginalttl && rr->rrclass == kDNSQClass_ANY && !rr->rdlength)
@@ -1444,7 +1440,6 @@ mDNSlocal void UpdateLeaseTable(PktMsg *pkt, DaemonInfo *d, mDNSs32 lease)
                 {
                     RehashTable(d);
                     bucket = rr->namehash % d->nbuckets;
-                    rptr = &d->table[bucket];
                 }
                 if (gettimeofday(&tv, NULL)) { LogErr("UpdateLeaseTable", "gettimeofday"); goto cleanup; }
                 allocsize = sizeof(RRTableElem);
@@ -1475,12 +1470,11 @@ cleanup:
 // Replies are currently not signed !!!KRS change this
 mDNSlocal PktMsg *FormatLeaseReply(DaemonInfo *d, PktMsg *orig, mDNSu32 lease)
 {
-    PktMsg *reply;
-    mDNSu8 *ptr, *end;
+    PktMsg *const reply = malloc(sizeof(*reply));
+    mDNSu8 *ptr;
     mDNSOpaque16 flags;
-
     (void)d;  //unused
-    reply = malloc(sizeof(*reply));
+    
     if (!reply) { LogErr("FormatLeaseReply", "malloc"); return NULL; }
     flags.b[0] = kDNSFlag0_QR_Response | kDNSFlag0_OP_Update;
     flags.b[1] = 0;
@@ -1488,9 +1482,7 @@ mDNSlocal PktMsg *FormatLeaseReply(DaemonInfo *d, PktMsg *orig, mDNSu32 lease)
     InitializeDNSMessage(&reply->msg.h, orig->msg.h.id, flags);
     reply->src.sin_addr.s_addr = zerov4Addr.NotAnInteger;            // unused except for log messages
     reply->src.sin_family = AF_INET;
-    ptr = reply->msg.data;
-    end = (mDNSu8 *)&reply->msg + sizeof(DNSMessage);
-    ptr = putUpdateLease(&reply->msg, ptr, lease);
+    ptr = putUpdateLease(&reply->msg, reply->msg.data, lease);
     if (!ptr) { Log("FormatLeaseReply: putUpdateLease failed"); free(reply); return NULL; }
     reply->len = ptr - (mDNSu8 *)&reply->msg;
     HdrHToN(reply);
@@ -1513,13 +1505,14 @@ HandleRequest
     char addrbuf[32];
     TCPSocket * sock = NULL;
     mStatus err;
-    mDNSs32 lease = 0;
+    mDNSu32 lease = 0;
+    mDNSBool gotlease;
     if ((request->msg.h.flags.b[0] & kDNSFlag0_QROP_Mask) == kDNSFlag0_OP_Update)
     {
         int i, adds = 0, dels = 0;
         const mDNSu8 *ptr, *end = (mDNSu8 *)&request->msg + request->len;
         HdrNToH(request);
-        lease = GetPktLease(&mDNSStorage, &request->msg, end);
+        gotlease = GetPktLease(&mDNSStorage, &request->msg, end, &lease);
         ptr = LocateAuthorities(&request->msg, end);
         for (i = 0; i < request->msg.h.mDNS_numUpdates; i++)
         {
@@ -1528,7 +1521,7 @@ HandleRequest
             if (lcr.r.resrec.RecordType != kDNSRecordTypePacketNegative && lcr.r.resrec.rroriginalttl) adds++;else dels++;
         }
         HdrHToN(request);
-        if (adds && !lease)
+        if (adds && !gotlease)
         {
             static const mDNSOpaque16 UpdateRefused = { { kDNSFlag0_QR_Response | kDNSFlag0_OP_Update, kDNSFlag1_RC_Refused } };
             Log("Rejecting Update Request with %d additions but no lease", adds);
@@ -2322,7 +2315,8 @@ mDNSlocal int RecvLLQ( DaemonInfo *d, PktMsg *pkt, TCPSocket *sock )
 {
     DNSQuestion q;
     LargeCacheRecord opt;
-    int i, err = -1;
+    unsigned int i;
+    int err = -1;
     char addr[32];
     const mDNSu8 *qptr = pkt->msg.data;
     const mDNSu8 *end = (mDNSu8 *)&pkt->msg + pkt->len;
@@ -2349,7 +2343,7 @@ mDNSlocal int RecvLLQ( DaemonInfo *d, PktMsg *pkt, TCPSocket *sock )
     for (i = 0; i < pkt->msg.h.numAdditionals; i++)
     {
         aptr = GetLargeResourceRecord(NULL, &pkt->msg, aptr, end, 0, kDNSRecordTypePacketAdd, &opt);
-        if (!aptr) { Log("Malformatted LLQ from %s: could not get Additional record %d", addr, i); goto end; }
+        if (!aptr) { Log("Malformatted LLQ from %s: could not get Additional record %u", addr, i); goto end; }
         if (opt.r.resrec.RecordType != kDNSRecordTypePacketNegative && opt.r.resrec.rrtype == kDNSType_OPT) break;
     }
 
@@ -2361,8 +2355,8 @@ mDNSlocal int RecvLLQ( DaemonInfo *d, PktMsg *pkt, TCPSocket *sock )
     for (i = 0; i < pkt->msg.h.numQuestions; i++)
     {
         qptr = getQuestion(&pkt->msg, qptr, end, 0, &q);
-        if (!qptr) { Log("Malformatted LLQ from %s: cannot read question %d", addr, i); goto end; }
-        llq = (LLQOptData *)&opt.r.resrec.rdata->u.opt[0].u.llq + i; // point into OptData at index i
+        if (!qptr) { Log("Malformatted LLQ from %s: cannot read question %u", addr, i); goto end; }
+        llq = &opt.r.resrec.rdata->u.opt[i].u.llq; // point into OptData at index i
         if (llq->vers != kLLQ_Vers) { Log("LLQ from %s contains bad version %d (expected %d)", addr, llq->vers, kLLQ_Vers); goto end; }
 
         e = LookupLLQ(d, pkt->src, &q.qname, q.qtype, &llq->id);
@@ -2401,6 +2395,7 @@ mDNSlocal mDNSBool IsAuthorized( DaemonInfo * d, PktMsg * pkt, DomainAuthInfo **
     HdrNToH(pkt);
 
     *key = NULL;
+    bzero(&lcr, sizeof(lcr));
 
     if ( pkt->msg.h.numAdditionals )
     {
@@ -3100,42 +3095,40 @@ int main(int argc, char *argv[])
 void mDNSCoreInitComplete( mDNS * const m, mStatus result) { ( void ) m; ( void ) result; }
 void mDNS_ConfigChanged(mDNS *const m)  { ( void ) m; }
 void mDNSCoreMachineSleep(mDNS * const m, mDNSBool wake) { ( void ) m; ( void ) wake; }
-void mDNSCoreReceive(mDNS *const m, void *const msg, const mDNSu8 *const end,
+void mDNSCoreReceive(mDNS *const m, DNSMessage *const msg, const mDNSu8 *const end,
                      const mDNSAddr *const srcaddr, const mDNSIPPort srcport,
                      const mDNSAddr *const dstaddr, const mDNSIPPort dstport, const mDNSInterfaceID iid)
 { ( void ) m; ( void ) msg; ( void ) end; ( void ) srcaddr; ( void ) srcport; ( void ) dstaddr; ( void ) dstport; ( void ) iid; }
 DNSServer *mDNS_AddDNSServer(mDNS *const m, const domainname *d, const mDNSInterfaceID interface, const int serviceID, const mDNSAddr *addr, const mDNSIPPort port, 
-                             mDNSu32 scoped, mDNSu32 timeout, mDNSBool cellIntf, mDNSu16 resGroupID, mDNSBool reqA, mDNSBool reqAAAA, mDNSBool reqDO)
-{ ( void ) m; ( void ) d; ( void ) interface; ( void ) serviceID; ( void ) addr; ( void ) port; ( void ) scoped; ( void ) timeout; (void) cellIntf; 
- (void) resGroupID; (void) reqA; (void) reqAAAA; (void) reqDO; return(NULL); }
+                             mDNSu32 scopedType, mDNSu32 timeout, mDNSBool isCell, mDNSBool isExpensive, mDNSBool isConstrained,  mDNSBool isCLAT46, mDNSu32 resGroupID, mDNSBool reqA, mDNSBool reqAAAA, mDNSBool reqDO)
+{ ( void ) m; ( void ) d; ( void ) interface; ( void ) serviceID; ( void ) addr; ( void ) port; ( void ) scopedType; ( void ) timeout; (void) isCell; (void) isExpensive; (void) isConstrained; (void) isCLAT46;
+    (void) resGroupID; (void) reqA; (void) reqAAAA; (void) reqDO; return(NULL); }
 void mDNS_AddSearchDomain(const domainname *const domain, mDNSInterfaceID InterfaceID) { (void)domain; (void) InterfaceID;}
 void mDNS_AddDynDNSHostName(mDNS *m, const domainname *fqdn, mDNSRecordCallback *StatusCallback, const void *StatusContext)
 { ( void ) m; ( void ) fqdn; ( void ) StatusCallback; ( void ) StatusContext; }
 mDNSs32 mDNS_Execute   (mDNS *const m) { ( void ) m; return 0; }
 mDNSs32 mDNS_TimeNow(const mDNS *const m) { ( void ) m; return 0; }
 mStatus mDNS_Deregister(mDNS *const m, AuthRecord *const rr) { ( void ) m; ( void ) rr; return 0; }
-void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *set, mDNSBool flapping)
-{ ( void ) m; ( void ) set; ( void ) flapping; }
+void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *set, InterfaceActivationSpeed activationSpeed)
+{ ( void ) m; ( void ) set; ( void ) activationSpeed; }
 const char * const mDNS_DomainTypeNames[1] = {};
 mStatus mDNS_GetDomains(mDNS *const m, DNSQuestion *const question, mDNS_DomainType DomainType, const domainname *dom,
                         const mDNSInterfaceID InterfaceID, mDNSQuestionCallback *Callback, void *Context)
 { ( void ) m; ( void ) question; ( void ) DomainType; ( void ) dom; ( void ) InterfaceID; ( void ) Callback; ( void ) Context; return 0; }
 mStatus mDNS_Register(mDNS *const m, AuthRecord *const rr) { ( void ) m; ( void ) rr; return 0; }
-mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *set, mDNSBool flapping)
-{ ( void ) m; ( void ) set; ( void ) flapping; return 0; }
+mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *set, InterfaceActivationSpeed activationSpeed)
+{ ( void ) m; ( void ) set; ( void ) activationSpeed; return 0; }
 void mDNS_RemoveDynDNSHostName(mDNS *m, const domainname *fqdn) { ( void ) m; ( void ) fqdn; }
 void mDNS_SetFQDN(mDNS * const m) { ( void ) m; }
 void mDNS_SetPrimaryInterfaceInfo(mDNS *m, const mDNSAddr *v4addr,  const mDNSAddr *v6addr, const mDNSAddr *router)
 { ( void ) m; ( void ) v4addr; ( void ) v6addr; ( void ) router; }
 mStatus uDNS_SetupDNSConfig( mDNS *const m ) { ( void ) m; return 0; }
 mStatus mDNS_SetSecretForDomain(mDNS *m, DomainAuthInfo *info,
-                                const domainname *domain, const domainname *keyname, const char *b64keydata, const domainname *hostname, mDNSIPPort *port, mDNSBool autoTunnel)
-{ ( void ) m; ( void ) info; ( void ) domain; ( void ) keyname; ( void ) b64keydata; ( void ) hostname; (void) port; ( void ) autoTunnel; return 0; }
+                                const domainname *domain, const domainname *keyname, const char *b64keydata, const domainname *hostname, mDNSIPPort *port)
+{ ( void ) m; ( void ) info; ( void ) domain; ( void ) keyname; ( void ) b64keydata; ( void ) hostname; (void) port; return 0; }
 mStatus mDNS_StopQuery(mDNS *const m, DNSQuestion *const question) { ( void ) m; ( void ) question; return 0; }
 void TriggerEventCompletion(void);
 void TriggerEventCompletion() {}
-int AnonInfoAnswersQuestion(const ResourceRecord *const rr, const DNSQuestion *const q);
-int AnonInfoAnswersQuestion(const ResourceRecord *const rr, const DNSQuestion *const q) { ( void ) rr; ( void ) q; return 1;}
 mDNS mDNSStorage;
 
 

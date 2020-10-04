@@ -5,13 +5,12 @@ WARNS=0
 
 PROG=   dnsextd
 
-SRCS=	mDNSPosix.c mDNSUNP.c 
+SRCS=	mDNSPosix.c mDNSUNP.c mDNSDebug.c GenLinkedList.c DNSDigest.c \
+	DNSCommon.c PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l CryptoAlg.c  \
+	dnsextd.c
+
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
-SRCS+=	DNSDigest.c DNSCommon.c
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
-SRCS+=	dnsextd.c mDNSDebug.c GenLinkedList.c \
-	PlatformCommon.c dnsextd_parser.y y.tab.h dnsextd_parser.h dnsextd_lexer.l \
-	CryptoAlg.c
 
 SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
@@ -33,10 +32,6 @@ YFLAGS+=-v
 CLEANFILES= y.output dnsextd_parser.h
 
 LIBADD+=	l pthread
-
-dnsextd_parser.h:
-	mv y.tab.h ${.TARGET}
-
 
 .include <bsd.prog.mk>
 

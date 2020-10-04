@@ -1,6 +1,5 @@
-/* -*- Mode: C; tab-width: 4 -*-
- *
- * Copyright (c) 2003 Apple Computer, Inc. All rights reserved.
+/*
+ * Copyright (c) 2003-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-
-    File:		GenLinkedList.c
-
-    Contains:	implementation of generic linked lists.
-
-    Version:	1.0
-    Tabs:		4 spaces
  */
 
 #include "GenLinkedList.h"
@@ -262,6 +254,9 @@ int     OffsetRemoveFromList( GenLinkedOffsetList *pList, void *elem)
 {
     void    *iElem, *lastElem;
 
+    if (elem == NULL) {
+        return 0;
+    }
     for ( iElem = GetHeadPtr( pList), lastElem = NULL; iElem;
           iElem = GetOffsetLink( pList, iElem))
     {

@@ -1,6 +1,6 @@
-/* -*- Mode: C; tab-width: 4 -*-
+/* -*- Mode: C; tab-width: 4; c-file-style: "bsd"; c-basic-offset: 4; fill-column: 108; indent-tabs-mode: nil; -*-
  *
- * Copyright (c) 2002-2013 Apple Computer, Inc. All rights reserved.
+ * Copyright (c) 2002-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,19 @@
  * routines, or types (which may or may not be present on any given platform).
  */
 
-#include "DNSCommon.h"                  // Defines general DNS untility routines
+#include <stddef.h>
+#include "DNSCommon.h"                  // Defines general DNS utility routines
 #include "uDNS.h"                       // Defines entry points into unicast-specific routines
 #include "nsec.h"
 #include "dnssec.h"
-#include "anonymous.h"
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+#include "D2D.h"
+#endif
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, SYMPTOMS)
+#include "SymptomReporter.h"
+#endif
 
 // Disable certain benign warnings with Microsoft compilers
 #if (defined(_MSC_VER))
@@ -45,42 +53,50 @@
 #endif
 
 #include "dns_sd.h" // for kDNSServiceFlags* definitions
+#include "dns_sd_internal.h"
 
 #if APPLE_OSX_mDNSResponder
+// Delay in seconds before disabling multicast after there are no active queries or registrations.
+#define BONJOUR_DISABLE_DELAY 60
+#endif
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, WEB_CONTENT_FILTER)
 #include <WebFilterDNS/WebFilterDNS.h>
 
-#if !NO_WCF
 WCFConnection *WCFConnectionNew(void) __attribute__((weak_import));
 void WCFConnectionDealloc(WCFConnection* c) __attribute__((weak_import));
+#endif
 
-// Do we really need to define a macro for "if"?
-#define CHECK_WCF_FUNCTION(X) if (X)
-#endif // ! NO_WCF
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+#include "Metrics.h"
+#endif
 
-#else
-
-#define NO_WCF 1
-#endif // APPLE_OSX_mDNSResponder
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+#include "DNS64.h"
+#endif
 
 // Forward declarations
 mDNSlocal void BeginSleepProcessing(mDNS *const m);
 mDNSlocal void RetrySPSRegistrations(mDNS *const m);
-mDNSlocal void SendWakeup(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSEthAddr *EthAddr, mDNSOpaque48 *password);
-mDNSlocal mDNSBool CacheRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q);
+mDNSlocal void SendWakeup(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSEthAddr *EthAddr, mDNSOpaque48 *password, mDNSBool unicastOnly);
 mDNSlocal mDNSBool LocalRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q);
-mDNSlocal void mDNS_PurgeForQuestion(mDNS *const m, DNSQuestion *q);
+mDNSlocal void mDNS_PurgeBeforeResolve(mDNS *const m, DNSQuestion *q);
 mDNSlocal void CheckForDNSSECRecords(mDNS *const m, DNSQuestion *q);
 mDNSlocal void mDNS_SendKeepalives(mDNS *const m);
 mDNSlocal void mDNS_ExtractKeepaliveInfo(AuthRecord *ar, mDNSu32 *timeout, mDNSAddr *laddr, mDNSAddr *raddr, mDNSEthAddr *eth,
                                          mDNSu32 *seq, mDNSu32 *ack, mDNSIPPort *lport, mDNSIPPort *rport, mDNSu16 *win);
 
-mDNSlocal void AdvertiseAllInterfaceRecords(mDNS *const m);
-mDNSlocal void DeadvertiseAllInterfaceRecords(mDNS *const m);
+typedef mDNSu32 DeadvertiseFlags;
+#define kDeadvertiseFlag_NormalHostname (1U << 0)
+#define kDeadvertiseFlag_RandHostname   (1U << 1)
+#define kDeadvertiseFlag_All            (kDeadvertiseFlag_NormalHostname | kDeadvertiseFlag_RandHostname)
+
+mDNSlocal void DeadvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set, DeadvertiseFlags flags);
+mDNSlocal void AdvertiseInterfaceIfNeeded(mDNS *const m, NetworkInterfaceInfo *set);
 mDNSlocal void FreeNSECRecords(mDNS *const m, CacheRecord *NSECRecords);
 mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const response, const mDNSu8 *end,
                                         const mDNSInterfaceID InterfaceID, CacheRecord **NSEC3Records);
-
+mDNSlocal mDNSu8 *GetValueForMACAddr(mDNSu8 *ptr, mDNSu8 *limit, mDNSEthAddr *eth);
 
 // ***************************************************************************
 #if COMPILER_LIKES_PRAGMA_MARK
@@ -89,8 +105,6 @@ mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const resp
 
 // To Turn OFF mDNS_Tracer set MDNS_TRACER to 0 or undef it
 #define MDNS_TRACER 1
-
-#define NO_HINFO 1
 
 // Any records bigger than this are considered 'large' records
 #define SmallRecordLimit 1024
@@ -102,16 +116,43 @@ mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const resp
 #define NR_AnswerMulticast  (mDNSu8*)~0
 #define NR_AnswerUnicast    (mDNSu8*)~1
 
-// Defined to set the kDNSQClass_UnicastResponse bit in the first four query packets.
-// else, it's just set it the first query.
-#define mDNS_REQUEST_UNICAST_RESPONSE 0
+// Question default timeout values
+#define DEFAULT_MCAST_TIMEOUT       5
+#define DEFAULT_LO_OR_P2P_TIMEOUT   5
 
 // The code (see SendQueries() and BuildQuestion()) needs to have the
 // RequestUnicast value set to a value one greater than the number of times you want the query
 // sent with the "request unicast response" (QU) bit set.
 #define SET_QU_IN_FIRST_QUERY   2
-#define SET_QU_IN_FIRST_FOUR_QUERIES   5
+#define kDefaultRequestUnicastCount SET_QU_IN_FIRST_QUERY
 
+// The time needed to offload records to a sleep proxy after powerd sends the kIOMessageSystemWillSleep notification
+#define DARK_WAKE_DELAY_SLEEP  5
+#define kDarkWakeDelaySleep    (mDNSPlatformOneSecond * DARK_WAKE_DELAY_SLEEP)
+
+// The maximum number of times we delay probing to prevent spurious conflicts due to stale packets
+#define MAX_CONFLICT_PROCESSING_DELAYS 3
+
+// RFC 6762 defines Passive Observation Of Failures (POOF)
+//
+//    A host observes the multicast queries issued by the other hosts on
+//    the network.  One of the major benefits of also sending responses
+//    using multicast is that it allows all hosts to see the responses
+//    (or lack thereof) to those queries.
+//
+//    If a host sees queries, for which a record in its cache would be
+//    expected to be given as an answer in a multicast response, but no
+//    such answer is seen, then the host may take this as an indication
+//    that the record may no longer be valid.
+//
+//    After seeing two or more of these queries, and seeing no multicast
+//    response containing the expected answer within ten seconds, then even
+//    though its TTL may indicate that it is not yet due to expire, that
+//    record SHOULD be flushed from the cache.
+//
+// <https://tools.ietf.org/html/rfc6762#section-10.5>
+
+#define POOF_ENABLED 1
 
 mDNSexport const char *const mDNS_DomainTypeNames[] =
 {
@@ -132,6 +173,87 @@ mDNSexport const char *const mDNS_DomainTypeNames[] =
 #pragma mark - General Utility Functions
 #endif
 
+#if MDNS_MALLOC_DEBUGGING
+// When doing memory allocation debugging, this function traverses all lists in the mDNS query
+// structures and caches and checks each entry in the list to make sure it's still good.
+mDNSlocal void mDNS_ValidateLists(void *context)
+{
+    mDNS *m = context;
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    mDNSu32 NumAllInterfaceRecords   = 0;
+    mDNSu32 NumAllInterfaceQuestions = 0;
+#endif
+
+    // Check core mDNS lists
+    AuthRecord                  *rr;
+    for (rr = m->ResourceRecords; rr; rr=rr->next)
+    {
+        if (rr->next == (AuthRecord *)~0 || rr->resrec.RecordType == 0 || rr->resrec.RecordType == 0xFF)
+            LogMemCorruption("ResourceRecords list: %p is garbage (%X)", rr, rr->resrec.RecordType);
+        if (rr->resrec.name != &rr->namestorage)
+            LogMemCorruption("ResourceRecords list: %p name %p does not point to namestorage %p %##s",
+                             rr, rr->resrec.name->c, rr->namestorage.c, rr->namestorage.c);
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+        if (!AuthRecord_uDNS(rr) && !RRLocalOnly(rr)) NumAllInterfaceRecords++;
+#endif
+    }
+
+    for (rr = m->DuplicateRecords; rr; rr=rr->next)
+    {
+        if (rr->next == (AuthRecord *)~0 || rr->resrec.RecordType == 0 || rr->resrec.RecordType == 0xFF)
+            LogMemCorruption("DuplicateRecords list: %p is garbage (%X)", rr, rr->resrec.RecordType);
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+        if (!AuthRecord_uDNS(rr) && !RRLocalOnly(rr)) NumAllInterfaceRecords++;
+#endif
+    }
+
+    rr = m->NewLocalRecords;
+    if (rr)
+        if (rr->next == (AuthRecord *)~0 || rr->resrec.RecordType == 0 || rr->resrec.RecordType == 0xFF)
+            LogMemCorruption("NewLocalRecords: %p is garbage (%X)", rr, rr->resrec.RecordType);
+
+    rr = m->CurrentRecord;
+    if (rr)
+        if (rr->next == (AuthRecord *)~0 || rr->resrec.RecordType == 0 || rr->resrec.RecordType == 0xFF)
+            LogMemCorruption("CurrentRecord: %p is garbage (%X)", rr, rr->resrec.RecordType);
+
+    DNSQuestion                 *q;
+    for (q = m->Questions; q; q=q->next)
+    {
+        if (q->next == (DNSQuestion*)~0 || q->ThisQInterval == (mDNSs32) ~0)
+            LogMemCorruption("Questions list: %p is garbage (%lX %p)", q, q->ThisQInterval, q->next);
+        if (q->DuplicateOf && q->LocalSocket)
+            LogMemCorruption("Questions list: Duplicate Question %p should not have LocalSocket set %##s (%s)", q, q->qname.c, DNSTypeName(q->qtype));
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+        if (!LocalOnlyOrP2PInterface(q->InterfaceID) && mDNSOpaque16IsZero(q->TargetQID))
+            NumAllInterfaceQuestions++;
+#endif
+    }
+
+    CacheGroup                  *cg;
+    CacheRecord                 *cr;
+    mDNSu32 slot;
+    FORALL_CACHERECORDS(slot, cg, cr)
+    {
+        if (cr->resrec.RecordType == 0 || cr->resrec.RecordType == 0xFF)
+            LogMemCorruption("Cache slot %lu: %p is garbage (%X)", slot, cr, cr->resrec.RecordType);
+        if (cr->CRActiveQuestion)
+        {
+            for (q = m->Questions; q; q=q->next) if (q == cr->CRActiveQuestion) break;
+            if (!q) LogMemCorruption("Cache slot %lu: CRActiveQuestion %p not in m->Questions list %s", slot, cr->CRActiveQuestion, CRDisplayString(m, cr));
+        }
+    }
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    if (m->NumAllInterfaceRecords != NumAllInterfaceRecords)
+    	LogMemCorruption("NumAllInterfaceRecords is %d should be %d", m->NumAllInterfaceRecords, NumAllInterfaceRecords);
+    
+    if (m->NumAllInterfaceQuestions != NumAllInterfaceQuestions)
+    	LogMemCorruption("NumAllInterfaceQuestions is %d should be %d", m->NumAllInterfaceQuestions, NumAllInterfaceQuestions);
+#endif // MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+}
+#endif // MDNS_MALLOC_DEBUGGING
+
 // Returns true if this is a  unique, authoritative LocalOnly record that answers questions of type 
 // A, AAAA , CNAME, or PTR.  The caller should answer the question with this record and not send out 
 // the question on the wire if LocalOnlyRecordAnswersQuestion() also returns true.
@@ -146,10 +268,6 @@ mDNSlocal void SetNextQueryStopTime(mDNS *const m, const DNSQuestion *const q)
 {
     mDNS_CheckLock(m);
 
-#if ForceAlerts
-    if (m->mDNS_busy != m->mDNS_reentrancy+1) *(long*)0 = 0;
-#endif
-
     if (m->NextScheduledStopTime - q->StopTime > 0)
         m->NextScheduledStopTime = q->StopTime;
 }
@@ -157,10 +275,6 @@ mDNSlocal void SetNextQueryStopTime(mDNS *const m, const DNSQuestion *const q)
 mDNSexport void SetNextQueryTime(mDNS *const m, const DNSQuestion *const q)
 {
     mDNS_CheckLock(m);
-
-#if ForceAlerts
-    if (m->mDNS_busy != m->mDNS_reentrancy+1) *(long*)0 = 0;
-#endif
 
     if (ActiveQuestion(q))
     {
@@ -175,7 +289,7 @@ mDNSexport void SetNextQueryTime(mDNS *const m, const DNSQuestion *const q)
 
 mDNSlocal void ReleaseAuthEntity(AuthHash *r, AuthEntity *e)
 {
-#if APPLE_OSX_mDNSResponder && MACOSX_MDNS_MALLOC_DEBUGGING >= 1
+#if MDNS_MALLOC_DEBUGGING >= 1
     unsigned int i;
     for (i=0; i<sizeof(*e); i++) ((char*)e)[i] = 0xFF;
 #endif
@@ -209,7 +323,7 @@ mDNSlocal AuthEntity *GetAuthEntity(AuthHash *r, const AuthGroup *const Preserve
         // free them all individually which normally happens when we parse /etc/hosts into
         // AuthHash where we add the "new" entries and discard (free) the already added
         // entries. If we allocate as chunks, we can't free them individually.
-        AuthEntity *storage = mDNSPlatformMemAllocate(sizeof(AuthEntity));
+        AuthEntity *storage = (AuthEntity *) mDNSPlatformMemAllocateClear(sizeof(*storage));
         storage->next = mDNSNULL;
         r->rrauth_free = storage;
     }
@@ -252,24 +366,27 @@ mDNSlocal AuthEntity *GetAuthEntity(AuthHash *r, const AuthGroup *const Preserve
     return(e);
 }
 
-mDNSexport AuthGroup *AuthGroupForName(AuthHash *r, const mDNSu32 slot, const mDNSu32 namehash, const domainname *const name)
+mDNSexport AuthGroup *AuthGroupForName(AuthHash *r, const mDNSu32 namehash, const domainname *const name)
 {
     AuthGroup *ag;
+    const mDNSu32 slot = namehash % AUTH_HASH_SLOTS;
+
     for (ag = r->rrauth_hash[slot]; ag; ag=ag->next)
         if (ag->namehash == namehash && SameDomainName(ag->name, name))
             break;
     return(ag);
 }
 
-mDNSexport AuthGroup *AuthGroupForRecord(AuthHash *r, const mDNSu32 slot, const ResourceRecord *const rr)
+mDNSexport AuthGroup *AuthGroupForRecord(AuthHash *r, const ResourceRecord *const rr)
 {
-    return(AuthGroupForName(r, slot, rr->namehash, rr->name));
+    return(AuthGroupForName(r, rr->namehash, rr->name));
 }
 
-mDNSlocal AuthGroup *GetAuthGroup(AuthHash *r, const mDNSu32 slot, const ResourceRecord *const rr)
+mDNSlocal AuthGroup *GetAuthGroup(AuthHash *r, const ResourceRecord *const rr)
 {
     mDNSu16 namelen = DomainNameLength(rr->name);
     AuthGroup *ag = (AuthGroup*)GetAuthEntity(r, mDNSNULL);
+    const mDNSu32 slot = rr->namehash % AUTH_HASH_SLOTS;
     if (!ag) { LogMsg("GetAuthGroup: Failed to allocate memory for %##s", rr->name->c); return(mDNSNULL); }
     ag->next         = r->rrauth_hash[slot];
     ag->namehash     = rr->namehash;
@@ -277,7 +394,7 @@ mDNSlocal AuthGroup *GetAuthGroup(AuthHash *r, const mDNSu32 slot, const Resourc
     ag->rrauth_tail  = &ag->members;
     ag->NewLocalOnlyRecords = mDNSNULL;
     if (namelen > sizeof(ag->namestorage))
-        ag->name = mDNSPlatformMemAllocate(namelen);
+        ag->name = (domainname *) mDNSPlatformMemAllocate(namelen);
     else
         ag->name = (domainname*)ag->namestorage;
     if (!ag->name)
@@ -288,9 +405,9 @@ mDNSlocal AuthGroup *GetAuthGroup(AuthHash *r, const mDNSu32 slot, const Resourc
     }
     AssignDomainName(ag->name, rr->name);
 
-    if (AuthGroupForRecord(r, slot, rr)) LogMsg("GetAuthGroup: Already have AuthGroup for %##s", rr->name->c);
+    if (AuthGroupForRecord(r, rr)) LogMsg("GetAuthGroup: Already have AuthGroup for %##s", rr->name->c);
     r->rrauth_hash[slot] = ag;
-    if (AuthGroupForRecord(r, slot, rr) != ag) LogMsg("GetAuthGroup: Not finding AuthGroup for %##s", rr->name->c);
+    if (AuthGroupForRecord(r, rr) != ag) LogMsg("GetAuthGroup: Not finding AuthGroup for %##s", rr->name->c);
 
     return(ag);
 }
@@ -299,12 +416,12 @@ mDNSlocal AuthGroup *GetAuthGroup(AuthHash *r, const mDNSu32 slot, const Resourc
 mDNSexport AuthGroup *InsertAuthRecord(mDNS *const m, AuthHash *r, AuthRecord *rr)
 {
     AuthGroup *ag;
-    const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
-    ag = AuthGroupForRecord(r, slot, &rr->resrec);
-    if (!ag) ag = GetAuthGroup(r, slot, &rr->resrec);   // If we don't have a AuthGroup for this name, make one now
+
+    (void)m;
+    ag = AuthGroupForRecord(r, &rr->resrec);
+    if (!ag) ag = GetAuthGroup(r, &rr->resrec);   // If we don't have a AuthGroup for this name, make one now
     if (ag)
     {
-        LogInfo("InsertAuthRecord: inserting auth record %s from table", ARDisplayString(m, rr));
         *(ag->rrauth_tail) = rr;                // Append this record to tail of cache slot list
         ag->rrauth_tail = &(rr->next);          // Advance tail pointer
     }
@@ -314,13 +431,11 @@ mDNSexport AuthGroup *InsertAuthRecord(mDNS *const m, AuthHash *r, AuthRecord *r
 mDNSexport AuthGroup *RemoveAuthRecord(mDNS *const m, AuthHash *r, AuthRecord *rr)
 {
     AuthGroup *a;
-    AuthGroup **ag = &a;
     AuthRecord **rp;
-    const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
 
-    a = AuthGroupForRecord(r, slot, &rr->resrec);
+    a = AuthGroupForRecord(r, &rr->resrec);
     if (!a) { LogMsg("RemoveAuthRecord: ERROR!! AuthGroup not found for %s", ARDisplayString(m, rr)); return mDNSNULL; }
-    rp = &(*ag)->members;
+    rp = &a->members;
     while (*rp)
     {
         if (*rp != rr)
@@ -334,25 +449,26 @@ mDNSexport AuthGroup *RemoveAuthRecord(mDNS *const m, AuthHash *r, AuthRecord *r
         }
     }
     // TBD: If there are no more members, release authgroup ?
-    (*ag)->rrauth_tail = rp;
+    a->rrauth_tail = rp;
     return a;
 }
 
-mDNSexport CacheGroup *CacheGroupForName(const mDNS *const m, const mDNSu32 slot, const mDNSu32 namehash, const domainname *const name)
+mDNSexport CacheGroup *CacheGroupForName(const mDNS *const m, const mDNSu32 namehash, const domainname *const name)
 {
     CacheGroup *cg;
+    mDNSu32    slot = HashSlotFromNameHash(namehash);
     for (cg = m->rrcache_hash[slot]; cg; cg=cg->next)
         if (cg->namehash == namehash && SameDomainName(cg->name, name))
             break;
     return(cg);
 }
 
-mDNSlocal CacheGroup *CacheGroupForRecord(const mDNS *const m, const mDNSu32 slot, const ResourceRecord *const rr)
+mDNSlocal CacheGroup *CacheGroupForRecord(const mDNS *const m, const ResourceRecord *const rr)
 {
-    return(CacheGroupForName(m, slot, rr->namehash, rr->name));
+    return(CacheGroupForName(m, rr->namehash, rr->name));
 }
 
-mDNSexport mDNSBool mDNS_AddressIsLocalSubnet(mDNS *const m, const mDNSInterfaceID InterfaceID, const mDNSAddr *addr, mDNSBool *myself)
+mDNSexport mDNSBool mDNS_AddressIsLocalSubnet(mDNS *const m, const mDNSInterfaceID InterfaceID, const mDNSAddr *addr)
 {
     NetworkInterfaceInfo *intf;
 
@@ -363,44 +479,19 @@ mDNSexport mDNSBool mDNS_AddressIsLocalSubnet(mDNS *const m, const mDNSInterface
         for (intf = m->HostInterfaces; intf; intf = intf->next)
             if (intf->ip.type == addr->type && intf->InterfaceID == InterfaceID && intf->McastTxRx)
                 if (((intf->ip.ip.v4.NotAnInteger ^ addr->ip.v4.NotAnInteger) & intf->mask.ip.v4.NotAnInteger) == 0)
-                {
-                    if (myself)
-                    {
-                        if (mDNSSameIPv4Address(intf->ip.ip.v4, addr->ip.v4))
-                            *myself = mDNStrue;
-                        else
-                            *myself = mDNSfalse;
-                        if (*myself)
-                            debugf("mDNS_AddressIsLocalSubnet: IPv4 %#a returning true", addr);
-                        else
-                            debugf("mDNS_AddressIsLocalSubnet: IPv4 %#a returning false", addr);
-                    }
                     return(mDNStrue);
-                }
     }
 
     if (addr->type == mDNSAddrType_IPv6)
     {
+        if (mDNSv6AddressIsLinkLocal(&addr->ip.v6)) return(mDNStrue);
         for (intf = m->HostInterfaces; intf; intf = intf->next)
             if (intf->ip.type == addr->type && intf->InterfaceID == InterfaceID && intf->McastTxRx)
                 if ((((intf->ip.ip.v6.l[0] ^ addr->ip.v6.l[0]) & intf->mask.ip.v6.l[0]) == 0) &&
                     (((intf->ip.ip.v6.l[1] ^ addr->ip.v6.l[1]) & intf->mask.ip.v6.l[1]) == 0) &&
                     (((intf->ip.ip.v6.l[2] ^ addr->ip.v6.l[2]) & intf->mask.ip.v6.l[2]) == 0) &&
                     (((intf->ip.ip.v6.l[3] ^ addr->ip.v6.l[3]) & intf->mask.ip.v6.l[3]) == 0))
-                    {
-                        if (myself)
-                        {
-                            if (mDNSSameIPv6Address(intf->ip.ip.v6, addr->ip.v6))
-                                *myself = mDNStrue;
-                            else
-                                *myself = mDNSfalse;
-                            if (*myself)
-                                debugf("mDNS_AddressIsLocalSubnet: IPv6 %#a returning true", addr);
-                            else
-                                debugf("mDNS_AddressIsLocalSubnet: IPv6 %#a returning false", addr);
-                        }
                         return(mDNStrue);
-                    }
     }
 
     return(mDNSfalse);
@@ -441,14 +532,18 @@ mDNSexport char *InterfaceNameForID(mDNS *const m, const mDNSInterfaceID Interfa
 }
 
 // Caller should hold the lock
-mDNSlocal void GenerateNegativeResponse(mDNS *const m, QC_result qc)
+mDNSlocal void GenerateNegativeResponseEx(mDNS *const m, mDNSInterfaceID InterfaceID, QC_result qc, mDNSBool noData)
 {
     DNSQuestion *q;
     if (!m->CurrentQuestion) { LogMsg("GenerateNegativeResponse: ERROR!! CurrentQuestion not set"); return; }
     q = m->CurrentQuestion;
-    LogInfo("GenerateNegativeResponse: Generating negative response for question %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+           "[R%d->Q%d] GenerateNegativeResponse: Generating negative response for question " PRI_DM_NAME " (" PUB_S ")",
+           q->request_id, mDNSVal16(q->TargetQID), DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype));
 
-    MakeNegativeCacheRecord(m, &m->rec.r, &q->qname, q->qnamehash, q->qtype, q->qclass, 60, mDNSInterface_Any, mDNSNULL);
+    MakeNegativeCacheRecord(m, &m->rec.r, &q->qname, q->qnamehash, q->qtype, q->qclass, 60, InterfaceID, mDNSNULL);
+    m->rec.r.resrec.negativeRecordType = noData ? kNegativeRecordType_NoData : kNegativeRecordType_Unspecified;
+
     // We need to force the response through in the following cases
     //
     //  a) SuppressUnusable questions that are suppressed
@@ -461,32 +556,29 @@ mDNSlocal void GenerateNegativeResponse(mDNS *const m, QC_result qc)
     // Don't touch the question after this
     m->rec.r.resrec.RecordType = 0;     // Clear RecordType to show we're not still using it
 }
+#define GenerateNegativeResponse(M, INTERFACE_ID, QC) GenerateNegativeResponseEx(M, INTERFACE_ID, QC, mDNSfalse)
 
 mDNSexport void AnswerQuestionByFollowingCNAME(mDNS *const m, DNSQuestion *q, ResourceRecord *rr)
 {
     const mDNSBool selfref = SameDomainName(&q->qname, &rr->rdata->u.name);
     if (q->CNAMEReferrals >= 10 || selfref)
-        LogMsg("AnswerQuestionByFollowingCNAME: %p %##s (%s) NOT following CNAME referral %d%s for %s",
-               q, q->qname.c, DNSTypeName(q->qtype), q->CNAMEReferrals, selfref ? " (Self-Referential)" : "", RRDisplayString(m, rr));
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->Q%d] AnswerQuestionByFollowingCNAME: %p " PRI_DM_NAME " (" PUB_S ")  NOT following CNAME referral %d" PUB_S " for " PRI_S,
+               q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype),
+               q->CNAMEReferrals, selfref ? " (Self-Referential)" : "", RRDisplayString(m, rr));
+
+    }
     else
     {
         const mDNSu32 c = q->CNAMEReferrals + 1;        // Stash a copy of the new q->CNAMEReferrals value
         UDPSocket *sock = q->LocalSocket;
         mDNSOpaque16 id = q->TargetQID;
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+        uDNSMetrics metrics;
+#endif
 
-        // if there is a message waiting at the socket, we want to process that instead
-        // of throwing it away. If we have a CNAME response that answers
-        // both A and AAAA question and while answering it we don't want to throw
-        // away the response where the actual addresses are present.
-        if (mDNSPlatformPeekUDP(m, q->LocalSocket))
-        {
-            LogInfo("AnswerQuestionByFollowingCNAME: Preserving UDP socket for %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
-            q->LocalSocket = mDNSNULL;
-        }
-        else
-        {
-            sock = mDNSNULL;
-        }
+        q->LocalSocket = mDNSNULL;
 
         // The SameDomainName check above is to ignore bogus CNAME records that point right back at
         // themselves. Without that check we can get into a case where we have two duplicate questions,
@@ -503,9 +595,31 @@ mDNSexport void AnswerQuestionByFollowingCNAME(mDNS *const m, DNSQuestion *q, Re
         // which we would subsequently cancel and retract if the CNAME referral record were removed.
         // In reality this is such a corner case we'll ignore it until someone actually needs it.
 
-        LogInfo("AnswerQuestionByFollowingCNAME: %p %##s (%s) following CNAME referral %d for %s",
-                q, q->qname.c, DNSTypeName(q->qtype), q->CNAMEReferrals, RRDisplayString(m, rr));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->Q%d] AnswerQuestionByFollowingCNAME: %p " PRI_DM_NAME " (" PUB_S ") following CNAME referral %d for " PRI_S,
+               q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype),
+               q->CNAMEReferrals, RRDisplayString(m, rr));
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+        if ((q->CNAMEReferrals == 0) && !q->metrics.originalQName)
+        {
+            domainname *    qName;
+            mDNSu16         qNameLen;
+
+            qNameLen = DomainNameLength(&q->qname);
+            if ((qNameLen > 0) && (qNameLen <= MAX_DOMAIN_NAME))
+            {
+                qName = (domainname *) mDNSPlatformMemAllocate(qNameLen);
+                if (qName)
+                {
+                    mDNSPlatformMemCopy(qName->c, q->qname.c, qNameLen);
+                    q->metrics.originalQName = qName;
+                }
+            }
+        }
+        metrics = q->metrics;
+        mDNSPlatformMemZero(&q->metrics, sizeof(q->metrics));
+#endif
         mDNS_StopQuery_internal(m, q);                              // Stop old query
         AssignDomainName(&q->qname, &rr->rdata->u.name);            // Update qname
         q->qnamehash = DomainNameHashValue(&q->qname);              // and namehash
@@ -514,24 +628,107 @@ mDNSexport void AnswerQuestionByFollowingCNAME(mDNS *const m, DNSQuestion *q, Re
         // to try this as unicast query even though it is a .local name
         if (!mDNSOpaque16IsZero(q->TargetQID) && IsLocalDomain(&q->qname))
         {
-            LogInfo("AnswerQuestionByFollowingCNAME: Resolving a .local CNAME %p %##s (%s) Record %s",
-                    q, q->qname.c, DNSTypeName(q->qtype), RRDisplayString(m, rr));
-            q->InterfaceID = mDNSInterface_Unicast;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                   "[R%d->Q%d] AnswerQuestionByFollowingCNAME: Resolving a .local CNAME %p " PRI_DM_NAME " (" PUB_S ") Record " PRI_S,
+                   q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype), RRDisplayString(m, rr));
+            q->IsUnicastDotLocal = mDNStrue;
         }
         mDNS_StartQuery_internal(m, q);                             // start new query
         // Record how many times we've done this. We need to do this *after* mDNS_StartQuery_internal,
         // because mDNS_StartQuery_internal re-initializes CNAMEReferrals to zero
         q->CNAMEReferrals = c;
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+        metrics.expiredAnswerState  = q->metrics.expiredAnswerState; //  We want the newly initialized state for this value
+        metrics.dnsOverTCPState     = q->metrics.dnsOverTCPState;    //  We want the newly initialized state for this value
+        q->metrics = metrics;
+#endif
         if (sock)
         {
-            // We have a message waiting and that should answer this question.
-            if (q->LocalSocket)
-                mDNSPlatformUDPClose(q->LocalSocket);
-            q->LocalSocket = sock;
-            q->TargetQID = id;
+            // If our new query is a duplicate, then it can't have a socket of its own, so we have to close the one we saved.
+            if (q->DuplicateOf) mDNSPlatformUDPClose(sock);
+            else
+            {
+                // Transplant the old socket into the new question, and copy the query ID across too.
+                // No need to close the old q->LocalSocket value because it won't have been created yet (they're made lazily on-demand).
+                q->LocalSocket = sock;
+                q->TargetQID = id;
+            }
         }
     }
 }
+
+#ifdef USE_LIBIDN
+
+#include <unicode/uidna.h>
+
+// #define DEBUG_PUNYCODE 1
+
+mDNSlocal mDNSu8 *PunycodeConvert(const mDNSu8 *const src, mDNSu8 *const dst, const mDNSu8 *const end)
+{
+    UErrorCode errorCode = U_ZERO_ERROR;
+    UIDNAInfo info = UIDNA_INFO_INITIALIZER;
+    UIDNA *uts46 = uidna_openUTS46(UIDNA_USE_STD3_RULES|UIDNA_NONTRANSITIONAL_TO_UNICODE, &errorCode);
+    int32_t len = uidna_nameToASCII_UTF8(uts46, (const char *)src+1, src[0], (char *)dst+1, end-(dst+1), &info, &errorCode);
+    uidna_close(uts46);
+    #if DEBUG_PUNYCODE
+    if (errorCode) LogMsg("uidna_nameToASCII_UTF8(%##s) failed errorCode %d", src, errorCode);
+    if (info.errors) LogMsg("uidna_nameToASCII_UTF8(%##s) failed info.errors 0x%08X", src, info.errors);
+    if (len > MAX_DOMAIN_LABEL) LogMsg("uidna_nameToASCII_UTF8(%##s) result too long %d", src, len);
+    #endif
+    if (errorCode || info.errors || len > MAX_DOMAIN_LABEL) return mDNSNULL;
+    *dst = len;
+    return(dst + 1 + len);
+}
+
+mDNSlocal mDNSBool IsHighASCIILabel(const mDNSu8 *d)
+{
+    int i;
+    for (i=1; i<=d[0]; i++) if (d[i] & 0x80) return mDNStrue;
+    return mDNSfalse;
+}
+
+mDNSlocal const mDNSu8 *FindLastHighASCIILabel(const domainname *const d)
+{
+    const mDNSu8 *ptr = d->c;
+    const mDNSu8 *ans = mDNSNULL;
+    while (ptr[0])
+    {
+        const mDNSu8 *const next = ptr + 1 + ptr[0];
+        if (ptr[0] > MAX_DOMAIN_LABEL || next >= d->c + MAX_DOMAIN_NAME) return mDNSNULL;
+        if (IsHighASCIILabel(ptr)) ans = ptr;
+        ptr = next;
+    }
+    return ans;
+}
+
+mDNSlocal mDNSBool PerformNextPunycodeConversion(const DNSQuestion *const q, domainname *const newname)
+{
+    const mDNSu8 *h = FindLastHighASCIILabel(&q->qname);
+    #if DEBUG_PUNYCODE
+    LogMsg("PerformNextPunycodeConversion: %##s (%s) Last High-ASCII Label %##s", q->qname.c, DNSTypeName(q->qtype), h);
+    #endif
+    if (!h) return mDNSfalse;  // There are no high-ascii labels to convert
+
+    mDNSu8 *const dst = PunycodeConvert(h, newname->c + (h - q->qname.c), newname->c + MAX_DOMAIN_NAME);
+    if (!dst)
+        return mDNSfalse;  // The label was not convertible to Punycode
+    else
+    {
+        // If Punycode conversion of final eligible label was successful, copy the rest of the domainname
+        const mDNSu8 *const src = h + 1 + h[0];
+        const mDNSu8 remainder  = DomainNameLength((domainname*)src);
+        if (dst + remainder > newname->c + MAX_DOMAIN_NAME) return mDNSfalse;  // Name too long -- cannot be converted to Punycode
+
+        mDNSPlatformMemCopy(newname->c, q->qname.c, h - q->qname.c);  // Fill in the leading part
+        mDNSPlatformMemCopy(dst, src, remainder);                     // Fill in the trailing part
+        #if DEBUG_PUNYCODE
+        LogMsg("PerformNextPunycodeConversion: %##s converted to %##s", q->qname.c, newname->c);
+        #endif
+        return mDNStrue;
+    }
+}
+
+#endif // USE_LIBIDN
 
 // For a single given DNSQuestion pointed to by CurrentQuestion, deliver an add/remove result for the single given AuthRecord
 // Note: All the callers should use the m->CurrentQuestion to see if the question is still valid or not
@@ -586,7 +783,7 @@ mDNSlocal void AnswerLocalQuestionWithLocalAuthRecord(mDNS *const m, AuthRecord 
     mDNS_ReclaimLockAfterCallback();    // Decrement mDNS_reentrancy to block mDNS API calls again
 }
 
-mDNSlocal void AnswerInterfaceAnyQuestionsWithLocalAuthRecord(mDNS *const m, AuthRecord *rr, QC_result AddRecord)
+mDNSlocal void AnswerInterfaceAnyQuestionsWithLocalAuthRecord(mDNS *const m, AuthRecord *ar, QC_result AddRecord)
 {
     if (m->CurrentQuestion)
         LogMsg("AnswerInterfaceAnyQuestionsWithLocalAuthRecord: ERROR m->CurrentQuestion already set: %##s (%s)",
@@ -596,12 +793,12 @@ mDNSlocal void AnswerInterfaceAnyQuestionsWithLocalAuthRecord(mDNS *const m, Aut
     {
         mDNSBool answered;
         DNSQuestion *q = m->CurrentQuestion;
-        if (RRAny(rr))
-            answered = ResourceRecordAnswersQuestion(&rr->resrec, q);
+        if (RRAny(ar))
+            answered = AuthRecordAnswersQuestion(ar, q);
         else
-            answered = LocalOnlyRecordAnswersQuestion(rr, q);
+            answered = LocalOnlyRecordAnswersQuestion(ar, q);
         if (answered)
-            AnswerLocalQuestionWithLocalAuthRecord(m, rr, AddRecord);       // MUST NOT dereference q again
+            AnswerLocalQuestionWithLocalAuthRecord(m, ar, AddRecord);       // MUST NOT dereference q again
         if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
             m->CurrentQuestion = q->next;
     }
@@ -619,7 +816,7 @@ mDNSlocal void AnswerInterfaceAnyQuestionsWithLocalAuthRecord(mDNS *const m, Aut
 // AnswerAllLocalQuestionsWithLocalAuthRecord is used by the m->NewLocalRecords loop in mDNS_Execute(),
 // and by mDNS_Deregister_internal()
 
-mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRecord *rr, QC_result AddRecord)
+mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRecord *ar, QC_result AddRecord)
 {
     if (m->CurrentQuestion)
         LogMsg("AnswerAllLocalQuestionsWithLocalAuthRecord ERROR m->CurrentQuestion already set: %##s (%s)",
@@ -631,12 +828,12 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
         mDNSBool answered;
         DNSQuestion *q = m->CurrentQuestion;
         // We are called with both LocalOnly/P2P record or a regular AuthRecord
-        if (RRAny(rr))
-            answered = ResourceRecordAnswersQuestion(&rr->resrec, q);
+        if (RRAny(ar))
+            answered = AuthRecordAnswersQuestion(ar, q);
         else
-            answered = LocalOnlyRecordAnswersQuestion(rr, q);
+            answered = LocalOnlyRecordAnswersQuestion(ar, q);
         if (answered)
-            AnswerLocalQuestionWithLocalAuthRecord(m, rr, AddRecord);           // MUST NOT dereference q again
+            AnswerLocalQuestionWithLocalAuthRecord(m, ar, AddRecord);           // MUST NOT dereference q again
         if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
             m->CurrentQuestion = q->next;
     }
@@ -644,8 +841,8 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
     m->CurrentQuestion = mDNSNULL;
 
     // If this AuthRecord is marked LocalOnly or P2P, then we want to deliver it to all local 'mDNSInterface_Any' questions
-    if (rr->ARType == AuthRecordLocalOnly || rr->ARType == AuthRecordP2P)
-        AnswerInterfaceAnyQuestionsWithLocalAuthRecord(m, rr, AddRecord);
+    if (ar->ARType == AuthRecordLocalOnly || ar->ARType == AuthRecordP2P)
+        AnswerInterfaceAnyQuestionsWithLocalAuthRecord(m, ar, AddRecord);
 
 }
 
@@ -657,17 +854,44 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
 
 #define RRTypeIsAddressType(T) ((T) == kDNSType_A || (T) == kDNSType_AAAA)
 
-#define ResourceRecordIsValidAnswer(RR) ( ((RR)->resrec.RecordType & kDNSRecordTypeActiveMask)  && \
-                                          ((RR)->Additional1 == mDNSNULL || ((RR)->Additional1->resrec.RecordType & kDNSRecordTypeActiveMask)) && \
-                                          ((RR)->Additional2 == mDNSNULL || ((RR)->Additional2->resrec.RecordType & kDNSRecordTypeActiveMask)) && \
-                                          ((RR)->DependentOn == mDNSNULL || ((RR)->DependentOn->resrec.RecordType & kDNSRecordTypeActiveMask))  )
+mDNSlocal mDNSBool ResourceRecordIsValidAnswer(const AuthRecord *const rr)
+{
+    if ((rr->resrec.RecordType & kDNSRecordTypeActiveMask) &&
+        ((rr->Additional1 == mDNSNULL) || (rr->Additional1->resrec.RecordType & kDNSRecordTypeActiveMask)) &&
+        ((rr->Additional2 == mDNSNULL) || (rr->Additional2->resrec.RecordType & kDNSRecordTypeActiveMask)) &&
+        ((rr->DependentOn == mDNSNULL) || (rr->DependentOn->resrec.RecordType & kDNSRecordTypeActiveMask)))
+    {
+        return mDNStrue;
+    }
+    else
+    {
+        return mDNSfalse;
+    }
+}
 
-#define ResourceRecordIsValidInterfaceAnswer(RR, INTID) \
-    (ResourceRecordIsValidAnswer(RR) && \
-     ((RR)->resrec.InterfaceID == mDNSInterface_Any || (RR)->resrec.InterfaceID == (INTID)))
+mDNSlocal mDNSBool IsInterfaceValidForAuthRecord(const AuthRecord *const rr, const mDNSInterfaceID InterfaceID)
+{
+    if (rr->resrec.InterfaceID == mDNSInterface_Any)
+    {
+        return mDNSPlatformValidRecordForInterface(rr, InterfaceID);
+    }
+    else
+    {
+        return ((rr->resrec.InterfaceID == InterfaceID) ? mDNStrue : mDNSfalse);
+    }
+}
+
+mDNSlocal mDNSBool ResourceRecordIsValidInterfaceAnswer(const AuthRecord *const rr, const mDNSInterfaceID interfaceID)
+{
+    return ((IsInterfaceValidForAuthRecord(rr, interfaceID) && ResourceRecordIsValidAnswer(rr)) ? mDNStrue : mDNSfalse);
+}
 
 #define DefaultProbeCountForTypeUnique ((mDNSu8)3)
 #define DefaultProbeCountForRecordType(X)      ((X) == kDNSRecordTypeUnique ? DefaultProbeCountForTypeUnique : (mDNSu8)0)
+
+// Parameters for handling probing conflicts
+#define kMaxAllowedMCastProbingConflicts 1                     // Maximum number of conflicts to allow from mcast messages.
+#define kProbingConflictPauseDuration    mDNSPlatformOneSecond // Duration of probing pause after an allowed mcast conflict.
 
 // See RFC 6762: "8.3 Announcing"
 // "The Multicast DNS responder MUST send at least two unsolicited responses, one second apart."
@@ -680,6 +904,7 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
 #define GoodbyeCount ((mDNSu8)3)
 #define WakeupCount ((mDNSu8)18)
 #define MAX_PROBE_RESTARTS ((mDNSu8)20)
+#define MAX_GHOST_TIME ((mDNSs32)((60*60*24*7)*mDNSPlatformOneSecond))  //  One week
 
 // Number of wakeups we send if WakeOnResolve is set in the question
 #define InitialWakeOnResolveCount ((mDNSu8)3)
@@ -697,7 +922,6 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
                                             (X) &kDNSRecordTypeActiveUniqueMask ? DefaultAnnounceIntervalForTypeUnique : 0)
 
 #define TimeToAnnounceThisRecord(RR,time) ((RR)->AnnounceCount && (time) - ((RR)->LastAPTime + (RR)->ThisAPInterval) >= 0)
-#define TimeToSendThisRecord(RR,time) ((TimeToAnnounceThisRecord(RR,time) || (RR)->ImmedAnswer) && ResourceRecordIsValidAnswer(RR))
 #define TicksTTL(RR) ((mDNSs32)(RR)->resrec.rroriginalttl * mDNSPlatformOneSecond)
 #define RRExpireTime(RR) ((RR)->TimeRcvd + TicksTTL(RR))
 
@@ -706,7 +930,7 @@ mDNSlocal void AnswerAllLocalQuestionsWithLocalAuthRecord(mDNS *const m, AuthRec
 // If we do our normal refresh at 80% of the TTL, our local caching server will return 20 seconds, so we'll do another
 // 80% refresh after 16 seconds, and then the server will return 4 seconds, and so on, in the fashion of Zeno's paradox.
 // To avoid this, we extend the record's effective TTL to give it a little extra grace period.
-// We adjust the 100 second TTL to 127. This means that when we do our 80% query at 102 seconds,
+// We adjust the 100 second TTL to 127. This means that when we do our 80% query after 102 seconds,
 // the cached copy at our local caching server will already have expired, so the server will be forced
 // to fetch a fresh copy from the authoritative server, and then return a fresh record with the full TTL of 3600 seconds.
 
@@ -756,6 +980,8 @@ mDNSlocal mDNSBool PacketRRMatchesSignature(const CacheRecord *const pktrr, cons
         pktrr->resrec.InterfaceID != authrr->resrec.InterfaceID) return(mDNSfalse);
     if (!(authrr->resrec.RecordType & kDNSRecordTypeUniqueMask) || authrr->WakeUp.HMAC.l[0])
         if (pktrr->resrec.rrtype != authrr->resrec.rrtype) return(mDNSfalse);
+    if ((authrr->resrec.InterfaceID == mDNSInterface_Any) &&
+        !mDNSPlatformValidRecordForInterface(authrr, pktrr->resrec.InterfaceID)) return(mDNSfalse);
     return (mDNSBool)(
                pktrr->resrec.rrclass == authrr->resrec.rrclass &&
                pktrr->resrec.namehash == authrr->resrec.namehash &&
@@ -829,15 +1055,17 @@ mDNSlocal void InitializeLastAPTime(mDNS *const m, AuthRecord *const rr)
 
     if (rr->ProbeCount)
     {
+        rr->ProbingConflictCount = 0;
         // If we have no probe suppression time set, or it is in the past, set it now
         if (m->SuppressProbes == 0 || m->SuppressProbes - m->timenow < 0)
         {
             // To allow us to aggregate probes when a group of services are registered together,
-            // the first probe is delayed 1/4 second. This means the common-case behaviour is:
+            // the first probe is delayed by a random delay in the range 1/8 to 1/4 second.
+            // This means the common-case behaviour is:
+            // randomized wait; probe
             // 1/4 second wait; probe
             // 1/4 second wait; probe
-            // 1/4 second wait; probe
-            // 1/4 second wait; announce (i.e. service is normally announced exactly one second after being registered)
+            // 1/4 second wait; announce (i.e. service is normally announced 7/8 to 1 second after being registered)
             m->SuppressProbes = NonZeroTime(m->timenow + DefaultProbeIntervalForTypeUnique/2 + mDNSRandom(DefaultProbeIntervalForTypeUnique/2));
 
             // If we already have a *probe* scheduled to go out sooner, then use that time to get better aggregation
@@ -869,7 +1097,9 @@ mDNSlocal void InitializeLastAPTime(mDNS *const m, AuthRecord *const rr)
         }
         rr->LastAPTime = m->SuppressProbes - rr->ThisAPInterval;
     }
-    else if (m->SuppressProbes && m->SuppressProbes - m->timenow >= 0)
+    // Skip kDNSRecordTypeKnownUnique and kDNSRecordTypeShared records here and set their LastAPTime in the "else" block below so 
+    // that they get announced immediately, otherwise, their announcement would be delayed until the based on the SuppressProbes value.
+    else if ((rr->resrec.RecordType != kDNSRecordTypeKnownUnique) && (rr->resrec.RecordType != kDNSRecordTypeShared) && m->SuppressProbes && (m->SuppressProbes - m->timenow >= 0))
         rr->LastAPTime = m->SuppressProbes - rr->ThisAPInterval + DefaultProbeIntervalForTypeUnique * DefaultProbeCountForTypeUnique + rr->ThisAPInterval / 2;
     else
         rr->LastAPTime = m->timenow - rr->ThisAPInterval;
@@ -880,7 +1110,7 @@ mDNSlocal void InitializeLastAPTime(mDNS *const m, AuthRecord *const rr)
     // and we can begin broadcasting our announcements to take over ownership of that IP address.
     // If we don't wait for the client to go to sleep, then when the client sees our ARP Announcements there's a risk
     // (depending on the OS and networking stack it's using) that it might interpret it as a conflict and change its IP address.
-    if (rr->AddressProxy.type) 
+    if (rr->AddressProxy.type)
         rr->LastAPTime = m->timenow;
 
     // Set LastMCTime to now, to inhibit multicast responses
@@ -896,11 +1126,7 @@ mDNSlocal const domainname *SetUnicastTargetToHostName(mDNS *const m, AuthRecord
     const domainname *target;
     if (rr->AutoTarget)
     {
-        // For autotunnel services pointing at our IPv6 ULA we don't need or want a NAT mapping, but for all other
-        // advertised services referencing our uDNS hostname, we want NAT mappings automatically created as appropriate,
-        // with the port number in our advertised SRV record automatically tracking the external mapped port.
-        DomainAuthInfo *AuthInfo = GetAuthInfoForName_internal(m, rr->resrec.name);
-        if (!AuthInfo || !AuthInfo->AutoTunnel) rr->AutoTarget = Target_AutoHostAndNATMAP;
+        rr->AutoTarget = Target_AutoHostAndNATMAP;
     }
 
     target = GetServiceTarget(m, rr);
@@ -918,20 +1144,37 @@ mDNSlocal const domainname *SetUnicastTargetToHostName(mDNS *const m, AuthRecord
     }
 }
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+mDNSlocal mDNSBool AuthRecordIncludesOrIsAWDL(const AuthRecord *const ar)
+{
+    return ((AuthRecordIncludesAWDL(ar) || mDNSPlatformInterfaceIsAWDL(ar->resrec.InterfaceID)) ? mDNStrue : mDNSfalse);
+}
+#endif
+
 // Right now this only applies to mDNS (.local) services where the target host is always m->MulticastHostname
 // Eventually we should unify this with GetServiceTarget() in uDNS.c
 mDNSlocal void SetTargetToHostName(mDNS *const m, AuthRecord *const rr)
 {
     domainname *const target = GetRRDomainNameTarget(&rr->resrec);
-    const domainname *newname = &m->MulticastHostname;
+    const domainname *newname;
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (AuthRecordIncludesOrIsAWDL(rr))
+    {
+        newname = &m->RandomizedHostname;
+    }
+    else
+#endif
+    {
+        newname = &m->MulticastHostname;
+    }
     if (!target) LogInfo("SetTargetToHostName: Don't know how to set the target of rrtype %s", DNSTypeName(rr->resrec.rrtype));
 
     if (!(rr->ForceMCast || rr->ARType == AuthRecordLocalOnly || rr->ARType == AuthRecordP2P || IsLocalDomain(&rr->namestorage)))
     {
         const domainname *const n = SetUnicastTargetToHostName(m, rr);
         if (n) newname = n;
-        else { target->c[0] = 0; SetNewRData(&rr->resrec, mDNSNULL, 0); return; }
+        else { if (target) target->c[0] = 0; SetNewRData(&rr->resrec, mDNSNULL, 0); return; }
     }
 
     if (target && SameDomainName(target, newname))
@@ -1022,16 +1265,18 @@ mDNSexport void ActivateUnicastRegistration(mDNS *const m, AuthRecord *const rr)
         LogInfo("ActivateUnicastRegistration: Resource record %s, current state %d, moving to Pending", ARDisplayString(m, rr), rr->state);
         rr->state = regState_Pending;
     }
-    rr->ProbeCount     = 0;
-    rr->ProbeRestartCount = 0;
-    rr->AnnounceCount  = 0;
-    rr->ThisAPInterval = INIT_RECORD_REG_INTERVAL;
-    rr->LastAPTime     = m->timenow - rr->ThisAPInterval;
-    rr->expire         = 0; // Forget about all the leases, start fresh
-    rr->uselease       = mDNStrue;
-    rr->updateid       = zeroID;
-    rr->SRVChanged     = mDNSfalse;
-    rr->updateError    = mStatus_NoError;
+    rr->ProbingConflictCount = 0;
+    rr->LastConflictPktNum   = 0;
+    rr->ProbeRestartCount    = 0;
+    rr->ProbeCount           = 0;
+    rr->AnnounceCount        = 0;
+    rr->ThisAPInterval       = INIT_RECORD_REG_INTERVAL;
+    rr->LastAPTime           = m->timenow - rr->ThisAPInterval;
+    rr->expire               = 0; // Forget about all the leases, start fresh
+    rr->uselease             = mDNStrue;
+    rr->updateid             = zeroID;
+    rr->SRVChanged           = mDNSfalse;
+    rr->updateError          = mStatus_NoError;
     // RestartRecordGetZoneData calls this function whenever a new interface gets registered with core.
     // The records might already be registered with the server and hence could have NAT state.
     if (rr->NATinfo.clientContext)
@@ -1058,26 +1303,24 @@ mDNSexport void ActivateUnicastRegistration(mDNS *const m, AuthRecord *const rr)
 
 mDNSlocal AuthRecord *CheckAuthIdenticalRecord(AuthHash *r, AuthRecord *rr)
 {
-    AuthGroup *a;
-    AuthGroup **ag = &a;
-    AuthRecord **rp;
-    const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
+    const AuthGroup *a;
+    AuthRecord *rp;
 
-    a = AuthGroupForRecord(r, slot, &rr->resrec);
+    a = AuthGroupForRecord(r, &rr->resrec);
     if (!a) return mDNSNULL;
-    rp = &(*ag)->members;
-    while (*rp)
+    rp = a->members;
+    while (rp)
     {
-        if (!RecordIsLocalDuplicate(*rp, rr))
-            rp=&(*rp)->next;
+        if (!RecordIsLocalDuplicate(rp, rr))
+            rp = rp->next;
         else
         {
-            if ((*rp)->resrec.RecordType == kDNSRecordTypeDeregistering)
+            if (rp->resrec.RecordType == kDNSRecordTypeDeregistering)
             {
-                (*rp)->AnnounceCount = 0;
-                rp=&(*rp)->next;
+                rp->AnnounceCount = 0;
+                rp = rp->next;
             }
-            else return *rp;
+            else return rp;
         }
     }
     return (mDNSNULL);
@@ -1085,22 +1328,20 @@ mDNSlocal AuthRecord *CheckAuthIdenticalRecord(AuthHash *r, AuthRecord *rr)
 
 mDNSlocal mDNSBool CheckAuthRecordConflict(AuthHash *r, AuthRecord *rr)
 {
-    AuthGroup *a;
-    AuthGroup **ag = &a;
-    AuthRecord **rp;
-    const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
+    const AuthGroup *a;
+    const AuthRecord *rp;
 
-    a = AuthGroupForRecord(r, slot, &rr->resrec);
+    a = AuthGroupForRecord(r, &rr->resrec);
     if (!a) return mDNSfalse;
-    rp = &(*ag)->members;
-    while (*rp)
+    rp = a->members;
+    while (rp)
     {
         const AuthRecord *s1 = rr->RRSet ? rr->RRSet : rr;
-        const AuthRecord *s2 = (*rp)->RRSet ? (*rp)->RRSet : *rp;
-        if (s1 != s2 && SameResourceRecordSignature((*rp), rr) && !IdenticalSameNameRecord(&(*rp)->resrec, &rr->resrec))
+        const AuthRecord *s2 = rp->RRSet ? rp->RRSet : rp;
+        if (s1 != s2 && SameResourceRecordSignature(rp, rr) && !IdenticalSameNameRecord(&rp->resrec, &rr->resrec))
             return mDNStrue;
         else
-            rp=&(*rp)->next;
+            rp = rp->next;
     }
     return (mDNSfalse);
 }
@@ -1108,60 +1349,199 @@ mDNSlocal mDNSBool CheckAuthRecordConflict(AuthHash *r, AuthRecord *rr)
 // checks to see if "rr" is already present
 mDNSlocal AuthRecord *CheckAuthSameRecord(AuthHash *r, AuthRecord *rr)
 {
-    AuthGroup *a;
-    AuthGroup **ag = &a;
-    AuthRecord **rp;
-    const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
+    const AuthGroup *a;
+    AuthRecord *rp;
 
-    a = AuthGroupForRecord(r, slot, &rr->resrec);
+    a = AuthGroupForRecord(r, &rr->resrec);
     if (!a) return mDNSNULL;
-    rp = &(*ag)->members;
-    while (*rp)
+    rp = a->members;
+    while (rp)
     {
-        if (*rp != rr)
-            rp=&(*rp)->next;
+        if (rp != rr)
+            rp = rp->next;
         else
         {
-            return *rp;
+            return rp;
         }
     }
     return (mDNSNULL);
 }
 
-
 mDNSlocal void DecrementAutoTargetServices(mDNS *const m, AuthRecord *const rr)
 {
-    if (!AuthRecord_uDNS(rr) && rr->resrec.rrtype == kDNSType_SRV && rr->AutoTarget == Target_AutoHost)
+    if (RRLocalOnly(rr))
     {
-        m->AutoTargetServices--;
-        LogInfo("DecrementAutoTargetServices: AutoService Record %s, AutoTargetServices %d", ARDisplayString(m, rr), m->AutoTargetServices);
-        if (!m->AutoTargetServices)
-            DeadvertiseAllInterfaceRecords(m);
+        // A sanity check, this should be prevented in calling code.
+        LogInfo("DecrementAutoTargetServices: called for RRLocalOnly() record: %s", ARDisplayString(m, rr));
+        return;
+    }
+
+    if (!AuthRecord_uDNS(rr) && (rr->resrec.rrtype == kDNSType_SRV) && (rr->AutoTarget == Target_AutoHost))
+    {
+        NetworkInterfaceInfo *intf;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+        DeadvertiseFlags flags     = 0; // DeadvertiseFlags for non-AWDL interfaces.
+        DeadvertiseFlags flagsAWDL = 0; // DeadvertiseFlags for AWDL interfaces.
+        if (AuthRecordIncludesOrIsAWDL(rr))
+        {
+            if (AuthRecordIncludesAWDL(rr))
+            {
+                m->AutoTargetAWDLIncludedCount--;
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                    "DecrementAutoTargetServices: AutoTargetAWDLIncludedCount %u Record " PRI_S,
+                    m->AutoTargetAWDLIncludedCount, ARDisplayString(m, rr));
+                if (m->AutoTargetAWDLIncludedCount == 0)
+                {
+                    flags |= kDeadvertiseFlag_RandHostname;
+                    if (m->AutoTargetAWDLOnlyCount == 0) flagsAWDL |= kDeadvertiseFlag_RandHostname;
+                }
+            }
+            else
+            {
+                m->AutoTargetAWDLOnlyCount--;
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                    "DecrementAutoTargetServices: AutoTargetAWDLOnlyCount %u Record " PRI_S,
+                    m->AutoTargetAWDLOnlyCount, ARDisplayString(m, rr));
+                if ((m->AutoTargetAWDLIncludedCount == 0) && (m->AutoTargetAWDLOnlyCount == 0))
+                {
+                    flagsAWDL |= kDeadvertiseFlag_RandHostname;
+                }
+            }
+            if (flags || flagsAWDL)
+            {
+                for (intf = m->HostInterfaces; intf; intf = intf->next)
+                {
+                    if (!intf->Advertise) continue;
+                    if (mDNSPlatformInterfaceIsAWDL(intf->InterfaceID))
+                    {
+                        if (flagsAWDL) DeadvertiseInterface(m, intf, flagsAWDL);
+                    }
+                    else
+                    {
+                        if (flags) DeadvertiseInterface(m, intf, flags);
+                    }
+                }
+            }
+            if ((m->AutoTargetAWDLIncludedCount == 0) && (m->AutoTargetAWDLOnlyCount == 0))
+            {
+                GetRandomUUIDLocalHostname(&m->RandomizedHostname);
+            }
+        }
+        else
+#endif
+        {
+            m->AutoTargetServices--;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "DecrementAutoTargetServices: AutoTargetServices %u Record " PRI_S,
+                m->AutoTargetServices, ARDisplayString(m, rr));
+            if (m->AutoTargetServices == 0)
+            {
+                for (intf = m->HostInterfaces; intf; intf = intf->next)
+                {
+                    if (intf->Advertise) DeadvertiseInterface(m, intf, kDeadvertiseFlag_NormalHostname);
+                }
+            }
+        }
+    }
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    if (!AuthRecord_uDNS(rr))
+    {
+        if (m->NumAllInterfaceRecords + m->NumAllInterfaceQuestions == 1)
+            m->NextBonjourDisableTime = NonZeroTime(m->timenow + (BONJOUR_DISABLE_DELAY * mDNSPlatformOneSecond));
+        m->NumAllInterfaceRecords--;
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "DecrementAutoTargetServices: NumAllInterfaceRecords %u NumAllInterfaceQuestions %u " PRI_S,
+            m->NumAllInterfaceRecords, m->NumAllInterfaceQuestions, ARDisplayString(m, rr));
+    }
+#endif
+}
+
+mDNSlocal void AdvertiseNecessaryInterfaceRecords(mDNS *const m)
+{
+    NetworkInterfaceInfo *intf;
+    for (intf = m->HostInterfaces; intf; intf = intf->next)
+    {
+        if (intf->Advertise) AdvertiseInterfaceIfNeeded(m, intf);
     }
 }
 
 mDNSlocal void IncrementAutoTargetServices(mDNS *const m, AuthRecord *const rr)
 {
-    if (!AuthRecord_uDNS(rr) && rr->resrec.rrtype == kDNSType_SRV && rr->AutoTarget == Target_AutoHost)
-    {
-        int count = m->AutoTargetServices;
+    mDNSBool enablingBonjour = mDNSfalse;
 
-        // Bump up before calling AdvertiseAllInterfaceRecords. AdvertiseInterface
-        // returns without doing anything if the count is zero.
-        m->AutoTargetServices++;
-        LogInfo("IncrementAutoTargetServices: AutoService Record %s, AutoTargetServices %d", ARDisplayString(m, rr), m->AutoTargetServices);
-        if (!count)
-            AdvertiseAllInterfaceRecords(m);
+    if (RRLocalOnly(rr))
+    {
+        // A sanity check, this should be prevented in calling code.
+        LogInfo("IncrementAutoTargetServices: called for RRLocalOnly() record: %s", ARDisplayString(m, rr));
+        return;
+    }
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    if (!AuthRecord_uDNS(rr))
+    {
+        m->NumAllInterfaceRecords++;
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "IncrementAutoTargetServices: NumAllInterfaceRecords %u NumAllInterfaceQuestions %u " PRI_S,
+            m->NumAllInterfaceRecords, m->NumAllInterfaceQuestions, ARDisplayString(m, rr));
+        if (m->NumAllInterfaceRecords + m->NumAllInterfaceQuestions == 1)
+        {
+            m->NextBonjourDisableTime = 0;
+            if (m->BonjourEnabled == 0)
+            {
+                // Enable Bonjour immediately by scheduling network changed processing where
+                // we will join the multicast group on each active interface.
+                m->BonjourEnabled = 1;
+                enablingBonjour = mDNStrue;
+                m->NetworkChanged = m->timenow;
+            }
+        }
+    }
+#endif
+
+    if (!AuthRecord_uDNS(rr) && (rr->resrec.rrtype == kDNSType_SRV) && (rr->AutoTarget == Target_AutoHost))
+    {
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+        if (AuthRecordIncludesAWDL(rr))
+        {
+            m->AutoTargetAWDLIncludedCount++;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "IncrementAutoTargetServices: AutoTargetAWDLIncludedCount %u Record " PRI_S,
+                m->AutoTargetAWDLIncludedCount, ARDisplayString(m, rr));
+        }
+        else if (mDNSPlatformInterfaceIsAWDL(rr->resrec.InterfaceID))
+        {
+            m->AutoTargetAWDLOnlyCount++;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "IncrementAutoTargetServices: AutoTargetAWDLOnlyCount %u Record " PRI_S,
+                m->AutoTargetAWDLOnlyCount, ARDisplayString(m, rr));
+        }
+        else
+#endif
+        {
+            m->AutoTargetServices++;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "IncrementAutoTargetServices: AutoTargetServices %u Record " PRI_S,
+                m->AutoTargetServices, ARDisplayString(m, rr));
+        }
+        // If this is the first advertised service and we did not just enable Bonjour above, then
+        // advertise all the interface records.  If we did enable Bonjour above, the interface records will
+        // be advertised during the network changed processing scheduled above, so no need 
+        // to do it here.
+        if (!enablingBonjour) AdvertiseNecessaryInterfaceRecords(m);
     }
 }
 
 mDNSlocal void getKeepaliveRaddr(mDNS *const m, AuthRecord *rr, mDNSAddr *raddr)
 {
-    mDNSAddr     laddr;
-    mDNSEthAddr  eth;
-    mDNSIPPort   lport, rport;
-    mDNSu32      timeout, seq, ack;
-    mDNSu16      win;
+    mDNSAddr     laddr = zeroAddr;
+    mDNSEthAddr  eth = zeroEthAddr;
+    mDNSIPPort   lport = zeroIPPort;
+    mDNSIPPort   rport = zeroIPPort;
+    mDNSu32      timeout = 0;
+    mDNSu32      seq = 0;
+    mDNSu32      ack = 0;
+    mDNSu16      win = 0;
 
     if (mDNS_KeepaliveRecord(&rr->resrec))
     {
@@ -1240,9 +1620,9 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
     {
         if (rr->resrec.RecordType == kDNSRecordTypeUnique)
             rr->resrec.RecordType =  kDNSRecordTypeVerified;
-        else
+        else if (rr->resrec.RecordType != kDNSRecordTypeKnownUnique)
         {
-            LogMsg("mDNS_Register_internal: ERROR! %##s (%s): rr->DependentOn && RecordType != kDNSRecordTypeUnique",
+            LogMsg("mDNS_Register_internal: ERROR! %##s (%s): rr->DependentOn && RecordType != kDNSRecordTypeUnique or kDNSRecordTypeKnownUnique",
                    rr->resrec.name->c, DNSTypeName(rr->resrec.rrtype));
             return(mStatus_Invalid);
         }
@@ -1254,34 +1634,21 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
         }
     }
 
-    // If this resource record is referencing a specific interface, make sure it exists.
-    // Skip checks for LocalOnly and P2P as they are not valid InterfaceIDs. Also, for scoped
-    // entries in /etc/hosts skip that check as that interface may not be valid at this time.
-    if (rr->resrec.InterfaceID && rr->ARType != AuthRecordLocalOnly && rr->ARType != AuthRecordP2P)
-    {
-        NetworkInterfaceInfo *intf = FirstInterfaceForID(m, rr->resrec.InterfaceID);
-        if (!intf)
-        {
-            debugf("mDNS_Register_internal: Bogus InterfaceID %p in resource record", rr->resrec.InterfaceID);
-            return(mStatus_BadReferenceErr);
-        }
-    }
-
     rr->next = mDNSNULL;
 
     // Field Group 1: The actual information pertaining to this resource record
     // Set up by client prior to call
 
     // Field Group 2: Persistent metadata for Authoritative Records
-//	rr->Additional1       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
-//	rr->Additional2       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
-//	rr->DependentOn       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
-//	rr->RRSet             = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
-//	rr->Callback          = already set      in mDNS_SetupResourceRecord
-//	rr->Context           = already set      in mDNS_SetupResourceRecord
-//	rr->RecordType        = already set      in mDNS_SetupResourceRecord
-//	rr->HostTarget        = set to mDNSfalse in mDNS_SetupResourceRecord; may be overridden by client
-//	rr->AllowRemoteQuery  = set to mDNSfalse in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->Additional1       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->Additional2       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->DependentOn       = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->RRSet             = set to mDNSNULL  in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->Callback          = already set      in mDNS_SetupResourceRecord
+//  rr->Context           = already set      in mDNS_SetupResourceRecord
+//  rr->RecordType        = already set      in mDNS_SetupResourceRecord
+//  rr->HostTarget        = set to mDNSfalse in mDNS_SetupResourceRecord; may be overridden by client
+//  rr->AllowRemoteQuery  = set to mDNSfalse in mDNS_SetupResourceRecord; may be overridden by client
     // Make sure target is not uninitialized data, or we may crash writing debugging log messages
     if (rr->AutoTarget && target) target->c[0] = 0;
 
@@ -1304,9 +1671,9 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
     rr->NR_AnswerTo       = mDNSNULL;
     rr->NR_AdditionalTo   = mDNSNULL;
     if (!rr->AutoTarget) InitializeLastAPTime(m, rr);
-//	rr->LastAPTime        = Set for us in InitializeLastAPTime()
-//	rr->LastMCTime        = Set for us in InitializeLastAPTime()
-//	rr->LastMCInterface   = Set for us in InitializeLastAPTime()
+//  rr->LastAPTime        = Set for us in InitializeLastAPTime()
+//  rr->LastMCTime        = Set for us in InitializeLastAPTime()
+//  rr->LastMCInterface   = Set for us in InitializeLastAPTime()
     rr->NewRData          = mDNSNULL;
     rr->newrdlength       = 0;
     rr->UpdateCallback    = mDNSNULL;
@@ -1339,12 +1706,12 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
     // times with different values if the external NAT port changes during the lifetime of the service registration.
     //if (rr->resrec.rrtype == kDNSType_SRV) rr->NATinfo.IntPort = rr->resrec.rdata->u.srv.port;
 
-//	rr->resrec.interface         = already set in mDNS_SetupResourceRecord
-//	rr->resrec.name->c           = MUST be set by client
-//	rr->resrec.rrtype            = already set in mDNS_SetupResourceRecord
-//	rr->resrec.rrclass           = already set in mDNS_SetupResourceRecord
-//	rr->resrec.rroriginalttl     = already set in mDNS_SetupResourceRecord
-//	rr->resrec.rdata             = MUST be set by client, unless record type is CNAME or PTR and rr->HostTarget is set
+//  rr->resrec.interface         = already set in mDNS_SetupResourceRecord
+//  rr->resrec.name->c           = MUST be set by client
+//  rr->resrec.rrtype            = already set in mDNS_SetupResourceRecord
+//  rr->resrec.rrclass           = already set in mDNS_SetupResourceRecord
+//  rr->resrec.rroriginalttl     = already set in mDNS_SetupResourceRecord
+//  rr->resrec.rdata             = MUST be set by client, unless record type is CNAME or PTR and rr->HostTarget is set
 
     // BIND named (name daemon) doesn't allow TXT records with zero-length rdata. This is strictly speaking correct,
     // since RFC 1035 specifies a TXT record as "One or more <character-string>s", not "Zero or more <character-string>s".
@@ -1389,6 +1756,7 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
         // (kDNSRecordTypeDeregistering) so that we deliver RMV events to the application. But this causes more
         // complications and not clear whether there are any benefits. See rdar:9304275 for details.
         // Hence, just bail out.
+        // This comment is doesn’t make any sense. -- SC
         if (rr->resrec.RecordType & kDNSRecordTypeUniqueMask)
         {
             if (CheckAuthRecordConflict(&m->rrauth, rr))
@@ -1406,7 +1774,6 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
         if (!m->NewLocalRecords) m->NewLocalRecords = rr;
         // When we called SetTargetToHostName, it may have caused mDNS_Register_internal to be re-entered, appending new
         // records to the list, so we now need to update p to advance to the new end to the list before appending our new record.
-        // Note that for AutoTunnel this should never happen, but this check makes the code future-proof.
         while (*p) p=&(*p)->next;
         *p = rr;
         if (rr->resrec.RecordType == kDNSRecordTypeUnique) rr->resrec.RecordType = kDNSRecordTypeVerified;
@@ -1438,7 +1805,7 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
 
     if (r)
     {
-        debugf("mDNS_Register_internal:Adding to duplicate list %s", ARDisplayString(m,rr));
+        LogInfo("mDNS_Register_internal: Adding to duplicate list %s", ARDisplayString(m,rr));
         *d = rr;
         // If the previous copy of this record is already verified unique,
         // then indicate that we should move this record promptly to kDNSRecordTypeUnique state.
@@ -1449,16 +1816,17 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
     }
     else
     {
-        debugf("mDNS_Register_internal: Adding to active record list %s", ARDisplayString(m,rr));
+        LogInfo("mDNS_Register_internal: Adding to active record list %s", ARDisplayString(m,rr));
         if (RRLocalOnly(rr))
         {
             AuthGroup *ag;
             ag = InsertAuthRecord(m, &m->rrauth, rr);
-            if (ag && !ag->NewLocalOnlyRecords) {
+            if (ag && !ag->NewLocalOnlyRecords)
+            {
                 m->NewLocalOnlyRecords = mDNStrue;
                 ag->NewLocalOnlyRecords = rr;
             }
-            // No probing for LocalOnly records, Acknowledge them right away
+            // No probing for LocalOnly records; acknowledge them right away
             if (rr->resrec.RecordType == kDNSRecordTypeUnique) rr->resrec.RecordType = kDNSRecordTypeVerified;
             AcknowledgeRecord(m, rr);
             return(mStatus_NoError);
@@ -1470,31 +1838,32 @@ mDNSexport mStatus mDNS_Register_internal(mDNS *const m, AuthRecord *const rr)
         }
     }
 
-    // If this is a keepalive record, fetch the MAC address of the remote host.
-    // This is used by the in-NIC proxy to send the keepalive packets.
-    if (mDNS_KeepaliveRecord(&rr->resrec))
-    {
-        // Set the record type to known unique to prevent probing keep alive records.
-        // Also make sure we do not announce the keepalive records.
-       rr->resrec.RecordType = kDNSRecordTypeKnownUnique;
-       rr->AnnounceCount     = 0;
-       mDNSAddr   raddr;
-       getKeepaliveRaddr(m, rr, &raddr);
-       // This is an asynchronous call. Once the remote MAC address is available, helper will schedule an
-       // asynchronous task to update the resource record
-       mDNSPlatformGetRemoteMacAddr(m, &raddr);
-    }
-
     if (!AuthRecord_uDNS(rr))   // This check is superfluous, given that for unicast records we (currently) bail out above
     {
-        // We have inserted the record in the list. See if we have to advertise the A/AAAA,HINFO,PTR records.
+        // We have inserted the record in the list. See if we have to advertise the A/AAAA, HINFO, PTR records.
         IncrementAutoTargetServices(m, rr);
+
         // For records that are not going to probe, acknowledge them right away
         if (rr->resrec.RecordType != kDNSRecordTypeUnique && rr->resrec.RecordType != kDNSRecordTypeDeregistering)
             AcknowledgeRecord(m, rr);
 
         // Adding a record may affect whether or not we should sleep
         mDNS_UpdateAllowSleep(m);
+    }
+
+    // If this is a non-sleep proxy keepalive record, fetch the MAC address of the remote host.
+    // This is used by the in-NIC proxy to send the keepalive packets.
+    if (!rr->WakeUp.HMAC.l[0] && mDNS_KeepaliveRecord(&rr->resrec))
+    {
+        mDNSAddr raddr;
+        // Set the record type to known unique to prevent probing keep alive records.
+        // Also make sure we do not announce the keepalive records.
+       rr->resrec.RecordType = kDNSRecordTypeKnownUnique;
+       rr->AnnounceCount     = 0;
+       getKeepaliveRaddr(m, rr, &raddr);
+       // This is an asynchronous call. Once the remote MAC address is available, helper will schedule an
+       // asynchronous task to update the resource record
+       mDNSPlatformGetRemoteMacAddr(&raddr);
     }
 
     return(mStatus_NoError);
@@ -1542,13 +1911,11 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
     if (RRLocalOnly(rr))
     {
         AuthGroup *a;
-        AuthGroup **ag = &a;
         AuthRecord **rp;
-        const mDNSu32 slot = AuthHashSlot(rr->resrec.name);
 
-        a = AuthGroupForRecord(&m->rrauth, slot, &rr->resrec);
+        a = AuthGroupForRecord(&m->rrauth, &rr->resrec);
         if (!a) return mDNSfalse;
-        rp = &(*ag)->members;
+        rp = &a->members;
         while (*rp && *rp != rr) rp=&(*rp)->next;
         p = rp;
     }
@@ -1645,7 +2012,7 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
     // we need to retract that announcement before we delete the record
 
     // If this is a record (including mDNSInterface_LocalOnly records) for which we've given local-only answers then
-    // it's tempting to just do "AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNSfalse)" here, but that would not not be safe.
+    // it's tempting to just do "AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, QC_rmv)" here, but that would not not be safe.
     // The AnswerAllLocalQuestionsWithLocalAuthRecord routine walks the question list invoking client callbacks, using the "m->CurrentQuestion"
     // mechanism to cope with the client callback modifying the question list while that's happening.
     // However, mDNS_Deregister could have been called from a client callback (e.g. from the domain enumeration callback FoundDomain)
@@ -1672,7 +2039,7 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
         }
         // Sometimes the records don't complete proper deregistration i.e., don't wait for a response
         // from the server. In that case, if the records have been part of a group update, clear the
-        // state here. Some recors e.g., AutoTunnel gets reused without ever being completely initialized
+        // state here.
         rr->updateid = zeroID;
 
         // We defer cleaning up NAT state only after sending goodbyes. This is important because
@@ -1700,14 +2067,9 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
         return(mStatus_BadReferenceErr);
     }
 
-    // <rdar://problem/7457925> Local-only questions don't get remove events for unique records
-    // We may want to consider changing this code so that we generate local-only question "rmv"
-    // events (and maybe goodbye packets too) for unique records as well as for shared records
-    // Note: If we change the logic for this "if" statement, need to ensure that the code in
-    // CompleteDeregistration() sets the appropriate state variables to gaurantee that "else"
-    // clause will execute here and the record will be cut from the list.
     if (rr->WakeUp.HMAC.l[0] ||
-        (RecordType == kDNSRecordTypeShared && (rr->RequireGoodbye || rr->AnsweredLocalQ)))
+        (((RecordType == kDNSRecordTypeShared) || (rr->ARType == AuthRecordLocalOnly)) &&
+        (rr->RequireGoodbye || rr->AnsweredLocalQ)))
     {
         verbosedebugf("mDNS_Deregister_internal: Starting deregistration for %s", ARDisplayString(m, rr));
         rr->resrec.RecordType    = kDNSRecordTypeDeregistering;
@@ -1736,10 +2098,6 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
         if (m->CurrentRecord   == rr) m->CurrentRecord   = rr->next;
         rr->next = mDNSNULL;
 
-        // Should we generate local remove events here?
-        // i.e. something like:
-        // if (rr->AnsweredLocalQ) { AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNSfalse); rr->AnsweredLocalQ = mDNSfalse; }
-
         verbosedebugf("mDNS_Deregister_internal: Deleting record for %s", ARDisplayString(m, rr));
         rr->resrec.RecordType = kDNSRecordTypeUnregistered;
 
@@ -1758,7 +2116,7 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
         if (drt != mDNS_Dereg_conflict)
         {
             mDNS_DropLockBeforeCallback();      // Allow client to legally make mDNS API calls from the callback
-            LogInfo("mDNS_Deregister_internal: mStatus_MemFree for %s", ARDisplayString(m, rr));
+            LogInfo("mDNS_Deregister_internal: callback with mStatus_MemFree for %s", ARDisplayString(m, rr));
             if (rr->RecordCallback)
                 rr->RecordCallback(m, rr, mStatus_MemFree);         // MUST NOT touch rr after this
             mDNS_ReclaimLockAfterCallback();    // Decrement mDNS_reentrancy to block mDNS API calls again
@@ -1782,6 +2140,10 @@ mDNSexport mStatus mDNS_Deregister_internal(mDNS *const m, AuthRecord *const rr,
                 }
                 else
                 {
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+                    // See if this record was also registered with any D2D plugins.
+                    D2D_stop_advertising_record(r2);
+#endif
                     mDNS_Deregister_internal(m, r2, mDNS_Dereg_conflict);
                     // As this is a duplicate record, it will be unlinked from the list
                     // immediately
@@ -1815,6 +2177,27 @@ mDNSlocal void AddRecordToResponseList(AuthRecord ***nrpp, AuthRecord *rr, AuthR
     debugf("AddRecordToResponseList: %##s (%s) already in list", rr->resrec.name->c, DNSTypeName(rr->resrec.rrtype));
 }
 
+mDNSlocal void AddRRSetAdditionalsToResponseList(mDNS *const m, AuthRecord ***nrpp, AuthRecord *rr, AuthRecord *additional, const mDNSInterfaceID InterfaceID)
+{
+    AuthRecord *rr2;
+    if (additional->resrec.RecordType & kDNSRecordTypeUniqueMask)
+    {
+        for (rr2 = m->ResourceRecords; rr2; rr2 = rr2->next)
+        {
+            if ((rr2->resrec.namehash == additional->resrec.namehash) &&
+                (rr2->resrec.rrtype   == additional->resrec.rrtype) &&
+                (rr2 != additional) &&
+                (rr2->resrec.RecordType & kDNSRecordTypeUniqueMask) &&
+                (rr2->resrec.rrclass  == additional->resrec.rrclass) &&
+                ResourceRecordIsValidInterfaceAnswer(rr2, InterfaceID) &&
+                SameDomainName(rr2->resrec.name, additional->resrec.name))
+            {
+                AddRecordToResponseList(nrpp, rr2, rr);
+            }
+        }
+    }
+}
+
 mDNSlocal void AddAdditionalsToResponseList(mDNS *const m, AuthRecord *ResponseRecords, AuthRecord ***nrpp, const mDNSInterfaceID InterfaceID)
 {
     AuthRecord  *rr, *rr2;
@@ -1823,10 +2206,16 @@ mDNSlocal void AddAdditionalsToResponseList(mDNS *const m, AuthRecord *ResponseR
         // (Note: This is an "if", not a "while". If we add a record, we'll find it again
         // later in the "for" loop, and we will follow further "additional" links then.)
         if (rr->Additional1 && ResourceRecordIsValidInterfaceAnswer(rr->Additional1, InterfaceID))
+        {
             AddRecordToResponseList(nrpp, rr->Additional1, rr);
+            AddRRSetAdditionalsToResponseList(m, nrpp, rr, rr->Additional1, InterfaceID);
+        }
 
         if (rr->Additional2 && ResourceRecordIsValidInterfaceAnswer(rr->Additional2, InterfaceID))
+        {
             AddRecordToResponseList(nrpp, rr->Additional2, rr);
+            AddRRSetAdditionalsToResponseList(m, nrpp, rr, rr->Additional2, InterfaceID);
+        }
 
         // For SRV records, automatically add the Address record(s) for the target host
         if (rr->resrec.rrtype == kDNSType_SRV)
@@ -1856,21 +2245,12 @@ mDNSlocal void AddAdditionalsToResponseList(mDNS *const m, AuthRecord *ResponseR
     }
 }
 
-mDNSlocal int AnonInfoSpace(AnonymousInfo *info)
-{
-    ResourceRecord *rr = info->nsec3RR;
-
-    // 2 bytes for compressed name + type (2) class (2) TTL (4) rdlength (2) rdata (n)
-    return (2 + 10 + rr->rdlength);
-}
-
 mDNSlocal void SendDelayedUnicastResponse(mDNS *const m, const mDNSAddr *const dest, const mDNSInterfaceID InterfaceID)
 {
     AuthRecord *rr;
     AuthRecord  *ResponseRecords = mDNSNULL;
     AuthRecord **nrp             = &ResponseRecords;
     NetworkInterfaceInfo *intf = FirstInterfaceForID(m, InterfaceID);
-    int AnoninfoSpace = 0;
 
     // Make a list of all our records that need to be unicast to this destination
     for (rr = m->ResourceRecords; rr; rr=rr->next)
@@ -1892,9 +2272,8 @@ mDNSlocal void SendDelayedUnicastResponse(mDNS *const m, const mDNSAddr *const d
                 rr->v6Requester  = zerov6Addr;
 
                 // Only sent records registered for P2P over P2P interfaces
-                if (intf && !mDNSPlatformValidRecordForInterface(rr, intf))
+                if (intf && !mDNSPlatformValidRecordForInterface(rr, intf->InterfaceID))
                 {
-                    LogInfo("SendDelayedUnicastResponse: Not sending %s, on %s", ARDisplayString(m, rr), InterfaceNameForID(m, InterfaceID));
                     continue;
                 }
 
@@ -1920,17 +2299,10 @@ mDNSlocal void SendDelayedUnicastResponse(mDNS *const m, const mDNSAddr *const d
         while (ResponseRecords && ResponseRecords->NR_AnswerTo)
         {
             rr = ResponseRecords;
-            if (rr->resrec.AnonInfo)
-            {
-                AnoninfoSpace += AnonInfoSpace(rr->resrec.AnonInfo);
-                rr->resrec.AnonInfo->SendNow = mDNSInterfaceMark;
-            }
             if (rr->resrec.RecordType & kDNSRecordTypeUniqueMask)
                 rr->resrec.rrclass |= kDNSClass_UniqueRRSet;        // Temporarily set the cache flush bit so PutResourceRecord will set it
 
-            // Retract the limit by AnoninfoSpace which we need to put the AnoInfo option.
-            newptr = PutResourceRecordTTLWithLimit(&m->omsg, responseptr, &m->omsg.h.numAnswers, &rr->resrec, rr->resrec.rroriginalttl,
-                 m->omsg.data + (AllowedRRSpace(&m->omsg) - AnoninfoSpace));
+            newptr = PutResourceRecord(&m->omsg, responseptr, &m->omsg.h.numAnswers, &rr->resrec);
 
             rr->resrec.rrclass &= ~kDNSClass_UniqueRRSet;           // Make sure to clear cache flush bit back to normal state
             if (!newptr && m->omsg.h.numAnswers)
@@ -1943,29 +2315,6 @@ mDNSlocal void SendDelayedUnicastResponse(mDNS *const m, const mDNSAddr *const d
             rr->NR_AnswerTo     = mDNSNULL;
             rr->NR_AdditionalTo = mDNSNULL;
             rr->RequireGoodbye  = mDNStrue;
-        }
-
-        // We have reserved the space for AnonInfo option. PutResourceRecord uses the
-        // standard limit (AllowedRRSpace) and we should have space now.
-        for (rr = m->ResourceRecords; rr; rr=rr->next)
-        {
-            if (rr->resrec.AnonInfo && rr->resrec.AnonInfo->SendNow == mDNSInterfaceMark)
-            {
-                ResourceRecord *nsec3RR = rr->resrec.AnonInfo->nsec3RR;
-
-                newptr = PutResourceRecord(&m->omsg, responseptr, &m->omsg.h.numAuthorities, nsec3RR);
-                if (newptr)
-                {
-                    responseptr = newptr;
-                    debugf("SendDelayedUnicastResponse: Added NSEC3 Record %s on %p", RRDisplayString(m, nsec3RR), intf->InterfaceID);
-                }
-                else
-                {
-                    // We allocated space and we should not fail. Don't break, we need to clear the SendNow flag.
-                    LogMsg("SendDelayedUnicastResponse: ERROR!! Cannot Add NSEC3 Record %s on %p", RRDisplayString(m, nsec3RR), intf->InterfaceID);
-                }
-                rr->resrec.AnonInfo->SendNow = mDNSNULL;
-            }
         }
 
         // Add additionals, if there's space
@@ -1987,7 +2336,7 @@ mDNSlocal void SendDelayedUnicastResponse(mDNS *const m, const mDNSAddr *const d
         }
 
         if (m->omsg.h.numAnswers)
-            mDNSSendDNSMessage(m, &m->omsg, responseptr, InterfaceID, mDNSNULL, dest, MulticastDNSPort, mDNSNULL, mDNSNULL, mDNSfalse);
+            mDNSSendDNSMessage(m, &m->omsg, responseptr, InterfaceID, mDNSNULL, mDNSNULL, dest, MulticastDNSPort, mDNSNULL, mDNSfalse);
     }
 }
 
@@ -2001,7 +2350,7 @@ mDNSexport void CompleteDeregistration(mDNS *const m, AuthRecord *rr)
     rr->resrec.RecordType = kDNSRecordTypeShared;
     rr->RequireGoodbye    = mDNSfalse;
     rr->WakeUp.HMAC       = zeroEthAddr;
-    if (rr->AnsweredLocalQ) { AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNSfalse); rr->AnsweredLocalQ = mDNSfalse; }
+    if (rr->AnsweredLocalQ) { AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, QC_rmv); rr->AnsweredLocalQ = mDNSfalse; }
     mDNS_Deregister_internal(m, rr, mDNS_Dereg_normal);     // Don't touch rr after this
 }
 
@@ -2331,7 +2680,7 @@ mDNSlocal void SendResponses(mDNS *const m)
     mDNSs32 maxExistingAnnounceInterval = 0;
     const NetworkInterfaceInfo *intf = GetFirstActiveInterface(m->HostInterfaces);
 
-    m->NextScheduledResponse = m->timenow + 0x78000000;
+    m->NextScheduledResponse = m->timenow + FutureTime;
 
     if (m->SleepState == SleepState_Transferring) RetrySPSRegistrations(m);
 
@@ -2369,11 +2718,13 @@ mDNSlocal void SendResponses(mDNS *const m)
                 }
                 else
                 {
+                    mDNSBool unicastOnly;
                     LogSPS("SendResponses: Sending wakeup %2d for %.6a %s", rr->AnnounceCount-3, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
-                    SendWakeup(m, rr->resrec.InterfaceID, &rr->WakeUp.IMAC, &rr->WakeUp.password);
+                    unicastOnly = ((rr->AnnounceCount == WakeupCount) || (rr->AnnounceCount == WakeupCount - 1)) ? mDNStrue : mDNSfalse;
+                    SendWakeup(m, rr->resrec.InterfaceID, &rr->WakeUp.IMAC, &rr->WakeUp.password, unicastOnly);
                     for (r2 = rr; r2; r2=r2->next)
-                        if (r2->AnnounceCount && r2->resrec.InterfaceID == rr->resrec.InterfaceID && mDNSSameEthAddress(&r2->WakeUp.IMAC, &rr->WakeUp.IMAC) &&
-                                !mDNSSameEthAddress(&zeroEthAddr, &r2->WakeUp.HMAC))
+                        if ((r2->resrec.RecordType == kDNSRecordTypeDeregistering) && r2->AnnounceCount && (r2->resrec.InterfaceID == rr->resrec.InterfaceID) &&
+                            mDNSSameEthAddress(&r2->WakeUp.IMAC, &rr->WakeUp.IMAC) && !mDNSSameEthAddress(&zeroEthAddr, &r2->WakeUp.HMAC))
                         {
                             // For now we only want to send a single Unsolicited Neighbor Advertisement restoring the address to the original
                             // owner, because these packets can cause some IPv6 stacks to falsely conclude that there's an address conflict.
@@ -2471,17 +2822,28 @@ mDNSlocal void SendResponses(mDNS *const m)
             if (rr->ImmedAnswer)            // If we're sending this as answer, see that its whole RRSet is similarly marked
             {
                 for (r2 = m->ResourceRecords; r2; r2=r2->next)
-                    if (ResourceRecordIsValidAnswer(r2))
-                        if (r2->ImmedAnswer != mDNSInterfaceMark &&
-                            r2->ImmedAnswer != rr->ImmedAnswer && SameResourceRecordSignature(r2, rr))
-                            r2->ImmedAnswer = !r2->ImmedAnswer ? rr->ImmedAnswer : mDNSInterfaceMark;
+                {
+                    if ((r2->resrec.RecordType & kDNSRecordTypeUniqueMask) && ResourceRecordIsValidAnswer(r2) &&
+                        (r2->ImmedAnswer != mDNSInterfaceMark) && (r2->ImmedAnswer != rr->ImmedAnswer) &&
+                        SameResourceRecordSignature(r2, rr) &&
+                        ((rr->ImmedAnswer == mDNSInterfaceMark) || IsInterfaceValidForAuthRecord(r2, rr->ImmedAnswer)))
+                    {
+                        r2->ImmedAnswer = !r2->ImmedAnswer ? rr->ImmedAnswer : mDNSInterfaceMark;
+                    }
+                }
             }
             else if (rr->ImmedAdditional)   // If we're sending this as additional, see that its whole RRSet is similarly marked
             {
                 for (r2 = m->ResourceRecords; r2; r2=r2->next)
-                    if (ResourceRecordIsValidAnswer(r2))
-                        if (r2->ImmedAdditional != rr->ImmedAdditional && SameResourceRecordSignature(r2, rr))
-                            r2->ImmedAdditional = rr->ImmedAdditional;
+                {
+                    if ((r2->resrec.RecordType & kDNSRecordTypeUniqueMask) && ResourceRecordIsValidAnswer(r2) &&
+                        (r2->ImmedAdditional != rr->ImmedAdditional) &&
+                        SameResourceRecordSignature(r2, rr) &&
+                        IsInterfaceValidForAuthRecord(r2, rr->ImmedAdditional))
+                    {
+                        r2->ImmedAdditional = rr->ImmedAdditional;
+                    }
+                }
             }
         }
 
@@ -2494,6 +2856,7 @@ mDNSlocal void SendResponses(mDNS *const m)
             rr->ImmedAdditional = mDNSNULL;             // No need to send as additional if sending as answer
             rr->LastMCTime      = m->timenow;
             rr->LastMCInterface = rr->ImmedAnswer;
+            rr->ProbeRestartCount = 0;                  // Reset the probe restart count
             // If we're announcing this record, and it's at least half-way to its ordained time, then consider this announcement done
             if (TimeToAnnounceThisRecord(rr, m->timenow + rr->ThisAPInterval/2))
             {
@@ -2526,7 +2889,6 @@ mDNSlocal void SendResponses(mDNS *const m)
         int numDereg    = 0;
         int numAnnounce = 0;
         int numAnswer   = 0;
-        int AnoninfoSpace = 0;
         mDNSu8 *responseptr = m->omsg.data;
         mDNSu8 *newptr;
         InitializeDNSMessage(&m->omsg.h, zeroID, ResponseFlags);
@@ -2541,9 +2903,8 @@ mDNSlocal void SendResponses(mDNS *const m)
             // Skip this interface if the record InterfaceID is *Any and the record is not
             // appropriate for the interface type.
             if ((rr->SendRNow == intf->InterfaceID) &&
-                ((rr->resrec.InterfaceID == mDNSInterface_Any) && !mDNSPlatformValidRecordForInterface(rr, intf)))
+                ((rr->resrec.InterfaceID == mDNSInterface_Any) && !mDNSPlatformValidRecordForInterface(rr, intf->InterfaceID)))
             {
-                LogInfo("SendResponses: Not sending %s, on %s", ARDisplayString(m, rr), InterfaceNameForID(m, rr->SendRNow));
                 rr->SendRNow = GetNextActiveInterfaceID(intf);
             }
             else if (rr->SendRNow == intf->InterfaceID)
@@ -2563,17 +2924,6 @@ mDNSlocal void SendResponses(mDNS *const m)
                         else continue; // If this packet is already too full to hold the goodbye for this record, skip it for now and we'll retry later
                     }
                     SetNewRData(&rr->resrec, rr->NewRData, rr->newrdlength);
-                }
-
-                if (rr->resrec.AnonInfo)
-                {
-                    int tmp = AnonInfoSpace(rr->resrec.AnonInfo);
-
-                    AnoninfoSpace += tmp;
-                    // Adjust OwnerRecordSpace/TraceRecordSpace which is used by PutRR_OS_TTL below so that
-                    // we have space to put in the NSEC3 record in the authority section.
-                    OwnerRecordSpace += tmp;
-                    TraceRecordSpace += tmp;
                 }
 
                 if (rr->resrec.RecordType & kDNSRecordTypeUniqueMask)
@@ -2598,13 +2948,6 @@ mDNSlocal void SendResponses(mDNS *const m)
 
                 if (newptr)     // If succeeded in sending, advance to next interface
                 {
-                    if (rr->resrec.AnonInfo)
-                    {
-                        debugf("SendResponses: Marking %s, OwnerRecordSpace %d, TraceRecordSpace %d, limit %p", ARDisplayString(m, rr), OwnerRecordSpace,
-                                TraceRecordSpace, m->omsg.data + AllowedRRSpace(&m->omsg) - OwnerRecordSpace - TraceRecordSpace);
-                        rr->resrec.AnonInfo->SendNow = intf->InterfaceID;
-                    }
-
                     // If sending on all interfaces, go to next interface; else we're finished now
                     if (rr->ImmedAnswer == mDNSInterfaceMark && rr->resrec.InterfaceID == mDNSInterface_Any)
                         rr->SendRNow = GetNextActiveInterfaceID(intf);
@@ -2614,31 +2957,6 @@ mDNSlocal void SendResponses(mDNS *const m)
             }
         }
 
-        // Get the reserved space back
-        OwnerRecordSpace -= AnoninfoSpace;
-        TraceRecordSpace -= AnoninfoSpace; 
-        newptr = responseptr;
-        for (rr = m->ResourceRecords; rr; rr=rr->next)
-        {
-            if (rr->resrec.AnonInfo && rr->resrec.AnonInfo->SendNow == intf->InterfaceID)
-            {
-                ResourceRecord *nsec3RR = rr->resrec.AnonInfo->nsec3RR;
-
-                newptr = PutRR_OS_TTL(newptr, &m->omsg.h.numAuthorities, nsec3RR,  nsec3RR->rroriginalttl);
-                if (newptr)
-                {
-                    responseptr = newptr;
-                    debugf("SendResponses: Added NSEC3 %s, OwnerRecordSpace %d, TraceRecordSpace %d, limit %p", ARDisplayString(m, rr), OwnerRecordSpace,
-                            TraceRecordSpace, m->omsg.data + AllowedRRSpace(&m->omsg) - OwnerRecordSpace - TraceRecordSpace);
-                }
-                else
-                {
-                    LogMsg("SendResponses: Cannot add NSEC3 %s, OwnerRecordSpace %d, TraceRecordSpace %d, limit %p", ARDisplayString(m, rr), OwnerRecordSpace,
-                            TraceRecordSpace, m->omsg.data + AllowedRRSpace(&m->omsg) - OwnerRecordSpace - TraceRecordSpace);
-                }
-                rr->resrec.AnonInfo->SendNow = mDNSNULL;
-            }
-        }
         // Second Pass. Add additional records, if there's space.
         newptr = responseptr;
         for (rr = m->ResourceRecords; rr; rr=rr->next)
@@ -2765,10 +3083,9 @@ mDNSlocal void SendResponses(mDNS *const m)
                     SetupTracerOpt(m, &opt.resrec.rdata->u.opt[0]);
                 }
                 newptr = PutResourceRecord(&m->omsg, responseptr, &m->omsg.h.numAdditionals, &opt.resrec);
-                if (newptr) 
-                { 
-                    responseptr = newptr; 
-                    LogInfo("SendResponses put %s %s: %s %s", OwnerRecordSpace ? "OWNER" : "", TraceRecordSpace ? "TRACER" : "", intf->ifname, ARDisplayString(m, &opt));
+                if (newptr)
+                {
+                    responseptr = newptr;
                 }
                 else if (m->omsg.h.numAnswers + m->omsg.h.numAuthorities + m->omsg.h.numAdditionals == 1)
                 {
@@ -2781,15 +3098,15 @@ mDNSlocal void SendResponses(mDNS *const m)
                            m->omsg.h.numQuestions, m->omsg.h.numAnswers, m->omsg.h.numAuthorities, m->omsg.h.numAdditionals, ARDisplayString(m, &opt));
                 }
             }
-    
+
             debugf("SendResponses: Sending %d Deregistration%s, %d Announcement%s, %d Answer%s, %d Additional%s on %p",
                    numDereg,                 numDereg                 == 1 ? "" : "s",
                    numAnnounce,              numAnnounce              == 1 ? "" : "s",
                    numAnswer,                numAnswer                == 1 ? "" : "s",
                    m->omsg.h.numAdditionals, m->omsg.h.numAdditionals == 1 ? "" : "s", intf->InterfaceID);
 
-            if (intf->IPv4Available) mDNSSendDNSMessage(m, &m->omsg, responseptr, intf->InterfaceID, mDNSNULL, &AllDNSLinkGroup_v4, MulticastDNSPort, mDNSNULL, mDNSNULL, mDNSfalse);
-            if (intf->IPv6Available) mDNSSendDNSMessage(m, &m->omsg, responseptr, intf->InterfaceID, mDNSNULL, &AllDNSLinkGroup_v6, MulticastDNSPort, mDNSNULL, mDNSNULL, mDNSfalse);
+            if (intf->IPv4Available) mDNSSendDNSMessage(m, &m->omsg, responseptr, intf->InterfaceID, mDNSNULL, mDNSNULL, &AllDNSLinkGroup_v4, MulticastDNSPort, mDNSNULL, mDNSfalse);
+            if (intf->IPv6Available) mDNSSendDNSMessage(m, &m->omsg, responseptr, intf->InterfaceID, mDNSNULL, mDNSNULL, &AllDNSLinkGroup_v6, MulticastDNSPort, mDNSNULL, mDNSfalse);
             if (!m->SuppressSending) m->SuppressSending = NonZeroTime(m->timenow + (mDNSPlatformOneSecond+9)/10);
             if (++pktcount >= 1000) { LogMsg("SendResponses exceeded loop limit %d: giving up", pktcount); break; }
             // There might be more things to send on this interface, so go around one more time and try again.
@@ -2821,7 +3138,8 @@ mDNSlocal void SendResponses(mDNS *const m)
         if (rr->SendRNow)
         {
             if (rr->ARType != AuthRecordLocalOnly && rr->ARType != AuthRecordP2P)
-                LogMsg("SendResponses: No active interface %p to send: %p %02X %s", rr->SendRNow, rr->resrec.InterfaceID, rr->resrec.RecordType, ARDisplayString(m, rr));
+                LogInfo("SendResponses: No active interface %d to send: %d %02X %s",
+                IIDPrintable(rr->SendRNow), IIDPrintable(rr->resrec.InterfaceID), rr->resrec.RecordType, ARDisplayString(m, rr));
             rr->SendRNow = mDNSNULL;
         }
 
@@ -2858,13 +3176,13 @@ mDNSlocal void SendResponses(mDNS *const m)
 //    so allow at most 1/10 second lateness
 // 5. For records with rroriginalttl set to zero, that means we really want to delete them immediately
 //    (we have a new record with DelayDelivery set, waiting for the old record to go away before we can notify clients).
-#define CacheCheckGracePeriod(RR) (                                                   \
-        ((RR)->CRActiveQuestion == mDNSNULL            ) ? (60 * mDNSPlatformOneSecond) : \
-        ((RR)->UnansweredQueries < MaxUnansweredQueries) ? (TicksTTL(rr)/50)            : \
-        ((RR)->resrec.rroriginalttl > 10               ) ? (mDNSPlatformOneSecond)      : \
-        ((RR)->resrec.rroriginalttl > 0                ) ? (mDNSPlatformOneSecond/10)   : 0)
+#define CacheCheckGracePeriod(CR) (                                                   \
+        ((CR)->CRActiveQuestion == mDNSNULL            ) ? (60 * mDNSPlatformOneSecond) : \
+        ((CR)->UnansweredQueries < MaxUnansweredQueries) ? (TicksTTL(CR)/50)            : \
+        ((CR)->resrec.rroriginalttl > 10               ) ? (mDNSPlatformOneSecond)      : \
+        ((CR)->resrec.rroriginalttl > 0                ) ? (mDNSPlatformOneSecond/10)   : 0)
 
-#define NextCacheCheckEvent(RR) ((RR)->NextRequiredQuery + CacheCheckGracePeriod(RR))
+#define NextCacheCheckEvent(CR) ((CR)->NextRequiredQuery + CacheCheckGracePeriod(CR))
 
 mDNSexport void ScheduleNextCacheCheckTime(mDNS *const m, const mDNSu32 slot, const mDNSs32 event)
 {
@@ -2892,13 +3210,18 @@ mDNSexport void SetNextCacheCheckTimeForRecord(mDNS *const m, CacheRecord *const
         verbosedebugf("SetNextCacheCheckTimeForRecord: NextRequiredQuery in %ld sec CacheCheckGracePeriod %d ticks for %s",
                       (rr->NextRequiredQuery - m->timenow) / mDNSPlatformOneSecond, CacheCheckGracePeriod(rr), CRDisplayString(m,rr));
     }
-    ScheduleNextCacheCheckTime(m, HashSlot(rr->resrec.name), NextCacheCheckEvent(rr));
+    ScheduleNextCacheCheckTime(m, HashSlotFromNameHash(rr->resrec.namehash), NextCacheCheckEvent(rr));
 }
 
 #define kMinimumReconfirmTime                     ((mDNSu32)mDNSPlatformOneSecond *  5)
 #define kDefaultReconfirmTimeForWake              ((mDNSu32)mDNSPlatformOneSecond *  5)
 #define kDefaultReconfirmTimeForNoAnswer          ((mDNSu32)mDNSPlatformOneSecond *  5)
-#define kDefaultReconfirmTimeForFlappingInterface ((mDNSu32)mDNSPlatformOneSecond *  5)
+
+// Delay before restarting questions on a flapping interface.
+#define kDefaultQueryDelayTimeForFlappingInterface ((mDNSu32)mDNSPlatformOneSecond *  3)
+// After kDefaultQueryDelayTimeForFlappingInterface seconds, allow enough time for up to three queries (0, 1, and 4 seconds)
+// plus three seconds for "response delay" before removing the reconfirmed records from the cache.
+#define kDefaultReconfirmTimeForFlappingInterface (kDefaultQueryDelayTimeForFlappingInterface + ((mDNSu32)mDNSPlatformOneSecond *  7))
 
 mDNSexport mStatus mDNS_Reconfirm_internal(mDNS *const m, CacheRecord *const rr, mDNSu32 interval)
 {
@@ -2913,7 +3236,7 @@ mDNSexport mStatus mDNS_Reconfirm_internal(mDNS *const m, CacheRecord *const rr,
         // Add a 33% random amount to the interval, to avoid synchronization between multiple hosts
         // For all the reconfirmations in a given batch, we want to use the same random value
         // so that the reconfirmation questions can be grouped into a single query packet
-        if (!m->RandomReconfirmDelay) m->RandomReconfirmDelay = 1 + mDNSRandom(0x3FFFFFFF);
+        if (!m->RandomReconfirmDelay) m->RandomReconfirmDelay = 1 + mDNSRandom(FutureTime);
         interval += m->RandomReconfirmDelay % ((interval/3) + 1);
         rr->TimeRcvd          = m->timenow - (mDNSs32)interval * 3;
         rr->resrec.rroriginalttl     = (interval * 4 + mDNSPlatformOneSecond - 1) / mDNSPlatformOneSecond;
@@ -2927,14 +3250,13 @@ mDNSexport mStatus mDNS_Reconfirm_internal(mDNS *const m, CacheRecord *const rr,
 // BuildQuestion puts a question into a DNS Query packet and if successful, updates the value of queryptr.
 // It also appends to the list of known answer records that need to be included,
 // and updates the forcast for the size of the known answer section.
-mDNSlocal mDNSBool BuildQuestion(mDNS *const m, DNSMessage *query, mDNSu8 **queryptr, DNSQuestion *q,
-                                 CacheRecord ***kalistptrptr, mDNSu32 *answerforecast)
+mDNSlocal mDNSBool BuildQuestion(mDNS *const m, const NetworkInterfaceInfo *intf, DNSMessage *query, mDNSu8 **queryptr,
+                                 DNSQuestion *q, CacheRecord ***kalistptrptr, mDNSu32 *answerforecast)
 {
-    mDNSBool ucast = (q->LargeAnswers || q->RequestUnicast) && m->CanReceiveUnicastOn5353;
+    mDNSBool ucast = (q->LargeAnswers || q->RequestUnicast) && m->CanReceiveUnicastOn5353 && intf->SupportsUnicastMDNSResponse;
     mDNSu16 ucbit = (mDNSu16)(ucast ? kDNSQClass_UnicastResponse : 0);
     const mDNSu8 *const limit = query->data + NormalMaxDNSMessageData;
-    mDNSu8 anoninfo_space = q->AnonInfo ? AnonInfoSpace(q->AnonInfo) : 0;
-    mDNSu8 *newptr = putQuestion(query, *queryptr, limit - *answerforecast - anoninfo_space, &q->qname, q->qtype, (mDNSu16)(q->qclass | ucbit));
+    mDNSu8 *newptr = putQuestion(query, *queryptr, limit - *answerforecast, &q->qname, q->qtype, (mDNSu16)(q->qclass | ucbit));
     if (!newptr)
     {
         debugf("BuildQuestion: No more space in this packet for question %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
@@ -2942,19 +3264,18 @@ mDNSlocal mDNSBool BuildQuestion(mDNS *const m, DNSMessage *query, mDNSu8 **quer
     }
     else
     {
-        mDNSu32 forecast = *answerforecast + anoninfo_space;
-        const mDNSu32 slot = HashSlot(&q->qname);
-        const CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
-        CacheRecord *rr;
+        mDNSu32 forecast = *answerforecast;
+        const CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
+        CacheRecord *cr;
         CacheRecord **ka = *kalistptrptr;   // Make a working copy of the pointer we're going to update
 
-        for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)             // If we have a resource record in our cache,
-            if (rr->resrec.InterfaceID == q->SendQNow &&                    // received on this interface
-                !(rr->resrec.RecordType & kDNSRecordTypeUniqueMask) &&      // which is a shared (i.e. not unique) record type
-                rr->NextInKAList == mDNSNULL && ka != &rr->NextInKAList &&  // which is not already in the known answer list
-                rr->resrec.rdlength <= SmallRecordLimit &&                  // which is small enough to sensibly fit in the packet
-                SameNameRecordAnswersQuestion(&rr->resrec, q) &&            // which answers our question
-                rr->TimeRcvd + TicksTTL(rr)/2 - m->timenow >                // and its half-way-to-expiry time is at least 1 second away
+        for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)             // If we have a resource record in our cache,
+            if (cr->resrec.InterfaceID == q->SendQNow &&                    // received on this interface
+                !(cr->resrec.RecordType & kDNSRecordTypeUniqueMask) &&      // which is a shared (i.e. not unique) record type
+                cr->NextInKAList == mDNSNULL && ka != &cr->NextInKAList &&  // which is not already in the known answer list
+                cr->resrec.rdlength <= SmallRecordLimit &&                  // which is small enough to sensibly fit in the packet
+                SameNameCacheRecordAnswersQuestion(cr, q) &&                // which answers our question
+                cr->TimeRcvd + TicksTTL(cr)/2 - m->timenow >                // and its half-way-to-expiry time is at least 1 second away
                 mDNSPlatformOneSecond)                                      // (also ensures we never include goodbye records with TTL=1)
             {
                 // We don't want to include unique records in the Known Answer section. The Known Answer section
@@ -2963,10 +3284,10 @@ mDNSlocal mDNSBool BuildQuestion(mDNS *const m, DNSMessage *query, mDNSu8 **quer
                 // which we have a unique record already in our cache, then including that unique record as a
                 // Known Answer, so as to suppress the only answer we were expecting to get, makes little sense.
 
-                *ka = rr;   // Link this record into our known answer chain
-                ka = &rr->NextInKAList;
+                *ka = cr;   // Link this record into our known answer chain
+                ka = &cr->NextInKAList;
                 // We forecast: compressed name (2) type (2) class (2) TTL (4) rdlength (2) rdata (n)
-                forecast += 12 + rr->resrec.rdestimate;
+                forecast += 12 + cr->resrec.rdestimate;
                 // If we're trying to put more than one question in this packet, and it doesn't fit
                 // then undo that last question and try again next time
                 if (query->h.numQuestions > 1 && newptr + forecast >= limit)
@@ -2986,14 +3307,14 @@ mDNSlocal mDNSBool BuildQuestion(mDNS *const m, DNSMessage *query, mDNSu8 **quer
         *kalistptrptr    = ka;                  // Update the known answer list pointer
         if (ucast) q->ExpectUnicastResp = NonZeroTime(m->timenow);
 
-        for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)             // For every resource record in our cache,
-            if (rr->resrec.InterfaceID == q->SendQNow &&                    // received on this interface
-                rr->NextInKAList == mDNSNULL && ka != &rr->NextInKAList &&  // which is not in the known answer list
-                SameNameRecordAnswersQuestion(&rr->resrec, q))              // which answers our question
+        for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)             // For every resource record in our cache,
+            if (cr->resrec.InterfaceID == q->SendQNow &&                    // received on this interface
+                cr->NextInKAList == mDNSNULL && ka != &cr->NextInKAList &&  // which is not in the known answer list
+                SameNameCacheRecordAnswersQuestion(cr, q))                  // which answers our question
             {
-                rr->UnansweredQueries++;                                    // indicate that we're expecting a response
-                rr->LastUnansweredTime = m->timenow;
-                SetNextCacheCheckTimeForRecord(m, rr);
+                cr->UnansweredQueries++;                                    // indicate that we're expecting a response
+                cr->LastUnansweredTime = m->timenow;
+                SetNextCacheCheckTimeForRecord(m, cr);
             }
 
         return(mDNStrue);
@@ -3012,21 +3333,25 @@ mDNSlocal mDNSBool BuildQuestion(mDNS *const m, DNSMessage *query, mDNSu8 **quer
 // Depth 3: PTR "_services._dns-sd._udp.local." refers to "_example._tcp.local."; may be stale
 // Currently depths 4 and 5 are not expected to occur; if we did get to depth 5 we'd reconfim any records we
 // found referring to the given name, but not recursively descend any further reconfirm *their* antecedents.
-mDNSlocal void ReconfirmAntecedents(mDNS *const m, const domainname *const name, const mDNSu32 namehash, const int depth)
+mDNSlocal void ReconfirmAntecedents(mDNS *const m, const domainname *const name, const mDNSu32 namehash, const mDNSInterfaceID InterfaceID, const int depth)
 {
     mDNSu32 slot;
-    CacheGroup *cg;
+    const CacheGroup *cg;
     CacheRecord *cr;
     debugf("ReconfirmAntecedents (depth=%d) for %##s", depth, name->c);
+    if (!InterfaceID) return; // mDNS records have a non-zero InterfaceID. If InterfaceID is 0, then there's nothing to do.
     FORALL_CACHERECORDS(slot, cg, cr)
     {
-        domainname *crtarget = GetRRDomainNameTarget(&cr->resrec);
-        if (crtarget && cr->resrec.rdatahash == namehash && SameDomainName(crtarget, name))
+        const domainname *crtarget;
+        if (cr->resrec.InterfaceID != InterfaceID) continue; // Skip non-mDNS records and mDNS records from other interfaces.
+        if (cr->resrec.rdatahash != namehash)      continue; // Skip records whose rdata hash doesn't match the name hash.
+        crtarget = GetRRDomainNameTarget(&cr->resrec);
+        if (crtarget && SameDomainName(crtarget, name))
         {
-            LogInfo("ReconfirmAntecedents: Reconfirming (depth=%d) %s", depth, CRDisplayString(m, cr));
+            LogInfo("ReconfirmAntecedents: Reconfirming (depth=%d, InterfaceID=%p) %s", depth, InterfaceID, CRDisplayString(m, cr));
             mDNS_Reconfirm_internal(m, cr, kDefaultReconfirmTimeForNoAnswer);
             if (depth < 5)
-                ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, depth+1);
+                ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, InterfaceID, depth+1);
         }
     }
 }
@@ -3037,7 +3362,7 @@ mDNSlocal void ReconfirmAntecedents(mDNS *const m, const domainname *const name,
 // to get a AAAA response is not grounds to doubt the PTR/SRV chain that lead us to that name.
 mDNSlocal const CacheRecord *CacheHasAddressTypeForName(mDNS *const m, const domainname *const name, const mDNSu32 namehash)
 {
-    CacheGroup *const cg = CacheGroupForName(m, HashSlot(name), namehash, name);
+    CacheGroup *const cg = CacheGroupForName(m, namehash, name);
     const CacheRecord *cr = cg ? cg->members : mDNSNULL;
     while (cr && !RRTypeIsAddressType(cr->resrec.rrtype)) cr=cr->next;
     return(cr);
@@ -3047,13 +3372,13 @@ mDNSlocal const CacheRecord *CacheHasAddressTypeForName(mDNS *const m, const dom
 mDNSlocal const CacheRecord *FindSPSInCache1(mDNS *const m, const DNSQuestion *const q, const CacheRecord *const c0, const CacheRecord *const c1)
 {
 #ifndef SPC_DISABLED
-    CacheGroup *const cg = CacheGroupForName(m, HashSlot(&q->qname), q->qnamehash, &q->qname);
+    CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
     const CacheRecord *cr, *bestcr = mDNSNULL;
     mDNSu32 bestmetric = 1000000;
     for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
         if (cr->resrec.rrtype == kDNSType_PTR && cr->resrec.rdlength >= 6)                      // If record is PTR type, with long enough name,
             if (cr != c0 && cr != c1)                                                           // that's not one we've seen before,
-                if (SameNameRecordAnswersQuestion(&cr->resrec, q))                              // and answers our browse query,
+                if (SameNameCacheRecordAnswersQuestion(cr, q))                                  // and answers our browse query,
                     if (!IdenticalSameNameRecord(&cr->resrec, &m->SPSRecords.RR_PTR.resrec))    // and is not our own advertised service...
                     {
                         mDNSu32 metric = SPSMetric(cr->resrec.rdata->u.name.c);
@@ -3061,36 +3386,36 @@ mDNSlocal const CacheRecord *FindSPSInCache1(mDNS *const m, const DNSQuestion *c
                     }
     return(bestcr);
 #else // SPC_DISABLED
-	(void) m;
-	(void) q;
-	(void) c0;
-	(void) c1;
-	(void) c1;
+    (void) m;
+    (void) q;
+    (void) c0;
+    (void) c1;
+    (void) c1;
     return mDNSNULL;
 #endif // SPC_DISABLED
 }
 
-mDNSlocal void CheckAndSwapSPS(const CacheRecord *sps1, const CacheRecord *sps2)
+mDNSlocal void CheckAndSwapSPS(const CacheRecord **sps1, const CacheRecord **sps2)
 {
     const CacheRecord *swap_sps;
     mDNSu32 metric1, metric2;
 
-    if (!sps1 || !sps2) return;
-    metric1 = SPSMetric(sps1->resrec.rdata->u.name.c);
-    metric2 = SPSMetric(sps2->resrec.rdata->u.name.c);
-    if (!SPSFeatures(sps1->resrec.rdata->u.name.c) && SPSFeatures(sps2->resrec.rdata->u.name.c) && (metric2 >= metric1))
+    if (!(*sps1) || !(*sps2)) return;
+    metric1 = SPSMetric((*sps1)->resrec.rdata->u.name.c);
+    metric2 = SPSMetric((*sps2)->resrec.rdata->u.name.c);
+    if (!SPSFeatures((*sps1)->resrec.rdata->u.name.c) && SPSFeatures((*sps2)->resrec.rdata->u.name.c) && (metric2 >= metric1))
     {
-        swap_sps = sps1;
-        sps1     = sps2;
-        sps2     = swap_sps;
+        swap_sps = *sps1;
+        *sps1    = *sps2;
+        *sps2    = swap_sps;
     }
 }
 
 mDNSlocal void ReorderSPSByFeature(const CacheRecord *sps[3])
 {
-    CheckAndSwapSPS(sps[0], sps[1]);
-    CheckAndSwapSPS(sps[0], sps[2]);
-    CheckAndSwapSPS(sps[1], sps[2]);
+    CheckAndSwapSPS(&sps[0], &sps[1]);
+    CheckAndSwapSPS(&sps[0], &sps[2]);
+    CheckAndSwapSPS(&sps[1], &sps[2]);
 }
 
 
@@ -3134,7 +3459,7 @@ mDNSlocal mDNSBool SuppressOnThisInterface(const DupSuppressInfo ds[DupSuppressI
     return(mDNSfalse);
 }
 
-mDNSlocal int RecordDupSuppressInfo(DupSuppressInfo ds[DupSuppressInfoSize], mDNSs32 Time, mDNSInterfaceID InterfaceID, mDNSs32 Type)
+mDNSlocal void RecordDupSuppressInfo(DupSuppressInfo ds[DupSuppressInfoSize], mDNSs32 Time, mDNSInterfaceID InterfaceID, mDNSs32 Type)
 {
     int i, j;
 
@@ -3154,8 +3479,6 @@ mDNSlocal int RecordDupSuppressInfo(DupSuppressInfo ds[DupSuppressInfoSize], mDN
     ds[i].Time        = Time;
     ds[i].InterfaceID = InterfaceID;
     ds[i].Type        = Type;
-
-    return(i);
 }
 
 mDNSlocal void mDNSSendWakeOnResolve(mDNS *const m, DNSQuestion *q)
@@ -3165,7 +3488,7 @@ mDNSlocal void mDNSSendWakeOnResolve(mDNS *const m, DNSQuestion *q)
     domainname *d = &q->qname;
 
     // We can't send magic packets without knowing which interface to send it on.
-    if (InterfaceID == mDNSInterface_Any || InterfaceID == mDNSInterface_LocalOnly || InterfaceID == mDNSInterface_P2P)
+    if (InterfaceID == mDNSInterface_Any || LocalOnlyOrP2PInterface(InterfaceID))
     {
         LogMsg("mDNSSendWakeOnResolve: ERROR!! Invalid InterfaceID %p for question %##s", InterfaceID, q->qname.c);
         return;
@@ -3173,7 +3496,6 @@ mDNSlocal void mDNSSendWakeOnResolve(mDNS *const m, DNSQuestion *q)
 
     // Split MAC@IPAddress and pass them separately
     len = d->c[0];
-    i = 1;
     cnt = 0;
     for (i = 1; i < len; i++)
     {
@@ -3201,7 +3523,7 @@ mDNSlocal void mDNSSendWakeOnResolve(mDNS *const m, DNSQuestion *q)
             mDNSPlatformMemCopy(IPAddr, &d->c[i + 1], len - i);
             IPAddr[len - i] = 0;
             m->mDNSStats.WakeOnResolves++;
-            mDNSPlatformSendWakeupPacket(m, InterfaceID, EthAddr, IPAddr, InitialWakeOnResolveCount - q->WakeOnResolveCount);
+            mDNSPlatformSendWakeupPacket(InterfaceID, EthAddr, IPAddr, InitialWakeOnResolveCount - q->WakeOnResolveCount);
             return;
         }
         else if (d->c[i] == ':')
@@ -3222,17 +3544,16 @@ mDNSlocal mDNSBool AccelerateThisQuery(mDNS *const m, DNSQuestion *q)
     {
         // We forecast: qname (n) type (2) class (2)
         mDNSu32 forecast = (mDNSu32)DomainNameLength(&q->qname) + 4;
-        const mDNSu32 slot = HashSlot(&q->qname);
-        const CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
-        const CacheRecord *rr;
-        for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)             // If we have a resource record in our cache,
-            if (rr->resrec.rdlength <= SmallRecordLimit &&                  // which is small enough to sensibly fit in the packet
-                SameNameRecordAnswersQuestion(&rr->resrec, q) &&            // which answers our question
-                rr->TimeRcvd + TicksTTL(rr)/2 - m->timenow >= 0 &&          // and it is less than half-way to expiry
-                rr->NextRequiredQuery - (m->timenow + q->ThisQInterval) > 0) // and we'll ask at least once again before NextRequiredQuery
+        const CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
+        const CacheRecord *cr;
+        for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)              // If we have a resource record in our cache,
+            if (cr->resrec.rdlength <= SmallRecordLimit &&                   // which is small enough to sensibly fit in the packet
+                SameNameCacheRecordAnswersQuestion(cr, q) &&                 // which answers our question
+                cr->TimeRcvd + TicksTTL(cr)/2 - m->timenow >= 0 &&           // and it is less than half-way to expiry
+                cr->NextRequiredQuery - (m->timenow + q->ThisQInterval) > 0) // and we'll ask at least once again before NextRequiredQuery
             {
                 // We forecast: compressed name (2) type (2) class (2) TTL (4) rdlength (2) rdata (n)
-                forecast += 12 + rr->resrec.rdestimate;
+                forecast += 12 + cr->resrec.rdestimate;
                 if (forecast >= 512) return(mDNSfalse); // If this would add 512 bytes or more to the packet, don't accelerate
             }
         return(mDNStrue);
@@ -3281,11 +3602,7 @@ mDNSlocal void SendQueries(mDNS *const m)
                 ExpireDupSuppressInfoOnInterface(q->DupSuppress, m->timenow - TicksTTL(cr)/20, cr->resrec.InterfaceID);
                 // For uDNS queries (TargetQID non-zero) we adjust LastQTime,
                 // and bump UnansweredQueries so that we don't spin trying to send the same cache expiration query repeatedly
-                if (q->Target.type)
-                {
-                    q->SendQNow = mDNSInterfaceMark; // If targeted query, mark it
-                }
-                else if (!mDNSOpaque16IsZero(q->TargetQID))
+                if (!mDNSOpaque16IsZero(q->TargetQID))
                 {
                     q->LastQTime = m->timenow - q->ThisQInterval;
                     cr->UnansweredQueries++;
@@ -3320,29 +3637,7 @@ mDNSlocal void SendQueries(mDNS *const m)
     while (m->CurrentQuestion && m->CurrentQuestion != m->NewQuestions)
     {
         q = m->CurrentQuestion;
-        if (q->Target.type && (q->SendQNow || TimeToSendThisQuestion(q, m->timenow)))
-        {
-            mDNSu8       *qptr        = m->omsg.data;
-            const mDNSu8 *const limit = m->omsg.data + sizeof(m->omsg.data);
-
-            // If we fail to get a new on-demand socket (should only happen cases of the most extreme resource exhaustion), we'll try again next time
-            if (!q->LocalSocket) q->LocalSocket = mDNSPlatformUDPSocket(m, zeroIPPort);
-            if (q->LocalSocket)
-            {
-                InitializeDNSMessage(&m->omsg.h, q->TargetQID, QueryFlags);
-                qptr = putQuestion(&m->omsg, qptr, limit, &q->qname, q->qtype, q->qclass);
-                mDNSSendDNSMessage(m, &m->omsg, qptr, mDNSInterface_Any, q->LocalSocket, &q->Target, q->TargetPort, mDNSNULL, mDNSNULL, q->UseBackgroundTrafficClass);
-                q->ThisQInterval    *= QuestionIntervalStep;
-            }
-            if (q->ThisQInterval > MaxQuestionInterval)
-                q->ThisQInterval = MaxQuestionInterval;
-            q->LastQTime         = m->timenow;
-            q->LastQTxTime       = m->timenow;
-            q->RecentAnswerPkts  = 0;
-            q->SendQNow          = mDNSNULL;
-            q->ExpectUnicastResp = NonZeroTime(m->timenow);
-        }
-        else if (mDNSOpaque16IsZero(q->TargetQID) && !q->Target.type && TimeToSendThisQuestion(q, m->timenow))
+        if (mDNSOpaque16IsZero(q->TargetQID) && TimeToSendThisQuestion(q, m->timenow))
         {
             //LogInfo("Time to send %##s (%s) %d", q->qname.c, DNSTypeName(q->qtype), m->timenow - NextQSendTime(q));
             q->SendQNow = mDNSInterfaceMark;        // Mark this question for sending on all interfaces
@@ -3367,11 +3662,11 @@ mDNSlocal void SendQueries(mDNS *const m)
     // Note: Don't set NextScheduledQuery until here, because uDNS_CheckCurrentQuestion in the loop above can add new questions to the list,
     // which causes NextScheduledQuery to get (incorrectly) set to m->timenow. Setting it here is the right place, because the very
     // next thing we do is scan the list and call SetNextQueryTime() for every question we find, so we know we end up with the right value.
-    m->NextScheduledQuery = m->timenow + 0x78000000;
+    m->NextScheduledQuery = m->timenow + FutureTime;
     for (q = m->Questions; q && q != m->NewQuestions; q=q->next)
     {
         if (mDNSOpaque16IsZero(q->TargetQID)
-            && (q->SendQNow || (!q->Target.type && ActiveQuestion(q) && q->ThisQInterval <= maxExistingQuestionInterval && AccelerateThisQuery(m,q))))
+            && (q->SendQNow || (ActiveQuestion(q) && q->ThisQInterval <= maxExistingQuestionInterval && AccelerateThisQuery(m,q))))
         {
             // If at least halfway to next query time, advance to next interval
             // If less than halfway to next query time, then
@@ -3382,7 +3677,7 @@ mDNSlocal void SendQueries(mDNS *const m)
                 // don't send it again until MaxQuestionInterval unless:
                 //  one of its cached answers needs to be refreshed,
                 //  or it's the initial query for a kDNSServiceFlagsThresholdFinder mode browse.
-                if (q->BrowseThreshold 
+                if (q->BrowseThreshold
                     && (q->CurrentAnswers >= q->BrowseThreshold)
                     && (q->CachedAnswerNeedsUpdate == mDNSfalse)
                     && !((q->flags & kDNSServiceFlagsThresholdFinder) && (q->ThisQInterval == InitialQuestionInterval)))
@@ -3404,11 +3699,12 @@ mDNSlocal void SendQueries(mDNS *const m)
                 debugf("SendQueries: %##s (%s) next interval %d seconds RequestUnicast = %d",
                        q->qname.c, DNSTypeName(q->qtype), q->ThisQInterval / InitialQuestionInterval, q->RequestUnicast);
 
-                if (q->ThisQInterval >= QuestionIntervalThreshold)
+                if (q->ThisQInterval > MaxQuestionInterval)
                 {
                     q->ThisQInterval = MaxQuestionInterval;
                 }
-                else if (q->CurrentAnswers == 0 && q->ThisQInterval == InitialQuestionInterval * QuestionIntervalStep3 && !q->RequestUnicast &&
+                else if (mDNSOpaque16IsZero(q->TargetQID) && q->InterfaceID &&
+                         q->CurrentAnswers == 0 && q->ThisQInterval == InitialQuestionInterval * QuestionIntervalStep3 && !q->RequestUnicast &&
                          !(RRTypeIsAddressType(q->qtype) && CacheHasAddressTypeForName(m, &q->qname, q->qnamehash)))
                 {
                     // Generally don't need to log this.
@@ -3419,7 +3715,7 @@ mDNSlocal void SendQueries(mDNS *const m)
                     debugf("SendQueries: Zero current answers for %##s (%s); will reconfirm antecedents",
                            q->qname.c, DNSTypeName(q->qtype));
                     // Sending third query, and no answers yet; time to begin doubting the source
-                    ReconfirmAntecedents(m, &q->qname, q->qnamehash, 0);
+                    ReconfirmAntecedents(m, &q->qname, q->qnamehash, q->InterfaceID, 0);
                 }
             }
 
@@ -3446,7 +3742,7 @@ mDNSlocal void SendQueries(mDNS *const m)
 
     // 2. Scan our authoritative RR list to see what probes we might need to send
 
-    m->NextScheduledProbe = m->timenow + 0x78000000;
+    m->NextScheduledProbe = m->timenow + FutureTime;
 
     if (m->CurrentRecord)
         LogMsg("SendQueries ERROR m->CurrentRecord already set %s", ARDisplayString(m, m->CurrentRecord));
@@ -3467,6 +3763,11 @@ mDNSlocal void SendQueries(mDNS *const m)
             {
                 if (ar->AddressProxy.type == mDNSAddrType_IPv4)
                 {
+                    // There's a problem here. If a host is waking up, and we probe to see if it responds, then
+                    // it will see those ARP probes as signalling intent to use the address, so it picks a different one.
+                    // A more benign way to find out if a host is responding to ARPs might be send a standard ARP *request*
+                    // (using our sender IP address) instead of an ARP *probe* (using all-zero sender IP address).
+                    // A similar concern may apply to the NDP Probe too. -- SC
                     LogSPS("SendQueries ARP Probe %d %s %s", ar->ProbeCount, InterfaceNameForID(m, ar->resrec.InterfaceID), ARDisplayString(m,ar));
                     SendARP(m, 1, ar, &zerov4Addr, &zeroEthAddr, &ar->AddressProxy.ip.v4, &ar->WakeUp.IMAC);
                 }
@@ -3558,28 +3859,15 @@ mDNSlocal void SendQueries(mDNS *const m)
                     // If interface is P2P type, verify that query should be sent over it.
                     if (!mDNSPlatformValidQuestionForInterface(q, intf))
                     {
-                        LogInfo("SendQueries: Not sending (%s) %##s on %s", DNSTypeName(q->qtype), q->qname.c, InterfaceNameForID(m, intf->InterfaceID));
                         q->SendQNow = (q->InterfaceID || !q->SendOnAll) ? mDNSNULL : GetNextActiveInterfaceID(intf);
                     }
                     // If we're suppressing this question, or we successfully put it, update its SendQNow state
                     else if ((Suppress = SuppressOnThisInterface(q->DupSuppress, intf)) ||
-                        BuildQuestion(m, &m->omsg, &queryptr, q, &kalistptr, &answerforecast))
+                        BuildQuestion(m, intf, &m->omsg, &queryptr, q, &kalistptr, &answerforecast))
                     {
-                        // We successfully added the question to the packet. Make sure that
-                        // we also send the NSEC3 record if required. BuildQuestion accounted for
-                        // the space.
-                        //
-                        // Note: We don't suppress anonymous questions and hence Suppress should always
-                        // be zero.
-
                         if (Suppress)
                             m->mDNSStats.DupQuerySuppressions++;
 
-                        if (!Suppress && q->AnonInfo)
-                        {
-                            debugf("SendQueries: marking for question %##s, Suppress %d", q->qname.c, Suppress);
-                            q->AnonInfo->SendNow = intf->InterfaceID;
-                        }
                         q->SendQNow = (q->InterfaceID || !q->SendOnAll) ? mDNSNULL : GetNextActiveInterfaceID(intf);
                         if (q->WakeOnResolveCount)
                         {
@@ -3587,8 +3875,8 @@ mDNSlocal void SendQueries(mDNS *const m)
                             q->WakeOnResolveCount--;
                         }
 
-                        // use brackground traffic class if any included question requires it
-                        if (q->UseBackgroundTrafficClass)
+                        // use background traffic class if any included question requires it
+                        if (q->UseBackgroundTraffic)
                         {
                             useBackgroundTrafficClass = mDNStrue;
                         }
@@ -3598,24 +3886,62 @@ mDNSlocal void SendQueries(mDNS *const m)
 
             // Put probe questions in this packet
             for (ar = m->ResourceRecords; ar; ar=ar->next)
-                if (ar->SendRNow == intf->InterfaceID)
+            {
+                if (ar->SendRNow != intf->InterfaceID)
+                    continue;
+
+                // If interface is a P2P variant, verify that the probe should be sent over it.
+                if (!mDNSPlatformValidRecordForInterface(ar, intf->InterfaceID))
                 {
-                    mDNSBool ucast = (ar->ProbeCount >= DefaultProbeCountForTypeUnique-1) && m->CanReceiveUnicastOn5353;
+                    ar->SendRNow = (ar->resrec.InterfaceID) ? mDNSNULL : GetNextActiveInterfaceID(intf);
+                    ar->IncludeInProbe = mDNSfalse;
+                }
+                else
+                {
+                    mDNSBool ucast = (ar->ProbeCount >= DefaultProbeCountForTypeUnique-1) && m->CanReceiveUnicastOn5353 && intf->SupportsUnicastMDNSResponse;
                     mDNSu16 ucbit = (mDNSu16)(ucast ? kDNSQClass_UnicastResponse : 0);
                     const mDNSu8 *const limit = m->omsg.data + (m->omsg.h.numQuestions ? NormalMaxDNSMessageData : AbsoluteMaxDNSMessageData);
                     // We forecast: compressed name (2) type (2) class (2) TTL (4) rdlength (2) rdata (n)
                     mDNSu32 forecast = answerforecast + 12 + ar->resrec.rdestimate;
-                    mDNSu8 *newptr = putQuestion(&m->omsg, queryptr, limit - forecast, ar->resrec.name, kDNSQType_ANY, (mDNSu16)(ar->resrec.rrclass | ucbit));
-                    if (newptr)
+                    mDNSBool putProbe = mDNStrue;
+                    mDNSu16 qclass = ar->resrec.rrclass | ucbit;
+
+                    {// Determine if this probe question is already in packet's dns message
+                        const mDNSu8 *questionptr = m->omsg.data;
+                        DNSQuestion question;
+                        mDNSu16 n;
+                        for (n = 0; n < m->omsg.h.numQuestions && questionptr; n++)
+                        {
+                            questionptr = getQuestion(&m->omsg, questionptr, limit, mDNSInterface_Any, &question);
+                            if (questionptr && (question.qtype == kDNSQType_ANY) && (question.qclass == qclass) &&
+                                (question.qnamehash == ar->resrec.namehash) && SameDomainName(&question.qname, ar->resrec.name))
+                            {
+                                putProbe = mDNSfalse;  // set to false if already in message
+                                break;
+                            }
+                        }
+                    }
+
+                    if (putProbe)
                     {
-                        queryptr       = newptr;
-                        answerforecast = forecast;
+                        mDNSu8 *newptr = putQuestion(&m->omsg, queryptr, limit - forecast, ar->resrec.name, kDNSQType_ANY, qclass);
+                        if (newptr)
+                        {
+                            queryptr       = newptr;
+                            answerforecast = forecast;
+                            ar->SendRNow = (ar->resrec.InterfaceID) ? mDNSNULL : GetNextActiveInterfaceID(intf);
+                            ar->IncludeInProbe = mDNStrue;
+                            verbosedebugf("SendQueries:   Put Question %##s (%s) probecount %d InterfaceID= %d %d %d",
+                                      ar->resrec.name->c, DNSTypeName(ar->resrec.rrtype), ar->ProbeCount, ar->resrec.InterfaceID, ar->resrec.rdestimate, answerforecast);
+                        }
+                    }
+                    else
+                    {
                         ar->SendRNow = (ar->resrec.InterfaceID) ? mDNSNULL : GetNextActiveInterfaceID(intf);
                         ar->IncludeInProbe = mDNStrue;
-                        verbosedebugf("SendQueries:   Put Question %##s (%s) probecount %d",
-                                      ar->resrec.name->c, DNSTypeName(ar->resrec.rrtype), ar->ProbeCount);
                     }
                 }
+            }
         }
 
         // Put our known answer list (either new one from this question or questions, or remainder of old one from last time)
@@ -3655,24 +3981,6 @@ mDNSlocal void SendQueries(mDNS *const m)
             }
         }
 
-        for (q = m->Questions; q; q = q->next)
-        {
-            if (q->AnonInfo && q->AnonInfo->SendNow == intf->InterfaceID)
-            {
-                mDNSu8 *newptr = PutResourceRecord(&m->omsg, queryptr, &m->omsg.h.numAuthorities, q->AnonInfo->nsec3RR);
-                if (newptr)
-                {
-                    debugf("SendQueries: Added NSEC3 record %s on InterfaceID %p", RRDisplayString(m, q->AnonInfo->nsec3RR), intf->InterfaceID);
-                    queryptr = newptr;
-                }
-                else
-                {
-                    LogMsg("SendQueries: ERROR!! Cannot add NSEC3 record %s on InterfaceID %p", RRDisplayString(m, q->AnonInfo->nsec3RR), intf->InterfaceID);
-                }
-                q->AnonInfo->SendNow = mDNSNULL;
-            }
-        }
-
         if (queryptr > m->omsg.data)
         {
             // If we have data to send, add OWNER/TRACER/OWNER+TRACER option if necessary, then send packet
@@ -3681,7 +3989,7 @@ mDNSlocal void SendQueries(mDNS *const m)
                 AuthRecord opt;
                 mDNS_SetupResourceRecord(&opt, mDNSNULL, mDNSInterface_Any, kDNSType_OPT, kStandardTTL, kDNSRecordTypeKnownUnique, AuthRecordAny, mDNSNULL, mDNSNULL);
                 opt.resrec.rrclass    = NormalMaxDNSMessageData;
-                opt.resrec.rdlength   = sizeof(rdataOPT); 
+                opt.resrec.rdlength   = sizeof(rdataOPT);
                 opt.resrec.rdestimate = sizeof(rdataOPT);
                 if (OwnerRecordSpace && TraceRecordSpace)
                 {
@@ -3698,31 +4006,30 @@ mDNSlocal void SendQueries(mDNS *const m)
                 {
                     SetupTracerOpt(m, &opt.resrec.rdata->u.opt[0]);
                 }
-                LogInfo("SendQueries putting %s %s: %s %s", OwnerRecordSpace ? "OWNER" : "", TraceRecordSpace ? "TRACER" : "", intf->ifname, ARDisplayString(m, &opt));
                 queryptr = PutResourceRecordTTLWithLimit(&m->omsg, queryptr, &m->omsg.h.numAdditionals,
                                                          &opt.resrec, opt.resrec.rroriginalttl, m->omsg.data + AbsoluteMaxDNSMessageData);
                 if (!queryptr)
-                { 
+                {
                     LogMsg("SendQueries: How did we fail to have space for %s %s OPT record (%d/%d/%d/%d) %s", OwnerRecordSpace ? "OWNER" : "", TraceRecordSpace ? "TRACER" : "",
                            m->omsg.h.numQuestions, m->omsg.h.numAnswers, m->omsg.h.numAuthorities, m->omsg.h.numAdditionals, ARDisplayString(m, &opt));
                 }
                 if (queryptr > m->omsg.data + NormalMaxDNSMessageData)
                 {
                     if (m->omsg.h.numQuestions != 1 || m->omsg.h.numAnswers != 0 || m->omsg.h.numAuthorities != 1 || m->omsg.h.numAdditionals != 1)
-                        LogMsg("SendQueries: Why did we generate oversized packet with %s %s OPT record %p %p %p (%d/%d/%d/%d) %s", OwnerRecordSpace ? "OWNER" : "", 
-                                TraceRecordSpace ? "TRACER" : "", m->omsg.data, m->omsg.data + NormalMaxDNSMessageData, queryptr, m->omsg.h.numQuestions, m->omsg.h.numAnswers, 
+                        LogMsg("SendQueries: Why did we generate oversized packet with %s %s OPT record %p %p %p (%d/%d/%d/%d) %s", OwnerRecordSpace ? "OWNER" : "",
+                                TraceRecordSpace ? "TRACER" : "", m->omsg.data, m->omsg.data + NormalMaxDNSMessageData, queryptr, m->omsg.h.numQuestions, m->omsg.h.numAnswers,
                                 m->omsg.h.numAuthorities, m->omsg.h.numAdditionals, ARDisplayString(m, &opt));
                 }
             }
 
             if ((m->omsg.h.flags.b[0] & kDNSFlag0_TC) && m->omsg.h.numQuestions > 1)
                 LogMsg("SendQueries: Should not have more than one question (%d) in a truncated packet", m->omsg.h.numQuestions);
-            debugf("SendQueries:   Sending %d Question%s %d Answer%s %d Update%s on %p",
+            debugf("SendQueries:   Sending %d Question%s %d Answer%s %d Update%s on %d (%s)",
                    m->omsg.h.numQuestions,   m->omsg.h.numQuestions   == 1 ? "" : "s",
                    m->omsg.h.numAnswers,     m->omsg.h.numAnswers     == 1 ? "" : "s",
-                   m->omsg.h.numAuthorities, m->omsg.h.numAuthorities == 1 ? "" : "s", intf->InterfaceID);
-            if (intf->IPv4Available) mDNSSendDNSMessage(m, &m->omsg, queryptr, intf->InterfaceID, mDNSNULL, &AllDNSLinkGroup_v4, MulticastDNSPort, mDNSNULL, mDNSNULL, useBackgroundTrafficClass);
-            if (intf->IPv6Available) mDNSSendDNSMessage(m, &m->omsg, queryptr, intf->InterfaceID, mDNSNULL, &AllDNSLinkGroup_v6, MulticastDNSPort, mDNSNULL, mDNSNULL, useBackgroundTrafficClass);
+                   m->omsg.h.numAuthorities, m->omsg.h.numAuthorities == 1 ? "" : "s", IIDPrintable(intf->InterfaceID), intf->ifname);
+            if (intf->IPv4Available) mDNSSendDNSMessage(m, &m->omsg, queryptr, intf->InterfaceID, mDNSNULL, mDNSNULL, &AllDNSLinkGroup_v4, MulticastDNSPort, mDNSNULL, useBackgroundTrafficClass);
+            if (intf->IPv6Available) mDNSSendDNSMessage(m, &m->omsg, queryptr, intf->InterfaceID, mDNSNULL, mDNSNULL, &AllDNSLinkGroup_v6, MulticastDNSPort, mDNSNULL, useBackgroundTrafficClass);
             if (!m->SuppressSending) m->SuppressSending = NonZeroTime(m->timenow + (mDNSPlatformOneSecond+9)/10);
             if (++pktcount >= 1000)
             { LogMsg("SendQueries exceeded loop limit %d: giving up", pktcount); break; }
@@ -3747,7 +4054,8 @@ mDNSlocal void SendQueries(mDNS *const m)
         if (ar->SendRNow)
         {
             if (ar->ARType != AuthRecordLocalOnly && ar->ARType != AuthRecordP2P)
-                LogMsg("SendQueries: No active interface %p to send probe: %p %s", ar->SendRNow, ar->resrec.InterfaceID, ARDisplayString(m, ar));
+                LogInfo("SendQueries: No active interface %d to send probe: %d %s",
+                        IIDPrintable(ar->SendRNow), IIDPrintable(ar->resrec.InterfaceID), ARDisplayString(m, ar));
             ar->SendRNow = mDNSNULL;
         }
 
@@ -3778,16 +4086,21 @@ mDNSlocal void SendQueries(mDNS *const m)
         {
             DNSQuestion *x;
             for (x = m->NewQuestions; x; x=x->next) if (x == q) break;  // Check if this question is a NewQuestion
-            LogMsg("SendQueries: No active interface %p to send %s question: %p %##s (%s)", q->SendQNow, x ? "new" : "old", q->InterfaceID, q->qname.c, DNSTypeName(q->qtype));
+            // There will not be an active interface for questions applied to mDNSInterface_BLE
+            // so don't log the warning in that case.
+            if (q->InterfaceID != mDNSInterface_BLE)
+                LogInfo("SendQueries: No active interface %d to send %s question: %d %##s (%s)",
+                        IIDPrintable(q->SendQNow), x ? "new" : "old", IIDPrintable(q->InterfaceID), q->qname.c, DNSTypeName(q->qtype));
             q->SendQNow = mDNSNULL;
         }
         q->CachedAnswerNeedsUpdate = mDNSfalse;
     }
 }
 
-mDNSlocal void SendWakeup(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSEthAddr *EthAddr, mDNSOpaque48 *password)
+mDNSlocal void SendWakeup(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSEthAddr *EthAddr, mDNSOpaque48 *password, mDNSBool unicastOnly)
 {
     int i, j;
+
     mDNSu8 *ptr = m->omsg.data;
     NetworkInterfaceInfo *intf = FirstInterfaceForID(m, InterfaceID);
     if (!intf) { LogMsg("SendARP: No interface with InterfaceID %p found", InterfaceID); return; }
@@ -3813,13 +4126,16 @@ mDNSlocal void SendWakeup(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSEthAdd
 
     mDNSPlatformSendRawPacket(m->omsg.data, ptr, InterfaceID);
 
-    // For Ethernet switches that don't flood-foward packets with unknown unicast destination MAC addresses,
-    // broadcast is the only reliable way to get a wakeup packet to the intended target machine.
-    // For 802.11 WPA networks, where a sleeping target machine may have missed a broadcast/multicast
-    // key rotation, unicast is the only way to get a wakeup packet to the intended target machine.
-    // So, we send one of each, unicast first, then broadcast second.
-    for (i=0; i<6; i++) m->omsg.data[i] = 0xFF;
-    mDNSPlatformSendRawPacket(m->omsg.data, ptr, InterfaceID);
+    if (!unicastOnly)
+    {
+        // For Ethernet switches that don't flood-foward packets with unknown unicast destination MAC addresses,
+        // broadcast is the only reliable way to get a wakeup packet to the intended target machine.
+        // For 802.11 WPA networks, where a sleeping target machine may have missed a broadcast/multicast
+        // key rotation, unicast is the only way to get a wakeup packet to the intended target machine.
+        // So, we send one of each, unicast first, then broadcast second.
+        for (i=0; i<6; i++) m->omsg.data[i] = 0xFF;
+        mDNSPlatformSendRawPacket(m->omsg.data, ptr, InterfaceID);
+    }
 }
 
 // ***************************************************************************
@@ -3844,6 +4160,44 @@ mDNSlocal void ResetQuestionState(mDNS *const m, DNSQuestion *q)
     debugf("ResetQuestionState: Set MaxQuestionInterval for %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
 }
 
+mDNSlocal void AdjustUnansweredQueries(mDNS *const m, CacheRecord *const rr)
+{
+    const mDNSs32 expireTime = RRExpireTime(rr);
+    const mDNSu32 interval = TicksTTL(rr) / 20; // Calculate 5% of the cache record's TTL.
+    mDNSu32 rem;
+
+    // If the record is expired or UnansweredQueries is already at the max, then return early.
+    if (((m->timenow - expireTime) >= 0) || (rr->UnansweredQueries >= MaxUnansweredQueries)) return;
+
+    if (interval == 0)
+    {
+        LogInfo("AdjustUnansweredQueries: WARNING: unusually small TTL (%d ticks) for %s", TicksTTL(rr), CRDisplayString(m, rr));
+        return;
+    }
+
+    // Calculate the number of whole 5% TTL intervals between now and expiration time.
+    rem = ((mDNSu32)(expireTime - m->timenow)) / interval;
+
+    // Calculate the expected number of remaining refresher queries.
+    // Refresher queries are sent at the start of the last MaxUnansweredQueries intervals.
+    if (rem > MaxUnansweredQueries) rem = MaxUnansweredQueries;
+
+    // If the current number of remaining refresher queries is greater than expected, then at least one refresher query time
+    // was missed. This can happen if the cache record didn't have an active question during any of the times at which
+    // refresher queries would have been sent if the cache record did have an active question. The cache record's
+    // UnansweredQueries count needs to be adjusted to avoid a burst of refresher queries being sent in an attempt to make up
+    // for lost time. UnansweredQueries is set to the number of queries that would have been sent had the cache record had an
+    // active question from the 80% point of its lifetime up to now, with one exception: if the number of expected remaining
+    // refresher queries is zero (because timenow is beyond the 95% point), then UnansweredQueries is set to
+    // MaxUnansweredQueries - 1 so that at least one refresher query is sent before the cache record expires.
+	// Note: The cast is safe because rem is never greater than MaxUnansweredQueries; the comparison has to be signed.
+    if ((MaxUnansweredQueries - rr->UnansweredQueries) > (mDNSs32)rem)
+    {
+        if (rem == 0) rem++;
+        rr->UnansweredQueries = (mDNSu8)(MaxUnansweredQueries - rem);
+    }
+}
+
 // Note: AnswerCurrentQuestionWithResourceRecord can call a user callback, which may change the record list and/or question list.
 // Any code walking either list must use the m->CurrentQuestion (and possibly m->CurrentRecord) mechanism to protect against this.
 // In fact, to enforce this, the routine will *only* answer the question currently pointed to by m->CurrentQuestion,
@@ -3851,10 +4205,11 @@ mDNSlocal void ResetQuestionState(mDNS *const m, DNSQuestion *q)
 mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheRecord *const rr, const QC_result AddRecord)
 {
     DNSQuestion *const q = m->CurrentQuestion;
-    mDNSBool followcname = FollowCNAME(q, &rr->resrec, AddRecord);
+    const mDNSBool followcname = FollowCNAME(q, &rr->resrec, AddRecord);
 
-    verbosedebugf("AnswerCurrentQuestionWithResourceRecord:%4lu %s TTL %d %s",
-                  q->CurrentAnswers, AddRecord ? "Add" : "Rmv", rr->resrec.rroriginalttl, CRDisplayString(m, rr));
+    verbosedebugf("AnswerCurrentQuestionWithResourceRecord:%4lu %s (%s) TTL %d %s",
+                  q->CurrentAnswers, AddRecord ? "Add" : "Rmv", MortalityDisplayString(rr->resrec.mortality),
+                  rr->resrec.rroriginalttl, CRDisplayString(m, rr));
 
     // When the response for the question was validated, the entire rrset was validated. If we deliver
     // a RMV for a single record in the rrset, we invalidate the response. If we deliver another add
@@ -3887,7 +4242,7 @@ mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheReco
         return;
     }
 
-    if (QuerySuppressed(q))
+    if (q->Suppressed && (AddRecord != QC_suppressed))
     {
         // If the query is suppressed, then we don't want to answer from the cache. But if this query is
         // supposed to time out, we still want to callback the clients. We do this only for TimeoutQuestions
@@ -3895,18 +4250,50 @@ mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheReco
         if (!q->TimeoutQuestion || rr->resrec.RecordType != kDNSRecordTypePacketNegative || (m->timenow - q->StopTime < 0))
             return;
     }
+    
+    //  Set the record to immortal if appropriate
+    if (AddRecord == QC_add && Question_uDNS(q) && rr->resrec.RecordType != kDNSRecordTypePacketNegative &&
+        q->allowExpired != AllowExpired_None && rr->resrec.mortality == Mortality_Mortal ) rr->resrec.mortality = Mortality_Immortal; // Update a non-expired cache record to immortal if appropriate
+    
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+    if ((AddRecord == QC_add) && Question_uDNS(q) && !followcname)
+    {
+        const domainname *  queryName;
+        mDNSu32             responseLatencyMs;
+        mDNSBool            isForCellular;
 
+        queryName = q->metrics.originalQName ? q->metrics.originalQName : &q->qname;
+        isForCellular = (q->qDNSServer && q->qDNSServer->isCell);
+        if (!q->metrics.answered)
+        {
+            if (q->metrics.querySendCount > 0)
+            {
+                responseLatencyMs = ((m->timenow - q->metrics.firstQueryTime) * 1000) / mDNSPlatformOneSecond;
+            }
+            else
+            {
+                responseLatencyMs = 0;
+            }
+
+            MetricsUpdateDNSQueryStats(queryName, q->qtype, &rr->resrec, q->metrics.querySendCount, q->metrics.expiredAnswerState, q->metrics.dnsOverTCPState, responseLatencyMs, isForCellular);
+            q->metrics.answered = mDNStrue;
+        }
+    }
+#endif
     // Note: Use caution here. In the case of records with rr->DelayDelivery set, AnswerCurrentQuestionWithResourceRecord(... mDNStrue)
     // may be called twice, once when the record is received, and again when it's time to notify local clients.
     // If any counters or similar are added here, care must be taken to ensure that they are not double-incremented by this.
 
-    rr->LastUsed = m->timenow;
-    if (AddRecord == QC_add && !q->DuplicateOf && rr->CRActiveQuestion != q)
+    if (AddRecord == QC_add && !q->DuplicateOf && rr->CRActiveQuestion != q && rr->resrec.mortality != Mortality_Ghost)
     {
-        if (!rr->CRActiveQuestion) m->rrcache_active++; // If not previously active, increment rrcache_active count
         debugf("AnswerCurrentQuestionWithResourceRecord: Updating CRActiveQuestion from %p to %p for cache record %s, CurrentAnswer %d",
                rr->CRActiveQuestion, q, CRDisplayString(m,rr), q->CurrentAnswers);
-        rr->CRActiveQuestion = q;                       // We know q is non-null
+        if (!rr->CRActiveQuestion)
+        {
+            m->rrcache_active++;            // If not previously active, increment rrcache_active count
+            AdjustUnansweredQueries(m, rr); // Adjust UnansweredQueries in case the record missed out on refresher queries
+        }
+        rr->CRActiveQuestion = q;           // We know q is non-null
         SetNextCacheCheckTimeForRecord(m, rr);
     }
 
@@ -3926,6 +4313,35 @@ mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheReco
 
     if (rr->DelayDelivery) return;      // We'll come back later when CacheRecordDeferredAdd() calls us
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+    // If DNS64StateMachine() returns true, then the question was restarted as a different question, so return.
+    if (!mDNSOpaque16IsZero(q->TargetQID) && DNS64StateMachine(m, q, &rr->resrec, AddRecord)) return;
+#endif
+
+#ifdef USE_LIBIDN
+    if (rr->resrec.RecordType == kDNSRecordTypePacketNegative)  // If negative answer, check if we need to try Punycode conversion
+    {
+        domainname newname;
+        if (PerformNextPunycodeConversion(q, &newname))         // Itertative Punycode conversion succeeded, so reissue question with new name
+        {
+            UDPSocket *const sock = q->LocalSocket;             // Save old socket and transaction ID
+            const mDNSOpaque16 id = q->TargetQID;
+            q->LocalSocket = mDNSNULL;
+            mDNS_StopQuery_internal(m, q);                      // Stop old query
+            AssignDomainName(&q->qname, &newname);              // Update qname
+            q->qnamehash = DomainNameHashValue(&q->qname);      // and namehash
+            mDNS_StartQuery_internal(m, q);                     // Start new query
+
+            if (sock)                                           // Transplant saved socket, if appropriate
+            {
+                if (q->DuplicateOf) mDNSPlatformUDPClose(sock);
+                else { q->LocalSocket = sock; q->TargetQID = id; }
+            }
+            return;                                             // All done for now; wait until we get the next answer
+        }
+    }
+#endif // USE_LIBIDN
+
     // Only deliver negative answers if client has explicitly requested them except when we are forcing a negative response
     // for the purpose of retrying search domains/timeout OR the question is suppressed
     if (rr->resrec.RecordType == kDNSRecordTypePacketNegative || (q->qtype != kDNSType_NSEC && RRAssertsNonexistence(&rr->resrec, q->qtype)))
@@ -3942,9 +4358,25 @@ mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheReco
             q->QuestionCallback(m, q, &neg.resrec, AddRecord);
         }
         else
-            q->QuestionCallback(m, q, &rr->resrec, AddRecord);
+        {
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+            if (DNS64ShouldAnswerQuestion(q, &rr->resrec))
+            {
+                DNS64AnswerCurrentQuestion(m, &rr->resrec, AddRecord);
+            }
+            else
+#endif
+            {
+                q->QuestionCallback(m, q, &rr->resrec, AddRecord);
+            }
+        }
         mDNS_ReclaimLockAfterCallback();    // Decrement mDNS_reentrancy to block mDNS API calls again
     }
+    // Note: Proceed with caution after this point because client callback function
+    // invoked above is allowed to do anything, such as starting/stopping queries
+    // (including this one itself, or the next or previous query in the linked list),
+    // registering/deregistering records, starting/stopping NAT traversals, etc.
+
     // If this is an "Add" operation and this question needs validation, validate the response.
     // In the case of negative responses, extra care should be taken. Negative cache records are
     // used for many purposes. For example,
@@ -3970,19 +4402,26 @@ mDNSexport void AnswerCurrentQuestionWithResourceRecord(mDNS *const m, CacheReco
         return;
     }
 
-    // Note: Proceed with caution here because client callback function is allowed to do anything,
-    // including starting/stopping queries, registering/deregistering records, etc.
-    //
-    // If we get a CNAME back while we are validating the response (i.e., CNAME for DS, DNSKEY, RRSIG),
-    // don't follow them. If it is a ValidationRequired question, wait for the CNAME to be validated
-    // first before following it
-    if (!ValidatingQuestion(q) && followcname && m->CurrentQuestion == q)
-        AnswerQuestionByFollowingCNAME(m, q, &rr->resrec);
+    if ((m->CurrentQuestion == q) && !ValidatingQuestion(q))
+    {
+        // If we get a CNAME back while we are validating the response (i.e., CNAME for DS, DNSKEY, RRSIG),
+        // don't follow them. If it is a ValidationRequired question, wait for the CNAME to be validated
+        // first before following it
+        if (followcname)  AnswerQuestionByFollowingCNAME(m, q, &rr->resrec);
+        
+        // If we are returning expired RRs, then remember the first expired qname we we can start the query again
+        if (rr->resrec.mortality == Mortality_Ghost && !q->firstExpiredQname.c[0] && (q->allowExpired == AllowExpired_AllowExpiredAnswers) && rr->resrec.RecordType != kDNSRecordTypePacketNegative)
+        {
+            debugf("AnswerCurrentQuestionWithResourceRecord: Keeping track of domain for expired RR %s for question %p", CRDisplayString(m,rr), q);
+            // Note: question->qname is already changed at this point if following a CNAME
+            AssignDomainName(&q->firstExpiredQname, rr->resrec.name);           // Update firstExpiredQname
+        }
+    }
 }
 
-mDNSlocal void CacheRecordDeferredAdd(mDNS *const m, CacheRecord *rr)
+mDNSlocal void CacheRecordDeferredAdd(mDNS *const m, CacheRecord *cr)
 {
-    rr->DelayDelivery = 0;
+    cr->DelayDelivery = 0;
     if (m->CurrentQuestion)
         LogMsg("CacheRecordDeferredAdd ERROR m->CurrentQuestion already set: %##s (%s)",
                m->CurrentQuestion->qname.c, DNSTypeName(m->CurrentQuestion->qtype));
@@ -3990,64 +4429,25 @@ mDNSlocal void CacheRecordDeferredAdd(mDNS *const m, CacheRecord *rr)
     while (m->CurrentQuestion && m->CurrentQuestion != m->NewQuestions)
     {
         DNSQuestion *q = m->CurrentQuestion;
-        if (ResourceRecordAnswersQuestion(&rr->resrec, q))
-            AnswerCurrentQuestionWithResourceRecord(m, rr, QC_add);
+        if (CacheRecordAnswersQuestion(cr, q))
+            AnswerCurrentQuestionWithResourceRecord(m, cr, QC_add);
         if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
             m->CurrentQuestion = q->next;
     }
     m->CurrentQuestion = mDNSNULL;
 }
 
-mDNSlocal mDNSs32 CheckForSoonToExpireRecords(mDNS *const m, const domainname *const name, const mDNSu32 namehash, const mDNSu32 slot, mDNSBool *purge)
+mDNSlocal mDNSs32 CheckForSoonToExpireRecords(mDNS *const m, const domainname *const name, const mDNSu32 namehash)
 {
-    const mDNSs32 threshhold = m->timenow + mDNSPlatformOneSecond;  // See if there are any records expiring within one second
+    const mDNSs32 threshold = m->timenow + mDNSPlatformOneSecond;  // See if there are any records expiring within one second
     const mDNSs32 start      = m->timenow - 0x10000000;
     mDNSs32 delay = start;
-    CacheGroup *cg = CacheGroupForName(m, slot, namehash, name);
+    CacheGroup *cg = CacheGroupForName(m, namehash, name);
     const CacheRecord *rr;
 
-    if (purge)
-        *purge = mDNSfalse;
     for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
     {
-        // If there are records that will expire soon, there are cases that need delayed
-        // delivery of events:
-        //
-        // 1) A new cache entry is about to be added as a replacement. The caller needs to
-        //    deliver a RMV (for the current old entry) followed by ADD (for the new entry).
-        //    It needs to schedule the timer for the next cache expiry (ScheduleNextCacheCheckTime),
-        //    so that the cache entry can be purged (purging causes the RMV followed by ADD)
-        //   
-        // 2) A new question is about to be answered and the caller needs to know whether it's
-        //    scheduling should be delayed so that the question is not answered with this record.
-        //    Instead of delivering an ADD (old entry) followed by RMV (old entry) and another ADD
-        //    (new entry), a single ADD can be delivered by delaying the scheduling of the question
-        //    immediately.
-        //
-        // When the unicast cache record is created, it's TTL has been extended beyond its value
-        // given in the resource record (See RRAdjustTTL). If it is in the "extended" time, the
-        // cache is already expired and we set "purge" to indicate that. When "purge" is set, the
-        // return value of the function should be ignored by the callers.
-        //
-        // Note: For case (1), "purge" argument is NULL and hence the following checks are skipped.
-        // It is okay to skip in that case because the cache records have been set to expire almost
-        // immediately and the extended time does not apply.
-        //
-        // Also, if there is already an active question we don't try to optimize as purging the cache
-        // would end up delivering RMV for the active question and hence we avoid that.
-
-        if (purge && !rr->resrec.InterfaceID && !rr->CRActiveQuestion && rr->resrec.rroriginalttl)
-        {
-            mDNSu32 uTTL = RRUnadjustedTTL(rr->resrec.rroriginalttl);
-            if (m->timenow - (rr->TimeRcvd + ((mDNSs32)uTTL * mDNSPlatformOneSecond)) >= 0)
-            {
-                LogInfo("CheckForSoonToExpireRecords: %s: rroriginalttl %u, unadjustedTTL %u, currentTTL %u",
-                    CRDisplayString(m, rr), rr->resrec.rroriginalttl, uTTL, (m->timenow - rr->TimeRcvd)/mDNSPlatformOneSecond);
-                *purge = mDNStrue;
-                continue;
-            }
-        }
-        if (threshhold - RRExpireTime(rr) >= 0)     // If we have records about to expire within a second
+        if (threshold - RRExpireTime(rr) >= 0)     // If we have records about to expire within a second
         {
             if (delay - RRExpireTime(rr) < 0)       // then delay until after they've been deleted
                 delay = RRExpireTime(rr);
@@ -4067,7 +4467,7 @@ mDNSlocal mDNSs32 CheckForSoonToExpireRecords(mDNS *const m, const domainname *c
 // Note: CacheRecordAdd calls AnswerCurrentQuestionWithResourceRecord which can call a user callback,
 // which may change the record list and/or question list.
 // Any code walking either list must use the CurrentQuestion and/or CurrentRecord mechanism to protect against this.
-mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *rr)
+mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *cr)
 {
     DNSQuestion *q;
 
@@ -4075,7 +4475,7 @@ mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *rr)
     // counters here we'll end up double-incrementing them when we do it again in AnswerNewQuestion().
     for (q = m->Questions; q && q != m->NewQuestions; q=q->next)
     {
-        if (ResourceRecordAnswersQuestion(&rr->resrec, q))
+        if (CacheRecordAnswersQuestion(cr, q))
         {
             // If this question is one that's actively sending queries, and it's received ten answers within one
             // second of sending the last query packet, then that indicates some radical network topology change,
@@ -4096,28 +4496,28 @@ mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *rr)
                     SetNextQueryTime(m,q);
                 }
             }
-            verbosedebugf("CacheRecordAdd %p %##s (%s) %lu %#a:%d question %p", rr, rr->resrec.name->c,
-                          DNSTypeName(rr->resrec.rrtype), rr->resrec.rroriginalttl, rr->resrec.rDNSServer ?
-                          &rr->resrec.rDNSServer->addr : mDNSNULL, mDNSVal16(rr->resrec.rDNSServer ?
-                                                                             rr->resrec.rDNSServer->port : zeroIPPort), q);
+            verbosedebugf("CacheRecordAdd %p %##s (%s) %lu %#a:%d question %p", cr, cr->resrec.name->c,
+                          DNSTypeName(cr->resrec.rrtype), cr->resrec.rroriginalttl, cr->resrec.rDNSServer ?
+                          &cr->resrec.rDNSServer->addr : mDNSNULL, mDNSVal16(cr->resrec.rDNSServer ?
+                                                                             cr->resrec.rDNSServer->port : zeroIPPort), q);
             q->CurrentAnswers++;
 
             q->unansweredQueries = 0;
-            if (rr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers++;
-            if (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers++;
+            if (cr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers++;
+            if (cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers++;
             if (q->CurrentAnswers > 4000)
             {
                 static int msgcount = 0;
                 if (msgcount++ < 10)
                     LogMsg("CacheRecordAdd: %##s (%s) has %d answers; shedding records to resist DOS attack",
                            q->qname.c, DNSTypeName(q->qtype), q->CurrentAnswers);
-                rr->resrec.rroriginalttl = 0;
-                rr->UnansweredQueries = MaxUnansweredQueries;
+                cr->resrec.rroriginalttl = 0;
+                cr->UnansweredQueries = MaxUnansweredQueries;
             }
         }
     }
 
-    if (!rr->DelayDelivery)
+    if (!cr->DelayDelivery)
     {
         if (m->CurrentQuestion)
             LogMsg("CacheRecordAdd ERROR m->CurrentQuestion already set: %##s (%s)", m->CurrentQuestion->qname.c, DNSTypeName(m->CurrentQuestion->qtype));
@@ -4125,15 +4525,15 @@ mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *rr)
         while (m->CurrentQuestion && m->CurrentQuestion != m->NewQuestions)
         {
             q = m->CurrentQuestion;
-            if (ResourceRecordAnswersQuestion(&rr->resrec, q))
-                AnswerCurrentQuestionWithResourceRecord(m, rr, QC_add);
+            if (CacheRecordAnswersQuestion(cr, q))
+                AnswerCurrentQuestionWithResourceRecord(m, cr, QC_add);
             if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
                 m->CurrentQuestion = q->next;
         }
         m->CurrentQuestion = mDNSNULL;
     }
 
-    SetNextCacheCheckTimeForRecord(m, rr);
+    SetNextCacheCheckTimeForRecord(m, cr);
 }
 
 // NoCacheAnswer is only called from mDNSCoreReceiveResponse, *never* directly as a result of a client API call.
@@ -4146,7 +4546,7 @@ mDNSlocal void CacheRecordAdd(mDNS *const m, CacheRecord *rr)
 // Note: NoCacheAnswer calls AnswerCurrentQuestionWithResourceRecord which can call a user callback,
 // which may change the record list and/or question list.
 // Any code walking either list must use the CurrentQuestion and/or CurrentRecord mechanism to protect against this.
-mDNSlocal void NoCacheAnswer(mDNS *const m, CacheRecord *rr)
+mDNSlocal void NoCacheAnswer(mDNS *const m, CacheRecord *cr)
 {
     LogMsg("No cache space: Delivering non-cached result for %##s", m->rec.r.resrec.name->c);
     if (m->CurrentQuestion)
@@ -4157,8 +4557,8 @@ mDNSlocal void NoCacheAnswer(mDNS *const m, CacheRecord *rr)
     while (m->CurrentQuestion)
     {
         DNSQuestion *q = m->CurrentQuestion;
-        if (ResourceRecordAnswersQuestion(&rr->resrec, q))
-            AnswerCurrentQuestionWithResourceRecord(m, rr, QC_addnocache);  // QC_addnocache means "don't expect remove events for this"
+        if (CacheRecordAnswersQuestion(cr, q))
+            AnswerCurrentQuestionWithResourceRecord(m, cr, QC_addnocache);  // QC_addnocache means "don't expect remove events for this"
         if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
             m->CurrentQuestion = q->next;
     }
@@ -4169,12 +4569,12 @@ mDNSlocal void NoCacheAnswer(mDNS *const m, CacheRecord *rr)
 // Note that CacheRecordRmv is *only* called for records that are referenced by at least one active question.
 // If new questions are created as a result of invoking client callbacks, they will be added to
 // the end of the question list, and m->NewQuestions will be set to indicate the first new question.
-// rr is an existing cache CacheRecord that just expired and is being deleted
+// cr is an existing cache CacheRecord that just expired and is being deleted
 // (kDNSRecordTypePacketAns/PacketAnsUnique/PacketAdd/PacketAddUnique).
 // Note: CacheRecordRmv calls AnswerCurrentQuestionWithResourceRecord which can call a user callback,
 // which may change the record list and/or question list.
 // Any code walking either list must use the CurrentQuestion and/or CurrentRecord mechanism to protect against this.
-mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *rr)
+mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *cr)
 {
     if (m->CurrentQuestion)
         LogMsg("CacheRecordRmv ERROR m->CurrentQuestion already set: %##s (%s)",
@@ -4190,9 +4590,10 @@ mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *rr)
         // response. A cache may be present that answers this question e.g., cache entry generated
         // before the question became suppressed. We need to skip the suppressed questions here as
         // the RMV event has already been generated.
-        if (!QuerySuppressed(q) && ResourceRecordAnswersQuestion(&rr->resrec, q))
+        if (!q->Suppressed && CacheRecordAnswersQuestion(cr, q) &&
+            (q->allowExpired == AllowExpired_None || cr->resrec.mortality == Mortality_Mortal))
         {
-            verbosedebugf("CacheRecordRmv %p %s", rr, CRDisplayString(m, rr));
+            verbosedebugf("CacheRecordRmv %p %s", cr, CRDisplayString(m, cr));
             q->FlappingInterface1 = mDNSNULL;
             q->FlappingInterface2 = mDNSNULL;
 
@@ -4203,8 +4604,8 @@ mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *rr)
             else
             {
                 q->CurrentAnswers--;
-                if (rr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers--;
-                if (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers--;
+                if (cr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers--;
+                if (cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers--;
             }
 
             // If we have dropped below the answer threshold for this mDNS question,
@@ -4217,15 +4618,15 @@ mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *rr)
                 LogInfo("CacheRecordRmv: (%s) %##s dropped below threshold of %d answers",
                     DNSTypeName(q->qtype), q->qname.c, q->BrowseThreshold);
             }
-            if (rr->resrec.rdata->MaxRDLength) // Never generate "remove" events for negative results
+            if (cr->resrec.rdata->MaxRDLength) // Never generate "remove" events for negative results
             {
-                if (q->CurrentAnswers == 0)
+                if ((q->CurrentAnswers == 0) && mDNSOpaque16IsZero(q->TargetQID))
                 {
                     LogInfo("CacheRecordRmv: Last answer for %##s (%s) expired from cache; will reconfirm antecedents",
                             q->qname.c, DNSTypeName(q->qtype));
-                    ReconfirmAntecedents(m, &q->qname, q->qnamehash, 0);
+                    ReconfirmAntecedents(m, &q->qname, q->qnamehash, cr->resrec.InterfaceID, 0);
                 }
-                AnswerCurrentQuestionWithResourceRecord(m, rr, QC_rmv);
+                AnswerCurrentQuestionWithResourceRecord(m, cr, QC_rmv);
             }
         }
         if (m->CurrentQuestion == q)    // If m->CurrentQuestion was not auto-advanced, do it ourselves now
@@ -4236,7 +4637,7 @@ mDNSlocal void CacheRecordRmv(mDNS *const m, CacheRecord *rr)
 
 mDNSlocal void ReleaseCacheEntity(mDNS *const m, CacheEntity *e)
 {
-#if APPLE_OSX_mDNSResponder && MACOSX_MDNS_MALLOC_DEBUGGING >= 1
+#if MDNS_MALLOC_DEBUGGING >= 1
     unsigned int i;
     for (i=0; i<sizeof(*e); i++) ((char*)e)[i] = 0xFF;
 #endif
@@ -4252,7 +4653,7 @@ mDNSlocal void ReleaseCacheGroup(mDNS *const m, CacheGroup **cp)
     if ((*cp)->rrcache_tail != &(*cp)->members)
         LogMsg("ERROR: (*cp)->members == mDNSNULL but (*cp)->rrcache_tail != &(*cp)->members)");
     //if ((*cp)->name != (domainname*)((*cp)->namestorage))
-    //	LogMsg("ReleaseCacheGroup: %##s, %p %p", (*cp)->name->c, (*cp)->name, (domainname*)((*cp)->namestorage));
+    //  LogMsg("ReleaseCacheGroup: %##s, %p %p", (*cp)->name->c, (*cp)->name, (domainname*)((*cp)->namestorage));
     if ((*cp)->name != (domainname*)((*cp)->namestorage)) mDNSPlatformMemFree((*cp)->name);
     (*cp)->name = mDNSNULL;
     *cp = (*cp)->next;          // Cut record from list
@@ -4292,14 +4693,13 @@ mDNSlocal void ReleaseAdditionalCacheRecords(mDNS *const m, CacheRecord **rp)
 mDNSexport void ReleaseCacheRecord(mDNS *const m, CacheRecord *r)
 {
     CacheGroup *cg;
-    const mDNSu32 slot = HashSlot(r->resrec.name);
 
     //LogMsg("ReleaseCacheRecord: Releasing %s", CRDisplayString(m, r));
     if (r->resrec.rdata && r->resrec.rdata != (RData*)&r->smallrdatastorage) mDNSPlatformMemFree(r->resrec.rdata);
     r->resrec.rdata = mDNSNULL;
 
-    cg = CacheGroupForRecord(m, slot, &r->resrec);
-    
+    cg = CacheGroupForRecord(m, &r->resrec);
+
     if (!cg)
     {
         // It is okay to have this printed for NSEC/NSEC3s
@@ -4314,13 +4714,6 @@ mDNSexport void ReleaseCacheRecord(mDNS *const m, CacheRecord *r)
         mDNSPlatformMemFree((void *)r->resrec.name);
     }
     r->resrec.name = mDNSNULL;
-
-    if (r->resrec.AnonInfo)
-    {
-        debugf("ReleaseCacheRecord: freeing AnonInfo for %##s (%s)", r->resrec.name->c, DNSTypeName(r->resrec.rrtype));
-        FreeAnonInfo((void *)r->resrec.AnonInfo);
-    }
-    r->resrec.AnonInfo = mDNSNULL;
 
     if (!r->resrec.InterfaceID)
     {
@@ -4348,16 +4741,15 @@ mDNSlocal void CheckCacheExpiration(mDNS *const m, const mDNSu32 slot, CacheGrou
     while (*rp)
     {
         CacheRecord *const rr = *rp;
+        mDNSBool recordReleased = mDNSfalse;
         mDNSs32 event = RRExpireTime(rr);
         if (m->timenow - event >= 0)    // If expired, delete it
         {
-            *rp = rr->next;             // Cut it from the list
-            
-            verbosedebugf("CheckCacheExpiration: Deleting%7d %7d %p %s",
-                          m->timenow - rr->TimeRcvd, rr->resrec.rroriginalttl, rr->CRActiveQuestion, CRDisplayString(m, rr));
             if (rr->CRActiveQuestion)   // If this record has one or more active questions, tell them it's going away
             {
                 DNSQuestion *q = rr->CRActiveQuestion;
+                verbosedebugf("CheckCacheExpiration: Removing%7d %7d %p %s",
+                              m->timenow - rr->TimeRcvd, rr->resrec.rroriginalttl, rr->CRActiveQuestion, CRDisplayString(m, rr));
                 // When a cache record is about to expire, we expect to do four queries at 80-82%, 85-87%, 90-92% and
                 // then 95-97% of the TTL. If the DNS server does not respond, then we will remove the cache entry
                 // before we pick a new DNS server. As the question interval is set to MaxQuestionInterval, we may
@@ -4365,7 +4757,8 @@ mDNSlocal void CheckCacheExpiration(mDNS *const m, const mDNSu32 slot, CacheGrou
                 // a normal deferred ADD case, then AnswerCurrentQuestionWithResourceRecord will reset it to
                 // MaxQuestionInterval. If we have inactive questions referring to negative cache entries,
                 // don't ressurect them as they will deliver duplicate "No such Record" ADD events
-                if (!mDNSOpaque16IsZero(q->TargetQID) && !q->LongLived && ActiveQuestion(q))
+                if (((mDNSOpaque16IsZero(q->TargetQID) && (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask)) ||
+                     (!mDNSOpaque16IsZero(q->TargetQID) && !q->LongLived)) && ActiveQuestion(q))
                 {
                     q->ThisQInterval = InitialQuestionInterval;
                     q->LastQTime     = m->timenow - q->ThisQInterval;
@@ -4374,9 +4767,30 @@ mDNSlocal void CheckCacheExpiration(mDNS *const m, const mDNSu32 slot, CacheGrou
                 CacheRecordRmv(m, rr);
                 m->rrcache_active--;
             }
-            ReleaseCacheRecord(m, rr);
+            
+            event += MAX_GHOST_TIME;                                                    // Adjust so we can check for a ghost expiration
+            if (rr->resrec.mortality == Mortality_Mortal ||                             // Normal expired mortal record that needs released
+                (rr->resrec.mortality == Mortality_Ghost && m->timenow - event >= 0))   // A ghost record that expired more than MAX_GHOST_TIME ago
+            {   //  Release as normal
+                *rp = rr->next;                                     // Cut it from the list before ReleaseCacheRecord
+                verbosedebugf("CheckCacheExpiration: Deleting (%s)%7d %7d %p %s",
+                              MortalityDisplayString(rr->resrec.mortality),
+                              m->timenow - rr->TimeRcvd, rr->resrec.rroriginalttl, rr->CRActiveQuestion, CRDisplayString(m, rr));
+                ReleaseCacheRecord(m, rr);
+                recordReleased = mDNStrue;
+            }
+            else                                                    // An immortal record needs to become a ghost when it expires
+            {   // Don't release this entry
+                if (rr->resrec.mortality == Mortality_Immortal)
+                {
+                    rr->resrec.mortality = Mortality_Ghost;         // Expired immortal records become ghosts
+                    verbosedebugf("CheckCacheExpiration: NOT Deleting (%s)%7d %7d %p %s",
+                                  MortalityDisplayString(rr->resrec.mortality),
+                                  m->timenow - rr->TimeRcvd, rr->resrec.rroriginalttl, rr->CRActiveQuestion, CRDisplayString(m, rr));
+                }
+            }
         }
-        else                            // else, not expired; see if we need to query
+        else                                                        // else, not expired; see if we need to query
         {
             // If waiting to delay delivery, do nothing until then
             if (rr->DelayDelivery && rr->DelayDelivery - m->timenow > 0)
@@ -4395,10 +4809,14 @@ mDNSlocal void CheckCacheExpiration(mDNS *const m, const mDNSu32 slot, CacheGrou
                         m->NextScheduledQuery = m->timenow;
                         // After sending the query we'll increment UnansweredQueries and call SetNextCacheCheckTimeForRecord(),
                         // which will correctly update m->NextCacheCheck for us.
-                        event = m->timenow + 0x3FFFFFFF;
+                        event = m->timenow + FutureTime;
                     }
                 }
             }
+        }
+        
+        if (!recordReleased)  //  Schedule if we did not release the record
+        {
             verbosedebugf("CheckCacheExpiration:%6d %5d %s",
                           (event - m->timenow) / mDNSPlatformOneSecond, CacheCheckGracePeriod(rr), CRDisplayString(m, rr));
             if (m->rrcache_nextcheck[slot] - event > 0)
@@ -4420,15 +4838,13 @@ mDNSlocal void CheckCacheExpiration(mDNS *const m, const mDNSu32 slot, CacheGrou
 // returns true to indicate the same.
 mDNSlocal mDNSBool AnswerQuestionWithLORecord(mDNS *const m, DNSQuestion *q, mDNSBool checkOnly)
 {
-    mDNSu32 slot;
     AuthRecord *lr;
     AuthGroup *ag;
 
     if (m->CurrentRecord)
         LogMsg("AnswerQuestionWithLORecord ERROR m->CurrentRecord already set %s", ARDisplayString(m, m->CurrentRecord));
 
-    slot = AuthHashSlot(&q->qname);
-    ag = AuthGroupForName(&m->rrauth, slot, q->qnamehash, &q->qname);
+    ag = AuthGroupForName(&m->rrauth, q->qnamehash, &q->qname);
     if (ag)
     {
         m->CurrentRecord = ag->members;
@@ -4444,7 +4860,7 @@ mDNSlocal mDNSBool AnswerQuestionWithLORecord(mDNS *const m, DNSQuestion *q, mDN
             // details on how we handle this case. For P2P we just handle "Interface_Any" questions. For LocalOnly
             // we handle both mDNSInterface_Any and scoped questions.
 
-            if (rr->ARType == AuthRecordLocalOnly || (rr->ARType == AuthRecordP2P && q->InterfaceID == mDNSInterface_Any))
+            if (rr->ARType == AuthRecordLocalOnly || (rr->ARType == AuthRecordP2P && (q->InterfaceID == mDNSInterface_Any || q->InterfaceID == mDNSInterface_BLE)))
                 if (LocalOnlyRecordAnswersQuestion(rr, q))
                 {
                     if (checkOnly)
@@ -4454,7 +4870,7 @@ mDNSlocal mDNSBool AnswerQuestionWithLORecord(mDNS *const m, DNSQuestion *q, mDN
                         m->CurrentRecord = mDNSNULL;
                         return mDNStrue;
                     }
-                    AnswerLocalQuestionWithLocalAuthRecord(m, rr, mDNStrue);
+                    AnswerLocalQuestionWithLocalAuthRecord(m, rr, QC_add);
                     if (m->CurrentQuestion != q)
                         break;     // If callback deleted q, then we're finished here
                 }
@@ -4499,36 +4915,33 @@ mDNSlocal mDNSBool AnswerQuestionWithLORecord(mDNS *const m, DNSQuestion *q, mDN
 
 // Today, we suppress questions (not send them on the wire) for several reasons e.g.,
 // AAAA query is suppressed because no IPv6 capability or PID is not allowed to make
-// DNS requests. We need to temporarily suspend the suppress status so that we can
-// deliver a negative response (AnswerCurrentQuestionWithResourceRecord does not answer
-// suppressed questions) and reset it back. In the future, if there are other
-// reasons for suppressing the query, this function should be updated.
+// DNS requests.
 mDNSlocal void AnswerSuppressedQuestion(mDNS *const m, DNSQuestion *q)
 {
-    mDNSBool SuppressQuery = q->SuppressQuery;
-    mDNSBool DisallowPID   = q->DisallowPID;
-
-    // make sure that QuerySuppressed() returns false
-    q->SuppressQuery = mDNSfalse;
-    q->DisallowPID   = mDNSfalse;
-
-    GenerateNegativeResponse(m, QC_suppressed);
-
-    q->SuppressQuery = SuppressQuery;
-    q->DisallowPID   = DisallowPID;
+    // If the client did not set the kDNSServiceFlagsReturnIntermediates flag, then don't generate a negative response,
+    // just deactivate the DNSQuestion.
+    if (q->ReturnIntermed)
+    {
+        GenerateNegativeResponse(m, mDNSInterface_Any, QC_suppressed);
+    }
+    else
+    {
+        q->ThisQInterval = 0;
+    }
 }
 
 mDNSlocal void AnswerNewQuestion(mDNS *const m)
 {
     mDNSBool ShouldQueryImmediately = mDNStrue;
     DNSQuestion *const q = m->NewQuestions;     // Grab the question we're going to answer
-    mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
-    mDNSBool AnsweredFromCache = mDNSfalse;
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+    if (!mDNSOpaque16IsZero(q->TargetQID)) DNS64HandleNewQuestion(m, q);
+#endif
+    CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
 
     verbosedebugf("AnswerNewQuestion: Answering %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
 
-    if (cg) CheckCacheExpiration(m, slot, cg);
+    if (cg) CheckCacheExpiration(m, HashSlotFromNameHash(q->qnamehash), cg);
     if (m->NewQuestions != q) { LogInfo("AnswerNewQuestion: Question deleted while doing CheckCacheExpiration"); goto exit; }
     m->NewQuestions = q->next;
     // Advance NewQuestions to the next *after* calling CheckCacheExpiration, because if we advance it first
@@ -4554,14 +4967,21 @@ mDNSlocal void AnswerNewQuestion(mDNS *const m)
     // If the client's question callback deletes the question, then m->CurrentQuestion will
     // be advanced, and we'll exit out of the loop
     m->lock_rrcache = 1;
-    if (m->CurrentQuestion)
-        LogMsg("AnswerNewQuestion ERROR m->CurrentQuestion already set: %##s (%s)",
-               m->CurrentQuestion->qname.c, DNSTypeName(m->CurrentQuestion->qtype));
+    if (m->CurrentQuestion) {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT,
+               "[R%d->Q%d] AnswerNewQuestion ERROR m->CurrentQuestion already set: " PRI_DM_NAME " (" PUB_S ")",
+               m->CurrentQuestion->request_id, mDNSVal16(m->CurrentQuestion->TargetQID),
+               DM_NAME_PARAM(m->CurrentQuestion->qname.c), DNSTypeName(m->CurrentQuestion->qtype));
+    }
+
     m->CurrentQuestion = q;     // Indicate which question we're answering, so we'll know if it gets deleted
 
     if (q->NoAnswer == NoAnswer_Fail)
     {
-        LogMsg("AnswerNewQuestion: NoAnswer_Fail %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT,
+               "[R%d->Q%d] AnswerNewQuestion: NoAnswer_Fail " PRI_DM_NAME " (" PUB_S ")",
+               q->request_id, mDNSVal16(q->TargetQID), DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype));
+
         MakeNegativeCacheRecord(m, &m->rec.r, &q->qname, q->qnamehash, q->qtype, q->qclass, 60, mDNSInterface_Any, q->qDNSServer);
         q->NoAnswer = NoAnswer_Normal;      // Temporarily turn off answer suppression
         AnswerCurrentQuestionWithResourceRecord(m, &m->rec.r, QC_addnocache);
@@ -4581,66 +5001,67 @@ mDNSlocal void AnswerNewQuestion(mDNS *const m)
     if (AnswerQuestionWithLORecord(m, q, mDNSfalse))
         goto exit;
 
-    // If we are not supposed to answer this question, generate a negative response.
-    // Temporarily suspend the SuppressQuery so that AnswerCurrentQuestionWithResourceRecord can answer the question
-    //
     // If it is a question trying to validate some response, it already checked the cache for a response. If it still
     // reissues a question it means it could not find the RRSIGs. So, we need to bypass the cache check and send
     // the question out.
-    if (QuerySuppressed(q))
+    if (q->Suppressed)
     {
         AnswerSuppressedQuestion(m, q);
     }
     else if (!q->ValidatingResponse)
     {
-        CacheRecord *rr;
-        for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
-            if (SameNameRecordAnswersQuestion(&rr->resrec, q))
+        CacheRecord *cr;
+        for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
+            if (SameNameCacheRecordAnswersQuestion(cr, q))
             {
                 // SecsSinceRcvd is whole number of elapsed seconds, rounded down
-                mDNSu32 SecsSinceRcvd = ((mDNSu32)(m->timenow - rr->TimeRcvd)) / mDNSPlatformOneSecond;
-                if (rr->resrec.rroriginalttl <= SecsSinceRcvd)
-                {
-                    LogMsg("AnswerNewQuestion: How is rr->resrec.rroriginalttl %lu <= SecsSinceRcvd %lu for %s %d %d",
-                           rr->resrec.rroriginalttl, SecsSinceRcvd, CRDisplayString(m, rr), m->timenow, rr->TimeRcvd);
-                    continue;   // Go to next one in loop
-                }
+                mDNSu32 SecsSinceRcvd = ((mDNSu32)(m->timenow - cr->TimeRcvd)) / mDNSPlatformOneSecond;
+                mDNSBool IsExpired = (cr->resrec.rroriginalttl <= SecsSinceRcvd);
+                if (IsExpired && q->allowExpired != AllowExpired_AllowExpiredAnswers) continue;   // Go to next one in loop
 
                 // If this record set is marked unique, then that means we can reasonably assume we have the whole set
                 // -- we don't need to rush out on the network and query immediately to see if there are more answers out there
-                if ((rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) || (q->ExpectUnique))
+                if ((cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) || (q->ExpectUnique))
                     ShouldQueryImmediately = mDNSfalse;
                 q->CurrentAnswers++;
-                if (rr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers++;
-                if (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers++;
-                AnsweredFromCache = mDNStrue;
-                AnswerCurrentQuestionWithResourceRecord(m, rr, QC_add);
+                if (cr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers++;
+                if (cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers++;
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+                if (q->metrics.expiredAnswerState == ExpiredAnswer_Allowed) q->metrics.expiredAnswerState = IsExpired ? ExpiredAnswer_AnsweredWithExpired : ExpiredAnswer_AnsweredWithCache;
+#endif
+                AnswerCurrentQuestionWithResourceRecord(m, cr, QC_add);
                 if (m->CurrentQuestion != q) break;     // If callback deleted q, then we're finished here
             }
-            else if (RRTypeIsAddressType(rr->resrec.rrtype) && RRTypeIsAddressType(q->qtype))
+            else if (mDNSOpaque16IsZero(q->TargetQID) && RRTypeIsAddressType(cr->resrec.rrtype) && RRTypeIsAddressType(q->qtype))
                 ShouldQueryImmediately = mDNSfalse;
     }
     // We don't use LogInfo for this "Question deleted" message because it happens so routinely that
     // it's not remotely remarkable, and therefore unlikely to be of much help tracking down bugs.
     if (m->CurrentQuestion != q) { debugf("AnswerNewQuestion: Question deleted while giving cache answers"); goto exit; }
 
-    // Neither a local record nor a cache entry could answer this question. If this question need to be retried
-    // with search domains, generate a negative response which will now retry after appending search domains.
-    // If the query was suppressed above, we already generated a negative response. When it gets unsuppressed,
-    // we will retry with search domains.
-    if (!QuerySuppressed(q) && !AnsweredFromCache && q->RetryWithSearchDomains)
+    q->InitialCacheMiss  = mDNStrue;                                    // Initial cache check is done, so mark as a miss from now on
+    if (q->allowExpired == AllowExpired_AllowExpiredAnswers)
     {
-        LogInfo("AnswerNewQuestion: Generating response for retrying with search domains %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
-        GenerateNegativeResponse(m, QC_forceresponse);
+        q->allowExpired = AllowExpired_MakeAnswersImmortal;             // After looking through the cache for an answer, demote to make immortal
+        if (q->firstExpiredQname.c[0])                                  // If an original query name was saved on an expired answer, start it over in case it is updated
+        {
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT,
+                   "[R%d->Q%d] AnswerNewQuestion: Restarting original question %p firstExpiredQname " PRI_DM_NAME " for allowExpiredAnswers question",
+                   q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(&q->firstExpiredQname.c));
+            mDNS_StopQuery_internal(m, q);                              // Stop old query
+            AssignDomainName(&q->qname, &q->firstExpiredQname);         // Update qname
+            q->qnamehash = DomainNameHashValue(&q->qname);              // and namehash
+            mDNS_StartQuery_internal(m, q);                             // start new query
+            q->CNAMEReferrals = 0;                                      // Reset referral count
+            q->firstExpiredQname.c[0] = 0;                              // Erase the domain name
+        }
     }
-
-    if (m->CurrentQuestion != q) { debugf("AnswerNewQuestion: Question deleted while giving negative answer"); goto exit; }
-
+    
     // Note: When a query gets suppressed or retried with search domains, we de-activate the question.
     // Hence we don't execute the following block of code for those cases.
     if (ShouldQueryImmediately && ActiveQuestion(q))
     {
-        debugf("AnswerNewQuestion: ShouldQueryImmediately %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
+        debugf("[R%d->Q%d] AnswerNewQuestion: ShouldQueryImmediately %##s (%s)", q->request_id, mDNSVal16(q->TargetQID), q->qname.c, DNSTypeName(q->qtype));
         q->ThisQInterval  = InitialQuestionInterval;
         q->LastQTime      = m->timenow - q->ThisQInterval;
         if (mDNSOpaque16IsZero(q->TargetQID))       // For mDNS, spread packets to avoid a burst of simultaneous queries
@@ -4668,9 +5089,9 @@ exit:
 // appropriate answers, stopping if it reaches a NewLocalOnlyRecord -- these will be handled by AnswerAllLocalQuestionsWithLocalAuthRecord
 mDNSlocal void AnswerNewLocalOnlyQuestion(mDNS *const m)
 {
-    mDNSu32 slot;
     AuthGroup *ag;
     DNSQuestion *q = m->NewLocalOnlyQuestions;      // Grab the question we're going to answer
+    mDNSBool retEv = mDNSfalse;
     m->NewLocalOnlyQuestions = q->next;             // Advance NewLocalOnlyQuestions to the next (if any)
 
     debugf("AnswerNewLocalOnlyQuestion: Answering %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
@@ -4686,8 +5107,7 @@ mDNSlocal void AnswerNewLocalOnlyQuestion(mDNS *const m)
     // 1. First walk the LocalOnly records answering the LocalOnly question
     // 2. As LocalOnly questions should also be answered by any other Auth records local to the machine,
     //    walk the ResourceRecords list delivering the answers
-    slot = AuthHashSlot(&q->qname);
-    ag = AuthGroupForName(&m->rrauth, slot, q->qnamehash, &q->qname);
+    ag = AuthGroupForName(&m->rrauth, q->qnamehash, &q->qname);
     if (ag)
     {
         m->CurrentRecord = ag->members;
@@ -4697,7 +5117,8 @@ mDNSlocal void AnswerNewLocalOnlyQuestion(mDNS *const m)
             m->CurrentRecord = rr->next;
             if (LocalOnlyRecordAnswersQuestion(rr, q))
             {
-                AnswerLocalQuestionWithLocalAuthRecord(m, rr, mDNStrue);
+                retEv = mDNStrue;
+                AnswerLocalQuestionWithLocalAuthRecord(m, rr, QC_add);
                 if (m->CurrentQuestion != q) break;     // If callback deleted q, then we're finished here
             }
         }
@@ -4709,15 +5130,21 @@ mDNSlocal void AnswerNewLocalOnlyQuestion(mDNS *const m)
 
         while (m->CurrentRecord && m->CurrentRecord != m->NewLocalRecords)
         {
-            AuthRecord *rr = m->CurrentRecord;
-            m->CurrentRecord = rr->next;
-            if (ResourceRecordAnswersQuestion(&rr->resrec, q))
+            AuthRecord *ar = m->CurrentRecord;
+            m->CurrentRecord = ar->next;
+            if (AuthRecordAnswersQuestion(ar, q))
             {
-                AnswerLocalQuestionWithLocalAuthRecord(m, rr, mDNStrue);
+                retEv = mDNStrue;
+                AnswerLocalQuestionWithLocalAuthRecord(m, ar, QC_add);
                 if (m->CurrentQuestion != q) break;     // If callback deleted q, then we're finished here
             }
         }
     }
+
+    // The local host is the authoritative source for LocalOnly questions
+    // so if no records exist and client requested intermediates, then generate a negative response
+    if (!retEv && (m->CurrentQuestion == q) && q->ReturnIntermed)
+        GenerateNegativeResponse(m, mDNSInterface_LocalOnly, QC_forceresponse);
 
     m->CurrentQuestion = mDNSNULL;
     m->CurrentRecord   = mDNSNULL;
@@ -4734,8 +5161,11 @@ mDNSlocal CacheEntity *GetCacheEntity(mDNS *const m, const CacheGroup *const Pre
     if (!m->rrcache_free && m->MainCallback)
     {
         if (m->rrcache_totalused != m->rrcache_size)
-            LogMsg("GetFreeCacheRR: count mismatch: m->rrcache_totalused %lu != m->rrcache_size %lu",
-                   m->rrcache_totalused, m->rrcache_size);
+        {
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT,
+                      "GetFreeCacheRR: count mismatch: m->rrcache_totalused %u != m->rrcache_size %u",
+                      m->rrcache_totalused, m->rrcache_size);
+        }
 
         // We don't want to be vulnerable to a malicious attacker flooding us with an infinite
         // number of bogus records so that we keep growing our cache until the machine runs out of memory.
@@ -4743,8 +5173,11 @@ mDNSlocal CacheEntity *GetCacheEntity(mDNS *const m, const CacheGroup *const Pre
         // and we're actively using less than 1/32 of that cache, then we purge all the unused records
         // and recycle them, instead of allocating more memory.
         if (m->rrcache_size > 5000 && m->rrcache_size / 32 > m->rrcache_active)
-            LogInfo("Possible denial-of-service attack in progress: m->rrcache_size %lu; m->rrcache_active %lu",
-                    m->rrcache_size, m->rrcache_active);
+        {
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                      "Possible denial-of-service attack in progress: m->rrcache_size %u; m->rrcache_active %u",
+                      m->rrcache_size, m->rrcache_active);
+        }
         else
         {
             mDNS_DropLockBeforeCallback();      // Allow client to legally make mDNS API calls from the callback
@@ -4785,8 +5218,8 @@ mDNSlocal CacheEntity *GetCacheEntity(mDNS *const m, const CacheGroup *const Pre
                 else ReleaseCacheGroup(m, cp);
             }
         }
-        LogInfo("GetCacheEntity recycled %d records to reduce cache from %d to %d",
-                oldtotalused - m->rrcache_totalused, oldtotalused, m->rrcache_totalused);
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "GetCacheEntity recycled %d records to reduce cache from %d to %d",
+                  oldtotalused - m->rrcache_totalused, oldtotalused, m->rrcache_totalused);
     }
 
     if (m->rrcache_free)    // If there are records in the free list, take one
@@ -4795,7 +5228,7 @@ mDNSlocal CacheEntity *GetCacheEntity(mDNS *const m, const CacheGroup *const Pre
         m->rrcache_free = e->next;
         if (++m->rrcache_totalused >= m->rrcache_report)
         {
-            LogInfo("RR Cache now using %ld objects", m->rrcache_totalused);
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "RR Cache now using %u objects", m->rrcache_totalused);
             if      (m->rrcache_report <  100) m->rrcache_report += 10;
             else if (m->rrcache_report < 1000) m->rrcache_report += 100;
             else m->rrcache_report += 1000;
@@ -4816,7 +5249,7 @@ mDNSlocal CacheRecord *GetCacheRecord(mDNS *const m, CacheGroup *cg, mDNSu16 RDL
         r->resrec.rdata = (RData*)&r->smallrdatastorage;    // By default, assume we're usually going to be using local storage
         if (RDLength > InlineCacheRDSize)           // If RDLength is too big, allocate extra storage
         {
-            r->resrec.rdata = (RData*)mDNSPlatformMemAllocate(sizeofRDataHeader + RDLength);
+            r->resrec.rdata = (RData*) mDNSPlatformMemAllocateClear(sizeofRDataHeader + RDLength);
             if (r->resrec.rdata) r->resrec.rdata->MaxRDLength = r->resrec.rdlength = RDLength;
             else { ReleaseCacheEntity(m, (CacheEntity*)r); r = mDNSNULL; }
         }
@@ -4833,8 +5266,8 @@ mDNSlocal CacheGroup *GetCacheGroup(mDNS *const m, const mDNSu32 slot, const Res
     cg->namehash     = rr->namehash;
     cg->members      = mDNSNULL;
     cg->rrcache_tail = &cg->members;
-    if (namelen > sizeof(cg->namestorage)) 
-        cg->name = mDNSPlatformMemAllocate(namelen);
+    if (namelen > sizeof(cg->namestorage))
+        cg->name = (domainname *) mDNSPlatformMemAllocate(namelen);
     else
         cg->name = (domainname*)cg->namestorage;
     if (!cg->name)
@@ -4845,9 +5278,9 @@ mDNSlocal CacheGroup *GetCacheGroup(mDNS *const m, const mDNSu32 slot, const Res
     }
     AssignDomainName(cg->name, rr->name);
 
-    if (CacheGroupForRecord(m, slot, rr)) LogMsg("GetCacheGroup: Already have CacheGroup for %##s", rr->name->c);
+    if (CacheGroupForRecord(m, rr)) LogMsg("GetCacheGroup: Already have CacheGroup for %##s", rr->name->c);
     m->rrcache_hash[slot] = cg;
-    if (CacheGroupForRecord(m, slot, rr) != cg) LogMsg("GetCacheGroup: Not finding CacheGroup for %##s", rr->name->c);
+    if (CacheGroupForRecord(m, rr) != cg) LogMsg("GetCacheGroup: Not finding CacheGroup for %##s", rr->name->c);
 
     return(cg);
 }
@@ -4887,7 +5320,7 @@ mDNSexport mDNSs32 mDNS_TimeNow(const mDNS *const m)
 // had its Sleep Proxy client list change, and defer to actual BPF reconfiguration to mDNS_Execute().
 // (GetNextScheduledEvent() returns "now" when m->SPSProxyListChanged is set)
 #define SetSPSProxyListChanged(X) do { \
-        if (m->SPSProxyListChanged && m->SPSProxyListChanged != (X)) mDNSPlatformUpdateProxyList(m, m->SPSProxyListChanged);                                                                                                                          \
+        if (m->SPSProxyListChanged && m->SPSProxyListChanged != (X)) mDNSPlatformUpdateProxyList(m->SPSProxyListChanged); \
         m->SPSProxyListChanged = (X); } while(0)
 
 // Called from mDNS_Execute() to expire stale proxy records
@@ -4931,7 +5364,7 @@ mDNSlocal void CheckRmvEventsForLocalRecords(mDNS *const m)
         {
             debugf("CheckRmvEventsForLocalRecords: Generating local RMV events for %s", ARDisplayString(m, rr));
             rr->resrec.RecordType = kDNSRecordTypeShared;
-            AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNSfalse);
+            AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, QC_rmv);
             if (m->CurrentRecord == rr) // If rr still exists in list, restore its state now
             {
                 rr->resrec.RecordType = kDNSRecordTypeDeregistering;
@@ -4946,13 +5379,12 @@ mDNSlocal void CheckRmvEventsForLocalRecords(mDNS *const m)
     }
 }
 
-mDNSlocal void TimeoutQuestions(mDNS *const m)
+mDNSlocal void TimeoutQuestions_internal(mDNS *const m, DNSQuestion* questions, mDNSInterfaceID InterfaceID)
 {
-    m->NextScheduledStopTime = m->timenow + 0x3FFFFFFF;
     if (m->CurrentQuestion)
         LogMsg("TimeoutQuestions ERROR m->CurrentQuestion already set: %##s (%s)", m->CurrentQuestion->qname.c,
                DNSTypeName(m->CurrentQuestion->qtype));
-    m->CurrentQuestion = m->Questions;
+    m->CurrentQuestion = questions;
     while (m->CurrentQuestion)
     {
         DNSQuestion *const q = m->CurrentQuestion;
@@ -4964,7 +5396,8 @@ mDNSlocal void TimeoutQuestions(mDNS *const m)
             if (m->timenow - q->StopTime >= 0)
             {
                 LogInfo("TimeoutQuestions: question %p %##s timed out, time %d", q, q->qname.c, m->timenow - q->StopTime);
-                GenerateNegativeResponse(m, QC_forceresponse);
+                q->LOAddressAnswers = 0; // unset since timing out the question
+                GenerateNegativeResponse(m, InterfaceID, QC_forceresponse);
                 if (m->CurrentQuestion == q) q->StopTime = 0;
             }
             else
@@ -4980,6 +5413,13 @@ mDNSlocal void TimeoutQuestions(mDNS *const m)
             m->CurrentQuestion = q->next;
     }
     m->CurrentQuestion = mDNSNULL;
+}
+
+mDNSlocal void TimeoutQuestions(mDNS *const m)
+{
+    m->NextScheduledStopTime = m->timenow + FutureTime; // push reschedule of TimeoutQuestions to way off into the future
+    TimeoutQuestions_internal(m, m->Questions, mDNSInterface_Any);
+    TimeoutQuestions_internal(m, m->LocalOnlyQuestions, mDNSInterface_LocalOnly);
 }
 
 mDNSlocal void mDNSCoreFreeProxyRR(mDNS *const m)
@@ -4998,10 +5438,6 @@ mDNSlocal void mDNSCoreFreeProxyRR(mDNS *const m)
 mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
 {
     mDNS_Lock(m);   // Must grab lock before trying to read m->timenow
-
-#if APPLE_OSX_mDNSResponder
-    mDNSLogStatistics(m);
-#endif // APPLE_OSX_mDNSResponder
 
     if (m->timenow - m->NextScheduledEvent >= 0)
     {
@@ -5029,13 +5465,13 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
         if (m->rrcache_size && m->timenow - m->NextCacheCheck >= 0)
         {
             mDNSu32 numchecked = 0;
-            m->NextCacheCheck = m->timenow + 0x3FFFFFFF;
+            m->NextCacheCheck = m->timenow + FutureTime;
             for (slot = 0; slot < CACHE_HASH_SLOTS; slot++)
             {
                 if (m->timenow - m->rrcache_nextcheck[slot] >= 0)
                 {
                     CacheGroup **cp = &m->rrcache_hash[slot];
-                    m->rrcache_nextcheck[slot] = m->timenow + 0x3FFFFFFF;
+                    m->rrcache_nextcheck[slot] = m->timenow + FutureTime;
                     while (*cp)
                     {
                         debugf("m->NextCacheCheck %4d Slot %3d %##s", numchecked, slot, *cp ? (*cp)->name : (domainname*)"\x04NULL");
@@ -5055,7 +5491,7 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
 
         if (m->timenow - m->NextScheduledSPS >= 0)
         {
-            m->NextScheduledSPS = m->timenow + 0x3FFFFFFF;
+            m->NextScheduledSPS = m->timenow + FutureTime;
             CheckProxyRecords(m, m->DuplicateRecords);  // Clear m->DuplicateRecords first, then m->ResourceRecords
             CheckProxyRecords(m, m->ResourceRecords);
         }
@@ -5066,9 +5502,22 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
         // as records could have expired during that check
         if (m->timenow - m->NextScheduledKA >= 0)
         {
-            m->NextScheduledKA = m->timenow + 0x3FFFFFFF;
+            m->NextScheduledKA = m->timenow + FutureTime;
             mDNS_SendKeepalives(m);
         }
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+        if (m->NextBonjourDisableTime && (m->timenow - m->NextBonjourDisableTime >= 0))
+        {
+            // Schedule immediate network change processing to leave the multicast group
+            // since the delay time has expired since the previous active registration or query.
+            m->NetworkChanged = m->timenow;
+            m->NextBonjourDisableTime = 0;
+            m->BonjourEnabled = 0;
+
+            LogInfo("mDNS_Execute: Scheduled network changed processing to leave multicast group.");
+        }
+#endif
 
         // Clear AnnounceOwner if necessary. (Do this *before* SendQueries() and SendResponses().)
         if (m->AnnounceOwner && m->timenow - m->AnnounceOwner >= 0)
@@ -5123,7 +5572,7 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
             if (LocalRecordReady(rr))
             {
                 debugf("mDNS_Execute: Delivering Add event with LocalAuthRecord %s", ARDisplayString(m, rr));
-                AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNStrue);
+                AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, QC_add);
             }
             else if (!rr->next)
             {
@@ -5170,6 +5619,7 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
         {
             m->NewLocalOnlyRecords = mDNSfalse;
             for (slot = 0; slot < AUTH_HASH_SLOTS; slot++)
+            {
                 for (ag = m->rrauth.rrauth_hash[slot]; ag; ag = ag->next)
                 {
                     for (i=0; i<100 && ag->NewLocalOnlyRecords; i++)
@@ -5180,13 +5630,14 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
                         if (LocalRecordReady(rr))
                         {
                             debugf("mDNS_Execute: Delivering Add event with LocalAuthRecord %s", ARDisplayString(m, rr));
-                            AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, mDNStrue);
+                            AnswerAllLocalQuestionsWithLocalAuthRecord(m, rr, QC_add);
                         }
                         else LogMsg("mDNS_Execute: LocalOnlyRecord %s not ready", ARDisplayString(m, rr));
                     }
                     // We limit about 100 per AuthGroup that can be serviced at a time
                     if (i >= 100) LogMsg("mDNS_Execute: ag->NewLocalOnlyRecords exceeded loop limit");
                 }
+            }
         }
 
         // 5. See what packets we need to send
@@ -5234,12 +5685,17 @@ mDNSexport mDNSs32 mDNS_Execute(mDNS *const m)
         m->RandomQueryDelay     = 0;
         m->RandomReconfirmDelay = 0;
 
+        // See if any questions (or local-only questions) have timed out
         if (m->NextScheduledStopTime && m->timenow - m->NextScheduledStopTime >= 0) TimeoutQuestions(m);
 #ifndef UNICAST_DISABLED
         if (m->NextSRVUpdate && m->timenow - m->NextSRVUpdate >= 0) UpdateAllSRVRecords(m);
         if (m->timenow - m->NextScheduledNATOp >= 0) CheckNATMappings(m);
         if (m->timenow - m->NextuDNSEvent >= 0) uDNS_Tasks(m);
 #endif
+#if APPLE_OSX_mDNSResponder && ENABLE_BLE_TRIGGERED_BONJOUR
+        extern void serviceBLE();
+        if (m->NextBLEServiceTime && (m->timenow - m->NextBLEServiceTime >= 0)) serviceBLE();
+#endif // APPLE_OSX_mDNSResponder && ENABLE_BLE_TRIGGERED_BONJOUR
     }
 
     // Note about multi-threaded systems:
@@ -5279,11 +5735,9 @@ mDNSlocal void SuspendLLQs(mDNS *m)
 mDNSlocal mDNSBool QuestionHasLocalAnswers(mDNS *const m, DNSQuestion *q)
 {
     AuthRecord *rr;
-    mDNSu32 slot;
     AuthGroup *ag;
 
-    slot = AuthHashSlot(&q->qname);
-    ag = AuthGroupForName(&m->rrauth, slot, q->qnamehash, &q->qname);
+    ag = AuthGroupForName(&m->rrauth, q->qnamehash, &q->qname);
     if (ag)
     {
         for (rr = ag->members; rr; rr=rr->next)
@@ -5305,34 +5759,15 @@ mDNSlocal mDNSBool QuestionHasLocalAnswers(mDNS *const m, DNSQuestion *q)
 // In cases 2 and 3 we do want to cause the question to be resent immediately (ScheduleImmediately is true)
 mDNSlocal void ActivateUnicastQuery(mDNS *const m, DNSQuestion *const question, mDNSBool ScheduleImmediately)
 {
-    // For now this AutoTunnel stuff is specific to Mac OS X.
-    // In the future, if there's demand, we may see if we can abstract it out cleanly into the platform layer
-#if APPLE_OSX_mDNSResponder
-    // Even though BTMM client tunnels are only useful for AAAA queries, we need to treat v4 and v6 queries equally.
-    // Otherwise we can get the situation where the A query completes really fast (with an NXDOMAIN result) and the
-    // caller then gives up waiting for the AAAA result while we're still in the process of setting up the tunnel.
-    // To level the playing field, we block both A and AAAA queries while tunnel setup is in progress, and then
-    // returns results for both at the same time. If we are looking for the _autotunnel6 record, then skip this logic
-    // as this would trigger looking up _autotunnel6._autotunnel6 and end up failing the original query.
-
-    if (RRTypeIsAddressType(question->qtype) && PrivateQuery(question) &&
-        !SameDomainLabel(question->qname.c, (const mDNSu8 *)"\x0c_autotunnel6")&& question->QuestionCallback != AutoTunnelCallback)
-    {
-        question->NoAnswer = NoAnswer_Suspended;
-        AddNewClientTunnel(m, question);
-        return;
-    }
-#endif // APPLE_OSX_mDNSResponder
-
     if (!question->DuplicateOf)
     {
-        debugf("ActivateUnicastQuery: %##s %s%s%s",
-               question->qname.c, DNSTypeName(question->qtype), PrivateQuery(question) ? " (Private)" : "", ScheduleImmediately ? " ScheduleImmediately" : "");
+        debugf("ActivateUnicastQuery: %##s %s%s",
+               question->qname.c, DNSTypeName(question->qtype), ScheduleImmediately ? " ScheduleImmediately" : "");
         question->CNAMEReferrals = 0;
         if (question->nta) { CancelGetZoneData(m, question->nta); question->nta = mDNSNULL; }
         if (question->LongLived)
         {
-            question->state = LLQ_InitialRequest;
+            question->state = LLQ_Init;
             question->id = zeroOpaque64;
             question->servPort = zeroIPPort;
             if (question->tcp) { DisposeTCPConn(question->tcp); question->tcp = mDNSNULL; }
@@ -5420,23 +5855,13 @@ mDNSexport void mDNSCoreRestartAddressQueries(mDNS *const m, mDNSBool SearchDoma
             // If the query is suppressed, the RMV events won't be delivered
             if (!CacheRecordRmvEventsForQuestion(m, q)) { LogInfo("mDNSCoreRestartAddressQueries: Question deleted while delivering Cache Record RMV events"); continue; }
 
-            // SuppressQuery status does not affect questions that are answered using local records
+            // Suppressed status does not affect questions that are answered using local records
             if (!LocalRecordRmvEventsForQuestion(m, q)) { LogInfo("mDNSCoreRestartAddressQueries: Question deleted while delivering Local Record RMV events"); continue; }
 
-            LogInfo("mDNSCoreRestartAddressQueries: Stop question %p %##s (%s), AppendSearchDomains %d, qnameOrig %p", q,
-                    q->qname.c, DNSTypeName(q->qtype), q->AppendSearchDomains, q->qnameOrig);
+            LogInfo("mDNSCoreRestartAddressQueries: Stop question %p %##s (%s), AppendSearchDomains %d", q,
+                    q->qname.c, DNSTypeName(q->qtype), q->AppendSearchDomains);
             mDNS_StopQuery_internal(m, q);
-            // Reset state so that it looks like it was in the beginning i.e it should look at /etc/hosts, cache
-            // and then search domains should be appended. At the beginning, qnameOrig was NULL.
-            if (q->qnameOrig)
-            {
-                LogInfo("mDNSCoreRestartAddressQueries: qnameOrig %##s", q->qnameOrig);
-                AssignDomainName(&q->qname, q->qnameOrig);
-                mDNSPlatformMemFree(q->qnameOrig);
-                q->qnameOrig = mDNSNULL;
-                q->RetryWithSearchDomains = ApplySearchDomainsFirst(q) ? 1 : 0;
-            }
-            q->SearchListIndex = 0;
+            if (q->ResetHandler) q->ResetHandler(q);
             q->next = restart;
             restart = q;
         }
@@ -5485,11 +5910,7 @@ mDNSexport void mDNSCoreRestartQuestion(mDNS *const m, DNSQuestion *q)
     if (mDNSOpaque16IsZero(q->TargetQID) && ActiveQuestion(q))
     {
         q->ThisQInterval    = InitialQuestionInterval;  // MUST be > zero for an active question
-#if mDNS_REQUEST_UNICAST_RESPONSE
-        q->RequestUnicast = SET_QU_IN_FIRST_FOUR_QUERIES;
-#else   // mDNS_REQUEST_UNICAST_RESPONSE
-        q->RequestUnicast   = SET_QU_IN_FIRST_QUERY;
-#endif  // mDNS_REQUEST_UNICAST_RESPONSE
+        q->RequestUnicast   = kDefaultRequestUnicastCount;
         q->LastQTime        = m->timenow - q->ThisQInterval;
         q->RecentAnswerPkts = 0;
         ExpireDupSuppressInfo(q->DupSuppress, m->timenow);
@@ -5498,23 +5919,26 @@ mDNSexport void mDNSCoreRestartQuestion(mDNS *const m, DNSQuestion *q)
 }
 
 // restart the probe/announce cycle for multicast record
-mDNSexport void mDNSCoreRestartRegistration(mDNS *const m, AuthRecord  *rr, int announceCount)
+mDNSexport void mDNSCoreRestartRegistration(mDNS *const m, AuthRecord *rr, int announceCount)
 {
     if (!AuthRecord_uDNS(rr))
     {
         if (rr->resrec.RecordType == kDNSRecordTypeVerified && !rr->DependentOn) rr->resrec.RecordType = kDNSRecordTypeUnique;
         rr->ProbeCount     = DefaultProbeCountForRecordType(rr->resrec.RecordType);
 
-        // announceCount < 0 indicates default announce count should be used
-        if (announceCount < 0)
-            announceCount = InitialAnnounceCount;
-        if (rr->AnnounceCount < announceCount) 
-            rr->AnnounceCount  = announceCount;
-
         if (mDNS_KeepaliveRecord(&rr->resrec))
-            rr->AnnounceCount  = 0; // Do not announce keepalive records
+        {
+            rr->AnnounceCount = 0; // Do not announce keepalive records
+        }
         else
-            rr->AnnounceCount  = InitialAnnounceCount;
+        {
+            // announceCount < 0 indicates default announce count should be used
+            if (announceCount < 0)
+                announceCount = InitialAnnounceCount;
+            if (rr->AnnounceCount < (mDNSu8)announceCount)
+                rr->AnnounceCount = (mDNSu8)announceCount;
+        }
+
         rr->SendNSECNow    = mDNSNULL;
         InitializeLastAPTime(m, rr);
     }
@@ -5561,25 +5985,33 @@ mDNSexport void mDNS_UpdateAllowSleep(mDNS *const m)
                         break;
                     }
 
-                    // Disallow sleep if there is no sleep proxy server
-                    const CacheRecord *cr = FindSPSInCache1(m, &intf->NetWakeBrowse, mDNSNULL, mDNSNULL);
-                    if ( cr == mDNSNULL)
+                    // If the interface can be an in-NIC Proxy, we should check if it can accomodate all the records
+                    // that will be offloaded. If not, we should prevent sleep.
+                    // This check will be possible once the lower layers provide an API to query the space available for offloads on the NIC.
+#if APPLE_OSX_mDNSResponder
+                    if (!SupportsInNICProxy(intf))
+#endif
                     {
-                        allowSleep = mDNSfalse;
-                        mDNS_snprintf(reason, sizeof(reason), "No sleep proxy server on %s", intf->ifname);
-                        LogInfo("mDNS_UpdateAllowSleep: Sleep disabled because %s has no sleep proxy server", intf->ifname);
-                        break;
-                    }
-                    else if (m->SPSType != 0)
-                    {
-                        mDNSu32 mymetric = LocalSPSMetric(m);
-                        mDNSu32 metric   = SPSMetric(cr->resrec.rdata->u.name.c);
-                        if (metric >= mymetric)
+                        // Disallow sleep if there is no sleep proxy server
+                        const CacheRecord *cr = FindSPSInCache1(m, &intf->NetWakeBrowse, mDNSNULL, mDNSNULL);
+                        if ( cr == mDNSNULL)
                         {
                             allowSleep = mDNSfalse;
-                            mDNS_snprintf(reason, sizeof(reason), "No sleep proxy server with better metric on %s", intf->ifname);
-                            LogInfo("mDNS_UpdateAllowSleep: Sleep disabled because %s has no sleep proxy server with a better metric", intf->ifname);
+                            mDNS_snprintf(reason, sizeof(reason), "No sleep proxy server on %s", intf->ifname);
+                            LogInfo("mDNS_UpdateAllowSleep: Sleep disabled because %s has no sleep proxy server", intf->ifname);
                             break;
+                        }
+                        else if (m->SPSType != 0)
+                        {
+                            mDNSu32 mymetric = LocalSPSMetric(m);
+                            mDNSu32 metric   = SPSMetric(cr->resrec.rdata->u.name.c);
+                            if (metric >= mymetric)
+                            {
+                                allowSleep = mDNSfalse;
+                                mDNS_snprintf(reason, sizeof(reason), "No sleep proxy server with better metric on %s", intf->ifname);
+                                LogInfo("mDNS_UpdateAllowSleep: Sleep disabled because %s has no sleep proxy server with a better metric", intf->ifname);
+                                break;
+                            }
                         }
                     }
                 }
@@ -5588,7 +6020,7 @@ mDNSexport void mDNS_UpdateAllowSleep(mDNS *const m)
     }
 
     // Call the platform code to enable/disable sleep
-    mDNSPlatformSetAllowSleep(m, allowSleep, reason);
+    mDNSPlatformSetAllowSleep(allowSleep, reason);
 #else
     (void) m;
 #endif /* !defined(IDLESLEEPCONTROL_DISABLED) */
@@ -5599,7 +6031,7 @@ mDNSlocal mDNSBool mDNSUpdateOkToSend(mDNS *const m, AuthRecord *rr, NetworkInte
     // If it is not a uDNS record, check to see if the updateid is zero. "updateid" is cleared when we have
     // sent the resource record on all the interfaces. If the update id is not zero, check to see if it is time
     // to send.
-    if (AuthRecord_uDNS(rr) || (rr->AuthFlags & AuthFlagsWakeOnly) || mDNSOpaque16IsZero(rr->updateid) || 
+    if (AuthRecord_uDNS(rr) || (rr->AuthFlags & AuthFlagsWakeOnly) || mDNSOpaque16IsZero(rr->updateid) ||
         m->timenow - (rr->LastAPTime + rr->ThisAPInterval) < 0)
     {
         return mDNSfalse;
@@ -5611,7 +6043,7 @@ mDNSlocal mDNSBool mDNSUpdateOkToSend(mDNS *const m, AuthRecord *rr, NetworkInte
     // updateid and we should have returned from above.
     //
     // Note: scopeid is the same as intf->InterfaceID. It is passed in so that we don't have to call the
-    // platform function to extract the value from "intf" everytime.
+    // platform function to extract the value from "intf" every time.
 
     if ((scopeid >= (sizeof(rr->updateIntID) * mDNSNBBY) || bit_get_opaque64(rr->updateIntID, scopeid)) &&
         (!rr->resrec.InterfaceID || rr->resrec.InterfaceID == intf->InterfaceID))
@@ -5620,47 +6052,56 @@ mDNSlocal mDNSBool mDNSUpdateOkToSend(mDNS *const m, AuthRecord *rr, NetworkInte
     return mDNSfalse;
 }
 
-mDNSexport void UpdateRMACCallback(mDNS *const m, void *context)
+mDNSexport void UpdateRMAC(mDNS *const m, void *context)
 {
     IPAddressMACMapping *addrmap = (IPAddressMACMapping *)context ;
     m->CurrentRecord = m->ResourceRecords;
 
     if (!addrmap)
     {
-        LogMsg("UpdateRMACCallback: Address mapping is NULL");
+        LogMsg("UpdateRMAC: Address mapping is NULL");
         return;
     }
 
     while (m->CurrentRecord)
     {
         AuthRecord *rr = m->CurrentRecord;
-        // If this is a keepalive record and the remote IP address matches, update the RData
-        if (mDNS_KeepaliveRecord(&rr->resrec))
+        // If this is a non-sleep proxy keepalive record and the remote IP address matches, update the RData
+        if (!rr->WakeUp.HMAC.l[0] && mDNS_KeepaliveRecord(&rr->resrec))
         {
             mDNSAddr raddr;
             getKeepaliveRaddr(m, rr, &raddr);
             if (mDNSSameAddress(&raddr, &addrmap->ipaddr))
             {
-                UpdateKeepaliveRData(m, rr, mDNSNULL, mDNStrue, (char *)(addrmap->ethaddr));
+                // Update the MAC address only if it is not a zero MAC address
+                mDNSEthAddr macAddr;
+                mDNSu8 *ptr = GetValueForMACAddr((mDNSu8 *)(addrmap->ethaddr), (mDNSu8 *) (addrmap->ethaddr + sizeof(addrmap->ethaddr)), &macAddr);
+                if (ptr != mDNSNULL && !mDNSEthAddressIsZero(macAddr))
+                {
+                    UpdateKeepaliveRData(m, rr, mDNSNULL, mDNStrue, (char *)(addrmap->ethaddr));
+                }
             }
         }
         m->CurrentRecord = rr->next;
     }
 
     if (addrmap)
-    {
         mDNSPlatformMemFree(addrmap);
-    }
+
 }
 
 mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkInterfaceInfo *const intf, mDNSBool updateMac, char *ethAddr)
 {
     mDNSu16 newrdlength;
-    mDNSAddr laddr, raddr;
-    mDNSEthAddr eth;
-    mDNSIPPort lport, rport;
-    mDNSu32 timeout, seq, ack;
-    mDNSu16 win;
+    mDNSAddr laddr = zeroAddr;
+    mDNSAddr raddr = zeroAddr;
+    mDNSEthAddr eth = zeroEthAddr;
+    mDNSIPPort lport = zeroIPPort;
+    mDNSIPPort rport = zeroIPPort;
+    mDNSu32 timeout = 0;
+    mDNSu32 seq = 0;
+    mDNSu32 ack = 0;
+    mDNSu16 win = 0;
     UTF8str255 txt;
     int rdsize;
     RData *newrd;
@@ -5670,8 +6111,7 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
     // Note: If we fail to update the  DNS NULL  record with additional information in this function, it will be registered
     // with the SPS like any other record. SPS will not send keepalives if it does not have additional information.
     mDNS_ExtractKeepaliveInfo(rr, &timeout, &laddr, &raddr, &eth, &seq, &ack, &lport, &rport, &win);
-    if (!timeout || mDNSAddressIsZero(&laddr) || mDNSAddressIsZero(&raddr) || mDNSIPPortIsZero(lport) ||
-        mDNSIPPortIsZero(rport))
+    if (!timeout || mDNSAddressIsZero(&laddr) || mDNSAddressIsZero(&raddr) || mDNSIPPortIsZero(lport) || mDNSIPPortIsZero(rport))
     {
         LogMsg("UpdateKeepaliveRData: not a valid record %s for keepalive %#a:%d %#a:%d", ARDisplayString(m, rr), &laddr, lport.NotAnInteger, &raddr, rport.NotAnInteger);
         return mStatus_UnknownErr;
@@ -5691,7 +6131,7 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
         // now, then we don't update the DNS NULL record. But we do not prevent it from registering with the SPS. When SPS sees
         // this DNS NULL record, it does not send any keepalives as it does not have all the information
         mDNSPlatformMemZero(&mti, sizeof (mDNSTCPInfo));
-        ret = mDNSPlatformRetrieveTCPInfo(m, &laddr, &lport, &raddr, &rport, &mti);
+        ret = mDNSPlatformRetrieveTCPInfo(&laddr, &lport, &raddr, &rport, &mti);
         if (ret != mStatus_NoError)
         {
             LogMsg("mDNSPlatformRetrieveTCPInfo: mDNSPlatformRetrieveTCPInfo failed %d", ret);
@@ -5699,7 +6139,7 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
         }
         if ((intf != mDNSNULL) && (mti.IntfId != intf->InterfaceID))
         {
-            LogInfo("mDNSPlatformRetrieveTCPInfo: InterfaceID  mismatch mti.IntfId = %p InterfaceID = %p",  mti.IntfId, intf->InterfaceID);
+            LogInfo("mDNSPlatformRetrieveTCPInfo: InterfaceID mismatch mti.IntfId = %p InterfaceID = %p",  mti.IntfId, intf->InterfaceID);
             return mStatus_BadParamErr;
         }
 
@@ -5722,7 +6162,7 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
     newrdlength += 2;
 
     rdsize = newrdlength > sizeof(RDataBody) ? newrdlength : sizeof(RDataBody);
-    newrd = mDNSPlatformMemAllocate(sizeof(RData) - sizeof(RDataBody) + rdsize);
+    newrd = (RData *) mDNSPlatformMemAllocate(sizeof(RData) - sizeof(RDataBody) + rdsize);
     if (!newrd) { LogMsg("UpdateKeepaliveRData: ptr NULL"); return mStatus_NoMemoryErr; }
 
     newrd->MaxRDLength = (mDNSu16) rdsize;
@@ -5734,8 +6174,8 @@ mDNSexport mStatus UpdateKeepaliveRData(mDNS *const m, AuthRecord *rr, NetworkIn
     //  free that memory here before copying in the new data.
     if ( rr->resrec.rdata != &rr->rdatastorage)
     {
-        mDNSPlatformMemFree(rr->resrec.rdata);
         LogSPS("UpdateKeepaliveRData: Freed allocated memory for keep alive packet: %s ", ARDisplayString(m, rr));
+        mDNSPlatformMemFree(rr->resrec.rdata);
     }
     SetNewRData(&rr->resrec, newrd, newrdlength);    // Update our rdata
 
@@ -5875,8 +6315,8 @@ mDNSlocal void SendSPSRegistrationForOwner(mDNS *const m, NetworkInterfaceInfo *
 
                 LogSPS("SendSPSRegistration: Sending Update %s %d (%d) id %5d with %d records %d bytes to %#a:%d", intf->ifname, intf->NextSPSAttempt, sps,
                        mDNSVal16(m->omsg.h.id), m->omsg.h.mDNS_numUpdates, p - m->omsg.data, &intf->SPSAddr[sps], mDNSVal16(intf->SPSPort[sps]));
-                // if (intf->NextSPSAttempt < 5) m->omsg.h.flags = zeroID;	// For simulating packet loss
-                err = mDNSSendDNSMessage(m, &m->omsg, p, intf->InterfaceID, mDNSNULL, &intf->SPSAddr[sps], intf->SPSPort[sps], mDNSNULL, mDNSNULL, mDNSfalse);
+                // if (intf->NextSPSAttempt < 5) m->omsg.h.flags = zeroID;  // For simulating packet loss
+                err = mDNSSendDNSMessage(m, &m->omsg, p, intf->InterfaceID, mDNSNULL, mDNSNULL, &intf->SPSAddr[sps], intf->SPSPort[sps], mDNSNULL, mDNSfalse);
                 if (err) LogSPS("SendSPSRegistration: mDNSSendDNSMessage err %d", err);
                 if (err && intf->SPSAddr[sps].type == mDNSAddrType_IPv4 && intf->NetWakeResolve[sps].ThisQInterval == -1)
                 {
@@ -5905,15 +6345,13 @@ mDNSlocal mDNSBool RecordIsFirstOccurrenceOfOwner(mDNS *const m, const AuthRecor
 
 mDNSlocal void mDNSCoreStoreProxyRR(mDNS *const m, const mDNSInterfaceID InterfaceID, AuthRecord *const rr)
 {
-    AuthRecord *newRR = mDNSPlatformMemAllocate(sizeof(AuthRecord));
-
+    AuthRecord *newRR = (AuthRecord *) mDNSPlatformMemAllocateClear(sizeof(*newRR));
     if (newRR == mDNSNULL)
     {
         LogSPS("%s : could not allocate memory for new resource record", __func__);
         return;
     }
 
-    mDNSPlatformMemZero(newRR, sizeof(AuthRecord));
     mDNS_SetupResourceRecord(newRR, mDNSNULL, InterfaceID, rr->resrec.rrtype,
                              rr->resrec.rroriginalttl, rr->resrec.RecordType,
                              rr->ARType, mDNSNULL, mDNSNULL);
@@ -5948,7 +6386,7 @@ mDNSlocal void SPSInitRecordsBeforeUpdate(mDNS *const m, mDNSOpaque64 updateIntI
 {
     AuthRecord *ar;
     LogSPS("SPSInitRecordsBeforeUpdate: UpdateIntID 0x%x 0x%x", updateIntID.l[1], updateIntID.l[0]);
-    
+
     *WakeOnlyService = mDNSfalse;
 
     // Before we store the A and AAAA records that we are going to register with the sleep proxy,
@@ -6065,7 +6503,7 @@ mDNSlocal void NetWakeResolve(mDNS *const m, DNSQuestion *question, const Resour
     if (!AddRecord) return;                                             // Don't care about REMOVE events
     if (answer->rrtype != question->qtype) return;                      // Don't care about CNAMEs
 
-    // if (answer->rrtype == kDNSType_AAAA && sps == 0) return;	// To test failing to resolve sleep proxy's address
+    // if (answer->rrtype == kDNSType_AAAA && sps == 0) return; // To test failing to resolve sleep proxy's address
 
     if (answer->rrtype == kDNSType_SRV)
     {
@@ -6117,28 +6555,42 @@ mDNSexport mDNSBool mDNSCoreHaveAdvertisedMulticastServices(mDNS *const m)
     return mDNSfalse;
 }
 
+#define WAKE_ONLY_SERVICE 1
+#define AC_ONLY_SERVICE   2
+
+#ifdef APPLE_OSX_mDNSResponder
+mDNSlocal void SendGoodbyesForSelectServices(mDNS *const m, mDNSBool *servicePresent, mDNSu32 serviceType)
+{
+    AuthRecord *rr;
+    *servicePresent = mDNSfalse;
+
+    // Mark all the records we need to deregister and send them
+    for (rr = m->ResourceRecords; rr; rr=rr->next)
+    {
+        // If the service type is wake only service and the auth flags match and requires a goodbye
+        // OR if the service type is AC only and it is not a keepalive record,
+        // mark the records we need to deregister and send them
+        if ((serviceType == WAKE_ONLY_SERVICE && (rr->AuthFlags & AuthFlagsWakeOnly) &&
+                rr->resrec.RecordType == kDNSRecordTypeShared && rr->RequireGoodbye) ||
+            (serviceType == AC_ONLY_SERVICE && !mDNS_KeepaliveRecord(&rr->resrec)))
+        {
+            rr->ImmedAnswer = mDNSInterfaceMark;
+            *servicePresent = mDNStrue;
+        }
+    }
+}
+#endif
+
 #ifdef APPLE_OSX_mDNSResponder
 // This function is used only in the case of local NIC proxy. For external
 // sleep proxy server, we do this in SPSInitRecordsBeforeUpdate when we
 // walk the resource records.
 mDNSlocal void SendGoodbyesForWakeOnlyService(mDNS *const m, mDNSBool *WakeOnlyService)
 {
-    AuthRecord *rr;
-
-    *WakeOnlyService = mDNSfalse;
-
-    // Mark all the records we need to deregister and send them
-    for (rr = m->ResourceRecords; rr; rr=rr->next)
-    {
-        if ((rr->AuthFlags & AuthFlagsWakeOnly) && 
-            rr->resrec.RecordType == kDNSRecordTypeShared && rr->RequireGoodbye)
-        {
-            rr->ImmedAnswer = mDNSInterfaceMark;
-            *WakeOnlyService = mDNStrue;
-        }
-    }
+    return SendGoodbyesForSelectServices(m, WakeOnlyService, WAKE_ONLY_SERVICE);
 }
-#endif // APPLE_OSx_mDNSResponder
+#endif // APPLE_OSX_mDNSResponder
+
 
 mDNSlocal void SendSleepGoodbyes(mDNS *const m, mDNSBool AllInterfaces, mDNSBool unicast)
 {
@@ -6238,23 +6690,23 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
     mDNSBool invokeKACallback = mDNStrue;
     const CacheRecord *sps[3] = { mDNSNULL };
     mDNSOpaque64 updateIntID = zeroOpaque64;
-    mDNSInterfaceID registeredIntfIDS[128];
+    mDNSInterfaceID registeredIntfIDS[128] = { 0 };
     mDNSu32 registeredCount = 0;
     int skippedRegistrations = 0;
 
     m->NextScheduledSPRetry = m->timenow;
+
+    // Clear out the SCDynamic entry that stores the external SPS information
+    mDNSPlatformClearSPSData();
 
     if      (!m->SystemWakeOnLANEnabled) LogSPS("BeginSleepProcessing: m->SystemWakeOnLANEnabled is false");
     else if (!mDNSCoreHaveAdvertisedMulticastServices(m)) LogSPS("BeginSleepProcessing: No advertised services");
     else    // If we have at least one advertised service
     {
         NetworkInterfaceInfo *intf;
-
-        // Clear out the SCDynamic entry that stores the external SPS information
-        mDNSPlatformClearSPSMACAddr();
-
         for (intf = GetFirstActiveInterface(m->HostInterfaces); intf; intf = GetFirstActiveInterface(intf->next))
         {
+            mDNSBool skipFullSleepProxyRegistration = mDNSfalse;
             // Intialize it to false. These values make sense only when SleepState is set to Sleeping.
             intf->SendGoodbyes = 0;
 
@@ -6281,32 +6733,42 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
                 continue;
             }
 
-            // Check if we have already registered with a sleep proxy for this subnet
+            // Check if we have already registered with a sleep proxy for this subnet.
+            // If so, then the subsequent in-NIC sleep proxy registration is limited to any keepalive records that belong
+            // to the interface.
             if (skipSameSubnetRegistration(m, registeredIntfIDS, registeredCount, intf->InterfaceID))
             {
-                LogSPS("%s : Skipping sleep proxy registration on %s", __func__, intf->ifname);
-                continue;
+                LogSPS("%s : Skipping full sleep proxy registration on %s", __func__, intf->ifname);
+                skipFullSleepProxyRegistration = mDNStrue;
             }
 
 #if APPLE_OSX_mDNSResponder
-            else if (SupportsInNICProxy(intf))
+            if (SupportsInNICProxy(intf))
             {
-                if (ActivateLocalProxy(m, intf) == mStatus_NoError)
+                mDNSBool keepaliveOnly = mDNSfalse;
+                const mStatus err = ActivateLocalProxy(intf, skipFullSleepProxyRegistration, &keepaliveOnly);
+                if (!skipFullSleepProxyRegistration && !err)
                 {
                     SendGoodbyesForWakeOnlyService(m, &WakeOnlyService);
-                    SendGoodbyes = mDNSfalse;
-                    invokeKACallback  = mDNSfalse;
+
+                    // Send goodbyes for all advertised services if the only record offloaded was the keepalive record.
+                    SendGoodbyes     = (keepaliveOnly) ? mDNStrue: mDNSfalse;
+                    invokeKACallback = mDNSfalse;
                     LogSPS("BeginSleepProcessing: %-6s using local proxy", intf->ifname);
                     // This will leave m->SleepState set to SleepState_Transferring,
                     // which is okay because with no outstanding resolves, or updates in flight,
                     // mDNSCoreReadyForSleep() will conclude correctly that all the updates have already completed
 
+                    // Setting this flag activates the SleepLimit which delays sleep by 5 seconds and
+                    // will allow the system to deregister any BTMM records.
+                    m->NextScheduledSPRetry  = m->timenow + (5 * mDNSPlatformOneSecond);
                     registeredIntfIDS[registeredCount] = intf->InterfaceID;
                     registeredCount++;
                 }
+                continue;
             }
 #endif // APPLE_OSX_mDNSResponder
-            else
+            if (!skipFullSleepProxyRegistration)
             {
 #if APPLE_OSX_mDNSResponder
                 // If on battery, do not attempt to offload to external sleep proxies
@@ -6337,9 +6799,9 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
                     {
 #if ForceAlerts
                         if (intf->SPSAddr[i].type)
-                        { LogMsg("BeginSleepProcessing: %s %d intf->SPSAddr[i].type %d", intf->ifname, i, intf->SPSAddr[i].type); *(long*)0 = 0; }
+                            LogFatalError("BeginSleepProcessing: %s %d intf->SPSAddr[i].type %d", intf->ifname, i, intf->SPSAddr[i].type);
                         if (intf->NetWakeResolve[i].ThisQInterval >= 0)
-                        { LogMsg("BeginSleepProcessing: %s %d intf->NetWakeResolve[i].ThisQInterval %d", intf->ifname, i, intf->NetWakeResolve[i].ThisQInterval); *(long*)0 = 0; }
+                            LogFatalError("BeginSleepProcessing: %s %d intf->NetWakeResolve[i].ThisQInterval %d", intf->ifname, i, intf->NetWakeResolve[i].ThisQInterval);
 #endif
                         intf->SPSAddr[i].type = mDNSAddrType_None;
                         if (intf->NetWakeResolve[i].ThisQInterval >= 0) mDNS_StopQuery(m, &intf->NetWakeResolve[i]);
@@ -6379,7 +6841,7 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
     //
     // - If there are no sleep proxy servers, then send goodbyes on all interfaces
     //   for both multicast and unicast.
-    // 
+    //
     // - If we skipped registrations on some interfaces, then we have already marked
     //   them appropriately above. We don't need to send goodbyes for unicast as
     //   we have registered with at least one sleep proxy.
@@ -6402,7 +6864,7 @@ mDNSlocal void BeginSleepProcessing(mDNS *const m)
     else if (WakeOnlyService)
     {
         // If we saw WakeOnly service above, send the goodbyes now.
-        LogSPS("BeginSleepProcessing: Sending goodbyes for WakeOnlyServices");
+        LogSPS("BeginSleepProcessing: Sending goodbyes for WakeOnlyService");
         SendResponses(m);
     }
 }
@@ -6414,7 +6876,8 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
 {
     AuthRecord *rr;
 
-    LogSPS("%s (old state %d) at %ld", sleep ? "Sleeping" : "Waking", m->SleepState, m->timenow);
+    LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_INFO,
+        PUB_S " (old state %d) at %d", sleep ? "Sleeping" : "Waking", m->SleepState, m->timenow);
 
     if (sleep && !m->SleepState)        // Going to sleep
     {
@@ -6428,16 +6891,23 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
 #ifndef SPC_DISABLED
             if (oldstate == 1) mDNS_DeregisterService(m, &m->SPSRecords);
 #else
-			(void)oldstate;
+            (void)oldstate;
 #endif
             mDNS_ReclaimLockAfterCallback();
         }
-
+#ifdef _LEGACY_NAT_TRAVERSAL_
+        if (m->SSDPSocket)
+        {
+            mDNSPlatformUDPClose(m->SSDPSocket);
+            m->SSDPSocket = mDNSNULL;
+        }
+#endif
         m->SleepState = SleepState_Transferring;
         if (m->SystemWakeOnLANEnabled && m->DelaySleep)
         {
             // If we just woke up moments ago, allow ten seconds for networking to stabilize before going back to sleep
-            LogSPS("mDNSCoreMachineSleep: Re-sleeping immediately after waking; will delay for %d ticks", m->DelaySleep - m->timenow);
+            LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG,
+                      "mDNSCoreMachineSleep: Re-sleeping immediately after waking; will delay for %d ticks", m->DelaySleep - m->timenow);
             m->SleepLimit = NonZeroTime(m->DelaySleep + mDNSPlatformOneSecond * 10);
         }
         else
@@ -6451,12 +6921,10 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
 #ifndef UNICAST_DISABLED
         SuspendLLQs(m);
 #endif
-#if APPLE_OSX_mDNSResponder
-        RemoveAutoTunnel6Record(m);
-#endif
-        LogSPS("mDNSCoreMachineSleep: m->SleepState %d (%s) seq %d", m->SleepState,
-               m->SleepState == SleepState_Transferring ? "Transferring" :
-               m->SleepState == SleepState_Sleeping     ? "Sleeping"     : "?", m->SleepSeqNum);
+        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG, "mDNSCoreMachineSleep: m->SleepState %d (" PUB_S ") seq %d",
+                  m->SleepState,
+                  m->SleepState == SleepState_Transferring ? "Transferring" :
+                  m->SleepState == SleepState_Sleeping     ? "Sleeping"     : "?", m->SleepSeqNum);
         mDNS_Unlock(m);
     }
     else if (!sleep)        // Waking up
@@ -6477,10 +6945,10 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
             m->SleepState = SleepState_Awake;
             m->SleepSeqNum++;
             // If the machine wakes and then immediately tries to sleep again (e.g. a maintenance wake)
-            // then we enforce a minimum delay of 16 seconds before we begin sleep processing.
+            // then we enforce a minimum delay of five seconds before we begin sleep processing.
             // This is to allow time for the Ethernet link to come up, DHCP to get an address, mDNS to issue queries, etc.,
             // before we make our determination of whether there's a Sleep Proxy out there we should register with.
-            m->DelaySleep = NonZeroTime(m->timenow + mDNSPlatformOneSecond * 16);
+            m->DelaySleep = NonZeroTime(m->timenow + kDarkWakeDelaySleep);
         }
 
         if (m->SPSState == 3)
@@ -6489,7 +6957,6 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
             mDNSCoreBeSleepProxyServer_internal(m, m->SPSType, m->SPSPortability, m->SPSMarginalPower, m->SPSTotalPower, m->SPSFeatureFlags);
         }
         m->mDNSStats.Wakes++;
-
         // ... and the same for NextSPSAttempt
         for (intf = GetFirstActiveInterface(m->HostInterfaces); intf; intf = GetFirstActiveInterface(intf->next)) intf->NextSPSAttempt = -1;
 
@@ -6498,15 +6965,11 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
 
         // and reactivtate service registrations
         m->NextSRVUpdate = NonZeroTime(m->timenow + mDNSPlatformOneSecond);
-        LogInfo("mDNSCoreMachineSleep waking: NextSRVUpdate in %d %d", m->NextSRVUpdate - m->timenow, m->timenow);
+        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG,
+                  "mDNSCoreMachineSleep waking: NextSRVUpdate in %d %d", m->NextSRVUpdate - m->timenow, m->timenow);
 
         // 2. Re-validate our cache records
         currtime = mDNSPlatformUTC();
-
-#if APPLE_OSX_mDNSResponder
-        // start time of this statistics gathering interval
-        m->StatStartTime = currtime;
-#endif // APPLE_OSX_mDNSResponder
 
         diff = currtime - m->TimeSlept;
         FORALL_CACHERECORDS(slot, cg, cr)
@@ -6530,7 +6993,7 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
                     mDNSu32 uTTL = RRUnadjustedTTL(cr->resrec.rroriginalttl);
                     const mDNSs32 remain = uTTL - (m->timenow - cr->TimeRcvd) / mDNSPlatformOneSecond;
 
-                    // -if we have slept longer than the remaining TTL, purge and start fresh. 
+                    // -if we have slept longer than the remaining TTL, purge and start fresh.
                     // -if we have been sleeping for a long time, we could reduce TimeRcvd below by
                     //  a sufficiently big value which could cause the value to go into the future
                     //  because of the signed comparison of time. For this to happen, we should have been
@@ -6539,21 +7002,25 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
 
                     if (diff >= remain || diff > (2 * 24 * 3600))
                     {
-                        LogInfo("mDNSCoreMachineSleep: %s: Purging cache entry SleptTime %d, Remaining TTL %d",
-                            CRDisplayString(m, cr), diff, remain);
+                        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG,
+                                  "mDNSCoreMachineSleep: " PRI_S ": Purging cache entry SleptTime %d, Remaining TTL %d",
+                                  CRDisplayString(m, cr), diff, remain);
                         mDNS_PurgeCacheResourceRecord(m, cr);
                         continue;
                     }
                     cr->TimeRcvd -= (diff * mDNSPlatformOneSecond);
                     if (m->timenow - (cr->TimeRcvd + ((mDNSs32)uTTL * mDNSPlatformOneSecond)) >= 0)
                     {
-                        LogInfo("mDNSCoreMachineSleep: %s: Purging after adjusting the remaining TTL %d by %d seconds",
-                            CRDisplayString(m, cr), remain, diff);
+                        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG,
+                                  "mDNSCoreMachineSleep: " PRI_S ": Purging after adjusting the remaining TTL %d by %d seconds",
+                                  CRDisplayString(m, cr), remain, diff);
                         mDNS_PurgeCacheResourceRecord(m, cr);
                     }
                     else
                     {
-                        LogInfo("mDNSCoreMachineSleep: %s: Adjusted the remain ttl %u by %d seconds", CRDisplayString(m, cr), remain, diff);
+                        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG,
+                                  "mDNSCoreMachineSleep: " PRI_S ": Adjusted the remain ttl %u by %d seconds",
+                                  CRDisplayString(m, cr), remain, diff);
                     }
                 }
             }
@@ -6583,7 +7050,7 @@ mDNSexport void mDNSCoreMachineSleep(mDNS *const m, mDNSBool sleep)
         // But if we do get a network configuration change, mDNSMacOSXNetworkChanged will call uDNS_SetupDNSConfig, which
         // will call mDNS_SetPrimaryInterfaceInfo, which will call RecreateNATMappings to refresh them, potentially sooner
         // than five seconds from now.
-        LogInfo("mDNSCoreMachineSleep: recreating NAT mappings in 5 seconds");
+        LogRedact(MDNS_LOG_CATEGORY_SPS, MDNS_LOG_DEBUG, "mDNSCoreMachineSleep: recreating NAT mappings in 5 seconds");
         RecreateNATMappings(m, mDNSPlatformOneSecond * 5);
         mDNS_Unlock(m);
     }
@@ -6653,9 +7120,6 @@ mDNSexport mDNSBool mDNSCoreReadyForSleep(mDNS *m, mDNSs32 now)
         {
             if (rr->state == regState_Refresh && rr->tcp)
             { LogSPS("mDNSCoreReadyForSleep: waiting for Record updateIntID 0x%x 0x%x (updateid %d) %s", rr->updateIntID.l[1], rr->updateIntID.l[0], mDNSVal16(rr->updateid), ARDisplayString(m,rr)); goto notready; }
-            #if APPLE_OSX_mDNSResponder
-            if (!RecordReadyForSleep(m, rr)) { LogSPS("mDNSCoreReadyForSleep: waiting for %s", ARDisplayString(m, rr)); goto notready; }
-            #endif
         }
 
     mDNS_Unlock(m);
@@ -6758,7 +7222,7 @@ mDNSlocal mDNSu8 *GenerateUnicastResponse(const DNSMessage *const query, const m
     const mDNSu8    *const limit     = response->data + sizeof(response->data);
     const mDNSu8    *ptr             = query->data;
     AuthRecord  *rr;
-    mDNSu32 maxttl = 0x70000000;
+    mDNSu32 maxttl = (!InterfaceID) ? mDNSMaximumUnicastTTLSeconds : mDNSMaximumMulticastTTLSeconds;
     int i;
 
     // Initialize the response fields so we can answer the questions
@@ -6829,6 +7293,12 @@ mDNSlocal int CompareRData(const AuthRecord *const our, const CacheRecord *const
     if (!our) { LogMsg("CompareRData ERROR: our is NULL"); return(+1); }
     if (!pkt) { LogMsg("CompareRData ERROR: pkt is NULL"); return(+1); }
 
+#if defined(__clang_analyzer__)
+    // Get rid of analyzer warnings about ourptr and pktptr pointing to garbage after retruning from putRData().
+    // There are no clear indications from the analyzer of the cause of the supposed problem.
+    mDNSPlatformMemZero(ourdata, 1);
+    mDNSPlatformMemZero(pktdata, 1);
+#endif
     ourend = putRData(mDNSNULL, ourdata, ourdata + sizeof(ourdata), &our->resrec);
     pktend = putRData(mDNSNULL, pktdata, pktdata + sizeof(pktdata), &pkt->resrec);
     while (ourptr < ourend && pktptr < pktend && *ourptr == *pktptr) { ourptr++; pktptr++; }
@@ -6841,6 +7311,17 @@ mDNSlocal int CompareRData(const AuthRecord *const our, const CacheRecord *const
 
     LogMsg("CompareRData ERROR: Invalid state");
     return(-1);
+}
+
+mDNSlocal mDNSBool PacketRecordMatches(const AuthRecord *const rr, const CacheRecord *const pktrr, const AuthRecord *const master)
+{
+    if (IdenticalResourceRecord(&rr->resrec, &pktrr->resrec))
+    {
+        const AuthRecord *r2 = rr;
+        while (r2->DependentOn) r2 = r2->DependentOn;
+        if (r2 == master) return(mDNStrue);
+    }
+    return(mDNSfalse);
 }
 
 // See if we have an authoritative record that's identical to this packet record,
@@ -6857,21 +7338,11 @@ mDNSlocal mDNSBool MatchDependentOn(const mDNS *const m, const CacheRecord *cons
     const AuthRecord *r1;
     for (r1 = m->ResourceRecords; r1; r1=r1->next)
     {
-        if (IdenticalResourceRecord(&r1->resrec, &pktrr->resrec))
-        {
-            const AuthRecord *r2 = r1;
-            while (r2->DependentOn) r2 = r2->DependentOn;
-            if (r2 == master) return(mDNStrue);
-        }
+        if (PacketRecordMatches(r1, pktrr, master)) return(mDNStrue);
     }
     for (r1 = m->DuplicateRecords; r1; r1=r1->next)
     {
-        if (IdenticalResourceRecord(&r1->resrec, &pktrr->resrec))
-        {
-            const AuthRecord *r2 = r1;
-            while (r2->DependentOn) r2 = r2->DependentOn;
-            if (r2 == master) return(mDNStrue);
-        }
+        if (PacketRecordMatches(r1, pktrr, master)) return(mDNStrue);
     }
     return(mDNSfalse);
 }
@@ -6887,8 +7358,7 @@ mDNSlocal const AuthRecord *FindRRSet(const mDNS *const m, const CacheRecord *co
     {
         if (IdenticalResourceRecord(&rr->resrec, &pktrr->resrec))
         {
-            while (rr->RRSet && rr != rr->RRSet) rr = rr->RRSet;
-            return(rr);
+            return(rr->RRSet ? rr->RRSet : rr);
         }
     }
     return(mDNSNULL);
@@ -6941,7 +7411,7 @@ mDNSlocal void ResolveSimultaneousProbe(mDNS *const m, const DNSMessage *const q
     {
         ptr = GetLargeResourceRecord(m, query, ptr, end, q->InterfaceID, kDNSRecordTypePacketAuth, &m->rec);
         if (!ptr) break;
-        if (m->rec.r.resrec.RecordType != kDNSRecordTypePacketNegative && ResourceRecordAnswersQuestion(&m->rec.r.resrec, q))
+        if (m->rec.r.resrec.RecordType != kDNSRecordTypePacketNegative && CacheRecordAnswersQuestion(&m->rec.r, q))
         {
             FoundUpdate = mDNStrue;
             if (PacketRRConflict(m, our, &m->rec.r))
@@ -6985,16 +7455,15 @@ exit:
 
 mDNSlocal CacheRecord *FindIdenticalRecordInCache(const mDNS *const m, const ResourceRecord *const pktrr)
 {
-    mDNSu32 slot = HashSlot(pktrr->name);
-    CacheGroup *cg = CacheGroupForRecord(m, slot, pktrr);
+    CacheGroup *cg = CacheGroupForRecord(m, pktrr);
     CacheRecord *rr;
     mDNSBool match;
     for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
     {
         if (!pktrr->InterfaceID)
         {
-            mDNSu16 id1 = (pktrr->rDNSServer ? pktrr->rDNSServer->resGroupID : 0);
-            mDNSu16 id2 = (rr->resrec.rDNSServer ? rr->resrec.rDNSServer->resGroupID : 0);
+            const mDNSu32 id1 = (pktrr->rDNSServer ? pktrr->rDNSServer->resGroupID : 0);
+            const mDNSu32 id2 = (rr->resrec.rDNSServer ? rr->resrec.rDNSServer->resGroupID : 0);
             match = (id1 == id2);
         }
         else match = (pktrr->InterfaceID == rr->resrec.InterfaceID);
@@ -7014,7 +7483,7 @@ mDNSlocal void DeregisterProxyRecord(mDNS *const m, AuthRecord *const rr)
 mDNSlocal void ClearKeepaliveProxyRecords(mDNS *const m, const OwnerOptData *const owner, AuthRecord *const thelist, const mDNSInterfaceID InterfaceID)
 {
     if (m->CurrentRecord)
-        LogMsg("ClearIdenticalProxyRecords ERROR m->CurrentRecord already set %s", ARDisplayString(m, m->CurrentRecord));
+        LogMsg("ClearKeepaliveProxyRecords ERROR m->CurrentRecord already set %s", ARDisplayString(m, m->CurrentRecord));
     m->CurrentRecord = thelist;
 
     // Normally, the RDATA of the keepalive record will be different each time and hence we always
@@ -7106,11 +7575,12 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
                                const mDNSAddr *srcaddr, const mDNSInterfaceID InterfaceID, mDNSBool LegacyQuery, mDNSBool QueryWasMulticast,
                                mDNSBool QueryWasLocalUnicast, DNSMessage *const response)
 {
-    mDNSBool FromLocalSubnet    = srcaddr && mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr, mDNSNULL);
+    const mDNSBool FromLocalSubnet   = mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr);
     AuthRecord   *ResponseRecords    = mDNSNULL;
     AuthRecord  **nrp                = &ResponseRecords;
 
 #if POOF_ENABLED
+    mDNSBool    notD2D = !mDNSPlatformInterfaceIsD2D(InterfaceID);  // We don't run the POOF algorithm on D2D interfaces.
     CacheRecord  *ExpectedAnswers    = mDNSNULL;            // Records in our cache we expect to see updated
     CacheRecord **eap                = &ExpectedAnswers;
 #endif // POOF_ENABLED
@@ -7148,9 +7618,9 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
         m->rec.r.resrec.RecordType = 0;     // Clear RecordType to show we're not still using it
     }
 
-    // 
+    //
     // Look in Authority Section for NSEC3 record
-    // 
+    //
 
     mDNSParseNSEC3Records(m, query, end, InterfaceID, &McastNSEC3Records);
 
@@ -7167,9 +7637,6 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
         ptr = getQuestion(query, ptr, end, InterfaceID, &pktq); // get the question...
         if (!ptr) goto exit;
 
-        pktq.AnonInfo = mDNSNULL;
-        if (McastNSEC3Records)
-            InitializeAnonInfoForQuestion(m, &McastNSEC3Records, &pktq);
         // The only queries that *need* a multicast response are:
         // * Queries sent via multicast
         // * from port 5353
@@ -7201,7 +7668,7 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
         {
             rr = m->CurrentRecord;
             m->CurrentRecord = rr->next;
-            if (AnyTypeRecordAnswersQuestion(&rr->resrec, &pktq) && (QueryWasMulticast || QueryWasLocalUnicast || rr->AllowRemoteQuery))
+            if (AnyTypeRecordAnswersQuestion(rr, &pktq) && (QueryWasMulticast || QueryWasLocalUnicast || rr->AllowRemoteQuery))
             {
                 m->mDNSStats.MatchingAnswersForQueries++;
                 if (RRTypeAnswersQuestionType(&rr->resrec, pktq.qtype))
@@ -7211,12 +7678,6 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
                     else if (ResourceRecordIsValidAnswer(rr))
                     {
                         NumAnswersForThisQuestion++;
-                        // As we have verified this question to be part of the same subset,
-                        // set the anonymous data which is needed below when walk the cache
-                        // records to see what answers we should be expecting. The cache records
-                        // may cache only the nsec3RR and not the anonymous data itself. 
-                        if (pktq.AnonInfo && rr->resrec.AnonInfo)
-                            SetAnonData(&pktq, &rr->resrec, mDNStrue);
 
                         // Note: We should check here if this is a probe-type query, and if so, generate an immediate
                         // unicast answer back to the source, because timeliness in answering probes is important.
@@ -7233,7 +7694,7 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
                             // We only mark this question for sending if it is at least one second since the last time we multicast it
                             // on this interface. If it is more than a second, or LastMCInterface is different, then we may multicast it.
                             // This is to guard against the case where someone blasts us with queries as fast as they can.
-                            if (m->timenow - (rr->LastMCTime + mDNSPlatformOneSecond) >= 0 ||
+                            if ((mDNSu32)(m->timenow - rr->LastMCTime) >= (mDNSu32)mDNSPlatformOneSecond ||
                                 (rr->LastMCInterface != mDNSInterfaceMark && rr->LastMCInterface != InterfaceID))
                                 rr->NR_AnswerTo = NR_AnswerMulticast;
                         }
@@ -7262,72 +7723,55 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
 
         if (query->h.flags.b[0] & kDNSFlag0_TC)
             m->mDNSStats.KnownAnswerMultiplePkts++;
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-        if (QuestionNeedsMulticastResponse)
-#else
         // We only do the following accelerated cache expiration and duplicate question suppression processing
         // for non-truncated multicast queries with multicast responses.
         // For any query generating a unicast response we don't do this because we can't assume we will see the response.
         // For truncated queries we don't do this because a response we're expecting might be suppressed by a subsequent
         // known-answer packet, and when there's packet loss we can't safely assume we'll receive *all* known-answer packets.
         if (QuestionNeedsMulticastResponse && !(query->h.flags.b[0] & kDNSFlag0_TC))
-#endif
         {
 #if POOF_ENABLED
-            const mDNSu32 slot = HashSlot(&pktq.qname);
-            CacheGroup *cg = CacheGroupForName(m, slot, pktq.qnamehash, &pktq.qname);
-            CacheRecord *cr;
-
-            // Make a list indicating which of our own cache records we expect to see updated as a result of this query
-            // Note: Records larger than 1K are not habitually multicast, so don't expect those to be updated
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-            if (!(query->h.flags.b[0] & kDNSFlag0_TC))
-#endif // ENABLE_MULTI_PACKET_QUERY_SNOOPING
-            for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
-                if (SameNameRecordAnswersQuestion(&cr->resrec, &pktq) && cr->resrec.rdlength <= SmallRecordLimit)
-                    if (!cr->NextInKAList && eap != &cr->NextInKAList)
+            if (notD2D)
+            {
+                CacheGroup *cg = CacheGroupForName(m, pktq.qnamehash, &pktq.qname);
+                CacheRecord *cr;
+    
+                // Make a list indicating which of our own cache records we expect to see updated as a result of this query
+                // Note: Records larger than 1K are not habitually multicast, so don't expect those to be updated
+                for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
+                {
+                    if (SameNameCacheRecordAnswersQuestion(cr, &pktq) && cr->resrec.rdlength <= SmallRecordLimit)
                     {
-                        *eap = cr;
-                        eap = &cr->NextInKAList;
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-                        if (cr->MPUnansweredQ == 0 || m->timenow - cr->MPLastUnansweredQT >= mDNSPlatformOneSecond)
+                        if (!cr->NextInKAList && eap != &cr->NextInKAList)
                         {
-                            // Although MPUnansweredQ is only really used for multi-packet query processing,
-                            // we increment it for both single-packet and multi-packet queries, so that it stays in sync
-                            // with the MPUnansweredKA value, which by necessity is incremented for both query types.
-                            cr->MPUnansweredQ++;
-                            cr->MPLastUnansweredQT = m->timenow;
-                            cr->MPExpectingKA = mDNStrue;
+                            *eap = cr;
+                            eap = &cr->NextInKAList;
                         }
-#endif // ENABLE_MULTI_PACKET_QUERY_SNOOPING
                     }
+                }
+            }
 #endif // POOF_ENABLED
 
             // Check if this question is the same as any of mine.
             // We only do this for non-truncated queries. Right now it would be too complicated to try
             // to keep track of duplicate suppression state between multiple packets, especially when we
             // can't guarantee to receive all of the Known Answer packets that go with a particular query.
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-            if (!(query->h.flags.b[0] & kDNSFlag0_TC))
-#endif
-            // For anonymous question, the duplicate suppressesion should happen if the
-            // question belongs in the same group. As the group is expected to be
-            // small, we don't do the optimization for now.
-            if (!pktq.AnonInfo)
+            for (q = m->Questions; q; q=q->next)
             {
-                for (q = m->Questions; q; q=q->next)
-                    if (!q->Target.type && ActiveQuestion(q) && m->timenow - q->LastQTxTime > mDNSPlatformOneSecond / 4)
-                        if (!q->InterfaceID || q->InterfaceID == InterfaceID)
-                            if (q->NextInDQList == mDNSNULL && dqp != &q->NextInDQList)
-                                if (q->qtype == pktq.qtype &&
-                                    q->qclass == pktq.qclass &&
-                                    q->qnamehash == pktq.qnamehash && SameDomainName(&q->qname, &pktq.qname))
-                                { *dqp = q; dqp = &q->NextInDQList; }
+                if (ActiveQuestion(q) && m->timenow - q->LastQTxTime > mDNSPlatformOneSecond / 4)
+                {
+                    if (!q->InterfaceID || q->InterfaceID == InterfaceID)
+                    {
+                        if (q->NextInDQList == mDNSNULL && dqp != &q->NextInDQList)
+                        {
+                            if (q->qtype == pktq.qtype &&
+                                q->qclass == pktq.qclass &&
+                                q->qnamehash == pktq.qnamehash && SameDomainName(&q->qname, &pktq.qname))
+                            { *dqp = q; dqp = &q->NextInDQList; }
+                        }
+                    }
+                }
             }
-        }
-        if (pktq.AnonInfo)
-        {
-            FreeAnonInfo(pktq.AnonInfo);
         }
     }
 
@@ -7393,26 +7837,19 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
 
             ourcacherr = FindIdenticalRecordInCache(m, &m->rec.r.resrec);
 
-    #if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-            // See if this Known-Answer suppresses any answers we were expecting for our cache records. We do this always,
-            // even if the TC bit is not set (the TC bit will *not* be set in the *last* packet of a multi-packet KA list).
-            if (ourcacherr && ourcacherr->MPExpectingKA && m->timenow - ourcacherr->MPLastUnansweredQT < mDNSPlatformOneSecond)
-            {
-                ourcacherr->MPUnansweredKA++;
-                ourcacherr->MPExpectingKA = mDNSfalse;
-            }
-    #endif
-
 #if POOF_ENABLED
-            // Having built our ExpectedAnswers list from the questions in this packet, we then remove
-            // any records that are suppressed by the Known Answer list in this packet.
-            eap = &ExpectedAnswers;
-            while (*eap)
+            if (notD2D)
             {
-                CacheRecord *cr = *eap;
-                if (cr->resrec.InterfaceID == InterfaceID && IdenticalResourceRecord(&m->rec.r.resrec, &cr->resrec))
-                { *eap = cr->NextInKAList; cr->NextInKAList = mDNSNULL; }
-                else eap = &cr->NextInKAList;
+                // Having built our ExpectedAnswers list from the questions in this packet, we then remove
+                // any records that are suppressed by the Known Answer list in this packet.
+                eap = &ExpectedAnswers;
+                while (*eap)
+                {
+                    CacheRecord *cr = *eap;
+                    if (cr->resrec.InterfaceID == InterfaceID && IdenticalResourceRecord(&m->rec.r.resrec, &cr->resrec))
+                    { *eap = cr->NextInKAList; cr->NextInKAList = mDNSNULL; }
+                    else eap = &cr->NextInKAList;
+                }
             }
 #endif // POOF_ENABLED
 
@@ -7423,7 +7860,7 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
                 while (*dqp)
                 {
                     DNSQuestion *q = *dqp;
-                    if (ResourceRecordAnswersQuestion(&m->rec.r.resrec, q))
+                    if (CacheRecordAnswersQuestion(&m->rec.r, q))
                     { *dqp = q->NextInDQList; q->NextInDQList = mDNSNULL; }
                     else dqp = &q->NextInDQList;
                 }
@@ -7449,13 +7886,9 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
             mDNSBool SendMulticastResponse = mDNSfalse;     // Send modern multicast response
             mDNSBool SendUnicastResponse   = mDNSfalse;     // Send modern unicast response (not legacy unicast response)
 
-#if !TARGET_OS_EMBEDDED
-    // always honor kDNSQClass_UnicastResponse in embedded environment to increase reliability
-    // in high multicast packet loss environments.
-
             // If it's been one TTL/4 since we multicast this, then send a multicast response 
             // for conflict detection, etc.
-            if (m->timenow - (rr->LastMCTime + TicksTTL(rr)/4) >= 0)
+            if ((mDNSu32)(m->timenow - rr->LastMCTime) >= (mDNSu32)TicksTTL(rr)/4)
             {
                 SendMulticastResponse = mDNStrue;
                 // If this record was marked for modern (delayed) unicast response, then mark it as promoted to
@@ -7467,7 +7900,6 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
                     rr->NR_AnswerTo = NR_AnswerMulticast;
                 }
             }
-#endif // !TARGET_OS_EMBEDDED
 
             // If the client insists on a multicast response, then we'd better send one
             if      (rr->NR_AnswerTo == NR_AnswerMulticast)
@@ -7484,7 +7916,6 @@ mDNSlocal mDNSu8 *ProcessQuery(mDNS *const m, const DNSMessage *const query, con
             {
                 SendLegacyResponse    = mDNStrue;
             }
-            
 
             if (SendMulticastResponse || SendUnicastResponse)
             {
@@ -7582,7 +8013,7 @@ exit:
     }
 
 #if POOF_ENABLED
-    while (ExpectedAnswers)
+    while (ExpectedAnswers && notD2D)
     {
         CacheRecord *cr = ExpectedAnswers;
         ExpectedAnswers = cr->NextInKAList;
@@ -7591,15 +8022,12 @@ exit:
         // For non-truncated queries, we can definitively say that we should expect
         // to be seeing a response for any records still left in the ExpectedAnswers list
         if (!(query->h.flags.b[0] & kDNSFlag0_TC))
-            if (cr->UnansweredQueries == 0 || m->timenow - cr->LastUnansweredTime >= mDNSPlatformOneSecond)
+            if (cr->UnansweredQueries == 0 || m->timenow - cr->LastUnansweredTime >= mDNSPlatformOneSecond * 3/4)
             {
                 cr->UnansweredQueries++;
                 cr->LastUnansweredTime = m->timenow;
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
                 if (cr->UnansweredQueries > 1)
-                    debugf("ProcessQuery: (!TC) UAQ %lu MPQ %lu MPKA %lu %s",
-                           cr->UnansweredQueries, cr->MPUnansweredQ, cr->MPUnansweredKA, CRDisplayString(m, cr));
-#endif // ENABLE_MULTI_PACKET_QUERY_SNOOPING
+                        debugf("ProcessQuery: UnansweredQueries %lu %s", cr->UnansweredQueries, CRDisplayString(m, cr));
                 SetNextCacheCheckTimeForRecord(m, cr);
             }
 
@@ -7607,47 +8035,14 @@ exit:
         // then mark it to expire in five seconds if we don't get a response by then.
         if (cr->UnansweredQueries >= MaxUnansweredQueries)
         {
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
             // Only show debugging message if this record was not about to expire anyway
-            if (RRExpireTime(cr) - m->timenow > 4 * mDNSPlatformOneSecond)
-                debugf("ProcessQuery: (Max) UAQ %lu MPQ %lu MPKA %lu mDNS_Reconfirm() for %s",
-                       cr->UnansweredQueries, cr->MPUnansweredQ, cr->MPUnansweredKA, CRDisplayString(m, cr));
-#endif // ENABLE_MULTI_PACKET_QUERY_SNOOPING
+            if (RRExpireTime(cr) - m->timenow > (mDNSs32) kDefaultReconfirmTimeForNoAnswer * 4 / 3 + mDNSPlatformOneSecond)
+                    LogInfo("ProcessQuery: UnansweredQueries %lu interface %lu TTL %lu mDNS_Reconfirm() for %s",
+                       cr->UnansweredQueries, InterfaceID, (RRExpireTime(cr) - m->timenow + mDNSPlatformOneSecond-1) / mDNSPlatformOneSecond, CRDisplayString(m, cr));
+
             m->mDNSStats.PoofCacheDeletions++;
             mDNS_Reconfirm_internal(m, cr, kDefaultReconfirmTimeForNoAnswer);
         }
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-        // Make a guess, based on the multi-packet query / known answer counts, whether we think we
-        // should have seen an answer for this. (We multiply MPQ by 4 and MPKA by 5, to allow for
-        // possible packet loss of up to 20% of the additional KA packets.)
-        else if (cr->MPUnansweredQ * 4 > cr->MPUnansweredKA * 5 + 8)
-        {
-            // We want to do this conservatively.
-            // If there are so many machines on the network that they have to use multi-packet known-answer lists,
-            // then we don't want them to all hit the network simultaneously with their final expiration queries.
-            // By setting the record to expire in four minutes, we achieve two things:
-            // (a) the 90-95% final expiration queries will be less bunched together
-            // (b) we allow some time for us to witness enough other failed queries that we don't have to do our own
-            mDNSu32 remain = (mDNSu32)(RRExpireTime(cr) - m->timenow) / 4;
-            if (remain > 240 * (mDNSu32)mDNSPlatformOneSecond)
-                remain = 240 * (mDNSu32)mDNSPlatformOneSecond;
-
-            // Only show debugging message if this record was not about to expire anyway
-            if (RRExpireTime(cr) - m->timenow > 4 * mDNSPlatformOneSecond)
-                debugf("ProcessQuery: (MPQ) UAQ %lu MPQ %lu MPKA %lu mDNS_Reconfirm() for %s",
-                       cr->UnansweredQueries, cr->MPUnansweredQ, cr->MPUnansweredKA, CRDisplayString(m, cr));
-
-            if (remain <= 60 * (mDNSu32)mDNSPlatformOneSecond)
-                cr->UnansweredQueries++;    // Treat this as equivalent to one definite unanswered query
-            cr->MPUnansweredQ  = 0;         // Clear MPQ/MPKA statistics
-            cr->MPUnansweredKA = 0;
-            cr->MPExpectingKA  = mDNSfalse;
-
-            if (remain < kDefaultReconfirmTimeForNoAnswer)
-                remain = kDefaultReconfirmTimeForNoAnswer;
-            mDNS_Reconfirm_internal(m, cr, remain);
-        }
-#endif // ENABLE_MULTI_PACKET_QUERY_SNOOPING
     }
 #endif // POOF_ENABLED
 
@@ -7656,9 +8051,9 @@ exit:
         DNSQuestion *q = DupQuestions;
         DupQuestions = q->NextInDQList;
         q->NextInDQList = mDNSNULL;
-        i = RecordDupSuppressInfo(q->DupSuppress, m->timenow, InterfaceID, srcaddr->type);
-        debugf("ProcessQuery: Recorded DSI for %##s (%s) on %p/%s %d", q->qname.c, DNSTypeName(q->qtype), InterfaceID,
-               srcaddr->type == mDNSAddrType_IPv4 ? "v4" : "v6", i);
+        RecordDupSuppressInfo(q->DupSuppress, m->timenow, InterfaceID, srcaddr->type);
+        debugf("ProcessQuery: Recorded DSI for %##s (%s) on %p/%s", q->qname.c, DNSTypeName(q->qtype), InterfaceID,
+               srcaddr->type == mDNSAddrType_IPv4 ? "v4" : "v6");
     }
 
     if (McastNSEC3Records)
@@ -7676,17 +8071,18 @@ mDNSlocal void mDNSCoreReceiveQuery(mDNS *const m, const DNSMessage *const msg, 
 {
     mDNSu8    *responseend = mDNSNULL;
     mDNSBool QueryWasLocalUnicast = srcaddr && dstaddr &&
-                                    !mDNSAddrIsDNSMulticast(dstaddr) && mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr, mDNSNULL);
+                                    !mDNSAddrIsDNSMulticast(dstaddr) && mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr);
 
-    if (!InterfaceID && dstaddr && mDNSAddrIsDNSMulticast(dstaddr))
+    if (!dstaddr || (!InterfaceID && mDNSAddrIsDNSMulticast(dstaddr)))
     {
+        const char *const reason = !dstaddr ? "Received over TCP connection" : "Multicast, but no InterfaceID";
         LogMsg("Ignoring Query from %#-15a:%-5d to %#-15a:%-5d on 0x%p with "
-               "%2d Question%s %2d Answer%s %2d Authorit%s %2d Additional%s %d bytes (Multicast, but no InterfaceID)",
+               "%2d Question%s %2d Answer%s %2d Authorit%s %2d Additional%s %d bytes (%s)",
                srcaddr, mDNSVal16(srcport), dstaddr, mDNSVal16(dstport), InterfaceID,
                msg->h.numQuestions,   msg->h.numQuestions   == 1 ? ", "   : "s,",
                msg->h.numAnswers,     msg->h.numAnswers     == 1 ? ", "   : "s,",
                msg->h.numAuthorities, msg->h.numAuthorities == 1 ? "y,  " : "ies,",
-               msg->h.numAdditionals, msg->h.numAdditionals == 1 ? " "    : "s", end - msg->data);
+               msg->h.numAdditionals, msg->h.numAdditionals == 1 ? " "    : "s", end - msg->data, reason);
         return;
     }
 
@@ -7708,7 +8104,7 @@ mDNSlocal void mDNSCoreReceiveQuery(mDNS *const m, const DNSMessage *const msg, 
                m->omsg.h.numAnswers,     m->omsg.h.numAnswers     == 1 ? "" : "s",
                m->omsg.h.numAdditionals, m->omsg.h.numAdditionals == 1 ? "" : "s",
                srcaddr, mDNSVal16(srcport), InterfaceID, srcaddr->type);
-        mDNSSendDNSMessage(m, &m->omsg, responseend, InterfaceID, mDNSNULL, srcaddr, srcport, mDNSNULL, mDNSNULL, mDNSfalse);
+        mDNSSendDNSMessage(m, &m->omsg, responseend, InterfaceID, mDNSNULL, mDNSNULL, srcaddr, srcport, mDNSNULL, mDNSfalse);
     }
 }
 
@@ -7729,19 +8125,36 @@ struct UDPSocket_struct
     mDNSIPPort port; // MUST BE FIRST FIELD -- mDNSCoreReceive expects every UDPSocket_struct to begin with mDNSIPPort port
 };
 
-mDNSlocal DNSQuestion *ExpectingUnicastResponseForQuestion(const mDNS *const m, const mDNSIPPort port, const mDNSOpaque16 id, const DNSQuestion *const question, mDNSBool tcp)
+mDNSlocal DNSQuestion *ExpectingUnicastResponseForQuestion(const mDNS *const m, const mDNSIPPort port, const mDNSOpaque16 id, const DNSQuestion *const question, mDNSBool tcp, DNSQuestion ** suspiciousQ)
 {
     DNSQuestion *q;
     for (q = m->Questions; q; q=q->next)
     {
         if (!tcp && !q->LocalSocket) continue;
-        if (mDNSSameIPPort(tcp ? q->tcpSrcPort : q->LocalSocket->port, port)     &&
-            mDNSSameOpaque16(q->TargetQID,         id)       &&
+        if (mDNSSameIPPort(tcp ? q->tcpSrcPort : q->LocalSocket->port, port)       &&
             q->qtype                  == question->qtype     &&
             q->qclass                 == question->qclass    &&
             q->qnamehash              == question->qnamehash &&
             SameDomainName(&q->qname, &question->qname))
-            return(q);
+        {
+            if (mDNSSameOpaque16(q->TargetQID, id)) return(q);
+            else
+            {
+                // Everything but the QIDs match up, should we be suspicious?
+                if (!tcp && suspiciousQ)
+                {
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+                    if (mDNSSameOpaque16(q->LastTargetQID, id)) // Only be suspicious if this is also not the "last" used QID (on a DNS server set change)
+                    {
+                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_ERROR, "Ignored but not suspicious LastTargetQID %d TargetQID %d", mDNSVal16(q->LastTargetQID), mDNSVal16(q->TargetQID));
+                    }
+                    else
+#endif
+                    *suspiciousQ = q;
+                }
+                return(mDNSNULL);
+            }
+        }
     }
     return(mDNSNULL);
 }
@@ -7753,7 +8166,6 @@ mDNSlocal DNSQuestion *ExpectingUnicastResponseForRecord(mDNS *const m,
 {
     DNSQuestion *q;
     (void)id;
-    (void)srcaddr;
 
     for (q = m->Questions; q; q=q->next)
     {
@@ -7776,11 +8188,11 @@ mDNSlocal DNSQuestion *ExpectingUnicastResponseForRecord(mDNS *const m,
                     }
                     if (mDNSSameIPPort(srcp, port)) return(q);
 
-                    //	if (mDNSSameAddress(srcaddr, &q->Target))                   return(mDNStrue);
-                    //	if (q->LongLived && mDNSSameAddress(srcaddr, &q->servAddr)) return(mDNStrue); Shouldn't need this now that we have LLQType checking
-                    //	if (TrustedSource(m, srcaddr))                              return(mDNStrue);
-                    LogInfo("WARNING: Ignoring suspect uDNS response for %##s (%s) [q->Target %#a:%d] from %#a:%d %s",
-                            q->qname.c, DNSTypeName(q->qtype), &q->Target, mDNSVal16(srcp), srcaddr, mDNSVal16(port), CRDisplayString(m, rr));
+                    //  if (mDNSSameAddress(srcaddr, &q->Target))                   return(mDNStrue);
+                    //  if (q->LongLived && mDNSSameAddress(srcaddr, &q->servAddr)) return(mDNStrue); Shouldn't need this now that we have LLQType checking
+                    //  if (TrustedSource(m, srcaddr))                              return(mDNStrue);
+                    LogInfo("WARNING: Ignoring suspect uDNS response for %##s (%s) from %#a:%d %s",
+                            q->qname.c, DNSTypeName(q->qtype), srcaddr, mDNSVal16(port), CRDisplayString(m, rr));
                     return(mDNSNULL);
                 }
             }
@@ -7792,111 +8204,6 @@ mDNSlocal DNSQuestion *ExpectingUnicastResponseForRecord(mDNS *const m,
         }
     }
     return(mDNSNULL);
-}
-
-// Return a pointer to the primary service name, skipping subtype name if present.
-mDNSlocal const domainname *getPrimaryServiceName(const domainname *domainName)
-{
-    const domainname *primaryName = domainName;
-    const domainname *subName = SkipLeadingLabels(domainName, 1);
-    
-    if (SameDomainLabel(subName->c, (const mDNSu8 *)mDNSSubTypeLabel))
-    {
-        // skip "<sub type name>._sub" portion of name
-        primaryName = SkipLeadingLabels(domainName, 2);
-        debugf("getPrimaryServiceName: returning %##s for _sub type", primaryName);
-    }
-
-    return primaryName;
-}
-
-// This function is not called if the packet is from us, which implies that we accept all multicast packets coming from us.
-mDNSlocal mDNSBool ExpectingMulticastResponseForRecord(mDNS *const m, CacheRecord *rr, const mDNSAddr *srcaddr, mDNSBool recordAccepted,
-    CacheRecord **McastNSEC3Records)
-{
-    DNSQuestion *q;
-
-    // Accept A and AAAA if we accepted something before in the same packet as most likely related to the
-    // service records that we may have accepted.
-    if (recordAccepted && (rr->resrec.rrtype == kDNSType_A || rr->resrec.rrtype == kDNSType_AAAA))
-    {
-        LogInfo("ExpectingMulticastResponseForRecord:A:AAAA: accepting %s, from %#a due to same packet %d", CRDisplayString(m, rr), srcaddr, m->PktNum);
-        return mDNStrue;
-    }
-    for (q = m->Questions; q; q=q->next)
-    {
-        if (!q->DuplicateOf && mDNSOpaque16IsZero(q->TargetQID))
-        {
-            mDNSBool ret;
-            // 1. If a resource record answers question, cache it. This also will cache NSECs if it asserts
-            //    non-existence of q->qtype. If we have any matching NSEC3 Records for the question, send
-            //    it along with the resource record. Do it only for questions that are expecting to
-            //    discover only its peers (q->AnonInfo not NULL)
-            if (q->AnonInfo && McastNSEC3Records && !rr->resrec.AnonInfo)
-            {
-                InitializeAnonInfoForCR(m, McastNSEC3Records, rr);
-            }
-            ret = ResourceRecordAnswersQuestion(&rr->resrec, q);
-            if (ret)
-            {
-                // The record and the question belong to the same subset. Set the
-                // anonymous data in the cache record.
-                if (q->AnonInfo && rr->resrec.AnonInfo)
-                {
-                    SetAnonData(q, &rr->resrec, mDNSfalse);
-                }
-                LogInfo("ExpectingMulticastResponseForRecord: Name and Type match, accepting %s, from %#a", CRDisplayString(m, rr), srcaddr);
-                if (rr->resrec.rrtype == kDNSType_NSEC)
-                    LogInfo("ExpectingMulticastResponseForRecord: record %s, question %##s (%s)", CRDisplayString(m, rr), q->qname.c, DNSTypeName(q->qtype));
-                return mDNStrue;
-            }
-            if (rr->resrec.rrtype == kDNSType_SRV || rr->resrec.rrtype == kDNSType_TXT)
-            {
-                // Point to the service type in the record name
-                const domainname *name = SkipLeadingLabels(rr->resrec.name, 1);
-
-                // If question is for a sub type, just compare against the primary service type
-                const domainname *primaryName = getPrimaryServiceName(&q->qname);
-
-                // 2. If the SRV or TXT record matches the service name, then cache it. If the TXT or SRV record is
-                //    before the PTR record in the packet, PTR record may not be in the cache yet and hence the logic
-                //    in (3) below will fail to cache it.
-                if (q->qtype == kDNSType_PTR && name && SameDomainName(primaryName, name))
-                {
-                    LogInfo("ExpectingMulticastResponseForRecord: Accepting %s due to PTR match, question %##s from %#a, pktnum %d",
-                        CRDisplayString(m, rr), q->qname.c, srcaddr, m->PktNum);
-                    return mDNStrue;
-                }
-
-                if (name)
-                {
-                    const mDNSu32 slot = HashSlot(name);
-                    const mDNSu32 namehash = DomainNameHashValue(name);
-                    CacheGroup *cg = CacheGroupForName(m, slot, namehash, name);
-                    CacheRecord *cr;
-     
-                    // 3. Same as in (2), but look in the cache in case we don't have the PTR question.
-
-                    for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
-                    {
-                        if (cr->resrec.rrtype == kDNSType_PTR)
-                        {
-                            primaryName = getPrimaryServiceName(cr->resrec.name);
-
-                            if (SameDomainName(primaryName, name))
-                            {
-                                LogInfo("ExpectingMulticastResponseForRecord: accepting %s, from %#a, pktnum %d",
-                                    CRDisplayString(m, rr), srcaddr, m->PktNum);
-                                return mDNStrue;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    debugf("ExpectingMulticastResponseForRecord: discarding %s, from %#a, pktnum %d", CRDisplayString(m, rr), srcaddr, m->PktNum);
-    return(mDNSfalse);
 }
 
 // Certain data types need more space for in-memory storage than their in-packet rdlength would imply
@@ -7921,27 +8228,19 @@ mDNSexport CacheRecord *CreateNewCacheEntry(mDNS *const m, const mDNSu32 slot, C
     if (!m->rec.r.resrec.InterfaceID) debugf("CreateNewCacheEntry %s", CRDisplayString(m, &m->rec.r));
 
     //if (RDLength > InlineCacheRDSize)
-    //	LogInfo("Rdata len %4d > InlineCacheRDSize %d %s", RDLength, InlineCacheRDSize, CRDisplayString(m, &m->rec.r));
+    //  LogInfo("Rdata len %4d > InlineCacheRDSize %d %s", RDLength, InlineCacheRDSize, CRDisplayString(m, &m->rec.r));
 
     if (!cg) cg = GetCacheGroup(m, slot, &m->rec.r.resrec); // If we don't have a CacheGroup for this name, make one now
     if (cg) rr = GetCacheRecord(m, cg, RDLength);   // Make a cache record, being careful not to recycle cg
     if (!rr) NoCacheAnswer(m, &m->rec.r);
     else
     {
-        RData *saveptr = rr->resrec.rdata;      // Save the rr->resrec.rdata pointer
-        *rr = m->rec.r;                         // Block copy the CacheRecord object
-        rr->resrec.rdata  = saveptr;            // Restore rr->resrec.rdata after the structure assignment
-        rr->resrec.name   = cg->name;           // And set rr->resrec.name to point into our CacheGroup header
+        RData *saveptr         = rr->resrec.rdata;   // Save the rr->resrec.rdata pointer
+        *rr                    = m->rec.r;           // Block copy the CacheRecord object
+        rr->resrec.rdata       = saveptr;            // Restore rr->resrec.rdata after the structure assignment
+        rr->resrec.name        = cg->name;           // And set rr->resrec.name to point into our CacheGroup header
+        rr->resrec.mortality   = Mortality_Mortal;
 
-        // We need to add the anonymous info before we call CacheRecordAdd so that
-        // if it finds a matching question with this record, it bumps up the counters like
-        // CurrentAnswers etc. Otherwise, when a cache entry gets removed, CacheRecordRmv
-        // will complain.
-        if (m->rec.r.resrec.AnonInfo)
-        {
-            rr->resrec.AnonInfo = m->rec.r.resrec.AnonInfo;
-            m->rec.r.resrec.AnonInfo = mDNSNULL;
-        }
         rr->DelayDelivery = delay;
 
         // If this is an oversized record with external storage allocated, copy rdata to external storage
@@ -7976,7 +8275,7 @@ mDNSexport CacheRecord *CreateNewCacheEntry(mDNS *const m, const mDNSu32 slot, C
         {
             // Can't use the "cg->name" if we are not adding to the cache as the
             // CacheGroup may be released anytime if it is empty
-            domainname *name = mDNSPlatformMemAllocate(DomainNameLength(cg->name));
+            domainname *name = (domainname *) mDNSPlatformMemAllocate(DomainNameLength(cg->name));
             if (name)
             {
                 AssignDomainName(name, cg->name);
@@ -7993,24 +8292,38 @@ mDNSexport CacheRecord *CreateNewCacheEntry(mDNS *const m, const mDNSu32 slot, C
     return(rr);
 }
 
+mDNSlocal void RefreshCacheRecordCacheGroupOrder(CacheGroup *cg, CacheRecord *cr)
+{   //  Move the cache record to the tail of the cache group to maintain a fresh ordering
+    if (cg->rrcache_tail != &cr->next)          // If not already at the tail
+    {
+        CacheRecord **rp;
+        for (rp = &cg->members; *rp; rp = &(*rp)->next)
+        {
+            if (*rp == cr)                      // This item points to this record
+            {
+                *rp = cr->next;                 // Remove this record
+                break;
+            }
+        }
+        cr->next = mDNSNULL;                    // This record is now last
+        *(cg->rrcache_tail) = cr;               // Append this record to tail of cache group
+        cg->rrcache_tail = &(cr->next);         // Advance tail pointer
+    }
+}
+
 mDNSlocal void RefreshCacheRecord(mDNS *const m, CacheRecord *rr, mDNSu32 ttl)
 {
     rr->TimeRcvd             = m->timenow;
     rr->resrec.rroriginalttl = ttl;
     rr->UnansweredQueries = 0;
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-    rr->MPUnansweredQ     = 0;
-    rr->MPUnansweredKA    = 0;
-    rr->MPExpectingKA     = mDNSfalse;
-#endif
+    if (rr->resrec.mortality != Mortality_Mortal) rr->resrec.mortality = Mortality_Immortal;
     SetNextCacheCheckTimeForRecord(m, rr);
 }
 
 mDNSexport void GrantCacheExtensions(mDNS *const m, DNSQuestion *q, mDNSu32 lease)
 {
     CacheRecord *rr;
-    const mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
+    CacheGroup *cg = CacheGroupForName(m, q->qnamehash, &q->qname);
     for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
         if (rr->CRActiveQuestion == q)
         {
@@ -8074,7 +8387,7 @@ mDNSlocal mDNSBool IsResponseAcceptable(mDNS *const m, const CacheRecord *crlist
 
         if (target && cr->resrec.rdatahash == rr->namehash && SameDomainName(target, rr->name))
         {
-            LogInfo("IsResponseAcceptable: Found a matching entry for %##s in the CacheFlushRecords %s", rr->name->c, CRDisplayString(m, cr));
+            LogDebug("IsResponseAcceptable: Found a matching entry for %##s in the CacheFlushRecords %s", rr->name->c, CRDisplayString(m, cr));
             return (mDNStrue);
         }
     }
@@ -8176,7 +8489,7 @@ mDNSlocal void mDNSCoreReceiveNoDNSSECAnswers(mDNS *const m, const DNSMessage *c
         DNSQuestion pktq;
         DNSQuestion *qptr = mDNSNULL;
         ptr = getQuestion(response, ptr, end, InterfaceID, &pktq);
-        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &pktq, !dstaddr)) &&
+        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &pktq, !dstaddr, mDNSNULL)) &&
             qptr->ValidatingResponse)
         {
             DNSQuestion *next, *q;
@@ -8220,19 +8533,20 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
         DNSQuestion q;
         DNSQuestion *qptr = mDNSNULL;
         ptr = getQuestion(response, ptr, end, InterfaceID, &q);
-        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr)))
+        if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr, mDNSNULL)))
         {
-            CacheRecord *rr, *neg = mDNSNULL;
-            mDNSu32 slot = HashSlot(&q.qname);
-            CacheGroup *cg = CacheGroupForName(m, slot, q.qnamehash, &q.qname);
-            for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
-                if (SameNameRecordAnswersQuestion(&rr->resrec, qptr))
+            CacheRecord *cr, *neg = mDNSNULL;
+            CacheGroup *cg = CacheGroupForName(m, q.qnamehash, &q.qname);
+            for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
+            {
+                if (SameNameCacheRecordAnswersQuestion(cr, qptr))
                 {
                     // 1. If we got a fresh answer to this query, then don't need to generate a negative entry
-                    if (RRExpireTime(rr) - m->timenow > 0) break;
+                    if (RRExpireTime(cr) - m->timenow > 0) break;
                     // 2. If we already had a negative entry, keep track of it so we can resurrect it instead of creating a new one
-                    if (rr->resrec.RecordType == kDNSRecordTypePacketNegative) neg = rr;
+                    if (cr->resrec.RecordType == kDNSRecordTypePacketNegative) neg = cr;
                 }
+            }
             // When we're doing parallel unicast and multicast queries for dot-local names (for supporting Microsoft
             // Active Directory sites) we don't want to waste memory making negative cache entries for all the unicast answers.
             // Otherwise we just fill up our cache with negative entries for just about every single multicast name we ever look up
@@ -8251,26 +8565,31 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
             // do the appropriate thing. This negative response is also needed for appending new search domains.
             if (!InterfaceID && q.qtype != kDNSType_SOA && IsLocalDomain(&q.qname))
             {
-                if (!rr)
+                if (!cr)
                 {
-                    LogInfo("mDNSCoreReceiveNoUnicastAnswers: Generate negative response for %##s (%s)", q.qname.c, DNSTypeName(q.qtype));
+                    const mDNSBool noData = ((response->h.flags.b[1] & kDNSFlag1_RC_Mask) == kDNSFlag1_RC_NoErr) ? mDNStrue : mDNSfalse;
+                    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                              "[R%u->Q%u] mDNSCoreReceiveNoUnicastAnswers: Generate negative response for " PRI_DM_NAME " (" PUB_S ")",
+                              q.request_id, mDNSVal16(q.TargetQID), DM_NAME_PARAM(q.qname.c), DNSTypeName(q.qtype));
                     m->CurrentQuestion = qptr;
                     // We are not creating a cache record in this case, we need to pass back
                     // the error we got so that the proxy code can return the right one to
                     // the application
                     if (qptr->ProxyQuestion)
                         qptr->responseFlags = response->h.flags;
-                    GenerateNegativeResponse(m, QC_forceresponse);
+                    GenerateNegativeResponseEx(m, mDNSInterface_Any, QC_forceresponse, noData);
                     m->CurrentQuestion = mDNSNULL;
                 }
                 else
                 {
-                    LogInfo("mDNSCoreReceiveNoUnicastAnswers: Skipping check and not creating a negative cache entry for %##s (%s)", q.qname.c, DNSTypeName(q.qtype));
+                    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                              "[R%u->Q%u] mDNSCoreReceiveNoUnicastAnswers: Skipping check and not creating a negative cache entry for " PRI_DM_NAME " (" PUB_S ")",
+                              q.request_id, mDNSVal16(q.TargetQID), DM_NAME_PARAM(q.qname.c), DNSTypeName(q.qtype));
                 }
             }
             else
             {
-                if (!rr)
+                if (!cr)
                 {
                     // We start off assuming a negative caching TTL of 60 seconds
                     // but then look to see if we can find an SOA authority record to tell us a better value we should be using
@@ -8293,8 +8612,7 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                         ptr = GetLargeResourceRecord(m, response, ptr, end, InterfaceID, kDNSRecordTypePacketAuth, &m->rec);
                         if (ptr && m->rec.r.resrec.RecordType != kDNSRecordTypePacketNegative && m->rec.r.resrec.rrtype == kDNSType_SOA)
                         {
-                            const mDNSu32 s = HashSlot(m->rec.r.resrec.name);
-                            CacheGroup *cgSOA = CacheGroupForRecord(m, s, &m->rec.r.resrec);
+                            CacheGroup *cgSOA = CacheGroupForRecord(m, &m->rec.r.resrec);
                             const rdataSOA *const soa = (const rdataSOA *)m->rec.r.resrec.rdata->u.data;
                             mDNSu32 ttl_s = soa->min;
                             // We use the lesser of the SOA.MIN field and the SOA record's TTL, *except*
@@ -8306,7 +8624,7 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
 
                             // Create the SOA record as we may have to return this to the questions
                             // that we are acting as a proxy for currently or in the future.
-                            SOARecord = CreateNewCacheEntry(m, s, cgSOA, 1, mDNSfalse, mDNSNULL);
+                            SOARecord = CreateNewCacheEntry(m, HashSlotFromNameHash(m->rec.r.resrec.namehash), cgSOA, 1, mDNSfalse, mDNSNULL);
 
                             // Special check for SOA queries: If we queried for a.b.c.d.com, and got no answer,
                             // with an Authority Section SOA record for d.com, then this is a hint that the authority
@@ -8346,7 +8664,9 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                     // If we already had a negative cache entry just update it, else make one or more new negative cache entries.
                     if (neg)
                     {
-                        LogInfo("mDNSCoreReceiveNoUnicastAnswers: Renewing negative TTL from %d to %d %s", neg->resrec.rroriginalttl, negttl, CRDisplayString(m, neg));
+                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                  "[R%u->Q%u] mDNSCoreReceiveNoUnicastAnswers: Renewing negative TTL from %d to %d " PRI_S,
+                                  q.request_id, mDNSVal16(q.TargetQID), neg->resrec.rroriginalttl, negttl, CRDisplayString(m, neg));
                         RefreshCacheRecord(m, neg, negttl);
                         // When we created the cache for the first time and answered the question, the question's
                         // interval was set to MaxQuestionInterval. If the cache is about to expire and we are resending
@@ -8364,7 +8684,9 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                             {
                                 // We might just have an SOA record for zones that are not signed and hence don't log
                                 // this as an error
-                                LogInfo("mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord failed to add NSEC for negcr %s during refresh", CRDisplayString(m, neg));
+                                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_ERROR,
+                                          "[R%u->Q%d] mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord failed to add NSEC for negcr " PRI_S" during refresh",
+                                          q.request_id, mDNSVal16(q.TargetQID), CRDisplayString(m, neg));
                                 FreeNSECRecords(m, NSECRecords);
                                 neg->CRDNSSECQuestion = 0;
                             }
@@ -8389,25 +8711,28 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                             // been NULL. If we pass NULL cg to new cache entries that we create below,
                             // it will create additional cache groups for the same name. To avoid that,
                             // look up the cache group again to re-initialize cg again.
-                            cg = CacheGroupForName(m, slot, hash, name);
+                            cg = CacheGroupForName(m, hash, name);
                             if (NSECRecords && DNSSECQuestion(qptr))
                             {
                                 // Create the cache entry with delay and then add the NSEC records
                                 // to it and add it immediately.
-                                negcr = CreateNewCacheEntry(m, slot, cg, 1, mDNStrue, mDNSNULL);
+                                negcr = CreateNewCacheEntry(m, HashSlotFromNameHash(hash), cg, 1, mDNStrue, mDNSNULL);
                                 if (negcr)
                                 {
                                     negcr->CRDNSSECQuestion = 0;
                                     if (!AddNSECSForCacheRecord(m, NSECRecords, negcr, rcode))
                                     {
-                                        LogInfo("mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord failed to add NSEC for negcr %s",
-                                            CRDisplayString(m, negcr));
+                                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_ERROR,
+                                                  "[R%u->Q%u] mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord failed to add NSEC for negcr " PRI_S,
+                                                  q.request_id, mDNSVal16(q.TargetQID), CRDisplayString(m, negcr));
                                         FreeNSECRecords(m, NSECRecords);
                                     }
                                     else
                                     {
                                         negcr->CRDNSSECQuestion = 1;
-                                        LogInfo("mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord added neg NSEC for %s", CRDisplayString(m, negcr));
+                                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                                  "[R%u->Q%u] mDNSCoreReceiveNoUnicastAnswers: AddNSECSForCacheRecord added neg NSEC for " PRI_S,
+                                                  q.request_id, mDNSVal16(q.TargetQID), CRDisplayString(m, negcr));
                                     }
                                     NSECRecords = mDNSNULL;
                                     negcr->DelayDelivery = 0;
@@ -8419,7 +8744,7 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                             else
                             {
                                 // Need to add with a delay so that we can tag the SOA record
-                                negcr = CreateNewCacheEntry(m, slot, cg, 1, mDNStrue, mDNSNULL);
+                                negcr = CreateNewCacheEntry(m, HashSlotFromNameHash(hash), cg, 1, mDNStrue, mDNSNULL);
                                 if (negcr)
                                 {
                                     negcr->CRDNSSECQuestion = 0;
@@ -8443,20 +8768,27 @@ mDNSlocal void mDNSCoreReceiveNoUnicastAnswers(mDNS *const m, const DNSMessage *
                             repeat--;
                             name = (const domainname *)(name->c + 1 + name->c[0]);
                             hash = DomainNameHashValue(name);
-                            slot = HashSlot(name);
-                            cg   = CacheGroupForName(m, slot, hash, name);
                         }
                 }
             }
         }
     }
-    if (NSECRecords) { LogInfo("mDNSCoreReceiveNoUnicastAnswers: NSECRecords not used"); FreeNSECRecords(m, NSECRecords); }
-    if (SOARecord)   { LogInfo("mDNSCoreReceiveNoUnicastAnswers: SOARecord not used"); ReleaseCacheRecord(m, SOARecord); }
+    if (NSECRecords)
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveNoUnicastAnswers: NSECRecords not used");
+        FreeNSECRecords(m, NSECRecords);
+    }
+    if (SOARecord)
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveNoUnicastAnswers: SOARecord not used");
+        ReleaseCacheRecord(m, SOARecord);
+    }
 }
 
 mDNSlocal void mDNSCorePrintStoredProxyRecords(mDNS *const m)
 {
     AuthRecord *rrPtr = mDNSNULL;
+    if (!m->SPSRRSet) return;
     LogSPS("Stored Proxy records :");
     for (rrPtr = m->SPSRRSet; rrPtr; rrPtr = rrPtr->next)
     {
@@ -8480,27 +8812,27 @@ mDNSlocal mDNSBool mDNSCoreRegisteredProxyRecord(mDNS *const m, AuthRecord *rr)
     return mDNSfalse;
 }
 
-mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage *const response, uDNS_LLQType LLQType,
+mDNSexport CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage *const response, uDNS_LLQType LLQType,
     const mDNSu32 slot, CacheGroup *cg, DNSQuestion *unicastQuestion, CacheRecord ***cfp, CacheRecord **NSECCachePtr,
     mDNSInterfaceID InterfaceID)
 {
-    CacheRecord *rr;
+    CacheRecord *cr;
     CacheRecord **cflocal = *cfp;
 
-    for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
+    for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
     {
         mDNSBool match;
         // Resource record received via unicast, the resGroupID should match ?
         if (!InterfaceID)
         {
-            mDNSu16 id1 = (rr->resrec.rDNSServer ? rr->resrec.rDNSServer->resGroupID : 0);
-            mDNSu16 id2 = (m->rec.r.resrec.rDNSServer ? m->rec.r.resrec.rDNSServer->resGroupID : 0);
+            const mDNSu32 id1 = (cr->resrec.rDNSServer ? cr->resrec.rDNSServer->resGroupID : 0);
+            const mDNSu32 id2 = (m->rec.r.resrec.rDNSServer ? m->rec.r.resrec.rDNSServer->resGroupID : 0);
             match = (id1 == id2);
         }
         else
-            match = (rr->resrec.InterfaceID == InterfaceID);
+            match = (cr->resrec.InterfaceID == InterfaceID);
         // If we found this exact resource record, refresh its TTL
-        if (match && IdenticalSameNameRecord(&m->rec.r.resrec, &rr->resrec))
+        if (match && IdenticalSameNameRecord(&m->rec.r.resrec, &cr->resrec))
         {
             if (m->rec.r.resrec.rdlength > InlineCacheRDSize)
                 verbosedebugf("mDNSCoreReceiveCacheCheck: Found record size %5d interface %p already in cache: %s",
@@ -8509,77 +8841,61 @@ mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage
             if (m->rec.r.resrec.RecordType & kDNSRecordTypePacketUniqueMask)
             {
                 // If this packet record has the kDNSClass_UniqueRRSet flag set, then add it to our cache flushing list
-                if (rr->NextInCFList == mDNSNULL && *cfp != &rr->NextInCFList && LLQType != uDNS_LLQ_Events)
+                if (cr->NextInCFList == mDNSNULL && *cfp != &cr->NextInCFList && LLQType != uDNS_LLQ_Events)
                 {
-                    *cflocal = rr;
-                    cflocal = &rr->NextInCFList;
+                    *cflocal = cr;
+                    cflocal = &cr->NextInCFList;
                     *cflocal = (CacheRecord*)1;
-                    *cfp = &rr->NextInCFList;
+                    *cfp = &cr->NextInCFList;
                 }
 
                 // If this packet record is marked unique, and our previous cached copy was not, then fix it
-                if (!(rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask))
+                if (!(cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask))
                 {
                     DNSQuestion *q;
                     for (q = m->Questions; q; q=q->next)
                     {
-                        if (ResourceRecordAnswersQuestion(&rr->resrec, q))
+                        if (CacheRecordAnswersQuestion(cr, q))
                             q->UniqueAnswers++;
                     }
-                    rr->resrec.RecordType = m->rec.r.resrec.RecordType;
+                    cr->resrec.RecordType = m->rec.r.resrec.RecordType;
                 }
             }
 
-            if (!SameRDataBody(&m->rec.r.resrec, &rr->resrec.rdata->u, SameDomainNameCS))
+            if (!SameRDataBody(&m->rec.r.resrec, &cr->resrec.rdata->u, SameDomainNameCS))
             {
                 // If the rdata of the packet record differs in name capitalization from the record in our cache
                 // then mDNSPlatformMemSame will detect this. In this case, throw the old record away, so that clients get
                 // a 'remove' event for the record with the old capitalization, and then an 'add' event for the new one.
                 // <rdar://problem/4015377> mDNS -F returns the same domain multiple times with different casing
-                rr->resrec.rroriginalttl = 0;
-                rr->TimeRcvd = m->timenow;
-                rr->UnansweredQueries = MaxUnansweredQueries;
-                SetNextCacheCheckTimeForRecord(m, rr);
-                LogInfo("mDNSCoreReceiveCacheCheck: Discarding due to domainname case change old: %s", CRDisplayString(m, rr));
-                LogInfo("mDNSCoreReceiveCacheCheck: Discarding due to domainname case change new: %s", CRDisplayString(m, &m->rec.r));
-                LogInfo("mDNSCoreReceiveCacheCheck: Discarding due to domainname case change in %d slot %3d in %d %d",
-                        NextCacheCheckEvent(rr) - m->timenow, slot, m->rrcache_nextcheck[slot] - m->timenow, m->NextCacheCheck - m->timenow);
+                cr->resrec.rroriginalttl = 0;
+                cr->TimeRcvd = m->timenow;
+                cr->UnansweredQueries = MaxUnansweredQueries;
+                SetNextCacheCheckTimeForRecord(m, cr);
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveCacheCheck: Discarding due to domainname case change old: " PRI_S, CRDisplayString(m, cr));
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveCacheCheck: Discarding due to domainname case change new: " PRI_S, CRDisplayString(m, &m->rec.r));
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveCacheCheck: Discarding due to domainname case change in %d slot %3d in %d %d",
+                          NextCacheCheckEvent(cr) - m->timenow, slot, m->rrcache_nextcheck[slot] - m->timenow, m->NextCacheCheck - m->timenow);
                 // DO NOT break out here -- we want to continue as if we never found it
-            }
-            else if (!IdenticalAnonInfo(m->rec.r.resrec.AnonInfo, rr->resrec.AnonInfo))
-            {
-                // If the NSEC3 record changed, a few possibilities
-                //
-                // 1) the peer reinitialized e.g., after network change and still part of the
-                //    same set.
-                // 2) the peer went to a different set but we did not see the goodbyes. If we just
-                //    update the nsec3 record, it would be incorrect. Flush the cache so that we
-                //    can deliver a RMV followed by ADD.
-                // 3) if the peer is ourselves and we see the goodbye when moving to a different set
-                //    and so we flush the cache and create a new cache record with the new set information.
-                //    Now we move back to the original set. In this case, we can't just update the
-                //    NSEC3 record alone. We need to flush so that we can deliver an RMV followed by ADD
-                //    when we create the new cache entry.
-                //
-                // Note: For case (1), we could avoid flushing the cache but we can't tell the difference
-                // from the other cases.
-                rr->resrec.rroriginalttl = 0;
-                rr->TimeRcvd = m->timenow;
-                rr->UnansweredQueries = MaxUnansweredQueries;
-                SetNextCacheCheckTimeForRecord(m, rr);
-                LogInfo("mDNSCoreReceiveCacheCheck: AnonInfo changed for %s", CRDisplayString(m, rr));
-                // DO NOT break out here -- we want to continue as if we never found it. When we return
-                // from this function, we will create a new cache entry with the new NSEC3 record
             }
             else if (m->rec.r.resrec.rroriginalttl > 0)
             {
                 DNSQuestion *q;
 
                 m->mDNSStats.CacheRefreshed++;
+                
+                if (cr->resrec.mortality == Mortality_Ghost && unicastQuestion && (unicastQuestion->allowExpired != AllowExpired_AllowExpiredAnswers) && !cr->DelayDelivery)
+                {
+                    cr->DelayDelivery = NonZeroTime(m->timenow);
+                    debugf("mDNSCoreReceiveCacheCheck: Reset DelayDelivery for mortalityExpired EXP:%d RR %s", m->timenow - RRExpireTime(cr), CRDisplayString(m, cr));
+                }
 
-                if (rr->resrec.rroriginalttl == 0) debugf("uDNS rescuing %s", CRDisplayString(m, rr));
-                RefreshCacheRecord(m, rr, m->rec.r.resrec.rroriginalttl);
-                rr->responseFlags = response->h.flags;
+                if (cr->resrec.rroriginalttl == 0) debugf("uDNS rescuing %s", CRDisplayString(m, cr));
+                RefreshCacheRecord(m, cr, m->rec.r.resrec.rroriginalttl);
+                // RefreshCacheRecordCacheGroupOrder will modify the cache group member list that is currently being iterated over in this for-loop.
+                // It is safe to call because the else-if body will unconditionally break out of the for-loop now that it has found the entry to update.
+                RefreshCacheRecordCacheGroupOrder(cg, cr);
+                cr->responseFlags = response->h.flags;
 
                 // If we may have NSEC records returned with the answer (which we don't know yet as it
                 // has not been processed), we need to cache them along with the first cache
@@ -8588,11 +8904,11 @@ mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage
                 // that would answer the question. It is possible that we might cache additional things
                 // e.g., MX question might cache A records also, and we want to cache the NSEC on
                 // the record that answers the question.
-                if (response->h.numAnswers && unicastQuestion && unicastQuestion->qtype == rr->resrec.rrtype
+                if (response->h.numAnswers && unicastQuestion && unicastQuestion->qtype == cr->resrec.rrtype
                     && !(*NSECCachePtr))
                 {
-                    LogInfo("mDNSCoreReceiveCacheCheck: rescuing RR %s", CRDisplayString(m, rr));
-                    *NSECCachePtr = rr;
+                    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "mDNSCoreReceiveCacheCheck: rescuing RR " PRI_S, CRDisplayString(m, cr));
+                    *NSECCachePtr = cr;
                 }
                 // We have to reset the question interval to MaxQuestionInterval so that we don't keep
                 // polling the network once we get a valid response back. For the first time when a new
@@ -8602,12 +8918,12 @@ mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage
                 // Currently, we do this for for both multicast and unicast questions as long as the record
                 // type is unique. For unicast, resource record is always unique and for multicast it is
                 // true for records like A etc. but not for PTR.
-                if (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask)
+                if (cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask)
                 {
                     for (q = m->Questions; q; q=q->next)
                     {
                         if (!q->DuplicateOf && !q->LongLived &&
-                            ActiveQuestion(q) && ResourceRecordAnswersQuestion(&rr->resrec, q))
+                            ActiveQuestion(q) && CacheRecordAnswersQuestion(cr, q))
                         {
                             ResetQuestionState(m, q);
                             debugf("mDNSCoreReceiveCacheCheck: Set MaxQuestionInterval for %p %##s (%s)", q, q->qname.c, DNSTypeName(q->qtype));
@@ -8615,11 +8931,10 @@ mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage
                         }
                     }
                 }
-                break;
+                break;  // Check usage of RefreshCacheRecordCacheGroupOrder before removing (See note above)
             }
             else
             {
-            
                 // If the packet TTL is zero, that means we're deleting this record.
                 // To give other hosts on the network a chance to protest, we push the deletion
                 // out one second into the future. Also, we set UnansweredQueries to MaxUnansweredQueries.
@@ -8628,25 +8943,25 @@ mDNSlocal CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage
                 // If record's current expiry time is more than a second from now, we set it to expire in one second.
                 // If the record is already going to expire in less than one second anyway, we leave it alone --
                 // we don't want to let the goodbye packet *extend* the record's lifetime in our cache.
-                debugf("DE for %s", CRDisplayString(m, rr));
-                if (RRExpireTime(rr) - m->timenow > mDNSPlatformOneSecond)
+                debugf("DE for %s", CRDisplayString(m, cr));
+                if (RRExpireTime(cr) - m->timenow > mDNSPlatformOneSecond)
                 {
-                    rr->resrec.rroriginalttl = 1;
-                    rr->TimeRcvd = m->timenow;
-                    rr->UnansweredQueries = MaxUnansweredQueries;
-                    SetNextCacheCheckTimeForRecord(m, rr);
+                    cr->resrec.rroriginalttl = 1;
+                    cr->TimeRcvd = m->timenow;
+                    cr->UnansweredQueries = MaxUnansweredQueries;
+                    SetNextCacheCheckTimeForRecord(m, cr);
                 }
                 break;
             }
         }
     }
-    return rr;
+    return cr;
 }
 
 mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const response, const mDNSu8 *end,
     const mDNSInterfaceID InterfaceID, CacheRecord **NSEC3Records)
 {
-    const mDNSu8 *ptr   = response->data;
+    const mDNSu8 *ptr;
     CacheRecord *rr;
     int i;
 
@@ -8660,7 +8975,6 @@ mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const resp
     }
     for (i = 0; i < response->h.numAuthorities && ptr && ptr < end; i++)
     {
-        mDNSu32 slot;
         CacheGroup *cg;
 
         ptr = GetLargeResourceRecord(m, response, ptr, end, InterfaceID, kDNSRecordTypePacketAuth, &m->rec);
@@ -8670,11 +8984,10 @@ mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const resp
             m->rec.r.resrec.RecordType = 0;
             continue;
         }
-        slot = HashSlot(m->rec.r.resrec.name);
-        cg = CacheGroupForRecord(m, slot, &m->rec.r.resrec);
+        cg = CacheGroupForRecord(m, &m->rec.r.resrec);
         // Create the cache entry but don't add it to the cache it. We need
         // to cache this along with the main cache record.
-        rr = CreateNewCacheEntry(m, slot, cg, 0, mDNSfalse, mDNSNULL);
+        rr = CreateNewCacheEntry(m, HashSlotFromNameHash(m->rec.r.resrec.namehash), cg, 0, mDNSfalse, mDNSNULL);
         if (rr)
         {
             debugf("mDNSParseNSEC3Records: %s", CRDisplayString(m, rr));
@@ -8688,29 +9001,6 @@ mDNSlocal void mDNSParseNSEC3Records(mDNS *const m, const DNSMessage *const resp
 mDNSlocal void mDNSCoreResetRecord(mDNS *const m)
 {
     m->rec.r.resrec.RecordType = 0;     // Clear RecordType to show we're not still using it
-    if (m->rec.r.resrec.AnonInfo)
-    {
-        FreeAnonInfo(m->rec.r.resrec.AnonInfo); 
-        m->rec.r.resrec.AnonInfo = mDNSNULL;
-    }
-}
-
-#define DEVICE_INFO_RECORD_LABELS 4
-
-// Determine if the record is an instance of _device-info._tcp.local.
-mDNSlocal mDNSBool IsDeviceInfoRecord(const domainname *d)
-{
-    const domainname *afterInstance;
-
-    if (CountLabels(d) != DEVICE_INFO_RECORD_LABELS)
-        return mDNSfalse;
-
-    // skip the instance name
-    afterInstance = SkipLeadingLabels(d, 1);
-    if (SameDomainName(afterInstance, &LocalDeviceInfoName))
-        return mDNStrue;
-
-    return mDNSfalse;
 }
 
 // Note: mDNSCoreReceiveResponse calls mDNS_Deregister_internal which can call a user callback, which may change
@@ -8725,9 +9015,8 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                                        const mDNSInterfaceID InterfaceID)
 {
     int i;
-    mDNSBool myself;
-    mDNSBool ResponseMCast    = dstaddr && mDNSAddrIsDNSMulticast(dstaddr);
-    mDNSBool ResponseSrcLocal = !srcaddr || mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr, &myself);
+    const mDNSBool ResponseMCast = dstaddr && mDNSAddrIsDNSMulticast(dstaddr);
+    mDNSBool ResponseSrcLocal = !srcaddr || mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr);
     DNSQuestion *llqMatch = mDNSNULL;
     DNSQuestion *unicastQuestion = mDNSNULL;
     uDNS_LLQType LLQType      = uDNS_recvLLQResponse(m, response, end, srcaddr, srcport, &llqMatch);
@@ -8745,12 +9034,12 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
     mDNSu8 rcode = '\0';
     mDNSBool rrsigsCreated = mDNSfalse;
     mDNSBool DNSSECQuestion = mDNSfalse;
-    mDNSBool recordAccepted = mDNSfalse;
     NetworkInterfaceInfo *llintf = FirstIPv4LLInterfaceForID(m, InterfaceID);
+    mDNSBool    recordAcceptedInResponse = mDNSfalse; // Set if a record is accepted from a unicast mDNS response that answers an existing question.
 
     // All records in a DNS response packet are treated as equally valid statements of truth. If we want
     // to guard against spoof responses, then the only credible protection against that is cryptographic
-    // security, e.g. DNSSEC., not worring about which section in the spoof packet contained the record
+    // security, e.g. DNSSEC., not worrying about which section in the spoof packet contained the record.
     int firstauthority  =                   response->h.numAnswers;
     int firstadditional = firstauthority  + response->h.numAuthorities;
     int totalrecords    = firstadditional + response->h.numAdditionals;
@@ -8765,6 +9054,13 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
            response->h.numAuthorities, response->h.numAuthorities == 1 ? "y,  " : "ies,",
            response->h.numAdditionals, response->h.numAdditionals == 1 ? " "    : "s", end - response->data, LLQType);
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+    if (mDNSSameIPPort(srcport, UnicastDNSPort))
+    {
+        MetricsUpdateDNSResponseSize((mDNSu32)(end - (mDNSu8 *)response));
+    }
+#endif
+
     // According to RFC 2181 <http://www.ietf.org/rfc/rfc2181.txt>
     //    When a DNS client receives a reply with TC
     //    set, it should ignore that response, and query again, using a
@@ -8777,18 +9073,25 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
     // abort our TCP connection, and not complete the operation, and end up with an incomplete RRSet in our cache.
     // Next time there's a query for this RRSet we'll see answers in our cache, and assume we have the whole RRSet already,
     // and not even do the TCP query.
-    // Accordingly, if we get a uDNS reply with kDNSFlag0_TC set, we bail out and wait for the TCP response containing the entire RRSet.
-    if (!InterfaceID && (response->h.flags.b[0] & kDNSFlag0_TC)) return;
+    // Accordingly, if we get a uDNS reply with kDNSFlag0_TC set, we bail out and wait for the TCP response containing the
+    // entire RRSet, with the following exception. If the response contains an answer section and one or more records in
+    // either the authority section or additional section, then that implies that truncation occurred beyond the answer
+    // section, and the answer section is therefore assumed to be complete.
+    //
+    // From section 6.2 of RFC 1035 <https://tools.ietf.org/html/rfc1035>:
+    //    When a response is so long that truncation is required, the truncation
+    //    should start at the end of the response and work forward in the
+    //    datagram.  Thus if there is any data for the authority section, the
+    //    answer section is guaranteed to be unique.
+    if (!InterfaceID && (response->h.flags.b[0] & kDNSFlag0_TC) &&
+        ((response->h.numAnswers == 0) || ((response->h.numAuthorities == 0) && (response->h.numAdditionals == 0)))) return;
 
     if (LLQType == uDNS_LLQ_Ignore) return;
 
     // 1. We ignore questions (if any) in mDNS response packets
     // 2. If this is an LLQ response, we handle it much the same
-    // 3. If we get a uDNS UDP response with the TC (truncated) bit set, then we can't treat this
-    //    answer as being the authoritative complete RRSet, and respond by deleting all other
-    //    matching cache records that don't appear in this packet.
     // Otherwise, this is a authoritative uDNS answer, so arrange for any stale records to be purged
-    if (ResponseMCast || LLQType == uDNS_LLQ_Events || (response->h.flags.b[0] & kDNSFlag0_TC))
+    if (ResponseMCast || LLQType == uDNS_LLQ_Events)
         ptr = LocateAnswers(response, end);
     // Otherwise, for one-shot queries, any answers in our cache that are not also contained
     // in this response packet are immediately deemed to be invalid.
@@ -8806,46 +9109,53 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
         // packet number, then we deduce they are old and delete them
         for (i = 0; i < response->h.numQuestions && ptr && ptr < end; i++)
         {
-            DNSQuestion q, *qptr = mDNSNULL;
+            DNSQuestion q, *qptr = mDNSNULL, *suspiciousForQ = mDNSNULL;
             ptr = getQuestion(response, ptr, end, InterfaceID, &q);
-            if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr)))
+            if (ptr && (qptr = ExpectingUnicastResponseForQuestion(m, dstport, response->h.id, &q, !dstaddr, &suspiciousForQ)))
             {
                 if (!failure)
                 {
-                    CacheRecord *rr;
+                    CacheRecord *cr;
                     // Remember the unicast question that we found, which we use to make caching
                     // decisions later on in this function
-                    const mDNSu32 slot = HashSlot(&q.qname);
-                    CacheGroup *cg = CacheGroupForName(m, slot, q.qnamehash, &q.qname);
+                    CacheGroup *cg = CacheGroupForName(m, q.qnamehash, &q.qname);
                     if (!mDNSOpaque16IsZero(response->h.id))
                     {
                         unicastQuestion = qptr;
                         if (qptr->qDNSServer && DNSSECQuestion(qptr))
                         {
-                            LogInfo("mDNSCoreReceiveResponse: Setting aware for %##s (%s) on %#a", qptr->qname.c,
-                                DNSTypeName(qptr->qtype), &qptr->qDNSServer->addr);
+                            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                   "[R%d->Q%d] mDNSCoreReceiveResponse: Setting aware for " PRI_DM_NAME " (" PUB_S ") on " PRI_IP_ADDR,
+                                   qptr->request_id, mDNSVal16(qptr->TargetQID), DM_NAME_PARAM(qptr->qname.c),
+                                   DNSTypeName(qptr->qtype), &qptr->qDNSServer->addr);
+
                             qptr->qDNSServer->DNSSECAware = mDNStrue;
                             qptr->qDNSServer->req_DO = mDNStrue;
                         }
                         if (qptr->ValidatingResponse)
                             DNSSECQuestion = mDNStrue;
                     }
-                    for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
-                        if (SameNameRecordAnswersQuestion(&rr->resrec, qptr))
+                    for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
+                    {
+                        if (SameNameCacheRecordAnswersQuestion(cr, qptr))
                         {
                             debugf("uDNS marking %p %##s (%s) %p %s", q.InterfaceID, q.qname.c, DNSTypeName(q.qtype),
-                                   rr->resrec.InterfaceID, CRDisplayString(m, rr));
+                                   cr->resrec.InterfaceID, CRDisplayString(m, cr));
                             // Don't want to disturb rroriginalttl here, because code below might need it for the exponential backoff doubling algorithm
-                            rr->TimeRcvd          = m->timenow - TicksTTL(rr) - 1;
-                            rr->UnansweredQueries = MaxUnansweredQueries;
-                            rr->CRDNSSECQuestion = 0;
+                            cr->TimeRcvd          = m->timenow - TicksTTL(cr) - 1;
+                            cr->UnansweredQueries = MaxUnansweredQueries;
+                            cr->CRDNSSECQuestion = 0;
                             if (unicastQuestion && DNSSECQuestion(unicastQuestion))
                             {
-                                LogInfo("mDNSCoreReceiveResponse: CRDNSSECQuestion set for record %s, question %##s (%s)", CRDisplayString(m, rr),
-                                    unicastQuestion->qname.c, DNSTypeName(unicastQuestion->qtype));
-                                rr->CRDNSSECQuestion = 1;
+                                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                       "[R%d->Q%d] mDNSCoreReceiveResponse: CRDNSSECQuestion set for record " PRI_S ", question " PRI_DM_NAME " (" PUB_S ")",
+                                       unicastQuestion->request_id, mDNSVal16(unicastQuestion->TargetQID),
+                                       CRDisplayString(m, cr), DM_NAME_PARAM(unicastQuestion->qname.c),
+                                       DNSTypeName(unicastQuestion->qtype));
+                                cr->CRDNSSECQuestion = 1;
                             }
                         }
+                    }
                 }
                 else
                 {
@@ -8857,28 +9167,50 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                         // and hence retransmit without the EDNS0/DOK option.
                         if (DNSSECOptionalQuestion(qptr) && qptr->qDNSServer && !qptr->qDNSServer->DNSSECAware)
                         {
-                            LogInfo("mDNSCoreReceiveResponse: Server %p responded with code %d to DNSSEC Query %##s (%s), clear DO flag", 
-                                    qptr->qDNSServer, rcode, q.qname.c, DNSTypeName(q.qtype));
-                            qptr->qDNSServer->req_DO = mDNSfalse;    
+                            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                   "[R%d->Q%d] mDNSCoreReceiveResponse: Server %p responded with code %d to DNSSEC Query " PRI_DM_NAME " (" PUB_S "), clear DO flag",
+                                   qptr->request_id, mDNSVal16(qptr->TargetQID), qptr->qDNSServer, rcode,
+                                   DM_NAME_PARAM(q.qname.c), DNSTypeName(q.qtype));
+                            qptr->qDNSServer->req_DO = mDNSfalse;
                         }
                         // For Unicast DNS Queries, penalize the DNSServer
                         else
                         {
-                            LogInfo("mDNSCoreReceiveResponse: Server %p responded with code %d to query %##s (%s)", 
-                                    qptr->qDNSServer, rcode, q.qname.c, DNSTypeName(q.qtype));
+                            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                                   "[R%d->Q%d] mDNSCoreReceiveResponse: Server %p responded with code %d to query " PRI_DM_NAME " (" PUB_S ")",
+                                   qptr->request_id, mDNSVal16(qptr->TargetQID), qptr->qDNSServer, rcode,
+                                   DM_NAME_PARAM(q.qname.c), DNSTypeName(q.qtype));
                             PenalizeDNSServer(m, qptr, response->h.flags);
                         }
                     }
                     returnEarly = mDNStrue;
                 }
             }
+            else if (!InterfaceID && suspiciousForQ)
+            {
+                // If a response is suspicious for a question, then reissue the question via TCP
+                LogInfo("[R%d->Q%d] mDNSCoreReceiveResponse: Server %p responded suspiciously to query %##s (%s) qID %d != rID: %d",
+                        suspiciousForQ->request_id, mDNSVal16(suspiciousForQ->TargetQID),
+                        suspiciousForQ->qDNSServer, q.qname.c, DNSTypeName(q.qtype),
+                        mDNSVal16(suspiciousForQ->TargetQID), mDNSVal16(response->h.id));
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+                m->NextSuspiciousTimeout = NonZeroTime(m->timenow + (SUSPICIOUS_REPLY_DEFENSE_SECS * mDNSPlatformOneSecond));
+#endif
+                uDNS_RestartQuestionAsTCP(m, suspiciousForQ, srcaddr, srcport);
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+                suspiciousForQ->metrics.dnsOverTCPState = DNSOverTCP_Suspicious;
+#endif
+                return;
+            }
         }
         if (returnEarly)
         {
-            LogInfo("Ignoring %2d Answer%s %2d Authorit%s %2d Additional%s",
-                    response->h.numAnswers,     response->h.numAnswers     == 1 ? ", " : "s,",
-                    response->h.numAuthorities, response->h.numAuthorities == 1 ? "y,  " : "ies,",
-                    response->h.numAdditionals, response->h.numAdditionals == 1 ? "" : "s");
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                   "[Q%d] Ignoring %2d Answer" PUB_S " %2d Authorit" PUB_S " %2d Additional" PUB_S,
+                   mDNSVal16(response->h.id),
+                   response->h.numAnswers,     response->h.numAnswers     == 1 ? ", " : "s,",
+                   response->h.numAuthorities, response->h.numAuthorities == 1 ? "y,  " : "ies,",
+                   response->h.numAdditionals, response->h.numAdditionals == 1 ? "" : "s");
             // not goto exit because we won't have any CacheFlushRecords and we do not want to
             // generate negative cache entries (we want to query the next server)
             return;
@@ -8899,7 +9231,9 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
     {
         // All responses sent via LL multicast are acceptable for caching
         // All responses received over our outbound TCP connections are acceptable for caching
-        mDNSBool AcceptableResponse = ResponseMCast || !dstaddr || LLQType;
+        // We accept all records in a unicast response to a multicast query once we find one that
+        // answers an active question.
+        mDNSBool AcceptableResponse = ResponseMCast || !dstaddr || LLQType || recordAcceptedInResponse;
         // (Note that just because we are willing to cache something, that doesn't necessarily make it a trustworthy answer
         // to any specific question -- any code reading records from the cache needs to make that determination for itself.)
 
@@ -8986,64 +9320,76 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                 // Even though it is AcceptableResponse, we still need a DNSServer pointer for the resource records that
                 // we create.
 
-                if (!mDNSOpaque16IsZero(response->h.id))
+                DNSQuestion *q = ExpectingUnicastResponseForRecord(m, srcaddr, ResponseSrcLocal, dstport, response->h.id, &m->rec.r, !dstaddr);
+
+                // Initialize the DNS server on the resource record which will now filter what questions we answer with
+                // this record.
+                //
+                // We could potentially lookup the DNS server based on the source address, but that may not work always
+                // and that's why ExpectingUnicastResponseForRecord does not try to verify whether the response came
+                // from the DNS server that queried. We follow the same logic here. If we can find a matching quetion based
+                // on the "id" and "source port", then this response answers the question and assume the response
+                // came from the same DNS server that we sent the query to.
+
+                if (q != mDNSNULL)
                 {
-                    DNSQuestion *q = ExpectingUnicastResponseForRecord(m, srcaddr, ResponseSrcLocal, dstport, response->h.id, &m->rec.r, !dstaddr);
-
-                    // Initialize the DNS server on the resource record which will now filter what questions we answer with
-                    // this record.
-                    //
-                    // We could potentially lookup the DNS server based on the source address, but that may not work always
-                    // and that's why ExpectingUnicastResponseForRecord does not try to verify whether the response came
-                    // from the DNS server that queried. We follow the same logic here. If we can find a matching quetion based
-                    // on the "id" and "source port", then this response answers the question and assume the response
-                    // came from the same DNS server that we sent the query to.
-
-                    if (q != mDNSNULL)
+                    AcceptableResponse = mDNStrue;
+                    if (!InterfaceID)
                     {
-                        AcceptableResponse = mDNStrue;
-                        if (!InterfaceID)
-                        {
-                            debugf("mDNSCoreReceiveResponse: InterfaceID %p %##s (%s)", q->InterfaceID, q->qname.c, DNSTypeName(q->qtype));
-                            m->rec.r.resrec.rDNSServer = uDNSServer = q->qDNSServer;
-                        }
-                        else
-                            LogInfo("mDNSCoreReceiveResponse: InterfaceID %p %##s (%s)", q->InterfaceID, q->qname.c, DNSTypeName(q->qtype));
+                        debugf("mDNSCoreReceiveResponse: InterfaceID %p %##s (%s)", q->InterfaceID, q->qname.c, DNSTypeName(q->qtype));
+                        m->rec.r.resrec.rDNSServer = uDNSServer = q->qDNSServer;
+                        if (!unicastQuestion) unicastQuestion = q;      //  Acceptable responses to unicast questions need to have (unicastQuestion != nil)
                     }
                     else
                     {
-                        // If we can't find a matching question, we need to see whether we have seen records earlier that matched
-                        // the question. The code below does that. So, make this record unacceptable for now
-                        if (!InterfaceID)
-                        {
-                            debugf("mDNSCoreReceiveResponse: Can't find question for record name %##s", m->rec.r.resrec.name->c);
-                            AcceptableResponse = mDNSfalse;
-                        }
+                        // Accept all remaining records in this unicast response to an mDNS query.
+                        recordAcceptedInResponse = mDNStrue;
+                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                               "[R%d->Q%d] mDNSCoreReceiveResponse: Accepting response for query: " PRI_DM_NAME " (" PUB_S ")",
+                               q->request_id, mDNSVal16(q->TargetQID), DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype));
                     }
                 }
-                else if (ExpectingMulticastResponseForRecord(m, &m->rec.r, srcaddr, recordAccepted, &McastNSEC3Records))
+                else
                 {
-                    recordAccepted = mDNStrue;
-                    AcceptableResponse = mDNStrue;
-                    LogInfo("mDNSCoreReceiveResponse: Accepting record in response to QU question %s, InterfaceID %p", CRDisplayString(m, &m->rec.r),
-                        InterfaceID);
-                }
-                else if (IsDeviceInfoRecord(m->rec.r.resrec.name))
-                {
-                    recordAccepted = mDNStrue;
-                    AcceptableResponse = mDNStrue;
-                    LogInfo("mDNSCoreReceiveResponse: Accepting _device-info record %s, InterfaceID %p",
-                         CRDisplayString(m, &m->rec.r), InterfaceID);
+                    // If we can't find a matching question, we need to see whether we have seen records earlier that matched
+                    // the question. The code below does that. So, make this record unacceptable for now
+                    if (!InterfaceID)
+                    {
+                        debugf("mDNSCoreReceiveResponse: Can't find question for record name %##s", m->rec.r.resrec.name->c);
+                        AcceptableResponse = mDNSfalse;
+                    }
                 }
             }
         }
         else if (llintf && llintf->IgnoreIPv4LL && m->rec.r.resrec.rrtype == kDNSType_A)
         {
-            CacheRecord *const rr = &m->rec.r;
-            RDataBody2 *const rdb = (RDataBody2 *)rr->smallrdatastorage.data;
+            // There are some routers (rare, thankfully) that generate bogus ARP responses for
+            // any IPv4 address they don’t recognize, including RFC 3927 IPv4 link-local addresses.
+            // To work with these broken routers, client devices need to blacklist these broken
+            // routers and ignore their bogus ARP responses. Some devices implement a technique
+            // such as the one described in US Patent 7436783, which lets clients detect and
+            // ignore these broken routers: <https://www.google.com/patents/US7436783>
 
-            // If we are supposed to ignore link-local addresses on this interface, drop
-            // all "A" records that have link-local address in them.
+            // OS X and iOS do not implement this defensive mechanism, instead taking a simpler
+            // approach of just detecting these broken routers and completely disabling IPv4
+            // link-local communication on interfaces where a broken router is detected.
+            // OS X and iOS set the IFEF_ARPLL interface flag on interfaces
+            // that are deemed “safe” for IPv4 link-local communication;
+            // the flag is cleared on interfaces where a broken router is detected.
+
+            // OS X and iOS will not even try to communicate with an IPv4
+            // link-local destination on an interface without the IFEF_ARPLL flag set.
+            // This can cause some badly written applications to freeze for a long time if they
+            // attempt to connect to an IPv4 link-local destination address and then wait for
+            // that connection attempt to time out before trying other candidate addresses.
+
+            // To mask this client bug, we suppress acceptance of IPv4 link-local address
+            // records on interfaces where we know the OS will be unwilling even to attempt
+            // communication with those IPv4 link-local destination addresses.
+            // <rdar://problem/9400639> kSuppress IPv4LL answers on interfaces without IFEF_ARPLL
+
+            const CacheRecord *const rr = &m->rec.r;
+            const RDataBody2 *const rdb = (RDataBody2 *)rr->smallrdatastorage.data;
             if (mDNSv4AddressIsLinkLocal(&rdb->ipv4))
             {
                 LogInfo("mDNSResponder: Dropping LinkLocal packet %s", CRDisplayString(m, &m->rec.r));
@@ -9087,7 +9433,8 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     // else, the packet RR has different type or different rdata -- check to see if this is a conflict
                     else if (m->rec.r.resrec.rroriginalttl > 0 && PacketRRConflict(m, rr, &m->rec.r))
                     {
-                        LogInfo("mDNSCoreReceiveResponse: Pkt Record: %08lX %s", m->rec.r.resrec.rdatahash, CRDisplayString(m, &m->rec.r));
+                        LogInfo("mDNSCoreReceiveResponse: Pkt Record: %08lX %s (interface %d)",
+                            m->rec.r.resrec.rdatahash, CRDisplayString(m, &m->rec.r), IIDPrintable(InterfaceID));
                         LogInfo("mDNSCoreReceiveResponse: Our Record: %08lX %s", rr->resrec.rdatahash, ARDisplayString(m, rr));
 
                         // If this record is marked DependentOn another record for conflict detection purposes,
@@ -9102,7 +9449,7 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                         if (rr->ProbeCount > DefaultProbeCountForTypeUnique)
                             LogInfo("mDNSCoreReceiveResponse: Already reset to Probing: %s", ARDisplayString(m, rr));
                         else if (rr->ProbeCount == DefaultProbeCountForTypeUnique)
-                            LogMsg("mDNSCoreReceiveResponse: Ignoring response received before we even began probing: %s", ARDisplayString(m, rr));
+                            LogInfo("mDNSCoreReceiveResponse: Ignoring response received before we even began probing: %s", ARDisplayString(m, rr));
                         else
                         {
                             LogMsg("mDNSCoreReceiveResponse: Received from %#a:%d %s", srcaddr, mDNSVal16(srcport), CRDisplayString(m, &m->rec.r));
@@ -9123,13 +9470,40 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                             // If we're probing for this record, we just failed
                             else if (rr->resrec.RecordType == kDNSRecordTypeUnique)
                             {
+	                            // At this point in the code, we're probing for uniqueness.
+	                            // We've sent at least one probe (rr->ProbeCount < DefaultProbeCountForTypeUnique)
+	                            // but we haven't completed probing yet (rr->resrec.RecordType == kDNSRecordTypeUnique).
                                 // Before we call deregister, check if this is a packet we registered with the sleep proxy.
                                 if (!mDNSCoreRegisteredProxyRecord(m, rr))
                                 {
-                                    LogMsg("mDNSCoreReceiveResponse: ProbeCount %d; will deregister %s", rr->ProbeCount, ARDisplayString(m, rr));
-                                    
-                                    m->mDNSStats.NameConflicts++;
-                                    mDNS_Deregister_internal(m, rr, mDNS_Dereg_conflict);
+                                    if ((rr->ProbingConflictCount == 0) || (m->MPktNum != rr->LastConflictPktNum))
+                                    {
+                                        const NetworkInterfaceInfo *const intf = FirstInterfaceForID(m, InterfaceID);
+                                        rr->ProbingConflictCount++;
+                                        rr->LastConflictPktNum = m->MPktNum;
+                                        if (ResponseMCast && (!intf || intf->SupportsUnicastMDNSResponse) &&
+                                            (rr->ProbingConflictCount <= kMaxAllowedMCastProbingConflicts))
+                                        {
+                                            LogMsg("mDNSCoreReceiveResponse: ProbeCount %d; restarting probing after %d-tick pause due to possibly "
+                                                "spurious multicast conflict (%d/%d) via interface %d for %s",
+                                                rr->ProbeCount, kProbingConflictPauseDuration, rr->ProbingConflictCount,
+                                                kMaxAllowedMCastProbingConflicts, IIDPrintable(InterfaceID), ARDisplayString(m, rr));
+                                            rr->ProbeCount = DefaultProbeCountForTypeUnique;
+                                            rr->LastAPTime = m->timenow + kProbingConflictPauseDuration - rr->ThisAPInterval;
+                                            SetNextAnnounceProbeTime(m, rr);
+                                        }
+                                        else
+                                        {
+                                            LogMsg("mDNSCoreReceiveResponse: ProbeCount %d; will deregister %s due to %scast conflict via interface %d",
+                                                rr->ProbeCount, ARDisplayString(m, rr), ResponseMCast ? "multi" : "uni", IIDPrintable(InterfaceID));
+                                            m->mDNSStats.NameConflicts++;
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+                                            // See if this record was also registered with any D2D plugins.
+                                            D2D_stop_advertising_record(rr);
+#endif
+                                            mDNS_Deregister_internal(m, rr, mDNS_Dereg_conflict);
+                                        }
+                                    }
                                 }
                             }
                             // We assumed this record must be unique, but we were wrong. (e.g. There are two mDNSResponders on the
@@ -9141,6 +9515,9 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                             {
                                 LogMsg("mDNSCoreReceiveResponse: Unexpected conflict discarding %s", ARDisplayString(m, rr));
                                 m->mDNSStats.KnownUniqueNameConflicts++;
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+                                D2D_stop_advertising_record(rr);
+#endif
                                 mDNS_Deregister_internal(m, rr, mDNS_Dereg_conflict);
                             }
                             else
@@ -9152,7 +9529,7 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     // have any record(s) of the same type that we should re-assert to rescue them
                     // (see note about "multi-homing and bridged networks" at the end of this function).
                     else if (m->rec.r.resrec.rrtype == rr->resrec.rrtype)
-                        if ((m->rec.r.resrec.RecordType & kDNSRecordTypePacketUniqueMask) && m->timenow - rr->LastMCTime > mDNSPlatformOneSecond/2)
+                        if ((m->rec.r.resrec.RecordType & kDNSRecordTypePacketUniqueMask) && (mDNSu32)(m->timenow - rr->LastMCTime) > (mDNSu32)mDNSPlatformOneSecond/2)
                         { rr->ImmedAnswer = mDNSInterfaceMark; m->NextScheduledResponse = m->timenow; }
                 }
             }
@@ -9168,15 +9545,15 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
         // 2. See if we want to add this packet resource record to our cache
         // We only try to cache answers if we have a cache to put them in
         // Also, we ignore any apparent attempts at cache poisoning unicast to us that do not answer any outstanding active query
-        if (!AcceptableResponse) LogInfo("mDNSCoreReceiveResponse ignoring %s", CRDisplayString(m, &m->rec.r));
+        if (!AcceptableResponse) {
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO, "[Q%d] mDNSCoreReceiveResponse ignoring " PRI_S,
+                   mDNSVal16(response->h.id), CRDisplayString(m, &m->rec.r));
+        }
         if (m->rrcache_size && AcceptableResponse)
         {
-            const mDNSu32 slot = HashSlot(m->rec.r.resrec.name);
-            CacheGroup *cg = CacheGroupForRecord(m, slot, &m->rec.r.resrec);
+            const mDNSu32 slot = HashSlotFromNameHash(m->rec.r.resrec.namehash);
+            CacheGroup *cg = CacheGroupForRecord(m, &m->rec.r.resrec);
             CacheRecord *rr = mDNSNULL;
-
-            if (McastNSEC3Records)
-                InitializeAnonInfoForCR(m, &McastNSEC3Records, &m->rec.r);
 
             // 2a. Check if this packet resource record is already in our cache.
             //
@@ -9188,27 +9565,6 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                 rr = mDNSCoreReceiveCacheCheck(m, response, LLQType, slot, cg, unicastQuestion, &cfp, &NSECCachePtr, InterfaceID);
             }
 
-            // If mDNSOppCaching is set (which affects only multicast), enable opportunistic caching in which case we cache
-            // everything that was received over multicast. Otherwise, we are selective about the caching.
-            //
-            // Cache everything that is from ourselves (that's how we answer any questions looking for them). Otherwise call
-            // ExpectingMulticastResponseForRecord which decides whether to cache this record or not.
-            //
-            if (!m->mDNSOppCaching && !rr && !myself && mDNSOpaque16IsZero(response->h.id))
-            {
-                if (!ExpectingMulticastResponseForRecord(m, &m->rec.r, srcaddr, recordAccepted, &McastNSEC3Records))
-                {
-                    //LogMsg("mDNSCoreReceiveResponse: discarding %s", CRDisplayString(m, &m->rec.r));
-                    mDNSCoreResetRecord(m);
-                    continue;
-                }
-                else
-                {
-                    recordAccepted = mDNStrue;
-                }
-            }
-
-
             // If packet resource record not in our cache, add it now
             // (unless it is just a deletion of a record we never had, in which case we don't care)
             if (!rr && m->rec.r.resrec.rroriginalttl > 0)
@@ -9219,7 +9575,7 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                 if (AddToCFList)
                     delay = NonZeroTime(m->timenow + mDNSPlatformOneSecond);
                 else
-                    delay = CheckForSoonToExpireRecords(m, m->rec.r.resrec.name, m->rec.r.resrec.namehash, slot, mDNSNULL);
+                    delay = CheckForSoonToExpireRecords(m, m->rec.r.resrec.name, m->rec.r.resrec.namehash);
 
                 // If unique, assume we may have to delay delivery of this 'add' event.
                 // Below, where we walk the CacheFlushRecords list, we either call CacheRecordDeferredAdd()
@@ -9241,8 +9597,10 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     rr->CRDNSSECQuestion = 0;
                     if (unicastQuestion && DNSSECQuestion(unicastQuestion))
                     {
-                        LogInfo("mDNSCoreReceiveResponse: CRDNSSECQuestion set for new record %s, question %##s (%s)", CRDisplayString(m, rr),
-                            unicastQuestion->qname.c, DNSTypeName(unicastQuestion->qtype));
+                        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                               "[R%d->Q%d] mDNSCoreReceiveResponse: CRDNSSECQuestion set for new record " PRI_S ", question " PRI_DM_NAME " (" PUB_S ")",
+                               unicastQuestion->request_id, mDNSVal16(unicastQuestion->TargetQID), CRDisplayString(m, rr),
+                               DM_NAME_PARAM(unicastQuestion->qname.c), DNSTypeName(unicastQuestion->qtype));
                         rr->CRDNSSECQuestion = 1;
                     }
                     // NSEC/NSEC3 records and its signatures are cached with the negative cache entry
@@ -9266,13 +9624,6 @@ mDNSlocal void mDNSCoreReceiveResponse(mDNS *const m,
                     }
                 }
             }
-            else
-            {
-                if (rr && rr->resrec.AnonInfo && m->rec.r.resrec.AnonInfo)
-                {
-                    CopyAnonInfoForCR(m, rr, &m->rec.r);
-                }
-            }
         }
         mDNSCoreResetRecord(m);
     }
@@ -9285,8 +9636,9 @@ exit:
     while (CacheFlushRecords != (CacheRecord*)1)
     {
         CacheRecord *r1 = CacheFlushRecords, *r2;
-        const mDNSu32 slot = HashSlot(r1->resrec.name);
-        const CacheGroup *cg = CacheGroupForRecord(m, slot, &r1->resrec);
+        const mDNSu32 slot = HashSlotFromNameHash(r1->resrec.namehash);
+        const CacheGroup *cg = CacheGroupForRecord(m, &r1->resrec);
+        mDNSBool purgedRecords = mDNSfalse;
         CacheFlushRecords = CacheFlushRecords->NextInCFList;
         r1->NextInCFList = mDNSNULL;
 
@@ -9330,13 +9682,19 @@ exit:
                     continue;
                 }
             }
-             
+
             // For Unicast (null InterfaceID) the resolver IDs should also match
             if ((r1->resrec.InterfaceID == r2->resrec.InterfaceID) &&
                 (r1->resrec.InterfaceID || (id1 == id2)) &&
                 r1->resrec.rrtype      == r2->resrec.rrtype &&
                 r1->resrec.rrclass     == r2->resrec.rrclass)
             {
+                if (r1->resrec.mortality == Mortality_Mortal && r2->resrec.mortality != Mortality_Mortal)
+                {
+                    verbosedebugf("mDNSCoreReceiveResponse: R1(%p) is being immortalized by R2(%p)", r1, r2);
+                    r1->resrec.mortality = Mortality_Immortal;   //  Immortalize the replacement record
+                }
+
                 // If record is recent, just ensure the whole RRSet has the same TTL (as required by DNS semantics)
                 // else, if record is old, mark it to be flushed
                 if (m->timenow - r2->TimeRcvd < mDNSPlatformOneSecond && RRExpireTime(r2) - m->timenow > mDNSPlatformOneSecond)
@@ -9346,23 +9704,31 @@ exit:
                     // goodbye announcement with the cache flush bit set (or a case-change on record rdata,
                     // which we treat as a goodbye followed by an addition) and in that case it would be
                     // inappropriate to synchronize all the other records to a TTL of 0 (or 1).
+
                     // We suppress the message for the specific case of correcting from 240 to 60 for type TXT,
                     // because certain early Bonjour devices are known to have this specific mismatch, and
                     // there's no point filling syslog with messages about something we already know about.
                     // We also don't log this for uDNS responses, since a caching name server is obliged
                     // to give us an aged TTL to correct for how long it has held the record,
                     // so our received TTLs are expected to vary in that case
+
+                    // We also suppress log message in the case of SRV records that are received
+                    // with a TTL of 4500 that are already cached with a TTL of 120 seconds, since
+                    // this behavior was observed for a number of discoveryd based AppleTV's in iOS 8
+                    // GM builds.
                     if (r2->resrec.rroriginalttl != r1->resrec.rroriginalttl && r1->resrec.rroriginalttl > 1)
                     {
                         if (!(r2->resrec.rroriginalttl == 240 && r1->resrec.rroriginalttl == 60 && r2->resrec.rrtype == kDNSType_TXT) &&
+                            !(r2->resrec.rroriginalttl == 120 && r1->resrec.rroriginalttl == 4500 && r2->resrec.rrtype == kDNSType_SRV) &&
                             mDNSOpaque16IsZero(response->h.id))
                             LogInfo("Correcting TTL from %4d to %4d for %s",
                                     r2->resrec.rroriginalttl, r1->resrec.rroriginalttl, CRDisplayString(m, r2));
                         r2->resrec.rroriginalttl = r1->resrec.rroriginalttl;
                     }
                     r2->TimeRcvd = m->timenow;
+                    SetNextCacheCheckTimeForRecord(m, r2);
                 }
-                else                // else, if record is old, mark it to be flushed
+                else if (r2->resrec.InterfaceID) // else, if record is old, mark it to be flushed
                 {
                     verbosedebugf("Cache flush new %p age %d expire in %d %s", r1, m->timenow - r1->TimeRcvd, RRExpireTime(r1) - m->timenow, CRDisplayString(m, r1));
                     verbosedebugf("Cache flush old %p age %d expire in %d %s", r2, m->timenow - r2->TimeRcvd, RRExpireTime(r2) - m->timenow, CRDisplayString(m, r2));
@@ -9400,8 +9766,30 @@ exit:
                         // We use (m->timenow - 1) instead of m->timenow, because we use that to identify records
                         // that we marked for deletion via an explicit DE record
                     }
+                    SetNextCacheCheckTimeForRecord(m, r2);
                 }
-                SetNextCacheCheckTimeForRecord(m, r2);
+                else
+                {
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+                    if (r2->resrec.mortality == Mortality_Ghost)
+                    {
+                        DNSQuestion * q;
+                        for (q = m->Questions; q; q=q->next)
+                        {
+                            if (!q->LongLived && ActiveQuestion(q) &&
+                                CacheRecordAnswersQuestion(r2, q) &&
+                                q->metrics.expiredAnswerState == ExpiredAnswer_AnsweredWithExpired)
+                            {
+                                q->metrics.expiredAnswerState = ExpiredAnswer_ExpiredAnswerChanged;
+                            }
+                        }
+                    }
+#endif
+                    // Old uDNS records are scheduled to be purged instead of given at most one second to live.
+                    r2->resrec.mortality = Mortality_Mortal;       //  We want it purged, so remove any immortality
+                    mDNS_PurgeCacheResourceRecord(m, r2);
+                    purgedRecords = mDNStrue;
+                }
             }
         }
 
@@ -9416,20 +9804,31 @@ exit:
             {
                 if (!NSECCachePtr)
                 {
-                    LogInfo("mDNSCoreReceiveResponse: Updating NSECCachePtr to %s", CRDisplayString(m, r1));
+                    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                           "[R%d->Q%d] mDNSCoreReceiveResponse: Updating NSECCachePtr to " PRI_S,
+                           unicastQuestion->request_id, mDNSVal16(unicastQuestion->TargetQID), CRDisplayString(m, r1));
                     NSECCachePtr = r1;
                 }
                 // Note: We need to do this before we call CacheRecordDeferredAdd as this
                 // might start the verification process which needs these NSEC records
                 if (!AddNSECSForCacheRecord(m, NSECRecords, NSECCachePtr, rcode))
-                { 
+                {
                     LogInfo("mDNSCoreReceiveResponse: AddNSECSForCacheRecord failed to add NSEC for %s", CRDisplayString(m, NSECCachePtr));
                     FreeNSECRecords(m, NSECRecords);
                 }
                 NSECRecords = mDNSNULL;
                 NSECCachePtr = mDNSNULL;
             }
-            r1->DelayDelivery = CheckForSoonToExpireRecords(m, r1->resrec.name, r1->resrec.namehash, slot, mDNSNULL);
+            if (r1->resrec.InterfaceID)
+            {
+                r1->DelayDelivery = CheckForSoonToExpireRecords(m, r1->resrec.name, r1->resrec.namehash);
+            }
+            else
+            {
+                // If uDNS records from an older RRset were scheduled to be purged, then delay delivery slightly to allow
+                // them to be deleted before any ADD events for this record.
+                r1->DelayDelivery = purgedRecords ? NonZeroTime(m->timenow) : 0;
+            }
             // If no longer delaying, deliver answer now, else schedule delivery for the appropriate time
             if (!r1->DelayDelivery) CacheRecordDeferredAdd(m, r1);
             else ScheduleNextCacheCheckTime(m, slot, r1->DelayDelivery);
@@ -9442,7 +9841,7 @@ exit:
     {
         LogInfo("mDNSCoreReceieveResponse: Updating NSEC records in %s", CRDisplayString(m, NSECCachePtr));
         if (!AddNSECSForCacheRecord(m, NSECRecords, NSECCachePtr, rcode))
-        { 
+        {
             LogInfo("mDNSCoreReceiveResponse: AddNSECSForCacheRecord failed to add NSEC for %s", CRDisplayString(m, NSECCachePtr));
             FreeNSECRecords(m, NSECRecords);
         }
@@ -9522,8 +9921,8 @@ mDNSlocal void SPSRecordCallback(mDNS *const m, AuthRecord *const ar, mStatus re
         LogMsg("%-7s Conflicting mDNS -- waking %.6a %s", InterfaceNameForID(m, ar->resrec.InterfaceID), &ar->WakeUp.HMAC, ARDisplayString(m, ar));
         if (ar->WakeUp.HMAC.l[0])
         {
-            SendWakeup(m, ar->resrec.InterfaceID, &ar->WakeUp.IMAC, &ar->WakeUp.password);  // Send one wakeup magic packet
-            ScheduleWakeup(m, ar->resrec.InterfaceID, &ar->WakeUp.HMAC);                    // Schedule all other records with the same owner to be woken
+            SendWakeup(m, ar->resrec.InterfaceID, &ar->WakeUp.IMAC, &ar->WakeUp.password, mDNSfalse);  // Send one wakeup magic packet
+            ScheduleWakeup(m, ar->resrec.InterfaceID, &ar->WakeUp.HMAC);                               // Schedule all other records with the same owner to be woken
         }
         mDNS_Unlock(m);
     }
@@ -9553,6 +9952,11 @@ mDNSlocal mDNSu8 *GetValueForMACAddr(mDNSu8 *ptr, mDNSu8 *limit, mDNSEthAddr *et
         }
         else if (*ptr == ':')
         {
+            if (colons >=5)
+            {
+                LogMsg("GetValueForMACAddr: Address malformed colons %d val %d", colons, val);
+                return mDNSNULL;
+            }
             eth->b[colons] = val;
             colons++;
             val = 0;
@@ -9684,6 +10088,11 @@ mDNSlocal mDNSu8 *GetValueForIPv4Addr(mDNSu8 *ptr, mDNSu8 *limit, mDNSv4Addr *v4
             val = val * 10 + *ptr - '0';
         else if (*ptr == '.')
         {
+            if (val > 255 || dots >= 3)
+            {
+                LogMsg("GetValueForIPv4Addr: something wrong ptr(%p) %c, limit %p, dots %d", ptr, *ptr, limit, dots);
+                return mDNSNULL;
+            }
             v4->b[dots++] = val;
             val = 0;
         }
@@ -9726,6 +10135,38 @@ mDNSlocal mDNSu8 *GetValueForKeepalive(mDNSu8 *ptr, mDNSu8 *limit, mDNSu32 *valu
     return ptr;
 }
 
+mDNSexport mDNSBool mDNSValidKeepAliveRecord(AuthRecord *rr)
+{
+    mDNSAddr    laddr, raddr;
+    mDNSEthAddr eth;
+    mDNSIPPort  lport, rport;
+    mDNSu32     timeout, seq, ack;
+    mDNSu16     win;
+
+    if (!mDNS_KeepaliveRecord(&rr->resrec))
+    {
+        return mDNSfalse;
+    }
+
+    timeout = seq = ack = 0;
+    win = 0;
+    laddr = raddr = zeroAddr;
+    lport = rport = zeroIPPort;
+    eth = zeroEthAddr;
+
+    mDNS_ExtractKeepaliveInfo(rr, &timeout, &laddr, &raddr, &eth, &seq, &ack, &lport, &rport, &win);
+
+    if (mDNSAddressIsZero(&laddr) || mDNSIPPortIsZero(lport) ||
+        mDNSAddressIsZero(&raddr) || mDNSIPPortIsZero(rport) ||
+        mDNSEthAddressIsZero(eth))
+    {
+        return mDNSfalse;
+    }
+
+    return mDNStrue;
+}
+
+
 mDNSlocal void mDNS_ExtractKeepaliveInfo(AuthRecord *ar, mDNSu32 *timeout, mDNSAddr *laddr, mDNSAddr *raddr, mDNSEthAddr *eth, mDNSu32 *seq,
                                          mDNSu32 *ack, mDNSIPPort *lport, mDNSIPPort *rport, mDNSu16 *win)
 {
@@ -9753,7 +10194,7 @@ mDNSlocal void mDNS_ExtractKeepaliveInfo(AuthRecord *ar, mDNSu32 *timeout, mDNSA
                 raddr->type = mDNSAddrType_IPv4;
                 ptr = GetValueForIPv4Addr(ptr, limit, &raddr->ip.v4);
             }
-            if (param == 'H')
+            else if (param == 'H')
             {
                 laddr->type = mDNSAddrType_IPv6;
                 ptr = GetValueForIPv6Addr(ptr, limit, &laddr->ip.v6);
@@ -9902,16 +10343,18 @@ mDNSlocal void mDNS_SendKeepalives(mDNS *const m)
 
 mDNSlocal void mDNS_SendKeepaliveACK(mDNS *const m, AuthRecord *ar)
 {
-    if (ar != mDNSNULL)
-    {
-        LogInfo("mDNS_SendKeepalivesACK: AuthRecord is NULL");
-        return;
-    }
-    mDNSu32     timeout, seq, ack;
+    mDNSu32     timeout, seq, ack, seqInc;
     mDNSu16     win;
     mDNSAddr    laddr, raddr;
     mDNSEthAddr eth;
     mDNSIPPort  lport, rport;
+    mDNSu8      *ptr;
+
+    if (ar == mDNSNULL)
+    {
+        LogInfo("mDNS_SendKeepalivesACK: AuthRecord is NULL");
+        return;
+    }
 
     timeout = seq = ack = 0;
     win = 0;
@@ -9926,6 +10369,17 @@ mDNSlocal void mDNS_SendKeepaliveACK(mDNS *const m, AuthRecord *ar)
         LogInfo("mDNS_SendKeepaliveACK: not a valid record %s for keepalive", ARDisplayString(m, ar));
         return;
     }
+
+    // To send a keepalive ACK, we need to add one to the sequence number from the keepalive
+    // record, which is the TCP connection's "next" sequence number minus one. Otherwise, the
+    // keepalive ACK also ends up being a keepalive probe. Also, seq is in network byte order, so
+    // it's converted to host byte order before incrementing it by one.
+    ptr = (mDNSu8 *)&seq;
+    seqInc = (mDNSu32)((ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3]) + 1;
+    ptr[0] = (mDNSu8)((seqInc >> 24) & 0xFF);
+    ptr[1] = (mDNSu8)((seqInc >> 16) & 0xFF);
+    ptr[2] = (mDNSu8)((seqInc >>  8) & 0xFF);
+    ptr[3] = (mDNSu8)((seqInc      ) & 0xFF);
     LogMsg("mDNS_SendKeepaliveACK: laddr %#a raddr %#a lport %d rport %d", &laddr, &raddr, mDNSVal16(lport), mDNSVal16(rport));
     mDNSPlatformSendKeepalive(&laddr, &raddr, &lport, &rport, seq, ack, win);
 }
@@ -9953,7 +10407,7 @@ mDNSlocal void mDNSCoreReceiveUpdate(mDNS *const m,
     if (!InterfaceID || !m->SPSSocket || !mDNSSameIPPort(dstport, m->SPSSocket->port)) return;
 
     if (mDNS_PacketLoggingEnabled)
-        DumpPacket(m, mStatus_NoError, mDNSfalse, "UDP", srcaddr, srcport, dstaddr, dstport, msg, end);
+        DumpPacket(mStatus_NoError, mDNSfalse, "UDP", srcaddr, srcport, dstaddr, dstport, msg, end, InterfaceID);
 
     ptr = LocateOptRR(msg, end, DNSOpt_LeaseData_Space + DNSOpt_OwnerData_ID_Space);
     if (ptr)
@@ -10018,7 +10472,7 @@ mDNSlocal void mDNSCoreReceiveUpdate(mDNS *const m,
             if (ptr && m->rec.r.resrec.RecordType != kDNSRecordTypePacketNegative)
             {
                 mDNSu16 RDLengthMem = GetRDLengthMem(&m->rec.r.resrec);
-                AuthRecord *ar = mDNSPlatformMemAllocate(sizeof(AuthRecord) - sizeof(RDataBody) + RDLengthMem);
+                AuthRecord *ar = (AuthRecord *) mDNSPlatformMemAllocateClear(sizeof(AuthRecord) - sizeof(RDataBody) + RDLengthMem);
                 if (!ar)
                 {
                     m->omsg.h.flags.b[1] |= kDNSFlag1_RC_Refused;
@@ -10082,32 +10536,52 @@ mDNSlocal void mDNSCoreReceiveUpdate(mDNS *const m,
         }
     }
 
-    if (p) mDNSSendDNSMessage(m, &m->omsg, p, InterfaceID, m->SPSSocket, srcaddr, srcport, mDNSNULL, mDNSNULL, mDNSfalse);
+    if (p) mDNSSendDNSMessage(m, &m->omsg, p, InterfaceID, mDNSNULL, m->SPSSocket, srcaddr, srcport, mDNSNULL, mDNSfalse);
     mDNS_SendKeepalives(m);
 }
 
+mDNSlocal mDNSu32 mDNSGenerateOwnerOptForInterface(mDNS *const m, const mDNSInterfaceID InterfaceID, DNSMessage *msg)
+{
+    mDNSu8 *ptr    = msg->data;
+    mDNSu8 *end    = mDNSNULL;
+    mDNSu32 length = 0;
+    AuthRecord opt;
+    NetworkInterfaceInfo *intf;
+
+    mDNS_SetupResourceRecord(&opt, mDNSNULL, mDNSInterface_Any, kDNSType_OPT, kStandardTTL, kDNSRecordTypeKnownUnique, AuthRecordAny, mDNSNULL, mDNSNULL);
+    opt.resrec.rrclass    = NormalMaxDNSMessageData;
+    opt.resrec.rdlength   = sizeof(rdataOPT);
+    opt.resrec.rdestimate = sizeof(rdataOPT);
+
+    intf = FirstInterfaceForID(m, InterfaceID);
+    SetupOwnerOpt(m, intf, &opt.resrec.rdata->u.opt[0]);
+
+    LogSPS("Generated OPT record : %s", ARDisplayString(m, &opt));
+    end = PutResourceRecord(msg, ptr, &msg->h.numAdditionals, &opt.resrec);
+    if (end != mDNSNULL)
+    {
+        // Put all the integer values in IETF byte-order (MSB first, LSB second)
+        SwapDNSHeaderBytes(msg);
+        length = (end - msg->data);
+    }
+    else
+        LogSPS("mDNSGenerateOwnerOptForInterface: Failed to generate owner OPT record");
+
+    return length;
+}
+
+// Note that this routine is called both for Sleep Proxy Registrations, and for Standard Dynamic
+// DNS registrations, but (currently) only has to handle the Sleep Proxy Registration reply case,
+// and should ignore Standard Dynamic DNS registration replies, because those are handled elsewhere.
+// Really, both should be unified and handled in one place.
 mDNSlocal void mDNSCoreReceiveUpdateR(mDNS *const m, const DNSMessage *const msg, const mDNSu8 *end, const mDNSAddr *srcaddr, const mDNSInterfaceID InterfaceID)
 {
     if (InterfaceID)
     {
-        mDNSu32 updatelease = 60 * 60;      // If SPS fails to indicate lease time, assume one hour
-        const mDNSu8 *ptr = LocateOptRR(msg, end, DNSOpt_LeaseData_Space);
-        if (ptr)
-        {
-            ptr = GetLargeResourceRecord(m, msg, ptr, end, 0, kDNSRecordTypePacketAdd, &m->rec);
-            if (ptr && m->rec.r.resrec.RecordType != kDNSRecordTypePacketNegative && m->rec.r.resrec.rrtype == kDNSType_OPT)
-            {
-                const rdataOPT *o;
-                const rdataOPT *const e = (const rdataOPT *)&m->rec.r.resrec.rdata->u.data[m->rec.r.resrec.rdlength];
-                for (o = &m->rec.r.resrec.rdata->u.opt[0]; o < e; o++)
-                    if (o->opt == kDNSOpt_Lease)
-                    {
-                        updatelease = o->u.updatelease;
-                        LogSPS("Sleep Proxy granted lease time %4d seconds, updateid %d, InterfaceID %p", updatelease, mDNSVal16(msg->h.id), InterfaceID);
-                    }
-            }
-            m->rec.r.resrec.RecordType = 0;     // Clear RecordType to show we're not still using it
-        }
+        mDNSu32 pktlease = 0, spsupdates = 0;
+        const mDNSBool gotlease = GetPktLease(m, msg, end, &pktlease);
+        const mDNSu32 updatelease = gotlease ? pktlease : 60 * 60; // If SPS fails to indicate lease time, assume one hour
+        if (gotlease) LogSPS("DNS Update response contains lease option granting %4d seconds, updateid %d, InterfaceID %p", updatelease, mDNSVal16(msg->h.id), InterfaceID);
 
         if (m->CurrentRecord)
             LogMsg("mDNSCoreReceiveUpdateR ERROR m->CurrentRecord already set %s", ARDisplayString(m, m->CurrentRecord));
@@ -10126,7 +10600,8 @@ mDNSlocal void mDNSCoreReceiveUpdateR(mDNS *const m, const DNSMessage *const msg
                     if (mDNSOpaque64IsZero(&rr->updateIntID))
                         rr->updateid = zeroID;
                     rr->expire   = NonZeroTime(m->timenow + updatelease * mDNSPlatformOneSecond);
-                    LogSPS("Sleep Proxy %s record %5d 0x%x 0x%x (%d) %s", rr->WakeUp.HMAC.l[0] ? "transferred" : "registered", updatelease, rr->updateIntID.l[1], rr->updateIntID.l[0], mDNSVal16(rr->updateid), ARDisplayString(m,rr));
+                    spsupdates++;
+                    LogSPS("Sleep Proxy %s record %2d %5d 0x%x 0x%x (%d) %s", rr->WakeUp.HMAC.l[0] ? "transferred" : "registered", spsupdates, updatelease, rr->updateIntID.l[1], rr->updateIntID.l[0], mDNSVal16(rr->updateid), ARDisplayString(m,rr));
                     if (rr->WakeUp.HMAC.l[0])
                     {
                         rr->WakeUp.HMAC = zeroEthAddr;  // Clear HMAC so that mDNS_Deregister_internal doesn't waste packets trying to wake this host
@@ -10139,12 +10614,27 @@ mDNSlocal void mDNSCoreReceiveUpdateR(mDNS *const m, const DNSMessage *const msg
             if (m->CurrentRecord == rr) // If m->CurrentRecord was not advanced for us, do it now
                 m->CurrentRecord = rr->next;
         }
+        if (spsupdates) // Only do this dynamic store stuff if this was, in fact, a Sleep Proxy Update response
+        {
+            char *ifname;
+            mDNSAddr spsaddr;
+            DNSMessage optMsg;
+            int length;
+            // Update the dynamic store with the IP Address and MAC address of the sleep proxy
+            ifname = InterfaceNameForID(m, InterfaceID);
+            mDNSPlatformMemCopy(&spsaddr, srcaddr, sizeof (mDNSAddr));
+            mDNSPlatformStoreSPSMACAddr(&spsaddr, ifname);
 
-        // Update the dynamic store with the IP Address and MAC address of the sleep proxy
-        char *ifname = InterfaceNameForID(m, InterfaceID);
-        mDNSAddr spsaddr;
-        mDNSPlatformMemCopy(&spsaddr, srcaddr, sizeof (mDNSAddr));
-        mDNSPlatformStoreSPSMACAddr(&spsaddr, ifname);
+            // Store the Owner OPT record for this interface.
+            // Configd may use the OPT record if it detects a conflict with the BSP when the system wakes up
+            InitializeDNSMessage(&optMsg.h, zeroID, ResponseFlags);
+            length = mDNSGenerateOwnerOptForInterface(m, InterfaceID, &optMsg);
+            if (length != 0)
+            {
+                length += sizeof(DNSMessageHeader);
+                mDNSPlatformStoreOwnerOptRecord(ifname, &optMsg, length);
+            }
+        }
     }
     // If we were waiting to go to sleep, then this SPS registration or wide-area record deletion
     // may have been the thing we were waiting for, so schedule another check to see if we can sleep now.
@@ -10155,12 +10645,7 @@ mDNSexport void MakeNegativeCacheRecord(mDNS *const m, CacheRecord *const cr,
                                         const domainname *const name, const mDNSu32 namehash, const mDNSu16 rrtype, const mDNSu16 rrclass, mDNSu32 ttl_seconds, mDNSInterfaceID InterfaceID, DNSServer *dnsserver)
 {
     if (cr == &m->rec.r && m->rec.r.resrec.RecordType)
-    {
-        LogMsg("MakeNegativeCacheRecord: m->rec appears to be already in use for %s", CRDisplayString(m, &m->rec.r));
-#if ForceAlerts
-        *(long*)0 = 0;
-#endif
-    }
+        LogFatalError("MakeNegativeCacheRecord: m->rec appears to be already in use for %s", CRDisplayString(m, &m->rec.r));
 
     // Create empty resource record
     cr->resrec.RecordType    = kDNSRecordTypePacketNegative;
@@ -10181,16 +10666,9 @@ mDNSexport void MakeNegativeCacheRecord(mDNS *const m, CacheRecord *const cr,
     cr->TimeRcvd           = m->timenow;
     cr->DelayDelivery      = 0;
     cr->NextRequiredQuery  = m->timenow;
-    cr->LastUsed           = m->timenow;
     cr->CRActiveQuestion   = mDNSNULL;
     cr->UnansweredQueries  = 0;
     cr->LastUnansweredTime = 0;
-#if ENABLE_MULTI_PACKET_QUERY_SNOOPING
-    cr->MPUnansweredQ      = 0;
-    cr->MPLastUnansweredQT = 0;
-    cr->MPUnansweredKA     = 0;
-    cr->MPExpectingKA      = mDNSfalse;
-#endif
     cr->NextInCFList       = mDNSNULL;
     cr->nsec               = mDNSNULL;
     cr->soa                = mDNSNULL;
@@ -10200,12 +10678,12 @@ mDNSexport void MakeNegativeCacheRecord(mDNS *const m, CacheRecord *const cr,
     cr->responseFlags      = ResponseFlags;
 }
 
-mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *const end,
+mDNSexport void mDNSCoreReceive(mDNS *const m, DNSMessage *const msg, const mDNSu8 *const end,
                                 const mDNSAddr *const srcaddr, const mDNSIPPort srcport, const mDNSAddr *dstaddr, const mDNSIPPort dstport,
                                 const mDNSInterfaceID InterfaceID)
 {
     mDNSInterfaceID ifid = InterfaceID;
-    DNSMessage  *msg  = (DNSMessage *)pkt;
+    const mDNSu8 *const pkt = (mDNSu8 *)msg;
     const mDNSu8 StdQ = kDNSFlag0_QR_Query    | kDNSFlag0_OP_StdQuery;
     const mDNSu8 StdR = kDNSFlag0_QR_Response | kDNSFlag0_OP_StdQuery;
     const mDNSu8 UpdQ = kDNSFlag0_QR_Query    | kDNSFlag0_OP_Update;
@@ -10222,7 +10700,7 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
         if (mDNSSameIPPort(srcport, SSDPPort) || (m->SSDPSocket && mDNSSameIPPort(dstport, m->SSDPSocket->port)))
         {
             mDNS_Lock(m);
-            LNT_ConfigureRouterInfo(m, InterfaceID, pkt, (mDNSu16)(end - (mDNSu8 *)pkt));
+            LNT_ConfigureRouterInfo(m, InterfaceID, (mDNSu8 *)msg, (mDNSu16)(end - pkt));
             mDNS_Unlock(m);
             return;
         }
@@ -10230,7 +10708,7 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
         if (mDNSSameIPPort(srcport, NATPMPPort))
         {
             mDNS_Lock(m);
-            uDNS_ReceiveNATPacket(m, InterfaceID, pkt, (mDNSu16)(end - (mDNSu8 *)pkt));
+            uDNS_ReceiveNATPacket(m, InterfaceID, (mDNSu8 *)msg, (mDNSu16)(end - pkt));
             mDNS_Unlock(m);
             return;
         }
@@ -10240,9 +10718,9 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
 #endif
 
 #endif
-    if ((unsigned)(end - (mDNSu8 *)pkt) < sizeof(DNSMessageHeader))
+    if ((unsigned)(end - pkt) < sizeof(DNSMessageHeader))
     {
-        LogMsg("DNS Message from %#a:%d to %#a:%d length %d too short", srcaddr, mDNSVal16(srcport), dstaddr, mDNSVal16(dstport), end - (mDNSu8 *)pkt);
+        LogMsg("DNS Message from %#a:%d to %#a:%d length %d too short", srcaddr, mDNSVal16(srcport), dstaddr, mDNSVal16(dstport), (int)(end - pkt));
         return;
     }
     QR_OP = (mDNSu8)(msg->h.flags.b[0] & kDNSFlag0_QROP_Mask);
@@ -10257,7 +10735,7 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
 
     // We use zero addresses and all-ones addresses at various places in the code to indicate special values like "no address"
     // If we accept and try to process a packet with zero or all-ones source address, that could really mess things up
-    if (srcaddr && !mDNSAddressIsValid(srcaddr)) { debugf("mDNSCoreReceive ignoring packet from %#a", srcaddr); return; }
+    if (!mDNSAddressIsValid(srcaddr)) { debugf("mDNSCoreReceive ignoring packet from %#a", srcaddr); return; }
 
     mDNS_Lock(m);
     m->PktNum++;
@@ -10268,7 +10746,7 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
         // Track the number of multicast packets received from a source outside our subnet.
         // Check the destination address to avoid accounting for spurious packets that
         // comes in with message id zero.
-        if (!mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr, mDNSNULL) &&
+        if (!mDNS_AddressIsLocalSubnet(m, InterfaceID, srcaddr) && dstaddr &&
             mDNSAddressIsAllDNSLinkGroup(dstaddr))
         {
             m->RemoteSubnet++;
@@ -10282,7 +10760,7 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
         {
             ifid = mDNSInterface_Any;
             if (mDNS_PacketLoggingEnabled)
-                DumpPacket(m, mStatus_NoError, mDNSfalse, TLS ? "TLS" : !dstaddr ? "TCP" : "UDP", srcaddr, srcport, dstaddr, dstport, msg, end);
+                DumpPacket(mStatus_NoError, mDNSfalse, TLS ? "TLS" : !dstaddr ? "TCP" : "UDP", srcaddr, srcport, dstaddr, dstport, msg, end, InterfaceID);
             uDNS_ReceiveMsg(m, msg, end, srcaddr, srcport);
             // Note: mDNSCore also needs to get access to received unicast responses
         }
@@ -10293,17 +10771,21 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
     else if (QR_OP == UpdR) mDNSCoreReceiveUpdateR (m, msg, end, srcaddr,                            InterfaceID);
     else
     {
-        LogMsg("Unknown DNS packet type %02X%02X from %#-15a:%-5d to %#-15a:%-5d length %d on %p (ignored)",
-               msg->h.flags.b[0], msg->h.flags.b[1], srcaddr, mDNSVal16(srcport), dstaddr, mDNSVal16(dstport), end - (mDNSu8 *)pkt, InterfaceID);
         if (mDNS_LoggingEnabled)
         {
-            int i = 0;
-            while (i<end - (mDNSu8 *)pkt)
-            {
-                char buffer[128];
-                char *p = buffer + mDNS_snprintf(buffer, sizeof(buffer), "%04X", i);
-                do if (i<end - (mDNSu8 *)pkt) p += mDNS_snprintf(p, sizeof(buffer), " %02X", ((mDNSu8 *)pkt)[i]);while (++i & 15);
-                LogInfo("%s", buffer);
+            static int msgCount = 0;
+            if (msgCount < 1000) {
+                int i = 0;
+                msgCount++;
+                LogInfo("Unknown DNS packet type %02X%02X from %#-15a:%-5d to %#-15a:%-5d length %d on %p (ignored)",
+                        msg->h.flags.b[0], msg->h.flags.b[1], srcaddr, mDNSVal16(srcport), dstaddr, mDNSVal16(dstport), (int)(end - pkt), InterfaceID);
+                while (i < (int)(end - pkt))
+                {
+                    char buffer[128];
+                    char *p = buffer + mDNS_snprintf(buffer, sizeof(buffer), "%04X", i);
+                    do if (i < (int)(end - pkt)) p += mDNS_snprintf(p, sizeof(buffer), " %02X", pkt[i]);while (++i & 15);
+                    LogInfo("%s", buffer);
+                }
             }
         }
     }
@@ -10320,12 +10802,6 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
 #pragma mark -
 #pragma mark - Searcher Functions
 #endif
-
-// Targets are considered the same if both queries are untargeted, or
-// if both are targeted to the same address+port
-// (If Target address is zero, TargetPort is undefined)
-#define SameQTarget(A,B) (((A)->Target.type == mDNSAddrType_None && (B)->Target.type == mDNSAddrType_None) || \
-                          (mDNSSameAddress(& (A)->Target, & (B)->Target) && mDNSSameIPPort((A)->TargetPort, (B)->TargetPort)))
 
 // Note: We explicitly disallow making a public query be a duplicate of a private one. This is to avoid the
 // circular deadlock where a client does a query for something like "dns-sd -Q _dns-query-tls._tcp.company.com SRV"
@@ -10346,7 +10822,9 @@ mDNSexport void mDNSCoreReceive(mDNS *const m, void *const pkt, const mDNSu8 *co
 // (a) long-lived and
 // (b) being performed by a unicast DNS long-lived query (either full LLQ, or polling)
 // for multicast questions, we don't want to treat LongLived as anything special
-#define IsLLQ(Q) ((Q)->LongLived && !mDNSOpaque16IsZero((Q)->TargetQID))
+#define IsLLQ(Q)                 ((Q)->LongLived && !mDNSOpaque16IsZero((Q)->TargetQID))
+#define AWDLIsIncluded(Q)        (((Q)->flags & kDNSServiceFlagsIncludeAWDL) != 0)
+#define SameQuestionKind(Q1, Q2) (mDNSOpaque16IsZero((Q1)->TargetQID) == mDNSOpaque16IsZero((Q2)->TargetQID))
 
 mDNSlocal DNSQuestion *FindDuplicateQuestion(const mDNS *const m, const DNSQuestion *const question)
 {
@@ -10355,22 +10833,23 @@ mDNSlocal DNSQuestion *FindDuplicateQuestion(const mDNS *const m, const DNSQuest
     // This prevents circular references, where two questions are each marked as a duplicate of the other.
     // Accordingly, we break out of the loop when we get to 'question', because there's no point searching
     // further in the list.
-    for (q = m->Questions; q && q != question; q=q->next)       // Scan our list for another question
-        if (q->InterfaceID == question->InterfaceID &&          // with the same InterfaceID,
-            SameQTarget(q, question)                &&          // and same unicast/multicast target settings
-            q->qtype      == question->qtype        &&          // type,
-            q->qclass     == question->qclass       &&          // class,
-            IsLLQ(q)      == IsLLQ(question)        &&          // and long-lived status matches
-            (!q->AuthInfo || question->AuthInfo)    &&          // to avoid deadlock, don't make public query dup of a private one
-            (q->AnonInfo  == question->AnonInfo)    &&          // Anonymous query not a dup of normal query
-            (q->SuppressQuery == question->SuppressQuery) &&    // Questions that are suppressed/not suppressed
-            (q->ValidationRequired == question->ValidationRequired) &&  // Questions that require DNSSEC validation
-            (q->ValidatingResponse == question->ValidatingResponse) &&  // Questions that are validating responses using DNSSEC
-            (q->DisallowPID == question->DisallowPID)     &&            // Disallowing a PID should not affect a PID that is allowed
-            (q->BrowseThreshold == question->BrowseThreshold) &&  // browse thresholds must match
-            q->qnamehash  == question->qnamehash    &&
-            SameDomainName(&q->qname, &question->qname))        // and name
-            return(q);
+    for (q = m->Questions; q && (q != question); q = q->next)
+    {
+        if (!SameQuestionKind(q, question))                         continue;
+        if (q->qnamehash          != question->qnamehash)           continue;
+        if (q->InterfaceID        != question->InterfaceID)         continue;
+        if (q->qtype              != question->qtype)               continue;
+        if (q->qclass             != question->qclass)              continue;
+        if (IsLLQ(q)              != IsLLQ(question))               continue;
+        if (q->AuthInfo && !question->AuthInfo)                     continue;
+        if (q->ValidationRequired != question->ValidationRequired)  continue;
+        if (q->ValidatingResponse != question->ValidatingResponse)  continue;
+        if (!q->Suppressed        != !question->Suppressed)         continue;
+        if (q->BrowseThreshold    != question->BrowseThreshold)     continue;
+        if (AWDLIsIncluded(q)     != AWDLIsIncluded(question))      continue;
+        if (!SameDomainName(&q->qname, &question->qname))           continue;
+        return(q);
+    }
     return(mDNSNULL);
 }
 
@@ -10384,9 +10863,11 @@ mDNSlocal void UpdateQuestionDuplicates(mDNS *const m, DNSQuestion *const questi
     // question as a duplicate.
     if (question->DuplicateOf)
     {
-        LogInfo("UpdateQuestionDuplicates: question %p %##s (%s) duplicate of %p %##s (%s)",
-                question, question->qname.c, DNSTypeName(question->qtype),
-                question->DuplicateOf, question->DuplicateOf->qname.c, DNSTypeName(question->DuplicateOf->qtype));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->DupQ%d->Q%d] UpdateQuestionDuplicates: question %p " PRI_DM_NAME " (" PUB_S ") duplicate of %p " PRI_DM_NAME " (" PUB_S ")",
+               question->request_id, mDNSVal16(question->DuplicateOf->TargetQID), mDNSVal16(question->TargetQID),
+               question, DM_NAME_PARAM(question->qname.c), DNSTypeName(question->qtype), question->DuplicateOf,
+               DM_NAME_PARAM(question->DuplicateOf->qname.c), DNSTypeName(question->DuplicateOf->qtype));
         return;
     }
 
@@ -10417,15 +10898,11 @@ mDNSlocal void UpdateQuestionDuplicates(mDNS *const m, DNSQuestion *const questi
                 q->triedAllServersOnce = question->triedAllServersOnce;
 
                 q->TargetQID         = question->TargetQID;
-                if (q->LocalSocket)
-                {
-                    mDNSPlatformUDPClose(q->LocalSocket);
-                }
-                    
                 q->LocalSocket       = question->LocalSocket;
+                // No need to close old q->LocalSocket first -- duplicate questions can't have their own sockets
 
                 q->state             = question->state;
-                //	q->tcp               = question->tcp;
+                //  q->tcp               = question->tcp;
                 q->ReqLease          = question->ReqLease;
                 q->expire            = question->expire;
                 q->ntries            = question->ntries;
@@ -10433,7 +10910,7 @@ mDNSlocal void UpdateQuestionDuplicates(mDNS *const m, DNSQuestion *const questi
 
                 question->LocalSocket = mDNSNULL;
                 question->nta        = mDNSNULL;    // If we've got a GetZoneData in progress, transfer it to the newly active question
-                //	question->tcp        = mDNSNULL;
+                //  question->tcp        = mDNSNULL;
 
                 if (q->LocalSocket)
                     debugf("UpdateQuestionDuplicates transferred LocalSocket pointer for %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
@@ -10465,7 +10942,8 @@ mDNSexport McastResolver *mDNS_AddMcastResolver(mDNS *const m, const domainname 
 
     if (!d) d = (const domainname *)"";
 
-    LogInfo("mDNS_AddMcastResolver: Adding %##s, InterfaceID %p, timeout %u", d->c, interface, timeout);
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+        "mDNS_AddMcastResolver: Adding " PUB_DM_NAME ", InterfaceID %p, timeout %u", DM_NAME_PARAM(d), interface, timeout);
 
     mDNS_CheckLock(m);
 
@@ -10473,8 +10951,8 @@ mDNSexport McastResolver *mDNS_AddMcastResolver(mDNS *const m, const domainname 
     {
         if ((*p)->interface == interface && SameDomainName(&(*p)->domain, d))
         {
-            if (!((*p)->flags & DNSServer_FlagDelete)) LogMsg("Note: Mcast Resolver domain %##s (%p) registered more than once", d->c, interface);
-            (*p)->flags &= ~DNSServer_FlagDelete;
+            if (!((*p)->flags & McastResolver_FlagDelete)) LogMsg("Note: Mcast Resolver domain %##s (%p) registered more than once", d->c, interface);
+            (*p)->flags &= ~McastResolver_FlagDelete;
             tmp = *p;
             *p = tmp->next;
             tmp->next = mDNSNULL;
@@ -10487,12 +10965,12 @@ mDNSexport McastResolver *mDNS_AddMcastResolver(mDNS *const m, const domainname 
     else
     {
         // allocate, add to list
-        *p = mDNSPlatformMemAllocate(sizeof(**p));
+        *p = (McastResolver *) mDNSPlatformMemAllocateClear(sizeof(**p));
         if (!*p) LogMsg("mDNS_AddMcastResolver: ERROR!! - malloc");
         else
         {
             (*p)->interface = interface;
-            (*p)->flags     = DNSServer_FlagNew;
+            (*p)->flags     = McastResolver_FlagNew;
             (*p)->timeout   = timeout;
             AssignDomainName(&(*p)->domain, d);
             (*p)->next = mDNSNULL;
@@ -10631,15 +11109,15 @@ mDNSexport mDNSBool DomainEnumQuery(const domainname *qname)
 // Note: InterfaceID is the InterfaceID of the question
 mDNSlocal mDNSBool DNSServerMatch(DNSServer *d, mDNSInterfaceID InterfaceID, mDNSs32 ServiceID)
 {
-    // 1) Unscoped questions (NULL InterfaceID) should  consider *only* unscoped DNSServers ( DNSServer
-    // with "scoped" set to kScopeNone)
+    // 1) Unscoped questions (NULL InterfaceID) should consider *only* unscoped DNSServers ( DNSServer
+    // with scopeType set to kScopeNone)
     //
     // 2) Scoped questions (non-NULL InterfaceID) should consider *only* scoped DNSServers (DNSServer
-    // with "scoped" set to kScopeInterfaceId) and their InterfaceIDs should match.
+    // with scopeType set to kScopeInterfaceID) and their InterfaceIDs should match.
     //
     // 3) Scoped questions (non-zero ServiceID) should consider *only* scoped DNSServers (DNSServer
-    // with "scoped" set to kScopeServiceID) and their ServiceIDs should match.
-    //    
+    // with scopeType set to kScopeServiceID) and their ServiceIDs should match.
+    //
     // The first condition in the "if" statement checks to see if both the question and the DNSServer are
     // unscoped. The question is unscoped only if InterfaceID is zero and ServiceID is -1.
     //
@@ -10655,13 +11133,10 @@ mDNSlocal mDNSBool DNSServerMatch(DNSServer *d, mDNSInterfaceID InterfaceID, mDN
     //
     // - DNSServer is scoped and InterfaceID is not NULL - the InterfaceID of the question and the DNSServer
     //   should match (Refer to (2) above).
-    //
-    // Note: mDNSInterface_Unicast is used only by .local unicast questions and are treated as unscoped.
-    // If a question is scoped both to InterfaceID and ServiceID, the question will be scoped to InterfaceID.
 
-    if (((d->scoped == kScopeNone) && ((!InterfaceID && ServiceID == -1) || InterfaceID == mDNSInterface_Unicast)) ||
-        ((d->scoped == kScopeInterfaceID) && d->interface == InterfaceID) ||
-        ((d->scoped == kScopeServiceID) && d->serviceID == ServiceID))
+    if (((d->scopeType == kScopeNone) && (!InterfaceID && ServiceID == -1))  ||
+        ((d->scopeType == kScopeInterfaceID) && d->interface == InterfaceID) ||
+        ((d->scopeType == kScopeServiceID) && d->serviceID == ServiceID))
     {
         return mDNStrue;
     }
@@ -10678,15 +11153,15 @@ mDNSexport mDNSu32 SetValidDNSServers(mDNS *m, DNSQuestion *question)
     mDNSu32 timeout = 0;
     mDNSBool DEQuery;
 
-    question->validDNSServers = zeroOpaque64;
+    question->validDNSServers = zeroOpaque128;
     DEQuery = DomainEnumQuery(&question->qname);
     for (curr = m->DNSServers; curr; curr = curr->next)
     {
-        debugf("SetValidDNSServers: Parsing DNS server Address %#a (Domain %##s), Scope: %d", &curr->addr, curr->domain.c, curr->scoped);
+        debugf("SetValidDNSServers: Parsing DNS server Address %#a (Domain %##s), Scope: %d", &curr->addr, curr->domain.c, curr->scopeType);
         // skip servers that will soon be deleted
-        if (curr->flags & DNSServer_FlagDelete)
+        if (curr->flags & DNSServerFlag_Delete)
         {
-            debugf("SetValidDNSServers: Delete set for index %d, DNS server %#a (Domain %##s), scoped %d", index, &curr->addr, curr->domain.c, curr->scoped);
+            debugf("SetValidDNSServers: Delete set for index %d, DNS server %#a (Domain %##s), scoped %d", index, &curr->addr, curr->domain.c, curr->scopeType);
             continue;
         }
 
@@ -10698,14 +11173,17 @@ mDNSexport mDNSu32 SetValidDNSServers(mDNS *m, DNSQuestion *question)
         //
         // Note: DNS configuration change will help pick the new dns servers but currently it does not affect the timeout
 
-        if (curr->scoped && curr->interface == mDNSInterface_Any)
+        // Skip DNSServers that are InterfaceID Scoped but have no valid interfaceid set OR DNSServers that are ServiceID Scoped but have no valid serviceid set
+        if (((curr->scopeType == kScopeInterfaceID) && (curr->interface == mDNSInterface_Any)) ||
+            ((curr->scopeType == kScopeServiceID) && (curr->serviceID <= 0)))
         {
-            debugf("SetValidDNSServers: Scoped DNS server %#a (Domain %##s) with Interface Any", &curr->addr, curr->domain.c);
+            LogInfo("SetValidDNSServers: ScopeType[%d] Skipping DNS server %#a (Domain %##s) Interface:[%p] Serviceid:[%d]",
+                (int)curr->scopeType, &curr->addr, curr->domain.c, curr->interface, curr->serviceID);
             continue;
         }
 
         currcount = CountLabels(&curr->domain);
-        if ((!DEQuery || !curr->cellIntf) && DNSServerMatch(curr, question->InterfaceID, question->ServiceID))
+        if ((!DEQuery || !curr->isCell) && DNSServerMatch(curr, question->InterfaceID, question->ServiceID))
         {
             bettermatch = BetterMatchForName(&question->qname, namecount, &curr->domain, currcount, bestmatchlen);
 
@@ -10719,24 +11197,24 @@ mDNSexport mDNSu32 SetValidDNSServers(mDNS *m, DNSQuestion *question)
                 if (bettermatch)
                 {
                     debugf("SetValidDNSServers: Resetting all the bits");
-                    question->validDNSServers = zeroOpaque64;
+                    question->validDNSServers = zeroOpaque128;
                     timeout = 0;
                 }
                 debugf("SetValidDNSServers: question %##s Setting the bit for DNS server Address %#a (Domain %##s), Scoped:%d index %d,"
-                       " Timeout %d, interface %p", question->qname.c, &curr->addr, curr->domain.c, curr->scoped, index, curr->timeout,
+                       " Timeout %d, interface %p", question->qname.c, &curr->addr, curr->domain.c, curr->scopeType, index, curr->timeout,
                        curr->interface);
                 timeout += curr->timeout;
                 if (DEQuery)
-                    debugf("DomainEnumQuery: Question %##s, DNSServer %#a, cell %d", question->qname.c, &curr->addr, curr->cellIntf);
-                bit_set_opaque64(question->validDNSServers, index);
+                    debugf("DomainEnumQuery: Question %##s, DNSServer %#a, cell %d", question->qname.c, &curr->addr, curr->isCell);
+                bit_set_opaque128(question->validDNSServers, index);
             }
         }
         index++;
     }
     question->noServerResponse = 0;
 
-    debugf("SetValidDNSServers: ValidDNSServer bits  0x%x%x for question %p %##s (%s)",
-           question->validDNSServers.l[1], question->validDNSServers.l[0], question, question->qname.c, DNSTypeName(question->qtype));
+    debugf("SetValidDNSServers: ValidDNSServer bits 0x%08x%08x%08x%08x for question %p %##s (%s)",
+           question->validDNSServers.l[3], question->validDNSServers.l[2], question->validDNSServers.l[1], question->validDNSServers.l[0], question, question->qname.c, DNSTypeName(question->qtype));
     // If there are no matching resolvers, then use the default timeout value.
     // For ProxyQuestion, shorten the timeout so that dig does not timeout on us in case of no response.
     return ((question->ProxyQuestion || question->ValidatingResponse) ? DEFAULT_UDNSSEC_TIMEOUT : timeout ? timeout : DEFAULT_UDNS_TIMEOUT);
@@ -10744,7 +11222,7 @@ mDNSexport mDNSu32 SetValidDNSServers(mDNS *m, DNSQuestion *question)
 
 // Get the Best server that matches a name. If you find penalized servers, look for the one
 // that will come out of the penalty box soon
-mDNSlocal DNSServer *GetBestServer(mDNS *m, const domainname *name, mDNSInterfaceID InterfaceID, mDNSs32 ServiceID, mDNSOpaque64 validBits,
+mDNSlocal DNSServer *GetBestServer(mDNS *m, const domainname *name, mDNSInterfaceID InterfaceID, mDNSs32 ServiceID, mDNSOpaque128 validBits,
     int *selected, mDNSBool nameMatch)
 {
     DNSServer *curmatch = mDNSNULL;
@@ -10760,9 +11238,9 @@ mDNSlocal DNSServer *GetBestServer(mDNS *m, const domainname *name, mDNSInterfac
     for (curr = m->DNSServers; curr; curr = curr->next)
     {
         // skip servers that will soon be deleted
-        if (curr->flags & DNSServer_FlagDelete)
+        if (curr->flags & DNSServerFlag_Delete)
         {
-            debugf("GetBestServer: Delete set for index %d, DNS server %#a (Domain %##s), scoped %d", index, &curr->addr, curr->domain.c, curr->scoped);
+            debugf("GetBestServer: Delete set for index %d, DNS server %#a (Domain %##s), scoped %d", index, &curr->addr, curr->domain.c, curr->scopeType);
             continue;
         }
 
@@ -10823,24 +11301,24 @@ mDNSlocal DNSServer *GetServerForName(mDNS *m, const domainname *name, mDNSInter
 {
     DNSServer *curmatch = mDNSNULL;
     char *ifname = mDNSNULL;    // for logging purposes only
-    mDNSOpaque64 allValid;
+    mDNSOpaque128 allValid;
 
-    if ((InterfaceID == mDNSInterface_Unicast) || (InterfaceID == mDNSInterface_LocalOnly))
+    if (InterfaceID == mDNSInterface_LocalOnly)
         InterfaceID = mDNSNULL;
 
     if (InterfaceID) ifname = InterfaceNameForID(m, InterfaceID);
 
     // By passing in all ones, we make sure that every DNS server is considered
-    allValid.l[0] = allValid.l[1] = 0xFFFFFFFF;
+    allValid.l[0] = allValid.l[1] = allValid.l[2] = allValid.l[3] = 0xFFFFFFFF;
 
     curmatch = GetBestServer(m, name, InterfaceID, ServiceID, allValid, mDNSNULL, mDNStrue);
 
     if (curmatch != mDNSNULL)
-        LogInfo("GetServerForName: DNS server %#a:%d (Penalty Time Left %d) (Scope %s:%p) found for name %##s", &curmatch->addr,
+        LogInfo("GetServerForName: DNS server %#a:%d (Penalty Time Left %d) (Scope %s:%p) for %##s", &curmatch->addr,
                 mDNSVal16(curmatch->port), (curmatch->penaltyTime ? (curmatch->penaltyTime - m->timenow) : 0), ifname ? ifname : "None",
                 InterfaceID, name);
     else
-        LogInfo("GetServerForName: no DNS server (Scope %s:%p) found for name %##s", ifname ? ifname : "None", InterfaceID, name);
+        LogInfo("GetServerForName: no DNS server (Scope %s:%p) for %##s", ifname ? ifname : "None", InterfaceID, name);
 
     return(curmatch);
 }
@@ -10854,38 +11332,37 @@ mDNSexport DNSServer *GetServerForQuestion(mDNS *m, DNSQuestion *question)
     const domainname *name = &question->qname;
     int currindex;
 
-    if ((InterfaceID == mDNSInterface_Unicast) || (InterfaceID == mDNSInterface_LocalOnly))
+    if (InterfaceID == mDNSInterface_LocalOnly)
         InterfaceID = mDNSNULL;
 
     if (InterfaceID)
         ifname = InterfaceNameForID(m, InterfaceID);
 
-    if (!mDNSOpaque64IsZero(&question->validDNSServers))
+    if (!mDNSOpaque128IsZero(&question->validDNSServers))
     {
         curmatch = GetBestServer(m, name, InterfaceID, question->ServiceID, question->validDNSServers, &currindex, mDNSfalse);
         if (currindex != -1)
-            bit_clr_opaque64(question->validDNSServers, currindex);
+            bit_clr_opaque128(question->validDNSServers, currindex);
     }
 
     if (curmatch != mDNSNULL)
     {
-        LogInfo("GetServerForQuestion: %p DNS server (%p) %#a:%d (Penalty Time Left %d) (Scope %s:%p:%d) found for name %##s (%s)",
-                question, curmatch, &curmatch->addr, mDNSVal16(curmatch->port),
-                (curmatch->penaltyTime ? (curmatch->penaltyTime - m->timenow) : 0), ifname ? ifname : "None",
-                InterfaceID, question->ServiceID, name, DNSTypeName(question->qtype));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->Q%d] GetServerForQuestion: %p DNS server (%p) " PRI_IP_ADDR ":%d (Penalty Time Left %d) (Scope " PUB_S ":%p:%d) for " PRI_DM_NAME " (" PUB_S ")",
+               question->request_id, mDNSVal16(question->TargetQID), question, curmatch, &curmatch->addr,
+               mDNSVal16(curmatch->port), (curmatch->penaltyTime ? (curmatch->penaltyTime - m->timenow) : 0),
+               ifname ? ifname : "None", InterfaceID, question->ServiceID, DM_NAME_PARAM(name), DNSTypeName(question->qtype));
     }
     else
     {
-        LogInfo("GetServerForQuestion: %p no DNS server (Scope %s:%p:%d) found for name %##s (%s)",
-            question, ifname ? ifname : "None", InterfaceID, question->ServiceID, name, DNSTypeName(question->qtype));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->Q%d] GetServerForQuestion: %p no DNS server (Scope " PUB_S ":%p:%d) for " PRI_DM_NAME " (" PUB_S ")",
+               question->request_id, mDNSVal16(question->TargetQID), question, ifname ? ifname : "None", InterfaceID,
+               question->ServiceID, DM_NAME_PARAM(name), DNSTypeName(question->qtype));
     }
 
     return(curmatch);
 }
-
-
-#define ValidQuestionTarget(Q) (((Q)->Target.type == mDNSAddrType_IPv4 || (Q)->Target.type == mDNSAddrType_IPv6) && \
-                                (mDNSSameIPPort((Q)->TargetPort, UnicastDNSPort) || mDNSSameIPPort((Q)->TargetPort, MulticastDNSPort)))
 
 // Called in normal client context (lock not held)
 mDNSlocal void LLQNATCallback(mDNS *m, NATTraversalInfo *n)
@@ -10897,201 +11374,125 @@ mDNSlocal void LLQNATCallback(mDNS *m, NATTraversalInfo *n)
     for (q = m->Questions; q; q=q->next)
         if (ActiveQuestion(q) && !mDNSOpaque16IsZero(q->TargetQID) && q->LongLived)
             startLLQHandshake(m, q);    // If ExternalPort is zero, will do StartLLQPolling instead
-#if APPLE_OSX_mDNSResponder
-    UpdateAutoTunnelDomainStatuses(m);
-#endif
     mDNS_Unlock(m);
 }
 
-mDNSlocal mDNSBool IsPrivateDomain(mDNS *const m, DNSQuestion *q)
-{
-    DomainAuthInfo *AuthInfo;
-    // Skip Private domains as we have special addresses to get the hosts in the Private domain
-    AuthInfo = GetAuthInfoForName_internal(m, &q->qname);
-    if (AuthInfo && !AuthInfo->deltime && AuthInfo->AutoTunnel)
-    {
-        debugf("IsPrivateDomain: %##s true", q->qname.c);
-        return mDNStrue;
-    }
-    else
-    {
-        debugf("IsPrivateDomain: %##s false", q->qname.c);
-        return mDNSfalse;
-    }
-}
-
 // This function takes the DNSServer as a separate argument because sometimes the
-// caller has not yet assigned the DNSServer, but wants to evaluate the SuppressQuery
+// caller has not yet assigned the DNSServer, but wants to evaluate the Suppressed
 // status before switching to it.
-mDNSlocal mDNSBool ShouldSuppressUnicastQuery(mDNS *const m, DNSQuestion *q, DNSServer *d)
+mDNSlocal mDNSBool ShouldSuppressUnicastQuery(const DNSQuestion *const q, const DNSServer *const server)
 {
-    // Some callers don't check for the qtype
-    if (q->qtype != kDNSType_A && q->qtype != kDNSType_AAAA)
-    {
-        LogInfo("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, not A/AAAA type", q->qname.c, DNSTypeName(q->qtype));
-        return mDNSfalse;
-    }
+    mDNSBool suppress = mDNSfalse;
+    const char *reason = NULL;
 
-    // Private domains are exempted irrespective of what the DNSServer says
-    if (IsPrivateDomain(m, q))
+    if (q->BlockedByPolicy)
     {
-        LogInfo("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, Private Domain", q->qname.c, DNSTypeName(q->qtype));
-        return mDNSfalse;
+        suppress = mDNStrue;
+        reason   = " (blocked by policy)";
     }
-
-    if (!d)
+    else if (!server)
     {
-        LogInfo("ShouldSuppressUnicastQuery: Query suppressed for %##s, qtype %s, as the DNS server is NULL", q->qname.c, DNSTypeName(q->qtype));
-        return mDNStrue;
+        if (!q->IsUnicastDotLocal)
+        {
+            suppress = mDNStrue;
+            reason   = " (no DNS server)";
+        }
     }
-    
-    // Check if the DNS Configuration allows A/AAAA queries to be sent
-    if ((q->qtype == kDNSType_A) && (d->req_A))
+    else if (server->isCell && (q->flags & kDNSServiceFlagsDenyCellular))
     {
-        LogInfo("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, DNSServer %##s %#a:%d allows A queries", q->qname.c,
-                DNSTypeName(q->qtype), d->domain.c, &d->addr, mDNSVal16(d->port));
-        return mDNSfalse;
+        suppress = mDNStrue;
+        reason   = " (interface is cellular)";
     }
-    if ((q->qtype == kDNSType_AAAA) && (d->req_AAAA))
+    else if (server->isExpensive && (q->flags & kDNSServiceFlagsDenyExpensive))
     {
-        LogInfo("ShouldSuppressUnicastQuery: Query not suppressed for %##s, qtype %s, DNSServer %##s %#a:%d allows AAAA queries", q->qname.c,
-                DNSTypeName(q->qtype), d->domain.c, &d->addr, mDNSVal16(d->port));
-        return mDNSfalse;
+        suppress = mDNStrue;
+        reason   = " (interface is expensive)";
     }
-
-    LogInfo("ShouldSuppressUnicastQuery: Query suppressed for %##s, qtype %s, since DNS Configuration does not allow (req_A is %s and req_AAAA is %s)",
-        q->qname.c, DNSTypeName(q->qtype), d->req_A ? "true" : "false", d->req_AAAA ? "true" : "false");
-
-    return mDNStrue;
+    else if (server->isConstrained && (q->flags & kDNSServiceFlagsDenyConstrained))
+    {
+        suppress = mDNStrue;
+        reason   = " (interface is constrained)";
+    }
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+    else if (q->SuppressUnusable && !DNS64IsQueryingARecord(q->dns64.state))
+#else
+    else if (q->SuppressUnusable)
+#endif
+    {
+        if (q->qtype == kDNSType_A)
+        {
+            if (!server->usableA)
+            {
+                suppress = mDNStrue;
+                reason   = " (A records are unusable)";
+            }
+            // If the server's configuration allows A record queries, suppress this query if
+            //     1. the interface associated with the server is CLAT46; and
+            //     2. the query has the kDNSServiceFlagsPathEvaluationDone flag, indicating that it's from libnetwork.
+            // See <rdar://problem/42672030> for more info.
+            else if (server->isCLAT46 && (q->flags & kDNSServiceFlagsPathEvaluationDone))
+            {
+                suppress = mDNStrue;
+                reason   = " (CLAT46 A records are unusable)";
+            }
+        }
+        else if (q->qtype == kDNSType_AAAA)
+        {
+            if (!server->usableAAAA)
+            {
+                suppress = mDNStrue;
+                reason   = " (AAAA records are unusable)";
+            }
+        }
+    }
+    if (suppress)
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "[Q%u] ShouldSuppressUnicastQuery: Query suppressed for " PRI_DM_NAME " " PUB_S PUB_S,
+            mDNSVal16(q->TargetQID), DM_NAME_PARAM(&q->qname), DNSTypeName(q->qtype), reason ? reason : "");
+    }
+    return suppress;
 }
 
-mDNSlocal mDNSBool ShouldSuppressDotLocalQuery(mDNS *const m, DNSQuestion *q)
+mDNSlocal mDNSBool ShouldSuppressQuery(DNSQuestion *q)
 {
-    NetworkInterfaceInfo *intf;
-    AuthRecord *rr;
-    mDNSBool ret;
-
-    // Check to see if there is at least one interface other than loopback and don't suppress
-    // .local questions if you find one. If we have at least one interface, it means that
-    // we can send unicast queries for the .local name and we don't want to suppress
-    // multicast in that case as upper layers don't know how to handle if we return a 
-    // negative response for multicast followed by a positive response for unicast.
-    //
-    // Note: we used to check for multicast capable interfaces instead of just any interface
-    // present. That did not work in the case where we have a valid interface for unicast
-    // but not multicast capable e.g., cellular, as we ended up delivering a negative response 
-    // first and the upper layer did not wait for the positive response that came later.
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
+    if (q->InterfaceID == mDNSInterface_LocalOnly)
     {
-        if (intf->InterfaceActive && !intf->Loopback)
-        {
-            LogInfo("ShouldSuppressDotLocalQuery: Found interface %s, not suppressing", intf->ifname);
-            return mDNSfalse;
-        }
-    }
-
-    // 1. If we find a LocalOnly or P2P record answering this question, then don't suppress it.
-    //    Set m->CurrentQuestion as it is required by AnswerQuestionWithLORecord.
-    m->CurrentQuestion = q;
-    ret = AnswerQuestionWithLORecord(m, q, mDNStrue);
-    m->CurrentQuestion = mDNSNULL;
-
-    if (ret)
-    {
-        LogInfo("ShouldSuppressDotLocalQuery: Found LocalOnly record for %##s (%s), not suppressing", q->qname.c,
-            DNSTypeName(q->qtype));
         return mDNSfalse;
     }
-
-    // 2. If we find a local AuthRecord answering this question, then don't suppress it. 
-    for (rr = m->ResourceRecords; rr; rr = rr->next)
+    if (!q->IsUnicastDotLocal && IsLocalDomain(&q->qname))
     {
-        if (ResourceRecordAnswersQuestion(&rr->resrec, q))
-        {
-            LogInfo("ShouldSuppressDotLocalQuery: Found resource record %s for %##s (%s) not suppressing", ARDisplayString(m, rr),
-                q->qname.c, DNSTypeName(q->qtype));
-            return mDNSfalse;
-        }
-    }
-    return mDNStrue;
-}
-
-mDNSlocal mDNSBool ShouldSuppressQuery(mDNS *const m, DNSQuestion *q)
-{
-    if (q->qtype != kDNSType_A && q->qtype != kDNSType_AAAA)
-    {
-        LogInfo("ShouldSuppressQuery: Query not suppressed for %##s, qtype %s, not A/AAAA type", q->qname.c, DNSTypeName(q->qtype));
         return mDNSfalse;
     }
-
-    // We still want the ability to be able to listen to the local services and hence
-    // don't fail .local query if we have local records that can potentially answer
-    // the question.
-    if (q->InterfaceID != mDNSInterface_Unicast && IsLocalDomain(&q->qname))
-    {
-        if (!ShouldSuppressDotLocalQuery(m, q))
-        {
-            LogInfo("ShouldSuppressQuery: Query not suppressed for %##s, qtype %s, Local question", q->qname.c, DNSTypeName(q->qtype));
-            return mDNSfalse;
-        }
-        else
-        {
-            LogInfo("ShouldSuppressQuery: Query suppressed for %##s, qtype %s, Local question", q->qname.c, DNSTypeName(q->qtype));
-            return mDNStrue;
-        }
-    }
-
-    return (ShouldSuppressUnicastQuery(m, q, q->qDNSServer));
+    return (ShouldSuppressUnicastQuery(q, q->qDNSServer));
 }
 
 mDNSlocal void CacheRecordRmvEventsForCurrentQuestion(mDNS *const m, DNSQuestion *q)
 {
-    CacheRecord *rr;
-    mDNSu32 slot;
+    CacheRecord *cr;
     CacheGroup *cg;
 
-    slot = HashSlot(&q->qname);
-    cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
-    for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
+    cg = CacheGroupForName(m, q->qnamehash, &q->qname);
+    for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
     {
         // Don't deliver RMV events for negative records
-        if (rr->resrec.RecordType == kDNSRecordTypePacketNegative)
+        if (cr->resrec.RecordType == kDNSRecordTypePacketNegative)
         {
-            LogInfo("CacheRecordRmvEventsForCurrentQuestion: CacheRecord %s Suppressing RMV events for question %p %##s (%s), CRActiveQuestion %p, CurrentAnswers %d",
-                    CRDisplayString(m, rr), q, q->qname.c, DNSTypeName(q->qtype), rr->CRActiveQuestion, q->CurrentAnswers);
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                      "[R%u->Q%u] CacheRecordRmvEventsForCurrentQuestion: CacheRecord " PRI_S " Suppressing RMV events for question %p " PRI_DM_NAME " (" PUB_S "), CRActiveQuestion %p, CurrentAnswers %d",
+                      q->request_id, mDNSVal16(q->TargetQID), CRDisplayString(m, cr), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype), cr->CRActiveQuestion, q->CurrentAnswers);
             continue;
         }
 
-        if (SameNameRecordAnswersQuestion(&rr->resrec, q))
+        if (SameNameCacheRecordAnswersQuestion(cr, q))
         {
             LogInfo("CacheRecordRmvEventsForCurrentQuestion: Calling AnswerCurrentQuestionWithResourceRecord (RMV) for question %##s using resource record %s LocalAnswers %d",
-                    q->qname.c, CRDisplayString(m, rr), q->LOAddressAnswers);
+                    q->qname.c, CRDisplayString(m, cr), q->LOAddressAnswers);
 
             q->CurrentAnswers--;
-            if (rr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers--;
-            if (rr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers--;
-
-            if (rr->CRActiveQuestion == q)
-            {
-                DNSQuestion *qptr;
-                // If this was the active question for this cache entry, it was the one that was
-                // responsible for keeping the cache entry fresh when the cache entry was reaching
-                // its expiry. We need to handover the responsibility to someone else. Otherwise,
-                // when the cache entry is about to expire, we won't find an active question
-                // (pointed by CRActiveQuestion) to refresh the cache.
-                for (qptr = m->Questions; qptr; qptr=qptr->next)
-                    if (qptr != q && ActiveQuestion(qptr) && ResourceRecordAnswersQuestion(&rr->resrec, qptr))
-                        break;
-
-                if (qptr)
-                    LogInfo("CacheRecordRmvEventsForCurrentQuestion: Updating CRActiveQuestion to %p for cache record %s, "
-                            "Original question CurrentAnswers %d, new question CurrentAnswers %d, SuppressUnusable %d, SuppressQuery %d",
-                            qptr, CRDisplayString(m,rr), q->CurrentAnswers, qptr->CurrentAnswers, qptr->SuppressUnusable, qptr->SuppressQuery);
-
-                rr->CRActiveQuestion = qptr;        // Question used to be active; new value may or may not be null
-                if (!qptr) m->rrcache_active--; // If no longer active, decrement rrcache_active count
-            }
-            AnswerCurrentQuestionWithResourceRecord(m, rr, QC_rmv);
+            if (cr->resrec.rdlength > SmallRecordLimit) q->LargeAnswers--;
+            if (cr->resrec.RecordType & kDNSRecordTypePacketUniqueMask) q->UniqueAnswers--;
+            AnswerCurrentQuestionWithResourceRecord(m, cr, QC_rmv);
             if (m->CurrentQuestion != q) break;     // If callback deleted q, then we're finished here
         }
     }
@@ -11108,7 +11509,6 @@ mDNSlocal mDNSBool IsQuestionNew(mDNS *const m, DNSQuestion *question)
 mDNSlocal mDNSBool LocalRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q)
 {
     AuthRecord *rr;
-    mDNSu32 slot;
     AuthGroup *ag;
 
     if (m->CurrentQuestion)
@@ -11121,8 +11521,7 @@ mDNSlocal mDNSBool LocalRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q
         return mDNStrue;
     }
     m->CurrentQuestion = q;
-    slot = AuthHashSlot(&q->qname);
-    ag = AuthGroupForName(&m->rrauth, slot, q->qnamehash, &q->qname);
+    ag = AuthGroupForName(&m->rrauth, q->qnamehash, &q->qname);
     if (ag)
     {
         for (rr = ag->members; rr; rr=rr->next)
@@ -11148,7 +11547,7 @@ mDNSlocal mDNSBool LocalRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q
 
 // Returns false if the question got deleted while delivering the RMV events
 // The caller should handle the case
-mDNSlocal mDNSBool CacheRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q)
+mDNSexport mDNSBool CacheRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q)
 {
     if (m->CurrentQuestion)
         LogMsg("CacheRecordRmvEventsForQuestion: ERROR m->CurrentQuestion already set: %##s (%s)",
@@ -11170,26 +11569,30 @@ mDNSlocal mDNSBool CacheRecordRmvEventsForQuestion(mDNS *const m, DNSQuestion *q
 mDNSlocal void SuppressStatusChanged(mDNS *const m, DNSQuestion *q, DNSQuestion **restart)
 {
     // NOTE: CacheRecordRmvEventsForQuestion will not generate RMV events for queries that have non-zero
-    // LOddressAnswers. Hence it is important that we call CacheRecordRmvEventsForQuestion before
+    // LOAddressAnswers. Hence it is important that we call CacheRecordRmvEventsForQuestion before
     // LocalRecordRmvEventsForQuestion (which decrements LOAddressAnswers)
-    if (q->SuppressQuery)
+    if (q->Suppressed)
     {
-        q->SuppressQuery = mDNSfalse;
+        q->Suppressed = mDNSfalse;
         if (!CacheRecordRmvEventsForQuestion(m, q))
         {
-            LogInfo("SuppressStatusChanged: Question deleted while delivering RMV events from cache");
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "[R%u->Q%u] SuppressStatusChanged: Question deleted while delivering RMV events from cache",
+                q->request_id, mDNSVal16(q->TargetQID));
             return;
         }
-        q->SuppressQuery = mDNStrue;
+        q->Suppressed = mDNStrue;
     }
 
     // SuppressUnusable does not affect questions that are answered from the local records (/etc/hosts)
-    // and SuppressQuery status does not mean anything for these questions. As we are going to stop the
+    // and Suppressed status does not mean anything for these questions. As we are going to stop the
     // question below, we need to deliver the RMV events so that the ADDs that will be delivered during
     // the restart will not be a duplicate ADD
     if (!LocalRecordRmvEventsForQuestion(m, q))
     {
-        LogInfo("SuppressStatusChanged: Question deleted while delivering RMV events from Local AuthRecords");
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "[R%u->Q%u] SuppressStatusChanged: Question deleted while delivering RMV events from Local AuthRecords",
+            q->request_id, mDNSVal16(q->TargetQID));
         return;
     }
 
@@ -11203,9 +11606,9 @@ mDNSlocal void SuppressStatusChanged(mDNS *const m, DNSQuestion *q, DNSQuestion 
     //
     // 2. Previously it was not suppressed and now it is suppressed. We need to restart the questions
     // so that we redo the duplicate checks in mDNS_StartQuery_internal. A SuppressUnusable question
-    // is a duplicate of non-SuppressUnusable question if it is not suppressed (SuppressQuery is false).
+    // is a duplicate of non-SuppressUnusable question if it is not suppressed (Suppressed is false).
     // A SuppressUnusable question is not a duplicate of non-SuppressUnusable question if it is suppressed
-    // (SuppressQuery is true). The reason for this is that when a question is suppressed, we want an
+    // (Suppressed is true). The reason for this is that when a question is suppressed, we want an
     // immediate response and not want to be blocked behind a question that is querying DNS servers. When
     // the question is not suppressed, we don't want two active questions sending packets on the wire.
     // This affects both efficiency and also the current design where there is only one active question
@@ -11220,7 +11623,9 @@ mDNSlocal void SuppressStatusChanged(mDNS *const m, DNSQuestion *q, DNSQuestion 
     //
     // It is much cleaner and less error prone to build a list of questions and restart at the end.
 
-    LogInfo("SuppressStatusChanged: Stop question %p %##s (%s)", q, q->qname.c, DNSTypeName(q->qtype));
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+        "[R%u->Q%u] SuppressStatusChanged: Stop question %p " PRI_DM_NAME " (" PUB_S ")",
+        q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype));
     mDNS_StopQuery_internal(m, q);
     q->next = *restart;
     *restart = q;
@@ -11236,7 +11641,7 @@ mDNSexport void CheckSuppressUnusableQuestions(mDNS *const m)
     // we potentially restart questions here in this function that ends up as new questions,
     // which may be suppressed at this instance. Before it is handled we get another network
     // event that changes the status e.g., address becomes available. If we did not process
-    // new questions, we would never change its SuppressQuery status.
+    // new questions, we would never change its Suppressed status.
     //
     // CurrentQuestion is used by RmvEventsForQuestion below. While delivering RMV events, the
     // application callback can potentially stop the current question (detected by CurrentQuestion) or
@@ -11253,9 +11658,9 @@ mDNSexport void CheckSuppressUnusableQuestions(mDNS *const m)
         m->RestartQuestion = q->next;
         if (q->SuppressUnusable)
         {
-            mDNSBool old = q->SuppressQuery;
-            q->SuppressQuery = ShouldSuppressQuery(m, q);
-            if (q->SuppressQuery != old)
+            const mDNSBool old = q->Suppressed;
+            q->Suppressed = ShouldSuppressQuery(q);
+            if (q->Suppressed != old)
             {
                 // Previously it was not suppressed, Generate RMV events for the ADDs that we might have delivered before
                 // followed by a negative cache response. Temporarily turn off suppression so that
@@ -11277,7 +11682,7 @@ mDNSexport void CheckSuppressUnusableQuestions(mDNS *const m)
 mDNSlocal void RestartUnicastQuestions(mDNS *const m)
 {
     DNSQuestion *q;
-    DNSQuestion *restart = mDNSNULL;
+    DNSQuestion *restartList = mDNSNULL;
 
     if (m->RestartQuestion)
         LogMsg("RestartUnicastQuestions: ERROR!! m->RestartQuestion already set: %##s (%s)",
@@ -11291,38 +11696,26 @@ mDNSlocal void RestartUnicastQuestions(mDNS *const m)
         {
             if (mDNSOpaque16IsZero(q->TargetQID))
                 LogMsg("RestartUnicastQuestions: ERROR!! Restart set for multicast question %##s (%s)", q->qname.c, DNSTypeName(q->qtype));
-                
-            q->Restart = 0;
-            SuppressStatusChanged(m, q, &restart);
+
+            q->Restart = mDNSfalse;
+            SuppressStatusChanged(m, q, &restartList);
         }
     }
-    while (restart)
+    while ((q = restartList) != mDNSNULL)
     {
-        q = restart;
-        restart = restart->next;
+        restartList = q->next;
         q->next = mDNSNULL;
-        LogInfo("RestartUnicastQuestions: Start question %p %##s (%s)", q, q->qname.c, DNSTypeName(q->qtype));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "[R%u->Q%u] RestartUnicastQuestions: Start question %p " PRI_DM_NAME " (" PUB_S ")",
+             q->request_id, mDNSVal16(q->TargetQID), q, DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype));
         mDNS_StartQuery_internal(m, q);
     }
 }
-
 
 // ValidateParameters() is called by mDNS_StartQuery_internal() to check the client parameters of 
 // DNS Question that are already set by the client before calling mDNS_StartQuery() 
 mDNSlocal mStatus ValidateParameters(mDNS *const m, DNSQuestion *const question)
 {
-
-    if (question->Target.type && !ValidQuestionTarget(question))
-    {
-        LogMsg("ValidateParameters: Warning! Target.type = %ld port = %u (Client forgot to initialize before calling mDNS_StartQuery? for question %##s)",
-               question->Target.type, mDNSVal16(question->TargetPort), question->qname.c);
-        question->Target.type = mDNSAddrType_None;
-    }
-
-    // If no question->Target specified, clear TargetPort
-    if (!question->Target.type) 
-        question->TargetPort = zeroIPPort;
-
     if (!ValidateDomainName(&question->qname))
     {
         LogMsg("ValidateParameters: Attempt to start query with invalid qname %##s (%s)", question->qname.c, DNSTypeName(question->qtype));
@@ -11330,74 +11723,84 @@ mDNSlocal mStatus ValidateParameters(mDNS *const m, DNSQuestion *const question)
     }
 
     // If this question is referencing a specific interface, verify it exists 
-    if (question->InterfaceID && question->InterfaceID != mDNSInterface_LocalOnly && question->InterfaceID != mDNSInterface_Unicast && question->InterfaceID != mDNSInterface_P2P)
+    if (question->InterfaceID && !LocalOnlyOrP2PInterface(question->InterfaceID))
     {
         NetworkInterfaceInfo *intf = FirstInterfaceForID(m, question->InterfaceID);
         if (!intf)
-            LogMsg("ValidateParameters: Note: InterfaceID %p for question %##s (%s) not currently found in active interface list",
-                    question->InterfaceID, question->qname.c, DNSTypeName(question->qtype));
+            LogInfo("ValidateParameters: Note: InterfaceID %d for question %##s (%s) not currently found in active interface list",
+                    IIDPrintable(question->InterfaceID), question->qname.c, DNSTypeName(question->qtype));
     }
-    
+
     return(mStatus_NoError);
 }
 
 // InitDNSConfig() is called by InitCommonState() to initialize the DNS configuration of the Question.    
-// These are a subset of the internal uDNS fields. Must be done before ShouldSuppressQuery() & mDNS_PurgeForQuestion()
+// These are a subset of the internal uDNS fields. Must be done before ShouldSuppressQuery() & mDNS_PurgeBeforeResolve()
 mDNSlocal void InitDNSConfig(mDNS *const m, DNSQuestion *const question)
 {
     // First reset all DNS Configuration
     question->qDNSServer          = mDNSNULL;
-    question->validDNSServers     = zeroOpaque64;
-    question->triedAllServersOnce = 0;                                                                                                                                
-    question->noServerResponse    = 0;  
-    question->StopTime            = 0;
+    question->validDNSServers     = zeroOpaque128;
+    question->triedAllServersOnce = mDNSfalse;
+    question->noServerResponse    = mDNSfalse;
+    question->StopTime            = (question->TimeoutQuestion) ? question->StopTime : 0;
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+    mDNSPlatformMemZero(&question->metrics, sizeof(question->metrics));
+    question->metrics.expiredAnswerState = (question->allowExpired != AllowExpired_None) ? ExpiredAnswer_Allowed : ExpiredAnswer_None;
+#endif
 
-    // Need not initialize the DNS Configuration for Local Only OR P2P Questions
-    if (question->InterfaceID == mDNSInterface_LocalOnly || question->InterfaceID == mDNSInterface_P2P)
+    // Need not initialize the DNS Configuration for Local Only OR P2P Questions when timeout not specified
+    if (LocalOnlyOrP2PInterface(question->InterfaceID) && !question->TimeoutQuestion)
         return;
     // Proceed to initialize DNS Configuration (some are set in SetValidDNSServers())
     if (!mDNSOpaque16IsZero(question->TargetQID))
-    {     
+    {
         mDNSu32 timeout = SetValidDNSServers(m, question);
-        // We set the timeout whenever mDNS_StartQuery_internal is called. This means if we have
-        // a networking change/search domain change that calls this function again we keep
-        // reinitializing the timeout value which means it may never timeout. If this becomes
-        // a common case in the future, we can easily fix this by adding extra state that
-        // indicates that we have already set the StopTime.
-        //
-        // Note that we set the timeout for all questions. If this turns out to be a duplicate, 
+        // We set the timeout value the first time mDNS_StartQuery_internal is called for a question.
+        // So if a question is restarted when a network change occurs, the StopTime is not reset.
+        // Note that we set the timeout for all questions. If this turns out to be a duplicate,
         // it gets a full timeout value even if the original question times out earlier.
-        if (question->TimeoutQuestion)
+        if (question->TimeoutQuestion && !question->StopTime)
         {
             question->StopTime = NonZeroTime(m->timenow + timeout * mDNSPlatformOneSecond);
-            LogInfo("InitDNSConfig: Setting StopTime on question %p %##s (%s)", question, question->qname.c, DNSTypeName(question->qtype));
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "[Q%u] InitDNSConfig: Setting StopTime on the uDNS question %p " PRI_DM_NAME " (" PUB_S ")",
+                mDNSVal16(question->TargetQID), question, DM_NAME_PARAM(question->qname.c), DNSTypeName(question->qtype));
         }
 
         question->qDNSServer = GetServerForQuestion(m, question);
-        LogInfo("InitDNSConfig: question %p %##s (%s) Timeout %d, DNS Server %#a:%d",
-                 question, question->qname.c, DNSTypeName(question->qtype), timeout,
-                 question->qDNSServer ? &question->qDNSServer->addr : mDNSNULL,
-                 mDNSVal16(question->qDNSServer ? question->qDNSServer->port : zeroIPPort));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+            "[R%u->Q%u] InitDNSConfig: question %p " PRI_DM_NAME " " PUB_S " Timeout %d, DNS Server " PRI_IP_ADDR ":%d",
+            question->request_id, mDNSVal16(question->TargetQID), question, DM_NAME_PARAM(question->qname.c),
+            DNSTypeName(question->qtype), timeout, question->qDNSServer ? &question->qDNSServer->addr : mDNSNULL,
+            mDNSVal16(question->qDNSServer ? question->qDNSServer->port : zeroIPPort));
     }
-    else
-    {     
-        if (question->TimeoutQuestion)
-            question->StopTime = NonZeroTime(m->timenow + GetTimeoutForMcastQuestion(m, question) * mDNSPlatformOneSecond);
+    else if (question->TimeoutQuestion && !question->StopTime)
+    {
+        // If the question is to be timed out and its a multicast, local-only or P2P case,
+        // then set it's stop time.
+        mDNSu32 timeout = LocalOnlyOrP2PInterface(question->InterfaceID) ?
+                            DEFAULT_LO_OR_P2P_TIMEOUT : GetTimeoutForMcastQuestion(m, question);
+        question->StopTime = NonZeroTime(m->timenow + timeout * mDNSPlatformOneSecond);
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                  "[R%u->Q%u] InitDNSConfig: Setting StopTime on the uDNS question %p " PRI_DM_NAME " (" PUB_S ")",
+                  question->request_id, mDNSVal16(question->TargetQID), question, DM_NAME_PARAM(question->qname.c), DNSTypeName(question->qtype));
     }
     // Set StopTime here since it is a part of DNS Configuration 
     if (question->StopTime)
         SetNextQueryStopTime(m, question);
-    // SetNextQueryTime() need not be initialized for LocalOnly OR P2P Questions since those questions
-    // will never be transmitted on the wire. Hence we call SetNextQueryTime() here.
-    SetNextQueryTime(m,question); 
+    // Don't call SetNextQueryTime() if a LocalOnly OR P2P Question since those questions
+    // will never be transmitted on the wire.
+    if (!(LocalOnlyOrP2PInterface(question->InterfaceID)))
+        SetNextQueryTime(m,question);
 }
 
 // InitCommonState() is called by mDNS_StartQuery_internal() to initialize the common(uDNS/mDNS) internal
 // state fields of the DNS Question. These are independent of the Client layer.
-mDNSlocal mDNSBool InitCommonState(mDNS *const m, DNSQuestion *const question)
+mDNSlocal void InitCommonState(mDNS *const m, DNSQuestion *const question)
 {
-    mDNSBool purge;
     int i;
+    mDNSBool isBlocked = mDNSfalse;
 
     // Note: In the case where we already have the answer to this question in our cache, that may be all the client
     // wanted, and they may immediately cancel their question. In this case, sending an actual query on the wire would
@@ -11414,7 +11817,7 @@ mDNSlocal mDNSBool InitCommonState(mDNS *const m, DNSQuestion *const question)
     // turned ON which can allocate memory e.g., base64 encoding, in the case of DNSSEC.
     question->ThisQInterval     = InitialQuestionInterval;                  // MUST be > zero for an active question
     question->qnamehash         = DomainNameHashValue(&question->qname);
-    question->DelayAnswering    = CheckForSoonToExpireRecords(m, &question->qname, question->qnamehash, HashSlot(&question->qname), &purge);
+    question->DelayAnswering    = mDNSOpaque16IsZero(question->TargetQID) ? CheckForSoonToExpireRecords(m, &question->qname, question->qnamehash) : 0;
     question->LastQTime         = m->timenow;
     question->ExpectUnicastResp = 0;
     question->LastAnswerPktNum  = m->PktNum;
@@ -11446,73 +11849,55 @@ mDNSlocal mDNSBool InitCommonState(mDNS *const m, DNSQuestion *const question)
     question->FlappingInterface1 = mDNSNULL;
     question->FlappingInterface2 = mDNSNULL;
 
-    question->ServiceID = mDNSPlatformGetServiceID(m, question);
-    
+    // if kDNSServiceFlagsServiceIndex flag is SET by the client, then do NOT call mDNSPlatformGetDNSRoutePolicy()
+    // since we would already have the question->ServiceID in that case.
+    if (!(question->flags & kDNSServiceFlagsServiceIndex))
+    {
+#if APPLE_OSX_mDNSResponder
+        mDNSPlatformGetDNSRoutePolicy(question, &isBlocked);
+#else
+        question->ServiceID = -1;
+#endif
+    }
+    else
+        LogInfo("InitCommonState: Query for %##s (%s), PID[%d], EUID[%d], ServiceID[%d] is already set by client", question->qname.c,
+                DNSTypeName(question->qtype), question->pid, question->euid, question->ServiceID);
+
     InitDNSConfig(m, question);
 
     question->AuthInfo          = GetAuthInfoForQuestion(m, question);
-    question->SuppressQuery     = 0;
-    if (question->SuppressUnusable)
-        question->SuppressQuery = ShouldSuppressQuery(m, question);
 
-    // If ServiceID is 0 or the policy disallows making DNS requests,
-    // set DisallowPID
-    question->DisallowPID       =  0; // Apple bug (question->ServiceID == 0 || (mDNSPlatformAllowPID(m, question) == 0));
-    if (question->DisallowPID)
-    {
-        LogInfo("InitCommonState: Query suppressed for %##s (%s), PID %d/ServiceID %d not allowed", question->qname.c,
-            DNSTypeName(question->qtype), question->pid, question->ServiceID);
-    }
-
+    // The question's BlockedByPolicy value must be set before calling ShouldSuppressQuery().
+    question->BlockedByPolicy   = isBlocked ? mDNStrue : mDNSfalse;
+    question->Suppressed        = ShouldSuppressQuery(question);
     question->NextInDQList      = mDNSNULL;
     question->SendQNow          = mDNSNULL;
     question->SendOnAll         = mDNSfalse;
-
-#if mDNS_REQUEST_UNICAST_RESPONSE
-    question->RequestUnicast    = SET_QU_IN_FIRST_FOUR_QUERIES;
-#else   // mDNS_REQUEST_UNICAST_RESPONSE
-    question->RequestUnicast    = SET_QU_IN_FIRST_QUERY;
-#endif  // mDNS_REQUEST_UNICAST_RESPONSE
+    question->RequestUnicast    = kDefaultRequestUnicastCount;
 
 #if APPLE_OSX_mDNSResponder
-    // Request unicast response for first 4 queries to increase
-    // reliability in an environment with high multicast packet loss.
-    // Must set to one more than the number of unicast queries you want, since SendQueries()
-    // decrements it before calling BuildQuestion() which acts on it.
-    if (question->flags & kDNSServiceFlagsUnicastResponse)
+    // Set the QU bit in the first query for the following options.
+    if ((question->flags & kDNSServiceFlagsUnicastResponse) || (question->flags & kDNSServiceFlagsThresholdFinder))
     {
-        question->RequestUnicast    = SET_QU_IN_FIRST_FOUR_QUERIES;
+        question->RequestUnicast    = SET_QU_IN_FIRST_QUERY;
         LogInfo("InitCommonState: setting RequestUnicast = %d for %##s (%s)", question->RequestUnicast, question->qname.c,
             DNSTypeName(question->qtype));
-    } 
-    else if (question->flags & kDNSServiceFlagsThresholdFinder)
-    {
-        // always send one request with QU bit set when kDNSServiceFlagsThresholdFinder is set
-#if mDNS_REQUEST_UNICAST_RESPONSE
-        question->RequestUnicast    = SET_QU_IN_FIRST_FOUR_QUERIES;
-#else   // mDNS_REQUEST_UNICAST_RESPONSE
-        question->RequestUnicast    = SET_QU_IN_FIRST_QUERY;
-#endif  // mDNS_REQUEST_UNICAST_RESPONSE
-
-        LogInfo("InitCommonState: kDNSServiceFlagsThresholdFinder set, setting RequestUnicast = %d for %##s (%s)", 
-            question->RequestUnicast, question->qname.c, DNSTypeName(question->qtype));
     }
 #endif  // APPLE_OSX_mDNSResponder
 
     question->LastQTxTime       = m->timenow;
-    question->CNAMEReferrals    = 0; 
+    question->CNAMEReferrals    = 0;
 
     question->WakeOnResolveCount = 0;
     if (question->WakeOnResolve)
-    {     
+    {
         question->WakeOnResolveCount = InitialWakeOnResolveCount;
-        purge = mDNStrue;
-    }     
+    }
 
     for (i=0; i<DupSuppressInfoSize; i++)
         question->DupSuppress[i].InterfaceID = mDNSNULL;
 
-    question->Restart = 0;
+    question->Restart = mDNSfalse;
 
     debugf("InitCommonState: Question %##s (%s) Interface %p Now %d Send in %d Answer in %d (%p) %s (%p)",
             question->qname.c, DNSTypeName(question->qtype), question->InterfaceID, m->timenow,
@@ -11523,8 +11908,6 @@ mDNSlocal mDNSBool InitCommonState(mDNS *const m, DNSQuestion *const question)
     if (question->DelayAnswering)
         LogInfo("InitCommonState: Delaying answering for %d ticks while cache stabilizes for %##s (%s)",
                  question->DelayAnswering - m->timenow, question->qname.c, DNSTypeName(question->qtype));
-
-    return(purge);
 }
 
 // Excludes the DNS Config fields which are already handled by InitDNSConfig()
@@ -11534,7 +11917,7 @@ mDNSlocal void InitWABState(DNSQuestion *const question)
     // We won't need one for duplicate questions, or from questions answered immediately out of the cache.
     // We also don't need one for LLQs because (when we're using NAT) we want them all to share a single
     // NAT mapping for receiving inbound add/remove events.
-    question->LocalSocket       = mDNSNULL; 
+    question->LocalSocket       = mDNSNULL;
     question->unansweredQueries = 0;
     question->nta               = mDNSNULL;
     question->servAddr          = zeroAddr;
@@ -11559,7 +11942,7 @@ mDNSlocal void InitLLQNATState(mDNS *const m)
 
 mDNSlocal void InitLLQState(DNSQuestion *const question)
 {
-    question->state             = LLQ_InitialRequest;
+    question->state             = LLQ_Init;
     question->ReqLease          = 0;
     question->expire            = 0;
     question->ntries            = 0;
@@ -11579,9 +11962,9 @@ mDNSlocal void InitDNSSECProxyState(mDNS *const m, DNSQuestion *const question)
     // at ValidationRequired setting also.
     if (question->qDNSServer)
     {
-        if (question->qDNSServer->cellIntf)
+        if (question->qDNSServer->isCell)
         {
-            LogInfo("InitDNSSECProxyState: Turning off validation for %##s (%s); going over cell", question->qname.c, DNSTypeName(question->qtype));
+            debugf("InitDNSSECProxyState: Turning off validation for %##s (%s); going over cell", question->qname.c, DNSTypeName(question->qtype));
             question->ValidationRequired = mDNSfalse;
         }
         if (DNSSECOptionalQuestion(question) && !(question->qDNSServer->req_DO))
@@ -11599,29 +11982,38 @@ mDNSlocal void InitDNSSECProxyState(mDNS *const m, DNSQuestion *const question)
 // Once the question is completely initialized including the duplicate logic, this function
 // is called to finalize the unicast question which requires flushing the cache if needed,
 // activating the query etc.
-mDNSlocal void FinalizeUnicastQuestion(mDNS *const m, DNSQuestion *question, mDNSBool purge)
+mDNSlocal void FinalizeUnicastQuestion(mDNS *const m, DNSQuestion *question)
 {
     // Ensure DNS related info of duplicate question is same as the orig question
     if (question->DuplicateOf)
     {
         question->validDNSServers = question->DuplicateOf->validDNSServers;
+        // If current(dup) question has DNS Server assigned but the original question has no DNS Server assigned to it,
+        // then we log a line as it could indicate an issue
+        if (question->DuplicateOf->qDNSServer == mDNSNULL)
+        {
+            if (question->qDNSServer) {
+                LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                       "[R%d->Q%d] FinalizeUnicastQuestion: Current(dup) question %p has DNSServer(" PRI_IP_ADDR ":%d) but original question(%p) has no DNS Server! " PRI_DM_NAME " (" PUB_S ")",
+                       question->request_id, mDNSVal16(question->TargetQID), question,
+                       question->qDNSServer ? &question->qDNSServer->addr : mDNSNULL,
+                       mDNSVal16(question->qDNSServer ? question->qDNSServer->port : zeroIPPort), question->DuplicateOf,
+                       DM_NAME_PARAM(question->qname.c), DNSTypeName(question->qtype));
+            }
+
+        }
         question->qDNSServer = question->DuplicateOf->qDNSServer;
-        LogInfo("FinalizeUnicastQuestion: Duplicate question %p (%p) %##s (%s), DNS Server %#a:%d",
-                 question, question->DuplicateOf, question->qname.c, DNSTypeName(question->qtype),
-                 question->qDNSServer ? &question->qDNSServer->addr : mDNSNULL,
-                 mDNSVal16(question->qDNSServer ? question->qDNSServer->port : zeroIPPort));
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+               "[R%d->DupQ%d->Q%d] FinalizeUnicastQuestion: Duplicate question %p (%p) " PRI_DM_NAME " (" PUB_S "), DNS Server " PRI_IP_ADDR ":%d",
+               question->request_id, mDNSVal16(question->DuplicateOf->TargetQID), mDNSVal16(question->TargetQID),
+               question, question->DuplicateOf, DM_NAME_PARAM(question->qname.c), DNSTypeName(question->qtype),
+               question->qDNSServer ? &question->qDNSServer->addr : mDNSNULL,
+               mDNSVal16(question->qDNSServer ? question->qDNSServer->port : zeroIPPort));
     }
 
     ActivateUnicastQuery(m, question, mDNSfalse);
 
-    // If purge was set above, flush the cache. Need to do this after we set the
-    // DNS server on the question
-    if (purge)
-    {
-        question->DelayAnswering = 0;
-        mDNS_PurgeForQuestion(m, question);
-    }
-    else if (!question->DuplicateOf && DNSSECQuestion(question))
+    if (!question->DuplicateOf && DNSSECQuestion(question))
     {
         // For DNSSEC questions, we need to have the RRSIGs also for verification.
         CheckForDNSSECRecords(m, question);
@@ -11634,9 +12026,6 @@ mDNSlocal void FinalizeUnicastQuestion(mDNS *const m, DNSQuestion *question, mDN
         // the LLQ NAT state only for unicast. Otherwise we will unnecessarily
         // start the NAT traversal that is not needed.
         InitLLQNATState(m);
-#if APPLE_OSX_mDNSResponder
-        UpdateAutoTunnelDomainStatuses(m);
-#endif
     }
 }
 
@@ -11644,7 +12033,6 @@ mDNSexport mStatus mDNS_StartQuery_internal(mDNS *const m, DNSQuestion *const qu
 {
     DNSQuestion **q;
     mStatus vStatus;
-    mDNSBool purge;
 
     // First check for cache space (can't do queries if there is no cache space allocated)
     if (m->rrcache_size == 0)
@@ -11653,19 +12041,35 @@ mDNSexport mStatus mDNS_StartQuery_internal(mDNS *const m, DNSQuestion *const qu
     vStatus = ValidateParameters(m, question);
     if (vStatus)
         return(vStatus);
-    
-    question->TargetQID =
+
+#ifdef USE_LIBIDN
+    // If the TLD includes high-ascii bytes, assume it will need to be converted to Punycode.
+    // (In the future the root name servers may answer UTF-8 queries directly, but for now they do not.)
+    // This applies to the top label (TLD) only
+    // -- for the second level and down we try UTF-8 first, and then fall back to Punycode only if UTF-8 fails.
+    if (IsHighASCIILabel(LastLabel(&question->qname)))
+    {
+        domainname newname;
+        if (PerformNextPunycodeConversion(question, &newname))
+            AssignDomainName(&question->qname, &newname);
+    }
+#endif // USE_LIBIDN
+
 #ifndef UNICAST_DISABLED
-                          (question->Target.type || Question_uDNS(question)) ? mDNS_NewMessageID(m) :
-#endif // UNICAST_DISABLED
-                          zeroID;
-    debugf("mDNS_StartQuery_internal: %##s (%s)", question->qname.c, DNSTypeName(question->qtype)); 
-    
+    question->TargetQID = Question_uDNS(question) ? mDNS_NewMessageID(m) : zeroID;
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+    question->LastTargetQID = zeroID;
+#endif
+#else
+    question->TargetQID = zeroID;
+#endif
+    debugf("mDNS_StartQuery_internal: %##s (%s)", question->qname.c, DNSTypeName(question->qtype));
+
     // Note: It important that new questions are appended at the *end* of the list, not prepended at the start
     q = &m->Questions;
-    if (question->InterfaceID == mDNSInterface_LocalOnly || question->InterfaceID == mDNSInterface_P2P) 
+    if (LocalOnlyOrP2PInterface(question->InterfaceID))
         q = &m->LocalOnlyQuestions;
-    while (*q && *q != question) 
+    while (*q && *q != question)
         q=&(*q)->next;
 
     if (*q)
@@ -11675,14 +12079,13 @@ mDNSexport mStatus mDNS_StartQuery_internal(mDNS *const m, DNSQuestion *const qu
         return(mStatus_AlreadyRegistered);
     }
     *q = question;
-    
 
     // Intialize the question. The only ordering constraint we have today is that
     // InitDNSSECProxyState should be called after the DNS server is selected (in
     // InitCommonState -> InitDNSConfig) as DNS server selection affects DNSSEC
     // validation.
 
-    purge = InitCommonState(m, question);
+    InitCommonState(m, question);
     InitWABState(question);
     InitLLQState(question);
     InitDNSSECProxyState(m, question);
@@ -11691,17 +12094,17 @@ mDNSexport mStatus mDNS_StartQuery_internal(mDNS *const m, DNSQuestion *const qu
     // as the duplicate logic could be potentially based on any field in the
     // question.
     question->DuplicateOf  = FindDuplicateQuestion(m, question);
-    if (question->DuplicateOf) 
-        question->AuthInfo = question->DuplicateOf->AuthInfo; 
+    if (question->DuplicateOf)
+        question->AuthInfo = question->DuplicateOf->AuthInfo;
 
-    if (question->InterfaceID == mDNSInterface_LocalOnly || question->InterfaceID == mDNSInterface_P2P)
+    if (LocalOnlyOrP2PInterface(question->InterfaceID))
     {
-        if (!m->NewLocalOnlyQuestions) 
+        if (!m->NewLocalOnlyQuestions)
             m->NewLocalOnlyQuestions = question;
     }
     else
     {
-        if (!m->NewQuestions) 
+        if (!m->NewQuestions)
             m->NewQuestions = question;
 
         // If the question's id is non-zero, then it's Wide Area
@@ -11712,14 +12115,31 @@ mDNSexport mStatus mDNS_StartQuery_internal(mDNS *const m, DNSQuestion *const qu
         // this routine with the question list data structures in an inconsistent state.
         if (!mDNSOpaque16IsZero(question->TargetQID))
         {
-            FinalizeUnicastQuestion(m, question, purge);
+            FinalizeUnicastQuestion(m, question);
         }
         else
         {
-            if (purge)
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+            m->NumAllInterfaceQuestions++;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "mDNS_StartQuery_internal: NumAllInterfaceRecords %u NumAllInterfaceQuestions %u " PRI_DM_NAME " (" PUB_S ")",
+                m->NumAllInterfaceRecords, m->NumAllInterfaceQuestions, DM_NAME_PARAM(&question->qname), DNSTypeName(question->qtype));
+            if (m->NumAllInterfaceRecords + m->NumAllInterfaceQuestions == 1)
+            {
+                m->NextBonjourDisableTime = 0;
+                if (m->BonjourEnabled == 0)
+                {
+                    // Enable Bonjour immediately by scheduling network changed processing where
+                    // we will join the multicast group on each active interface.
+                    m->BonjourEnabled = 1;
+                    m->NetworkChanged = m->timenow;
+                }
+            }
+#endif
+            if (question->WakeOnResolve)
             {
                 LogInfo("mDNS_StartQuery_internal: Purging for %##s", question->qname.c);
-                mDNS_PurgeForQuestion(m, question);
+                mDNS_PurgeBeforeResolve(m, question);
             }
         }
     }
@@ -11745,14 +12165,14 @@ mDNSexport void CancelGetZoneData(mDNS *const m, ZoneData *nta)
 
 mDNSexport mStatus mDNS_StopQuery_internal(mDNS *const m, DNSQuestion *const question)
 {
-    const mDNSu32 slot = HashSlot(&question->qname);
-    CacheGroup *cg = CacheGroupForName(m, slot, question->qnamehash, &question->qname);
-    CacheRecord *rr;
+    CacheGroup *cg = CacheGroupForName(m, question->qnamehash, &question->qname);
+    CacheRecord *cr;
     DNSQuestion **qp = &m->Questions;
 
     //LogInfo("mDNS_StopQuery_internal %##s (%s)", question->qname.c, DNSTypeName(question->qtype));
 
-    if (question->InterfaceID == mDNSInterface_LocalOnly || question->InterfaceID == mDNSInterface_P2P) qp = &m->LocalOnlyQuestions;
+    if (LocalOnlyOrP2PInterface(question->InterfaceID))
+        qp = &m->LocalOnlyQuestions;
     while (*qp && *qp != question) qp=&(*qp)->next;
     if (*qp) *qp = (*qp)->next;
     else
@@ -11760,14 +12180,35 @@ mDNSexport mStatus mDNS_StopQuery_internal(mDNS *const m, DNSQuestion *const que
 #if !ForceAlerts
         if (question->ThisQInterval >= 0)   // Only log error message if the query was supposed to be active
 #endif
-        LogMsg("mDNS_StopQuery_internal: Question %##s (%s) not found in active list",
-               question->qname.c, DNSTypeName(question->qtype));
-#if ForceAlerts
-        *(long*)0 = 0;
-#endif
+        LogFatalError("mDNS_StopQuery_internal: Question %##s (%s) not found in active list", question->qname.c, DNSTypeName(question->qtype));
         return(mStatus_BadReferenceErr);
     }
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    if (!LocalOnlyOrP2PInterface(question->InterfaceID) && mDNSOpaque16IsZero(question->TargetQID))
+    {
+        if (m->NumAllInterfaceRecords + m->NumAllInterfaceQuestions == 1)
+            m->NextBonjourDisableTime = NonZeroTime(m->timenow + (BONJOUR_DISABLE_DELAY * mDNSPlatformOneSecond));
+        m->NumAllInterfaceQuestions--;
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "mDNS_StopQuery_internal: NumAllInterfaceRecords %u NumAllInterfaceQuestions %u " PRI_DM_NAME " (" PUB_S ")",
+            m->NumAllInterfaceRecords, m->NumAllInterfaceQuestions, DM_NAME_PARAM(&question->qname), DNSTypeName(question->qtype));
+    }
+#endif
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+    if (Question_uDNS(question) && !question->metrics.answered && (question->metrics.querySendCount > 0))
+    {
+        const domainname *  queryName;
+        mDNSBool            isForCell;
+        mDNSu32             durationMs;
+
+        queryName  = question->metrics.originalQName ? question->metrics.originalQName : &question->qname;
+        isForCell  = (question->qDNSServer && question->qDNSServer->isCell);
+        durationMs = ((m->timenow - question->metrics.firstQueryTime) * 1000) / mDNSPlatformOneSecond;
+        MetricsUpdateDNSQueryStats(queryName, question->qtype, mDNSNULL, question->metrics.querySendCount, question->metrics.expiredAnswerState, question->metrics.dnsOverTCPState, durationMs, isForCell);
+    }
+#endif
     // Take care to cut question from list *before* calling UpdateQuestionDuplicates
     UpdateQuestionDuplicates(m, question);
     // But don't trash ThisQInterval until afterwards.
@@ -11775,21 +12216,36 @@ mDNSexport mStatus mDNS_StopQuery_internal(mDNS *const m, DNSQuestion *const que
 
     // If there are any cache records referencing this as their active question, then see if there is any
     // other question that is also referencing them, else their CRActiveQuestion needs to get set to NULL.
-    for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
+    for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
     {
-        if (rr->CRActiveQuestion == question)
+        if (cr->CRActiveQuestion == question)
         {
             DNSQuestion *q;
-            // Checking for ActiveQuestion filters questions that are suppressed also
-            // as suppressed questions are not active
-            for (q = m->Questions; q; q=q->next)        // Scan our list of questions
-                if (ActiveQuestion(q) && ResourceRecordAnswersQuestion(&rr->resrec, q))
-                    break;
-            if (q)
+            DNSQuestion *replacement = mDNSNULL;
+            // If we find an active question that is answered by this cached record, use it as the cache record's
+            // CRActiveQuestion replacement. If there are no such questions, but there's at least one unsuppressed inactive
+            // question that is answered by this cache record, then use an inactive one to not forgo generating RMV events
+            // via CacheRecordRmv() when the cache record expires.
+            for (q = m->Questions; q && (q != m->NewQuestions); q = q->next)
+            {
+                if (!q->DuplicateOf && !q->Suppressed && CacheRecordAnswersQuestion(cr, q))
+                {
+                    if (q->ThisQInterval > 0)
+                    {
+                        replacement = q;
+                        break;
+                    }
+                    else if (!replacement)
+                    {
+                        replacement = q;
+                    }
+                }
+            }
+            if (replacement)
                 debugf("mDNS_StopQuery_internal: Updating CRActiveQuestion to %p for cache record %s, Original question CurrentAnswers %d, new question "
-                       "CurrentAnswers %d, SuppressQuery %d", q, CRDisplayString(m,rr), question->CurrentAnswers, q->CurrentAnswers, q->SuppressQuery);
-            rr->CRActiveQuestion = q;       // Question used to be active; new value may or may not be null
-            if (!q) m->rrcache_active--;    // If no longer active, decrement rrcache_active count
+                       "CurrentAnswers %d, Suppressed %d", replacement, CRDisplayString(m,cr), question->CurrentAnswers, replacement->CurrentAnswers, replacement->Suppressed);
+            cr->CRActiveQuestion = replacement;    // Question used to be active; new value may or may not be null
+            if (!replacement) m->rrcache_active--; // If no longer active, decrement rrcache_active count
         }
     }
 
@@ -11872,8 +12328,11 @@ mDNSexport mStatus mDNS_StopQuery_internal(mDNS *const m, DNSQuestion *const que
                 question->tcp           = mDNSNULL;
             }
         }
-#if APPLE_OSX_mDNSResponder
-        UpdateAutoTunnelDomainStatuses(m);
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+        else if (question->dnsPushServer != mDNSNULL)
+        {
+            UnSubscribeToDNSPushNotificationServer(m, question);
+        }
 #endif
     }
     // wait until we send the refresh above which needs the nta
@@ -11885,11 +12344,17 @@ mDNSexport mStatus mDNS_StopQuery_internal(mDNS *const m, DNSQuestion *const que
         question->DAIFreeCallback(m, question->DNSSECAuthInfo);
         question->DNSSECAuthInfo = mDNSNULL;
     }
-    if (question->AnonInfo)
+#if MDNSRESPONDER_SUPPORTS(APPLE, METRICS)
+    if (question->metrics.originalQName)
     {
-        FreeAnonInfo(question->AnonInfo);
-        question->AnonInfo = mDNSNULL;
+        mDNSPlatformMemFree(question->metrics.originalQName);
+        question->metrics.originalQName = mDNSNULL;
     }
+#endif
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+    DNS64ResetState(question);
+#endif
 
     return(mStatus_NoError);
 }
@@ -11928,17 +12393,18 @@ mDNSexport mStatus mDNS_StopQueryWithRemoves(mDNS *const m, DNSQuestion *const q
     status = mDNS_StopQuery_internal(m, question);
     if (status == mStatus_NoError && !qq)
     {
-        const CacheRecord *rr;
-        const mDNSu32 slot = HashSlot(&question->qname);
-        CacheGroup *const cg = CacheGroupForName(m, slot, question->qnamehash, &question->qname);
+        const CacheRecord *cr;
+        CacheGroup *const cg = CacheGroupForName(m, question->qnamehash, &question->qname);
         LogInfo("Generating terminal removes for %##s (%s)", question->qname.c, DNSTypeName(question->qtype));
-        for (rr = cg ? cg->members : mDNSNULL; rr; rr=rr->next)
-            if (rr->resrec.RecordType != kDNSRecordTypePacketNegative && SameNameRecordAnswersQuestion(&rr->resrec, question))
+        for (cr = cg ? cg->members : mDNSNULL; cr; cr=cr->next)
+        {
+            if (cr->resrec.RecordType != kDNSRecordTypePacketNegative && SameNameCacheRecordAnswersQuestion(cr, question))
             {
                 // Don't use mDNS_DropLockBeforeCallback() here, since we don't allow API calls
                 if (question->QuestionCallback)
-                    question->QuestionCallback(m, question, &rr->resrec, mDNSfalse);
+                    question->QuestionCallback(m, question, &cr->resrec, mDNSfalse);
             }
+        }
     }
     mDNS_Unlock(m);
     return(status);
@@ -11949,7 +12415,7 @@ mDNSexport mStatus mDNS_Reconfirm(mDNS *const m, CacheRecord *const cr)
     mStatus status;
     mDNS_Lock(m);
     status = mDNS_Reconfirm_internal(m, cr, kDefaultReconfirmTimeForNoAnswer);
-    if (status == mStatus_NoError) ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, 0);
+    if (status == mStatus_NoError) ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, cr->resrec.InterfaceID, 0);
     mDNS_Unlock(m);
     return(status);
 }
@@ -11962,355 +12428,61 @@ mDNSexport mStatus mDNS_ReconfirmByValue(mDNS *const m, ResourceRecord *const rr
     cr = FindIdenticalRecordInCache(m, rr);
     debugf("mDNS_ReconfirmByValue: %p %s", cr, RRDisplayString(m, rr));
     if (cr) status = mDNS_Reconfirm_internal(m, cr, kDefaultReconfirmTimeForNoAnswer);
-    if (status == mStatus_NoError) ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, 0);
+    if (status == mStatus_NoError) ReconfirmAntecedents(m, cr->resrec.name, cr->resrec.namehash, cr->resrec.InterfaceID, 0);
     mDNS_Unlock(m);
     return(status);
 }
 
 mDNSlocal mStatus mDNS_StartBrowse_internal(mDNS *const m, DNSQuestion *const question,
                                             const domainname *const srv, const domainname *const domain,
-                                            const mDNSu8 *anondata, const mDNSInterfaceID InterfaceID, mDNSu32 flags,
+                                            const mDNSInterfaceID InterfaceID, mDNSu32 flags,
                                             mDNSBool ForceMCast, mDNSBool useBackgroundTrafficClass,
                                             mDNSQuestionCallback *Callback, void *Context)
 {
     question->InterfaceID      = InterfaceID;
     question->flags            = flags;
-    question->Target           = zeroAddr;
     question->qtype            = kDNSType_PTR;
     question->qclass           = kDNSClass_IN;
     question->LongLived        = mDNStrue;
     question->ExpectUnique     = mDNSfalse;
     question->ForceMCast       = ForceMCast;
-    question->ReturnIntermed   = mDNSfalse;
+    question->ReturnIntermed   = (flags & kDNSServiceFlagsReturnIntermediates) != 0;
     question->SuppressUnusable = mDNSfalse;
-    question->SearchListIndex  = 0;
-    question->AppendSearchDomains = 0;
-    question->RetryWithSearchDomains = mDNSfalse;
+    question->AppendSearchDomains = mDNSfalse;
     question->TimeoutQuestion  = 0;
     question->WakeOnResolve    = 0;
-    question->UseBackgroundTrafficClass = useBackgroundTrafficClass;
+    question->UseBackgroundTraffic = useBackgroundTrafficClass;
     question->ValidationRequired = 0;
     question->ValidatingResponse = 0;
     question->ProxyQuestion    = 0;
-    question->qnameOrig        = mDNSNULL;
-    question->AnonInfo         = mDNSNULL;
     question->QuestionCallback = Callback;
     question->QuestionContext  = Context;
 
     if (!ConstructServiceName(&question->qname, mDNSNULL, srv, domain))
         return(mStatus_BadParamErr);
 
-    if (anondata)
-    {
-        question->AnonInfo = AllocateAnonInfo(&question->qname, anondata, mDNSPlatformStrLen(anondata), mDNSNULL);
-        if (!question->AnonInfo)
-            return(mStatus_BadParamErr);
-    }
-
     return(mDNS_StartQuery_internal(m, question));
 }
 
 mDNSexport mStatus mDNS_StartBrowse(mDNS *const m, DNSQuestion *const question,
                                     const domainname *const srv, const domainname *const domain,
-                                    const mDNSu8 *anondata, const mDNSInterfaceID InterfaceID, mDNSu32 flags,
+                                    const mDNSInterfaceID InterfaceID, mDNSu32 flags,
                                     mDNSBool ForceMCast, mDNSBool useBackgroundTrafficClass,
                                     mDNSQuestionCallback *Callback, void *Context)
 {
     mStatus status;
     mDNS_Lock(m);
-    status = mDNS_StartBrowse_internal(m, question, srv, domain, anondata, InterfaceID, flags, ForceMCast, useBackgroundTrafficClass, Callback, Context);
+    status = mDNS_StartBrowse_internal(m, question, srv, domain, InterfaceID, flags, ForceMCast, useBackgroundTrafficClass, Callback, Context);
     mDNS_Unlock(m);
     return(status);
 }
 
-mDNSlocal mDNSBool MachineHasActiveIPv6(mDNS *const m)
-{
-    NetworkInterfaceInfo *intf;
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
-        if (intf->ip.type == mDNSAddrType_IPv6) return(mDNStrue);
-    return(mDNSfalse);
-}
-
-mDNSlocal void FoundServiceInfoSRV(mDNS *const m, DNSQuestion *question, const ResourceRecord *const answer, QC_result AddRecord)
-{
-    ServiceInfoQuery *query = (ServiceInfoQuery *)question->QuestionContext;
-    mDNSBool PortChanged = !mDNSSameIPPort(query->info->port, answer->rdata->u.srv.port);
-    if (!AddRecord) return;
-    if (answer->rrtype != kDNSType_SRV) return;
-
-    query->info->port = answer->rdata->u.srv.port;
-
-    // If this is our first answer, then set the GotSRV flag and start the address query
-    if (!query->GotSRV)
-    {
-        query->GotSRV             = mDNStrue;
-        query->qAv4.InterfaceID   = answer->InterfaceID;
-        AssignDomainName(&query->qAv4.qname, &answer->rdata->u.srv.target);
-        query->qAv6.InterfaceID   = answer->InterfaceID;
-        AssignDomainName(&query->qAv6.qname, &answer->rdata->u.srv.target);
-        mDNS_StartQuery(m, &query->qAv4);
-        // Only do the AAAA query if this machine actually has IPv6 active
-        if (MachineHasActiveIPv6(m)) mDNS_StartQuery(m, &query->qAv6);
-    }
-    // If this is not our first answer, only re-issue the address query if the target host name has changed
-    else if ((query->qAv4.InterfaceID != query->qSRV.InterfaceID && query->qAv4.InterfaceID != answer->InterfaceID) ||
-             !SameDomainName(&query->qAv4.qname, &answer->rdata->u.srv.target))
-    {
-        mDNS_StopQuery(m, &query->qAv4);
-        if (query->qAv6.ThisQInterval >= 0) mDNS_StopQuery(m, &query->qAv6);
-        if (SameDomainName(&query->qAv4.qname, &answer->rdata->u.srv.target) && !PortChanged)
-        {
-            // If we get here, it means:
-            // 1. This is not our first SRV answer
-            // 2. The interface ID is different, but the target host and port are the same
-            // This implies that we're seeing the exact same SRV record on more than one interface, so we should
-            // make our address queries at least as broad as the original SRV query so that we catch all the answers.
-            query->qAv4.InterfaceID = query->qSRV.InterfaceID;  // Will be mDNSInterface_Any, or a specific interface
-            query->qAv6.InterfaceID = query->qSRV.InterfaceID;
-        }
-        else
-        {
-            query->qAv4.InterfaceID   = answer->InterfaceID;
-            AssignDomainName(&query->qAv4.qname, &answer->rdata->u.srv.target);
-            query->qAv6.InterfaceID   = answer->InterfaceID;
-            AssignDomainName(&query->qAv6.qname, &answer->rdata->u.srv.target);
-        }
-        debugf("FoundServiceInfoSRV: Restarting address queries for %##s (%s)", query->qAv4.qname.c, DNSTypeName(query->qAv4.qtype));
-        mDNS_StartQuery(m, &query->qAv4);
-        // Only do the AAAA query if this machine actually has IPv6 active
-        if (MachineHasActiveIPv6(m)) mDNS_StartQuery(m, &query->qAv6);
-    }
-    else if (query->ServiceInfoQueryCallback && query->GotADD && query->GotTXT && PortChanged)
-    {
-        if (++query->Answers >= 100)
-            debugf("**** WARNING **** Have given %lu answers for %##s (SRV) %##s %u",
-                   query->Answers, query->qSRV.qname.c, answer->rdata->u.srv.target.c,
-                   mDNSVal16(answer->rdata->u.srv.port));
-        query->ServiceInfoQueryCallback(m, query);
-    }
-    // CAUTION: MUST NOT do anything more with query after calling query->Callback(), because the client's
-    // callback function is allowed to do anything, including deleting this query and freeing its memory.
-}
-
-mDNSlocal void FoundServiceInfoTXT(mDNS *const m, DNSQuestion *question, const ResourceRecord *const answer, QC_result AddRecord)
-{
-    ServiceInfoQuery *query = (ServiceInfoQuery *)question->QuestionContext;
-    if (!AddRecord) return;
-    if (answer->rrtype != kDNSType_TXT) return;
-    if (answer->rdlength > sizeof(query->info->TXTinfo)) return;
-
-    query->GotTXT       = mDNStrue;
-    query->info->TXTlen = answer->rdlength;
-    query->info->TXTinfo[0] = 0;        // In case answer->rdlength is zero
-    mDNSPlatformMemCopy(query->info->TXTinfo, answer->rdata->u.txt.c, answer->rdlength);
-
-    verbosedebugf("FoundServiceInfoTXT: %##s GotADD=%d", query->info->name.c, query->GotADD);
-
-    // CAUTION: MUST NOT do anything more with query after calling query->Callback(), because the client's
-    // callback function is allowed to do anything, including deleting this query and freeing its memory.
-    if (query->ServiceInfoQueryCallback && query->GotADD)
-    {
-        if (++query->Answers >= 100)
-            debugf("**** WARNING **** have given %lu answers for %##s (TXT) %#s...",
-                   query->Answers, query->qSRV.qname.c, answer->rdata->u.txt.c);
-        query->ServiceInfoQueryCallback(m, query);
-    }
-}
-
-mDNSlocal void FoundServiceInfo(mDNS *const m, DNSQuestion *question, const ResourceRecord *const answer, QC_result AddRecord)
-{
-    ServiceInfoQuery *query = (ServiceInfoQuery *)question->QuestionContext;
-    //LogInfo("FoundServiceInfo %d %s", AddRecord, RRDisplayString(m, answer));
-    if (!AddRecord) return;
-
-    if (answer->rrtype == kDNSType_A)
-    {
-        query->info->ip.type = mDNSAddrType_IPv4;
-        query->info->ip.ip.v4 = answer->rdata->u.ipv4;
-    }
-    else if (answer->rrtype == kDNSType_AAAA)
-    {
-        query->info->ip.type = mDNSAddrType_IPv6;
-        query->info->ip.ip.v6 = answer->rdata->u.ipv6;
-    }
-    else
-    {
-        debugf("FoundServiceInfo: answer %##s type %d (%s) unexpected", answer->name->c, answer->rrtype, DNSTypeName(answer->rrtype));
-        return;
-    }
-
-    query->GotADD = mDNStrue;
-    query->info->InterfaceID = answer->InterfaceID;
-
-    verbosedebugf("FoundServiceInfo v%ld: %##s GotTXT=%d", query->info->ip.type, query->info->name.c, query->GotTXT);
-
-    // CAUTION: MUST NOT do anything more with query after calling query->Callback(), because the client's
-    // callback function is allowed to do anything, including deleting this query and freeing its memory.
-    if (query->ServiceInfoQueryCallback && query->GotTXT)
-    {
-        if (++query->Answers >= 100)
-            debugf(answer->rrtype == kDNSType_A ?
-                   "**** WARNING **** have given %lu answers for %##s (A) %.4a" :
-                   "**** WARNING **** have given %lu answers for %##s (AAAA) %.16a",
-                   query->Answers, query->qSRV.qname.c, &answer->rdata->u.data);
-        query->ServiceInfoQueryCallback(m, query);
-    }
-}
-
-// On entry, the client must have set the name and InterfaceID fields of the ServiceInfo structure
-// If the query is not interface-specific, then InterfaceID may be zero
-// Each time the Callback is invoked, the remainder of the fields will have been filled in
-// In addition, InterfaceID will be updated to give the interface identifier corresponding to that response
-mDNSexport mStatus mDNS_StartResolveService(mDNS *const m,
-                                            ServiceInfoQuery *query, ServiceInfo *info, mDNSServiceInfoQueryCallback *Callback, void *Context)
-{
-    mStatus status;
-    mDNS_Lock(m);
-
-    query->qSRV.ThisQInterval       = -1;       // So that mDNS_StopResolveService() knows whether to cancel this question
-    query->qSRV.InterfaceID         = info->InterfaceID;
-    query->qSRV.flags               = 0;
-    query->qSRV.Target              = zeroAddr;
-    AssignDomainName(&query->qSRV.qname, &info->name);
-    query->qSRV.qtype               = kDNSType_SRV;
-    query->qSRV.qclass              = kDNSClass_IN;
-    query->qSRV.LongLived           = mDNSfalse;
-    query->qSRV.ExpectUnique        = mDNStrue;
-    query->qSRV.ForceMCast          = mDNSfalse;
-    query->qSRV.ReturnIntermed      = mDNSfalse;
-    query->qSRV.SuppressUnusable    = mDNSfalse;
-    query->qSRV.SearchListIndex     = 0;
-    query->qSRV.AppendSearchDomains = 0;
-    query->qSRV.RetryWithSearchDomains = mDNSfalse;
-    query->qSRV.TimeoutQuestion     = 0;
-    query->qSRV.WakeOnResolve       = 0;
-    query->qSRV.UseBackgroundTrafficClass = mDNSfalse;
-    query->qSRV.ValidationRequired  = 0;
-    query->qSRV.ValidatingResponse  = 0;
-    query->qSRV.ProxyQuestion       = 0;
-    query->qSRV.qnameOrig           = mDNSNULL;
-    query->qSRV.AnonInfo            = mDNSNULL;
-    query->qSRV.QuestionCallback    = FoundServiceInfoSRV;
-    query->qSRV.QuestionContext     = query;
-
-    query->qTXT.ThisQInterval       = -1;       // So that mDNS_StopResolveService() knows whether to cancel this question
-    query->qTXT.InterfaceID         = info->InterfaceID;
-    query->qTXT.flags               = 0;
-    query->qTXT.Target              = zeroAddr;
-    AssignDomainName(&query->qTXT.qname, &info->name);
-    query->qTXT.qtype               = kDNSType_TXT;
-    query->qTXT.qclass              = kDNSClass_IN;
-    query->qTXT.LongLived           = mDNSfalse;
-    query->qTXT.ExpectUnique        = mDNStrue;
-    query->qTXT.ForceMCast          = mDNSfalse;
-    query->qTXT.ReturnIntermed      = mDNSfalse;
-    query->qTXT.SuppressUnusable    = mDNSfalse;
-    query->qTXT.SearchListIndex     = 0;
-    query->qTXT.AppendSearchDomains = 0;
-    query->qTXT.RetryWithSearchDomains = mDNSfalse;
-    query->qTXT.TimeoutQuestion     = 0;
-    query->qTXT.WakeOnResolve       = 0;
-    query->qTXT.UseBackgroundTrafficClass = mDNSfalse;
-    query->qTXT.ValidationRequired  = 0;
-    query->qTXT.ValidatingResponse  = 0;
-    query->qTXT.ProxyQuestion       = 0;
-    query->qTXT.qnameOrig           = mDNSNULL;
-    query->qTXT.AnonInfo            = mDNSNULL;
-    query->qTXT.QuestionCallback    = FoundServiceInfoTXT;
-    query->qTXT.QuestionContext     = query;
-
-    query->qAv4.ThisQInterval       = -1;       // So that mDNS_StopResolveService() knows whether to cancel this question
-    query->qAv4.InterfaceID         = info->InterfaceID;
-    query->qAv4.flags               = 0;
-    query->qAv4.Target              = zeroAddr;
-    query->qAv4.qname.c[0]          = 0;
-    query->qAv4.qtype               = kDNSType_A;
-    query->qAv4.qclass              = kDNSClass_IN;
-    query->qAv4.LongLived           = mDNSfalse;
-    query->qAv4.ExpectUnique        = mDNStrue;
-    query->qAv4.ForceMCast          = mDNSfalse;
-    query->qAv4.ReturnIntermed      = mDNSfalse;
-    query->qAv4.SuppressUnusable    = mDNSfalse;
-    query->qAv4.SearchListIndex     = 0;
-    query->qAv4.AppendSearchDomains = 0;
-    query->qAv4.RetryWithSearchDomains = mDNSfalse;
-    query->qAv4.TimeoutQuestion     = 0;
-    query->qAv4.WakeOnResolve       = 0;
-    query->qAv4.UseBackgroundTrafficClass = mDNSfalse;
-    query->qAv4.ValidationRequired  = 0;
-    query->qAv4.ValidatingResponse  = 0;
-    query->qAv4.ProxyQuestion       = 0;
-    query->qAv4.qnameOrig           = mDNSNULL;
-    query->qAv4.AnonInfo            = mDNSNULL;
-    query->qAv4.QuestionCallback    = FoundServiceInfo;
-    query->qAv4.QuestionContext     = query;
-
-    query->qAv6.ThisQInterval       = -1;       // So that mDNS_StopResolveService() knows whether to cancel this question
-    query->qAv6.InterfaceID         = info->InterfaceID;
-    query->qAv6.flags               = 0;
-    query->qAv6.Target              = zeroAddr;
-    query->qAv6.qname.c[0]          = 0;
-    query->qAv6.qtype               = kDNSType_AAAA;
-    query->qAv6.qclass              = kDNSClass_IN;
-    query->qAv6.LongLived           = mDNSfalse;
-    query->qAv6.ExpectUnique        = mDNStrue;
-    query->qAv6.ForceMCast          = mDNSfalse;
-    query->qAv6.ReturnIntermed      = mDNSfalse;
-    query->qAv6.SuppressUnusable    = mDNSfalse;
-    query->qAv6.SearchListIndex     = 0;
-    query->qAv6.AppendSearchDomains = 0;
-    query->qAv6.RetryWithSearchDomains = mDNSfalse;
-    query->qAv6.TimeoutQuestion     = 0;
-    query->qAv6.UseBackgroundTrafficClass = mDNSfalse;
-    query->qAv6.ValidationRequired  = 0;
-    query->qAv6.ValidatingResponse  = 0;
-    query->qAv6.ProxyQuestion       = 0;
-    query->qAv6.qnameOrig           = mDNSNULL;
-    query->qAv6.AnonInfo            = mDNSNULL;
-    query->qAv6.QuestionCallback    = FoundServiceInfo;
-    query->qAv6.QuestionContext     = query;
-
-    query->GotSRV                   = mDNSfalse;
-    query->GotTXT                   = mDNSfalse;
-    query->GotADD                   = mDNSfalse;
-    query->Answers                  = 0;
-
-    query->info                     = info;
-    query->ServiceInfoQueryCallback = Callback;
-    query->ServiceInfoQueryContext  = Context;
-
-//	info->name      = Must already be set up by client
-//	info->interface = Must already be set up by client
-    info->ip        = zeroAddr;
-    info->port      = zeroIPPort;
-    info->TXTlen    = 0;
-
-    // We use mDNS_StartQuery_internal here because we're already holding the lock
-    status = mDNS_StartQuery_internal(m, &query->qSRV);
-    if (status == mStatus_NoError) status = mDNS_StartQuery_internal(m, &query->qTXT);
-    if (status != mStatus_NoError) mDNS_StopResolveService(m, query);
-
-    mDNS_Unlock(m);
-    return(status);
-}
-
-mDNSexport void    mDNS_StopResolveService (mDNS *const m, ServiceInfoQuery *q)
-{
-    mDNS_Lock(m);
-    // We use mDNS_StopQuery_internal here because we're already holding the lock
-    if (q->qSRV.ThisQInterval >= 0) mDNS_StopQuery_internal(m, &q->qSRV);
-    if (q->qTXT.ThisQInterval >= 0) mDNS_StopQuery_internal(m, &q->qTXT);
-    if (q->qAv4.ThisQInterval >= 0) mDNS_StopQuery_internal(m, &q->qAv4);
-    if (q->qAv6.ThisQInterval >= 0) mDNS_StopQuery_internal(m, &q->qAv6);
-    mDNS_Unlock(m);
-}
 
 mDNSexport mStatus mDNS_GetDomains(mDNS *const m, DNSQuestion *const question, mDNS_DomainType DomainType, const domainname *dom,
                                    const mDNSInterfaceID InterfaceID, mDNSQuestionCallback *Callback, void *Context)
 {
     question->InterfaceID      = InterfaceID;
     question->flags            = 0;
-    question->Target           = zeroAddr;
     question->qtype            = kDNSType_PTR;
     question->qclass           = kDNSClass_IN;
     question->LongLived        = mDNSfalse;
@@ -12318,18 +12490,15 @@ mDNSexport mStatus mDNS_GetDomains(mDNS *const m, DNSQuestion *const question, m
     question->ForceMCast       = mDNSfalse;
     question->ReturnIntermed   = mDNSfalse;
     question->SuppressUnusable = mDNSfalse;
-    question->SearchListIndex  = 0;
-    question->AppendSearchDomains = 0;
-    question->RetryWithSearchDomains = mDNSfalse;
+    question->AppendSearchDomains = mDNSfalse;
     question->TimeoutQuestion  = 0;
     question->WakeOnResolve    = 0;
-    question->UseBackgroundTrafficClass = mDNSfalse;
+    question->UseBackgroundTraffic = mDNSfalse;
     question->ValidationRequired = 0;
     question->ValidatingResponse = 0;
     question->ProxyQuestion    = 0;
-    question->qnameOrig        = mDNSNULL;
-    question->AnonInfo         = mDNSNULL;
     question->pid              = mDNSPlatformGetPID();
+    question->euid             = 0;
     question->QuestionCallback = Callback;
     question->QuestionContext  = Context;
     if (DomainType > mDNS_DomainTypeMax) return(mStatus_BadParamErr);
@@ -12433,60 +12602,105 @@ mDNSexport mStatus mDNS_Deregister(mDNS *const m, AuthRecord *const rr)
 
 // Circular reference: AdvertiseInterface references mDNS_HostNameCallback, which calls mDNS_SetFQDN, which call AdvertiseInterface
 mDNSlocal void mDNS_HostNameCallback(mDNS *const m, AuthRecord *const rr, mStatus result);
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+mDNSlocal void mDNS_RandomizedHostNameCallback(mDNS *m, AuthRecord *rr, mStatus result);
+#endif
 
-mDNSlocal NetworkInterfaceInfo *FindFirstAdvertisedInterface(mDNS *const m)
+mDNSlocal AuthRecord *GetInterfaceAddressRecord(NetworkInterfaceInfo *intf, mDNSBool forRandHostname)
+{
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+        return(forRandHostname ? &intf->RR_AddrRand : &intf->RR_A);
+#else
+        (void)forRandHostname; // Unused.
+        return(&intf->RR_A);
+#endif
+}
+
+mDNSlocal AuthRecord *GetFirstAddressRecordEx(const mDNS *const m, const mDNSBool forRandHostname)
 {
     NetworkInterfaceInfo *intf;
     for (intf = m->HostInterfaces; intf; intf = intf->next)
-        if (intf->Advertise) break;
-    return(intf);
+    {
+        if (!intf->Advertise) continue;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+        if (mDNSPlatformInterfaceIsAWDL(intf->InterfaceID)) continue;
+#endif
+        return(GetInterfaceAddressRecord(intf, forRandHostname));
+    }
+    return(mDNSNULL);
 }
+#define GetFirstAddressRecord(M)    GetFirstAddressRecordEx(M, mDNSfalse)
 
+// The parameter "set" here refers to the set of AuthRecords used to advertise this interface.
+// (It's a set of records, not a set of interfaces.)
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+mDNSlocal void AdvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set, mDNSBool useRandomizedHostname)
+#else
 mDNSlocal void AdvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set)
+#endif
 {
+    const domainname *hostname;
+    mDNSRecordCallback *hostnameCallback;
+    AuthRecord *addrAR;
+    AuthRecord *ptrAR;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    const mDNSBool interfaceIsAWDL = mDNSPlatformInterfaceIsAWDL(set->InterfaceID);
+#endif
+    mDNSu8 addrRecordType;
     char buffer[MAX_REVERSE_MAPPING_NAME];
-    NetworkInterfaceInfo *primary;
 
-    if (!set->McastTxRx)
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (interfaceIsAWDL || useRandomizedHostname)
     {
-        LogInfo("AdvertiseInterface: Returning, not multicast capable %s", set->ifname);
-        return;
+        hostname         = &m->RandomizedHostname;
+        hostnameCallback = mDNS_RandomizedHostNameCallback;
     }
-#if TARGET_OS_EMBEDDED
-    if (!m->AutoTargetServices)
+    else
+#endif
     {
-        LogInfo("AdvertiseInterface: Returning due to AutoTargetServices zero for %s", set->ifname);
-        return;
+        hostname         = &m->MulticastHostname;
+        hostnameCallback = mDNS_HostNameCallback;
     }
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (!interfaceIsAWDL && useRandomizedHostname)
+    {
+        addrAR = &set->RR_AddrRand;
+        ptrAR  = mDNSNULL;
+    }
+    else
+#endif
+    {
+        addrAR = &set->RR_A;
+        ptrAR  = &set->RR_PTR;
+    }
+    if (addrAR->resrec.RecordType != kDNSRecordTypeUnregistered) return;
+
+    addrRecordType = set->DirectLink ? kDNSRecordTypeKnownUnique : kDNSRecordTypeUnique;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (hostname == &m->RandomizedHostname) addrRecordType = kDNSRecordTypeKnownUnique;
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+        "AdvertiseInterface: Advertising " PUB_S " hostname on interface " PUB_S,
+        (hostname == &m->RandomizedHostname) ? "randomized" : "normal", set->ifname);
+#else
+    LogInfo("AdvertiseInterface: Advertising for ifname %s", set->ifname);
 #endif
 
-    primary = FindFirstAdvertisedInterface(m);
-    if (!primary) primary = set; // If no existing advertised interface, this new NetworkInterfaceInfo becomes our new primary
-
-    // If interface is marked as a direct link, we can assume the address record is unique
-    // and does not need to go through the probe phase of the probe/announce packet sequence.
-    mDNSu8 recordType = (set->DirectLink ? kDNSRecordTypeKnownUnique : kDNSRecordTypeUnique);
-
-    if (set->DirectLink)
-        LogInfo("AdvertiseInterface: Marking address record as kDNSRecordTypeKnownUnique for %s", set->ifname);
-
     // Send dynamic update for non-linklocal IPv4 Addresses
-    mDNS_SetupResourceRecord(&set->RR_A,     mDNSNULL, set->InterfaceID, kDNSType_A,     kHostNameTTL, recordType,      AuthRecordAny, mDNS_HostNameCallback, set);
-    mDNS_SetupResourceRecord(&set->RR_PTR,   mDNSNULL, set->InterfaceID, kDNSType_PTR,   kHostNameTTL, kDNSRecordTypeKnownUnique, AuthRecordAny, mDNSNULL, mDNSNULL);
-    mDNS_SetupResourceRecord(&set->RR_HINFO, mDNSNULL, set->InterfaceID, kDNSType_HINFO, kHostNameTTL, kDNSRecordTypeUnique,      AuthRecordAny, mDNSNULL, mDNSNULL);
+    mDNS_SetupResourceRecord(addrAR, mDNSNULL, set->InterfaceID, kDNSType_A, kHostNameTTL, addrRecordType, AuthRecordAny, hostnameCallback, set);
+    if (ptrAR) mDNS_SetupResourceRecord(ptrAR, mDNSNULL, set->InterfaceID, kDNSType_PTR, kHostNameTTL, kDNSRecordTypeKnownUnique, AuthRecordAny, mDNSNULL, mDNSNULL);
 
 #if ANSWER_REMOTE_HOSTNAME_QUERIES
-    set->RR_A.AllowRemoteQuery  = mDNStrue;
-    set->RR_PTR.AllowRemoteQuery  = mDNStrue;
-    set->RR_HINFO.AllowRemoteQuery  = mDNStrue;
+    addrAR->AllowRemoteQuery = mDNStrue;
+    if (ptrAR) ptrAR->AllowRemoteQuery = mDNStrue;
 #endif
     // 1. Set up Address record to map from host name ("foo.local.") to IP address
     // 2. Set up reverse-lookup PTR record to map from our address back to our host name
-    AssignDomainName(&set->RR_A.namestorage, &m->MulticastHostname);
+    AssignDomainName(&addrAR->namestorage, hostname);
     if (set->ip.type == mDNSAddrType_IPv4)
     {
-        set->RR_A.resrec.rrtype = kDNSType_A;
-        set->RR_A.resrec.rdata->u.ipv4 = set->ip.ip.v4;
+        addrAR->resrec.rrtype        = kDNSType_A;
+        addrAR->resrec.rdata->u.ipv4 = set->ip.ip.v4;
         // Note: This is reverse order compared to a normal dotted-decimal IP address, so we can't use our customary "%.4a" format code
         mDNS_snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d.in-addr.arpa.",
                       set->ip.ip.v4.b[3], set->ip.ip.v4.b[2], set->ip.ip.v4.b[1], set->ip.ip.v4.b[0]);
@@ -12494,8 +12708,8 @@ mDNSlocal void AdvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set)
     else if (set->ip.type == mDNSAddrType_IPv6)
     {
         int i;
-        set->RR_A.resrec.rrtype = kDNSType_AAAA;
-        set->RR_A.resrec.rdata->u.ipv6 = set->ip.ip.v6;
+        addrAR->resrec.rrtype        = kDNSType_AAAA;
+        addrAR->resrec.rdata->u.ipv6 = set->ip.ip.v6;
         for (i = 0; i < 16; i++)
         {
             static const char hexValues[] = "0123456789ABCDEF";
@@ -12507,97 +12721,117 @@ mDNSlocal void AdvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set)
         mDNS_snprintf(&buffer[64], sizeof(buffer)-64, "ip6.arpa.");
     }
 
-    MakeDomainNameFromDNSNameString(&set->RR_PTR.namestorage, buffer);
-    set->RR_PTR.AutoTarget = Target_AutoHost;   // Tell mDNS that the target of this PTR is to be kept in sync with our host name
-    set->RR_PTR.ForceMCast = mDNStrue;          // This PTR points to our dot-local name, so don't ever try to write it into a uDNS server
+    if (ptrAR)
+    {
+        MakeDomainNameFromDNSNameString(&ptrAR->namestorage, buffer);
+        ptrAR->AutoTarget = Target_AutoHost;    // Tell mDNS that the target of this PTR is to be kept in sync with our host name
+        ptrAR->ForceMCast = mDNStrue;           // This PTR points to our dot-local name, so don't ever try to write it into a uDNS server
+    }
 
-    set->RR_A.RRSet = &primary->RR_A;           // May refer to self
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    addrAR->RRSet = interfaceIsAWDL ? addrAR : GetFirstAddressRecordEx(m, useRandomizedHostname);
+#else
+    addrAR->RRSet = GetFirstAddressRecord(m);
+#endif
+    if (!addrAR->RRSet) addrAR->RRSet = addrAR;
+    mDNS_Register_internal(m, addrAR);
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG, "Initialized RRSet for " PRI_S, ARDisplayString(m, addrAR));
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG, "RRSet:                " PRI_S, ARDisplayString(m, addrAR->RRSet));
+    if (ptrAR) mDNS_Register_internal(m, ptrAR);
 
-    mDNS_Register_internal(m, &set->RR_A);
-    mDNS_Register_internal(m, &set->RR_PTR);
-
-#if APPLE_OSX_mDNSResponder
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
     // must be after the mDNS_Register_internal() calls so that records have complete rdata fields, etc
     D2D_start_advertising_interface(set);
-#endif // APPLE_OSX_mDNSResponder
+#endif
+}
 
-    if (!NO_HINFO && m->HIHardware.c[0] > 0 && m->HISoftware.c[0] > 0 && m->HIHardware.c[0] + m->HISoftware.c[0] <= 254)
+mDNSlocal void AdvertiseInterfaceIfNeeded(mDNS *const m, NetworkInterfaceInfo *set)
+{
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (mDNSPlatformInterfaceIsAWDL(set->InterfaceID))
     {
-        mDNSu8 *p = set->RR_HINFO.resrec.rdata->u.data;
-        AssignDomainName(&set->RR_HINFO.namestorage, &m->MulticastHostname);
-        set->RR_HINFO.DependentOn = &set->RR_A;
-        mDNSPlatformMemCopy(p, &m->HIHardware, 1 + (mDNSu32)m->HIHardware.c[0]);
-        p += 1 + (int)p[0];
-        mDNSPlatformMemCopy(p, &m->HISoftware, 1 + (mDNSu32)m->HISoftware.c[0]);
-        mDNS_Register_internal(m, &set->RR_HINFO);
+        if ((m->AutoTargetAWDLIncludedCount > 0) || (m->AutoTargetAWDLOnlyCount > 0))
+        {
+            AdvertiseInterface(m, set, mDNSfalse);
+        }
     }
     else
     {
-        debugf("Not creating HINFO record: platform support layer provided no information");
-        set->RR_HINFO.resrec.RecordType = kDNSRecordTypeUnregistered;
+        if (m->AutoTargetServices          > 0) AdvertiseInterface(m, set, mDNSfalse);
+        if (m->AutoTargetAWDLIncludedCount > 0) AdvertiseInterface(m, set, mDNStrue);
     }
+#else
+    if (m->AutoTargetServices > 0) AdvertiseInterface(m, set);
+#endif
 }
 
-mDNSlocal void DeadvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set)
+mDNSlocal void DeadvertiseInterface(mDNS *const m, NetworkInterfaceInfo *set, DeadvertiseFlags flags)
 {
-    NetworkInterfaceInfo *intf;
-
-    // If we still have address records referring to this one, update them
-    NetworkInterfaceInfo *primary = FindFirstAdvertisedInterface(m);
-    AuthRecord *A = primary ? &primary->RR_A : mDNSNULL;
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
-        if (intf->RR_A.RRSet == &set->RR_A)
-            intf->RR_A.RRSet = A;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    const mDNSBool interfaceIsAWDL = mDNSPlatformInterfaceIsAWDL(set->InterfaceID);
+#endif
 
     // Unregister these records.
     // When doing the mDNS_Exit processing, we first call DeadvertiseInterface for each interface, so by the time the platform
     // support layer gets to call mDNS_DeregisterInterface, the address and PTR records have already been deregistered for it.
     // Also, in the event of a name conflict, one or more of our records will have been forcibly deregistered.
     // To avoid unnecessary and misleading warning messages, we check the RecordType before calling mDNS_Deregister_internal().
-    if (set->RR_A.resrec.RecordType) mDNS_Deregister_internal(m, &set->RR_A,     mDNS_Dereg_normal);
-    if (set->RR_PTR.resrec.RecordType) mDNS_Deregister_internal(m, &set->RR_PTR,   mDNS_Dereg_normal);
-    if (set->RR_HINFO.resrec.RecordType) mDNS_Deregister_internal(m, &set->RR_HINFO, mDNS_Dereg_normal);
-
-#if APPLE_OSX_mDNSResponder
-    D2D_stop_advertising_interface(set);
-#endif // APPLE_OSX_mDNSResponder
-
-}
-
-mDNSlocal void AdvertiseAllInterfaceRecords(mDNS *const m)
-{
-    NetworkInterfaceInfo *intf;
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
-    {
-        if (intf->Advertise)
-        {
-            LogInfo("AdvertiseInterface: Advertising for ifname %s", intf->ifname);
-            AdvertiseInterface(m, intf);
-        }
-    }
-}
-
-mDNSlocal void DeadvertiseAllInterfaceRecords(mDNS *const m)
-{
-#if TARGET_OS_EMBEDDED
-    NetworkInterfaceInfo *intf;
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
-    {
-        if (intf->Advertise)
-        {
-            LogInfo("DeadvertiseInterface: Deadvertising for ifname %s", intf->ifname);
-            DeadvertiseInterface(m, intf);
-        }
-    }
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if ((!interfaceIsAWDL && (flags & kDeadvertiseFlag_NormalHostname)) ||
+        ( interfaceIsAWDL && (flags & kDeadvertiseFlag_RandHostname)))
 #else
-    (void) m; //unused
+    if (flags & kDeadvertiseFlag_NormalHostname)
 #endif
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+            "DeadvertiseInterface: Deadvertising " PUB_S " hostname on interface " PUB_S,
+            (flags & kDeadvertiseFlag_RandHostname) ? "randomized" : "normal", set->ifname);
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+        D2D_stop_advertising_interface(set);
+#endif
+        if (set->RR_A.resrec.RecordType)   mDNS_Deregister_internal(m, &set->RR_A,   mDNS_Dereg_normal);
+        if (set->RR_PTR.resrec.RecordType) mDNS_Deregister_internal(m, &set->RR_PTR, mDNS_Dereg_normal);
+    }
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (!interfaceIsAWDL && (flags & kDeadvertiseFlag_RandHostname))
+    {
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+            "DeadvertiseInterface: Deadvertising randomized hostname on interface " PUB_S, set->ifname);
+        AuthRecord *const ar = &set->RR_AddrRand;
+        if (ar->resrec.RecordType) mDNS_Deregister_internal(m, ar, mDNS_Dereg_normal);
+    }
+#endif
+}
+
+// Change target host name for record.  
+mDNSlocal void UpdateTargetHostName(mDNS *const m, AuthRecord *const rr)
+{
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+    // If this record was also registered with any D2D plugins, stop advertising
+    // the version with the old host name.
+    D2D_stop_advertising_record(rr);
+#endif
+
+    SetTargetToHostName(m, rr);
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, D2D)
+    // Advertise the record with the updated host name with the D2D plugins if appropriate.
+    D2D_start_advertising_record(rr);
+#endif
+}
+
+mDNSlocal void DeadvertiseAllInterfaceRecords(mDNS *const m, DeadvertiseFlags flags)
+{
+    NetworkInterfaceInfo *intf;
+    for (intf = m->HostInterfaces; intf; intf = intf->next)
+    {
+        if (intf->Advertise) DeadvertiseInterface(m, intf, flags);
+    }
 }
 
 mDNSexport void mDNS_SetFQDN(mDNS *const m)
 {
     domainname newmname;
-    NetworkInterfaceInfo *intf;
     AuthRecord *rr;
     newmname.c[0] = 0;
 
@@ -12610,19 +12844,13 @@ mDNSexport void mDNS_SetFQDN(mDNS *const m)
     else
     {
         AssignDomainName(&m->MulticastHostname, &newmname);
-
-        // 1. Stop advertising our address records on all interfaces
-        for (intf = m->HostInterfaces; intf; intf = intf->next)
-            if (intf->Advertise) DeadvertiseInterface(m, intf);
-
-        // 2. Start advertising our address records using the new name
-        for (intf = m->HostInterfaces; intf; intf = intf->next)
-            if (intf->Advertise) AdvertiseInterface(m, intf);
+        DeadvertiseAllInterfaceRecords(m, kDeadvertiseFlag_NormalHostname);
+        AdvertiseNecessaryInterfaceRecords(m);
     }
 
     // 3. Make sure that any AutoTarget SRV records (and the like) get updated
-    for (rr = m->ResourceRecords;  rr; rr=rr->next) if (rr->AutoTarget) SetTargetToHostName(m, rr);
-    for (rr = m->DuplicateRecords; rr; rr=rr->next) if (rr->AutoTarget) SetTargetToHostName(m, rr);
+    for (rr = m->ResourceRecords;  rr; rr=rr->next) if (rr->AutoTarget) UpdateTargetHostName(m, rr);
+    for (rr = m->DuplicateRecords; rr; rr=rr->next) if (rr->AutoTarget) UpdateTargetHostName(m, rr);
 
     mDNS_Unlock(m);
 }
@@ -12675,6 +12903,44 @@ mDNSlocal void mDNS_HostNameCallback(mDNS *const m, AuthRecord *const rr, mStatu
         LogMsg("mDNS_HostNameCallback: Unknown error %d for registration of record %s", result,  rr->resrec.name->c);
 }
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+mDNSlocal void mDNS_RandomizedHostNameCallback(mDNS *const m, AuthRecord *const addrRecord, const mStatus result)
+{
+    (void)addrRecord;   // Unused parameter
+
+    if (result == mStatus_NameConflict)
+    {
+        AuthRecord *rr;
+        domainlabel newUUIDLabel;
+
+        GetRandomUUIDLabel(&newUUIDLabel);
+        if (SameDomainLabel(newUUIDLabel.c, m->RandomizedHostname.c))
+        {
+            IncrementLabelSuffix(&newUUIDLabel, mDNSfalse);
+        }
+
+        mDNS_Lock(m);
+
+        m->RandomizedHostname.c[0] = 0;
+        AppendDomainLabel(&m->RandomizedHostname, &newUUIDLabel);
+        AppendLiteralLabelString(&m->RandomizedHostname, "local");
+
+        DeadvertiseAllInterfaceRecords(m, kDeadvertiseFlag_RandHostname);
+        AdvertiseNecessaryInterfaceRecords(m);
+        for (rr = m->ResourceRecords; rr; rr = rr->next)
+        {
+            if (rr->AutoTarget && AuthRecordIncludesOrIsAWDL(rr)) UpdateTargetHostName(m, rr);
+        }
+        for (rr = m->DuplicateRecords; rr; rr = rr->next)
+        {
+            if (rr->AutoTarget && AuthRecordIncludesOrIsAWDL(rr)) UpdateTargetHostName(m, rr);
+        }
+
+        mDNS_Unlock(m);
+    }
+}
+#endif
+
 mDNSlocal void UpdateInterfaceProtocols(mDNS *const m, NetworkInterfaceInfo *active)
 {
     NetworkInterfaceInfo *intf;
@@ -12711,7 +12977,7 @@ mDNSlocal void InitializeNetWakeState(mDNS *const m, NetworkInterfaceInfo *set)
     // be stopped during interface deregistration. We can't sanity check to see if the
     // question has been stopped or not before initializing it to -1 because we need to
     // initialize it to -1 the very first time.
-    
+
     set->NetWakeBrowse.ThisQInterval = -1;
     for (i=0; i<3; i++)
     {
@@ -12731,7 +12997,7 @@ mDNSexport void mDNS_ActivateNetWake_internal(mDNS *const m, NetworkInterfaceInf
     if (set->InterfaceActive)
     {
         LogSPS("ActivateNetWake for %s (%#a)", set->ifname, &set->ip);
-        mDNS_StartBrowse_internal(m, &set->NetWakeBrowse, &SleepProxyServiceType, &localdomain, mDNSNULL, set->InterfaceID, 0, mDNSfalse, mDNSfalse, m->SPSBrowseCallback, set);
+        mDNS_StartBrowse_internal(m, &set->NetWakeBrowse, &SleepProxyServiceType, &localdomain, set->InterfaceID, 0, mDNSfalse, mDNSfalse, m->SPSBrowseCallback, set);
     }
 }
 
@@ -12768,7 +13034,7 @@ mDNSexport void mDNS_DeactivateNetWake_internal(mDNS *const m, NetworkInterfaceI
     }
 }
 
-mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *set, mDNSBool flapping)
+mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *set, InterfaceActivationSpeed activationSpeed)
 {
     AuthRecord *rr;
     mDNSBool FirstOfType = mDNStrue;
@@ -12814,11 +13080,11 @@ mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *s
     set->next = mDNSNULL;
     *p = set;
 
-    if (set->Advertise)
-        AdvertiseInterface(m, set);
+    if (set->Advertise) AdvertiseInterfaceIfNeeded(m, set);
 
-    LogInfo("mDNS_RegisterInterface: InterfaceID %p %s (%#a) %s", set->InterfaceID, set->ifname, &set->ip,
-            set->InterfaceActive ?
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+            "mDNS_RegisterInterface: InterfaceID %u " PUB_S " (" PRI_IP_ADDR ") " PUB_S,
+            IIDPrintable(set->InterfaceID), set->ifname, &set->ip, set->InterfaceActive ?
             "not represented in list; marking active and retriggering queries" :
             "already represented in list; marking inactive for now");
 
@@ -12838,38 +13104,65 @@ mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *s
         // We don't want to do a probe, and then see a stale echo of an announcement we ourselves sent,
         // and think it's a conflicting answer to our probe.
         // In the case of a flapping interface, we pause for five seconds, and reduce the announcement count to one packet.
-        const mDNSs32 probedelay  = flapping ? mDNSPlatformOneSecond * 5 : mDNSPlatformOneSecond / 2;
-        const mDNSu8 numannounce = flapping ? (mDNSu8)1                 : InitialAnnounceCount;
-
-        // Use a small amount of randomness:
-        // In the case of a network administrator turning on an Ethernet hub so that all the
-        // connected machines establish link at exactly the same time, we don't want them all
-        // to go and hit the network with identical queries at exactly the same moment.
-        // We set a random delay of up to InitialQuestionInterval (1/3 second).
-        // We must *never* set m->SuppressSending to more than that (or set it repeatedly in a way
-        // that causes mDNSResponder to remain in a prolonged state of SuppressSending, because
-        // suppressing packet sending for more than about 1/3 second can cause protocol correctness
-        // to start to break down (e.g. we don't answer probes fast enough, and get name conflicts).
-        // See <rdar://problem/4073853> mDNS: m->SuppressSending set too enthusiastically
-        if (!m->SuppressSending) m->SuppressSending = m->timenow + (mDNSs32)mDNSRandom((mDNSu32)InitialQuestionInterval);
-
-        if (flapping)
+        mDNSs32 probedelay;
+        mDNSu8 numannounce;
+        switch (activationSpeed)
         {
-            LogMsg("mDNS_RegisterInterface: Frequent transitions for interface %s (%#a)", set->ifname, &set->ip);
-            m->mDNSStats.InterfaceUpFlap++;
+            case FastActivation:
+                probedelay = (mDNSs32)0;
+                numannounce = InitialAnnounceCount;
+                LogMsg("mDNS_RegisterInterface: Using fast activation for DirectLink interface %s (%#a)", set->ifname, &set->ip);
+                break;
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, SLOW_ACTIVATION)
+            case SlowActivation:
+                probedelay = mDNSPlatformOneSecond * 5;
+                numannounce = (mDNSu8)1;
+                LogMsg("mDNS_RegisterInterface: Frequent transitions for interface %s (%#a), doing slow activation", set->ifname, &set->ip);
+                m->mDNSStats.InterfaceUpFlap++;
+                break;
+#endif
+
+            case NormalActivation:
+            default:
+                probedelay = mDNSPlatformOneSecond / 2;
+                numannounce = InitialAnnounceCount;
+                break;
         }
 
         LogInfo("mDNS_RegisterInterface: %s (%#a) probedelay %d", set->ifname, &set->ip, probedelay);
-        if (m->SuppressProbes == 0 ||
-            m->SuppressProbes - NonZeroTime(m->timenow + probedelay) < 0)
-            m->SuppressProbes = NonZeroTime(m->timenow + probedelay);
+
+        // No probe or sending suppression on DirectLink type interfaces.
+        if (activationSpeed == FastActivation)
+        {
+            m->SuppressSending = 0;
+            m->SuppressProbes = 0;
+        }
+        else
+        {
+	        // Use a small amount of randomness:
+	        // In the case of a network administrator turning on an Ethernet hub so that all the
+	        // connected machines establish link at exactly the same time, we don't want them all
+	        // to go and hit the network with identical queries at exactly the same moment.
+	        // We set a random delay of up to InitialQuestionInterval (1/3 second).
+	        // We must *never* set m->SuppressSending to more than that (or set it repeatedly in a way
+	        // that causes mDNSResponder to remain in a prolonged state of SuppressSending, because
+	        // suppressing packet sending for more than about 1/3 second can cause protocol correctness
+	        // to start to break down (e.g. we don't answer probes fast enough, and get name conflicts).
+	        // See <rdar://problem/4073853> mDNS: m->SuppressSending set too enthusiastically
+            if (!m->SuppressSending) m->SuppressSending = m->timenow + (mDNSs32)mDNSRandom((mDNSu32)InitialQuestionInterval);
+
+            if (m->SuppressProbes == 0 ||
+                m->SuppressProbes - NonZeroTime(m->timenow + probedelay) < 0)
+                m->SuppressProbes = NonZeroTime(m->timenow + probedelay);
+        }
 
         // Include OWNER option in packets for 60 seconds after connecting to the network. Setting
         // it here also handles the wake up case as the network link comes UP after waking causing
         // us to reconnect to the network. If we do this as part of the wake up code, it is possible
         // that the network link comes UP after 60 seconds and we never set the OWNER option
         m->AnnounceOwner = NonZeroTime(m->timenow + 60 * mDNSPlatformOneSecond);
-        LogInfo("mDNS_RegisterInterface: Setting AnnounceOwner");
+        LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG, "mDNS_RegisterInterface: Setting AnnounceOwner");
 
         m->mDNSStats.InterfaceUp++;
         for (q = m->Questions; q; q=q->next)                                // Scan our list of questions
@@ -12878,27 +13171,24 @@ mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *s
             {
                 if (!q->InterfaceID || q->InterfaceID == set->InterfaceID)      // If non-specific Q, or Q on this specific interface,
                 {                                                               // then reactivate this question
+#if MDNSRESPONDER_SUPPORTS(APPLE, SLOW_ACTIVATION)
                     // If flapping, delay between first and second queries is nine seconds instead of one second
-                    mDNSBool dodelay = flapping && (q->FlappingInterface1 == set->InterfaceID || q->FlappingInterface2 == set->InterfaceID);
+                    mDNSBool dodelay = (activationSpeed == SlowActivation) && (q->FlappingInterface1 == set->InterfaceID || q->FlappingInterface2 == set->InterfaceID);
                     mDNSs32 initial  = dodelay ? InitialQuestionInterval * QuestionIntervalStep2 : InitialQuestionInterval;
-                    mDNSs32 qdelay   = dodelay ? mDNSPlatformOneSecond * 5 : 0;
-                    if (dodelay) LogInfo("No cache records expired for %##s (%s); okay to delay questions a little", q->qname.c, DNSTypeName(q->qtype));
+                    mDNSs32 qdelay   = dodelay ? kDefaultQueryDelayTimeForFlappingInterface : 0;
+                    if (dodelay) LogInfo("No cache records expired for %##s (%s); delaying questions by %d seconds", q->qname.c, DNSTypeName(q->qtype), qdelay);
+#else
+                    mDNSs32 initial  = InitialQuestionInterval;
+                    mDNSs32 qdelay   = 0;
+#endif
 
                     if (!q->ThisQInterval || q->ThisQInterval > initial)
                     {
-                        q->ThisQInterval = initial;
-
-#if mDNS_REQUEST_UNICAST_RESPONSE
-                        q->RequestUnicast = SET_QU_IN_FIRST_FOUR_QUERIES;
-#else   // mDNS_REQUEST_UNICAST_RESPONSE
-                        q->RequestUnicast = SET_QU_IN_FIRST_QUERY;
-#endif  // mDNS_REQUEST_UNICAST_RESPONSE
-
+                        q->ThisQInterval  = initial;
+                        q->RequestUnicast = kDefaultRequestUnicastCount;
                     }
                     q->LastQTime = m->timenow - q->ThisQInterval + qdelay;
                     q->RecentAnswerPkts = 0;
-                    // Change the salt
-                    ReInitAnonInfo(&q->AnonInfo, &q->qname);
                     SetNextQueryTime(m,q);
                 }
             }
@@ -12910,8 +13200,6 @@ mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *s
         {
             if (!rr->resrec.InterfaceID || rr->resrec.InterfaceID == set->InterfaceID)
             {
-                // Change the salt
-                ReInitAnonInfo(&rr->resrec.AnonInfo, rr->resrec.name);
                 mDNSCoreRestartRegistration(m, rr, numannounce);
             }
         }
@@ -12928,13 +13216,47 @@ mDNSexport mStatus mDNS_RegisterInterface(mDNS *const m, NetworkInterfaceInfo *s
     return(mStatus_NoError);
 }
 
+mDNSlocal void AdjustAddressRecordSetsEx(mDNS *const m, NetworkInterfaceInfo *removedIntf, mDNSBool forRandHostname)
+{
+    NetworkInterfaceInfo *intf;
+    const AuthRecord *oldAR;
+    AuthRecord *newAR;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    if (mDNSPlatformInterfaceIsAWDL(removedIntf->InterfaceID)) return;
+#endif
+    oldAR = GetInterfaceAddressRecord(removedIntf, forRandHostname);
+    newAR = GetFirstAddressRecordEx(m, forRandHostname);
+    for (intf = m->HostInterfaces; intf; intf = intf->next)
+    {
+        AuthRecord *ar;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+        if (mDNSPlatformInterfaceIsAWDL(intf->InterfaceID)) continue;
+#endif
+        ar = GetInterfaceAddressRecord(intf, forRandHostname);
+        if (ar->RRSet == oldAR)
+        {
+            ar->RRSet = newAR ? newAR : ar;
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG, "Changed RRSet for " PRI_S, ARDisplayString(m, ar));
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG, "New RRSet:        " PRI_S, ARDisplayString(m, ar->RRSet));
+        }
+    }
+}
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+#define AdjustAddressRecordSetsForRandHostname(M, REMOVED_INTF) AdjustAddressRecordSetsEx(M, REMOVED_INTF, mDNStrue)
+#endif
+#define AdjustAddressRecordSets(M, REMOVED_INTF)                AdjustAddressRecordSetsEx(M, REMOVED_INTF, mDNSfalse)
+
 // Note: mDNS_DeregisterInterface calls mDNS_Deregister_internal which can call a user callback, which may change
 // the record list and/or question list.
 // Any code walking either list must use the CurrentQuestion and/or CurrentRecord mechanism to protect against this.
-mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *set, mDNSBool flapping)
+mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *set, InterfaceActivationSpeed activationSpeed)
 {
+#if !MDNSRESPONDER_SUPPORTS(APPLE, SLOW_ACTIVATION)
+    (void)activationSpeed;   // Unused parameter
+#endif
     NetworkInterfaceInfo **p = &m->HostInterfaces;
     mDNSBool revalidate = mDNSfalse;
+    NetworkInterfaceInfo *intf;
 
     mDNS_Lock(m);
 
@@ -12951,18 +13273,17 @@ mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *se
     if (!set->InterfaceActive)
     {
         // If this interface not the active member of its set, update the v4/v6Available flags for the active member
-        NetworkInterfaceInfo *intf;
         for (intf = m->HostInterfaces; intf; intf = intf->next)
             if (intf->InterfaceActive && intf->InterfaceID == set->InterfaceID)
                 UpdateInterfaceProtocols(m, intf);
     }
     else
     {
-        NetworkInterfaceInfo *intf = FirstInterfaceForID(m, set->InterfaceID);
+        intf = FirstInterfaceForID(m, set->InterfaceID);
         if (intf)
         {
-            LogInfo("mDNS_DeregisterInterface: Another representative of InterfaceID %p %s (%#a) exists;"
-                    " making it active", set->InterfaceID, set->ifname, &set->ip);
+            LogInfo("mDNS_DeregisterInterface: Another representative of InterfaceID %d %s (%#a) exists;"
+                    " making it active", IIDPrintable(set->InterfaceID), set->ifname, &set->ip);
             if (intf->InterfaceActive)
                 LogMsg("mDNS_DeregisterInterface: ERROR intf->InterfaceActive already set for %s (%#a)", set->ifname, &set->ip);
             intf->InterfaceActive = mDNStrue;
@@ -12984,26 +13305,31 @@ mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *se
             CacheRecord *rr;
             DNSQuestion *q;
 
-            LogInfo("mDNS_DeregisterInterface: Last representative of InterfaceID %p %s (%#a) deregistered;"
-                    " marking questions etc. dormant", set->InterfaceID, set->ifname, &set->ip);
+            LogInfo("mDNS_DeregisterInterface: Last representative of InterfaceID %d %s (%#a) deregistered;"
+                    " marking questions etc. dormant", IIDPrintable(set->InterfaceID), set->ifname, &set->ip);
 
             m->mDNSStats.InterfaceDown++;
-
-            if (set->McastTxRx && flapping)
+ 
+#if MDNSRESPONDER_SUPPORTS(APPLE, SLOW_ACTIVATION)
+            if (set->McastTxRx && (activationSpeed == SlowActivation))
             {
-                LogMsg("DeregisterInterface: Frequent transitions for interface %s (%#a)", set->ifname, &set->ip);
+                LogMsg("mDNS_DeregisterInterface: Frequent transitions for interface %s (%#a)", set->ifname, &set->ip);
                 m->mDNSStats.InterfaceDownFlap++;
             }
+#endif
 
             // 1. Deactivate any questions specific to this interface, and tag appropriate questions
             // so that mDNS_RegisterInterface() knows how swiftly it needs to reactivate them
             for (q = m->Questions; q; q=q->next)
             {
-                if (q->InterfaceID == set->InterfaceID) q->ThisQInterval = 0;
-                if (!q->InterfaceID || q->InterfaceID == set->InterfaceID)
+                if (mDNSOpaque16IsZero(q->TargetQID))                   // Only deactivate multicast quesstions. (Unicast questions are stopped when/if the associated DNS server group goes away.)
                 {
-                    q->FlappingInterface2 = q->FlappingInterface1;
-                    q->FlappingInterface1 = set->InterfaceID;       // Keep history of the last two interfaces to go away
+                    if (q->InterfaceID == set->InterfaceID) q->ThisQInterval = 0;
+                    if (!q->InterfaceID || q->InterfaceID == set->InterfaceID)
+                    {
+                        q->FlappingInterface2 = q->FlappingInterface1;
+                        q->FlappingInterface1 = set->InterfaceID;       // Keep history of the last two interfaces to go away
+                    }
                 }
             }
 
@@ -13013,18 +13339,22 @@ mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *se
             {
                 if (rr->resrec.InterfaceID == set->InterfaceID)
                 {
+#if MDNSRESPONDER_SUPPORTS(APPLE, SLOW_ACTIVATION)
                     // If this interface is deemed flapping,
                     // postpone deleting the cache records in case the interface comes back again
-                    if (set->McastTxRx && flapping)
+                    if (set->McastTxRx && (activationSpeed == SlowActivation))
                     {
-                        // For a flapping interface we want these record to go away after 30 seconds
+                        // For a flapping interface we want these records to go away after 
+                        // kDefaultReconfirmTimeForFlappingInterface seconds if they are not reconfirmed.
                         mDNS_Reconfirm_internal(m, rr, kDefaultReconfirmTimeForFlappingInterface);
                         // We set UnansweredQueries = MaxUnansweredQueries so we don't waste time doing any queries for them --
                         // if the interface does come back, any relevant questions will be reactivated anyway
                         rr->UnansweredQueries = MaxUnansweredQueries;
                     }
                     else
+#endif
                     {
+                        rr->resrec.mortality = Mortality_Mortal;
                         mDNS_PurgeCacheResourceRecord(m, rr);
                     }
                 }
@@ -13032,8 +13362,16 @@ mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *se
         }
     }
 
+    // If we still have address records referring to this one, update them.
+    // This is safe, because this NetworkInterfaceInfo has already been unlinked from the list,
+    // so the call to AdjustAddressRecordSets*() won’t accidentally find it.
+    AdjustAddressRecordSets(m, set);
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    AdjustAddressRecordSetsForRandHostname(m, set);
+#endif
+
     // If we were advertising on this interface, deregister those address and reverse-lookup records now
-    if (set->Advertise) DeadvertiseInterface(m, set);
+    if (set->Advertise) DeadvertiseInterface(m, set, kDeadvertiseFlag_All);
 
     // If we have any cache records received on this interface that went away, then re-verify them.
     // In some versions of OS X the IPv6 address remains on an interface even when the interface is turned off,
@@ -13052,52 +13390,6 @@ mDNSexport void mDNS_DeregisterInterface(mDNS *const m, NetworkInterfaceInfo *se
     mDNS_UpdateAllowSleep(m);
 
     mDNS_Unlock(m);
-}
-
-mDNSlocal void SetAnonInfoSRS(ServiceRecordSet *sr, int NumSubTypes)
-{
-    int i, len;
-
-    if (!sr->AnonData)
-        return;
-
-    len = mDNSPlatformStrLen(sr->AnonData);
-    if (sr->RR_PTR.resrec.AnonInfo)
-    {
-        LogMsg("SetAnonInfoSRS: Freeing AnonInfo for PTR record %##s, should have been freed already", sr->RR_PTR.resrec.name->c);
-        FreeAnonInfo(sr->RR_PTR.resrec.AnonInfo);
-    }
-    sr->RR_PTR.resrec.AnonInfo = AllocateAnonInfo(sr->RR_PTR.resrec.name, sr->AnonData, len, mDNSNULL);
-    for (i=0; i<NumSubTypes; i++)
-    {
-        if (sr->SubTypes[i].resrec.AnonInfo)
-        {
-            LogMsg("SetAnonInfoSRS: Freeing AnonInfo for subtype record %##s, should have been freed already", sr->SubTypes[i].resrec.name->c);
-            FreeAnonInfo(sr->SubTypes[i].resrec.AnonInfo);
-        }
-        sr->SubTypes[i].resrec.AnonInfo = AllocateAnonInfo(sr->SubTypes[i].resrec.name, sr->AnonData, len, mDNSNULL);
-    }
-}
-
-mDNSlocal void ResetAnonInfoSRS(ServiceRecordSet *sr, int NumSubTypes)
-{
-    int i;
-
-    if (!sr->AnonData)
-        return;
-    if (sr->RR_PTR.resrec.AnonInfo)
-    {
-        FreeAnonInfo(sr->RR_PTR.resrec.AnonInfo);
-        sr->RR_PTR.resrec.AnonInfo = mDNSNULL;
-    }
-    for (i=0; i<NumSubTypes; i++)
-    {
-        if (sr->SubTypes[i].resrec.AnonInfo)
-        {
-            FreeAnonInfo(sr->SubTypes[i].resrec.AnonInfo);
-            sr->SubTypes[i].resrec.AnonInfo = mDNSNULL;
-        }
-    }
 }
 
 mDNSlocal void ServiceCallback(mDNS *const m, AuthRecord *const rr, mStatus result)
@@ -13145,7 +13437,6 @@ mDNSlocal void ServiceCallback(mDNS *const m, AuthRecord *const rr, mStatus resu
             if (e->r.resrec.RecordType != kDNSRecordTypeUnregistered) return;
             e = e->next;
         }
-        ResetAnonInfoSRS(sr, sr->NumSubTypes);
 
         // If this ServiceRecordSet was forcibly deregistered, and now its memory is ready for reuse,
         // then we can now report the NameConflict to the client
@@ -13168,20 +13459,21 @@ mDNSlocal void NSSCallback(mDNS *const m, AuthRecord *const rr, mStatus result)
 }
 
 
+// Derive AuthRecType from the kDNSServiceFlags* values.
 mDNSlocal AuthRecType setAuthRecType(mDNSInterfaceID InterfaceID, mDNSu32 flags)
 {
     AuthRecType artype;
 
     if (InterfaceID == mDNSInterface_LocalOnly)
         artype = AuthRecordLocalOnly;
-    else if (InterfaceID == mDNSInterface_P2P)
+    else if (InterfaceID == mDNSInterface_P2P || InterfaceID == mDNSInterface_BLE)
         artype = AuthRecordP2P;
-    else if ((InterfaceID == mDNSInterface_Any) && (flags & coreFlagIncludeP2P)
-            && (flags & coreFlagIncludeAWDL))
+    else if ((InterfaceID == mDNSInterface_Any) && (flags & kDNSServiceFlagsIncludeP2P)
+            && (flags & kDNSServiceFlagsIncludeAWDL))
         artype = AuthRecordAnyIncludeAWDLandP2P;
-    else if ((InterfaceID == mDNSInterface_Any) && (flags & coreFlagIncludeP2P))
+    else if ((InterfaceID == mDNSInterface_Any) && (flags & kDNSServiceFlagsIncludeP2P))
         artype = AuthRecordAnyIncludeP2P;
-    else if ((InterfaceID == mDNSInterface_Any) && (flags & coreFlagIncludeAWDL))
+    else if ((InterfaceID == mDNSInterface_Any) && (flags & kDNSServiceFlagsIncludeAWDL))
         artype = AuthRecordAnyIncludeAWDL;
     else
         artype = AuthRecordAny;
@@ -13200,15 +13492,14 @@ mDNSlocal AuthRecType setAuthRecType(mDNSInterfaceID InterfaceID, mDNSu32 flags)
 // If the optional target host parameter is set, then the storage it points to must remain valid for the lifetime of the service registration
 mDNSexport mStatus mDNS_RegisterService(mDNS *const m, ServiceRecordSet *sr,
                                         const domainlabel *const name, const domainname *const type, const domainname *const domain,
-                                        const domainname *const host, mDNSIPPort port, const mDNSu8 txtinfo[], mDNSu16 txtlen,
+                                        const domainname *const host, mDNSIPPort port, RData *const txtrdata, const mDNSu8 txtinfo[], mDNSu16 txtlen,
                                         AuthRecord *SubTypes, mDNSu32 NumSubTypes,
                                         mDNSInterfaceID InterfaceID, mDNSServiceCallback Callback, void *Context, mDNSu32 flags)
 {
     mStatus err;
     mDNSu32 i;
-    mDNSu32 hostTTL;
     AuthRecType artype;
-    mDNSu8 recordType = (flags & coreFlagKnownUnique) ? kDNSRecordTypeKnownUnique : kDNSRecordTypeUnique;
+    mDNSu8 recordType = (flags & kDNSServiceFlagsKnownUnique) ? kDNSRecordTypeKnownUnique : kDNSRecordTypeUnique;
 
     sr->ServiceCallback = Callback;
     sr->ServiceContext  = Context;
@@ -13226,25 +13517,20 @@ mDNSexport mStatus mDNS_RegisterService(mDNS *const m, ServiceRecordSet *sr,
     mDNS_SetupResourceRecord(&sr->RR_ADV, mDNSNULL, InterfaceID, kDNSType_PTR, kStandardTTL, kDNSRecordTypeAdvisory, artype, ServiceCallback, sr);
     mDNS_SetupResourceRecord(&sr->RR_PTR, mDNSNULL, InterfaceID, kDNSType_PTR, kStandardTTL, kDNSRecordTypeShared,   artype, ServiceCallback, sr);
 
-    if (flags & coreFlagWakeOnly)
+    if (flags & kDNSServiceFlagsWakeOnlyService)
     {
         sr->RR_PTR.AuthFlags = AuthFlagsWakeOnly;
     }
 
-    if (SameDomainName(type, (const domainname *) "\x4" "_ubd" "\x4" "_tcp"))
-        hostTTL = kHostNameSmallTTL;
-    else
-        hostTTL = kHostNameTTL;
-
-    mDNS_SetupResourceRecord(&sr->RR_SRV, mDNSNULL, InterfaceID, kDNSType_SRV, hostTTL, recordType, artype, ServiceCallback, sr);
-    mDNS_SetupResourceRecord(&sr->RR_TXT, mDNSNULL, InterfaceID, kDNSType_TXT, kStandardTTL, kDNSRecordTypeUnique, artype, ServiceCallback, sr);
+    mDNS_SetupResourceRecord(&sr->RR_SRV, mDNSNULL, InterfaceID, kDNSType_SRV, kHostNameTTL, recordType, artype, ServiceCallback, sr);
+    mDNS_SetupResourceRecord(&sr->RR_TXT, txtrdata, InterfaceID, kDNSType_TXT, kStandardTTL, recordType, artype, ServiceCallback, sr);
 
     // If port number is zero, that means the client is really trying to do a RegisterNoSuchService
     if (mDNSIPPortIsZero(port))
         return(mDNS_RegisterNoSuchService(m, &sr->RR_SRV, name, type, domain, mDNSNULL, InterfaceID, NSSCallback, sr, flags));
 
-    // If the client is registering an oversized TXT record,
-    // it is the client's responsibility to alloate a ServiceRecordSet structure that is large enough for it
+    // If the caller is registering an oversized TXT record,
+    // it is the caller's responsibility to allocate a ServiceRecordSet structure that is large enough for it
     if (sr->RR_TXT.resrec.rdata->MaxRDLength < txtlen)
         sr->RR_TXT.resrec.rdata->MaxRDLength = txtlen;
 
@@ -13282,8 +13568,6 @@ mDNSexport mStatus mDNS_RegisterService(mDNS *const m, ServiceRecordSet *sr,
         sr->SubTypes[i].Additional1 = &sr->RR_SRV;
         sr->SubTypes[i].Additional2 = &sr->RR_TXT;
     }
-    
-    SetAnonInfoSRS(sr, NumSubTypes);
 
     // 3. Set up the SRV record rdata.
     sr->RR_SRV.resrec.rdata->u.srv.priority = 0;
@@ -13342,6 +13626,7 @@ mDNSexport mStatus mDNS_AddRecordToService(mDNS *const m, ServiceRecordSet *sr,
     mStatus status;
     AuthRecType artype;
     mDNSInterfaceID InterfaceID = sr->RR_PTR.resrec.InterfaceID;
+    ResourceRecord *rr;
 
     artype = setAuthRecType(InterfaceID, flags);
 
@@ -13351,10 +13636,39 @@ mDNSexport mStatus mDNS_AddRecordToService(mDNS *const m, ServiceRecordSet *sr,
     AssignDomainName(&extra->r.namestorage, sr->RR_SRV.resrec.name);
 
     mDNS_Lock(m);
+    rr = mDNSNULL;
+    if (extra->r.resrec.rrtype == kDNSType_TXT)
+    {
+        if (sr->RR_TXT.resrec.RecordType & kDNSRecordTypeUniqueMask) rr = &sr->RR_TXT.resrec;
+    }
+    else if (extra->r.resrec.rrtype == kDNSType_SRV)
+    {
+        if (sr->RR_SRV.resrec.RecordType & kDNSRecordTypeUniqueMask) rr = &sr->RR_SRV.resrec;
+    }
+
+    if (!rr)
+    {
+        ExtraResourceRecord *srExtra;
+
+        for (srExtra = sr->Extras; srExtra; srExtra = srExtra->next)
+        {
+            if ((srExtra->r.resrec.rrtype == extra->r.resrec.rrtype) && (srExtra->r.resrec.RecordType & kDNSRecordTypeUniqueMask))
+            {
+                rr = &srExtra->r.resrec;
+                break;
+            }
+        }
+    }
+
+    if (rr && (extra->r.resrec.rroriginalttl != rr->rroriginalttl))
+    {
+        LogMsg("mDNS_AddRecordToService: Correcting TTL from %4d to %4d for %s",
+            extra->r.resrec.rroriginalttl, rr->rroriginalttl, RRDisplayString(m, &extra->r.resrec));
+        extra->r.resrec.rroriginalttl = rr->rroriginalttl;
+    }
+
     e = &sr->Extras;
     while (*e) e = &(*e)->next;
-
-    if (ttl == 0) ttl = kStandardTTL;
 
     extra->r.DependentOn = &sr->RR_SRV;
 
@@ -13416,8 +13730,13 @@ mDNSexport mStatus mDNS_RenameAndReregisterService(mDNS *const m, ServiceRecordS
         debugf("%##s service renamed from \"%#s\" to \"%#s\"", type.c, name1.c, newname->c);
     else debugf("%##s service (domain %##s) renamed from \"%#s\" to \"%#s\"",type.c, domain.c, name1.c, newname->c);
 
+    // If there's a pending TXT record update at this point, which can happen if a DNSServiceUpdateRecord() call was made
+    // after the TXT record's deregistration, execute it now, otherwise it will be lost during the service re-registration.
+    if (sr->RR_TXT.NewRData) CompleteRDataUpdate(m, &sr->RR_TXT);
     err = mDNS_RegisterService(m, sr, newname, &type, &domain,
-                               host, sr->RR_SRV.resrec.rdata->u.srv.port, sr->RR_TXT.resrec.rdata->u.txt.c, sr->RR_TXT.resrec.rdlength,
+                               host, sr->RR_SRV.resrec.rdata->u.srv.port,
+                               (sr->RR_TXT.resrec.rdata != &sr->RR_TXT.rdatastorage) ? sr->RR_TXT.resrec.rdata : mDNSNULL,
+                               sr->RR_TXT.resrec.rdata->u.txt.c, sr->RR_TXT.resrec.rdlength,
                                sr->SubTypes, sr->NumSubTypes,
                                sr->RR_PTR.resrec.InterfaceID, sr->ServiceCallback, sr->ServiceContext, sr->flags);
 
@@ -13476,7 +13795,6 @@ mDNSexport mStatus mDNS_DeregisterService_drt(mDNS *const m, ServiceRecordSet *s
         // SRV, TXT, or Extra records could have already been automatically deregistered, and that's okay
         mDNS_Deregister_internal(m, &sr->RR_SRV, mDNS_Dereg_repeat);
         mDNS_Deregister_internal(m, &sr->RR_TXT, mDNS_Dereg_repeat);
-
         mDNS_Deregister_internal(m, &sr->RR_ADV, drt);
 
         // We deregister all of the extra records, but we leave the sr->Extras list intact
@@ -13528,7 +13846,7 @@ mDNSexport mStatus mDNS_AdvertiseDomains(mDNS *const m, AuthRecord *rr,
 
     if (InterfaceID == mDNSInterface_LocalOnly)
         artype = AuthRecordLocalOnly;
-    else if (InterfaceID == mDNSInterface_P2P)
+    else if (InterfaceID == mDNSInterface_P2P || InterfaceID == mDNSInterface_BLE)
         artype = AuthRecordP2P;
     else
         artype = AuthRecordAny;
@@ -13637,8 +13955,9 @@ mDNSlocal void mDNSCoreReceiveRawARP(mDNS *const m, const ARP_EthIP *const arp, 
                 const char *const msg = mDNSSameEthAddress(&arp->sha, &rr->WakeUp.IMAC) ? msg1 :
                                         (rr->AnnounceCount == InitialAnnounceCount)     ? msg2 :
                                         mDNSSameEthAddress(&arp->sha, &intf->MAC)       ? msg3 : msg4;
-                LogSPS("%-7s %s %.6a %.4a for %.4a -- H-MAC %.6a I-MAC %.6a %s",
-                       intf->ifname, msg, &arp->sha, &arp->spa, &arp->tpa, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
+                LogMsg("Arp %-7s %s %.6a %.4a for %.4a -- H-MAC %.6a I-MAC %.6a %s",
+                       intf->ifname, msg, arp->sha.b, arp->spa.b, arp->tpa.b,
+                       &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
                 if (msg == msg1)
                 {
                     if ( rr->ProbeRestartCount < MAX_PROBE_RESTARTS)
@@ -13648,11 +13967,11 @@ mDNSlocal void mDNSCoreReceiveRawARP(mDNS *const m, const ARP_EthIP *const arp, 
                 }
                 else if (msg == msg3)
                 {
-                    mDNSPlatformSetLocalAddressCacheEntry(m, &rr->AddressProxy, &rr->WakeUp.IMAC, InterfaceID);
+                    mDNSPlatformSetLocalAddressCacheEntry(&rr->AddressProxy, &rr->WakeUp.IMAC, InterfaceID);
                 }
                 else if (msg == msg4)
                 {
-                    SendARP(m, 2, rr, &arp->tpa, &arp->sha, &arp->spa, &arp->sha);
+                    SendARP(m, 2, rr, (mDNSv4Addr *)arp->tpa.b, &arp->sha, (mDNSv4Addr *)arp->spa.b, &arp->sha);
                 }
             }
     }
@@ -13666,7 +13985,7 @@ mDNSlocal void mDNSCoreReceiveRawARP(mDNS *const m, const ARP_EthIP *const arp, 
     //   If the sender hardware address is the original owner this is benign, so we just suppress our own proxy answering for a while longer.
     //   If the sender hardware address is *not* the original owner, then this is a conflict, and we need to wake the sleeping machine to handle it.
     if (mDNSSameEthAddress(&arp->sha, &intf->MAC))
-        debugf("ARP from self for %.4a", &arp->tpa);
+        debugf("ARP from self for %.4a", arp->tpa.b);
     else
     {
         if (!mDNSSameIPv4Address(arp->spa, zerov4Addr))
@@ -13676,22 +13995,22 @@ mDNSlocal void mDNSCoreReceiveRawARP(mDNS *const m, const ARP_EthIP *const arp, 
                 {
                     if (mDNSSameEthAddress(&zeroEthAddr, &rr->WakeUp.HMAC))
                     {
-                        LogSPS("%-7s ARP from %.6a %.4a for %.4a -- Invalid H-MAC %.6a I-MAC %.6a %s", intf->ifname,
-                                &arp->sha, &arp->spa, &arp->tpa, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
+                        LogMsg("%-7s ARP from %.6a %.4a for %.4a -- Invalid H-MAC %.6a I-MAC %.6a %s", intf->ifname,
+                                arp->sha.b, arp->spa.b, arp->tpa.b, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
                     }
                     else
                     {
                         RestartARPProbing(m, rr);
                         if (mDNSSameEthAddress(&arp->sha, &rr->WakeUp.IMAC))
                         {
-                            LogSPS("%-7s ARP %s from owner %.6a %.4a for %-15.4a -- re-starting probing for %s", intf->ifname,
+                            LogMsg("%-7s ARP %s from owner %.6a %.4a for %-15.4a -- re-starting probing for %s", intf->ifname,
                                     mDNSSameIPv4Address(arp->spa, arp->tpa) ? "Announcement " : mDNSSameOpaque16(arp->op, ARP_op_request) ? "Request      " : "Response     ",
-                                    &arp->sha, &arp->spa, &arp->tpa, ARDisplayString(m, rr));
+                                    arp->sha.b, arp->spa.b, arp->tpa.b, ARDisplayString(m, rr));
                         }
                         else
                         {
                             LogMsg("%-7s Conflicting ARP from %.6a %.4a for %.4a -- waking H-MAC %.6a I-MAC %.6a %s", intf->ifname,
-                                    &arp->sha, &arp->spa, &arp->tpa, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
+                                    arp->sha.b, arp->spa.b, arp->tpa.b, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
                             ScheduleWakeup(m, rr->resrec.InterfaceID, &rr->WakeUp.HMAC);
                         }
                     }
@@ -13740,10 +14059,10 @@ mDNSlocal void mDNSCoreReceiveRawND(mDNS *const m, const mDNSEthAddr *const sha,
                 static const char msg3[] = "Creating Local NDP Cache entry  ";
                 static const char msg4[] = "Answering NDP Request from      ";
                 static const char msg5[] = "Answering NDP Probe   from      ";
-                const char *const msg = sha && mDNSSameEthAddress(sha, &rr->WakeUp.IMAC) ? msg1 :
-                                        (rr->AnnounceCount == InitialAnnounceCount)      ? msg2 :
-                                        sha && mDNSSameEthAddress(sha, &intf->MAC)       ? msg3 :
-                                        spa && mDNSIPv6AddressIsZero(*spa)               ? msg4 : msg5;
+                const char *const msg = mDNSSameEthAddress(sha, &rr->WakeUp.IMAC)   ? msg1 :
+                                        (rr->AnnounceCount == InitialAnnounceCount) ? msg2 :
+                                        mDNSSameEthAddress(sha, &intf->MAC)         ? msg3 :
+                                        mDNSIPv6AddressIsZero(*spa)                 ? msg4 : msg5;
                 LogSPS("%-7s %s %.6a %.16a for %.16a -- H-MAC %.6a I-MAC %.6a %s",
                        intf->ifname, msg, sha, spa, &ndp->target, &rr->WakeUp.HMAC, &rr->WakeUp.IMAC, ARDisplayString(m, rr));
                 if (msg == msg1)
@@ -13754,10 +14073,10 @@ mDNSlocal void mDNSCoreReceiveRawND(mDNS *const m, const mDNSEthAddr *const sha,
                         LogSPS("Reached maximum number of restarts for probing - %s", ARDisplayString(m,rr));
                 }
                 else if (msg == msg3)
-                    mDNSPlatformSetLocalAddressCacheEntry(m, &rr->AddressProxy, &rr->WakeUp.IMAC, InterfaceID);
-                else if (msg == msg4) 
+                    mDNSPlatformSetLocalAddressCacheEntry(&rr->AddressProxy, &rr->WakeUp.IMAC, InterfaceID);
+                else if (msg == msg4)
                     SendNDP(m, NDP_Adv, NDP_Solicited, rr, &ndp->target, mDNSNULL, spa, sha);
-                else if (msg == msg5) 
+                else if (msg == msg5)
                     SendNDP(m, NDP_Adv, 0, rr, &ndp->target, mDNSNULL, &AllHosts_v6, &AllHosts_v6_Eth);
             }
     }
@@ -14009,17 +14328,19 @@ mDNSexport void mDNSCoreReceiveRawPacket(mDNS *const m, const mDNSu8 *const p, c
     else if (end >= p+34 && mDNSSameOpaque16(eth->ethertype, Ethertype_IPv4) && (pkt->v4.flagsfrags.b[0] & 0x1F) == 0 && pkt->v4.flagsfrags.b[1] == 0)
     {
         const mDNSu8 *const trans = p + 14 + (pkt->v4.vlen & 0xF) * 4;
-        debugf("Got IPv4 %02X from %.4a to %.4a", pkt->v4.protocol, &pkt->v4.src, &pkt->v4.dst);
+        const mDNSu8 * transEnd = p + 14 + mDNSVal16(pkt->v4.totlen);
+        if (transEnd > end) transEnd = end;
+        debugf("Got IPv4 %02X from %.4a to %.4a", pkt->v4.protocol, &pkt->v4.src.b, &pkt->v4.dst.b);
         src.type = mDNSAddrType_IPv4; src.ip.v4 = pkt->v4.src;
         dst.type = mDNSAddrType_IPv4; dst.ip.v4 = pkt->v4.dst;
-        if (end >= trans + RequiredCapLen(pkt->v4.protocol))
-            mDNSCoreReceiveRawTransportPacket(m, &eth->src, &src, &dst, pkt->v4.protocol, p, (TransportLayerPacket*)trans, end, InterfaceID, 0);
+        if (transEnd >= trans + RequiredCapLen(pkt->v4.protocol))
+            mDNSCoreReceiveRawTransportPacket(m, &eth->src, &src, &dst, pkt->v4.protocol, p, (TransportLayerPacket*)trans, transEnd, InterfaceID, 0);
     }
     // Is IPv6? Length must be at least 14 + 28 = 42 bytes
     else if (end >= p+54 && mDNSSameOpaque16(eth->ethertype, Ethertype_IPv6))
     {
         const mDNSu8 *const trans = p + 54;
-        debugf("Got IPv6  %02X from %.16a to %.16a", pkt->v6.pro, &pkt->v6.src, &pkt->v6.dst);
+        debugf("Got IPv6  %02X from %.16a to %.16a", pkt->v6.pro, &pkt->v6.src.b, &pkt->v6.dst.b);
         src.type = mDNSAddrType_IPv6; src.ip.v6 = pkt->v6.src;
         dst.type = mDNSAddrType_IPv6; dst.ip.v6 = pkt->v6.dst;
         if (end >= trans + RequiredCapLen(pkt->v6.pro))
@@ -14053,6 +14374,7 @@ mDNSlocal void SleepProxyServerCallback(mDNS *const m, ServiceRecordSet *const s
                 mDNS_RegisterService(m, srs,
                                      &name, &SleepProxyServiceType, &localdomain,
                                      mDNSNULL, m->SPSSocket->port, // Host, port
+                                     mDNSNULL,
                                      (mDNSu8 *)"", 1,           // TXT data, length
                                      mDNSNULL, 0,               // Subtypes (none)
                                      mDNSInterface_Any,         // Interface ID
@@ -14091,7 +14413,7 @@ mDNSexport void mDNSCoreBeSleepProxyServer_internal(mDNS *const m, mDNSu8 sps, m
     {
         if (!m->SPSSocket)
         {
-            m->SPSSocket = mDNSPlatformUDPSocket(m, zeroIPPort);
+            m->SPSSocket = mDNSPlatformUDPSocket(zeroIPPort);
             if (!m->SPSSocket) { LogMsg("mDNSCoreBeSleepProxyServer: Failed to allocate SPSSocket"); goto fail; }
         }
 #ifndef SPC_DISABLED
@@ -14133,9 +14455,9 @@ mDNSexport void mDNS_GrowCache(mDNS *const m, CacheEntity *storage, mDNSu32 numr
     mDNS_Unlock(m);
 }
 
-mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
-                             CacheEntity *rrcachestorage, mDNSu32 rrcachesize,
-                             mDNSBool AdvertiseLocalAddresses, mDNSCallback *Callback, void *Context)
+mDNSlocal mStatus mDNS_InitStorage(mDNS *const m, mDNS_PlatformSupport *const p,
+                                   CacheEntity *rrcachestorage, mDNSu32 rrcachesize,
+                                   mDNSBool AdvertiseLocalAddresses, mDNSCallback *Callback, void *Context)
 {
     mDNSu32 slot;
     mDNSs32 timenow;
@@ -14143,7 +14465,9 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
 
     if (!rrcachestorage) rrcachesize = 0;
 
+    m->next_request_id               = 1;
     m->p                             = p;
+    m->NetworkChanged                = 0;
     m->CanReceiveUnicastOn5353       = mDNSfalse; // Assume we can't receive unicasts on 5353, unless platform layer tells us otherwise
     m->AdvertiseLocalAddresses       = AdvertiseLocalAddresses;
     m->DivertMulticastAdvertisements = mDNSfalse;
@@ -14154,7 +14478,6 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->MainCallback                  = Callback;
     m->MainContext                   = Context;
     m->rec.r.resrec.RecordType       = 0;
-    m->rec.r.resrec.AnonInfo         = mDNSNULL;
 
     // For debugging: To catch and report locking failures
     m->mDNS_busy               = 0;
@@ -14174,14 +14497,24 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->timenow_last            = timenow;
     m->NextScheduledEvent      = timenow;
     m->SuppressSending         = timenow;
-    m->NextCacheCheck          = timenow + 0x78000000;
-    m->NextScheduledQuery      = timenow + 0x78000000;
-    m->NextScheduledProbe      = timenow + 0x78000000;
-    m->NextScheduledResponse   = timenow + 0x78000000;
-    m->NextScheduledNATOp      = timenow + 0x78000000;
-    m->NextScheduledSPS        = timenow + 0x78000000;
-    m->NextScheduledKA         = timenow + 0x78000000;
-    m->NextScheduledStopTime   = timenow + 0x78000000;
+    m->NextCacheCheck          = timenow + FutureTime;
+    m->NextScheduledQuery      = timenow + FutureTime;
+    m->NextScheduledProbe      = timenow + FutureTime;
+    m->NextScheduledResponse   = timenow + FutureTime;
+    m->NextScheduledNATOp      = timenow + FutureTime;
+    m->NextScheduledSPS        = timenow + FutureTime;
+    m->NextScheduledKA         = timenow + FutureTime;
+    m->NextScheduledStopTime   = timenow + FutureTime;
+    m->NextBLEServiceTime      = 0;    // zero indicates inactive
+
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    m->NextBonjourDisableTime  = 0; // Timer active when non zero.
+    m->BonjourEnabled          = 0; // Set when Bonjour on Demand is enabled and Bonjour is currently enabled.  
+#endif
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+    m->NextSuspiciousTimeout   = 0;
+#endif
+
     m->RandomQueryDelay        = 0;
     m->RandomReconfirmDelay    = 0;
     m->PktNum                  = 0;
@@ -14195,9 +14528,6 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->SleepLimit              = 0;
 
 #if APPLE_OSX_mDNSResponder
-    m->StatStartTime           = mDNSPlatformUTC();
-    m->NextStatLogTime         = m->StatStartTime + kDefaultNextStatsticsLogTime;
-    m->ActiveStatTime          = 0;
     m->UnicastPacketsSent      = 0;
     m->MulticastPacketsSent    = 0;
     m->RemoteSubnet            = 0;
@@ -14220,7 +14550,7 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     for (slot = 0; slot < CACHE_HASH_SLOTS; slot++)
     {
         m->rrcache_hash[slot]      = mDNSNULL;
-        m->rrcache_nextcheck[slot] = timenow + 0x78000000;;
+        m->rrcache_nextcheck[slot] = timenow + FutureTime;;
     }
 
     mDNS_GrowCache_internal(m, rrcachestorage, rrcachesize);
@@ -14233,6 +14563,9 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->hostlabel.c[0]          = 0;
     m->nicelabel.c[0]          = 0;
     m->MulticastHostname.c[0]  = 0;
+#if MDNSRESPONDER_SUPPORTS(APPLE, RANDOM_AWDL_HOSTNAME)
+    m->RandomizedHostname.c[0] = 0;
+#endif
     m->HIHardware.c[0]         = 0;
     m->HISoftware.c[0]         = 0;
     m->ResourceRecords         = mDNSNULL;
@@ -14246,8 +14579,8 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->SuppressProbes          = 0;
 
 #ifndef UNICAST_DISABLED
-    m->NextuDNSEvent            = timenow + 0x78000000;
-    m->NextSRVUpdate            = timenow + 0x78000000;
+    m->NextuDNSEvent            = timenow + FutureTime;
+    m->NextSRVUpdate            = timenow + FutureTime;
 
     m->DNSServers               = mDNSNULL;
 
@@ -14261,25 +14594,23 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->StaticHostname.c[0]      = 0;
     m->FQDN.c[0]                = 0;
     m->Hostnames                = mDNSNULL;
-    m->AutoTunnelNAT.clientContext = mDNSNULL;
 
     m->WABBrowseQueriesCount    = 0;
     m->WABLBrowseQueriesCount   = 0;
     m->WABRegQueriesCount       = 0;
-#if !TARGET_OS_EMBEDDED
-    m->mDNSOppCaching           = mDNStrue;
-#else
-    m->mDNSOppCaching           = mDNSfalse;
-#endif
     m->AutoTargetServices       = 0;
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, BONJOUR_ON_DEMAND)
+    m->NumAllInterfaceRecords   = 0;
+    m->NumAllInterfaceQuestions = 0;
+#endif
     // NAT traversal fields
     m->LLQNAT.clientCallback    = mDNSNULL;
     m->LLQNAT.clientContext     = mDNSNULL;
     m->NATTraversals            = mDNSNULL;
     m->CurrentNATTraversal      = mDNSNULL;
     m->retryIntervalGetAddr     = 0;    // delta between time sent and retry
-    m->retryGetAddr             = timenow + 0x78000000; // absolute time when we retry
+    m->retryGetAddr             = timenow + FutureTime; // absolute time when we retry
     m->ExtAddress               = zerov4Addr;
     m->PCPNonce[0]              = mDNSRandom(-1);
     m->PCPNonce[1]              = mDNSRandom(-1);
@@ -14311,21 +14642,33 @@ mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
     m->SPSBrowseCallback        = mDNSNULL;
     m->ProxyRecords             = 0;
 
+    m->DNSPushServers           = mDNSNULL;
+    m->DNSPushZones             = mDNSNULL;
 #endif
 
-#if APPLE_OSX_mDNSResponder
-    m->TunnelClients            = mDNSNULL;
-
-#if !NO_WCF
-    CHECK_WCF_FUNCTION(WCFConnectionNew)
+#if MDNSRESPONDER_SUPPORTS(APPLE, WEB_CONTENT_FILTER)
+    if (WCFConnectionNew)
     {
         m->WCF = WCFConnectionNew();
         if (!m->WCF) { LogMsg("WCFConnectionNew failed"); return -1; }
     }
 #endif
 
-#endif
+    return(result);
+}
 
+mDNSexport mStatus mDNS_Init(mDNS *const m, mDNS_PlatformSupport *const p,
+                             CacheEntity *rrcachestorage, mDNSu32 rrcachesize,
+                             mDNSBool AdvertiseLocalAddresses, mDNSCallback *Callback, void *Context)
+{
+    mStatus result = mDNS_InitStorage(m, p, rrcachestorage, rrcachesize, AdvertiseLocalAddresses, Callback, Context);
+    if (result != mStatus_NoError)
+        return(result);
+
+#if MDNS_MALLOC_DEBUGGING
+    static mDNSListValidator lv;
+    mDNSPlatformAddListValidator(&lv, mDNS_ValidateLists, "mDNS_ValidateLists", m);
+#endif
     result = mDNSPlatformInit(m);
 
 #ifndef UNICAST_DISABLED
@@ -14370,23 +14713,24 @@ mDNSlocal void DynDNSHostNameCallback(mDNS *const m, AuthRecord *const rr, mStat
     mDNSPlatformDynDNSHostNameStatusChanged(rr->resrec.name, result);
 }
 
-mDNSlocal void PurgeOrReconfirmCacheRecord(mDNS *const m, CacheRecord *cr, const DNSServer * const ptr, mDNSBool lameduck)
+mDNSlocal void PurgeOrReconfirmCacheRecord(mDNS *const m, CacheRecord *cr)
 {
     mDNSBool purge = cr->resrec.RecordType == kDNSRecordTypePacketNegative ||
                      cr->resrec.rrtype     == kDNSType_A ||
                      cr->resrec.rrtype     == kDNSType_AAAA ||
-                     cr->resrec.rrtype     == kDNSType_SRV;
+                     cr->resrec.rrtype     == kDNSType_SRV ||
+                     cr->resrec.rrtype     == kDNSType_CNAME;
 
-    (void) lameduck;
-    (void) ptr;
-    debugf("PurgeOrReconfirmCacheRecord: %s cache record due to %s server %p %#a:%d (%##s): %s",
+    debugf("PurgeOrReconfirmCacheRecord: %s cache record due to server %#a:%d (%##s): %s",
            purge    ? "purging"   : "reconfirming",
-           lameduck ? "lame duck" : "new",
-           ptr, &ptr->addr, mDNSVal16(ptr->port), ptr->domain.c, CRDisplayString(m, cr));
+           cr->resrec.rDNSServer ? &cr->resrec.rDNSServer->addr : mDNSNULL,
+           cr->resrec.rDNSServer ? mDNSVal16(cr->resrec.rDNSServer->port) : -1,
+           cr->resrec.rDNSServer ? cr->resrec.rDNSServer->domain.c : mDNSNULL, CRDisplayString(m, cr));
 
     if (purge)
     {
         LogInfo("PurgeorReconfirmCacheRecord: Purging Resourcerecord %s, RecordType %x", CRDisplayString(m, cr), cr->resrec.RecordType);
+        cr->resrec.mortality = Mortality_Mortal;
         mDNS_PurgeCacheResourceRecord(m, cr);
     }
     else
@@ -14396,10 +14740,9 @@ mDNSlocal void PurgeOrReconfirmCacheRecord(mDNS *const m, CacheRecord *cr, const
     }
 }
 
-mDNSlocal void mDNS_PurgeForQuestion(mDNS *const m, DNSQuestion *q)
+mDNSlocal void mDNS_PurgeBeforeResolve(mDNS *const m, DNSQuestion *q)
 {
-    const mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
+    CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
     CacheRecord *rp;
     mDNSu8 validatingResponse = 0;
 
@@ -14411,9 +14754,9 @@ mDNSlocal void mDNS_PurgeForQuestion(mDNS *const m, DNSQuestion *q)
     }
     for (rp = cg ? cg->members : mDNSNULL; rp; rp = rp->next)
     {
-        if (SameNameRecordAnswersQuestion(&rp->resrec, q))
+        if (SameNameCacheRecordAnswersQuestion(rp, q))
         {
-            LogInfo("mDNS_PurgeForQuestion: Flushing %s", CRDisplayString(m, rp));
+            LogInfo("mDNS_PurgeBeforeResolve: Flushing %s", CRDisplayString(m, rp));
             mDNS_PurgeCacheResourceRecord(m, rp);
         }
     }
@@ -14434,13 +14777,12 @@ mDNSlocal void mDNS_PurgeForQuestion(mDNS *const m, DNSQuestion *q)
 // them.
 mDNSlocal void CheckForDNSSECRecords(mDNS *const m, DNSQuestion *q)
 {
-    const mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
+    CacheGroup *const cg = CacheGroupForName(m, q->qnamehash, &q->qname);
     CacheRecord *rp;
 
     for (rp = cg ? cg->members : mDNSNULL; rp; rp = rp->next)
     {
-        if (SameNameRecordAnswersQuestion(&rp->resrec, q))
+        if (SameNameCacheRecordAnswersQuestion(rp, q))
         {
             if (rp->resrec.RecordType != kDNSRecordTypePacketNegative || !rp->nsec)
             {
@@ -14452,30 +14794,6 @@ mDNSlocal void CheckForDNSSECRecords(mDNS *const m, DNSQuestion *q)
             }
         }
     }
-}
-
-// Check for a positive unicast response to the question but with qtype
-mDNSexport mDNSBool mDNS_CheckForCacheRecord(mDNS *const m, DNSQuestion *q, mDNSu16 qtype)
-{
-    DNSQuestion question;
-    const mDNSu32 slot = HashSlot(&q->qname);
-    CacheGroup *const cg = CacheGroupForName(m, slot, q->qnamehash, &q->qname);
-    CacheRecord *rp;
-
-    // Create an identical question but with qtype
-    mDNS_SetupQuestion(&question, q->InterfaceID, &q->qname, qtype, mDNSNULL, mDNSNULL);
-    question.qDNSServer = q->qDNSServer;
-
-    for (rp = cg ? cg->members : mDNSNULL; rp; rp = rp->next)
-    {
-        if (!rp->resrec.InterfaceID && rp->resrec.RecordType != kDNSRecordTypePacketNegative &&
-            SameNameRecordAnswersQuestion(&rp->resrec, &question))
-        {
-            LogInfo("mDNS_CheckForCacheRecord: Found %s", CRDisplayString(m, rp));
-            return mDNStrue;
-        }
-    }
-    return mDNSfalse;
 }
 
 mDNSexport void DNSServerChangeForQuestion(mDNS *const m, DNSQuestion *q, DNSServer *new)
@@ -14507,8 +14825,11 @@ mDNSlocal void SetConfigState(mDNS *const m, mDNSBool delete)
         for (ptr = m->DNSServers; ptr; ptr = ptr->next)
         {
             ptr->penaltyTime = 0;
-            NumUnicastDNSServers--;
-            ptr->flags |= DNSServer_FlagDelete;
+            ptr->flags |= DNSServerFlag_Delete;
+#if MDNSRESPONDER_SUPPORTS(APPLE, SYMPTOMS)
+            if (ptr->flags & DNSServerFlag_Unreachable)
+                NumUnreachableDNSServers--;
+#endif
         }
         // We handle the mcast resolvers here itself as mDNSPlatformSetDNSConfig looks at
         // mcast resolvers. Today we get both mcast and ucast configuration using the same
@@ -14521,27 +14842,51 @@ mDNSlocal void SetConfigState(mDNS *const m, mDNSBool delete)
         for (ptr = m->DNSServers; ptr; ptr = ptr->next)
         {
             ptr->penaltyTime = 0;
-            NumUnicastDNSServers++;
-            ptr->flags &= ~DNSServer_FlagDelete;
+            ptr->flags &= ~DNSServerFlag_Delete;
+#if MDNSRESPONDER_SUPPORTS(APPLE, SYMPTOMS)
+            if (ptr->flags & DNSServerFlag_Unreachable)
+                NumUnreachableDNSServers++;
+#endif
         }
         for (mr = m->McastResolvers; mr; mr = mr->next)
             mr->flags &= ~McastResolver_FlagDelete;
     }
 }
 
+mDNSlocal void SetDynDNSHostNameIfChanged(mDNS *const m, domainname *const fqdn)
+{
+    // Did our FQDN change?
+    if (!SameDomainName(fqdn, &m->FQDN))
+    {
+        if (m->FQDN.c[0]) mDNS_RemoveDynDNSHostName(m, &m->FQDN);
+
+        AssignDomainName(&m->FQDN, fqdn);
+
+        if (m->FQDN.c[0])
+        {
+            mDNSPlatformDynDNSHostNameStatusChanged(&m->FQDN, 1);
+            mDNS_AddDynDNSHostName(m, &m->FQDN, DynDNSHostNameCallback, mDNSNULL);
+        }
+    }
+}
+
+// Even though this is called “Setup” it is not called just once at startup.
+// It’s actually called multiple times, every time there’s a configuration change.
 mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
 {
     mDNSu32 slot;
     CacheGroup *cg;
     CacheRecord *cr;
-    mDNSBool Restart = mDNSfalse;
     mDNSAddr v4, v6, r;
     domainname fqdn;
     DNSServer   *ptr, **p = &m->DNSServers;
     const DNSServer *oldServers = m->DNSServers;
     DNSQuestion *q;
     McastResolver *mr, **mres = &m->McastResolvers;
-
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+    DNSPushNotificationServer **psp;
+#endif
+    
     debugf("uDNS_SetupDNSConfig: entry");
 
     // Let the platform layer get the current DNS information and setup the WAB queries if needed.
@@ -14557,13 +14902,18 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
     // hence we are ready to ack the configuration as this is the last call to mDNSPlatformSetConfig
     // for the dns configuration change notification.
     SetConfigState(m, mDNStrue);
-    if (!mDNSPlatformSetDNSConfig(m, mDNStrue, mDNSfalse, &fqdn, mDNSNULL, mDNSNULL, mDNStrue))
+    if (!mDNSPlatformSetDNSConfig(mDNStrue, mDNSfalse, &fqdn, mDNSNULL, mDNSNULL, mDNStrue))
     {
+        SetDynDNSHostNameIfChanged(m, &fqdn);
         SetConfigState(m, mDNSfalse);
         mDNS_Unlock(m);
         LogInfo("uDNS_SetupDNSConfig: No configuration change");
         return mStatus_NoError;
     }
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+    // Reset suspicious mode on any DNS configuration change
+    m->NextSuspiciousTimeout = 0;
+#endif
 
     // For now, we just delete the mcast resolvers. We don't deal with cache or
     // questions here. Neither question nor cache point to mcast resolvers. Questions
@@ -14571,7 +14921,7 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
     // affecting them as they never change.
     while (*mres)
     {
-        if (((*mres)->flags & DNSServer_FlagDelete) != 0)
+        if (((*mres)->flags & McastResolver_FlagDelete) != 0)
         {
             mr = *mres;
             *mres = (*mres)->next;
@@ -14612,86 +14962,121 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
     //   cache records and as the resGroupID is different, you can't use the cache record from the scoped DNSServer to answer the
     //   non-scoped question and vice versa.
     //
-    for (q = m->Questions; q; q=q->next)
+#if MDNSRESPONDER_SUPPORTS(APPLE, DNS64)
+    DNS64RestartQuestions(m);
+#endif
+
+    // First, restart questions whose suppression status will change. The suppression status of each question in a given
+    // question set, i.e., a non-duplicate question and all of its duplicates, if any, may or may not change. For example,
+    // a suppressed (or non-suppressed) question that is currently a duplicate of a suppressed (or non-suppressed) question
+    // may become a non-suppressed (or suppressed) question, while the question that it's a duplicate of may remain
+    // suppressed (or non-suppressed).
+    for (q = m->Questions; q; q = q->next)
     {
-        if (!mDNSOpaque16IsZero(q->TargetQID))
+        DNSServer *s;
+        const DNSServer *t;
+        mDNSBool oldSuppressed;
+
+        if (mDNSOpaque16IsZero(q->TargetQID)) continue;
+
+        SetValidDNSServers(m, q);
+        q->triedAllServersOnce = mDNSfalse;
+        s = GetServerForQuestion(m, q);
+        t = q->qDNSServer;
+        if (s != t)
         {
-            DNSServer *s, *t;
-            DNSQuestion *qptr;
-            if (q->DuplicateOf) continue;
-            SetValidDNSServers(m, q);
-            q->triedAllServersOnce = 0;
-            s = GetServerForQuestion(m, q);
-            t = q->qDNSServer;
-            if (t != s)
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+                "[R%u->Q%u] uDNS_SetupDNSConfig: Updating DNS server from " PRI_IP_ADDR ":%d (" PRI_DM_NAME ") to "
+                PRI_IP_ADDR ":%d (" PRI_DM_NAME ") for question " PRI_DM_NAME " (" PUB_S ") (scope:%p)",
+                q->request_id, mDNSVal16(q->TargetQID),
+                t ? &t->addr : mDNSNULL, mDNSVal16(t ? t->port : zeroIPPort), DM_NAME_PARAM(t ? t->domain.c : (mDNSu8*)""),
+                s ? &s->addr : mDNSNULL, mDNSVal16(s ? s->port : zeroIPPort), DM_NAME_PARAM(s ? s->domain.c : (mDNSu8*)""),
+                DM_NAME_PARAM(q->qname.c), DNSTypeName(q->qtype), q->InterfaceID);
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+            // If this question had a DNS Push server associated with it, substitute the new server for the
+            // old one.   If there is no new server, then we'll clean up the push server later.
+            if (!q->DuplicateOf && (q->dnsPushServer != mDNSNULL))
             {
-                mDNSBool old, new;
-                // If DNS Server for this question has changed, reactivate it
-                LogInfo("uDNS_SetupDNSConfig: Updating DNS Server from %#a:%d (%##s) to %#a:%d (%##s) for question %##s (%s) (scope:%p)",
-                        t ? &t->addr : mDNSNULL, mDNSVal16(t ? t->port : zeroIPPort), t ? t->domain.c : (mDNSu8*)"",
-                        s ? &s->addr : mDNSNULL, mDNSVal16(s ? s->port : zeroIPPort), s ? s->domain.c : (mDNSu8*)"",
-                        q->qname.c, DNSTypeName(q->qtype), q->InterfaceID);
-
-                old = q->SuppressQuery;
-                new = ShouldSuppressUnicastQuery(m, q, s);
-                if (old != new)
+                if (q->dnsPushServer->qDNSServer == t)
                 {
-                    // Changing the DNS server affected the SuppressQuery status. We need to
-                    // deliver RMVs for the previous ADDs (if any) before switching to the new
-                    // DNSServer.  To keep it simple, we walk all the questions and mark them
-                    // to be restarted and then handle all of them at once.
-                    q->Restart = 1;
-                    q->SuppressQuery = new;
-                    for (qptr = q->next ; qptr; qptr = qptr->next)
-                    {
-                        if (qptr->DuplicateOf == q)
-                            qptr->Restart = 1;
-                    }
-                    Restart = mDNStrue;
+                    q->dnsPushServer->qDNSServer = s; // which might be null
                 }
-                else
+                // If it is null, do the accounting and drop the push server.
+                if (q->dnsPushServer->qDNSServer == mDNSNULL)
                 {
-                    DNSServerChangeForQuestion(m, q, s);
-                    q->unansweredQueries = 0;
-
-                    // If we had sent a query out to DNSServer "t" and we are changing to "s", we
-                    // need to ignore the responses coming back from "t" as the DNS configuration
-                    // has changed e.g., when a new interface is coming up and that becomes the primary
-                    // interface, we switch to the DNS servers configured for the primary interface. In
-                    // this case, we should not accept responses associated with the previous interface as
-                    // the "name" could resolve differently on this new primary interface. Hence, discard
-                    // in-flight responses.
-                    q->TargetQID = mDNS_NewMessageID(m);
-
-                    if (!QuerySuppressed(q))
-                    {
-                        debugf("uDNS_SetupDNSConfig: Activating query %p %##s (%s)", q, q->qname.c, DNSTypeName(q->qtype));
-                        ActivateUnicastQuery(m, q, mDNStrue);
-                        // ActivateUnicastQuery is called for duplicate questions also as it does something
-                        // special for AutoTunnel questions
-                        for (qptr = q->next ; qptr; qptr = qptr->next)
-                        {
-                            if (qptr->DuplicateOf == q) ActivateUnicastQuery(m, qptr, mDNStrue);
-                        }
-                    }
+                    DNSPushReconcileConnection(m, q);
                 }
             }
-            else
+#endif
+        }
+        oldSuppressed = q->Suppressed;
+        q->Suppressed = ShouldSuppressUnicastQuery(q, s);
+        if (!q->Suppressed != !oldSuppressed) q->Restart = mDNStrue;
+    }
+    RestartUnicastQuestions(m);
+
+    // Now, change the server for each question set, if necessary. Note that questions whose suppression status changed
+    // have already had their server changed by being restarted.
+    for (q = m->Questions; q; q = q->next)
+    {
+        DNSServer *s;
+        const DNSServer *t;
+
+        if (mDNSOpaque16IsZero(q->TargetQID) || q->DuplicateOf) continue;
+
+        SetValidDNSServers(m, q);
+        q->triedAllServersOnce = mDNSfalse;
+        s = GetServerForQuestion(m, q);
+        t = q->qDNSServer;
+        DNSServerChangeForQuestion(m, q, s);
+        if (s == t) continue;
+
+        q->Suppressed = ShouldSuppressUnicastQuery(q, s);
+        q->unansweredQueries = 0;
+#if MDNSRESPONDER_SUPPORTS(APPLE, SUSPICIOUS_REPLY_DEFENSE)
+        q->LastTargetQID = q->TargetQID;
+#endif
+        q->TargetQID = mDNS_NewMessageID(m);
+        if (!q->Suppressed) ActivateUnicastQuery(m, q, mDNStrue);
+    }
+
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+    // The above code may have found some DNS Push servers that are no longer valid.   Now that we
+    // are done running through the code, we need to drop our connections to those servers.
+    // When we get here, any such servers should have zero questions associated with them.
+    for (psp = &m->DNSPushServers; *psp != mDNSNULL; )
+    {
+        DNSPushNotificationServer *server = *psp;
+
+        // It's possible that a push server whose DNS server has been deleted could be still connected but
+        // not referenced by any questions.  In this case, we just delete the push server rather than trying
+        // to figure out with which DNS server (if any) to associate it.
+        if (server->qDNSServer != mDNSNULL && server->qDNSServer->flags & DNSServerFlag_Delete)
+        {
+            server->qDNSServer = mDNSNULL;
+        }
+
+        if (server->qDNSServer == mDNSNULL)
+        {
+            // This would be a programming error, so should never happen.
+            if (server->numberOfQuestions != 0)
             {
-                debugf("uDNS_SetupDNSConfig: Not Updating DNS server question %p %##s (%s) DNS server %#a:%d %p %d",
-                       q, q->qname.c, DNSTypeName(q->qtype), t ? &t->addr : mDNSNULL, mDNSVal16(t ? t->port : zeroIPPort), q->DuplicateOf, q->SuppressUnusable);
-                for (qptr = q->next ; qptr; qptr = qptr->next)
-                    if (qptr->DuplicateOf == q) { qptr->validDNSServers = q->validDNSServers; qptr->qDNSServer = q->qDNSServer; }
+                LogInfo("uDNS_SetupDNSConfig: deleting push server %##s that has questions.", &server->serverName);
             }
+            DNSPushServerDrop(server);
+            *psp = server->next;
+            mDNSPlatformMemFree(server);
+        }
+        else
+        {
+            psp = &(*psp)->next;
         }
     }
-    if (Restart)
-        RestartUnicastQuestions(m);
+#endif
 
     FORALL_CACHERECORDS(slot, cg, cr)
     {
-        if (cr->resrec.InterfaceID)
-            continue;
+        if (cr->resrec.InterfaceID) continue;
 
         // We already walked the questions and restarted/reactivated them if the dns server
         // change affected the question. That should take care of updating the cache. But
@@ -14704,101 +15089,88 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
         // the questions if they were suppressed (see above). To keep it simple, we walk
         // all the cache entries to make sure that there are no stale entries. We use the
         // active question's InterfaceID/ServiceID for looking up the right DNS server.
-        // Note that the unscoped value for ServiceID is -1.
         //
         // Note: If GetServerForName returns NULL, it could either mean that there are no
         // DNS servers or no matching DNS servers for this question. In either case,
         // the cache should get purged below when we process deleted DNS servers.
+        //
+        // If it is a DNSSEC question, purge the cache as the DNSSEC capabilities of the
+        // DNS server may have changed.
 
-        ptr = GetServerForName(m, cr->resrec.name,
-                               (cr->CRActiveQuestion ? cr->CRActiveQuestion->InterfaceID : mDNSNULL),
-                               (cr->CRActiveQuestion ? cr->CRActiveQuestion->ServiceID   : -1));
-
-        // Purge or Reconfirm if this cache entry would use the new DNS server
-        if (ptr && (ptr != cr->resrec.rDNSServer))
+        if (cr->CRActiveQuestion && !DNSSECQuestion(cr->CRActiveQuestion))
         {
-            // As the DNSServers for this cache record is not the same anymore, we don't
-            // want any new questions to pick this old value. If there is no active question,
-            // we can't possibly re-confirm, so purge in that case. If it is a DNSSEC question,
-            // purge the cache as the DNSSEC capabilities of the DNS server may have changed.
-
-            if (cr->CRActiveQuestion == mDNSNULL || DNSSECQuestion(cr->CRActiveQuestion))
+            // Purge or Reconfirm if this cache entry would use the new DNS server
+            ptr = GetServerForName(m, cr->resrec.name, cr->CRActiveQuestion->InterfaceID, cr->CRActiveQuestion->ServiceID);
+            if (ptr && (ptr != cr->resrec.rDNSServer))
             {
-                LogInfo("uDNS_SetupDNSConfig: Purging Resourcerecord %s, New DNS server %#a , Old DNS server %#a", CRDisplayString(m, cr),
-                        &ptr->addr, (cr->resrec.rDNSServer != mDNSNULL ?  &cr->resrec.rDNSServer->addr : mDNSNULL));
-                mDNS_PurgeCacheResourceRecord(m, cr);
+                LogInfo("uDNS_SetupDNSConfig: Purging/Reconfirming Resourcerecord %s, New DNS server %#a, Old DNS server %#a",
+                        CRDisplayString(m, cr), &ptr->addr,
+                        cr->resrec.rDNSServer ? &cr->resrec.rDNSServer->addr : mDNSNULL);
+                PurgeOrReconfirmCacheRecord(m, cr);
+                
+                // If a cache record's DNSServer pointer is NULL, but its active question got a DNSServer in this DNS configuration
+                // update, then use its DNSServer. This way, the active question and its duplicates don't miss out on RMV events.
+                if (!cr->resrec.rDNSServer && cr->CRActiveQuestion->qDNSServer)
+                {
+                    LogInfo("uDNS_SetupDNSConfig: Using active question's DNS server %#a for cache record %s", &cr->CRActiveQuestion->qDNSServer->addr, CRDisplayString(m, cr));
+                    cr->resrec.rDNSServer = cr->CRActiveQuestion->qDNSServer;
+                }
             }
-            else
+            
+            if (cr->resrec.rDNSServer && cr->resrec.rDNSServer->flags & DNSServerFlag_Delete)
             {
-                LogInfo("uDNS_SetupDNSConfig: Purging/Reconfirming Resourcerecord %s, New DNS server %#a, Old DNS server %#a", CRDisplayString(m, cr),
-                        &ptr->addr, (cr->resrec.rDNSServer != mDNSNULL ?  &cr->resrec.rDNSServer->addr : mDNSNULL));
-                PurgeOrReconfirmCacheRecord(m, cr, ptr, mDNSfalse);
+                DNSQuestion *qptr = cr->CRActiveQuestion;
+                if (qptr->qDNSServer == cr->resrec.rDNSServer)
+                {
+                    LogMsg("uDNS_SetupDNSConfig: ERROR!! Cache Record %s  Active question %##s (%s) (scope:%p) pointing to DNSServer Address %#a"
+                           " to be freed", CRDisplayString(m, cr),
+                           qptr->qname.c, DNSTypeName(qptr->qtype), qptr->InterfaceID,
+                           &cr->resrec.rDNSServer->addr);
+                    qptr->validDNSServers = zeroOpaque128;
+                    qptr->qDNSServer = mDNSNULL;
+                    cr->resrec.rDNSServer = mDNSNULL;
+                }
+                else
+                {
+                    LogInfo("uDNS_SetupDNSConfig: Cache Record %s,  Active question %##s (%s) (scope:%p), pointing to DNSServer %#a (to be deleted),"
+                            " resetting to  question's DNSServer Address %#a", CRDisplayString(m, cr),
+                            qptr->qname.c, DNSTypeName(qptr->qtype), qptr->InterfaceID,
+                            &cr->resrec.rDNSServer->addr,
+                            qptr->qDNSServer ? &qptr->qDNSServer->addr : mDNSNULL);
+                    cr->resrec.rDNSServer = qptr->qDNSServer;
+                }
+                PurgeOrReconfirmCacheRecord(m, cr);
             }
+        }
+        else if (!cr->resrec.rDNSServer || cr->resrec.rDNSServer->flags & DNSServerFlag_Delete)
+        {
+            LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEBUG,
+                "uDNS_SetupDNSConfig: Purging Resourcerecord " PRI_S ", DNS server " PUB_S " " PRI_IP_ADDR " " PUB_S,
+                CRDisplayString(m, cr), !cr->resrec.rDNSServer ? "(to be deleted)" : "",
+                cr->resrec.rDNSServer ? &cr->resrec.rDNSServer->addr : mDNSNULL,
+                cr->resrec.rDNSServer ? DNSScopeToString(cr->resrec.rDNSServer->scopeType) : "" );
+            cr->resrec.rDNSServer = mDNSNULL;
+            cr->resrec.mortality = Mortality_Mortal;
+            mDNS_PurgeCacheResourceRecord(m, cr);
         }
     }
 
+    //  Delete all the DNS servers that are flagged for deletion
     while (*p)
     {
-        if (((*p)->flags & DNSServer_FlagDelete) != 0)
+        if (((*p)->flags & DNSServerFlag_Delete) != 0)
         {
-            // Scan our cache, looking for uDNS records that we would have queried this server for.
-            // We reconfirm any records that match, because in this world of split DNS, firewalls, etc.
-            // different DNS servers can give different answers to the same question.
             ptr = *p;
-            FORALL_CACHERECORDS(slot, cg, cr)
-            {
-                if (cr->resrec.InterfaceID) continue;
-                if (cr->resrec.rDNSServer == ptr)
-                {
-                    // If we don't have an active question for this cache record, neither Purge can
-                    // generate RMV events nor Reconfirm can send queries out. Just set the DNSServer
-                    // pointer on the record NULL so that we don't point to freed memory (We might dereference
-                    // DNSServer pointers from resource record for logging purposes).
-                    //
-                    // If there is an active question, point to its DNSServer as long as it does not point to the
-                    // freed one. We already went through the questions above and made them point at either the
-                    // new server or NULL if there is no server.
-
-                    if (cr->CRActiveQuestion)
-                    {
-                        DNSQuestion *qptr = cr->CRActiveQuestion;
-
-                        if (qptr->qDNSServer == ptr)
-                        {
-                            LogMsg("uDNS_SetupDNSConfig: ERROR!! Cache Record %s  Active question %##s (%s) (scope:%p) poining to DNSServer Address %#a"
-                                   " to be freed", CRDisplayString(m, cr),  qptr->qname.c, DNSTypeName(qptr->qtype), qptr->InterfaceID, &ptr->addr);
-                            qptr->validDNSServers = zeroOpaque64;
-                            qptr->qDNSServer = mDNSNULL;
-                            cr->resrec.rDNSServer = mDNSNULL;
-                        }
-                        else
-                        {
-                            LogInfo("uDNS_SetupDNSConfig: Cache Record %s,  Active question %##s (%s) (scope:%p), pointing to DNSServer %#a (to be deleted),"
-                                    " resetting to  question's DNSServer Address %#a", CRDisplayString(m, cr),  qptr->qname.c, DNSTypeName(qptr->qtype),
-                                    qptr->InterfaceID, &ptr->addr, (qptr->qDNSServer ? &qptr->qDNSServer->addr : mDNSNULL));
-                            cr->resrec.rDNSServer = qptr->qDNSServer;
-                        }
-                    }
-                    else
-                    {
-                        LogInfo("uDNS_SetupDNSConfig: Cache Record %##s has no Active question, Record's DNSServer Address %#a, Server to be deleted %#a",
-                                cr->resrec.name, &cr->resrec.rDNSServer->addr, &ptr->addr);
-                        cr->resrec.rDNSServer = mDNSNULL;
-                    }
-
-                    PurgeOrReconfirmCacheRecord(m, cr, ptr, mDNStrue);
-                }
-            }
             *p = (*p)->next;
-            LogInfo("uDNS_SetupDNSConfig: Deleting server %p %#a:%d (%##s) %d", ptr, &ptr->addr, mDNSVal16(ptr->port), ptr->domain.c, NumUnicastDNSServers);
+            LogInfo("uDNS_SetupDNSConfig: Deleting server %p %#a:%d (%##s)", ptr, &ptr->addr, mDNSVal16(ptr->port), ptr->domain.c);
             mDNSPlatformMemFree(ptr);
         }
         else
         {
-            (*p)->flags &= ~DNSServer_FlagNew;
             p = &(*p)->next;
         }
     }
+    LogInfo("uDNS_SetupDNSConfig: CountOfUnicastDNSServers %d", CountOfUnicastDNSServers(m));
 
     // If we now have no DNS servers at all and we used to have some, then immediately purge all unicast cache records (including for LLQs).
     // This is important for giving prompt remove events when the user disconnects the Ethernet cable or turns off wireless.
@@ -14822,19 +15194,7 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
         RestartRecordGetZoneData(m);
     }
 
-    // Did our FQDN change?
-    if (!SameDomainName(&fqdn, &m->FQDN))
-    {
-        if (m->FQDN.c[0]) mDNS_RemoveDynDNSHostName(m, &m->FQDN);
-
-        AssignDomainName(&m->FQDN, &fqdn);
-
-        if (m->FQDN.c[0])
-        {
-            mDNSPlatformDynDNSHostNameStatusChanged(&m->FQDN, 1);
-            mDNS_AddDynDNSHostName(m, &m->FQDN, DynDNSHostNameCallback, mDNSNULL);
-        }
-    }
+    SetDynDNSHostNameIfChanged(m, &fqdn);
 
     mDNS_Unlock(m);
 
@@ -14842,7 +15202,7 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
     v4 = v6 = r = zeroAddr;
     v4.type = r.type = mDNSAddrType_IPv4;
 
-    if (mDNSPlatformGetPrimaryInterface(m, &v4, &v6, &r) == mStatus_NoError && !mDNSv4AddressIsLinkLocal(&v4.ip.v4))
+    if (mDNSPlatformGetPrimaryInterface(&v4, &v6, &r) == mStatus_NoError && !mDNSv4AddressIsLinkLocal(&v4.ip.v4))
     {
         mDNS_SetPrimaryInterfaceInfo(m,
                                      !mDNSIPv4AddressIsZero(v4.ip.v4) ? &v4 : mDNSNULL,
@@ -14855,7 +15215,7 @@ mDNSexport mStatus uDNS_SetupDNSConfig(mDNS *const m)
         if (m->FQDN.c[0]) mDNSPlatformDynDNSHostNameStatusChanged(&m->FQDN, 1); // Set status to 1 to indicate temporary failure
     }
 
-    debugf("uDNS_SetupDNSConfig: number of unicast DNS servers %d", NumUnicastDNSServers);
+    debugf("uDNS_SetupDNSConfig: number of unicast DNS servers %d", CountOfUnicastDNSServers(m));
     return mStatus_NoError;
 }
 
@@ -14897,7 +15257,6 @@ mDNSlocal void DeregLoop(mDNS *const m, AuthRecord *const start)
 
 mDNSexport void mDNS_StartExit(mDNS *const m)
 {
-    NetworkInterfaceInfo *intf;
     AuthRecord *rr;
 
     mDNS_Lock(m);
@@ -14907,13 +15266,11 @@ mDNSexport void mDNS_StartExit(mDNS *const m)
 
     mDNSCoreBeSleepProxyServer_internal(m, 0, 0, 0, 0, 0);
 
-#if APPLE_OSX_mDNSResponder
-#if !NO_WCF
-    CHECK_WCF_FUNCTION(WCFConnectionDealloc)
+#if MDNSRESPONDER_SUPPORTS(APPLE, WEB_CONTENT_FILTER)
+    if (WCFConnectionDealloc)
     {
-        if (m->WCF) WCFConnectionDealloc((WCFConnection *)m->WCF);
+        if (m->WCF) WCFConnectionDealloc(m->WCF);
     }
-#endif
 #endif
 
 #ifndef UNICAST_DISABLED
@@ -14937,9 +15294,7 @@ mDNSexport void mDNS_StartExit(mDNS *const m)
     }
 #endif
 
-    for (intf = m->HostInterfaces; intf; intf = intf->next)
-        if (intf->Advertise)
-            DeadvertiseInterface(m, intf);
+    DeadvertiseAllInterfaceRecords(m, kDeadvertiseFlag_All);
 
     // Shut down all our active NAT Traversals
     while (m->NATTraversals)
@@ -14999,14 +15354,13 @@ mDNSexport void mDNS_StartExit(mDNS *const m)
 mDNSexport void mDNS_FinalExit(mDNS *const m)
 {
     mDNSu32 rrcache_active = 0;
-    mDNSu32 rrcache_totalused = 0;
+    mDNSu32 rrcache_totalused = m->rrcache_totalused;
     mDNSu32 slot;
     AuthRecord *rr;
 
     LogInfo("mDNS_FinalExit: mDNSPlatformClose");
     mDNSPlatformClose(m);
 
-    rrcache_totalused = m->rrcache_totalused;
     for (slot = 0; slot < CACHE_HASH_SLOTS; slot++)
     {
         while (m->rrcache_hash[slot])
@@ -15025,10 +15379,14 @@ mDNSexport void mDNS_FinalExit(mDNS *const m)
     }
     debugf("mDNS_FinalExit: RR Cache was using %ld records, %lu active", rrcache_totalused, rrcache_active);
     if (rrcache_active != m->rrcache_active)
-        LogMsg("*** ERROR *** rrcache_active %lu != m->rrcache_active %lu", rrcache_active, m->rrcache_active);
+        LogMsg("*** ERROR *** rrcache_totalused %lu; rrcache_active %lu != m->rrcache_active %lu", rrcache_totalused, rrcache_active, m->rrcache_active);
 
     for (rr = m->ResourceRecords; rr; rr = rr->next)
         LogMsg("mDNS_FinalExit failed to send goodbye for: %p %02X %s", rr, rr->resrec.RecordType, ARDisplayString(m, rr));
 
     LogInfo("mDNS_FinalExit: done");
 }
+
+#ifdef UNIT_TEST
+#include "../unittests/mdns_ut.c"
+#endif

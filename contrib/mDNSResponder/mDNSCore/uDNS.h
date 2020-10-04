@@ -1,6 +1,5 @@
-/* -*- Mode: C; tab-width: 4 -*-
- *
- * Copyright (c) 2002-2013 Apple Computer, Inc. All rights reserved.
+/*
+ * Copyright (c) 2002-2019 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +19,13 @@
 
 #include "mDNSEmbeddedAPI.h"
 #include "DNSCommon.h"
+#include <sys/types.h>
+#include "dns_sd.h"
+
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+#include "dso.h"
+#include "dso-transport.h"
+#endif
 
 #ifdef  __cplusplus
 extern "C" {
@@ -47,9 +53,8 @@ extern "C" {
 #define QuestionIntervalStep3 (QuestionIntervalStep*QuestionIntervalStep*QuestionIntervalStep)
 #define InitialQuestionInterval ((mDNSPlatformOneSecond + QuestionIntervalStep-1) / QuestionIntervalStep)
 #define MaxQuestionInterval         (3600 * mDNSPlatformOneSecond)
-
-// just move to MaxQuestionInterval once over this threshold
-#define QuestionIntervalThreshold   (QuestionIntervalStep3 * mDNSPlatformOneSecond)
+#define UDNSBackOffMultiplier 2 
+#define MinQuestionInterval (1 * mDNSPlatformOneSecond)
 
 // For Unicast record registrations, we initialize the interval to 1 second. When we send any query for
 // the record registration e.g., GetZoneData, we always back off by QuestionIntervalStep
@@ -76,11 +81,46 @@ extern "C" {
 // validation (for optional case only) for any questions that uses this server
 #define MAX_DNSSEC_RETRANSMISSIONS 3
 
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+// Push notification structures
+struct mDNS_DNSPushNotificationServer
+{
+    dso_connect_state_t       *connectInfo;       // DSO Connection state information
+    dso_state_t               *connection;        // DNS Stateful Operations/TCP Connection pointer, might be null.
+    mDNSu32                    numberOfQuestions; // Number of questions for this server
+    DNSPushServer_ConnectState connectState;      // Current status of connection attempt to this server
+    mDNSs32                    lastDisconnect;    // Last time we got a disconnect, used to avoid constant reconnects
+    domainname                 serverName;        // The hostname returned by the _dns-push-tls._tcp.<zone> SRV lookup
+    mDNSIPPort                 port;              // The port from the SRV lookup
+    DNSServer                 *qDNSServer;        // DNS server stolen from the question that created this server structure.
+    mDNS                      *m;
+    DNSPushNotificationServer *next;
+} ;
+
+struct mDNS_DNSPushNotificationZone
+{
+    domainname zoneName;
+    DNSPushNotificationServer *server; // DNS Push Notification Servers for this zone
+    mDNSu32 numberOfQuestions;          // Number of questions for this zone
+    DNSPushNotificationZone *next;
+} ;
+#endif
+
 // Entry points into unicast-specific routines
 
 extern void LLQGotZoneData(mDNS *const m, mStatus err, const ZoneData *zoneInfo);
 extern void startLLQHandshake(mDNS *m, DNSQuestion *q);
 extern void sendLLQRefresh(mDNS *m, DNSQuestion *q);
+
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+extern void DNSPushNotificationGotZoneData(mDNS *const m, mStatus err, const ZoneData *zoneInfo);
+extern void DiscoverDNSPushNotificationServer(mDNS *m, DNSQuestion *q);
+extern DNSPushNotificationServer *GetConnectionToDNSPushNotificationServer(mDNS *m, DNSQuestion *q);
+extern DNSPushNotificationServer *SubscribeToDNSPushNotificationServer(mDNS *m, DNSQuestion *q);
+extern void UnSubscribeToDNSPushNotificationServer(mDNS *m, DNSQuestion *q);
+extern void DNSPushReconcileConnection(mDNS *m, DNSQuestion *q);
+extern void DNSPushServerDrop(DNSPushNotificationServer *server);
+#endif
 
 extern void SleepRecordRegistrations(mDNS *m);
 
@@ -124,7 +164,9 @@ extern mStatus         uDNS_SetupDNSConfig(mDNS *const m);
 extern void uDNS_SetupWABQueries(mDNS *const m);
 extern void uDNS_StartWABQueries(mDNS *const m, int queryType);
 extern void uDNS_StopWABQueries(mDNS *const m, int queryType);
-extern domainname      *uDNS_GetNextSearchDomain(mDNS *const m, mDNSInterfaceID InterfaceID, mDNSs8 *searchIndex, mDNSBool ignoreDotLocal);
+extern domainname      *uDNS_GetNextSearchDomain(mDNSInterfaceID InterfaceID, int *searchIndex, mDNSBool ignoreDotLocal);
+    
+extern void uDNS_RestartQuestionAsTCP(mDNS *m, DNSQuestion *const q, const mDNSAddr *const srcaddr, const mDNSIPPort srcport);
 
 typedef enum
 {
@@ -143,6 +185,15 @@ extern void DisposeTCPConn(struct tcpInfo_t *tcp);
 extern void uDNS_ReceiveNATPacket(mDNS *m, const mDNSInterfaceID InterfaceID, mDNSu8 *pkt, mDNSu16 len); // Called for each received PCP or NAT-PMP packet
 extern void natTraversalHandleAddressReply(mDNS *const m, mDNSu16 err, mDNSv4Addr ExtAddr);
 extern void natTraversalHandlePortMapReply(mDNS *const m, NATTraversalInfo *n, const mDNSInterfaceID InterfaceID, mDNSu16 err, mDNSIPPort extport, mDNSu32 lease, NATTProtocol protocol);
+
+#if MDNSRESPONDER_SUPPORTS(COMMON, DNS_PUSH)
+// DNS Push Notification
+extern void SubscribeToDNSPushNotification(mDNS *m, DNSQuestion *q);
+#endif
+    
+extern CacheRecord* mDNSCoreReceiveCacheCheck(mDNS *const m, const DNSMessage *const response, uDNS_LLQType LLQType,
+											  const mDNSu32 slot, CacheGroup *cg, DNSQuestion *unicastQuestion,
+                                              CacheRecord ***cfp, CacheRecord **NSECCachePtr, mDNSInterfaceID InterfaceID);
 
 #ifdef  __cplusplus
 }

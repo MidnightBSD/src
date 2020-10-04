@@ -13,7 +13,7 @@ SRCS=	Responder.c mDNSPosix.c mDNSUNP.c
 SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 SRCS+=	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
-	PlatformCommon.c CryptoAlg.c anonymous.c
+	PlatformCommon.c CryptoAlg.c
 
 SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
