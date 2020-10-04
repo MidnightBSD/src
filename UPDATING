@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20201004:
+	Update mDNSresponder to 1096.40.7
+
 20200924:
 	Add support for SIOCGIFMEDIA
 
