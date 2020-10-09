@@ -46,6 +46,10 @@
             encoder
             ..
         ..
+        perl
+            5.32.0
+            ..
+        ..
     ..
     libdata
         gcc
