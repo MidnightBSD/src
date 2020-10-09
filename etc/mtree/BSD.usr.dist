@@ -46,7 +46,7 @@
             encoder
             ..
         ..
-        perl
+        perl5
             5.32.0
             ..
         ..
