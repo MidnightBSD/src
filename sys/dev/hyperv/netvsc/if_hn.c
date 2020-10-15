@@ -71,8 +71,10 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/netvsc/if_hn.c 356411 2020-01-06 09
 #include <sys/module.h>
 #include <sys/queue.h>
 #include <sys/lock.h>
+#include <sys/proc.h>
 #include <sys/rmlock.h>
 #include <sys/sbuf.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -165,8 +167,11 @@ __FBSDID("$FreeBSD: stable/11/sys/dev/hyperv/netvsc/if_hn.c 356411 2020-01-06 09
 #define HN_LOCK_ASSERT(sc)		sx_assert(&(sc)->hn_lock, SA_XLOCKED)
 #define HN_LOCK(sc)					\
 do {							\
-	while (sx_try_xlock(&(sc)->hn_lock) == 0)	\
+	while (sx_try_xlock(&(sc)->hn_lock) == 0) {	\
+		/* Relinquish cpu to avoid deadlock */	\
+		sched_relinquish(curthread);		\
 		DELAY(1000);				\
+	}
 } while (0)
 #define HN_UNLOCK(sc)			sx_xunlock(&(sc)->hn_lock)
 
