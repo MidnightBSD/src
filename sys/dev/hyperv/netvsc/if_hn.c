@@ -171,7 +171,7 @@ do {							\
 		/* Relinquish cpu to avoid deadlock */	\
 		sched_relinquish(curthread);		\
 		DELAY(1000);				\
-	}
+	}						\
 } while (0)
 #define HN_UNLOCK(sc)			sx_xunlock(&(sc)->hn_lock)
 
