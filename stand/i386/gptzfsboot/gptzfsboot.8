@@ -36,7 +36,7 @@ is used on BIOS-based computers to boot from a filesystem in
 a ZFS pool.
 .Nm
 is installed in a
-.Cm freebsd-boot
+.Cm mnbsd-boot
 partition of a GPT-partitioned disk with
 .Xr gpart 8 .
 .Sh IMPLEMENTATION NOTES
@@ -60,7 +60,7 @@ determines that the whole disk is not a ZFS pool member, the
 individual partitions are probed in their partition table order.
 Currently GPT and MBR partition schemes are supported.
 With the GPT scheme, only partitions of type
-.Cm freebsd-zfs
+.Cm mnbsd-zfs
 are probed.
 The first pool seen during probing is used as a default boot pool.
 .Pp

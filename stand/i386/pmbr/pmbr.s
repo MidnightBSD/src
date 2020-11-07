@@ -31,7 +31,7 @@
 #
 # Partly from: src/sys/boot/i386/mbr/mbr.s 1.7
 
-# A 512 byte PMBR boot manager that looks for a FreeBSD boot GPT partition
+# A 512 byte PMBR boot manager that looks for a MidnightBSD boot GPT partition
 # and boots it.
 
 		.set LOAD,0x7c00		# Load address
@@ -120,14 +120,14 @@ main.3a:	decl (%si)			# 0x0(%si) = last sec (0-31)
 		movsw				# $lastsec--, copy it to $lba
 		jmp main.2a			# Read the next sector
 #
-# Load a partition table sector from disk and look for a FreeBSD boot
+# Load a partition table sector from disk and look for a MidnightBSD boot
 # partition.
 #
 load_part:	movw $GPT_ADDR+GPT_PART_LBA,%si
 		movw $PART_ADDR,%bx
 		call read
 scan:		movw %bx,%si			# Compare partition UUID
-		movw $boot_uuid,%di		#  with FreeBSD boot UUID 
+		movw $boot_uuid,%di		#  with MidnightBSD boot UUID 
 		movb $0x10,%cl
 		repe cmpsb
 		jnz next_part			# Didn't match, next partition

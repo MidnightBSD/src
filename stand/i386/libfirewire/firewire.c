@@ -279,11 +279,7 @@ fw_reset_crom(struct fwohci_softc *sc)
 	crom_add_entry(root, CSRKEY_NCAP, 0x0083c0); /* XXX */
 	/* private company_id */
 	crom_add_entry(root, CSRKEY_VENDOR, CSRVAL_VENDOR_PRIVATE);
-#ifdef __DragonFly__
-	crom_add_simple_text(src, root, &buf->vendor, "DragonFly Project");
-#else
-	crom_add_simple_text(src, root, &buf->vendor, "FreeBSD Project");
-#endif
+	crom_add_simple_text(src, root, &buf->vendor, "MidnightBSD Project");
 }
 
 
@@ -305,7 +301,7 @@ dcons_crom(struct fwohci_softc *sc)
 
 	crom_add_chunk(src, root, &buf->unit, CROM_UDIR);
 	crom_add_entry(&buf->unit, CSRKEY_SPEC, CSRVAL_VENDOR_PRIVATE);
-	crom_add_simple_text(src, &buf->unit, &buf->spec, "FreeBSD");
+	crom_add_simple_text(src, &buf->unit, &buf->spec, "MidnightBSD");
 	crom_add_entry(&buf->unit, CSRKEY_VER, DCONS_CSR_VAL_VER);
 	crom_add_simple_text(src, &buf->unit, &buf->ver, "dcons");
 	crom_add_entry(&buf->unit, DCONS_CSR_KEY_HI, ADDR_HI(dcons_paddr));

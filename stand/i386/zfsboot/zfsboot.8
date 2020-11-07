@@ -98,7 +98,7 @@ sysctl kern.geom.debugflags=0x10
 can also be installed in an MBR slice:
 .Bd -literal -offset indent
 gpart create -s mbr ada0
-gpart add -t freebsd ada0
+gpart add -t midnightbsd ada0
 gpart bootcode -b /boot/boot0 ada0
 gpart set -a active -i 1 ada0
 dd if=/dev/zero of=/dev/ada0s1 count=2
