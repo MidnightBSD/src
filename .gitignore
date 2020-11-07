@@ -16,3 +16,9 @@ GTAGS
 ID
 cscope.out
 ?cscope.out
+*.ko
+*.o
+sys/modules/**/*.h
+sys/modules/**/x86
+sys/modules/**/machine
+sys/modules/**/export_syms
