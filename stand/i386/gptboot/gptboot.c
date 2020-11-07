@@ -58,7 +58,7 @@ __FBSDID("$FreeBSD: stable/11/stand/i386/gptboot/gptboot.c 344399 2019-02-20 23:
 
 extern uint32_t _end;
 
-static const uuid_t midnightbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static const uuid_t mnbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
 	RBX_DUAL,
