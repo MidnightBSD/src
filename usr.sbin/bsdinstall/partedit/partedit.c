@@ -1,5 +1,7 @@
 /* $MidnightBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -24,19 +26,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit.c 285769 2015-07-21 21:12:28Z allanjude $
+ * $FreeBSD: stable/11/usr.sbin/bsdinstall/partedit/partedit.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
-#include <libgen.h>
-#include <libutil.h>
-#include <inttypes.h>
-#include <errno.h>
 
-#include <fstab.h>
-#include <libgeom.h>
 #include <dialog.h>
 #include <dlg_keys.h>
+#include <errno.h>
+#include <fstab.h>
+#include <inttypes.h>
+#include <libgeom.h>
+#include <libutil.h>
+#include <stdlib.h>
 
 #include "diskeditor.h"
 #include "partedit.h"
@@ -72,13 +74,14 @@ int
 main(int argc, const char **argv)
 {
 	struct partition_metadata *md;
-	const char *prompt;
+	const char *progname, *prompt;
 	struct partedit_item *items = NULL;
 	struct gmesh mesh;
 	int i, op, nitems, nscroll;
 	int error;
 
-	if (strcmp(basename(argv[0]), "sade") == 0)
+	progname = getprogname();
+	if (strcmp(progname, "sade") == 0)
 		sade_mode = 1;
 
 	TAILQ_INIT(&part_metadata);
@@ -94,7 +97,7 @@ main(int argc, const char **argv)
 	/* Revert changes on SIGINT */
 	signal(SIGINT, sigint_handler);
 
-	if (strcmp(basename(argv[0]), "autopart") == 0) { /* Guided */
+	if (strcmp(progname, "autopart") == 0) { /* Guided */
 		prompt = "Please review the disk setup. When complete, press "
 		    "the Finish button.";
 		/* Experimental ZFS autopartition support */
@@ -103,7 +106,7 @@ main(int argc, const char **argv)
 		} else {
 			part_wizard("ufs");
 		}
-	} else if (strcmp(basename(argv[0]), "scriptedpart") == 0) {
+	} else if (strcmp(progname, "scriptedpart") == 0) {
 		error = scripted_editor(argc, argv);
 		prompt = NULL;
 		if (error != 0) {
