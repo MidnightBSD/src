@@ -4,7 +4,7 @@
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
 # and it is not possible to change the name.
 #
-.include <bsd.own.mk>
+.include <src.opts.mk>
 .include <bsd.obj.mk>
 .include <bsd.man.mk>
 
