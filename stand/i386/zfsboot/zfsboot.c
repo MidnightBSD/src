@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: stable/11/stand/i386/zfsboot/zfsboot.c 348866 2019-06-10 15:
 extern uint32_t _end;
 
 #ifdef GPT
-static const uuid_t freebsd_zfs_uuid = GPT_ENT_TYPE_FREEBSD_ZFS;
+static const uuid_t mnbsd_zfs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 #endif
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
@@ -625,7 +625,7 @@ probe_drive(struct zfsdsk *zdsk)
 	    return;
 	for (part = 0; part < entries_per_sec; part++) {
 	    ent = (struct gpt_ent *)(sec + part * hdr.hdr_entsz);
-	    if (memcmp(&ent->ent_type, &freebsd_zfs_uuid,
+	    if (memcmp(&ent->ent_type, &mnbsd_zfs_uuid,
 		     sizeof(uuid_t)) == 0) {
 		zdsk->dsk.start = ent->ent_lba_start;
 		zdsk->dsk.size = ent->ent_lba_end - ent->ent_lba_start + 1;
@@ -874,7 +874,7 @@ main(void)
 
     for (;;) {
 	if (!autoboot || !OPT_CHECK(RBX_QUIET)) {
-	    printf("\nFreeBSD/x86 boot\n");
+	    printf("\nMidnightBSD/x86 boot\n");
 	    if (zfs_rlookup(spa, zfsmount.rootobj, rootname) != 0)
 		printf("Default: %s/<0x%llx>:%s\n"
 		       "boot: ",

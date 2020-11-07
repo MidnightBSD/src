@@ -79,7 +79,7 @@ struct file_format multiboot_obj =
 
 extern void multiboot_tramp();
 
-static const char mbl_name[] = "FreeBSD Loader";
+static const char mbl_name[] = "MidnightBSD Loader";
 
 static int
 num_modules(struct preloaded_file *kfp)
@@ -252,15 +252,15 @@ multiboot_exec(struct preloaded_file *fp)
 	/*
 	 * Prepare the multiboot module list, Xen assumes the first
 	 * module is the Dom0 kernel, and the second one is the initramfs.
-	 * This is not optimal for FreeBSD, that doesn't have a initramfs
+	 * This is not optimal for BSD, that doesn't have a initramfs
 	 * but instead loads modules dynamically and creates the metadata
 	 * info on-the-fly.
 	 *
 	 * As expected, the first multiboot module is going to be the
-	 * FreeBSD kernel loaded as a raw file. The second module is going
+	 * BSD kernel loaded as a raw file. The second module is going
 	 * to contain the metadata info and the loaded modules.
 	 *
-	 * On native FreeBSD loads all the modules and then places the
+	 * On native BSD loads all the modules and then places the
 	 * metadata info at the end, but this is painful when running on Xen,
 	 * because it relocates the second multiboot module wherever it
 	 * likes. In order to workaround this limitation the metadata
@@ -302,13 +302,13 @@ multiboot_exec(struct preloaded_file *fp)
 
 	fp = file_findfile(NULL, "elf kernel");
 	if (fp == NULL) {
-		printf("No FreeBSD kernel provided, aborting\n");
+		printf("No MidnightBSD kernel provided, aborting\n");
 		error = EINVAL;
 		goto error;
 	}
 
 	if (fp->f_metadata != NULL) {
-		printf("FreeBSD kernel already contains metadata, aborting\n");
+		printf("MidnightBSD kernel already contains metadata, aborting\n");
 		error = EINVAL;
 		goto error;
 	}
@@ -407,7 +407,7 @@ multiboot_obj_loadfile(char *filename, uint64_t dest,
 		return (EFTYPE);
 
 	/*
-	 * We have a multiboot kernel loaded, see if there's a FreeBSD
+	 * We have a multiboot kernel loaded, see if there's a BSD
 	 * kernel loaded also.
 	 */
 	kfp = file_findfile(NULL, "elf kernel");

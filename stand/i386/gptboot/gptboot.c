@@ -58,7 +58,7 @@ __FBSDID("$FreeBSD: stable/11/stand/i386/gptboot/gptboot.c 344399 2019-02-20 23:
 
 extern uint32_t _end;
 
-static const uuid_t freebsd_ufs_uuid = GPT_ENT_TYPE_FREEBSD_UFS;
+static const uuid_t midnightbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
 	RBX_DUAL,
@@ -232,11 +232,11 @@ static int
 gptinit(void)
 {
 
-	if (gptread(&freebsd_ufs_uuid, &gdsk.dsk, dmadat->secbuf) == -1) {
+	if (gptread(&mnbsd_ufs_uuid, &gdsk.dsk, dmadat->secbuf) == -1) {
 		printf("%s: unable to load GPT\n", BOOTPROG);
 		return (-1);
 	}
-	if (gptfind(&freebsd_ufs_uuid, &gdsk.dsk, gdsk.dsk.part) == -1) {
+	if (gptfind(&mnbsd_ufs_uuid, &gdsk.dsk, gdsk.dsk.part) == -1) {
 		printf("%s: no UFS partition was found\n", BOOTPROG);
 		return (-1);
 	}
@@ -339,7 +339,7 @@ main(void)
 		memcpy(kname, PATH_KERNEL, sizeof(PATH_KERNEL));
 		load();
 		gptbootfailed(&gdsk.dsk);
-		if (gptfind(&freebsd_ufs_uuid, &gdsk.dsk, -1) == -1)
+		if (gptfind(&mnbsd_ufs_uuid, &gdsk.dsk, -1) == -1)
 			break;
 		dsk_meta = 0;
 	}
@@ -348,7 +348,7 @@ main(void)
 
 	for (;;) {
 		if (!OPT_CHECK(RBX_QUIET)) {
-			printf("\nFreeBSD/x86 boot\n"
+			printf("\nMidnightBSD/x86 boot\n"
 			    "Default: %u:%s(%up%u)%s\n"
 			    "boot: ",
 			    gdsk.dsk.drive & DRV_MASK, dev_nm[gdsk.dsk.type],

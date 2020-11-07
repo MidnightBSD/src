@@ -620,7 +620,7 @@ desc_ofs:
 	 * which is used for non-matching names.
 	 */
 		.byte os_linux-.		# 131, Linux
-		.byte os_freebsd-.		# 165, FreeBSD
+		.byte os_freebsd-.		# 165, FreeBSD, MidnightBSD
 		.byte os_bsd-.			# 166, OpenBSD
 		.byte os_bsd-.			# 169, NetBSD
 		.byte os_dos-.			#   6, FAT16 >= 32M
