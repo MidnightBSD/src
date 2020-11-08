@@ -1,4 +1,5 @@
 #-
+# Copyright (c) 2011 Lucas Holt <luke@foolishgames.com>
 # Copyright (c) 2007 Yahoo!, Inc.
 # All rights reserved.
 # Written by: John Baldwin <jhb@FreeBSD.org>
@@ -27,7 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/stand/i386/pmbr/pmbr.s 239060 2012-08-05 12:57:38Z ae $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/i386/pmbr/pmbr.s,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Partly from: src/sys/boot/i386/mbr/mbr.s 1.7
 
@@ -232,17 +234,17 @@ msg_noboot: 	.asciz "Missing boot loader"
 
 lba:		.quad 1				# LBA of GPT header 
 
-boot_uuid:	.long 0x83bd6b9d
-		.word 0x7f41
-		.word 0x11dc
-		.byte 0xbe
-		.byte 0x0b
-		.byte 0x00
-		.byte 0x15
-		.byte 0x60
-		.byte 0xb8
-		.byte 0x4f
-		.byte 0x0f
+boot_uuid:	.long 0x85d5e45e
+		.word 0x237c
+		.word 0x11e1
+		.byte 0xb4
+		.byte 0xb3
+		.byte 0xe8
+		.byte 0x9a
+		.byte 0x8f
+		.byte 0x7f
+		.byte 0xc3
+		.byte 0xa7
 
 		.org DISKSIG,0x90
 sig:		.long 0				# OS Disk Signature
