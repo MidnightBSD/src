@@ -535,9 +535,9 @@ zfs_probe_partition(void *arg, const char *partname,
 	char devname[32];
 	int ret;
 
-	/* Probe only freebsd-zfs and freebsd partitions */
-	if (part->type != PART_FREEBSD &&
-	    part->type != PART_FREEBSD_ZFS)
+	/* Probe only mnbsd-zfs and midnightbsd partitions */
+	if (part->type != PART_MIDNIGHTBSD &&
+	    part->type != PART_MIDNIGHTBSD_ZFS)
 		return (0);
 
 	ppa = (struct zfs_probe_args *)arg;
@@ -551,7 +551,7 @@ zfs_probe_partition(void *arg, const char *partname,
 	if (ret == 0)
 		return (0);
 	/* Do we have BSD label here? */
-	if (part->type == PART_FREEBSD) {
+	if (part->type == PART_MIDNIGHTBSD) {
 		pa.devname = devname;
 		pa.pool_guid = ppa->pool_guid;
 		pa.secsz = ppa->secsz;
