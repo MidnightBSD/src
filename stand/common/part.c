@@ -53,14 +53,14 @@ __FBSDID("$FreeBSD: stable/11/stand/common/part.c 346483 2019-04-21 04:35:49Z ke
 #define	MAXTBLSZ	64
 static const uuid_t gpt_uuid_unused = GPT_ENT_TYPE_UNUSED;
 static const uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
-static const uuid_t gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+static const uuid_t gpt_uuid_midnightbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static const uuid_t gpt_uuid_efi = GPT_ENT_TYPE_EFI;
-static const uuid_t gpt_uuid_freebsd = GPT_ENT_TYPE_FREEBSD;
-static const uuid_t gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
-static const uuid_t gpt_uuid_freebsd_nandfs = GPT_ENT_TYPE_FREEBSD_NANDFS;
-static const uuid_t gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
-static const uuid_t gpt_uuid_freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
-static const uuid_t gpt_uuid_freebsd_vinum = GPT_ENT_TYPE_FREEBSD_VINUM;
+static const uuid_t gpt_uuid_midnightbsd = GPT_ENT_TYPE_MIDNIGHTBSD;
+static const uuid_t gpt_uuid_midnightbsd_boot = GPT_ENT_TYPE_MIDNIGHTBSD_BOOT;
+static const uuid_t gpt_uuid_midnightbsd_nandfs = GPT_ENT_TYPE_MIDNIGHTBSD_NANDFS;
+static const uuid_t gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
+static const uuid_t gpt_uuid_midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
+static const uuid_t gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
 #endif
 
 struct pentry {
@@ -89,13 +89,13 @@ static struct parttypes {
 } ptypes[] = {
 	{ PART_UNKNOWN,		"Unknown" },
 	{ PART_EFI,		"EFI" },
-	{ PART_FREEBSD,		"FreeBSD" },
-	{ PART_FREEBSD_BOOT,	"FreeBSD boot" },
-	{ PART_FREEBSD_NANDFS,	"FreeBSD nandfs" },
-	{ PART_FREEBSD_UFS,	"FreeBSD UFS" },
-	{ PART_FREEBSD_ZFS,	"FreeBSD ZFS" },
-	{ PART_FREEBSD_SWAP,	"FreeBSD swap" },
-	{ PART_FREEBSD_VINUM,	"FreeBSD vinum" },
+	{ PART_MIDNIGHTBSD,		"FreeBSD" },
+	{ PART_MIDNIGHTBSD_BOOT,	"FreeBSD boot" },
+	{ PART_MIDNIGHTBSD_NANDFS,	"FreeBSD nandfs" },
+	{ PART_MIDNIGHTBSD_UFS,	"FreeBSD UFS" },
+	{ PART_MIDNIGHTBSD_ZFS,	"FreeBSD ZFS" },
+	{ PART_MIDNIGHTBSD_SWAP,	"FreeBSD swap" },
+	{ PART_MIDNIGHTBSD_VINUM,	"FreeBSD vinum" },
 	{ PART_LINUX,		"Linux" },
 	{ PART_LINUX_SWAP,	"Linux swap" },
 	{ PART_DOS,		"DOS/Windows" },
@@ -131,20 +131,20 @@ gpt_parttype(uuid_t type)
 		return (PART_EFI);
 	else if (uuid_equal(&type, &gpt_uuid_ms_basic_data, NULL))
 		return (PART_DOS);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_boot, NULL))
-		return (PART_FREEBSD_BOOT);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_ufs, NULL))
-		return (PART_FREEBSD_UFS);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_zfs, NULL))
-		return (PART_FREEBSD_ZFS);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_swap, NULL))
-		return (PART_FREEBSD_SWAP);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_vinum, NULL))
-		return (PART_FREEBSD_VINUM);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd_nandfs, NULL))
-		return (PART_FREEBSD_NANDFS);
-	else if (uuid_equal(&type, &gpt_uuid_freebsd, NULL))
-		return (PART_FREEBSD);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_boot, NULL))
+		return (PART_MIDNIGHTBSD_BOOT);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_ufs, NULL))
+		return (PART_MIDNIGHTBSD_UFS);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_zfs, NULL))
+		return (PART_MIDNIGHTBSD_ZFS);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_swap, NULL))
+		return (PART_MIDNIGHTBSD_SWAP);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_vinum, NULL))
+		return (PART_MIDNIGHTBSD_VINUM);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd_nandfs, NULL))
+		return (PART_MIDNIGHTBSD_NANDFS);
+	else if (uuid_equal(&type, &gpt_uuid_midnightbsd, NULL))
+		return (PART_MIDNIGHTBSD);
 	return (PART_UNKNOWN);
 }
 
@@ -364,7 +364,7 @@ mbr_parttype(uint8_t type)
 
 	switch (type) {
 	case DOSPTYP_386BSD:
-		return (PART_FREEBSD);
+		return (PART_MIDNIGHTBSD);
 	case DOSPTYP_LINSWP:
 		return (PART_LINUX_SWAP);
 	case DOSPTYP_LINUX:
@@ -446,15 +446,15 @@ bsd_parttype(uint8_t type)
 
 	switch (type) {
 	case FS_NANDFS:
-		return (PART_FREEBSD_NANDFS);
+		return (PART_MIDNIGHTBSD_NANDFS);
 	case FS_SWAP:
-		return (PART_FREEBSD_SWAP);
+		return (PART_MIDNIGHTBSD_SWAP);
 	case FS_BSDFFS:
-		return (PART_FREEBSD_UFS);
+		return (PART_MIDNIGHTBSD_UFS);
 	case FS_VINUM:
-		return (PART_FREEBSD_VINUM);
+		return (PART_MIDNIGHTBSD_VINUM);
 	case FS_ZFS:
-		return (PART_FREEBSD_ZFS);
+		return (PART_MIDNIGHTBSD_ZFS);
 	}
 	return (PART_UNKNOWN);
 }
@@ -527,17 +527,17 @@ vtoc8_parttype(uint16_t type)
 {
 
 	switch (type) {
-	case VTOC_TAG_FREEBSD_NANDFS:
-		return (PART_FREEBSD_NANDFS);
-	case VTOC_TAG_FREEBSD_SWAP:
-		return (PART_FREEBSD_SWAP);
-	case VTOC_TAG_FREEBSD_UFS:
-		return (PART_FREEBSD_UFS);
-	case VTOC_TAG_FREEBSD_VINUM:
-		return (PART_FREEBSD_VINUM);
-	case VTOC_TAG_FREEBSD_ZFS:
-		return (PART_FREEBSD_ZFS);
-	}
+	case VTOC_TAG_MIDNIGHTBSD_NANDFS:
+		return (PART_MIDNIGHTBSD_NANDFS);
+	case VTOC_TAG_MIDNIGHTBSD_SWAP:
+		return (PART_MIDNIGHTBSD_SWAP);
+	case VTOC_TAG_MIDNIGHTBSD_UFS:
+		return (PART_MIDNIGHTBSD_UFS);
+	case VTOC_TAG_MIDNIGHTBSD_VINUM:
+		return (PART_MIDNIGHTBSD_VINUM);
+	case VTOC_TAG_MIDNIGHTBSD_ZFS:
+		return (PART_MIDNIGHTBSD_ZFS);
+	};
 	return (PART_UNKNOWN);
 }
 
@@ -895,8 +895,8 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 		if (table->type == PTABLE_GPT) {
 			if (entry->part.type == PART_DOS)
 				pref = PREF_DOS;
-			else if (entry->part.type == PART_FREEBSD_UFS ||
-			    entry->part.type == PART_FREEBSD_ZFS)
+			else if (entry->part.type == PART_MIDNIGHTBSD_UFS ||
+			    entry->part.type == PART_MIDNIGHTBSD_ZFS)
 				pref = PREF_FBSD;
 			else
 				pref = PREF_NONE;

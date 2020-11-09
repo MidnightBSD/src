@@ -620,7 +620,7 @@ desc_ofs:
 	 * which is used for non-matching names.
 	 */
 		.byte os_linux-.		# 131, Linux
-		.byte os_freebsd-.		# 165, FreeBSD, MidnightBSD
+		.byte os_bsd-.			# 165, FreeBSD, MidnightBSD
 		.byte os_bsd-.			# 166, OpenBSD
 		.byte os_bsd-.			# 169, NetBSD
 		.byte os_dos-.			#   6, FAT16 >= 32M
@@ -647,7 +647,6 @@ os_dos:
 #endif
 os_win:		.ascii "Wi";   .byte 'n'|0x80
 os_linux:	.ascii "Linu"; .byte 'x'|0x80
-os_freebsd:	.ascii "Free"
 os_bsd:		.ascii "BS";   .byte 'D'|0x80
 #ifndef SAVE_MORE_MEMORY
 os_ext:		.ascii "EX";   .byte 'T'|0x80
