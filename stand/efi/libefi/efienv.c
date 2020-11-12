@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: stable/11/stand/efi/libefi/efienv.c 346483 2019-04-21 04:35:
 #include <efilib.h>
 
 static EFI_GUID FreeBSDBootVarGUID = FREEBSD_BOOT_VAR_GUID;
+static EFI_GUID MidnightBSDBootVarGUID = MIDNIGHTBSD_BOOT_VAR_GUID;
 static EFI_GUID GlobalBootVarGUID = EFI_GLOBAL_VARIABLE;
 
 EFI_STATUS
@@ -60,6 +61,29 @@ efi_global_getenv(const char *v, void *data, size_t *len)
 {
 
 	return (efi_getenv(&GlobalBootVarGUID, v, data, len));
+}
+
+EFI_STATUS
+efi_midnightbsd_getenv(const char *v, void *data, size_t *len)
+{
+
+	return (efi_getenv(&MidnightBSDBootVarGUID, v, data, len));
+}
+
+EFI_STATUS
+efi_setenv_midnightbsd_wcs(const char *varname, CHAR16 *valstr)
+{
+	CHAR16 *var = NULL;
+	size_t len;
+	EFI_STATUS rv;
+
+	if (utf8_to_ucs2(varname, &var, &len) != 0)
+		return (EFI_OUT_OF_RESOURCES);
+	rv = RS->SetVariable(var, &MidnightBSDBootVarGUID,
+	    EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
+	    (ucs2len(valstr) + 1) * sizeof(efi_char), valstr);
+	free(var);
+	return (rv);
 }
 
 EFI_STATUS
