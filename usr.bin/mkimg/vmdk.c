@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,10 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/vmdk.c 269900 2014-08-13 01:43:38Z marcel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/vmdk.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -37,6 +34,7 @@ __FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/vmdk.c 269900 2014-08-13 01:43:38Z m
 #include <string.h>
 #include <unistd.h>
 
+#include "endian.h"
 #include "image.h"
 #include "format.h"
 #include "mkimg.h"
@@ -150,7 +148,7 @@ vmdk_write(int fd)
 	gdsz = (ngts * sizeof(uint32_t) + VMDK_SECTOR_SIZE - 1) &
 	    ~(VMDK_SECTOR_SIZE - 1);
 
-	gd = calloc(gdsz, 1);
+	gd = calloc(1, gdsz);
 	if (gd == NULL) {
 		free(desc);
 		return (ENOMEM);
@@ -162,7 +160,7 @@ vmdk_write(int fd)
 		sec += VMDK_NGTES * sizeof(uint32_t) / VMDK_SECTOR_SIZE;
 	}
 
-	rgd = calloc(gdsz, 1);
+	rgd = calloc(1, gdsz);
 	if (rgd == NULL) {
 		free(gd);
 		free(desc);
@@ -184,14 +182,14 @@ vmdk_write(int fd)
 	le64enc(&hdr.overhead, sec);
 	be32enc(&hdr.nl_test, VMDK_NL_TEST);
 
-	gtsz = ngts * VMDK_NGTES * sizeof(uint32_t);
-	gt = calloc(gtsz, 1);
+	gt = calloc(ngts, VMDK_NGTES * sizeof(uint32_t));
 	if (gt == NULL) {
 		free(rgd);
 		free(gd);
 		free(desc);
 		return (ENOMEM);
 	}
+	gtsz = ngts * VMDK_NGTES * sizeof(uint32_t);
 
 	cursec = sec;
 	blkcnt = (grainsz * VMDK_SECTOR_SIZE) / secsz;
@@ -226,7 +224,7 @@ vmdk_write(int fd)
 	cur = VMDK_SECTOR_SIZE + desc_len + (gdsz + gtsz) * 2;
 	lim = sec * VMDK_SECTOR_SIZE;
 	if (cur < lim) {
-		buf = calloc(VMDK_SECTOR_SIZE, 1);
+		buf = calloc(1, VMDK_SECTOR_SIZE);
 		if (buf == NULL)
 			error = ENOMEM;
 		while (!error && cur < lim) {

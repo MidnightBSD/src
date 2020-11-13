@@ -26,11 +26,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/raw.c 269177 2014-07-28 02:07:16Z marcel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/raw.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

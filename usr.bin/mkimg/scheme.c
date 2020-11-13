@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2013,2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,11 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/scheme.c 292341 2015-12-16 16:44:56Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/scheme.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/linker_set.h>
-#include <sys/queue.h>
 #include <sys/stat.h>
 #include <assert.h>
 #include <err.h>
@@ -62,9 +58,11 @@ static struct {
 	{ "mnbsd-zfs", ALIAS_MIDNIGHTBSD_ZFS },
 	{ "mbr", ALIAS_MBR },
 	{ "ntfs", ALIAS_NTFS },
+	{ "prepboot", ALIAS_PPCBOOT },
 	{ NULL, ALIAS_NONE }		/* Keep last! */
 };
 
+static struct mkimg_scheme *first;
 static struct mkimg_scheme *scheme;
 static void *bootcode;
 
@@ -82,13 +80,27 @@ scheme_parse_alias(const char *name)
 	return (ALIAS_NONE);
 }
 
+struct mkimg_scheme *
+scheme_iterate(struct mkimg_scheme *s)
+{
+
+	return ((s == NULL) ? first : s->next);
+}
+
+void
+scheme_register(struct mkimg_scheme *s)
+{
+	s->next = first;
+	first = s;
+}
+
 int
 scheme_select(const char *spec)
 {
-	struct mkimg_scheme *s, **iter;
+	struct mkimg_scheme *s;
 
-	SET_FOREACH(iter, schemes) {
-		s = *iter;
+	s = NULL;
+	while ((s = scheme_iterate(s)) != NULL) {
 		if (strcasecmp(spec, s->name) == 0) {
 			scheme = s;
 			return (0);
