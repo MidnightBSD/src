@@ -26,16 +26,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/bsd.c 272030 2014-09-23 16:05:23Z marcel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/bsd.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/disklabel.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/disklabel.h>
+
+#include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
@@ -104,7 +105,7 @@ bsd_write(lba_t imgsz, void *bootcode)
 
 	dp = &d->d_partitions[RAW_PART];
 	le32enc(&dp->p_size, imgsz);
-	STAILQ_FOREACH(part, &partlist, link) {
+	TAILQ_FOREACH(part, &partlist, link) {
 		n = part->index + ((part->index >= RAW_PART) ? 1 : 0);
 		dp = &d->d_partitions[n];
 		le32enc(&dp->p_size, part->size);

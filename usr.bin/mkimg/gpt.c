@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,20 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/gpt.c 287122 2015-08-25 04:03:51Z marcel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/gpt.c 345436 2019-03-23 03:37:08Z marcel $");
 
-#include <sys/types.h>
-#include <sys/diskmbr.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
-#include <sys/gpt.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <uuid.h>
 
+#include <sys/diskmbr.h>
+#include <sys/gpt.h>
+
+#include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
@@ -132,21 +130,6 @@ crc32(const void *buf, size_t sz)
 	return (crc ^ ~0U);
 }
 
-static void
-gpt_uuid_enc(void *buf, const uuid_t *uuid)
-{
-	uint8_t *p = buf;
-	int i;
-
-	le32enc(p, uuid->time_low);
-	le16enc(p + 4, uuid->time_mid);
-	le16enc(p + 6, uuid->time_hi_and_version);
-	p[8] = uuid->clock_seq_hi_and_reserved;
-	p[9] = uuid->clock_seq_low;
-	for (i = 0; i < _UUID_NODE_LEN; i++)
-		p[10 + i] = uuid->node[i];
-}
-
 static u_int
 gpt_tblsz(void)
 {
@@ -174,7 +157,7 @@ gpt_write_pmbr(lba_t blks, void *bootcode)
 	uint32_t secs;
 	int error;
 
-	secs = (blks > UINT32_MAX) ? UINT32_MAX : (uint32_t)blks;
+	secs = (blks > UINT32_MAX) ? UINT32_MAX : (uint32_t)blks - 1;
 
 	pmbr = malloc(secsz);
 	if (pmbr == NULL)
@@ -200,7 +183,7 @@ gpt_write_pmbr(lba_t blks, void *bootcode)
 static struct gpt_ent *
 gpt_mktbl(u_int tblsz)
 {
-	uuid_t uuid;
+	mkimg_uuid_t uuid;
 	struct gpt_ent *tbl, *ent;
 	struct part *part;
 	int c, idx;
@@ -209,11 +192,11 @@ gpt_mktbl(u_int tblsz)
 	if (tbl == NULL)
 		return (NULL);
 
-	STAILQ_FOREACH(part, &partlist, link) {
+	TAILQ_FOREACH(part, &partlist, link) {
 		ent = tbl + part->index;
-		gpt_uuid_enc(&ent->ent_type, ALIAS_TYPE2PTR(part->type));
+		mkimg_uuid_enc(&ent->ent_type, ALIAS_TYPE2PTR(part->type));
 		mkimg_uuid(&uuid);
-		gpt_uuid_enc(&ent->ent_uuid, &uuid);
+		mkimg_uuid_enc(&ent->ent_uuid, &uuid);
 		le64enc(&ent->ent_lba_start, part->block);
 		le64enc(&ent->ent_lba_end, part->block + part->size - 1);
 		if (part->label != NULL) {
@@ -244,7 +227,7 @@ gpt_write_hdr(struct gpt_hdr *hdr, uint64_t self, uint64_t alt, uint64_t tbl)
 static int
 gpt_write(lba_t imgsz, void *bootcode)
 {
-	uuid_t uuid;
+	mkimg_uuid_t uuid;
 	struct gpt_ent *tbl;
 	struct gpt_hdr *hdr;
 	uint32_t crc;
@@ -281,10 +264,10 @@ gpt_write(lba_t imgsz, void *bootcode)
 	le64enc(&hdr->hdr_lba_start, 2 + tblsz);
 	le64enc(&hdr->hdr_lba_end, imgsz - tblsz - 2);
 	mkimg_uuid(&uuid);
-	gpt_uuid_enc(&hdr->hdr_uuid, &uuid);
-	le32enc(&hdr->hdr_entries, nparts);
+	mkimg_uuid_enc(&hdr->hdr_uuid, &uuid);
+	le32enc(&hdr->hdr_entries, tblsz * secsz / sizeof(struct gpt_ent));
 	le32enc(&hdr->hdr_entsz, sizeof(struct gpt_ent));
-	crc = crc32(tbl, nparts * sizeof(struct gpt_ent));
+	crc = crc32(tbl, tblsz * secsz);
 	le32enc(&hdr->hdr_crc_table, crc);
 	error = gpt_write_hdr(hdr, 1, imgsz - 1, 2);
 	if (!error)

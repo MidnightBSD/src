@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2014 Juniper Networks, Inc.
  * All rights reserved.
@@ -26,17 +25,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/vtoc8.c 272030 2014-09-23 16:05:23Z marcel $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/vtoc8.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
-#include <sys/vtoc.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/vtoc.h>
+
+#include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
@@ -88,7 +88,7 @@ vtoc8_write(lba_t imgsz, void *bootcode __unused)
 	be16enc(&vtoc8.magic, VTOC_MAGIC);
 
 	be32enc(&vtoc8.map[VTOC_RAW_PART].nblks, imgsz);
-	STAILQ_FOREACH(part, &partlist, link) {
+	TAILQ_FOREACH(part, &partlist, link) {
 		n = part->index + ((part->index >= VTOC_RAW_PART) ? 1 : 0);
 		be16enc(&vtoc8.part[n].tag, ALIAS_TYPE2INT(part->type));
 		be32enc(&vtoc8.map[n].cyl, part->block / (nsecs * nheads));
