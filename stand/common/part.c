@@ -89,13 +89,13 @@ static struct parttypes {
 } ptypes[] = {
 	{ PART_UNKNOWN,		"Unknown" },
 	{ PART_EFI,		"EFI" },
-	{ PART_MIDNIGHTBSD,		"FreeBSD" },
-	{ PART_MIDNIGHTBSD_BOOT,	"FreeBSD boot" },
-	{ PART_MIDNIGHTBSD_NANDFS,	"FreeBSD nandfs" },
-	{ PART_MIDNIGHTBSD_UFS,	"FreeBSD UFS" },
-	{ PART_MIDNIGHTBSD_ZFS,	"FreeBSD ZFS" },
-	{ PART_MIDNIGHTBSD_SWAP,	"FreeBSD swap" },
-	{ PART_MIDNIGHTBSD_VINUM,	"FreeBSD vinum" },
+	{ PART_MIDNIGHTBSD,		"MidnightBSD" },
+	{ PART_MIDNIGHTBSD_BOOT,	"MidnightBSD boot" },
+	{ PART_MIDNIGHTBSD_NANDFS,	"MidnightBSD nandfs" },
+	{ PART_MIDNIGHTBSD_UFS,	"MidnightBSD UFS" },
+	{ PART_MIDNIGHTBSD_ZFS,	"MidnightBSD ZFS" },
+	{ PART_MIDNIGHTBSD_SWAP,	"MidnightBSD swap" },
+	{ PART_MIDNIGHTBSD_VINUM,	"MidnightBSD vinum" },
 	{ PART_LINUX,		"Linux" },
 	{ PART_LINUX_SWAP,	"Linux swap" },
 	{ PART_DOS,		"DOS/Windows" },
@@ -839,16 +839,16 @@ ptable_getpart(const struct ptable *table, struct ptable_entry *part, int index)
 /*
  * Search for a slice with the following preferences:
  *
- * 1: Active FreeBSD slice
- * 2: Non-active FreeBSD slice
+ * 1: Active MidnightBSD slice
+ * 2: Non-active MidnightBSD slice
  * 3: Active Linux slice
  * 4: non-active Linux slice
  * 5: Active FAT/FAT32 slice
  * 6: non-active FAT/FAT32 slice
  */
 #define	PREF_RAWDISK	0
-#define	PREF_FBSD_ACT	1
-#define	PREF_FBSD	2
+#define	PREF_MBSD_ACT	1
+#define	PREF_MBSD	2
 #define	PREF_LINUX_ACT	3
 #define	PREF_LINUX	4
 #define	PREF_DOS_ACT	5
@@ -870,8 +870,8 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 		if (table->type == PTABLE_MBR) {
 			switch (entry->type.mbr) {
 			case DOSPTYP_386BSD:
-				pref = entry->flags & 0x80 ? PREF_FBSD_ACT:
-				    PREF_FBSD;
+				pref = entry->flags & 0x80 ? PREF_MBSD_ACT:
+				    PREF_MBSD;
 				break;
 			case DOSPTYP_LINUX:
 				pref = entry->flags & 0x80 ? PREF_LINUX_ACT:
@@ -897,7 +897,7 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 				pref = PREF_DOS;
 			else if (entry->part.type == PART_MIDNIGHTBSD_UFS ||
 			    entry->part.type == PART_MIDNIGHTBSD_ZFS)
-				pref = PREF_FBSD;
+				pref = PREF_MBSD;
 			else
 				pref = PREF_NONE;
 		}
@@ -905,14 +905,14 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 #ifdef LOADER_PC98_SUPPORT
 		if (table->type == PTABLE_PC98) {
 			switch(entry->part.type & PC98_MID_MASK) {
-			case PC98_MID_386BSD:		/* FreeBSD */
+			case PC98_MID_386BSD:		/* BSD */
 				if ((entry->part.type & PC98_MID_BOOTABLE) &&
-				    (preflevel > PREF_FBSD_ACT)) {
+				    (preflevel > PREF_MBSD_ACT)) {
 					pref = i;
-					preflevel = PREF_FBSD_ACT;
-				} else if (preflevel > PREF_FBSD) {
+					preflevel = PREF_MBSD_ACT;
+				} else if (preflevel > PREF_MBSD) {
 					pref = i;
-					preflevel = PREF_FBSD;
+					preflevel = PREF_MBSD;
 				}
 				break;
 
