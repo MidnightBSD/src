@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/mkimg/image.h 287122 2015-08-25 04:03:51Z marcel $
+ * $FreeBSD: stable/11/usr.bin/mkimg/image.h 286215 2015-08-03 01:24:48Z marcel $
  */
 
 #ifndef _MKIMG_IMAGE_H_

@@ -26,16 +26,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/usr.bin/mkimg/ebr.c 292341 2015-12-16 16:44:56Z emaste $");
+__FBSDID("$FreeBSD: stable/11/usr.bin/mkimg/ebr.c 329059 2018-02-09 09:15:43Z manu $");
 
-#include <sys/types.h>
-#include <sys/diskmbr.h>
-#include <sys/endian.h>
 #include <sys/errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <sys/diskmbr.h>
+
+#include "endian.h"
 #include "image.h"
 #include "mkimg.h"
 #include "scheme.h"
@@ -89,7 +90,7 @@ ebr_write(lba_t imgsz __unused, void *bootcode __unused)
 	le16enc(ebr + DOSMAGICOFFSET, DOSMAGIC);
 
 	error = 0;
-	STAILQ_FOREACH_SAFE(part, &partlist, link, next) {
+	TAILQ_FOREACH(part, &partlist, link) {
 		block = part->block - nsecs;
 		size = round_track(part->size);
 		dp = (void *)(ebr + DOSPARTOFF);
@@ -101,6 +102,7 @@ ebr_write(lba_t imgsz __unused, void *bootcode __unused)
 		le32enc(&dp->dp_size, size);
 
 		/* Add link entry */
+		next = TAILQ_NEXT(part, link);
 		if (next != NULL) {
 			size = round_track(next->size);
 			dp++;

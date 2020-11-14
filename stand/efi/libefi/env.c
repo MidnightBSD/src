@@ -66,6 +66,7 @@ static struct efi_uuid_mapping {
 } efi_uuid_mapping[] = {
 	{ .efi_guid_name = "global", .efi_guid = EFI_GLOBAL_VARIABLE },
 	{ .efi_guid_name = "freebsd", .efi_guid = FREEBSD_BOOT_VAR_GUID },
+	{ .efi_guid_name = "midnightbsd", .efi_guid = MIDNIGHTBSD_BOOT_VAR_GUID },
 	/* EFI Systab entry names. */
 	{ .efi_guid_name = "MPS Table", .efi_guid = MPS_TABLE_GUID },
 	{ .efi_guid_name = "ACPI Table", .efi_guid = ACPI_TABLE_GUID },
@@ -468,11 +469,11 @@ efi_print_mem_type(const CHAR16 *varnamearg __unused, uint8_t *data,
 }
 
 /*
- * Print FreeBSD variables.
+ * Print MidnightBSD variables.
  * We have LoaderPath and LoaderDev as CHAR16 strings.
  */
 static int
-efi_print_freebsd(const CHAR16 *varnamearg, uint8_t *data,
+efi_print_midnightbsd(const CHAR16 *varnamearg, uint8_t *data,
     UINTN datasz __unused)
 {
 	int rv = -1;
@@ -710,8 +711,8 @@ efi_print_var(CHAR16 *varnamearg, EFI_GUID *matchguid, int lflag)
 	if (lflag == 0) {
 		if (strcmp(str, "global") == 0)
 			rv = efi_print_global(varnamearg, data, datasz);
-		else if (strcmp(str, "freebsd") == 0)
-			rv = efi_print_freebsd(varnamearg, data, datasz);
+		else if (strcmp(str, "freebsd") == 0 || strcmp(str, "midnightbsd"))
+			rv = efi_print_midnightbsd(varnamearg, data, datasz);
 		else if (strcmp(str,
 		    EFI_MEMORY_TYPE_INFORMATION_VARIABLE_NAME) == 0)
 			rv = efi_print_mem_type(varnamearg, data, datasz);

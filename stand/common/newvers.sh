@@ -50,7 +50,7 @@ u=${USER-root} h=${HOSTNAME-`hostname`} t=`date`
 #r=`head -n 6 $1 | tail -n 1 | awk -F: ' { print $1 } '`
 r=`awk -F: ' /^[0-9]\.[0-9]+:/ { print $1; exit }' $1`
 
-bootprog_info="FreeBSD/${3} ${2}, Revision ${r}\\n"
+bootprog_info="MidnightBSD/${3} ${2}, Revision ${r}\\n"
 if [ -n "${include_metadata}" ]; then
 	bootprog_info="$bootprog_info(${t} ${u}@${h})\\n"
 fi

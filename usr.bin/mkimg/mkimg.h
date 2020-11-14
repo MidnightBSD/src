@@ -24,16 +24,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/10/usr.bin/mkimg/mkimg.h 272776 2014-10-08 22:13:18Z marcel $
+ * $FreeBSD: stable/11/usr.bin/mkimg/mkimg.h 329059 2018-02-09 09:15:43Z manu $
  */
 
 #ifndef _MKIMG_MKIMG_H_
 #define	_MKIMG_MKIMG_H_
 
 #include <sys/queue.h>
+#include <sys/types.h>
 
 struct part {
-	STAILQ_ENTRY(part) link;
+	TAILQ_ENTRY(part) link;
 	char	*alias;		/* Partition type alias. */
 	char	*contents;	/* Contents/size specification. */
 	u_int	kind;		/* Content kind. */
@@ -48,7 +49,7 @@ struct part {
 	char	*label;		/* Partition label. */
 };
 
-extern STAILQ_HEAD(partlisthead, part) partlist;
+extern TAILQ_HEAD(partlisthead, part) partlist;
 extern u_int nparts;
 
 extern u_int unit_testing;
@@ -59,6 +60,7 @@ extern u_int nheads;
 extern u_int nsecs;
 extern u_int secsz;	/* Logical block size. */
 extern u_int blksz;	/* Physical block size. */
+extern uint32_t active_partition;
 
 static inline lba_t
 round_block(lba_t n)
@@ -90,7 +92,17 @@ ssize_t sparse_write(int, const void *, size_t);
 
 void mkimg_chs(lba_t, u_int, u_int *, u_int *, u_int *);
 
-struct uuid;
-void mkimg_uuid(struct uuid *);
+struct mkimg_uuid {
+	uint32_t	time_low;
+	uint16_t	time_mid;
+	uint16_t	time_hi_and_version;
+	uint8_t		clock_seq_hi_and_reserved;
+	uint8_t		clock_seq_low;
+	uint8_t		node[6];
+};
+typedef struct mkimg_uuid mkimg_uuid_t;
+
+void mkimg_uuid(mkimg_uuid_t *);
+void mkimg_uuid_enc(void *, const mkimg_uuid_t *);
 
 #endif /* _MKIMG_MKIMG_H_ */

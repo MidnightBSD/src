@@ -10,6 +10,8 @@
 # $MidnightBSD$
 #
 
+set -e
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 export PATH
 
@@ -30,14 +32,13 @@ fi
 
 echo '/dev/ufs/MidnightBSD_Install / ufs ro,noatime 1 1' > ${1}/etc/fstab
 echo 'root_rw_mount="NO"' > ${1}/etc/rc.conf.local
-makefs -B little -o label=MidnightBSD_Install ${2}.part ${1}
-if [ $? -ne 0 ]; then
-	echo "makefs failed"
-	exit 1
-fi
+makefs -B little -o label=MidnightBSD_Install -o version=2 ${2}.part ${1}
 rm ${1}/etc/fstab
 rm ${1}/etc/rc.conf.local
 
-mkimg -s gpt -b ${1}/boot/pmbr -p mnbsd-boot:=${1}/boot/gptboot -p mnbsd-ufs:=${2}.part -p mnbsd-swap::1M -o ${2}
+mkimg -s mbr \
+    -b ${1}/boot/mbr \
+    -p midnightbsd:-"mkimg -s bsd -b ${1}/boot/boot -p mnbsd-ufs:=${2}.part" \
+    -o ${2}
 rm ${2}.part
 

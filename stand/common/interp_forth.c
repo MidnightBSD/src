@@ -27,7 +27,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: stable/11/stand/common/interp_forth.c 346483 2019-04-21 04:35:49Z kevans $");
 
-#include <sys/param.h>		/* to pick up __FreeBSD_version */
+#include <sys/param.h>		/* to pick up __MidnightBSD_version */
 #include <string.h>
 #include <stand.h>
 #include "bootstrap.h"
@@ -52,7 +52,7 @@ INTERP_DEFINE("4th");
 #define BF_PARSE 100
 
 /*
- * FreeBSD loader default dictionary cells
+ * BSD loader default dictionary cells
  */
 #ifndef	BF_DICTSIZE
 #define	BF_DICTSIZE	10000
@@ -278,7 +278,7 @@ bf_init(void)
 	ficlExec(bf_vm, "only forth definitions");
 
 	/* Export some version numbers so that code can detect the loader/host version */
-	ficlSetEnv(bf_sys, "FreeBSD_version", __FreeBSD_version);
+	ficlSetEnv(bf_sys, "MidnightBSD_version", __MidnightBSD_version);
 	ficlSetEnv(bf_sys, "loader_version", bootprog_rev);
 
 	/* try to load and run init file if present */
