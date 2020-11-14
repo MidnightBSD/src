@@ -13,7 +13,7 @@
       <Description>Logical network used by this appliance.</Description>
     </Network>
   </NetworkSection>
-  <VirtualSystem ovf:id="freebsd">
+  <VirtualSystem ovf:id="midnightbsd">
     <Info>A virtual machine</Info>
     <OperatingSystemSection ovf:id="78">
       <Info>The kind of installed guest operating system</Info>
@@ -25,7 +25,7 @@
       <System>
         <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
         <vssd:InstanceID>0</vssd:InstanceID>
-        <vssd:VirtualSystemIdentifier>freebsd</vssd:VirtualSystemIdentifier>
+        <vssd:VirtualSystemIdentifier>midnightbsd</vssd:VirtualSystemIdentifier>
         <vssd:VirtualSystemType>virtualbox-2.2</vssd:VirtualSystemType>
       </System>
       <Item>
@@ -83,7 +83,7 @@
         <rasd:ResourceType>10</rasd:ResourceType>
       </Item>
     </VirtualHardwareSection>
-    <vbox:Machine ovf:required="false" version="1.12-macosx" uuid="{8b837be7-fa96-48fc-b119-e90cfa144456}" name="freebsd" OSType="MidnightBSD_64" snapshotFolder="Snapshots" lastStateChange="2014-03-13T13:50:05Z">
+    <vbox:Machine ovf:required="false" version="1.12-macosx" uuid="{8b837be7-fa96-48fc-b119-e90cfa144456}" name="midnightbsd" OSType="MidnightBSD_64" snapshotFolder="Snapshots" lastStateChange="2014-03-13T13:50:05Z">
       <ovf:Info>Complete VirtualBox machine configuration in VirtualBox format</ovf:Info>
       <ExtraData>
         <ExtraDataItem name="GUI/LastGuestSizeHint" value="720,400"/>
