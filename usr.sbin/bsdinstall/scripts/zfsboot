@@ -155,7 +155,7 @@ f_isset ZFSBOOT_DATASETS || ZFSBOOT_DATASETS="
 	/usr/home	# NB: /home is a symlink to /usr/home
 
 	# Ports tree
-	/usr/ports	setuid=off
+	/usr/mports	setuid=off
 
 	# Source tree (compressed)
 	/usr/src
