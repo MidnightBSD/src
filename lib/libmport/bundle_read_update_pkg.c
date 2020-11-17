@@ -63,14 +63,16 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
-    install_backup_bundle(mport, tmpfile2);
+    if (install_backup_bundle(mport, tmpfile2) == MPORT_OK) {
+      (void)mport_rmtree(tmpfile2);
+    }
     RETURN_CURRENT_ERROR;
   }           
   
   /* if we can't delete the tmpfile, just move on. */
   (void)mport_rmtree(tmpfile2);
   
-  return MPORT_OK;    
+  return MPORT_OK;
 }
   
   

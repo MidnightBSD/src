@@ -1493,6 +1493,7 @@ static int
 linux_file_close(struct file *file, struct thread *td)
 {
 	struct linux_file *filp;
+	int (*release)(struct inode *, struct linux_file *);
 	const struct file_operations *fop;
 	struct linux_cdev *ldev;
 	int error;
@@ -1510,8 +1511,13 @@ linux_file_close(struct file *file, struct thread *td)
 	linux_set_current(td);
 	linux_poll_wait_dequeue(filp);
 	linux_get_fop(filp, &fop, &ldev);
-	if (fop->release != NULL)
-		error = -OPW(file, td, fop->release(filp->f_vnode, filp));
+	/*
+	 * Always use the real release function, if any, to avoid
+	 * leaking device resources:
+	 */
+	release = filp->f_op->release;
+	if (release != NULL)
+		error = -OPW(file, td, release(filp->f_vnode, filp));
 	funsetown(&filp->f_sigio);
 	if (filp->f_vnode != NULL)
 		vdrop(filp->f_vnode);
@@ -1530,7 +1536,9 @@ linux_file_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *cred,
 	struct linux_file *filp;
 	const struct file_operations *fop;
 	struct linux_cdev *ldev;
-	int error;
+	struct fiodgname_arg *fgn;
+	const char *p;
+	int error, i;
 
 	error = 0;
 	filp = (struct linux_file *)fp->f_data;
@@ -1557,6 +1565,20 @@ linux_file_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *cred,
 		break;
 	case FIOGETOWN:
 		*(int *)data = fgetown(&filp->f_sigio);
+		break;
+	case FIODGNAME:
+		if (filp->f_cdev == NULL || filp->f_cdev->cdev == NULL) {
+			error = ENXIO;
+			break;
+		}
+		fgn = data;
+		p = devtoname(filp->f_cdev->cdev);
+		i = strlen(p) + 1;
+		if (i > fgn->len) {
+			error = EINVAL;
+			break;
+		}
+		error = copyout(p, fgn->buf, i);
 		break;
 	default:
 		error = linux_file_ioctl_sub(fp, filp, fop, cmd, data, td);
@@ -1909,9 +1931,38 @@ add_timer_on(struct timer_list *timer, int cpu)
 	    &linux_timer_callback_wrapper, timer, cpu);
 }
 
+/* greatest common divisor, Euclid equation */
+static uint64_t
+lkpi_gcd_64(uint64_t a, uint64_t b)
+{
+	uint64_t an;
+	uint64_t bn;
+
+	while (b != 0) {
+		an = b;
+		bn = a % b;
+		a = an;
+		b = bn;
+	}
+	return (a);
+}
+
+uint64_t lkpi_nsec2hz_rem;
+uint64_t lkpi_nsec2hz_div = 1000000000ULL;
+uint64_t lkpi_nsec2hz_max;
+
+uint64_t lkpi_usec2hz_rem;
+uint64_t lkpi_usec2hz_div = 1000000ULL;
+uint64_t lkpi_usec2hz_max;
+
+uint64_t lkpi_msec2hz_rem;
+uint64_t lkpi_msec2hz_div = 1000ULL;
+uint64_t lkpi_msec2hz_max;
+
 static void
 linux_timer_init(void *arg)
 {
+	uint64_t gcd;
 
 	/*
 	 * Compute an internal HZ value which can divide 2**32 to
@@ -1922,6 +1973,27 @@ linux_timer_init(void *arg)
 	while (linux_timer_hz_mask < (unsigned long)hz)
 		linux_timer_hz_mask *= 2;
 	linux_timer_hz_mask--;
+
+	/* compute some internal constants */
+	
+	lkpi_nsec2hz_rem = hz;
+	lkpi_usec2hz_rem = hz;
+	lkpi_msec2hz_rem = hz;
+
+	gcd = lkpi_gcd_64(lkpi_nsec2hz_rem, lkpi_nsec2hz_div);
+	lkpi_nsec2hz_rem /= gcd;
+	lkpi_nsec2hz_div /= gcd;
+	lkpi_nsec2hz_max = -1ULL / lkpi_nsec2hz_rem;
+
+	gcd = lkpi_gcd_64(lkpi_usec2hz_rem, lkpi_usec2hz_div);
+	lkpi_usec2hz_rem /= gcd;
+	lkpi_usec2hz_div /= gcd;
+	lkpi_usec2hz_max = -1ULL / lkpi_usec2hz_rem;
+
+	gcd = lkpi_gcd_64(lkpi_msec2hz_rem, lkpi_msec2hz_div);
+	lkpi_msec2hz_rem /= gcd;
+	lkpi_msec2hz_div /= gcd;
+	lkpi_msec2hz_max = -1ULL / lkpi_msec2hz_rem;
 }
 SYSINIT(linux_timer, SI_SUB_DRIVERS, SI_ORDER_FIRST, linux_timer_init, NULL);
 
