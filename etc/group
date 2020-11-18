@@ -33,5 +33,6 @@ www:*:80:
 _ntp:*:123:
 _ypldap:*:160:
 hast:*:845:
+tests:*:977:
 nogroup:*:65533:
 nobody:*:65534:
