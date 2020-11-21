@@ -157,7 +157,7 @@ mp_start(void *dummy)
 	}
 
 	cpu_mp_start();
-	printf("FreeBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
+	printf("MidnightBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
 	    mp_ncpus);
 	cpu_mp_announce();
 }
