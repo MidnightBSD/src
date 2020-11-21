@@ -51,7 +51,7 @@ firstboot_start()
 			else
 #			GNUSTEP/WindowMaker/mlogind
 				/sbin/ipfw disable firewall
-				/usr/sbin/mport install midnightbsd-destkop
+				/usr/sbin/mport install midnightbsd-desktop
 				/sbin/ipfw enable firewall
 				echo "mlogind_enable=\"YES\"" >> /etc/rc.conf
 			fi
