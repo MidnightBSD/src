@@ -10,6 +10,8 @@ Updating Information for MidnightBSD users.
 	frequency.  Note also that certctl(8) cannot manage certs in the
 	format used by the security/ca_root_nss port.
 
+	Update file to 5.38
+
 20201004:
 	Update mDNSresponder to 1096.40.7
 
