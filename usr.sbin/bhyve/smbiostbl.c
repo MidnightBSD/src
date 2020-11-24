@@ -734,7 +734,7 @@ smbios_type19_initializer(struct smbios_structure *template_entry,
 		type19 = (struct smbios_table_type19 *)curaddr;
 		type19->arrayhand = type16_handle;
 		type19->xsaddr = 4*GB;
-		type19->xeaddr = guest_himem;
+		type19->xeaddr = guest_himem + (4*GB);
 	}
 
 	return (0);
