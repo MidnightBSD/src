@@ -635,7 +635,7 @@ cpu_mp_announce(void)
 	int cores_per_pkg;
 	int thrs_per_core;
 
-	printf("FreeBSD/SMP: ");
+	printf("MidnightBSD/SMP: ");
 	if (topo_analyze(&topo_root, 1, &pkg_count,
 	    &cores_per_pkg, &thrs_per_core)) {
 		printf("%d package(s)", pkg_count);
@@ -649,7 +649,7 @@ cpu_mp_announce(void)
 	printf("\n");
 
 	if (disabled_cpus) {
-		printf("FreeBSD/SMP Online: ");
+		printf("MidnightBSD/SMP Online: ");
 		if (topo_analyze(&topo_root, 0, &pkg_count,
 		    &cores_per_pkg, &thrs_per_core)) {
 			printf("%d package(s)", pkg_count);
