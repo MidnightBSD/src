@@ -6,7 +6,6 @@
 SUBDIR=	adduser \
 	arp \
 	binmiscctl \
-	burncd \
 	camdd \
 	cdcontrol \
 	chkgrp \
