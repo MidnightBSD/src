@@ -81,7 +81,7 @@ static u_int16_t snd_mixerdefaults[SOUND_MIXER_NRDEVICES] = {
 	[SOUND_MIXER_PCM]	= 75,
 	[SOUND_MIXER_SPEAKER]	= 75,
 	[SOUND_MIXER_LINE]	= 75,
-	[SOUND_MIXER_MIC] 	= 0,
+	[SOUND_MIXER_MIC] 	= 25,
 	[SOUND_MIXER_CD]	= 75,
 	[SOUND_MIXER_IGAIN]	= 0,
 	[SOUND_MIXER_LINE1]	= 75,
@@ -1028,6 +1028,14 @@ mix_get_type(struct snd_mixer *m)
 	KASSERT(m != NULL, ("NULL snd_mixer"));
 
 	return (m->type);
+}
+
+device_t
+mix_get_dev(struct snd_mixer *m)
+{
+	KASSERT(m != NULL, ("NULL snd_mixer"));
+
+	return (m->dev);
 }
 
 /* ----------------------------------------------------------------------- */

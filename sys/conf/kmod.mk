@@ -104,6 +104,16 @@ WERROR?=	-Wno-error
 WERROR?=	-Werror
 .endif
 
+LINUXKPI_GENSRCS+= \
+	bus_if.h \
+	device_if.h \
+	pci_if.h \
+	pci_iov_if.h \
+	vnode_if.h \
+	usb_if.h \
+	opt_usb.h \
+	opt_stack.h
+
 CFLAGS+=	${WERROR}
 CFLAGS+=	-D_KERNEL
 CFLAGS+=	-DKLD_MODULE
@@ -458,7 +468,7 @@ assym.s: ${SYSDIR}/kern/genassym.sh
 	sh ${SYSDIR}/kern/genassym.sh genassym.o > ${.TARGET}
 genassym.o: ${SYSDIR}/${MACHINE}/${MACHINE}/genassym.c
 genassym.o: ${SRCS:Mopt_*.h}
-	${CC} -c ${CFLAGS:N-flto:N-fno-common} \
+	${CC} -c ${CFLAGS:N-flto:N-fno-common} -fcommon \
 	    ${SYSDIR}/${MACHINE}/${MACHINE}/genassym.c
 .endif
 

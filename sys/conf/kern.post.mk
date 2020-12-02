@@ -196,7 +196,7 @@ assym.s: $S/kern/genassym.sh genassym.o
 	NM='${NM}' NMFLAGS='${NMFLAGS}' sh $S/kern/genassym.sh genassym.o > ${.TARGET}
 
 genassym.o: $S/$M/$M/genassym.c
-	${CC} -c ${CFLAGS:N-flto:N-fno-common} $S/$M/$M/genassym.c
+	${CC} -c ${CFLAGS:N-flto:N-fno-common} -fcommon $S/$M/$M/genassym.c
 
 OBJS_DEPEND_GUESS+= opt_global.h
 genassym.o vers.o: opt_global.h
@@ -313,7 +313,7 @@ kernel-cleandepend: .PHONY
 
 kernel-tags:
 	@ls .depend.* > /dev/null 2>&1 || \
-	    { echo "you must make depend first"; exit 1; }
+	    { echo "you must make all first"; exit 1; }
 	sh $S/conf/systags.sh
 
 kernel-install: .PHONY
