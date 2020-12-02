@@ -12,6 +12,9 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20201202:
+OLD_FILES+=usr/sbin/burncd
+OLD_FILES+=usr/share/man/man8/burncd.8.gz
 # 20201004:
 OLD_FILES+=usr/lib/perl5/5.28.0/bigint.pm
 OLD_FILES+=usr/lib/perl5/5.28.0/perlfaq.pm
@@ -1793,7 +1796,6 @@ OLD_FILES+=usr/sbin/nsec3hash
 OLD_FILES+=usr/sbin/rndc
 OLD_FILES+=usr/sbin/rndc-confgen
 OLD_LIBS+=lib/libc.so.6
-OLD_LIBS+=lib/geom/geom_raid3.so
 OLD_LIBS+=lib/geom/geom_raid5.so
 OLD_LIBS+=usr/lib/libfetch.so.5
 OLD_LIBS+=usr/lib/liblwres.so.50
@@ -1803,11 +1805,7 @@ OLD_LIBS+=lib/libz.so.5
 OLD_FILES+=usr/include/clang/3.1/unwind.h
 OLD_DIRS+=usr/include/i4b
 #20130613
-OLD_FILES+=sbin/bsdlabel
-OLD_FILES+=sbin/disklabel
-OLD_FILES+=sbin/fdisk
 OLD_FILES+=sbin/gpt
-OLD_FILES+=sbin/graid3
 OLD_FILES+=sbin/idmapd
 OLD_FILES+=sbin/mount.nfs4
 OLD_FILES+=sbin/slattach
