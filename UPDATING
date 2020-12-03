@@ -25,6 +25,11 @@ Updating Information for MidnightBSD users.
 	base due to differences in nss branch used as well as general update
 	frequency.  Note also that certctl(8) cannot manage certs in the
 	format used by the security/ca_root_nss port.
+	
+20201115:
+	MidnightBSD 2.0.1 RELEASE
+	
+	Fixes issues with UEFI not booting on amd64.
 
 20201029:
 	MidnightBSD 2.0 RELEASE
