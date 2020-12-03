@@ -11,6 +11,10 @@ Updating Information for MidnightBSD users.
 	affected timezones if the /usr/share/zoneinfo and /etc/localtime files are
 	not updated, and all applications on the system that rely on the system time,
 	such as cron(8) and syslog(8), will be affected.
+	
+	A bug in the firstboot script was corrected that referenced an invalid package name.
+	
+	burncd was removed.
 
 20201122:
 	The root certificates of the Mozilla CA Certificate Store have been
