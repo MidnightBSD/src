@@ -9,6 +9,31 @@ Updating Information for MidnightBSD users.
 	affected timezones if the /usr/share/zoneinfo and /etc/localtime files are
 	not updated, and all applications on the system that rely on the system time,
 	such as cron(8) and syslog(8), will be affected.
+	
+	ipfw: initialize some variables to fix some odd handling with ports.
+	
+	callout(9)
+	Callouts may be bound to a specific CPU, in which case that CPU is
+	responsible for raising the timer interrupt which schedules execution of the
+	callout.
+	A kernel thread may attempt to stop a callout while it is actively executing,
+	in which case the thread goes to sleep until execution has completed.  In the
+	meantime the callout may be re-scheduled and re-executed on a different CPU.
+	In this scenario, when the sleeping thread finally completes removal of the
+	callout from some internal data structures, it may modify the wrong CPU's
+	data structures and thus leave them in an invalid state.
+	
+	rtsold(8)
+	Two bugs exist in rtsold(8)'s RDNSS and DNSSL option handling.  First,
+	rtsold(8) failed to perform sufficient bounds checking on the extent of the
+	option.  In particular, it does not verify that the option does not extend
+	past the end of the received packet before processing its contents.  The
+	kernel currently ignores such malformed packets but still passes them to
+	userspace programs.
+	Second, when processing a DNSSL option, rtsold(8) decodes domain name labels
+	per an encoding specified in RFC 1035 in which the first octet of each label
+	contains the label's length.  rtsold(8) did not validate label lengths
+	correctly and could overflow the destination buffer.
 
 20201122:
 	The root certificates of the Mozilla CA Certificate Store have been
