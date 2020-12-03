@@ -1,5 +1,17 @@
 Updating Information for MidnightBSD users.
 
+20201202:
+	MidnightBSD 2.0.2
+	
+	ICMPv6: A remote host may be able to trigger a read of freed kernel memory.  This may
+	trigger a kernel panic if the address had been unmapped.
+
+	tzdata: (2020d imported to fix) 
+	An incorrect time will be displayed on a system configured to use one of the
+	affected timezones if the /usr/share/zoneinfo and /etc/localtime files are
+	not updated, and all applications on the system that rely on the system time,
+	such as cron(8) and syslog(8), will be affected.
+
 20201122:
 	The root certificates of the Mozilla CA Certificate Store have been
 	imported into the base system and can be managed with the certctl(8)
