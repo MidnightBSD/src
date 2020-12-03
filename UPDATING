@@ -34,6 +34,10 @@ Updating Information for MidnightBSD users.
 	per an encoding specified in RFC 1035 in which the first octet of each label
 	contains the label's length.  rtsold(8) did not validate label lengths
 	correctly and could overflow the destination buffer.
+	
+	A bug in the firstboot script was corrected that referenced an invalid package name.
+	
+	burncd was removed.
 
 20201122:
 	The root certificates of the Mozilla CA Certificate Store have been
@@ -48,6 +52,9 @@ Updating Information for MidnightBSD users.
 	Update file to 5.38
 
 	xz 5.2.5
+	
+20201115:
+	Fixes issues with UEFI not booting on amd64.
 
 20201004:
 	Update mDNSresponder to 1096.40.7
