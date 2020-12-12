@@ -174,8 +174,9 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-
-#if __MidnightBSD_version >= 200000
+#if __MidnightBSD_version >= 201000
+#define MPORT_OSVERSION "2.1"
+#elif __MidnightBSD_version >= 200000
 #define MPORT_OSVERSION "2.0"
 #elif __MidnightBSD_version >= 102000
 #define MPORT_OSVERSION "1.2"
