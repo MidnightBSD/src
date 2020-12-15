@@ -72,8 +72,9 @@ ASN1_SEQUENCE(OTHERNAME) = {
 IMPLEMENT_ASN1_FUNCTIONS(OTHERNAME)
 
 ASN1_SEQUENCE(EDIPARTYNAME) = {
-        ASN1_IMP_OPT(EDIPARTYNAME, nameAssigner, DIRECTORYSTRING, 0),
-        ASN1_IMP_OPT(EDIPARTYNAME, partyName, DIRECTORYSTRING, 1)
+        /* DirectoryString is a CHOICE type so use explicit tagging */
+        ASN1_EXP_OPT(EDIPARTYNAME, nameAssigner, DIRECTORYSTRING, 0),
+        ASN1_EXP(EDIPARTYNAME, partyName, DIRECTORYSTRING, 1)
 } ASN1_SEQUENCE_END(EDIPARTYNAME)
 
 IMPLEMENT_ASN1_FUNCTIONS(EDIPARTYNAME)
@@ -105,6 +106,37 @@ GENERAL_NAME *GENERAL_NAME_dup(GENERAL_NAME *a)
     return (GENERAL_NAME *)ASN1_dup((i2d_of_void *)i2d_GENERAL_NAME,
                                     (d2i_of_void *)d2i_GENERAL_NAME,
                                     (char *)a);
+}
+
+static int edipartyname_cmp(const EDIPARTYNAME *a, const EDIPARTYNAME *b)
+{
+    int res;
+
+    if (a == NULL || b == NULL) {
+        /*
+         * Shouldn't be possible in a valid GENERAL_NAME, but we handle it
+         * anyway. OTHERNAME_cmp treats NULL != NULL so we do the same here
+         */
+        return -1;
+    }
+    if (a->nameAssigner == NULL && b->nameAssigner != NULL)
+        return -1;
+    if (a->nameAssigner != NULL && b->nameAssigner == NULL)
+        return 1;
+    /* If we get here then both have nameAssigner set, or both unset */
+    if (a->nameAssigner != NULL) {
+        res = ASN1_STRING_cmp(a->nameAssigner, b->nameAssigner);
+        if (res != 0)
+            return res;
+    }
+    /*
+     * partyName is required, so these should never be NULL. We treat it in
+     * the same way as the a == NULL || b == NULL case above
+     */
+    if (a->partyName == NULL || b->partyName == NULL)
+        return -1;
+
+    return ASN1_STRING_cmp(a->partyName, b->partyName);
 }
 
 static int edipartyname_cmp(const EDIPARTYNAME *a, const EDIPARTYNAME *b)
