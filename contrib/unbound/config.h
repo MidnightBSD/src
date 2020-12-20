@@ -594,7 +594,7 @@
 #define PACKAGE_NAME "unbound"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "unbound 1.10.1"
+#define PACKAGE_STRING "unbound 1.13.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "unbound"
@@ -603,7 +603,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.10.1"
+#define PACKAGE_VERSION "1.13.0"
 
 /* default pidfile location */
 #define PIDFILE "/var/unbound/unbound.pid"
@@ -625,7 +625,7 @@
 #define ROOT_CERT_FILE "/var/unbound/icannbundle.pem"
 
 /* version number for resource files */
-#define RSRC_PACKAGE_VERSION 1,10,1,0
+#define RSRC_PACKAGE_VERSION 1,13,0,0
 
 /* Directory to chdir to */
 #define RUN_DIR "/var/unbound"
@@ -1207,6 +1207,8 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53
+/** default port for DNS over HTTPS traffic. */
+#define UNBOUND_DNS_OVER_HTTPS_PORT 443
 /** default port for DNS over TLS traffic. */
 #define UNBOUND_DNS_OVER_TLS_PORT 853
 /** default port for unbound control traffic, registered port with IANA,

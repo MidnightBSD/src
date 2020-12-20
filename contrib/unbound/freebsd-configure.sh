@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/11/contrib/unbound/freebsd-configure.sh 356345 2020-01-04 01:09:33Z cy $
+# $FreeBSD$
 #
 
 set -e
