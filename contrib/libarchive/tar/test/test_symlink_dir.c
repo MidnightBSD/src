@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_symlink_dir.c 348607 2019-06-04 10:35:54Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * tar -x -P should follow existing symlinks for dirs, but not other

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_option_zstd.c 324417 2017-10-08 20:54:53Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_option_zstd)
 {

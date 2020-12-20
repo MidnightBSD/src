@@ -1,12 +1,10 @@
-# $FreeBSD: stable/11/usr.bin/cpio/Makefile 358088 2020-02-19 01:50:47Z mm $
-
 .include <src.opts.mk>
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 _LIBARCHIVECONFDIR=	${SRCTOP}/lib/libarchive
 
 PROG=	bsdcpio
-BSDCPIO_VERSION_STRING=	3.4.2
+BSDCPIO_VERSION_STRING=	3.5.0
 
 .PATH:	${_LIBARCHIVEDIR}/cpio
 SRCS=	cpio.c cmdline.c

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_compat_zstd.c 324417 2017-10-08 20:54:53Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Verify our ability to read sample files compatibly with 'zstd -d'.
@@ -79,4 +79,7 @@ DEFINE_TEST(test_compat_zstd)
 	/* This sample was compressed as 3 separate streams with a zstd skippable
 	* frame placed in the middle */
 	compat_zstd("test_compat_zstd_1.tar.zst");
+
+	/* The same sample compressed with pzstd */
+	compat_zstd("test_compat_zstd_2.tar.zst");
 }

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_xattr_platform.c 353376 2019-10-09 22:19:06Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_xattr_platform)
 {

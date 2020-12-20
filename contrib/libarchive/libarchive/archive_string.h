@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_string.h 358088 2020-02-19 01:50:47Z mm $
+ * $FreeBSD$
  *
  */
 
@@ -226,7 +226,7 @@ void	archive_mstring_copy(struct archive_mstring *dest, struct archive_mstring *
 int archive_mstring_get_mbs(struct archive *, struct archive_mstring *, const char **);
 int archive_mstring_get_utf8(struct archive *, struct archive_mstring *, const char **);
 int archive_mstring_get_wcs(struct archive *, struct archive_mstring *, const wchar_t **);
-int	archive_mstring_get_mbs_l(struct archive_mstring *, const char **,
+int	archive_mstring_get_mbs_l(struct archive *, struct archive_mstring *, const char **,
 	    size_t *, struct archive_string_conv *);
 int	archive_mstring_copy_mbs(struct archive_mstring *, const char *mbs);
 int	archive_mstring_copy_mbs_len(struct archive_mstring *, const char *mbs,

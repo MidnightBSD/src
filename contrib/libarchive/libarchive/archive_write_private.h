@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_private.h 358088 2020-02-19 01:50:47Z mm $
+ * $FreeBSD$
  */
 
 #ifndef ARCHIVE_WRITE_PRIVATE_H_INCLUDED
@@ -89,6 +89,7 @@ struct archive_write {
 	archive_open_callback	*client_opener;
 	archive_write_callback	*client_writer;
 	archive_close_callback	*client_closer;
+	archive_free_callback	*client_freer;
 	void			*client_data;
 
 	/*

@@ -1,10 +1,9 @@
-# $FreeBSD: stable/11/usr.bin/tar/Makefile 358088 2020-02-19 01:50:47Z mm $
 .include <src.opts.mk>
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 PROG=	bsdtar
-BSDTAR_VERSION_STRING=	3.4.2
+BSDTAR_VERSION_STRING=	3.5.0
 
 .PATH: ${_LIBARCHIVEDIR}/tar
 SRCS=	bsdtar.c	\

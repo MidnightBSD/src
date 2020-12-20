@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/lib/libarchive/Makefile 348607 2019-06-04 10:35:54Z mm $
 .include <src.opts.mk>
 
 PACKAGE=lib${LIB}
@@ -9,6 +8,7 @@ LIB=	archive
 LIBADD=	z bz2 lzma bsdxml
 CFLAGS+= -DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1
 
+# BSD SHLIB_MAJOR value is managed as part of the BSD system.
 # It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 6
 
@@ -85,6 +85,7 @@ SRCS=	archive_acl.c					\
 	archive_read_set_options.c			\
 	archive_read_support_filter_all.c		\
 	archive_read_support_filter_bzip2.c		\
+	archive_read_support_filter_by_code.c		\
 	archive_read_support_filter_compress.c		\
 	archive_read_support_filter_gzip.c		\
 	archive_read_support_filter_grzip.c		\

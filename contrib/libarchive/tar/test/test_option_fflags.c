@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_option_fflags.c 337351 2018-08-05 14:35:30Z mm $");
+__FBSDID("$FreeBSD$");
 
 #if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__BORLANDC__)
 #define chmod _chmod

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_zip_winzip_aes.c 313570 2017-02-11 00:54:16Z mm $");
+__FBSDID("$FreeBSD$");
 
 static void
 test_winzip_aes(const char *refname, int need_libz)

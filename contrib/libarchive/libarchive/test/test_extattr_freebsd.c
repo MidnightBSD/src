@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_extattr_freebsd.c 342360 2018-12-21 23:33:05Z mm $");
+__FBSDID("$FreeBSD$");
 
 #if defined(__FreeBSD__) && __FreeBSD__ > 4
 #include <sys/extattr.h>

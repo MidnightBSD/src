@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
@@ -24,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#define __LIBARCHIVE_CONFIG_H_INCLUDED 1
 
 #define ARCHIVE_ACL_FREEBSD 1
 #define ARCHIVE_XATTR_FREEBSD 1
@@ -172,6 +172,7 @@
 #define HAVE_STRFTIME 1
 #define HAVE_STRINGS_H 1
 #define HAVE_STRING_H 1
+#define HAVE_STRNLEN 1
 #define HAVE_STRRCHR 1
 #define HAVE_STRUCT_STATFS_F_NAMEMAX 1
 #define HAVE_STRUCT_STAT_ST_BIRTHTIME 1
@@ -199,6 +200,7 @@
 #define HAVE_TZSET 1
 #define HAVE_UINTMAX_T 1
 #define HAVE_UNISTD_H 1
+#define HAVE_UNLINKAT 1
 #define HAVE_UNSETENV 1
 #define HAVE_UNSIGNED_LONG_LONG 1
 #define HAVE_UNSIGNED_LONG_LONG_INT 1
@@ -220,6 +222,9 @@
 #define HAVE_WMEMMOVE 1
 #define HAVE_ZLIB_H 1
 #define TIME_WITH_SYS_TIME 1
+
+#define HAVE_FUTIMENS 1
+#define HAVE_UTIMENSAT 1
 
 /* MidnightBSD defines for archive_hash.h */
 #ifdef WITH_OPENSSL
