@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20201220:
 	libarchive 3.5.0
 
+	Update caroot certs
+
 20201202:
 	ICMPv6: A remote host may be able to trigger a read of freed kernel memory.  This may
 	trigger a kernel panic if the address had been unmapped.
