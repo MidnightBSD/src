@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/secure/caroot/Makefile 357192 2020-01-28 02:58:39Z kevans $
+# $FreeBSD$
 
 PACKAGE=	caroot
 
