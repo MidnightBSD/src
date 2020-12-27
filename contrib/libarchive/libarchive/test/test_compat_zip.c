@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_compat_zip.c 358088 2020-02-19 01:50:47Z mm $");
+__FBSDID("$FreeBSD$");
 
 /* Copy this function for each test file and adjust it accordingly. */
 DEFINE_TEST(test_compat_zip_1)

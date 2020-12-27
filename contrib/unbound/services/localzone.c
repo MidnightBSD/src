@@ -157,7 +157,7 @@ local_zone_create(uint8_t* nm, size_t len, int labs,
 	z->namelen = len;
 	z->namelabs = labs;
 	lock_rw_init(&z->lock);
-	z->region = regional_create_custom(sizeof(struct regional));
+	z->region = regional_create_nochunk(sizeof(struct regional));
 	if(!z->region) {
 		free(z);
 		return NULL;
@@ -518,7 +518,7 @@ local_zone_enter_rr(struct local_zone* z, uint8_t* nm, size_t nmlen,
 }
 
 /** enter data RR into auth zone */
-int
+static int
 lz_enter_rr_into_zone(struct local_zone* z, const char* rrstr)
 {
 	uint8_t* nm;

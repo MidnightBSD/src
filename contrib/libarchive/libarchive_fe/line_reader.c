@@ -26,7 +26,7 @@
  */
 
 #include "lafe_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive_fe/line_reader.c 349524 2019-06-28 22:33:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdio.h>

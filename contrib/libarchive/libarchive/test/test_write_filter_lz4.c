@@ -25,7 +25,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_filter_lz4.c 313570 2017-02-11 00:54:16Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * A basic exercise of lz4 reading and writing.

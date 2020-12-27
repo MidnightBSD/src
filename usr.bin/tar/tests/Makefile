@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/usr.bin/tar/tests/Makefile 358088 2020-02-19 01:50:47Z mm $
-
 PACKAGE=	tests
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive

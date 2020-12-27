@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/lib/libarchive/tests/Makefile 358968 2020-03-13 20:59:02Z lwhsu $
-
 PACKAGE=	tests
 
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
@@ -203,6 +201,8 @@ TESTS_SRCS= \
 	test_read_format_zip_with_invalid_traditional_eocd.c	\
 	test_read_format_zip_zip64.c		\
 	test_read_large.c			\
+	test_read_pax_xattr_rht_security_selinux.c	\
+	test_read_pax_xattr_schily.c		\
 	test_read_pax_truncated.c		\
 	test_read_position.c			\
 	test_read_set_format.c			\
@@ -377,6 +377,7 @@ ${PACKAGE}FILES+=	test_compat_zip_6.zip.uu
 ${PACKAGE}FILES+=	test_compat_zip_7.xps.uu
 ${PACKAGE}FILES+=	test_compat_zip_8.zip.uu
 ${PACKAGE}FILES+=	test_compat_zstd_1.tar.zst.uu
+${PACKAGE}FILES+=	test_compat_zstd_2.tar.zst.uu
 ${PACKAGE}FILES+=	test_fuzz.cab.uu
 ${PACKAGE}FILES+=	test_fuzz.lzh.uu
 ${PACKAGE}FILES+=	test_fuzz_1.iso.Z.uu
@@ -571,6 +572,7 @@ ${PACKAGE}FILES+=	test_read_format_ustar_filename_koi8r.tar.Z.uu
 ${PACKAGE}FILES+=	test_read_format_warc.warc.uu
 ${PACKAGE}FILES+=	test_read_format_zip.zip.uu
 ${PACKAGE}FILES+=	test_read_format_zip_7075_utf8_paths.zip.uu
+${PACKAGE}FILES+=	test_read_format_zip_7z_lzma.zip.uu
 ${PACKAGE}FILES+=	test_read_format_zip_bz2_hang.zip.uu
 ${PACKAGE}FILES+=	test_read_format_zip_bzip2.zipx.uu
 ${PACKAGE}FILES+=	test_read_format_zip_bzip2_multi.zipx.uu
@@ -623,6 +625,8 @@ ${PACKAGE}FILES+=	test_read_large_splitted_rar_ab.uu
 ${PACKAGE}FILES+=	test_read_large_splitted_rar_ac.uu
 ${PACKAGE}FILES+=	test_read_large_splitted_rar_ad.uu
 ${PACKAGE}FILES+=	test_read_large_splitted_rar_ae.uu
+${PACKAGE}FILES+=	test_read_pax_xattr_rht_security_selinux.tar.uu
+${PACKAGE}FILES+=	test_read_pax_xattr_schily.tar.uu
 ${PACKAGE}FILES+=	test_read_splitted_rar_aa.uu
 ${PACKAGE}FILES+=	test_read_splitted_rar_ab.uu
 ${PACKAGE}FILES+=	test_read_splitted_rar_ac.uu

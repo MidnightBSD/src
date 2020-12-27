@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_write_set_format_cpio_newc.c 358088 2020-02-19 01:50:47Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -190,7 +190,7 @@ archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 	const char *path;
 	size_t len;
 
-	if (archive_entry_filetype(entry) == 0) {
+	if (archive_entry_filetype(entry) == 0 && archive_entry_hardlink(entry) == NULL) {
 		archive_set_error(&a->archive, -1, "Filetype required");
 		return (ARCHIVE_FAILED);
 	}

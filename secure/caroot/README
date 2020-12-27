@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/secure/caroot/README 352948 2019-10-02 01:05:29Z kevans $
+# $FreeBSD$
 
 This directory contains the scripts to update the TLS CA Root Certificates
 that comprise the 'root trust store'.

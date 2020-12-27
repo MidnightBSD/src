@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/cpio/test/test_option_L_upper.c 348607 2019-06-04 10:35:54Z mm $");
+__FBSDID("$FreeBSD$");
 
 /* This is a little pointless, as Windows doesn't support symlinks
  * (except for the seriously crippled CreateSymbolicLink API) so these

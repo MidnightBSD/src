@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_support_format_empty.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD$");
 
 #include "archive.h"
 #include "archive_entry.h"
@@ -47,7 +47,7 @@ archive_read_support_format_empty(struct archive *_a)
 
 	r = __archive_read_register_format(a,
 	    NULL,
-	    NULL,
+	    "empty",
 	    archive_read_format_empty_bid,
 	    NULL,
 	    archive_read_format_empty_read_header,

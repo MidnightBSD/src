@@ -26,7 +26,7 @@
 
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_archive_write_set_format_filter_by_ext.c 358088 2020-02-19 01:50:47Z mm $");
+__FBSDID("$FreeBSD$");
 
 static void
 test_format_filter_by_ext(const char *output_file, 

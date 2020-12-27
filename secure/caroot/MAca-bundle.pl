@@ -38,7 +38,7 @@ use Carp;
 use MIME::Base64;
 use Getopt::Long;
 
-my $VERSION = '$FreeBSD: stable/11/secure/caroot/MAca-bundle.pl 352951 2019-10-02 01:27:50Z kevans $';
+my $VERSION = '$FreeBSD$';
 my $generated = '@' . 'generated';
 my $inputfh = *STDIN;
 my $debug = 0;

@@ -24,7 +24,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_write_format_zip_zip64.c 313570 2017-02-11 00:54:16Z mm $");
+__FBSDID("$FreeBSD$");
 
 static void
 verify_zip_filesize(uint64_t size, int expected)

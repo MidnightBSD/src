@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/contrib/libarchive/tar/bsdtar.1 358088 2020-02-19 01:50:47Z mm $
+.\" $FreeBSD$
 .\"
 .Dd January 31, 2020
 .Dt TAR 1
@@ -631,7 +631,8 @@ A decimal integer from 4 to 7 specifying the lz4 compression block size
 Use the previous block of the block being compressed for
 a compression dictionary to improve compression ratio.
 .It Cm zstd:compression-level
-A decimal integer from 1 to 22 specifying the zstd compression level.
+A decimal integer specifying the zstd compression level. Supported values depend
+on the library version, common values are from 1 to 22.
 .It Cm lzop:compression-level
 A decimal integer from 1 to 9 specifying the lzop compression level.
 .It Cm xz:compression-level

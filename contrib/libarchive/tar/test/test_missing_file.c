@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/tar/test/test_missing_file.c 307797 2016-10-22 21:41:00Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_missing_file)
 {

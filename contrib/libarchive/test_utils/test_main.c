@@ -597,6 +597,19 @@ assertion_chdir(const char *file, int line, const char *pathname)
 
 }
 
+/* change file/directory permissions and errors if it fails */
+int
+assertion_chmod(const char *file, int line, const char *pathname, int mode)
+{
+	assertion_count(file, line);
+	if (chmod(pathname, mode) == 0)
+		return (1);
+	failure_start(file, line, "chmod(\"%s\", %4.o)", pathname, mode);
+	failure_finish(NULL);
+	return (0);
+
+}
+
 /* Verify two integers are equal. */
 int
 assertion_equal_int(const char *file, int line,
@@ -804,6 +817,22 @@ wcsdump(const char *e, const wchar_t *w)
 	}
 	logprintf("\"\n");
 }
+
+#ifndef HAVE_WCSCMP
+static int
+wcscmp(const wchar_t *s1, const wchar_t *s2)
+{
+
+	while (*s1 == *s2++) {
+		if (*s1++ == L'\0')
+			return 0;
+	}
+	if (*s1 > *--s2)
+		return 1;
+	else
+		return -1;
+}
+#endif
 
 /* Verify that two wide strings are equal, dump them if not. */
 int

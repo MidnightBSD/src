@@ -159,16 +159,28 @@ client_info_compare(const struct respip_client_info* ci_a,
 		return 1;
 	if(ci_a->taglen != ci_b->taglen)
 		return (ci_a->taglen < ci_b->taglen) ? -1 : 1;
-	cmp = memcmp(ci_a->taglist, ci_b->taglist, ci_a->taglen);
-	if(cmp != 0)
-		return cmp;
+	if(ci_a->taglist && !ci_b->taglist)
+		return -1;
+	if(!ci_a->taglist && ci_b->taglist)
+		return 1;
+	if(ci_a->taglist && ci_b->taglist) {
+		cmp = memcmp(ci_a->taglist, ci_b->taglist, ci_a->taglen);
+		if(cmp != 0)
+			return cmp;
+	}
 	if(ci_a->tag_actions_size != ci_b->tag_actions_size)
 		return (ci_a->tag_actions_size < ci_b->tag_actions_size) ?
 			-1 : 1;
-	cmp = memcmp(ci_a->tag_actions, ci_b->tag_actions,
-		ci_a->tag_actions_size);
-	if(cmp != 0)
-		return cmp;
+	if(ci_a->tag_actions && !ci_b->tag_actions)
+		return -1;
+	if(!ci_a->tag_actions && ci_b->tag_actions)
+		return 1;
+	if(ci_a->tag_actions && ci_b->tag_actions) {
+		cmp = memcmp(ci_a->tag_actions, ci_b->tag_actions,
+			ci_a->tag_actions_size);
+		if(cmp != 0)
+			return cmp;
+	}
 	if(ci_a->tag_datas != ci_b->tag_datas)
 		return ci_a->tag_datas < ci_b->tag_datas ? -1 : 1;
 	if(ci_a->view != ci_b->view)
@@ -538,6 +550,9 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			log_err("mesh_new_client: out of memory add tcpreqinfo");
 			goto servfail_mem;
 		}
+	}
+	if(rep->c->use_h2) {
+		http2_stream_add_meshstate(rep->c->h2_stream, mesh, s);
 	}
 	/* add serve expired timer if required and not already there */
 	if(timeout && !mesh_serve_expired_init(s, timeout)) {
@@ -1181,6 +1196,12 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	/* Copy the client's EDNS for later restore, to make sure the edns
 	 * compare is with the correct edns options. */
 	struct edns_data edns_bak = r->edns;
+	/* briefly set the replylist to null in case the
+	 * meshsendreply calls tcpreqinfo sendreply that
+	 * comm_point_drops because of size, and then the
+	 * null stops the mesh state remove and thus
+	 * reply_list modification and accounting */
+	struct mesh_reply* rlist = m->reply_list;
 	/* examine security status */
 	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
 		m->s.env->cfg->ignore_cd) && rep && 
@@ -1195,16 +1216,29 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
+	if(r->query_reply.c->use_h2) {
+		r->query_reply.c->h2_stream = r->h2_stream;
+		/* Mesh reply won't exist for long anymore. Make it impossible
+		 * for HTTP/2 stream to refer to mesh state, in case
+		 * connection gets cleanup before HTTP/2 stream close. */
+		r->h2_stream->mesh_state = NULL;
+	}
 	/* send the reply */
-	/* We don't reuse the encoded answer if either the previous or current
-	 * response has a local alias.  We could compare the alias records
-	 * and still reuse the previous answer if they are the same, but that
-	 * would be complicated and error prone for the relatively minor case.
-	 * So we err on the side of safety. */
-	if(prev && prev_buffer && prev->qflags == r->qflags && 
+	/* We don't reuse the encoded answer if:
+	 * - either the previous or current response has a local alias.  We could
+	 *   compare the alias records and still reuse the previous answer if they
+	 *   are the same, but that would be complicated and error prone for the
+	 *   relatively minor case. So we err on the side of safety.
+	 * - there are registered callback functions for the given rcode, as these
+	 *   need to be called for each reply. */
+	if(((rcode != LDNS_RCODE_SERVFAIL &&
+			!m->s.env->inplace_cb_lists[inplace_cb_reply]) ||
+		(rcode == LDNS_RCODE_SERVFAIL &&
+			!m->s.env->inplace_cb_lists[inplace_cb_reply_servfail])) &&
+		prev && prev_buffer && prev->qflags == r->qflags &&
 		!prev->local_alias && !r->local_alias &&
-		prev->edns.edns_present == r->edns.edns_present && 
-		prev->edns.bits == r->edns.bits && 
+		prev->edns.edns_present == r->edns.edns_present &&
+		prev->edns.bits == r->edns.bits &&
 		prev->edns.udp_size == r->edns.udp_size &&
 		edns_opt_list_compare(prev->edns.opt_list, r->edns.opt_list)
 		== 0) {
@@ -1214,22 +1248,26 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		sldns_buffer_write_at(r_buffer, 0, &r->qid, sizeof(uint16_t));
 		sldns_buffer_write_at(r_buffer, 12, r->qname,
 			m->s.qinfo.qname_len);
+		m->reply_list = NULL;
 		comm_point_send_reply(&r->query_reply);
+		m->reply_list = rlist;
 	} else if(rcode) {
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 		if(rcode == LDNS_RCODE_SERVFAIL) {
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-				rep, rcode, &r->edns, NULL, m->s.region))
+				rep, rcode, &r->edns, &r->query_reply, m->s.region))
 					r->edns.opt_list = NULL;
 		} else { 
 			if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep, rcode,
-				&r->edns, NULL, m->s.region))
+				&r->edns, &r->query_reply, m->s.region))
 					r->edns.opt_list = NULL;
 		}
 		error_encode(r_buffer, rcode, &m->s.qinfo, r->qid,
 			r->qflags, &r->edns);
+		m->reply_list = NULL;
 		comm_point_send_reply(&r->query_reply);
+		m->reply_list = rlist;
 	} else {
 		size_t udp_size = r->edns.udp_size;
 		r->edns.edns_version = EDNS_ADVERTISED_VERSION;
@@ -1239,7 +1277,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		m->s.qinfo.qname = r->qname;
 		m->s.qinfo.local_alias = r->local_alias;
 		if(!inplace_cb_reply_call(m->s.env, &m->s.qinfo, &m->s, rep,
-			LDNS_RCODE_NOERROR, &r->edns, NULL, m->s.region) ||
+			LDNS_RCODE_NOERROR, &r->edns, &r->query_reply, m->s.region) ||
 			!apply_edns_options(&r->edns, &edns_bak,
 				m->s.env->cfg, r->query_reply.c,
 				m->s.region) ||
@@ -1249,13 +1287,15 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			secure)) 
 		{
 			if(!inplace_cb_reply_servfail_call(m->s.env, &m->s.qinfo, &m->s,
-			rep, LDNS_RCODE_SERVFAIL, &r->edns, NULL, m->s.region))
+			rep, LDNS_RCODE_SERVFAIL, &r->edns, &r->query_reply, m->s.region))
 				r->edns.opt_list = NULL;
 			error_encode(r_buffer, LDNS_RCODE_SERVFAIL,
 				&m->s.qinfo, r->qid, r->qflags, &r->edns);
 		}
 		r->edns = edns_bak;
+		m->reply_list = NULL;
 		comm_point_send_reply(&r->query_reply);
+		m->reply_list = rlist;
 	}
 	/* account */
 	log_assert(m->s.env->mesh->num_reply_addrs > 0);
@@ -1284,7 +1324,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 
 void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_reply* r, *reply_list = NULL;
+	struct mesh_reply* r;
 	struct mesh_reply* prev = NULL;
 	struct sldns_buffer* prev_buffer = NULL;
 	struct mesh_cb* c;
@@ -1308,27 +1348,7 @@ void mesh_query_done(struct mesh_state* mstate)
 			free(err);
 		}
 	}
-	if(mstate->reply_list) {
-		/* set the reply_list to NULL during the mesh_query_done
-		 * processing, so that calls back into the mesh from
-		 * tcp_req_info (deciding to drop the reply and thus
-		 * unregister the mesh_reply from the mstate) are stopped
-		 * because the list is empty.
-		 * The mstate is then likely not a reply_state, and maybe
-		 * also a detached_state.
-		 */
-		reply_list = mstate->reply_list;
-		mstate->reply_list = NULL;
-		if(!mstate->reply_list && !mstate->cb_list) {
-			/* was a reply state, not anymore */
-			log_assert(mstate->s.env->mesh->num_reply_states > 0);
-			mstate->s.env->mesh->num_reply_states--;
-		}
-		if(!mstate->reply_list && !mstate->cb_list &&
-			mstate->super_set.count == 0)
-			mstate->s.env->mesh->num_detached_states++;
-	}
-	for(r = reply_list; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* if a response-ip address block has been stored the
 		 *  information should be logged for each client. */
 		if(mstate->s.respip_action_info &&
@@ -1352,7 +1372,15 @@ void mesh_query_done(struct mesh_state* mstate)
 		/* if this query is determined to be dropped during the
 		 * mesh processing, this is the point to take that action. */
 		if(mstate->s.is_drop) {
+			/* briefly set the reply_list to NULL, so that the
+			 * tcp req info cleanup routine that calls the mesh
+			 * to deregister the meshstate for it is not done
+			 * because the list is NULL and also accounting is not
+			 * done there, but instead we do that here. */
+			struct mesh_reply* reply_list = mstate->reply_list;
+			mstate->reply_list = NULL;
 			comm_point_drop_reply(&r->query_reply);
+			mstate->reply_list = reply_list;
 		} else {
 			struct sldns_buffer* r_buffer = r->query_reply.c->buffer;
 			if(r->query_reply.c->tcp_req_info) {
@@ -1368,6 +1396,17 @@ void mesh_query_done(struct mesh_state* mstate)
 			prev = r;
 			prev_buffer = r_buffer;
 		}
+	}
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			/* was a reply state, not anymore */
+			log_assert(mstate->s.env->mesh->num_reply_states > 0);
+			mstate->s.env->mesh->num_reply_states--;
+		}
+		if(!mstate->reply_list && !mstate->cb_list &&
+			mstate->super_set.count == 0)
+			mstate->s.env->mesh->num_detached_states++;
 	}
 	mstate->replies_sent = 1;
 	while((c = mstate->cb_list) != NULL) {
@@ -1476,6 +1515,8 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 		s->s.qinfo.qname_len);
 	if(!r->qname)
 		return 0;
+	if(rep->c->use_h2)
+		r->h2_stream = rep->c->h2_stream;
 
 	/* Data related to local alias stored in 'qinfo' (if any) is ephemeral
 	 * and can be different for different original queries (even if the
@@ -1946,16 +1987,7 @@ mesh_serve_expired_callback(void* arg)
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("Serve expired lookup", &qstate->qinfo, msg->rep);
 
-	r = mstate->reply_list;
-	mstate->reply_list = NULL;
-	if(!mstate->reply_list && !mstate->cb_list) {
-		log_assert(mesh->num_reply_states > 0);
-		mesh->num_reply_states--;
-		if(mstate->super_set.count == 0) {
-			mesh->num_detached_states++;
-		}
-	}
-	for(; r; r = r->next) {
+	for(r = mstate->reply_list; r; r = r->next) {
 		/* If address info is returned, it means the action should be an
 		* 'inform' variant and the information should be logged. */
 		if(actinfo.addrinfo) {
@@ -1987,6 +2019,16 @@ mesh_serve_expired_callback(void* arg)
 		/* Account for each reply sent. */
 		mesh->ans_expired++;
 
+	}
+	if(mstate->reply_list) {
+		mstate->reply_list = NULL;
+		if(!mstate->reply_list && !mstate->cb_list) {
+			log_assert(mesh->num_reply_states > 0);
+			mesh->num_reply_states--;
+			if(mstate->super_set.count == 0) {
+				mesh->num_detached_states++;
+			}
+		}
 	}
 	while((c = mstate->cb_list) != NULL) {
 		/* take this cb off the list; so that the list can be

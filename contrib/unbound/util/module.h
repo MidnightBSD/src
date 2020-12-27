@@ -520,6 +520,8 @@ struct module_env {
 	struct edns_known_option* edns_known_options;
 	/* Number of known edns options */
 	size_t edns_known_options_num;
+	/** EDNS client string information */
+	struct edns_strings* edns_strings;
 
 	/* Make every mesh state unique, do not aggregate mesh states. */
 	int unique_mesh;

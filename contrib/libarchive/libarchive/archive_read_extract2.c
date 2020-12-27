@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_read_extract2.c 311041 2017-01-02 01:41:31Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>

@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/archive_check_magic.c 315432 2017-03-16 23:07:35Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -54,7 +54,7 @@ errmsg(const char *m)
 	ssize_t written;
 
 	while (s > 0) {
-		written = write(2, m, strlen(m));
+		written = write(2, m, s);
 		if (written <= 0)
 			return;
 		m += written;

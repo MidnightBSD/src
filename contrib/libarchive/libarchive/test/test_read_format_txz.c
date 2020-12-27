@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_format_txz.c 299529 2016-05-12 10:16:16Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char archive[] = {
 253, 55,122, 88, 90,  0,  0,  4,230,214,180, 70,  2,  0, 33,  1,

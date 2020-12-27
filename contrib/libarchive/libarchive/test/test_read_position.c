@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: stable/11/contrib/libarchive/libarchive/test/test_read_position.c 238856 2012-07-28 06:38:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char nulls[1000];
 static unsigned char tmp[1000];
