@@ -12,6 +12,16 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20210105: WITH_LIBICONV_COMPAT removal
+OLD_FILES+=usr/include/_libiconv_compat.h
+OLD_FILES+=usr/lib/libiconv.a
+OLD_FILES+=usr/lib/libiconv.so
+OLD_FILES+=usr/lib/libiconv.so.3
+OLD_FILES+=usr/lib/libiconv_p.a
+OLD_FILES+=usr/lib32/libiconv.a
+OLD_FILES+=usr/lib32/libiconv.so
+OLD_FILES+=usr/lib32/libiconv.so.3
+OLD_FILES+=usr/lib32/libiconv_p.a
 # 20201202:
 OLD_FILES+=usr/sbin/burncd
 OLD_FILES+=usr/share/man/man8/burncd.8.gz
