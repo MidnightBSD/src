@@ -48,7 +48,7 @@ osdep_uuidgen(mkimg_uuid_t *uuid)
 }
 #endif	/* __APPLE__ */
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/uuid.h>
 
 static void
