@@ -176,6 +176,10 @@ if findvcs .git; then
 	done
 fi
 
+if findvcs .gituprevision; then
+	gituprevision="${VCSTOP}/.gituprevision"
+fi
+
 if findvcs .hg; then
 	for dir in /usr/bin /usr/local/bin; do
 		if [ -x "${dir}/hg" ] ; then
@@ -202,25 +206,11 @@ if [ -n "$svnversion" ] ; then
 fi
 
 if [ -n "$git_cmd" ] ; then
-	git=`$git_cmd rev-parse --verify --short HEAD 2>/dev/null`
-	svn=`$git_cmd svn find-rev $git 2>/dev/null`
-	if [ -n "$svn" ] ; then
-		svn=" r${svn}"
-		git="=${git}"
-	else
-		svn=`$git_cmd log --grep '^git-svn-id:' | \
-		    grep '^    git-svn-id:' | head -1 | \
-		    sed -n 's/^.*@\([0-9][0-9]*\).*$/\1/p'`
-		if [ -z "$svn" ] ; then
-			svn=`$git_cmd log --format='format:%N' | \
-			     grep '^svn ' | head -1 | \
-			     sed -n 's/^.*revision=\([0-9][0-9]*\).*$/\1/p'`
-		fi
-		if [ -n "$svn" ] ; then
-			svn=" r${svn}"
-			git="+${git}"
-		else
-			git=" ${git}"
+	git=$($git_cmd rev-parse --verify --short HEAD 2>/dev/null)
+	if [ "$(git rev-parse --is-shallow-repository)" = false ] ; then
+		git_cnt=$($git_cmd rev-list --first-parent --count HEAD 2>/dev/null)
+		if [ -n "$git_cnt" ] ; then
+			git="n${git_cnt}-${git}"
 		fi
 	fi
 	git_b=`$git_cmd rev-parse --abbrev-ref HEAD`
@@ -231,6 +221,10 @@ if [ -n "$git_cmd" ] ; then
 		git="${git}-dirty"
 		modified=true
 	fi
+fi
+
+if [ -n "$gituprevision" ] ; then
+	gitup=" $(awk -F: '{print $2}' $gituprevision)"
 fi
 
 if [ -n "$p4_cmd" ] ; then
@@ -279,10 +273,10 @@ done
 shift $((OPTIND - 1))
 
 if [ -z "${include_metadata}" ]; then
-	VERINFO="${VERSION} ${svn}${git}${hg}${p4version}"
+	VERINFO="${VERSION}${svn}${git}${gitup}${hg}${p4version} ${i}"
 	VERSTR="${VERINFO}\\n"
 else
-	VERINFO="${VERSION} #${v}${svn}${git}${hg}${p4version}: ${t}"
+	VERINFO="${VERSION} #${v}${svn}${git}${gitup}${hg}${p4version}: ${t}"
 	VERSTR="${VERINFO}\\n    ${u}@${h}:${d}\\n"
 fi
 
