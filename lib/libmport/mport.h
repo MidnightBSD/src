@@ -1,5 +1,4 @@
-/* $MidnightBSD$
- *
+/* 
  * Copyright (c) 2013, 2014 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -47,6 +46,7 @@ typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 /* Mport Instance (an installed copy of the mport system) */
 #define MPORT_INST_HAVE_INDEX 1
+#define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
 
 typedef struct {
   int flags;
@@ -215,6 +215,7 @@ int mport_version_cmp(const char *, const char *);
 
 /* fetch XXX: This should become private */
 int mport_fetch_bundle(mportInstance *, const char *);
+int mport_download(mportInstance *, const char *);
 
 /* Errors */
 int mport_err_code(void);

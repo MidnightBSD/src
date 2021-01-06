@@ -39,7 +39,6 @@ __MBSDID("$MidnightBSD$");
 #include <mport_private.h>
 
 #define MPORT_TOOLS_PATH "/usr/libexec/"
-#define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
 
 static void usage(void);
 static void loadIndex(mportInstance *);
@@ -51,7 +50,6 @@ static int configGet(mportInstance *, const char *);
 static int configSet(mportInstance *, const char *, const char *);
 static int delete(const char *);
 static int deleteAll(mportInstance *);
-static int download(mportInstance *, const char *);
 static int update(mportInstance *, const char *);
 static int upgrade(mportInstance *);
 static int info(mportInstance *, const char *);
@@ -126,11 +124,11 @@ main(int argc, char *argv[]) {
 				resultCode = tempResultCode;
 		}
 		});
-        } else if (!strcmp(argv[1], "download")) {
+	} else if (!strcmp(argv[1], "download")) {
 		dispatch_group_async(grp, q, ^{
 		loadIndex(mport);
 		for (i = 2; i < argc; i++) {
-			tempResultCode = download(mport, argv[2]);
+			tempResultCode = mport_download(mport, argv[2]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
@@ -578,58 +576,18 @@ delete(const char *packageName) {
 }
 
 int
-download(mportInstance *mport, const char *packageName) {
-	mportIndexEntry **indexEntry;
-	char *path;
-	bool existed = true;
-
-	indexEntry = lookupIndex(mport, packageName);
-	if (indexEntry == NULL || *indexEntry == NULL)
-		errx(1, "Package %s not found in index.\n", packageName);
-
-	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
-	if (path == NULL)
-		errx(1, "Out of memory.");
-
-	if (!mport_file_exists(path)) {
-		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-			fprintf(stderr, "%s\n", mport_err_string());
-			free(path);
-			return mport_err_code();
-		}
-		existed = false;
-        }
-
-	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
-		fprintf(stderr, "Package %s fails hash verification.\n", packageName);
-		free(path);
-		return (1);
-	}
-
-	if (!existed)
-		printf("Package %s saved as %s\n", packageName, path);
-	else
-		printf("Package %s exists at %s\n", packageName, path);
-
-	free(path);
-	mport_index_entry_free_vec(indexEntry);
-
-	return (0);
-}
-
-int
 update(mportInstance *mport, const char *packageName) {
 	mportIndexEntry **indexEntry;
 	char *path;
 
 	indexEntry = lookupIndex(mport, packageName);
-        if (indexEntry == NULL || *indexEntry == NULL)
-                return (1);
+	if (indexEntry == NULL || *indexEntry == NULL)
+		return (1);
 
 	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 
 	if (!mport_file_exists(path)) {
-        	if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
 			fprintf(stderr, "%s\n", mport_err_string());
 			free(path);
 			return mport_err_code();
