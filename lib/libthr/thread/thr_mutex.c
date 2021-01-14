@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_mutex.c 352893 2019-09-30 07:42:59Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdlib.h>
@@ -379,6 +379,8 @@ __pthread_mutex_init(pthread_mutex_t * __restrict mutex,
 {
 	struct pthread_mutex *pmtx;
 	int ret;
+
+	_thr_check_init();
 
 	if (mutex_attr != NULL) {
 		ret = mutex_check_attr(*mutex_attr);
