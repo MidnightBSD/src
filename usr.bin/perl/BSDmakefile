@@ -12,7 +12,7 @@ NOPROFILE=
 
 SRCDIR= ${.CURDIR}/../../contrib/perl
 
-LIBADD+=	c dl pthread
+LIBADD=	c crypt dl m pthread
 
 WARNS?=	0
 
