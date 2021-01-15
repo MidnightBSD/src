@@ -1,11 +1,12 @@
-# $FreeBSD: stable/11/lib/clang/libllvmminimal/Makefile 346296 2019-04-16 20:05:24Z dim $
+# $FreeBSD$
 
 .include "../llvm.pre.mk"
 
 LIB=		llvmminimal
 INTERNALLIB=
 
-SRCDIR=		lib
+SRCDIR=		llvm/lib
+SRCS+=		Demangle/ItaniumDemangle.cpp
 SRCS+=		Support/APFloat.cpp
 SRCS+=		Support/APInt.cpp
 SRCS+=		Support/ARMTargetParser.cpp
@@ -14,6 +15,7 @@ SRCS+=		Support/CodeGenCoverage.cpp
 SRCS+=		Support/CommandLine.cpp
 SRCS+=		Support/ConvertUTF.cpp
 SRCS+=		Support/ConvertUTFWrapper.cpp
+SRCS+=		Support/CrashRecoveryContext.cpp
 SRCS+=		Support/Debug.cpp
 SRCS+=		Support/Errno.cpp
 SRCS+=		Support/Error.cpp
@@ -30,7 +32,6 @@ SRCS+=		Support/LowLevelType.cpp
 SRCS+=		Support/MD5.cpp
 SRCS+=		Support/ManagedStatic.cpp
 SRCS+=		Support/MemoryBuffer.cpp
-SRCS+=		Support/Mutex.cpp
 SRCS+=		Support/NativeFormatting.cpp
 SRCS+=		Support/Path.cpp
 SRCS+=		Support/PrettyStackTrace.cpp
@@ -38,6 +39,7 @@ SRCS+=		Support/Process.cpp
 SRCS+=		Support/Program.cpp
 SRCS+=		Support/Regex.cpp
 SRCS+=		Support/Signals.cpp
+SRCS+=		Support/Signposts.cpp
 SRCS+=		Support/SmallPtrSet.cpp
 SRCS+=		Support/SmallVector.cpp
 SRCS+=		Support/SourceMgr.cpp
@@ -46,13 +48,17 @@ SRCS+=		Support/StringExtras.cpp
 SRCS+=		Support/StringMap.cpp
 SRCS+=		Support/StringRef.cpp
 SRCS+=		Support/StringSaver.cpp
+SRCS+=		Support/ThreadLocal.cpp
 SRCS+=		Support/Threading.cpp
 SRCS+=		Support/Timer.cpp
 SRCS+=		Support/ToolOutputFile.cpp
 SRCS+=		Support/Triple.cpp
 SRCS+=		Support/Twine.cpp
 SRCS+=		Support/Unicode.cpp
+SRCS+=		Support/VirtualFileSystem.cpp
+SRCS+=		Support/Watchdog.cpp
 SRCS+=		Support/WithColor.cpp
+SRCS+=		Support/YAMLParser.cpp
 SRCS+=		Support/circular_raw_ostream.cpp
 SRCS+=		Support/raw_ostream.cpp
 SRCS+=		Support/regcomp.c

@@ -1,16 +1,14 @@
-# $FreeBSD: stable/11/usr.bin/clang/lldb/Makefile 346296 2019-04-16 20:05:24Z dim $
+# $FreeBSD$
 
 .include "${SRCTOP}/lib/clang/lldb.pre.mk"
 
 PACKAGE=	lldb
 PROG_CXX=	lldb
-# Man page directory
-.PATH:		${LLDB_SRCS}/docs
 
 CFLAGS+=	-I${LLDB_SRCS}/include
 CFLAGS+=	-I${.OBJDIR}
 
-SRCDIR=		tools/lldb/tools/driver
+SRCDIR=		lldb/tools/driver
 SRCS+=		Driver.cpp
 
 .include "${SRCTOP}/lib/clang/clang.build.mk"
@@ -37,8 +35,10 @@ DPSRCS+=	${TGHDRS}
 CLEANFILES+=	${TGHDRS} ${TGHDRS:C/$/.d/}
 
 LIBADD+=	edit
-LIBADD+=	panel
+LIBADD+=	execinfo
+LIBADD+=	lzma
 LIBADD+=	ncursesw
+LIBADD+=	panel
 LIBADD+=	pthread
 LIBADD+=	z
 

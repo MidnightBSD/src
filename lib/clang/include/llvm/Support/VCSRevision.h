@@ -1,2 +1,2 @@
-/* $FreeBSD: stable/11/lib/clang/include/llvm/Support/VCSRevision.h 350259 2019-07-23 20:31:54Z dim $ */
-#define LLVM_REVISION "svn-r366581"
+#define LLVM_REVISION "llvmorg-10.0.1-0-gef32c611aa2"
+#define LLVM_REPOSITORY "git@github.com:llvm/llvm-project.git"

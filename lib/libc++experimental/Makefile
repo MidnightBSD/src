@@ -1,9 +1,9 @@
-# $FreeBSD: stable/11/lib/libc++experimental/Makefile 344213 2019-02-16 15:57:29Z dim $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
 PACKAGE=	clibs
-SRCDIR=		${SRCTOP}/contrib/libc++
+SRCDIR=		${SRCTOP}/contrib/llvm-project/libcxx
 
 LIB=		c++experimental
 NO_PIC=

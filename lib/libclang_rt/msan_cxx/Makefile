@@ -1,16 +1,17 @@
-# $FreeBSD: stable/11/lib/libclang_rt/msan_cxx/Makefile 337260 2018-08-03 15:30:32Z dim $
+
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
 LIB=		clang_rt.msan_cxx-${CRTARCH}
 
-SRCS+=		msan/msan_new_delete.cc
-SRCS+=		ubsan/ubsan_handlers_cxx.cc
-SRCS+=		ubsan/ubsan_type_hash.cc
-SRCS+=		ubsan/ubsan_type_hash_itanium.cc
+SRCS+=		msan/msan_new_delete.cpp
+SRCS+=		ubsan/ubsan_handlers_cxx.cpp
+SRCS+=		ubsan/ubsan_type_hash.cpp
+SRCS+=		ubsan/ubsan_type_hash_itanium.cpp
 
 .include <bsd.lib.mk>
 
-CXXFLAGS.ubsan_handlers_cxx.cc=		-frtti
-CXXFLAGS.ubsan_type_hash.cc=		-frtti
-CXXFLAGS.ubsan_type_hash_itanium.cc=	-frtti
+CXXFLAGS.ubsan_handlers_cxx.cpp=		-frtti
+CXXFLAGS.ubsan_type_hash.cpp=		-frtti
+CXXFLAGS.ubsan_type_hash_itanium.cpp=	-frtti

@@ -1,6 +1,0 @@
-# $MidnightBSD$
-
-The BSD copy of libc++.  
-
-Includes: include and src directories.
-Excludes: support/win32 code

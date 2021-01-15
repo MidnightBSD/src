@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/lib/clang/Makefile 310618 2016-12-26 20:36:37Z dim $
-
 .include <src.opts.mk>
 
 # These have to be built in order.

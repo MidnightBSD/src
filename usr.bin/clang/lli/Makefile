@@ -1,8 +1,8 @@
-# $FreeBSD: stable/11/usr.bin/clang/lli/Makefile 344213 2019-02-16 15:57:29Z dim $
+# $FreeBSD$
 
 PROG_CXX=	lli
 
-SRCDIR=		tools/lli
+SRCDIR=		llvm/tools/lli
 SRCS+=		lli.cpp
 
 LIBADD+=	z

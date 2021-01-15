@@ -1,8 +1,8 @@
-# $FreeBSD: stable/11/usr.bin/clang/llvm-pdbutil/Makefile 346296 2019-04-16 20:05:24Z dim $
+# $FreeBSD$
 
 PROG_CXX=	llvm-pdbutil
 
-SRCDIR=		tools/llvm-pdbutil
+SRCDIR=		llvm/tools/llvm-pdbutil
 SRCS+=		BytesOutputStyle.cpp
 SRCS+=		DumpOutputStyle.cpp
 SRCS+=		ExplainOutputStyle.cpp
@@ -23,7 +23,10 @@ SRCS+=		PrettyTypeDumper.cpp
 SRCS+=		PrettyTypedefDumper.cpp
 SRCS+=		PrettyVariableDumper.cpp
 SRCS+=		StreamUtil.cpp
+SRCS+=		TypeReferenceTracker.cpp
 SRCS+=		YAMLOutputStyle.cpp
 SRCS+=		llvm-pdbutil.cpp
+
+LIBADD+=	z
 
 .include "../llvm.prog.mk"
