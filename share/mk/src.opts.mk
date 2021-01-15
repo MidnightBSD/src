@@ -190,6 +190,7 @@ __DEFAULT_YES_OPTIONS = \
 __DEFAULT_NO_OPTIONS = \
     BSD_GREP \
     CLANG_EXTRAS \
+    CLANG_FORMAT \
     DTRACE_TESTS \
     EISA \
     HESIOD \
@@ -341,7 +342,9 @@ __DEFAULT_YES_OPTIONS+=OFED
 __DEFAULT_NO_OPTIONS+=OFED
 .endif
 
-.if ${COMPILER_FEATURES:Mc++11} && (${__T} == "amd64" || ${__T} == "i386")
+.if ${COMPILER_FEATURES:Mc++11} && \
+    (${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
+     ${__T} == "powerpc64")
 __DEFAULT_YES_OPTIONS+=OPENMP
 .else
 __DEFAULT_NO_OPTIONS+=OPENMP
@@ -483,6 +486,7 @@ MK_LLDB:=	no
 
 .if ${MK_CLANG} == "no"
 MK_CLANG_EXTRAS:= no
+MK_CLANG_FORMAT:= no
 MK_CLANG_FULL:= no
 MK_LLVM_COV:= no
 .endif
