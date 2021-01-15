@@ -19,7 +19,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'make tinderbox' 
+                sh 'make -j4 tinderbox' 
             }
         }
     }
