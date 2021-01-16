@@ -1,6 +1,6 @@
 
 pipeline {
-    agent any
+    agent { label 'bsd' }
     
     // Throttle a declarative pipeline via options
     options {
