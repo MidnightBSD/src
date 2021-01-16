@@ -203,8 +203,8 @@ public:
   }
 };
 
-#ifndef FREEBSD_CC_VERSION
-#define FREEBSD_CC_VERSION 0U
+#ifndef MIDNIGHTBSD_CC_VERSION
+#define MIDNIGHTBSD_CC_VERSION 0U
 #endif
 
 // FreeBSD Target
