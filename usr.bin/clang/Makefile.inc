@@ -1,5 +1,10 @@
-# $FreeBSD: stable/11/usr.bin/clang/Makefile.inc 310618 2016-12-26 20:36:37Z dim $
+# $FreeBSD$
 
 WARNS?=		0
+
+.if ${MACHINE_ARCH:Mmips*} && ${MACHINE_ARCH:Mmips64*} == ""
+CFLAGS+= -mxgot
+CXXFLAGS+= -mxgot
+.endif
 
 .include "../Makefile.inc"

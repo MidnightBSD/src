@@ -1,9 +1,8 @@
-# $FreeBSD: stable/11/usr.bin/clang/llvm-cxxfilt/Makefile 331838 2018-03-31 11:38:16Z dim $
+# $FreeBSD$
 
 PROG_CXX=	llvm-cxxfilt
-MAN=
 
-SRCDIR=		tools/llvm-cxxfilt
+SRCDIR=		llvm/tools/llvm-cxxfilt
 SRCS+=		llvm-cxxfilt.cpp
 
 .include "../llvm.prog.mk"

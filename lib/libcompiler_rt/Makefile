@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libcompiler_rt/Makefile 316423 2017-04-02 17:24:58Z dim $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -11,10 +11,6 @@ CFLAGS+=	${PICFLAG}
 CFLAGS+=	-fvisibility=hidden
 CFLAGS+=	-DVISIBILITY_HIDDEN
 CFLAGS+=	-I${SRCTOP}/contrib/libcxxrt
-
-.if ${COMPILER_TYPE} == "clang"
-CWARNFLAGS.gcc_personality_v0.c+= -Wno-typedef-redefinition
-.endif
 
 # gcc has incompatible internal declarations for __divtc3 and __multc3, but has
 # no option to silence its warning, so make warnings non-fatal.

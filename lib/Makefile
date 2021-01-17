@@ -1,6 +1,4 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/10/lib/Makefile 322094 2017-08-05 12:33:00Z marius $
-# $MidnightBSD$
 
 .include <src.opts.mk>
 
@@ -245,7 +243,6 @@ _libclang_rt=	libclang_rt
 .if ${MK_LIBCPLUSPLUS} != "no"
 _libcxxrt=	libcxxrt
 _libcplusplus=	libc++ libc++experimental
-_libcplusplus+=	libc++fs
 .endif
 
 .if ${MK_EFI} != "no"
@@ -305,7 +302,9 @@ _librtld_db=	librtld_db
 SUBDIR.${MK_OFED}+=	ofed
 SUBDIR.${MK_ZFS}+=	libbe
 
+.if ${MACHINE_ARCH} != "powerpc"
 SUBDIR.${MK_OPENMP}+=	libomp
+.endif
 
 .if ${MK_OPENSSL} != "no"
 _libmp=		libmp

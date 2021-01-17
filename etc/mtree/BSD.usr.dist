@@ -21,9 +21,21 @@
         aout
         ..
         clang
-            8.0.1
+            10.0.1
                 include
+                    cuda_wrappers
+                    ..
+                    fuzzer
+                    ..
+                    openmp_wrappers
+                    ..
+                    ppc_wrappers
+                    ..
+                    profile
+                    ..
                     sanitizer
+                    ..
+                    xray
                     ..
                 ..
                 lib

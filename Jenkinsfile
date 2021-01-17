@@ -1,6 +1,6 @@
 
 pipeline {
-    agent any
+    agent { label 'bsd' }
     
     // Throttle a declarative pipeline via options
     options {
@@ -19,7 +19,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'make tinderbox' 
+                sh 'make -j4 tinderbox' 
             }
         }
     }

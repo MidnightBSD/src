@@ -290,8 +290,12 @@ struct name {							\
 #define	ELFTC_VCSID(ID)		__RCSID(ID)
 #endif
 
-#if defined(__MidnightBSD__) 
+#if defined(__MidnightBSD__)
 #define	ELFTC_VCSID(ID)		__MBSDID(ID)
+#endif
+
+#if defined(__FreeBSD__) && !defined(__MidnightBSD__)
+#define	ELFTC_VCSID(ID)		__FBSDID(ID)
 #endif
 
 #if defined(__APPLE__) || defined(__GLIBC__) || defined(__GNU__) || \
@@ -338,7 +342,7 @@ struct name {							\
 
 #define	ELFTC_GETPROGNAME()	getprogname()
 
-#endif	/* __DragonFly__ || __FreeBSD__ || __minix || __NetBSD__ || __MidnightBSD__ */
+#endif	/* __DragonFly__ || __FreeBSD__ || __minix || __NetBSD__ */
 
 
 #if defined(__GLIBC__) || defined(__linux__)
@@ -374,11 +378,14 @@ extern const char *__progname;
 
 #include <libkern/OSByteOrder.h>
 #define	htobe32(x)	OSSwapHostToBigInt32(x)
+#define	htole32(x)	OSSwapHostToLittleInt32(x)
+#ifndef roundup2
 #define	roundup2	roundup
+#endif
 
-#define	ELFTC_BYTE_ORDER			_BYTE_ORDER
-#define	ELFTC_BYTE_ORDER_LITTLE_ENDIAN		_LITTLE_ENDIAN
-#define	ELFTC_BYTE_ORDER_BIG_ENDIAN		_BIG_ENDIAN
+#define	ELFTC_BYTE_ORDER			__DARWIN_BYTE_ORDER
+#define	ELFTC_BYTE_ORDER_LITTLE_ENDIAN		__DARWIN_LITTLE_ENDIAN
+#define	ELFTC_BYTE_ORDER_BIG_ENDIAN		__DARWIN_BIG_ENDIAN
 
 #define	ELFTC_HAVE_MMAP				1
 #define	ELFTC_HAVE_STRMODE			1
@@ -418,7 +425,9 @@ extern const char *__progname;
 /* Whether we need to supply {be,le}32dec. */
 #define ELFTC_NEED_BYTEORDER_EXTENSIONS		1
 
+#ifndef roundup2
 #define	roundup2	roundup
+#endif
 
 #endif	/* __GLIBC__ || __linux__ */
 

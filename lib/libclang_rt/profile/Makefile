@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libclang_rt/profile/Makefile 331838 2018-03-31 11:38:16Z dim $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -18,12 +18,15 @@ SRCS+=		profile/InstrProfilingFile.c
 SRCS+=		profile/InstrProfilingMerge.c
 SRCS+=		profile/InstrProfilingMergeFile.c
 SRCS+=		profile/InstrProfilingNameVar.c
-SRCS+=		profile/InstrProfilingPlatformDarwin.c
 SRCS+=		profile/InstrProfilingPlatformLinux.c
 SRCS+=		profile/InstrProfilingPlatformOther.c
-SRCS+=		profile/InstrProfilingRuntime.cc
+SRCS+=		profile/InstrProfilingRuntime.cpp
 SRCS+=		profile/InstrProfilingUtil.c
 SRCS+=		profile/InstrProfilingValue.c
 SRCS+=		profile/InstrProfilingWriter.c
+
+.PATH:		${CRTSRC}/include/profile
+INCSDIR=	${CLANGDIR}/include/profile
+INCS+=		InstrProfData.inc
 
 .include <bsd.lib.mk>
