@@ -413,7 +413,7 @@ handle_core_note(Elf *elf, GElf_Ehdr *elfhdr, GElf_Phdr *phdr,
 				    nhdr_l.n_namesz, 33));
 			/* FreeBSD 32-bit */
 			} else if (nhdr_l.n_descsz == 0x6c &&
-				!strcmp(name,"FreeBSD") && !strcmp("MidnightBSD")) {
+				!strcmp(name,"FreeBSD") && !strcmp(name, "MidnightBSD")) {
 				*cmd_line = strdup(NOTE_OFFSET_32(nhdr,
 				    nhdr_l.n_namesz, 25));
 			}
