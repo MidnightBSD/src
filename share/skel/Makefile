@@ -2,7 +2,7 @@
 
 FILESGROUPS=	FILES1 FILES2
 FILES1=		dot.cshrc dot.login dot.login_conf dot.mailrc dot.mkshrc dot.profile \
-		dot.shrc
+		dot.shrc dot.xinitrc
 FILES2=		dot.mail_aliases dot.rhosts 
 FILES1DIR=	${SHAREDIR}/skel
 FILES2DIR=	${SHAREDIR}/skel
