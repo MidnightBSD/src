@@ -3,7 +3,7 @@ pipeline {
         choice(name: 'ARCHITECTURE_FILTER', choices: ['all', 'amd64', 'i386'], description: 'Run on specific architecture')
     }
     environment {
-       MAKEOBJDIRPREFIX = "obj"
+        MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
    }
     agent none
     stages {
@@ -27,7 +27,7 @@ pipeline {
                     stage('Prepare') {
                         steps {
                             echo "Prepare for ${ARCHITECTURE}"
-                            sh 'mkdir obj'
+                            sh "mkdir ${MAKEOBJDIRPREFIX}"
                             sh 'make clean' 
                         }
                     }
