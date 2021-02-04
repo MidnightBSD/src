@@ -27,7 +27,7 @@ pipeline {
                         }
                         steps {
                             echo "Prepare for ${ARCHITECTURE}"
-                            sh "mkdir ${MAKEOBJDIRPREFIX}"
+                            sh "mkdir -p ${MAKEOBJDIRPREFIX}"
                             sh 'make clean' 
                         }
                     }
