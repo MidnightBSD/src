@@ -39,7 +39,7 @@ pipeline {
                      stage('buildkernel') {
                         steps {
                             echo "Do buildkernel for ${ARCHITECTURE}"
-                             sh 'make -j4 buildkernel'  
+                             sh 'make -j4 -DMAKE_JUST_KERNELS universe' 
                         }
                     }
                 }
