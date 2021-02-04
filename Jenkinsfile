@@ -2,9 +2,6 @@ pipeline {
     parameters {
         choice(name: 'ARCHITECTURE_FILTER', choices: ['all', 'amd64', 'i386'], description: 'Run on specific architecture')
     }
-    environment {
-        MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
-   }
     agent none
     stages {
         stage('BuildAndTest') {
@@ -25,6 +22,9 @@ pipeline {
                 }
                 stages {
                     stage('Prepare') {
+                        environment {
+                            MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
+                        }
                         steps {
                             echo "Prepare for ${ARCHITECTURE}"
                             sh "mkdir ${MAKEOBJDIRPREFIX}"
@@ -32,12 +32,18 @@ pipeline {
                         }
                     }
                     stage('buildworld') {
+                        environment {
+                            MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
+                        }
                         steps {
                             echo "Do buildworld for ${ARCHITECTURE}"
                              sh 'make -j4 buildworld'
                         }
                     }
                     stage('buildkernel') {
+                        environment {
+                            MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
+                        }
                         steps {
                             echo "Do buildkernel for ${ARCHITECTURE}"
                              sh 'make -j4 buildkernel' 
