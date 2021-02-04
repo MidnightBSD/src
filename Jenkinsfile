@@ -36,10 +36,16 @@ pipeline {
                              sh 'make -j4 buildworld'
                         }
                     }
-                     stage('buildkernel') {
+                    stage('buildkernel') {
                         steps {
                             echo "Do buildkernel for ${ARCHITECTURE}"
                              sh 'make -j4 buildkernel' 
+                        }
+                    }
+                    stage('tests') {
+                        steps {
+                            echo "Do tests for ${ARCHITECTURE}"
+                            sh 'kyua test -k tests/Kyuafile' 
                         }
                     }
                 }
