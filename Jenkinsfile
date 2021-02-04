@@ -2,6 +2,9 @@ pipeline {
     parameters {
         choice(name: 'ARCHITECTURE_FILTER', choices: ['all', 'amd64', 'i386'], description: 'Run on specific architecture')
     }
+    environment {
+       MAKEOBJDIRPREFIX = "${env.WORKSPACE}\\obj"
+   }
     agent none
     stages {
         stage('BuildAndTest') {
