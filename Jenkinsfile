@@ -12,7 +12,7 @@ pipeline {
                 
                 when { anyOf {
                     expression { params.ARCHITECTURE_FILTER == 'all' }
-                    expression { params.ARCHITECTURE_FILTER == env.PLATFORM }
+                    expression { params.ARCHITECTURE_FILTER == env.ARCHITECTURE }
                 } }
                 axes {
                     axis {
@@ -27,10 +27,15 @@ pipeline {
                             sh 'make clean' 
                         }
                     }
-                    stage('Build') {
+                    stage('buildworld') {
                         steps {
-                            echo "Do Test for ${ARCHITECTURE}"
+                            echo "Do buildworld for ${ARCHITECTURE}"
                              sh 'make -j4 buildworld'
+                        }
+                    }
+                     stage('buildkernel') {
+                        steps {
+                            echo "Do buildkernel for ${ARCHITECTURE}"
                              sh 'make -j4 buildkernel'  
                         }
                     }
