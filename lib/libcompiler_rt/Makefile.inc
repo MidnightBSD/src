@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 CRTARCH=	${MACHINE_CPUARCH:C/amd64/x86_64/}
 
 CRTSRC=		${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins
@@ -213,7 +211,7 @@ SRCF+=		udivsi3
 SRCF+=		umodsi3
 .endif
 
-# FreeBSD-specific atomic intrinsics.
+# BSD-specific atomic intrinsics.
 .if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "armv6"
 .PATH:		${SRCTOP}/sys/arm/arm
 
