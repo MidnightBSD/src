@@ -113,7 +113,7 @@
 #  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#  if defined(__FreeBSD__)
+#  if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
 #endif
@@ -253,6 +253,19 @@
 #  endif  // __LONG_LONG_SUPPORTED
 #endif  // __FreeBSD__
 
+#ifdef __MidnightBSD__
+#  include <sys/endian.h>
+#  include <osreldate.h>
+#  if _BYTE_ORDER == _LITTLE_ENDIAN
+#    define _LIBCPP_LITTLE_ENDIAN
+#  else  // _BYTE_ORDER == _LITTLE_ENDIAN
+#    define _LIBCPP_BIG_ENDIAN
+#  endif  // _BYTE_ORDER == _LITTLE_ENDIAN
+#  ifndef __LONG_LONG_SUPPORTED
+#    define _LIBCPP_HAS_NO_LONG_LONG
+#  endif  // __LONG_LONG_SUPPORTED
+#endif  // __MidnightBSD__
+
 #ifdef __NetBSD__
 #  include <sys/endian.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
@@ -338,7 +351,7 @@
 #endif
 
 #if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
-#  if defined(__FreeBSD__)
+#  if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_C11_FEATURES
@@ -902,7 +915,7 @@ typedef unsigned int   char32_t;
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
-    defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
+    defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__) || defined(__MidnightBSD__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
@@ -913,7 +926,7 @@ typedef unsigned int   char32_t;
 #  endif
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
@@ -940,11 +953,11 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define _LIBCPP_HAS_DEFAULTRUNELOCALE
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__) || defined(__MidnightBSD__)
 #define _LIBCPP_WCTYPE_IS_MASK
 #endif
 
@@ -1115,6 +1128,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     !defined(_LIBCPP_HAS_THREAD_API_WIN32) && \
     !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 #  if defined(__FreeBSD__) || \
+      defined(__MidnightBSD__) || \
       defined(__wasi__) || \
       defined(__NetBSD__) || \
       defined(__linux__) || \
