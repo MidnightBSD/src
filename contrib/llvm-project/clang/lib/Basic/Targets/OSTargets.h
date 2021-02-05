@@ -224,6 +224,8 @@ protected:
 
     Builder.defineMacro("__MidnightBSD__", Twine(Release));
     Builder.defineMacro("__MidnightBSD_cc_version", Twine(CCVersion));
+    // freebsd compatibility
+    Builder.defineMacro("__FreeBSD__", Twine(11U));
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
