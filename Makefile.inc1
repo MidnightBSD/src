@@ -2280,6 +2280,7 @@ secure/lib/libssh__L: lib/libgssapi__L kerberos5/lib/libkrb5__L \
     kerberos5/lib/libhx509__L kerberos5/lib/libasn1__L lib/libcom_err__L \
     lib/libmd__L kerberos5/lib/libroken__L
 .endif
+_lib_libfetch=	secure/lib/libssl__L secure/lib/libcrypto__L
 .endif
 .endif
 _secure_lib=	secure/lib
