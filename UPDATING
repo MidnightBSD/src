@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20210206:
+	tzdata 2021a
+
+	Fix a extattr corruption bug with ufs
+
+	Uninitialized kernel stack leaks in several file systems
+
+	Xen guests can triger backend Out Of Memory
+
 20201220:
 	libarchive 3.5.0
 
