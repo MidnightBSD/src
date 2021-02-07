@@ -243,7 +243,7 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 		strlcpy(nonSample, file, FILENAME_MAX * 2);
 	char** fileargv = parse_sample(nonSample);
 
-	if (fileargv[1] != '\0') {
+	if (fileargv[1] != NULL) {
 		if (fileargv[1][0] == '/')
 			strlcpy(secondFile, fileargv[1], FILENAME_MAX);
 		else
