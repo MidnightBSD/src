@@ -2,7 +2,11 @@
 # ~/.xinitrc
 # Executed by startx (run your window manager from here)
 
+if [ -f "/usr/local/bin/startxfce4" ]; then
+DEFAULT_SESSION="startxfce4"
+else
 DEFAULT_SESSION="wmaker"
+fi
 
 # Source GNUstep so we can use openapp and friends.
 if [ -x /usr/local/GNUstep/System/Makefiles/GNUstep.sh ]; then
@@ -21,8 +25,11 @@ fi
 
 
 case $1 in
-wmaker|startxfce4|twm|etoile)
+wmaker|startxfce4|gnome-shell|twm|etoile)
 	exec $1
+	;;
+Lumina-DE)
+	exec start-lumina-desktop
 	;;
 *)
 	exec $DEFAULT_SESSION
