@@ -37,7 +37,7 @@ pipeline {
                         }
                         steps {
                             echo "Do buildworld for ${ARCHITECTURE}"
-                             sh 'make -j4 buildworld'
+                             sh 'make buildworld'
                         }
                     }
                     stage('buildkernel') {
@@ -46,7 +46,7 @@ pipeline {
                         }
                         steps {
                             echo "Do buildkernel for ${ARCHITECTURE}"
-                             sh 'make -j4 buildkernel' 
+                             sh 'make buildkernel' 
                         }
                     }
                     stage('tests') {
