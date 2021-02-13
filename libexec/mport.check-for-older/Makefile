@@ -1,6 +1,10 @@
 PROG= mport.check-for-older
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.check-for-older
+
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
+
 WARNS?= 	4
 
 MK_MAN= no

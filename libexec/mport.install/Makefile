@@ -1,7 +1,9 @@
 PROG= mport.install
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 	6
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.install
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
 
 MK_MAN= no
 

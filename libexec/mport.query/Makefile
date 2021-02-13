@@ -1,7 +1,11 @@
 PROG= mport.query
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 	4
+PROG= mport.list
+
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/${PROG}
+
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
 
 MK_MAN= no
 

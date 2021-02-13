@@ -1,10 +1,12 @@
 PROG= mport.check-fake
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 	6
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.check-fake
+
+CFLAGS+=	-I${MPORTDIR}/libmport -fblocks
 
 MK_MAN=	no
 
-LIBADD=	mport dispatch BlocksRuntime pthread
+LIBADD=	mport sqlite3 dispatch BlocksRuntime pthread
 
 .include <bsd.prog.mk>
