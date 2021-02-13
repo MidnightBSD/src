@@ -1,5 +1,22 @@
 Updating Information for MidnightBSD users.
 
+20210213:
+	Import mport 2.0.5
+
+	Import tzdata 2021a
+
+20210203:
+	MidnightBSD 2.0.4
+
+	Add .xinitrc default for users
+
+20201231:
+	MidnightBSD 2.0.3
+
+	OpenSSL security patch
+
+	/dev/devstat permission changed for libgtop compatibility
+
 20201202:
 	MidnightBSD 2.0.2
 	
