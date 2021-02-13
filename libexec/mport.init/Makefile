@@ -1,11 +1,13 @@
 PROG= mport.init
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 	4
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.init
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
 
 MK_MAN=		no
 
-LIBADD+=	mport dispatch BlocksRuntime pthread
+LIBADD+=	mport sqlite3 dispatch BlocksRuntime pthread
 
 
 .include <bsd.prog.mk>

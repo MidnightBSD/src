@@ -1,6 +1,8 @@
 .include <src.opts.mk>
 
 PACKAGE=lib${LIB}
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libmport
 
 LIB=	mport
 SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
@@ -13,18 +15,13 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
    		stats.c verify.c lock.c mkdir.c hashmap.c
 INCS=	mport.h mport_dispatch.h
 
-CFLAGS+=	-I${.CURDIR} -fblocks -g
+CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -fblocks -g
 SHLIB_MAJOR=	2
 MAN=	mport.3
 
 WARNS=	3
 
 MK_PROFILE=no
-
-#DPADD=	${LIBMD} ${LIBARCHIVE} ${LIBBZP2} ${LIBLZMA} ${LIBZ} ${LIBFETCH} \
-#	${LIBSQLITE3} ${LIBPTHREAD} ${LIBDISPATCH} ${LIBBLOCKSRUNTIME}
-#LDADD=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 \
-#	-lpthread -ldispatch -lBlocksRuntime
 
 LIBADD=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
 

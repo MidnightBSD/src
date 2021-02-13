@@ -1,6 +1,10 @@
 PROG= mport.delete
 
-CFLAGS+=	-I${.CURDIR}/../../lib/libmport/ -fblocks
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.delete
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
+
 WARNS?= 	4
 
 MK_MAN= no

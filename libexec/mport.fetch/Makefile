@@ -1,7 +1,9 @@
 PROG= mport.fetch
 
-CFLAGS=	-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 	4
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.fetch
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
 
 MK_MAN= no
 

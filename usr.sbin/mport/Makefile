@@ -1,6 +1,9 @@
 PROG= mport
 
-CFLAGS= -I${SRCTOP}/lib/libmport/ -fblocks -g
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/mport
+
+CFLAGS= -I${MPORTDIR}/libmport/ -fblocks -g
 
 LIBADD+=	mport dispatch BlocksRuntime
 
