@@ -1,7 +1,9 @@
 PROG=	mport.info
 
-CFLAGS+=-I${.CURDIR}/../../lib/libmport/ -fblocks
-WARNS?= 4
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.info
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
 
 MK_MAN= no
 

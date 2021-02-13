@@ -1,6 +1,10 @@
 PROG= mport.create
 
-CFLAGS+=	-fblocks -I${.CURDIR}/../../lib/libmport/
+MPORTDIR= ${SRCTOP}/contrib/mport
+.PATH: ${MPORTDIR}/libexec/mport.create
+ 
+CFLAGS+=       -I${MPORTDIR}/libmport -fblocks
+
 WARNS?= 	6
 
 MK_MAN= no
