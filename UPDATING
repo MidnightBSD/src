@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	Fix a security issue with pam.  The rules would not be applied correctly.
 
+	xen fix to unmap correctly when errors occur
+
 20210206:
 	tzdata 2021a
 
