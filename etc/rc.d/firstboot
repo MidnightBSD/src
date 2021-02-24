@@ -36,7 +36,7 @@ firstboot_start()
 				/usr/sbin/mport install bsdstats
 				/sbin/ipfw enable firewall
 			fi
-			echo "bsdstats_enable=\"YES\"" >> /etc/rc.conf
+			/usr/sbin/sysrc bsdstats_enable="YES"
 		fi
 
 		echo -e "\r${yellow}Do you wish to enable a graphical environment? (yes or no)${lsuffix}"
@@ -49,11 +49,11 @@ firstboot_start()
 				echo "KDE detected"
 				echo "ttyv8 \"/usr/local/bin/kdm -nodaemon\" xterm on secure" >> /etc/ttys
 			else
-#			GNUSTEP/WindowMaker/mlogind
+#			xfce4/mlogind
 				/sbin/ipfw disable firewall
 				/usr/sbin/mport install midnightbsd-desktop
 				/sbin/ipfw enable firewall
-				echo "mlogind_enable=\"YES\"" >> /etc/rc.conf
+				/usr/sbin/sysrc mlogind_enable="YES"
 			fi
 			echo "Please restart to enable graphical login."
 			echo -e "\r${yellow}Done.${lsuffix}"
