@@ -2,6 +2,10 @@ Updating Information for MidnightBSD users.
 
 
 20210224:
+	xen fix to unmap correctly when errors occur
+
+	MidnightBSD 2.0.5
+
 	Happy 15th anniversary to MidnightBSD!
 
 	Fix a security issue with pam.  The rules would not be applied correctly.
