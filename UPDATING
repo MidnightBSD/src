@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20210224:
+	Happy 15th anniversary to MidnightBSD!
+
+	Fix a security issue with pam.  The rules would not be applied correctly.
+
 20210206:
 	tzdata 2021a
 
