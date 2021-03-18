@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <err.h>
 #include <dispatch/dispatch.h>
+#include <locale.h>
 #include <mport.h>
 #include <mport_private.h>
 
@@ -73,6 +74,8 @@ main(int argc, char *argv[]) {
 
 	if (argc < 2)
 		usage();
+
+	setlocale(LC_ALL, "");
 
 	dispatch_queue_t mainq = dispatch_get_main_queue();
 	dispatch_group_t grp = dispatch_group_create();
