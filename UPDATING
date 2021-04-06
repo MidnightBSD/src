@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20210406:
+	mport package manager updated to 2.1.0
+
 	Fix two security issues:
 
 	A particular case of memory sharing is mishandled in the virtual memory system.  It is possible 
