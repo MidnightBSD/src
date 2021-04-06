@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
@@ -40,24 +39,24 @@
 MPORT_PUBLIC_API mportStats *
 mport_stats_new(void)
 {
-    return (mportStats *)calloc(1, sizeof(mportStats));
+	return (mportStats *) calloc(1, sizeof(mportStats));
 }
 
 MPORT_PUBLIC_API int
 mport_stats_free(mportStats *stats)
 {
-    free(stats);
-    return MPORT_OK;
+	free(stats);
+	return MPORT_OK;
 }
 
 MPORT_PUBLIC_API int
 mport_stats(mportInstance *mport, mportStats **stats)
 {
-	__block sqlite3_stmt *stmt;
-	__block sqlite3 *db = mport->db;
-	__block mportStats *s;
-	__block int result = MPORT_OK;
-	__block char *err;
+	sqlite3_stmt *stmt;
+	sqlite3 *db = mport->db;
+	mportStats *s;
+	int result = MPORT_OK;
+	char *err;
 
 	if ((s = mport_stats_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -69,40 +68,32 @@ mport_stats(mportInstance *mport, mportStats **stats)
 		RETURN_CURRENT_ERROR;
 	}
 
-	dispatch_sync(mportSQLSerial, ^{
-		if (sqlite3_step(stmt) != SQLITE_ROW) {
-			sqlite3_finalize(stmt);
-			err = (char *) sqlite3_errmsg(db);
-			result = MPORT_ERR_FATAL;
-			return;
-		}
-
-		s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
 		sqlite3_finalize(stmt);
-	});
-	if (result == MPORT_ERR_FATAL) {
+		err = (char *) sqlite3_errmsg(db);
+		result = MPORT_ERR_FATAL;
 		SET_ERRORX(result, "%s", err);
 		return result;
 	}
 
-    if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM idx.packages") != MPORT_OK) {
+	s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+
+	if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM idx.packages") != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
 
-	dispatch_sync(mportSQLSerial, ^{
-		if (sqlite3_step(stmt) != SQLITE_ROW) {
-			sqlite3_finalize(stmt);
-			err = (char *) sqlite3_errmsg(db);
-			result = MPORT_ERR_FATAL;
-			return;
-		}
-
-		s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
 		sqlite3_finalize(stmt);
-	});
-
-	if (result == MPORT_ERR_FATAL)
+		err = (char *) sqlite3_errmsg(db);
+		result = MPORT_ERR_FATAL;
 		SET_ERRORX(result, "%s", err);
+		return result;
+	}
+
+	s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+
 	return result;
 }

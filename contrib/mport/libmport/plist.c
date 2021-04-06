@@ -284,6 +284,8 @@ parse_command(const char *s) {
     	return ASSET_LDCONFIG_LINUX;
     if (STRING_EQ(s, "ldconfig"))
     	return ASSET_LDCONFIG;
+    if (STRING_EQ(s, "rmempty"))
+    	return ASSET_RMEMPTY;
 
     /* special case, starts with ( as in @(root,wheel,0755) */
     if (s[0] == '(')

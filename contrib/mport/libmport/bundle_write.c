@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 /* Portions of this code (the hardlink handling) were inspired by and/or copied 
  * from write.c in bsdtar by Tim Kientzle. Copyright (c) 2003-2007 Tim Kientzle.
@@ -142,20 +141,20 @@ int mport_bundle_write_finish(mportBundleWrite *bundle)
  * Add a single file to the bundle.  filename is the name of the file
  * in the system, while path is where the file should be put in the bundle.
  */
-int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, const char *path) 
+int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, const char *path)
 {
-  struct archive_entry *entry = NULL;
-  struct stat st;
-  int fd = -1, ret = MPORT_OK;
-  ssize_t len;
-  char buff[BUFF_SIZE];
+	struct archive_entry *entry = NULL;
+	struct stat st;
+	int fd = -1, ret = MPORT_OK;
+	ssize_t len;
+	char buff[BUFF_SIZE];
 
-  if (lstat(filename, &st) != 0) {
-    RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to stat %s: %s", filename, strerror(errno));
-  }
+	if (lstat(filename, &st) != 0) {
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to stat %s: %s", filename, strerror(errno));
+	}
 
-  entry = archive_entry_new();
-  archive_entry_set_pathname(entry, path);
+	entry = archive_entry_new();
+	archive_entry_set_pathname(entry, path);
 
   if (!S_ISDIR(st.st_mode) && (st.st_nlink > 1))
     if (lookup_hardlink(bundle, entry, &st) != MPORT_OK)
@@ -275,7 +274,7 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
     return MPORT_OK; /* just to be safe */ 
   }
 
-  /* if the number of entires is twice the number of buckets, increase the table size */
+  /* if the number of entries is twice the number of buckets, increase the table size */
   if (links->nentries > links->nbuckets * 2) {
     new_size = links->nbuckets * 2;
     new_buckets = calloc(new_size, sizeof(links->buckets[0]));

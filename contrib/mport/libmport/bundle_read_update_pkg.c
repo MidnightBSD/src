@@ -88,6 +88,8 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
 
+  extra->is_backup = true;
+
   ret = mport_create_primative(alist, pkg, extra);
 
   mport_assetlist_free(alist);
@@ -123,6 +125,7 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
   if (build_create_extras_copy_metafiles(pkg, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
+  extra->is_backup = false;
   
   return MPORT_OK;
 }

@@ -13,9 +13,9 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 		update_primative.c bundle_read_update_pkg.c pkgmeta.c \
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
    		stats.c verify.c lock.c mkdir.c hashmap.c
-INCS=	mport.h mport_dispatch.h
+INCS=	mport.h
 
-CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -fblocks -g
+CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -g
 SHLIB_MAJOR=	2
 MAN=	mport.3
 
@@ -23,6 +23,6 @@ WARNS=	3
 
 MK_PROFILE=no
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
+LIBADD=	md archive bz2 lzma z fetch sqlite3 pthread
 
 .include <bsd.lib.mk>

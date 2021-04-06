@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,17 +36,13 @@ __MBSDID("$MidnightBSD$");
 static void usage(void);
 
 int
-main(int argc, char *argv[]) 
+main(int argc, char *argv[])
 {
 	int ch;
 	char *prefix = NULL;
 	mportInstance *mport;
-	__block int error_code = 0;
+	int error_code = 0;
 
-	dispatch_queue_t mainq = dispatch_get_main_queue();
-        dispatch_group_t grp = dispatch_group_create();
-        dispatch_queue_t q = dispatch_queue_create("print", NULL);
-		
 	while ((ch = getopt(argc, argv, "p:")) != -1) {
 		switch (ch) {
 			case 'p':
@@ -56,17 +51,15 @@ main(int argc, char *argv[])
 			case '?':
 			default:
 				usage();
-				break; 
+				break;
 		}
-	} 
+	}
 
 	argc -= optind;
 	argv += optind;
 
 	if (argc == 0)
 		usage();
-
-	mport_init_queues();
 
 	mport = mport_instance_new();
 
@@ -76,26 +69,22 @@ main(int argc, char *argv[])
 	}
 
 	for (int i = 0; i < argc; i++) {
-		dispatch_group_async(grp, q, ^{
-			if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
-				warnx("install failed: %s", mport_err_string());
-				mport_instance_free(mport);
-				exit(1);
-			}
-		});
-	}
- 
-	dispatch_group_wait(grp, DISPATCH_TIME_FOREVER);
-        dispatch_async(mainq, ^{
-                mport_instance_free(mport);
-                exit(error_code);
-        });
 
-        dispatch_main();
+		if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
+			warnx("install failed: %s", mport_err_string());
+			mport_instance_free(mport);
+			exit(1);
+		}
+	}
+
+
+	mport_instance_free(mport);
+	exit(error_code);
+
 }
 
-static 
-void usage(void) 
+static
+void usage(void)
 {
 
 	fprintf(stderr, "Usage: mport.install [-p prefix] pkgfile1 pkgfile2 ...\n");

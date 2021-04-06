@@ -179,15 +179,15 @@ str_remove( const char *str, const char ch )
 	
 	len = strlen(str);
 	
-	output = calloc(len, sizeof(char));
+	output = calloc(len + 1, sizeof(char));
 	
-	for (i = 0, x = 0; i < len; i++) {
+	for (i = 0, x = 0; i <= len; i++) {
 		if (str[i] != ch) {
 			output[x] = str[i];
 			x++;
 		}
     }
-    output[len -1] = '\0';
+    output[len] = '\0';
 	
     return (output);
 } 

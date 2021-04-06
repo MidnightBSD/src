@@ -23,15 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,130 +37,145 @@ __MBSDID("$MidnightBSD$");
 #include <mport.h>
 
 static void usage(void);
+
 static void check_for_required_args(const mportPackageMeta *, const mportCreateExtras *);
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
-  int ch;
-  int plist_seen = 0;
-  dispatch_queue_t mainq = dispatch_get_main_queue();
-  dispatch_group_t grp = dispatch_group_create();
-  dispatch_queue_t q = dispatch_queue_create("print", NULL);
-  mportPackageMeta *pack    = mport_pkgmeta_new();
-  mportCreateExtras *extra  = mport_createextras_new();
-  mportAssetList *assetlist = mport_assetlist_new();
-  FILE *fp;
-  struct tm expDate;
-    
-  while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
-    switch (ch) {
-      case 'o':
-        extra->pkg_filename = optarg;
-        break;
-      case 'n':
-        pack->name = optarg;
-        break;
-      case 'v':
-        pack->version = optarg;
-        break;
-      case 'c':
-        pack->comment = optarg;
-        break;
-      case 'f':
-	pack->flavor = optarg;
-        break;
-      case 'e':
-	pack->cpe = optarg;
-	break;
-      case 'l':
-        pack->lang = optarg;
-        break;
-      case 's':
-        extra->sourcedir = optarg;
-        break;
-      case 'd':
-        pack->desc = optarg;
-        break;
-      case 'p':
-        if ((fp = fopen(optarg, "r")) == NULL) {
-          err(1, "%s", optarg);
-        }
-        if (mport_parse_plistfile(fp, assetlist) != 0) {
-          warnx("Could not parse plist file '%s'.\n", optarg);
-          fclose(fp);
-          exit(1);
-        }
-        fclose(fp);
-        
-        plist_seen++;
-        
-        break;
-      case 'P':
-        pack->prefix = optarg;
-        break;
-      case 'D':
-        mport_parselist(optarg, &(extra->depends));
-        break;
-      case 'M':
-        extra->mtree = optarg;
-        break;
-      case 'O':
-        pack->origin = optarg;
-        break;
-      case 'C':
-        mport_parselist(optarg, &(extra->conflicts));
-        break;
-      case 'E':
-        strptime(optarg, "%Y-%m-%d", &expDate);
-        pack->expiration_date = mktime(&expDate);
-        break;
-      case 'S':
-        if (optarg[0] == '1' || optarg[0] == 'Y' || optarg[0] == 'y')
-            pack->no_provide_shlib = 1;
-        else
-            pack->no_provide_shlib = 0;
-        break;
-      case 'i':
-        extra->pkginstall = optarg;
-        break;
-      case 'j':
-        extra->pkgdeinstall = optarg;
-        break;
-      case 'm':
-        extra->pkgmessage = optarg;
-        break;
-      case 't':
-        mport_parselist(optarg, &(pack->categories));
-        break;
-      case 'x':
-        pack->deprecated = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	int ch;
+	int plist_seen = 0;
+	mportPackageMeta *pack = mport_pkgmeta_new();
+	mportCreateExtras *extra = mport_createextras_new();
+	mportAssetList *assetlist = mport_assetlist_new();
+	FILE *fp;
+	struct tm expDate;
 
-dispatch_group_async(grp, q, ^{
-  check_for_required_args(pack, extra);
-  if (plist_seen == 0) {
-    warnx("Required arg missing: plist");
-    usage();
-  }
+	if (pack == NULL || extra == NULL || assetlist == NULL) {
+		errx(1, "Failed to allocate memory");
+	}
 
-  if (mport_create_primative(assetlist, pack, extra) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-});
+	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
+		switch (ch) {
+			case 'o':
+				extra->pkg_filename = optarg;
+				break;
+			case 'n':
+				if (optarg != NULL) {
+					pack->name = strdup(optarg);
+				}
+				break;
+			case 'v':
+				if (optarg != NULL) {
+					pack->version = strdup(optarg);
+				}
+				break;
+			case 'c':
+				if (optarg != NULL) {
+					pack->comment = strdup(optarg);
+				}
+				break;
+			case 'f':
+				if (optarg != NULL) {
+					pack->flavor = strdup(optarg);
+				}
+				break;
+			case 'e':
+				if (optarg != NULL) {
+					pack->cpe = strdup(optarg);
+				}
+				break;
+			case 'l':
+				if (optarg != NULL) {
+					pack->lang = strdup(optarg);
+				}
+				break;
+			case 's':
+				extra->sourcedir = optarg;
+				break;
+			case 'd':
+				if (optarg != NULL) {
+					pack->desc = strdup(optarg);
+				}
+				break;
+			case 'p':
+				if ((fp = fopen(optarg, "r")) == NULL) {
+					err(1, "%s", optarg);
+				}
+				if (mport_parse_plistfile(fp, assetlist) != 0) {
+					warnx("Could not parse plist file '%s'.\n", optarg);
+					fclose(fp);
+					exit(1);
+				}
+				fclose(fp);
 
-     dispatch_group_wait(grp, DISPATCH_TIME_FOREVER);
-        dispatch_async(mainq, ^{
-                exit(0);
-        });
+				plist_seen++;
 
-        dispatch_main();
+				break;
+			case 'P':
+				if (optarg != NULL) {
+					pack->prefix = strdup(optarg);
+				}
+				break;
+			case 'D':
+				mport_parselist(optarg, &(extra->depends));
+				break;
+			case 'M':
+				extra->mtree = optarg;
+				break;
+			case 'O':
+				if (optarg != NULL) {
+					pack->origin = strdup(optarg);
+				}
+				break;
+			case 'C':
+				mport_parselist(optarg, &(extra->conflicts));
+				break;
+			case 'E':
+				strptime(optarg, "%Y-%m-%d", &expDate);
+				pack->expiration_date = mktime(&expDate);
+				break;
+			case 'S':
+				if (optarg[0] == '1' || optarg[0] == 'Y' || optarg[0] == 'y' || optarg[0] == 'T' || optarg[0] == 't')
+					pack->no_provide_shlib = 1;
+				else
+					pack->no_provide_shlib = 0;
+				break;
+			case 'i':
+				extra->pkginstall = optarg;
+				break;
+			case 'j':
+				extra->pkgdeinstall = optarg;
+				break;
+			case 'm':
+				extra->pkgmessage = optarg;
+				break;
+			case 't':
+				mport_parselist(optarg, &(pack->categories));
+				break;
+			case 'x':
+				if (optarg != NULL) {
+					pack->deprecated = strdup(optarg);
+				}
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
+	}
+
+	check_for_required_args(pack, extra);
+	if (plist_seen == 0) {
+		warnx("Required arg missing: plist");
+		usage();
+	}
+
+	if (mport_create_primative(assetlist, pack, extra) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(1);
+	}
+
+	return 0;
 }
 
 
@@ -175,41 +184,41 @@ dispatch_group_async(grp, q, ^{
     warnx("Required arg missing: %s", #errmsg); \
     usage(); \
   }
-  
+
 static void check_for_required_args(const mportPackageMeta *pkg, const mportCreateExtras *extra)
 {
-  CHECK_ARG(pkg->name, "package name")
-  CHECK_ARG(pkg->version, "package version");
-  CHECK_ARG(extra->pkg_filename, "package filename");
-  CHECK_ARG(extra->sourcedir, "source dir");
-  CHECK_ARG(pkg->prefix, "prefix");
-  CHECK_ARG(pkg->origin, "origin");
-  CHECK_ARG(pkg->categories, "categories");
+	CHECK_ARG(pkg->name, "package name")
+	CHECK_ARG(pkg->version, "package version");
+	CHECK_ARG(extra->pkg_filename, "package filename");
+	CHECK_ARG(extra->sourcedir, "source dir");
+	CHECK_ARG(pkg->prefix, "prefix");
+	CHECK_ARG(pkg->origin, "origin");
+	CHECK_ARG(pkg->categories, "categories");
 }
-    
 
-static void usage(void) 
+
+static void usage(void)
 {
-  fprintf(stderr, "\nmport.create <arguments>\n");
-  fprintf(stderr, "Arguments:\n");
-  fprintf(stderr, "\t-n <package name>\n");
-  fprintf(stderr, "\t-v <package version>\n");
-  fprintf(stderr, "\t-o <package filename>\n");
-  fprintf(stderr, "\t-s <source dir (usually the fake destdir)>\n");
-  fprintf(stderr, "\t-p <plist filename>\n");
-  fprintf(stderr, "\t-P <prefix>\n");
-  fprintf(stderr, "\t-O <origin>\n");
-  fprintf(stderr, "\t-c <comment (short description)>\n");
-  fprintf(stderr, "\t-e <cpe string>\n");
-  fprintf(stderr, "\t-l <package lang>\n");
-  fprintf(stderr, "\t-D <package depends>\n");
-  fprintf(stderr, "\t-C <package conflicts>\n");
-  fprintf(stderr, "\t-d <pkg-descr file>\n");
-  fprintf(stderr, "\t-i <pkg-install script>\n");
-  fprintf(stderr, "\t-j <pkg-deinstall script>\n");
-  fprintf(stderr, "\t-m <pkg-message file>\n");
-  fprintf(stderr, "\t-M <mtree file>\n");  
-  fprintf(stderr, "\t-t <categories>\n");
-  exit(1);
+	fprintf(stderr, "\nmport.create <arguments>\n");
+	fprintf(stderr, "Arguments:\n");
+	fprintf(stderr, "\t-n <package name>\n");
+	fprintf(stderr, "\t-v <package version>\n");
+	fprintf(stderr, "\t-o <package filename>\n");
+	fprintf(stderr, "\t-s <source dir (usually the fake destdir)>\n");
+	fprintf(stderr, "\t-p <plist filename>\n");
+	fprintf(stderr, "\t-P <prefix>\n");
+	fprintf(stderr, "\t-O <origin>\n");
+	fprintf(stderr, "\t-c <comment (short description)>\n");
+	fprintf(stderr, "\t-e <cpe string>\n");
+	fprintf(stderr, "\t-l <package lang>\n");
+	fprintf(stderr, "\t-D <package depends>\n");
+	fprintf(stderr, "\t-C <package conflicts>\n");
+	fprintf(stderr, "\t-d <pkg-descr file>\n");
+	fprintf(stderr, "\t-i <pkg-install script>\n");
+	fprintf(stderr, "\t-j <pkg-deinstall script>\n");
+	fprintf(stderr, "\t-m <pkg-message file>\n");
+	fprintf(stderr, "\t-M <mtree file>\n");
+	fprintf(stderr, "\t-t <categories>\n");
+	exit(1);
 }
 

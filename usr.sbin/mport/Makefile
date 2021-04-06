@@ -3,8 +3,8 @@ PROG= mport
 MPORTDIR= ${SRCTOP}/contrib/mport
 .PATH: ${MPORTDIR}/mport
 
-CFLAGS= -I${MPORTDIR}/libmport/ -fblocks -g
+CFLAGS= -I${MPORTDIR}/libmport/ -g
 
-LIBADD+=	mport dispatch BlocksRuntime
+LIBADD+=	mport
 
 .include <bsd.prog.mk>

@@ -593,6 +593,7 @@ mport_get_osrelease(void)
         return NULL;
 
     for (int i = 0; i < 10; i++) {
+    	// old versions contained a - in the name  e.g. 0.4-RELEASE
         if (osrelease[i] == '\0' || osrelease[i] == '-')
             break;
 
@@ -610,8 +611,8 @@ mport_version(void)
 {
     char *version;
     char *osrel = mport_get_osrelease();
-    asprintf(&version, "mport for MidnightBSD %s, Bundle Version %s\n",
-             osrel, MPORT_BUNDLE_VERSION_STR);
+    asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n",
+             MPORT_VERSION, osrel, MPORT_BUNDLE_VERSION_STR);
     free(osrel);
 
     return version;

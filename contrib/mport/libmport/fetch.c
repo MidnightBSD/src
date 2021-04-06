@@ -119,8 +119,8 @@ mport_fetch_bootstrap_index(mportInstance *mport)
 /* mport_fetch_bundle(mport, filename)
  *
  * Fetch a given bundle from a remote.	If there is no loaded index, then
- * an error is thrown.	The file will be downloaded to the MPORT_FETCH_STAGING_DIR
- * directory.
+ * an error is thrown.	The file will be downloaded to the 
+ * MPORT_FETCH_STAGING_DIR directory.
  */
 int
 mport_fetch_bundle(mportInstance *mport, const char *filename)
@@ -235,5 +235,57 @@ fetch(mportInstance *mport, const char *url, const char *dest)
 	(mport->progress_free_cb)();
 
 	return MPORT_OK;
+}
+
+/**
+ * Download a package. Top level, public method.
+ *
+ * @param mport
+ * @param packageName name of the package to fetch
+ * @param path returns the path of the saved file. Must be freed on success
+ */
+int
+mport_download(mportInstance *mport, const char *packageName, char **path) {
+	mportIndexEntry **indexEntry;
+	bool existed = true;
+
+	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
+	
+	if (indexEntry == NULL || *indexEntry == NULL)
+		SET_ERRORX(1, "Package %s not found in index.\n", packageName);
+	
+	asprintf(path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
+	if (path == NULL) {
+		mport_index_entry_free_vec(indexEntry);
+		SET_ERRORX(1, "%s", "Unable to allocate memory for path.");
+	}
+
+	if (!mport_file_exists(*path)) {
+		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
+			fprintf(stderr, "%s\n", mport_err_string());
+			free(*path);
+			mport_index_entry_free_vec(indexEntry);
+			return mport_err_code();
+			
+		}
+		existed = false;
+	}
+
+	if (!mport_verify_hash(*path, (*indexEntry)->hash)) {
+		free(*path);
+		mport_index_entry_free_vec(indexEntry);
+		SET_ERRORX(1, "Package %s fails hash verification.", packageName);
+	}
+
+	if (!existed)
+		mport_call_msg_cb(mport, "Package %s saved as %s\n", packageName, *path);
+	else
+		mport_call_msg_cb(mport, "Package %s exists at %s\n", packageName, *path);
+
+	mport_index_entry_free_vec(indexEntry);
+
+	return (0);
 }
 

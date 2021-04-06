@@ -45,6 +45,7 @@
 #define MPORT_MASTER_VERSION 7
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
+#define MPORT_VERSION "2.1.0"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 
@@ -174,8 +175,9 @@ int mport_set_errx(int , const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-
-#if __MidnightBSD_version >= 200000
+#if __MidnightBSD_version >= 201000
+#define MPORT_OSVERSION "2.1"
+#elif __MidnightBSD_version >= 200000
 #define MPORT_OSVERSION "2.0"
 #elif __MidnightBSD_version >= 102000
 #define MPORT_OSVERSION "1.2"
@@ -204,7 +206,7 @@ int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 
 #define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", func);
 #define MPORT_DAY 3600 * 24
-#define MPORT_MAX_INDEX_AGE MPORT_DAY * 14 /* two weeks */
+#define MPORT_MAX_INDEX_AGE MPORT_DAY * 7 /* one week */
 #define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
 
 /* Binaries we use */

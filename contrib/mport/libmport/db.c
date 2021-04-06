@@ -34,9 +34,13 @@
 #include "mport_private.h"
 
 static int mport_upgrade_master_schema_0to2(sqlite3 *);
+
 static int mport_upgrade_master_schema_2to3(sqlite3 *);
+
 static int mport_upgrade_master_schema_3to4(sqlite3 *);
+
 static int mport_upgrade_master_schema_4to6(sqlite3 *);
+
 static int mport_upgrade_master_schema_6to7(sqlite3 *);
 
 
@@ -51,8 +55,8 @@ mport_db_do(sqlite3 *db, const char *fmt, ...)
 {
 	va_list args;
 	char *sql;
-	__block int result = MPORT_OK;
-	__block char *err;
+	int result = MPORT_OK;
+	char *err;
 
 	va_start(args, fmt);
 
@@ -63,22 +67,20 @@ mport_db_do(sqlite3 *db, const char *fmt, ...)
 	if (sql == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
 
-	dispatch_sync(mportSQLSerial, ^{
-		int sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
-		/* if we get an error code, we want to run it again in some cases */
-		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-			sleep(1);
-			if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
-				err = (char *) sqlite3_errmsg(db);
-				result = MPORT_ERR_FATAL;
-			}
-		} else if (sqlcode != SQLITE_OK) {
+	int sqlcode = sqlite3_exec(db, sql, 0, 0, 0);
+	/* if we get an error code, we want to run it again in some cases */
+	if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+		sleep(1);
+		if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
 			err = (char *) sqlite3_errmsg(db);
 			result = MPORT_ERR_FATAL;
 		}
+	} else if (sqlcode != SQLITE_OK) {
+		err = (char *) sqlite3_errmsg(db);
+		result = MPORT_ERR_FATAL;
+	}
 
-		sqlite3_free(sql);
-	});
+	sqlite3_free(sql);
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
@@ -98,8 +100,8 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 {
 	va_list args;
 	char *sql;
-	__block int result = MPORT_OK;
-	__block char *err;
+	int result = MPORT_OK;
+	char *err;
 
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
@@ -108,21 +110,19 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 	if (sql == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
 
-	dispatch_sync(mportSQLSerial, ^{
-		int sqlcode = sqlite3_prepare_v2(db, sql, -1, stmt, NULL);
-		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-			sleep(1);
-			if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
-				err = (char *) sqlite3_errmsg(db);
-				result = MPORT_ERR_FATAL;
-			}
-		} else if (sqlcode != SQLITE_OK) {
+	int sqlcode = sqlite3_prepare_v2(db, sql, -1, stmt, NULL);
+	if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+		sleep(1);
+		if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
 			err = (char *) sqlite3_errmsg(db);
 			result = MPORT_ERR_FATAL;
 		}
+	} else if (sqlcode != SQLITE_OK) {
+		err = (char *) sqlite3_errmsg(db);
+		result = MPORT_ERR_FATAL;
+	}
 
-		sqlite3_free(sql);
-	});
+	sqlite3_free(sql);
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
@@ -130,12 +130,13 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 }
 
 int
-mport_db_count(sqlite3 *db, int *count, const char *fmt, ...) {
+mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
+{
 	va_list args;
 	char *sql;
-	__block int result = MPORT_OK;
-	__block char *err;
-	__block int realCount = 0;
+	int result = MPORT_OK;
+	char *err;
+	int realCount = 0;
 
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
@@ -144,40 +145,36 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...) {
 	if (sql == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
 
-	dispatch_sync(mportSQLSerial, ^{
-		sqlite3_stmt *stmt;
-		int sqlcode = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-		if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
-			sleep(1);
-			if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-				err = (char *) sqlite3_errmsg(db);
-				result = MPORT_ERR_FATAL;
-				return;
-			}
-		} else if (sqlcode != SQLITE_OK) {
+	sqlite3_stmt *stmt;
+	int sqlcode = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+	if (sqlcode == SQLITE_BUSY || sqlcode == SQLITE_LOCKED) {
+		sleep(2);
+		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 			err = (char *) sqlite3_errmsg(db);
 			result = MPORT_ERR_FATAL;
-			return;
 		}
+	} else if (sqlcode != SQLITE_OK) {
+		err = (char *) sqlite3_errmsg(db);
+		result = MPORT_ERR_FATAL;
+	}
 
-		sqlite3_free(sql);
-
-		if (sqlite3_step(stmt) != SQLITE_ROW) {
-			sqlite3_finalize(stmt);
-			return;
-		}
-
-		realCount = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	});
-	*count = realCount;
+	sqlite3_free(sql);
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
+
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		return result;
+	}
+
+	realCount = sqlite3_column_int(stmt, 0);
+	sqlite3_finalize(stmt);
+	*count = realCount;
+
 	return result;
 }
 
-  
 
 /* mport_attach_stub_db(sqlite *db, const char *tmpdir) 
  *
@@ -192,14 +189,14 @@ mport_attach_stub_db(sqlite3 *db, const char *dir)
 	char *file;
 
 	asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
-  
-	if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
+
+	if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) {
 		free(file);
 		RETURN_CURRENT_ERROR;
 	}
-  
+
 	free(file);
-  
+
 	return (MPORT_OK);
 }
 
@@ -213,14 +210,11 @@ mport_attach_stub_db(sqlite3 *db, const char *dir)
 int
 mport_detach_stub_db(sqlite3 *db)
 {
-	if (mport_db_do(db, "DETACH stub") != MPORT_OK) 
+	if (mport_db_do(db, "DETACH stub") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
-  
+
 	return (MPORT_OK);
 }
-
-
-
 
 
 #define RUN_SQL(db, sql) \
@@ -228,7 +222,7 @@ mport_detach_stub_db(sqlite3 *db)
     RETURN_CURRENT_ERROR
 
 int
-mport_generate_stub_schema(sqlite3 *db) 
+mport_generate_stub_schema(sqlite3 *db)
 {
 	char *ptr;
 	char *sql;
@@ -237,21 +231,25 @@ mport_generate_stub_schema(sqlite3 *db)
 	if (ptr == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release could not be determined");
 	asprintf(&sql, "INSERT INTO meta VALUES (\"os_release\", \"%s\")", ptr);
-	
+
 	RUN_SQL(db, "CREATE TABLE meta (field text NOT NULL, value text NOT NULL)");
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
 	RUN_SQL(db, sql);
-	RUN_SQL(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
-	RUN_SQL(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int NOT NULL, flavor text)");
-	RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
-	RUN_SQL(db, "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
+	RUN_SQL(db,
+	        "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
+	RUN_SQL(db,
+	        "CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text, os_release text NOT NULL, cpe text NOT NULL, deprecated text, expiration_date int64, no_provide_shlib int NOT NULL, flavor text)");
+	RUN_SQL(db,
+	        "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
+	RUN_SQL(db,
+	        "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
 
 	return (MPORT_OK);
 }
 
 int
-mport_upgrade_master_schema(sqlite3 *db, int databaseVersion) 
+mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 {
 	if (databaseVersion == MPORT_MASTER_VERSION)
 		return MPORT_OK;
@@ -303,9 +301,9 @@ static int
 mport_upgrade_master_schema_2to3(sqlite3 *db)
 {
 
-        RUN_SQL(db, "ALTER TABLE packages ADD COLUMN cpe text;");
+	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN cpe text;");
 
-        return (MPORT_OK);
+	return (MPORT_OK);
 }
 
 static int
@@ -328,7 +326,8 @@ mport_upgrade_master_schema_4to6(sqlite3 *db)
 }
 
 static int
-mport_upgrade_master_schema_6to7(sqlite3 *db) {
+mport_upgrade_master_schema_6to7(sqlite3 *db)
+{
 	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN deprecated text");
 	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN expiration_date int64");
 	RUN_SQL(db, "ALTER TABLE packages ADD COLUMN no_provide_shlib int");
@@ -343,23 +342,27 @@ mport_upgrade_master_schema_6to7(sqlite3 *db) {
 }
 
 int
-mport_generate_master_schema(sqlite3 *db) 
+mport_generate_master_schema(sqlite3 *db)
 {
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text NOT NULL default '1.0', cpe text, locked int NOT NULL default '0', deprecated text default '', expiration_date int64 NOT NULL default '0', no_provide_shlib int default '0', flavor text default '')");
+	RUN_SQL(db,
+	        "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text NOT NULL default '1.0', cpe text, locked int NOT NULL default '0', deprecated text default '', expiration_date int64 NOT NULL default '0', no_provide_shlib int default '0', flavor text default '')");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
+	RUN_SQL(db,
+	        "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
+	RUN_SQL(db,
+	        "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
 
-	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
+	RUN_SQL(db,
+	        "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
-  
+
 	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
 

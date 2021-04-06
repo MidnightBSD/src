@@ -38,11 +38,17 @@
 #include <stddef.h>
 
 static int index_is_recentish(void);
-static int index_last_checked_recentish(mportInstance *); 
+
+static int index_last_checked_recentish(mportInstance *);
+
 static int index_update_last_checked(mportInstance *);
+
 static time_t get_time(void);
+
 static int lookup_alias(mportInstance *, const char *, char **);
+
 static int attach_index_db(sqlite3 *db);
+
 static void populate_row(sqlite3_stmt *stmt, mportIndexEntry *e);
 
 /*
@@ -107,7 +113,7 @@ attach_index_db(sqlite3 *db)
  * a download of the index manually by the user.
  */
 MPORT_PUBLIC_API int
-mport_index_get(mportInstance *mport) 
+mport_index_get(mportInstance *mport)
 {
 
 	if (!(mport->flags & MPORT_INST_HAVE_INDEX)) {
@@ -117,7 +123,7 @@ mport_index_get(mportInstance *mport)
 		if (mport_fetch_index(mport) != MPORT_OK) {
 			SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
 			RETURN_CURRENT_ERROR;
-		} 
+		}
 	}
 
 	/* if we were already attached, reconnect refreshed index. */
@@ -132,7 +138,7 @@ mport_index_get(mportInstance *mport)
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
 	}
-        
+
 	if (index_update_last_checked(mport) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
@@ -156,7 +162,8 @@ index_is_recentish(void)
 }
 
 static int
-index_last_checked_recentish(mportInstance *mport) {
+index_last_checked_recentish(mportInstance *mport)
+{
 	char *recent;
 	int ret;
 
@@ -172,7 +179,8 @@ index_last_checked_recentish(mportInstance *mport) {
 }
 
 static int
-index_update_last_checked(mportInstance *mport) {
+index_update_last_checked(mportInstance *mport)
+{
 	char *utime;
 	int ret;
 
@@ -184,10 +192,11 @@ index_update_last_checked(mportInstance *mport) {
 	free(utime);
 
 	return ret;
-} 
+}
 
-static time_t 
-get_time(void) {
+static time_t
+get_time(void)
+{
 	struct timespec now;
 
 	if (clock_gettime(CLOCK_REALTIME, &now) != 0)
@@ -225,7 +234,8 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
 	*list_p = list;
 	i = 0;
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country=%Q", mirror_region) != MPORT_OK) {
+	if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country=%Q", mirror_region) !=
+	    MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -264,7 +274,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
  * is responsible for freeing the memory allocated.  See
  * mport_index_entry_free_vec()
  */
-MPORT_PUBLIC_API int 
+MPORT_PUBLIC_API int
 mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry ***entry_vec)
 {
 	char *lookup = NULL;
@@ -279,7 +289,7 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 	if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (mport_db_count(mport->db, &count,"SELECT count(*) FROM idx.packages  WHERE pkg GLOB %Q", lookup) != MPORT_OK)
+	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.packages  WHERE pkg GLOB %Q", lookup) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	e = (mportIndexEntry **) calloc((size_t) count + 1, sizeof(mportIndexEntry *));
@@ -327,8 +337,8 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 			goto DONE;
 		}
 	}
-      
-  DONE:
+
+	DONE:
 	free(lookup);
 	sqlite3_finalize(stmt);
 	return ret;
@@ -346,7 +356,7 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
  *
  * indexEntries is set to an empty allocated list and MPORT_OK is returned if no packages where found.
  */
-MPORT_PUBLIC_API int 
+MPORT_PUBLIC_API int
 mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const char *fmt, ...)
 {
 	va_list args;
@@ -365,10 +375,10 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 	if (where == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
 
-	if (mport_db_count(mport->db, &len,"SELECT count(*) FROM idx.packages  WHERE %s", where) != MPORT_OK)
+	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages  WHERE %s", where) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	e = (mportIndexEntry **)calloc((size_t) len + 1, sizeof(mportIndexEntry *));
+	e = (mportIndexEntry **) calloc((size_t) len + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
 		sqlite3_free(where);
 		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory");
@@ -380,7 +390,9 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 		return MPORT_OK;
 	}
 
-	if (mport_db_prepare(db, &stmt, "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) != MPORT_OK) {
+	if (mport_db_prepare(db, &stmt,
+	                     "SELECT pkg, version, comment, bundlefile, license, hash FROM idx.packages WHERE %s", where) !=
+	    MPORT_OK) {
 		sqlite3_free(where);
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
@@ -390,36 +402,37 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 		step = sqlite3_step(stmt);
 
 		if (step == SQLITE_ROW) {
-			if ((e[i] = (mportIndexEntry *)calloc(1, sizeof(mportIndexEntry))) == NULL) {
+			if ((e[i] = (mportIndexEntry *) calloc(1, sizeof(mportIndexEntry))) == NULL) {
 				ret = MPORT_ERR_FATAL;
+				break;
+			}
+
+			populate_row(stmt, e[i]);
+
+			if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL ||
+			    e[i]->bundlefile == NULL) {
+				ret = MPORT_ERR_FATAL;
+				break;
+			}
+
+			i++;
+		} else if (step == SQLITE_DONE) {
+			e[i] = NULL;
+			break;
+		} else {
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 			break;
 		}
+	}
 
-		populate_row(stmt, e[i]);
+	sqlite3_free(where);
+	sqlite3_finalize(stmt);
 
-		if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->license == NULL || e[i]->bundlefile == NULL) {
-			ret = MPORT_ERR_FATAL;
-			break;
-		}
-
-      i++;
-    } else if (step == SQLITE_DONE) {
-      e[i] = NULL;
-      break;
-    } else {
-      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-      break;
-    }
-  }
-
-  sqlite3_free(where);
-  sqlite3_finalize(stmt);
-
-  return ret;
+	return ret;
 }
 
 
-MPORT_PUBLIC_API int 
+MPORT_PUBLIC_API int
 mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 {
 	sqlite3_stmt *stmt;
@@ -429,7 +442,7 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 	sqlite3 *db = mport->db;
 	mportIndexEntry **e;
 
-	if (mport_db_count(mport->db, &len,"SELECT count(*) FROM idx.packages") != MPORT_OK)
+	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	e = (mportIndexEntry **) calloc((size_t) len + 1, sizeof(mportIndexEntry *));
@@ -478,7 +491,8 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 }
 
 static void
-populate_row(sqlite3_stmt *stmt, mportIndexEntry *e) {
+populate_row(sqlite3_stmt *stmt, mportIndexEntry *e)
+{
 
 	e->pkgname = strdup((const char *) sqlite3_column_text(stmt, 0));
 	e->version = strdup((const char *) sqlite3_column_text(stmt, 1));
@@ -493,26 +507,24 @@ static int
 lookup_alias(mportInstance *mport, const char *query, char **result)
 {
 	sqlite3_stmt *stmt;
-	__block int ret = MPORT_OK;
+	int ret = MPORT_OK;
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE alias=%Q", query) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	dispatch_sync(mportSQLSerial, ^{
-		switch (sqlite3_step(stmt)) {
-			case SQLITE_ROW:
-				*result = strdup((const char *) sqlite3_column_text(stmt, 0));
-				break;
-			case SQLITE_DONE:
-				*result = strdup(query);
-				break;
-			default:
-				ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-				break;
-		}
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			*result = strdup((const char *) sqlite3_column_text(stmt, 0));
+			break;
+		case SQLITE_DONE:
+			*result = strdup(query);
+			break;
+		default:
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			break;
+	}
 
-		sqlite3_finalize(stmt);
-	});
+	sqlite3_finalize(stmt);
 
 	return ret;
 }
