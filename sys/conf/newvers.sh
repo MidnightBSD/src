@@ -31,7 +31,7 @@
 # $FreeBSD: stable/11/sys/conf/newvers.sh 349884 2019-07-10 13:35:01Z gjb $
 
 TYPE="MidnightBSD"
-REVISION="2.0.6"
+REVISION="2.0.7"
 RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
 
