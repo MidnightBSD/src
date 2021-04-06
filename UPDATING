@@ -1,13 +1,17 @@
 Updating Information for MidnightBSD users.
 
 20210406:
+	Fix two security issues:
+
 	A particular case of memory sharing is mishandled in the virtual memory system.  It is possible 
 	and legal to establish a relationship where multiple descendant processes share a mapping which 
 	shadows memory of an ancestor process.  In this scenario, when one process modifies memory 
 	through such a mapping, the copy-on-write logic fails to invalidate other mappings of the source 
 	page.  These stale mappings may remain even after the mapped pages have been reused for another purpose.
 
-	
+	Due to a race condition between lookup of ".." and remounting a filesystem,
+	a process running inside a jail might access filesystem hierarchy outside
+	of jail.
 
 20210224:
 	Happy 15th anniversary to MidnightBSD!
