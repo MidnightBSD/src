@@ -61,8 +61,6 @@ mport_instance_init(mportInstance *mport, const char *root) {
 		mport->root = strdup("");
 	}
 
-	mport_init_queues();
-
 	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
 
 	if (mport_mkdir(dir) != MPORT_OK) {
@@ -114,9 +112,8 @@ mport_instance_init(mportInstance *mport, const char *root) {
  */
 int
 mport_get_database_version(sqlite3 *db) {
-    __block int databaseVersion = -1; /* ERROR condition */
+    int databaseVersion = -1; /* ERROR condition */
 
-    dispatch_sync(mportSQLSerial, ^{
 		sqlite3_stmt *stmt_version;
         if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt_version, NULL) == SQLITE_OK) {
             while (sqlite3_step(stmt_version) == SQLITE_ROW) {
@@ -124,7 +121,6 @@ mport_get_database_version(sqlite3 *db) {
             }
         }
         sqlite3_finalize(stmt_version);
-    });
 
     return databaseVersion;
 }
@@ -181,7 +177,7 @@ void
 mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
     va_list args;
 
-    __block char *msg;
+    char *msg;
     va_start(args, fmt);
     (void) vasprintf(&msg, fmt, args);
     va_end(args);
@@ -189,11 +185,10 @@ mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
     if (msg == NULL)
         return; /* No message for you! */
 
-    dispatch_async(mportPrintSerial, ^{
+
         (mport->msg_cb)(msg);
 
         free(msg);
-    });
 }
 
 
@@ -208,11 +203,9 @@ mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...) {
     if (title == NULL)
         return;
 
-    dispatch_async(mportPrintSerial, ^{
         (mport->progress_init_cb)(title);
 
         free(title);
-    });
 }
 
 

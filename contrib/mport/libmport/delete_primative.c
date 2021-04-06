@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <md5.h>
+#include <sha256.h>
 #include <stdlib.h>
 #include <libgen.h>
 #include <syslog.h>
@@ -55,14 +56,14 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
     mportAssetListEntryType type;
     const char *data, *checksum, *cwd, *service, *rc_script;
     struct stat st;
-    char md5[33];
+    char hash[65];
 
     if (force == 0) {
         if (check_for_upwards_depends(mport, pack) != MPORT_OK)
             RETURN_CURRENT_ERROR;
     }
 
-    mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
+    mport_call_progress_init_cb(mport, "Deleting %s-%s", pack->name, pack->version);
 
     /* stop any services that might exist; this replaces @stopdaemon */
     if (mport_db_prepare(mport->db, &stmt,
@@ -158,14 +159,27 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
         }
 
         switch (type) {
-	    case ASSET_FILE_OWNER_MODE:
-		/* falls through */
-            case ASSET_FILE:
-                /* falls through */
+	        case ASSET_RMEMPTY:
+		        (mport->progress_step_cb)(++current, total, file);
+		        if (lstat(file, &st) != 0) {
+			        mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
+			        break; /* next asset */
+		        }
+
+		        // remove the file if it is empty
+		        if (S_ISREG(st.st_mode) && st.st_size == 0) {
+			        if (unlink(file) != 0)
+				        mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+		        }
+	        	break;
+	        case ASSET_FILE_OWNER_MODE:
+			/* falls through */
+			case ASSET_FILE:
+            /* falls through */
             case ASSET_SHELL:
-                /* falls through */
+            /* falls through */
             case ASSET_SAMPLE:
-		/* falls through */
+			/* falls through */
             case ASSET_SAMPLE_OWNER_MODE:
                 (mport->progress_step_cb)(++current, total, file);
 
@@ -175,29 +189,53 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
                 }
 
                 if (S_ISREG(st.st_mode)) {
-                    if (MD5File(file, md5) == NULL)
-                        mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
+	                if (checksum == NULL) {
+		                mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+                    } else if (strlen(checksum) < 34) {
+		                if (MD5File(file, hash) == NULL)
+			                mport_call_msg_cb(mport, "Can't MD5 %s: %s", file, strerror(errno));
 
-                    if (checksum == NULL || md5 == NULL || strcmp(md5, checksum) != 0)
-                        mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+		                if (hash == NULL || strcmp(hash, checksum) != 0)
+			                mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+	                }  else {
+		                if (SHA256_File(file, hash) == NULL)
+			                mport_call_msg_cb(mport, "Can't SHA256 %s: %s", file, strerror(errno));
+
+		                if (hash == NULL || strcmp(hash, checksum) != 0)
+			                mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
+	                }
 
                     if (type == ASSET_SAMPLE || type == ASSET_SAMPLE_OWNER_MODE) {
-                        char sample_md5[33];
+                        char sample_hash[65];
                         char nonSample[FILENAME_MAX];
                         strlcpy(nonSample, file, FILENAME_MAX);
                         char *sptr = strcasestr(nonSample, ".sample");
                         if (sptr != NULL) {
                             sptr[0] = '\0'; /* hack off .sample */
-                            if (MD5File(nonSample, sample_md5) == NULL) {
-                                mport_call_msg_cb(mport, "Could not check file %s, review and remove manually.",
-                                                  nonSample);
-                            } else if (strcmp(sample_md5, md5) == 0) {
-                                if (unlink(nonSample) != 0)
-                                    mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
-                            } else {
-                                mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.",
-                                                  nonSample);
-                            }
+
+	                        if (strlen(checksum) < 34) {
+		                        if (MD5File(nonSample, sample_hash) == NULL) {
+			                        mport_call_msg_cb(mport, "Could not check file %s, review and remove manually.",
+			                                          nonSample);
+		                        } else if (strcmp(sample_hash, hash) == 0) {
+			                        if (unlink(nonSample) != 0)
+				                        mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+		                        } else {
+			                        mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.",
+			                                          nonSample);
+		                        }
+	                        } else {
+		                        if (SHA256_File(nonSample, sample_hash) == NULL) {
+			                        mport_call_msg_cb(mport, "Could not check file %s, review and remove manually.",
+			                                          nonSample);
+		                        } else if (strcmp(sample_hash, hash) == 0) {
+			                        if (unlink(nonSample) != 0)
+				                        mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+		                        } else {
+			                        mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.",
+			                                          nonSample);
+		                        }
+	                        }
                         }
                     }
                 }

@@ -26,6 +26,7 @@
 
 
 #include <sys/cdefs.h>
+
 __MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
@@ -40,9 +41,9 @@ __MBSDID("$MidnightBSD$");
 MPORT_PUBLIC_API int
 mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePath, mportPackageMeta **pack)
 {
-	__block sqlite3_stmt *stmt = NULL;
-	__block int result = MPORT_OK;
-	__block char *err;
+	sqlite3_stmt *stmt = NULL;
+	int result = MPORT_OK;
+	char *err;
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM assets WHERE data=%Q", filePath) != MPORT_OK) {
 		sqlite3_finalize(stmt);
@@ -82,7 +83,7 @@ mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePat
 				result = MPORT_OK;
 				break;
 			}
-		    }
+		}
 	}
 
 	sqlite3_finalize(stmt);
@@ -95,10 +96,10 @@ mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePat
 MPORT_PUBLIC_API int
 mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAssetList **alist_p)
 {
-	__block mportAssetList *alist;
-	__block sqlite3_stmt *stmt = NULL;
-	__block int result = MPORT_OK;
-	__block char *err;
+	mportAssetList *alist;
+	sqlite3_stmt *stmt = NULL;
+	int result = MPORT_OK;
+	char *err;
 
 	if ((alist = mport_assetlist_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -107,7 +108,8 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 
 	// pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK) {
+	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM assets WHERE pkg=%Q",
+	                     pack->name) != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -116,56 +118,55 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
 	}
 
-	dispatch_sync(mportSQLSerial, ^{
-	    while (1) {
-		    mportAssetListEntry *e;
 
-		    int ret = sqlite3_step(stmt);
+	while (1) {
+		mportAssetListEntry *e;
 
-		    if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
-			    sleep(1);
-			    ret = sqlite3_step(stmt);
-		    }
+		int ret = sqlite3_step(stmt);
 
-		    if (ret == SQLITE_DONE)
-			    break;
+		if (ret == SQLITE_BUSY || ret == SQLITE_LOCKED) {
+			sleep(1);
+			ret = sqlite3_step(stmt);
+		}
 
-		    if (ret != SQLITE_ROW) {
-			    err = (char *) sqlite3_errmsg(mport->db);
-			    result = MPORT_ERR_FATAL;
-			    break; // we finalize below
-		    }
+		if (ret == SQLITE_DONE)
+			break;
 
-		    e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
+		if (ret != SQLITE_ROW) {
+			err = (char *) sqlite3_errmsg(mport->db);
+			result = MPORT_ERR_FATAL;
+			break; // we finalize below
+		}
 
-		    if (e == NULL) {
-			    err = "Out of memory";
-			    result = MPORT_ERR_FATAL;
-			    break; // we finalize below
-		    }
+		e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
 
-		    e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
-		    const unsigned char *data = sqlite3_column_text(stmt, 1);
-		    const unsigned char *checksum = sqlite3_column_text(stmt, 2);
-		    const unsigned char *owner = sqlite3_column_text(stmt, 3);
-		    const unsigned char *group = sqlite3_column_text(stmt, 4);
-		    const unsigned char *mode = sqlite3_column_text(stmt, 5);
+		if (e == NULL) {
+			err = "Out of memory";
+			result = MPORT_ERR_FATAL;
+			break; // we finalize below
+		}
 
-		    e->data = data == NULL ? NULL : strdup((char *) data);
-		    if (checksum != NULL)
-			    e->checksum = strdup((char *) checksum);
-		    if (owner != NULL)
-			    e->owner = strdup((char *) owner);
-		    if (group != NULL)
-			    e->group = strdup((char *) group);
-		    if (mode != NULL)
-			    e->mode = strdup((char *) mode);
+		e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
+		const unsigned char *data = sqlite3_column_text(stmt, 1);
+		const unsigned char *checksum = sqlite3_column_text(stmt, 2);
+		const unsigned char *owner = sqlite3_column_text(stmt, 3);
+		const unsigned char *group = sqlite3_column_text(stmt, 4);
+		const unsigned char *mode = sqlite3_column_text(stmt, 5);
 
-		    STAILQ_INSERT_TAIL(alist, e, next);
-	    }
+		e->data = data == NULL ? NULL : strdup((char *) data);
+		if (checksum != NULL)
+			e->checksum = strdup((char *) checksum);
+		if (owner != NULL)
+			e->owner = strdup((char *) owner);
+		if (group != NULL)
+			e->group = strdup((char *) group);
+		if (mode != NULL)
+			e->mode = strdup((char *) mode);
 
-	    sqlite3_finalize(stmt);
-	});
+		STAILQ_INSERT_TAIL(alist, e, next);
+	}
+
+	sqlite3_finalize(stmt);
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "Error reading assets %s", err);

@@ -33,7 +33,6 @@
 #include <sysexits.h>
 #include <unistd.h>
 #include <err.h>
-#include <dispatch/dispatch.h>
 #include <locale.h>
 #include <mport.h>
 #include <mport_private.h>
@@ -66,30 +65,25 @@ static int which(mportInstance *, const char *, bool, bool);
 int 
 main(int argc, char *argv[]) {
 	char *flag = NULL, *buf = NULL;
-	__block	mportInstance *mport;
-	__block int resultCode = MPORT_ERR_FATAL;
-	__block int tempResultCode;
-	__block int i;
-	__block char **searchQuery;
+	mportInstance *mport;
+	int resultCode = MPORT_ERR_FATAL;
+	int tempResultCode;
+	int i;
+	char **searchQuery;
 
 	if (argc < 2)
 		usage();
 
 	setlocale(LC_ALL, "");
 
-	dispatch_queue_t mainq = dispatch_get_main_queue();
-	dispatch_group_t grp = dispatch_group_create();
-	dispatch_queue_t q = dispatch_queue_create("org.midnightbsd.mport.q", NULL);
 	mport = mport_instance_new();
 
-	dispatch_group_async(grp, q, ^{
 		if (mport_instance_init(mport, NULL) != MPORT_OK) {
 			errx(1, "%s", mport_err_string());
 		}
-	});
 
 	if (!strcmp(argv[1], "install")) {
-		dispatch_group_async(grp, q, ^{
+
 		if (argc == 2) {
 			mport_instance_free(mport);
 			usage();
@@ -98,11 +92,9 @@ main(int argc, char *argv[]) {
 		for (i = 2; i < argc; i++) {
 			tempResultCode = install(mport, argv[i]);
 			if (tempResultCode != 0)
-                                resultCode = tempResultCode;
+				resultCode = tempResultCode;
 		}
-		});
 	} else if (!strcmp(argv[1], "delete")) {
-		dispatch_group_async(grp, q, ^{
 		if (argc == 2) {
 			mport_instance_free(mport);
 			usage();
@@ -112,10 +104,8 @@ main(int argc, char *argv[]) {
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
-		});
 	} else if (!strcmp(argv[1], "update")) {
-		dispatch_group_async(grp, q, ^{
-		if (argc == 2) { 
+		if (argc == 2) {
 			mport_instance_free(mport);
 			usage();
 		}
@@ -125,21 +115,20 @@ main(int argc, char *argv[]) {
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
-		});
 	} else if (!strcmp(argv[1], "download")) {
-		dispatch_group_async(grp, q, ^{
-		loadIndex(mport);
-		for (i = 2; i < argc; i++) {
-			tempResultCode = mport_download(mport, argv[2]);
-			if (tempResultCode != 0)
-				resultCode = tempResultCode;
-		}
-		});
+			loadIndex(mport);
+			char *path;
+			for (i = 2; i < argc; i++) {
+				tempResultCode = mport_download(mport, argv[i], &path);
+				if (tempResultCode != 0) {
+					resultCode = tempResultCode;
+				} else if (path != NULL) {
+					free(path);
+				}
+			}
 	} else if (!strcmp(argv[1], "upgrade")) {
-		dispatch_group_async(grp, q, ^{
-		loadIndex(mport);
-		resultCode = upgrade(mport);
-		});
+			loadIndex(mport);
+			resultCode = upgrade(mport);
 	} else if (!strcmp(argv[1], "locks")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		flag = strdup("-l");
@@ -147,22 +136,18 @@ main(int argc, char *argv[]) {
                 free(flag);
                 free(buf);
 	} else if (!strcmp(argv[1], "lock")) {
-		dispatch_group_async(grp, q, ^{
 		if (argc > 2) {
 			lock(mport, argv[2]);
 		} else {
 			usage();
 		}
-		});
 	} else if (!strcmp(argv[1], "unlock")) {
-		dispatch_group_async(grp, q, ^{
 		if (argc > 2) {
 			unlock(mport, argv[2]);
 		} else {
 			usage();
 		}
-		});
-        } else if (!strcmp(argv[1], "list")) {
+	} else if (!strcmp(argv[1], "list")) {
 		asprintf(&buf, "%s%s", MPORT_TOOLS_PATH, "mport.list");
 		if (argc > 2) {
 			if (!strcmp(argv[2], "updates") || 
@@ -179,19 +164,14 @@ main(int argc, char *argv[]) {
 		free(flag);
 		free(buf);
 	} else if (!strcmp(argv[1], "info")) {
-		dispatch_group_async(grp, q, ^{
 		loadIndex(mport);
 		resultCode = info(mport, argv[2]);
-		});
 	} else if (!strcmp(argv[1], "index")) {
-		dispatch_group_async(grp, q, ^{
                 	resultCode = mport_index_get(mport);
 			if (resultCode != MPORT_OK) {
 				fprintf(stderr, "Unable to fetch index: %s\n", mport_err_string());
 			}
-                });
 	} else if (!strcmp(argv[1], "search")) {
-		dispatch_group_async(grp, q, ^{
 		loadIndex(mport);
 		searchQuery = calloc((size_t)argc - 1, sizeof(char*));
 		for (i = 2; i < argc; i++) {
@@ -202,17 +182,12 @@ main(int argc, char *argv[]) {
 			free(searchQuery[i-2]);
 		}
 		free(searchQuery);
-		});
         } else if (!strcmp(argv[1], "stats")) {
-		dispatch_group_async(grp, q, ^{
 			loadIndex(mport);
                 	resultCode = stats(mport);
-		});
 	} else if (!strcmp(argv[1], "clean")) {
-		dispatch_group_async(grp, q, ^{
 			loadIndex(mport);
 			resultCode = clean(mport);
-		});
         } else if (!strcmp(argv[1], "config")) {
 		if (argc < 3) {
 			mport_instance_free(mport);
@@ -220,65 +195,48 @@ main(int argc, char *argv[]) {
 		}
 
 		if (!strcmp(argv[2], "get")) {
-			dispatch_group_async(grp, q, ^{
 				resultCode = configGet(mport, argv[3]);
-			});
 		} else if (!strcmp(argv[2], "set")) {
-			dispatch_group_async(grp, q, ^{                         
-				resultCode = configSet(mport, 
+				resultCode = configSet(mport,
 					argv[3], argv[4]);
-			});
 		}
 	} else if (!strcmp(argv[1], "cpe")) {
-		dispatch_group_async(grp, q, ^{
 			resultCode = cpeList(mport);
-		});
 	} else if (!strcmp(argv[1], "deleteall")) {
-		dispatch_group_async(grp, q, ^{
-		resultCode = deleteAll(mport);
-		});
+			resultCode = deleteAll(mport);
 	} else if (!strcmp(argv[1], "verify")) {
-		dispatch_group_async(grp, q, ^{
-		resultCode = verify(mport);
-		});
+			resultCode = verify(mport);
 	} else if (!strcmp(argv[1], "which")) {
-		dispatch_group_async(grp, q, ^{
-		__block int local_argc = argc;
-		__block char *const * local_argv = argv;
+		int local_argc = argc;
+		char *const * local_argv = argv;
 		local_argv++;
-                if (local_argc > 2) {
+		if (local_argc > 2) {
 			int ch, qflag, oflag;
 			qflag = oflag = 0;
-		        while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
+			while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
 				switch (ch) {
 			 		case 'q':
-					qflag = 1;
-					break;
+						qflag = 1;
+						break;
 					case 'o':
-	                                oflag = 1;
-        	                        break;
+						oflag = 1;
+						break;
 				}
 			}
 			local_argc -= optind;
 			local_argv += optind;
 
 			which(mport, *local_argv, qflag, oflag);
-                } else {
-                        usage();
-                }
-                });
+		} else {
+			usage();
+        }
 	} else {
 		mport_instance_free(mport);
 		usage();
 	}
 
-	dispatch_group_wait(grp, DISPATCH_TIME_FOREVER);
-	dispatch_async(mainq, ^{
-                mport_instance_free(mport);
-                exit(resultCode);
-        });
-
-	dispatch_main();
+		mport_instance_free(mport);
+		exit(resultCode);
 }
 
 void
@@ -370,9 +328,9 @@ lock(mportInstance *mport, const char *packageName) {
 	mportPackageMeta **packs;
 
 	if (packageName == NULL) {
-                warnx("%s", "Specify package name");
-                return (1);
-        }
+		warnx("%s", "Specify package name");
+		return (1);
+	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -391,7 +349,7 @@ lock(mportInstance *mport, const char *packageName) {
 
 int
 unlock(mportInstance *mport, const char *packageName) {
-        mportPackageMeta **packs;
+	mportPackageMeta **packs;
 
 	if (packageName == NULL) {
 		warnx("%s", "Specify package name");
@@ -417,9 +375,9 @@ static int
 stats(mportInstance *mport) {
 	mportStats *s;
 	if (mport_stats(mport, &s) != MPORT_OK) {
-                warnx("%s", mport_err_string());
-                return (1);
-        }
+		warnx("%s", mport_err_string());
+		return (1);
+	}
 
 	printf("Local package database:\n");
 	printf("\tInstalled packages: %d\n", s->pkg_installed);
@@ -450,18 +408,17 @@ info(mportInstance *mport, const char *packageName) {
 
 int
 which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
-
 	mportPackageMeta *pack = NULL;
 
-        if (filePath == NULL) {
-                warnx("%s", "Specify file path");
-                return (1);
-        }
+	if (filePath == NULL) {
+        warnx("%s", "Specify file path");
+		return (1);
+	}
 
 	if (mport_asset_get_package_from_file_path(mport, filePath, &pack) != MPORT_OK) {
-                warnx("%s", mport_err_string());
-                return (1);
-        }
+		warnx("%s", mport_err_string());
+		return (1);
+	}
 
 	if (pack != NULL && pack->origin != NULL) {
 		if (quiet && origin) {
@@ -475,7 +432,7 @@ which(mportInstance *mport, const char *filePath, bool quiet, bool origin) {
 		}
 	}
 
-        return (0);
+	return (0);
 }
 
 /* recursive function */ 
@@ -505,16 +462,25 @@ install_depends(mportInstance *mport, const char *packageName, const char *versi
 		while (*depends != NULL) {
 			install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
 			depends++;
-        	}
+		}
 		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
 			warnx("%s", mport_err_string());
 			return mport_err_code();
 		}
 		mport_index_depends_free_vec(depends);
 	} else {
-		/* already installed */
-		mport_pkgmeta_vec_free(packs);
+		/* already installed, double check we are on the latest */
 		mport_index_depends_free_vec(depends);
+
+		if (mport_check_preconditions(mport, packs[0], MPORT_PRECHECK_UPGRADEABLE) == MPORT_OK) {
+			if (update(mport, packageName) != MPORT_OK) {
+				warnx("%s", mport_err_string());
+				mport_pkgmeta_vec_free(packs);
+				return mport_err_code();
+			}
+		}
+
+		mport_pkgmeta_vec_free(packs);
 	}
 
 	return (0);
@@ -537,8 +503,7 @@ install(mportInstance *mport, const char *packageName) {
 		i2 = indexEntry;
 		item = 0;
 		while (*i2 != NULL) {
-			printf("%d. %s-%s\n", item, (*i2)->pkgname,
-				(*i2)->version);
+			printf("%d. %s-%s\n", item, (*i2)->pkgname, (*i2)->version);
 			item++;
 			i2++;
 		}
@@ -579,39 +544,19 @@ delete(const char *packageName) {
 
 int
 update(mportInstance *mport, const char *packageName) {
-	mportIndexEntry **indexEntry;
 	char *path;
 
-	indexEntry = lookupIndex(mport, packageName);
-	if (indexEntry == NULL || *indexEntry == NULL)
-		return (1);
-
-	asprintf(&path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
-
-	if (!mport_file_exists(path)) {
-		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-			fprintf(stderr, "%s\n", mport_err_string());
-			free(path);
-			return mport_err_code();
-		}
-	}
-
-	if (!mport_verify_hash(path, (*indexEntry)->hash)) {
-		if (unlink(path) == 0)  /* remove file so we can try again */
-			fprintf(stderr, "Package fails hash verification and was removed. Please try again.\n");
-		else
-			fprintf(stderr, "Package fails hash verification Please delete it manually at %s\n", path);
-		free(path);
-		return (1);
-	}
+	int result = mport_download(mport, packageName, &path);
+	if (result != 0)
+		return result;
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {
 		fprintf(stderr, "%s\n", mport_err_string());
 		free(path);
 		return mport_err_code();
 	}
+
 	free(path);
-	mport_index_entry_free_vec(indexEntry);
 
 	return (0);
 }

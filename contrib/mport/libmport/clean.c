@@ -35,20 +35,19 @@
 #include <string.h>
 #include <errno.h>
 #include <dirent.h>
+#include <unistd.h>
 
 MPORT_PUBLIC_API int
 mport_clean_database(mportInstance *mport)
 {
-	__block int error_code = MPORT_OK;
+	int error_code = MPORT_OK;
 
-	dispatch_sync(mportTaskSerial, ^{
-	    if (mport_db_do(mport->db, "vacuum") != MPORT_OK) {
-		    error_code = mport_err_code();
-		    mport_call_msg_cb(mport, "Database maintenance failed: %s\n", mport_err_string());
-	    } else {
-		    mport_call_msg_cb(mport, "Database maintenance complete.\n");
-	    }
-	});
+	if (mport_db_do(mport->db, "vacuum") != MPORT_OK) {
+		error_code = mport_err_code();
+		mport_call_msg_cb(mport, "Database maintenance failed: %s\n", mport_err_string());
+	} else {
+		mport_call_msg_cb(mport, "Database maintenance complete.\n");
+	}
 
 	return error_code;
 }
@@ -56,72 +55,70 @@ mport_clean_database(mportInstance *mport)
 MPORT_PUBLIC_API int
 mport_clean_oldpackages(mportInstance *mport)
 {
-	__block int error_code = MPORT_OK;
+	int error_code = MPORT_OK;
 
-	dispatch_sync(mportTaskSerial, ^{
-	    int deleted = 0;
-	    struct dirent *de;
-	    DIR *d = opendir(MPORT_FETCH_STAGING_DIR);
 
-	    if (d == NULL) {
-		    error_code = SET_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR,
-		                            strerror(errno));
-		    return;
-	    }
+	int deleted = 0;
+	struct dirent *de;
+	DIR *d = opendir(MPORT_FETCH_STAGING_DIR);
 
-	    while ((de = readdir(d)) != NULL) {
-		    mportIndexEntry **indexEntry;
-		    char *path;
-		    if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
-			    continue;
+	if (d == NULL) {
+		error_code = SET_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_FETCH_STAGING_DIR,
+		                        strerror(errno));
+		return error_code;
+	}
 
-		    if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK) {
- 		  	    mport_call_msg_cb(mport, "failed to search index %s: ",  mport_err_string());
-			    continue;
-		    }
+	while ((de = readdir(d)) != NULL) {
+		mportIndexEntry **indexEntry;
+		char *path;
+		if (strcmp(".", de->d_name) == 0 || strcmp("..", de->d_name) == 0)
+			continue;
 
-		    asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-		    if (path == NULL) {
-                        if (indexEntry != NULL)
-			    mport_index_entry_free_vec(indexEntry); 
-                        continue;                                                                                               
-                    }   
-                                  
-		    if (indexEntry == NULL || *indexEntry == NULL) {
-				    if (unlink(path) < 0) {
-					    error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",
-					                            path, strerror(errno));
-					    mport_call_msg_cb(mport, "%s\n", mport_err_string());
-				    } else {
-					    deleted++;
-				    }
-                    } else if (mport_verify_hash(path, (*indexEntry)->hash) == 0) {
-                    		    if (unlink(path) < 0) {                                                                                                               
+		if (mport_index_search(mport, &indexEntry, "bundlefile=%Q", de->d_name) != MPORT_OK) {
+			mport_call_msg_cb(mport, "failed to search index %s: ", mport_err_string());
+			continue;
+		}
 
-                                            error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",                                                      
+		asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
+		if (path == NULL) {
+			if (indexEntry != NULL)
+				mport_index_entry_free_vec(indexEntry);
+			continue;
+		}
 
-                                                                    path, strerror(errno));                                                                               
+		if (indexEntry == NULL || *indexEntry == NULL) {
+			if (unlink(path) < 0) {
+				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",
+				                        path, strerror(errno));
+				mport_call_msg_cb(mport, "%s\n", mport_err_string());
+			} else {
+				deleted++;
+			}
+		} else if (mport_verify_hash(path, (*indexEntry)->hash) == 0) {
+			if (unlink(path) < 0) {
 
-                                            mport_call_msg_cb(mport, "%s\n", mport_err_string());                                                                         
+				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",
 
-                                    } else {                                                                                                                              
+				                        path, strerror(errno));
 
-                                            deleted++;                                                                                                                    
+				mport_call_msg_cb(mport, "%s\n", mport_err_string());
 
-                                    }                                                                                                                                     
-			    mport_index_entry_free_vec(indexEntry);
-		    } else {
-			    mport_index_entry_free_vec(indexEntry);
-		    }
+			} else {
 
-		    free(path);
-	    }
+				deleted++;
 
-	    closedir(d);
+			}
+			mport_index_entry_free_vec(indexEntry);
+		} else {
+			mport_index_entry_free_vec(indexEntry);
+		}
 
-	    mport_call_msg_cb(mport, "Cleaned up %d packages.\n", deleted);
-	});
+		free(path);
+	}
+
+	closedir(d);
+
+	mport_call_msg_cb(mport, "Cleaned up %d packages.\n", deleted);
 
 	return error_code;
 }
-

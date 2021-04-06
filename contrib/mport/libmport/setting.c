@@ -36,7 +36,7 @@
 MPORT_PUBLIC_API char *
 mport_setting_get(mportInstance *mport, const char *name) {
     sqlite3_stmt *stmt;
-    __block char *val = NULL;
+   char *val = NULL;
 
     if (name == NULL)
         return NULL;
@@ -46,21 +46,19 @@ mport_setting_get(mportInstance *mport, const char *name) {
 		return NULL;
 	}
 
-	dispatch_sync(mportSQLSerial, ^{
-	    switch (sqlite3_step(stmt)) {
-		    case SQLITE_ROW:
-			    val = strdup((const char *) sqlite3_column_text(stmt, 0));
-		        sqlite3_finalize(stmt);
-		        break;
-		    case SQLITE_DONE:
-			    SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
-		        sqlite3_finalize(stmt);
-		        break;
-		    default:
-			    SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-		        sqlite3_finalize(stmt);
-	    }
-	});
+	switch (sqlite3_step(stmt)) {
+		case SQLITE_ROW:
+			val = strdup((const char *) sqlite3_column_text(stmt, 0));
+			sqlite3_finalize(stmt);
+			break;
+		case SQLITE_DONE:
+			SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
+			sqlite3_finalize(stmt);
+			break;
+		default:
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			sqlite3_finalize(stmt);
+	}
 
     return val;
 }

@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <md5.h>
+#include <sha256.h>
 #include <stdlib.h>
 #include "mport.h"
 #include "mport_private.h"
@@ -45,7 +46,7 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 	int ret;
 	const char *data, *checksum;
 	struct stat st;
-	char md5[33];
+	char hash[65];
 	
 	mport_call_msg_cb(mport, "Verifying %s-%s", pack->name, pack->version);
 	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK) {
@@ -96,18 +97,31 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 				}
 
 				if (S_ISREG(st.st_mode)) {
-					if (MD5File(file, md5) == NULL)
-						mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
-
-					if (md5 == NULL)
-						mport_call_msg_cb(mport,
-						                  "Destination checksum could not be computed %s",
-						                  file);
-					else if (checksum == NULL)
+					if (checksum == NULL) {
 						mport_call_msg_cb(mport, "Source checksum missing %s", file);
-					else if (strcmp(md5, checksum) != 0)
-						mport_call_msg_cb(mport, "Checksum mismatch: %s %s %s", file, md5,
-						                  checksum);
+					} else if (strlen(checksum) < 34) {
+						if (MD5File(file, hash) == NULL)
+							mport_call_msg_cb(mport, "Can't MD5 %s: %s", file, strerror(errno));
+
+						if (hash == NULL)
+							mport_call_msg_cb(mport,
+							                  "Destination checksum could not be computed %s",
+							                  file);
+						else if (strcmp(hash, checksum) != 0)
+							mport_call_msg_cb(mport, "Checksum mismatch: %s %s %s", file, hash,
+							                  checksum);
+					} else {
+						if (SHA256_File(file, hash) == NULL)
+							mport_call_msg_cb(mport, "Can't SHA256 %s: %s", file, strerror(errno));
+
+						if (hash == NULL)
+							mport_call_msg_cb(mport,
+							                  "Destination checksum could not be computed %s",
+							                  file);
+						else if (strcmp(hash, checksum) != 0)
+							mport_call_msg_cb(mport, "Checksum mismatch: %s %s %s", file, hash,
+							                  checksum);
+					}
 				}
 
 				break;

@@ -35,8 +35,7 @@
 #include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
-
-#include "mport_dispatch.h"
+#include <stdbool.h>
 
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
@@ -84,7 +83,8 @@ enum _AssetListEntryType {
     ASSET_SAMPLE, ASSET_SHELL,
     ASSET_PREEXEC, ASSET_PREUNEXEC, ASSET_POSTEXEC, ASSET_POSTUNEXEC,
     ASSET_FILE_OWNER_MODE, ASSET_DIR_OWNER_MODE, 
-    ASSET_SAMPLE_OWNER_MODE, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX
+    ASSET_SAMPLE_OWNER_MODE, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX,
+    ASSET_RMEMPTY
 };
 
 typedef enum _AssetListEntryType mportAssetListEntryType;
@@ -187,6 +187,7 @@ typedef struct {
   char *pkginstall;
   char *pkgdeinstall;
   char *pkgmessage;
+  bool is_backup;
 } mportCreateExtras;  
 
 mportCreateExtras * mport_createextras_new(void);
@@ -215,7 +216,7 @@ int mport_version_cmp(const char *, const char *);
 
 /* fetch XXX: This should become private */
 int mport_fetch_bundle(mportInstance *, const char *);
-int mport_download(mportInstance *, const char *);
+int mport_download(mportInstance *, const char *, char **);
 
 /* Errors */
 int mport_err_code(void);

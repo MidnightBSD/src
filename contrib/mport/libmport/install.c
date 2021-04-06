@@ -74,7 +74,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
         }
         if (e[e_loc] == NULL) {
           mport_index_entry_free_vec(e);
-          RETURN_ERRORX(MPORT_ERR_FATAL, "Cound not resolve '%s-%s'.",
+          RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s-%s'.",
             pkgname, version);
         }
     } else {

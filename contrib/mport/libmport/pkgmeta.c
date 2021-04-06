@@ -42,9 +42,18 @@ static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_
 MPORT_PUBLIC_API mportPackageMeta* 
 mport_pkgmeta_new(void) 
 {
-  /* we use calloc so any pointers that aren't set are NULL.
-     (calloc zero's out the memory region. */
-    return (mportPackageMeta *) calloc(1, sizeof(mportPackageMeta));
+	mportPackageMeta *pack = (mportPackageMeta *) calloc(1, sizeof(mportPackageMeta));
+	if (pack == NULL)
+		return NULL;
+
+	/* these items aren't always initialized from other sources and are needed to be an empty string for sqlite use. */
+	pack->cpe = malloc(1 * sizeof(char));
+	pack->cpe[0] = '\0';
+
+	pack->flavor = malloc(1 * sizeof(char));
+	pack->flavor[0] = '\0';
+
+	return pack;
 }
 
 MPORT_PUBLIC_API void
@@ -108,7 +117,7 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 	return;
 
     for (i = 0; *(vec + i) != NULL; i++) {
-	mportPackageMeta *pack = *(vec + i);
+		mportPackageMeta *pack = *(vec + i);
         mport_pkgmeta_free(pack);
     }
 
