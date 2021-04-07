@@ -12,7 +12,7 @@ NOPROFILE=
 
 SRCDIR= ${.CURDIR}/../../contrib/perl
 
-LIBADD=	c crypt dl m pthread
+LIBADD=	c crypt dl dtrace m pthread
 
 WARNS?=	0
 
@@ -26,7 +26,8 @@ CFLAGS+=	-fno-strict-aliasing
 CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
 		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
 		-Dmksymlinks -Dsrc=${SRCDIR} -Duse64bitint -Duseshrplib \
-		-Dusethreads=y -Ulocincpth='' -Ui_gdbm -Ut_gdbm
+		-Dusethreads=y -Ulocincpth='' -Ui_gdbm -Ut_gdbm  \
+		-Dusedtrace
 
 .if !defined(TARGET_ARCH)
 TARGET_ARCH!= /usr/bin/uname -p
