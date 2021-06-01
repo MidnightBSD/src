@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20210527:
+	MidnightBSD 2.0.8
+	
+	Fix a security issue with libradius.
+	
+	mport 2.0.10 imported
+
 20210406:
 	MidnightBSD 2.0.7 
 
