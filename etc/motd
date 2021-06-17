@@ -7,7 +7,7 @@ Before seeking technical support, please use the following resources:
     The MidnightBSD website has the latest information on support and
     security advisories.  http://www.midnightbsd.org/
 
-    MidnightBSD is on FreeNode #MidnightBSD (IRC)
+    MidnightBSD is on irc.libera.chat #MidnightBSD (IRC)
 
 If you still have a question or problem, please take the output of
 `uname -a', along with any relevant error messages, and email it
