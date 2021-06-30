@@ -4,6 +4,15 @@ Updating Information for MidnightBSD users.
 	A programming error in the Linux compatibility layer futex(2) system
 	call might allow attackers to cause a denial of service.
 
+	libcasper(3) creates service processes by forking the calling process,
+	so they initially inherit the calling process' file descriptor table.
+	Casper services expect the lowest 3 file descriptors, traditionally
+	corresponding to standard input, output, and error, are redirected to
+	/dev/null.  libcasper(3) ensures this is the case.  However, it did not
+	handle the possibility that one of them is closed, and this scenario
+	would trigger an assertion failure during service creation, resulting in
+	a crash.
+
 20210527:
 	MidnightBSD 2.0.8
 	
