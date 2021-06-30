@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20210630:
+	A programming error in the Linux compatibility layer futex(2) system
+	call might allow attackers to cause a denial of service.
+
 20210406:
 	mport package manager updated to 2.1.0
 
