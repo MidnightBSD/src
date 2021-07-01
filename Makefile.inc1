@@ -2281,7 +2281,7 @@ secure/lib/libssh__L: lib/libgssapi__L kerberos5/lib/libkrb5__L \
     lib/libmd__L kerberos5/lib/libroken__L
 .endif
 lib/libfetch__L: secure/lib/libssl__L secure/lib/libcrypto__L
-lib/libarchive__L: lib/libz__L lib/libbz2__L lib/lzma__L lib/bsdxml__L secure/lib/libssl__L secure/lib/libcrypto__L
+lib/libarchive__L: lib/libz__L lib/libbz2__L lib/liblzma__L lib/libexpat__L secure/lib/libssl__L secure/lib/libcrypto__L
 .endif
 .endif
 _secure_lib=	secure/lib
@@ -2334,7 +2334,7 @@ _lib_libypclnt=	lib/libypclnt
 .if ${MK_OPENSSL} == "no"
 lib/libradius__L: lib/libmd__L
 lib/libfetch__L: lib/libmd__L
-lib/libarchive__L: lib/libz__L lib/libbz2__L lib/lzma__L lib/bsdxml__L lib/libmd__L
+lib/libarchive__L: lib/libz__L lib/libbz2__L lib/liblzma__L lib/libexpat__L lib/libmd__L
 .endif
 
 lib/libproc__L: \
