@@ -47,7 +47,6 @@ static const char sccsid[] = "@(#)rshd.c	8.2 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/rshd/rshd.c 330322 2018-03-03 10:35:00Z eadler $");
 
 /*
  * remote shell server:
@@ -439,7 +438,7 @@ doit(struct sockaddr *fromp)
 				nfd = pv[0];
 			else
 				nfd = s;
-				ioctl(pv[0], FIONBIO, (char *)&one);
+			ioctl(pv[0], FIONBIO, (char *)&one);
 
 			/* should set s nbio! */
 			nfd++;
