@@ -1,6 +1,4 @@
-# $FreeBSD: stable/11/share/doc/llvm/clang/Makefile 284321 2015-06-12 14:30:27Z sjg $
-
-SRCDIR=		${.CURDIR}/../../../../contrib/llvm/tools/clang
+SRCDIR=		${SRCTOP}/contrib/llvm-project/clang
 
 .PATH: ${SRCDIR}
 
