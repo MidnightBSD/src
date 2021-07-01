@@ -1,6 +1,6 @@
 PROG= mport
 
-CFLAGS= -I ../libmport/ -fblocks -g -L../libmport -lmport -ldispatch -lBlocksRuntime
+CFLAGS= -I ../libmport/ -g -L../libmport -lmport
 
 LIBADD+=	mport dispatch BlocksRuntime
 

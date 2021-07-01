@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2015 Lucas Holt
+ * Copyright (c) 2021 Lucas Holt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,38 +27,46 @@
 #include <sys/cdefs.h>
 
 #include "mport.h"
-#include "mport_dispatch.h"
 #include "mport_private.h"
+#include <string.h>
+#include <stdlib.h>
 
-/**
- * package task queue
- */
-dispatch_queue_t mportTaskSerial = NULL;
+MPORT_PUBLIC_API int
+mport_update(mportInstance *mport, const char *packageName) {
+	char *path;
+	mportDependsEntry **depends;
+	mportIndexEntry **indexEntry;
 
-/**
- * libarchive operations queue
- */
-dispatch_queue_t mportArchiveSerial = NULL;
+	if (packageName == NULL) {
+		return (1);
+	}
 
-/**
- * print callbacks queue
- */
-dispatch_queue_t mportPrintSerial = NULL;
+	int result = mport_download(mport, packageName, &path);
+	if (result != 0)
+		return result;
 
-/**
- * sqlite operations queue
- */
-dispatch_queue_t mportSQLSerial = NULL;
+	/* in the event the package is not found in the index, it could be user generated and we still want to update it if
+	   present */
+	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK ||
+			indexEntry == NULL || *indexEntry == NULL) {
+		mport_call_msg_cb(mport, "Package %s not found in the index", packageName);
+	} else {
+		/* get the dependency list and start updating/installing missing entries */
+		mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends);
 
-//static dispatch_once_t mportInitializeOnce;
+		while (*depends != NULL) {
+			mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
+			depends++;
+		}
+	}
 
+	if (mport_update_primative(mport, path) != MPORT_OK) {
+		mport_call_msg_cb(mport, "%s\n", mport_err_string());
+		free(path);
+		return mport_err_code();
+	}
 
-void
-mport_init_queues(void)
-{
+	free(path);
 
-    mportArchiveSerial = dispatch_queue_create("org.midnightbsd.mport.archive", NULL);
-    mportPrintSerial = dispatch_queue_create("org.midnightbsd.mport.print", NULL);
-    mportSQLSerial = dispatch_queue_create("org.midnightbsd.mport.sql", NULL);
-    mportTaskSerial= dispatch_queue_create("org.midnightbsd.mport.task", NULL);
+	return (0);
 }

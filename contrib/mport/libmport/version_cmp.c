@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -65,7 +66,11 @@ mport_version_cmp(const char *astr, const char *bstr)
 			result = cmp_ints(a.revision, b.revision);
 		}
 	}
-  
+
+#ifdef DEBUG
+	printf("Version a %s, Version b %s, result %d\n", a.version, b.version, result);
+#endif
+
 	free(a.version);
 	free(b.version);
   
@@ -100,27 +105,167 @@ mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **arg
  * mport_version_require_check("0.2.1", ">=2.0") == 0
  * mport_version_require_check("4.1.2", ">5.1")  == -1
  * mport_version_require_check("3.1.4", "|")     > 0
+ * multi example:
+ * mport_version_require_check("0.2.1", ">=1.4.0<1.5")
  */
 int
 mport_version_require_check(const char *baseline, const char *require)
 {
     int ret = 0;
 
-    if (require[0] == '<') {
-        if (require[1] == '=') {
-            ret = (mport_version_cmp(baseline, &require[2]) <= 0) ? 0 : -1;
-        } else {
-            ret = (mport_version_cmp(baseline, &require[1]) < 0) ? 0 : -1;
-        }
-    } else if (require[0] == '>') {
-        if (require[1] == '=') {
-            ret = (mport_version_cmp(baseline, &require[2]) >= 0) ? 0 : -1;
-        } else {
-            ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
-        }
-    } else {
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+    bool multi = false;
+    int greater[2] = {-1,-1} ;
+    int less[2] = {-1,-1};
+    int equal[2] = {-1,-1};
+    size_t version_size = strlen(require);
+
+    if (version_size < 2) {
+    	return 1; // impossible to validate
     }
+
+	for (size_t i = 0; i < version_size; i++) {
+		if (require[i] == '>') {
+			if (greater[0] == -1) {
+				greater[0] = i;
+			} else {
+				greater[1] = i;
+			}
+		} else if (require[i] == '<') {
+			if (less[0] == -1) {
+				less[0] = i;
+			} else {
+				less[1] = i;
+			}
+		} else if (require[i] == '=') {
+			if (equal[0] == -1) {
+				equal[0] = i;
+			} else {
+				equal[1] = i;
+			}
+		}
+	}
+
+#ifdef DEBUG
+	printf(" g0 %d g1 %d l0 %d l1 %d eq0 %d\n", greater[0], greater[1], less[0], less[1], equal[0]);
+#endif
+
+	if (greater[0] == -1 && less[0] == -1 && equal[0] == -1) {
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+	}
+
+	if (greater[1] > -1 || less[1] > -1 || equal[1] > -1 || (greater[0] > -1 && less[0] > -1)) {
+		multi = true;
+#ifdef DEBUG
+		printf("multi enabled\n");
+#endif
+	}
+
+	if (!multi) {
+		if (require[0] == '<') {
+			if (require[1] == '=') {
+				ret = (mport_version_cmp(baseline, &require[2]) <= 0) ? 0 : -1;
+			} else {
+				ret = (mport_version_cmp(baseline, &require[1]) < 0) ? 0 : -1;
+			}
+		} else if (require[0] == '>') {
+			if (require[1] == '=') {
+				ret = (mport_version_cmp(baseline, &require[2]) >= 0) ? 0 : -1;
+			} else {
+				ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
+			}
+		} else {
+			RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+		}
+	} else {
+		char *s = strdup(require);
+		if (s == NULL) {
+			RETURN_ERROR(MPORT_ERR_FATAL, "Memory allocation failed");
+		}
+
+		if (less[1] > 0) {
+			// second one is less than e.g. <1.5
+			s[less[1]] = '\0';
+			if (s[less[1] + 1] == '=') {
+				ret = (mport_version_cmp(baseline, &s[less[1] + 2]) <= 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			} else {
+				ret = (mport_version_cmp(baseline, &s[less[1] + 1]) < 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			}
+		} else if (less[0] > greater[0]) {
+			// second one is less than e.g. <1.5
+			s[less[0]] = '\0';
+			if (s[less[0] + 1] == '=') {
+				ret = (mport_version_cmp(baseline, &s[less[0] + 2]) <= 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			} else {
+				ret = (mport_version_cmp(baseline, &s[less[0] + 1]) < 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			}
+		} else if (greater[1] > 0) {
+			// second one is greater
+			s[greater[1]] = '\0';
+			if (s[greater[1] + 1] == '=') {
+				ret = (mport_version_cmp(baseline, &s[greater[1] + 2]) >= 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			} else {
+				ret = (mport_version_cmp(baseline, &s[greater[1] + 1]) > 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			}
+		} else if (greater[0] > less[0]) {
+			// second one is greater
+			s[greater[0]] = '\0';
+			if (s[greater[0] + 1] == '=') {
+				ret = (mport_version_cmp(baseline, &s[greater[0] + 2]) >= 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			} else {
+				ret = (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
+				if (ret == -1) {
+					free(s);
+					return (ret);
+				}
+			}
+		}
+
+		if (greater[0] > 0) {
+			s[greater[0]] = '\0';
+			ret = (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
+			if (ret == -1) {
+				free(s);
+				return (ret);
+			}
+		} else if (less[0] > 0) {
+			s[less[0]] = '\0';
+			ret = (mport_version_cmp(baseline, &s[less[0] + 1]) < 0) ? 0 : -1;
+			if (ret == -1) {
+				free(s);
+				return (ret);
+			}
+		}
+
+		free(s);
+	}
 
     return (ret);
 }
@@ -131,9 +276,23 @@ parse_version(const char *in, struct version *v)
     char *s = strdup(in);
     char *underscore;
     char *comma;
+    // greater than and less than prevent multiversion strings from getting parsed incorrectly
+    // so 2.0<1.5 would just be 2.0. Ideally we need to catch this upstream and do the right check.
+    char *lessthan;
+    char *greaterthan;
 
     underscore = rindex(s, '_');
     comma = rindex(s, ',');
+	lessthan = rindex(s, '<');
+	greaterthan = rindex(s, '>');
+
+	if (lessthan != NULL) {
+		*lessthan = '\0';
+	}
+
+	if (greaterthan != NULL) {
+		*greaterthan = '\0';
+	}
 
     if (comma == NULL) {
         v->epoch = 0;

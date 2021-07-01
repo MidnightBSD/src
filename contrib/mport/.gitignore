@@ -30,6 +30,23 @@
 
 # Executables
 *.out
+*.debug
+*.full
+libexec/mport.check-fake/mport.check-fake
+libexec/mport.check-for-older/mport.check-for-older
+libexec/mport.create/mport.create
+libexec/mport.delete/mport.delete
+libexec/mport.fetch/mport.fetch
+libexec/mport.info/mport.info
+libexec/mport.init/mport.init
+libexec/mport.install/mport.install
+libexec/mport.list/mport.list
+libexec/mport.merge/mport.merge
+libexec/mport.query/mport.query
+libexec/mport.update/mport.update
+libexec/mport.updepends/mport.updepends
+libexec/mport.version_cmp/mport.version_cmp
+mport/mport
 
 # Debug files
 *.dSYM/
@@ -39,3 +56,6 @@
 
 # built man pages
 *.gz
+
+# IDE
+.idea/

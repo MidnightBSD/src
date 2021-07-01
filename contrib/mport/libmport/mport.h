@@ -1,5 +1,5 @@
 /* 
- * Copyright (c) 2013, 2014 Lucas Holt
+ * Copyright (c) 2013, 2014, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -153,6 +153,7 @@ typedef struct {
 
 int mport_index_load(mportInstance *);
 int mport_index_get(mportInstance *);
+int mport_index_check(mportInstance *, mportPackageMeta *);
 int mport_index_list(mportInstance *, mportIndexEntry ***);
 int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
 int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
@@ -203,7 +204,11 @@ int mport_install(mportInstance *, const char *, const char *, const char *);
 int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* package updating */
+int mport_update(mportInstance *, const char *);
 int mport_update_primative(mportInstance *, const char *);
+
+/* package upgrade */
+int mport_upgrade(mportInstance *);
 
 /* Package deletion */
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
@@ -264,5 +269,9 @@ typedef struct {
 int mport_stats(mportInstance *, mportStats **);
 int mport_stats_free(mportStats *);
 mportStats * mport_stats_new(void);
+
+/* Import/Export */
+int mport_import(mportInstance*,  char *);
+int mport_export(mportInstance*, char *);
 
 #endif /* ! defined _MPORT_H */

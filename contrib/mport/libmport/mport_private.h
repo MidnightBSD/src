@@ -45,11 +45,11 @@
 #define MPORT_MASTER_VERSION 7
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.1.0"
+#define MPORT_VERSION "2.1.3"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 
-/* callback syntaxtic sugar */
+/* callback syntactic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 void mport_call_progress_init_cb(mportInstance *, const char *, ...);
 
@@ -135,6 +135,8 @@ int mport_bundle_read_extract_next_file(mportBundleRead *, struct archive_entry 
 int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
+int mport_install_depends(mportInstance *, const char *, const char *);
+int mport_update_down(mportInstance *, mportPackageMeta *);
 
 /* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);

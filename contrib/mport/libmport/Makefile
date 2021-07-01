@@ -8,7 +8,7 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 		default_cbs.c  merge_primative.c bundle_read_install_pkg.c \
 		update_primative.c bundle_read_update_pkg.c pkgmeta.c \
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
-   		stats.c verify.c lock.c mkdir.c hashmap.c
+   		stats.c update.c upgrade.c verify.c lock.c mkdir.c hashmap.c import_export.c
 INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR}
@@ -19,7 +19,7 @@ WARNS=	3
 
 MK_PROFILE=no
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 dispatch BlocksRuntime pthread
+LIBADD=	md archive bz2 lzma z fetch sqlite3 pthread
 
 LDFLAGS+=	-lmd -larchive -lbz2 -llzma -lz -lfetch -lsqlite3 -lpthread
 

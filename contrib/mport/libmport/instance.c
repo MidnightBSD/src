@@ -45,7 +45,6 @@ mport_instance_new(void) {
     return (mportInstance *) calloc(1, sizeof(mportInstance));
 }
 
-
 /**
  * Set up the master database, and related instance infrastructure.
  */
@@ -165,47 +164,44 @@ mport_set_progress_free_cb(mportInstance *mport, mport_progress_free_cb cb) {
     mport->progress_free_cb = cb;
 }
 
-
 MPORT_PUBLIC_API void
 mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb) {
     mport->confirm_cb = cb;
 }
 
-
 /* callers for the callbacks (only for msg at the moment) */
 void
 mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
-    va_list args;
+	va_list args;
 
-    char *msg;
-    va_start(args, fmt);
-    (void) vasprintf(&msg, fmt, args);
-    va_end(args);
+	char *msg;
+	va_start(args, fmt);
+	(void) vasprintf(&msg, fmt, args);
+	va_end(args);
 
     if (msg == NULL)
-        return; /* No message for you! */
+		return; /* No message for you! */
 
+	(mport->msg_cb)(msg);
 
-        (mport->msg_cb)(msg);
-
-        free(msg);
+    free(msg);
 }
 
 
 void
 mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...) {
-    va_list args;
-    char *title;
+	va_list args;
+	char *title;
 
-    va_start(args, fmt);
-    (void) vasprintf(&title, fmt, args);
+	va_start(args, fmt);
+	(void) vasprintf(&title, fmt, args);
 
-    if (title == NULL)
-        return;
+	if (title == NULL)
+		return;
 
-        (mport->progress_init_cb)(title);
+	(mport->progress_init_cb)(title);
 
-        free(title);
+	free(title);
 }
 
 
