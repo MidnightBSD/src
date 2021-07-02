@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/stand/i386/boot2/Makefile 351515 2019-08-26 17:34:07Z kevans $
+# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -56,7 +56,7 @@ boot1: boot1.out
 	${OBJCOPY} -S -O binary boot1.out ${.TARGET}
 
 boot1.out: boot1.o
-	${LD} ${LD_FLAGS} -e start -Ttext ${ORG1} -o ${.TARGET} boot1.o
+	${LD} ${LD_FLAGS} -e start --defsym ORG=${ORG1} -T ${LDSCRIPT} -o ${.TARGET} boot1.o
 
 CLEANFILES+=	boot2 boot2.ld boot2.ldr boot2.bin boot2.out boot2.o \
 		boot2.h sio.o
@@ -79,12 +79,12 @@ boot2.bin: boot2.out
 	${OBJCOPY} -S -O binary boot2.out ${.TARGET}
 
 # For __ashldi3
-.PATH: ${SRCTOP}/contrib/compiler-rt/lib/builtins
+.PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins
 CFLAGS.ashldi3.c=	-Wno-missing-prototypes -Wno-missing-declarations
 CLEANFILES+=	ashldi3.o
 
 boot2.out: ${BTXCRT} boot2.o sio.o ashldi3.o
-	${LD} ${LD_FLAGS} -Ttext ${ORG2} -o ${.TARGET} ${.ALLSRC}
+	${LD} ${LD_FLAGS} --defsym ORG=${ORG2} -T ${LDSCRIPT} -o ${.TARGET} ${.ALLSRC}
 
 SRCS=	boot2.c boot2.h
 
