@@ -30,7 +30,6 @@
  *
  *	@(#)saioctl.h	8.1 (Berkeley) 6/11/93
  *
- * $FreeBSD: stable/11/stand/libsa/saioctl.h 329132 2018-02-11 19:51:29Z kevans $
  */
 
 /* ioctl's -- for disks just now */

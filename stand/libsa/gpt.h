@@ -23,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/libsa/gpt.h 329134 2018-02-11 20:00:26Z kevans $
  */
 
 #ifndef _GPT_H_

@@ -68,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/ufs.c 344376 2019-02-20 19:05:58Z kevans $");
 
 /*
  *	Stand-alone file reading package.

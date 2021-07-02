@@ -19,7 +19,6 @@
  * suitability of this software for any purpose.  It is provided "as is"
  * without express or implied warranty.
  *
- * $FreeBSD: stable/11/stand/libsa/bootp.h 344408 2019-02-21 02:43:48Z kevans $
  */
 
 #ifndef _BOOTP_H_

@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/panic.c 329175 2018-02-12 17:44:35Z kevans $");
 
 #include <stand.h>
 #include <machine/stdarg.h>

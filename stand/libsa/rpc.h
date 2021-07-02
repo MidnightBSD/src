@@ -32,7 +32,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/libsa/rpc.h 329132 2018-02-11 19:51:29Z kevans $
  */
 
 /* XXX defines we can't easily get from system includes */

@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/arp.c 346476 2019-04-21 03:36:05Z kevans $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

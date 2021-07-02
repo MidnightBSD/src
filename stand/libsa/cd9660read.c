@@ -33,7 +33,6 @@
 /*	$NetBSD: cd9660.c,v 1.5 1997/06/26 19:11:33 drochner Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/cd9660read.c 344408 2019-02-21 02:43:48Z kevans $");
 
 #include <fs/cd9660/iso.h>
 #include <fs/cd9660/cd9660_rrip.h>

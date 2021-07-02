@@ -33,7 +33,6 @@
  *
  *	@(#)rpcv2.h	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: stable/11/stand/libsa/rpcv2.h 329132 2018-02-11 19:51:29Z kevans $
  */
 
 /*

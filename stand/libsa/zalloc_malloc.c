@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/zalloc_malloc.c 329132 2018-02-11 19:51:29Z kevans $");
 
 /*
  * MALLOC.C - malloc equivalent, runs on top of zalloc and uses sbrk

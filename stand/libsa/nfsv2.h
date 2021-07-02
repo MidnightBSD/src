@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/stand/libsa/nfsv2.h 329132 2018-02-11 19:51:29Z kevans $ */
 /*	$NetBSD: nfsv2.h,v 1.2 1996/02/26 23:05:23 gwr Exp $	*/
 
 /*

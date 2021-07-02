@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/twiddle.c 329132 2018-02-11 19:51:29Z kevans $");
 
 #include <sys/types.h>
 #include "stand.h"

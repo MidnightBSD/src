@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/rarp.c 330898 2018-03-14 03:30:34Z kevans $");
 
 #include <sys/param.h>
 #include <sys/socket.h>

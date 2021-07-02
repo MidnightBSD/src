@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/stand/libsa/Makefile 351515 2019-08-26 17:34:07Z kevans $
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
 # Notes:
@@ -53,7 +52,7 @@ CFLAGS.clang+=	-mno-movt
 .endif
 CFLAGS.clang+=	-mfpu=none
 
-.PATH: ${SRCTOP}/contrib/compiler-rt/lib/builtins/arm/
+.PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins/arm/
 SRCS+=	aeabi_idivmod.S aeabi_ldivmod.S aeabi_uidivmod.S aeabi_uldivmod.S
 SRCS+=	aeabi_memcmp.S aeabi_memcpy.S aeabi_memmove.S aeabi_memset.S
 .endif
@@ -63,7 +62,7 @@ SRCS+=	aeabi_memcmp.S aeabi_memcpy.S aeabi_memmove.S aeabi_memset.S
 .endif
 
 # Compiler support functions
-.PATH: ${SRCTOP}/contrib/compiler-rt/lib/builtins/
+.PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins/
 # __clzsi2 and ctzsi2 for various builtin functions
 SRCS+=	clzsi2.c ctzsi2.c
 # Divide and modulus functions called by the compiler

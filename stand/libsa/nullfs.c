@@ -61,7 +61,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/nullfs.c 332141 2018-04-06 19:34:21Z kevans $");
 
 #include "stand.h"
 

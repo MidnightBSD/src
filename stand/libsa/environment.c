@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/environment.c 329183 2018-02-12 20:51:28Z kevans $");
 
 /*
  * Manage an environment-like space in which string variables may be stored.

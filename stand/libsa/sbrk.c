@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/sbrk.c 346476 2019-04-21 03:36:05Z kevans $");
 
 /*
  * Minimal sbrk() emulation required for malloc support.

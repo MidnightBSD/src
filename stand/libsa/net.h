@@ -33,7 +33,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/stand/libsa/net.h 332154 2018-04-06 21:37:25Z kevans $
  */
 
 #ifndef _STAND_NET_H

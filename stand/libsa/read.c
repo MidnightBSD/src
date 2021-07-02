@@ -61,7 +61,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/read.c 344291 2019-02-19 18:50:20Z kevans $");
 
 #include <sys/param.h>
 #include "stand.h"

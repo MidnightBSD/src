@@ -44,7 +44,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/ufsread.c 329134 2018-02-11 20:00:26Z kevans $");
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ufs/dir.h>

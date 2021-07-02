@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/nfs.c 355367 2019-12-03 22:54:08Z rpokala $");
 
 #include <sys/param.h>
 #include <sys/time.h>

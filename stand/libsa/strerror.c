@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/strerror.c 329132 2018-02-11 19:51:29Z kevans $");
 
 #include "stand.h"
 

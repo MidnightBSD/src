@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/bootp.c 344408 2019-02-21 02:43:48Z kevans $");
 
 #include <stddef.h>
 #include <sys/types.h>

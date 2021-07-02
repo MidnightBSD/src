@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/libsa/gets.c 338077 2018-08-20 00:49:06Z kevans $");
 
 #include "stand.h"
 
