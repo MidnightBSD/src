@@ -516,7 +516,7 @@ BSARGS= 	DESTDIR= \
 		MK_HTML=no NO_LINT=yes MK_MAN=no \
 		-DNO_PIC MK_PROFILE=no -DNO_SHARED \
 		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no \
-		MK_CLANG_EXTRAS=no MK_CLANG_FULL=no \
+		MK_CLANG_EXTRAS=no MK_CLANG_FORMAT=no MK_CLANG_FULL=no \
 		MK_LLDB=no MK_TESTS=no \
 		MK_INCLUDES=yes
 
@@ -533,7 +533,7 @@ TMAKE=		MAKEOBJDIRPREFIX=${OBJTREE} \
 		SSP_CFLAGS= \
 		-DNO_LINT \
 		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no \
-		MK_CLANG_EXTRAS=no MK_CLANG_FULL=no \
+		MK_CLANG_EXTRAS=no MK_CLANG_FORMAT=no MK_CLANG_FULL=no \
 		MK_LLDB=no MK_TESTS=no
 
 # cross-tools stage
@@ -603,7 +603,7 @@ XCXXFLAGS+=	-isystem ${WORLDTMP}/usr/include/c++/v1 -std=c++11 \
 .endif
 .else
 TARGET_ABI?=	unknown
-TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/}-${TARGET_ABI}-freebsd11.3
+TARGET_TRIPLE?=	${TARGET_ARCH:C/amd64/x86_64/}-${TARGET_ABI}-freebsd11.4
 XCFLAGS+=	-target ${TARGET_TRIPLE}
 .endif
 XCFLAGS+=	--sysroot=${WORLDTMP}
@@ -645,7 +645,9 @@ INSTALL_DDIR=	${_INSTALL_DDIR:S://:/:g:C:/$::}
 METALOG?=	${DESTDIR}/${DISTDIR}/METALOG
 METALOG:=	${METALOG:C,//+,/,g}
 IMAKE+=		-DNO_ROOT METALOG=${METALOG}
-INSTALLFLAGS+=	-U -M ${METALOG} -D ${INSTALL_DDIR}
+METALOG_INSTALLFLAGS=	-U -M ${METALOG} -D ${INSTALL_DDIR}
+INSTALLFLAGS+=	${METALOG_INSTALLFLAGS}
+CERTCTLFLAGS=	${METALOG_INSTALLFLAGS}
 MTREEFLAGS+=	-W
 .endif
 .if defined(BUILD_PKGS)
@@ -654,6 +656,11 @@ INSTALLFLAGS+=	-h sha256
 .if defined(DB_FROM_SRC) || defined(NO_ROOT)
 IMAKE_INSTALL=	INSTALL="install ${INSTALLFLAGS}"
 IMAKE_MTREE=	MTREE_CMD="mtree ${MTREEFLAGS}"
+.endif
+.if make(distributeworld)
+CERTCTLDESTDIR=	${DESTDIR}/${DISTDIR}/base
+.else
+CERTCTLDESTDIR=	${DESTDIR}
 .endif
 
 # kernel stage
@@ -1102,6 +1109,14 @@ distributeworld installworld stageworld: _installcheck_world .PHONY
 	${DESTDIR}/${DISTDIR}/${dist}.debug.meta
 .endfor
 .endif
+.endif # make(distributeworld)
+.if !make(packageworld) && ${MK_CAROOT} != "no"
+	@if which openssl>/dev/null; then \
+		DESTDIR=${CERTCTLDESTDIR} \
+		    sh ${SRCTOP}/usr.sbin/certctl/certctl.sh ${CERTCTLFLAGS} rehash \
+	else \
+		echo "No openssl on the host, not rehashing certificates target -- /etc/ssl may not be populated."; \
+	fi
 .endif
 
 packageworld: .PHONY
@@ -1777,10 +1792,13 @@ _gensnmptree=	usr.sbin/bsnmpd/gensnmptree
 _clang_tblgen= \
 	lib/clang/libllvmminimal \
 	usr.bin/clang/llvm-tblgen \
-	usr.bin/clang/clang-tblgen
+	usr.bin/clang/clang-tblgen \
+	usr.bin/clang/lldb-tblgen
+# XXX: lldb-tblgen is not needed, if top-level MK_LLDB=no
 
 ${_bt}-usr.bin/clang/clang-tblgen: ${_bt}-lib/clang/libllvmminimal
 ${_bt}-usr.bin/clang/llvm-tblgen: ${_bt}-lib/clang/libllvmminimal
+${_bt}-usr.bin/clang/lldb-tblgen: ${_bt}-lib/clang/libllvmminimal
 .endif
 
 # Default to building the GPL DTC, but build the BSDL one if users explicitly
@@ -1996,7 +2014,7 @@ NXBMAKE=	${NXBENV} ${MAKE} \
 		MK_HTML=no NO_LINT=yes MK_MAN=no \
 		-DNO_PIC MK_PROFILE=no -DNO_SHARED \
 		-DNO_CPU_CFLAGS MK_WARNS=no MK_CTF=no \
-		MK_CLANG_EXTRAS=no MK_CLANG_FULL=no \
+		MK_CLANG_EXTRAS=no MK_CLANG_FORMAT=no MK_CLANG_FULL=no \
 		MK_LLDB=no MK_DEBUG_FILES=no
 
 # native-xtools is the current target for qemu-user cross builds of ports
