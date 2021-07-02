@@ -30,7 +30,7 @@
  */
 %{
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sbin/pfctl/parse.y 344020 2019-02-11 19:08:03Z kp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>

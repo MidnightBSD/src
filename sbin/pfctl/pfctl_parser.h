@@ -30,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sbin/pfctl/pfctl_parser.h 338390 2018-08-29 20:49:56Z kp $
+ * $FreeBSD$
  */
 
 #ifndef _PFCTL_PARSER_H_
