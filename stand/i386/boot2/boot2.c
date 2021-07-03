@@ -14,7 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/boot2/boot2.c 332130 2018-04-06 18:55:02Z kevans $");
 
 #include <sys/param.h>
 #include <sys/disklabel.h>

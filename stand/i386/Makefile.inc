@@ -1,6 +1,6 @@
 # Common defines for all of /stand/i386/
 #
-# $FreeBSD: stable/11/stand/i386/Makefile.inc 333048 2018-04-27 01:21:52Z emaste $
+# $FreeBSD$
 
 .sinclude <bsd.linker.mk>
 
@@ -23,10 +23,9 @@ CFLAGS+=	-I${BTXLIB}
 
 # compact binary with no padding between text, data, bss
 LDSCRIPT=	${BOOTSRC}/i386/boot.ldscript
-# LDFLAGS_BIN=-e start -Ttext ${ORG} -Wl,-T,${LDSCRIPT},-S,--oformat,binary
-# LD_FLAGS_BIN=-static -T ${LDSCRIPT} --gc-sections
-LDFLAGS_BIN=-e start -Ttext ${ORG} -Wl,-N,-S,--oformat,binary
-LD_FLAGS_BIN=-static -N --gc-sections
+LDFLAGS_ORG=	-Wl,--defsym,ORG=${ORG},-T,${LDSCRIPT}
+LDFLAGS_BIN=	-e start ${LDFLAGS_ORG} -Wl,-N,-S,--oformat,binary
+LD_FLAGS_BIN=	-static -N --gc-sections
 
 .if ${MACHINE_CPUARCH} == "amd64"
 DO32=1
