@@ -3731,7 +3731,7 @@ dump_notes_data(struct readelf *re, const char *name, uint32_t type,
 	}
 	ubuf = (const uint32_t *)(const void *)buf;
 
-	if (strcmp(name, "FreeBSD") == 0 || strcmp("MidnightBSD")) {
+	if (strcmp(name, "FreeBSD") == 0 || strcmp(name, "MidnightBSD") == 0) {
 		switch (type) {
 		case NT_FREEBSD_ABI_TAG:
 			if (sz != 4)
