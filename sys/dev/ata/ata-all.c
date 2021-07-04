@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/ata/ata-all.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -314,13 +314,13 @@ ata_suspend(device_t dev)
     if (!dev || !(ch = device_get_softc(dev)))
 	return ENXIO;
 
-	if (ch->flags & ATA_PERIODIC_POLL)
-		callout_drain(&ch->poll_callout);
-	mtx_lock(&ch->state_mtx);
-	xpt_freeze_simq(ch->sim, 1);
-	while (ch->state != ATA_IDLE)
-		msleep(ch, &ch->state_mtx, PRIBIO, "atasusp", hz/100);
-	mtx_unlock(&ch->state_mtx);
+    if (ch->flags & ATA_PERIODIC_POLL)
+	callout_drain(&ch->poll_callout);
+    mtx_lock(&ch->state_mtx);
+    xpt_freeze_simq(ch->sim, 1);
+    while (ch->state != ATA_IDLE)
+	msleep(ch, &ch->state_mtx, PRIBIO, "atasusp", hz/100);
+    mtx_unlock(&ch->state_mtx);
     return(0);
 }
 
