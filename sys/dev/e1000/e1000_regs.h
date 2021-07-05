@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/e1000_regs.h 333213 2018-05-03 15:40:56Z marius $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_REGS_H_
 #define _E1000_REGS_H_

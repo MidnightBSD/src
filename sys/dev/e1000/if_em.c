@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/if_em.c 354208 2019-10-30 21:48:43Z marius $*/
+/*$FreeBSD$*/
 
 #include "opt_em.h"
 #include "opt_ddb.h"
@@ -1451,6 +1451,11 @@ em_init_locked(struct adapter *adapter)
 			ctrl |= E1000_CTRL_VME;
 			E1000_WRITE_REG(&adapter->hw, E1000_CTRL, ctrl);
 		}
+	} else {
+		u32 ctrl;
+		ctrl = E1000_READ_REG(&adapter->hw, E1000_CTRL);
+		ctrl &= ~E1000_CTRL_VME;
+		E1000_WRITE_REG(&adapter->hw, E1000_CTRL, ctrl);
 	}
 
 	/* Don't lose promiscuous settings */

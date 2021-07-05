@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/if_lem.c 341477 2018-12-04 17:40:56Z vmaffione $*/
+/*$FreeBSD$*/
 
 /*
  * Uncomment the following extensions for better performance in a VM,

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/if_igb.c 342789 2019-01-05 19:32:48Z marius $*/
+/*$FreeBSD$*/
 
 
 #include "opt_inet.h"

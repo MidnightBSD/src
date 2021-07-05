@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/if_igb.h 299182 2016-05-06 15:41:38Z sbruno $*/
+/*$FreeBSD$*/
 
 #ifndef _IF_IGB_H_
 #define _IF_IGB_H_

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/e1000_mbx.c 333215 2018-05-03 15:47:42Z marius $*/
+/*$FreeBSD$*/
 
 #include "e1000_mbx.h"
 

@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: stable/11/sys/dev/e1000/e1000_api.h 331722 2018-03-29 02:50:57Z eadler $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_API_H_
 #define _E1000_API_H_
