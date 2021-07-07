@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/urtwn/if_urtwn.c 345636 2019-03-28 09:50:25Z avos $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for Realtek RTL8188CE-VAU/RTL8188CUS/RTL8188EU/RTL8188RU/RTL8192CU.
@@ -4177,11 +4177,12 @@ urtwn_mac_init(struct urtwn_softc *sc)
 		}
 		urtwn_write_1(sc, R92C_MAX_AGGR_NUM, 0x07);
 	} else {
-		for (i = 0; i < nitems(rtl8192cu_mac); i++)
+		for (i = 0; i < nitems(rtl8192cu_mac); i++) {
 			error = urtwn_write_1(sc, rtl8192cu_mac[i].reg,
 			    rtl8192cu_mac[i].val);
 			if (error != USB_ERR_NORMAL_COMPLETION)
 				return (EIO);
+		}
 	}
 
 	return (0);
