@@ -1,4 +1,4 @@
-$FreeBSD: stable/11/sys/ufs/ufs/README.extattr 105417 2002-10-18 21:11:36Z rwatson $
+$FreeBSD$
 
   UFS Extended Attributes Copyright
 

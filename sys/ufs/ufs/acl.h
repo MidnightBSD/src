@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/ufs/ufs/acl.h 200796 2009-12-21 19:39:10Z trasz $
+ * $FreeBSD$
  */
 /*
  * Developed by the TrustedBSD Project.

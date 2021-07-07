@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/ufs/ufs/gjournal.h 262678 2014-03-02 02:52:34Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_GJOURNAL_H_

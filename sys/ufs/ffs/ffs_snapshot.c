@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/ufs/ffs/ffs_snapshot.c 342819 2019-01-06 22:34:47Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 
@@ -315,7 +315,7 @@ restart:
 		goto out;
 	ip->i_size = lblktosize(fs, (off_t)numblks);
 	DIP_SET(ip, i_size, ip->i_size);
-	ip->i_flag |= IN_CHANGE | IN_UPDATE;
+	ip->i_flag |= IN_SIZEMOD | IN_CHANGE | IN_UPDATE;
 	error = readblock(vp, bp, numblks - 1);
 	bawrite(bp);
 	if (error != 0)

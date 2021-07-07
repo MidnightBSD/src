@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fs.h	8.13 (Berkeley) 3/21/95
- * $FreeBSD: stable/11/sys/ufs/ffs/fs.h 356905 2020-01-20 08:28:54Z eugen $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_FFS_FS_H_
