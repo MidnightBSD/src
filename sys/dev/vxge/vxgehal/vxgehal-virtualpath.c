@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: stable/11/sys/dev/vxge/vxgehal/vxgehal-virtualpath.c 331722 2018-03-29 02:50:57Z eadler $*/
+/*$FreeBSD$*/
 #include <dev/vxge/vxgehal/vxgehal.h>
 
 
@@ -5547,7 +5547,7 @@ __hal_vpath_alarm_process(__hal_virtualpath_t *vpath, u32 skip_alarms)
 					    hldev->header.regh0,
 					    VXGE_HAL_MRPCIM_TO_VPATH_ALARM_REG_ALARM,
 					    &vpath->vp_reg->mrpcim_to_vpath_alarm_reg);
-					return (VXGE_HAL_ERR_EVENT_MRPCIM_CRITICAL);
+				return (VXGE_HAL_ERR_EVENT_MRPCIM_CRITICAL);
 			}
 
 			if (!skip_alarms)
