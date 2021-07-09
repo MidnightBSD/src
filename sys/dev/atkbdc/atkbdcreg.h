@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/dev/atkbdc/atkbdcreg.h 343158 2019-01-18 21:12:00Z wulf $
+ * $FreeBSD$
  * from kbdio.h,v 1.8 1998/09/25 11:55:46 yokota Exp
  */
 

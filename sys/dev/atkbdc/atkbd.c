@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/atkbdc/atkbd.c 356013 2019-12-22 17:15:48Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"

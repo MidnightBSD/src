@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/sys/dev/atkbdc/atkbdc.c 343158 2019-01-18 21:12:00Z wulf $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 
