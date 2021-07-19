@@ -2326,6 +2326,8 @@ kerberos5/lib/libheimipcc__L: kerberos5/lib/libroken__L kerberos5/lib/libheimbas
 
 lib/libsqlite3__L: lib/libthr__L lib/msun__L lib/libz__L
 
+lib/libdispatch__L: lib/libblocksruntime__L lib/libthr__L
+
 .if ${MK_GSSAPI} != "no"
 _lib_libgssapi=	lib/libgssapi
 .endif
