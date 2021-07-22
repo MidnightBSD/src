@@ -12,7 +12,6 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: stable/11/stand/i386/boot2/boot1.S 232623 2012-03-06 20:45:13Z jhb $
  */
 
 /* Memory Locations */
