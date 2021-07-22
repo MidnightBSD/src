@@ -2179,7 +2179,7 @@ gnu/lib/libdialog__L: lib/msun__L lib/ncurses/ncursesw__L
 _prebuild_libs+= lib/libc++
 .endif
 
-lib/libgeom__L: lib/libexpat__L
+lib/libgeom__L: lib/libexpat__L lib/libsbuf__L
 lib/libkvm__L: lib/libelf__L
 
 .if ${MK_LIBTHR} != "no"
@@ -2265,6 +2265,8 @@ secure/lib/libssh__L: lib/libgssapi__L kerberos5/lib/libkrb5__L \
     kerberos5/lib/libhx509__L kerberos5/lib/libasn1__L lib/libcom_err__L \
     lib/libmd__L kerberos5/lib/libroken__L
 .endif
+lib/libfetch__L: secure/lib/libssl__L secure/lib/libcrypto__L
+lib/libarchive__L: lib/libz__L lib/libbz2__L lib/liblzma__L lib/libexpat__L secure/lib/libssl__L secure/lib/libcrypto__L
 .endif
 .endif
 _secure_lib=	secure/lib
@@ -2291,6 +2293,8 @@ kerberos5/lib/libheimipcc__L: kerberos5/lib/libroken__L kerberos5/lib/libheimbas
 
 lib/libsqlite3__L: lib/libthr__L lib/msun__L lib/libz__L
 
+lib/libdispatch__L: lib/libblocksruntime__L lib/libthr__L
+
 .if ${MK_GSSAPI} != "no"
 _lib_libgssapi=	lib/libgssapi
 .endif
@@ -2316,6 +2320,8 @@ _lib_libypclnt=	lib/libypclnt
 
 .if ${MK_OPENSSL} == "no"
 lib/libradius__L: lib/libmd__L
+lib/libfetch__L: lib/libmd__L
+lib/libarchive__L: lib/libz__L lib/libbz2__L lib/liblzma__L lib/libexpat__L lib/libmd__L
 .endif
 
 lib/libproc__L: \
