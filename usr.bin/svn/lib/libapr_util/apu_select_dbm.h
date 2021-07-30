@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/svn/lib/libapr_util/apu_select_dbm.h 251886 2013-06-18 02:53:45Z peter $ */
+/* $FreeBSD$ */
 
 /* Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

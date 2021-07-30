@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/usr.bin/svn/lib/libapr_util/apu.h 286562 2015-08-10 00:53:45Z peter $ */
+/* $FreeBSD$ */
 /* Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -114,12 +114,12 @@
 #define APU_HAVE_SQLITE3       0
 #define APU_HAVE_SQLITE2       0
 #define APU_HAVE_ORACLE        0
-#define APU_HAVE_FREETDS       0
 #define APU_HAVE_ODBC          0
 
 #define APU_HAVE_CRYPTO        1
 #define APU_HAVE_OPENSSL       1
 #define APU_HAVE_NSS           0
+#define APU_HAVE_COMMONCRYPTO  0
 
 #define APU_HAVE_APR_ICONV     0
 #ifndef APU_HAVE_ICONV

@@ -33,12 +33,14 @@ Prerequisites
 The following tools must be in PATH:
 
 * cmake, version 2.8 or later
+  cmake version 3.1.3 or later is required to work with current OpenSSL
+  releases.  (OpenSSL is an optional prerequisite of APR-Util.)
 * If using a command-line compiler: compiler and linker and related tools
   (Refer to the cmake documentation for more information.)
 
 The following support libraries are mandatory:
 
-* APR 1.4.x, built with cmake
+* APR 1.4.x or APR 1.5.x, built with cmake
 
 Optional support libraries allow optional features of APR to be enabled:
 

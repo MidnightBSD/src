@@ -21,6 +21,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 FIND_PACKAGE(OpenSSL)
 
+FIND_PACKAGE(expat)
+
 OPTION(APU_HAVE_CRYPTO      "Crypto support"                            OFF)
 OPTION(APU_HAVE_ODBC        "Build ODBC DBD driver"                     ON)
 OPTION(APR_HAS_LDAP         "LDAP support"                              ON)
@@ -59,6 +61,18 @@ IF(APR_HAS_LDAP)
   SET(apr_has_ldap_10 1)
 ENDIF()
 
+IF(NOT EXPAT_FOUND)
+  MESSAGE(FATAL_ERROR "Expat is required, and it wasn't found!")
+ENDIF()
+
+SET(XMLLIB_INCLUDE_DIR   ${EXPAT_INCLUDE_DIRS})
+SET(XMLLIB_LIBRARIES     ${EXPAT_LIBRARIES})
+
+SET(LDAP_LIBRARIES)
+IF(APR_HAS_LDAP)
+  SET(LDAP_LIBRARIES wldap32)
+ENDIF()
+
 CONFIGURE_FILE(include/apu.hwc
               ${PROJECT_BINARY_DIR}/apu.h)
 CONFIGURE_FILE(include/apr_ldap.hwc
@@ -73,14 +87,6 @@ CONFIGURE_FILE(include/private/apu_select_dbm.hw
 CONFIGURE_FILE(include/apu_want.hw
                ${PROJECT_BINARY_DIR}/apu_want.h
                COPYONLY)
-
-SET(XMLLIB_INCLUDE_DIR   ${CMAKE_CURRENT_SOURCE_DIR}/xml/expat/lib)
-SET(XMLLIB_LIBRARIES     libexpat)
-
-SET(LDAP_LIBRARIES)
-IF(APR_HAS_LDAP)
-  SET(LDAP_LIBRARIES wldap32)
-ENDIF()
 
 # Generated .h files are stored in PROJECT_BINARY_DIR, not the
 # source tree.
@@ -117,10 +123,12 @@ SET(APR_PUBLIC_HEADERS_STATIC
   include/apr_optional.h
   include/apr_optional_hooks.h
   include/apr_queue.h
+  include/apr_redis.h
   include/apr_reslist.h
   include/apr_rmm.h
   include/apr_sdbm.h
   include/apr_sha1.h
+  include/apr_siphash.h
   include/apr_strmatch.h
   include/apr_thread_pool.h
   include/apr_uri.h
@@ -157,6 +165,7 @@ SET(APR_SOURCES
   crypto/apr_md5.c
   crypto/apr_passwd.c
   crypto/apr_sha1.c
+  crypto/apr_siphash.c
   crypto/crypt_blowfish.c
   crypto/getuuid.c
   crypto/uuid.c
@@ -177,6 +186,7 @@ SET(APR_SOURCES
   misc/apr_thread_pool.c
   misc/apu_dso.c
   misc/apu_version.c
+  redis/apr_redis.c
   strmatch/apr_strmatch.c
   uri/apr_uri.c
   xlate/xlate.c
@@ -200,8 +210,10 @@ SET(APR_TEST_SOURCES
   test/testmemcache.c
   test/testpass.c
   test/testqueue.c
+  test/testredis.c
   test/testreslist.c
   test/testrmm.c
+  test/testsiphash.c
   test/teststrmatch.c
   test/testuri.c
   test/testutil.c
@@ -210,28 +222,18 @@ SET(APR_TEST_SOURCES
   test/testxml.c
 )
 
-SET(EXPAT_SOURCES
-  xml/expat/lib/xmlrole.c
-  xml/expat/lib/xmltok.c
-  xml/expat/lib/xmlparse.c
-)
-
 SET(install_targets)
 SET(install_bin_pdb)
 SET(dbd_drivers)
 
 # Note: The WINNT definition on some targets is used only by libaprutil.rc.
 
-# static expat (not installed)
-ADD_LIBRARY(libexpat STATIC ${EXPAT_SOURCES})
-SET_TARGET_PROPERTIES(libexpat PROPERTIES COMPILE_DEFINITIONS "XML_STATIC;COMPILED_FROM_DSP")
-
 # libaprutil-1 is shared, aprutil-1 is static
 ADD_LIBRARY(libaprutil-1 SHARED ${APR_SOURCES} ${APR_PUBLIC_HEADERS_GENERATED} libaprutil.rc)
 SET(install_targets ${install_targets} libaprutil-1)
 SET(install_bin_pdb ${install_bin_pdb} ${PROJECT_BINARY_DIR}/libaprutil-1.pdb)
 TARGET_LINK_LIBRARIES(libaprutil-1 ${APR_LIBRARIES} ${XMLLIB_LIBRARIES})
-SET_TARGET_PROPERTIES(libaprutil-1 PROPERTIES COMPILE_DEFINITIONS "APU_DECLARE_EXPORT;XML_STATIC;WINNT")
+SET_TARGET_PROPERTIES(libaprutil-1 PROPERTIES COMPILE_DEFINITIONS "APU_DECLARE_EXPORT;APR_DECLARE_EXPORT;XML_STATIC;WINNT")
 
 ADD_LIBRARY(aprutil-1 STATIC ${APR_SOURCES} ${APR_PUBLIC_HEADERS_GENERATED})
 SET(install_targets ${install_targets} aprutil-1)
@@ -247,7 +249,7 @@ IF(APU_HAVE_CRYPTO)
   SET(install_bin_pdb ${install_bin_pdb} ${PROJECT_BINARY_DIR}/apr_crypto_openssl-1.pdb)
   SET_TARGET_PROPERTIES(apr_crypto_openssl-1 PROPERTIES INCLUDE_DIRECTORIES "${APR_INCLUDE_DIRECTORIES};${OPENSSL_INCLUDE_DIR}")
   SET_TARGET_PROPERTIES(apr_crypto_openssl-1 PROPERTIES COMPILE_DEFINITIONS "WINNT")
-  SET_TARGET_PROPERTIES(apr_crypto_openssl-1 PROPERTIES COMPILE_FLAGS "-DDLL_NAME=apr_crypto_openssl")
+  SET_TARGET_PROPERTIES(apr_crypto_openssl-1 PROPERTIES COMPILE_FLAGS "-DAPR_DECLARE_EXPORT=1 -DAPU_DECLARE_EXPORT=1 -DDLL_NAME=apr_crypto_openssl")
   TARGET_LINK_LIBRARIES(apr_crypto_openssl-1 libaprutil-1 ${APR_LIBRARIES} ${OPENSSL_LIBRARIES})
 ENDIF()
 
@@ -258,8 +260,8 @@ IF(APU_HAVE_ODBC)
   SET(dbd_drivers ${dbd_drivers} odbc)
   TARGET_LINK_LIBRARIES(apr_dbd_odbc-1 libaprutil-1 ${APR_LIBRARIES} odbc32 odbccp32)
   SET_PROPERTY(TARGET apr_dbd_odbc-1 APPEND PROPERTY LINK_FLAGS /export:apr_dbd_odbc_driver)
-  SET_TARGET_PROPERTIES(apr_dbd_odbc-1 PROPERTIES COMPILE_DEFINITIONS "APU_HAVE_ODBC;HAVE_SQL_H;APU_DECLARE_EXPORT;APU_DSO_MODULE_BUILD;WINNT")
-  SET_TARGET_PROPERTIES(apr_dbd_odbc-1 PROPERTIES COMPILE_FLAGS "-DDLL_NAME=apr_dbd_odbc")
+  SET_TARGET_PROPERTIES(apr_dbd_odbc-1 PROPERTIES COMPILE_DEFINITIONS "APU_HAVE_ODBC;HAVE_SQL_H;APU_DECLARE_EXPORT;APR_DECLARE_EXPORT;APU_DSO_MODULE_BUILD;WINNT")
+  SET_TARGET_PROPERTIES(apr_dbd_odbc-1 PROPERTIES COMPILE_FLAGS "-DAPR_DECLARE_EXPORT=1 -DAPU_DECLARE_EXPORT=1 -DDLL_NAME=apr_dbd_odbc")
 ENDIF()
 
 IF(APR_HAS_LDAP)
@@ -269,7 +271,7 @@ IF(APR_HAS_LDAP)
   SET(install_bin_pdb ${install_bin_pdb} ${PROJECT_BINARY_DIR}/apr_ldap-1.pdb)
   TARGET_LINK_LIBRARIES(apr_ldap-1 libaprutil-1 ${APR_LIBRARIES} ${LDAP_LIBRARIES})
   SET_TARGET_PROPERTIES(apr_ldap-1 PROPERTIES COMPILE_DEFINITIONS "WINNT")
-  SET_TARGET_PROPERTIES(apr_ldap-1 PROPERTIES COMPILE_FLAGS "-DDLL_NAME=apr_ldap")
+  SET_TARGET_PROPERTIES(apr_ldap-1 PROPERTIES COMPILE_FLAGS "-DAPR_DECLARE_EXPORT=1 -DAPU_DECLARE_EXPORT=1 -DDLL_NAME=apr_ldap")
   SET(apr_ldap_libraries apr_ldap-1)
 ELSE()
   SET(apr_ldap_libraries)

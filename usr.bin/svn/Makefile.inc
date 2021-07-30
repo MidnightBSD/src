@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/svn/Makefile.inc 314011 2017-02-21 02:30:26Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 

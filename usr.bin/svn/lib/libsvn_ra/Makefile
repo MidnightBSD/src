@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.bin/svn/lib/libsvn_ra/Makefile 251886 2013-06-18 02:53:45Z peter $
+# $FreeBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -7,10 +7,16 @@
 INTERNALLIB=	yes
 LIB=		svn_ra
 
-SRCS=		compat.c debug_reporter.c deprecated.c editor.c \
-		ra_loader.c util.c
+SRCS=		compat.c \
+		debug_reporter.c \
+		deprecated.c \
+		editor.c \
+		ra_loader.c \
+		util.c
 
-CFLAGS+=	-I${SVNDIR}/include -I${SVNDIR} -I${.CURDIR}/../.. \
+CFLAGS+=	-I${SVNDIR}/include \
+		-I${SVNDIR} \
+		-I${.CURDIR}/../.. \
 		-I${.CURDIR}/../libapr \
 		-I${APR}/include/arch/unix \
 		-I${APR}/include \
