@@ -105,7 +105,7 @@ main(int argc, char *argv[]) {
 		}
 		loadIndex(mport);
 		for (i = 2; i < argc; i++) {
-			tempResultCode = mport_update(mport, argv[2]);
+			tempResultCode = mport_update(mport, argv[i]);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
