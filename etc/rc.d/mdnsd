@@ -1,6 +1,4 @@
 #!/bin/sh
-#
-# $MidnightBSD$
 
 # PROVIDE: mdnsd
 # REQUIRE: DAEMON
@@ -19,11 +17,12 @@ mdnsd_precmd()
 	if grep -q mdns "/etc/nsswitch.conf"; then
 		return
 	else
-		if [ ! -w /etc/nswitch.conf ]; then
-			echo ' /etc/nswitch.conf is not writable, update failed.'
+		if [ -w "/etc/nsswitch.conf" ]; then
+			sed -i '' 's|^\(hosts.*\)files dns|\1files mdns dns|g' /etc/nsswitch.conf
+		else
+			echo ' /etc/nsswitch.conf is not writable, update failed.'
 			return
 		fi
-		sed 's|^\(hosts.*\)files dns|\1files mdns dns|g' /etc/nsswitch.conf
 	fi
 }
 
