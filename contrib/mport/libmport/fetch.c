@@ -248,6 +248,7 @@ int
 mport_download(mportInstance *mport, const char *packageName, char **path) {
 	mportIndexEntry **indexEntry;
 	bool existed = true;
+	int retryCount = 0;
 
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
@@ -262,9 +263,10 @@ mport_download(mportInstance *mport, const char *packageName, char **path) {
 		SET_ERRORX(1, "%s", "Unable to allocate memory for path.");
 	}
 
+getfile:
 	if (!mport_file_exists(*path)) {
 		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
-			fprintf(stderr, "%s\n", mport_err_string());
+			mport_call_msg_cb(mport, "Error fetching package %s, %s", packageName, mport_err_string());
 			free(*path);
 			mport_index_entry_free_vec(indexEntry);
 			return mport_err_code();
@@ -274,6 +276,14 @@ mport_download(mportInstance *mport, const char *packageName, char **path) {
 	}
 
 	if (!mport_verify_hash(*path, (*indexEntry)->hash)) {
+		if (existed) {
+			if (unlink(*path) == 0)	{
+				retryCount++;
+
+				if (retryCount < 2)
+					goto getfile;
+			}
+		}
 		free(*path);
 		mport_index_entry_free_vec(indexEntry);
 		SET_ERRORX(1, "Package %s fails hash verification.", packageName);

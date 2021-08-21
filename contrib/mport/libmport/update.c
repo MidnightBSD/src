@@ -42,7 +42,7 @@ mport_update(mportInstance *mport, const char *packageName) {
 	}
 
 	int result = mport_download(mport, packageName, &path);
-	if (result != 0)
+	if (result != MPORT_OK)
 		return result;
 
 	/* in the event the package is not found in the index, it could be user generated and we still want to update it if
@@ -55,9 +55,15 @@ mport_update(mportInstance *mport, const char *packageName) {
 		mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends);
 
 		while (*depends != NULL) {
-			mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
+			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
+				mport_call_msg_cb(mport, "%s", mport_err_string());
+				mport_index_depends_free_vec(depends);
+				return mport_err_code();
+			}
 			depends++;
 		}
+
+		mport_index_depends_free_vec(depends);
 	}
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {

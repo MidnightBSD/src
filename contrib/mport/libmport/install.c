@@ -122,10 +122,10 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 	mportDependsEntry **depends;
 
 	if (packageName == NULL || version == NULL)
-		return (1);
+		RETURN_ERROR(MPORT_ERR_WARN, "Dependecy name or version is null");
 
 	mport_index_depends_list(mport, packageName, version, &depends);
-
+ 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
 		mport_call_msg_cb(mport, "%s", mport_err_string());
 		return mport_err_code();
@@ -140,11 +140,16 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		while (*depends != NULL) {
-			mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version);
+			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
+     			mport_call_msg_cb(mport, "%s", mport_err_string());
+				mport_index_depends_free_vec(depends);
+				return mport_err_code();
+			}
 			depends++;
 		}
 		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
+			mport_index_depends_free_vec(depends);
 			return mport_err_code();
 		}
 		mport_index_depends_free_vec(depends);
@@ -163,5 +168,5 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 		mport_pkgmeta_vec_free(packs);
 	}
 
-	return (0);
+	return (MPORT_OK);
 }
