@@ -1,9 +1,7 @@
 PROG= mport.query
 
-PROG= mport.list
-
 MPORTDIR= ${SRCTOP}/contrib/mport
-.PATH: ${MPORTDIR}/libexec/${PROG}
+.PATH: ${MPORTDIR}/libexec/mport.query
 
 CFLAGS+=       -I${MPORTDIR}/libmport 
 
