@@ -53,7 +53,7 @@ ${PERL_MAKEFILE}:
 
 # if OBJDIR is ., then don't delete ourselves.            
 clean:
-	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | grep -v '.svn' | xargs rm -r
+	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | grep -v 'Makefile.depend' | grep -v '.svn' | xargs rm -r
 
 install: install.perl install.man
 
