@@ -1,7 +1,5 @@
 PROG= mport.merge
 
-PROG= mport.list
-
 MPORTDIR= ${SRCTOP}/contrib/mport
 .PATH: ${MPORTDIR}/libexec/${PROG}
 

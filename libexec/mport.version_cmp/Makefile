@@ -1,7 +1,5 @@
 PROG= mport.version_cmp
 
-PROG= mport.list
-
 MPORTDIR= ${SRCTOP}/contrib/mport
 .PATH: ${MPORTDIR}/libexec/${PROG}
 
