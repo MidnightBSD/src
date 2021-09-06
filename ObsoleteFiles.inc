@@ -12,6 +12,15 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+OLD_FILES+=usr/libexec/cc1obj
+OLD_FILES+=usr/libexec/f771
+OLD_FILES+=usr/libexec/lint1
+OLD_FILES+=usr/libexec/lint2
+OLD_FILES+=usr/libexec/lukemftpd
+OLD_FILES+=usr/libexec/pt_chown
+OLD_LIBS+=usr/libexec/libnoexec.so.3
+OLD_LIBS+=usr/libexec/libnoexec.so
+OLD_LIBS+=usr/libexec/libnoexec.a
 # 20210105: WITH_LIBICONV_COMPAT removal
 OLD_FILES+=usr/include/_libiconv_compat.h
 OLD_FILES+=usr/lib/libiconv.a
