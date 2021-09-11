@@ -1,7 +1,7 @@
-/*	$Id: mansearch.c,v 1.76 2017/08/02 13:29:04 schwarze Exp $ */
+/*	$Id: mansearch.c,v 1.82 2019/07/01 22:56:24 schwarze Exp $ */
 /*
  * Copyright (c) 2012 Kristaps Dzonsons <kristaps@bsd.lv>
- * Copyright (c) 2013-2017 Ingo Schwarze <schwarze@openbsd.org>
+ * Copyright (c) 2013-2018 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "mandoc.h"
 #include "mandoc_aux.h"
 #include "mandoc_ohash.h"
 #include "manconf.h"
@@ -188,10 +187,20 @@ mansearch(const struct mansearch *search,
 			mpage = *res + cur;
 			mandoc_asprintf(&mpage->file, "%s/%s",
 			    paths->paths[i], page->file + 1);
+			if (access(chdir_status ? page->file + 1 :
+			    mpage->file, R_OK) == -1) {
+				warn("%s", mpage->file);
+				warnx("outdated mandoc.db contains "
+				    "bogus %s entry, run makewhatis %s",
+				    page->file + 1, paths->paths[i]);
+				free(mpage->file);
+				free(rp);
+				continue;
+			}
 			mpage->names = buildnames(page);
 			mpage->output = buildoutput(outkey, page);
+			mpage->bits = search->firstmatch ? rp->bits : 0;
 			mpage->ipath = i;
-			mpage->bits = rp->bits;
 			mpage->sec = *page->sect - '0';
 			if (mpage->sec < 0 || mpage->sec > 9)
 				mpage->sec = 10;
@@ -764,8 +773,9 @@ exprterm(const struct mansearch *search, int argc, char *argv[], int *argi)
 		cs = 0;
 	} else if ((val = strpbrk(argv[*argi], "=~")) == NULL) {
 		e->bits = TYPE_Nm | TYPE_Nd;
-		e->match.type = DBM_SUB;
-		e->match.str = argv[*argi];
+		e->match.type = DBM_REGEX;
+		val = argv[*argi];
+		cs = 0;
 	} else {
 		if (val == argv[*argi])
 			e->bits = TYPE_Nm | TYPE_Nd;
