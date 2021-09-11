@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20210911:
 	Update mandoc
 
+	Update mport to 2.1.4
+
 20210825:
 	Patch 3 security issues:
 
