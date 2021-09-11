@@ -91,8 +91,7 @@ mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportC
 		goto CLEANUP;
 	}
 
-	if ((error_code = archive_files(assetlist, pack, extra, tmpdir)) != MPORT_OK)
-		goto CLEANUP;
+	error_code = archive_files(assetlist, pack, extra, tmpdir); /* cleanup will run next which is the desired action */
 
 	CLEANUP:
 	clean_up(tmpdir);
@@ -192,7 +191,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 			if (lstat(file, &st) != 0) {
 				// if we have a backup, we can safely ignore some missing files
 				if (extra->is_backup) {
-					// hack: mark it as a comment so it gets ignored later
+					// hack: mark it as a comment, so it gets ignored later
 					e->type = ASSET_COMMENT;
 					goto reset;
 				}
@@ -436,7 +435,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 	    MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	/* depends look like this.  break'em up into port, pkgversion and pkgname
+	/* dependencies look like this.  break'em up into port, pkgversion and pkgname
 	 * perl:lang/perl5.8:>=5.8.3
 	 */
 	while (*depend != NULL) {

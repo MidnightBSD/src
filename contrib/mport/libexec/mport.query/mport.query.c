@@ -23,14 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
  */
-
-
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
 
 #include <stdlib.h>
 #include <stdio.h>

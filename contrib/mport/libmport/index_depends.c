@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "mport.h"
 #include "mport_private.h"
 
@@ -38,7 +36,7 @@
 
 
 /*
- * Looks up depends list via pkgname and version from the index and fills a vector of depends entries
+ * Looks up dependencies list via pkgname and version from the index and fills with a vector of depends entries
  * with the result.
  *
  * The calling code is responsible for freeing the memory allocated.  See
@@ -69,11 +67,9 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 		ret = SET_ERROR(MPORT_ERR_FATAL,
 		    "No rows returned from a 'SELECT COUNT(*)' query.");
 		goto DONE;
-		break;
 	default:
 		ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 		goto DONE;
-		break;
 	}
   
 	sqlite3_finalize(stmt);
@@ -81,8 +77,9 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 	e = (mportDependsEntry **)calloc(count + 1, sizeof(mportDependsEntry *));
 	*entry_vec = e;
   
-	if (count == 0) 
-		return MPORT_OK;
+	if (count == 0)  {
+		return (MPORT_OK);
+	}
   
 	if (mport_db_prepare(mport->db, &stmt,
 	    "SELECT pkg, version, d_pkg, d_version FROM idx.depends WHERE pkg= %Q and version=%Q", pkgname, version) != MPORT_OK) {
@@ -133,13 +130,16 @@ DONE:
 MPORT_PUBLIC_API void
 mport_index_depends_free_vec(mportDependsEntry **e)
 {
-	int i;
 
 	if (e == NULL)
 		return;
   
-	for (i=0; e[i] != NULL; i++) 
+	for (int i = 0; e[i] != NULL; i++) {
 		mport_index_depends_free(e[i]);
+		e[i] = NULL;
+	}
+
+	free(e);
 }
 
 

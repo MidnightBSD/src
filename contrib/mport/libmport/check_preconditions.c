@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -45,7 +43,7 @@ static int check_if_older_os(mportInstance *, mportPackageMeta *);
  *   MPORT_PRECHECK_INSTALLED  -- Fail if the package is installed
  *   MPORT_PRECHECK_UPGRADABLE -- Fail if an older version is not installed
  *   MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a conflict
- *   MPORT_PRECHECK_DEPENDS    -- Fail if the the depends are no resolved
+ *   MPORT_PRECHECK_DEPENDS    -- Fail if the dependencies are not resolved
  *   MPORT_PRECHECK_OS	       -- Fail if the os version of the installed is older
  *
  * The checks are run in the order listed above.  The first failure
@@ -124,8 +122,6 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
 			SET_ERRORX(MPORT_ERR_FATAL, "%s (version %s) is already installed.", pack->name, inst_version);
 			sqlite3_finalize(stmt);
 			RETURN_CURRENT_ERROR;
-
-			break;
 		default:
 			/* Some sort of sqlite error */
 			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
@@ -258,13 +254,12 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
 
 					break;
 				case SQLITE_DONE:
-					/* this depend isn't installed. */
+					/* this dependency isn't installed. */
 					SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
 					sqlite3_finalize(lookup);
 					sqlite3_finalize(stmt);
 					free(system_os_release);
 					RETURN_CURRENT_ERROR;
-					break;
 				default:
 					SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 					sqlite3_finalize(lookup);
@@ -276,7 +271,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
 			sqlite3_reset(lookup);
 			sqlite3_clear_bindings(lookup);
 		} else if (ret == SQLITE_DONE) {
-			/* No more depends to check. */
+			/* No more dependencies to check. */
 			sqlite3_finalize(lookup);
 			sqlite3_finalize(stmt);
 			break;

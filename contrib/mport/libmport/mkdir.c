@@ -46,7 +46,7 @@
 
 /*
  * Create directory (like mkdir -p) based on mkdir.c source.
- * WARNING: unlike most mport_ functions this does not use MPORT_ERR_FATAL, etc
+ * WARNING: unlike most mport_ functions this does not use MPORT_ERR_FATAL, etc.
  * omode should be the mode used, like say S_IRWXU | S_IRWXG | S_IRWXO
  * Returns 1 if a directory has been created,
  * 2 if it already existed, and 0 on failure.

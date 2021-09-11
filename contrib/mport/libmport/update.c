@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "mport.h"
 #include "mport_private.h"
 #include <string.h>
@@ -34,11 +32,11 @@
 MPORT_PUBLIC_API int
 mport_update(mportInstance *mport, const char *packageName) {
 	char *path;
-	mportDependsEntry **depends;
+	mportDependsEntry **depends, **depends_orig;
 	mportIndexEntry **indexEntry;
 
 	if (packageName == NULL) {
-		return (1);
+		return (MPORT_ERR_WARN);
 	}
 
 	int result = mport_download(mport, packageName, &path);
@@ -52,8 +50,9 @@ mport_update(mportInstance *mport, const char *packageName) {
 		mport_call_msg_cb(mport, "Package %s not found in the index", packageName);
 	} else {
 		/* get the dependency list and start updating/installing missing entries */
-		mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends);
+		mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends_orig);
 
+		depends = depends_orig;
 		while (*depends != NULL) {
 			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
@@ -63,7 +62,7 @@ mport_update(mportInstance *mport, const char *packageName) {
 			depends++;
 		}
 
-		mport_index_depends_free_vec(depends);
+		mport_index_depends_free_vec(depends_orig);
 	}
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {
@@ -74,5 +73,5 @@ mport_update(mportInstance *mport, const char *packageName) {
 
 	free(path);
 
-	return (0);
+	return (MPORT_OK);
 }

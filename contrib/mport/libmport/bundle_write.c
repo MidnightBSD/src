@@ -84,7 +84,7 @@ mportBundleWrite* mport_bundle_write_new(void)
 /*
  * mport_bundle_write_init(bundle, filename)
  * 
- * set up an bundle for adding files.  Sets the bundle file to
+ * set up a bundle for adding files.  Sets the bundle file to
  * filename.
  */
 int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
@@ -247,7 +247,7 @@ int mport_bundle_write_add_entry(mportBundleWrite *bundle, mportBundleRead *inbu
 
 /* lookup a file with more than one link in the link table.  If we find an entry
  * for the inode in the table, mark this incoming file as a hardlink to the prior file.
- * otherwise insert the new file into the table
+ * Otherwise, insert the new file into the table.
  */
 static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry, const struct stat *st)
 {
