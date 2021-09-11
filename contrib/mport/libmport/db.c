@@ -25,8 +25,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <sqlite3.h>
 #include <stdlib.h>
 #include <unistd.h>

@@ -24,9 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
-#include <sys/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,21 +54,26 @@ mport_assetlist_new(void) {
 /* free all the entries in the list, and then the list itself. */
 MPORT_PUBLIC_API void
 mport_assetlist_free(mportAssetList *list) {
-    mportAssetListEntry *n = NULL;
+	mportAssetListEntry *n = NULL;
+	mportAssetList *list_orig;
+	list_orig = list;
 
-    while (!STAILQ_EMPTY(list)) {
-        n = STAILQ_FIRST(list);
-        STAILQ_REMOVE_HEAD(list, next);
-        free(n->data);
+	if (list == NULL)
+		return;
+
+	while (!STAILQ_EMPTY(list)) {
+		n = STAILQ_FIRST(list);
+		STAILQ_REMOVE_HEAD(list, next);
+		free(n->data);
 		free(n->checksum);
 		free(n->owner);
 		free(n->group);
 		free(n->mode);
 		/* type is not a pointer */
-        free(n);
-    }
+		free(n);
+	}
 
-    free(list);
+	free(list_orig);
 }
 
 
@@ -120,7 +122,7 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
                 RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
 
 		entry->checksum = NULL; /* checksum is only used by bundle read install */
-			entry->type = parse_command(cmnd);
+		entry->type = parse_command(cmnd);
 		if (entry->type == ASSET_FILE_OWNER_MODE)
 			parse_file_owner_mode(&entry, cmnd);
 		if (entry->type == ASSET_DIR_OWNER_MODE) {

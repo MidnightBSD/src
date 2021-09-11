@@ -26,12 +26,6 @@
  * $MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.3 2011/10/23 00:23:38 laffer1 Exp $
  */
 
-
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.merge/mport.merge.c,v 1.3 2011/10/23 00:23:38 laffer1 Exp $");
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>

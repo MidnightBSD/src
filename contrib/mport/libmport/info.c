@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
@@ -48,11 +46,15 @@ mport_info(mportInstance *mport, const char *packageName)
 	char *info_text = NULL;
 	time_t expirationDate;
 
+	if (mport == NULL) {
+		SET_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+		return (NULL);
+	}
+
 	if (packageName == NULL) {
 		SET_ERROR(MPORT_ERR_FATAL, "Package name not found.");
 		return (NULL);
 	}
-
 
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK) {
 		return (NULL);
@@ -121,8 +123,9 @@ mport_info(mportInstance *mport, const char *packageName)
 		free(cpe);
 		free(flavor);
 		free(deprecated);
-	} else
+	} else {
 		mport_pkgmeta_vec_free(packs);
+	}
 
 	mport_index_entry_free_vec(indexEntry);
 	return info_text;

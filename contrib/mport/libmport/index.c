@@ -24,8 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "mport.h"
 #include "mport_private.h"
 
@@ -66,31 +64,35 @@ mport_index_load(mportInstance *mport)
 {
 
 	if (mport_file_exists(MPORT_INDEX_FILE)) {
-
-		if (attach_index_db(mport->db) != MPORT_OK)
+		if (attach_index_db(mport->db) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
 
 		if (!index_is_recentish()) {
 			if (index_last_checked_recentish(mport))
-				return MPORT_OK;
+				return (MPORT_OK);
 
 			return mport_index_get(mport);
 		}
 	} else {
-		if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
+		if (mport_fetch_bootstrap_index(mport) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 
-		if (!mport_file_exists(MPORT_INDEX_FILE))
+		if (!mport_file_exists(MPORT_INDEX_FILE)) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "Index file could not be extracted");
+		}
 
-		if (attach_index_db(mport->db) != MPORT_OK)
+		if (attach_index_db(mport->db) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
-		if (index_update_last_checked(mport) != MPORT_OK)
+		if (index_update_last_checked(mport) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 	}
 
 	return (MPORT_OK);
@@ -116,9 +118,14 @@ MPORT_PUBLIC_API int
 mport_index_get(mportInstance *mport)
 {
 
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
 	if (!(mport->flags & MPORT_INST_HAVE_INDEX)) {
-		if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
+		if (mport_fetch_bootstrap_index(mport) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 	} else {
 		if (mport_fetch_index(mport) != MPORT_OK) {
 			SET_ERROR(MPORT_ERR_WARN, "Could not fetch updated index; previous index used.");
@@ -128,44 +135,55 @@ mport_index_get(mportInstance *mport)
 
 	/* if we were already attached, reconnect refreshed index. */
 	if (mport->flags & MPORT_INST_HAVE_INDEX) {
-		if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK)
+		if (mport_db_do(mport->db, "DETACH idx") != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 
 		mport->flags &= ~MPORT_INST_HAVE_INDEX;
 
-		if (attach_index_db(mport->db) != MPORT_OK)
+		if (attach_index_db(mport->db) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
+		}
 
 		mport->flags |= MPORT_INST_HAVE_INDEX;
 	}
 
-	if (index_update_last_checked(mport) != MPORT_OK)
+	if (index_update_last_checked(mport) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
+	}
 
 	return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API int
 mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
-	mportIndexEntry **indexEntries;
+	mportIndexEntry **indexEntries, **indexEntries_orig;
 	int ret = 0;
 
-	if (mport_index_lookup_pkgname(mport, pack->name, &indexEntries) != MPORT_OK) {
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
+	if (pack == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "pack not defined");
+
+	if (mport_index_lookup_pkgname(mport, pack->name, &indexEntries_orig) != MPORT_OK) {
 		SET_ERRORX(MPORT_ERR_WARN, "Error Looking up package name %s", pack->name); /* TODO: is this needed. */
 		return (0);
 	}
 
-	if (indexEntries != NULL) {
+	if (indexEntries_orig != NULL) {
+		indexEntries = indexEntries_orig;
 		while (*indexEntries != NULL) {
 			int osflag = mport_check_preconditions(mport, pack, MPORT_PRECHECK_OS);
-			if ((*indexEntries)->version != NULL && (mport_version_cmp(pack->version, (*indexEntries)->version) < 0 ||
+			if ((*indexEntries)->version != NULL && pack->version != NULL && (mport_version_cmp(pack->version, (*indexEntries)->version) < 0 ||
 			                                         (mport_version_cmp(pack->version, (*indexEntries)->version) == 0 && osflag == MPORT_OK))) {
 				ret = 1;
 				break;
 			}
 			indexEntries++;
 		}
-		mport_index_entry_free_vec(indexEntries);
+		mport_index_entry_free_vec(indexEntries_orig);
 	}
 
 	return (ret);
@@ -178,11 +196,13 @@ index_is_recentish(void)
 {
 	struct stat st;
 
-	if (stat(MPORT_INDEX_FILE, &st) != 0)
+	if (stat(MPORT_INDEX_FILE, &st) != 0) {
 		return 0;
+	}
 
-	if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < get_time())
+	if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < get_time()) {
 		return 0;
+	}
 
 	return 1;
 }
@@ -194,10 +214,11 @@ index_last_checked_recentish(mportInstance *mport)
 	int ret;
 
 	recent = mport_setting_get(mport, MPORT_SETTING_INDEX_LAST_CHECKED);
-	if (recent && get_time() < atoi(recent) + MPORT_DAY)
+	if (recent && get_time() < atoi(recent) + MPORT_DAY) {
 		ret = 1;
-	else
+	} else {
 		ret = 0;
+	}
 
 	free(recent);
 
@@ -211,10 +232,11 @@ index_update_last_checked(mportInstance *mport)
 	int ret;
 
 	asprintf(&utime, "%jd", (intmax_t) get_time());
-	if (utime)
+	if (utime) {
 		ret = mport_setting_set(mport, MPORT_SETTING_INDEX_LAST_CHECKED, utime);
-	else
+	} else {
 		RETURN_CURRENT_ERROR;
+	}
 	free(utime);
 
 	return ret;
@@ -225,8 +247,9 @@ get_time(void)
 {
 	struct timespec now;
 
-	if (clock_gettime(CLOCK_REALTIME, &now) != 0)
+	if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
 		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+	}
 
 	return now.tv_sec;
 }
@@ -238,7 +261,8 @@ get_time(void)
  * 
  * XXX - The country is currently hardcoded to the US.
  */
-int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size)
+int
+mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size)
 {
 	char **list;
 	int ret, i;
@@ -252,8 +276,9 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_
 	}
 
 	/* XXX the country is hard coded until a configuration system is created */
-	if (mport_db_count(mport->db, &len, "SELECT COUNT(*) FROM idx.mirrors WHERE country=%Q", mirror_region) != MPORT_OK)
+	if (mport_db_count(mport->db, &len, "SELECT COUNT(*) FROM idx.mirrors WHERE country=%Q", mirror_region) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
+	}
 
 	*list_size = len;
 	list = calloc((size_t) len + 1, sizeof(char *));
@@ -310,13 +335,19 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 	int ret = MPORT_OK;
 	mportIndexEntry **e = NULL;
 
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
+
 	MPORT_CHECK_FOR_INDEX(mport, "mport_index_lookup_pkgname()")
 
-	if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
+	if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
+	}
 
-	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.packages  WHERE pkg GLOB %Q", lookup) != MPORT_OK)
+	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.packages  WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
+	}
 
 	e = (mportIndexEntry **) calloc((size_t) count + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
@@ -391,18 +422,25 @@ mport_index_search(mportInstance *mport, mportIndexEntry ***entry_vec, const cha
 	int len;
 	int i = 0, step;
 	char *where;
-	sqlite3 *db = mport->db;
 	mportIndexEntry **e;
 
 	va_start(args, fmt);
 	where = sqlite3_vmprintf(fmt, args);
 	va_end(args);
 
-	if (where == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+	if (mport == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	}
 
-	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages  WHERE %s", where) != MPORT_OK)
+	sqlite3 *db = mport->db;
+
+	if (where == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
+	}
+
+	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages  WHERE %s", where) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
+	}
 
 	e = (mportIndexEntry **) calloc((size_t) len + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
@@ -561,11 +599,16 @@ MPORT_PUBLIC_API void
 mport_index_entry_free_vec(mportIndexEntry **e)
 {
 
-	if (e == NULL)
+	if (e == NULL) {
 		return;
+	}
 
-	for (int i = 0; e[i] != NULL; i++)
+	for (int i = 0; e[i] != NULL; i++) {
 		mport_index_entry_free(e[i]);
+		e[i] = NULL;
+	}
+
+	free(e);
 }
 
 
@@ -573,8 +616,10 @@ mport_index_entry_free_vec(mportIndexEntry **e)
 MPORT_PUBLIC_API void
 mport_index_entry_free(mportIndexEntry *e)
 {
-	if (e == NULL)
+
+	if (e == NULL) {
 		return;
+	}
 
 	free(e->pkgname);
 	free(e->comment);

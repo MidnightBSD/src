@@ -190,11 +190,9 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
     case SQLITE_DONE:
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, "SQLite returned no rows for a COUNT(*) select.");
-      break;
     default:
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-      break;
   }
 
   if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)

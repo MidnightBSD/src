@@ -64,7 +64,7 @@ static uint32_t SuperFastHash(const char *);
  * Takes a list of bundle filenames and an output filename.  This function will create
  * a new bundle file containing all the packages un the different input bundle files,
  * named `outfile`.  Care is taken to not have duplicates, to ensure that the exterior
- * depends are correct, and that the packages are in an optimal order for installation.
+ * dependencies are correct, and that the packages are in an optimal order for installation.
  */ 
 MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *outfile)
 {
@@ -125,7 +125,7 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
 }
 
 
-/* This function goes thru each file, and builds up the merged database as
+/* This function goes through each file, and builds up the merged database as
  * filename `dbfile`.  It also builds up the hashtable of package -> filename pairs.
  * When this function is done, db points to a readonly sqlite object representing
  * the merged db.
@@ -246,7 +246,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
     RETURN_ERRORX(MPORT_ERR_FATAL, "Sorted (%i) and unsorted (%i) counts do no match.", pkgs, unsort);
     
       
-  /* Close the stub database handle, and reopen as read only to insure that we don't
+  /* Close the stub database handle, and reopen as read only to ensure that we don't
    * try to change it after this point 
    */    
   if (sqlite3_close(*db) != SQLITE_OK)

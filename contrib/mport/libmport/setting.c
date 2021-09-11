@@ -26,8 +26,6 @@
  *
  */
 
-#include <sys/cdefs.h>
-
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>

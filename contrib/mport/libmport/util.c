@@ -143,7 +143,7 @@ mport_get_uid(const char *username)
 
     pw = getpwnam(username);
     if (pw == NULL)
-        return 0; /* if we cant figure it out be safe */
+        return 0; /* if we can't figure it out be safe */
 
     return pw->pw_uid;
 }
@@ -357,7 +357,7 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
  * mport_parselist(input, string_array_pointer)
  *
  * hacks input into sub strings by whitespace.  Allocates a chunk or memory
- * for a array of those strings, and sets the pointer you pass to reference
+ * for an array of those strings, and sets the pointer you pass to reference
  * that memory
  *
  * char input[] = "foo bar baz"
@@ -379,7 +379,7 @@ mport_parselist(char *opt, char ***list)
         return;
     }
 
-    /* first we need to get the length of the depends list */
+    /* first we need to get the length of the dependency list */
     for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
         if (*field != '\0')
             len++;
@@ -394,7 +394,7 @@ mport_parselist(char *opt, char ***list)
         return;
     }
 
-    /* dereference once so we don't loose our minds. */
+    /* dereference once so we don't lose our minds. */
     char **vec = *list;
 
     while ((field = strsep(&input, " \t\n")) != NULL) {
@@ -411,7 +411,7 @@ mport_parselist(char *opt, char ***list)
 /*
  * mport_run_asset_exec(fmt, cwd, last_file)
  * 
- * handles a @exec or a @unexec directive in a plist.  This function
+ * handles an @exec or an @unexec directive in a plist.  This function
  * does the substitions and then runs the command.  last_file is 
  * absolute path.
  *
@@ -593,7 +593,7 @@ mport_get_osrelease(void)
         return NULL;
 
     for (int i = 0; i < 10; i++) {
-    	// old versions contained a - in the name  e.g. 0.4-RELEASE
+    	// old versions contained an - in the name  e.g. 0.4-RELEASE
         if (osrelease[i] == '\0' || osrelease[i] == '-')
             break;
 

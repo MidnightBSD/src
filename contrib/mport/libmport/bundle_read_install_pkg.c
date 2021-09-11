@@ -207,7 +207,7 @@ create_package_row(mportInstance *mport, mportPackageMeta *pkg)
 static int
 create_depends(mportInstance *mport, mportPackageMeta *pkg)
 {
-	/* Insert the depends into the master table */
+	/* Insert the dependencies into the master table */
 	if (mport_db_do(mport->db,
 	                "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q",
 	                pkg->name) != MPORT_OK)
@@ -257,6 +257,7 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 		(void) snprintf(nonSample, FILENAME_MAX, "%s%s/%s", mport->root, cwd, file);
 	else
 		strlcpy(nonSample, file, FILENAME_MAX * 2);
+
 	char **fileargv = parse_sample(nonSample);
 
 	if (fileargv[1] != NULL) {
@@ -427,8 +428,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 	if (create_categories(mport, pkg) != MPORT_OK)
 		goto ERROR;
 
-	/* Insert the assets into the master table (We do this one by one because we want to insert file
-	* assets as absolute paths. */
+	/* Insert the assets into the master table. We do this one by one because we want to insert file assets as absolute paths. */
 	if (mport_db_prepare(mport->db, &insert,
 	                     "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)",
 	                     pkg->name) != MPORT_OK)

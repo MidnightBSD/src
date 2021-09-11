@@ -23,14 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.5 2011/06/14 02:30:32 laffer1 Exp $
  */
-
-
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.updepends/mport.updepends.c,v 1.5 2011/06/14 02:30:32 laffer1 Exp $");
-
 
 #include <stdlib.h>
 #include <stdio.h>
