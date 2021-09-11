@@ -1,6 +1,6 @@
 ************************************************************************
 * Official mandoc TODO.
-* $Id: TODO,v 1.246 2017/07/24 11:15:12 schwarze Exp $
+* $Id: TODO,v 1.295 2019/06/11 16:04:36 schwarze Exp $
 ************************************************************************
 
 Many issues are annotated for difficulty as follows:
@@ -52,44 +52,36 @@ are mere guesses, and some may be wrong.
   found by naddy@ in xloadimage(1)
   loc **  exist ***  algo *  size *  imp *
 
-- .nr third argument (auto-increment step size, requires \n+)
-  found by bentley@ in sbcl(1)  Mon, 9 Dec 2013 18:36:57 -0700
-  loc *  exist *  algo *  size *  imp **
-
 - .ns (no-space mode) occurs in xine-config(1)
   when implementing this, also let .TH set it
   reported by brad@  Sat, 15 Jan 2011 15:45:23 -0500
   loc ***  exist ***  algo ***  size **  imp *
-
-- .while and .shift
-  found by jca@ in ratpoison(1)  Sun, 30 Jun 2013 12:01:09 +0200
-  loc *  exist **  algo **  size **  imp **
-
-- \n+ and \n- numerical register increment and decrement
-  found by bentley@ in sbcl(1)  Mon, 9 Dec 2013 18:36:57 -0700
-  loc *  exist *  algo *  size *  imp **
 
 - \w'' improve width measurements
   would not be very useful without an expression parser, see below
   needed for Tcl_NewStringObj(3) via wiz@  Wed, 5 Mar 2014 22:27:43 +0100
   loc **  exist ***  algo ***  size *  imp ***
 
-- \\ in high-level macro arguments
-  Currently, \\ is expanded in two situations:
-  1) macro and string definition (roff.c setstrn())
-  2) macro argument parsing (mandoc.c mandoc_getarg())
-  For user defined macros, the second happens in time because of ROFF_REPARSE.
-  But for standard high-level macros, it only happens after entering the
-  high level parsers, which is too late because the code doesn't get
-  back to roff.c roff_res() from that point.  Because this requires
-  distinguishing requests, user-defined macros and standard macros
-  on the roff_res() level, it is hard to solve without the parser reorg.
-  Found by naddy@ in devel/cutils cobfusc(1)  Mon, 16 Feb 2015 19:10:52 +0100
-  loc ***  exist ***  algo ***  size **  imp *
+- .als only works for macros in mandoc, not for user-defined strings.
+  Also, the "val" field in struct roffkv would have to be replaced
+  with a pointer to a reference-counted wrapper, and an alias
+  would have to point to the same wrapper as the original.
+  .als to undefined does nothing; the alias is not created.
+  .rm'ing the original leaves the alias to point to the old value.
+  .de .als .de changes both, but
+  .de .als .rm .de only changes the new value, not the alias.
+  Found in groffer(1) version 1.19
+  Jan Stary 20 Apr 2019 20:16:54 +0200
+  loc *  exist **  algo **  size **  imp *
 
-- using undefined strings or macros defines them to be empty
-  wl@  Mon, 14 Nov 2011 14:37:01 +0000
-  loc *  exist *  algo *  size *  imp *
+- roff string condition comparisons fail when vars contain quotes:
+  .ds s '
+  .if '\*s'' \&...
+  hard to fix because of the basic architecture (string replacement
+  happens before roff(7) syntax parsing)
+  Found in groffer(1) version 1.19
+  Jan Stary 20 Apr 2019 20:16:54 +0200
+  loc *  exist ***  algo ***  size **  imp *
 
 --- missing mdoc features ----------------------------------------------
 
@@ -105,13 +97,6 @@ are mere guesses, and some may be wrong.
   .Sh .Nm .Bk .Nm .Ek .Sh found by jmc@ in ssh-keygen(1)
   from jmc@  Wed, 14 Jul 2010 18:10:32 +0100
   loc *  exist ***  algo ***  size **  imp **
-
-- .Bd -centered implies -filled, not -unfilled, which is not
-  easy to implement; it requires code similar to .ce, which
-  we don't have either.
-  Besides, groff has bug causing text right *before* .Bd -centered
-  to be centered as well.
-  loc ***  exist ***  algo **  size **  imp **  (parser reorg would help)
 
 - .Bd -filled should not be the same as .Bd -ragged, but align both
   the left and right margin.  In groff, it is implemented in terms
@@ -146,10 +131,6 @@ are mere guesses, and some may be wrong.
   is not safe, e.g. `.Bl -column .It Pf a b .' gives "ab."
   but should give "ab ."
 
-- check whether it is correct that `D1' uses INDENT+1;
-  does it need its own constant?
-  loc *  exist **  algo **  size *  imp **
-
 - prohibit `Nm' from having non-text HEAD children
   (e.g., NetBSD mDNSShared/dns-sd.1)
   (mdoc_html.c and mdoc_term.c `Nm' handlers can be slightly simplified)
@@ -170,12 +151,21 @@ are mere guesses, and some may be wrong.
   uqs@  Thu, 2 Jun 2011 11:33:35 +0200
   loc *  exist **  algo ***  size *  imp **
 
+--- missing man features -----------------------------------------------
+
+- groff_www(7) .MTO and .URL
+  These macros were used by the GNU grep(1) man page.
+  The groff_www(7) manual page itself uses them, too.
+  We should probably *not* add them to mandoc.
+  Just mentioning this here to keep track of the abuse.
+  Laura Morales <lauretas at mail dot com> 20 Apr 2018 07:33:02 +0200
+  loc **  exist *  algo *  size **  imp *
+
 --- missing tbl features -----------------------------------------------
 
-- the "s" layout column specifier is used for placement of data
-  into columns, but ignored during column width calculations
-  synaptics(4) found by tedu@  Mon, 17 Aug 2015 21:17:42 -0400
-  loc *  exist **  algo ***  size *  imp **
+- vertical centering in cells vertically spanned with ^
+  pali dot rohar at gmail dot com 16 Jul 2018 13:03:35 +0200
+  loc *  exist ***  algo ***  size **  imp *
 
 - support mdoc(7) and man(7) macros inside tbl(7) code;
   probably requires the parser reorg and letting tbl(7)
@@ -184,23 +174,24 @@ are mere guesses, and some may be wrong.
   loc ***  exist **  algo ***  size **  imp ***
 
 - look at the POSIX manuals in the books/man-pages-posix port,
-  they use some unsupported tbl(7) features.
+  they use some unsupported tbl(7) features, mostly macros in tbl(7).
   loc *  exist **  algo **  size **  imp ***
 
 - look what Joerg Schilling manual pages use
   Thu, 19 Mar 2015 18:31:48 +0100
 
-- use Unicode U+2500 to U+256C for table borders
-  in tbl(7) -Tutf-8 output
-  suggested by bentley@  Tue, 14 Oct 2014 04:10:55 -0600
-  loc *  exist **  algo *  size *  imp **
-
 --- missing eqn features -----------------------------------------------
 
 - In a matrix, break the output line after each matrix line.
-  Found in the discussion at CDBUG 2015.
-  Suggested by Avi Weinstock.
-  loc *  exist *  algo *  size *  imp **
+  Found in the discussion at CDBUG 2015.  Suggested by Avi Weinstock.
+  This may not be the ideal solution after all: eqn(7) matrices
+  are lists of columns, so Avi's proposal would show each *column*
+  on its own *line*, which is likely to cause confusion.
+  A better solution, but much harder to implement, would be to
+  actually show the coordinates of column vectors on different
+  terminal output lines, using the clumnated output facilities
+  developed for .Bl -tag, .Bl -column, and also used for tbl(7).
+  loc *  exist *  algo **  size **  imp **
 
 - The "size" keyword is parsed, but ignored by the formatter.
   loc *  exist *  algo *  size *  imp *
@@ -219,11 +210,14 @@ are mere guesses, and some may be wrong.
   surrounded by blanks, not when it is part of an unquoted word.
   Also, check whether there are more such cases (e.g., +?).
   reported by bentley@  20 Jun 2017 02:04:29 -0600
+  loc *  exist **  algo **  size *  imp *
 
 - Primes, opprime, and '
   bentley@  Thu, 13 Jul 2017 23:14:20 -0600
 
 --- missing misc features ----------------------------------------------
+
+- man -ks 1,8 route; kn@ Jul 13, 2018 orally
 
 - italic correction (\/) in PostScript mode
   Werner LEMBERG on groff at gnu dot org  Sun, 10 Nov 2013 12:47:46
@@ -291,6 +285,9 @@ are mere guesses, and some may be wrong.
   https://github.com/schmonz/ikiwiki/compare/mandoc
   Amitai Schlair  Mon, 19 May 2014 14:05:53 -0400
 
+- check compatibility with
+  https://git.sr.ht/~sircmpwn/scdoc
+
 - check features of the Slackware man.conf(5) format
   Carsten Kunze  Wed, 11 Mar 2015 17:57:24 +0100
 
@@ -354,6 +351,8 @@ are mere guesses, and some may be wrong.
 
 - a line starting with "\fB something" counts as starting with whitespace
   and triggers a line break; found in audio/normalize-mp3(1)
+  This will become easier once escape sequences are represented
+  by syntax tree nodes.
   loc **  exist *  algo **  size *  imp **
 
 - formatting /usr/local/man/man1/latex2man.1 with groff and mandoc
@@ -471,6 +470,10 @@ are mere guesses, and some may be wrong.
 * warning issues
 ************************************************************************
 
+- warn about duplicate .Sh/.Ss heads
+  gre(4): Rename duplicate sections 20 Apr 2018 15:27:33 +0200
+  loc *  exist *  algo *  size *  imp **
+
 - style message about macros inside .Bd -literal and .Dl, in particular
   font changing macros like .Cm, .Ar, .Fa (from the mdoclint TODO)
 
@@ -497,24 +500,18 @@ are mere guesses, and some may be wrong.
   all over mdoc_macro.c and all subtly different.
   loc **  exist **  algo **  size **  imp **
 
-- style message about suspicious uses of - vs. \- vs. \(mi
-  e.g. -1 is likely wrong (from the mdoclint TODO)
-
 - warn about punctuation - e.g. ',' and ';' - at the beginning
   of a text line, if it is likely intended to follow the preceding
   output without intervening whitespace, in particular after a
   macro line (from the mdoclint TODO)
 
-- mandoc_special does not really check the escape sequence,
-  but just the overall format
-  loc **  exist **  algo ***  size **  imp **
+- makewhatis -p complains about language subdirectories:
+  /usr/local/man//ru: Unknown directory part
+
 
 ************************************************************************
 * documentation issues
 ************************************************************************
-
-- dashes, hyphens, and minus signs in manual pages
-  jmc@ Fri, 28 Mar 2014 07:19:27 +0000
 
 - mark macros as: page structure domain, manual domain, general text domain
   is this useful?
@@ -541,10 +538,6 @@ are mere guesses, and some may be wrong.
   Found by Aaron M. Ucko in the GNU Hurd via Bdale Garbee,
   https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=829624
 
-- We use the input line number at several places to distinguish
-  same-line from different-line input.  That plainly doesn't work
-  with user-defined macros, leading to random breakage.
-
 - Is it possible to further simplify ENDBODY_SPACE?
 
 - Find better ways to prevent endless loops
@@ -562,14 +555,22 @@ are mere guesses, and some may be wrong.
 
  - Enable HTTP compression by detecting gzip encoding and filtering
    output through libz.
- - Sandbox (see OpenSSH).
+ - Privilege separation (see OpenSSH).
  - Enable caching support via HTTP 304 and If-Modified-Since.
- - Have Mac OSX systems automatically disable -static compilation of the
-   CGI: -static isn't supported.
 
 ************************************************************************
 * to improve in the groff_mdoc(7) macros
 ************************************************************************
+
+- .Cd # arch1, arch2 in section 4 pages:
+  find better way to indicate multiple architectures, maybe:
+  allow .Dt vgafb 4 "macppc sparc64"
+  already shown as "Device Drivers Manual (macppc sparc64)"
+  for apropos, make that "vgafb(4) - macppc # sparc64" instead of "- all"
+  groff can be made to show multiple arches, too, but it is
+  tedious to do the string parsing in roff code...
+  jmc@ 23 Apr 2018 07:24:52 +0100 [man for vgafb(4)...]
+  loc **  exist **  algo *  size *  imp ***
 
 - use uname(1) to set doc-default-operating-system at install time
   tobimensch  Mon, 1 Dec 2014 00:25:07 +0100

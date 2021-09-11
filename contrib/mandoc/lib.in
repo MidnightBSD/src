@@ -1,4 +1,4 @@
-/*	$Id: lib.in,v 1.19 2016/11/23 20:22:13 schwarze Exp $ */
+/*	$Id: lib.in,v 1.22 2019/07/01 22:56:24 schwarze Exp $ */
 /*
  * Copyright (c) 2009 Kristaps Dzonsons <kristaps@bsd.lv>
  * Copyright (c) 2009, 2012 Joerg Sonnenberger <joerg@netbsd.org>
@@ -25,10 +25,13 @@
  */
 
 LINE("lib80211",	"802.11 Wireless Network Management Library (lib80211, \\-l80211)")
+LINE("libalias",	"Packet Aliasing Library (libalias, \\-lalias)")
 LINE("libarchive",	"Streaming Archive Library (libarchive, \\-larchive)")
 LINE("libarm",		"ARM Architecture Library (libarm, \\-larm)")
 LINE("libarm32",	"ARM32 Architecture Library (libarm32, \\-larm32)")
+LINE("libbe",		"Boot Environment Library (libbe, \\-lbe)")
 LINE("libbluetooth",	"Bluetooth Library (libbluetooth, \\-lbluetooth)")
+LINE("libbsdxml",	"eXpat XML parser library (libbsdxml, \\-lbsdxml)")
 LINE("libbsm",		"Basic Security Module Library (libbsm, \\-lbsm)")
 LINE("libc",		"Standard C\\~Library (libc, \\-lc)")
 LINE("libc_r",		"Reentrant C\\~Library (libc_r, \\-lc_r)")
@@ -40,7 +43,7 @@ LINE("libcipher",	"FreeSec Crypt Library (libcipher, \\-lcipher)")
 LINE("libcompat",	"Compatibility Library (libcompat, \\-lcompat)")
 LINE("libcrypt",	"Crypt Library (libcrypt, \\-lcrypt)")
 LINE("libcurses",	"Curses Library (libcurses, \\-lcurses)")
-LINE("libcuse", 	"Userland Character Device Library (libcuse, \\-lcuse)")
+LINE("libcuse",		"Userland Character Device Library (libcuse, \\-lcuse)")
 LINE("libdevattr",	"Device attribute and event library (libdevattr, \\-ldevattr)")
 LINE("libdevctl",	"Device Control Library (libdevctl, \\-ldevctl)")
 LINE("libdevinfo",	"Device and Resource Information Utility Library (libdevinfo, \\-ldevinfo)")
@@ -59,7 +62,9 @@ LINE("libfsid",		"Filesystem Identification Library (libfsid, \\-lfsid)")
 LINE("libftpio",	"FTP Connection Management Library (libftpio, \\-lftpio)")
 LINE("libform",		"Curses Form Library (libform, \\-lform)")
 LINE("libgeom",		"Userland API Library for Kernel GEOM subsystem (libgeom, \\-lgeom)")
+LINE("libgmock",	"GoogleMock library (libgmock, \\-lgmock)")
 LINE("libgpio",		"General-Purpose Input Output (GPIO) library (libgpio, \\-lgpio)")
+LINE("libgtest",	"GoogleTest library (libgtest, \\-lgtest)")
 LINE("libhammer",	"HAMMER Filesystem Userland Library (libhammer, \\-lhammer)")
 LINE("libi386",		"i386 Architecture Library (libi386, \\-li386)")
 LINE("libintl",		"Internationalized Message Handling Library (libintl, \\-lintl)")
@@ -113,6 +118,7 @@ LINE("libsaslc",	"Simple Authentication and Security Layer client library (libsa
 LINE("libsbuf",		"Safe String Composition Library (libsbuf, \\-lsbuf)")
 LINE("libsdp",		"Bluetooth Service Discovery Protocol User Library (libsdp, \\-lsdp)")
 LINE("libssp",		"Buffer Overflow Protection Library (libssp, \\-lssp)")
+LINE("libstdthreads",	"C11 Threads Library (libstdthreads, \\-lstdthreads)")
 LINE("libstdthreads",	"C11 Threads Library (libstdthreads, \\-lstdthreads)")
 LINE("libSystem",	"System Library (libSystem, \\-lSystem)")
 LINE("libsysdecode",	"System Argument Decoding Library (libsysdecode, \\-lsysdecode)")
