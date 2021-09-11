@@ -1,26 +1,27 @@
-# $FreeBSD: stable/11/usr.bin/mandoc/Makefile 322249 2017-08-08 11:35:27Z bapt $
-
 .include <src.opts.mk>
 
-MDOCMLDIR=	${SRCTOP}/contrib/mdocml
-.PATH: ${MDOCMLDIR}
+MANDOCDIR=	${SRCTOP}/contrib/mandoc
+.PATH: ${MANDOCDIR}
 
 PROG=	mandoc
-MAN=	mandoc.1 eqn.7 mandoc_char.7 tbl.7 man.7 mdoc.7 # roff.7
+MAN=	mandoc.1 eqn.7 mandoc_char.7 tbl.7 man.7 mdoc.7 roff.7
 MLINKS=	mandoc.1 mdocml.1
-.if ${MK_MANDOCDB} != no
+.if ${MK_MAN_UTILS} != no
 MAN+=	apropos.1 makewhatis.8
 MLINKS+=	apropos.1 whatis.1
 LINKS=	${BINDIR}/mandoc ${BINDIR}/whatis \
 	${BINDIR}/mandoc ${BINDIR}/makewhatis \
 	${BINDIR}/mandoc ${BINDIR}/apropos
+.elif defined(BOOTSTRAPPING)
+.error "MK_MAN_UTILS should be set to yes when bootstrapping"
 .endif
 
 LIBMAN_SRCS=	man.c \
 		man_macro.c \
 		man_validate.c
 
-LIBMDOC_SRCS=	att.c \
+LIBMDOC_SRCS=	arch.c \
+		att.c \
 		lib.c \
 		mdoc.c \
 		mdoc_argv.c \
@@ -46,6 +47,7 @@ LIB_SRCS=	${LIBMAN_SRCS} \
 		chars.c \
 		mandoc.c \
 		mandoc_aux.c \
+		mandoc_msg.c \
 		mandoc_ohash.c \
 		mandoc_xr.c \
 		msec.c \
@@ -96,6 +98,8 @@ WARNS?=	3
 CFLAGS+= -DHAVE_CONFIG_H \
 	 -D_WITH_GETLINE \
 	 -I${SRCTOP}/lib/libopenbsd/
+# This can be removed after swtiching to newer gcc
+CFLAGS.gcc+=	-Wno-format
 LIBADD=	openbsd z
 
 .include <bsd.prog.mk>
