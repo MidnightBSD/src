@@ -366,9 +366,9 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     const char *binpath;
     caddr_t imgentry;
     char buf[MAXPATHLEN];
-    int argc, fd, i, mib[2], phnum, rtld_argc;
-    size_t len;
-    bool dir_enable, explicit_fd, search_in_path;
+    int argc, fd, i, mib[4], old_osrel, osrel, phnum, rtld_argc;
+    size_t len, sz;
+    bool dir_enable, direct_exec, explicit_fd, search_in_path;
 
     /*
      * On entry, the dynamic linker itself has not been relocated yet.
@@ -427,6 +427,7 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     }
 
     trust = !issetugid();
+    direct_exec = false;
 
     md_abi_variant_hook(aux_info);
 
@@ -442,6 +443,21 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
 		  argv0);
 		rtld_die();
 	    }
+	    direct_exec = true;
+
+	    /*
+	     * Set osrel for us, it is later reset to the binary'
+	     * value before first instruction of code from the binary
+	     * is executed.
+	     */
+	    mib[0] = CTL_KERN;
+	    mib[1] = KERN_PROC;
+	    mib[2] = KERN_PROC_OSREL;
+	    mib[3] = getpid();
+	    osrel = __MidnightBSD_version;
+	    sz = sizeof(old_osrel);
+	    (void)sysctl(mib, 4, &old_osrel, &sz, &osrel, sizeof(osrel));
+
 	    dbg("opening main program in direct exec mode");
 	    if (argc >= 2) {
 		rtld_argc = parse_args(argv, argc, &search_in_path, &fd);
@@ -673,7 +689,8 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     preload_tail = globallist_curr(TAILQ_LAST(&obj_list, obj_entry_q));
 
     dbg("loading needed objects");
-    if (load_needed_objects(obj_main, 0) == -1)
+    if (load_needed_objects(obj_main, ld_tracing != NULL ? RTLD_LO_TRACE :
+      0) == -1)
 	rtld_die();
 
     /* Make a list of all objects loaded at startup. */
@@ -772,6 +789,18 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
      * init functions.
      */
     pre_init();
+
+    if (direct_exec) {
+	/* Set osrel for direct-execed binary */
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_OSREL;
+	mib[3] = getpid();
+	osrel = obj_main->osrel;
+	sz = sizeof(old_osrel);
+	dbg("setting osrel to %d", osrel);
+	(void)sysctl(mib, 4, &old_osrel, &sz, &osrel, sizeof(osrel));
+    }
 
     wlock_acquire(rtld_bind_lock, &lockstate);
 
@@ -1037,7 +1066,10 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
     *dyn_runpath = NULL;
 
     obj->bind_now = false;
-    for (dynp = obj->dynamic;  dynp->d_tag != DT_NULL;  dynp++) {
+    dynp = obj->dynamic;
+    if (dynp == NULL)
+	return;
+    for (;  dynp->d_tag != DT_NULL;  dynp++) {
 	switch (dynp->d_tag) {
 
 	case DT_REL:
@@ -1313,6 +1345,8 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
 		    obj->z_interpose = true;
 		if (dynp->d_un.d_val & DF_1_NODEFLIB)
 		    obj->z_nodeflib = true;
+		if (dynp->d_un.d_val & DF_1_PIE)
+		    obj->z_pie = true;
 	    break;
 
 	default:
@@ -2080,6 +2114,34 @@ process_z(Obj_Entry *root)
 		}
 	}
 }
+
+static void
+parse_rtld_phdr(Obj_Entry *obj)
+{
+	const Elf_Phdr *ph;
+	Elf_Addr note_start, note_end;
+
+	obj->stack_flags = PF_X | PF_R | PF_W;
+	for (ph = obj->phdr;  (const char *)ph < (const char *)obj->phdr +
+	    obj->phsize; ph++) {
+		switch (ph->p_type) {
+		case PT_GNU_STACK:
+			obj->stack_flags = ph->p_flags;
+			break;
+		case PT_GNU_RELRO:
+			obj->relro_page = obj->relocbase +
+			    trunc_page(ph->p_vaddr);
+			obj->relro_size = round_page(ph->p_memsz);
+			break;
+		case PT_NOTE:
+			note_start = (Elf_Addr)obj->relocbase + ph->p_vaddr;
+			note_end = note_start + ph->p_filesz;
+			digest_notes(obj, note_start, note_end);
+			break;
+		}
+	}
+}
+
 /*
  * Initialize the dynamic linker.  The argument is the address at which
  * the dynamic linker has been mapped into memory.  The primary task of
@@ -2148,6 +2210,9 @@ init_rtld(caddr_t mapbase, Elf_Auxinfo **aux_info)
 
     /* Replace the path with a dynamically allocated copy. */
     obj_rtld.path = xstrdup(ld_path_rtld);
+
+    parse_rtld_phdr(&obj_rtld);
+    obj_enforce_relro(&obj_rtld);
 
     r_debug.r_brk = r_debug_state;
     r_debug.r_state = RT_CONSISTENT;
@@ -2512,6 +2577,11 @@ do_load_object(int fd, const char *name, char *path, struct stat *sbp,
 	goto errp;
     dbg("%s valid_hash_sysv %d valid_hash_gnu %d dynsymcount %d", obj->path,
 	obj->valid_hash_sysv, obj->valid_hash_gnu, obj->dynsymcount);
+    if (obj->z_pie && (flags & RTLD_LO_TRACE) == 0) {
+	dbg("refusing to load PIE executable \"%s\"", obj->path);
+	_rtld_error("Cannot load PIE binary %s as DSO", obj->path);
+	goto errp;
+    }
     if (obj->z_noopen && (flags & (RTLD_LO_DLOPEN | RTLD_LO_TRACE)) ==
       RTLD_LO_DLOPEN) {
 	dbg("refusing to load non-loadable \"%s\"", obj->path);
@@ -2716,7 +2786,7 @@ objlist_call_init(Objlist *list, RtldLockState *lockstate)
 	        (void *)elm->obj->init);
 	    LD_UTRACE(UTRACE_INIT_CALL, elm->obj, (void *)elm->obj->init,
 	        0, 0, elm->obj->path);
-	    call_initfini_pointer(elm->obj, elm->obj->init);
+	    call_init_pointer(elm->obj, elm->obj->init);
 	}
 	init_addr = (Elf_Addr *)elm->obj->init_array;
 	if (init_addr != NULL) {
@@ -2885,11 +2955,8 @@ relocate_object(Obj_Entry *obj, bool bind_now, Obj_Entry *rtldobj,
 		dbg("relocating \"%s\"", obj->path);
 
 	if (obj->symtab == NULL || obj->strtab == NULL ||
-	    !(obj->valid_hash_sysv || obj->valid_hash_gnu)) {
-		_rtld_error("%s: Shared object has no run-time symbol table",
-			    obj->path);
-		return (-1);
-	}
+	    !(obj->valid_hash_sysv || obj->valid_hash_gnu))
+		dbg("object %s has no run-time symbol table", obj->path);
 
 	/* There are relocations to the write-protected text segment. */
 	if (obj->textrel && reloc_textrel_prot(obj, true) != 0)
@@ -2972,12 +3039,15 @@ resolve_object_ifunc(Obj_Entry *obj, bool bind_now, int flags,
 	if (obj->ifuncs_resolved)
 		return (0);
 	obj->ifuncs_resolved = true;
-	if (!obj->irelative && !((obj->bind_now || bind_now) && obj->gnu_ifunc))
+	if (!obj->irelative && !((obj->bind_now || bind_now) &&
+	    obj->gnu_ifunc) && !obj->non_plt_gnu_ifunc)
 		return (0);
 	if (obj_disable_relro(obj) == -1 ||
 	    (obj->irelative && reloc_iresolve(obj, lockstate) == -1) ||
 	    ((obj->bind_now || bind_now) && obj->gnu_ifunc &&
 	    reloc_gnu_ifunc(obj, flags, lockstate) == -1) ||
+	    (obj->non_plt_gnu_ifunc && reloc_non_plt(obj, &obj_rtld,
+	    flags | SYMLOOK_IFUNC, lockstate) == -1) ||
 	    obj_enforce_relro(obj) == -1)
 		return (-1);
 	return (0);
@@ -3300,8 +3370,10 @@ rtld_dlopen(const char *name, int fd, int mode)
 	    lo_flags |= RTLD_LO_NODELETE;
     if (mode & RTLD_NOLOAD)
 	    lo_flags |= RTLD_LO_NOLOAD;
+    if (mode & RTLD_DEEPBIND)
+	    lo_flags |= RTLD_LO_DEEPBIND;
     if (ld_tracing != NULL)
-	    lo_flags |= RTLD_LO_TRACE;
+	    lo_flags |= RTLD_LO_TRACE | RTLD_LO_IGNSTLS;
 
     return (dlopen_object(name, fd, obj_main, lo_flags,
       mode & (RTLD_MODEMASK | RTLD_GLOBAL), NULL));
@@ -3327,6 +3399,9 @@ dlopen_object(const char *name, int fd, Obj_Entry *refobj, int lo_flags,
     RtldLockState mlockstate;
     int result;
 
+    dbg("dlopen_object name \"%s\" fd %d refobj \"%s\" lo_flags %#x mode %#x",
+      name != NULL ? name : "<null>", fd, refobj == NULL ? "<null>" :
+      refobj->path, lo_flags, mode);
     objlist_init(&initlist);
 
     if (lockstate == NULL && !(lo_flags & RTLD_LO_EARLY)) {
@@ -3351,16 +3426,18 @@ dlopen_object(const char *name, int fd, Obj_Entry *refobj, int lo_flags,
 	if (globallist_next(old_obj_tail) != NULL) {
 	    /* We loaded something new. */
 	    assert(globallist_next(old_obj_tail) == obj);
+	    if ((lo_flags & RTLD_LO_DEEPBIND) != 0)
+		obj->symbolic = true;
 	    result = 0;
-	    if ((lo_flags & RTLD_LO_EARLY) == 0 && obj->static_tls &&
-	      !allocate_tls_offset(obj)) {
+	    if ((lo_flags & (RTLD_LO_EARLY | RTLD_LO_IGNSTLS)) == 0 &&
+	      obj->static_tls && !allocate_tls_offset(obj)) {
 		_rtld_error("%s: No space available "
 		  "for static Thread Local Storage", obj->path);
 		result = -1;
 	    }
 	    if (result != -1)
 		result = load_needed_objects(obj, lo_flags & (RTLD_LO_DLOPEN |
-		    RTLD_LO_EARLY));
+		  RTLD_LO_EARLY | RTLD_LO_IGNSTLS | RTLD_LO_TRACE));
 	    init_dag(obj);
 	    ref_dag(obj);
 	    if (result != -1)

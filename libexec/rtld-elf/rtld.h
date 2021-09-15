@@ -22,7 +22,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/libexec/rtld-elf/rtld.h 346156 2019-04-12 15:15:27Z kib $
  */
 
 #ifndef RTLD_H /* { */
@@ -253,6 +252,7 @@ typedef struct Struct_Obj_Entry {
     bool z_interpose : 1;	/* Interpose all objects but main */
     bool z_nodeflib : 1;	/* Don't search default library path */
     bool z_global : 1;		/* Make the object global */
+    bool z_pie : 1;		/* Object proclaimed itself PIE executable */
     bool static_tls : 1;	/* Needs static TLS allocation */
     bool static_tls_copied : 1;	/* Needs static TLS copying */
     bool ref_nodel : 1;		/* Refcount increased to prevent dlclose */
@@ -303,6 +303,8 @@ TAILQ_HEAD(obj_entry_q, Struct_Obj_Entry);
 #define	RTLD_LO_FILTEES 0x10	/* Loading filtee. */
 #define	RTLD_LO_EARLY	0x20	/* Do not call ctors, postpone it to the
 				   initialization during the image start. */
+#define	RTLD_LO_IGNSTLS 0x40	/* Do not allocate static TLS */
+#define	RTLD_LO_DEEPBIND 0x80	/* Force symbolic for this object */
 
 /*
  * Symbol cache entry used during relocation to avoid multiple lookups
