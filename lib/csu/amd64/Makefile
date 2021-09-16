@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/lib/csu/amd64/Makefile 313538 2017-02-10 07:32:40Z ngie $
-
 .PATH: ${.CURDIR:H}/common
 
 SRCS=		crt1.c crti.S crtn.S
