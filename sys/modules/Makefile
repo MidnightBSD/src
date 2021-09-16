@@ -8,6 +8,8 @@ SUBDIR_PARALLEL=
 # Modules that include binary-only blobs of microcode should be selectable by
 # MK_SOURCELESS_UCODE option (see below).
 
+.include "${SYSDIR}/conf/config.mk"
+
 .if defined(MODULES_OVERRIDE) && !defined(ALL_MODULES)
 SUBDIR=${MODULES_OVERRIDE}
 .else
@@ -372,6 +374,7 @@ SUBDIR=	\
 	${_stg} \
 	stge \
 	${_streams} \
+	${_sume} \
 	${_svr4} \
 	${_sym} \
 	${_syscons} \
@@ -468,7 +471,7 @@ _if_enc=	if_enc
 _if_gif=	if_gif
 _if_gre=	if_gre
 _ipfw_pmod=	ipfw_pmod
-.if ${MK_IPSEC_SUPPORT} != "no"
+.if ${KERN_OPTS:MIPSEC_SUPPORT} && !${KERN_OPTS:MIPSEC}
 _ipsec=		ipsec
 .endif
 .endif
@@ -733,6 +736,7 @@ _ntb=		ntb
 _pms=		pms
 _qlxge=		qlxge
 _qlxgb=		qlxgb
+_sume=		sume
 .if ${MK_SOURCELESS_UCODE} != "no"
 _qlxgbe=	qlxgbe
 _qlnx=		qlnx
@@ -853,8 +857,6 @@ afterinstall: .PHONY
 		kldxref ${DESTDIR}${KMODDIR}; \
 	fi
 .endif
-
-.include "${SYSDIR}/conf/config.mk"
 
 SUBDIR:= ${SUBDIR:u:O}
 
