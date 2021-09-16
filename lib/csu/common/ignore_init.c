@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: trunk/lib/csu/common/ignore_init.c 10423 2018-06-05 22:43:43Z laffer1 $");
+
+#include <sys/param.h>
+#include <sys/elf_common.h>
 
 #include "notes.h"
 

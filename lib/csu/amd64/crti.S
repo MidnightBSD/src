@@ -39,6 +39,3 @@ _fini:
 
 	.section .note.GNU-stack,"",%progbits
 
-	.section .rodata
-
-.ascii "$MidnightBSD: src/lib/csu/amd64/crti.S,v 1.3 2012/10/19 12:54:51 laffer1 Exp $\0"
