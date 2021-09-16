@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/share/mk/bsd.clang-analyze.mk 297434 2016-03-30 23:50:23Z bdrewery $
+# $FreeBSD$
 #
 # Support Clang static analyzer on SRCS.
 #
@@ -14,7 +14,7 @@
 # 				html - generate html in obj.plist/ directories.
 # 				plist - generate xml obj.plist files.
 # 				See also:
-# 				  contrib/llvm/tools/clang/include/clang/StaticAnalyzer/Core/Analyses.def
+# 				  contrib/llvm-project/clang/include/clang/StaticAnalyzer/Core/Analyses.def
 #
 # CLANG_ANALYZE_OUTPUT_DIR	Sets which directory output set by
 # 				CLANG_ANALYZE_OUTPUT is placed into.
