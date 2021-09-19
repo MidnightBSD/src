@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/sys/conf/config.mk 303314 2016-07-25 18:25:19Z bdrewery $
+# $FreeBSD$
 #
 # Common code to marry kernel config(8) goo and module building goo.
 #
@@ -18,6 +18,10 @@ opt_inet.h:
 .if ${MK_INET6_SUPPORT} != "no"
 opt_inet6.h:
 	@echo "#define INET6 1" > ${.TARGET}
+.endif
+.if ${MK_IPSEC_SUPPORT} != "no"
+opt_ipsec.h:
+	@echo "#define IPSEC_SUPPORT 1" > ${.TARGET}
 .endif
 .if ${MK_EISA} != "no"
 opt_eisa.h:
@@ -45,6 +49,9 @@ KERN_OPTS+= INET TCP_OFFLOAD
 .endif
 .if ${MK_INET6_SUPPORT} != "no"
 KERN_OPTS+= INET6
+.endif
+.if ${MK_IPSEC_SUPPORT} != "no"
+KERN_OPTS+= IPSEC_SUPPORT
 .endif
 .if ${MK_EISA} != "no"
 KERN_OPTS+= DEV_EISA

@@ -1,7 +1,5 @@
 PROG= mport.updepends
 
-PROG= mport.list
-
 MPORTDIR= ${SRCTOP}/contrib/mport
 .PATH: ${MPORTDIR}/libexec/${PROG}
 

@@ -246,7 +246,7 @@ fetch(mportInstance *mport, const char *url, const char *dest)
  */
 int
 mport_download(mportInstance *mport, const char *packageName, char **path) {
-	mportIndexEntry **indexEntry;
+	mportIndexEntry **indexEntry = NULL;
 	bool existed = true;
 	int retryCount = 0;
 
@@ -254,13 +254,21 @@ mport_download(mportInstance *mport, const char *packageName, char **path) {
 		RETURN_CURRENT_ERROR;
 	}
 	
-	if (indexEntry == NULL || *indexEntry == NULL)
+	if (indexEntry == NULL || (*indexEntry) == NULL) {
 		SET_ERRORX(1, "Package %s not found in index.\n", packageName);
+		RETURN_CURRENT_ERROR;
+	}
+
+	if ((*indexEntry)->bundlefile == NULL) {
+		SET_ERRORX(1, "Package %s does not contain a bundle file.\n", packageName);
+		RETURN_CURRENT_ERROR;
+	}
 	
 	asprintf(path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 	if (path == NULL) {
 		mport_index_entry_free_vec(indexEntry);
 		SET_ERRORX(1, "%s", "Unable to allocate memory for path.");
+		RETURN_CURRENT_ERROR;
 	}
 
 getfile:
@@ -287,6 +295,7 @@ getfile:
 		free(*path);
 		mport_index_entry_free_vec(indexEntry);
 		SET_ERRORX(1, "Package %s fails hash verification.", packageName);
+		RETURN_CURRENT_ERROR;
 	}
 
 	if (!existed)

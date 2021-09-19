@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -116,7 +115,7 @@ int mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
  */
 int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep)
 {
-  /* extract the meta-files into the a temp dir */
+  /* extract the meta-files into a temp dir */
   char filepath[FILENAME_MAX];
   const char *file;
   char dirtmpl[] = "/tmp/mport.XXXXXXXX";
@@ -276,11 +275,9 @@ int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bu
     case SQLITE_DONE:
       sqlite3_finalize(stmt);
       RETURN_ERRORX(MPORT_ERR_FATAL, "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);    
-      break;
     default:
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-      break;
   }
   
   return MPORT_OK;

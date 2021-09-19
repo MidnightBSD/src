@@ -1,6 +1,157 @@
-$Id: NEWS,v 1.26 2017/07/28 14:57:56 schwarze Exp $
+$Id: NEWS,v 1.34 2019/03/10 09:32:00 schwarze Exp $
 
 This file lists the most important changes in the mandoc.bsd.lv distribution.
+
+Changes in version 1.14.5, released on March 10, 2019
+
+    --- MAJOR NEW FEATURES ---
+ * apropos(1): improve POSIX compliance by accepting case-insensitive
+   extended regular expressions by default
+ * new -O tag[=term] output option (open a page at the definition of a term)
+ * tbl(7) -T html: spanning and horizontal and vertical alignment of cells
+ * tbl(7) -T html: draw lines on the edges of table cells
+ * tbl(7) -T utf8: render lines with the Unicode box drawing characters
+ * mandoc is now able to handle the manual pages of the groff package.
+    --- MINOR NEW FEATURES ---
+ * -T html: new option -O toc (table of contents)
+ * -T html: second argument to -O man to support local and remote links
+ * mdoc(7) .Bd -centered now fills the text contained in it
+ * man-ext .SY and .YS macros (synopsis block)
+ * man-ext .TQ macro (tagged paragraph without vertical space before it)
+ * tbl(7) \& explicit alignment indicator
+ * roff(7) .shift, .while, and .return requests
+ * roff(7) .char request (output glyph definition)
+ * roff(7) .nop request (no operation)
+ * roff(7) .ft request: handle the CB, CI, and CR fonts
+ * roff(7) .if c conditional (character available)
+ * roff(7) \\$@ escape sequence (insert all macro arguments, quoted)
+ * roff(7) \*(.T predefined string (interpolate output device name)
+ * roff(7) \[charNNN] escape sequence (for printable ASCII characters)
+ * roff(7) \# escape sequence (line continuation with comment)
+    --- HTML OUTPUT SYNTAX CORRECTIONS ---
+ * Render .br and \p as <br/>, not as an empty <div>.
+ * Render .Pp and .PP as <p> and automatically close it when needed.
+ * Stop writing empty list elements for non-compact .Bl -tag lists.
+ * Do not put <p> inside <a> if .UR or .MT contain .PP.
+ * Implement tooltips purely in CSS rather than abusing title= attributes.
+    --- MINOR FUNCTIONAL IMPROVEMENTS ---
+ * many improvements to the handling of fill and no-fill mode
+ * tbl(7): better column widths in the presence of horizontal spans
+ * several minor improvements to escape sequence handling
+ * several minor improvements to manual font handling
+ * portability: autodetect need for _GNU_SOURCE or _OPENBSD_SOURCE
+ * portability: autodetect whether less(1) supports the -T option
+ * large numbers of bugfixes of diverse kinds
+    --- STRUCTURAL IMPROVEMENTS ---
+ * Disentangle eqn(7) and tbl(7) from other parser header files,
+   and clean up some parser data structures.
+ * Substantially simplify error and warning message infrastructure.
+    --- THANKS TO ---
+ * John Gardner for crucial help implementing tooltips in CSS.
+ * Alexander Bluhm, Raphael Graf, Ted Unangst (OpenBSD)
+   and Daniel Sabogal (Alpine Linux) for patches.
+ * Anthony Bentley and Jason McIntyre (OpenBSD) for documentation patches,
+   suggesting new features, bug reports, and useful discussions.
+ * Kyle Evans and Baptiste Daroussin (FreeBSD) for minor patches.
+ * Pali Rohar for suggesting multiple new features and for reporting
+   several bugs and missing features.
+ * Klemens Nanni (OpenBSD) for suggesting multiple new features.
+ * Kristaps Dzonsons (bsd.lv), Marc Espie (OpenBSD), Adam Kalisz,
+   and Laura Morales for suggesting new features.
+ * Wolfram Schneider and Yuri Pankov (FreeBSD) for reporting missing features.
+ * Edward Tomasz Napierala (FreeBSD) for suggesting a feature improvement.
+ * Thomas Klausner (NetBSD) and Sevan Janiyan (SmartOS)
+   for bug reports and release testing.
+ * Bryan Steele, Janne Johansson, Kurt Mosiejczuk, Mike Belopuhov, Theo
+   Buehler, Todd Miller (OpenBSD), Andreas Gustafsson, Christos Zoulas,
+   Robert Elz (NetBSD), Kurt Jaeger (FreeBSD), Fabio Scotoni, Kelvin
+   Sherlock, Mark Harris, Orestis Ioannou, Raf Czlonka, and Sean Farrell
+   for bug reports.
+ * Ulrich Spoerlein (FreeBSD), Leah Neukirchen (Void Linux),
+   Matej Cepl (openSUSE), and Jan Stary (MacOS X) for release testing.
+ * Brian Callahan and Stuart Henderson (OpenBSD) for help
+   with the OpenBSD groff port.
+ * Bertrand Garrigues, Branden Robinson, Ralph Corderoy, and Werner
+   Lemberg (GNU troff) for checking groff patches.
+ * Scott Cheloha, Theo de Raadt (OpenBSD)
+   and Natanael Copa (Alpine Linux) for useful discussions.
+
+Changes in version 1.14.4, released on August 8, 2018
+
+    --- MAJOR NEW FEATURES ---
+ * In ASCII output, render mathematical symbols and greek letters
+   as transliterations conveying the characters' meanings rather
+   than trying to imitate their shape.  Consequently, such characters
+   can now be used in portable manual pages.  All the same, please
+   limit their use to contexts where they really matter, for example
+   when showing complicated mathematical formulae.
+ * First steps towards better support for small screens in HTML
+   output (responsive design): avoid most style= attributes, in
+   particular all hard-coded indentations and column widths, and
+   provide a better mandoc.css style sheet with a @media query,
+   using em units throughout, and avoiding redundancy in selectors.
+ * Better HTML output with some more fitting HTML elements, eliminating
+   needless class= attributes, and avoiding various HTML syntax errors
+   (element nesting, URL-fragment syntax, duplicate id= attributes).
+    --- MINOR NEW FEATURES ---
+ * When a man(1) argument contains a slash, imply -l like in man-db.
+ * Use TIOCGWINSZ to reduce the default -Owidth and -Oindent during
+   interactive use on terminals narrower than 79 columns.
+ * Generated PostScript files are now more than 50% smaller.
+ * Terminal rendering of eqn(7) is improved in several respects.
+ * Simplified and nicer output from the mdoc(7) .Lk macro, formatting
+   all links in-line, even long ones.
+ * roff(7) \n+ and \n- numerical register auto-increment and -decrement
+ * roff(7) .nr optional third argument (auto-increment step size)
+ * Autodetect in ./configure whether the compiler can use -W and -static,
+   allowing to build on Solaris 10 and 11 without any configure.local.
+    --- RELIABILITY BUGFIXES ---
+ * Only activate UTF-8 output when the user really selected UTF-8,
+   not some other multibyte character encoding.
+ * Prevent excessive .ll arguments from generating infinite output.
+ * Fix out of bounds accesses to parse buffers that could happen when
+   using renamed or user defined macros after roff(7) conditionals.
+ * Avoid an assertion failure in certain .Bl -column lists.
+ * Avoid a NULL pointer access on deroff() failure after '.SS ""'.
+ * Fix a segfault that could be triggered by two invalid .Dt macros.
+ * Fix two syntax errors in generated PDF files.
+ * Properly state the page size in generated PostScript files.
+ * Close a memory leak caused by missing gzclose(3).
+ * Fix misformatting of man(7) documents lacking .SH macros
+   in PostScript and PDF output.
+ * And many minor bugfixes.
+    --- THANKS TO ---
+ * Marc Espie (OpenBSD) for implementing the size reduction of
+   PostScript files, one additional patch for code simplification,
+   and two bug reports.
+ * Theo Buehler (OpenBSD) for a bugfix patch,
+   and Theo de Raadt (OpenBSD) for checking it.
+ * John Gardner for more than a dozen suggestions regarding HTML output.
+ * Mike Williams for teaching me how to use %%DocumentMedia and
+   setpagedevice in PostScript files.
+ * Werner Lemberg (groff) for feedback on mdoc(7) language changes.
+ * Colin Watson (man-db) for feedback on man-db semantics.
+ * Jason McIntyre (OpenBSD) for lots of feedback and suggestions
+   on diagnostic messages and on the documentation.
+ * Thomas Klausner (NetBSD) for suggesting two new style messages
+   and one new feature, for two bug reports, and for release testing.
+ * Leah Neukirchen (Void Linux) for suggesting a new style message,
+   five bug reports, and release testing.
+ * Anthony Bentley (OpenBSD) for reporting multiple bugs and missing
+   features.
+ * Paul Irofti (OpenBSD) and Nate Bargmann for suggesting new features.
+ * Michael Stapelberg (Debian) for bug reports and release testing.
+ * Christian Weisgerber, Jonathan Gray, Stuart Henderson,
+   Ted Unangst (OpenBSD), Takeshi Nakayama (NetBSD),
+   Anton Lazarov, Jakub Klinkovsky, Jan Stary, Jesper Wallin,
+   Will Backmam, and Wolfgang Mueller for bug reports.
+ * Sevan Janiyan (NetBSD) for additions to lib.in.
+ * George Brown for suggesting code simplifications.
+ * David Coppa, Igor Sobrado (OpenBSD), and Alexander Kuleshov
+   for documentation improvements.
+ * Laura Morales and Raf Czlonka for questions resulting in better
+   documentation.
+ * Yuri Pankov (illumos) for release testing.
 
 Changes in version 1.14.3, released on August 5, 2017
 

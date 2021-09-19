@@ -22,8 +22,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1 2011/12/18 02:23:42 laffer1 Exp $
- * $FreeBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1.4.3 2011/01/16 10:47:35 kib Exp $
  */
 
 
@@ -52,4 +50,3 @@ _start:
 
 	.section .note.GNU-stack,"",%progbits
 
-	.ident	"$MidnightBSD: src/lib/csu/i386-elf/crt1_s.S,v 1.1 2011/12/18 02:23:42 laffer1 Exp $"

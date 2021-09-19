@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* LINTLIBRARY */
 /*-
  * Copyright 1996-1998 John D. Polstra.
@@ -71,6 +70,4 @@ __asm__("eprol:");
 	handle_static_init(argc, argv, env);
 	exit(main(argc, argv, env));
 }
-
-__asm__(".ident\t\"$MidnightBSD$\"");
 

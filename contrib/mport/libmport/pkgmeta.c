@@ -61,6 +61,9 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 {
 	int i;
 
+	if (pack == NULL)
+		return;
+
 	free(pack->name);
 	pack->name = NULL;
 
@@ -111,17 +114,18 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 MPORT_PUBLIC_API void
 mport_pkgmeta_vec_free(mportPackageMeta **vec)
 {
-    int i;
+	mportPackageMeta **pkgmetas = vec;
 
-    if (vec == NULL) 
-	return;
+	if (vec == NULL)
+		return;
 
-    for (i = 0; *(vec + i) != NULL; i++) {
-		mportPackageMeta *pack = *(vec + i);
-        mport_pkgmeta_free(pack);
-    }
+	for (int i = 0; *(pkgmetas + i) != NULL; i++) {
+		mportPackageMeta *pack = *(pkgmetas + i);
+		mport_pkgmeta_free(pack);
+		pack = NULL;
+	}
 
-//    free(vec);
+	free(vec);
 }
 
 
@@ -205,6 +209,9 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
     if (where == NULL)
         RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
 
+    if (mport == NULL)
+    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+
     if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK) {
         sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
@@ -214,7 +221,6 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
         sqlite3_finalize(stmt);
         RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
     }
-
 
     len = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
@@ -252,6 +258,10 @@ mport_pkgmeta_list(mportInstance *mport, mportPackageMeta ***ref)
 {
     sqlite3_stmt *stmt;
     int ret, len;
+
+    if (mport == NULL)
+    	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+
     sqlite3 *db = mport->db;
 
     if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages") != MPORT_OK) {
@@ -298,6 +308,9 @@ mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mport
   int count = 0;
   int ret;
   sqlite3_stmt *stmt;
+
+  if (mport == NULL)
+  	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
   
   /* if the depends are set, there's nothing for us to do */
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
@@ -337,11 +350,15 @@ mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mport
  * 
  * Populate the upwards depends of a pkg using the data in the master database.  
  */
-MPORT_PUBLIC_API int mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
+MPORT_PUBLIC_API int
+mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
 {
   int count = 0;
   int ret;
   sqlite3_stmt *stmt;
+
+  if (mport == NULL)
+  	RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
   
   /* if the depends are set, there's nothing for us to do */
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK) {
@@ -404,7 +421,8 @@ mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *
 }
 
 
-static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
+static int
+populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
 {
 	mportPackageMeta **vec;
 	int done = 0;
@@ -437,7 +455,8 @@ static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db,
 }
 
 
-static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
+static int
+populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 {
 	const char *tmp = 0;
 

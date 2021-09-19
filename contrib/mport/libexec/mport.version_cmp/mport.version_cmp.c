@@ -23,13 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.version_cmp/mport.version_cmp.c,v 1.1 2007/11/26 21:45:02 ctriv Exp $
  */
-
-
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.version_cmp/mport.version_cmp.c,v 1.1 2007/11/26 21:45:02 ctriv Exp $");
 
 #include <stdio.h>
 #include <mport.h>

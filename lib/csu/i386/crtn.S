@@ -33,5 +33,3 @@
 
 	.section .note.GNU-stack,"",%progbits
 
-	.section .rodata
-.ascii "$MidnightBSD: src/lib/csu/i386-elf/crtn.S,v 1.2 2008/05/16 18:43:29 laffer1 Exp $\0"

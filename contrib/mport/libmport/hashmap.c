@@ -3,8 +3,8 @@
  */
 #include "hashmap.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define INITIAL_SIZE (256)
@@ -228,7 +228,7 @@ int hashmap_rehash(map_t in){
 	int old_size;
 	hashmap_element* curr;
 
-	/* Setup the new elements */
+	/* Set up the new elements */
 	hashmap_map *m = (hashmap_map *) in;
 	hashmap_element* temp = (hashmap_element *)
 		calloc(2 * m->table_size, sizeof(hashmap_element));

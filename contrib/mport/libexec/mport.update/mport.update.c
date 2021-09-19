@@ -23,14 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.2 2010/03/10 05:44:13 laffer1 Exp $
  */
-
-
-
-#include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.update/mport.update.c,v 1.2 2010/03/10 05:44:13 laffer1 Exp $");
-
 
 #include <stdlib.h>
 #include <stdio.h>
