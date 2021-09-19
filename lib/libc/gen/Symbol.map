@@ -231,8 +231,6 @@ FBSD_1.0 {
 	readpassphrase;
 	getpass;
 	rewinddir;
-	scandir;
-	alphasort;
 	seed48;
 	seekdir;
 	user_from_uid;
@@ -420,7 +418,9 @@ FBSD_1.4 {
 };
 
 FBSD_1.5 {
+        alphasort;
 	elf_aux_info;
+	scandir;
 	sem_clockwait_np;
 	setproctitle_fast;
 };
