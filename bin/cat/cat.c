@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -44,7 +46,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/cat/cat.c 337733 2018-08-14 01:45:22Z kevans $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -225,10 +227,16 @@ cook_cat(FILE *fp)
 				} else
 					gobble = 0;
 			}
-			if (nflag && (!bflag || ch != '\n')) {
-				(void)fprintf(stdout, "%6d\t", ++line);
-				if (ferror(stdout))
-					break;
+			if (nflag) {
+				if (!bflag || ch != '\n') {
+					(void)fprintf(stdout, "%6d\t", ++line);
+					if (ferror(stdout))
+						break;
+				} else if (eflag) {
+					(void)fprintf(stdout, "%6s\t", "");
+					if (ferror(stdout))
+						break;
+				}
 			}
 		}
 		if (ch == '\n') {
@@ -291,6 +299,7 @@ ilseq:
 static void
 raw_cat(int rfd)
 {
+	long pagesize;
 	int off, wfd;
 	ssize_t nr, nw;
 	static size_t bsize;
@@ -307,9 +316,12 @@ raw_cat(int rfd)
 				bsize = MIN(BUFSIZE_MAX, MAXPHYS * 8);
 			else
 				bsize = BUFSIZE_SMALL;
-		} else
-			bsize = MAX(sbuf.st_blksize,
-			    (blksize_t)sysconf(_SC_PAGESIZE));
+		} else {
+			bsize = sbuf.st_blksize;
+			pagesize = sysconf(_SC_PAGESIZE);
+			if (pagesize > 0)
+				bsize = MAX(bsize, (size_t)pagesize);
+		}
 		if ((buf = malloc(bsize)) == NULL)
 			err(1, "malloc() failure of IO buffer");
 	}
