@@ -1,7 +1,6 @@
 #
-# $FreeBSD: stable/11/lib/libusb/Makefile 356398 2020-01-06 09:21:15Z hselasky $
 #
-# Makefile for the FreeBSD specific LibUSB 2.0
+# Makefile for the MidnightBSD specific LibUSB 2.0
 #
 
 PACKAGE=lib${LIB}
@@ -69,6 +68,7 @@ CFLAGS+=	-I ../../sys
 MLINKS += libusb.3 libusb_get_version.3
 MLINKS += libusb.3 libusb_init.3
 MLINKS += libusb.3 libusb_exit.3
+MLINKS += libusb.3 libusb_has_capability.3
 MLINKS += libusb.3 libusb_strerror.3
 MLINKS += libusb.3 libusb_error_name.3
 MLINKS += libusb.3 libusb_set_debug.3

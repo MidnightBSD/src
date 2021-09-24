@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/lib/libusb/usb.h 331722 2018-03-29 02:50:57Z eadler $ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libusb/libusb10.c 353135 2019-10-06 03:59:05Z kevans $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2009 Sylvestre Gallon. All rights reserved.
  * Copyright (c) 2009 Hans Petter Selasky. All rights reserved.
@@ -1712,5 +1712,20 @@ libusb_error_name(int code)
 		return ("LIBUSB_ERROR_OTHER");
 	default:
 		return ("LIBUSB_ERROR_UNKNOWN");
+	}
+}
+
+int
+libusb_has_capability(uint32_t capability)
+{
+
+	switch (capability) {
+	case LIBUSB_CAP_HAS_CAPABILITY:
+	case LIBUSB_CAP_HAS_HOTPLUG:
+	case LIBUSB_CAP_HAS_HID_ACCESS:
+	case LIBUSB_CAP_SUPPORTS_DETACH_KERNEL_DRIVER:
+		return (1);
+	default:
+		return (0);
 	}
 }
