@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/bin/sh/arith_yacc.h 279503 2015-03-01 21:46:55Z jilles $
+ * $FreeBSD$
  */
 
 #define ARITH_ASS 1
@@ -90,4 +90,5 @@ union yystype {
 
 extern union yystype yylval;
 
+arith_t strtoarith_t(const char *restrict nptr, char **restrict endptr);
 int yylex(void);

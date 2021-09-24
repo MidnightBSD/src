@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -42,7 +44,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/main.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <signal.h>
@@ -239,6 +241,10 @@ cmdloop(int top)
 		}
 	}
 	popstackmark(&smark);
+	if (top && iflag) {
+		out2c('\n');
+		flushout(out2);
+	}
 }
 
 
@@ -292,6 +298,7 @@ static char *
 find_dot_file(char *basename)
 {
 	char *fullname;
+	const char *opt;
 	const char *path = pathval();
 	struct stat statb;
 
@@ -299,7 +306,7 @@ find_dot_file(char *basename)
 	if( strchr(basename, '/'))
 		return basename;
 
-	while ((fullname = padvance(&path, basename)) != NULL) {
+	while ((fullname = padvance(&path, &opt, basename)) != NULL) {
 		if ((stat(fullname, &statb) == 0) && S_ISREG(statb.st_mode)) {
 			/*
 			 * Don't bother freeing here, since it will

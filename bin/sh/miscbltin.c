@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +38,7 @@ static char sccsid[] = "@(#)miscbltin.c	8.4 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/miscbltin.c 359077 2020-03-18 18:10:44Z hrs $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Miscellaneous builtins.
@@ -439,7 +441,7 @@ struct limits {
 	const char *name;
 	const char *units;
 	int	cmd;
-	int	factor;	/* multiply by to get rlim_{cur,max} values */
+	short	factor;	/* multiply by to get rlim_{cur,max} values */
 	char	option;
 };
 

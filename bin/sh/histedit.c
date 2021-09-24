@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)histedit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/histedit.c 345617 2019-03-27 22:09:35Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <limits.h>
@@ -124,7 +124,7 @@ histedit(void)
 				el_set(el, EL_PROMPT, getprompt);
 				el_set(el, EL_ADDFN, "sh-complete",
 				    "Filename completion",
-				    _el_fn_sh_complete);
+				    _el_fn_complete);
 			} else {
 bad:
 				out2fmt_flush("sh: can't initialize editing\n");
@@ -139,8 +139,10 @@ bad:
 		if (el) {
 			if (Vflag)
 				el_set(el, EL_EDITOR, "vi");
-			else if (Eflag)
+			else if (Eflag) {
 				el_set(el, EL_EDITOR, "emacs");
+				el_set(el, EL_BIND, "^R", "em-inc-search-prev", NULL);
+			}
 			el_set(el, EL_BIND, "^I", "sh-complete", NULL);
 			el_source(el, NULL);
 		}
@@ -376,10 +378,10 @@ histcmd(int argc, char **argv __unused)
 		char *editcmd;
 
 		fclose(efp);
+		INTON;
 		editcmd = stalloc(strlen(editor) + strlen(editfile) + 2);
 		sprintf(editcmd, "%s %s", editor, editfile);
 		evalstring(editcmd, 0);	/* XXX - should use no JC command */
-		INTON;
 		readcmdfile(editfile);	/* XXX - should read back - quick tst */
 		unlink(editfile);
 	}

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -13,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)output.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: stable/11/bin/sh/output.h 345617 2019-03-27 22:09:35Z jilles $
+ * $FreeBSD$
  */
 
 #ifndef OUTPUT_INCL
@@ -41,7 +43,7 @@
 
 struct output {
 	char *nextc;
-	int nleft;
+	char *bufend;
 	char *buf;
 	int bufsize;
 	short fd;
@@ -77,7 +79,7 @@ void doformat(struct output *, const char *, va_list) __printflike(2, 0);
 FILE *out1fp(void);
 int xwrite(int, const char *, int);
 
-#define outc(c, file)	(--(file)->nleft < 0? (emptyoutbuf(file), *(file)->nextc++ = (c)) : (*(file)->nextc++ = (c)))
+#define outc(c, file)	((file)->nextc == (file)->bufend ? (emptyoutbuf(file), *(file)->nextc++ = (c)) : (*(file)->nextc++ = (c)))
 #define out1c(c)	outc(c, out1);
 #define out2c(c)	outcslow(c, out2);
 

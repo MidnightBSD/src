@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)jobs.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/jobs.c 345561 2019-03-26 22:34:07Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/ioctl.h>
 #include <sys/param.h>
@@ -1007,9 +1007,11 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
 	pid_t pid;
 	struct jmploc jmploc;
 	struct jmploc *savehandler;
+	int inton;
 
 	TRACE(("vforkexecshell(%%%td, %s, %p) called\n", jp - jobtab, argv[0],
 	    (void *)pip));
+	inton = is_int_on();
 	INTOFF;
 	flushall();
 	savehandler = handler;
@@ -1044,7 +1046,7 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
 		setcurjob(jp);
 #endif
 	}
-	INTON;
+	SETINTON(inton);
 	TRACE(("In parent shell:  child = %d\n", (int)pid));
 	return pid;
 }
@@ -1070,7 +1072,7 @@ vforkexecshell(struct job *jp, char **argv, char **envp, const char *path, int i
  */
 
 int
-waitforjob(struct job *jp, int *origstatus)
+waitforjob(struct job *jp, int *signaled)
 {
 #if JOBS
 	int propagate_int = jp->jobctl && jp->foreground;
@@ -1093,8 +1095,8 @@ waitforjob(struct job *jp, int *origstatus)
 		setcurjob(jp);
 #endif
 	status = getjobstatus(jp);
-	if (origstatus != NULL)
-		*origstatus = status;
+	if (signaled != NULL)
+		*signaled = WIFSIGNALED(status);
 	/* convert to 8 bits */
 	if (WIFEXITED(status))
 		st = WEXITSTATUS(status);

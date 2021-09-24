@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/bin/sh/arith_yacc.c 270246 2014-08-20 20:15:43Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <errno.h>
@@ -104,7 +104,7 @@ static arith_t arith_lookupvarint(char *varname)
 	if (str == NULL || *str == '\0')
 		str = "0";
 	errno = 0;
-	result = strtoarith_t(str, &p, 0);
+	result = strtoarith_t(str, &p);
 	if (errno != 0 || *p != '\0')
 		yyerror("variable conversion error");
 	return result;
