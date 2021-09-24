@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_sincosl.c 324006 2017-09-26 09:01:56Z dim $");
+
 
 #include <float.h>
 #ifdef __i386__

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_fmodl.c 181063 2008-07-31 20:09:47Z das $");
+
 
 #include <float.h>
 #include <stdint.h>

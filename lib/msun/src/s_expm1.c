@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_expm1.c 352835 2019-09-28 08:57:29Z dim $");
+
 
 /* expm1(x)
  * Returns exp(x)-1, the exponential of x minus 1.

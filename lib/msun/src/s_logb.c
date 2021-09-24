@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_logb.c 176101 2008-02-08 01:22:13Z bde $");
+
 
 /*
  * double logb(x)

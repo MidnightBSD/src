@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tanhf.c 270847 2014-08-30 17:31:53Z kargl $");
+
 
 #include "math.h"
 #include "math_private.h"

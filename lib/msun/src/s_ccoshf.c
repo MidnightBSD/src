@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_ccoshf.c 331722 2018-03-29 02:50:57Z eadler $");
+
 
 #include <complex.h>
 #include <math.h>
@@ -41,7 +41,7 @@ static const float huge = 0x1p127;
 float complex
 ccoshf(float complex z)
 {
-	float x, y, h;
+	volatile float x, y, h;
 	int32_t hx, hy, ix, iy;
 
 	x = crealf(z);

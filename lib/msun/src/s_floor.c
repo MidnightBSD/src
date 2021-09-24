@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_floor.c 176305 2008-02-15 07:01:40Z bde $");
+
 
 /*
  * floor(x)

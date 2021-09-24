@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/k_sincosl.h 354794 2019-11-17 18:26:07Z lwhsu $");
+
 
 #if LDBL_MANT_DIG == 64		/* ld80 version of k_sincosl.c. */
 
