@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_fabs.c 324006 2017-09-26 09:01:56Z dim $");
+
 
 /*
  * fabs(x) returns the absolute value of x.

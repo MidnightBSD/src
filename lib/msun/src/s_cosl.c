@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_cosl.c 331722 2018-03-29 02:50:57Z eadler $");
+
 
 /*
  * Limited testing on pseudorandom numbers drawn within [-2e8:4e8] shows

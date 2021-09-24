@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_cosh.c 260067 2013-12-30 01:06:21Z kargl $");
+
 
 /* __ieee754_cosh(x)
  * Method : 

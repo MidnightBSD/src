@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_asinhl.c 251599 2013-06-10 06:04:58Z das $");
+
 
 /*
  * See s_asinh.c for complete comments.

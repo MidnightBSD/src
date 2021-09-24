@@ -10,7 +10,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_nexttowardf.c 218511 2011-02-10 07:38:38Z das $");
+
 
 #include <float.h>
 

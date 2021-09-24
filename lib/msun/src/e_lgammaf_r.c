@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/e_lgammaf_r.c 324006 2017-09-26 09:01:56Z dim $");
+
 
 #include "math.h"
 #include "math_private.h"

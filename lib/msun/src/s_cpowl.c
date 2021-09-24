@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_cpowl.c 336767 2018-07-27 17:39:36Z dim $");
+
 
 #include <complex.h>
 #include <math.h>

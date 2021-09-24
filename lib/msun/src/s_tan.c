@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_tan.c 218509 2011-02-10 07:37:50Z das $");
+
 
 /* tan(x)
  * Return tangent function of x.

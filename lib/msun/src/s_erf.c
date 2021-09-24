@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_erf.c 268593 2014-07-13 17:05:03Z kargl $");
+
 
 /* double erf(double x)
  * double erfc(double x)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/src/imprecise.c 336767 2018-07-27 17:39:36Z dim $
+ * $FreeBSD$
  */
 
 #include <float.h>

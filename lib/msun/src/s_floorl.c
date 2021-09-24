@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/src/s_floorl.c 176280 2008-02-14 15:10:34Z bde $");
+
 
 /*
  * floorl(x)
