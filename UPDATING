@@ -5,6 +5,10 @@ Updating Information for MidnightBSD users.
 
 	Libucl 0.8.1
 
+	root shell changed to tcsh for now. We may change this again.  (was csh)
+
+	/bin/sh updated based on freebsd 12-stable sources as of today.
+
 20210923:
 	Update pci vendor ids
 
