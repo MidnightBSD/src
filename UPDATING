@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20210924:
+	Introduce a patch to dummynet from pfsense to increase max value to 4Gb/s instead of 2Gb/s.
+
+20210923:
+	Update pci vendor ids
+
+	add libusb_has_capability to libusb
+
+	use md library sha256 implementation for lzma
+
 20210921:
 	MidnightBSD 2.1.0 released. Coninuing 2.2 development. 
 
