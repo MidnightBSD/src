@@ -86,14 +86,14 @@ which are usually found in
 .Pa /usr/src ,
 .Pa /usr/doc ,
 and
-.Pa /usr/ports .
+.Pa /usr/mports .
 As a rule, the system administrator creates
 .Nm
 when the values of certain control variables need to be changed
 from their defaults.
 .Pp
 The system build procedures occur in four broad areas:
-the world, the kernel, documentation and ports.
+the world, the kernel, documentation and mports.
 Variables set in
 .Nm
 may be applicable in one, two, or all four of these areas.
@@ -223,7 +223,7 @@ Set this to not update the doc tree during
 .Dq Li "make update" .
 .It Va NO_PORTSUPDATE
 .Pq Vt bool
-Set this to not update the ports tree during
+Set this to not update the mports tree during
 .Dq Li "make update" .
 .It Va SVN_UPDATE
 .Pq Vt bool
@@ -304,7 +304,7 @@ during
 .Pq Vt bool
 Set to not build modules with the kernel.
 .It Va PORTS_MODULES
-Set this to the list of ports you wish to rebuild every time the kernel
+Set this to the list of mports you wish to rebuild every time the kernel
 is built.
 .It Va WITHOUT_MODULES
 .Pq Vt str
@@ -633,7 +633,7 @@ for postscript or graphics printers with a ghostscript
 filter, or both.
 .El
 .Ss "BUILDING PORTS"
-Several make variables can be set that affect the building of ports.
+Several make variables can be set that affect the building of mports.
 These variables and their effects are documented in
 .Xr ports 7 ,
 .Pa ${PORTSDIR}/Mk/*
@@ -644,7 +644,7 @@ Porter's Handbook.
 .Bl -tag -width ".Pa /usr/share/examples/etc/make.conf" -compact
 .It Pa /etc/make.conf
 .It Pa /usr/doc/Makefile
-.It Pa /usr/ports/Makefile
+.It Pa /usr/mports/Makefile
 .It Pa /usr/share/examples/etc/make.conf
 .It Pa /usr/share/mk/sys.mk
 .It Pa /usr/src/Makefile
