@@ -1,6 +1,6 @@
-# $FreeBSD: stable/11/lib/libucl/Makefile 353450 2019-10-12 01:02:45Z gjb $
+# $FreeBSD$
 
-LIBUCL=	${.CURDIR}/../../contrib/libucl
+LIBUCL=	${SRCTOP}/contrib/libucl
 
 PACKAGE=lib${LIB}
 LIB=		ucl
@@ -23,7 +23,7 @@ SRCS=		ucl_emitter_streamline.c \
 INCS=		ucl.h
 LIBADD=		m
 
-WARNS=		1
+WARNS?=		1
 CFLAGS+=	-I${LIBUCL}/include \
 		-I${LIBUCL}/src \
 		-I${LIBUCL}/uthash \
