@@ -1,5 +1,4 @@
 #  @(#)Makefile 5.1beta 93/09/24
-# $FreeBSD: stable/11/lib/msun/Makefile 336767 2018-07-27 17:39:36Z dim $
 #
 #  ====================================================
 #  Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -33,6 +32,16 @@ CFLAGS+=	-I${.CURDIR}/ld128
 .endif
 
 CFLAGS+=	-I${.CURDIR}/${ARCH_SUBDIR}
+
+.include <bsd.compiler.mk>
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 100000 && \
+    (${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386")
+# When using clang with x86_64 CPUs that support AVX, some floating point
+# transformations may raise exceptions that would not have been raised by the
+# original code. To avoid this, use the -fp-exception-behavior=maytrap flag,
+# introduced in clang 10.0.0.
+CFLAGS+=	-ffp-exception-behavior=maytrap
+.endif
 
 .PATH:	${.CURDIR}/bsdsrc
 .PATH:	${.CURDIR}/src
@@ -108,6 +117,13 @@ COMMON_SRCS+=	catrigl.c \
 	s_nextafterl.c s_nexttoward.c s_remquol.c s_rintl.c s_roundl.c \
 	s_scalbnl.c s_sinl.c s_sincosl.c \
 	s_tanhl.c s_tanl.c s_truncl.c w_cabsl.c
+# Work around this warning from gcc 6:
+#     lib/msun/ld80/e_powl.c:275:1: error: floating constant exceeds range of
+#     'long double' [-Werror=overflow]
+#     if( y >= LDBL_MAX )
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60000
+CFLAGS.e_powl.c+= -Wno-error=overflow
+.endif
 .endif
 
 # C99 complex functions
@@ -119,7 +135,7 @@ COMMON_SRCS+=	catrig.c catrigf.c \
 	s_cproj.c s_cprojf.c s_creal.c s_crealf.c s_creall.c \
 	s_csinh.c s_csinhf.c s_ctanh.c s_ctanhf.c
 
-# FreeBSD's C library supplies these functions:
+# BSD's C library supplies these functions:
 #COMMON_SRCS+=	s_fabs.c s_frexp.c s_isnan.c s_ldexp.c s_modf.c
 
 # Exclude the generic versions of what we provide in the MD area.
