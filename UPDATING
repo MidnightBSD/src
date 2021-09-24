@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20210924:
 	Introduce a patch to dummynet from pfsense to increase max value to 4Gb/s instead of 2Gb/s.
 
+	Libucl 0.8.1
+
 20210923:
 	Update pci vendor ids
 
