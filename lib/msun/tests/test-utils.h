@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/tests/test-utils.h 315121 2017-03-12 04:52:09Z ngie $
+ * $FreeBSD$
  */
 
 #ifndef	_TEST_UTILS_H_

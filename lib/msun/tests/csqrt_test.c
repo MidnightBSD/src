@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/msun/tests/csqrt_test.c 323475 2017-09-12 00:26:56Z rlibby $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

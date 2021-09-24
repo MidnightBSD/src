@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: stable/11/lib/msun/tests/lround_test.t 292497 2015-12-20 05:06:44Z ngie $
+# $FreeBSD$
 
 cd `dirname $0`
 

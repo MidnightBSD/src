@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/msun/tests/ilogb_test.c 292328 2015-12-16 09:11:11Z ngie $
+ * $FreeBSD$
  */
 
 #include <assert.h>
