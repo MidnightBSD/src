@@ -41,7 +41,7 @@
 
 /* Extra functions from NetBSD standalone printf.c */
 
-static u_int globaldiv;
+static u_int globaldiv = 16;
 
 void
 twiddle(u_int callerdiv)

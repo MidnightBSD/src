@@ -54,7 +54,7 @@ cons_probe(void)
     char		*prefconsole;
 
     /* We want a callback to install the new value when this var changes. */
-    env_setenv("twiddle_divisor", EV_VOLATILE, "1", twiddle_set, env_nounset);
+    env_setenv("twiddle_divisor", EV_VOLATILE, "16", twiddle_set, env_nounset);
 
     /* Do all console probes */
     for (cons = 0; consoles[cons] != NULL; cons++) {
