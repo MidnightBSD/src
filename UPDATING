@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20210930:
+	MidnightBSD 2.1.1
+
+	Fix a bug on install media with libperl.so symbolic link
+
+	Switch default pager to less.
+
+	Switch default root shell to tcsh
+
+	Add siginfo to chflags
+
+	Lower 'twiddle' in lower to speed up boot time.
+
+20210921:
+	MidnightBSD 2.1.0
+
 20210911:
 	Update mandoc
 
