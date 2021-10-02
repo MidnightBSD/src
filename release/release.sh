@@ -56,30 +56,32 @@ usage() {
 env_setup() {
 	# The directory within which the release will be built.
 	CHROOTDIR="/scratch"
-	RELENGDIR="$(dirname $(realpath ${0}))"
+	if [ -z "${RELENGDIR}" ]; then
+		export RELENGDIR="$(dirname $(realpath ${0}))"
+	fi
 
 	# The default version control system command to obtain the sources.
 	for _dir in /usr/bin /usr/local/bin; do
-		for _svn in svn svnlite; do
-			[ -x "${_dir}/${_svn}" ] && VCSCMD="${_dir}/${_svn}"
-			[ ! -z "${VCSCMD}" ] && break 2
-		done
+		[ -x "${_dir}/git" ] && VCSCMD="/${_dir}/git"
+		[ ! -z "${VCSCMD}" ] && break 2
 	done
-	VCSCMD="${VCSCMD} checkout"
 
-	# The default svn checkout server, and svn branches for src/, doc/,
-	# and mports/.
-	SVNROOT="svn://svn.MidnightBSD.org/svn/"
-	SRCBRANCH="base/trunk@rHEAD"
-	DOCBRANCH="doc/trunk@rHEAD"
-	PORTBRANCH="mports/trunk@rHEAD"
+	if [ -z "${VCSCMD}" -a -z "${NOGIT}" ]; then
+		echo "*** The devel/git port/package is required."
+		exit 1
+	fi
+	VCSCMD="/usr/local/bin/git clone -q"
+
+	# The default git checkout server, and branches for src/, doc/,
+	# and ports/.
+	GITROOT="https://github.com/midnightbsd/"
+	SRCBRANCH="master"
+	PORTBRANCH="master"
+	GITSRC="src.git"
+	GITPORTS="mports.git"
 
 	# Set for embedded device builds.
 	EMBEDDEDBUILD=
-
-	# Sometimes one needs to checkout src with --force svn option.
-	# If custom kernel configs copied to src tree before checkout, e.g.
-	SRC_FORCE_CHECKOUT=
 
 	# The default make.conf and src.conf to use.  Set to /dev/null
 	# by default to avoid polluting the chroot(8) environment with
@@ -128,20 +130,10 @@ env_setup() {
 # in env_setup() if '-c <release.conf>' is specified.
 env_check() {
 	chroot_build_release_cmd="chroot_build_release"
-	# Fix for backwards-compatibility with release.conf that does not have
-	# the trailing '/'.
-	case ${SVNROOT} in
-		*svn*)
-			SVNROOT="${SVNROOT}/"
-			;;
-		*)
-			;;
-	esac
 
-	# Prefix the branches with the SVNROOT for the full checkout URL.
-	SRCBRANCH="${SVNROOT}${SRCBRANCH}"
-	DOCBRANCH="${SVNROOT}${DOCBRANCH}"
-	PORTBRANCH="${SVNROOT}${PORTBRANCH}"
+	# Prefix the branches with the GITROOT for the full checkout URL.
+	SRC="${GITROOT}${GITSRC}"
+	PORT="${GITROOT}${GITPORTS}"
 
 	if [ -n "${EMBEDDEDBUILD}" ]; then
 		WITH_DVD=
@@ -156,41 +148,26 @@ env_check() {
 		esac
 	fi
 
-	# If PORTS is set and NODOC is unset, force NODOC=yes because the mports
-	# tree is required to build the documentation set.
-	if [ -n "${NOPORTS}" ] && [ -z "${NODOC}" ]; then
-		echo "*** NOTICE: Setting NODOC=1 since mports tree is required"
-		echo "            and NOPORTS is set."
-		NODOC=yes
-	fi
-
-	# If NOSRC, NOPORTS and/or NODOC are unset, they must not pass to make
+	# If NOSRC and/or NOPORTS are unset, they must not pass to make
 	# as variables.  The release makefile verifies definedness of the
-	# NOPORTS/NODOC variables instead of their values.
-	SRCDOCPORTS=
+	# NOPORTS variable instead of its value.
+	SRCPORTS=
 	if [ -n "${NOPORTS}" ]; then
-		SRCDOCPORTS="NOPORTS=yes"
-	fi
-	if [ -n "${NODOC}" ]; then
-		SRCDOCPORTS="${SRCDOCPORTS}${SRCDOCPORTS:+ }NODOC=yes"
+		SRCPORTS="NOPORTS=yes"
 	fi
 	if [ -n "${NOSRC}" ]; then
-		SRCDOCPORTS="${SRCDOCPORTS}${SRCDOCPORTS:+ }NOSRC=yes"
+		SRCPORTS="${SRCPORTS}${SRCPORTS:+ }NOSRC=yes"
 	fi
 
 	# The aggregated build-time flags based upon variables defined within
 	# this file, unless overridden by release.conf.  In most cases, these
 	# will not need to be changed.
 	CONF_FILES="__MAKE_CONF=${MAKE_CONF} SRCCONF=${SRC_CONF}"
+	NOCONF_FILES="__MAKE_CONF=/dev/null SRCCONF=/dev/null"
 	if [ -n "${TARGET}" ] && [ -n "${TARGET_ARCH}" ]; then
 		ARCH_FLAGS="TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH}"
 	else
 		ARCH_FLAGS=
-	fi
-	# Force src checkout if configured
-	FORCE_SRC_KEY=
-	if [ -n "${SRC_FORCE_CHECKOUT}" ]; then
-		FORCE_SRC_KEY="--force"
 	fi
 
 	if [ -z "${CHROOTDIR}" ]; then
@@ -210,15 +187,15 @@ env_check() {
 
 	CHROOT_MAKEENV="${CHROOT_MAKEENV} \
 		MAKEOBJDIRPREFIX=${CHROOTDIR}/tmp/obj"
-	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${CONF_FILES}"
-	CHROOT_IMAKEFLAGS="${CONF_FILES}"
-	CHROOT_DMAKEFLAGS="${CONF_FILES}"
+	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
 	RELEASE_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${ARCH_FLAGS} \
 		${CONF_FILES}"
 	RELEASE_KMAKEFLAGS="${MAKE_FLAGS} ${KERNEL_FLAGS} \
 		KERNCONF=\"${KERNEL}\" ${ARCH_FLAGS} ${CONF_FILES}"
 	RELEASE_RMAKEFLAGS="${ARCH_FLAGS} \
-		KERNCONF=\"${KERNEL}\" ${CONF_FILES} ${SRCDOCPORTS} \
+		KERNCONF=\"${KERNEL}\" ${CONF_FILES} ${SRCPORTS} \
 		WITH_DVD=${WITH_DVD} WITH_VMIMAGES=${WITH_VMIMAGES} \
 		WITH_CLOUDWARE=${WITH_CLOUDWARE} XZ_THREADS=${XZ_THREADS}"
 
@@ -231,13 +208,18 @@ chroot_setup() {
 	mkdir -p ${CHROOTDIR}/usr
 
 	if [ -z "${SRC_UPDATE_SKIP}" ]; then
-		${VCSCMD} ${FORCE_SRC_KEY} ${SRCBRANCH} ${CHROOTDIR}/usr/src
-	fi
-	if [ -z "${NODOC}" ] && [ -z "${DOC_UPDATE_SKIP}" ]; then
-		${VCSCMD} ${DOCBRANCH} ${CHROOTDIR}/usr/doc
+		if [ -d "${CHROOTDIR}/usr/src/.git" ]; then
+			git -C ${CHROOTDIR}/usr/src pull -q
+		else
+			${VCSCMD} ${SRC} -b ${SRCBRANCH} ${CHROOTDIR}/usr/src
+		fi
 	fi
 	if [ -z "${NOPORTS}" ] && [ -z "${PORTS_UPDATE_SKIP}" ]; then
-		${VCSCMD} ${PORTBRANCH} ${CHROOTDIR}/usr/mports
+		if [ -d "${CHROOTDIR}/usr/mports/.git" ]; then
+			git -C ${CHROOTDIR}/usr/mports pull -q
+		else
+			${VCSCMD} ${PORT} -b ${PORTBRANCH} ${CHROOTDIR}/usr/mports
+		fi
 	fi
 
 	if [ -z "${CHROOTBUILD_SKIP}" ]; then
@@ -274,24 +256,37 @@ extra_chroot_setup() {
 		cp ${SRC_CONF} ${CHROOTDIR}/${SRC_CONF}
 	fi
 
-	if [ -d ${CHROOTDIR}/usr/mports ]; then
-		# Trick the mports 'run-autotools-fixup' target to do the right
-		# thing.
-		_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
-		REVISION=$(chroot ${CHROOTDIR} make -C /usr/src/release -V REVISION)
-		BRANCH=$(chroot ${CHROOTDIR} make -C /usr/src/release -V BRANCH)
-		UNAME_r=${REVISION}-${BRANCH}
-		if [ -d ${CHROOTDIR}/usr/doc ] && [ -z "${NODOC}" ]; then
+	if [ -z "${NOGIT}" ]; then
+		# Install git from ports or packages if the ports tree is
+		# available and VCSCMD is unset.
+		_gitcmd="$(which git)"
+		if [ -d ${CHROOTDIR}/usr/mports -a -z "${_gitcmd}" ]; then
+			# Trick the ports 'run-autotools-fixup' target to do the right
+			# thing.
+			_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
+			REVISION=$(chroot ${CHROOTDIR} make -C /usr/src/release -V REVISION)
+			BRANCH=$(chroot ${CHROOTDIR} make -C /usr/src/release -V BRANCH)
+			UNAME_r=${REVISION}-${BRANCH}
+			GITUNSETOPTS="CONTRIB CURL CVS GITWEB GUI HTMLDOCS"
+			GITUNSETOPTS="${GITUNSETOPTS} ICONV NLS P4 PERL"
+			GITUNSETOPTS="${GITUNSETOPTS} SEND_EMAIL SUBTREE SVN"
+			GITUNSETOPTS="${GITUNSETOPTS} PCRE PCRE2"
 			PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 			PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 			PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
 			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
 			PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
-			chroot ${CHROOTDIR} env ${PBUILD_FLAGS} \
-				OPTIONS_UNSET="AVAHI FOP IGOR" make -C \
-				/usr/mports/textproc/docproj \
-				FORCE_PKG_REGISTER=1 \
+			eval chroot ${CHROOTDIR} env OPTIONS_UNSET=\"${GITUNSETOPTS}\" \
+				${PBUILD_FLAGS} \
+				make -C /usr/mports/devel/git FORCE_PKG_REGISTER=1 \
+				WRKDIRPREFIX=/tmp/mports \
+				DISTDIR=/tmp/distfiles \
 				install clean distclean
+		else
+			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
+				mport install git
+			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
+				mport clean
 		fi
 	fi
 
@@ -299,6 +294,7 @@ extra_chroot_setup() {
 		_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
 		REVISION=$(chroot ${CHROOTDIR} make -C /usr/src/release -V REVISION)
 		BRANCH=$(chroot ${CHROOTDIR} make -C /usr/src/release -V BRANCH)
+		UNAME_r=${REVISION}-${BRANCH}
 		PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 		PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 		PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
@@ -307,7 +303,7 @@ extra_chroot_setup() {
 		for _PORT in ${EMBEDDEDPORTS}; do
 			eval chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
 				/usr/mports/${_PORT} \
-				FORCE_PKG_REGISTER=1 install clean distclean
+				FORCE_PKG_REGISTER=1 deinstall install clean distclean
 		done
 	fi
 
@@ -387,11 +383,15 @@ chroot_arm_build_release() {
 			;;
 	esac
 	[ ! -z "${RELEASECONF}" ] && . "${RELEASECONF}"
-	WORLDDIR="$(eval chroot ${CHROOTDIR} make -C /usr/src/release -V WORLDDIR)"
-	OBJDIR="$(eval chroot ${CHROOTDIR} make -C /usr/src/release -V .OBJDIR)"
-	DESTDIR="${OBJDIR}/${KERNEL}"
-	IMGBASE="${CHROOTDIR}/${OBJDIR}/${KERNEL}.img"
-	OSRELEASE="$(eval chroot ${CHROOTDIR} make -C /usr/src/release \
+	export MAKE_FLAGS="${MAKE_FLAGS} TARGET=${EMBEDDED_TARGET}"
+	export MAKE_FLAGS="${MAKE_FLAGS} TARGET_ARCH=${EMBEDDED_TARGET_ARCH}"
+	export MAKE_FLAGS="${MAKE_FLAGS} ${CONF_FILES}"
+	eval chroot ${CHROOTDIR} env WITH_UNIFIED_OBJDIR=1 make ${MAKE_FLAGS} -C /usr/src/release obj
+	export WORLDDIR="$(eval chroot ${CHROOTDIR} make ${MAKE_FLAGS} -C /usr/src/release -V WORLDDIR)"
+	export OBJDIR="$(eval chroot ${CHROOTDIR} env WITH_UNIFIED_OBJDIR=1 make ${MAKE_FLAGS} -C /usr/src/release -V .OBJDIR)"
+	export DESTDIR="${OBJDIR}/${KERNEL}"
+	export IMGBASE="${CHROOTDIR}/${OBJDIR}/${BOARDNAME}.img"
+	export OSRELEASE="$(eval chroot ${CHROOTDIR} make ${MAKE_FLAGS} -C /usr/src/release \
 		TARGET=${EMBEDDED_TARGET} TARGET_ARCH=${EMBEDDED_TARGET_ARCH} \
 		-V OSRELEASE)"
 	chroot ${CHROOTDIR} mkdir -p ${DESTDIR}
@@ -404,11 +404,11 @@ chroot_arm_build_release() {
 	arm_install_uboot
 	mdconfig -d -u ${mddev}
 	chroot ${CHROOTDIR} rmdir ${DESTDIR}
-	mv ${IMGBASE} ${CHROOTDIR}/${OBJDIR}/${OSRELEASE}-${KERNEL}.img
+	mv ${IMGBASE} ${CHROOTDIR}/${OBJDIR}/${OSRELEASE}-${BOARDNAME}.img
 	chroot ${CHROOTDIR} mkdir -p /R
-	chroot ${CHROOTDIR} cp -p ${OBJDIR}/${OSRELEASE}-${KERNEL}.img \
-		/R/${OSRELEASE}-${KERNEL}.img
-	chroot ${CHROOTDIR} xz -T ${XZ_THREADS} /R/${OSRELEASE}-${KERNEL}.img
+	chroot ${CHROOTDIR} cp -p ${OBJDIR}/${OSRELEASE}-${BOARDNAME}.img \
+		/R/${OSRELEASE}-${BOARDNAME}.img
+	chroot ${CHROOTDIR} xz -T ${XZ_THREADS} /R/${OSRELEASE}-${BOARDNAME}.img
 	cd ${CHROOTDIR}/R && sha512 ${OSRELEASE}* \
 		> CHECKSUM.SHA512
 	cd ${CHROOTDIR}/R && sha256 ${OSRELEASE}* \

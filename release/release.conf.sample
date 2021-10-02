@@ -1,7 +1,5 @@
 #!/bin/sh
 #
-# $MidnightBSD$
-#
 
 ## Redefine environment variables here to override prototypes
 ## defined in release.sh.
@@ -12,23 +10,19 @@
 ## Set the directory within which the release will be built.
 CHROOTDIR="/scratch"
 
-## Set the svn host.
-SVNROOT="svn://svn.MidnightBSD.org/svn/"
+## Do not explicitly require the devel/git port to be installed.
+#NOGIT=1
+## Set the version control system host.
+GITROOT="https://github.com/midnightbsd/"
+GITSRC="src.git"
+GITPORTS="mports.git"
 
 ## Set the src/, mports/, and doc/ branches or tags.
-SRCBRANCH="base/stable/1@rHEAD"
-DOCBRANCH="doc/trunk@rHEAD"
-PORTBRANCH="mports/trunk@rHEAD"
+SRCBRANCH="master"
+PORTBRANCH="master"
 
-## Run svn co --force for src checkout.
-#SRC_FORCE_CHECKOUT=yes
-
-## Sample configuration for using git instead of svn.
-#VCSCMD="/usr/local/bin/git clone --branch master"
-#SVNROOT=""
-#SRCBRANCH="https://github.com/midnightbsd/src"
-#DOCBRANCH="https://github.com/midnightbsd/midnightbsd-doc"
-#PORTBRANCH="https://github.com/midnightbsd/mports"
+## Sample configuration for using git from ports.
+#GITCMD="/usr/local/bin/git clone -q --branch main"
 
 ## Set to override the default target architecture.
 #TARGET="amd64"
@@ -49,7 +43,6 @@ PORTBRANCH="mports/trunk@rHEAD"
 #KERNEL_FLAGS="-j $(( $(( $(sysctl -n hw.ncpu) + 1 )) / 2 ))"
 
 ## Set miscellaneous 'make release' settings.
-#NODOC=
 #NOPORTS=
 #NOSRC=
 #WITH_DVD=
@@ -84,10 +77,6 @@ PORTBRANCH="mports/trunk@rHEAD"
 ## the chroot.  This is intended for use when /usr/src already exists.
 #SRC_UPDATE_SKIP=
 
-## Set to a non-empty value skip checkout or update of /usr/doc in
-## the chroot.  This is intended for use when /usr/doc already exists.
-#DOC_UPDATE_SKIP=
-
 ## Set to a non-empty value skip checkout or update of /usr/ports in
 ## the chroot.  This is intended for use when /usr/ports already exists.
 #PORTS_UPDATE_SKIP=
@@ -110,8 +99,8 @@ PORTBRANCH="mports/trunk@rHEAD"
 
 ## If WITH_VMIMAGES is set to a non-empty value, this is the size of the
 ## virtual machine disk filesystem.  Valid size values are described in
-## the truncate(1) manual page.
-#VMSIZE="20G"
+## the makefs(8) manual page.
+#VMSIZE="20g"
 
 ## If WITH_VMIMAGES is set to a non-empty value, this is a list of disk
 ## image formats to create.  Valid values are listed in the mkimg(1)

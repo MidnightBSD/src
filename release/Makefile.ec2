@@ -1,36 +1,12 @@
 #
-# $MidnightBSD$
+# $FreeBSD$
 #
 #
 # Makefile for creating an EC2 AMI from a disk image.
 #
 
-# Figure out where SVN is
-.if !defined(SVN_CMD) || empty(SVN_CMD)
-. for _P in /usr/bin /usr/local/bin
-.  for _S in svn svnlite
-.   if exists(${_P}/${_S})
-SVN_CMD=   ${_P}/${_S}
-.   endif
-.  endfor
-. endfor
-.endif
-.if exists(${SRCTOP}/.svn)
-.  if empty(EC2_SVNBRANCH)
-   EC2_SVNBRANCH!=	${SVN_CMD} info --show-item relative-url ${WORLDDIR} 2>/dev/null | sed -e 's/\^\///'
-.  export EC2_SVNBRANCH
-.  endif
-.  if empty(EC2_SVNREV)
-   EC2_SVNREV!=	${SVN_CMD} info --show-item last-changed-revision ${WORLDDIR} 2>/dev/null || true
-.  export EC2_SVNREV
-.  endif
-.else
-EC2_SVNBRANCH=	unknown
-EC2_SVNREV=	unknown
-.endif
-
 .if ${BRANCH} == "CURRENT" || ${BRANCH} == "STABLE" || ${BRANCH} == "PRERELEASE"
-AMINAMESUFFIX!=	date +-%Y-%m-%d
+AMINAMESUFFIX!=	date +-${BUILDDATE}
 .endif
 .if defined(EC2PUBLIC) && !empty(EC2PUBLIC)
 PUBLISH=	--public
@@ -40,10 +16,19 @@ PUBLICSNAP=	--publicsnap
 .endif
 .if defined(EC2SNSTOPIC) && !empty(EC2SNSTOPIC)
 EC2SNSREL=	${REVISION}-${BRANCH}
-EC2SNSVERS=	${EC2_SVNBRANCH}@${EC2_SVNREV}
+EC2SNSVERS=	${GITBRANCH}@${GITREV}
+.endif
+.if defined(SSMPREFIX) && !empty(SSMPREFIX)
+SSMOPTS=	--ssm-name ${SSMPREFIX}/${TARGET_ARCH:S/aarch64/arm64/}/base/ufs/${REVISION}/${BRANCH}
 .endif
 .if ${TARGET_ARCH} != "amd64"
 EC2ARCH=	--${TARGET_ARCH:S/aarch64/arm64/}
+.endif
+.if !defined(AMIBOOTMETHOD)
+AMIBOOTMETHOD=	UEFI
+.endif
+.if ${AMIBOOTMETHOD} == "UEFI" && ${TARGET_ARCH} == "amd64"
+BOOTMODEOPT=	--uefi
 .endif
 
 CLEANFILES+=		ec2ami
@@ -57,7 +42,7 @@ CW_EC2_PORTINSTALL=
 
 cw-ec2-portinstall:
 .if exists(${PORTSDIR}/net/bsdec2-image-upload/Makefile)
-	env - PATH=$$PATH make -C ${PORTSDIR}/net/bsdec2-image-upload BATCH=1 all install clean
+	env - UNAME_r=${UNAME_r} PATH=$$PATH make -C ${PORTSDIR}/net/bsdec2-image-upload BATCH=1 all install clean
 .else
 . if !exists(/usr/local/sbin/pkg-static)
 	env ASSUME_ALWAYS_YES=yes pkg bootstrap -y
@@ -86,10 +71,10 @@ ec2ami: cw-ec2 ${CW_EC2_PORTINSTALL}
 	@false
 .endif
 	/usr/local/bin/bsdec2-image-upload ${PUBLISH} ${PUBLICSNAP} \
-	    ${EC2ARCH} --sriov --ena \
+	    ${EC2ARCH} ${SSMOPTS} ${BOOTMODEOPT} --sriov --ena \
 	    ${.OBJDIR}/ec2.raw \
-	    "${TYPE} ${REVISION}-${BRANCH}-${TARGET}${AMINAMESUFFIX}" \
-	    "${TYPE}/${TARGET} ${EC2_SVNBRANCH}@${EC2_SVNREV}" \
+	    "${TYPE} ${REVISION}-${BRANCH}-${TARGET}${AMINAMESUFFIX} ${AMIBOOTMETHOD}" \
+	    "${TYPE}/${TARGET} ${GITBRANCH}@${GITREV}" \
 	    ${AWSREGION} ${AWSBUCKET} ${AWSKEYFILE} \
 	    ${EC2SNSTOPIC} ${EC2SNSREL} ${EC2SNSVERS}
 	@touch ${.TARGET}

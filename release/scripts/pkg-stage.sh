@@ -1,7 +1,4 @@
 #!/bin/sh
-#
-# $FreeBSD: stable/11/release/scripts/pkg-stage.sh 338859 2018-09-21 15:58:08Z gjb $
-#
 
 set -e
 
@@ -9,18 +6,16 @@ export ASSUME_ALWAYS_YES="YES"
 export PKG_DBDIR="/tmp/pkg"
 export PERMISSIVE="YES"
 export REPO_AUTOUPDATE="NO"
-export PKGCMD="/usr/sbin/pkg -d"
+export PKGCMD="/usr/sbin/mport"
 export PORTSDIR="${PORTSDIR:-/usr/mports}"
 
 _DVD_PACKAGES="archivers/unzip
 devel/subversion
 devel/subversion-static
 emulators/linux_base-c6
-misc/freebsd-doc-all
+graphics/drm-fbsd11.2-kmod
 net/mpd5
 net/rsync
-ports-mgmt/pkg
-ports-mgmt/portmaster
 shells/bash
 shells/zsh
 security/sudo
@@ -30,21 +25,7 @@ www/firefox
 www/links
 x11-drivers/xf86-video-vmware
 x11/gnome3
-x11/kde5
 x11/xorg"
-
-# If NOPORTS is set for the release, do not attempt to build pkg(8).
-if [ ! -f ${PORTSDIR}/Makefile ]; then
-	echo "*** ${PORTSDIR} is missing!    ***"
-	echo "*** Skipping pkg-stage.sh     ***"
-	echo "*** Unset NOPORTS to fix this ***"
-	exit 0
-fi
-
-if [ ! -x /usr/local/sbin/pkg ]; then
-	/etc/rc.d/ldconfig restart
-	/usr/bin/make -C ${PORTSDIR}/ports-mgmt/pkg install clean
-fi
 
 export DVD_DIR="dvd/packages"
 export PKG_ABI=$(pkg config ABI)
@@ -76,9 +57,8 @@ if [ -z "${DVD_PACKAGES}" ]; then
 fi
 
 # Print pkg(8) information to make debugging easier.
-${PKGCMD} -vv
-${PKGCMD} update -f
-${PKGCMD} fetch -o ${PKG_REPODIR} -d ${DVD_PACKAGES}
+${PKGCMD} index
+${PKGCMD} download -o ${PKG_REPODIR} -d ${DVD_PACKAGES}
 
 # Create the 'Latest/pkg.txz' symlink so 'pkg bootstrap' works
 # using the on-disc packages.
