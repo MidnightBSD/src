@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 .include <bsd.compiler.mk>
 
 SHLIB_NAME=	libomp.so
