@@ -54,6 +54,8 @@ firstboot_start()
 				/usr/sbin/mport install midnightbsd-desktop
 				/sbin/ipfw enable firewall
 				/usr/sbin/sysrc mlogind_enable=YES
+				/usr/sbin/sysrc dbus_enable=YES
+				/usr/sbin/sysrc hald_enable=YES
 			fi
 			echo "Please restart to enable graphical login."
 			echo -e "\r${yellow}Done.${lsuffix}"
