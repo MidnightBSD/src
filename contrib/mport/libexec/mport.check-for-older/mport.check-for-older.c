@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,35 +37,38 @@ __MBSDID("$MidnightBSD$");
 static void usage(void);
 
 int
-main(int argc, char *argv[]) 
-{
+main(int argc, char *argv[]) {
 	int ch;
 	mportInstance *mport;
 	mportPackageMeta **packs;
 	const char *arg, *where, *version = NULL;
+	const char *chroot_path = NULL;
 
 	if (argc == 1)
 		usage();
-    
-	while ((ch = getopt(argc, argv, "v:o:n:")) != -1) {
+
+	while ((ch = getopt(argc, argv, "c:v:o:n:")) != -1) {
 		switch (ch) {
-		case 'v':
-			version = optarg;
-			break;
-		case 'o':
-			where = "origin=%Q";
-			arg   = optarg;
-			break;
-		case 'n':
-			where = "pkg=%Q";
-			arg   = optarg;
-			break;
-		case '?':
-		default:
-			usage();
-			break; 
+			case 'c':
+				chroot_path = optarg;
+				break;
+			case 'v':
+				version = optarg;
+				break;
+			case 'o':
+				where = "origin=%Q";
+				arg = optarg;
+				break;
+			case 'n':
+				where = "pkg=%Q";
+				arg = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
 		}
-	} 
+	}
 
 	argc -= optind;
 	argv += optind;
@@ -74,24 +76,30 @@ main(int argc, char *argv[])
 	if (arg == NULL || version == NULL)
 		usage();
 
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
+
 	mport = mport_instance_new();
-  
+
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
-  
+
 	if (packs == NULL) {
-		(void)printf("No packages installed matching '%s'\n", arg);
+		(void) printf("No packages installed matching '%s'\n", arg);
 		mport_instance_free(mport);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (packs[1] != NULL) {
@@ -99,28 +107,28 @@ main(int argc, char *argv[])
 		mport_instance_free(mport);
 		exit(3);
 	}
-  
+
 	if (mport_version_cmp(packs[0]->version, version) >= 0) {
 		/* a version from a previous OS release will show as not installed */
 		if (mport_check_preconditions(mport, packs[0], MPORT_PRECHECK_OS) != MPORT_OK) {
-			(void)printf("%s is installed, but installed version (%s) is not older than port (%s).\n", packs[0]->name, packs[0]->version, version);
+			(void) printf("%s is installed, but installed version (%s) is not older than port (%s).\n", packs[0]->name,
+			              packs[0]->version, version);
 			mport_instance_free(mport);
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
-  
-	mport_instance_free(mport); 
-  
-	return(0);
+
+	mport_instance_free(mport);
+
+	return (0);
 }
 
 
 static void
-usage(void) 
-{
+usage(void) {
 
 	fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n"
-			"       mport.check-for-older -o origin -v newversion\n");
+	                "       mport.check-for-older -o origin -v newversion\n");
 
 	exit(2);
 }

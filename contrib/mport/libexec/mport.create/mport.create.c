@@ -44,14 +44,21 @@ int main(int argc, char *argv[])
 {
 	int ch;
 	int plist_seen = 0;
+	mportInstance *mport = mport_instance_new();
 	mportPackageMeta *pack = mport_pkgmeta_new();
 	mportCreateExtras *extra = mport_createextras_new();
 	mportAssetList *assetlist = mport_assetlist_new();
 	FILE *fp;
 	struct tm expDate;
 
-	if (pack == NULL || extra == NULL || assetlist == NULL) {
-		errx(1, "Failed to allocate memory");
+	if (mport == NULL || pack == NULL || extra == NULL || assetlist == NULL) {
+		errx(EXIT_FAILURE, "Failed to allocate memory");
+	}
+
+	// we need this to know if the user customized the "target_os" configuration.
+	// the caveat is that the userland it was built against could be wrong.
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		errx(EXIT_FAILURE, mport_err_string());
 	}
 
 	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
@@ -170,9 +177,9 @@ int main(int argc, char *argv[])
 		usage();
 	}
 
-	if (mport_create_primative(assetlist, pack, extra) != MPORT_OK) {
+	if (mport_create_primative(mport, assetlist, pack, extra) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	return 0;

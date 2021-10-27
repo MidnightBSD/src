@@ -1,4 +1,4 @@
-.\" Copyright (c) 2010, 2011, 2015 Lucas Holt
+.\" Copyright (c) 2010, 2011, 2015, 2021 Lucas Holt
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
 .\"
-.Dd November 29, 2015
+.Dd October 13, 2021
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -32,12 +31,29 @@
 .Nd "mport utility"
 .Sh SYNOPSIS
 .Nm
+.Op Fl v
+.Op Fl c Ao chroot path Ac
+.Ao command Ac
+.Pp
+.Nm
+.Cm autoremove
+.Nm
 .Cm clean
+.Nm
+.Cm config get
+.Op Ar setting name
+.Nm
+.Cm config set
+.Op Ar setting name
+.Op Ar setting value
 .Nm
 .Cm cpe
 .Nm
 .Cm list
-.Ar updates
+.Nm
+.Cm list updates
+.Nm
+.Cm list prime
 .Nm
 .Cm info
 .Op Ar name
@@ -71,16 +87,40 @@ The
 .Nm
 command installs or removes mport packages, and displays information on
 installed packages.
-.Pp
-Here is the list of standard commands:
+.Sh OPTIONS
+The following options are supported by
+.Nm :
+.Bl -tag -width indent
+.It Fl v, Cm --version
+Display the current version of 
+.Nm .
+.It Fl c Ao chroot path Ac , Cm --chroot Ao chroot path Ac
+.Nm
+will chroot in the
+.Ao chroot path Ac
+environment.
+.Sh COMMANDS
+The following commands are supported by
+.Nm :
 .Bl -tag -width ".Cm install"
+.It Cm autoremove
+Experimental! Removes all packages installed as dependencies that are no longer needed
+as the original package depending on them has been removed.
 .It Cm clean
 Clean up old packages not found in the index and perform maintenence on the
 database.
+.It Cm config get Ao name Ac
+Displays the value of a configuration setting
+.It Cm config set Ao name Ac Ao value Ac
+Sets the value of the configuration setting.
 .It Cm cpe
 List all CPE information for each installed package
 .It Cm list
 List all currently installed packages
+.It Cm list updates
+List currently installed packages with updates available
+.It Cm list prime
+List all packages explicitly installed rather than as a dependency
 .It Cm info
 Print detailed information about a package
 .It Cm delete
@@ -99,7 +139,7 @@ Fetch and install a package
 Search package names and descriptions.  Supports globbing queries such as 
 "*php*".
 .It Cm stats
-List statistcs about available and installed packages.
+List statistics about available and installed packages.
 .It Cm update
 Fetch and update a specific package
 .It Cm upgrade
@@ -107,6 +147,18 @@ Upgrade all currently installed packages with the latest version
 .It Cm verify
 Verify currently installed packages have not had files deleted or modified from the original
 installation.
+.Sh SETTINGS
+The
+.Nm
+command has the following settings that modify it's behavior:
+.It Cm mirror_region
+Determines which mirror region to use to fetch packages.  Valid values are currently us, uk, jp
+The current list is always available in the mport index file in /var/db/mport/index.db in the mirrors table
+.It Cm target_os
+Override the OS version used to fetch packages and install them. If undefined, we try /bin/midnightbsd-version first and
+fall back to the running kernel version.
+.It Cm index_last_check
+This is the last time the index file was checked for an update.
 .Sh HISTORY
 The
 .Nm

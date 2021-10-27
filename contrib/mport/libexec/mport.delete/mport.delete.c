@@ -23,15 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
  */
 
-
-
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -40,80 +34,92 @@ __MBSDID("$MidnightBSD$");
 #include <unistd.h>
 #include <mport.h>
 
-
 static void usage(void);
 
-int main(int argc, char *argv[]) 
-{
-  int ch, force;
-  mportInstance *mport;
-  mportPackageMeta **packs;
-  const char *arg = NULL, *where = NULL;
-  force = 0;
+int main(int argc, char *argv[]) {
+	int ch, force;
+	mportInstance *mport;
+	mportPackageMeta **packs;
+	const char *arg = NULL, *where = NULL;
+	const char *chroot_path = NULL;
 
-  if (argc == 1)
-    usage();
-    
-  while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
-    switch (ch) {
-      case 'f':
-        force = 1;
-        break;
-      case 'o':
-        where = "LOWER(origin)=LOWER(%Q)";
-        arg   = optarg;
-        break;
-      case 'n':
-        where = "LOWER(pkg)=LOWER(%Q)";
-        arg   = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	force = 0;
 
-  if (arg == NULL)
-    usage();
+	if (argc == 1)
+		usage();
 
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
+	while ((ch = getopt(argc, argv, "c:fo:n:")) != -1) {
+		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
+			case 'f':
+				force = 1;
+				break;
+			case 'o':
+				where = "LOWER(origin)=LOWER(%Q)";
+				arg = optarg;
+				break;
+			case 'n':
+				where = "LOWER(pkg)=LOWER(%Q)";
+				arg = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
+	}
 
-  if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    mport_instance_free(mport);
-    exit(1);
-  }
-  
-  if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
-    exit(3);
-  }
-  
-  while (*packs != NULL) {
-    if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      mport_instance_free(mport);
-      exit(1);
-    }
-    packs++;
-  }
+	argc -= optind;
+	argv += optind;
 
-  mport_instance_free(mport); 
-  
-  return 0;
+	if (arg == NULL)
+		usage();
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
+
+	mport = mport_instance_new();
+
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
+	if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
+	if (packs == NULL) {
+		warnx("No packages installed matching '%s'", arg);
+		exit(3);
+	}
+
+	while (*packs != NULL) {
+		if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			mport_instance_free(mport);
+			exit(EXIT_FAILURE);
+		}
+		packs++;
+	}
+
+	mport_instance_free(mport);
+
+	return (0);
 }
 
 
 static void
-usage(void) 
-{
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
-  exit(2);
+usage(void) {
+	fprintf(stderr, "Usage: mport.delete [-f] [-c <chroot directory>] -n pkgname\n");
+	fprintf(stderr, "Usage: mport.delete [-f] [-c <chroot directory>] -o origin\n");
+	exit(2);
 }

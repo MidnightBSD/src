@@ -30,99 +30,107 @@
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mport.h>
 
 
 static void usage(void);
 
-int main(int argc, char *argv[]) 
-{
-  int ch, i;
-  mportInstance *mport;
-  mportPackageMeta **packs;
-  mportPackageMeta **depends;
-  const char *arg = NULL, *where = NULL;
+int main(int argc, char *argv[]) {
+	int ch, i;
+	mportInstance *mport;
+	mportPackageMeta **packs;
+	mportPackageMeta **depends;
+	const char *arg = NULL, *where = NULL;
+	const char *chroot_path = NULL;
 
-  if (argc == 1)
-    usage();
-    
-  while ((ch = getopt(argc, argv, "o:n:")) != -1) {
-    switch (ch) {
-      case 'o':
-        where = "origin=%Q";
-        arg   = optarg;
-        break;
-      case 'n':
-        where = "pkg=%Q";
-        arg   = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	if (argc == 1)
+		usage();
 
-  if (arg == NULL || where == NULL)
-    usage();
+	while ((ch = getopt(argc, argv, "c:o:n:")) != -1) {
+		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
+			case 'o':
+				where = "origin=%Q";
+				arg = optarg;
+				break;
+			case 'n':
+				where = "pkg=%Q";
+				arg = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
+	}
 
-  if ((mport = mport_instance_new()) == NULL) {
-    warnx("Out of memory");
-    exit(1);
-  }
+	if (arg == NULL || where == NULL)
+		usage();
 
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
 
-  
-  if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    mport_instance_free(mport);
-    exit(1);
-  }
+	if ((mport = mport_instance_new()) == NULL) {
+		warnx("Out of memory");
+		exit(1);
+	}
 
-  if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
-    mport_instance_free(mport);
-    exit(3);
-  }
-  
-  if (packs[1] != NULL) {
-    warnx("Ambiguous package identifier: %s", arg);
-    mport_instance_free(mport);
-    exit(3);
-  }
-  
-  if (mport_pkgmeta_get_updepends(mport, packs[0], &depends) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    mport_instance_free(mport);
-    exit(1);
-  }
-  
-  if (depends == NULL) {
-    /* no depends, nothing to print. */
-    mport_instance_free(mport);
-    exit(0);
-  }
-  
-  i = 0;
-  while (depends[i] != NULL) {
-    (void)printf("%s\n", depends[i]->origin);
-    i++;
-  }
-  
-  mport_instance_free(mport); 
-  
-  return 0;
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(1);
+	}
+
+	if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
+	if (packs == NULL) {
+		warnx("No packages installed matching '%s'", arg);
+		mport_instance_free(mport);
+		exit(3);
+	}
+
+	if (packs[1] != NULL) {
+		warnx("Ambiguous package identifier: %s", arg);
+		mport_instance_free(mport);
+		exit(3);
+	}
+
+	if (mport_pkgmeta_get_updepends(mport, packs[0], &depends) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
+	if (depends == NULL) {
+		/* no depends, nothing to print. */
+		mport_instance_free(mport);
+		exit(EXIT_SUCCESS);
+	}
+
+	i = 0;
+	while (depends[i] != NULL) {
+		(void) printf("%s\n", depends[i]->origin);
+		i++;
+	}
+
+	mport_instance_free(mport);
+
+	return (0);
 }
 
 
 static void
-usage(void) 
-{
-  fprintf(stderr, "Usage: mport.updepends -n pkgname\n"
-                  "       mport.updepends -o origin\n");
-  exit(2);
+usage(void) {
+	fprintf(stderr, "Usage: mport.updepends -n pkgname\n"
+	                "       mport.updepends -o origin -c <chroot path>\n");
+	exit(2);
 }

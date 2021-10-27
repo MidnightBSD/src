@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, 2015 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -36,18 +36,21 @@
 #define DIAG(...) 
 #endif
 
+#if defined(__MidnightBSD__)
 #include <osreldate.h>
+#endif
 #include <sqlite3.h>
 #include "bzlib.h"
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 7
+#define MPORT_MASTER_VERSION 9
 #define MPORT_BUNDLE_VERSION 5
 #define MPORT_BUNDLE_VERSION_STR "5"
-#define MPORT_VERSION "2.1.4"
+#define MPORT_VERSION "2.2.0"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
+#define MPORT_SETTING_TARGET_OS "target_os"
 
 /* callback syntactic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
@@ -63,7 +66,7 @@ int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
-int mport_generate_stub_schema(sqlite3 *);
+int mport_generate_stub_schema(mportInstance *, sqlite3 *);
 int mport_upgrade_master_schema(sqlite3 *, int);
 
 /* instance */
@@ -98,7 +101,7 @@ void mport_free_vec(void *);
 int mport_decompress_bzip2(const char *, const char *);
 int mport_shell_register(const char *);
 int mport_shell_unregister(const char *);
-
+time_t mport_get_time(void);
 
 /* Mport Bundle (a file containing packages) */
 typedef struct {
@@ -135,7 +138,7 @@ int mport_bundle_read_extract_next_file(mportBundleRead *, struct archive_entry 
 int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
-int mport_install_depends(mportInstance *, const char *, const char *);
+int mport_install_depends(mportInstance *, const char *, const char *, mportAutomatic);
 int mport_update_down(mportInstance *, mportPackageMeta *);
 
 /* version compare functions */

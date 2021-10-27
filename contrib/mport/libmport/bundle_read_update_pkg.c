@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2021 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -25,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include "mport.h"
 #include "mport_private.h"
@@ -57,9 +57,9 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
     RETURN_CURRENT_ERROR;
   }
 
+  pkg->action = MPORT_ACTION_UPDATE;
   if (
-        (mport_delete_primative(mport, pkg, 1) != MPORT_OK)
-                          ||
+        (mport_delete_primative(mport, pkg, 1) != MPORT_OK) ||
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
@@ -90,7 +90,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
 
   extra->is_backup = true;
 
-  ret = mport_create_primative(alist, pkg, extra);
+  ret = mport_create_primative(mport, alist, pkg, extra);
 
   mport_assetlist_free(alist);
   mport_createextras_free(extra);
@@ -104,7 +104,7 @@ static int install_backup_bundle(mportInstance *mport, char *filename)
   /* at some point we might want to look into making this more forceful, but
    * this will do for the moment.  Wrap in a function for this future. */
   
-  return mport_install_primative(mport, filename, NULL);
+  return mport_install_primative(mport, filename, NULL, 0);
 }
 
 
@@ -162,7 +162,7 @@ static int build_create_extras_copy_metafiles(const mportPackageMeta *pkg, mport
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
    
   if (mport_file_exists(file)) {
-    if ((extra->pkgmessage = strdup(file)) == NULL) 
+    if ((extra->pkgmessage = strdup(file)) == NULL)
       RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 

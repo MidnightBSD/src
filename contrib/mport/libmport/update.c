@@ -43,7 +43,7 @@ mport_update(mportInstance *mport, const char *packageName) {
 	if (result != MPORT_OK)
 		return result;
 
-	/* in the event the package is not found in the index, it could be user generated and we still want to update it if
+	/* in the event the package is not found in the index, it could be user generated, and we still want to update it if
 	   present */
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK ||
 			indexEntry == NULL || *indexEntry == NULL) {
@@ -54,7 +54,7 @@ mport_update(mportInstance *mport, const char *packageName) {
 
 		depends = depends_orig;
 		while (*depends != NULL) {
-			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
+			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_index_depends_free_vec(depends);
 				return mport_err_code();

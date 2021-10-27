@@ -109,6 +109,22 @@ mportAssetList* mport_assetlist_new(void);
 void mport_assetlist_free(mportAssetList *);
 int mport_parse_plistfile(FILE *, mportAssetList *);
 
+enum _Automatic{
+    MPORT_EXPLICIT, /* explicitly installed */
+    MPORT_AUTOMATIC /* Automatically installed dependency */
+};
+typedef enum _Automatic mportAutomatic;
+
+
+enum _Action{
+    MPORT_ACTION_INSTALL,
+    MPORT_ACTION_UPGRADE,
+    MPORT_ACTION_UPDATE,
+    MPORT_ACTION_DELETE,
+    MPORT_ACTION_UNKNOWN
+};
+typedef enum _Action mportAction;
+
 /* Package Meta-data structure */
 typedef struct {
     char *name;
@@ -127,6 +143,9 @@ typedef struct {
     time_t expiration_date;
     int no_provide_shlib;
     char *flavor;
+    mportAutomatic automatic;
+	time_t install_date;
+    mportAction action; // not populated from package table
 } mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
@@ -179,6 +198,21 @@ char * mport_info(mportInstance *mport, const char *packageName);
 
 /* Package creation */
 
+typedef enum {
+    PKG_MESSAGE_ALWAYS = 0,
+    PKG_MESSAGE_INSTALL,
+    PKG_MESSAGE_REMOVE,
+    PKG_MESSAGE_UPGRADE,
+} pkg_message_t;
+
+typedef struct package_message {
+    char			*str;
+    char			*minimum_version;
+    char			*maximum_version;
+    pkg_message_t		 type;
+    struct package_message *next, *prev;
+} mportPackageMessage;
+
 typedef struct {
   char *pkg_filename;
   char *sourcedir;
@@ -194,14 +228,14 @@ typedef struct {
 mportCreateExtras * mport_createextras_new(void);
 void mport_createextras_free(mportCreateExtras *);
 
-int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtras *);
+int mport_create_primative(mportInstance *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 /* Merge primative */
-int mport_merge_primative(const char **, const char *);
+int mport_merge_primative(mportInstance *mport, const char **, const char *);
 
 /* Package installation */
-int mport_install(mportInstance *, const char *, const char *, const char *);
-int mport_install_primative(mportInstance *, const char *, const char *);
+int mport_install(mportInstance *, const char *, const char *, const char *, mportAutomatic);
+int mport_install_primative(mportInstance *, const char *, const char *, mportAutomatic);
 
 /* package updating */
 int mport_update(mportInstance *, const char *);
@@ -212,6 +246,8 @@ int mport_upgrade(mportInstance *);
 
 /* Package deletion */
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
+
+int mport_autoremove(mportInstance *);
 
 /* package verify */
 int mport_verify_package(mportInstance *, mportPackageMeta *);
@@ -244,8 +280,8 @@ int mport_setting_set(mportInstance *, const char *, const char *);
 void mport_parselist(char *, char ***);
 int mport_verify_hash(const char *, const char *);
 int mport_file_exists(const char *);
-char * mport_version(void);
-char * mport_get_osrelease(void);
+char * mport_version(mportInstance *);
+char * mport_get_osrelease(mportInstance *);
 
 /* Locks */
 enum _LockState {

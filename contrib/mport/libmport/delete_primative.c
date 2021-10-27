@@ -262,7 +262,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
             case ASSET_DIR:
             case ASSET_DIRRM:
             case ASSET_DIRRMTRY:
-	    case ASSET_DIR_OWNER_MODE:
+	        case ASSET_DIR_OWNER_MODE:
                 if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
                     mport_call_msg_cb(mport, "Could not remove directory '%s': %s", file, mport_err_string());
                 }
