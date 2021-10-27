@@ -147,7 +147,7 @@ int main(int argc, const char **argv) {
   InitLLVM x(argc, argv);
 
   std::vector<const char *> args(argv, argv + argc);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
   return !elf::link(args, canExitEarly(), llvm::outs(), llvm::errs());
 #else
   switch (parseFlavor(args)) {
