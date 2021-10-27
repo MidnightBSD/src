@@ -41,11 +41,11 @@
 #include "mport.h"
 #include "mport_private.h"
 
-static int create_stub_db(sqlite3 **, const char *);
+static int create_stub_db(mportInstance *, sqlite3 **, const char *);
 
 static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
-static int insert_meta(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
+static int insert_meta(mportInstance *, sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
 static int insert_depends(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
@@ -61,9 +61,8 @@ static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportC
 
 static int clean_up(const char *);
 
-
 MPORT_PUBLIC_API int
-mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
+mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
 	int error_code = MPORT_OK;
 
@@ -77,13 +76,13 @@ mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportC
 		goto CLEANUP;
 	}
 
-	if ((error_code = create_stub_db(&db, tmpdir)) != MPORT_OK)
+	if ((error_code = create_stub_db(mport, &db, tmpdir)) != MPORT_OK)
 		goto CLEANUP;
 
 	if ((error_code = insert_assetlist(db, assetlist, pack, extra)) != MPORT_OK)
 		goto CLEANUP;
 
-	if ((error_code = insert_meta(db, pack, extra)) != MPORT_OK)
+	if ((error_code = insert_meta(mport, db, pack, extra)) != MPORT_OK)
 		goto CLEANUP;
 
 	if (sqlite3_close(db) != SQLITE_OK) {
@@ -101,7 +100,7 @@ mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportC
 
 
 static int
-create_stub_db(sqlite3 **db, const char *tmpdir)
+create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 {
 	int error_code = MPORT_OK;
 
@@ -116,7 +115,7 @@ create_stub_db(sqlite3 **db, const char *tmpdir)
 		return error_code;
 
 	/* create tables */
-	return mport_generate_stub_schema(*db);
+	return mport_generate_stub_schema(mport, *db);
 }
 
 static int
@@ -229,7 +228,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 }
 
 static int
-insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
+insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
 	int error_code = MPORT_OK;
 
@@ -237,7 +236,7 @@ insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 	const char *rest = 0;
 	char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
 
-	char *os_release = mport_get_osrelease();
+	char *os_release = mport_get_osrelease(mport);
 	if (pack->cpe == NULL) {
 		pack->cpe = malloc(1 * sizeof(char));
 		pack->cpe[0] = '\0';

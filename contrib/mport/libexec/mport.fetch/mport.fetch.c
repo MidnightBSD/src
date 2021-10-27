@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.fetch/mport.fetch.c,v 1.2 2011/06/14 02:32:01 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,79 +32,87 @@ __MBSDID("$MidnightBSD: src/libexec/mport.fetch/mport.fetch.c,v 1.2 2011/06/14 0
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mport.h>
 #include "mport_private.h"
 
 static void usage(void);
 
-int 
-main(int argc, char *argv[]) 
-{
-  int ch;
-  mportInstance *mport;
-  mportIndexEntry **indexEntries;
-  bool verbose = false;
-  char *bundleFile = NULL;
+int
+main(int argc, char *argv[]) {
+	int ch;
+	mportInstance *mport;
+	mportIndexEntry **indexEntries;
+	bool verbose = false;
+	char *bundleFile = NULL;
+	const char *chroot_path = NULL;
 
-  if (argc < 2)
-    usage();
-    
-  while ((ch = getopt(argc, argv, "v")) != -1) {
-    switch (ch) {
-      case 'v':
-        verbose = true;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
+	if (argc < 2)
+		usage();
 
-  argv += optind;
+	while ((ch = getopt(argc, argv, "c:v")) != -1) {
+		switch (ch) {
+			case 'v':
+				verbose = true;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
+	}
 
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
+	argc -= optind;
+	argv += optind;
 
-  if (mport_index_load(mport) != MPORT_OK)
-    errx(4, "Unable to load updates index");
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
 
-  if (mport_index_lookup_pkgname(mport, argv[0], &indexEntries) != MPORT_OK) {
-    fprintf(stderr, "Error looking up package name %s: %d %s\n", argv[0],  mport_err_code(), mport_err_string());
-    exit(mport_err_code());
-  }
+	mport = mport_instance_new();
 
-  if (indexEntries != NULL) {
-    /* TODO: currently only fetches first match */
-    if (*indexEntries != NULL) {
-      bundleFile = strdup((*indexEntries)->bundlefile);
-      mport_index_entry_free_vec(indexEntries);
-      indexEntries = NULL;
-    }
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
 
-    if (verbose)
-      printf("Fetching %s\n", bundleFile);
-    if (mport_fetch_bundle(mport, bundleFile) != MPORT_OK) {
-      fprintf(stderr, "%s\n", mport_err_string());
-      exit(mport_err_code());
-    }
+	if (mport_index_load(mport) != MPORT_OK)
+		errx(4, "Unable to load updates index");
 
-    free(bundleFile);
-  }
+	if (mport_index_lookup_pkgname(mport, argv[0], &indexEntries) != MPORT_OK) {
+		fprintf(stderr, "Error looking up package name %s: %d %s\n", argv[0], mport_err_code(), mport_err_string());
+		exit(mport_err_code());
+	}
 
-  mport_instance_free(mport); 
-  
-  return 0;
+	if (indexEntries != NULL) {
+		/* TODO: currently only fetches first match */
+		if (*indexEntries != NULL) {
+			bundleFile = strdup((*indexEntries)->bundlefile);
+			mport_index_entry_free_vec(indexEntries);
+			indexEntries = NULL;
+		}
+
+		if (verbose)
+			printf("Fetching %s\n", bundleFile);
+		if (mport_fetch_bundle(mport, bundleFile) != MPORT_OK) {
+			fprintf(stderr, "%s\n", mport_err_string());
+			exit(mport_err_code());
+		}
+
+		free(bundleFile);
+	}
+
+	mport_instance_free(mport);
+
+	return (0);
 }
 
 
-static void 
-usage(void) 
-{
-  fprintf(stderr, "Usage: mport.fetch <package name>\n");
-  exit(2);
+static void
+usage(void) {
+	fprintf(stderr, "Usage: mport.fetch [-c <chroot directory>] <package name>\n");
+	exit(2);
 }

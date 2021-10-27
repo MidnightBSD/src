@@ -31,7 +31,7 @@
 #include <unistd.h>
 
 MPORT_PUBLIC_API int
-mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix)
+mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic)
 {
   mportIndexEntry **e;
   char *filename;
@@ -107,7 +107,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   	}
   }
  
-  ret = mport_install_primative(mport, filename, prefix);
+  ret = mport_install_primative(mport, filename, prefix, automatic);
 
   free(filename);
   mport_index_entry_free_vec(e);
@@ -117,7 +117,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
 
 /* recursive function */
 int
-mport_install_depends(mportInstance *mport, const char *packageName, const char *version) {
+mport_install_depends(mportInstance *mport, const char *packageName, const char *version, mportAutomatic automatic) {
 	mportPackageMeta **packs;
 	mportDependsEntry **depends;
 	mportDependsEntry **depends_orig;
@@ -136,21 +136,21 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 
 	if (packs == NULL && depends == NULL) {
 		/* Package is not installed and there are no dependencies */
-		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
+		if (mport_install(mport, packageName, version, NULL, automatic) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			return mport_err_code();
 		}
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		while (*depends != NULL) {
-			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
+			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
      			mport_call_msg_cb(mport, "%s", mport_err_string());
      			mport_index_depends_free_vec(depends_orig);
 				return mport_err_code();
 			}
 			depends++;
 		}
-		if (mport_install(mport, packageName, version, NULL) != MPORT_OK) {
+		if (mport_install(mport, packageName, version, NULL, automatic) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			mport_index_depends_free_vec(depends_orig);
 			return mport_err_code();
@@ -168,7 +168,8 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 			}
 		}
 
-		mport_pkgmeta_vec_free(packs);
+        // TODO: fix crash on nested calls
+		//mport_pkgmeta_vec_free(packs);
 	}
 
 	return (MPORT_OK);

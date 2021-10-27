@@ -71,7 +71,7 @@ mport_import(mportInstance *mport,  char  *path)
 		}
 		
 		mport_call_msg_cb(mport, "Installing %s", name);
-		mport_install(mport, name,  NULL, NULL);
+		mport_install(mport, name,  NULL, NULL, MPORT_EXPLICIT);
 	}
 
 	if (!console) {

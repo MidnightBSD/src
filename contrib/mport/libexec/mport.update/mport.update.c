@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2021 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -30,46 +31,66 @@
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mport.h>
-
 
 static void usage(void);
 
-int main(int argc, char *argv[]) 
-{
-  int i;
-  mportInstance *mport;
+int main(int argc, char *argv[]) {
+	int i, ch;
+	mportInstance *mport;
+	const char *chroot_path = NULL;
 
-  if (argc == 1) 
-    usage();
+	while ((ch = getopt(argc, argv, "c:")) != -1) {
+		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
+	}
 
-  argv++;
-  argc--;
-    
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-  
-  for (i=0; i<argc; i++) {
-    if (mport_update_primative(mport, argv[i]) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      mport_instance_free(mport);
-      exit(1);
-    }
-  }
- 
-  mport_instance_free(mport); 
-  
-  return 0;
+	argc -= optind;
+	argv += optind;
+
+	if (argc == 1)
+		usage();
+
+	argv++;
+	argc--;
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
+
+	mport = mport_instance_new();
+
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < argc; i++) {
+		if (mport_update_primative(mport, argv[i]) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			mport_instance_free(mport);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	mport_instance_free(mport);
+
+	return (0);
 }
 
 static void
-usage(void) 
-{
+usage(void) {
 
-	fprintf(stderr, "Usage: mport.update pkgfile1 pkgfile2 ...\n");
+	fprintf(stderr, "Usage: mport.update [-c <chroot directory>] pkgfile1 pkgfile2 ...\n");
 	exit(2);
 }

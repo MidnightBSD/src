@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011, 2013, 2015 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -41,9 +41,14 @@
 #include <sys/wait.h>
 #include <sys/signal.h>
 #include <unistd.h>
+#include <spawn.h>
+#include <poll.h>
 #include <libgen.h>
 #include "mport.h"
 #include "mport_private.h"
+
+static char * mport_get_osrelease_userland(void);
+static char * mport_get_osrelease_kern(void);
 
 
 /* these two aren't really utilities, but there's no better place to put them */
@@ -575,45 +580,148 @@ mport_decompress_bzip2(const char *input, const char *output)
 }
 
 MPORT_PUBLIC_API char *
-mport_get_osrelease(void)
+mport_get_osrelease(mportInstance *mport)
 {
-    char osrelease[128];
-    size_t len;
-    char *version;
+	char *version = NULL;
 
-    len = sizeof(osrelease);
-    if (sysctlbyname("kern.osrelease", &osrelease, &len, NULL, 0) < 0)
-        return NULL;
+	// honor settings first
+	if (mport != NULL) {
+		version = mport_setting_get(mport, MPORT_SETTING_TARGET_OS);
+	}
 
-    if (osrelease == NULL)
-        return NULL;
+	// try midnightbsd-version
+	if (version == NULL) {
+		version = mport_get_osrelease_userland();
+	}
 
-    version = calloc(10, sizeof(char));
-    if (version == NULL)
-        return NULL;
+	// fall back to kernel version
+	if (version == NULL) {
+		version = mport_get_osrelease_kern();
+	}
 
-    for (int i = 0; i < 10; i++) {
-    	// old versions contained an - in the name  e.g. 0.4-RELEASE
-        if (osrelease[i] == '\0' || osrelease[i] == '-')
-            break;
 
-        version[i] = osrelease[i];
-    }
+	return version;
+}
 
-    version[3] = '\0'; /* force major version only for now */
+static char *
+mport_get_osrelease_kern(void)
+{
+	char osrelease[128];
+	size_t len;
+	char *version;
 
-    return version;
+	len = sizeof(osrelease);
+	if (sysctlbyname("kern.osrelease", &osrelease, &len, NULL, 0) < 0)
+		return NULL;
+
+	version = calloc(10, sizeof(char));
+	if (version == NULL)
+		return NULL;
+
+	for (int i = 0; i < 10; i++) {
+		// old versions contained an - in the name  e.g. 0.4-RELEASE
+		if (osrelease[i] == '\0' || osrelease[i] == '-')
+			break;
+
+		version[i] = osrelease[i];
+	}
+
+	version[3] = '\0'; /* force major version only for now */
+
+	return version;
+}
+
+static char *
+mport_get_osrelease_userland(void) {
+	int exit_code;
+	int cout_pipe[2];
+	int cerr_pipe[2];
+	int bytes_read;
+	char *version;
+	posix_spawn_file_actions_t action;
+
+	if (pipe(cout_pipe) || pipe(cerr_pipe))
+		return NULL;
+
+	posix_spawn_file_actions_init(&action);
+	posix_spawn_file_actions_addclose(&action, cout_pipe[0]);
+	posix_spawn_file_actions_addclose(&action, cerr_pipe[0]);
+	posix_spawn_file_actions_adddup2(&action, cout_pipe[1], 1);
+	posix_spawn_file_actions_adddup2(&action, cerr_pipe[1], 2);
+
+	posix_spawn_file_actions_addclose(&action, cout_pipe[1]);
+	posix_spawn_file_actions_addclose(&action, cerr_pipe[1]);
+
+	char *command[] = {"midnightbsd-version", "-u"};
+	char *argsmem[] = {"sh", "-c"};
+	char *args[] = {&argsmem[0][0], &argsmem[1][0], &command[0][0], &command[0][1], NULL};
+
+	pid_t pid;
+	if (posix_spawnp(&pid, args[0], &action, NULL, &args[0], NULL) != 0) {
+#ifdef DEBUG
+		fprintf(stderr, "posix_spawnp failed with error: %d\n", errno);
+#endif
+		return NULL;
+	}
+
+	close(cout_pipe[1]), close(cerr_pipe[1]); // close child-side of pipes
+
+	char *buffer[1024];
+	struct pollfd plist[2];
+	plist[0] = (struct pollfd) {cout_pipe[0], POLLIN, 0};
+	plist[1] = (struct pollfd) {cerr_pipe[0], POLLIN, 0};
+
+        version = calloc(10, sizeof(char));
+        if (version == NULL)
+                return NULL;
+
+
+	for (int rval; (rval = poll(&plist[0], 2, -1)) > 0;) {
+		if (plist[0].revents & POLLIN) {
+			bytes_read = read(cout_pipe[0], &buffer[0], 1024);
+			snprintf(version, 10, "%.*s\n", bytes_read, (char *) &buffer);
+			break;
+		} else if (plist[1].revents & POLLIN) {
+			bytes_read = read(cerr_pipe[0], &buffer[0], 1024);
+			snprintf(version, 10, "%.*s\n", bytes_read, (char *) &buffer);
+			break;
+		} else break; // nothing left to read
+	}
+
+	waitpid(pid, &exit_code, 0);
+#ifdef DEBUG
+	fprintf(stderr, "exit code: %d\n", exit_code);
+#endif
+
+	posix_spawn_file_actions_destroy(&action);
+
+
+	version[3] = '\0'; /* force major version only for now */
+
+	return version;
 }
 
 
 MPORT_PUBLIC_API char *
-mport_version(void)
+mport_version(mportInstance *mport)
 {
     char *version;
-    char *osrel = mport_get_osrelease();
+    char *osrel = mport_get_osrelease(mport);
     asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n",
              MPORT_VERSION, osrel, MPORT_BUNDLE_VERSION_STR);
     free(osrel);
 
     return version;
+}
+
+time_t
+mport_get_time(void)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+	}
+
+	return now.tv_sec;
 }

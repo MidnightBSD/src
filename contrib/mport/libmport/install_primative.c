@@ -31,7 +31,7 @@
 #include <string.h>
 
 MPORT_PUBLIC_API int
-mport_install_primative(mportInstance *mport, const char *filename, const char *prefix)
+mport_install_primative(mportInstance *mport, const char *filename, const char *prefix, mportAutomatic automatic)
 {
 	mportBundleRead *bundle;
 	mportPackageMeta **pkgs, *pkg;
@@ -52,6 +52,8 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 
 	for (i = 0; *(pkgs + i) != NULL; i++) {
 		pkg = pkgs[i];
+        pkg->automatic = automatic;
+		pkg->install_date = mport_get_time();
 
 		if (prefix != NULL) {
 			/* override the default prefix with the given prefix */
@@ -66,7 +68,6 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 		    (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
 			                  mport_err_string());
-			/* TODO: WHY WAS THIS HERE mport_set_err(MPORT_OK, NULL); */
 			error = true;
 			break; /* do not keep going if we have a package failure! */
 		}

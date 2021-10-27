@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2021 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
  *
@@ -53,9 +54,10 @@ mport_update_primative(mportInstance *mport, const char *filename)
 
     for (i = 0; *(pkgs + i) != NULL; i++) {
         pkg = pkgs[i];
+		pkg->install_date = mport_get_time();
 
         if (mport_lock_islocked(pkg) == MPORT_LOCKED) {
-            mport_call_msg_cb(mport, "Unable to update %s-%s: pacakge is locked.", pkg->name, pkg->version);
+            mport_call_msg_cb(mport, "Unable to update %s-%s: package is locked.", pkg->name, pkg->version);
             mport_set_err(MPORT_OK, NULL);
             continue;
         }

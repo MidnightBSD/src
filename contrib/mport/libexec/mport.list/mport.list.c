@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,6 +33,7 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mport.h>
 
 static void usage(void);
@@ -52,21 +52,29 @@ main(int argc, char *argv[])
 	bool origin = false;
 	bool update = false;
 	bool locks = false;
+    bool prime = false;
 	char *comment;
 	char *os_release;
 	char name_version[30];
+	const char *chroot_path = NULL;
 	
 	if (argc > 3)
 		usage();
     
-	while ((ch = getopt(argc, argv, "loqvu")) != -1) {
+	while ((ch = getopt(argc, argv, "c:lopqvu")) != -1) {
 		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
 			case 'l':
 				locks = true;
 				break;
 			case 'o':
 				origin = true;
 				break;
+            case 'p':
+                prime = true;
+                break;
 			case 'q':
 				quiet = true;
 				break;
@@ -81,15 +89,21 @@ main(int argc, char *argv[])
 				usage();
 				break; 
 		}
-	} 
+	}
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
 	
 	mport = mport_instance_new();
-	os_release = mport_get_osrelease();
-	
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
+
+	os_release = mport_get_osrelease(mport);
 
 	if (update && mport_index_load(mport) != MPORT_OK) {
                 warnx("Unable to load updates index, %s", mport_err_string());
@@ -99,7 +113,7 @@ main(int argc, char *argv[])
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	
 	if (packs == NULL) {
@@ -126,11 +140,14 @@ main(int argc, char *argv[])
 			while (*indexEntries != NULL) {
 				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
 					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
-					if (verbose) {
-						(void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version);
-					} else {
-						(void) printf("%-15s %8s  <  %-8s\n", (*packs)->name, (*packs)->version, (*indexEntries)->version);
-					}
+
+                        if (verbose) {
+                            (void) printf("%-15s %8s (%s)  <  %-s\n", (*packs)->name, (*packs)->version,
+                                          (*packs)->os_release, (*indexEntries)->version);
+                        } else {
+                            (void) printf("%-15s %8s  <  %-8s\n", (*packs)->name, (*packs)->version,
+                                          (*indexEntries)->version);
+                        }
 				}
 				indexEntries++;
 			}
@@ -144,6 +161,8 @@ main(int argc, char *argv[])
 			(void) printf("%-30s\t%6s\t%s\n", name_version, (*packs)->os_release, comment);
 			free(comment);
 		}
+        else if (prime && (*packs)->automatic == 0)
+            (void) printf("%s\n", (*packs)->name);
 		else if (quiet && !origin)
 			(void) printf("%s\n", (*packs)->name);
 		else if (quiet && origin)
@@ -196,8 +215,8 @@ str_remove( const char *str, const char ch )
 static void 
 usage(void) 
 {
-	
-	fprintf(stderr, "Usage: mport.list [-q | -v | -u]\n");
+
+	fprintf(stderr, "Usage: mport.list [-q | -v | -u | -c <chroot path>]\n");
 
 	exit(2);
 }

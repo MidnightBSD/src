@@ -22,28 +22,47 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.3 2012/04/11 00:15:09 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.init/mport.init.c,v 1.3 2012/04/11 00:15:09 laffer1 Exp $");
 
 #include <stdlib.h>
 #include <err.h>
 #include <string.h>
 #include <mport.h>
+#include <unistd.h>
+#include <getopt.h>
 
 int
-main(int argc __unused, char *argv[] __unused)
+main(int argc, char *argv[])
 {
 	mportInstance *mport;
+	int ch;
+	const char *chroot_path = NULL;
+
+	while ((ch = getopt(argc, argv, "c:")) != -1) {
+		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
 
 	mport = mport_instance_new();
   
 	if (mport_instance_init(mport, NULL) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		exit(1);
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
 	}
   
 	mport_instance_free(mport); 

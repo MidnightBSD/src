@@ -46,7 +46,7 @@ struct table_entry {
 
 #define TABLE_SIZE 128
 
-static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
+static int build_stub_db(mportInstance *, sqlite3 **, const char *, const char *, const char **, struct table_entry **);
 static int archive_metafiles(mportBundleWrite *, sqlite3 *, struct table_entry **);
 static int archive_package_files(mportBundleWrite *, sqlite3 *, struct table_entry **);
 static int extract_stub_db(const char *, const char *);
@@ -54,7 +54,6 @@ static int extract_stub_db(const char *, const char *);
 static struct table_entry * find_in_table(struct table_entry **, const char *);
 static int insert_into_table(struct table_entry **, const char *, const char *);
 static uint32_t SuperFastHash(const char *);
-
 
 #include <err.h>
 
@@ -66,7 +65,8 @@ static uint32_t SuperFastHash(const char *);
  * named `outfile`.  Care is taken to not have duplicates, to ensure that the exterior
  * dependencies are correct, and that the packages are in an optimal order for installation.
  */ 
-MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *outfile)
+MPORT_PUBLIC_API int
+mport_merge_primative(mportInstance *mport, const char **filenames, const char *outfile)
 {
   sqlite3 *db;
   mportBundleWrite *bundle;
@@ -87,7 +87,7 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
   DIAG("Building stub")
 
   /* this function merges the stub databases into one db. */      
-  if (build_stub_db(&db, tmpdir, dbfile, filenames, table) != MPORT_OK)
+  if (build_stub_db(mport, &db, tmpdir, dbfile, filenames, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   DIAG("Stub complete: %s", dbfile)
@@ -130,7 +130,7 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
  * When this function is done, db points to a readonly sqlite object representing
  * the merged db.
  */
-static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames, struct table_entry **table) 
+static int build_stub_db(mportInstance *mport, sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames, struct table_entry **table)
 {
   char *tmpdbfile;
   const char *name;
@@ -144,7 +144,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   if (sqlite3_open(dbfile, db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
   
-  if (mport_generate_stub_schema(*db) != MPORT_OK)
+  if (mport_generate_stub_schema(mport, *db) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   for (file = *filenames; file != NULL; file = *(++filenames)) {

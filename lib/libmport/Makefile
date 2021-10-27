@@ -13,10 +13,11 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 	update_primative.c bundle_read_update_pkg.c pkgmeta.c \
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
    	stats.c verify.c lock.c mkdir.c hashmap.c \
-	import_export.c upgrade.c update.c
+	import_export.c upgrade.c update.c autoremove.c
 INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -g
+CFLAGS+=-I${SRCTOP}/contrib/libucl/include
 SHLIB_MAJOR=	2
 MAN=	mport.3
 
@@ -24,6 +25,6 @@ WARNS=	3
 
 MK_PROFILE=no
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 pthread
+LIBADD=	md archive bz2 lzma z fetch sqlite3 ucl pthread
 
 .include <bsd.lib.mk>

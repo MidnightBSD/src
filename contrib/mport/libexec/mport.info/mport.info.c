@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,91 +33,97 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <mport.h>
 
 static void usage(void);
 
-int 
-main(int argc, char *argv[]) 
-{
-  int ch;
-  mportInstance *mport;
-  mportPackageMeta **packs;
-  bool quiet = false;
-  bool verbose = false;
-  bool origin = false;
+int
+main(int argc, char *argv[]) {
+	int ch;
+	mportInstance *mport;
+	mportPackageMeta **packs;
+	bool quiet = false;
+	bool verbose = false;
+	bool origin = false;
+	const char *chroot_path = NULL;
 
-  while ((ch = getopt(argc, argv, "oqv")) != -1) {
-    switch (ch) {
-      case 'o': 
-        origin = true;
-        break;
-      case 'q':
-        quiet = true;
-        break;
-      case 'v':
-        verbose = true;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
-
-  argc -= optind;
-  argv += optind;
-
-  if (argv[0] == NULL) {
-    warnx("Missing origin");
-    exit(2);
-  }
-
-  mport = mport_instance_new();
-  
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-
-  if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    mport_instance_free(mport);
-    exit(1);
-  }
-  
-  if (packs == NULL) {
-    if (!quiet)
-      warnx("No packages installed matching.");
-    mport_instance_free(mport);
-    exit(3);
-  }
-
-  if (!quiet)
-    printf("The following installed package(s) has %s origin:\n", argv[0]);
- 
-  while (*packs != NULL) {
-    if (strcmp(argv[0], (*packs)->origin) == 0) {
-        if (origin) {
-		printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
-                (*packs)->origin);
-        } else {
-		printf("%s-%s\n", (*packs)->name, (*packs)->version);
+	while ((ch = getopt(argc, argv, "c:oqv")) != -1) {
+		switch (ch) {
+			case 'o':
+				origin = true;
+				break;
+			case 'q':
+				quiet = true;
+				break;
+			case 'v':
+				verbose = true;
+				break;
+			case '?':
+			default:
+				usage();
+				break;
+		}
 	}
-    }
-   
-    packs++;
-  }
 
-  mport_instance_free(mport); 
-  
-  return 0;
+	argc -= optind;
+	argv += optind;
+
+	if (argv[0] == NULL) {
+		warnx("Missing origin");
+		exit(2);
+	}
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
+
+	mport = mport_instance_new();
+
+	if (mport_instance_init(mport, NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		exit(EXIT_FAILURE);
+	}
+
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
+	if (packs == NULL) {
+		if (!quiet)
+			warnx("No packages installed matching.");
+		mport_instance_free(mport);
+		exit(3);
+	}
+
+	if (!quiet)
+		printf("The following installed package(s) has %s origin:\n", argv[0]);
+
+	while (*packs != NULL) {
+		if (strcmp(argv[0], (*packs)->origin) == 0) {
+			if (origin) {
+				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
+				       (*packs)->origin);
+			} else {
+				printf("%s-%s\n", (*packs)->name, (*packs)->version);
+			}
+		}
+
+		packs++;
+	}
+
+	mport_instance_free(mport);
+
+	return 0;
 }
 
 
-static void 
-usage(void) 
-{
-  fprintf(stderr, "Usage: mport.info [-o | -q | -v] <origin>\n");
-  exit(2);
+static void
+usage(void) {
+	fprintf(stderr, "Usage: mport.info [-o | -q | -v] [-c <chroot directory>] <origin>\n");
+	exit(2);
 }

@@ -58,9 +58,13 @@ main(int argc, char *argv[])
 	const char *skip = NULL, *prefix = NULL, *destdir = NULL, *assetlistfile = NULL;
 	mportAssetList *assetlist;
 	FILE *fp;
+	const char *chroot_path = NULL;
 
-	while ((ch = getopt(argc, argv, "f:d:s:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:f:d:s:p:")) != -1) {
 		switch (ch) {
+			case 'c':
+				chroot_path = optarg;
+				break;
 			case 's':
 				skip = optarg;
 				break;
@@ -87,6 +91,12 @@ main(int argc, char *argv[])
 
 	if (!prefix || !destdir || !assetlistfile) 
 		usage();
+
+	if (chroot_path != NULL) {
+		if (chroot(chroot_path) == -1) {
+			err(EXIT_FAILURE, "chroot failed");
+		}
+	}
 	
 	if ((fp = fopen(assetlistfile, "r")) == NULL)
 		err(EX_NOINPUT, "Could not open assetlist file %s", assetlistfile);
@@ -292,7 +302,7 @@ string_replace(const char *str, const char *old, const char *new)
 static void
 usage(void) 
 {
-	errx(EX_USAGE, "Usage: mport.check-fake [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
+	errx(EX_USAGE, "Usage: mport.check-fake [-s skip] [-c <chroot directory>] <-f plistfile> <-d destdir> <-p prefix>");
 }
 
 

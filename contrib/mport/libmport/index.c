@@ -41,8 +41,6 @@ static int index_last_checked_recentish(mportInstance *);
 
 static int index_update_last_checked(mportInstance *);
 
-static time_t get_time(void);
-
 static int lookup_alias(mportInstance *, const char *, char **);
 
 static int attach_index_db(sqlite3 *db);
@@ -200,7 +198,7 @@ index_is_recentish(void)
 		return 0;
 	}
 
-	if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < get_time()) {
+	if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < mport_get_time()) {
 		return 0;
 	}
 
@@ -214,7 +212,7 @@ index_last_checked_recentish(mportInstance *mport)
 	int ret;
 
 	recent = mport_setting_get(mport, MPORT_SETTING_INDEX_LAST_CHECKED);
-	if (recent && get_time() < atoi(recent) + MPORT_DAY) {
+	if (recent && mport_get_time() < atoi(recent) + MPORT_DAY) {
 		ret = 1;
 	} else {
 		ret = 0;
@@ -231,7 +229,7 @@ index_update_last_checked(mportInstance *mport)
 	char *utime;
 	int ret;
 
-	asprintf(&utime, "%jd", (intmax_t) get_time());
+	asprintf(&utime, "%jd", (intmax_t) mport_get_time());
 	if (utime) {
 		ret = mport_setting_set(mport, MPORT_SETTING_INDEX_LAST_CHECKED, utime);
 	} else {
@@ -241,19 +239,6 @@ index_update_last_checked(mportInstance *mport)
 
 	return ret;
 }
-
-static time_t
-get_time(void)
-{
-	struct timespec now;
-
-	if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
-		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
-	}
-
-	return now.tv_sec;
-}
-
 
 /*
  * Fills the string vector with the list of the mirrors for the current
