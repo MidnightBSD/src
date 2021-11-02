@@ -13,6 +13,18 @@
 
 #include <sys/cdefs.h>
 
+#include <float.h>
+
+#include "math.h"
+#include "math_private.h"
+
+#ifdef USE_BUILTIN_SQRT
+double
+__ieee754_sqrt(double x)
+{
+	return (__builtin_sqrt(x));
+}
+#else
 /* __ieee754_sqrt(x)
  * Return correctly rounded sqrt.
  *           ------------------------------------------
@@ -82,11 +94,6 @@
  * Other methods : see the appended file at the end of the program below.
  *---------------
  */
-
-#include <float.h>
-
-#include "math.h"
-#include "math_private.h"
 
 static	const double	one	= 1.0, tiny=1.0e-300;
 
@@ -186,6 +193,7 @@ __ieee754_sqrt(double x)
 	INSERT_WORDS(z,ix0,ix1);
 	return z;
 }
+#endif
 
 #if (LDBL_MANT_DIG == 53)
 __weak_reference(sqrt, sqrtl);
