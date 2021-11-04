@@ -147,8 +147,11 @@ mport_info(mportInstance *mport, const char *packageName) {
 		free(desc);
 	} else {
 		mport_pkgmeta_vec_free(packs);
+		packs = NULL;
 	}
 
 	mport_index_entry_free_vec(indexEntry);
+	indexEntry = NULL;
+
 	return info_text;
 }

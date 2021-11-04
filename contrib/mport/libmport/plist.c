@@ -242,7 +242,7 @@ parse_command(const char *s) {
     if (STRING_EQ(s, "dir"))
         return ASSET_DIR;
     if (strncmp(s, "dir(", 4) == 0)
-	return ASSET_DIR_OWNER_MODE;
+        return ASSET_DIR_OWNER_MODE;
     if (STRING_EQ(s, "dirrm"))
         return ASSET_DIRRM;
     if (STRING_EQ(s, "dirrmtry"))
@@ -282,16 +282,29 @@ parse_command(const char *s) {
 		return ASSET_SAMPLE_OWNER_MODE;
     if (STRING_EQ(s, "shell"))
         return ASSET_SHELL;
-    if (STRING_EQ(s, "ldconfig-linux"))
+    if (STRING_EQ(s, "ldconfig-linux")) {
     	return ASSET_LDCONFIG_LINUX;
-    if (STRING_EQ(s, "ldconfig"))
+    }
+    if (STRING_EQ(s, "ldconfig")) {
     	return ASSET_LDCONFIG;
-    if (STRING_EQ(s, "rmempty"))
+    }
+    if (STRING_EQ(s, "rmempty")) {
     	return ASSET_RMEMPTY;
+    }
+    if (STRING_EQ(s, "glib-schemas")) {
+        return ASSET_GLIB_SCHEMAS;
+    }
+    if (STRING_EQ(s, "kld")) {
+        return ASSET_KLD;
+    }
+    if (STRING_EQ(s, "desktop-file-utils")) {
+        return ASSET_DESKTOP_FILE_UTILS;
+    }
 
     /* special case, starts with ( as in @(root,wheel,0755) */
-    if (s[0] == '(')
+    if (s[0] == '(') {
 		return ASSET_FILE_OWNER_MODE;
+    }
 
     return ASSET_INVALID;
 }
