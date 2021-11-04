@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 
+20211104:
+        Updated mport 2.2.0 code with bugfixes and new plist features.
+
+        Updated tzdata to fix some DST changes in asia
+
+        Update root certificates bundle
+
 20211027:
 	mport 2.2.0 (alpha)
 
