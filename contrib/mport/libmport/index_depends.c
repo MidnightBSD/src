@@ -60,16 +60,16 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 	}
  
 	switch (sqlite3_step(stmt)) {
-	case SQLITE_ROW:
-		count = sqlite3_column_int(stmt, 0);
-		break;
-	case SQLITE_DONE:
-		ret = SET_ERROR(MPORT_ERR_FATAL,
-		    "No rows returned from a 'SELECT COUNT(*)' query.");
-		goto DONE;
-	default:
-		ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-		goto DONE;
+		case SQLITE_ROW:
+			count = sqlite3_column_int(stmt, 0);
+			break;
+		case SQLITE_DONE:
+			ret = SET_ERROR(MPORT_ERR_FATAL,
+		    	"No rows returned from a 'SELECT COUNT(*)' query.");
+			goto DONE;
+		default:
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto DONE;
 	}
   
 	sqlite3_finalize(stmt);
@@ -128,18 +128,22 @@ DONE:
 
 /* free a vector of mportDependsEntry structs */
 MPORT_PUBLIC_API void
-mport_index_depends_free_vec(mportDependsEntry **e)
+mport_index_depends_free_vec(mportDependsEntry **depends)
 {
+	mportDependsEntry **depends_orig = depends;
 
-	if (e == NULL)
+	if (depends == NULL) {
 		return;
+	}
   
-	for (int i = 0; e[i] != NULL; i++) {
-		mport_index_depends_free(e[i]);
-		e[i] = NULL;
+	while (*depends != NULL) {
+		mport_index_depends_free(*depends);
+		depends++;
 	}
 
-	free(e);
+	free(depends_orig);
+	depends_orig = NULL;
+	depends = NULL;
 }
 
 
@@ -147,8 +151,9 @@ mport_index_depends_free_vec(mportDependsEntry **e)
 MPORT_PUBLIC_API void
 mport_index_depends_free(mportDependsEntry *e) 
 {
-	if (e == NULL)
+	if (e == NULL) {
 		return;
+	}
 
 	free(e->pkgname);
 	free(e->d_pkgname);

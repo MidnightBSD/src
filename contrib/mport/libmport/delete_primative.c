@@ -44,6 +44,7 @@
 
 static int run_unexec(mportInstance *, mportPackageMeta *, mportAssetListEntryType);
 static int run_unldconfig(mportInstance *, mportPackageMeta *);
+static int run_special_unexec(mportInstance *, mportPackageMeta *);
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
@@ -279,6 +280,10 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
     if (run_unexec(mport, pack, ASSET_POSTUNEXEC) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
+    if (run_special_unexec(mport, pack) != MPORT_OK) {
+        RETURN_CURRENT_ERROR;
+    }
+                
     if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
@@ -375,6 +380,73 @@ run_unldconfig(mportInstance *mport, mportPackageMeta *pkg) {
     return MPORT_OK;
 
     UNLDCONFIG_ERROR:
+    sqlite3_finalize(assets);
+    RETURN_CURRENT_ERROR;
+}
+
+static int
+run_special_unexec(mportInstance *mport, mportPackageMeta *pkg) {
+    int ret;
+    char cwd[FILENAME_MAX];
+    sqlite3_stmt *assets = NULL;
+    sqlite3 *db;
+    const char *data;
+    mportAssetListEntryType type;
+
+    db = mport->db;
+
+    /* Process @ldconfig steps */
+    if (mport_db_prepare(db, &assets, "SELECT type, data FROM assets WHERE pkg=%Q and type in (%d)", pkg->name,
+                         ASSET_GLIB_SCHEMAS) != MPORT_OK)
+        goto SPECIAL_ERROR;
+
+    (void) strlcpy(cwd, pkg->prefix, sizeof(cwd));
+
+    if (mport_chdir(mport, cwd) != MPORT_OK)
+        goto SPECIAL_ERROR;
+
+    while (1) {
+        ret = sqlite3_step(assets);
+
+        if (ret == SQLITE_DONE)
+            break;
+
+        if (ret != SQLITE_ROW) {
+            SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+            goto SPECIAL_ERROR;
+        }
+        type = (mportAssetListEntryType) sqlite3_column_int(assets, 0);
+        data = sqlite3_column_text(assets, 1);
+
+        switch(type) {
+            case ASSET_GLIB_SCHEMAS:
+				if (mport_file_exists("/usr/local/bin/glib-compile-schemas") && 
+                    mport_xsystem(mport, "/usr/local/bin/glib-compile-schemas %s/share/glib-2.0/schemas > /dev/null || true", data == NULL ? pkg->prefix : data) != MPORT_OK) {
+					goto SPECIAL_ERROR;
+				}
+				break;
+            case ASSET_KLD:
+                if (mport_xsystem(mport, "/usr/sbin/kldxref %s", data) != MPORT_OK) {
+                    goto SPECIAL_ERROR;
+                }
+                /* attempt to remove the directory containing the kernel module, if it's not /boot/modules */
+                if (strcmp("/boot/modules", data) != 0 && mport_rmdir(data, 1) != MPORT_OK) {
+                    mport_call_msg_cb(mport, "Could not remove directory '%s': %s", data, mport_err_string());
+                }
+                break;
+            case ASSET_DESKTOP_FILE_UTILS:
+				if (mport_file_exists("/usr/local/bin/update-desktop-database") && mport_xsystem(mport, "/usr/local/bin/update-desktop-database -q > /dev/null || true") != MPORT_OK) {
+					goto SPECIAL_ERROR;
+				}
+				break;
+        	default:
+        		break;
+        }
+    }
+    sqlite3_finalize(assets);
+    return MPORT_OK;
+
+    SPECIAL_ERROR:
     sqlite3_finalize(assets);
     RETURN_CURRENT_ERROR;
 }

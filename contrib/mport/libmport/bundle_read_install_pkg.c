@@ -326,8 +326,8 @@ mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
 		}
 	} else if (state == POSTINSTALL) {
 		if (mport_db_prepare(mport->db, &stmt,
-		                     "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d, %d, %d)",
-		                     pkg->name, ASSET_CWD, ASSET_POSTEXEC, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX) != MPORT_OK) {
+		                     "SELECT type,data,checksum,owner,grp,mode FROM stub.assets WHERE pkg=%Q and type in (%d, %d, %d, %d, %d)",
+		                     pkg->name, ASSET_CWD, ASSET_POSTEXEC, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX, ASSET_GLIB_SCHEMAS) != MPORT_OK) {
 			sqlite3_finalize(stmt);
 			RETURN_CURRENT_ERROR;
 		}
@@ -902,6 +902,22 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 					if (mport_xsystem(mport, "%s/sbin/ldconfig", e->data) != MPORT_OK) {
 						goto ERROR;
 					}
+				}
+				break;
+			case ASSET_GLIB_SCHEMAS:
+				if (mport_file_exists("/usr/local/bin/glib-compile-schemas") && 
+					mport_xsystem(mport, "/usr/local/bin/glib-compile-schemas %s/share/glib-2.0/schemas > /dev/null || true", e->data == NULL ? pkg->prefix : e->data) != MPORT_OK) {
+					goto ERROR;
+				}
+				break;
+			case ASSET_KLD:
+				if (mport_xsystem(mport, "/usr/sbin/kldxref %s", file) != MPORT_OK) {
+					goto ERROR;
+				}
+				break;
+			case ASSET_DESKTOP_FILE_UTILS:
+				if (mport_file_exists("/usr/local/bin/update-desktop-database") && mport_xsystem(mport, "/usr/local/bin/update-desktop-database -q > /dev/null || true") != MPORT_OK) {
+					goto ERROR;
 				}
 				break;
 			default:

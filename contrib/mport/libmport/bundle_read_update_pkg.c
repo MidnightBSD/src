@@ -42,37 +42,39 @@ static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mpor
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-  char tmpfile2[] = "/tmp/mport.XXXXXXXX";
-  int fd;
+	char tmpfile2[] = "/tmp/mport.XXXXXXXX";
+	int fd;
 
-  mport_pkgmeta_logevent(mport, pkg, "Begining update");
+	mport_pkgmeta_logevent(mport, pkg, "Begining update");
 
-  if ((fd = mkstemp(tmpfile2)) == -1) {
-    RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
-  }
+	if ((fd = mkstemp(tmpfile2)) == -1) {
+    	RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
+  	}
   
-  close(fd);
+	close(fd);
 
-  if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
-    RETURN_CURRENT_ERROR;
-  }
+  	if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
+		// attempt to clear the temp file
+		(void)mport_rmtree(tmpfile2);
+		RETURN_CURRENT_ERROR;
+  	}
 
-  pkg->action = MPORT_ACTION_UPDATE;
-  if (
+	pkg->action = MPORT_ACTION_UPDATE;
+	if (
         (mport_delete_primative(mport, pkg, 1) != MPORT_OK) ||
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
-  ) 
-  {
-    if (install_backup_bundle(mport, tmpfile2) == MPORT_OK) {
-      (void)mport_rmtree(tmpfile2);
-    }
-    RETURN_CURRENT_ERROR;
-  }           
+	) 
+	{
+    	if (install_backup_bundle(mport, tmpfile2) == MPORT_OK) {
+      		(void)mport_rmtree(tmpfile2);
+    	}
+    	RETURN_CURRENT_ERROR;
+	}           
   
-  /* if we can't delete the tmpfile, just move on. */
-  (void)mport_rmtree(tmpfile2);
+	/* if we can't delete the tmpfile, just move on. */
+	(void)mport_rmtree(tmpfile2);
   
-  return MPORT_OK;
+	return (MPORT_OK);
 }
   
   
@@ -82,11 +84,13 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   mportCreateExtras *extra;
   int ret;
  
-  if (mport_asset_get_assetlist(mport, pkg, &alist) != MPORT_OK)
+  if (mport_asset_get_assetlist(mport, pkg, &alist) != MPORT_OK) {
     RETURN_CURRENT_ERROR;
+  }
 
-  if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) 
+  if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) {
     RETURN_CURRENT_ERROR;
+  }
 
   extra->is_backup = true;
 
@@ -95,7 +99,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
   mport_assetlist_free(alist);
   mport_createextras_free(extra);
 
-  return ret;
+  return (ret);
 }        
 
 

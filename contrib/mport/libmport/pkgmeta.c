@@ -43,8 +43,9 @@ MPORT_PUBLIC_API mportPackageMeta*
 mport_pkgmeta_new(void) 
 {
 	mportPackageMeta *pack = (mportPackageMeta *) calloc(1, sizeof(mportPackageMeta));
-	if (pack == NULL)
+	if (pack == NULL) {
 		return NULL;
+    }
 
 	/* these items aren't always initialized from other sources and are needed to be an empty string for sqlite use. */
 	pack->cpe = malloc(1 * sizeof(char));
@@ -63,8 +64,9 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 {
 	int i;
 
-	if (pack == NULL)
+	if (pack == NULL) {
 		return;
+    }
 
 	free(pack->name);
 	pack->name = NULL;
@@ -121,13 +123,14 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 	if (vec == NULL)
 		return;
 
-	for (int i = 0; *(pkgmetas + i) != NULL; i++) {
-		mportPackageMeta *pack = *(pkgmetas + i);
-		mport_pkgmeta_free(pack);
-		pack = NULL;
-	}
+    while (*pkgmetas != NULL) {
+        mport_pkgmeta_free(*pkgmetas);
+        pkgmetas++;
+    }
 
 	free(vec);
+    vec = NULL;
+    pkgmetas = NULL;
 }
 
 
