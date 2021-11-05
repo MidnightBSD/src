@@ -19,6 +19,7 @@ SUBDIR_BOOTSTRAP= \
 	libelf \
 	libssp \
 	libssp_nonshared \
+	libucl \
 	msun
 
 # The main list; please keep these sorted alphabetically.
@@ -152,7 +153,7 @@ SUBDIR_DEPEND_libgeom= libexpat libsbuf
 SUBDIR_DEPEND_librpcsec_gss= libgssapi
 SUBDIR_DEPEND_libmagic= libz
 SUBDIR_DEPEND_libmemstat= libkvm
-SUBDIR_DEPEND_libmport= libarchive libblocksruntime libdispatch libbz2 liblzma libfetch libsqlite3 libucl
+SUBDIR_DEPEND_libmport= libarchive libbz2 liblzma libfetch libsqlite3 libucl
 SUBDIR_DEPEND_libmsearch= libsqlite3 libmagic libz
 SUBDIR_DEPEND_libopie= libmd
 SUBDIR_DEPEND_libpam= libcrypt libopie ${_libradius} librpcsvc libtacplus libutil ${_libypclnt} ${_libcom_err} 
