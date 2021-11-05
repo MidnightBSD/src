@@ -114,7 +114,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	${_libtelnet} \
 	${_libthr} \
 	libthread_db \
-	libucl \
 	libufs \
 	libugidfw \
 	libulog \
