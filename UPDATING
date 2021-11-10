@@ -2348,12 +2348,72 @@ of BMPString or UniversalString objects before attempting to print them.
 	the port installed, it will be overwritten on the next buildworld.
 
 
+COMMON ITEMS:
+
+	General Notes
+	-------------
+	Sometimes, obscure build problems are the result of environment
+	poisoning.  This can happen because the make utility reads its
+	environment when searching for values for global variables.  To run
+	your build attempts in an "environmental clean room", prefix all make
+	commands with 'env -i '.  See the env(1) manual page for more details.
+	Occasionally a build failure will occur with "make -j" due to a race
+	condition.  If this happens try building again without -j, and please
+	report a bug if it happens consistently.
+
+	When upgrading from one major version to another it is generally best to
+	upgrade to the latest code in the currently installed branch first, then
+	do an upgrade to the new branch. This is the best-tested upgrade path,
+	and has the highest probability of being successful.  Please try this
+	approach if you encounter problems with a major version upgrade.  Since
+	the stable 0.2 branch point, one has generally been able to upgrade from
+	anywhere in the most recent stable branch to head / current (or even the
+	last couple of stable branches). See the top of this file when there's
+	an exception.
+
+	The update process will emit an error on an attempt to perform a build
+	or install from a MidnightBSD version below the earliest supported version.
+	When updating from an older version the update should be performed one
+	major release at a time, including running `make delete-old` at each
+	step.
+
+	When upgrading a live system, having a root shell around before
+	installing anything can help undo problems. Not having a root shell
+	around can lead to problems if pam has changed too much from your
+	starting point to allow continued authentication after the upgrade.
+
+	This file should be read as a log of events. When a later event changes
+	information of a prior event, the prior event should not be deleted.
+	Instead, a pointer to the entry with the new information should be
+	placed in the old entry. Readers of this file should also sanity check
+	older entries before relying on them blindly. Authors of new entries
+	should write them with this in mind.
+
+	ZFS notes
+	---------
+	When upgrading the boot ZFS pool to a new version, always follow
+	these two steps:
+
+	1.) recompile and reinstall the ZFS boot loader and boot block
+	(this is part of "make buildworld" and "make installworld")
+
+	2.) update the ZFS boot block on your boot drive
+
+	The following example updates the ZFS boot block on the
+	mnbsd-boot partition of a GPT partitioned drive ada0:
+	"gpart bootcode -p /boot/gptzfsboot -i $N ada0"
+	The value $N will typically be 1 (if booting from BIOS) or 2 (if
+	booting from EFI).
+
+	Non-boot pools do not need these updates.
 
 	To build a kernel
 	-----------------
 	If you are updating from a prior version of MidnightBSD (even one just
-	a few days old), you should follow this procedure. With a
-	/usr/obj tree with a fresh buildworld,
+	a few days old), you should follow this procedure.  It is the most
+	failsafe as it uses a /usr/obj tree with a fresh mini-buildworld,
+
+	make kernel-toolchain
 	make -DALWAYS_CHECK_MAKE buildkernel KERNCONF=YOUR_KERNEL_HERE
 	make -DALWAYS_CHECK_MAKE installkernel KERNCONF=YOUR_KERNEL_HERE
 
@@ -2365,21 +2425,6 @@ of BMPString or UniversalString objects before attempting to print them.
 	make installkernel KERNCONF=YOUR_KERNEL_HERE KODIR=/boot/testkernel
 	nextboot -k testkernel
 
-	To just build a kernel when you know that it won't mess you up
-	--------------------------------------------------------------
-	This assumes you are already running a 6.X system.  Replace
-	${arch} with the architecture of your machine (e.g. "i386",
-	"amd64", "ia64", "pc98", "sparc64", etc).
-
-	cd src/sys/${arch}/conf
-	config KERNEL_NAME_HERE
-	cd ../compile/KERNEL_NAME_HERE
-	make depend
-	make
-	make install
-
-	If this fails, go to the "To build a kernel" section.
-
 	To rebuild everything and install it on the current system.
 	-----------------------------------------------------------
 	# Note: sometimes if you are running current you gotta do more than
@@ -2387,15 +2432,15 @@ of BMPString or UniversalString objects before attempting to print them.
 
 	<make sure you have good level 0 dumps>
 	make buildworld
-	make kernel KERNCONF=YOUR_KERNEL_HERE
+	make buildkernel KERNCONF=YOUR_KERNEL_HERE
+	make installkernel KERNCONF=YOUR_KERNEL_HERE
 							[1]
 	<reboot in single user>				[3]
-	mergemaster -p					[5]
+	etcupdate -p					[5]
 	make installworld
-	make delete-old
-	mergemaster					[4]
+	etcupdate -B					[4]
+	make delete-old					[6]
 	<reboot>
-
 
 	To cross-install current onto a separate partition
 	--------------------------------------------------
@@ -2410,28 +2455,29 @@ of BMPString or UniversalString objects before attempting to print them.
 	make buildkernel KERNCONF=YOUR_KERNEL_HERE
 	<maybe newfs current's root partition>
 	<mount current's root partition on directory ${CURRENT_ROOT}>
-	make installworld DESTDIR=${CURRENT_ROOT}
-	cd src/etc; make distribution DESTDIR=${CURRENT_ROOT} # if newfs'd
+	make installworld DESTDIR=${CURRENT_ROOT} -DDB_FROM_SRC
+	make distribution DESTDIR=${CURRENT_ROOT} # if newfs'd
 	make installkernel KERNCONF=YOUR_KERNEL_HERE DESTDIR=${CURRENT_ROOT}
 	cp /etc/fstab ${CURRENT_ROOT}/etc/fstab 		   # if newfs'd
 	<edit ${CURRENT_ROOT}/etc/fstab to mount "/" from the correct partition>
 	<reboot into current>
 	<do a "native" rebuild/install as described in the previous section>
-	<maybe install compatibility libraries from src/lib/compat>
- 	<reboot>
+	<maybe install compatibility libraries from ports/misc/compat*>
+	<reboot>
 
 
-	To upgrade in-place from 5.x-stable or higher to 6.x-stable
-	-----------------------------------------------------------
+	To upgrade in-place from stable to current
+	----------------------------------------------
 	<make sure you have good level 0 dumps>
 	make buildworld					[9]
-	make kernel KERNCONF=YOUR_KERNEL_HERE		[8]
+	make buildkernel KERNCONF=YOUR_KERNEL_HERE	[8]
+	make installkernel KERNCONF=YOUR_KERNEL_HERE
 							[1]
 	<reboot in single user>				[3]
-	mergemaster -p					[5]
+	etcupdate -p					[5]
 	make installworld
-	make delete-old
-	mergemaster -i					[4]
+	etcupdate -B					[4]
+	make delete-old					[6]
 	<reboot>
 
 	Make sure that you've read the UPDATING file to understand the
@@ -2440,55 +2486,65 @@ of BMPString or UniversalString objects before attempting to print them.
 	to cope.  The defaults can also change, so please read ALL of
 	the UPDATING entries.
 
-	Also, if you are tracking -current, you must be subscribed to
-	freebsd-current@freebsd.org.  Make sure that before you update
-	your sources that you have read and understood all the recent
-	messages there.  If in doubt, please track -stable which has
-	much fewer pitfalls.
-
-	[1] If you have third party modules, such as vmware, you
-	should disable them at this point so they don't crash your
-	system on reboot.
+	[1] If you have third party modules, such as vmware, you should disable
+	them at this point so they don't crash your system on
+	reboot. Alternatively, you should rebuild all the modules you have in
+	your system and install them as well.  If you are running current, you
+	should seriously consider placing all sources to all the modules for
+	your system (or symlinks to them) in /usr/local/sys/modules so this
+	happens automatically. If all your modules come from mports, then adding
+	the port origin directories to PORTS_MODULES instead is also automatic
+	and effective, eg:
+	     PORTS_MODULES+=x11/nvidia-driver
 
 	[3] From the bootblocks, boot -s, and then do
 		fsck -p
 		mount -u /
 		mount -a
-		cd src
+		sh /etc/rc.d/zfs start	# mount zfs filesystem, if needed
+		cd src			# full path to source
 		adjkerntz -i		# if CMOS is wall time
-	Also, when doing a major release upgrade, it is required that
-	you boot into single user mode to do the installworld.
+	Also, when doing a major release upgrade, it is required that you boot
+	into single user mode to do the installworld.
 
 	[4] Note: This step is non-optional.  Failure to do this step
 	can result in a significant reduction in the functionality of the
 	system.  Attempting to do it by hand is not recommended and those
 	that pursue this avenue should read this file carefully, as well
-	as the archives of freebsd-current and freebsd-hackers mailing lists
-	for potential gotchas.
+	as the archives of midnightbsd-users mailing lists
+	for potential gotchas.  See etcupdate(8) for more information.
 
-	[5] Usually this step is a noop.  However, from time to time
+	[5] Usually this step is a no-op.  However, from time to time
 	you may need to do this if you get unknown user in the following
-	step.  It never hurts to do it all the time.
+	step.
 
-	[8] In order to have a kernel that can run the 5.x binaries
-	needed to do an installworld, you must include the COMPAT_FREEBSD5
-	option in your kernel.  Failure to do so may leave you with a system
-	that is hard to boot to recover. A similar kernel option COMPAT_FREEBSD5
-	is required to run the 5.x binaries on more recent kernels.
+	[6] This only deletes old files and directories. Old libraries
+	can be deleted by "make delete-old-libs", but you have to make
+	sure that no program is using those libraries anymore.
+
+	[8] The new kernel must be able to run existing binaries used by an
+	installworld.  When upgrading across major versions, the new kernel's
+	configuration must include the correct COMPAT_FREEBSD<n> option for
+	existing binaries (e.g. COMPAT_FREEBSD10 to run 10.x binaries).  Failure
+	to do so may leave you with a system that is hard to boot to recover. A
+	GENERIC kernel will include suitable compatibility options to run
+	binaries from older branches.  Note that the ability to run binaries
+	from unsupported branches is not guaranteed.
 
 	Make sure that you merge any new devices from GENERIC since the
-	last time you updated your kernel config file.
+	last time you updated your kernel config file. Options also
+	change over time, so you may need to adjust your custom kernels
+	for these as well.
 
-	[9] When checking out sources, you must include the -P flag to have
-	cvs prune empty directories.
-
-	If CPUTYPE is defined in your /etc/make.conf, make sure to use the
+	[9] If CPUTYPE is defined in your /etc/make.conf, make sure to use the
 	"?=" instead of the "=" assignment operator, so that buildworld can
 	override the CPUTYPE if it needs to.
 
 	MAKEOBJDIRPREFIX must be defined in an environment variable, and
 	not on the command line, or in /etc/make.conf.  buildworld will
 	warn if it is improperly defined.
+	
+FORMAT:
 
 Copyright information:
 
