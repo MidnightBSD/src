@@ -19,7 +19,6 @@ SUBDIR_BOOTSTRAP= \
 	libelf \
 	libssp \
 	libssp_nonshared \
-	libucl \
 	msun
 
 # The main list; please keep these sorted alphabetically.
@@ -114,6 +113,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	${_libtelnet} \
 	${_libthr} \
 	libthread_db \
+	libucl \
 	libufs \
 	libugidfw \
 	libulog \
