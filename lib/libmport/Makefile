@@ -18,6 +18,7 @@ INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -g
 CFLAGS+=-I${SRCTOP}/contrib/libucl/include
+.PATH:  ${SRCTOP}/contrib/libucl/include
 SHLIB_MAJOR=	2
 MAN=	mport.3
 
