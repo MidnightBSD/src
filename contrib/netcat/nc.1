@@ -25,8 +25,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/contrib/netcat/nc.1 288303 2015-09-27 07:04:16Z delphij $
-.\"
 .Dd September 26, 2015
 .Dt NC 1
 .Os
@@ -41,6 +39,7 @@
 .Op Fl I Ar length
 .Op Fl i Ar interval
 .Op Fl -no-tcpopt
+.Op Fl -sctp
 .Op Fl O Ar length
 .Op Fl P Ar proxy_username
 .Op Fl p Ar source_port
@@ -181,6 +180,8 @@ hostnames or ports.
 Disables the use of TCP options on the socket, by setting the boolean
 TCP_NOOPT
 socket option.
+.It Fl -sctp
+Use SCTP instead of the default option of TCP.
 .It Fl O Ar length
 Specifies the size of the TCP send buffer.
 .It Fl P Ar proxy_username
