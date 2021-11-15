@@ -22,6 +22,7 @@ _PRIVATELIBS=	\
 		heimipcs \
 		ldns \
 		ssh \
+		ucl \
 		unbound
 
 _INTERNALLIBS=	\
@@ -167,7 +168,6 @@ _LIBRARIES=	\
 		tacplus \
 		termcap \
 		termcapw \
-		ucl \
 		ufs \
 		ugidfw \
 		ulog \
