@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20211115:
+	Update lua 5.3.6
+
 20211104:
 	Updated mport 2.2.0 code with bugfixes and new plist features.
 
