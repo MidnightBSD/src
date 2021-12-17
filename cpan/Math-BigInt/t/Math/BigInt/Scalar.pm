@@ -14,8 +14,6 @@ our @ISA = qw(Exporter);
 
 our $VERSION = '0.13';
 
-sub api_version() { 1; }
-
 ##############################################################################
 # global constants, flags and accessory
 
@@ -223,8 +221,8 @@ sub _digit {
     # 0 is the rightmost digit
     my ($c, $x, $n) = @_;
 
-    $n ++;			# 0 => 1, 1 => 2
-    return substr($$x, -$n, 1);	# 1 => -1, -2 => 2 etc
+    $n ++;                      # 0 => 1, 1 => 2
+    return substr($$x, -$n, 1); # 1 => -1, -2 => 2 etc
 }
 
 ##############################################################################

@@ -1,3 +1,68 @@
+2010-01-27 10:27:00 TonyC
+    version 3.20
+        * fix a format string and arguments for some debugging text
+        * linkify references to alternatives to Storable
+
+2020-01-27 11:01:00 TonyC
+    version 3.19
+        * add casts to match some I32 parameters to "%d" formats (#17339)
+        * fix dependencies in Makefile.PL -> META (#17422)
+        * make use of note() optional, this requires a newer version of
+          Test::More and there's a circular dependency between later
+          versions of Test::More and Storable  (#17422)
+
+2019-11-19 07:59:39 TonyC
+    version 3.18
+        * update bug tracker to point at github (#17298)
+        * disallow vstring magic strings over 2GB-1 (#17306)
+        * mark some ASCII dependent tests as ASCII platform only
+
+2019-08-08 11:48:00 TonyC
+    version 3.17
+        * correct a data type to ensure the check for too large results from
+	  STORABLE_freeze() are detected correctly (detected by Coverity)
+	* removed remains of stack size detection from the build process.
+	* moved CAN_FLOCK detection into XS to simplify the build process.
+
+2019-06-11 10:43:00 TonyC
+    version 3.16
+        * (perl #134179) fix self-referencing structures that include regexps
+        * bless regexps to preserve bless qr//, "Foo"
+
+2019-04-23 16:00:00 xsawyerx
+    version 3.15
+    * Fix leaking.
+
+unreleased
+    version 3.14
+	* (perl #133708) don't build-time probe for stack limits at all
+
+unreleased
+    version 3.12
+        * (perl #133411) don't probe for stack limits with -Dusecrosscompile
+
+2018-04-27 20:40:00 xsawyerx
+    version 3.11
+        * Fix Strawberry Perl build failures.
+
+2018-04-21 22:00:00 xsawyerx
+    Version 3.10
+        * Fix binary artifacts from distribution.
+
+2018-04-21 16:49:00 xsawyerx
+    Version 3.09
+        * Fix "provides" in metadata (META.yml/META.json) to use the Storable
+          template instead of a small other file (which also didn't exist).
+
+2018-04-21 11:23:00 xsawyerx
+    Version 3.08
+        * (perl #132849) try to disable core files when deliberatly segfaulting.
+        * (perl #127743) don't probe Storable limits so much.
+        * (perl #132893) don't probe for Storable recursion limits on old Win32.
+        * (perl #132870) workaround VC2017 compiler bug.
+        * (perl #127743) re-work for debugging builds with MSVC.
+        * (perl #133039) dont build a Storable.so/.dll with a static perl build.
+
 2018-02-07 15:08:00 tonyc
     Version 3.06
 
@@ -307,7 +372,7 @@ Sat Mar 13 20:11:03 GMT 2004   Nicholas Clark <nick@ccl4.org>
     Version 2.11
 
         1. Storing restricted hashes in canonical order would SEGV. Fixed.
-        2. It was impossible to retrieve references to PL_sv_no and and
+        2. It was impossible to retrieve references to PL_sv_no and
            PL_sv_undef from STORABLE_thaw hooks.
         3. restrict.t was failing on 5.8.0, due to 5.8.0's unique
            implementation of restricted hashes using PL_sv_undef

@@ -17,14 +17,14 @@
 use strict;
 use warnings;
 
-our ($CLASS, $CALC, $EXPECTED_CLASS);
+our ($CLASS, $LIB, $EXPECTED_CLASS);
 
 ##############################################################################
 # for testing inheritance of _swap
 
 package Math::Foo;
 
-use Math::BigInt lib => $main::CALC;
+use Math::BigInt lib => $main::LIB;
 our @ISA = (qw/Math::BigInt/);
 
 use overload
@@ -47,7 +47,7 @@ sub _swap {
 ##############################################################################
 package main;
 
-is($CLASS->config('lib'), $CALC, "$CLASS->config('lib')");
+is($CLASS->config('lib'), $LIB, "$CLASS->config('lib')");
 
 my ($x, $y, $z, @args, $a, $m, $e, $try, $got, $want, $exp);
 my ($f, $round_mode, $expected_class);
@@ -80,7 +80,7 @@ while (<DATA>) {
     $try = qq|\$x = $CLASS->new("$args[0]");|;
     if ($f eq "bnorm") {
         $try = qq|\$x = $CLASS->bnorm("$args[0]");|;
-    } elsif ($f =~ /^is_(zero|one|odd|even|negative|positive|nan|int)$/) {
+    } elsif ($f =~ /^is_(zero|one|odd|even||(non_)?(negative|positive)|nan|int)$/) {
         $try .= " \$x->$f();";
     } elsif ($f =~ /^(to|as)_(hex|oct|bin)$/) {
         $try .= " \$x->$f();";
@@ -243,7 +243,7 @@ sub is_valid {
       if $e eq '0' && $x->{sign} !~ /^(\+|-|\+inf|-inf|NaN)$/;
 
     $e = "-0 is invalid!" if $e ne '0' && $x->{sign} eq '-' && $x == 0;
-    #$e = $CALC->_check($x->{value}) if $e eq '0';
+    #$e = $LIB->_check($x->{value}) if $e eq '0';
 
     # test done, see if error did crop up
     if ($e eq '0') {
@@ -303,6 +303,22 @@ NaNneg:0
 +inf:1
 -inf:0
 NaNneg:0
+
+&is_non_negative
+0:1
+-1:0
+1:1
++inf:1
+-inf:0
+NaN:0
+
+&is_non_positive
+0:1
+-1:1
+1:0
++inf:0
+-inf:1
+NaN:0
 
 &is_odd
 abc:0
@@ -1340,8 +1356,8 @@ abc:12:NaN
 +inf:1234500012:inf
 -inf:1234500012:inf
 -inf:1234500013:-inf
-+inf:-12345000123:inf
--inf:-12345000123:-inf
++inf:-12345000123:0
+-inf:-12345000123:0
 # 1 ** -x => 1 / (1 ** x)
 -1:0:1
 -2:0:1

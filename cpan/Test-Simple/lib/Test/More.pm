@@ -17,7 +17,7 @@ sub _carp {
     return warn @_, " at $file line $line\n";
 }
 
-our $VERSION = '1.302133';
+our $VERSION = '1.302175';
 
 use Test::Builder::Module;
 our @ISA    = qw(Test::Builder::Module);
@@ -95,8 +95,10 @@ Test::More - yet another framework for writing test scripts
 =head1 DESCRIPTION
 
 B<STOP!> If you're just getting started writing tests, have a look at
-L<Test::Simple> first.  This is a drop in replacement for Test::Simple
-which you can switch to once you get the hang of basic testing.
+L<Test2::Suite> first.
+
+This is a drop in replacement for Test::Simple which you can switch to once you
+get the hang of basic testing.
 
 The purpose of this module is to provide a wide range of testing
 utilities.  Various ways to say "ok" with better diagnostics,
@@ -1400,7 +1402,7 @@ You then know the thing you had todo is done and can remove the
 TODO flag.
 
 The nice part about todo tests, as opposed to simply commenting out a
-block of tests, is it's like having a programmatic todo list.  You know
+block of tests, is that it is like having a programmatic todo list.  You know
 how much work is left to be done, you're aware of what bugs there are,
 and you'll know immediately when they're fixed.
 
@@ -1846,7 +1848,7 @@ might get a "Wide character in print" warning.  Using
 C<< binmode STDOUT, ":utf8" >> will not fix it.
 L<Test::Builder> (which powers
 Test::More) duplicates STDOUT and STDERR.  So any changes to them,
-including changing their output disciplines, will not be seem by
+including changing their output disciplines, will not be seen by
 Test::More.
 
 One work around is to apply encodings to STDOUT and STDERR as early
@@ -1918,6 +1920,8 @@ magic side-effects are kept to a minimum.  WYSIWYG.
 
 =head2 ALTERNATIVES
 
+L<Test2::Suite> is the most recent and modern set of tools for testing.
+
 L<Test::Simple> if all this confuses you and you just want to write
 some tests.  You can upgrade to Test::More later (it's forward
 compatible).
@@ -1925,15 +1929,6 @@ compatible).
 L<Test::Legacy> tests written with Test.pm, the original testing
 module, do not play well with other testing libraries.  Test::Legacy
 emulates the Test.pm interface and does play well with others.
-
-=head2 TESTING FRAMEWORKS
-
-L<Fennec> The Fennec framework is a testers toolbox. It uses L<Test::Builder>
-under the hood. It brings enhancements for forking, defining state, and
-mocking. Fennec enhances several modules to work better together than they
-would if you loaded them individually on your own.
-
-L<Fennec::Declare> Provides enhanced (L<Devel::Declare>) syntax for Fennec.
 
 =head2 ADDITIONAL LIBRARIES
 

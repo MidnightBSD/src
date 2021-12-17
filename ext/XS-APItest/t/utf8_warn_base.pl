@@ -584,7 +584,7 @@ sub flags_to_text($$)
 }
 
 # Possible flag returns from utf8n_to_uvchr_error().  These should have G_,
-# instead of A_, D_, but the prefixes will be used in a a later commit, so
+# instead of A_, D_, but the prefixes will be used in a later commit, so
 # minimize churn by having them here.
 my @utf8n_flags_to_text =  ( qw(
         A_EMPTY
@@ -699,6 +699,80 @@ sub do_warnings_test(@)
     return $succeeded;
 }
 
+my $min_cont = $::lowest_continuation;
+my $continuation_shift = (isASCII) ? 6 : 5;
+my $continuation_mask = (1 << $continuation_shift) - 1;
+
+sub isUTF8_CHAR($$) {   # Uses first principals to determine if this I8 input
+                        # is legal.  (Doesn't work if overflows)
+    my ($native, $length) = @_;
+    my $i8 = native_to_I8($native);
+
+    # Uses first principals to calculate if $i8 is legal
+
+    return 0 if $length <= 0;
+
+    my $first = ord substr($i8, 0, 1);
+
+    # Invariant
+    return 1 if $length == 1 && $first < $min_cont;
+
+    return 0 if $first < 0xC0;  # Starts with continuation
+
+    # Calculate the number of leading 1 bits
+    my $utf8skip = 0;
+    my $bits = $first;
+    do {
+        $utf8skip++;
+        $bits = ($bits << 1) & 0xFF;
+    } while ($bits & 0x80);
+
+    return 0 if $utf8skip != $length;
+
+    # Accumulate the $code point.  The remaining bits in the start byte count
+    # towards it
+    my $cp = $bits >> $utf8skip;
+
+    for my $i (1 .. $length - 1) {
+        my $ord = ord substr($i8, $i, 1);
+
+        # Wrong if not a continuation
+        return 0 if $ord < $min_cont || $ord >= 0xC0;
+
+        $cp = ($cp << $continuation_shift)
+            | ($ord & $continuation_mask);
+    }
+
+    # If the calculated value can be expressed in fewer bytes than were passed
+    # in, is an illegal overlong.  XXX if 'chr' is not working properly, this
+    # may not be right
+    my $chr = uni_to_native(chr $cp);
+    utf8::upgrade($chr);
+
+    use bytes;
+    return 0 if length $chr < $length;
+
+    # Also, its possible on EBCDIC platforms that have more illegal start
+    # bytes than ASCII ones (like C3, C4) for something to have the same
+    # length but still be overlong.  We make sure the first byte isn't smaller
+    # than the first byte of the real representation.
+    return 0 if substr($native, 0, 1) lt substr($chr, 0, 1);
+
+    return 1;
+}
+
+sub start_mark($) {
+    my $len = shift;
+    return 0xFF if $len >  7;
+    return (0xFF & (0xFE << (7 - $len)));
+}
+
+sub start_mask($) {
+    my $len = shift;
+    return 0 if $len >  7;
+    return 0x1F >> ($len - 2);
+}
+
 # This test is split into this number of files.
 my $num_test_files = $ENV{TEST_JOBS} || 1;
 $num_test_files = 10 if $num_test_files > 10;
@@ -707,6 +781,206 @@ $num_test_files = 10 if $num_test_files > 10;
 my $tested_CHECK_ONLY = 0;
 
 my $test_count = -1;
+
+# By setting this environment variable to this particular value, we test
+# essentially all combinations of potential UTF-8, so that can get a
+# comprehensive test of the decoding routine.  This test assumes the routine
+# that does the translation from code point to UTF-8 is working.  An assert
+# can be used in the routine to make sure that the dfa is working precisely
+# correctly, and any flaws in it aren't being masked by the remainder of the
+# function.
+if ($::TEST_CHUNK == 0
+&& $ENV{PERL_DEBUG_FULL_TEST}
+&& $ENV{PERL_DEBUG_FULL_TEST} == 97)
+{
+    # We construct UTF-8 (I8 on EBCDIC platforms converted later to native)
+
+    my $min_cont_mask = $min_cont | 0xF;
+    my @bytes = (   0,  # Placeholder to signify to use an empty string ""
+                 0x41,  # We assume that all the invariant characters are
+                        # properly in the same class, so this is an exemplar
+                        # character
+                $min_cont .. 0xFF   # But test every non-invariant individually
+                );
+    my $mark = $min_cont;
+    my $mask = (1 << $continuation_shift) - 1;
+    for my $byte1 (@bytes) {
+        for my $byte2 (@bytes) {
+            last if $byte2 && ! $byte1;      # Don't test empty preceding byte
+
+            last if $byte2 && $byte1 < 0xC0; # No need to test more than a
+                                             # single byte unless start byte
+                                             # indicates those.
+
+            for my $byte3 (@bytes) {
+                last if $byte3 && ! $byte2;
+                last if $byte3 && $byte1 < 0xE0;    # Only test 3 bytes for
+                                                    # 3-byte start byte
+
+                # If the preceding byte is a start byte, it should fail, and
+                # there is no need to test illegal bytes that follow.
+                # Instead, limit ourselves to just a few legal bytes that
+                # could follow.  This cuts down tremendously on the number of
+                # tests executed.
+                next if $byte2 >= 0xC0
+                     && $byte3 >= $min_cont
+                     && ($byte3 & $min_cont_mask) != $min_cont;
+
+                for my $byte4 (@bytes) {
+                    last if $byte4 && ! $byte3;
+                    last if $byte4 && $byte1 < 0xF0;  # Only test 4 bytes for
+                                                      # 4 byte strings
+
+                    # Like for byte 3, we limit things that come after a
+                    # mispositioned start-byte to just a few things that
+                    # otherwise would be legal
+                    next if ($byte2 >= 0xC0 || $byte3 >= 0xC0)
+                          && $byte4 >= $min_cont
+                          && ($byte4 & $min_cont_mask) != $min_cont;
+
+                    for my $byte5 (@bytes) {
+                        last if $byte5 && ! $byte4;
+                        last if $byte5 && $byte1 < 0xF8;  # Only test 5 bytes for
+                                                          # 5 byte strings
+
+                        # Like for byte 4, we limit things that come after a
+                        # mispositioned start-byte to just a few things that
+                        # otherwise would be legal
+                        next if (   $byte2 >= 0xC0
+                                 || $byte3 >= 0xC0
+                                 || $byte4 >= 0xC0)
+                              && $byte4 >= $min_cont
+                              && ($byte4 & $min_cont_mask) != $min_cont;
+
+                        my $string = "";
+                        $string .= chr $byte1 if $byte1;
+                        $string .= chr $byte2 if $byte2;
+                        $string .= chr $byte3 if $byte3;
+                        $string .= chr $byte4 if $byte4;
+                        $string .= chr $byte5 if $byte5;
+
+                        my $length = length $string;
+                        next unless $length;
+                        last if $byte1 >= ((isASCII) ? 0xF6 : 0xFA);
+
+                        my $native = I8_to_native($string);
+                        my $is_valid = isUTF8_CHAR($native, $length);
+                        my $got_valid = test_isUTF8_CHAR($native, $length);
+                        my $got_strict
+                                    = test_isSTRICT_UTF8_CHAR($native, $length);
+                        my $got_C9
+                                 = test_isC9_STRICT_UTF8_CHAR($native, $length);
+                        my $ret = test_utf8n_to_uvchr_msgs($native, $length,
+                                            $::UTF8_WARN_ILLEGAL_INTERCHANGE);
+                        my $is_strict = $is_valid;
+                        my $is_C9 = $is_valid;
+
+                        if ($is_valid) {
+
+                            # Here, is legal UTF-8.  Verify that it returned
+                            # the correct code point, and if so, that it
+                            # correctly classifies the result.
+                            my $cp = $ret->[0];
+
+                            my $should_be_string;
+                            if ($length == 1) {
+                                $should_be_string = native_to_I8(chr $cp);
+                            }
+                            else {
+
+                                # Starting with the code point, use first
+                                # principals to find the equivalent I8 string
+                                my @bytes;
+                                my $uv = ord native_to_uni(chr $cp);
+                                for (my $i = $length - 1; $i > 0; $i--) {
+                                    $bytes[$i] = chr (($uv & $mask) | $mark);
+                                    $uv >>= $continuation_shift;
+                                }
+                                $bytes[0] = chr ($uv & start_mask($length)
+                                            | start_mark($length));
+                                $should_be_string = join "", @bytes;
+                            }
+
+                            # If the original string and the inverse are the
+                            # same, it worked.
+                            my $test_name = "utf8n_to_uvchr_msgs("
+                                          . display_bytes($native)
+                                          . ") yields "
+                                          . sprintf ("0x%x", $cp)
+                                          . "; does its I8 eq original";
+                            if (is($should_be_string, $string, $test_name)) {
+                                my $is_surrogate = $cp >= 0xD800
+                                                && $cp <= 0xDFFF;
+                                my $got_surrogate
+                                    = ($ret->[2] & $::UTF8_GOT_SURROGATE) != 0;
+                                $is_strict = 0 if $is_surrogate;
+                                $is_C9 = 0 if $is_surrogate;
+
+                                my $is_super = $cp > 0x10FFFF;
+                                my $got_super
+                                        = ($ret->[2] & $::UTF8_GOT_SUPER) != 0;
+                                $is_strict = 0 if $is_super;
+                                $is_C9 = 0 if $is_super;
+
+                                my $is_nonchar = ! $is_super
+                                    && (   ($cp & 0xFFFE) == 0xFFFE
+                                        || ($cp >= 0xFDD0 && $cp <= 0xFDEF));
+                                my $got_nonchar
+                                      = ($ret->[2] & $::UTF8_GOT_NONCHAR) != 0;
+                                $is_strict = 0 if $is_nonchar;
+
+                                is($got_surrogate, $is_surrogate,
+                                    "    And correctly flagged it as"
+                                  . ((! $is_surrogate) ? " not" : "")
+                                  . " being a surrogate");
+                                is($got_super, $is_super,
+                                    "    And correctly flagged it as"
+                                  . ((! $is_super) ? " not" : "")
+                                  . " being above Unicode");
+                                is($got_nonchar, $is_nonchar,
+                                    "    And correctly flagged it as"
+                                  . ((! $is_nonchar) ? " not" : "")
+                                  . " being a non-char");
+                            }
+
+                            # This is how we exit the loop normally if things
+                            # are working.  The fail-safe code above is used
+                            # when they aren't.
+                            goto done if $cp > 0x140001;
+                        }
+                        else {
+                            is($ret->[0], 0, "utf8n_to_uvchr_msgs("
+                                            . display_bytes($native)
+                                            . ") correctly returns error");
+                            if (! ($ret->[2] & ($::UTF8_GOT_SHORT
+                                               |$::UTF8_GOT_NON_CONTINUATION
+                                               |$::UTF8_GOT_LONG)))
+                            {
+                                is($ret->[2] & ( $::UTF8_GOT_NONCHAR
+                                                |$::UTF8_GOT_SURROGATE
+                                                |$::UTF8_GOT_SUPER), 0,
+                                "    And isn't a surrogate, non-char, nor"
+                                . " above Unicode");
+                             }
+                        }
+
+                        is($got_valid == 0, $is_valid == 0,
+                           "    And isUTF8_CHAR() correctly returns "
+                         . (($got_valid == 0) ? "0" : "non-zero"));
+                        is($got_strict == 0, $is_strict == 0,
+                           "    And isSTRICT_UTF8_CHAR() correctly returns "
+                         . (($got_strict == 0) ? "0" : "non-zero"));
+                        is($got_C9 == 0, $is_C9 == 0,
+                           "    And isC9_UTF8_CHAR() correctly returns "
+                         . (($got_C9 == 0) ? "0" : "non-zero"));
+                    }
+                }
+            }
+        }
+    }
+  done:
+}
+
 foreach my $test (@tests) {
   $test_count++;
   next if $test_count % $num_test_files != $::TEST_CHUNK;
@@ -1141,7 +1415,7 @@ foreach my $test (@tests) {
               $allow_flags |= $::UTF8_ALLOW_OVERFLOW if $malformed_allow_type;
           }
 
-          # And we can create the malformation-related text for the the test
+          # And we can create the malformation-related text for the test
           # names we eventually will generate.
           my $malformations_name = "";
           if (@malformation_names) {
@@ -1371,7 +1645,7 @@ foreach my $test (@tests) {
 
               # We classify the warnings into certain "interesting" types,
               # described later
-              foreach my $warning_type (0..4) {
+              foreach my $warning_type (0..5) {
                 next if $skip_most_tests && $warning_type != 1;
                 foreach my $use_warn_flag (0, 1) {
                     if ($use_warn_flag) {
@@ -1435,8 +1709,9 @@ foreach my $test (@tests) {
                             = $controlling_warning_category eq 'non_unicode';
                         $expect_warnings_for_malformed = $which_func;
                     }
-                    elsif ($warning_type == 4) {  # Like type 3, but uses the
-                                                  # PERL_EXTENDED flags
+                    elsif ($warning_type =~ /^[45]$/) {
+                        # Like type 3, but uses the PERL_EXTENDED flags, and 5
+                        # uses PORTABLE warnings;
                         # The complement flags were set up so that the
                         # PERL_EXTENDED flags have been tested that they don't
                         # trigger wrongly for too small code points.  And the
@@ -1446,7 +1721,13 @@ foreach my $test (@tests) {
                         # trigger the PERL_EXTENDED flags.
                         next if ! requires_extended_utf8($allowed_uv);
                         next if $controlling_warning_category ne 'non_unicode';
-                        $eval_warn = "no warnings; use warnings 'non_unicode'";
+                        $eval_warn = "no warnings;";
+                        if ($warning_type == 4) {
+                            $eval_warn .= " use warnings 'non_unicode'";
+                        }
+                        else {
+                            $eval_warn .= " use warnings 'portable'";
+                        }
                         $expect_regular_warnings = 1;
                         $expect_warnings_for_overflow = 1;
                         $expect_warnings_for_malformed = 0;

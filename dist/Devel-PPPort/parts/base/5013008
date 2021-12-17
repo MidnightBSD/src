@@ -6,3 +6,4 @@ parse_fullexpr                 # U
 parse_listexpr                 # U
 parse_termexpr                 # U
 sv_unmagicext                  # U
+Perl_hv_undef_flags            # F added by devel/scanprov

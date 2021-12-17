@@ -30,7 +30,7 @@ use vmsish qw(hushed);
 
 $| = 1;				# flush stdout
 
-$ENV{LC_ALL}   = 'C';		# Forge English error messages.
+$ENV{LC_ALL}   = 'C';		# Force English error messages.
 $ENV{LANGUAGE} = 'C';		# Ditto in GNU.
 
 my $Is_VMS   = $^O eq 'VMS';
@@ -113,6 +113,8 @@ unless( ok($rc == 255 << 8 or $rc == -1 or $rc == 256 or $rc == 512) ) {
 
 unless ( ok( $! == 2  or  $! =~ /\bno\b.*\bfile/i or  
              $! == 13 or  $! =~ /permission denied/i or
+             $! == 20 or  $! =~ /not a directory/i or   # If PATH component is
+                                                        # a non-directory
              $! == 22 or  $! =~ /invalid argument/i  ) ) {
     diag sprintf "\$! eq %d, '%s'\n", $!, $!;
 }

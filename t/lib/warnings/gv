@@ -3,12 +3,6 @@
      Can't locate package %s for @%s::ISA
 	@ISA = qw(Fred); joe()
 
-     $# is no longer supported
-     $* is no longer supported
-
-	$a = ${"#"} ;
- 	$a = ${"*"} ;
-
      Name "main::a" used only once: possible typo
 
   Mandatory Warnings ALL TODO
@@ -22,7 +16,6 @@ __END__
 use warnings 'syntax' ;
 @ISA = qw(Fred); joe()
 EXPECT
-Can't locate package Fred for @main::ISA at - line 3.
 Undefined subroutine &main::joe called at - line 3.
 ########
 # gv.c
@@ -32,64 +25,84 @@ EXPECT
 Undefined subroutine &main::joe called at - line 3.
 ########
 # gv.c
-$a = ${"#"};
-$a = ${"*"};
-no warnings 'deprecated' ;
-$a = ${"#"};
-$a = ${"*"};
+use warnings 'syntax' ;
+@ISA = qw(Fred); __PACKAGE__->joe()
 EXPECT
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
+While trying to resolve method call main->joe() can not locate package "Fred" yet it is mentioned in @main::ISA (perhaps you forgot to load "Fred"?) at - line 3.
+Can't locate object method "joe" via package "main" at - line 3.
 ########
 # gv.c
-$a = ${#};
-$a = ${*};
-no warnings 'deprecated' ;
-$a = ${#};
-$a = ${*};
+no warnings 'syntax' ;
+@ISA = qw(Fred); __PACKAGE__->joe()
 EXPECT
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
+Can't locate object method "joe" via package "main" at - line 3.
 ########
 # gv.c
-$a = $#;
-$a = $*;
-$# = $a;
-$* = $a;
-$a = \$#;
-$a = \$*;
-no warnings 'deprecated' ;
-$a = $#;
-$a = $*;
-$# = $a;
-$* = $a;
-$a = \$#;
-$a = \$*;
+use warnings 'syntax' ;
+{
+    package AA;    # this is a deliberate error
+#   package A;     # should be this
+    sub foo {
+       print STDERR "I'm in A's foo\n";
+    }
+}
+{
+   package B;
+   sub foo {
+       print STDERR "I'm in B's foo\n";
+   }
+}
+@C::ISA = qw(A B);
+$a = bless [], 'C';
+$a->foo();
+__END__
 EXPECT
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 4.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 5.
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 6.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 7.
+While trying to resolve method call C->foo() can not locate package "A" yet it is mentioned in @C::ISA (perhaps you forgot to load "A"?) at - line 18.
+I'm in B's foo
 ########
 # gv.c
-@a = @#;
-@a = @*;
-$a = $#;
-$a = $*;
+no warnings 'syntax' ;
+{
+    package AA;    # this is a deliberate error
+#   package A;     # should be this
+    sub foo {
+       print STDERR "I'm in A's foo\n";
+    }
+}
+{
+   package B;
+   sub foo {
+       print STDERR "I'm in B's foo\n";
+   }
+}
+@C::ISA = qw(A B);
+$a = bless [], 'C';
+$a->foo();
+__END__
 EXPECT
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 4.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 5.
+I'm in B's foo
 ########
 # gv.c
-$a = $#;
-$a = $*;
-@a = @#;
-@a = @*;
+use warnings 'syntax' ;
+{
+#   package AA;    # this would be an error
+    package A;     # the right thing
+    sub foo {
+       print STDERR "I'm in A's foo\n";
+    }
+}
+{
+   package B;
+   sub foo {
+       print STDERR "I'm in B's foo\n";
+   }
+}
+@C::ISA = qw(A B);
+$a = bless [], 'C';
+$a->foo();
+__END__
 EXPECT
-$# is no longer supported. Its use will be fatal in Perl 5.30 at - line 2.
-$* is no longer supported. Its use will be fatal in Perl 5.30 at - line 3.
+I'm in A's foo
 ########
 # gv.c
 $a = ${^ENCODING};
@@ -104,7 +117,6 @@ use open qw( :utf8 :std );
 package Ｙ;
 @ISA = qw(Fred); joe()
 EXPECT
-Can't locate package Fred for @Ｙ::ISA at - line 6.
 Undefined subroutine &Ｙ::joe called at - line 6.
 ########
 # gv.c

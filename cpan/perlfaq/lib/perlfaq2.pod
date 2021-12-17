@@ -4,7 +4,7 @@ perlfaq2 - Obtaining and Learning about Perl
 
 =head1 VERSION
 
-version 5.021011
+version 5.20200523
 
 =head1 DESCRIPTION
 
@@ -85,8 +85,7 @@ contains tens of thousands of modules and extensions, source code
 and documentation, designed for I<everything> from commercial
 database interfaces to keyboard/screen control and running large web sites.
 
-You can search CPAN on L<http://metacpan.org> or
-L<http://search.cpan.org/>.
+You can search CPAN on L<http://metacpan.org>.
 
 The master web site for CPAN is L<http://www.cpan.org/>,
 L<http://www.cpan.org/SITES.html> lists all mirrors.
@@ -214,10 +213,9 @@ First, ensure that you've found an actual bug. Second, ensure you've
 found an actual bug.
 
 If you've found a bug with the perl interpreter or one of the modules
-in the standard library (those that come with Perl), you can use the
-L<perlbug> utility that comes with Perl (>= 5.004). It collects
-information about your installation to include with your message, then
-sends the message to the right place.
+in the standard library (those that come with Perl), you can submit a
+bug report to the GitHub issue tracker at
+L<https://github.com/Perl/perl5/issues>.
 
 To determine if a module came with your version of Perl, you can
 install and use the L<Module::CoreList> module. It has the information

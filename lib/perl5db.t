@@ -31,8 +31,6 @@ BEGIN {
     $ENV{PERL_RL} = 'Perl'; # Suppress system Term::ReadLine::Gnu
 }
 
-plan(127);
-
 my $rc_filename = '.perldb';
 
 sub rc {
@@ -2900,6 +2898,68 @@ SKIP:
         q/RT 120174: x command can be invoked without space after 'x' before hash ref/,
     );
 }
+
+{
+    # gh #17660
+    my $wrapper = DebugWrap->new(
+        {
+            cmds =>
+            [
+                'b 13',
+                'c',
+                'i Foo',
+                'q',
+            ],
+            prog => '../lib/perl5db/t/gh-17660',
+        }
+    );
+
+    $wrapper->output_unlike(
+        qr/Undefined subroutine &mro::get_linear_isa/ms,
+        q/mro needs to be loaded/,
+       );
+    $wrapper->output_like(
+        qr/Foo 1.000, Bar 2.000/,
+        q/check for reasonable result/,
+       );
+}
+
+SKIP:
+{
+    $Config{usethreads}
+      or skip "need threads to test debugging threads", 1;
+    my $wrapper = DebugWrap->new(
+        {
+            cmds =>
+            [
+                'c',
+                'q',
+            ],
+            prog => '../lib/perl5db/t/rt-124203',
+        }
+    );
+
+    $wrapper->output_like(qr/In the thread/, "[perl #124203] the thread ran");
+
+    $wrapper->output_like(qr/Finished/, "[perl #124203] debugger didn't deadlock");
+
+    $wrapper = DebugWrap->new(
+        {
+            cmds =>
+            [
+                'c',
+                'q',
+            ],
+            prog => '../lib/perl5db/t/rt-124203b',
+        }
+    );
+
+    $wrapper->output_like(qr/In the thread/, "[perl #124203] the thread ran (lvalue)");
+
+    $wrapper->output_like(qr/Finished One/, "[perl #124203] debugger didn't deadlock (lvalue)");
+}
+
+done_testing();
 
 END {
     1 while unlink ($rc_filename, $out_fn);

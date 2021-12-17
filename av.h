@@ -39,7 +39,7 @@ struct xpvav {
 /*
 =head1 Handy Values
 
-=for apidoc AmU||Nullav
+=for apidoc ADmnU||Nullav
 Null AV pointer.
 
 (deprecated - use C<(AV *)NULL> instead)
@@ -47,10 +47,12 @@ Null AV pointer.
 =head1 Array Manipulation Functions
 
 =for apidoc Am|int|AvFILL|AV* av
-Same as C<av_top_index()>.  Deprecated, use C<av_top_index()> instead.
+Same as C<av_top_index()> or C<av_tindex()>.
 
-=for apidoc Am|int|av_tindex|AV* av
+=for apidoc av_tindex
 Same as C<av_top_index()>.
+
+=for apidoc m|int|AvFILLp|AV* av
 
 =cut
 */

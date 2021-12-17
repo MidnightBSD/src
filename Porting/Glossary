@@ -584,11 +584,6 @@ d_cmsghdr_s (d_cmsghdr_s.U):
 	This variable conditionally defines the HAS_STRUCT_CMSGHDR symbol,
 	which indicates that the struct cmsghdr is supported.
 
-d_const (d_const.U):
-	This variable conditionally defines the HASCONST symbol, which
-	indicates to the C program that this C compiler knows about the
-	const type.
-
 d_copysign (d_copysign.U):
 	This variable conditionally defines the HAS_COPYSIGN symbol, which
 	indicates to the C program that the copysign() routine is available.
@@ -1363,6 +1358,10 @@ d_grpasswd (i_grp.U):
 	This variable conditionally defines GRPASSWD, which indicates
 	that struct group in <grp.h> contains gr_passwd.
 
+d_has_C_UTF8 (d_setlocale.U):
+	This variable is set to either "true" or "false" depending on
+	whether the compilation system supports the C.UTF-8 locale.
+
 d_hasmntopt (d_hasmntopt.U):
 	This variable conditionally defines the HAS_HASMNTOPT symbol, which
 	indicates to the C program that the hasmntopt() routine is available
@@ -2098,7 +2097,7 @@ d_random_r (d_random_r.U):
 d_re_comp (d_regcmp.U):
 	This variable conditionally defines the HAS_RECOMP symbol, which
 	indicates to the C program that the re_comp() routine is available
-	for regular patern matching (usally on BSD). If so, it is likely that
+	for regular pattern matching (usually on BSD). If so, it is likely that
 	re_exec() exists.
 
 d_readdir (d_readdir.U):
@@ -2131,12 +2130,12 @@ d_recvmsg (d_recvmsg.U):
 d_regcmp (d_regcmp.U):
 	This variable conditionally defines the HAS_REGCMP symbol, which
 	indicates to the C program that the regcmp() routine is available
-	for regular patern matching (usally on System V).
+	for regular pattern matching (usually on System V).
 
 d_regcomp (d_regcmp.U):
 	This variable conditionally defines the HAS_REGCOMP symbol, which
 	indicates to the C program that the regcomp() routine is available
-	for regular patern matching (usally on POSIX.2 conforming systems).
+	for regular pattern matching (usually on POSIX.2 conforming systems).
 
 d_remainder (d_remainder.U):
 	This variable conditionally defines the HAS_REMAINDER symbol, which
@@ -2284,6 +2283,10 @@ d_setlinebuf (d_setlnbuf.U):
 d_setlocale (d_setlocale.U):
 	This variable conditionally defines HAS_SETLOCALE if setlocale() is
 	available to handle locale-specific ctype implementations.
+
+d_setlocale_accepts_any_locale_name (d_setlocale.U):
+	This variable conditionally defines SETLOCALE_ACCEPTS_ANY_LOCALE_NAME
+	if setlocale() accepts any locale name.
 
 d_setlocale_r (d_setlocale_r.U):
 	This variable conditionally defines the HAS_SETLOCALE_R symbol,
@@ -2635,6 +2638,10 @@ d_strtod (d_strtod.U):
 	indicates to the C program that the strtod() routine is available
 	to provide better numeric string conversion than atof().
 
+d_strtod_l (d_strtod_l.U):
+	This variable conditionally defines the HAS_STRTOD_L symbol, which
+	indicates to the C program that the strtod_l() routine is available.
+
 d_strtol (d_strtol.U):
 	This variable conditionally defines the HAS_STRTOL symbol, which
 	indicates to the C program that the strtol() routine is available
@@ -2755,16 +2762,24 @@ d_times (d_times.U):
 
 d_tm_tm_gmtoff (i_time.U):
 	This variable conditionally defines HAS_TM_TM_GMTOFF, which indicates
-	indicates to the C program that the struct tm has the tm_gmtoff field.
+	to the C program that the struct tm has the tm_gmtoff field.
 
 d_tm_tm_zone (i_time.U):
 	This variable conditionally defines HAS_TM_TM_ZONE, which indicates
-	indicates to the C program that the struct tm has the tm_zone field.
+	to the C program that the struct tm has the tm_zone field.
 
 d_tmpnam_r (d_tmpnam_r.U):
 	This variable conditionally defines the HAS_TMPNAM_R symbol,
 	which indicates to the C program that the tmpnam_r()
 	routine is available.
+
+d_towlower (d_towlower.U):
+	This variable conditionally defines the HAS_TOWLOWER symbol, which
+	indicates to the C program that the towlower() routine is available.
+
+d_towupper (d_towupper.U):
+	This variable conditionally defines the HAS_TOWUPPER symbol, which
+	indicates to the C program that the towupper() routine is available.
 
 d_trunc (d_trunc.U):
 	This variable conditionally defines the HAS_TRUNC symbol, which
@@ -3796,6 +3811,10 @@ i_vfork (i_vfork.U):
 i_wchar (i_wchar.U):
 	This variable conditionally defines the I_WCHAR symbol,
 	that indicates whether a C program may include <wchar.h>.
+
+i_wctype (i_wctype.U):
+	This variable conditionally defines the I_WCTYPE symbol,
+	that indicates whether a C program may include <wctype.h>.
 
 i_xlocale (d_newlocale.U):
 	This symbol, if defined, indicates to the C program that it should
@@ -5537,6 +5556,12 @@ usekernprocpathname (usekernprocpathname.U):
 	This variable, indicates that we can use sysctl with
 	KERN_PROC_PATHNAME to get a full path for the executable, and hence
 	convert $^X to an absolute path.
+
+uselanginfo (Extensions.U):
+	This variable holds either 'true' or 'false' to indicate
+	whether the I18N::Langinfo extension should be used.  The sole
+	use for this currently is to allow an easy mechanism for users to skip
+	this extension from the Configure command line.
 
 uselargefiles (uselfs.U):
 	This variable conditionally defines the USE_LARGE_FILES symbol,

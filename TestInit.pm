@@ -10,7 +10,7 @@
 # modules from an installed Perl.
 #
 # t/TEST and t/harness will invoke each test script with
-#      perl -MTestInit[=arg,arg,..] some/test.t
+#      perl -I. -MTestInit[=arg,arg,..] some/test.t
 # You may "use TestInit" in the test # programs but it is not required.
 #
 # TestInit will completely empty the current @INC and replace it with
@@ -43,7 +43,8 @@ $VERSION = 1.04;
 # which live dual lives on CPAN.
 # Don't interfere with the taintedness of %ENV, this could perturbate tests.
 # This feels like a better solution than the original, from
-# http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2003-07/msg00154.html
+# Message-ID: 20030703145818.5bdd2873.rgarciasuarez@free.fr
+# https://www.nntp.perl.org/group/perl.perl5.porters/2003/07/msg77533.html
 $ENV{PERL_CORE} = $^X;
 
 $0 =~ s/\.dp$//; # for the test.deparse make target

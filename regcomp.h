@@ -7,6 +7,10 @@
  *    License or the Artistic License, as specified in the README file.
  *
  */
+
+#ifndef PERL_REGCOMP_H_
+#define PERL_REGCOMP_H_
+
 #include "regcharclass.h"
 
 /* Convert branch sequences to more efficient trie ops? */
@@ -25,36 +29,6 @@
 #ifdef DEBUGGING
 #define RE_TRACK_PATTERN_OFFSETS
 #endif
-
-/*
- * The "internal use only" fields in regexp.h are present to pass info from
- * compile to execute that permits the execute phase to run lots faster on
- * simple cases.  They are:
- *
- * regstart	sv that must begin a match; NULL if none obvious
- * reganch	is the match anchored (at beginning-of-line only)?
- * regmust	string (pointer into program) that match must include, or NULL
- *  [regmust changed to SV* for bminstr()--law]
- * regmlen	length of regmust string
- *  [regmlen not used currently]
- *
- * Regstart and reganch permit very fast decisions on suitable starting points
- * for a match, cutting down the work a lot.  Regmust permits fast rejection
- * of lines that cannot possibly match.  The regmust tests are costly enough
- * that pregcomp() supplies a regmust only if the r.e. contains something
- * potentially expensive (at present, the only such thing detected is * or +
- * at the start of the r.e., which can involve a lot of backup).  Regmlen is
- * supplied because the test in pregexec() needs it and pregcomp() is computing
- * it anyway.
- * [regmust is now supplied always.  The tests that use regmust have a
- * heuristic that disables the test if it usually matches.]
- *
- * [In fact, we now use regmust in many cases to locate where the search
- * starts in the string, so if regback is >= 0, the regmust search is never
- * wasted effort.  The regback variable says how many characters back from
- * where regmust matched is the earliest possible start of the match.
- * For instance, /[a-z].foo/ has a regmust of 'foo' and a regback of 2.]
- */
 
 /*
  * Structure for regexp "program".  This is essentially a linear encoding
@@ -91,7 +65,6 @@
    private to the engine itself. It now lives here. */
 
  typedef struct regexp_internal {
-        int name_list_idx;	/* Optional data index of an array of paren names */
         union {
 	    U32 *offsets;           /* offset annotations 20001228 MJD
                                        data about mapping the program to the
@@ -108,6 +81,7 @@
                                    data that the regops need. Often the ARG field of
                                    a regop is an index into this structure */
 	struct reg_code_blocks *code_blocks;/* positions of literal (?{}) */
+        int name_list_idx;	/* Optional data index of an array of paren names */
 	regnode program[1];	/* Unwarranted chumminess with compiler. */
 } regexp_internal;
 
@@ -152,6 +126,22 @@ struct regnode_string {
     char string[1];
 };
 
+struct regnode_lstring { /* Constructed this way to keep the string aligned. */
+    U8	flags;
+    U8  type;
+    U16 next_off;
+    U32 str_len;    /* Only 18 bits allowed before would overflow 'next_off' */
+    char string[1];
+};
+
+struct regnode_anyofhs { /* Constructed this way to keep the string aligned. */
+    U8	str_len;
+    U8  type;
+    U16 next_off;
+    U32 arg1;                           /* set by set_ANYOF_arg() */
+    char string[1];
+};
+
 /* Argument bearing node - workhorse, 
    arg1 is often for the data field */
 struct regnode_1 {
@@ -159,6 +149,15 @@ struct regnode_1 {
     U8  type;
     U16 next_off;
     U32 arg1;
+};
+
+/* Node whose argument is 'SV *'.  This needs to be used very carefully in
+ * situations where pointers won't become invalid because of, say re-mallocs */
+struct regnode_p {
+    U8	flags;
+    U8  type;
+    U16 next_off;
+    SV * arg1;
 };
 
 /* Similar to a regnode_1 but with an extra signed argument */
@@ -178,21 +177,6 @@ struct regnode_2 {
     U16 arg1;
     U16 arg2;
 };
-
-/* This give the number of code points that can be in the bitmap of an ANYOF
- * node.  The shift number must currently be one of: 8..12.  It can't be less
- * than 8 (256) because some code relies on it being at least that.  Above 12
- * (4096), and you start running into warnings that some data structure widths
- * have been exceeded, though the test suite as of this writing still passes
- * for up through 16, which is as high as anyone would ever want to go,
- * encompassing all of the Unicode BMP, and thus including all the economically
- * important world scripts.  At 12 most of them are: including Arabic,
- * Cyrillic, Greek, Hebrew, Indian subcontinent, Latin, and Thai; but not Han,
- * Japanese, nor Korean.  (The regarglen structure in regnodes.h is a U8, and
- * the trie types TRIEC and AHOCORASICKC are larger than U8 for shift values
- * below above 12.)  Be sure to benchmark before changing, as larger sizes do
- * significantly slow down the test suite */
-#define NUM_ANYOF_CODE_POINTS   (1 << 8)
 
 #define ANYOF_BITMAP_SIZE	(NUM_ANYOF_CODE_POINTS / 8)   /* 8 bits/Byte */
 
@@ -217,7 +201,7 @@ struct regnode_charclass {
 };
 
 /* has runtime (locale) \d, \w, ..., [:posix:] classes */
-struct regnode_charclass_class {
+struct regnode_charclass_posixl {
     U8	flags;                      /* ANYOF_MATCHES_POSIXL bit must go here */
     U8  type;
     U16 next_off;
@@ -265,22 +249,22 @@ struct regnode_ssc {
    Impose a limit of REG_INFTY on various pattern matching operations
    to limit stack growth and to avoid "infinite" recursions.
 */
-/* The default size for REG_INFTY is I16_MAX, which is the same as
-   SHORT_MAX (see perl.h).  Unfortunately I16 isn't necessarily 16 bits
-   (see handy.h).  On the Cray C90, sizeof(short)==4 and hence I16_MAX is
-   ((1<<31)-1), while on the Cray T90, sizeof(short)==8 and I16_MAX is
-   ((1<<63)-1).  To limit stack growth to reasonable sizes, supply a
+/* The default size for REG_INFTY is U16_MAX, which is the same as
+   USHORT_MAX (see perl.h).  Unfortunately U16 isn't necessarily 16 bits
+   (see handy.h).  On the Cray C90, sizeof(short)==4 and hence U16_MAX is
+   ((1<<32)-1), while on the Cray T90, sizeof(short)==8 and U16_MAX is
+   ((1<<64)-1).  To limit stack growth to reasonable sizes, supply a
    smaller default.
 	--Andy Dougherty  11 June 1998
 */
 #if SHORTSIZE > 2
 #  ifndef REG_INFTY
-#    define REG_INFTY ((1<<15)-1)
+#    define REG_INFTY ((1<<16)-1)
 #  endif
 #endif
 
 #ifndef REG_INFTY
-#  define REG_INFTY I16_MAX
+#  define REG_INFTY U16_MAX
 #endif
 
 #define ARG_VALUE(arg) (arg)
@@ -291,11 +275,13 @@ struct regnode_ssc {
 #undef ARG2
 
 #define ARG(p) ARG_VALUE(ARG_LOC(p))
+#define ARGp(p) ARG_VALUE(ARGp_LOC(p))
 #define ARG1(p) ARG_VALUE(ARG1_LOC(p))
 #define ARG2(p) ARG_VALUE(ARG2_LOC(p))
 #define ARG2L(p) ARG_VALUE(ARG2L_LOC(p))
 
 #define ARG_SET(p, val) ARG__SET(ARG_LOC(p), (val))
+#define ARGp_SET(p, val) ARG__SET(ARGp_LOC(p), (val))
 #define ARG1_SET(p, val) ARG__SET(ARG1_LOC(p), (val))
 #define ARG2_SET(p, val) ARG__SET(ARG2_LOC(p), (val))
 #define ARG2L_SET(p, val) ARG__SET(ARG2L_LOC(p), (val))
@@ -320,19 +306,61 @@ struct regnode_ssc {
 
 #undef OP
 #undef OPERAND
-#undef MASK
 #undef STRING
 
 #define	OP(p)		((p)->type)
 #define FLAGS(p)	((p)->flags)	/* Caution: Doesn't apply to all      \
 					   regnode types.  For some, it's the \
 					   character set of the regnode */
-#define	OPERAND(p)	(((struct regnode_string *)p)->string)
-#define MASK(p)		((char*)OPERAND(p))
-#define	STR_LEN(p)	(((struct regnode_string *)p)->str_len)
-#define	STRING(p)	(((struct regnode_string *)p)->string)
-#define STR_SZ(l)	((l + sizeof(regnode) - 1) / sizeof(regnode))
-#define NODE_SZ_STR(p)	(STR_SZ(STR_LEN(p))+1)
+#define	STR_LENs(p)	(__ASSERT_(OP(p) != LEXACT && OP(p) != LEXACT_REQ8)  \
+                                    ((struct regnode_string *)p)->str_len)
+#define	STRINGs(p)	(__ASSERT_(OP(p) != LEXACT && OP(p) != LEXACT_REQ8)  \
+                                    ((struct regnode_string *)p)->string)
+#define	OPERANDs(p)	STRINGs(p)
+
+/* Long strings.  Currently limited to length 18 bits, which handles a 262000
+ * byte string.  The limiting factor is the 16 bit 'next_off' field, which
+ * points to the next regnode, so the furthest away it can be is 2**16.  On
+ * most architectures, regnodes are 2**2 bytes long, so that yields 2**18
+ * bytes.  Should a longer string be desired, we could increase it to 26 bits
+ * fairly easily, by changing this node to have longj type which causes the ARG
+ * field to be used for the link to the next regnode (although code would have
+ * to be changed to account for this), and then use a combination of the flags
+ * and next_off fields for the length.  To get 34 bit length, also change the
+ * node to be an ARG2L, using the second 32 bit field for the length, and not
+ * using the flags nor next_off fields at all.  One could have an llstring node
+ * and even an lllstring type. */
+#define	STR_LENl(p)	(__ASSERT_(OP(p) == LEXACT || OP(p) == LEXACT_REQ8)  \
+                                    (((struct regnode_lstring *)p)->str_len))
+#define	STRINGl(p)	(__ASSERT_(OP(p) == LEXACT || OP(p) == LEXACT_REQ8)  \
+                                    (((struct regnode_lstring *)p)->string))
+#define	OPERANDl(p)	STRINGl(p)
+
+#define	STR_LEN(p)	((OP(p) == LEXACT || OP(p) == LEXACT_REQ8)           \
+                                               ? STR_LENl(p) : STR_LENs(p))
+#define	STRING(p)	((OP(p) == LEXACT || OP(p) == LEXACT_REQ8)           \
+                                               ? STRINGl(p)  : STRINGs(p))
+#define	OPERAND(p)	STRING(p)
+
+/* The number of (smallest) regnode equivalents that a string of length l bytes
+ * occupies */
+#define STR_SZ(l)	(((l) + sizeof(regnode) - 1) / sizeof(regnode))
+
+/* The number of (smallest) regnode equivalents that the EXACTISH node 'p'
+ * occupies */
+#define NODE_SZ_STR(p)	(STR_SZ(STR_LEN(p)) + 1 + regarglen[(p)->type])
+
+#define setSTR_LEN(p,v)                                                     \
+    STMT_START{                                                             \
+        if (OP(p) == LEXACT || OP(p) == LEXACT_REQ8)                        \
+            ((struct regnode_lstring *)(p))->str_len = (v);                 \
+        else                                                                \
+            ((struct regnode_string *)(p))->str_len = (v);                  \
+    } STMT_END
+
+#define ANYOFR_BASE_BITS    20
+#define ANYOFRbase(p)   (ARG(p) & ((1 << ANYOFR_BASE_BITS) - 1))
+#define ANYOFRdelta(p)  (ARG(p) >> ANYOFR_BASE_BITS)
 
 #undef NODE_ALIGN
 #undef ARG_LOC
@@ -341,6 +369,7 @@ struct regnode_ssc {
 
 #define	NODE_ALIGN(node)
 #define	ARG_LOC(p)	(((struct regnode_1 *)p)->arg1)
+#define ARGp_LOC(p)	(((struct regnode_p *)p)->arg1)
 #define	ARG1_LOC(p)	(((struct regnode_2 *)p)->arg1)
 #define	ARG2_LOC(p)	(((struct regnode_2 *)p)->arg2)
 #define ARG2L_LOC(p)	(((struct regnode_2L *)p)->arg2)
@@ -348,28 +377,42 @@ struct regnode_ssc {
 #define NODE_STEP_REGNODE	1	/* sizeof(regnode)/sizeof(regnode) */
 #define EXTRA_STEP_2ARGS	EXTRA_SIZE(struct regnode_2)
 
-#define NODE_STEP_B	4
-
 #define	NEXTOPER(p)	((p) + NODE_STEP_REGNODE)
 #define	PREVOPER(p)	((p) - NODE_STEP_REGNODE)
 
-#define FILL_ADVANCE_NODE(ptr, op) STMT_START { \
-    (ptr)->type = op;    (ptr)->next_off = 0;   (ptr)++; } STMT_END
-#define FILL_ADVANCE_NODE_ARG(ptr, op, arg) STMT_START { \
-    ARG_SET(ptr, arg);  FILL_ADVANCE_NODE(ptr, op); (ptr) += 1; } STMT_END
-#define FILL_ADVANCE_NODE_2L_ARG(ptr, op, arg1, arg2)               \
-                STMT_START {                                        \
-                    ARG_SET(ptr, arg1);                             \
-                    ARG2L_SET(ptr, arg2);                           \
-                    FILL_ADVANCE_NODE(ptr, op);                     \
-                    (ptr) += 2;                                     \
-                } STMT_END
+#define FILL_NODE(offset, op)                                           \
+    STMT_START {                                                        \
+                    OP(REGNODE_p(offset)) = op;                         \
+                    NEXT_OFF(REGNODE_p(offset)) = 0;                    \
+    } STMT_END
+#define FILL_ADVANCE_NODE(offset, op)                                   \
+    STMT_START {                                                        \
+                    FILL_NODE(offset, op);                              \
+                    (offset)++;                                         \
+    } STMT_END
+#define FILL_ADVANCE_NODE_ARG(offset, op, arg)                          \
+    STMT_START {                                                        \
+                    ARG_SET(REGNODE_p(offset), arg);                    \
+                    FILL_ADVANCE_NODE(offset, op);                      \
+                    /* This is used generically for other operations    \
+                     * that have a longer argument */                   \
+                    (offset) += regarglen[op];                          \
+    } STMT_END
+#define FILL_ADVANCE_NODE_ARGp(offset, op, arg)                          \
+    STMT_START {                                                        \
+                    ARGp_SET(REGNODE_p(offset), arg);                    \
+                    FILL_ADVANCE_NODE(offset, op);                      \
+                    (offset) += regarglen[op];                          \
+    } STMT_END
+#define FILL_ADVANCE_NODE_2L_ARG(offset, op, arg1, arg2)                \
+    STMT_START {                                                        \
+                    ARG_SET(REGNODE_p(offset), arg1);                   \
+                    ARG2L_SET(REGNODE_p(offset), arg2);                 \
+                    FILL_ADVANCE_NODE(offset, op);                      \
+                    (offset) += 2;                                      \
+    } STMT_END
 
 #define REG_MAGIC 0234
-
-#define SIZE_ONLY cBOOL(RExC_emit == (regnode *) & RExC_emit_dummy)
-#define PASS1 SIZE_ONLY
-#define PASS2 (! SIZE_ONLY)
 
 /* An ANYOF node is basically a bitmap with the index being a code point.  If
  * the bit for that code point is 1, the code point matches;  if 0, it doesn't
@@ -380,7 +423,7 @@ struct regnode_ssc {
  * never reach this high). */
 #define ANYOF_ONLY_HAS_BITMAP	((U32) -1)
 
-/* When the bimap isn't completely sufficient for handling the ANYOF node,
+/* When the bitmap isn't completely sufficient for handling the ANYOF node,
  * flags (in node->flags of the ANYOF node) get set to indicate this.  These
  * are perennially in short supply.  Beyond several cases where warnings need
  * to be raised under certain circumstances, currently, there are six cases
@@ -390,7 +433,7 @@ struct regnode_ssc {
  *
  *  1)  The bitmap has a compiled-in very finite size.  So something else needs
  *      to be used to specify if a code point that is too large for the bitmap
- *      actually matches.  The mechanism currently is a swash or inversion
+ *      actually matches.  The mechanism currently is an inversion
  *      list.  ANYOF_ONLY_HAS_BITMAP, described above, being TRUE indicates
  *      there are no matches of too-large code points.  But if it is FALSE,
  *      then almost certainly there are matches too large for the bitmap.  (The
@@ -401,7 +444,7 @@ struct regnode_ssc {
  *  2)  A subset of item 1) is if all possible code points outside the bitmap
  *      match.  This is a common occurrence when the class is complemented,
  *      like /[^ij]/.  Therefore a bit is reserved to indicate this,
- *      rather than having an expensive swash created,
+ *      rather than having an inversion list created,
  *      ANYOF_MATCHES_ALL_ABOVE_BITMAP.
  *  3)  Under /d rules, it can happen that code points that are in the upper
  *      latin1 range (\x80-\xFF or their equivalents on EBCDIC platforms) match
@@ -414,12 +457,12 @@ struct regnode_ssc {
  *      handled.  But it can be a shared flag: see 5) below.
  *  4)  Also under /d rules, something like /[\Wfoo]/ will match everything in
  *      the \x80-\xFF range, unless the string being matched against is UTF-8.
- *      A swash could be created for this case, but this is relatively common,
- *      and it turns out that it's all or nothing:  if any one of these code
- *      points matches, they all do.  Hence a single bit suffices.  We use a
- *      shared flag that doesn't take up space by itself:
- *      ANYOF_SHARED_d_MATCHES_ALL_NON_UTF8_NON_ASCII_non_d_WARN_SUPER.
- *      This also implies 1), with one exception: [:^cntrl:].
+ *      An inversion list could be created for this case, but this is
+ *      relatively common, and it turns out that it's all or nothing:  if any
+ *      one of these code points matches, they all do.  Hence a single bit
+ *      suffices.  We use a shared flag that doesn't take up space by itself:
+ *      ANYOF_SHARED_d_MATCHES_ALL_NON_UTF8_NON_ASCII_non_d_WARN_SUPER.  This
+ *      also implies 1), with one exception: [:^cntrl:].
  *  5)  A user-defined \p{} property may not have been defined by the time the
  *      regex is compiled.  In this case, we don't know until runtime what it
  *      will match, so we have to assume it could match anything, including
@@ -441,9 +484,9 @@ struct regnode_ssc {
  *      shared with another, so it doesn't occupy extra space.
  *
  * At the moment, there is one spare bit, but this could be increased by
- * various tricks.
+ * various tricks:
  *
- * If just one more bit is needed, at this writing it seems to khw that the
+ * If just one more bit is needed, as of this writing it seems to khw that the
  * best choice would be to make ANYOF_MATCHES_ALL_ABOVE_BITMAP not a flag, but
  * something like
  *
@@ -454,22 +497,18 @@ struct regnode_ssc {
  * handler function, as the macro REGINCLASS in regexec.c does now for other
  * cases.
  *
- * Another possibility is to instead (or additionally) rename the ANYOF_POSIXL
- * flag to be ANYOFL_LARGE, to mean that the ANYOF node has an extra 32 bits
- * beyond what a regular one does.  That's what it effectively means now, with
- * the extra space all for the POSIX class flags.  But those classes actually
- * only occupy 30 bits, so the ANYOFL_FOLD and
- * ANYOFL_SHARED_UTF8_LOCALE_fold_HAS_MATCHES_nonfold_REQD flags could be moved
- * to that extra space.  The 30 bits in the extra word would indicate if a
- * posix class should be looked up or not.  The downside of this is that ANYOFL
- * nodes with folding would always have to have the extra space allocated, even
- * if they didn't use the 30 posix bits.  There isn't an SSC problem as all
- * SSCs are this large anyway.
+ * Another possibility is based on the fact that ANYOF_MATCHES_POSIXL is
+ * redundant with the node type ANYOFPOSIXL.  That flag could be removed, but
+ * at the expense of extra code in regexec.c.  The flag has been retained
+ * because it allows us to see if we need to call reginsert, or just use the
+ * bitmap in one test.
  *
- * One could completely remove ANYOFL_LARGE and make all ANYOFL nodes large.
- * REGINCLASS would have to be modified so that if the node type were this, it
- * would call reginclass(), as the flag bit that indicates to do this now would
- * be gone.
+ * If this is done, an extension would be to make all ANYOFL nodes contain the
+ * extra 32 bits that ANYOFPOSIXL ones do.  The posix flags only occupy 30
+ * bits, so the ANYOFL_SHARED_UTF8_LOCALE_fold_HAS_MATCHES_nonfold_REQD flags
+ * and ANYOFL_FOLD could be moved to that extra space, but it would mean extra
+ * instructions, as there are currently places in the code that assume those
+ * two bits are zero.
  *
  * All told, 5 bits could be available for other uses if all of the above were
  * done.
@@ -499,9 +538,9 @@ struct regnode_ssc {
 #define ANYOFL_FOLD                             0x04
 
 /* Shared bit set only with ANYOFL and SSC nodes:
- *    If ANYOFL_FOLD is set, this means there are potential matches valid
- *       only if the locale is a UTF-8 one.
- *    If ANYOFL_FOLD is NOT set, this means to warn if the runtime locale
+ *    If ANYOFL_FOLD is set, this flag indicates there are potential matches
+ *      valid only if the locale is a UTF-8 one.
+ *    If ANYOFL_FOLD is NOT set, this flag means to warn if the runtime locale
  *       isn't a UTF-8 one (and the generated node assumes a UTF-8 locale).
  *       None of INVERT, POSIXL,
  *       ANYOF_SHARED_d_UPPER_LATIN1_UTF8_STRING_MATCHES_non_d_RUNTIME_USER_PROP
@@ -530,10 +569,11 @@ struct regnode_ssc {
 /* Shared bit:
  *      Under /d it means the ANYOFD node matches more things if the target
  *          string is encoded in UTF-8; any such things will be non-ASCII,
- *          characters that are < 256, and can be accessed via the swash.
+ *          characters that are < 256, and can be accessed via the inversion
+ *          list.
  *      When not under /d, it means the ANYOF node contains a user-defined
  *      property that wasn't yet defined at the time the regex was compiled,
- *      and so must be looked up at runtime, by creating a swash
+ *      and so must be looked up at runtime, by creating an inversion list.
  * (These uses are mutually exclusive because a user-defined property is
  * specified by \p{}, and \p{} implies /u which deselects /d).  The long macro
  * name is to make sure that you are cautioned about its shared nature.  Only
@@ -639,17 +679,22 @@ struct regnode_ssc {
 
 #define ANYOF_BIT(c)		(1U << ((c) & 7))
 
-#define ANYOF_POSIXL_SET(p, c)	(((regnode_charclass_posixl*) (p))->classflags |= (1U << (c)))
-#define ANYOF_CLASS_SET(p, c)	ANYOF_POSIXL_SET((p), (c))
+#define POSIXL_SET(field, c)	((field) |= (1U << (c)))
+#define ANYOF_POSIXL_SET(p, c)	POSIXL_SET(((regnode_charclass_posixl*) (p))->classflags, (c))
 
-#define ANYOF_POSIXL_CLEAR(p, c) (((regnode_charclass_posixl*) (p))->classflags &= ~ (1U <<(c)))
-#define ANYOF_CLASS_CLEAR(p, c)	ANYOF_POSIXL_CLEAR((p), (c))
+#define POSIXL_CLEAR(field, c) ((field) &= ~ (1U <<(c)))
+#define ANYOF_POSIXL_CLEAR(p, c) POSIXL_CLEAR(((regnode_charclass_posixl*) (p))->classflags, (c))
 
-#define ANYOF_POSIXL_TEST(p, c)	(((regnode_charclass_posixl*) (p))->classflags & (1U << (c)))
-#define ANYOF_CLASS_TEST(p, c)	ANYOF_POSIXL_TEST((p), (c))
+#define POSIXL_TEST(field, c)	((field) & (1U << (c)))
+#define ANYOF_POSIXL_TEST(p, c)	POSIXL_TEST(((regnode_charclass_posixl*) (p))->classflags, (c))
 
-#define ANYOF_POSIXL_ZERO(ret)	STMT_START { ((regnode_charclass_posixl*) (ret))->classflags = 0; } STMT_END
-#define ANYOF_CLASS_ZERO(ret)	ANYOF_POSIXL_ZERO(ret)
+#define POSIXL_ZERO(field)	STMT_START { (field) = 0; } STMT_END
+#define ANYOF_POSIXL_ZERO(ret)	POSIXL_ZERO(((regnode_charclass_posixl*) (ret))->classflags)
+
+#define ANYOF_POSIXL_SET_TO_BITMAP(p, bits)                                 \
+     STMT_START {                                                           \
+                    ((regnode_charclass_posixl*) (p))->classflags = (bits); \
+     } STMT_END
 
 /* Shifts a bit to get, eg. 0x4000_0000, then subtracts 1 to get 0x3FFF_FFFF */
 #define ANYOF_POSIXL_SETALL(ret) STMT_START { ((regnode_charclass_posixl*) (ret))->classflags = ((1U << ((ANYOF_POSIXL_MAX) - 1))) - 1; } STMT_END
@@ -690,9 +735,6 @@ struct regnode_ssc {
 #define ANYOF_BITMAP_CLEARALL(p)	\
 	Zero (ANYOF_BITMAP(p), ANYOF_BITMAP_SIZE)
 
-#define ANYOF_SKIP		EXTRA_SIZE(regnode_charclass)
-#define ANYOF_POSIXL_SKIP	EXTRA_SIZE(regnode_charclass_posixl)
-
 /*
  * Utility definitions.
  */
@@ -702,6 +744,8 @@ struct regnode_ssc {
 #  define UCHARAT(p)	((int)*(p)&CHARMASK)
 #endif
 
+/* Number of regnode equivalents that 'guy' occupies beyond the size of the
+ * smallest regnode. */
 #define EXTRA_SIZE(guy) ((sizeof(guy)-1)/sizeof(struct regnode))
 
 #define REG_ZERO_LEN_SEEN                   0x00000001
@@ -761,9 +805,9 @@ END_EXTERN_C
  *   l - start op for literal (?{EVAL}) item
  *   L - start op for literal (?{EVAL}) item, with separate CV (qr//)
  *   r - pointer to an embedded code-containing qr, e.g. /ab$qr/
- *   s - swash for Unicode-style character class, and the multicharacter
- *       strings resulting from casefolding the single-character entries
- *       in the character class
+ *   s - inversion list for Unicode-style character class, and the
+ *       multicharacter strings resulting from casefolding the single-character
+ *       entries in the character class
  *   t - trie struct
  *   u - trie struct's widecharmap (a HV, so can't share, must dup)
  *       also used for revcharmap and words under DEBUGGING
@@ -933,6 +977,9 @@ typedef struct _reg_ac_data reg_ac_data;
 #define RE_TRIE_MAXBUF_NAME "\022E_TRIE_MAXBUF"
 #define RE_DEBUG_FLAGS "\022E_DEBUG_FLAGS"
 
+#define RE_COMPILE_RECURSION_INIT 1000
+#define RE_COMPILE_RECURSION_LIMIT "\022E_COMPILE_RECURSION_LIMIT"
+
 /*
 
 RE_DEBUG_FLAGS is used to control what debug output is emitted
@@ -981,90 +1028,112 @@ re.pm, especially to the documentation.
 #define RE_DEBUG_EXECUTE_TRIE      0x000400
 
 /* Extra */
-#define RE_DEBUG_EXTRA_MASK        0xFF0000
-#define RE_DEBUG_EXTRA_TRIE        0x010000
-#define RE_DEBUG_EXTRA_OFFSETS     0x020000
-#define RE_DEBUG_EXTRA_OFFDEBUG    0x040000
-#define RE_DEBUG_EXTRA_STATE       0x080000
-#define RE_DEBUG_EXTRA_OPTIMISE    0x100000
-#define RE_DEBUG_EXTRA_BUFFERS     0x400000
-#define RE_DEBUG_EXTRA_GPOS        0x800000
+#define RE_DEBUG_EXTRA_MASK              0x3FF0000
+#define RE_DEBUG_EXTRA_TRIE              0x0010000
+#define RE_DEBUG_EXTRA_OFFSETS           0x0020000
+#define RE_DEBUG_EXTRA_OFFDEBUG          0x0040000
+#define RE_DEBUG_EXTRA_STATE             0x0080000
+#define RE_DEBUG_EXTRA_OPTIMISE          0x0100000
+#define RE_DEBUG_EXTRA_BUFFERS           0x0400000
+#define RE_DEBUG_EXTRA_GPOS              0x0800000
+#define RE_DEBUG_EXTRA_DUMP_PRE_OPTIMIZE 0x1000000
+#define RE_DEBUG_EXTRA_WILDCARD          0x2000000
 /* combined */
-#define RE_DEBUG_EXTRA_STACK       0x280000
+#define RE_DEBUG_EXTRA_STACK             0x0280000
 
-#define RE_DEBUG_FLAG(x) (re_debug_flags & x)
+#define RE_DEBUG_FLAG(x) (re_debug_flags & (x))
 /* Compile */
 #define DEBUG_COMPILE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_MASK) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_MASK)) x  )
 #define DEBUG_PARSE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_PARSE) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_PARSE)) x  )
 #define DEBUG_OPTIMISE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_OPTIMISE) x  )
-#define DEBUG_PARSE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_PARSE) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_OPTIMISE)) x  )
 #define DEBUG_DUMP_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_DUMP) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_DUMP)) x  )
 #define DEBUG_TRIE_COMPILE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_TRIE) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_TRIE)) x )
 #define DEBUG_FLAGS_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_FLAGS) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_FLAGS)) x )
 #define DEBUG_TEST_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_COMPILE_TEST) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_TEST)) x )
 /* Execute */
 #define DEBUG_EXECUTE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXECUTE_MASK) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXECUTE_MASK)) x  )
 #define DEBUG_INTUIT_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXECUTE_INTUIT) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXECUTE_INTUIT)) x  )
 #define DEBUG_MATCH_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXECUTE_MATCH) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXECUTE_MATCH)) x  )
 #define DEBUG_TRIE_EXECUTE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXECUTE_TRIE) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXECUTE_TRIE)) x )
 
 /* Extra */
 #define DEBUG_EXTRA_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_MASK) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_MASK)) x  )
 #define DEBUG_OFFSETS_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_OFFSETS) x  )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_OFFSETS)) x  )
 #define DEBUG_STATE_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_STATE) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_STATE)) x )
 #define DEBUG_STACK_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_STACK) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_STACK)) x )
 #define DEBUG_BUFFERS_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_BUFFERS) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_BUFFERS)) x )
 
 #define DEBUG_OPTIMISE_MORE_r(x) DEBUG_r( \
-    if ((RE_DEBUG_EXTRA_OPTIMISE|RE_DEBUG_COMPILE_OPTIMISE) == \
-         (re_debug_flags & (RE_DEBUG_EXTRA_OPTIMISE|RE_DEBUG_COMPILE_OPTIMISE)) ) x )
+    if (DEBUG_v_TEST || ((RE_DEBUG_EXTRA_OPTIMISE|RE_DEBUG_COMPILE_OPTIMISE) == \
+         RE_DEBUG_FLAG(RE_DEBUG_EXTRA_OPTIMISE|RE_DEBUG_COMPILE_OPTIMISE))) x )
 #define MJD_OFFSET_DEBUG(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_OFFDEBUG) \
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_OFFDEBUG)) \
         Perl_warn_nocontext x )
 #define DEBUG_TRIE_COMPILE_MORE_r(x) DEBUG_TRIE_COMPILE_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_TRIE) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_TRIE)) x )
 #define DEBUG_TRIE_EXECUTE_MORE_r(x) DEBUG_TRIE_EXECUTE_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_TRIE) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_TRIE)) x )
 
 #define DEBUG_TRIE_r(x) DEBUG_r( \
-    if (re_debug_flags & (RE_DEBUG_COMPILE_TRIE \
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_COMPILE_TRIE \
         | RE_DEBUG_EXECUTE_TRIE )) x )
 #define DEBUG_GPOS_r(x) DEBUG_r( \
-    if (re_debug_flags & RE_DEBUG_EXTRA_GPOS) x )
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_GPOS)) x )
+
+#define DEBUG_DUMP_PRE_OPTIMIZE_r(x) DEBUG_r( \
+    if (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_DUMP_PRE_OPTIMIZE)) x )
 
 /* initialization */
-/* get_sv() can return NULL during global destruction. */
-#define GET_RE_DEBUG_FLAGS DEBUG_r({ \
-        SV * re_debug_flags_sv = NULL; \
+/* Get the debug flags for code not in regcomp.c nor regexec.c.  This doesn't
+ * initialize the variable if it isn't already there, instead it just assumes
+ * the flags are 0 */
+#define DECLARE_AND_GET_RE_DEBUG_FLAGS_NON_REGEX                               \
+    volatile IV re_debug_flags = 0;  PERL_UNUSED_VAR(re_debug_flags);          \
+    STMT_START {                                                               \
+        SV * re_debug_flags_sv = NULL;                                         \
+                     /* get_sv() can return NULL during global destruction. */ \
         re_debug_flags_sv = PL_curcop ? get_sv(RE_DEBUG_FLAGS, GV_ADD) : NULL; \
-        if (re_debug_flags_sv) { \
-            if (!SvIOK(re_debug_flags_sv)) \
-                sv_setuv(re_debug_flags_sv, RE_DEBUG_COMPILE_DUMP | RE_DEBUG_EXECUTE_MASK ); \
-            re_debug_flags=SvIV(re_debug_flags_sv); \
-        }\
-})
+        if (re_debug_flags_sv && SvIOK(re_debug_flags_sv))                     \
+            re_debug_flags=SvIV(re_debug_flags_sv);                            \
+    } STMT_END
+
 
 #ifdef DEBUGGING
 
-#define GET_RE_DEBUG_FLAGS_DECL volatile IV re_debug_flags = 0; \
-        PERL_UNUSED_VAR(re_debug_flags); GET_RE_DEBUG_FLAGS;
+/* For use in regcomp.c and regexec.c,  Get the debug flags, and initialize to
+ * the defaults if not done already */
+#define DECLARE_AND_GET_RE_DEBUG_FLAGS                                         \
+    volatile IV re_debug_flags = 0;  PERL_UNUSED_VAR(re_debug_flags);          \
+    STMT_START {                                                               \
+        SV * re_debug_flags_sv = NULL;                                         \
+                     /* get_sv() can return NULL during global destruction. */ \
+        re_debug_flags_sv = PL_curcop ? get_sv(RE_DEBUG_FLAGS, GV_ADD) : NULL; \
+        if (re_debug_flags_sv) {                                               \
+            if (!SvIOK(re_debug_flags_sv)) /* If doesnt exist set to default */\
+                sv_setuv(re_debug_flags_sv,                                    \
+                        /* These defaults should be kept in sync with re.pm */ \
+                            RE_DEBUG_COMPILE_DUMP | RE_DEBUG_EXECUTE_MASK );   \
+            re_debug_flags=SvIV(re_debug_flags_sv);                            \
+        }                                                                      \
+    } STMT_END
+
+#define isDEBUG_WILDCARD (DEBUG_v_TEST || RE_DEBUG_FLAG(RE_DEBUG_EXTRA_WILDCARD))
 
 #define RE_PV_COLOR_DECL(rpv,rlen,isuni,dsv,pv,l,m,c1,c2)   \
     const char * const rpv =                                \
@@ -1093,12 +1162,13 @@ re.pm, especially to the documentation.
     
 #else /* if not DEBUGGING */
 
-#define GET_RE_DEBUG_FLAGS_DECL
-#define RE_PV_COLOR_DECL(rpv,rlen,isuni,dsv,pv,l,m,c1,c2)
+#define DECLARE_AND_GET_RE_DEBUG_FLAGS  dNOOP
+#define RE_PV_COLOR_DECL(rpv,rlen,isuni,dsv,pv,l,m,c1,c2)  dNOOP
 #define RE_SV_ESCAPE(rpv,isuni,dsv,sv,m)
-#define RE_PV_QUOTED_DECL(rpv,isuni,dsv,pv,l,m)
+#define RE_PV_QUOTED_DECL(rpv,isuni,dsv,pv,l,m)  dNOOP
 #define RE_SV_DUMPLEN(ItEm)
 #define RE_SV_TAIL(ItEm)
+#define isDEBUG_WILDCARD 0
 
 #endif /* DEBUG RELATED DEFINES */
 
@@ -1111,6 +1181,33 @@ typedef enum {
 	SB_BOUND,
 	WB_BOUND
 } bound_type;
+
+/* This unpacks the FLAGS field of ANYOF[HR]x nodes.  The value it contains
+ * gives the strict lower bound for the UTF-8 start byte of any code point
+ * matchable by the node, and a loose upper bound as well.
+ *
+ * The low bound is stored in the upper 6 bits, plus 0xC0.
+ * The loose upper bound is determined from the lowest 2 bits and the low bound
+ * (called x) as follows:
+ *
+ * 11  The upper limit of the range can be as much as (EF - x) / 8
+ * 10  The upper limit of the range can be as much as (EF - x) / 4
+ * 01  The upper limit of the range can be as much as (EF - x) / 2
+ * 00  The upper limit of the range can be as much as  EF
+ *
+ * For motivation of this design, see commit message in
+ * 3146c00a633e9cbed741e10146662fbcedfdb8d3 */
+#ifdef EBCDIC
+#  define MAX_ANYOF_HRx_BYTE  0xF4
+#else
+#  define MAX_ANYOF_HRx_BYTE  0xEF
+#endif
+#define LOWEST_ANYOF_HRx_BYTE(b) (((b) >> 2) + 0xC0)
+#define HIGHEST_ANYOF_HRx_BYTE(b)                                           \
+                                  (LOWEST_ANYOF_HRx_BYTE(b)                 \
+          + ((MAX_ANYOF_HRx_BYTE - LOWEST_ANYOF_HRx_BYTE(b)) >> ((b) & 3)))
+
+#endif /* PERL_REGCOMP_H_ */
 
 /*
  * ex: set ts=8 sts=4 sw=4 et:

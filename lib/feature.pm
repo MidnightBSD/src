@@ -5,16 +5,17 @@
 
 package feature;
 
-our $VERSION = '1.52';
+our $VERSION = '1.58';
 
 our %feature = (
     fc              => 'feature_fc',
+    isa             => 'feature_isa',
     say             => 'feature_say',
     state           => 'feature_state',
     switch          => 'feature_switch',
     bitwise         => 'feature_bitwise',
+    indirect        => 'feature_indirect',
     evalbytes       => 'feature_evalbytes',
-    array_base      => 'feature_arybase',
     signatures      => 'feature_signatures',
     current_sub     => 'feature___SUB__',
     refaliasing     => 'feature_refaliasing',
@@ -25,13 +26,13 @@ our %feature = (
 );
 
 our %feature_bundle = (
-    "5.10"    => [qw(array_base say state switch)],
-    "5.11"    => [qw(array_base say state switch unicode_strings)],
-    "5.15"    => [qw(current_sub evalbytes fc say state switch unicode_eval unicode_strings)],
-    "5.23"    => [qw(current_sub evalbytes fc postderef_qq say state switch unicode_eval unicode_strings)],
-    "5.27"    => [qw(bitwise current_sub evalbytes fc postderef_qq say state switch unicode_eval unicode_strings)],
-    "all"     => [qw(array_base bitwise current_sub declared_refs evalbytes fc postderef_qq refaliasing say signatures state switch unicode_eval unicode_strings)],
-    "default" => [qw(array_base)],
+    "5.10"    => [qw(indirect say state switch)],
+    "5.11"    => [qw(indirect say state switch unicode_strings)],
+    "5.15"    => [qw(current_sub evalbytes fc indirect say state switch unicode_eval unicode_strings)],
+    "5.23"    => [qw(current_sub evalbytes fc indirect postderef_qq say state switch unicode_eval unicode_strings)],
+    "5.27"    => [qw(bitwise current_sub evalbytes fc indirect postderef_qq say state switch unicode_eval unicode_strings)],
+    "all"     => [qw(bitwise current_sub declared_refs evalbytes fc indirect isa postderef_qq refaliasing say signatures state switch unicode_eval unicode_strings)],
+    "default" => [qw(indirect)],
 );
 
 $feature_bundle{"5.12"} = $feature_bundle{"5.11"};
@@ -48,10 +49,17 @@ $feature_bundle{"5.24"} = $feature_bundle{"5.23"};
 $feature_bundle{"5.25"} = $feature_bundle{"5.23"};
 $feature_bundle{"5.26"} = $feature_bundle{"5.23"};
 $feature_bundle{"5.28"} = $feature_bundle{"5.27"};
+$feature_bundle{"5.29"} = $feature_bundle{"5.27"};
+$feature_bundle{"5.30"} = $feature_bundle{"5.27"};
+$feature_bundle{"5.31"} = $feature_bundle{"5.27"};
+$feature_bundle{"5.32"} = $feature_bundle{"5.27"};
 $feature_bundle{"5.9.5"} = $feature_bundle{"5.10"};
 my %noops = (
     postderef => 1,
     lexical_subs => 1,
+);
+my %removed = (
+    array_base => 1,
 );
 
 our $hint_shift   = 26;
@@ -209,9 +217,9 @@ This feature is available starting with Perl 5.16.
 
 =head2 The 'array_base' feature
 
-This feature supports the legacy C<$[> variable.  See L<perlvar/$[> and
-L<arybase>.  It is on by default but disabled under C<use v5.16> (see
-L</IMPLICIT LOADING>, below).
+This feature supported the legacy C<$[> variable.  See L<perlvar/$[>.
+It was on by default but disabled under C<use v5.16> (see
+L</IMPLICIT LOADING>, below) and unavailable since perl 5.30.
 
 This feature is available under this name starting with Perl 5.16.  In
 previous versions, it was simply on all the time, and this pragma knew
@@ -344,6 +352,26 @@ Reference to a Variable> for examples.
 
 This feature is available from Perl 5.26 onwards.
 
+=head2 The 'isa' feature
+
+This allows the use of the C<isa> infix operator, which tests whether the
+scalar given by the left operand is an object of the class given by the
+right operand. See L<perlop/Class Instance Operator> for more details.
+
+This feature is available from Perl 5.32 onwards.
+
+=head2 The 'indirect' feature
+
+This feature allows the use of L<indirect object
+syntax|perlobj/Indirect Object Syntax> for method calls, e.g.  C<new
+Foo 1, 2;>. It is enabled by default, but can be turned off to
+disallow indirect object syntax.
+
+This feature is available under this name from Perl 5.32 onwards. In
+previous versions, it was simply on all the time.  To disallow (or
+warn on) indirect object syntax on older Perls, see the L<indirect>
+CPAN module.
+
 =head1 FEATURE BUNDLES
 
 It's possible to load multiple features together, using
@@ -356,37 +384,49 @@ The following feature bundles are available:
 
   bundle    features included
   --------- -----------------
-  :default  array_base
+  :default  indirect
 
-  :5.10     say state switch array_base
+  :5.10     say state switch indirect
 
-  :5.12     say state switch unicode_strings array_base
+  :5.12     say state switch unicode_strings indirect
 
-  :5.14     say state switch unicode_strings array_base
+  :5.14     say state switch unicode_strings indirect
 
   :5.16     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
+            indirect
 
   :5.18     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
+            indirect
 
   :5.20     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
+            indirect
 
   :5.22     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
+            indirect
 
   :5.24     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
-            postderef_qq
+            postderef_qq indirect
 
   :5.26     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
-            postderef_qq
+            postderef_qq indirect
 
   :5.28     say state switch unicode_strings
             unicode_eval evalbytes current_sub fc
-            postderef_qq bitwise
+            postderef_qq bitwise indirect
+
+  :5.30     say state switch unicode_strings
+            unicode_eval evalbytes current_sub fc
+            postderef_qq bitwise indirect
+
+  :5.32     say state switch unicode_strings
+            unicode_eval evalbytes current_sub fc
+            postderef_qq bitwise indirect
 
 The C<:default> bundle represents the feature set that is enabled before
 any C<use feature> or C<no feature> declaration.
@@ -471,7 +511,7 @@ sub __common {
     my $import = shift;
     my $bundle_number = $^H & $hint_mask;
     my $features = $bundle_number != $hint_mask
-	&& $feature_bundle{$hint_bundles[$bundle_number >> $hint_shift]};
+      && $feature_bundle{$hint_bundles[$bundle_number >> $hint_shift]};
     if ($features) {
 	# Features are enabled implicitly via bundle hints.
 	# Delete any keys that may be left over from last time.
@@ -497,6 +537,9 @@ sub __common {
         }
         if (!exists $feature{$name}) {
             if (exists $noops{$name}) {
+                next;
+            }
+            if (!$import && exists $removed{$name}) {
                 next;
             }
             unknown_feature($name);

@@ -34,6 +34,7 @@
 #include "EXTERN.h"
 #define PERL_IN_PP_HOT_C
 #include "perl.h"
+#include "regcomp.h"
 
 /* Hot code. */
 
@@ -639,7 +640,7 @@ PP(pp_multiconcat)
      *   one set of segment lengths.
      *
      * * If the string has different plain and utf8 representations
-     *   (e.g. "\x80"), then then aux[PERL_MULTICONCAT_IX_PLAIN_PV/LEN]]
+     *   (e.g. "\x80"), then aux[PERL_MULTICONCAT_IX_PLAIN_PV/LEN]]
      *   holds the plain rep, while aux[PERL_MULTICONCAT_IX_UTF8_PV/LEN]
      *   holds the utf8 rep, and there are 2 sets of segment lengths,
      *   with the utf8 set following after the plain set.
@@ -686,7 +687,7 @@ PP(pp_multiconcat)
          * calculate how much extra growth is needed for all the chars
          * which will expand to two utf8 bytes.
          * Also, if the growth is non-zero, negate the length to indicate
-         * that this this is a variant string. Conversely, un-negate the
+         * that this is a variant string. Conversely, un-negate the
          * length on utf8 args (which was only needed to flag non-utf8
          * args in this loop */
         for (svpv_p = svpv_buf; svpv_p < svpv_end; svpv_p++) {
@@ -1060,9 +1061,9 @@ PP(pp_multiconcat)
                     SV * const tmpsv = amagic_call(left, right, concat_amg,
                                                 (nextappend ? AMGf_assign: 0));
                     if (tmpsv) {
-                        /* NB: tryAMAGICbin_MG() includes an SvPADMY test
-                         * here, which isn;t needed as any implicit
-                         * assign does under OPpTARGET_MY is done after
+                        /* NB: tryAMAGICbin_MG() includes an OPpTARGET_MY test
+                         * here, which isn't needed as any implicit
+                         * assign done under OPpTARGET_MY is done after
                          * this loop */
                         if (nextappend) {
                             sv_setsv(left, tmpsv);
@@ -1097,15 +1098,20 @@ PP(pp_multiconcat)
 
         SP = toparg - stack_adj + 1;
 
-        /* Assign result of all RHS concats (left) to LHS (targ).
+        /* Return the result of all RHS concats, unless this op includes
+         * an assign ($lex = x.y.z or expr = x.y.z), in which case copy
+         * to target (which will be $lex or expr).
          * If we are appending, targ will already have been appended to in
          * the loop */
-        if (is_append)
-            SvTAINT(targ);
-        else {
+        if (  !is_append
+            && (   (PL_op->op_flags   & OPf_STACKED)
+                || (PL_op->op_private & OPpTARGET_MY))
+        ) {
             sv_setsv(targ, left);
             SvSETMAGIC(targ);
         }
+        else
+            targ = left;
         SETs(targ);
         RETURN;
     }
@@ -1257,7 +1263,7 @@ PP(pp_eq)
     dSP;
     SV *left, *right;
 
-    tryAMAGICbin_MG(eq_amg, AMGf_set|AMGf_numeric);
+    tryAMAGICbin_MG(eq_amg, AMGf_numeric);
     right = POPs;
     left  = TOPs;
     SETs(boolSV(
@@ -1430,16 +1436,10 @@ PP(pp_add)
             NV nl = SvNVX(svl);
             NV nr = SvNVX(svr);
 
-            if (
-#if defined(NAN_COMPARE_BROKEN) && defined(Perl_isnan)
-                !Perl_isnan(nl) && nl == (NV)(il = (IV)nl)
-                && !Perl_isnan(nr) && nr == (NV)(ir = (IV)nr)
-#else
-                nl == (NV)(il = (IV)nl) && nr == (NV)(ir = (IV)nr)
-#endif
-                )
+            if (lossless_NV_to_IV(nl, &il) && lossless_NV_to_IV(nr, &ir)) {
                 /* nothing was lost by converting to IVs */
                 goto do_iv;
+            }
             SP--;
             TARGn(nl + nr, 0); /* args not GMG, so can't be tainted */
             SETs(TARG);
@@ -1521,7 +1521,9 @@ PP(pp_add)
 			auv = aiv;
 			auvok = 1;	/* Now acting as a sign flag.  */
 		    } else {
-			auv = (aiv == IV_MIN) ? (UV)aiv : (UV)(-aiv);
+                        /* Using 0- here and later to silence bogus warning
+                         * from MS VC */
+                        auv = (UV) (0 - (UV) aiv);
 		    }
 		}
 		a_valid = 1;
@@ -1541,7 +1543,7 @@ PP(pp_add)
 		    buv = biv;
 		    buvok = 1;
 		} else
-                    buv = (biv == IV_MIN) ? (UV)biv : (UV)(-biv);
+                    buv = (UV) (0 - (UV) biv);
 	    }
 	    /* ?uvok if value is >= 0. basically, flagged as UV if it's +ve,
 	       else "IV" now, independent of how it came in.
@@ -1822,7 +1824,6 @@ S_padhv_rv2hv_common(pTHX_ HV *hv, U8 gimme, bool is_keys, bool has_targ)
                 PUSHi(i);
             }
             else
-#ifdef PERL_OP_PARENT
             if (is_keys) {
                 /* parent op should be an unused OP_KEYS whose targ we can
                  * use */
@@ -1836,7 +1837,6 @@ S_padhv_rv2hv_common(pTHX_ HV *hv, U8 gimme, bool is_keys, bool has_targ)
                 PUSHi(i);
             }
             else
-#endif
                 mPUSHi(i);
         }
     }
@@ -2890,6 +2890,47 @@ PP(pp_qr)
     RETURN;
 }
 
+STATIC bool
+S_are_we_in_Debug_EXECUTE_r(pTHX)
+{
+    /* Given a 'use re' is in effect, does it ask for outputting execution
+     * debug info?
+     *
+     * This is separated from the sole place it's called, an inline function,
+     * because it is the large-ish slow portion of the function */
+
+    DECLARE_AND_GET_RE_DEBUG_FLAGS_NON_REGEX;
+
+    return cBOOL(RE_DEBUG_FLAG(RE_DEBUG_EXECUTE_MASK));
+}
+
+PERL_STATIC_INLINE bool
+S_should_we_output_Debug_r(pTHX_ regexp *prog)
+{
+    PERL_ARGS_ASSERT_SHOULD_WE_OUTPUT_DEBUG_R;
+
+    /* pp_match can output regex debugging info.  This function returns a
+     * boolean as to whether or not it should.
+     *
+     * Under -Dr, it should.  Any reasonable compiler will optimize this bit of
+     * code away on non-debugging builds. */
+    if (UNLIKELY(DEBUG_r_TEST)) {
+        return TRUE;
+    }
+
+    /* If the regex engine is using the non-debugging execution routine, then
+     * no debugging should be output.  Same if the field is NULL that pluggable
+     * engines are not supposed to fill. */
+    if (     LIKELY(prog->engine->exec == &Perl_regexec_flags)
+        || UNLIKELY(prog->engine->op_comp == NULL))
+    {
+        return FALSE;
+    }
+
+    /* Otherwise have to check */
+    return S_are_we_in_Debug_EXECUTE_r(aTHX);
+}
+
 PP(pp_match)
 {
     dSP; dTARG;
@@ -2945,7 +2986,9 @@ PP(pp_match)
         pm->op_pmflags & PMf_USED
 #endif
     ) {
-        DEBUG_r(PerlIO_printf(Perl_debug_log, "?? already matched once"));
+        if (UNLIKELY(should_we_output_Debug_r(prog))) {
+            PerlIO_printf(Perl_debug_log, "?? already matched once");
+        }
 	goto nope;
     }
 
@@ -2967,9 +3010,11 @@ PP(pp_match)
     }
 
     if (RXp_MINLEN(prog) >= 0 && (STRLEN)RXp_MINLEN(prog) > len) {
-        DEBUG_r(PerlIO_printf(Perl_debug_log, "String shorter than min possible regex match (%"
-                                              UVuf " < %" IVdf ")\n",
-                                              (UV)len, (IV)RXp_MINLEN(prog)));
+        if (UNLIKELY(should_we_output_Debug_r(prog))) {
+            PerlIO_printf(Perl_debug_log,
+                "String shorter than min possible regex match (%zd < %zd)\n",
+                                                        len, RXp_MINLEN(prog));
+        }
 	goto nope;
     }
 
@@ -3270,9 +3315,9 @@ Perl_do_readline(pTHX)
 	    }
 	    for (t1 = SvPVX_const(sv); *t1; t1++)
 #ifdef __VMS
-		if (strchr("*%?", *t1))
+		if (memCHRs("*%?", *t1))
 #else
-		if (strchr("$&*(){}[]'\";\\|?<>~`", *t1))
+		if (memCHRs("$&*(){}[]'\";\\|?<>~`", *t1))
 #endif
 			break;
 	    if (*t1 && PerlLIO_lstat(SvPVX_const(sv), &statbuf) < 0) {
@@ -3932,7 +3977,7 @@ PP(pp_iter)
     case CXt_LOOP_LIST: /* for (1,2,3) */
 
         assert(OPpITER_REVERSED == 2); /* so inc becomes -1 or 1 */
-        inc = 1 - (PL_op->op_private & OPpITER_REVERSED);
+        inc = (IV)1 - (IV)(PL_op->op_private & OPpITER_REVERSED);
         ix = (cx->blk_loop.state_u.stack.ix += inc);
         if (UNLIKELY(inc > 0
                         ? ix > cx->blk_oldsp
@@ -3947,7 +3992,7 @@ PP(pp_iter)
     case CXt_LOOP_ARY: /* for (@ary) */
 
         av = cx->blk_loop.state_u.ary.ary;
-        inc = 1 - (PL_op->op_private & OPpITER_REVERSED);
+        inc = (IV)1 - (IV)(PL_op->op_private & OPpITER_REVERSED);
         ix = (cx->blk_loop.state_u.ary.ix += inc);
         if (UNLIKELY(inc > 0
                         ? ix > AvFILL(av)

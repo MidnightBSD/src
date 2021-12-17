@@ -64,6 +64,7 @@
 #include <float.h>
 #include <time.h>
 #include <sys/utime.h>
+#include <wchar.h>
 
 #ifdef __GNUC__
 /* Mingw32 defaults to globing command line
@@ -438,7 +439,7 @@ win32_get_xlib(const char *pl, WIN32_NO_REGISTRY_M_(const char *xlib)
 	sv1 = sv2;
     } else if (sv2) {
         dTHX;
-	sv_catpv(sv1, ";");
+	sv_catpvs(sv1, ";");
 	sv_catsv(sv1, sv2);
     }
 
@@ -1348,7 +1349,7 @@ get_hwnd_delay(pTHX, long child, DWORD tries)
      * caching reasons, and the child thread was attached to a different CPU
      * therefore there is no workload on that CPU and Sleep(0) returns control
      * without yielding the time slot.
-     * https://rt.perl.org/rt3/Ticket/Display.html?id=88840
+     * https://github.com/Perl/perl5/issues/11267
      */
     Sleep(0);
     win32_async_check(aTHX);
@@ -1684,6 +1685,8 @@ win32_longpath(char *path)
 static void
 out_of_memory(void)
 {
+    dVAR;
+
     if (PL_curinterp)
 	croak_no_mem();
     exit(1);
@@ -1720,7 +1723,7 @@ wstr_to_str(const wchar_t* wstr)
  * then it will convert the short name instead.
  *
  * The buffer to the ansi pathname must be freed with win32_free() when it
- * it no longer needed.
+ * is no longer needed.
  *
  * The argument to win32_ansipath() must exist before this function is
  * called; otherwise there is no way to determine the short path name.
@@ -2238,6 +2241,7 @@ win32_async_check(pTHX)
 DllExport DWORD
 win32_msgwait(pTHX_ DWORD count, LPHANDLE handles, DWORD timeout, LPDWORD resultp)
 {
+    int retry = 0;
     /* We may need several goes at this - so compute when we stop */
     FT_t ticks = {0};
     unsigned __int64 endtime = timeout;
@@ -2260,12 +2264,13 @@ win32_msgwait(pTHX_ DWORD count, LPHANDLE handles, DWORD timeout, LPDWORD result
      * from another process (msctf.dll doing IPC among its instances, VS debugger
      * causes msctf.dll to be loaded into Perl by kernel), see [perl #33096].
      */
-    while (ticks.ft_i64 <= endtime) {
+    while (ticks.ft_i64 <= endtime || retry) {
 	/* if timeout's type is lengthened, remember to split 64b timeout
 	 * into multiple non-infinity runs of MWFMO */
 	DWORD result = MsgWaitForMultipleObjects(count, handles, FALSE,
 						(DWORD)(endtime - ticks.ft_i64),
 						QS_POSTMESSAGE|QS_TIMER|QS_SENDMESSAGE);
+        retry = 0;
 	if (resultp)
 	   *resultp = result;
 	if (result == WAIT_TIMEOUT) {
@@ -2281,6 +2286,7 @@ win32_msgwait(pTHX_ DWORD count, LPHANDLE handles, DWORD timeout, LPDWORD result
 	if (result == WAIT_OBJECT_0 + count) {
 	    /* Message has arrived - check it */
 	    (void)win32_async_check(aTHX);
+            retry = 1;
 	}
 	else {
 	   /* Not timeout or message - one of handles is ready */
@@ -2453,6 +2459,14 @@ win32_sleep(unsigned int t)
 			"sleep(%lu) too large", t);
     }
     return win32_msgwait(aTHX_ 0, NULL, t * 1000, NULL) / 1000;
+}
+
+DllExport int
+win32_pause(void)
+{
+    dTHX;
+    win32_msgwait(aTHX_ 0, NULL, INFINITE, NULL);
+    return -1;
 }
 
 DllExport unsigned int
@@ -2644,7 +2658,7 @@ win32_strerror(int e)
 	 * additionally map them to corresponding Windows (sockets) error codes
 	 * first to avoid getting the wrong system message.
 	 */
-	else if (e >= EADDRINUSE && e <= EWOULDBLOCK) {
+	else if (inRANGE(e, EADDRINUSE, EWOULDBLOCK)) {
 	    e = convert_errno_to_wsa_error(e);
 	}
 #endif
@@ -2898,9 +2912,17 @@ win32_rewind(FILE *pf)
 DllExport int
 win32_tmpfd(void)
 {
+    return win32_tmpfd_mode(0);
+}
+
+DllExport int
+win32_tmpfd_mode(int mode)
+{
     char prefix[MAX_PATH+1];
     char filename[MAX_PATH+1];
     DWORD len = GetTempPath(MAX_PATH, prefix);
+    mode &= ~( O_ACCMODE | O_CREAT | O_EXCL );
+    mode |= O_RDWR;
     if (len && len < MAX_PATH) {
 	if (GetTempFileName(prefix, "plx", 0, filename)) {
 	    HANDLE fh = CreateFile(filename,
@@ -2912,7 +2934,7 @@ win32_tmpfd(void)
 				   | FILE_FLAG_DELETE_ON_CLOSE,
 				   NULL);
 	    if (fh != INVALID_HANDLE_VALUE) {
-		int fd = win32_open_osfhandle((intptr_t)fh, 0);
+		int fd = win32_open_osfhandle((intptr_t)fh, mode);
 		if (fd >= 0) {
 		    PERL_DEB(dTHX;)
 		    DEBUG_p(PerlIO_printf(Perl_debug_log,
@@ -3891,7 +3913,7 @@ RETRY:
 	w32_child_pids[w32_num_children] = (DWORD)ret;
 	++w32_num_children;
     }
-    else  {
+    else {
 	DWORD status;
 	win32_msgwait(aTHX_ 1, &ProcessInformation.hProcess, INFINITE, NULL);
 	/* FIXME: if msgwait returned due to message perhaps forward the
@@ -4531,6 +4553,7 @@ Perl_win32_term(void)
     PERLIO_TERM;
     MALLOC_TERM;
     LOCALE_TERM;
+    ENV_TERM;
 #ifndef WIN32_NO_REGISTRY
     /* handles might be NULL, RegCloseKey then returns ERROR_INVALID_HANDLE
        but no point of checking and we can't die() at this point */
@@ -4703,6 +4726,7 @@ win32_csighandler(int sig)
 void
 Perl_sys_intern_init(pTHX)
 {
+    dVAR;
     int i;
 
     w32_perlshell_tokens	= NULL;
@@ -4752,6 +4776,8 @@ Perl_sys_intern_init(pTHX)
 void
 Perl_sys_intern_clear(pTHX)
 {
+    dVAR;
+
     Safefree(w32_perlshell_tokens);
     Safefree(w32_perlshell_vec);
     /* NOTE: w32_fdpid is freed by sv_clean_all() */

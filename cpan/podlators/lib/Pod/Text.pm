@@ -6,16 +6,7 @@
 # seemed to produce better output.  It uses Pod::Parser and is designed to be
 # very easy to subclass.
 #
-# Perl core hackers, please note that this module is also separately
-# maintained outside of the Perl core as part of the podlators.  Please send
-# me any patches at the address above in addition to sending them to the
-# standard Perl mailing lists.
-#
-# Copyright 1999, 2000, 2001, 2002, 2004, 2006, 2008, 2009, 2012, 2013, 2014,
-#     2015, 2016 Russ Allbery <rra@cpan.org>
-#
-# This program is free software; you may redistribute it and/or modify it
-# under the same terms as Perl itself.
+# SPDX-License-Identifier: GPL-1.0-or-later OR Artistic-1.0-Perl
 
 ##############################################################################
 # Modules and declarations
@@ -23,7 +14,7 @@
 
 package Pod::Text;
 
-use 5.006;
+use 5.008;
 use strict;
 use warnings;
 
@@ -39,7 +30,7 @@ use Pod::Simple ();
 # We have to export pod2text for backward compatibility.
 @EXPORT = qw(pod2text);
 
-$VERSION = '4.10';
+$VERSION = '4.14';
 
 # Ensure that $Pod::Simple::nbsp and $Pod::Simple::shy are available.  Code
 # taken from Pod::Simple 3.32, but was only added in 3.30.
@@ -48,16 +39,8 @@ if ($Pod::Simple::VERSION ge 3.30) {
     $NBSP = $Pod::Simple::nbsp;
     $SHY  = $Pod::Simple::shy;
 } else {
-    if ($] ge 5.007_003) {
-        $NBSP = chr utf8::unicode_to_native(0xA0);
-        $SHY  = chr utf8::unicode_to_native(0xAD);
-    } elsif (Pod::Simple::ASCII) {
-        $NBSP = "\xA0";
-        $SHY  = "\xAD";
-    } else {
-        $NBSP = "\x41";
-        $SHY  = "\xCA";
-    }
+    $NBSP = chr utf8::unicode_to_native(0xA0);
+    $SHY  = chr utf8::unicode_to_native(0xAD);
 }
 
 ##############################################################################
@@ -126,6 +109,7 @@ sub new {
         $self->no_errata_section (0);
         $self->complain_stderr (0);
     } elsif ($$self{opt_errors} eq 'none') {
+        $self->no_errata_section (1);
         $self->no_whining (1);
     } else {
         croak (qq(Invalid errors setting: "$$self{errors}"));
@@ -255,7 +239,7 @@ sub wrap {
     my $spaces = ' ' x $$self{MARGIN};
     my $width = $$self{opt_width} - $$self{MARGIN};
     while (length > $width) {
-        if (s/^([^\n]{0,$width})\s+// || s/^([^\n]{$width})//) {
+        if (s/^([^\n]{0,$width})[ \t\n]+// || s/^([^\n]{$width})//) {
             $output .= $spaces . $1 . "\n";
         } else {
             last;
@@ -273,14 +257,16 @@ sub reformat {
     local $_ = shift;
 
     # If we're trying to preserve two spaces after sentences, do some munging
-    # to support that.  Otherwise, smash all repeated whitespace.
+    # to support that.  Otherwise, smash all repeated whitespace.  Be careful
+    # not to use \s here, which in Unicode input may match non-breaking spaces
+    # that we don't want to smash.
     if ($$self{opt_sentence}) {
         s/ +$//mg;
         s/\.\n/. \n/g;
         s/\n/ /g;
         s/   +/  /g;
     } else {
-        s/\s+/ /g;
+        s/[ \t\n]+/ /g;
     }
     return $self->wrap ($_);
 }
@@ -341,15 +327,14 @@ sub start_document {
 
     # When UTF-8 output is set, check whether our output file handle already
     # has a PerlIO encoding layer set.  If it does not, we'll need to encode
-    # our output before printing it (handled in the output() sub).  Wrap the
-    # check in an eval to handle versions of Perl without PerlIO.
+    # our output before printing it (handled in the output() sub).
     $$self{ENCODE} = 0;
     if ($$self{opt_utf8}) {
         $$self{ENCODE} = 1;
         eval {
             my @options = (output => 1, details => 1);
             my $flag = (PerlIO::get_layers ($$self{output_fh}, @options))[-1];
-            if ($flag & PerlIO::F_UTF8 ()) {
+            if ($flag && ($flag & PerlIO::F_UTF8 ())) {
                 $$self{ENCODE} = 0;
                 $$self{ENCODING} = 'UTF-8';
             }
@@ -790,7 +775,7 @@ Pod::Text - Convert POD data to formatted text
 =head1 SYNOPSIS
 
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    my $parser = Pod::Text->new (sentence => 1, width => 78);
 
     # Read POD from STDIN and write to STDOUT.
     $parser->parse_from_filehandle;
@@ -888,7 +873,7 @@ marks are added around CE<lt>> text.
 If set to a true value, Pod::Text will assume that each sentence ends in two
 spaces, and will try to preserve that spacing.  If set to false, all
 consecutive whitespace in non-verbatim paragraphs is compressed into a
-single space.  Defaults to true.
+single space.  Defaults to false.
 
 =item stderr
 
@@ -927,7 +912,9 @@ being the file to write the formatted output to.
 You can also call parse_lines() to parse an array of lines or
 parse_string_document() to parse a document already in memory.  As with
 parse_file(), parse_lines() and parse_string_document() default to sending
-their output to C<STDOUT> unless changed with the output_fh() method.
+their output to C<STDOUT> unless changed with the output_fh() method.  Be
+aware that parse_lines() and parse_string_document() both expect raw bytes,
+not decoded characters.
 
 To put the output from any parse method into a string instead of a file
 handle, call the output_string() method instead of output_fh().
@@ -1004,14 +991,6 @@ sequences, although it wasn't turned on by default and it was problematic to
 get it to work at all.  This rewrite doesn't even try to do that, but a
 subclass of it does.  Look for L<Pod::Text::Termcap>.
 
-=head1 SEE ALSO
-
-L<Pod::Simple>, L<Pod::Text::Termcap>, L<perlpod(1)>, L<pod2text(1)>
-
-The current version of this module is always available from its web site at
-L<http://www.eyrie.org/~eagle/software/podlators/>.  It is also part of the
-Perl core distribution as of 5.6.0.
-
 =head1 AUTHOR
 
 Russ Allbery <rra@cpan.org>, based I<very> heavily on the original
@@ -1022,10 +1001,22 @@ how to use Pod::Simple.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 1999, 2000, 2001, 2002, 2004, 2006, 2008, 2009, 2012, 2013, 2014,
-2015, 2016 Russ Allbery <rra@cpan.org>
+Copyright 1999-2002, 2004, 2006, 2008-2009, 2012-2016, 2018-2019 Russ Allbery
+<rra@cpan.org>
 
 This program is free software; you may redistribute it and/or modify it
 under the same terms as Perl itself.
 
+=head1 SEE ALSO
+
+L<Pod::Simple>, L<Pod::Text::Termcap>, L<perlpod(1)>, L<pod2text(1)>
+
+The current version of this module is always available from its web site at
+L<https://www.eyrie.org/~eagle/software/podlators/>.  It is also part of the
+Perl core distribution as of 5.6.0.
+
 =cut
+
+# Local Variables:
+# copyright-at-end-flag: t
+# End:

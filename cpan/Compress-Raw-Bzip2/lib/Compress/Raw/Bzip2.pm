@@ -11,7 +11,7 @@ use Carp ;
 use bytes ;
 our ($VERSION, $XS_VERSION, @ISA, @EXPORT, $AUTOLOAD);
 
-$VERSION = '2.074';
+$VERSION = '2.093';
 $XS_VERSION = $VERSION; 
 $VERSION = eval $VERSION;
 
@@ -147,7 +147,7 @@ Compress::Raw::Bzip2 - Low-Level Interface to bzip2 compression library
 =head1 DESCRIPTION
 
 C<Compress::Raw::Bzip2> provides an interface to the in-memory
-compression/uncompression functions from the bzip2 compression library. 
+compression/uncompression functions from the bzip2 compression library.
 
 Although the primary purpose for the existence of C<Compress::Raw::Bzip2>
 is for use by the  C<IO::Compress::Bzip2> and C<IO::Compress::Bunzip2>
@@ -158,7 +158,7 @@ tasks.
 
 =head2 ($z, $status) = new Compress::Raw::Bzip2 $appendOutput, $blockSize100k, $workfactor;
 
-Creates a new compression object. 
+Creates a new compression object.
 
 If successful, it will return the initialised compression object, C<$z>
 and a C<$status> of C<BZ_OK> in a list context. In scalar context it
@@ -273,7 +273,7 @@ To quote the bzip2 documentation
     If small is nonzero, the library will use an alternative decompression
     algorithm which uses less memory but at the cost of decompressing more
     slowly (roughly speaking, half the speed, but the maximum memory
-    requirement drops to around 2300k). 
+    requirement drops to around 2300k).
 
 Defaults to 0.
 
@@ -281,7 +281,7 @@ Defaults to 0.
 
 The C<LimitOutput> option changes the behavior of the C<< $i->bzinflate >>
 method so that the amount of memory used by the output buffer can be
-limited. 
+limited.
 
 When C<LimitOutput> is used the size of the output buffer used will either
 be the 16k or the amount of memory already allocated to C<$output>,
@@ -307,7 +307,7 @@ Defaults to 0.
 
 =head2 $status = $z->bzinflate($input, $output);
 
-Uncompresses C<$input> and writes the uncompressed data to C<$output>. 
+Uncompresses C<$input> and writes the uncompressed data to C<$output>.
 
 Returns C<BZ_OK> if the uncompression was successful, but the end of the
 compressed data stream has not been reached. Returns C<BZ_STREAM_END> on
@@ -354,9 +354,15 @@ The following bzip2 constants are exported by this module
 		BZ_OUTBUFF_FULL
 		BZ_CONFIG_ERROR
 
+=head1 SUPPORT
+
+General feedback/questions/bug reports should be sent to 
+L<https://github.com/pmqs/Compress-Raw-Bzip2/issues> (preferred) or
+L<https://rt.cpan.org/Public/Dist/Display.html?Name=Compress-Raw-Bzip2>.
+
 =head1 SEE ALSO
 
-L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Uncompress::Inflate>, L<IO::Compress::RawDeflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
+L<Compress::Zlib>, L<IO::Compress::Gzip>, L<IO::Uncompress::Gunzip>, L<IO::Compress::Deflate>, L<IO::Uncompress::Inflate>, L<IO::Compress::RawDeflate>, L<IO::Uncompress::RawInflate>, L<IO::Compress::Bzip2>, L<IO::Uncompress::Bunzip2>, L<IO::Compress::Lzma>, L<IO::Uncompress::UnLzma>, L<IO::Compress::Xz>, L<IO::Uncompress::UnXz>, L<IO::Compress::Lzip>, L<IO::Uncompress::UnLzip>, L<IO::Compress::Lzop>, L<IO::Uncompress::UnLzop>, L<IO::Compress::Lzf>, L<IO::Uncompress::UnLzf>, L<IO::Compress::Zstd>, L<IO::Uncompress::UnZstd>, L<IO::Uncompress::AnyInflate>, L<IO::Uncompress::AnyUncompress>
 
 L<IO::Compress::FAQ|IO::Compress::FAQ>
 
@@ -364,13 +370,13 @@ L<File::GlobMapper|File::GlobMapper>, L<Archive::Zip|Archive::Zip>,
 L<Archive::Tar|Archive::Tar>,
 L<IO::Zlib|IO::Zlib>
 
-The primary site for the bzip2 program is L<http://www.bzip.org>.
+The primary site for the bzip2 program is L<https://sourceware.org/bzip2/>.
 
 See the module L<Compress::Bzip2|Compress::Bzip2>
 
 =head1 AUTHOR
 
-This module was written by Paul Marquess, C<pmqs@cpan.org>. 
+This module was written by Paul Marquess, C<pmqs@cpan.org>.
 
 =head1 MODIFICATION HISTORY
 
@@ -378,7 +384,7 @@ See the Changes file.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2017 Paul Marquess. All rights reserved.
+Copyright (c) 2005-2019 Paul Marquess. All rights reserved.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

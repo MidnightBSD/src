@@ -15,8 +15,6 @@ $|=1;
 # later Standards could cause them to not test what they originally were aimed
 # to do.
 
-no warnings "experimental::script_run";
-
 # Since there's so few tests currently, we can afford to try each syntax on
 # all of them
 foreach my $type ('script_run', 'sr', 'atomic_script_run', 'asr') {
@@ -51,8 +49,8 @@ foreach my $type ('script_run', 'sr', 'atomic_script_run', 'asr') {
     unlike("\N{HEBREW LETTER ALEF}\N{HEBREW LETTER TAV}\N{MODIFIER LETTER SMALL Y}", $script_run, "Hebrew then Latin isn't a script run");
     like("9876543210\N{DESERET SMALL LETTER WU}", $script_run, "0-9 are the digits for Deseret");
     like("\N{DESERET SMALL LETTER WU}9876543210", $script_run, "Also when they aren't in the initial position");
-    unlike("\N{DESERET SMALL LETTER WU}\N{FULLWIDTH DIGIT FIVE}", $script_run, "Fullwidth digits aren't the digits for Deseret");
-    unlike("\N{FULLWIDTH DIGIT SIX}\N{DESERET SMALL LETTER LONG I}", $script_run, "... likewise if the digits come first");
+    like("\N{DESERET SMALL LETTER WU}\N{FULLWIDTH DIGIT FIVE}", $script_run, "Fullwidth digits may be digits for Deseret");
+    like("\N{FULLWIDTH DIGIT SIX}\N{DESERET SMALL LETTER LONG I}", $script_run, "... likewise if the digits come first");
 
     like("1234567890\N{ARABIC LETTER ALEF}", $script_run, "[0-9] work for Arabic");
     unlike("1234567890\N{ARABIC LETTER ALEF}\N{ARABIC-INDIC DIGIT FOUR}\N{ARABIC-INDIC DIGIT FIVE}", $script_run, "... but not in combination with real ARABIC digits");
@@ -84,12 +82,42 @@ foreach my $type ('script_run', 'sr', 'atomic_script_run', 'asr') {
 
     # From UTS 39
     like("写真だけの結婚式", $script_run, "Mixed Hiragana and Han");
+
+    unlike "\N{THAI DIGIT FIVE}1", $script_run, "Thai digit followed by '1'";
+    unlike "1\N{THAI DIGIT FIVE}", $script_run, "'1' followed by Thai digit ";
+    unlike "\N{BENGALI DIGIT ZERO}\N{CHAKMA DIGIT SEVEN}", $script_run,
+           "Two digits in same extended script but from different sets of 10";
 }
 
     # Until fixed, this was skipping the '['
-    unlike("abc]c", qr/^ (*sr:a(*sr:[bc]*)c) $/x, "Doesn't skip parts of exact matches");
+    unlike("abc]c", qr/^ (*sr:a(*sr:[bc]*)c) $/x,
+           "Doesn't skip parts of exact matches");
 
-      like("abc", qr/(*asr:a[bc]*c)/, "Outer asr works on a run");
-    unlike("abc", qr/(*asr:a(*asr:[bc]*)c)/, "Nested asr works to exclude some things");
+    like("abc", qr/(*asr:a[bc]*c)/, "Outer asr works on a run");
+    unlike("abc", qr/(*asr:a(*asr:[bc]*)c)/,
+           "Nested asr works to exclude some things");
+
+    like("\x{0980}12\x{0993}", qr/^(*sr:.{4})/,
+         "Script with own zero works with ASCII digits"); # perl #133547
+    like("\x{3041}12\x{3041}", qr/^(*sr:.{4})/,
+         "Script without own zero works with ASCII digits");
+
+    like("A\x{ff10}\x{ff19}B", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Latin"); # perl #133547
+    like("A\x{ff10}BC", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Latin"); # perl #133547
+    like("A\x{1d7ce}\x{1d7cf}B", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Latin"); # perl #133547
+    like("A\x{1d7ce}BC", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Latin"); # perl #133547
+    like("\x{1d7ce}\x{1d7cf}AB", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Latin"); # perl #133547
+    like("α\x{1d7ce}βγ", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Greek"); # perl #133547
+    like("\x{1d7ce}αβγ", qr/^(*sr:.{4})/,
+         "Non-ASCII Common digits work with Greek"); # perl #133547
+
+    fresh_perl_is('print scalar "0" =~ m!(((*sr:()|)0)(*sr:)0|)!;',
+                  1, {}, '[perl #133997]');
 
 done_testing();

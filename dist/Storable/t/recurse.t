@@ -20,7 +20,7 @@ use Storable qw(freeze thaw dclone);
 
 $Storable::flags = Storable::FLAGS_COMPAT;
 
-use Test::More tests => 38;
+use Test::More tests => 39;
 
 package OBJ_REAL;
 
@@ -318,9 +318,11 @@ is($refcount_ok, 1, "check refcount");
 # Small 64bit systems fail with 1200 (c++ debugging), with gcc 3000.
 # Optimized 64bit allows up to 33.000 recursion depth.
 # with asan the limit is 255 though.
+
+local $Storable::recursion_limit = 30;
+local $Storable::recursion_limit_hash = 20;
 sub MAX_DEPTH () { Storable::stack_depth() }
 sub MAX_DEPTH_HASH () { Storable::stack_depth_hash() }
-sub OVERFLOW () { 35000 }
 {
     my $t;
     print "# max depth ", MAX_DEPTH, "\n";
@@ -345,7 +347,7 @@ sub OVERFLOW () { 35000 }
 eval {
     my $t;
     $t = [$t] for 1 .. MAX_DEPTH*2;
-    note 'trying catching recursive aref stack overflow';
+    eval { note('trying catching recursive aref stack overflow') };
     dclone $t;
 };
 like $@, qr/Max\. recursion depth with nested structures exceeded/,
@@ -360,9 +362,21 @@ else {
         my $t;
         # 35.000 will cause appveyor 64bit windows to fail earlier
         $t = {1=>$t} for 1 .. MAX_DEPTH * 2;
-        note 'trying catching recursive href stack overflow';
+        eval { note('trying catching recursive href stack overflow') };
         dclone $t;
     };
     like $@, qr/Max\. recursion depth with nested structures exceeded/,
-      'Caught href stack overflow '.MAX_DEPTH*2;
+      'Caught href stack overflow '.MAX_DEPTH_HASH*2;
+}
+
+{
+    # perl #133326
+    my @tt;
+    #$Storable::DEBUGME=1;
+    for (1..16000) {
+        my $t = [[[]]];
+        push @tt, $t;
+    }
+    ok(eval { dclone \@tt; 1 },
+       "low depth structure shouldn't be treated as nested");
 }

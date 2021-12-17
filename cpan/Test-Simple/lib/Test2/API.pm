@@ -9,13 +9,43 @@ BEGIN {
     $ENV{TEST2_ACTIVE} = 1;
 }
 
-our $VERSION = '1.302133';
+our $VERSION = '1.302175';
 
 
 my $INST;
 my $ENDING = 0;
-sub test2_set_is_end { ($ENDING) = @_ ? @_ : (1) }
+sub test2_unset_is_end { $ENDING = 0 }
 sub test2_get_is_end { $ENDING }
+
+sub test2_set_is_end {
+    my $before = $ENDING;
+    ($ENDING) = @_ ? @_ : (1);
+
+    # Only send the event in a transition from false to true
+    return if $before;
+    return unless $ENDING;
+
+    return unless $INST;
+    my $stack = $INST->stack or return;
+    my $root = $stack->root or return;
+
+    return unless $root->count;
+
+    return unless $$ == $INST->pid;
+    return unless get_tid() == $INST->tid;
+
+    my $trace = Test2::EventFacet::Trace->new(
+        frame  => [__PACKAGE__, __FILE__, __LINE__, __PACKAGE__ . '::test2_set_is_end'],
+    );
+    my $ctx = Test2::API::Context->new(
+        trace => $trace,
+        hub   => $root,
+    );
+
+    $ctx->send_ev2(control => { phase => 'END', details => 'Transition to END phase' });
+
+    1;
+}
 
 use Test2::API::Instance(\$INST);
 
@@ -70,7 +100,7 @@ use Test2::Event::Subtest();
 
 use Carp qw/carp croak confess/;
 use Scalar::Util qw/blessed weaken/;
-use Test2::Util qw/get_tid clone_io pkg_to_file/;
+use Test2::Util qw/get_tid clone_io pkg_to_file gen_uid/;
 
 our @EXPORT_OK = qw{
     context release
@@ -85,8 +115,10 @@ our @EXPORT_OK = qw{
     test2_start_preload
     test2_stop_preload
     test2_in_preload
+    test2_is_testing_done
 
     test2_set_is_end
+    test2_unset_is_end
     test2_get_is_end
 
     test2_pid
@@ -98,6 +130,8 @@ our @EXPORT_OK = qw{
     test2_ipc_wait_enabled
 
     test2_add_uuid_via
+
+    test2_add_callback_testing_done
 
     test2_add_callback_context_aquire
     test2_add_callback_context_acquire
@@ -127,7 +161,6 @@ our @EXPORT_OK = qw{
     test2_ipc_set_pending
     test2_ipc_get_timeout
     test2_ipc_set_timeout
-    test2_ipc_enable_shm
 
     test2_formatter
     test2_formatters
@@ -175,9 +208,46 @@ sub test2_ipc_wait_enable  { $INST->set_no_wait(0) }
 sub test2_ipc_wait_disable { $INST->set_no_wait(1) }
 sub test2_ipc_wait_enabled { !$INST->no_wait }
 
+sub test2_is_testing_done {
+    # No instance? VERY DONE!
+    return 1 unless $INST;
+
+    # No stack? tests must be done, it is created pretty early
+    my $stack = $INST->stack or return 1;
+
+    # Nothing on the stack, no root hub yet, likely have not started testing
+    return 0 unless @$stack;
+
+    # Stack has a slot for the root hub (see above) but it is undefined, likely
+    # garbage collected, test is done
+    my $root_hub = $stack->[0] or return 1;
+
+    # If the root hub is ended than testing is done.
+    return 1 if $root_hub->ended;
+
+    # Looks like we are still testing!
+    return 0;
+}
+
 sub test2_no_wait {
     $INST->set_no_wait(@_) if @_;
     $INST->no_wait;
+}
+
+sub test2_add_callback_testing_done {
+    my $cb = shift;
+
+    test2_add_callback_post_load(sub {
+        my $stack = test2_stack();
+        $stack->top; # Insure we have a hub
+        my ($hub) = Test2::API::test2_stack->all;
+
+        $hub->set_active(1);
+
+        $hub->follow_up($cb);
+    });
+
+    return;
 }
 
 sub test2_add_callback_context_acquire   { $INST->add_context_acquire_callback(@_) }
@@ -213,7 +283,7 @@ sub test2_ipc_get_pending     { $INST->get_ipc_pending }
 sub test2_ipc_set_pending     { $INST->set_ipc_pending(@_) }
 sub test2_ipc_set_timeout     { $INST->set_ipc_timeout(@_) }
 sub test2_ipc_get_timeout     { $INST->ipc_timeout() }
-sub test2_ipc_enable_shm      { $INST->ipc_enable_shm }
+sub test2_ipc_enable_shm      { 0 }
 
 sub test2_formatter     {
     if ($ENV{T2_FORMATTER} && $ENV{T2_FORMATTER} =~ m/^(\+)?(.*)$/) {
@@ -289,7 +359,6 @@ sub no_context(&;$) {
 };
 
 my $UUID_VIA = _add_uuid_via_ref();
-my $CID = 1;
 sub context {
     # We need to grab these before anything else to ensure they are not
     # changed.
@@ -306,6 +375,23 @@ sub context {
 
     my $stack   = $params{stack} || $STACK;
     my $hub     = $params{hub}   || (@$stack ? $stack->[-1] : $stack->top);
+
+    # Catch an edge case where we try to get context after the root hub has
+    # been garbage collected resulting in a stack that has a single undef
+    # hub
+    if (!$hub && !exists($params{hub}) && @$stack) {
+        my $msg = Carp::longmess("Attempt to get Test2 context after testing has completed (did you attempt a testing event after done_testing?)");
+
+        # The error message is usually masked by the global destruction, so we have to print to STDER
+        print STDERR $msg;
+
+        # Make sure this is a failure, we are probably already in END, so set $? to change the exit code
+        $? = 1;
+
+        # Now we actually die to interrupt the program flow and avoid undefined his warnings
+        die $msg;
+    }
+
     my $hid     = $hub->{hid};
     my $current = $CONTEXTS->{$hid};
 
@@ -369,7 +455,7 @@ sub context {
             frame  => [$pkg, $file, $line, $sub],
             pid    => $$,
             tid    => get_tid(),
-            cid    => 'C' . $CID++,
+            cid    => gen_uid(),
             hid    => $hid,
             nested => $hub->{nested},
             buffered => $hub->{buffered},
@@ -798,6 +884,7 @@ C<intercept { ... }> which only lets you see events as the main hub sees them.
         test2_ipc
         test2_formatter_set
         test2_formatter
+        test2_is_testing_done
     };
 
     my $init  = test2_init_done();
@@ -1241,6 +1328,26 @@ Check if Test2 believes it is the END phase.
 This will return the global L<Test2::API::Stack> instance. If this has not
 yet been initialized it will be initialized now.
 
+=item $bool = test2_is_testing_done()
+
+This will return true if testing is complete and no other events should be
+sent. This is useful in things like warning handlers where you might want to
+turn warnings into events, but need them to start acting like normal warnings
+when testing is done.
+
+    $SIG{__WARN__} = sub {
+        my ($warning) = @_;
+
+        if (test2_is_testing_done()) {
+            warn @_;
+        }
+        else {
+            my $ctx = context();
+            ...
+            $ctx->release
+        }
+    }
+
 =item test2_ipc_disable
 
 Disable IPC.
@@ -1281,7 +1388,7 @@ to turn this off.
 
 These functions return the filehandles that test output should be written to.
 They are primarily useful when writing a custom formatter and code that turns
-events into actual output (TAP, etc.)  They will return a dupe of the original
+events into actual output (TAP, etc.).  They will return a dupe of the original
 filehandles that formatted output can be sent to regardless of whatever state
 the currently running test may have left STDOUT and STDERR in.
 
@@ -1325,6 +1432,22 @@ from C<$exit>
 Add a callback that will be called when Test2 is finished loading. This
 means the callback will be run once, the first time a context is obtained.
 If Test2 has already finished loading then the callback will be run immediately.
+
+=item test2_add_callback_testing_done(sub { ... })
+
+This adds your coderef as a follow-up to the root hub after Test2 is finished loading.
+
+This is essentially a helper to do the following:
+
+    test2_add_callback_post_load(sub {
+        my $stack = test2_stack();
+        $stack->top; # Insure we have a hub
+        my ($hub) = Test2::API::test2_stack->all;
+
+        $hub->set_active(1);
+
+        $hub->follow_up(sub { ... }); # <-- Your coderef here
+    });
 
 =item test2_add_callback_context_acquire(sub { ... })
 
@@ -1441,8 +1564,7 @@ Turn off IPC polling.
 
 =item test2_ipc_enable_shm()
 
-Turn on IPC SHM. Only some IPC drivers use this, and most will turn it on
-themselves.
+Legacy, this is currently a no-op that returns 0;
 
 =item test2_ipc_set_pending($uniq_val)
 
@@ -1557,7 +1679,7 @@ F<http://github.com/Test-More/test-more/>.
 
 =head1 COPYRIGHT
 
-Copyright 2018 Chad Granum E<lt>exodist@cpan.orgE<gt>.
+Copyright 2019 Chad Granum E<lt>exodist@cpan.orgE<gt>.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.

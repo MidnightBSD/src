@@ -2,8 +2,7 @@ package Test2::IPC::Driver::Files;
 use strict;
 use warnings;
 
-our $VERSION = '1.302133';
-
+our $VERSION = '1.302175';
 
 BEGIN { require Test2::IPC::Driver; our @ISA = qw(Test2::IPC::Driver) }
 
@@ -17,9 +16,6 @@ use POSIX();
 
 use Test2::Util qw/try get_tid pkg_to_file IS_WIN32 ipc_separator do_rename do_unlink try_sig_mask/;
 use Test2::API qw/test2_ipc_set_pending/;
-
-sub use_shm { 1 }
-sub shm_size() { 64 }
 
 sub is_viable { 1 }
 
@@ -121,12 +117,36 @@ sub drop_hub {
     }
 
     opendir(my $dh, $tdir) or $self->abort_trace("Could not open temp dir!");
+
+    my %bad;
     for my $file (readdir($dh)) {
         next if $file =~ m{\.complete$};
         next unless $file =~ m{^$hid};
-        $self->abort_trace("Not all files from hub '$hid' have been collected!");
+
+        eval { $bad{$file} = $self->read_event_file(File::Spec->catfile($tdir, $file)); 1 } or $bad{$file} = $@ || "Unknown error reading file";
     }
     closedir($dh);
+
+    return unless keys %bad;
+
+    my $data;
+    my $ok = eval {
+        require JSON::PP;
+        local *UNIVERSAL::TO_JSON = sub { +{ %{$_[0]} } };
+        my $json = JSON::PP->new->ascii->pretty->canonical->allow_unknown->allow_blessed->convert_blessed;
+        $data = $json->encode(\%bad);
+        1;
+    };
+    $ok ||= eval {
+        require Data::Dumper;
+        local $Data::Dumper::Sortkeys = 1;
+        $data = Data::Dumper::Dumper(\%bad);
+        1;
+    };
+
+    $data = "Could not dump data... sorry." unless defined $data;
+
+    $self->abort_trace("Not all files from hub '$hid' have been collected!\nHere is the leftover data:\n========================\n$data\n===================\n");
 }
 
 sub send {
@@ -168,7 +188,7 @@ do so if Test::Builder is loaded for legacy reasons.
 
     if ($ok) {
         $self->abort("Could not rename file '$file' -> '$ready': $ren_err") unless $ren_ok;
-        test2_ipc_set_pending(substr($file, -(shm_size)));
+        test2_ipc_set_pending($file);
     }
     else {
         my $src_file = __FILE__;
@@ -270,7 +290,7 @@ sub parse_event_filename {
     my $ready    = substr($file, -6, 6) eq '.ready'    || 0 and substr($file, -6, 6, "");
 
     my @parts = split ipc_separator, $file;
-    my ($global, $hid) = $parts[0] eq 'GLOBAL' ? (1, shift @parts) : (0, join ipc_separator, splice(@parts, 0, 3));
+    my ($global, $hid) = $parts[0] eq 'GLOBAL' ? (1, shift @parts) : (0, join ipc_separator, splice(@parts, 0, 4));
     my ($pid, $tid, $eid) = splice(@parts, 0, 3);
     my $type = join '::' => @parts;
 
@@ -473,7 +493,7 @@ F<http://github.com/Test-More/test-more/>.
 
 =head1 COPYRIGHT
 
-Copyright 2018 Chad Granum E<lt>exodist@cpan.orgE<gt>.
+Copyright 2019 Chad Granum E<lt>exodist@cpan.orgE<gt>.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
