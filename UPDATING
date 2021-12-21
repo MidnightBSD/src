@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20211220:
+	Imported OpenSSL 1.1.1l
+
 20211115:
 	Update lua 5.3.6
 
