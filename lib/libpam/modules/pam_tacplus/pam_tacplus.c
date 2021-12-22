@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
  * Copyright (c) 2001-2003 Networks Associates Technology, Inc.
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_tacplus/pam_tacplus.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

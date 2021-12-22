@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2001 Mark R V Murray
  * All rights reserved.
  * Copyright (c) 2001 Networks Associates Technology, Inc.
@@ -35,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_login_access/pam_login_access.c 359117 2020-03-19 03:37:02Z cy $");
+__FBSDID("$FreeBSD$");
 
 #define _BSD_SOURCE
 

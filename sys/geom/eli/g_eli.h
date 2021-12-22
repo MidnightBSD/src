@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/geom/eli/g_eli.h 344397 2019-02-20 23:42:03Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef	_G_ELI_H_
@@ -177,7 +179,7 @@ struct g_eli_worker {
 	struct g_eli_softc	*w_softc;
 	struct proc		*w_proc;
 	u_int			 w_number;
-	uint64_t		 w_sid;
+	crypto_session_t	 w_sid;
 	boolean_t		 w_active;
 	LIST_ENTRY(g_eli_worker) w_next;
 };

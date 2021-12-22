@@ -1,4 +1,3 @@
-/* $MidnightBSD: trunk/lib/libpam/modules/pam_ssh/pam_ssh.c 12243 2019-08-09 01:36:53Z laffer1 $ */
 /*-
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libpam/modules/pam_ssh/pam_ssh.c 338561 2018-09-10 16:20:12Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/wait.h>

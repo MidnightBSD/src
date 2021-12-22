@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,9 +30,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcasper/services/cap_pwd/tests/pwd_test.c 322715 2017-08-20 06:07:40Z ngie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/capsicum.h>
+#include <sys/nv.h>
 
 #include <assert.h>
 #include <err.h>

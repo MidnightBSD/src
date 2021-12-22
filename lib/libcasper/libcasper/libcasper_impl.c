@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 The FreeBSD Foundation
  * Copyright (c) 2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libcasper/libcasper/libcasper_impl.c 296047 2016-02-25 18:23:40Z oshogbo $
+ * $FreeBSD$
  */
 
 #include <err.h>
@@ -35,7 +37,6 @@
 #include <fcntl.h>
 #include <paths.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "libcasper_impl.h"
 

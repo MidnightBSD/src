@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * Copyright (c) 2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libcasper/libcasper/zygote.h 296047 2016-02-25 18:23:40Z oshogbo $
+ * $FreeBSD$
  */
 
 #ifndef _ZYGOTE_H_
@@ -36,6 +38,12 @@
 typedef void zygote_func_t(int);
 
 int	zygote_init(void);
-int	zygote_clone(zygote_func_t *func, int *chanfdp, int *procfdp);
+int	zygote_clone(uint64_t funcidx, int *chanfdp, int *procfdp);
+int	zygote_clone_service_execute(int *chanfdp, int *procfdp);
+
+/*
+ * Functions reachable via zygote_clone().
+ */
+zygote_func_t	service_execute;
 
 #endif	/* !_ZYGOTE_H_ */

@@ -1,16 +1,19 @@
-# $FreeBSD: stable/11/lib/libcasper/services/cap_grp/Makefile 322715 2017-08-20 06:07:40Z ngie $
+# $FreeBSD$
 
 SHLIBDIR?=	/lib/casper
 
 .include <src.opts.mk>
 
 PACKAGE=libcasper
-LIB=	cap_grp
 
-SHLIB_MAJOR=	0
+SHLIB_MAJOR=	1
 INCSDIR?=	${INCLUDEDIR}/casper
 
+.if ${MK_CASPER} != "no"
+SHLIB=	cap_grp
+
 SRCS=	cap_grp.c
+.endif
 
 INCS=	cap_grp.h
 
@@ -18,8 +21,23 @@ LIBADD=	nv
 
 CFLAGS+=-I${.CURDIR}
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
+
+MAN+=	cap_grp.3
+
+MLINKS+=cap_grp.3 libcap_grp.3
+MLINKS+=cap_grp.3 cap_getgrent.3
+MLINKS+=cap_grp.3 cap_getgrnam.3
+MLINKS+=cap_grp.3 cap_getgrgid.3
+MLINKS+=cap_grp.3 cap_getgrent_r.3
+MLINKS+=cap_grp.3 cap_getgrnam_r.3
+MLINKS+=cap_grp.3 cap_getgrgid_r.3
+MLINKS+=cap_grp.3 cap_setgroupent.3
+MLINKS+=cap_grp.3 cap_setgrent.3
+MLINKS+=cap_grp.3 cap_endgrent.3
+MLINKS+=cap_grp.3 cap_grp_limit_cmds.3
+MLINKS+=cap_grp.3 cap_grp_limit_fields.3
+MLINKS+=cap_grp.3 cap_grp_limit_groups.3
 
 .include <bsd.lib.mk>

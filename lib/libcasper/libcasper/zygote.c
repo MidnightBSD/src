@@ -1,10 +1,17 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * Copyright (c) 2015 Mariusz Zaborski <oshogbo@FreeBSD.org>
- * All rights reserved.
+ * Copyright (c) 2017 Robert N. M. Watson
  *
  * This software was developed by Pawel Jakub Dawidek under sponsorship from
  * the FreeBSD Foundation.
+ *
+ * All rights reserved.
+ * This software was developed by SRI International and the University of
+ * Cambridge Computer Laboratory under DARPA/AFRL contract (FA8750-10-C-0237)
+ * ("CTSRD"), as part of the DARPA CRASH research programme.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcasper/libcasper/zygote.c 301572 2016-06-08 02:03:53Z oshogbo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/capsicum.h>
@@ -51,8 +58,10 @@ __FBSDID("$FreeBSD: stable/11/lib/libcasper/libcasper/zygote.c 301572 2016-06-08
 /* Zygote info. */
 static int	zygote_sock = -1;
 
+#define	ZYGOTE_SERVICE_EXECUTE	1
+
 int
-zygote_clone(zygote_func_t *func, int *chanfdp, int *procfdp)
+zygote_clone(uint64_t funcidx, int *chanfdp, int *procfdp)
 {
 	nvlist_t *nvl;
 	int error;
@@ -64,7 +73,7 @@ zygote_clone(zygote_func_t *func, int *chanfdp, int *procfdp)
 	}
 
 	nvl = nvlist_create(0);
-	nvlist_add_number(nvl, "func", (uint64_t)(uintptr_t)func);
+	nvlist_add_number(nvl, "funcidx", funcidx);
 	nvl = nvlist_xfer(zygote_sock, nvl, 0);
 	if (nvl == NULL)
 		return (-1);
@@ -82,6 +91,13 @@ zygote_clone(zygote_func_t *func, int *chanfdp, int *procfdp)
 	return (0);
 }
 
+int
+zygote_clone_service_execute(int *chanfdp, int *procfdp)
+{
+
+	return (zygote_clone(ZYGOTE_SERVICE_EXECUTE, chanfdp, procfdp));
+}
+
 /*
  * This function creates sandboxes on-demand whoever has access to it via
  * 'sock' socket. Function sends two descriptors to the caller: process
@@ -94,6 +110,7 @@ zygote_main(int *sockp)
 	int error, procfd;
 	int chanfd[2];
 	nvlist_t *nvlin, *nvlout;
+	uint64_t funcidx;
 	zygote_func_t *func;
 	pid_t pid;
 
@@ -108,13 +125,20 @@ zygote_main(int *sockp)
 		if (nvlin == NULL) {
 			if (errno == ENOTCONN) {
 				/* Casper exited. */
-				exit(0);
+				_exit(0);
 			}
 			continue;
 		}
-		func = (zygote_func_t *)(uintptr_t)nvlist_get_number(nvlin,
-		    "func");
+		funcidx = nvlist_get_number(nvlin, "funcidx");
 		nvlist_destroy(nvlin);
+
+		switch (funcidx) {
+		case ZYGOTE_SERVICE_EXECUTE:
+			func = service_execute;
+			break;
+		default:
+			_exit(0);
+		}
 
 		/*
 		 * Someone is requesting a new process, create one.
@@ -140,7 +164,7 @@ zygote_main(int *sockp)
 			close(chanfd[0]);
 			func(chanfd[1]);
 			/* NOTREACHED */
-			exit(1);
+			_exit(1);
 		default:
 			/* Parent. */
 			close(chanfd[1]);

@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/libpam/modules/pam_login_access/Makefile 156344 2006-03-06 12:31:25Z yar $
+# $FreeBSD$
 
 LIB=	pam_login_access
 SRCS=	pam_login_access.c login_access.c

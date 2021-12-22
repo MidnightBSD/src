@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1980, 1987, 1988, 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 2001 Mark R V Murray
@@ -42,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libpam/modules/pam_lastlog/pam_lastlog.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #define _BSD_SOURCE
 

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: stable/11/lib/libmp/Symbol.map 226111 2011-10-07 15:05:24Z ed $
+ * $FreeBSD$
  */
 
 FBSD_1.1 {

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/lib/libmp/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -15,8 +15,7 @@ CFLAGS+=	-I${SRCTOP}/crypto
 VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 
-.if ${MK_TESTS} != "no"
-SUBDIR+=	tests
-.endif
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.lib.mk>

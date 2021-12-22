@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/libpam/modules/pam_self/Makefile 112044 2003-03-09 20:06:38Z obrien $
+# $FreeBSD$
 
 LIB=	pam_self
 SRCS=	pam_self.c

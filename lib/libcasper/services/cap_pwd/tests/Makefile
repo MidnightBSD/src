@@ -1,9 +1,14 @@
-# $FreeBSD: stable/11/lib/libcasper/services/cap_pwd/tests/Makefile 305626 2016-09-08 20:01:26Z oshogbo $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 TAP_TESTS_C=	pwd_test
 
+.if ${MK_CASPER} != "no"
 LIBADD+=	casper
 LIBADD+=	cap_pwd
+CFLAGS+=-DWITH_CASPER
+.endif
 LIBADD+=	nv
 
 WARNS?=		3

@@ -26,18 +26,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libcasper/services/cap_sysctl/cap_sysctl.h 296047 2016-02-25 18:23:40Z oshogbo $
+ * $FreeBSD$
  */
 
 #ifndef	_CAP_SYSCTL_H_
 #define	_CAP_SYSCTL_H_
+
+#ifdef HAVE_CASPER
+#define WITH_CASPER
+#endif
 
 #define	CAP_SYSCTL_READ		0x01
 #define	CAP_SYSCTL_WRITE	0x02
 #define	CAP_SYSCTL_RDWR		(CAP_SYSCTL_READ | CAP_SYSCTL_WRITE)
 #define	CAP_SYSCTL_RECURSIVE	0x04
 
+#ifdef WITH_CASPER
 int cap_sysctlbyname(cap_channel_t *chan, const char *name, void *oldp,
     size_t *oldlenp, const void *newp, size_t newlen);
+#else
+#define	cap_sysctlbyname(chan, name, oldp, oldlenp, newp, newlen)		\
+	sysctlbyname(name, oldp, oldlenp, newp, newlen)
+#endif
 
 #endif	/* !_CAP_SYSCTL_H_ */

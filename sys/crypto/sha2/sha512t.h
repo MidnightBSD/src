@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/crypto/sha2/sha512t.h 310372 2016-12-21 18:42:04Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef _SHA512T_H_

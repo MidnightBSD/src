@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/lib/libpam/modules/Makefile 297947 2016-04-14 01:17:37Z bdrewery $
+# $FreeBSD$
 
 .include "modules.inc"
 

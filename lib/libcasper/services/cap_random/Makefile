@@ -1,18 +1,29 @@
-# $FreeBSD: stable/11/lib/libcasper/services/cap_random/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
+
+SHLIBDIR?=	/lib/casper
+
+.include <src.opts.mk>
 
 PACKAGE=libcasper
-LIB=	cap_random
 
-SHLIB_MAJOR=	0
-SHLIBDIR?=	/lib/casper
+SHLIB_MAJOR=	1
 INCSDIR?=	${INCLUDEDIR}/casper
 
+.if ${MK_CASPER} != "no"
+SHLIB=	cap_random
+
 SRCS=	cap_random.c
+.endif
 
 INCS=	cap_random.h
 
 LIBADD=	nv
 
 CFLAGS+=-I${.CURDIR}
+
+MAN+=	cap_random.3
+
+MLINKS+=cap_random.3 libcap_random.3
+MLINKS+=cap_random.3 cap_random_buf.3
 
 .include <bsd.lib.mk>

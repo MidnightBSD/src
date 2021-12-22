@@ -1,5 +1,5 @@
 # PAM module for SSH
-# $FreeBSD: stable/11/lib/libpam/modules/pam_ssh/Makefile 313538 2017-02-10 07:32:40Z ngie $
+# $FreeBSD$
 
 SSHDIR=	${SRCTOP}/crypto/openssh
 
