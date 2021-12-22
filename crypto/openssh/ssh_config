@@ -17,9 +17,7 @@
 # list of available options, their meanings and defaults, please see the
 # ssh_config(5) man page.
 
-Host *
-UseRoaming no
-
+# Host *
 #   ForwardAgent no
 #   ForwardX11 no
 #   PasswordAuthentication yes
@@ -27,7 +25,7 @@ UseRoaming no
 #   GSSAPIAuthentication no
 #   GSSAPIDelegateCredentials no
 #   BatchMode no
-#   CheckHostIP yes
+#   CheckHostIP no
 #   AddressFamily any
 #   ConnectTimeout 0
 #   StrictHostKeyChecking ask
@@ -46,3 +44,5 @@ UseRoaming no
 #   VisualHostKey no
 #   ProxyCommand ssh -q -W %h:%p gateway.example.com
 #   RekeyLimit 1G 1h
+#   VerifyHostKeyDNS yes
+#   VersionAddendum MidnightBSD-20211221

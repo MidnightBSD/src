@@ -287,7 +287,6 @@
 #define HAVE_CONTROL_IN_MSGHDR 1
 
 /* Define to 1 if you have the `crypt' function. */
-/* #undef HAVE_CRYPT */
 #define HAVE_CRYPT 1
 
 /* Define to 1 if you have the <crypto/sha2.h> header file. */
@@ -396,19 +395,19 @@
 /* #undef HAVE_DEV_PTS_AND_PTC */
 
 /* Define if libcrypto has DH_get0_key */
-/* #undef HAVE_DH_GET0_KEY */
+#define HAVE_DH_GET0_KEY 1
 
 /* Define if libcrypto has DH_get0_pqg */
-/* #undef HAVE_DH_GET0_PQG */
+#define HAVE_DH_GET0_PQG 1
 
 /* Define if libcrypto has DH_set0_key */
-/* #undef HAVE_DH_SET0_KEY */
+#define HAVE_DH_SET0_KEY 1
 
 /* Define if libcrypto has DH_set0_pqg */
-/* #undef HAVE_DH_SET0_PQG */
+#define HAVE_DH_SET0_PQG 1
 
 /* Define if libcrypto has DH_set_length */
-/* #undef HAVE_DH_SET_LENGTH */
+#define HAVE_DH_SET_LENGTH 1
 
 /* Define to 1 if you have the <dirent.h> header file. */
 #define HAVE_DIRENT_H 1
@@ -423,28 +422,28 @@
 #define HAVE_DSA_GENERATE_PARAMETERS_EX 1
 
 /* Define if libcrypto has DSA_get0_key */
-/* #undef HAVE_DSA_GET0_KEY */
+#define HAVE_DSA_GET0_KEY 1
 
 /* Define if libcrypto has DSA_get0_pqg */
-/* #undef HAVE_DSA_GET0_PQG */
+#define HAVE_DSA_GET0_PQG 1
 
 /* Define if libcrypto has DSA_set0_key */
-/* #undef HAVE_DSA_SET0_KEY */
+#define HAVE_DSA_SET0_KEY 1
 
 /* Define if libcrypto has DSA_set0_pqg */
-/* #undef HAVE_DSA_SET0_PQG */
+#define HAVE_DSA_SET0_PQG 1
 
 /* Define if libcrypto has DSA_SIG_get0 */
-/* #undef HAVE_DSA_SIG_GET0 */
+#define HAVE_DSA_SIG_GET0 1
 
 /* Define if libcrypto has DSA_SIG_set0 */
-/* #undef HAVE_DSA_SIG_SET0 */
+#define HAVE_DSA_SIG_SET0 1
 
 /* Define if libcrypto has ECDSA_SIG_get0 */
-/* #undef HAVE_ECDSA_SIG_GET0 */
+#define HAVE_ECDSA_SIG_GET0 1
 
 /* Define if libcrypto has ECDSA_SIG_set0 */
-/* #undef HAVE_ECDSA_SIG_SET0 */
+#define HAVE_ECDSA_SIG_SET0 1
 
 /* Define to 1 if you have the <elf.h> header file. */
 #define HAVE_ELF_H 1
@@ -480,10 +479,10 @@
 /* #undef HAVE_EVP_CIPHER_CTX_GET_IV */
 
 /* Define if libcrypto has EVP_CIPHER_CTX_iv */
-/* #undef HAVE_EVP_CIPHER_CTX_IV */
+#define HAVE_EVP_CIPHER_CTX_IV 1
 
 /* Define if libcrypto has EVP_CIPHER_CTX_iv_noconst */
-/* #undef HAVE_EVP_CIPHER_CTX_IV_NOCONST */
+#define HAVE_EVP_CIPHER_CTX_IV_NOCONST 1
 
 /* Define to 1 if you have the `EVP_DigestFinal_ex' function. */
 #define HAVE_EVP_DIGESTFINAL_EX 1
@@ -492,22 +491,22 @@
 #define HAVE_EVP_DIGESTINIT_EX 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_cleanup' function. */
-#define HAVE_EVP_MD_CTX_CLEANUP 1
+/* #undef HAVE_EVP_MD_CTX_CLEANUP */
 
 /* Define to 1 if you have the `EVP_MD_CTX_copy_ex' function. */
 #define HAVE_EVP_MD_CTX_COPY_EX 1
 
 /* Define if libcrypto has EVP_MD_CTX_free */
-/* #undef HAVE_EVP_MD_CTX_FREE */
+#define HAVE_EVP_MD_CTX_FREE 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_init' function. */
-#define HAVE_EVP_MD_CTX_INIT 1
+/* #undef HAVE_EVP_MD_CTX_INIT */
 
 /* Define if libcrypto has EVP_MD_CTX_new */
-/* #undef HAVE_EVP_MD_CTX_NEW */
+#define HAVE_EVP_MD_CTX_NEW 1
 
 /* Define if libcrypto has EVP_PKEY_get0_RSA */
-/* #undef HAVE_EVP_PKEY_GET0_RSA */
+#define HAVE_EVP_PKEY_GET0_RSA 1
 
 /* Define to 1 if you have the `EVP_ripemd160' function. */
 #define HAVE_EVP_RIPEMD160 1
@@ -519,7 +518,7 @@
 /* #undef HAVE_EXIT_IN_UTMP */
 
 /* Define to 1 if you have the `explicit_bzero' function. */
-/* #undef HAVE_EXPLICIT_BZERO */
+#define HAVE_EXPLICIT_BZERO 1
 
 /* Define to 1 if you have the `fchmod' function. */
 #define HAVE_FCHMOD 1
@@ -630,7 +629,7 @@
 /* #undef HAVE_GETPWANAM */
 
 /* Define to 1 if you have the `getrandom' function. */
-/* #undef HAVE_GETRANDOM */
+#define HAVE_GETRANDOM 1
 
 /* Define to 1 if you have the `getrlimit' function. */
 #define HAVE_GETRLIMIT 1
@@ -705,7 +704,7 @@
 #define HAVE_HEADER_AD 1
 
 /* Define to 1 if you have the `HMAC_CTX_init' function. */
-#define HAVE_HMAC_CTX_INIT 1
+/* #undef HAVE_HMAC_CTX_INIT */
 
 /* Define if you have ut_host in utmp.h */
 /* #undef HAVE_HOST_IN_UTMP */
@@ -777,7 +776,7 @@
 /* #undef HAVE_LASTLOG_H */
 
 /* Define if you want ldns support */
-#define HAVE_LDNS 1
+/* #undef HAVE_LDNS */
 
 /* Define to 1 if you have the <libaudit.h> header file. */
 /* #undef HAVE_LIBAUDIT_H */
@@ -877,7 +876,7 @@
 /* #undef HAVE_MD5_CRYPT */
 
 /* Define if you want to allow MD5 passwords */
-#define HAVE_MD5_PASSWORDS 1
+/* #undef HAVE_MD5_PASSWORDS */
 
 /* Define to 1 if you have the `memmove' function. */
 #define HAVE_MEMMOVE 1
@@ -886,7 +885,7 @@
 #define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the `memset_s' function. */
-/* #undef HAVE_MEMSET_S */
+#define HAVE_MEMSET_S 1
 
 /* Define to 1 if you have the `mkdtemp' function. */
 #define HAVE_MKDTEMP 1
@@ -1032,46 +1031,46 @@
 #define HAVE_RSA_GENERATE_KEY_EX 1
 
 /* Define if libcrypto has RSA_get0_crt_params */
-/* #undef HAVE_RSA_GET0_CRT_PARAMS */
+#define HAVE_RSA_GET0_CRT_PARAMS 1
 
 /* Define if libcrypto has RSA_get0_factors */
-/* #undef HAVE_RSA_GET0_FACTORS */
+#define HAVE_RSA_GET0_FACTORS 1
 
 /* Define if libcrypto has RSA_get0_key */
-/* #undef HAVE_RSA_GET0_KEY */
+#define HAVE_RSA_GET0_KEY 1
 
 /* Define to 1 if you have the `RSA_get_default_method' function. */
 #define HAVE_RSA_GET_DEFAULT_METHOD 1
 
 /* Define if libcrypto has RSA_meth_dup */
-/* #undef HAVE_RSA_METH_DUP */
+#define HAVE_RSA_METH_DUP 1
 
 /* Define if libcrypto has RSA_meth_free */
-/* #undef HAVE_RSA_METH_FREE */
+#define HAVE_RSA_METH_FREE 1
 
 /* Define if libcrypto has RSA_meth_get_finish */
-/* #undef HAVE_RSA_METH_GET_FINISH */
+#define HAVE_RSA_METH_GET_FINISH 1
 
 /* Define if libcrypto has RSA_meth_set1_name */
-/* #undef HAVE_RSA_METH_SET1_NAME */
+#define HAVE_RSA_METH_SET1_NAME 1
 
 /* Define if libcrypto has RSA_meth_set_finish */
-/* #undef HAVE_RSA_METH_SET_FINISH */
+#define HAVE_RSA_METH_SET_FINISH 1
 
 /* Define if libcrypto has RSA_meth_set_priv_dec */
-/* #undef HAVE_RSA_METH_SET_PRIV_DEC */
+#define HAVE_RSA_METH_SET_PRIV_DEC 1
 
 /* Define if libcrypto has RSA_meth_set_priv_enc */
-/* #undef HAVE_RSA_METH_SET_PRIV_ENC */
+#define HAVE_RSA_METH_SET_PRIV_ENC 1
 
 /* Define if libcrypto has RSA_get0_srt_params */
-/* #undef HAVE_RSA_SET0_CRT_PARAMS */
+#define HAVE_RSA_SET0_CRT_PARAMS 1
 
 /* Define if libcrypto has RSA_set0_factors */
-/* #undef HAVE_RSA_SET0_FACTORS */
+#define HAVE_RSA_SET0_FACTORS 1
 
 /* Define if libcrypto has RSA_set0_key */
-/* #undef HAVE_RSA_SET0_KEY */
+#define HAVE_RSA_SET0_KEY 1
 
 /* Define to 1 if you have the <sandbox.h> header file. */
 /* #undef HAVE_SANDBOX_H */
@@ -1260,7 +1259,7 @@
 #define HAVE_STRNLEN 1
 
 /* Define to 1 if you have the `strnvis' function. */
-/* #undef HAVE_STRNVIS */
+#define HAVE_STRNVIS 1
 
 /* Define to 1 if you have the `strptime' function. */
 #define HAVE_STRPTIME 1
@@ -1455,7 +1454,7 @@
 /* #undef HAVE_TIME_IN_UTMPX */
 
 /* Define to 1 if you have the `timingsafe_bcmp' function. */
-/* #undef HAVE_TIMINGSAFE_BCMP */
+#define HAVE_TIMINGSAFE_BCMP 1
 
 /* Define to 1 if you have the <tmpdir.h> header file. */
 /* #undef HAVE_TMPDIR_H */
@@ -1604,9 +1603,6 @@
 /* Define this if you are using the Heimdal version of Kerberos V5 */
 /* #undef HEIMDAL */
 
-/* Define if you want HPN support. */
-#define HPN_ENABLED 1
-
 /* Define if you need to use IP address instead of hostname in $DISPLAY */
 /* #undef IPADDR_IN_DISPLAY */
 
@@ -1623,7 +1619,7 @@
 /* #undef LASTLOG_WRITE_PUTUTXLINE */
 
 /* Define if you want TCP Wrappers support */
-#define LIBWRAP 1
+/* #undef LIBWRAP */
 
 /* Define to whatever link() returns for "not supported" if it doesn't return
    EOPNOTSUPP. */
@@ -1639,7 +1635,7 @@
 /* #undef LLONG_MIN */
 
 /* Account locked with pw(1) */
-/* #undef LOCKED_PASSWD_PREFIX */
+#define LOCKED_PASSWD_PREFIX "*LOCKED*"
 
 /* String used in /etc/passwd to denote locked account */
 /* #undef LOCKED_PASSWD_STRING */
@@ -1655,9 +1651,6 @@
 
 /* Need setpgrp to acquire controlling tty */
 /* #undef NEED_SETPGRP */
-
-/* Define if you want NONECIPHER support. */
-/* #undef NONE_CIPHER_ENABLED */
 
 /* compiler does not accept __attribute__ on prototype args */
 /* #undef NO_ATTRIBUTE_ON_PROTOTYPE_ARGS */
@@ -1760,7 +1753,7 @@
 /* #undef SANDBOX_SKIP_RLIMIT_FSIZE */
 
 /* define if setrlimit RLIMIT_NOFILE breaks things */
-/* #undef SANDBOX_SKIP_RLIMIT_NOFILE */
+#define SANDBOX_SKIP_RLIMIT_NOFILE 1
 
 /* Sandbox using Solaris/Illumos privileges */
 /* #undef SANDBOX_SOLARIS */
@@ -1918,7 +1911,7 @@
 #endif
 
 /* Define if xauth is found in your path */
-/* #define XAUTH_PATH "/usr/local/bin/xauth" */
+/* #undef XAUTH_PATH */
 
 /* Enable large inode numbers on Mac OS X 10.5.  */
 #ifndef _DARWIN_USE_64_BIT_INODE

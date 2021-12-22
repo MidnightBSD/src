@@ -43,9 +43,11 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
@@ -85,6 +87,15 @@
 #include <prot.h>
 #endif
 
+#ifdef __FreeBSD__
+#include <resolv.h>
+#if defined(GSSAPI) && defined(HAVE_GSSAPI_GSSAPI_H)
+#include <gssapi/gssapi.h>
+#elif defined(GSSAPI) && defined(HAVE_GSSAPI_H)
+#include <gssapi.h>
+#endif
+#endif
+
 #include "xmalloc.h"
 #include "ssh.h"
 #include "ssh2.h"
@@ -122,6 +133,14 @@
 #include "auth-options.h"
 #include "version.h"
 #include "ssherr.h"
+#include "blacklist_client.h"
+
+#ifdef LIBWRAP
+#include <tcpd.h>
+#include <syslog.h>
+int allow_severity;
+int deny_severity;
+#endif /* LIBWRAP */
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -357,6 +376,8 @@ grace_alarm_handler(int sig)
 		signal(SIGTERM, SIG_IGN);
 		kill(0, SIGTERM);
 	}
+
+	BLACKLIST_NOTIFY(BLACKLIST_AUTH_FAIL, "ssh");
 
 	/* Log error and exit. */
 	sigdie("Timeout before authentication for %s port %d",
@@ -914,14 +935,13 @@ drop_connection(int startups)
 static void
 usage(void)
 {
-	fprintf(stderr, "%s, %s\n",
-	    SSH_RELEASE,
-#ifdef WITH_OPENSSL
-	    SSLeay_version(SSLEAY_VERSION)
-#else
-	    "without OpenSSL"
-#endif
-	);
+	if (options.version_addendum && *options.version_addendum != '\0')
+		fprintf(stderr, "%s %s, %s\n",
+		    SSH_RELEASE,
+		    options.version_addendum, OPENSSL_VERSION_STRING);
+	else
+		fprintf(stderr, "%s, %s\n",
+		    SSH_RELEASE, OPENSSL_VERSION_STRING);
 	fprintf(stderr,
 "usage: sshd [-46DdeiqTt] [-C connection_spec] [-c host_cert_file]\n"
 "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
@@ -1723,7 +1743,7 @@ main(int ac, char **av)
 
 	debug("sshd version %s, %s", SSH_VERSION,
 #ifdef WITH_OPENSSL
-	    SSLeay_version(SSLEAY_VERSION)
+	    OpenSSL_version(OPENSSL_VERSION)
 #else
 	    "without OpenSSL"
 #endif
@@ -1939,6 +1959,10 @@ main(int ac, char **av)
 	/* Reinitialize the log (because of the fork above). */
 	log_init(__progname, options.log_level, options.log_facility, log_stderr);
 
+	/* Avoid killing the process in high-pressure swapping environments. */
+	if (!inetd_flag && madvise(NULL, 0, MADV_PROTECT) != 0)
+		debug("madvise(): %.200s", strerror(errno));
+
 	/* Chdir to the root directory so that the current disk can be
 	   unmounted if desired. */
 	if (chdir("/") == -1)
@@ -2054,6 +2078,29 @@ main(int ac, char **av)
 	signal(SIGCHLD, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
 
+#ifdef __FreeBSD__
+	/*
+	 * Initialize the resolver.  This may not happen automatically
+	 * before privsep chroot().
+	 */
+	if ((_res.options & RES_INIT) == 0) {
+		debug("res_init()");
+		res_init();
+	}
+#ifdef GSSAPI
+	/*
+	 * Force GSS-API to parse its configuration and load any
+	 * mechanism plugins.
+	 */
+	{
+		gss_OID_set mechs;
+		OM_uint32 minor_status;
+		gss_indicate_mechs(&minor_status, &mechs);
+		gss_release_oid_set(&minor_status, &mechs);
+	}
+#endif
+#endif
+
 	/*
 	 * Register our connection.  This turns encryption off because we do
 	 * not have a key.
@@ -2089,9 +2136,32 @@ main(int ac, char **av)
 	 */
 	remote_ip = ssh_remote_ipaddr(ssh);
 
+#ifdef HAVE_LOGIN_CAP
+	/* Also caches remote hostname for sandboxed child. */
+	auth_get_canonical_hostname(ssh, options.use_dns);
+#endif
+
 #ifdef SSH_AUDIT_EVENTS
 	audit_connection_from(remote_ip, remote_port);
 #endif
+#ifdef LIBWRAP
+	allow_severity = options.log_facility|LOG_INFO;
+	deny_severity = options.log_facility|LOG_WARNING;
+	/* Check whether logins are denied from this host. */
+	if (packet_connection_is_on_socket()) {
+		struct request_info req;
+
+		request_init(&req, RQ_DAEMON, __progname, RQ_FILE, sock_in, 0);
+		fromhost(&req);
+
+		if (!hosts_access(&req)) {
+			debug("Connection refused by tcp wrapper");
+			refuse(&req);
+			/* NOTREACHED */
+			fatal("libwrap refuse returns");
+		}
+	}
+#endif /* LIBWRAP */
 
 	rdomain = ssh_packet_rdomain_in(ssh);
 
@@ -2135,6 +2205,8 @@ main(int ac, char **av)
 	if ((loginmsg = sshbuf_new()) == NULL)
 		fatal("%s: sshbuf_new failed", __func__);
 	auth_debug_reset();
+
+	BLACKLIST_INIT();
 
 	if (use_privsep) {
 		if (privsep_preauth(authctxt) == 1)

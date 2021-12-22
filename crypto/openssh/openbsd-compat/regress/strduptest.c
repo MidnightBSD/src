@@ -1,6 +1,5 @@
-/* $OpenBSD: roaming_dummy.c,v 1.3 2009/06/21 09:04:03 dtucker Exp $ */
 /*
- * Copyright (c) 2004-2009 AppGate Network Security AB
+ * Copyright (c) 2005 Darren Tucker
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,47 +14,32 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*
- * This file is included in the client programs which should not
- * support roaming.
- */
+#include <stdlib.h>
+#include <string.h>
 
-#include "includes.h"
-
-#include <sys/types.h>
-#include <unistd.h>
-
-#include "roaming.h"
-
-int resume_in_progress = 0;
-
-u_int64_t
-get_recv_bytes(void)
-{
-	return 0;
-}
-
-ssize_t
-roaming_write(int fd, const void *buf, size_t count, int *cont)
-{
-	return write(fd, buf, count);
-}
-
-ssize_t
-roaming_read(int fd, void *buf, size_t count, int *cont)
-{
-	if (cont)
-		*cont = 0;
-	return read(fd, buf, count);
-}
+static int fail = 0;
 
 void
-add_recv_bytes(u_int64_t num)
+test(const char *a)
 {
+	char *b;
+
+	b = strdup(a);
+	if (b == 0) {
+		fail = 1;
+		return;
+	}
+	if (strcmp(a, b) != 0)
+		fail = 1;
+	free(b);
 }
 
 int
-resume_kex(void)
+main(void)
 {
-	return 1;
+	test("");
+	test("a");
+	test("\0");
+	test("abcdefghijklmnopqrstuvwxyz");
+	return fail;
 }

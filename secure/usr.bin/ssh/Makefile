@@ -1,10 +1,13 @@
+# $FreeBSD$
+
 .include <src.opts.mk>
 
+CONFS=	ssh_config
+CONFSDIR=	/etc/ssh
 PROG=	ssh
 LINKS=	${BINDIR}/ssh ${BINDIR}/slogin
 MAN=	ssh.1 ssh_config.5
 MLINKS=	ssh.1 slogin.1
-
 PACKAGE=	ssh
 
 SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
@@ -28,11 +31,14 @@ SRCS+=	krb5_config.h
 LIBADD+=	gssapi
 .endif
 
-LIBADD+= 	crypto
+LIBADD+=	crypto
 
 .if defined(LOCALBASE)
 CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
 .endif
+
+# Workaround VMware Workstation NAT bug
+CFLAGS+=-DVMWARE_GUEST_WORKAROUND
 
 .include <bsd.prog.mk>
 

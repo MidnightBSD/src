@@ -34,6 +34,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $OpenBSD: ssh_config.5,v 1.286 2018/10/03 06:38:35 djm Exp $
+.\" $FreeBSD$
 .Dd $Mdocdate: October 3 2018 $
 .Dt SSH_CONFIG 5
 .Os
@@ -387,8 +388,7 @@ or
 .Cm no .
 .It Cm CheckHostIP
 If set to
-.Cm yes
-(the default),
+.Cm yes ,
 .Xr ssh 1
 will additionally check the host IP address in the
 .Pa known_hosts
@@ -401,6 +401,8 @@ in the process, regardless of the setting of
 If the option is set to
 .Cm no ,
 the check will not be executed.
+The default is
+.Cm no .
 .It Cm Ciphers
 Specifies the ciphers allowed and their order of preference.
 Multiple ciphers must be comma-separated.
@@ -1643,12 +1645,23 @@ need to confirm new host keys according to the
 .Cm StrictHostKeyChecking
 option.
 The default is
-.Cm no .
+.Cm yes
+if compiled with LDNS and
+.Cm no
+otherwise.
 .Pp
 See also
 .Sx VERIFYING HOST KEYS
 in
 .Xr ssh 1 .
+.It Cm VersionAddendum
+Specifies a string to append to the regular version string to identify
+OS- or site-specific modifications.
+The default is
+.Dq FreeBSD-20180909 .
+The value
+.Cm none
+may be used to disable this.
 .It Cm VisualHostKey
 If this flag is set to
 .Cm yes ,
@@ -1665,7 +1678,7 @@ Specifies the full pathname of the
 .Xr xauth 1
 program.
 The default is
-.Pa /usr/X11R6/bin/xauth .
+.Pa /usr/local/bin/xauth .
 .El
 .Sh PATTERNS
 A

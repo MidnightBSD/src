@@ -1,6 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/secure/lib/libssh/Makefile 323124 2017-09-01 22:52:18Z des $
-
 .include <src.opts.mk>
 
 LIB=	ssh
@@ -24,8 +21,7 @@ SRCS+=	authfd.c authfile.c \
 	kex.c kexdh.c kexgex.c kexecdh.c kexc25519.c \
 	kexdhc.c kexgexc.c kexecdhc.c kexc25519c.c \
 	kexdhs.c kexgexs.c kexecdhs.c kexc25519s.c \
-	platform-pledge.c platform-tracing.c platform-misc.c \
-	md5crypt.c
+	platform-pledge.c platform-tracing.c platform-misc.c
 PACKAGE=	ssh
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is

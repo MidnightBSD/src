@@ -12,6 +12,7 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -64,6 +65,7 @@
 #include "auth.h"
 #include "myproposal.h"
 #include "digest.h"
+#include "version.h"
 
 static void add_listen_addr(ServerOptions *, const char *,
     const char *, int);
@@ -180,6 +182,7 @@ initialize_server_options(ServerOptions *options)
 	options->fingerprint_hash = -1;
 	options->disable_forwarding = -1;
 	options->expose_userauth_info = -1;
+	options->use_blacklist = -1;
 }
 
 /* Returns 1 if a string option is unset or set to "none" or 0 otherwise. */
@@ -233,12 +236,16 @@ array_append(const char *file, const int line, const char *directive,
 	(*lp)++;
 }
 
+static const char *defaultkey = "[default]";
+
 void
 servconf_add_hostkey(const char *file, const int line,
     ServerOptions *options, const char *path)
 {
 	char *apath = derelativise_path(path);
 
+	if (file == defaultkey && access(path, R_OK) != 0)
+		return;
 	array_append(file, line, "HostKey",
 	    &options->host_key_files, &options->num_host_key_files, apath);
 	free(apath);
@@ -262,24 +269,28 @@ fill_default_server_options(ServerOptions *options)
 
 	/* Portable-specific options */
 	if (options->use_pam == -1)
-		options->use_pam = 0;
+		options->use_pam = 1;
 
 	/* Standard Options */
 	if (options->num_host_key_files == 0) {
 		/* fill default hostkeys for protocols */
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_RSA_KEY_FILE);
+		servconf_add_hostkey(defaultkey, 0, options,
+		    _PATH_HOST_DSA_KEY_FILE);
 #ifdef OPENSSL_HAS_ECC
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_ECDSA_KEY_FILE);
 #endif
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_ED25519_KEY_FILE);
 #ifdef WITH_XMSS
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_XMSS_KEY_FILE);
 #endif /* WITH_XMSS */
 	}
+	if (options->num_host_key_files == 0)
+		fatal("No host key files found");
 	/* No certificates by default */
 	if (options->num_ports == 0)
 		options->ports[options->num_ports++] = SSH_DEFAULT_PORT;
@@ -292,7 +303,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->login_grace_time == -1)
 		options->login_grace_time = 120;
 	if (options->permit_root_login == PERMIT_NOT_SET)
-		options->permit_root_login = PERMIT_NO_PASSWD;
+		options->permit_root_login = PERMIT_NO;
 	if (options->ignore_rhosts == -1)
 		options->ignore_rhosts = 1;
 	if (options->ignore_user_known_hosts == -1)
@@ -302,7 +313,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->print_lastlog == -1)
 		options->print_lastlog = 1;
 	if (options->x11_forwarding == -1)
-		options->x11_forwarding = 0;
+		options->x11_forwarding = 1;
 	if (options->x11_display_offset == -1)
 		options->x11_display_offset = 10;
 	if (options->x11_use_localhost == -1)
@@ -342,7 +353,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->gss_strict_acceptor == -1)
 		options->gss_strict_acceptor = 1;
 	if (options->password_authentication == -1)
-		options->password_authentication = 1;
+		options->password_authentication = 0;
 	if (options->kbd_interactive_authentication == -1)
 		options->kbd_interactive_authentication = 0;
 	if (options->challenge_response_authentication == -1)
@@ -378,17 +389,17 @@ fill_default_server_options(ServerOptions *options)
 	if (options->max_sessions == -1)
 		options->max_sessions = DEFAULT_SESSIONS_MAX;
 	if (options->use_dns == -1)
-		options->use_dns = 0;
+		options->use_dns = 1;
 	if (options->client_alive_interval == -1)
 		options->client_alive_interval = 0;
 	if (options->client_alive_count_max == -1)
 		options->client_alive_count_max = 3;
 	if (options->num_authkeys_files == 0) {
-		array_append("[default]", 0, "AuthorizedKeysFiles",
+		array_append(defaultkey, 0, "AuthorizedKeysFiles",
 		    &options->authorized_keys_files,
 		    &options->num_authkeys_files,
 		    _PATH_SSH_USER_PERMITTED_KEYS);
-		array_append("[default]", 0, "AuthorizedKeysFiles",
+		array_append(defaultkey, 0, "AuthorizedKeysFiles",
 		    &options->authorized_keys_files,
 		    &options->num_authkeys_files,
 		    _PATH_SSH_USER_PERMITTED_KEYS2);
@@ -400,7 +411,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->ip_qos_bulk == -1)
 		options->ip_qos_bulk = IPTOS_DSCP_CS1;
 	if (options->version_addendum == NULL)
-		options->version_addendum = xstrdup("");
+		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 	if (options->fwd_opts.streamlocal_bind_mask == (mode_t)-1)
 		options->fwd_opts.streamlocal_bind_mask = 0177;
 	if (options->fwd_opts.streamlocal_bind_unlink == -1)
@@ -411,6 +422,8 @@ fill_default_server_options(ServerOptions *options)
 		options->disable_forwarding = 0;
 	if (options->expose_userauth_info == -1)
 		options->expose_userauth_info = 0;
+	if (options->use_blacklist == -1)
+		options->use_blacklist = 0;
 
 	assemble_algorithms(options);
 
@@ -497,6 +510,7 @@ typedef enum {
 	sStreamLocalBindMask, sStreamLocalBindUnlink,
 	sAllowStreamLocalForwarding, sFingerprintHash, sDisableForwarding,
 	sExposeAuthInfo, sRDomain,
+	sUseBlacklist,
 	sDeprecated, sIgnore, sUnsupported
 } ServerOpCodes;
 
@@ -645,6 +659,12 @@ static struct {
 	{ "exposeauthinfo", sExposeAuthInfo, SSHCFG_ALL },
 	{ "rdomain", sRDomain, SSHCFG_ALL },
 	{ "casignaturealgorithms", sCASignatureAlgorithms, SSHCFG_ALL },
+	{ "useblacklist", sUseBlacklist, SSHCFG_GLOBAL },
+	{ "useblocklist", sUseBlacklist, SSHCFG_GLOBAL }, /* alias */
+	{ "noneenabled", sUnsupported, SSHCFG_ALL },
+	{ "hpndisabled", sDeprecated, SSHCFG_ALL },
+	{ "hpnbuffersize", sDeprecated, SSHCFG_ALL },
+	{ "tcprcvbufpoll", sDeprecated, SSHCFG_ALL },
 	{ NULL, sBadOption, 0 }
 };
 
@@ -2149,6 +2169,10 @@ process_server_config_line(ServerOptions *options, char *line,
 			*charptr = xstrdup(arg);
 		break;
 
+	case sUseBlacklist:
+		intptr = &options->use_blacklist;
+		goto parse_flag;
+
 	case sDeprecated:
 	case sIgnore:
 	case sUnsupported:
@@ -2588,6 +2612,7 @@ dump_config(ServerOptions *o)
 	dump_cfg_fmtint(sStreamLocalBindUnlink, o->fwd_opts.streamlocal_bind_unlink);
 	dump_cfg_fmtint(sFingerprintHash, o->fingerprint_hash);
 	dump_cfg_fmtint(sExposeAuthInfo, o->expose_userauth_info);
+	dump_cfg_fmtint(sUseBlacklist, o->use_blacklist);
 
 	/* string arguments */
 	dump_cfg_string(sPidFile, o->pid_file);
