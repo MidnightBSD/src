@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/unbound/checkconf/Makefile 356914 2020-01-20 13:46:09Z cy $
+# $FreeBSD$
 
 # Vendor sources and generated files
 LDNSDIR= ${SRCTOP}/contrib/ldns
