@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/dma/dmagent/Makefile 332337 2018-04-09 21:16:28Z emaste $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -20,7 +20,6 @@ SRCS=	aliases_parse.y \
 MAN8=	dma.8
 CONFS=	dma.conf
 CONFSDIR=	${CONFDIR}/dma
-CFLAGS+=	-D_WITH_GETLINE
 YFLAGS+=	-i
 CLEANFILES=	aliases_parse.i
 FILES=	mailer.conf
@@ -36,7 +35,7 @@ BINMODE=	2555
 .include <bsd.compiler.mk>
 
 .if ${COMPILER_TYPE} == gcc
-WARNS=	5
+WARNS?=	5
 .endif
 
 .include <bsd.prog.mk>

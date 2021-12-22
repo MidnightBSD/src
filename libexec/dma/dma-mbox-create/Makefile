@@ -1,8 +1,8 @@
-# $FreeBSD: stable/11/libexec/dma/dma-mbox-create/Makefile 289087 2015-10-09 22:09:44Z bapt $
+# $FreeBSD$
 
 MAN=
 
-WARNS=	2
+WARNS?=	2
 
 PROG=	dma-mbox-create
 BINMODE=	4554

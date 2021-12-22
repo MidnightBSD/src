@@ -33,15 +33,20 @@
  * SUCH DAMAGE.
  */
 
+#define _WITH_GETLINE
+
+#include <stdio.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <signal.h>
+#include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 
 #include "dma.h"
 
 #define MAX_LINE_RFC822	1000
+
 
 void
 bounce(struct qitem *it, const char *reason)

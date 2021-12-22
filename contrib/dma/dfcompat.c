@@ -16,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * $OpenBSD: strlcpy.c,v 1.11 2006/05/05 15:27:38 millert Exp $
- * $FreeBSD: stable/11/contrib/dma/dfcompat.c 262282 2014-02-21 07:26:49Z bapt $
+ * $FreeBSD$
  * $DragonFly: src/lib/libc/string/strlcpy.c,v 1.4 2005/09/18 16:32:34 asmodai Exp $
  */
 
@@ -85,7 +85,7 @@ strlcpy(char *dst, const char *src, size_t siz)
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/dma/dfcompat.c 262282 2014-02-21 07:26:49Z bapt $
+ * $FreeBSD$
  * $DragonFly: src/lib/libc/stdlib/reallocf.c,v 1.2 2003/06/17 04:26:46 dillon Exp $
  */
 #include <stdlib.h>

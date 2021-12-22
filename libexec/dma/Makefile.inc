@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/libexec/dma/Makefile.inc 321269 2017-07-20 00:58:19Z ngie $
+# $FreeBSD$
 
 .sinclude "${.CURDIR:H:H}/Makefile.inc"
 DMA_SOURCES=	${SRCTOP}/contrib/dma
