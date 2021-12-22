@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -27,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.12 (Berkeley) 4/27/95
- * $FreeBSD: stable/11/include/unistd.h 357180 2020-01-27 22:13:42Z kevans $
  */
 
 #ifndef _UNISTD_H_
@@ -485,14 +486,20 @@ pid_t	 vfork(void) __returns_twice;
 
 #if __BSD_VISIBLE
 struct timeval;				/* select(2) */
+
+struct crypt_data {
+	int	initialized;	/* For compatibility with glibc. */
+	char	__buf[256];	/* Buffer returned by crypt_r(). */
+};
+
 int	 acct(const char *);
 int	 async_daemon(void);
 int	 check_utility_compat(const char *);
+int	 close_range(unsigned int, unsigned int, int);
 const char *
 	 crypt_get_format(void);
+char	*crypt_r(const char *, const char *, struct crypt_data *);
 int	 crypt_set_format(const char *);
-int	 des_cipher(const char *, char *, long, int);
-int	 des_setkey(const char *key);
 int	 dup3(int, int, int);
 int	 eaccess(const char *, int);
 void	 endusershell(void);
@@ -501,6 +508,7 @@ int	 execvP(const char *, const char *, char * const *);
 int	 feature_present(const char *);
 char	*fflagstostr(u_long);
 int	 getdomainname(char *, int);
+int	 getentropy(void *, size_t);
 int	 getgrouplist(const char *, gid_t, gid_t *, int *);
 int	 getloginclass(char *, size_t);
 mode_t	 getmode(const void *, mode_t);
@@ -558,10 +566,6 @@ int	 setdomainname(const char *, int);
 int	 setgroups(int, const gid_t *);
 void	 sethostid(long);
 int	 sethostname(const char *, int);
-#ifndef _SETKEY_DECLARED
-int	 setkey(const char *);
-#define	_SETKEY_DECLARED
-#endif
 int	 setlogin(const char *);
 int	 setloginclass(const char *);
 void	*setmode(const char *);
