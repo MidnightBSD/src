@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/traceroute/Makefile 338475 2018-09-05 20:13:28Z oshogbo $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -33,7 +33,7 @@ LIBADD+=	ipsec
 .if ${MK_CASPER} != "no"
 LIBADD+=	casper
 LIBADD+=	cap_dns
-CFLAGS+=-DHAVE_LIBCASPER
+CFLAGS+=-DWITH_CASPER
 .endif
 
 CFLAGS+= -I${TRACEROUTE_DISTDIR}

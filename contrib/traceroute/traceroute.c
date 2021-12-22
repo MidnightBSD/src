@@ -28,7 +28,7 @@ static const char rcsid[] =
     "@(#)$Id: traceroute.c,v 1.68 2000/12/14 08:04:33 leres Exp $ (LBL)";
 #endif
 static const char rcsid[] =
-    "$FreeBSD: stable/11/contrib/traceroute/traceroute.c 339045 2018-10-01 14:39:59Z oshogbo $";
+    "$FreeBSD$";
 #endif
 
 /*
@@ -228,7 +228,7 @@ static const char rcsid[] =
 
 #include <arpa/inet.h>
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 #include <libcasper.h>
 #include <casper/cap_dns.h>
 #endif
@@ -239,6 +239,7 @@ static const char rcsid[] =
 #endif	/* IPSEC */
 
 #include <ctype.h>
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -369,7 +370,7 @@ extern int optind;
 extern int opterr;
 extern char *optarg;
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 static cap_channel_t *capdns;
 #endif
 
@@ -521,8 +522,8 @@ main(int argc, char **argv)
 	int requestPort = -1;
 	int sump = 0;
 	int sockerrno;
-#ifdef HAVE_LIBCASPER
-	const char *types[] = { "NAME", "ADDR" };
+#ifdef WITH_CASPER
+	const char *types[] = { "NAME2ADDR", "ADDR2NAME" };
 	int families[1];
 	cap_channel_t *casper;
 #endif
@@ -556,7 +557,7 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 	casper = cap_init();
 	if (casper == NULL)
 		errx(1, "unable to create casper process");
@@ -568,7 +569,7 @@ main(int argc, char **argv)
 	families[0] = AF_INET;
 	if (cap_dns_family_limit(capdns, families, 1) < 0)
 		errx(1, "unable to limit access to system.dns service");
-#endif /* HAVE_LIBCASPER */
+#endif /* WITH_CASPER */
 
 #ifdef IPCTL_DEFTTL
 	{
@@ -584,7 +585,7 @@ main(int argc, char **argv)
 	max_ttl = 30;
 #endif
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 	cap_close(casper);
 #endif
 
@@ -1006,7 +1007,7 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 	cansandbox = true;
 #else
 	if (nflag)
@@ -1014,6 +1015,8 @@ main(int argc, char **argv)
 	else
 		cansandbox = false;
 #endif
+
+	caph_cache_catpages();
 
 	/*
 	 * Here we enter capability mode. Further down access to global
@@ -1904,7 +1907,7 @@ inetname(struct in_addr in)
 		else {
 			cp = strchr(domain, '.');
 			if (cp == NULL) {
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 				if (capdns != NULL)
 					hp = cap_gethostbyname(capdns, domain);
 				else
@@ -1923,7 +1926,7 @@ inetname(struct in_addr in)
 		}
 	}
 	if (!nflag && in.s_addr != INADDR_ANY) {
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 		if (capdns != NULL)
 			hp = cap_gethostbyaddr(capdns, (char *)&in, sizeof(in),
 			    AF_INET);
@@ -1975,7 +1978,7 @@ gethostinfo(register char *hostname)
 		return (hi);
 	}
 
-#ifdef HAVE_LIBCASPER
+#ifdef WITH_CASPER
 	if (capdns != NULL)
 		hp = cap_gethostbyname(capdns, hostname);
 	else

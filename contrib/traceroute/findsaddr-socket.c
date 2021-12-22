@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/traceroute/findsaddr-socket.c 132796 2004-07-28 14:21:25Z mux $
+ * $FreeBSD$
  */
 
 /* XXX Yes this is WAY too complicated */
@@ -156,7 +156,8 @@ findsaddr(register const struct sockaddr_in *to,
 			return (errbuf);
 		}
 
-	} while (rp->rtm_seq != seq || rp->rtm_pid != pid);
+	} while (rp->rtm_type != RTM_GET || rp->rtm_seq != seq ||
+	    rp->rtm_pid != pid);
 	close(s);
 
 
