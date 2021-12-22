@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/uefisign/uefisign.c 332615 2018-04-16 17:13:54Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/wait.h>
 #include <assert.h>
@@ -390,9 +390,9 @@ main(int argc, char **argv)
 
 	inpath = argv[0];
 
-	OPENSSL_config(NULL);
-	ERR_load_crypto_strings();
-	OpenSSL_add_all_algorithms();
+	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG |
+	    OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+	    OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
 
 	error = pipe(pipefds);
 	if (error != 0)

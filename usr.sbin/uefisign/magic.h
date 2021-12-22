@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/uefisign/magic.h 332615 2018-04-16 17:13:54Z trasz $
+ * $FreeBSD$
  *
  */
 

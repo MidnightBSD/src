@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/usr.sbin/uefisign/pe.c 332615 2018-04-16 17:13:54Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <err.h>
