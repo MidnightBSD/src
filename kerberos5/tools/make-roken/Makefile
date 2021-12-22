@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/tools/make-roken/Makefile 264400 2014-04-13 05:21:56Z imp $
+# $FreeBSD$
 
 PROG=	make-roken
 MAN=

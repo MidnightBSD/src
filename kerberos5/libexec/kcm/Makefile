@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/libexec/kcm/Makefile 275022 2014-11-25 09:57:42Z bapt $
+# $FreeBSD$
 
 PROG=	kcm
 MAN=	kcm.8

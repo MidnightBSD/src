@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/kerberos5/include/crypto-headers.h 233294 2012-03-22 08:48:42Z stas $ */
+/* $FreeBSD$ */
 #ifndef __crypto_headers_h__
 #define __crypto_headers_h__
 
@@ -18,9 +18,5 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ecdh.h>
-#ifndef BN_is_negative
-#define BN_set_negative(bn, flag) ((bn)->neg=(flag)?1:0)
-#define BN_is_negative(bn) ((bn)->neg != 0)
-#endif
 
 #endif /* __crypto_headers_h__ */

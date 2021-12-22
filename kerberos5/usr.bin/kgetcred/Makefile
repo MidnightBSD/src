@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/usr.bin/kgetcred/Makefile 275022 2014-11-25 09:57:42Z bapt $
+# $FreeBSD$
 
 PROG=	kgetcred
 CFLAGS+=	-I${KRB5DIR}/lib/asn1 \

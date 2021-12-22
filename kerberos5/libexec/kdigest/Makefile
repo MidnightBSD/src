@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/libexec/kdigest/Makefile 288200 2015-09-24 23:23:58Z bdrewery $
+# $FreeBSD$
 
 PROG=	kdigest
 MAN=	kdigest.8

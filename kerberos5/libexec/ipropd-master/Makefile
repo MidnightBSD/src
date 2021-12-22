@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/libexec/ipropd-master/Makefile 322472 2017-08-13 19:35:48Z cy $
+# $FreeBSD$
 
 PROG=	ipropd-master
 MAN=	iprop.8

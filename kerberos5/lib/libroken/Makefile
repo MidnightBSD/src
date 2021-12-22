@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/lib/libroken/Makefile 319285 2017-05-31 05:52:32Z delphij $
+# $FreeBSD$
 
 LIB=	roken
 LIBADD=	crypt

@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/kerberos5/lib/libheimbase/Makefile 275022 2014-11-25 09:57:42Z bapt $
+#$FreeBSD$
 
 LIB=	heimbase
 LDFLAGS=	-Wl,--no-undefined

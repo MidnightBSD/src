@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/usr.sbin/Makefile.inc 56546 2000-01-24 19:56:26Z markm $
+# $FreeBSD$
 
 BINDIR=	/usr/sbin
 

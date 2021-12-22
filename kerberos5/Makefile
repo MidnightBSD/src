@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/Makefile 319183 2017-05-30 04:13:06Z ngie $
+# $FreeBSD$
 
 SUBDIR=	lib .WAIT \
 	libexec tools usr.bin usr.sbin

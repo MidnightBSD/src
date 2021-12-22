@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/kerberos5/lib/libwind/Makefile 344200 2019-02-16 03:18:52Z nyan $
+#$FreeBSD$
 
 LIB=	wind
 LDFLAGS=	-Wl,--no-undefined

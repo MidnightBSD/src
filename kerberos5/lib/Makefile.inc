@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/lib/Makefile.inc 233294 2012-03-22 08:48:42Z stas $
+# $FreeBSD$
 
 SHLIB_MAJOR?=	11
 

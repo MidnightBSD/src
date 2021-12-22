@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/usr.bin/kf/Makefile 275022 2014-11-25 09:57:42Z bapt $
+# $FreeBSD$
 
 PROG=	kf
 MAN=	kf.1

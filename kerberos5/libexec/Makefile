@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/kerberos5/libexec/Makefile 311731 2017-01-09 01:31:16Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
