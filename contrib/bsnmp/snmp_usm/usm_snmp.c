@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/contrib/bsnmp/snmp_usm/usm_snmp.c 313241 2017-02-04 17:18:49Z ngie $
+ * $FreeBSD$
  */
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -43,6 +43,7 @@
 #include "snmp.h"
 #include "snmpmod.h"
 
+#define	SNMPTREE_TYPES
 #include "usm_tree.h"
 #include "usm_oid.h"
 
@@ -604,9 +605,10 @@ usm_dump(void)
 		    privstr[uuser->suser.priv_proto]);
 }
 
-const char usm_comment[] = \
+static const char usm_comment[] = \
 "This module implements SNMP User-based Security Model defined in RFC 3414.";
 
+extern const struct snmp_module config;
 const struct snmp_module config = {
 	.comment =	usm_comment,
 	.init =		usm_init,

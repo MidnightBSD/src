@@ -1,4 +1,4 @@
-#$FreeBSD: stable/11/contrib/bsnmp/FREEBSD-Xlist 156677 2006-03-13 09:30:26Z harti $
+#$FreeBSD$
 */Makefile.in
 */acinclude.m4
 */aclocal.m4
