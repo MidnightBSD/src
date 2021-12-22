@@ -1,7 +1,6 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/sha1-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from sha1-586.pl. */
 #ifdef PIC
-.file	"sha1-586.S"
 .text
 .globl	sha1_block_data_order
 .type	sha1_block_data_order,@function
@@ -3972,7 +3971,6 @@ _sha1_block_data_order_avx:
 .byte	114,111,64,111,112,101,110,115,115,108,46,111,114,103,62,0
 .comm	OPENSSL_ia32cap_P,16,4
 #else
-.file	"sha1-586.S"
 .text
 .globl	sha1_block_data_order
 .type	sha1_block_data_order,@function

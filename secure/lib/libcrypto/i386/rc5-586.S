@@ -1,7 +1,6 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/rc5-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from rc5-586.pl. */
 #ifdef PIC
-.file	"rc5-586.S"
 .text
 .globl	RC5_32_encrypt
 .type	RC5_32_encrypt,@function
@@ -566,7 +565,6 @@ RC5_32_cbc_encrypt:
 .align	64
 .size	RC5_32_cbc_encrypt,.-.L_RC5_32_cbc_encrypt_begin
 #else
-.file	"rc5-586.S"
 .text
 .globl	RC5_32_encrypt
 .type	RC5_32_encrypt,@function

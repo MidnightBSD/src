@@ -1,8 +1,6 @@
-/* $MidnightBSD$ */
-# $FreeBSD: stable/10/secure/lib/libcrypto/i386/cast-586.S 299966 2016-05-16 19:30:27Z jkim $
-# Do not modify. This file is auto-generated from cast-586.pl.
+/* $FreeBSD$ */
+/* Do not modify. This file is auto-generated from cast-586.pl. */
 #ifdef PIC
-.file	"cast-586.S"
 .text
 .globl	CAST_encrypt
 .type	CAST_encrypt,@function
@@ -28,10 +26,10 @@ CAST_encrypt:
 	movl	4(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -49,10 +47,10 @@ CAST_encrypt:
 	movl	12(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -70,10 +68,10 @@ CAST_encrypt:
 	movl	20(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -91,10 +89,10 @@ CAST_encrypt:
 	movl	28(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -112,10 +110,10 @@ CAST_encrypt:
 	movl	36(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -133,10 +131,10 @@ CAST_encrypt:
 	movl	44(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -154,10 +152,10 @@ CAST_encrypt:
 	movl	52(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -175,10 +173,10 @@ CAST_encrypt:
 	movl	60(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -196,10 +194,10 @@ CAST_encrypt:
 	movl	68(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -217,10 +215,10 @@ CAST_encrypt:
 	movl	76(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -238,10 +236,10 @@ CAST_encrypt:
 	movl	84(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -259,10 +257,10 @@ CAST_encrypt:
 	movl	92(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -284,10 +282,10 @@ CAST_encrypt:
 	movl	100(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -305,10 +303,10 @@ CAST_encrypt:
 	movl	108(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -326,10 +324,10 @@ CAST_encrypt:
 	movl	116(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -347,10 +345,10 @@ CAST_encrypt:
 	movl	124(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -399,10 +397,10 @@ CAST_decrypt:
 	movl	124(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -420,10 +418,10 @@ CAST_decrypt:
 	movl	116(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -441,10 +439,10 @@ CAST_decrypt:
 	movl	108(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -462,10 +460,10 @@ CAST_decrypt:
 	movl	100(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -484,10 +482,10 @@ CAST_decrypt:
 	movl	92(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -505,10 +503,10 @@ CAST_decrypt:
 	movl	84(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -526,10 +524,10 @@ CAST_decrypt:
 	movl	76(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -547,10 +545,10 @@ CAST_decrypt:
 	movl	68(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -568,10 +566,10 @@ CAST_decrypt:
 	movl	60(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -589,10 +587,10 @@ CAST_decrypt:
 	movl	52(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -610,10 +608,10 @@ CAST_decrypt:
 	movl	44(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -631,10 +629,10 @@ CAST_decrypt:
 	movl	36(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -652,10 +650,10 @@ CAST_decrypt:
 	movl	28(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -673,10 +671,10 @@ CAST_decrypt:
 	movl	20(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -694,10 +692,10 @@ CAST_decrypt:
 	movl	12(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -715,10 +713,10 @@ CAST_decrypt:
 	movl	4(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -936,7 +934,6 @@ CAST_cbc_encrypt:
 .align	64
 .size	CAST_cbc_encrypt,.-.L_CAST_cbc_encrypt_begin
 #else
-.file	"cast-586.S"
 .text
 .globl	CAST_encrypt
 .type	CAST_encrypt,@function
@@ -962,10 +959,10 @@ CAST_encrypt:
 	movl	4(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -983,10 +980,10 @@ CAST_encrypt:
 	movl	12(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1004,10 +1001,10 @@ CAST_encrypt:
 	movl	20(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1025,10 +1022,10 @@ CAST_encrypt:
 	movl	28(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1046,10 +1043,10 @@ CAST_encrypt:
 	movl	36(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1067,10 +1064,10 @@ CAST_encrypt:
 	movl	44(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1088,10 +1085,10 @@ CAST_encrypt:
 	movl	52(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1109,10 +1106,10 @@ CAST_encrypt:
 	movl	60(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1130,10 +1127,10 @@ CAST_encrypt:
 	movl	68(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1151,10 +1148,10 @@ CAST_encrypt:
 	movl	76(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1172,10 +1169,10 @@ CAST_encrypt:
 	movl	84(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1193,10 +1190,10 @@ CAST_encrypt:
 	movl	92(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1218,10 +1215,10 @@ CAST_encrypt:
 	movl	100(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1239,10 +1236,10 @@ CAST_encrypt:
 	movl	108(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1260,10 +1257,10 @@ CAST_encrypt:
 	movl	116(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1281,10 +1278,10 @@ CAST_encrypt:
 	movl	124(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1333,10 +1330,10 @@ CAST_decrypt:
 	movl	124(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1354,10 +1351,10 @@ CAST_decrypt:
 	movl	116(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1375,10 +1372,10 @@ CAST_decrypt:
 	movl	108(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1396,10 +1393,10 @@ CAST_decrypt:
 	movl	100(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1418,10 +1415,10 @@ CAST_decrypt:
 	movl	92(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1439,10 +1436,10 @@ CAST_decrypt:
 	movl	84(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1460,10 +1457,10 @@ CAST_decrypt:
 	movl	76(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1481,10 +1478,10 @@ CAST_decrypt:
 	movl	68(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1502,10 +1499,10 @@ CAST_decrypt:
 	movl	60(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1523,10 +1520,10 @@ CAST_decrypt:
 	movl	52(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1544,10 +1541,10 @@ CAST_decrypt:
 	movl	44(%ebp),%ecx
 	subl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1565,10 +1562,10 @@ CAST_decrypt:
 	movl	36(%ebp),%ecx
 	xorl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1586,10 +1583,10 @@ CAST_decrypt:
 	movl	28(%ebp),%ecx
 	addl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1607,10 +1604,10 @@ CAST_decrypt:
 	movl	20(%ebp),%ecx
 	subl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1628,10 +1625,10 @@ CAST_decrypt:
 	movl	12(%ebp),%ecx
 	xorl	%esi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al
@@ -1649,10 +1646,10 @@ CAST_decrypt:
 	movl	4(%ebp),%ecx
 	addl	%edi,%edx
 	roll	%cl,%edx
-	movl	%edx,%ebx
 	xorl	%ecx,%ecx
+	movl	$255,%ebx
 	movb	%dh,%cl
-	andl	$255,%ebx
+	andl	%edx,%ebx
 	shrl	$16,%edx
 	xorl	%eax,%eax
 	movb	%dh,%al

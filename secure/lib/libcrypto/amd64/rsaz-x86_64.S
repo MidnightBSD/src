@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/amd64/rsaz-x86_64.S 356290 2020-01-02 21:35:28Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from rsaz-x86_64.pl. */
 .text	
 
@@ -8,14 +8,28 @@
 .type	rsaz_512_sqr,@function
 .align	32
 rsaz_512_sqr:
+.cfi_startproc	
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r15,-56
 
 	subq	$128+24,%rsp
+.cfi_adjust_cfa_offset	128+24
 .Lsqr_body:
 .byte	102,72,15,110,202
 	movq	(%rsi),%rdx
@@ -673,28 +687,51 @@ rsaz_512_sqr:
 .Lsqr_tail:
 
 	leaq	128+24+48(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-48(%rax),%r15
+.cfi_restore	%r15
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Lsqr_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_sqr,.-rsaz_512_sqr
 .globl	rsaz_512_mul
 .type	rsaz_512_mul,@function
 .align	32
 rsaz_512_mul:
+.cfi_startproc	
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r15,-56
 
 	subq	$128+24,%rsp
+.cfi_adjust_cfa_offset	128+24
 .Lmul_body:
 .byte	102,72,15,110,199
 .byte	102,72,15,110,201
@@ -756,28 +793,51 @@ rsaz_512_mul:
 	call	__rsaz_512_subtract
 
 	leaq	128+24+48(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-48(%rax),%r15
+.cfi_restore	%r15
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_mul,.-rsaz_512_mul
 .globl	rsaz_512_mul_gather4
 .type	rsaz_512_mul_gather4,@function
 .align	32
 rsaz_512_mul_gather4:
+.cfi_startproc	
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r15,-56
 
 	subq	$152,%rsp
+.cfi_adjust_cfa_offset	152
 .Lmul_gather4_body:
 	movd	%r9d,%xmm8
 	movdqa	.Linc+16(%rip),%xmm1
@@ -1166,29 +1226,52 @@ rsaz_512_mul_gather4:
 	call	__rsaz_512_subtract
 
 	leaq	128+24+48(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-48(%rax),%r15
+.cfi_restore	%r15
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul_gather4_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_mul_gather4,.-rsaz_512_mul_gather4
 .globl	rsaz_512_mul_scatter4
 .type	rsaz_512_mul_scatter4,@function
 .align	32
 rsaz_512_mul_scatter4:
+.cfi_startproc	
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r15,-56
 
 	movl	%r9d,%r9d
 	subq	$128+24,%rsp
+.cfi_adjust_cfa_offset	128+24
 .Lmul_scatter4_body:
 	leaq	(%r8,%r9,8),%r8
 .byte	102,72,15,110,199
@@ -1263,28 +1346,51 @@ rsaz_512_mul_scatter4:
 	movq	%r15,896(%rsi)
 
 	leaq	128+24+48(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-48(%rax),%r15
+.cfi_restore	%r15
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul_scatter4_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_mul_scatter4,.-rsaz_512_mul_scatter4
 .globl	rsaz_512_mul_by_one
 .type	rsaz_512_mul_by_one,@function
 .align	32
 rsaz_512_mul_by_one:
+.cfi_startproc	
 	pushq	%rbx
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_adjust_cfa_offset	8
+.cfi_offset	%r15,-56
 
 	subq	$128+24,%rsp
+.cfi_adjust_cfa_offset	128+24
 .Lmul_by_one_body:
 	movl	OPENSSL_ia32cap_P+8(%rip),%eax
 	movq	%rdx,%rbp
@@ -1327,19 +1433,29 @@ rsaz_512_mul_by_one:
 	movq	%r15,56(%rdi)
 
 	leaq	128+24+48(%rsp),%rax
+.cfi_def_cfa	%rax,8
 	movq	-48(%rax),%r15
+.cfi_restore	%r15
 	movq	-40(%rax),%r14
+.cfi_restore	%r14
 	movq	-32(%rax),%r13
+.cfi_restore	%r13
 	movq	-24(%rax),%r12
+.cfi_restore	%r12
 	movq	-16(%rax),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rax),%rbx
+.cfi_restore	%rbx
 	leaq	(%rax),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul_by_one_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_mul_by_one,.-rsaz_512_mul_by_one
 .type	__rsaz_512_reduce,@function
 .align	32
 __rsaz_512_reduce:
+.cfi_startproc	
 	movq	%r8,%rbx
 	imulq	128+8(%rsp),%rbx
 	movq	0(%rbp),%rax
@@ -1419,10 +1535,12 @@ __rsaz_512_reduce:
 	jne	.Lreduction_loop
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__rsaz_512_reduce,.-__rsaz_512_reduce
 .type	__rsaz_512_reducex,@function
 .align	32
 __rsaz_512_reducex:
+.cfi_startproc	
 
 	imulq	%r8,%rdx
 	xorq	%rsi,%rsi
@@ -1475,10 +1593,12 @@ __rsaz_512_reducex:
 	jne	.Lreduction_loopx
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__rsaz_512_reducex,.-__rsaz_512_reducex
 .type	__rsaz_512_subtract,@function
 .align	32
 __rsaz_512_subtract:
+.cfi_startproc	
 	movq	%r8,(%rdi)
 	movq	%r9,8(%rdi)
 	movq	%r10,16(%rdi)
@@ -1532,10 +1652,12 @@ __rsaz_512_subtract:
 	movq	%r15,56(%rdi)
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__rsaz_512_subtract,.-__rsaz_512_subtract
 .type	__rsaz_512_mul,@function
 .align	32
 __rsaz_512_mul:
+.cfi_startproc	
 	leaq	8(%rsp),%rdi
 
 	movq	(%rsi),%rax
@@ -1674,10 +1796,12 @@ __rsaz_512_mul:
 	movq	%r15,56(%rdi)
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__rsaz_512_mul,.-__rsaz_512_mul
 .type	__rsaz_512_mulx,@function
 .align	32
 __rsaz_512_mulx:
+.cfi_startproc	
 	mulxq	(%rsi),%rbx,%r8
 	movq	$-6,%rcx
 
@@ -1794,11 +1918,13 @@ __rsaz_512_mulx:
 	movq	%r15,8+64+56(%rsp)
 
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	__rsaz_512_mulx,.-__rsaz_512_mulx
 .globl	rsaz_512_scatter4
 .type	rsaz_512_scatter4,@function
 .align	16
 rsaz_512_scatter4:
+.cfi_startproc	
 	leaq	(%rdi,%rdx,8),%rdi
 	movl	$8,%r9d
 	jmp	.Loop_scatter
@@ -1811,12 +1937,14 @@ rsaz_512_scatter4:
 	decl	%r9d
 	jnz	.Loop_scatter
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	rsaz_512_scatter4,.-rsaz_512_scatter4
 
 .globl	rsaz_512_gather4
 .type	rsaz_512_gather4,@function
 .align	16
 rsaz_512_gather4:
+.cfi_startproc	
 	movd	%edx,%xmm8
 	movdqa	.Linc+16(%rip),%xmm1
 	movdqa	.Linc(%rip),%xmm0
@@ -1880,6 +2008,7 @@ rsaz_512_gather4:
 	jnz	.Loop_gather
 	.byte	0xf3,0xc3
 .LSEH_end_rsaz_512_gather4:
+.cfi_endproc	
 .size	rsaz_512_gather4,.-rsaz_512_gather4
 
 .align	64

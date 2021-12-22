@@ -1,7 +1,6 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/x86-mont.S 337982 2018-08-17 18:32:53Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from x86-mont.pl. */
 #ifdef PIC
-.file	"x86-mont.S"
 .text
 .globl	bn_mul_mont
 .type	bn_mul_mont,@function
@@ -478,7 +477,6 @@ bn_mul_mont:
 .byte	111,114,103,62,0
 .comm	OPENSSL_ia32cap_P,16,4
 #else
-.file	"x86-mont.S"
 .text
 .globl	bn_mul_mont
 .type	bn_mul_mont,@function

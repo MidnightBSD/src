@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/secure/Makefile 357082 2020-01-24 15:29:33Z kevans $
-
 .include <src.opts.mk>
 
 SUBDIR= lib .WAIT \

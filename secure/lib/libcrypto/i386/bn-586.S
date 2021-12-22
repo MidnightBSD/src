@@ -1,7 +1,6 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/bn-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from bn-586.pl. */
 #ifdef PIC
-.file	"bn-586.S"
 .text
 .globl	bn_mul_add_words
 .type	bn_mul_add_words,@function
@@ -1532,7 +1531,6 @@ bn_sub_part_words:
 .size	bn_sub_part_words,.-.L_bn_sub_part_words_begin
 .comm	OPENSSL_ia32cap_P,16,4
 #else
-.file	"bn-586.S"
 .text
 .globl	bn_mul_add_words
 .type	bn_mul_add_words,@function

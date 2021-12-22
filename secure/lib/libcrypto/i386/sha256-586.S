@@ -1,7 +1,6 @@
-/* $FreeBSD: stable/11/secure/lib/libcrypto/i386/sha256-586.S 305153 2016-08-31 20:33:59Z jkim $ */
+/* $FreeBSD$ */
 /* Do not modify. This file is auto-generated from sha256-586.pl. */
 #ifdef PIC
-.file	"sha256-586.S"
 .text
 .globl	sha256_block_data_order
 .type	sha256_block_data_order,@function
@@ -6785,7 +6784,6 @@ sha256_block_data_order:
 .size	sha256_block_data_order,.-.L_sha256_block_data_order_begin
 .comm	OPENSSL_ia32cap_P,16,4
 #else
-.file	"sha256-586.S"
 .text
 .globl	sha256_block_data_order
 .type	sha256_block_data_order,@function
