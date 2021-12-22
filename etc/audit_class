@@ -1,5 +1,5 @@
 #
-# $FreeBSD: stable/10/contrib/openbsm/etc/audit_class 293161 2016-01-04 16:32:21Z brueffer $
+# $FreeBSD$
 #
 0x00000000:no:invalid class
 0x00000001:fr:file read

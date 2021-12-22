@@ -1,6 +1,12 @@
 /*-
  * Copyright (c) 2004-2008 Apple Inc.
+ * Copyright (c) 2016 Robert N. M. Watson
  * All rights reserved.
+ *
+ * Portions of this software were developed by BAE Systems, the University of
+ * Cambridge Computer Laboratory, and Memorial University under DARPA/AFRL
+ * contract FA8650-15-C-7558 ("CADETS"), as part of the DARPA Transparent
+ * Computing (TC) research program.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,9 +54,15 @@
 #include <compat/queue.h>
 #endif
 
+#ifdef HAVE_CAP_ENTER
+#include <sys/capsicum.h>
+#include <sys/wait.h>
+#endif
+
 #include <bsm/libbsm.h>
 
 #include <err.h>
+#include <fnmatch.h>
 #include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -83,6 +95,7 @@ static int		 p_egid;	/* Effective group id. */
 static int		 p_rgid;	/* Real group id. */ 
 static int		 p_ruid;	/* Real user id. */ 
 static int		 p_subid;	/* Subject id. */
+static const char	*p_zone;	/* Zone. */
 
 /*
  * Maintain a dynamically sized array of events for -m
@@ -102,6 +115,8 @@ static char	*p_shmobj = NULL;
 static char	*p_sockobj = NULL; 
 
 static uint32_t opttochk = 0;
+
+static int	select_zone(const char *zone, uint32_t *optchkd);
 
 static void
 parse_regexp(char *re_string)
@@ -175,6 +190,7 @@ usage(const char *msg)
 	fprintf(stderr, "\t-r <uid|name> : real user\n");
 	fprintf(stderr, "\t-u <uid|name> : audit user\n");
 	fprintf(stderr, "\t-v : select non-matching records\n");
+	fprintf(stderr, "\t-z <zone> : zone name\n");
 	exit(EX_USAGE);
 }
 
@@ -482,6 +498,21 @@ select_subj32(tokenstr_t tok, uint32_t *optchkd)
 }
 
 /*
+ * Check if the given zone matches the selection criteria.
+  */
+static int
+select_zone(const char *zone, uint32_t *optchkd)
+{
+
+	SETOPT((*optchkd), OPT_z);
+	if (ISOPTSET(opttochk, OPT_z) && p_zone != NULL) {
+		if (fnmatch(p_zone, zone, FNM_PATHNAME) != 0)
+			return (0);
+	}
+	return (1);
+}
+
+/*
  * Read each record from the audit trail.  Check if it is selected after
  * passing through each of the options 
  */
@@ -548,6 +579,10 @@ select_records(FILE *fp)
 				    tok_hdr32_copy, &optchkd);
 				break;
 
+			case AUT_ZONENAME:
+				selected = select_zone(tok.tt.zonename.zonename, &optchkd);
+				break;
+
 			default:
 				break;
 			}
@@ -611,10 +646,14 @@ main(int argc, char **argv)
 	char timestr[128];
 	char *fname;
 	uint16_t *etp;
+#ifdef HAVE_CAP_ENTER
+	int retval, status;
+	pid_t childpid, pid;
+#endif
 
 	converr = NULL;
 
-	while ((ch = getopt(argc, argv, "Aa:b:c:d:e:f:g:j:m:o:r:u:v")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:b:c:d:e:f:g:j:m:o:r:u:vz:")) != -1) {
 		switch(ch) {
 		case 'A':
 			SETOPT(opttochk, OPT_A);
@@ -768,6 +807,11 @@ main(int argc, char **argv)
 			SETOPT(opttochk, OPT_v);
 			break;
 
+		case 'z':
+			p_zone = optarg;
+			SETOPT(opttochk, OPT_z);
+			break;
+
 		case '?':
 		default:
 			usage("Unknown option");
@@ -777,6 +821,11 @@ main(int argc, char **argv)
 	argc -= optind;
 
 	if (argc == 0) {
+#ifdef HAVE_CAP_ENTER
+		retval = cap_enter();
+		if (retval != 0 && errno != ENOSYS)
+			err(EXIT_FAILURE, "cap_enter");
+#endif
 		if (select_records(stdin) == -1)
 			errx(EXIT_FAILURE,
 			    "Couldn't select records from stdin");
@@ -791,10 +840,39 @@ main(int argc, char **argv)
 		fp = fopen(fname, "r");
 		if (fp == NULL)
 			errx(EXIT_FAILURE, "Couldn't open %s", fname);
-		if (select_records(fp) == -1) {
+
+		/*
+		 * If operating with sandboxing, create a sandbox process for
+		 * each trail file we operate on.  This avoids the need to do
+		 * fancy things with file descriptors, etc, when iterating on
+		 * a list of arguments.
+		 *
+		 * NB: Unlike praudit(1), auditreduce(1) terminates if it hits
+		 * any errors.  Propagate the error from the child to the
+		 * parent if any problems arise.
+		 */
+#ifdef HAVE_CAP_ENTER
+		childpid = fork();
+		if (childpid == 0) {
+			/* Child. */
+			retval = cap_enter();
+			if (retval != 0 && errno != ENOSYS)
+				errx(EXIT_FAILURE, "cap_enter");
+			if (select_records(fp) == -1)
+				errx(EXIT_FAILURE,
+				    "Couldn't select records %s", fname);
+			exit(0);
+		}
+
+		/* Parent.  Await child termination, check exit value. */
+		while ((pid = waitpid(childpid, &status, 0)) != childpid);
+		if (WEXITSTATUS(status) != 0)
+			exit(EXIT_FAILURE);
+#else
+		if (select_records(fp) == -1)
 			errx(EXIT_FAILURE, "Couldn't select records %s",
 			    fname);
-		}
+#endif
 		fclose(fp);
 	}
 	exit(EXIT_SUCCESS);
