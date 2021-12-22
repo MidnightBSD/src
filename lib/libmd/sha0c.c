@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libmd/sha0c.c 154479 2006-01-17 15:35:57Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -446,9 +446,7 @@ SHA_CTX *c;
 	l=c->h3; nl2c(l,cp);
 	l=c->h4; nl2c(l,cp);
 
-	/* clear stuff, sha_block may be leaving some stuff on the stack
-	 * but I'm not worried :-) */
-	c->num=0;
-/*	memset((char *)&c,0,sizeof(c));*/
+	/* Clear the context state */
+	explicit_bzero(&c, sizeof(c));
 	}
 

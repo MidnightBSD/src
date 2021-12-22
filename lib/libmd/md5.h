@@ -1,4 +1,4 @@
-/* $FreeBSD: stable/11/lib/libmd/md5.h 310372 2016-12-21 18:42:04Z emaste $ */
+/* $FreeBSD$ */
 
 #ifndef _MD5_H_
 #define _MD5_H_

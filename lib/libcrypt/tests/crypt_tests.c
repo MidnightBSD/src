@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcrypt/tests/crypt_tests.c 256365 2013-10-12 06:06:53Z rpaulo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <crypt.h>

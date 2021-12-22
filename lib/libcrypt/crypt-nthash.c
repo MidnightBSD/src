@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Michael Bretterklieber
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcrypt/crypt-nthash.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -46,16 +48,14 @@ __FBSDID("$FreeBSD: stable/11/lib/libcrypt/crypt-nthash.c 331722 2018-03-29 02:5
  */
 
 /* ARGSUSED */
-char *
-crypt_nthash(const char *pw, const char *salt __unused)
+int
+crypt_nthash(const char *pw, const char *salt __unused, char *buffer)
 {
 	size_t unipwLen;
-	int i, j;
-	static char hexconvtab[] = "0123456789abcdef";
+	int i;
+	static const char hexconvtab[] = "0123456789abcdef";
 	static const char *magic = "$3$";
-	static char passwd[120];
 	u_int16_t unipw[128];
-	char final[MD4_SIZE*2 + 1];
 	u_char hash[MD4_SIZE];
 	const char *s;
 	MD4_CTX	ctx;
@@ -70,19 +70,14 @@ crypt_nthash(const char *pw, const char *salt __unused)
  	MD4Init(&ctx);
 	MD4Update(&ctx, (u_char *)unipw, unipwLen*sizeof(u_int16_t));
 	MD4Final(hash, &ctx);  
-	
-	for (i = j = 0; i < MD4_SIZE; i++) {
-		final[j++] = hexconvtab[hash[i] >> 4];
-		final[j++] = hexconvtab[hash[i] & 15];
+
+	buffer = stpcpy(buffer, magic);
+	*buffer++ = '$';
+	for (i = 0; i < MD4_SIZE; i++) {
+		*buffer++ = hexconvtab[hash[i] >> 4];
+		*buffer++ = hexconvtab[hash[i] & 15];
 	}
-	final[j] = '\0';
+	*buffer = '\0';
 
-	strcpy(passwd, magic);
-	strcat(passwd, "$");
-	strncat(passwd, final, MD4_SIZE*2);
-
-	/* Don't leave anything around in vm they could use. */
-	memset(final, 0, sizeof(final));
-
-	return (passwd);
+	return (0);
 }

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1999
  *      University of California.  All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libcrypt/misc.c 331722 2018-03-29 02:50:57Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -47,7 +49,7 @@ _crypt_to64(char *s, u_long v, int n)
 }
 
 void
-b64_from_24bit(uint8_t B2, uint8_t B1, uint8_t B0, int n, int *buflen, char **cp)
+b64_from_24bit(uint8_t B2, uint8_t B1, uint8_t B0, int n, char **cp)
 {
 	uint32_t w;
 	int i;
@@ -56,8 +58,6 @@ b64_from_24bit(uint8_t B2, uint8_t B1, uint8_t B0, int n, int *buflen, char **cp
 	for (i = 0; i < n; i++) {
 		**cp = itoa64[w&0x3f];
 		(*cp)++;
-		if ((*buflen)-- < 0)
-			break;
 		w >>= 6;
 	}
 }

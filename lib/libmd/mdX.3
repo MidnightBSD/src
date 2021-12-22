@@ -6,9 +6,9 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: stable/11/lib/libmd/mdX.3 300921 2016-05-29 01:15:36Z allanjude $
+.\" $FreeBSD$
 .\"
-.Dd April 26, 2016
+.Dd July 20, 2018
 .Dt MDX 3
 .Os
 .Sh NAME
@@ -78,7 +78,9 @@ initialize it with
 run over the data with
 .Fn MDXUpdate ,
 and finally extract the result using
-.Fn MDXFinal .
+.Fn MDXFinal ,
+which will also erase the
+.Vt MDX_CTX .
 .Pp
 The
 .Fn MDXPad
