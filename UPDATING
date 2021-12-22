@@ -1,5 +1,18 @@
 Updating Information for MidnightBSD users.
 
+20211222:
+	Import OpenBSM 1.2 alpha5
+
+20211221:
+	Import ldns 1.7
+
+	Import unbound 1.13.1
+
+	Import libcapsicum, libfetch, libpam, geli from FreeBSD
+	12-stable (sept 2021)
+
+	update heimdal to work with OpenSSL 1.1.1
+
 20211220:
 	Imported OpenSSL 1.1.1l
 
