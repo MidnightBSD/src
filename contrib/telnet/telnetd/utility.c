@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)utility.c	8.4 (Berkeley) 5/30/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/contrib/telnet/telnetd/utility.c 351432 2019-08-23 17:40:47Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #ifdef __FreeBSD__
 #include <locale.h>
@@ -356,30 +356,30 @@ edithost(char *pat, char *host)
 {
 	char *res = editedhost;
 
-	if (!pat)
-		pat = strdup("");
-	while (*pat) {
-		switch (*pat) {
+	if (pat) {
+		while (*pat) {
+			switch (*pat) {
 
-		case '#':
-			if (*host)
-				host++;
-			break;
+			case '#':
+				if (*host)
+					host++;
+				break;
 
-		case '@':
-			if (*host)
-				*res++ = *host++;
-			break;
+			case '@':
+				if (*host)
+					*res++ = *host++;
+				break;
 
-		default:
-			*res++ = *pat;
-			break;
+			default:
+				*res++ = *pat;
+				break;
+			}
+			if (res == &editedhost[sizeof editedhost - 1]) {
+				*res = '\0';
+				return;
+			}
+			pat++;
 		}
-		if (res == &editedhost[sizeof editedhost - 1]) {
-			*res = '\0';
-			return;
-		}
-		pat++;
 	}
 	if (*host)
 		(void) strncpy(res, host,

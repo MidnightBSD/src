@@ -48,7 +48,7 @@
  * this software for any purpose.  It is provided "as is" without express
  * or implied warranty.
  *
- * $FreeBSD: stable/11/contrib/telnet/libtelnet/key-proto.h 351432 2019-08-23 17:40:47Z emaste $
+ * $FreeBSD$
  */
 
 #ifndef	__KEY_PROTO__

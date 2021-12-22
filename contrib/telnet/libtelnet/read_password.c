@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: stable/11/contrib/telnet/libtelnet/read_password.c 351432 2019-08-23 17:40:47Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

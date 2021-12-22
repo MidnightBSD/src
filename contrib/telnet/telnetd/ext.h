@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ext.h	8.2 (Berkeley) 12/15/93
- * $FreeBSD: stable/11/contrib/telnet/telnetd/ext.h 359754 2020-04-09 20:38:36Z kevans $
+ * $FreeBSD$
  */
 
 #ifndef EXTERN

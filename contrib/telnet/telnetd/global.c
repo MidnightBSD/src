@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)global.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/contrib/telnet/telnetd/global.c 359754 2020-04-09 20:38:36Z kevans $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Allocate global variables.  We do this

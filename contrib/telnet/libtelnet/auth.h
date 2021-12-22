@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)auth.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/11/contrib/telnet/libtelnet/auth.h 351432 2019-08-23 17:40:47Z emaste $
+ * $FreeBSD$
  */
 
 /*
