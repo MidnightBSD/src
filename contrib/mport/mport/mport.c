@@ -272,10 +272,10 @@ main(int argc, char *argv[]) {
 		char *const *local_argv = argv;
 		local_argv++;
 		if (local_argc > 2) {
-			int ch, qflag, oflag;
+			int ch2, qflag, oflag;
 			qflag = oflag = 0;
-			while ((ch = getopt(local_argc, local_argv, "qo")) != -1) {
-				switch (ch) {
+			while ((ch2 = getopt(local_argc, local_argv, "qo")) != -1) {
+				switch (ch2) {
 					case 'q':
 						qflag = 1;
 						break;
