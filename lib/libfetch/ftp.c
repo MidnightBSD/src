@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: (BSD-3-Clause AND Beerware)
+ *
  * Copyright (c) 1998-2011 Dag-Erling Smørgrav
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libfetch/ftp.c 339250 2018-10-09 10:49:19Z des $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Portions of this code were taken from or based on ftpio.c:
@@ -1086,8 +1088,8 @@ ftp_get_proxy(struct url * url, const char *flags)
 		}
 		if (!purl->port)
 			purl->port = fetch_default_proxy_port(purl->scheme);
-		if (strcasecmp(purl->scheme, SCHEME_FTP) == 0 ||
-		    strcasecmp(purl->scheme, SCHEME_HTTP) == 0)
+		if (strcmp(purl->scheme, SCHEME_FTP) == 0 ||
+		    strcmp(purl->scheme, SCHEME_HTTP) == 0)
 			return (purl);
 		fetchFreeURL(purl);
 	}
@@ -1105,7 +1107,8 @@ ftp_request(struct url *url, const char *op, struct url_stat *us,
 	int oflag;
 
 	/* check if we should use HTTP instead */
-	if (purl && strcasecmp(purl->scheme, SCHEME_HTTP) == 0) {
+	if (purl && (strcmp(purl->scheme, SCHEME_HTTP) == 0 ||
+	    strcmp(purl->scheme, SCHEME_HTTPS) == 0)) {
 		if (strcmp(op, "STAT") == 0)
 			return (http_request(url, "HEAD", us, purl, flags));
 		else if (strcmp(op, "RETR") == 0)

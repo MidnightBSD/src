@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998-2014 Dag-Erling Smørgrav
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/lib/libfetch/common.h 339250 2018-10-09 10:49:19Z des $
+ * $FreeBSD$
  */
 
 #ifndef _COMMON_H_INCLUDED
