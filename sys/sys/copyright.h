@@ -1,4 +1,5 @@
 /*-
+ * Copyright (C) 2006-2022 Lucas Holt
  * Copyright (C) 1992-2020 The FreeBSD Project. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,7 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2021 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2022 The MidnightBSD Project.\n"
 
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
