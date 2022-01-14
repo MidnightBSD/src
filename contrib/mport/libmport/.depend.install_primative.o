@@ -1,0 +1,24 @@
+install_primative.o: install_primative.c \
+  /home/laffer1/git/mport/libmport/mport.h /usr/include/sys/cdefs.h \
+  /usr/include/archive.h /usr/include/sys/stat.h \
+  /usr/include/sys/_timespec.h /usr/include/sys/_types.h \
+  /usr/include/machine/_types.h /usr/include/x86/_types.h \
+  /usr/include/machine/_limits.h /usr/include/x86/_limits.h \
+  /usr/include/sys/time.h /usr/include/sys/_timeval.h \
+  /usr/include/sys/types.h /usr/include/machine/endian.h \
+  /usr/include/x86/endian.h /usr/include/sys/_pthreadtypes.h \
+  /usr/include/sys/_stdint.h /usr/include/sys/select.h \
+  /usr/include/sys/_sigset.h /usr/include/sys/timespec.h \
+  /usr/include/time.h /usr/include/sys/_null.h \
+  /usr/include/xlocale/_time.h /usr/include/stddef.h \
+  /usr/include/stdio.h /usr/include/inttypes.h \
+  /usr/include/machine/_inttypes.h /usr/include/x86/_inttypes.h \
+  /usr/include/sys/stdint.h /usr/include/machine/_stdint.h \
+  /usr/include/x86/_stdint.h /usr/include/unistd.h \
+  /usr/include/sys/unistd.h /usr/include/sqlite3.h /usr/include/stdarg.h \
+  /usr/include/x86/stdarg.h /usr/include/sys/queue.h \
+  /usr/include/stdbool.h \
+  /home/laffer1/git/mport/libmport/mport_private.h \
+  /usr/include/osreldate.h /usr/include/bzlib.h /usr/include/stdlib.h \
+  /usr/include/string.h /usr/include/strings.h \
+  /usr/include/xlocale/_strings.h /usr/include/xlocale/_string.h
