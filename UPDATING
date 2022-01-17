@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20220116:
+	Bug fix for HyperV support in windows 2022 server.
+	
+	Fix register restore for SSE/XMM
+
 20211222:
 	Import OpenBSM 1.2 alpha5
 
