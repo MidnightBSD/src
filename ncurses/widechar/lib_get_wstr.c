@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2002-2009,2011 Free Software Foundation, Inc.              *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2002-2009,2011 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -39,7 +40,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_get_wstr.c,v 1.13 2011/10/22 16:31:35 tom Exp $")
+MODULE_ID("$Id: lib_get_wstr.c,v 1.19 2021/09/04 10:29:59 tom Exp $")
 
 static int
 wadd_wint(WINDOW *win, wint_t *src)
@@ -88,8 +89,8 @@ wgetn_wstr(WINDOW *win, wint_t *str, int maxlen)
     SCREEN *sp = _nc_screen_of(win);
     TTY buf;
     bool oldnl, oldecho, oldraw, oldcbreak;
-    wint_t erasec;
-    wint_t killc;
+    wchar_t erasec = 0;
+    wchar_t killc = 0;
     wint_t *oldstr = str;
     wint_t *tmpstr = str;
     wint_t ch;
@@ -100,19 +101,20 @@ wgetn_wstr(WINDOW *win, wint_t *str, int maxlen)
     if (!win)
 	returnCode(ERR);
 
+    maxlen = _nc_getstr_limit(maxlen);
+
     _nc_get_tty_mode(&buf);
 
     oldnl = sp->_nl;
     oldecho = sp->_echo;
     oldraw = sp->_raw;
     oldcbreak = sp->_cbreak;
-    nl();
-    noecho();
-    noraw();
-    cbreak();
+    NCURSES_SP_NAME(nl) (NCURSES_SP_ARG);
+    NCURSES_SP_NAME(noecho) (NCURSES_SP_ARG);
+    NCURSES_SP_NAME(raw) (NCURSES_SP_ARG);
 
-    erasec = (wint_t) erasechar();
-    killc = (wint_t) killchar();
+    NCURSES_SP_NAME(erasewchar) (NCURSES_SP_ARGx &erasec);
+    NCURSES_SP_NAME(killwchar) (NCURSES_SP_ARGx &killc);
 
     getyx(win, y, x);
 
@@ -129,12 +131,12 @@ wgetn_wstr(WINDOW *win, wint_t *str, int maxlen)
 	    code = KEY_CODE_YES;
 	    ch = KEY_ENTER;
 	}
-	if (ch < KEY_MIN) {
-	    if (ch == erasec) {
+	if (ch != 0 && ch < KEY_MIN) {
+	    if (ch == (wint_t) erasec) {
 		ch = KEY_BACKSPACE;
 		code = KEY_CODE_YES;
 	    }
-	    if (ch == killc) {
+	    if (ch == (wint_t) killc) {
 		ch = KEY_EOL;
 		code = KEY_CODE_YES;
 	    }
@@ -142,7 +144,7 @@ wgetn_wstr(WINDOW *win, wint_t *str, int maxlen)
 	if (code == KEY_CODE_YES) {
 	    /*
 	     * Some terminals (the Wyse-50 is the most common) generate a \n
-	     * from the down-arrow key.  With this logic, it's the user's
+	     * from the down-arrow key.  With this logic, it is the user's
 	     * choice whether to set kcud=\n for wget_wch(); terminating
 	     * *getn_wstr() with \n should work either way.
 	     */
@@ -164,7 +166,7 @@ wgetn_wstr(WINDOW *win, wint_t *str, int maxlen)
 	    } else {
 		beep();
 	    }
-	} else if (maxlen >= 0 && tmpstr - oldstr >= maxlen) {
+	} else if (tmpstr - oldstr >= maxlen) {
 	    beep();
 	} else {
 	    *tmpstr++ = ch;

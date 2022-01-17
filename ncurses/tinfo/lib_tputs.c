@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2012,2013 Free Software Foundation, Inc.              *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -51,7 +52,7 @@
 #include <termcap.h>		/* ospeed */
 #include <tic.h>
 
-MODULE_ID("$Id: lib_tputs.c,v 1.93 2013/01/12 20:57:32 tom Exp $")
+MODULE_ID("$Id: lib_tputs.c,v 1.108 2021/05/08 23:27:40 tom Exp $")
 
 NCURSES_EXPORT_VAR(char) PC = 0;              /* used by termcap library */
 NCURSES_EXPORT_VAR(NCURSES_OSPEED) ospeed = 0;        /* used by termcap library */
@@ -119,17 +120,42 @@ delay_output(int ms)
 NCURSES_EXPORT(void)
 NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_DCL0)
 {
+    T((T_CALLED("_nc_flush(%p)"), (void *) SP_PARM));
     if (SP_PARM != 0 && SP_PARM->_ofd >= 0) {
+	TR(TRACE_CHARPUT, ("ofd:%d inuse:%lu buffer:%p",
+			   SP_PARM->_ofd,
+			   (unsigned long) SP_PARM->out_inuse,
+			   SP_PARM->out_buffer));
 	if (SP_PARM->out_inuse) {
+	    char *buf = SP_PARM->out_buffer;
 	    size_t amount = SP->out_inuse;
-	    /*
-	     * Help a little, if the write is interrupted, by first resetting
-	     * our amount.
-	     */
+
 	    SP->out_inuse = 0;
-	    IGNORE_RC(write(SP_PARM->_ofd, SP_PARM->out_buffer, amount));
+	    TR(TRACE_CHARPUT, ("flushing %ld/%ld bytes",
+			       (unsigned long) amount, _nc_outchars));
+	    while (amount) {
+		ssize_t res = write(SP_PARM->_ofd, buf, amount);
+		if (res > 0) {
+		    /* if the write was incomplete, try again */
+		    amount -= (size_t) res;
+		    buf += res;
+		} else if (errno == EAGAIN) {
+		    continue;
+		} else if (errno == EINTR) {
+		    continue;
+		} else {
+		    break;	/* an error we can not recover from */
+		}
+	    }
+	} else if (SP_PARM->out_buffer == 0) {
+	    TR(TRACE_CHARPUT, ("flushing stdout"));
+	    fflush(stdout);
 	}
+    } else {
+	TR(TRACE_CHARPUT, ("flushing stdout"));
+	fflush(stdout);
     }
+    returnVoid;
 }
 
 #if NCURSES_SP_FUNCS
@@ -250,21 +276,24 @@ NCURSES_SP_NAME(tputs) (NCURSES_SP_DCLx
 			NCURSES_SP_OUTC outc)
 {
     NCURSES_SP_OUTC my_outch = GetOutCh();
-    bool always_delay;
-    bool normal_delay;
+    bool always_delay = FALSE;
+    bool normal_delay = FALSE;
     int number;
 #if BSD_TPUTS
     int trailpad;
 #endif /* BSD_TPUTS */
 
 #ifdef TRACE
-    char addrbuf[32];
-
     if (USE_TRACEF(TRACE_TPUTS)) {
-	if (outc == NCURSES_SP_NAME(_nc_outch))
+	char addrbuf[32];
+	TR_FUNC_BFR(1);
+
+	if (outc == NCURSES_SP_NAME(_nc_outch)) {
 	    _nc_STRCPY(addrbuf, "_nc_outch", sizeof(addrbuf));
-	else
-	    _nc_SPRINTF(addrbuf, _nc_SLIMIT(sizeof(addrbuf)) "%p", outc);
+	} else {
+	    _nc_SPRINTF(addrbuf, _nc_SLIMIT(sizeof(addrbuf)) "%s",
+			TR_FUNC_ARG(0, outc));
+	}
 	if (_nc_tputs_trace) {
 	    _tracef("tputs(%s = %s, %d, %s) called", _nc_tputs_trace,
 		    _nc_visbuf(string), affcnt, addrbuf);
@@ -276,32 +305,30 @@ NCURSES_SP_NAME(tputs) (NCURSES_SP_DCLx
     }
 #endif /* TRACE */
 
-    if (SP_PARM != 0 && !HasTInfoTerminal(SP_PARM))
-	return ERR;
-
     if (!VALID_STRING(string))
 	return ERR;
 
-    if (
+    if (SP_PARM != 0 && HasTInfoTerminal(SP_PARM)) {
+	if (
 #if NCURSES_SP_FUNCS
-	   (SP_PARM != 0 && SP_PARM->_term == 0)
+	       (SP_PARM != 0 && SP_PARM->_term == 0)
 #else
-	   cur_term == 0
+	       cur_term == 0
 #endif
-	) {
-	always_delay = FALSE;
-	normal_delay = TRUE;
-    } else {
-	always_delay = (string == bell) || (string == flash_screen);
-	normal_delay =
-	    !xon_xoff
-	    && padding_baud_rate
+	    ) {
+	    always_delay = FALSE;
+	    normal_delay = TRUE;
+	} else {
+	    always_delay = (string == bell) || (string == flash_screen);
+	    normal_delay =
+		!xon_xoff
+		&& padding_baud_rate
 #if NCURSES_NO_PADDING
-	    && !GetNoPadding(SP_PARM)
+		&& !GetNoPadding(SP_PARM)
 #endif
-	    && (_nc_baudrate(ospeed) >= padding_baud_rate);
+		&& (_nc_baudrate(ospeed) >= padding_baud_rate);
+	}
     }
-
 #if BSD_TPUTS
     /*
      * This ugly kluge deals with the fact that some ancient BSD programs
@@ -400,7 +427,7 @@ NCURSES_SP_NAME(tputs) (NCURSES_SP_DCLx
      */
     if (trailpad > 0
 	&& (always_delay || normal_delay))
-	delay_output(trailpad / 10);
+	NCURSES_SP_NAME(delay_output) (NCURSES_SP_ARGx trailpad / 10);
 #endif /* BSD_TPUTS */
 
     SetOutCh(my_outch);
@@ -412,7 +439,7 @@ NCURSES_EXPORT(int)
 _nc_outc_wrapper(SCREEN *sp, int c)
 {
     if (0 == sp) {
-	return (ERR);
+	return fputc(c, stdout);
     } else {
 	return sp->jump(c);
     }

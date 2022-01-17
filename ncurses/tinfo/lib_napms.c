@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2011,2012 Free Software Foundation, Inc.              *
+ * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 1998-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -51,7 +52,7 @@
 #endif
 #endif
 
-MODULE_ID("$Id: lib_napms.c,v 1.23 2012/06/30 22:08:24 tom Exp $")
+MODULE_ID("$Id: lib_napms.c,v 1.27 2020/08/15 19:45:23 tom Exp $")
 
 NCURSES_EXPORT(int)
 NCURSES_SP_NAME(napms) (NCURSES_SP_DCLx int ms)
@@ -59,9 +60,7 @@ NCURSES_SP_NAME(napms) (NCURSES_SP_DCLx int ms)
     T((T_CALLED("napms(%d)"), ms));
 
 #ifdef USE_TERM_DRIVER
-    if (HasTerminal(SP_PARM)) {
-	CallDriver_1(SP_PARM, nap, ms);
-    }
+    CallDriver_1(SP_PARM, td_nap, ms);
 #else /* !USE_TERM_DRIVER */
 #if NCURSES_SP_FUNCS
     (void) sp;
@@ -76,6 +75,8 @@ NCURSES_SP_NAME(napms) (NCURSES_SP_DCLx int ms)
 	    request = remaining;
 	}
     }
+#elif defined(_NC_WINDOWS)
+    Sleep((DWORD) ms);
 #else
     _nc_timed_wait(0, 0, ms, (int *) 0 EVENTLIST_2nd(0));
 #endif

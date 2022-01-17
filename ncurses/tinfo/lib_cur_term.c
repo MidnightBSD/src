@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2012,2013 Free Software Foundation, Inc.              *
+ * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -38,11 +39,12 @@
 
 #include <curses.priv.h>
 #include <termcap.h>		/* ospeed */
+#include <tic.h>		/* VALID_STRING */
 
-MODULE_ID("$Id: lib_cur_term.c,v 1.32 2013/10/28 00:10:27 tom Exp $")
+MODULE_ID("$Id: lib_cur_term.c,v 1.43 2020/10/24 18:54:32 tom Exp $")
 
 #undef CUR
-#define CUR termp->type.
+#define CUR TerminalType(termp).
 
 #if USE_REENTRANT
 
@@ -76,7 +78,7 @@ NCURSES_EXPORT_VAR(TERMINAL *) cur_term = 0;
 #endif
 
 NCURSES_EXPORT(TERMINAL *)
-NCURSES_SP_NAME(set_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
+NCURSES_SP_NAME(set_curterm) (NCURSES_SP_DCLx TERMINAL *termp)
 {
     TERMINAL *oldterm;
 
@@ -95,15 +97,20 @@ NCURSES_SP_NAME(set_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
 #ifdef USE_TERM_DRIVER
 	TERMINAL_CONTROL_BLOCK *TCB = (TERMINAL_CONTROL_BLOCK *) termp;
 	ospeed = (NCURSES_OSPEED) _nc_ospeed(termp->_baudrate);
-	if (TCB->drv->isTerminfo && termp->type.Strings) {
-	    PC = (char) ((pad_char != NULL) ? pad_char[0] : 0);
+	if (TCB->drv &&
+	    TCB->drv->isTerminfo &&
+	    TerminalType(termp).Strings) {
+	    PC = (char) (VALID_STRING(pad_char) ? pad_char[0] : 0);
 	}
 	TCB->csp = SP_PARM;
 #else
 	ospeed = (NCURSES_OSPEED) _nc_ospeed(termp->_baudrate);
-	if (termp->type.Strings) {
-	    PC = (char) ((pad_char != NULL) ? pad_char[0] : 0);
+	if (TerminalType(termp).Strings) {
+	    PC = (char) (VALID_STRING(pad_char) ? pad_char[0] : 0);
 	}
+#endif
+#if !USE_REENTRANT
+	save_ttytype(termp);
 #endif
     }
     _nc_unlock_global(curses);
@@ -114,14 +121,14 @@ NCURSES_SP_NAME(set_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
 
 #if NCURSES_SP_FUNCS
 NCURSES_EXPORT(TERMINAL *)
-set_curterm(TERMINAL * termp)
+set_curterm(TERMINAL *termp)
 {
     return NCURSES_SP_NAME(set_curterm) (CURRENT_SCREEN, termp);
 }
 #endif
 
 NCURSES_EXPORT(int)
-NCURSES_SP_NAME(del_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
+NCURSES_SP_NAME(del_curterm) (NCURSES_SP_DCLx TERMINAL *termp)
 {
     int rc = ERR;
 
@@ -139,7 +146,10 @@ NCURSES_SP_NAME(del_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
 #endif
 	);
 
-	_nc_free_termtype(&(termp->type));
+#if NCURSES_EXT_NUMBERS
+	_nc_free_termtype(&termp->type);
+#endif
+	_nc_free_termtype2(&TerminalType(termp));
 	if (termp == cur)
 	    NCURSES_SP_NAME(set_curterm) (NCURSES_SP_ARGx 0);
 
@@ -151,7 +161,11 @@ NCURSES_SP_NAME(del_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
 #endif
 #ifdef USE_TERM_DRIVER
 	if (TCB->drv)
-	    TCB->drv->release(TCB);
+	    TCB->drv->td_release(TCB);
+#endif
+#if NO_LEAKS
+	/* discard memory used in tgetent's cache for this terminal */
+	_nc_tgetent_leak(termp);
 #endif
 	free(termp);
 
@@ -162,9 +176,9 @@ NCURSES_SP_NAME(del_curterm) (NCURSES_SP_DCLx TERMINAL * termp)
 
 #if NCURSES_SP_FUNCS
 NCURSES_EXPORT(int)
-del_curterm(TERMINAL * termp)
+del_curterm(TERMINAL *termp)
 {
-    int rc = ERR;
+    int rc;
 
     _nc_lock_global(curses);
     rc = NCURSES_SP_NAME(del_curterm) (CURRENT_SCREEN, termp);

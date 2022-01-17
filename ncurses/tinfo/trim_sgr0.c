@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2005-2010,2012 Free Software Foundation, Inc.              *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 2005-2012,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,7 +37,7 @@
 
 #include <tic.h>
 
-MODULE_ID("$Id: trim_sgr0.c,v 1.15 2012/12/15 20:57:17 tom Exp $")
+MODULE_ID("$Id: trim_sgr0.c,v 1.21 2021/06/17 21:20:30 tom Exp $")
 
 #undef CUR
 #define CUR tp->
@@ -46,12 +47,12 @@ MODULE_ID("$Id: trim_sgr0.c,v 1.15 2012/12/15 20:57:17 tom Exp $")
 #define L_BRACK   '['
 
 static char *
-set_attribute_9(TERMTYPE *tp, int flag)
+set_attribute_9(TERMTYPE2 *tp, int flag)
 {
     const char *value;
     char *result;
 
-    value = tparm(set_attributes, 0, 0, 0, 0, 0, 0, 0, 0, flag);
+    value = TIPARM_9(set_attributes, 0, 0, 0, 0, 0, 0, 0, 0, flag);
     if (PRESENT(value))
 	result = strdup(value);
     else
@@ -221,7 +222,7 @@ compare_part(const char *part, const char *full)
 }
 
 /*
- * While 'sgr0' is the "same" as termcap 'me', there is a compatibility issue. 
+ * While 'sgr0' is the "same" as termcap 'me', there is a compatibility issue.
  * The sgr/sgr0 capabilities include setting/clearing alternate character set
  * mode.  A termcap application cannot use sgr, so sgr0 strings that reset
  * alternate character set mode will be misinterpreted.  Here, we remove those
@@ -232,7 +233,7 @@ compare_part(const char *part, const char *full)
  * an error occurs, or the original sgr0 if no change is needed.
  */
 NCURSES_EXPORT(char *)
-_nc_trim_sgr0(TERMTYPE *tp)
+_nc_trim_sgr0(TERMTYPE2 *tp)
 {
     char *result = exit_attribute_mode;
 
@@ -263,7 +264,7 @@ _nc_trim_sgr0(TERMTYPE *tp)
 	    /*
 	     * If rmacs is a substring of sgr(0), remove that chunk.
 	     */
-	    if (exit_alt_charset_mode != 0) {
+	    if (PRESENT(exit_alt_charset_mode)) {
 		TR(TRACE_DATABASE, ("scan for rmacs %s", _nc_visbuf(exit_alt_charset_mode)));
 		j = strlen(off);
 		k = strlen(exit_alt_charset_mode);

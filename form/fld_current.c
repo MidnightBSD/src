@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2004,2010 Free Software Foundation, Inc.              *
+ * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 1998-2010,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_current.c,v 1.12 2010/01/23 21:14:35 tom Exp $")
+MODULE_ID("$Id: fld_current.c,v 1.16 2020/05/24 01:40:20 anonymous.maarten Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -47,7 +48,7 @@ MODULE_ID("$Id: fld_current.c,v 1.12 2010/01/23 21:14:35 tom Exp $")
 |                    E_INVALID_FIELD   - current field can't be left
 |                    E_SYSTEM_ERROR    - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_current_field(FORM *form, FIELD *field)
 {
   int err = E_OK;
@@ -76,7 +77,7 @@ set_current_field(FORM *form, FIELD *field)
 	{
 	  if (form->current != field)
 	    {
-	      if (!_nc_Internal_Validation(form))
+	      if (form->current && !_nc_Internal_Validation(form))
 		{
 		  err = E_INVALID_FIELD;
 		}
@@ -104,13 +105,39 @@ set_current_field(FORM *form, FIELD *field)
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
+|   Function      :  int unfocus_current_field(FORM * form)
+|
+|   Description   :  Removes focus from the current field.
+|
+|   Return Values :  E_OK              - success
+|                    E_BAD_ARGUMENT    - invalid form pointer
+|                    E_REQUEST_DENIED  - there is no current field to unfocus
++--------------------------------------------------------------------------*/
+FORM_EXPORT(int)
+unfocus_current_field(FORM *const form)
+{
+  T((T_CALLED("unfocus_current_field(%p)"), (const void *)form));
+  if (form == 0)
+    {
+      RETURN(E_BAD_ARGUMENT);
+    }
+  else if (form->current == 0)
+    {
+      RETURN(E_REQUEST_DENIED);
+    }
+  _nc_Unset_Current_Field(form);
+  RETURN(E_OK);
+}
+
+/*---------------------------------------------------------------------------
+|   Facility      :  libnform
 |   Function      :  FIELD *current_field(const FORM * form)
 |
 |   Description   :  Return the current field.
 |
 |   Return Values :  Pointer to the current field.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(FIELD *)
+FORM_EXPORT(FIELD *)
 current_field(const FORM *form)
 {
   T((T_CALLED("current_field(%p)"), (const void *)form));
@@ -127,7 +154,7 @@ current_field(const FORM *form)
 |   Return Values :  >= 0   : field index
 |                    -1     : fieldpointer invalid or field not connected
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 field_index(const FIELD *field)
 {
   T((T_CALLED("field_index(%p)"), (const void *)field));

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2010,2012 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2012,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,20 +33,21 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_hook.c,v 1.16 2012/03/11 00:37:16 tom Exp $")
+MODULE_ID("$Id: frm_hook.c,v 1.20 2020/05/24 01:40:20 anonymous.maarten Exp $")
 
 /* "Template" macro to generate function to set application specific hook */
 #define GEN_HOOK_SET_FUNCTION( typ, name ) \
-NCURSES_IMPEXP int NCURSES_API set_ ## typ ## _ ## name (FORM *form, Form_Hook func)\
+FORM_IMPEXP int NCURSES_API set_ ## typ ## _ ## name (FORM *form, Form_Hook func)\
 {\
-   T((T_CALLED("set_" #typ"_"#name"(%p,%p)"), (void *) form, func));\
+   TR_FUNC_BFR(1); \
+   T((T_CALLED("set_" #typ"_"#name"(%p,%s)"), (void *) form, TR_FUNC_ARG(0, func)));\
    (Normalize_Form( form ) -> typ ## name) = func ;\
    RETURN(E_OK);\
 }
 
 /* "Template" macro to generate function to get application specific hook */
 #define GEN_HOOK_GET_FUNCTION( typ, name ) \
-NCURSES_IMPEXP Form_Hook NCURSES_API typ ## _ ## name ( const FORM *form )\
+FORM_IMPEXP Form_Hook NCURSES_API typ ## _ ## name ( const FORM *form )\
 {\
    T((T_CALLED(#typ "_" #name "(%p)"), (const void *) form));\
    returnFormHook( Normalize_Form( form ) -> typ ## name );\

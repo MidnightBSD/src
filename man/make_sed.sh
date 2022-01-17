@@ -1,7 +1,8 @@
 #!/bin/sh
-# $Id: make_sed.sh,v 1.9 2005/07/16 18:15:31 tom Exp $
+# $Id: make_sed.sh,v 1.12 2021/06/17 21:20:30 tom Exp $
 ##############################################################################
-# Copyright (c) 1998-2003,2005 Free Software Foundation, Inc.                #
+# Copyright 2020,2021 Thomas E. Dickey                                       #
+# Copyright 1998-2005,2017 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -45,7 +46,7 @@ UPPER=upper$$
 SCRIPT=script$$
 RESULT=result$$
 rm -f $UPPER $SCRIPT $RESULT
-trap "rm -f $COL.* $INPUT $UPPER $SCRIPT $RESULT" 0 1 2 5 15
+trap "rm -f $COL.* $INPUT $UPPER $SCRIPT $RESULT" 0 1 2 3 15
 fgrep -v \# $1 | \
 sed	-e 's/[	][	]*/	/g' >$INPUT
 
@@ -57,7 +58,7 @@ done
 for F in 2 4
 do
 	tr abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ <$COL.$F >$UPPER
-	mv $UPPER $COL.$F 
+	mv $UPPER $COL.$F
 done
 paste $COL.* | \
 sed	-e 's/^/s\/\\</' \

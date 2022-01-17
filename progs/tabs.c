@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2008-2012,2013 Free Software Foundation, Inc.              *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 2008-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,12 +37,13 @@
 
 #define USE_LIBTINFO
 #include <progs.priv.h>
+#include <tty_settings.h>
 
-MODULE_ID("$Id: tabs.c,v 1.34 2013/06/11 08:18:27 tom Exp $")
+MODULE_ID("$Id: tabs.c,v 1.50 2021/10/10 00:54:41 tom Exp $")
 
-static void usage(void) GCC_NORETURN;
+static GCC_NORETURN void usage(void);
 
-static char *prg_name;
+const char *_nc_progname;
 static int max_cols;
 
 static void
@@ -57,14 +59,44 @@ putch(int c)
     return putchar(c);
 }
 
+static char *
+skip_csi(char *value)
+{
+    if (UChar(*value) == 0x9b)
+	++value;
+    else if (!strncmp(value, "\033[", 2))
+	value += 2;
+    return value;
+}
+
+/*
+ * If the terminal uses ANSI clear_all_tabs, then it is not necessary to first
+ * move to the left margin before clearing tabs.
+ */
+static bool
+ansi_clear_tabs(void)
+{
+    bool result = FALSE;
+    if (VALID_STRING(clear_all_tabs)) {
+	char *param = skip_csi(clear_all_tabs);
+	if (!strcmp(param, "3g"))
+	    result = TRUE;
+    }
+    return result;
+}
+
 static void
 do_tabs(int *tab_list)
 {
     int last = 1;
     int stop;
+    bool first = TRUE;
 
-    putchar('\r');
     while ((stop = *tab_list++) > 0) {
+	if (first) {
+	    first = FALSE;
+	    putchar('\r');
+	}
 	if (last < stop) {
 	    while (last++ < stop) {
 		if (last > max_cols)
@@ -73,17 +105,22 @@ do_tabs(int *tab_list)
 	    }
 	}
 	if (stop <= max_cols) {
-	    tputs(tparm(set_tab, stop), 1, putch);
+	    tputs(set_tab, 1, putch);
 	    last = stop;
 	} else {
 	    break;
 	}
     }
-    putchar('\n');
+    putchar('\r');
 }
 
+/*
+ * Decode a list of tab-stops from a string, returning an array of integers.
+ * If the margin is positive (because the terminal does not support margins),
+ * work around this by adding the margin to the decoded values.
+ */
 static int *
-decode_tabs(const char *tab_list)
+decode_tabs(const char *tab_list, int margin)
 {
     int *result = typeCalloc(int, strlen(tab_list) + (unsigned) max_cols);
     int n = 0;
@@ -94,16 +131,19 @@ decode_tabs(const char *tab_list)
     if (result == 0)
 	failed("decode_tabs");
 
+    if (margin < 0)
+	margin = 0;
+
     while ((ch = *tab_list++) != '\0') {
 	if (isdigit(UChar(ch))) {
 	    value *= 10;
 	    value += (ch - '0');
 	} else if (ch == ',') {
-	    result[n] = value + prior;
+	    result[n] = value + prior + margin;
 	    if (n > 0 && result[n] <= result[n - 1]) {
 		fprintf(stderr,
 			"%s: tab-stops are not in increasing order: %d %d\n",
-			prg_name, value, result[n - 1]);
+			_nc_progname, value, result[n - 1]);
 		free(result);
 		result = 0;
 		break;
@@ -125,7 +165,7 @@ decode_tabs(const char *tab_list)
 	    int step = value;
 	    value = 1;
 	    while (n < max_cols - 1) {
-		result[n++] = value;
+		result[n++] = value + margin;
 		value += step;
 	    }
 	}
@@ -133,7 +173,7 @@ decode_tabs(const char *tab_list)
 	/*
 	 * Add the last value, if any.
 	 */
-	result[n++] = value + prior;
+	result[n++] = value + prior + margin;
 	result[n] = 0;
     }
 
@@ -141,10 +181,9 @@ decode_tabs(const char *tab_list)
 }
 
 static void
-print_ruler(int *tab_list)
+print_ruler(int *tab_list, const char *new_line)
 {
     int last = 0;
-    int stop;
     int n;
 
     /* first print a readable ruler */
@@ -158,11 +197,12 @@ print_ruler(int *tab_list)
 		     : (ch + 'A' - 10)));
 	printf("%.*s", ((max_cols - n) > 10) ? 10 : (max_cols - n), buffer);
     }
-    putchar('\n');
+    printf("%s", new_line);
 
     /* now, print '*' for each stop */
     for (n = 0, last = 0; (tab_list[n] > 0) && (last < max_cols); ++n) {
-	stop = tab_list[n];
+	int stop = tab_list[n];
+
 	while (++last < stop) {
 	    if (last <= max_cols) {
 		putchar('-');
@@ -179,7 +219,7 @@ print_ruler(int *tab_list)
     }
     while (++last <= max_cols)
 	putchar('-');
-    putchar('\n');
+    printf("%s", new_line);
 }
 
 /*
@@ -187,7 +227,7 @@ print_ruler(int *tab_list)
  * ruler.
  */
 static void
-write_tabs(int *tab_list)
+write_tabs(int *tab_list, const char *new_line)
 {
     int stop;
 
@@ -197,7 +237,7 @@ write_tabs(int *tab_list)
     /* also show a tab _past_ the stops */
     if (stop < max_cols)
 	fputs("\t+", stdout);
-    putchar('\n');
+    fputs(new_line, stdout);
 }
 
 /*
@@ -208,11 +248,11 @@ static char *
 trimmed_tab_list(const char *source)
 {
     char *result = strdup(source);
-    int ch, j, k, last;
-
     if (result != 0) {
+	int j, k, last;
+
 	for (j = k = last = 0; result[j] != 0; ++j) {
-	    ch = UChar(result[j]);
+	    int ch = UChar(result[j]);
 	    if (isspace(ch)) {
 		if (last == '\0') {
 		    continue;
@@ -288,6 +328,61 @@ add_to_tab_list(char **append, const char *value)
 
 	*append = result;
     }
+    free(copied);
+    return result;
+}
+
+/*
+ * If the terminal supports it, (re)set the left margin and return true.
+ * Otherwise, return false.
+ */
+static bool
+do_set_margin(int margin, bool no_op)
+{
+    bool result = FALSE;
+
+    if (margin == 0) {		/* 0 is special case for resetting */
+	if (VALID_STRING(clear_margins)) {
+	    result = TRUE;
+	    if (!no_op)
+		tputs(clear_margins, 1, putch);
+	}
+    } else if (margin-- < 0) {	/* margin will be 0-based from here on */
+	result = TRUE;
+    } else if (VALID_STRING(set_left_margin)) {
+	result = TRUE;
+	if (!no_op) {
+	    /*
+	     * assuming we're on the first column of the line, move the cursor
+	     * to the column at which we will set a margin.
+	     */
+	    if (VALID_STRING(column_address)) {
+		tputs(TIPARM_1(column_address, margin), 1, putch);
+	    } else if (margin >= 1) {
+		if (VALID_STRING(parm_right_cursor)) {
+		    tputs(TIPARM_1(parm_right_cursor, margin), 1, putch);
+		} else {
+		    while (margin-- > 0)
+			putch(' ');
+		}
+	    }
+	    tputs(set_left_margin, 1, putch);
+	}
+    } else if (VALID_STRING(set_left_margin_parm)) {
+	result = TRUE;
+	if (!no_op) {
+	    if (VALID_STRING(set_right_margin_parm)) {
+		tputs(TIPARM_1(set_left_margin_parm, margin), 1, putch);
+	    } else {
+		tputs(TIPARM_2(set_left_margin_parm, margin, max_cols), 1, putch);
+	    }
+	}
+    } else if (VALID_STRING(set_lr_margin)) {
+	result = TRUE;
+	if (!no_op) {
+	    tputs(TIPARM_2(set_lr_margin, margin, max_cols), 1, putch);
+	}
+    }
     return result;
 }
 
@@ -301,24 +396,25 @@ legal_tab_list(const char *tab_list)
 
     if (tab_list != 0 && *tab_list != '\0') {
 	if (comma_is_needed(tab_list)) {
-	    int n, ch;
+	    int n;
+
 	    for (n = 0; tab_list[n] != '\0'; ++n) {
-		ch = UChar(tab_list[n]);
+		int ch = UChar(tab_list[n]);
+
 		if (!(isdigit(ch) || ch == ',' || ch == '+')) {
 		    fprintf(stderr,
 			    "%s: unexpected character found '%c'\n",
-			    prg_name, ch);
+			    _nc_progname, ch);
 		    result = FALSE;
 		    break;
 		}
 	    }
 	} else {
-	    fprintf(stderr, "%s: trailing comma found '%s'\n", prg_name, tab_list);
+	    fprintf(stderr, "%s: trailing comma found '%s'\n", _nc_progname, tab_list);
 	    result = FALSE;
 	}
     } else {
-	fprintf(stderr, "%s: no tab-list given\n", prg_name);
-	result = FALSE;
+	/* if no list given, default to "tabs -8" */
     }
     return result;
 }
@@ -338,36 +434,35 @@ skip_list(char *value)
 static void
 usage(void)
 {
-    static const char *msg[] =
+#define DATA(s) s "\n"
+    static const char msg[] =
     {
-	"Usage: tabs [options] [tabstop-list]"
-	,""
-	,"Options:"
-	,"  -0       reset tabs"
-	,"  -8       set tabs to standard interval"
-	,"  -a       Assembler, IBM S/370, first format"
-	,"  -a2      Assembler, IBM S/370, second format"
-	,"  -c       COBOL, normal format"
-	,"  -c2      COBOL compact format"
-	,"  -c3      COBOL compact format extended"
-	,"  -d       debug (show ruler with expected/actual tab positions)"
-	,"  -f       FORTRAN"
-	,"  -n       no-op (do not modify terminal settings)"
-	,"  -p       PL/I"
-	,"  -s       SNOBOL"
-	,"  -u       UNIVAC 1100 Assembler"
-	,"  -T name  use terminal type 'name'"
-	,"  -V       print version"
-	,""
-	,"A tabstop-list is an ordered list of column numbers, e.g., 1,11,21"
-	,"or 1,+10,+10 which is the same."
+	DATA("Usage: tabs [options] [tabstop-list]")
+	DATA("")
+	DATA("Options:")
+	DATA("  -0       reset tabs")
+	DATA("  -8       set tabs to standard interval")
+	DATA("  -a       Assembler, IBM S/370, first format")
+	DATA("  -a2      Assembler, IBM S/370, second format")
+	DATA("  -c       COBOL, normal format")
+	DATA("  -c2      COBOL compact format")
+	DATA("  -c3      COBOL compact format extended")
+	DATA("  -d       debug (show ruler with expected/actual tab positions)")
+	DATA("  -f       FORTRAN")
+	DATA("  -n       no-op (do not modify terminal settings)")
+	DATA("  -p       PL/I")
+	DATA("  -s       SNOBOL")
+	DATA("  -u       UNIVAC 1100 Assembler")
+	DATA("  -T name  use terminal type 'name'")
+	DATA("  -V       print version")
+	DATA("")
+	DATA("A tabstop-list is an ordered list of column numbers, e.g., 1,11,21")
+	DATA("or 1,+10,+10 which is the same.")
     };
-    unsigned n;
+#undef DATA
 
     fflush(stdout);
-    for (n = 0; n < SIZEOF(msg); ++n) {
-	fprintf(stderr, "%s\n", msg[n]);
-    }
+    fputs(msg, stderr);
     ExitProgram(EXIT_FAILURE);
 }
 
@@ -377,12 +472,17 @@ main(int argc, char *argv[])
     int rc = EXIT_FAILURE;
     bool debug = FALSE;
     bool no_op = FALSE;
+    bool change_tty = FALSE;
     int n, ch;
     NCURSES_CONST char *term_name = 0;
     char *append = 0;
     const char *tab_list = 0;
+    const char *new_line = "\n";
+    int margin = -1;
+    TTY tty_settings;
+    int fd;
 
-    prg_name = _nc_rootname(argv[0]);
+    _nc_progname = _nc_rootname(argv[0]);
 
     if ((term_name = getenv("TERM")) == 0)
 	term_name = "ansi+tabs";
@@ -453,7 +553,7 @@ main(int argc, char *argv[])
 		    if (*++option != '\0') {
 			term_name = option;
 		    } else {
-			term_name = argv[n++];
+			term_name = argv[n];
 			option--;
 		    }
 		    option += ((int) strlen(option)) - 1;
@@ -475,7 +575,10 @@ main(int argc, char *argv[])
 	    }
 	    break;
 	case '+':
-	    while ((ch = *++option) != '\0') {
+	    if ((ch = *++option) != '\0') {
+		int digits = 0;
+		int number = 0;
+
 		switch (ch) {
 		case 'm':
 		    /*
@@ -483,6 +586,17 @@ main(int argc, char *argv[])
 		     * att510d implements smgl, which is needed to support
 		     * this option.
 		     */
+		    while ((ch = *++option) != '\0') {
+			if (isdigit(UChar(ch))) {
+			    ++digits;
+			    number = number * 10 + (ch - '0');
+			} else {
+			    usage();
+			}
+		    }
+		    if (digits == 0)
+			number = 10;
+		    margin = number;
 		    break;
 		default:
 		    /* special case of relative stops separated by spaces? */
@@ -506,37 +620,78 @@ main(int argc, char *argv[])
 	}
     }
 
-    setupterm(term_name, STDOUT_FILENO, (int *) 0);
+    fd = save_tty_settings(&tty_settings, FALSE);
+
+    setupterm(term_name, fd, (int *) 0);
 
     max_cols = (columns > 0) ? columns : 80;
+    if (margin > 0)
+	max_cols -= margin;
 
     if (!VALID_STRING(clear_all_tabs)) {
 	fprintf(stderr,
 		"%s: terminal type '%s' cannot reset tabs\n",
-		prg_name, term_name);
+		_nc_progname, term_name);
     } else if (!VALID_STRING(set_tab)) {
 	fprintf(stderr,
 		"%s: terminal type '%s' cannot set tabs\n",
-		prg_name, term_name);
+		_nc_progname, term_name);
     } else if (legal_tab_list(tab_list)) {
-	int *list = decode_tabs(tab_list);
+	int *list;
 
-	if (!no_op)
+	if (tab_list == NULL)
+	    tab_list = add_to_tab_list(&append, "8");
+
+	if (!no_op) {
+#if defined(TERMIOS) && defined(OCRNL)
+	    /* set tty modes to -ocrnl to allow \r */
+	    if (isatty(STDOUT_FILENO)) {
+		TTY new_settings = tty_settings;
+		new_settings.c_oflag &= (unsigned)~OCRNL;
+		update_tty_settings(&tty_settings, &new_settings);
+		change_tty = TRUE;
+		new_line = "\r\n";
+	    }
+#endif
+
+	    if (!ansi_clear_tabs())
+		putch('\r');
 	    tputs(clear_all_tabs, 1, putch);
+	}
+
+	if (margin >= 0) {
+	    putch('\r');
+	    if (margin > 0) {
+		/* reset existing margin before setting margin, to reduce
+		 * problems moving left of the current margin.
+		 */
+		if (do_set_margin(0, no_op))
+		    putch('\r');
+	    }
+	    if (do_set_margin(margin, no_op))
+		margin = -1;
+	}
+
+	list = decode_tabs(tab_list, margin);
 
 	if (list != 0) {
 	    if (!no_op)
 		do_tabs(list);
 	    if (debug) {
 		fflush(stderr);
-		printf("tabs %s\n", tab_list);
-		print_ruler(list);
-		write_tabs(list);
+		printf("tabs %s%s", tab_list, new_line);
+		print_ruler(list, new_line);
+		write_tabs(list, new_line);
 	    }
 	    free(list);
 	} else if (debug) {
 	    fflush(stderr);
-	    printf("tabs %s\n", tab_list);
+	    printf("tabs %s%s", tab_list, new_line);
+	}
+	if (!no_op) {
+	    if (change_tty) {
+		restore_tty_settings();
+	    }
 	}
 	rc = EXIT_SUCCESS;
     }

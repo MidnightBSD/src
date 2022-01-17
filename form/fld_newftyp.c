@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2009,2010 Free Software Foundation, Inc.              *
+ * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 1998-2010,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_newftyp.c,v 1.19 2010/01/23 21:14:36 tom Exp $")
+MODULE_ID("$Id: fld_newftyp.c,v 1.23 2020/05/24 01:40:20 anonymous.maarten Exp $")
 
 static FIELDTYPE default_fieldtype =
 {
@@ -52,8 +53,8 @@ static FIELDTYPE default_fieldtype =
 #endif
 };
 
-NCURSES_EXPORT_VAR(FIELDTYPE *)
-_nc_Default_FieldType = &default_fieldtype;
+FORM_EXPORT_VAR(FIELDTYPE *)
+  _nc_Default_FieldType = &default_fieldtype;
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -70,13 +71,18 @@ _nc_Default_FieldType = &default_fieldtype;
 |
 |   Return Values :  Fieldtype pointer or NULL if error occurred
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(FIELDTYPE *)
+FORM_EXPORT(FIELDTYPE *)
 new_fieldtype(bool (*const field_check) (FIELD *, const void *),
 	      bool (*const char_check) (int, const void *))
 {
   FIELDTYPE *nftyp = (FIELDTYPE *)0;
 
-  T((T_CALLED("new_fieldtype(%p,%p)"), field_check, char_check));
+  TR_FUNC_BFR(2);
+
+  T((T_CALLED("new_fieldtype(%s,%s)"),
+     TR_FUNC_ARG(0, field_check),
+     TR_FUNC_ARG(1, char_check)));
+
   if ((field_check) || (char_check))
     {
       nftyp = typeMalloc(FIELDTYPE, 1);
@@ -115,7 +121,7 @@ new_fieldtype(bool (*const field_check) (FIELD *, const void *),
 |                    E_CONNECTED     - there are fields referencing the type
 |                    E_BAD_ARGUMENT  - invalid fieldtype pointer
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 free_fieldtype(FIELDTYPE *typ)
 {
   T((T_CALLED("free_fieldtype(%p)"), (void *)typ));

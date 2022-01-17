@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2012,2013 Free Software Foundation, Inc.              *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -32,8 +33,6 @@
  *     and: Thomas E. Dickey                        1996 on                 *
  ****************************************************************************/
 
-/* $FreeBSD: stable/11/contrib/ncurses/ncurses/tinfo/comp_scan.c 262685 2014-03-02 08:58:21Z delphij $ */
-
 /*
  *	comp_scan.c --- Lexical scanner for terminfo compiler.
  *
@@ -52,7 +51,7 @@
 #include <ctype.h>
 #include <tic.h>
 
-MODULE_ID("$Id: comp_scan.c,v 1.102 2013/11/16 19:57:50 tom Exp $")
+MODULE_ID("$Id: comp_scan.c,v 1.112 2021/10/04 23:56:28 tom Exp $")
 
 /*
  * Maximum length of string capability we'll accept before raising an error.
@@ -137,7 +136,7 @@ last_char(int from_end)
 
     while (len--) {
 	if (!isspace(UChar(bufptr[len]))) {
-	    if (from_end < (int) len)
+	    if (from_end <= (int) len)
 		result = bufptr[(int) len - from_end];
 	    break;
 	}
@@ -170,6 +169,8 @@ next_char(void)
 	if (result != 0) {
 	    FreeAndNull(result);
 	    FreeAndNull(pushname);
+	    bufptr = 0;
+	    bufstart = 0;
 	    allocated = 0;
 	}
 	/*
@@ -191,12 +192,11 @@ next_char(void)
 	 * quite hard to get completely right.  Try it and see.  If you
 	 * succeed, don't forget to hack push_back() correspondingly.
 	 */
-	size_t used;
 	size_t len;
 
 	do {
+	    size_t used = 0;
 	    bufstart = 0;
-	    used = 0;
 	    do {
 		if (used + (LEXBUFSIZ / 4) >= allocated) {
 		    allocated += (allocated + LEXBUFSIZ);
@@ -225,6 +225,8 @@ next_char(void)
 		}
 		if ((bufptr = bufstart) != 0) {
 		    used = strlen(bufptr);
+		    if (used == 0)
+			return (EOF);
 		    while (iswhite(*bufptr)) {
 			if (*bufptr == '\t') {
 			    _nc_curr_col = (_nc_curr_col | 7) + 1;
@@ -554,7 +556,7 @@ _nc_get_token(bool silent)
 		 * Grrr...what we ought to do here is barf, complaining that
 		 * the entry is malformed.  But because a couple of name fields
 		 * in the 8.2 termcap file end with |\, we just have to assume
-		 * it's termcap syntax.
+		 * it is termcap syntax.
 		 */
 		_nc_syntax = SYN_TERMCAP;
 		separator = ':';
@@ -585,12 +587,11 @@ _nc_get_token(bool silent)
 	     */
 	    if (after_list != 0) {
 		if (!silent) {
-		    if (*after_list == '\0')
+		    if (*after_list == '\0' || strchr("|", after_list[1]) != NULL) {
 			_nc_warning("empty longname field");
-#ifndef FREEBSD_NATIVE
-		    else if (strchr(after_list, ' ') == 0)
+		    } else if (strchr(after_list, ' ') == 0) {
 			_nc_warning("older tic versions may treat the description field as an alias");
-#endif
+		    }
 		}
 	    } else {
 		after_list = tok_buf + strlen(tok_buf);
@@ -673,7 +674,15 @@ _nc_get_token(bool silent)
 		    if (numchk == numbuf)
 			_nc_warning("no value given for `%s'", tok_buf);
 		    if ((*numchk != '\0') || (ch != separator))
-			_nc_warning("Missing separator");
+			_nc_warning("Missing separator for `%s'", tok_buf);
+		    if (number < 0)
+			_nc_warning("value of `%s' cannot be negative", tok_buf);
+		    if (number > MAX_OF_TYPE(NCURSES_INT2)) {
+			_nc_warning("limiting value of `%s' from %#lx to %#x",
+				    tok_buf,
+				    number, MAX_OF_TYPE(NCURSES_INT2));
+			number = MAX_OF_TYPE(NCURSES_INT2);
+		    }
 		}
 		_nc_curr_token.tk_name = tok_buf;
 		_nc_curr_token.tk_valnumber = (int) number;
@@ -814,8 +823,6 @@ _nc_trans_string(char *ptr, char *last)
 	    }
 	    if (c == '?' && (_nc_syntax != SYN_TERMCAP)) {
 		*(ptr++) = '\177';
-		if (_nc_tracing)
-		    _nc_warning("Allow ^? as synonym for \\177");
 	    } else {
 		if ((c &= 037) == 0)
 		    c = 128;
@@ -827,8 +834,6 @@ _nc_trans_string(char *ptr, char *last)
 	    c = next_char();
 	    if (c == EOF)
 		_nc_err_abort(MSG_NO_INPUTS);
-
-#define isoctal(c) ((c) >= '0' && (c) <= '7')
 
 	    if (isoctal(c) || (strict_bsd && isdigit(c))) {
 		number = c - '0';
@@ -994,10 +999,8 @@ _nc_push_token(int tokclass)
 NCURSES_EXPORT(void)
 _nc_panic_mode(char ch)
 {
-    int c;
-
     for (;;) {
-	c = next_char();
+	int c = next_char();
 	if (c == ch)
 	    return;
 	if (c == EOF)

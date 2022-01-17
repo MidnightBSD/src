@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2011,2012 Free Software Foundation, Inc.              *
+ * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -49,7 +50,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_raw.c,v 1.21 2012/01/21 19:21:29 KO.Myung-Hun Exp $")
+MODULE_ID("$Id: lib_raw.c,v 1.26 2020/11/21 22:07:48 tom Exp $")
 
 #if HAVE_SYS_TERMIO_H
 #include <sys/termio.h>		/* needed for ISC */
@@ -96,6 +97,8 @@ NCURSES_SP_NAME(raw) (NCURSES_SP_DCL0)
 	buf.c_iflag &= (unsigned) ~(COOKED_INPUT);
 	buf.c_cc[VMIN] = 1;
 	buf.c_cc[VTIME] = 0;
+#elif defined(EXP_WIN32_DRIVER)
+	buf.dwFlagIn &= (unsigned long) ~CONMODE_NORAW;
 #else
 	buf.sg_flags |= RAW;
 #endif
@@ -112,8 +115,10 @@ NCURSES_SP_NAME(raw) (NCURSES_SP_DCL0)
 	    kbdinfo.fsMask |= KEYBOARD_BINARY_MODE;
 	    KbdSetStatus(&kbdinfo, 0);
 #endif
-	    SP_PARM->_raw = TRUE;
-	    SP_PARM->_cbreak = 1;
+	    if (SP_PARM) {
+		SP_PARM->_raw = TRUE;
+		SP_PARM->_cbreak = 1;
+	    }
 	    termp->Nttyb = buf;
 	}
 	AFTER("raw");
@@ -149,12 +154,17 @@ NCURSES_SP_NAME(cbreak) (NCURSES_SP_DCL0)
 	buf.c_lflag |= ISIG;
 	buf.c_cc[VMIN] = 1;
 	buf.c_cc[VTIME] = 0;
+#elif defined(EXP_WIN32_DRIVER)
+	buf.dwFlagIn |= CONMODE_NORAW;
+	buf.dwFlagIn &= (unsigned long) ~CONMODE_NOCBREAK;
 #else
 	buf.sg_flags |= CBREAK;
 #endif
 	result = NCURSES_SP_NAME(_nc_set_tty_mode) (NCURSES_SP_ARGx &buf);
 	if (result == OK) {
-	    SP_PARM->_cbreak = 1;
+	    if (SP_PARM) {
+		SP_PARM->_cbreak = 1;
+	    }
 	    termp->Nttyb = buf;
 	}
 	AFTER("cbreak");
@@ -177,12 +187,12 @@ cbreak(void)
 NCURSES_EXPORT(void)
 NCURSES_SP_NAME(qiflush) (NCURSES_SP_DCL0)
 {
-    int result = ERR;
     TERMINAL *termp;
 
     T((T_CALLED("qiflush(%p)"), (void *) SP_PARM));
     if ((termp = TerminalOf(SP_PARM)) != 0) {
 	TTY buf;
+	int result;
 
 	BEFORE("qiflush");
 	buf = termp->Nttyb;
@@ -190,6 +200,7 @@ NCURSES_SP_NAME(qiflush) (NCURSES_SP_DCL0)
 	buf.c_lflag &= (unsigned) ~(NOFLSH);
 	result = NCURSES_SP_NAME(_nc_set_tty_mode) (NCURSES_SP_ARGx &buf);
 #else
+	result = ERR;
 	/* FIXME */
 #endif
 	if (result == OK)
@@ -225,6 +236,8 @@ NCURSES_SP_NAME(noraw) (NCURSES_SP_DCL0)
 	buf.c_lflag |= ISIG | ICANON |
 	    (termp->Ottyb.c_lflag & IEXTEN);
 	buf.c_iflag |= COOKED_INPUT;
+#elif defined(EXP_WIN32_DRIVER)
+	buf.dwFlagIn |= CONMODE_NORAW;
 #else
 	buf.sg_flags &= ~(RAW | CBREAK);
 #endif
@@ -241,8 +254,10 @@ NCURSES_SP_NAME(noraw) (NCURSES_SP_DCL0)
 	    kbdinfo.fsMask |= KEYBOARD_ASCII_MODE;
 	    KbdSetStatus(&kbdinfo, 0);
 #endif
-	    SP_PARM->_raw = FALSE;
-	    SP_PARM->_cbreak = 0;
+	    if (SP_PARM) {
+		SP_PARM->_raw = FALSE;
+		SP_PARM->_cbreak = 0;
+	    }
 	    termp->Nttyb = buf;
 	}
 	AFTER("noraw");
@@ -275,12 +290,16 @@ NCURSES_SP_NAME(nocbreak) (NCURSES_SP_DCL0)
 #ifdef TERMIOS
 	buf.c_lflag |= ICANON;
 	buf.c_iflag |= ICRNL;
+#elif defined(EXP_WIN32_DRIVER)
+	buf.dwFlagIn |= (CONMODE_NOCBREAK | CONMODE_NORAW);
 #else
 	buf.sg_flags &= ~CBREAK;
 #endif
 	result = NCURSES_SP_NAME(_nc_set_tty_mode) (NCURSES_SP_ARGx &buf);
 	if (result == OK) {
-	    SP_PARM->_cbreak = 0;
+	    if (SP_PARM) {
+		SP_PARM->_cbreak = 0;
+	    }
 	    termp->Nttyb = buf;
 	}
 	AFTER("nocbreak");
@@ -299,12 +318,12 @@ nocbreak(void)
 NCURSES_EXPORT(void)
 NCURSES_SP_NAME(noqiflush) (NCURSES_SP_DCL0)
 {
-    int result = ERR;
     TERMINAL *termp;
 
     T((T_CALLED("noqiflush(%p)"), (void *) SP_PARM));
     if ((termp = TerminalOf(SP_PARM)) != 0) {
 	TTY buf;
+	int result;
 
 	BEFORE("noqiflush");
 	buf = termp->Nttyb;
@@ -313,6 +332,7 @@ NCURSES_SP_NAME(noqiflush) (NCURSES_SP_DCL0)
 	result = NCURSES_SP_NAME(_nc_set_tty_mode) (NCURSES_SP_ARGx &buf);
 #else
 	/* FIXME */
+	result = ERR;
 #endif
 	if (result == OK)
 	    termp->Nttyb = buf;

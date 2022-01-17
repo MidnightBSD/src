@@ -1,5 +1,6 @@
 .\"***************************************************************************
-.\" Copyright (c) 1998-2010,2012 Free Software Foundation, Inc.              *
+.\" Copyright 2019,2020 Thomas E. Dickey                                     *
+.\" Copyright 1998-2012,2017 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
 .\" copy of this software and associated documentation files (the            *
@@ -26,10 +27,15 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: curs_addchstr.3x,v 1.16 2012/11/03 22:54:43 tom Exp $
+.\" $Id: curs_addchstr.3x,v 1.22 2020/12/19 21:39:20 tom Exp $
 .TH curs_addchstr 3X ""
+.ie \n(.g .ds `` \(lq
+.el       .ds `` ``
+.ie \n(.g .ds '' \(rq
+.el       .ds '' ''
 .de bP
-.IP \(bu 4
+.ie n  .IP \(bu 4
+.el    .IP \(bu 2
 ..
 .na
 .hy 0
@@ -48,21 +54,21 @@
 .nf
 \fB#include <curses.h>\fR
 .PP
-\fBint addchstr(const chtype *chstr);\fR
+\fBint addchstr(const chtype *\fP\fIchstr\fP\fB);\fR
 .br
-\fBint addchnstr(const chtype *chstr, int n);\fR
+\fBint addchnstr(const chtype *\fP\fIchstr\fP\fB, int \fP\fIn\fP\fB);\fR
 .br
-\fBint waddchstr(WINDOW *win, const chtype *chstr);\fR
+\fBint waddchstr(WINDOW *\fP\fIwin\fP\fB, const chtype *\fP\fIchstr\fP\fB);\fR
 .br
-\fBint waddchnstr(WINDOW *win, const chtype *chstr, int n);\fR
+\fBint waddchnstr(WINDOW *\fP\fIwin\fP\fB, const chtype *\fP\fIchstr\fP\fB, int \fP\fIn\fP\fB);\fR
+.sp
+\fBint mvaddchstr(int \fP\fIy\fP\fB, int \fP\fIx\fP\fB, const chtype *\fP\fIchstr\fP\fB);\fR
 .br
-\fBint mvaddchstr(int y, int x, const chtype *chstr);\fR
+\fBint mvaddchnstr(int \fP\fIy\fP\fB, int \fP\fIx\fP\fB, const chtype *\fP\fIchstr\fP\fB, int \fP\fIn\fP\fB);\fR
 .br
-\fBint mvaddchnstr(int y, int x, const chtype *chstr, int n);\fR
+\fBint mvwaddchstr(WINDOW *\fP\fIwin\fP\fB, int \fP\fIy\fP\fB, int \fP\fIx\fP\fB, const chtype *\fP\fIchstr\fP\fB);\fR
 .br
-\fBint mvwaddchstr(WINDOW *win, int y, int x, const chtype *chstr);\fR
-.br
-\fBint mvwaddchnstr(WINDOW *win, int y, int x, const chtype *chstr, int n);\fR
+\fBint mvwaddchnstr(WINDOW *\fP\fIwin\fP\fB, int \fP\fIy\fP\fB, int \fP\fIx\fP\fB, const chtype *\fP\fIchstr\fP\fB, int \fP\fIn\fP\fB);\fR
 .fi
 .SH DESCRIPTION
 These functions copy the (null-terminated)
@@ -95,7 +101,7 @@ X/Open does not define any error conditions.
 This implementation returns an error
 if the window pointer is null.
 .PP
-Functions with a "mv" prefix first perform a cursor movement using
+Functions with a \*(``mv\*('' prefix first perform a cursor movement using
 \fBwmove\fP, and return an error if the position is outside the window,
 or if the window pointer is null.
 .SH NOTES
@@ -103,8 +109,8 @@ All functions except \fBwaddchnstr\fR may be macros.
 .SH PORTABILITY
 These entry points are described in the XSI Curses standard, Issue 4.
 .SH SEE ALSO
-\fBcurs_addstr\fR(3X),
-\fBcurses\fR(3X).
+\fBcurses\fR(3X),
+\fBcurs_addstr\fR(3X).
 .PP
 Comparable functions in the wide-character (ncursesw) library are
 described in

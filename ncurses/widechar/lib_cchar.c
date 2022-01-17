@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 2001-2012,2014 Free Software Foundation, Inc.              *
+ * Copyright 2019-2020,2021 Thomas E. Dickey                                *
+ * Copyright 2001-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -34,10 +35,11 @@
 */
 
 #include <curses.priv.h>
+#include <wchar.h>
 
-MODULE_ID("$Id: lib_cchar.c,v 1.27 2014/02/01 22:10:42 tom Exp $")
+MODULE_ID("$Id: lib_cchar.c,v 1.37 2021/06/17 21:11:08 tom Exp $")
 
-/* 
+/*
  * The SuSv2 description leaves some room for interpretation.  We'll assume wch
  * points to a string which is L'\0' terminated, contains at least one
  * character with strictly positive width, which must be the first, and
@@ -47,22 +49,25 @@ NCURSES_EXPORT(int)
 setcchar(cchar_t *wcval,
 	 const wchar_t *wch,
 	 const attr_t attrs,
-	 NCURSES_PAIRS_T color_pair,
+	 NCURSES_PAIRS_T pair_arg,
 	 const void *opts)
 {
-    unsigned i;
-    unsigned len;
     int code = OK;
+    int color_pair = pair_arg;
+    unsigned len;
 
-    TR(TRACE_CCALLS, (T_CALLED("setcchar(%p,%s,%lu,%d,%p)"),
+    TR(TRACE_CCALLS, (T_CALLED("setcchar(%p,%s,attrs=%lu,pair=%d,%p)"),
 		      (void *) wcval, _nc_viswbuf(wch),
-		      (unsigned long) attrs, (int) color_pair, opts));
+		      (unsigned long) attrs, color_pair, opts));
 
-    if (opts != NULL
-	|| wch == NULL
-	|| ((len = (unsigned) wcslen(wch)) > 1 && wcwidth(wch[0]) < 0)) {
+    set_extended_pair(opts, color_pair);
+    if (wch == NULL
+	|| ((len = (unsigned) wcslen(wch)) > 1 && _nc_wacs_width(wch[0]) < 0)
+	|| color_pair < 0) {
 	code = ERR;
     } else {
+	unsigned i;
+
 	if (len > CCHARW_MAX)
 	    len = CCHARW_MAX;
 
@@ -71,7 +76,7 @@ setcchar(cchar_t *wcval,
 	 * are only interested in adding non-spacing characters.
 	 */
 	for (i = 1; i < len; ++i) {
-	    if (wcwidth(wch[i]) != 0) {
+	    if (_nc_wacs_width(wch[i]) != 0) {
 		len = i;
 		break;
 	    }
@@ -96,21 +101,27 @@ NCURSES_EXPORT(int)
 getcchar(const cchar_t *wcval,
 	 wchar_t *wch,
 	 attr_t *attrs,
-	 NCURSES_PAIRS_T *color_pair,
+	 NCURSES_PAIRS_T *pair_arg,
 	 void *opts)
 {
-    wchar_t *wp;
-    int len;
     int code = ERR;
 
     TR(TRACE_CCALLS, (T_CALLED("getcchar(%p,%p,%p,%p,%p)"),
 		      (const void *) wcval,
 		      (void *) wch,
 		      (void *) attrs,
-		      (void *) color_pair,
+		      (void *) pair_arg,
 		      opts));
 
-    if (opts == NULL && wcval != NULL) {
+#if !NCURSES_EXT_COLORS
+    if (opts != NULL) {
+	;			/* empty */
+    } else
+#endif
+    if (wcval != NULL) {
+	wchar_t *wp;
+	int len;
+
 	len = ((wp = wmemchr(wcval->chars, L'\0', (size_t) CCHARW_MAX))
 	       ? (int) (wp - wcval->chars)
 	       : CCHARW_MAX);
@@ -121,14 +132,21 @@ getcchar(const cchar_t *wcval,
 	     * If the value is not a null, return the length plus 1 for null.
 	     */
 	    code = (len < CCHARW_MAX) ? (len + 1) : CCHARW_MAX;
-	} else if (attrs == 0 || color_pair == 0) {
+	} else if (attrs == 0 || pair_arg == 0) {
 	    code = ERR;
 	} else if (len >= 0) {
+	    int color_pair;
+
+	    TR(TRACE_CCALLS, ("copy %d wchars, first is %s", len,
+			      _tracecchar_t(wcval)));
 	    *attrs = AttrOf(*wcval) & A_ATTRIBUTES;
-	    *color_pair = (NCURSES_PAIRS_T) GetPair(*wcval);
+	    color_pair = GetPair(*wcval);
+	    get_extended_pair(opts, color_pair);
+	    *pair_arg = limit_PAIRS(color_pair);
 	    wmemcpy(wch, wcval->chars, (size_t) len);
 	    wch[len] = L'\0';
-	    code = OK;
+	    if (*pair_arg >= 0)
+		code = OK;
 	}
     }
 

@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2011,2012 Free Software Foundation, Inc.              *
+ * Copyright 2019-2020,2021 Thomas E. Dickey                                *
+ * Copyright 1998-2012,2014 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -33,13 +34,13 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: keyok.c,v 1.13 2012/11/18 02:14:35 tom Exp $")
+MODULE_ID("$Id: keyok.c,v 1.17 2021/06/17 21:26:02 tom Exp $")
 
 /*
  * Enable (or disable) ncurses' interpretation of a keycode by adding (or
  * removing) the corresponding 'tries' entry.
  *
- * Do this by storing a second tree of tries, which records the disabled keys. 
+ * Do this by storing a second tree of tries, which records the disabled keys.
  * The simplest way to copy is to make a function that returns the string (with
  * nulls set to 0200), then use that to reinsert the string into the
  * corresponding tree.
@@ -53,9 +54,8 @@ NCURSES_SP_NAME(keyok) (NCURSES_SP_DCLx int c, bool flag)
     if (HasTerminal(SP_PARM)) {
 	T((T_CALLED("keyok(%p, %d,%d)"), (void *) SP_PARM, c, flag));
 #ifdef USE_TERM_DRIVER
-	code = CallDriver_2(sp, kyOk, c, flag);
+	code = CallDriver_2(sp, td_kyOk, c, flag);
 #else
-	T((T_CALLED("keyok(%d,%d)"), c, flag));
 	if (c >= 0) {
 	    int count = 0;
 	    char *s;

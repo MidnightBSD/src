@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2012,2013 Free Software Foundation, Inc.              *
+ * Copyright 2018-2020,2021 Thomas E. Dickey                                *
+ * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -82,8 +83,8 @@
 
 /*
  * The average overhead of a full optimization computation in character
- * transmission times.  If it's too high, the algorithm will be a bit
- * over-biased toward using cup rather than local motions; if it's too
+ * transmission times.  If it is too high, the algorithm will be a bit
+ * over-biased toward using cup rather than local motions; if it is too
  * low, the algorithm may spend more time than is strictly optimal
  * looking for non-cup motions.  Profile the optimizer using the `t'
  * command of the exerciser (see below), and round to the nearest integer.
@@ -97,7 +98,7 @@
 
 /*
  * LONG_DIST is the distance we consider to be just as costly to move over as a
- * cup sequence is to emit.  In other words, it's the length of a cup sequence
+ * cup sequence is to emit.  In other words, it is the length of a cup sequence
  * adjusted for average computation overhead.  The magic number is the length
  * of "\033[yy;xxH", the typical cup sequence these days.
  */
@@ -147,7 +148,7 @@
  *	int		_rep_cost;	// cost of (repeat_char)
  *
  * The USE_HARD_TABS switch controls whether it is reliable to use tab/backtabs
- * for local motions.  On many systems, it's not, due to uncertainties about
+ * for local motions.  On many systems, it is not, due to uncertainties about
  * tab delays and whether or not tabs will be expanded in raw mode.  If you
  * have parm_right_cursor, tab motions don't win you a lot anyhow.
  */
@@ -159,7 +160,7 @@
 #define CUR SP_TERMTYPE
 #endif
 
-MODULE_ID("$Id: lib_mvcur.c,v 1.133 2013/05/25 23:59:41 tom Exp $")
+MODULE_ID("$Id: lib_mvcur.c,v 1.156 2021/09/04 10:29:15 tom Exp $")
 
 #define WANT_CHAR(sp, y, x) NewScreen(sp)->_line[y].text[x]	/* desired state */
 
@@ -278,8 +279,8 @@ reset_scroll_region(NCURSES_SP_DCL0)
 {
     if (change_scroll_region) {
 	NCURSES_PUTP2("change_scroll_region",
-		      TPARM_2(change_scroll_region,
-			      0, screen_lines(SP_PARM) - 1));
+		      TIPARM_2(change_scroll_region,
+			       0, screen_lines(SP_PARM) - 1));
     }
 }
 
@@ -327,7 +328,7 @@ NCURSES_EXPORT(void)
 NCURSES_SP_NAME(_nc_mvcur_init) (NCURSES_SP_DCL0)
 /* initialize the cost structure */
 {
-    if (SP_PARM->_ofp && isatty(fileno(SP_PARM->_ofp))) {
+    if (SP_PARM->_ofp && NC_ISATTY(fileno(SP_PARM->_ofp))) {
 	SP_PARM->_char_padding = ((BAUDBYTE * 1000 * 10)
 				  / (BAUDRATE(SP_PARM) > 0
 				     ? BAUDRATE(SP_PARM)
@@ -344,7 +345,9 @@ NCURSES_SP_NAME(_nc_mvcur_init) (NCURSES_SP_DCL0)
     SP_PARM->_home_cost = CostOf(cursor_home, 0);
     SP_PARM->_ll_cost = CostOf(cursor_to_ll, 0);
 #if USE_HARD_TABS
-    if (getenv("NCURSES_NO_HARD_TABS") == 0) {
+    if (getenv("NCURSES_NO_HARD_TABS") == 0
+	&& dest_tabs_magic_smso == 0
+	&& HasHardTabs()) {
 	SP_PARM->_ht_cost = CostOf(tab, 0);
 	SP_PARM->_cbt_cost = CostOf(back_tab, 0);
     } else {
@@ -396,13 +399,13 @@ NCURSES_SP_NAME(_nc_mvcur_init) (NCURSES_SP_DCL0)
      * All these averages depend on the assumption that all parameter values
      * are equally probable.
      */
-    SP_PARM->_cup_cost = CostOf(TPARM_2(SP_PARM->_address_cursor, 23, 23), 1);
-    SP_PARM->_cub_cost = CostOf(TPARM_1(parm_left_cursor, 23), 1);
-    SP_PARM->_cuf_cost = CostOf(TPARM_1(parm_right_cursor, 23), 1);
-    SP_PARM->_cud_cost = CostOf(TPARM_1(parm_down_cursor, 23), 1);
-    SP_PARM->_cuu_cost = CostOf(TPARM_1(parm_up_cursor, 23), 1);
-    SP_PARM->_hpa_cost = CostOf(TPARM_1(column_address, 23), 1);
-    SP_PARM->_vpa_cost = CostOf(TPARM_1(row_address, 23), 1);
+    SP_PARM->_cup_cost = CostOf(TIPARM_2(SP_PARM->_address_cursor, 23, 23), 1);
+    SP_PARM->_cub_cost = CostOf(TIPARM_1(parm_left_cursor, 23), 1);
+    SP_PARM->_cuf_cost = CostOf(TIPARM_1(parm_right_cursor, 23), 1);
+    SP_PARM->_cud_cost = CostOf(TIPARM_1(parm_down_cursor, 23), 1);
+    SP_PARM->_cuu_cost = CostOf(TIPARM_1(parm_up_cursor, 23), 1);
+    SP_PARM->_hpa_cost = CostOf(TIPARM_1(column_address, 23), 1);
+    SP_PARM->_vpa_cost = CostOf(TIPARM_1(row_address, 23), 1);
 
     /* non-parameterized screen-update strings */
     SP_PARM->_ed_cost = NormalizedCost(clr_eos, 1);
@@ -419,17 +422,16 @@ NCURSES_SP_NAME(_nc_mvcur_init) (NCURSES_SP_DCL0)
 	SP_PARM->_el_cost = 0;
 
     /* parameterized screen-update strings */
-    SP_PARM->_dch_cost = NormalizedCost(TPARM_1(parm_dch, 23), 1);
-    SP_PARM->_ich_cost = NormalizedCost(TPARM_1(parm_ich, 23), 1);
-    SP_PARM->_ech_cost = NormalizedCost(TPARM_1(erase_chars, 23), 1);
-    SP_PARM->_rep_cost = NormalizedCost(TPARM_2(repeat_char, ' ', 23), 1);
+    SP_PARM->_dch_cost = NormalizedCost(TIPARM_1(parm_dch, 23), 1);
+    SP_PARM->_ich_cost = NormalizedCost(TIPARM_1(parm_ich, 23), 1);
+    SP_PARM->_ech_cost = NormalizedCost(TIPARM_1(erase_chars, 23), 1);
+    SP_PARM->_rep_cost = NormalizedCost(TIPARM_2(repeat_char, ' ', 23), 1);
 
-    SP_PARM->_cup_ch_cost = NormalizedCost(
-					      TPARM_2(SP_PARM->_address_cursor,
-						      23, 23),
-					      1);
-    SP_PARM->_hpa_ch_cost = NormalizedCost(TPARM_1(column_address, 23), 1);
-    SP_PARM->_cuf_ch_cost = NormalizedCost(TPARM_1(parm_right_cursor, 23), 1);
+    SP_PARM->_cup_ch_cost = NormalizedCost(TIPARM_2(SP_PARM->_address_cursor,
+						    23, 23),
+					   1);
+    SP_PARM->_hpa_ch_cost = NormalizedCost(TIPARM_1(column_address, 23), 1);
+    SP_PARM->_cuf_ch_cost = NormalizedCost(TIPARM_1(parm_right_cursor, 23), 1);
     SP_PARM->_inline_cost = min(SP_PARM->_cup_ch_cost,
 				min(SP_PARM->_hpa_ch_cost,
 				    SP_PARM->_cuf_ch_cost));
@@ -450,8 +452,8 @@ NCURSES_SP_NAME(_nc_mvcur_init) (NCURSES_SP_DCL0)
 
     /*
      * A different, possibly better way to arrange this would be to set the
-     * SCREEN's _endwin to TRUE at window initialization time and let this be
-     * called by doupdate's return-from-shellout code.
+     * SCREEN's _endwin at window initialization time and let this be called by
+     * doupdate's return-from-shellout code.
      */
     NCURSES_SP_NAME(_nc_mvcur_resume) (NCURSES_SP_ARG);
 }
@@ -560,7 +562,7 @@ relative_move(NCURSES_SP_DCLx
 	vcost = INFINITY;
 
 	if (row_address != 0
-	    && _nc_safe_strcat(target, TPARM_1(row_address, to_y))) {
+	    && _nc_safe_strcat(target, TIPARM_1(row_address, to_y))) {
 	    vcost = SP_PARM->_vpa_cost;
 	}
 
@@ -570,12 +572,12 @@ relative_move(NCURSES_SP_DCLx
 	    if (parm_down_cursor
 		&& SP_PARM->_cud_cost < vcost
 		&& _nc_safe_strcat(_nc_str_copy(target, &save),
-				   TPARM_1(parm_down_cursor, n))) {
+				   TIPARM_1(parm_down_cursor, n))) {
 		vcost = SP_PARM->_cud_cost;
 	    }
 
 	    if (cursor_down
-		&& (*cursor_down != '\n' || SP_PARM->_nl)
+		&& (*cursor_down != '\n')
 		&& (n * SP_PARM->_cud1_cost < vcost)) {
 		vcost = repeated_append(_nc_str_copy(target, &save), 0,
 					SP_PARM->_cud1_cost, n, cursor_down);
@@ -586,7 +588,7 @@ relative_move(NCURSES_SP_DCLx
 	    if (parm_up_cursor
 		&& SP_PARM->_cuu_cost < vcost
 		&& _nc_safe_strcat(_nc_str_copy(target, &save),
-				   TPARM_1(parm_up_cursor, n))) {
+				   TIPARM_1(parm_up_cursor, n))) {
 		vcost = SP_PARM->_cuu_cost;
 	    }
 
@@ -610,7 +612,7 @@ relative_move(NCURSES_SP_DCLx
 
 	if (column_address
 	    && _nc_safe_strcat(_nc_str_copy(target, &save),
-			       TPARM_1(column_address, to_x))) {
+			       TIPARM_1(column_address, to_x))) {
 	    hcost = SP_PARM->_hpa_cost;
 	}
 
@@ -620,7 +622,7 @@ relative_move(NCURSES_SP_DCLx
 	    if (parm_right_cursor
 		&& SP_PARM->_cuf_cost < hcost
 		&& _nc_safe_strcat(_nc_str_copy(target, &save),
-				   TPARM_1(parm_right_cursor, n))) {
+				   TIPARM_1(parm_right_cursor, n))) {
 		hcost = SP_PARM->_cuf_cost;
 	    }
 
@@ -713,7 +715,7 @@ relative_move(NCURSES_SP_DCLx
 	    if (parm_left_cursor
 		&& SP_PARM->_cub_cost < hcost
 		&& _nc_safe_strcat(_nc_str_copy(target, &save),
-				   TPARM_1(parm_left_cursor, n))) {
+				   TIPARM_1(parm_left_cursor, n))) {
 		hcost = SP_PARM->_cub_cost;
 	    }
 
@@ -758,7 +760,7 @@ relative_move(NCURSES_SP_DCLx
 #endif /* !NO_OPTIMIZE */
 
 /*
- * With the machinery set up above, it's conceivable that
+ * With the machinery set up above, it is conceivable that
  * onscreen_mvcur could be modified into a recursive function that does
  * an alpha-beta search of motion space, as though it were a chess
  * move tree, with the weight function being boolean and the search
@@ -790,7 +792,8 @@ onscreen_mvcur(NCURSES_SP_DCLx
 #define InitResult _nc_str_init(&result, buffer, sizeof(buffer))
 
     /* tactic #0: use direct cursor addressing */
-    if (_nc_safe_strcpy(InitResult, TPARM_2(SP_PARM->_address_cursor, ynew, xnew))) {
+    if (_nc_safe_strcpy(InitResult, TIPARM_2(SP_PARM->_address_cursor,
+					     ynew, xnew))) {
 	tactic = 0;
 	usecost = SP_PARM->_cup_cost;
 
@@ -935,6 +938,7 @@ onscreen_mvcur(NCURSES_SP_DCLx
 #endif /* MAIN */
 
     if (usecost != INFINITY) {
+	TR(TRACE_MOVE, ("mvcur tactic %d", tactic));
 	TPUTS_TRACE("mvcur");
 	NCURSES_SP_NAME(tputs) (NCURSES_SP_ARGx
 				buffer, 1, myOutCh);
@@ -958,7 +962,7 @@ _nc_real_mvcur(NCURSES_SP_DCLx
     NCURSES_CH_T oldattr;
     int code;
 
-    TR(TRACE_CALLS | TRACE_MOVE, (T_CALLED("_nc_tinfo_mvcur(%p,%d,%d,%d,%d)"),
+    TR(TRACE_CALLS | TRACE_MOVE, (T_CALLED("_nc_real_mvcur(%p,%d,%d,%d,%d)"),
 				  (void *) SP_PARM, yold, xold, ynew, xnew));
 
     if (SP_PARM == 0) {
@@ -988,42 +992,33 @@ _nc_real_mvcur(NCURSES_SP_DCLx
 	    TR(TRACE_CHARPUT, ("turning off (%#lx) %s before move",
 			       (unsigned long) AttrOf(oldattr),
 			       _traceattr(AttrOf(oldattr))));
-	    (void) VIDATTR(SP_PARM, A_NORMAL, 0);
+	    VIDPUTS(SP_PARM, A_NORMAL, 0);
 	}
 
 	if (xold >= screen_columns(SP_PARM)) {
-	    int l;
 
-	    if (SP_PARM->_nl) {
-		l = (xold + 1) / screen_columns(SP_PARM);
-		yold += l;
-		if (yold >= screen_lines(SP_PARM))
-		    l -= (yold - screen_lines(SP_PARM) - 1);
+	    int l = (xold + 1) / screen_columns(SP_PARM);
 
-		if (l > 0) {
-		    if (carriage_return) {
-			NCURSES_PUTP2("carriage_return", carriage_return);
-		    } else {
-			myOutCh(NCURSES_SP_ARGx '\r');
-		    }
-		    xold = 0;
+	    yold += l;
+	    if (yold >= screen_lines(SP_PARM))
+		l -= (yold - screen_lines(SP_PARM) - 1);
 
-		    while (l > 0) {
-			if (newline) {
-			    NCURSES_PUTP2("newline", newline);
-			} else {
-			    myOutCh(NCURSES_SP_ARGx '\n');
-			}
-			l--;
-		    }
+	    if (l > 0) {
+		if (carriage_return) {
+		    NCURSES_PUTP2("carriage_return", carriage_return);
+		} else {
+		    myOutCh(NCURSES_SP_ARGx '\r');
 		}
-	    } else {
-		/*
-		 * If caller set nonl(), we cannot really use newlines to
-		 * position to the next row.
-		 */
-		xold = -1;
-		yold = -1;
+		xold = 0;
+
+		while (l > 0) {
+		    if (newline) {
+			NCURSES_PUTP2("newline", newline);
+		    } else {
+			myOutCh(NCURSES_SP_ARGx '\n');
+		    }
+		    l--;
+		}
 	    }
 	}
 
@@ -1042,7 +1037,7 @@ _nc_real_mvcur(NCURSES_SP_DCLx
 	    TR(TRACE_CHARPUT, ("turning on (%#lx) %s after move",
 			       (unsigned long) AttrOf(oldattr),
 			       _traceattr(AttrOf(oldattr))));
-	    (void) VIDATTR(SP_PARM, AttrOf(oldattr), GetPair(oldattr));
+	    VIDPUTS(SP_PARM, AttrOf(oldattr), GetPair(oldattr));
 	}
     }
     returnCode(code);
@@ -1056,9 +1051,18 @@ NCURSES_SP_NAME(_nc_mvcur) (NCURSES_SP_DCLx
 			    int yold, int xold,
 			    int ynew, int xnew)
 {
-    return _nc_real_mvcur(NCURSES_SP_ARGx yold, xold, ynew, xnew,
-			  NCURSES_SP_NAME(_nc_outch),
-			  TRUE);
+    int rc;
+    rc = _nc_real_mvcur(NCURSES_SP_ARGx yold, xold, ynew, xnew,
+			NCURSES_SP_NAME(_nc_outch),
+			TRUE);
+    /*
+     * With the terminal-driver, we cannot distinguish between internal and
+     * external calls.  Flush the output if the screen has not been
+     * initialized, e.g., when used from low-level terminfo programs.
+     */
+    if ((SP_PARM != 0) && (SP_PARM->_endwin == ewInitial))
+	NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_ARG);
+    return rc;
 }
 
 #if NCURSES_SP_FUNCS
@@ -1077,11 +1081,16 @@ _nc_mvcur(int yold, int xold,
 NCURSES_EXPORT(int)
 TINFO_MVCUR(NCURSES_SP_DCLx int yold, int xold, int ynew, int xnew)
 {
-    return _nc_real_mvcur(NCURSES_SP_ARGx
-			  yold, xold,
-			  ynew, xnew,
-			  NCURSES_SP_NAME(_nc_outch),
-			  TRUE);
+    int rc;
+    rc = _nc_real_mvcur(NCURSES_SP_ARGx
+			yold, xold,
+			ynew, xnew,
+			NCURSES_SP_NAME(_nc_outch),
+			TRUE);
+    if ((SP_PARM != 0) && (SP_PARM->_endwin == ewInitial))
+	NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_ARG);
+    NCURSES_SP_NAME(_nc_flush) (NCURSES_SP_ARG);
+    return rc;
 }
 
 #else /* !USE_TERM_DRIVER */
@@ -1181,13 +1190,12 @@ roll(int n)
 int
 main(int argc GCC_UNUSED, char *argv[]GCC_UNUSED)
 {
-    strcpy(tname, getenv("TERM"));
+    _nc_STRCPY(tname, getenv("TERM"), sizeof(tname));
     load_term();
     _nc_setupscreen(lines, columns, stdout, FALSE, 0);
     baudrate();
 
     _nc_mvcur_init();
-    NC_BUFFERED(FALSE);
 
     (void) puts("The mvcur tester.  Type ? for help");
 
@@ -1198,27 +1206,26 @@ main(int argc GCC_UNUSED, char *argv[]GCC_UNUSED)
 	int fy, fx, ty, tx, n, i;
 	char buf[BUFSIZ], capname[BUFSIZ];
 
-	(void) fputs("> ", stdout);
-	(void) fgets(buf, sizeof(buf), stdin);
+	if (fputs("> ", stdout) == EOF)
+	    break;
+	if (fgets(buf, sizeof(buf), stdin) == 0)
+	    break;
 
+#define PUTS(s)   (void) puts(s)
+#define PUTF(s,t) (void) printf(s,t)
 	if (buf[0] == '?') {
-	    (void) puts("?                -- display this help message");
-	    (void)
-		puts("fy fx ty tx      -- (4 numbers) display (fy,fx)->(ty,tx) move");
-	    (void) puts("s[croll] n t b m -- display scrolling sequence");
-	    (void)
-		printf("r[eload]         -- reload terminal info for %s\n",
-		       termname());
-	    (void)
-		puts("l[oad] <term>    -- load terminal info for type <term>");
-	    (void) puts("d[elete] <cap>   -- delete named capability");
-	    (void) puts("i[nspect]        -- display terminal capabilities");
-	    (void)
-		puts("c[ost]           -- dump cursor-optimization cost table");
-	    (void) puts("o[optimize]      -- toggle movement optimization");
-	    (void)
-		puts("t[orture] <num>  -- torture-test with <num> random moves");
-	    (void) puts("q[uit]           -- quit the program");
+	    PUTS("?                -- display this help message");
+	    PUTS("fy fx ty tx      -- (4 numbers) display (fy,fx)->(ty,tx) move");
+	    PUTS("s[croll] n t b m -- display scrolling sequence");
+	    PUTF("r[eload]         -- reload terminal info for %s\n",
+		 termname());
+	    PUTS("l[oad] <term>    -- load terminal info for type <term>");
+	    PUTS("d[elete] <cap>   -- delete named capability");
+	    PUTS("i[nspect]        -- display terminal capabilities");
+	    PUTS("c[ost]           -- dump cursor-optimization cost table");
+	    PUTS("o[optimize]      -- toggle movement optimization");
+	    PUTS("t[orture] <num>  -- torture-test with <num> random moves");
+	    PUTS("q[uit]           -- quit the program");
 	} else if (sscanf(buf, "%d %d %d %d", &fy, &fx, &ty, &tx) == 4) {
 	    struct timeval before, after;
 
@@ -1246,7 +1253,7 @@ main(int argc GCC_UNUSED, char *argv[]GCC_UNUSED)
 							     before.tv_sec)
 			   * 1000000));
 	} else if (buf[0] == 'r') {
-	    (void) strcpy(tname, termname());
+	    _nc_STRCPY(tname, termname(), sizeof(tname));
 	    load_term();
 	} else if (sscanf(buf, "l %s", tname) == 1) {
 	    load_term();
@@ -1279,8 +1286,9 @@ main(int argc GCC_UNUSED, char *argv[]GCC_UNUSED)
 		}
 	    }
 	} else if (buf[0] == 'i') {
-	    dump_init((char *) NULL, F_TERMINFO, S_TERMINFO, 70, 0, FALSE);
-	    dump_entry(&cur_term->type, FALSE, TRUE, 0, 0);
+	    dump_init(NULL, F_TERMINFO, S_TERMINFO,
+		      FALSE, 70, 0, 0, FALSE, FALSE, 0);
+	    dump_entry(&TerminalType(cur_term), FALSE, TRUE, 0, 0);
 	    putchar('\n');
 	} else if (buf[0] == 'o') {
 	    if (_nc_optimize_enable & OPTIMIZE_MVCUR) {

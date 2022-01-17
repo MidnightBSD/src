@@ -1,5 +1,6 @@
 /****************************************************************************
- * Copyright (c) 1998-2009,2012 Free Software Foundation, Inc.              *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 1998-2012,2015 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -37,41 +38,43 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_req_name.c,v 1.22 2012/07/21 23:27:32 tom Exp $")
+MODULE_ID("$Id: m_req_name.c,v 1.27 2021/06/17 21:11:08 tom Exp $")
 
-static const char *request_names[MAX_MENU_COMMAND - MIN_MENU_COMMAND + 1] =
+#define DATA(s) { s }
+
+static const char request_names[MAX_MENU_COMMAND - MIN_MENU_COMMAND + 1][14] =
 {
-  "LEFT_ITEM",
-  "RIGHT_ITEM",
-  "UP_ITEM",
-  "DOWN_ITEM",
-  "SCR_ULINE",
-  "SCR_DLINE",
-  "SCR_DPAGE",
-  "SCR_UPAGE",
-  "FIRST_ITEM",
-  "LAST_ITEM",
-  "NEXT_ITEM",
-  "PREV_ITEM",
-  "TOGGLE_ITEM",
-  "CLEAR_PATTERN",
-  "BACK_PATTERN",
-  "NEXT_MATCH",
-  "PREV_MATCH"
+  DATA("LEFT_ITEM"),
+  DATA("RIGHT_ITEM"),
+  DATA("UP_ITEM"),
+  DATA("DOWN_ITEM"),
+  DATA("SCR_ULINE"),
+  DATA("SCR_DLINE"),
+  DATA("SCR_DPAGE"),
+  DATA("SCR_UPAGE"),
+  DATA("FIRST_ITEM"),
+  DATA("LAST_ITEM"),
+  DATA("NEXT_ITEM"),
+  DATA("PREV_ITEM"),
+  DATA("TOGGLE_ITEM"),
+  DATA("CLEAR_PATTERN"),
+  DATA("BACK_PATTERN"),
+  DATA("NEXT_MATCH"),
+  DATA("PREV_MATCH")
 };
 
 #define A_SIZE (sizeof(request_names)/sizeof(request_names[0]))
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  const char * menu_request_name (int request);
-|   
+|
 |   Description   :  Get the external name of a menu request.
 |
 |   Return Values :  Pointer to name      - on success
 |                    NULL                 - on invalid request code
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(const char *)
+MENU_EXPORT(const char *)
 menu_request_name(int request)
 {
   T((T_CALLED("menu_request_name(%d)"), request));
@@ -85,27 +88,28 @@ menu_request_name(int request)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  int menu_request_by_name (const char *str);
-|   
+|
 |   Description   :  Search for a request with this name.
 |
 |   Return Values :  Request Id       - on success
 |                    E_NO_MATCH       - request not found
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+MENU_EXPORT(int)
 menu_request_by_name(const char *str)
 {
   /* because the table is so small, it doesn't really hurt
      to run sequentially through it.
    */
   size_t i = 0;
-  char buf[16];
 
   T((T_CALLED("menu_request_by_name(%s)"), _nc_visbuf(str)));
 
   if (str != 0 && (i = strlen(str)) != 0)
     {
+      char buf[16];
+
       if (i > sizeof(buf) - 2)
 	i = sizeof(buf) - 2;
       memcpy(buf, str, i);
