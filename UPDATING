@@ -1,7 +1,17 @@
 Updating Information for MidnightBSD users.
 
+20220116:
+	MidnightBSD 2.1.3
+	
+	mport package manager (20121217)
+	
+	Bug fix for HyperV support in windows 2022 server.
+	
+	Fix register restore for SSE/XMM
 
 20211104:
+	MidnightBSD 2.1.2
+	
         Updated mport 2.2.0 code with bugfixes and new plist features.
 
         Updated tzdata to fix some DST changes in asia
