@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20220117:
+	expat 2.4.3
+
 20220116:
 	Bug fix for HyperV support in windows 2022 server.
 	
