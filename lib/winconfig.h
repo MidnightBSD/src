@@ -6,8 +6,10 @@
                         \___/_/\_\ .__/ \__,_|\__|
                                  |_| XML parser
 
-   Copyright (c) 1997-2000 Thai Open Source Software Center Ltd
-   Copyright (c) 2000-2017 Expat development team
+   Copyright (c) 2000      Clark Cooper <coopercc@users.sourceforge.net>
+   Copyright (c) 2002      Greg Stein <gstein@users.sourceforge.net>
+   Copyright (c) 2005      Karl Waclawek <karl@waclawek.net>
+   Copyright (c) 2017-2021 Sebastian Pipping <sebastian@pipping.org>
    Licensed under the MIT license:
 
    Permission is  hereby granted,  free of charge,  to any  person obtaining
@@ -30,16 +32,14 @@
    USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef WINCONFIG_H
+#define WINCONFIG_H
 
-int XML_URLInit();
-void XML_URLUninit();
-int XML_ProcessURL(XML_Parser parser,
-                   const XML_Char *url,
-                   unsigned flags);
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
 
-#ifdef __cplusplus
-}
-#endif
+#include <memory.h>
+#include <string.h>
+
+#endif /* ndef WINCONFIG_H */
