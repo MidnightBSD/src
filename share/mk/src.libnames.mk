@@ -554,14 +554,10 @@ LIBBSDXMLDIR=	${OBJTOP}/lib/libexpat
 LIBKVMDIR=	${OBJTOP}/lib/libkvm
 LIBPTHREADDIR=	${OBJTOP}/lib/libthr
 LIBMDIR=	${OBJTOP}/lib/msun
-LIBFORMDIR=	${OBJTOP}/lib/ncurses/form
-LIBFORMLIBWDIR=	${OBJTOP}/lib/ncurses/formw
-LIBMENUDIR=	${OBJTOP}/lib/ncurses/menu
-LIBMENULIBWDIR=	${OBJTOP}/lib/ncurses/menuw
-LIBNCURSESDIR=	${OBJTOP}/lib/ncurses/ncurses
-LIBNCURSESWDIR=	${OBJTOP}/lib/ncurses/ncursesw
-LIBPANELDIR=	${OBJTOP}/lib/ncurses/panel
-LIBPANELWDIR=	${OBJTOP}/lib/ncurses/panelw
+LIBFORMWDIR=	${OBJTOP}/lib/ncurses/form
+LIBMENUWDIR=	${OBJTOP}/lib/ncurses/menu
+LIBNCURSESWDIR=	${OBJTOP}/lib/ncurses/ncurses
+LIBPANELWDIR=	${OBJTOP}/lib/ncurses/panel
 LIBCRYPTODIR=	${OBJTOP}/secure/lib/libcrypto
 LIBNETPGPDIR=	${OBJTOP}/secure/lib/libnetpgp
 LIBSSHDIR=	${OBJTOP}/secure/lib/libssh
@@ -570,7 +566,6 @@ LIBTEKENDIR=	${OBJTOP}/sys/teken/libteken
 LIBEGACYDIR=	${OBJTOP}/tools/build
 LIBLNDIR=	${OBJTOP}/usr.bin/lex/lib
 
-LIBTERMCAPDIR=	${LIBNCURSESDIR}
 LIBTERMCAPWDIR=	${LIBNCURSESWDIR}
 
 # Default other library directories to lib/libNAME.
