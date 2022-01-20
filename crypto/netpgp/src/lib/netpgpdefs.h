@@ -29,6 +29,8 @@
 #ifndef NETPGPDEFS_H_
 #define NETPGPDEFS_H_	1
 
+#include <openssl/asn1.h>
+
 #define PRItime		"ll"
 
 #ifdef WIN32
