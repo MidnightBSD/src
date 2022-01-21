@@ -1,12 +1,13 @@
-## $NetBSD: Makefile.am,v 1.3 2009/05/26 05:42:25 lukem Exp $
+## $NetBSD: Makefile.am,v 1.10 2010/11/29 06:21:40 agc Exp $
 
 AM_CFLAGS		= $(WARNCFLAGS)
 
 lib_LTLIBRARIES		= libnetpgp.la
 
-libnetpgp_la_CPPFLAGS	= -I$(top_srcdir)/include
+libnetpgp_la_CPPFLAGS	= -I$(top_srcdir)/include -I../libmj
 
 libnetpgp_la_SOURCES	= \
+	bufgap.c \
 	compress.c \
 	create.c \
 	crypto.c \
@@ -19,10 +20,11 @@ libnetpgp_la_SOURCES	= \
 	packet-show.c \
 	reader.c \
 	signature.c \
+	ssh2pgp.c \
 	symmetric.c \
 	validate.c \
 	writer.c
 
-man3_MANS		= libnetpgp.3
+libnetpgp_la_LIBADD	= ../libmj/libmj.la
 
 dist_man_MANS		= libnetpgp.3

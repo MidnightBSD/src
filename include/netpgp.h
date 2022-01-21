@@ -29,6 +29,18 @@
 #ifndef NETPGP_H_
 #define NETPGP_H_
 
+#ifndef __BEGIN_DECLS
+#  if defined(__cplusplus)
+#  define __BEGIN_DECLS           extern "C" {
+#  define __END_DECLS             }
+#  else
+#  define __BEGIN_DECLS
+#  define __END_DECLS
+#  endif
+#endif
+
+__BEGIN_DECLS
+
 /* structure used to hold (key,value) pair information */
 typedef struct netpgp_t {
 	unsigned	  c;		/* # of elements used */
@@ -38,6 +50,7 @@ typedef struct netpgp_t {
 	void		 *pubring;	/* public key ring */
 	void		 *secring;	/* s3kr1t key ring */
 	void		 *io;		/* the io struct for results/errs */
+	void		 *passfp;	/* file pointer for password input */
 } netpgp_t;
 
 /* begin and end */
@@ -53,11 +66,18 @@ int netpgp_list_packets(netpgp_t *, char *, int, char *);
 /* variables */
 int netpgp_setvar(netpgp_t *, const char *, const char *);
 char *netpgp_getvar(netpgp_t *, const char *);
+int netpgp_incvar(netpgp_t *, const char *, const int);
+int netpgp_unsetvar(netpgp_t *, const char *);
+
+/* set home directory information */
+int netpgp_set_homedir(netpgp_t *, char *, const char *, const int);
 
 /* key management */
-int netpgp_list_keys(netpgp_t *);
+int netpgp_list_keys(netpgp_t *, const int);
+int netpgp_list_keys_json(netpgp_t *, char **, const int);
 int netpgp_find_key(netpgp_t *, char *);
-int netpgp_export_key(netpgp_t *, char *);
+char *netpgp_get_key(netpgp_t *, const char *, const char *);
+char *netpgp_export_key(netpgp_t *, char *);
 int netpgp_import_key(netpgp_t *, char *);
 int netpgp_generate_key(netpgp_t *, char *, int);
 
@@ -66,5 +86,25 @@ int netpgp_encrypt_file(netpgp_t *, const char *, const char *, char *, int);
 int netpgp_decrypt_file(netpgp_t *, const char *, char *, int);
 int netpgp_sign_file(netpgp_t *, const char *, const char *, char *, int, int, int);
 int netpgp_verify_file(netpgp_t *, const char *, const char *, int);
+
+/* memory signing and encryption */
+int netpgp_sign_memory(netpgp_t *, const char *, char *, size_t, char *, size_t, const unsigned, const unsigned);
+int netpgp_verify_memory(netpgp_t *, const void *, const size_t, void *, size_t, const int);
+int netpgp_encrypt_memory(netpgp_t *, const char *, void *, const size_t, char *, size_t, int);
+int netpgp_decrypt_memory(netpgp_t *, const void *, const size_t, char *, size_t, const int);
+
+/* match and hkp-related functions */
+int netpgp_match_keys_json(netpgp_t *, char **, char *, const char *, const int);
+int netpgp_match_keys(netpgp_t *, char *, const char *, void *, const int);
+int netpgp_match_pubkeys(netpgp_t *, char *, void *);
+int netpgp_format_json(void *, const char *, const int);
+
+int netpgp_validate_sigs(netpgp_t *);
+
+/* save pgp key in ssh format */
+int netpgp_write_sshkey(netpgp_t *, char *, const char *, char *, size_t);
+
+
+__END_DECLS
 
 #endif /* !NETPGP_H_ */

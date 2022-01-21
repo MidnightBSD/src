@@ -54,15 +54,11 @@
 
 #if defined(__NetBSD__)
 __COPYRIGHT("@(#) Copyright (c) 2009 The NetBSD Foundation, Inc. All rights reserved.");
-__RCSID("$NetBSD: crypto.c,v 1.15 2009/05/31 23:26:20 agc Exp $");
+__RCSID("$NetBSD: crypto.c,v 1.36 2014/02/17 07:39:19 agc Exp $");
 #endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -88,93 +84,110 @@ __RCSID("$NetBSD: crypto.c,v 1.15 2009/05/31 23:26:20 agc Exp $");
 \note only RSA at present
 */
 int 
-__ops_decrypt_decode_mpi(unsigned char *buf,
+pgp_decrypt_decode_mpi(uint8_t *buf,
 				unsigned buflen,
+				const BIGNUM *g_to_k,
 				const BIGNUM *encmpi,
-				const __ops_seckey_t *seckey)
+				const pgp_seckey_t *seckey)
 {
-	unsigned char   encmpibuf[NETPGP_BUFSIZ];
-	unsigned char   mpibuf[NETPGP_BUFSIZ];
 	unsigned        mpisize;
-	int             n;
+	uint8_t		encmpibuf[NETPGP_BUFSIZ];
+	uint8_t		mpibuf[NETPGP_BUFSIZ];
+	uint8_t		gkbuf[NETPGP_BUFSIZ];
 	int             i;
+	int             n;
 
-	mpisize = BN_num_bytes(encmpi);
+	mpisize = (unsigned)BN_num_bytes(encmpi);
 	/* MPI can't be more than 65,536 */
 	if (mpisize > sizeof(encmpibuf)) {
 		(void) fprintf(stderr, "mpisize too big %u\n", mpisize);
 		return -1;
 	}
-	BN_bn2bin(encmpi, encmpibuf);
-
-	if (seckey->pubkey.alg != OPS_PKA_RSA) {
+	switch (seckey->pubkey.alg) {
+	case PGP_PKA_RSA:
+		BN_bn2bin(encmpi, encmpibuf);
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "encrypted", encmpibuf, 16);
+		}
+		n = pgp_rsa_private_decrypt(mpibuf, encmpibuf,
+					(unsigned)(BN_num_bits(encmpi) + 7) / 8,
+					&seckey->key.rsa, &seckey->pubkey.key.rsa);
+		if (n == -1) {
+			(void) fprintf(stderr, "ops_rsa_private_decrypt failure\n");
+			return -1;
+		}
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "decrypted", mpibuf, 16);
+		}
+		if (n <= 0) {
+			return -1;
+		}
+		/* Decode EME-PKCS1_V1_5 (RFC 2437). */
+		if (mpibuf[0] != 0 || mpibuf[1] != 2) {
+			return -1;
+		}
+		/* Skip the random bytes. */
+		for (i = 2; i < n && mpibuf[i]; ++i) {
+		}
+		if (i == n || i < 10) {
+			return -1;
+		}
+		/* Skip the zero */
+		i += 1;
+		/* this is the unencoded m buf */
+		if ((unsigned) (n - i) <= buflen) {
+			(void) memcpy(buf, mpibuf + i, (unsigned)(n - i)); /* XXX - Flexelint */
+		}
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "decoded m", buf, (size_t)(n - i));
+		}
+		return n - i;
+	case PGP_PKA_DSA:
+	case PGP_PKA_ELGAMAL:
+		(void) BN_bn2bin(g_to_k, gkbuf);
+		(void) BN_bn2bin(encmpi, encmpibuf);
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "encrypted", encmpibuf, 16);
+		}
+		n = pgp_elgamal_private_decrypt(mpibuf, gkbuf, encmpibuf,
+					(unsigned)BN_num_bytes(encmpi),
+					&seckey->key.elgamal, &seckey->pubkey.key.elgamal);
+		if (n == -1) {
+			(void) fprintf(stderr, "ops_elgamal_private_decrypt failure\n");
+			return -1;
+		}
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "decrypted", mpibuf, 16);
+		}
+		if (n <= 0) {
+			return -1;
+		}
+		/* Decode EME-PKCS1_V1_5 (RFC 2437). */
+		if (mpibuf[0] != 2) {
+			fprintf(stderr, "mpibuf mismatch\n");
+			return -1;
+		}
+		/* Skip the random bytes. */
+		for (i = 1; i < n && mpibuf[i]; ++i) {
+		}
+		if (i == n || i < 10) {
+			fprintf(stderr, "175 n %d\n", n);
+			return -1;
+		}
+		/* Skip the zero */
+		i += 1;
+		/* this is the unencoded m buf */
+		if ((unsigned) (n - i) <= buflen) {
+			(void) memcpy(buf, mpibuf + i, (unsigned)(n - i)); /* XXX - Flexelint */
+		}
+		if (pgp_get_debug_level(__FILE__)) {
+			hexdump(stderr, "decoded m", buf, (size_t)(n - i));
+		}
+		return n - i;
+	default:
 		(void) fprintf(stderr, "pubkey algorithm wrong\n");
 		return -1;
 	}
-
-	if (__ops_get_debug_level(__FILE__)) {
-		(void) fprintf(stderr, "\nDECRYPTING\n");
-		(void) fprintf(stderr, "encrypted data     : ");
-		for (i = 0; i < 16; i++) {
-			(void) fprintf(stderr, "%2x ", encmpibuf[i]);
-		}
-		(void) fprintf(stderr, "\n");
-	}
-	n = __ops_rsa_private_decrypt(mpibuf, encmpibuf,
-				(unsigned)(BN_num_bits(encmpi) + 7) / 8,
-				&seckey->key.rsa, &seckey->pubkey.key.rsa);
-	if (n == -1) {
-		(void) fprintf(stderr, "ops_rsa_private_decrypt failure\n");
-		return -1;
-	}
-
-	if (__ops_get_debug_level(__FILE__)) {
-		(void) fprintf(stderr, "decrypted encoded m buf     : ");
-		for (i = 0; i < 16; i++) {
-			(void) fprintf(stderr, "%2x ", mpibuf[i]);
-		}
-		(void) fprintf(stderr, "\n");
-	}
-	if (n <= 0) {
-		return -1;
-	}
-
-	if (__ops_get_debug_level(__FILE__)) {
-		printf(" decrypted=%d ", n);
-		hexdump(stdout, mpibuf, (unsigned)n, "");
-		printf("\n");
-	}
-	/* Decode EME-PKCS1_V1_5 (RFC 2437). */
-
-	if (mpibuf[0] != 0 || mpibuf[1] != 2) {
-		return -1;
-	}
-
-	/* Skip the random bytes. */
-	for (i = 2; i < n && mpibuf[i]; ++i) {
-	}
-
-	if (i == n || i < 10) {
-		return -1;
-	}
-
-	/* Skip the zero */
-	i += 1;
-
-	/* this is the unencoded m buf */
-	if ((unsigned) (n - i) <= buflen) {
-		(void) memcpy(buf, mpibuf + i, (unsigned)(n - i));
-	}
-
-	if (__ops_get_debug_level(__FILE__)) {
-		int             j;
-
-		printf("decoded m buf:\n");
-		for (j = 0; j < n - i; j++)
-			printf("%2x ", buf[j]);
-		printf("\n");
-	}
-	return n - i;
 }
 
 /**
@@ -182,24 +195,24 @@ __ops_decrypt_decode_mpi(unsigned char *buf,
 \brief RSA-encrypt an MPI
 */
 unsigned 
-__ops_rsa_encrypt_mpi(const unsigned char *encoded_m_buf,
+pgp_rsa_encrypt_mpi(const uint8_t *encoded_m_buf,
 		    const size_t sz_encoded_m_buf,
-		    const __ops_pubkey_t * pubkey,
-		    __ops_pk_sesskey_parameters_t * skp)
+		    const pgp_pubkey_t * pubkey,
+		    pgp_pk_sesskey_params_t * skp)
 {
 
-	unsigned char   encmpibuf[NETPGP_BUFSIZ];
-	int             n = 0;
+	uint8_t   encmpibuf[NETPGP_BUFSIZ];
+	int             n;
 
-	if (sz_encoded_m_buf != (size_t) BN_num_bytes(pubkey->key.rsa.n)) {
+	if (sz_encoded_m_buf != (size_t)BN_num_bytes(pubkey->key.rsa.n)) {
 		(void) fprintf(stderr, "sz_encoded_m_buf wrong\n");
 		return 0;
 	}
 
-	n = __ops_rsa_public_encrypt(encmpibuf, encoded_m_buf,
+	n = pgp_rsa_public_encrypt(encmpibuf, encoded_m_buf,
 				sz_encoded_m_buf, &pubkey->key.rsa);
 	if (n == -1) {
-		(void) fprintf(stderr, "__ops_rsa_public_encrypt failure\n");
+		(void) fprintf(stderr, "pgp_rsa_public_encrypt failure\n");
 		return 0;
 	}
 
@@ -208,19 +221,119 @@ __ops_rsa_encrypt_mpi(const unsigned char *encoded_m_buf,
 
 	skp->rsa.encrypted_m = BN_bin2bn(encmpibuf, n, NULL);
 
-	if (__ops_get_debug_level(__FILE__)) {
-		int             i;
-		(void) fprintf(stderr, "encrypted mpi buf     : ");
-		for (i = 0; i < 16; i++) {
-			(void) fprintf(stderr, "%2x ", encmpibuf[i]);
-		}
-		(void) fprintf(stderr, "\n");
+	if (pgp_get_debug_level(__FILE__)) {
+		hexdump(stderr, "encrypted mpi", encmpibuf, 16);
 	}
 	return 1;
 }
 
-static          __ops_cb_ret_t
-callback_write_parsed(const __ops_packet_t *, __ops_cbdata_t *);
+/**
+\ingroup Core_MPI
+\brief Elgamal-encrypt an MPI
+*/
+unsigned 
+pgp_elgamal_encrypt_mpi(const uint8_t *encoded_m_buf,
+		    const size_t sz_encoded_m_buf,
+		    const pgp_pubkey_t * pubkey,
+		    pgp_pk_sesskey_params_t * skp)
+{
+
+	uint8_t   encmpibuf[NETPGP_BUFSIZ];
+	uint8_t   g_to_k[NETPGP_BUFSIZ];
+	int             n;
+
+	if (sz_encoded_m_buf != (size_t)BN_num_bytes(pubkey->key.elgamal.p)) {
+		(void) fprintf(stderr, "sz_encoded_m_buf wrong\n");
+		return 0;
+	}
+
+	n = pgp_elgamal_public_encrypt(g_to_k, encmpibuf, encoded_m_buf,
+				sz_encoded_m_buf, &pubkey->key.elgamal);
+	if (n == -1) {
+		(void) fprintf(stderr, "pgp_elgamal_public_encrypt failure\n");
+		return 0;
+	}
+
+	if (n <= 0)
+		return 0;
+
+	skp->elgamal.g_to_k = BN_bin2bn(g_to_k, n / 2, NULL);
+	skp->elgamal.encrypted_m = BN_bin2bn(encmpibuf, n / 2, NULL);
+
+	if (pgp_get_debug_level(__FILE__)) {
+		hexdump(stderr, "encrypted mpi", encmpibuf, 16);
+	}
+	return 1;
+}
+
+static pgp_cb_ret_t
+write_parsed_cb(const pgp_packet_t *pkt, pgp_cbdata_t *cbinfo)
+{
+	const pgp_contents_t	*content = &pkt->u;
+
+	if (pgp_get_debug_level(__FILE__)) {
+		printf("write_parsed_cb: ");
+		pgp_print_packet(&cbinfo->printstate, pkt);
+	}
+	if (pkt->tag != PGP_PTAG_CT_UNARMOURED_TEXT && cbinfo->printstate.skipping) {
+		puts("...end of skip");
+		cbinfo->printstate.skipping = 0;
+	}
+	switch (pkt->tag) {
+	case PGP_PTAG_CT_UNARMOURED_TEXT:
+		printf("PGP_PTAG_CT_UNARMOURED_TEXT\n");
+		if (!cbinfo->printstate.skipping) {
+			puts("Skipping...");
+			cbinfo->printstate.skipping = 1;
+		}
+		if (fwrite(content->unarmoured_text.data, 1,
+		       content->unarmoured_text.length, stdout) != content->unarmoured_text.length) {
+			fprintf(stderr, "unable to write unarmoured text data\n");
+			cbinfo->printstate.skipping = 1;
+		}
+		break;
+
+	case PGP_PTAG_CT_PK_SESSION_KEY:
+		return pgp_pk_sesskey_cb(pkt, cbinfo);
+
+	case PGP_GET_SECKEY:
+		if (cbinfo->sshseckey) {
+			*content->get_seckey.seckey = cbinfo->sshseckey;
+			return PGP_KEEP_MEMORY;
+		}
+		return pgp_get_seckey_cb(pkt, cbinfo);
+
+	case PGP_GET_PASSPHRASE:
+		return cbinfo->cryptinfo.getpassphrase(pkt, cbinfo);
+
+	case PGP_PTAG_CT_LITDATA_BODY:
+		return pgp_litdata_cb(pkt, cbinfo);
+
+	case PGP_PTAG_CT_ARMOUR_HEADER:
+	case PGP_PTAG_CT_ARMOUR_TRAILER:
+	case PGP_PTAG_CT_ENCRYPTED_PK_SESSION_KEY:
+	case PGP_PTAG_CT_COMPRESSED:
+	case PGP_PTAG_CT_LITDATA_HEADER:
+	case PGP_PTAG_CT_SE_IP_DATA_BODY:
+	case PGP_PTAG_CT_SE_IP_DATA_HEADER:
+	case PGP_PTAG_CT_SE_DATA_BODY:
+	case PGP_PTAG_CT_SE_DATA_HEADER:
+		/* Ignore these packets  */
+		/* They're handled in parse_packet() */
+		/* and nothing else needs to be done */
+		break;
+
+	default:
+		if (pgp_get_debug_level(__FILE__)) {
+			fprintf(stderr, "Unexpected packet tag=%d (0x%x)\n",
+				pkt->tag,
+				pkt->tag);
+		}
+		break;
+	}
+
+	return PGP_RELEASE_MEMORY;
+}
 
 /**
 \ingroup HighLevel_Crypto
@@ -233,44 +346,87 @@ Encrypt a file
 \return 1 if OK; else 0
 */
 unsigned 
-__ops_encrypt_file(__ops_io_t *io,
+pgp_encrypt_file(pgp_io_t *io,
 			const char *infile,
 			const char *outfile,
-			const __ops_keydata_t *pubkey,
+			const pgp_key_t *key,
 			const unsigned use_armour,
-			const unsigned allow_overwrite)
+			const unsigned allow_overwrite,
+			const char *cipher)
 {
-	__ops_output_t	*output;
-	__ops_memory_t	*inmem;
-	int		 fd_out = 0;
+	pgp_output_t	*output;
+	pgp_memory_t	*inmem;
+	int		 fd_out;
 
-	__OPS_USED(io);
-	inmem = __ops_memory_new();
-	if (!__ops_mem_readfile(inmem, infile)) {
+	__PGP_USED(io);
+	inmem = pgp_memory_new();
+	if (!pgp_mem_readfile(inmem, infile)) {
 		return 0;
 	}
-	fd_out = __ops_setup_file_write(&output, outfile, allow_overwrite);
+	fd_out = pgp_setup_file_write(&output, outfile, allow_overwrite);
 	if (fd_out < 0) {
-		__ops_memory_free(inmem);
+		pgp_memory_free(inmem);
 		return 0;
 	}
 
 	/* set armoured/not armoured here */
 	if (use_armour) {
-		__ops_writer_push_armor_msg(output);
+		pgp_writer_push_armor_msg(output);
 	}
 
 	/* Push the encrypted writer */
-	__ops_push_enc_se_ip(output, pubkey);
+	if (!pgp_push_enc_se_ip(output, key, cipher)) {
+		pgp_memory_free(inmem);
+		return 0;
+	}
 
 	/* This does the writing */
-	__ops_write(output, __ops_mem_data(inmem), __ops_mem_len(inmem));
+	pgp_write(output, pgp_mem_data(inmem), (unsigned)pgp_mem_len(inmem));
 
 	/* tidy up */
-	__ops_memory_free(inmem);
-	__ops_teardown_file_write(output, fd_out);
+	pgp_memory_free(inmem);
+	pgp_teardown_file_write(output, fd_out);
 
 	return 1;
+}
+
+/* encrypt the contents of the input buffer, and return the mem structure */
+pgp_memory_t *
+pgp_encrypt_buf(pgp_io_t *io,
+			const void *input,
+			const size_t insize,
+			const pgp_key_t *pubkey,
+			const unsigned use_armour,
+			const char *cipher)
+{
+	pgp_output_t	*output;
+	pgp_memory_t	*outmem;
+
+	__PGP_USED(io);
+	if (input == NULL) {
+		(void) fprintf(io->errs,
+			"pgp_encrypt_buf: null memory\n");
+		return 0;
+	}
+
+	pgp_setup_memory_write(&output, &outmem, insize);
+
+	/* set armoured/not armoured here */
+	if (use_armour) {
+		pgp_writer_push_armor_msg(output);
+	}
+
+	/* Push the encrypted writer */
+	pgp_push_enc_se_ip(output, pubkey, cipher);
+
+	/* This does the writing */
+	pgp_write(output, input, (unsigned)insize);
+
+	/* tidy up */
+	pgp_writer_close(output);
+	pgp_output_delete(output);
+
+	return outmem;
 }
 
 /**
@@ -281,28 +437,32 @@ __ops_encrypt_file(__ops_io_t *io,
    \param keyring Keyring to use
    \param use_armour Expect armoured text, if set
    \param allow_overwrite Allow output file to overwritten, if set.
-   \param cb_get_passphrase Callback to use to get passphrase
+   \param getpassfunc Callback to use to get passphrase
 */
 
 unsigned 
-__ops_decrypt_file(__ops_io_t *io,
+pgp_decrypt_file(pgp_io_t *io,
 			const char *infile,
 			const char *outfile,
-			__ops_keyring_t *keyring,
+			pgp_keyring_t *secring,
+			pgp_keyring_t *pubring,
 			const unsigned use_armour,
 			const unsigned allow_overwrite,
-			__ops_cbfunc_t *cb_get_passphrase)
+			const unsigned sshkeys,
+			void *passfp,
+			int numtries,
+			pgp_cbfunc_t *getpassfunc)
 {
-	__ops_parseinfo_t	*parse = NULL;
-	const int		 printerrors = 1;
-	char			*filename = NULL;
-	int			 fd_in = 0;
-	int			 fd_out = 0;
+	pgp_stream_t	*parse = NULL;
+	const int	 printerrors = 1;
+	char		*filename = NULL;
+	int		 fd_in;
+	int		 fd_out;
 
 	/* setup for reading from given input file */
-	fd_in = __ops_setup_file_read(io, &parse, infile,
+	fd_in = pgp_setup_file_read(io, &parse, infile,
 				    NULL,
-				    callback_write_parsed,
+				    write_parsed_cb,
 				    0);
 	if (fd_in < 0) {
 		perror(infile);
@@ -310,11 +470,11 @@ __ops_decrypt_file(__ops_io_t *io,
 	}
 	/* setup output filename */
 	if (outfile) {
-		fd_out = __ops_setup_file_write(&parse->cbinfo.output, outfile,
+		fd_out = pgp_setup_file_write(&parse->cbinfo.output, outfile,
 				allow_overwrite);
 		if (fd_out < 0) {
 			perror(outfile);
-			__ops_teardown_file_read(parse, fd_in);
+			pgp_teardown_file_read(parse, fd_in);
 			return 0;
 		}
 	} else {
@@ -324,22 +484,23 @@ __ops_decrypt_file(__ops_io_t *io,
 
 		if (strcmp(suffix, ".gpg") == 0 ||
 		    strcmp(suffix, ".asc") == 0) {
-			filenamelen = strlen(infile) - strlen(suffix);
-			filename = calloc(1, filenamelen + 1);
+			filenamelen = (unsigned)(strlen(infile) - strlen(suffix));
+			if ((filename = calloc(1, filenamelen + 1)) == NULL) {
+				(void) fprintf(stderr, "can't allocate %" PRIsize "d bytes\n",
+					(size_t)(filenamelen + 1));
+				return 0;
+			}
 			(void) strncpy(filename, infile, filenamelen);
 			filename[filenamelen] = 0x0;
 		}
 
-		fd_out = __ops_setup_file_write(&parse->cbinfo.output,
+		fd_out = pgp_setup_file_write(&parse->cbinfo.output,
 					filename, allow_overwrite);
 		if (fd_out < 0) {
 			perror(filename);
-			(void) free(filename);
-			__ops_teardown_file_read(parse, fd_in);
+			free(filename);
+			pgp_teardown_file_read(parse, fd_in);
 			return 0;
-		}
-		if (filename) {
-			(void) free(filename);
 		}
 	}
 
@@ -348,90 +509,104 @@ __ops_decrypt_file(__ops_io_t *io,
 	/* setup for writing decrypted contents to given output file */
 
 	/* setup keyring and passphrase callback */
-	parse->cbinfo.cryptinfo.keyring = keyring;
-	parse->cbinfo.cryptinfo.getpassphrase = cb_get_passphrase;
+	parse->cbinfo.cryptinfo.secring = secring;
+	parse->cbinfo.passfp = passfp;
+	parse->cbinfo.cryptinfo.getpassphrase = getpassfunc;
+	parse->cbinfo.cryptinfo.pubring = pubring;
+	parse->cbinfo.sshseckey = (sshkeys) ? &secring->keys[0].key.seckey : NULL;
+	parse->cbinfo.numtries = numtries;
 
 	/* Set up armour/passphrase options */
 	if (use_armour) {
-		__ops_reader_push_dearmour(parse);
+		pgp_reader_push_dearmour(parse);
 	}
 
 	/* Do it */
-	__ops_parse(parse, printerrors);
+	pgp_parse(parse, printerrors);
 
 	/* Unsetup */
 	if (use_armour) {
-		__ops_reader_pop_dearmour(parse);
+		pgp_reader_pop_dearmour(parse);
+	}
+
+	/* if we didn't get the passphrase, unlink output file */
+	if (!parse->cbinfo.gotpass) {
+		(void) unlink((filename) ? filename : outfile);
 	}
 
 	if (filename) {
-		__ops_teardown_file_write(parse->cbinfo.output, fd_out);
+		pgp_teardown_file_write(parse->cbinfo.output, fd_out);
+		free(filename);
 	}
-	__ops_teardown_file_read(parse, fd_in);
+	pgp_teardown_file_read(parse, fd_in);
 	/* \todo cleardown crypt */
 
 	return 1;
 }
 
-static __ops_cb_ret_t
-callback_write_parsed(const __ops_packet_t *pkt, __ops_cbdata_t *cbinfo)
+/* decrypt an area of memory */
+pgp_memory_t *
+pgp_decrypt_buf(pgp_io_t *io,
+			const void *input,
+			const size_t insize,
+			pgp_keyring_t *secring,
+			pgp_keyring_t *pubring,
+			const unsigned use_armour,
+			const unsigned sshkeys,
+			void *passfp,
+			int numtries,
+			pgp_cbfunc_t *getpassfunc)
 {
-	const __ops_contents_t	*content = &pkt->u;
-	static unsigned		 skipping;
+	pgp_stream_t	*parse = NULL;
+	pgp_memory_t	*outmem;
+	pgp_memory_t	*inmem;
+	const int	 printerrors = 1;
 
-	if (__ops_get_debug_level(__FILE__)) {
-		printf("callback_write_parsed: ");
-		__ops_print_packet(pkt);
-	}
-	if (pkt->tag != OPS_PTAG_CT_UNARMOURED_TEXT && skipping) {
-		puts("...end of skip");
-		skipping = 0;
-	}
-	switch (pkt->tag) {
-	case OPS_PTAG_CT_UNARMOURED_TEXT:
-		printf("OPS_PTAG_CT_UNARMOURED_TEXT\n");
-		if (!skipping) {
-			puts("Skipping...");
-			skipping = 1;
-		}
-		fwrite(content->unarmoured_text.data, 1,
-		       content->unarmoured_text.length, stdout);
-		break;
-
-	case OPS_PTAG_CT_PK_SESSION_KEY:
-		return pk_sesskey_cb(pkt, cbinfo);
-
-	case OPS_GET_SECKEY:
-		return get_seckey_cb(pkt, cbinfo);
-
-	case OPS_GET_PASSPHRASE:
-		return cbinfo->cryptinfo.getpassphrase(pkt, cbinfo);
-
-	case OPS_PTAG_CT_LITERAL_DATA_BODY:
-		return litdata_cb(pkt, cbinfo);
-
-	case OPS_PTAG_CT_ARMOUR_HEADER:
-	case OPS_PTAG_CT_ARMOUR_TRAILER:
-	case OPS_PTAG_CT_ENCRYPTED_PK_SESSION_KEY:
-	case OPS_PTAG_CT_COMPRESSED:
-	case OPS_PTAG_CT_LITERAL_DATA_HEADER:
-	case OPS_PTAG_CT_SE_IP_DATA_BODY:
-	case OPS_PTAG_CT_SE_IP_DATA_HEADER:
-	case OPS_PTAG_CT_SE_DATA_BODY:
-	case OPS_PTAG_CT_SE_DATA_HEADER:
-		/* Ignore these packets  */
-		/* They're handled in __ops_parse_packet() */
-		/* and nothing else needs to be done */
-		break;
-
-	default:
-		if (__ops_get_debug_level(__FILE__)) {
-			fprintf(stderr, "Unexpected packet tag=%d (0x%x)\n",
-				pkt->tag,
-				pkt->tag);
-		}
-		break;
+	if (input == NULL) {
+		(void) fprintf(io->errs,
+			"pgp_encrypt_buf: null memory\n");
+		return 0;
 	}
 
-	return OPS_RELEASE_MEMORY;
+	inmem = pgp_memory_new();
+	pgp_memory_add(inmem, input, insize);
+
+	/* set up to read from memory */
+	pgp_setup_memory_read(io, &parse, inmem,
+				    NULL,
+				    write_parsed_cb,
+				    0);
+
+	/* setup for writing decrypted contents to given output file */
+	pgp_setup_memory_write(&parse->cbinfo.output, &outmem, insize);
+
+	/* setup keyring and passphrase callback */
+	parse->cbinfo.cryptinfo.secring = secring;
+	parse->cbinfo.cryptinfo.pubring = pubring;
+	parse->cbinfo.passfp = passfp;
+	parse->cbinfo.cryptinfo.getpassphrase = getpassfunc;
+	parse->cbinfo.sshseckey = (sshkeys) ? &secring->keys[0].key.seckey : NULL;
+	parse->cbinfo.numtries = numtries;
+
+	/* Set up armour/passphrase options */
+	if (use_armour) {
+		pgp_reader_push_dearmour(parse);
+	}
+
+	/* Do it */
+	pgp_parse(parse, printerrors);
+
+	/* Unsetup */
+	if (use_armour) {
+		pgp_reader_pop_dearmour(parse);
+	}
+
+	/* tidy up */
+	pgp_teardown_memory_read(parse, inmem);
+
+	pgp_writer_close(parse->cbinfo.output);
+	pgp_output_delete(parse->cbinfo.output);
+
+	/* if we didn't get the passphrase, return NULL */
+	return (parse->cbinfo.gotpass) ? outmem : NULL;
 }
