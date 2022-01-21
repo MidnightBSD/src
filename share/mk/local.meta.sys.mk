@@ -188,6 +188,8 @@ LDFLAGS_LAST+= -L${STAGE_LIBDIR}
 
 .endif				# MK_STAGING
 
+.-include "local.toolchain.mk"
+
 # this is sufficient for most of the tree.
 .MAKE.DEPENDFILE_DEFAULT = ${.MAKE.DEPENDFILE_PREFIX}
 
@@ -202,6 +204,10 @@ LDFLAGS_LAST+= -L${STAGE_LIBDIR}
 
 .if ${.MAKE.LEVEL} > 0 && ${MACHINE} == "host" && ${.MAKE.DEPENDFILE:E} != "host"
 # we can use this but should not update it.
+UPDATE_DEPENDFILE= NO
+.endif
+# Don't require filemon for makeman.
+.if make(showconfig)
 UPDATE_DEPENDFILE= NO
 .endif
 
@@ -242,7 +248,7 @@ BTOOLSPATH= ${HOST_OBJTOP}/tools${.CURDIR}
 
 # Don't use the bootstrap tools logic on itself.
 .if ${.TARGETS:Mbootstrap-tools} == "" && \
-    !make(showconfig) && \
+    !make(test-system-*) && !make(showconfig) && !make(print-dir) && \
     !defined(BOOTSTRAPPING_TOOLS) && !empty(TOOLSDIR) && ${.MAKE.LEVEL} == 0
 .for dir in /sbin /bin /usr/sbin /usr/bin
 PATH:= ${TOOLSDIR}${dir}:${PATH}
