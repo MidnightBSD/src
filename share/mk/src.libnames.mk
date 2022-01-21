@@ -125,6 +125,7 @@ _LIBRARIES=	\
 		magic \
 		md \
 		memstat \
+		mj \
 		mp \
 		mport \
 		msearch \
@@ -335,7 +336,8 @@ _DP_zfs=	md pthread umem util uutil m nvpair avl bsdxml geom nvpair z \
 _DP_zfs_core=	nvpair
 _DP_zpool=	md pthread z nvpair avl umem
 _DP_be=		zfs nvpair
-_DP_netpgp=	bz2 crypto z
+_DP_mj=		bz2 crypto z
+_DP_netpgp=	bz2 crypto mj z
 _DP_dns_sd=	pthread
 
 # OFED support
@@ -559,6 +561,7 @@ LIBMENUWDIR=	${OBJTOP}/lib/ncurses/menu
 LIBNCURSESWDIR=	${OBJTOP}/lib/ncurses/ncurses
 LIBPANELWDIR=	${OBJTOP}/lib/ncurses/panel
 LIBCRYPTODIR=	${OBJTOP}/secure/lib/libcrypto
+LIBMJDIR=	${OBJTOP}/secure/lib/libmj
 LIBNETPGPDIR=	${OBJTOP}/secure/lib/libnetpgp
 LIBSSHDIR=	${OBJTOP}/secure/lib/libssh
 LIBSSLDIR=	${OBJTOP}/secure/lib/libssl

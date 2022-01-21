@@ -2,7 +2,7 @@
 
 .include <bsd.own.mk>
 
-PROG=	netpgp
+PROG=	netpgpkeys
 
 NETPGP_SRC=     ${SRCTOP}/crypto/netpgp
 
@@ -10,8 +10,8 @@ CFLAGS+=-I${NETPGP_SRC} -I${NETPGP_SRC}/src/libmj
 
 LIBADD+=	crypto z bz2 mj netpgp
 
-MAN=	netpgp.1
+MAN=	netpgpkeys.1
 
 .include <bsd.prog.mk>
 
-.PATH:	${NETPGP_SRC}/src/netpgp
+.PATH:	${NETPGP_SRC}/src/netpgpkeys

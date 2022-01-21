@@ -4,7 +4,7 @@
 
 SUBDIR= 
 .if ${MK_OPENSSL} != "no"
-SUBDIR+=libcrypto libssl libnetpgp
+SUBDIR+=libcrypto libssl libmj libnetpgp
 .if ${MK_OPENSSH} != "no"
 SUBDIR+=libssh
 .endif

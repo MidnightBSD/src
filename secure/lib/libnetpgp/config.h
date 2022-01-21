@@ -1,6 +1,5 @@
 /* src/lib/config.h.  Generated from config.h.in by configure.  */
 /* src/lib/config.h.in.  Generated from configure.ac by autoheader.  */
-/* $MidnightBSD$ */
 
 /* Define to 1 if you have the <bzlib.h> header file. */
 #define HAVE_BZLIB_H 1
@@ -33,7 +32,7 @@
 #define HAVE_LONG_LONG_INT 1
 
 /* Define to 1 if you have the <malloc.h> header file. */
-#define HAVE_MALLOC_H 1
+/* #undef HAVE_MALLOC_H */
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
@@ -43,6 +42,9 @@
 
 /* Define to 1 if you have the <openssl/bn.h> header file. */
 #define HAVE_OPENSSL_BN_H 1
+
+/* Define to 1 if you have the <openssl/camellia.h> header file. */
+#define HAVE_OPENSSL_CAMELLIA_H 1
 
 /* Define to 1 if you have the <openssl/cast.h> header file. */
 #define HAVE_OPENSSL_CAST_H 1
@@ -113,8 +115,15 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#define HAVE_UNSIGNED_LONG_LONG_INT 1
+
 /* Define to 1 if you have the <zlib.h> header file. */
 #define HAVE_ZLIB_H 1
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#define LT_OBJDIR ".libs/"
 
 /* Name of package */
 #define PACKAGE "netpgp"
@@ -126,19 +135,22 @@
 #define PACKAGE_NAME "netpgp"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "netpgp 20090525"
+#define PACKAGE_STRING "netpgp 20140220"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "netpgp"
 
+/* Define to the home page for this package. */
+#define PACKAGE_URL ""
+
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "20090525"
+#define PACKAGE_VERSION "20140220"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "20090525"
+#define VERSION "20140220"
 
 /* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
    <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
