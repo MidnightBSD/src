@@ -55,57 +55,57 @@
 
 #include "packet.h"
 
-/** __ops_list_t
+/** pgp_list_t
  */
 typedef struct {
-	unsigned int    size;	/* num of array slots allocated */
-	unsigned int    used;	/* num of array slots currently used */
+	unsigned    size;	/* num of array slots allocated */
+	unsigned    used;	/* num of array slots currently used */
 	char          **strings;
-} __ops_list_t;
+} pgp_list_t;
 
-/** __ops_text_t
+/** pgp_text_t
  */
 typedef struct {
-	__ops_list_t      known;
-	__ops_list_t      unknown;
-} __ops_text_t;
+	pgp_list_t	known;
+	pgp_list_t   	unknown;
+} pgp_text_t;
 
-/** __ops_bit_map_t
+/** pgp_bit_map_t
  */
 typedef struct {
-	unsigned char   mask;
+	uint8_t		mask;
 	const char     *string;
-} __ops_bit_map_t;
+} pgp_bit_map_t;
 
-void __ops_text_init(__ops_text_t *);
-void __ops_text_free(__ops_text_t *);
+void pgp_text_init(pgp_text_t *);
+void pgp_text_free(pgp_text_t *);
 
-const char *__ops_show_packet_tag(__ops_packet_tag_t);
-const char *__ops_show_ss_type(__ops_ss_type_t);
+const char *pgp_show_packet_tag(pgp_content_enum);
+const char *pgp_show_ss_type(pgp_content_enum);
 
-const char *__ops_show_sig_type(__ops_sig_type_t);
-const char *__ops_show_pka(__ops_pubkey_alg_t);
+const char *pgp_show_sig_type(pgp_sig_type_t);
+const char *pgp_show_pka(pgp_pubkey_alg_t);
 
-__ops_text_t *__ops_showall_ss_zpref(__ops_ss_zpref_t);
-const char *__ops_show_ss_zpref(unsigned char);
+pgp_text_t *pgp_showall_ss_zpref(const pgp_data_t *);
+const char *pgp_show_ss_zpref(uint8_t);
 
-__ops_text_t *__ops_showall_ss_hashpref(__ops_ss_hashpref_t);
-const char *__ops_show_hash_alg(unsigned char);
-const char *__ops_show_symm_alg(unsigned char);
+pgp_text_t *pgp_showall_ss_hashpref(const pgp_data_t *);
+const char *pgp_show_hash_alg(uint8_t);
+const char *pgp_show_symm_alg(uint8_t);
 
-__ops_text_t *__ops_showall_ss_skapref(__ops_ss_skapref_t);
-const char *__ops_show_ss_skapref(unsigned char);
+pgp_text_t *pgp_showall_ss_skapref(const pgp_data_t *);
+const char *pgp_show_ss_skapref(uint8_t);
 
-const char *__ops_show_ss_rr_code(__ops_ss_rr_code_t);
+const char *pgp_show_ss_rr_code(pgp_ss_rr_code_t);
 
-__ops_text_t *__ops_showall_ss_features(__ops_ss_features_t);
+pgp_text_t *pgp_showall_ss_features(pgp_data_t);
 
-__ops_text_t *__ops_showall_ss_key_flags(__ops_ss_key_flags_t);
-const char *__ops_show_ss_key_flag(unsigned char, __ops_bit_map_t *);
+pgp_text_t *pgp_showall_ss_key_flags(const pgp_data_t *);
+const char *pgp_show_ss_key_flag(uint8_t, pgp_bit_map_t *);
 
-__ops_text_t *__ops_show_keyserv_prefs(__ops_ss_key_server_prefs_t);
-const char *__ops_show_keyserv_pref(unsigned char, __ops_bit_map_t *);
+pgp_text_t *pgp_show_keyserv_prefs(const pgp_data_t *);
+const char *pgp_show_keyserv_pref(uint8_t, pgp_bit_map_t *);
 
-__ops_text_t *__ops_showall_notation(__ops_ss_notation_t);
+pgp_text_t *pgp_showall_notation(pgp_ss_notation_t);
 
 #endif /* PACKET_SHOW_H_ */

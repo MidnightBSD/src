@@ -1,14 +1,14 @@
-# $NetBSD: configure.ac,v 1.15 2009/05/27 00:38:26 agc Exp $
+# $NetBSD: configure.ac,v 1.41 2014/02/21 01:55:10 agc Exp $
 #
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([netpgp], [20090526], [Alistair Crooks <agc@netbsd.org> c0596823])
-AC_PREREQ([2.62])
-AC_REVISION([$Revision: 1.1.1.1 $])
+AC_INIT([netpgp],[20140220],[Alistair Crooks <agc@netbsd.org> c0596823])
+AC_PREREQ(2.63)
+AC_REVISION([$Revision: 1.41 $])
 
 AS_SHELL_SANITIZE
 
-AC_CONFIG_SRCDIR([src/bin/netpgp.c])
+AC_CONFIG_SRCDIR([src/netpgp/netpgp.c])
 AC_CONFIG_AUX_DIR([buildaux])
 AC_CONFIG_HEADER([src/lib/config.h])
 
@@ -28,6 +28,16 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AC_PROG_LN_S
 
+dnl based on AC_PROG_RANLIB from autoconf
+m4_ifndef([AC_PROG_AR],[dnl
+AN_MAKEVAR([AR], [AC_PROG_AR])
+AN_PROGRAM([ar], [AC_PROG_AR])
+AC_DEFUN([AC_PROG_AR],
+[AC_CHECK_TOOL(AR, ar, :)])
+])
+
+AC_PROG_AR
+
 # Compiler characteristics
 #
 AC_MSG_CHECKING([if using gcc])
@@ -38,16 +48,19 @@ AS_IF([test "$GCC" = "yes"],
        AC_MSG_RESULT([no])])
 AC_SUBST([WARNCFLAGS])
 
+# try to see if we need to link with -ldl
+AC_SEARCH_LIBS(dlopen, dl)
+
 # Checks for header files.
 #
 AC_HEADER_STDC
 AC_CHECK_HEADERS([CommonCrypto/CommonDigest.h])
 AC_CHECK_HEADERS([dmalloc.h direct.h errno.h fcntl.h \
                  inttypes.h limits.h malloc.h zlib.h])
-AC_CHECK_HEADERS([openssl/aes.h openssl/bn.h openssl/cast.h openssl/des.h \
-                  openssl/dsa.h openssl/err.h openssl/idea.h openssl/md5.h \
-                  openssl/rand.h openssl/rsa.h openssl/sha.h openssl/err.h \
-                  openssl/sha.h])
+AC_CHECK_HEADERS([openssl/aes.h openssl/bn.h openssl/camellia.h openssl/cast.h \
+		  openssl/des.h openssl/dsa.h openssl/err.h openssl/idea.h \
+		  openssl/md5.h openssl/rand.h openssl/rsa.h openssl/sha.h \
+		  openssl/err.h openssl/sha.h])
 AC_CHECK_HEADERS([sys/cdefs.h sys/file.h sys/mman.h sys/param.h \
                   sys/resource.h sys/uio.h])
 
@@ -63,6 +76,12 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+
+# check for openssl
+m4_include([ax_check_openssl.m4])
+
+AX_CHECK_OPENSSL([LIBS="$LIBS $OPENSSL_LIBS" INCLUDES="$INCLUDES $OPENSSL_INCLUDES"],
+	[AC_MSG_ERROR([Missing OpenSSL])])
 
 AC_CHECK_TYPES([SHA256_CTX],
                [],
@@ -97,8 +116,10 @@ AC_CONFIG_FILES([
         Makefile
         include/Makefile
         src/Makefile
+        src/libmj/Makefile
         src/lib/Makefile
-        src/bin/Makefile
+        src/netpgp/Makefile
+        src/netpgpkeys/Makefile
         tests/Makefile
         tests/atlocal
 ])

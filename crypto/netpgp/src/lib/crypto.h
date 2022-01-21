@@ -55,191 +55,214 @@
 
 #include "keyring.h"
 #include "packet.h"
+#include "memory.h"
 #include "packet-parse.h"
 
 #include <openssl/dsa.h>
 
-#define OPS_MIN_HASH_SIZE	16
+#define PGP_MIN_HASH_SIZE	16
 
-typedef void __ops_hash_init_t(__ops_hash_t *);
-typedef void __ops_hash_add_t(__ops_hash_t *, const unsigned char *, unsigned);
-typedef unsigned __ops_hash_finish_t(__ops_hash_t *, unsigned char *);
-
-/** _ops_hash_t */
-struct _ops_hash_t {
-	__ops_hash_alg_t	 alg;		/* algorithm */
+/** pgp_hash_t */
+struct pgp_hash_t {
+	pgp_hash_alg_t		 alg;		/* algorithm */
 	size_t			 size;		/* size */
 	const char		*name;		/* what it's known as */
-	__ops_hash_init_t	*init;		/* initialisation func */
-	__ops_hash_add_t	*add;		/* add text func */
-	__ops_hash_finish_t	*finish;	/* finalise func */
+	int			(*init)(pgp_hash_t *);
+	void			(*add)(pgp_hash_t *, const uint8_t *, unsigned);
+	unsigned		(*finish)(pgp_hash_t *, uint8_t *);
 	void		 	*data;		/* blob for data */
 };
 
-typedef void __ops_setiv_func_t(__ops_crypt_t *, const unsigned char *);
-typedef void __ops_setkey_func_t(__ops_crypt_t *, const unsigned char *);
-typedef void __ops_crypt_init_t(__ops_crypt_t *);
-typedef void __ops_crypt_resync_t(__ops_crypt_t *);
-typedef void __ops_blkenc_t(__ops_crypt_t *, void *, const void *);
-typedef void __ops_blkdec_t(__ops_crypt_t *, void *, const void *);
-typedef void __ops_crypt_cfb_encrypt_t(__ops_crypt_t *, void *, const void *,
-					size_t);
-typedef void __ops_crypt_cfb_decrypt_t(__ops_crypt_t *, void *, const void *,
-					size_t);
-typedef void __ops_crypt_finish_t(__ops_crypt_t *);
-
-/** _ops_crypt_t */
-struct _ops_crypt_t {
-	__ops_symm_alg_t		alg;
-	size_t				blocksize;
-	size_t				keysize;
-	__ops_setiv_func_t		*set_iv;/* Call before decrypt init! */
-	__ops_setkey_func_t		*set_key;/* Call this before init! */
-	__ops_crypt_init_t		*base_init;
-	__ops_crypt_resync_t		*decrypt_resync;
-	/* encrypt/decrypt one block  */
-	__ops_blkenc_t			*block_encrypt;
-	__ops_blkdec_t			*block_decrypt;
+/** pgp_crypt_t */
+struct pgp_crypt_t {
+	pgp_symm_alg_t	alg;
+	size_t			blocksize;
+	size_t			keysize;
+	void 			(*set_iv)(pgp_crypt_t *, const uint8_t *);
+	void			(*set_crypt_key)(pgp_crypt_t *, const uint8_t *);
+	int			(*base_init)(pgp_crypt_t *);
+	void			(*decrypt_resync)(pgp_crypt_t *);
+	/* encrypt/decrypt one block */
+	void			(*block_encrypt)(pgp_crypt_t *, void *, const void *);
+	void			(*block_decrypt)(pgp_crypt_t *, void *, const void *);
 	/* Standard CFB encrypt/decrypt (as used by Sym Enc Int Prot packets) */
-	__ops_crypt_cfb_encrypt_t	*cfb_encrypt;
-	__ops_crypt_cfb_decrypt_t	*cfb_decrypt;
-	__ops_crypt_finish_t		*decrypt_finish;
-	unsigned char			iv[OPS_MAX_BLOCK_SIZE];
-	unsigned char			civ[OPS_MAX_BLOCK_SIZE];
-	unsigned char			siv[OPS_MAX_BLOCK_SIZE];
+	void 			(*cfb_encrypt)(pgp_crypt_t *, void *, const void *, size_t);
+	void			(*cfb_decrypt)(pgp_crypt_t *, void *, const void *, size_t);
+	void			(*decrypt_finish)(pgp_crypt_t *);
+	uint8_t			iv[PGP_MAX_BLOCK_SIZE];
+	uint8_t			civ[PGP_MAX_BLOCK_SIZE];
+	uint8_t			siv[PGP_MAX_BLOCK_SIZE];
 		/* siv is needed for weird v3 resync */
-	unsigned char			key[OPS_MAX_KEY_SIZE];
-	int				num;
+	uint8_t			key[PGP_MAX_KEY_SIZE];
+	int			num;
 		/* num is offset - see openssl _encrypt doco */
-	void				*encrypt_key;
-	void				*decrypt_key;
+	void			*encrypt_key;
+	void			*decrypt_key;
 };
 
-void __ops_crypto_init(void);
-void __ops_crypto_finish(void);
-void __ops_hash_md5(__ops_hash_t *);
-void __ops_hash_sha1(__ops_hash_t *);
-void __ops_hash_sha256(__ops_hash_t *);
-void __ops_hash_sha512(__ops_hash_t *);
-void __ops_hash_sha384(__ops_hash_t *);
-void __ops_hash_sha224(__ops_hash_t *);
-void __ops_hash_any(__ops_hash_t *, __ops_hash_alg_t);
-__ops_hash_alg_t __ops_str_to_hash_alg(const char *);
-const char *__ops_text_from_hash(__ops_hash_t *);
-unsigned __ops_hash_size(__ops_hash_alg_t);
-unsigned __ops_hash(unsigned char *, __ops_hash_alg_t, const void *, size_t);
+void pgp_crypto_finish(void);
+void pgp_hash_md5(pgp_hash_t *);
+void pgp_hash_sha1(pgp_hash_t *);
+void pgp_hash_sha256(pgp_hash_t *);
+void pgp_hash_sha512(pgp_hash_t *);
+void pgp_hash_sha384(pgp_hash_t *);
+void pgp_hash_sha224(pgp_hash_t *);
+void pgp_hash_any(pgp_hash_t *, pgp_hash_alg_t);
+pgp_hash_alg_t pgp_str_to_hash_alg(const char *);
+const char *pgp_text_from_hash(pgp_hash_t *);
+unsigned pgp_hash_size(pgp_hash_alg_t);
+unsigned pgp_hash(uint8_t *, pgp_hash_alg_t, const void *, size_t);
 
-void __ops_hash_add_int(__ops_hash_t *, unsigned, unsigned);
+void pgp_hash_add_int(pgp_hash_t *, unsigned, unsigned);
 
-unsigned __ops_dsa_verify(const unsigned char *, size_t,
-			const __ops_dsa_sig_t *,
-			const __ops_dsa_pubkey_t *);
+unsigned pgp_dsa_verify(const uint8_t *, size_t,
+			const pgp_dsa_sig_t *,
+			const pgp_dsa_pubkey_t *);
 
-int __ops_rsa_public_decrypt(unsigned char *, const unsigned char *, size_t,
-			const __ops_rsa_pubkey_t *);
-int __ops_rsa_public_encrypt(unsigned char *, const unsigned char *, size_t,
-			const __ops_rsa_pubkey_t *);
+int pgp_rsa_public_decrypt(uint8_t *, const uint8_t *, size_t,
+			const pgp_rsa_pubkey_t *);
+int pgp_rsa_public_encrypt(uint8_t *, const uint8_t *, size_t,
+			const pgp_rsa_pubkey_t *);
 
-int __ops_rsa_private_encrypt(unsigned char *, const unsigned char *, size_t,
-			const __ops_rsa_seckey_t *, const __ops_rsa_pubkey_t *);
-int __ops_rsa_private_decrypt(unsigned char *, const unsigned char *, size_t,
-			const __ops_rsa_seckey_t *, const __ops_rsa_pubkey_t *);
+int pgp_rsa_private_encrypt(uint8_t *, const uint8_t *, size_t,
+			const pgp_rsa_seckey_t *, const pgp_rsa_pubkey_t *);
+int pgp_rsa_private_decrypt(uint8_t *, const uint8_t *, size_t,
+			const pgp_rsa_seckey_t *, const pgp_rsa_pubkey_t *);
 
-unsigned __ops_block_size(__ops_symm_alg_t);
-unsigned __ops_key_size(__ops_symm_alg_t);
+int pgp_elgamal_public_encrypt(uint8_t *, uint8_t *, const uint8_t *, size_t,
+			const pgp_elgamal_pubkey_t *);
+int pgp_elgamal_private_decrypt(uint8_t *, const uint8_t *, const uint8_t *, size_t,
+			const pgp_elgamal_seckey_t *, const pgp_elgamal_pubkey_t *);
 
-int __ops_decrypt_data(__ops_content_tag_t, __ops_region_t *,
-			__ops_parseinfo_t *);
+pgp_symm_alg_t pgp_str_to_cipher(const char *);
+unsigned pgp_block_size(pgp_symm_alg_t);
+unsigned pgp_key_size(pgp_symm_alg_t);
 
-int __ops_crypt_any(__ops_crypt_t *, __ops_symm_alg_t);
-void __ops_decrypt_init(__ops_crypt_t *);
-void __ops_encrypt_init(__ops_crypt_t *);
-size_t __ops_decrypt_se(__ops_crypt_t *, void *, const void *, size_t);
-size_t __ops_encrypt_se(__ops_crypt_t *, void *, const void *, size_t);
-size_t __ops_decrypt_se_ip(__ops_crypt_t *, void *, const void *, size_t);
-size_t __ops_encrypt_se_ip(__ops_crypt_t *, void *, const void *, size_t);
-unsigned __ops_is_sa_supported(__ops_symm_alg_t);
+int pgp_decrypt_data(pgp_content_enum, pgp_region_t *,
+			pgp_stream_t *);
 
-void __ops_reader_push_decrypt(__ops_parseinfo_t *, __ops_crypt_t *,
-			__ops_region_t *);
-void __ops_reader_pop_decrypt(__ops_parseinfo_t *);
+int pgp_crypt_any(pgp_crypt_t *, pgp_symm_alg_t);
+void pgp_decrypt_init(pgp_crypt_t *);
+void pgp_encrypt_init(pgp_crypt_t *);
+size_t pgp_decrypt_se(pgp_crypt_t *, void *, const void *, size_t);
+size_t pgp_encrypt_se(pgp_crypt_t *, void *, const void *, size_t);
+size_t pgp_decrypt_se_ip(pgp_crypt_t *, void *, const void *, size_t);
+size_t pgp_encrypt_se_ip(pgp_crypt_t *, void *, const void *, size_t);
+unsigned pgp_is_sa_supported(pgp_symm_alg_t);
+
+void pgp_reader_push_decrypt(pgp_stream_t *, pgp_crypt_t *,
+			pgp_region_t *);
+void pgp_reader_pop_decrypt(pgp_stream_t *);
 
 /* Hash everything that's read */
-void __ops_reader_push_hash(__ops_parseinfo_t *, __ops_hash_t *);
-void __ops_reader_pop_hash(__ops_parseinfo_t *);
+void pgp_reader_push_hash(pgp_stream_t *, pgp_hash_t *);
+void pgp_reader_pop_hash(pgp_stream_t *);
 
-int __ops_decrypt_decode_mpi(unsigned char *, unsigned, const BIGNUM *,
-			const __ops_seckey_t *);
-unsigned __ops_rsa_encrypt_mpi(const unsigned char *, const size_t,
-			const __ops_pubkey_t *,
-			__ops_pk_sesskey_parameters_t *);
+int pgp_decrypt_decode_mpi(uint8_t *, unsigned, const BIGNUM *,
+			const BIGNUM *, const pgp_seckey_t *);
+
+unsigned pgp_rsa_encrypt_mpi(const uint8_t *, const size_t,
+			const pgp_pubkey_t *,
+			pgp_pk_sesskey_params_t *);
+unsigned pgp_elgamal_encrypt_mpi(const uint8_t *, const size_t,
+			const pgp_pubkey_t *,
+			pgp_pk_sesskey_params_t *);
 
 /* Encrypt everything that's written */
-struct __ops_key_data;
-void __ops_writer_push_encrypt(__ops_output_t *,
-			const struct __ops_key_data *);
+struct pgp_key_data;
+void pgp_writer_push_encrypt(pgp_output_t *,
+			const struct pgp_key_data *);
 
-unsigned   __ops_encrypt_file(__ops_io_t *, const char *, const char *,
-			const __ops_keydata_t *,
-			const unsigned, const unsigned);
-unsigned   __ops_decrypt_file(__ops_io_t *,
+unsigned   pgp_encrypt_file(pgp_io_t *, const char *, const char *,
+			const pgp_key_t *,
+			const unsigned, const unsigned, const char *);
+unsigned   pgp_decrypt_file(pgp_io_t *,
 			const char *,
 			const char *,
-			__ops_keyring_t *,
+			pgp_keyring_t *,
+			pgp_keyring_t *,
 			const unsigned,
 			const unsigned,
-			__ops_cbfunc_t *);
+			const unsigned,
+			void *,
+			int,
+			pgp_cbfunc_t *);
+
+pgp_memory_t *
+pgp_encrypt_buf(pgp_io_t *, const void *, const size_t,
+			const pgp_key_t *,
+			const unsigned, const char *);
+pgp_memory_t *
+pgp_decrypt_buf(pgp_io_t *,
+			const void *,
+			const size_t,
+			pgp_keyring_t *,
+			pgp_keyring_t *,
+			const unsigned,
+			const unsigned,
+			void *,
+			int,
+			pgp_cbfunc_t *);
 
 /* Keys */
-__ops_keydata_t  *__ops_rsa_new_selfsign_key(const int,
-			const unsigned long, __ops_userid_t *);
+pgp_key_t  *pgp_rsa_new_selfsign_key(const int,
+			const unsigned long, uint8_t *, const char *,
+			const char *);
 
-int __ops_dsa_size(const __ops_dsa_pubkey_t *);
-DSA_SIG *__ops_dsa_sign(unsigned char *, unsigned,
-				const __ops_dsa_seckey_t *,
-				const __ops_dsa_pubkey_t *);
+int pgp_dsa_size(const pgp_dsa_pubkey_t *);
+DSA_SIG *pgp_dsa_sign(uint8_t *, unsigned,
+				const pgp_dsa_seckey_t *,
+				const pgp_dsa_pubkey_t *);
 
-/** __ops_reader_t */
-struct __ops_reader_t {
-	__ops_reader_func_t	*reader; /* reader func to get parse data */
-	__ops_reader_destroyer_t *destroyer;
+int openssl_read_pem_seckey(const char *, pgp_key_t *, const char *, int);
+
+/** pgp_reader_t */
+struct pgp_reader_t {
+	pgp_reader_func_t	*reader; /* reader func to get parse data */
+	pgp_reader_destroyer_t	*destroyer;
 	void			*arg;	/* args to pass to reader function */
 	unsigned		 accumulate:1;	/* set to gather packet data */
-	unsigned char		*accumulated;	/* the accumulated data */
+	uint8_t			*accumulated;	/* the accumulated data */
 	unsigned		 asize;	/* size of the buffer */
 	unsigned		 alength;/* used buffer */
 	unsigned		 position;	/* reader-specific offset */
-	__ops_reader_t		*next;
-	__ops_parseinfo_t	*parent;/* parent parse_info structure */
+	pgp_reader_t		*next;
+	pgp_stream_t		*parent;/* parent parse_info structure */
 };
 
 
-/** __ops_cryptinfo_t
+/** pgp_cryptinfo_t
  Encrypt/decrypt settings
 */
-struct __ops_cryptinfo_t {
+struct pgp_cryptinfo_t {
 	char			*passphrase;
-	__ops_keyring_t		*keyring;
-	const __ops_keydata_t	*keydata;
-	__ops_cbfunc_t		*getpassphrase;
+	pgp_keyring_t		*secring;
+	const pgp_key_t		*keydata;
+	pgp_cbfunc_t		*getpassphrase;
+	pgp_keyring_t		*pubring;
 };
 
-/** __ops_cbdata_t */
-struct __ops_cbdata_t {
-	__ops_cbfunc_t		*cbfunc;	/* callback function */
+/** pgp_cbdata_t */
+struct pgp_cbdata_t {
+	pgp_cbfunc_t		*cbfunc;	/* callback function */
 	void			*arg;	/* args to pass to callback func */
-	__ops_error_t		**errors; /* address of error stack */
-	__ops_cbdata_t		*next;
-	__ops_output_t		*output;/* used if writing out parsed info */
-	__ops_io_t		*io;		/* error/output messages */
-	__ops_cryptinfo_t	 cryptinfo;	/* used when decrypting */
+	pgp_error_t		**errors; /* address of error stack */
+	pgp_cbdata_t		*next;
+	pgp_output_t		*output;	/* when writing out parsed info */
+	pgp_io_t		*io;		/* error/output messages */
+	void			*passfp;	/* fp for passphrase input */
+	pgp_cryptinfo_t		 cryptinfo;	/* used when decrypting */
+	pgp_printstate_t	 printstate;	/* used to keep printing state */
+	pgp_seckey_t		*sshseckey;	/* secret key for ssh */
+	int			 numtries;	/* # of passphrase attempts */
+	int			 gotpass;	/* when passphrase entered */
 };
 
-/** __ops_hashtype_t */
+/** pgp_hashtype_t */
 typedef struct {
-	__ops_hash_t	hash;	/* hashes we should hash data with */
-	unsigned char	keyid[OPS_KEY_ID_SIZE];
-} __ops_hashtype_t;
+	pgp_hash_t	hash;	/* hashes we should hash data with */
+	uint8_t	keyid[PGP_KEY_ID_SIZE];
+} pgp_hashtype_t;
 
 #define NTAGS	0x100	/* == 256 */
 
@@ -265,22 +288,28 @@ typedef struct {
  *  It has a linked list of errors.
  */
 
-struct __ops_parseinfo_t {
-	unsigned char		 ss_raw[NTAGS / 8];
+struct pgp_stream_t {
+	uint8_t		 	ss_raw[NTAGS / 8];
 		/* 1 bit / sig-subpkt type; set to get raw data */
-	unsigned char		 ss_parsed[NTAGS / 8];
+	uint8_t		 	ss_parsed[NTAGS / 8];
 		/* 1 bit / sig-subpkt type; set to get parsed data */
-	__ops_reader_t	 	 readinfo;
-	__ops_cbdata_t		 cbinfo;
-	__ops_error_t		*errors;
+	pgp_reader_t	 	 readinfo;
+	pgp_cbdata_t		 cbinfo;
+	pgp_error_t		*errors;
 	void			*io;		/* io streams */
-	__ops_crypt_t		 decrypt;
-	__ops_cryptinfo_t	 cryptinfo;
-	size_t			 nhashes;
-	__ops_hashtype_t        *hashes;
+	pgp_crypt_t		 decrypt;
+	pgp_cryptinfo_t		 cryptinfo;
+	size_t			 hashc;
+	pgp_hashtype_t		*hashes;
 	unsigned		 reading_v3_secret:1;
 	unsigned		 reading_mpi_len:1;
 	unsigned		 exact_read:1;
+	unsigned		 partial_read:1;
+	unsigned		 coalescing:1;
+	/* used for partial length coalescing */
+	unsigned		 virtualc;
+	unsigned		 virtualoff;
+	uint8_t			*virtualpkt;
 };
 
 #endif /* CRYPTO_H_ */

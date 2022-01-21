@@ -42,6 +42,9 @@
 /* Define to 1 if you have the <openssl/bn.h> header file. */
 #undef HAVE_OPENSSL_BN_H
 
+/* Define to 1 if you have the <openssl/camellia.h> header file. */
+#undef HAVE_OPENSSL_CAMELLIA_H
+
 /* Define to 1 if you have the <openssl/cast.h> header file. */
 #undef HAVE_OPENSSL_CAST_H
 
@@ -111,8 +114,15 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#undef HAVE_UNSIGNED_LONG_LONG_INT
+
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
 
 /* Name of package */
 #undef PACKAGE
@@ -128,6 +138,9 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION

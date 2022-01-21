@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 The NetBSD Foundation, Inc.
+ * Copyright (c) 2009,2010 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -34,34 +34,45 @@
 #include "signature.h"
 #include "packet-show.h"
 
-typedef struct __ops_validation_t {
-	unsigned int		 validc;
-	__ops_sig_info_t	*valid_sigs;
-	unsigned int		 invalidc;
-	__ops_sig_info_t	*invalid_sigs;
-	unsigned int		 unknownc;
-	__ops_sig_info_t	*unknown_sigs;
-} __ops_validation_t;
+#ifndef __printflike
+#define __printflike(n, m)		__attribute__((format(printf,n,m)))
+#endif
 
-void            __ops_validate_result_free(__ops_validation_t *);
+typedef struct pgp_validation_t {
+	unsigned		 validc;
+	pgp_sig_info_t	*valid_sigs;
+	unsigned		 invalidc;
+	pgp_sig_info_t	*invalid_sigs;
+	unsigned		 unknownc;
+	pgp_sig_info_t	*unknown_sigs;
+	time_t			 birthtime;
+	time_t			 duration;
+} pgp_validation_t;
+
+void            pgp_validate_result_free(pgp_validation_t *);
 
 unsigned 
-__ops_validate_key_sigs(__ops_validation_t *,
-		const __ops_keydata_t *,
-		const __ops_keyring_t *,
-		__ops_cb_ret_t cb(const __ops_packet_t *, __ops_cbdata_t *));
+pgp_validate_key_sigs(pgp_validation_t *,
+		const pgp_key_t *,
+		const pgp_keyring_t *,
+		pgp_cb_ret_t cb(const pgp_packet_t *, pgp_cbdata_t *));
 
 unsigned
-__ops_validate_all_sigs(__ops_validation_t *,
-		const __ops_keyring_t *,
-		__ops_cb_ret_t cb(const __ops_packet_t *, __ops_cbdata_t *));
+pgp_validate_all_sigs(pgp_validation_t *,
+		const pgp_keyring_t *,
+		pgp_cb_ret_t cb(const pgp_packet_t *, pgp_cbdata_t *));
 
-unsigned   __ops_check_sig(const unsigned char *,
-		unsigned, const __ops_sig_t *, const __ops_pubkey_t *);
+unsigned   pgp_check_sig(const uint8_t *,
+		unsigned, const pgp_sig_t *, const pgp_pubkey_t *);
 
-const char     *__ops_get_info(const char *type);
+const char     *pgp_get_info(const char *type);
 
-void netpgp_log(const char *, ...);
+int pgp_asprintf(char **, const char *, ...) __printflike(2, 3);
+
+void netpgp_log(const char *, ...) __printflike(1, 2);
+
+int netpgp_strcasecmp(const char *, const char *);
+char *netpgp_strdup(const char *);
 
 
 #endif
