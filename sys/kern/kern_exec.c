@@ -686,6 +686,14 @@ interpret:
 	else
 		stack_base = exec_copyout_strings(imgp);
 
+	/* Sanity check we have at least one argument as required by POSIX */
+	if (imgp->args->argc == 0) {
+		error = EINVAL;
+		vn_lock(imgp->vp, LK_SHARED | LK_RETRY);
+		goto exec_fail_dealloc;
+	}
+
+
 	/*
 	 * If custom stack fixup routine present for this process
 	 * let it do the stack setup.
