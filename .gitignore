@@ -18,6 +18,7 @@ cscope.out
 ?cscope.out
 *.ko
 *.o
+*.core
 sys/modules/**/*.h
 sys/modules/**/x86
 sys/modules/**/machine
