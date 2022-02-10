@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/gen/auxv.c 356674 2020-01-13 03:36:43Z kevans $");
 
 #include "namespace.h"
 #include <elf.h>
