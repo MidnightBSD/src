@@ -985,7 +985,13 @@ display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
     mportPackageMessage packageMessage;
     pkg_message_t expectedType;
 
-    packageMessage.type = PKG_MESSAGE_ALWAYS;
+	packageMessage.minimum_version = NULL;
+	packageMessage.maximum_version = NULL;
+	packageMessage.str = NULL;
+	packageMessage.prev = NULL;
+	packageMessage.next = NULL;
+    packageMessage.type = PKG_MESSAGE_ALWAYS; // default type
+
     if (load_pkg_msg(mport, bundle, pkg, &packageMessage) != MPORT_OK) {
         RETURN_CURRENT_ERROR;
     }

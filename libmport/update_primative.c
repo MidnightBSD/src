@@ -36,9 +36,10 @@ static int set_prefix_to_installed(mportInstance *, mportPackageMeta *);
 MPORT_PUBLIC_API int
 mport_update_primative(mportInstance *mport, const char *filename)
 {
-    mportBundleRead *bundle;
-    mportPackageMeta **pkgs, *pkg;
-    int i;
+    mportBundleRead *bundle = NULL;
+    mportPackageMeta **pkgs = NULL;
+    mportPackageMeta *pkg = NULL;
+    mportPackageMeta **packs_start = NULL;
 
     if ((bundle = mport_bundle_read_new()) == NULL)
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -52,7 +53,8 @@ mport_update_primative(mportInstance *mport, const char *filename)
     if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
         RETURN_CURRENT_ERROR;
 
-    for (i = 0; *(pkgs + i) != NULL; i++) {
+    packs_start = pkgs;
+    for (int i = 0; *(pkgs + i) != NULL; i++) {
         pkg = pkgs[i];
 		pkg->install_date = mport_get_time();
 
@@ -71,6 +73,8 @@ mport_update_primative(mportInstance *mport, const char *filename)
             mport_set_err(MPORT_OK, NULL);
         }
     }
+
+    mport_pkgmeta_vec_free(packs_start);
 
     if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
         RETURN_CURRENT_ERROR;

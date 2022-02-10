@@ -192,8 +192,16 @@ mport_attach_stub_db(sqlite3 *db, const char *dir)
 	asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
 
 	if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) {
-		free(file);
-		RETURN_CURRENT_ERROR;
+		/* it might be attached already on error */
+		if (mport_detach_stub_db(db) == MPORT_OK) {
+			if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) {
+				free(file);
+				RETURN_CURRENT_ERROR;
+			}
+		} else {
+			free(file);
+			RETURN_CURRENT_ERROR;
+		}
 	}
 
 	free(file);
