@@ -47,10 +47,13 @@ mport_update(mportInstance *mport, const char *packageName) {
 	   present */
 	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK ||
 			indexEntry == NULL || *indexEntry == NULL) {
-		mport_call_msg_cb(mport, "Package %s not found in the index", packageName);
+		mport_call_msg_cb(mport, "Package %s not found in the index\n", packageName);
 	} else {
 		/* get the dependency list and start updating/installing missing entries */
-		mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends_orig);
+		if (mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends_orig) != MPORT_OK) {
+			mport_call_msg_cb(mport, "Failed to get dependency list for %s: %s\n", packageName, mport_err_string());
+			return mport_err_code();
+		}
 
 		depends = depends_orig;
 		while (*depends != NULL) {
@@ -63,6 +66,8 @@ mport_update(mportInstance *mport, const char *packageName) {
 		}
 
 		mport_index_depends_free_vec(depends_orig);
+		depends_orig = NULL;
+		depends = NULL;
 	}
 
 	if (mport_update_primative(mport, path) != MPORT_OK) {

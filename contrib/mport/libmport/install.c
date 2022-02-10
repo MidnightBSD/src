@@ -73,6 +73,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
         }
         if (e[e_loc] == NULL) {
           mport_index_entry_free_vec(e);
+          e = NULL;
           RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s-%s'.", pkgname, version);
         }
     } else {
@@ -84,13 +85,16 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
   if (filename == NULL) {
     mport_index_entry_free_vec(e);
+    e = NULL;
     RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 
   if (!mport_file_exists(filename)) {
     if (mport_fetch_bundle(mport, e[e_loc]->bundlefile) != MPORT_OK) {
       free(filename);
+      filename = NULL;
       mport_index_entry_free_vec(e);
+      e = NULL;
       RETURN_CURRENT_ERROR;
     }
   }
@@ -100,9 +104,11 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
 
   	if (unlink(filename) == 0) {
 	    free(filename);
+      filename = NULL;
   		RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
   	} else {
 	    free(filename);
+      filename = NULL;
   		RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
   	}
   }
@@ -110,7 +116,9 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   ret = mport_install_primative(mport, filename, prefix, automatic);
 
   free(filename);
+  filename = NULL;
   mport_index_entry_free_vec(e);
+  e = NULL;
   
   return ret;
 }

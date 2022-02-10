@@ -144,7 +144,7 @@ typedef struct {
     int no_provide_shlib;
     char *flavor;
     mportAutomatic automatic;
-	time_t install_date;
+	  time_t install_date;
     mportAction action; // not populated from package table
 } __attribute__ ((aligned (16)))  mportPackageMeta;
 

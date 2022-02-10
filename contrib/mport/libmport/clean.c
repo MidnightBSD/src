@@ -79,8 +79,10 @@ mport_clean_oldpackages(mportInstance *mport)
 
 		asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
 		if (path == NULL) {
-			if (indexEntry != NULL)
+			if (indexEntry != NULL) {
 				mport_index_entry_free_vec(indexEntry);
+				indexEntry = NULL;
+			}
 			continue;
 		}
 
@@ -94,24 +96,20 @@ mport_clean_oldpackages(mportInstance *mport)
 			}
 		} else if (mport_verify_hash(path, (*indexEntry)->hash) == 0) {
 			if (unlink(path) < 0) {
-
-				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s",
-
-				                        path, strerror(errno));
-
+				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not delete file %s: %s", path, strerror(errno));
 				mport_call_msg_cb(mport, "%s\n", mport_err_string());
-
 			} else {
-
 				deleted++;
-
 			}
 			mport_index_entry_free_vec(indexEntry);
+			indexEntry = NULL;
 		} else {
 			mport_index_entry_free_vec(indexEntry);
+			indexEntry = NULL;
 		}
 
 		free(path);
+		path = NULL;
 	}
 
 	closedir(d);
