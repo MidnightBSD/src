@@ -303,18 +303,18 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
 
     
     if (mport_bundle_read_init(inbundle, filename) != MPORT_OK) {
-      mport_bundle_read_finish(NULL, inbundle);
+      ret = mport_bundle_read_finish(NULL, inbundle);
       goto DONE;
     }
 
     
     /* skip the sub db */
     if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
-      mport_bundle_read_finish(NULL, inbundle);
+      ret = mport_bundle_read_finish(NULL, inbundle);
       goto DONE;
     }
     if (archive_read_data_skip(inbundle->archive) != ARCHIVE_OK) {
-      mport_bundle_read_finish(NULL, inbundle);
+      ret = mport_bundle_read_finish(NULL, inbundle);
       ret = SET_ERRORX(MPORT_ERR_FATAL, "Unable to read %s: %s", filename, archive_error_string(inbundle->archive));
       goto DONE;
     }
@@ -322,7 +322,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     
     while (1) {
       if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
-        mport_bundle_read_finish(NULL, inbundle);
+        ret = mport_bundle_read_finish(NULL, inbundle);
         goto DONE;
       } 
       
@@ -333,12 +333,12 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
       
       if ((ret = mport_bundle_write_add_entry(bundle, inbundle, entry)) != MPORT_OK) {
         DIAG("bundle add entry failed")
-        mport_bundle_read_finish(NULL, inbundle);
+        ret = mport_bundle_read_finish(NULL, inbundle);
         goto DONE;
       }
     }
 
-    mport_bundle_read_finish(NULL, inbundle);    
+    ret = mport_bundle_read_finish(NULL, inbundle);    
   }
   
   DONE:

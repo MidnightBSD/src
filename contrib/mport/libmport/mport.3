@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\"
-.Dd October 17, 2015
+.Dd February 3, 2022
 .Dt MPORT 3
 .Os
 .Sh NAME
@@ -81,6 +79,7 @@
 .Lb libmport
 .Sh SYNOPSIS
 .In mport.h
+.In mport_private.h
 .Ft int
 .Fn mport_clean_database "mportInstance *mport"
 .Ft int
@@ -176,8 +175,50 @@
 .Ft int
 .Fn mport_lock_islocked "mportPackageMeta *pkg"
 .Sh DESCRIPTION
-These functions implement a package management library for creating
+These functions implement a package management library for creating, removing,
 and installing packages.
+.Pp
+At a minimum, one must call
+.Fn mport_instance_new
+and 
+.Fn mport_instance_init
+to initialize the library. This will create a master.db file if one does not exist.	
+.Pp
+At the end of the program, one must call 
+.Fn mport_instance_free
+to close the master.db and cleanup any other resources. 
+.Pp
+The following error codes are defined in
+.In mport.h :
+.Bl -tag -width 18n
+.It Bq Er MPORT_OK
+Operation completed successfully
+.It Bq Er MPORT_ERR_FATAL
+Operation failed with an error
+.It Bq Er MPORT_ERR_WARN
+Operation completed with a warning
+.Sh ENVIRONMENT
+.Bl -tag -width ".Ev FETCH_BIND_ADDRESS"
+.It Ev FETCH_BIND_ADDRESS
+Specifies a hostname or IP address to which sockets used for outgoing
+connections will be bound.
+.It Ev FTP_LOGIN
+Default FTP login if none was provided in the URL.
+.It Ev FTP_PASSIVE_MODE
+If set to
+.Ql no ,
+forces the FTP code to use active mode.
+If set to any other value, forces passive mode even if the application
+requested active mode.
+.It Ev FTP_PASSWORD
+Default FTP password if the remote server requests one and none was
+provided in the URL.
+.It Ev FTP_PROXY
+URL of the proxy to use for FTP requests.
+The document part is ignored.
+FTP and HTTP proxies are supported; if no scheme is specified, FTP is
+assumed.
+If the proxy is an FTP proxy,
 .Sh SEE ALSO
 .Xr mport 1 ,
 .Xr mports 7

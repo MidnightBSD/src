@@ -267,6 +267,7 @@ mport_download(mportInstance *mport, const char *packageName, char **path) {
 	asprintf(path, "%s/%s", MPORT_LOCAL_PKG_PATH, (*indexEntry)->bundlefile);
 	if (path == NULL) {
 		mport_index_entry_free_vec(indexEntry);
+		indexEntry = NULL;
 		SET_ERRORX(1, "%s", "Unable to allocate memory for path.");
 		RETURN_CURRENT_ERROR;
 	}
@@ -276,7 +277,9 @@ getfile:
 		if (mport_fetch_bundle(mport, (*indexEntry)->bundlefile) != MPORT_OK) {
 			mport_call_msg_cb(mport, "Error fetching package %s, %s", packageName, mport_err_string());
 			free(*path);
+			path = NULL;
 			mport_index_entry_free_vec(indexEntry);
+			indexEntry = NULL;
 			return mport_err_code();
 			
 		}
@@ -293,7 +296,9 @@ getfile:
 			}
 		}
 		free(*path);
+		path = NULL;
 		mport_index_entry_free_vec(indexEntry);
+		indexEntry = NULL;
 		SET_ERRORX(1, "Package %s fails hash verification.", packageName);
 		RETURN_CURRENT_ERROR;
 	}
@@ -304,6 +309,7 @@ getfile:
 		mport_call_msg_cb(mport, "Package %s exists at %s\n", packageName, *path);
 
 	mport_index_entry_free_vec(indexEntry);
+	indexEntry = NULL;
 
 	return (0);
 }

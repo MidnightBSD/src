@@ -316,7 +316,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
     mport_pkgmeta_logevent(mport, pack, "Package deleted");
     syslog(LOG_NOTICE, "%s-%s deinstalled", pack->name, pack->version);
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 static int
@@ -377,7 +377,7 @@ run_unldconfig(mportInstance *mport, mportPackageMeta *pkg) {
     sqlite3_finalize(assets);
     mport_pkgmeta_logevent(mport, pkg, type == ASSET_LDCONFIG ? "ldconfig" : "ldconfig-linux");
 
-    return MPORT_OK;
+    return (MPORT_OK);
 
     UNLDCONFIG_ERROR:
     sqlite3_finalize(assets);
@@ -444,7 +444,7 @@ run_special_unexec(mportInstance *mport, mportPackageMeta *pkg) {
         }
     }
     sqlite3_finalize(assets);
-    return MPORT_OK;
+    return (MPORT_OK);
 
     SPECIAL_ERROR:
     sqlite3_finalize(assets);
@@ -499,7 +499,7 @@ run_unexec(mportInstance *mport, mportPackageMeta *pkg, mportAssetListEntryType 
     sqlite3_finalize(assets);
     mport_pkgmeta_logevent(mport, pkg, type == ASSET_POSTUNEXEC ? "postunexec" : "preunexec");
 
-    return MPORT_OK;
+    return (MPORT_OK);
 
     POSTUN_ERROR:
     sqlite3_finalize(assets);
@@ -523,7 +523,7 @@ run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode
             RETURN_ERRORX(MPORT_ERR_FATAL, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
     }
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 
@@ -539,7 +539,7 @@ delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack) {
             RETURN_ERRORX(MPORT_ERR_FATAL, "mport_rmtree(%s) failed.", dir);
     }
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 
@@ -578,7 +578,7 @@ check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack) {
     }
 
     sqlite3_finalize(stmt);
-    return MPORT_OK;
+    return (MPORT_OK);
 } 
       
   
