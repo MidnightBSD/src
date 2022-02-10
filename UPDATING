@@ -1,7 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20220210:
-	mport 2.2.1
+	MidnightBSD 2.1.5
+
+	mport 2.2.1 - fix crash issues
 
 20220126:
 	MidnightBSD 2.1.4
