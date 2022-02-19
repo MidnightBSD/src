@@ -196,6 +196,7 @@ static int
 netpgp_cmd(netpgp_t *netpgp, prog_t *p, char *f)
 {
 	char	*key;
+	char	*s;
 
 	switch (p->cmd) {
 	case LIST_KEYS:
@@ -211,8 +212,10 @@ netpgp_cmd(netpgp_t *netpgp, prog_t *p, char *f)
 			key = netpgp_getvar(netpgp, "userid");
 		}
 		if (key) {
-			printf("%s", key);
-			return 1;
+			if ((s = netpgp_export_key(netpgp, key)) != NULL) {
+				printf("%s", s);
+				return 1;
+			}
 		}
 		(void) fprintf(stderr, "key '%s' not found\n", f);
 		return 0;
@@ -450,6 +453,9 @@ main(int argc, char **argv)
 	if (!homeset) {
 		netpgp_set_homedir(&netpgp, getenv("HOME"),
 			netpgp_getvar(&netpgp, "ssh keys") ? "/.ssh" : "/.gnupg", 1);
+	}
+	if (p.keyring[0] != '\0') {
+		netpgp_setvar(&netpgp, "pubring", p.keyring);
 	}
 	/* initialise, and read keys from file */
 	if (!netpgp_init(&netpgp)) {
