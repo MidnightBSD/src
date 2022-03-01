@@ -835,10 +835,8 @@ pgp_keyring_filewrite(pgp_keyring_t *keyring,
 	pgp_key_t		*key;
 	unsigned	 	n;
 	unsigned	 	keyc = (keyring != NULL) ? keyring->keyc : 0;
-	char 			*cp;
 	pgp_content_enum	type;
 	pgp_armor_type_t	atype;
-	char			keyid[PGP_KEY_ID_SIZE * 3];
 
 	fd = pgp_setup_file_write(&output, filename, 1);
 	if (fd < 0) {
@@ -846,7 +844,7 @@ pgp_keyring_filewrite(pgp_keyring_t *keyring,
 		return 0;
 	}
 
-	type = keyring->keyc > 0 ? keyring->keys->type : PGP_PTAG_CT_PUBLIC_KEY;
+	type = keyc > 0 ? keyring->keys->type : PGP_PTAG_CT_PUBLIC_KEY;
 
 	if (armour) {
 		if (type == PGP_PTAG_CT_PUBLIC_KEY)
@@ -855,7 +853,7 @@ pgp_keyring_filewrite(pgp_keyring_t *keyring,
 			atype = PGP_PGP_PRIVATE_KEY_BLOCK;
 		pgp_writer_push_armoured(output, atype);
 	}
-	for (n = 0, key = keyring->keys; n < keyring->keyc; ++n, ++key) {
+	for (n = 0, key = keyring->keys; n < keyc; ++n, ++key) {
 		/* write only keys of a single type */
 		if (key->type != type) {
 			(void) fprintf(stderr, "ERROR: skip key %d\n", n);
