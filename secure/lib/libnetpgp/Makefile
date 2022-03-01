@@ -17,7 +17,7 @@ NETPGP_SRC=	${SRCTOP}/crypto/netpgp
 
 CFLAGS+= -I${.CURDIR} -I${NETPGP_SRC}/include -I${NETPGP_SRC}/src/libmj
 MAN= libnetpgp.3
-WARNS=4
+WARNS=0
 
 LIBADD+=	bz2 crypto mj z 
 
