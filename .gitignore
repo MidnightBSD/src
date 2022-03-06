@@ -3,6 +3,7 @@
 *.ko
 *.o
 *.orig
+*.pico
 *.rej
 *.so
 *.sw[nop]
@@ -32,6 +33,7 @@ compile_commands.json
 tags
 .clangd
 .ccls-cache
+.depend
 sys/modules/**/*.h
 sys/modules/**/x86
 sys/modules/**/machine
