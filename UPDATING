@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20220320:
+        tzdata 2022a
+
+20220315:
+        Fix an openssl vulnerability.
+
+        wifi security changes.
+
 20220126:
         Reject execve when new argc is zero
         Fixes a security issue with NULL argv[0] entries, similar to the recent
