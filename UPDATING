@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20220320:
+	tzdata 2022a
+
+20220315:
+	Fix an openssl vulnerability.
+
+	wifi security changes.
+
 20220210:
 	MidnightBSD 2.1.5
 
