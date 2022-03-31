@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $FreeBSD: stable/10/contrib/zlib/zconf.h 313796 2017-02-16 06:16:50Z delphij $ */
+/* @(#) $Id$ */
 
 #ifndef ZCONF_H
 #define ZCONF_H
@@ -431,7 +431,7 @@ typedef uLong FAR uLongf;
    typedef unsigned long z_crc_t;
 #endif
 
-#if 0    /* was set to #if 0 by ./configure */
+#ifdef HAVE_UNISTD_H    /* may be set to #if 1 by ./configure */
 #  define Z_HAVE_UNISTD_H
 #endif
 
@@ -498,14 +498,6 @@ typedef uLong FAR uLongf;
 #  define SEEK_SET        0       /* Seek from beginning of file.  */
 #  define SEEK_CUR        1       /* Seek from current position.  */
 #  define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
-#endif
-
-/*
- * This is hard-configured for FreeBSD.
- */
-#define	z_off_t	off_t
-#ifndef _FILE_OFFSET_BITS
-#define _FILE_OFFSET_BITS 64
 #endif
 
 #ifndef z_off_t
