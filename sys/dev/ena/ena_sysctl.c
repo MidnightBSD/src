@@ -465,11 +465,9 @@ ena_sysctl_add_rss(struct ena_adapter *adapter)
 void
 ena_sysctl_update_queue_node_nb(struct ena_adapter *adapter, int old, int new)
 {
-	device_t dev;
 	struct sysctl_oid *oid;
 	int min, max, i;
 
-	dev = adapter->pdev;
 	min = MIN(old, new);
 	max = MIN(MAX(old, new), adapter->max_num_io_queues);
 
@@ -814,7 +812,6 @@ ena_sysctl_rss_indir_table(SYSCTL_HANDLER_ARGS)
 {
 	int num_queues, error;
 	struct ena_adapter *adapter = arg1;
-	struct ena_com_dev *ena_dev;
 	struct ena_indir *indir;
 	char *msg, *buf, *endp;
 	uint32_t idx, value;
@@ -830,7 +827,6 @@ ena_sysctl_rss_indir_table(SYSCTL_HANDLER_ARGS)
 		goto unlock;
 	}
 
-	ena_dev = adapter->ena_dev;
 	indir = adapter->rss_indir;
 	msg = indir->sysctl_buf;
 
