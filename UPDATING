@@ -1,21 +1,60 @@
 Updating Information for MidnightBSD users.
 
+20220408:
+	netmap: Fix TOCTOU vulnerability in nmreq_copyin
+	The total size of the user-provided nmreq was first computed and then
+	trusted during the copyin. This might lead to kernel memory corruption
+	and escape from jails/containers.
+	Security: CVE-2022-23084
+
+	netmap
+	An unsanitized field in an option could be abused, causing an integer
+	overflow followed by kernel memory corruption. This might be used
+	to escape jails/containers.
+	Security: CVE-2022-23085
+
+	The netmap_ioctl() function has a reference counting bug in case of
+	NETMAP_REQ_PORT_INFO_GET command. When `hdr->nr_name[0] == '\0'`,
+	the function does not decrease the refcount of "nmd", which is
+	increased by netmap_mem_find(), causing a refcount leak.
+
+20220406:
+	The 802.11 beacon handling routine failed to validate the length of an
+	IEEE 802.11s Mesh ID before copying it to a heap-allocated buffer.
+
+	Handlers for *_CFG_PAGE read / write ioctls in the mpr, mps, and mpt drivers
+	allocated a buffer of a caller-specified size, but copied to it a fixed size
+	header.  Other heap content would be overwritten if the specified size was
+	too small.
+
+	byhve
+	The e1000 network adapters permit a variety of modifications to an Ethernet
+	packet when it is being transmitted.  These include the insertion of IP and
+	TCP checksums, insertion of an Ethernet VLAN header, and TCP segmentation
+	offload ("TSO").  The e1000 device model uses an on-stack buffer to generate
+	the modified packet header when simulating these modifications on transmitted
+	packets.
+
+	When checksum offload is requested for a transmitted packet, the e1000 device
+	model used a guest-provided value to specify the checksum offset in the on-
+	stack buffer.  The offset was not validated for certain packet types.
+
 20220331:
 	zlib 1.2.12
 
 20220320:
-        tzdata 2022a
+	tzdata 2022a
 
 20220315:
-        Fix an openssl vulnerability.
+	Fix an openssl vulnerability.
 
-        wifi security changes.
+	wifi security changes.
 
 20220126:
-        Reject execve when new argc is zero
-        Fixes a security issue with NULL argv[0] entries, similar to the recent
-        CVE with polkit on Linux. The current POC for that does not work on
-        MidnightBSD since we don't use glibc, but proactively prevent similar issues.
+	Reject execve when new argc is zero
+	Fixes a security issue with NULL argv[0] entries, similar to the recent
+	CVE with polkit on Linux. The current POC for that does not work on
+	MidnightBSD since we don't use glibc, but proactively prevent similar issues.
 
 20220117:
 	expat 2.4.3
@@ -90,7 +129,7 @@ Updating Information for MidnightBSD users.
 	it to a fixed-sized buffer.  This allows to overwrite the stack of ggatec(8).
 
 	The passive mode in FTP communication allows an out of boundary read while
-	libfetch uses strtol to parse the relevant numbers into address bytes.  It
+	libfetch uses strtol to parse the relevant numbers into address bytes.	It
 	does not check if the line ends prematurely.  If it does, the for-loop
 	condition checks for *p == '\0' one byte too late because p++ was already
 	performed.
@@ -134,7 +173,7 @@ Updating Information for MidnightBSD users.
 
 	A particular case of memory sharing is mishandled in the virtual memory system.  It is possible 
 	and legal to establish a relationship where multiple descendant processes share a mapping which 
-	shadows memory of an ancestor process.  In this scenario, when one process modifies memory 
+	shadows memory of an ancestor process.	In this scenario, when one process modifies memory 
 	through such a mapping, the copy-on-write logic fails to invalidate other mappings of the source 
 	page.  These stale mappings may remain even after the mapped pages have been reused for another purpose.
 
@@ -145,7 +184,7 @@ Updating Information for MidnightBSD users.
 20210224:
 	Happy 15th anniversary to MidnightBSD!
 
-	Fix a security issue with pam.  The rules would not be applied correctly.
+	Fix a security issue with pam.	The rules would not be applied correctly.
 
 	xen fix to unmap correctly when errors occur
 
@@ -189,7 +228,7 @@ Updating Information for MidnightBSD users.
 	data structures and thus leave them in an invalid state.
 	
 	rtsold(8)
-	Two bugs exist in rtsold(8)'s RDNSS and DNSSL option handling.  First,
+	Two bugs exist in rtsold(8)'s RDNSS and DNSSL option handling.	First,
 	rtsold(8) failed to perform sufficient bounds checking on the extent of the
 	option.  In particular, it does not verify that the option does not extend
 	past the end of the received packet before processing its contents.  The
@@ -260,7 +299,7 @@ Updating Information for MidnightBSD users.
 	dhclient
 	When parsing option 119 data, dhclient(8) computes the uncompressed domain
 	list length so that it can allocate an appropriately sized buffer to store
-	the uncompressed list.  The code to compute the length failed to handle
+	the uncompressed list.	The code to compute the length failed to handle
 	certain malformed input, resulting in a heap overflow when the uncompressed
 	list is copied into in inadequately sized buffer.
 
@@ -290,14 +329,14 @@ Updating Information for MidnightBSD users.
 	
 
 20200514:
-        Fixed a security issue in libalias.
+	Fixed a security issue in libalias.
 
-        The FTP packet handler in libalias incorrectly calculates some packet
-        lengths.  This may result in disclosing small amounts of memory from the
-        kernel (for the in-kernel NAT implementation) or from the process space for
-        natd (for the userspace implementation).
+	The FTP packet handler in libalias incorrectly calculates some packet
+	lengths.  This may result in disclosing small amounts of memory from the
+	kernel (for the in-kernel NAT implementation) or from the process space for
+	natd (for the userspace implementation).
 
-        Updated tzdata to 2020a.
+	Updated tzdata to 2020a.
 
 	Updated subversion to 1.9.x
 
@@ -323,10 +362,10 @@ Updating Information for MidnightBSD users.
 	struct file.
 
 20190821:
-        Security patch for CVE-2019-5611. 
+	Security patch for CVE-2019-5611. 
 
-        Due do a missing check in the code of m_pulldown(9) data returned may not be
-        contiguous as requested by the caller.
+	Due do a missing check in the code of m_pulldown(9) data returned may not be
+	contiguous as requested by the caller.
 
 20190808:
 	OpenSSH 7.9p1
@@ -491,8 +530,8 @@ Updating Information for MidnightBSD users.
 20170819:
 	Heimdal KDC-REP service name validation vulerability patched.
 
-        Introduce a partial fix for AMD Ryzen issues. On Ryzen, move
-        the lower shared page by one.
+	Introduce a partial fix for AMD Ryzen issues. On Ryzen, move
+	the lower shared page by one.
 
 20170326:
 	sudo removed from base. Use doas(1) or install sudo from mports
@@ -725,16 +764,16 @@ Updating Information for MidnightBSD users.
 	support mkdir -p like behavior for plist entries.
 
 20160531:
-        Fix four security issues with MidnightBSD.
+	Fix four security issues with MidnightBSD.
 
-        The implementation of TIOCGSERIAL ioctl(2) does not clear the output
-        struct before sending to userland in the linux emulation layer.
+	The implementation of TIOCGSERIAL ioctl(2) does not clear the output
+	struct before sending to userland in the linux emulation layer.
 
-        The compat 43 stat(2) system call exposes kernel stack to userland.
+	The compat 43 stat(2) system call exposes kernel stack to userland.
 
-        libarchive - CVE-2015-2304 and CVE-2013-0211 fix issues with
-        cpio directory traversal and an integer signedness error in the archive
-        write zip data routine.
+	libarchive - CVE-2015-2304 and CVE-2013-0211 fix issues with
+	cpio directory traversal and an integer signedness error in the archive
+	write zip data routine.
 
 
 20160528:
@@ -798,7 +837,7 @@ Updating Information for MidnightBSD users.
 
 	A special combination of sysarch(2) arguments, specify a request to
 	uninstall a set of descriptors from the LDT.  The start descriptor
-	is cleared and the number of descriptors are provided.  Due to invalid
+	is cleared and the number of descriptors are provided.	Due to invalid
 	use of a signed intermediate value in the bounds checking during argument
 	validity verification, unbound zero'ing of the process LDT and adjacent
 	memory can be initiated from usermode.
@@ -818,14 +857,14 @@ Updating Information for MidnightBSD users.
 	OpenSSL
 
 	The signature verification routines will crash with a NULL pointer dereference
-        if presented with an ASN.1 signature using the RSA PSS algorithm and absent
-        mask generation function parameter. [CVE-2015-3194]
+	if presented with an ASN.1 signature using the RSA PSS algorithm and absent
+	mask generation function parameter. [CVE-2015-3194]
 
-        When presented with a malformed X509_ATTRIBUTE structure, OpenSSL will leak
-        memory. [CVE-2015-3195]
+	When presented with a malformed X509_ATTRIBUTE structure, OpenSSL will leak
+	memory. [CVE-2015-3195]
 
-        If PSK identity hints are received by a multi-threaded client then the values
-        are incorrectly updated in the parent SSL_CTX structure.  [CVE-2015-3196]
+	If PSK identity hints are received by a multi-threaded client then the values
+	are incorrectly updated in the parent SSL_CTX structure.  [CVE-2015-3196]
 
 	Fix security on bsnmpd configuration file during installation.
 
@@ -876,7 +915,7 @@ Updating Information for MidnightBSD users.
 	Fix kqueue write events for files > 2GB
 
 20150825:
-        kernel:
+	kernel:
 	fix a security issue on amd64 where the GS segment CPU register can be changed via
 	userland value in kernel mode by using an IRET with #SS or #NP exceptions.
 
@@ -1014,11 +1053,11 @@ Updating Information for MidnightBSD users.
 20150618:
 	Sendmail
 
-        With the recent changes to OpenSSL to block 512 bit certificates,
-        sendmail can't connect with TLS to some servers.
+	With the recent changes to OpenSSL to block 512 bit certificates,
+	sendmail can't connect with TLS to some servers.
 
-        Increase the default size to 1024 bit for client connections to
-        match the server configuration.
+	Increase the default size to 1024 bit for client connections to
+	match the server configuration.
 
 	ZFS
 
@@ -1078,20 +1117,20 @@ Updating Information for MidnightBSD users.
 	Upgrade OpenSSL to 0.9.8ze
 
 20150225:
-        Fix two security vulnerabilities.
+	Fix two security vulnerabilities.
 
-        1. BIND servers which are configured to perform DNSSEC validation and which
-        are using managed keys (which occurs implicitly when using
-        "dnssec-validation auto;" or "dnssec-lookaside auto;") may exhibit
-        unpredictable behavior due to the use of an improperly initialized
-        variable.
+	1. BIND servers which are configured to perform DNSSEC validation and which
+	are using managed keys (which occurs implicitly when using
+	"dnssec-validation auto;" or "dnssec-lookaside auto;") may exhibit
+	unpredictable behavior due to the use of an improperly initialized
+	variable.
 
-        CVE-2015-1349
+	CVE-2015-1349
 
-        2. An integer overflow in computing the size of IGMPv3 data buffer can result
-        in a buffer which is too small for the requested operation.
+	2. An integer overflow in computing the size of IGMPv3 data buffer can result
+	in a buffer which is too small for the requested operation.
 
-        This can result in a DOS attack.
+	This can result in a DOS attack.
 
 20141211:
 	Fix a security issue with file and libmagic that can allow
@@ -1116,17 +1155,17 @@ Updating Information for MidnightBSD users.
 
 20141021:
 	Fix several security vulnerabilities in routed, rtsold,
-        and namei with respect to Capsicum sandboxes looking up
-        nonexistent path names and leaking memory.
+	and namei with respect to Capsicum sandboxes looking up
+	nonexistent path names and leaking memory.
 
-        The input path in routed(8) will accept queries from any source and
-        attempt to answer them.  However, the output path assumes that the
-        destination address for the response is on a directly connected
-        network.
+	The input path in routed(8) will accept queries from any source and
+	attempt to answer them.  However, the output path assumes that the
+	destination address for the response is on a directly connected
+	network.
 
-        Due to a missing length check in the code that handles DNS parameters,
-        a malformed router advertisement message can result in a stack buffer
-        overflow in rtsold(8).
+	Due to a missing length check in the code that handles DNS parameters,
+	a malformed router advertisement message can result in a stack buffer
+	overflow in rtsold(8).
 
 20141011:
 	mksh R50d - fix field splitting regression and null 
@@ -1154,11 +1193,11 @@ Updating Information for MidnightBSD users.
 	sudo 1.7.6p2
 
 20140916:
-        Fix a security issue with TCP SYN.
+	Fix a security issue with TCP SYN.
 
-        When a segment with the SYN flag for an already existing connection arrives,
-        the TCP stack tears down the connection, bypassing a check that the
-        sequence number in the segment is in the expected window.
+	When a segment with the SYN flag for an already existing connection arrives,
+	the TCP stack tears down the connection, bypassing a check that the
+	sequence number in the segment is in the expected window.
 
 20140909:
 	Fixed a bug with our clearenv(3) implementation that caused segfaults
@@ -1205,10 +1244,10 @@ Updating Information for MidnightBSD users.
 	Fix four security issues with OpenSSL
 
 20140604:
-        Sendmail failed to properly set close-on-exec for open file descriptors.
+	Sendmail failed to properly set close-on-exec for open file descriptors.
 
-        ktrace page fault kernel trace entries were set to an incorrect size which resulted
-        in a leak of information.
+	ktrace page fault kernel trace entries were set to an incorrect size which resulted
+	in a leak of information.
 
 20140430:
 	Fix a TCP reassembly bug that could result in a DOS attack
@@ -1222,12 +1261,12 @@ Updating Information for MidnightBSD users.
 	Support for username with length 32. Previous limit was 16
 
 20140114:
-        Fix two security vulnerabilities.
+	Fix two security vulnerabilities.
 
-        bsnmpd contains a stack overflow when sent certain queries.
+	bsnmpd contains a stack overflow when sent certain queries.
 
-        bind 9.8 when using NSEC3-signed zones zones, will crash with special
-        crafted packets.
+	bind 9.8 when using NSEC3-signed zones zones, will crash with special
+	crafted packets.
 
 20131228:
 	Imported FreeBSD 9.2 usb stack (plus z87 patches from stable)
@@ -1280,7 +1319,7 @@ Updating Information for MidnightBSD users.
 	Network interface drivers, however, assume that the SIOCSIFADDR,
 	SIOCSIFBRDADDR, SIOCSIFDSTADDR and SIOCSIFNETMASK requests have been
 	handled at the network layer, and therefore do not perform input
-	validation or verify the caller's credentials.  Typical link-layer
+	validation or verify the caller's credentials.	Typical link-layer
 	actions for these requests may include marking the interface as "up"
 	and resetting the underlying hardware.
 
@@ -1471,7 +1510,7 @@ Updating Information for MidnightBSD users.
 	compatibility on amd64. 
 
 	The scheduler default has been changed to ULE in i386 and
-	amd64.  Changes were made to both schedulers (4BSD AND ULE)
+	amd64.	Changes were made to both schedulers (4BSD AND ULE)
 	for this feature. 
 
 	This work is based on Jeff Roberson's FreeBSD 7.1 patches.
@@ -1535,7 +1574,7 @@ Updating Information for MidnightBSD users.
 	to build a graphical based search in the future. You can enable
 	index building for msearch in periodic.conf or manually run the
 	/usr/libexec/msearch.index tool.  Full text indexes take considerable
-	space in /var.  I'm using approximately 500MB currently.
+	space in /var.	I'm using approximately 500MB currently.
 
 	Fix a long standing bug with the periodic script to check package
 	versions.  This will be obsolete with mport though.
@@ -1649,9 +1688,9 @@ Updating Information for MidnightBSD users.
 	uses the sensors framework ported by Constantine A. Murenin (GSOC2007)
 
 20110120:
-        BIND 9.6.2-P3
+	BIND 9.6.2-P3
 
-        sudo 1.7.4-p6
+	sudo 1.7.4-p6
 
 20110115:
 	Add experimental jme(4) for Jmicron ethernet devices.
@@ -1671,9 +1710,9 @@ Updating Information for MidnightBSD users.
 	newfs and growfs was also modified.
 
 20101110:
-        Fix a security issue with pseudofs which could result in running code in kernel
-        context or a kernel panic depending on system configuration.  This affects file
-        systems such as procfs for instance.
+	Fix a security issue with pseudofs which could result in running code in kernel
+	context or a kernel panic depending on system configuration.  This affects file
+	systems such as procfs for instance.
 
 20101021:
 	sysrc is a utility to print and modify name/value pairs in /etc/rc.conf easily.
@@ -1684,7 +1723,7 @@ Updating Information for MidnightBSD users.
 	bzip2 security patch for integer overflow.
 
 20100905:
-	MidnightBSD RELENG_0_3 branch created.  Aggressive development continues here
+	MidnightBSD RELENG_0_3 branch created.	Aggressive development continues here
 	for 0.4.
 
 20100902:
@@ -1877,7 +1916,7 @@ of BMPString or UniversalString objects before attempting to print them.
 
 20090403:
 	mksh was disconnected a few day ago do to bugs with
-	buildworld and mports.  Now, connect it back 
+	buildworld and mports.	Now, connect it back 
 	for use as /bin/sh with a conditional called
 	MK_ASH.  By default, ash is the standard /bin/sh
 	but we may change this later.  This will allow further
@@ -1887,7 +1926,7 @@ of BMPString or UniversalString objects before attempting to print them.
 
 20090328:
 	Bring in mksh R37 from CVS. The dot.mkshrc files for root 
-	and skel were changed.  mksh(1) now replaces ash aka sh(1)
+	and skel were changed.	mksh(1) now replaces ash aka sh(1)
 	as the default /bin/sh.  Please report bugs with
 	ports, etc. The ash code will remain in the repo for awhile
 	as I decide if we'll add something like MK_SHELL_ASH as
@@ -1946,7 +1985,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	changed accordingly.  ipfilter and ncurses were corrected
 	using __MidnightBSD__ tests in the code.  
 
-	The GENERIC kernel config was caught up on i386 today.  Consider
+	The GENERIC kernel config was caught up on i386 today.	Consider
 	i386 still broken, but amd64 is running again. 
 
 	mdoc.local was updated with the new MidnightBSD version info.
@@ -2013,7 +2052,7 @@ of BMPString or UniversalString objects before attempting to print them.
 20080514:
 	Fixed a number of problems with pcc.  It is not yet connected
 	to the build, but usable on i386 hosts.  You may use it 
-	by make; make install in /usr/src/usr.bin/pcc.  It will
+	by make; make install in /usr/src/usr.bin/pcc.	It will
 	install in /usr/local as some of the files conflict with
 	GCC versions. __MidnightBSD__ is defined in PCC as well.
 
@@ -2082,7 +2121,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	My copy is in the closet collecting dust.
 
 20080306:
-	Synced tinderbox with FreeBSD.  Modified it for MidnightBSD.
+	Synced tinderbox with FreeBSD.	Modified it for MidnightBSD.
 	Developers can now use it to check src builds.
 
 20080303:
@@ -2197,7 +2236,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	mport work and other projects at this time.
 
 	This is not a clean removal.  It is recommended that you
-	have a recently SNAP CD handy.  You can either reinstall
+	have a recently SNAP CD handy.	You can either reinstall
 	or perform a make buildworld and make buildkernel and 
 	make installkernel.  Reboot on the cd and copy the contents
 	of /bin, /sbin, /lib, /libexec, and /usr/bin, /usr/sbin,
@@ -2273,7 +2312,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	wpa_supplicant was updated.
 
 	For stability and compatibility reasons, it was decided that MidnightBSD
-	sync with FreeBSD 6.1 Release.  Nearly every change between the original
+	sync with FreeBSD 6.1 Release.	Nearly every change between the original
 	fork date of February 24, 2006 and the release of FreeBSD 6.1 in May
 	2006 will be merged.  Beyond this, MidnightBSD will be a "real" fork and
 	will not sync every little change with FreeBSD.
@@ -2340,7 +2379,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	Updated man pages in section 7.
 
 20061030:
- 	Updated sys/dev/drm to support intel 915 and radeon 
+	Updated sys/dev/drm to support intel 915 and radeon 
 	r300 cards properly.  
 
 	Synced snmpd with FreeBSD-stable.
@@ -2367,7 +2406,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	ATA driver was updated.  USB/USB1/USB2 types added.
 
 20061010: 
-	OpenSSH was updated to 4.4p1.   
+	OpenSSH was updated to 4.4p1.	
 
 20060909:
 	OpenNTPD was added to MidnightBSD.  Run make delete-old to remove
@@ -2388,7 +2427,7 @@ of BMPString or UniversalString objects before attempting to print them.
 	Bind was patched to fix a potential denial of service condition.
 
 20060817:
-	ksh has been added to the base system.  If you previously had
+	ksh has been added to the base system.	If you previously had
 	the port installed, it will be overwritten on the next buildworld.
 
 
@@ -2502,7 +2541,7 @@ COMMON ITEMS:
 	make installworld DESTDIR=${CURRENT_ROOT} -DDB_FROM_SRC
 	make distribution DESTDIR=${CURRENT_ROOT} # if newfs'd
 	make installkernel KERNCONF=YOUR_KERNEL_HERE DESTDIR=${CURRENT_ROOT}
-	cp /etc/fstab ${CURRENT_ROOT}/etc/fstab 		   # if newfs'd
+	cp /etc/fstab ${CURRENT_ROOT}/etc/fstab			   # if newfs'd
 	<edit ${CURRENT_ROOT}/etc/fstab to mount "/" from the correct partition>
 	<reboot into current>
 	<do a "native" rebuild/install as described in the previous section>
@@ -2556,7 +2595,7 @@ COMMON ITEMS:
 	system.  Attempting to do it by hand is not recommended and those
 	that pursue this avenue should read this file carefully, as well
 	as the archives of midnightbsd-users mailing lists
-	for potential gotchas.  See etcupdate(8) for more information.
+	for potential gotchas.	See etcupdate(8) for more information.
 
 	[5] Usually this step is a no-op.  However, from time to time
 	you may need to do this if you get unknown user in the following
@@ -2585,7 +2624,7 @@ COMMON ITEMS:
 	override the CPUTYPE if it needs to.
 
 	MAKEOBJDIRPREFIX must be defined in an environment variable, and
-	not on the command line, or in /etc/make.conf.  buildworld will
+	not on the command line, or in /etc/make.conf.	buildworld will
 	warn if it is improperly defined.
 	
 FORMAT:
