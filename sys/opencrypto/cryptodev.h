@@ -63,7 +63,10 @@
 #define _CRYPTO_CRYPTO_H_
 
 #include <sys/ioccom.h>
-
+#ifdef _KERNEL
+#include <opencrypto/_cryptodev.h>
+#include <sys/_task.h>
+#endif
 /* Some initial values */
 #define CRYPTO_DRIVERS_INITIAL	4
 #define CRYPTO_SW_SESSIONS	32
