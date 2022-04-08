@@ -6,7 +6,7 @@
 -- this stuff is worth it, you can buy me a beer in return.   -Philip Paeps
 -- ----------------------------------------------------------------------------
 --
--- $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_pf/BEGEMOT-PF-MIB.txt 310901 2016-12-31 10:32:49Z ngie $
+-- $FreeBSD$
 --
 
 BEGEMOT-PF-MIB DEFINITIONS ::= BEGIN

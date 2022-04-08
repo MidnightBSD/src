@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_wlan/wlan_snmp.c 330449 2018-03-05 07:26:05Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -52,6 +52,7 @@
 #include <bsnmp/snmpmod.h>
 #include <bsnmp/snmp_mibII.h>
 
+#define	SNMPTREE_TYPES
 #include "wlan_tree.h"
 #include "wlan_snmp.h"
 #include "wlan_oid.h"

@@ -28,7 +28,7 @@
  *
  * Textual conventions for OctetStrings
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptc.c 311594 2017-01-07 08:44:43Z ngie $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

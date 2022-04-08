@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_partition_tbl.c 344747 2019-03-04 03:38:43Z avos $
+ * $FreeBSD$
  */
 
 /*
@@ -50,11 +50,7 @@
 #include "hostres_oid.h"
 #include "hostres_tree.h"
 
-#ifdef PC98
-#define	HR_FREEBSD_PART_TYPE	0xc494
-#else
 #define	HR_FREEBSD_PART_TYPE	165
-#endif
 
 /* Maximum length for label and id including \0 */
 #define	PART_STR_MLEN	(128 + 1)
@@ -488,7 +484,7 @@ partition_tbl_handle_disk(int32_t ds_index, const char *disk_dev_name)
 
 	/*
 	 * Get the "SUN" GEOM class.
-	 * Here we'll find all the info needed about the BSD slices.
+	 * Here we'll find all the info needed about the SUN slices.
 	 */
 	if ((classp = find_class(&mesh, "SUN")) != NULL) {
 		get_bsd_sun(classp, ds_index, disk_dev_name);

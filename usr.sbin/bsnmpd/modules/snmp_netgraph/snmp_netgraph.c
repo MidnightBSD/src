@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_netgraph/snmp_netgraph.c 310901 2016-12-31 10:32:49Z ngie $
+ * $FreeBSD$
  *
  * Netgraph interface for SNMPd.
  */

@@ -23,7 +23,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_bridge/BEGEMOT-BRIDGE-MIB.txt 310901 2016-12-31 10:32:49Z ngie $
+-- $FreeBSD$
 --
 
 BEGEMOT-BRIDGE-MIB DEFINITIONS ::= BEGIN
@@ -878,7 +878,7 @@ begemotBridgeTpMaxAddresses OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"The maximum number of entries that this bridge can
-	learn in it's Forwarding Address Table and use for
+	learn in its Forwarding Address Table and use for
 	making forwarding decisions."
     ::= { begemotBridgeTpEntry 3 }
 

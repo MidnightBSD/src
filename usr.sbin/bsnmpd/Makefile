@@ -1,3 +1,5 @@
+# $FreeBSD$
+
 SUBDIR=	gensnmptree	\
 	bsnmpd		\
 	modules		\

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/bsnmptools/Makefile 313242 2017-02-04 17:21:17Z ngie $
+# $FreeBSD$
 # Author: Shteryana Shopova <syrinx@FreeBSD.org>
 
 .include <src.opts.mk>

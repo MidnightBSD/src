@@ -28,7 +28,7 @@
  *
  * Helper functions common for all tools.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.h 299701 2016-05-13 21:26:12Z ngie $
+ * $FreeBSD$
  */
 
 #ifndef	_BSNMP_TOOLS_H_

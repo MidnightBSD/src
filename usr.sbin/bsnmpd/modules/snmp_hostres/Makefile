@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile 313239 2017-02-04 17:10:19Z ngie $
+# $FreeBSD$
 #
 
 LPRSRC=	${SRCTOP}/usr.sbin/lpr/common_source
