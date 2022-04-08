@@ -1,9 +1,13 @@
 #
-# $FreeBSD: stable/11/usr.sbin/praudit/Makefile 336212 2018-07-11 20:11:06Z asomers $
+# $FreeBSD$
 #
+
+.include <src.opts.mk>
 
 OPENBSMDIR=${SRCTOP}/contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/praudit
+
+CFLAGS+=	-I${OPENBSMDIR}
 
 PROG=	praudit
 MAN=	praudit.1
