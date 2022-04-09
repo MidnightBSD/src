@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hast/Makefile 312056 2017-01-13 09:07:29Z ngie $
+# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -27,7 +27,6 @@ CFLAGS+=-DINET6
 # This is needed to have WARNS > 1.
 CFLAGS+=-DYY_NO_UNPUT
 CFLAGS+=-DYY_NO_INPUT
-CFLAGS+= -DSNMPTREE_TYPES
 
 LIBADD=	util
 

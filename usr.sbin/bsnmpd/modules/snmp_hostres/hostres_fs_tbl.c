@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_fs_tbl.c 317062 2017-04-17 18:55:54Z araujo $
+ * $FreeBSD$
  */
 
 /*

@@ -1,3 +1,7 @@
+# $FreeBSD$
+#
+# Author: Harti Brandt <harti@freebsd.org>
+
 CONTRIB=${SRCTOP}/contrib/bsnmp
 .PATH: ${CONTRIB}/gensnmptree
 

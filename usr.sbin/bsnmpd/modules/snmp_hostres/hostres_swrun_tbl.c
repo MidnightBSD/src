@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_swrun_tbl.c 240352 2012-09-11 08:28:58Z glebius $
+ * $FreeBSD$
  *
  * Host Resources MIB for SNMPd. Implementation for hrSWRunTable
  */

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile 313239 2017-02-04 17:10:19Z ngie $
+# $FreeBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

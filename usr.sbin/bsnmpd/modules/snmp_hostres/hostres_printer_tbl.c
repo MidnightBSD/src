@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_printer_tbl.c 285719 2015-07-20 16:08:01Z pfg $
+ * $FreeBSD$
  */
 
 /*

@@ -1,4 +1,4 @@
-# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_netgraph/Makefile 275054 2014-11-25 16:57:27Z bapt $
+# $FreeBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
