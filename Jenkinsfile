@@ -36,8 +36,10 @@ pipeline {
                             MAKEOBJDIRPREFIX = "${env.WORKSPACE}/obj"
                         }
                         steps {
-                            echo "Do buildworld for ${ARCHITECTURE}"
-                             sh 'make -j5 buildworld'
+                            catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                                echo "Do buildworld for ${ARCHITECTURE}"
+                                sh 'make -j5 buildworld'
+                            }
                         }
                     }
                     stage('buildkernel') {
