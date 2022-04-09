@@ -28,7 +28,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge OS specific ioctls.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_sys.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/ioctl.h>
@@ -58,7 +58,6 @@
 #include <bsnmp/snmpmod.h>
 #include <bsnmp/snmp_mibII.h>
 
-#define	SNMPTREE_TYPES
 #include "bridge_tree.h"
 #include "bridge_snmp.h"
 
@@ -586,7 +585,8 @@ bridge_get_basemac(const char *bif_name, u_char *mac, size_t mlen)
 			continue;
 
 		/*
-		 * Not just casting because of alignment constraints.
+		 * Not just casting because of alignment constraints
+		 * on sparc64.
 		 */
 		bcopy(ifa->ifa_addr, &sdl, sizeof(struct sockaddr_dl));
 

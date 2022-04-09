@@ -28,7 +28,7 @@
  *
  * Helper functions for snmp client tools
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.c 311594 2017-01-07 08:44:43Z ngie $
  */
 
 #include <sys/param.h>
@@ -1828,11 +1828,11 @@ snmp_output_numval(struct snmp_toolinfo *snmptoolctx, struct snmp_value *val,
 		break;
 
 	    case SNMP_SYNTAX_NOSUCHOBJECT:
-		fprintf(stderr, "No Such Object\n");
+		fprintf(stdout, "No Such Object\n");
 		return (val->syntax);
 
 	    case SNMP_SYNTAX_NOSUCHINSTANCE:
-		fprintf(stderr, "No Such Instance\n");
+		fprintf(stdout, "No Such Instance\n");
 		return (val->syntax);
 
 	    case SNMP_SYNTAX_ENDOFMIBVIEW:
@@ -1841,12 +1841,12 @@ snmp_output_numval(struct snmp_toolinfo *snmptoolctx, struct snmp_value *val,
 
 	    case SNMP_SYNTAX_NULL:
 		/* NOTREACHED */
-		fprintf(stderr, "agent returned NULL Syntax\n");
+		fprintf(stdout, "agent returned NULL Syntax\n");
 		return (val->syntax);
 
 	    default:
 		/* NOTREACHED - If here - then all went completely wrong. */
-		fprintf(stderr, "agent returned unknown syntax\n");
+		fprintf(stdout, "agent returned unknown syntax\n");
 		return (-1);
 	}
 

@@ -28,7 +28,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge interface objects.
  *
- * $FreeBSD$
+ * $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/queue.h>
@@ -50,7 +50,6 @@
 #include <bsnmp/snmpmod.h>
 #include <bsnmp/snmp_mibII.h>
 
-#define	SNMPTREE_TYPES
 #include "bridge_tree.h"
 #include "bridge_snmp.h"
 #include "bridge_oid.h"
@@ -359,7 +358,7 @@ bridge_get_time_since_tc(struct bridge_if *bif, uint32_t *ticks)
 
 	if (gettimeofday(&ct, NULL) < 0) {
 		syslog(LOG_ERR, "bridge get time since last TC:"
-		    "gettimeofday failed: %s", strerror(errno));
+		    "getttimeofday failed: %s", strerror(errno));
 		return (-1);
 	}
 

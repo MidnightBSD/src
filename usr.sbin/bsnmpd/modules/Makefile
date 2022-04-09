@@ -1,10 +1,14 @@
-# $FreeBSD$
+# $FreeBSD: stable/11/usr.sbin/bsnmpd/modules/Makefile 313239 2017-02-04 17:10:19Z ngie $
 
 .include <src.opts.mk>
 
 .PATH: ${SRCTOP}/contrib/bsnmp/snmpd
 
-SUBDIR=	\
+.if ${MK_ATM} != "no"
+_snmp_atm= snmp_atm
+.endif
+
+SUBDIR=	${_snmp_atm} \
 	snmp_bridge \
 	snmp_hostres \
 	snmp_lm75 \

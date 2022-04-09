@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
+__FBSDID("$FreeBSD: stable/11/usr.sbin/bsnmpd/modules/snmp_lm75/snmp_lm75.c 267971 2014-06-27 18:58:22Z loos $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -100,6 +100,7 @@ lm75_init(struct lmodule *mod, int argc __unused, char *argv[] __unused)
 	module = mod;
 
 	lm75_sensors = 0;
+	openlog("snmp_lm75", LOG_NDELAY | LOG_PID, LOG_DAEMON);
 
 	return(0);
 }
