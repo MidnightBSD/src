@@ -1,5 +1,8 @@
-# $FreeBSD: stable/11/lib/libbsnmp/Makefile 143601 2005-03-14 17:32:16Z harti $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 SUBDIR=	libbsnmp
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.subdir.mk>
