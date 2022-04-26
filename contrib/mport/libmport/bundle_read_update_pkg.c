@@ -49,15 +49,15 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
 
 	if ((fd = mkstemp(tmpfile2)) == -1) {
     	RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
-  	}
+	}
   
 	close(fd);
 
-  	if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
+	if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
 		// attempt to clear the temp file
 		(void)mport_rmtree(tmpfile2);
 		RETURN_CURRENT_ERROR;
-  	}
+	}
 
 	pkg->action = MPORT_ACTION_UPDATE;
 	if (
@@ -230,5 +230,5 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
   
   sqlite3_finalize(stmt);
   
-  return MPORT_OK;
+  return (MPORT_OK);
 }

@@ -182,6 +182,8 @@ mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
 			indexEntries++;
 		}
 		mport_index_entry_free_vec(indexEntries_orig);
+		indexEntries_orig = NULL;
+		indexEntries = NULL;
 	}
 
 	return (ret);

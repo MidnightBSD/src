@@ -190,7 +190,7 @@ int mport_chdir(mportInstance *mport, const char *dir)
             RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't chdir to %s: %s", dir, strerror(errno));
     }
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }    
 
 
@@ -228,7 +228,7 @@ mport_copy_file(const char *fromName, const char *toName)
     fclose(fsrc);
     fclose(fdest);
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 
@@ -244,7 +244,7 @@ int mport_mkdir(const char *dir)
             RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't mkdir %s: %s", dir, strerror(errno));
     }
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 
@@ -259,13 +259,13 @@ int mport_rmdir(const char *dir, int ignore_nonempty)
 {
     if (rmdir(dir) != 0) {
         if (ignore_nonempty && (errno == ENOTEMPTY || errno == ENOENT)) {
-            return MPORT_OK;
+            return (MPORT_OK);
         } else {
             RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't rmdir %s: %s", dir, strerror(errno));
         }
     }
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 
@@ -350,7 +350,7 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
     }
 
     if (WIFEXITED(ret))
-        return MPORT_OK;
+        return (MPORT_OK);
 
     RETURN_ERROR(MPORT_ERR_FATAL, "Error executing command");
 }
@@ -576,7 +576,7 @@ mport_decompress_bzip2(const char *input, const char *output)
     fclose(f);
     fclose(fout);
 
-    return MPORT_OK;
+    return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API char *
