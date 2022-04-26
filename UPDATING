@@ -48,6 +48,11 @@ Updating Information for MidnightBSD users.
 20220315:
 	Fix an openssl vulnerability.
 
+20220126:
+	Reject execve when new argc is zero
+	Fixes a security issue with NULL argv[0] entries, similar to the recent
+	CVE with polkit on Linux. The current POC for that does not work on
+	MidnightBSD since we don't use glibc, but proactively prevent similar issues.
 
 20211115:
 	Update lua 5.3.6
