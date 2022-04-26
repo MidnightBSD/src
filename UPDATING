@@ -1,5 +1,54 @@
 Updating Information for MidnightBSD users.
 
+20220408:
+	netmap: Fix TOCTOU vulnerability in nmreq_copyin
+	The total size of the user-provided nmreq was first computed and then
+	trusted during the copyin. This might lead to kernel memory corruption
+	and escape from jails/containers.
+	Security: CVE-2022-23084
+
+	netmap
+	An unsanitized field in an option could be abused, causing an integer
+	overflow followed by kernel memory corruption. This might be used
+	to escape jails/containers.
+	Security: CVE-2022-23085
+
+	The netmap_ioctl() function has a reference counting bug in case of
+	NETMAP_REQ_PORT_INFO_GET command. When `hdr->nr_name[0] == '\0'`,
+	the function does not decrease the refcount of "nmd", which is
+	increased by netmap_mem_find(), causing a refcount leak.
+
+20220406:
+	The 802.11 beacon handling routine failed to validate the length of an
+	IEEE 802.11s Mesh ID before copying it to a heap-allocated buffer.
+
+	Handlers for *_CFG_PAGE read / write ioctls in the mpr, mps, and mpt drivers
+	allocated a buffer of a caller-specified size, but copied to it a fixed size
+	header.  Other heap content would be overwritten if the specified size was
+	too small.
+
+	byhve
+	The e1000 network adapters permit a variety of modifications to an Ethernet
+	packet when it is being transmitted.  These include the insertion of IP and
+	TCP checksums, insertion of an Ethernet VLAN header, and TCP segmentation
+	offload ("TSO").  The e1000 device model uses an on-stack buffer to generate
+	the modified packet header when simulating these modifications on transmitted
+	packets.
+
+	When checksum offload is requested for a transmitted packet, the e1000 device
+	model used a guest-provided value to specify the checksum offset in the on-
+	stack buffer.  The offset was not validated for certain packet types.
+
+20220331:
+	zlib 1.2.12
+
+20220320:
+	tzdata 2022a
+
+20220315:
+	Fix an openssl vulnerability.
+
+
 20211115:
 	Update lua 5.3.6
 
