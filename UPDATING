@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20220427:
+	sqlite 3.38.2
+
+	expat 2.47
+
 20220408:
 	netmap: Fix TOCTOU vulnerability in nmreq_copyin
 	The total size of the user-provided nmreq was first computed and then
