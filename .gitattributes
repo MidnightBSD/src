@@ -1,8 +1,0 @@
-* text=auto !eol
-/MIDNIGHTBSD-upgrade -text
-/shell.c -text
-/sqlite3.1 -text
-/sqlite3.c -text
-/sqlite3.h -text
-/sqlite3.pc -text
-/sqlite3ext.h -text

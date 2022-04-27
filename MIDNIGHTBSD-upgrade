@@ -1,32 +1,14 @@
-sqlite 3.5.8 - A simple, high-performance, self-contained, public domain,
+sqlite 3.8.6 - A simple, high-performance, self-contained, public domain,
 SQL database.
 
 Originals can be found at http://www.sqlite.org/
 
-1) Install tcl-tk-wrapper or apply the following change to Makefile.in (you
-can use another version of tclsh, I had 8.4 on my box):
+1) Download the amalgamation release
 
---- Makefile.in.orig	Thu May 10 03:13:25 2007
-+++ Makefile.in	Thu May 10 03:14:07 2007
-@@ -304,7 +304,7 @@
- 	cp parse.c opcodes.c keywordhash.h tsrc
- 
- sqlite3.c:	target_source $(TOP)/tool/mksqlite3c.tcl
--	tclsh $(TOP)/tool/mksqlite3c.tcl
-+	tclsh8.4 $(TOP)/tool/mksqlite3c.tcl
- 
- # Rules to build the LEMON compiler generator
- #
+2) Unpack with the xlist:
+	tar xf sqlite-amalgamation-3.6.23.tar.gz -X MIDNIGHTBSD-Xlist
+	We also deleted the tea directory
 
+3) Imported with:
 
-2) ./configure --build=i386-mbsd-freebsd6.0 --prefix=/usr
-
-3) Run 'make sqlite3.c' to generate sqlite3.c
-
-4) move src/shell.c to the current directory.
-
-5) Delete everything but sqlite3.c, sqlite3.h, sqlite3.1 and shell.c
-
-6) Imported with:
-
-cvs import -m "import sqlite 3.5.8 (very trimmed)" src/contrib/sqlite3 SQLite v3_5_8
+	cvs import -m "import sqlite 3.7.17 (trimmed)" src/contrib/sqlite3 SQLite v3_7_17
