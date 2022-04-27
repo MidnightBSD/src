@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20220427:
+	sqlite 3.38.2
+
+	expat 2.4.7
+
 20220408:
 	Subversion 1.14.1 
 	
