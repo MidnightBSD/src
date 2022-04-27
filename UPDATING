@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	expat 2.47
 
+	subversion 1.14.1
+
 20220408:
 	netmap: Fix TOCTOU vulnerability in nmreq_copyin
 	The total size of the user-provided nmreq was first computed and then
