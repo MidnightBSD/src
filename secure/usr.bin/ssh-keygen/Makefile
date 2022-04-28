@@ -1,12 +1,12 @@
-# $FreeBSD: stable/11/secure/usr.bin/ssh-keygen/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 .include <src.opts.mk>
+.include "${SRCTOP}/secure/ssh.mk"
 
 PROG=	ssh-keygen
-SRCS=	ssh-keygen.c
+# XXX ssh-sk-client.c in libssh maybe?
+SRCS=	ssh-keygen.c sshsig.c ssh-sk-client.c
 PACKAGE=	ssh
-CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
-SRCS+=	ssh_namespace.h
 
 LIBADD=	ssh
 
