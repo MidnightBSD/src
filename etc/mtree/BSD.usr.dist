@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/mtree/BSD.usr.dist 258481 2013-11-22 19:26:04Z glebius $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -7,12 +7,40 @@
 .
     bin
     ..
-    games
-    ..
     include
+        private
+            bsdstat
+            ..
+            ucl
+            ..
+        ..
     ..
     lib
         aout
+        ..
+        clang
+            10.0.0
+                include
+                    cuda_wrappers
+                    ..
+                    fuzzer
+                    ..
+                    openmp_wrappers
+                    ..
+                    ppc_wrappers
+                    ..
+                    profile
+                    ..
+                    sanitizer
+                    ..
+                    xray
+                    ..
+                ..
+                lib
+                    freebsd
+                    ..
+                ..
+            ..
         ..
         compat
             aout
@@ -24,15 +52,9 @@
         ..
         i18n
         ..
-        private
-        ..
-    ..
-    lib32
-        dtrace
-        ..
-        i18n
-        ..
-        private
+        libxo
+            encoder
+            ..
         ..
     ..
     libdata
@@ -101,8 +123,16 @@
             ..
             include
             ..
+            includes
+                include
+                ..
+            ..
         ..
         bsdinstall
+        ..
+        dwatch
+        ..
+        hyperv
         ..
         lpr
             ru
@@ -160,6 +190,12 @@
             uk_UA.KOI8-U
             ..
         ..
+        certs
+            blacklisted
+            ..
+            trusted
+            ..
+        ..
         dict
         ..
         doc
@@ -170,12 +206,6 @@
             atm
             ..
             legal
-                intel_ipw
-                ..
-                intel_iwi
-                ..
-                intel_wpi
-                ..
             ..
             llvm
                 clang
@@ -184,8 +214,24 @@
             ncurses
             ..
             ntp
+                drivers
+                    icons
+                    ..
+                    scripts
+                    ..
+                ..
+                hints
+                ..
+                icons
+                ..
+                pic
+                ..
+                scripts
+                ..
             ..
             papers
+            ..
+            pjdfstest
             ..
             psd
                 01.cacm
@@ -283,8 +329,6 @@
             ..
         ..
         dtrace
-            toolkit
-            ..
         ..
         examples
             BSD_daemon
@@ -301,11 +345,13 @@
             ..
             csh
             ..
-            cvsup
-            ..
             diskless
             ..
+            dma
+            ..
             drivers
+            ..
+            dwatch
             ..
             etc
                 defaults
@@ -324,8 +370,6 @@
             ipfilter
             ..
             ipfw
-            ..
-            iscsi
             ..
             jails
             ..
@@ -360,8 +404,6 @@
             mdoc
             ..
             netgraph
-                bluetooth
-                ..
             ..
             pc-sysinstall
             ..
@@ -403,6 +445,12 @@
             ..
             tcsh
             ..
+            uefisign
+            ..
+            ypldap
+            ..
+        ..
+        firmware
         ..
         games
             fortune
@@ -480,8 +528,6 @@
                 ..
             ..
         ..
-        info
-        ..
         keys
             pkg
                 revoked
@@ -491,13 +537,23 @@
             ..
         ..
         locale
-            UTF-8
-            ..
             af_ZA.ISO8859-1
             ..
             af_ZA.ISO8859-15
             ..
             af_ZA.UTF-8
+            ..
+            ar_AE.UTF-8
+            ..
+            ar_EG.UTF-8
+            ..
+            ar_JO.UTF-8
+            ..
+            ar_MA.UTF-8
+            ..
+            ar_QA.UTF-8
+            ..
+            ar_SA.UTF-8
             ..
             am_ET.UTF-8
             ..
@@ -517,23 +573,23 @@
             ..
             ca_AD.ISO8859-15
             ..
-            ca_AD.UTF-8
-            ..
             ca_ES.ISO8859-1
             ..
             ca_ES.ISO8859-15
-            ..
-            ca_ES.UTF-8
             ..
             ca_FR.ISO8859-1
             ..
             ca_FR.ISO8859-15
             ..
-            ca_FR.UTF-8
-            ..
             ca_IT.ISO8859-1
             ..
             ca_IT.ISO8859-15
+            ..
+            ca_AD.UTF-8
+            ..
+            ca_ES.UTF-8
+            ..
+            ca_FR.UTF-8
             ..
             ca_IT.UTF-8
             ..
@@ -593,6 +649,14 @@
             ..
             en_GB.UTF-8
             ..
+            en_HK.ISO8859-1
+            ..
+            en_HK.UTF-8
+            ..
+            en_IE.ISO8859-1
+            ..
+            en_IE.ISO8859-15
+            ..
             en_IE.UTF-8
             ..
             en_NZ.ISO8859-1
@@ -603,6 +667,12 @@
             ..
             en_NZ.UTF-8
             ..
+            en_PH.UTF-8
+            ..
+            en_SG.ISO8859-1
+            ..
+            en_SG.UTF-8
+            ..
             en_US.ISO8859-1
             ..
             en_US.ISO8859-15
@@ -611,11 +681,31 @@
             ..
             en_US.UTF-8
             ..
+            en_ZA.ISO8859-1
+            ..
+            en_ZA.ISO8859-15
+            ..
+            en_ZA.US-ASCII
+            ..
+            en_ZA.UTF-8
+            ..
+            es_AR.ISO8859-1
+            ..
+            es_AR.UTF-8
+            ..
+            es_CR.UTF-8
+            ..
             es_ES.ISO8859-1
             ..
             es_ES.ISO8859-15
             ..
             es_ES.UTF-8
+            ..
+            es_MX.ISO8859-1
+            ..
+            es_MX.UTF-8
+            ..
+            et_EE.ISO8859-1
             ..
             et_EE.ISO8859-15
             ..
@@ -661,6 +751,8 @@
             ..
             hi_IN.ISCII-DEV
             ..
+            hi_IN.UTF-8
+            ..
             hr_HR.ISO8859-2
             ..
             hr_HR.UTF-8
@@ -697,8 +789,6 @@
             ..
             ja_JP.eucJP
             ..
-            kk_KZ.PT154
-            ..
             kk_KZ.UTF-8
             ..
             ko_KR.CP949
@@ -707,21 +797,7 @@
             ..
             ko_KR.eucKR
             ..
-            la_LN.ISO8859-1
-            ..
-            la_LN.ISO8859-13
-            ..
-            la_LN.ISO8859-15
-            ..
-            la_LN.ISO8859-2
-            ..
-            la_LN.ISO8859-4
-            ..
-            la_LN.US-ASCII
-            ..
             lt_LT.ISO8859-13
-            ..
-            lt_LT.ISO8859-4
             ..
             lt_LT.UTF-8
             ..
@@ -755,12 +831,6 @@
             ..
             nn_NO.UTF-8
             ..
-            no_NO.ISO8859-1
-            ..
-            no_NO.ISO8859-15
-            ..
-            no_NO.UTF-8
-            ..
             pl_PL.ISO8859-2
             ..
             pl_PL.UTF-8
@@ -789,6 +859,10 @@
             ..
             ru_RU.UTF-8
             ..
+            se_FI.UTF-8
+            ..
+            se_NO.UTF-8
+            ..
             sk_SK.ISO8859-2
             ..
             sk_SK.UTF-8
@@ -797,11 +871,19 @@
             ..
             sl_SI.UTF-8
             ..
-            sr_YU.ISO8859-2
+            sr_RS.ISO8859-5
             ..
-            sr_YU.ISO8859-5
+            sr_RS.UTF-8
             ..
-            sr_YU.UTF-8
+            sr_RS.ISO8859-2
+            ..
+            sr_RS.UTF-8@latin
+            ..
+            sv_FI.ISO8859-1
+            ..
+            sv_FI.ISO8859-15
+            ..
+            sv_FI.UTF-8
             ..
             sv_SE.ISO8859-1
             ..
@@ -827,11 +909,9 @@
             ..
             zh_CN.GBK
             ..
-            zh_CN.UTF-8
-            ..
             zh_CN.eucCN
             ..
-            zh_HK.Big5HKSCS
+            zh_CN.UTF-8
             ..
             zh_HK.UTF-8
             ..
@@ -1029,8 +1109,6 @@
             ..
             man9
             ..
-        ..
-        mdocml
         ..
         misc
             fonts
@@ -1231,21 +1309,7 @@
             ..
             ko_KR.eucKR
             ..
-            la_LN.ISO8859-1
-            ..
-            la_LN.ISO8859-13
-            ..
-            la_LN.ISO8859-15
-            ..
-            la_LN.ISO8859-2
-            ..
-            la_LN.ISO8859-4
-            ..
-            la_LN.US-ASCII
-            ..
             lt_LT.ISO8859-13
-            ..
-            lt_LT.ISO8859-4
             ..
             lt_LT.UTF-8
             ..
@@ -1410,6 +1474,12 @@
             catalog
             ..
         ..
+        vt
+            fonts
+            ..
+            keymaps
+            ..
+        ..
         zoneinfo
             Africa
             ..
@@ -1433,20 +1503,28 @@
             ..
             Australia
             ..
+            Brazil
+            ..
+            Canada
+            ..
+            Chile
+            ..
             Etc
             ..
             Europe
             ..
             Indian
             ..
+            Mexico
+            ..
             Pacific
             ..
             SystemV
             ..
+            US
+            ..
         ..
     ..
     src             nochange
-    ..
-    tests
     ..
 ..

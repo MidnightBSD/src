@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from: BSDI: wstate.h,v 1.4 1997/09/18 13:05:51 torek Exp
- * $FreeBSD: release/10.0.0/sys/sparc64/include/wstate.h 205409 2010-03-21 13:09:54Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_WSTATE_H_

@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/c++/Makefile 245898 2013-01-25 06:18:49Z andrew $
+# $FreeBSD$
 
-NO_MAN=
-.include <bsd.own.mk>
+MAN=
+.include <src.opts.mk>
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"

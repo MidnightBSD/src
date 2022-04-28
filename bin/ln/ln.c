@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)ln.c	8.2 (Berkeley) 3/31/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/ln/ln.c 251261 2013-06-02 17:55:00Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -245,11 +245,11 @@ linkit(const char *source, const char *target, int isdir)
 
 	/*
 	 * If the target is a directory (and not a symlink if hflag),
-	 * append the source's name.
+	 * append the source's name, unless Fflag is set.
 	 */
-	if (isdir ||
+	if (!Fflag && (isdir ||
 	    (lstat(target, &sb) == 0 && S_ISDIR(sb.st_mode)) ||
-	    (!hflag && stat(target, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+	    (!hflag && stat(target, &sb) == 0 && S_ISDIR(sb.st_mode)))) {
 		if (strlcpy(bbuf, source, sizeof(bbuf)) >= sizeof(bbuf) ||
 		    (p = basename(bbuf)) == NULL ||
 		    snprintf(path, sizeof(path), "%s/%s", target, p) >=

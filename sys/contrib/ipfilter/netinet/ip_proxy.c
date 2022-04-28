@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_proxy.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -16,43 +16,34 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/file.h>
-#if !defined(AIX)
 # include <sys/fcntl.h>
-#endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
 # include <stdio.h>
 # include <string.h>
 # include <stdlib.h>
 # include <ctype.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if !defined(linux)
 # include <sys/protosw.h>
-#endif
 #include <sys/socket.h>
 #if defined(_KERNEL)
-# if !defined(__NetBSD__) && !defined(sun) && !defined(__osf__) && \
-     !defined(__OpenBSD__) && !defined(__hpux) && !defined(__sgi) && \
-     !defined(AIX)
+#ifdef __FreeBSD_version
 #  include <sys/ctype.h>
 # endif
 # include <sys/systm.h>
-# if !defined(__SVR4) && !defined(__svr4__)
+# if !defined(__SVR4)
 #  include <sys/mbuf.h>
 # endif
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && defined(__FreeBSD_version)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
 # include <sys/ioctl.h>
 #endif
-#if defined(__SVR4) || defined(__svr4__)
+#if defined(__SVR4)
 # include <sys/byteorder.h>
 # ifdef _KERNEL
 #  include <sys/dditypes.h>
@@ -60,19 +51,26 @@ struct file;
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if __FreeBSD_version >= 300000
+#ifdef __FreeBSD_version
 # include <sys/queue.h>
 #endif
 #include <net/if.h>
+#if defined(__FreeBSD_version) && defined(_KERNEL)
+#include <net/vnet.h>
+#else
+#define CURVNET_SET(arg)
+#define CURVNET_RESTORE()
+#define	VNET_DEFINE(_t, _v)	_t _v
+#define	VNET_DECLARE(_t, _v)	extern _t _v
+#define	VNET(arg)	arg
+#endif
 #ifdef sun
 # include <net/af.h>
 #endif
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
-#ifndef linux
 # include <netinet/ip_var.h>
-#endif
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
@@ -82,7 +80,7 @@ struct file;
 #include "netinet/ip_nat.h"
 #include "netinet/ip_state.h"
 #include "netinet/ip_proxy.h"
-#if (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version)
 # include <sys/malloc.h>
 #endif
 
@@ -916,7 +914,7 @@ ipf_proxy_check(fin, nat)
 	ip_t *ip;
 	short rv;
 	int err;
-#if !defined(_KERNEL) || defined(MENTAT) || defined(__sgi)
+#if !defined(_KERNEL) || defined(MENTAT)
 	u_32_t s1, s2, sd;
 #endif
 
@@ -1008,7 +1006,7 @@ ipf_proxy_check(fin, nat)
 		 * packet.
 		 */
 		adjlen = APR_INC(err);
-#if !defined(_KERNEL) || defined(MENTAT) || defined(__sgi)
+#if !defined(_KERNEL) || defined(MENTAT)
 		s1 = LONG_SUM(fin->fin_plen - adjlen);
 		s2 = LONG_SUM(fin->fin_plen);
 		CALC_SUMD(s1, s2, sd);

@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/filemon/filemon.h 236592 2012-06-04 22:54:19Z obrien $
+ * $FreeBSD$
  */
 
 #define FILEMON_SET_FD		_IOWR('S', 1, int)
 #define FILEMON_SET_PID		_IOWR('S', 2, pid_t)
 
-#define FILEMON_VERSION		4	/* output format
+#define FILEMON_VERSION		5	/* output format
 					   (bump when adding record types) */

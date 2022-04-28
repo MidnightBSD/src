@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-cenatek.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -63,7 +63,7 @@ ata_cenatek_probe(device_t dev)
 
     ctlr->chipinit = ata_generic_chipinit;
     device_set_desc(dev, "Cenatek Rocket Drive controller");
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 ATA_DECLARE_DRIVER(ata_cenatek);

@@ -26,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/if_ath_spectral.c 245190 2013-01-08 22:42:15Z adrian $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_spectral.c 245190 2013-01-08 22:42:15Z adrian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Implement some basic spectral scan control logic.
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_spectral.c 245190 2013-01-
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -53,6 +54,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_spectral.c 245190 2013-01-
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */
@@ -210,7 +212,7 @@ ath_ioctl_spectral(struct ath_softc *sc, struct ath_diag *ad)
 		 * pointer for us to use below in reclaiming the buffer;
 		 * may want to be more defensive.
 		 */
-		outdata = malloc(outsize, M_TEMP, M_NOWAIT);
+		outdata = malloc(outsize, M_TEMP, M_NOWAIT | M_ZERO);
 		if (outdata == NULL) {
 			error = ENOMEM;
 			goto bad;
@@ -273,6 +275,7 @@ ath_ioctl_spectral(struct ath_softc *sc, struct ath_diag *ad)
 		break;
 		default:
 			error = EINVAL;
+			goto bad;
 	}
 	if (outsize < ad->ad_out_size)
 		ad->ad_out_size = outsize;

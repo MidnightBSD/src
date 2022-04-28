@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w
 #-
+# SPDX-License-Identifier: BSD-3-Clause
+#
 # Copyright (c) 2001,2002 Networks Associates Technologies, Inc.
 # All rights reserved.
 #
@@ -32,7 +34,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/pam.d/convert.pl 130151 2004-06-06 11:46:29Z schweikh $
+# $FreeBSD$
 #
 
 use strict;

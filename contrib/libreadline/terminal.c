@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/contrib/libreadline/terminal.c 165675 2006-12-31 09:22:31Z ache $ */
+/* $FreeBSD$ */
 /* terminal.c -- controlling the terminal with termcap. */
 
 /* Copyright (C) 1996-2006 Free Software Foundation, Inc.

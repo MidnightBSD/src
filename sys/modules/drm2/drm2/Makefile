@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm2/drm2/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../../dev/drm2 ${.CURDIR}/../../../dev/drm2/ttm
+.PATH:	${SRCTOP}/sys/dev/drm2 ${SRCTOP}/sys/dev/drm2/ttm
 KMOD	= drm2
 SRCS	= \
 	drm_agpsupport.c \
@@ -13,7 +13,6 @@ SRCS	= \
 	drm_dma.c \
 	drm_dp_helper.c \
 	drm_dp_iic_helper.c \
-	drm_drawable.c \
 	drm_drv.c \
 	drm_edid.c \
 	drm_fb_helper.c \
@@ -31,10 +30,11 @@ SRCS	= \
 	drm_modes.c \
 	drm_pci.c \
 	drm_scatter.c \
-	drm_sman.c \
 	drm_stub.c \
 	drm_sysctl.c \
 	drm_vm.c \
+	drm_os_freebsd.c \
+	ttm_agp_backend.c \
 	ttm_lock.c \
 	ttm_object.c \
 	ttm_tt.c \
@@ -46,14 +46,18 @@ SRCS	= \
 	ttm_page_alloc.c \
 	ttm_bo_vm.c \
 	ati_pcigart.c
-#ttm_agp_backend.c
 #ttm_page_alloc_dma.c
 
-.if ${MACHINE_CPUARCH} == "amd64"
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_ARCH} == "powerpc64"
 SRCS	+= drm_ioc32.c
 .endif
 
 SRCS	+=device_if.h bus_if.h pci_if.h device_if.h iicbus_if.h opt_drm.h \
-	opt_vm.h opt_compat.h
+	opt_vm.h opt_compat.h opt_syscons.h
+
+
+.if ${MACHINE_CPUARCH} == "powerpc"
+CWARNFLAGS+=-Wno-cast-qual
+.endif
 
 .include <bsd.kmod.mk>

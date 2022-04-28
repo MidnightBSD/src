@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libthread_db/libpthread_db.h 181059 2008-07-31 16:26:58Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _LIBPTHREAD_DB_H_
@@ -77,7 +77,7 @@ struct td_thragent {
 	int		thread_off_sigmask;
 	int		thread_off_sigpend;
 	struct pt_map	*map;
-	int		map_len;
+	unsigned int	map_len;
 };
 
 void pt_md_init(void);

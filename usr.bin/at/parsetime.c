@@ -1,5 +1,8 @@
-/* 
+/*-
  *  parsetime.c - parse time for at(1)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (C) 1993, 1994  Thomas Koenig
  *
  *  modifications for English-language times
@@ -34,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/at/parsetime.c 241230 2012-10-05 17:54:27Z cracauer $");
+__FBSDID("$FreeBSD$");
 
 /* System Headers */
 
@@ -614,6 +617,7 @@ parsetime(int argc, char **argv)
 	    }
 	    /* now is optional prefix for PLUS tree */
 	    expect(PLUS);
+	    /* FALLTHROUGH */
     case PLUS:
 	    plus(&runtime);
 	    break;
@@ -638,8 +642,10 @@ parsetime(int argc, char **argv)
 	     */
     case TEATIME:
 	    hr += 4;
+	    /* FALLTHROUGH */
     case NOON:
 	    hr += 12;
+	    /* FALLTHROUGH */
     case MIDNIGHT:
 	    if (runtime.tm_hour >= hr) {
 		runtime.tm_mday++;

@@ -1,8 +1,8 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/atapci/Makefile 249213 2013-04-06 19:12:49Z marius $
+# $FreeBSD$
 
 SUBDIR += chipsets
 
-.PATH: ${.CURDIR}/../../../dev/ata
+.PATH: ${SRCTOP}/sys/dev/ata
 
 KMOD=	atapci
 SRCS=	ata-pci.c ata-dma.c ata-sata.c

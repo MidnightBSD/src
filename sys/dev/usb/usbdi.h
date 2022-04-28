@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/usb/usbdi.h 246194 2013-02-01 07:05:43Z hselasky $
+ * $FreeBSD$
  */
 #ifndef _USB_USBDI_H_
 #define _USB_USBDI_H_
@@ -128,6 +128,8 @@ struct usb_xfer_queue {
 	void    (*command) (struct usb_xfer_queue *pq);
 	uint8_t	recurse_1:1;
 	uint8_t	recurse_2:1;
+	uint8_t	recurse_3:1;
+	uint8_t	reserved:5;
 };
 
 /*
@@ -140,7 +142,7 @@ struct usb_endpoint {
 
 	struct usb_endpoint_descriptor *edesc;
 	struct usb_endpoint_ss_comp_descriptor *ecomp;
-	struct usb_pipe_methods *methods;	/* set by HC driver */
+	const struct usb_pipe_methods *methods;	/* set by HC driver */
 
 	uint16_t isoc_next;
 
@@ -239,7 +241,7 @@ struct usb_config {
 /*
  * Use these macro when defining USB device ID arrays if you want to
  * have your driver module automatically loaded in host, device or
- * both modes respectivly:
+ * both modes respectively:
  */
 #if USB_HAVE_ID_SECTION
 #define	STRUCT_USB_HOST_ID \
@@ -264,8 +266,38 @@ struct usb_config {
  */
 struct usb_device_id {
 
-	/* Hook for driver specific information */
-	unsigned long driver_info;
+	/* Select which fields to match against */
+#if BYTE_ORDER == LITTLE_ENDIAN
+	uint16_t
+		match_flag_vendor:1,
+		match_flag_product:1,
+		match_flag_dev_lo:1,
+		match_flag_dev_hi:1,
+
+		match_flag_dev_class:1,
+		match_flag_dev_subclass:1,
+		match_flag_dev_protocol:1,
+		match_flag_int_class:1,
+
+		match_flag_int_subclass:1,
+		match_flag_int_protocol:1,
+		match_flag_unused:6;
+#else
+	uint16_t
+		match_flag_unused:6,
+		match_flag_int_protocol:1,
+		match_flag_int_subclass:1,
+
+		match_flag_int_class:1,
+		match_flag_dev_protocol:1,
+		match_flag_dev_subclass:1,
+		match_flag_dev_class:1,
+
+		match_flag_dev_hi:1,
+		match_flag_dev_lo:1,
+		match_flag_product:1,
+		match_flag_vendor:1;
+#endif
 
 	/* Used for product specific matches; the BCD range is inclusive */
 	uint16_t idVendor;
@@ -283,21 +315,6 @@ struct usb_device_id {
 	uint8_t	bInterfaceSubClass;
 	uint8_t	bInterfaceProtocol;
 
-	/* Select which fields to match against */
-	uint8_t	match_flag_vendor:1;
-	uint8_t	match_flag_product:1;
-	uint8_t	match_flag_dev_lo:1;
-	uint8_t	match_flag_dev_hi:1;
-
-	uint8_t	match_flag_dev_class:1;
-	uint8_t	match_flag_dev_subclass:1;
-	uint8_t	match_flag_dev_protocol:1;
-	uint8_t	match_flag_int_class:1;
-
-	uint8_t	match_flag_int_subclass:1;
-	uint8_t	match_flag_int_protocol:1;
-	uint8_t match_flag_unused:6;
-
 #if USB_HAVE_COMPAT_LINUX
 	/* which fields to match against */
 	uint16_t match_flags;
@@ -312,7 +329,25 @@ struct usb_device_id {
 #define	USB_DEVICE_ID_MATCH_INT_SUBCLASS	0x0100
 #define	USB_DEVICE_ID_MATCH_INT_PROTOCOL	0x0200
 #endif
+
+	/* Hook for driver specific information */
+	unsigned long driver_info;
 } __aligned(32);
+
+#define USB_STD_PNP_INFO "M16:mask;U16:vendor;U16:product;L16:release;G16:release;" \
+	"U8:devclass;U8:devsubclass;U8:devprotocol;" \
+	"U8:intclass;U8:intsubclass;U8:intprotocol;"
+#define USB_STD_PNP_HOST_INFO USB_STD_PNP_INFO "T:mode=host;"
+#define USB_STD_PNP_DEVICE_INFO USB_STD_PNP_INFO "T:mode=device;"
+#define USB_PNP_HOST_INFO(table)					\
+	MODULE_PNP_INFO(USB_STD_PNP_HOST_INFO, usb, table, table, sizeof(table[0]), \
+	    sizeof(table) / sizeof(table[0]))
+#define USB_PNP_DEVICE_INFO(table)					\
+	MODULE_PNP_INFO(USB_STD_PNP_DEVICE_INFO, usb, table, table, sizeof(table[0]), \
+	    sizeof(table) / sizeof(table[0]))
+#define USB_PNP_DUAL_INFO(table)					\
+	MODULE_PNP_INFO(USB_STD_PNP_INFO, usb, table, table, sizeof(table[0]), \
+	    sizeof(table) / sizeof(table[0]))
 
 /* check that the size of the structure above is correct */
 extern char usb_device_id_assert[(sizeof(struct usb_device_id) == 32) ? 1 : -1];
@@ -569,6 +604,7 @@ int	usbd_xfer_is_stalled(struct usb_xfer *xfer);
 void	usbd_xfer_set_flag(struct usb_xfer *xfer, int flag);
 void	usbd_xfer_clr_flag(struct usb_xfer *xfer, int flag);
 uint16_t usbd_xfer_get_timestamp(struct usb_xfer *xfer);
+uint8_t usbd_xfer_maxp_was_clamped(struct usb_xfer *xfer);
 
 void	usbd_copy_in(struct usb_page_cache *cache, usb_frlength_t offset,
 	    const void *ptr, usb_frlength_t len);
@@ -585,6 +621,8 @@ void	usbd_m_copy_in(struct usb_page_cache *cache, usb_frlength_t dst_offset,
 void	usbd_frame_zero(struct usb_page_cache *cache, usb_frlength_t offset,
 	    usb_frlength_t len);
 void	usbd_start_re_enumerate(struct usb_device *udev);
+usb_error_t
+	usbd_start_set_config(struct usb_device *, uint8_t);
 
 int	usb_fifo_attach(struct usb_device *udev, void *priv_sc,
 	    struct mtx *priv_mtx, struct usb_fifo_methods *pm,

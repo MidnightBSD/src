@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2019  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -39,10 +39,17 @@
 /*
  * Language details.
  */
+#if HAVE_ANSI_PROTOS
+#define LESSPARAMS(a) a
+#else
+#define LESSPARAMS(a) ()
+#endif
 #if HAVE_VOID
 #define	VOID_POINTER	void *
+#define	VOID_PARAM	void
 #else
 #define	VOID_POINTER	char *
+#define	VOID_PARAM
 #define	void  int
 #endif
 #if HAVE_CONST
@@ -310,6 +317,17 @@ struct textlist
 	char *endstring;
 };
 
+struct wchar_range
+{
+	LWCHAR first, last;
+};
+
+struct wchar_range_table 
+{
+	struct wchar_range *table;
+	int count;
+};
+
 #define	EOI		(-1)
 
 #define	READ_INTR	(-2)
@@ -444,7 +462,9 @@ struct textlist
 #endif /* IS_EBCDIC_HOST */
 
 #define	ESC		CONTROL('[')
+#define	ESCS		"\33"
 #define	CSI		((unsigned char)'\233')
+#define	CHAR_END_COMMAND 0x40000000
 
 #if _OSK_MWC32
 #define	LSIGNAL(sig,func)	os9_signal(sig,func)
@@ -486,7 +506,6 @@ struct textlist
 #define	CH_HELPFILE	010
 #define	CH_NODATA  	020	/* Special case for zero length files */
 
-
 #define	ch_zero()	((POSITION)0)
 
 #define	FAKE_HELPFILE	"@/\\less/\\help/\\file/\\@"
@@ -498,9 +517,33 @@ struct textlist
 #define	CVT_CRLF	04	/* Remove CR after LF */
 #define	CVT_ANSI	010	/* Remove ANSI escape sequences */
 
+#if HAVE_TIME_T
+#define time_type	time_t
+#else
+#define	time_type	long
+#endif
+
+/* X11 mouse reporting definitions */
+#define X11MOUSE_BUTTON1    0 /* Left button press */
+#define X11MOUSE_BUTTON2    1 /* Middle button press */
+#define X11MOUSE_BUTTON3    2 /* Right button press */
+#define X11MOUSE_BUTTON_REL 3 /* Button release */
+#define X11MOUSE_WHEEL_UP   0x40 /* Wheel scroll up */
+#define X11MOUSE_WHEEL_DOWN 0x41 /* Wheel scroll down */
+#define X11MOUSE_OFFSET     0x20 /* Added to button & pos bytes to create a char */
+
+struct mlist;
+struct loption;
+struct hilite_tree;
+#include "pattern.h"
 #include "funcs.h"
 
 /* Functions not included in funcs.h */
-void postoa();
-void linenumtoa();
-void inttoa();
+void postoa LESSPARAMS ((POSITION, char*));
+void linenumtoa LESSPARAMS ((LINENUM, char*));
+void inttoa LESSPARAMS ((int, char*));
+int lstrtoi LESSPARAMS ((char*, char**));
+POSITION lstrtopos LESSPARAMS ((char*, char**));
+#if MSDOS_COMPILER==WIN32C
+int pclose LESSPARAMS ((FILE*));
+#endif

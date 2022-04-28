@@ -30,15 +30,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/csu/mips/crt1.c 245133 2013-01-07 17:58:27Z kib $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/csu/mips/crt1.c 245133 2013-01-07 17:58:27Z kib $");
-
-#ifndef __GNUC__
-#error "GCC is needed to compile this file"
-#endif
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include "libc_private.h"

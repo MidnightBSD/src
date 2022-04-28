@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2011 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/cpucontrol/cpucontrol.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdio.h>
@@ -60,6 +62,8 @@ int	verbosity_level = 0;
 #define	FLAG_I	0x01
 #define	FLAG_M	0x02
 #define	FLAG_U	0x04
+#define	FLAG_N	0x08
+#define	FLAG_E	0x10
 
 #define	OP_INVAL	0x00
 #define	OP_READ		0x01
@@ -91,6 +95,7 @@ static struct ucode_handler {
 	ucode_update_t *update;
 } handlers[] = {
 	{ intel_probe, intel_update },
+	{ amd10h_probe, amd10h_update },
 	{ amd_probe, amd_update },
 	{ via_probe, via_update },
 };
@@ -99,6 +104,7 @@ static struct ucode_handler {
 static void	usage(void);
 static int	isdir(const char *path);
 static int	do_cpuid(const char *cmdarg, const char *dev);
+static int	do_cpuid_count(const char *cmdarg, const char *dev);
 static int	do_msr(const char *cmdarg, const char *dev);
 static int	do_update(const char *dev);
 static void	datadir_add(const char *path);
@@ -112,7 +118,7 @@ usage(void)
 	if (name == NULL)
 		name = "cpuctl";
 	fprintf(stderr, "Usage: %s [-vh] [-d datadir] [-m msr[=value] | "
-	    "-i level | -u] device\n", name);
+	    "-i level | -i level,level_type | -e | -u] device\n", name);
 	exit(EX_USAGE);
 }
 
@@ -165,6 +171,57 @@ do_cpuid(const char *cmdarg, const char *dev)
 	}
 	fprintf(stdout, "cpuid level 0x%x: 0x%.8x 0x%.8x 0x%.8x 0x%.8x\n",
 	    level, args.data[0], args.data[1], args.data[2], args.data[3]);
+	close(fd);
+	return (0);
+}
+
+static int
+do_cpuid_count(const char *cmdarg, const char *dev)
+{
+	char *cmdarg1, *endptr, *endptr1;
+	unsigned int level, level_type;
+	cpuctl_cpuid_count_args_t args;
+	int fd, error;
+
+	assert(cmdarg != NULL);
+	assert(dev != NULL);
+
+	level = strtoul(cmdarg, &endptr, 16);
+	if (*cmdarg == '\0' || *endptr == '\0') {
+		WARNX(0, "incorrect or missing operand: %s", cmdarg);
+		usage();
+		/* NOTREACHED */
+	}
+	/* Locate the comma... */
+	cmdarg1 = strstr(endptr, ",");
+	/* ... and skip past it */
+	cmdarg1 += 1;
+	level_type = strtoul(cmdarg1, &endptr1, 16);
+	if (*cmdarg1 == '\0' || *endptr1 != '\0') {
+		WARNX(0, "incorrect or missing operand: %s", cmdarg);
+		usage();
+		/* NOTREACHED */
+	}
+
+	/*
+	 * Fill ioctl argument structure.
+	 */
+	args.level = level;
+	args.level_type = level_type;
+	fd = open(dev, O_RDONLY);
+	if (fd < 0) {
+		WARN(0, "error opening %s for reading", dev);
+		return (1);
+	}
+	error = ioctl(fd, CPUCTL_CPUID_COUNT, &args);
+	if (error < 0) {
+		WARN(0, "ioctl(%s, CPUCTL_CPUID_COUNT)", dev);
+		close(fd);
+		return (error);
+	}
+	fprintf(stdout, "cpuid level 0x%x, level_type 0x%x: 0x%.8x 0x%.8x "
+	    "0x%.8x 0x%.8x\n", level, level_type, args.data[0], args.data[1],
+	    args.data[2], args.data[3]);
 	close(fd);
 	return (0);
 }
@@ -273,7 +330,7 @@ do_msr(const char *cmdarg, const char *dev)
 	}
 	error = ioctl(fd, command, &args);
 	if (error < 0) {
-		WARN(0, "ioctl(%s, CPUCTL_%s (%lu))", dev, command_name, command);
+		WARN(0, "ioctl(%s, CPUCTL_%s (%#x))", dev, command_name, msr);
 		close(fd);
 		return (1);
 	}
@@ -282,6 +339,25 @@ do_msr(const char *cmdarg, const char *dev)
 		    HIGH(args.data), LOW(args.data));
 	close(fd);
 	return (0);
+}
+
+static int
+do_eval_cpu_features(const char *dev)
+{
+	int fd, error;
+
+	assert(dev != NULL);
+
+	fd = open(dev, O_RDWR);
+	if (fd < 0) {
+		WARN(0, "error opening %s for writing", dev);
+		return (1);
+	}
+	error = ioctl(fd, CPUCTL_EVAL_CPU_FEATURES, NULL);
+	if (error < 0)
+		WARN(0, "ioctl(%s, CPUCTL_EVAL_CPU_FEATURES)", dev);
+	close(fd);
+	return (error);
 }
 
 static int
@@ -374,14 +450,13 @@ main(int argc, char *argv[])
 	error = 0;
 	cmdarg = "";	/* To keep gcc3 happy. */
 
-	/*
-	 * Add all default data dirs to the list first.
-	 */
-	datadir_add(DEFAULT_DATADIR);
-	while ((c = getopt(argc, argv, "d:hi:m:uv")) != -1) {
+	while ((c = getopt(argc, argv, "d:ehi:m:nuv")) != -1) {
 		switch (c) {
 		case 'd':
 			datadir_add(optarg);
+			break;
+		case 'e':
+			flags |= FLAG_E;
 			break;
 		case 'i':
 			flags |= FLAG_I;
@@ -390,6 +465,9 @@ main(int argc, char *argv[])
 		case 'm':
 			flags |= FLAG_M;
 			cmdarg = optarg;
+			break;
+		case 'n':
+			flags |= FLAG_N;
 			break;
 		case 'u':
 			flags |= FLAG_U;
@@ -410,21 +488,29 @@ main(int argc, char *argv[])
 		usage();
 		/* NOTREACHED */
 	}
+	if ((flags & FLAG_N) == 0)
+		datadir_add(DEFAULT_DATADIR);
 	dev = argv[0];
-	c = flags & (FLAG_I | FLAG_M | FLAG_U);
+	c = flags & (FLAG_E | FLAG_I | FLAG_M | FLAG_U);
 	switch (c) {
-		case FLAG_I:
+	case FLAG_I:
+		if (strstr(cmdarg, ",") != NULL)
+			error = do_cpuid_count(cmdarg, dev);
+		else
 			error = do_cpuid(cmdarg, dev);
-			break;
-		case FLAG_M:
-			error = do_msr(cmdarg, dev);
-			break;
-		case FLAG_U:
-			error = do_update(dev);
-			break;
-		default:
-			usage();	/* Only one command can be selected. */
+		break;
+	case FLAG_M:
+		error = do_msr(cmdarg, dev);
+		break;
+	case FLAG_U:
+		error = do_update(dev);
+		break;
+	case FLAG_E:
+		error = do_eval_cpu_features(dev);
+		break;
+	default:
+		usage();	/* Only one command can be selected. */
 	}
 	SLIST_FREE(&datadirs, next, free);
-	return (error);
+	return (error == 0 ? 0 : 1);
 }

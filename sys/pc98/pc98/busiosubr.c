@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/pc98/pc98/busiosubr.c 214584 2010-10-31 03:03:20Z nyan $ */
+/* $FreeBSD$ */
 /*	$NecBSD: busiosubr.c,v 1.30.4.4 1999/08/28 02:25:35 honda Exp $	*/
 /*	$NetBSD$	*/
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sbin/rcorder/hash.h 173412 2007-11-07 10:53:41Z kevlo $	*/
+/*	$FreeBSD$	*/
 /*	$NetBSD: hash.h,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $	*/
 
 /*

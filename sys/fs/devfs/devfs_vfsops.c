@@ -31,7 +31,7 @@
  *	@(#)kernfs_vfsops.c	8.10 (Berkeley) 5/14/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: release/10.0.0/sys/fs/devfs/devfs_vfsops.c 242833 2012-11-09 18:02:25Z attilio $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -182,6 +182,8 @@ devfs_unmount(struct mount *mp, int mntflags)
 	fmp = VFSTODEVFS(mp);
 	KASSERT(fmp->dm_mount != NULL,
 		("devfs_unmount unmounted devfs_mount"));
+	if (mntflags & MNT_FORCE)
+		flags |= FORCECLOSE;
 	/* There is 1 extra root vnode reference from devfs_mount(). */
 	error = vflush(mp, 1, flags, curthread);
 	if (error)

@@ -33,13 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clvnops.c 252072 2013-06-21 22:26:18Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 /*
  * vnode op calls for Sun NFS version 2, 3 and 4
  */
 
-#include "opt_kdtrace.h"
 #include "opt_inet.h"
 
 #include <sys/param.h>
@@ -101,19 +100,10 @@ uint32_t	nfscl_accesscache_load_done_id;
 #define	TRUE	1
 #define	FALSE	0
 
-extern struct nfsstats newnfsstats;
+extern struct nfsstatsv1 nfsstatsv1;
 extern int nfsrv_useacl;
 extern int nfscl_debuglevel;
 MALLOC_DECLARE(M_NEWNFSREQ);
-
-/*
- * Ifdef for FreeBSD-current merged buffer cache. It is unfortunate that these
- * calls are not in getblk() and brelse() so that they would not be necessary
- * here.
- */
-#ifndef B_VMIO
-#define	vfs_busy_pages(bp, f)
-#endif
 
 static vop_read_t	nfsfifo_read;
 static vop_write_t	nfsfifo_write;
@@ -139,7 +129,6 @@ static vop_rmdir_t	nfs_rmdir;
 static vop_symlink_t	nfs_symlink;
 static vop_readdir_t	nfs_readdir;
 static vop_strategy_t	nfs_strategy;
-static vop_lock1_t	nfs_lock1;
 static	int	nfs_lookitup(struct vnode *, char *, int,
 		    struct ucred *, struct thread *, struct nfsnode **);
 static	int	nfs_sillyrename(struct vnode *, struct vnode *,
@@ -151,6 +140,7 @@ static vop_advlock_t	nfs_advlock;
 static vop_advlockasync_t nfs_advlockasync;
 static vop_getacl_t nfs_getacl;
 static vop_setacl_t nfs_setacl;
+static vop_set_text_t nfs_set_text;
 
 /*
  * Global vfs data structures for nfs
@@ -168,7 +158,6 @@ struct vop_vector newnfs_vnodeops = {
 	.vop_putpages =		ncl_putpages,
 	.vop_inactive =		ncl_inactive,
 	.vop_link =		nfs_link,
-	.vop_lock1 = 		nfs_lock1,
 	.vop_lookup =		nfs_lookup,
 	.vop_mkdir =		nfs_mkdir,
 	.vop_mknod =		nfs_mknod,
@@ -188,6 +177,7 @@ struct vop_vector newnfs_vnodeops = {
 	.vop_write =		ncl_write,
 	.vop_getacl =		nfs_getacl,
 	.vop_setacl =		nfs_setacl,
+	.vop_set_text =		nfs_set_text,
 };
 
 struct vop_vector newnfs_fifoops = {
@@ -197,6 +187,7 @@ struct vop_vector newnfs_fifoops = {
 	.vop_fsync =		nfs_fsync,
 	.vop_getattr =		nfs_getattr,
 	.vop_inactive =		ncl_inactive,
+	.vop_pathconf =		nfs_pathconf,
 	.vop_print =		nfs_print,
 	.vop_read =		nfsfifo_read,
 	.vop_reclaim =		ncl_reclaim,
@@ -260,14 +251,6 @@ SYSCTL_INT(_vfs_nfs, OID_AUTO, nfs_keep_dirty_on_error, CTLFLAG_RW,
 int newnfs_directio_allow_mmap = 1;
 SYSCTL_INT(_vfs_nfs, OID_AUTO, nfs_directio_allow_mmap, CTLFLAG_RW,
 	   &newnfs_directio_allow_mmap, 0, "Enable mmaped IO on file with O_DIRECT opens");
-
-#if 0
-SYSCTL_INT(_vfs_nfs, OID_AUTO, access_cache_hits, CTLFLAG_RD,
-	   &newnfsstats.accesscache_hits, 0, "NFS ACCESS cache hit count");
-
-SYSCTL_INT(_vfs_nfs, OID_AUTO, access_cache_misses, CTLFLAG_RD,
-	   &newnfsstats.accesscache_misses, 0, "NFS ACCESS cache miss count");
-#endif
 
 #define	NFSACCESS_ALL (NFSACCESS_READ | NFSACCESS_MODIFY		\
 			 | NFSACCESS_EXTEND | NFSACCESS_EXECUTE	\
@@ -421,7 +404,7 @@ nfs_access(struct vop_access_args *ap)
 			    if (time_second < (np->n_accesscache[i].stamp
 				+ nfsaccess_cache_timeout) &&
 				(np->n_accesscache[i].mode & mode) == mode) {
-				NFSINCRGLOBAL(newnfsstats.accesscache_hits);
+				NFSINCRGLOBAL(nfsstatsv1.accesscache_hits);
 				gotahit = 1;
 			    }
 			    break;
@@ -440,7 +423,7 @@ nfs_access(struct vop_access_args *ap)
 			/*
 			 * Either a no, or a don't know.  Go to the wire.
 			 */
-			NFSINCRGLOBAL(newnfsstats.accesscache_misses);
+			NFSINCRGLOBAL(nfsstatsv1.accesscache_misses);
 		        error = nfs34_access_otw(vp, wmode, ap->a_td,
 			    ap->a_cred, &rmode);
 			if (!error &&
@@ -677,7 +660,7 @@ nfs_close(struct vop_close_args *ap)
 	int error = 0, ret, localcred = 0;
 	int fmode = ap->a_fflag;
 
-	if ((vp->v_mount->mnt_kern_flag & MNTK_UNMOUNTF))
+	if (NFSCL_FORCEDISM(vp->v_mount))
 		return (0);
 	/*
 	 * During shutdown, a_cred isn't valid, so just use root.
@@ -721,12 +704,12 @@ nfs_close(struct vop_close_args *ap)
 		     * traditional vnode locking implemented for Vnode Ops.
 		     */
 		    int cm = newnfs_commit_on_close ? 1 : 0;
-		    error = ncl_flush(vp, MNT_WAIT, cred, ap->a_td, cm, 0);
+		    error = ncl_flush(vp, MNT_WAIT, ap->a_td, cm, 0);
 		    /* np->n_flag &= ~NMODIFIED; */
 		} else if (NFS_ISV4(vp)) { 
 			if (nfscl_mustflush(vp) != 0) {
 				int cm = newnfs_commit_on_close ? 1 : 0;
-				error = ncl_flush(vp, MNT_WAIT, cred, ap->a_td,
+				error = ncl_flush(vp, MNT_WAIT, ap->a_td,
 				    cm, 0);
 				/*
 				 * as above w.r.t races when clearing
@@ -734,8 +717,9 @@ nfs_close(struct vop_close_args *ap)
 				 * np->n_flag &= ~NMODIFIED;
 				 */
 			}
-		} else
-		    error = ncl_vinvalbuf(vp, V_SAVE, ap->a_td, 1);
+		} else {
+			error = ncl_vinvalbuf(vp, V_SAVE, ap->a_td, 1);
+		}
 		mtx_lock(&np->n_mtx);
 	    }
  	    /* 
@@ -768,7 +752,9 @@ nfs_close(struct vop_close_args *ap)
 		/*
 		 * Get attributes so "change" is up to date.
 		 */
-		if (error == 0 && nfscl_mustflush(vp) != 0) {
+		if (error == 0 && nfscl_mustflush(vp) != 0 &&
+		    vp->v_type == VREG &&
+		    (VFSTONFS(vp->v_mount)->nm_flag & NFSMNT_NOCTO) == 0) {
 			ret = nfsrpc_getattr(vp, cred, ap->a_td, &nfsva,
 			    NULL);
 			if (!ret) {
@@ -858,7 +844,7 @@ nfs_getattr(struct vop_getattr_args *ap)
 
 	if (NFS_ISV34(vp) && nfs_prime_access_cache &&
 	    nfsaccess_cache_timeout > 0) {
-		NFSINCRGLOBAL(newnfsstats.accesscache_misses);
+		NFSINCRGLOBAL(nfsstatsv1.accesscache_misses);
 		nfs34_access_otw(vp, NFSACCESS_ALL, td, ap->a_cred, NULL);
 		if (ncl_getattrcache(vp, ap->a_vap) == 0) {
 			nfscl_deleggetmodtime(vp, &ap->a_vap->va_mtime);
@@ -943,19 +929,16 @@ nfs_setattr(struct vop_setattr_args *ap)
 			mtx_lock(&np->n_mtx);
 			tsize = np->n_size;
 			mtx_unlock(&np->n_mtx);
-			error = ncl_meta_setsize(vp, ap->a_cred, td,
-			    vap->va_size);
+			error = ncl_meta_setsize(vp, td, vap->va_size);
 			mtx_lock(&np->n_mtx);
  			if (np->n_flag & NMODIFIED) {
 			    tsize = np->n_size;
 			    mtx_unlock(&np->n_mtx);
- 			    if (vap->va_size == 0)
- 				error = ncl_vinvalbuf(vp, 0, td, 1);
- 			    else
- 				error = ncl_vinvalbuf(vp, V_SAVE, td, 1);
- 			    if (error) {
-				vnode_pager_setsize(vp, tsize);
-				return (error);
+			    error = ncl_vinvalbuf(vp, vap->va_size == 0 ?
+			        0 : V_SAVE, td, 1);
+			    if (error != 0) {
+				    vnode_pager_setsize(vp, tsize);
+				    return (error);
 			    }
 			    /*
 			     * Call nfscl_delegmodtime() to set the modify time
@@ -973,14 +956,14 @@ nfs_setattr(struct vop_setattr_args *ap)
 			mtx_lock(&np->n_mtx);
  			np->n_vattr.na_size = np->n_size = vap->va_size;
 			mtx_unlock(&np->n_mtx);
-  		};
+  		}
   	} else {
 		mtx_lock(&np->n_mtx);
 		if ((vap->va_mtime.tv_sec != VNOVAL || vap->va_atime.tv_sec != VNOVAL) && 
 		    (np->n_flag & NMODIFIED) && vp->v_type == VREG) {
 			mtx_unlock(&np->n_mtx);
-			if ((error = ncl_vinvalbuf(vp, V_SAVE, td, 1)) != 0 &&
-			    (error == EINTR || error == EIO))
+			error = ncl_vinvalbuf(vp, V_SAVE, td, 1);
+			if (error == EINTR || error == EIO)
 				return (error);
 		} else
 			mtx_unlock(&np->n_mtx);
@@ -1066,7 +1049,8 @@ nfs_lookup(struct vop_lookup_args *ap)
 	}
 	mtx_unlock(&np->n_mtx);
 
-	if ((error = VOP_ACCESS(dvp, VEXEC, cnp->cn_cred, td)) != 0)
+	error = vn_dir_check_exec(dvp, cnp);
+	if (error != 0)
 		return (error);
 	error = cache_lookup(dvp, vpp, cnp, &nctime, &ncticks);
 	if (error > 0 && error != ENOENT)
@@ -1115,7 +1099,7 @@ nfs_lookup(struct vop_lookup_args *ap)
 		    ((u_int)(ticks - ncticks) < (nmp->nm_nametimeo * hz) &&
 		    VOP_GETATTR(newvp, &vattr, cnp->cn_cred) == 0 &&
 		    timespeccmp(&vattr.va_ctime, &nctime, ==))) {
-			NFSINCRGLOBAL(newnfsstats.lookupcache_hits);
+			NFSINCRGLOBAL(nfsstatsv1.lookupcache_hits);
 			if (cnp->cn_nameiop != LOOKUP &&
 			    (flags & ISLASTCN))
 				cnp->cn_flags |= SAVENAME;
@@ -1142,7 +1126,7 @@ nfs_lookup(struct vop_lookup_args *ap)
 		if ((u_int)(ticks - ncticks) < (nmp->nm_negnametimeo * hz) &&
 		    VOP_GETATTR(dvp, &vattr, cnp->cn_cred) == 0 &&
 		    timespeccmp(&vattr.va_mtime, &nctime, ==)) {
-			NFSINCRGLOBAL(newnfsstats.lookupcache_hits);
+			NFSINCRGLOBAL(nfsstatsv1.lookupcache_hits);
 			return (ENOENT);
 		}
 		cache_purge_negative(dvp);
@@ -1150,7 +1134,7 @@ nfs_lookup(struct vop_lookup_args *ap)
 
 	error = 0;
 	newvp = NULLVP;
-	NFSINCRGLOBAL(newnfsstats.lookupcache_misses);
+	NFSINCRGLOBAL(nfsstatsv1.lookupcache_misses);
 	error = nfsrpc_lookup(dvp, cnp->cn_nameptr, cnp->cn_namelen,
 	    cnp->cn_cred, td, &dnfsva, &nfsva, &nfhp, &attrflag, &dattrflag,
 	    NULL);
@@ -1183,8 +1167,7 @@ nfs_lookup(struct vop_lookup_args *ap)
 			return (EJUSTRETURN);
 		}
 
-		if ((cnp->cn_flags & MAKEENTRY) && cnp->cn_nameiop != CREATE &&
-		    dattrflag) {
+		if ((cnp->cn_flags & MAKEENTRY) != 0 && dattrflag) {
 			/*
 			 * Cache the modification time of the parent
 			 * directory from the post-op attributes in
@@ -1375,7 +1358,7 @@ ncl_readrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 	attrflag = 0;
 	if (NFSHASPNFS(nmp))
 		error = nfscl_doiods(vp, uiop, NULL, NULL,
-		    NFSV4OPEN_ACCESSREAD, cred, uiop->uio_td);
+		    NFSV4OPEN_ACCESSREAD, 0, cred, uiop->uio_td);
 	NFSCL_DEBUG(4, "readrpc: aft doiods=%d\n", error);
 	if (error != 0)
 		error = nfsrpc_read(vp, uiop, cred, uiop->uio_td, &nfsva,
@@ -1406,7 +1389,7 @@ ncl_writerpc(struct vnode *vp, struct uio *uiop, struct ucred *cred,
 	attrflag = 0;
 	if (NFSHASPNFS(nmp))
 		error = nfscl_doiods(vp, uiop, iomode, must_commit,
-		    NFSV4OPEN_ACCESSWRITE, cred, uiop->uio_td);
+		    NFSV4OPEN_ACCESSWRITE, 0, cred, uiop->uio_td);
 	NFSCL_DEBUG(4, "writerpc: aft doiods=%d\n", error);
 	if (error != 0)
 		error = nfsrpc_write(vp, uiop, iomode, must_commit, cred,
@@ -1606,20 +1589,6 @@ again:
 		}
 	} else if (NFS_ISV34(dvp) && (fmode & O_EXCL)) {
 		if (nfscl_checksattr(vap, &nfsva)) {
-			/*
-			 * We are normally called with only a partially
-			 * initialized VAP. Since the NFSv3 spec says that
-			 * the server may use the file attributes to
-			 * store the verifier, the spec requires us to do a
-			 * SETATTR RPC. FreeBSD servers store the verifier in
-			 * atime, but we can't really assume that all servers
-			 * will so we ensure that our SETATTR sets both atime
-			 * and mtime.
-			 */
-			if (vap->va_mtime.tv_sec == VNOVAL)
-				vfs_timestamp(&vap->va_mtime);
-			if (vap->va_atime.tv_sec == VNOVAL)
-				vap->va_atime = vap->va_mtime;
 			error = nfsrpc_setattr(newvp, vap, NULL, cnp->cn_cred,
 			    cnp->cn_thread, &nfsva, &attrflag, NULL);
 			if (error && (vap->va_uid != (uid_t)VNOVAL ||
@@ -1698,8 +1667,8 @@ nfs_remove(struct vop_remove_args *ap)
 		 * unnecessary delayed writes later.
 		 */
 		error = ncl_vinvalbuf(vp, 0, cnp->cn_thread, 1);
-		/* Do the rpc */
 		if (error != EINTR && error != EIO)
+			/* Do the rpc */
 			error = nfs_removerpc(dvp, vp, cnp->cn_nameptr,
 			    cnp->cn_namelen, cnp->cn_cred, cnp->cn_thread);
 		/*
@@ -1801,7 +1770,7 @@ nfs_rename(struct vop_rename_args *ap)
 	}
 
 	if (fvp == tvp) {
-		ncl_printf("nfs_rename: fvp == tvp (can't happen)\n");
+		printf("nfs_rename: fvp == tvp (can't happen)\n");
 		error = 0;
 		goto out;
 	}
@@ -1974,10 +1943,6 @@ nfs_link(struct vop_link_args *ap)
 	struct nfsnode *np, *tdnp;
 	struct nfsvattr nfsva, dnfsva;
 	int error = 0, attrflag, dattrflag;
-
-	if (vp->v_mount != tdvp->v_mount) {
-		return (EXDEV);
-	}
 
 	/*
 	 * Push all writes to the server, so that the attribute cache
@@ -2228,7 +2193,7 @@ nfs_readdir(struct vop_readdir_args *ap)
 	struct vnode *vp = ap->a_vp;
 	struct nfsnode *np = VTONFS(vp);
 	struct uio *uio = ap->a_uio;
-	ssize_t tresid;
+	ssize_t tresid, left;
 	int error = 0;
 	struct vattr vattr;
 	
@@ -2247,7 +2212,7 @@ nfs_readdir(struct vop_readdir_args *ap)
 			if ((NFS_ISV4(vp) && np->n_change == vattr.va_filerev) ||
 			    !NFS_TIMESPEC_COMPARE(&np->n_mtime, &vattr.va_mtime)) {
 				mtx_unlock(&np->n_mtx);
-				NFSINCRGLOBAL(newnfsstats.direofcache_hits);
+				NFSINCRGLOBAL(nfsstatsv1.direofcache_hits);
 				if (ap->a_eofflag != NULL)
 					*ap->a_eofflag = 1;
 				return (0);
@@ -2257,16 +2222,30 @@ nfs_readdir(struct vop_readdir_args *ap)
 	}
 
 	/*
+	 * NFS always guarantees that directory entries don't straddle
+	 * DIRBLKSIZ boundaries.  As such, we need to limit the size
+	 * to an exact multiple of DIRBLKSIZ, to avoid copying a partial
+	 * directory entry.
+	 */
+	left = uio->uio_resid % DIRBLKSIZ;
+	if (left == uio->uio_resid)
+		return (EINVAL);
+	uio->uio_resid -= left;
+
+	/*
 	 * Call ncl_bioread() to do the real work.
 	 */
 	tresid = uio->uio_resid;
 	error = ncl_bioread(vp, uio, 0, ap->a_cred);
 
 	if (!error && uio->uio_resid == tresid) {
-		NFSINCRGLOBAL(newnfsstats.direofcache_misses);
+		NFSINCRGLOBAL(nfsstatsv1.direofcache_misses);
 		if (ap->a_eofflag != NULL)
 			*ap->a_eofflag = 1;
 	}
+	
+	/* Add the partial DIRBLKSIZ (left) back in. */
+	uio->uio_resid += left;
 	return (error);
 }
 
@@ -2319,7 +2298,7 @@ ncl_readdirrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred,
 			dnp->n_direofoffset = uiop->uio_offset;
 		else {
 			if (uiop->uio_resid > 0)
-				ncl_printf("EEK! readdirrpc resid > 0\n");
+				printf("EEK! readdirrpc resid > 0\n");
 			ncl_dircookie_lock(dnp);
 			cookiep = ncl_getcookie(dnp, uiop->uio_offset, 1);
 			*cookiep = cookie;
@@ -2378,7 +2357,7 @@ ncl_readdirplusrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred,
 			dnp->n_direofoffset = uiop->uio_offset;
 		else {
 			if (uiop->uio_resid > 0)
-				ncl_printf("EEK! readdirplusrpc resid > 0\n");
+				printf("EEK! readdirplusrpc resid > 0\n");
 			ncl_dircookie_lock(dnp);
 			cookiep = ncl_getcookie(dnp, uiop->uio_offset, 1);
 			*cookiep = cookie;
@@ -2418,7 +2397,7 @@ nfs_sillyrename(struct vnode *dvp, struct vnode *vp, struct componentname *cnp)
 
 	/* 
 	 * Fudge together a funny name.
-	 * Changing the format of the funny name to accomodate more 
+	 * Changing the format of the funny name to accommodate more 
 	 * sillynames per directory.
 	 * The name is now changed to .nfs.<ticks>.<pid>.4, where ticks is 
 	 * CPU ticks since boot.
@@ -2565,16 +2544,34 @@ ncl_commit(struct vnode *vp, u_quad_t offset, int cnt, struct ucred *cred,
 {
 	struct nfsvattr nfsva;
 	struct nfsmount *nmp = VFSTONFS(vp->v_mount);
+	struct nfsnode *np;
+	struct uio uio;
 	int error, attrflag;
 
-	mtx_lock(&nmp->nm_mtx);
-	if ((nmp->nm_state & NFSSTA_HASWRITEVERF) == 0) {
-		mtx_unlock(&nmp->nm_mtx);
-		return (0);
+	np = VTONFS(vp);
+	error = EIO;
+	attrflag = 0;
+	if (NFSHASPNFS(nmp) && (np->n_flag & NDSCOMMIT) != 0) {
+		uio.uio_offset = offset;
+		uio.uio_resid = cnt;
+		error = nfscl_doiods(vp, &uio, NULL, NULL,
+		    NFSV4OPEN_ACCESSWRITE, 1, cred, td);
+		if (error != 0) {
+			mtx_lock(&np->n_mtx);
+			np->n_flag &= ~NDSCOMMIT;
+			mtx_unlock(&np->n_mtx);
+		}
 	}
-	mtx_unlock(&nmp->nm_mtx);
-	error = nfsrpc_commit(vp, offset, cnt, cred, td, &nfsva,
-	    &attrflag, NULL);
+	if (error != 0) {
+		mtx_lock(&nmp->nm_mtx);
+		if ((nmp->nm_state & NFSSTA_HASWRITEVERF) == 0) {
+			mtx_unlock(&nmp->nm_mtx);
+			return (0);
+		}
+		mtx_unlock(&nmp->nm_mtx);
+		error = nfsrpc_commit(vp, offset, cnt, cred, td, &nfsva,
+		    &attrflag, NULL);
+	}
 	if (attrflag != 0)
 		(void) nfscl_loadattrcache(&vp, &nfsva, NULL, NULL,
 		    0, 1);
@@ -2592,13 +2589,20 @@ ncl_commit(struct vnode *vp, u_quad_t offset, int cnt, struct ucred *cred,
 static int
 nfs_strategy(struct vop_strategy_args *ap)
 {
-	struct buf *bp = ap->a_bp;
+	struct buf *bp;
+	struct vnode *vp;
 	struct ucred *cr;
 
+	bp = ap->a_bp;
+	vp = ap->a_vp;
+	KASSERT(bp->b_vp == vp, ("missing b_getvp"));
 	KASSERT(!(bp->b_flags & B_DONE),
 	    ("nfs_strategy: buffer %p unexpectedly marked B_DONE", bp));
 	BUF_ASSERT_HELD(bp);
 
+	if (vp->v_type == VREG && bp->b_blkno == bp->b_lblkno)
+		bp->b_blkno = bp->b_lblkno * (vp->v_bufobj.bo_bsize /
+		    DEV_BSIZE);
 	if (bp->b_iocmd == BIO_READ)
 		cr = bp->b_rcred;
 	else
@@ -2610,8 +2614,8 @@ nfs_strategy(struct vop_strategy_args *ap)
 	 * otherwise just do it ourselves.
 	 */
 	if ((bp->b_flags & B_ASYNC) == 0 ||
-	    ncl_asyncio(VFSTONFS(ap->a_vp->v_mount), bp, NOCRED, curthread))
-		(void) ncl_doio(ap->a_vp, bp, cr, curthread, 1);
+	    ncl_asyncio(VFSTONFS(vp->v_mount), bp, NOCRED, curthread))
+		(void) ncl_doio(vp, bp, cr, curthread, 1);
 	return (0);
 }
 
@@ -2632,7 +2636,7 @@ nfs_fsync(struct vop_fsync_args *ap)
 		 */
 		return (0);
 	}
-	return (ncl_flush(ap->a_vp, ap->a_waitfor, NULL, ap->a_td, 1, 0));
+	return (ncl_flush(ap->a_vp, ap->a_waitfor, ap->a_td, 1, 0));
 }
 
 /*
@@ -2644,7 +2648,7 @@ nfs_fsync(struct vop_fsync_args *ap)
  * waiting for a buffer write to complete.
  */
 int
-ncl_flush(struct vnode *vp, int waitfor, struct ucred *cred, struct thread *td,
+ncl_flush(struct vnode *vp, int waitfor, struct thread *td,
     int commit, int called_from_renewthread)
 {
 	struct nfsnode *np = VTONFS(vp);
@@ -2974,14 +2978,17 @@ done:
 		free(bvec, M_TEMP);
 	if (error == 0 && commit != 0 && waitfor == MNT_WAIT &&
 	    (bo->bo_dirty.bv_cnt != 0 || bo->bo_numoutput != 0 ||
-	     np->n_directio_asyncwr != 0) && trycnt++ < 5) {
-		/* try, try again... */
-		passone = 1;
-		wcred = NULL;
-		bvec = NULL;
-		bvecsize = 0;
-printf("try%d\n", trycnt);
-		goto again;
+	    np->n_directio_asyncwr != 0)) {
+		if (trycnt++ < 5) {
+			/* try, try again... */
+			passone = 1;
+			wcred = NULL;
+			bvec = NULL;
+			bvecsize = 0;
+			goto again;
+		}
+		vn_printf(vp, "ncl_flush failed");
+		error = called_from_renewthread != 0 ? EIO : EBUSY;
 	}
 	return (error);
 }
@@ -3001,14 +3008,19 @@ nfs_advlock(struct vop_advlock_args *ap)
 	int ret, error = EOPNOTSUPP;
 	u_quad_t size;
 	
+	ret = NFSVOPLOCK(vp, LK_SHARED);
+	if (ret != 0)
+		return (EBADF);
 	if (NFS_ISV4(vp) && (ap->a_flags & (F_POSIX | F_FLOCK)) != 0) {
-		if (vp->v_type != VREG)
+		if (vp->v_type != VREG) {
+			NFSVOPUNLOCK(vp, 0);
 			return (EINVAL);
+		}
 		if ((ap->a_flags & F_POSIX) != 0)
 			cred = p->p_ucred;
 		else
 			cred = td->td_ucred;
-		NFSVOPLOCK(vp, LK_EXCLUSIVE | LK_RETRY);
+		NFSVOPLOCK(vp, LK_UPGRADE | LK_RETRY);
 		if (vp->v_iflag & VI_DOOMED) {
 			NFSVOPUNLOCK(vp, 0);
 			return (EBADF);
@@ -3022,7 +3034,7 @@ nfs_advlock(struct vop_advlock_args *ap)
 		if (ap->a_op == F_UNLCK &&
 		    nfscl_checkwritelocked(vp, ap->a_fl, cred, td, ap->a_id,
 		    ap->a_flags))
-			(void) ncl_flush(vp, MNT_WAIT, cred, td, 1, 0);
+			(void) ncl_flush(vp, MNT_WAIT, td, 1, 0);
 
 		/*
 		 * Loop around doing the lock op, while a blocking lock
@@ -3079,13 +3091,14 @@ nfs_advlock(struct vop_advlock_args *ap)
 					np->n_change = va.va_filerev;
 				}
 			}
+			/* Mark that a file lock has been acquired. */
+			mtx_lock(&np->n_mtx);
+			np->n_flag |= NHASBEENLOCKED;
+			mtx_unlock(&np->n_mtx);
 		}
 		NFSVOPUNLOCK(vp, 0);
 		return (0);
 	} else if (!NFS_ISV4(vp)) {
-		error = NFSVOPLOCK(vp, LK_SHARED);
-		if (error)
-			return (error);
 		if ((VFSTONFS(vp->v_mount)->nm_flag & NFSMNT_NOLOCKD) != 0) {
 			size = VTONFS(vp)->n_size;
 			NFSVOPUNLOCK(vp, 0);
@@ -3098,7 +3111,18 @@ nfs_advlock(struct vop_advlock_args *ap)
 				error = ENOLCK;
 			}
 		}
-	}
+		if (error == 0 && ap->a_op == F_SETLK) {
+			error = NFSVOPLOCK(vp, LK_SHARED);
+			if (error == 0) {
+				/* Mark that a file lock has been acquired. */
+				mtx_lock(&np->n_mtx);
+				np->n_flag |= NHASBEENLOCKED;
+				mtx_unlock(&np->n_mtx);
+				NFSVOPUNLOCK(vp, 0);
+			}
+		}
+	} else
+		NFSVOPUNLOCK(vp, 0);
 	return (error);
 }
 
@@ -3137,8 +3161,8 @@ nfs_print(struct vop_print_args *ap)
 	struct vnode *vp = ap->a_vp;
 	struct nfsnode *np = VTONFS(vp);
 
-	ncl_printf("\tfileid %ld fsid 0x%x",
-	   np->n_vattr.na_fileid, np->n_vattr.na_fsid);
+	printf("\tfileid %jd fsid 0x%jx", (uintmax_t)np->n_vattr.na_fileid,
+	    (uintmax_t)np->n_vattr.na_fsid);
 	if (vp->v_type == VFIFO)
 		fifo_printinfo(vp);
 	printf("\n");
@@ -3152,27 +3176,21 @@ nfs_print(struct vop_print_args *ap)
 int
 ncl_writebp(struct buf *bp, int force __unused, struct thread *td)
 {
-	int s;
-	int oldflags = bp->b_flags;
-#if 0
-	int retv = 1;
-	off_t off;
-#endif
+	int oldflags, rtval;
 
 	BUF_ASSERT_HELD(bp);
 
 	if (bp->b_flags & B_INVAL) {
 		brelse(bp);
-		return(0);
+		return (0);
 	}
 
+	oldflags = bp->b_flags;
 	bp->b_flags |= B_CACHE;
 
 	/*
 	 * Undirty the bp.  We will redirty it later if the I/O fails.
 	 */
-
-	s = splbio();
 	bundirty(bp);
 	bp->b_flags &= ~B_DONE;
 	bp->b_ioflags &= ~BIO_ERROR;
@@ -3180,7 +3198,6 @@ ncl_writebp(struct buf *bp, int force __unused, struct thread *td)
 
 	bufobj_wref(bp->b_bufobj);
 	curthread->td_ru.ru_oublock++;
-	splx(s);
 
 	/*
 	 * Note: to avoid loopback deadlocks, we do not
@@ -3192,19 +3209,14 @@ ncl_writebp(struct buf *bp, int force __unused, struct thread *td)
 	bp->b_iooffset = dbtob(bp->b_blkno);
 	bstrategy(bp);
 
-	if( (oldflags & B_ASYNC) == 0) {
-		int rtval = bufwait(bp);
+	if ((oldflags & B_ASYNC) != 0)
+		return (0);
 
-		if (oldflags & B_DELWRI) {
-			s = splbio();
-			reassignbuf(bp);
-			splx(s);
-		}
-		brelse(bp);
-		return (rtval);
-	}
-
-	return (0);
+	rtval = bufwait(bp);
+	if (oldflags & B_DELWRI)
+		reassignbuf(bp);
+	brelse(bp);
+	return (rtval);
 }
 
 /*
@@ -3343,37 +3355,6 @@ struct buf_ops buf_ops_newnfs = {
 	.bop_bdflush	=	bufbdflush,
 };
 
-/*
- * Cloned from vop_stdlock(), and then the ugly hack added.
- */
-static int
-nfs_lock1(struct vop_lock1_args *ap)
-{
-	struct vnode *vp = ap->a_vp;
-	int error = 0;
-
-	/*
-	 * Since vfs_hash_get() calls vget() and it will no longer work
-	 * for FreeBSD8 with flags == 0, I can only think of this horrible
-	 * hack to work around it. I call vfs_hash_get() with LK_EXCLOTHER
-	 * and then handle it here. All I want for this case is a v_usecount
-	 * on the vnode to use for recovery, while another thread might
-	 * hold a lock on the vnode. I have the other threads blocked, so
-	 * there isn't any race problem.
-	 */
-	if ((ap->a_flags & LK_TYPE_MASK) == LK_EXCLOTHER) {
-		if ((ap->a_flags & LK_INTERLOCK) == 0)
-			panic("ncllock1");
-		if ((vp->v_iflag & VI_DOOMED))
-			error = ENOENT;
-		VI_UNLOCK(vp);
-		return (error);
-	}
-	return (_lockmgr_args(vp->v_vnlock, ap->a_flags, VI_MTX(vp),
-	    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT, ap->a_file,
-	    ap->a_line));
-}
-
 static int
 nfs_getacl(struct vop_getacl_args *ap)
 {
@@ -3406,6 +3387,39 @@ nfs_setacl(struct vop_setacl_args *ap)
 	return (error);
 }
 
+static int
+nfs_set_text(struct vop_set_text_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct nfsnode *np;
+
+	/*
+	 * If the text file has been mmap'd, flush any dirty pages to the
+	 * buffer cache and then...
+	 * Make sure all writes are pushed to the NFS server.  If this is not
+	 * done, the modify time of the file can change while the text
+	 * file is being executed.  This will cause the process that is
+	 * executing the text file to be terminated.
+	 */
+	if (vp->v_object != NULL) {
+		VM_OBJECT_WLOCK(vp->v_object);
+		vm_object_page_clean(vp->v_object, 0, 0, OBJPC_SYNC);
+		VM_OBJECT_WUNLOCK(vp->v_object);
+	}
+
+	/* Now, flush the buffer cache. */
+	ncl_flush(vp, MNT_WAIT, curthread, 0, 0);
+
+	/* And, finally, make sure that n_mtime is up to date. */
+	np = VTONFS(vp);
+	mtx_lock(&np->n_mtx);
+	np->n_mtime = np->n_vattr.na_mtime;
+	mtx_unlock(&np->n_mtx);
+
+	vp->v_vflag |= VV_TEXT;
+	return (0);
+}
+
 /*
  * Return POSIX pathconf information applicable to nfs filesystems.
  */
@@ -3418,12 +3432,15 @@ nfs_pathconf(struct vop_pathconf_args *ap)
 	struct thread *td = curthread;
 	int attrflag, error;
 
-	if (NFS_ISV4(vp) || (NFS_ISV3(vp) && (ap->a_name == _PC_LINK_MAX ||
+	if ((NFS_ISV34(vp) && (ap->a_name == _PC_LINK_MAX ||
 	    ap->a_name == _PC_NAME_MAX || ap->a_name == _PC_CHOWN_RESTRICTED ||
-	    ap->a_name == _PC_NO_TRUNC))) {
+	    ap->a_name == _PC_NO_TRUNC)) ||
+	    (NFS_ISV4(vp) && ap->a_name == _PC_ACL_NFS4)) {
 		/*
 		 * Since only the above 4 a_names are returned by the NFSv3
 		 * Pathconf RPC, there is no point in doing it for others.
+		 * For NFSv4, the Pathconf RPC (actually a Getattr Op.) can
+		 * be used for _PC_NFS4_ACL as well.
 		 */
 		error = nfsrpc_pathconf(vp, &pc, td->td_ucred, td, &nfsva,
 		    &attrflag, NULL);
@@ -3452,20 +3469,17 @@ nfs_pathconf(struct vop_pathconf_args *ap)
 	case _PC_NAME_MAX:
 		*ap->a_retval = pc.pc_namemax;
 		break;
-	case _PC_PATH_MAX:
-		*ap->a_retval = PATH_MAX;
-		break;
 	case _PC_PIPE_BUF:
-		*ap->a_retval = PIPE_BUF;
+		if (ap->a_vp->v_type == VDIR || ap->a_vp->v_type == VFIFO)
+			*ap->a_retval = PIPE_BUF;
+		else
+			error = EINVAL;
 		break;
 	case _PC_CHOWN_RESTRICTED:
 		*ap->a_retval = pc.pc_chownrestricted;
 		break;
 	case _PC_NO_TRUNC:
 		*ap->a_retval = pc.pc_notrunc;
-		break;
-	case _PC_ACL_EXTENDED:
-		*ap->a_retval = 0;
 		break;
 	case _PC_ACL_NFS4:
 		if (NFS_ISV4(vp) && nfsrv_useacl != 0 && attrflag != 0 &&
@@ -3479,14 +3493,6 @@ nfs_pathconf(struct vop_pathconf_args *ap)
 			*ap->a_retval = ACL_MAX_ENTRIES;
 		else
 			*ap->a_retval = 3;
-		break;
-	case _PC_MAC_PRESENT:
-		*ap->a_retval = 0;
-		break;
-	case _PC_ASYNC_IO:
-		/* _PC_ASYNC_IO should have been handled by upper layers. */
-		KASSERT(0, ("_PC_ASYNC_IO should not get here"));
-		error = EINVAL;
 		break;
 	case _PC_PRIO_IO:
 		*ap->a_retval = 0;
@@ -3520,7 +3526,7 @@ nfs_pathconf(struct vop_pathconf_args *ap)
 		break;
 
 	default:
-		error = EINVAL;
+		error = vop_stdpathconf(ap);
 		break;
 	}
 	return (error);

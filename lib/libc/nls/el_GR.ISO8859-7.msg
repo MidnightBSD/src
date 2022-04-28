@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/el_GR.ISO8859-7.msg 192653 2009-05-23 17:13:35Z des $
+$ $FreeBSD$
 $
 $ Message catalog for C locale (template)
 $

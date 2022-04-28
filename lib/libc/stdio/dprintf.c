@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/dprintf.c 189356 2009-03-04 03:38:51Z das $");
+__FBSDID("$FreeBSD$");
 
 #define	_WITH_DPRINTF
 #include "namespace.h"

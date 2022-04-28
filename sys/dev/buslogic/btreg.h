@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/buslogic/btreg.h 241592 2012-10-15 16:13:55Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _BTREG_H_
@@ -595,7 +595,7 @@ struct sg_map_node {
 };
 	
 struct bt_softc {
-	struct device		*dev;
+	device_t		dev;
 	struct resource		*port;
 	struct resource		*irq;
 	struct resource		*drq;

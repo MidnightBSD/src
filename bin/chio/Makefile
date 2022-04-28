@@ -1,6 +1,7 @@
-# $FreeBSD: release/10.0.0/bin/chio/Makefile 140902 2005-01-27 13:25:09Z delphij $
+# $FreeBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
 
+PACKAGE=runtime
 PROG=	chio
 
 .include <bsd.prog.mk>

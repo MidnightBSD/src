@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/malo/Makefile 178354 2008-04-20 20:35:46Z sam $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/malo
+.PATH: ${SRCTOP}/sys/dev/malo
 
 KMOD    = if_malo
 SRCS    = if_malo.c if_malohal.c if_malo_pci.c

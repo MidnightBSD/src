@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/net80211/wlanwatch/wlanwatch.c 179122 2008-05-19 17:51:00Z thompsa $
+ * $FreeBSD$
  */
 
 /*
@@ -45,7 +45,6 @@
 #include <net/if_dl.h>
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
-#include <netatalk/at.h>
 #ifdef __NetBSD__
 #include <net80211/ieee80211_netbsd.h>
 #elif __FreeBSD__

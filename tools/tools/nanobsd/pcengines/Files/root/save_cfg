@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/pcengines/Files/root/save_cfg 199536 2009-11-19 16:27:51Z mr $
+# $FreeBSD$
 #
 
 set -e

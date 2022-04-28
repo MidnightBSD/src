@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/wtap/wtap/wtap.c 229972 2012-01-11 17:51:56Z adrian $
+ * $FreeBSD$
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,7 +75,7 @@ int main( int argc, const char* argv[])
 	delete(id);
 	break;
       default:
-	printf("wtap ioctl: unkown command '%c'\n", *argv[1]);
+	printf("wtap ioctl: unknown command '%c'\n", *argv[1]);
 	return -1;
     }
     return 0;

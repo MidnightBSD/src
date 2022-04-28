@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/inetd 240336 2012-09-11 05:04:59Z obrien $
+# $FreeBSD$
 #
 
 # PROVIDE: inetd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="inetd"
+desc="Internet \"super-server\""
 rcvar="inetd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"

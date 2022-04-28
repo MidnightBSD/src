@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,26 +25,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/bhyverun.h 256869 2013-10-22 00:58:51Z neel $
+ * $FreeBSD$
  */
 
 #ifndef	_FBSDRUN_H_
 #define	_FBSDRUN_H_
 
-#ifndef CTASSERT		/* Allow lint to override */
-#define	CTASSERT(x)		_CTASSERT(x, __LINE__)
-#define	_CTASSERT(x, y)		__CTASSERT(x, y)
-#define	__CTASSERT(x, y)	typedef char __assert ## y[(x) ? 1 : -1]
-#endif
+#define	VMEXIT_CONTINUE		(0)
+#define	VMEXIT_ABORT		(-1)
 
 struct vmctx;
 extern int guest_ncpus;
+extern uint16_t cores, sockets, threads;
+extern char *guest_uuid_str;
 extern char *vmname;
 
 void *paddr_guest2host(struct vmctx *ctx, uintptr_t addr, size_t len);
 
 void fbsdrun_set_capabilities(struct vmctx *ctx, int cpu);
-void fbsdrun_addcpu(struct vmctx *ctx, int cpu, uint64_t rip);
+void fbsdrun_addcpu(struct vmctx *ctx, int fromcpu, int newcpu, uint64_t rip);
 int  fbsdrun_muxed(void);
 int  fbsdrun_vmexit_on_hlt(void);
 int  fbsdrun_vmexit_on_pause(void);

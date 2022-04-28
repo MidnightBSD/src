@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: release/10.0.0/share/doc/usd/07.mail/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $FreeBSD$
 
 VOLUME=		usd/07.mail
 SRCS=		mail0.nr mail1.nr mail2.nr mail3.nr mail4.nr mail5.nr mail6.nr \

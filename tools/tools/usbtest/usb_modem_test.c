@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/tools/usbtest/usb_modem_test.c 254241 2013-08-12 09:15:33Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2007-2010 Hans Petter Selasky. All rights reserved.
  *

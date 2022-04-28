@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/mdio.h 245881 2013-01-24 15:14:22Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_MDIO_H__
@@ -34,7 +34,7 @@
 /**
 * @file_name mdio.h
 * @author Netlogic Microsystems
-* @brief Access functions for XLP MDIO 
+* @brief Access functions for XLP MDIO
 */
 #define	INT_MDIO_CTRL				0x19
 #define	INT_MDIO_CTRL_DATA			0x1A

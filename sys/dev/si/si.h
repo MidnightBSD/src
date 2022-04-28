@@ -30,7 +30,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/si/si.h 179668 2008-06-09 08:43:27Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/callout.h>
@@ -76,7 +76,7 @@ struct si_module {
 };
 
 /*
- *	The 'next' pointer & with 0x7fff + SI base addres give
+ *	The 'next' pointer & with 0x7fff + SI base address give
  *	the address of the next module block if fitted. (else 0)
  *	Note that next points to the TX buffer so 0x60 must be
  *	subtracted to find the true base.

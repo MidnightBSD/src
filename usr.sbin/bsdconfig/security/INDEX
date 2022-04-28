@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/security/INDEX 251906 2013-06-18 08:15:56Z dteske $
+# $FreeBSD$
 
 #
 # Title that will be shown in the bsdconfig menu.

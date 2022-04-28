@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/ciphy.c 235999 2012-05-25 15:05:17Z raj $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the Cicada/Vitesse CS/VSC8xxx 10/100/1000 copper PHY.
@@ -131,12 +131,6 @@ ciphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		ciphy_fixup(sc);	/* XXX hardware bug work-around */
 
 		switch (IFM_SUBTYPE(ife->ifm_media)) {
@@ -186,12 +180,6 @@ setit:
 		break;
 
 	case MII_TICK:
-		/*
-		 * Is the interface even up?
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			return (0);
-
 		/*
 		 * Only used for autonegotiation.
 		 */
@@ -315,8 +303,7 @@ ciphy_fixup(struct mii_softc *sc)
 	status = PHY_READ(sc, CIPHY_MII_AUXCSR);
 	speed = status & CIPHY_AUXCSR_SPEED;
 
-	if (strcmp(device_get_name(device_get_parent(sc->mii_dev)),
-	    "nfe") == 0) {
+	if (mii_phy_mac_match(sc, "nfe")) {
 		/* need to set for 2.5V RGMII for NVIDIA adapters */
 		val = PHY_READ(sc, CIPHY_MII_ECTL1);
 		val &= ~(CIPHY_ECTL1_IOVOL | CIPHY_ECTL1_INTSEL);

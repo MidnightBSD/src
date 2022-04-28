@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)hexdump.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/hexdump/hexdump.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD$
  */
 
 #include <wchar.h>
@@ -82,9 +82,9 @@ enum _vflag { ALL, DUP, FIRST, WAIT };	/* -v values */
 extern enum _vflag vflag;
 
 void	 add(const char *);
-void	 addfile(char *);
-void	 badcnt(char *);
-void	 badconv(char *);
+void	 addfile(const char *);
+void	 badcnt(const char *);
+void	 badconv(const char *);
 void	 badfmt(const char *);
 void	 badsfmt(void);
 void	 bpad(PR *);

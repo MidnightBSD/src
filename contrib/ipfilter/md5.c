@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/md5.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 
 
@@ -35,16 +35,11 @@
  ***********************************************************************
  */
 
-#if defined(linux) && defined(_KERNEL)
-extern void *memcpy(void *, const void *, unsigned long);
-# define	bcopy(a,b,c)	memcpy(b,a,c)
-#else
-# if defined(_KERNEL) && !defined(__sgi)
+# if defined(_KERNEL)
 #  include <sys/systm.h>
 # else
 #  include <string.h>
 # endif
-#endif
 
 #include "md5.h"
 

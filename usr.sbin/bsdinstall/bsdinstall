@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/bsdinstall 259402 2013-12-15 03:20:01Z gjb $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 

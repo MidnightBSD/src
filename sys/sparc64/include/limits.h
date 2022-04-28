@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: release/10.0.0/sys/sparc64/include/limits.h 143140 2005-03-04 21:26:07Z joerg $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_LIMITS_H_

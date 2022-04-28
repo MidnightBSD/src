@@ -27,7 +27,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/services_mkdb/services_mkdb.8 249373 2013-04-11 18:46:41Z joel $
+.\" $FreeBSD$
 .\"
 .Dd April 4, 2010
 .Dt SERVICES_MKDB 8
@@ -37,6 +37,7 @@
 .Nd generate the services database
 .Sh SYNOPSIS
 .Nm
+.Op Fl b | l
 .Op Fl q
 .Op Fl o Ar database
 .Op Ar file
@@ -61,6 +62,10 @@ The file must be in the correct format (see
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl b
+Use big-endian byte order for database metadata.
+.It Fl l
+Use little-endian byte order for database metadata.
 .It Fl o Ar database
 Put the output databases in the named file.
 .It Fl q
@@ -71,6 +76,13 @@ Print the services file to stdout, omitting duplicate entries and comments.
 .Pp
 The databases are used by the C library services routines (see
 .Xr getservent 3 ) .
+.Pp
+The
+.Fl b
+and
+.Fl l
+flags are mutually exclusive.
+The default byte ordering is the current host order.
 .Sh FILES
 .Bl -tag -width ".Pa /var/db/services.db.tmp" -compact
 .It Pa /var/db/services.db

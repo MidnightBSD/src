@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/arm/at91/std.at91sam9g45 239362 2012-08-18 05:48:19Z andrew $
+# $FreeBSD$
 #
 # Unlike other Atmel SoCs, which have their SDRAM at CS1, the
 # at91sam9g45 family has it on CS6, so PHYSADDR must be adjusted

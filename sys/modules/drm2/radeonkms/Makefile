@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm2/radeonkms/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../../dev/drm2/radeon
+.PATH:	${SRCTOP}/sys/dev/drm2/radeon
 
 KMOD	= radeonkms
 SRCS	=								\
@@ -15,17 +15,16 @@ SRCS	=								\
 	evergreen_reg_safe.h						\
 	cayman_reg_safe.h
 SRCS	+=								\
-	radeon_acpi.c							\
+	${radeon_acpi}							\
 	radeon_agp.c							\
 	radeon_asic.c							\
 	radeon_atombios.c						\
-	radeon_atpx_handler.c						\
+	${radeon_atpx_handler}						\
 	radeon_benchmark.c						\
 	radeon_bios.c							\
 	radeon_clocks.c							\
 	radeon_combios.c						\
 	radeon_connectors.c						\
-	radeon_cp.c							\
 	radeon_cs.c							\
 	radeon_cursor.c							\
 	radeon_device.c							\
@@ -37,6 +36,7 @@ SRCS	+=								\
 	radeon_gart.c							\
 	radeon_gem.c							\
 	radeon_i2c.c							\
+	${radeon_ioc32}							\
 	radeon_irq.c							\
 	radeon_irq_kms.c						\
 	radeon_kms.c							\
@@ -49,7 +49,6 @@ SRCS	+=								\
 	radeon_ring.c							\
 	radeon_sa.c							\
 	radeon_semaphore.c						\
-	radeon_state.c							\
 	radeon_test.c							\
 	radeon_ttm.c							\
 	atom.c								\
@@ -60,7 +59,6 @@ SRCS	+=								\
 	r100.c								\
 	r200.c								\
 	r300.c								\
-	r300_cmdbuf.c							\
 	r420.c								\
 	rs400.c								\
 	rs600.c								\
@@ -69,10 +67,8 @@ SRCS	+=								\
 	r520.c								\
 	r600.c								\
 	r600_audio.c							\
-	r600_blit.c							\
 	r600_blit_kms.c							\
 	r600_blit_shaders.c						\
-	r600_cp.c							\
 	r600_cs.c							\
 	r600_hdmi.c							\
 	rv770.c								\
@@ -86,7 +82,11 @@ SRCS	+=								\
 	si.c								\
 	si_blit_shaders.c
 
-#radeon_ioc32.c
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+radeon_acpi=		radeon_acpi.c
+#radeon_atpx_handler=	radeon_atpx_handler.c
+.endif
+
 #radeon_prime.c
 #--radeon_trace_points.c
 
@@ -94,14 +94,17 @@ SRCS	+=								\
 	opt_acpi.h							\
 	opt_compat.h							\
 	opt_drm.h							\
+	opt_syscons.h							\
 	acpi_if.h							\
 	bus_if.h							\
+	fb_if.h								\
 	device_if.h							\
 	iicbb_if.h							\
 	iicbus_if.h							\
 	pci_if.h
 
-CFLAGS  += -I${.CURDIR}/../../../dev/drm2/radeon			\
-	   -fms-extensions
-
 .include <bsd.kmod.mk>
+
+CFLAGS+=			-I${SRCTOP}/sys/dev/drm2/radeon
+
+CWARNFLAGS+=			${CWARNFLAGS.${.IMPSRC:T}}

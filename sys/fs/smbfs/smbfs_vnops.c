@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/smbfs/smbfs_vnops.c 254627 2013-08-21 23:04:48Z ken $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -280,7 +280,7 @@ smbfs_getattr(ap)
 	smbfs_attr_cachelookup(vp, va);
 	if (np->n_flag & NOPEN)
 		np->n_size = oldsize;
-		smbfs_free_scred(scred);
+	smbfs_free_scred(scred);
 	return 0;
 }
 
@@ -341,7 +341,7 @@ smbfs_setattr(ap)
  		    default:
 			error = EINVAL;
 			goto out;
-  		};
+  		}
 		if (isreadonly) {
 			error = EROFS;
 			goto out;
@@ -358,7 +358,8 @@ smbfs_setattr(ap)
 				doclose = 1;
 		}
 		if (error == 0)
-			error = smbfs_smb_setfsize(np, vap->va_size, scred);
+			error = smbfs_smb_setfsize(np,
+			    (int64_t)vap->va_size, scred);
 		if (doclose)
 			smbfs_smb_close(ssp, np->n_fid, NULL, scred);
 		if (error) {
@@ -896,8 +897,12 @@ smbfs_pathconf (ap)
 	int error = 0;
 	
 	switch (ap->a_name) {
-	    case _PC_LINK_MAX:
-		*retval = 0;
+	    case _PC_FILESIZEBITS:
+		if (vcp->vc_sopt.sv_caps & (SMB_CAP_LARGE_READX |
+		    SMB_CAP_LARGE_WRITEX))
+		    *retval = 64;
+		else
+		    *retval = 32;
 		break;
 	    case _PC_NAME_MAX:
 		*retval = (vcp->vc_hflags2 & SMB_FLAGS2_KNOWS_LONG_NAMES) ? 255 : 12;
@@ -905,8 +910,11 @@ smbfs_pathconf (ap)
 	    case _PC_PATH_MAX:
 		*retval = 800;	/* XXX: a correct one ? */
 		break;
+	    case _PC_NO_TRUNC:
+		*retval = 1;
+		break;
 	    default:
-		error = EINVAL;
+		error = vop_stdpathconf(ap);
 	}
 	return error;
 }
@@ -1188,7 +1196,8 @@ smbfs_lookup(ap)
 	islastcn = flags & ISLASTCN;
 	if (islastcn && (mp->mnt_flag & MNT_RDONLY) && (nameiop != LOOKUP))
 		return EROFS;
-	if ((error = VOP_ACCESS(dvp, VEXEC, cnp->cn_cred, td)) != 0)
+	error = vn_dir_check_exec(dvp, cnp);
+	if (error != 0)
 		return error;
 	smp = VFSTOSMBFS(mp);
 	dnp = VTOSMB(dvp);

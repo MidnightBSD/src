@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_errno.c 139799 2005-01-06 23:22:04Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 #include <i386/ibcs2/ibcs2_errno.h>

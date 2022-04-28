@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/nandsim/nandsim_rcfile.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD$
  *
  * from: FreeBSD: src/lib/libncp/ncpl_rcfile.c,v 1.5 2007/01/09 23:27:39 imp Exp
  */

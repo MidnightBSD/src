@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_pmcvar.h 239190 2012-08-11 05:45:19Z imp $ */
+/* $FreeBSD$ */
 
 #ifndef ARM_AT91_AT91_PMCVAR_H
 #define ARM_AT91_AT91_PMCVAR_H

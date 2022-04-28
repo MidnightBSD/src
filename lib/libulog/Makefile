@@ -1,8 +1,9 @@
-# $FreeBSD: release/10.0.0/lib/libulog/Makefile 202215 2010-01-13 18:53:06Z ed $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 SHLIBDIR?=/lib
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 LIB=	ulog
 SHLIB_MAJOR= 0
@@ -19,10 +20,9 @@ MLINKS+=ulog_login.3 ulog_login_pseudo.3 \
 	utempter_remove_added_record.3 removeFromUtmp.3 \
 	utempter_remove_record.3 removeLineFromUtmp.3
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
-VERSION_DEF= ${.CURDIR}/../libc/Versions.def
+VERSION_DEF= ${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS= ${.CURDIR}/Symbol.map
 
 .if ${MK_INSTALLLIB} != "no"

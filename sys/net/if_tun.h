@@ -13,7 +13,7 @@
  * UCL. This driver is based much more on read/write/select mode of
  * operation though.
  *
- * $FreeBSD: release/10.0.0/sys/net/if_tun.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NET_IF_TUN_H_
@@ -25,11 +25,11 @@
 #define	TUNMTU		1500
 
 /* Maximum receive packet size (hard limit) */
-#define	TUNMRU		16384
+#define	TUNMRU		65535
 
 struct tuninfo {
 	int	baudrate;		/* linespeed */
-	short	mtu;			/* maximum transmission unit */
+	unsigned short	mtu;		/* maximum transmission unit */
 	u_char	type;			/* ethernet, tokenring, etc. */
 	u_char	dummy;			/* place holder */
 };
@@ -40,6 +40,7 @@ struct tuninfo {
 #define	TUNSIFINFO	_IOW('t', 91, struct tuninfo)
 #define	TUNGIFINFO	_IOR('t', 92, struct tuninfo)
 #define	TUNSLMODE	_IOW('t', 93, int)
+#define	TUNGIFNAME	_IOR('t', 93, struct ifreq)
 #define	TUNSIFMODE	_IOW('t', 94, int)
 #define	TUNSIFPID	_IO('t', 95)
 #define	TUNSIFHEAD	_IOW('t', 96, int)

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Robert Nordier
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/ckdist/ckdist.c 185073 2008-11-19 00:09:01Z delphij $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>

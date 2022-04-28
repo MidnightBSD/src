@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/tlb.h 241123 2012-10-02 07:14:22Z alc $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_TLB_H_

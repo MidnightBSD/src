@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxge.h 251862 2013-06-17 20:11:04Z pluknet $*/
+/*$FreeBSD$*/
 
 #ifndef	_VXGE_H_
 #define	_VXGE_H_

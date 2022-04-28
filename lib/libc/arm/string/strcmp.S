@@ -30,14 +30,18 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/string/strcmp.S 137464 2004-11-09 16:49:14Z cognet $");
+__FBSDID("$FreeBSD$");
 
 ENTRY(strcmp)
 1:
 	ldrb	r2, [r0], #1
 	ldrb	r3, [r1], #1
 	cmp	r2, #1
+	it	cs
 	cmpcs	r2, r3
 	beq	1b
 	sub	r0, r2, r3
 	RET
+END(strcmp)
+
+	.section .note.GNU-stack,"",%progbits

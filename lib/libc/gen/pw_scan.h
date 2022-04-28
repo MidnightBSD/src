@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)pw_scan.h	8.1 (Berkeley) 4/1/94
- * $FreeBSD: release/10.0.0/lib/libc/gen/pw_scan.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD$
  */
 
 #define _PWSCAN_MASTER 0x01
 #define _PWSCAN_WARN   0x02
 
+extern void	__pw_initpwd(struct passwd *);
 extern int	__pw_scan(char *, struct passwd *, int);

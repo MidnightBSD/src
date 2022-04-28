@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/netinet/if_atm.h 249925 2013-04-26 12:50:32Z glebius $ */
+/* $FreeBSD$ */
 /*      $NetBSD: if_atm.h,v 1.2 1996/07/03 17:17:17 chuck Exp $       */
 
 /*-

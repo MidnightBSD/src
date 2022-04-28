@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 1987, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2018 Philip Paeps
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +38,7 @@ static const char copyright[] =
 static const char sccsid[] = "@(#)last.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/last/last.c 240425 2012-09-12 22:16:31Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -58,12 +59,15 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/last/last.c 240425 2012-09-12 22:16:3
 #include <utmpx.h>
 #include <sys/queue.h>
 
+#include <libxo/xo.h>
+
 #define	NO	0				/* false/no */
 #define	YES	1				/* true/yes */
 #define	ATOI2(ar)	((ar)[0] - '0') * 10 + ((ar)[1] - '0'); (ar) += 2;
 
 typedef struct arg {
 	char	*name;				/* argument */
+#define	REBOOT_TYPE	-1
 #define	HOST_TYPE	-2
 #define	TTY_TYPE	-3
 #define	USER_TYPE	-4
@@ -84,6 +88,7 @@ static const	char *crmsg;			/* cause of last reboot */
 static time_t	currentout;			/* current logout value */
 static long	maxrec;				/* records to display */
 static const	char *file = NULL;		/* utx.log file */
+static int	noctfix = 0;			/* locale is C or UTF-8 */
 static int	sflag = 0;			/* show delta in seconds */
 static int	width = 5;			/* show seconds in delta */
 static int	yflag;				/* show year */
@@ -95,6 +100,7 @@ static time_t	snaptime;			/* if != 0, we will only
 						 */
 
 static void	 addarg(int, char *);
+static const char *ctf(const char *);
 static time_t	 dateconv(char *);
 static void	 doentry(struct utmpx *);
 static void	 hostconv(char *);
@@ -104,10 +110,35 @@ static int	 want(struct utmpx *);
 static void	 usage(void);
 static void	 wtmp(void);
 
+static const char*
+ctf(const char *fmt) {
+	static char  buf[31];
+	const char  *src, *end;
+	char	    *dst;
+
+	if (noctfix)
+		return (fmt);
+
+	end = buf + sizeof(buf);
+	for (src = fmt, dst = buf; dst < end; *dst++ = *src++) {
+		if (*src == '\0') {
+			*dst = '\0';
+			break;
+		} else if (*src == '%' && *(src+1) == 's') {
+			*dst++ = '%';
+			*dst++ = 'h';
+			*dst++ = 's';
+			strlcpy(dst, src+2, end - dst);
+			return (buf);
+		}
+	}
+	return (buf);
+}
+
 static void
 usage(void)
 {
-	(void)fprintf(stderr,
+	xo_error(
 "usage: last [-swy] [-d [[CC]YY][MMDD]hhmm[.SS]] [-f file] [-h host]\n"
 "            [-n maxrec] [-t tty] [user ...]\n");
 	exit(1);
@@ -121,6 +152,16 @@ main(int argc, char *argv[])
 
 	(void) setlocale(LC_TIME, "");
 	d_first = (*nl_langinfo(D_MD_ORDER) == 'd');
+
+	(void) setlocale(LC_CTYPE, "");
+	p = nl_langinfo(CODESET);
+	if (strcmp(p, "UTF-8") == 0 || strcmp(p, "US-ASCII") == 0)
+		noctfix = 1;
+
+	argc = xo_parse_args(argc, argv);
+	if (argc < 0)
+		exit(1);
+	atexit(xo_finish_atexit);
 
 	maxrec = -1;
 	snaptime = 0;
@@ -156,7 +197,7 @@ main(int argc, char *argv[])
 			maxrec = strtol(optarg, &p, 10);
 			if (p == optarg || *p != '\0' || errno != 0 ||
 			    maxrec <= 0)
-				errx(1, "%s: bad line count", optarg);
+				xo_errx(1, "%s: bad line count", optarg);
 			break;
 		case 's':
 			sflag++;	/* Show delta as seconds */
@@ -180,6 +221,8 @@ main(int argc, char *argv[])
 	if (argc) {
 		setlinebuf(stdout);
 		for (argv += optind; *argv; ++argv) {
+			if (strcmp(*argv, "reboot") == 0)
+				addarg(REBOOT_TYPE, *argv);
 #define	COMPATIBILITY
 #ifdef	COMPATIBILITY
 			/* code to allow "last p5" to work */
@@ -209,14 +252,16 @@ wtmp(void)
 	SLIST_INIT(&idlist);
 	(void)time(&t);
 
+	xo_open_container("last-information");
+
 	/* Load the last entries from the file. */
 	if (setutxdb(UTXDB_LOG, file) != 0)
-		err(1, "%s", file);
+		xo_err(1, "%s", file);
 	while ((ut = getutxent()) != NULL) {
 		if (amount % 128 == 0) {
 			buf = realloc(buf, (amount + 128) * sizeof *ut);
 			if (buf == NULL)
-				err(1, "realloc");
+				xo_err(1, "realloc");
 		}
 		memcpy(&buf[amount++], ut, sizeof *ut);
 		if (t > ut->ut_tv.tv_sec)
@@ -225,12 +270,17 @@ wtmp(void)
 	endutxent();
 
 	/* Display them in reverse order. */
+	xo_open_list("last");
 	while (amount > 0)
 		doentry(&buf[--amount]);
-
+	xo_close_list("last");
+	free(buf);
 	tm = localtime(&t);
 	(void) strftime(ct, sizeof(ct), "%+", tm);
-	printf("\n%s begins %s\n", ((file == NULL) ? "utx.log" : file), ct);
+	xo_emit("\n{:utxdb/%s}", (file == NULL) ? "utx.log" : file);
+	xo_attr("seconds", "%lu", (unsigned long) t);
+	xo_emit(ctf(" begins {:begins/%s}\n"), ct);
+	xo_close_container("last-information");
 }
 
 /*
@@ -285,7 +335,7 @@ doentry(struct utmpx *bp)
 		/* add new one */
 		tt = malloc(sizeof(struct idtab));
 		if (tt == NULL)
-			errx(1, "malloc failure");
+			xo_errx(1, "malloc failure");
 		tt->logout = currentout;
 		memcpy(tt->id, bp->ut_id, sizeof bp->ut_id);
 		SLIST_INSERT_HEAD(&idlist, tt, list);
@@ -321,6 +371,7 @@ printentry(struct utmpx *bp, struct idtab *tt)
 
 	if (maxrec != -1 && !maxrec--)
 		exit(0);
+	xo_open_instance("last");
 	t = bp->ut_tv.tv_sec;
 	tm = localtime(&t);
 	(void) strftime(ct, sizeof(ct), d_first ?
@@ -328,48 +379,55 @@ printentry(struct utmpx *bp, struct idtab *tt)
 	    (yflag ? "%a %b %e %Y %R" : "%a %b %e %R"), tm);
 	switch (bp->ut_type) {
 	case BOOT_TIME:
-		printf("%-42s", "boot time");
+		xo_emit("{:user/%-42s/%s}", "boot time");
 		break;
 	case SHUTDOWN_TIME:
-		printf("%-42s", "shutdown time");
+		xo_emit("{:user/%-42s/%s}", "shutdown time");
 		break;
 	case OLD_TIME:
-		printf("%-42s", "old time");
+		xo_emit("{:user/%-42s/%s}", "old time");
 		break;
 	case NEW_TIME:
-		printf("%-42s", "new time");
+		xo_emit("{:user/%-42s/%s}", "new time");
 		break;
 	case USER_PROCESS:
-		printf("%-10s %-8s %-22.22s",
+		xo_emit("{:user/%-10s/%s} {:tty/%-8s/%s} {:from/%-22.22s/%s}",
 		    bp->ut_user, bp->ut_line, bp->ut_host);
 		break;
 	}
-	printf(" %s%c", ct, tt == NULL ? '\n' : ' ');
+	xo_attr("seconds", "%lu", (unsigned long)t);
+	xo_emit(ctf(" {:login-time/%s%c/%s}"), ct, tt == NULL ? '\n' : ' ');
 	if (tt == NULL)
-		return;
+		goto end;
 	if (!tt->logout) {
-		puts("  still logged in");
-		return;
+		xo_emit("  {:logout-time/still logged in}\n");
+		goto end;
 	}
 	if (tt->logout < 0) {
 		tt->logout = -tt->logout;
-		printf("- %s", crmsg);
+		xo_emit("- {:logout-reason/%s}", crmsg);
 	} else {
 		tm = localtime(&tt->logout);
 		(void) strftime(ct, sizeof(ct), "%R", tm);
-		printf("- %s", ct);
+		xo_attr("seconds", "%lu", (unsigned long)tt->logout);
+		xo_emit(ctf("- {:logout-time/%s}"), ct);
 	}
 	delta = tt->logout - bp->ut_tv.tv_sec;
+	xo_attr("seconds", "%ld", (long)delta);
 	if (sflag) {
-		printf("  (%8ld)\n", (long)delta);
+		xo_emit("  ({:session-length/%8ld})\n", (long)delta);
 	} else {
 		tm = gmtime(&delta);
 		(void) strftime(ct, sizeof(ct), width >= 8 ? "%T" : "%R", tm);
 		if (delta < 86400)
-			printf("  (%s)\n", ct);
+			xo_emit(ctf("  ({:session-length/%s})\n"), ct);
 		else
-			printf(" (%ld+%s)\n", (long)delta / 86400, ct);
+			xo_emit(ctf(" ({:session-length/%ld+%s})\n"),
+			    (long)delta / 86400, ct);
 	}
+
+end:
+	xo_close_instance("last");
 }
 
 /*
@@ -389,6 +447,11 @@ want(struct utmpx *bp)
 
 	for (step = arglist; step; step = step->next)
 		switch(step->type) {
+		case REBOOT_TYPE:
+			if (bp->ut_type == BOOT_TIME ||
+			    bp->ut_type == SHUTDOWN_TIME)
+				return (YES);
+			break;
 		case HOST_TYPE:
 			if (!strcasecmp(step->name, bp->ut_host))
 				return (YES);
@@ -415,7 +478,7 @@ addarg(int type, char *arg)
 	ARG *cur;
 
 	if ((cur = malloc(sizeof(ARG))) == NULL)
-		errx(1, "malloc failure");
+		xo_errx(1, "malloc failure");
 	cur->next = arglist;
 	cur->type = type;
 	cur->name = arg;
@@ -440,7 +503,7 @@ hostconv(char *arg)
 	if (first) {
 		first = 0;
 		if (gethostname(name, sizeof(name)))
-			err(1, "gethostname");
+			xo_err(1, "gethostname");
 		hostdot = strchr(name, '.');
 	}
 	if (hostdot && !strcasecmp(hostdot, argdot))
@@ -463,7 +526,7 @@ ttyconv(char *arg)
 	if (strlen(arg) == 2) {
 		/* either 6 for "ttyxx" or 8 for "console" */
 		if ((mval = malloc(8)) == NULL)
-			errx(1, "malloc failure");
+			xo_errx(1, "malloc failure");
 		if (!strcmp(arg, "co"))
 			(void)strcpy(mval, "console");
 		else {
@@ -493,9 +556,9 @@ dateconv(char *arg)
 
         /* Start with the current time. */
         if (time(&timet) < 0)
-                err(1, "time");
+                xo_err(1, "time");
         if ((t = localtime(&timet)) == NULL)
-                err(1, "localtime");
+                xo_err(1, "localtime");
 
         /* [[CC]YY]MMDDhhmm[.SS] */
         if ((p = strchr(arg, '.')) == NULL)
@@ -544,7 +607,7 @@ dateconv(char *arg)
         t->tm_isdst = -1;       	/* Figure out DST. */
         timet = mktime(t);
         if (timet == -1)
-terr:           errx(1,
+terr:           xo_errx(1,
         "out of range or illegal time specification: [[CC]YY]MMDDhhmm[.SS]");
         return timet;
 }

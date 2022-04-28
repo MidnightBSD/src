@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * Copyright (c) 2010-2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/hastd.c 246922 2013-02-17 21:12:34Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -806,12 +808,6 @@ listen_accept(struct hastd_listen *lst)
 		 */
 		version = 1;
 	}
-	if (version > HAST_PROTO_VERSION) {
-		pjdlog_info("Remote protocol version %hhu is not supported, falling back to version %hhu.",
-		    version, (unsigned char)HAST_PROTO_VERSION);
-		version = HAST_PROTO_VERSION;
-	}
-	pjdlog_debug(1, "Negotiated protocol version %hhu.", version);
 	token = nv_get_uint8_array(nvin, &size, "token");
 	/*
 	 * NULL token means that this is first connection.
@@ -925,6 +921,12 @@ listen_accept(struct hastd_listen *lst)
 	 */
 
 	if (token == NULL) {
+		if (version > HAST_PROTO_VERSION) {
+			pjdlog_info("Remote protocol version %hhu is not supported, falling back to version %hhu.",
+			    version, (unsigned char)HAST_PROTO_VERSION);
+			version = HAST_PROTO_VERSION;
+		}
+		pjdlog_debug(1, "Negotiated protocol version %hhu.", version);
 		res->hr_version = version;
 		arc4random_buf(res->hr_token, sizeof(res->hr_token));
 		nvout = nv_alloc();
@@ -1090,7 +1092,7 @@ main_loop(void)
 			fd = proto_descriptor(lst->hl_conn);
 			PJDLOG_ASSERT(fd >= 0);
 			FD_SET(fd, &rfds);
-			maxfd = fd > maxfd ? fd : maxfd;
+			maxfd = MAX(fd, maxfd);
 		}
 		TAILQ_FOREACH(res, &cfg->hc_resources, hr_next) {
 			if (res->hr_event == NULL)
@@ -1098,14 +1100,14 @@ main_loop(void)
 			fd = proto_descriptor(res->hr_event);
 			PJDLOG_ASSERT(fd >= 0);
 			FD_SET(fd, &rfds);
-			maxfd = fd > maxfd ? fd : maxfd;
+			maxfd = MAX(fd, maxfd);
 			if (res->hr_role == HAST_ROLE_PRIMARY) {
 				/* Only primary workers asks for connections. */
 				PJDLOG_ASSERT(res->hr_conn != NULL);
 				fd = proto_descriptor(res->hr_conn);
 				PJDLOG_ASSERT(fd >= 0);
 				FD_SET(fd, &rfds);
-				maxfd = fd > maxfd ? fd : maxfd;
+				maxfd = MAX(fd, maxfd);
 			} else {
 				PJDLOG_ASSERT(res->hr_conn == NULL);
 			}

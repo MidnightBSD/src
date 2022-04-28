@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfr_getmap.c 228600 2011-12-16 22:05:10Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <time.h>
@@ -43,8 +43,8 @@ __FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfr_getmap.c 228600 2011-12-1
 
 extern bool_t xdr_ypresp_all_seq(XDR *, unsigned long *);
 
-int (*ypresp_allfn)();
-void *ypresp_data;
+extern int (*ypresp_allfn)();
+extern void *ypresp_data;
 extern DB *specdbp;
 extern enum ypstat yp_errno;
 

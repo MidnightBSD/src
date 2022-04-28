@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/hastd/hast_checksum.h 219351 2011-03-06 22:56:14Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_HAST_CHECKSUM_H_

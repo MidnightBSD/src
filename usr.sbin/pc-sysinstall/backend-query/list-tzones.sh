@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/list-tzones.sh 214060 2010-10-19 15:18:40Z emaste $
+# $FreeBSD$
 
 # Backend script which lists all the available timezones for front-ends to display
 egrep -v '^#' /usr/share/zoneinfo/zone.tab |\

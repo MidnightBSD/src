@@ -25,7 +25,7 @@
  *
  *	from: NetBSD: iommuvar.h,v 1.6 2008/05/29 14:51:26 mrg Exp
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/iommuvar.h 219567 2011-03-12 14:33:32Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IOMMUVAR_H_

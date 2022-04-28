@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/gperf/FREEBSD-Xlist 228068 2011-11-28 14:23:09Z bapt $
+$FreeBSD$
 */*.dvi
 */*.html
 */*.info

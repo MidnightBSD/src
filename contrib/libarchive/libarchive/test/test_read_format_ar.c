@@ -26,7 +26,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 
 DEFINE_TEST(test_read_format_ar)
@@ -49,6 +49,8 @@ DEFINE_TEST(test_read_format_ar)
 	assertEqualInt(0, archive_entry_uid(ae));
 	assertEqualInt(0, archive_entry_gid(ae));
 	assertEqualInt(0, archive_entry_size(ae));
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 	/* First Entry */
 	assertA(0 == archive_read_next_header(a, &ae));
@@ -59,6 +61,8 @@ DEFINE_TEST(test_read_format_ar)
 	assert(8 == archive_entry_size(ae));
 	assertA(8 == archive_read_data(a, buff, 10));
 	assertEqualMem(buff, "55667788", 8);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 	/* Second Entry */
 	assertA(0 == archive_read_next_header(a, &ae));
@@ -69,6 +73,8 @@ DEFINE_TEST(test_read_format_ar)
 	assert(4 == archive_entry_size(ae));
 	assertA(4 == archive_read_data(a, buff, 10));
 	assertEqualMem(buff, "3333", 4);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 	/* Third Entry */
 	assertA(0 == archive_read_next_header(a, &ae));

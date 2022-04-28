@@ -23,11 +23,11 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: release/10.0.0/sys/ddb/db_watch.h 139747 2005-01-06 01:34:41Z imp $
+ * $FreeBSD$
  */
 
 /*
- * 	Author: David B. Golub, Carnegie Mellon University
+ *	Author: David B. Golub, Carnegie Mellon University
  *	Date:	10/90
  */
 

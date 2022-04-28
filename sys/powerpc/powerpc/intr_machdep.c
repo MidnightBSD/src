@@ -57,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/intr_machdep.c 255419 2013-09-09 12:52:34Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include "opt_isa.h"
@@ -102,6 +102,8 @@ struct powerpc_intr {
 	cpuset_t cpu;
 	enum intr_trigger trig;
 	enum intr_polarity pol;
+	int	fwcode;
+	int	ipi;
 };
 
 struct pic {
@@ -124,6 +126,11 @@ static u_int nirqs = 16;	/* Allocated IRQS (ISA pre-allocated). */
 static u_int nirqs = 0;		/* Allocated IRQs. */
 #endif
 static u_int stray_count;
+
+u_long intrcnt[INTR_VECTORS];
+char intrnames[INTR_VECTORS * MAXCOMLEN];
+size_t sintrcnt = sizeof(intrcnt);
+size_t sintrnames = sizeof(intrnames);
 
 device_t root_pic;
 
@@ -202,6 +209,8 @@ intr_lookup(u_int irq)
 	i->irq = irq;
 	i->pic = NULL;
 	i->vector = -1;
+	i->fwcode = 0;
+	i->ipi = 0;
 
 #ifdef SMP
 	i->cpu = all_cpus;
@@ -289,7 +298,7 @@ powerpc_intr_post_ithread(void *arg)
 }
 
 static int
-powerpc_assign_intr_cpu(void *arg, u_char cpu)
+powerpc_assign_intr_cpu(void *arg, int cpu)
 {
 #ifdef SMP
 	struct powerpc_intr *i = arg;
@@ -343,6 +352,9 @@ powerpc_register_pic(device_t dev, uint32_t node, u_int irqs, u_int ipis,
 		npics++;
 	}
 
+	KASSERT(npics < MAX_PICS,
+	    ("Number of PICs exceeds maximum (%d)", MAX_PICS));
+
 	mtx_unlock(&intr_table_lock);
 }
 
@@ -375,6 +387,9 @@ powerpc_get_irq(uint32_t node, u_int pin)
 	piclist[idx].base = nirqs;
 	nirqs += 128;
 	npics++;
+
+	KASSERT(npics < MAX_PICS,
+	    ("Number of PICs exceeds maximum (%d)", MAX_PICS));
 
 	mtx_unlock(&intr_table_lock);
 
@@ -414,6 +429,15 @@ powerpc_enable_intr(void)
 				printf("unable to setup IPI handler\n");
 				return (error);
 			}
+
+			/*
+			 * Some subterfuge: disable late EOI and mark this
+			 * as an IPI to the dispatch layer.
+			 */
+			i = intr_lookup(MAP_IRQ(piclist[n].node,
+			    piclist[n].irqs));
+			i->event->ie_post_filter = NULL;
+			i->ipi = 1;
 		}
 	}
 #endif
@@ -427,6 +451,9 @@ powerpc_enable_intr(void)
 		if (error)
 			continue;
 
+		if (i->trig == INTR_TRIGGER_INVALID)
+			PIC_TRANSLATE_CODE(i->pic, i->intline, i->fwcode,
+			    &i->trig, &i->pol);
 		if (i->trig != INTR_TRIGGER_CONFORM ||
 		    i->pol != INTR_POLARITY_CONFORM)
 			PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
@@ -469,15 +496,21 @@ powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter,
 	if (!cold) {
 		error = powerpc_map_irq(i);
 
-		if (!error && (i->trig != INTR_TRIGGER_CONFORM ||
-		    i->pol != INTR_POLARITY_CONFORM))
-			PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
+		if (!error) {
+			if (i->trig == INTR_TRIGGER_INVALID)
+				PIC_TRANSLATE_CODE(i->pic, i->intline,
+				    i->fwcode, &i->trig, &i->pol);
+	
+			if (i->trig != INTR_TRIGGER_CONFORM ||
+			    i->pol != INTR_POLARITY_CONFORM)
+				PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
 
-		if (!error && i->pic == root_pic)
-			PIC_BIND(i->pic, i->intline, i->cpu);
+			if (i->pic == root_pic)
+				PIC_BIND(i->pic, i->intline, i->cpu);
 
-		if (!error && enable)
-			PIC_ENABLE(i->pic, i->intline, i->vector);
+			if (enable)
+				PIC_ENABLE(i->pic, i->intline, i->vector);
+		}
 	}
 	return (error);
 }
@@ -502,6 +535,28 @@ powerpc_bind_intr(u_int irq, u_char cpu)
 	return (intr_event_bind(i->event, cpu));
 }
 #endif
+
+int
+powerpc_fw_config_intr(int irq, int sense_code)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL)
+		return (ENOMEM);
+
+	i->trig = INTR_TRIGGER_INVALID;
+	i->pol = INTR_POLARITY_CONFORM;
+	i->fwcode = sense_code;
+
+	if (!cold && i->pic != NULL) {
+		PIC_TRANSLATE_CODE(i->pic, i->intline, i->fwcode, &i->trig,
+		    &i->pol);
+		PIC_CONFIG(i->pic, i->intline, i->trig, i->pol);
+	}
+
+	return (0);
+}
 
 int
 powerpc_config_intr(int irq, enum intr_trigger trig, enum intr_polarity pol)
@@ -536,6 +591,13 @@ powerpc_dispatch_intr(u_int vector, struct trapframe *tf)
 	ie = i->event;
 	KASSERT(ie != NULL, ("%s: interrupt without an event", __func__));
 
+	/*
+	 * IPIs are magical and need to be EOI'ed before filtering.
+	 * This prevents races in IPI handling.
+	 */
+	if (i->ipi)
+		PIC_EOI(i->pic, i->intline);
+
 	if (intr_event_handle(ie, tf) != 0) {
 		goto stray;
 	}
@@ -552,4 +614,28 @@ stray:
 	}
 	if (i != NULL)
 		PIC_MASK(i->pic, i->intline);
+}
+
+void
+powerpc_intr_mask(u_int irq)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL || i->pic == NULL)
+		return;
+
+	PIC_MASK(i->pic, i->intline);
+}
+
+void
+powerpc_intr_unmask(u_int irq)
+{
+	struct powerpc_intr *i;
+
+	i = intr_lookup(irq);
+	if (i == NULL || i->pic == NULL)
+		return;
+
+	PIC_UNMASK(i->pic, i->intline);
 }

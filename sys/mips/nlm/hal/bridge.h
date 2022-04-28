@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/bridge.h 227722 2011-11-19 14:06:15Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_HAL_BRIDGE_H__

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc64/gen/fpsetmask.c 251091 2013-05-29 01:54:10Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ieeefp.h>

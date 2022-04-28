@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_split.c 220768 2011-04-18 09:12:27Z glebius $
+ * $FreeBSD$
  *
  */
 

@@ -38,45 +38,39 @@
 
 #include "opt_ddb.h"
 #include "opt_platform.h"
-#include "opt_global.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/broadcom/bcm2835/bcm2835_machdep.c 245388 2013-01-13 21:32:40Z gonzo $");
+__FBSDID("$FreeBSD$");
 
-#define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/frame.h> /* For trapframe_t, used in <machine/machdep.h> */
 #include <machine/machdep.h>
-#include <machine/pmap.h>
+#include <machine/platform.h>
+#include <machine/platformvar.h>
 
 #include <dev/fdt/fdt_common.h>
 
 #include <arm/broadcom/bcm2835/bcm2835_wdog.h>
+#include <arm/broadcom/bcm2835/bcm2836_mp.h>
 
-/* Start of address space used for bootstrap map */
-#define DEVMAP_BOOTSTRAP_MAP_START	0xE0000000
+#include "platform_if.h"
 
-vm_offset_t
-initarm_lastaddr(void)
+static vm_offset_t
+bcm2835_lastaddr(platform_t plat)
 {
 
-	return (DEVMAP_BOOTSTRAP_MAP_START - ARM_NOCACHE_KVA_SIZE);
+	return (devmap_lastaddr());
 }
 
-void
-initarm_gpio_init(void)
-{
-}
-
-void
-initarm_late_init(void)
+static void
+bcm2835_late_init(platform_t plat)
 {
 	phandle_t system;
 	pcell_t cells[2];
@@ -84,59 +78,78 @@ initarm_late_init(void)
 
 	system = OF_finddevice("/system");
 	if (system != 0) {
-		len = OF_getprop(system, "linux,serial", &cells, sizeof(cells));
+		len = OF_getencprop(system, "linux,serial", cells,
+		    sizeof(cells));
 		if (len > 0)
-			board_set_serial(fdt64_to_cpu(*((uint64_t *)cells)));
+			board_set_serial(((uint64_t)cells[0]) << 32 | cells[1]);
 
-		len = OF_getprop(system, "linux,revision", &cells, sizeof(cells));
+		len = OF_getencprop(system, "linux,revision", cells,
+		    sizeof(cells));
 		if (len > 0)
-			board_set_revision(fdt32_to_cpu(*((uint32_t *)cells)));
+			board_set_revision(cells[0]);
 	}
 }
 
-#define FDT_DEVMAP_MAX	(2)		// FIXME
-static struct pmap_devmap fdt_devmap[FDT_DEVMAP_MAX] = {
-	{ 0, 0, 0, 0, 0, }
-};
-
-
+#ifdef SOC_BCM2835
 /*
- * Construct pmap_devmap[] with DT-derived config data.
+ * Set up static device mappings.
+ * All on-chip peripherals exist in a 16MB range starting at 0x20000000.
+ * Map the entire range using 1MB section mappings.
  */
-int
-platform_devmap_init(void)
+static int
+bcm2835_devmap_init(platform_t plat)
 {
-	int i = 0;
 
-	fdt_devmap[i].pd_va = 0xf2000000;
-	fdt_devmap[i].pd_pa = 0x20000000;
-	fdt_devmap[i].pd_size = 0x01000000;       /* 1 MB */
-	fdt_devmap[i].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	fdt_devmap[i].pd_cache = PTE_DEVICE;
-	i++;
-
-	pmap_devmap_bootstrap_table = &fdt_devmap[0];
+	devmap_add_entry(0x20000000, 0x01000000);
 	return (0);
 }
+#endif
 
-struct arm32_dma_range *
-bus_dma_get_range(void)
+#ifdef SOC_BCM2836
+static int
+bcm2836_devmap_init(platform_t plat)
 {
 
-	return (NULL);
-}
-
-int
-bus_dma_get_range_nb(void)
-{
-
+	devmap_add_entry(0x3f000000, 0x01000000);
 	return (0);
 }
+#endif
 
-void
-cpu_reset()
+
+
+static void
+bcm2835_cpu_reset(platform_t plat)
 {
 	bcmwd_watchdog_reset();
-	while (1);
 }
 
+#ifdef SOC_BCM2835
+static platform_method_t bcm2835_methods[] = {
+	PLATFORMMETHOD(platform_devmap_init,	bcm2835_devmap_init),
+	PLATFORMMETHOD(platform_lastaddr,	bcm2835_lastaddr),
+	PLATFORMMETHOD(platform_late_init,	bcm2835_late_init),
+	PLATFORMMETHOD(platform_cpu_reset,	bcm2835_cpu_reset),
+
+	PLATFORMMETHOD_END,
+};
+FDT_PLATFORM_DEF2(bcm2835, bcm2835_legacy, "bcm2835 (legacy)", 0, "raspberrypi,model-b", 100);
+FDT_PLATFORM_DEF2(bcm2835, bcm2835, "bcm2835", 0, "brcm,bcm2835", 100);
+#endif
+
+#ifdef SOC_BCM2836
+static platform_method_t bcm2836_methods[] = {
+	PLATFORMMETHOD(platform_devmap_init,	bcm2836_devmap_init),
+	PLATFORMMETHOD(platform_lastaddr,	bcm2835_lastaddr),
+	PLATFORMMETHOD(platform_late_init,	bcm2835_late_init),
+	PLATFORMMETHOD(platform_cpu_reset,	bcm2835_cpu_reset),
+
+#ifdef SMP
+	PLATFORMMETHOD(platform_mp_start_ap,	bcm2836_mp_start_ap),
+	PLATFORMMETHOD(platform_mp_setmaxid,	bcm2836_mp_setmaxid),
+#endif
+
+	PLATFORMMETHOD_END,
+};
+FDT_PLATFORM_DEF2(bcm2836, bcm2836_legacy, "bcm2836 (legacy)", 0, "brcm,bcm2709", 100);
+FDT_PLATFORM_DEF2(bcm2836, bcm2836, "bcm2836", 0, "brcm,bcm2836", 100);
+#endif

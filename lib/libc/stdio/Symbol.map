@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/stdio/Symbol.map 254151 2013-08-09 17:24:23Z jilles $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -160,6 +160,23 @@ FBSD_1.3 {
 	open_wmemstream;
 	mkostemp;
 	mkostemps;
+};
+
+FBSD_1.4 {
+	fdclose;
+	fopencookie;
+};
+
+FBSD_1.5 {
+	gets_s;
+};
+
+FBSD_1.6 {
+	fflush_unlocked;
+	fputc_unlocked;
+	fputs_unlocked;
+	fread_unlocked;
+	fwrite_unlocked;
 };
 
 FBSDprivate_1.0 {

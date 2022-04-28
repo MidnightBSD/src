@@ -31,7 +31,7 @@
 #
 # Author: George V. Neville-Neil
 #
-# $FreeBSD: release/10.0.0/tools/test/hwpmc/pmctest.py 250612 2013-05-13 19:53:19Z hiren $
+# $FreeBSD$
 
 # Description: A program to run a simple program against every available
 # pmc counter present in a system.

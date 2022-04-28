@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/machdep.h 236324 2012-05-30 17:34:40Z raj $
+ * $FreeBSD$
  */
 
 #ifndef _POWERPC_MACHDEP_H_

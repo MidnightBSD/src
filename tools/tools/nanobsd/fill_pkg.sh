@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/fill_pkg.sh 191275 2009-04-19 18:23:23Z phk $
+# $FreeBSD$
 #
 # Usage:
 # 	$0 PACKAGE_DUMP NANO_PACKAGE_DIR /usr/ports/foo/bar ...
@@ -57,8 +57,8 @@ ports_recurse() (
 		else
 			(
 			cd $d
-			rd=`make -V RUN_DEPENDS`	
-			ld=`make -V LIB_DEPENDS`	
+			rd=`make -V RUN_DEPENDS ${PORTS_OPTS}`
+			ld=`make -V LIB_DEPENDS ${PORTS_OPTS}`
 			
 			for x in $rd $ld
 			do
@@ -84,8 +84,8 @@ done
 for i in `cat $PL`
 do
 	p=`(cd $i && make -V PKGNAME)`
-	if [ -f $NANO_PKG_DUMP/$p.tbz ] ; then
-		ln -s $NANO_PKG_DUMP/$p.tbz $NANO_PACKAGE_DIR
+	if [ -f $NANO_PKG_DUMP/$p.t[bx]z ] ; then
+		ln -s $NANO_PKG_DUMP/$p.t[bx]z $NANO_PACKAGE_DIR
 	else
 		echo "Package $p misssing in $NANO_PKG_DUMP" 1>&2
 		exit 1

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/pcengines/Files/root/.cshrc 229831 2012-01-09 00:48:19Z eadler $
+# $FreeBSD$
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -14,7 +14,7 @@ alias ll	ls -lA
 # A righteous umask
 umask 22
 
-set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin $HOME/bin)
+set path = (/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin $HOME/bin)
 
 setenv	EDITOR	vi
 setenv	PAGER	more

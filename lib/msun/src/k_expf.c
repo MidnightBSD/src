@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/k_expf.c 230371 2012-01-20 07:02:42Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 
@@ -82,6 +82,6 @@ __ldexp_cexpf(float complex z, int expt)
 	half_expt = expt - half_expt;
 	SET_FLOAT_WORD(scale2, (0x7f + half_expt) << 23);
 
-	return (cpackf(cosf(y) * exp_x * scale1 * scale2,
+	return (CMPLXF(cosf(y) * exp_x * scale1 * scale2,
 	    sinf(y) * exp_x * scale1 * scale2));
 }

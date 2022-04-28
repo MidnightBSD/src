@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/svn/lib/libapr_util/apu_want.h 251886 2013-06-18 02:53:45Z peter $ */
+/* $FreeBSD$ */
 
 /* Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

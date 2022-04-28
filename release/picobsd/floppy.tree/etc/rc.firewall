@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/floppy.tree/etc/rc.firewall 91853 2002-03-08 05:15:08Z luigi $
+# $FreeBSD$
 
 # Setup system for firewall service, with some sample configurations.
 # Select one using ${firewall_type} which you can set in /etc/rc.conf.local.

@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ctm/ctm/ctm.h 113201 2003-04-07 08:09:53Z mckay $
+ * $FreeBSD$
  *
  */
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ata/ata_all.c 257049 2013-10-24 10:33:31Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -75,14 +75,26 @@ ata_op_string(struct ata_cmd *cmd)
 	if (cmd->control & 0x04)
 		return ("SOFT_RESET");
 	switch (cmd->command) {
-	case 0x00: return ("NOP");
+	case 0x00:
+		switch (cmd->features) {
+		case 0x00: return ("NOP FLUSHQUEUE");
+		case 0x01: return ("NOP AUTOPOLL");
+		}
+		return ("NOP");
 	case 0x03: return ("CFA_REQUEST_EXTENDED_ERROR");
 	case 0x06:
 		switch (cmd->features) {
-	        case 0x01: return ("DSM TRIM");
-	        }
-	        return "DSM";
+		case 0x01: return ("DSM TRIM");
+		}
+		return "DSM";
+	case 0x07:
+		switch (cmd->features) {
+		case 0x01: return ("DSM_XL TRIM");
+		}
+		return "DSM_XL";
 	case 0x08: return ("DEVICE_RESET");
+	case 0x0b: return ("REQUEST_SENSE_DATA_EXT");
+	case 0x12: return ("GET_PHYSICAL_ELEMENT_STATUS");
 	case 0x20: return ("READ");
 	case 0x24: return ("READ48");
 	case 0x25: return ("READ_DMA48");
@@ -105,9 +117,59 @@ ata_op_string(struct ata_cmd *cmd)
 	case 0x3f: return ("WRITE_LOG_EXT");
 	case 0x40: return ("READ_VERIFY");
 	case 0x42: return ("READ_VERIFY48");
+	case 0x44:
+		switch (cmd->features) {
+		case 0x01: return ("ZERO_EXT TRIM");
+		}
+		return "ZERO_EXT";
+	case 0x45:
+		switch (cmd->features) {
+		case 0x55: return ("WRITE_UNCORRECTABLE48 PSEUDO");
+		case 0xaa: return ("WRITE_UNCORRECTABLE48 FLAGGED");
+		}
+		return "WRITE_UNCORRECTABLE48";
+	case 0x47: return ("READ_LOG_DMA_EXT");
+	case 0x4a: return ("ZAC_MANAGEMENT_IN");
 	case 0x51: return ("CONFIGURE_STREAM");
+	case 0x57: return ("WRITE_LOG_DMA_EXT");
+	case 0x5b: return ("TRUSTED_NON_DATA");
+	case 0x5c: return ("TRUSTED_RECEIVE");
+	case 0x5d: return ("TRUSTED_RECEIVE_DMA");
+	case 0x5e: return ("TRUSTED_SEND");
+	case 0x5f: return ("TRUSTED_SEND_DMA");
 	case 0x60: return ("READ_FPDMA_QUEUED");
 	case 0x61: return ("WRITE_FPDMA_QUEUED");
+	case 0x63:
+		switch (cmd->features & 0xf) {
+		case 0x00: return ("NCQ_NON_DATA ABORT NCQ QUEUE");
+		case 0x01: return ("NCQ_NON_DATA DEADLINE HANDLING");
+		case 0x02: return ("NCQ_NON_DATA HYBRID DEMOTE BY SIZE");
+		case 0x03: return ("NCQ_NON_DATA HYBRID CHANGE BY LBA RANGE");
+		case 0x04: return ("NCQ_NON_DATA HYBRID CONTROL");
+		case 0x05: return ("NCQ_NON_DATA SET FEATURES");
+		/*
+		 * XXX KDM need common decoding between NCQ and non-NCQ
+		 * versions of SET FEATURES.
+		 */
+		case 0x06: return ("NCQ_NON_DATA ZERO EXT");
+		case 0x07: return ("NCQ_NON_DATA ZAC MANAGEMENT OUT");
+		}
+		return ("NCQ_NON_DATA");
+	case 0x64:
+		switch (cmd->sector_count_exp & 0xf) {
+		case 0x00: return ("SEND_FPDMA_QUEUED DATA SET MANAGEMENT");
+		case 0x01: return ("SEND_FPDMA_QUEUED HYBRID EVICT");
+		case 0x02: return ("SEND_FPDMA_QUEUED WRITE LOG DMA EXT");
+		case 0x03: return ("SEND_FPDMA_QUEUED ZAC MANAGEMENT OUT");
+		case 0x04: return ("SEND_FPDMA_QUEUED DATA SET MANAGEMENT XL");
+		}
+		return ("SEND_FPDMA_QUEUED");
+	case 0x65:
+		switch (cmd->sector_count_exp & 0xf) {
+		case 0x01: return ("RECEIVE_FPDMA_QUEUED READ LOG DMA EXT");
+		case 0x02: return ("RECEIVE_FPDMA_QUEUED ZAC MANAGEMENT IN");
+		}
+		return ("RECEIVE_FPDMA_QUEUED");
 	case 0x67:
 		if (cmd->features == 0xec)
 			return ("SEP_ATTN IDENTIFY");
@@ -119,14 +181,48 @@ ata_op_string(struct ata_cmd *cmd)
 		}
 		return ("SEP_ATTN");
 	case 0x70: return ("SEEK");
+	case 0x77: return ("SET_DATE_TIME_EXT");
+	case 0x78:
+		switch (cmd->features) {
+		case 0x00: return ("GET_NATIVE_MAX_ADDRESS_EXT");
+		case 0x01: return ("SET_ACCESSIBLE_MAX_ADDRESS_EXT");
+		case 0x02: return ("FREEZE_ACCESSIBLE_MAX_ADDRESS_EXT");
+		}
+		return ("ACCESSIBLE_MAX_ADDRESS_CONFIGURATION");
+	case 0x7C: return ("REMOVE_ELEMENT_AND_TRUNCATE");
 	case 0x87: return ("CFA_TRANSLATE_SECTOR");
 	case 0x90: return ("EXECUTE_DEVICE_DIAGNOSTIC");
 	case 0x92: return ("DOWNLOAD_MICROCODE");
+	case 0x93: return ("DOWNLOAD_MICROCODE_DMA");
+	case 0x9a: return ("ZAC_MANAGEMENT_OUT");
 	case 0xa0: return ("PACKET");
 	case 0xa1: return ("ATAPI_IDENTIFY");
 	case 0xa2: return ("SERVICE");
-	case 0xb0: return ("SMART");
+	case 0xb0:
+		switch(cmd->features) {
+		case 0xd0: return ("SMART READ ATTR VALUES");
+		case 0xd1: return ("SMART READ ATTR THRESHOLDS");
+		case 0xd3: return ("SMART SAVE ATTR VALUES");
+		case 0xd4: return ("SMART EXECUTE OFFLINE IMMEDIATE");
+		case 0xd5: return ("SMART READ LOG");
+		case 0xd6: return ("SMART WRITE LOG");
+		case 0xd8: return ("SMART ENABLE OPERATION");
+		case 0xd9: return ("SMART DISABLE OPERATION");
+		case 0xda: return ("SMART RETURN STATUS");
+		}
+		return ("SMART");
 	case 0xb1: return ("DEVICE CONFIGURATION");
+	case 0xb2: return ("SET_SECTOR_CONFIGURATION_EXT");
+	case 0xb4:
+		switch(cmd->features) {
+		case 0x00: return ("SANITIZE_STATUS_EXT");
+		case 0x11: return ("CRYPTO_SCRAMBLE_EXT");
+		case 0x12: return ("BLOCK_ERASE_EXT");
+		case 0x14: return ("OVERWRITE_EXT");
+		case 0x20: return ("SANITIZE_FREEZE_LOCK_EXT");
+		case 0x40: return ("SANITIZE_ANTIFREEZE_LOCK_EXT");
+		}
+		return ("SANITIZE_DEVICE");
 	case 0xc0: return ("CFA_ERASE");
 	case 0xc4: return ("READ_MUL");
 	case 0xc5: return ("WRITE_MUL");
@@ -149,22 +245,50 @@ ata_op_string(struct ata_cmd *cmd)
 	case 0xe5: return ("CHECK_POWER_MODE");
 	case 0xe6: return ("SLEEP");
 	case 0xe7: return ("FLUSHCACHE");
-	case 0xe8: return ("WRITE_PM");
+	case 0xe8: return ("WRITE_BUFFER/PM");
+	case 0xe9: return ("READ_BUFFER_DMA");
 	case 0xea: return ("FLUSHCACHE48");
+	case 0xeb: return ("WRITE_BUFFER_DMA");
 	case 0xec: return ("ATA_IDENTIFY");
 	case 0xed: return ("MEDIA_EJECT");
 	case 0xef:
+		/*
+		 * XXX KDM need common decoding between NCQ and non-NCQ
+		 * versions of SET FEATURES.
+		 */
 		switch (cmd->features) {
-	        case 0x03: return ("SETFEATURES SET TRANSFER MODE");
 	        case 0x02: return ("SETFEATURES ENABLE WCACHE");
-	        case 0x82: return ("SETFEATURES DISABLE WCACHE");
+	        case 0x03: return ("SETFEATURES SET TRANSFER MODE");
+		case 0x05: return ("SETFEATURES ENABLE APM");
 	        case 0x06: return ("SETFEATURES ENABLE PUIS");
-	        case 0x86: return ("SETFEATURES DISABLE PUIS");
 	        case 0x07: return ("SETFEATURES SPIN-UP");
+		case 0x0b: return ("SETFEATURES ENABLE WRITE READ VERIFY");
+		case 0x0c: return ("SETFEATURES ENABLE DEVICE LIFE CONTROL");
 	        case 0x10: return ("SETFEATURES ENABLE SATA FEATURE");
+		case 0x41: return ("SETFEATURES ENABLE FREEFALL CONTROL");
+		case 0x43: return ("SETFEATURES SET MAX HOST INT SECT TIMES");
+		case 0x45: return ("SETFEATURES SET RATE BASIS");
+		case 0x4a: return ("SETFEATURES EXTENDED POWER CONDITIONS");
+		case 0x50: return ("SETFEATURES ADVANCED BACKGROUD OPERATION");
+	        case 0x55: return ("SETFEATURES DISABLE RCACHE");
+		case 0x5d: return ("SETFEATURES ENABLE RELIRQ");
+		case 0x5e: return ("SETFEATURES ENABLE SRVIRQ");
+		case 0x62: return ("SETFEATURES LONG PHYS SECT ALIGN ERC");
+		case 0x63: return ("SETFEATURES DSN");
+		case 0x66: return ("SETFEATURES DISABLE DEFAULTS");
+	        case 0x82: return ("SETFEATURES DISABLE WCACHE");
+	        case 0x85: return ("SETFEATURES DISABLE APM");
+	        case 0x86: return ("SETFEATURES DISABLE PUIS");
+		case 0x8b: return ("SETFEATURES DISABLE WRITE READ VERIFY");
+		case 0x8c: return ("SETFEATURES DISABLE DEVICE LIFE CONTROL");
 	        case 0x90: return ("SETFEATURES DISABLE SATA FEATURE");
 	        case 0xaa: return ("SETFEATURES ENABLE RCACHE");
-	        case 0x55: return ("SETFEATURES DISABLE RCACHE");
+		case 0xC1: return ("SETFEATURES DISABLE FREEFALL CONTROL");
+		case 0xC3: return ("SETFEATURES SENSE DATA REPORTING");
+		case 0xC4: return ("SETFEATURES NCQ SENSE DATA RETURN");
+		case 0xCC: return ("SETFEATURES ENABLE DEFAULTS");
+		case 0xdd: return ("SETFEATURES DISABLE RELIRQ");
+		case 0xde: return ("SETFEATURES DISABLE SRVIRQ");
 	        }
 	        return "SETFEATURES";
 	case 0xf1: return ("SECURITY_SET_PASSWORD");
@@ -182,29 +306,64 @@ ata_op_string(struct ata_cmd *cmd)
 char *
 ata_cmd_string(struct ata_cmd *cmd, char *cmd_string, size_t len)
 {
+	struct sbuf sb;
+	int error;
 
-	snprintf(cmd_string, len, "%02x %02x %02x %02x "
+	if (len == 0)
+		return ("");
+
+	sbuf_new(&sb, cmd_string, len, SBUF_FIXEDLEN);
+	ata_cmd_sbuf(cmd, &sb);
+
+	error = sbuf_finish(&sb);
+	if (error != 0 && error != ENOMEM)
+		return ("");
+
+	return(sbuf_data(&sb));
+}
+
+void
+ata_cmd_sbuf(struct ata_cmd *cmd, struct sbuf *sb)
+{
+	sbuf_printf(sb, "%02x %02x %02x %02x "
 	    "%02x %02x %02x %02x %02x %02x %02x %02x",
 	    cmd->command, cmd->features,
 	    cmd->lba_low, cmd->lba_mid, cmd->lba_high, cmd->device,
 	    cmd->lba_low_exp, cmd->lba_mid_exp, cmd->lba_high_exp,
 	    cmd->features_exp, cmd->sector_count, cmd->sector_count_exp);
-
-	return(cmd_string);
 }
 
 char *
 ata_res_string(struct ata_res *res, char *res_string, size_t len)
 {
+	struct sbuf sb;
+	int error;
 
-	snprintf(res_string, len, "%02x %02x %02x %02x "
+	if (len == 0)
+		return ("");
+
+	sbuf_new(&sb, res_string, len, SBUF_FIXEDLEN);
+	ata_res_sbuf(res, &sb);
+
+	error = sbuf_finish(&sb);
+	if (error != 0 && error != ENOMEM)
+		return ("");
+
+	return(sbuf_data(&sb));
+}
+
+int
+ata_res_sbuf(struct ata_res *res, struct sbuf *sb)
+{
+
+	sbuf_printf(sb, "%02x %02x %02x %02x "
 	    "%02x %02x %02x %02x %02x %02x %02x",
 	    res->status, res->error,
 	    res->lba_low, res->lba_mid, res->lba_high, res->device,
 	    res->lba_low_exp, res->lba_mid_exp, res->lba_high_exp,
 	    res->sector_count, res->sector_count_exp);
 
-	return(res_string);
+	return (0);
 }
 
 /*
@@ -213,11 +372,10 @@ ata_res_string(struct ata_res *res, char *res_string, size_t len)
 int
 ata_command_sbuf(struct ccb_ataio *ataio, struct sbuf *sb)
 {
-	char cmd_str[(12 * 3) + 1];
 
-	sbuf_printf(sb, "%s. ACB: %s",
-	    ata_op_string(&ataio->cmd),
-	    ata_cmd_string(&ataio->cmd, cmd_str, sizeof(cmd_str)));
+	sbuf_printf(sb, "%s. ACB: ",
+	    ata_op_string(&ataio->cmd));
+	ata_cmd_sbuf(&ataio->cmd, sb);
 
 	return(0);
 }
@@ -255,45 +413,41 @@ ata_status_sbuf(struct ccb_ataio *ataio, struct sbuf *sb)
 	return(0);
 }
 
-/*
- * ata_res_sbuf() returns 0 for success and -1 for failure.
- */
-int
-ata_res_sbuf(struct ccb_ataio *ataio, struct sbuf *sb)
-{
-	char res_str[(11 * 3) + 1];
-
-	sbuf_printf(sb, "RES: %s",
-	    ata_res_string(&ataio->res, res_str, sizeof(res_str)));
-
-	return(0);
-}
-
 void
 ata_print_ident(struct ata_params *ident_data)
 {
-	char product[48], revision[16];
+	const char *proto;
+	char product[48], revision[16], ata[12], sata[12];
 
 	cam_strvis(product, ident_data->model, sizeof(ident_data->model),
 		   sizeof(product));
 	cam_strvis(revision, ident_data->revision, sizeof(ident_data->revision),
 		   sizeof(revision));
-	printf("<%s %s> %s-%d",
-	    product, revision,
-	    (ident_data->config == ATA_PROTO_CFA) ? "CFA" :
-	    (ident_data->config & ATA_PROTO_ATAPI) ? "ATAPI" : "ATA",
-	    ata_version(ident_data->version_major));
+	proto = (ident_data->config == ATA_PROTO_CFA) ? "CFA" :
+		(ident_data->config & ATA_PROTO_ATAPI) ? "ATAPI" : "ATA";
+	if (ata_version(ident_data->version_major) == 0) {
+		snprintf(ata, sizeof(ata), "%s", proto);
+	} else if (ata_version(ident_data->version_major) <= 7) {
+		snprintf(ata, sizeof(ata), "%s-%d", proto,
+		    ata_version(ident_data->version_major));
+	} else if (ata_version(ident_data->version_major) == 8) {
+		snprintf(ata, sizeof(ata), "%s8-ACS", proto);
+	} else {
+		snprintf(ata, sizeof(ata), "ACS-%d %s",
+		    ata_version(ident_data->version_major) - 7, proto);
+	}
 	if (ident_data->satacapabilities && ident_data->satacapabilities != 0xffff) {
 		if (ident_data->satacapabilities & ATA_SATA_GEN3)
-			printf(" SATA 3.x");
+			snprintf(sata, sizeof(sata), " SATA 3.x");
 		else if (ident_data->satacapabilities & ATA_SATA_GEN2)
-			printf(" SATA 2.x");
+			snprintf(sata, sizeof(sata), " SATA 2.x");
 		else if (ident_data->satacapabilities & ATA_SATA_GEN1)
-			printf(" SATA 1.x");
+			snprintf(sata, sizeof(sata), " SATA 1.x");
 		else
-			printf(" SATA");
-	}
-	printf(" device\n");
+			snprintf(sata, sizeof(sata), " SATA");
+	} else
+		sata[0] = 0;
+	printf("<%s %s> %s%s device\n", product, revision, ata, sata);
 }
 
 void
@@ -338,10 +492,10 @@ semb_print_ident_short(struct sep_identify_data *ident_data)
 uint32_t
 ata_logical_sector_size(struct ata_params *ident_data)
 {
-	if ((ident_data->pss & 0xc000) == 0x4000 &&
+	if ((ident_data->pss & ATA_PSS_VALID_MASK) == ATA_PSS_VALID_VALUE &&
 	    (ident_data->pss & ATA_PSS_LSSABOVE512)) {
-		return ((u_int32_t)ident_data->lss_1 |
-		    ((u_int32_t)ident_data->lss_2 << 16));
+		return (((u_int32_t)ident_data->lss_1 |
+		    ((u_int32_t)ident_data->lss_2 << 16)) * 2);
 	}
 	return (512);
 }
@@ -349,10 +503,13 @@ ata_logical_sector_size(struct ata_params *ident_data)
 uint64_t
 ata_physical_sector_size(struct ata_params *ident_data)
 {
-	if ((ident_data->pss & 0xc000) == 0x4000 &&
-	    (ident_data->pss & ATA_PSS_MULTLS)) {
-		return ((uint64_t)ata_logical_sector_size(ident_data) *
-		    (1 << (ident_data->pss & ATA_PSS_LSPPS)));
+	if ((ident_data->pss & ATA_PSS_VALID_MASK) == ATA_PSS_VALID_VALUE) {
+		if (ident_data->pss & ATA_PSS_MULTLS) {
+			return ((uint64_t)ata_logical_sector_size(ident_data) *
+			    (1 << (ident_data->pss & ATA_PSS_LSPPS)));
+		} else {
+			return (uint64_t)ata_logical_sector_size(ident_data);
+		}
 	}
 	return (512);
 }
@@ -376,7 +533,12 @@ ata_28bit_cmd(struct ccb_ataio *ataio, uint8_t cmd, uint8_t features,
 	if (cmd == ATA_READ_DMA ||
 	    cmd == ATA_READ_DMA_QUEUED ||
 	    cmd == ATA_WRITE_DMA ||
-	    cmd == ATA_WRITE_DMA_QUEUED)
+	    cmd == ATA_WRITE_DMA_QUEUED ||
+	    cmd == ATA_TRUSTED_RECEIVE_DMA ||
+	    cmd == ATA_TRUSTED_SEND_DMA ||
+	    cmd == ATA_DOWNLOAD_MICROCODE_DMA ||
+	    cmd == ATA_READ_BUFFER_DMA ||
+	    cmd == ATA_WRITE_BUFFER_DMA)
 		ataio->cmd.flags |= CAM_ATAIO_DMA;
 	ataio->cmd.command = cmd;
 	ataio->cmd.features = features;
@@ -401,7 +563,9 @@ ata_48bit_cmd(struct ccb_ataio *ataio, uint8_t cmd, uint16_t features,
 	    cmd == ATA_WRITE_DMA_QUEUED48 ||
 	    cmd == ATA_WRITE_DMA_QUEUED_FUA48 ||
 	    cmd == ATA_WRITE_STREAM_DMA48 ||
-	    cmd == ATA_DATA_SET_MANAGEMENT)
+	    cmd == ATA_DATA_SET_MANAGEMENT ||
+	    cmd == ATA_READ_LOG_DMA_EXT ||
+	    cmd == ATA_WRITE_LOG_DMA_EXT)
 		ataio->cmd.flags |= CAM_ATAIO_DMA;
 	ataio->cmd.command = cmd;
 	ataio->cmd.features = features;
@@ -469,6 +633,36 @@ ata_pm_write_cmd(struct ccb_ataio *ataio, int reg, int port, uint32_t val)
 	ataio->cmd.lba_mid = val >> 16;
 	ataio->cmd.lba_high = val >> 24;
 	ataio->cmd.device = port & 0x0f;
+}
+
+void
+ata_read_log(struct ccb_ataio *ataio, uint32_t retries,
+	     void (*cbfcnp)(struct cam_periph *, union ccb *),
+	     uint32_t log_address, uint32_t page_number, uint16_t block_count,
+	     uint32_t protocol, uint8_t *data_ptr, uint32_t dxfer_len,
+	     uint32_t timeout)
+{
+	uint64_t lba;
+
+	cam_fill_ataio(ataio,
+	    /*retries*/ 1,
+	    /*cbfcnp*/ cbfcnp,
+	    /*flags*/ CAM_DIR_IN,
+	    /*tag_action*/ 0,
+	    /*data_ptr*/ data_ptr,
+	    /*dxfer_len*/ dxfer_len,
+	    /*timeout*/ timeout);
+
+	lba = (((uint64_t)page_number & 0xff00) << 32) |
+	      ((page_number & 0x00ff) << 8) |
+	      (log_address & 0xff);
+
+	ata_48bit_cmd(ataio,
+	    /*cmd*/ (protocol & CAM_ATAIO_DMA) ? ATA_READ_LOG_DMA_EXT :
+		     ATA_READ_LOG_EXT,
+	    /*features*/ 0,
+	    /*lba*/ lba,
+	    /*sector_count*/ block_count);
 }
 
 void
@@ -831,3 +1025,148 @@ semb_write_buffer(struct ccb_ataio *ataio,
 	    length > 0 ? data_ptr[0] : 0, 0x80, length / 4);
 }
 
+
+void
+ata_zac_mgmt_out(struct ccb_ataio *ataio, uint32_t retries, 
+		 void (*cbfcnp)(struct cam_periph *, union ccb *),
+		 int use_ncq, uint8_t zm_action, uint64_t zone_id,
+		 uint8_t zone_flags, uint16_t sector_count, uint8_t *data_ptr,
+		 uint32_t dxfer_len, uint32_t timeout)
+{
+	uint8_t command_out, ata_flags;
+	uint16_t features_out, sectors_out;
+	uint32_t auxiliary;
+
+	if (use_ncq == 0) {
+		command_out = ATA_ZAC_MANAGEMENT_OUT;
+		features_out = (zm_action & 0xf) | (zone_flags << 8);
+		if (dxfer_len == 0) {
+			ata_flags = 0;
+			sectors_out = 0;
+		} else {
+			ata_flags = CAM_ATAIO_DMA;
+			/* XXX KDM use sector count? */
+			sectors_out = ((dxfer_len >> 9) & 0xffff);
+		}
+		auxiliary = 0;
+	} else {
+		if (dxfer_len == 0) {
+			command_out = ATA_NCQ_NON_DATA;
+			features_out = ATA_NCQ_ZAC_MGMT_OUT;
+			sectors_out = 0;
+		} else {
+			command_out = ATA_SEND_FPDMA_QUEUED;
+
+			/* Note that we're defaulting to normal priority */
+			sectors_out = ATA_SFPDMA_ZAC_MGMT_OUT << 8;
+
+			/*
+			 * For SEND FPDMA QUEUED, the transfer length is
+			 * encoded in the FEATURE register, and 0 means
+			 * that 65536 512 byte blocks are to be tranferred.
+			 * In practice, it seems unlikely that we'll see
+			 * a transfer that large.
+			 */
+			if (dxfer_len == (65536 * 512)) {
+				features_out = 0;
+			} else {
+				/*
+				 * Yes, the caller can theoretically send a
+				 * transfer larger than we can handle.
+				 * Anyone using this function needs enough
+				 * knowledge to avoid doing that.
+				 */
+				features_out = ((dxfer_len >> 9) & 0xffff);
+			}
+		}
+		auxiliary = (zm_action & 0xf) | (zone_flags << 8);
+
+		ata_flags = CAM_ATAIO_FPDMA;
+	}
+
+	cam_fill_ataio(ataio,
+	    /*retries*/ retries,
+	    /*cbfcnp*/ cbfcnp,
+	    /*flags*/ (dxfer_len > 0) ? CAM_DIR_OUT : CAM_DIR_NONE,
+	    /*tag_action*/ 0,
+	    /*data_ptr*/ data_ptr,
+	    /*dxfer_len*/ dxfer_len,
+	    /*timeout*/ timeout);
+
+	ata_48bit_cmd(ataio,
+	    /*cmd*/ command_out,
+	    /*features*/ features_out,
+	    /*lba*/ zone_id,
+	    /*sector_count*/ sectors_out);
+
+	ataio->cmd.flags |= ata_flags;
+	if (auxiliary != 0) {
+		ataio->ata_flags |= ATA_FLAG_AUX;
+		ataio->aux = auxiliary;
+	}
+}
+
+void
+ata_zac_mgmt_in(struct ccb_ataio *ataio, uint32_t retries, 
+		void (*cbfcnp)(struct cam_periph *, union ccb *),
+		int use_ncq, uint8_t zm_action, uint64_t zone_id,
+		uint8_t zone_flags, uint8_t *data_ptr, uint32_t dxfer_len,
+		uint32_t timeout)
+{
+	uint8_t command_out, ata_flags;
+	uint16_t features_out, sectors_out;
+	uint32_t auxiliary;
+
+	if (use_ncq == 0) {
+		command_out = ATA_ZAC_MANAGEMENT_IN;
+		/* XXX KDM put a macro here */
+		features_out = (zm_action & 0xf) | (zone_flags << 8);
+		ata_flags = CAM_ATAIO_DMA;
+		sectors_out = ((dxfer_len >> 9) & 0xffff);
+		auxiliary = 0;
+	} else {
+		command_out = ATA_RECV_FPDMA_QUEUED;
+		sectors_out = ATA_RFPDMA_ZAC_MGMT_IN << 8;
+		auxiliary = (zm_action & 0xf) | (zone_flags << 8);
+		ata_flags = CAM_ATAIO_FPDMA;
+		/*
+		 * For RECEIVE FPDMA QUEUED, the transfer length is
+		 * encoded in the FEATURE register, and 0 means
+		 * that 65536 512 byte blocks are to be tranferred.
+		 * In practice, it is unlikely we will see a transfer that
+		 * large.
+		 */
+		if (dxfer_len == (65536 * 512)) {
+			features_out = 0;
+		} else {
+			/*
+			 * Yes, the caller can theoretically request a
+			 * transfer larger than we can handle.
+			 * Anyone using this function needs enough
+			 * knowledge to avoid doing that.
+			 */
+			features_out = ((dxfer_len >> 9) & 0xffff);
+		}
+	}
+
+	cam_fill_ataio(ataio,
+	    /*retries*/ retries,
+	    /*cbfcnp*/ cbfcnp,
+	    /*flags*/ CAM_DIR_IN,
+	    /*tag_action*/ 0,
+	    /*data_ptr*/ data_ptr,
+	    /*dxfer_len*/ dxfer_len,
+	    /*timeout*/ timeout);
+
+	ata_48bit_cmd(ataio,
+	    /*cmd*/ command_out,
+	    /*features*/ features_out,
+	    /*lba*/ zone_id,
+	    /*sector_count*/ sectors_out);
+
+	ataio->cmd.flags |= ata_flags;
+	if (auxiliary != 0) {
+		ataio->ata_flags |= ATA_FLAG_AUX;
+		ataio->aux = auxiliary;
+	}
+}

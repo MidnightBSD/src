@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)kill.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/kill/kill.c 250035 2013-04-28 22:05:01Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD: release/10.0.0/bin/kill/kill.c 250035 2013-04-28 22:05:01Z e
 #ifdef SHELL
 #define main killcmd
 #include "bltin/bltin.h"
-#include "error.h"
 #endif
 
 static void nosig(const char *);
@@ -67,7 +66,9 @@ static void usage(void);
 int
 main(int argc, char *argv[])
 {
-	int errors, numsig, pid;
+	long pidl;
+	pid_t pid;
+	int errors, numsig, ret;
 	char *ep;
 
 	if (argc < 2)
@@ -134,15 +135,18 @@ main(int argc, char *argv[])
 	for (errors = 0; argc; argc--, argv++) {
 #ifdef SHELL
 		if (**argv == '%')
-			pid = getjobpgrp(*argv);
+			ret = killjob(*argv, numsig);
 		else
 #endif
 		{
-			pid = strtol(*argv, &ep, 10);
-			if (!**argv || *ep)
+			pidl = strtol(*argv, &ep, 10);
+			/* Check for overflow of pid_t. */
+			pid = (pid_t)pidl;
+			if (!**argv || *ep || pid != pidl)
 				errx(2, "illegal process id: %s", *argv);
+			ret = kill(pid, numsig);
 		}
-		if (kill(pid, numsig) == -1) {
+		if (ret == -1) {
 			warn("%s", *argv);
 			errors = 1;
 		}

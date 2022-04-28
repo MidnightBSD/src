@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/pnpinfo/pnpinfo.h 50964 1999-09-05 17:27:05Z peter $
+ * $FreeBSD$
  */
 
 

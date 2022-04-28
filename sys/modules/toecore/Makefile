@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/toecore/Makefile 237560 2012-06-25 09:46:06Z uqs $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=	toecore
 SRCS=	toecore.c

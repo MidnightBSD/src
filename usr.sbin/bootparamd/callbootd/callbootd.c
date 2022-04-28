@@ -9,7 +9,7 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/bootparamd/callbootd/callbootd.c 230361 2012-01-20 01:39:26Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include "bootparam_prot.h"
@@ -104,7 +104,7 @@ char **argv;
   case 3:
     whoami_arg.client_address.address_type = IP_ADDR_TYPE;
     the_inet_addr = inet_addr(argv[2]);
-    if ( the_inet_addr == -1)
+    if ( the_inet_addr == INADDR_NONE)
       errx(2, "bogus addr %s", argv[2]);
     bcopy(&the_inet_addr,&whoami_arg.client_address.bp_address_u.ip_addr,4);
 

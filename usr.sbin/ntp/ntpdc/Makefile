@@ -1,31 +1,35 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ntp/ntpdc/Makefile 220370 2011-04-05 18:41:01Z obrien $
+# $FreeBSD$
 
-NO_MAN=
+MAN=
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-.PATH: ${.CURDIR}/../../../contrib/ntp/ntpdc
+.PATH: ${SRCTOP}/contrib/ntp/ntpdc
 
 PROG=	ntpdc
 SRCS= 	ntpdc.c ntpdc_ops.c ntpdc-opts.c version.c
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../ \
-	-I${.CURDIR}/../../../contrib/ntp/libopts
+CFLAGS+= -I${SRCTOP}/contrib/ntp/include \
+	-I${SRCTOP}/contrib/ntp/lib/isc/include \
+	-I${SRCTOP}/contrib/ntp/lib/isc/unix/include \
+	-I${SRCTOP}/contrib/ntp/lib/isc/pthreads/include \
+	-I${SRCTOP}/contrib/ntp/sntp/libopts \
+	-I${.CURDIR}/lib/libc/${MACHINE_ARCH} \
+	-I${.CURDIR:H} -I${.CURDIR}
 
-DPADD=	${LIBNTP} ${LIBM} ${LIBMD} ${LIBOPTS}
-LDADD=	${LIBNTP} -lm -lmd ${LIBOPTS}
-
-DPADD+=		${LIBEDIT} ${LIBTERMCAP}
-LDADD+=		-ledit -ltermcap
+LIBADD=	edit ntp m opts pthread
 CFLAGS+=	-DHAVE_LIBEDIT -DHAVE_READLINE_READLINE_H \
 		-I${DESTDIR}/${INCLUDEDIR}/edit
+
+.if ${MK_OPENSSL} != "no"
+LIBADD+=	crypto
+.else
+LIBADD+=	md
+.endif
 
 CLEANFILES+= .version version.c
 
 version.c:
-	sh -e ${.CURDIR}/../scripts/mkver ntpdc
-
-afterinstall:
-	rm -f ${DESTDIR}/usr/sbin/xntpdc
+	sh -e ${.CURDIR:H}/scripts/mkver ntpdc
 
 .include <bsd.prog.mk>

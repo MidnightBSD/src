@@ -43,12 +43,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_syscalls.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -208,7 +208,7 @@ sys___mac_set_proc(struct thread *td, struct __mac_set_proc_args *uap)
 	setsugid(p);
 	crcopy(newcred, oldcred);
 	mac_cred_relabel(newcred, intlabel);
-	p->p_ucred = newcred;
+	proc_set_cred(p, newcred);
 
 	PROC_UNLOCK(p);
 	crfree(oldcred);

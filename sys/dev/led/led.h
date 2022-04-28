@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/10.0.0/sys/dev/led/led.h 219951 2011-03-24 08:56:12Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_LED_H

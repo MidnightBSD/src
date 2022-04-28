@@ -29,7 +29,7 @@
 #define __RV200D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv200d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define R_00015C_AGP_BASE_2                          0x00015C
 #define   S_00015C_AGP_BASE_ADDR_2(x)                  (((x) & 0xF) << 0)

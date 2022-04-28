@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/usr.sbin/portsnap/phttpget/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	phttpget
-NO_MAN=
+MAN=	phttpget.8
 
 BINDIR=	${LIBEXECDIR}
 

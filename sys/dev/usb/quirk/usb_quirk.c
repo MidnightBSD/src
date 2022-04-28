@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/quirk/usb_quirk.c 252501 2013-07-02 07:35:57Z hrs $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc. All rights reserved.
  * Copyright (c) 1998 Lennart Augustsson. All rights reserved.
@@ -59,8 +59,9 @@
 MODULE_DEPEND(usb_quirk, usb, 1, 1, 1);
 MODULE_VERSION(usb_quirk, 1);
 
-#define	USB_DEV_QUIRKS_MAX 256
+#define	USB_DEV_QUIRKS_MAX 384
 #define	USB_SUB_QUIRKS_MAX 8
+#define	USB_QUIRK_ENVROOT "hw.usb.quirk."
 
 struct usb_quirk_entry {
 	uint16_t vid;
@@ -93,8 +94,12 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(TELEX, MIC1, 0x009, 0x009, UQ_AU_NO_FRAC),
 	USB_QUIRK(SILICONPORTALS, YAPPHONE, 0x100, 0x100, UQ_AU_INP_ASYNC),
 	USB_QUIRK(LOGITECH, UN53B, 0x0000, 0xffff, UQ_NO_STRINGS),
+	USB_QUIRK(LOGITECH, G510S, 0x0000, 0xFFFF, UQ_KBD_BOOTPROTO),
+	USB_QUIRK(REALTEK, RTL8196EU, 0x0000, 0xffff, UQ_CFG_INDEX_1),
+	USB_QUIRK(REALTEK, RTL8153, 0x0000, 0xffff, UQ_CFG_INDEX_1),
 	USB_QUIRK(ELSA, MODEM1, 0x0000, 0xffff, UQ_CFG_INDEX_1),
 	USB_QUIRK(PLANEX2, MZKUE150N, 0x0000, 0xffff, UQ_CFG_INDEX_1),
+	USB_QUIRK(CISCOLINKSYS, USB3GIGV1, 0x0000, 0xffff, UQ_CFG_INDEX_1),
 	/* Quirks for printer devices */
 	USB_QUIRK(HP, 895C, 0x0000, 0xffff, UQ_BROKEN_BIDIR),
 	USB_QUIRK(HP, 880C, 0x0000, 0xffff, UQ_BROKEN_BIDIR),
@@ -109,6 +114,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(CYBERPOWER, 1500CAVRLCD, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(CYPRESS, SILVERSHIELD, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(DELORME, EARTHMATE, 0x0000, 0xffff, UQ_HID_IGNORE),
+	USB_QUIRK(DREAMLINK, DL100B, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(ITUNERNET, USBLCD2X20, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(ITUNERNET, USBLCD4X20, 0x0000, 0xffff, UQ_HID_IGNORE),
 	USB_QUIRK(LIEBERT, POWERSURE_PXT, 0x0000, 0xffff, UQ_HID_IGNORE),
@@ -129,6 +135,15 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(MICROSOFT, WLINTELLIMOUSE, 0x0000, 0xffff, UQ_MS_LEADING_BYTE),
 	/* Quirk for Corsair Vengeance K60 keyboard */
 	USB_QUIRK(CORSAIR, K60, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair Gaming K68 keyboard */
+	USB_QUIRK(CORSAIR, K68, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair Vengeance K70 keyboard */
+	USB_QUIRK(CORSAIR, K70, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair K70 RGB keyboard */
+	USB_QUIRK(CORSAIR, K70_RGB, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	/* Quirk for Corsair STRAFE Gaming keyboard */
+	USB_QUIRK(CORSAIR, STRAFE, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
+	USB_QUIRK(CORSAIR, STRAFE2, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 	/* umodem(4) device quirks */
 	USB_QUIRK(METRICOM, RICOCHET_GS, 0x100, 0x100, UQ_ASSUME_CM_OVER_DATA),
 	USB_QUIRK(SANYO, SCP4900, 0x000, 0x000, UQ_ASSUME_CM_OVER_DATA),
@@ -164,6 +179,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(ASAHIOPTICAL, OPTIO330, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
+	USB_QUIRK(ATP, EUSB, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
 	USB_QUIRK(BELKIN, USB2SCSI, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(CASIO, QV_DIGICAM, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI,
@@ -190,6 +206,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(FREECOM, DVD, 0x0000, 0xffff, UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(FUJIPHOTO, MASS0100, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI_I,
 	    UQ_MSC_FORCE_PROTO_ATAPI, UQ_MSC_NO_RS_CLEAR_UA, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(GARMIN, FORERUNNER230, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(GENESYS, GL641USB2IDE, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_FORCE_SHORT_INQ,
 	    UQ_MSC_NO_START_STOP, UQ_MSC_IGNORE_RESIDUE, UQ_MSC_NO_SYNC_CACHE),
@@ -224,6 +241,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_RBC),
 	USB_QUIRK(INSYSTEM, STORAGE_V2, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI,
 	    UQ_MSC_FORCE_PROTO_RBC),
+	USB_QUIRK(INTENSO, MEMORY_BOX, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(IODATA, IU_CD2, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(IODATA, DVR_UEH8, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
@@ -231,9 +249,12 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(IOMEGA, ZIP100, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI,
 	    UQ_MSC_NO_TEST_UNIT_READY), /* XXX ZIP drives can also use ATAPI */
+	USB_QUIRK(JMICRON, JMS566, 0x0000, 0xffff, UQ_MSC_NO_GETMAXLUN),
+	USB_QUIRK(JMICRON, JMS567, 0x0000, 0xffff, UQ_MSC_NO_GETMAXLUN),
 	USB_QUIRK(JMICRON, JM20337, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI,
 	    UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(KINGSTON, HYPERX3_0, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(KYOCERA, FINECAM_L3, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(KYOCERA, FINECAM_S3X, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI,
@@ -247,6 +268,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(LEXAR, CF_READER, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(LEXAR, JUMPSHOT, 0x0000, 0xffff, UQ_MSC_FORCE_PROTO_SCSI),
+	USB_QUIRK(LEXAR, JUMPDRIVE, 0x0000, 0xffff, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(LOGITEC, LDR_H443SU2, 0x0000, 0xffff, UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(LOGITEC, LDR_H443U2, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI,),
@@ -286,6 +308,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE),
 	USB_QUIRK(NETCHIP, CLIK_40, 0x0000, 0xffff, UQ_MSC_FORCE_PROTO_ATAPI,
 	    UQ_MSC_NO_INQUIRY),
+	USB_QUIRK(NETCHIP, POCKETBOOK, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
 	USB_QUIRK(NIKON, D300, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI),
 	USB_QUIRK(OLYMPUS, C1, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
@@ -320,7 +343,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE,
 	    UQ_MSC_NO_START_STOP),
 	USB_QUIRK(PROLIFIC, PL2506, 0x0000, 0xffff,
-	    UQ_MSC_NO_SYNC_CACHE),
+	    UQ_MSC_NO_SYNC_CACHE, UQ_MSC_NO_PREVENT_ALLOW),
 	USB_QUIRK_VP(USB_VENDOR_SAMSUNG_TECHWIN,
 	    USB_PRODUCT_SAMSUNG_TECHWIN_DIGIMAX_410, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
@@ -332,12 +355,17 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(SANDISK, SDDR12, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_CBI,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_READ_CAP_OFFBY1,
 	    UQ_MSC_NO_GETMAXLUN),
+	USB_QUIRK(SANDISK, SDCZ2_128, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
+	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE,
+	    UQ_MSC_NO_SYNC_CACHE),
 	USB_QUIRK(SANDISK, SDCZ2_256, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE),
 	USB_QUIRK(SANDISK, SDCZ4_128, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE),
 	USB_QUIRK(SANDISK, SDCZ4_256, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_IGNORE_RESIDUE),
+	USB_QUIRK(SANDISK, SDCZ48_32, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE,
+	    UQ_MSC_NO_TEST_UNIT_READY),
 	USB_QUIRK(SANDISK, SDDR31, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_READ_CAP_OFFBY1),
 	USB_QUIRK(SANDISK, IMAGEMATE_SDDR289, 0x0000, 0xffff,
@@ -427,8 +455,28 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(WESTERN, MYBOOK, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY_EVPD,
 	    UQ_MSC_NO_SYNC_CACHE),
-	USB_QUIRK(WESTERN, MYPASSWORD, 0x0000, 0xffff, UQ_MSC_FORCE_SHORT_INQ),
-	USB_QUIRK(WESTERN, MYPASSPORT, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_00, 0x0000, 0xffff, UQ_MSC_FORCE_SHORT_INQ),
+	USB_QUIRK(WESTERN, MYPASSPORT_01, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_02, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_03, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_04, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_05, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_06, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_07, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_08, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_09, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_10, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORT_11, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_00, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_01, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_02, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_03, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_04, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_05, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_06, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_07, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_08, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(WESTERN, MYPASSPORTES_09, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
 	USB_QUIRK(WINMAXGROUP, FLASH64MC, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY),
 	USB_QUIRK(YANO, FW800HD, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
@@ -449,10 +497,11 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	    UQ_MSC_FORCE_PROTO_ATAPI),
 	USB_QUIRK(MEIZU, M6_SL, 0x0000, 0xffff, UQ_MSC_FORCE_WIRE_BBB,
 	    UQ_MSC_FORCE_PROTO_SCSI, UQ_MSC_NO_INQUIRY, UQ_MSC_NO_SYNC_CACHE),
-
-	USB_QUIRK(TOSHIBA, TRANSMEMORY, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
+	USB_QUIRK(TOSHIBA, TRANSMEMORY, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE,
+	    UQ_MSC_NO_PREVENT_ALLOW),
 	USB_QUIRK(VIALABS, USB30SATABRIDGE, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE),
-
+	USB_QUIRK(QUALCOMMINC, ZTE_MF730M, 0x0000, 0xffff, UQ_MSC_NO_GETMAXLUN,
+	    UQ_MSC_NO_INQUIRY, UQ_CFG_INDEX_0),
 	/* Non-standard USB MIDI devices */
 	USB_QUIRK(ROLAND, UM1, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(ROLAND, SC8850, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
@@ -470,6 +519,7 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(ROLAND, SD20, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(ROLAND, SD80, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(ROLAND, UA700, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
+	USB_QUIRK(ROLAND, PCR300, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(EGO, M4U, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI),
 	USB_QUIRK(LOGILINK, U2M, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI),
 	USB_QUIRK(MEDELI, DD305, 0x0000, 0xffff, UQ_SINGLE_CMD_MIDI, UQ_MATCH_VENDOR_ONLY),
@@ -481,6 +531,9 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	/* Non-standard USB AUDIO devices */
 	USB_QUIRK(MAUDIO, FASTTRACKULTRA, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 	USB_QUIRK(MAUDIO, FASTTRACKULTRA8R, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
+	USB_QUIRK(CMEDIA, CM6206, 0x0000, 0xffff, UQ_AU_SET_SPDIF_CM6206),
+	USB_QUIRK(PLOYTEC, SPL_CRIMSON_1, 0x0000, 0xffff, UQ_CFG_INDEX_1),
+	USB_QUIRK(ROLAND, UA25EX_AD, 0x0000, 0xffff, UQ_AU_VENDOR_CLASS),
 
 	/*
 	 * Quirks for manufacturers which USB devices does not respond
@@ -491,6 +544,12 @@ static struct usb_quirk_entry usb_quirks[USB_DEV_QUIRKS_MAX] = {
 	USB_QUIRK(FEIYA, DUMMY, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE, UQ_MATCH_VENDOR_ONLY),
 	USB_QUIRK(REALTEK, DUMMY, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE, UQ_MATCH_VENDOR_ONLY),
 	USB_QUIRK(INITIO, DUMMY, 0x0000, 0xffff, UQ_MSC_NO_SYNC_CACHE, UQ_MATCH_VENDOR_ONLY),
+
+	/* DYMO LabelManager Pnp */
+	USB_QUIRK(DYMO, LABELMANAGERPNP, 0x0000, 0xffff, UQ_MSC_DYMO_EJECT),
+
+	/* Holtek USB gaming keyboard */
+	USB_QUIRK(HOLTEK, F85, 0x0000, 0xffff, UQ_KBD_BOOTPROTO),
 };
 #undef USB_QUIRK_VP
 #undef USB_QUIRK
@@ -555,10 +614,14 @@ static const char *usb_quirk_str[USB_QUIRK_MAX] = {
 	[UQ_MSC_EJECT_WAIT]		= "UQ_MSC_EJECT_WAIT",
 	[UQ_MSC_EJECT_SAEL_M460]	= "UQ_MSC_EJECT_SAEL_M460",
 	[UQ_MSC_EJECT_HUAWEISCSI]	= "UQ_MSC_EJECT_HUAWEISCSI",
+	[UQ_MSC_EJECT_HUAWEISCSI2]	= "UQ_MSC_EJECT_HUAWEISCSI2",
 	[UQ_MSC_EJECT_TCT]		= "UQ_MSC_EJECT_TCT",
 	[UQ_BAD_MIDI]			= "UQ_BAD_MIDI",
 	[UQ_AU_VENDOR_CLASS]		= "UQ_AU_VENDOR_CLASS",
 	[UQ_SINGLE_CMD_MIDI]		= "UQ_SINGLE_CMD_MIDI",
+	[UQ_MSC_DYMO_EJECT]		= "UQ_MSC_DYMO_EJECT",
+	[UQ_AU_SET_SPDIF_CM6206]	= "UQ_AU_SET_SPDIF_CM6206",
+	[UQ_WMT_IGNORE]			= "UQ_WMT_IGNORE",
 };
 
 /*------------------------------------------------------------------------*
@@ -569,8 +632,32 @@ static const char *usb_quirk_str[USB_QUIRK_MAX] = {
 static const char *
 usb_quirkstr(uint16_t quirk)
 {
-	return ((quirk < USB_QUIRK_MAX) ?
-	    usb_quirk_str[quirk] : "USB_QUIRK_UNKNOWN");
+	return ((quirk < USB_QUIRK_MAX && usb_quirk_str[quirk] != NULL) ?
+	    usb_quirk_str[quirk] : "UQ_UNKNOWN");
+}
+
+/*------------------------------------------------------------------------*
+ *	usb_strquirk
+ *
+ * This function converts a string into a USB quirk code.
+ *
+ * Returns:
+ * Less than USB_QUIRK_MAX: Quirk code
+ * Else: Quirk code not found
+ *------------------------------------------------------------------------*/
+static uint16_t
+usb_strquirk(const char *str, size_t len)
+{
+	const char *quirk;
+	uint16_t x;
+
+	for (x = 0; x != USB_QUIRK_MAX; x++) {
+		quirk = usb_quirkstr(x);
+		if (strncmp(str, quirk, len) == 0 &&
+		    quirk[len] == 0)
+			break;
+	}
+	return (x);
 }
 
 /*------------------------------------------------------------------------*
@@ -618,8 +705,6 @@ usb_test_quirk_by_info(const struct usbd_lookup_info *info, uint16_t quirk)
 				return (1);
 			}
 		}
-		/* no quirk found */
-		break;
 	}
 	mtx_unlock(&usb_quirk_mtx);
 done:
@@ -815,12 +900,122 @@ usb_quirk_ioctl(unsigned long cmd, caddr_t data,
 	return (ENOIOCTL);
 }
 
+/*------------------------------------------------------------------------*
+ *	usb_quirk_strtou16
+ *
+ * Helper function to scan a 16-bit integer.
+ *------------------------------------------------------------------------*/
+static uint16_t
+usb_quirk_strtou16(const char **pptr, const char *name, const char *what)
+{
+	unsigned long value;
+	char *end;
+
+	value = strtoul(*pptr, &end, 0);
+	if (value > 65535 || *pptr == end || (*end != ' ' && *end != '\t')) {
+		printf("%s: %s 16-bit %s value set to zero\n",
+		    name, what, *end == 0 ? "incomplete" : "invalid");
+		return (0);
+	}
+	*pptr = end + 1;
+	return ((uint16_t)value);
+}
+
+/*------------------------------------------------------------------------*
+ *	usb_quirk_add_entry_from_str
+ *
+ * Add a USB quirk entry from string.
+ *     "VENDOR PRODUCT LO_REV HI_REV QUIRK[,QUIRK[,...]]"
+ *------------------------------------------------------------------------*/
+static void
+usb_quirk_add_entry_from_str(const char *name, const char *env)
+{
+	struct usb_quirk_entry entry = { };
+	struct usb_quirk_entry *new;
+	uint16_t quirk_idx;
+	uint16_t quirk;
+	const char *end;
+
+	/* check for invalid environment variable */
+	if (name == NULL || env == NULL)
+		return;
+
+	if (bootverbose)
+		printf("Adding USB QUIRK '%s' = '%s'\n", name, env);
+
+	/* parse device information */
+	entry.vid = usb_quirk_strtou16(&env, name, "Vendor ID");
+	entry.pid = usb_quirk_strtou16(&env, name, "Product ID");
+	entry.lo_rev = usb_quirk_strtou16(&env, name, "Low revision");
+	entry.hi_rev = usb_quirk_strtou16(&env, name, "High revision");
+
+	/* parse quirk information */
+	quirk_idx = 0;
+	while (*env != 0 && quirk_idx != USB_SUB_QUIRKS_MAX) {
+		/* skip whitespace before quirks */
+		while (*env == ' ' || *env == '\t')
+			env++;
+
+		/* look for quirk separation character */
+		end = strchr(env, ',');
+		if (end == NULL)
+			end = env + strlen(env);
+
+		/* lookup quirk in string table */
+		quirk = usb_strquirk(env, end - env);
+		if (quirk < USB_QUIRK_MAX) {
+			entry.quirks[quirk_idx++] = quirk;
+		} else {
+			printf("%s: unknown USB quirk '%.*s' (skipped)\n",
+			    name, (int)(end - env), env);
+		}
+		env = end;
+
+		/* skip quirk delimiter, if any */
+		if (*env != 0)
+			env++;
+	}
+
+	/* register quirk */
+	if (quirk_idx != 0) {
+		if (*env != 0) {
+			printf("%s: Too many USB quirks, only %d allowed!\n",
+			    name, USB_SUB_QUIRKS_MAX);
+		}
+		mtx_lock(&usb_quirk_mtx);
+		new = usb_quirk_get_entry(entry.vid, entry.pid,
+		    entry.lo_rev, entry.hi_rev, 1);
+		if (new == NULL)
+			printf("%s: USB quirks table is full!\n", name);
+		else
+			memcpy(new->quirks, entry.quirks, sizeof(entry.quirks));
+		mtx_unlock(&usb_quirk_mtx);
+	} else {
+		printf("%s: No USB quirks found!\n", name);
+	}
+}
+
 static void
 usb_quirk_init(void *arg)
 {
+	char envkey[sizeof(USB_QUIRK_ENVROOT) + 2];	/* 2 digits max, 0 to 99 */
+	int i;
+  
 	/* initialize mutex */
 	mtx_init(&usb_quirk_mtx, "USB quirk", NULL, MTX_DEF);
 
+	/* look for quirks defined by the environment variable */
+	for (i = 0; i != 100; i++) {
+		snprintf(envkey, sizeof(envkey), USB_QUIRK_ENVROOT "%d", i);
+
+		/* Stop at first undefined var */
+		if (!testenv(envkey))
+			break;
+
+		/* parse environment variable */
+		usb_quirk_add_entry_from_str(envkey, kern_getenv(envkey));
+	}
+	
 	/* register our function */
 	usb_test_quirk_p = &usb_test_quirk_by_info;
 	usb_quirk_ioctl_p = &usb_quirk_ioctl;

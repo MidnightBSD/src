@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/include/mk-osreldate.sh 255957 2013-09-30 21:01:04Z ian $
+# $FreeBSD$
 
 set -e
 
@@ -35,8 +35,8 @@ trap "rm -f $tmpfile" EXIT
 
 ${ECHO} creating osreldate.h from newvers.sh
 
-export PARAMFILE="${PARAM_H:=$CURDIR/../sys/sys/param.h}"
 set +e
+VARS_ONLY=1
 . "${NEWVERS_SH:=$CURDIR/../sys/conf/newvers.sh}" || exit 1
 set -e
 cat > $tmpfile <<EOF
@@ -49,4 +49,4 @@ $COPYRIGHT
 #endif
 EOF
 chmod 644 $tmpfile
-mv $tmpfile osreldate.h
+mv -f $tmpfile osreldate.h

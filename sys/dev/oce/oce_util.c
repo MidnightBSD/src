@@ -36,7 +36,7 @@
  * Costa Mesa, CA 92626
  */
 
-/* $FreeBSD: release/10.0.0/sys/dev/oce/oce_util.c 257187 2013-10-26 19:02:39Z delphij $ */
+/* $FreeBSD$ */
 
 #include "oce_if.h"
 
@@ -105,15 +105,15 @@ oce_dma_free(POCE_SOFTC sc, POCE_DMA_MEM dma)
 	if (dma->tag == NULL)
 		return;
 
-	if (dma->map != NULL) {
+	if (dma->paddr != 0) {
 		bus_dmamap_sync(dma->tag, dma->map,
 				BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(dma->tag, dma->map);
+		dma->paddr = 0;
 	}
 
 	if (dma->ptr != NULL) {
 		bus_dmamem_free(dma->tag, dma->ptr, dma->map);
-		dma->map = NULL;
 		dma->ptr = NULL;
 	}
 

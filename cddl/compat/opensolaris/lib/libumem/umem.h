@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/lib/libumem/umem.h 178414 2008-04-22 07:43:00Z jb $
+ * $FreeBSD$
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

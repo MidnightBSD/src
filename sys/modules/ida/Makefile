@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/ida/Makefile 124367 2004-01-11 07:01:30Z mdodd $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../dev/ida
+.PATH:	${SRCTOP}/sys/dev/ida
 
 KMOD=	ida
 SRCS=	ida.c ida_disk.c ida_pci.c \

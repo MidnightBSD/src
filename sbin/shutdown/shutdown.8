@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)shutdown.8	8.2 (Berkeley) 4/27/95
-.\" $FreeBSD: release/10.0.0/sbin/shutdown/shutdown.8 248535 2013-03-19 21:40:14Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 19, 2013
+.Dd September 21, 2016
 .Dt SHUTDOWN 8
 .Os
 .Sh NAME
@@ -118,6 +118,15 @@ to the current system values.
 The first form brings the system down in
 .Ar number
 minutes and the second at the absolute time specified.
+.Ar +number
+may be specified in units other than minutes by appending the corresponding
+suffix:
+.Dq Li s ,
+.Dq Li sec ,
+.Dq Li m ,
+.Dq Li min .
+.Dq Li h ,
+.Dq Li hour .
 .It Ar warning-message
 Any other arguments comprise the warning message that is broadcast
 to users currently logged into the system.
@@ -206,7 +215,9 @@ a colon (``:'') for backward compatibility.
 .Xr init 8 ,
 .Xr reboot 8
 .Sh HISTORY
-The
+A
 .Nm
-utility appeared in
-.Bx 4.0 .
+command was originally written by Ian Johnstone for UNSW's modified
+.At "6th Edn" .
+It was modified and then incorporated in
+.Bx 4.1 .

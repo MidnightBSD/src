@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge ports.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_port.c 228990 2011-12-30 10:58:14Z uqs $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -626,7 +628,7 @@ op_dot1d_stp_ext_port(struct snmp_context *ctx, struct snmp_value *val,
 			    return (SNMP_ERR_NOERROR);
 
 			case LEAF_dot1dStpPortAdminPointToPoint:
-			    if (val->v.integer < 0 || val->v.integer > 
+			    if (val->v.integer < 0 || val->v.integer >
 				StpPortAdminPointToPointType_auto)
 				return (SNMP_ERR_WRONG_VALUE);
 
@@ -864,7 +866,7 @@ bridge_port_index_getnext(const struct asn_oid *oid, uint sub, int8_t status)
 		for (i = 0; i < oid->subs[sub]; i++)
 			bif_name[i] = oid->subs[sub + i + 1];
 		bif_name[i] = '\0';
-	
+
 		port_no = oid->subs[sub + i + 1];
 
 		if ((bif = bridge_if_find_ifname(bif_name)) == NULL ||
@@ -937,7 +939,7 @@ bridge_port_set_status(struct snmp_context *ctx,
 		ctx->scratch->int1 = bp->status;
 		bp->status = RowStatus_active;
 		break;
-		
+
 	    case RowStatus_notInService:
 		if (bp == NULL || bp->span_enable == 0 ||
 		    bp->status == RowStatus_active)
@@ -1229,9 +1231,9 @@ op_begemot_stp_port(struct snmp_context *ctx, struct snmp_value *val,
 
 		    case LEAF_begemotBridgeStpPortEnable:
 			if (val->v.integer !=
-			    begemotBridgeStpPortEnable_enabled ||
+			    (int32_t)begemotBridgeStpPortEnable_enabled ||
 			    val->v.integer !=
-			    begemotBridgeStpPortEnable_disabled)
+			    (int32_t)begemotBridgeStpPortEnable_disabled)
 			    return (SNMP_ERR_WRONG_VALUE);
 
 			ctx->scratch->int1 = bp->enable;

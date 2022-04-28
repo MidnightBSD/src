@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rtsold/dump.c 254462 2013-08-17 19:23:35Z hrs $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

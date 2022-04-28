@@ -33,12 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/si/si.c 247089 2013-02-21 07:19:50Z imp $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
-static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International, 1990,1992,1998",
-		  si_copyright2[] =  "@(#) Copyright (C) Andy Rutter 1993",
-		  si_copyright3[] =  "@(#) Copyright (C) Peter Wemm 2000";
+__IDSTRING(si_copyright1, "@(#) Copyright (C) Specialix International, 1990,1992,1998");
+__IDSTRING(si_copyright2, "@(#) Copyright (C) Andy Rutter 1993");
+__IDSTRING(si_copyright3, "@(#) Copyright (C) Peter Wemm 2000");
 #endif	/* not lint */
 
 #include "opt_compat.h"
@@ -119,8 +119,7 @@ static int si_Nports;
 static int si_Nmodules;
 static int si_debug;
 
-SYSCTL_INT(_machdep, OID_AUTO, si_debug, CTLFLAG_RW, &si_debug, 0, "");
-TUNABLE_INT("machdep.si_debug", &si_debug);
+SYSCTL_INT(_machdep, OID_AUTO, si_debug, CTLFLAG_RWTUN, &si_debug, 0, "");
 
 static int si_numunits;
 
@@ -542,7 +541,7 @@ try_next:
 	pp = sc->sc_ports;
 	nmodule = 0;
 	modp = (struct si_module *)(maddr + 0x80);
-	uart_type = 1000;	/* arbitary, > uchar_max */
+	uart_type = 1000;	/* arbitrary, > uchar_max */
 	for (;;) {
 		switch (modp->sm_type) {
 		case TA4:
@@ -605,6 +604,8 @@ try_next2:
 	if (unit == 0)
 		make_dev(&si_Scdevsw, 0, UID_ROOT, GID_WHEEL, 0600,
 		    "si_control");
+	device_printf(dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 	return (0);
 }
 

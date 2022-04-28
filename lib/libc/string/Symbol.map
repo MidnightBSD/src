@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/string/Symbol.map 246766 2013-02-13 15:46:33Z zeising $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -98,6 +98,16 @@ FBSD_1.3 {
 	strncasecmp_l;
 	wcswidth_l;
 	wcwidth_l;
+};
+
+FBSD_1.4 {
+	explicit_bzero;
+};
+
+FBSD_1.5 {
+	memset_s;
+	timingsafe_bcmp;
+	timingsafe_memcmp;
 };
 
 FBSDprivate_1.0 {

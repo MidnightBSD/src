@@ -1,5 +1,5 @@
 # regular expression test set
-# $FreeBSD: release/10.0.0/lib/libc/regex/grot/tests 197234 2009-09-15 21:15:29Z dds $
+# $FreeBSD$
 # Lines are at least three fields, separated by one or more tabs.  "" stands
 # for an empty field.  First field is an RE.  Second field is flags.  If
 # C flag given, regcomp() is expected to fail, and the third field is the

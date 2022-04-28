@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_util.h 227701 2011-11-19 10:11:50Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

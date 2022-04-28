@@ -27,7 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/stf.4 245323 2013-01-12 08:44:54Z joel $
+.\" $FreeBSD$
 .\"
 .Dd December 28, 2012
 .Dt STF 4
@@ -189,8 +189,9 @@ The default value is shown next to each variable.
 .Bl -tag -width indent
 .It Va net.link.stf.permit_rfc1918 : No 0
 The RFC3056 requires the use of globally unique 32-bit IPv4
-addresses. This sysctl variable controls the behaviour of this
-requirement. When it set to not 0,
+addresses.
+This sysctl variable controls the behaviour of this requirement.
+When it set to not 0,
 .Nm stf
 allows the use of private IPv4 addresses described in the RFC1918.
 This may be useful for an Intranet environment or when some mechanisms

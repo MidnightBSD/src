@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ips/ips_disk.c 198329 2009-10-21 15:04:50Z brueffer $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>

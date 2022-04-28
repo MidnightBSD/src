@@ -4,7 +4,7 @@
 # then override the default options (adding devices as needed) and adding
 # hints as needed (for example, the GPIO and LAN PHY.)
 
-# $FreeBSD: release/10.0.0/sys/mips/conf/AR933X_BASE.hints 252242 2013-06-26 05:02:47Z adrian $
+# $FreeBSD$
 
 hint.apb.0.at="nexus0"
 hint.apb.0.irq=4

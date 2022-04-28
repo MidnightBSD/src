@@ -32,9 +32,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ffs_subr.c 228990 2011-12-30 10:58:14Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/types.h>
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>

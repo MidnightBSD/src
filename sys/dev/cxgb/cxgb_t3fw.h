@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/cxgb_t3fw.h 220009 2011-03-25 20:53:02Z np $
+$FreeBSD$
 
 ***************************************************************************/
 

@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sci_fast_list.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCI_FAST_LIST_HEADER_
 #define _SCI_FAST_LIST_HEADER_
@@ -67,7 +67,7 @@
  *        queue.   Pointers in this implementation never == NULL.
  *
  *        Definitions:
- *        - anchor : This is ths list container and has a
+ *        - anchor : This is the list container and has a
  *                   pointer to both the head and tail of the
  *                   list elements
  *        - element: This is the list element not the actual

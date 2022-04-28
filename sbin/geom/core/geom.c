@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2009 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/core/geom.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -635,11 +637,15 @@ get_class(int *argc, char ***argv)
 	} else if (!strcasecmp(class_name, "label")) {
 		version = &glabel_version;
 		class_commands = glabel_class_commands;
-	} else
-		errx(EXIT_FAILURE, "Invalid class name.");
+	}
 #endif /* !STATIC_GEOM_CLASSES */
 
 	set_class_name();
+
+	/* If we can't load or list, it's not a class. */
+	if (!std_available("load") && !std_available("list"))
+		errx(EXIT_FAILURE, "Invalid class name.");
+
 	if (*argc < 1)
 		usage();
 }

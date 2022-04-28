@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: cpu.h,v 1.11 2000/05/26 21:19:53 thorpej Exp $
- * $FreeBSD: release/10.0.0/sys/powerpc/include/cpu.h 253750 2013-07-28 18:44:17Z avg $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -48,23 +48,35 @@
  */
 
 extern int cpu_features;
+extern int cpu_features2;
 
 #define	PPC_FEATURE_32		0x80000000	/* Always true */
 #define	PPC_FEATURE_64		0x40000000	/* Defined on a 64-bit CPU */
 #define	PPC_FEATURE_HAS_ALTIVEC	0x10000000	
 #define	PPC_FEATURE_HAS_FPU	0x08000000
 #define	PPC_FEATURE_HAS_MMU	0x04000000
-#define PPC_FEATURE_UNIFIED_CACHE 0x01000000
+#define	PPC_FEATURE_UNIFIED_CACHE 0x01000000
+#define	PPC_FEATURE_BOOKE	0x00008000
+#define	PPC_FEATURE_SMT		0x00004000
+#define	PPC_FEATURE_ARCH_2_05	0x00001000
+#define	PPC_FEATURE_HAS_DFP	0x00000400
+#define	PPC_FEATURE_ARCH_2_06	0x00000100
+#define	PPC_FEATURE_HAS_VSX	0x00000080
+
+#define	PPC_FEATURE2_ARCH_2_07	0x80000000
+#define	PPC_FEATURE2_HAS_HTM	0x40000000
+#define	PPC_FEATURE2_HAS_VCRYPTO 0x02000000
 
 #define	PPC_FEATURE_BITMASK						\
 	"\20"								\
-	"\040PPC32\037PPC64\035ALTIVEC\034FPU\033MMU\031UNIFIEDCACHE"
+	"\040PPC32\037PPC64\035ALTIVEC\034FPU\033MMU\031UNIFIEDCACHE"	\
+	"\020BOOKE\017SMT\015ARCH205\013DFP\011ARCH206\010VSX"
+#define	PPC_FEATURE2_BITMASK						\
+	"\20"								\
+	"\040ARCH207\037HTM\032VCRYPTO"
 
 #define	TRAPF_USERMODE(frame)	(((frame)->srr1 & PSL_PR) != 0)
 #define	TRAPF_PC(frame)		((frame)->srr0)
-
-#define	cpu_swapout(p)
-#define	cpu_number()		0
 
 /*
  * CTL_MACHDEP definitions.
@@ -88,13 +100,16 @@ get_cyclecount(void)
 }
 
 #define	cpu_getstack(td)	((td)->td_frame->fixreg[1])
-#define	cpu_spinwait()		/* nothing */
+#define	cpu_spinwait()		__asm __volatile("or 27,27,27") /* yield */
+#define	cpu_lock_delay()	DELAY(1)
 
 extern char btext[];
 extern char etext[];
 
 void	cpu_halt(void);
 void	cpu_reset(void);
+void	cpu_sleep(void);
+void	flush_disable_caches(void);
 void	fork_trampoline(void);
 void	swi_vm(void *);
 

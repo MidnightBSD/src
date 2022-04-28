@@ -28,7 +28,7 @@
  *
  * Customisation of call control source to the NG environment.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/atm/ccatm/ng_ccatm_cust.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

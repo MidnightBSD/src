@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/lex/initparse.c 250881 2013-05-21 19:32:35Z jkim $ */
+/* $FreeBSD$ */
 #ifndef lint
 static const char yysccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 #endif
@@ -680,14 +680,14 @@ static int yygrowstack(YYSTACKDATA *data)
 
     i = data->s_mark - data->s_base;
     newss = (short *)realloc(data->s_base, newsize * sizeof(*newss));
-    if (newss == 0)
+    if (newss == NULL)
         return -1;
 
     data->s_base = newss;
     data->s_mark = newss + i;
 
     newvs = (YYSTYPE *)realloc(data->l_base, newsize * sizeof(*newvs));
-    if (newvs == 0)
+    if (newvs == NULL)
         return -1;
 
     data->l_base = newvs;
@@ -721,7 +721,7 @@ YYPARSE_DECL()
 #if YYDEBUG
     const char *yys;
 
-    if ((yys = getenv("YYDEBUG")) != 0)
+    if ((yys = getenv("YYDEBUG")) != NULL)
     {
         yyn = *yys;
         if (yyn >= '0' && yyn <= '9')

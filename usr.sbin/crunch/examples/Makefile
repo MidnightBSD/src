@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/crunch/examples/Makefile 241298 2012-10-06 20:01:05Z marcel $
+# $FreeBSD$
 
 CRUNCHED=	fixit
 
@@ -11,7 +11,7 @@ CONF=	$(CRUNCHED).conf
 OUTMK=	$(CRUNCHED).mk
 OUTPUTS= $(OUTMK) $(CRUNCHED).c $(CRUNCHED).cache
 
-NO_MAN=
+MAN=
 CLEANFILES+= $(CRUNCHED) *.o *.lo *.c *.mk *.cache
 CLEANDIRFILES+= $(OUTPUTS)
 

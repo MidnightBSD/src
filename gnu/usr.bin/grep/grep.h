@@ -16,7 +16,7 @@
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
    02111-1307, USA.  */
 
-/* $FreeBSD: release/10.0.0/gnu/usr.bin/grep/grep.h 146199 2005-05-14 03:02:22Z tjr $ */
+/* $FreeBSD$ */
 
 #if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 6) || __STRICT_ANSI__
 # define __attribute__(x)

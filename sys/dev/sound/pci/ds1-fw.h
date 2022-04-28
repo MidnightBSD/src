@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/ds1-fw.h 230133 2012-01-15 13:23:33Z uqs $
+ * $FreeBSD$
  */
 #ifndef _HWMCODE_
 #define _HWMCODE_

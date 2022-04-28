@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997, 2001 Joerg Wunsch
  *
  * All rights reserved.
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/spppcontrol/spppcontrol.c 173717 2007-11-18 00:33:23Z jb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

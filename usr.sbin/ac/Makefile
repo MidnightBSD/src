@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ac/Makefile 239910 2012-08-30 16:45:27Z ed $
+# $FreeBSD$
 
 PROG=	ac
 MAN=	ac.8

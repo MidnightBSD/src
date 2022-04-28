@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/conf/ldscript.sparc64 218822 2011-02-18 20:54:12Z dim $ */
+/* $FreeBSD$ */
 OUTPUT_FORMAT("elf64-sparc-freebsd", "elf64-sparc-freebsd",
 	      "elf64-sparc-freebsd")
 OUTPUT_ARCH(sparc:v9)
@@ -154,7 +154,6 @@ SECTIONS
     *(.data)
     *(.data.*)
     *(.gnu.linkonce.d.*)
-    SORT(CONSTRUCTORS)
   }
   .data1   : { *(.data1) }
   .eh_frame : { KEEP (*(.eh_frame)) }

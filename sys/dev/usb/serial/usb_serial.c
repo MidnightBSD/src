@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.c 250576 2013-05-12 16:43:26Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Copyright (c) 1998, 2000 The NetBSD Foundation, Inc.
@@ -46,13 +46,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.c 250576 2013-0
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -88,6 +81,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.c 250576 2013-0
 #include <sys/cons.h>
 #include <sys/kdb.h>
 
+#include <dev/uart/uart_ppstypes.h>
+
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
@@ -103,10 +98,16 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.c 250576 2013-0
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, ucom, CTLFLAG_RW, 0, "USB ucom");
 
+static int ucom_pps_mode;
+
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, pps_mode, CTLFLAG_RWTUN,
+    &ucom_pps_mode, 0, 
+    "pulse capture mode: 0/1/2=disabled/CTS/DCD; add 0x10 to invert");
+
 #ifdef USB_DEBUG
 static int ucom_debug = 0;
 
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ucom_debug, 0, "ucom debug level");
 #endif
 
@@ -126,14 +127,11 @@ static int ucom_cons_subunit = 0;
 static int ucom_cons_baud = 9600;
 static struct ucom_softc *ucom_cons_softc = NULL;
 
-TUNABLE_INT("hw.usb.ucom.cons_unit", &ucom_cons_unit);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_unit, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_unit, CTLFLAG_RWTUN,
     &ucom_cons_unit, 0, "console unit number");
-TUNABLE_INT("hw.usb.ucom.cons_subunit", &ucom_cons_subunit);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_subunit, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_subunit, CTLFLAG_RWTUN,
     &ucom_cons_subunit, 0, "console subunit number");
-TUNABLE_INT("hw.usb.ucom.cons_baud", &ucom_cons_baud);
-SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_baud, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_hw_usb_ucom, OID_AUTO, cons_baud, CTLFLAG_RWTUN,
     &ucom_cons_baud, 0, "console baud rate");
 
 static usb_proc_callback_t ucom_cfg_start_transfers;
@@ -164,6 +162,7 @@ static tsw_param_t ucom_param;
 static tsw_outwakeup_t ucom_outwakeup;
 static tsw_inwakeup_t ucom_inwakeup;
 static tsw_free_t ucom_free;
+static tsw_busy_t ucom_busy;
 
 static struct ttydevsw ucom_class = {
 	.tsw_flags = TF_INITLOCK | TF_CALLOUT,
@@ -175,6 +174,7 @@ static struct ttydevsw ucom_class = {
 	.tsw_param = ucom_param,
 	.tsw_modem = ucom_modem,
 	.tsw_free = ucom_free,
+	.tsw_busy = ucom_busy,
 };
 
 MODULE_DEPEND(ucom, usb, 1, 1, 1);
@@ -210,7 +210,7 @@ ucom_uninit(void *arg)
 
 	mtx_destroy(&ucom_mtx);
 }
-SYSUNINIT(ucom_uninit, SI_SUB_KLD - 2, SI_ORDER_ANY, ucom_uninit, NULL);
+SYSUNINIT(ucom_uninit, SI_SUB_KLD - 3, SI_ORDER_ANY, ucom_uninit, NULL);
 
 /*
  * Mark a unit number (the X in cuaUX) as in use.
@@ -418,6 +418,11 @@ ucom_attach_tty(struct ucom_super_softc *ssc, struct ucom_softc *sc)
 	tty_makedev(tp, NULL, "%s", buf);
 
 	sc->sc_tty = tp;
+
+	sc->sc_pps.ppscap = PPS_CAPTUREBOTH;
+	sc->sc_pps.driver_abi = PPS_ABI_VERSION;
+	sc->sc_pps.driver_mtx = sc->sc_mtx;
+	pps_init_abi(&sc->sc_pps);
 
 	DPRINTF("ttycreate: %s\n", buf);
 
@@ -868,6 +873,8 @@ ucom_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 		} else {
 			error = ENOIOCTL;
 		}
+		if (error == ENOIOCTL)
+			error = pps_ioctl(cmd, data, &sc->sc_pps);
 		break;
 	}
 	return (error);
@@ -1069,10 +1076,12 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 	    (struct ucom_cfg_task *)_task;
 	struct ucom_softc *sc = task->sc;
 	struct tty *tp;
+	int onoff;
 	uint8_t new_msr;
 	uint8_t new_lsr;
-	uint8_t onoff;
+	uint8_t msr_delta;
 	uint8_t lsr_delta;
+	uint8_t pps_signal;
 
 	tp = sc->sc_tty;
 
@@ -1095,13 +1104,38 @@ ucom_cfg_status_change(struct usb_proc_msg *_task)
 		/* TTY device closed */
 		return;
 	}
-	onoff = ((sc->sc_msr ^ new_msr) & SER_DCD);
+	msr_delta = (sc->sc_msr ^ new_msr);
 	lsr_delta = (sc->sc_lsr ^ new_lsr);
 
 	sc->sc_msr = new_msr;
 	sc->sc_lsr = new_lsr;
 
-	if (onoff) {
+	/*
+	 * Time pulse counting support.
+	 */
+	switch(ucom_pps_mode & UART_PPS_SIGNAL_MASK) {
+	case UART_PPS_CTS:
+		pps_signal = SER_CTS;
+		break;
+	case UART_PPS_DCD:
+		pps_signal = SER_DCD;
+		break;
+	default:
+		pps_signal = 0;
+		break;
+	}
+
+	if ((sc->sc_pps.ppsparam.mode & PPS_CAPTUREBOTH) &&
+	    (msr_delta & pps_signal)) {
+		pps_capture(&sc->sc_pps);
+		onoff = (sc->sc_msr & pps_signal) ? 1 : 0;
+		if (ucom_pps_mode & UART_PPS_INVERT_PULSE)
+			onoff = !onoff;
+		pps_event(&sc->sc_pps, onoff ? PPS_CAPTUREASSERT :
+		    PPS_CAPTURECLEAR);
+	}
+
+	if (msr_delta & SER_DCD) {
 
 		onoff = (sc->sc_msr & SER_DCD) ? 1 : 0;
 
@@ -1261,6 +1295,27 @@ ucom_outwakeup(struct tty *tp)
 		return;
 	}
 	ucom_start_transfers(sc);
+}
+
+static bool
+ucom_busy(struct tty *tp)
+{
+	struct ucom_softc *sc = tty_softc(tp);
+	const uint8_t txidle = ULSR_TXRDY | ULSR_TSRE;
+
+	UCOM_MTX_ASSERT(sc, MA_OWNED);
+
+	DPRINTFN(3, "sc = %p lsr 0x%02x\n", sc, sc->sc_lsr);
+
+	/*
+	 * If the driver maintains the txidle bits in LSR, we can use them to
+	 * determine whether the transmitter is busy or idle.  Otherwise we have
+	 * to assume it is idle to avoid hanging forever on tcdrain(3).
+	 */
+	if (sc->sc_flag & UCOM_FLAG_LSRTXIDLE)
+		return ((sc->sc_lsr & txidle) != txidle);
+	else
+		return (false);
 }
 
 /*------------------------------------------------------------------------*

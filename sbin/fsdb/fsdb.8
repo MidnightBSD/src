@@ -26,9 +26,9 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/sbin/fsdb/fsdb.8 162395 2006-09-18 11:55:10Z ru $
+.\" $FreeBSD$
 .\"
-.Dd August 24, 2006
+.Dd October 3, 2016
 .Dt FSDB 8
 .Os
 .Sh NAME
@@ -239,19 +239,20 @@ Exit the program.
 .Sh HISTORY
 The
 .Nm
-utility uses the source code for
+utility appeared in
+.Bx 4.3 Tahoe .
+It used the source code for
 .Xr fsck 8
 to implement most of the file system manipulation code.
 The remainder of
 .Nm
-first appeared in
-.Nx ,
+appeared in
+.Nx 1.1
 written by
 .An John T. Kohl .
-.Pp
-.An Peter Wemm
-ported it to
-.Fx .
+It first appeared in
+.Fx 2.1.5 
+ported by Peter Wemm.
 .Sh BUGS
 Manipulation of ``short'' symlinks has no effect.
 In particular, one should not

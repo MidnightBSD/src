@@ -25,48 +25,31 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_mmc.c 239278 2012-08-15 05:37:10Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/bio.h>
 #include <sys/bus.h>
-#include <sys/conf.h>
-#include <sys/endian.h>
 #include <sys/kernel.h>
-#include <sys/kthread.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/queue.h>
 #include <sys/resource.h>
 #include <sys/rman.h>
-#include <sys/time.h>
-#include <sys/timetc.h>
-#include <sys/watchdog.h>
-
-#include <sys/kdb.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <dev/mmc/bridge.h>
-#include <dev/mmc/mmcreg.h>
 #include <dev/mmc/mmcbrvar.h>
 
 #include <arm/lpc/lpcreg.h>
 #include <arm/lpc/lpcvar.h>
-
-#define	DEBUG
-#undef	DEBUG
 
 #ifdef DEBUG
 #define debugf(fmt, args...) do { printf("%s(): ", __func__);   \
@@ -170,6 +153,10 @@ static struct lpc_dmac_channel_config lpc_mmc_dma_txconf = {
 static int
 lpc_mmc_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "lpc,mmc"))
 		return (ENXIO);
 
@@ -511,14 +498,14 @@ lpc_mmc_setup_xfer(struct lpc_mmc_softc *sc, struct mmc_data *data)
 	if (data->flags & MMC_DATA_READ) {
 		sc->lm_xfer_direction = DIRECTION_READ;
 		lpc_dmac_setup_transfer(sc->lm_dev, LPC_MMC_DMACH_READ,
-		    LPC_SD_BASE + LPC_SD_FIFO, sc->lm_buffer_phys,
+		    LPC_SD_PHYS_BASE + LPC_SD_FIFO, sc->lm_buffer_phys,
 		    data_words, 0);
 	}
 
 	if (data->flags & MMC_DATA_WRITE) {
 		sc->lm_xfer_direction = DIRECTION_WRITE;
 		lpc_dmac_setup_transfer(sc->lm_dev, LPC_MMC_DMACH_WRITE,
-		    sc->lm_buffer_phys, LPC_SD_BASE + LPC_SD_FIFO,
+		    sc->lm_buffer_phys, LPC_SD_PHYS_BASE + LPC_SD_FIFO,
 		    data_words, 0);
 	}
 
@@ -754,7 +741,6 @@ static device_method_t lpc_mmc_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_read_ivar,	lpc_mmc_read_ivar),
 	DEVMETHOD(bus_write_ivar,	lpc_mmc_write_ivar),
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
 
 	/* MMC bridge interface */
 	DEVMETHOD(mmcbr_update_ios,	lpc_mmc_update_ios),
@@ -763,7 +749,7 @@ static device_method_t lpc_mmc_methods[] = {
 	DEVMETHOD(mmcbr_acquire_host,	lpc_mmc_acquire_host),
 	DEVMETHOD(mmcbr_release_host,	lpc_mmc_release_host),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static devclass_t lpc_mmc_devclass;
@@ -774,4 +760,5 @@ static driver_t lpc_mmc_driver = {
 	sizeof(struct lpc_mmc_softc),
 };
 
-DRIVER_MODULE(lpcmmc, simplebus, lpc_mmc_driver, lpc_mmc_devclass, 0, 0);
+DRIVER_MODULE(lpcmmc, simplebus, lpc_mmc_driver, lpc_mmc_devclass, NULL, NULL);
+MMC_DECLARE_BRIDGE(lpcmmc);

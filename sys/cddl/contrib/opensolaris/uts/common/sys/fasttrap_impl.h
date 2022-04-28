@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/dtrace.h>
 #include <sys/proc.h>
+#include <sys/queue.h>
 #include <sys/fasttrap.h>
 #include <sys/fasttrap_isa.h>
 
@@ -68,7 +69,29 @@ extern "C" {
  * then disabled, ownership of that tracepoint may be exchanged for an
  * unused tracepoint belonging to another probe that was attached to the
  * enabled tracepoint.
+ *
+ * On FreeBSD, fasttrap providers also maintain per-thread scratch space for use
+ * by the ISA-specific fasttrap code. The fasttrap_scrblock_t type stores the
+ * virtual address of a page-sized memory block that is mapped into a process'
+ * address space. Each block is carved up into chunks (fasttrap_scrspace_t) for
+ * use by individual threads, which keep the address of their scratch space
+ * chunk in their struct kdtrace_thread. A thread's scratch space isn't released
+ * until it exits.
  */
+
+#ifndef illumos
+typedef struct fasttrap_scrblock {
+	vm_offset_t ftsb_addr;			/* address of a scratch block */
+	LIST_ENTRY(fasttrap_scrblock) ftsb_next;/* next block in list */
+} fasttrap_scrblock_t;
+#define	FASTTRAP_SCRBLOCK_SIZE	PAGE_SIZE
+
+typedef struct fasttrap_scrspace {
+	uintptr_t ftss_addr;			/* scratch space address */
+	LIST_ENTRY(fasttrap_scrspace) ftss_next;/* next in list */
+} fasttrap_scrspace_t;
+#define	FASTTRAP_SCRSPACE_SIZE	64
+#endif
 
 typedef struct fasttrap_proc {
 	pid_t ftpc_pid;				/* process ID for this proc */
@@ -76,6 +99,11 @@ typedef struct fasttrap_proc {
 	uint64_t ftpc_rcount;			/* count of extant providers */
 	kmutex_t ftpc_mtx;			/* lock on all but acount */
 	struct fasttrap_proc *ftpc_next;	/* next proc in hash chain */
+#ifndef illumos
+	LIST_HEAD(, fasttrap_scrblock) ftpc_scrblks; /* mapped scratch blocks */
+	LIST_HEAD(, fasttrap_scrspace) ftpc_fscr; /* free scratch space */
+	LIST_HEAD(, fasttrap_scrspace) ftpc_ascr; /* used scratch space */
+#endif
 } fasttrap_proc_t;
 
 typedef struct fasttrap_provider {
@@ -158,21 +186,29 @@ typedef struct fasttrap_hash {
  */
 #define	fasttrap_copyout	copyout
 #define	fasttrap_fuword32	fuword32
-#define	fasttrap_suword32(_k, _u)	copyout((_k), (_u), sizeof(uint32_t))
-#define	fasttrap_suword64(_k, _u)	copyout((_k), (_u), sizeof(uint64_t))
+#define	fasttrap_suword32	suword32
+#define	fasttrap_suword64	suword64
 
 #ifdef __amd64__
 #define	fasttrap_fulword	fuword64
-#define	fasttrap_sulword	fasttrap_suword64
+#define	fasttrap_sulword	suword64
 #else
 #define	fasttrap_fulword	fuword32
-#define	fasttrap_sulword	fasttrap_suword32
+#define	fasttrap_sulword	suword32
 #endif
 
 extern void fasttrap_sigtrap(proc_t *, kthread_t *, uintptr_t);
+#ifndef illumos
+extern fasttrap_scrspace_t *fasttrap_scraddr(struct thread *,
+    fasttrap_proc_t *);
+#endif
 
 extern dtrace_id_t 		fasttrap_probe_id;
 extern fasttrap_hash_t		fasttrap_tpoints;
+
+#ifndef illumos
+extern struct rmlock		fasttrap_tp_lock;
+#endif
 
 #define	FASTTRAP_TPOINTS_INDEX(pid, pc) \
 	(((pc) / sizeof (fasttrap_instr_t) + (pid)) & fasttrap_tpoints.fth_mask)
@@ -185,9 +221,9 @@ extern int fasttrap_tracepoint_init(proc_t *, fasttrap_tracepoint_t *,
 extern int fasttrap_tracepoint_install(proc_t *, fasttrap_tracepoint_t *);
 extern int fasttrap_tracepoint_remove(proc_t *, fasttrap_tracepoint_t *);
 
-struct reg;
-extern int fasttrap_pid_probe(struct reg *);
-extern int fasttrap_return_probe(struct reg *);
+struct trapframe;
+extern int fasttrap_pid_probe(struct trapframe *);
+extern int fasttrap_return_probe(struct trapframe *);
 
 extern uint64_t fasttrap_pid_getarg(void *, dtrace_id_t, void *, int, int);
 extern uint64_t fasttrap_usdt_getarg(void *, dtrace_id_t, void *, int, int);

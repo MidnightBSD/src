@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/util.c 200462 2009-12-13 03:14:06Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/types.h>

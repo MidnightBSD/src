@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 1997 Sandro Sigala, Brescia, Italy.
  * Copyright (c) 1997 Chris Shenton
- * Copyright (c) 1995 S ren Schmidt
+ * Copyright (c) 1995 Søren Schmidt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/syscons/daemon/daemon_saver.c 197062 2009-09-10 12:58:37Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

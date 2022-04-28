@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/gate/g_gate.c 248720 2013-03-26 05:42:12Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -62,11 +62,9 @@ SYSCTL_DECL(_kern_geom);
 static SYSCTL_NODE(_kern_geom, OID_AUTO, gate, CTLFLAG_RW, 0,
     "GEOM_GATE configuration");
 static int g_gate_debug = 0;
-TUNABLE_INT("kern.geom.gate.debug", &g_gate_debug);
-SYSCTL_INT(_kern_geom_gate, OID_AUTO, debug, CTLFLAG_RW, &g_gate_debug, 0,
+SYSCTL_INT(_kern_geom_gate, OID_AUTO, debug, CTLFLAG_RWTUN, &g_gate_debug, 0,
     "Debug level");
 static u_int g_gate_maxunits = 256;
-TUNABLE_INT("kern.geom.gate.maxunits", &g_gate_maxunits);
 SYSCTL_UINT(_kern_geom_gate, OID_AUTO, maxunits, CTLFLAG_RDTUN,
     &g_gate_maxunits, 0, "Maximum number of ggate devices");
 
@@ -88,9 +86,23 @@ static struct g_gate_softc **g_gate_units;
 static u_int g_gate_nunits;
 static struct mtx g_gate_units_lock;
 
+static void
+g_gate_detach(void *arg, int flags __unused)
+{
+	struct g_consumer *cp = arg;
+
+	g_topology_assert();
+	G_GATE_DEBUG(1, "Destroying read consumer on provider %s orphan.",
+	    cp->provider->name);
+	(void)g_access(cp, -1, 0, 0);
+	g_detach(cp);
+	g_destroy_consumer(cp);
+}
+
 static int
 g_gate_destroy(struct g_gate_softc *sc, boolean_t force)
 {
+	struct bio_queue_head queue;
 	struct g_provider *pp;
 	struct g_consumer *cp;
 	struct g_geom *gp;
@@ -110,24 +122,24 @@ g_gate_destroy(struct g_gate_softc *sc, boolean_t force)
 	wakeup(sc);
 	mtx_unlock(&sc->sc_queue_mtx);
 	gp = pp->geom;
-	pp->flags |= G_PF_WITHER;
-	g_orphan_provider(pp, ENXIO);
+	g_wither_provider(pp, ENXIO);
 	callout_drain(&sc->sc_callout);
+	bioq_init(&queue);
 	mtx_lock(&sc->sc_queue_mtx);
-	while ((bp = bioq_first(&sc->sc_inqueue)) != NULL) {
-		bioq_remove(&sc->sc_inqueue, bp);
+	while ((bp = bioq_takefirst(&sc->sc_inqueue)) != NULL) {
 		sc->sc_queue_count--;
-		G_GATE_LOGREQ(1, bp, "Request canceled.");
-		g_io_deliver(bp, ENXIO);
+		bioq_insert_tail(&queue, bp);
 	}
-	while ((bp = bioq_first(&sc->sc_outqueue)) != NULL) {
-		bioq_remove(&sc->sc_outqueue, bp);
+	while ((bp = bioq_takefirst(&sc->sc_outqueue)) != NULL) {
 		sc->sc_queue_count--;
-		G_GATE_LOGREQ(1, bp, "Request canceled.");
-		g_io_deliver(bp, ENXIO);
+		bioq_insert_tail(&queue, bp);
 	}
 	mtx_unlock(&sc->sc_queue_mtx);
 	g_topology_unlock();
+	while ((bp = bioq_takefirst(&queue)) != NULL) {
+		G_GATE_LOGREQ(1, bp, "Request canceled.");
+		g_io_deliver(bp, ENXIO);
+	}
 	mtx_lock(&g_gate_units_lock);
 	/* One reference is ours. */
 	sc->sc_ref--;
@@ -138,6 +150,7 @@ g_gate_destroy(struct g_gate_softc *sc, boolean_t force)
 	g_gate_nunits--;
 	mtx_unlock(&g_gate_units_lock);
 	mtx_destroy(&sc->sc_queue_mtx);
+	mtx_destroy(&sc->sc_read_mtx);
 	g_topology_lock();
 	if ((cp = sc->sc_readcons) != NULL) {
 		sc->sc_readcons = NULL;
@@ -206,8 +219,11 @@ g_gate_queue_io(struct bio *bp)
 static void
 g_gate_done(struct bio *cbp)
 {
+	struct g_gate_softc *sc;
 	struct bio *pbp;
+	struct g_consumer *cp;
 
+	cp = cbp->bio_from;
 	pbp = cbp->bio_parent;
 	if (cbp->bio_error == 0) {
 		pbp->bio_completed = cbp->bio_completed;
@@ -220,12 +236,20 @@ g_gate_done(struct bio *cbp)
 		pbp->bio_children--;
 		g_gate_queue_io(pbp);
 	}
+
+	sc = cp->geom->softc;
+	mtx_lock(&sc->sc_read_mtx);
+	if (--cp->index == 0 && sc->sc_readcons != cp)
+		g_post_event(g_gate_detach, cp, M_NOWAIT, NULL);
+	mtx_unlock(&sc->sc_read_mtx);
 }
 
 static void
 g_gate_start(struct bio *pbp)
 {
 	struct g_gate_softc *sc;
+	struct g_consumer *cp;
+	struct bio *cbp;
 
 	sc = pbp->bio_to->geom->softc;
 	if (sc == NULL || (sc->sc_flags & G_GATE_FLAG_DESTROY) != 0) {
@@ -235,21 +259,26 @@ g_gate_start(struct bio *pbp)
 	G_GATE_LOGREQ(2, pbp, "Request received.");
 	switch (pbp->bio_cmd) {
 	case BIO_READ:
-		if (sc->sc_readcons != NULL) {
-			struct bio *cbp;
-
-			cbp = g_clone_bio(pbp);
-			if (cbp == NULL) {
-				g_io_deliver(pbp, ENOMEM);
-				return;
-			}
-			cbp->bio_done = g_gate_done;
-			cbp->bio_offset = pbp->bio_offset + sc->sc_readoffset;
-			cbp->bio_to = sc->sc_readcons->provider;
-			g_io_request(cbp, sc->sc_readcons);
+		if (sc->sc_readcons == NULL)
+			break;
+		cbp = g_clone_bio(pbp);
+		if (cbp == NULL) {
+			g_io_deliver(pbp, ENOMEM);
 			return;
 		}
-		break;
+		mtx_lock(&sc->sc_read_mtx);
+		if ((cp = sc->sc_readcons) == NULL) {
+			mtx_unlock(&sc->sc_read_mtx);
+			g_destroy_bio(cbp);
+			pbp->bio_children--;
+			break;
+		}
+		cp->index++;
+		cbp->bio_offset = pbp->bio_offset + sc->sc_readoffset;
+		mtx_unlock(&sc->sc_read_mtx);
+		cbp->bio_done = g_gate_done;
+		g_io_request(cbp, cp);
+		return;
 	case BIO_DELETE:
 	case BIO_WRITE:
 	case BIO_FLUSH:
@@ -334,6 +363,7 @@ g_gate_getunit(int unit, int *errorp)
 static void
 g_gate_guard(void *arg)
 {
+	struct bio_queue_head queue;
 	struct g_gate_softc *sc;
 	struct bintime curtime;
 	struct bio *bp, *bp2;
@@ -341,24 +371,27 @@ g_gate_guard(void *arg)
 	sc = arg;
 	binuptime(&curtime);
 	g_gate_hold(sc->sc_unit, NULL);
+	bioq_init(&queue);
 	mtx_lock(&sc->sc_queue_mtx);
 	TAILQ_FOREACH_SAFE(bp, &sc->sc_inqueue.queue, bio_queue, bp2) {
 		if (curtime.sec - bp->bio_t0.sec < 5)
 			continue;
 		bioq_remove(&sc->sc_inqueue, bp);
 		sc->sc_queue_count--;
-		G_GATE_LOGREQ(1, bp, "Request timeout.");
-		g_io_deliver(bp, EIO);
+		bioq_insert_tail(&queue, bp);
 	}
 	TAILQ_FOREACH_SAFE(bp, &sc->sc_outqueue.queue, bio_queue, bp2) {
 		if (curtime.sec - bp->bio_t0.sec < 5)
 			continue;
 		bioq_remove(&sc->sc_outqueue, bp);
 		sc->sc_queue_count--;
+		bioq_insert_tail(&queue, bp);
+	}
+	mtx_unlock(&sc->sc_queue_mtx);
+	while ((bp = bioq_takefirst(&queue)) != NULL) {
 		G_GATE_LOGREQ(1, bp, "Request timeout.");
 		g_io_deliver(bp, EIO);
 	}
-	mtx_unlock(&sc->sc_queue_mtx);
 	if ((sc->sc_flags & G_GATE_FLAG_DESTROY) == 0) {
 		callout_reset(&sc->sc_callout, sc->sc_timeout * hz,
 		    g_gate_guard, sc);
@@ -371,20 +404,18 @@ g_gate_orphan(struct g_consumer *cp)
 {
 	struct g_gate_softc *sc;
 	struct g_geom *gp;
+	int done;
 
 	g_topology_assert();
 	gp = cp->geom;
 	sc = gp->softc;
-	if (sc == NULL)
-		return;
-	KASSERT(cp == sc->sc_readcons, ("cp=%p sc_readcons=%p", cp,
-	    sc->sc_readcons));
-	sc->sc_readcons = NULL;
-	G_GATE_DEBUG(1, "Destroying read consumer on provider %s orphan.",
-	    cp->provider->name);
-	(void)g_access(cp, -1, 0, 0);
-	g_detach(cp);
-	g_destroy_consumer(cp);
+	mtx_lock(&sc->sc_read_mtx);
+	if (sc->sc_readcons == cp)
+		sc->sc_readcons = NULL;
+	done = (cp->index == 0);
+	mtx_unlock(&sc->sc_read_mtx);
+	if (done)
+		g_gate_detach(cp, 0);
 }
 
 static void
@@ -477,12 +508,13 @@ g_gate_create(struct g_gate_ctl_create *ggio)
 	bioq_init(&sc->sc_inqueue);
 	bioq_init(&sc->sc_outqueue);
 	mtx_init(&sc->sc_queue_mtx, "gg:queue", NULL, MTX_DEF);
+	mtx_init(&sc->sc_read_mtx, "gg:read", NULL, MTX_DEF);
 	sc->sc_queue_count = 0;
 	sc->sc_queue_size = ggio->gctl_maxcount;
 	if (sc->sc_queue_size > G_GATE_MAX_QUEUE_SIZE)
 		sc->sc_queue_size = G_GATE_MAX_QUEUE_SIZE;
 	sc->sc_timeout = ggio->gctl_timeout;
-	callout_init(&sc->sc_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->sc_callout, 1);
 
 	mtx_lock(&g_gate_units_lock);
 	sc->sc_unit = g_gate_getunit(ggio->gctl_unit, &error);
@@ -542,6 +574,7 @@ g_gate_create(struct g_gate_ctl_create *ggio)
 
 	if (ropp != NULL) {
 		cp = g_new_consumer(gp);
+		cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 		error = g_attach(cp, ropp);
 		if (error != 0) {
 			G_GATE_DEBUG(1, "Unable to attach to %s.", ropp->name);
@@ -560,6 +593,7 @@ g_gate_create(struct g_gate_ctl_create *ggio)
 	ggio->gctl_unit = sc->sc_unit;
 
 	pp = g_new_providerf(gp, "%s", name);
+	pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
 	pp->mediasize = ggio->gctl_mediasize;
 	pp->sectorsize = ggio->gctl_sectorsize;
 	sc->sc_provider = pp;
@@ -588,6 +622,7 @@ fail2:
 fail1:
 	mtx_unlock(&g_gate_units_lock);
 	mtx_destroy(&sc->sc_queue_mtx);
+	mtx_destroy(&sc->sc_read_mtx);
 	free(sc, M_GATE);
 	return (error);
 }
@@ -597,7 +632,7 @@ g_gate_modify(struct g_gate_softc *sc, struct g_gate_ctl_modify *ggio)
 {
 	struct g_provider *pp;
 	struct g_consumer *cp;
-	int error;
+	int done, error;
 
 	if ((ggio->gctl_modify & GG_MODIFY_MEDIASIZE) != 0) {
 		if (ggio->gctl_mediasize <= 0) {
@@ -620,13 +655,15 @@ g_gate_modify(struct g_gate_softc *sc, struct g_gate_ctl_modify *ggio)
 
 	if ((ggio->gctl_modify & GG_MODIFY_READPROV) != 0) {
 		g_topology_lock();
-		if (sc->sc_readcons != NULL) {
-			cp = sc->sc_readcons;
+		mtx_lock(&sc->sc_read_mtx);
+		if ((cp = sc->sc_readcons) != NULL) {
 			sc->sc_readcons = NULL;
-			(void)g_access(cp, -1, 0, 0);
-			g_detach(cp);
-			g_destroy_consumer(cp);
-		}
+			done = (cp->index == 0);
+			mtx_unlock(&sc->sc_read_mtx);
+			if (done)
+				g_gate_detach(cp, 0);
+		} else
+			mtx_unlock(&sc->sc_read_mtx);
 		if (ggio->gctl_readprov[0] != '\0') {
 			pp = g_provider_by_name(ggio->gctl_readprov);
 			if (pp == NULL) {
@@ -636,6 +673,7 @@ g_gate_modify(struct g_gate_softc *sc, struct g_gate_ctl_modify *ggio)
 				return (EINVAL);
 			}
 			cp = g_new_consumer(sc->sc_provider->geom);
+			cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 			error = g_attach(cp, pp);
 			if (error != 0) {
 				G_GATE_DEBUG(1, "Unable to attach to %s.",
@@ -938,7 +976,7 @@ g_gate_modevent(module_t mod, int type, void *data)
 		}
 		mtx_unlock(&g_gate_units_lock);
 		mtx_destroy(&g_gate_units_lock);
-		if (status_dev != 0)
+		if (status_dev != NULL)
 			destroy_dev(status_dev);
 		free(g_gate_units, M_GATE);
 		break;
@@ -956,3 +994,4 @@ static moduledata_t g_gate_module = {
 };
 DECLARE_MODULE(geom_gate, g_gate_module, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 DECLARE_GEOM_CLASS(g_gate_class, g_gate);
+MODULE_VERSION(geom_gate, 0);

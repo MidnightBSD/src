@@ -17,13 +17,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -69,10 +62,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/bus.h,v 1.5 1999/08/28 00:38:40 peter
- * $FreeBSD: release/10.0.0/sys/mips/mips/bus_space_generic.c 256247 2013-10-09 22:10:03Z adrian $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/bus_space_generic.c 256247 2013-10-09 22:10:03Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -235,20 +228,21 @@ bus_space_tag_t mips_bus_space_generic = &generic_space;
 
 int
 generic_bs_map(void *t __unused, bus_addr_t addr,
-	      bus_size_t size __unused, int flags __unused,
+	      bus_size_t size, int flags __unused,
 	      bus_space_handle_t *bshp)
 {
 
-	*bshp = addr;
+	*bshp = (bus_space_handle_t)pmap_mapdev((vm_paddr_t)addr,
+	    (vm_size_t)size);
 	return (0);
 }
 
 void
-generic_bs_unmap(void *t __unused, bus_space_handle_t bh __unused,
-	      bus_size_t size __unused)
+generic_bs_unmap(void *t __unused, bus_space_handle_t bh,
+	      bus_size_t size)
 {
 
-	/* Do nothing */
+	pmap_unmapdev((vm_offset_t)bh, (vm_size_t)size);
 }
 
 int

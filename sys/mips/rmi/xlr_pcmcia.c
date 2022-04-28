@@ -31,7 +31,7 @@
  * ATA driver for the XLR_PCMCIA Host adapter on the RMI XLR/XLS/.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rmi/xlr_pcmcia.c 211923 2010-08-28 07:58:10Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

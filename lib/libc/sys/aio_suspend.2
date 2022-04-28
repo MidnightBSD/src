@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/aio_suspend.2 177870 2008-04-03 02:41:54Z kevlo $
+.\" $FreeBSD$
 .\"
-.Dd June 2, 1999
+.Dd Oct 23, 2017
 .Dt AIO_SUSPEND 2
 .Os
 .Sh NAME
@@ -85,10 +85,10 @@ expired before any I/O requests completed.
 The
 .Fa iocbs
 argument
-contains more than
-.Dv AIO_LISTIO_MAX
-asynchronous I/O requests, or at least one of the requests is not
-valid.
+contains more asynchronous I/O requests than the
+.Va vfs.aio.max_aio_queue_per_proc
+.Xr sysctl 8
+variable, or at least one of the requests is not valid.
 .It Bq Er EINTR
 the suspend was interrupted by a signal.
 .El
@@ -114,4 +114,4 @@ system call first appeared in
 .Sh AUTHORS
 This
 manual page was written by
-.An Wes Peters Aq wes@softweyr.com .
+.An Wes Peters Aq Mt wes@softweyr.com .

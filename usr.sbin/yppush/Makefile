@@ -1,8 +1,7 @@
-# $FreeBSD: release/10.0.0/usr.sbin/yppush/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD$
 
-RPCDIR=	${.CURDIR}/../../include/rpcsvc
-.PATH: ${RPCDIR} ${.CURDIR}/../../usr.sbin/ypserv \
-       ${.CURDIR}/../../libexec/ypxfr
+RPCDIR=	${SRCTOP}/include/rpcsvc
+.PATH: ${RPCDIR} ${SRCTOP}/usr.sbin/ypserv ${SRCTOP}/libexec/ypxfr
 
 PROG=	yppush
 MAN=	yppush.8
@@ -10,7 +9,7 @@ SRCS=	ypxfr_getmap.c yp_dblookup.c yp_error.c ypxfr_misc.c yppush_main.c \
 	${GENSRCS}
 GENSRCS=yp.h yp_clnt.c yppush_svc.c
 
-CFLAGS+= -I. -I${.CURDIR}/../../libexec/ypxfr
+CFLAGS+= -I. -I${SRCTOP}/libexec/ypxfr
 
 WARNS?=	2
 

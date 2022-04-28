@@ -1,12 +1,12 @@
 # -*- makefile -*-
 #
-# $FreeBSD: release/10.0.0/release/doc/share/examples/Makefile.relnotesng 171847 2007-08-15 03:02:22Z bmah $
+# $FreeBSD$
 #
 # Sample makefile for rendering and uploading RELNOTESng files outside
 # the build tree.
 #
 
-ARCHS=		amd64 ia64 i386 pc98 powerpc sparc64
+ARCHS=		amd64 i386 pc98 powerpc sparc64
 MULTITEXTS=	
 UNITEXTS=	hardware readme relnotes errata
 

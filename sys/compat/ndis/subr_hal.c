@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/subr_hal.c 232509 2012-03-04 17:08:43Z brucec $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -274,7 +274,7 @@ READ_PORT_BUFFER_UCHAR(port, val, cnt)
  * KeAcquireSpinLock() and KeReleaseSpinLock(), but these are just
  * macros that call KfAcquireSpinLock() and KfReleaseSpinLock().
  * KefAcquireSpinLockAtDpcLevel() and KefReleaseSpinLockFromDpcLevel()
- * perform the lock aquisition/release functions without doing the
+ * perform the lock acquisition/release functions without doing the
  * IRQL manipulation, and are used when one is already running at
  * DISPATCH_LEVEL. Make sense? Good.
  *

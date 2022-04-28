@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/cavium/obiovar.h 203128 2010-01-28 20:38:52Z imp $
+ * $FreeBSD$
  *
  */
 

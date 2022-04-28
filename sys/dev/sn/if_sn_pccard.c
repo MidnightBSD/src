@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sn/if_sn_pccard.c 199414 2009-11-17 18:22:14Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -327,3 +327,4 @@ extern devclass_t sn_devclass;
 
 DRIVER_MODULE(sn, pccard, sn_pccard_driver, sn_devclass, 0, 0);
 MODULE_DEPEND(sn, ether, 1, 1, 1);
+PCCARD_PNP_INFO(sn_pccard_products);

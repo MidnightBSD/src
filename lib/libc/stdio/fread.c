@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fread.c	8.2 (Berkeley) 12/11/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fread.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -54,9 +54,9 @@ fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 {
 	size_t ret;
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	ret = __fread(buf, size, count, fp);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (ret);
 }
 
@@ -113,3 +113,5 @@ __fread(void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
 	fp->_p += resid;
 	return (count);
 }
+
+__weak_reference(__fread, fread_unlocked);

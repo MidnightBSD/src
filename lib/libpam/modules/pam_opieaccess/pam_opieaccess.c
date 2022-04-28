@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libpam/modules/pam_opieaccess/pam_opieaccess.c 125668 2004-02-10 20:42:33Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #define _BSD_SOURCE
 

@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aic79xx_inline.h#57 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic79xx_inline.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _AIC79XX_INLINE_H_
@@ -417,7 +417,7 @@ ahd_targetcmd_offset(struct ahd_softc *ahd, u_int index)
 	       - (uint8_t *)ahd->qoutfifo);
 }
 
-/*********************** Miscelaneous Support Functions ***********************/
+/********************** Miscellaneous Support Functions ***********************/
 static __inline void	ahd_complete_scb(struct ahd_softc *ahd,
 					 struct scb *scb);
 static __inline void	ahd_update_residual(struct ahd_softc *ahd,
@@ -534,7 +534,7 @@ static __inline void
 ahd_outw(struct ahd_softc *ahd, u_int port, u_int value)
 {
 	/*
-	 * Write low byte first to accomodate registers
+	 * Write low byte first to accommodate registers
 	 * such as PRGMCNT where the order maters.
 	 */
 	ahd_outb(ahd, port, value & 0xFF);

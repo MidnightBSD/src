@@ -23,9 +23,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_main_np.c 157457 2006-04-04 02:57:49Z davidxu $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -37,10 +38,10 @@
 __weak_reference(_pthread_main_np, pthread_main_np);
 
 /*
- * Provide the equivelant to Solaris thr_main() function
+ * Provide the equivalent to Solaris thr_main() function.
  */
 int
-_pthread_main_np()
+_pthread_main_np(void)
 {
 
 	if (!_thr_initial)

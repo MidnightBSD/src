@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/locate/locate/fastfind.c 229403 2012-01-03 18:51:58Z ed $
+ * $FreeBSD$
  */
 
 

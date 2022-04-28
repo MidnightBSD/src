@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/tools/kerneldoc/subsys/Makefile 196511 2009-08-24 13:10:55Z netchild $
+# $FreeBSD$
 #
 
 _ALL!=	cd ${.CURDIR} && ls Doxyfile-*
@@ -58,7 +58,7 @@ ${.OBJDIR}/${target}/${target}.tag:
 		    DOXYGEN_DEST_PATH=${DOXYGEN_DEST_PATH} \
 		    DOXYGEN_SRC_INCLUDE_PATH="${S}/sys ${S}/../include ${S}/${TARGET_ARCH}/include ${.OBJDIR}/include" \
 		    DOXYGEN_TARGET_ARCH=${TARGET_ARCH} \
-		    DOXYGEN_LINUX_PATH=${DOXYGEN_LINUX_PATH} \
+		    DOXYGEN_LINUX_PATH="${DOXYGEN_LINUX_PATH}" \
 		    NOTREVIEWED=${.CURDIR}/notreviewed.dox \
 		    PATH=${LOCALBASE}/bin:${PATH} \
 			doxygen ${.CURDIR}/Doxyfile-${target}

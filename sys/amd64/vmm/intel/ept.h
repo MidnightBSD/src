@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/vmm/intel/ept.h 256072 2013-10-05 21:22:35Z neel $
+ * $FreeBSD$
  */
 
 #ifndef	_EPT_H_
@@ -31,7 +31,7 @@
 
 struct vmx;
 
-int	ept_init(void);
+int	ept_init(int ipinum);
 void	ept_invalidate_mappings(u_long eptp);
 struct vmspace *ept_vmspace_alloc(vm_offset_t min, vm_offset_t max);
 void	ept_vmspace_free(struct vmspace *vmspace);

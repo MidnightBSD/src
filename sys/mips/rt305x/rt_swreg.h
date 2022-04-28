@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/rt305x/rt_swreg.h 220297 2011-04-03 14:39:55Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _RT_SWREG_H_

@@ -27,7 +27,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_mm.c 207118 2010-04-23 14:48:30Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Generic simple memory manager implementation. Intended to be used as a base

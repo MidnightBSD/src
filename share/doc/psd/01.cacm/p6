@@ -4,7 +4,7 @@
 .\"
 .\"	@(#)p6	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/psd/01.cacm/p6 96914 2002-05-19 05:31:37Z grog $
+.\" $FreeBSD$
 .SH
 IX. STATISTICS
 .PP

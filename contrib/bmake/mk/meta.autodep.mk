@@ -1,4 +1,4 @@
-# $Id: meta.autodep.mk,v 1.32 2012/11/13 00:44:26 sjg Exp $
+# $Id: meta.autodep.mk,v 1.46 2017/10/25 23:44:20 sjg Exp $
 
 #
 #	@(#) Copyright (c) 2010, Simon J. Gerraty
@@ -18,7 +18,7 @@ _this ?= ${.PARSEFILE}
 .if !target(__${_this}__)
 __${_this}__: .NOTMAIN
 
-.-include "local.autodep.mk"
+.-include <local.autodep.mk>
 
 .if defined(SRCS)
 # it would be nice to be able to query .SUFFIXES
@@ -50,7 +50,25 @@ UPDATE_DEPENDFILE = NO
 .endif
 
 _CURDIR ?= ${.CURDIR}
+_OBJDIR ?= ${.OBJDIR}
+_OBJTOP ?= ${OBJTOP}
+_OBJROOT ?= ${OBJROOT:U${_OBJTOP}}
 _DEPENDFILE := ${_CURDIR}/${.MAKE.DEPENDFILE:T}
+
+.if ${.MAKE.LEVEL} > 0 || ${BUILD_AT_LEVEL0:Uyes:tl} == "yes"
+# do not allow auto update if we ever built this dir without filemon
+NO_FILEMON_COOKIE = .nofilemon
+CLEANFILES += ${NO_FILEMON_COOKIE}
+.if ${.MAKE.MODE:Uno:Mnofilemon} != ""
+UPDATE_DEPENDFILE = NO
+all: ${NO_FILEMON_COOKIE}
+${NO_FILEMON_COOKIE}: .NOMETA
+	@echo UPDATE_DEPENDFILE=NO > ${.TARGET}
+.elif exists(${NO_FILEMON_COOKIE})
+UPDATE_DEPENDFILE = NO
+.warning ${RELDIR} built with nofilemon; UPDATE_DEPENDFILE=NO
+.endif
+.endif
 
 .if ${.MAKE.LEVEL} == 0
 .if ${BUILD_AT_LEVEL0:Uyes:tl} == "no"
@@ -83,7 +101,7 @@ WANT_UPDATE_DEPENDFILE ?= yes
 .endif
 
 .if ${WANT_UPDATE_DEPENDFILE:Uno:tl} != "no"
-.if ${.MAKE.MODE:Mmeta*} == "" || ${.MAKE.MODE:M*read*} != ""
+.if ${.MAKE.MODE:Uno:Mmeta*} == "" || ${.MAKE.MODE:Uno:M*read*} != ""
 UPDATE_DEPENDFILE = no
 .endif
 
@@ -97,6 +115,8 @@ UPDATE_DEPENDFILE = no
 # for example the result of running configure
 # just make sure this is not empty
 META_FILE_FILTER ?= N.meta
+# never consider these
+META_FILE_FILTER += Ndirdeps.cache*
 
 .if !empty(DPADD)
 # if we have any non-libs in DPADD, 
@@ -120,7 +140,7 @@ FORCE_DPADD += ${_nonlibs:@x@${DPADD:M*/$x}@}
 # some makefiles and/or targets contain
 # circular dependencies if you dig too deep 
 # (as meta mode is apt to do) 
-# so we provide a means of supressing them.
+# so we provide a means of suppressing them.
 # the input to the loop below is target: dependency
 # with just one dependency per line.
 # Also some targets are not really local, or use random names.
@@ -137,7 +157,7 @@ SUPPRESS_DEPEND += \
 # the double $$ defers initial evaluation
 # if necessary, we fake .po dependencies, just so the result 
 # in Makefile.depend* is stable
-# The current objdir may be refered to in various ways
+# The current objdir may be referred to in various ways
 OBJDIR_REFS += ${.OBJDIR} ${.OBJDIR:tA} ${_OBJDIR} ${RELOBJTOP}/${RELDIR}
 _depend = .depend
 # it would be nice to be able to get .SUFFIXES as ${.SUFFIXES}
@@ -176,7 +196,9 @@ _depend =
 .info ${_DEPENDFILE:S,${SRCTOP}/,,} _depend=${_depend}
 .endif
 
+.if ${UPDATE_DEPENDFILE} == "yes"
 gendirdeps:	${_DEPENDFILE}
+.endif
 
 .if !target(${_DEPENDFILE})
 .if ${_bootstrap_dirdeps} == "yes"
@@ -186,9 +208,9 @@ gendirdeps:	${_DEPENDFILE}
 # anything which matches ${_OBJROOT}* but not ${_OBJTOP}*
 # needs to be qualified in DIRDEPS
 # The pseudo machine "host" is used for HOST_TARGET
-DIRDEPS = \
+DIRDEPS += \
 	${DPADD:M${_OBJTOP}*:H:C,${_OBJTOP}[^/]*/,,:N.:O:u} \
-	${DPADD:M${_OBJROOT}*:N${_OBJTOP}*:H:S,${_OBJROOT},,:C,^([^/]+)/(.*),\2.\1,:S,${HOST_TARGET}$,host,:N.*:O:u}
+	${DPADD:M${_OBJROOT}*:N${_OBJTOP}*:N${STAGE_ROOT:U${_OBJTOP}}/*:H:S,${_OBJROOT},,:C,^([^/]+)/(.*),\2.\1,:S,${HOST_TARGET}$,host,:N.*:O:u}
 
 .endif
 .endif
@@ -239,12 +261,12 @@ META_FILES = ${.MAKE.META.FILES:T:N.depend*:N*o.meta:O:u} \
 _makesyspath:= ${_PARSEDIR}
 ${_DEPENDFILE}: ${_depend} ${.PARSEDIR}/gendirdeps.mk  ${META2DEPS} $${.MAKE.META.CREATED}
 	@echo Checking $@: ${.OODATE:T:[1..8]}
-	@(cd . && \
+	@(cd . && ${GENDIRDEPS_ENV} \
 	SKIP_GENDIRDEPS='${SKIP_GENDIRDEPS:O:u}' \
 	DPADD='${FORCE_DPADD:O:u}' ${_gendirdeps_mutex} \
 	MAKESYSPATH=${_makesyspath} \
 	${.MAKE} -f gendirdeps.mk RELDIR=${RELDIR} _DEPENDFILE=${_DEPENDFILE} \
-	META_FILES='${META_XTRAS:T:O:u} ${META_FILES:T:O:u:${META_FILE_FILTER:ts:}}')
+	META_FILES='${META_XTRAS:O:u} ${META_FILES:T:O:u:${META_FILE_FILTER:ts:}}')
 	@test -s $@ && touch $@; :
 .endif
 
@@ -252,6 +274,9 @@ ${_DEPENDFILE}: ${_depend} ${.PARSEDIR}/gendirdeps.mk  ${META2DEPS} $${.MAKE.MET
 .endif
 
 .if ${_bootstrap_dirdeps} == "yes"
+.if ${BUILD_AT_LEVEL0:Uno} == "no"
+DIRDEPS+= ${RELDIR}.${TARGET_SPEC:U${MACHINE}}
+.endif
 # make sure this is included at least once
 .include <dirdeps.mk>
 .else
@@ -259,4 +284,28 @@ ${_DEPENDFILE}: .PRECIOUS
 .endif
 
 CLEANFILES += *.meta filemon.* *.db
+
+# these make it easy to gather some stats
+now_utc = ${%s:L:gmtime}
+start_utc := ${now_utc}
+
+meta_stats= meta=${empty(.MAKE.META.FILES):?0:${.MAKE.META.FILES:[#]}} \
+	created=${empty(.MAKE.META.CREATED):?0:${.MAKE.META.CREATED:[#]}}
+
+#.END: _reldir_finish
+.if target(gendirdeps)
+_reldir_finish: gendirdeps
+.endif
+_reldir_finish: .NOMETA
+	@echo "${TIME_STAMP} Finished ${RELDIR}.${TARGET_SPEC} seconds=$$(( ${now_utc} - ${start_utc} )) ${meta_stats}"
+
+#.ERROR: _reldir_failed
+_reldir_failed: .NOMETA
+	@echo "${TIME_STAMP} Failed ${RELDIR}.${TARGET_SPEC} seconds=$$(( ${now_utc} - ${start_utc} )) ${meta_stats}"
+
+.if defined(WITH_META_STATS) && ${.MAKE.LEVEL} > 0
+.END: _reldir_finish
+.ERROR: _reldir_failed
+.endif
+
 .endif

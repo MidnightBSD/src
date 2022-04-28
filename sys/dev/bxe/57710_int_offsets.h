@@ -1,9 +1,5 @@
 /*-
- * Copyright (c) 2007-2013 Broadcom Corporation. All rights reserved.
- *
- * Eric Davis        <edavis@broadcom.com>
- * David Christensen <davidch@broadcom.com>
- * Gary Zambrano     <zambrano@broadcom.com>
+ * Copyright (c) 2007-2017 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,11 +10,8 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
@@ -32,10 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bxe/57710_int_offsets.h 255736 2013-09-20 20:18:49Z davidch $");
+__FBSDID("$FreeBSD$");
 
 
-static const struct iro e1_iro_arr[379] = {
+static const struct iro e1_iro_arr[385] = {
 	{     0x40,      0x0,      0x0,      0x0,      0x0},	// COMMON_SB_SIZE
 	{     0x40,      0x0,      0x0,      0x0,      0x0},	// COMMON_SB_DATA_SIZE
 	{     0x28,      0x0,      0x0,      0x0,      0x0},	// COMMON_SP_SB_SIZE
@@ -139,6 +132,10 @@ static const struct iro e1_iro_arr[379] = {
 	{   0x19c8,      0x0,      0x0,      0x0,      0x8},	// TSTORM_COMMON_RTC_PARAMS_OFFSET
 	{   0x2008,     0x10,      0x0,      0x0,     0x10},	// TSTORM_ASSERT_LIST_OFFSET(assertListEntry)
 	{   0x2000,      0x0,      0x0,      0x0,      0x8},	// TSTORM_ASSERT_LIST_INDEX_OFFSET
+	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_MEASURE_PCI_LATENCY_CTRL_OFFSET
+	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_MEASURE_PCI_LATENCY_DATA_OFFSET
+	{      0x0,      0x0,      0x0,      0x0,      0x0},	// TSTORM_AGG_MEASURE_PCI_LATENCY_INDEX
+	{      0x0,      0x0,      0x0,      0x0,      0x0},	// TSTORM_AGG_MEASURE_PCI_LATENCY_COMP_TYPE
 	{   0x4870,      0x8,      0x0,      0x0,      0x1},	// TSTORM_FUNC_EN_OFFSET(funcId)
 	{   0x4871,      0x8,      0x0,      0x0,      0x1},	// TSTORM_VF_TO_PF_OFFSET(funcId)
 	{   0x4872,      0x8,      0x0,      0x0,      0x1},	// TSTORM_RECORD_SLOW_PATH_OFFSET(funcId)
@@ -241,6 +238,8 @@ static const struct iro e1_iro_arr[379] = {
 	{   0x2508,     0x40,      0x0,      0x0,     0x20},	// TSTORM_MAC_FILTER_CONFIG_OFFSET(pfId)
 	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_APPROXIMATE_MATCH_MULTICAST_FILTERING_OFFSET(pfId)
 	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_ACCEPT_CLASSIFY_FAILED_OFFSET
+	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_ACCEPT_CLASSIFY_FAIL_E2_ENABLE_OFFSET(portId)
+	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// TSTORM_ACCEPT_CLASSIFY_FAIL_E2_VNIC_OFFSET(portId)
 	{UNDEF_IRO,      0x0,      0x0,      0x0,      0x0},	// USTORM_CQE_PAGE_NEXT_OFFSET(portId,clientId)
 	{   0x3000,      0x0,      0x0,      0x0,   0x1000},	// USTORM_AGG_DATA_OFFSET
 	{   0x50a1,      0x0,      0x0,      0x0,      0x1},	// USTORM_TPA_BTR_OFFSET

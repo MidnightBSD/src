@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/tools/bus_autoconf/bus_usb.c 233110 2012-03-18 09:47:27Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.

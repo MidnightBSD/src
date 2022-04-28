@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *	from: src/sys/i386/include/resource.h,v 1.3 1999/10/14 21:38:30 dfr
  *	JNPR: resource.h,v 1.3 2006/08/07 05:38:57 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/resource.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_RESOURCE_H_
@@ -42,5 +42,8 @@
 #define	SYS_RES_DRQ	2	/* isa dma lines */
 #define	SYS_RES_MEMORY	3	/* i/o memory */
 #define	SYS_RES_IOPORT	4	/* i/o ports */
+#ifdef NEW_PCIB
+#define	PCI_RES_BUS	5
+#endif
 
 #endif /* !_MACHINE_RESOURCE_H_ */

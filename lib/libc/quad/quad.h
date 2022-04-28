@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quad.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/10.0.0/lib/libc/quad/quad.h 165903 2007-01-09 00:28:16Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -89,7 +89,7 @@ union uu {
  * (sizeof(long)*CHAR_BIT/2).
  */
 #define	HHALF(x)	((x) >> HALF_BITS)
-#define	LHALF(x)	((x) & ((1 << HALF_BITS) - 1))
+#define	LHALF(x)	((x) & ((1L << HALF_BITS) - 1))
 #define	LHUP(x)		((x) << HALF_BITS)
 
 int		__cmpdi2(quad_t a, quad_t b);

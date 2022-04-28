@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2011, 2012 LSI Corp.
+ * Copyright (c) 2006-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,13 +24,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: release/10.0.0/sys/dev/mps/mpi/mpi2_ioc.h 237683 2012-06-28 03:48:54Z ken $
+ * $FreeBSD$
  */
 
 /*
- *  Copyright (c) 2000-2012 LSI Corporation.
+ *  Copyright (c) 2006-2015 LSI Corporation.
+ *  Copyright (c) 2013-2015 Avago Technologies
  *
  *
  *           Name:  mpi2_ioc.h

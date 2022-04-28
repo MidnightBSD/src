@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/krb5/kcrypto_arcfour.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -44,8 +44,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/krb5/kcrypto_arcfour.c 184588 200
 static void
 arcfour_init(struct krb5_key_state *ks)
 {
+	static struct timeval lastwarn;
 
 	ks->ks_priv = NULL;
+	if (ratecheck(&lastwarn, &krb5_warn_interval))
+		gone_in(13, "RC4 cipher for Kerberos GSS");
 }
 
 static void

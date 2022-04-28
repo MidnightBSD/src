@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2004 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
  *
@@ -25,11 +27,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/logins/logins.c 228991 2011-12-30 10:59:15Z uqs $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/logins/logins.c 228991 2011-12-30 10:59:15Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <grp.h>

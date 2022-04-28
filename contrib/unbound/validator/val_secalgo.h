@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -42,6 +42,30 @@
 
 #ifndef VALIDATOR_VAL_SECALGO_H
 #define VALIDATOR_VAL_SECALGO_H
+struct sldns_buffer;
+
+/** Return size of nsec3 hash algorithm, 0 if not supported */
+size_t nsec3_hash_algo_size_supported(int id);
+
+/**
+ * Hash a single hash call of an NSEC3 hash algorithm.
+ * Iterations and salt are done by the caller.
+ * @param algo: nsec3 hash algorithm.
+ * @param buf: the buffer to digest
+ * @param len: length of buffer to digest.
+ * @param res: result stored here (must have sufficient space).
+ * @return false on failure.
+*/
+int secalgo_nsec3_hash(int algo, unsigned char* buf, size_t len,
+        unsigned char* res);
+
+/**
+ * Calculate the sha256 hash for the data buffer into the result.
+ * @param buf: buffer to digest.
+ * @param len: length of the buffer to digest.
+ * @param res: result is stored here (space 256/8 bytes).
+ */
+void secalgo_hash_sha256(unsigned char* buf, size_t len, unsigned char* res);
 
 /**
  * Return size of DS digest according to its hash algorithm.
@@ -76,7 +100,7 @@ int dnskey_algo_id_is_supported(int id);
  * @return secure if verification succeeded, bogus on crypto failure,
  *	unchecked on format errors and alloc failures.
  */
-enum sec_status verify_canonrrset(ldns_buffer* buf, int algo,
+enum sec_status verify_canonrrset(struct sldns_buffer* buf, int algo,
 	unsigned char* sigblock, unsigned int sigblock_len,
 	unsigned char* key, unsigned int keylen, char** reason);
 

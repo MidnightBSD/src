@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/yppasswdd 231667 2012-02-14 10:51:24Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: yppasswdd
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="yppasswdd"
+desc="Server for updating NIS passwords"
 rcvar="nis_yppasswdd_enable"
 
 load_rc_config $name

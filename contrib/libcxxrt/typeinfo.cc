@@ -86,17 +86,9 @@ extern "C" char* __cxa_demangle(const char* mangled_name,
 	if (NULL != demangled)
 	{
 		size_t len = strlen(demangled);
-		if (buf == NULL)
+		if (!buf || (*n < len+1))
 		{
-			if (n)
-			{
-				*n = len;
-			}
-			return demangled;
-		}
-		if (*n < len+1)
-		{
-			buf = (char*)realloc(buf, len+1);
+			buf = static_cast<char*>(realloc(buf, len+1));
 		}
 		if (0 != buf)
 		{

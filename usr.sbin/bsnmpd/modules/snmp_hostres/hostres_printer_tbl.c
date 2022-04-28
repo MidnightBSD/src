@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_printer_tbl.c 160341 2006-07-14 09:07:56Z harti $
+ * $FreeBSD$
  */
 
 /*
@@ -175,7 +175,7 @@ get_printer_status(const struct printer *pp)
 		goto LABEL_DONE;
 	}
 
-	memset(&fline[0], '\0', sizeof(line));
+	memset(&fline[0], '\0', sizeof(fline));
 	if (fgets(fline, sizeof(fline) -1, f) == NULL) {
 		ps = PS_UNKNOWN;
 		goto LABEL_DONE;

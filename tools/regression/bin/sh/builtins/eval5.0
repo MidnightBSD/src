@@ -1,4 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/eval5.0 210829 2010-08-03 22:17:29Z jilles $
-
-# eval should return 0 if no command was executed.
-eval $(false)

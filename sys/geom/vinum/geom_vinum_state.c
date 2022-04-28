@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/vinum/geom_vinum_state.c 190507 2009-03-28 17:20:08Z lulf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/malloc.h>
@@ -183,7 +183,7 @@ gv_set_sd_state(struct gv_sd *s, int newstate, int flags)
 		 * Only do this if we're forced, since it usually is done
 		 * internally, and then we do use the force flag. 
 		 */
-		if (!flags & GV_SETSTATE_FORCE)
+		if (!(flags & GV_SETSTATE_FORCE))
 			return (GV_ERR_SETSTATE);
 		break;
 

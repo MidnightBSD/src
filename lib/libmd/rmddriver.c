@@ -12,7 +12,7 @@
  * documentation and/or software. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libmd/rmddriver.c 220496 2011-04-09 13:56:29Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

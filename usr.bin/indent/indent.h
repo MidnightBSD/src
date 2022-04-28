@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Jens Schweikhardt
  * All rights reserved.
  *
@@ -25,13 +27,14 @@
  */
 
 #if 0
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/indent/indent.h 93440 2002-03-30 17:10:20Z dwmalone $");
+__FBSDID("$FreeBSD$");
 #endif
 
 void	addkey(char *, int);
 int	compute_code_target(void);
 int	compute_label_target(void);
 int	count_spaces(int, char *);
+int	count_spaces_until(int, char *, char *);
 int	lexi(void);
 void	diag2(int, const char *);
 void	diag3(int, const char *, int);

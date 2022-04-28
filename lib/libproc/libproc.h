@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libproc/libproc.h 211184 2010-08-11 17:33:26Z rpaulo $
+ * $FreeBSD$
  */
 
 #ifndef	_LIBPROC_H_
@@ -37,6 +37,7 @@
 #include <rtld_db.h>
 #include <limits.h>
 
+struct ctf_file;
 struct proc_handle;
 
 typedef void (*proc_child_func)(void *);
@@ -66,6 +67,11 @@ typedef struct prmap {
 #define MA_NEEDS_COPY	0x10
 #define	MA_NOCOREDUMP	0x20
 } prmap_t;
+
+typedef struct prsyminfo {
+	u_int		prs_lmid;	/* Map id. */
+	u_int		prs_id;		/* Symbol id. */
+} prsyminfo_t;
 
 typedef int proc_map_f(void *, const prmap_t *, const char *);
 typedef int proc_sym_f(void *, const GElf_Sym *, const char *);
@@ -102,6 +108,7 @@ typedef struct lwpstatus {
 #define PR_FAULTED	2
 #define PR_SYSENTRY	3
 #define PR_SYSEXIT	4
+#define PR_SIGNALLED	5
 	int pr_what;
 #define FLTBPT		-1
 } lwpstatus_t;
@@ -124,7 +131,9 @@ int	proc_create(const char *, char * const *, proc_child_func *, void *,
 	    struct proc_handle **);
 int	proc_detach(struct proc_handle *, int);
 int	proc_getflags(struct proc_handle *);
-int	proc_name2sym(struct proc_handle *, const char *, const char *, GElf_Sym *);
+int	proc_name2sym(struct proc_handle *, const char *, const char *,
+	    GElf_Sym *, prsyminfo_t *);
+struct ctf_file *proc_name2ctf(struct proc_handle *, const char *);
 int	proc_setflags(struct proc_handle *, int);
 int	proc_state(struct proc_handle *);
 pid_t	proc_getpid(struct proc_handle *);
@@ -132,8 +141,7 @@ int	proc_wstatus(struct proc_handle *);
 int	proc_getwstat(struct proc_handle *);
 char *	proc_signame(int, char *, size_t);
 int	proc_read(struct proc_handle *, void *, size_t, size_t);
-const lwpstatus_t *
-	proc_getlwpstatus(struct proc_handle *);
+const lwpstatus_t *proc_getlwpstatus(struct proc_handle *);
 void	proc_free(struct proc_handle *);
 rd_agent_t *proc_rdagent(struct proc_handle *);
 void	proc_updatesyms(struct proc_handle *);
@@ -146,4 +154,4 @@ int	proc_regset(struct proc_handle *, proc_reg_t, unsigned long);
 
 __END_DECLS
 
-#endif /* !_LIBPROC_H_ */
+#endif /* _LIBPROC_H_ */

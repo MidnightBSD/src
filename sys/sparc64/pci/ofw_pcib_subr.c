@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/pci/ofw_pcib_subr.c 225931 2011-10-02 23:22:38Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ofw_pci.h"
 
@@ -70,7 +70,6 @@ ofw_pcib_gen_route_interrupt(device_t bridge, device_t dev, int intpin)
 	struct ofw_bus_iinfo *ii;
 	struct ofw_pci_register reg;
 	ofw_pci_intr_t pintr, mintr;
-	uint8_t maskbuf[sizeof(reg) + sizeof(pintr)];
 
 	sc = device_get_softc(bridge);
 	ii = &sc->ops_iinfo;
@@ -78,7 +77,7 @@ ofw_pcib_gen_route_interrupt(device_t bridge, device_t dev, int intpin)
 		pintr = intpin;
 		if (ofw_bus_lookup_imap(ofw_bus_get_node(dev), ii, &reg,
 		    sizeof(reg), &pintr, sizeof(pintr), &mintr, sizeof(mintr),
-		    NULL, maskbuf)) {
+		    NULL)) {
 			/*
 			 * If we've found a mapping, return it and don't map
 			 * it again on higher levels - that causes problems

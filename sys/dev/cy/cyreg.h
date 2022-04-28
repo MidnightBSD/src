@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cy/cyreg.h 50477 1999-08-28 01:08:13Z peter $
+ * $FreeBSD$
  */
 
 /*

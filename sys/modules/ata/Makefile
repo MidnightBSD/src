@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/Makefile 249083 2013-04-04 07:12:24Z mav $
+# $FreeBSD$
 
 SUBDIR = atacore
 SUBDIR += atacard

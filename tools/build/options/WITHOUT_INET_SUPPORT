@@ -1,2 +1,2 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_INET_SUPPORT 221266 2011-04-30 17:58:28Z bz $
+.\" $FreeBSD$
 Set to build libraries, programs, and kernel modules without IPv4 support.

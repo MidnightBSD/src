@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.h 237263 2012-06-19 07:34:13Z np $
+$FreeBSD$
 
 ***************************************************************************/
 
@@ -174,4 +174,5 @@ static inline void remove_handle(struct iwch_dev *rhp, struct idr *idr, u32 id)
 }
 
 void iwch_ev_dispatch(struct iwch_dev *, struct mbuf *);
+void process_newconn(struct iw_cm_id *parent_cm_id, struct socket *child_so);
 #endif

@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_xgmac.c 211347 2010-08-15 20:52:15Z np $");
+__FBSDID("$FreeBSD$");
 
 #include <cxgb_include.h>
 

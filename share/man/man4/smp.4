@@ -21,9 +21,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/smp.4 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd May 7, 2008
+.Dd January 6, 2018
 .Dt SMP 4
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@ kernel implements symmetric multi-processor support.
 Support for multi-processor systems is present for all Tier-1
 architectures on
 .Fx .
-Currently, this includes amd64, i386, ia64, and sparc64.
+Currently, this includes amd64, i386 and sparc64.
 Support is enabled using
 .Cd options SMP .
 It is permissible to use the SMP kernel configuration on non-SMP equipped
@@ -56,6 +56,11 @@ i386 also requires
 The
 .Xr mptable 1
 command may be used to view the status of multi-processor support.
+.Pp
+.Nm
+support can be disabled by setting the loader tunable
+.Va kern.smp.disabled
+to 1.
 .Pp
 The number of CPUs detected by the system is available in
 the read-only sysctl variable
@@ -158,6 +163,6 @@ in
 .Bsx .
 .Pp
 .Fx 5.0
-also introduced support for SMP on the ia64 and sparc64 architectures.
+also introduced support for SMP on the sparc64 architecture.
 .Sh AUTHORS
-.An Steve Passe Aq fsmp@FreeBSD.org
+.An Steve Passe Aq Mt fsmp@FreeBSD.org

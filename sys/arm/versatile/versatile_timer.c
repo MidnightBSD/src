@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_timer.c 244197 2012-12-13 23:19:13Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_timer.c 244197 20
 #include <sys/watchdog.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -48,7 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_timer.c 244197 20
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 void
 cpu_initclocks(void)

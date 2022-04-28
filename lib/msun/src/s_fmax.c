@@ -25,8 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_fmax.c 131320 2004-06-30 07:04:01Z das $");
+__FBSDID("$FreeBSD$");
 
+#include <float.h>
 #include <math.h>
 
 #include "fpmath.h"
@@ -51,3 +52,7 @@ fmax(double x, double y)
 
 	return (x > y ? x : y);
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(fmax, fmaxl);
+#endif

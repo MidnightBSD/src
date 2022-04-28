@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/at91_gpio.h 248911 2013-03-29 19:52:57Z ian $
+ * $FreeBSD$
  */
 
 #ifndef _ARM_AT91_GPIO_H

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/svn/lib/libapr_util/apu.h 253734 2013-07-28 06:02:40Z peter $ */
+/* $FreeBSD$ */
 /* Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -117,13 +117,11 @@
 #define APU_HAVE_FREETDS       0
 #define APU_HAVE_ODBC          0
 
-#define APU_HAVE_CRYPTO        0
-#define APU_HAVE_OPENSSL       0
+#define APU_HAVE_CRYPTO        1
+#define APU_HAVE_OPENSSL       1
 #define APU_HAVE_NSS           0
 
-#ifndef APU_HAVE_APR_ICONV
 #define APU_HAVE_APR_ICONV     0
-#endif
 #ifndef APU_HAVE_ICONV
 #define APU_HAVE_ICONV         0
 #endif

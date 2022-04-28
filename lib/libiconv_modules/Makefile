@@ -1,9 +1,10 @@
-# $FreeBSD: release/10.0.0/lib/libiconv_modules/Makefile 255298 2013-09-06 10:40:38Z theraven $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
 SUBDIR=	BIG5 DECHanyu EUC EUCTW GBK2K HZ ISO2022 JOHAB MSKanji UES UTF1632 \
 	UTF7 UTF8 VIQR ZW iconv_none iconv_std mapper_646 mapper_none \
 	mapper_parallel mapper_serial mapper_std mapper_zone
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

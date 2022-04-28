@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ic/esp.h 77961 2001-06-10 04:20:37Z nyan $
+ * $FreeBSD$
  */
 
 #ifndef _IC_ESP_H_

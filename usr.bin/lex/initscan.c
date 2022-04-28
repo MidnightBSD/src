@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/lex/initscan.c 250881 2013-05-21 19:32:35Z jkim $ */
+/* $FreeBSD$ */
 
 #line 3 "<stdout>"
 
@@ -3455,7 +3455,7 @@ YY_RULE_SETUP
  			 }
 nmstr[yyleng - 2 - end_is_ws] = '\0';  /* chop trailing brace */
 
-			if ( (nmdefptr = ndlookup( nmstr )) == 0 )
+			if ( (nmdefptr = ndlookup( nmstr )) == NULL )
 				format_synerr(
 					_( "undefined definition {%s}" ),
 						nmstr );

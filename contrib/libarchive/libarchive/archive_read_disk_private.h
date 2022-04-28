@@ -23,21 +23,26 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_disk_private.h 238856 2012-07-28 06:38:44Z mm $
+ * $FreeBSD$
  */
+
+#ifndef ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
+#define ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
 
 #ifndef __LIBARCHIVE_BUILD
 #error This header is only to be used internally to libarchive.
 #endif
 
-#ifndef ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
-#define ARCHIVE_READ_DISK_PRIVATE_H_INCLUDED
+#include "archive_platform_acl.h"
 
 struct tree;
 struct archive_entry;
 
 struct archive_read_disk {
 	struct archive	archive;
+
+	/* Reused by archive_read_next_header() */
+	struct archive_entry *entry;
 
 	/*
 	 * Symlink mode is one of 'L'ogical, 'P'hysical, or 'H'ybrid,
@@ -60,14 +65,8 @@ struct archive_read_disk {
 	int	(*tree_current_dir_fd)(struct tree*);
 	int	(*tree_enter_working_dir)(struct tree*);
 
-	/* Set 1 if users request to restore atime . */
-	int		 restore_time;
-	/* Set 1 if users request to honor nodump flag . */
-	int		 honor_nodump;
-	/* Set 1 if users request to enable mac copyfile. */
-	int		 enable_copyfile;
-	/* Set 1 if users request to traverse mount points. */
-	int		 traverse_mount_points;
+	/* Bitfield with ARCHIVE_READDISK_* tunables */
+	int	flags;
 
 	const char * (*lookup_gname)(void *private, int64_t gid);
 	void	(*cleanup_gname)(void *private);
@@ -89,4 +88,11 @@ struct archive_read_disk {
 	void	*excluded_cb_data;
 };
 
+const char *
+archive_read_disk_entry_setup_path(struct archive_read_disk *,
+    struct archive_entry *, int *);
+
+int
+archive_read_disk_entry_setup_acls(struct archive_read_disk *,
+    struct archive_entry *, int *);
 #endif

@@ -1,6 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/execution/bg4.0 223283 2011-06-19 00:00:36Z jilles $
-
-x=''
-: ${x:=1} &
-wait
-exit ${x:-0}

@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- $FreeBSD: release/10.0.0/release/doc/share/xml/catalog.xml 260657 2014-01-14 23:58:50Z hrs $ -->
+<!-- $FreeBSD$ -->
 <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
   <rewriteSystem systemIdStartString="http://www.FreeBSD.org/release/XML/"
                  rewritePrefix="../../"/>
@@ -7,5 +7,7 @@
               rewritePrefix="../../"/>
 
   <public publicId="-//FreeBSD//ENTITIES Release Specification//EN" uri="release.ent"/>
+  <public publicId="-//FreeBSD//ENTITIES Sponsor Specification//EN" uri="sponsor.ent"/>
+  <public publicId="-//FreeBSD//ENTITIES Vendor Specification//EN" uri="vendor.ent"/>
   <public publicId="-//FreeBSD//ENTITIES Auto Generated Device Lists//EN" uri="dev-auto.ent"/>
 </catalog>

@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_stp_request.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCIC_SDS_STP_REQUEST_T_
 #define _SCIC_SDS_STP_REQUEST_T_
@@ -83,7 +83,7 @@ typedef struct SCIC_SDS_STP_REQUEST
       struct
       {
          /**
-          * Total transfer for the entire PIO request recorded at request constuction
+          * Total transfer for the entire PIO request recorded at request construction
           * time.
           *
           * @todo Should we just decrement this value for each byte of data transitted

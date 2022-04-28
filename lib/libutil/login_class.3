@@ -17,7 +17,7 @@
 .\" 5. Modifications may be freely made to this file providing the above
 .\"    conditions are met.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libutil/login_class.3 219963 2011-03-24 16:06:57Z pluknet $
+.\" $FreeBSD$
 .\"
 .Dd March 24, 2011
 .Dt LOGIN_CLASS 3
@@ -118,6 +118,8 @@ sbsize           RLIMIT_SBSIZE
 vmemoryuse       RLIMIT_VMEM
 pseudoterminals  RLIMIT_NPTS
 swapuse          RLIMIT_SWAP
+kqueues          RLIMIT_KQUEUES
+umtxp            RLIMIT_UMTXP
 .Ed
 .It LOGIN_SETPRIORITY
 Set the scheduling priority for the current process based on the
@@ -159,7 +161,6 @@ capability "setenv=var1 val1,var2 val2..,varN valN".
 .It LOGIN_SETMAC
 Set the MAC label for the current process to the label specified
 in system login class database.
-.Pp
 .It LOGIN_SETCPUMASK
 Create a new
 .Xr cpuset 2

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * APM (Advanced Power Management) Event Dispatcher
  *
  * Copyright (c) 1999 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/apmd/apmd.h 208075 2010-05-14 14:26:56Z uqs $
+ * $FreeBSD$
  */
 
 #define APMD_CONFIGFILE		"/etc/apmd.conf"

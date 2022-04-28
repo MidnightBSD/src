@@ -1,9 +1,10 @@
-# $FreeBSD: release/10.0.0/sbin/geom/class/multipath/Makefile 216468 2010-12-15 23:24:34Z obrien $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../misc
+PACKAGE=runtime
+.PATH: ${.CURDIR:H:H}/misc
 
 GEOM_CLASS=	multipath
 
-CFLAGS+=  -I${.CURDIR}/../../../../sys
+CFLAGS+=  -I${SRCTOP}/sys
 
 .include <bsd.lib.mk>

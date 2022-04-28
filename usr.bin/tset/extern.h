@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 6/9/93
- *	$FreeBSD: release/10.0.0/usr.bin/tset/extern.h 241737 2012-10-19 14:49:42Z ed $
+ *	$FreeBSD$
  */
 
 #include <termios.h>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strcspn.c 181748 2008-08-15 04:07:22Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/types.h>

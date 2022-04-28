@@ -26,16 +26,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: release/10.0.0/sys/modules/ath_pci/Makefile 227413 2011-11-09 23:53:13Z adrian $
+# $FreeBSD$
 #
 
-.PATH:	${.CURDIR}/../../dev/ath
-.PATH:	${.CURDIR}/../../dev/ath/ath_hal
+.PATH:	${SRCTOP}/sys/dev/ath
+.PATH:	${SRCTOP}/sys/dev/ath/ath_hal
 
 KMOD=	if_ath_pci
 SRCS=	if_ath_pci.c
 SRCS+=	device_if.h bus_if.h pci_if.h opt_wlan.h opt_ath.h opt_ah.h
 
-CFLAGS+=  -I. -I${.CURDIR}/../../dev/ath -I${.CURDIR}/../../dev/ath/ath_hal
+CFLAGS+=  -I. -I${SRCTOP}/sys/dev/ath -I${SRCTOP}/sys/dev/ath/ath_hal
 
 .include <bsd.kmod.mk>

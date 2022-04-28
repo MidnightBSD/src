@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_request.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCIC_SDS_IO_REQUEST_H_
 #define _SCIC_SDS_IO_REQUEST_H_
@@ -64,6 +64,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+#include <sys/param.h>
 
 #include <dev/isci/scil/scic_io_request.h>
 
@@ -331,7 +333,6 @@ extern SCIC_SDS_IO_REQUEST_STATE_HANDLER_T
 #define scic_sds_request_get_task_context(request) \
    ((request)->task_context_buffer)
 
-#define CACHE_LINE_SIZE (64)
 #define scic_sds_request_align_task_context_buffer(address) \
    ((SCU_TASK_CONTEXT_T *)( \
        (((POINTER_UINT)(address)) + (CACHE_LINE_SIZE - 1)) \

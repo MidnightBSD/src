@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/db_disasm.c 190003 2009-03-18 23:52:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -803,7 +803,7 @@ static const struct sparc_insn sparc_i[] = {
 };
 
 db_addr_t
-db_disasm(db_addr_t loc, boolean_t altfmt)
+db_disasm(db_addr_t loc, bool altfmt)
 {
 	const struct sparc_insn* i_ptr = (struct sparc_insn *)&sparc_i;
 	unsigned int insn, you_lose, bitmask;
@@ -867,7 +867,7 @@ db_disasm(db_addr_t loc, boolean_t altfmt)
 			break;
 		}
 		i_ptr++;
-	};
+	}
 
 	if (!matchp) {
 		db_printf("undefined\n");
@@ -1023,7 +1023,7 @@ db_disasm(db_addr_t loc, boolean_t altfmt)
 		}
 		if (*(++f_ptr))
 			db_printf(", ");
-	};
+	}
 
 	db_printf("\n");
 

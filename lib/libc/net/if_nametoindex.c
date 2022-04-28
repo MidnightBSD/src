@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/if_nametoindex.c 255328 2013-09-06 21:02:06Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -70,9 +70,7 @@ if_nametoindex(const char *ifname)
 
 	s = _socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
 	if (s != -1) {
-#ifdef PURIFY
 		memset(&ifr, 0, sizeof(ifr));
-#endif
 		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 		if (_ioctl(s, SIOCGIFINDEX, &ifr) != -1) {
 			_close(s);

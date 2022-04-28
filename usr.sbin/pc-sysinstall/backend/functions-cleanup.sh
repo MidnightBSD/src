@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-cleanup.sh 240165 2012-09-06 14:59:53Z jpaetzel $
+# $FreeBSD$
 
 # Functions which perform the final cleanup after an install
 

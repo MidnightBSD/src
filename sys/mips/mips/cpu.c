@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/cpu.c 257528 2013-11-01 21:17:45Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -73,6 +73,9 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 	u_int32_t prid;
 	u_int32_t cfg0;
 	u_int32_t cfg1;
+#ifndef CPU_CNMIPS
+	u_int32_t cfg2;
+#endif
 #if defined(CPU_CNMIPS)
 	u_int32_t cfg4;
 #endif
@@ -128,6 +131,9 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 #endif
 
 	/* L1 instruction cache. */
+#ifdef MIPS_DISABLE_L1_CACHE
+	cpuinfo->l1.ic_linesize = 0;
+#else
 	tmp = (cfg1 & MIPS_CONFIG1_IL_MASK) >> MIPS_CONFIG1_IL_SHIFT;
 	if (tmp != 0) {
 		cpuinfo->l1.ic_linesize = 1 << (tmp + 1);
@@ -135,8 +141,12 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 		cpuinfo->l1.ic_nsets = 
 	    		1 << (((cfg1 & MIPS_CONFIG1_IS_MASK) >> MIPS_CONFIG1_IS_SHIFT) + 6);
 	}
+#endif
 
 	/* L1 data cache. */
+#ifdef MIPS_DISABLE_L1_CACHE
+	cpuinfo->l1.dc_linesize = 0;
+#else
 #ifndef CPU_CNMIPS
 	tmp = (cfg1 & MIPS_CONFIG1_DL_MASK) >> MIPS_CONFIG1_DL_SHIFT;
 	if (tmp != 0) {
@@ -173,11 +183,45 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 	/* All Octeon models use 128 byte line size.  */
 	cpuinfo->l1.dc_linesize = 128;
 #endif
+#endif
 
 	cpuinfo->l1.ic_size = cpuinfo->l1.ic_linesize
 	    * cpuinfo->l1.ic_nsets * cpuinfo->l1.ic_nways;
 	cpuinfo->l1.dc_size = cpuinfo->l1.dc_linesize 
 	    * cpuinfo->l1.dc_nsets * cpuinfo->l1.dc_nways;
+
+	/*
+	 * Probe PageMask register to see what sizes of pages are supported
+	 * by writing all one's and then reading it back.
+	 */
+	mips_wr_pagemask(~0);
+	cpuinfo->tlb_pgmask = mips_rd_pagemask();
+	mips_wr_pagemask(MIPS3_PGMASK_4K);
+
+#ifndef CPU_CNMIPS
+	/* L2 cache */
+	if (!(cfg1 & MIPS_CONFIG_CM)) {
+		/* We don't have valid cfg2 register */
+		return;
+	}
+
+	cfg2 = mips_rd_config2();
+
+	tmp = (cfg2 >> MIPS_CONFIG2_SL_SHIFT) & MIPS_CONFIG2_SL_MASK;
+	if (0 < tmp && tmp <= 7)
+		cpuinfo->l2.dc_linesize = 2 << tmp;
+
+	tmp = (cfg2 >> MIPS_CONFIG2_SS_SHIFT) & MIPS_CONFIG2_SS_MASK;
+	if (0 <= tmp && tmp <= 7)
+		cpuinfo->l2.dc_nsets = 64 << tmp;
+
+	tmp = (cfg2 >> MIPS_CONFIG2_SA_SHIFT) & MIPS_CONFIG2_SA_MASK;
+	if (0 <= tmp && tmp <= 7)
+		cpuinfo->l2.dc_nways = tmp + 1;
+
+	cpuinfo->l2.dc_size = cpuinfo->l2.dc_linesize
+	    * cpuinfo->l2.dc_nsets * cpuinfo->l2.dc_nways;
+#endif
 }
 
 void
@@ -253,8 +297,31 @@ cpu_identify(void)
 		} else if (cpuinfo.tlb_type == MIPS_MMU_FIXED) {
 			printf("Fixed mapping");
 		}
-		printf(", %d entries\n", cpuinfo.tlb_nentries);
+		printf(", %d entries ", cpuinfo.tlb_nentries);
 	}
+
+	if (cpuinfo.tlb_pgmask) {
+		printf("(");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_MASKX)
+			printf("1K ");
+		printf("4K ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_16K)
+			printf("16K ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_64K)
+			printf("64K ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_256K)
+			printf("256K ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_1M)
+			printf("1M ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_16M)
+			printf("16M ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_64M)
+			printf("64M ");
+		if (cpuinfo.tlb_pgmask & MIPS3_PGMASK_256M)
+			printf("256M ");
+		printf("pg sizes)");
+	}
+	printf("\n");
 
 	printf("  L1 i-cache: ");
 	if (cpuinfo.l1.ic_linesize == 0) {
@@ -282,6 +349,18 @@ cpu_identify(void)
 		    cpuinfo.l1.dc_nsets, cpuinfo.l1.dc_linesize);
 	}
 
+	printf("  L2 cache: ");
+	if (cpuinfo.l2.dc_linesize == 0) {
+		printf("disabled\n");
+	} else {
+		printf("%d ways of %d sets, %d bytes per line, "
+		    "%d KiB total size\n",
+		    cpuinfo.l2.dc_nways,
+		    cpuinfo.l2.dc_nsets,
+		    cpuinfo.l2.dc_linesize,
+		    cpuinfo.l2.dc_size / 1024);
+	}
+
 	cfg0 = mips_rd_config();
 	/* If config register selection 1 does not exist, exit. */
 	if (!(cfg0 & MIPS_CONFIG_CM))
@@ -299,6 +378,7 @@ cpu_identify(void)
 	 * Config2 contains no useful information other then Config3 
 	 * existence flag
 	 */
+	printf("  Config2=0x%08x\n", cfg2);
 
 	/* If config register selection 3 does not exist, exit. */
 	if (!(cfg2 & MIPS_CONFIG_CM))
@@ -320,7 +400,8 @@ static devclass_t cpu_devclass;
 static int cpu_probe(device_t);
 static int cpu_attach(device_t);
 static struct resource *cpu_alloc_resource(device_t, device_t, int, int *,
-					   u_long, u_long, u_long, u_int);
+					   rman_res_t, rman_res_t, rman_res_t,
+					   u_int);
 static int cpu_setup_intr(device_t, device_t, struct resource *, int,
 			  driver_filter_t *f, driver_intr_t *, void *, 
 			  void **);
@@ -347,6 +428,7 @@ static driver_t cpu_driver = {
 static int
 cpu_probe(device_t dev)
 {
+
 	return (0);
 }
 
@@ -392,7 +474,7 @@ cpu_attach(device_t dev)
 
 static struct resource *
 cpu_alloc_resource(device_t dev, device_t child, int type, int *rid,
-		   u_long start, u_long end, u_long count, u_int flags)
+		   rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct resource *res;
 

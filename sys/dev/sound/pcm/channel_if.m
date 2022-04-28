@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/dev/sound/pcm/channel_if.m 193640 2009-06-07 19:12:08Z ariff $
+# $FreeBSD$
 #
 
 #include <dev/sound/pcm/sound.h>

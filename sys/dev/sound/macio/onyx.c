@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/macio/onyx.c 239401 2012-08-19 19:40:33Z andreast $
+ * $FreeBSD$
  */
 
 /*

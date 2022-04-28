@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/amdtemp/Makefile 189768 2009-03-13 16:08:08Z rpaulo $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../dev/amdtemp
+.PATH:	${SRCTOP}/sys/dev/amdtemp
 
 KMOD=	amdtemp
 SRCS=	amdtemp.c bus_if.h device_if.h pci_if.h

@@ -1,6 +1,6 @@
 # Cronyx Id: sys.modules.ct.Makefile,v 1.1.2.2 2003/12/08 15:39:01 rik Exp $
-# $FreeBSD: release/10.0.0/sys/modules/ctau/Makefile 182668 2008-09-01 23:59:00Z imp $
-.PATH:  ${.CURDIR}/../../dev/ctau
+# $FreeBSD$
+.PATH:  ${SRCTOP}/sys/dev/ctau
 KMOD=   if_ct
 SRCS=   if_ct.c ctddk.c ctau.c opt_netgraph.h opt_ng_cronyx.h \
 	device_if.h bus_if.h isa_if.h

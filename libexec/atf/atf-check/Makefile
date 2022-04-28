@@ -23,23 +23,28 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/libexec/atf/atf-check/Makefile 241823 2012-10-22 01:18:41Z marcel $
+# $FreeBSD$
 
+.include <src.opts.mk>
 .include <bsd.init.mk>
 
+ATF=		${SRCTOP}/contrib/atf
 .PATH:		${ATF}/atf-sh
 
-BINDIR=		/usr/libexec
 PROG_CXX=	atf-check
 SRCS=		atf-check.cpp
 MAN=		atf-check.1
 
 CFLAGS+=	-I${ATF}
+CFLAGS+=	-DATF_SHELL='"/bin/sh"'
 
-DPADD+=		${LIBATF_CXX} ${LIBATF_C}
+# Silence warnings about usage of deprecated std::auto_ptr
+CXXWARNFLAGS+=	-Wno-deprecated-declarations
 
-LDFLAGS+=	-L${.OBJDIR}/../../../lib/atf/libatf-c++
-LDFLAGS+=	-L${.OBJDIR}/../../../lib/atf/libatf-c
-LDADD+=		-latf-c++ -latf-c
+LIBADD=		atf_cxx
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

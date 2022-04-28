@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/rtld-elf/debug.c 225152 2011-08-24 20:05:13Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -62,7 +62,8 @@ dump_relocations (Obj_Entry *obj0)
 {
     Obj_Entry *obj;
 
-    for (obj = obj0; obj != NULL; obj = obj->next) {
+    for (obj = globallist_curr(obj0); obj != NULL;
+      obj = globallist_next(obj)) {
         dump_obj_relocations(obj);
     }
 }

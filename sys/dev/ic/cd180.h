@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ic/cd180.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -82,7 +82,7 @@
 
 /* Channel Address Register */
 #define CAR_CHAN        0x07    /* Channel Number Mask                    */
-#define CAR_A7          0x08    /* Addres bit 7 (unused)                  */
+#define	CAR_A7          0x08    /* Address bit 7 (unused)                  */
 
 /* Receive Character Status Register */
 #define RCSR_OE         0x01    /* Overrun Error                          */

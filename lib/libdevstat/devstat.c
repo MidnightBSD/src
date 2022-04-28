@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libdevstat/devstat.c 244270 2012-12-15 18:19:48Z trociny $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -150,7 +150,9 @@ static const char *namelist[] = {
 	"_devstat_version",
 #define X_DEVICE_STATQ	3
 	"_device_statq",
-#define X_END		4
+#define X_TIME_UPTIME	4
+	"_time_uptime",
+#define X_END		5
 };
 
 /*
@@ -199,7 +201,7 @@ devstat_getnumdevs(kvm_t *kd)
  * supplied in a more atmoic manner by the kern.devstat.all sysctl.
  * Because this generation sysctl is separate from the statistics sysctl,
  * the device list and the generation could change between the time that
- * this function is called and the device list is retreived.
+ * this function is called and the device list is retrieved.
  */
 long
 devstat_getgeneration(kvm_t *kd)
@@ -332,7 +334,6 @@ devstat_getdevs(kvm_t *kd, struct statinfo *stats)
 {
 	int error;
 	size_t dssize;
-	int oldnumdevs;
 	long oldgeneration;
 	int retval = 0;
 	struct devinfo *dinfo;
@@ -346,13 +347,12 @@ devstat_getdevs(kvm_t *kd, struct statinfo *stats)
 		return(-1);
 	}
 
-	oldnumdevs = dinfo->numdevs;
 	oldgeneration = dinfo->generation;
 
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	stats->snap_time = ts.tv_sec + ts.tv_nsec * 1e-9;
-
 	if (kd == NULL) {
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+		stats->snap_time = ts.tv_sec + ts.tv_nsec * 1e-9;
+
 		/* If this is our first time through, mem_ptr will be null. */
 		if (dinfo->mem_ptr == NULL) {
 			/*
@@ -433,6 +433,11 @@ devstat_getdevs(kvm_t *kd, struct statinfo *stats)
 		} 
 
 	} else {
+		if (KREADNL(kd, X_TIME_UPTIME, ts.tv_sec) == -1)
+			return(-1);
+		else
+			stats->snap_time = ts.tv_sec;
+
 		/* 
 		 * This is of course non-atomic, but since we are working
 		 * on a core dump, the generation is unlikely to change
@@ -1480,22 +1485,9 @@ devstat_compute_statistics(struct devstat *current, struct devstat *previous,
 				*destld = 0.0;
 			break;
 		/*
-		 * This calculation is somewhat bogus.  It simply divides
-		 * the elapsed time by the total number of transactions
-		 * completed.  While that does give the caller a good
-		 * picture of the average rate of transaction completion,
-		 * it doesn't necessarily give the caller a good view of
-		 * how long transactions took to complete on average.
-		 * Those two numbers will be different for a device that
-		 * can handle more than one transaction at a time.  e.g.
-		 * SCSI disks doing tagged queueing.
-		 *
-		 * The only way to accurately determine the real average
-		 * time per transaction would be to compute and store the
-		 * time on a per-transaction basis.  That currently isn't
-		 * done in the kernel, and would only be desireable if it
-		 * could be implemented in a somewhat non-intrusive and high
-		 * performance way.
+		 * Some devstat callers update the duration and some don't.
+		 * So this will only be accurate if they provide the
+		 * duration. 
 		 */
 		case DSM_MS_PER_TRANSACTION:
 			if (totaltransfers > 0) {
@@ -1505,11 +1497,6 @@ devstat_compute_statistics(struct devstat *current, struct devstat *previous,
 			} else
 				*destld = 0.0;
 			break;
-		/*
-		 * As above, these next two really only give the average
-		 * rate of completion for read and write transactions, not
-		 * the average time the transaction took to complete.
-		 */
 		case DSM_MS_PER_TRANSACTION_READ:
 			if (totaltransfersread > 0) {
 				*destld = totaldurationread;

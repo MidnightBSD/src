@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	1.4 (Berkeley) 6/8/93
-# $FreeBSD: release/10.0.0/share/doc/papers/newvm/Makefile 105920 2002-10-25 08:40:24Z ru $
+# $FreeBSD$
 
 VOLUME=	papers
 DOC=	newvm

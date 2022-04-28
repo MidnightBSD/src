@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_util.h#2 $
- * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl_util.h 229997 2012-01-12 00:34:33Z ken $
+ * $FreeBSD$
  */
 /*
  * CAM Target Layer SCSI library interface
@@ -61,6 +61,10 @@ void ctl_scsi_read_write(union ctl_io *io, uint8_t *data_ptr,
 			 int minimum_cdb_size, uint64_t lba,
 			 uint32_t num_blocks, ctl_tag_type tag_type,
 			 uint8_t control);
+void ctl_scsi_write_same(union ctl_io *io, uint8_t *data_ptr,
+			 uint32_t data_len, uint8_t byte2,
+			 uint64_t lba, uint32_t num_blocks,
+			 ctl_tag_type tag_type, uint8_t control);
 void ctl_scsi_read_capacity(union ctl_io *io, uint8_t *data_ptr,
 			    uint32_t data_len, uint32_t addr, int reladr,
 			    int pmi, ctl_tag_type tag_type, uint8_t control);
@@ -73,7 +77,7 @@ void ctl_scsi_mode_sense(union ctl_io *io, uint8_t *data_ptr,
 			 int minimum_cdb_size, ctl_tag_type tag_type,
 			 uint8_t control);
 void ctl_scsi_start_stop(union ctl_io *io, int start, int load_eject,
-			 int immediate, int power_conditions, int onoffline,
+			 int immediate, int power_conditions,
 			 ctl_tag_type tag_type, uint8_t control);
 void ctl_scsi_sync_cache(union ctl_io *io, int immed, int reladr,
 			 int minimum_cdb_size, uint64_t starting_lba,
@@ -90,24 +94,27 @@ void ctl_scsi_maintenance_in(union ctl_io *io, uint8_t *data_ptr,
 			     uint32_t data_len, uint8_t action, 
 			     ctl_tag_type tag_type, uint8_t control);
 #ifndef _KERNEL
-union ctl_io *ctl_scsi_alloc_io(struct ctl_id initid);
+union ctl_io *ctl_scsi_alloc_io(uint32_t initid);
 void ctl_scsi_free_io(union ctl_io *io);
-#endif /* !_KERNEL */
 void ctl_scsi_zero_io(union ctl_io *io);
+#else
+#define	ctl_scsi_zero_io(io)	ctl_zero_io(io)
+#endif /* !_KERNEL */
 const char *ctl_scsi_task_string(struct ctl_taskio *taskio);
+void ctl_io_sbuf(union ctl_io *io, struct sbuf *sb);
 void ctl_io_error_sbuf(union ctl_io *io,
 		       struct scsi_inquiry_data *inq_data, struct sbuf *sb);
+char *ctl_io_string(union ctl_io *io, char *str, int str_len);
 char *ctl_io_error_string(union ctl_io *io,
 			  struct scsi_inquiry_data *inq_data, char *str,
 			  int str_len);
 #ifdef _KERNEL
-
+void ctl_io_print(union ctl_io *io);
 void ctl_io_error_print(union ctl_io *io, struct scsi_inquiry_data *inq_data);
+void ctl_data_print(union ctl_io *io);
 #else /* _KERNEL */
-void
-ctl_io_error_print(union ctl_io *io, struct scsi_inquiry_data *inq_data,
+void ctl_io_error_print(union ctl_io *io, struct scsi_inquiry_data *inq_data,
 		   FILE *ofile);
-
 #endif /* _KERNEL */
 
 __END_DECLS

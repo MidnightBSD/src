@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_dmac.c 239278 2012-08-15 05:37:10Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -90,6 +90,10 @@ static void lpc_dmac_intr(void *);
 
 static int lpc_dmac_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "lpc,dmac"))
 		return (ENXIO);
 

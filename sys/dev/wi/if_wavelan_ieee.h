@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/wi/if_wavelan_ieee.h 192492 2009-05-20 22:28:55Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_WAVELAN_IEEE_H
@@ -431,7 +431,7 @@ struct wi_apinfo {
  */
 
 /*
- * standard hermes recieve frame used by wavelan/prism2 cards
+ * standard hermes receive frame used by wavelan/prism2 cards
  */
 struct wi_rx_frame {
 	/*

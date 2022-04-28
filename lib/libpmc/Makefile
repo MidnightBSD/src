@@ -1,9 +1,13 @@
-# $FreeBSD: release/10.0.0/lib/libpmc/Makefile 250203 2013-05-03 08:20:10Z uqs $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 LIB=	pmc
 
 SRCS=	libpmc.c pmclog.c
 INCS=	pmc.h pmclog.h
+
+# Silence warnings about usage of deprecated std::auto_ptr
+CXXWARNFLAGS+=	-Wno-deprecated-declarations
 
 MAN=	pmc.3
 MAN+=	pmc_allocate.3
@@ -24,12 +28,14 @@ MAN+=	pmc.soft.3
 
 # PMC-dependent manual pages
 MAN+=	pmc.atom.3
+MAN+=	pmc.atomsilvermont.3
 MAN+=	pmc.core.3
 MAN+=	pmc.core2.3
 MAN+=	pmc.corei7.3
 MAN+=	pmc.corei7uc.3
 MAN+=	pmc.haswell.3
 MAN+=	pmc.haswelluc.3
+MAN+=	pmc.haswellxeon.3
 MAN+=	pmc.iaf.3
 MAN+=	pmc.ivybridge.3
 MAN+=	pmc.ivybridgexeon.3

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/mips/freebsd32_machdep.c 232896 2012-03-12 21:25:32Z jmallett $
+ * $FreeBSD$
  */
 
 /*
@@ -68,7 +68,7 @@
 
 static void freebsd32_exec_setregs(struct thread *, struct image_params *, u_long);
 static int get_mcontext32(struct thread *, mcontext32_t *, int);
-static int set_mcontext32(struct thread *, const mcontext32_t *);
+static int set_mcontext32(struct thread *, mcontext32_t *);
 static void freebsd32_sendsig(sig_t, ksiginfo_t *, sigset_t *);
 
 extern const char *freebsd32_syscallnames[];
@@ -77,8 +77,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= freebsd32_sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -86,7 +84,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_sendsig	= freebsd32_sendsig,
 	.sv_sigcode	= sigcode32,
 	.sv_szsigcode	= &szsigcode32,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
@@ -106,6 +103,8 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = freebsd32_syscallnames,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 INIT_SYSENTVEC(elf32_sysvec, &elf32_freebsd_sysvec);
 
@@ -227,7 +226,7 @@ get_mcontext32(struct thread *td, mcontext32_t *mcp, int flags)
 }
 
 static int
-set_mcontext32(struct thread *td, const mcontext32_t *mcp)
+set_mcontext32(struct thread *td, mcontext32_t *mcp)
 {
 	mcontext_t mcp64;
 	unsigned i;
@@ -291,6 +290,7 @@ freebsd32_getcontext(struct thread *td, struct freebsd32_getcontext_args *uap)
 	if (uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(uc));
 		get_mcontext32(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		PROC_LOCK(td->td_proc);
 		uc.uc_sigmask = td->td_sigmask;
@@ -330,6 +330,7 @@ freebsd32_swapcontext(struct thread *td, struct freebsd32_swapcontext_args *uap)
 	if (uap->oucp == NULL || uap->ucp == NULL)
 		ret = EINVAL;
 	else {
+		bzero(&uc, sizeof(uc));
 		get_mcontext32(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
 		PROC_LOCK(td->td_proc);
 		uc.uc_sigmask = td->td_sigmask;
@@ -411,18 +412,12 @@ freebsd32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	/* Allocate and validate space for the signal handler context. */
 	if ((td->td_pflags & TDP_ALTSTACK) != 0 && !oonstack &&
 	    SIGISMEMBER(psp->ps_sigonstack, sig)) {
-		sfp = (struct sigframe32 *)((vm_offset_t)(td->td_sigstk.ss_sp +
+		sfp = (struct sigframe32 *)(((uintptr_t)td->td_sigstk.ss_sp +
 		    td->td_sigstk.ss_size - sizeof(struct sigframe32))
 		    & ~(sizeof(__int64_t) - 1));
 	} else
 		sfp = (struct sigframe32 *)((vm_offset_t)(td->td_frame->sp - 
 		    sizeof(struct sigframe32)) & ~(sizeof(__int64_t) - 1));
-
-	/* Translate the signal if appropriate */
-	if (p->p_sysent->sv_sigtbl) {
-		if (sig <= p->p_sysent->sv_sigsize)
-			sig = p->p_sysent->sv_sigtbl[_SIG_IDX(sig)];
-	}
 
 	/* Build the argument list for the signal handler. */
 	td->td_frame->a0 = sig;

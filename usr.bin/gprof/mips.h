@@ -32,7 +32,7 @@
  *
  *	@(#)mips.h	8.1 (Berkeley) 6/6/93
  * From: @(#)sparc.h	5.1 (Berkeley) 7/8/92
- * $FreeBSD: release/10.0.0/usr.bin/gprof/mips.h 182681 2008-09-02 15:35:47Z obrien $
+ * $FreeBSD$
  */
 
 /*

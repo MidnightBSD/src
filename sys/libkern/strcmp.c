@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strcmp.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strcmp.c 128019 2004-04-07 20:46:
  */
 int
 strcmp(s1, s2)
-	register const char *s1, *s2;
+	const char *s1, *s2;
 {
 	while (*s1 == *s2++)
 		if (*s1++ == 0)

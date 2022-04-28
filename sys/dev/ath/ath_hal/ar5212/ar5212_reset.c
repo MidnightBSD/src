@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5212/ar5212_reset.c 234774 2012-04-28 22:03:19Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -116,7 +116,9 @@ write_common(struct ath_hal *ah, const HAL_INI_ARRAY *ia,
 HAL_BOOL
 ar5212Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 	struct ieee80211_channel *chan,
-	HAL_BOOL bChannelChange, HAL_STATUS *status)
+	HAL_BOOL bChannelChange,
+	HAL_RESET_TYPE resetType,
+	HAL_STATUS *status)
 {
 #define	N(a)	(sizeof (a) / sizeof (a[0]))
 #define	FAIL(_code)	do { ecode = _code; goto bad; } while (0)
@@ -197,7 +199,8 @@ ar5212Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 		saveFrameSeqCount = 0;		/* NB: silence compiler */
 
 	/* Blank the channel survey statistics */
-	OS_MEMZERO(&ahp->ah_chansurvey, sizeof(ahp->ah_chansurvey));
+	ath_hal_survey_clear(ah);
+
 #if 0
 	/*
 	 * XXX disable for now; this appears to sometimes cause OFDM
@@ -1382,7 +1385,7 @@ ar5212GetNfHistMid(const int16_t calData[AR512_NF_CAL_HIST_MAX])
 }
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  */
 int16_t
 ar5212GetNf(struct ath_hal *ah, struct ieee80211_channel *chan)
@@ -2605,6 +2608,12 @@ ar5212GetTargetPowers(struct ath_hal *ah, const struct ieee80211_channel *chan,
 		powInfo[ixlo].twicePwr54, powInfo[ixhi].twicePwr54);
 }
 
+static uint32_t
+udiff(uint32_t u, uint32_t v)
+{
+	return (u >= v ? u - v : v - u);
+}
+
 /*
  * Search a list for a specified value v that is within
  * EEP_DELTA of the search values.  Return the closest
@@ -2639,7 +2648,7 @@ ar5212GetLowerUpperValues(uint16_t v, uint16_t *lp, uint16_t listSize,
 		 * If value is close to the current value of the list
 		 * then target is not between values, it is one of the values
 		 */
-		if (abs(lp[0] * EEP_SCALE - target) < EEP_DELTA) {
+		if (udiff(lp[0] * EEP_SCALE, target) < EEP_DELTA) {
 			*vlo = *vhi = lp[0];
 			return;
 		}

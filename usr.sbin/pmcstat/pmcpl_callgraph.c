@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcpl_callgraph.c 212176 2010-09-03 13:54:02Z fabient $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>

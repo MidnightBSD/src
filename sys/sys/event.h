@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/event.h 255675 2013-09-18 18:48:33Z rdivacky $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_EVENT_H_
@@ -38,12 +38,28 @@
 #define EVFILT_PROC		(-5)	/* attached to struct proc */
 #define EVFILT_SIGNAL		(-6)	/* attached to struct proc */
 #define EVFILT_TIMER		(-7)	/* timers */
-/*	EVFILT_NETDEV		(-8)	   no longer supported */
+#define EVFILT_PROCDESC		(-8)	/* attached to process descriptors */
 #define EVFILT_FS		(-9)	/* filesystem events */
 #define EVFILT_LIO		(-10)	/* attached to lio requests */
 #define EVFILT_USER		(-11)	/* User events */
-#define EVFILT_SYSCOUNT		11
+#define EVFILT_SENDFILE		(-12)	/* attached to sendfile requests */
+#define EVFILT_SYSCOUNT		12
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define	EV_SET(kevp_, a, b, c, d, e, f) do {	\
+	*(kevp_) = (struct kevent){		\
+	    .ident = (a),			\
+	    .filter = (b),			\
+	    .flags = (c),			\
+	    .fflags = (d),			\
+	    .data = (e),			\
+	    .udata = (f),			\
+	};					\
+} while(0)
+#else /* Pre-C99 or not STDC (e.g., C++) */
+/* The definition of the local variable kevp could possibly conflict
+ * with a user-defined value passed in parameters a-f.
+ */
 #define EV_SET(kevp_, a, b, c, d, e, f) do {	\
 	struct kevent *kevp = (kevp_);		\
 	(kevp)->ident = (a);			\
@@ -53,21 +69,34 @@
 	(kevp)->data = (e);			\
 	(kevp)->udata = (f);			\
 } while(0)
+#endif
 
 struct kevent {
 	uintptr_t	ident;		/* identifier for this event */
 	short		filter;		/* filter for event */
-	u_short		flags;
-	u_int		fflags;
-	intptr_t	data;
+	u_short		flags;		/* action flags for kqueue */
+	u_int		fflags;		/* filter flag value */
+	intptr_t	data;		/* filter data value */
 	void		*udata;		/* opaque user data identifier */
 };
+
+#if defined(_WANT_KEVENT32) || (defined(_KERNEL) && defined(__LP64__))
+struct kevent32 {
+	u_int32_t	ident;		/* identifier for this event */
+	short		filter;		/* filter for event */
+	u_short		flags;
+	u_int		fflags;
+	int32_t		data;
+	u_int32_t	udata;		/* opaque user data identifier */
+};
+#endif
 
 /* actions */
 #define EV_ADD		0x0001		/* add event to kq (implies enable) */
 #define EV_DELETE	0x0002		/* delete event from kq */
 #define EV_ENABLE	0x0004		/* enable event */
 #define EV_DISABLE	0x0008		/* disable event (not reported) */
+#define EV_FORCEONESHOT	0x0100		/* enable _ONESHOT and force trigger */
 
 /* flags */
 #define EV_ONESHOT	0x0010		/* only report one occurrence */
@@ -78,6 +107,7 @@ struct kevent {
 #define EV_SYSFLAGS	0xF000		/* reserved by system */
 #define	EV_DROP		0x1000		/* note should be dropped */
 #define EV_FLAG1	0x2000		/* filter-specific flag */
+#define EV_FLAG2	0x4000		/* filter-specific flag */
 
 /* returned values */
 #define EV_EOF		0x8000		/* EOF detected */
@@ -106,6 +136,7 @@ struct kevent {
  * data/hint flags for EVFILT_{READ|WRITE}, shared with userspace
  */
 #define NOTE_LOWAT	0x0001			/* low water mark */
+#define NOTE_FILE_POLL	0x0002			/* behave like poll() */
 
 /*
  * data/hint flags for EVFILT_VNODE, shared with userspace
@@ -117,9 +148,15 @@ struct kevent {
 #define	NOTE_LINK	0x0010			/* link count changed */
 #define	NOTE_RENAME	0x0020			/* vnode was renamed */
 #define	NOTE_REVOKE	0x0040			/* vnode access was revoked */
+#define	NOTE_OPEN	0x0080			/* vnode was opened */
+#define	NOTE_CLOSE	0x0100			/* file closed, fd did not
+						   allowed write */
+#define	NOTE_CLOSE_WRITE 0x0200			/* file closed, fd did allowed
+						   write */
+#define	NOTE_READ	0x0400			/* file was read */
 
 /*
- * data/hint flags for EVFILT_PROC, shared with userspace
+ * data/hint flags for EVFILT_PROC and EVFILT_PROCDESC, shared with userspace
  */
 #define	NOTE_EXIT	0x80000000		/* process exited */
 #define	NOTE_FORK	0x40000000		/* process forked */
@@ -132,6 +169,12 @@ struct kevent {
 #define	NOTE_TRACKERR	0x00000002		/* could not track child */
 #define	NOTE_CHILD	0x00000004		/* am a child process */
 
+/* additional flags for EVFILT_TIMER */
+#define NOTE_SECONDS		0x00000001	/* data is seconds */
+#define NOTE_MSECONDS		0x00000002	/* data is milliseconds */
+#define NOTE_USECONDS		0x00000004	/* data is microseconds */
+#define NOTE_NSECONDS		0x00000008	/* data is nanoseconds */
+
 struct knote;
 SLIST_HEAD(klist, knote);
 struct kqueue;
@@ -142,7 +185,8 @@ struct knlist {
 	void    (*kl_unlock)(void *);
 	void	(*kl_assert_locked)(void *);
 	void	(*kl_assert_unlocked)(void *);
-	void *kl_lockarg;		/* argument passed to kl_lockf() */
+	void	*kl_lockarg;		/* argument passed to lock functions */
+	int	kl_autodestroy;
 };
 
 
@@ -154,7 +198,7 @@ struct knlist {
 #define	KNF_LISTLOCKED	0x0001			/* knlist is locked */
 #define	KNF_NOKQLOCK	0x0002			/* do not keep KQ_LOCK */
 
-#define KNOTE(list, hist, flags)	knote(list, hist, flags)
+#define KNOTE(list, hint, flags)	knote(list, hint, flags)
 #define KNOTE_LOCKED(list, hint)	knote(list, hint, KNF_LISTLOCKED)
 #define KNOTE_UNLOCKED(list, hint)	knote(list, hint, 0)
 
@@ -206,13 +250,16 @@ struct knote {
 #define KN_MARKER	0x20			/* ignore this knote */
 #define KN_KQUEUE	0x40			/* this knote belongs to a kq */
 #define KN_HASKQLOCK	0x80			/* for _inevent */
+#define	KN_SCAN		0x100			/* flux set in kqueue_scan() */
 	int			kn_sfflags;	/* saved filter flags */
 	intptr_t		kn_sdata;	/* saved data field */
 	union {
 		struct		file *p_fp;	/* file data pointer */
 		struct		proc *p_proc;	/* proc pointer */
-		struct		aiocblist *p_aio;	/* AIO job pointer */
-		struct		aioliojob *p_lio;	/* LIO job pointer */ 
+		struct		kaiocb *p_aio;	/* AIO job pointer */
+		struct		aioliojob *p_lio;	/* LIO job pointer */
+		sbintime_t	*p_nexttime;	/* next timer event fires at */
+		void		*p_v;		/* generic other pointer */
 	} kn_ptr;
 	struct			filterops *kn_fop;
 	void			*kn_hook;
@@ -237,29 +284,30 @@ struct knlist;
 struct mtx;
 struct rwlock;
 
-extern void	knote(struct knlist *list, long hint, int lockflags);
-extern void	knote_fork(struct knlist *list, int pid);
-extern void	knlist_add(struct knlist *knl, struct knote *kn, int islocked);
-extern void	knlist_remove(struct knlist *knl, struct knote *kn, int islocked);
-extern void	knlist_remove_inevent(struct knlist *knl, struct knote *kn);
-extern int	knlist_empty(struct knlist *knl);
-extern void	knlist_init(struct knlist *knl, void *lock,
-    void (*kl_lock)(void *), void (*kl_unlock)(void *),
-    void (*kl_assert_locked)(void *), void (*kl_assert_unlocked)(void *));
-extern void	knlist_init_mtx(struct knlist *knl, struct mtx *lock);
-extern void	knlist_init_rw_reader(struct knlist *knl, struct rwlock *lock);
-extern void	knlist_destroy(struct knlist *knl);
-extern void	knlist_cleardel(struct knlist *knl, struct thread *td,
-	int islocked, int killkn);
+void	knote(struct knlist *list, long hint, int lockflags);
+void	knote_fork(struct knlist *list, int pid);
+struct knlist *knlist_alloc(struct mtx *lock);
+void	knlist_detach(struct knlist *knl);
+void	knlist_add(struct knlist *knl, struct knote *kn, int islocked);
+void	knlist_remove(struct knlist *knl, struct knote *kn, int islocked);
+int	knlist_empty(struct knlist *knl);
+void	knlist_init(struct knlist *knl, void *lock, void (*kl_lock)(void *),
+	    void (*kl_unlock)(void *), void (*kl_assert_locked)(void *),
+	    void (*kl_assert_unlocked)(void *));
+void	knlist_init_mtx(struct knlist *knl, struct mtx *lock);
+void	knlist_init_rw_reader(struct knlist *knl, struct rwlock *lock);
+void	knlist_destroy(struct knlist *knl);
+void	knlist_cleardel(struct knlist *knl, struct thread *td,
+	    int islocked, int killkn);
 #define knlist_clear(knl, islocked)				\
-		knlist_cleardel((knl), NULL, (islocked), 0)
+	knlist_cleardel((knl), NULL, (islocked), 0)
 #define knlist_delete(knl, td, islocked)			\
-		knlist_cleardel((knl), (td), (islocked), 1)
-extern void	knote_fdclose(struct thread *p, int fd);
-extern int 	kqfd_register(int fd, struct kevent *kev, struct thread *p,
-		    int waitok);
-extern int	kqueue_add_filteropts(int filt, struct filterops *filtops);
-extern int	kqueue_del_filteropts(int filt);
+	knlist_cleardel((knl), (td), (islocked), 1)
+void	knote_fdclose(struct thread *p, int fd);
+int 	kqfd_register(int fd, struct kevent *kev, struct thread *p,
+	    int waitok);
+int	kqueue_add_filteropts(int filt, struct filterops *filtops);
+int	kqueue_del_filteropts(int filt);
 
 #else 	/* !_KERNEL */
 

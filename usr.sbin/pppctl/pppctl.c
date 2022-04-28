@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pppctl/pppctl.c 138808 2004-12-13 14:50:13Z brian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

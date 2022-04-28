@@ -28,9 +28,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/cap_sandboxed.c 247598 2013-03-02 00:11:27Z pjd $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 
 #include <assert.h>
 #include <errno.h>

@@ -31,9 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: release/10.0.0/sys/dev/dcons/dcons_os.h 170408 2007-06-08 00:54:44Z simokawa $
+ * $FreeBSD$
  */
-
 
 typedef void (*dcons_poll_fn)(void *, int);
 EVENTHANDLER_DECLARE(dcons_poll, dcons_poll_fn);

@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/regression/nfsmmap/README 228975 2011-12-30 00:04:11Z uqs $
+$FreeBSD$
 These tests are intended to make sure that NFS's use of the
 b_{valid,dirty}{off,end} fields of struct buf is consistent with the
 VM system's use of the underlying VM pages.

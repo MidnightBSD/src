@@ -1,7 +1,9 @@
 /*	$NetBSD: usbhid.c,v 1.14 2000/07/03 02:51:37 matt Exp $	*/
-/*	$FreeBSD: release/10.0.0/usr.bin/usbhidctl/usbhid.c 235519 2012-05-16 20:30:20Z mav $ */
+/*	$FreeBSD$ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -200,8 +202,8 @@ dumpitem(const char *label, struct hid_item *h)
 {
 	if ((h->flags & HIO_CONST) && !verbose)
 		return;
-	printf("%s rid=%d size=%d count=%d page=%s usage=%s%s%s", label,
-	       h->report_ID, h->report_size, h->report_count,
+	printf("%s rid=%d pos=%d size=%d count=%d page=%s usage=%s%s%s", label,
+	       h->report_ID, h->pos, h->report_size, h->report_count,
 	       hid_usage_page(HID_PAGE(h->usage)),
 	       hid_usage_in_page(h->usage),
 	       h->flags & HIO_CONST ? " Const" : "",

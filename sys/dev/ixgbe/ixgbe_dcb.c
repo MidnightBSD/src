@@ -1,36 +1,36 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2017, Intel Corporation
   All rights reserved.
-  
-  Redistribution and use in source and binary forms, with or without 
+
+  Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
-  
-   1. Redistributions of source code must retain the above copyright notice, 
+
+   1. Redistributions of source code must retain the above copyright notice,
       this list of conditions and the following disclaimer.
-  
-   2. Redistributions in binary form must reproduce the above copyright 
-      notice, this list of conditions and the following disclaimer in the 
+
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
-  
-   3. Neither the name of the Intel Corporation nor the names of its 
-      contributors may be used to endorse or promote products derived from 
+
+   3. Neither the name of the Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
       this software without specific prior written permission.
-  
+
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
-  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/ixgbe/ixgbe_dcb.c 251964 2013-06-18 21:28:19Z jfv $*/
+/*$FreeBSD$*/
 
 
 #include "ixgbe_type.h"
@@ -148,6 +148,11 @@ s32 ixgbe_dcb_calculate_tc_credits_cee(struct ixgbe_hw *hw,
 		/* Calculate credit refill ratio using multiplier */
 		credit_refill = min(link_percentage * min_multiplier,
 				    (u32)IXGBE_DCB_MAX_CREDIT_REFILL);
+
+		/* Refill at least minimum credit */
+		if (credit_refill < min_credit)
+			credit_refill = min_credit;
+
 		p->data_credits_refill = (u16)credit_refill;
 
 		/* Calculate maximum credit for the TC */
@@ -158,7 +163,7 @@ s32 ixgbe_dcb_calculate_tc_credits_cee(struct ixgbe_hw *hw,
 		 * of a TC is too small, the maximum credit may not be
 		 * enough to send out a jumbo frame in data plane arbitration.
 		 */
-		if (credit_max && (credit_max < min_credit))
+		if (credit_max < min_credit)
 			credit_max = min_credit;
 
 		if (direction == IXGBE_DCB_TX_CONFIG) {
@@ -394,6 +399,9 @@ s32 ixgbe_dcb_get_tc_stats(struct ixgbe_hw *hw, struct ixgbe_hw_stats *stats,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_get_tc_stats_82599(hw, stats, tc_count);
 		break;
@@ -422,6 +430,9 @@ s32 ixgbe_dcb_get_pfc_stats(struct ixgbe_hw *hw, struct ixgbe_hw_stats *stats,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_get_pfc_stats_82599(hw, stats, tc_count);
 		break;
@@ -461,6 +472,9 @@ s32 ixgbe_dcb_config_rx_arbiter_cee(struct ixgbe_hw *hw,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_rx_arbiter_82599(hw, refill, max, bwgid,
 							tsa, map);
@@ -500,6 +514,9 @@ s32 ixgbe_dcb_config_tx_desc_arbiter_cee(struct ixgbe_hw *hw,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tx_desc_arbiter_82599(hw, refill, max,
 							     bwgid, tsa);
@@ -541,6 +558,9 @@ s32 ixgbe_dcb_config_tx_data_arbiter_cee(struct ixgbe_hw *hw,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tx_data_arbiter_82599(hw, refill, max,
 							     bwgid, tsa,
@@ -576,6 +596,9 @@ s32 ixgbe_dcb_config_pfc_cee(struct ixgbe_hw *hw,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_pfc_82599(hw, pfc_en, map);
 		break;
@@ -602,6 +625,9 @@ s32 ixgbe_dcb_config_tc_stats(struct ixgbe_hw *hw)
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_tc_stats_82599(hw, NULL);
 		break;
@@ -647,6 +673,9 @@ s32 ixgbe_dcb_hw_config_cee(struct ixgbe_hw *hw,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ixgbe_dcb_config_82599(hw, dcb_config);
 		ret = ixgbe_dcb_hw_config_82599(hw, dcb_config->link_speed,
@@ -679,6 +708,9 @@ s32 ixgbe_dcb_config_pfc(struct ixgbe_hw *hw, u8 pfc_en, u8 *map)
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ret = ixgbe_dcb_config_pfc_82599(hw, pfc_en, map);
 		break;
@@ -702,6 +734,9 @@ s32 ixgbe_dcb_hw_config(struct ixgbe_hw *hw, u16 *refill, u16 *max,
 		break;
 	case ixgbe_mac_82599EB:
 	case ixgbe_mac_X540:
+	case ixgbe_mac_X550:
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
 #if !defined(NO_82599_SUPPORT) || !defined(NO_X540_SUPPORT)
 		ixgbe_dcb_config_rx_arbiter_82599(hw, refill, max, bwg_id,
 						  tsa, map);

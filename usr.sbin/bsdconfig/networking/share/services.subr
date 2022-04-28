@@ -24,7 +24,7 @@ if [ ! "$_NETWORKING_SERVICES_SUBR" ]; then _NETWORKING_SERVICES_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/networking/share/services.subr 252987 2013-07-07 18:51:44Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -42,8 +42,9 @@ f_include $BSDCFG_SHARE/sysrc.subr
 #
 f_config_pcnfsd()
 {
+	local funcname=f_config_pcnfsd
 	f_package_add "pcnfsd" || return $?
-	f_sysrc_set mountd_flags "-n"
+	f_eval_catch $funcname f_sysrc_set 'f_sysrc_set mountd_flags -n'
 	return $SUCCESS
 }
 

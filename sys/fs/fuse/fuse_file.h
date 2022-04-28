@@ -52,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/fuse/fuse_file.h 241519 2012-10-13 23:54:26Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _FUSE_FILE_H_
@@ -137,6 +137,7 @@ fuse_filehandle_xlate_to_oflags(fufh_type_t type)
 }
 
 int fuse_filehandle_valid(struct vnode *vp, fufh_type_t fufh_type);
+fufh_type_t fuse_filehandle_validrw(struct vnode *vp, fufh_type_t fufh_type);
 int fuse_filehandle_get(struct vnode *vp, fufh_type_t fufh_type,
                         struct fuse_filehandle **fufhp);
 int fuse_filehandle_getrw(struct vnode *vp, fufh_type_t fufh_type,

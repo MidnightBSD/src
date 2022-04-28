@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/rt305x_gpio.c 249449 2013-04-13 21:21:13Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/rt305x_gpio.c 249449 2013-04-
 #include <mips/rt305x/rt305x_gpio.h>
 #include <mips/rt305x/rt305x_gpiovar.h>
 #include <mips/rt305x/rt305x_sysctlvar.h>
+#include <dev/gpio/gpiobusvar.h>
 
 #include "gpio_if.h"
 
@@ -84,6 +85,7 @@ void 	rt305x_set_int_status(device_t, uint32_t);
 /*
  * GPIO interface
  */
+static device_t rt305x_gpio_get_bus(device_t);
 static int rt305x_gpio_pin_max(device_t dev, int *maxpin);
 static int rt305x_gpio_pin_getcaps(device_t dev, uint32_t pin, uint32_t *caps);
 static int rt305x_gpio_pin_getflags(device_t dev, uint32_t pin, uint32_t
@@ -155,6 +157,16 @@ rt305x_gpio_pin_configure(struct rt305x_gpio_softc *sc, struct gpio_pin *pin,
 #endif
 
 	GPIO_UNLOCK(sc);
+}
+
+static device_t
+rt305x_gpio_get_bus(device_t dev)
+{
+	struct rt305x_gpio_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	return (sc->busdev);
 }
 
 static int
@@ -242,17 +254,7 @@ rt305x_gpio_pin_setflags(device_t dev, uint32_t pin, uint32_t flags)
 	if (i >= sc->gpio_npins)
 		return (EINVAL);
 
-	/* Check for unwanted flags. */
-	if ((flags & sc->gpio_pins[i].gp_caps) != flags)
-		return (EINVAL);
-
-	/* Can't mix input/output together */
-	if ((flags & (GPIO_PIN_INPUT|GPIO_PIN_OUTPUT)) ==
-	    (GPIO_PIN_INPUT|GPIO_PIN_OUTPUT))
-		return (EINVAL);
-
 	rt305x_gpio_pin_configure(sc, &sc->gpio_pins[i], flags);
-
 
 	return (0);
 }
@@ -440,7 +442,7 @@ static int
 rt305x_gpio_attach(device_t dev)
 {
 	struct rt305x_gpio_softc *sc = device_get_softc(dev);
-	int error = 0, i;
+	int i;
 	uint64_t avlpins = 0;
 	sc->reset_gpio = DAP1350_RESET_GPIO;
 
@@ -456,14 +458,14 @@ rt305x_gpio_attach(device_t dev)
 
 	if (sc->gpio_mem_res == NULL) {
 		device_printf(dev, "couldn't map memory\n");
-		error = ENXIO;
 		rt305x_gpio_detach(dev);
-		return(error);
+		return (ENXIO);
 	}
 
 	if ((sc->gpio_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, 
 	    &sc->gpio_irq_rid, RF_SHAREABLE | RF_ACTIVE)) == NULL) {
 		device_printf(dev, "unable to allocate IRQ resource\n");
+		rt305x_gpio_detach(dev);
 		return (ENXIO);
 	}
 
@@ -472,6 +474,7 @@ rt305x_gpio_attach(device_t dev)
 	    rt305x_gpio_intr, NULL, sc, &sc->gpio_ih))) {
 		device_printf(dev,
 		    "WARNING: unable to register interrupt handler\n");
+		rt305x_gpio_detach(dev);
 		return (ENXIO);
 	}
 
@@ -510,12 +513,13 @@ rt305x_gpio_attach(device_t dev)
 		device_printf(dev, "\tUse reset_gpio %d\n", sc->reset_gpio);
 	}
 #endif
+	sc->busdev = gpiobus_attach_bus(dev);
+	if (sc->busdev == NULL) {
+		rt305x_gpio_detach(dev);
+		return (ENXIO);
+	}
 
-	device_add_child(dev, "gpioc", device_get_unit(dev));
-	device_add_child(dev, "gpiobus", device_get_unit(dev));
-
-
-	return (bus_generic_attach(dev));
+	return (0);
 }
 
 static int
@@ -525,12 +529,15 @@ rt305x_gpio_detach(device_t dev)
 
 	KASSERT(mtx_initialized(&sc->gpio_mtx), ("gpio mutex not initialized"));
 
-	bus_generic_detach(dev);
-
+	gpiobus_detach_bus(dev);
+	if (sc->gpio_ih)
+		bus_teardown_intr(dev, sc->gpio_irq_res, sc->gpio_ih);
+	if (sc->gpio_irq_res)
+		bus_release_resource(dev, SYS_RES_IRQ, sc->gpio_irq_rid,
+		    sc->gpio_irq_res);
 	if (sc->gpio_mem_res)
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->gpio_mem_rid,
 		    sc->gpio_mem_res);
-
 	mtx_destroy(&sc->gpio_mtx);
 
 	return(0);
@@ -539,7 +546,7 @@ rt305x_gpio_detach(device_t dev)
 #ifdef notyet
 static struct resource *
 rt305x_gpio_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct obio_softc		*sc = device_get_softc(bus);
 	struct resource			*rv;
@@ -555,7 +562,7 @@ rt305x_gpio_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	}
 
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
-	if (rv == 0) {
+	if (rv == NULL) {
 		printf("%s: could not reserve resource\n", __func__);
 		return (0);
 	}
@@ -596,6 +603,7 @@ static device_method_t rt305x_gpio_methods[] = {
 	DEVMETHOD(device_detach,	rt305x_gpio_detach),
 
 	/* GPIO protocol */
+	DEVMETHOD(gpio_get_bus,		rt305x_gpio_get_bus),
 	DEVMETHOD(gpio_pin_max,		rt305x_gpio_pin_max),
 	DEVMETHOD(gpio_pin_getname,	rt305x_gpio_pin_getname),
 	DEVMETHOD(gpio_pin_getflags,	rt305x_gpio_pin_getflags),

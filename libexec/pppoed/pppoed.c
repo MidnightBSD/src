@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/pppoed/pppoed.c 228586 2011-12-16 16:07:39Z dim $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

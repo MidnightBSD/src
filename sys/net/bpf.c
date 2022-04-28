@@ -35,10 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf.c 250945 2013-05-23 21:33:10Z ghelmer $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bpf.h"
 #include "opt_compat.h"
+#include "opt_ddb.h"
 #include "opt_netgraph.h"
 
 #include <sys/types.h>
@@ -67,8 +68,13 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf.c 250945 2013-05-23 21:33:10Z ghe
 
 #include <sys/socket.h>
 
+#ifdef DDB
+#include <ddb/ddb.h>
+#endif
+
 #include <net/if.h>
-#define	BPF_INTERNAL
+#include <net/if_var.h>
+#include <net/if_dl.h>
 #include <net/bpf.h>
 #include <net/bpf_buffer.h>
 #ifdef BPF_JITTER
@@ -76,6 +82,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf.c 250945 2013-05-23 21:33:10Z ghe
 #endif
 #include <net/bpf_zerocopy.h>
 #include <net/bpfdesc.h>
+#include <net/route.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -89,6 +96,25 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf.c 250945 2013-05-23 21:33:10Z ghe
 
 MALLOC_DEFINE(M_BPF, "BPF", "BPF data");
 
+static struct bpf_if_ext dead_bpf_if = {
+	.bif_dlist = LIST_HEAD_INITIALIZER()
+};
+
+struct bpf_if {
+#define	bif_next	bif_ext.bif_next
+#define	bif_dlist	bif_ext.bif_dlist
+	struct bpf_if_ext bif_ext;	/* public members */
+	u_int		bif_dlt;	/* link layer type */
+	u_int		bif_hdrlen;	/* length of link header */
+	struct ifnet	*bif_ifp;	/* corresponding interface */
+	struct rwlock	bif_lock;	/* interface lock */
+	LIST_HEAD(, bpf_d) bif_wlist;	/* writer-only list */
+	int		bif_flags;	/* Interface flags */
+	struct bpf_if	**bif_bpf;	/* Pointer to pointer to us */
+};
+
+CTASSERT(offsetof(struct bpf_if, bif_ext) == 0);
+
 #if defined(DEV_BPF) || defined(NETGRAPH_BPF)
 
 #define PRINET  26			/* interruptible */
@@ -100,7 +126,7 @@ MALLOC_DEFINE(M_BPF, "BPF", "BPF data");
 #include <sys/mount.h>
 #include <compat/freebsd32/freebsd32.h>
 #define BPF_ALIGNMENT32 sizeof(int32_t)
-#define BPF_WORDALIGN32(x) (((x)+(BPF_ALIGNMENT32-1))&~(BPF_ALIGNMENT32-1))
+#define	BPF_WORDALIGN32(x) roundup2(x, BPF_ALIGNMENT32)
 
 #ifndef BURN_BRIDGES
 /*
@@ -135,6 +161,9 @@ struct bpf_dltlist32 {
 #define	BIOCSETFNR32	_IOW('B', 130, struct bpf_program32)
 #endif
 
+#define BPF_LOCK()	   sx_xlock(&bpf_sx)
+#define BPF_UNLOCK()		sx_xunlock(&bpf_sx)
+#define BPF_LOCK_ASSERT()	sx_assert(&bpf_sx, SA_XLOCKED)
 /*
  * bpf_iflist is a list of BPF interface structures, each corresponding to a
  * specific DLT.  The same network interface might have several BPF interface
@@ -142,7 +171,7 @@ struct bpf_dltlist32 {
  * frames, ethernet frames, etc).
  */
 static LIST_HEAD(, bpf_if)	bpf_iflist, bpf_freelist;
-static struct mtx	bpf_mtx;		/* bpf global lock */
+static struct sx	bpf_sx;		/* bpf global lock */
 static int		bpf_bpfd_cnt;
 
 static void	bpf_attachd(struct bpf_d *, struct bpf_if *);
@@ -150,7 +179,7 @@ static void	bpf_detachd(struct bpf_d *);
 static void	bpf_detachd_locked(struct bpf_d *);
 static void	bpf_freed(struct bpf_d *);
 static int	bpf_movein(struct uio *, int, struct ifnet *, struct mbuf **,
-		    struct sockaddr *, int *, struct bpf_insn *);
+		    struct sockaddr *, int *, struct bpf_d *);
 static int	bpf_setif(struct bpf_d *, struct ifreq *);
 static void	bpf_timed_out(void *);
 static __inline void
@@ -179,8 +208,8 @@ static SYSCTL_NODE(_net_bpf, OID_AUTO, stats, CTLFLAG_MPSAFE | CTLFLAG_RW,
 
 static VNET_DEFINE(int, bpf_optimize_writers) = 0;
 #define	V_bpf_optimize_writers VNET(bpf_optimize_writers)
-SYSCTL_VNET_INT(_net_bpf, OID_AUTO, optimize_writers,
-    CTLFLAG_RW, &VNET_NAME(bpf_optimize_writers), 0,
+SYSCTL_INT(_net_bpf, OID_AUTO, optimize_writers, CTLFLAG_VNET | CTLFLAG_RW,
+    &VNET_NAME(bpf_optimize_writers), 0,
     "Do not send packets until BPF program is set");
 
 static	d_open_t	bpfopen;
@@ -440,7 +469,7 @@ bpf_ioctl_setzbuf(struct thread *td, struct bpf_d *d, struct bpf_zbuf *bz)
  */
 static int
 bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
-    struct sockaddr *sockp, int *hdrlen, struct bpf_insn *wfilter)
+    struct sockaddr *sockp, int *hdrlen, struct bpf_d *d)
 {
 	const struct ieee80211_bpf_params *p;
 	struct ether_header *eh;
@@ -535,7 +564,7 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 	if (error)
 		goto bad;
 
-	slen = bpf_filter(wfilter, mtod(m, u_char *), len, len);
+	slen = bpf_filter(d->bd_wfilter, mtod(m, u_char *), len, len);
 	if (slen == 0) {
 		error = EPERM;
 		goto bad;
@@ -551,6 +580,10 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 				m->m_flags |= M_BCAST;
 			else
 				m->m_flags |= M_MCAST;
+		}
+		if (d->bd_hdrcmplt == 0) {
+			memcpy(eh->ether_shost, IF_LLADDR(ifp),
+			    sizeof(eh->ether_shost));
 		}
 		break;
 	}
@@ -576,7 +609,7 @@ bpf_movein(struct uio *uio, int linktype, struct ifnet *ifp, struct mbuf **mp,
 				goto bad;
 			}
 		}
-		bcopy(m->m_data, sockp->sa_data, hlen);
+		bcopy(mtod(m, const void *), sockp->sa_data, hlen);
 	}
 	*hdrlen = hlen;
 
@@ -600,13 +633,13 @@ bpf_attachd(struct bpf_d *d, struct bpf_if *bp)
 	 * Save sysctl value to protect from sysctl change
 	 * between reads
 	 */
-	op_w = V_bpf_optimize_writers;
+	op_w = V_bpf_optimize_writers || d->bd_writer;
 
 	if (d->bd_bif != NULL)
 		bpf_detachd_locked(d);
 	/*
 	 * Point d at bp, and add d to the interface's list.
-	 * Since there are many applicaiotns using BPF for
+	 * Since there are many applications using BPF for
 	 * sending raw packets only (dhcpd, cdpd are good examples)
 	 * we can delay adding d to the list of active listeners until
 	 * some filter is configured.
@@ -642,8 +675,69 @@ bpf_attachd(struct bpf_d *d, struct bpf_if *bp)
 }
 
 /*
+ * Check if we need to upgrade our descriptor @d from write-only mode.
+ */
+static int
+bpf_check_upgrade(u_long cmd, struct bpf_d *d, struct bpf_insn *fcode, int flen)
+{
+	int is_snap, need_upgrade;
+
+	/*
+	 * Check if we've already upgraded or new filter is empty.
+	 */
+	if (d->bd_writer == 0 || fcode == NULL)
+		return (0);
+
+	need_upgrade = 0;
+
+	/*
+	 * Check if cmd looks like snaplen setting from
+	 * pcap_bpf.c:pcap_open_live().
+	 * Note we're not checking .k value here:
+	 * while pcap_open_live() definitely sets to non-zero value,
+	 * we'd prefer to treat k=0 (deny ALL) case the same way: e.g.
+	 * do not consider upgrading immediately
+	 */
+	if (cmd == BIOCSETF && flen == 1 && fcode[0].code == (BPF_RET | BPF_K))
+		is_snap = 1;
+	else
+		is_snap = 0;
+
+	if (is_snap == 0) {
+		/*
+		 * We're setting first filter and it doesn't look like
+		 * setting snaplen.  We're probably using bpf directly.
+		 * Upgrade immediately.
+		 */
+		need_upgrade = 1;
+	} else {
+		/*
+		 * Do not require upgrade by first BIOCSETF
+		 * (used to set snaplen) by pcap_open_live().
+		 */
+
+		if (--d->bd_writer == 0) {
+			/*
+			 * First snaplen filter has already
+			 * been set. This is probably catch-all
+			 * filter
+			 */
+			need_upgrade = 1;
+		}
+	}
+
+	CTR5(KTR_NET,
+	    "%s: filter function set by pid %d, "
+	    "bd_writer counter %d, snap %d upgrade %d",
+	    __func__, d->bd_pid, d->bd_writer,
+	    is_snap, need_upgrade);
+
+	return (need_upgrade);
+}
+
+/*
  * Add d to the list of active bp filters.
- * Reuqires bpf_attachd() to be called before
+ * Requires bpf_attachd() to be called before.
  */
 static void
 bpf_upgraded(struct bpf_d *d)
@@ -787,7 +881,7 @@ static	int
 bpfopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct bpf_d *d;
-	int error, size;
+	int error;
 
 	d = malloc(sizeof(*d), M_BPF, M_WAITOK | M_ZERO);
 	error = devfs_set_cdevpriv(d, bpf_dtor);
@@ -802,6 +896,8 @@ bpfopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 * particular buffer method.
 	 */
 	bpf_buffer_init(d);
+	if ((flags & FREAD) == 0)
+		d->bd_writer = 2;
 	d->bd_hbuf_in_use = 0;
 	d->bd_bufmode = BPF_BUFMODE_BUFFER;
 	d->bd_sig = SIGIO;
@@ -814,10 +910,6 @@ bpfopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	mtx_init(&d->bd_lock, devtoname(dev), "bpf cdev lock", MTX_DEF);
 	callout_init_mtx(&d->bd_callout, &d->bd_lock, 0);
 	knlist_init_mtx(&d->bd_sel.si_note, &d->bd_lock);
-
-	/* Allocate default buffers */
-	size = d->bd_bufsize;
-	bpf_buffer_ioctl_sblen(d, &size);
 
 	return (0);
 }
@@ -1015,6 +1107,7 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	struct ifnet *ifp;
 	struct mbuf *m, *mc;
 	struct sockaddr dst;
+	struct route ro;
 	int error, hlen;
 
 	error = devfs_get_cdevpriv((void **)&d);
@@ -1046,7 +1139,7 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	hlen = 0;
 	/* XXX: bpf_movein() can sleep */
 	error = bpf_movein(uio, (int)d->bd_bif->bif_dlt, ifp,
-	    &m, &dst, &hlen, d->bd_wfilter);
+	    &m, &dst, &hlen, d);
 	if (error) {
 		d->bd_wdcount++;
 		return (error);
@@ -1078,7 +1171,14 @@ bpfwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	BPFD_UNLOCK(d);
 #endif
 
-	error = (*ifp->if_output)(ifp, m, &dst, NULL);
+	bzero(&ro, sizeof(ro));
+	if (hlen != 0) {
+		ro.ro_prepend = (u_char *)&dst.sa_data;
+		ro.ro_plen = hlen;
+		ro.ro_flags = RT_HAS_HEADER;
+	}
+
+	error = (*ifp->if_output)(ifp, m, &dst, &ro);
 	if (error)
 		d->bd_wdcount++;
 
@@ -1130,7 +1230,6 @@ reset_d(struct bpf_d *d)
 
 /*
  *  FIONREAD		Check for read packet available.
- *  SIOCGIFADDR		Get interface address - convenient hook to driver.
  *  BIOCGBLEN		Get buffer len [for read()].
  *  BIOCSETF		Set read filter.
  *  BIOCSETFNR		Set read filter without resetting descriptor.
@@ -1257,19 +1356,6 @@ bpfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 			BPFD_UNLOCK(d);
 
 			*(int *)addr = n;
-			break;
-		}
-
-	case SIOCGIFADDR:
-		{
-			struct ifnet *ifp;
-
-			if (d->bd_bif == NULL)
-				error = EINVAL;
-			else {
-				ifp = d->bd_bif->bif_ifp;
-				error = (*ifp->if_ioctl)(ifp, cmd, addr);
-			}
 			break;
 		}
 
@@ -1409,10 +1495,33 @@ bpfioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flags,
 	 * Set interface.
 	 */
 	case BIOCSETIF:
-		BPF_LOCK();
-		error = bpf_setif(d, (struct ifreq *)addr);
-		BPF_UNLOCK();
-		break;
+		{
+			int alloc_buf, size;
+
+			/*
+			 * Behavior here depends on the buffering model.  If
+			 * we're using kernel memory buffers, then we can
+			 * allocate them here.  If we're using zero-copy,
+			 * then the user process must have registered buffers
+			 * by the time we get here.
+			 */
+			alloc_buf = 0;
+			BPFD_LOCK(d);
+			if (d->bd_bufmode == BPF_BUFMODE_BUFFER &&
+			    d->bd_sbuf == NULL)
+				alloc_buf = 1;
+			BPFD_UNLOCK(d);
+			if (alloc_buf) {
+				size = d->bd_bufsize;
+				error = bpf_buffer_ioctl_sblen(d, &size);
+				if (error != 0)
+					break;
+			}
+			BPF_LOCK();
+			error = bpf_setif(d, (struct ifreq *)addr);
+			BPF_UNLOCK();
+			break;
+		}
 
 	/*
 	 * Set read timeout.
@@ -1801,17 +1910,7 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 		if (cmd == BIOCSETF)
 			reset_d(d);
 
-		if (fcode != NULL) {
-			/*
-			 * Do not require upgrade by first BIOCSETF
-			 * (used to set snaplen) by pcap_open_live().
-			 */
-			if (d->bd_writer != 0 && --d->bd_writer == 0)
-				need_upgrade = 1;
-			CTR4(KTR_NET, "%s: filter function set by pid %d, "
-			    "bd_writer counter %d, need_upgrade %d",
-			    __func__, d->bd_pid, d->bd_writer, need_upgrade);
-		}
+		need_upgrade = bpf_check_upgrade(cmd, d, fcode, flen);
 	}
 	BPFD_UNLOCK(d);
 	if (d->bd_bif != NULL)
@@ -1824,7 +1923,7 @@ bpf_setf(struct bpf_d *d, struct bpf_program *fp, u_long cmd)
 #endif
 
 	/* Move d to active readers list. */
-	if (need_upgrade)
+	if (need_upgrade != 0)
 		bpf_upgraded(d);
 
 	BPF_UNLOCK();
@@ -1852,17 +1951,15 @@ bpf_setif(struct bpf_d *d, struct ifreq *ifr)
 
 	/* Check if interface is not being detached from BPF */
 	BPFIF_RLOCK(bp);
-	if (bp->flags & BPFIF_FLAG_DYING) {
+	if (bp->bif_flags & BPFIF_FLAG_DYING) {
 		BPFIF_RUNLOCK(bp);
 		return (ENXIO);
 	}
 	BPFIF_RUNLOCK(bp);
 
 	/*
-	 * Behavior here depends on the buffering model.  If we're using
-	 * kernel memory buffers, then we can allocate them here.  If we're
-	 * using zero-copy, then the user process must have registered
-	 * buffers by the time we get here.  If not, return an error.
+	 * At this point, we expect the buffer is already allocated.  If not,
+	 * return an error.
 	 */
 	switch (d->bd_bufmode) {
 	case BPF_BUFMODE_BUFFER:
@@ -1965,10 +2062,10 @@ filt_bpfread(struct knote *kn, long hint)
 	ready = bpf_ready(d);
 	if (ready) {
 		kn->kn_data = d->bd_slen;
-		while (d->bd_hbuf_in_use)
-			mtx_sleep(&d->bd_hbuf_in_use, &d->bd_lock,
-			    PRINET, "bd_hbuf", 0);
-		if (d->bd_hbuf)
+		/*
+		 * Ignore the hold buffer if it is being copied to user space.
+		 */
+		if (!d->bd_hbuf_in_use && d->bd_hbuf)
 			kn->kn_data += d->bd_hlen;
 	} else if (d->bd_rtout > 0 && d->bd_state == BPF_IDLE) {
 		callout_reset(&d->bd_callout, d->bd_rtout,
@@ -2239,12 +2336,13 @@ bpf_hdrlen(struct bpf_d *d)
 static void
 bpf_bintime2ts(struct bintime *bt, struct bpf_ts *ts, int tstype)
 {
-	struct bintime bt2;
+	struct bintime bt2, boottimebin;
 	struct timeval tsm;
 	struct timespec tsn;
 
 	if ((tstype & BPF_T_MONOTONIC) == 0) {
 		bt2 = *bt;
+		getboottimebin(&boottimebin);
 		bintime_add(&bt2, &boottimebin);
 		bt = &bt2;
 	}
@@ -2300,9 +2398,6 @@ catchpacket(struct bpf_d *d, u_char *pkt, u_int pktlen, u_int snaplen,
 	 * spot to do it.
 	 */
 	if (d->bd_fbuf == NULL && bpf_canfreebuf(d)) {
-		while (d->bd_hbuf_in_use)
-			mtx_sleep(&d->bd_hbuf_in_use, &d->bd_lock,
-			    PRINET, "bd_hbuf", 0);
 		d->bd_fbuf = d->bd_hbuf;
 		d->bd_hbuf = NULL;
 		d->bd_hlen = 0;
@@ -2345,9 +2440,7 @@ catchpacket(struct bpf_d *d, u_char *pkt, u_int pktlen, u_int snaplen,
 			++d->bd_dcount;
 			return;
 		}
-		while (d->bd_hbuf_in_use)
-			mtx_sleep(&d->bd_hbuf_in_use, &d->bd_lock,
-			    PRINET, "bd_hbuf", 0);
+		KASSERT(!d->bd_hbuf_in_use, ("hold buffer is in use"));
 		ROTATE_BUFFERS(d);
 		do_wakeup = 1;
 		curlen = 0;
@@ -2468,27 +2561,52 @@ bpfattach2(struct ifnet *ifp, u_int dlt, u_int hdrlen, struct bpf_if **driverp)
 {
 	struct bpf_if *bp;
 
-	bp = malloc(sizeof(*bp), M_BPF, M_NOWAIT | M_ZERO);
-	if (bp == NULL)
-		panic("bpfattach");
+	KASSERT(*driverp == NULL, ("bpfattach2: driverp already initialized"));
 
+	bp = malloc(sizeof(*bp), M_BPF, M_WAITOK | M_ZERO);
+
+	rw_init(&bp->bif_lock, "bpf interface lock");
 	LIST_INIT(&bp->bif_dlist);
 	LIST_INIT(&bp->bif_wlist);
 	bp->bif_ifp = ifp;
 	bp->bif_dlt = dlt;
-	rw_init(&bp->bif_lock, "bpf interface lock");
-	KASSERT(*driverp == NULL, ("bpfattach2: driverp already initialized"));
+	bp->bif_hdrlen = hdrlen;
+	bp->bif_bpf = driverp;
 	*driverp = bp;
 
 	BPF_LOCK();
 	LIST_INSERT_HEAD(&bpf_iflist, bp, bif_next);
 	BPF_UNLOCK();
 
-	bp->bif_hdrlen = hdrlen;
-
-	if (bootverbose)
+	if (bootverbose && IS_DEFAULT_VNET(curvnet))
 		if_printf(ifp, "bpf attached\n");
 }
+
+#ifdef VIMAGE
+/*
+ * When moving interfaces between vnet instances we need a way to
+ * query the dlt and hdrlen before detach so we can re-attch the if_bpf
+ * after the vmove.  We unfortunately have no device driver infrastructure
+ * to query the interface for these values after creation/attach, thus
+ * add this as a workaround.
+ */
+int
+bpf_get_bp_params(struct bpf_if *bp, u_int *bif_dlt, u_int *bif_hdrlen)
+{
+
+	if (bp == NULL)
+		return (ENXIO);
+	if (bif_dlt == NULL && bif_hdrlen == NULL)
+		return (0);
+
+	if (bif_dlt != NULL)
+		*bif_dlt = bp->bif_dlt;
+	if (bif_hdrlen != NULL)
+		*bif_hdrlen = bp->bif_hdrlen;
+
+	return (0);
+}
+#endif
 
 /*
  * Detach bpf from an interface. This involves detaching each descriptor
@@ -2521,7 +2639,8 @@ bpfdetach(struct ifnet *ifp)
 		 * Mark bp as detached to restrict new consumers.
 		 */
 		BPFIF_WLOCK(bp);
-		bp->flags |= BPFIF_FLAG_DYING;
+		bp->bif_flags |= BPFIF_FLAG_DYING;
+		*bp->bif_bpf = (struct bpf_if *)&dead_bpf_if;
 		BPFIF_WUNLOCK(bp);
 
 		CTR4(KTR_NET, "%s: sheduling free for encap %d (%p) for if %p",
@@ -2567,6 +2686,10 @@ bpf_ifdetach(void *arg __unused, struct ifnet *ifp)
 	struct bpf_if *bp, *bp_temp;
 	int nmatched = 0;
 
+	/* Ignore ifnet renaming. */
+	if (ifp->if_flags & IFF_RENAMING)
+		return;
+
 	BPF_LOCK();
 	/*
 	 * Find matching entries in free list.
@@ -2587,13 +2710,6 @@ bpf_ifdetach(void *arg __unused, struct ifnet *ifp)
 		nmatched++;
 	}
 	BPF_UNLOCK();
-
-	/*
-	 * Note that we cannot zero other pointers to
-	 * custom DLTs possibly used by given interface.
-	 */
-	if (nmatched != 0)
-		ifp->if_bpf = NULL;
 }
 
 /*
@@ -2602,26 +2718,44 @@ bpf_ifdetach(void *arg __unused, struct ifnet *ifp)
 static int
 bpf_getdltlist(struct bpf_d *d, struct bpf_dltlist *bfl)
 {
-	int n, error;
 	struct ifnet *ifp;
 	struct bpf_if *bp;
+	u_int *lst;
+	int error, n, n1;
 
 	BPF_LOCK_ASSERT();
 
 	ifp = d->bd_bif->bif_ifp;
+again:
+	n1 = 0;
+	LIST_FOREACH(bp, &bpf_iflist, bif_next) {
+		if (bp->bif_ifp == ifp)
+			n1++;
+	}
+	if (bfl->bfl_list == NULL) {
+		bfl->bfl_len = n1;
+		return (0);
+	}
+	if (n1 > bfl->bfl_len)
+		return (ENOMEM);
+	BPF_UNLOCK();
+	lst = malloc(n1 * sizeof(u_int), M_TEMP, M_WAITOK);
 	n = 0;
-	error = 0;
+	BPF_LOCK();
 	LIST_FOREACH(bp, &bpf_iflist, bif_next) {
 		if (bp->bif_ifp != ifp)
 			continue;
-		if (bfl->bfl_list != NULL) {
-			if (n >= bfl->bfl_len)
-				return (ENOMEM);
-			error = copyout(&bp->bif_dlt,
-			    bfl->bfl_list + n, sizeof(u_int));
+		if (n >= n1) {
+			free(lst, M_TEMP);
+			goto again;
 		}
+		lst[n] = bp->bif_dlt;
 		n++;
 	}
+	BPF_UNLOCK();
+	error = copyout(lst, bfl->bfl_list, sizeof(u_int) * n);
+	free(lst, M_TEMP);
+	BPF_LOCK();
 	bfl->bfl_len = n;
 	return (error);
 }
@@ -2671,7 +2805,7 @@ bpf_drvinit(void *unused)
 {
 	struct cdev *dev;
 
-	mtx_init(&bpf_mtx, "bpf global lock", NULL, MTX_DEF);
+	sx_init(&bpf_sx, "bpf global lock");
 	LIST_INIT(&bpf_iflist);
 	LIST_INIT(&bpf_freelist);
 
@@ -2755,7 +2889,8 @@ bpfstats_fill_xbpf(struct xbpf_d *d, struct bpf_d *bd)
 static int
 bpf_stats_sysctl(SYSCTL_HANDLER_ARGS)
 {
-	struct xbpf_d *xbdbuf, *xbd, zerostats;
+	static const struct xbpf_d zerostats;
+	struct xbpf_d *xbdbuf, *xbd, tempstats;
 	int index, error;
 	struct bpf_if *bp;
 	struct bpf_d *bd;
@@ -2775,11 +2910,13 @@ bpf_stats_sysctl(SYSCTL_HANDLER_ARGS)
 	 * as we aren't allowing the user to set the counters currently.
 	 */
 	if (req->newptr != NULL) {
-		if (req->newlen != sizeof(zerostats))
+		if (req->newlen != sizeof(tempstats))
 			return (EINVAL);
-		bzero(&zerostats, sizeof(zerostats));
-		xbd = req->newptr;
-		if (bcmp(xbd, &zerostats, sizeof(*xbd)) != 0)
+		memset(&tempstats, 0, sizeof(tempstats));
+		error = SYSCTL_IN(req, &tempstats, sizeof(tempstats));
+		if (error)
+			return (error);
+		if (bcmp(&tempstats, &zerostats, sizeof(tempstats)) != 0)
 			return (EINVAL);
 		bpf_zero_counters();
 		return (0);
@@ -2822,13 +2959,13 @@ bpf_stats_sysctl(SYSCTL_HANDLER_ARGS)
 SYSINIT(bpfdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE,bpf_drvinit,NULL);
 
 #else /* !DEV_BPF && !NETGRAPH_BPF */
+
 /*
  * NOP stubs to allow bpf-using drivers to load and function.
  *
  * A 'better' implementation would allow the core bpf functionality
  * to be loaded at runtime.
  */
-static struct bpf_if bp_null;
 
 void
 bpf_tap(struct bpf_if *bp, u_char *pkt, u_int pktlen)
@@ -2856,7 +2993,7 @@ void
 bpfattach2(struct ifnet *ifp, u_int dlt, u_int hdrlen, struct bpf_if **driverp)
 {
 
-	*driverp = &bp_null;
+	*driverp = (struct bpf_if *)&dead_bpf_if;
 }
 
 void
@@ -2877,3 +3014,34 @@ bpf_validate(const struct bpf_insn *f, int len)
 }
 
 #endif /* !DEV_BPF && !NETGRAPH_BPF */
+
+#ifdef DDB
+static void
+bpf_show_bpf_if(struct bpf_if *bpf_if)
+{
+
+	if (bpf_if == NULL)
+		return;
+	db_printf("%p:\n", bpf_if);
+#define	BPF_DB_PRINTF(f, e)	db_printf("   %s = " f "\n", #e, bpf_if->e);
+	/* bif_ext.bif_next */
+	/* bif_ext.bif_dlist */
+	BPF_DB_PRINTF("%#x", bif_dlt);
+	BPF_DB_PRINTF("%u", bif_hdrlen);
+	BPF_DB_PRINTF("%p", bif_ifp);
+	/* bif_lock */
+	/* bif_wlist */
+	BPF_DB_PRINTF("%#x", bif_flags);
+}
+
+DB_SHOW_COMMAND(bpf_if, db_show_bpf_if)
+{
+
+	if (!have_addr) {
+		db_printf("usage: show bpf_if <struct bpf_if *>\n");
+		return;
+	}
+
+	bpf_show_bpf_if((struct bpf_if *)addr);
+}
+#endif

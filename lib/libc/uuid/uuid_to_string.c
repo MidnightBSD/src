@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/uuid/uuid_to_string.c 139601 2005-01-03 02:56:15Z marcel $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -49,7 +49,7 @@ uuid_to_string(const uuid_t *u, char **s, uint32_t *status)
 		*status = uuid_s_ok;
 
 	/* Why allow a NULL-pointer here? */
-	if (s == 0)
+	if (s == NULL)
 		return;
 
 	if (u == NULL) {

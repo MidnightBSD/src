@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_misc.c 219089 2011-02-27 19:41:40Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>

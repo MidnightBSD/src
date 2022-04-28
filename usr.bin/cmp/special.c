@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)special.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/cmp/special.c 223376 2011-06-21 20:44:06Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -99,6 +99,8 @@ eof:	if (ferror(fp1))
 	} else
 		if (feof(fp2))
 			eofmsg(file2);
+	fclose(fp2);
+	fclose(fp1);
 	if (dfound)
 		exit(DIFF_EXIT);
 }

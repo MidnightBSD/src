@@ -11,11 +11,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -32,9 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)indent.1	8.1 (Berkeley) 7/1/93
-.\" $FreeBSD: release/10.0.0/usr.bin/indent/indent.1 233456 2012-03-25 09:19:25Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 3, 2012
+.Dd August 7, 2017
 .Dt INDENT 1
 .Os
 .Sh NAME
@@ -117,7 +113,10 @@ If
 is named
 .Sq Pa /blah/blah/file ,
 the backup file is named
-.Sq Pa file.BAK .
+.Sq Pa file.BAK
+by default. The extension used for the backup file may be overridden using the
+.Ev SIMPLE_BACKUP_SUFFIX
+environment variable.
 .Pp
 If
 .Ar output-file
@@ -184,7 +183,6 @@ if (...) {
   code
 }
 .Ed
-.Pp
 .It Fl c Ns Ar n
 The column in which comments on code start.
 The default is 33.
@@ -523,7 +521,7 @@ The
 utility understands a substantial amount about the syntax of C, but it
 has a `forgiving' parser.
 It attempts to cope with the usual sorts of
-incomplete and misformed syntax.
+incomplete and malformed syntax.
 In particular, the use of macros like:
 .Pp
 .Dl #define forever for(;;)

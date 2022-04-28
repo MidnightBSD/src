@@ -9,7 +9,7 @@
 # sparc-sun-sunos4.1.3 sparc-sun-sunos4.1.3 sun4 "" sun3 sparc-sun-sunos4.1.3
 # produces sun3.x sun3.xbn sun3.xn sun3.xr sun3.xu em_sun3.c
 #
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/genscripts.sh 218822 2011-02-18 20:54:12Z dim $
+# $FreeBSD$
 #
 # This is a cut-down version of the GNU script. Instead of jumping through
 # hoops for all possible combinations of paths, just use the libdir
@@ -50,8 +50,7 @@ fi
 if test -d ldscripts; then
   true
 else
-  rm -f ldscripts
-  mkdir ldscripts
+  mkdir -p ldscripts
 fi
 
 # Set some flags for the emultempl scripts.  USE_LIBPATH will

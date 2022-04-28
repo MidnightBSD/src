@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/sys/_kstack_cache.h 228567 2011-12-16 10:56:16Z kib $
+ *	$FreeBSD$
  */
 
 #ifndef _SYS__KSTACK_CACHE_H
@@ -37,6 +37,10 @@ struct kstack_cache_entry {
 };
 
 extern struct kstack_cache_entry *kstack_cache;
+
+#ifndef KSTACK_MAX_PAGES
+#define KSTACK_MAX_PAGES 32
+#endif
 
 #endif
 

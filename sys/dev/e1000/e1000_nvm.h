@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,17 +30,15 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_nvm.h 247064 2013-02-21 00:25:45Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_NVM_H_
 #define _E1000_NVM_H_
 
-#if !defined(NO_READ_PBA_RAW) || !defined(NO_WRITE_PBA_RAW)
 struct e1000_pba {
 	u16 word[2];
 	u16 *pba_block;
 };
-#endif
 
 
 void e1000_init_nvm_ops_generic(struct e1000_hw *hw);

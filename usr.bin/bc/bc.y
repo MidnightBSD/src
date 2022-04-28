@@ -1,5 +1,5 @@
 %{
-/*	$OpenBSD: bc.y,v 1.33 2009/10/27 23:59:36 deraadt Exp $	*/
+/*	$OpenBSD: bc.y,v 1.44 2013/11/20 21:33:54 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/bc/bc.y 243075 2012-11-15 15:06:00Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/bc/bc.y 243075 2012-11-15 15:06:00Z e
 #include <search.h>
 #include <signal.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -53,7 +52,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/bc/bc.y 243075 2012-11-15 15:06:00Z e
 #include "extern.h"
 #include "pathnames.h"
 
-#define BC_VER		"1.0-FreeBSD"
+#define BC_VER		"1.1-FreeBSD"
 #define END_NODE	((ssize_t) -1)
 #define CONST_STRING	((ssize_t) -2)
 #define ALLOC_STRING	((ssize_t) -3)
@@ -81,7 +80,7 @@ static void		 grow(void);
 static ssize_t		 cs(const char *);
 static ssize_t		 as(const char *);
 static ssize_t		 node(ssize_t, ...);
-static void		 emit(ssize_t);
+static void		 emit(ssize_t, int);
 static void		 emit_macro(int, ssize_t);
 static void		 free_tree(void);
 static ssize_t		 numnode(int);
@@ -197,7 +196,7 @@ program		: /* empty */
 
 input_item	: semicolon_list NEWLINE
 			{
-				emit($1);
+				emit($1, 0);
 				macro_char = reset_macro_char;
 				putchar('\n');
 				free_tree();
@@ -827,13 +826,18 @@ node(ssize_t arg, ...)
 }
 
 static void
-emit(ssize_t i)
+emit(ssize_t i, int level)
 {
 
-	if (instructions[i].index >= 0)
-		while (instructions[i].index != END_NODE)
-			emit(instructions[i++].index);
-	else
+	if (level > 1000)
+		errx(1, "internal error: tree level > 1000");
+	if (instructions[i].index >= 0) {
+		while (instructions[i].index != END_NODE &&
+		    instructions[i].index != i)  {
+			emit(instructions[i].index, level + 1);
+			i++;
+		}
+	} else if (instructions[i].index != END_NODE)
 		fputs(instructions[i].u.cstr, stdout);
 }
 
@@ -842,7 +846,7 @@ emit_macro(int nodeidx, ssize_t code)
 {
 
 	putchar('[');
-	emit(code);
+	emit(code, 0);
 	printf("]s%s\n", instructions[nodeidx].u.cstr);
 	nesting--;
 }
@@ -971,10 +975,15 @@ yyerror(const char *s)
 	if (yyin != NULL && feof(yyin))
 		n = asprintf(&str, "%s: %s:%d: %s: unexpected EOF",
 		    __progname, filename, lineno, s);
-	else if (isspace(yytext[0]) || !isprint(yytext[0]))
+	else if (yytext[0] == '\n')
+		n = asprintf(&str,
+		    "%s: %s:%d: %s: newline unexpected",
+		    __progname, filename, lineno, s);
+	else if (isspace((unsigned char)yytext[0]) ||
+	    !isprint((unsigned char)yytext[0]))
 		n = asprintf(&str,
 		    "%s: %s:%d: %s: ascii char 0x%02x unexpected",
-		    __progname, filename, lineno, s, yytext[0]);
+		    __progname, filename, lineno, s, yytext[0] & 0xff);
 	else
 		n = asprintf(&str, "%s: %s:%d: %s: %s unexpected",
 		    __progname, filename, lineno, s, yytext);
@@ -987,7 +996,7 @@ yyerror(const char *s)
 			putchar('\\');
 		putchar(*p);
 	}
-	fputs("]pc\n", stdout);
+	fputs("]ec\n", stdout);
 	free(str);
 }
 
@@ -1023,7 +1032,7 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: %s [-chlqv] [-e expression] [file ...]\n",
+	fprintf(stderr, "usage: %s [-chlv] [-e expression] [file ...]\n",
 	    __progname);
 	exit(1);
 }
@@ -1085,26 +1094,25 @@ escape(const char *str)
 
 /* ARGSUSED */
 static void
-sigchld(int signo)
+sigchld(int signo __unused)
 {
 	pid_t pid;
-	int status;
+	int status, save_errno = errno;
 
-	switch (signo) {
-	default:
-		for (;;) {
-			pid = waitpid(dc, &status, WUNTRACED);
-			if (pid == -1) {
-				if (errno == EINTR)
-					continue;
-				_exit(0);
-			}
-			if (WIFEXITED(status) || WIFSIGNALED(status))
-				_exit(0);
-			else
-				break;
-		}
+	for (;;) {
+		pid = waitpid(dc, &status, WCONTINUED | WNOHANG);
+		if (pid == -1) {
+			if (errno == EINTR)
+				continue;
+			_exit(0);
+		} else if (pid == 0)
+			break;
+		if (WIFEXITED(status) || WIFSIGNALED(status))
+			_exit(0);
+		else
+			break;
 	}
+	errno = save_errno;
 }
 
 static const char *
@@ -1122,7 +1130,7 @@ main(int argc, char *argv[])
 	int ch, i;
 
 	init();
-	setlinebuf(stdout);
+	setvbuf(stdout, NULL, _IOLBF, 0);
 
 	sargv = malloc(argc * sizeof(char *));
 	if (sargv == NULL)
@@ -1165,7 +1173,8 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	interactive = isatty(STDIN_FILENO);
+	interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO) &&
+	    isatty(STDERR_FILENO);
 	for (i = 0; i < argc; i++)
 		sargv[sargc++] = argv[i];
 
@@ -1191,6 +1200,7 @@ main(int argc, char *argv[])
 		}
 	}
 	if (interactive) {
+		gettty(&ttysaved);
 		el = el_init("bc", stdin, stderr, stderr);
 		hist = history_init();
 		history(hist, &he, H_SETSIZE, 100);
@@ -1198,6 +1208,8 @@ main(int argc, char *argv[])
 		el_set(el, EL_EDITOR, "emacs");
 		el_set(el, EL_SIGNAL, 1);
 		el_set(el, EL_PROMPT, dummy_prompt);
+		el_set(el, EL_ADDFN, "bc_eof", "", bc_eof);
+		el_set(el, EL_BIND, "^D", "bc_eof", NULL);
 		el_source(el, NULL);
 	}
 	yywrap();

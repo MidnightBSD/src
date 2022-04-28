@@ -1,2 +1,2 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_MAIL 183242 2008-09-21 22:02:26Z sam $
+.\" $FreeBSD$
 Set to not build any mail support (MUA or MTA).

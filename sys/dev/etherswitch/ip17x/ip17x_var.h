@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/ip17x/ip17x_var.h 250386 2013-05-08 20:58:41Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IP17X_VAR_H__
@@ -52,7 +52,6 @@ struct ip17x_softc {
 	int		phyport[MII_NPHY];
 	int		numports;	/* number of ports */
 	int		*portphy;
-	char		**ifname;
 	device_t	**miibus;
 	etherswitch_info_t	info;
 	ip17x_switch_type	sc_switchtype;

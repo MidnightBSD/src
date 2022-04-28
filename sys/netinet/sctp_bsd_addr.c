@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp_bsd_addr.c 258890 2013-12-03 20:55:37Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -140,7 +140,6 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 		ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
 	}
 }
-
 #endif				/* INET6 */
 
 
@@ -201,10 +200,8 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct ifaddr *ifa;
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
-
 #ifdef INET6
 	struct in6_ifaddr *ifa6;
-
 #endif
 
 	IFNET_RLOCK();
@@ -293,9 +290,12 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	uint32_t ifa_flags = 0;
 
+	if (SCTP_BASE_VAR(sctp_pcb_initialized) == 0) {
+		return;
+	}
 	/*
 	 * BSD only has one VRF, if this changes we will need to hook in the
-	 * right things here to get the id to pass to the address managment
+	 * right things here to get the id to pass to the address management
 	 * routine.
 	 */
 	if (SCTP_BASE_VAR(first_time) == 0) {
@@ -303,10 +303,12 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		SCTP_BASE_VAR(first_time) = 1;
 		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
 	}
+
 	if ((cmd != RTM_ADD) && (cmd != RTM_DELETE)) {
 		/* don't know what to do with this */
 		return;
 	}
+
 	if (ifa->ifa_addr == NULL) {
 		return;
 	}
@@ -381,30 +383,15 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		return (m);
 	}
 	if (allonebuf) {
-		int siz;
-
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			siz = SCTP_BUF_EXTEND_SIZE(m);
-		} else {
-			if (want_header)
-				siz = MHLEN;
-			else
-				siz = MLEN;
-		}
-		if (siz < space_needed) {
+		if (SCTP_BUF_SIZE(m) < space_needed) {
 			m_freem(m);
 			return (NULL);
 		}
-	}
-	if (SCTP_BUF_NEXT(m)) {
-		sctp_m_freem(SCTP_BUF_NEXT(m));
-		SCTP_BUF_NEXT(m) = NULL;
+		KASSERT(SCTP_BUF_NEXT(m) == NULL, ("%s: no chain allowed", __FUNCTION__));
 	}
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 	return (m);
@@ -489,7 +476,7 @@ again_locked:
 	lenat++;
 	*lenat = value;
 	lenat++;
-	tick_tock = (uint32_t *) lenat;
+	tick_tock = (uint32_t *)lenat;
 	lenat++;
 	*tick_tock = sctp_get_tick_count();
 	copyto = (void *)lenat;
@@ -510,7 +497,7 @@ no_log:
 
 
 int
-sctp_copy_out_packet_log(uint8_t * target, int length)
+sctp_copy_out_packet_log(uint8_t *target, int length)
 {
 	/*
 	 * We wind through the packet log starting at start copying up to

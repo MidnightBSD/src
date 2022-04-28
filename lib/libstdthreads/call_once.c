@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libstdthreads/call_once.c 228904 2011-12-26 21:51:53Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libstdthreads/call_once.c 228904 2011-12-26 21:51:53Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <pthread.h>
 

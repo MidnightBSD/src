@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/tcp_flags.c 170268 2007-06-04 02:54:36Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2004 by Darren Reed.

@@ -53,7 +53,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/tools/tools/ifpifa/ifpifa.c 236645 2012-06-05 22:02:27Z emax $");
+__FBSDID("$FreeBSD$");
 
 static struct nlist	nl[] = {
 #define N_IFNET         0

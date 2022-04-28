@@ -62,7 +62,7 @@
  *    cc -o lmcconfig lmcconfig.c
  * Install the executable program in /usr/local/sbin/lmcconfig.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/lmcconfig/lmcconfig.c 239988 2012-09-01 10:56:15Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -222,7 +222,7 @@ call_driver(unsigned long cmd, struct iohdr *iohdr)
 {
   int error = 0;
 
-  strncpy(iohdr->ifname, ifname, sizeof(iohdr->ifname));
+  strlcpy(iohdr->ifname, ifname, sizeof(iohdr->ifname));
   iohdr->cookie = NGM_LMC_COOKIE;
   iohdr->iohdr = iohdr;
 
@@ -938,7 +938,7 @@ vga_dbs(u_int8_t vga)
   if ((vga >= 0x1C) && (vga <= 0x33)) return 10.0 + 1.25 * (vga - 0x1C);
   if ((vga >= 0x34) && (vga <= 0x39)) return 40.0 + 1.67 * (vga - 0x34);
   if ((vga >= 0x3A) && (vga <  0x3F)) return 50.0 + 2.80 * (vga - 0x3A);
-                                      return 64.0;
+  return 64.0;
 }
 
 static void
@@ -1528,7 +1528,7 @@ print_test_pattern(int patt)
     case 11:
       printf("framed X^23+X^18+1\n");
       break;
-    case 12:;
+    case 12:
       printf("framed X^11+X^9+1 w/7ZS\n");
       break;
     case 13:
@@ -2008,7 +2008,7 @@ load_xilinx(char *name)
   int c;
 
   if (verbose) printf("Load firmware from file %s...\n", name);
-  if ((f = fopen(name, "r")) == 0)
+  if ((f = fopen(name, "r")) == NULL)
     {
     perror("Failed to open file");
     exit(1);

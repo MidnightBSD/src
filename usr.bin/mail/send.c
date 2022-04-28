@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)send.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/send.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include "rcv.h"
 #include "extern.h"
@@ -59,7 +59,7 @@ sendmessage(struct message *mp, FILE *obuf, struct ignoretab *doign,
 	FILE *ibuf;
 	char *cp, *cp2, line[LINESIZE];
 	int ishead, infld, ignoring, dostat, firstline;
-	int c, length, prefixlen;
+	int c = 0, length, prefixlen;
 
 	/*
 	 * Compute the prefix string, without trailing whitespace
@@ -566,8 +566,13 @@ savemail(char name[], FILE *fi)
 	char buf[BUFSIZ];
 	int i;
 	time_t now;
+	mode_t saved_umask;
 
-	if ((fo = Fopen(name, "a")) == NULL) {
+	saved_umask = umask(077);
+	fo = Fopen(name, "a");
+	umask(saved_umask);
+
+	if (fo == NULL) {
 		warn("%s", name);
 		return (-1);
 	}

@@ -1,5 +1,5 @@
 /*	$KAME: rtsock.c,v 1.3 2000/10/10 08:46:45 itojun Exp $	*/
-/*	$FreeBSD: release/10.0.0/usr.sbin/rtsold/rtsock.c 254462 2013-08-17 19:23:35Z hrs $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000 WIDE Project.

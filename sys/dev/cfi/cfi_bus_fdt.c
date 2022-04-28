@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfi/cfi_bus_fdt.c 250114 2013-04-30 18:33:29Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,6 +66,9 @@ DRIVER_MODULE (cfi, simplebus, cfi_fdt_driver, cfi_devclass, 0, 0);
 static int
 cfi_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "cfi-flash"))
 		return (ENXIO);

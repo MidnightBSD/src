@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994-1995 Søren Schmidt
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/kbdcontrol/kbdcontrol.c 228976 2011-12-30 00:59:08Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -38,6 +40,8 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/kbdcontrol/kbdcontrol.c 228976 2011-
 #include <fcntl.h>
 #include <sys/kbio.h>
 #include <sys/consio.h>
+#include <sys/queue.h>
+#include <sys/sysctl.h>
 #include "path.h"
 #include "lex.h"
 
@@ -111,11 +115,13 @@ static const int repeats[] = { 34,  38,  42,  46,  50,  55,  59,  63,
 static const int ndelays = (sizeof(delays) / sizeof(int));
 static const int nrepeats = (sizeof(repeats) / sizeof(int));
 static int	hex = 0;
+static int	paths_configured = 0;
 static int	token;
 
 int		number;
 char		letter;
 
+static void	add_keymap_path(const char *path);
 static void	dump_accent_definition(char *name, accentmap_t *accentmap);
 static void	dump_entry(int value);
 static void	dump_key_definition(char *name, keymap_t *keymap);
@@ -140,6 +146,24 @@ static void	set_keyboard(char *device);
 static void	set_keyrates(char *opt);
 static void	show_kbd_info(void);
 static void	usage(void) __dead2;
+
+struct pathent {
+	STAILQ_ENTRY(pathent) next;
+	char *path;
+};
+static STAILQ_HEAD(, pathent) pathlist = STAILQ_HEAD_INITIALIZER(pathlist);
+
+/* Detect presence of vt(4). */
+static int
+is_vt4(void)
+{
+	char vty_name[4] = "";
+	size_t len = sizeof(vty_name);
+
+	if (sysctlbyname("kern.vty", vty_name, &len, NULL, 0) != 0)
+		return (0);
+	return (strcmp(vty_name, "vt") == 0);
+}
 
 static char *
 nextarg(int ac, char **av, int *indp, int oc)
@@ -266,11 +290,11 @@ get_entry(void)
 }
 
 static int
-get_definition_line(FILE *fd, keymap_t *keymap, accentmap_t *accentmap)
+get_definition_line(FILE *file, keymap_t *keymap, accentmap_t *accentmap)
 {
 	int c;
 
-	yyin = fd;
+	yyin = file;
 
 	if (token < 0)
 		token = yylex();
@@ -778,29 +802,57 @@ dump_accent_definition(char *name, accentmap_t *accentmap)
 }
 
 static void
+add_keymap_path(const char *path)
+{
+	struct pathent* pe;
+	size_t len;
+
+	len = strlen(path);
+	if ((pe = malloc(sizeof(*pe))) == NULL ||
+	    (pe->path = malloc(len + 2)) == NULL)
+		err(1, "malloc");
+	memcpy(pe->path, path, len);
+	if (len > 0 && path[len - 1] != '/')
+		pe->path[len++] = '/';
+	pe->path[len] = '\0';
+	STAILQ_INSERT_TAIL(&pathlist, pe, next);
+}
+
+static void
 load_keymap(char *opt, int dumponly)
 {
 	keymap_t keymap;
 	accentmap_t accentmap;
-	FILE	*fd;
-	int	i, j;
+	struct pathent *pe;
+	FILE	*file;
+	int	j;
 	char	*name, *cp;
-	char	blank[] = "", keymap_path[] = KEYMAP_PATH, dotkbd[] = ".kbd";
-	char	*prefix[]  = {blank, blank, keymap_path, NULL};
+	char	blank[] = "", keymap_path[] = KEYMAP_PATH;
+	char	vt_keymap_path[] = VT_KEYMAP_PATH, dotkbd[] = ".kbd";
 	char	*postfix[] = {blank, dotkbd, NULL};
 
-	cp = getenv("KEYMAP_PATH");
-	if (cp != NULL)
-		asprintf(&(prefix[0]), "%s/", cp);
+	if (!paths_configured) {
+		cp = getenv("KEYMAP_PATH");
+		if (cp != NULL)
+			add_keymap_path(cp);
+		add_keymap_path("");
+		if (is_vt4())
+			add_keymap_path(vt_keymap_path);
+		else
+			add_keymap_path(keymap_path);
+		paths_configured = 1;
+	}
 
-	fd = NULL;
-	for (i=0; prefix[i] && fd == NULL; i++) {
-		for (j=0; postfix[j] && fd == NULL; j++) {
-			name = mkfullname(prefix[i], opt, postfix[j]);
-			fd = fopen(name, "r");
+	file = NULL;
+	STAILQ_FOREACH(pe, &pathlist, next) {
+		for (j=0; postfix[j] && file == NULL; j++) {
+			name = mkfullname(pe->path, opt, postfix[j]);
+			file = fopen(name, "r");
+			if (file != NULL)
+				break;
 		}
 	}
-	if (fd == NULL) {
+	if (file == NULL) {
 		warn("keymap file \"%s\" not found", opt);
 		return;
 	}
@@ -808,7 +860,7 @@ load_keymap(char *opt, int dumponly)
 	memset(&accentmap, 0, sizeof(accentmap));
 	token = -1;
 	while (1) {
-		if (get_definition_line(fd, &keymap, &accentmap) < 0)
+		if (get_definition_line(file, &keymap, &accentmap) < 0)
 			break;
     	}
 	if (dumponly) {
@@ -825,13 +877,13 @@ load_keymap(char *opt, int dumponly)
 	}
 	if ((keymap.n_keys > 0) && (ioctl(0, PIO_KEYMAP, &keymap) < 0)) {
 		warn("setting keymap");
-		fclose(fd);
+		fclose(file);
 		return;
 	}
 	if ((accentmap.n_accs > 0) 
 		&& (ioctl(0, PIO_DEADKEYMAP, &accentmap) < 0)) {
 		warn("setting accentmap");
-		fclose(fd);
+		fclose(file);
 		return;
 	}
 }
@@ -909,6 +961,8 @@ set_bell_values(char *opt)
 	int bell, duration, pitch;
 
 	bell = 0;
+	duration = 0;
+	pitch = 0;
 	if (!strncmp(opt, "quiet.", 6)) {
 		bell = CONS_QUIET_BELL;
 		opt += 6;
@@ -939,8 +993,8 @@ badopt:
 	}
 
 	ioctl(0, CONS_BELLTYPE, &bell);
-	if (!(bell & CONS_VISUAL_BELL))
-		fprintf(stderr, "[=%d;%dB", pitch, duration);
+	if (duration > 0 && pitch > 0)
+		fprintf(stderr, "\e[=%d;%dB", pitch, duration);
 }
 
 static void
@@ -1154,7 +1208,7 @@ usage(void)
 	fprintf(stderr, "%s\n%s\n%s\n",
 "usage: kbdcontrol [-dFKix] [-A name] [-a name] [-b duration.pitch | [quiet.]belltype]",
 "                  [-r delay.repeat | speed] [-l mapfile] [-f # string]",
-"                  [-k device] [-L mapfile]");
+"                  [-k device] [-L mapfile] [-P path]");
 	exit(1);
 }
 
@@ -1162,9 +1216,16 @@ usage(void)
 int
 main(int argc, char **argv)
 {
+	const char	*optstring = "A:a:b:df:iKk:Fl:L:P:r:x";
 	int		opt;
 
-	while((opt = getopt(argc, argv, "A:a:b:df:iKk:Fl:L:r:x")) != -1)
+	/* Collect any -P arguments, regardless of where they appear. */
+	while ((opt = getopt(argc, argv, optstring)) != -1)
+		if (opt == 'P')
+			add_keymap_path(optarg);
+
+	optind = optreset = 1;
+	while ((opt = getopt(argc, argv, optstring)) != -1)
 		switch(opt) {
 		case 'A':
 		case 'a':
@@ -1181,6 +1242,8 @@ main(int argc, char **argv)
 			break;
 		case 'L':
 			load_keymap(optarg, 1);
+			break;
+		case 'P':
 			break;
 		case 'f':
 			set_functionkey(optarg,

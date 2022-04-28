@@ -1,10 +1,10 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/netinet/ipmulticast/Makefile 170614 2007-06-12 16:29:22Z bms $
+# $FreeBSD$
 #
 
 PROG=	ipmulticast
 SRCS=	ipmulticast.c
-NO_MAN=
+MAN=
 
 WARNS?=	2
 

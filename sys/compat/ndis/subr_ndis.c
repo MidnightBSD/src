@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/subr_ndis.c 241896 2012-10-22 17:50:54Z kib $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This file implements a translation layer between the BSD networking
@@ -76,6 +76,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/subr_ndis.c 241896 2012-10-22
 #include <sys/sysproto.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -625,6 +626,9 @@ NdisReadConfiguration(status, parm, cfg, key, type)
 
 	block = (ndis_miniport_block *)cfg;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
+	/*
+	device_printf(sc->ndis_dev, "NdisReadConfiguration sc=%p\n", sc);
+	*/
 
 	if (key->us_len == 0 || key->us_buf == NULL) {
 		*status = NDIS_STATUS_FAILURE;
@@ -895,7 +899,7 @@ NdisReadPciSlotInformation(adapter, slot, offset, buf, len)
 	uint32_t		len;
 {
 	ndis_miniport_block	*block;
-	int			i;
+	uint32_t		i;
 	char			*dest;
 	device_t		dev;
 
@@ -938,7 +942,7 @@ NdisWritePciSlotInformation(adapter, slot, offset, buf, len)
 	uint32_t		len;
 {
 	ndis_miniport_block	*block;
-	int			i;
+	uint32_t		i;
 	char			*dest;
 	device_t		dev;
 
@@ -983,7 +987,7 @@ NdisWriteErrorLogEntry(ndis_handle adapter, ndis_error_code code,
 	dev = block->nmb_physdeviceobj->do_devext;
 	drv = block->nmb_deviceobj->do_drvobj;
 	sc = device_get_softc(dev);
-	ifp = sc->ifp;
+	ifp = NDISUSB_GET_IFNET(sc);
 
 	if (ifp != NULL && ifp->if_flags & IFF_DEBUG) {
 		error = pe_get_message((vm_offset_t)drv->dro_driverstart,
@@ -1281,7 +1285,7 @@ NdisMRegisterIoPortRange(offset, adapter, port, numports)
 	if (rman_get_size(sc->ndis_res_io) < numports)
 		return (NDIS_STATUS_INVALID_LENGTH);
 
-	*offset = (void *)rman_get_start(sc->ndis_res_io);
+	*offset = (void *)(uintptr_t)rman_get_start(sc->ndis_res_io);
 
 	return (NDIS_STATUS_SUCCESS);
 }
@@ -1303,17 +1307,19 @@ NdisReadNetworkAddress(status, addr, addrlen, adapter)
 	ndis_handle		adapter;
 {
 	struct ndis_softc	*sc;
+	struct ifnet		*ifp;
 	ndis_miniport_block	*block;
 	uint8_t			empty[] = { 0, 0, 0, 0, 0, 0 };
 
 	block = (ndis_miniport_block *)adapter;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
-	if (sc->ifp == NULL) {
+	ifp = NDISUSB_GET_IFNET(sc);
+	if (ifp == NULL) {
 		*status = NDIS_STATUS_FAILURE;
 		return;
 	}
 
-	if (sc->ifp->if_addr == NULL ||
+	if (ifp->if_addr == NULL ||
 	    bcmp(IF_LLADDR(sc->ifp), empty, ETHER_ADDR_LEN) == 0)
 		*status = NDIS_STATUS_FAILURE;
 	else {
@@ -2431,7 +2437,7 @@ NdisReadPcmciaAttributeMemory(handle, offset, buf, len)
 	bus_space_handle_t	bh;
 	bus_space_tag_t		bt;
 	char			*dest;
-	int			i;
+	uint32_t		i;
 
 	if (handle == NULL)
 		return (0);
@@ -2461,7 +2467,7 @@ NdisWritePcmciaAttributeMemory(handle, offset, buf, len)
 	bus_space_handle_t	bh;
 	bus_space_tag_t		bt;
 	char			*src;
-	int			i;
+	uint32_t		i;
 
 	if (handle == NULL)
 		return (0);
@@ -2669,7 +2675,7 @@ ndis_find_sym(lf, filename, suffix, sym)
 {
 	char			*fullsym;
 	char			*suf;
-	int			i;
+	u_int			i;
 
 	fullsym = ExAllocatePoolWithTag(NonPagedPool, MAXPATHLEN, 0);
 	if (fullsym == NULL)
@@ -2816,10 +2822,7 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 
 	/* Some threads don't have a current working directory. */
 
-	if (td->td_proc->p_fd->fd_rdir == NULL)
-		td->td_proc->p_fd->fd_rdir = rootvnode;
-	if (td->td_proc->p_fd->fd_cdir == NULL)
-		td->td_proc->p_fd->fd_cdir = rootvnode;
+	pwd_ensure_dirs();
 
 	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, path, td);
 

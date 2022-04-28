@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)commands.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/commands.c 207449 2010-04-30 19:52:35Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/un.h>
@@ -45,6 +41,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/commands.c 207449 2010-
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -112,7 +109,7 @@ static int send_tncmd(void (*)(int, int), const char *, char *);
 static int setmod(int);
 static int clearmode(int);
 static int modehelp(void);
-static int sourceroute(struct addrinfo *, char *, char **, int *, int *, int *);
+static int sourceroute(struct addrinfo *, char *, unsigned char **, int *, int *, int *);
 
 typedef struct {
 	const char *name;	/* command name */
@@ -896,6 +893,7 @@ static struct setlist Setlist[] = {
     { "forw1",	"alternate end of line character", NULL, termForw1Charp },
     { "forw2",	"alternate end of line character", NULL, termForw2Charp },
     { "ayt",	"alternate AYT character", NULL, termAytCharp },
+    { "baudrate", "set remote baud rate", DoBaudRate, ComPortBaudRate },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -1654,10 +1652,10 @@ env_init(void)
 		char hbuf[256+1];
 		char *cp2 = strchr((char *)ep->value, ':');
 
-		gethostname(hbuf, 256);
-		hbuf[256] = '\0';
-		cp = (char *)malloc(strlen(hbuf) + strlen(cp2) + 1);
-		sprintf((char *)cp, "%s%s", hbuf, cp2);
+		gethostname(hbuf, sizeof(hbuf));
+		hbuf[sizeof(hbuf)-1] = '\0';
+		asprintf(&cp, "%s%s", hbuf, cp2);
+		assert(cp != NULL);
 		free(ep->value);
 		ep->value = (unsigned char *)cp;
 	}
@@ -2170,7 +2168,7 @@ switch_af(struct addrinfo **aip)
 int
 tn(int argc, char *argv[])
 {
-    char *srp = 0;
+    unsigned char *srp = 0;
     int proto, opt;
     int srlen;
     int srcroute = 0, result;
@@ -2843,10 +2841,10 @@ cmdrc(char *m1, char *m2)
  *		setsockopt, as socket protocol family.
  */
 static int
-sourceroute(struct addrinfo *ai, char *arg, char **cpp, int *lenp, int *protop, int *optp)
+sourceroute(struct addrinfo *ai, char *arg, unsigned char **cpp, int *lenp, int *protop, int *optp)
 {
 	static char buf[1024 + ALIGNBYTES];	/*XXX*/
-	char *cp, *cp2, *lsrp, *ep;
+	unsigned char *cp, *cp2, *lsrp, *ep;
 	struct sockaddr_in *_sin;
 #ifdef INET6
 	struct sockaddr_in6 *sin6;

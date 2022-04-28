@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_macro_gram.y#5 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y 224046 2011-07-15 00:36:47Z emaste $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

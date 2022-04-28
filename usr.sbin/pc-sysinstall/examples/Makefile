@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/examples/Makefile 209513 2010-06-24 22:21:47Z imp $
+# $FreeBSD$
 
 FILES=	README pc-autoinstall.conf pcinstall.cfg.fbsd-netinstall \
 	pcinstall.cfg.geli pcinstall.cfg.gmirror pcinstall.cfg.netinstall \
@@ -6,6 +6,5 @@ FILES=	README pc-autoinstall.conf pcinstall.cfg.fbsd-netinstall \
 	pcinstall.cfg.zfs
 
 FILESDIR=${SHAREDIR}/examples/pc-sysinstall
-NO_OBJ=
 
 .include <bsd.prog.mk>

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/ccd 174438 2007-12-08 07:20:23Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: disks
@@ -9,6 +9,7 @@
 . /etc/rc.subr
 
 name="ccd"
+desc="Concatenated disks setup"
 start_cmd="ccd_start"
 stop_cmd=":"
 

@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Martin Blapp
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/rpc.umntall/rpc.umntall.c 194880 2009-06-24 18:42:21Z dfr $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>

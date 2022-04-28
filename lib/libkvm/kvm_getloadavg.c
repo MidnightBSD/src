@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm_getloadavg.c 217744 2011-01-23 11:08:28Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -70,6 +70,12 @@ kvm_getloadavg(kvm_t *kd, double loadavg[], int nelem)
 
 	if (ISALIVE(kd))
 		return (getloadavg(loadavg, nelem));
+
+	if (!kd->arch->ka_native(kd)) {
+		_kvm_err(kd, kd->program,
+		    "cannot read loadavg from non-native core");
+		return (-1);
+	}
 
 	if (kvm_nlist(kd, nl) != 0) {
 		for (p = nl; p->n_type != 0; ++p);

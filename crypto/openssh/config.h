@@ -38,9 +38,6 @@
 /* ia_uinfo routines not supported by OS yet */
 /* #undef BROKEN_LIBIAF */
 
-/* Ultrix mmap can't map files */
-/* #undef BROKEN_MMAP */
-
 /* Define if your struct dirent expects you to allocate extra space for d_name
    */
 /* #undef BROKEN_ONE_BYTE_DIRENT_D_NAME */
@@ -48,8 +45,12 @@
 /* Can't do comparisons on readv */
 /* #undef BROKEN_READV_COMPARISON */
 
-/* Define if you have a broken realpath. */
-/* #undef BROKEN_REALPATH */
+/* NetBSD read function is sometimes redirected, breaking atomicio comparisons
+   against it */
+/* #undef BROKEN_READ_COMPARISON */
+
+/* realpath does not work with nonexistent files */
+#define BROKEN_REALPATH 1
 
 /* Needed for NeXT */
 /* #undef BROKEN_SAVED_UIDS */
@@ -75,7 +76,7 @@
 /* Define if your snprintf is busted */
 /* #undef BROKEN_SNPRINTF */
 
-/* FreeBSD strnvis does not do what we need */
+/* strnvis detected broken */
 #define BROKEN_STRNVIS 1
 
 /* tcgetattr with ICANON may hang */
@@ -183,6 +184,9 @@
 /* Define to 1 if you have the `arc4random_buf' function. */
 #define HAVE_ARC4RANDOM_BUF 1
 
+/* Define to 1 if you have the `arc4random_stir' function. */
+#define HAVE_ARC4RANDOM_STIR 1
+
 /* Define to 1 if you have the `arc4random_uniform' function. */
 #define HAVE_ARC4RANDOM_UNIFORM 1
 
@@ -213,8 +217,29 @@
 /* Define to 1 if you have the `bcopy' function. */
 #define HAVE_BCOPY 1
 
+/* Define to 1 if you have the `bcrypt_pbkdf' function. */
+/* #undef HAVE_BCRYPT_PBKDF */
+
 /* Define to 1 if you have the `bindresvport_sa' function. */
 #define HAVE_BINDRESVPORT_SA 1
+
+/* Define to 1 if you have the `blf_enc' function. */
+/* #undef HAVE_BLF_ENC */
+
+/* Define to 1 if you have the <blf.h> header file. */
+/* #undef HAVE_BLF_H */
+
+/* Define to 1 if you have the `Blowfish_expand0state' function. */
+/* #undef HAVE_BLOWFISH_EXPAND0STATE */
+
+/* Define to 1 if you have the `Blowfish_expandstate' function. */
+/* #undef HAVE_BLOWFISH_EXPANDSTATE */
+
+/* Define to 1 if you have the `Blowfish_initstate' function. */
+/* #undef HAVE_BLOWFISH_INITSTATE */
+
+/* Define to 1 if you have the `Blowfish_stream2word' function. */
+/* #undef HAVE_BLOWFISH_STREAM2WORD */
 
 /* Define to 1 if you have the `BN_is_prime_ex' function. */
 #define HAVE_BN_IS_PRIME_EX 1
@@ -227,6 +252,9 @@
 
 /* Define to 1 if you have the <bstring.h> header file. */
 /* #undef HAVE_BSTRING_H */
+
+/* Define to 1 if you have the `cap_rights_limit' function. */
+#define HAVE_CAP_RIGHTS_LIMIT 1
 
 /* Define to 1 if you have the `clock' function. */
 #define HAVE_CLOCK 1
@@ -260,6 +288,10 @@
 
 /* Define if your libraries define daemon() */
 #define HAVE_DAEMON 1
+
+/* Define to 1 if you have the declaration of `AI_NUMERICSERV', and to 0 if
+   you don't. */
+#define HAVE_DECL_AI_NUMERICSERV 1
 
 /* Define to 1 if you have the declaration of `authenticate', and to 0 if you
    don't. */
@@ -369,17 +401,47 @@
 /* Define to 1 if you have the `endutxent' function. */
 #define HAVE_ENDUTXENT 1
 
+/* Define to 1 if you have the `err' function. */
+#define HAVE_ERR 1
+
+/* Define to 1 if you have the `errx' function. */
+#define HAVE_ERRX 1
+
+/* Define to 1 if you have the <err.h> header file. */
+#define HAVE_ERR_H 1
+
 /* Define if your system has /etc/default/login */
 /* #undef HAVE_ETC_DEFAULT_LOGIN */
 
 /* Define if libcrypto has EVP_CIPHER_CTX_ctrl */
 #define HAVE_EVP_CIPHER_CTX_CTRL 1
 
+/* Define to 1 if you have the `EVP_DigestFinal_ex' function. */
+#define HAVE_EVP_DIGESTFINAL_EX 1
+
+/* Define to 1 if you have the `EVP_DigestInit_ex' function. */
+#define HAVE_EVP_DIGESTINIT_EX 1
+
+/* Define to 1 if you have the `EVP_MD_CTX_cleanup' function. */
+#define HAVE_EVP_MD_CTX_CLEANUP 1
+
+/* Define to 1 if you have the `EVP_MD_CTX_copy_ex' function. */
+#define HAVE_EVP_MD_CTX_COPY_EX 1
+
+/* Define to 1 if you have the `EVP_MD_CTX_init' function. */
+#define HAVE_EVP_MD_CTX_INIT 1
+
+/* Define to 1 if you have the `EVP_ripemd160' function. */
+#define HAVE_EVP_RIPEMD160 1
+
 /* Define to 1 if you have the `EVP_sha256' function. */
 #define HAVE_EVP_SHA256 1
 
 /* Define if you have ut_exit in utmp.h */
 /* #undef HAVE_EXIT_IN_UTMP */
+
+/* Define to 1 if you have the `explicit_bzero' function. */
+#define HAVE_EXPLICIT_BZERO 1
 
 /* Define to 1 if you have the `fchmod' function. */
 #define HAVE_FCHMOD 1
@@ -413,6 +475,9 @@
 
 /* Define to 1 if the system has the type `fsfilcnt_t'. */
 #define HAVE_FSFILCNT_T 1
+
+/* Define to 1 if you have the `fstatfs' function. */
+#define HAVE_FSTATFS 1
 
 /* Define to 1 if you have the `fstatvfs' function. */
 #define HAVE_FSTATVFS 1
@@ -585,6 +650,9 @@
 /* define if you have int64_t data type */
 #define HAVE_INT64_T 1
 
+/* Define to 1 if the system has the type `intmax_t'. */
+#define HAVE_INTMAX_T 1
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
@@ -608,6 +676,9 @@
 
 /* Define to 1 if you have the `krb5_get_error_message' function. */
 /* #undef HAVE_KRB5_GET_ERROR_MESSAGE */
+
+/* Define to 1 if you have the <langinfo.h> header file. */
+#define HAVE_LANGINFO_H 1
 
 /* Define to 1 if you have the <lastlog.h> header file. */
 /* #undef HAVE_LASTLOG_H */
@@ -635,9 +706,6 @@
 
 /* Define to 1 if you have the `network' library (-lnetwork). */
 /* #undef HAVE_LIBNETWORK */
-
-/* Define to 1 if you have the `nsl' library (-lnsl). */
-/* #undef HAVE_LIBNSL */
 
 /* Define to 1 if you have the `pam' library (-lpam). */
 #define HAVE_LIBPAM 1
@@ -668,6 +736,9 @@
 
 /* Define to 1 if you have the <linux/seccomp.h> header file. */
 /* #undef HAVE_LINUX_SECCOMP_H */
+
+/* Define to 1 if you have the `llabs' function. */
+#define HAVE_LLABS 1
 
 /* Define to 1 if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
@@ -702,6 +773,9 @@
 /* Define to 1 if you have the `mblen' function. */
 #define HAVE_MBLEN 1
 
+/* Define to 1 if you have the `mbtowc' function. */
+#define HAVE_MBTOWC 1
+
 /* Define to 1 if you have the `md5_crypt' function. */
 /* #undef HAVE_MD5_CRYPT */
 
@@ -714,11 +788,11 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
+/* Define to 1 if you have the `memset_s' function. */
+#define HAVE_MEMSET_S 1
+
 /* Define to 1 if you have the `mkdtemp' function. */
 #define HAVE_MKDTEMP 1
-
-/* Define to 1 if you have the `mmap' function. */
-#define HAVE_MMAP 1
 
 /* define if you have mode_t data type */
 #define HAVE_MODE_T 1
@@ -743,6 +817,9 @@
 
 /* Define to 1 if you have the `ngetaddrinfo' function. */
 /* #undef HAVE_NGETADDRINFO */
+
+/* Define to 1 if you have the `nl_langinfo' function. */
+#define HAVE_NL_LANGINFO 1
 
 /* Define to 1 if you have the `nsleep' function. */
 /* #undef HAVE_NSLEEP */
@@ -784,6 +861,9 @@
 /* define if you have pid_t data type */
 #define HAVE_PID_T 1
 
+/* Define to 1 if you have the `pledge' function. */
+/* #undef HAVE_PLEDGE */
+
 /* Define to 1 if you have the `poll' function. */
 #define HAVE_POLL 1
 
@@ -792,6 +872,12 @@
 
 /* Define to 1 if you have the `prctl' function. */
 /* #undef HAVE_PRCTL */
+
+/* Define to 1 if you have the `priv_basicset' function. */
+/* #undef HAVE_PRIV_BASICSET */
+
+/* Define to 1 if you have the <priv.h> header file. */
+/* #undef HAVE_PRIV_H */
 
 /* Define if you have /proc/$pid/fd */
 /* #undef HAVE_PROC_PID */
@@ -813,6 +899,9 @@
 
 /* Define to 1 if you have the <readpassphrase.h> header file. */
 #define HAVE_READPASSPHRASE_H 1
+
+/* Define to 1 if you have the `reallocarray' function. */
+#define HAVE_REALLOCARRAY 1
 
 /* Define to 1 if you have the `realpath' function. */
 #define HAVE_REALPATH 1
@@ -891,6 +980,12 @@
 
 /* Define to 1 if you have the `setpcred' function. */
 /* #undef HAVE_SETPCRED */
+
+/* Define to 1 if you have the `setpflags' function. */
+/* #undef HAVE_SETPFLAGS */
+
+/* Define to 1 if you have the `setppriv' function. */
+/* #undef HAVE_SETPPRIV */
 
 /* Define to 1 if you have the `setproctitle' function. */
 #define HAVE_SETPROCTITLE 1
@@ -978,6 +1073,9 @@
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
+
+/* Define to 1 if you have the `strcasestr' function. */
+#define HAVE_STRCASESTR 1
 
 /* Define to 1 if you have the `strdup' function. */
 #define HAVE_STRDUP 1
@@ -1084,6 +1182,9 @@
 /* Define to 1 if you have the <sys/bsdtty.h> header file. */
 /* #undef HAVE_SYS_BSDTTY_H */
 
+/* Define to 1 if you have the <sys/capsicum.h> header file. */
+#define HAVE_SYS_CAPSICUM_H 1
+
 /* Define to 1 if you have the <sys/cdefs.h> header file. */
 #define HAVE_SYS_CDEFS_H 1
 
@@ -1116,6 +1217,9 @@
 
 /* Define to 1 if you have the <sys/ptms.h> header file. */
 /* #undef HAVE_SYS_PTMS_H */
+
+/* Define to 1 if you have the <sys/ptrace.h> header file. */
+#define HAVE_SYS_PTRACE_H 1
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #define HAVE_SYS_SELECT_H 1
@@ -1172,7 +1276,7 @@
 /* #undef HAVE_TIME_IN_UTMPX */
 
 /* Define to 1 if you have the `timingsafe_bcmp' function. */
-/* #undef HAVE_TIMINGSAFE_BCMP */
+#define HAVE_TIMINGSAFE_BCMP 1
 
 /* Define to 1 if you have the <tmpdir.h> header file. */
 /* #undef HAVE_TMPDIR_H */
@@ -1197,6 +1301,9 @@
 
 /* Define to 1 if you have the <ucred.h> header file. */
 /* #undef HAVE_UCRED_H */
+
+/* Define to 1 if the system has the type `uintmax_t'. */
+#define HAVE_UINTMAX_T 1
 
 /* define if you have uintxx_t data type */
 #define HAVE_UINTXX_T 1
@@ -1264,9 +1371,6 @@
 /* Define if va_copy exists */
 #define HAVE_VA_COPY 1
 
-/* Define to 1 if you have the `vhangup' function. */
-/* #undef HAVE_VHANGUP */
-
 /* Define to 1 if you have the <vis.h> header file. */
 #define HAVE_VIS_H 1
 
@@ -1275,6 +1379,15 @@
 
 /* Define to 1 if you have the `waitpid' function. */
 #define HAVE_WAITPID 1
+
+/* Define to 1 if you have the `warn' function. */
+#define HAVE_WARN 1
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#define HAVE_WCHAR_H 1
+
+/* Define to 1 if you have the `wcwidth' function. */
+#define HAVE_WCWIDTH 1
 
 /* Define to 1 if you have the `_getlong' function. */
 #define HAVE__GETLONG 1
@@ -1328,7 +1441,7 @@
 /* #undef LASTLOG_WRITE_PUTUTXLINE */
 
 /* Define if you want TCP Wrappers support */
-#define LIBWRAP 1
+/* #undef LIBWRAP */
 
 /* Define to whatever link() returns for "not supported" if it doesn't return
    EOPNOTSUPP. */
@@ -1352,18 +1465,8 @@
 /* String used in /etc/passwd to denote locked account */
 /* #undef LOCKED_PASSWD_SUBSTR */
 
-/* Some versions of /bin/login need the TERM supplied on the commandline */
-/* #undef LOGIN_NEEDS_TERM */
-
 /* Some systems need a utmpx entry for /bin/login to work */
 /* #undef LOGIN_NEEDS_UTMPX */
-
-/* Define if your login program cannot handle end of options ("--") */
-/* #undef LOGIN_NO_ENDOPT */
-
-/* If your header files don't define LOGIN_PROGRAM, then use this (detected)
-   from environment and PATH */
-#define LOGIN_PROGRAM_FALLBACK "/usr/bin/login"
 
 /* Set this to your mail directory if you do not have _PATH_MAILDIR */
 /* #undef MAIL_DIRECTORY */
@@ -1374,11 +1477,11 @@
 /* compiler does not accept __attribute__ on return types */
 /* #undef NO_ATTRIBUTE_ON_RETURN_TYPE */
 
-/* Define if the concept of ports only accessible to superusers isn't known */
-/* #undef NO_IPPORT_RESERVED_CONCEPT */
-
 /* Define if you don't want to use lastlog in session.c */
 /* #undef NO_SSH_LASTLOG */
+
+/* Define to disable UID restoration test */
+/* #undef NO_UID_RESTORATION_TEST */
 
 /* Define if X11 doesn't support AF_UNIX sockets on that system */
 /* #undef NO_X11_UNIX_SOCKETS */
@@ -1386,8 +1489,17 @@
 /* Define if EVP_DigestUpdate returns void */
 /* #undef OPENSSL_EVP_DIGESTUPDATE_VOID */
 
-/* libcrypto includes complete ECC support */
+/* OpenSSL has ECC */
 #define OPENSSL_HAS_ECC 1
+
+/* libcrypto has NID_X9_62_prime256v1 */
+#define OPENSSL_HAS_NISTP256 1
+
+/* libcrypto has NID_secp384r1 */
+#define OPENSSL_HAS_NISTP384 1
+
+/* libcrypto has NID_secp521r1 */
+#define OPENSSL_HAS_NISTP521 1
 
 /* libcrypto has EVP AES CTR */
 #define OPENSSL_HAVE_EVPCTR 1
@@ -1398,7 +1510,7 @@
 /* libcrypto is missing AES 192 and 256 bit functions */
 /* #undef OPENSSL_LOBOTOMISED_AES */
 
-/* Define if you want OpenSSL's internally seeded PRNG only */
+/* Define if you want the OpenSSL internally seeded PRNG only */
 #define OPENSSL_PRNG_ONLY 1
 
 /* Define to the address where bug reports for this package should be sent. */
@@ -1441,20 +1553,32 @@
 /* read(1) can return 0 for a non-closed fd */
 /* #undef PTY_ZEROREAD */
 
+/* Sandbox using capsicum */
+#define SANDBOX_CAPSICUM 1
+
 /* Sandbox using Darwin sandbox_init(3) */
 /* #undef SANDBOX_DARWIN */
 
 /* no privsep sandboxing */
 /* #undef SANDBOX_NULL */
 
+/* Sandbox using pledge(2) */
+/* #undef SANDBOX_PLEDGE */
+
 /* Sandbox using setrlimit(2) */
-#define SANDBOX_RLIMIT 1
+/* #undef SANDBOX_RLIMIT */
 
 /* Sandbox using seccomp filter */
 /* #undef SANDBOX_SECCOMP_FILTER */
 
 /* setrlimit RLIMIT_FSIZE works */
 /* #undef SANDBOX_SKIP_RLIMIT_FSIZE */
+
+/* define if setrlimit RLIMIT_NOFILE breaks things */
+#define SANDBOX_SKIP_RLIMIT_NOFILE 1
+
+/* Sandbox using Solaris/Illumos privileges */
+/* #undef SANDBOX_SOLARIS */
 
 /* Sandbox using systrace(4) */
 /* #undef SANDBOX_SYSTRACE */
@@ -1492,6 +1616,9 @@
 
 /* Define if sshd somehow reacquires a controlling TTY after setsid() */
 /* #undef SSHD_ACQUIRES_CTTY */
+
+/* sshd PAM service name */
+/* #undef SSHD_PAM_SERVICE */
 
 /* Define if pam_chauthtok wants real uid set to the unpriv'ed user */
 /* #undef SSHPAM_CHAUTHTOK_NEEDS_RUID */
@@ -1562,6 +1689,9 @@
 /* Use PIPES instead of a socketpair() */
 /* #undef USE_PIPES */
 
+/* Define if you have Solaris privileges */
+/* #undef USE_SOLARIS_PRIVS */
+
 /* Define if you have Solaris process contracts */
 /* #undef USE_SOLARIS_PROCESS_CONTRACTS */
 
@@ -1587,8 +1717,14 @@
 /* Define if you want IRIX project management */
 /* #undef WITH_IRIX_PROJECT */
 
+/* use libcrypto for cryptography */
+#define WITH_OPENSSL 1
+
 /* Define if you want SELinux support. */
 /* #undef WITH_SELINUX */
+
+/* include SSH protocol version 1 support */
+/* #undef WITH_SSH1 */
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -1604,6 +1740,11 @@
 
 /* Define if xauth is found in your path */
 /* #undef XAUTH_PATH */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */

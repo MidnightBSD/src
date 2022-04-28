@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/test-netup.sh 222528 2011-05-31 15:02:30Z bz $
+# $FreeBSD$
 
 
 # Script which tries to ping "home" to see if Internet connectivity is

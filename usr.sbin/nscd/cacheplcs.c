@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nscd/cacheplcs.c 194104 2009-06-13 13:07:56Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/time.h>
 

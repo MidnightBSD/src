@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/vmm/vmm_util.c 245678 2013-01-20 03:42:49Z neel $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/vmm/vmm_util.c 245678 2013-01-20 03:42:49Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -36,26 +36,20 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/amd64/vmm/vmm_util.c 245678 2013-01-20 03
 
 #include "vmm_util.h"
 
-boolean_t
+bool
 vmm_is_intel(void)
 {
 
-	if (strcmp(cpu_vendor, "GenuineIntel") == 0)
-		return (TRUE);
-	else
-		return (FALSE);
+	return (strcmp(cpu_vendor, "GenuineIntel") == 0);
 }
 
-boolean_t
+bool
 vmm_is_amd(void)
 {
-	if (strcmp(cpu_vendor, "AuthenticAMD") == 0)
-		return (TRUE);
-	else
-		return (FALSE);
+	return (strcmp(cpu_vendor, "AuthenticAMD") == 0);
 }
 
-boolean_t
+bool
 vmm_supports_1G_pages(void)
 {
 	unsigned int regs[4];
@@ -68,9 +62,9 @@ vmm_supports_1G_pages(void)
 	if (cpu_exthigh >= 0x80000001) {
 		do_cpuid(0x80000001, regs);
 		if (regs[3] & (1 << 26))
-			return (TRUE);
+			return (true);
 	}
-	return (FALSE);
+	return (false);
 }
 
 #include <sys/proc.h>

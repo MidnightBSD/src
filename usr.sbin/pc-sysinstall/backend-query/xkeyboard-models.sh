@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/xkeyboard-models.sh 211730 2010-08-24 06:11:46Z imp $
+# $FreeBSD$
 
 FOUND="0"
 

@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)input.c	8.3 (Berkeley) 6/9/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/sh/input.c 253658 2013-07-25 19:48:15Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>	/* defines BUFSIZ */
 #include <fcntl.h>
@@ -102,8 +102,6 @@ static struct parsefile basepf = {	/* top level input file */
 static struct parsefile *parsefile = &basepf;	/* current input file */
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
 
-EditLine *el;			/* cookie for editline package */
-
 static void pushfile(void);
 static int preadfd(void);
 static void popstring(void);
@@ -113,33 +111,6 @@ resetinput(void)
 {
 	popallfiles();
 	parselleft = parsenleft = 0;	/* clear input buffer */
-}
-
-
-/*
- * Read a line from the script.
- */
-
-char *
-pfgets(char *line, int len)
-{
-	char *p = line;
-	int nleft = len;
-	int c;
-
-	while (--nleft > 0) {
-		c = pgetc_macro();
-		if (c == PEOF) {
-			if (p == line)
-				return NULL;
-			break;
-		}
-		*p++ = c;
-		if (c == '\n')
-			break;
-	}
-	*p = '\0';
-	return line;
 }
 
 
@@ -162,20 +133,16 @@ preadfd(void)
 	int nr;
 	parsenextc = parsefile->buf;
 
-#ifndef NO_HISTORY
-	if (el != NULL && gotwinch) {
-		gotwinch = 0;
-		el_resize(el);
-	}
-#endif
 retry:
 #ifndef NO_HISTORY
 	if (parsefile->fd == 0 && el) {
 		static const char *rl_cp;
 		static int el_len;
 
-		if (rl_cp == NULL)
+		if (rl_cp == NULL) {
+			el_resize(el);
 			rl_cp = el_gets(el, &el_len);
+		}
 		if (rl_cp == NULL)
 			nr = el_len == 0 ? 0 : -1;
 		else {
@@ -226,20 +193,23 @@ retry:
 int
 preadbuffer(void)
 {
-	char *p, *q;
-	int more;
-	int something;
+	char *p, *q, *r, *end;
 	char savec;
 
-	if (parsefile->strpush) {
+	while (parsefile->strpush) {
+		/*
+		 * Add a space to the end of an alias to ensure that the
+		 * alias remains in use while parsing its last word.
+		 * This avoids alias recursions.
+		 */
+		if (parsenleft == -1 && parsefile->strpush->ap != NULL)
+			return ' ';
 		popstring();
 		if (--parsenleft >= 0)
 			return (*parsenextc++);
 	}
 	if (parsenleft == EOF_NLEFT || parsefile->buf == NULL)
 		return PEOF;
-	flushout(&output);
-	flushout(&errout);
 
 again:
 	if (parselleft <= 0) {
@@ -249,46 +219,39 @@ again:
 		}
 	}
 
-	q = p = parsefile->buf + (parsenextc - parsefile->buf);
-
-	/* delete nul characters */
-	something = 0;
-	for (more = 1; more;) {
-		switch (*p) {
-		case '\0':
-			p++;	/* Skip nul */
-			goto check;
-
-		case '\t':
-		case ' ':
-			break;
-
-		case '\n':
-			parsenleft = q - parsenextc;
-			more = 0; /* Stop processing here */
-			break;
-
-		default:
-			something = 1;
-			break;
+	p = parsefile->buf + (parsenextc - parsefile->buf);
+	end = p + parselleft;
+	*end = '\0';
+	q = strchrnul(p, '\n');
+	if (q != end && *q == '\0') {
+		/* delete nul characters */
+		for (r = q; q != end; q++) {
+			if (*q != '\0')
+				*r++ = *q;
 		}
-
-		*q++ = *p++;
-check:
-		if (--parselleft <= 0) {
-			parsenleft = q - parsenextc - 1;
-			if (parsenleft < 0)
-				goto again;
-			*q = '\0';
-			more = 0;
-		}
+		parselleft -= end - r;
+		if (parselleft == 0)
+			goto again;
+		end = p + parselleft;
+		*end = '\0';
+		q = strchrnul(p, '\n');
 	}
+	if (q == end) {
+		parsenleft = parselleft;
+		parselleft = 0;
+	} else /* *q == '\n' */ {
+		q++;
+		parsenleft = q - parsenextc;
+		parselleft -= parsenleft;
+	}
+	parsenleft--;
 
 	savec = *q;
 	*q = '\0';
 
 #ifndef NO_HISTORY
-	if (parsefile->fd == 0 && hist && something) {
+	if (parsefile->fd == 0 && hist &&
+	    parsenextc[strspn(parsenextc, " \t\n")] != '\0') {
 		HistEvent he;
 		INTOFF;
 		history(hist, &he, whichprompt == 1 ? H_ENTER : H_ADD,
@@ -341,7 +304,7 @@ pungetc(void)
  * We handle aliases this way.
  */
 void
-pushstring(char *s, int len, struct alias *ap)
+pushstring(const char *s, int len, struct alias *ap)
 {
 	struct strpush *sp;
 
@@ -370,12 +333,16 @@ popstring(void)
 	struct strpush *sp = parsefile->strpush;
 
 	INTOFF;
+	if (sp->ap) {
+		if (parsenextc != sp->ap->val &&
+		    (parsenextc[-1] == ' ' || parsenextc[-1] == '\t'))
+			forcealias();
+		sp->ap->flag &= ~ALIASINUSE;
+	}
 	parsenextc = sp->prevstring;
 	parsenleft = sp->prevnleft;
 	parselleft = sp->prevlleft;
 /*out2fmt_flush("*** calling popstring: restoring to '%s'\n", parsenextc);*/
-	if (sp->ap)
-		sp->ap->flag &= ~ALIASINUSE;
 	parsefile->strpush = sp->prev;
 	if (sp != &(parsefile->basestrpush))
 		ckfree(sp);

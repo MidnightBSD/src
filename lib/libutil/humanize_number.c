@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/humanize_number.c 256130 2013-10-07 22:22:57Z jmg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <assert.h>
@@ -43,7 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libutil/humanize_number.c 256130 2013-10-
 #include <locale.h>
 #include <libutil.h>
 
-static const int maxscale = 7;
+static const int maxscale = 6;
 
 int
 humanize_number(char *buf, size_t len, int64_t quotient,
@@ -64,7 +64,7 @@ humanize_number(char *buf, size_t len, int64_t quotient,
 		return (-1);
 	if (scale < 0)
 		return (-1);
-	else if (scale >= maxscale &&
+	else if (scale > maxscale &&
 	    ((scale & ~(HN_AUTOSCALE|HN_GETSCALE)) != 0))
 		return (-1);
 	if ((flags & HN_DIVISOR_1000) && (flags & HN_IEC_PREFIXES))
@@ -143,7 +143,8 @@ humanize_number(char *buf, size_t len, int64_t quotient,
 		 */
 		for (i = 0;
 		    (quotient >= max || (quotient == max - 1 &&
-		    remainder >= divisordeccut)) && i < maxscale; i++) {
+		    (remainder >= divisordeccut || remainder >=
+		    divisor / 2))) && i < maxscale; i++) {
 			remainder = quotient % divisor;
 			quotient /= divisor;
 		}

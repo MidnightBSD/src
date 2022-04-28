@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/control.c 252472 2013-07-01 18:41:07Z trociny $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -215,6 +217,16 @@ control_status_worker(struct hast_resource *res, struct nv *nvout,
 	    "stat_delete_error%u", no);
 	nv_add_uint64(nvout, nv_get_uint64(cnvin, "stat_flush_error"),
 	    "stat_flush_error%u", no);
+	nv_add_uint64(nvout, nv_get_uint64(cnvin, "idle_queue_size"),
+	    "idle_queue_size%u", no);
+	nv_add_uint64(nvout, nv_get_uint64(cnvin, "local_queue_size"),
+	    "local_queue_size%u", no);
+	nv_add_uint64(nvout, nv_get_uint64(cnvin, "send_queue_size"),
+	    "send_queue_size%u", no);
+	nv_add_uint64(nvout, nv_get_uint64(cnvin, "recv_queue_size"),
+	    "recv_queue_size%u", no);
+	nv_add_uint64(nvout, nv_get_uint64(cnvin, "done_queue_size"),
+	    "done_queue_size%u", no);
 end:
 	if (cnvin != NULL)
 		nv_free(cnvin);
@@ -478,6 +490,7 @@ ctrl_thread(void *arg)
 			nv_add_uint64(nvout, res->hr_stat_flush_error +
 			    res->hr_stat_activemap_flush_error,
 			    "stat_flush_error");
+			res->output_status_aux(nvout);
 			nv_add_int16(nvout, 0, "error");
 			break;
 		case CONTROL_RELOAD:

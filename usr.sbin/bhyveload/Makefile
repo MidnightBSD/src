@@ -1,14 +1,14 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bhyveload/Makefile 256176 2013-10-09 03:56:07Z neel $
+# $FreeBSD$
 
 PROG=	bhyveload
 SRCS=	bhyveload.c
 MAN=	bhyveload.8
+PACKAGE=	bhyve
 
-DPADD+=	${LIBVMMAPI} ${LIBUTIL}
-LDADD+=	-lvmmapi -lutil
+LIBADD=	vmmapi
 
 WARNS?=	3
 
-CFLAGS+=-I${.CURDIR}/../../sys/boot/userboot
+CFLAGS+=-I${SRCTOP}/stand/userboot
 
 .include <bsd.prog.mk>

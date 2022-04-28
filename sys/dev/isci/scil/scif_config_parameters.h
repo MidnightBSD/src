@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_config_parameters.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCIF_SAS_USER_PARAMETERS_H_
 #define _SCIF_SAS_USER_PARAMETERS_H_
@@ -116,7 +116,7 @@ typedef struct SCIF_SAS_USER_PARAMETERS
 
    /**
     * This field indicates the os/user recommends ignoring fua in translation
-    * for perfromance reasons.
+    * for performance reasons.
     */
    BOOL  ignore_fua;
 

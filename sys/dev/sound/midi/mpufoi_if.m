@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/dev/sound/midi/mpufoi_if.m 166971 2007-02-25 13:51:52Z netchild $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>

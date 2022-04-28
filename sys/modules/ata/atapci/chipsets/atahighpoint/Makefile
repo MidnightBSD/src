@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/atapci/chipsets/atahighpoint/Makefile 249213 2013-04-06 19:12:49Z marius $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../../dev/ata/chipsets
+.PATH: ${SRCTOP}/sys/dev/ata/chipsets
 
 KMOD=	atahighpoint
 SRCS=	ata-highpoint.c

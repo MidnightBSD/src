@@ -26,13 +26,13 @@
  * SUCH DAMAGE.
  */
 /* Functions to encode or decode struct sun_disklabel into a bytestream
- * of correct endianess and packing.
+ * of correct endianness and packing.
  *
  * NB!  This file must be usable both in kernel and userland.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_sunlabel_enc.c 144328 2005-03-30 09:33:10Z joerg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/endian.h>

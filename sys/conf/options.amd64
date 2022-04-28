@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/conf/options.amd64 254624 2013-08-21 22:43:29Z obrien $
+# $FreeBSD$
 # Options specific to AMD64 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h
@@ -49,6 +49,9 @@ AGP_DEBUG		opt_agp.h
 
 ATKBD_DFLT_KEYMAP	opt_atkbd.h
 
+# iWARP client interface support in ixl
+IXL_IW			opt_ixl.h
+
 # -------------------------------
 # EOF
 # -------------------------------
@@ -58,9 +61,6 @@ PSM_RESETAFTERSUSPEND	opt_psm.h
 PSM_DEBUG		opt_psm.h
 DEV_ATPIC		opt_atpic.h
 
-# Debugging
-KDTRACE_FRAME		opt_kdtrace.h
-
 # BPF just-in-time compiler
 BPF_JITTER		opt_bpf.h
 
@@ -68,3 +68,6 @@ XENHVM			opt_global.h
 
 # options for the Intel C600 SAS driver (isci)
 ISCI_LOGGING	opt_isci.h
+
+# EFI Runtime services support
+EFIRT			opt_efirt.h

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_sin.c 218509 2011-02-10 07:37:50Z das $");
+__FBSDID("$FreeBSD$");
 
 /* sin(x)
  * Return sine function of x.

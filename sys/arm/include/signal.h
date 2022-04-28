@@ -29,7 +29,7 @@
  *      @(#)signal.h    8.1 (Berkeley) 6/11/93
  *	from: FreeBSD: src/sys/i386/include/signal.h,v 1.13 2000/11/09
  *	from: FreeBSD: src/sys/sparc64/include/signal.h,v 1.6 2001/09/30 18:52:17
- * $FreeBSD: release/10.0.0/sys/arm/include/signal.h 248153 2013-03-11 10:56:46Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

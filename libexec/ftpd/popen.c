@@ -13,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +37,7 @@ static char sccsid[] = "@(#)popen.c	8.3 (Berkeley) 4/6/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/ftpd/popen.c 228843 2011-12-23 15:00:37Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -64,7 +60,7 @@ __FBSDID("$FreeBSD: release/10.0.0/libexec/ftpd/popen.c 228843 2011-12-23 15:00:
 #define	MAXGLOBARGS	1000
 
 /*
- * Special version of popen which avoids call to shell.  This ensures noone
+ * Special version of popen which avoids call to shell.  This ensures no one
  * may create a pipe to a hidden program as a side effect of a list or dir
  * command.
  */
@@ -85,9 +81,8 @@ ftpd_popen(char *program, char *type)
 	if (!pids) {
 		if ((fds = getdtablesize()) <= 0)
 			return (NULL);
-		if ((pids = malloc(fds * sizeof(int))) == NULL)
+		if ((pids = calloc(fds, sizeof(int))) == NULL)
 			return (NULL);
-		memset(pids, 0, fds * sizeof(int));
 	}
 	if (pipe(pdes) < 0)
 		return (NULL);
@@ -189,7 +184,7 @@ ftpd_pclose(FILE *iop)
 	 * pclose returns -1 if stream is not associated with a
 	 * `popened' command, or, if already `pclosed'.
 	 */
-	if (pids == 0 || pids[fdes = fileno(iop)] == 0)
+	if (pids == NULL || pids[fdes = fileno(iop)] == 0)
 		return (-1);
 	(void)fclose(iop);
 	omask = sigblock(sigmask(SIGINT)|sigmask(SIGQUIT)|sigmask(SIGHUP));

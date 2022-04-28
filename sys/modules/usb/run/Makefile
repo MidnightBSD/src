@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/run/Makefile 203134 2010-01-28 22:24:54Z thompsa $
+# $FreeBSD$
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=	${.CURDIR}/../../..
+S=	${SRCTOP}/sys
 
 .PATH:	$S/dev/usb/wlan
 

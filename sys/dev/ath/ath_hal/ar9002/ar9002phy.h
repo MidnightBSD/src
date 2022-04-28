@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar9002/ar9002phy.h 220590 2011-04-13 04:40:59Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__ATH_AR9002PHY_H__
 #define	__ATH_AR9002PHY_H__

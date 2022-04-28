@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/xlocale/_string.h 231673 2012-02-14 12:03:23Z theraven $
+ * $FreeBSD$
  */
 
 #ifndef _LOCALE_T_DEFINED
@@ -53,9 +53,7 @@ size_t	 strxfrm_l(char *, const char *, size_t, locale_t);
 #ifdef _XLOCALE_H_
 #ifndef _XLOCALE_STRING2_H
 #define _XLOCALE_STRING2_H
-int	 strcasecmp_l(const char *, const char *, locale_t);
 char	*strcasestr_l(const char *, const char *, locale_t);
-int	 strncasecmp_l(const char *, const char *, size_t, locale_t);
 
 #endif /* _XLOCALE_STRING2_H */
 #endif /* _XLOCALE_H_ */

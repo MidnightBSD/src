@@ -15,7 +15,7 @@
  */
 
 /* $Id: platform.h.in,v 1.2.6.2 2008/01/23 02:15:02 tbox Exp $ */
-/* $FreeBSD: release/10.0.0/lib/libc/include/isc/platform.h 186090 2008-12-14 19:39:53Z ume $ */
+/* $FreeBSD$ */
 
 /*! \file */
 

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ndiscvt/Makefile 228665 2011-12-17 22:16:27Z dim $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../sys/compat/ndis
+.PATH:	${SRCTOP}/sys/compat/ndis
 
 PROG=	ndiscvt
 SRCS=	ndiscvt.c
@@ -13,18 +13,14 @@ MAN+=	ndisgen.8
 WARNS?=	4
 NO_WCAST_ALIGN=
 
-DPADD=  ${LIBL}
-LDADD=  -ll
-
 YFLAGS+=-v
 
-CFLAGS+=-I. -I${.CURDIR} -I${.CURDIR}/../../sys
+CFLAGS+=-I. -I${.CURDIR} -I${SRCTOP}/sys
 
 CLEANFILES= y.output
 
 FILES= windrv_stub.c
-FILESNAME= windrv_stub.c
-FILESDIR= /usr/share/misc
+FILESDIR= ${SHAREDIR}/misc
 
 SCRIPTS= ndisgen.sh
 

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/pcfclock/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../dev/ppbus
+.PATH:	${SRCTOP}/sys/dev/ppbus
 
 KMOD=	pcfclock
 SRCS=	pcfclock.c opt_pcfclock.h

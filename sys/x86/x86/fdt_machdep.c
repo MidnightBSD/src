@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/fdt_machdep.c 250840 2013-05-21 03:05:49Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_platform.h"
 
@@ -54,7 +54,7 @@ x86_init_fdt(void)
 	mdp = preload_search_by_type("elf kernel");
 	if (mdp == NULL)
 		mdp = preload_search_by_type("elf32 kernel");
-	dtbp = (mdp != NULL) ? MD_FETCH(mdp, MODINFOMD_DTBP, void *) : NULL;
+	dtbp = MD_FETCH(mdp, MODINFOMD_DTBP, void *);
 
 #if defined(FDT_DTB_STATIC)
 	/*

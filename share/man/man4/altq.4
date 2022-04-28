@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/altq.4 255736 2013-09-20 20:18:49Z davidch $
+.\" $FreeBSD$
 .\"
-.Dd December 9, 2011
+.Dd March 20, 2018
 .Dt ALTQ 4
 .Os
 .Sh NAME
@@ -35,15 +35,18 @@
 .Cd options ALTQ
 .Pp
 .Cd options ALTQ_CBQ
+.Cd options ALTQ_CODEL
 .Cd options ALTQ_RED
 .Cd options ALTQ_RIO
 .Cd options ALTQ_HFSC
 .Cd options ALTQ_CDNR
 .Cd options ALTQ_PRIQ
+.Cd options ALTQ_FAIRQ
 .Sh DESCRIPTION
 The
 .Nm
-framework provides several disciplines for queuing outgoing network packets.
+system is a framework which provides several disciplines for queuing outgoing
+network packets.
 This is done by modifications to the interface packet queues.
 See
 .Xr altq 9
@@ -57,7 +60,7 @@ utility, so please refer to the
 .Xr pfctl 8
 and the
 .Xr pf.conf 5
-manpages for a complete description of the
+man pages for a complete description of the
 .Nm
 capabilities and how to use it.
 .Ss Kernel Options
@@ -72,6 +75,10 @@ Enable
 .It Dv ALTQ_CBQ
 Build the
 .Dq "Class Based Queuing"
+discipline.
+.It Dv ALTQ_CODEL
+Build the
+.Dq "Controlled Delay"
 discipline.
 .It Dv ALTQ_RED
 Build the
@@ -92,6 +99,10 @@ any of the available disciplines or consumers.
 .It Dv ALTQ_PRIQ
 Build the
 .Dq "Priority Queuing"
+discipline.
+.It Dv ALTQ_FAIRQ
+Build the
+.Dq "Fair Queuing"
 discipline.
 .It Dv ALTQ_NOPCC
 Required if the TSC is unusable.
@@ -145,13 +156,13 @@ They have been applied to the following hardware drivers:
 .Xr ixgbe 4 ,
 .Xr jme 4 ,
 .Xr le 4 ,
+.Xr liquidio 4 ,
 .Xr msk 4 ,
 .Xr mxge 4 ,
 .Xr my 4 ,
 .Xr nfe 4 ,
 .Xr nge 4 ,
 .Xr npe 4 ,
-.Xr nve 4 ,
 .Xr qlxgb 4 ,
 .Xr ral 4 ,
 .Xr re 4 ,
@@ -192,3 +203,11 @@ pseudo drivers also do support
 .Xr ipfw 8 ,
 .Xr pfctl 8 ,
 .Xr altq 9
+.Sh HISTORY
+The
+.Nm
+system first appeared in March 1997 and found home in the KAME project
+(http://www.kame.net).
+It was imported to
+.Fx
+in 5.3 .

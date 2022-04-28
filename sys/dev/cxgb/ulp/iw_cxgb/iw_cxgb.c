@@ -27,7 +27,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/ulp/iw_cxgb/iw_cxgb.c 256303 2013-10-10 22:44:29Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -251,9 +251,6 @@ iwch_mod_unload(void)
 }
 #endif	/* TCP_OFFLOAD */
 
-#undef MODULE_VERSION
-#include <sys/module.h>
-
 static int
 iwch_modevent(module_t mod, int cmd, void *arg)
 {
@@ -299,3 +296,5 @@ MODULE_DEPEND(t3_tom, cxgbc, 1, 1, 1);
 MODULE_DEPEND(iw_cxgb, toecore, 1, 1, 1);
 MODULE_DEPEND(iw_cxgb, t3_tom, 1, 1, 1);
 MODULE_DEPEND(iw_cxgb, ibcore, 1, 1, 1);
+MODULE_DEPEND(iw_cxgb, linuxkpi, 1, 1, 1);
+

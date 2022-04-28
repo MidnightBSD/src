@@ -1,5 +1,5 @@
 $Id: TODO,v 1.2 2004/08/23 18:08:15 max Exp $
-$FreeBSD: release/10.0.0/sys/netgraph/bluetooth/drivers/h4/TODO 171818 2007-08-13 17:19:28Z emax $
+$FreeBSD$
 
 FIXME/TODO list
 

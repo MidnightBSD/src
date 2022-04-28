@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/Makefile.arm 232908 2012-03-13 00:45:27Z jmallett $
+# $FreeBSD$
 
-SUBDIR+=	ofwdump
 SUBDIR+=	kgmon
+SUBDIR+=	ofwdump

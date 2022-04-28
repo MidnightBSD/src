@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/lockmgr.h 255940 2013-09-29 18:02:23Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_LOCKMGR_H_
@@ -68,6 +68,10 @@ struct thread;
  */
 int	 __lockmgr_args(struct lock *lk, u_int flags, struct lock_object *ilk,
 	    const char *wmesg, int prio, int timo, const char *file, int line);
+int	 lockmgr_lock_fast_path(struct lock *lk, u_int flags,
+	    struct lock_object *ilk, const char *file, int line);
+int	 lockmgr_unlock_fast_path(struct lock *lk, u_int flags,
+	    struct lock_object *ilk);
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
 void	 _lockmgr_assert(const struct lock *lk, int what, const char *file, int line);
 #endif
@@ -77,6 +81,7 @@ void	 lockallowrecurse(struct lock *lk);
 void	 lockallowshare(struct lock *lk);
 void	 lockdestroy(struct lock *lk);
 void	 lockdisablerecurse(struct lock *lk);
+void	 lockdisableshare(struct lock *lk);
 void	 lockinit(struct lock *lk, int prio, const char *wmesg, int timo,
 	    int flags);
 #ifdef DDB
@@ -157,6 +162,8 @@ _lockmgr_args_rw(struct lock *lk, u_int flags, struct rwlock *ilk,
 #define	LK_RETRY	0x000400
 #define	LK_SLEEPFAIL	0x000800
 #define	LK_TIMELOCK	0x001000
+#define	LK_NODDLKTREAT	0x002000
+#define	LK_VNHELD	0x004000
 
 /*
  * Operations for lockmgr().

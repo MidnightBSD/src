@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/examples/ppp/ppp.linkdown.span-isp 88078 2001-12-17 22:05:23Z cjc $
+# $FreeBSD$
 
 # Refer to ppp.conf.span-isp for a description of what this file is for.
 # This file is only required on the Gateway machine.

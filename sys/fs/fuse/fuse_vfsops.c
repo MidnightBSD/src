@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/fuse/fuse_vfsops.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/fs/fuse/fuse_vfsops.c 255219 2013-09-05 0
 #include <sys/errno.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/conf.h>
 #include <sys/filedesc.h>
 #include <sys/uio.h>
@@ -114,10 +114,10 @@ struct vfsops fuse_vfsops = {
 };
 
 SYSCTL_INT(_vfs_fuse, OID_AUTO, init_backgrounded, CTLFLAG_RD,
-    0, 1, "indicate async handshake");
+    SYSCTL_NULL_INT_PTR, 1, "indicate async handshake");
 static int fuse_enforce_dev_perms = 0;
 
-SYSCTL_LONG(_vfs_fuse, OID_AUTO, enforce_dev_perms, CTLFLAG_RW,
+SYSCTL_INT(_vfs_fuse, OID_AUTO, enforce_dev_perms, CTLFLAG_RW,
     &fuse_enforce_dev_perms, 0,
     "enforce fuse device permissions for secondary mounts");
 static unsigned sync_unmount = 1;
@@ -215,7 +215,7 @@ fuse_vfsop_mount(struct mount *mp)
 	size_t len;
 
 	struct cdev *fdev;
-	struct fuse_data *data;
+	struct fuse_data *data = NULL;
 	struct thread *td;
 	struct file *fp, *fptmp;
 	char *fspec, *subtype;
@@ -337,6 +337,7 @@ fuse_vfsop_mount(struct mount *mp)
 	MNT_ILOCK(mp);
 	mp->mnt_data = data;
 	mp->mnt_flag |= MNT_LOCAL;
+	mp->mnt_kern_flag |= MNTK_USES_BCACHE;
 	MNT_IUNLOCK(mp);
 	/* We need this here as this slot is used by getnewvnode() */
 	mp->mnt_stat.f_iosize = PAGE_SIZE;
@@ -354,7 +355,7 @@ fuse_vfsop_mount(struct mount *mp)
 out:
 	if (err) {
 		FUSE_LOCK();
-		if (data->mp == mp) {
+		if (data != NULL && data->mp == mp) {
 			/*
 			 * Destroy device only if we acquired reference to
 			 * it

@@ -32,16 +32,14 @@
  * SUCH DAMAGE.
  * 
  * $Id: dcons.c,v 1.65 2003/10/24 03:24:55 simokawa Exp $
- * $FreeBSD: release/10.0.0/sys/dev/dcons/dcons.c 169972 2007-05-25 05:00:39Z simokawa $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 
-#if defined(__DragonFly__) || defined(_BOOT)
-#include "dcons.h"
 #if defined(_BOOT)
+#include "dcons.h"
 #include "stand.h"
-#endif
 #else
 #include <dev/dcons/dcons.h>
 #endif

@@ -41,16 +41,16 @@ static char sccsid[] = "@(#)rwhod.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rwhod/rwhod.c 255227 2013-09-05 01:05:48Z pjd $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/capability.h>
 #include <sys/param.h>
+#include <sys/capsicum.h>
+#include <sys/ioctl.h>
+#include <sys/procdesc.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/signal.h>
-#include <sys/ioctl.h>
 #include <sys/sysctl.h>
-#include <sys/procdesc.h>
 #include <sys/wait.h>
 
 #include <net/if.h>
@@ -281,7 +281,7 @@ main(int argc, char *argv[])
 		} else if (pid_child_receiver == -1) {
 			if (errno == ENOSYS) {
 				syslog(LOG_ERR,
-				    "The pdfork(2) system call is not available; recompile the kernel with options PROCDESC");
+				    "The pdfork(2) system call is not available - kernel too old.");
 			} else {
 				syslog(LOG_ERR, "pdfork: %m");
 			}
@@ -488,7 +488,6 @@ sender_process(void)
 		for (we = mywd.wd_we; we < wend; we++) {
 			if (stat(we->we_utmp.out_line, &stb) >= 0)
 				we->we_idle = htonl(now - stb.st_atime);
-			we++;
 		}
 		(void) getloadavg(avenrun,
 		    sizeof(avenrun) / sizeof(avenrun[0]));
@@ -549,7 +548,7 @@ getboottime(int signo __unused)
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_BOOTTIME;
 	size = sizeof(tm);
-	if (sysctl(mib, 2, &tm, &size, NULL, 0) == -1) {
+	if (sysctl(mib, nitems(mib), &tm, &size, NULL, 0) == -1) {
 		syslog(LOG_ERR, "cannot get boottime: %m");
 		exit(1);
 	}
@@ -630,11 +629,11 @@ configure(int so)
 	mib[3] = AF_INET;
 	mib[4] = NET_RT_IFLIST;
 	mib[5] = 0;
-	if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0)
+	if (sysctl(mib, nitems(mib), NULL, &needed, NULL, 0) < 0)
 		quit("route-sysctl-estimate");
 	if ((buf = malloc(needed)) == NULL)
 		quit("malloc");
-	if (sysctl(mib, 6, buf, &needed, NULL, 0) < 0)
+	if (sysctl(mib, nitems(mib), buf, &needed, NULL, 0) < 0)
 		quit("actual retrieval of interface table");
 	lim = buf + needed;
 

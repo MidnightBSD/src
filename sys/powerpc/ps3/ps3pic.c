@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3pic.c 230144 2012-01-15 18:26:43Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -166,12 +166,13 @@ ps3pic_dispatch(device_t dev, struct trapframe *tf)
 	sc = device_get_softc(dev);
 
 	if (PCPU_GET(cpuid) == 0) {
-		bitmap = sc->bitmap_thread0[0];
+		bitmap = atomic_readandclear_64(&sc->bitmap_thread0[0]);
 		mask = sc->mask_thread0[0];
 	} else {
-		bitmap = sc->bitmap_thread1[0];
+		bitmap = atomic_readandclear_64(&sc->bitmap_thread1[0]);
 		mask = sc->mask_thread1[0];
 	}
+	powerpc_sync();
 
 	while ((irq = ffsl(bitmap & mask) - 1) != -1) {
 		bitmap &= ~(1UL << irq);

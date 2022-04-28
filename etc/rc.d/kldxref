@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/kldxref 238416 2012-07-13 06:46:09Z kevlo $
+# $FreeBSD$
 #
 
 # PROVIDE: kldxref
@@ -12,6 +12,7 @@
 
 rcvar="kldxref_enable"
 name="kldxref"
+desc="Generate hints for the kernel loader"
 stop_cmd=":"
 start_cmd="kldxref_start"
 

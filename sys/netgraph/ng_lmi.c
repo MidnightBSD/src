@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_lmi.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD$
  * $Whistle: ng_lmi.c,v 1.38 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -429,7 +429,7 @@ ngauto_state_machine(sc_p sc)
 		break;
 	}
 
-	/* send an inquirey encoded appropriatly */
+	/* send an inquirey encoded appropriately */
 	nglmi_inquire(sc, 0);
 	sc->poll_count--;
 }
@@ -585,7 +585,7 @@ nglmi_rcvdata(hook_p hook, item_p item)
 
 	/* Now check if there is a 'locking shift'. This is only seen in
 	 * Annex D frames. don't bother checking, we already did that. Don't
-	 * increment immediatly as it might not be there. */
+	 * increment immediately as it might not be there. */
 	if (ANNEXD(sc))
 		STEPBY(1);
 

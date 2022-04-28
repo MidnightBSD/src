@@ -35,7 +35,7 @@
  * For any questions regarding licensing please contact marketing@caviumnetworks.com
  *
  ***********************license end**************************************/
-/* $FreeBSD: release/10.0.0/sys/mips/cavium/cvmx_config.h 233639 2012-03-29 02:05:11Z jmallett $ */
+/* $FreeBSD$ */
 
 #ifndef	_CVMX_CONFIG_H
 #define	_CVMX_CONFIG_H
@@ -50,7 +50,6 @@
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
-#include <machine/pmap.h>
 #include <machine/stdarg.h>
 
 #define	asm		__asm
@@ -63,7 +62,7 @@
 #define CVMX_ENABLE_PKO_FUNCTIONS
 
 /* Define to enable the use of simple executive helper functions. These
-** include many harware setup functions.  See cvmx-helper.[ch] for
+** include many hardware setup functions.  See cvmx-helper.[ch] for
 ** details.
 */
 #define CVMX_ENABLE_HELPER_FUNCTIONS

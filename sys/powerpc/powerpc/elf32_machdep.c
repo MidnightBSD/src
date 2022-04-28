@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/elf32_machdep.c 219405 2011-03-08 19:01:45Z dchagin $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -47,6 +47,7 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 
+#include <machine/altivec.h>
 #include <machine/cpu.h>
 #include <machine/elf.h>
 #include <machine/reg.h>
@@ -67,8 +68,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_table	= sysent,
 #endif
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -76,7 +75,6 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode32,
 	.sv_szsigcode	= &szsigcode32,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
 	.sv_imgact_try	= NULL,
@@ -107,6 +105,8 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_shared_page_base = FREEBSD32_SHAREDPAGE,
 	.sv_shared_page_len = PAGE_SIZE,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 INIT_SYSENTVEC(elf32_sysvec, &elf32_freebsd_sysvec);
 
@@ -146,13 +146,37 @@ SYSINIT(oelf32, SI_SUB_EXEC, SI_ORDER_ANY,
 	(sysinit_cfunc_t) elf32_insert_brand_entry,
 	&freebsd_brand_oinfo);
 
+void elf_reloc_self(Elf_Dyn *dynp, Elf_Addr relocbase);
+
 void
-elf32_dump_thread(struct thread *td __unused, void *dst __unused,
-    size_t *off __unused)
+elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 {
+	size_t len;
+	struct pcb *pcb;
+
+	len = 0;
+	pcb = td->td_pcb;
+	if (pcb->pcb_flags & PCB_VEC) {
+		save_vec_nodrop(td);
+		if (dst != NULL) {
+			len += elf32_populate_note(NT_PPC_VMX,
+			    &pcb->pcb_vec, dst,
+			    sizeof(pcb->pcb_vec), NULL);
+		} else
+			len += elf32_populate_note(NT_PPC_VMX, NULL, NULL,
+			    sizeof(pcb->pcb_vec), NULL);
+	}
+	*off = len;
 }
 
 #ifndef __powerpc64__
+bool
+elf_is_ifunc_reloc(Elf_Size r_info __unused)
+{
+
+	return (false);
+}
+
 /* Process one elf relocation with addend. */
 static int
 elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
@@ -164,6 +188,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	Elf_Addr addend;
 	Elf_Word rtype, symidx;
 	const Elf_Rela *rela;
+	int error;
 
 	switch (type) {
 	case ELF_RELOC_REL:
@@ -183,20 +208,19 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 
 	switch (rtype) {
 
-       	case R_PPC_NONE:
-	       	break;
+	case R_PPC_NONE:
+		break;
 
 	case R_PPC_ADDR32: /* word32 S + A */
-       		addr = lookup(lf, symidx, 1);
-	       	if (addr == 0)
-	       		return -1;
-		addr += addend;
-	       	*where = addr;
-	       	break;
+		error = lookup(lf, symidx, 1, &addr);
+		if (error != 0)
+			return -1;
+		*where = elf_relocaddr(lf, addr + addend);
+			break;
 
-       	case R_PPC_ADDR16_LO: /* #lo(S) */
-		addr = lookup(lf, symidx, 1);
-		if (addr == 0)
+	case R_PPC_ADDR16_LO: /* #lo(S) */
+		error = lookup(lf, symidx, 1, &addr);
+		if (error != 0)
 			return -1;
 		/*
 		 * addend values are sometimes relative to sections
@@ -204,15 +228,14 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		 * are relative to relocbase. Detect this condition.
 		 */
 		if (addr > relocbase && addr <= (relocbase + addend))
-			addr = relocbase + addend;
-		else
-			addr += addend;
+			addr = relocbase;
+		addr = elf_relocaddr(lf, addr + addend);
 		*hwhere = addr & 0xffff;
 		break;
 
 	case R_PPC_ADDR16_HA: /* #ha(S) */
-		addr = lookup(lf, symidx, 1);
-		if (addr == 0)
+		error = lookup(lf, symidx, 1, &addr);
+		if (error != 0)
 			return -1;
 		/*
 		 * addend values are sometimes relative to sections
@@ -220,23 +243,55 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		 * are relative to relocbase. Detect this condition.
 		 */
 		if (addr > relocbase && addr <= (relocbase + addend))
-			addr = relocbase + addend;
-		else
-			addr += addend;
-	       	*hwhere = ((addr >> 16) + ((addr & 0x8000) ? 1 : 0))
+			addr = relocbase;
+		addr = elf_relocaddr(lf, addr + addend);
+		*hwhere = ((addr >> 16) + ((addr & 0x8000) ? 1 : 0))
 		    & 0xffff;
 		break;
 
 	case R_PPC_RELATIVE: /* word32 B + A */
-       		*where = elf_relocaddr(lf, relocbase + addend);
-	       	break;
+		*where = elf_relocaddr(lf, relocbase + addend);
+		break;
 
 	default:
-       		printf("kldload: unexpected relocation type %d\n",
-	       	    (int) rtype);
+		printf("kldload: unexpected relocation type %d\n",
+		    (int) rtype);
 		return -1;
 	}
 	return(0);
+}
+
+void
+elf_reloc_self(Elf_Dyn *dynp, Elf_Addr relocbase)
+{
+	Elf_Rela *rela = NULL, *relalim;
+	Elf_Addr relasz = 0;
+	Elf_Addr *where;
+
+	/*
+	 * Extract the rela/relasz values from the dynamic section
+	 */
+	for (; dynp->d_tag != DT_NULL; dynp++) {
+		switch (dynp->d_tag) {
+		case DT_RELA:
+			rela = (Elf_Rela *)(relocbase+dynp->d_un.d_ptr);
+			break;
+		case DT_RELASZ:
+			relasz = dynp->d_un.d_val;
+			break;
+		}
+	}
+
+	/*
+	 * Relocate these values
+	 */
+	relalim = (Elf_Rela *)((caddr_t)rela + relasz);
+	for (; rela < relalim; rela++) {
+		if (ELF_R_TYPE(rela->r_info) != R_PPC_RELATIVE)
+			continue;
+		where = (Elf_Addr *)(relocbase + rela->r_offset);
+		*where = (Elf_Addr)(relocbase + rela->r_addend);
+	}
 }
 
 int

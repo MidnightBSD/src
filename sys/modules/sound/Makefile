@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/Makefile 132236 2004-07-16 04:00:08Z tanimura $
+# $FreeBSD$
 
 SUBDIR =
 SUBDIR += sound

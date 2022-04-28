@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/printf-pos.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is the code responsible for handling positional arguments
@@ -633,7 +633,7 @@ __grow_type_table(struct typetable *types)
 			return (-1);
 		bcopy(oldtable, newtable, oldsize * sizeof(enum typeid));
 	} else {
-		newtable = realloc(oldtable, newsize * sizeof(enum typeid));
+		newtable = reallocarray(oldtable, newsize, sizeof(enum typeid));
 		if (newtable == NULL)
 			return (-1);
 	}

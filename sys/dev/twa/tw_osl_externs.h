@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_osl_externs.h 208969 2010-06-09 21:40:38Z delphij $
+ *	$FreeBSD$
  */
 
 /*

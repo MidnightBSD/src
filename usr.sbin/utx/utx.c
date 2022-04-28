@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011-2012 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/utx/utx.c 231530 2012-02-11 20:28:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/time.h>
 #include <errno.h>
@@ -95,10 +97,7 @@ int
 main(int argc, char *argv[])
 {
 
-	if (argc >= 2 && strcmp(getprogname(), "utxrm") == 0)
-		/* For compatibility. */
-		return (rm(&argv[1]));
-	else if (argc == 2 && strcmp(argv[1], "boot") == 0)
+	if (argc == 2 && strcmp(argv[1], "boot") == 0)
 		return (boot(BOOT_TIME));
 	else if (argc == 2 && strcmp(argv[1], "shutdown") == 0)
 		return (boot(SHUTDOWN_TIME));
@@ -108,7 +107,6 @@ main(int argc, char *argv[])
 	fprintf(stderr,
 	    "usage: utx boot\n"
 	    "       utx shutdown\n"
-	    "       utx rm identifier ...\n"
-	    "       utxrm identifier ...\n");
+	    "       utx rm identifier ...\n");
 	exit(1);
 }

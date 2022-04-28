@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994, 1995, 1996, 1998 Peter Wemm <peter@netplex.com.au>
  * All rights reserved.
  *
@@ -43,7 +45,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-	"$FreeBSD: release/10.0.0/usr.bin/mktemp/mktemp.c 241118 2012-10-02 00:30:26Z eadler $";
+	"$FreeBSD$";
 #endif /* not lint */
 
 static void usage(void);

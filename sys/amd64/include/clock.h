@@ -3,7 +3,7 @@
  * Garrett Wollman, September 1994.
  * This file is in the public domain.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/include/clock.h 249324 2013-04-10 05:59:07Z neel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CLOCK_H_
@@ -25,6 +25,8 @@ extern int	smp_tsc;
 #endif
 
 void	i8254_init(void);
+void	i8254_delay(int);
+void	clock_init(void);
 
 /*
  * Driver to clock driver interface.
@@ -32,6 +34,7 @@ void	i8254_init(void);
 
 void	startrtclock(void);
 void	init_TSC(void);
+void	resume_TSC(void);
 
 #define	HAS_TIMER_SPKR 1
 int	timer_spkr_acquire(void);

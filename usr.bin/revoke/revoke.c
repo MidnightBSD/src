@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/revoke/revoke.c 194267 2009-06-15 21:52:27Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

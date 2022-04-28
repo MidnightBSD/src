@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/BIG5/UCS@SIP%HKSCS.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS@SIP%HKSCS.src,v 1.2 2008/04/12 13:11:56 tnozaki Exp $
 
 TYPE		ROWCOL

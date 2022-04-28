@@ -27,17 +27,29 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: release/10.0.0/sys/amd64/include/proc.h 233291 2012-03-22 04:52:51Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PROC_H_
 #define	_MACHINE_PROC_H_
 
+#include <sys/queue.h>
 #include <machine/segments.h>
+
+/*
+ * List of locks
+ *	k - only accessed by curthread
+ *	pp - pmap.c:invl_gen_mtx
+ */
 
 struct proc_ldt {
 	caddr_t ldt_base;
 	int     ldt_refcnt;
+};
+
+struct pmap_invl_gen {
+	u_long gen;			/* (k) */
+	LIST_ENTRY(pmap_invl_gen) link;	/* (pp) */
 };
 
 /*
@@ -47,6 +59,7 @@ struct mdthread {
 	int	md_spinlock_count;	/* (k) */
 	register_t md_saved_flags;	/* (k) */
 	register_t md_spurflt_addr;	/* (k) Spurious page fault address. */
+	struct pmap_invl_gen md_invl_gen;
 };
 
 struct mdproc {
@@ -56,6 +69,13 @@ struct mdproc {
 
 #define	KINFO_PROC_SIZE 1088
 #define	KINFO_PROC32_SIZE 768
+
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[8];
+	int narg;
+};
 
 #ifdef	_KERNEL
 
@@ -68,10 +88,8 @@ struct mdproc {
 	    (char *)&td;						\
 } while (0)
 
-void set_user_ldt(struct mdproc *);
 struct proc_ldt *user_ldt_alloc(struct proc *, int);
 void user_ldt_free(struct thread *);
-void user_ldt_deref(struct proc_ldt *);
 struct sysarch_args;
 int sysarch_ldt(struct thread *td, struct sysarch_args *uap, int uap_space);
 int amd64_set_ldt_data(struct thread *td, int start, int num,
@@ -79,13 +97,6 @@ int amd64_set_ldt_data(struct thread *td, int start, int num,
 
 extern struct mtx dt_lock;
 extern int max_ldt_segment;
-
-struct syscall_args {
-	u_int code;
-	struct sysent *callp;
-	register_t args[8];
-	int narg;
-};
 #endif  /* _KERNEL */
 
 #endif /* !_MACHINE_PROC_H_ */

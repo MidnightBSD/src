@@ -27,7 +27,7 @@
  *
  *	from: src/sys/alpha/include/sigframe.h,v 1.1 1999/09/29 15:06:26 marcel
  *	from: sigframe.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/sigframe.h 232449 2012-03-03 08:19:18Z jmallett $
+ * $FreeBSD$
  */
 #ifndef _MACHINE_SIGFRAME_H_
 #define	_MACHINE_SIGFRAME_H_

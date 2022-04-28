@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/include/stdatomic/logic.c 251558 2013-06-08 22:44:49Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdatomic.h>

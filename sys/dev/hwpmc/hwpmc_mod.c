@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_mod.c 255746 2013-09-20 23:10:52Z davide $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -173,7 +173,7 @@ static struct pmc_classdep **pmc_rowindex_to_classdep;
  * Prototypes
  */
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 static int	pmc_debugflags_sysctl_handler(SYSCTL_HANDLER_ARGS);
 static int	pmc_debugflags_parse(char *newstr, char *fence);
 #endif
@@ -192,6 +192,7 @@ static int	pmc_detach_process(struct proc *p, struct pmc *pm);
 static int	pmc_detach_one_process(struct proc *p, struct pmc *pm,
     int flags);
 static void	pmc_destroy_owner_descriptor(struct pmc_owner *po);
+static void	pmc_destroy_pmc_descriptor(struct pmc *pm);
 static struct pmc_owner *pmc_find_owner_descriptor(struct proc *p);
 static int	pmc_find_pmc(pmc_id_t pmcid, struct pmc **pm);
 static struct pmc *pmc_find_pmc_descriptor_in_process(struct pmc_owner *po,
@@ -234,17 +235,16 @@ static void pmc_generic_cpu_finalize(struct pmc_mdep *md);
 SYSCTL_DECL(_kern_hwpmc);
 
 static int pmc_callchaindepth = PMC_CALLCHAIN_DEPTH;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "callchaindepth", &pmc_callchaindepth);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, callchaindepth, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, callchaindepth, CTLFLAG_RDTUN,
     &pmc_callchaindepth, 0, "depth of call chain records");
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 struct pmc_debugflags pmc_debugflags = PMC_DEBUG_DEFAULT_FLAGS;
 char	pmc_debugstr[PMC_DEBUG_STRSIZE];
 TUNABLE_STR(PMC_SYSCTL_NAME_PREFIX "debugflags", pmc_debugstr,
     sizeof(pmc_debugstr));
 SYSCTL_PROC(_kern_hwpmc, OID_AUTO, debugflags,
-    CTLTYPE_STRING|CTLFLAG_RW|CTLFLAG_TUN,
+    CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
     0, 0, pmc_debugflags_sysctl_handler, "A", "debug flags");
 #endif
 
@@ -254,8 +254,7 @@ SYSCTL_PROC(_kern_hwpmc, OID_AUTO, debugflags,
  */
 
 static int pmc_hashsize = PMC_HASH_SIZE;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "hashsize", &pmc_hashsize);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_RDTUN,
     &pmc_hashsize, 0, "rows in hash tables");
 
 /*
@@ -263,8 +262,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, hashsize, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_nsamples = PMC_NSAMPLES;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "nsamples", &pmc_nsamples);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_RDTUN,
     &pmc_nsamples, 0, "number of PC samples per CPU");
 
 
@@ -273,8 +271,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, nsamples, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_mtxpool_size = PMC_MTXPOOL_SIZE;
-TUNABLE_INT(PMC_SYSCTL_NAME_PREFIX "mtxpoolsize", &pmc_mtxpool_size);
-SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_TUN|CTLFLAG_RD,
+SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_RDTUN,
     &pmc_mtxpool_size, 0, "size of spin mutex pool");
 
 
@@ -288,8 +285,7 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_TUN|CTLFLAG_RD,
  */
 
 static int pmc_unprivileged_syspmcs = 0;
-TUNABLE_INT("security.bsd.unprivileged_syspmcs", &pmc_unprivileged_syspmcs);
-SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RW,
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RWTUN,
     &pmc_unprivileged_syspmcs, 0,
     "allow unprivileged process to allocate system PMCs");
 
@@ -315,28 +311,33 @@ SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_syspmcs, CTLFLAG_RW,
 
 /* The `sysent' for the new syscall */
 static struct sysent pmc_sysent = {
-	2,			/* sy_narg */
-	pmc_syscall_handler	/* sy_call */
+	.sy_narg =	2,
+	.sy_call =	pmc_syscall_handler,
 };
 
 static struct syscall_module_data pmc_syscall_mod = {
-	load,
-	NULL,
-	&pmc_syscall_num,
-	&pmc_sysent,
-	{ 0, NULL }
+	.chainevh =	load,
+	.chainarg =	NULL,
+	.offset =	&pmc_syscall_num,
+	.new_sysent =	&pmc_sysent,
+	.old_sysent =	{ .sy_narg = 0, .sy_call = NULL },
+	.flags =	SY_THR_STATIC_KLD,
 };
 
 static moduledata_t pmc_mod = {
-	PMC_MODULE_NAME,
-	syscall_module_handler,
-	&pmc_syscall_mod
+	.name =		PMC_MODULE_NAME,
+	.evhand =	syscall_module_handler,
+	.priv =		&pmc_syscall_mod,
 };
 
+#ifdef EARLY_AP_STARTUP
+DECLARE_MODULE(pmc, pmc_mod, SI_SUB_SYSCALLS, SI_ORDER_ANY);
+#else
 DECLARE_MODULE(pmc, pmc_mod, SI_SUB_SMP, SI_ORDER_ANY);
+#endif
 MODULE_VERSION(pmc, PMC_VERSION);
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 enum pmc_dbgparse_state {
 	PMCDS_WS,		/* in whitespace */
 	PMCDS_MAJOR,		/* seen a major keyword */
@@ -650,12 +651,12 @@ pmc_ri_to_classdep(struct pmc_mdep *md, int ri, int *adjri)
 static void
 pmc_save_cpu_binding(struct pmc_binding *pb)
 {
-	PMCDBG(CPU,BND,2, "%s", "save-cpu");
+	PMCDBG0(CPU,BND,2, "save-cpu");
 	thread_lock(curthread);
 	pb->pb_bound = sched_is_bound(curthread);
 	pb->pb_cpu   = curthread->td_oncpu;
 	thread_unlock(curthread);
-	PMCDBG(CPU,BND,2, "save-cpu cpu=%d", pb->pb_cpu);
+	PMCDBG1(CPU,BND,2, "save-cpu cpu=%d", pb->pb_cpu);
 }
 
 /*
@@ -665,7 +666,7 @@ pmc_save_cpu_binding(struct pmc_binding *pb)
 static void
 pmc_restore_cpu_binding(struct pmc_binding *pb)
 {
-	PMCDBG(CPU,BND,2, "restore-cpu curcpu=%d restore=%d",
+	PMCDBG2(CPU,BND,2, "restore-cpu curcpu=%d restore=%d",
 	    curthread->td_oncpu, pb->pb_cpu);
 	thread_lock(curthread);
 	if (pb->pb_bound)
@@ -673,7 +674,7 @@ pmc_restore_cpu_binding(struct pmc_binding *pb)
 	else
 		sched_unbind(curthread);
 	thread_unlock(curthread);
-	PMCDBG(CPU,BND,2, "%s", "restore-cpu done");
+	PMCDBG0(CPU,BND,2, "restore-cpu done");
 }
 
 /*
@@ -690,7 +691,7 @@ pmc_select_cpu(int cpu)
 	KASSERT(pmc_cpu_is_active(cpu), ("[pmc,%d] selecting inactive "
 	    "CPU %d", __LINE__, cpu));
 
-	PMCDBG(CPU,SEL,2, "select-cpu cpu=%d", cpu);
+	PMCDBG1(CPU,SEL,2, "select-cpu cpu=%d", cpu);
 	thread_lock(curthread);
 	sched_bind(curthread, cpu);
 	thread_unlock(curthread);
@@ -699,7 +700,7 @@ pmc_select_cpu(int cpu)
 	    ("[pmc,%d] CPU not bound [cpu=%d, curr=%d]", __LINE__,
 		cpu, curthread->td_oncpu));
 
-	PMCDBG(CPU,SEL,2, "select-cpu cpu=%d ok", cpu);
+	PMCDBG1(CPU,SEL,2, "select-cpu cpu=%d ok", cpu);
 }
 
 /*
@@ -741,18 +742,19 @@ pmc_remove_owner(struct pmc_owner *po)
 
 	sx_assert(&pmc_sx, SX_XLOCKED);
 
-	PMCDBG(OWN,ORM,1, "remove-owner po=%p", po);
+	PMCDBG1(OWN,ORM,1, "remove-owner po=%p", po);
 
 	/* Remove descriptor from the owner hash table */
 	LIST_REMOVE(po, po_next);
 
 	/* release all owned PMC descriptors */
 	LIST_FOREACH_SAFE(pm, &po->po_pmcs, pm_next, tmp) {
-		PMCDBG(OWN,ORM,2, "pmc=%p", pm);
+		PMCDBG1(OWN,ORM,2, "pmc=%p", pm);
 		KASSERT(pm->pm_owner == po,
 		    ("[pmc,%d] owner %p != po %p", __LINE__, pm->pm_owner, po));
 
 		pmc_release_pmc_descriptor(pm);	/* will unlink from the list */
+		pmc_destroy_pmc_descriptor(pm);
 	}
 
 	KASSERT(po->po_sscount == 0,
@@ -773,7 +775,7 @@ static void
 pmc_maybe_remove_owner(struct pmc_owner *po)
 {
 
-	PMCDBG(OWN,OMR,1, "maybe-remove-owner po=%p", po);
+	PMCDBG1(OWN,OMR,1, "maybe-remove-owner po=%p", po);
 
 	/*
 	 * Remove owner record if
@@ -811,10 +813,10 @@ pmc_link_target_process(struct pmc *pm, struct pmc_process *pp)
 
 	ri = PMC_TO_ROWINDEX(pm);
 
-	PMCDBG(PRC,TLK,1, "link-target pmc=%p ri=%d pmc-process=%p",
+	PMCDBG3(PRC,TLK,1, "link-target pmc=%p ri=%d pmc-process=%p",
 	    pm, ri, pp);
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 	LIST_FOREACH(pt, &pm->pm_targets, pt_next)
 	    if (pt->pt_process == pp)
 		    KASSERT(0, ("[pmc,%d] pp %p already in pmc %p targets",
@@ -864,7 +866,7 @@ pmc_unlink_target_process(struct pmc *pm, struct pmc_process *pp)
 
 	ri = PMC_TO_ROWINDEX(pm);
 
-	PMCDBG(PRC,TUL,1, "unlink-target pmc=%p ri=%d pmc-process=%p",
+	PMCDBG3(PRC,TUL,1, "unlink-target pmc=%p ri=%d pmc-process=%p",
 	    pm, ri, pp);
 
 	KASSERT(pp->pp_pmcs[ri].pp_pmc == pm,
@@ -900,7 +902,7 @@ pmc_unlink_target_process(struct pmc *pm, struct pmc_process *pp)
 		kern_psignal(p, SIGIO);
 		PROC_UNLOCK(p);
 
-		PMCDBG(PRC,SIG,2, "signalling proc=%p signal=%d", p,
+		PMCDBG2(PRC,SIG,2, "signalling proc=%p signal=%d", p,
 		    SIGIO);
 	}
 }
@@ -973,7 +975,7 @@ pmc_attach_one_process(struct proc *p, struct pmc *pm)
 
 	sx_assert(&pmc_sx, SX_XLOCKED);
 
-	PMCDBG(PRC,ATT,2, "attach-one pm=%p ri=%d proc=%p (%d, %s)", pm,
+	PMCDBG5(PRC,ATT,2, "attach-one pm=%p ri=%d proc=%p (%d, %s)", pm,
 	    PMC_TO_ROWINDEX(pm), p, p->p_pid, p->p_comm);
 
 	/*
@@ -1007,14 +1009,14 @@ pmc_attach_one_process(struct proc *p, struct pmc *pm)
 
 	/* issue an attach event to a configured log file */
 	if (pm->pm_owner->po_flags & PMC_PO_OWNS_LOGFILE) {
-		pmc_getfilename(p->p_textvp, &fullpath, &freepath);
-		if (p->p_flag & P_KTHREAD) {
+		if (p->p_flag & P_KPROC) {
 			fullpath = kernelname;
 			freepath = NULL;
-		} else
+		} else {
+			pmc_getfilename(p->p_textvp, &fullpath, &freepath);
 			pmclog_process_pmcattach(pm, p->p_pid, fullpath);
-		if (freepath)
-			free(freepath, M_TEMP);
+		}
+		free(freepath, M_TEMP);
 		if (PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)))
 			pmc_log_process_mappings(pm->pm_owner, p);
 	}
@@ -1038,7 +1040,7 @@ pmc_attach_process(struct proc *p, struct pmc *pm)
 
 	sx_assert(&pmc_sx, SX_XLOCKED);
 
-	PMCDBG(PRC,ATT,1, "attach pm=%p ri=%d proc=%p (%d, %s)", pm,
+	PMCDBG5(PRC,ATT,1, "attach pm=%p ri=%d proc=%p (%d, %s)", pm,
 	    PMC_TO_ROWINDEX(pm), p, p->p_pid, p->p_comm);
 
 
@@ -1105,7 +1107,7 @@ pmc_detach_one_process(struct proc *p, struct pmc *pm, int flags)
 
 	ri = PMC_TO_ROWINDEX(pm);
 
-	PMCDBG(PRC,ATT,2, "detach-one pm=%p ri=%d proc=%p (%d, %s) flags=0x%x",
+	PMCDBG6(PRC,ATT,2, "detach-one pm=%p ri=%d proc=%p (%d, %s) flags=0x%x",
 	    pm, ri, p, p->p_pid, p->p_comm, flags);
 
 	if ((pp = pmc_find_process_descriptor(p, 0)) == NULL)
@@ -1121,7 +1123,7 @@ pmc_detach_one_process(struct proc *p, struct pmc *pm, int flags)
 		pmclog_process_pmcdetach(pm, p->p_pid);
 
 	/*
-	 * If there are no PMCs targetting this process, we remove its
+	 * If there are no PMCs targeting this process, we remove its
 	 * descriptor from the target hash table and unset the P_HWPMC
 	 * flag in the struct proc.
 	 */
@@ -1155,7 +1157,7 @@ pmc_detach_process(struct proc *p, struct pmc *pm)
 
 	sx_assert(&pmc_sx, SX_XLOCKED);
 
-	PMCDBG(PRC,ATT,1, "detach pm=%p ri=%d proc=%p (%d, %s)", pm,
+	PMCDBG5(PRC,ATT,1, "detach pm=%p ri=%d proc=%p (%d, %s)", pm,
 	    PMC_TO_ROWINDEX(pm), p, p->p_pid, p->p_comm);
 
 	if ((pm->pm_flags & PMC_F_DESCENDANTS) == 0)
@@ -1226,11 +1228,11 @@ pmc_process_csw_in(struct thread *td)
 
 	cpu = PCPU_GET(cpuid); /* td->td_oncpu is invalid */
 
-	PMCDBG(CSW,SWI,1, "cpu=%d proc=%p (%d, %s) pp=%p", cpu, p,
+	PMCDBG5(CSW,SWI,1, "cpu=%d proc=%p (%d, %s) pp=%p", cpu, p,
 	    p->p_pid, p->p_comm, pp);
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
-	    ("[pmc,%d] wierd CPU id %d", __LINE__, cpu));
+	    ("[pmc,%d] weird CPU id %d", __LINE__, cpu));
 
 	pc = pmc_pcpu[cpu];
 
@@ -1280,8 +1282,16 @@ pmc_process_csw_in(struct thread *td)
 		 */
 		if (PMC_TO_MODE(pm) == PMC_MODE_TS) {
 			mtx_pool_lock_spin(pmc_mtxpool, pm);
+
+			/*
+			 * Use the saved value calculated after the most recent
+			 * thread switch out to start this counter.  Reset
+			 * the saved count in case another thread from this
+			 * process switches in before any threads switch out.
+			 */
 			newvalue = PMC_PCPU_SAVED(cpu,ri) =
 			    pp->pp_pmcs[ri].pp_pmcval;
+			pp->pp_pmcs[ri].pp_pmcval = pm->pm_sc.pm_reloadcount;
 			mtx_pool_unlock_spin(pmc_mtxpool, pm);
 		} else {
 			KASSERT(PMC_TO_MODE(pm) == PMC_MODE_TC,
@@ -1293,9 +1303,18 @@ pmc_process_csw_in(struct thread *td)
 			mtx_pool_unlock_spin(pmc_mtxpool, pm);
 		}
 
-		PMCDBG(CSW,SWI,1,"cpu=%d ri=%d new=%jd", cpu, ri, newvalue);
+		PMCDBG3(CSW,SWI,1,"cpu=%d ri=%d new=%jd", cpu, ri, newvalue);
 
 		pcd->pcd_write_pmc(cpu, adjri, newvalue);
+
+		/* If a sampling mode PMC, reset stalled state. */
+		if (PMC_TO_MODE(pm) == PMC_MODE_TS)
+			CPU_CLR_ATOMIC(cpu, &pm->pm_stalled);
+
+		/* Indicate that we desire this to run. */
+		CPU_SET_ATOMIC(cpu, &pm->pm_cpustate);
+
+		/* Start the PMC. */
 		pcd->pcd_start_pmc(cpu, adjri);
 	}
 
@@ -1354,11 +1373,11 @@ pmc_process_csw_out(struct thread *td)
 
 	cpu = PCPU_GET(cpuid); /* td->td_oncpu is invalid */
 
-	PMCDBG(CSW,SWO,1, "cpu=%d proc=%p (%d, %s) pp=%p", cpu, p,
+	PMCDBG5(CSW,SWO,1, "cpu=%d proc=%p (%d, %s) pp=%p", cpu, p,
 	    p->p_pid, p->p_comm, pp);
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
-	    ("[pmc,%d wierd CPU id %d", __LINE__, cpu));
+	    ("[pmc,%d weird CPU id %d", __LINE__, cpu));
 
 	pc = pmc_pcpu[cpu];
 
@@ -1390,8 +1409,14 @@ pmc_process_csw_out(struct thread *td)
 		    ("[pmc,%d] ri mismatch pmc(%d) ri(%d)",
 			__LINE__, PMC_TO_ROWINDEX(pm), ri));
 
-		/* Stop hardware if not already stopped */
-		if (pm->pm_stalled == 0)
+		/*
+		 * Change desired state, and then stop if not stalled.
+		 * This two-step dance should avoid race conditions where
+		 * an interrupt re-enables the PMC after this code has
+		 * already checked the pm_stalled flag.
+		 */
+		CPU_CLR_ATOMIC(cpu, &pm->pm_cpustate);
+		if (!CPU_ISSET(cpu, &pm->pm_stalled))
 			pcd->pcd_stop_pmc(cpu, adjri);
 
 		/* reduce this PMC's runcount */
@@ -1402,8 +1427,8 @@ pmc_process_csw_out(struct thread *td)
 		 * save the reading.
 		 */
 
-		if (pp != NULL && pp->pp_pmcs[ri].pp_pmc != NULL) {
-
+		if (pm->pm_state != PMC_STATE_DELETED && pp != NULL &&
+		    pp->pp_pmcs[ri].pp_pmc != NULL) {
 			KASSERT(pm == pp->pp_pmcs[ri].pp_pmc,
 			    ("[pmc,%d] pm %p != pp_pmcs[%d] %p", __LINE__,
 				pm, ri, pp->pp_pmcs[ri].pp_pmc));
@@ -1414,31 +1439,43 @@ pmc_process_csw_out(struct thread *td)
 
 			pcd->pcd_read_pmc(cpu, adjri, &newvalue);
 
-			tmp = newvalue - PMC_PCPU_SAVED(cpu,ri);
-
-			PMCDBG(CSW,SWO,1,"cpu=%d ri=%d tmp=%jd", cpu, ri,
-			    tmp);
-
 			if (mode == PMC_MODE_TS) {
+				PMCDBG3(CSW,SWO,1,"cpu=%d ri=%d tmp=%jd (samp)",
+				    cpu, ri, PMC_PCPU_SAVED(cpu,ri) - newvalue);
 
 				/*
 				 * For sampling process-virtual PMCs,
-				 * we expect the count to be
-				 * decreasing as the 'value'
-				 * programmed into the PMC is the
-				 * number of events to be seen till
-				 * the next sampling interrupt.
+				 * newvalue is the number of events to be seen
+				 * until the next sampling interrupt.
+				 * We can just add the events left from this
+				 * invocation to the counter, then adjust
+				 * in case we overflow our range.
+				 *
+				 * (Recall that we reload the counter every
+				 * time we use it.)
 				 */
-				if (tmp < 0)
-					tmp += pm->pm_sc.pm_reloadcount;
 				mtx_pool_lock_spin(pmc_mtxpool, pm);
-				pp->pp_pmcs[ri].pp_pmcval -= tmp;
-				if ((int64_t) pp->pp_pmcs[ri].pp_pmcval < 0)
-					pp->pp_pmcs[ri].pp_pmcval +=
+
+				pp->pp_pmcs[ri].pp_pmcval += newvalue;
+				if (pp->pp_pmcs[ri].pp_pmcval >
+				    pm->pm_sc.pm_reloadcount)
+					pp->pp_pmcs[ri].pp_pmcval -=
 					    pm->pm_sc.pm_reloadcount;
+				KASSERT(pp->pp_pmcs[ri].pp_pmcval > 0 &&
+				    pp->pp_pmcs[ri].pp_pmcval <=
+				    pm->pm_sc.pm_reloadcount,
+				    ("[pmc,%d] pp_pmcval outside of expected "
+				    "range cpu=%d ri=%d pp_pmcval=%jx "
+				    "pm_reloadcount=%jx", __LINE__, cpu, ri,
+				    pp->pp_pmcs[ri].pp_pmcval,
+				    pm->pm_sc.pm_reloadcount));
 				mtx_pool_unlock_spin(pmc_mtxpool, pm);
 
 			} else {
+				tmp = newvalue - PMC_PCPU_SAVED(cpu,ri);
+
+				PMCDBG3(CSW,SWO,1,"cpu=%d ri=%d tmp=%jd (count)",
+				    cpu, ri, tmp);
 
 				/*
 				 * For counting process-virtual PMCs,
@@ -1446,7 +1483,7 @@ pmc_process_csw_out(struct thread *td)
 				 * increasing monotonically, modulo a 64
 				 * bit wraparound.
 				 */
-				KASSERT((int64_t) tmp >= 0,
+				KASSERT(tmp >= 0,
 				    ("[pmc,%d] negative increment cpu=%d "
 				     "ri=%d newvalue=%jx saved=%jx "
 				     "incr=%jx", __LINE__, cpu, ri,
@@ -1573,7 +1610,7 @@ pmc_log_kernel_mappings(struct pmc *pm)
 	 */
 	kmbase = linker_hwpmc_list_objects();
 	for (km = kmbase; km->pm_file != NULL; km++) {
-		PMCDBG(LOG,REG,1,"%s %p", (char *) km->pm_file,
+		PMCDBG2(LOG,REG,1,"%s %p", (char *) km->pm_file,
 		    (void *) km->pm_address);
 		pmclog_process_map_in(po, (pid_t) -1, km->pm_address,
 		    km->pm_file);
@@ -1614,7 +1651,7 @@ pmc_log_process_mappings(struct pmc_owner *po, struct proc *p)
 	for (entry = map->header.next; entry != &map->header; entry = entry->next) {
 
 		if (entry == NULL) {
-			PMCDBG(LOG,OPS,2, "hwpmc: vm_map entry unexpectedly "
+			PMCDBG2(LOG,OPS,2, "hwpmc: vm_map entry unexpectedly "
 			    "NULL! pid=%d vm_map=%p\n", p->p_pid, map);
 			break;
 		}
@@ -1647,13 +1684,14 @@ pmc_log_process_mappings(struct pmc_owner *po, struct proc *p)
 		 * At this point lobj is the base vm_object and it is locked.
 		 */
 		if (lobj == NULL) {
-			PMCDBG(LOG,OPS,2, "hwpmc: lobj unexpectedly NULL! pid=%d "
+			PMCDBG3(LOG,OPS,2, "hwpmc: lobj unexpectedly NULL! pid=%d "
 			    "vm_map=%p vm_obj=%p\n", p->p_pid, map, obj);
 			VM_OBJECT_RUNLOCK(obj);
 			continue;
 		}
 
-		if (lobj->type != OBJT_VNODE || lobj->handle == NULL) {
+		vp = vm_object_vnode(lobj);
+		if (vp == NULL) {
 			if (lobj != obj)
 				VM_OBJECT_RUNLOCK(lobj);
 			VM_OBJECT_RUNLOCK(obj);
@@ -1665,7 +1703,7 @@ pmc_log_process_mappings(struct pmc_owner *po, struct proc *p)
 		 * vnode, so we don't emit redundant MAP-IN
 		 * directives.
 		 */
-		if (entry->start == last_end && lobj->handle == last_vp) {
+		if (entry->start == last_end && vp == last_vp) {
 			last_end = entry->end;
 			if (lobj != obj)
 				VM_OBJECT_RUNLOCK(lobj);
@@ -1688,7 +1726,6 @@ pmc_log_process_mappings(struct pmc_owner *po, struct proc *p)
 		last_timestamp = map->timestamp;
 		vm_map_unlock_read(map);
 
-		vp = lobj->handle;
 		vref(vp);
 		if (lobj != obj)
 			VM_OBJECT_RUNLOCK(lobj);
@@ -1782,7 +1819,7 @@ pmc_log_all_process_mappings(struct pmc_owner *po)
  */
 
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 const char *pmc_hooknames[] = {
 	/* these strings correspond to PMC_FN_* in <sys/pmckern.h> */
 	"",
@@ -1804,7 +1841,7 @@ static int
 pmc_hook_handler(struct thread *td, int function, void *arg)
 {
 
-	PMCDBG(MOD,PMH,1, "hook td=%p func=%d \"%s\" arg=%p", td, function,
+	PMCDBG4(MOD,PMH,1, "hook td=%p func=%d \"%s\" arg=%p", td, function,
 	    pmc_hooknames[function], arg);
 
 	switch (function)
@@ -1870,7 +1907,7 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 
 		/*
 		 * Log the exec event to all monitoring owners.  Skip
-		 * owners who have already recieved the event because
+		 * owners who have already received the event because
 		 * they had system sampling PMCs active.
 		 */
 		for (ri = 0; ri < md->pmd_npmc; ri++)
@@ -1887,7 +1924,7 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 			free(freepath, M_TEMP);
 
 
-		PMCDBG(PRC,EXC,1, "exec proc=%p (%d, %s) cred-changed=%d",
+		PMCDBG4(PRC,EXC,1, "exec proc=%p (%d, %s) cred-changed=%d",
 		    p, p->p_pid, p->p_comm, pk->pm_credentialschanged);
 
 		if (pk->pm_credentialschanged == 0) /* no change */
@@ -1896,7 +1933,7 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 		/*
 		 * If the newly exec()'ed process has a different credential
 		 * than before, allow it to be the target of a PMC only if
-		 * the PMC's owner has sufficient priviledge.
+		 * the PMC's owner has sufficient privilege.
 		 */
 
 		for (ri = 0; ri < md->pmd_npmc; ri++)
@@ -2000,7 +2037,7 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 		break;
 
 	default:
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 		KASSERT(0, ("[pmc,%d] unknown hook %d\n", __LINE__, function));
 #endif
 		break;
@@ -2032,7 +2069,7 @@ pmc_allocate_owner_descriptor(struct proc *p)
 	TAILQ_INIT(&po->po_logbuffers);
 	mtx_init(&po->po_mtx, "pmc-owner-mtx", "pmc-per-proc", MTX_SPIN);
 
-	PMCDBG(OWN,ALL,1, "allocate-owner proc=%p (%d, %s) pmc-owner=%p",
+	PMCDBG4(OWN,ALL,1, "allocate-owner proc=%p (%d, %s) pmc-owner=%p",
 	    p, p->p_pid, p->p_comm, po);
 
 	return po;
@@ -2042,7 +2079,7 @@ static void
 pmc_destroy_owner_descriptor(struct pmc_owner *po)
 {
 
-	PMCDBG(OWN,REL,1, "destroy-owner po=%p proc=%p (%d, %s)",
+	PMCDBG4(OWN,REL,1, "destroy-owner po=%p proc=%p (%d, %s)",
 	    po, po->po_owner, po->po_owner->p_pid, po->po_owner->p_comm);
 
 	mtx_destroy(&po->po_mtx);
@@ -2133,7 +2170,7 @@ pmc_find_owner_descriptor(struct proc *p)
 	    if (po->po_owner == p)
 		    break;
 
-	PMCDBG(OWN,FND,1, "find-owner proc=%p (%d, %s) hindex=0x%x -> "
+	PMCDBG5(OWN,FND,1, "find-owner proc=%p (%d, %s) hindex=0x%x -> "
 	    "pmc-owner=%p", p, p->p_pid, p->p_comm, hindex, po);
 
 	return po;
@@ -2153,7 +2190,7 @@ pmc_allocate_pmc_descriptor(void)
 
 	pmc = malloc(sizeof(struct pmc), M_PMC, M_WAITOK|M_ZERO);
 
-	PMCDBG(PMC,ALL,1, "allocate-pmc -> pmc=%p", pmc);
+	PMCDBG1(PMC,ALL,1, "allocate-pmc -> pmc=%p", pmc);
 
 	return pmc;
 }
@@ -2165,9 +2202,7 @@ pmc_allocate_pmc_descriptor(void)
 static void
 pmc_destroy_pmc_descriptor(struct pmc *pm)
 {
-	(void) pm;
 
-#ifdef	DEBUG
 	KASSERT(pm->pm_state == PMC_STATE_DELETED ||
 	    pm->pm_state == PMC_STATE_FREE,
 	    ("[pmc,%d] destroying non-deleted PMC", __LINE__));
@@ -2178,13 +2213,14 @@ pmc_destroy_pmc_descriptor(struct pmc *pm)
 	KASSERT(pm->pm_runcount == 0,
 	    ("[pmc,%d] pmc has non-zero run count %d", __LINE__,
 		pm->pm_runcount));
-#endif
+
+	free(pm, M_PMC);
 }
 
 static void
 pmc_wait_for_pmc_idle(struct pmc *pm)
 {
-#ifdef DEBUG
+#ifdef HWPMC_DEBUG
 	volatile int maxloop;
 
 	maxloop = 100 * pmc_cpu_max();
@@ -2194,7 +2230,7 @@ pmc_wait_for_pmc_idle(struct pmc *pm)
 	 * comes down to zero.
 	 */
 	while (atomic_load_acq_32(&pm->pm_runcount) > 0) {
-#ifdef DEBUG
+#ifdef HWPMC_DEBUG
 		maxloop--;
 		KASSERT(maxloop > 0,
 		    ("[pmc,%d] (ri%d, rc%d) waiting too long for "
@@ -2211,10 +2247,10 @@ pmc_wait_for_pmc_idle(struct pmc *pm)
  *  - detaches the PMC from hardware
  *  - unlinks all target threads that were attached to it
  *  - removes the PMC from its owner's list
- *  - destroy's the PMC private mutex
+ *  - destroys the PMC private mutex
  *
- * Once this function completes, the given pmc pointer can be safely
- * FREE'd by the caller.
+ * Once this function completes, the given pmc pointer can be freed by
+ * calling pmc_destroy_pmc_descriptor().
  */
 
 static void
@@ -2237,7 +2273,7 @@ pmc_release_pmc_descriptor(struct pmc *pm)
 	pcd  = pmc_ri_to_classdep(md, ri, &adjri);
 	mode = PMC_TO_MODE(pm);
 
-	PMCDBG(PMC,REL,1, "release-pmc pmc=%p ri=%d mode=%d", pm, ri,
+	PMCDBG3(PMC,REL,1, "release-pmc pmc=%p ri=%d mode=%d", pm, ri,
 	    mode);
 
 	/*
@@ -2257,22 +2293,23 @@ pmc_release_pmc_descriptor(struct pmc *pm)
 		pmc_select_cpu(cpu);
 
 		/* switch off non-stalled CPUs */
+		CPU_CLR_ATOMIC(cpu, &pm->pm_cpustate);
 		if (pm->pm_state == PMC_STATE_RUNNING &&
-		    pm->pm_stalled == 0) {
+		    !CPU_ISSET(cpu, &pm->pm_stalled)) {
 
 			phw = pmc_pcpu[cpu]->pc_hwpmcs[ri];
 
 			KASSERT(phw->phw_pmc == pm,
 			    ("[pmc, %d] pmc ptr ri(%d) hw(%p) pm(%p)",
 				__LINE__, ri, phw->phw_pmc, pm));
-			PMCDBG(PMC,REL,2, "stopping cpu=%d ri=%d", cpu, ri);
+			PMCDBG2(PMC,REL,2, "stopping cpu=%d ri=%d", cpu, ri);
 
 			critical_enter();
 			pcd->pcd_stop_pmc(cpu, adjri);
 			critical_exit();
 		}
 
-		PMCDBG(PMC,REL,2, "decfg cpu=%d ri=%d", cpu, ri);
+		PMCDBG2(PMC,REL,2, "decfg cpu=%d ri=%d", cpu, ri);
 
 		critical_enter();
 		pcd->pcd_config_pmc(cpu, adjri, NULL);
@@ -2328,7 +2365,7 @@ pmc_release_pmc_descriptor(struct pmc *pm)
 			pp = ptgt->pt_process;
 			pmc_unlink_target_process(pm, pp); /* frees 'ptgt' */
 
-			PMCDBG(PMC,REL,3, "pp->refcnt=%d", pp->pp_refcnt);
+			PMCDBG1(PMC,REL,3, "pp->refcnt=%d", pp->pp_refcnt);
 
 			/*
 			 * If the target process record shows that no
@@ -2364,8 +2401,6 @@ pmc_release_pmc_descriptor(struct pmc *pm)
 		LIST_REMOVE(pm, pm_next);
 		pm->pm_owner = NULL;
 	}
-
-	pmc_destroy_pmc_descriptor(pm);
 }
 
 /*
@@ -2396,7 +2431,7 @@ pmc_register_owner(struct proc *p, struct pmc *pmc)
 	if (po->po_flags & PMC_PO_OWNS_LOGFILE)
 		pmclog_process_pmcallocate(pmc);
 
-	PMCDBG(PMC,REG,1, "register-owner pmc-owner=%p pmc=%p",
+	PMCDBG2(PMC,REG,1, "register-owner pmc-owner=%p pmc=%p",
 	    po, pmc);
 
 	return 0;
@@ -2434,7 +2469,7 @@ pmc_can_allocate_rowindex(struct proc *p, unsigned int ri, int cpu)
 	struct pmc_owner *po;
 	struct pmc_process *pp;
 
-	PMCDBG(PMC,ALR,1, "can-allocate-rowindex proc=%p (%d, %s) ri=%d "
+	PMCDBG5(PMC,ALR,1, "can-allocate-rowindex proc=%p (%d, %s) ri=%d "
 	    "cpu=%d", p, p->p_pid, p->p_comm, ri, cpu);
 
 	/*
@@ -2464,7 +2499,7 @@ pmc_can_allocate_rowindex(struct proc *p, unsigned int ri, int cpu)
 		if (pp->pp_pmcs[ri].pp_pmc)
 			return EEXIST;
 
-	PMCDBG(PMC,ALR,2, "can-allocate-rowindex proc=%p (%d, %s) ri=%d ok",
+	PMCDBG4(PMC,ALR,2, "can-allocate-rowindex proc=%p (%d, %s) ri=%d ok",
 	    p, p->p_pid, p->p_comm, ri);
 
 	return 0;
@@ -2482,7 +2517,7 @@ pmc_can_allocate_row(int ri, enum pmc_mode mode)
 
 	sx_assert(&pmc_sx, SX_XLOCKED);
 
-	PMCDBG(PMC,ALR,1, "can-allocate-row ri=%d mode=%d", ri, mode);
+	PMCDBG2(PMC,ALR,1, "can-allocate-row ri=%d mode=%d", ri, mode);
 
 	if (PMC_IS_SYSTEM_MODE(mode))
 		disp = PMC_DISP_STANDALONE;
@@ -2509,7 +2544,7 @@ pmc_can_allocate_row(int ri, enum pmc_mode mode)
 	 * All OK
 	 */
 
-	PMCDBG(PMC,ALR,2, "can-allocate-row ri=%d mode=%d ok", ri, mode);
+	PMCDBG2(PMC,ALR,2, "can-allocate-row ri=%d mode=%d ok", ri, mode);
 
 	return 0;
 
@@ -2539,18 +2574,39 @@ static int
 pmc_find_pmc(pmc_id_t pmcid, struct pmc **pmc)
 {
 
-	struct pmc *pm;
+	struct pmc *pm, *opm;
 	struct pmc_owner *po;
+	struct pmc_process *pp;
 
-	PMCDBG(PMC,FND,1, "find-pmc id=%d", pmcid);
+	PMCDBG1(PMC,FND,1, "find-pmc id=%d", pmcid);
+	if (PMC_ID_TO_ROWINDEX(pmcid) >= md->pmd_npmc)
+		return (EINVAL);
 
-	if ((po = pmc_find_owner_descriptor(curthread->td_proc)) == NULL)
-		return ESRCH;
+	if ((po = pmc_find_owner_descriptor(curthread->td_proc)) == NULL) {
+		/*
+		 * In case of PMC_F_DESCENDANTS child processes we will not find
+		 * the current process in the owners hash list.  Find the owner
+		 * process first and from there lookup the po.
+		 */
+		if ((pp = pmc_find_process_descriptor(curthread->td_proc,
+		    PMC_FLAG_NONE)) == NULL) {
+			return ESRCH;
+		} else {
+			opm = pp->pp_pmcs[PMC_ID_TO_ROWINDEX(pmcid)].pp_pmc;
+			if (opm == NULL)
+				return ESRCH;
+			if ((opm->pm_flags & (PMC_F_ATTACHED_TO_OWNER|
+			    PMC_F_DESCENDANTS)) != (PMC_F_ATTACHED_TO_OWNER|
+			    PMC_F_DESCENDANTS))
+				return ESRCH;
+			po = opm->pm_owner;
+		}
+	}
 
 	if ((pm = pmc_find_pmc_descriptor_in_process(po, pmcid)) == NULL)
 		return EINVAL;
 
-	PMCDBG(PMC,FND,2, "find-pmc id=%d -> pmc=%p", pmcid, pm);
+	PMCDBG2(PMC,FND,2, "find-pmc id=%d -> pmc=%p", pmcid, pm);
 
 	*pmc = pm;
 	return 0;
@@ -2578,7 +2634,7 @@ pmc_start(struct pmc *pm)
 
 	error = 0;
 
-	PMCDBG(PMC,OPS,1, "start pmc=%p mode=%d ri=%d", pm, mode, ri);
+	PMCDBG3(PMC,OPS,1, "start pmc=%p mode=%d ri=%d", pm, mode, ri);
 
 	po = pm->pm_owner;
 
@@ -2634,7 +2690,7 @@ pmc_start(struct pmc *pm)
 		if (po->po_sscount == 0) {
 			LIST_INSERT_HEAD(&pmc_ss_owners, po, po_ssnext);
 			atomic_add_rel_int(&pmc_ss_count, 1);
-			PMCDBG(PMC,OPS,1, "po=%p in global list", po);
+			PMCDBG1(PMC,OPS,1, "po=%p in global list", po);
 		}
 		po->po_sscount++;
 
@@ -2674,8 +2730,15 @@ pmc_start(struct pmc *pm)
 	if ((error = pcd->pcd_write_pmc(cpu, adjri,
 		 PMC_IS_SAMPLING_MODE(mode) ?
 		 pm->pm_sc.pm_reloadcount :
-		 pm->pm_sc.pm_initial)) == 0)
+		 pm->pm_sc.pm_initial)) == 0) {
+		/* If a sampling mode PMC, reset stalled state. */
+		if (PMC_IS_SAMPLING_MODE(mode))
+			CPU_CLR_ATOMIC(cpu, &pm->pm_stalled);
+
+		/* Indicate that we desire this to run. Start it. */
+		CPU_SET_ATOMIC(cpu, &pm->pm_cpustate);
 		error = pcd->pcd_start_pmc(cpu, adjri);
+	}
 	critical_exit();
 
 	pmc_restore_cpu_binding(&pb);
@@ -2697,7 +2760,7 @@ pmc_stop(struct pmc *pm)
 
 	KASSERT(pm != NULL, ("[pmc,%d] null pmc", __LINE__));
 
-	PMCDBG(PMC,OPS,1, "stop pmc=%p mode=%d ri=%d", pm,
+	PMCDBG3(PMC,OPS,1, "stop pmc=%p mode=%d ri=%d", pm,
 	    PMC_TO_MODE(pm), PMC_TO_ROWINDEX(pm));
 
 	pm->pm_state = PMC_STATE_STOPPED;
@@ -2737,6 +2800,7 @@ pmc_stop(struct pmc *pm)
 	ri = PMC_TO_ROWINDEX(pm);
 	pcd = pmc_ri_to_classdep(md, ri, &adjri);
 
+	CPU_CLR_ATOMIC(cpu, &pm->pm_cpustate);
 	critical_enter();
 	if ((error = pcd->pcd_stop_pmc(cpu, adjri)) == 0)
 		error = pcd->pcd_read_pmc(cpu, adjri, &pm->pm_sc.pm_initial);
@@ -2752,7 +2816,7 @@ pmc_stop(struct pmc *pm)
 		if (po->po_sscount == 0) {
 			atomic_subtract_rel_int(&pmc_ss_count, 1);
 			LIST_REMOVE(po, po_ssnext);
-			PMCDBG(PMC,OPS,2,"po=%p removed from global list", po);
+			PMCDBG1(PMC,OPS,2,"po=%p removed from global list", po);
 		}
 	}
 
@@ -2760,7 +2824,7 @@ pmc_stop(struct pmc *pm)
 }
 
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 static const char *pmc_op_to_name[] = {
 #undef	__PMC_OP
 #define	__PMC_OP(N, D)	#N ,
@@ -2789,30 +2853,38 @@ static const char *pmc_op_to_name[] = {
 static int
 pmc_syscall_handler(struct thread *td, void *syscall_args)
 {
-	int error, is_sx_downgraded, is_sx_locked, op;
+	int error, is_sx_downgraded, op;
 	struct pmc_syscall_args *c;
+	void *pmclog_proc_handle;
 	void *arg;
 
-	PMC_GET_SX_XLOCK(ENOSYS);
-
-	DROP_GIANT();
-
-	is_sx_downgraded = 0;
-	is_sx_locked = 1;
-
-	c = (struct pmc_syscall_args *) syscall_args;
-
+	c = (struct pmc_syscall_args *)syscall_args;
 	op = c->pmop_code;
 	arg = c->pmop_data;
+	if (op == PMC_OP_CONFIGURELOG) {
+		/*
+		 * We cannot create the logging process inside
+		 * pmclog_configure_log() because there is a LOR
+		 * between pmc_sx and process structure locks.
+		 * Instead, pre-create the process and ignite the loop
+		 * if everything is fine, otherwise direct the process
+		 * to exit.
+		 */
+		error = pmclog_proc_create(td, &pmclog_proc_handle);
+		if (error != 0)
+			goto done_syscall;
+	}
 
-	PMCDBG(MOD,PMS,1, "syscall op=%d \"%s\" arg=%p", op,
+	PMC_GET_SX_XLOCK(ENOSYS);
+	is_sx_downgraded = 0;
+
+	PMCDBG3(MOD,PMS,1, "syscall op=%d \"%s\" arg=%p", op,
 	    pmc_op_to_name[op], arg);
 
 	error = 0;
 	atomic_add_int(&pmc_stats.pm_syscalls, 1);
 
-	switch(op)
-	{
+	switch (op) {
 
 
 	/*
@@ -2828,15 +2900,16 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		struct pmc_owner *po;
 		struct pmc_op_configurelog cl;
 
-		sx_assert(&pmc_sx, SX_XLOCKED);
-
-		if ((error = copyin(arg, &cl, sizeof(cl))) != 0)
+		if ((error = copyin(arg, &cl, sizeof(cl))) != 0) {
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			break;
+		}
 
 		/* mark this process as owning a log file */
 		p = td->td_proc;
 		if ((po = pmc_find_owner_descriptor(p)) == NULL)
 			if ((po = pmc_allocate_owner_descriptor(p)) == NULL) {
+				pmclog_proc_ignite(pmclog_proc_handle, NULL);
 				error = ENOMEM;
 				break;
 			}
@@ -2848,11 +2921,11 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		 * de-configure it.
 		 */
 		if (cl.pm_logfd >= 0) {
-			sx_xunlock(&pmc_sx);
-			is_sx_locked = 0;
 			error = pmclog_configure_log(md, po, cl.pm_logfd);
+			pmclog_proc_ignite(pmclog_proc_handle, error == 0 ?
+			    po : NULL);
 		} else if (po->po_flags & PMC_PO_OWNS_LOGFILE) {
-			pmclog_process_closelog(po);
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			error = pmclog_close(po);
 			if (error == 0) {
 				LIST_FOREACH(pm, &po->po_pmcs, pm_next)
@@ -2861,11 +2934,10 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 					    pmc_stop(pm);
 				error = pmclog_deconfigure_log(po);
 			}
-		} else
+		} else {
+			pmclog_proc_ignite(pmclog_proc_handle, NULL);
 			error = EINVAL;
-
-		if (error)
-			break;
+		}
 	}
 	break;
 
@@ -2918,6 +2990,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		struct pmc_classdep *pcd;
 		int cl;
 
+		memset(&gci, 0, sizeof(gci));
 		gci.pm_cputype = md->pmd_cputype;
 		gci.pm_ncpu    = pmc_cpu_max();
 		gci.pm_npmc    = md->pmd_npmc;
@@ -3059,7 +3132,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		npmc = md->pmd_npmc;
 
 		pmcinfo_size = npmc * sizeof(struct pmc_info);
-		pmcinfo = malloc(pmcinfo_size, M_PMC, M_WAITOK);
+		pmcinfo = malloc(pmcinfo_size, M_PMC, M_WAITOK | M_ZERO);
 
 		p = pmcinfo;
 
@@ -3318,7 +3391,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 			break;
 		}
 
-		PMCDBG(PMC,ALL,2, "event=%d caps=0x%x mode=%d cpu=%d",
+		PMCDBG4(PMC,ALL,2, "event=%d caps=0x%x mode=%d cpu=%d",
 		    pa.pm_ev, caps, mode, cpu);
 
 		pmc = pmc_allocate_pmc_descriptor();
@@ -3372,7 +3445,6 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 
 		if (n == (int) md->pmd_npmc) {
 			pmc_destroy_pmc_descriptor(pmc);
-			free(pmc, M_PMC);
 			pmc = NULL;
 			error = EINVAL;
 			break;
@@ -3381,7 +3453,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		/* Fill in the correct value in the ID field */
 		pmc->pm_id = PMC_ID_MAKE_ID(cpu,mode,pa.pm_class,n);
 
-		PMCDBG(PMC,ALL,2, "ev=%d class=%d mode=%d n=%d -> pmcid=%x",
+		PMCDBG5(PMC,ALL,2, "ev=%d class=%d mode=%d n=%d -> pmcid=%x",
 		    pmc->pm_event, pa.pm_class, mode, n, pmc->pm_id);
 
 		/* Process mode PMCs with logging enabled need log files */
@@ -3408,7 +3480,6 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 			    (error = pcd->pcd_config_pmc(cpu, adjri, pmc)) != 0) {
 				(void) pcd->pcd_release_pmc(cpu, adjri, pmc);
 				pmc_destroy_pmc_descriptor(pmc);
-				free(pmc, M_PMC);
 				pmc = NULL;
 				pmc_restore_cpu_binding(&pb);
 				error = EPERM;
@@ -3436,7 +3507,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		if ((error =
 		    pmc_register_owner(curthread->td_proc, pmc)) != 0) {
 			pmc_release_pmc_descriptor(pmc);
-			free(pmc, M_PMC);
+			pmc_destroy_pmc_descriptor(pmc);
 			pmc = NULL;
 			break;
 		}
@@ -3679,8 +3750,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		po = pm->pm_owner;
 		pmc_release_pmc_descriptor(pm);
 		pmc_maybe_remove_owner(po);
-
-		free(pm, M_PMC);
+		pmc_destroy_pmc_descriptor(pm);
 	}
 	break;
 
@@ -3706,7 +3776,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 			break;
 
 		ri = 0;
-		PMCDBG(PMC,OPS,1, "rw id=%d flags=0x%x", prw.pm_pmcid,
+		PMCDBG2(PMC,OPS,1, "rw id=%d flags=0x%x", prw.pm_pmcid,
 		    prw.pm_flags);
 
 		/* must have at least one flag set */
@@ -3802,12 +3872,12 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 
 		pprw = (struct pmc_op_pmcrw *) arg;
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 		if (prw.pm_flags & PMC_F_NEWVALUE)
-			PMCDBG(PMC,OPS,2, "rw id=%d new %jx -> old %jx",
+			PMCDBG3(PMC,OPS,2, "rw id=%d new %jx -> old %jx",
 			    ri, prw.pm_value, oldvalue);
 		else if (prw.pm_flags & PMC_F_OLDVALUE)
-			PMCDBG(PMC,OPS,2, "rw id=%d -> old %jx", ri, oldvalue);
+			PMCDBG2(PMC,OPS,2, "rw id=%d -> old %jx", ri, oldvalue);
 #endif
 
 		/* return old value if requested */
@@ -3963,19 +4033,15 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		break;
 	}
 
-	if (is_sx_locked != 0) {
-		if (is_sx_downgraded)
-			sx_sunlock(&pmc_sx);
-		else
-			sx_xunlock(&pmc_sx);
-	}
-
+	if (is_sx_downgraded)
+		sx_sunlock(&pmc_sx);
+	else
+		sx_xunlock(&pmc_sx);
+done_syscall:
 	if (error)
 		atomic_add_int(&pmc_stats.pm_syscall_errors, 1);
 
-	PICKUP_GIANT();
-
-	return error;
+	return (error);
 }
 
 /*
@@ -4048,19 +4114,20 @@ pmc_process_interrupt(int cpu, int ring, struct pmc *pm, struct trapframe *tf,
 
 	ps = psb->ps_write;
 	if (ps->ps_nsamples) {	/* in use, reader hasn't caught up */
-		pm->pm_stalled = 1;
+		CPU_SET_ATOMIC(cpu, &pm->pm_stalled);
 		atomic_add_int(&pmc_stats.pm_intr_bufferfull, 1);
-		PMCDBG(SAM,INT,1,"(spc) cpu=%d pm=%p tf=%p um=%d wr=%d rd=%d",
+		PMCDBG6(SAM,INT,1,"(spc) cpu=%d pm=%p tf=%p um=%d wr=%d rd=%d",
 		    cpu, pm, (void *) tf, inuserspace,
 		    (int) (psb->ps_write - psb->ps_samples),
 		    (int) (psb->ps_read - psb->ps_samples));
+		callchaindepth = 1;
 		error = ENOMEM;
 		goto done;
 	}
 
 
 	/* Fill in entry. */
-	PMCDBG(SAM,INT,1,"cpu=%d pm=%p tf=%p um=%d wr=%d rd=%d", cpu, pm,
+	PMCDBG6(SAM,INT,1,"cpu=%d pm=%p tf=%p um=%d wr=%d rd=%d", cpu, pm,
 	    (void *) tf, inuserspace,
 	    (int) (psb->ps_write - psb->ps_samples),
 	    (int) (psb->ps_read - psb->ps_samples));
@@ -4111,7 +4178,8 @@ pmc_process_interrupt(int cpu, int ring, struct pmc *pm, struct trapframe *tf,
 
  done:
 	/* mark CPU as needing processing */
-	CPU_SET_ATOMIC(cpu, &pmc_cpumask);
+	if (callchaindepth != PMC_SAMPLE_INUSE)
+		CPU_SET_ATOMIC(cpu, &pmc_cpumask);
 
 	return (error);
 }
@@ -4125,13 +4193,13 @@ pmc_process_interrupt(int cpu, int ring, struct pmc *pm, struct trapframe *tf,
 static void
 pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 {
-	int i;
 	struct pmc *pm;
 	struct thread *td;
-	struct pmc_sample *ps;
+	struct pmc_sample *ps, *ps_end;
 	struct pmc_samplebuffer *psb;
 #ifdef	INVARIANTS
 	int ncallchains;
+	int nfree;
 #endif
 
 	psb = pmc_pcpu[cpu]->pc_sb[ring];
@@ -4143,19 +4211,26 @@ pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 
 #ifdef	INVARIANTS
 	ncallchains = 0;
+	nfree = 0;
 #endif
 
 	/*
 	 * Iterate through all deferred callchain requests.
+	 * Walk from the current read pointer to the current
+	 * write pointer.
 	 */
 
-	ps = psb->ps_samples;
-	for (i = 0; i < pmc_nsamples; i++, ps++) {
-
+	ps = psb->ps_read;
+	ps_end = psb->ps_write;
+	do {
+#ifdef	INVARIANTS
+		if (ps->ps_pmc->pm_state != PMC_STATE_RUNNING)
+			nfree++;
+#endif
 		if (ps->ps_nsamples != PMC_SAMPLE_INUSE)
-			continue;
+			goto next;
 		if (ps->ps_td != td)
-			continue;
+			goto next;
 
 		KASSERT(ps->ps_cpu == cpu,
 		    ("[pmc,%d] cpu mismatch ps_cpu=%d pcpu=%d", __LINE__,
@@ -4180,15 +4255,23 @@ pmc_capture_user_callchain(int cpu, int ring, struct trapframe *tf)
 #ifdef	INVARIANTS
 		ncallchains++;
 #endif
-	}
 
-	KASSERT(ncallchains > 0,
+next:
+		/* increment the pointer, modulo sample ring size */
+		if (++ps == psb->ps_fence)
+			ps = psb->ps_samples;
+	} while (ps != ps_end);
+
+	KASSERT(ncallchains > 0 || nfree > 0,
 	    ("[pmc,%d] cpu %d didn't find a sample to collect", __LINE__,
 		cpu));
 
 	KASSERT(td->td_pinned == 1,
 	    ("[pmc,%d] invalid td_pinned value", __LINE__));
 	sched_unpin();	/* Can migrate safely now. */
+
+	/* mark CPU as needing processing */
+	CPU_SET_ATOMIC(cpu, &pmc_cpumask);
 
 	return;
 }
@@ -4243,7 +4326,7 @@ pmc_process_samples(int cpu, int ring)
 			break;
 		}
 
-		PMCDBG(SAM,OPS,1,"cpu=%d pm=%p n=%d fl=%x wr=%d rd=%d", cpu,
+		PMCDBG6(SAM,OPS,1,"cpu=%d pm=%p n=%d fl=%x wr=%d rd=%d", cpu,
 		    pm, ps->ps_nsamples, ps->ps_flags,
 		    (int) (psb->ps_write - psb->ps_samples),
 		    (int) (psb->ps_read - psb->ps_samples));
@@ -4303,10 +4386,11 @@ pmc_process_samples(int cpu, int ring)
 		if (pm == NULL ||			 /* !cfg'ed */
 		    pm->pm_state != PMC_STATE_RUNNING || /* !active */
 		    !PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)) || /* !sampling */
-		    pm->pm_stalled == 0) /* !stalled */
+		    !CPU_ISSET(cpu, &pm->pm_cpustate) || /* !desired */
+		    !CPU_ISSET(cpu, &pm->pm_stalled)) /* !stalled */
 			continue;
 
-		pm->pm_stalled = 0;
+		CPU_CLR_ATOMIC(cpu, &pm->pm_stalled);
 		(*pcd->pcd_start_pmc)(cpu, adjri);
 	}
 }
@@ -4359,7 +4443,7 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 		return;
 
 	PMC_GET_SX_XLOCK();
-	PMCDBG(PRC,EXT,1,"process-exit proc=%p (%d, %s)", p, p->p_pid,
+	PMCDBG3(PRC,EXT,1,"process-exit proc=%p (%d, %s)", p, p->p_pid,
 	    p->p_comm);
 
 	/*
@@ -4367,14 +4451,14 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 	 * process, we would have context switched IN at some prior
 	 * point.  However, with PREEMPTION, kernel mode context
 	 * switches may happen any time, so we want to disable a
-	 * context switch OUT till we get any PMCs targetting this
+	 * context switch OUT till we get any PMCs targeting this
 	 * process off the hardware.
 	 *
 	 * We also need to atomically remove this process'
 	 * entry from our target process hash table, using
 	 * PMC_FLAG_REMOVE.
 	 */
-	PMCDBG(PRC,EXT,1, "process-exit proc=%p (%d, %s)", p, p->p_pid,
+	PMCDBG3(PRC,EXT,1, "process-exit proc=%p (%d, %s)", p, p->p_pid,
 	    p->p_comm);
 
 	critical_enter(); /* no preemption */
@@ -4384,7 +4468,7 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 	if ((pp = pmc_find_process_descriptor(p,
 		 PMC_FLAG_REMOVE)) != NULL) {
 
-		PMCDBG(PRC,EXT,2,
+		PMCDBG2(PRC,EXT,2,
 		    "process-exit proc=%p pmc-process=%p", p, pp);
 
 		/*
@@ -4407,13 +4491,13 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 
 			(void) (*pcd->pcd_get_config)(cpu, adjri, &pm);
 
-			PMCDBG(PRC,EXT,2, "ri=%d pm=%p", ri, pm);
+			PMCDBG2(PRC,EXT,2, "ri=%d pm=%p", ri, pm);
 
 			if (pm == NULL ||
 			    !PMC_IS_VIRTUAL_MODE(PMC_TO_MODE(pm)))
 				continue;
 
-			PMCDBG(PRC,EXT,2, "ppmcs[%d]=%p pm=%p "
+			PMCDBG4(PRC,EXT,2, "ppmcs[%d]=%p pm=%p "
 			    "state=%d", ri, pp->pp_pmcs[ri].pp_pmc,
 			    pm, pm->pm_state);
 
@@ -4425,23 +4509,31 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 			    ("[pmc,%d] pm %p != pp_pmcs[%d] %p",
 				__LINE__, pm, ri, pp->pp_pmcs[ri].pp_pmc));
 
-			(void) pcd->pcd_stop_pmc(cpu, adjri);
-
 			KASSERT(pm->pm_runcount > 0,
 			    ("[pmc,%d] bad runcount ri %d rc %d",
 				__LINE__, ri, pm->pm_runcount));
 
-			/* Stop hardware only if it is actually running */
-			if (pm->pm_state == PMC_STATE_RUNNING &&
-			    pm->pm_stalled == 0) {
-				pcd->pcd_read_pmc(cpu, adjri, &newvalue);
-				tmp = newvalue -
-				    PMC_PCPU_SAVED(cpu,ri);
+			/*
+			 * Change desired state, and then stop if not
+			 * stalled. This two-step dance should avoid
+			 * race conditions where an interrupt re-enables
+			 * the PMC after this code has already checked
+			 * the pm_stalled flag.
+			 */
+			if (CPU_ISSET(cpu, &pm->pm_cpustate)) {
+				CPU_CLR_ATOMIC(cpu, &pm->pm_cpustate);
+				if (!CPU_ISSET(cpu, &pm->pm_stalled)) {
+					(void) pcd->pcd_stop_pmc(cpu, adjri);
+					pcd->pcd_read_pmc(cpu, adjri,
+					    &newvalue);
+					tmp = newvalue -
+					    PMC_PCPU_SAVED(cpu,ri);
 
-				mtx_pool_lock_spin(pmc_mtxpool, pm);
-				pm->pm_gv.pm_savedvalue += tmp;
-				pp->pp_pmcs[ri].pp_pmcval += tmp;
-				mtx_pool_unlock_spin(pmc_mtxpool, pm);
+					mtx_pool_lock_spin(pmc_mtxpool, pm);
+					pm->pm_gv.pm_savedvalue += tmp;
+					pp->pp_pmcs[ri].pp_pmcval += tmp;
+					mtx_pool_unlock_spin(pmc_mtxpool, pm);
+				}
 			}
 
 			atomic_subtract_rel_int(&pm->pm_runcount,1);
@@ -4462,7 +4554,7 @@ pmc_process_exit(void *arg __unused, struct proc *p)
 
 		/*
 		 * Unlink this process from the PMCs that are
-		 * targetting it.  This will send a signal to
+		 * targeting it.  This will send a signal to
 		 * all PMC owner's whose PMCs are orphaned.
 		 *
 		 * Log PMC value at exit time if requested.
@@ -4529,7 +4621,7 @@ pmc_process_fork(void *arg __unused, struct proc *p1, struct proc *newproc,
 		return;
 
 	PMC_GET_SX_XLOCK();
-	PMCDBG(PMC,FRK,1, "process-fork proc=%p (%d, %s) -> %p", p1,
+	PMCDBG4(PMC,FRK,1, "process-fork proc=%p (%d, %s) -> %p", p1,
 	    p1->p_pid, p1->p_comm, newproc);
 
 	/*
@@ -4629,12 +4721,20 @@ pmc_kld_unload(void *arg __unused, const char *filename __unused,
 /*
  * initialization
  */
+static const char *
+pmc_name_of_pmcclass(enum pmc_class class)
+{
 
-static const char *pmc_name_of_pmcclass[] = {
+	switch (class) {
 #undef	__PMC_CLASS
-#define	__PMC_CLASS(N) #N ,
-	__PMC_CLASSES()
-};
+#define	__PMC_CLASS(S,V,D)						\
+	case PMC_CLASS_##S:						\
+		return #S;
+	__PMC_CLASSES();
+	default:
+		return ("<unknown>");
+	}
+}
 
 /*
  * Base class initializer: allocate structure and set default classes.
@@ -4716,7 +4816,7 @@ pmc_initialize(void)
 	md = NULL;
 	error = 0;
 
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 	/* parse debug flags first */
 	if (TUNABLE_STR_FETCH(PMC_SYSCTL_NAME_PREFIX "debugflags",
 		pmc_debugstr, sizeof(pmc_debugstr)))
@@ -4724,7 +4824,7 @@ pmc_initialize(void)
 		    pmc_debugstr+strlen(pmc_debugstr));
 #endif
 
-	PMCDBG(MOD,INI,0, "PMC Initialize (version %x)", PMC_VERSION);
+	PMCDBG1(MOD,INI,0, "PMC Initialize (version %x)", PMC_VERSION);
 
 	/* check kernel version */
 	if (pmc_kernel_version != PMC_VERSION) {
@@ -4757,8 +4857,9 @@ pmc_initialize(void)
 	if (pmc_callchaindepth <= 0 ||
 	    pmc_callchaindepth > PMC_CALLCHAIN_DEPTH_MAX) {
 		(void) printf("hwpmc: tunable \"callchaindepth\"=%d out of "
-		    "range.\n", pmc_callchaindepth);
-		pmc_callchaindepth = PMC_CALLCHAIN_DEPTH;
+		    "range - using %d.\n", pmc_callchaindepth,
+		    PMC_CALLCHAIN_DEPTH_MAX);
+		pmc_callchaindepth = PMC_CALLCHAIN_DEPTH_MAX;
 	}
 
 	md = pmc_md_initialize();
@@ -4884,7 +4985,7 @@ pmc_initialize(void)
 	pmc_mtxpool = mtx_pool_create("pmc-leaf", pmc_mtxpool_size,
 	    MTX_SPIN);
 
-	PMCDBG(MOD,INI,1, "pmc_ownerhash=%p, mask=0x%lx "
+	PMCDBG4(MOD,INI,1, "pmc_ownerhash=%p, mask=0x%lx "
 	    "targethash=%p mask=0x%lx", pmc_ownerhash, pmc_ownerhashmask,
 	    pmc_processhash, pmc_processhashmask);
 
@@ -4912,7 +5013,7 @@ pmc_initialize(void)
 		for (n = 0; n < (int) md->pmd_nclass; n++) {
 			pcd = &md->pmd_classdep[n];
 			printf(" %s/%d/%d/0x%b",
-			    pmc_name_of_pmcclass[pcd->pcd_class],
+			    pmc_name_of_pmcclass(pcd->pcd_class),
 			    pcd->pcd_num,
 			    pcd->pcd_width,
 			    pcd->pcd_caps,
@@ -4936,11 +5037,11 @@ pmc_cleanup(void)
 	struct pmc_ownerhash *ph;
 	struct pmc_owner *po, *tmp;
 	struct pmc_binding pb;
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 	struct pmc_processhash *prh;
 #endif
 
-	PMCDBG(MOD,INI,0, "%s", "cleanup");
+	PMCDBG0(MOD,INI,0, "cleanup");
 
 	/* switch off sampling */
 	CPU_ZERO(&pmc_cpumask);
@@ -4969,7 +5070,7 @@ pmc_cleanup(void)
 				pmc_remove_owner(po);
 
 				/* send SIGBUS to owner processes */
-				PMCDBG(MOD,INI,2, "cleanup signal proc=%p "
+				PMCDBG3(MOD,INI,2, "cleanup signal proc=%p "
 				    "(%d, %s)", po->po_owner,
 				    po->po_owner->p_pid,
 				    po->po_owner->p_comm);
@@ -4988,15 +5089,15 @@ pmc_cleanup(void)
 
 	mtx_destroy(&pmc_processhash_mtx);
 	if (pmc_processhash) {
-#ifdef	DEBUG
+#ifdef	HWPMC_DEBUG
 		struct pmc_process *pp;
 
-		PMCDBG(MOD,INI,3, "%s", "destroy process hash");
+		PMCDBG0(MOD,INI,3, "destroy process hash");
 		for (prh = pmc_processhash;
 		     prh <= &pmc_processhash[pmc_processhashmask];
 		     prh++)
 			LIST_FOREACH(pp, prh, pp_next)
-			    PMCDBG(MOD,INI,3, "pid=%d", pp->pp_proc->p_pid);
+			    PMCDBG1(MOD,INI,3, "pid=%d", pp->pp_proc->p_pid);
 #endif
 
 		hashdestroy(pmc_processhash, M_PMC, pmc_processhashmask);
@@ -5004,7 +5105,7 @@ pmc_cleanup(void)
 	}
 
 	if (pmc_ownerhash) {
-		PMCDBG(MOD,INI,3, "%s", "destroy owner hash");
+		PMCDBG0(MOD,INI,3, "destroy owner hash");
 		hashdestroy(pmc_ownerhash, M_PMC, pmc_ownerhashmask);
 		pmc_ownerhash = NULL;
 	}
@@ -5017,11 +5118,11 @@ pmc_cleanup(void)
  	/* do processor and pmc-class dependent cleanup */
 	maxcpu = pmc_cpu_max();
 
-	PMCDBG(MOD,INI,3, "%s", "md cleanup");
+	PMCDBG0(MOD,INI,3, "md cleanup");
 	if (md) {
 		pmc_save_cpu_binding(&pb);
 		for (cpu = 0; cpu < maxcpu; cpu++) {
-			PMCDBG(MOD,INI,1,"pmc-cleanup cpu=%d pcs=%p",
+			PMCDBG2(MOD,INI,1,"pmc-cleanup cpu=%d pcs=%p",
 			    cpu, pmc_pcpu[cpu]);
 			if (!pmc_cpu_is_active(cpu) || pmc_pcpu[cpu] == NULL)
 				continue;
@@ -5097,7 +5198,7 @@ load (struct module *module __unused, int cmd, void *arg __unused)
 		error = pmc_initialize();
 		if (error != 0)
 			break;
-		PMCDBG(MOD,INI,1, "syscall=%d maxcpu=%d",
+		PMCDBG2(MOD,INI,1, "syscall=%d maxcpu=%d",
 		    pmc_syscall_num, pmc_cpu_max());
 		break;
 
@@ -5105,7 +5206,7 @@ load (struct module *module __unused, int cmd, void *arg __unused)
 	case MOD_UNLOAD :
 	case MOD_SHUTDOWN:
 		pmc_cleanup();
-		PMCDBG(MOD,INI,1, "%s", "unloaded");
+		PMCDBG0(MOD,INI,1, "unloaded");
 		break;
 
 	default :

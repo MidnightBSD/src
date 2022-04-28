@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/smbfs/smbfs_io.c 250238 2013-05-04 14:27:28Z davide $
+ * $FreeBSD$
  *
  */
 #include <sys/param.h>
@@ -104,8 +104,8 @@ smbfs_readvdir(struct vnode *vp, struct uio *uio, struct ucred *cred)
 		de.d_namlen = offset + 1;
 		de.d_name[0] = '.';
 		de.d_name[1] = '.';
-		de.d_name[offset + 1] = '\0';
 		de.d_type = DT_DIR;
+		dirent_terminate(&de);
 		error = uiomove(&de, DE_SIZE, uio);
 		if (error)
 			goto out;
@@ -154,7 +154,7 @@ smbfs_readvdir(struct vnode *vp, struct uio *uio, struct ucred *cred)
 		de.d_type = (ctx->f_attr.fa_attr & SMB_FA_DIR) ? DT_DIR : DT_REG;
 		de.d_namlen = ctx->f_nmlen;
 		bcopy(ctx->f_name, de.d_name, de.d_namlen);
-		de.d_name[de.d_namlen] = '\0';
+		dirent_terminate(&de);
 		if (smbfs_fastlookup) {
 			error = smbfs_nget(vp->v_mount, vp, ctx->f_name,
 			    ctx->f_nmlen, &ctx->f_attr, &newvp);
@@ -342,7 +342,7 @@ smbfs_doio(struct vnode *vp, struct buf *bp, struct ucred *cr, struct thread *td
 	    default:
 		printf("smbfs_doio:  type %x unexpected\n",vp->v_type);
 		break;
-	    };
+	    }
 	    if (error) {
 		bp->b_error = error;
 		bp->b_ioflags |= BIO_ERROR;
@@ -419,13 +419,12 @@ smbfs_getpages(ap)
 		vm_page_t *a_m;
 		int a_count;
 		int a_reqpage;
-		vm_ooffset_t a_offset;
 	} */ *ap;
 {
 #ifdef SMBFS_RWGENERIC
 	return vop_stdgetpages(ap);
 #else
-	int i, error, nextoff, size, toff, npages, count, reqpage;
+	int i, error, nextoff, size, toff, npages, count;
 	struct uio uio;
 	struct iovec iov;
 	vm_offset_t kva;
@@ -437,7 +436,7 @@ smbfs_getpages(ap)
 	struct smbnode *np;
 	struct smb_cred *scred;
 	vm_object_t object;
-	vm_page_t *pages, m;
+	vm_page_t *pages;
 
 	vp = ap->a_vp;
 	if ((object = vp->v_object) == NULL) {
@@ -450,29 +449,18 @@ smbfs_getpages(ap)
 	np = VTOSMB(vp);
 	smp = VFSTOSMBFS(vp->v_mount);
 	pages = ap->a_m;
-	count = ap->a_count;
-	npages = btoc(count);
-	reqpage = ap->a_reqpage;
+	npages = ap->a_count;
 
 	/*
 	 * If the requested page is partially valid, just return it and
 	 * allow the pager to zero-out the blanks.  Partially valid pages
 	 * can only occur at the file EOF.
+	 *
+	 * XXXGL: is that true for SMB filesystem?
 	 */
-	m = pages[reqpage];
-
 	VM_OBJECT_WLOCK(object);
-	if (m->valid != 0) {
-		for (i = 0; i < npages; ++i) {
-			if (i != reqpage) {
-				vm_page_lock(pages[i]);
-				vm_page_free(pages[i]);
-				vm_page_unlock(pages[i]);
-			}
-		}
-		VM_OBJECT_WUNLOCK(object);
-		return 0;
-	}
+	if (pages[npages - 1]->valid != 0 && --npages == 0)
+		goto out;
 	VM_OBJECT_WUNLOCK(object);
 
 	scred = smbfs_malloc_scred();
@@ -485,6 +473,7 @@ smbfs_getpages(ap)
 	PCPU_INC(cnt.v_vnodein);
 	PCPU_ADD(cnt.v_vnodepgsin, npages);
 
+	count = npages << PAGE_SHIFT;
 	iov.iov_base = (caddr_t) kva;
 	iov.iov_len = count;
 	uio.uio_iov = &iov;
@@ -501,22 +490,14 @@ smbfs_getpages(ap)
 
 	relpbuf(bp, &smbfs_pbuf_freecnt);
 
-	VM_OBJECT_WLOCK(object);
 	if (error && (uio.uio_resid == count)) {
 		printf("smbfs_getpages: error %d\n",error);
-		for (i = 0; i < npages; i++) {
-			if (reqpage != i) {
-				vm_page_lock(pages[i]);
-				vm_page_free(pages[i]);
-				vm_page_unlock(pages[i]);
-			}
-		}
-		VM_OBJECT_WUNLOCK(object);
 		return VM_PAGER_ERROR;
 	}
 
 	size = count - uio.uio_resid;
 
+	VM_OBJECT_WLOCK(object);
 	for (i = 0, toff = 0; i < npages; i++, toff = nextoff) {
 		vm_page_t m;
 		nextoff = toff + PAGE_SIZE;
@@ -539,18 +520,20 @@ smbfs_getpages(ap)
 			    ("smbfs_getpages: page %p is dirty", m));
 		} else {
 			/*
-			 * Read operation was short.  If no error occured
+			 * Read operation was short.  If no error occurred
 			 * we may have hit a zero-fill section.   We simply
 			 * leave valid set to 0.
 			 */
 			;
 		}
-
-		if (i != reqpage)
-			vm_page_readahead_finish(m);
 	}
+out:
 	VM_OBJECT_WUNLOCK(object);
-	return 0;
+	if (ap->a_rbehind)
+		*ap->a_rbehind = 0;
+	if (ap->a_rahead)
+		*ap->a_rahead = 0;
+	return (VM_PAGER_OK);
 #endif /* SMBFS_RWGENERIC */
 }
 
@@ -568,7 +551,6 @@ smbfs_putpages(ap)
 		int a_count;
 		int a_sync;
 		int *a_rtvals;
-		vm_ooffset_t a_offset;
 	} */ *ap;
 {
 	int error;
@@ -639,9 +621,11 @@ smbfs_putpages(ap)
 
 	relpbuf(bp, &smbfs_pbuf_freecnt);
 
-	if (!error)
-		vnode_pager_undirty_pages(pages, rtvals, count - uio.uio_resid);
-	return rtvals[0];
+	if (error == 0) {
+		vnode_pager_undirty_pages(pages, rtvals, count - uio.uio_resid,
+		    npages * PAGE_SIZE, npages * PAGE_SIZE);
+	}
+	return (rtvals[0]);
 #endif /* SMBFS_RWGENERIC */
 }
 

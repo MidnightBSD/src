@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/dev/scc/scc_if.m 188174 2009-02-05 19:32:34Z imp $
+# $FreeBSD$
 
 #include <sys/param.h>
 #include <sys/bus.h>

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Fabio Checconi
  * Copyright (c) 2010 Luigi Rizzo, Universita` di Pisa
  * All rights reserved.
@@ -27,7 +29,7 @@
 
 /*
  * $Id$
- * $FreeBSD: release/10.0.0/sbin/geom/class/sched/geom_sched.c 212554 2010-09-13 13:48:18Z pjd $
+ * $FreeBSD$
  *
  * This file implements the userspace library used by the 'geom'
  * command to load and manipulate disk schedulers.

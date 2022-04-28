@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/accounting 234927 2012-05-02 14:25:39Z jhb $
+# $FreeBSD$
 #
 
 # PROVIDE: accounting

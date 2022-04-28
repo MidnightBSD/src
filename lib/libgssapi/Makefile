@@ -1,8 +1,9 @@
-# $FreeBSD: release/10.0.0/lib/libgssapi/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 LIB=		gssapi
 SHLIB_MAJOR=	10
-VERSION_DEF=	${.CURDIR}/../libc/Versions.def
+VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 
 SRCS=

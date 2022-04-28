@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-partmanager/delete-part.sh 228990 2011-12-30 10:58:14Z uqs $
+# $FreeBSD$
 
 # Delete a specified partition, takes effect immediately
 ########################################################

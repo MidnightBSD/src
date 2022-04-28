@@ -30,7 +30,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/ndiscvt/ndisgen.sh 178213 2008-04-15 04:17:13Z thompsa $
+# $FreeBSD$
 #
 
 header () {
@@ -432,11 +432,6 @@ fi
 echo -n "	Building kernel module... "
 echo "" > bus_if.h
 echo "" > device_if.h
-if ! ${MAKE} -f ${MAKEFILE} depend > /dev/null; then
-	echo "build failed. Exiting."
-	echo ""
-	exit
-fi
 if ! ${MAKE} -f ${MAKEFILE} all > /dev/null; then
 	echo "build failed. Exiting."
 	echo ""
@@ -493,7 +488,7 @@ convert_driver () {
 	return
 }
 
-ICONVPATH=/usr/local/bin/iconv
+ICONVPATH=/usr/bin/iconv
 NDISCVT=/usr/sbin/ndiscvt
 STUBPATH=/usr/share/misc
 STUBFILE=windrv_stub.c

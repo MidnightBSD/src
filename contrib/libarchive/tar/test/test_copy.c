@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/tar/test/test_copy.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #if defined(__CYGWIN__)
 # include <limits.h>
@@ -176,7 +176,7 @@ create_tree(void)
 			sprintf(buff, "s/%s", filenames[i]);
 			sprintf(buff2, "../f/%s", filenames[i]);
 			failure("buff=\"%s\" buff2=\"%s\"", buff, buff2);
-			assertMakeSymlink(buff, buff2);
+			assertMakeSymlink(buff, buff2, 0);
 		}
 		/* Create a dir named "d/abcdef...". */
 		buff[0] = 'd';
@@ -222,7 +222,7 @@ verify_tree(size_t limit)
 			sprintf(name1, "s/%s", filenames[i]);
 			sprintf(name2, "../f/%s", filenames[i]);
 			if (strlen(name2) <= limit)
-				assertIsSymlink(name1, name2);
+				assertIsSymlink(name1, name2, 0);
 		}
 
 		/* Verify dir "d/abcdef...". */
@@ -256,13 +256,13 @@ verify_tree(size_t limit)
 					continue;
 				switch(dp[0]) {
 				case 'l': case 'm': case 'd':
-					failure("strlen(p)=%d", strlen(p));
+					failure("strlen(p)=%zu", strlen(p));
 					assert(strlen(p) < limit);
 					assertEqualString(p,
 					    filenames[strlen(p)]);
 					break;
 				case 'f': case 's':
-					failure("strlen(p)=%d", strlen(p));
+					failure("strlen(p)=%zu", strlen(p));
 					assert(strlen(p) < limit + 1);
 					assertEqualString(p,
 					    filenames[strlen(p)]);
@@ -285,7 +285,7 @@ copy_basic(void)
 
 	/* NOTE: for proper operation on cygwin-1.5 and windows, the
 	 * length of the name of the directory below, "plain", must be
-	 * less than or equal to the lengthe of the name of the original
+	 * less than or equal to the length of the name of the original
 	 * directory, "original"  This restriction derives from the
 	 * extremely limited pathname lengths on those platforms.
 	 */
@@ -327,7 +327,7 @@ copy_ustar(void)
 
 	/* NOTE: for proper operation on cygwin-1.5 and windows, the
 	 * length of the name of the directory below, "ustar", must be
-	 * less than or equal to the lengthe of the name of the original
+	 * less than or equal to the length of the name of the original
 	 * directory, "original"  This restriction derives from the
 	 * extremely limited pathname lengths on those platforms.
 	 */

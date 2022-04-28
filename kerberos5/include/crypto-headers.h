@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/kerberos5/include/crypto-headers.h 233294 2012-03-22 08:48:42Z stas $ */
+/* $FreeBSD$ */
 #ifndef __crypto_headers_h__
 #define __crypto_headers_h__
 

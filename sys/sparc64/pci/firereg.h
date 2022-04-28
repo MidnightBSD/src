@@ -23,14 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/pci/firereg.h 233701 2012-03-30 15:08:09Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _SPARC64_PCI_FIREREG_H_
 #define	_SPARC64_PCI_FIREREG_H_
 
 #define	FIRE_NINTR				3	/* 2 OFW + 1 MSIq */
-#define	FIRE_NRANGE				4
 #define	FIRE_NREG				2
 
 #define	FIRE_PCI				0
@@ -922,7 +921,7 @@
 #define	FO_XBC_PRF_CNT_SHFT			0
 
 /* Lookup tables */
-const uint16_t const fire_freq_nak_tmr_thrs[6][4] = {
+const uint16_t fire_freq_nak_tmr_thrs[6][4] = {
 	{ 0x00ed, 0x049, 0x043, 0x030 },
 	{ 0x01a0, 0x076, 0x06b, 0x048 },
 	{ 0x022f, 0x09a, 0x056, 0x056 },
@@ -931,7 +930,7 @@ const uint16_t const fire_freq_nak_tmr_thrs[6][4] = {
 	{ 0x102f, 0x41a, 0x216, 0x216 }
 };
 
-const uint16_t const fire_rply_tmr_thrs[6][4] = {
+const uint16_t fire_rply_tmr_thrs[6][4] = {
 	{ 0x0379, 0x112, 0x0fc, 0x0b4 },
 	{ 0x0618, 0x1BA, 0x192, 0x10e },
 	{ 0x0831, 0x242, 0x143, 0x143 },

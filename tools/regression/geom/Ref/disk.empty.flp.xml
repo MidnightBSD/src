@@ -1,2 +1,2 @@
-$FreeBSD: release/10.0.0/tools/regression/geom/Ref/disk.empty.flp.xml 113291 2003-04-09 12:40:12Z phk $
+$FreeBSD$
 /dev/md34	512	1474560	2880	80	2	18

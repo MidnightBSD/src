@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)mount.c	8.25 (Berkeley) 5/8/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/mount/mount.c 253372 2013-07-15 21:57:21Z rmh $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -114,6 +114,7 @@ static struct opt {
 	{ MNT_ACLS,		"acls" },
 	{ MNT_NFS4ACLS,		"nfsv4acls" },
 	{ MNT_GJOURNAL,		"gjournal" },
+	{ MNT_AUTOMOUNTED,	"automounted" },
 	{ 0, NULL }
 };
 
@@ -143,7 +144,7 @@ use_mountprog(const char *vfstype)
 	unsigned int i;
 	const char *fs[] = {
 	"cd9660", "mfs", "msdosfs", "nfs",
-	"nullfs", "oldnfs", "smbfs", "udf", "unionfs",
+	"nullfs", "smbfs", "udf", "unionfs",
 	NULL
 	};
 
@@ -223,6 +224,7 @@ restart_mountd(void)
 	struct pidfh *pfh;
 	pid_t mountdpid;
 
+	mountdpid = 0;
 	pfh = pidfile_open(_PATH_MOUNTDPID, 0600, &mountdpid);
 	if (pfh != NULL) {
 		/* Mountd is not running. */
@@ -233,6 +235,16 @@ restart_mountd(void)
 		/* Cannot open pidfile for some reason. */
 		return;
 	}
+
+	/*
+	 * Refuse to send broadcast or group signals, this has
+	 * happened due to the bugs in pidfile(3).
+	 */
+	if (mountdpid <= 0) {
+		warnx("mountd pid %d, refusing to send SIGHUP", mountdpid);
+		return;
+	}
+
 	/* We have mountd(8) PID in mountdpid varible, let's signal it. */
 	if (kill(mountdpid, SIGHUP) == -1)
 		err(1, "signal mountd");
@@ -396,7 +408,9 @@ main(int argc, char *argv[])
 					have_fstab = 1;
 					mntfromname = mntbuf->f_mntfromname;
 				} else if (argv[0][0] == '/' &&
-				    argv[0][1] == '\0') {
+				    argv[0][1] == '\0' &&
+				    strcmp(fs->fs_vfstype,
+				    mntbuf->f_fstypename) == 0) {
 					fs = getfsfile("/");
 					have_fstab = 1;
 					mntfromname = fs->fs_spec;
@@ -484,10 +498,18 @@ ismounted(struct fstab *fs, struct statfs *mntbuf, int mntsize)
 		strlcpy(realfsfile, fs->fs_file, sizeof(realfsfile));
 	}
 
+	/* 
+	 * Consider the filesystem to be mounted if:
+	 * It has the same mountpoint as a mounted filesytem, and
+	 * It has the same type as that same mounted filesystem, and
+	 * It has the same device name as that same mounted filesystem, OR
+	 *     It is a nonremountable filesystem
+	 */
 	for (i = mntsize - 1; i >= 0; --i)
 		if (strcmp(realfsfile, mntbuf[i].f_mntonname) == 0 &&
+		    strcmp(fs->fs_vfstype, mntbuf[i].f_fstypename) == 0 && 
 		    (!isremountable(fs->fs_vfstype) ||
-		     strcmp(fs->fs_spec, mntbuf[i].f_mntfromname) == 0))
+		     (strcmp(fs->fs_spec, mntbuf[i].f_mntfromname) == 0)))
 			return (1);
 	return (0);
 }
@@ -532,7 +554,7 @@ append_arg(struct cpa *sa, char *arg)
 {
 	if (sa->c + 1 == sa->sz) {
 		sa->sz = sa->sz == 0 ? 8 : sa->sz * 2;
-		sa->a = realloc(sa->a, sizeof(sa->a) * sa->sz);
+		sa->a = realloc(sa->a, sizeof(*sa->a) * sa->sz);
 		if (sa->a == NULL)
 			errx(1, "realloc failed");
 	}
@@ -588,7 +610,7 @@ mountfs(const char *vfstype, const char *spec, const char *name, int flags,
 	append_arg(&mnt_argv, execname);
 	mangle(optbuf, &mnt_argv);
 	if (mountprog != NULL)
-		strcpy(execname, mountprog);
+		strlcpy(execname, mountprog, sizeof(execname));
 
 	append_arg(&mnt_argv, strdup(spec));
 	append_arg(&mnt_argv, strdup(name));
@@ -896,8 +918,9 @@ putfsent(struct statfs *ent)
 
 	if (strncmp(ent->f_mntfromname, "<below>", 7) == 0 ||
 	    strncmp(ent->f_mntfromname, "<above>", 7) == 0) {
-		strcpy(ent->f_mntfromname, (strnstr(ent->f_mntfromname, ":", 8)
-		    +1));
+		strlcpy(ent->f_mntfromname,
+		    (strnstr(ent->f_mntfromname, ":", 8) +1),
+		    sizeof(ent->f_mntfromname));
 	}
 
 	l = strlen(ent->f_mntfromname);

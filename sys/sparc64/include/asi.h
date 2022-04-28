@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from: BSDI: asi.h,v 1.3 1997/08/08 14:31:42 torek
- * $FreeBSD: release/10.0.0/sys/sparc64/include/asi.h 207537 2010-05-02 19:38:17Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_ASI_H_

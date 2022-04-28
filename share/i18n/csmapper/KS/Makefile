@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/KS/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.4 2006/10/18 17:54:55 tnozaki Exp $
 
 CODE=	KS

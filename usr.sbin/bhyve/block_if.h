@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013  Peter Grehan <grehan@freebsd.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/block_if.h 256052 2013-10-04 16:52:03Z grehan $
+ * $FreeBSD$
  */
 
 /*
@@ -39,12 +41,19 @@
 #include <sys/uio.h>
 #include <sys/unistd.h>
 
-#define BLOCKIF_IOV_MAX		32	/* not practical to be IOV_MAX */
+/*
+ * BLOCKIF_IOV_MAX is the maximum number of scatter/gather entries in
+ * a single request.  BLOCKIF_RING_MAX is the maxmimum number of
+ * pending requests that can be queued.
+ */
+#define	BLOCKIF_IOV_MAX		128	/* not practical to be IOV_MAX */
+#define	BLOCKIF_RING_MAX	128
 
 struct blockif_req {
 	struct iovec	br_iov[BLOCKIF_IOV_MAX];
 	int		br_iovcnt;
 	off_t		br_offset;
+	ssize_t		br_resid;
 	void		(*br_callback)(struct blockif_req *req, int err);
 	void		*br_param;
 };
@@ -52,12 +61,17 @@ struct blockif_req {
 struct blockif_ctxt;
 struct blockif_ctxt *blockif_open(const char *optstr, const char *ident);
 off_t	blockif_size(struct blockif_ctxt *bc);
+void	blockif_chs(struct blockif_ctxt *bc, uint16_t *c, uint8_t *h,
+    uint8_t *s);
 int	blockif_sectsz(struct blockif_ctxt *bc);
+void	blockif_psectsz(struct blockif_ctxt *bc, int *size, int *off);
 int	blockif_queuesz(struct blockif_ctxt *bc);
 int	blockif_is_ro(struct blockif_ctxt *bc);
+int	blockif_candelete(struct blockif_ctxt *bc);
 int	blockif_read(struct blockif_ctxt *bc, struct blockif_req *breq);
 int	blockif_write(struct blockif_ctxt *bc, struct blockif_req *breq);
 int	blockif_flush(struct blockif_ctxt *bc, struct blockif_req *breq);
+int	blockif_delete(struct blockif_ctxt *bc, struct blockif_req *breq);
 int	blockif_cancel(struct blockif_ctxt *bc, struct blockif_req *breq);
 int	blockif_close(struct blockif_ctxt *bc);
 

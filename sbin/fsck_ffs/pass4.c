@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass4.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/pass4.c 241012 2012-09-27 23:30:58Z mdf $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -143,7 +143,7 @@ pass4check(struct inodesc *idesc)
 				free((char *)dlp);
 				break;
 			}
-			if (dlp == 0) {
+			if (dlp == NULL) {
 				clrbmap(blkno);
 				n_blks--;
 			}

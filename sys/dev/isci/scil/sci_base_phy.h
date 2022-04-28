@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sci_base_phy.h 240518 2012-09-14 21:28:56Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCI_BASE_PHY_H_
 #define _SCI_BASE_PHY_H_
@@ -93,7 +93,7 @@ typedef enum _SCI_BASE_PHY_STATES
    SCI_BASE_PHY_STATE_STOPPED,
 
    /**
-    * This state indicates that the phy is in the process of becomming
+    * This state indicates that the phy is in the process of becoming
     * ready.  In this state no new IO operations are permitted on this phy.
     * This state is entered from the STOPPED state.
     * This state is entered from the READY state.

@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/kerberos5/lib/libkafs5/version.map 234013 2012-04-08 04:22:09Z stas $
+# $FreeBSD$
 #
 HEIMDAL_KAFS5_1.0 {
 	global:

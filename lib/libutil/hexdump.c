@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/hexdump.c 180161 2008-07-01 22:30:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <libutil.h>

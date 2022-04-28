@@ -5,7 +5,7 @@ $ Based on uk_UA.KOI8-U translation by Olexander Kunytsa <kunia@istc.kiev.ua>
 $
 $ For ee patchlevel 3
 $
-$ $FreeBSD: release/10.0.0/usr.bin/ee/nls/ru_RU.KOI8-R/ee.msg 248160 2013-03-11 13:08:32Z glebius $
+$ $FreeBSD$
 $
 $
 $set 1

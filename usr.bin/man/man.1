@@ -23,9 +23,9 @@
 .\"  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\"  SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.bin/man/man.1 245514 2013-01-16 23:20:24Z brooks $
+.\" $FreeBSD$
 .\"
-.Dd June 3, 2011
+.Dd March 11, 2017
 .Dt MAN 1
 .Os
 .Sh NAME
@@ -57,6 +57,37 @@ If
 is provided,
 .Nm
 restricts the search to the specific section of the manual.
+.Pp
+The sections of the manual are:
+.Bl -enum -offset indent -compact
+.It
+.Fx
+General Commands Manual
+.It
+.Fx
+System Calls Manual
+.It
+.Fx
+Library Functions Manual
+.It
+.Fx
+Kernel Interfaces Manual
+.It
+.Fx
+File Formats Manual
+.It
+.Fx
+Games Manual
+.It
+.Fx
+Miscellaneous Information Manual
+.It
+.Fx
+System Manager's Manual
+.It
+.Fx
+Kernel Developer's Manual
+.El
 .Pp
 Options that
 .Nm
@@ -264,13 +295,22 @@ Corresponds to the
 .Fl m
 option.
 .It Ev MANPATH
-Used to find the location of the manual files.
-See
-.Xr manpath 1
-for additional information.
-Corresponds to the
-.Fl M
-option.
+The standard search path used by
+.Xr man 1
+may be changed by specifying a path in the
+.Ev MANPATH
+environment variable.
+Invalid paths, or paths without manual databases, are ignored.
+Overridden by
+.Fl M .
+If
+.Ev MANPATH
+begins with a colon, it is appended to the default list;
+if it ends with a colon, it is prepended to the default list;
+or if it contains two adjacent colons,
+the standard search path is inserted between the colons.
+If none of these conditions are met, it overrides the
+standard search path.
 .It Ev MANROFFSEQ
 Used to determine the preprocessors for the manual source before running
 .Xr nroff 1
@@ -315,6 +355,8 @@ System configuration file.
 .It Pa /usr/local/etc/man.d/*.conf
 Local configuration files.
 .El
+.Sh EXIT STATUS
+.Ex -std
 .Sh SEE ALSO
 .Xr apropos 1 ,
 .Xr intro 1 ,
@@ -323,4 +365,12 @@ Local configuration files.
 .Xr nroff 1 ,
 .Xr troff 1 ,
 .Xr whatis 1 ,
-.Xr man.conf 5
+.Xr intro 2 ,
+.Xr intro 3 ,
+.Xr intro 4 ,
+.Xr intro 5 ,
+.Xr man.conf 5 ,
+.Xr intro 6 ,
+.Xr intro 7 ,
+.Xr intro 8 ,
+.Xr intro 9

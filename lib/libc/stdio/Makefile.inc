@@ -1,19 +1,20 @@
 #	@(#)Makefile.inc	8.3 (Berkeley) 4/17/94
-# $FreeBSD: release/10.0.0/lib/libc/stdio/Makefile.inc 254151 2013-08-09 17:24:23Z jilles $
+# $FreeBSD$
 
 # stdio sources
-.PATH: ${.CURDIR}/stdio
+.PATH: ${LIBC_SRCTOP}/stdio
 
 SRCS+=	_flock_stub.c asprintf.c clrerr.c dprintf.c \
 	fclose.c fcloseall.c fdopen.c \
 	feof.c ferror.c fflush.c fgetc.c fgetln.c fgetpos.c fgets.c fgetwc.c \
 	fgetwln.c fgetws.c \
-	fileno.c findfp.c flags.c fmemopen.c fopen.c fprintf.c fpurge.c \
+	fileno.c findfp.c flags.c fmemopen.c fopen.c \
+	fopencookie.c fprintf.c fpurge.c \
 	fputc.c fputs.c \
 	fputwc.c fputws.c fread.c freopen.c fscanf.c fseek.c fsetpos.c \
 	ftell.c funopen.c fvwrite.c fwalk.c fwide.c fwprintf.c fwscanf.c \
 	fwrite.c getc.c getchar.c getdelim.c getline.c \
-	gets.c getw.c getwc.c getwchar.c makebuf.c mktemp.c \
+	gets.c gets_s.c getw.c getwc.c getwchar.c makebuf.c mktemp.c \
 	open_memstream.c open_wmemstream.c \
 	perror.c printf.c printf-pos.c putc.c putchar.c \
 	puts.c putw.c putwc.c putwchar.c \
@@ -31,28 +32,33 @@ SRCS+=	xprintf.c xprintf_float.c xprintf_int.c xprintf_str.c
 SRCS+=	xprintf_errno.c xprintf_hexdump.c xprintf_quote.c 
 SRCS+=	xprintf_time.c xprintf_vis.c
 
-SYM_MAPS+=	${.CURDIR}/stdio/Symbol.map
+SYM_MAPS+=	${LIBC_SRCTOP}/stdio/Symbol.map
 
 MAN+=	fclose.3 ferror.3 fflush.3 fgetln.3 fgets.3 fgetwln.3 fgetws.3 \
 	flockfile.3 \
-	fopen.3 fputs.3 \
+	fopen.3 fopencookie.3 fputs.3 \
 	fputws.3 fread.3 fseek.3 funopen.3 fwide.3 getc.3 \
 	getline.3 getwc.3 mktemp.3 open_memstream.3 \
 	printf.3 printf_l.3 putc.3 putwc.3 remove.3 scanf.3 scanf_l.3 setbuf.3 \
 	stdio.3 tmpnam.3 \
 	ungetc.3 ungetwc.3 wprintf.3 wscanf.3
 
-MLINKS+=fclose.3 fcloseall.3
+MLINKS+=fclose.3 fcloseall.3 fclose.3 fdclose.3
 MLINKS+=ferror.3 ferror_unlocked.3 \
 	ferror.3 clearerr.3 ferror.3 clearerr_unlocked.3 \
 	ferror.3 feof.3 ferror.3 feof_unlocked.3 \
 	ferror.3 fileno.3 ferror.3 fileno_unlocked.3
-MLINKS+=fflush.3 fpurge.3
+MLINKS+=fflush.3 fflush_unlocked.3 \
+	fflush.3 fpurge.3
 MLINKS+=fgets.3 gets.3
+MLINKS+=fgets.3 gets_s.3
 MLINKS+=flockfile.3 ftrylockfile.3 flockfile.3 funlockfile.3
 MLINKS+=fopen.3 fdopen.3 fopen.3 freopen.3 fopen.3 fmemopen.3
-MLINKS+=fputs.3 puts.3
-MLINKS+=fread.3 fwrite.3
+MLINKS+=fputs.3 fputs_unlocked.3 \
+	fputs.3 puts.3
+MLINKS+=fread.3 fread_unlocked.3 \
+	fread.3 fwrite.3 \
+	fread.3 fwrite_unlocked.3
 MLINKS+=fseek.3 fgetpos.3 fseek.3 fseeko.3 fseek.3 fsetpos.3 fseek.3 ftell.3 \
 	fseek.3 ftello.3 fseek.3 rewind.3
 MLINKS+=funopen.3 fropen.3 funopen.3 fwopen.3

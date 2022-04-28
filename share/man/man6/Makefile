@@ -1,5 +1,7 @@
-# $FreeBSD: release/10.0.0/share/man/man6/Makefile 74856 2001-03-27 13:48:25Z ru $
+# $FreeBSD$
 
 MAN=	intro.6
+
+PACKAGE=runtime-manuals
 
 .include <bsd.prog.mk>

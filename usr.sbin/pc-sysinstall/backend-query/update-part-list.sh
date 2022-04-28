@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/update-part-list.sh 220909 2011-04-21 06:25:12Z jpaetzel $
+# $FreeBSD$
 
 # Need access to a some unmount functions
 . ${PROGDIR}/backend/functions-unmount.sh

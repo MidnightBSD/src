@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Brian Somers <brian@Awfulhak.org>
  *                    Ian Donaldson <iand@labtam.labtam.oz.au>
  *                    Carsten Bormann <cabo@cs.tu-berlin.de>
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/pred.c 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

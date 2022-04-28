@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/smp_all.c 216088 2010-11-30 22:39:46Z ken $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -118,8 +118,7 @@ smp_error_desc(int function_result)
 {
 	int i;
 
-	for (i = 0; i < (sizeof(smp_error_table)/sizeof(smp_error_table[0]));
-	     i++){
+	for (i = 0; i < nitems(smp_error_table); i++){
 		if (function_result == smp_error_table[i].function_result)
 			return (smp_error_table[i].desc);
 	}
@@ -164,7 +163,7 @@ smp_command_desc(uint8_t cmd_num)
 {
 	int i;
 
-	for (i = 0; i < (sizeof(smp_cmd_table)/sizeof(smp_cmd_table[0])) &&
+	for (i = 0; i < nitems(smp_cmd_table) &&
 	     smp_cmd_table[i].cmd_num <= cmd_num; i++) {
 		if (cmd_num == smp_cmd_table[i].cmd_num)
 			return (smp_cmd_table[i].desc);

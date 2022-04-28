@@ -32,22 +32,18 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)SYS.h	5.5 (Berkeley) 5/7/91
- * $FreeBSD: release/10.0.0/lib/libc/arm/SYS.h 245650 2013-01-19 04:03:18Z andrew $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>
 #include <sys/syscall.h>
 #include <machine/swi.h>
 
-#ifdef __ARM_EABI__
 #define SYSTRAP(x)							\
 			mov ip, r7;					\
 			ldr r7, =SYS_ ## x;				\
 			swi 0;						\
 			mov r7, ip
-#else
-#define SYSTRAP(x)	swi 0 | SYS_ ## x
-#endif
 
 #define	CERROR		_C_LABEL(cerror)
 #define	CURBRK		_C_LABEL(curbrk)
@@ -62,6 +58,7 @@
 
 #define _SYSCALL(x)							\
 	_SYSCALL_NOERROR(x);						\
+	it	cs;							\
 	bcs PIC_SYM(CERROR, PLT)
 
 #define SYSCALL(x)							\
@@ -72,6 +69,7 @@
 	.weak _C_LABEL(__CONCAT(_,x));					\
 	.set _C_LABEL(__CONCAT(_,x)),_C_LABEL(__CONCAT(__sys_,x));	\
 	SYSTRAP(x);							\
+	it	cs;							\
 	bcs PIC_SYM(CERROR, PLT);					\
 	RET
 

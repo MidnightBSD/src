@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/dev/le/am7990var.h 204646 2010-03-03 17:55:51Z joel $ */
+/* $FreeBSD$ */
 
 #ifndef _DEV_LE_AM7990VAR_H_
 #define	_DEV_LE_AM7990VAR_H_

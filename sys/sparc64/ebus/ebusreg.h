@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/sparc64/ebus/ebusreg.h 219567 2011-03-12 14:33:32Z marius $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: ebusreg.h,v 1.4 2001/10/01 18:08:04 jason Exp $	*/
 /*	$NetBSD: ebusreg.h,v 1.8 2008/05/29 14:51:27 mrg Exp $	*/
 

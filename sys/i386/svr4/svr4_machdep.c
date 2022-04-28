@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/svr4/svr4_machdep.c 177145 2008-03-13 10:54:38Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -65,7 +65,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/i386/svr4/svr4_machdep.c 177145 2008-03-1
 
 extern int svr4_szsigcode;
 extern char svr4_sigcode[];
-extern int _udatasel, _ucodesel;
 
 static void svr4_getsiginfo(union svr4_siginfo *, int, u_long, caddr_t);
 
@@ -160,7 +159,7 @@ svr4_getcontext(td, uc, mask, oonstack)
 #if defined(DONE_MORE_SIGALTSTACK_WORK)
 	bsd_to_svr4_sigaltstack(sf, s);
 #else
-	s->ss_sp = (void *)(((u_long) tf->tf_esp) & ~(16384 - 1));
+	s->ss_sp = (void *)rounddown2((u_long)tf->tf_esp, 16384);
 	s->ss_size = 16384;
 	s->ss_flags = 0;
 #endif
@@ -442,7 +441,7 @@ svr4_sendsig(catcher, ksi, mask)
 	 */
 	if ((td->td_pflags & TDP_ALTSTACK) && !oonstack &&
 	    SIGISMEMBER(psp->ps_sigonstack, sig)) {
-		fp = (struct svr4_sigframe *)(td->td_sigstk.ss_sp +
+		fp = (struct svr4_sigframe *)((uintptr_t)td->td_sigstk.ss_sp +
 		    td->td_sigstk.ss_size - sizeof(struct svr4_sigframe));
 		td->td_sigstk.ss_flags |= SS_ONSTACK;
 	} else {

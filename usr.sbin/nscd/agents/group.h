@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/nscd/agents/group.h 194112 2009-06-13 14:12:55Z des $
+ * $FreeBSD$
  */
 
 #include "../agent.h"

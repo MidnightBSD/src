@@ -1,7 +1,7 @@
 /*
  * hrvatski praznici
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/hr_HR.ISO8859-2/calendar.praznici 232105 2012-02-24 11:40:20Z osa $
+ * $FreeBSD$
  */
 
 #ifndef _hr_HR_ISO8859_2_praznici_

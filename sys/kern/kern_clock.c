@@ -35,12 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_clock.c 252342 2013-06-28 15:55:30Z rstone $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kdb.h"
 #include "opt_device_polling.h"
 #include "opt_hwpmc_hooks.h"
-#include "opt_kdtrace.h"
 #include "opt_ntp.h"
 #include "opt_watchdog.h"
 
@@ -93,7 +92,7 @@ SYSINIT(clocks, SI_SUB_CLOCKS, SI_ORDER_FIRST, initclocks, NULL);
 static struct mtx time_lock;
 
 SDT_PROVIDER_DECLARE(sched);
-SDT_PROBE_DEFINE2(sched, , , tick, tick, "struct thread *", "struct proc *");
+SDT_PROBE_DEFINE2(sched, , , tick, "struct thread *", "struct proc *");
 
 static int
 sysctl_kern_cp_time(SYSCTL_HANDLER_ARGS)
@@ -334,14 +333,18 @@ read_cpu_time(long *cp_time)
 	}
 }
 
-#ifdef SW_WATCHDOG
 #include <sys/watchdog.h>
 
 static int watchdog_ticks;
 static int watchdog_enabled;
 static void watchdog_fire(void);
 static void watchdog_config(void *, u_int, int *);
-#endif /* SW_WATCHDOG */
+
+static void
+watchdog_attach(void)
+{
+	EVENTHANDLER_REGISTER(watchdog_list, watchdog_config, NULL, 0);
+}
 
 /*
  * Clock handling routines.
@@ -382,17 +385,18 @@ volatile int	ticks;
 int	psratio;
 
 static DPCPU_DEFINE(int, pcputicks);	/* Per-CPU version of ticks. */
-static int global_hardclock_run = 0;
+#ifdef DEVICE_POLLING
+static int devpoll_run = 0;
+#endif
 
 /*
  * Initialize clock frequencies and start both clocks running.
  */
 /* ARGSUSED*/
 static void
-initclocks(dummy)
-	void *dummy;
+initclocks(void *dummy)
 {
-	register int i;
+	int i;
 
 	/*
 	 * Set divisors to 1 (normal case) and let the machine-specific
@@ -408,8 +412,14 @@ initclocks(dummy)
 	if (profhz == 0)
 		profhz = i;
 	psratio = profhz / i;
+
 #ifdef SW_WATCHDOG
-	EVENTHANDLER_REGISTER(watchdog_list, watchdog_config, NULL, 0);
+	/* Enable hardclock watchdog now, even if a hardware watchdog exists. */
+	watchdog_attach();
+#else
+	/* Volunteer to run a software watchdog. */
+	if (wdog_software_attach == NULL)
+		wdog_software_attach = watchdog_attach;
 #endif
 }
 
@@ -433,19 +443,18 @@ hardclock_cpu(int usermode)
 	flags = 0;
 	if (usermode &&
 	    timevalisset(&pstats->p_timer[ITIMER_VIRTUAL].it_value)) {
-		PROC_SLOCK(p);
+		PROC_ITIMLOCK(p);
 		if (itimerdecr(&pstats->p_timer[ITIMER_VIRTUAL], tick) == 0)
 			flags |= TDF_ALRMPEND | TDF_ASTPENDING;
-		PROC_SUNLOCK(p);
+		PROC_ITIMUNLOCK(p);
 	}
 	if (timevalisset(&pstats->p_timer[ITIMER_PROF].it_value)) {
-		PROC_SLOCK(p);
+		PROC_ITIMLOCK(p);
 		if (itimerdecr(&pstats->p_timer[ITIMER_PROF], tick) == 0)
 			flags |= TDF_PROFPEND | TDF_ASTPENDING;
-		PROC_SUNLOCK(p);
+		PROC_ITIMUNLOCK(p);
 	}
 	thread_lock(td);
-	sched_tick(1);
 	td->td_flags |= flags;
 	thread_unlock(td);
 
@@ -481,10 +490,8 @@ hardclock(int usermode, uintfptr_t pc)
 #ifdef DEVICE_POLLING
 	hardclock_device_poll();	/* this is very short and quick */
 #endif /* DEVICE_POLLING */
-#ifdef SW_WATCHDOG
 	if (watchdog_enabled > 0 && --watchdog_ticks <= 0)
 		watchdog_fire();
-#endif /* SW_WATCHDOG */
 }
 
 void
@@ -495,9 +502,7 @@ hardclock_cnt(int cnt, int usermode)
 	struct proc *p = td->td_proc;
 	int *t = DPCPU_PTR(pcputicks);
 	int flags, global, newticks;
-#ifdef SW_WATCHDOG
 	int i;
-#endif /* SW_WATCHDOG */
 
 	/*
 	 * Update per-CPU and possibly global ticks values.
@@ -521,23 +526,24 @@ hardclock_cnt(int cnt, int usermode)
 	flags = 0;
 	if (usermode &&
 	    timevalisset(&pstats->p_timer[ITIMER_VIRTUAL].it_value)) {
-		PROC_SLOCK(p);
+		PROC_ITIMLOCK(p);
 		if (itimerdecr(&pstats->p_timer[ITIMER_VIRTUAL],
 		    tick * cnt) == 0)
 			flags |= TDF_ALRMPEND | TDF_ASTPENDING;
-		PROC_SUNLOCK(p);
+		PROC_ITIMUNLOCK(p);
 	}
 	if (timevalisset(&pstats->p_timer[ITIMER_PROF].it_value)) {
-		PROC_SLOCK(p);
+		PROC_ITIMLOCK(p);
 		if (itimerdecr(&pstats->p_timer[ITIMER_PROF],
 		    tick * cnt) == 0)
 			flags |= TDF_PROFPEND | TDF_ASTPENDING;
-		PROC_SUNLOCK(p);
+		PROC_ITIMUNLOCK(p);
 	}
-	thread_lock(td);
-	sched_tick(cnt);
-	td->td_flags |= flags;
-	thread_unlock(td);
+	if (flags != 0) {
+		thread_lock(td);
+		td->td_flags |= flags;
+		thread_unlock(td);
+	}
 
 #ifdef	HWPMC_HOOKS
 	if (PMC_CPU_HAS_SAMPLES(PCPU_GET(cpuid)))
@@ -547,22 +553,20 @@ hardclock_cnt(int cnt, int usermode)
 #endif
 	/* We are in charge to handle this tick duty. */
 	if (newticks > 0) {
-		/* Dangerous and no need to call these things concurrently. */
-		if (atomic_cmpset_acq_int(&global_hardclock_run, 0, 1)) {
-			tc_ticktock(newticks);
+		tc_ticktock(newticks);
 #ifdef DEVICE_POLLING
+		/* Dangerous and no need to call these things concurrently. */
+		if (atomic_cmpset_acq_int(&devpoll_run, 0, 1)) {
 			/* This is very short and quick. */
 			hardclock_device_poll();
-#endif /* DEVICE_POLLING */
-			atomic_store_rel_int(&global_hardclock_run, 0);
+			atomic_store_rel_int(&devpoll_run, 0);
 		}
-#ifdef SW_WATCHDOG
+#endif /* DEVICE_POLLING */
 		if (watchdog_enabled > 0) {
 			i = atomic_fetchadd_int(&watchdog_ticks, -newticks);
 			if (i > 0 && i <= newticks)
 				watchdog_fire();
 		}
-#endif /* SW_WATCHDOG */
 	}
 	if (curcpu == CPU_FIRST())
 		cpu_tick_calibration();
@@ -580,11 +584,10 @@ hardclock_sync(int cpu)
  * Compute number of ticks in the specified amount of time.
  */
 int
-tvtohz(tv)
-	struct timeval *tv;
+tvtohz(struct timeval *tv)
 {
-	register unsigned long ticks;
-	register long sec, usec;
+	unsigned long ticks;
+	long sec, usec;
 
 	/*
 	 * If the number of usecs in the whole seconds part of the time
@@ -623,11 +626,10 @@ tvtohz(tv)
 #endif
 		ticks = 1;
 	} else if (sec <= LONG_MAX / 1000000)
-		ticks = (sec * 1000000 + (unsigned long)usec + (tick - 1))
-			/ tick + 1;
+		ticks = howmany(sec * 1000000 + (unsigned long)usec, tick) + 1;
 	else if (sec <= LONG_MAX / hz)
 		ticks = sec * hz
-			+ ((unsigned long)usec + (tick - 1)) / tick + 1;
+			+ howmany((unsigned long)usec, tick) + 1;
 	else
 		ticks = LONG_MAX;
 	if (ticks > INT_MAX)
@@ -642,8 +644,7 @@ tvtohz(tv)
  * keeps the profile clock running constantly.
  */
 void
-startprofclock(p)
-	register struct proc *p;
+startprofclock(struct proc *p)
 {
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
@@ -662,18 +663,17 @@ startprofclock(p)
  * Stop profiling on a process.
  */
 void
-stopprofclock(p)
-	register struct proc *p;
+stopprofclock(struct proc *p)
 {
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	if (p->p_flag & P_PROFIL) {
 		if (p->p_profthreads != 0) {
-			p->p_flag |= P_STOPPROF;
-			while (p->p_profthreads != 0)
+			while (p->p_profthreads != 0) {
+				p->p_flag |= P_STOPPROF;
 				msleep(&p->p_profthreads, &p->p_mtx, PPAUSE,
 				    "stopprof", 0);
-			p->p_flag &= ~P_STOPPROF;
+			}
 		}
 		if ((p->p_flag & P_PROFIL) == 0)
 			return;
@@ -841,8 +841,6 @@ SYSCTL_PROC(_kern, KERN_CLOCKRATE, clockrate,
 	0, 0, sysctl_kern_clockrate, "S,clockinfo",
 	"Rate and period of various kernel clocks");
 
-#ifdef SW_WATCHDOG
-
 static void
 watchdog_config(void *unused __unused, u_int cmd, int *error)
 {
@@ -891,5 +889,3 @@ watchdog_fire(void)
 	panic("watchdog timeout");
 #endif
 }
-
-#endif /* SW_WATCHDOG */

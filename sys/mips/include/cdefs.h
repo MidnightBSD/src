@@ -26,7 +26,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/cdefs.h 204557 2010-03-02 07:27:30Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_CDEFS_H_

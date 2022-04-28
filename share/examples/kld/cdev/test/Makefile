@@ -64,16 +64,18 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/share/examples/kld/cdev/test/Makefile 203349 2010-02-01 16:13:56Z wkoszek $
+# $FreeBSD$
 #
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld/cdev/test
 PROG=	testcdev
-NO_MAN=
+MAN=
 WARNS?=	5
 
 MODSTAT= /sbin/kldstat
 
 load:
-	@echo "This test program will call the sample kld characer device ";
+	@echo "This test program will call the sample kld character device ";
 	@echo "driver."
 	@echo
 	@echo "The sample driver will display a message on the"

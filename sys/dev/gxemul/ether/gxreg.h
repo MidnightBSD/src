@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/gxemul/ether/gxreg.h 255212 2013-09-04 20:34:36Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_GXEMUL_ETHER_GXREG_H_

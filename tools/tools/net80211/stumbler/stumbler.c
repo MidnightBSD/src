@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/net80211/stumbler/stumbler.c 195848 2009-07-24 15:31:22Z sam $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -711,7 +711,7 @@ int get_packet_info(struct ieee80211_frame* wh,
 	else if (type == IEEE80211_FC0_TYPE_DATA &&
 	    stype == IEEE80211_FC0_SUBTYPE_DATA) {
 	
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			unsigned char* iv;
 			
 			node->wep = CRYPT_WEP;

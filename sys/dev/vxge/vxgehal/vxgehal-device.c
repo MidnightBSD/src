@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxgehal/vxgehal-device.c 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD$*/
 
 #include <dev/vxge/vxgehal/vxgehal.h>
 
@@ -3395,7 +3395,7 @@ vxge_hal_device_trace_dump(vxge_hal_device_h devh)
  * @read_length: Size of the valid data in the buffer.
  *
  * Read  HAL trace buffer contents starting from the offset
- * upto the size of the buffer or till EOF is reached.
+ * up to the size of the buffer or till EOF is reached.
  *
  * Returns: VXGE_HAL_OK - success.
  * VXGE_HAL_EOF_TRACE_BUF - No more data in the trace buffer.

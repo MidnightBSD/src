@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)popen.c	8.3 (Berkeley) 5/3/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/popen.c 250827 2013-05-20 17:31:18Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -67,12 +67,12 @@ static pthread_mutex_t pidlist_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define	THREAD_UNLOCK()	if (__isthreaded) _pthread_mutex_unlock(&pidlist_mutex)
 
 FILE *
-popen(command, type)
-	const char *command, *type;
+popen(const char *command, const char *type)
 {
 	struct pid *cur;
 	FILE *iop;
 	int pdes[2], pid, twoway, cloexec;
+	int pdes_unused_in_parent;
 	char *argv[4];
 	struct pid *p;
 
@@ -90,12 +90,26 @@ popen(command, type)
 		    (type[1] && (type[1] != 'e' || type[2])))
 			return (NULL);
 	}
-	if ((cloexec ? pipe2(pdes, O_CLOEXEC) : pipe(pdes)) < 0)
+	if (pipe2(pdes, O_CLOEXEC) < 0)
 		return (NULL);
 
 	if ((cur = malloc(sizeof(struct pid))) == NULL) {
 		(void)_close(pdes[0]);
 		(void)_close(pdes[1]);
+		return (NULL);
+	}
+
+	if (*type == 'r') {
+		iop = fdopen(pdes[0], type);
+		pdes_unused_in_parent = pdes[1];
+	} else {
+		iop = fdopen(pdes[1], type);
+		pdes_unused_in_parent = pdes[0];
+	}
+	if (iop == NULL) {
+		(void)_close(pdes[0]);
+		(void)_close(pdes[1]);
+		free(cur);
 		return (NULL);
 	}
 
@@ -108,9 +122,14 @@ popen(command, type)
 	switch (pid = vfork()) {
 	case -1:			/* Error. */
 		THREAD_UNLOCK();
-		(void)_close(pdes[0]);
-		(void)_close(pdes[1]);
+		/*
+		 * The _close() closes the unused end of pdes[], while
+		 * the fclose() closes the used end of pdes[], *and* cleans
+		 * up iop.
+		 */
+		(void)_close(pdes_unused_in_parent);
 		free(cur);
+		(void)fclose(iop);
 		return (NULL);
 		/* NOTREACHED */
 	case 0:				/* Child. */
@@ -123,29 +142,20 @@ popen(command, type)
 			 * the compiler is free to corrupt all the local
 			 * variables.
 			 */
-			if (!cloexec)
-				(void)_close(pdes[0]);
 			if (pdes[1] != STDOUT_FILENO) {
 				(void)_dup2(pdes[1], STDOUT_FILENO);
-				if (!cloexec)
-					(void)_close(pdes[1]);
 				if (twoway)
 					(void)_dup2(STDOUT_FILENO, STDIN_FILENO);
 			} else if (twoway && (pdes[1] != STDIN_FILENO)) {
 				(void)_dup2(pdes[1], STDIN_FILENO);
-				if (cloexec)
-					(void)_fcntl(pdes[1], F_SETFD, 0);
-			} else if (cloexec)
+				(void)_fcntl(pdes[1], F_SETFD, 0);
+			} else
 				(void)_fcntl(pdes[1], F_SETFD, 0);
 		} else {
 			if (pdes[0] != STDIN_FILENO) {
 				(void)_dup2(pdes[0], STDIN_FILENO);
-				if (!cloexec)
-					(void)_close(pdes[0]);
-			} else if (cloexec)
+			} else
 				(void)_fcntl(pdes[0], F_SETFD, 0);
-			if (!cloexec)
-				(void)_close(pdes[1]);
 		}
 		SLIST_FOREACH(p, &pidlist, next)
 			(void)_close(fileno(p->fp));
@@ -155,14 +165,8 @@ popen(command, type)
 	}
 	THREAD_UNLOCK();
 
-	/* Parent; assume fdopen can't fail. */
-	if (*type == 'r') {
-		iop = fdopen(pdes[0], type);
-		(void)_close(pdes[1]);
-	} else {
-		iop = fdopen(pdes[1], type);
-		(void)_close(pdes[0]);
-	}
+	/* Parent. */
+	(void)_close(pdes_unused_in_parent);
 
 	/* Link into list of file descriptors. */
 	cur->fp = iop;
@@ -170,6 +174,14 @@ popen(command, type)
 	THREAD_LOCK();
 	SLIST_INSERT_HEAD(&pidlist, cur, next);
 	THREAD_UNLOCK();
+
+	/*
+	 * To guard against undesired fd passing with concurrent calls,
+	 * only clear the close-on-exec flag after linking the file into
+	 * the list which will cause an explicit close.
+	 */
+	if (!cloexec)
+		(void)_fcntl(*type == 'r' ? pdes[0] : pdes[1], F_SETFD, 0);
 
 	return (iop);
 }
@@ -180,8 +192,7 @@ popen(command, type)
  *	if already `pclosed', or waitpid returns an error.
  */
 int
-pclose(iop)
-	FILE *iop;
+pclose(FILE *iop)
 {
 	struct pid *cur, *last = NULL;
 	int pstat;

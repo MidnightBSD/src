@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/password/include/messages.subr 249751 2013-04-22 05:52:06Z dteske $
+# $FreeBSD$
 
 hline_alnum_punc_tab_enter="Use alpha-numeric, punctuation, TAB or ENTER"
 msg_cancel="Cancel"

@@ -37,11 +37,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:21:10Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 
 #include <sys/module.h>
@@ -54,7 +57,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ie/if_ie_isa.c 241066 2012-09-30 09:2
 #include <machine/md_var.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_media.h>
 
 #include <isa/isavar.h>
@@ -879,7 +881,7 @@ ie_modevent (mod, what, arg)
 		break;
 	default:
 		break;
-	};
+	}
 
 	return (0);
 }

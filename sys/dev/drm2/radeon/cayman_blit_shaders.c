@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/cayman_blit_shaders.c 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 
@@ -370,6 +370,6 @@ const u32 cayman_ps[] =
 	0x00000000,
 };
 
-const u32 cayman_ps_size = DRM_ARRAY_SIZE(cayman_ps);
-const u32 cayman_vs_size = DRM_ARRAY_SIZE(cayman_vs);
-const u32 cayman_default_size = DRM_ARRAY_SIZE(cayman_default_state);
+const u32 cayman_ps_size = ARRAY_SIZE(cayman_ps);
+const u32 cayman_vs_size = ARRAY_SIZE(cayman_vs);
+const u32 cayman_default_size = ARRAY_SIZE(cayman_default_state);

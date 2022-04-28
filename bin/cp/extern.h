@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/1/94
- * $FreeBSD: release/10.0.0/bin/cp/extern.h 161586 2006-08-24 20:45:38Z julian $
+ * $FreeBSD$
  */
 
 typedef struct {
@@ -37,7 +37,7 @@ typedef struct {
 } PATH_T;
 
 extern PATH_T to;
-extern int fflag, iflag, lflag, nflag, pflag, vflag;
+extern int fflag, iflag, lflag, nflag, pflag, sflag, vflag;
 extern volatile sig_atomic_t info;
 
 __BEGIN_DECLS

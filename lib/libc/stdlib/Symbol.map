@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/stdlib/Symbol.map 234370 2012-04-17 07:22:14Z jasone $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -104,7 +104,30 @@ FBSD_1.3 {
 	strtouq_l;
 };
 
+FBSD_1.4 {
+	atexit_b;
+	bsearch_b;
+	heapsort_b;
+	mergesort_b;
+	qsort_b;
+	hcreate_r;
+	hdestroy_r;
+	hsearch_r;
+	reallocarray;
+};
+
+FBSD_1.5 {
+	__cxa_thread_atexit;
+	__cxa_thread_atexit_impl;
+	abort_handler_s;
+	ignore_handler_s;
+	set_constraint_handler_s;
+};
+
 FBSDprivate_1.0 {
 	__system;
 	_system;
+	__libc_system;
+	__cxa_thread_call_dtors;
+	__libc_atexit;
 };

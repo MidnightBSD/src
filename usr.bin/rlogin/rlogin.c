@@ -51,7 +51,7 @@ static const char sccsid[] = "@(#)rlogin.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rlogin/rlogin.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rlogin - remote login
@@ -131,7 +131,7 @@ main(int argc, char *argv[])
 	long omask;
 	int argoff, ch, dflag, Dflag, one;
 	uid_t uid;
-	char *host, *localname, *p, *user, term[1024];
+	char *host, *localname, *p, *user, term[1024] = "network";
 	speed_t ospeed;
 	struct sockaddr_storage ss;
 	socklen_t sslen;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/isa/ad1816.h 172568 2007-10-12 06:03:46Z kevlo $
+ * $FreeBSD$
  */
 
 /*

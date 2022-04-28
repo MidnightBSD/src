@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/rpc/clnt_rc.c 248255 2013-03-13 21:06:03Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -450,7 +450,6 @@ clnt_reconnect_control(CLIENT *cl, u_int request, void *info)
 
 	case CLSET_BACKCHANNEL:
 		xprt = (SVCXPRT *)info;
-		SVC_ACQUIRE(xprt);
 		xprt_register(xprt);
 		rc->rc_backchannel = info;
 		break;

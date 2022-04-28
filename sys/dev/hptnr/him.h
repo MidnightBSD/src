@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptnr/him.h 252867 2013-07-06 07:49:41Z delphij $
+ * $FreeBSD$
  */
 #include <dev/hptnr/hptnr_config.h>
 #ifndef _HPT_HIM_H_
@@ -197,6 +197,9 @@ IDENTIFY_DATA, *PIDENTIFY_DATA;
 typedef struct _HIM_DEVICE_CONFIG
 {
 	HPT_U64 capacity;
+	HPT_U32 logical_sector_size;
+	HPT_U8 logicalsectors_per_physicalsector;
+	HPT_U16 lowest_aligned;
 
 	DEVICE_FLAGS flags;
 

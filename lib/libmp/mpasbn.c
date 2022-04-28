@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libmp/mpasbn.c 189092 2009-02-26 21:43:15Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>
@@ -286,10 +286,10 @@ mp_min(MINT *mp)
 	line = fgetln(stdin, &linelen);
 	if (line == NULL)
 		MPERR(("min"));
-	nline = malloc(linelen);
+	nline = malloc(linelen + 1);
 	if (nline == NULL)
 		MPERR(("min"));
-	strncpy(nline, line, linelen);
+	memcpy(nline, line, linelen);
 	nline[linelen] = '\0';
 	rmp = _dtom("min", nline);
 	_movem("min", rmp, mp);

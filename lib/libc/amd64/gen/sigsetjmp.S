@@ -37,7 +37,7 @@
 	.asciz "$Id: sigsetjmp.S,v 1.1 1993/12/05 13:01:05 ats Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/gen/sigsetjmp.S 227023 2011-11-02 18:06:22Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -63,7 +63,7 @@ ENTRY(sigsetjmp)
 	movq	$0,%rsi			/* (sigset_t*)set  */
 	leaq	72(%rcx),%rdx		/* 9,10 (sigset_t*)oset */
 	/* stack is 16-byte aligned */
-	call	PIC_PLT(CNAME(_sigprocmask))
+	call	__libc_sigprocmask
 	popq	%rdi
 2:	movq	%rdi,%rcx
 	movq	0(%rsp),%rdx		/* retval */
@@ -80,8 +80,7 @@ ENTRY(sigsetjmp)
 	ret
 END(sigsetjmp)
 
-	.weak CNAME(siglongjmp)
-	.set CNAME(siglongjmp),CNAME(__siglongjmp)
+	WEAK_REFERENCE(__siglongjmp, siglongjmp)
 ENTRY(__siglongjmp)
 	cmpl	$0,88(%rdi)
 	jz	2f
@@ -92,7 +91,7 @@ ENTRY(__siglongjmp)
 	leaq	72(%rdx),%rsi		/* (sigset_t*)set  */
 	movq	$0,%rdx			/* (sigset_t*)oset */
 	subq	$0x8,%rsp		/* make the stack 16-byte aligned */
-	call	PIC_PLT(CNAME(_sigprocmask))
+	call	__libc_sigprocmask
 	addq	$0x8,%rsp
 	popq	%rsi
 	popq	%rdi			/* jmpbuf */
@@ -106,7 +105,6 @@ ENTRY(__siglongjmp)
 	movq	40(%rdx),%r13
 	movq	48(%rdx),%r14
 	movq	56(%rdx),%r15
-	fninit
 	fldcw	64(%rdx)
 	testq	%rax,%rax
 	jnz	1f

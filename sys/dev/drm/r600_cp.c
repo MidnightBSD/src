@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/r600_cp.c 207069 2010-04-22 18:47:30Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

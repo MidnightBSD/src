@@ -1,6 +1,8 @@
 #ifndef _SDP_H_
 #define _SDP_H_
 
+#define	LINUXKPI_PARAM_PREFIX ib_sdp_
+
 #include "opt_ddb.h"
 #include "opt_inet.h"
 #include "opt_ofed.h"
@@ -25,6 +27,7 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/route.h>
 #include <net/vnet.h>
 
@@ -49,7 +52,6 @@
 #include <rdma/ib_verbs.h>
 #include <rdma/rdma_cm.h>
 #include <rdma/ib_cm.h>
-#include <rdma/sdp_socket.h>
 #include <rdma/ib_fmr_pool.h>
 
 #ifdef SDP_DEBUG
@@ -65,7 +67,7 @@ struct name {                                                           \
         struct type *lh_first;  /* first element */                     \
 }
 
-/* Interval between sucessive polls in the Tx routine when polling is used
+/* Interval between successive polls in the Tx routine when polling is used
    instead of interrupts (in per-core Tx rings) - should be power of 2 */
 #define SDP_TX_POLL_MODER	16
 #define SDP_TX_POLL_TIMEOUT	(HZ / 20)
@@ -335,7 +337,6 @@ struct sdp_rx_ring {
 
 struct sdp_device {
 	struct ib_pd 		*pd;
-	struct ib_mr 		*mr;
 	struct ib_fmr_pool 	*fmr_pool;
 };
 
@@ -400,8 +401,7 @@ struct sdp_sock {
 	struct sdp_rx_ring rx_ring;
 	struct sdp_tx_ring tx_ring;
 	struct rwlock	lock;
-	struct mbuf *rx_ctl_q;
-	struct mbuf *rx_ctl_tail;
+	struct mbufq	rxctlq;		/* received control packets */
 
 	int qp_active;	/* XXX Flag. */
 	int max_sge;
@@ -423,8 +423,8 @@ struct sdp_sock {
 
 	/* SDP slow start */
 	int recv_request_head; 	/* mark the rx_head when the resize request
-				   was recieved */
-	int recv_request; 	/* XXX flag if request to resize was recieved */
+				   was received */
+	int recv_request; 	/* XXX flag if request to resize was received */
 
 	unsigned long tx_packets;
 	unsigned long rx_packets;
@@ -452,6 +452,8 @@ struct sdp_sock {
 #define	SDP_WLOCK_ASSERT(ssk)	rw_assert(&(ssk)->lock, RA_WLOCKED)
 #define	SDP_RLOCK_ASSERT(ssk)	rw_assert(&(ssk)->lock, RA_RLOCKED)
 #define	SDP_LOCK_ASSERT(ssk)	rw_assert(&(ssk)->lock, RA_LOCKED)
+
+MALLOC_DECLARE(M_SDP);
 
 static inline void tx_sa_reset(struct tx_srcavail_state *tx_sa)
 {
@@ -702,6 +704,7 @@ void sdp_do_posts(struct sdp_sock *ssk);
 void sdp_rx_comp_full(struct sdp_sock *ssk);
 
 /* sdp_zcopy.c */
+struct kiocb;
 int sdp_sendmsg_zcopy(struct kiocb *iocb, struct socket *sk, struct iovec *iov);
 int sdp_handle_srcavail(struct sdp_sock *ssk, struct sdp_srcah *srcah);
 void sdp_handle_sendsm(struct sdp_sock *ssk, u32 mseq_ack);

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/cmx/Makefile 241828 2012-10-22 02:12:11Z eadler $
+# $FreeBSD$
 #
-.PATH:	${.CURDIR}/../../dev/cmx
+.PATH:	${SRCTOP}/sys/dev/cmx
 
 KMOD=	cmx
 SRCS=	cmx.c cmxvar.h cmxreg.h \

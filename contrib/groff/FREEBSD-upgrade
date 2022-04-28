@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/groff/FREEBSD-upgrade 151508 2005-10-20 11:18:24Z ru $
+$FreeBSD$
 
 This directory contains virgin copies of the original distribution files
 on a "vendor" branch.  Do not, under any circumstances, attempt to upgrade

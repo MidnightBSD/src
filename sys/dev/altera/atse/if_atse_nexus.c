@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/atse/if_atse_nexus.c 256752 2013-10-18 20:44:19Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_device_polling.h"
 
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/atse/if_atse_nexus.c 256752 20
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_media.h>
+#include <net/if_var.h>
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
@@ -129,7 +130,7 @@ atse_probe_nexus(device_t dev)
 
 	/* Success. */
 	device_set_desc(dev, "Altera Triple-Speed Ethernet MegaCore");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

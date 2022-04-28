@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/memcchr.c 229198 2012-01-01 20:26:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 #include <sys/limits.h>

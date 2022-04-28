@@ -21,7 +21,11 @@
 /*
  * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2010 Nexenta Systems, Inc. All rights reserved.
+ * Copyright (c) 2013, 2015 by Delphix. All rights reserved.
+ * Copyright 2016 Igor Kozhukhov <ikozhukhov@gmail.com>
  */
+
+#include <sys/zfs_context.h>
 
 #if defined(_KERNEL)
 #include <sys/systm.h>
@@ -34,43 +38,35 @@
 #include <libnvpair.h>
 #include <ctype.h>
 #endif
-/* XXX includes zfs_context.h, so why bother with the above? */
 #include <sys/dsl_deleg.h>
 #include "zfs_prop.h"
 #include "zfs_deleg.h"
 #include "zfs_namecheck.h"
 
-/*
- * permission table
- *
- * Keep this table in sorted order
- *
- * This table is used for displaying all permissions for
- * zfs allow
- */
-
 zfs_deleg_perm_tab_t zfs_deleg_perm_tab[] = {
-	{ZFS_DELEG_PERM_ALLOW, ZFS_DELEG_NOTE_ALLOW},
-	{ZFS_DELEG_PERM_CLONE, ZFS_DELEG_NOTE_CLONE },
-	{ZFS_DELEG_PERM_CREATE, ZFS_DELEG_NOTE_CREATE },
-	{ZFS_DELEG_PERM_DESTROY, ZFS_DELEG_NOTE_DESTROY },
-	{ZFS_DELEG_PERM_MOUNT, ZFS_DELEG_NOTE_MOUNT },
-	{ZFS_DELEG_PERM_PROMOTE, ZFS_DELEG_NOTE_PROMOTE },
-	{ZFS_DELEG_PERM_RECEIVE, ZFS_DELEG_NOTE_RECEIVE },
-	{ZFS_DELEG_PERM_RENAME, ZFS_DELEG_NOTE_RENAME },
-	{ZFS_DELEG_PERM_ROLLBACK, ZFS_DELEG_NOTE_ROLLBACK },
-	{ZFS_DELEG_PERM_SNAPSHOT, ZFS_DELEG_NOTE_SNAPSHOT },
-	{ZFS_DELEG_PERM_SHARE, ZFS_DELEG_NOTE_SHARE },
-	{ZFS_DELEG_PERM_SEND, ZFS_DELEG_NOTE_SEND },
-	{ZFS_DELEG_PERM_USERPROP, ZFS_DELEG_NOTE_USERPROP },
-	{ZFS_DELEG_PERM_USERQUOTA, ZFS_DELEG_NOTE_USERQUOTA },
-	{ZFS_DELEG_PERM_GROUPQUOTA, ZFS_DELEG_NOTE_GROUPQUOTA },
-	{ZFS_DELEG_PERM_USERUSED, ZFS_DELEG_NOTE_USERUSED },
-	{ZFS_DELEG_PERM_GROUPUSED, ZFS_DELEG_NOTE_GROUPUSED },
-	{ZFS_DELEG_PERM_HOLD, ZFS_DELEG_NOTE_HOLD },
-	{ZFS_DELEG_PERM_RELEASE, ZFS_DELEG_NOTE_RELEASE },
-	{ZFS_DELEG_PERM_DIFF, ZFS_DELEG_NOTE_DIFF},
-	{NULL, ZFS_DELEG_NOTE_NONE }
+	{ZFS_DELEG_PERM_ALLOW},
+	{ZFS_DELEG_PERM_BOOKMARK},
+	{ZFS_DELEG_PERM_CLONE},
+	{ZFS_DELEG_PERM_CREATE},
+	{ZFS_DELEG_PERM_DESTROY},
+	{ZFS_DELEG_PERM_DIFF},
+	{ZFS_DELEG_PERM_MOUNT},
+	{ZFS_DELEG_PERM_PROMOTE},
+	{ZFS_DELEG_PERM_RECEIVE},
+	{ZFS_DELEG_PERM_REMAP},
+	{ZFS_DELEG_PERM_RENAME},
+	{ZFS_DELEG_PERM_ROLLBACK},
+	{ZFS_DELEG_PERM_SNAPSHOT},
+	{ZFS_DELEG_PERM_SHARE},
+	{ZFS_DELEG_PERM_SEND},
+	{ZFS_DELEG_PERM_USERPROP},
+	{ZFS_DELEG_PERM_USERQUOTA},
+	{ZFS_DELEG_PERM_GROUPQUOTA},
+	{ZFS_DELEG_PERM_USERUSED},
+	{ZFS_DELEG_PERM_GROUPUSED},
+	{ZFS_DELEG_PERM_HOLD},
+	{ZFS_DELEG_PERM_RELEASE},
+	{NULL}
 };
 
 static int
@@ -183,8 +179,9 @@ zfs_deleg_verify_nvlist(nvlist_t *nvp)
 			    nvpair_name(perm_name));
 			if (error)
 				return (-1);
-		} while (perm_name = nvlist_next_nvpair(perms, perm_name));
-	} while (who = nvlist_next_nvpair(nvp, who));
+		} while ((perm_name = nvlist_next_nvpair(perms, perm_name))
+		    != NULL);
+	} while ((who = nvlist_next_nvpair(nvp, who)) != NULL);
 	return (0);
 }
 

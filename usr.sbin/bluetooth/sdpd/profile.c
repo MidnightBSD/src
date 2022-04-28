@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,10 +30,11 @@
  * SUCH DAMAGE.
  *
  * $Id: profile.c,v 1.6 2004/01/13 19:31:54 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/profile.c 177358 2008-03-18 18:21:39Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <string.h>
@@ -45,6 +48,8 @@
 profile_p
 profile_get_descriptor(uint16_t uuid)
 {
+  	extern	profile_t	audio_sink_profile_descriptor;
+	extern	profile_t	audio_source_profile_descriptor;
 	extern	profile_t	dun_profile_descriptor;
 	extern	profile_t	ftrn_profile_descriptor;
 	extern	profile_t	irmc_profile_descriptor;
@@ -57,6 +62,8 @@ profile_get_descriptor(uint16_t uuid)
 	extern	profile_t	panu_profile_descriptor;
 
 	static const profile_p	profiles[] = {
+		&audio_sink_profile_descriptor,
+		&audio_source_profile_descriptor,
 		&dun_profile_descriptor,
 		&ftrn_profile_descriptor,
 		&irmc_profile_descriptor,

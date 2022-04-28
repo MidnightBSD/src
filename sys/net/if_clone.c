@@ -28,10 +28,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.c	8.5 (Berkeley) 1/9/95
- * $FreeBSD: release/10.0.0/sys/net/if_clone.c 241650 2012-10-17 21:19:27Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/malloc.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
@@ -42,8 +43,8 @@
 #include <sys/socket.h>
 
 #include <net/if.h>
-#include <net/if_clone.h>
 #include <net/if_var.h>
+#include <net/if_clone.h>
 #include <net/radix.h>
 #include <net/route.h>
 #include <net/vnet.h>
@@ -102,15 +103,14 @@ static int     ifc_simple_match(struct if_clone *, const char *);
 static int     ifc_simple_create(struct if_clone *, char *, size_t, caddr_t);
 static int     ifc_simple_destroy(struct if_clone *, struct ifnet *);
 
-static struct mtx	if_cloners_mtx;
+static struct mtx if_cloners_mtx;
+MTX_SYSINIT(if_cloners_lock, &if_cloners_mtx, "if_cloners lock", MTX_DEF);
 static VNET_DEFINE(int, if_cloners_count);
 VNET_DEFINE(LIST_HEAD(, if_clone), if_cloners);
 
 #define	V_if_cloners_count	VNET(if_cloners_count)
 #define	V_if_cloners		VNET(if_cloners)
 
-#define IF_CLONERS_LOCK_INIT()		\
-    mtx_init(&if_cloners_mtx, "if_cloners lock", NULL, MTX_DEF)
 #define IF_CLONERS_LOCK_ASSERT()	mtx_assert(&if_cloners_mtx, MA_OWNED)
 #define IF_CLONERS_LOCK()		mtx_lock(&if_cloners_mtx)
 #define IF_CLONERS_UNLOCK()		mtx_unlock(&if_cloners_mtx)
@@ -168,13 +168,6 @@ vnet_if_clone_init(void)
 	LIST_INIT(&V_if_cloners);
 }
 
-void
-if_clone_init(void)
-{
-
-	IF_CLONERS_LOCK_INIT();
-}
-
 /*
  * Lookup and create a clone network interface.
  */
@@ -215,6 +208,17 @@ if_clone_create(char *name, size_t len, caddr_t params)
 	return (if_clone_createif(ifc, name, len, params));
 }
 
+void
+if_clone_addif(struct if_clone *ifc, struct ifnet *ifp)
+{
+
+	if_addgroup(ifp, ifc->ifc_name);
+
+	IF_CLONE_LOCK(ifc);
+	IFC_IFLIST_INSERT(ifc, ifp);
+	IF_CLONE_UNLOCK(ifc);
+}
+
 /*
  * Create a clone network interface.
  */
@@ -237,11 +241,7 @@ if_clone_createif(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 		if (ifp == NULL)
 			panic("%s: lookup failed for %s", __func__, name);
 
-		if_addgroup(ifp, ifc->ifc_name);
-
-		IF_CLONE_LOCK(ifc);
-		IFC_IFLIST_INSERT(ifc, ifp);
-		IF_CLONE_UNLOCK(ifc);
+		if_clone_addif(ifc, ifp);
 	}
 
 	return (err);
@@ -491,7 +491,7 @@ if_clone_list(struct if_clonereq *ifcr)
 	 * below, but that's not a major problem.  Not caping our
 	 * allocation to the number of cloners actually in the system
 	 * could be because that would let arbitrary users cause us to
-	 * allocate abritrary amounts of kernel memory.
+	 * allocate arbitrary amounts of kernel memory.
 	 */
 	buf_count = (V_if_cloners_count < ifcr->ifcr_count) ?
 	    V_if_cloners_count : ifcr->ifcr_count;
@@ -522,6 +522,49 @@ done:
 	if (outbuf != NULL)
 		free(outbuf, M_CLONE);
 	return (err);
+}
+
+/*
+ * if_clone_findifc() looks up ifnet from the current
+ * cloner list, and returns ifc if found.  Note that ifc_refcnt
+ * is incremented.
+ */
+struct if_clone *
+if_clone_findifc(struct ifnet *ifp)
+{
+	struct if_clone *ifc, *ifc0;
+	struct ifnet *ifcifp;
+
+	ifc0 = NULL;
+	IF_CLONERS_LOCK();
+	LIST_FOREACH(ifc, &V_if_cloners, ifc_list) {
+		IF_CLONE_LOCK(ifc);
+		LIST_FOREACH(ifcifp, &ifc->ifc_iflist, if_clones) {
+			if (ifp == ifcifp) {
+				ifc0 = ifc;
+				IF_CLONE_ADDREF_LOCKED(ifc);
+				break;
+			}
+		}
+		IF_CLONE_UNLOCK(ifc);
+		if (ifc0 != NULL)
+			break;
+	}
+	IF_CLONERS_UNLOCK();
+
+	return (ifc0);
+}
+
+/*
+ * if_clone_addgroup() decrements ifc_refcnt because it is called after
+ * if_clone_findifc().
+ */
+void
+if_clone_addgroup(struct ifnet *ifp, struct if_clone *ifc)
+{
+
+	if_addgroup(ifp, ifc->ifc_name);
+	IF_CLONE_REMREF(ifc);
 }
 
 /*
@@ -559,44 +602,56 @@ ifc_name2unit(const char *name, int *unit)
 	return (0);
 }
 
-int
-ifc_alloc_unit(struct if_clone *ifc, int *unit)
+static int
+ifc_alloc_unit_specific(struct if_clone *ifc, int *unit)
 {
 	char name[IFNAMSIZ];
-	int wildcard;
 
-	wildcard = (*unit < 0);
-retry:
 	if (*unit > ifc->ifc_maxunit)
 		return (ENOSPC);
-	if (*unit < 0) {
-		*unit = alloc_unr(ifc->ifc_unrhdr);
-		if (*unit == -1)
-			return (ENOSPC);
-	} else {
-		*unit = alloc_unr_specific(ifc->ifc_unrhdr, *unit);
-		if (*unit == -1) {
-			if (wildcard) {
-				(*unit)++;
-				goto retry;
-			} else
-				return (EEXIST);
-		}
-	}
+
+	if (alloc_unr_specific(ifc->ifc_unrhdr, *unit) == -1)
+		return (EEXIST);
 
 	snprintf(name, IFNAMSIZ, "%s%d", ifc->ifc_name, *unit);
 	if (ifunit(name) != NULL) {
 		free_unr(ifc->ifc_unrhdr, *unit);
-		if (wildcard) {
-			(*unit)++;
-			goto retry;
-		} else
-			return (EEXIST);
+		return (EEXIST);
 	}
 
 	IF_CLONE_ADDREF(ifc);
 
 	return (0);
+}
+
+static int
+ifc_alloc_unit_next(struct if_clone *ifc, int *unit)
+{
+	int error;
+
+	*unit = alloc_unr(ifc->ifc_unrhdr);
+	if (*unit == -1)
+		return (ENOSPC);
+
+	free_unr(ifc->ifc_unrhdr, *unit);
+	for (;;) {
+		error = ifc_alloc_unit_specific(ifc, unit);
+		if (error != EEXIST)
+			break;
+
+		(*unit)++;
+	}
+
+	return (error);
+}
+
+int
+ifc_alloc_unit(struct if_clone *ifc, int *unit)
+{
+	if (*unit < 0)
+		return (ifc_alloc_unit_next(ifc, unit));
+	else
+		return (ifc_alloc_unit_specific(ifc, unit));
 }
 
 void

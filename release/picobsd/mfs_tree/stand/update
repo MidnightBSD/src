@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/release/picobsd/mfs_tree/stand/update 92059 2002-03-11 05:15:44Z luigi $
+# $FreeBSD$
 # script to edit and save some config file(s).
 # If called with no arguments, it edits 3 files in /etc
 thefiles=$*

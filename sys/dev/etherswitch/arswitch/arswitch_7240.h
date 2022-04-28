@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/arswitch/arswitch_7240.h 235323 2012-05-12 05:26:49Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__ARSWITCH_7240_H__
 #define	__ARSWITCH_7240_H__

@@ -27,7 +27,7 @@
 #include "opt_isa.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/autoconf.c 191450 2009-04-24 03:51:11Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

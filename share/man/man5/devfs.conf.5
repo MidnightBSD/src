@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man5/devfs.conf.5 249086 2013-04-04 08:30:04Z joel $
+.\" $FreeBSD$
 .\"
-.Dd May 17, 2005
+.Dd October 13, 2015
 .Dt DEVFS.CONF 5
 .Os
 .Sh NAME
@@ -109,9 +109,9 @@ link	cd0	cdrom
 .Pp
 Similarly, to link
 .Pa /dev/cdrom
-to the first ATAPI CD-ROM device, the following action may be used:
+to the first SCSI CD-ROM device, the following action may be used:
 .Bd -literal -offset indent
-link	acd0	cdrom
+link	cd0	cdrom
 .Ed
 .Pp
 To set the owner of a device, the
@@ -135,4 +135,4 @@ perm	cd0	0660
 .Xr chown 8
 .Sh AUTHORS
 This manual page was written by
-.An "Roland Smith" Aq rsmith@xs4all.nl .
+.An Roland Smith Aq Mt rsmith@xs4all.nl .

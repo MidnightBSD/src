@@ -1,11 +1,12 @@
-# $FreeBSD: release/10.0.0/sys/modules/geom/geom_eli/Makefile 220922 2011-04-21 13:31:43Z pjd $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../geom/eli
+.PATH: ${SRCTOP}/sys/geom/eli
 
 KMOD=	geom_eli
 SRCS=	g_eli.c
 SRCS+=	g_eli_crypto.c
 SRCS+=	g_eli_ctl.c
+SRCS+=	g_eli_hmac.c
 SRCS+=	g_eli_integrity.c
 SRCS+=	g_eli_key.c
 SRCS+=	g_eli_key_cache.c

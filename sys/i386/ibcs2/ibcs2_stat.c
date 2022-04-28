@@ -27,16 +27,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_stat.c 229272 2012-01-02 12:12:10Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/namei.h>
+#include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/filedesc.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/malloc.h>
 #include <sys/vnode.h>
@@ -107,16 +109,18 @@ ibcs2_statfs(td, uap)
 	struct thread *td;
 	struct ibcs2_statfs_args *uap;
 {
-	struct statfs sf;
+	struct statfs *sf;
 	char *path;
 	int error;
 
 	CHECKALTEXIST(td, uap->path, &path);
-	error = kern_statfs(td, path, UIO_SYSSPACE, &sf);
+	sf = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_statfs(td, path, UIO_SYSSPACE, sf);
 	free(path, M_TEMP);
-	if (error)
-		return (error);
-	return cvt_statfs(&sf, (caddr_t)uap->buf, uap->len);
+	if (error == 0)
+		error = cvt_statfs(sf, (caddr_t)uap->buf, uap->len);
+	free(sf, M_STATFS);
+	return (error);
 }
 
 int
@@ -124,13 +128,15 @@ ibcs2_fstatfs(td, uap)
 	struct thread *td;
 	struct ibcs2_fstatfs_args *uap;
 {
-	struct statfs sf;
+	struct statfs *sf;
 	int error;
 
-	error = kern_fstatfs(td, uap->fd, &sf);
-	if (error)
-		return (error);
-	return cvt_statfs(&sf, (caddr_t)uap->buf, uap->len);
+	sf = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = kern_fstatfs(td, uap->fd, sf);
+	if (error == 0)
+		error = cvt_statfs(sf, (caddr_t)uap->buf, uap->len);
+	free(sf, M_STATFS);
+	return (error);
 }
 
 int
@@ -145,7 +151,7 @@ ibcs2_stat(td, uap)
 
 	CHECKALTEXIST(td, uap->path, &path);
 
-	error = kern_stat(td, path, UIO_SYSSPACE, &st);
+	error = kern_statat(td, 0, AT_FDCWD, path, UIO_SYSSPACE, &st, NULL);
 	free(path, M_TEMP);
 	if (error)
 		return (error);
@@ -166,7 +172,8 @@ ibcs2_lstat(td, uap)
 
 	CHECKALTEXIST(td, uap->path, &path);
 
-	error = kern_lstat(td, path, UIO_SYSSPACE, &st);
+	error = kern_statat(td, AT_SYMLINK_NOFOLLOW, AT_FDCWD, path,
+	    UIO_SYSSPACE, &st, NULL);
 	free(path, M_TEMP);
 	if (error)
 		return (error);

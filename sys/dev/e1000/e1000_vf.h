@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_vf.h 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_VF_H_
 #define _E1000_VF_H_
@@ -208,7 +208,7 @@ struct e1000_mac_operations {
 	s32  (*init_hw)(struct e1000_hw *);
 	s32  (*setup_link)(struct e1000_hw *);
 	void (*write_vfta)(struct e1000_hw *, u32, u32);
-	void (*rar_set)(struct e1000_hw *, u8*, u32);
+	int  (*rar_set)(struct e1000_hw *, u8*, u32);
 	s32  (*read_mac_addr)(struct e1000_hw *);
 };
 

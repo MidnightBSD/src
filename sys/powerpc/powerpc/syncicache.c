@@ -31,10 +31,8 @@
  * $NetBSD: syncicache.c,v 1.2 1999/05/05 12:36:40 tsubai Exp $
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sys/powerpc/powerpc/syncicache.c 209975 2010-07-13 05:32:19Z nwhitehorn $";
-#endif /* not lint */
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #if	defined(_KERNEL) || defined(_STANDALONE)

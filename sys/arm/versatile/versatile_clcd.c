@@ -1,5 +1,7 @@
-/*
- * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2012-2017 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_clcd.c 245071 2013-01-05 21:05:16Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,7 +42,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_clcd.c 245071 201
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -51,22 +52,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_clcd.c 245071 201
 #include <dev/fb/fbreg.h>
 #include <dev/syscons/syscons.h>
 
+#include <arm/versatile/versatile_scm.h>
+
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #define	PL110_VENDOR_ARM926PXP	1
-
-#define	MEM_SYS		0
-#define	MEM_CLCD	1
-#define MEM_REGIONS	2
-
-#define	SYS_CLCD		0x00
-#define		SYS_CLCD_CLCDID_SHIFT	0x08
-#define		SYS_CLCD_CLCDID_MASK	0x1f
-#define		SYS_CLCD_PWR3V5VSWITCH	(1 << 4)
-#define		SYS_CLCD_VDDPOSSWITCH 	(1 << 3)
-#define		SYS_CLCD_NLCDIOON  	(1 << 2)
-#define		SYS_CLCD_LCD_MODE_MASK	0x03
 
 #define	CLCD_MODE_RGB888	0x0
 #define	CLCD_MODE_RGB555	0x01
@@ -122,18 +112,13 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/versatile/versatile_clcd.c 245071 201
 #define dprintf(fmt, args...)
 #endif
 
-#define	versatile_clcdc_sys_read_4(sc, reg)	\
-	bus_read_4((sc)->mem_res[MEM_SYS], (reg))
-#define	versatile_clcdc_sys_write_4(sc, reg, val)	\
-	bus_write_4((sc)->mem_res[MEM_SYS], (reg), (val))
-
 #define	versatile_clcdc_read_4(sc, reg)	\
-	bus_read_4((sc)->mem_res[MEM_CLCD], (reg))
+	bus_read_4((sc)->mem_res, (reg))
 #define	versatile_clcdc_write_4(sc, reg, val)	\
-	bus_write_4((sc)->mem_res[MEM_CLCD], (reg), (val))
+	bus_write_4((sc)->mem_res, (reg), (val))
 
 struct versatile_clcdc_softc {
-	struct resource*	mem_res[MEM_REGIONS];
+	struct resource*	mem_res;
 
 	struct mtx		mtx;
 
@@ -208,12 +193,6 @@ static u_char mouse_pointer[16] = {
 
 static struct video_adapter_softc va_softc;
 
-static struct resource_spec versatile_clcdc_mem_spec[] = {
-	{ SYS_RES_MEMORY, 0, RF_ACTIVE },
-	{ SYS_RES_MEMORY, 1, RF_ACTIVE },
-	{ -1, 0, 0 }
-};
-
 static int versatilefb_configure(int);
 static void versatilefb_update_margins(video_adapter_t *adp);
 
@@ -233,6 +212,9 @@ static int
 versatile_clcdc_probe(device_t dev)
 {
 
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (ofw_bus_is_compatible(dev, "arm,pl110")) {
 		device_set_desc(dev, "PL110 CLCD controller");
 		return (BUS_PROBE_DEFAULT);
@@ -246,21 +228,25 @@ versatile_clcdc_attach(device_t dev)
 {
 	struct versatile_clcdc_softc *sc = device_get_softc(dev);
 	struct video_adapter_softc *va_sc = &va_softc;
-	int err;
+	int err, rid;
 	uint32_t reg;
 	int clcdid;
 	int dma_size;
 
 	/* Request memory resources */
-	err = bus_alloc_resources(dev, versatile_clcdc_mem_spec,
-		sc->mem_res);
-	if (err) {
-		device_printf(dev, "Error: could not allocate memory resources\n");
+	rid = 0;
+	sc->mem_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, RF_ACTIVE);
+	if (sc->mem_res == NULL) {
+		device_printf(dev, "could not allocate memory resources\n");
 		return (ENXIO);
 	}
 
-	reg = versatile_clcdc_sys_read_4(sc, SYS_CLCD);
-	clcdid = (reg >> SYS_CLCD_CLCDID_SHIFT) & SYS_CLCD_CLCDID_MASK;
+	err = versatile_scm_reg_read_4(SCM_CLCD, &reg);
+	if (err) {
+		device_printf(dev, "failed to read SCM register\n");
+		goto fail;
+	}
+	clcdid = (reg >> SCM_CLCD_CLCDID_SHIFT) & SCM_CLCD_CLCDID_MASK;
 	switch (clcdid) {
 		case 31:
 			device_printf(dev, "QEMU VGA 640x480\n");
@@ -272,17 +258,17 @@ versatile_clcdc_attach(device_t dev)
 			goto fail;
 	}
 
-	reg &= ~SYS_CLCD_LCD_MODE_MASK;
+	reg &= ~SCM_CLCD_LCD_MODE_MASK;
 	reg |= CLCD_MODE_RGB565;
 	sc->mode = CLCD_MODE_RGB565;
-	versatile_clcdc_sys_write_4(sc, SYS_CLCD, reg);
-	dma_size = sc->width*sc->height*2;
-
-	/*
+	versatile_scm_reg_write_4(SCM_CLCD, reg);
+ 	dma_size = sc->width*sc->height*2;
+ 
+ 	/*
 	 * Power on LCD
 	 */
-	reg |= SYS_CLCD_PWR3V5VSWITCH | SYS_CLCD_NLCDIOON;
-	versatile_clcdc_sys_write_4(sc, SYS_CLCD, reg);
+	reg |= SCM_CLCD_PWR3V5VSWITCH | SCM_CLCD_NLCDIOON;
+	versatile_scm_reg_write_4(SCM_CLCD, reg);
 
 	/*
 	 * XXX: hardcoded timing for VGA. For other modes/panels
@@ -361,8 +347,6 @@ versatile_clcdc_attach(device_t dev)
 fail:
 	if (sc->fb_base)
 		bus_dmamem_free(sc->dma_tag, sc->fb_base, sc->dma_map);
-	if (sc->dma_map)
-		bus_dmamap_destroy(sc->dma_tag, sc->dma_map);
 	if (sc->dma_tag)
 		bus_dma_tag_destroy(sc->dma_tag);
 	return (err);
@@ -657,7 +641,6 @@ versatilefb_init(int unit, video_adapter_t *adp, int flags)
 	sc->xmargin = (sc->width - (vi->vi_width * vi->vi_cwidth)) / 2;
 	sc->ymargin = (sc->height - (vi->vi_height * vi->vi_cheight))/2;
 
-
 	adp->va_window = (vm_offset_t) versatilefb_static_window;
 	adp->va_flags |= V_ADP_FONT /* | V_ADP_COLOR | V_ADP_MODECHANGE */;
 
@@ -938,22 +921,3 @@ versatilefb_putm(video_adapter_t *adp, int x, int y, uint8_t *pixel_image,
 
 	return (0);
 }
-
-/*
- * Define a stub keyboard driver in case one hasn't been
- * compiled into the kernel
- */
-#include <sys/kbio.h>
-#include <dev/kbd/kbdreg.h>
-
-static int dummy_kbd_configure(int flags);
-
-keyboard_switch_t bcmdummysw;
-
-static int
-dummy_kbd_configure(int flags)
-{
-
-	return (0);
-}
-KEYBOARD_DRIVER(bcmdummy, bcmdummysw, dummy_kbd_configure);

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_sarea.h 235783 2012-05-22 11:07:44Z kib $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_
@@ -39,12 +39,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_sarea.h 235783 2012-05-22 11
 
 /* SAREA area needs to be at least a page */
 #if defined(__alpha__)
-#define SAREA_MAX                       0x2000
-#elif defined(__ia64__)
-#define SAREA_MAX                       0x10000	/* 64kB */
+#define SAREA_MAX                       0x2000U
+#elif defined(__mips__)
+#define SAREA_MAX                       0x4000U
 #else
 /* Intel 830M driver needs at least 8k SAREA */
-#define SAREA_MAX                       0x2000UL
+#define SAREA_MAX                       0x2000U
 #endif
 
 /** Maximum number of drawables in the SAREA */

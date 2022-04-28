@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/include/nss_tls.h 192976 2009-05-28 15:02:21Z zml $
+ * $FreeBSD$
  *
  * Macros which generate thread local storage handling code in NSS modules.
  */

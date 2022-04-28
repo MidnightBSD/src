@@ -1,4 +1,4 @@
-#	$OpenBSD: test-exec.sh,v 1.46 2013/06/21 02:26:26 djm Exp $
+#	$OpenBSD: test-exec.sh,v 1.59 2017/02/07 23:03:11 dtucker Exp $
 #	Placed in the Public Domain.
 
 #SUDO=sudo
@@ -130,11 +130,71 @@ if [ "x$TEST_SSH_CONCH" != "x" ]; then
 	esac
 fi
 
+SSH_PROTOCOLS=2
+#SSH_PROTOCOLS=`$SSH -Q protocol-version`
+if [ "x$TEST_SSH_PROTOCOLS" != "x" ]; then
+	SSH_PROTOCOLS="${TEST_SSH_PROTOCOLS}"
+fi
+
 # Path to sshd must be absolute for rexec
 case "$SSHD" in
 /*) ;;
-*) SSHD=`which sshd` ;;
+*) SSHD=`which $SSHD` ;;
 esac
+
+case "$SSHAGENT" in
+/*) ;;
+*) SSHAGENT=`which $SSHAGENT` ;;
+esac
+
+# Record the actual binaries used.
+SSH_BIN=${SSH}
+SSHD_BIN=${SSHD}
+SSHAGENT_BIN=${SSHAGENT}
+SSHADD_BIN=${SSHADD}
+SSHKEYGEN_BIN=${SSHKEYGEN}
+SSHKEYSCAN_BIN=${SSHKEYSCAN}
+SFTP_BIN=${SFTP}
+SFTPSERVER_BIN=${SFTPSERVER}
+SCP_BIN=${SCP}
+
+if [ "x$USE_VALGRIND" != "x" ]; then
+	mkdir -p $OBJ/valgrind-out
+	VG_TEST=`basename $SCRIPT .sh`
+
+	# Some tests are difficult to fix.
+	case "$VG_TEST" in
+	connect-privsep|reexec)
+		VG_SKIP=1 ;;
+	esac
+
+	if [ x"$VG_SKIP" = "x" ]; then
+		VG_IGNORE="/bin/*,/sbin/*,/usr/*,/var/*"
+		VG_LOG="$OBJ/valgrind-out/${VG_TEST}."
+		VG_OPTS="--track-origins=yes --leak-check=full"
+		VG_OPTS="$VG_OPTS --trace-children=yes"
+		VG_OPTS="$VG_OPTS --trace-children-skip=${VG_IGNORE}"
+		VG_PATH="valgrind"
+		if [ "x$VALGRIND_PATH" != "x" ]; then
+			VG_PATH="$VALGRIND_PATH"
+		fi
+		VG="$VG_PATH $VG_OPTS"
+		SSH="$VG --log-file=${VG_LOG}ssh.%p $SSH"
+		SSHD="$VG --log-file=${VG_LOG}sshd.%p $SSHD"
+		SSHAGENT="$VG --log-file=${VG_LOG}ssh-agent.%p $SSHAGENT"
+		SSHADD="$VG --log-file=${VG_LOG}ssh-add.%p $SSHADD"
+		SSHKEYGEN="$VG --log-file=${VG_LOG}ssh-keygen.%p $SSHKEYGEN"
+		SSHKEYSCAN="$VG --log-file=${VG_LOG}ssh-keyscan.%p $SSHKEYSCAN"
+		SFTP="$VG --log-file=${VG_LOG}sftp.%p ${SFTP}"
+		SCP="$VG --log-file=${VG_LOG}scp.%p $SCP"
+		cat > $OBJ/valgrind-sftp-server.sh << EOF
+#!/bin/sh
+exec $VG --log-file=${VG_LOG}sftp-server.%p $SFTPSERVER "\$@"
+EOF
+		chmod a+rx $OBJ/valgrind-sftp-server.sh
+		SFTPSERVER="$OBJ/valgrind-sftp-server.sh"
+	fi
+fi
 
 # Logfiles.
 # SSH_LOGFILE should be the debug output of ssh(1) only
@@ -162,17 +222,26 @@ echo "#!/bin/sh" > $SSHLOGWRAP
 echo "exec ${SSH} -E${TEST_SSH_LOGFILE} "'"$@"' >>$SSHLOGWRAP
 
 chmod a+rx $OBJ/ssh-log-wrapper.sh
+REAL_SSH="$SSH"
 SSH="$SSHLOGWRAP"
 
 # Some test data.  We make a copy because some tests will overwrite it.
 # The tests may assume that $DATA exists and is writable and $COPY does
-# not exist.
+# not exist.  Tests requiring larger data files can call increase_datafile_size
+# [kbytes] to ensure the file is at least that large.
 DATANAME=data
 DATA=$OBJ/${DATANAME}
-cat $SSHD $SSHD $SSHD $SSHD >${DATA}
+cat ${SSHAGENT_BIN} >${DATA}
 chmod u+w ${DATA}
 COPY=$OBJ/copy
 rm -f ${COPY}
+
+increase_datafile_size()
+{
+	while [ `du -k ${DATA} | cut -f1` -lt $1 ]; do
+		cat ${SSHAGENT_BIN} >>${DATA}
+	done
+}
 
 # these should be used in tests
 export SSH SSHD SSHAGENT SSHADD SSHKEYGEN SSHKEYSCAN SFTP SFTPSERVER SCP
@@ -224,8 +293,7 @@ md5 () {
 }
 # End of portable specific functions
 
-# helper
-cleanup ()
+stop_sshd ()
 {
 	if [ -f $PIDFILE ]; then
 		pid=`$SUDO cat $PIDFILE`
@@ -233,7 +301,7 @@ cleanup ()
 			echo no sshd running
 		else
 			if [ $pid -lt 2 ]; then
-				echo bad pid for ssh: $pid
+				echo bad pid for sshd: $pid
 			else
 				$SUDO kill $pid
 				trace "wait for sshd to exit"
@@ -247,6 +315,19 @@ cleanup ()
 			fi
 		fi
 	fi
+}
+
+# helper
+cleanup ()
+{
+	if [ "x$SSH_PID" != "x" ]; then
+		if [ $SSH_PID -lt 2 ]; then
+			echo bad pid for ssh: $SSH_PID
+		else
+			kill $SSH_PID
+		fi
+	fi
+	stop_sshd
 }
 
 start_debug_log ()
@@ -305,16 +386,26 @@ fatal ()
 	exit $RESULT
 }
 
+ssh_version ()
+{
+	echo ${SSH_PROTOCOLS} | grep "$1" >/dev/null
+}
+
 RESULT=0
 PIDFILE=$OBJ/pidfile
 
 trap fatal 3 2
 
+if ssh_version 1; then
+	PROTO="2,1"
+else
+	PROTO="2"
+fi
+
 # create server config
 cat << EOF > $OBJ/sshd_config
 	StrictModes		no
 	Port			$PORT
-	Protocol		2,1
 	AddressFamily		inet
 	ListenAddress		127.0.0.1
 	#ListenAddress		::1
@@ -325,6 +416,13 @@ cat << EOF > $OBJ/sshd_config
 	AcceptEnv		_XXX_TEST
 	Subsystem	sftp	$SFTPSERVER
 EOF
+
+# This may be necessary if /usr/src and/or /usr/obj are group-writable,
+# but if you aren't careful with permissions then the unit tests could
+# be abused to locally escalate privileges.
+if [ ! -z "$TEST_SSH_UNSAFE_PERMISSIONS" ]; then
+	echo "StrictModes no" >> $OBJ/sshd_config
+fi
 
 if [ ! -z "$TEST_SSH_SSHD_CONFOPTS" ]; then
 	trace "adding sshd_config option $TEST_SSH_SSHD_CONFOPTS"
@@ -340,35 +438,37 @@ echo 'StrictModes no' >> $OBJ/sshd_proxy
 # create client config
 cat << EOF > $OBJ/ssh_config
 Host *
-	Protocol		2,1
 	Hostname		127.0.0.1
 	HostKeyAlias		localhost-with-alias
 	Port			$PORT
 	User			$USER
 	GlobalKnownHostsFile	$OBJ/known_hosts
 	UserKnownHostsFile	$OBJ/known_hosts
-	RSAAuthentication	yes
 	PubkeyAuthentication	yes
 	ChallengeResponseAuthentication	no
 	HostbasedAuthentication	no
 	PasswordAuthentication	no
-	RhostsRSAAuthentication	no
 	BatchMode		yes
 	StrictHostKeyChecking	yes
 	LogLevel		DEBUG3
 EOF
 
 if [ ! -z "$TEST_SSH_SSH_CONFOPTS" ]; then
-	trace "adding ssh_config option $TEST_SSH_SSHD_CONFOPTS"
+	trace "adding ssh_config option $TEST_SSH_SSH_CONFOPTS"
 	echo "$TEST_SSH_SSH_CONFOPTS" >> $OBJ/ssh_config
 fi
 
 rm -f $OBJ/known_hosts $OBJ/authorized_keys_$USER
 
+if ssh_version 1; then
+	SSH_KEYTYPES="rsa rsa1"
+else
+	SSH_KEYTYPES="rsa ed25519"
+fi
 trace "generate keys"
-for t in rsa rsa1; do
+for t in ${SSH_KEYTYPES}; do
 	# generate user key
-	if [ ! -f $OBJ/$t ] || [ ${SSHKEYGEN} -nt $OBJ/$t ]; then
+	if [ ! -f $OBJ/$t ] || [ ${SSHKEYGEN_BIN} -nt $OBJ/$t ]; then
 		rm -f $OBJ/$t
 		${SSHKEYGEN} -q -N '' -t $t  -f $OBJ/$t ||\
 			fail "ssh-keygen for $t failed"
@@ -415,7 +515,11 @@ if test "$REGRESS_INTEROP_PUTTY" = "yes" ; then
 
 	# Add a PuTTY key to authorized_keys
 	rm -f ${OBJ}/putty.rsa2
-	puttygen -t rsa -o ${OBJ}/putty.rsa2 < /dev/null > /dev/null
+	if ! puttygen -t rsa -o ${OBJ}/putty.rsa2 \
+	    --new-passphrase /dev/null < /dev/null > /dev/null; then
+		echo "Your installed version of PuTTY is too old to support --new-passphrase; trying without (may require manual interaction) ..." >&2
+		puttygen -t rsa -o ${OBJ}/putty.rsa2 < /dev/null > /dev/null
+	fi
 	puttygen -O public-openssh ${OBJ}/putty.rsa2 \
 	    >> $OBJ/authorized_keys_$USER
 
@@ -428,10 +532,12 @@ if test "$REGRESS_INTEROP_PUTTY" = "yes" ; then
 	# Setup proxied session
 	mkdir -p ${OBJ}/.putty/sessions
 	rm -f ${OBJ}/.putty/sessions/localhost_proxy
-	echo "Hostname=127.0.0.1" >> ${OBJ}/.putty/sessions/localhost_proxy
+	echo "Protocol=ssh" >> ${OBJ}/.putty/sessions/localhost_proxy
+	echo "HostName=127.0.0.1" >> ${OBJ}/.putty/sessions/localhost_proxy
 	echo "PortNumber=$PORT" >> ${OBJ}/.putty/sessions/localhost_proxy
 	echo "ProxyMethod=5" >> ${OBJ}/.putty/sessions/localhost_proxy
-	echo "ProxyTelnetCommand=sh ${SRC}/sshd-log-wrapper.sh ${SSHD} ${TEST_SSHD_LOGFILE} -i -f $OBJ/sshd_proxy" >> ${OBJ}/.putty/sessions/localhost_proxy
+	echo "ProxyTelnetCommand=sh ${SRC}/sshd-log-wrapper.sh ${TEST_SSHD_LOGFILE} ${SSHD} -i -f $OBJ/sshd_proxy" >> ${OBJ}/.putty/sessions/localhost_proxy
+	echo "ProxyLocalhost=1" >> ${OBJ}/.putty/sessions/localhost_proxy
 
 	REGRESS_INTEROP_PUTTY=yes
 fi
@@ -439,7 +545,7 @@ fi
 # create a proxy version of the client config
 (
 	cat $OBJ/ssh_config
-	echo proxycommand ${SUDO} sh ${SRC}/sshd-log-wrapper.sh ${SSHD} ${TEST_SSHD_LOGFILE} -i -f $OBJ/sshd_proxy
+	echo proxycommand ${SUDO} sh ${SRC}/sshd-log-wrapper.sh ${TEST_SSHD_LOGFILE} ${SSHD} -i -f $OBJ/sshd_proxy
 ) > $OBJ/ssh_proxy
 
 # check proxy config

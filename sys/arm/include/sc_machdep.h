@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/sc_machdep.h 239696 2012-08-25 23:59:31Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SC_MACHDEP_H_

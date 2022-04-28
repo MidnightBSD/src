@@ -88,7 +88,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/es137x.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define MEM_MAP_REG 0x14
 
@@ -1741,7 +1741,7 @@ es_pci_attach(device_t dev)
 
 	es->st = rman_get_bustag(es->reg);
 	es->sh = rman_get_bushandle(es->reg);
-	callout_init(&es->poll_timer, CALLOUT_MPSAFE);
+	callout_init(&es->poll_timer, 1);
 	es->poll_ticks = 1;
 
 	if (resource_int_value(device_get_name(dev),
@@ -1856,7 +1856,7 @@ es_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at %s 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
 	    (es->regtype == SYS_RES_IOPORT)? "io" : "memory",
 	    rman_get_start(es->reg), rman_get_start(es->irq),
 	    PCM_KLDSTRING(snd_es137x));

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-extractimage.sh 247705 2013-03-03 09:47:47Z jpaetzel $
+# $FreeBSD$
 
 # Functions which perform the extraction / installation of system to disk
 
@@ -303,7 +303,7 @@ fetch_split_files()
     OUTFILE="${FSMNT}/.fetch-${INSFILE}"
   fi
 
-  DIRS="base catpages dict doc games info manpages proflibs kernels src"
+  DIRS="base catpages dict doc info manpages proflibs kernels src"
   if [ "${FBSD_ARCH}" = "amd64" ]
   then
     DIRS="${DIRS} lib32"

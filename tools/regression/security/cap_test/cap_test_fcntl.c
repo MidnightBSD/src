@@ -30,10 +30,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/security/cap_test/cap_test_fcntl.c 224653 2011-08-04 17:17:57Z jonathan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/errno.h>
 #include <sys/ipc.h>
 #include <sys/mman.h>

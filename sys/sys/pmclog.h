@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pmclog.h 233628 2012-03-28 20:58:30Z fabient $
+ * $FreeBSD$
  */
 
 #ifndef	_SYS_PMCLOG_H_
@@ -260,6 +260,8 @@ int	pmclog_deconfigure_log(struct pmc_owner *_po);
 int	pmclog_flush(struct pmc_owner *_po);
 int	pmclog_close(struct pmc_owner *_po);
 void	pmclog_initialize(void);
+int	pmclog_proc_create(struct thread *td, void **handlep);
+void	pmclog_proc_ignite(void *handle, struct pmc_owner *po);
 void	pmclog_process_callchain(struct pmc *_pm, struct pmc_sample *_ps);
 void	pmclog_process_closelog(struct pmc_owner *po);
 void	pmclog_process_dropnotify(struct pmc_owner *po);

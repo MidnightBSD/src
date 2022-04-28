@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libthread_db/kse.h 177526 2008-03-23 09:38:11Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_KSE_H_

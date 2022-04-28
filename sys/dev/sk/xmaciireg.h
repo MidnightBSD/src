@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sk/xmaciireg.h 158070 2006-04-27 05:59:09Z yongari $
+ * $FreeBSD$
  */
 
 /*

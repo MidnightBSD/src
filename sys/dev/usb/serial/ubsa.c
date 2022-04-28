@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/ubsa.c 239299 2012-08-15 15:42:57Z hselasky $");
+__FBSDID("$FreeBSD$");
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -41,13 +41,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/ubsa.c 239299 2012-08-15 1
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -96,7 +89,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/ubsa.c 239299 2012-08-15 1
 static int ubsa_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, ubsa, CTLFLAG_RW, 0, "USB ubsa");
-SYSCTL_INT(_hw_usb_ubsa, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_ubsa, OID_AUTO, debug, CTLFLAG_RWTUN,
     &ubsa_debug, 0, "ubsa debug level");
 #endif
 
@@ -280,6 +273,7 @@ DRIVER_MODULE(ubsa, uhub, ubsa_driver, ubsa_devclass, NULL, 0);
 MODULE_DEPEND(ubsa, ucom, 1, 1, 1);
 MODULE_DEPEND(ubsa, usb, 1, 1, 1);
 MODULE_VERSION(ubsa, 1);
+USB_PNP_HOST_INFO(ubsa_devs);
 
 static int
 ubsa_probe(device_t dev)
@@ -656,11 +650,19 @@ ubsa_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 			usbd_copy_out(pc, 0, buf, sizeof(buf));
 
 			/*
-			 * incidentally, Belkin adapter status bits match
-			 * UART 16550 bits
+			 * MSR bits need translation from ns16550 to SER_* values.
+			 * LSR bits are ns16550 in hardware and ucom.
 			 */
+			sc->sc_msr = 0;
+			if (buf[3] & UBSA_MSR_CTS)
+				sc->sc_msr |= SER_CTS;
+			if (buf[3] & UBSA_MSR_DCD)
+				sc->sc_msr |= SER_DCD;
+			if (buf[3] & UBSA_MSR_RI)
+				sc->sc_msr |= SER_RI;
+			if (buf[3] & UBSA_MSR_DSR)
+				sc->sc_msr |= SER_DSR;
 			sc->sc_lsr = buf[2];
-			sc->sc_msr = buf[3];
 
 			DPRINTF("lsr = 0x%02x, msr = 0x%02x\n",
 			    sc->sc_lsr, sc->sc_msr);
@@ -669,7 +671,7 @@ ubsa_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 		} else {
 			DPRINTF("ignoring short packet, %d bytes\n", actlen);
 		}
-
+		/* FALLTHROUGH */
 	case USB_ST_SETUP:
 tr_setup:
 		usbd_xfer_set_frame_len(xfer, 0, usbd_xfer_max_len(xfer));

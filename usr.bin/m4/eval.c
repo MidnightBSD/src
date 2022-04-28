@@ -1,4 +1,4 @@
-/*	$OpenBSD: eval.c,v 1.70 2012/04/12 17:00:11 espie Exp $	*/
+/*	$OpenBSD: eval.c,v 1.78 2019/06/28 05:35:34 deraadt Exp $	*/
 /*	$NetBSD: eval.c,v 1.7 1996/11/10 21:21:29 pk Exp $	*/
 
 /*
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/m4/eval.c 250226 2013-05-03 23:29:38Z jkim $");
+__FBSDID("$FreeBSD$");
 
 
 /*
@@ -48,8 +48,8 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/m4/eval.c 250226 2013-05-03 23:29:38Z
 #include <errno.h>
 #include <limits.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -124,6 +124,7 @@ void
 expand_builtin(const char *argv[], int argc, int td)
 {
 	int c, n;
+	const char *errstr;
 	int ac;
 	static int sysval = 0;
 
@@ -184,13 +185,15 @@ expand_builtin(const char *argv[], int argc, int td)
 		if (argc > 3) {
 			base = strtonum(argv[3], 2, 36, &errstr);
 			if (errstr) {
-				m4errx(1, "expr: base %s invalid.", argv[3]);
+				m4errx(1, "expr: base is %s: %s.",
+				    errstr, argv[3]);
 			}
 		}
 		if (argc > 4) {
 			maxdigits = strtonum(argv[4], 0, INT_MAX, &errstr);
 			if (errstr) {
-				m4errx(1, "expr: maxdigits %s invalid.", argv[4]);
+				m4errx(1, "expr: maxdigits is %s: %s.",
+				    errstr, argv[4]);
 			}
 		}
 		if (argc > 2)
@@ -199,8 +202,7 @@ expand_builtin(const char *argv[], int argc, int td)
 	}
 
 	case IFELTYPE:
-		if (argc > 4)
-			doifelse(argv, argc);
+		doifelse(argv, argc);
 		break;
 
 	case IFDFTYPE:
@@ -230,8 +232,13 @@ expand_builtin(const char *argv[], int argc, int td)
 	 * doincr - increment the value of the
 	 * argument
 	 */
-		if (argc > 2)
-			pbnum(atoi(argv[2]) + 1);
+		if (argc > 2) {
+			n = strtonum(argv[2], INT_MIN, INT_MAX-1, &errstr);
+			if (errstr != NULL)
+				m4errx(1, "incr: argument is %s: %s.",
+				    errstr, argv[2]);
+			pbnum(n + 1);
+		}
 		break;
 
 	case DECRTYPE:
@@ -239,8 +246,13 @@ expand_builtin(const char *argv[], int argc, int td)
 	 * dodecr - decrement the value of the
 	 * argument
 	 */
-		if (argc > 2)
-			pbnum(atoi(argv[2]) - 1);
+		if (argc > 2) {
+			n = strtonum(argv[2], INT_MIN+1, INT_MAX, &errstr);
+			if (errstr)
+				m4errx(1, "decr: argument is %s: %s.",
+				    errstr, argv[2]);
+			pbnum(n - 1);
+		}
 		break;
 
 	case SYSCTYPE:
@@ -267,16 +279,21 @@ expand_builtin(const char *argv[], int argc, int td)
 			doesyscmd(argv[2]);
 		break;
 	case INCLTYPE:
-		if (argc > 2)
+		if (argc > 2) {
 			if (!doincl(argv[2])) {
 				if (mimic_gnu) {
 					warn("%s at line %lu: include(%s)",
 					    CURRENT_NAME, CURRENT_LINE, argv[2]);
 					exit_code = 1;
+					if (fatal_warns) {
+						killdiv();
+						exit(exit_code);
+					}
 				} else
 					err(1, "%s at line %lu: include(%s)",
 					    CURRENT_NAME, CURRENT_LINE, argv[2]);
 			}
+		}
 		break;
 
 	case SINCTYPE:
@@ -336,12 +353,18 @@ expand_builtin(const char *argv[], int argc, int td)
 		break;
 
 	case DIVRTYPE:
-		if (argc > 2 && (n = atoi(argv[2])) != 0)
-			dodiv(n);
-		else {
-			active = stdout;
-			oindex = 0;
+		if (argc > 2) {
+			n = strtonum(argv[2], INT_MIN, INT_MAX, &errstr);
+			if (errstr)
+				m4errx(1, "divert: argument is %s: %s.",
+				    errstr, argv[2]);
+			if (n != 0) {
+				dodiv(n);
+				 break;
+			}
 		}
+		active = stdout;
+		oindex = 0;
 		break;
 
 	case UNDVTYPE:
@@ -688,17 +711,17 @@ dotrace(const char *argv[], int argc, int on)
 static void
 doifelse(const char *argv[], int argc)
 {
-	cycle {
-		if (STREQ(argv[2], argv[3]))
+	while (argc > 4) {
+		if (STREQ(argv[2], argv[3])) {
 			pbstr(argv[4]);
-		else if (argc == 6)
+			break;
+		} else if (argc == 6) {
 			pbstr(argv[5]);
-		else if (argc > 6) {
+			break;
+		} else {
 			argv += 3;
 			argc -= 3;
-			continue;
 		}
-		break;
 	}
 }
 
@@ -794,7 +817,7 @@ dom4wrap(const char *text)
 			maxwraps = 16;
 		else
 			maxwraps *= 2;
-		m4wraps = xrealloc(m4wraps, maxwraps * sizeof(*m4wraps),
+		m4wraps = xreallocarray(m4wraps, maxwraps, sizeof(*m4wraps),
 		   "too many m4wraps");
 	}
 	m4wraps[wrapindex++] = xstrdup(text);
@@ -821,11 +844,10 @@ dodiv(int n)
 	if (outfile[n] == NULL) {
 		char fname[] = _PATH_DIVNAME;
 
-		if ((fd = mkstemp(fname)) < 0 || 
-			(outfile[n] = fdopen(fd, "w+")) == NULL)
-				err(1, "%s: cannot divert", fname);
-		if (unlink(fname) == -1)
-			err(1, "%s: cannot unlink", fname);
+		if ((fd = mkstemp(fname)) == -1 ||
+		    unlink(fname) == -1 ||
+		    (outfile[n] = fdopen(fd, "w+")) == NULL)
+			err(1, "%s: cannot divert", fname);
 	}
 	active = outfile[n];
 }
@@ -895,7 +917,7 @@ dosub(const char *argv[], int argc)
  * function of ICON language. Within mapvec, we replace every character 
  * of "from" with the corresponding character in "to". 
  * If "to" is shorter than "from", than the corresponding entries are null, 
- * which means that those characters dissapear altogether. 
+ * which means that those characters disappear altogether. 
  */
 static void
 map(char *dest, const char *src, const char *from, const char *to)

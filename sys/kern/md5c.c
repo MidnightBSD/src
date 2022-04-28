@@ -30,7 +30,7 @@
  * This file should be kept in sync with src/lib/libmd/md5c.c
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/md5c.c 157304 2006-03-30 18:45:50Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -217,18 +217,16 @@ MD5Pad (MD5_CTX *context)
  */
 
 void
-MD5Final (digest, context)
-	unsigned char digest[16];
-	MD5_CTX *context;
+MD5Final(unsigned char digest[static MD5_DIGEST_LENGTH], MD5_CTX *context)
 {
 	/* Do padding. */
 	MD5Pad (context);
 
 	/* Store state in digest */
-	Encode (digest, context->state, 16);
+	Encode (digest, context->state, MD5_DIGEST_LENGTH);
 
 	/* Zeroize sensitive information. */
-	memset ((void *)context, 0, sizeof (*context));
+	memset (context, 0, sizeof (*context));
 }
 
 /* MD5 basic transformation. Transforms state based on block. */

@@ -24,7 +24,7 @@ if [ ! "$_TIMEZONE_MENUS_SUBR" ]; then _TIMEZONE_MENUS_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/timezone/share/menus.subr 252987 2013-07-07 18:51:44Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -104,7 +104,7 @@ f_make_menus_awk='
 function add_zone_n_to_country_menu(tlc, n)
 {
 	zone_title = ENVIRON["country_" tlc "_descr_" n]
-	gsub(/'\''/, "'\''\\'\'''\''", zone_title)
+	gsub(/'\''/, "'\''\\'\'\''", zone_title)
 	country_menu_list[tlc] = country_menu_list[tlc] \
 		( length(country_menu_list[tlc]) > 0 ? "\n" : "" ) \
 		n " '\''" zone_title "'\''"
@@ -121,7 +121,7 @@ BEGIN {
 	{
 		tlc = countries[cp]
 		title = ENVIRON["country_" tlc "_name"]
-		gsub(/'\''/, "'\''\\'\'''\''", title)
+		gsub(/'\''/, "'\''\\'\'\''", title)
 		nzones = ENVIRON["country_" tlc "_nzones"]
 		if (!nzones)
 		{

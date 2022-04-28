@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/pc98/pc98_machdep.c 208349 2010-05-20 12:46:19Z marius $
+ * $FreeBSD$
  */
 
 #include "opt_pc98.h"
@@ -49,8 +49,7 @@
 
 static	int	ad_geom_method = AD_GEOM_ADJUST_COMPATIDE;
 
-TUNABLE_INT("machdep.ad_geom_method", &ad_geom_method);
-SYSCTL_INT(_machdep, OID_AUTO, ad_geom_method, CTLFLAG_RW, &ad_geom_method, 0,
+SYSCTL_INT(_machdep, OID_AUTO, ad_geom_method, CTLFLAG_RWTUN, &ad_geom_method, 0,
     "IDE disk geometry conversion method");
 
 /*

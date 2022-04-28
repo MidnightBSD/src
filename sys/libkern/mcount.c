@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/mcount.c 170659 2007-06-13 06:17:48Z bde $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/gmon.h>

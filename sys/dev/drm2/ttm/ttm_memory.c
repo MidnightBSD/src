@@ -26,7 +26,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/ttm/ttm_memory.c 248663 2013-03-23 20:46:47Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_memory.h>

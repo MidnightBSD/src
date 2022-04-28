@@ -1,5 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/set-e/if3.0 211399 2010-08-16 17:18:08Z jilles $
-set -e
-if false; false; then
-	:
-fi

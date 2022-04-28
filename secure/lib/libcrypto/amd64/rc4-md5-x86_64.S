@@ -1,4 +1,5 @@
-	# $FreeBSD: release/10.0.0/secure/lib/libcrypto/amd64/rc4-md5-x86_64.S 238405 2012-07-12 19:30:53Z jkim $
+/* $FreeBSD$ */
+/* Do not modify. This file is auto-generated from rc4-md5-x86_64.pl. */
 .text	
 .align	16
 

@@ -1,5 +1,8 @@
-/* 
+/*-
  *  panic.c - terminate fast in case of error
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  *  Copyright (C) 1993  Thomas Koenig
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/at/panic.c 96701 2002-05-16 00:47:14Z tjr $");
+__FBSDID("$FreeBSD$");
 
 /* System Headers */
 

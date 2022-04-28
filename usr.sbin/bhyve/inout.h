@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/inout.h 257396 2013-10-30 20:42:09Z neel $
+ * $FreeBSD$
  */
 
 #ifndef _INOUT_H_
@@ -32,7 +34,11 @@
 #include <sys/linker_set.h>
 
 struct vmctx;
+struct vm_exit;
 
+/*
+ * inout emulation handlers return 0 on success and -1 on failure.
+ */
 typedef int (*inout_func_t)(struct vmctx *ctx, int vcpu, int in, int port,
 			    int bytes, uint32_t *eax, void *arg);
 
@@ -66,8 +72,8 @@ struct inout_port {
 	DATA_SET(inout_port_set, __CONCAT(__inout_port, __LINE__))
 	
 void	init_inout(void);
-int	emulate_inout(struct vmctx *, int vcpu, int in, int port, int bytes,
-		      uint32_t *eax, int strict);
+int	emulate_inout(struct vmctx *, int vcpu, struct vm_exit *vmexit,
+		      int strict);
 int	register_inout(struct inout_port *iop);
 int	unregister_inout(struct inout_port *iop);
 void	init_bvmcons(void);

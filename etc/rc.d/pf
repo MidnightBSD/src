@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/pf 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: pf
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="pf"
+desc="Packet filter"
 rcvar="pf_enable"
 load_rc_config $name
 start_cmd="pf_start"
@@ -46,27 +47,30 @@ pf_stop()
 pf_check()
 {
 	echo "Checking pf rules."
-	$pf_program -n -f "$pf_rules"
+	$pf_program -n -f "$pf_rules" $pf_flags
 }
 
 pf_reload()
 {
 	echo "Reloading pf rules."
-	$pf_program -n -f "$pf_rules" || return 1
-	# Flush everything but existing state entries that way when
-	# rules are read in, it doesn't break established connections.
-	$pf_program -Fnat -Fqueue -Frules -FSources -Finfo -FTables -Fosfp > /dev/null 2>&1
-	$pf_program -f "$pf_rules" $pf_flags
+	pf_resync
 }
 
 pf_resync()
 {
+	$pf_program -n -f "$pf_rules" $pf_flags || return 1
 	$pf_program -f "$pf_rules" $pf_flags
 }
 
 pf_status()
 {
-	$pf_program -s info
+	if ! [ -c /dev/pf ] ; then
+		echo "pf.ko is not loaded"
+		return 1
+	else
+		$pf_program -s info
+		$pf_program -s Running >/dev/null
+	fi
 }
 
 run_rc_command "$1"

@@ -6,13 +6,13 @@
  *
  * Developed at SunSoft, a Sun Microsystems, Inc. business.
  * Permission to use, copy, modify, and distribute this
- * software is freely granted, provided that this notice 
+ * software is freely granted, provided that this notice
  * is preserved.
  * ====================================================
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_asin.c 218509 2011-02-10 07:37:50Z das $");
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_asin(x)
  * Method :                  

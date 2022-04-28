@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/nandsim/nandsim.8 235542 2012-05-17 11:29:22Z joel $
+.\" $FreeBSD$
 .\"
 .Dd August 10, 2010
 .Dt NANDSIM 8
@@ -177,7 +177,7 @@ list all blocks marked as bad on a given chip.
 .El
 .It Ic log
 Prints activity log of the specified controller to stdout; if
-controller number is not specifed, logs for all available
+controller number is not specified, logs for all available
 controllers are printed.
 .It Ic stats
 Print statistics of the selected controller, chip and page.
@@ -217,13 +217,13 @@ All commands issues to any chip on this controller are ignored.
 .El
 .Sh SEE ALSO
 .Xr nand 4 ,
-.Xr nandsim 4
+.Xr nandsim 4 ,
 .Xr nandsim.conf 5
 .Sh HISTORY
 The
 .Nm
 utility first appeared in
 .Fx 10.0 .
-.Sh AUTHOR
+.Sh AUTHORS
 This utility was written by
 .An Lukasz Wojcik .

@@ -30,10 +30,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)xargs.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/xargs/xargs.1 233038 2012-03-16 16:41:28Z jilles $
+.\" $FreeBSD$
 .\" $xMach: xargs.1,v 1.2 2002/02/23 05:23:37 tim Exp $
 .\"
-.Dd March 16, 2012
+.Dd August 4, 2015
 .Dt XARGS 1
 .Os
 .Sh NAME
@@ -164,7 +164,6 @@ directory to
 .Pa destdir :
 .Pp
 .Dl /bin/ls -1d [A-Z]* | xargs -J % cp -Rp % destdir
-.Pp
 .It Fl L Ar number
 Call
 .Ar utility
@@ -208,6 +207,11 @@ Parallel mode: run at most
 invocations of
 .Ar utility
 at once.
+If
+.Ar maxprocs
+is set to 0,
+.Nm
+will run as many processes as possible.
 .It Fl p
 Echo each command to be executed and ask the user whether it should be
 executed.

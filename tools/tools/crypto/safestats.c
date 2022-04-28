@@ -23,10 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/crypto/safestats.c 117852 2003-07-21 21:58:04Z sam $
+ * $FreeBSD$
  */
-#include <stdio.h>
+
 #include <sys/types.h>
+#include <sys/sysctl.h>
+
+#include <err.h>
+#include <stdio.h>
+
 #include "../../../sys/dev/safe/safevar.h"
 
 /*
@@ -39,7 +44,7 @@ main(int argc, char *argv[])
 	size_t slen;
 
 	slen = sizeof (stats);
-	if (sysctlbyname("hw.safe.stats", &stats, &slen, NULL, NULL) < 0)
+	if (sysctlbyname("hw.safe.stats", &stats, &slen, NULL, 0) < 0)
 		err(1, "hw.safe.stats");
 
 	printf("input %llu bytes %u packets\n",

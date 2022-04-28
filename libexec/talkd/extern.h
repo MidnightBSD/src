@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/talkd/extern.h 241777 2012-10-20 10:33:15Z ed $
+ * $FreeBSD$
  */
 
 extern int debug;

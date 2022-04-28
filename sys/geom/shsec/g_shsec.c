@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/shsec/g_shsec.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,12 +71,10 @@ SYSCTL_DECL(_kern_geom);
 static SYSCTL_NODE(_kern_geom, OID_AUTO, shsec, CTLFLAG_RW, 0,
     "GEOM_SHSEC stuff");
 static u_int g_shsec_debug = 0;
-TUNABLE_INT("kern.geom.shsec.debug", &g_shsec_debug);
-SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, debug, CTLFLAG_RW, &g_shsec_debug, 0,
+SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, debug, CTLFLAG_RWTUN, &g_shsec_debug, 0,
     "Debug level");
 static u_int g_shsec_maxmem = MAXPHYS * 100;
-TUNABLE_INT("kern.geom.shsec.maxmem", &g_shsec_maxmem);
-SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, maxmem, CTLFLAG_RD, &g_shsec_maxmem,
+SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, maxmem, CTLFLAG_RDTUN, &g_shsec_maxmem,
     0, "Maximum memory that can be allocated for I/O (in bytes)");
 static u_int g_shsec_alloc_failed = 0;
 SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, alloc_failed, CTLFLAG_RD,
@@ -158,13 +156,13 @@ g_shsec_remove_disk(struct g_consumer *cp)
 
 	sc->sc_disks[no] = NULL;
 	if (sc->sc_provider != NULL) {
-		g_orphan_provider(sc->sc_provider, ENXIO);
+		g_wither_provider(sc->sc_provider, ENXIO);
 		sc->sc_provider = NULL;
 		G_SHSEC_DEBUG(0, "Device %s removed.", sc->sc_name);
 	}
 
 	if (cp->acr > 0 || cp->acw > 0 || cp->ace > 0)
-		g_access(cp, -cp->acr, -cp->acw, -cp->ace);
+		return;
 	g_detach(cp);
 	g_destroy_consumer(cp);
 }
@@ -183,35 +181,20 @@ g_shsec_orphan(struct g_consumer *cp)
 
 	g_shsec_remove_disk(cp);
 	/* If there are no valid disks anymore, remove device. */
-	if (g_shsec_nvalid(sc) == 0)
+	if (LIST_EMPTY(&gp->consumer))
 		g_shsec_destroy(sc, 1);
 }
 
 static int
 g_shsec_access(struct g_provider *pp, int dr, int dw, int de)
 {
-	struct g_consumer *cp1, *cp2;
+	struct g_consumer *cp1, *cp2, *tmp;
 	struct g_shsec_softc *sc;
 	struct g_geom *gp;
 	int error;
 
 	gp = pp->geom;
 	sc = gp->softc;
-
-	if (sc == NULL) {
-		/*
-		 * It looks like geom is being withered.
-		 * In that case we allow only negative requests.
-		 */
-		KASSERT(dr <= 0 && dw <= 0 && de <= 0,
-		    ("Positive access request (device=%s).", pp->name));
-		if ((pp->acr + dr) == 0 && (pp->acw + dw) == 0 &&
-		    (pp->ace + de) == 0) {
-			G_SHSEC_DEBUG(0, "Device %s definitely destroyed.",
-			    gp->name);
-		}
-		return (0);
-	}
 
 	/* On first open, grab an extra "exclusive" bit */
 	if (pp->acr == 0 && pp->acw == 0 && pp->ace == 0)
@@ -221,21 +204,30 @@ g_shsec_access(struct g_provider *pp, int dr, int dw, int de)
 		de--;
 
 	error = ENXIO;
-	LIST_FOREACH(cp1, &gp->consumer, consumer) {
+	LIST_FOREACH_SAFE(cp1, &gp->consumer, consumer, tmp) {
 		error = g_access(cp1, dr, dw, de);
-		if (error == 0)
-			continue;
-		/*
-		 * If we fail here, backout all previous changes.
-		 */
-		LIST_FOREACH(cp2, &gp->consumer, consumer) {
-			if (cp1 == cp2)
-				return (error);
-			g_access(cp2, -dr, -dw, -de);
+		if (error != 0)
+			goto fail;
+		if (cp1->acr == 0 && cp1->acw == 0 && cp1->ace == 0 &&
+		    cp1->flags & G_CF_ORPHAN) {
+			g_detach(cp1);
+			g_destroy_consumer(cp1);
 		}
-		/* NOTREACHED */
 	}
 
+	/* If there are no valid disks anymore, remove device. */
+	if (LIST_EMPTY(&gp->consumer))
+		g_shsec_destroy(sc, 1);
+
+	return (error);
+
+fail:
+	/* If we fail here, backout all previous changes. */
+	LIST_FOREACH(cp2, &gp->consumer, consumer) {
+		if (cp1 == cp2)
+			break;
+		g_access(cp2, -dr, -dw, -de);
+	}
 	return (error);
 }
 
@@ -836,3 +828,4 @@ g_shsec_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 }
 
 DECLARE_GEOM_CLASS(g_shsec_class, g_shsec);
+MODULE_VERSION(geom_shsec, 0);

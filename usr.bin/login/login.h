@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 FreeBSD, Inc
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/login/login.h 169342 2007-05-07 11:01:36Z dwmalone $
+ * $FreeBSD$
  */
 
 void	login_fbtab(char *, uid_t, gid_t);

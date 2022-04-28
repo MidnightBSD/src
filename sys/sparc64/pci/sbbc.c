@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/pci/sbbc.c 248965 2013-04-01 00:44:20Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -325,7 +325,7 @@ sbbc_pci_attach(device_t dev)
 	int error, rid;
 	uint32_t val;
 
-	/* Nothing to to if we're not the chosen one. */
+	/* Nothing to do if we're not the chosen one. */
 	if ((node = OF_finddevice("/chosen")) == -1) {
 		device_printf(dev, "failed to find /chosen\n");
 		return (ENXIO);
@@ -397,7 +397,7 @@ sbbc_pci_attach(device_t dev)
 
 static struct resource *
 sbbc_bus_alloc_resource(device_t dev, device_t child __unused, int type,
-    int *rid, u_long start, u_long end, u_long count, u_int flags)
+    int *rid, rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct sbbc_softc *sc;
 
@@ -435,8 +435,8 @@ sbbc_bus_deactivate_resource(device_t bus, device_t child, int type, int rid,
 
 static int
 sbbc_bus_adjust_resource(device_t bus __unused, device_t child __unused,
-    int type __unused, struct resource *res __unused, u_long start __unused,
-    u_long end __unused)
+    int type __unused, struct resource *res __unused, rman_res_t start __unused,
+    rman_res_t end __unused)
 {
 
 	return (ENXIO);
@@ -618,7 +618,7 @@ sbbc_uart_sbbc_probe(device_t dev)
 	sc = device_get_softc(dev);
 	sc->sc_class = &uart_sbbc_class;
 	device_set_desc(dev, "Serengeti console");
-	return (uart_bus_probe(dev, 0, 0, SBBC_PCI_BAR, 0));
+	return (uart_bus_probe(dev, 0, 0, 0, SBBC_PCI_BAR, 0, 0));
 }
 
 /*
@@ -813,7 +813,8 @@ struct uart_class uart_sbbc_class = {
 	sizeof(struct uart_softc),
 	.uc_ops = &sbbc_uart_ops,
 	.uc_range = 1,
-	.uc_rclk = 0x5bbc	/* arbitrary */
+	.uc_rclk = 0x5bbc,	/* arbitrary */
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)						\

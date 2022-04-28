@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.c#23 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm.c 236571 2012-06-04 17:22:43Z dim $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -668,7 +668,7 @@ check_patch(patch_t **start_patch, unsigned int start_instr,
 				cur_patch = STAILQ_NEXT(cur_patch, links);
 		} else {
 			/* Accepted this patch.  Advance to the next
-			 * one and wait for our intruction pointer to
+			 * one and wait for our instruction pointer to
 			 * hit this point.
 			 */
 			cur_patch = STAILQ_NEXT(cur_patch, links);

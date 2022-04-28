@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/pass5.c 250057 2013-04-29 20:14:11Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -82,7 +82,7 @@ pass5(void)
 			}
 		}
 		if (fs->fs_maxcontig > 1) {
-			const char *doit = 0;
+			const char *doit = NULL;
 
 			if (fs->fs_contigsumsize < 1) {
 				doit = "CREAT";

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)syslog.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/gen/syslog.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd December 30, 2004
+.Dd April 12, 2018
 .Dt SYSLOG 3
 .Os
 .Sh NAME
@@ -292,4 +292,4 @@ for later interpolation by
 .Pp
 Always use the proper secure idiom:
 .Pp
-.Dl syslog("%s", string);
+.Dl syslog(priority, \*q%s\*q, string);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/vinum/geom_vinum_drive.c 223921 2011-07-11 05:22:31Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/endian.h>
@@ -76,7 +76,7 @@ gv_legacy_header_type(uint8_t *hdr, int bigendian)
 	uint32_t *i32;
 	int arch_32, arch_64, i;
 
-	/* Set arch according to endianess. */
+	/* Set arch according to endianness. */
 	if (bigendian) {
 		arch_32 = GV_LEGACY_POWERPC;
 		arch_64 = GV_LEGACY_SPARC64;

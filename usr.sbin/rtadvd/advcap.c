@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.sbin/rtadvd/advcap.c 222824 2011-06-07 15:40:17Z hrs $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: advcap.c,v 1.11 2003/05/19 09:46:50 keiichi Exp $	*/
 
 /*
@@ -149,9 +149,9 @@ getent(char *bp, char *name, const char *cfile)
 				}
 				break;
 			}
-			if (cp >= bp + BUFSIZ) {
+			if (cp >= bp + BUFSIZ - 1) {
 				write(STDERR_FILENO, "Remcap entry too long\n",
-				      23);
+				    22);
 				break;
 			} else
 				*cp++ = c;

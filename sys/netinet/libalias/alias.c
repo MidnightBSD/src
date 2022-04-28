@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/libalias/alias.c 248416 2013-03-17 07:37:10Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
     Alias.c provides supervisory control for the functions of the
@@ -699,11 +699,13 @@ ProtoAliasOut(struct libalias *la, struct in_addr *ip_src,
 	struct alias_link *lnk;
 
 	LIBALIAS_LOCK_ASSERT(la);
-	(void)create;
 
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
+
+	if (!create)
+		return (PKT_ALIAS_IGNORED);
 
 	lnk = FindProtoOut(la, *ip_src, ip_dst, ip_p);
 	if (lnk != NULL) {
@@ -1409,6 +1411,10 @@ getout:
 #define UNREG_ADDR_C_LOWER 0xc0a80000
 #define UNREG_ADDR_C_UPPER 0xc0a8ffff
 
+/* 100.64.0.0  -> 100.127.255.255 (RFC 6598 - Carrier Grade NAT) */
+#define UNREG_ADDR_CGN_LOWER 0x64400000
+#define UNREG_ADDR_CGN_UPPER 0x647fffff
+
 int
 LibAliasOut(struct libalias *la, char *ptr, int maxpacketsize)
 {
@@ -1460,7 +1466,8 @@ LibAliasOutLocked(struct libalias *la, char *ptr,	/* valid IP packet */
 	}
 
 	addr_save = GetDefaultAliasAddress(la);
-	if (la->packetAliasMode & PKT_ALIAS_UNREGISTERED_ONLY) {
+	if (la->packetAliasMode & PKT_ALIAS_UNREGISTERED_ONLY ||
+	    la->packetAliasMode & PKT_ALIAS_UNREGISTERED_CGN) {
 		u_long addr;
 		int iclass;
 
@@ -1472,6 +1479,9 @@ LibAliasOutLocked(struct libalias *la, char *ptr,	/* valid IP packet */
 			iclass = 2;
 		else if (addr >= UNREG_ADDR_A_LOWER && addr <= UNREG_ADDR_A_UPPER)
 			iclass = 1;
+		else if (addr >= UNREG_ADDR_CGN_LOWER && addr <= UNREG_ADDR_CGN_UPPER &&
+		    la->packetAliasMode & PKT_ALIAS_UNREGISTERED_CGN)
+			iclass = 4;
 
 		if (iclass == 0) {
 			SetDefaultAliasAddress(la, pip->ip_src);
@@ -1722,7 +1732,7 @@ LibAliasUnLoadAllModule(void)
 
 	/* Unload all modules then reload everything. */
 	while ((p = first_handler()) != NULL) {	
-		detach_handler(p);
+		LibAliasDetachHandlers(p);
 	}
 	while ((t = walk_dll_chain()) != NULL) {	
 		dlclose(t->handle);
@@ -1747,7 +1757,8 @@ LibAliasUnLoadAllModule(void)
  * the input packet, on failure NULL. The input packet is always consumed.
  */
 struct mbuf *
-m_megapullup(struct mbuf *m, int len) {
+m_megapullup(struct mbuf *m, int len)
+{
 	struct mbuf *mcl;
 
 	if (len > m->m_pkthdr.len)
@@ -1756,7 +1767,14 @@ m_megapullup(struct mbuf *m, int len) {
 	if (m->m_next == NULL && M_WRITABLE(m))
 		return (m);
 
-	mcl = m_get2(len, M_NOWAIT, MT_DATA, M_PKTHDR);
+	if (len <= MJUMPAGESIZE)
+		mcl = m_get2(len, M_NOWAIT, MT_DATA, M_PKTHDR);
+	else if (len <= MJUM9BYTES)
+		mcl = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM9BYTES);
+	else if (len <= MJUM16BYTES)
+		mcl = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR, MJUM16BYTES);
+	else
+		goto bad;
 	if (mcl == NULL)
 		goto bad;
 	m_align(mcl, len);

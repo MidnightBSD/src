@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_ssc.c 236989 2012-06-13 04:52:19Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -193,16 +193,16 @@ at91_ssc_deactivate(device_t dev)
 	sc = device_get_softc(dev);
 	if (sc->intrhand)
 		bus_teardown_intr(dev, sc->irq_res, sc->intrhand);
-	sc->intrhand = 0;
+	sc->intrhand = NULL;
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
 		bus_release_resource(dev, SYS_RES_IOPORT,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
-	sc->mem_res = 0;
+	sc->mem_res = NULL;
 	if (sc->irq_res)
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->irq_res), sc->irq_res);
-	sc->irq_res = 0;
+	sc->irq_res = NULL;
 	return;
 }
 

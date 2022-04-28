@@ -1,5 +1,7 @@
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/iscsictl/token.l 255570 2013-09-14 15:29:06Z trasz $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -46,6 +48,7 @@ extern int	yylex(void);
 
 %option noinput
 %option nounput
+%option noyywrap
 
 %%
 HeaderDigest		{ return HEADER_DIGEST; }
@@ -61,7 +64,9 @@ tgtChapName		{ return MUTUAL_USER; }
 tgtChapSecret		{ return MUTUAL_SECRET; }
 AuthMethod		{ return AUTH_METHOD; }
 SessionType		{ return SESSION_TYPE; }
+enable			{ return ENABLE; }
 protocol		{ return PROTOCOL; }
+offload			{ return OFFLOAD; }
 port			{ return IGNORED; }
 MaxConnections		{ return IGNORED; }
 TargetAlias		{ return IGNORED; }
@@ -87,7 +92,10 @@ chapDigest		{ return IGNORED; }
 \{			{ return OPENING_BRACKET; }
 \}			{ return CLOSING_BRACKET; }
 =			{ return EQUALS; }
+;			{ return SEMICOLON; }
 #.*$			/* ignore comments */;
+\r\n			{ lineno++; }
 \n			{ lineno++; }
 [ \t]+			/* ignore whitespace */;
+.			{ yylval.str = strdup(yytext); return STR; }
 %%

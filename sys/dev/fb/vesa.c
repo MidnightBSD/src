@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fb/vesa.c 255004 2013-08-28 20:10:56Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"
@@ -79,6 +79,7 @@ struct adp_state {
 typedef struct adp_state adp_state_t;
 
 static struct mtx vesa_lock;
+MTX_SYSINIT(vesa_lock, &vesa_lock, "VESA lock", MTX_DEF);
 
 static int vesa_state;
 static void *vesa_state_buf;
@@ -101,7 +102,6 @@ static video_adapter_t *vesa_adp;
 
 static SYSCTL_NODE(_debug, OID_AUTO, vesa, CTLFLAG_RD, NULL, "VESA debugging");
 static int vesa_shadow_rom;
-TUNABLE_INT("debug.vesa.shadow_rom", &vesa_shadow_rom);
 SYSCTL_INT(_debug_vesa, OID_AUTO, shadow_rom, CTLFLAG_RDTUN, &vesa_shadow_rom,
     0, "Enable video BIOS shadow");
 
@@ -654,7 +654,7 @@ vesa_map_gen_mode_num(int type, int color, int mode)
     };
     int i;
 
-    for (i = 0; i < sizeof(mode_map)/sizeof(mode_map[0]); ++i) {
+    for (i = 0; i < nitems(mode_map); ++i) {
         if (mode_map[i].from == mode)
             return (mode_map[i].to);
     }
@@ -677,7 +677,7 @@ vesa_translate_flags(u_int16_t vflags)
 	int flags;
 	int i;
 
-	for (flags = 0, i = 0; i < sizeof(ftable)/sizeof(ftable[0]); ++i) {
+	for (flags = 0, i = 0; i < nitems(ftable); ++i) {
 		flags |= (vflags & ftable[i].mask) ? 
 			 ftable[i].set : ftable[i].reset;
 	}
@@ -1026,7 +1026,8 @@ vesa_bios_init(void)
 
 		++modes;
 	}
-	vesa_vmode[modes].vi_mode = EOT;
+	if (vesa_vmode != NULL)
+		vesa_vmode[modes].vi_mode = EOT;
 
 	if (bootverbose)
 		printf("VESA: %d mode(s) found\n", modes);
@@ -1582,7 +1583,7 @@ vesa_set_origin(video_adapter_t *adp, off_t offset)
 	regs.R_DX = offset / adp->va_window_gran;
 	x86bios_intr(&regs, 0x10);
 
-	adp->va_window_orig = (offset/adp->va_window_gran)*adp->va_window_gran;
+	adp->va_window_orig = rounddown(offset, adp->va_window_gran);
 	return (0);			/* XXX */
 }
 
@@ -1634,6 +1635,9 @@ vesa_mmap(video_adapter_t *adp, vm_ooffset_t offset, vm_paddr_t *paddr,
 		if (offset > adp->va_window_size - PAGE_SIZE)
 			return (-1);
 		*paddr = adp->va_info.vi_buffer + offset;
+#ifdef VM_MEMATTR_WRITE_COMBINING
+		*memattr = VM_MEMATTR_WRITE_COMBINING;
+#endif
 		return (0);
 	}
 	return ((*prevvidsw->mmap)(adp, offset, paddr, prot, memattr));
@@ -1914,8 +1918,6 @@ vesa_load(void)
 	if (vesa_init_done)
 		return (0);
 
-	mtx_init(&vesa_lock, "VESA lock", NULL, MTX_DEF);
-
 	/* locate a VGA adapter */
 	vesa_adp = NULL;
 	error = vesa_configure(0);
@@ -1954,7 +1956,6 @@ vesa_unload(void)
 	}
 
 	vesa_bios_uninit();
-	mtx_destroy(&vesa_lock);
 
 	return (error);
 }

@@ -20,10 +20,10 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: ev_timers.c,v 1.5.18.1 2005/04/27 05:01:06 sra Exp $";
+static const char rcsid[] = "$Id: ev_timers.c,v 1.6 2005/04/27 04:56:36 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/isc/ev_timers.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 /* Import. */
 
@@ -117,7 +117,7 @@ evCmpTime(struct timespec a, struct timespec b) {
 }
 
 struct timespec
-evNowTime() {
+evNowTime(void) {
 	struct timeval now;
 #ifdef CLOCK_REALTIME
 	struct timespec tsnow;
@@ -136,7 +136,7 @@ evNowTime() {
 }
 
 struct timespec
-evUTCTime() {
+evUTCTime(void) {
 	struct timeval now;
 #ifdef CLOCK_REALTIME
 	struct timespec tsnow;

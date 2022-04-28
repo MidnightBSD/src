@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/JIS/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.6 2007/03/05 16:58:33 tnozaki Exp $
 
 CODE=	JIS

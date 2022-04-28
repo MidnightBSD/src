@@ -39,6 +39,7 @@
 #include "hostfile.h"
 #include "auth.h"
 #include "log.h"
+#include "misc.h"
 #include "servconf.h"
 
 #include "buffer.h"
@@ -132,10 +133,16 @@ ssh_gssapi_krb5_storecreds(ssh_gssapi_client *client)
 		return;
 
 #ifdef HEIMDAL
+# ifdef HAVE_KRB5_CC_NEW_UNIQUE
 	if ((problem = krb5_cc_new_unique(krb_context, krb5_fcc_ops.prefix,
 	    NULL, &ccache)) != 0) {
 		errmsg = krb5_get_error_message(krb_context, problem);
 		logit("krb5_cc_new_unique(): %.100s", errmsg);
+# else
+	if ((problem = krb5_cc_gen_new(krb_context, &krb5_fcc_ops, &ccache))) {
+	    logit("krb5_cc_gen_new(): %.100s",
+		krb5_get_err_text(krb_context, problem));
+# endif
 		krb5_free_error_message(krb_context, errmsg);
 		return;
 	}

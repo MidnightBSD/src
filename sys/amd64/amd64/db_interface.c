@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/db_interface.c 208392 2010-05-21 17:17:56Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Interface to new debugger.
@@ -146,4 +146,5 @@ db_show_mdpcpu(struct pcpu *pc)
 	db_printf("gs32p        = %p\n", pc->pc_gs32p);
 	db_printf("ldt          = %p\n", pc->pc_ldt);
 	db_printf("tss          = %p\n", pc->pc_tss);
+	db_printf("tlb gen      = %u\n", pc->pc_smp_tlb_done);
 }

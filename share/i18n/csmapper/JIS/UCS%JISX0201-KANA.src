@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/JIS/UCS%JISX0201-KANA.src 258293 2013-11-18 04:42:58Z hrs $
+# $FreeBSD$
 # $NetBSD: UCS%JISX0201-KANA.src,v 1.5 2006/10/26 16:04:21 tnozaki Exp $
 
 TYPE		ROWCOL

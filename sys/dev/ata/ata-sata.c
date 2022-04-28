@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/ata-sata.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -297,7 +297,7 @@ ata_pm_identify(device_t dev)
 
     /* get PM revision data */
     if (ch->hw.pm_read(dev, ATA_PM, 1, &pm_revision)) {
-	device_printf(dev, "error getting PM revison data\n");
+	device_printf(dev, "error getting PM revision data\n");
 	return;
     }
 

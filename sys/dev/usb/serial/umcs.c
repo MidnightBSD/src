@@ -38,7 +38,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/umcs.c 239299 2012-08-15 15:42:57Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -80,7 +80,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/umcs.c 239299 2012-08-15 1
 static int umcs_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, umcs, CTLFLAG_RW, 0, "USB umcs quadport serial adapter");
-SYSCTL_INT(_hw_usb_umcs, OID_AUTO, debug, CTLFLAG_RW, &umcs_debug, 0, "Debug level");
+SYSCTL_INT(_hw_usb_umcs, OID_AUTO, debug, CTLFLAG_RWTUN, &umcs_debug, 0, "Debug level");
 #endif					/* USB_DEBUG */
 
 
@@ -121,8 +121,6 @@ struct umcs7840_softc_oneport {
 
 	uint8_t	sc_lcr;			/* local line control register */
 	uint8_t	sc_mcr;			/* local modem control register */
-	uint8_t	sc_lsr;			/* local line status register */
-	uint8_t	sc_msr;			/* local modem status register */
 };
 
 struct umcs7840_softc {
@@ -280,6 +278,7 @@ DRIVER_MODULE(umcs7840, uhub, umcs7840_driver, umcs7840_devclass, 0, 0);
 MODULE_DEPEND(umcs7840, ucom, 1, 1, 1);
 MODULE_DEPEND(umcs7840, usb, 1, 1, 1);
 MODULE_VERSION(umcs7840, UMCS7840_MODVER);
+USB_PNP_HOST_INFO(umcs7840_devs);
 
 static int
 umcs7840_probe(device_t dev)
@@ -535,12 +534,7 @@ umcs7840_cfg_open(struct ucom_softc *ucom)
 	if (umcs7840_set_reg_sync(sc, umcs7840_port_registers[pn].reg_control, data))
 		return;
 
-	/* Read LSR & MSR */
-	if (umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_LSR, &sc->sc_ports[pn].sc_lsr))
-		return;
-	if (umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_MSR, &sc->sc_ports[pn].sc_msr))
-		return;
-	DPRINTF("Port %d has been opened, LSR=%02x MSR=%02x\n", pn, sc->sc_ports[pn].sc_lsr, sc->sc_ports[pn].sc_msr);
+	DPRINTF("Port %d has been opened\n", pn);
 }
 
 static void
@@ -748,9 +742,28 @@ static void
 umcs7840_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 {
 	struct umcs7840_softc *sc = ucom->sc_parent;
+	uint8_t pn = ucom->sc_portno;
+	uint8_t	hw_msr = 0;	/* local modem status register */
 
-	*lsr = sc->sc_ports[ucom->sc_portno].sc_lsr;
-	*msr = sc->sc_ports[ucom->sc_portno].sc_msr;
+	/*
+	 * Read status registers.  MSR bits need translation from ns16550 to
+	 * SER_* values.  LSR bits are ns16550 in hardware and ucom.
+	 */
+	umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_LSR, lsr);
+	umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_MSR, &hw_msr);
+
+	if (hw_msr & MCS7840_UART_MSR_NEGCTS)
+		*msr |= SER_CTS;
+
+	if (hw_msr & MCS7840_UART_MSR_NEGDCD)
+		*msr |= SER_DCD;
+
+	if (hw_msr & MCS7840_UART_MSR_NEGRI)
+		*msr |= SER_RI;
+
+	if (hw_msr & MCS7840_UART_MSR_NEGDSR)
+		*msr |= SER_DSR;
+
 	DPRINTF("Port %d status: LSR=%02x MSR=%02x\n", ucom->sc_portno, *lsr, *msr);
 }
 
@@ -781,21 +794,11 @@ umcs7840_intr_callback(struct usb_xfer *xfer, usb_error_t error)
 				case MCS7840_UART_ISR_RXERR:
 				case MCS7840_UART_ISR_RXHASDATA:
 				case MCS7840_UART_ISR_RXTIMEOUT:
-					/* Read new LSR */
-					if (umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_LSR, &sc->sc_ports[pn].sc_lsr))
-						break;	/* Inner switch */
-					ucom_status_change(&sc->sc_ucom[subunit]);
-					/* Inner switch */
-					break;
-				case MCS7840_UART_ISR_TXEMPTY:
-					/* Do nothing */
-					break;	/* Inner switch */
 				case MCS7840_UART_ISR_MSCHANGE:
-					/* Read new MSR */
-					if (umcs7840_get_UART_reg_sync(sc, pn, MCS7840_UART_REG_MSR, &sc->sc_ports[pn].sc_msr))
-						break;	/* Inner switch */
-					DPRINTF("Port %d: new MSR %02x\n", pn, sc->sc_ports[pn].sc_msr);
 					ucom_status_change(&sc->sc_ucom[subunit]);
+					break;
+				default:
+					/* Do nothing */
 					break;
 				}
 			}
@@ -1080,7 +1083,7 @@ umcs7840_set_baudrate(struct umcs7840_softc *sc, uint8_t portno, uint32_t rate)
 
 /* Maximum speeds for standard frequences, when PLL is not used */
 static const uint32_t umcs7840_baudrate_divisors[] = {0, 115200, 230400, 403200, 460800, 806400, 921600, 1572864, 3145728,};
-static const uint8_t umcs7840_baudrate_divisors_len = sizeof(umcs7840_baudrate_divisors) / sizeof(umcs7840_baudrate_divisors[0]);
+static const uint8_t umcs7840_baudrate_divisors_len = nitems(umcs7840_baudrate_divisors);
 
 static usb_error_t
 umcs7840_calc_baudrate(uint32_t rate, uint16_t *divisor, uint8_t *clk)
@@ -1092,7 +1095,10 @@ umcs7840_calc_baudrate(uint32_t rate, uint16_t *divisor, uint8_t *clk)
 
 	for (i = 0; i < umcs7840_baudrate_divisors_len - 1 &&
 	    !(rate > umcs7840_baudrate_divisors[i] && rate <= umcs7840_baudrate_divisors[i + 1]); ++i);
-	*divisor = umcs7840_baudrate_divisors[i + 1] / rate;
+	if (rate == 0)
+		*divisor = 1;	/* XXX */
+	else
+		*divisor = umcs7840_baudrate_divisors[i + 1] / rate;
 	/* 0x00 .. 0x70 */
 	*clk = i << MCS7840_DEV_SPx_CLOCK_SHIFT;
 	return (0);

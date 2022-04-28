@@ -1,10 +1,8 @@
-# $FreeBSD: release/10.0.0/gnu/lib/libreadline/readline/Makefile 136658 2004-10-18 08:36:40Z ache $
-
-SUBDIR= doc
+# $FreeBSD$
 
 LIB=    readline
-MAN=    doc/readline.3
-SHLIBDIR?=	/lib
+INTERNALLIB=	yes
+MAN=
 
 TILDESRC= tilde.c
 SRCS=     readline.c vi_mode.c funmap.c keymaps.c parens.c search.c \
@@ -15,13 +13,17 @@ SRCS=     readline.c vi_mode.c funmap.c keymaps.c parens.c search.c \
 INSTALLED_HEADERS= readline.h chardefs.h keymaps.h history.h tilde.h \
 		   rlstdc.h rlconf.h rltypedefs.h
 
-DPADD=	${LIBTERMCAP}
-LDADD=	-ltermcap
+CFLAGS+=	-I${.OBJDIR}/..
+SRCDIR=	${.CURDIR}/../../../../contrib/libreadline
 
-INCSDIR=${INCLUDEDIR}/readline
+CLEANFILES+= ${INSTALLED_HEADERS}
+SRCS+= ${INSTALLED_HEADERS}
 
-.for hdr in ${INSTALLED_HEADERS}
-INCS+=	${SRCDIR}/${hdr}
+.for _h in ${INSTALLED_HEADERS}
+${_h}:	${SRCDIR}/${_h} .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 .endfor
+
+LIBADD=	ncursesw
 
 .include <bsd.lib.mk>

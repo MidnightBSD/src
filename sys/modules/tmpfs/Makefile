@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/tmpfs/Makefile 171087 2007-06-29 05:23:15Z delphij $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../fs/tmpfs
+.PATH: ${SRCTOP}/sys/fs/tmpfs
 
 KMOD=	tmpfs
 SRCS=	vnode_if.h \

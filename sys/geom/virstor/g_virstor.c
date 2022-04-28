@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/virstor/g_virstor.c 239021 2012-08-03 20:24:16Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,20 +84,16 @@ static SYSCTL_NODE(_kern_geom, OID_AUTO, virstor, CTLFLAG_RW, 0,
     "GEOM_GVIRSTOR information");
 
 static u_int g_virstor_debug = 2; /* XXX: lower to 2 when released to public */
-TUNABLE_INT("kern.geom.virstor.debug", &g_virstor_debug);
-SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, debug, CTLFLAG_RW, &g_virstor_debug,
+SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, debug, CTLFLAG_RWTUN, &g_virstor_debug,
     0, "Debug level (2=production, 5=normal, 15=excessive)");
 
 static u_int g_virstor_chunk_watermark = 100;
-TUNABLE_INT("kern.geom.virstor.chunk_watermark", &g_virstor_chunk_watermark);
-SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, chunk_watermark, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, chunk_watermark, CTLFLAG_RWTUN,
     &g_virstor_chunk_watermark, 0,
     "Minimum number of free chunks before issuing administrative warning");
 
 static u_int g_virstor_component_watermark = 1;
-TUNABLE_INT("kern.geom.virstor.component_watermark",
-    &g_virstor_component_watermark);
-SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, component_watermark, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_virstor, OID_AUTO, component_watermark, CTLFLAG_RWTUN,
     &g_virstor_component_watermark, 0,
     "Minimum number of free components before issuing administrative warning");
 
@@ -475,7 +471,7 @@ static void
 update_metadata(struct g_virstor_softc *sc)
 {
 	struct g_virstor_metadata md;
-	int n;
+	u_int n;
 
 	if (virstor_valid_components(sc) != sc->n_components)
 		return; /* Incomplete device */
@@ -904,15 +900,13 @@ remove_component(struct g_virstor_softc *sc, struct g_virstor_component *comp,
 	LOG_MSG(LVL_DEBUG, "Component %s removed from %s", c->provider->name,
 	    sc->geom->name);
 	if (sc->provider != NULL) {
-		/* Whither, GEOM? */
-		sc->provider->flags |= G_PF_WITHER;
-		g_orphan_provider(sc->provider, ENXIO);
+		LOG_MSG(LVL_INFO, "Removing provider %s", sc->provider->name);
+		g_wither_provider(sc->provider, ENXIO);
 		sc->provider = NULL;
-		LOG_MSG(LVL_INFO, "Removing provider %s", sc->geom->name);
 	}
 
 	if (c->acr > 0 || c->acw > 0 || c->ace > 0)
-		g_access(c, -c->acr, -c->acw, -c->ace);
+		return;
 	if (delay) {
 		/* Destroy consumer after it's tasted */
 		g_post_event(delay_destroy_consumer, c, M_WAITOK, NULL);
@@ -932,7 +926,7 @@ virstor_geom_destroy(struct g_virstor_softc *sc, boolean_t force,
 {
 	struct g_provider *pp;
 	struct g_geom *gp;
-	int n;
+	u_int n;
 
 	g_topology_assert();
 
@@ -1046,6 +1040,7 @@ write_metadata(struct g_consumer *cp, struct g_virstor_metadata *md)
 	pp = cp->provider;
 
 	buf = malloc(pp->sectorsize, M_GVIRSTOR, M_WAITOK);
+	bzero(buf, pp->sectorsize);
 	virstor_metadata_encode(md, buf);
 	g_topology_unlock();
 	error = g_write_data(cp, pp->mediasize - pp->sectorsize, buf,
@@ -1261,7 +1256,7 @@ virstor_check_and_run(struct g_virstor_softc *sc)
 		bs = MIN(MAXPHYS, sc->map_size - count);
 		if (bs % sc->sectorsize != 0) {
 			/* Check for alignment errors */
-			bs = (bs / sc->sectorsize) * sc->sectorsize;
+			bs = rounddown(bs, sc->sectorsize);
 			if (bs == 0)
 				break;
 			LOG_MSG(LVL_ERROR, "Trouble: map is not sector-aligned "
@@ -1402,7 +1397,7 @@ g_virstor_orphan(struct g_consumer *cp)
 	KASSERT(comp != NULL, ("%s: No component in private part of consumer",
 	    __func__));
 	remove_component(sc, comp, FALSE);
-	if (virstor_valid_components(sc) == 0)
+	if (LIST_EMPTY(&gp->consumer))
 		virstor_geom_destroy(sc, TRUE, FALSE);
 }
 
@@ -1412,7 +1407,7 @@ g_virstor_orphan(struct g_consumer *cp)
 static int
 g_virstor_access(struct g_provider *pp, int dr, int dw, int de)
 {
-	struct g_consumer *c;
+	struct g_consumer *c, *c2, *tmp;
 	struct g_virstor_softc *sc;
 	struct g_geom *gp;
 	int error;
@@ -1422,46 +1417,40 @@ g_virstor_access(struct g_provider *pp, int dr, int dw, int de)
 	KASSERT(gp != NULL, ("%s: NULL geom", __func__));
 	sc = gp->softc;
 
-	if (sc == NULL) {
-		/* It seems that .access can be called with negative dr,dw,dx
-		 * in this case but I want to check for myself */
-		LOG_MSG(LVL_WARNING, "access(%d, %d, %d) for %s",
-		    dr, dw, de, pp->name);
-		/* This should only happen when geom is withered so
-		 * allow only negative requests */
-		KASSERT(dr <= 0 && dw <= 0 && de <= 0,
-		    ("%s: Positive access for %s", __func__, pp->name));
-		if (pp->acr + dr == 0 && pp->acw + dw == 0 && pp->ace + de == 0)
-			LOG_MSG(LVL_DEBUG, "Device %s definitely destroyed",
-			    pp->name);
-		return (0);
-	}
-
 	/* Grab an exclusive bit to propagate on our consumers on first open */
 	if (pp->acr == 0 && pp->acw == 0 && pp->ace == 0)
 		de++;
 	/* ... drop it on close */
 	if (pp->acr + dr == 0 && pp->acw + dw == 0 && pp->ace + de == 0) {
 		de--;
-		update_metadata(sc);	/* Writes statistical information */
+		if (sc != NULL)
+			update_metadata(sc);
 	}
 
 	error = ENXIO;
-	LIST_FOREACH(c, &gp->consumer, consumer) {
-		KASSERT(c != NULL, ("%s: consumer is NULL", __func__));
+	LIST_FOREACH_SAFE(c, &gp->consumer, consumer, tmp) {
 		error = g_access(c, dr, dw, de);
-		if (error != 0) {
-			struct g_consumer *c2;
-
-			/* Backout earlier changes */
-			LIST_FOREACH(c2, &gp->consumer, consumer) {
-				if (c2 == c) /* all eariler components fixed */
-					return (error);
-				g_access(c2, -dr, -dw, -de);
-			}
+		if (error != 0)
+			goto fail;
+		if (c->acr == 0 && c->acw == 0 && c->ace == 0 &&
+		    c->flags & G_CF_ORPHAN) {
+			g_detach(c);
+			g_destroy_consumer(c);
 		}
 	}
 
+	if (sc != NULL && LIST_EMPTY(&gp->consumer))
+		virstor_geom_destroy(sc, TRUE, FALSE);
+
+	return (error);
+
+fail:
+	/* Backout earlier changes */
+	LIST_FOREACH(c2, &gp->consumer, consumer) {
+		if (c2 == c)
+			break;
+		g_access(c2, -dr, -dw, -de);
+	}
 	return (error);
 }
 
@@ -1727,13 +1716,12 @@ g_virstor_start(struct bio *b)
 				 * sc_offset will end up pointing to the drive
 				 * sector. */
 				s_offset = chunk_index * sizeof *me;
-				s_offset = (s_offset / sc->sectorsize) *
-				    sc->sectorsize;
+				s_offset = rounddown(s_offset, sc->sectorsize);
 
 				/* data_me points to map entry sector
-				 * in memory (analoguos to offset) */
-				data_me = &sc->map[(chunk_index /
-				    sc->me_per_sector) * sc->me_per_sector];
+				 * in memory (analogous to offset) */
+				data_me = &sc->map[rounddown(chunk_index,
+				    sc->me_per_sector)];
 
 				/* Commit sector with map entry to storage */
 				cb->bio_to = sc->components[0].gcons->provider;
@@ -1895,3 +1883,4 @@ invalid_call(void)
 }
 
 DECLARE_GEOM_CLASS(g_virstor_class, g_virstor); /* Let there be light */
+MODULE_VERSION(geom_virstor, 0);

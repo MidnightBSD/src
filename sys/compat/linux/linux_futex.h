@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/linux/linux_futex.h 218118 2011-01-31 06:06:23Z dchagin $
+ * $FreeBSD$
  */
 
 #ifndef _LINUX_FUTEX_H
@@ -76,6 +76,7 @@ extern struct mtx futex_mtx;
 #define	FUTEX_TID_MASK		0x3fffffff
 #define	FUTEX_BITSET_MATCH_ANY	0xffffffff
 
-void	release_futexes(struct proc *);
+void	release_futexes(struct thread *,
+			struct linux_emuldata *);
 
 #endif	/* !_LINUX_FUTEX_H */

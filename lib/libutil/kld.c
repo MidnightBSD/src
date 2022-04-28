@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libutil/kld.c 211619 2010-08-22 11:48:32Z des $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

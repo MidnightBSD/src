@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_user.h 226026 2011-10-04 21:40:25Z delphij $
+ * $FreeBSD$
  */
 
 #define TWS_AEN_NOT_RETRIEVED        0x1

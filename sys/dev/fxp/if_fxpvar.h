@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/fxp/if_fxpvar.h 233586 2012-03-28 01:27:27Z yongari $
+ * $FreeBSD$
  */
 
 /*
@@ -143,7 +143,8 @@ struct fxp_desc_list {
 };
 
 struct fxp_ident {
-	uint16_t	devid;
+	uint16_t	vendor;
+	uint16_t	device;
 	int16_t		revid;		/* -1 matches anything */
 	uint8_t		ich;
 	const char	*name;
@@ -178,7 +179,7 @@ struct fxp_hwstats {
  *	 for functional grouping.
  */
 struct fxp_softc {
-	struct ifnet *ifp;		/* per-interface network data */
+	void *ifp;			/* per-interface network data */
 	struct resource	*fxp_res[2];	/* I/O and IRQ resources */
 	struct resource_spec *fxp_spec;	/* the resource spec we used */
 	void *ih;			/* interrupt handler cookie */

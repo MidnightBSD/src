@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/Makefile 259807 2013-12-24 04:27:11Z gjb $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/..
 
 SUBDIR = relnotes
 SUBDIR+= hardware
-SUBDIR+= installation
 SUBDIR+= readme
 SUBDIR+= errata
 

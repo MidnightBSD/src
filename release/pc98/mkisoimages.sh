@@ -4,7 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $FreeBSD: release/10.0.0/release/pc98/mkisoimages.sh 246283 2013-02-03 10:26:24Z hrs $
+# $FreeBSD$
 #
 # This script is used by release/Makefile to build the (optional) ISO images
 # for a FreeBSD release.  It is considered architecture dependent since each
@@ -32,14 +32,14 @@ else
 fi
 
 if [ $# -lt 3 ]; then
-	echo Usage: $0 '[-b] image-label image-name base-bits-dir [extra-bits-dir]'
+	echo "Usage: $0 [-b] image-label image-name base-bits-dir [extra-bits-dir]"
 	exit 1
 fi
 
-LABEL=`echo $1 | tr '[:lower:]' '[:upper:]'`; shift
-NAME=$1; shift
+LABEL=`echo "$1" | tr '[:lower:]' '[:upper:]'`; shift
+NAME="$1"; shift
 
 publisher="The FreeBSD Project.  http://www.FreeBSD.org/"
-echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > $1/etc/fstab
-makefs -t cd9660 $bootable -o rockridge -o label=$LABEL -o publisher="$publisher" $NAME $*
-rm $1/etc/fstab
+echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > "$1/etc/fstab"
+makefs -t cd9660 $bootable -o rockridge -o label="$LABEL" -o publisher="$publisher" "$NAME" "$@"
+rm -f "$1/etc/fstab"

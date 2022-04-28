@@ -27,7 +27,7 @@
   * such options should clear the "dry_run" flag to inform the caller of this
   * course of action.
   *
-  * $FreeBSD: release/10.0.0/contrib/tcp_wrappers/options.c 71045 2001-01-14 23:00:59Z dwmalone $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -50,6 +50,8 @@ static char sccsid[] = "@(#) options.c 1.17 96/02/11 17:01:31";
 #include <ctype.h>
 #include <setjmp.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #ifndef MAXPATHNAMELEN
 #define MAXPATHNAMELEN  BUFSIZ
@@ -69,8 +71,8 @@ extern jmp_buf tcpd_buf;		/* tcpd_jump() support */
 static char whitespace_eq[] = "= \t\r\n";
 #define whitespace (whitespace_eq + 1)
 
-static char *get_field();		/* chew :-delimited field off string */
-static char *chop_string();		/* strip leading and trailing blanks */
+static char *get_field(char *string);		/* chew :-delimited field off string */
+static char *chop_string(char *string);		/* strip leading and trailing blanks */
 
 /* List of functions that implement the options. Add yours here. */
 
@@ -441,16 +443,21 @@ struct request_info *request;
 /* severity_map - lookup facility or severity value */
 
 static int severity_map(table, name)
-CODE   *table;
+const CODE   *table;
 char   *name;
 {
-    CODE *t;
+    const CODE *t;
+    int ret = -1;
 
     for (t = table; t->c_name; t++)
-	if (STR_EQ(t->c_name, name))
-	    return (t->c_val);
-    tcpd_jump("bad syslog facility or severity: \"%s\"", name);
-    /* NOTREACHED */
+	if (STR_EQ(t->c_name, name)) {
+	    ret = t->c_val;
+	    break;
+	}
+    if (ret == -1)
+    	tcpd_jump("bad syslog facility or severity: \"%s\"", name);
+
+    return (ret);
 }
 
 /* severity_option - change logging severity for this event (Dave Mitchell) */

@@ -26,12 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/strchrnul.c 246766 2013-02-13 15:46:33Z zeising $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 #include <string.h>
 
 __weak_reference(__strchrnul, strchrnul);
+
+char *__strchrnul(const char *, int);
 
 char *
 __strchrnul(const char *p, int ch)

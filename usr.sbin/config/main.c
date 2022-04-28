@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/config/main.c 250133 2013-05-01 05:14:59Z wkoszek $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -70,6 +70,17 @@ static const char rcsid[] =
 
 #define	CDIR	"../compile/"
 
+char	*machinename;
+char	*machinearch;
+
+struct cfgfile_head	cfgfiles;
+struct cputype_head	cputype;
+struct opt_head		opt, mkopt, rmopts;
+struct opt_list_head	otab;
+struct envvar_head	envvars;
+struct hint_head	hints;
+struct includepath_head	includepath;
+
 char *	PREFIX;
 char 	destdir[MAXPATHLEN];
 char 	srcdir[MAXPATHLEN];
@@ -84,12 +95,14 @@ int	incignore;
  * literally).
  */
 int	filebased = 0;
+int	versreq;
 
 static void configfile(void);
 static void get_srcdir(void);
 static void usage(void);
 static void cleanheaders(char *);
 static void kernconfdump(const char *);
+static void badversion(void);
 static void checkversion(void);
 extern int yyparse(void);
 
@@ -110,14 +123,24 @@ main(int argc, char **argv)
 	int ch, len;
 	char *p;
 	char *kernfile;
+	struct includepath* ipath;
 	int printmachine;
 
 	printmachine = 0;
 	kernfile = NULL;
-	while ((ch = getopt(argc, argv, "Cd:gmpVx:")) != -1)
+	SLIST_INIT(&includepath);
+	while ((ch = getopt(argc, argv, "CI:d:gmps:Vx:")) != -1)
 		switch (ch) {
 		case 'C':
 			filebased = 1;
+			break;
+		case 'I':
+			ipath = (struct includepath *) \
+			    	calloc(1, sizeof (struct includepath));
+			if (ipath == NULL)
+				err(EXIT_FAILURE, "calloc");
+			ipath->path = optarg;
+			SLIST_INSERT_HEAD(&includepath, ipath, path_next);
 			break;
 		case 'm':
 			printmachine = 1;
@@ -133,6 +156,12 @@ main(int argc, char **argv)
 			break;
 		case 'p':
 			profiling++;
+			break;
+		case 's':
+			if (*srcdir == '\0')
+				strlcpy(srcdir, optarg, sizeof(srcdir));
+			else
+				errx(EXIT_FAILURE, "src directory already set");
 			break;
 		case 'V':
 			printf("%d\n", CONFIGVERS);
@@ -170,7 +199,8 @@ main(int argc, char **argv)
 		len = strlen(destdir);
 		while (len > 1 && destdir[len - 1] == '/')
 			destdir[--len] = '\0';
-		get_srcdir();
+		if (*srcdir == '\0')
+			get_srcdir();
 	} else {
 		strlcpy(destdir, CDIR, sizeof(destdir));
 		strlcat(destdir, PREFIX, sizeof(destdir));
@@ -185,6 +215,7 @@ main(int argc, char **argv)
 	STAILQ_INIT(&fntab);
 	STAILQ_INIT(&ftab);
 	STAILQ_INIT(&hints);
+	STAILQ_INIT(&envvars);
 	if (yyparse())
 		exit(3);
 
@@ -265,7 +296,8 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: config [-CgmpV] [-d destdir] sysname\n");
+	fprintf(stderr,
+	    "usage: config [-CgmpV] [-d destdir] [-s srcdir] sysname\n");
 	fprintf(stderr, "       config -x kernel\n");
 	exit(EX_USAGE);
 }
@@ -279,7 +311,7 @@ usage(void)
 char *
 get_word(FILE *fp)
 {
-	static char line[80];
+	static char line[160];
 	int ch;
 	char *cp;
 	int escaped_nl = 0;
@@ -304,10 +336,21 @@ begin:
 	}
 	cp = line;
 	*cp++ = ch;
-	while ((ch = getc(fp)) != EOF) {
+	/* Negation operator is a word by itself. */
+	if (ch == '!') {
+		*cp = 0;
+		return (line);
+	}
+	while ((ch = getc(fp)) != EOF && cp < line + sizeof(line)) {
 		if (isspace(ch))
 			break;
 		*cp++ = ch;
+	}
+	if (cp >= line + sizeof(line)) {
+		line[sizeof(line) - 1] = '\0';
+		fprintf(stderr, "config: attempted overflow, partial line: `%s'",
+		    line);
+		exit(2);
 	}
 	*cp = 0;
 	if (ch == EOF)
@@ -324,7 +367,7 @@ begin:
 char *
 get_quoted_word(FILE *fp)
 {
-	static char line[256];
+	static char line[512];
 	int ch;
 	char *cp;
 	int escaped_nl = 0;
@@ -367,15 +410,29 @@ begin:
 			}
 			if (ch != quote && escaped_nl)
 				*cp++ = '\\';
+			if (cp >= line + sizeof(line)) {
+				line[sizeof(line) - 1] = '\0';
+				printf(
+				    "config: line buffer overflow reading partial line `%s'\n",
+				    line);
+				exit(2);
+			}
 			*cp++ = ch;
 			escaped_nl = 0;
 		}
 	} else {
 		*cp++ = ch;
-		while ((ch = getc(fp)) != EOF) {
+		while ((ch = getc(fp)) != EOF && cp < line + sizeof(line)) {
 			if (isspace(ch))
 				break;
 			*cp++ = ch;
+		}
+		if (cp >= line + sizeof(line)) {
+			line[sizeof(line) - 1] = '\0';
+			printf(
+			    "config: line buffer overflow reading partial line `%s'\n",
+			    line);
+			exit(2);
 		}
 		if (ch != EOF)
 			(void) ungetc(ch, fp);
@@ -663,7 +720,7 @@ kernconfdump(const char *file)
 {
 	struct stat st;
 	FILE *fp, *pp;
-	int error, len, osz, r;
+	int error, osz, r;
 	unsigned int i, off, size, t1, t2, align;
 	char *cmd, *o;
 
@@ -691,7 +748,7 @@ kernconfdump(const char *file)
 	if (pp == NULL)
 		errx(EXIT_FAILURE, "popen() failed");
 	free(cmd);
-	len = fread(o, osz, 1, pp);
+	(void)fread(o, osz, 1, pp);
 	pclose(pp);
 	r = sscanf(o, "%d%d%d%d%d", &off, &size, &t1, &t2, &align);
 	free(o);
@@ -716,8 +773,8 @@ kernconfdump(const char *file)
 	fclose(fp);
 }
 
-static void 
-badversion(int versreq)
+static void
+badversion(void)
 {
 	fprintf(stderr, "ERROR: version of config(8) does not match kernel!\n");
 	fprintf(stderr, "config version = %d, ", CONFIGVERS);
@@ -737,7 +794,6 @@ checkversion(void)
 {
 	FILE *ifp;
 	char line[BUFSIZ];
-	int versreq;
 
 	ifp = open_makefile_template();
 	while (fgets(line, BUFSIZ, ifp) != 0) {
@@ -749,7 +805,7 @@ checkversion(void)
 		if (MAJOR_VERS(versreq) == MAJOR_VERS(CONFIGVERS) &&
 		    versreq <= CONFIGVERS)
 			continue;
-		badversion(versreq);
+		badversion();
 	}
 	fclose(ifp);
 }

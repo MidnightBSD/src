@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/nfsd/Makefile 249596 2013-04-17 22:42:43Z ken $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../fs/nfsserver ${.CURDIR}/../../nfs
+.PATH: ${SRCTOP}/sys/fs/nfsserver ${SRCTOP}/sys/nfs
 KMOD=	nfsd
 SRCS=	vnode_if.h \
 	nfs_fha.c \
@@ -14,6 +14,7 @@ SRCS=	vnode_if.h \
 	nfs_nfsdport.c \
 	opt_ufs.h \
 	opt_nfs.h \
+	opt_inet.h \
 	opt_inet6.h \
 	opt_kgssapi.h
 

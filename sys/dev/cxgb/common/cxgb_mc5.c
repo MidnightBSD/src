@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_mc5.c 183292 2008-09-23 03:16:54Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <common/cxgb_common.h>
 #include <common/cxgb_regs.h>
@@ -96,13 +96,6 @@ static int mc5_cmd_write(adapter_t *adapter, u32 cmd)
 	t3_write_reg(adapter, A_MC5_DB_DBGI_REQ_CMD, cmd);
 	return t3_wait_op_done(adapter, A_MC5_DB_DBGI_RSP_STATUS,
 			       F_DBGIRSPVALID, 1, MAX_WRITE_ATTEMPTS, 1);
-}
-
-static inline void dbgi_wr_addr3(adapter_t *adapter, u32 v1, u32 v2, u32 v3)
-{
-	t3_write_reg(adapter, A_MC5_DB_DBGI_REQ_ADDR0, v1);
-	t3_write_reg(adapter, A_MC5_DB_DBGI_REQ_ADDR1, v2);
-	t3_write_reg(adapter, A_MC5_DB_DBGI_REQ_ADDR2, v3);
 }
 
 static inline void dbgi_wr_data3(adapter_t *adapter, u32 v1, u32 v2, u32 v3)

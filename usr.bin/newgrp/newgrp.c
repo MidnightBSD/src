@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Tim J. Robbins.
  * All rights reserved.
  *
@@ -29,14 +31,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/newgrp/newgrp.c 246553 2013-02-08 14:14:00Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
 #include <err.h>
 #include <errno.h>
 #include <grp.h>
-#include <libgen.h>
 #include <limits.h>
 #include <login_cap.h>
 #include <paths.h>
@@ -290,7 +291,7 @@ loginshell(void)
 	if (ticket != NULL)
 		setenv("KRBTKFILE", ticket, 1);
 
-	if (asprintf(args, "-%s", basename(shell)) < 0)
+	if (asprintf(args, "-%s", shell) < 0)
 		err(1, "asprintf");
 	args[1] = NULL;
 
@@ -306,6 +307,6 @@ doshell(void)
 	shell = pwd->pw_shell;
 	if (*shell == '\0')
 		shell = _PATH_BSHELL;
-	execl(shell, basename(shell), (char *)NULL);
+	execl(shell, shell, (char *)NULL);
 	err(1, "%s", shell);
 }

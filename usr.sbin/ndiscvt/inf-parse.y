@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ndiscvt/inf-parse.y 243906 2012-12-05 20:28:44Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <sys/types.h>

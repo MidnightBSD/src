@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/bktr/bktr_os.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD$ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -6,7 +6,7 @@
  * chipset.
  * Copyright Roger Hardiman and Amancio Hasty.
  *
- * bktr_os : This has all the Operating System dependant code.
+ * bktr_os : This has all the Operating System dependent code.
  *
  */
 

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/beri/beri_pic.c 257522 2013-11-01 20:28:13Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -253,6 +253,9 @@ bp_set_counter_name(device_t ic, device_t child, int src)
 static int
 beripic_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "sri-cambridge,beri-pic"))
 		return (ENXIO);

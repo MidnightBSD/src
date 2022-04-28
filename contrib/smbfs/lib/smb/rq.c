@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: rq.c,v 1.7 2001/04/16 04:33:01 bp Exp $
- * $FreeBSD: release/10.0.0/contrib/smbfs/lib/smb/rq.c 136700 2004-10-19 17:44:31Z obrien $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -86,7 +86,7 @@ smb_rq_wend(struct smb_rq *rqp)
 }
 
 int
-smb_rq_dmem(struct mbdata *mbp, const char *src, size_t size)
+smb_rq_dmem(struct mbdata *mbp, char *src, size_t size)
 {
 	struct mbuf *m;
 	char * dst;
@@ -118,7 +118,7 @@ smb_rq_dmem(struct mbdata *mbp, const char *src, size_t size)
 }
 
 int
-smb_rq_dstring(struct mbdata *mbp, const char *s)
+smb_rq_dstring(struct mbdata *mbp, char *s)
 {
 	return smb_rq_dmem(mbp, s, strlen(s) + 1);
 }

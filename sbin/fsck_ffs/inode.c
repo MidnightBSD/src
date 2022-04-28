@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/inode.c 248658 2013-03-23 20:00:02Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/inode.c 248658 2013-03-23 20:00
 
 static ino_t startinum;
 
-static int iblock(struct inodesc *, long ilevel, off_t isize, int type);
+static int iblock(struct inodesc *, off_t isize, int type);
 
 int
 ckinode(union dinode *dp, struct inodesc *idesc)
@@ -67,6 +67,8 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 	if (idesc->id_fix != IGNORE)
 		idesc->id_fix = DONTKNOW;
 	idesc->id_lbn = -1;
+	idesc->id_lballoc = -1;
+	idesc->id_level = 0;
 	idesc->id_entryno = 0;
 	idesc->id_filesize = DIP(dp, di_size);
 	mode = DIP(dp, di_mode) & IFMT;
@@ -100,7 +102,7 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 					printf(
 					    "YOU MUST RERUN FSCK AFTERWARDS\n");
 					rerun = 1;
-					inodirty();
+					inodirty(dp);
 
 				}
 			}
@@ -119,14 +121,15 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 	sizepb = sblock.fs_bsize;
 	for (i = 0; i < NIADDR; i++) {
 		sizepb *= NINDIR(&sblock);
+		idesc->id_level = i + 1;
 		if (DIP(&dino, di_ib[i])) {
 			idesc->id_blkno = DIP(&dino, di_ib[i]);
-			ret = iblock(idesc, i + 1, remsize, BT_LEVEL1 + i);
+			ret = iblock(idesc, remsize, BT_LEVEL1 + i);
 			if (ret & STOP)
 				return (ret);
-		} else {
+		} else if (remsize > 0) {
 			idesc->id_lbn += sizepb / sblock.fs_bsize;
-			if (idesc->id_type == DATA && remsize > 0) {
+			if (idesc->id_type == DATA) {
 				/* An empty block in a directory XXX */
 				getpathname(pathbuf, idesc->id_number,
 						idesc->id_number);
@@ -140,7 +143,7 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 					printf(
 					    "YOU MUST RERUN FSCK AFTERWARDS\n");
 					rerun = 1;
-					inodirty();
+					inodirty(dp);
 					break;
 				}
 			}
@@ -151,7 +154,7 @@ ckinode(union dinode *dp, struct inodesc *idesc)
 }
 
 static int
-iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
+iblock(struct inodesc *idesc, off_t isize, int type)
 {
 	struct bufarea *bp;
 	int i, n, (*func)(struct inodesc *), nif;
@@ -169,8 +172,8 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
 	if (chkrange(idesc->id_blkno, idesc->id_numfrags))
 		return (SKIP);
 	bp = getdatablk(idesc->id_blkno, sblock.fs_bsize, type);
-	ilevel--;
-	for (sizepb = sblock.fs_bsize, i = 0; i < ilevel; i++)
+	idesc->id_level--;
+	for (sizepb = sblock.fs_bsize, i = 0; i < idesc->id_level; i++)
 		sizepb *= NINDIR(&sblock);
 	if (howmany(isize, sizepb) > NINDIR(&sblock))
 		nif = NINDIR(&sblock);
@@ -192,19 +195,21 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
 		flush(fswritefd, bp);
 	}
 	for (i = 0; i < nif; i++) {
-		if (ilevel == 0)
-			idesc->id_lbn++;
 		if (IBLK(bp, i)) {
 			idesc->id_blkno = IBLK(bp, i);
-			if (ilevel == 0)
+			if (idesc->id_level == 0) {
+				idesc->id_lbn++;
 				n = (*func)(idesc);
-			else
-				n = iblock(idesc, ilevel, isize, type);
+			} else {
+				n = iblock(idesc, isize, type);
+				idesc->id_level++;
+			}
 			if (n & STOP) {
 				bp->b_flags &= ~B_INUSE;
 				return (n);
 			}
 		} else {
+			idesc->id_lbn += sizepb / sblock.fs_bsize;
 			if (idesc->id_type == DATA && isize > 0) {
 				/* An empty block in a directory XXX */
 				getpathname(pathbuf, idesc->id_number,
@@ -219,7 +224,7 @@ iblock(struct inodesc *idesc, long ilevel, off_t isize, int type)
 					printf(
 					    "YOU MUST RERUN FSCK AFTERWARDS\n");
 					rerun = 1;
-					inodirty();
+					inodirty(dp);
 					bp->b_flags &= ~B_INUSE;
 					return(STOP);
 				}
@@ -290,10 +295,10 @@ ginode(ino_t inumber)
 	if (startinum == 0 ||
 	    inumber < startinum || inumber >= startinum + INOPB(&sblock)) {
 		iblk = ino_to_fsba(&sblock, inumber);
-		if (pbp != 0)
+		if (pbp != NULL)
 			pbp->b_flags &= ~B_INUSE;
 		pbp = getdatablk(iblk, sblock.fs_bsize, BT_INODES);
-		startinum = (inumber / INOPB(&sblock)) * INOPB(&sblock);
+		startinum = rounddown(inumber, INOPB(&sblock));
 	}
 	if (sblock.fs_magic == FS_UFS1_MAGIC)
 		return ((union dinode *)
@@ -451,8 +456,10 @@ cacheino(union dinode *dp, ino_t inumber)
 
 	if (howmany(DIP(dp, di_size), sblock.fs_bsize) > NDADDR)
 		blks = NDADDR + NIADDR;
-	else
+	else if (DIP(dp, di_size) > 0)
 		blks = howmany(DIP(dp, di_size), sblock.fs_bsize);
+	else
+		blks = 1;
 	inp = (struct inoinfo *)
 		Malloc(sizeof(*inp) + (blks - 1) * sizeof(ufs2_daddr_t));
 	if (inp == NULL)
@@ -465,15 +472,15 @@ cacheino(union dinode *dp, ino_t inumber)
 	inp->i_number = inumber;
 	inp->i_isize = DIP(dp, di_size);
 	inp->i_numblks = blks;
-	for (i = 0; i < (blks < NDADDR ? blks : NDADDR); i++)
+	for (i = 0; i < MIN(blks, NDADDR); i++)
 		inp->i_blks[i] = DIP(dp, di_db[i]);
 	if (blks > NDADDR)
 		for (i = 0; i < NIADDR; i++)
 			inp->i_blks[NDADDR + i] = DIP(dp, di_ib[i]);
 	if (inplast == listmax) {
 		listmax += 100;
-		inpsort = (struct inoinfo **)realloc((char *)inpsort,
-		    (unsigned)listmax * sizeof(struct inoinfo *));
+		inpsort = (struct inoinfo **)reallocarray((char *)inpsort,
+		    listmax, sizeof(struct inoinfo *));
 		if (inpsort == NULL)
 			errx(EEXIT, "cannot increase directory list");
 	}
@@ -515,7 +522,7 @@ inocleanup(void)
 }
 
 void
-inodirty(void)
+inodirty(union dinode *dp)
 {
 
 	dirty(pbp);
@@ -540,7 +547,7 @@ clri(struct inodesc *idesc, const char *type, int flag)
 			(void)ckinode(dp, idesc);
 			inoinfo(idesc->id_number)->ino_state = USTATE;
 			clearinode(dp);
-			inodirty();
+			inodirty(dp);
 		} else {
 			cmd.value = idesc->id_number;
 			cmd.size = -DIP(dp, di_nlink);
@@ -608,7 +615,7 @@ pinode(ino_t ino)
 		return;
 	dp = ginode(ino);
 	printf(" OWNER=");
-	if ((pw = getpwuid((int)DIP(dp, di_uid))) != 0)
+	if ((pw = getpwuid((int)DIP(dp, di_uid))) != NULL)
 		printf("%s ", pw->pw_name);
 	else
 		printf("%u ", (unsigned)DIP(dp, di_uid));
@@ -707,7 +714,7 @@ allocino(ino_t request, int type)
 	DIP_SET(dp, di_size, sblock.fs_fsize);
 	DIP_SET(dp, di_blocks, btodb(sblock.fs_fsize));
 	n_files++;
-	inodirty();
+	inodirty(dp);
 	inoinfo(ino)->ino_type = IFTODT(type);
 	return (ino);
 }
@@ -728,7 +735,7 @@ freeino(ino_t ino)
 	dp = ginode(ino);
 	(void)ckinode(dp, &idesc);
 	clearinode(dp);
-	inodirty();
+	inodirty(dp);
 	inoinfo(ino)->ino_state = USTATE;
 	n_files--;
 }

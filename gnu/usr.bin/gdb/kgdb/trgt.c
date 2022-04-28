@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/trgt.c 246893 2013-02-17 02:15:19Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -53,6 +53,18 @@ __FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/gdb/kgdb/trgt.c 246893 2013-02-17
 
 #include "kgdb.h"
 
+#ifdef CROSS_DEBUGGER
+/*
+ * We suppress the call to add_target() of core_ops in corelow.c because if
+ * there are multiple core_stratum targets, the find_core_target() function
+ * won't know which one to return and returns none. We need it to return
+ * our target. We only have to do that when we're building a cross-debugger
+ * because fbsd-threads.c is part of a native debugger and it too defines
+ * coreops_suppress_target with 1 as the initializer.
+ */
+int coreops_suppress_target = 1;
+#endif
+
 static CORE_ADDR stoppcbs;
 
 static void	kgdb_core_cleanup(void *);
@@ -64,7 +76,20 @@ kvm_t *kvm;
 static char kvm_err[_POSIX2_LINE_MAX];
 
 #define	KERNOFF		(kgdb_kernbase ())
-#define	INKERNEL(x)	((x) >= KERNOFF)
+#define	PINKERNEL(x)	((x) >= KERNOFF)
+
+static int
+kgdb_resolve_symbol(const char *name, kvaddr_t *kva)
+{
+	struct minimal_symbol *ms;
+
+	ms = lookup_minimal_symbol (name, NULL, NULL);
+	if (ms == NULL)
+		return (1);
+
+	*kva = SYMBOL_VALUE_ADDRESS (ms);
+	return (0);
+}
 
 static CORE_ADDR
 kgdb_kernbase (void)
@@ -108,8 +133,8 @@ kgdb_trgt_open(char *filename, int from_tty)
 
 	old_chain = make_cleanup (xfree, filename);
 
-	nkvm = kvm_openfiles(bfd_get_filename(exec_bfd), filename, NULL,
-	    write_files ? O_RDWR : O_RDONLY, kvm_err);
+	nkvm = kvm_open2(bfd_get_filename(exec_bfd), filename,
+	    write_files ? O_RDWR : O_RDONLY, kvm_err, kgdb_resolve_symbol);
 	if (nkvm == NULL)
 		error ("Failed to open vmcore: %s", kvm_err);
 
@@ -242,7 +267,7 @@ kgdb_trgt_xfer_memory(CORE_ADDR memaddr, char *myaddr, int len, int write,
 		if (len == 0)
 			return (0);
 		if (!write)
-			return (kvm_read(kvm, memaddr, myaddr, len));
+			return (kvm_read2(kvm, memaddr, myaddr, len));
 		else
 			return (kvm_write(kvm, memaddr, myaddr, len));
 	}
@@ -284,7 +309,7 @@ kgdb_set_proc_cmd (char *arg, int from_tty)
 
 	addr = (CORE_ADDR) parse_and_eval_address (arg);
 
-	if (!INKERNEL (addr)) {
+	if (!PINKERNEL (addr)) {
 		thr = kgdb_thr_lookup_pid((int)addr);
 		if (thr == NULL)
 			error ("invalid pid");
@@ -307,7 +332,7 @@ kgdb_set_tid_cmd (char *arg, int from_tty)
 
 	addr = (CORE_ADDR) parse_and_eval_address (arg);
 
-	if (kvm != NULL && INKERNEL (addr)) {
+	if (kvm != NULL && PINKERNEL (addr)) {
 		thr = kgdb_thr_lookup_taddr(addr);
 		if (thr == NULL)
 			error("invalid thread address");

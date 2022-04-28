@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_user.c 248973 2013-04-01 13:18:34Z mav $
+ * $FreeBSD$
  */
 
 #include <dev/tws/tws.h>
@@ -41,7 +41,7 @@
 
 
 int tws_ioctl(struct cdev *dev, long unsigned int cmd, caddr_t buf, int flags, 
-                                                    d_thread_t *proc);
+                                                    struct thread *td);
 void tws_passthru_complete(struct tws_request *req);
 extern void tws_circular_aenq_insert(struct tws_softc *sc,
                     struct tws_circular_q *cq, struct tws_event_packet *aen);
@@ -60,7 +60,7 @@ extern void tws_timeout(void *arg);
 
 int
 tws_ioctl(struct cdev *dev, u_long cmd, caddr_t buf, int flags, 
-                                                    d_thread_t *proc)
+                                                    struct thread *td)
 {
     struct tws_softc *sc = (struct tws_softc *)(dev->si_drv1);
     int error;
@@ -90,9 +90,13 @@ tws_passthru(struct tws_softc *sc, void *buf)
     struct tws_request *req;
     struct tws_ioctl_no_data_buf *ubuf = (struct tws_ioctl_no_data_buf *)buf;
     int error;
+    u_int32_t buffer_length;
     u_int16_t lun4;
 
-
+    buffer_length = roundup2(ubuf->driver_pkt.buffer_length, 512);
+    if ( buffer_length > TWS_MAX_IO_SIZE ) {
+        return(EINVAL);
+    }
     if ( tws_get_state(sc) != TWS_ONLINE) {
         return(EBUSY);
     }
@@ -103,8 +107,7 @@ tws_passthru(struct tws_softc *sc, void *buf)
     do {
         req = tws_get_request(sc, TWS_REQ_TYPE_PASSTHRU);
         if ( !req ) {
-            sc->chan = (void *)sc;
-            error = tsleep(sc->chan,  0, "tws_sleep", TWS_IOCTL_TIMEOUT*hz);
+            error = tsleep(sc,  0, "tws_sleep", TWS_IOCTL_TIMEOUT*hz);
             if ( error == EWOULDBLOCK ) {
                 return(ETIMEDOUT);
             }
@@ -117,7 +120,7 @@ tws_passthru(struct tws_softc *sc, void *buf)
         }
     } while(1);
 
-    req->length = (ubuf->driver_pkt.buffer_length + 511) & ~511;
+    req->length = buffer_length;
     TWS_TRACE_DEBUG(sc, "datal,rid", req->length, req->request_id);
     if ( req->length ) {
         req->data = sc->ioctl_data_mem;
@@ -203,7 +206,7 @@ out_data:
     //
     req->state = TWS_REQ_STATE_FREE;
 
-    wakeup_one(sc->chan);
+    wakeup_one(sc);
 
     return(error);
 }

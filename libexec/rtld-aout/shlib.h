@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: release/10.0.0/libexec/rtld-aout/shlib.h 140241 2005-01-14 12:22:57Z delphij $
+ * $FreeBSD$
  */
 
 /*

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ic/via6522reg.h 153030 2005-12-02 22:36:14Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef _VIA6522REG_H_

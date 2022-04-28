@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_hdm.h 241753 2012-10-19 22:07:40Z delphij $
+ * $FreeBSD$
  */
 
 
@@ -410,7 +410,7 @@ struct tws_request {
     void         (*cb)(struct tws_request *);      /* callback func */
     bus_dmamap_t dma_map;        /* dma map */
     union ccb    *ccb_ptr;       /* pointer to ccb */
-    struct callout_handle thandle; /* handle to req timeout */
+    struct callout timeout;	 /* request timeout timer */
     struct tws_softc *sc;        /* pointer back to ctlr softc */
 
     struct tws_request *next;    /* pointer to next request */

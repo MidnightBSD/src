@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/fdread/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	fdread
 SRCS=	fdread.c fdutil.c

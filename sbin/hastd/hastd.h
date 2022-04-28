@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/hastd/hastd.h 218044 2011-01-28 21:56:47Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_HASTD_H_

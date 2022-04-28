@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/arswitch/arswitch_8226.h 235288 2012-05-11 20:53:20Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__ARSWITCH_8226_H__
 #define	__ARSWITCH_8226_H__

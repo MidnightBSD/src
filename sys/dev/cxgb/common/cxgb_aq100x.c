@@ -28,7 +28,7 @@ POSSIBILITY OF SUCH DAMAGE.
 ***************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_aq100x.c 228825 2011-12-23 01:39:10Z np $");
+__FBSDID("$FreeBSD$");
 
 #include <cxgb_include.h>
 
@@ -350,7 +350,7 @@ aq100x_set_speed_duplex(struct cphy *phy, int speed, int duplex)
 }
 
 static int
-aq100x_get_link_status(struct cphy *phy, int *link_ok, int *speed, int *duplex,
+aq100x_get_link_status(struct cphy *phy, int *link_state, int *speed, int *duplex,
 		       int *fc)
 {
 	int err;
@@ -440,8 +440,8 @@ aq100x_get_link_status(struct cphy *phy, int *link_ok, int *speed, int *duplex,
 
 	link = 1;
 done:
-	if (link_ok)
-		*link_ok = link;
+	if (link_state)
+		*link_state = link ? PHY_LINK_UP : PHY_LINK_DOWN;
 	return (0);
 }
 

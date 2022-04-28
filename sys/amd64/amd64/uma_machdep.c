@@ -25,13 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/uma_machdep.c 243040 2012-11-14 20:01:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
+#include <sys/vmmeter.h>
 #include <vm/vm.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
@@ -41,25 +42,17 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/uma_machdep.c 243040 2012-11-
 #include <machine/vmparam.h>
 
 void *
-uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
+uma_small_alloc(uma_zone_t zone, vm_size_t bytes, u_int8_t *flags, int wait)
 {
 	vm_page_t m;
 	vm_paddr_t pa;
 	void *va;
-	int pflags;
 
 	*flags = UMA_SLAB_PRIV;
-	pflags = malloc2vm_flags(wait) | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED;
-	for (;;) {
-		m = vm_page_alloc(NULL, 0, pflags);
-		if (m == NULL) {
-			if (wait & M_NOWAIT)
-				return (NULL);
-			else
-				VM_WAIT;
-		} else
-			break;
-	}
+	m = vm_page_alloc(NULL, 0,
+	    malloc2vm_flags(wait) | VM_ALLOC_NOOBJ | VM_ALLOC_WIRED);
+	if (m == NULL)
+		return (NULL);
 	pa = m->phys_addr;
 	if ((wait & M_NODUMP) == 0)
 		dump_add_page(pa);
@@ -70,7 +63,7 @@ uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 }
 
 void
-uma_small_free(void *mem, int size, u_int8_t flags)
+uma_small_free(void *mem, vm_size_t size, u_int8_t flags)
 {
 	vm_page_t m;
 	vm_paddr_t pa;
@@ -80,5 +73,5 @@ uma_small_free(void *mem, int size, u_int8_t flags)
 	m = PHYS_TO_VM_PAGE(pa);
 	m->wire_count--;
 	vm_page_free(m);
-	atomic_subtract_int(&cnt.v_wire_count, 1);
+	atomic_subtract_int(&vm_cnt.v_wire_count, 1);
 }

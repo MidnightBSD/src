@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/auditdistd 244181 2012-12-13 09:41:32Z pjd $
+# $FreeBSD$
 #
 
 # PROVIDE: auditdistd
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="auditdistd"
+desc="Audit trail files distribution daemon"
 rcvar="${name}_enable"
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/${name}"

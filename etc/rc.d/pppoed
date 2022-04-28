@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/pppoed 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: pppoed
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="pppoed"
+desc="Handle incoming PPP over Ethernet connections"
 rcvar="pppoed_enable"
 start_cmd="pppoed_start"
 # XXX stop_cmd will not be straightforward

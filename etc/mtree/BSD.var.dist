@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/mtree/BSD.var.dist 258762 2013-11-30 07:03:18Z delphij $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -9,9 +9,9 @@
     ..
     at
 /set uname=daemon
-        jobs
+        jobs            tags=package=at
         ..
-        spool
+        spool           tags=package=at
         ..
 /set uname=root
     ..
@@ -28,7 +28,7 @@
 /set gname=wheel
     backups
     ..
-    cache		mode=0755
+    cache               mode=0755
     ..
     crash
     ..
@@ -42,13 +42,21 @@
         ..
         freebsd-update  mode=0700
         ..
+        hyperv          mode=0700
+        ..
         ipf             mode=0700
+        ..
+        ntp             mode=0700
         ..
         pkg
         ..
         ports
         ..
         portsnap
+        ..
+        zfsd
+            cases
+            ..
         ..
     ..
     empty           mode=0555 flags=schg
@@ -74,6 +82,8 @@
     rwho            gname=daemon mode=0775
     ..
     spool
+        dma             uname=root gname=mail mode=0770
+        ..
         lock            uname=uucp gname=dialer mode=0775
         ..
 /set gname=daemon
@@ -93,7 +103,9 @@
         vi.recover      mode=01777
         ..
     ..
-    unbound         uname=unbound gname=unbound mode=0755
+    unbound         uname=unbound gname=unbound mode=0755 tags=package=unbound
+        conf.d          uname=unbound gname=unbound mode=0755 tags=package=unbound
+        ..
     ..
     yp
     ..

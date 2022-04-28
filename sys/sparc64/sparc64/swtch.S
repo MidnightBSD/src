@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/swtch.S 226054 2011-10-06 11:01:31Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/asmacros.h>
 #include <machine/asi.h>
@@ -173,8 +173,7 @@ ENTRY(cpu_switch)
 	 * active on this CPU.
 	 */
 	mov	_NCPUBITS, %l5
-	mov	%g0, %y
-	udiv	%l3, %l5, %l6
+	udivx	%l3, %l5, %l6
 	srl	%l6, 0, %l4
 	sllx	%l4, PTR_SHIFT, %l4
 	add	%l4, PM_ACTIVE, %l4
@@ -242,8 +241,7 @@ ENTRY(cpu_switch)
 	 * Mark the pmap as active on this CPU.
 	 */
 	mov	_NCPUBITS, %l5
-	mov	%g0, %y
-	udiv	%l3, %l5, %l6
+	udivx	%l3, %l5, %l6
 	srl	%l6, 0, %l4
 	sllx	%l4, PTR_SHIFT, %l4
 	add	%l4, PM_ACTIVE, %l4

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: release/10.0.0/sys/amd64/include/cpu.h 255744 2013-09-20 22:59:22Z gibbs $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -63,14 +63,17 @@
 struct cpu_ops {
 	void (*cpu_init)(void);
 	void (*cpu_resume)(void);
-	void (*ipi_vectored)(u_int, int);
 };
 
 extern struct	cpu_ops cpu_ops;
 extern char	btext[];
 extern char	etext[];
 
+/* Resume hook for VMM. */
+extern	void (*vmm_resume_p)(void);
+
 void	cpu_halt(void);
+void	cpu_lock_delay(void);
 void	cpu_reset(void);
 void	fork_trampoline(void);
 void	swi_vm(void *);

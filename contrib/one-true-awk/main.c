@@ -23,7 +23,7 @@ THIS SOFTWARE.
 ****************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/one-true-awk/main.c 244988 2013-01-03 07:25:30Z delphij $");
+__FBSDID("$FreeBSD$");
 
 const char	*version = "version 20121220 (FreeBSD)";
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	signal(SIGFPE, fpecatch);
 
 	srand_seed = 1;
-	srand(srand_seed);
+	srandom((unsigned long) srand_seed);
 
 	yyin = NULL;
 	symtab = makesymtab(NSYMTAB/NSYMTAB);

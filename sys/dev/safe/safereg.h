@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/safe/safereg.h 117845 2003-07-21 21:46:07Z sam $
+ * $FreeBSD$
  */
 #ifndef _SAFE_SAFEREG_H_
 #define	_SAFE_SAFEREG_H_

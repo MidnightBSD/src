@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/tools/tools/vhba/medium/vhba_medium.c 208926 2010-06-08 22:26:47Z mjacob $ */
+/* $FreeBSD$ */
 /*
  * A VHBA device that has a medium number of device.
  */

@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/pic.h 233563 2012-03-27 15:39:55Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef _NLM_HAL_PIC_H
@@ -168,13 +168,8 @@
 #define	PIC_IRT_TIMER_INDEX(num)	((num) + PIC_IRT_TIMER_0_INDEX)
 
 #define	PIC_CLOCK_TIMER			7
-#define	PIC_IRQ_BASE			8
 
 #if !defined(LOCORE) && !defined(__ASSEMBLY__)
-
-#define	PIC_IRT_FIRST_IRQ		(PIC_IRQ_BASE)
-#define	PIC_IRT_LAST_IRQ		63
-#define	XLP_IRQ_IS_PICINTR(irq)		((irq) >= PIC_IRT_FIRST_IRQ)
 
 /*
  *   Misc

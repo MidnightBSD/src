@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/rescue/Files/root/.cshrc 188482 2009-02-11 12:15:35Z mr $
+# $FreeBSD$
 #
 #csh .cshrc file
 
@@ -11,7 +11,7 @@
 	a lm	'll | more'
 	a m	more
 
-set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin /usr/X11R6/bin /usr/local/jdk1.6.0/bin /usr/local/jdk1.5.0/bin $HOME/bin)
+set path = (/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin /usr/X11R6/bin /usr/local/jdk1.6.0/bin /usr/local/jdk1.5.0/bin $HOME/bin)
 setenv MANPATH "/usr/share/man:/usr/X11R6/man:/usr/local/man"
 
 setenv	PAGER	more

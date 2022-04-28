@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 The FreeBSD Project
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/asf/asf_kvm.c 159720 2006-06-18 11:14:40Z yar $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -35,6 +37,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/asf/asf_kvm.c 159720 2006-06-18 11:1
 #include <kvm.h>
 #include <limits.h>
 #include <nlist.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 

@@ -55,7 +55,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/dev/sym/sym_conf.h 237101 2012-06-14 20:49:22Z marius $ */
+/* $FreeBSD$ */
 
 #ifndef SYM_CONF_H
 #define SYM_CONF_H

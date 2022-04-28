@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/direntry.h 203827 2010-02-13 12:41:07Z kib $ */
+/* $FreeBSD$ */
 /*	$NetBSD: direntry.h,v 1.14 1997/11/17 15:36:32 ws Exp $	*/
 
 /*-
@@ -145,7 +145,7 @@ struct msdosfsmount;
 
 char	*mbnambuf_flush(struct mbnambuf *nbp, struct dirent *dp);
 void	mbnambuf_init(struct mbnambuf *nbp);
-void	mbnambuf_write(struct mbnambuf *nbp, char *name, int id);
+int	mbnambuf_write(struct mbnambuf *nbp, char *name, int id);
 int	dos2unixfn(u_char dn[11], u_char *un, int lower,
 	    struct msdosfsmount *pmp);
 int	unix2dosfn(const u_char *un, u_char dn[12], size_t unlen, u_int gen,

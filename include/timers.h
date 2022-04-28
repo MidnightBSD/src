@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/timers.h 50473 1999-08-27 23:45:13Z peter $
+ * $FreeBSD$
  *
  * Description : Basic timers header.
  *

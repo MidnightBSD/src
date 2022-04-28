@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_pentium.h 184802 2008-11-09 17:37:54Z jkoshy $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar933x_chip.h 248782 2013-03-27 03:38:58Z adrian $ */
+/* $FreeBSD$ */
 
 #ifndef	__AR933X_CHIP_H__
 #define	__AR933X_CHIP_H__

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fwrite.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fwrite.c 253277 2013-07-12 17:37:05Z schweikh $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -50,7 +50,8 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fwrite.c 253277 2013-07-12 17:
  * Return the number of whole objects written.
  */
 size_t
-fwrite(const void * __restrict buf, size_t size, size_t count, FILE * __restrict fp)
+fwrite_unlocked(const void * __restrict buf, size_t size, size_t count,
+    FILE * __restrict fp)
 {
 	size_t n;
 	struct __suio uio;
@@ -82,7 +83,6 @@ fwrite(const void * __restrict buf, size_t size, size_t count, FILE * __restrict
 	uio.uio_iov = &iov;
 	uio.uio_iovcnt = 1;
 
-	FLOCKFILE(fp);
 	ORIENT(fp, -1);
 	/*
 	 * The usual case is success (__sfvwrite returns 0);
@@ -91,6 +91,17 @@ fwrite(const void * __restrict buf, size_t size, size_t count, FILE * __restrict
 	 */
 	if (__sfvwrite(fp, &uio) != 0)
 	    count = (n - uio.uio_resid) / size;
-	FUNLOCKFILE(fp);
 	return (count);
+}
+
+size_t
+fwrite(const void * __restrict buf, size_t size, size_t count,
+    FILE * __restrict fp)
+{
+	size_t n;
+
+	FLOCKFILE_CANCELSAFE(fp);
+	n = fwrite_unlocked(buf, size, count, fp);
+	FUNLOCKFILE_CANCELSAFE();
+	return (n);
 }

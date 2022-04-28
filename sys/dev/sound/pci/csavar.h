@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/csavar.h 147626 2005-06-27 07:43:57Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _CSA_VAR_H

@@ -22,13 +22,15 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/uninorthvar.h 230993 2012-02-04 19:54:13Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef	_POWERPC_POWERMAC_UNINORTHVAR_H_
 #define	_POWERPC_POWERMAC_UNINORTHVAR_H_
 
-#include <powerpc/ofw/ofw_pci.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#include <dev/ofw/ofw_pci.h>
+#include <dev/ofw/ofwpci.h>
 
 struct uninorth_softc {
 	struct ofw_pci_softc	pci_sc;
@@ -38,9 +40,9 @@ struct uninorth_softc {
 };
 
 struct unin_chip_softc {
-	u_int32_t		sc_physaddr;
+	uint64_t		sc_physaddr;
+	uint64_t		sc_size;
 	vm_offset_t		sc_addr;
-	u_int32_t		sc_size;
 	struct rman  		sc_mem_rman;
 	int			sc_version;
 };
@@ -76,10 +78,30 @@ struct unin_chip_devinfo {
 #define UNIN_CLOCKCNTL_GMAC	0x2
 
 /*
+ * Power management register
+ */
+#define UNIN_PWR_MGMT		0x30
+#define UNIN_PWR_NORMAL		0x00
+#define UNIN_PWR_IDLE2		0x01
+#define UNIN_PWR_SLEEP		0x02
+#define UNIN_PWR_SAVE		0x03
+#define UNIN_PWR_MASK		0x03
+
+/*
+ * Hardware initialization state register
+ */
+#define UNIN_HWINIT_STATE	0x70
+#define UNIN_SLEEPING		0x01
+#define UNIN_RUNNING		0x02
+
+
+/*
  * Toggle registers
  */
 #define UNIN_TOGGLE_REG		0xe0
 #define UNIN_MPIC_RESET		0x2
 #define UNIN_MPIC_OUTPUT_ENABLE	0x4
 
+extern int unin_chip_sleep(device_t dev, int idle);
+extern int unin_chip_wake(device_t dev);
 #endif  /* _POWERPC_POWERMAC_UNINORTHVAR_H_ */

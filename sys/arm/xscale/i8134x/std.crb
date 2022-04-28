@@ -1,5 +1,5 @@
 #CRB board configuration
-#$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/std.crb 171626 2007-07-27 14:50:57Z cognet $
+#$FreeBSD$
 include		"../xscale/i8134x/std.i81342"
 files		"../xscale/i8134x/files.crb"
 makeoptions	KERNPHYSADDR=0x00200000

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/local 179931 2008-06-22 16:23:39Z mtm $
+# $FreeBSD$
 #
 
 # PROVIDE: local
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="local"
+desc="Run /etc/rc.local and /etc/shutdown.local"
 start_cmd="local_start"
 stop_cmd="local_stop"
 

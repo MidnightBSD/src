@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/elf-hints.h 76224 2001-05-02 23:56:21Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef	_ELF_HINTS_H_

@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 2006-2010 Broadcom Corporation
- *	David Christensen <davidch@broadcom.com>.  All rights reserved.
+ * Copyright (c) 2006-2014 QLogic Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,9 +9,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -26,56 +22,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/bce/if_bcereg.h 252402 2013-06-30 05:12:18Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_BCEREG_H_DEFINED
 #define _BCEREG_H_DEFINED
-
-#include <sys/param.h>
-#include <sys/endian.h>
-#include <sys/systm.h>
-#include <sys/sockio.h>
-#include <sys/mbuf.h>
-#include <sys/malloc.h>
-#include <sys/kernel.h>
-#include <sys/module.h>
-#include <sys/socket.h>
-#include <sys/sysctl.h>
-#include <sys/queue.h>
-
-#include <net/bpf.h>
-#include <net/ethernet.h>
-#include <net/if.h>
-#include <net/if_arp.h>
-#include <net/if_dl.h>
-#include <net/if_media.h>
-
-#include <net/if_types.h>
-#include <net/if_vlan_var.h>
-
-#include <netinet/in_systm.h>
-#include <netinet/in.h>
-#include <netinet/if_ether.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-
-#include <machine/bus.h>
-#include <machine/resource.h>
-#include <sys/bus.h>
-#include <sys/rman.h>
-
-#include <dev/mii/mii.h>
-#include <dev/mii/miivar.h>
-#include "miidevs.h"
-#include <dev/mii/brgphyreg.h>
-
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
-
-#include "miibus_if.h"
 
 /****************************************************************************/
 /* Conversion to FreeBSD type definitions.                                  */
@@ -468,7 +419,7 @@
 /* Returns FALSE in "defects" per 2^31 - 1 calls, otherwise returns TRUE. */
 #define DB_RANDOMFALSE(defects)        (random() > defects)
 #define DB_OR_RANDOMFALSE(defects)  || (random() > defects)
-#define DB_AND_RANDOMFALSE(defects) && (random() > ddfects)
+#define DB_AND_RANDOMFALSE(defects) && (random() > defects)
 
 /* Returns TRUE in "defects" per 2^31 - 1 calls, otherwise returns FALSE. */
 #define DB_RANDOMTRUE(defects)         (random() < defects)
@@ -6138,7 +6089,7 @@ struct l2_fhdr {
 /****************************************************************************/
 /* The following definitions refer to pre-defined locations in processor    */
 /* memory space which allows the driver to enable particular functionality  */
-/* within the firmware or read specfic information about the running        */
+/* within the firmware or read specific information about the running        */
 /* firmware.                                                                */
 /****************************************************************************/
 
@@ -6223,7 +6174,7 @@ struct l2_fhdr {
 #define RX_IDX(x) ((x) & USABLE_RX_BD_PER_PAGE)
 
 /*
- * To accomodate jumbo frames, the page chain should
+ * To accommodate jumbo frames, the page chain should
  * be 4 times larger than the receive chain.
  */
 #define DEFAULT_PG_PAGES		(DEFAULT_RX_PAGES * 4)
@@ -6354,8 +6305,8 @@ struct fw_info {
 
 #define BCE_TX_TIMEOUT		5
 
-#define BCE_MAX_SEGMENTS	32
-#define BCE_TSO_MAX_SIZE	65536
+#define BCE_MAX_SEGMENTS	35
+#define BCE_TSO_MAX_SIZE	(65535 + sizeof(struct ether_vlan_header))
 #define BCE_TSO_MAX_SEG_SIZE	4096
 
 #define BCE_DMA_ALIGN		8
@@ -6741,6 +6692,7 @@ struct bce_softc
 	u32			l2fhdr_error_count;
 	u32			dma_map_addr_tx_failed_count;
 	u32			dma_map_addr_rx_failed_count;
+	u32			watchdog_timeouts;
 
 	/* Host coalescing block command register */
 	u32			hc_command;

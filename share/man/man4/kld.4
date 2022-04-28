@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/kld.4 166690 2007-02-13 17:06:15Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd November 8, 1998
+.Dd January 13, 2014
 .Dt KLD 4
 .Os
 .Sh NAME
@@ -146,7 +146,7 @@ facility provided by
 The
 .Nm
 facility was originally implemented by
-.An Doug Rabson Aq dfr@FreeBSD.org .
+.An Doug Rabson Aq Mt dfr@FreeBSD.org .
 .Sh BUGS
 If a module B, is dependent on another module A, but is not compiled with
 module A as a dependency, then
@@ -166,8 +166,8 @@ binary, then
 fails to execute the entry point.
 .Pp
 .Xr kldload 8
-returns the cryptic message
-.Sq Li "ENOEXEC (Exec format error)"
+points the user to read
+.Xr dmesg 8
 for any error encountered while loading a module.
 .Pp
 When system internal interfaces change, old modules often cannot

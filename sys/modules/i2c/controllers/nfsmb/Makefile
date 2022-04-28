@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/i2c/controllers/nfsmb/Makefile 153618 2005-12-21 15:49:51Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../pci
+.PATH: ${SRCTOP}/sys/dev/nfsmb
 
 KMOD=	nfsmb
 SRCS=	nfsmb.c

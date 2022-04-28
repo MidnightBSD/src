@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/sr.h 214574 2010-10-30 23:07:30Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SR_H_

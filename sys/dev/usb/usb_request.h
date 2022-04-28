@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_request.h 250207 2013-05-03 11:10:04Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

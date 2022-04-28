@@ -1,6 +1,22 @@
 
-# $FreeBSD: release/10.0.0/sys/modules/aic7xxx/Makefile 101131 2002-08-01 01:36:39Z scottl $
+# $FreeBSD$
 
-SUBDIR= aicasm ahc ahd
+SUBDIR= ahc ahd
+
+firmware: aicasm/aicasm ahdfirmware ahcfirmware
+
+aicasm/aicasm:
+	( cd ${.CURDIR}/aicasm ; ${MAKE} aicasm )
+
+ahdfirmware:
+	( cd ${.CURDIR}/ahd ; ${MAKE} ahdfirmware )
+
+ahcfirmware:
+	( cd ${.CURDIR}/ahc ; ${MAKE} ahcfirmware )
+
+cleanfirmware:
+	( cd .${CURDIR}/aicasm ; ${MAKE} clean )
+	( cd .${CURDIR}/ahc ; ${MAKE} cleanfirmware )
+	( cd .${CURDIR}/ahd ; ${MAKE} cleanfirmware )
 
 .include <bsd.subdir.mk>

@@ -5,7 +5,7 @@
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted under any licence of your choise which
-    meets the open source licence definiton
+    meets the open source licence definition
     http://www.opensource.org/opd.html such as the GNU licence or the
     BSD licence.
 
@@ -20,7 +20,7 @@
 
     ---------------------------------------------------------------------- */
 
-/*  $FreeBSD: release/10.0.0/sys/dev/usb/storage/rio500_usb.h 196219 2009-08-14 20:03:53Z jhb $ */
+/*  $FreeBSD$ */
 
 #include <sys/ioccom.h>
 #ifndef USB_VENDOR_DIAMOND

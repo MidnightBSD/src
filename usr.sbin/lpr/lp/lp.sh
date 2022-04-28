@@ -1,6 +1,8 @@
 #!/bin/sh
 #
 #
+# SPDX-License-Identifier: BSD-4-Clause
+#
 # Copyright (c) 1995 Joerg Wunsch
 #
 # All rights reserved.
@@ -36,7 +38,7 @@
 #
 # Posix 1003.2 compliant print spooler interface.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/lpr/lp/lp.sh 197625 2009-09-29 21:28:32Z jilles $
+# $FreeBSD$
 #
 
 ncopies=""

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,8 +28,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/iscsid/iscsid.c 255678 2013-09-18 21:15:21Z trasz $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -35,11 +39,12 @@
 #include <sys/param.h>
 #include <sys/linker.h>
 #include <sys/socket.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/wait.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libutil.h>
 #include <netdb.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -48,8 +53,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <libutil.h>
 
 #include "iscsid.h"
 
@@ -149,8 +152,7 @@ resolve_addr(const struct connection *conn, const char *address,
 }
 
 static struct connection *
-connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
-    int iscsi_fd)
+connection_new(int iscsi_fd, const struct iscsi_daemon_request *request)
 {
 	struct connection *conn;
 	struct addrinfo *from_ai, *to_ai;
@@ -158,7 +160,7 @@ connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
 #ifdef ICL_KERNEL_PROXY
 	struct iscsi_daemon_connect idc;
 #endif
-	int error;
+	int error, sockbuf;
 
 	conn = calloc(1, sizeof(*conn));
 	if (conn == NULL)
@@ -174,14 +176,13 @@ connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
 	conn->conn_max_data_segment_length = 8192;
 	conn->conn_max_burst_length = 262144;
 	conn->conn_first_burst_length = 65536;
-
-	conn->conn_session_id = session_id;
 	conn->conn_iscsi_fd = iscsi_fd;
 
-	/*
-	 * XXX: Should we sanitize this somehow?
-	 */
-	memcpy(&conn->conn_conf, conf, sizeof(conn->conn_conf));
+	conn->conn_session_id = request->idr_session_id;
+	memcpy(&conn->conn_conf, &request->idr_conf, sizeof(conn->conn_conf));
+	memcpy(&conn->conn_isid, &request->idr_isid, sizeof(conn->conn_isid));
+	conn->conn_tsih = request->idr_tsih;
+	memcpy(&conn->conn_limits, &request->idr_limits, sizeof(conn->conn_limits));
 
 	from_addr = conn->conn_conf.isc_initiator_addr;
 	to_addr = conn->conn_conf.isc_target_addr;
@@ -194,30 +195,32 @@ connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
 	resolve_addr(conn, to_addr, &to_ai, false);
 
 #ifdef ICL_KERNEL_PROXY
+	if (conn->conn_conf.isc_iser) {
+		memset(&idc, 0, sizeof(idc));
+		idc.idc_session_id = conn->conn_session_id;
+		if (conn->conn_conf.isc_iser)
+			idc.idc_iser = 1;
+		idc.idc_domain = to_ai->ai_family;
+		idc.idc_socktype = to_ai->ai_socktype;
+		idc.idc_protocol = to_ai->ai_protocol;
+		if (from_ai != NULL) {
+			idc.idc_from_addr = from_ai->ai_addr;
+			idc.idc_from_addrlen = from_ai->ai_addrlen;
+		}
+		idc.idc_to_addr = to_ai->ai_addr;
+		idc.idc_to_addrlen = to_ai->ai_addrlen;
 
-	memset(&idc, 0, sizeof(idc));
-	idc.idc_session_id = conn->conn_session_id;
-	if (conn->conn_conf.isc_iser)
-		idc.idc_iser = 1;
-	idc.idc_domain = to_ai->ai_family;
-	idc.idc_socktype = to_ai->ai_socktype;
-	idc.idc_protocol = to_ai->ai_protocol;
-	if (from_ai != NULL) {
-		idc.idc_from_addr = from_ai->ai_addr;
-		idc.idc_from_addrlen = from_ai->ai_addrlen;
+		log_debugx("connecting to %s using ICL kernel proxy", to_addr);
+		error = ioctl(iscsi_fd, ISCSIDCONNECT, &idc);
+		if (error != 0) {
+			fail(conn, strerror(errno));
+			log_err(1, "failed to connect to %s "
+			    "using ICL kernel proxy: ISCSIDCONNECT", to_addr);
+		}
+
+		return (conn);
 	}
-	idc.idc_to_addr = to_ai->ai_addr;
-	idc.idc_to_addrlen = to_ai->ai_addrlen;
-
-	log_debugx("connecting to %s using ICL kernel proxy", to_addr);
-	error = ioctl(iscsi_fd, ISCSIDCONNECT, &idc);
-	if (error != 0) {
-		fail(conn, strerror(errno));
-		log_err(1, "failed to connect to %s using ICL kernel proxy",
-		    to_addr);
-	}
-
-#else /* !ICL_KERNEL_PROXY */
+#endif /* ICL_KERNEL_PROXY */
 
 	if (conn->conn_conf.isc_iser) {
 		fail(conn, "iSER not supported");
@@ -231,6 +234,14 @@ connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
 		fail(conn, strerror(errno));
 		log_err(1, "failed to create socket for %s", from_addr);
 	}
+	sockbuf = SOCKBUF_SIZE;
+	if (setsockopt(conn->conn_socket, SOL_SOCKET, SO_RCVBUF,
+	    &sockbuf, sizeof(sockbuf)) == -1)
+		log_warn("setsockopt(SO_RCVBUF) failed");
+	sockbuf = SOCKBUF_SIZE;
+	if (setsockopt(conn->conn_socket, SOL_SOCKET, SO_SNDBUF,
+	    &sockbuf, sizeof(sockbuf)) == -1)
+		log_warn("setsockopt(SO_SNDBUF) failed");
 	if (from_ai != NULL) {
 		error = bind(conn->conn_socket, from_ai->ai_addr,
 		    from_ai->ai_addrlen);
@@ -246,8 +257,6 @@ connection_new(unsigned int session_id, const struct iscsi_session_conf *conf,
 		log_err(1, "failed to connect to %s", to_addr);
 	}
 
-#endif /* !ICL_KERNEL_PROXY */
-
 	return (conn);
 }
 
@@ -261,12 +270,10 @@ handoff(struct connection *conn)
 
 	memset(&idh, 0, sizeof(idh));
 	idh.idh_session_id = conn->conn_session_id;
-#ifndef ICL_KERNEL_PROXY
 	idh.idh_socket = conn->conn_socket;
-#endif
 	strlcpy(idh.idh_target_alias, conn->conn_target_alias,
 	    sizeof(idh.idh_target_alias));
-	memcpy(idh.idh_isid, conn->conn_isid, sizeof(idh.idh_isid));
+	idh.idh_tsih = conn->conn_tsih;
 	idh.idh_statsn = conn->conn_statsn;
 	idh.idh_header_digest = conn->conn_header_digest;
 	idh.idh_data_digest = conn->conn_data_digest;
@@ -285,7 +292,9 @@ void
 fail(const struct connection *conn, const char *reason)
 {
 	struct iscsi_daemon_fail idf;
-	int error;
+	int error, saved_errno;
+
+	saved_errno = errno;
 
 	memset(&idf, 0, sizeof(idf));
 	idf.idf_session_id = conn->conn_session_id;
@@ -294,6 +303,8 @@ fail(const struct connection *conn, const char *reason)
 	error = ioctl(conn->conn_iscsi_fd, ISCSIDFAIL, &idf);
 	if (error != 0)
 		log_err(1, "ISCSIDFAIL");
+
+	errno = saved_errno;
 }
 
 /*
@@ -306,10 +317,10 @@ capsicate(struct connection *conn)
 	cap_rights_t rights;
 #ifdef ICL_KERNEL_PROXY
 	const unsigned long cmds[] = { ISCSIDCONNECT, ISCSIDSEND, ISCSIDRECEIVE,
-	    ISCSIDHANDOFF, ISCSIDFAIL, ISCSISADD, ISCSISREMOVE };
+	    ISCSIDHANDOFF, ISCSIDFAIL, ISCSISADD, ISCSISREMOVE, ISCSISMODIFY };
 #else
 	const unsigned long cmds[] = { ISCSIDHANDOFF, ISCSIDFAIL, ISCSISADD,
-	    ISCSISREMOVE };
+	    ISCSISREMOVE, ISCSISMODIFY };
 #endif
 
 	cap_rights_init(&rights, CAP_IOCTL);
@@ -317,8 +328,8 @@ capsicate(struct connection *conn)
 	if (error != 0 && errno != ENOSYS)
 		log_err(1, "cap_rights_limit");
 
-	error = cap_ioctls_limit(conn->conn_iscsi_fd, cmds,
-	    sizeof(cmds) / sizeof(cmds[0]));
+	error = cap_ioctls_limit(conn->conn_iscsi_fd, cmds, nitems(cmds));
+
 	if (error != 0 && errno != ENOSYS)
 		log_err(1, "cap_ioctls_limit");
 
@@ -394,6 +405,32 @@ set_timeout(int timeout)
 }
 
 static void
+sigchld_handler(int dummy __unused)
+{
+
+	/*
+	 * The only purpose of this handler is to make SIGCHLD
+	 * interrupt the ISCSIDWAIT ioctl(2), so we can call
+	 * wait_for_children().
+	 */
+}
+
+static void
+register_sigchld(void)
+{
+	struct sigaction sa;
+	int error;
+
+	bzero(&sa, sizeof(sa));
+	sa.sa_handler = sigchld_handler;
+	sigfillset(&sa.sa_mask);
+	error = sigaction(SIGCHLD, &sa, NULL);
+	if (error != 0)
+		log_err(1, "sigaction");
+
+}
+
+static void
 handle_request(int iscsi_fd, const struct iscsi_daemon_request *request, int timeout)
 {
 	struct connection *conn;
@@ -406,7 +443,7 @@ handle_request(int iscsi_fd, const struct iscsi_daemon_request *request, int tim
 		setproctitle("%s", request->idr_conf.isc_target_addr);
 	}
 
-	conn = connection_new(request->idr_session_id, &request->idr_conf, iscsi_fd);
+	conn = connection_new(iscsi_fd, request);
 	set_timeout(timeout);
 	capsicate(conn);
 	login(conn);
@@ -521,6 +558,8 @@ main(int argc, char **argv)
 	}
 
 	pidfile_write(pidfh);
+
+	register_sigchld();
 
 	for (;;) {
 		log_debugx("waiting for request from the kernel");

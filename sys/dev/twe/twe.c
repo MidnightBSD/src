@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twe/twe.c 240209 2012-09-07 18:41:19Z jhb $
+ *	$FreeBSD$
  */
 
 /*
@@ -531,7 +531,7 @@ twe_ioctl(struct twe_softc *sc, u_long ioctlcmd, void *addr)
     case TWEIO_COMMAND:
 	/*
 	 * if there's a data buffer, allocate and copy it in.
-	 * Must be in multipled of 512 bytes.
+	 * Must be in multiplied of 512 bytes.
 	 */
 	tr_length = roundup2(tu->tu_size, 512);
 	if (tr_length > 0) {
@@ -985,7 +985,7 @@ twe_immediate_request(struct twe_request *tr, int usetmp)
 
     if (usetmp && (tr->tr_data != NULL)) {
 	tr->tr_flags |= TWE_CMD_IMMEDIATE;
-	if (tr->tr_length > MAXBSIZE)
+	if (tr->tr_length > DFLTPHYS)
 	    return (EINVAL);
 	bcopy(tr->tr_data, sc->twe_immediate, tr->tr_length);
     }

@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/inet.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 
@@ -54,7 +54,7 @@ struct iaddr
 subnet_number(struct iaddr addr, struct iaddr mask)
 {
 	struct iaddr rv;
-	int i;
+	unsigned i;
 
 	rv.len = 0;
 
@@ -77,7 +77,7 @@ struct iaddr
 broadcast_addr(struct iaddr subnet, struct iaddr mask)
 {
 	struct iaddr rv;
-	int i;
+	unsigned i;
 
 	if (subnet.len != mask.len) {
 		rv.len = 0;

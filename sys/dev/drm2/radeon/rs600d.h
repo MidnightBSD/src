@@ -29,7 +29,7 @@
 #define __RS600D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rs600d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 /* Registers */
 #define R_000040_GEN_INT_CNTL                        0x000040

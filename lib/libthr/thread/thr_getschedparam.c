@@ -28,9 +28,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_getschedparam.c 238645 2012-07-20 05:47:12Z davidxu $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -44,8 +45,8 @@
 __weak_reference(_pthread_getschedparam, pthread_getschedparam);
 
 int
-_pthread_getschedparam(pthread_t pthread, int *policy, 
-	struct sched_param *param)
+_pthread_getschedparam(pthread_t pthread, int * __restrict policy, 
+    struct sched_param * __restrict param)
 {
 	struct pthread *curthread = _get_curthread();
 	int ret = 0;

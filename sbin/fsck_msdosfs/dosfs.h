@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1995, 1996, 1997 Wolfgang Solfrank
  * Copyright (c) 1995 Martin Husemann
  * Some structure declaration borrowed from Paul Popelka
@@ -24,13 +26,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *	$NetBSD: dosfs.h,v 1.4 1997/01/03 14:32:48 ws Exp $
- * $FreeBSD: release/10.0.0/sbin/fsck_msdosfs/dosfs.h 203874 2010-02-14 12:31:28Z kib $
+ * $FreeBSD$
  */
 
 #ifndef DOSFS_H
 #define DOSFS_H
 
-#define DOSBOOTBLOCKSIZE 512
+/* support 4Kn disk reads */
+#define DOSBOOTBLOCKSIZE_REAL 512
+#define DOSBOOTBLOCKSIZE 4096
 
 typedef	u_int32_t	cl_t;	/* type holding a cluster number */
 
@@ -70,7 +74,7 @@ struct bootblock {
 	u_int32_t NumSectors;		/* how many sectors are there */
 	u_int32_t FATsecs;		/* how many sectors are in FAT */
 	u_int32_t NumFatEntries;	/* how many entries really are there */
-	u_int	ClusterOffset;		/* at what sector would sector 0 start */
+	u_int	FirstCluster;		/* at what sector is Cluster CLUST_FIRST */
 	u_int	ClusterSize;		/* Cluster size in bytes */
 
 	/* Now some statistics: */
@@ -79,19 +83,13 @@ struct bootblock {
 	u_int	NumBad;			/* # of bad clusters */
 };
 
-struct fatEntry {
-	cl_t	next;			/* pointer to next cluster */
-	cl_t	head;			/* pointer to start of chain */
-	u_int32_t length;		/* number of clusters on chain */
-	int	flags;			/* see below */
-};
-
 #define	CLUST_FREE	0		/* 0 means cluster is free */
 #define	CLUST_FIRST	2		/* 2 is the minimum valid cluster number */
 #define	CLUST_RSRVD	0xfffffff6	/* start of reserved clusters */
 #define	CLUST_BAD	0xfffffff7	/* a cluster with a defect */
 #define	CLUST_EOFS	0xfffffff8	/* start of EOF indicators */
 #define	CLUST_EOF	0xffffffff	/* standard value for last cluster */
+#define	CLUST_DEAD	0xfdeadc0d	/* error encountered */
 
 /*
  * Masks for cluster values
@@ -99,8 +97,6 @@ struct fatEntry {
 #define	CLUST12_MASK	0xfff
 #define	CLUST16_MASK	0xffff
 #define	CLUST32_MASK	0xfffffff
-
-#define	FAT_USED	1		/* This fat chain is used in a file */
 
 #define	DOSLONGNAMELEN	256		/* long name maximal length */
 #define LRFIRST		0x40		/* first long name record */

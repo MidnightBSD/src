@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/devfs 231194 2012-02-08 08:52:40Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: devfs
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="devfs"
+desc="Device filesystem"
 start_cmd='devfs_start'
 stop_cmd=':'
 

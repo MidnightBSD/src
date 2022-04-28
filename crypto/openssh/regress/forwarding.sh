@@ -1,4 +1,4 @@
-#	$OpenBSD: forwarding.sh,v 1.11 2013/06/10 21:56:43 dtucker Exp $
+#	$OpenBSD: forwarding.sh,v 1.19 2017/01/30 05:22:14 djm Exp $
 #	Placed in the Public Domain.
 
 tid="local and remote forwarding"
@@ -10,6 +10,8 @@ start_sshd
 base=33
 last=$PORT
 fwd=""
+CTL=/tmp/openssh.regress.ctl-sock.$$
+
 for j in 0 1 2; do
 	for i in 0 1 2; do
 		a=$base$j$i
@@ -20,21 +22,25 @@ for j in 0 1 2; do
 		last=$a
 	done
 done
-for p in 1 2; do
+for p in ${SSH_PROTOCOLS}; do
 	q=`expr 3 - $p`
+	if ! ssh_version $q; then
+		q=$p
+	fi
 	trace "start forwarding, fork to background"
-	${SSH} -$p -F $OBJ/ssh_config -f $fwd somehost sleep 10
+	rm -f $CTL
+	${SSH} -S $CTL -M -$p -F $OBJ/ssh_config -f $fwd somehost sleep 10
 
 	trace "transfer over forwarded channels and check result"
 	${SSH} -$q -F $OBJ/ssh_config -p$last -o 'ConnectionAttempts=4' \
 		somehost cat ${DATA} > ${COPY}
-	test -f ${COPY}		|| fail "failed copy of ${DATA}"
+	test -s ${COPY}		|| fail "failed copy of ${DATA}"
 	cmp ${DATA} ${COPY}	|| fail "corrupted copy of ${DATA}"
 
-	sleep 10
+	${SSH} -F $OBJ/ssh_config -S $CTL -O exit somehost
 done
 
-for p in 1 2; do
+for p in ${SSH_PROTOCOLS}; do
 for d in L R; do
 	trace "exit on -$d forward failure, proto $p"
 
@@ -46,14 +52,14 @@ for d in L R; do
 	    -$d ${base}04:127.0.0.1:$PORT \
 	    -oExitOnForwardFailure=yes somehost true
 	if [ $? != 0 ]; then
-		fail "connection failed, should not"
+		fatal "connection failed, should not"
 	else
 		# this one should fail
 		${SSH} -q -$p -F $OBJ/ssh_config \
 		    -$d ${base}01:127.0.0.1:$PORT \
 		    -$d ${base}02:127.0.0.1:$PORT \
 		    -$d ${base}03:127.0.0.1:$PORT \
-		    -$d ${base}01:127.0.0.1:$PORT \
+		    -$d ${base}01:localhost:$PORT \
 		    -$d ${base}04:127.0.0.1:$PORT \
 		    -oExitOnForwardFailure=yes somehost true
 		r=$?
@@ -64,35 +70,37 @@ for d in L R; do
 done
 done
 
-for p in 1 2; do
+for p in ${SSH_PROTOCOLS}; do
 	trace "simple clear forwarding proto $p"
 	${SSH} -$p -F $OBJ/ssh_config -oClearAllForwardings=yes somehost true
 
 	trace "clear local forward proto $p"
-	${SSH} -$p -f -F $OBJ/ssh_config -L ${base}01:127.0.0.1:$PORT \
+	rm -f $CTL
+	${SSH} -S $CTL -M -$p -f -F $OBJ/ssh_config -L ${base}01:127.0.0.1:$PORT \
 	    -oClearAllForwardings=yes somehost sleep 10
 	if [ $? != 0 ]; then
 		fail "connection failed with cleared local forwarding"
 	else
 		# this one should fail
-		${SSH} -$p -F $OBJ/ssh_config -p ${base}01 true \
+		${SSH} -$p -F $OBJ/ssh_config -p ${base}01 somehost true \
 		     >>$TEST_REGRESS_LOGFILE 2>&1 && \
 			fail "local forwarding not cleared"
 	fi
-	sleep 10
+	${SSH} -F $OBJ/ssh_config -S $CTL -O exit somehost
 	
 	trace "clear remote forward proto $p"
-	${SSH} -$p -f -F $OBJ/ssh_config -R ${base}01:127.0.0.1:$PORT \
+	rm -f $CTL
+	${SSH} -S $CTL -M -$p -f -F $OBJ/ssh_config -R ${base}01:127.0.0.1:$PORT \
 	    -oClearAllForwardings=yes somehost sleep 10
 	if [ $? != 0 ]; then
 		fail "connection failed with cleared remote forwarding"
 	else
 		# this one should fail
-		${SSH} -$p -F $OBJ/ssh_config -p ${base}01 true \
+		${SSH} -$p -F $OBJ/ssh_config -p ${base}01 somehost true \
 		     >>$TEST_REGRESS_LOGFILE 2>&1 && \
 			fail "remote forwarding not cleared"
 	fi
-	sleep 10
+	${SSH} -F $OBJ/ssh_config -S $CTL -O exit somehost
 done
 
 for p in 2; do
@@ -107,15 +115,35 @@ done
 
 echo "LocalForward ${base}01 127.0.0.1:$PORT" >> $OBJ/ssh_config
 echo "RemoteForward ${base}02 127.0.0.1:${base}01" >> $OBJ/ssh_config
-for p in 1 2; do
+for p in ${SSH_PROTOCOLS}; do
 	trace "config file: start forwarding, fork to background"
-	${SSH} -$p -F $OBJ/ssh_config -f somehost sleep 10
+	rm -f $CTL
+	${SSH} -S $CTL -M -$p -F $OBJ/ssh_config -f somehost sleep 10
 
 	trace "config file: transfer over forwarded channels and check result"
 	${SSH} -F $OBJ/ssh_config -p${base}02 -o 'ConnectionAttempts=4' \
 		somehost cat ${DATA} > ${COPY}
-	test -f ${COPY}		|| fail "failed copy of ${DATA}"
+	test -s ${COPY}		|| fail "failed copy of ${DATA}"
 	cmp ${DATA} ${COPY}	|| fail "corrupted copy of ${DATA}"
 
-	wait
+	${SSH} -F $OBJ/ssh_config -S $CTL -O exit somehost
+done
+
+for p in 2; do
+	trace "transfer over chained unix domain socket forwards and check result"
+	rm -f $OBJ/unix-[123].fwd
+	rm -f $CTL $CTL.[123]
+	${SSH} -S $CTL -M -f -F $OBJ/ssh_config -R${base}01:[$OBJ/unix-1.fwd] somehost sleep 10
+	${SSH} -S $CTL.1 -M -f -F $OBJ/ssh_config -L[$OBJ/unix-1.fwd]:[$OBJ/unix-2.fwd] somehost sleep 10
+	${SSH} -S $CTL.2 -M -f -F $OBJ/ssh_config -R[$OBJ/unix-2.fwd]:[$OBJ/unix-3.fwd] somehost sleep 10
+	${SSH} -S $CTL.3 -M -f -F $OBJ/ssh_config -L[$OBJ/unix-3.fwd]:127.0.0.1:$PORT somehost sleep 10
+	${SSH} -F $OBJ/ssh_config -p${base}01 -o 'ConnectionAttempts=4' \
+		somehost cat ${DATA} > ${COPY}
+	test -s ${COPY}			|| fail "failed copy ${DATA}"
+	cmp ${DATA} ${COPY}		|| fail "corrupted copy of ${DATA}"
+
+	${SSH} -F $OBJ/ssh_config -S $CTL -O exit somehost
+	${SSH} -F $OBJ/ssh_config -S $CTL.1 -O exit somehost
+	${SSH} -F $OBJ/ssh_config -S $CTL.2 -O exit somehost
+	${SSH} -F $OBJ/ssh_config -S $CTL.3 -O exit somehost
 done

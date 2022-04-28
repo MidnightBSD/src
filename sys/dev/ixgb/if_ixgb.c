@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: release/10.0.0/sys/dev/ixgb/if_ixgb.c 254263 2013-08-12 23:30:01Z scottl $*/
+/*$FreeBSD$*/
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -97,6 +97,7 @@ static void     ixgb_intr(void *);
 static void     ixgb_start(struct ifnet *);
 static void     ixgb_start_locked(struct ifnet *);
 static int      ixgb_ioctl(struct ifnet *, IOCTL_CMD_TYPE, caddr_t);
+static uint64_t	ixgb_get_counter(struct ifnet *, ift_counter);
 static void     ixgb_watchdog(struct adapter *);
 static void     ixgb_init(void *);
 static void     ixgb_init_locked(struct adapter *);
@@ -348,6 +349,7 @@ ixgb_attach(device_t dev)
 	ixgb_clear_hw_cntrs(&adapter->hw);
 	ixgb_update_stats_counters(adapter);
 
+	gone_in_dev(dev, 12, "ixgb(4) driver");
 	INIT_DEBUGOUT("ixgb_attach: end");
 	return (0);
 
@@ -538,7 +540,8 @@ ixgb_ioctl(struct ifnet * ifp, IOCTL_CMD_TYPE command, caddr_t data)
 			adapter->hw.max_frame_size =
 				ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
 
-			ixgb_init_locked(adapter);
+			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
+				ixgb_init_locked(adapter);
 			IXGB_UNLOCK(adapter);
 		}
 		break;
@@ -643,7 +646,7 @@ ixgb_watchdog(struct adapter *adapter)
 	ixgb_init_locked(adapter);
 
 
-	ifp->if_oerrors++;
+	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 
 	return;
 }
@@ -1242,8 +1245,8 @@ ixgb_allocate_pci_resources(struct adapter * adapter)
 	device_t        dev = adapter->dev;
 
 	rid = IXGB_MMBA;
-	adapter->res_memory = bus_alloc_resource(dev, SYS_RES_MEMORY,
-						 &rid, 0, ~0, 1,
+	adapter->res_memory = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+						 &rid,
 						 RF_ACTIVE);
 	if (!(adapter->res_memory)) {
 		device_printf(dev, "Unable to allocate bus resource: memory\n");
@@ -1256,9 +1259,9 @@ ixgb_allocate_pci_resources(struct adapter * adapter)
 	adapter->hw.hw_addr = (uint8_t *) & adapter->osdep.mem_bus_space_handle;
 
 	rid = 0x0;
-	adapter->res_interrupt = bus_alloc_resource(dev, SYS_RES_IRQ,
-						    &rid, 0, ~0, 1,
-						  RF_SHAREABLE | RF_ACTIVE);
+	adapter->res_interrupt = bus_alloc_resource_any(dev, SYS_RES_IRQ,
+							&rid,
+							RF_SHAREABLE | RF_ACTIVE);
 	if (!(adapter->res_interrupt)) {
 		device_printf(dev,
 		    "Unable to allocate bus resource: interrupt\n");
@@ -1355,6 +1358,7 @@ ixgb_setup_interface(device_t dev, struct adapter * adapter)
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = ixgb_ioctl;
 	ifp->if_start = ixgb_start;
+	ifp->if_get_counter = ixgb_get_counter;
 	ifp->if_snd.ifq_maxlen = adapter->num_tx_desc - 1;
 
 #if __FreeBSD_version < 500000
@@ -1368,7 +1372,7 @@ ixgb_setup_interface(device_t dev, struct adapter * adapter)
 	/*
 	 * Tell the upper layer(s) we support long frames.
 	 */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
 #if __FreeBSD_version >= 500000
 	ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU;
@@ -1459,7 +1463,6 @@ fail_2:
 fail_1:
 	bus_dma_tag_destroy(dma->dma_tag);
 fail_0:
-	dma->dma_map = NULL;
 	dma->dma_tag = NULL;
 	return (r);
 }
@@ -1775,7 +1778,7 @@ static int
 ixgb_get_buf(int i, struct adapter * adapter,
 	     struct mbuf * nmp)
 {
-	register struct mbuf *mp = nmp;
+	struct mbuf    *mp = nmp;
 	struct ixgb_buffer *rx_buffer;
 	struct ifnet   *ifp;
 	bus_addr_t      paddr;
@@ -2327,7 +2330,6 @@ ixgb_write_pci_cfg(struct ixgb_hw * hw,
 static void
 ixgb_update_stats_counters(struct adapter * adapter)
 {
-	struct ifnet   *ifp;
 
 	adapter->stats.crcerrs += IXGB_READ_REG(&adapter->hw, CRCERRS);
 	adapter->stats.gprcl += IXGB_READ_REG(&adapter->hw, GPRCL);
@@ -2390,28 +2392,36 @@ ixgb_update_stats_counters(struct adapter * adapter)
 	adapter->stats.pfrc += IXGB_READ_REG(&adapter->hw, PFRC);
 	adapter->stats.pftc += IXGB_READ_REG(&adapter->hw, PFTC);
 	adapter->stats.mcfrc += IXGB_READ_REG(&adapter->hw, MCFRC);
-
-	ifp = adapter->ifp;
-
-	/* Fill out the OS statistics structure */
-	ifp->if_ipackets = adapter->stats.gprcl;
-	ifp->if_opackets = adapter->stats.gptcl;
-	ifp->if_ibytes = adapter->stats.gorcl;
-	ifp->if_obytes = adapter->stats.gotcl;
-	ifp->if_imcasts = adapter->stats.mprcl;
-	ifp->if_collisions = 0;
-
-	/* Rx Errors */
-	ifp->if_ierrors =
-		adapter->dropped_pkts +
-		adapter->stats.crcerrs +
-		adapter->stats.rnbc +
-		adapter->stats.mpc +
-		adapter->stats.rlec;
-
-
 }
 
+static uint64_t
+ixgb_get_counter(struct ifnet *ifp, ift_counter cnt)
+{
+	struct adapter *adapter;
+
+	adapter = if_getsoftc(ifp);
+
+	switch (cnt) {
+	case IFCOUNTER_IPACKETS:
+		return (adapter->stats.gprcl);
+	case IFCOUNTER_OPACKETS:
+		return ( adapter->stats.gptcl);
+	case IFCOUNTER_IBYTES:
+		return (adapter->stats.gorcl);
+	case IFCOUNTER_OBYTES:
+		return (adapter->stats.gotcl);
+	case IFCOUNTER_IMCASTS:
+		return ( adapter->stats.mprcl);
+	case IFCOUNTER_COLLISIONS:
+		return (0);
+	case IFCOUNTER_IERRORS:
+		return (adapter->dropped_pkts + adapter->stats.crcerrs +
+		    adapter->stats.rnbc + adapter->stats.mpc +
+		    adapter->stats.rlec);
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
+}
 
 /**********************************************************************
  *

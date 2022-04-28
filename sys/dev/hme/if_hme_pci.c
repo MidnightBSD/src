@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hme/if_hme_pci.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI front-end device driver for the HME ethernet device.
@@ -40,7 +40,10 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/hme/if_hme_pci.c 227843 2011-11-22 21
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 

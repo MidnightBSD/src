@@ -1,31 +1,35 @@
-# $FreeBSD: release/10.0.0/sys/modules/mthca/Makefile 242933 2012-11-12 22:01:29Z dim $
+# $FreeBSD$
+.PATH:	${SRCTOP}/sys/dev/mthca
 
-.PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/hw/mthca
-
-.include <bsd.own.mk>
-
-KMOD    = mthca
-SRCS    = device_if.h bus_if.h pci_if.h vnode_if.h
-SRCS+=	mthca_allocator.c mthca_av.c mthca_catas.c mthca_cmd.c mthca_cq.c
-SRCS+=	mthca_eq.c mthca_mad.c mthca_main.c mthca_mcg.c mthca_memfree.c
-SRCS+=	mthca_mr.c mthca_pd.c mthca_profile.c mthca_provider.c mthca_qp.c
-SRCS+=	mthca_reset.c mthca_srq.c mthca_uar.c
+KMOD=	mthca
+SRCS= \
+mthca_allocator.c \
+mthca_av.c \
+mthca_catas.c \
+mthca_cmd.c \
+mthca_cq.c \
+mthca_eq.c \
+mthca_mad.c \
+mthca_main.c \
+mthca_mcg.c \
+mthca_memfree.c \
+mthca_mr.c \
+mthca_pd.c \
+mthca_profile.c \
+mthca_provider.c \
+mthca_qp.c \
+mthca_reset.c \
+mthca_srq.c \
+mthca_uar.c
+SRCS+=	${LINUXKPI_GENSRCS}
 SRCS+=	opt_inet.h opt_inet6.h
 
-CFLAGS+= -I${.CURDIR}/../../ofed/include
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
+CFLAGS+= -DCONFIG_INFINIBAND_USER_MEM
+CFLAGS+= -DINET6 -DINET
 
 .include <bsd.kmod.mk>
 
-CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -fms-extensions
+CFLAGS+= -Wno-cast-qual -Wno-pointer-arith

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/net/netisr_internal.h 222249 2011-05-24 12:34:19Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _NET_NETISR_INTERNAL_H_

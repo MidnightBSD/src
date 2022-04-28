@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_btsocket.c,v 1.4 2003/09/14 23:29:06 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/socket/ng_btsocket.c 253346 2013-07-15 01:32:55Z rodrigc $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -213,10 +213,9 @@ static struct protosw		ng_btsocket_protosw[] = {
 	.pr_usrreqs =		&ng_btsocket_sco_usrreqs,
 },
 };
-#define ng_btsocket_protosw_size \
-	(sizeof(ng_btsocket_protosw)/sizeof(ng_btsocket_protosw[0]))
+
 #define ng_btsocket_protosw_end \
-	&ng_btsocket_protosw[ng_btsocket_protosw_size]
+	&ng_btsocket_protosw[nitems(ng_btsocket_protosw)]
 
 /*
  * BLUETOOTH domain

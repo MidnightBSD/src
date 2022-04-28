@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/pf/pflogd/pflogd.c 223637 2011-06-28 11:57:25Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -766,7 +766,7 @@ main(int argc, char **argv)
 		np = pcap_dispatch(hpcap, PCAP_NUM_PKTS,
 		    phandler, (u_char *)dpcap);
 		if (np < 0) {
-			if (!if_exists(interface) == -1) {
+			if (!if_exists(interface)) {
 				logmsg(LOG_NOTICE, "interface %s went away",
 				    interface);
 				ret = -1;

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/procfs/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../fs/procfs
+.PATH: ${SRCTOP}/sys/fs/procfs
 
 KMOD=		procfs
 SRCS=

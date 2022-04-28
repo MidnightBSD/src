@@ -1,5 +1,5 @@
 /*	$NetBSD: ifconfig.c,v 1.34 1997/04/21 01:17:58 lukem Exp $	*/
-/* $FreeBSD: release/10.0.0/sbin/ifconfig/ifmedia.c 221954 2011-05-15 12:51:00Z marius $ */
+/* $FreeBSD$ */
 
 /*
  * Copyright (c) 1997 Jason R. Thorpe.
@@ -78,6 +78,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,12 +109,20 @@ static void
 media_status(int s)
 {
 	struct ifmediareq ifmr;
+	struct ifdownreason ifdr;
 	int *media_list, i;
+	bool no_carrier, xmedia;
 
 	(void) memset(&ifmr, 0, sizeof(ifmr));
-	(void) strncpy(ifmr.ifm_name, name, sizeof(ifmr.ifm_name));
+	(void) strlcpy(ifmr.ifm_name, name, sizeof(ifmr.ifm_name));
+	xmedia = true;
 
-	if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
+	/*
+	 * Check if interface supports extended media types.
+	 */
+	if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0)
+		xmedia = false;
+	if (!xmedia && ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
 		/*
 		 * Interface doesn't support SIOC{G,S}IFMEDIA.
 		 */
@@ -130,8 +139,13 @@ media_status(int s)
 		err(1, "malloc");
 	ifmr.ifm_ulist = media_list;
 
-	if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0)
-		err(1, "SIOCGIFMEDIA");
+	if (xmedia) {
+		if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0)
+			err(1, "SIOCGIFXMEDIA");
+	} else {
+		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0)
+			err(1, "SIOCGIFMEDIA");
+	}
 
 	printf("\tmedia: ");
 	print_media_word(ifmr.ifm_current, 1);
@@ -145,6 +159,7 @@ media_status(int s)
 	putchar('\n');
 
 	if (ifmr.ifm_status & IFM_AVALID) {
+		no_carrier = false;
 		printf("\tstatus: ");
 		switch (IFM_TYPE(ifmr.ifm_active)) {
 		case IFM_ETHER:
@@ -152,7 +167,7 @@ media_status(int s)
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				printf("active");
 			else
-				printf("no carrier");
+				no_carrier = true;
 			break;
 
 		case IFM_FDDI:
@@ -171,8 +186,26 @@ media_status(int s)
 				else
 					printf("running");
 			} else
-				printf("no carrier");
+				no_carrier = true;
 			break;
+		}
+		if (no_carrier) {
+			printf("no carrier");
+			memset(&ifdr, 0, sizeof(ifdr));
+			strlcpy(ifdr.ifdr_name, name, sizeof(ifdr.ifdr_name));
+			if (ioctl(s, SIOCGIFDOWNREASON, (caddr_t)&ifdr) == 0) {
+				switch (ifdr.ifdr_reason) {
+				case IFDR_REASON_MSG:
+					printf(" (%s)", ifdr.ifdr_msg);
+					break;
+				case IFDR_REASON_VENDOR:
+					printf(" (vendor code %d)",
+					    ifdr.ifdr_vendor);
+					break;
+				default:
+					break;
+				}
+			}
 		}
 		putchar('\n');
 	}
@@ -194,6 +227,7 @@ ifmedia_getstate(int s)
 {
 	static struct ifmediareq *ifmr = NULL;
 	int *mwords;
+	int xmedia = 1;
 
 	if (ifmr == NULL) {
 		ifmr = (struct ifmediareq *)malloc(sizeof(struct ifmediareq));
@@ -201,7 +235,7 @@ ifmedia_getstate(int s)
 			err(1, "malloc");
 
 		(void) memset(ifmr, 0, sizeof(struct ifmediareq));
-		(void) strncpy(ifmr->ifm_name, name,
+		(void) strlcpy(ifmr->ifm_name, name,
 		    sizeof(ifmr->ifm_name));
 
 		ifmr->ifm_count = 0;
@@ -213,7 +247,10 @@ ifmedia_getstate(int s)
 		 * the current media type and the top-level type.
 		 */
 
-		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0) {
+		if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)ifmr) < 0) {
+			xmedia = 0;
+		}
+		if (xmedia == 0 && ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0) {
 			err(1, "SIOCGIFMEDIA");
 		}
 
@@ -225,8 +262,13 @@ ifmedia_getstate(int s)
 			err(1, "malloc");
   
 		ifmr->ifm_ulist = mwords;
-		if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0)
-			err(1, "SIOCGIFMEDIA");
+		if (xmedia) {
+			if (ioctl(s, SIOCGIFXMEDIA, (caddr_t)ifmr) < 0)
+				err(1, "SIOCGIFXMEDIA");
+		} else {
+			if (ioctl(s, SIOCGIFMEDIA, (caddr_t)ifmr) < 0)
+				err(1, "SIOCGIFMEDIA");
+		}
 	}
 
 	return ifmr;
@@ -267,7 +309,7 @@ setmedia(const char *val, int d, int s, const struct afswtch *afp)
 	 */
 	subtype = get_media_subtype(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & IFM_IMASK) |
 	    IFM_TYPE(ifmr->ifm_ulist[0]) | subtype;
 
@@ -299,7 +341,7 @@ domediaopt(const char *val, int clear, int s)
 
 	options = get_media_options(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = ifmr->ifm_current;
 	if (clear)
 		ifr.ifr_media &= ~options;
@@ -326,7 +368,7 @@ setmediainst(const char *val, int d, int s, const struct afswtch *afp)
 	if (inst < 0 || inst > (int)IFM_INST_MAX)
 		errx(1, "invalid media instance: %s", val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & ~IFM_IMASK) | inst << IFM_ISHIFT;
 
 	ifmr->ifm_current = ifr.ifr_media;
@@ -343,7 +385,7 @@ setmediamode(const char *val, int d, int s, const struct afswtch *afp)
 
 	mode = get_media_mode(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
-	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	ifr.ifr_media = (ifmr->ifm_current & ~IFM_MMASK) | mode;
 
 	ifmr->ifm_current = ifr.ifr_media;
@@ -825,11 +867,9 @@ static struct afswtch af_media = {
 static __constructor void
 ifmedia_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(media_cmds);  i++)
+	for (i = 0; i < nitems(media_cmds);  i++)
 		cmd_register(&media_cmds[i]);
 	af_register(&af_media);
-#undef N
 }

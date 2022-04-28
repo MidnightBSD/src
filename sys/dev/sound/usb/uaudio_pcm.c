@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/sound/usb/uaudio_pcm.c 246128 2013-01-30 18:01:20Z sbz $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
@@ -81,14 +81,14 @@ ua_chan_setfragments(kobj_t obj, void *data, uint32_t blocksize, uint32_t blockc
 static int
 ua_chan_trigger(kobj_t obj, void *data, int go)
 {
-	if (!PCMTRIG_COMMON(go)) {
-		return (0);
+	if (PCMTRIG_COMMON(go)) {
+		if (go == PCMTRIG_START) {
+			uaudio_chan_start(data);
+		} else {
+			uaudio_chan_stop(data);
+		}
 	}
-	if (go == PCMTRIG_START) {
-		return (uaudio_chan_start(data));
-	} else {
-		return (uaudio_chan_stop(data));
-	}
+	return (0);
 }
 
 static uint32_t
@@ -144,7 +144,7 @@ ua_mixer_set(struct snd_mixer *m, unsigned type, unsigned left, unsigned right)
 		do_unlock = 1;
 		mtx_lock(mtx);
 	}
-	uaudio_mixer_set(mix_getdevinfo(m), type, left, right);
+	uaudio_mixer_set(mix_getdevinfo(m), m, type, left, right);
 	if (do_unlock) {
 		mtx_unlock(mtx);
 	}
@@ -164,7 +164,7 @@ ua_mixer_setrecsrc(struct snd_mixer *m, uint32_t src)
 		do_unlock = 1;
 		mtx_lock(mtx);
 	}
-	retval = uaudio_mixer_setrecsrc(mix_getdevinfo(m), src);
+	retval = uaudio_mixer_setrecsrc(mix_getdevinfo(m), m, src);
 	if (do_unlock) {
 		mtx_unlock(mtx);
 	}
@@ -174,7 +174,7 @@ ua_mixer_setrecsrc(struct snd_mixer *m, uint32_t src)
 static int
 ua_mixer_uninit(struct snd_mixer *m)
 {
-	return (uaudio_mixer_uninit_sub(mix_getdevinfo(m)));
+	return (uaudio_mixer_uninit_sub(mix_getdevinfo(m), m));
 }
 
 static kobj_method_t ua_mixer_methods[] = {

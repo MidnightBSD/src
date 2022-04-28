@@ -10,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -26,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/refcount.h 238828 2012-07-27 09:16:48Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_REFCOUNT_H__
@@ -53,7 +50,7 @@ refcount_acquire(volatile u_int *count)
 {
 
 	KASSERT(*count < UINT_MAX, ("refcount %p overflowed", count));
-	atomic_add_acq_int(count, 1);	
+	atomic_add_int(count, 1);
 }
 
 static __inline int
@@ -61,10 +58,56 @@ refcount_release(volatile u_int *count)
 {
 	u_int old;
 
-	/* XXX: Should this have a rel membar? */
+	atomic_thread_fence_rel();
 	old = atomic_fetchadd_int(count, -1);
-	KASSERT(old > 0, ("negative refcount %p", count));
-	return (old == 1);
+	KASSERT(old > 0, ("refcount %p is zero", count));
+	if (old > 1)
+		return (0);
+
+	/*
+	 * Last reference.  Signal the user to call the destructor.
+	 *
+	 * Ensure that the destructor sees all updates.  The fence_rel
+	 * at the start of the function synchronized with this fence.
+	 */
+	atomic_thread_fence_acq();
+	return (1);
+}
+
+/*
+ * This functions returns non-zero if the refcount was
+ * incremented. Else zero is returned.
+ *
+ * A temporary hack until refcount_* APIs are sorted out.
+ */
+static __inline __result_use_check int
+refcount_acquire_if_not_zero(volatile u_int *count)
+{
+	u_int old;
+
+	old = *count;
+	for (;;) {
+		KASSERT(old < UINT_MAX, ("refcount %p overflowed", count));
+		if (old == 0)
+			return (0);
+		if (atomic_fcmpset_int(count, &old, old + 1))
+			return (1);
+	}
+}
+
+static __inline __result_use_check int
+refcount_release_if_not_last(volatile u_int *count)
+{
+	u_int old;
+
+	old = *count;
+	for (;;) {
+		KASSERT(old > 0, ("refcount %p is zero", count));
+		if (old == 1)
+			return (0);
+		if (atomic_fcmpset_int(count, &old, old - 1))
+			return (1);
+	}
 }
 
 #endif	/* ! __SYS_REFCOUNT_H__ */

@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,10 +30,11 @@
  * SUCH DAMAGE.
  *
  * $Id: panu.c,v 1.1 2008/03/11 00:02:42 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/panu.c 177364 2008-03-19 00:06:30Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <string.h>

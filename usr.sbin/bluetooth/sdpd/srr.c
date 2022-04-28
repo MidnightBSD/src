@@ -1,5 +1,7 @@
-/*
+/*-
  * srr.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: srr.c,v 1.1 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/srr.c 153176 2005-12-06 17:56:36Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -34,6 +36,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <sdp.h>

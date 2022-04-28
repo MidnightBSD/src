@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_scatter.c 254025 2013-08-07 06:21:20Z jeff $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_scatter.c
  * Allocation of memory for scatter-gather mappings by the graphics chip.
@@ -48,7 +48,7 @@ drm_sg_alloc(struct drm_device *dev, struct drm_scatter_gather *request)
 	entry = malloc(sizeof(*entry), DRM_MEM_DRIVER, M_WAITOK | M_ZERO);
 
 	size = round_page(request->size);
-	entry->pages = OFF_TO_IDX(size);
+	entry->pages = atop(size);
 	entry->busaddr = malloc(entry->pages * sizeof(*entry->busaddr),
 	    DRM_MEM_SGLISTS, M_WAITOK | M_ZERO);
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/io/iodev.h 207329 2010-04-28 15:38:01Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_IODEV_H_

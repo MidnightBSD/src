@@ -42,7 +42,7 @@
 #include <dev/sound/pci/hda/hdaa.h>
 #include <dev/sound/pci/hda/hda_reg.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdaa_patches.c 253036 2013-07-08 15:28:09Z mav $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 static const struct {
 	uint32_t model;
@@ -107,7 +107,16 @@ static const struct {
 	{ APPLE_INTEL_MAC, HDA_CODEC_STAC9221, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(0) | HDAA_GPIO_SET(1) },
+	{ APPLE_MACBOOKAIR31, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
 	{ APPLE_MACBOOKPRO55, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
+	{ APPLE_MACBOOKPRO71, HDA_CODEC_CS4206, HDA_MATCH_ALL,
+	    0, 0,
+	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
+	{ HDA_INTEL_MACBOOKPRO92, HDA_CODEC_CS4206, HDA_MATCH_ALL,
 	    0, 0,
 	    HDAA_GPIO_SET(1) | HDAA_GPIO_SET(3) },
 	{ DELL_D630_SUBVENDOR, HDA_CODEC_STAC9205X, HDA_MATCH_ALL,
@@ -133,7 +142,6 @@ static const struct {
 	    0, HDAA_QUIRK_OVREF,
 	    0 }
 };
-#define HDAC_QUIRKS_LEN (sizeof(hdac_quirks) / sizeof(hdac_quirks[0]))
 
 static void
 hdac_pin_patch(struct hdaa_widget *w)
@@ -338,16 +346,27 @@ hdac_pin_patch(struct hdaa_widget *w)
 			patch = "as=1 seq=15";
 			break;
 		}
+	} else if (id == HDA_CODEC_CX20561 &&
+	    subid == LENOVO_T400_SUBVENDOR) {
+		switch (nid) {
+		case 22:
+			patch = "as=1 seq=15";
+			break;
+		case 26:
+			patch = "as=1 seq=0";
+			break;
+		}
 	} else if (id == HDA_CODEC_CX20590 &&
 	    (subid == LENOVO_X1_SUBVENDOR ||
 	    subid == LENOVO_X220_SUBVENDOR ||
 	    subid == LENOVO_T420_SUBVENDOR ||
-	    subid == LENOVO_T520_SUBVENDOR)) {
+	    subid == LENOVO_T520_SUBVENDOR ||
+	    subid == LENOVO_G580_SUBVENDOR)) {
 		switch (nid) {
 		case 25:
 			patch = "as=1 seq=15";
 			break;
-		/* 
+		/*
 		 * Group onboard mic and headphone mic
 		 * together.  Fixes onboard mic.
 		 */
@@ -368,10 +387,31 @@ hdac_pin_patch(struct hdaa_widget *w)
 			patch = "as=1 seq=15";
 			break;
 		}
+	} else if (id == HDA_CODEC_ALC285 &&
+	    subid == LENOVO_X120KH_SUBVENDOR) {
+		switch (nid) {
+		case 33:
+			patch = "as=1 seq=15";
+			break;
+		}
 	} else if (id == HDA_CODEC_ALC269 &&
 	    subid == ASUS_UX31A_SUBVENDOR) {
 		switch (nid) {
 		case 33:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC892 &&
+	    subid == INTEL_DH87RL_SUBVENDOR) {
+		switch (nid) {
+		case 27:
+			patch = "as=1 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC292 &&
+	    subid == LENOVO_X120BS_SUBVENDOR) {
+		switch (nid) {
+		case 21:
 			patch = "as=1 seq=15";
 			break;
 		}
@@ -457,7 +497,7 @@ hdaa_patch(struct hdaa_devinfo *devinfo)
 	/*
 	 * Quirks
 	 */
-	for (i = 0; i < HDAC_QUIRKS_LEN; i++) {
+	for (i = 0; i < nitems(hdac_quirks); i++) {
 		if (!(HDA_DEV_MATCH(hdac_quirks[i].model, subid) &&
 		    HDA_DEV_MATCH(hdac_quirks[i].id, id) &&
 		    HDA_DEV_MATCH(hdac_quirks[i].subsystemid, subsystemid)))
@@ -663,6 +703,22 @@ hdaa_patch(struct hdaa_devinfo *devinfo)
 	}
 }
 
+static uint32_t
+hdaa_read_coef(device_t dev, nid_t nid, uint16_t idx)
+{
+
+	hda_command(dev, HDA_CMD_SET_COEFF_INDEX(0, nid, idx));
+	return (hda_command(dev, HDA_CMD_GET_PROCESSING_COEFF(0, nid)));
+}
+
+static uint32_t
+hdaa_write_coef(device_t dev, nid_t nid, uint16_t idx, uint16_t val)
+{
+
+	hda_command(dev, HDA_CMD_SET_COEFF_INDEX(0, nid, idx));
+	return (hda_command(dev, HDA_CMD_SET_PROCESSING_COEFF(0, nid, val)));
+}
+
 void
 hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 {
@@ -690,6 +746,12 @@ hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 		hda_command(dev, HDA_CMD_12BIT(0, devinfo->nid,
 		    0xf88, 0xc0));
 		break;
+	case HDA_CODEC_ALC1150:
+		if (subid == 0xd9781462) {
+			/* Too low volume on MSI H170 GAMING M3. */
+			hdaa_write_coef(dev, 0x20, 0x07, 0x7cb);
+		}
+		break;
 	}
 	if (subid == APPLE_INTEL_MAC)
 		hda_command(dev, HDA_CMD_12BIT(0, devinfo->nid,
@@ -704,10 +766,12 @@ hdaa_patch_direct(struct hdaa_devinfo *devinfo)
 			 * That results in silence if downmix it to mono.
 			 * To workaround, make codec to handle signal as mono.
 			 */
-			hda_command(dev, HDA_CMD_SET_COEFF_INDEX(0, 0x20, 0x07));
-			val = hda_command(dev, HDA_CMD_GET_PROCESSING_COEFF(0, 0x20));
-			hda_command(dev, HDA_CMD_SET_COEFF_INDEX(0, 0x20, 0x07));
-			hda_command(dev, HDA_CMD_SET_PROCESSING_COEFF(0, 0x20, val|0x80));
+			val = hdaa_read_coef(dev, 0x20, 0x07);
+			hdaa_write_coef(dev, 0x20, 0x07, val|0x80);
+		}
+		if (subid == 0x15171043) {
+			/* Increase output amp on ASUS UX31A by +5dB. */
+			hdaa_write_coef(dev, 0x20, 0x12, 0x2800);
 		}
 	}
 }

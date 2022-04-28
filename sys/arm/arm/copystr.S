@@ -38,22 +38,20 @@
  * Created      : 16/05/95
  */
 
-	
 #include "assym.s"
 #include <machine/asm.h>
 #include <machine/armreg.h>
-#include <machine/asmacros.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/copystr.S 248361 2013-03-16 02:48:49Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/errno.h>
 
 	.text
-	.align	0
+	.align	2
 
-#ifdef _ARM_ARCH_6
+#if __ARM_ARCH >= 6
 #define GET_PCB(tmp) \
 	mrc p15, 0, tmp, c13, c0, 4; \
-	add	tmp, tmp, #(PC_CURPCB)
+	add	tmp, tmp, #(TD_PCB)
 #else
 .Lpcb:
 	.word	_C_LABEL(__pcpu) + PC_CURPCB
@@ -114,6 +112,8 @@ ENTRY(copyinstr)
 	moveq	r0, #ENAMETOOLONG
 	beq	2f
 
+	ldr	r12, =VM_MAXUSER_ADDRESS
+
 	GET_PCB(r4)
 	ldr	r4, [r4]
 
@@ -125,7 +125,10 @@ ENTRY(copyinstr)
 	adr	r5, .Lcopystrfault
 	str	r5, [r4, #PCB_ONFAULT]
 
-1:	ldrbt	r5, [r0], #0x0001
+1:
+	cmp	r0, r12
+	bcs	.Lcopystrfault
+	ldrbt	r5, [r0], #0x0001
 	add	r6, r6, #0x00000001
 	teq	r5, #0x00000000
 	strb	r5, [r1], #0x0001
@@ -162,6 +165,8 @@ ENTRY(copyoutstr)
 	moveq	r0, #ENAMETOOLONG
 	beq	2f
 
+	ldr	r12, =VM_MAXUSER_ADDRESS
+
 	GET_PCB(r4)
 	ldr	r4, [r4]
 
@@ -173,7 +178,10 @@ ENTRY(copyoutstr)
 	adr	r5, .Lcopystrfault
 	str	r5, [r4, #PCB_ONFAULT]
 
-1:	ldrb	r5, [r0], #0x0001
+1:
+	cmp	r0, r12
+	bcs	.Lcopystrfault
+	ldrb	r5, [r0], #0x0001
 	add	r6, r6, #0x00000001
 	teq	r5, #0x00000000
 	strbt	r5, [r1], #0x0001
@@ -198,6 +206,7 @@ END(copyoutstr)
 .Lcopystrfault:
 	mov	r1, #0x00000000
 	str	r1, [r4, #PCB_ONFAULT]
+	mov	r0, #EFAULT
 	RESTORE_REGS
 	RET
 
@@ -211,5 +220,5 @@ END(copyoutstr)
 
 Lcopystrpcbfaulttext:
 	.asciz	"No valid PCB during copyinoutstr() addr1=%08x addr2=%08x\n"
-	.align	0
+	.align	2
 #endif

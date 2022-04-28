@@ -1,12 +1,11 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ancontrol/Makefile 132901 2004-07-30 21:43:21Z njl $
+# $FreeBSD$
 
 PROG=	ancontrol
 MAN=	ancontrol.8
 
 WARNS?=	3
-CFLAGS+= -DANCACHE -I${.CURDIR}/../../sys
+CFLAGS+= -DANCACHE -I${SRCTOP}/sys
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.prog.mk>

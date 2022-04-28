@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdac_reg.h 230130 2012-01-15 13:21:36Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _HDAC_REG_H_

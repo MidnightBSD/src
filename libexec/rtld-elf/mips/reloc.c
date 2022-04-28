@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/rtld-elf/mips/reloc.c 233231 2012-03-20 13:20:49Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -141,7 +141,7 @@ store_ptr(void *where, Elf_Sxword val, size_t len)
 void
 _rtld_relocate_nonplt_self(Elf_Dyn *dynp, Elf_Addr relocbase)
 {
-	const Elf_Rel *rel = 0, *rellim;
+	const Elf_Rel *rel = NULL, *rellim;
 	Elf_Addr relsz = 0;
 	const Elf_Sym *symtab = NULL, *sym;
 	Elf_Addr *where;
@@ -240,20 +240,28 @@ _mips_rtld_bind(Obj_Entry *obj, Elf_Size reloff)
         Elf_Addr *got = obj->pltgot;
         const Elf_Sym *def;
         const Obj_Entry *defobj;
+        Elf_Addr *where;
         Elf_Addr target;
+        RtldLockState lockstate;
 
+	rlock_acquire(rtld_bind_lock, &lockstate);
+	if (sigsetjmp(lockstate.env, 0) != 0)
+		lock_upgrade(rtld_bind_lock, &lockstate);
+
+	where = &got[obj->local_gotno + reloff - obj->gotsym];
         def = find_symdef(reloff, obj, &defobj, SYMLOOK_IN_PLT, NULL,
-	    NULL);
+           &lockstate);
         if (def == NULL)
-		_rtld_error("bind failed no symbol");
+		rtld_die();
 
         target = (Elf_Addr)(defobj->relocbase + def->st_value);
         dbg("bind now/fixup at %s sym # %jd in %s --> was=%p new=%p",
 	    obj->path,
 	    (intmax_t)reloff, defobj->strtab + def->st_name, 
-	    (void *)got[obj->local_gotno + reloff - obj->gotsym],
-	    (void *)target);
-        got[obj->local_gotno + reloff - obj->gotsym] = target;
+	    (void *)*where, (void *)target);
+	if (!ld_bind_not)
+		*where = target;
+	lock_release(rtld_bind_lock, &lockstate);
 	return (Elf_Addr)target;
 }
 
@@ -273,6 +281,10 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 
 	/* The relocation for the dynamic loader has already been done. */
 	if (obj == obj_rtld)
+		return (0);
+
+	if ((flags & SYMLOOK_IFUNC) != 0)
+		/* XXX not implemented */
 		return (0);
 
 #ifdef SUPPORT_OLD_BROKEN_LD
@@ -611,6 +623,18 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target, const Obj_Entry *defobj,
 	/* Do nothing */
 
 	return target;
+}
+
+void
+ifunc_init(Elf_Auxinfo aux_info[__min_size(AT_COUNT)] __unused)
+{
+
+}
+
+void
+pre_init(void)
+{
+
 }
 
 void

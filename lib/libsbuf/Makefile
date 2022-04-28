@@ -1,14 +1,19 @@
-# $FreeBSD: release/10.0.0/lib/libsbuf/Makefile 222033 2011-05-17 17:37:58Z phk $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 LIB=		sbuf
 SHLIBDIR?= 	/lib
-SRCS=		subr_sbuf.c 
+SRCS=		subr_prf.c subr_sbuf.c
 
 SHLIB_MAJOR	= 6
 
 SYMBOL_MAPS=    ${.CURDIR}/Symbol.map
 VERSION_DEF=	${.CURDIR}/Version.def
 
-.PATH:	${.CURDIR}/../../sys/kern
+.include <src.opts.mk>
+
+.PATH:	${SRCTOP}/sys/kern
+
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.lib.mk>

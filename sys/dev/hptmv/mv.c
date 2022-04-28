@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptmv/mv.c 149871 2005-09-07 23:33:26Z scottl $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,17 +33,7 @@
 #include <sys/bus.h>
 #include <machine/resource.h>
 
-#if __FreeBSD_version >= 500043
 #include <machine/pci_cfgreg.h>
-#endif
-
-#if (__FreeBSD_version < 500043)
-#include <sys/bus_private.h>
-#endif
-
-#if (__FreeBSD_version < 500000)
-#include <machine/clock.h>
-#endif
 
 #ifndef __KERNEL__
 #define __KERNEL__

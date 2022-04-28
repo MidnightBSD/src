@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ndbm.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: release/10.0.0/include/ndbm.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NDBM_H_
@@ -52,7 +52,7 @@
 #define	DBM_SUFFIX	".db"
 
 typedef struct {
-	char *dptr;
+	void *dptr;
 	int dsize;
 } datum;
 
@@ -70,7 +70,7 @@ datum	 dbm_firstkey(DBM *);
 long	 dbm_forder(DBM *, datum);
 #endif
 datum	 dbm_nextkey(DBM *);
-DBM	*dbm_open(const char *, int, int);
+DBM	*dbm_open(const char *, int, mode_t);
 int	 dbm_store(DBM *, datum, datum, int);
 #if __BSD_VISIBLE
 int	 dbm_dirfno(DBM *);

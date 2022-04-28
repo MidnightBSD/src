@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/send-logs.sh 217173 2011-01-08 23:03:24Z jpaetzel $
+# $FreeBSD$
 
 # Script which creates a gzipped log and optionally mails it to the specified address
 ############################################################################

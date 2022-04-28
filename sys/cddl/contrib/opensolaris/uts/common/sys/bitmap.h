@@ -24,14 +24,17 @@
  * Use is subject to license terms.
  */
 
+/*
+ * Copyright (c) 2014 by Delphix. All rights reserved.
+ * Copyright 2017 RackTop Systems.
+ */
+
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
 /*	  All Rights Reserved  	*/
 
 
 #ifndef _SYS_BITMAP_H
 #define	_SYS_BITMAP_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -132,7 +135,7 @@ extern "C" {
 #define	BIT_ONLYONESET(u) \
 	((((u) == 0) ? 0 : ((u) & ((u) - 1)) == 0))
 
-#if defined(_KERNEL) && !defined(_ASM)
+#if (defined(_KERNEL) || defined(_FAKE_KERNEL)) && !defined(_ASM)
 #include <sys/atomic.h>
 
 /*
@@ -152,6 +155,7 @@ extern int	bt_range(ulong_t *bitmap, size_t *pos1, size_t *pos2,
  * Low order bit is 0, high order bit is 31.
  */
 extern int	highbit(ulong_t);
+extern int	highbit64(uint64_t);
 extern int	lowbit(ulong_t);
 extern int	bt_getlowbit(ulong_t *bitmap, size_t start, size_t stop);
 extern void	bt_copy(ulong_t *, ulong_t *, ulong_t);
@@ -168,9 +172,9 @@ extern int	odd_parity(ulong_t);
  * to 0 otherwise.
  */
 #define	BT_ATOMIC_SET(bitmap, bitindex) \
-	{ atomic_or_long(&(BT_WIM(bitmap, bitindex)), BT_BIW(bitindex)); }
+	{ atomic_or_ulong(&(BT_WIM(bitmap, bitindex)), BT_BIW(bitindex)); }
 #define	BT_ATOMIC_CLEAR(bitmap, bitindex) \
-	{ atomic_and_long(&(BT_WIM(bitmap, bitindex)), ~BT_BIW(bitindex)); }
+	{ atomic_and_ulong(&(BT_WIM(bitmap, bitindex)), ~BT_BIW(bitindex)); }
 
 #define	BT_ATOMIC_SET_EXCL(bitmap, bitindex, result) \
 	{ result = atomic_set_long_excl(&(BT_WIM(bitmap, bitindex)),	\
@@ -185,7 +189,7 @@ extern int	odd_parity(ulong_t);
  */
 #define	BITX(u, h, l)	(((u) >> (l)) & ((1LU << ((h) - (l) + 1LU)) - 1LU))
 
-#endif	/* _KERNEL && !_ASM */
+#endif	/* (_KERNEL || _FAKE_KERNEL) && !_ASM */
 
 #ifdef	__cplusplus
 }

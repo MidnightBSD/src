@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/posix4.h 225617 2011-09-16 13:58:51Z kmacy $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -55,9 +55,6 @@ int sys_ ## SC (struct thread *td, struct SC##_args *uap) \
 
 
 MALLOC_DECLARE(M_P31B);
-
-#define p31b_malloc(SIZE) malloc((SIZE), M_P31B, M_WAITOK)
-#define p31b_free(P) free((P), M_P31B)
 
 int p31b_proc(struct proc *, pid_t, struct proc **);
 

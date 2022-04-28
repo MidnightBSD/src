@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/dev/auxio/auxioreg.h 139749 2005-01-06 01:43:34Z imp $ */
+/*	$FreeBSD$ */
 /*	$NetBSD: auxioreg.h,v 1.4 2001/10/22 07:31:41 mrg Exp $	*/
 
 /*-

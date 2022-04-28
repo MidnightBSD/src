@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet/cc/cc_cubic.h 220560 2011-04-12 08:13:18Z lstewart $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_CC_CUBIC_H_

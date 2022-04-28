@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cy/cy.c 166901 2007-02-23 12:19:07Z piso $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -1347,7 +1347,7 @@ cyparam(struct tty *tp, struct termios *t)
 	/*
 	 * Set receive time-out period, normally to max(one char time, 5 ms).
 	 */
-	itimeout = (1000 * bits + t->c_ispeed - 1) / t->c_ispeed;
+	itimeout = howmany(1000 * bits, t->c_ispeed);
 #ifdef SOFT_HOTCHAR
 #define	MIN_RTP		1
 #else

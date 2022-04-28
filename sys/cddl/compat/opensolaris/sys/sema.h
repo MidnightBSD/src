@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/sema.h 179203 2008-05-22 08:35:03Z jb $
+ * $FreeBSD$
  *
  */
 

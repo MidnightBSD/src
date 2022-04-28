@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/r300.c 255573 2013-09-14 17:24:41Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/drm.h>
@@ -407,9 +407,9 @@ int r300_asic_reset(struct radeon_device *rdev)
 	WREG32(R_0000F0_RBBM_SOFT_RESET, S_0000F0_SOFT_RESET_VAP(1) |
 					S_0000F0_SOFT_RESET_GA(1));
 	RREG32(R_0000F0_RBBM_SOFT_RESET);
-	DRM_MDELAY(500);
+	mdelay(500);
 	WREG32(R_0000F0_RBBM_SOFT_RESET, 0);
-	DRM_MDELAY(1);
+	mdelay(1);
 	status = RREG32(R_000E40_RBBM_STATUS);
 	dev_info(rdev->dev, "(%s:%d) RBBM_STATUS=0x%08X\n", __func__, __LINE__, status);
 	/* resetting the CP seems to be problematic sometimes it end up
@@ -419,9 +419,9 @@ int r300_asic_reset(struct radeon_device *rdev)
 	 */
 	WREG32(R_0000F0_RBBM_SOFT_RESET, S_0000F0_SOFT_RESET_CP(1));
 	RREG32(R_0000F0_RBBM_SOFT_RESET);
-	DRM_MDELAY(500);
+	mdelay(500);
 	WREG32(R_0000F0_RBBM_SOFT_RESET, 0);
-	DRM_MDELAY(1);
+	mdelay(1);
 	status = RREG32(R_000E40_RBBM_STATUS);
 	dev_info(rdev->dev, "(%s:%d) RBBM_STATUS=0x%08X\n", __func__, __LINE__, status);
 	/* restore PCI & busmastering */
@@ -1041,7 +1041,7 @@ static int r300_packet0_check(struct radeon_cs_parser *p,
 		track->textures[i].height = tmp + 1;
 		tmp = (idx_value >> 26) & 0xF;
 		track->textures[i].num_levels = tmp;
-		tmp = idx_value & (1 << 31);
+		tmp = idx_value & (1U << 31);
 		track->textures[i].use_pitch = !!tmp;
 		tmp = (idx_value >> 22) & 0xF;
 		track->textures[i].txdepth = tmp;
@@ -1254,7 +1254,7 @@ int r300_cs_parse(struct radeon_cs_parser *p)
 	struct r100_cs_track *track;
 	int r;
 
-	track = malloc(sizeof(*track), DRM_MEM_DRIVER, M_ZERO | M_WAITOK);
+	track = malloc(sizeof(*track), DRM_MEM_DRIVER, M_NOWAIT | M_ZERO);
 	if (track == NULL)
 		return -ENOMEM;
 	r100_cs_track_clear(p->rdev, track);
@@ -1299,7 +1299,7 @@ int r300_cs_parse(struct radeon_cs_parser *p)
 void r300_set_reg_safe(struct radeon_device *rdev)
 {
 	rdev->config.r300.reg_safe_bm = r300_reg_safe_bm;
-	rdev->config.r300.reg_safe_bm_size = DRM_ARRAY_SIZE(r300_reg_safe_bm);
+	rdev->config.r300.reg_safe_bm_size = ARRAY_SIZE(r300_reg_safe_bm);
 }
 
 void r300_mc_program(struct radeon_device *rdev)

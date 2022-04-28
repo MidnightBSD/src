@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/include/counter.h 252434 2013-07-01 02:48:27Z kib $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_COUNTER_H__
@@ -51,7 +51,7 @@ counter_u64_fetch_inline(uint64_t *p)
 	int i;
 
 	r = 0;
-	for (i = 0; i < mp_ncpus; i++)
+	CPU_FOREACH(i)
 		r += counter_u64_read_one((uint64_t *)p, i);
 
 	return (r);
@@ -69,8 +69,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 

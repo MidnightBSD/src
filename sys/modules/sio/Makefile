@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/sys/modules/sio/Makefile 225214 2011-08-27 14:24:27Z rwatson $
+# $FreeBSD$
 
 .if ${MACHINE} == "pc98"
-.PATH: ${.CURDIR}/../../pc98/cbus
+.PATH: ${SRCTOP}/sys/pc98/cbus
 .endif
-.PATH: ${.CURDIR}/../../dev/sio
+.PATH: ${SRCTOP}/sys/dev/sio
 
 KMOD=	sio
 SRCS=	bus_if.h card_if.h device_if.h isa_if.h pci_if.h serdev_if.h \

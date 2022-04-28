@@ -1,7 +1,9 @@
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
- * Copyright (c) 2005 Emmanuel Dreyfus, all rights reserved.
+ * Copyright (c) 2009-2016 Dmitry Chagin
+ * Copyright (c) 2005 Emmanuel Dreyfus
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,13 +34,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/linux/linux_futex.c 255971 2013-10-01 15:40:27Z markj $");
+__FBSDID("$FreeBSD$");
 #if 0
 __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $");
 #endif
 
 #include "opt_compat.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,8 +54,9 @@ __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $")
 #include <sys/queue.h>
 #include <sys/sched.h>
 #include <sys/sdt.h>
-#include <sys/sx.h>
 #include <sys/umtx.h>
+
+#include <vm/vm_extern.h>
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>
@@ -66,14 +68,11 @@ __KERNEL_RCSID(1, "$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $")
 #include <compat/linux/linux_dtrace.h>
 #include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_futex.h>
+#include <compat/linux/linux_timer.h>
 #include <compat/linux/linux_util.h>
 
 /* DTrace init */
 LIN_SDT_PROVIDER_DECLARE(LINUX_DTRACE);
-
-/* Linuxulator-global DTrace probes */
-LIN_SDT_PROBE_DECLARE(locks, emul_lock, locked);
-LIN_SDT_PROBE_DECLARE(locks, emul_lock, unlock);
 
 /**
  * Futex part for the special DTrace module "locks".
@@ -110,7 +109,7 @@ LIN_SDT_PROBE_DEFINE3(futex, futex_get, entry, "uint32_t *",
 LIN_SDT_PROBE_DEFINE0(futex, futex_get, error);
 LIN_SDT_PROBE_DEFINE1(futex, futex_get, return, "int");
 LIN_SDT_PROBE_DEFINE3(futex, futex_sleep, entry, "struct futex *",
-    "struct waiting_proc **", "int");
+    "struct waiting_proc **", "struct timespec *");
 LIN_SDT_PROBE_DEFINE5(futex, futex_sleep, requeue_error, "int", "uint32_t *",
     "struct waiting_proc *", "uint32_t *", "uint32_t");
 LIN_SDT_PROBE_DEFINE3(futex, futex_sleep, sleep_error, "int", "uint32_t *",
@@ -129,9 +128,7 @@ LIN_SDT_PROBE_DEFINE3(futex, futex_requeue, requeue, "uint32_t *",
     "struct waiting_proc *", "uint32_t");
 LIN_SDT_PROBE_DEFINE1(futex, futex_requeue, return, "int");
 LIN_SDT_PROBE_DEFINE4(futex, futex_wait, entry, "struct futex *",
-    "struct waiting_proc **", "struct l_timespec *", "uint32_t");
-LIN_SDT_PROBE_DEFINE1(futex, futex_wait, copyin_error, "int");
-LIN_SDT_PROBE_DEFINE1(futex, futex_wait, itimerfix_error, "int");
+    "struct waiting_proc **", "struct timespec *", "uint32_t");
 LIN_SDT_PROBE_DEFINE1(futex, futex_wait, sleep_error, "int");
 LIN_SDT_PROBE_DEFINE1(futex, futex_wait, return, "int");
 LIN_SDT_PROBE_DEFINE3(futex, futex_atomic_op, entry, "struct thread *",
@@ -176,20 +173,19 @@ LIN_SDT_PROBE_DEFINE2(futex, linux_get_robust_list, entry, "struct thread *",
     "struct linux_get_robust_list_args *");
 LIN_SDT_PROBE_DEFINE1(futex, linux_get_robust_list, copyout_error, "int");
 LIN_SDT_PROBE_DEFINE1(futex, linux_get_robust_list, return, "int");
-LIN_SDT_PROBE_DEFINE3(futex, handle_futex_death, entry, "struct proc *",
-    "uint32_t *", "int");
+LIN_SDT_PROBE_DEFINE3(futex, handle_futex_death, entry,
+    "struct linux_emuldata *", "uint32_t *", "unsigned int");
 LIN_SDT_PROBE_DEFINE1(futex, handle_futex_death, copyin_error, "int");
 LIN_SDT_PROBE_DEFINE1(futex, handle_futex_death, return, "int");
 LIN_SDT_PROBE_DEFINE3(futex, fetch_robust_entry, entry,
-    "struct linux_robust_list **", "struct linux_robust_list **", "int *");
+    "struct linux_robust_list **", "struct linux_robust_list **",
+    "unsigned int *");
 LIN_SDT_PROBE_DEFINE1(futex, fetch_robust_entry, copyin_error, "int");
 LIN_SDT_PROBE_DEFINE1(futex, fetch_robust_entry, return, "int");
-LIN_SDT_PROBE_DEFINE1(futex, release_futexes, entry, "struct proc *");
+LIN_SDT_PROBE_DEFINE2(futex, release_futexes, entry, "struct thread *",
+    "struct linux_emuldata *");
 LIN_SDT_PROBE_DEFINE1(futex, release_futexes, copyin_error, "int");
 LIN_SDT_PROBE_DEFINE0(futex, release_futexes, return);
-
-static MALLOC_DEFINE(M_FUTEX, "futex", "Linux futexes");
-static MALLOC_DEFINE(M_FUTEX_WP, "futex wp", "Linux futexes wp");
 
 struct futex;
 
@@ -200,7 +196,7 @@ struct waiting_proc {
 };
 
 struct futex {
-	struct sx	f_lck;
+	struct mtx	f_lck;
 	uint32_t	*f_uaddr;	/* user-supplied value, for debug */
 	struct umtx_key	f_key;
 	uint32_t	f_refcount;
@@ -211,20 +207,22 @@ struct futex {
 
 struct futex_list futex_list;
 
-#define FUTEX_LOCK(f)		sx_xlock(&(f)->f_lck)
-#define FUTEX_UNLOCK(f)		sx_xunlock(&(f)->f_lck)
+#define FUTEX_LOCK(f)		mtx_lock(&(f)->f_lck)
+#define FUTEX_LOCKED(f)		mtx_owned(&(f)->f_lck)
+#define FUTEX_UNLOCK(f)		mtx_unlock(&(f)->f_lck)
 #define FUTEX_INIT(f)		do { \
-				    sx_init_flags(&(f)->f_lck, "ftlk", \
-					SX_DUPOK); \
+				    mtx_init(&(f)->f_lck, "ftlk", NULL, \
+					MTX_DUPOK); \
 				    LIN_SDT_PROBE1(futex, futex, create, \
 					&(f)->f_lck); \
 				} while (0)
 #define FUTEX_DESTROY(f)	do { \
 				    LIN_SDT_PROBE1(futex, futex, destroy, \
 					&(f)->f_lck); \
-				    sx_destroy(&(f)->f_lck); \
+				    mtx_destroy(&(f)->f_lck); \
 				} while (0)
-#define FUTEX_ASSERT_LOCKED(f)	sx_assert(&(f)->f_lck, SA_XLOCKED)
+#define FUTEX_ASSERT_LOCKED(f)	mtx_assert(&(f)->f_lck, MA_OWNED)
+#define FUTEX_ASSERT_UNLOCKED(f) mtx_assert(&(f)->f_lck, MA_NOTOWNED)
 
 struct mtx futex_mtx;			/* protects the futex list */
 #define FUTEXES_LOCK		do { \
@@ -243,6 +241,7 @@ struct mtx futex_mtx;			/* protects the futex list */
 #define FUTEX_DONTCREATE	0x2	/* don't create futex if not exists */
 #define FUTEX_DONTEXISTS	0x4	/* return EINVAL if futex exists */
 #define	FUTEX_SHARED		0x8	/* shared futex */
+#define	FUTEX_DONTLOCK		0x10	/* don't lock futex */
 
 /* wp_flags */
 #define FUTEX_WP_REQUEUED	0x1	/* wp requeued - wp moved from wp_list
@@ -253,6 +252,25 @@ struct mtx futex_mtx;			/* protects the futex list */
 					 * wp_list to prevent double wakeup.
 					 */
 
+static void futex_put(struct futex *, struct waiting_proc *);
+static int futex_get0(uint32_t *, struct futex **f, uint32_t);
+static int futex_get(uint32_t *, struct waiting_proc **, struct futex **,
+    uint32_t);
+static int futex_sleep(struct futex *, struct waiting_proc *, struct timespec *);
+static int futex_wake(struct futex *, int, uint32_t);
+static int futex_requeue(struct futex *, int, struct futex *, int);
+static int futex_copyin_timeout(int, struct l_timespec *, int,
+    struct timespec *);
+static int futex_wait(struct futex *, struct waiting_proc *, struct timespec *,
+    uint32_t);
+static void futex_lock(struct futex *);
+static void futex_unlock(struct futex *);
+static int futex_atomic_op(struct thread *, int, uint32_t *);
+static int handle_futex_death(struct linux_emuldata *, uint32_t *,
+    unsigned int);
+static int fetch_robust_entry(struct linux_robust_list **,
+    struct linux_robust_list **, unsigned int *);
+
 /* support.s */
 int futex_xchgl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_addl(int oparg, uint32_t *uaddr, int *oldval);
@@ -260,12 +278,37 @@ int futex_orl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_andl(int oparg, uint32_t *uaddr, int *oldval);
 int futex_xorl(int oparg, uint32_t *uaddr, int *oldval);
 
+
+static int
+futex_copyin_timeout(int op, struct l_timespec *luts, int clockrt,
+    struct timespec *ts)
+{
+	struct l_timespec lts;
+	struct timespec kts;
+	int error;
+
+	error = copyin(luts, &lts, sizeof(lts));
+	if (error)
+		return (error);
+
+	error = linux_to_native_timespec(ts, &lts);
+	if (error)
+		return (error);
+	if (clockrt) {
+		nanotime(&kts);
+		timespecsub(ts, &kts);
+	} else if (op == LINUX_FUTEX_WAIT_BITSET) {
+		nanouptime(&kts);
+		timespecsub(ts, &kts);
+	}
+	return (error);
+}
+
 static void
 futex_put(struct futex *f, struct waiting_proc *wp)
 {
 	LIN_SDT_PROBE2(futex, futex_put, entry, f, wp);
 
-	FUTEX_ASSERT_LOCKED(f);
 	if (wp != NULL) {
 		if ((wp->wp_flags & FUTEX_WP_REMOVED) == 0)
 			TAILQ_REMOVE(&f->f_waiting_proc, wp, wp_list);
@@ -276,7 +319,8 @@ futex_put(struct futex *f, struct waiting_proc *wp)
 	if (--f->f_refcount == 0) {
 		LIST_REMOVE(f, f_list);
 		FUTEXES_UNLOCK;
-		FUTEX_UNLOCK(f);
+		if (FUTEX_LOCKED(f))
+			futex_unlock(f);
 
 		LIN_SDT_PROBE3(futex, futex_put, destroy, f->f_uaddr,
 		    f->f_refcount, f->f_key.shared);
@@ -294,8 +338,9 @@ futex_put(struct futex *f, struct waiting_proc *wp)
 	    f->f_key.shared);
 	LINUX_CTR3(sys_futex, "futex_put uaddr %p ref %d shared %d",
 	    f->f_uaddr, f->f_refcount, f->f_key.shared);
+	if (FUTEX_LOCKED(f))
+		futex_unlock(f);
 	FUTEXES_UNLOCK;
-	FUTEX_UNLOCK(f);
 
 	LIN_SDT_PROBE0(futex, futex_put, return);
 }
@@ -323,7 +368,8 @@ retry:
 	LIST_FOREACH(f, &futex_list, f_list) {
 		if (umtx_key_match(&f->f_key, &key)) {
 			if (tmpf != NULL) {
-				FUTEX_UNLOCK(tmpf);
+				if (FUTEX_LOCKED(tmpf))
+					futex_unlock(tmpf);
 				FUTEX_DESTROY(tmpf);
 				free(tmpf, M_FUTEX);
 			}
@@ -344,7 +390,8 @@ retry:
 			FUTEXES_UNLOCK;
 			umtx_key_release(&key);
 
-			FUTEX_LOCK(f);
+			if ((flags & FUTEX_DONTLOCK) == 0)
+				futex_lock(f);
 			*newf = f;
 			LIN_SDT_PROBE3(futex, futex_get0, shared, uaddr,
 			    f->f_refcount, f->f_key.shared);
@@ -380,7 +427,8 @@ retry:
 		 * Lock the new futex before an insert into the futex_list
 		 * to prevent futex usage by other.
 		 */
-		FUTEX_LOCK(tmpf);
+		if ((flags & FUTEX_DONTLOCK) == 0)
+			futex_lock(tmpf);
 		goto retry;
 	}
 
@@ -428,16 +476,56 @@ futex_get(uint32_t *uaddr, struct waiting_proc **wp, struct futex **f,
 	return (error);
 }
 
-static int
-futex_sleep(struct futex *f, struct waiting_proc *wp, int timeout)
+static inline void
+futex_lock(struct futex *f)
 {
+
+	LINUX_CTR3(sys_futex, "futex_lock uaddr %p ref %d shared %d",
+	    f->f_uaddr, f->f_refcount, f->f_key.shared);
+	FUTEX_ASSERT_UNLOCKED(f);
+	FUTEX_LOCK(f);
+}
+
+static inline void
+futex_unlock(struct futex *f)
+{
+
+	LINUX_CTR3(sys_futex, "futex_unlock uaddr %p ref %d shared %d",
+	    f->f_uaddr, f->f_refcount, f->f_key.shared);
+	FUTEX_ASSERT_LOCKED(f);
+	FUTEX_UNLOCK(f);
+}
+
+static int
+futex_sleep(struct futex *f, struct waiting_proc *wp, struct timespec *ts)
+{
+	struct timespec uts;
+	sbintime_t sbt, prec, tmp;
+	time_t over;
 	int error;
 
 	FUTEX_ASSERT_LOCKED(f);
-	LIN_SDT_PROBE3(futex, futex_sleep, entry, f, wp, timeout);
-	LINUX_CTR4(sys_futex, "futex_sleep enter uaddr %p wp %p timo %d ref %d",
-	    f->f_uaddr, wp, timeout, f->f_refcount);
-	error = sx_sleep(wp, &f->f_lck, PCATCH, "futex", timeout);
+	if (ts != NULL) {
+		uts = *ts;
+		if (uts.tv_sec > INT32_MAX / 2) {
+			over = uts.tv_sec - INT32_MAX / 2;
+			uts.tv_sec -= over;
+		}
+		tmp = tstosbt(uts);
+		if (TIMESEL(&sbt, tmp))
+			sbt += tc_tick_sbt;
+		sbt += tmp;
+		prec = tmp;
+		prec >>= tc_precexp;
+	} else {
+		sbt = 0;
+		prec = 0;
+	}
+	LIN_SDT_PROBE3(futex, futex_sleep, entry, f, wp, sbt);
+	LINUX_CTR4(sys_futex, "futex_sleep enter uaddr %p wp %p timo %ld ref %d",
+	    f->f_uaddr, wp, sbt, f->f_refcount);
+
+	error = msleep_sbt(wp, &f->f_lck, PCATCH, "futex", sbt, prec, C_ABSOLUTE);
 	if (wp->wp_flags & FUTEX_WP_REQUEUED) {
 		KASSERT(f != wp->wp_futex, ("futex != wp_futex"));
 
@@ -453,7 +541,7 @@ futex_sleep(struct futex *f, struct waiting_proc *wp, int timeout)
 		    wp->wp_futex->f_refcount);
 		futex_put(f, NULL);
 		f = wp->wp_futex;
-		FUTEX_LOCK(f);
+		futex_lock(f);
 	} else {
 		if (error) {
 			LIN_SDT_PROBE3(futex, futex_sleep, sleep_error, error,
@@ -555,12 +643,9 @@ futex_requeue(struct futex *f, int n, struct futex *f2, int n2)
 }
 
 static int
-futex_wait(struct futex *f, struct waiting_proc *wp, struct l_timespec *ts,
+futex_wait(struct futex *f, struct waiting_proc *wp, struct timespec *ts,
     uint32_t bitset)
 {
-	struct l_timespec timeout;
-	struct timeval tv;
-	int timeout_hz;
 	int error;
 
 	LIN_SDT_PROBE4(futex, futex_wait, entry, f, wp, ts, bitset);
@@ -571,30 +656,9 @@ futex_wait(struct futex *f, struct waiting_proc *wp, struct l_timespec *ts,
 	}
 
 	f->f_bitset = bitset;
-
-	if (ts != NULL) {
-		error = copyin(ts, &timeout, sizeof(timeout));
-		if (error) {
-			LIN_SDT_PROBE1(futex, futex_wait, copyin_error, error);
-			LIN_SDT_PROBE1(futex, futex_wait, return, error);
-			return (error);
-		}
-		TIMESPEC_TO_TIMEVAL(&tv, &timeout);
-		error = itimerfix(&tv);
-		if (error) {
-			LIN_SDT_PROBE1(futex, futex_wait, itimerfix_error,
-			    error);
-			LIN_SDT_PROBE1(futex, futex_wait, return, error);
-			return (error);
-		}
-		timeout_hz = tvtohz(&tv);
-	} else
-		timeout_hz = 0;
-
-	error = futex_sleep(f, wp, timeout_hz);
-	if (error) {
+	error = futex_sleep(f, wp, ts);
+	if (error)
 		LIN_SDT_PROBE1(futex, futex_wait, sleep_error, error);
-	}
 	if (error == EWOULDBLOCK)
 		error = ETIMEDOUT;
 
@@ -618,7 +682,7 @@ futex_atomic_op(struct thread *td, int encoded_op, uint32_t *uaddr)
 
 	LIN_SDT_PROBE4(futex, futex_atomic_op, decoded_op, op, cmp, oparg,
 	    cmparg);
-	
+
 	/* XXX: Linux verifies access here and returns EFAULT */
 	LIN_SDT_PROBE0(futex, futex_atomic_op, missing_access_check);
 
@@ -680,12 +744,13 @@ futex_atomic_op(struct thread *td, int encoded_op, uint32_t *uaddr)
 int
 linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 {
-	int clockrt, nrwake, op_ret, ret, val;
-	struct linux_emuldata *em;
+	int clockrt, nrwake, op_ret, ret;
+	struct linux_pemuldata *pem;
 	struct waiting_proc *wp;
 	struct futex *f, *f2;
-	int error;
-	uint32_t flags;
+	struct timespec uts, *ts;
+	int error, save;
+	uint32_t flags, val;
 
 	LIN_SDT_PROBE2(futex, linux_sys_futex, entry, td, args);
 
@@ -722,9 +787,23 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 	case LINUX_FUTEX_WAIT_BITSET:
 		LIN_SDT_PROBE3(futex, linux_sys_futex, debug_wait, args->uaddr,
 		    args->val, args->val3);
-		LINUX_CTR3(sys_futex, "WAIT uaddr %p val %d val3 %d",
+		LINUX_CTR3(sys_futex, "WAIT uaddr %p val 0x%x bitset 0x%x",
 		    args->uaddr, args->val, args->val3);
 
+		if (args->timeout != NULL) {
+			error = futex_copyin_timeout(args->op, args->timeout,
+			    clockrt, &uts);
+			if (error) {
+				LIN_SDT_PROBE1(futex, linux_sys_futex, copyin_error,
+				    error);
+				LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
+				return (error);
+			}
+			ts = &uts;
+		} else
+			ts = NULL;
+
+retry0:
 		error = futex_get(args->uaddr, &wp, &f,
 		    flags | FUTEX_CREATE_WP);
 		if (error) {
@@ -732,14 +811,16 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 			return (error);
 		}
 
-		error = copyin(args->uaddr, &val, sizeof(val));
+		error = copyin_nofault(args->uaddr, &val, sizeof(val));
 		if (error) {
+			futex_put(f, wp);
+			error = copyin(args->uaddr, &val, sizeof(val));
+			if (error == 0)
+				goto retry0;
 			LIN_SDT_PROBE1(futex, linux_sys_futex, copyin_error,
 			    error);
 			LINUX_CTR1(sys_futex, "WAIT copyin failed %d",
 			    error);
-			futex_put(f, wp);
-
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
 		}
@@ -747,9 +828,9 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 			LIN_SDT_PROBE4(futex, linux_sys_futex,
 			    debug_wait_value_neq, args->uaddr, args->val, val,
 			    args->val3);
-			LINUX_CTR4(sys_futex,
-			    "WAIT uaddr %p val %d != uval %d val3 %d",
-			    args->uaddr, args->val, val, args->val3);
+			LINUX_CTR3(sys_futex,
+			    "WAIT uaddr %p val 0x%x != uval 0x%x",
+			    args->uaddr, args->val, val);
 			futex_put(f, wp);
 
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return,
@@ -757,7 +838,7 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 			return (EWOULDBLOCK);
 		}
 
-		error = futex_wait(f, wp, args->timeout, args->val3);
+		error = futex_wait(f, wp, ts, args->val3);
 		break;
 
 	case LINUX_FUTEX_WAKE:
@@ -767,7 +848,7 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 	case LINUX_FUTEX_WAKE_BITSET:
 		LIN_SDT_PROBE3(futex, linux_sys_futex, debug_wake, args->uaddr,
 		    args->val, args->val3);
-		LINUX_CTR3(sys_futex, "WAKE uaddr %p val % d val3 %d",
+		LINUX_CTR3(sys_futex, "WAKE uaddr %p nrwake 0x%x bitset 0x%x",
 		    args->uaddr, args->val, args->val3);
 
 		error = futex_get(args->uaddr, NULL, &f,
@@ -792,9 +873,9 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		    args->uaddr, args->val, args->val3, args->uaddr2,
 		    args->timeout);
 		LINUX_CTR5(sys_futex, "CMP_REQUEUE uaddr %p "
-		    "val %d val3 %d uaddr2 %p val2 %d",
+		    "nrwake 0x%x uval 0x%x uaddr2 %p nrequeue 0x%x",
 		    args->uaddr, args->val, args->val3, args->uaddr2,
-		    (int)(unsigned long)args->timeout);
+		    args->timeout);
 
 		/*
 		 * Linux allows this, we would not, it is an incorrect
@@ -807,7 +888,8 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 			return (EINVAL);
 		}
 
-		error = futex_get(args->uaddr, NULL, &f, flags);
+retry1:
+		error = futex_get(args->uaddr, NULL, &f, flags | FUTEX_DONTLOCK);
 		if (error) {
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
@@ -821,29 +903,33 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		 * returned by FUTEX_CMP_REQUEUE.
 		 */
 		error = futex_get(args->uaddr2, NULL, &f2,
-		    flags | FUTEX_DONTEXISTS);
+		    flags | FUTEX_DONTEXISTS | FUTEX_DONTLOCK);
 		if (error) {
 			futex_put(f, NULL);
 
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
 		}
-		error = copyin(args->uaddr, &val, sizeof(val));
+		futex_lock(f);
+		futex_lock(f2);
+		error = copyin_nofault(args->uaddr, &val, sizeof(val));
 		if (error) {
+			futex_put(f2, NULL);
+			futex_put(f, NULL);
+			error = copyin(args->uaddr, &val, sizeof(val));
+			if (error == 0)
+				goto retry1;
 			LIN_SDT_PROBE1(futex, linux_sys_futex, copyin_error,
 			    error);
 			LINUX_CTR1(sys_futex, "CMP_REQUEUE copyin failed %d",
 			    error);
-			futex_put(f2, NULL);
-			futex_put(f, NULL);
-
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
 		}
 		if (val != args->val3) {
 			LIN_SDT_PROBE2(futex, linux_sys_futex,
 			    debug_cmp_requeue_value_neq, args->val, val);
-			LINUX_CTR2(sys_futex, "CMP_REQUEUE val %d != uval %d",
+			LINUX_CTR2(sys_futex, "CMP_REQUEUE val 0x%x != uval 0x%x",
 			    args->val, val);
 			futex_put(f2, NULL);
 			futex_put(f, NULL);
@@ -862,51 +948,52 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		LIN_SDT_PROBE5(futex, linux_sys_futex, debug_wake_op,
 		    args->uaddr, args->op, args->val, args->uaddr2, args->val3);
 		LINUX_CTR5(sys_futex, "WAKE_OP "
-		    "uaddr %p op %d val %x uaddr2 %p val3 %x",
-		    args->uaddr, args->op, args->val,
-		    args->uaddr2, args->val3);
+		    "uaddr %p nrwake 0x%x uaddr2 %p op 0x%x nrwake2 0x%x",
+		    args->uaddr, args->val, args->uaddr2, args->val3,
+		    args->timeout);
 
-		error = futex_get(args->uaddr, NULL, &f, flags);
+		if (args->uaddr == args->uaddr2) {
+			LIN_SDT_PROBE1(futex, linux_sys_futex, return, EINVAL);
+			return (EINVAL);
+		}
+
+retry2:
+		error = futex_get(args->uaddr, NULL, &f, flags | FUTEX_DONTLOCK);
 		if (error) {
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
 		}
 
-		if (args->uaddr != args->uaddr2)
-			error = futex_get(args->uaddr2, NULL, &f2, flags);
+		error = futex_get(args->uaddr2, NULL, &f2, flags | FUTEX_DONTLOCK);
 		if (error) {
 			futex_put(f, NULL);
 
 			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
 			return (error);
 		}
+		futex_lock(f);
+		futex_lock(f2);
 
 		/*
 		 * This function returns positive number as results and
 		 * negative as errors
 		 */
+		save = vm_fault_disable_pagefaults();
 		op_ret = futex_atomic_op(td, args->val3, args->uaddr2);
+		vm_fault_enable_pagefaults(save);
+
+		LINUX_CTR2(sys_futex, "WAKE_OP atomic_op uaddr %p ret 0x%x",
+		    args->uaddr, op_ret);
 
 		if (op_ret < 0) {
-			/* XXX: We don't handle the EFAULT yet. */
-			if (op_ret != -EFAULT) {
-				if (f2 != NULL)
-					futex_put(f2, NULL);
-				futex_put(f, NULL);
-
-				LIN_SDT_PROBE1(futex, linux_sys_futex, return,
-				    -op_ret);
-				return (-op_ret);
-			} else {
-				LIN_SDT_PROBE0(futex, linux_sys_futex,
-				    unhandled_efault);
-			}
 			if (f2 != NULL)
 				futex_put(f2, NULL);
 			futex_put(f, NULL);
-
-			LIN_SDT_PROBE1(futex, linux_sys_futex, return, EFAULT);
-			return (EFAULT);
+			error = copyin(args->uaddr2, &val, sizeof(val));
+			if (error == 0)
+				goto retry2;
+			LIN_SDT_PROBE1(futex, linux_sys_futex, return, error);
+			return (error);
 		}
 
 		ret = futex_wake(f, args->val, args->val3);
@@ -930,46 +1017,59 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 
 	case LINUX_FUTEX_LOCK_PI:
 		/* not yet implemented */
-		linux_msg(td,
-			  "linux_sys_futex: "
-			  "op LINUX_FUTEX_LOCK_PI not implemented\n");
-		LIN_SDT_PROBE0(futex, linux_sys_futex, unimplemented_lock_pi);
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XUNSUP_FUTEXPIOP) == 0) {
+			linux_msg(td,
+				  "linux_sys_futex: "
+				  "unsupported futex_pi op\n");
+			pem->flags |= LINUX_XUNSUP_FUTEXPIOP;
+			LIN_SDT_PROBE0(futex, linux_sys_futex,
+			    unimplemented_lock_pi);
+		}
 		LIN_SDT_PROBE1(futex, linux_sys_futex, return, ENOSYS);
 		return (ENOSYS);
 
 	case LINUX_FUTEX_UNLOCK_PI:
 		/* not yet implemented */
-		linux_msg(td,
-			  "linux_sys_futex: "
-			  "op LINUX_FUTEX_UNLOCK_PI not implemented\n");
-		LIN_SDT_PROBE0(futex, linux_sys_futex, unimplemented_unlock_pi);
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XUNSUP_FUTEXPIOP) == 0) {
+			linux_msg(td,
+				  "linux_sys_futex: "
+				  "unsupported futex_pi op\n");
+			pem->flags |= LINUX_XUNSUP_FUTEXPIOP;
+			LIN_SDT_PROBE0(futex, linux_sys_futex,
+			    unimplemented_unlock_pi);
+		}
 		LIN_SDT_PROBE1(futex, linux_sys_futex, return, ENOSYS);
 		return (ENOSYS);
 
 	case LINUX_FUTEX_TRYLOCK_PI:
 		/* not yet implemented */
-		linux_msg(td,
-			  "linux_sys_futex: "
-			  "op LINUX_FUTEX_TRYLOCK_PI not implemented\n");
-		LIN_SDT_PROBE0(futex, linux_sys_futex,
-		    unimplemented_trylock_pi);
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XUNSUP_FUTEXPIOP) == 0) {
+			linux_msg(td,
+				  "linux_sys_futex: "
+				  "unsupported futex_pi op\n");
+			pem->flags |= LINUX_XUNSUP_FUTEXPIOP;
+			LIN_SDT_PROBE0(futex, linux_sys_futex,
+			    unimplemented_trylock_pi);
+		}
 		LIN_SDT_PROBE1(futex, linux_sys_futex, return, ENOSYS);
 		return (ENOSYS);
 
 	case LINUX_FUTEX_REQUEUE:
-
 		/*
 		 * Glibc does not use this operation since version 2.3.3,
 		 * as it is racy and replaced by FUTEX_CMP_REQUEUE operation.
 		 * Glibc versions prior to 2.3.3 fall back to FUTEX_WAKE when
 		 * FUTEX_REQUEUE returned EINVAL.
 		 */
-		em = em_find(td->td_proc, EMUL_DONTLOCK);
-		if ((em->flags & LINUX_XDEPR_REQUEUEOP) == 0) {
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XDEPR_REQUEUEOP) == 0) {
 			linux_msg(td,
 				  "linux_sys_futex: "
 				  "unsupported futex_requeue op\n");
-			em->flags |= LINUX_XDEPR_REQUEUEOP;
+			pem->flags |= LINUX_XDEPR_REQUEUEOP;
 			LIN_SDT_PROBE0(futex, linux_sys_futex,
 			    deprecated_requeue);
 		}
@@ -979,21 +1079,29 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 
 	case LINUX_FUTEX_WAIT_REQUEUE_PI:
 		/* not yet implemented */
-		linux_msg(td,
-			  "linux_sys_futex: "
-			  "op FUTEX_WAIT_REQUEUE_PI not implemented\n");
-		LIN_SDT_PROBE0(futex, linux_sys_futex,
-		    unimplemented_wait_requeue_pi);
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XUNSUP_FUTEXPIOP) == 0) {
+			linux_msg(td,
+				  "linux_sys_futex: "
+				  "unsupported futex_pi op\n");
+			pem->flags |= LINUX_XUNSUP_FUTEXPIOP;
+			LIN_SDT_PROBE0(futex, linux_sys_futex,
+			    unimplemented_wait_requeue_pi);
+		}
 		LIN_SDT_PROBE1(futex, linux_sys_futex, return, ENOSYS);
 		return (ENOSYS);
 
 	case LINUX_FUTEX_CMP_REQUEUE_PI:
 		/* not yet implemented */
-		linux_msg(td,
-			    "linux_sys_futex: "
-			    "op LINUX_FUTEX_CMP_REQUEUE_PI not implemented\n");
-		LIN_SDT_PROBE0(futex, linux_sys_futex,
-		    unimplemented_cmp_requeue_pi);
+		pem = pem_find(td->td_proc);
+		if ((pem->flags & LINUX_XUNSUP_FUTEXPIOP) == 0) {
+			linux_msg(td,
+				  "linux_sys_futex: "
+				  "unsupported futex_pi op\n");
+			pem->flags |= LINUX_XUNSUP_FUTEXPIOP;
+			LIN_SDT_PROBE0(futex, linux_sys_futex,
+			    unimplemented_cmp_requeue_pi);
+		}
 		LIN_SDT_PROBE1(futex, linux_sys_futex, return, ENOSYS);
 		return (ENOSYS);
 
@@ -1023,9 +1131,8 @@ linux_set_robust_list(struct thread *td, struct linux_set_robust_list_args *args
 		return (EINVAL);
 	}
 
-	em = em_find(td->td_proc, EMUL_DOLOCK);
+	em = em_find(td);
 	em->robust_futexes = args->head;
-	EMUL_UNLOCK(&emul_lock);
 
 	LIN_SDT_PROBE1(futex, linux_set_robust_list, return, 0);
 	return (0);
@@ -1037,29 +1144,36 @@ linux_get_robust_list(struct thread *td, struct linux_get_robust_list_args *args
 	struct linux_emuldata *em;
 	struct linux_robust_list_head *head;
 	l_size_t len = sizeof(struct linux_robust_list_head);
+	struct thread *td2;
 	int error = 0;
 
 	LIN_SDT_PROBE2(futex, linux_get_robust_list, entry, td, args);
 
 	if (!args->pid) {
-		em = em_find(td->td_proc, EMUL_DONTLOCK);
+		em = em_find(td);
+		KASSERT(em != NULL, ("get_robust_list: emuldata notfound.\n"));
 		head = em->robust_futexes;
 	} else {
-		struct proc *p;
-
-		p = pfind(args->pid);
-		if (p == NULL) {
+		td2 = tdfind(args->pid, -1);
+		if (td2 == NULL) {
 			LIN_SDT_PROBE1(futex, linux_get_robust_list, return,
 			    ESRCH);
 			return (ESRCH);
 		}
+		if (SV_PROC_ABI(td2->td_proc) != SV_ABI_LINUX) {
+			LIN_SDT_PROBE1(futex, linux_get_robust_list, return,
+			    EPERM);
+			PROC_UNLOCK(td2->td_proc);
+			return (EPERM);
+		}
 
-		em = em_find(p, EMUL_DONTLOCK);
+		em = em_find(td2);
+		KASSERT(em != NULL, ("get_robust_list: emuldata notfound.\n"));
 		/* XXX: ptrace? */
 		if (priv_check(td, PRIV_CRED_SETUID) ||
 		    priv_check(td, PRIV_CRED_SETEUID) ||
-		    p_candebug(td, p)) {
-			PROC_UNLOCK(p);
+		    p_candebug(td, td2->td_proc)) {
+			PROC_UNLOCK(td2->td_proc);
 
 			LIN_SDT_PROBE1(futex, linux_get_robust_list, return,
 			    EPERM);
@@ -1067,7 +1181,7 @@ linux_get_robust_list(struct thread *td, struct linux_get_robust_list_args *args
 		}
 		head = em->robust_futexes;
 
-		PROC_UNLOCK(p);
+		PROC_UNLOCK(td2->td_proc);
 	}
 
 	error = copyout(&len, args->len, sizeof(l_size_t));
@@ -1078,7 +1192,7 @@ linux_get_robust_list(struct thread *td, struct linux_get_robust_list_args *args
 		return (EFAULT);
 	}
 
-	error = copyout(head, args->head, sizeof(struct linux_robust_list_head));
+	error = copyout(&head, args->head, sizeof(head));
 	if (error) {
 		LIN_SDT_PROBE1(futex, linux_get_robust_list, copyout_error,
 		    error);
@@ -1089,13 +1203,14 @@ linux_get_robust_list(struct thread *td, struct linux_get_robust_list_args *args
 }
 
 static int
-handle_futex_death(struct proc *p, uint32_t *uaddr, int pi)
+handle_futex_death(struct linux_emuldata *em, uint32_t *uaddr,
+    unsigned int pi)
 {
 	uint32_t uval, nval, mval;
 	struct futex *f;
 	int error;
 
-	LIN_SDT_PROBE3(futex, handle_futex_death, entry, p, uaddr, pi);
+	LIN_SDT_PROBE3(futex, handle_futex_death, entry, em, uaddr, pi);
 
 retry:
 	error = copyin(uaddr, &uval, 4);
@@ -1104,7 +1219,7 @@ retry:
 		LIN_SDT_PROBE1(futex, handle_futex_death, return, EFAULT);
 		return (EFAULT);
 	}
-	if ((uval & FUTEX_TID_MASK) == p->p_pid) {
+	if ((uval & FUTEX_TID_MASK) == em->em_tid) {
 		mval = (uval & FUTEX_WAITERS) | FUTEX_OWNER_DIED;
 		nval = casuword32(uaddr, uval, mval);
 
@@ -1138,7 +1253,7 @@ retry:
 
 static int
 fetch_robust_entry(struct linux_robust_list **entry,
-    struct linux_robust_list **head, int *pi)
+    struct linux_robust_list **head, unsigned int *pi)
 {
 	l_ulong uentry;
 	int error;
@@ -1161,18 +1276,16 @@ fetch_robust_entry(struct linux_robust_list **entry,
 
 /* This walks the list of robust futexes releasing them. */
 void
-release_futexes(struct proc *p)
+release_futexes(struct thread *td, struct linux_emuldata *em)
 {
 	struct linux_robust_list_head *head = NULL;
 	struct linux_robust_list *entry, *next_entry, *pending;
 	unsigned int limit = 2048, pi, next_pi, pip;
-	struct linux_emuldata *em;
 	l_long futex_offset;
 	int rc, error;
 
-	LIN_SDT_PROBE1(futex, release_futexes, entry, p);
+	LIN_SDT_PROBE2(futex, release_futexes, entry, td, em);
 
-	em = em_find(p, EMUL_DONTLOCK);
 	head = em->robust_futexes;
 
 	if (head == NULL) {
@@ -1202,7 +1315,7 @@ release_futexes(struct proc *p)
 		rc = fetch_robust_entry(&next_entry, PTRIN(&entry->next), &next_pi);
 
 		if (entry != pending)
-			if (handle_futex_death(p,
+			if (handle_futex_death(em,
 			    (uint32_t *)((caddr_t)entry + futex_offset), pi)) {
 				LIN_SDT_PROBE0(futex, release_futexes, return);
 				return;
@@ -1222,7 +1335,7 @@ release_futexes(struct proc *p)
 	}
 
 	if (pending)
-		handle_futex_death(p, (uint32_t *)((caddr_t)pending + futex_offset), pip);
+		handle_futex_death(em, (uint32_t *)((caddr_t)pending + futex_offset), pip);
 
 	LIN_SDT_PROBE0(futex, release_futexes, return);
 }

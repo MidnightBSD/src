@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/10.0.0/sbin/dump/Makefile 198236 2009-10-19 16:00:24Z ru $
+# $FreeBSD$
 
 #	dump.h			header file
 #	itime.c			reads /etc/dumpdates
@@ -13,6 +13,7 @@
 #	DEBUG			use local directory to find ddate and dumpdates
 #	TDEBUG			trace out the process forking
 
+PACKAGE=runtime
 PROG=	dump
 LINKS=	${BINDIR}/dump ${BINDIR}/rdump
 CFLAGS+=-DRDUMP

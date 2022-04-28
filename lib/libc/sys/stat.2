@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)stat.2	8.4 (Berkeley) 5/1/95
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/stat.2 236441 2012-06-02 10:50:25Z ed $
+.\" $FreeBSD$
 .\"
-.Dd June 2, 2012
+.Dd December 5, 2018
 .Dt STAT 2
 .Os
 .Sh NAME
@@ -40,16 +40,15 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
-.In sys/types.h
 .In sys/stat.h
 .Ft int
-.Fn stat "const char *path" "struct stat *sb"
+.Fn stat "const char * restrict path" "struct stat * restrict sb"
 .Ft int
-.Fn lstat "const char *path" "struct stat *sb"
+.Fn lstat "const char * restrict path" "struct stat * restrict sb"
 .Ft int
 .Fn fstat "int fd" "struct stat *sb"
 .Ft int
-.Fn fstatat "int fd" "const char *path" "struct stat *buf" "int flag"
+.Fn fstatat "int fd" "const char *path" "struct stat *sb" "int flag"
 .Sh DESCRIPTION
 The
 .Fn stat
@@ -152,45 +151,53 @@ are as follows:
 .Bl -tag -width ".Va st_birthtim"
 .It Va st_atim
 Time when file data last accessed.
-Changed by the
-.Xr mknod 2 ,
-.Xr utimes 2 ,
+Changed implicitly by syscalls such as
 .Xr read 2
 and
-.Xr readv 2
-system calls.
+.Xr readv 2 ,
+and explicitly by
+.Xr utimes 2 .
 .It Va st_mtim
 Time when file data last modified.
-Changed by the
-.Xr mkdir 2 ,
-.Xr mkfifo 2 ,
-.Xr mknod 2 ,
-.Xr utimes 2 ,
-.Xr write 2
+Changed implicitly by syscalls such as
+.Xr truncate 2 ,
+.Xr write 2 ,
 and
-.Xr writev 2
-system calls.
+.Xr writev 2 ,
+and explicitly by
+.Xr utimes 2 .
+Also, any syscall which modifies directory content changes the
+.Va st_mtim
+for the affected directory.
+For instance,
+.Xr creat 2 ,
+.Xr mkdir 2 ,
+.Xr rename 2 ,
+.Xr link 2 ,
+and
+.Xr unlink 2 .
 .It Va st_ctim
 Time when file status was last changed (inode data modification).
-Changed by the
+Changed implicitly by any syscall that affects file metadata, including
+.Va st_mtim ,
+such as
 .Xr chflags 2 ,
 .Xr chmod 2 ,
 .Xr chown 2 ,
-.Xr creat 2 ,
-.Xr link 2 ,
-.Xr mkdir 2 ,
-.Xr mkfifo 2 ,
-.Xr mknod 2 ,
-.Xr rename 2 ,
-.Xr rmdir 2 ,
-.Xr symlink 2 ,
 .Xr truncate 2 ,
-.Xr unlink 2 ,
 .Xr utimes 2 ,
-.Xr write 2
 and
-.Xr writev 2
-system calls.
+.Xr write 2 .
+Also, any syscall which modifies directory content changes the
+.Va st_ctim
+for the affected directory.
+For instance,
+.Xr creat 2 ,
+.Xr mkdir 2 ,
+.Xr rename 2 ,
+.Xr link 2 ,
+and
+.Xr unlink 2 .
 .It Va st_birthtim
 Time when the inode was created.
 .El

@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/quotacheck/preen.c 207736 2010-05-07 00:41:12Z mckusick $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -105,7 +105,7 @@ checkfstab(int uflag, int gflag)
 			warnx("Can't open checklist file: %s\n", _PATH_FSTAB);
 			return (8);
 		}
-		while ((fs = getfsent()) != 0) {
+		while ((fs = getfsent()) != NULL) {
 			if (fs->fs_passno > passno && fs->fs_passno < nextpass)
 				nextpass = fs->fs_passno;
 

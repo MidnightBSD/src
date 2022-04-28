@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_string_sprintf.c 238856 2012-07-28 06:38:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * The use of printf()-family functions can be troublesome
@@ -53,7 +53,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_string_
 static void
 append_uint(struct archive_string *as, uintmax_t d, unsigned base)
 {
-	static const char *digits = "0123456789abcdef";
+	static const char digits[] = "0123456789abcdef";
 	if (d >= base)
 		append_uint(as, d/base, base);
 	archive_strappend_char(as, digits[d % base]);

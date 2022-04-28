@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_pctrie.h 250551 2013-05-12 04:05:01Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_PCTRIE_H_
@@ -38,14 +38,4 @@ struct pctrie {
 	uintptr_t	pt_root;
 };
 
-#ifdef _KERNEL
-
-static __inline boolean_t
-pctrie_is_empty(struct pctrie *ptree)
-{
-
-	return (ptree->pt_root == 0);
-}
-
-#endif /* _KERNEL */
 #endif /* !__SYS_PCTRIE_H_ */

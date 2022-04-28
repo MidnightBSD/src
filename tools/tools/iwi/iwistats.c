@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/tools/tools/iwi/iwistats.c 219527 2011-03-11 19:32:15Z brucec $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2005
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/tools/iwi/iwistats.c 219527 2011-03-11 19:32:15Z brucec $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

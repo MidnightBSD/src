@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfiutil.8 254906 2013-08-26 12:05:38Z sbruno $
+.\" $FreeBSD$
 .\"
 .Dd September 2, 2011
 .Dt MFIUTIL 8
@@ -168,6 +168,12 @@
 .Nm
 .Op Fl u Ar unit
 .Cm bbu Ar setting Ar value
+.Nm
+.Op Fl u Ar unit
+.Cm ctrlprop Ar rebuild Op Ar rate
+.Nm
+.Op Fl u Ar unit
+.Cm ctrlprop Ar alarm Op Ar 0/1
 .Sh DESCRIPTION
 The
 .Nm
@@ -601,25 +607,25 @@ Scan for foreign configurations and display the number found. The
 argument for the commands below takes the form of a number from 0 to the total
 configurations found.
 .It Cm foreign clear Op config
-Clear the specifed foreign
+Clear the specified foreign
 .Ar config
 or all if no
 .Ar config
 argument is provided.
 .It Cm foreign diag Op config
-Display a diagnostic display of the specifed foreign
+Display a diagnostic display of the specified foreign
 .Ar config
 or all if no
 .Ar config
 argument is provided.
 .It Cm foreign preview Op config
-Preview the specifed foreign
+Preview the specified foreign
 .Ar config
 after import or all if no
 .Ar config
 argument is provided.
 .It Cm foreign import Op config
-Import the specifed foreign
+Import the specified foreign
 .Ar config
 or all if no
 .Ar config
@@ -659,6 +665,12 @@ inclusive.
 Modes 1, 2 and 3 enable a transparent learn cycle, whereas modes 4 and 5 do not.
 The BBU's data retention time is greater when transparent learning is not used.
 .El
+.It Cm ctrlprop Ar rebuild Op Ar rate
+With no arguments display the rate of rebuild (percentage)a for volumes.
+With an integer argument (0-100), set that value as the new rebuild rate for volumes.
+.It Cm ctrlprop Ar alarm Op Ar 0/1
+With no arguments display the current alarm enable/disable status.
+With a 0, disable alarms.  With a 1, enable alarms.
 .El
 .Sh EXAMPLES
 Configure the cache for volume mfid0 to cache only writes:
@@ -699,6 +711,9 @@ patrol read starting in 5 minutes:
 Display the second detected foreign configuration:
 .Pp
 .Dl Nm Cm show foreign 1
+.Pp
+Set the current rebuild rate for volumes to 40%:
+.Dl Nm Cm ctrlprop rebuild 40
 .Sh SEE ALSO
 .Xr mfi 4
 .Sh HISTORY

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998-2011 Dag-Erling Smørgrav
+ * Copyright (c) 1998-2016 Dag-Erling Smørgrav
  * Copyright (c) 2013 Michael Gmelin <freebsd@grem.de>
  * All rights reserved.
  *
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libfetch/common.c 258756 2013-11-29 21:13:30Z bdrewery $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libfetch/common.c 258756 2013-11-29 21:13
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <poll.h>
 #include <pwd.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -152,7 +153,7 @@ fetch_syserr(void)
 	case EHOSTDOWN:
 		fetchLastErrCode = FETCH_DOWN;
 		break;
-default:
+	default:
 		fetchLastErrCode = FETCH_UNKNOWN;
 	}
 	snprintf(fetchLastErrString, MAXERRSTRING, "%s", strerror(errno));
@@ -240,24 +241,96 @@ fetch_ref(conn_t *conn)
 
 
 /*
+ * Resolve an address
+ */
+struct addrinfo *
+fetch_resolve(const char *addr, int port, int af)
+{
+	char hbuf[256], sbuf[8];
+	struct addrinfo hints, *res;
+	const char *hb, *he, *sep;
+	const char *host, *service;
+	int err, len;
+
+	/* first, check for a bracketed IPv6 address */
+	if (*addr == '[') {
+		hb = addr + 1;
+		if ((sep = strchr(hb, ']')) == NULL) {
+			errno = EINVAL;
+			goto syserr;
+		}
+		he = sep++;
+	} else {
+		hb = addr;
+		sep = strchrnul(hb, ':');
+		he = sep;
+	}
+
+	/* see if we need to copy the host name */
+	if (*he != '\0') {
+		len = snprintf(hbuf, sizeof(hbuf),
+		    "%.*s", (int)(he - hb), hb);
+		if (len < 0)
+			goto syserr;
+		if (len >= (int)sizeof(hbuf)) {
+			errno = ENAMETOOLONG;
+			goto syserr;
+		}
+		host = hbuf;
+	} else {
+		host = hb;
+	}
+
+	/* was it followed by a service name? */
+	if (*sep == '\0' && port != 0) {
+		if (port < 1 || port > 65535) {
+			errno = EINVAL;
+			goto syserr;
+		}
+		if (snprintf(sbuf, sizeof(sbuf), "%d", port) < 0)
+			goto syserr;
+		service = sbuf;
+	} else if (*sep != '\0') {
+		service = sep + 1;
+	} else {
+		service = NULL;
+	}
+
+	/* resolve */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = af;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_ADDRCONFIG;
+	if ((err = getaddrinfo(host, service, &hints, &res)) != 0) {
+		netdb_seterr(err);
+		return (NULL);
+	}
+	return (res);
+syserr:
+	fetch_syserr();
+	return (NULL);
+}
+
+
+
+/*
  * Bind a socket to a specific local address
  */
 int
 fetch_bind(int sd, int af, const char *addr)
 {
-	struct addrinfo hints, *res, *res0;
+	struct addrinfo *cliai, *ai;
 	int err;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = af;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = 0;
-	if ((err = getaddrinfo(addr, NULL, &hints, &res0)) != 0)
+	if ((cliai = fetch_resolve(addr, 0, af)) == NULL)
 		return (-1);
-	for (res = res0; res; res = res->ai_next)
-		if (bind(sd, res->ai_addr, res->ai_addrlen) == 0)
-			return (0);
-	return (-1);
+	for (ai = cliai; ai != NULL; ai = ai->ai_next)
+		if ((err = bind(sd, ai->ai_addr, ai->ai_addrlen)) == 0)
+			break;
+	if (err != 0)
+		fetch_syserr();
+	freeaddrinfo(cliai);
+	return (err == 0 ? 0 : -1);
 }
 
 
@@ -267,59 +340,76 @@ fetch_bind(int sd, int af, const char *addr)
 conn_t *
 fetch_connect(const char *host, int port, int af, int verbose)
 {
-	conn_t *conn;
-	char pbuf[10];
+	struct addrinfo *cais = NULL, *sais = NULL, *cai, *sai;
 	const char *bindaddr;
-	struct addrinfo hints, *res, *res0;
-	int sd, err;
+	conn_t *conn = NULL;
+	int err = 0, sd = -1;
 
-	DEBUG(fprintf(stderr, "---> %s:%d\n", host, port));
+	DEBUGF("---> %s:%d\n", host, port);
 
+	/* resolve server address */
 	if (verbose)
-		fetch_info("looking up %s", host);
+		fetch_info("resolving server address: %s:%d", host, port);
+	if ((sais = fetch_resolve(host, port, af)) == NULL)
+		goto fail;
 
-	/* look up host name and set up socket address structure */
-	snprintf(pbuf, sizeof(pbuf), "%d", port);
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = af;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = 0;
-	if ((err = getaddrinfo(host, pbuf, &hints, &res0)) != 0) {
-		netdb_seterr(err);
-		return (NULL);
-	}
+	/* resolve client address */
 	bindaddr = getenv("FETCH_BIND_ADDRESS");
+	if (bindaddr != NULL && *bindaddr != '\0') {
+		if (verbose)
+			fetch_info("resolving client address: %s", bindaddr);
+		if ((cais = fetch_resolve(bindaddr, 0, af)) == NULL)
+			goto fail;
+	}
 
-	if (verbose)
-		fetch_info("connecting to %s:%d", host, port);
-
-	/* try to connect */
-	for (sd = -1, res = res0; res; sd = -1, res = res->ai_next) {
-		if ((sd = socket(res->ai_family, res->ai_socktype,
-			 res->ai_protocol)) == -1)
-			continue;
-		if (bindaddr != NULL && *bindaddr != '\0' &&
-		    fetch_bind(sd, res->ai_family, bindaddr) != 0) {
-			fetch_info("failed to bind to '%s'", bindaddr);
-			close(sd);
-			continue;
+	/* try each server address in turn */
+	for (err = 0, sai = sais; sai != NULL; sai = sai->ai_next) {
+		/* open socket */
+		if ((sd = socket(sai->ai_family, SOCK_STREAM, 0)) < 0)
+			goto syserr;
+		/* attempt to bind to client address */
+		for (err = 0, cai = cais; cai != NULL; cai = cai->ai_next) {
+			if (cai->ai_family != sai->ai_family)
+				continue;
+			if ((err = bind(sd, cai->ai_addr, cai->ai_addrlen)) == 0)
+				break;
 		}
-		if (connect(sd, res->ai_addr, res->ai_addrlen) == 0 &&
-		    fcntl(sd, F_SETFL, O_NONBLOCK) == 0)
+		if (err != 0) {
+			if (verbose)
+				fetch_info("failed to bind to %s", bindaddr);
+			goto syserr;
+		}
+		/* attempt to connect to server address */
+		if ((err = connect(sd, sai->ai_addr, sai->ai_addrlen)) == 0)
 			break;
+		/* clean up before next attempt */
 		close(sd);
+		sd = -1;
 	}
-	freeaddrinfo(res0);
-	if (sd == -1) {
-		fetch_syserr();
-		return (NULL);
+	if (err != 0) {
+		if (verbose)
+			fetch_info("failed to connect to %s:%d", host, port);
+		goto syserr;
 	}
 
-	if ((conn = fetch_reopen(sd)) == NULL) {
-		fetch_syserr();
-		close(sd);
-	}
+	if ((conn = fetch_reopen(sd)) == NULL)
+		goto syserr;
+	if (cais != NULL)
+		freeaddrinfo(cais);
+	if (sais != NULL)
+		freeaddrinfo(sais);
 	return (conn);
+syserr:
+	fetch_syserr();
+	goto fail;
+fail:
+	if (sd >= 0)
+		close(sd);
+	if (cais != NULL)
+		freeaddrinfo(cais);
+	if (sais != NULL)
+		freeaddrinfo(sais);
+	return (NULL);
 }
 
 #ifdef WITH_SSL
@@ -470,7 +560,7 @@ fetch_ssl_hname_match(const char *h, size_t hlen, const char *m,
 	if (!fetch_ssl_hname_equal(hdot - delta, delta,
 	    mdot1 - delta, delta))
 		return (0);
-	/* all tests succeded, it's a match */
+	/* all tests succeeded, it's a match */
 	return (1);
 }
 
@@ -494,7 +584,8 @@ fetch_ssl_get_numeric_addrinfo(const char *hostname, size_t len)
 	hints.ai_protocol = 0;
 	hints.ai_flags = AI_NUMERICHOST;
 	/* port is not relevant for this purpose */
-	getaddrinfo(host, "443", &hints, &res);
+	if (getaddrinfo(host, "443", &hints, &res) != 0)
+		res = NULL;
 	free(host);
 	return res;
 }
@@ -641,7 +732,7 @@ fetch_ssl_verify_hname(X509 *cert, const char *host)
 	struct addrinfo *ip;
 	STACK_OF(GENERAL_NAME) *altnames;
 	X509_NAME *subject;
-	int ret;	
+	int ret;
 
 	ret = 0;
 	ip = fetch_ssl_get_numeric_addrinfo(host, strlen(host));
@@ -671,15 +762,17 @@ fetch_ssl_setup_transport_layer(SSL_CTX *ctx, int verbose)
 {
 	long ssl_ctx_options;
 
-	ssl_ctx_options = SSL_OP_ALL | SSL_OP_NO_TICKET;
-	if (getenv("SSL_ALLOW_SSL2") == NULL)
-		ssl_ctx_options |= SSL_OP_NO_SSLv2;
-	if (getenv("SSL_NO_SSL3") != NULL)
+	ssl_ctx_options = SSL_OP_ALL | SSL_OP_NO_SSLv2 | SSL_OP_NO_TICKET;
+	if (getenv("SSL_ALLOW_SSL3") == NULL)
 		ssl_ctx_options |= SSL_OP_NO_SSLv3;
 	if (getenv("SSL_NO_TLS1") != NULL)
 		ssl_ctx_options |= SSL_OP_NO_TLSv1;
+	if (getenv("SSL_NO_TLS1_1") != NULL)
+		ssl_ctx_options |= SSL_OP_NO_TLSv1_1;
+	if (getenv("SSL_NO_TLS1_2") != NULL)
+		ssl_ctx_options |= SSL_OP_NO_TLSv1_2;
 	if (verbose)
-		fetch_info("SSL options: %x", ssl_ctx_options);
+		fetch_info("SSL options: %lx", ssl_ctx_options);
 	SSL_CTX_set_options(ctx, ssl_ctx_options);
 }
 
@@ -687,6 +780,8 @@ fetch_ssl_setup_transport_layer(SSL_CTX *ctx, int verbose)
 /*
  * Configure peer verification based on environment.
  */
+#define LOCAL_CERT_FILE	"/usr/local/etc/ssl/cert.pem"
+#define BASE_CERT_FILE	"/etc/ssl/cert.pem"
 static int
 fetch_ssl_setup_peer_verification(SSL_CTX *ctx, int verbose)
 {
@@ -695,8 +790,13 @@ fetch_ssl_setup_peer_verification(SSL_CTX *ctx, int verbose)
 	const char *ca_cert_file, *ca_cert_path, *crl_file;
 
 	if (getenv("SSL_NO_VERIFY_PEER") == NULL) {
-		ca_cert_file = getenv("SSL_CA_CERT_FILE") != NULL ?
-		    getenv("SSL_CA_CERT_FILE") : "/etc/ssl/cert.pem";
+		ca_cert_file = getenv("SSL_CA_CERT_FILE");
+		if (ca_cert_file == NULL &&
+		    access(LOCAL_CERT_FILE, R_OK) == 0)
+			ca_cert_file = LOCAL_CERT_FILE;
+		if (ca_cert_file == NULL &&
+		    access(BASE_CERT_FILE, R_OK) == 0)
+			ca_cert_file = BASE_CERT_FILE;
 		ca_cert_path = getenv("SSL_CA_CERT_PATH");
 		if (verbose) {
 			fetch_info("Peer verification enabled");
@@ -706,11 +806,17 @@ fetch_ssl_setup_peer_verification(SSL_CTX *ctx, int verbose)
 			if (ca_cert_path != NULL)
 				fetch_info("Using CA cert path: %s",
 				    ca_cert_path);
+			if (ca_cert_file == NULL && ca_cert_path == NULL)
+				fetch_info("Using OpenSSL default "
+				    "CA cert file and path");
 		}
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER,
 		    fetch_ssl_cb_verify_crt);
-		SSL_CTX_load_verify_locations(ctx, ca_cert_file,
-		    ca_cert_path);
+		if (ca_cert_file != NULL || ca_cert_path != NULL)
+			SSL_CTX_load_verify_locations(ctx, ca_cert_file,
+			    ca_cert_path);
+		else
+			SSL_CTX_set_default_verify_paths(ctx);
 		if ((crl_file = getenv("SSL_CRL_FILE")) != NULL) {
 			if (verbose)
 				fetch_info("Using CRL file: %s", crl_file);
@@ -866,8 +972,8 @@ fetch_ssl(conn_t *conn, const struct url *URL, int verbose)
 	}
 
 	if (verbose) {
-		fetch_info("SSL connection established using %s",
-		    SSL_get_cipher(conn->ssl));
+		fetch_info("%s connection established using %s",
+		    SSL_get_version(conn->ssl), SSL_get_cipher(conn->ssl));
 		name = X509_get_subject_name(conn->ssl_cert);
 		str = X509_NAME_oneline(name, 0, 0);
 		fetch_info("Certificate subject: %s", str);
@@ -913,33 +1019,6 @@ fetch_ssl_read(SSL *ssl, char *buf, size_t len)
 }
 #endif
 
-/*
- * Cache some data that was read from a socket but cannot be immediately
- * returned because of an interrupted system call.
- */
-static int
-fetch_cache_data(conn_t *conn, char *src, size_t nbytes)
-{
-	char *tmp;
-
-	if (conn->cache.size < nbytes) {
-		tmp = realloc(conn->cache.buf, nbytes);
-		if (tmp == NULL) {
-			fetch_syserr();
-			return (-1);
-		}
-		conn->cache.buf = tmp;
-		conn->cache.size = nbytes;
-	}
-
-	memcpy(conn->cache.buf, src, nbytes);
-	conn->cache.len = nbytes;
-	conn->cache.pos = 0;
-
-	return (0);
-}
-
-
 static ssize_t
 fetch_socket_read(int sd, char *buf, size_t len)
 {
@@ -962,46 +1041,31 @@ ssize_t
 fetch_read(conn_t *conn, char *buf, size_t len)
 {
 	struct timeval now, timeout, delta;
-	fd_set readfds;
-	ssize_t rlen, total;
-	char *start;
+	struct pollfd pfd;
+	ssize_t rlen;
+	int deltams;
 
 	if (fetchTimeout > 0) {
 		gettimeofday(&timeout, NULL);
 		timeout.tv_sec += fetchTimeout;
 	}
 
-	total = 0;
-	start = buf;
+	deltams = INFTIM;
+	memset(&pfd, 0, sizeof pfd);
+	pfd.fd = conn->sd;
+	pfd.events = POLLIN | POLLERR;
 
-	if (conn->cache.len > 0) {
-		/*
-		 * The last invocation of fetch_read was interrupted by a
-		 * signal after some data had been read from the socket. Copy
-		 * the cached data into the supplied buffer before trying to
-		 * read from the socket again.
-		 */
-		total = (conn->cache.len < len) ? conn->cache.len : len;
-		memcpy(buf, conn->cache.buf, total);
-
-		conn->cache.len -= total;
-		conn->cache.pos += total;
-		len -= total;
-		buf += total;
-	}
-
-	while (len > 0) {
+	for (;;) {
 		/*
 		 * The socket is non-blocking.  Instead of the canonical
-		 * select() -> read(), we do the following:
+		 * poll() -> read(), we do the following:
 		 *
 		 * 1) call read() or SSL_read().
-		 * 2) if an error occurred, return -1.
-		 * 3) if we received data but we still expect more,
-		 *    update our counters and loop.
+		 * 2) if we received some data, return it.
+		 * 3) if an error occurred, return -1.
 		 * 4) if read() or SSL_read() signaled EOF, return.
 		 * 5) if we did not receive any data but we're not at EOF,
-		 *    call select().
+		 *    call poll().
 		 *
 		 * In the SSL case, this is necessary because if we
 		 * receive a close notification, we have to call
@@ -1017,46 +1081,34 @@ fetch_read(conn_t *conn, char *buf, size_t len)
 		else
 #endif
 			rlen = fetch_socket_read(conn->sd, buf, len);
-		if (rlen == 0) {
+		if (rlen >= 0) {
 			break;
-		} else if (rlen > 0) {
-			len -= rlen;
-			buf += rlen;
-			total += rlen;
-			continue;
 		} else if (rlen == FETCH_READ_ERROR) {
-			if (errno == EINTR)
-				fetch_cache_data(conn, start, total);
+			fetch_syserr();
 			return (-1);
 		}
 		// assert(rlen == FETCH_READ_WAIT);
-		FD_ZERO(&readfds);
-		while (!FD_ISSET(conn->sd, &readfds)) {
-			FD_SET(conn->sd, &readfds);
-			if (fetchTimeout > 0) {
-				gettimeofday(&now, NULL);
-				if (!timercmp(&timeout, &now, >)) {
-					errno = ETIMEDOUT;
-					fetch_syserr();
-					return (-1);
-				}
-				timersub(&timeout, &now, &delta);
-			}
-			errno = 0;
-			if (select(conn->sd + 1, &readfds, NULL, NULL,
-				fetchTimeout > 0 ? &delta : NULL) < 0) {
-				if (errno == EINTR) {
-					if (fetchRestartCalls)
-						continue;
-					/* Save anything that was read. */
-					fetch_cache_data(conn, start, total);
-				}
+		if (fetchTimeout > 0) {
+			gettimeofday(&now, NULL);
+			if (!timercmp(&timeout, &now, >)) {
+				errno = ETIMEDOUT;
 				fetch_syserr();
 				return (-1);
 			}
+			timersub(&timeout, &now, &delta);
+			deltams = delta.tv_sec * 1000 +
+			    delta.tv_usec / 1000;;
+		}
+		errno = 0;
+		pfd.revents = 0;
+		if (poll(&pfd, 1, deltams) < 0) {
+			if (errno == EINTR && fetchRestartCalls)
+				continue;
+			fetch_syserr();
+			return (-1);
 		}
 	}
-	return (total);
+	return (rlen);
 }
 
 
@@ -1104,7 +1156,7 @@ fetch_getln(conn_t *conn)
 	} while (c != '\n');
 
 	conn->buf[conn->buflen] = '\0';
-	DEBUG(fprintf(stderr, "<<< %s", conn->buf));
+	DEBUGF("<<< %s", conn->buf);
 	return (0);
 }
 
@@ -1130,35 +1182,36 @@ ssize_t
 fetch_writev(conn_t *conn, struct iovec *iov, int iovcnt)
 {
 	struct timeval now, timeout, delta;
-	fd_set writefds;
+	struct pollfd pfd;
 	ssize_t wlen, total;
-	int r;
+	int deltams;
 
+	memset(&pfd, 0, sizeof pfd);
 	if (fetchTimeout) {
-		FD_ZERO(&writefds);
+		pfd.fd = conn->sd;
+		pfd.events = POLLOUT | POLLERR;
 		gettimeofday(&timeout, NULL);
 		timeout.tv_sec += fetchTimeout;
 	}
 
 	total = 0;
 	while (iovcnt > 0) {
-		while (fetchTimeout && !FD_ISSET(conn->sd, &writefds)) {
-			FD_SET(conn->sd, &writefds);
+		while (fetchTimeout && pfd.revents == 0) {
 			gettimeofday(&now, NULL);
-			delta.tv_sec = timeout.tv_sec - now.tv_sec;
-			delta.tv_usec = timeout.tv_usec - now.tv_usec;
-			if (delta.tv_usec < 0) {
-				delta.tv_usec += 1000000;
-				delta.tv_sec--;
-			}
-			if (delta.tv_sec < 0) {
+			if (!timercmp(&timeout, &now, >)) {
 				errno = ETIMEDOUT;
 				fetch_syserr();
 				return (-1);
 			}
+			timersub(&timeout, &now, &delta);
+			deltams = delta.tv_sec * 1000 +
+			    delta.tv_usec / 1000;
 			errno = 0;
-			r = select(conn->sd + 1, NULL, &writefds, NULL, &delta);
-			if (r == -1) {
+			pfd.revents = 0;
+			if (poll(&pfd, 1, deltams) < 0) {
+				/* POSIX compliance */
+				if (errno == EAGAIN)
+					continue;
 				if (errno == EINTR && fetchRestartCalls)
 					continue;
 				return (-1);
@@ -1208,7 +1261,7 @@ fetch_putln(conn_t *conn, const char *str, size_t len)
 	struct iovec iov[2];
 	int ret;
 
-	DEBUG(fprintf(stderr, ">>> %s\n", str));
+	DEBUGF(">>> %s\n", str);
 	iov[0].iov_base = __DECONST(char *, str);
 	iov[0].iov_len = len;
 	iov[1].iov_base = __DECONST(char *, ENDL);
@@ -1250,7 +1303,6 @@ fetch_close(conn_t *conn)
 	}
 #endif
 	ret = close(conn->sd);
-	free(conn->cache.buf);
 	free(conn->buf);
 	free(conn);
 	return (ret);
@@ -1271,7 +1323,7 @@ fetch_add_entry(struct url_ent **p, int *size, int *len,
 	}
 
 	if (*len >= *size - 1) {
-		tmp = realloc(*p, (*size * 2 + 1) * sizeof(**p));
+		tmp = reallocarray(*p, *size * 2 + 1, sizeof(**p));
 		if (tmp == NULL) {
 			errno = ENOMEM;
 			fetch_syserr();
@@ -1304,27 +1356,23 @@ fetch_read_word(FILE *f)
 	return (word);
 }
 
-/*
- * Get authentication data for a URL from .netrc
- */
-int
-fetch_netrc_auth(struct url *url)
+static int
+fetch_netrc_open(void)
 {
+	struct passwd *pwd;
 	char fn[PATH_MAX];
-	const char *word;
-	char *p;
-	FILE *f;
+	const char *p;
+	int fd, serrno;
 
 	if ((p = getenv("NETRC")) != NULL) {
+		DEBUGF("NETRC=%s\n", p);
 		if (snprintf(fn, sizeof(fn), "%s", p) >= (int)sizeof(fn)) {
 			fetch_info("$NETRC specifies a file name "
 			    "longer than PATH_MAX");
 			return (-1);
 		}
 	} else {
-		if ((p = getenv("HOME")) != NULL) {
-			struct passwd *pwd;
-
+		if ((p = getenv("HOME")) == NULL) {
 			if ((pwd = getpwuid(getuid())) == NULL ||
 			    (p = pwd->pw_dir) == NULL)
 				return (-1);
@@ -1333,17 +1381,47 @@ fetch_netrc_auth(struct url *url)
 			return (-1);
 	}
 
-	if ((f = fopen(fn, "r")) == NULL)
+	if ((fd = open(fn, O_RDONLY)) < 0) {
+		serrno = errno;
+		DEBUGF("%s: %s\n", fn, strerror(serrno));
+		errno = serrno;
+	}
+	return (fd);
+}
+
+/*
+ * Get authentication data for a URL from .netrc
+ */
+int
+fetch_netrc_auth(struct url *url)
+{
+	const char *word;
+	int serrno;
+	FILE *f;
+
+	if (url->netrcfd < 0)
+		url->netrcfd = fetch_netrc_open();
+	if (url->netrcfd < 0)
 		return (-1);
+	if ((f = fdopen(url->netrcfd, "r")) == NULL) {
+		serrno = errno;
+		DEBUGF("fdopen(netrcfd): %s", strerror(errno));
+		close(url->netrcfd);
+		url->netrcfd = -1;
+		errno = serrno;
+		return (-1);
+	}
+	rewind(f);
+	DEBUGF("searching netrc for %s\n", url->host);
 	while ((word = fetch_read_word(f)) != NULL) {
 		if (strcmp(word, "default") == 0) {
-			DEBUG(fetch_info("Using default .netrc settings"));
+			DEBUGF("using default netrc settings\n");
 			break;
 		}
 		if (strcmp(word, "machine") == 0 &&
 		    (word = fetch_read_word(f)) != NULL &&
 		    strcasecmp(word, url->host) == 0) {
-			DEBUG(fetch_info("Using .netrc settings for %s", word));
+			DEBUGF("using netrc settings for %s\n", word);
 			break;
 		}
 	}
@@ -1375,9 +1453,13 @@ fetch_netrc_auth(struct url *url)
 		}
 	}
 	fclose(f);
+	url->netrcfd = -1;
 	return (0);
- ferr:
+ferr:
+	serrno = errno;
 	fclose(f);
+	url->netrcfd = -1;
+	errno = serrno;
 	return (-1);
 }
 
@@ -1386,7 +1468,7 @@ fetch_netrc_auth(struct url *url)
  * which the proxy should not be consulted; the contents is a comma-,
  * or space-separated list of domain names.  A single asterisk will
  * override all proxy variables and no transactions will be proxied
- * (for compatability with lynx and curl, see the discussion at
+ * (for compatibility with lynx and curl, see the discussion at
  * <http://curl.haxx.se/mail/archive_pre_oct_99/0009.html>).
  */
 int

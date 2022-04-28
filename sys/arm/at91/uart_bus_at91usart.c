@@ -26,7 +26,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/uart_bus_at91usart.c 238787 2012-07-26 05:46:56Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,9 +46,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/uart_bus_at91usart.c 238787 2012
 
 #include "uart_if.h"
 
-static int usart_at91_probe(device_t dev);
-
 extern struct uart_class at91_usart_class;
+static int usart_at91_probe(device_t dev);
 
 static device_method_t usart_at91_methods[] = {
 	/* Device interface */
@@ -105,7 +104,7 @@ usart_at91_probe(device_t dev)
 	sc->sc_class = &at91_usart_class;
 	if (sc->sc_class->uc_rclk == 0)
 		sc->sc_class->uc_rclk = at91_master_clock;
-	return (uart_bus_probe(dev, 0, 0, 0, device_get_unit(dev)));
+	return (uart_bus_probe(dev, 0, 0, 0, 0, device_get_unit(dev), 0));
 }
 
 

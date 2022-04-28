@@ -1,5 +1,5 @@
 /*	$NetBSD: pcmciareg.h,v 1.7 1998/10/29 09:45:52 enami Exp $	*/
-/* $FreeBSD: release/10.0.0/sys/dev/pccard/pccardreg.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ale/if_alereg.h 222107 2011-05-19 23:13:08Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_ALEREG_H
@@ -605,7 +605,6 @@ struct smb {
 	uint32_t tx_multi_colls;
 	uint32_t tx_late_colls;
 	uint32_t tx_excess_colls;
-	uint32_t tx_abort;
 	uint32_t tx_underrun;
 	uint32_t tx_desc_underrun;
 	uint32_t tx_lenerrs;

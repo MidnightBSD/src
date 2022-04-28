@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/lib/libnetbsd/sha1.h 244557 2012-12-21 20:37:38Z brooks $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2012 SRI International
@@ -35,8 +35,11 @@
 
 #include <sha.h>
 
+#define	SHA1_CTX	SHA_CTX
+
 #define	SHA1End		SHA1_End
 #define	SHA1File	SHA1_File
+#define	SHA1Final	SHA1_Final
 #define	SHA1Init	SHA1_Init
 #define	SHA1Update	SHA1_Update
 

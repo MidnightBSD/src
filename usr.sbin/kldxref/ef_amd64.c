@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Jake Burkholder.
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kldxref/ef_amd64.c 251439 2013-06-05 21:55:20Z delphij $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

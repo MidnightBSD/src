@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/nxge/xge_log.c 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD$
  */
 
 #include "xge_log.h"

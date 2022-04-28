@@ -10,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -33,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_smp.c 255783 2013-09-22 02:46:13Z gibbs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,6 +39,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_smp.c 255783 2013-09-22 02:46:1
 #include <sys/proc.h>
 #include <sys/bus.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/sched.h>
@@ -54,6 +52,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_smp.c 255783 2013-09-22 02:46:1
 #include "opt_sched.h"
 
 #ifdef SMP
+MALLOC_DEFINE(M_TOPO, "toponodes", "SMP topology data");
+
 volatile cpuset_t stopped_cpus;
 volatile cpuset_t started_cpus;
 volatile cpuset_t suspended_cpus;
@@ -62,6 +62,9 @@ cpuset_t logical_cpus_mask;
 
 void (*cpustop_restartfunc)(void);
 #endif
+
+static int sysctl_kern_smp_active(SYSCTL_HANDLER_ARGS);
+
 /* This is used in modules that need to work in both SMP and UP. */
 cpuset_t all_cpus;
 
@@ -81,23 +84,20 @@ SYSCTL_INT(_kern_smp, OID_AUTO, maxid, CTLFLAG_RD|CTLFLAG_CAPRD, &mp_maxid, 0,
 SYSCTL_INT(_kern_smp, OID_AUTO, maxcpus, CTLFLAG_RD|CTLFLAG_CAPRD, &mp_maxcpus,
     0, "Max number of CPUs that the system was compiled for.");
 
-int smp_active = 0;	/* are the APs allowed to run? */
-SYSCTL_INT(_kern_smp, OID_AUTO, active, CTLFLAG_RW, &smp_active, 0,
-    "Number of Auxillary Processors (APs) that were successfully started");
+SYSCTL_PROC(_kern_smp, OID_AUTO, active, CTLFLAG_RD | CTLTYPE_INT, NULL, 0,
+    sysctl_kern_smp_active, "I", "Indicates system is running in SMP mode");
 
 int smp_disabled = 0;	/* has smp been disabled? */
 SYSCTL_INT(_kern_smp, OID_AUTO, disabled, CTLFLAG_RDTUN|CTLFLAG_CAPRD,
     &smp_disabled, 0, "SMP has been disabled from the loader");
-TUNABLE_INT("kern.smp.disabled", &smp_disabled);
 
 int smp_cpus = 1;	/* how many cpu's running */
 SYSCTL_INT(_kern_smp, OID_AUTO, cpus, CTLFLAG_RD|CTLFLAG_CAPRD, &smp_cpus, 0,
     "Number of CPUs online");
 
 int smp_topology = 0;	/* Which topology we're using. */
-SYSCTL_INT(_kern_smp, OID_AUTO, topology, CTLFLAG_RD, &smp_topology, 0,
+SYSCTL_INT(_kern_smp, OID_AUTO, topology, CTLFLAG_RDTUN, &smp_topology, 0,
     "Topology override setting; 0 is default provided by hardware.");
-TUNABLE_INT("kern.smp.topology", &smp_topology);
 
 #ifdef SMP
 /* Enable forwarding of a signal to a process running on a different CPU */
@@ -128,7 +128,15 @@ struct mtx smp_ipi_mtx;
 static void
 mp_setmaxid(void *dummy)
 {
+
 	cpu_mp_setmaxid();
+
+	KASSERT(mp_ncpus >= 1, ("%s: CPU count < 1", __func__));
+	KASSERT(mp_ncpus > 1 || mp_maxid == 0,
+	    ("%s: one CPU but mp_maxid is not zero", __func__));
+	KASSERT(mp_maxid >= mp_ncpus - 1,
+	    ("%s: counters out of sync: max %d, count %d", __func__,
+		mp_maxid, mp_ncpus));
 }
 SYSINIT(cpu_mp_setmaxid, SI_SUB_TUNABLES, SI_ORDER_FIRST, mp_setmaxid, NULL);
 
@@ -201,6 +209,11 @@ forward_signal(struct thread *td)
  *   1: ok
  *
  */
+#if defined(__amd64__) || defined(__i386__)
+#define	X86	1
+#else
+#define	X86	0
+#endif
 static int
 generic_stop_cpus(cpuset_t map, u_int type)
 {
@@ -212,12 +225,11 @@ generic_stop_cpus(cpuset_t map, u_int type)
 	volatile cpuset_t *cpus;
 
 	KASSERT(
-#if defined(__amd64__) || defined(__i386__)
-	    type == IPI_STOP || type == IPI_STOP_HARD || type == IPI_SUSPEND,
-#else
-	    type == IPI_STOP || type == IPI_STOP_HARD,
+	    type == IPI_STOP || type == IPI_STOP_HARD
+#if X86
+	    || type == IPI_SUSPEND
 #endif
-	    ("%s: invalid stop type", __func__));
+	    , ("%s: invalid stop type", __func__));
 
 	if (!smp_started)
 		return (0);
@@ -225,7 +237,7 @@ generic_stop_cpus(cpuset_t map, u_int type)
 	CTR2(KTR_SMP, "stop_cpus(%s) with %u type",
 	    cpusetobj_strprint(cpusetbuf, &map), type);
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 	/*
 	 * When suspending, ensure there are are no IPIs in progress.
 	 * IPIs that have been issued, but not yet delivered (e.g.
@@ -237,6 +249,9 @@ generic_stop_cpus(cpuset_t map, u_int type)
 		mtx_lock_spin(&smp_ipi_mtx);
 #endif
 
+#if X86
+	if (!nmi_is_broadcast || nmi_kdb_lock == 0) {
+#endif
 	if (stopping_cpu != PCPU_GET(cpuid))
 		while (atomic_cmpset_int(&stopping_cpu, NOCPU,
 		    PCPU_GET(cpuid)) == 0)
@@ -245,8 +260,11 @@ generic_stop_cpus(cpuset_t map, u_int type)
 
 	/* send the stop IPI to all CPUs in map */
 	ipi_selected(map, type);
+#if X86
+	}
+#endif
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 	if (type == IPI_SUSPEND)
 		cpus = &suspended_cpus;
 	else
@@ -264,7 +282,7 @@ generic_stop_cpus(cpuset_t map, u_int type)
 		}
 	}
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 	if (type == IPI_SUSPEND)
 		mtx_unlock_spin(&smp_ipi_mtx);
 #endif
@@ -287,7 +305,7 @@ stop_cpus_hard(cpuset_t map)
 	return (generic_stop_cpus(map, IPI_STOP_HARD));
 }
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 int
 suspend_cpus(cpuset_t map)
 {
@@ -317,34 +335,43 @@ generic_restart_cpus(cpuset_t map, u_int type)
 #endif
 	volatile cpuset_t *cpus;
 
-	KASSERT(
-#if defined(__amd64__) || defined(__i386__)
-	    type == IPI_STOP || type == IPI_STOP_HARD || type == IPI_SUSPEND,
-#else
-	    type == IPI_STOP || type == IPI_STOP_HARD,
+	KASSERT(type == IPI_STOP || type == IPI_STOP_HARD
+#if X86
+	    || type == IPI_SUSPEND
 #endif
-	    ("%s: invalid stop type", __func__));
+	    , ("%s: invalid stop type", __func__));
 
 	if (!smp_started)
-		return 0;
+		return (0);
 
 	CTR1(KTR_SMP, "restart_cpus(%s)", cpusetobj_strprint(cpusetbuf, &map));
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 	if (type == IPI_SUSPEND)
-		cpus = &suspended_cpus;
+		cpus = &resuming_cpus;
 	else
 #endif
 		cpus = &stopped_cpus;
 
 	/* signal other cpus to restart */
-	CPU_COPY_STORE_REL(&map, &started_cpus);
+#if X86
+	if (type == IPI_SUSPEND)
+		CPU_COPY_STORE_REL(&map, &toresume_cpus);
+	else
+#endif
+		CPU_COPY_STORE_REL(&map, &started_cpus);
 
+#if X86
+	if (!nmi_is_broadcast || nmi_kdb_lock == 0) {
+#endif
 	/* wait for each to clear its bit */
 	while (CPU_OVERLAP(cpus, &map))
 		cpu_spinwait();
+#if X86
+	}
+#endif
 
-	return 1;
+	return (1);
 }
 
 int
@@ -354,7 +381,7 @@ restart_cpus(cpuset_t map)
 	return (generic_restart_cpus(map, IPI_STOP));
 }
 
-#if defined(__amd64__) || defined(__i386__)
+#if X86
 int
 resume_cpus(cpuset_t map)
 {
@@ -362,6 +389,7 @@ resume_cpus(cpuset_t map)
 	return (generic_restart_cpus(map, IPI_SUSPEND));
 }
 #endif
+#undef X86
 
 /*
  * All-CPU rendezvous.  CPUs are signalled, all execute the setup function 
@@ -428,7 +456,7 @@ smp_rendezvous_action(void)
 	 * function.  Ensure all CPUs have completed the setup
 	 * function before moving on to the action function.
 	 */
-	if (local_setup_func != smp_no_rendevous_barrier) {
+	if (local_setup_func != smp_no_rendezvous_barrier) {
 		if (smp_rv_setup_func != NULL)
 			smp_rv_setup_func(smp_rv_func_arg);
 		atomic_add_int(&smp_rv_waiters[1], 1);
@@ -439,7 +467,7 @@ smp_rendezvous_action(void)
 	if (local_action_func != NULL)
 		local_action_func(local_func_arg);
 
-	if (local_teardown_func != smp_no_rendevous_barrier) {
+	if (local_teardown_func != smp_no_rendezvous_barrier) {
 		/*
 		 * Signal that the main action has been completed.  If a
 		 * full exit rendezvous is requested, then all CPUs will
@@ -458,8 +486,13 @@ smp_rendezvous_action(void)
 	 * This means that no member of smp_rv_* pseudo-structure will be
 	 * accessed by this target CPU after this point; in particular,
 	 * memory pointed by smp_rv_func_arg.
+	 *
+	 * The release semantic ensures that all accesses performed by
+	 * the current CPU are visible when smp_rendezvous_cpus()
+	 * returns, by synchronizing with the
+	 * atomic_load_acq_int(&smp_rv_waiters[3]).
 	 */
-	atomic_add_int(&smp_rv_waiters[3], 1);
+	atomic_add_rel_int(&smp_rv_waiters[3], 1);
 
 	td->td_critnest--;
 	KASSERT(owepreempt == td->td_owepreempt,
@@ -525,6 +558,11 @@ smp_rendezvous_cpus(cpuset_t map,
 	 * CPUs to finish the rendezvous, so that smp_rv_*
 	 * pseudo-structure and the arg are guaranteed to not
 	 * be in use.
+	 *
+	 * Load acquire synchronizes with the release add in
+	 * smp_rendezvous_action(), which ensures that our caller sees
+	 * all memory actions done by the called functions on other
+	 * CPUs.
 	 */
 	while (atomic_load_acq_int(&smp_rv_waiters[3]) < ncpus)
 		cpu_spinwait();
@@ -541,7 +579,7 @@ smp_rendezvous(void (* setup_func)(void *),
 	smp_rendezvous_cpus(all_cpus, setup_func, action_func, teardown_func, arg);
 }
 
-static struct cpu_group group[MAXCPU];
+static struct cpu_group group[MAXCPU * MAX_CACHE_LEVELS + 1];
 
 struct cpu_group *
 smp_topo(void)
@@ -598,6 +636,17 @@ smp_topo(void)
 		    top, cpusetobj_strprint(cpusetbuf, &top->cg_mask),
 		    cpusetobj_strprint(cpusetbuf2, &all_cpus));
 	return (top);
+}
+
+struct cpu_group *
+smp_topo_alloc(u_int count)
+{
+	static u_int index;
+	u_int curr;
+
+	curr = index;
+	index += count;
+	return (&group[curr]);
 }
 
 struct cpu_group *
@@ -777,11 +826,18 @@ SYSINIT(cpu_mp_setvariables, SI_SUB_TUNABLES, SI_ORDER_FIRST,
     mp_setvariables_for_up, NULL);
 #endif /* SMP */
 
+/*
+ * smp_no_rendevous_barrier was renamed to smp_no_rendezvous_barrier
+ * in __FreeBSD_version 1101508, with the old name remaining in 11.x
+ * as an alias for compatibility.  The old name will be gone in 12.0
+ * (__FreeBSD_version >= 1200028).
+ */
+__strong_reference(smp_no_rendezvous_barrier, smp_no_rendevous_barrier);
 void
-smp_no_rendevous_barrier(void *dummy)
+smp_no_rendezvous_barrier(void *dummy)
 {
 #ifdef SMP
-	KASSERT((!smp_started),("smp_no_rendevous called and smp is started"));
+	KASSERT((!smp_started),("smp_no_rendezvous called and smp is started"));
 #endif
 }
 
@@ -834,3 +890,278 @@ quiesce_all_cpus(const char *wmesg, int prio)
 
 	return quiesce_cpus(all_cpus, wmesg, prio);
 }
+
+/* Extra care is taken with this sysctl because the data type is volatile */
+static int
+sysctl_kern_smp_active(SYSCTL_HANDLER_ARGS)
+{
+	int error, active;
+
+	active = smp_started;
+	error = SYSCTL_OUT(req, &active, sizeof(active));
+	return (error);
+}
+
+
+#ifdef SMP
+void
+topo_init_node(struct topo_node *node)
+{
+
+	bzero(node, sizeof(*node));
+	TAILQ_INIT(&node->children);
+}
+
+void
+topo_init_root(struct topo_node *root)
+{
+
+	topo_init_node(root);
+	root->type = TOPO_TYPE_SYSTEM;
+}
+
+/*
+ * Add a child node with the given ID under the given parent.
+ * Do nothing if there is already a child with that ID.
+ */
+struct topo_node *
+topo_add_node_by_hwid(struct topo_node *parent, int hwid,
+    topo_node_type type, uintptr_t subtype)
+{
+	struct topo_node *node;
+
+	TAILQ_FOREACH_REVERSE(node, &parent->children,
+	    topo_children, siblings) {
+		if (node->hwid == hwid
+		    && node->type == type && node->subtype == subtype) {
+			return (node);
+		}
+	}
+
+	node = malloc(sizeof(*node), M_TOPO, M_WAITOK);
+	topo_init_node(node);
+	node->parent = parent;
+	node->hwid = hwid;
+	node->type = type;
+	node->subtype = subtype;
+	TAILQ_INSERT_TAIL(&parent->children, node, siblings);
+	parent->nchildren++;
+
+	return (node);
+}
+
+/*
+ * Find a child node with the given ID under the given parent.
+ */
+struct topo_node *
+topo_find_node_by_hwid(struct topo_node *parent, int hwid,
+    topo_node_type type, uintptr_t subtype)
+{
+
+	struct topo_node *node;
+
+	TAILQ_FOREACH(node, &parent->children, siblings) {
+		if (node->hwid == hwid
+		    && node->type == type && node->subtype == subtype) {
+			return (node);
+		}
+	}
+
+	return (NULL);
+}
+
+/*
+ * Given a node change the order of its parent's child nodes such
+ * that the node becomes the firt child while preserving the cyclic
+ * order of the children.  In other words, the given node is promoted
+ * by rotation.
+ */
+void
+topo_promote_child(struct topo_node *child)
+{
+	struct topo_node *next;
+	struct topo_node *node;
+	struct topo_node *parent;
+
+	parent = child->parent;
+	next = TAILQ_NEXT(child, siblings);
+	TAILQ_REMOVE(&parent->children, child, siblings);
+	TAILQ_INSERT_HEAD(&parent->children, child, siblings);
+
+	while (next != NULL) {
+		node = next;
+		next = TAILQ_NEXT(node, siblings);
+		TAILQ_REMOVE(&parent->children, node, siblings);
+		TAILQ_INSERT_AFTER(&parent->children, child, node, siblings);
+		child = node;
+	}
+}
+
+/*
+ * Iterate to the next node in the depth-first search (traversal) of
+ * the topology tree.
+ */
+struct topo_node *
+topo_next_node(struct topo_node *top, struct topo_node *node)
+{
+	struct topo_node *next;
+
+	if ((next = TAILQ_FIRST(&node->children)) != NULL)
+		return (next);
+
+	if ((next = TAILQ_NEXT(node, siblings)) != NULL)
+		return (next);
+
+	while ((node = node->parent) != top)
+		if ((next = TAILQ_NEXT(node, siblings)) != NULL)
+			return (next);
+
+	return (NULL);
+}
+
+/*
+ * Iterate to the next node in the depth-first search of the topology tree,
+ * but without descending below the current node.
+ */
+struct topo_node *
+topo_next_nonchild_node(struct topo_node *top, struct topo_node *node)
+{
+	struct topo_node *next;
+
+	if ((next = TAILQ_NEXT(node, siblings)) != NULL)
+		return (next);
+
+	while ((node = node->parent) != top)
+		if ((next = TAILQ_NEXT(node, siblings)) != NULL)
+			return (next);
+
+	return (NULL);
+}
+
+/*
+ * Assign the given ID to the given topology node that represents a logical
+ * processor.
+ */
+void
+topo_set_pu_id(struct topo_node *node, cpuid_t id)
+{
+
+	KASSERT(node->type == TOPO_TYPE_PU,
+	    ("topo_set_pu_id: wrong node type: %u", node->type));
+	KASSERT(CPU_EMPTY(&node->cpuset) && node->cpu_count == 0,
+	    ("topo_set_pu_id: cpuset already not empty"));
+	node->id = id;
+	CPU_SET(id, &node->cpuset);
+	node->cpu_count = 1;
+	node->subtype = 1;
+
+	while ((node = node->parent) != NULL) {
+		KASSERT(!CPU_ISSET(id, &node->cpuset),
+		    ("logical ID %u is already set in node %p", id, node));
+		CPU_SET(id, &node->cpuset);
+		node->cpu_count++;
+	}
+}
+
+/*
+ * Check if the topology is uniform, that is, each package has the same number
+ * of cores in it and each core has the same number of threads (logical
+ * processors) in it.  If so, calculate the number of package, the number of
+ * cores per package and the number of logical processors per core.
+ * 'all' parameter tells whether to include administratively disabled logical
+ * processors into the analysis.
+ */
+int
+topo_analyze(struct topo_node *topo_root, int all,
+    int *pkg_count, int *cores_per_pkg, int *thrs_per_core)
+{
+	struct topo_node *pkg_node;
+	struct topo_node *core_node;
+	struct topo_node *pu_node;
+	int thrs_per_pkg;
+	int cpp_counter;
+	int tpc_counter;
+	int tpp_counter;
+
+	*pkg_count = 0;
+	*cores_per_pkg = -1;
+	*thrs_per_core = -1;
+	thrs_per_pkg = -1;
+	pkg_node = topo_root;
+	while (pkg_node != NULL) {
+		if (pkg_node->type != TOPO_TYPE_PKG) {
+			pkg_node = topo_next_node(topo_root, pkg_node);
+			continue;
+		}
+		if (!all && CPU_EMPTY(&pkg_node->cpuset)) {
+			pkg_node = topo_next_nonchild_node(topo_root, pkg_node);
+			continue;
+		}
+
+		(*pkg_count)++;
+
+		cpp_counter = 0;
+		tpp_counter = 0;
+		core_node = pkg_node;
+		while (core_node != NULL) {
+			if (core_node->type == TOPO_TYPE_CORE) {
+				if (!all && CPU_EMPTY(&core_node->cpuset)) {
+					core_node =
+					    topo_next_nonchild_node(pkg_node,
+					        core_node);
+					continue;
+				}
+
+				cpp_counter++;
+
+				tpc_counter = 0;
+				pu_node = core_node;
+				while (pu_node != NULL) {
+					if (pu_node->type == TOPO_TYPE_PU &&
+					    (all || !CPU_EMPTY(&pu_node->cpuset)))
+						tpc_counter++;
+					pu_node = topo_next_node(core_node,
+					    pu_node);
+				}
+
+				if (*thrs_per_core == -1)
+					*thrs_per_core = tpc_counter;
+				else if (*thrs_per_core != tpc_counter)
+					return (0);
+
+				core_node = topo_next_nonchild_node(pkg_node,
+				    core_node);
+			} else {
+				/* PU node directly under PKG. */
+				if (core_node->type == TOPO_TYPE_PU &&
+			           (all || !CPU_EMPTY(&core_node->cpuset)))
+					tpp_counter++;
+				core_node = topo_next_node(pkg_node,
+				    core_node);
+			}
+		}
+
+		if (*cores_per_pkg == -1)
+			*cores_per_pkg = cpp_counter;
+		else if (*cores_per_pkg != cpp_counter)
+			return (0);
+		if (thrs_per_pkg == -1)
+			thrs_per_pkg = tpp_counter;
+		else if (thrs_per_pkg != tpp_counter)
+			return (0);
+
+		pkg_node = topo_next_nonchild_node(topo_root, pkg_node);
+	}
+
+	KASSERT(*pkg_count > 0,
+		("bug in topology or analysis"));
+	if (*cores_per_pkg == 0) {
+		KASSERT(*thrs_per_core == -1 && thrs_per_pkg > 0,
+			("bug in topology or analysis"));
+		*thrs_per_core = thrs_per_pkg;
+	}
+
+	return (1);
+}
+#endif /* SMP */
+

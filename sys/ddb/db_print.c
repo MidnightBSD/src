@@ -25,7 +25,7 @@
  *
  */
 /*
- * 	Author: David B. Golub, Carnegie Mellon University
+ *	Author: David B. Golub, Carnegie Mellon University
  *	Date:	7/90
  */
 
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_print.c 145053 2005-04-14 05:25:40Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_print.c 145053 2005-04-14 05:25:40
 #include <ddb/db_sym.h>
 
 void
-db_show_regs(db_expr_t _1, boolean_t _2, db_expr_t _3, char *_4)
+db_show_regs(db_expr_t _1, bool _2, db_expr_t _3, char *_4)
 {
 	struct db_variable *regp;
 	db_expr_t value, offset;
@@ -56,7 +56,8 @@ db_show_regs(db_expr_t _1, boolean_t _2, db_expr_t _3, char *_4)
 	for (regp = db_regs; regp < db_eregs; regp++) {
 		if (!db_read_variable(regp, &value))
 			continue;
-		db_printf("%-12s%#10lr", regp->name, (unsigned long)value);
+		db_printf("%-12s%#*lr", regp->name,
+		    (int)(sizeof(unsigned long) * 2 + 2), (unsigned long)value);
 		db_find_xtrn_sym_and_offset((db_addr_t)value, &name, &offset);
 		if (name != NULL && offset <= (unsigned long)db_maxoff &&
 		    offset != value) {

@@ -1,6 +1,8 @@
-# $FreeBSD: release/10.0.0/etc/periodic/security/Makefile 220049 2011-03-27 03:06:58Z dougb $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
+
+FILESGROUPS=	FILES DATA
 
 FILES=	100.chksetuid \
 	110.neggrpperm \
@@ -9,9 +11,8 @@ FILES=	100.chksetuid \
 	400.passwdless \
 	410.logincheck \
 	700.kernelmsg \
-	800.loginfail \
-	900.tcpwrap \
-	security.functions
+	800.loginfail
+DATA=	security.functions
 
 # NB: keep these sorted by MK_* knobs
 
@@ -29,8 +30,8 @@ FILES+=	500.ipfwdenied \
 FILES+=	520.pfdenied
 .endif
 
-.if ${MK_PKGTOOLS} != "no"
-FILES+=	460.chkportsum
+.if ${MK_INETD} != "no" && ${MK_TCP_WRAPPERS} != "no"
+FILES+=	900.tcpwrap
 .endif
 
 .include <bsd.prog.mk>

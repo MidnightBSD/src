@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libfetch/fetch.h 226537 2011-10-19 11:43:51Z des $
+ * $FreeBSD$
  */
 
 #ifndef _FETCH_H_INCLUDED
@@ -47,6 +47,7 @@ struct url {
 	off_t		 offset;
 	size_t		 length;
 	time_t		 ims_time;
+	int		 netrcfd;
 };
 
 struct url_stat {
@@ -102,6 +103,8 @@ FILE		*fetchGetHTTP(struct url *, const char *);
 FILE		*fetchPutHTTP(struct url *, const char *);
 int		 fetchStatHTTP(struct url *, struct url_stat *, const char *);
 struct url_ent	*fetchListHTTP(struct url *, const char *);
+FILE		*fetchReqHTTP(struct url *, const char *, const char *,
+		    const char *, const char *);
 
 /* FTP-specific functions */
 FILE		*fetchXGetFTP(struct url *, struct url_stat *, const char *);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/miiproxy.h 234861 2012-05-01 06:11:38Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__DEV_ETHERSWITCH_MIIPROXY_H__

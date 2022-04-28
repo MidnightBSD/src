@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_icu.c 193847 2009-06-09 18:18:41Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_icu.c 193847 2009-06-0
 #include <sys/malloc.h>
 #include <sys/rman.h>
 #include <sys/timetc.h>
+#include <machine/armreg.h>
 #include <machine/bus.h>
 #include <machine/intr.h>
 
@@ -105,7 +106,7 @@ pxa_icu_attach(device_t dev)
 	pxa_icu_set_iclr(0);
 
 	/* XXX: This should move to configure_final or something. */
-	enable_interrupts(I32_bit|F32_bit);
+	enable_interrupts(PSR_I|PSR_F);
 
 	return (0);
 }
@@ -170,7 +171,7 @@ arm_unmask_irq(uintptr_t nb)
 }
 
 uint32_t
-pxa_icu_get_icip()
+pxa_icu_get_icip(void)
 {
 
 	return (bus_space_read_4(pxa_icu_softc->pi_bst,
@@ -186,7 +187,7 @@ pxa_icu_clear_icip(int irq)
 }
 
 uint32_t
-pxa_icu_get_icfp()
+pxa_icu_get_icfp(void)
 {
 
 	return (bus_space_read_4(pxa_icu_softc->pi_bst,
@@ -202,7 +203,7 @@ pxa_icu_clear_icfp(int irq)
 }
 
 uint32_t
-pxa_icu_get_icmr()
+pxa_icu_get_icmr(void)
 {
 
 	return (bus_space_read_4(pxa_icu_softc->pi_bst,
@@ -218,7 +219,7 @@ pxa_icu_set_icmr(uint32_t val)
 }
 
 uint32_t
-pxa_icu_get_iclr()
+pxa_icu_get_iclr(void)
 {
 
 	return (bus_space_read_4(pxa_icu_softc->pi_bst,
@@ -234,7 +235,7 @@ pxa_icu_set_iclr(uint32_t val)
 }
 
 uint32_t
-pxa_icu_get_icpr()
+pxa_icu_get_icpr(void)
 {
 
 	return (bus_space_read_4(pxa_icu_softc->pi_bst,
@@ -242,7 +243,7 @@ pxa_icu_get_icpr()
 }
 
 void
-pxa_icu_idle_enable()
+pxa_icu_idle_enable(void)
 {
 
 	bus_space_write_4(pxa_icu_softc->pi_bst,
@@ -250,7 +251,7 @@ pxa_icu_idle_enable()
 }
 
 void
-pxa_icu_idle_disable()
+pxa_icu_idle_disable(void)
 {
 
 	bus_space_write_4(pxa_icu_softc->pi_bst,

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/via_drv.c 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"

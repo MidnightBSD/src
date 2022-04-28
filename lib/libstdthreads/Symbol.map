@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libstdthreads/Symbol.map 228904 2011-12-26 21:51:53Z ed $
+ * $FreeBSD$
  */
 
 FBSD_1.3 {

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/mach64_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 
 #include <sys/types.h>
@@ -130,9 +130,5 @@ static driver_t mach64_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(mach64, vgapci, mach64_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(mach64, pci, mach64_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(mach64, drm, 1, 1, 1);

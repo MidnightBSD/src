@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/tmpfs/h_tools.c 204608 2010-03-02 22:25:50Z joel $
+ * $FreeBSD$
  */
 
 /*

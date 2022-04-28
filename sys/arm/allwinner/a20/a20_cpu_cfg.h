@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@gmail.com>
+ * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/allwinner/a20/a20_cpu_cfg.h 254056 2013-08-07 11:07:56Z ganbold $
+ * $FreeBSD$
  */
 
 #ifndef _A20_CPU_CFG_H_

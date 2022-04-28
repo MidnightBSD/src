@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/xe.4 152569 2005-11-18 10:56:28Z ru $
+.\" $FreeBSD$
 .\"
-.Dd July 16, 2005
+.Dd October 24 2018
 .Dt XE 4
 .Os
 .Sh NAME
@@ -45,6 +45,14 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_xe_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
+See https://github.com/freebsd/fcp/blob/master/fcp-0101.md for more
+information.
 .Sh DESCRIPTION
 The
 .Nm
@@ -154,11 +162,11 @@ driver first appeared in
 The
 .Nm
 device driver was written by
-.An Scott Mitchell Aq rsm@FreeBSD.org .
+.An Scott Mitchell Aq Mt rsm@FreeBSD.org .
 This manual page was written by
-.An Scott Mitchell Aq rsm@FreeBSD.org ,
+.An Scott Mitchell Aq Mt rsm@FreeBSD.org ,
 and
-.An Tom Rhodes Aq trhodes@FreeBSD.org .
+.An Tom Rhodes Aq Mt trhodes@FreeBSD.org .
 .Sh BUGS
 Supported devices will fail to attach on some machines using the
 .Tn NEWCARD

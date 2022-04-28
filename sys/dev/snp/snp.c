@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/snp/snp.c 224778 2011-08-11 12:30:23Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -174,7 +174,7 @@ snp_read(struct cdev *dev, struct uio *uio, int flag)
 			error = EWOULDBLOCK;
 			break;
 		}
-		error = cv_wait_sig(&ss->snp_outwait, tp->t_mtx);
+		error = cv_wait_sig(&ss->snp_outwait, tty_getlock(tp));
 		if (error != 0)
 			break;
 		if (tty_gone(tp)) {

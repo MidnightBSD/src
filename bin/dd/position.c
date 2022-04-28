@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)position.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/dd/position.c 250469 2013-05-10 18:43:36Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mtio.h>
@@ -45,11 +45,40 @@ __FBSDID("$FreeBSD: release/10.0.0/bin/dd/position.c 250469 2013-05-10 18:43:36Z
 #include <err.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <signal.h>
 #include <unistd.h>
 
 #include "dd.h"
 #include "extern.h"
+
+static off_t
+seek_offset(IO *io)
+{
+	off_t n;
+	size_t sz;
+
+	n = io->offset;
+	sz = io->dbsz;
+
+	_Static_assert(sizeof(io->offset) == sizeof(int64_t), "64-bit off_t");
+
+	/*
+	 * If the lseek offset will be negative, verify that this is a special
+	 * device file.  Some such files (e.g. /dev/kmem) permit "negative"
+	 * offsets.
+	 *
+	 * Bail out if the calculation of a file offset would overflow.
+	 */
+	if ((io->flags & ISCHR) == 0 && (n < 0 || n > OFF_MAX / (ssize_t)sz))
+		errx(1, "seek offsets cannot be larger than %jd",
+		    (intmax_t)OFF_MAX);
+	else if ((io->flags & ISCHR) != 0 && (uint64_t)n > UINT64_MAX / sz)
+		errx(1, "seek offsets cannot be larger than %ju",
+		    (uintmax_t)UINT64_MAX);
+
+	return ((off_t)( (uint64_t)n * sz ));
+}
 
 /*
  * Position input/output data streams before starting the copy.  Device type
@@ -68,7 +97,7 @@ pos_in(void)
 	/* If known to be seekable, try to seek on it. */
 	if (in.flags & ISSEEK) {
 		errno = 0;
-		if (lseek(in.fd, in.offset * in.dbsz, SEEK_CUR) == -1 &&
+		if (lseek(in.fd, seek_offset(&in), SEEK_CUR) == -1 &&
 		    errno != 0)
 			err(1, "%s", in.name);
 		return;
@@ -94,6 +123,8 @@ pos_in(void)
 				--cnt;
 			if (need_summary)
 				summary();
+			if (need_progress)
+				progress();
 			continue;
 		}
 
@@ -136,7 +167,7 @@ pos_out(void)
 	 */
 	if (out.flags & (ISSEEK | ISPIPE)) {
 		errno = 0;
-		if (lseek(out.fd, out.offset * out.dbsz, SEEK_CUR) == -1 &&
+		if (lseek(out.fd, seek_offset(&out), SEEK_CUR) == -1 &&
 		    errno != 0)
 			err(1, "%s", out.name);
 		return;

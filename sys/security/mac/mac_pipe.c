@@ -38,9 +38,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_pipe.c 191731 2009-05-01 21:05:40Z rwatson $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>

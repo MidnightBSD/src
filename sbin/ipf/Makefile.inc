@@ -1,24 +1,32 @@
-#	$FreeBSD: release/10.0.0/sbin/ipf/Makefile.inc 228612 2011-12-17 00:54:09Z dim $
+#	$FreeBSD$
+
+.include <src.opts.mk>
 
 WARNS?=		2
 NO_WFORMAT=
 NO_WARRAY_BOUNDS=
 
-CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter
-CFLAGS+=	-I${.CURDIR}/../../../contrib/ipfilter/tools
-CFLAGS+=	-I${.CURDIR}/../../../sys
-CFLAGS+=	-I${.CURDIR}/../../../sys/contrib/ipfilter
+CFLAGS+=	-I${SRCTOP}/contrib/ipfilter
+CFLAGS+=	-I${SRCTOP}/contrib/ipfilter/tools
+CFLAGS+=	-I${SRCTOP}/sys
+CFLAGS+=	-I${SRCTOP}/sys/contrib/ipfilter
 CFLAGS+=	-DSTATETOP -D__UIO_EXPOSE
 
-LIBIPF=		${.OBJDIR}/../libipf/libipf.a
-DPADD+=		${LIBIPF} ${LIBKVM}
-LDADD+=		${LIBIPF} -lkvm
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DUSE_INET6
+.else
+CFLAGS+=	-DNOINET6
+.endif
+
+.if ${.CURDIR:M*/libipf} == ""
+LIBADD+=	ipf
+.endif
 
 CLEANFILES+=	y.tab.c y.tab.h
 
-.PATH:	${.CURDIR}/../../../contrib/ipfilter	\
-	${.CURDIR}/../../../contrib/ipfilter/lib	\
-	${.CURDIR}/../../../contrib/ipfilter/tools	\
-	${.CURDIR}/../../../contrib/ipfilter/man
+.PATH:	${SRCTOP}/contrib/ipfilter		\
+	${SRCTOP}/contrib/ipfilter/lib		\
+	${SRCTOP}/contrib/ipfilter/tools	\
+	${SRCTOP}/contrib/ipfilter/man
 
 .include "../Makefile.inc"

@@ -1,3 +1,5 @@
-/* $FreeBSD: release/10.0.0/usr.bin/wall/ttymsg.h 83242 2001-09-09 14:23:31Z dd $ */
+/* $FreeBSD$ */
+
+#define	TTYMSG_IOV_MAX	32
 
 const char	*ttymsg(struct iovec *, int, const char *, int);

@@ -12,7 +12,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: release/10.0.0/contrib/tcp_wrappers/update.c 56977 2000-02-03 10:27:03Z shin $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -24,6 +24,7 @@ static char sccsid[] = "@(#) update.c 1.1 94/12/28 17:42:56";
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
+#include <unistd.h>
 
 /* Local stuff. */
 

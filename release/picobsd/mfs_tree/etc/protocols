@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/mfs_tree/etc/protocols 93110 2002-03-24 21:13:53Z luigi $
+# $FreeBSD$
 # Internet (IP) protocols
 ip	0	IP		# internet protocol, pseudo protocol number
 icmp	1	ICMP		# internet control message protocol

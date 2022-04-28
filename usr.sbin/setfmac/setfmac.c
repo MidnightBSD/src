@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2004 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/setfmac/setfmac.c 175796 2008-01-29 17:50:29Z yar $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

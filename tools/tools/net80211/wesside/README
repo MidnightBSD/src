@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/tools/net80211/wesside/README 161047 2006-08-07 17:08:05Z keramida $
+$FreeBSD$
 
 This is an implementation of the frag attack described in:
 http://tapir.cs.ucl.ac.uk/bittau-wep.pdf

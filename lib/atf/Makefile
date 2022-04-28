@@ -23,14 +23,16 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/lib/atf/Makefile 241823 2012-10-22 01:18:41Z marcel $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-SUBDIR=		\
-		libatf-c \
-		libatf-c++
+SUBDIR=		libatf-c \
+		libatf-c++ \
+                ${_tests}
 
-.ORDER: ${SUBDIR}
+.if ${MK_TESTS} != "no"
+_tests= 	tests
+.endif
 
 .include <bsd.subdir.mk>

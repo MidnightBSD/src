@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/esp/esp_sbus.c 227848 2011-11-22 21:55:40Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -165,7 +165,7 @@ static int	espattach(struct esp_softc *esc,
 		    const struct ncr53c9x_glue *gluep);
 static int	espdetach(struct esp_softc *esc);
 
-static const struct ncr53c9x_glue const esp_sbus_glue = {
+static const struct ncr53c9x_glue esp_sbus_glue = {
 	esp_read_reg,
 	esp_write_reg,
 	esp_dma_isintr,

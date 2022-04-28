@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/agp/agpvar.h 235782 2012-05-22 10:59:26Z kib $
+ *	$FreeBSD$
  */
 
 #ifndef _PCI_AGPVAR_H_
@@ -121,6 +121,19 @@ int agp_unbind_memory(device_t dev, void *handle);
  * agp_alloc_memory().
  */
 void agp_memory_info(device_t dev, void *handle, struct agp_memory_info *mi);
+
+/*
+ * Bind a set of pages at a given offset within the AGP aperture.
+ * Returns EINVAL if the given size or offset is not at an AGP page boundary.
+ */
+int agp_bind_pages(device_t dev, vm_page_t *pages, vm_size_t size,
+		   vm_offset_t offset);
+
+/*
+ * Unbind a set of pages from the AGP aperture.
+ * Returns EINVAL if the given size or offset is not at an AGP page boundary.
+ */
+int agp_unbind_pages(device_t dev, vm_size_t size, vm_offset_t offset);
 
 #define AGP_NORMAL_MEMORY 0
 

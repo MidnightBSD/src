@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ohci_pci.c 254438 2013-08-17 06:29:45Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 /*
  * USB Open Host Controller driver.
@@ -81,6 +81,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ohci_pci.c 254438 2013
 #define	PCI_OHCI_VENDORID_APPLE		0x106b
 #define	PCI_OHCI_VENDORID_ATI		0x1002
 #define	PCI_OHCI_VENDORID_CMDTECH	0x1095
+#define	PCI_OHCI_VENDORID_HYGON		0x1d94
 #define	PCI_OHCI_VENDORID_NEC		0x1033
 #define	PCI_OHCI_VENDORID_NVIDIA	0x12D2
 #define	PCI_OHCI_VENDORID_NVIDIA2	0x10DE
@@ -124,9 +125,10 @@ ohci_pci_match(device_t self)
 
 	case 0x740c1022:
 		return ("AMD-756 USB Controller");
-
 	case 0x74141022:
 		return ("AMD-766 USB Controller");
+	case 0x78071022:
+		return ("AMD FCH USB Controller");
 
 	case 0x43741002:
 		return "ATI SB400 USB Controller";
@@ -175,6 +177,8 @@ ohci_pci_match(device_t self)
 
 	case 0x0019106b:
 		return ("Apple KeyLargo USB controller");
+	case 0x003f106b:
+		return ("Apple KeyLargo/Intrepid USB controller");
 
 	default:
 		break;
@@ -211,6 +215,7 @@ ohci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(self),
@@ -274,6 +279,9 @@ ohci_pci_attach(device_t self)
 	case PCI_OHCI_VENDORID_CMDTECH:
 		sprintf(sc->sc_vendor, "CMDTECH");
 		break;
+	case PCI_OHCI_VENDORID_HYGON:
+		sprintf(sc->sc_vendor, "Hygon");
+		break;
 	case PCI_OHCI_VENDORID_NEC:
 		sprintf(sc->sc_vendor, "NEC");
 		break;
@@ -331,13 +339,7 @@ static int
 ohci_pci_detach(device_t self)
 {
 	ohci_softc_t *sc = device_get_softc(self);
-	device_t bdev;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(self, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(self);
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/gnu/usr.bin/cc/include/__wmmintrin_aes.h 255185 2013-09-03 17:33:29Z jmg $
+ * $FreeBSD$
  *
  */
 

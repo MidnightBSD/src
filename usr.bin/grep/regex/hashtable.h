@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/grep/regex/hashtable.h 226035 2011-10-05 09:56:43Z gabor $ */
+/* $FreeBSD$ */
 
 #ifndef HASHTABLE_H
 #define HASHTABLE_H 1

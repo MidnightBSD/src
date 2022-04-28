@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/10.0.0/contrib/ipfilter/man/ipf.5 255332 2013-09-06 23:11:19Z cy $
+.\" $FreeBSD$
 .TH IPF 5
 .SH NAME
 ipf, ipf.conf \- IPFilter firewall rules file format
@@ -881,7 +881,7 @@ through without needing to explicitly allow all fragment body packets.
 An example of how this is done is as follows:
 .PP
 .nf
-pass in proto udp from any prot = 2049 to any with frags keep fags
+pass in proto udp from any port = 2049 to any with frags keep frags
 .fi
 .SH Building a tree of rules
 .PP
@@ -1191,7 +1191,7 @@ pass in log or-block first quick proto tcp from any \\
 .fi
 .PP
 By default, IPFilter will only log the header portion of a packet received
-on the network. A portion of the body of a packet, upto 128 bytes, can also
+on the network. Up to 128 bytes of a packet's body can also
 be logged with the body keyword. ipmon(8) will display the contents of the
 portion of the body logged in hex.
 .PP
@@ -1693,6 +1693,6 @@ environment.
 /dev/ipf
 /etc/ipf.conf
 .br
-/usr/share/examples/ipf  Directory with examples.
+/usr/share/examples/ipfilter  Directory with examples.
 .SH SEE ALSO
 ipf(8), ipfstat(8), ippool.conf(5), ippool(8)

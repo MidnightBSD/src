@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: signal.h,v 1.4 1998/09/14 02:48:34 thorpej Exp $
- * $FreeBSD: release/10.0.0/sys/powerpc/include/signal.h 149337 2005-08-20 16:44:41Z stefanf $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SIGNAL_H_

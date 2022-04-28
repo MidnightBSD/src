@@ -27,7 +27,7 @@
 #ifndef __RADEON_BLIT_COMMON_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/radeon_blit_common.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define DI_PT_RECTLIST        0x11
 #define DI_INDEX_SIZE_16_BIT  0x0

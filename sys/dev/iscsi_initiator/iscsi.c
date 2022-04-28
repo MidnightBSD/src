@@ -29,12 +29,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iscsi_initiator/iscsi.c 255855 2013-09-24 17:01:29Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_iscsi_initiator.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/conf.h>
@@ -77,11 +77,11 @@ struct mtx iscsi_dbg_mtx;
 #endif
 
 static int max_sessions = MAX_SESSIONS;
-SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_sessions, CTLFLAG_RDTUN, &max_sessions, MAX_SESSIONS,
-	   "Max sessions allowed");
+SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_sessions, CTLFLAG_RDTUN,
+    &max_sessions, 0, "Max sessions allowed");
 static int max_pdus = MAX_PDUS;
-SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_pdus, CTLFLAG_RDTUN, &max_pdus, MAX_PDUS,
-	   "Max pdu pool");
+SYSCTL_INT(_net, OID_AUTO, iscsi_initiator_max_pdus, CTLFLAG_RDTUN,
+    &max_pdus, 0, "Max PDU pool");
 
 static char isid[6+1] = {
      0x80,
@@ -150,7 +150,7 @@ iscsi_close(struct cdev *dev, int flag, int otyp, struct thread *td)
 	  sdebug(3, "sp->flags=%x", sp->flags );
 	  /*
 	   | if still in full phase, this probably means
-	   | that something went realy bad.
+	   | that something went really bad.
 	   | it could be a result from 'shutdown', in which case
 	   | we will ignore it (so buffers can be flushed).
 	   | the problem is that there is no way of differentiating
@@ -388,20 +388,14 @@ i_setsoc(isc_session_t *sp, int fd, struct thread *td)
      if(sp->soc != NULL)
 	  isc_stop_receiver(sp);
 
-     error = fget(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT), &sp->fp);
+     error = getsock_cap(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT),
+	     &sp->fp, NULL, NULL);
      if(error)
 	  return error;
 
-     error = fgetsock(td, fd, cap_rights_init(&rights, CAP_SOCK_CLIENT),
-        &sp->soc, 0);
-     if(error == 0) {
-	  sp->td = td;
-	  isc_start_receiver(sp);
-     }
-     else {
-	  fdrop(sp->fp, td);
-	  sp->fp = NULL;
-     }
+     sp->soc = sp->fp->f_data;
+     sp->td = td;
+     isc_start_receiver(sp);
 
      return error;
 }
@@ -711,9 +705,6 @@ iscsi_start(void)
 {
      debug_called(8);
 
-     TUNABLE_INT_FETCH("net.iscsi_initiator.max_sessions", &max_sessions);
-     TUNABLE_INT_FETCH("net.iscsi_initiator.max_pdus", &max_pdus);
-
      isc =  malloc(sizeof(struct isc_softc), M_ISCSI, M_ZERO|M_WAITOK);
      mtx_init(&isc->isc_mtx, "iscsi-isc", NULL, MTX_DEF);
 
@@ -807,8 +798,6 @@ iscsi_stop(void)
      TAILQ_FOREACH_SAFE(sp, &isc->isc_sess, sp_link, sp_tmp) {
 	  //XXX: check for activity ...
 	  ism_stop(sp);
-	  if(sp->cam_sim != NULL)
-	       ic_destroy(sp);
      }
      mtx_destroy(&isc->isc_mtx);
      sx_destroy(&isc->unit_sx);

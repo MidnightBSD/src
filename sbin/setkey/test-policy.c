@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/setkey/test-policy.c 171135 2007-07-01 12:08:08Z gnn $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -76,7 +76,7 @@ main()
 	int i;
 	char *buf;
 
-	for (i = 0; i < sizeof(requests)/sizeof(requests[0]); i++) {
+	for (i = 0; i < nitems(requests); i++) {
 		printf("* requests:[%s]\n", requests[i]);
 		if ((buf = setpolicy(requests[i])) == NULL)
 			continue;

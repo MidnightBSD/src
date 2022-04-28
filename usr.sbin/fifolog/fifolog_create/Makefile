@@ -1,11 +1,10 @@
-# $FreeBSD: release/10.0.0/usr.sbin/fifolog/fifolog_create/Makefile 178068 2008-04-10 14:02:00Z ru $
+# $FreeBSD$
 
 PROG=	fifolog_create
 
-CFLAGS+= -I${.CURDIR}/../lib
+CFLAGS+= -I${.CURDIR:H}/lib
 
-DPADD=	${LIBFIFOLOG} ${LIBUTIL}
-LDADD=	${LIBFIFOLOG} -lutil
+LIBADD=	util fifolog
 
 MAN=	fifolog.1
 MLINKS=	fifolog.1 fifolog_create.1 \

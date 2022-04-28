@@ -1,6 +1,8 @@
 /*	$NetBSD: btpand.h,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/btpand.h 188013 2009-02-02 18:08:22Z emax $ */
+/* $FreeBSD$ */
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -183,7 +185,7 @@ b2eaddr(void *dst, bdaddr_t *src)
 /* bnep.c */
 bool		bnep_send(channel_t *, packet_t *);
 bool		bnep_recv(packet_t *);
-void		bnep_send_control(channel_t *, uint8_t, ...);
+void		bnep_send_control(channel_t *, unsigned, ...);
 
 /* channel.c */
 void		channel_init(void);

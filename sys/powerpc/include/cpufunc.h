@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/cpufunc.h 234589 2012-04-22 21:55:19Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_CPUFUNC_H_
@@ -82,7 +82,7 @@ static __inline void
 mtsrin(vm_offset_t va, register_t value)
 {
 
-	__asm __volatile ("mtsrin %0,%1" :: "r"(value), "r"(va));
+	__asm __volatile ("mtsrin %0,%1; isync" :: "r"(value), "r"(va));
 }
 
 static __inline register_t

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/netpfil/pf/in4_cksum.c 240494 2012-09-14 11:51:49Z glebius $	*/
+/*	$FreeBSD$	*/
 /*	$OpenBSD: in4_cksum.c,v 1.7 2003/06/02 23:28:13 millert Exp $	*/
 /*	$KAME: in4_cksum.c,v 1.10 2001/11/30 10:06:15 itojun Exp $	*/
 /*	$NetBSD: in_cksum.c,v 1.13 1996/10/13 02:03:03 christos Exp $	*/

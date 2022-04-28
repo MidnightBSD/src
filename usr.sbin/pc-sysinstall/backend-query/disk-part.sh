@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/disk-part.sh 217164 2011-01-08 20:25:00Z jpaetzel $
+# $FreeBSD$
 
 # Query a disk for partitions and display them
 #############################

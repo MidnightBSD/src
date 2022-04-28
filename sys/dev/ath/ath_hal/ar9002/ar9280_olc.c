@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar9002/ar9280_olc.c 221837 2011-05-13 14:33:45Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -328,7 +328,7 @@ ar9280SetPowerCalTable(struct ath_hal *ah, struct ar5416eeprom *pEepData,
 		 * uses this to calculate the PDADC delta during
 		 * calibration ; 0 here effectively stops the
 		 * temperature compensation calibration from
-		 * occuring.
+		 * occurring.
 		 */
 		AH5416(ah)->initPDADC = 0;
 	}

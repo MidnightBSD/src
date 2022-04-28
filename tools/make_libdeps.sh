@@ -24,13 +24,16 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/make_libdeps.sh 256998 2013-10-23 18:07:07Z bdrewery $
+# $FreeBSD$
 
 export PATH=/bin:/usr/bin
+
+set -e
 
 LC_ALL=C			# make sort deterministic
 FS=': '				# internal field separator
 LIBDEPENDS=./_libdeps		# intermediate output file
+LIBDIRS=./_libdirs		# intermediate output file
 USRSRC=${1:-/usr/src}		# source root
 LIBS="
 	lib
@@ -39,44 +42,74 @@ LIBS="
 	secure/lib
 	usr.bin/lex/lib
 	cddl/lib
+	contrib/ofed
 "				# where to scan for libraries
 
-# This sed(1) filter is used to convert -lfoo to path/to/libfoo.
-#
-SED_FILTER="
-sed -E
-    -e's; ;! ;g'
-    -e's;$;!;'
-    -e's;-lbsdxml!;lib/libexpat;g'
-    -e's;-lpthread!;lib/libthr;g'
-    -e's;-lm!;lib/msun;g'
-    -e's;-l(ncurses|termcap)!;lib/ncurses/ncurses;g'
-    -e's;-l(gcc)!;gnu/lib/lib\1;g'
-    -e's;-lssp_nonshared!;gnu/lib/libssp/libssp_nonshared;g'
-    -e's;-l(asn1|hdb|kdc|heimbase|heimntlm|heimsqlite|hx509|krb5|roken|wind)!;kerberos5/lib/lib\1;g'
-    -e's;-l(crypto|ssh|ssl)!;secure/lib/lib\1;g'
-    -e's;-l([^!]+)!;lib/lib\1;g'
-"
+
+# convert -lfoo to foo
+convert()
+{
+    sed -e "s/\-l//g" -e "s/pthread/thr/g" -e "s/ncurses.*/ncurses/g"
+}
+
+# find library build directory given library name
+findlibdir()
+{
+	while read NAME && read DIR
+	do
+		if [ "$NAME" = "$1" ]; then
+			echo "$DIR"
+			exit
+		fi
+	done
+
+	# Should not happen
+	echo lib_not_found/lib$1
+}
+
+# find library build directories given one or more library names
+resolvelibdirs()
+{
+	while read LIBNAME
+	do
+		cat $LIBDIRS | tr ' ' '\n' | findlibdir "$LIBNAME"
+	done
+}
 
 # Generate interdependencies between libraries.
 #
 genlibdepends()
 {
 	(
+		# Reset file
+		echo -n > $LIBDIRS
+
+		# First pass - generate list of directories
 		cd ${USRSRC}
-		find -s ${LIBS} -mindepth 1 -name Makefile |
+		find -s ${LIBS} -name Makefile |
+		xargs grep -l 'bsd\.lib\.mk' |
+		while read makefile; do
+			libdir=$(dirname ${makefile})
+			libname=$(
+				cd ${libdir}
+				make -m ${USRSRC}/share/mk WITH_OFED=YES -V LIB
+			)
+			if [ "${libname}" ]; then
+			    echo "${libname} ${libdir}" >> $LIBDIRS
+			fi
+		done
+
+		# Second pass - generate dependencies
+		find -s ${LIBS} -name Makefile |
 		xargs grep -l 'bsd\.lib\.mk' |
 		while read makefile; do
 			libdir=$(dirname ${makefile})
 			deps=$(
 				cd ${libdir}
-				make -m ${USRSRC}/share/mk -V LDADD
+				make -m ${USRSRC}/share/mk WITH_OFED=YES -V LDADD
 			)
 			if [ "${deps}" ]; then
-				echo ${libdir}"${FS}"$(
-					echo ${deps} |
-					eval ${SED_FILTER}
-				)
+				echo ${libdir}"${FS}"$(echo ${deps} | tr ' ' '\n' | convert | resolvelibdirs)
 			fi
 		done
 	)
@@ -89,12 +122,12 @@ main()
 	fi
 
 	prebuild_libs=$(
-		awk -F"${FS}" '{ print $2 }' ${LIBDEPENDS} |rs 0 1 |sort -u
+		awk -F"${FS}" '{ print $2 }' ${LIBDEPENDS} | tr ' ' '\n' |
+		    sort -u
 	)
 	echo "Libraries with dependents:"
 	echo
-	echo ${prebuild_libs} |
-	rs 0 1
+	echo ${prebuild_libs} | tr ' ' '\n'
 	echo
 
 	echo "List of interdependencies:"

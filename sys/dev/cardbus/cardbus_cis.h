@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cardbus/cardbus_cis.h 141412 2005-02-06 21:03:13Z imp $
+ * $FreeBSD$
  */
 
 /*

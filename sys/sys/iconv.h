@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/iconv.h 235711 2012-05-21 02:30:22Z kevlo $
+ * $FreeBSD$
  */
 #ifndef _SYS_ICONV_H_
 #define _SYS_ICONV_H_
@@ -65,7 +65,7 @@ struct iconv_cspair_info {
 };
 
 /*
- * Paramters for 'add' sysctl
+ * Parameters for 'add' sysctl
  */
 #define	ICONV_ADD_VER	1
 

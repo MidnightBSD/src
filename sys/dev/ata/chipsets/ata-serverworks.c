@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-serverworks.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -96,7 +96,7 @@ ata_serverworks_probe(device_t dev)
 
     ata_set_desc(dev);
     ctlr->chipinit = ata_serverworks_chipinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -162,9 +162,8 @@ ata_serverworks_chipinit(device_t dev)
 	}
     }
     else {
-	pci_write_config(dev, 0x5a,
-			 (pci_read_config(dev, 0x5a, 1) & ~0x40) |
-			 (ctlr->chip->cfg1 == SWKS_100) ? 0x03 : 0x02, 1);
+	pci_write_config(dev, 0x5a, (pci_read_config(dev, 0x5a, 1) & ~0x40) |
+	    ((ctlr->chip->cfg1 == SWKS_100) ? 0x03 : 0x02), 1);
     }
     ctlr->setmode = ata_serverworks_setmode;
     return 0;

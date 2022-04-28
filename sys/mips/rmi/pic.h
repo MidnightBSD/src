@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD: release/10.0.0/sys/mips/rmi/pic.h 217625 2011-01-20 08:08:19Z jchandra $
+ * $FreeBSD$
  */
 #ifndef _RMI_PIC_H_
 #define	_RMI_PIC_H_
@@ -214,7 +214,7 @@ void pic_setup_intr(int picintr, int irq, uint32_t cpumask, int level)
 
 	mtx_lock_spin(&xlr_pic_lock);
 	xlr_write_reg(mmio, PIC_IRT_0(picintr), cpumask);
-	xlr_write_reg(mmio, PIC_IRT_1(picintr), ((1 << 31) | (level << 30) |
+	xlr_write_reg(mmio, PIC_IRT_1(picintr), ((1U << 31) | (level << 30) |
 	    (1 << 6) | irq));
 	mtx_unlock_spin(&xlr_pic_lock);
 }

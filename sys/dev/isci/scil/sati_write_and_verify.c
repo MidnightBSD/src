@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/sati_write_and_verify.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
 * @file

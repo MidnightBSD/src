@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tail/forward.c 251565 2013-06-09 08:06:26Z jh $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)forward.c	8.1 (Berkeley) 6/6/93";

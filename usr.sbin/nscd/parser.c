@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nscd/parser.c 238094 2012-07-04 09:02:12Z se $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/time.h>
 

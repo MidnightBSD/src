@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_evnt.h,v 1.1 2002/11/24 19:47:06 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_evnt.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_EVNT_H_

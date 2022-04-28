@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/umoddi3.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <libkern/quad.h>
 

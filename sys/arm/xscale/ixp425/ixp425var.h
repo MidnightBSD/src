@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425var.h 229125 2011-12-31 15:53:34Z marius $
+ * $FreeBSD$
  *
  */
 

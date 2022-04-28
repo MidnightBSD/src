@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)collect.c	8.2 (Berkeley) 4/19/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/collect.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Mail -- a mail program
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/collect.c 216564 2010-12-19 16:2
 #include "extern.h"
 
 /*
- * Read a message from standard output and return a read file to it
+ * Read a message from standard input and return a read file to it
  * or NULL on error.
  */
 
@@ -131,7 +131,6 @@ collect(struct header *hp, int printheaders)
 		escape = ESCAPE;
 	eofcount = 0;
 	hadintr = 0;
-	lastlong = 0;
 	longline = 0;
 
 	if (!setjmp(colljmp)) {
@@ -339,9 +338,9 @@ cont:
 				int nullfd, tempfd, rc;
 				char tempname2[PATHSIZE];
 
-				if ((nullfd = open("/dev/null", O_RDONLY, 0))
+				if ((nullfd = open(_PATH_DEVNULL, O_RDONLY, 0))
 				    == -1) {
-					warn("/dev/null");
+					warn(_PATH_DEVNULL);
 					break;
 				}
 

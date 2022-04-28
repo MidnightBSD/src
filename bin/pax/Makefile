@@ -1,5 +1,7 @@
 #       @(#)Makefile	8.1 (Berkeley) 5/31/93
-# $FreeBSD: release/10.0.0/bin/pax/Makefile 205940 2010-03-30 23:10:56Z delphij $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 # To install on versions prior to BSD 4.4 the following may have to be
 # defined with CFLAGS +=
@@ -25,9 +27,14 @@
 # 		regex routines and must define NET2_REGEX.
 # 		Pax may not compile if this not (un)defined properly.
 
+PACKAGE=runtime
 PROG=   pax
 SRCS=	ar_io.c ar_subs.c buf_subs.c cache.c cpio.c file_subs.c ftree.c \
 	gen_subs.c getoldopt.c options.c pat_rep.c pax.c sel_subs.c \
 	tables.c tar.c tty_subs.c
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=    tests
+.endif
 
 .include <bsd.prog.mk>

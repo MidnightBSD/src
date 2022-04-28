@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_poll.c 254031 2013-08-07 07:22:56Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_device_polling.h"
 
@@ -42,7 +42,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_poll.c 254031 2013-08-07 07:22:
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
 
-#include <net/if.h>			/* for IFF_* flags		*/
+#include <net/if.h>
+#include <net/if_var.h>
 #include <net/netisr.h>			/* for NETISR_POLL		*/
 #include <net/vnet.h>
 
@@ -267,7 +268,7 @@ init_device_poll(void)
 	EVENTHANDLER_REGISTER(shutdown_post_sync, poll_shutdown, NULL,
 	    SHUTDOWN_PRI_LAST);
 }
-SYSINIT(device_poll, SI_SUB_CLOCKS, SI_ORDER_MIDDLE, init_device_poll, NULL);
+SYSINIT(device_poll, SI_SUB_SOFTINTR, SI_ORDER_MIDDLE, init_device_poll, NULL);
 
 
 /*
@@ -366,6 +367,9 @@ netisr_pollmore()
 	struct timeval t;
 	int kern_load;
 
+	if (poll_handlers == 0)
+		return;
+
 	mtx_lock(&poll_mtx);
 	if (!netisr_pollmore_scheduled) {
 		mtx_unlock(&poll_mtx);
@@ -423,6 +427,9 @@ netisr_poll(void)
 	int i, cycles;
 	enum poll_cmd arg = POLL_ONLY;
 
+	if (poll_handlers == 0)
+		return;
+
 	mtx_lock(&poll_mtx);
 	if (!netisr_poll_scheduled) {
 		mtx_unlock(&poll_mtx);
@@ -458,7 +465,7 @@ netisr_poll(void)
  * This is called from within the *_ioctl() functions.
  */
 int
-ether_poll_register(poll_handler_t *h, struct ifnet *ifp)
+ether_poll_register(poll_handler_t *h, if_t ifp)
 {
 	int i;
 
@@ -505,7 +512,7 @@ ether_poll_register(poll_handler_t *h, struct ifnet *ifp)
  * Remove interface from the polling list. Called from *_ioctl(), too.
  */
 int
-ether_poll_deregister(struct ifnet *ifp)
+ether_poll_deregister(if_t ifp)
 {
 	int i;
 

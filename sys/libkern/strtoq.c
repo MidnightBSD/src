@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strtoq.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -124,7 +124,7 @@ strtoq(const char *nptr, char **endptr, int base)
 		acc = neg ? QUAD_MIN : QUAD_MAX;
 	} else if (neg)
 		acc = -acc;
-	if (endptr != 0)
-		*((const char **)endptr) = any ? s - 1 : nptr;
+	if (endptr != NULL)
+		*endptr = __DECONST(char *, any ? s - 1 : nptr);
 	return (acc);
 }

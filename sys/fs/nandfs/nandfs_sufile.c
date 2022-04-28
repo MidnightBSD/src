@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nandfs/nandfs_sufile.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -137,7 +137,7 @@ nandfs_alloc_segment(struct nandfs_device *fsdev, uint64_t *seg)
 		rest = (fsdev->nd_blocksize - offset) / seg_size;
 		/* Go through all su usage in block */
 		while (rest) {
-			/* When last check start from beggining */
+			/* When last check start from beginning */
 			if (i == nsegments)
 				break;
 

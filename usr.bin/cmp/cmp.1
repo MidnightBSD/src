@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)cmp.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/cmp/cmp.1 216370 2010-12-11 08:32:16Z joel $
+.\" $FreeBSD$
 .\"
-.Dd December 19, 2006
+.Dd May 1, 2018
 .Dt CMP 1
 .Os
 .Sh NAME
@@ -59,10 +59,10 @@ The following options are available:
 .Bl -tag -width indent
 .It Fl h
 Do not follow symbolic links.
-.It Fl l
+.It Fl l , Fl -verbose
 Print the byte number (decimal) and the differing
 byte values (octal) for each difference.
-.It Fl s
+.It Fl s , Fl -silent , Fl -quiet
 Print nothing for differing files; return exit
 status only.
 .It Fl x
@@ -115,6 +115,12 @@ The
 utility is expected to be
 .St -p1003.2
 compatible.
+The
+.Fl h ,
+.Fl x ,
+and
+.Fl z
+options are extensions to the standard.
 .Sh HISTORY
 A
 .Nm

@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/mount/getmntopts.c 230372 2012-01-20 07:29:29Z jh $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -180,4 +180,18 @@ build_iovec_argf(struct iovec **iov, int *iovlen, const char *name,
 	vsnprintf(val, sizeof(val), fmt, ap);
 	va_end(ap);
 	build_iovec(iov, iovlen, name, strdup(val), (size_t)-1);
+}
+
+/*
+ * Free the iovec and reset to NULL with zero length.  Useful for calling
+ * nmount in a loop.
+ */
+void
+free_iovec(struct iovec **iov, int *iovlen)
+{
+	int i;
+
+	for (i = 0; i < *iovlen; i++)
+		free((*iov)[i].iov_base);
+	free(*iov);
 }

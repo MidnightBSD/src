@@ -36,20 +36,18 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xilinx/uart_dev_cdnc.c 249997 2013-04-27 22:38:29Z wkoszek $");
-
-#include "opt_global.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
-#include <sys/tty.h>
 #include <machine/bus.h>
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
+#include <dev/uart/uart_cpu_fdt.h>
 #include <dev/uart/uart_bus.h>
 
 #include "uart_if.h"
@@ -398,6 +396,8 @@ static int cdnc_uart_bus_param(struct uart_softc *, int, int, int, int);
 static int cdnc_uart_bus_receive(struct uart_softc *);
 static int cdnc_uart_bus_setsig(struct uart_softc *, int);
 static int cdnc_uart_bus_transmit(struct uart_softc *);
+static void cdnc_uart_bus_grab(struct uart_softc *);
+static void cdnc_uart_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t cdnc_uart_bus_methods[] = {
 	KOBJMETHOD(uart_probe,		cdnc_uart_bus_probe),
@@ -410,6 +410,8 @@ static kobj_method_t cdnc_uart_bus_methods[] = {
 	KOBJMETHOD(uart_receive,	cdnc_uart_bus_receive),
 	KOBJMETHOD(uart_setsig,		cdnc_uart_bus_setsig),
 	KOBJMETHOD(uart_transmit,	cdnc_uart_bus_transmit),
+	KOBJMETHOD(uart_grab,		cdnc_uart_bus_grab),
+	KOBJMETHOD(uart_ungrab,		cdnc_uart_bus_ungrab),
 	
 	KOBJMETHOD_END
 };
@@ -675,10 +677,37 @@ cdnc_uart_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 	return (error);
 }
 
-struct uart_class uart_cdnc_class = {
+static void
+cdnc_uart_bus_grab(struct uart_softc *sc)
+{
+
+	/* Enable interrupts. */
+	WR4(&sc->sc_bas, CDNC_UART_IEN_REG,
+	    CDNC_UART_INT_TXOVR | CDNC_UART_INT_RXOVR |
+	    CDNC_UART_INT_DMSI);
+}
+
+static void
+cdnc_uart_bus_ungrab(struct uart_softc *sc)
+{
+
+	/* Enable interrupts. */
+	WR4(&sc->sc_bas, CDNC_UART_IEN_REG,
+	    CDNC_UART_INT_RXTRIG | CDNC_UART_INT_RXTMOUT |
+	    CDNC_UART_INT_TXOVR | CDNC_UART_INT_RXOVR |
+	    CDNC_UART_INT_DMSI);
+}
+
+static struct uart_class uart_cdnc_class = {
 	"cdnc_uart",
 	cdnc_uart_bus_methods,
 	sizeof(struct uart_softc),
 	.uc_ops = &cdnc_uart_ops,
 	.uc_range = 8
 };
+
+static struct ofw_compat_data compat_data[] = {
+	{"cadence,uart",	(uintptr_t)&uart_cdnc_class},
+	{NULL,			(uintptr_t)NULL},
+};
+UART_FDT_CLASS_AND_DEVICE(compat_data);

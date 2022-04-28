@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2012-2013 Intel Corporation
+ * Copyright (C) 2012-2016 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,25 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nvme/nvme_sysctl.c 253112 2013-07-09 21:22:17Z jimharris $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_nvme.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/sysctl.h>
 
 #include "nvme_private.h"
+
+#ifndef NVME_USE_NVD
+#define NVME_USE_NVD 1
+#endif
+
+int nvme_use_nvd = NVME_USE_NVD;
+
+SYSCTL_NODE(_hw, OID_AUTO, nvme, CTLFLAG_RD, 0, "NVMe sysctl tunables");
+SYSCTL_INT(_hw_nvme, OID_AUTO, use_nvd, CTLFLAG_RDTUN,
+    &nvme_use_nvd, 1, "1 = Create NVD devices, 0 = Create NDA devices");
 
 /*
  * CTLTYPE_S64 and sysctl_handle_64 were added in r217616.  Define these
@@ -250,6 +262,10 @@ nvme_sysctl_initialize_ctrlr(struct nvme_controller *ctrlr)
 	ctrlr_ctx = device_get_sysctl_ctx(ctrlr->dev);
 	ctrlr_tree = device_get_sysctl_tree(ctrlr->dev);
 	ctrlr_list = SYSCTL_CHILDREN(ctrlr_tree);
+
+	SYSCTL_ADD_UINT(ctrlr_ctx, ctrlr_list, OID_AUTO, "num_cpus_per_ioq",
+	    CTLFLAG_RD, &ctrlr->num_cpus_per_ioq, 0,
+	    "Number of CPUs assigned per I/O queue pair");
 
 	SYSCTL_ADD_PROC(ctrlr_ctx, ctrlr_list, OID_AUTO,
 	    "int_coal_time", CTLTYPE_UINT | CTLFLAG_RW, ctrlr, 0,

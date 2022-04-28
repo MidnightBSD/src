@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rpc.ypupdated/ypupdated_main.c 223492 2011-06-24 07:05:20Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include "ypupdate_prot.h"
 #include <stdio.h>
@@ -73,6 +73,8 @@ static int _rpcfdtype;
 #define	_SERVING 2
 
 extern int _rpcsvcstate;	 /* Set when a request is serviced */
+
+int debug;
 
 char *progname = "rpc.ypupdated";
 char *yp_dir = "/var/yp/";

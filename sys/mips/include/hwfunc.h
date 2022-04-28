@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/hwfunc.h 232853 2012-03-12 07:34:15Z jmallett $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_HWFUNC_H_

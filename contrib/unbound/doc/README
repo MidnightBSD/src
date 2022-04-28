@@ -1,8 +1,10 @@
-README for Unbound 1.4.20
+README for Unbound 1.9.6
 Copyright 2007 NLnet Labs
 http://unbound.net
 
 This software is under BSD license, see LICENSE for details.
+The DNS64 module has BSD license in dns64/dns64.c.
+The DNSTAP code has BSD license in dnstap/dnstap.c.
 
 * Download the latest release version of this software from 
   	http://unbound.net 
@@ -10,14 +12,11 @@ This software is under BSD license, see LICENSE for details.
   	http://unbound.net/svn/
 
 * Uses the following libraries; 
-  * ldns	http://www.nlnetlabs.nl/ldns/			(BSD license)
-    (required) can use ldns build directory directly with --with-ldns=path.
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
     (optional) can use builtin alternative instead.
+  * libexpat	(for the unbound-anchor helper program)		(MIT license)
 
 * Make and install: ./configure; make; make install
-  * --with-ldns=/path/to/ldns
-	It will dynamically link against it.
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
 	--with-libevent=no (default) gives a builtin alternative 
@@ -36,8 +35,8 @@ This software is under BSD license, see LICENSE for details.
 	programming errors, among which buffer overflows.  The program exits
 	with an error if an assertion fails (but the buffer did not overflow).
   * --enable-static-exe
-	This enables a debug option to statically link, against ldns and 
-	libevent libraries.
+	This enables a debug option to statically link against the
+	libevent library.
   * --enable-lock-checks
   	This enables a debug option to check lock and unlock calls. It needs
 	a recent pthreads library to work.
@@ -77,6 +76,8 @@ This software is under BSD license, see LICENSE for details.
   	Disable support for RSASHA256 and RSASHA512 crypto.
   * --disable-gost
   	Disable support for GOST crypto, RFC 5933.
+  * --enable-subnet
+  	Enable EDNS client subnet processing.
 
 * 'make test' runs a series of self checks.
 
@@ -98,7 +99,7 @@ o If you are not receiving the correct source IP address on replies (e.g.
   the config file is an alternative. The interface-automatic option uses
   non portable socket options, Linux and FreeBSD should work fine.
 o The warning 'openssl has no entropy, seeding with time', with chroot 
-  enabled, may be solved with a symbolic link to /dev/random from <chrootdir>.
+  enabled, may be solved with a symbolic link to /dev/urandom from <chrootdir>.
 o On Solaris 5.10 some libtool packages from repositories do not work with
   gcc, showing errors gcc: unrecognized option `-KPIC'
   To solve this do ./configure libtool=./libtool [your options...].

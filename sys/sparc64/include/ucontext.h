@@ -26,18 +26,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/alpha/include/ucontext.h,v 1.3 1999/10/08
- * $FreeBSD: release/10.0.0/sys/sparc64/include/ucontext.h 253266 2013-07-12 14:24:52Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_UCONTEXT_H_
 #define	_MACHINE_UCONTEXT_H_
 
 struct __mcontext {
-	uint64_t mc_global[8];
-	uint64_t mc_out[8];
-	uint64_t mc_local[8];
-	uint64_t mc_in[8];
-	uint32_t mc_fp[64];
+	__uint64_t mc_global[8];
+	__uint64_t mc_out[8];
+	__uint64_t mc_local[8];
+	__uint64_t mc_in[8];
+	__uint32_t mc_fp[64];
 } __aligned(64);
 
 typedef struct __mcontext mcontext_t;

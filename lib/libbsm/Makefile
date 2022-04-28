@@ -1,14 +1,15 @@
 #
-# $FreeBSD: release/10.0.0/lib/libbsm/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 #
 
-OPENBSMDIR=		${.CURDIR}/../../contrib/openbsm
-LIBBSMDIR=		${OPENBSMDIR}/libbsm
+PACKAGE=	lib${LIB}
+OPENBSMDIR=		${SRCTOP}/contrib/openbsm
+_LIBBSMDIR=		${OPENBSMDIR}/libbsm
 
 LIB=		bsm
 SHLIB_MAJOR=	3
 
-.PATH:		${LIBBSMDIR}
+.PATH:		${_LIBBSMDIR}
 .PATH:		${OPENBSMDIR}/bsm
 .PATH:		${OPENBSMDIR}/man
 
@@ -31,7 +32,7 @@ SRCS=	bsm_audit.c							\
 #
 # Must use BSM include files from within the contrib area, not the system.
 #
-CFLAGS+=	-I${OPENBSMDIR} -I${LIBBSMDIR}
+CFLAGS+=	-I${OPENBSMDIR} -I${_LIBBSMDIR}
 
 WARNS?=		1
 
@@ -48,6 +49,7 @@ MAN=	libbsm.3							\
 	au_free_token.3							\
 	au_io.3								\
 	au_mask.3							\
+	au_notify.3							\
 	au_open.3							\
 	au_socket_type.3						\
 	au_token.3							\
@@ -73,10 +75,11 @@ MAN+=	audit.2								\
 	setauid.2
 
 MLINKS=	libbsm.3 bsm.3							\
+	libbsm.3 au_fcntl_cmd_to_bsm.3					\
 	au_class.3 getauclassent.3					\
 	au_class.3 getauclassent_r.3					\
 	au_class.3 getauclassnam.3					\
-	au_class.3 getauclassnam_3.3					\
+	au_class.3 getauclassnam_r.3					\
 	au_class.3 setauclass.3						\
 	au_class.3 endauclass.3						\
 	au_control.3 setac.3						\
@@ -112,6 +115,9 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_mask.3 au_preselect.3					\
 	au_mask.3 getauditflagsbin.3					\
 	au_mask.3 getauditflagschar.3					\
+	au_notify.3 au_get_state.3					\
+	au_notify.3 au_notify_initialize.3				\
+	au_notify.3 au_notify_terminate.3				\
 	au_open.3 au_close.3						\
 	au_open.3 au_close_buffer.3					\
 	au_open.3 au_close_token.3					\
@@ -121,6 +127,7 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_token.3 au_to_arg32.3					\
 	au_token.3 au_to_arg64.3					\
 	au_token.3 au_to_arg.3						\
+	au_token.3 au_to_attr32.3					\
 	au_token.3 au_to_attr64.3					\
 	au_token.3 au_to_data.3						\
 	au_token.3 au_to_exit.3						\
@@ -149,6 +156,7 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_token.3 au_to_sock_inet32.3					\
 	au_token.3 au_to_sock_inet128.3					\
 	au_token.3 au_to_sock_inet.3					\
+	au_token.3 au_to_socket_ex.3					\
 	au_token.3 au_to_subject32.3					\
 	au_token.3 au_to_subject64.3					\
 	au_token.3 au_to_subject.3					\
@@ -160,6 +168,7 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_token.3 au_to_exec_env.3					\
 	au_token.3 au_to_header.3					\
 	au_token.3 au_to_header32.3					\
+	au_token.3 au_to_header32_ex.3					\
 	au_token.3 au_to_header64.3					\
 	au_token.3 au_to_trailer.3					\
 	au_token.3 au_to_zonename.3					\
@@ -168,7 +177,7 @@ MLINKS=	libbsm.3 bsm.3							\
 	au_user.3 getauuserent.3					\
 	au_user.3 getauuserent_r.3					\
 	au_user.3 getauusernam.3					\
-	au_user.3 getauusernam_R.3					\
+	au_user.3 getauusernam_r.3					\
 	au_user.3 au_user_mask.3					\
 	au_user.3 getfauditflags.3					\
 	getaudit.2 getaudit_addr.2					\

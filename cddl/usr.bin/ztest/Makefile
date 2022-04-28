@@ -1,27 +1,23 @@
-# $FreeBSD: release/10.0.0/cddl/usr.bin/ztest/Makefile 254949 2013-08-27 04:01:31Z will $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../..//contrib/opensolaris/cmd/ztest
+.PATH: ${SRCTOP}/cddl/contrib/opensolaris/cmd/ztest
 
 PROG=	ztest
-NO_MAN=
+MAN=
 
 WARNS?=	0
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/lib/libnvpair
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/common/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
-CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/head
-CFLAGS+= -I${.CURDIR}/../../lib/libumem
+CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
+CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
+CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libcmdutils
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/zfs
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
 
-DPADD=	${LIBGEOM} ${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
-	${LIBPTHREAD} ${LIBAVL} ${LIBZFS_CORE} ${LIBZFS} ${LIBUUTIL}
-LDADD=	-lgeom -lm -lnvpair -lumem -lzpool -lpthread -lavl -lzfs_core -lzfs \
-	-luutil
+LIBADD=	geom m nvpair umem zpool pthread avl zfs_core zfs uutil
 
 CSTD=	c99
 

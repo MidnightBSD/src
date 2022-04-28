@@ -30,12 +30,14 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ls.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: release/10.0.0/bin/ls/ls.h 242807 2012-11-08 23:45:19Z grog $
+ * $FreeBSD$
  */
 
 #define NO_PRINT	1
 
 #define HUMANVALSTR_LEN	5
+
+#define LS_XO_VERSION	"1"
 
 extern long blocksize;		/* block size units */
 
@@ -58,6 +60,7 @@ extern int f_statustime;	/* use time of last mode change */
 extern int f_thousands;		/* show file sizes with thousands separators */
 extern char *f_timeformat;	/* user-specified time format */
 extern int f_notabs;		/* don't use tab-separated multi-col output */
+extern int f_numericonly;	/* don't convert uid/gid to name */
 extern int f_type;		/* add type character for non-regular files */
 #ifdef COLORLS
 extern int f_color;		/* add type in color for non-regular files */

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man3/pthread_rwlock_timedwrlock.3 218991 2011-02-24 10:21:26Z gahr $
+.\" $FreeBSD$
 .\"
-.Dd January 16, 2004
+.Dd August 17, 2018
 .Dt PTHREAD_RWLOCK_TIMEDWRLOCK 3
 .Os
 .Sh NAME
@@ -35,7 +35,7 @@
 .Sh SYNOPSIS
 .In pthread.h
 .Ft int
-.Fn pthread_rwlock_timedwrlock "pthread_rwlock_t *rwlock" "const struct timespec *abs_timeout"
+.Fn pthread_rwlock_timedwrlock "pthread_rwlock_t *restrict rwlock" "const struct timespec *restrict abs_timeout"
 .Sh DESCRIPTION
 This function acquires a write lock on the read-write lock
 .Fa rwlock .

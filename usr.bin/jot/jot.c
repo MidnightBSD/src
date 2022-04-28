@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)jot.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/jot/jot.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * jot - print sequential or random data
@@ -242,12 +242,15 @@ main(int argc, char **argv)
 			mask = 0;
 			break;
 		case HAVE_REPS | HAVE_BEGIN | HAVE_ENDER:
-			if (reps == 0)
-				errx(1, "infinite sequences cannot be bounded");
-			else if (reps == 1)
-				s = 0.0;
-			else
-				s = (ender - begin) / (reps - 1);
+			if (!randomize) {
+				if (reps == 0)
+					errx(1, "infinite sequences cannot "
+					    "be bounded");
+				else if (reps == 1)
+					s = 0.0;
+				else
+					s = (ender - begin) / (reps - 1);
+			}
 			mask = 0;
 			break;
 		case HAVE_REPS | HAVE_BEGIN | HAVE_ENDER | HAVE_STEP:

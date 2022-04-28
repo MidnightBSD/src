@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/nmdm/Makefile 181905 2008-08-20 08:31:58Z ed $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/nmdm
+.PATH: ${SRCTOP}/sys/dev/nmdm
 
 KMOD=	nmdm
 SRCS=	nmdm.c

@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Obtained from: $NetBSD: semtest.c,v 1.4 2002/07/20 08:36:25 grant Exp $
- * $FreeBSD: release/10.0.0/tools/regression/sysvsem/semtest.c 235719 2012-05-21 07:52:46Z kevlo $
+ * $FreeBSD$
  */
 
 /*
@@ -151,6 +151,15 @@ main(int argc, char *argv[])
 		err(1, "IPC_SET of mode didn't hold");
 
 	print_semid_ds(&s_ds, 0600);
+
+	errno = 0;
+	if (semget(semkey, 1, IPC_CREAT | IPC_EXCL | 0600) != -1 ||
+	    errno != EEXIST)
+		err(1, "semget IPC_EXCL 1 did not fail with [EEXIST]");
+	errno = 0;
+	if (semget(semkey, 2, IPC_CREAT | IPC_EXCL | 0600) != -1 ||
+	    errno != EEXIST)
+		err(1, "semget IPC_EXCL 2 did not fail with [EEXIST]");
 
 	for (child_count = 0; child_count < 5; child_count++) {
 		switch ((child_pid = fork())) {

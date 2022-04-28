@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_rapidstart.c 250363 2013-05-08 12:53:21Z takawata $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -84,12 +84,21 @@ acpi_rapidstart_attach(device_t dev)
 	sc->sysctl_ctx = device_get_sysctl_ctx(dev);
 	sc->sysctl_tree = device_get_sysctl_tree(dev);
 	for (i = 0 ; acpi_rapidstart_oids[i].nodename != NULL; i++){
-		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
-		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-		    i, acpi_rapidstart_oids[i].nodename , CTLTYPE_INT |
-		    ((acpi_rapidstart_oids[i].setmethod)? CTLFLAG_RW: CTLFLAG_RD),
-		    dev, i, sysctl_acpi_rapidstart_gen_handler, "I",
-		    acpi_rapidstart_oids[i].comment);
+		if (acpi_rapidstart_oids[i].setmethod != NULL) {
+			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
+			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+			    i, acpi_rapidstart_oids[i].nodename,
+			    CTLTYPE_INT | CTLFLAG_RW,
+			    dev, i, sysctl_acpi_rapidstart_gen_handler, "I",
+			    acpi_rapidstart_oids[i].comment);
+		} else {
+			SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
+			    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+			    i, acpi_rapidstart_oids[i].nodename,
+			    CTLTYPE_INT | CTLFLAG_RD,
+			    dev, i, sysctl_acpi_rapidstart_gen_handler, "I",
+			    acpi_rapidstart_oids[i].comment);
+		}
 	}
 	return (0);
 }

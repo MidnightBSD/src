@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012-2013 Baptiste Daroussin <bapt@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg/dns_utils.c 257309 2013-10-29 07:33:53Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <string.h>
@@ -84,7 +86,6 @@ compute_weight(struct dns_srvinfo **d, int first, int last)
 	int i, j, totalweight;
 	int *chosen;
 
-	chosen = malloc(sizeof(int) * (last - first + 1));
 	totalweight = 0;
 	
 	for (i = 0; i <= last; i++)
@@ -92,6 +93,8 @@ compute_weight(struct dns_srvinfo **d, int first, int last)
 
 	if (totalweight == 0)
 		return;
+
+	chosen = malloc(sizeof(int) * (last - first + 1));
 
 	for (i = 0; i <= last; i++) {
 		for (;;) {

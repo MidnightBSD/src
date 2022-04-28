@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/mcntl.h 207537 2010-05-02 19:38:17Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MCNTL_H

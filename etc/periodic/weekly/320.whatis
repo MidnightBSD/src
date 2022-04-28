@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $FreeBSD: release/10.0.0/etc/periodic/weekly/320.whatis 73349 2001-03-02 16:52:14Z ru $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.

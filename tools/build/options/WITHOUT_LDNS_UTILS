@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_LDNS_UTILS 255850 2013-09-24 14:33:31Z des $
+.\" $FreeBSD$
 Setting this variable will prevent building the LDNS utilities
 .Xr drill 1
 and

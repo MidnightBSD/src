@@ -1,6 +1,8 @@
 /*	$NetBSD: uniq.c,v 1.4 2008/04/28 20:24:17 martin Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/services_mkdb/uniq.c 241778 2012-10-20 10:34:55Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>

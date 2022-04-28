@@ -1,5 +1,5 @@
-/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_mapper.c 257039 2013-10-24 05:01:49Z delphij $ */
-/* $NetBSD: citrus_mapper.c,v 1.7 2008/07/25 14:05:25 christos Exp $ */
+/* $FreeBSD$ */
+/*	$NetBSD: citrus_mapper.c,v 1.10 2012/06/08 07:49:42 martin Exp $	*/
 
 /*-
  * Copyright (c)2003 Citrus Project,
@@ -244,8 +244,10 @@ mapper_open(struct _citrus_mapper_area *__restrict ma,
 	if (!cm->cm_ops->mo_init ||
 	    !cm->cm_ops->mo_uninit ||
 	    !cm->cm_ops->mo_convert ||
-	    !cm->cm_ops->mo_init_state)
+	    !cm->cm_ops->mo_init_state) {
+		ret = EINVAL;
 		goto err;
+	}
 
 	/* allocate traits structure */
 	cm->cm_traits = malloc(sizeof(*cm->cm_traits));

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/tar/test/test_0.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This first test does basic sanity checks on the environment.  For

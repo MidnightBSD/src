@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/libopcodes/Makefile.powerpc 84906 2001-10-14 01:31:37Z obrien $
+# $FreeBSD$
 
 SRCS+=	ppc-dis.c ppc-opc.c
 CFLAGS+= -DARCH_powerpc -DARCH_rs6000

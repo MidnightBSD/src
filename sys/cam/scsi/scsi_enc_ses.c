@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_enc_ses.c 255309 2013-09-06 15:41:37Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -100,6 +100,7 @@ typedef struct ses_addl_status {
 	union {
 		union ses_fcobj_hdr *fc;
 		union ses_elm_sas_hdr *sas;
+		struct ses_elm_ata_hdr *ata;
 	} proto_hdr;
 	union ses_addl_data proto_data;	/* array sizes stored in header */
 } ses_add_status_t;
@@ -107,7 +108,7 @@ typedef struct ses_addl_status {
 typedef struct ses_element {
 	uint8_t eip;			/* eip bit is set */
 	uint16_t descr_len;		/* length of the descriptor */
-	char *descr;			/* descriptor for this object */
+	const char *descr;		/* descriptor for this object */
 	struct ses_addl_status addl;	/* additional status info */
 } ses_element_t;
 
@@ -345,8 +346,9 @@ typedef struct ses_cache {
 	const struct ses_cfg_page		*cfg_page;
 
 	/* References into the config page. */
+	int					 ses_nsubencs;
 	const struct ses_enc_desc * const	*subencs;
-	uint8_t					 ses_ntypes;
+	int					 ses_ntypes;
 	const ses_type_t			*ses_types;
 
 	/* Source for all the status pointers */
@@ -441,6 +443,7 @@ ses_iter_next(struct ses_iterator *iter)
 		iter->type_element_index       = ITERATOR_INDEX_END;
 		iter->global_element_index     = ITERATOR_INDEX_END;
 		iter->individual_element_index = ITERATOR_INDEX_END;
+		iter->saved_individual_element_index = ITERATOR_INDEX_END;
 		return (NULL);
 	}
 
@@ -465,17 +468,12 @@ ses_iter_next(struct ses_iterator *iter)
 		 */
 		iter->type_index++;
 		iter->type_element_index = 0;
-		iter->saved_individual_element_index
-		    = iter->individual_element_index;
 		iter->individual_element_index = ITERATOR_INDEX_INVALID;
 	}
 
 	if (iter->type_element_index > 0) {
-		if (iter->type_element_index == 1) {
-			iter->individual_element_index
-			    = iter->saved_individual_element_index;
-		}
-		iter->individual_element_index++;
+		iter->individual_element_index =
+		    ++iter->saved_individual_element_index;
 	}
 
 	return (&iter->cache->elm_map[iter->global_element_index]);
@@ -549,6 +547,7 @@ static int ses_set_timed_completion(enc_softc_t *, uint8_t);
 static int ses_putstatus(enc_softc_t *, int, struct ses_comstat *);
 #endif
 
+static void ses_poll_status(enc_softc_t *);
 static void ses_print_addl_data(enc_softc_t *, enc_element_t *);
 
 /*=========================== SES cleanup routines ===========================*/
@@ -714,13 +713,15 @@ ses_cache_clone(enc_softc_t *enc, enc_cache_t *src, enc_cache_t *dst)
 	 * The element map is independent even though it starts out
 	 * pointing to the same constant page data.
 	 */
-	dst->elm_map = ENC_MALLOCZ(dst->nelms * sizeof(enc_element_t));
+	dst->elm_map = malloc(dst->nelms * sizeof(enc_element_t),
+	    M_SCSIENC, M_WAITOK);
 	memcpy(dst->elm_map, src->elm_map, dst->nelms * sizeof(enc_element_t));
 	for (dst_elm = dst->elm_map, src_elm = src->elm_map,
 	     last_elm = &src->elm_map[src->nelms];
 	     src_elm != last_elm; src_elm++, dst_elm++) {
 
-		dst_elm->elm_private = ENC_MALLOCZ(sizeof(ses_element_t));
+		dst_elm->elm_private = malloc(sizeof(ses_element_t),
+		    M_SCSIENC, M_WAITOK);
 		memcpy(dst_elm->elm_private, src_elm->elm_private,
 		       sizeof(ses_element_t));
 	}
@@ -823,14 +824,6 @@ ses_devids_iter(enc_softc_t *enc, enc_element_t *elm,
 	elmpriv = elm->elm_private;
 	addl = &(elmpriv->addl);
 
-	/*
-	 * Don't assume this object has additional status information, or
-	 * that it is a SAS device, or that it is a device slot device.
-	 */
-	if (addl->hdr == NULL || addl->proto_hdr.sas == NULL
-	 || addl->proto_data.sasdev_phys == NULL)
-		return;
-
 	devid_record_size = SVPD_DEVICE_ID_DESC_HDR_LEN
 			  + sizeof(struct scsi_vpd_id_naa_ieee_reg);
 	for (i = 0; i < addl->proto_hdr.sas->base_hdr.num_phys; i++) {
@@ -888,7 +881,7 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	struct device_match_result  *device_match;
 	struct device_match_pattern *device_pattern;
 	ses_path_iter_args_t	    *args;
-	struct cam_sim		    *sim;
+	struct cam_path		    *path;
 
 	args = (ses_path_iter_args_t *)arg;
 	match_pattern.type = DEV_MATCH_DEVICE;
@@ -901,10 +894,10 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	       device_pattern->data.devid_pat.id_len);
 
 	memset(&cdm, 0, sizeof(cdm));
-	if (xpt_create_path_unlocked(&cdm.ccb_h.path, /*periph*/NULL,
-				     CAM_XPT_PATH_ID,
-				     CAM_TARGET_WILDCARD,
-				     CAM_LUN_WILDCARD) != CAM_REQ_CMP)
+	if (xpt_create_path(&cdm.ccb_h.path, /*periph*/NULL,
+			     CAM_XPT_PATH_ID,
+			     CAM_TARGET_WILDCARD,
+			     CAM_LUN_WILDCARD) != CAM_REQ_CMP)
 		return;
 
 	cdm.ccb_h.func_code = XPT_DEV_MATCH;
@@ -914,31 +907,28 @@ ses_path_iter_devid_callback(enc_softc_t *enc, enc_element_t *elem,
 	cdm.match_buf_len   = sizeof(match_result);
 	cdm.matches         = &match_result;
 
-	sim = xpt_path_sim(cdm.ccb_h.path);
-	CAM_SIM_LOCK(sim);
-	xpt_action((union ccb *)&cdm);
+	do {
+		xpt_action((union ccb *)&cdm);
+
+		if ((cdm.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP ||
+		    (cdm.status != CAM_DEV_MATCH_LAST &&
+		     cdm.status != CAM_DEV_MATCH_MORE) ||
+		    cdm.num_matches == 0)
+			break;
+
+		device_match = &match_result.result.device_result;
+		if (xpt_create_path(&path, /*periph*/NULL,
+				    device_match->path_id,
+				    device_match->target_id,
+				    device_match->target_lun) == CAM_REQ_CMP) {
+
+			args->callback(enc, elem, path, args->callback_arg);
+
+			xpt_free_path(path);
+		}
+	} while (cdm.status == CAM_DEV_MATCH_MORE);
+
 	xpt_free_path(cdm.ccb_h.path);
-	CAM_SIM_UNLOCK(sim);
-
-	if ((cdm.ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP
-	 || (cdm.status != CAM_DEV_MATCH_LAST
-	  && cdm.status != CAM_DEV_MATCH_MORE)
-	 || cdm.num_matches == 0)
-		return;
-
-	device_match = &match_result.result.device_result;
-	if (xpt_create_path_unlocked(&cdm.ccb_h.path, /*periph*/NULL,
-				     device_match->path_id,
-				     device_match->target_id,
-				     device_match->target_lun) != CAM_REQ_CMP)
-		return;
-
-	args->callback(enc, elem, cdm.ccb_h.path, args->callback_arg);
-
-	sim = xpt_path_sim(cdm.ccb_h.path);
-	CAM_SIM_LOCK(sim);
-	xpt_free_path(cdm.ccb_h.path);
-	CAM_SIM_UNLOCK(sim);
 }
 
 /**
@@ -955,11 +945,48 @@ static void
 ses_paths_iter(enc_softc_t *enc, enc_element_t *elm,
 	       ses_path_callback_t *callback, void *callback_arg)
 {
-	ses_path_iter_args_t args;
+	ses_element_t *elmpriv;
+	struct ses_addl_status *addl;
 
-	args.callback     = callback;
-	args.callback_arg = callback_arg;
-	ses_devids_iter(enc, elm, ses_path_iter_devid_callback, &args);
+	elmpriv = elm->elm_private;
+	addl = &(elmpriv->addl);
+
+	if (addl->hdr == NULL)
+		return;
+
+	switch(ses_elm_addlstatus_proto(addl->hdr)) {
+	case SPSP_PROTO_SAS:
+		if (addl->proto_hdr.sas != NULL &&
+		    addl->proto_data.sasdev_phys != NULL) {
+			ses_path_iter_args_t args;
+
+			args.callback     = callback;
+			args.callback_arg = callback_arg;
+			ses_devids_iter(enc, elm, ses_path_iter_devid_callback,
+			    &args);
+		}
+		break;
+	case SPSP_PROTO_ATA:
+		if (addl->proto_hdr.ata != NULL) {
+			struct cam_path *path;
+			struct ccb_getdev cgd;
+
+			if (xpt_create_path(&path, /*periph*/NULL,
+			    scsi_4btoul(addl->proto_hdr.ata->bus),
+			    scsi_4btoul(addl->proto_hdr.ata->target), 0)
+			     != CAM_REQ_CMP)
+				return;
+
+			xpt_setup_ccb(&cgd.ccb_h, path, CAM_PRIORITY_NORMAL);
+			cgd.ccb_h.func_code = XPT_GDEV_TYPE;
+			xpt_action((union ccb *)&cgd);
+			if (cgd.ccb_h.status == CAM_REQ_CMP)
+				callback(enc, elm, path, callback_arg);
+
+			xpt_free_path(path);
+		}
+		break;
+	}
 }
 
 /**
@@ -1010,11 +1037,11 @@ ses_setphyspath_callback(enc_softc_t *enc, enc_element_t *elm,
 
 	args = (ses_setphyspath_callback_args_t *)arg;
 	old_physpath = malloc(MAXPATHLEN, M_SCSIENC, M_WAITOK|M_ZERO);
-	cam_periph_lock(enc->periph);
+	xpt_path_lock(path);
 	xpt_setup_ccb(&cdai.ccb_h, path, CAM_PRIORITY_NORMAL);
 	cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 	cdai.buftype = CDAI_TYPE_PHYS_PATH;
-	cdai.flags = 0;
+	cdai.flags = CDAI_FLAG_NONE;
 	cdai.bufsiz = MAXPATHLEN;
 	cdai.buf = old_physpath;
 	xpt_action((union ccb *)&cdai);
@@ -1026,7 +1053,7 @@ ses_setphyspath_callback(enc_softc_t *enc, enc_element_t *elm,
 		xpt_setup_ccb(&cdai.ccb_h, path, CAM_PRIORITY_NORMAL);
 		cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 		cdai.buftype = CDAI_TYPE_PHYS_PATH;
-		cdai.flags |= CDAI_FLAG_STORE;
+		cdai.flags = CDAI_FLAG_STORE;
 		cdai.bufsiz = sbuf_len(args->physpath);
 		cdai.buf = sbuf_data(args->physpath);
 		xpt_action((union ccb *)&cdai);
@@ -1035,7 +1062,7 @@ ses_setphyspath_callback(enc_softc_t *enc, enc_element_t *elm,
 		if (cdai.ccb_h.status == CAM_REQ_CMP)
 			args->num_set++;
 	}
-	cam_periph_unlock(enc->periph);
+	xpt_path_unlock(path);
 	free(old_physpath, M_SCSIENC);
 }
 
@@ -1064,19 +1091,20 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	ret = EIO;
 	devid = NULL;
 
+	elmpriv = elm->elm_private;
+	if (elmpriv->addl.hdr == NULL)
+		goto out;
+
 	/*
 	 * Assemble the components of the physical path starting with
 	 * the device ID of the enclosure itself.
 	 */
 	xpt_setup_ccb(&cdai.ccb_h, enc->periph->path, CAM_PRIORITY_NORMAL);
 	cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
+	cdai.flags = CDAI_FLAG_NONE;
 	cdai.buftype = CDAI_TYPE_SCSI_DEVID;
 	cdai.bufsiz = CAM_SCSI_DEVID_MAXLEN;
-	cdai.buf = devid = ENC_MALLOCZ(cdai.bufsiz);
-	if (devid == NULL) {
-		ret = ENOMEM;
-		goto out;
-	}
+	cdai.buf = devid = malloc(cdai.bufsiz, M_SCSIENC, M_WAITOK|M_ZERO);
 	cam_periph_lock(enc->periph);
 	xpt_action((union ccb *)&cdai);
 	if ((cdai.ccb_h.status & CAM_DEV_QFRZN) != 0)
@@ -1099,7 +1127,6 @@ ses_set_physpath(enc_softc_t *enc, enc_element_t *elm,
 	    scsi_8btou64(idd->identifier), iter->type_index,
 	    iter->type_element_index);
 	/* Append the element descriptor if one exists */
-	elmpriv = elm->elm_private;
 	if (elmpriv->descr != NULL && elmpriv->descr_len > 0) {
 		sbuf_cat(&sb, "/elmdesc@");
 		for (i = 0, c = elmpriv->descr; i < elmpriv->descr_len;
@@ -1169,7 +1196,6 @@ ses_page_cdb(char *cdb, int bufsiz, SesDiagPageCodes pagenum, int dir)
 static int
 ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 {
-	int err;
 	union ccb *ccb;
 	struct cam_periph *periph;
 	struct ses_mgmt_mode_page *mgmt;
@@ -1186,7 +1212,7 @@ ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 	if (mode_buf == NULL)
 		goto out;
 
-	scsi_mode_sense(&ccb->csio, /*retries*/4, enc_done, MSG_SIMPLE_Q_TAG,
+	scsi_mode_sense(&ccb->csio, /*retries*/4, NULL, MSG_SIMPLE_Q_TAG,
 	    /*dbd*/FALSE, SMS_PAGE_CTRL_CURRENT, SES_MGMT_MODE_PAGE_CODE,
 	    mode_buf, mode_buf_len, SSD_FULL_SIZE, /*timeout*/60 * 1000);
 
@@ -1194,7 +1220,7 @@ ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 	 * Ignore illegal request errors, as they are quite common and we
 	 * will print something out in that case anyway.
 	 */
-	err = cam_periph_runccb(ccb, enc_error, ENC_CFLAGS,
+	cam_periph_runccb(ccb, enc_error, ENC_CFLAGS,
 	    ENC_FLAGS|SF_QUIET_IR, NULL);
 	if (ccb->ccb_h.status != CAM_REQ_CMP) {
 		ENC_VLOG(enc, "Timed Completion Unsupported\n");
@@ -1214,11 +1240,11 @@ ses_set_timed_completion(enc_softc_t *enc, uint8_t tc_en)
 	/* SES2r20: a completion time of zero means as long as possible */
 	bzero(&mgmt->max_comp_time, sizeof(mgmt->max_comp_time));
 
-	scsi_mode_select(&ccb->csio, 5, enc_done, MSG_SIMPLE_Q_TAG,
+	scsi_mode_select(&ccb->csio, 5, NULL, MSG_SIMPLE_Q_TAG,
 	    /*page_fmt*/FALSE, /*save_pages*/TRUE, mode_buf, mode_buf_len,
 	    SSD_FULL_SIZE, /*timeout*/60 * 1000);
 
-	err = cam_periph_runccb(ccb, enc_error, ENC_CFLAGS, ENC_FLAGS, NULL);
+	cam_periph_runccb(ccb, enc_error, ENC_CFLAGS, ENC_FLAGS, NULL);
 	if (ccb->ccb_h.status != CAM_REQ_CMP) {
 		ENC_VLOG(enc, "Timed Completion Set Failed\n");
 		goto release;
@@ -1377,12 +1403,8 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	 * Now waltz through all the subenclosures summing the number of
 	 * types available in each.
 	 */
-	subencs = ENC_MALLOCZ(ses_cfg_page_get_num_subenc(cfg_page)
-			    * sizeof(*subencs));
-	if (subencs == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
+	subencs = malloc(ses_cfg_page_get_num_subenc(cfg_page)
+	    * sizeof(*subencs), M_SCSIENC, M_WAITOK|M_ZERO);
 	/*
 	 * Sub-enclosure data is const after construction (i.e. when
 	 * accessed via our cache object.
@@ -1390,11 +1412,12 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	 * The cast here is not required in C++ but C99 is not so
 	 * sophisticated (see C99 6.5.16.1(1)).
 	 */
+	ses_cache->ses_nsubencs = ses_cfg_page_get_num_subenc(cfg_page);
 	ses_cache->subencs = subencs;
 
 	buf_subenc = cfg_page->subencs;
 	cur_subenc = subencs;
-	last_subenc = &subencs[ses_cfg_page_get_num_subenc(cfg_page) - 1];
+	last_subenc = &subencs[ses_cache->ses_nsubencs - 1];
 	ntype = 0;
 	while (cur_subenc <= last_subenc) {
 
@@ -1419,15 +1442,13 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	}
 
 	/* Process the type headers. */
-	ses_types = ENC_MALLOCZ(ntype * sizeof(*ses_types));
-	if (ses_types == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
+	ses_types = malloc(ntype * sizeof(*ses_types),
+	    M_SCSIENC, M_WAITOK|M_ZERO);
 	/*
 	 * Type data is const after construction (i.e. when accessed via
 	 * our cache object.
 	 */
+	ses_cache->ses_ntypes = ntype;
 	ses_cache->ses_types = ses_types;
 
 	cur_buf_type = (const struct ses_elm_type_desc *)
@@ -1459,12 +1480,8 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	}
 
 	/* Create the object map. */
-	enc_cache->elm_map = ENC_MALLOCZ(nelm * sizeof(enc_element_t));
-	if (enc_cache->elm_map == NULL) {
-		err = ENOMEM;
-		goto out;
-	}
-	ses_cache->ses_ntypes = (uint8_t)ntype;
+	enc_cache->elm_map = malloc(nelm * sizeof(enc_element_t),
+	    M_SCSIENC, M_WAITOK|M_ZERO);
 	enc_cache->nelms = nelm;
 
 	ses_iter_init(enc, enc_cache, &iter);
@@ -1475,14 +1492,12 @@ ses_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 		    iter.global_element_index, iter.type_index, nelm,
 		    iter.type_element_index);
 		thdr = ses_cache->ses_types[iter.type_index].hdr;
+		element->elm_idx = iter.global_element_index;
+		element->elm_type = thdr->etype_elm_type;
 		element->subenclosure = thdr->etype_subenc;
-		element->enctype = thdr->etype_elm_type;
-		element->overall_status_elem = iter.type_element_index == 0;
-		element->elm_private = ENC_MALLOCZ(sizeof(ses_element_t));
-		if (element->elm_private == NULL) {
-			err = ENOMEM;
-			goto out;
-		}
+		element->type_elm_idx = iter.type_element_index;
+		element->elm_private = malloc(sizeof(ses_element_t),
+		    M_SCSIENC, M_WAITOK|M_ZERO);
 		ENC_DLOG(enc, "%s: creating elmpriv %d(%d,%d) subenc %d "
 		    "type 0x%x\n", __func__, iter.global_element_index,
 		    iter.type_index, iter.type_element_index,
@@ -1495,11 +1510,7 @@ out:
 	if (err)
 		ses_cache_free(enc, enc_cache);
 	else {
-		enc_update_request(enc, SES_UPDATE_GETSTATUS);
-		if (ses->ses_flags & SES_FLAG_DESC)
-			enc_update_request(enc, SES_UPDATE_GETELMDESCS);
-		if (ses->ses_flags & SES_FLAG_ADDLSTATUS)
-			enc_update_request(enc, SES_UPDATE_GETELMADDLSTATUS);
+		ses_poll_status(enc);
 		enc_update_request(enc, SES_PUBLISH_CACHE);
 	}
 	ENC_DLOG(enc, "%s: exiting with err %d\n", __func__, err);
@@ -1688,6 +1699,8 @@ static int ses_get_elm_addlstatus_fc(enc_softc_t *, enc_cache_t *,
 				     uint8_t *, int);
 static int ses_get_elm_addlstatus_sas(enc_softc_t *, enc_cache_t *, uint8_t *,
 				      int, int, int, int);
+static int ses_get_elm_addlstatus_ata(enc_softc_t *, enc_cache_t *, uint8_t *,
+				      int, int, int, int);
 
 /**
  * \brief Parse the additional status element data for each object.
@@ -1706,7 +1719,6 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 	struct ses_iterator iter, titer;
 	int eip;
 	int err;
-	int ignore_index = 0;
 	int length;
 	int offset;
 	enc_cache_t *enc_cache;
@@ -1777,71 +1789,122 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 
 		elm_hdr = (struct ses_elm_addlstatus_base_hdr *)&buf[offset];
 		eip = ses_elm_addlstatus_eip(elm_hdr);
-		if (eip && !ignore_index) {
+		if (eip) {
 			struct ses_elm_addlstatus_eip_hdr *eip_hdr;
-			int expected_index;
+			int expected_index, index;
+			ses_elem_index_type_t index_type;
 
 			eip_hdr = (struct ses_elm_addlstatus_eip_hdr *)elm_hdr;
-			expected_index = iter.individual_element_index;
+			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) {
+				index_type = SES_ELEM_INDEX_GLOBAL;
+				expected_index = iter.global_element_index;
+			} else {
+				index_type = SES_ELEM_INDEX_INDIVIDUAL;
+				expected_index = iter.individual_element_index;
+			}
+			if (eip_hdr->element_index < expected_index) {
+				ENC_VLOG(enc, "%s: provided %selement index "
+				    "%d is lower then expected %d\n",
+				    __func__, (eip_hdr->byte2 &
+				    SES_ADDL_EIP_EIIOE) ? "global " : "",
+				    eip_hdr->element_index, expected_index);
+				goto badindex;
+			}
 			titer = iter;
 			telement = ses_iter_seek_to(&titer,
-						   eip_hdr->element_index,
-						   SES_ELEM_INDEX_INDIVIDUAL);
-			if (telement != NULL &&
-			    (ses_typehasaddlstatus(enc, titer.type_index) !=
-			     TYPE_ADDLSTATUS_NONE ||
-			     titer.type_index > ELMTYP_SAS_CONN)) {
+			    eip_hdr->element_index, index_type);
+			if (telement == NULL) {
+				ENC_VLOG(enc, "%s: provided %selement index "
+				    "%d does not exist\n", __func__,
+				    (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) ?
+				    "global " : "", eip_hdr->element_index);
+				goto badindex;
+			}
+			if (ses_typehasaddlstatus(enc, titer.type_index) ==
+			    TYPE_ADDLSTATUS_NONE) {
+				ENC_VLOG(enc, "%s: provided %selement index "
+				    "%d can't have additional status\n",
+				    __func__,
+				    (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE) ?
+				    "global " : "", eip_hdr->element_index);
+badindex:
+				/*
+				 * If we expected mandatory element, we may
+				 * guess it was just a wrong index and we may
+				 * use the status.  If element was optional,
+				 * then we have no idea where status belongs.
+				 */
+				if (status_type == TYPE_ADDLSTATUS_OPTIONAL)
+					break;
+			} else {
 				iter = titer;
 				element = telement;
-			} else
-				ignore_index = 1;
+			}
 
-			if (iter.individual_element_index > expected_index
+			if (eip_hdr->byte2 & SES_ADDL_EIP_EIIOE)
+				index = iter.global_element_index;
+			else
+				index = iter.individual_element_index;
+			if (index > expected_index
 			 && status_type == TYPE_ADDLSTATUS_MANDATORY) {
-				ENC_VLOG(enc, "%s: provided element "
+				ENC_VLOG(enc, "%s: provided %s element"
 					"index %d skips mandatory status "
 					" element at index %d\n",
-					__func__, eip_hdr->element_index,
-					expected_index);
+					__func__, (eip_hdr->byte2 &
+					SES_ADDL_EIP_EIIOE) ? "global " : "",
+					index, expected_index);
 			}
 		}
 		elmpriv = element->elm_private;
-		elmpriv->addl.hdr = elm_hdr;
 		ENC_DLOG(enc, "%s: global element index=%d, type index=%d "
 		    "type element index=%d, offset=0x%x, "
 		    "byte0=0x%x, length=0x%x\n", __func__,
 		    iter.global_element_index, iter.type_index,
-		    iter.type_element_index, offset, elmpriv->addl.hdr->byte0,
-		    elmpriv->addl.hdr->length);
+		    iter.type_element_index, offset, elm_hdr->byte0,
+		    elm_hdr->length);
 
 		/* Skip to after the length field */
 		offset += sizeof(struct ses_elm_addlstatus_base_hdr);
 
 		/* Make sure the descriptor is within bounds */
-		if ((offset + elmpriv->addl.hdr->length) > length) {
+		if ((offset + elm_hdr->length) > length) {
 			ENC_VLOG(enc, "Element %d Beyond End "
 			    "of Additional Element Status Descriptors\n",
 			    iter.global_element_index);
 			break;
 		}
 
+		/* Skip elements marked as invalid. */
+		if (ses_elm_addlstatus_invalid(elm_hdr)) {
+			offset += elm_hdr->length;
+			continue;
+		}
+		elmpriv->addl.hdr = elm_hdr;
+
 		/* Advance to the protocol data, skipping eip bytes if needed */
 		offset += (eip * SES_EIP_HDR_EXTRA_LEN);
-		proto_info_len = elmpriv->addl.hdr->length
+		proto_info_len = elm_hdr->length
 			       - (eip * SES_EIP_HDR_EXTRA_LEN);
 
 		/* Errors in this block are ignored as they are non-fatal */
-		switch(ses_elm_addlstatus_proto(elmpriv->addl.hdr)) {
+		switch(ses_elm_addlstatus_proto(elm_hdr)) {
 		case SPSP_PROTO_FC:
-			if (elmpriv->addl.hdr->length == 0)
+			if (elm_hdr->length == 0)
 				break;
 			ses_get_elm_addlstatus_fc(enc, enc_cache,
 						  &buf[offset], proto_info_len);
 			break;
 		case SPSP_PROTO_SAS:
-			if (elmpriv->addl.hdr->length <= 2)
+			if (elm_hdr->length <= 2)
 				break;
 			ses_get_elm_addlstatus_sas(enc, enc_cache,
+						   &buf[offset],
+						   proto_info_len,
+						   eip, iter.type_index,
+						   iter.global_element_index);
+			break;
+		case SPSP_PROTO_ATA:
+			ses_get_elm_addlstatus_ata(enc, enc_cache,
 						   &buf[offset],
 						   proto_info_len,
 						   eip, iter.type_index,
@@ -1850,7 +1913,7 @@ ses_process_elm_addlstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 		default:
 			ENC_VLOG(enc, "Element %d: Unknown Additional Element "
 			    "Protocol 0x%x\n", iter.global_element_index,
-			    ses_elm_addlstatus_proto(elmpriv->addl.hdr));
+			    ses_elm_addlstatus_proto(elm_hdr));
 			break;
 		}
 
@@ -1878,7 +1941,7 @@ ses_process_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 	 *  o Some SCSI status error.
 	 */
 	ses_terminate_control_requests(&ses->ses_pending_requests, error);
-	enc_update_request(enc, SES_UPDATE_GETSTATUS);
+	ses_poll_status(enc);
 	return (0);
 }
 
@@ -1888,11 +1951,9 @@ ses_publish_physpaths(enc_softc_t *enc, struct enc_fsm_state *state,
 {
 	struct ses_iterator iter;
 	enc_cache_t *enc_cache;
-	ses_cache_t *ses_cache;
 	enc_element_t *element;
 
 	enc_cache = &enc->enc_daemon_cache;
-	ses_cache = enc_cache->private;
 
 	ses_iter_init(enc, enc_cache, &iter);
 	while ((element = ses_iter_next(&iter)) != NULL) {
@@ -1920,6 +1981,35 @@ ses_publish_cache(enc_softc_t *enc, struct enc_fsm_state *state,
 	sx_xunlock(&enc->enc_cache_lock);
 
 	return (0);
+}
+
+/*
+ * \brief Sanitize an element descriptor
+ *
+ * The SES4r3 standard, sections 3.1.2 and 6.1.10, specifies that element
+ * descriptors may only contain ASCII characters in the range 0x20 to 0x7e.
+ * But some vendors violate that rule.  Ensure that we only expose compliant
+ * descriptors to userland.
+ *
+ * \param desc		SES element descriptor as reported by the hardware
+ * \param len		Length of desc in bytes, not necessarily including
+ * 			trailing NUL.  It will be modified if desc is invalid.
+ */
+static const char*
+ses_sanitize_elm_desc(const char *desc, uint16_t *len)
+{
+	const char *invalid = "<invalid>";
+	int i;
+
+	for (i = 0; i < *len; i++) {
+		if (desc[i] == 0) {
+			break;
+		} else if (desc[i] < 0x20 || desc[i] > 0x7e) {
+			*len = strlen(invalid);
+			return (invalid);
+		}
+	}
+	return (desc);
 }
 
 /**
@@ -2006,7 +2096,8 @@ ses_process_elm_descs(enc_softc_t *enc, struct enc_fsm_state *state,
 		if (length > 0) {
 			elmpriv = element->elm_private;
 			elmpriv->descr_len = length;
-			elmpriv->descr = &buf[offset];
+			elmpriv->descr = ses_sanitize_elm_desc(&buf[offset],
+			    &elmpriv->descr_len);
 		}
 
 		/* skip over the descriptor itself */
@@ -2030,12 +2121,12 @@ ses_fill_rcv_diag_io(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	if (enc->enc_type == ENC_SEMB_SES) {
 		semb_receive_diagnostic_results(&ccb->ataio, /*retries*/5,
-					enc_done, MSG_SIMPLE_Q_TAG, /*pcv*/1,
+					NULL, MSG_SIMPLE_Q_TAG, /*pcv*/1,
 					state->page_code, buf, state->buf_size,
 					state->timeout);
 	} else {
 		scsi_receive_diagnostic_results(&ccb->csio, /*retries*/5,
-					enc_done, MSG_SIMPLE_Q_TAG, /*pcv*/1,
+					NULL, MSG_SIMPLE_Q_TAG, /*pcv*/1,
 					state->page_code, buf, state->buf_size,
 					SSD_FULL_SIZE, state->timeout);
 	}
@@ -2153,12 +2244,12 @@ ses_fill_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	/* Fill out the ccb */
 	if (enc->enc_type == ENC_SEMB_SES) {
-		semb_send_diagnostic(&ccb->ataio, /*retries*/5, enc_done,
+		semb_send_diagnostic(&ccb->ataio, /*retries*/5, NULL,
 			     MSG_SIMPLE_Q_TAG,
 			     buf, ses_page_length(&ses_cache->status_page->hdr),
 			     state->timeout);
 	} else {
-		scsi_send_diagnostic(&ccb->csio, /*retries*/5, enc_done,
+		scsi_send_diagnostic(&ccb->csio, /*retries*/5, NULL,
 			     MSG_SIMPLE_Q_TAG, /*unit_offline*/0,
 			     /*device_offline*/0, /*self_test*/0,
 			     /*page_format*/1, /*self_test_code*/0,
@@ -2177,18 +2268,16 @@ ses_get_elm_addlstatus_fc(enc_softc_t *enc, enc_cache_t *enc_cache,
 }
 
 #define	SES_PRINT_PORTS(p, type) do {					\
-	sbuf_printf(sbp, " %s(", type);					\
-	if (((p) & SES_SASOBJ_DEV_PHY_PROTOMASK) == 0)			\
-		sbuf_printf(sbp, " None");				\
-	else {								\
+	if (((p) & SES_SASOBJ_DEV_PHY_PROTOMASK) != 0) {		\
+		sbuf_printf(sbp, " %s (", type);			\
 		if ((p) & SES_SASOBJ_DEV_PHY_SMP)			\
 			sbuf_printf(sbp, " SMP");			\
 		if ((p) & SES_SASOBJ_DEV_PHY_STP)			\
 			sbuf_printf(sbp, " STP");			\
 		if ((p) & SES_SASOBJ_DEV_PHY_SSP)			\
 			sbuf_printf(sbp, " SSP");			\
+		sbuf_printf(sbp, " )");					\
 	}								\
-	sbuf_printf(sbp, " )");						\
 } while(0)
 
 /**
@@ -2198,11 +2287,10 @@ ses_get_elm_addlstatus_fc(enc_softc_t *enc, enc_cache_t *enc_cache,
  * \param sesname	SES device name associated with the object.
  * \param sbp		Sbuf to print to.
  * \param obj		The object to print the data for.
- * \param periph_name	Peripheral string associated with the object.
  */
 static void
 ses_print_addl_data_sas_type0(char *sesname, struct sbuf *sbp,
-			      enc_element_t *obj, char *periph_name)
+			      enc_element_t *obj)
 {
 	int i;
 	ses_element_t *elmpriv;
@@ -2211,16 +2299,12 @@ ses_print_addl_data_sas_type0(char *sesname, struct sbuf *sbp,
 
 	elmpriv = obj->elm_private;
 	addl = &(elmpriv->addl);
-	if (addl->proto_hdr.sas == NULL)
-		return;
-	sbuf_printf(sbp, "%s: %s: SAS Device Slot Element:",
-	    sesname, periph_name);
-	sbuf_printf(sbp, " %d Phys", addl->proto_hdr.sas->base_hdr.num_phys);
+	sbuf_printf(sbp, ", SAS Slot: %d%s phys",
+	    addl->proto_hdr.sas->base_hdr.num_phys,
+	    ses_elm_sas_type0_not_all_phys(addl->proto_hdr.sas) ? "+" : "");
 	if (ses_elm_addlstatus_eip(addl->hdr))
-		sbuf_printf(sbp, " at Slot %d",
+		sbuf_printf(sbp, " at slot %d",
 		    addl->proto_hdr.sas->type0_eip.dev_slot_num);
-	if (ses_elm_sas_type0_not_all_phys(addl->proto_hdr.sas))
-		sbuf_printf(sbp, ", Not All Phys");
 	sbuf_printf(sbp, "\n");
 	if (addl->proto_data.sasdev_phys == NULL)
 		return;
@@ -2231,9 +2315,8 @@ ses_print_addl_data_sas_type0(char *sesname, struct sbuf *sbp,
 			/* Spec says all other fields are specific values */
 			sbuf_printf(sbp, " SATA device\n");
 		else {
-			sbuf_printf(sbp, " SAS device type %d id %d\n",
+			sbuf_printf(sbp, " SAS device type %d phy %d",
 			    ses_elm_sas_dev_phy_dev_type(phy), phy->phy_id);
-			sbuf_printf(sbp, "%s:  phy %d: protocols:", sesname, i);
 			SES_PRINT_PORTS(phy->initiator_ports, "Initiator");
 			SES_PRINT_PORTS(phy->target_ports, "Target");
 			sbuf_printf(sbp, "\n");
@@ -2247,32 +2330,16 @@ ses_print_addl_data_sas_type0(char *sesname, struct sbuf *sbp,
 #undef SES_PRINT_PORTS
 
 /**
- * \brief Report whether a given enclosure object is an expander.
- *
- * \param enc	SES softc associated with object.
- * \param obj	Enclosure object to report for.
- *
- * \return	1 if true, 0 otherwise.
- */
-static int
-ses_obj_is_expander(enc_softc_t *enc, enc_element_t *obj)
-{
-	return (obj->enctype == ELMTYP_SAS_EXP);
-}
-
-/**
  * \brief Print the additional element status data for this object, for SAS
  *	  type 1 objects.  See SES2 r20 Sections 6.1.13.3.3 and 6.1.13.3.4.
  *
- * \param enc		SES enclosure, needed for type identification.
  * \param sesname	SES device name associated with the object.
  * \param sbp		Sbuf to print to.
  * \param obj		The object to print the data for.
- * \param periph_name	Peripheral string associated with the object.
  */
 static void
-ses_print_addl_data_sas_type1(enc_softc_t *enc, char *sesname,
-    struct sbuf *sbp, enc_element_t *obj, char *periph_name)
+ses_print_addl_data_sas_type1(char *sesname, struct sbuf *sbp,
+			      enc_element_t *obj)
 {
 	int i, num_phys;
 	ses_element_t *elmpriv;
@@ -2282,12 +2349,10 @@ ses_print_addl_data_sas_type1(enc_softc_t *enc, char *sesname,
 
 	elmpriv = obj->elm_private;
 	addl = &(elmpriv->addl);
-	if (addl->proto_hdr.sas == NULL)
-		return;
-	sbuf_printf(sbp, "%s: %s: SAS ", sesname, periph_name);
-	if (ses_obj_is_expander(enc, obj)) {
+	sbuf_printf(sbp, ", SAS ");
+	if (obj->elm_type == ELMTYP_SAS_EXP) {
 		num_phys = addl->proto_hdr.sas->base_hdr.num_phys;
-		sbuf_printf(sbp, "Expander: %d Phys", num_phys);
+		sbuf_printf(sbp, "Expander: %d phys", num_phys);
 		if (addl->proto_data.sasexp_phys == NULL)
 			return;
 		for (i = 0;i < num_phys;i++) {
@@ -2298,7 +2363,7 @@ ses_print_addl_data_sas_type1(enc_softc_t *enc, char *sesname,
 		}
 	} else {
 		num_phys = addl->proto_hdr.sas->base_hdr.num_phys;
-		sbuf_printf(sbp, "Port: %d Phys", num_phys);
+		sbuf_printf(sbp, "Port: %d phys", num_phys);
 		if (addl->proto_data.sasport_phys == NULL)
 			return;
 		for (i = 0;i < num_phys;i++) {
@@ -2311,6 +2376,24 @@ ses_print_addl_data_sas_type1(enc_softc_t *enc, char *sesname,
 			    (uintmax_t)scsi_8btou64(port_phy->phy_addr));
 		}
 	}
+}
+
+/**
+ * \brief Print the additional element status data for this object, for
+ *	  ATA objects.
+ *
+ * \param sbp		Sbuf to print to.
+ * \param obj		The object to print the data for.
+ */
+static void
+ses_print_addl_data_ata(struct sbuf *sbp, enc_element_t *obj)
+{
+	ses_element_t *elmpriv = obj->elm_private;
+	struct ses_addl_status *addl = &elmpriv->addl;
+	struct ses_elm_ata_hdr *ata = addl->proto_hdr.ata;
+
+	sbuf_printf(sbp, ", SATA Slot: scbus%d target %d\n",
+	    scsi_4btoul(ata->bus), scsi_4btoul(ata->target));
 }
 
 /**
@@ -2344,27 +2427,45 @@ ses_print_addl_data(enc_softc_t *enc, enc_element_t *obj)
 	sbuf_printf(&sesname, "%s%d", enc->periph->periph_name,
 	    enc->periph->unit_number);
 	sbuf_finish(&sesname);
+	sbuf_printf(&out, "%s: %s in ", sbuf_data(&sesname), sbuf_data(&name));
 	if (elmpriv->descr != NULL)
-		sbuf_printf(&out, "%s: %s: Element descriptor: '%s'\n",
-		    sbuf_data(&sesname), sbuf_data(&name), elmpriv->descr);
+		sbuf_printf(&out, "'%s'", elmpriv->descr);
+	else {
+		if (obj->elm_type <= ELMTYP_LAST)
+			sbuf_cat(&out, elm_type_names[obj->elm_type]);
+		else
+			sbuf_printf(&out, "<Type 0x%02x>", obj->elm_type);
+		sbuf_printf(&out, " %d", obj->type_elm_idx);
+		if (obj->subenclosure != 0)
+			sbuf_printf(&out, " of subenc %d", obj->subenclosure);
+	}
 	switch(ses_elm_addlstatus_proto(addl->hdr)) {
+	case SPSP_PROTO_FC:
+		goto noaddl;	/* stubbed for now */
 	case SPSP_PROTO_SAS:
+		if (addl->proto_hdr.sas == NULL)
+			goto noaddl;
 		switch(ses_elm_sas_descr_type(addl->proto_hdr.sas)) {
 		case SES_SASOBJ_TYPE_SLOT:
 			ses_print_addl_data_sas_type0(sbuf_data(&sesname),
-			    &out, obj, sbuf_data(&name));
+			    &out, obj);
 			break;
 		case SES_SASOBJ_TYPE_OTHER:
-			ses_print_addl_data_sas_type1(enc, sbuf_data(&sesname),
-			    &out, obj, sbuf_data(&name));
+			ses_print_addl_data_sas_type1(sbuf_data(&sesname),
+			    &out, obj);
 			break;
 		default:
-			break;
+			goto noaddl;
 		}
 		break;
-	case SPSP_PROTO_FC:	/* stubbed for now */
+	case SPSP_PROTO_ATA:
+		if (addl->proto_hdr.ata == NULL)
+			goto noaddl;
+		ses_print_addl_data_ata(&out, obj);
 		break;
 	default:
+noaddl:
+		sbuf_cat(&out, "\n");
 		break;
 	}
 	sbuf_finish(&out);
@@ -2469,7 +2570,7 @@ ses_get_elm_addlstatus_sas_type1(enc_softc_t *enc, enc_cache_t *enc_cache,
 		goto out;
 
 	/* Process expanders differently from other type1 cases */
-	if (ses_obj_is_expander(enc, obj)) {
+	if (obj->elm_type == ELMTYP_SAS_EXP) {
 		offset += sizeof(struct ses_elm_sas_type1_expander_hdr);
 		physz = addl->proto_hdr.sas->base_hdr.num_phys *
 		    sizeof(struct ses_elm_sas_expander_phy);
@@ -2572,6 +2673,53 @@ ses_get_elm_addlstatus_sas(enc_softc_t *enc, enc_cache_t *enc_cache,
 		err = ENODEV;
 		break;
 	}
+
+out:
+	return (err);
+}
+
+/**
+ * \brief Update the softc with the additional element status data for this
+ * 	  object, for ATA objects.
+ *
+ * \param enc		SES softc to be updated.
+ * \param buf		The additional element status response buffer.
+ * \param bufsiz	Size of the response buffer.
+ * \param eip		The EIP bit value.
+ * \param tidx		Type index for this object.
+ * \param nobj		Number of objects attached to the SES softc.
+ * 
+ * \return		0 on success, errno otherwise.
+ */
+static int
+ses_get_elm_addlstatus_ata(enc_softc_t *enc, enc_cache_t *enc_cache,
+			   uint8_t *buf, int bufsiz, int eip, int tidx,
+			   int nobj)
+{
+	int err;
+	ses_cache_t *ses_cache;
+
+	if (bufsiz < sizeof(struct ses_elm_ata_hdr)) {
+		err = EIO;
+		goto out;
+	}
+
+	ses_cache = enc_cache->private;
+	switch(ses_cache->ses_types[tidx].hdr->etype_elm_type) {
+	case ELMTYP_DEVICE:
+	case ELMTYP_ARRAY_DEV:
+		break;
+	default:
+		ENC_VLOG(enc, "Element %d has Additional Status, "
+		    "invalid for SES element type 0x%x\n", nobj,
+		    ses_cache->ses_types[tidx].hdr->etype_elm_type);
+		err = ENODEV;
+		goto out;
+	}
+
+	((ses_element_t *)enc_cache->elm_map[nobj].elm_private)
+	    ->addl.proto_hdr.ata = (struct ses_elm_ata_hdr *)buf;
+	err = 0;
 
 out:
 	return (err);
@@ -2695,13 +2843,14 @@ ses_get_elm_devnames(enc_softc_t *enc, encioc_elm_devnames_t *elmdn)
 	if (len < 0)
 		return (EINVAL);
 
-	sbuf_new(&sb, elmdn->elm_devnames, len, 0);
-
 	cam_periph_unlock(enc->periph);
+	sbuf_new(&sb, NULL, len, SBUF_FIXEDLEN);
 	ses_paths_iter(enc, &enc->enc_cache.elm_map[elmdn->elm_idx],
-		       ses_elmdevname_callback, &sb);
+	    ses_elmdevname_callback, &sb);
 	sbuf_finish(&sb);
 	elmdn->elm_names_len = sbuf_len(&sb);
+	copyout(sbuf_data(&sb), elmdn->elm_devnames, elmdn->elm_names_len + 1);
+	sbuf_delete(&sb);
 	cam_periph_lock(enc->periph);
 	return (elmdn->elm_names_len > 0 ? 0 : ENODEV);
 }
@@ -2719,21 +2868,34 @@ ses_get_elm_devnames(enc_softc_t *enc, encioc_elm_devnames_t *elmdn)
 static int
 ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 {
+	ses_softc_t *ses;
+	enc_cache_t *enc_cache;
+	ses_cache_t *ses_cache;
+	const struct ses_enc_desc *enc_desc;
 	int amt, payload, ret;
 	char cdb[6];
+	char str[32];
+	char vendor[9];
+	char product[17];
+	char rev[5];
 	uint8_t *buf;
+	size_t size, rsize;
+
+	ses = enc->enc_private;
+	enc_cache = &enc->enc_daemon_cache;
+	ses_cache = enc_cache->private;
 
 	/* Implement SES2r20 6.1.6 */
 	if (sstr->bufsiz > 0xffff)
 		return (EINVAL); /* buffer size too large */
 
-	if (ioc == ENCIOC_SETSTRING) {
+	switch (ioc) {
+	case ENCIOC_SETSTRING:
 		payload = sstr->bufsiz + 4; /* header for SEND DIAGNOSTIC */
 		amt = 0 - payload;
 		buf = ENC_MALLOC(payload);
 		if (buf == NULL)
-			return ENOMEM;
-
+			return (ENOMEM);
 		ses_page_cdb(cdb, payload, 0, CAM_DIR_OUT);
 		/* Construct the page request */
 		buf[0] = SesStringOut;
@@ -2741,18 +2903,54 @@ ses_handle_string(enc_softc_t *enc, encioc_string_t *sstr, int ioc)
 		buf[2] = sstr->bufsiz >> 8;
 		buf[3] = sstr->bufsiz & 0xff;
 		memcpy(&buf[4], sstr->buf, sstr->bufsiz);
-	} else if (ioc == ENCIOC_GETSTRING) {
+		break;
+	case ENCIOC_GETSTRING:
 		payload = sstr->bufsiz;
 		amt = payload;
 		ses_page_cdb(cdb, payload, SesStringIn, CAM_DIR_IN);
 		buf = sstr->buf;
-	} else
-		return EINVAL;
-
+		break;
+	case ENCIOC_GETENCNAME:
+		if (ses_cache->ses_nsubencs < 1)
+			return (ENODEV);
+		enc_desc = ses_cache->subencs[0];
+		cam_strvis(vendor, enc_desc->vendor_id,
+		    sizeof(enc_desc->vendor_id), sizeof(vendor));
+		cam_strvis(product, enc_desc->product_id,
+		    sizeof(enc_desc->product_id), sizeof(product));
+		cam_strvis(rev, enc_desc->product_rev,
+		    sizeof(enc_desc->product_rev), sizeof(rev));
+		rsize = snprintf(str, sizeof(str), "%s %s %s",
+		    vendor, product, rev) + 1;
+		if (rsize > sizeof(str))
+			rsize = sizeof(str);
+		copyout(&rsize, &sstr->bufsiz, sizeof(rsize));
+		size = rsize;
+		if (size > sstr->bufsiz)
+			size = sstr->bufsiz;
+		copyout(str, sstr->buf, size);
+		return (size == rsize ? 0 : ENOMEM);
+	case ENCIOC_GETENCID:
+		if (ses_cache->ses_nsubencs < 1)
+			return (ENODEV);
+		enc_desc = ses_cache->subencs[0];
+		rsize = snprintf(str, sizeof(str), "%16jx",
+		    scsi_8btou64(enc_desc->logical_id)) + 1;
+		if (rsize > sizeof(str))
+			rsize = sizeof(str);
+		copyout(&rsize, &sstr->bufsiz, sizeof(rsize));
+		size = rsize;
+		if (size > sstr->bufsiz)
+			size = sstr->bufsiz;
+		copyout(str, sstr->buf, size);
+		return (size == rsize ? 0 : ENOMEM);
+	default:
+		return (EINVAL);
+	}
 	ret = enc_runcmd(enc, cdb, 6, buf, &amt);
 	if (ioc == ENCIOC_SETSTRING)
 		ENC_FREE(buf);
-	return ret;
+	return (ret);
 }
 
 /**
@@ -2765,6 +2963,8 @@ ses_poll_status(enc_softc_t *enc)
 
 	ses = enc->enc_private;
 	enc_update_request(enc, SES_UPDATE_GETSTATUS);
+	if (ses->ses_flags & SES_FLAG_DESC)
+		enc_update_request(enc, SES_UPDATE_GETELMDESCS);
 	if (ses->ses_flags & SES_FLAG_ADDLSTATUS)
 		enc_update_request(enc, SES_UPDATE_GETELMADDLSTATUS);
 }

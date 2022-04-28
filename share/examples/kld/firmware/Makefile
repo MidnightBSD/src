@@ -1,5 +1,7 @@
-#	$FreeBSD: release/10.0.0/share/examples/kld/firmware/Makefile 154974 2006-01-29 02:52:42Z mlaier $
+#	$FreeBSD$
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld/firmware
 SUBDIR= fwimage fwconsumer
 
 .include <bsd.subdir.mk>

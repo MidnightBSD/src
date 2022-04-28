@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sati_translator_sequence.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SATI_TRANSLATOR_SEQUENCE_H_
 #define _SATI_TRANSLATOR_SEQUENCE_H_
@@ -57,7 +57,7 @@
 /**
  * @file
  * @brief This file contains all of the defintions for the SATI translator
- *        sequence.  A translator sequence is simply a defintion for the
+ *        sequence.  A translator sequence is simply a definition for the
  *        various sequences of commands that occur in this translator.
  */
 
@@ -310,7 +310,7 @@ typedef struct SATI_TRANSLATOR_SEQUENCE
 
    /**
     * This field specifies the amount of data that will actually be
-    * transfered across the wire for this ATA request.
+    * transferred across the wire for this ATA request.
     */
    U32 ata_transfer_length;
 

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/en/if_en_pci.c 223624 2011-06-28 08:36:48Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * i f _ e n _ p c i . c  
@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/en/if_en_pci.c 223624 2011-06-28 08:3
 #include <vm/uma.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_atm.h>
 #include <net/if_media.h>
 #include <net/if_types.h>

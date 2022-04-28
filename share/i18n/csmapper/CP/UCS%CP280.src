@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/CP/UCS%CP280.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%CP280.src,v 1.4 2005/03/11 23:38:02 christos Exp $
 
 TYPE		ROWCOL

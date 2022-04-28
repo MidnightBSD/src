@@ -1,15 +1,23 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/Makefile 257662 2013-11-04 23:36:49Z brooks $
+# $FreeBSD$
 
+ELF_SCR_EXT=	x xbn xc xd xdc xdw xn xr xs xsc xsw xu xw
 .include "../Makefile.inc0"
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${SRCDIR}/ld
 
-.if ${TARGET_ARCH} == "ia64"
-CFLAGS+= -O1
+PROG=	ld.bfd
+.if (!defined(TOOLS_PREFIX) && ${MK_LLD_IS_LD} == "no") || \
+    (defined(TOOLS_PREFIX) && ${MK_LLD_BOOTSTRAP} == "no")
+MAN=	ld.1
+LINKS=		${BINDIR}/ld.bfd ${BINDIR}/ld
+.else
+MAN=	ld.bfd.1
+CLEANFILES+=	ld.bfd.1
+ld.bfd.1:	ld.1
+	${CP} ${.ALLSRC} ${.TARGET}
 .endif
 
-PROG=	ld
 SCRIPTDIR= /usr/libdata/ldscripts
 SRCS+=	ldcref.c \
 	ldctor.c \
@@ -49,11 +57,14 @@ LDADD=	${DPADD}
 CLEANDIRS+=	ldscripts
 CLEANFILES+=	ldemul-list.h stringify.sed
 
+FILES=		${LDSCRIPTS:S|^|ldscripts/|}
+FILESDIR=	${SCRIPTDIR}
+
 HOST=		${TARGET_TUPLE}
-LIBSEARCHPATH=	\"${TOOLS_PREFIX}/lib\":\"${TOOLS_PREFIX}/usr/lib\"
-ELF_SCR_EXT=	x xbn xc xd xdc xdw xn xr xs xsc xsw xu xw
+LIBSEARCHPATH=	\"=/lib\":\"=/usr/lib\"
 .for ext in ${ELF_SCR_EXT}
 LDSCRIPTS+=	${NATIVE_EMULATION}.${ext}
+ldscripts/${NATIVE_EMULATION}.${ext}: e${NATIVE_EMULATION}.c
 .endfor
 
 EMXFR=
@@ -67,11 +78,9 @@ ldemul-list.h:
 	echo "${EMXFR}" > ${.TARGET}
 	echo "#define EMULATION_LIST ${EMLST} 0" >> ${.TARGET}
 
-stringify.sed:
-	ln -sf ${SRCDIR}/ld/emultempl/astring.sed ${.TARGET}
+stringify.sed: ${SRCDIR}/ld/emultempl/astring.sed .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
 
-afterinstall:
-	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-	    ${LDSCRIPTS:S|^|ldscripts/|} ${DESTDIR}${SCRIPTDIR}
+GENDIRDEPS_FILTER.host+= Nusr.bin/yacc
 
 .include <bsd.prog.mk>

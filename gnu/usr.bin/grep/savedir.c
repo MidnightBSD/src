@@ -18,7 +18,7 @@
 /* Written by David MacKenzie <djm@gnu.ai.mit.edu>. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/gnu/usr.bin/grep/savedir.c 187907 2009-01-30 00:22:08Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -71,6 +71,7 @@ char *stpcpy ();
 
 #include <fnmatch.h>
 #include "savedir.h"
+#include "system.h"
 
 char *path;
 size_t pathlen;

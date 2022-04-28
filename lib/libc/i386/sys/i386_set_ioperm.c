@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/sys/i386_set_ioperm.c 124296 2004-01-09 16:52:09Z nectar $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/sysarch.h>
 

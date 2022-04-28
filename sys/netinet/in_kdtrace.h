@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet/in_kdtrace.h 254889 2013-08-25 21:54:41Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_IN_KDTRACE_H_
@@ -32,6 +32,14 @@
 	SDT_PROBE6(ip, , , probe, arg0, arg1, arg2, arg3, arg4, arg5)
 #define	UDP_PROBE(probe, arg0, arg1, arg2, arg3, arg4)			\
 	SDT_PROBE5(udp, , , probe, arg0, arg1, arg2, arg3, arg4)
+#define	TCP_PROBE1(probe, arg0)						\
+	SDT_PROBE1(tcp, , , probe, arg0)
+#define	TCP_PROBE2(probe, arg0, arg1)					\
+	SDT_PROBE2(tcp, , , probe, arg0, arg1)
+#define	TCP_PROBE3(probe, arg0, arg1, arg2)				\
+	SDT_PROBE3(tcp, , , probe, arg0, arg1, arg2)
+#define	TCP_PROBE4(probe, arg0, arg1, arg2, arg3)			\
+	SDT_PROBE4(tcp, , , probe, arg0, arg1, arg2, arg3)
 #define	TCP_PROBE5(probe, arg0, arg1, arg2, arg3, arg4)			\
 	SDT_PROBE5(tcp, , , probe, arg0, arg1, arg2, arg3, arg4)
 #define	TCP_PROBE6(probe, arg0, arg1, arg2, arg3, arg4, arg5)		\
@@ -44,14 +52,20 @@ SDT_PROVIDER_DECLARE(udp);
 SDT_PROBE_DECLARE(ip, , , receive);
 SDT_PROBE_DECLARE(ip, , , send);
 
-SDT_PROBE_DECLARE(tcp, , , accept_established);
-SDT_PROBE_DECLARE(tcp, , , accept_refused);
-SDT_PROBE_DECLARE(tcp, , , connect_established);
-SDT_PROBE_DECLARE(tcp, , , connect_refused);
-SDT_PROBE_DECLARE(tcp, , , connect_request);
+SDT_PROBE_DECLARE(tcp, , , accept__established);
+SDT_PROBE_DECLARE(tcp, , , accept__refused);
+SDT_PROBE_DECLARE(tcp, , , connect__established);
+SDT_PROBE_DECLARE(tcp, , , connect__refused);
+SDT_PROBE_DECLARE(tcp, , , connect__request);
 SDT_PROBE_DECLARE(tcp, , , receive);
 SDT_PROBE_DECLARE(tcp, , , send);
-SDT_PROBE_DECLARE(tcp, , , state_change);
+SDT_PROBE_DECLARE(tcp, , , siftr);
+SDT_PROBE_DECLARE(tcp, , , state__change);
+SDT_PROBE_DECLARE(tcp, , , debug__input);
+SDT_PROBE_DECLARE(tcp, , , debug__output);
+SDT_PROBE_DECLARE(tcp, , , debug__user);
+SDT_PROBE_DECLARE(tcp, , , debug__drop);
+SDT_PROBE_DECLARE(tcp, , , receive__autoresize);
 
 SDT_PROBE_DECLARE(udp, , , receive);
 SDT_PROBE_DECLARE(udp, , , send);

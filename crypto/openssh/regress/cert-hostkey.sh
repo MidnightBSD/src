@@ -1,52 +1,127 @@
-#	$OpenBSD: cert-hostkey.sh,v 1.7 2013/05/17 00:37:40 dtucker Exp $
+#	$OpenBSD: cert-hostkey.sh,v 1.14 2016/05/02 09:52:00 djm Exp $
 #	Placed in the Public Domain.
 
 tid="certified host keys"
 
-# used to disable ECC based tests on platforms without ECC
-ecdsa=""
-if test "x$TEST_SSH_ECC" = "xyes"; then
-	ecdsa=ecdsa
-fi
+rm -f $OBJ/known_hosts-cert* $OBJ/host_ca_key* $OBJ/host_revoked_*
+rm -f $OBJ/cert_host_key* $OBJ/host_krl_*
 
-rm -f $OBJ/known_hosts-cert $OBJ/host_ca_key* $OBJ/cert_host_key*
+# Allow all hostkey/pubkey types, prefer certs for the client
+types=""
+for i in `$SSH -Q key`; do
+	if [ -z "$types" ]; then
+		types="$i"
+		continue
+	fi
+	case "$i" in
+	*cert*)	types="$i,$types";;
+	*)	types="$types,$i";;
+	esac
+done
+(
+	echo "HostKeyAlgorithms ${types}"
+	echo "PubkeyAcceptedKeyTypes *"
+) >> $OBJ/ssh_proxy
 cp $OBJ/sshd_proxy $OBJ/sshd_proxy_bak
+(
+	echo "HostKeyAlgorithms *"
+	echo "PubkeyAcceptedKeyTypes *"
+) >> $OBJ/sshd_proxy_bak
 
 HOSTS='localhost-with-alias,127.0.0.1,::1'
 
-# Create a CA key and add it to known hosts
-${SSHKEYGEN} -q -N '' -t rsa  -f $OBJ/host_ca_key ||\
+kh_ca() {
+	for k in "$@" ; do
+		printf "@cert-authority $HOSTS "
+		cat $OBJ/$k || fatal "couldn't cat $k"
+	done
+}
+kh_revoke() {
+	for k in "$@" ; do
+		printf "@revoked * "
+		cat $OBJ/$k || fatal "couldn't cat $k"
+	done
+}
+
+# Create a CA key and add it to known hosts. Ed25519 chosen for speed.
+# RSA for testing RSA/SHA2 signatures.
+${SSHKEYGEN} -q -N '' -t ed25519  -f $OBJ/host_ca_key ||\
 	fail "ssh-keygen of host_ca_key failed"
-(
-	printf '@cert-authority '
-	printf "$HOSTS "
-	cat $OBJ/host_ca_key.pub
-) > $OBJ/known_hosts-cert
+${SSHKEYGEN} -q -N '' -t rsa  -f $OBJ/host_ca_key2 ||\
+	fail "ssh-keygen of host_ca_key failed"
+
+kh_ca host_ca_key.pub host_ca_key2.pub > $OBJ/known_hosts-cert.orig
+cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
+
+# Plain text revocation files
+touch $OBJ/host_revoked_empty
+touch $OBJ/host_revoked_plain
+touch $OBJ/host_revoked_cert
+cat $OBJ/host_ca_key.pub $OBJ/host_ca_key2.pub > $OBJ/host_revoked_ca
+
+PLAIN_TYPES=`$SSH -Q key-plain | sed 's/^ssh-dss/ssh-dsa/g;s/^ssh-//'`
+
+if echo "$PLAIN_TYPES" | grep '^rsa$' >/dev/null 2>&1 ; then
+	PLAIN_TYPES="$PLAIN_TYPES rsa-sha2-256 rsa-sha2-512"
+fi
+
+# Prepare certificate, plain key and CA KRLs
+${SSHKEYGEN} -kf $OBJ/host_krl_empty || fatal "KRL init failed"
+${SSHKEYGEN} -kf $OBJ/host_krl_plain || fatal "KRL init failed"
+${SSHKEYGEN} -kf $OBJ/host_krl_cert || fatal "KRL init failed"
+${SSHKEYGEN} -kf $OBJ/host_krl_ca $OBJ/host_ca_key.pub $OBJ/host_ca_key2.pub \
+	|| fatal "KRL init failed"
 
 # Generate and sign host keys
-for ktype in rsa dsa $ecdsa ; do 
+serial=1
+for ktype in $PLAIN_TYPES ; do
 	verbose "$tid: sign host ${ktype} cert"
 	# Generate and sign a host key
 	${SSHKEYGEN} -q -N '' -t ${ktype} \
 	    -f $OBJ/cert_host_key_${ktype} || \
-		fail "ssh-keygen of cert_host_key_${ktype} failed"
-	${SSHKEYGEN} -h -q -s $OBJ/host_ca_key \
+		fatal "ssh-keygen of cert_host_key_${ktype} failed"
+	${SSHKEYGEN} -ukf $OBJ/host_krl_plain \
+	    $OBJ/cert_host_key_${ktype}.pub || fatal "KRL update failed"
+	cat $OBJ/cert_host_key_${ktype}.pub >> $OBJ/host_revoked_plain
+	case $ktype in
+	rsa-sha2-*)	tflag="-t $ktype"; ca="$OBJ/host_ca_key2" ;;
+	*)		tflag=""; ca="$OBJ/host_ca_key" ;;
+	esac
+	${SSHKEYGEN} -h -q -s $ca -z $serial $tflag \
 	    -I "regress host key for $USER" \
 	    -n $HOSTS $OBJ/cert_host_key_${ktype} ||
-		fail "couldn't sign cert_host_key_${ktype}"
-	# v00 ecdsa certs do not exist
-	test "${ktype}" = "ecdsa" && continue
-	cp $OBJ/cert_host_key_${ktype} $OBJ/cert_host_key_${ktype}_v00
-	cp $OBJ/cert_host_key_${ktype}.pub $OBJ/cert_host_key_${ktype}_v00.pub
-	${SSHKEYGEN} -t v00 -h -q -s $OBJ/host_ca_key \
-	    -I "regress host key for $USER" \
-	    -n $HOSTS $OBJ/cert_host_key_${ktype}_v00 ||
-		fail "couldn't sign cert_host_key_${ktype}_v00"
+		fatal "couldn't sign cert_host_key_${ktype}"
+	${SSHKEYGEN} -ukf $OBJ/host_krl_cert \
+	    $OBJ/cert_host_key_${ktype}-cert.pub || \
+		fatal "KRL update failed"
+	cat $OBJ/cert_host_key_${ktype}-cert.pub >> $OBJ/host_revoked_cert
+	serial=`expr $serial + 1`
 done
 
-# Basic connect tests
+attempt_connect() {
+	_ident="$1"
+	_expect_success="$2"
+	shift; shift
+	verbose "$tid: $_ident expect success $_expect_success"
+	cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
+	${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
+	    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
+	    "$@" -F $OBJ/ssh_proxy somehost true
+	_r=$?
+	if [ "x$_expect_success" = "xyes" ] ; then
+		if [ $_r -ne 0 ]; then
+			fail "ssh cert connect $_ident failed"
+		fi
+	else
+		if [ $_r -eq 0 ]; then
+			fail "ssh cert connect $_ident succeeded unexpectedly"
+		fi
+	fi
+}
+
+# Basic connect and revocation tests.
 for privsep in yes no ; do
-	for ktype in rsa dsa $ecdsa rsa_v00 dsa_v00; do 
+	for ktype in $PLAIN_TYPES ; do
 		verbose "$tid: host ${ktype} cert connect privsep $privsep"
 		(
 			cat $OBJ/sshd_proxy_bak
@@ -55,40 +130,36 @@ for privsep in yes no ; do
 			echo UsePrivilegeSeparation $privsep
 		) > $OBJ/sshd_proxy
 
-		${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
-		    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
-			-F $OBJ/ssh_proxy somehost true
-		if [ $? -ne 0 ]; then
-			fail "ssh cert connect failed"
-		fi
+		#               test name                         expect success
+		attempt_connect "$ktype basic connect"			"yes"
+		attempt_connect "$ktype empty KRL"			"yes" \
+		    -oRevokedHostKeys=$OBJ/host_krl_empty
+		attempt_connect "$ktype KRL w/ plain key revoked"	"no" \
+		    -oRevokedHostKeys=$OBJ/host_krl_plain
+		attempt_connect "$ktype KRL w/ cert revoked"		"no" \
+		    -oRevokedHostKeys=$OBJ/host_krl_cert
+		attempt_connect "$ktype KRL w/ CA revoked"		"no" \
+		    -oRevokedHostKeys=$OBJ/host_krl_ca
+		attempt_connect "$ktype empty plaintext revocation"	"yes" \
+		    -oRevokedHostKeys=$OBJ/host_revoked_empty
+		attempt_connect "$ktype plain key plaintext revocation"	"no" \
+		    -oRevokedHostKeys=$OBJ/host_revoked_plain
+		attempt_connect "$ktype cert plaintext revocation"	"no" \
+		    -oRevokedHostKeys=$OBJ/host_revoked_cert
+		attempt_connect "$ktype CA plaintext revocation"	"no" \
+		    -oRevokedHostKeys=$OBJ/host_revoked_ca
 	done
 done
 
 # Revoked certificates with key present
-(
-	printf '@cert-authority '
-	printf "$HOSTS "
-	cat $OBJ/host_ca_key.pub
-	printf '@revoked '
-	printf "* "
-	cat $OBJ/cert_host_key_rsa.pub
-	if test "x$TEST_SSH_ECC" = "xyes"; then
-		printf '@revoked '
-		printf "* "
-		cat $OBJ/cert_host_key_ecdsa.pub
-	fi
-	printf '@revoked '
-	printf "* "
-	cat $OBJ/cert_host_key_dsa.pub
-	printf '@revoked '
-	printf "* "
-	cat $OBJ/cert_host_key_rsa_v00.pub
-	printf '@revoked '
-	printf "* "
-	cat $OBJ/cert_host_key_dsa_v00.pub
-) > $OBJ/known_hosts-cert
+kh_ca host_ca_key.pub host_ca_key2.pub > $OBJ/known_hosts-cert.orig
+for ktype in $PLAIN_TYPES ; do
+	test -f "$OBJ/cert_host_key_${ktype}.pub" || fatal "no pubkey"
+	kh_revoke cert_host_key_${ktype}.pub >> $OBJ/known_hosts-cert.orig
+done
+cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
 for privsep in yes no ; do
-	for ktype in rsa dsa $ecdsa rsa_v00 dsa_v00; do 
+	for ktype in $PLAIN_TYPES ; do
 		verbose "$tid: host ${ktype} revoked cert privsep $privsep"
 		(
 			cat $OBJ/sshd_proxy_bak
@@ -97,6 +168,7 @@ for privsep in yes no ; do
 			echo UsePrivilegeSeparation $privsep
 		) > $OBJ/sshd_proxy
 
+		cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
 		${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
 		    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
 			-F $OBJ/ssh_proxy somehost true >/dev/null 2>&1
@@ -107,21 +179,17 @@ for privsep in yes no ; do
 done
 
 # Revoked CA
-(
-	printf '@cert-authority '
-	printf "$HOSTS "
-	cat $OBJ/host_ca_key.pub
-	printf '@revoked '
-	printf "* "
-	cat $OBJ/host_ca_key.pub
-) > $OBJ/known_hosts-cert
-for ktype in rsa dsa $ecdsa rsa_v00 dsa_v00 ; do 
+kh_ca host_ca_key.pub host_ca_key2.pub > $OBJ/known_hosts-cert.orig
+kh_revoke host_ca_key.pub host_ca_key2.pub >> $OBJ/known_hosts-cert.orig
+cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
+for ktype in $PLAIN_TYPES ; do
 	verbose "$tid: host ${ktype} revoked cert"
 	(
 		cat $OBJ/sshd_proxy_bak
 		echo HostKey $OBJ/cert_host_key_${ktype}
 		echo HostCertificate $OBJ/cert_host_key_${ktype}-cert.pub
 	) > $OBJ/sshd_proxy
+	cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
 	${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
 	    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
 		-F $OBJ/ssh_proxy somehost true >/dev/null 2>&1
@@ -131,35 +199,29 @@ for ktype in rsa dsa $ecdsa rsa_v00 dsa_v00 ; do
 done
 
 # Create a CA key and add it to known hosts
-(
-	printf '@cert-authority '
-	printf "$HOSTS "
-	cat $OBJ/host_ca_key.pub
-) > $OBJ/known_hosts-cert
+kh_ca host_ca_key.pub host_ca_key2.pub > $OBJ/known_hosts-cert.orig
+cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
 
 test_one() {
 	ident=$1
 	result=$2
 	sign_opts=$3
 
-	for kt in rsa rsa_v00 ; do
-		case $kt in
-		*_v00) args="-t v00" ;;
-		*) args="" ;;
+	for kt in rsa ed25519 ; do
+		case $ktype in
+		rsa-sha2-*)	tflag="-t $ktype"; ca="$OBJ/host_ca_key2" ;;
+		*)		tflag=""; ca="$OBJ/host_ca_key" ;;
 		esac
-
-		verbose "$tid: host cert connect $ident $kt expect $result"
-		${SSHKEYGEN} -q -s $OBJ/host_ca_key \
-		    -I "regress host key for $USER" \
-		    $sign_opts $args \
-		    $OBJ/cert_host_key_${kt} ||
-			fail "couldn't sign cert_host_key_${kt}"
+		${SSHKEYGEN} -q -s $ca $tflag -I "regress host key for $USER" \
+		    $sign_opts $OBJ/cert_host_key_${kt} ||
+			fatal "couldn't sign cert_host_key_${kt}"
 		(
 			cat $OBJ/sshd_proxy_bak
 			echo HostKey $OBJ/cert_host_key_${kt}
 			echo HostCertificate $OBJ/cert_host_key_${kt}-cert.pub
 		) > $OBJ/sshd_proxy
-	
+
+		cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
 		${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
 		    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
 		    -F $OBJ/ssh_proxy somehost true >/dev/null 2>&1
@@ -185,72 +247,68 @@ test_one "cert valid interval"	success "-h -V-1w:+2w"
 test_one "cert has constraints"	failure "-h -Oforce-command=false"
 
 # Check downgrade of cert to raw key when no CA found
-for v in v01 v00 ;  do 
-	for ktype in rsa dsa $ecdsa ; do 
-		# v00 ecdsa certs do not exist.
-		test "${v}${ktype}" = "v00ecdsa" && continue
-		rm -f $OBJ/known_hosts-cert $OBJ/cert_host_key*
-		verbose "$tid: host ${ktype} ${v} cert downgrade to raw key"
-		# Generate and sign a host key
-		${SSHKEYGEN} -q -N '' -t ${ktype} \
-		    -f $OBJ/cert_host_key_${ktype} || \
-			fail "ssh-keygen of cert_host_key_${ktype} failed"
-		${SSHKEYGEN} -t ${v} -h -q -s $OBJ/host_ca_key \
-		    -I "regress host key for $USER" \
-		    -n $HOSTS $OBJ/cert_host_key_${ktype} ||
-			fail "couldn't sign cert_host_key_${ktype}"
-		(
-			printf "$HOSTS "
-			cat $OBJ/cert_host_key_${ktype}.pub
-		) > $OBJ/known_hosts-cert
-		(
-			cat $OBJ/sshd_proxy_bak
-			echo HostKey $OBJ/cert_host_key_${ktype}
-			echo HostCertificate $OBJ/cert_host_key_${ktype}-cert.pub
-		) > $OBJ/sshd_proxy
-		
-		${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
-		    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
-			-F $OBJ/ssh_proxy somehost true
-		if [ $? -ne 0 ]; then
-			fail "ssh cert connect failed"
-		fi
-	done
+for ktype in $PLAIN_TYPES ; do
+	rm -f $OBJ/known_hosts-cert $OBJ/cert_host_key*
+	verbose "$tid: host ${ktype} ${v} cert downgrade to raw key"
+	# Generate and sign a host key
+	${SSHKEYGEN} -q -N '' -t ${ktype} -f $OBJ/cert_host_key_${ktype} || \
+		fail "ssh-keygen of cert_host_key_${ktype} failed"
+	case $ktype in
+	rsa-sha2-*)	tflag="-t $ktype"; ca="$OBJ/host_ca_key2" ;;
+	*)		tflag=""; ca="$OBJ/host_ca_key" ;;
+	esac
+	${SSHKEYGEN} -h -q $tflag -s $ca $tflag \
+	    -I "regress host key for $USER" \
+	    -n $HOSTS $OBJ/cert_host_key_${ktype} ||
+		fatal "couldn't sign cert_host_key_${ktype}"
+	(
+		printf "$HOSTS "
+		cat $OBJ/cert_host_key_${ktype}.pub
+	) > $OBJ/known_hosts-cert
+	(
+		cat $OBJ/sshd_proxy_bak
+		echo HostKey $OBJ/cert_host_key_${ktype}
+		echo HostCertificate $OBJ/cert_host_key_${ktype}-cert.pub
+	) > $OBJ/sshd_proxy
+
+	${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
+	    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
+		-F $OBJ/ssh_proxy somehost true
+	if [ $? -ne 0 ]; then
+		fail "ssh cert connect failed"
+	fi
 done
 
 # Wrong certificate
-(
-	printf '@cert-authority '
-	printf "$HOSTS "
-	cat $OBJ/host_ca_key.pub
-) > $OBJ/known_hosts-cert
-for v in v01 v00 ;  do 
-	for kt in rsa dsa $ecdsa ; do 
-		# v00 ecdsa certs do not exist.
-		test "${v}${ktype}" = "v00ecdsa" && continue
-		rm -f $OBJ/cert_host_key*
-		# Self-sign key
-		${SSHKEYGEN} -q -N '' -t ${kt} \
-		    -f $OBJ/cert_host_key_${kt} || \
-			fail "ssh-keygen of cert_host_key_${kt} failed"
-		${SSHKEYGEN} -t ${v} -h -q -s $OBJ/cert_host_key_${kt} \
-		    -I "regress host key for $USER" \
-		    -n $HOSTS $OBJ/cert_host_key_${kt} ||
-			fail "couldn't sign cert_host_key_${kt}"
-		verbose "$tid: host ${kt} connect wrong cert"
-		(
-			cat $OBJ/sshd_proxy_bak
-			echo HostKey $OBJ/cert_host_key_${kt}
-			echo HostCertificate $OBJ/cert_host_key_${kt}-cert.pub
-		) > $OBJ/sshd_proxy
-	
-		${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
-		    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
-			-F $OBJ/ssh_proxy -q somehost true >/dev/null 2>&1
-		if [ $? -eq 0 ]; then
-			fail "ssh cert connect $ident succeeded unexpectedly"
-		fi
-	done
+kh_ca host_ca_key.pub host_ca_key2.pub > $OBJ/known_hosts-cert.orig
+cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
+for kt in $PLAIN_TYPES ; do
+	verbose "$tid: host ${kt} connect wrong cert"
+	rm -f $OBJ/cert_host_key*
+	# Self-sign key
+	${SSHKEYGEN} -q -N '' -t ${kt} -f $OBJ/cert_host_key_${kt} || \
+		fail "ssh-keygen of cert_host_key_${kt} failed"
+	case $kt in
+	rsa-sha2-*)	tflag="-t $kt" ;;
+	*)		tflag="" ;;
+	esac
+	${SSHKEYGEN} $tflag -h -q -s $OBJ/cert_host_key_${kt} \
+	    -I "regress host key for $USER" \
+	    -n $HOSTS $OBJ/cert_host_key_${kt} ||
+		fatal "couldn't sign cert_host_key_${kt}"
+	(
+		cat $OBJ/sshd_proxy_bak
+		echo HostKey $OBJ/cert_host_key_${kt}
+		echo HostCertificate $OBJ/cert_host_key_${kt}-cert.pub
+	) > $OBJ/sshd_proxy
+
+	cp $OBJ/known_hosts-cert.orig $OBJ/known_hosts-cert
+	${SSH} -2 -oUserKnownHostsFile=$OBJ/known_hosts-cert \
+	    -oGlobalKnownHostsFile=$OBJ/known_hosts-cert \
+		-F $OBJ/ssh_proxy -q somehost true >/dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		fail "ssh cert connect $ident succeeded unexpectedly"
+	fi
 done
 
-rm -f $OBJ/known_hosts-cert $OBJ/host_ca_key* $OBJ/cert_host_key*
+rm -f $OBJ/known_hosts-cert* $OBJ/host_ca_key* $OBJ/cert_host_key*

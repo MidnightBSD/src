@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/file/Makefile 234449 2012-04-19 03:20:13Z obrien $
+# $FreeBSD$
 # Makefile for file(1) cmd.
 # Copyright (c) David E. O'Brien, 2000-2004, 2009
 # Copyright (c) Ian F. Darwin 86/09/01 - see LEGAL.NOTICE.
@@ -20,21 +20,21 @@
 #    ever read sources, credits must appear in the documentation.
 # 4. This notice may not be removed or altered.
 
-SRCDIR=	${.CURDIR}/../../contrib/file
-.PATH: ${SRCDIR}
+SRCDIR=	${SRCTOP}/contrib/file
+.PATH: ${SRCDIR}/src
+.PATH: ${SRCDIR}/doc
 
 PROG=	file
 
 MAGICPATH?=	/usr/share/misc
 
 CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DHAVE_CONFIG_H
-CFLAGS+= -I${.CURDIR}/../../lib/libmagic
+CFLAGS+= -I${SRCTOP}/lib/libmagic
 
-DPADD=	${LIBMAGIC} ${LIBZ}
-LDADD=	-lmagic -lz
+LIBADD=	magic
 
 FILEVER!= awk '$$1 == "\#define" && $$2 == "VERSION" { print $$3; exit }' \
-			${.CURDIR}/../../lib/libmagic/config.h
+			${SRCTOP}/lib/libmagic/config.h
 
 CLEANFILES+=	${MAN}
 

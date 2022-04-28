@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 # Copyright (c) 2002, 2003 Michael Telahun Makonnen. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
 #
 #	Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: release/10.0.0/usr.sbin/adduser/rmuser.sh 181006 2008-07-30 18:37:21Z jhb $
+# $FreeBSD$
 #
 
 ATJOBDIR="/var/at/jobs"

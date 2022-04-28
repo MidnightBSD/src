@@ -65,7 +65,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: release/10.0.0/share/examples/kld/cdev/module/cdevmod.c 158751 2006-05-19 20:02:44Z sobomax $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,6 +107,7 @@ static int
 cdev_load(module_t mod, int cmd, void *arg)
 {
     int  err = 0;
+    struct make_dev_args mda;
 
     switch (cmd) {
     case MOD_LOAD:
@@ -118,8 +119,14 @@ cdev_load(module_t mod, int cmd, void *arg)
 	printf("Copyright (c) 1998\n");
 	printf("Rajesh Vaidheeswarran\n");
 	printf("All rights reserved\n");
-	sdev = make_dev(&my_devsw, 0, UID_ROOT, GID_WHEEL, 0600, "cdev");
-	break;		/* Success*/
+
+	make_dev_args_init(&mda);
+	mda.mda_devsw = &my_devsw;
+	mda.mda_uid = UID_ROOT;
+	mda.mda_gid = GID_WHEEL;
+	mda.mda_mode = 0600;
+	err = make_dev_s(&mda, &sdev, "cdev");
+	break;
 
     case MOD_UNLOAD:
 	printf("Unloaded kld character device driver\n");

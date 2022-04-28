@@ -1,5 +1,14 @@
-# $FreeBSD: release/10.0.0/cddl/Makefile 168792 2007-04-16 21:20:26Z ru $
+# $FreeBSD$
 
-SUBDIR=	lib sbin usr.bin usr.sbin
+.include <src.opts.mk>
+
+SUBDIR=	lib .WAIT \
+	sbin usr.bin usr.sbin
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=tests
+.endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

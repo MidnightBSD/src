@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/grep/regex/tre-fastmatch.h 226035 2011-10-05 09:56:43Z gabor $ */
+/* $FreeBSD$ */
 
 #ifndef TRE_FASTMATCH_H
 #define TRE_FASTMATCH_H 1

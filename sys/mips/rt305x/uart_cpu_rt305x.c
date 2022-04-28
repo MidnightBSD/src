@@ -36,7 +36,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/uart_cpu_rt305x.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,6 +77,10 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 
 	uart_bus_space_io = NULL;
 	uart_bus_space_mem = mips_bus_space_generic;
+#ifdef RT305X_USE_UART
+	di->bas.bsh = MIPS_PHYS_TO_KSEG1(UART_BASE);
+#else
 	di->bas.bsh = MIPS_PHYS_TO_KSEG1(UARTLITE_BASE);
+#endif
 	return (0);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2011 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2011 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -10,7 +10,7 @@
  * the sendmail distribution.
  *
  *
- *	$Id: conf.h,v 1.144 2011/05/03 16:24:00 ca Exp $
+ *	$Id: conf.h,v 1.147 2013-11-22 20:51:31 ca Exp $
  */
 
 /*
@@ -473,6 +473,9 @@ typedef int		pid_t;
 #   ifndef HASGETUSERSHELL
 #    define HASGETUSERSHELL 0	/* getusershell(3) causes core dumps pre-2.7 */
 #   endif /* ! HASGETUSERSHELL */
+#   if SOLARIS < 21200
+#    define SIGWAIT_TAKES_1_ARG	1	/* S12 moves to UNIX V7 semantic */
+#   endif /* SOLARIS < 21200 */
 
 #  else /* SOLARIS */
 			/* SunOS 4.0.3 or 4.1.x */
@@ -1016,7 +1019,9 @@ extern unsigned int sleepX __P((unsigned int seconds));
 #   if __FreeBSD__ >= 2
 #    include <osreldate.h>
 #    if __FreeBSD_version >= 199512	/* 2.2-current when it appeared */
+#      if __FreeBSD_version < 500012
 #     include <libutil.h>
+#      endif
 #     define SPT_TYPE	SPT_BUILTIN
 #    endif /* __FreeBSD_version >= 199512 */
 #    if __FreeBSD_version >= 222000	/* 2.2.2-release and later */
@@ -1532,6 +1537,8 @@ extern void		*malloc();
 #   if defined(__GLIBC__) && defined(__GLIBC_MINOR__)
 #    define GLIBC_VERSION ((__GLIBC__ << 8) + __GLIBC_MINOR__)
 #    if (GLIBC_VERSION >= 0x201)
+#     define SOCKADDR_LEN_T     socklen_t
+#     define SOCKOPT_LEN_T      socklen_t
 #     undef IPPROTO_ICMPV6	/* linux #defines, glibc enums */
 #    else /* (GLIBC_VERSION >= 0x201) */
 #     include <linux/in6.h>	/* IPv6 support */
@@ -1904,6 +1911,7 @@ extern struct passwd *	sendmail_mpe_getpwuid __P((uid_t));
 #  define GIDSET_T		gid_t
 #  define SOCKADDR_LEN_T	size_t
 #  define SOCKOPT_LEN_T		size_t
+#  define SIGWAIT_TAKES_1_ARG	1
 #  ifndef _PATH_UNIX
 #   define _PATH_UNIX		"/stand/unix"
 #  endif /* ! _PATH_UNIX */
@@ -2918,6 +2926,10 @@ typedef void		(*sigfunc_t) __P((int));
 # define FD_SETSIZE	256
 #endif /* ! FD_SETSIZE */
 
+#ifndef SIGWAIT_TAKES_1_ARG
+# define SIGWAIT_TAKES_1_ARG	0
+#endif /* ! SIGWAIT_TAKES_1_ARG */
+
 /*
 **  Size of prescan buffer.
 **	Despite comments in the _sendmail_ book, this probably should
@@ -2962,6 +2974,17 @@ typedef void		(*sigfunc_t) __P((int));
 # ifndef SM_INT32
 #  define SM_INT32	int32_t
 # endif /* ! SM_INT32 */
+
+/* XXX  16 bit type */
+# ifndef SM_UINT16
+#  define SM_UINT16	uint16_t
+# endif /* ! SM_UINT16 */
+
+/* additional valid chars in user/group names in passwd */
+# ifndef SM_PWN_CHARS
+#  define SM_PWN_CHARS "-_."
+# endif
+
 
 /*
 **  SVr4 and similar systems use different routines for setjmp/longjmp
@@ -3044,5 +3067,7 @@ struct sm_align
 #  define SM_ALIGN_SIZE offsetof(struct sm_align, al_u)
 # endif /* ! SM_ALIGN_SIZE */
 # define SM_ALIGN_BITS (SM_ALIGN_SIZE - 1)
+
+char *sm_inet6_ntop __P((const void *, char *, size_t));
 
 #endif /* ! SM_CONF_H */

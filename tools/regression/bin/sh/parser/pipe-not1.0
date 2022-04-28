@@ -1,3 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/parser/pipe-not1.0 214281 2010-10-24 17:06:49Z jilles $
-
-: | ! : | false

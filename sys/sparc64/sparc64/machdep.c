@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/machdep.c 253266 2013-07-12 14:24:52Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -73,6 +73,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/machdep.c 253266 2013-07-
 #include <sys/sysproto.h>
 #include <sys/timetc.h>
 #include <sys/ucontext.h>
+#include <sys/vmmeter.h>
 
 #include <dev/ofw/openfirm.h>
 
@@ -113,10 +114,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/machdep.c 253266 2013-07-
 #include <machine/ver.h>
 
 typedef int ofw_vec_t(void *);
-
-#ifdef DDB
-extern vm_offset_t ksym_start, ksym_end;
-#endif
 
 int dtlb_slots;
 int itlb_slots;
@@ -190,8 +187,8 @@ cpu_startup(void *arg)
 	EVENTHANDLER_REGISTER(shutdown_final, sparc64_shutdown_final, NULL,
 	    SHUTDOWN_PRI_LAST);
 
-	printf("avail memory = %lu (%lu MB)\n", cnt.v_free_count * PAGE_SIZE,
-	    cnt.v_free_count / ((1024 * 1024) / PAGE_SIZE));
+	printf("avail memory = %lu (%lu MB)\n", vm_cnt.v_free_count * PAGE_SIZE,
+	    vm_cnt.v_free_count / ((1024 * 1024) / PAGE_SIZE));
 
 	if (bootverbose)
 		printf("machine: %s\n", sparc64_model);
@@ -249,7 +246,7 @@ find_bsp(phandle_t node, uint32_t bspid, u_int cpu_impl)
 {
 	char type[sizeof("cpu")];
 	phandle_t child;
-	uint32_t cpuid;
+	uint32_t portid;
 
 	for (; node != 0; node = OF_peer(node)) {
 		child = OF_child(node);
@@ -263,10 +260,10 @@ find_bsp(phandle_t node, uint32_t bspid, u_int cpu_impl)
 				continue;
 			if (strcmp(type, "cpu") != 0)
 				continue;
-			if (OF_getprop(node, cpu_cpuid_prop(cpu_impl), &cpuid,
-			    sizeof(cpuid)) <= 0)
+			if (OF_getprop(node, cpu_portid_prop(cpu_impl),
+			    &portid, sizeof(portid)) <= 0)
 				continue;
-			if (cpuid == bspid)
+			if (portid == bspid)
 				return (node);
 		}
 	}
@@ -274,7 +271,7 @@ find_bsp(phandle_t node, uint32_t bspid, u_int cpu_impl)
 }
 
 const char *
-cpu_cpuid_prop(u_int cpu_impl)
+cpu_portid_prop(u_int cpu_impl)
 {
 
 	switch (cpu_impl) {
@@ -383,7 +380,8 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 		kmdp = preload_search_by_type("elf kernel");
 		if (kmdp != NULL) {
 			boothowto = MD_FETCH(kmdp, MODINFOMD_HOWTO, int);
-			kern_envp = MD_FETCH(kmdp, MODINFOMD_ENVP, char *);
+			init_static_kenv(MD_FETCH(kmdp, MODINFOMD_ENVP, char *),
+			    0);
 			end = MD_FETCH(kmdp, MODINFOMD_KERNEND, vm_offset_t);
 			kernel_tlb_slots = MD_FETCH(kmdp, MODINFOMD_DTLB_SLOTS,
 			    int);
@@ -503,7 +501,7 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	}
 
 #ifdef SMP
-	mp_init(cpu_impl);
+	mp_init();
 #endif
 
 	/*
@@ -515,7 +513,7 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	 * Initialize tunables.
 	 */
 	init_param2(physmem);
-	env = getenv("kernelname");
+	env = kern_getenv("kernelname");
 	if (env != NULL) {
 		strlcpy(kernelname, env, sizeof(kernelname));
 		freeenv(env);
@@ -553,17 +551,15 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	 * trigger a fatal reset error or worse things further down the road.
 	 * XXX it should be possible to use this solely instead of writing
 	 * %tba in cpu_setregs().  Doing so causes a hang however.
-	 */
-	sun4u_set_traptable(tl0_base);
-
-	/*
-	 * Initialize the console.
+	 *
 	 * NB: the low-level console drivers require a working DELAY() and
 	 * some compiler optimizations may cause the curthread accesses of
 	 * mutex(9) to be factored out even if the latter aren't actually
-	 * called, both requiring PCPU_REG to be set.
+	 * called.  Both of these require PCPU_REG to be set.  However, we
+	 * can't set PCPU_REG without also taking over the trap table or the
+	 * firmware will overwrite it.
 	 */
-	cninit();
+	sun4u_set_traptable(tl0_base);
 
 	/*
 	 * Initialize the dynamic per-CPU area for the BSP and the message
@@ -576,6 +572,12 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	 * Initialize mutexes.
 	 */
 	mutex_init();
+
+	/*
+	 * Initialize console now that we have a reasonable set of system
+	 * services.
+	 */
+	cninit();
 
 	/*
 	 * Finish the interrupt initialization now that mutexes work and
@@ -645,7 +647,7 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	/* Allocate and validate space for the signal handler context. */
 	if ((td->td_pflags & TDP_ALTSTACK) != 0 && !oonstack &&
 	    SIGISMEMBER(psp->ps_sigonstack, sig)) {
-		sfp = (struct sigframe *)(td->td_sigstk.ss_sp +
+		sfp = (struct sigframe *)((uintptr_t)td->td_sigstk.ss_sp +
 		    td->td_sigstk.ss_size - sizeof(struct sigframe));
 	} else
 		sfp = (struct sigframe *)sp - 1;
@@ -653,10 +655,6 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 	PROC_UNLOCK(p);
 
 	fp = (struct frame *)sfp - 1;
-
-	/* Translate the signal if appropriate. */
-	if (p->p_sysent->sv_sigtbl && sig <= p->p_sysent->sv_sigsize)
-		sig = p->p_sysent->sv_sigtbl[_SIG_IDX(sig)];
 
 	/* Build the argument list for the signal handler. */
 	tf->tf_out[0] = sig;
@@ -811,7 +809,7 @@ get_mcontext(struct thread *td, mcontext_t *mc, int flags)
 }
 
 int
-set_mcontext(struct thread *td, const mcontext_t *mc)
+set_mcontext(struct thread *td, mcontext_t *mc)
 {
 	struct trapframe *tf;
 	struct pcb *pcb;
@@ -1059,6 +1057,7 @@ fill_fpregs(struct thread *td, struct fpreg *fpregs)
 	bcopy(pcb->pcb_ufp, fpregs->fr_regs, sizeof(fpregs->fr_regs));
 	fpregs->fr_fsr = tf->tf_fsr;
 	fpregs->fr_gsr = tf->tf_gsr;
+	fpregs->fr_pad[0] = 0;
 	return (0);
 }
 

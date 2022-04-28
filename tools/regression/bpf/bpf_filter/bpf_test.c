@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/bpf/bpf_filter/bpf_test.c 199605 2009-11-20 19:01:09Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <signal.h>
 #include <stdio.h>

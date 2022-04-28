@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 smh@freebsd.org
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_foreign.c 251516 2013-06-08 02:54:59Z sbruno $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -110,7 +112,7 @@ static int
 foreign_show_cfg(int fd, uint32_t opcode, uint8_t cfgidx, int diagnostic)
 {
 	struct mfi_config_data *config;
-	char prefix[26];
+	char prefix[64];
 	int error;
 	uint8_t mbox[4];
 

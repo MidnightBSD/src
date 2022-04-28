@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5212/ar5212_attach.c 247286 2013-02-25 22:42:43Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -270,8 +270,8 @@ ar5212InitState(struct ath_hal_5212 *ahp, uint16_t devid, HAL_SOFTC sc,
 	ahp->ah_acktimeout = (u_int) -1;
 	ahp->ah_ctstimeout = (u_int) -1;
 	ahp->ah_sifstime = (u_int) -1;
-	ahp->ah_txTrigLev = INIT_TX_FIFO_THRESHOLD,
-	ahp->ah_maxTxTrigLev = MAX_TX_FIFO_THRESHOLD,
+	ahp->ah_txTrigLev = INIT_TX_FIFO_THRESHOLD;
+	ahp->ah_maxTxTrigLev = MAX_TX_FIFO_THRESHOLD;
 
 	OS_MEMCPY(&ahp->ah_bssidmask, defbssidmask, IEEE80211_ADDR_LEN);
 #undef N
@@ -317,7 +317,7 @@ ar5212IsMacSupported(uint8_t macVersion, uint8_t macRev)
 static struct ath_hal *
 ar5212Attach(uint16_t devid, HAL_SOFTC sc,
 	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
-	HAL_STATUS *status)
+	HAL_OPS_CONFIG *ah_config, HAL_STATUS *status)
 {
 #define	AH_EEPROM_PROTECT(ah) \
 	(AH_PRIVATE(ah)->ah_ispcie)? AR_EEPROM_PROTECT_PCIE : AR_EEPROM_PROTECT)
@@ -885,7 +885,7 @@ ar5212FillCapabilityInfo(struct ath_hal *ah)
 		pCap->halRfSilentSupport = AH_TRUE;
 	}
 
-	/* NB: this is a guess, noone seems to know the answer */
+	/* NB: this is a guess, no one seems to know the answer */
 	ahpriv->ah_rxornIsFatal =
 	    (AH_PRIVATE(ah)->ah_macVersion < AR_SREV_VERSION_VENICE);
 

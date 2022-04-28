@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_cpio_svr4c_Z.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char archive[] = {
 31,157,144,'0','n',4,132,'!',3,6,140,26,'8','n',228,16,19,195,160,'A',26,
@@ -51,6 +51,8 @@ DEFINE_TEST(test_read_format_cpio_svr4c_Z)
 	assertEqualInt(archive_filter_code(a, 0), ARCHIVE_FILTER_COMPRESS);
 	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_SVR4_CRC);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

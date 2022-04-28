@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/eli/g_eli.c 255144 2013-09-02 10:44:54Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,6 +53,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/geom/eli/g_eli.c 255144 2013-09-02 10:44:
 #include <geom/eli/g_eli.h>
 #include <geom/eli/pkcs5v2.h>
 
+#include <crypto/intake.h>
+
 FEATURE(geom_eli, "GEOM crypto module");
 
 MALLOC_DEFINE(M_ELI, "eli data", "GEOM_ELI Data");
@@ -63,30 +65,87 @@ static int g_eli_version = G_ELI_VERSION;
 SYSCTL_INT(_kern_geom_eli, OID_AUTO, version, CTLFLAG_RD, &g_eli_version, 0,
     "GELI version");
 int g_eli_debug = 0;
-TUNABLE_INT("kern.geom.eli.debug", &g_eli_debug);
-SYSCTL_INT(_kern_geom_eli, OID_AUTO, debug, CTLFLAG_RW, &g_eli_debug, 0,
+SYSCTL_INT(_kern_geom_eli, OID_AUTO, debug, CTLFLAG_RWTUN, &g_eli_debug, 0,
     "Debug level");
 static u_int g_eli_tries = 3;
-TUNABLE_INT("kern.geom.eli.tries", &g_eli_tries);
-SYSCTL_UINT(_kern_geom_eli, OID_AUTO, tries, CTLFLAG_RW, &g_eli_tries, 0,
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, tries, CTLFLAG_RWTUN, &g_eli_tries, 0,
     "Number of tries for entering the passphrase");
 static u_int g_eli_visible_passphrase = GETS_NOECHO;
-TUNABLE_INT("kern.geom.eli.visible_passphrase", &g_eli_visible_passphrase);
-SYSCTL_UINT(_kern_geom_eli, OID_AUTO, visible_passphrase, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, visible_passphrase, CTLFLAG_RWTUN,
     &g_eli_visible_passphrase, 0,
     "Visibility of passphrase prompt (0 = invisible, 1 = visible, 2 = asterisk)");
 u_int g_eli_overwrites = G_ELI_OVERWRITES;
-TUNABLE_INT("kern.geom.eli.overwrites", &g_eli_overwrites);
-SYSCTL_UINT(_kern_geom_eli, OID_AUTO, overwrites, CTLFLAG_RW, &g_eli_overwrites,
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, overwrites, CTLFLAG_RWTUN, &g_eli_overwrites,
     0, "Number of times on-disk keys should be overwritten when destroying them");
 static u_int g_eli_threads = 0;
-TUNABLE_INT("kern.geom.eli.threads", &g_eli_threads);
-SYSCTL_UINT(_kern_geom_eli, OID_AUTO, threads, CTLFLAG_RW, &g_eli_threads, 0,
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, threads, CTLFLAG_RWTUN, &g_eli_threads, 0,
     "Number of threads doing crypto work");
 u_int g_eli_batch = 0;
-TUNABLE_INT("kern.geom.eli.batch", &g_eli_batch);
-SYSCTL_UINT(_kern_geom_eli, OID_AUTO, batch, CTLFLAG_RW, &g_eli_batch, 0,
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, batch, CTLFLAG_RWTUN, &g_eli_batch, 0,
     "Use crypto operations batching");
+
+/*
+ * Passphrase cached during boot, in order to be more user-friendly if
+ * there are multiple providers using the same passphrase.
+ */
+static char cached_passphrase[256];
+static u_int g_eli_boot_passcache = 1;
+TUNABLE_INT("kern.geom.eli.boot_passcache", &g_eli_boot_passcache);
+SYSCTL_UINT(_kern_geom_eli, OID_AUTO, boot_passcache, CTLFLAG_RD,
+    &g_eli_boot_passcache, 0,
+    "Passphrases are cached during boot process for possible reuse");
+static void
+fetch_loader_passphrase(void * dummy)
+{
+	char * env_passphrase;
+
+	KASSERT(dynamic_kenv, ("need dynamic kenv"));
+
+	if ((env_passphrase = kern_getenv("kern.geom.eli.passphrase")) != NULL) {
+		/* Extract passphrase from the environment. */
+		strlcpy(cached_passphrase, env_passphrase,
+		    sizeof(cached_passphrase));
+		freeenv(env_passphrase);
+
+		/* Wipe the passphrase from the environment. */
+		kern_unsetenv("kern.geom.eli.passphrase");
+	}
+}
+SYSINIT(geli_fetch_loader_passphrase, SI_SUB_KMEM + 1, SI_ORDER_ANY,
+    fetch_loader_passphrase, NULL);
+
+static void
+zero_boot_passcache(void)
+{
+
+        explicit_bzero(cached_passphrase, sizeof(cached_passphrase));
+}
+
+static void
+zero_geli_intake_keys(void)
+{
+        struct keybuf *keybuf;
+        int i;
+
+        if ((keybuf = get_keybuf()) != NULL) {
+                /* Scan the key buffer, clear all GELI keys. */
+                for (i = 0; i < keybuf->kb_nents; i++) {
+                         if (keybuf->kb_ents[i].ke_type == KEYBUF_TYPE_GELI) {
+                                 explicit_bzero(keybuf->kb_ents[i].ke_data,
+                                     sizeof(keybuf->kb_ents[i].ke_data));
+                                 keybuf->kb_ents[i].ke_type = KEYBUF_TYPE_NONE;
+                         }
+                }
+        }
+}
+
+static void
+zero_intake_passcache(void *dummy)
+{
+        zero_boot_passcache();
+        zero_geli_intake_keys();
+}
+EVENTHANDLER_DEFINE(mountroot, zero_intake_passcache, NULL, 0);
 
 static eventhandler_tag g_eli_pre_sync = NULL;
 
@@ -151,6 +210,16 @@ g_eli_crypto_rerun(struct cryptop *crp)
 	return (error);
 }
 
+static void
+g_eli_getattr_done(struct bio *bp)
+{
+	if (bp->bio_error == 0 && 
+	    !strcmp(bp->bio_attribute, "GEOM::physpath")) {
+		strlcat(bp->bio_data, "/eli", bp->bio_length);
+	}
+	g_std_done(bp);
+}
+
 /*
  * The function is called afer reading encrypted data from the provider.
  *
@@ -164,7 +233,7 @@ g_eli_read_done(struct bio *bp)
 
 	G_ELI_LOGREQ(2, bp, "Request done.");
 	pbp = bp->bio_parent;
-	if (pbp->bio_error == 0)
+	if (pbp->bio_error == 0 && bp->bio_error != 0)
 		pbp->bio_error = bp->bio_error;
 	g_destroy_bio(bp);
 	/*
@@ -175,14 +244,16 @@ g_eli_read_done(struct bio *bp)
 		return;
 	sc = pbp->bio_to->geom->softc;
 	if (pbp->bio_error != 0) {
-		G_ELI_LOGREQ(0, pbp, "%s() failed", __func__);
+		G_ELI_LOGREQ(0, pbp, "%s() failed (error=%d)", __func__,
+		    pbp->bio_error);
 		pbp->bio_completed = 0;
 		if (pbp->bio_driver2 != NULL) {
 			free(pbp->bio_driver2, M_ELI);
 			pbp->bio_driver2 = NULL;
 		}
 		g_io_deliver(pbp, pbp->bio_error);
-		atomic_subtract_int(&sc->sc_inflight, 1);
+		if (sc != NULL)
+			atomic_subtract_int(&sc->sc_inflight, 1);
 		return;
 	}
 	mtx_lock(&sc->sc_queue_mtx);
@@ -204,10 +275,8 @@ g_eli_write_done(struct bio *bp)
 
 	G_ELI_LOGREQ(2, bp, "Request done.");
 	pbp = bp->bio_parent;
-	if (pbp->bio_error == 0) {
-		if (bp->bio_error != 0)
-			pbp->bio_error = bp->bio_error;
-	}
+	if (pbp->bio_error == 0 && bp->bio_error != 0)
+		pbp->bio_error = bp->bio_error;
 	g_destroy_bio(bp);
 	/*
 	 * Do we have all sectors already?
@@ -218,17 +287,19 @@ g_eli_write_done(struct bio *bp)
 	free(pbp->bio_driver2, M_ELI);
 	pbp->bio_driver2 = NULL;
 	if (pbp->bio_error != 0) {
-		G_ELI_LOGREQ(0, pbp, "Crypto WRITE request failed (error=%d).",
+		G_ELI_LOGREQ(0, pbp, "%s() failed (error=%d)", __func__,
 		    pbp->bio_error);
 		pbp->bio_completed = 0;
-	}
+	} else
+		pbp->bio_completed = pbp->bio_length;
+
 	/*
 	 * Write is finished, send it up.
 	 */
-	pbp->bio_completed = pbp->bio_length;
 	sc = pbp->bio_to->geom->softc;
 	g_io_deliver(pbp, pbp->bio_error);
-	atomic_subtract_int(&sc->sc_inflight, 1);
+	if (sc != NULL)
+		atomic_subtract_int(&sc->sc_inflight, 1);
 }
 
 /*
@@ -278,13 +349,19 @@ g_eli_start(struct bio *bp)
 	case BIO_WRITE:
 	case BIO_GETATTR:
 	case BIO_FLUSH:
+	case BIO_ZONE:
 		break;
 	case BIO_DELETE:
 		/*
-		 * We could eventually support BIO_DELETE request.
-		 * It could be done by overwritting requested sector with
-		 * random data g_eli_overwrites number of times.
+		 * If the user hasn't set the NODELETE flag, we just pass
+		 * it down the stack and let the layers beneath us do (or
+		 * not) whatever they do with it.  If they have, we
+		 * reject it.  A possible extension would be an
+		 * additional flag to take it as a hint to shred the data
+		 * with [multiple?] overwrites.
 		 */
+		if (!(sc->sc_flags & G_ELI_FLAG_NODELETE))
+			break;
 	default:
 		g_io_deliver(bp, EOPNOTSUPP);
 		return;
@@ -311,7 +388,12 @@ g_eli_start(struct bio *bp)
 		break;
 	case BIO_GETATTR:
 	case BIO_FLUSH:
-		cbp->bio_done = g_std_done;
+	case BIO_DELETE:
+	case BIO_ZONE:
+		if (bp->bio_cmd == BIO_GETATTR)
+			cbp->bio_done = g_eli_getattr_done;
+		else
+			cbp->bio_done = g_std_done;
 		cp = LIST_FIRST(&sc->sc_geom->consumer);
 		cbp->bio_to = cp->provider;
 		G_ELI_LOGREQ(2, cbp, "Sending request.");
@@ -442,7 +524,9 @@ g_eli_worker(void *arg)
 
 	wr = arg;
 	sc = wr->w_softc;
-#ifdef SMP
+#ifdef EARLY_AP_STARTUP
+	MPASS(!sc->sc_cpubind || smp_started);
+#elif defined(SMP)
 	/* Before sched_bind() to a CPU, wait for all CPUs to go on-line. */
 	if (sc->sc_cpubind) {
 		while (!smp_started)
@@ -534,40 +618,6 @@ again:
 	}
 }
 
-/*
- * Here we generate IV. It is unique for every sector.
- */
-void
-g_eli_crypto_ivgen(struct g_eli_softc *sc, off_t offset, u_char *iv,
-    size_t size)
-{
-	uint8_t off[8];
-
-	if ((sc->sc_flags & G_ELI_FLAG_NATIVE_BYTE_ORDER) != 0)
-		bcopy(&offset, off, sizeof(off));
-	else
-		le64enc(off, (uint64_t)offset);
-
-	switch (sc->sc_ealgo) {
-	case CRYPTO_AES_XTS:
-		bcopy(off, iv, sizeof(off));
-		bzero(iv + sizeof(off), size - sizeof(off));
-		break;
-	default:
-	    {
-		u_char hash[SHA256_DIGEST_LENGTH];
-		SHA256_CTX ctx;
-
-		/* Copy precalculated SHA256 context for IV-Key. */
-		bcopy(&sc->sc_ivctx, &ctx, sizeof(ctx));
-		SHA256_Update(&ctx, off, sizeof(off));
-		SHA256_Final(hash, &ctx);
-		bcopy(hash, iv, MIN(sizeof(hash), size));
-		break;
-	    }
-	}
-}
-
 int
 g_eli_read_metadata(struct g_class *mp, struct g_provider *pp,
     struct g_eli_metadata *md)
@@ -602,7 +652,10 @@ g_eli_read_metadata(struct g_class *mp, struct g_provider *pp,
 	g_topology_lock();
 	if (buf == NULL)
 		goto end;
-	eli_metadata_decode(buf, md);
+	error = eli_metadata_decode(buf, md);
+	if (error != 0)
+		goto end;
+	/* Metadata was read and decoded successfully. */
 end:
 	if (buf != NULL)
 		g_free(buf);
@@ -688,7 +741,7 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	struct g_provider *pp;
 	struct g_consumer *cp;
 	u_int i, threads;
-	int error;
+	int dcw, error;
 
 	G_ELI_DEBUG(1, "Creating device %s%s.", bpp->name, G_ELI_SUFFIX);
 
@@ -696,10 +749,10 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	sc = malloc(sizeof(*sc), M_ELI, M_WAITOK | M_ZERO);
 	gp->start = g_eli_start;
 	/*
-	 * Spoiling cannot happen actually, because we keep provider open for
-	 * writing all the time or provider is read-only.
+	 * Spoiling can happen even though we have the provider open
+	 * exclusively, e.g. through media change events.
 	 */
-	gp->spoiled = g_eli_orphan_spoil_assert;
+	gp->spoiled = g_eli_orphan;
 	gp->orphan = g_eli_orphan;
 	gp->dumpconf = g_eli_dumpconf;
 	/*
@@ -711,43 +764,8 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	else
 		gp->access = g_std_access;
 
-	sc->sc_version = md->md_version;
-	sc->sc_inflight = 0;
-	sc->sc_crypto = G_ELI_CRYPTO_UNKNOWN;
-	sc->sc_flags = md->md_flags;
-	/* Backward compatibility. */
-	if (md->md_version < G_ELI_VERSION_04)
-		sc->sc_flags |= G_ELI_FLAG_NATIVE_BYTE_ORDER;
-	if (md->md_version < G_ELI_VERSION_05)
-		sc->sc_flags |= G_ELI_FLAG_SINGLE_KEY;
-	if (md->md_version < G_ELI_VERSION_06 &&
-	    (sc->sc_flags & G_ELI_FLAG_AUTH) != 0) {
-		sc->sc_flags |= G_ELI_FLAG_FIRST_KEY;
-	}
-	if (md->md_version < G_ELI_VERSION_07)
-		sc->sc_flags |= G_ELI_FLAG_ENC_IVKEY;
-	sc->sc_ealgo = md->md_ealgo;
+	eli_metadata_softc(sc, md, bpp->sectorsize, bpp->mediasize);
 	sc->sc_nkey = nkey;
-
-	if (sc->sc_flags & G_ELI_FLAG_AUTH) {
-		sc->sc_akeylen = sizeof(sc->sc_akey) * 8;
-		sc->sc_aalgo = md->md_aalgo;
-		sc->sc_alen = g_eli_hashlen(sc->sc_aalgo);
-
-		sc->sc_data_per_sector = bpp->sectorsize - sc->sc_alen;
-		/*
-		 * Some hash functions (like SHA1 and RIPEMD160) generates hash
-		 * which length is not multiple of 128 bits, but we want data
-		 * length to be multiple of 128, so we can encrypt without
-		 * padding. The line below rounds down data length to multiple
-		 * of 128 bits.
-		 */
-		sc->sc_data_per_sector -= sc->sc_data_per_sector % 16;
-
-		sc->sc_bytes_per_sector =
-		    (md->md_sectorsize - 1) / sc->sc_data_per_sector + 1;
-		sc->sc_bytes_per_sector *= bpp->sectorsize;
-	}
 
 	gp->softc = sc;
 	sc->sc_geom = gp;
@@ -776,10 +794,8 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	 * We don't open provider for writing only when user requested read-only
 	 * access.
 	 */
-	if (sc->sc_flags & G_ELI_FLAG_RO)
-		error = g_access(cp, 1, 0, 1);
-	else
-		error = g_access(cp, 1, 1, 1);
+	dcw = (sc->sc_flags & G_ELI_FLAG_RO) ? 0 : 1;
+	error = g_access(cp, 1, dcw, 1);
 	if (error != 0) {
 		if (req != NULL) {
 			gctl_error(req, "Cannot access %s (error=%d).",
@@ -791,22 +807,10 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 		goto failed;
 	}
 
-	sc->sc_sectorsize = md->md_sectorsize;
-	sc->sc_mediasize = bpp->mediasize;
-	if (!(sc->sc_flags & G_ELI_FLAG_ONETIME))
-		sc->sc_mediasize -= bpp->sectorsize;
-	if (!(sc->sc_flags & G_ELI_FLAG_AUTH))
-		sc->sc_mediasize -= (sc->sc_mediasize % sc->sc_sectorsize);
-	else {
-		sc->sc_mediasize /= sc->sc_bytes_per_sector;
-		sc->sc_mediasize *= sc->sc_sectorsize;
-	}
-
 	/*
 	 * Remember the keys in our softc structure.
 	 */
 	g_eli_mkey_propagate(sc, mkey);
-	sc->sc_ekeylen = md->md_keylen;
 
 	LIST_INIT(&sc->sc_workers);
 
@@ -867,8 +871,25 @@ g_eli_create(struct gctl_req *req, struct g_class *mp, struct g_provider *bpp,
 	G_ELI_DEBUG(0, "Device %s created.", pp->name);
 	G_ELI_DEBUG(0, "Encryption: %s %u", g_eli_algo2str(sc->sc_ealgo),
 	    sc->sc_ekeylen);
-	if (sc->sc_flags & G_ELI_FLAG_AUTH)
+	switch (sc->sc_ealgo) {
+	case CRYPTO_3DES_CBC:
+		gone_in(13,
+		    "support for GEOM_ELI volumes encrypted with 3des");
+		break;
+	case CRYPTO_BLF_CBC:
+		gone_in(13,
+		    "support for GEOM_ELI volumes encrypted with blowfish");
+		break;
+	}
+	if (sc->sc_flags & G_ELI_FLAG_AUTH) {
 		G_ELI_DEBUG(0, " Integrity: %s", g_eli_algo2str(sc->sc_aalgo));
+		switch (sc->sc_aalgo) {
+		case CRYPTO_MD5_HMAC:
+			gone_in(13,
+		    "support for GEOM_ELI volumes authenticated with hmac/md5");
+			break;
+		}
+	}
 	G_ELI_DEBUG(0, "    Crypto: %s",
 	    sc->sc_crypto == G_ELI_CRYPTO_SW ? "software" : "hardware");
 	return (gp);
@@ -886,7 +907,7 @@ failed:
 	mtx_destroy(&sc->sc_queue_mtx);
 	if (cp->provider != NULL) {
 		if (cp->acr == 1)
-			g_access(cp, -1, -1, -1);
+			g_access(cp, -1, -dcw, -1);
 		g_detach(cp);
 	}
 	g_destroy_consumer(cp);
@@ -967,6 +988,13 @@ g_eli_keyfiles_load(struct hmac_ctx *ctx, const char *provider)
 	for (i = 0; ; i++) {
 		snprintf(name, sizeof(name), "%s:geli_keyfile%d", provider, i);
 		keyfile = preload_search_by_type(name);
+		if (keyfile == NULL && i == 0) {
+			/*
+			 * If there is only one keyfile, allow simpler name.
+			 */
+			snprintf(name, sizeof(name), "%s:geli_keyfile", provider);
+			keyfile = preload_search_by_type(name);
+		}
 		if (keyfile == NULL)
 			return (i);	/* Return number of loaded keyfiles. */
 		data = preload_fetch_addr(keyfile);
@@ -1025,8 +1053,9 @@ g_eli_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	struct hmac_ctx ctx;
 	char passphrase[256];
 	u_char key[G_ELI_USERKEYLEN], mkey[G_ELI_DATAIVKEYLEN];
-	u_int i, nkey, nkeyfiles, tries;
+	u_int i, nkey, nkeyfiles, tries, showpass;
 	int error;
+        struct keybuf *keybuf;
 
 	g_trace(G_T_TOPOLOGY, "%s(%s, %s)", __func__, mp->name, pp->name);
 	g_topology_assert();
@@ -1051,7 +1080,8 @@ g_eli_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	if (md.md_provsize != pp->mediasize)
 		return (NULL);
 	/* Should we attach it on boot? */
-	if (!(md.md_flags & G_ELI_FLAG_BOOT))
+	if (!(md.md_flags & G_ELI_FLAG_BOOT) &&
+	    !(md.md_flags & G_ELI_FLAG_GELIBOOT))
 		return (NULL);
 	if (md.md_keys == 0x00) {
 		G_ELI_DEBUG(0, "No valid keys on %s.", pp->name);
@@ -1065,83 +1095,117 @@ g_eli_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		tries = g_eli_tries;
 	}
 
-	for (i = 0; i < tries; i++) {
-		g_eli_crypto_hmac_init(&ctx, NULL, 0);
+        if ((keybuf = get_keybuf()) != NULL) {
+                /* Scan the key buffer, try all GELI keys. */
+                for (i = 0; i < keybuf->kb_nents; i++) {
+                         if (keybuf->kb_ents[i].ke_type == KEYBUF_TYPE_GELI) {
+                                 memcpy(key, keybuf->kb_ents[i].ke_data,
+                                     sizeof(key));
 
-		/*
-		 * Load all key files.
-		 */
-		nkeyfiles = g_eli_keyfiles_load(&ctx, pp->name);
+                                 if (g_eli_mkey_decrypt_any(&md, key,
+                                     mkey, &nkey) == 0 ) {
+                                         explicit_bzero(key, sizeof(key));
+                                         goto have_key;
+                                 }
+                         }
+                }
+        }
 
-		if (nkeyfiles == 0 && md.md_iterations == -1) {
-			/*
-			 * No key files and no passphrase, something is
-			 * definitely wrong here.
-			 * geli(8) doesn't allow for such situation, so assume
-			 * that there was really no passphrase and in that case
-			 * key files are no properly defined in loader.conf.
-			 */
-			G_ELI_DEBUG(0,
-			    "Found no key files in loader.conf for %s.",
-			    pp->name);
-			return (NULL);
-		}
+        for (i = 0; i <= tries; i++) {
+                g_eli_crypto_hmac_init(&ctx, NULL, 0);
 
-		/* Ask for the passphrase if defined. */
-		if (md.md_iterations >= 0) {
-			printf("Enter passphrase for %s: ", pp->name);
-			cngets(passphrase, sizeof(passphrase),
-			    g_eli_visible_passphrase);
-		}
+                /*
+                 * Load all key files.
+                 */
+                nkeyfiles = g_eli_keyfiles_load(&ctx, pp->name);
 
-		/*
-		 * Prepare Derived-Key from the user passphrase.
-		 */
-		if (md.md_iterations == 0) {
-			g_eli_crypto_hmac_update(&ctx, md.md_salt,
-			    sizeof(md.md_salt));
-			g_eli_crypto_hmac_update(&ctx, passphrase,
-			    strlen(passphrase));
-			bzero(passphrase, sizeof(passphrase));
-		} else if (md.md_iterations > 0) {
-			u_char dkey[G_ELI_USERKEYLEN];
+                if (nkeyfiles == 0 && md.md_iterations == -1) {
+                        /*
+                         * No key files and no passphrase, something is
+                         * definitely wrong here.
+                         * geli(8) doesn't allow for such situation, so assume
+                         * that there was really no passphrase and in that case
+                         * key files are no properly defined in loader.conf.
+                         */
+                        G_ELI_DEBUG(0,
+                            "Found no key files in loader.conf for %s.",
+                            pp->name);
+                        return (NULL);
+                }
 
-			pkcs5v2_genkey(dkey, sizeof(dkey), md.md_salt,
-			    sizeof(md.md_salt), passphrase, md.md_iterations);
-			bzero(passphrase, sizeof(passphrase));
-			g_eli_crypto_hmac_update(&ctx, dkey, sizeof(dkey));
-			bzero(dkey, sizeof(dkey));
-		}
+                /* Ask for the passphrase if defined. */
+                if (md.md_iterations >= 0) {
+                        /* Try first with cached passphrase. */
+                        if (i == 0) {
+                                if (!g_eli_boot_passcache)
+                                        continue;
+                                memcpy(passphrase, cached_passphrase,
+                                    sizeof(passphrase));
+                        } else {
+                                printf("Enter passphrase for %s: ", pp->name);
+				showpass = g_eli_visible_passphrase;
+				if ((md.md_flags & G_ELI_FLAG_GELIDISPLAYPASS) != 0)
+					showpass = GETS_ECHOPASS;
+                                cngets(passphrase, sizeof(passphrase),
+				    showpass);
+                                memcpy(cached_passphrase, passphrase,
+                                    sizeof(passphrase));
+                        }
+                }
 
-		g_eli_crypto_hmac_final(&ctx, key, 0);
+                /*
+                 * Prepare Derived-Key from the user passphrase.
+                 */
+                if (md.md_iterations == 0) {
+                        g_eli_crypto_hmac_update(&ctx, md.md_salt,
+                            sizeof(md.md_salt));
+                        g_eli_crypto_hmac_update(&ctx, passphrase,
+                            strlen(passphrase));
+                        explicit_bzero(passphrase, sizeof(passphrase));
+                } else if (md.md_iterations > 0) {
+                        u_char dkey[G_ELI_USERKEYLEN];
 
-		/*
-		 * Decrypt Master-Key.
-		 */
-		error = g_eli_mkey_decrypt(&md, key, mkey, &nkey);
-		bzero(key, sizeof(key));
-		if (error == -1) {
-			if (i == tries - 1) {
-				G_ELI_DEBUG(0,
-				    "Wrong key for %s. No tries left.",
-				    pp->name);
-				g_eli_keyfiles_clear(pp->name);
-				return (NULL);
-			}
-			G_ELI_DEBUG(0, "Wrong key for %s. Tries left: %u.",
-			    pp->name, tries - i - 1);
-			/* Try again. */
-			continue;
-		} else if (error > 0) {
-			G_ELI_DEBUG(0,
-			    "Cannot decrypt Master Key for %s (error=%d).",
-			    pp->name, error);
-			g_eli_keyfiles_clear(pp->name);
-			return (NULL);
-		}
-		G_ELI_DEBUG(1, "Using Master Key %u for %s.", nkey, pp->name);
-		break;
-	}
+                        pkcs5v2_genkey(dkey, sizeof(dkey), md.md_salt,
+                            sizeof(md.md_salt), passphrase, md.md_iterations);
+                        bzero(passphrase, sizeof(passphrase));
+                        g_eli_crypto_hmac_update(&ctx, dkey, sizeof(dkey));
+                        explicit_bzero(dkey, sizeof(dkey));
+                }
+
+                g_eli_crypto_hmac_final(&ctx, key, 0);
+
+                /*
+                 * Decrypt Master-Key.
+                 */
+                error = g_eli_mkey_decrypt_any(&md, key, mkey, &nkey);
+                bzero(key, sizeof(key));
+                if (error == -1) {
+                        if (i == tries) {
+                                G_ELI_DEBUG(0,
+                                    "Wrong key for %s. No tries left.",
+                                    pp->name);
+                                g_eli_keyfiles_clear(pp->name);
+                                return (NULL);
+                        }
+                        if (i > 0) {
+                                G_ELI_DEBUG(0,
+                                    "Wrong key for %s. Tries left: %u.",
+                                    pp->name, tries - i);
+                        }
+                        /* Try again. */
+                        continue;
+                } else if (error > 0) {
+                        G_ELI_DEBUG(0,
+                            "Cannot decrypt Master Key for %s (error=%d).",
+                            pp->name, error);
+                        g_eli_keyfiles_clear(pp->name);
+                        return (NULL);
+                }
+                g_eli_keyfiles_clear(pp->name);
+                G_ELI_DEBUG(1, "Using Master Key %u for %s.", nkey, pp->name);
+                break;
+        }
+have_key:
 
 	/*
 	 * We have correct key, let's attach provider.
@@ -1170,9 +1234,9 @@ g_eli_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 	if (pp != NULL || cp != NULL)
 		return;	/* Nothing here. */
 
-	sbuf_printf(sb, "%s<KeysTotal>%ju</KeysTotal>", indent,
+	sbuf_printf(sb, "%s<KeysTotal>%ju</KeysTotal>\n", indent,
 	    (uintmax_t)sc->sc_ekeys_total);
-	sbuf_printf(sb, "%s<KeysAllocated>%ju</KeysAllocated>", indent,
+	sbuf_printf(sb, "%s<KeysAllocated>%ju</KeysAllocated>\n", indent,
 	    (uintmax_t)sc->sc_ekeys_allocated);
 	sbuf_printf(sb, "%s<Flags>", indent);
 	if (sc->sc_flags == 0)
@@ -1200,6 +1264,9 @@ g_eli_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		ADD_FLAG(G_ELI_FLAG_WOPEN, "W-OPEN");
 		ADD_FLAG(G_ELI_FLAG_DESTROY, "DESTROY");
 		ADD_FLAG(G_ELI_FLAG_RO, "READ-ONLY");
+		ADD_FLAG(G_ELI_FLAG_NODELETE, "NODELETE");
+		ADD_FLAG(G_ELI_FLAG_GELIBOOT, "GELIBOOT");
+		ADD_FLAG(G_ELI_FLAG_GELIDISPLAYPASS, "GELIDISPLAYPASS");
 #undef  ADD_FLAG
 	}
 	sbuf_printf(sb, "</Flags>\n");
@@ -1245,7 +1312,6 @@ g_eli_shutdown_pre_sync(void *arg, int howto)
 	int error;
 
 	mp = arg;
-	DROP_GIANT();
 	g_topology_lock();
 	LIST_FOREACH_SAFE(gp, &mp->geom, geom, gp2) {
 		sc = gp->softc;
@@ -1261,7 +1327,6 @@ g_eli_shutdown_pre_sync(void *arg, int howto)
 		}
 	}
 	g_topology_unlock();
-	PICKUP_GIANT();
 }
 
 static void
@@ -1284,3 +1349,4 @@ g_eli_fini(struct g_class *mp)
 
 DECLARE_GEOM_CLASS(g_eli_class, g_eli);
 MODULE_DEPEND(g_eli, crypto, 1, 1, 1);
+MODULE_VERSION(geom_eli, 0);

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/pci/pci_pir.c 181775 2008-08-15 20:51:31Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -117,7 +117,6 @@ SYSCTL_DECL(_hw_pci);
 #endif
 
 static uint32_t pci_irq_override_mask = PCI_IRQ_OVERRIDE_MASK;
-TUNABLE_INT("hw.pci.irq_override_mask", &pci_irq_override_mask);
 SYSCTL_INT(_hw_pci, OID_AUTO, irq_override_mask, CTLFLAG_RDTUN,
     &pci_irq_override_mask, PCI_IRQ_OVERRIDE_MASK,
     "Mask of allowed irqs to try to route when it has no good clue about\n"
@@ -138,9 +137,6 @@ pci_pir_open(void)
 	int i;
 	uint8_t ck, *cv;
 
-#ifdef XEN
-	return;
-#else	
 	/* Don't try if we've already found a table. */
 	if (pci_route_table != NULL)
 		return;
@@ -151,7 +147,7 @@ pci_pir_open(void)
 		sigaddr = bios_sigsearch(0, "_PIR", 4, 16, 0);
 	if (sigaddr == 0)
 		return;
-#endif
+
 	/* If we found something, check the checksum and length. */
 	/* XXX - Use pmap_mapdev()? */
 	pt = (struct PIR_table *)(uintptr_t)BIOS_PADDRTOVADDR(sigaddr);
@@ -264,8 +260,8 @@ pci_pir_create_links(struct PIR_entry *entry, struct PIR_intpin *intpin,
 }
 
 /*
- * Look to see if any of the function on the PCI device at bus/device have
- * an interrupt routed to intpin 'pin' by the BIOS.
+ * Look to see if any of the functions on the PCI device at bus/device
+ * have an interrupt routed to intpin 'pin' by the BIOS.
  */
 static uint8_t
 pci_pir_search_irq(int bus, int device, int pin)
@@ -274,6 +270,9 @@ pci_pir_search_irq(int bus, int device, int pin)
 	uint8_t func, maxfunc;
 
 	/* See if we have a valid device at function 0. */
+	value = pci_cfgregread(bus, device, 0, PCIR_VENDOR, 2);
+	if (value == PCIV_INVALID)
+		return (PCI_INVALID_IRQ);
 	value = pci_cfgregread(bus, device, 0, PCIR_HDRTYPE, 1);
 	if ((value & PCIM_HDRTYPE) > PCI_MAXHDRTYPE)
 		return (PCI_INVALID_IRQ);
@@ -284,8 +283,8 @@ pci_pir_search_irq(int bus, int device, int pin)
 
 	/* Scan all possible functions at this device. */
 	for (func = 0; func <= maxfunc; func++) {
-		value = pci_cfgregread(bus, device, func, PCIR_DEVVENDOR, 4);
-		if (value == 0xffffffff)
+		value = pci_cfgregread(bus, device, func, PCIR_VENDOR, 2);
+		if (value == PCIV_INVALID)
 			continue;
 		value = pci_cfgregread(bus, device, func, PCIR_INTPIN, 1);
 
@@ -482,11 +481,7 @@ pci_pir_biosroute(int bus, int device, int func, int pin, int irq)
 	args.eax = PCIBIOS_ROUTE_INTERRUPT;
 	args.ebx = (bus << 8) | (device << 3) | func;
 	args.ecx = (irq << 8) | (0xa + pin);
-#ifdef XEN
-	return (0);
-#else	
 	return (bios32(&args, PCIbios.ventry, GSEL(GCODE_SEL, SEL_KPL)));
-#endif
 }
 
 
@@ -659,7 +654,7 @@ pci_pir_probe(int bus, int require_parse)
 }
 
 /*
- * The driver for the new-bus psuedo device pir0 for the $PIR table.
+ * The driver for the new-bus pseudo device pir0 for the $PIR table.
  */
 
 static int

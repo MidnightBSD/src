@@ -27,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/umodem.4 239090 2012-08-06 08:59:39Z glebius $
+.\" $FreeBSD$
 .\"
-.Dd August 6, 2012
+.Dd April 26, 2017
 .Dt UMODEM 4
 .Os
 .Sh NAME
@@ -95,6 +95,20 @@ Sony Ericsson W810i phone
 .It
 Sonim XP5300 Force
 .El
+.Sh FILES
+.Bl -tag -width "/dev/ttyU*.init" -compact
+.It Pa /dev/ttyU*
+for callin ports
+.It Pa /dev/ttyU*.init
+.It Pa /dev/ttyU*.lock
+corresponding callin initial-state and lock-state devices
+.Pp
+.It Pa /dev/cuaU*
+for callout ports
+.It Pa /dev/cuaU*.init
+.It Pa /dev/cuaU*.lock
+corresponding callout initial-state and lock-state devices
+.El
 .Sh SEE ALSO
 .Xr tty 4 ,
 .Xr ucom 4 ,
@@ -108,7 +122,7 @@ appeared in
 This manual page was adopted from
 .Nx
 by
-.An Tom Rhodes Aq trhodes@FreeBSD.org
+.An Tom Rhodes Aq Mt trhodes@FreeBSD.org
 in April 2002.
 .Sh BUGS
 Only modems with multiplexed commands and data are supported

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_extattr.c 252438 2013-07-01 04:06:40Z gleb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 
@@ -68,6 +68,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_extattr.c 252438 2013-07-01 0
 #include <ufs/ufs/ufs_extern.h>
 
 #ifdef UFS_EXTATTR
+
+FEATURE(ufs_extattr, "ufs extended attribute support");
 
 static MALLOC_DEFINE(M_UFS_EXTATTR, "ufs_extattr", "ufs extended attribute");
 
@@ -597,8 +599,6 @@ ufs_extattr_enable(struct ufsmount *ump, int attrnamespace,
 
 	attribute = malloc(sizeof(struct ufs_extattr_list_entry),
 	    M_UFS_EXTATTR, M_WAITOK);
-	if (attribute == NULL)
-		return (ENOMEM);
 
 	if (!(ump->um_extattr.uepm_flags & UFS_EXTATTR_UEPM_STARTED)) {
 		error = EOPNOTSUPP;

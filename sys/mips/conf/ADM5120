@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/ADM5120 221753 2011-05-11 00:52:41Z gonzo $
+# $FreeBSD$
 
 ident		ADM5120
 

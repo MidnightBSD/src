@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_sparc64.c 185168 2008-11-22 12:34:49Z jkoshy $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pmc.h>

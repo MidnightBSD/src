@@ -1,7 +1,7 @@
 /*-
  * Test 0084:	Check very long BPF program.
  *
- * $FreeBSD: release/10.0.0/tools/regression/bpf/bpf_filter/tests/test0084.h 199722 2009-11-23 22:28:15Z jkim $
+ * $FreeBSD$
  */
 
 /* BPF program */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/librt/mq.c 213153 2010-09-25 01:57:47Z davidxu $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -272,8 +272,9 @@ __mq_unlink(const char *path)
 	return __sys_kmq_unlink(path);
 }
 
+#pragma weak mq_getfd_np
 int
-__mq_oshandle(mqd_t mqd)
+mq_getfd_np(mqd_t mqd)
 {
 
 	return (mqd->oshandle);

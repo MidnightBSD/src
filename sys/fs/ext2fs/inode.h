@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/inode.h 254283 2013-08-13 15:40:43Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _FS_EXT2FS_INODE_H_
@@ -56,10 +56,10 @@
 /*
  * The size of physical and logical block numbers in EXT2FS.
  */
-typedef	uint32_t e2fs_daddr_t;
-typedef	int64_t	e2fs_lbn_t;
-typedef	int64_t e4fs_daddr_t;
- 
+typedef uint32_t e2fs_daddr_t;
+typedef int64_t e2fs_lbn_t;
+typedef int64_t e4fs_daddr_t;
+
 /*
  * The inode is used to describe each active (or recently active) file in the
  * EXT2FS filesystem. It is composed of two types of information. The first
@@ -105,6 +105,7 @@ struct inode {
 	int32_t		i_ctimensec;	/* Last inode change time. */
 	int32_t		i_birthnsec;	/* Inode creation time. */
 	uint32_t	i_gen;		/* Generation number. */
+	uint64_t	i_facl;		/* EA block number. */
 	uint32_t	i_flags;	/* Status flags (chflags). */
 	uint32_t	i_db[NDADDR];	/* Direct disk blocks. */
 	uint32_t	i_ib[NIADDR];	/* Indirect disk blocks. */
@@ -150,8 +151,15 @@ struct inode {
 #define	IN_HASHED	0x0020		/* Inode is on hash list */
 #define	IN_LAZYMOD	0x0040		/* Modified, but don't write yet. */
 #define	IN_SPACECOUNTED	0x0080		/* Blocks to be freed in free count. */
-#define IN_LAZYACCESS   0x0100		/* Process IN_ACCESS after the
+#define	IN_LAZYACCESS   0x0100		/* Process IN_ACCESS after the
 					    suspension finished */
+
+/*
+ * These are translation flags for some attributes that Ext4
+ * passes as inode flags but that we cannot pass directly.
+ */
+#define	IN_E3INDEX	0x010000
+#define	IN_E4EXTENTS	0x020000
 
 #define i_devvp i_ump->um_devvp
 
@@ -171,11 +179,11 @@ struct indir {
 
 /* This overlays the fid structure (see mount.h). */
 struct ufid {
-	uint16_t ufid_len;	/* Length of structure. */
-	uint16_t ufid_pad;	/* Force 32-bit alignment. */
-	ino_t	 ufid_ino;	/* File number (ino). */
-	uint32_t ufid_gen;	/* Generation number. */
+	uint16_t ufid_len;		/* Length of structure. */
+	uint16_t ufid_pad;		/* Force 32-bit alignment. */
+	ino_t	ufid_ino;		/* File number (ino). */
+	uint32_t ufid_gen;		/* Generation number. */
 };
-#endif /* _KERNEL */
+#endif	/* _KERNEL */
 
-#endif /* !_FS_EXT2FS_INODE_H_ */
+#endif	/* !_FS_EXT2FS_INODE_H_ */

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/ndis/winx32_wrap.S 187948 2009-01-31 11:37:21Z obrien $
+ * $FreeBSD$
  */
 
 /* The 'ret' macro doesn't work in this file if GPROF is enabled. */

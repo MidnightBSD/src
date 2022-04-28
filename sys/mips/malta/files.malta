@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/malta/files.malta 255083 2013-08-30 20:28:35Z gonzo $
+# $FreeBSD$
 mips/malta/gt.c				standard
 mips/malta/gt_pci.c			standard
 mips/malta/gt_pci_bus_space.c			standard

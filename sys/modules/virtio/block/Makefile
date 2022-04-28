@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/virtio/block/Makefile 227652 2011-11-18 05:43:43Z grehan $
+# $FreeBSD$
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -23,14 +23,11 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/virtio/block
+.PATH: ${SRCTOP}/sys/dev/virtio/block
 
 KMOD=	virtio_blk
 SRCS=	virtio_blk.c
 SRCS+=	virtio_bus_if.h virtio_if.h
 SRCS+=	bus_if.h device_if.h 
-
-MFILES=	kern/bus_if.m kern/device_if.m \
-	dev/virtio/virtio_bus_if.m dev/virtio/virtio_if.m
 
 .include <bsd.kmod.mk>

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-national.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -67,7 +67,7 @@ ata_national_probe(device_t dev)
     if (pci_get_devid(dev) == ATA_SC1100) {
 	device_set_desc(dev, "National Geode SC1100 ATA33 controller");
 	ctlr->chipinit = ata_national_chipinit;
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_LOW_PRIORITY);
     }
     return ENXIO;
 }

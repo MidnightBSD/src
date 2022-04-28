@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/tools/regression/zfs/zpool/create/option-f_size_mismatch.t 185029 2008-11-17 20:49:29Z pjd $
+# $FreeBSD$
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh

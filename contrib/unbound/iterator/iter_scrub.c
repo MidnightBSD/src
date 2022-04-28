@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -53,16 +53,17 @@
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
 #include "util/alloc.h"
+#include "sldns/sbuffer.h"
 
 /** RRset flag used during scrubbing. The RRset is OK. */
 #define RRSET_SCRUB_OK	0x80
 
 /** remove rrset, update loop variables */
 static void
-remove_rrset(const char* str, ldns_buffer* pkt, struct msg_parse* msg, 
+remove_rrset(const char* str, sldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* prev, struct rrset_parse** rrset)
 {
-	if(verbosity >= VERB_QUERY 
+	if(verbosity >= VERB_QUERY && str
 		&& (*rrset)->dname_len <= LDNS_MAX_DOMAINLEN) {
 		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 		dname_pkt_copy(pkt, buf, (*rrset)->dname);
@@ -108,7 +109,7 @@ has_additional(uint16_t t)
 /** get additional name from rrset RR, return false if no name present */
 static int
 get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr, 
-	uint8_t** nm, size_t* nmlen, ldns_buffer* pkt) 
+	uint8_t** nm, size_t* nmlen, sldns_buffer* pkt) 
 {
 	size_t offset = 0;
 	size_t len, oldpos;
@@ -132,14 +133,14 @@ get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr,
 		default:
 			return 0;
 	}
-	len = ldns_read_uint16(rr->ttl_data+sizeof(uint32_t));
+	len = sldns_read_uint16(rr->ttl_data+sizeof(uint32_t));
 	if(len < offset+1)
 		return 0; /* rdata field too small */
 	*nm = rr->ttl_data+sizeof(uint32_t)+sizeof(uint16_t)+offset;
-	oldpos = ldns_buffer_position(pkt);
-	ldns_buffer_set_position(pkt, (size_t)(*nm - ldns_buffer_begin(pkt)));
+	oldpos = sldns_buffer_position(pkt);
+	sldns_buffer_set_position(pkt, (size_t)(*nm - sldns_buffer_begin(pkt)));
 	*nmlen = pkt_dname_len(pkt);
-	ldns_buffer_set_position(pkt, oldpos);
+	sldns_buffer_set_position(pkt, oldpos);
 	if(*nmlen == 0)
 		return 0;
 	return 1;
@@ -147,7 +148,7 @@ get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr,
 
 /** Place mark on rrsets in additional section they are OK */
 static void
-mark_additional_rrset(ldns_buffer* pkt, struct msg_parse* msg, 
+mark_additional_rrset(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* rrset)
 {
 	/* Mark A and AAAA for NS as appropriate additional section info. */
@@ -160,8 +161,8 @@ mark_additional_rrset(ldns_buffer* pkt, struct msg_parse* msg,
 	for(rr = rrset->rr_first; rr; rr = rr->next) {
 		if(get_additional_name(rrset, rr, &nm, &nmlen, pkt)) {
 			/* mark A */
-			hashvalue_t h = pkt_hash_rrset(pkt, nm, LDNS_RR_TYPE_A, 
-				rrset->rrset_class, 0);
+			hashvalue_type h = pkt_hash_rrset(pkt, nm,
+				LDNS_RR_TYPE_A, rrset->rrset_class, 0);
 			struct rrset_parse* r = msgparse_hashtable_lookup(
 				msg, pkt, h, 0, nm, nmlen, 
 				LDNS_RR_TYPE_A, rrset->rrset_class);
@@ -209,13 +210,17 @@ parse_get_cname_target(struct rrset_parse* rrset, uint8_t** sname,
 /** Synthesize CNAME from DNAME, false if too long */
 static int 
 synth_cname(uint8_t* qname, size_t qnamelen, struct rrset_parse* dname_rrset, 
-	uint8_t* alias, size_t* aliaslen, ldns_buffer* pkt)
+	uint8_t* alias, size_t* aliaslen, sldns_buffer* pkt)
 {
 	/* we already know that sname is a strict subdomain of DNAME owner */
 	uint8_t* dtarg = NULL;
 	size_t dtarglen;
 	if(!parse_get_cname_target(dname_rrset, &dtarg, &dtarglen))
 		return 0; 
+	if(qnamelen <= dname_rrset->dname_len)
+		return 0;
+	if(qnamelen == 0)
+		return 0;
 	log_assert(qnamelen > dname_rrset->dname_len);
 	/* DNAME from com. to net. with qname example.com. -> example.net. */
 	/* so: \3com\0 to \3net\0 and qname \7example\3com\0 */
@@ -233,7 +238,7 @@ static struct rrset_parse*
 synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias, 
 	size_t aliaslen, struct regional* region, struct msg_parse* msg, 
 	struct rrset_parse* rrset, struct rrset_parse* prev,
-	struct rrset_parse* nx, ldns_buffer* pkt)
+	struct rrset_parse* nx, sldns_buffer* pkt)
 {
 	struct rrset_parse* cn = (struct rrset_parse*)regional_alloc(region,
 		sizeof(struct rrset_parse));
@@ -264,8 +269,8 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		sizeof(uint32_t)+sizeof(uint16_t)+aliaslen);
 	if(!cn->rr_first->ttl_data)
 		return NULL;
-	ldns_write_uint32(cn->rr_first->ttl_data, 0); /* TTL = 0 */
-	ldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
+	sldns_write_uint32(cn->rr_first->ttl_data, 0); /* TTL = 0 */
+	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
 	cn->rr_first->size = sizeof(uint16_t)+aliaslen;
 
@@ -287,7 +292,7 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 
 /** check if DNAME applies to a name */
 static int
-pkt_strict_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
+pkt_strict_sub(sldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
 {
 	uint8_t buf1[LDNS_MAX_DOMAINLEN+1];
 	uint8_t buf2[LDNS_MAX_DOMAINLEN+1];
@@ -299,7 +304,7 @@ pkt_strict_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
 
 /** check subdomain with decompression */
 static int
-pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
+pkt_sub(sldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	dname_pkt_copy(pkt, buf, comprname);
@@ -308,11 +313,23 @@ pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 
 /** check subdomain with decompression, compressed is parent */
 static int
-sub_of_pkt(ldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
+sub_of_pkt(sldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	dname_pkt_copy(pkt, buf, comprname);
 	return dname_subdomain_c(zone, buf);
+}
+
+/** Check if there are SOA records in the authority section (negative) */
+static int
+soa_in_auth(struct msg_parse* msg)
+{
+	struct rrset_parse* rrset;
+	for(rrset = msg->rrset_first; rrset; rrset = rrset->rrset_all_next)
+		if(rrset->type == LDNS_RR_TYPE_SOA &&
+			rrset->section == LDNS_SECTION_AUTHORITY) 
+			return 1;
+	return 0;
 }
 
 /**
@@ -327,7 +344,7 @@ sub_of_pkt(ldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
  * @return 0 on error.
  */
 static int
-scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, struct regional* region)
 {
 	uint8_t* sname = qinfo->qname;
@@ -371,7 +388,7 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 				/* check next cname */
 				uint8_t* t = NULL;
 				size_t tlen = 0;
-				if(!parse_get_cname_target(rrset, &t, &tlen))
+				if(!parse_get_cname_target(nx, &t, &tlen))
 					return 0;
 				if(dname_pkt_compare(pkt, alias, t) == 0) {
 					/* it's OK and better capitalized */
@@ -404,7 +421,45 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 
 		/* Follow the CNAME chain. */
 		if(rrset->type == LDNS_RR_TYPE_CNAME) {
+			struct rrset_parse* nx = rrset->rrset_all_next;
 			uint8_t* oldsname = sname;
+			/* see if the next one is a DNAME, if so, swap them */
+			if(nx && nx->section == LDNS_SECTION_ANSWER &&
+				nx->type == LDNS_RR_TYPE_DNAME &&
+				nx->rr_count == 1 &&
+				pkt_strict_sub(pkt, sname, nx->dname)) {
+				/* there is a DNAME after this CNAME, it 
+				 * is in the ANSWER section, and the DNAME
+				 * applies to the name we cover */
+				/* check if the alias of the DNAME equals
+				 * this CNAME */
+				uint8_t alias[LDNS_MAX_DOMAINLEN+1];
+				size_t aliaslen = 0;
+				uint8_t* t = NULL;
+				size_t tlen = 0;
+				if(synth_cname(sname, snamelen, nx, alias,
+					&aliaslen, pkt) &&
+					parse_get_cname_target(rrset, &t, &tlen) &&
+			   		dname_pkt_compare(pkt, alias, t) == 0) {
+					/* the synthesized CNAME equals the
+					 * current CNAME.  This CNAME is the
+					 * one that the DNAME creates, and this
+					 * CNAME is better capitalised */
+					verbose(VERB_ALGO, "normalize: re-order of DNAME and its CNAME");
+					if(prev) prev->rrset_all_next = nx;
+					else msg->rrset_first = nx;
+					if(nx->rrset_all_next == NULL)
+						msg->rrset_last = rrset;
+					rrset->rrset_all_next =
+						nx->rrset_all_next;
+					nx->rrset_all_next = rrset;
+					/* prev = nx; unused, enable if there
+					 * is other rrset removal code after
+					 * this */
+				}
+			}
+
+			/* move to next name in CNAME chain */
 			if(!parse_get_cname_target(rrset, &sname, &snamelen))
 				return 0;
 			prev = rrset;
@@ -458,6 +513,19 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+			/* we don't want NS sets for NXDOMAIN answers,
+			 * because they could contain poisonous contents,
+			 * from. eg. fragmentation attacks, inserted after
+			 * long RRSIGs in the packet get to the packet
+			 * border and such */
+			/* also for NODATA answers */
+			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN ||
+			   (FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NOERROR
+			    && soa_in_auth(msg) && msg->an_rrsets == 0)) {
+				remove_rrset("normalize: removing irrelevant "
+					"RRset:", pkt, msg, prev, &rrset);
+				continue;
+			}
 			if(nsset == NULL) {
 				nsset = rrset;
 			} else {
@@ -465,6 +533,24 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+		}
+		/* if this is type DS and we query for type DS we just got
+		 * a referral answer for our type DS query, fix packet */
+		if(rrset->type==LDNS_RR_TYPE_DS &&
+			qinfo->qtype == LDNS_RR_TYPE_DS &&
+			dname_pkt_compare(pkt, qinfo->qname, rrset->dname) == 0) {
+			rrset->section = LDNS_SECTION_ANSWER;
+			msg->ancount = rrset->rr_count + rrset->rrsig_count;
+			msg->nscount = 0;
+			msg->arcount = 0;
+			msg->an_rrsets = 1;
+			msg->ns_rrsets = 0;
+			msg->ar_rrsets = 0;
+			msg->rrset_count = 1;
+			msg->rrset_first = rrset;
+			msg->rrset_last = rrset;
+			rrset->rrset_all_next = NULL;
+			return 1;
 		}
 		mark_additional_rrset(pkt, msg, rrset);
 		prev = rrset;
@@ -514,13 +600,13 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
  * @param rrset: to store.
  */
 static void
-store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
+store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	struct rrset_parse* rrset)
 {
 	struct ub_packed_rrset_key* k;
 	struct packed_rrset_data* d;
 	struct rrset_ref ref;
-	uint32_t now = *env->now;
+	time_t now = *env->now;
 
 	k = alloc_special_obtain(env->alloc);
 	if(!k)
@@ -538,18 +624,6 @@ store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
 }
 
-/** Check if there are SOA records in the authority section (negative) */
-static int
-soa_in_auth(struct msg_parse* msg)
-{
-	struct rrset_parse* rrset;
-	for(rrset = msg->rrset_first; rrset; rrset = rrset->rrset_all_next)
-		if(rrset->type == LDNS_RR_TYPE_SOA &&
-			rrset->section == LDNS_SECTION_AUTHORITY) 
-			return 1;
-	return 0;
-}
- 
 /**
  * Check if right hand name in NSEC is within zone
  * @param rrset: the NSEC rrset
@@ -565,7 +639,7 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
 	log_assert(rrset->type == LDNS_RR_TYPE_NSEC);
 	for(rr = rrset->rr_first; rr; rr = rr->next) {
 		rhs = rr->ttl_data+4+2;
-		len = ldns_read_uint16(rr->ttl_data+4);
+		len = sldns_read_uint16(rr->ttl_data+4);
 		if(!dname_valid(rhs, len)) {
 			/* malformed domain name in rdata */
 			return 1;
@@ -594,7 +668,7 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
  * @return 0 on error.
  */
 static int
-scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct module_env* env,
 	struct iter_env* ie)
 {
@@ -637,7 +711,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 	 * children of the originating zone. The idea here is that, 
 	 * as far as we know, the server that we contacted is ONLY 
 	 * authoritative for the originating zone. It, of course, MAY 
-	 * be authoriative for any other zones, and of course, MAY 
+	 * be authoritative for any other zones, and of course, MAY 
 	 * NOT be authoritative for some subdomains of the originating 
 	 * zone. */
 	prev = NULL;
@@ -646,14 +720,16 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 
 		/* remove private addresses */
 		if( (rrset->type == LDNS_RR_TYPE_A || 
-			rrset->type == LDNS_RR_TYPE_AAAA) &&
-			priv_rrset_bad(ie->priv, pkt, rrset)) {
+			rrset->type == LDNS_RR_TYPE_AAAA)) {
 
 			/* do not set servfail since this leads to too
 			 * many drops of other people using rfc1918 space */
-			remove_rrset("sanitize: removing public name with "
-				"private address", pkt, msg, prev, &rrset);
-			continue;
+			/* also do not remove entire rrset, unless all records
+			 * in it are bad */
+			if(priv_rrset_bad(ie->priv, pkt, rrset)) {
+				remove_rrset(NULL, pkt, msg, prev, &rrset);
+				continue;
+			}
 		}
 		
 		/* skip DNAME records -- they will always be followed by a 
@@ -677,7 +753,9 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 				 * (we dont want its glue that was approved
 				 * during the normalize action) */
 				del_addi = 1;
-			} else if(!env->cfg->harden_glue) {
+			} else if(!env->cfg->harden_glue && (
+				rrset->type == LDNS_RR_TYPE_A ||
+				rrset->type == LDNS_RR_TYPE_AAAA)) {
 				/* store in cache! Since it is relevant
 				 * (from normalize) it will be picked up 
 				 * from the cache to be used later */
@@ -711,7 +789,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 int 
-scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_message(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct regional* region,
 	struct module_env* env, struct iter_env* ie)
 {

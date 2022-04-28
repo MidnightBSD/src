@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_check_magic.c 238856 2012-07-28 06:38:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -62,7 +62,7 @@ errmsg(const char *m)
 	}
 }
 
-static void
+static __LA_DEAD void
 diediedie(void)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__) && defined(_DEBUG)

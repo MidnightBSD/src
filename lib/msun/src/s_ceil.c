@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_ceil.c 176305 2008-02-15 07:01:40Z bde $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ceil(x)

@@ -1,10 +1,11 @@
 # Makefile for libopie
 #
-# $FreeBSD: release/10.0.0/lib/libopie/Makefile 225227 2011-08-28 09:26:48Z kib $
+# $FreeBSD$
 #
-OPIE_DIST?=	${.CURDIR}/../../contrib/opie
+PACKAGE=lib${LIB}
+OPIE_DIST?=	${SRCTOP}/contrib/opie
 DIST_DIR=	${OPIE_DIST}/${.CURDIR:T}
-SHLIB_MAJOR=    7
+SHLIB_MAJOR=    8
 
 KEYFILE?=	\"/etc/opiekeys\"
 
@@ -27,8 +28,7 @@ CFLAGS+=	-DINSECURE_OVERRIDE -DPATH_ACCESS_FILE=${ACCESSFILE}
 
 WARNS?=	0
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 MAN=	${OPIE_DIST}/opie.4 ${OPIE_DIST}/opiekeys.5 ${OPIE_DIST}/opieaccess.5
 

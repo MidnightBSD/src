@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)telldir.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/telldir.c 235647 2012-05-19 12:44:27Z gleb $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -47,32 +47,68 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/telldir.c 235647 2012-05-19 12:4
 #include "telldir.h"
 
 /*
- * The option SINGLEUSE may be defined to say that a telldir
- * cookie may be used only once before it is freed. This option
- * is used to avoid having memory usage grow without bound.
- */
-#define SINGLEUSE
-
-/*
  * return a pointer into a directory
  */
 long
-telldir(dirp)
-	DIR *dirp;
+telldir(DIR *dirp)
 {
-	struct ddloc *lp;
+	struct ddloc_mem *lp, *flp;
+	union ddloc_packed ddloc;
 
-	if ((lp = (struct ddloc *)malloc(sizeof(struct ddloc))) == NULL)
-		return (-1);
 	if (__isthreaded)
 		_pthread_mutex_lock(&dirp->dd_lock);
-	lp->loc_index = dirp->dd_td->td_loccnt++;
-	lp->loc_seek = dirp->dd_seek;
-	lp->loc_loc = dirp->dd_loc;
-	LIST_INSERT_HEAD(&dirp->dd_td->td_locq, lp, loc_lqe);
+	/* 
+	 * Outline:
+	 * 1) If the directory position fits in a packed structure, return that.
+	 * 2) Otherwise, see if it's already been recorded in the linked list
+	 * 3) Otherwise, malloc a new one
+	 */
+	if (dirp->dd_seek < (1ul << DD_SEEK_BITS) &&
+	    dirp->dd_loc < (1ul << DD_LOC_BITS)) {
+		ddloc.s.is_packed = 1;
+		ddloc.s.loc = dirp->dd_loc;
+		ddloc.s.seek = dirp->dd_seek;
+		goto out;
+	}
+
+	flp = NULL;
+	LIST_FOREACH(lp, &dirp->dd_td->td_locq, loc_lqe) {
+		if (lp->loc_seek == dirp->dd_seek) {
+			if (flp == NULL)
+				flp = lp;
+			if (lp->loc_loc == dirp->dd_loc)
+				break;
+		} else if (flp != NULL) {
+			lp = NULL;
+			break;
+		}
+	}
+	if (lp == NULL) {
+		lp = malloc(sizeof(struct ddloc_mem));
+		if (lp == NULL) {
+			if (__isthreaded)
+				_pthread_mutex_unlock(&dirp->dd_lock);
+			return (-1);
+		}
+		lp->loc_index = dirp->dd_td->td_loccnt++;
+		lp->loc_seek = dirp->dd_seek;
+		lp->loc_loc = dirp->dd_loc;
+		if (flp != NULL)
+			LIST_INSERT_BEFORE(flp, lp, loc_lqe);
+		else
+			LIST_INSERT_HEAD(&dirp->dd_td->td_locq, lp, loc_lqe);
+	}
+	ddloc.i.is_packed = 0;
+	/* 
+	 * Technically this assignment could overflow on 32-bit architectures,
+	 * but we would get ENOMEM long before that happens.
+	 */
+	ddloc.i.index = lp->loc_index;
+
+out:
 	if (__isthreaded)
 		_pthread_mutex_unlock(&dirp->dd_lock);
-	return (lp->loc_index);
+	return (ddloc.l);
 }
 
 /*
@@ -80,45 +116,87 @@ telldir(dirp)
  * Only values returned by "telldir" should be passed to seekdir.
  */
 void
-_seekdir(dirp, loc)
-	DIR *dirp;
-	long loc;
+_seekdir(DIR *dirp, long loc)
 {
-	struct ddloc *lp;
+	struct ddloc_mem *lp;
 	struct dirent *dp;
+	union ddloc_packed ddloc;
+	off_t loc_seek;
+	long loc_loc;
 
-	LIST_FOREACH(lp, &dirp->dd_td->td_locq, loc_lqe) {
-		if (lp->loc_index == loc)
-			break;
+	ddloc.l = loc;
+
+	if (ddloc.s.is_packed) {
+		loc_seek = ddloc.s.seek;
+		loc_loc = ddloc.s.loc;
+	} else {
+		LIST_FOREACH(lp, &dirp->dd_td->td_locq, loc_lqe) {
+			if (lp->loc_index == ddloc.i.index)
+				break;
+		}
+		if (lp == NULL)
+			return;
+
+		loc_seek = lp->loc_seek;
+		loc_loc = lp->loc_loc;
 	}
-	if (lp == NULL)
+	if (loc_loc == dirp->dd_loc && loc_seek == dirp->dd_seek)
 		return;
-	if (lp->loc_loc == dirp->dd_loc && lp->loc_seek == dirp->dd_seek)
-		goto found;
-	(void) lseek(dirp->dd_fd, (off_t)lp->loc_seek, SEEK_SET);
-	dirp->dd_seek = lp->loc_seek;
+
+	/* If it's within the same chunk of data, don't bother reloading. */
+	if (loc_seek == dirp->dd_seek) {
+		/*
+		 * If we go back to 0 don't make the next readdir
+		 * trigger a call to getdirentries().
+		 */
+		if (loc_loc == 0)
+			dirp->dd_flags |= __DTF_SKIPREAD;
+		dirp->dd_loc = loc_loc;
+		return;
+	}
+	(void) lseek(dirp->dd_fd, (off_t)loc_seek, SEEK_SET);
+	dirp->dd_seek = loc_seek;
 	dirp->dd_loc = 0;
-	while (dirp->dd_loc < lp->loc_loc) {
+	dirp->dd_flags &= ~__DTF_SKIPREAD; /* current contents are invalid */
+	while (dirp->dd_loc < loc_loc) {
 		dp = _readdir_unlocked(dirp, 0);
 		if (dp == NULL)
 			break;
 	}
-found:
-#ifdef SINGLEUSE
-	LIST_REMOVE(lp, loc_lqe);
-	free((caddr_t)lp);
-#endif
+}
+
+/*
+ * After readdir returns the last entry in a block, a call to telldir
+ * returns a location that is after the end of that last entry.
+ * However, that location doesn't refer to a valid directory entry.
+ * Ideally, the call to telldir would return a location that refers to
+ * the first entry in the next block.  That location is not known
+ * until the next block is read, so readdir calls this function after
+ * fetching a new block to fix any such telldir locations.
+ */
+void
+_fixtelldir(DIR *dirp, long oldseek, long oldloc)
+{
+	struct ddloc_mem *lp;
+
+	lp = LIST_FIRST(&dirp->dd_td->td_locq);
+	if (lp != NULL) {
+		if (lp->loc_loc == oldloc &&
+		    lp->loc_seek == oldseek) {
+			lp->loc_seek = dirp->dd_seek;
+			lp->loc_loc = dirp->dd_loc;
+		}
+	}
 }
 
 /*
  * Reclaim memory for telldir cookies which weren't used.
  */
 void
-_reclaim_telldir(dirp)
-	DIR *dirp;
+_reclaim_telldir(DIR *dirp)
 {
-	struct ddloc *lp;
-	struct ddloc *templp;
+	struct ddloc_mem *lp;
+	struct ddloc_mem *templp;
 
 	lp = LIST_FIRST(&dirp->dd_td->td_locq);
 	while (lp != NULL) {

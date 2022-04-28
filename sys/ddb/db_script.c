@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_script.c 174919 2007-12-26 10:51:07Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -294,7 +294,7 @@ db_script_exec(const char *scriptname, int warnifnotfound)
 	buffer = drd->drd_buffer;
 	strcpy(buffer, dsp->ds_script);
 	while ((command = strsep(&buffer, ";")) != NULL) {
-		db_printf("db:%d:%s> %s\n", db_recursion, scriptname,
+		db_printf("db:%d:%s> %s\n", db_recursion, dsp->ds_scriptname,
 		    command);
 		db_command_trim(&command);
 		prev_jb = kdb_jmpbuf(jb);
@@ -339,7 +339,7 @@ db_script_kdbenter(const char *eventname)
  * List scripts and their contents.
  */
 void
-db_scripts_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_scripts_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	int i;
@@ -357,7 +357,7 @@ db_scripts_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
  * Execute a script.
  */
 void
-db_run_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
+db_run_cmd(db_expr_t addr, bool have_addr, db_expr_t count, char *modif)
 {
 	int t;
 
@@ -381,7 +381,7 @@ db_run_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count, char *modif)
  * we do not wish to use db_lex's token processing.
  */
 void
-db_script_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_script_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	char *buf, scriptname[DB_MAXSCRIPTNAME];
@@ -427,7 +427,7 @@ db_script_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
  * Remove a named script.
  */
 void
-db_unscript_cmd(db_expr_t addr, boolean_t have_addr, db_expr_t count,
+db_unscript_cmd(db_expr_t addr, bool have_addr, db_expr_t count,
     char *modif)
 {
 	int error, t;

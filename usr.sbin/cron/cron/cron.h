@@ -17,7 +17,7 @@
 
 /* cron.h - header for vixie's cron
  *
- * $FreeBSD: release/10.0.0/usr.sbin/cron/cron/cron.h 242101 2012-10-25 22:54:29Z sobomax $
+ * $FreeBSD$
  *
  * vix 14nov88 [rest of log is in RCS]
  * vix 14jan87 [0 or 7 can be sunday; thanks, mwm@berkeley]
@@ -73,7 +73,6 @@
 #define	MAX_COMMAND	1000	/* max length of internally generated cmd */
 #define	MAX_ENVSTR	1000	/* max length of envvar=value\0 strings */
 #define	MAX_TEMPSTR	100	/* obvious */
-#define	MAX_UNAME	20	/* max length of username, should be overkill */
 #define	ROOT_UID	0	/* don't change this, it really must be root */
 #define	ROOT_USER	"root"	/* ditto */
 #define	SYS_NAME	"*system*" /* magic owner name for system crontab */
@@ -169,19 +168,31 @@ typedef	struct _entry {
 #endif
 	char		**envp;
 	char		*cmd;
-	bitstr_t	bit_decl(second, SECOND_COUNT);
-	bitstr_t	bit_decl(minute, MINUTE_COUNT);
-	bitstr_t	bit_decl(hour,   HOUR_COUNT);
-	bitstr_t	bit_decl(dom,    DOM_COUNT);
-	bitstr_t	bit_decl(month,  MONTH_COUNT);
-	bitstr_t	bit_decl(dow,    DOW_COUNT);
+	union {
+		struct {
+			bitstr_t	bit_decl(second, SECOND_COUNT);
+			bitstr_t	bit_decl(minute, MINUTE_COUNT);
+			bitstr_t	bit_decl(hour,   HOUR_COUNT);
+			bitstr_t	bit_decl(dom,    DOM_COUNT);
+			bitstr_t	bit_decl(month,  MONTH_COUNT);
+			bitstr_t	bit_decl(dow,    DOW_COUNT);
+		};
+		struct {
+			time_t	lastexit;
+			time_t	interval;
+			pid_t	child;
+		};
+	};
 	int		flags;
 #define	DOM_STAR	0x01
 #define	DOW_STAR	0x02
 #define	WHEN_REBOOT	0x04
-#define	RUN_AT	0x08
+#define	RUN_AT		0x08
 #define	NOT_UNTIL	0x10
 #define	SEC_RES		0x20
+#define	INTERVAL	0x40
+#define	DONT_LOG	0x80
+#define	MAIL_WHEN_ERR	0x100
 	time_t	lastrun;
 } entry;
 
@@ -219,7 +230,7 @@ void		set_cron_uid(void),
 		unget_char(int, FILE *),
 		free_entry(entry *),
 		skip_comments(FILE *),
-		log_it(char *, int, char *, char *),
+		log_it(char *, int, char *, const char *),
 		log_close(void);
 
 int		job_runqueue(void),
@@ -248,7 +259,7 @@ user		*load_user(int, struct passwd *, char *),
 entry		*load_entry(FILE *, void (*)(char *),
 				 struct passwd *, char **);
 
-FILE		*cron_popen(char *, char *, entry *);
+FILE		*cron_popen(char *, char *, entry *, PID_T *);
 
 
 				/* in the C tradition, we only create

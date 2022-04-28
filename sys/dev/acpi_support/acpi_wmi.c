@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_wmi.c 241537 2012-10-14 09:31:11Z avg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for acpi-wmi mapping, provides an interface for vendor specific

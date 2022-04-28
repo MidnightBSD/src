@@ -1,6 +1,8 @@
-/*	$NetBSD: cd9660_eltorito.h,v 1.5 2009/07/04 14:31:38 ahoka Exp $	*/
+/*	$NetBSD: cd9660_eltorito.h,v 1.6 2017/01/24 11:22:43 nonaka Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
  * Perez-Rathke and Ram Vedam.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/cd9660_eltorito.h 214921 2010-11-07 16:05:04Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef _CD9660_ELTORITO_H_
@@ -42,6 +44,7 @@
 #define	ET_SYS_X86	0
 #define	ET_SYS_PPC	1
 #define	ET_SYS_MAC	2
+#define	ET_SYS_EFI	0xef	/* Platform ID at section header entry */
 
 #define ET_BOOT_ENTRY_SIZE 0x20
 
@@ -147,6 +150,7 @@ struct cd9660_boot_image {
 	u_char targetMode;
 	u_char system;
 	u_char bootable;
+	u_char platform_id;		/* for section header entry */
 	/*
 	 * If the boot image exists in the filesystem
 	 * already, this is a pointer to that node. For the sake

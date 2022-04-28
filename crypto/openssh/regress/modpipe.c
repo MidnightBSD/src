@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $OpenBSD: modpipe.c,v 1.5 2013/05/10 03:46:14 djm Exp $ */
+/* $OpenBSD: modpipe.c,v 1.6 2013/11/21 03:16:47 djm Exp $ */
 
 #include "includes.h"
 
@@ -25,35 +25,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
+#ifdef HAVE_ERR_H
+# include <err.h>
+#endif
 #include "openbsd-compat/getopt_long.c"
-
-static void err(int, const char *, ...) __attribute__((format(printf, 2, 3)));
-static void errx(int, const char *, ...) __attribute__((format(printf, 2, 3)));
-
-static void
-err(int r, const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	fprintf(stderr, "%s: ", strerror(errno));
-	vfprintf(stderr, fmt, args);
-	fputc('\n', stderr);
-	va_end(args);
-	exit(r);
-}
-
-static void
-errx(int r, const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	fputc('\n', stderr);
-	va_end(args);
-	exit(r);
-}
 
 static void
 usage(void)
@@ -68,7 +43,7 @@ usage(void)
 #define MAX_MODIFICATIONS 256
 struct modification {
 	enum { MOD_XOR, MOD_AND_OR } what;
-	u_int64_t offset;
+	unsigned long long offset;
 	u_int8_t m1, m2;
 };
 
@@ -79,7 +54,7 @@ parse_modification(const char *s, struct modification *m)
 	int n, m1, m2;
 
 	bzero(m, sizeof(*m));
-	if ((n = sscanf(s, "%16[^:]%*[:]%lli%*[:]%i%*[:]%i",
+	if ((n = sscanf(s, "%16[^:]%*[:]%llu%*[:]%i%*[:]%i",
 	    what, &m->offset, &m1, &m2)) < 3)
 		errx(1, "Invalid modification spec \"%s\"", s);
 	if (strcasecmp(what, "xor") == 0) {

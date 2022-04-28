@@ -39,7 +39,7 @@
 
 #include <machine/armreg.h>
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fiq_subr.S 248361 2013-03-16 02:48:49Z andrew $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MODE_CHANGE_NOP should be inserted between a mode change and a
@@ -52,14 +52,14 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fiq_subr.S 248361 2013-03-16 02:4
 #endif
 
 #define	SWITCH_TO_FIQ_MODE						\
-	mrs	r2, cpsr_all					;	\
+	mrs	r2, cpsr					;	\
 	mov	r3, r2						;	\
 	bic	r2, r2, #(PSR_MODE)				;	\
 	orr	r2, r2, #(PSR_FIQ32_MODE)			;	\
-	msr	cpsr_all, r2
+	msr	cpsr_fsxc, r2
 
 #define	BACK_TO_SVC_MODE						\
-	msr	cpsr_all, r3
+	msr	cpsr_fsxc, r3
 
 /*
  * fiq_getregs:
@@ -91,13 +91,3 @@ ENTRY(fiq_setregs)
 	RET
 END(fiq_setregs)
 
-/*
- * fiq_nullhandler:
- *
- *	Null handler copied down to the FIQ vector when the last
- *	FIQ handler is removed.
- */
-	.global	_C_LABEL(fiq_nullhandler), _C_LABEL(fiq_nullhandler_end)
-_C_LABEL(fiq_nullhandler):
-	subs	pc, lr, #4
-_C_LABEL(fiq_nullhandler_end):

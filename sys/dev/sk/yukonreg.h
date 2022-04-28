@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sk/yukonreg.h 158070 2006-04-27 05:59:09Z yongari $
+ * $FreeBSD$
  */
 
 /* General Purpose Status Register (GPSR) */
@@ -165,7 +165,7 @@
 /* SMI Data Register (SMIDR) */
 #define YUKON_SMIDR		0x0084
 
-/* PHY Addres Register (PAR) */
+/* PHY Address Register (PAR) */
 #define YUKON_PAR		0x0088
 
 #define YU_PAR_MIB_CLR		0x0020	/* MIB Counters Clear Mode */

@@ -33,15 +33,13 @@
 static char sccsid[] = "@(#)sigsetops.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sigsetops.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <signal.h>
 
 int
-sigaddset(set, signo)
-	sigset_t *set;
-	int signo;
+sigaddset(sigset_t *set, int signo)
 {
 
 	if (signo <= 0 || signo > _SIG_MAXSIG) {
@@ -53,9 +51,7 @@ sigaddset(set, signo)
 }
 
 int
-sigdelset(set, signo)
-	sigset_t *set;
-	int signo;
+sigdelset(sigset_t *set, int signo)
 {
 
 	if (signo <= 0 || signo > _SIG_MAXSIG) {
@@ -67,8 +63,7 @@ sigdelset(set, signo)
 }
 
 int
-sigemptyset(set)
-	sigset_t *set;
+sigemptyset(sigset_t *set)
 {
 	int i;
 
@@ -78,8 +73,7 @@ sigemptyset(set)
 }
 
 int
-sigfillset(set)
-	sigset_t *set;
+sigfillset(sigset_t *set)
 {
 	int i;
 
@@ -89,9 +83,38 @@ sigfillset(set)
 }
 
 int
-sigismember(set, signo)
-	const sigset_t *set;
-	int signo;
+sigorset(sigset_t *dest, const sigset_t *left, const sigset_t *right)
+{
+	int i;
+
+	for (i = 0; i < _SIG_WORDS; i++)
+		dest->__bits[i] = left->__bits[i] | right->__bits[i];
+	return (0);
+}
+
+int
+sigandset(sigset_t *dest, const sigset_t *left, const sigset_t *right)
+{
+	int i;
+
+	for (i = 0; i < _SIG_WORDS; i++)
+		dest->__bits[i] = left->__bits[i] & right->__bits[i];
+	return (0);
+}
+
+int
+sigisemptyset(const sigset_t *set)
+{
+	int i;
+
+	for (i = 0; i < _SIG_WORDS; i++)
+		if (set->__bits[i] != 0)
+			return (0);
+	return (1);
+}
+
+int
+sigismember(const sigset_t *set, int signo)
 {
 
 	if (signo <= 0 || signo > _SIG_MAXSIG) {

@@ -14,7 +14,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/ctm/ctm_rmail/error.c 76300 2001-05-06 03:03:45Z kris $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdio.h>

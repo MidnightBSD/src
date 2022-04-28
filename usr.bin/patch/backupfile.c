@@ -13,7 +13,7 @@
  * David MacKenzie <djm@ai.mit.edu>. Some algorithms adapted from GNU Emacs.
  *
  * $OpenBSD: backupfile.c,v 1.20 2009/10/27 23:59:41 deraadt Exp $
- * $FreeBSD: release/10.0.0/usr.bin/patch/backupfile.c 246091 2013-01-29 20:05:16Z delphij $
+ * $FreeBSD$
  */
 
 #include <ctype.h>
@@ -219,11 +219,11 @@ invalid_arg(const char *kind, const char *value, int problem)
 }
 
 static const char *backup_args[] = {
-	"never", "simple", "nil", "existing", "t", "numbered", 0
+	"none", "never", "simple", "nil", "existing", "t", "numbered", 0
 };
 
 static enum backup_type backup_types[] = {
-	simple, simple, numbered_existing,
+	none, simple, simple, numbered_existing,
 	numbered_existing, numbered, numbered
 };
 

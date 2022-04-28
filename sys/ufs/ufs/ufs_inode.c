@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_inode.c 234612 2012-04-23 17:54:49Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -125,7 +125,7 @@ ufs_inactive(ap)
 		}
 	}
 	isize = ip->i_size;
-	if (ip->i_ump->um_fstype == UFS2)
+	if (I_IS_UFS2(ip))
 		isize += ip->i_din2->di_extsize;
 	if (ip->i_effnlink <= 0 && isize && !UFS_RDONLY(ip))
 		error = UFS_TRUNCATE(vp, (off_t)0, IO_EXT | IO_NORMAL, NOCRED);
@@ -214,7 +214,6 @@ ufs_reclaim(ap)
 {
 	struct vnode *vp = ap->a_vp;
 	struct inode *ip = VTOI(vp);
-	struct ufsmount *ump = ip->i_ump;
 
 	ufs_prepare_reclaim(vp);
 
@@ -233,6 +232,6 @@ ufs_reclaim(ap)
 	VI_LOCK(vp);
 	vp->v_data = 0;
 	VI_UNLOCK(vp);
-	UFS_IFREE(ump, ip);
+	UFS_IFREE(ITOUMP(ip), ip);
 	return (0);
 }

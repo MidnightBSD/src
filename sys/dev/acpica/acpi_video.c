@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_video.c 241748 2012-10-19 19:17:43Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -132,7 +132,7 @@ static void	vo_set_device_state(ACPI_HANDLE, UINT32);
 #define	DOD_HEAD_ID_BITS	3
 #define	DOD_HEAD_ID_MASK \
 		(((1 << DOD_HEAD_ID_BITS) - 1) << DOD_HEAD_ID_SHIFT)
-#define	DOD_DEVID_SCHEME_STD	(1 << 31)
+#define	DOD_DEVID_SCHEME_STD	(1U << 31)
 
 /* _BCL related constants */
 #define	BCL_FULLPOWER		0
@@ -149,7 +149,7 @@ static void	vo_set_device_state(ACPI_HANDLE, UINT32);
 #define	DSS_INACTIVE		0
 #define	DSS_ACTIVE		(1 << 0)
 #define	DSS_SETNEXT		(1 << 30)
-#define	DSS_COMMIT		(1 << 31)
+#define	DSS_COMMIT		(1U << 31)
 
 static device_method_t acpi_video_methods[] = {
 	DEVMETHOD(device_identify, acpi_video_identify),
@@ -597,23 +597,28 @@ acpi_video_vo_bind(struct acpi_video_output *vo, ACPI_HANDLE handle)
 {
 
 	ACPI_SERIAL_BEGIN(video_output);
-	if (vo->vo_levels != NULL)
+	if (vo->vo_levels != NULL) {
+		AcpiRemoveNotifyHandler(vo->handle, ACPI_DEVICE_NOTIFY,
+		    acpi_video_vo_notify_handler);
 		AcpiOsFree(vo->vo_levels);
+		vo->vo_levels = NULL;
+	}
 	vo->handle = handle;
 	vo->vo_numlevels = vo_get_brightness_levels(handle, &vo->vo_levels);
 	if (vo->vo_numlevels >= 2) {
-		if (vo->vo_fullpower == -1
-		    || acpi_video_vo_check_level(vo, vo->vo_fullpower) != 0)
+		if (vo->vo_fullpower == -1 ||
+		    acpi_video_vo_check_level(vo, vo->vo_fullpower) != 0) {
 			/* XXX - can't deal with rebinding... */
 			vo->vo_fullpower = vo->vo_levels[BCL_FULLPOWER];
-		if (vo->vo_economy == -1
-		    || acpi_video_vo_check_level(vo, vo->vo_economy) != 0)
+		}
+		if (vo->vo_economy == -1 ||
+		    acpi_video_vo_check_level(vo, vo->vo_economy) != 0) {
 			/* XXX - see above. */
 			vo->vo_economy = vo->vo_levels[BCL_ECONOMY];
-	}
-	if (vo->vo_levels != NULL)
+		}
 		AcpiInstallNotifyHandler(handle, ACPI_DEVICE_NOTIFY,
 		    acpi_video_vo_notify_handler, vo);
+	}
 	ACPI_SERIAL_END(video_output);
 }
 

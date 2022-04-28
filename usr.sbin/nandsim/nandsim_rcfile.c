@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nandsim/nandsim_rcfile.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD$");
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <ctype.h>

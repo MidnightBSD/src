@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/libmchain/Makefile 227650 2011-11-18 03:05:20Z kevlo $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	libmchain
 SRCS=	subr_mchain.c

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/sys/arm/at91/if_macbreg.h 210040 2010-07-14 00:48:53Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef MACB_REG_H
@@ -99,7 +99,8 @@
 
 #define	CFG_DRFCS	(1 << 17)
 
-#define USRIO_CLOCK	(1 << 1)
+#define USRIO_RMII	(1 << 0)		/* RMII vs MII pins */
+#define USRIO_CLOCK	(1 << 1)		/* Enable the clock! */
 
 
 

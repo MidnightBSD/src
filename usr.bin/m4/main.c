@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.81 2012/04/12 17:00:11 espie Exp $	*/
+/*	$OpenBSD: main.c,v 1.87 2017/06/15 13:48:42 bcallah Exp $	*/
 /*	$NetBSD: main.c,v 1.12 1997/02/08 23:54:49 cgd Exp $	*/
 
 /*-
@@ -39,7 +39,7 @@
  * by: oz
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/m4/main.c 250226 2013-05-03 23:29:38Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <signal.h>
@@ -79,6 +79,8 @@ char scommt[MAXCCHARS+1] = {SCOMMT};	/* start character for comment */
 char ecommt[MAXCCHARS+1] = {ECOMMT};	/* end character for comment   */
 int  synch_lines = 0;		/* line synchronisation for C preprocessor */
 int  prefix_builtins = 0;	/* -P option to prefix builtin keywords */
+int  error_warns = 0;		/* -E option to make warnings exit_code = 1 */
+int  fatal_warns = 0;		/* -E -E option to make warnings fatal */
 
 struct keyblk {
         const char    *knam;          /* keyword name */
@@ -133,16 +135,13 @@ static struct keyblk keywrds[] = {	/* m4 keywords to be installed */
 	{ "traceon",	  TRACEONTYPE | NOARGS },
 	{ "traceoff",	  TRACEOFFTYPE | NOARGS },
 
-#if defined(unix) || defined(__unix__)
 	{ "unix",         SELFTYPE | NOARGS },
-#else
-#ifdef vms
-	{ "vms",          SELFTYPE | NOARGS },
-#endif
-#endif
 };
 
 #define MAXKEYS	(sizeof(keywrds)/sizeof(struct keyblk))
+
+extern int optind;
+extern char *optarg;
 
 #define MAXRECORD 50
 static struct position {
@@ -180,14 +179,14 @@ main(int argc, char *argv[])
 	initspaces();
 	STACKMAX = INITSTACKMAX;
 
-	mstack = (stae *)xalloc(sizeof(stae) * STACKMAX, NULL);
-	sstack = (char *)xalloc(STACKMAX, NULL);
+	mstack = xreallocarray(NULL, STACKMAX, sizeof(stae), NULL);
+	sstack = xalloc(STACKMAX, NULL);
 
 	maxout = 0;
 	outfile = NULL;
 	resizedivs(MAXOUT);
 
-	while ((c = getopt(argc, argv, "gst:d:D:U:o:I:P")) != -1)
+	while ((c = getopt(argc, argv, "gst:d:D:EU:o:I:P")) != -1)
 		switch(c) {
 
 		case 'D':               /* define something..*/
@@ -197,6 +196,12 @@ main(int argc, char *argv[])
 			if (*p)
 				*p++ = EOS;
 			dodefine(optarg, p);
+			break;
+		case 'E':               /* like GNU m4 1.4.9+ */
+			if (error_warns == 0)
+				error_warns = 1;
+			else
+				fatal_warns = 1;
 			break;
 		case 'I':
 			addtoincludepath(optarg);
@@ -396,7 +401,7 @@ macro(void)
 		/*
 		 * now push the string arguments:
 		 */
-				pushs1(macro_getdef(p)->defn);	/* defn string */
+				pushdef(p);			/* defn string */
 				pushs1((char *)macro_name(p));	/* macro name  */
 				pushs(ep);			/* start next..*/
 
@@ -415,7 +420,8 @@ macro(void)
 				}
 			}
 		} else if (t == EOF) {
-			if (sp > -1 && ilevel <= 0) {
+			if (!mimic_gnu /* you can puke right there */
+			    && sp > -1 && ilevel <= 0) {
 				warnx( "unexpected end of input, unclosed parenthesis:");
 				dump_stack(paren, PARLEV);
 				exit(1);
@@ -473,14 +479,14 @@ macro(void)
 
 		default:
 			if (LOOK_AHEAD(t, scommt)) {
-				char *cp;
-				for (cp = scommt; *cp; cp++)
-					chrsave(*cp);
+				char *p;
+				for (p = scommt; *p; p++)
+					chrsave(*p);
 				for(;;) {
 					t = gpbc();
 					if (LOOK_AHEAD(t, ecommt)) {
-						for (cp = ecommt; *cp; cp++)
-							chrsave(*cp);
+						for (p = ecommt; *p; p++)
+							chrsave(*p);
 						break;
 					}
 					if (t == EOF)
@@ -625,7 +631,7 @@ static void
 enlarge_stack(void)
 {
 	STACKMAX += STACKMAX/2;
-	mstack = xrealloc(mstack, sizeof(stae) * STACKMAX,
+	mstack = xreallocarray(mstack, STACKMAX, sizeof(stae),
 	    "Evaluation stack overflow (%lu)",
 	    (unsigned long)STACKMAX);
 	sstack = xrealloc(sstack, STACKMAX,

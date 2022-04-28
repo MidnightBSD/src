@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.sbin/cron/cron/externs.h 173412 2007-11-07 10:53:41Z kevlo $	*/
+/*	$FreeBSD$	*/
 
 /* Copyright 1993,1994 by Paul Vixie
  * All rights reserved
@@ -140,8 +140,4 @@ extern	int		getdtablesize(void);
 
 #ifdef NEED_SETENV
 extern	int		setenv(char *, char *, int);
-#endif
-
-#ifdef NEED_VFORK
-extern	PID_T		vfork(void);
 #endif

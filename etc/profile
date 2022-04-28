@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/profile 208116 2010-05-15 17:49:56Z jilles $
+# $FreeBSD$
 #
 # System-wide .profile file for sh(1).
 #

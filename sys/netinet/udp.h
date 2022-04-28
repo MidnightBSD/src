@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/netinet/udp.h 246210 2013-02-01 15:32:20Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_UDP_H_
@@ -58,7 +58,7 @@ struct udphdr {
  */
 /* Encapsulation types. */
 #define	UDP_ENCAP_ESPINUDP_NON_IKE	1 /* draft-ietf-ipsec-nat-t-ike-00/01 */
-#define	UDP_ENCAP_ESPINUDP		2 /* draft-ietf-ipsec-udp-encaps-02+ */
+#define	UDP_ENCAP_ESPINUDP		2 /* RFC3948 */
 
 /* Default ESP in UDP encapsulation port. */
 #define	UDP_ENCAP_ESPINUDP_PORT		500

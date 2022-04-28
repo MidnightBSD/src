@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/digi/digi_pci.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

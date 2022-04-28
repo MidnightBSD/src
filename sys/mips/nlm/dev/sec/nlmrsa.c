@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/nlm/dev/sec/nlmrsa.c 256046 2013-10-04 11:11:51Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
@@ -135,7 +135,7 @@ print_krp_params(struct cryptkop *krp)
 }
 #endif
 
-static int 
+static int
 xlp_rsa_init(struct xlp_rsa_softc *sc, int node)
 {
 	struct xlp_rsa_command *cmd = NULL;
@@ -387,7 +387,7 @@ xlp_rsa_freesession(device_t dev, u_int64_t tid)
 	return (0);
 }
 
-static void 
+static void
 xlp_free_cmd_params(struct xlp_rsa_command *cmd)
 {
 

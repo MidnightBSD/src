@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.bin/svn/lib/libapr_util/apu_config.h 252454 2013-07-01 07:00:12Z peter $ */
+/* $FreeBSD$ */
 
 /* include/private/apu_config.h.  Generated from apu_config.h.in by configure.  */
 /* include/private/apu_config.h.in.  Generated from configure.in by autoheader.  */

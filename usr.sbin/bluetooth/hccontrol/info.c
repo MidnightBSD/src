@@ -1,5 +1,7 @@
-/*
+/*-
  * info.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,9 +28,10 @@
  * SUCH DAMAGE.
  *
  * $Id: info.c,v 1.3 2003/08/18 19:19:54 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hccontrol/info.c 155964 2006-02-23 23:19:12Z markus $
+ * $FreeBSD$
  */
 
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <stdio.h>

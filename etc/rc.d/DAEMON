@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/DAEMON 174438 2007-12-08 07:20:23Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: DAEMON

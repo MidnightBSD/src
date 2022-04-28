@@ -53,7 +53,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)dumpfs.c	8.5 (Berkeley) 4/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/dumpfs/dumpfs.c 250710 2013-05-16 20:07:08Z mckusick $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -165,7 +165,7 @@ dumpfs(const char *name)
 		fstime = afs.fs_time;
 		printf("magic\t%x (UFS2)\ttime\t%s",
 		    afs.fs_magic, ctime(&fstime));
-		printf("superblock location\t%jd\tid\t[ %x %x ]\n",
+		printf("superblock location\t%jd\tid\t[ %08x %08x ]\n",
 		    (intmax_t)afs.fs_sblockloc, afs.fs_id[0], afs.fs_id[1]);
 		printf("ncg\t%d\tsize\t%jd\tblocks\t%jd\n",
 		    afs.fs_ncg, (intmax_t)fssize, (intmax_t)afs.fs_dsize);
@@ -353,8 +353,7 @@ dumpcg(void)
 		for (i = 1; i < afs.fs_contigsumsize; i++) {
 			if ((i - 1) % 8 == 0)
 				printf("\nclusters %d-%d:", i,
-				    afs.fs_contigsumsize - 1 < i + 7 ?
-				    afs.fs_contigsumsize - 1 : i + 7);
+				    MIN(afs.fs_contigsumsize - 1, i + 7));
 			printf("\t%d", cg_clustersum(&acg)[i]);
 		}
 		printf("\nclusters size %d and over: %d\n",

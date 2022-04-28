@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass1.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/pass1.c 248658 2013-03-23 20:00:02Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -67,6 +67,8 @@ pass1(void)
 	ufs2_daddr_t i, cgd;
 	u_int8_t *cp;
 	int c, rebuildcg;
+
+	badblk = dupblk = lastino = 0;
 
 	/*
 	 * Set file system reserved blocks in used block map.
@@ -131,9 +133,14 @@ pass1(void)
 		 */
 		if ((preen || inoopt) && usedsoftdep && !rebuildcg) {
 			cp = &cg_inosused(cgp)[(inosused - 1) / CHAR_BIT];
-			for ( ; inosused > 0; inosused -= CHAR_BIT, cp--) {
-				if (*cp == 0)
+			for ( ; inosused != 0; cp--) {
+				if (*cp == 0) {
+					if (inosused > CHAR_BIT)
+						inosused -= CHAR_BIT;
+					else
+						inosused = 0;
 					continue;
+				}
 				for (i = 1 << (CHAR_BIT - 1); i > 0; i >>= 1) {
 					if (*cp & i)
 						break;
@@ -141,15 +148,13 @@ pass1(void)
 				}
 				break;
 			}
-			if (inosused < 0)
-				inosused = 0;
 		}
 		/*
 		 * Allocate inoinfo structures for the allocated inodes.
 		 */
 		inostathead[c].il_numalloced = inosused;
 		if (inosused == 0) {
-			inostathead[c].il_stat = 0;
+			inostathead[c].il_stat = NULL;
 			continue;
 		}
 		info = Calloc((unsigned)inosused, sizeof(struct inostat));
@@ -219,7 +224,7 @@ pass1(void)
 		inostathead[c].il_numalloced = inosused;
 		if (inosused == 0) {
 			free(inostathead[c].il_stat);
-			inostathead[c].il_stat = 0;
+			inostathead[c].il_stat = NULL;
 			continue;
 		}
 		info = Calloc((unsigned)inosused, sizeof(struct inostat));
@@ -240,6 +245,7 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 	off_t kernmaxfilesize;
 	ufs2_daddr_t ndb;
 	mode_t mode;
+	uintmax_t fixsize;
 	int j, ret, offset;
 
 	if ((dp = getnextinode(inumber, rebuildcg)) == NULL)
@@ -263,7 +269,7 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 			if (reply("CLEAR") == 1) {
 				dp = ginode(inumber);
 				clearinode(dp);
-				inodirty();
+				inodirty(dp);
 			}
 		}
 		inoinfo(inumber)->ino_state = USTATE;
@@ -286,7 +292,7 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 		dp = ginode(inumber);
 		DIP_SET(dp, di_size, sblock.fs_fsize);
 		DIP_SET(dp, di_mode, IFREG|0600);
-		inodirty();
+		inodirty(dp);
 	}
 	if ((mode == IFBLK || mode == IFCHR || mode == IFIFO ||
 	     mode == IFSOCK) && DIP(dp, di_size) != 0) {
@@ -403,7 +409,7 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 		if (bkgrdflag == 0) {
 			dp = ginode(inumber);
 			DIP_SET(dp, di_blocks, idesc->id_entryno);
-			inodirty();
+			inodirty(dp);
 		} else {
 			cmd.value = idesc->id_number;
 			cmd.size = idesc->id_entryno - DIP(dp, di_blocks);
@@ -415,6 +421,46 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 				rwerror("ADJUST INODE BLOCK COUNT", cmd.value);
 		}
 	}
+	/*
+	 * Soft updates will always ensure that the file size is correct
+	 * for files that contain only direct block pointers. However
+	 * soft updates does not roll back sizes for files with indirect
+	 * blocks that it has set to unallocated because their contents
+	 * have not yet been written to disk. Hence, the file can appear
+	 * to have a hole at its end because the block pointer has been
+	 * rolled back to zero. Thus, id_lballoc tracks the last allocated
+	 * block in the file. Here, for files that extend into indirect
+	 * blocks, we check for a size past the last allocated block of
+	 * the file and if that is found, shorten the file to reference
+	 * the last allocated block to avoid having it reference a hole
+	 * at its end.
+	 */
+	if (DIP(dp, di_size) > NDADDR * sblock.fs_bsize &&
+	    idesc->id_lballoc < lblkno(&sblock, DIP(dp, di_size) - 1)) {
+		fixsize = lblktosize(&sblock, idesc->id_lballoc + 1);
+		pwarn("INODE %lu: FILE SIZE %ju BEYOND END OF ALLOCATED FILE, "
+		      "SIZE SHOULD BE %ju", (u_long)inumber,
+		      (uintmax_t)DIP(dp, di_size), fixsize);
+		if (preen)
+			printf(" (ADJUSTED)\n");
+		else if (reply("ADJUST") == 0)
+			return (1);
+		if (bkgrdflag == 0) {
+			dp = ginode(inumber);
+			DIP_SET(dp, di_size, fixsize);
+			inodirty(dp);
+		} else {
+			cmd.value = idesc->id_number;
+			cmd.size = fixsize;
+			if (debug)
+				printf("setsize ino %ju size set to %ju\n",
+				    (uintmax_t)cmd.value, (uintmax_t)cmd.size);
+			if (sysctl(setsize, MIBSIZE, 0, 0,
+			    &cmd, sizeof cmd) == -1)
+				rwerror("SET INODE SIZE", cmd.value);
+		}
+
+	}
 	return (1);
 unknown:
 	pfatal("UNKNOWN FILE TYPE I=%lu", (u_long)inumber);
@@ -423,7 +469,7 @@ unknown:
 		inoinfo(inumber)->ino_state = USTATE;
 		dp = ginode(inumber);
 		clearinode(dp);
-		inodirty();
+		inodirty(dp);
 	}
 	return (1);
 }
@@ -463,6 +509,7 @@ pass1check(struct inodesc *idesc)
 				ckfini(0);
 				exit(EEXIT);
 			}
+			rerun = 1;
 			return (STOP);
 		}
 	}
@@ -483,6 +530,7 @@ pass1check(struct inodesc *idesc)
 					ckfini(0);
 					exit(EEXIT);
 				}
+				rerun = 1;
 				return (STOP);
 			}
 			new = (struct dups *)Malloc(sizeof(struct dups));
@@ -492,12 +540,13 @@ pass1check(struct inodesc *idesc)
 					ckfini(0);
 					exit(EEXIT);
 				}
+				rerun = 1;
 				return (STOP);
 			}
 			new->dup = blkno;
-			if (muldup == 0) {
+			if (muldup == NULL) {
 				duplist = muldup = new;
-				new->next = 0;
+				new->next = NULL;
 			} else {
 				new->next = muldup->next;
 				muldup->next = new;
@@ -513,5 +562,7 @@ pass1check(struct inodesc *idesc)
 		 */
 		idesc->id_entryno++;
 	}
+	if (idesc->id_level == 0 && idesc->id_lballoc < idesc->id_lbn)
+		idesc->id_lballoc = idesc->id_lbn;
 	return (res);
 }

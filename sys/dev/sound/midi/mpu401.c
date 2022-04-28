@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sound/midi/mpu401.c 193979 2009-06-11 09:06:09Z ariff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -185,7 +185,7 @@ mpu401_init(kobj_class_t cls, void *cookie, driver_intr_t softintr,
 
 	kobj_init((kobj_t)m, cls);
 
-	callout_init(&m->timer, CALLOUT_MPSAFE);
+	callout_init(&m->timer, 1);
 
 	m->si = softintr;
 	m->cookie = cookie;

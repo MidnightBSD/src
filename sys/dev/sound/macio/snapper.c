@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/macio/snapper.c 239245 2012-08-14 05:16:35Z andreast $
+ * $FreeBSD$
  */
 /*-
  * Copyright (c) 2002, 2003 Tsubai Masanari.  All rights reserved.

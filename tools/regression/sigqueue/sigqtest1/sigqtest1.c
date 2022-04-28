@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/regression/sigqueue/sigqtest1/sigqtest1.c 197965 2009-10-11 17:04:13Z kib $ */
+/* $FreeBSD$ */
 #include <err.h>
 #include <errno.h>
 #include <signal.h>

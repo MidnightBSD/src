@@ -2,7 +2,7 @@
 
 use strict;
 
-# $FreeBSD: release/10.0.0/tools/tools/ath/athalq/txdiff.pl 250265 2013-05-05 09:38:02Z adrian $
+# $FreeBSD$
 
 # [1360537229.753890] [100494] TXD
 # [1360537229.754292] [100494] TXSTATUS: TxDone=1, TS=0x5ccfa5c7

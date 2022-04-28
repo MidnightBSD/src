@@ -1,6 +1,8 @@
-/* $FreeBSD: release/10.0.0/usr.sbin/mailwrapper/pathnames.h 55705 2000-01-10 03:20:13Z imp $ */
+/* $FreeBSD$ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1998
  * 	Perry E. Metzger.  All rights reserved.
  *

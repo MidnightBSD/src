@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/less/FREEBSD-upgrade 191930 2009-05-09 01:35:27Z delphij $
+$FreeBSD$
 
  1. Download latest less(1) tarball.  The homepage of less(1) is at:
 	http://www.greenwoodsoftware.com/less/

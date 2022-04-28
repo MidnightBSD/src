@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/syscons/keymaps/ru.koi8-r.kbd 75339 2001-04-09 16:36:48Z sobomax $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

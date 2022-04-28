@@ -105,4 +105,4 @@ ifconfig cxgb0 -tso
 ifconfig cxgb0 mtu 1500
 
 
-$FreeBSD: release/10.0.0/tools/tools/netrate/tcpp/README 209428 2010-06-22 10:45:35Z rwatson $
+$FreeBSD$

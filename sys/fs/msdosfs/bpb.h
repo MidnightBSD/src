@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/fs/msdosfs/bpb.h 203827 2010-02-13 12:41:07Z kib $ */
+/* $FreeBSD$ */
 /*	$NetBSD: bpb.h,v 1.7 1997/11/17 15:36:24 ws Exp $	*/
 
 /*-

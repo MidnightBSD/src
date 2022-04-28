@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_main.c,v 1.2 2003/03/18 00:09:36 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/hci/ng_hci_main.c 220768 2011-04-18 09:12:27Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -775,7 +775,6 @@ ng_hci_acl_rcvdata(hook_p hook, item_p item)
 	int			 size, error = 0;
 
 	NG_HCI_BUFF_ACL_SIZE(unit->buffer, size);
-
 	/* Check packet */
 	NGI_GET_M(item, m);
 
@@ -788,7 +787,6 @@ ng_hci_acl_rcvdata(hook_p hook, item_p item)
 		error = EINVAL;
 		goto drop;
 	}
-
 	if (m->m_pkthdr.len < sizeof(ng_hci_acldata_pkt_t) ||
 	    m->m_pkthdr.len > sizeof(ng_hci_acldata_pkt_t) + size) {
 		NG_HCI_ALERT(
@@ -831,7 +829,7 @@ ng_hci_acl_rcvdata(hook_p hook, item_p item)
 		goto drop;
 	}
 
-	if (con->link_type != NG_HCI_LINK_ACL) {
+	if (con->link_type == NG_HCI_LINK_SCO) {
 		NG_HCI_ERR(
 "%s: %s - unexpected HCI ACL data packet. Not ACL link, con_handle=%d, " \
 "link_type=%d\n",	__func__, NG_NODE_NAME(unit->node), 

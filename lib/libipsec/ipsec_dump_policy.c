@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libipsec/ipsec_dump_policy.c 216369 2010-12-11 08:07:21Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -199,6 +199,7 @@ ipsec_dump_ipsecrequest(buf, len, xisr, bound)
 		break;
 	case IPPROTO_TCP:
 		proto = "tcp";
+		break;
 	default:
 		__ipsec_errcode = EIPSEC_INVAL_PROTO;
 		return NULL;

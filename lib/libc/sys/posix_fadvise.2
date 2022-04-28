@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)madvise.2	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/posix_fadvise.2 245841 2013-01-23 10:50:52Z glebius $
+.\" $FreeBSD$
 .\"
-.Dd June 19, 2012
+.Dd October 3, 2015
 .Dt POSIX_FADVISE 2
 .Os
 .Sh NAME
@@ -89,11 +89,13 @@ read or written.
 Future access to this data may require a read operation.
 .El
 .Sh RETURN VALUES
-.Rv -std posix_fadvise
-.Sh ERRORS
-The
+If successful,
 .Fn posix_fadvise
-system call will fail if:
+returns zero.
+It returns an error on failure, without setting
+.Va errno .
+.Sh ERRORS
+Possible failure conditions:
 .Bl -tag -width Er
 .It Bq Er EBADF
 The

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/ndis/ndis_var.h 254842 2013-08-25 10:57:09Z andre $
+ * $FreeBSD$
  */
 
 #ifndef _NDIS_VAR_H_
@@ -1042,7 +1042,7 @@ struct ndis_request {
 			uint32_t	nr_bytesneeded;
 		} ndis_set_information;
 	} ndis_data;
-	/* NDIS 5.0 extentions */
+	/* NDIS 5.0 extensions */
 	uint8_t			nr_ndis_rsvd[9 * sizeof(void *)];
 	union {
 		uint8_t		nr_callmgr_rsvd[2 * sizeof(void *)];
@@ -1444,7 +1444,7 @@ struct ndis_miniport_characteristics {
 	void *			nmc_setinfo_func;
 	void *			nmc_transferdata_func;
 
-	/* NDIS 4.0 extentions */
+	/* NDIS 4.0 extensions */
 
 	void *			nmc_return_packet_func;
 	void *			nmc_sendmulti_func;
@@ -1459,7 +1459,7 @@ struct ndis_miniport_characteristics {
 	void *			nmc_comultisend_func;
 	void *			nmc_corequest_func;
 
-	/* NDIS 5.1 extentions */
+	/* NDIS 5.1 extensions */
 
 	void *			nmc_canceltxpkts_handler;
 	void *			nmc_pnpevent_handler;
@@ -1734,8 +1734,6 @@ extern int ndis_get_supported_oids(void *, ndis_oid **, int *);
 extern int ndis_send_packets(void *, ndis_packet **, int);
 extern int ndis_send_packet(void *, ndis_packet *);
 extern int ndis_convert_res(void *);
-extern int ndis_alloc_amem(void *);
-extern void ndis_free_amem(void *);
 extern void ndis_free_packet(ndis_packet *);
 extern void ndis_free_bufs(ndis_buffer *);
 extern int ndis_reset_nic(void *);
@@ -1743,7 +1741,7 @@ extern int ndis_halt_nic(void *);
 extern int ndis_shutdown_nic(void *);
 extern int ndis_pnpevent_nic(void *, int);
 extern int ndis_init_nic(void *);
-extern int ndis_return_packet(struct mbuf *, void *, void *);
+extern void ndis_return_packet(struct mbuf *, void *, void *);
 extern int ndis_init_dma(void *);
 extern int ndis_destroy_dma(void *);
 extern int ndis_create_sysctls(void *);

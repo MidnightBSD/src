@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/hosts.lpd 50472 1999-08-27 23:37:10Z peter $
+# $FreeBSD$
 #
 # See lpd(8)
 #machine.domain

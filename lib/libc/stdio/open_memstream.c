@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Advanced Computing Technologies LLC
+ * Copyright (c) 2013 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,12 +26,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/open_memstream.c 247411 2013-02-27 19:50:46Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#ifdef DEBUG
+#include <stdint.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

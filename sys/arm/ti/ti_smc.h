@@ -24,7 +24,7 @@
 
 
 /*
- * $FreeBSD: release/10.0.0/sys/arm/ti/ti_smc.h 239281 2012-08-15 06:31:32Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef TI_SMC_H_

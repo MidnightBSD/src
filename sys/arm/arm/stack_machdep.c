@@ -25,10 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/stack_machdep.c 250810 2013-05-19 16:25:09Z andrew $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/systm.h>
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/proc.h>
 #include <sys/stack.h>
 
@@ -43,19 +43,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/stack_machdep.c 250810 2013-05-19
  * APCS where it lays out the stack incorrectly. Because of this we disable
  * this when building for ARM EABI or when building with clang.
  */
+
+extern vm_offset_t kernel_vm_end;
+
 static void
 stack_capture(struct stack *st, u_int32_t *frame)
 {
-#if !defined(__ARM_EABI__) && !defined(__clang__)
-	vm_offset_t callpc;
-
-	while (INKERNEL(frame)) {
-		callpc = frame[FR_SCP];
-		if (stack_put(st, callpc) == -1)
-			break;
-		frame = (u_int32_t *)(frame[FR_RFP]);
-	}
-#endif
 }
 
 void
@@ -73,9 +66,16 @@ stack_save_td(struct stack *st, struct thread *td)
 	 * as it doesn't have a frame pointer, however it's value is not used
 	 * when building for EABI.
 	 */
-	frame = (u_int32_t *)td->td_pcb->un_32.pcb32_r11;
+	frame = (u_int32_t *)td->td_pcb->pcb_regs.sf_r11;
 	stack_zero(st);
 	stack_capture(st, frame);
+}
+
+int
+stack_save_td_running(struct stack *st, struct thread *td)
+{
+
+	return (EOPNOTSUPP);
 }
 
 void

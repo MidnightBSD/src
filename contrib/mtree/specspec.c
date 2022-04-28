@@ -73,7 +73,7 @@ shownode(NODE *n, int f, char const *path)
 	if (f & F_MODE)
 		printf(" mode=%o", n->st_mode);
 	if (f & F_NLINK)
-		printf(" nlink=%d", n->st_nlink);
+		printf(" nlink=%ju", (uintmax_t)n->st_nlink);
 	if (f & F_SIZE)
 		printf(" size=%jd", (intmax_t)n->st_size);
 	if (f & F_UID)
@@ -145,7 +145,7 @@ compare_nodes(NODE *n1, NODE *n2, char const *path)
 		return (1);
 	}
 	if (n1->type != n2->type) {
-		differs = 0;
+		differs = F_TYPE;
 		mismatch(n1, n2, differs, path);
 		return (1);
 	}

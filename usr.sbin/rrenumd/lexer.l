@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rrenumd/lexer.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD$
  */
 
 %{
@@ -40,10 +40,6 @@
 #include <string.h>
 
 #include <net/if.h>
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
-#include <net/if_var.h>
-#endif /* __FreeBSD__ >= 3 */
-
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
@@ -62,6 +58,7 @@ void yyerror(const char *);
 int yylex(void);
 %}
 
+%option noyywrap
 %option nounput
 
 /* common section */

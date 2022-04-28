@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/arm/at91/std.at91sam9 239362 2012-08-18 05:48:19Z andrew $
+# $FreeBSD$
 
 files		"../at91/files.at91"
 cpu		CPU_ARM9

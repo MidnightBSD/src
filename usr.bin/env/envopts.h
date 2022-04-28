@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of the FreeBSD Project.
  *
- * $FreeBSD: release/10.0.0/usr.bin/env/envopts.h 147493 2005-06-20 03:43:25Z gad $
+ * $FreeBSD$
  */
 
 void		 search_paths(char *path, char **argv);

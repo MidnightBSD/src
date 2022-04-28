@@ -31,7 +31,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/alchemy/uart_bus_alchemy.c 187498 2009-01-20 22:42:37Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,7 +81,7 @@ uart_alchemy_probe(device_t dev)
 	sc->sc_class = &uart_ns8250_class;
 	bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
 
-	return (uart_bus_probe(dev, 0, 0, 0, 0));
+	return (uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_alchemy_driver, uart_devclass, 0, 0);

@@ -34,8 +34,9 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sysconf.c 239347 2012-08-17 02:26:31Z davidxu $");
+__FBSDID("$FreeBSD$");
 
+#include "namespace.h"
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/sysctl.h>
@@ -47,8 +48,10 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sysconf.c 239347 2012-08-17 02:2
 #include <limits.h>
 #include <paths.h>
 #include <pthread.h>		/* we just need the limits */
+#include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
+#include "un-namespace.h"
 
 #include "../stdlib/atexit.h"
 #include "tzfile.h"		/* from ../../../contrib/tzcode/stdtime */
@@ -69,8 +72,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/sysconf.c 239347 2012-08-17 02:2
  * less useful than returning up-to-date values, however.
  */
 long
-sysconf(name)
-	int name;
+sysconf(int name)
 {
 	struct rlimit rl;
 	size_t len;
@@ -298,13 +300,9 @@ do_NAME_MAX:
 		mib[1] = CTL_P1003_1B_RTSIG_MAX;
 		goto yesno;
 	case _SC_SEM_NSEMS_MAX:
-		mib[0] = CTL_P1003_1B;
-		mib[1] = CTL_P1003_1B_SEM_NSEMS_MAX;
-		goto yesno;
+		return (-1);
 	case _SC_SEM_VALUE_MAX:
-		mib[0] = CTL_P1003_1B;
-		mib[1] = CTL_P1003_1B_SEM_VALUE_MAX;
-		goto yesno;
+		return (SEM_VALUE_MAX);
 	case _SC_SIGQUEUE_MAX:
 		mib[0] = CTL_P1003_1B;
 		mib[1] = CTL_P1003_1B_SIGQUEUE_MAX;
@@ -367,11 +365,17 @@ yesno:
 		 * _POSIX_FILE_LOCKING, so we can't answer this one.
 		 */
 #endif
-#if _POSIX_THREAD_SAFE_FUNCTIONS > -1
+
+	/*
+	 * SUSv4tc1 says the following about _SC_GETGR_R_SIZE_MAX and
+	 * _SC_GETPW_R_SIZE_MAX:
+	 * Note that sysconf(_SC_GETGR_R_SIZE_MAX) may return -1 if
+	 * there is no hard limit on the size of the buffer needed to
+	 * store all the groups returned.
+	 */
 	case _SC_GETGR_R_SIZE_MAX:
 	case _SC_GETPW_R_SIZE_MAX:
-#error "somebody needs to implement this"
-#endif
+		return (-1);
 	case _SC_HOST_NAME_MAX:
 		return (MAXHOSTNAMELEN - 1); /* does not include \0 */
 	case _SC_LOGIN_NAME_MAX:
@@ -570,10 +574,10 @@ yesno:
 	case _SC_IPV6:
 #if _POSIX_IPV6 == 0
 		sverrno = errno;
-		value = socket(PF_INET6, SOCK_DGRAM, 0);
+		value = _socket(PF_INET6, SOCK_DGRAM, 0);
 		errno = sverrno;
 		if (value >= 0) {
-			close(value);
+			_close(value);
 			return (200112L);
 		} else
 			return (0);

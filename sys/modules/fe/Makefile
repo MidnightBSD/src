@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/fe/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/fe
+.PATH: ${SRCTOP}/sys/dev/fe
 
 KMOD=	if_fe
 SRCS=	if_fe.c if_fe_pccard.c

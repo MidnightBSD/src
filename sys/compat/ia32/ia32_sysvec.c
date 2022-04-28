@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ia32/ia32_sysvec.c 238687 2012-07-22 13:41:45Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -89,21 +89,16 @@ extern const char *freebsd32_syscallnames[];
 static SYSCTL_NODE(_compat, OID_AUTO, ia32, CTLFLAG_RW, 0, "ia32 mode");
 
 static u_long	ia32_maxdsiz = IA32_MAXDSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RW, &ia32_maxdsiz, 0, "");
-TUNABLE_ULONG("compat.ia32.maxdsiz", &ia32_maxdsiz);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RWTUN, &ia32_maxdsiz, 0, "");
 u_long	ia32_maxssiz = IA32_MAXSSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RW, &ia32_maxssiz, 0, "");
-TUNABLE_ULONG("compat.ia32.maxssiz", &ia32_maxssiz);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RWTUN, &ia32_maxssiz, 0, "");
 static u_long	ia32_maxvmem = IA32_MAXVMEM;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RW, &ia32_maxvmem, 0, "");
-TUNABLE_ULONG("compat.ia32.maxvmem", &ia32_maxvmem);
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RWTUN, &ia32_maxvmem, 0, "");
 
 struct sysentvec ia32_freebsd_sysvec = {
 	.sv_size	= FREEBSD32_SYS_MAXSYSCALL,
 	.sv_table	= freebsd32_sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -111,7 +106,6 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_sendsig	= ia32_sendsig,
 	.sv_sigcode	= ia32_sigcode,
 	.sv_szsigcode	= &sz_ia32_sigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= elf32_coredump,
 	.sv_imgact_try	= NULL,
@@ -127,18 +121,15 @@ struct sysentvec ia32_freebsd_sysvec = {
 	.sv_fixlimit	= ia32_fixlimit,
 	.sv_maxssiz	= &ia32_maxssiz,
 	.sv_flags	= SV_ABI_FREEBSD | SV_IA32 | SV_ILP32 |
-#ifdef __amd64__
-		SV_SHP
-#else
-		0
-#endif
-	,
+			    SV_SHP | SV_TIMEKEEP,
 	.sv_set_syscall_retval = ia32_set_syscall_retval,
 	.sv_fetch_syscall_args = ia32_fetch_syscall_args,
 	.sv_syscallnames = freebsd32_syscallnames,
 	.sv_shared_page_base = FREEBSD32_SHAREDPAGE,
 	.sv_shared_page_len = PAGE_SIZE,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 INIT_SYSENTVEC(elf_ia32_sysvec, &ia32_freebsd_sysvec);
 
@@ -190,9 +181,25 @@ SYSINIT(kia32, SI_SUB_EXEC, SI_ORDER_ANY,
 	&kia32_brand_info);
 
 void
-elf32_dump_thread(struct thread *td __unused, void *dst __unused,
-    size_t *off __unused)
+elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 {
+	void *buf;
+	size_t len;
+
+	len = 0;
+	if (use_xsave) {
+		if (dst != NULL) {
+			fpugetregs(td);
+			len += elf32_populate_note(NT_X86_XSTATE,
+			    get_pcb_user_save_td(td), dst,
+			    cpu_max_ext_state_size, &buf);
+			*(uint64_t *)((char *)buf + X86_XSTATE_XCR0_OFFSET) =
+			    xsave_mask;
+		} else
+			len += elf32_populate_note(NT_X86_XSTATE, NULL, NULL,
+			    cpu_max_ext_state_size, NULL);
+	}
+	*off = len;
 }
 
 void

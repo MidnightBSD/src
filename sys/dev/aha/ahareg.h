@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/aha/ahareg.h 241603 2012-10-16 08:40:09Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _AHAREG_H_

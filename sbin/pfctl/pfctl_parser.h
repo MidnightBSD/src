@@ -1,6 +1,8 @@
 /*	$OpenBSD: pfctl_parser.h,v 1.86 2006/10/31 23:46:25 mcbride Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/pfctl/pfctl_parser.h 240494 2012-09-14 11:51:49Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _PFCTL_PARSER_H_
@@ -150,12 +152,28 @@ struct node_hfsc_opts {
 	int			flags;
 };
 
+struct node_fairq_sc {
+	struct node_queue_bw	m1;	/* slope of 1st segment; bps */
+	u_int			d;	/* x-projection of m1; msec */
+	struct node_queue_bw	m2;	/* slope of 2nd segment; bps */
+	u_int8_t		used;
+};
+
+struct node_fairq_opts {
+	struct node_fairq_sc	linkshare;
+	struct node_queue_bw	hogs_bw;
+	u_int			nbuckets;
+	int			flags;
+};
+
 struct node_queue_opt {
 	int			 qtype;
 	union {
 		struct cbq_opts		cbq_opts;
+		struct codel_opts	codel_opts;
 		struct priq_opts	priq_opts;
 		struct node_hfsc_opts	hfsc_opts;
+		struct node_fairq_opts	fairq_opts;
 	}			 data;
 };
 
@@ -239,6 +257,7 @@ void	print_src_node(struct pf_src_node *, int);
 void	print_rule(struct pf_rule *, const char *, int, int);
 void	print_tabledef(const char *, int, int, struct node_tinithead *);
 void	print_status(struct pf_status *, int);
+void	print_running(struct pf_status *);
 
 int	eval_pfaltq(struct pfctl *, struct pf_altq *, struct node_queue_bw *,
 	    struct node_queue_opt *);
@@ -294,7 +313,9 @@ void			 set_ipmask(struct node_host *, u_int8_t);
 int			 check_netmask(struct node_host *, sa_family_t);
 int			 unmask(struct pf_addr *, sa_family_t);
 void			 ifa_load(void);
+int			 get_socket_domain(void);
 struct node_host	*ifa_exists(const char *);
+struct node_host	*ifa_grouplookup(const char *ifa_name, int flags);
 struct node_host	*ifa_lookup(const char *, int);
 struct node_host	*host(const char *);
 

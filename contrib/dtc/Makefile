@@ -9,15 +9,15 @@
 # CONFIG_LOCALVERSION from some future config system.
 #
 VERSION = 1
-PATCHLEVEL = 3
-SUBLEVEL = 0
+PATCHLEVEL = 4
+SUBLEVEL = 3
 EXTRAVERSION =
 LOCAL_VERSION =
 CONFIG_LOCALVERSION =
 
 CPPFLAGS = -I libfdt -I .
-WARNINGS = -Werror -Wall -Wpointer-arith -Wcast-qual -Wnested-externs \
-	-Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls
+WARNINGS = -Wall -Wpointer-arith -Wcast-qual -Wnested-externs \
+	-Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -Wshadow
 CFLAGS = -g -Os -fPIC -Werror $(WARNINGS)
 
 BISON = bison
@@ -160,17 +160,25 @@ endif
 # intermediate target and building them again "for real"
 .SECONDARY: $(DTC_GEN_SRCS) $(CONVERT_GEN_SRCS)
 
-install: all $(SCRIPTS)
-	@$(VECHO) INSTALL
+install-bin: all $(SCRIPTS)
+	@$(VECHO) INSTALL-BIN
 	$(INSTALL) -d $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(BIN) $(SCRIPTS) $(DESTDIR)$(BINDIR)
+
+install-lib: all
+	@$(VECHO) INSTALL-LIB
 	$(INSTALL) -d $(DESTDIR)$(LIBDIR)
 	$(INSTALL) $(LIBFDT_lib) $(DESTDIR)$(LIBDIR)
 	ln -sf $(notdir $(LIBFDT_lib)) $(DESTDIR)$(LIBDIR)/$(LIBFDT_soname)
 	ln -sf $(LIBFDT_soname) $(DESTDIR)$(LIBDIR)/libfdt.$(SHAREDLIB_EXT)
 	$(INSTALL) -m 644 $(LIBFDT_archive) $(DESTDIR)$(LIBDIR)
+
+install-includes:
+	@$(VECHO) INSTALL-INC
 	$(INSTALL) -d $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL) -m 644 $(LIBFDT_include) $(DESTDIR)$(INCLUDEDIR)
+
+install: install-bin install-lib install-includes
 
 $(VERSION_FILE): Makefile FORCE
 	$(call filechk,version)
@@ -188,6 +196,33 @@ fdtget:	$(FDTGET_OBJS) $(LIBFDT_archive)
 
 fdtput:	$(FDTPUT_OBJS) $(LIBFDT_archive)
 
+dist:
+	git archive --format=tar --prefix=dtc-$(dtc_version)/ HEAD \
+		> ../dtc-$(dtc_version).tar
+	cat ../dtc-$(dtc_version).tar | \
+		gzip -9 > ../dtc-$(dtc_version).tar.gz
+
+#
+# Release signing and uploading
+# This is for maintainer convenience, don't try this at home.
+#
+ifeq ($(MAINTAINER),y)
+GPG = gpg2
+KUP = kup
+KUPDIR = /pub/software/utils/dtc
+
+kup: dist
+	$(GPG) --detach-sign --armor -o ../dtc-$(dtc_version).tar.sign \
+		../dtc-$(dtc_version).tar
+	$(KUP) put ../dtc-$(dtc_version).tar.gz ../dtc-$(dtc_version).tar.sign \
+		$(KUPDIR)/dtc-$(dtc_version).tar.gz
+endif
+
+tags: FORCE
+	rm -f tags
+	find . \( -name tests -type d -prune \) -o \
+	       \( ! -name '*.tab.[ch]' ! -name '*.lex.c' \
+	       -name '*.[chly]' -type f -print \) | xargs ctags -a
 
 #
 # Testsuite rules
@@ -198,6 +233,7 @@ TESTS_BIN += dtc
 TESTS_BIN += convert-dtsv0
 TESTS_BIN += fdtput
 TESTS_BIN += fdtget
+TESTS_BIN += fdtdump
 
 include tests/Makefile.tests
 
@@ -212,6 +248,7 @@ clean: libfdt_clean tests_clean
 	rm -f $(STD_CLEANFILES)
 	rm -f $(VERSION_FILE)
 	rm -f $(BIN)
+	rm -f dtc-*.tar dtc-*.tar.sign dtc-*.tar.asc
 
 #
 # Generic compile rules

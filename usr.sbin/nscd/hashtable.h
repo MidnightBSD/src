@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/nscd/hashtable.h 194109 2009-06-13 13:54:03Z des $
+ * $FreeBSD$
  */
 
 #ifndef __CACHELIB_HASHTABLE_H__
@@ -75,8 +75,8 @@ typedef unsigned int hashtable_index_t;
 #define HASHTABLE_INIT(table, type, field, _entries_size)		\
 	do {								\
 		hashtable_index_t var;					\
-		(table)->entries = calloc(1,				\
-			sizeof(*(table)->entries) * (_entries_size));	\
+		(table)->entries = calloc(_entries_size,		\
+			sizeof(*(table)->entries));			\
 		(table)->entries_size = (_entries_size);		\
 		for (var = 0; var < HASHTABLE_ENTRIES_COUNT(table); ++var) {\
 			(table)->entries[var].field.capacity = 		\

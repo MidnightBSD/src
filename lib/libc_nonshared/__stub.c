@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc_nonshared/__stub.c 258283 2013-11-17 22:52:17Z peter $
+ * $FreeBSD$
  */
 
 extern int __stub_N8TwezWFyocUB;

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/tools/usbtest/usb_msc_test.h 254159 2013-08-09 20:08:42Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *
@@ -109,6 +109,7 @@ struct usb_msc_params {
 	uint8_t	try_invalid_scsi_command;
 	uint8_t	try_invalid_wrapper_block;
 	uint8_t	try_invalid_max_packet_size;
+	uint8_t try_shorter_wrapper_block;
 	uint8_t	try_last_lba;
 	uint8_t	try_abort_data_write;
 	uint8_t try_sense_on_error;

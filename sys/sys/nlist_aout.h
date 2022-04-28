@@ -33,7 +33,7 @@
  *
  *	@(#)nlist.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: release/10.0.0/sys/sys/nlist_aout.h 208986 2010-06-10 14:19:51Z bz $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_NLIST_AOUT_H_
@@ -56,8 +56,6 @@ struct nlist {
 	} n_un;
 #else
 	const char *n_name;	/* symbol name (in memory) */
-	int : 8 * (sizeof(long) > sizeof(char *) ?
-	    sizeof(long) - sizeof(char *) : sizeof(char *) - sizeof(long));
 #endif
 	unsigned char n_type;	/* type defines */
 	char n_other;		/* ".type" and binding information */

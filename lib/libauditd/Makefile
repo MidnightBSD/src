@@ -1,24 +1,25 @@
 #
-# $FreeBSD: release/10.0.0/lib/libauditd/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 #
 
-OPENBSMDIR=		${.CURDIR}/../../contrib/openbsm
-LIBAUDITDDIR=		${OPENBSMDIR}/libauditd
-LIBBSMDIR=		${OPENBSMDIR}/libbsm
+PACKAGE=lib${LIB}
+OPENBSMDIR=		${SRCTOP}/contrib/openbsm
+_LIBAUDITDDIR=		${OPENBSMDIR}/libauditd
+_LIBBSMDIR=		${OPENBSMDIR}/libbsm
 
 LIB=		auditd
 
-.PATH:		${LIBAUDITDDIR}
+.PATH:		${_LIBAUDITDDIR}
 
 SRCS=	auditd_lib.c
 
 #
 # Must use BSM include files from within the contrib area, not the system.
 #
-CFLAGS+=	-I${OPENBSMDIR} -I${LIBBSMDIR}
+CFLAGS+=	-I${OPENBSMDIR} -I${_LIBBSMDIR}
 
 WARNS?=		3
 
-NO_MAN=
+MAN=
 
 .include <bsd.lib.mk>

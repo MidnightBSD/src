@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/usr.bin/cc/float.c 230368 2012-01-20 06:57:21Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <fenv.h>
 #include <float.h>

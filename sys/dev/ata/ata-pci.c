@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/ata-pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -217,7 +217,8 @@ ata_pci_write_config(device_t dev, device_t child, int reg,
 
 struct resource *
 ata_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
-		       u_long start, u_long end, u_long count, u_int flags)
+		       rman_res_t start, rman_res_t end, rman_res_t count,
+		       u_int flags)
 {
 	struct ata_pci_controller *controller = device_get_softc(dev);
 	struct resource *res = NULL;

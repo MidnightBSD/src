@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_timer.c 179595 2008-06-06 05:08:09Z benno $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxa_timer.c 179595 2008-06
 #include <sys/malloc.h>
 #include <sys/rman.h>
 #include <sys/timetc.h>
+#include <machine/armreg.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/frame.h>
@@ -190,7 +191,7 @@ cpu_reset(void)
 {
 	uint32_t	val;
 
-	(void)disable_interrupts(I32_bit|F32_bit);
+	(void)disable_interrupts(PSR_I|PSR_F);
 
 	val = pxa_timer_get_oscr();
 	val += PXA_TIMER_FREQUENCY;
@@ -234,7 +235,7 @@ pxa_timer_set_osmr(int which, uint32_t val)
 }
 
 uint32_t
-pxa_timer_get_oscr()
+pxa_timer_get_oscr(void)
 {
 
 	return (bus_space_read_4(timer_softc->pt_bst,
@@ -250,7 +251,7 @@ pxa_timer_set_oscr(uint32_t val)
 }
 
 uint32_t
-pxa_timer_get_ossr()
+pxa_timer_get_ossr(void)
 {
 
 	return (bus_space_read_4(timer_softc->pt_bst,
@@ -266,7 +267,7 @@ pxa_timer_clear_ossr(uint32_t val)
 }
 
 void
-pxa_timer_watchdog_enable()
+pxa_timer_watchdog_enable(void)
 {
 
 	bus_space_write_4(timer_softc->pt_bst,
@@ -274,7 +275,7 @@ pxa_timer_watchdog_enable()
 }
 
 void
-pxa_timer_watchdog_disable()	
+pxa_timer_watchdog_disable(void)
 {
 
 	bus_space_write_4(timer_softc->pt_bst,

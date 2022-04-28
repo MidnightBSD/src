@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/sys/eventvar.h 255527 2013-09-13 19:50:50Z kib $
+ *	$FreeBSD$
  */
 
 #ifndef _SYS_EVENTVAR_H_
@@ -60,6 +60,7 @@ struct kqueue {
 	u_long		kq_knhashmask;		/* size of knhash */
 	struct		klist *kq_knhash;	/* hash table for knotes */
 	struct		task kq_task;
+	struct		ucred *kq_cred;
 };
 
 #endif /* !_SYS_EVENTVAR_H_ */

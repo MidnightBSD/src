@@ -1,30 +1,33 @@
-# $FreeBSD: release/10.0.0/lib/libc/arm/aeabi/Makefile.inc 246706 2013-02-12 06:04:51Z andrew $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/arm/aeabi
+.PATH: ${LIBC_SRCTOP}/arm/aeabi
 
 SRCS+=	aeabi_atexit.c		\
+	aeabi_unwind_cpp.c	\
+	aeabi_unwind_exidx.c
+.if (${MACHINE_ARCH:Marmv6*} && defined(CPUTYPE) && ${CPUTYPE:M*soft*} != "") || \
+	${MACHINE_ARCH:Marmv6*} == ""
+SRCS+=	aeabi_asm_double.S	\
+	aeabi_asm_float.S	\
 	aeabi_double.c		\
-	aeabi_float.c		\
-	aeabi_unwind_cpp.c
+	aeabi_float.c
+.endif
+.if ${MACHINE_ARCH:Marmv6*} && (!defined(CPUTYPE) || ${CPUTYPE:M*soft*} == "")
+SRCS+=	aeabi_vfp_double.S	\
+	aeabi_vfp_float.S
+.endif
 
 # Add the aeabi_mem* functions. While they live in compiler-rt they call into
 # libc. This causes issues when other parts of libc call these functions.
 # We work around this by including these functions in libc but mark them as
 # hidden so users of libc will not pick up these versions.
-.PATH: ${.CURDIR}/../../contrib/compiler-rt/lib/arm
+.PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/builtins/arm
 
 SRCS+=	aeabi_memcmp.S		\
 	aeabi_memcpy.S		\
 	aeabi_memmove.S		\
 	aeabi_memset.S
 
-# Mark the functions as hidden so they are not available outside of libc.
-CFLAGS.aeabi_memcmp.S=	-DVISIBILITY_HIDDEN
-CFLAGS.aeabi_memcpy.S=	-DVISIBILITY_HIDDEN
-CFLAGS.aeabi_memmove.S=	-DVISIBILITY_HIDDEN
-CFLAGS.aeabi_memset.S=	-DVISIBILITY_HIDDEN
-CFLAGS+=		${CFLAGS.${.IMPSRC:T}}
+SRCS+=	aeabi_int_div.S
 
-
-SYM_MAPS+=${.CURDIR}/arm/aeabi/Symbol.map
-
+SYM_MAPS+=${LIBC_SRCTOP}/arm/aeabi/Symbol.map

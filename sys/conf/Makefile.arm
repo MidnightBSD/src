@@ -1,7 +1,7 @@
 # Makefile.arm -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: release/10.0.0/sys/conf/Makefile.arm 253396 2013-07-16 19:15:19Z andrew $
+# $FreeBSD$
 #
 # Makefile for FreeBSD
 #
@@ -17,7 +17,7 @@
 #
 
 # Which version of config(8) is required.
-%VERSREQ=	600004
+%VERSREQ=	600013
 
 STD8X16FONT?=	iso
 
@@ -30,7 +30,7 @@ S=	../../..
 .endif
 .include "$S/conf/kern.pre.mk"
 
-INCLUDES+= -I$S/contrib/libfdt
+INCLUDES+= -I$S/contrib/libfdt -I$S/gnu/dts/include 
 
 SYSTEM_LD:= ${SYSTEM_LD:$S/conf/ldscript.$M=ldscript.$M}
 SYSTEM_DEP:= ${SYSTEM_DEP:$S/conf/ldscript.$M=ldscript.$M}
@@ -39,25 +39,32 @@ SYSTEM_DEP:= ${SYSTEM_DEP:$S/conf/ldscript.$M=ldscript.$M}
 STRIP_FLAGS = -S
 .endif
 
-.if ${COMPILER_TYPE} != "clang"
-CFLAGS += -mno-thumb-interwork
-.endif
+# We don't support gcc's thump interwork stuff, so disable it
+CFLAGS.gcc += -mno-thumb-interwork
 
-.if empty(DDB_ENABLED)
-.if defined(WITHOUT_ARM_EABI) && ${COMPILER_TYPE} != "clang"
-CFLAGS += -mno-apcs-frame
-.endif
-.elif !defined(WITHOUT_ARM_EABI)
+# We generally don't want fpu instructions in the kernel.
+CFLAGS.clang += -mfpu=none
+
+.if !empty(DDB_ENABLED)
 CFLAGS += -funwind-tables
-.if ${COMPILER_TYPE} == "clang"
-# clang requires us to tell it to emit assembly with unwind information
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} < 30500
+# clang < 3.5.0 requires us to tell it to emit assembly with unwind information
 CFLAGS += -mllvm -arm-enable-ehabi
 .endif
 .endif
 
-SYSTEM_LD_ = ${LD} -Bdynamic -T ldscript.$M.noheader ${LDFLAGS} \
-	  -warn-common -export-dynamic -dynamic-linker /red/herring -o \
-	   ${FULLKERNEL}.noheader -X ${SYSTEM_OBJS} vers.o
+# "makeoptions KERNVIRTADDR=" is now optional, supply the default value.
+.if empty(KERNVIRTADDR)
+KERNVIRTADDR= 0xc0000000
+.endif
+
+# hack because genassym.c includes sys/bus.h which includes these.
+genassym.o: bus_if.h device_if.h
+
+SYSTEM_LD_ = ${LD} -m ${LD_EMULATION} -Bdynamic -T ldscript.$M.noheader \
+	${_LDFLAGS} --no-warn-mismatch --warn-common --export-dynamic \
+	--dynamic-linker /red/herring \
+	-o ${FULLKERNEL}.noheader -X ${SYSTEM_OBJS} vers.o
 SYSTEM_LD_TAIL +=;sed s/" + SIZEOF_HEADERS"// ldscript.$M\
 		>ldscript.$M.noheader; \
 		${SYSTEM_LD_}; \
@@ -65,18 +72,15 @@ SYSTEM_LD_TAIL +=;sed s/" + SIZEOF_HEADERS"// ldscript.$M\
 		${KERNEL_KO}.bin; \
 		rm ${FULLKERNEL}.noheader
 
-.if defined(MFS_IMAGE)
-SYSTEM_LD_TAIL += ;sh ${S}/tools/embed_mfs.sh ${KERNEL_KO}.bin ${MFS_IMAGE};
-.endif
-
-FILES_CPU_FUNC =	$S/$M/$M/cpufunc_asm_arm7tdmi.S \
-	$S/$M/$M/cpufunc_asm_arm8.S $S/$M/$M/cpufunc_asm_arm9.S \
-	$S/$M/$M/cpufunc_asm_sa1.S $S/$M/$M/cpufunc_asm_arm10.S \
+FILES_CPU_FUNC = \
+	$S/$M/$M/cpufunc_asm_arm9.S \
 	$S/$M/$M/cpufunc_asm_xscale.S $S/$M/$M/cpufunc_asm.S \
 	$S/$M/$M/cpufunc_asm_xscale_c3.S $S/$M/$M/cpufunc_asm_armv5_ec.S \
 	$S/$M/$M/cpufunc_asm_fa526.S $S/$M/$M/cpufunc_asm_sheeva.S \
-	$S/$M/$M/cpufunc_asm_pj4b.S $S/$M/$M/cpufunc_asm_armv7.S
+	$S/$M/$M/cpufunc_asm_pj4b.S $S/$M/$M/cpufunc_asm_armv6.S \
+	$S/$M/$M/cpufunc_asm_armv7.S
 
+.if ${MACHINE_ARCH} != "armv6" && defined(KERNPHYSADDR)
 KERNEL_EXTRA=trampoline
 KERNEL_EXTRA_INSTALL=kernel.gz.tramp
 trampoline: ${KERNEL_KO}.tramp
@@ -108,7 +112,7 @@ ${KERNEL_KO}.tramp: ${KERNEL_KO} $S/$M/$M/inckern.S $S/$M/$M/elf_trampoline.c
 	gzip -f9 ${KERNEL_KO}.tmp
 	eval $$(stat -s ${KERNEL_KO}.tmp.gz) && \
 	    echo "#define KERNCOMPSIZE $$st_size" >>opt_kernname.h
-	${CC} -O2 -ffreestanding -DKZIP -I. -I$S -c $S/kern/inflate.c -o \
+	${CC} -O2 -ffreestanding -DKZIP -I. -I$S -c $S/kern/subr_inflate.c -o \
 	    inflate-tramp.o
 	${CC} -O -nostdlib -I. -I$S -Xlinker -T -Xlinker ldscript.$M.tramp \
 	    -DKZIP tmphack.S $S/$M/$M/elf_trampoline.c inflate-tramp.o \
@@ -121,8 +125,7 @@ ${KERNEL_KO}.tramp: ${KERNEL_KO} $S/$M/$M/inckern.S $S/$M/$M/elf_trampoline.c
 	    ${KERNEL_KO}.gz.tramp.bin
 	rm ${KERNEL_KO}.tmp.gz ${KERNEL_KO}.tramp.noheader opt_kernname.h \
 	    inflate-tramp.o tmphack.S
-
-MKMODULESENV+=	MACHINE=${MACHINE}
+.endif
 
 %BEFORE_DEPEND
 

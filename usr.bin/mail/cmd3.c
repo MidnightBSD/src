@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)cmd3.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/cmd3.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include "rcv.h"
 #include "extern.h"
@@ -463,7 +463,8 @@ group(char **argv)
 	gname = *argv;
 	h = hash(gname);
 	if ((gh = findgroup(gname)) == NULL) {
-		gh = calloc(sizeof(*gh), 1);
+		if ((gh = calloc(1, sizeof(*gh))) == NULL)
+			err(1, "Out of memory");
 		gh->g_name = vcopy(gname);
 		gh->g_list = NULL;
 		gh->g_link = groups[h];
@@ -477,7 +478,8 @@ group(char **argv)
 	 */
 
 	for (ap = argv+1; *ap != NULL; ap++) {
-		gp = calloc(sizeof(*gp), 1);
+		if ((gp = calloc(1, sizeof(*gp))) == NULL)
+			err(1, "Out of memory");
 		gp->ge_name = vcopy(*ap);
 		gp->ge_link = gh->g_list;
 		gh->g_list = gp;
@@ -702,7 +704,8 @@ alternates(char **namelist)
 	}
 	if (altnames != 0)
 		(void)free(altnames);
-	altnames = calloc((unsigned)c, sizeof(char *));
+	if ((altnames = calloc((unsigned)c, sizeof(char *))) == NULL)
+		err(1, "Out of memory");
 	for (ap = namelist, ap2 = altnames; *ap != NULL; ap++, ap2++) {
 		cp = calloc((unsigned)strlen(*ap) + 1, sizeof(char));
 		strcpy(cp, *ap);

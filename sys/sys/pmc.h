@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pmc.h 248842 2013-03-28 19:15:54Z sbruno $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PMC_H_
@@ -73,6 +73,7 @@
 #define	__PMC_CPUS()						\
 	__PMC_CPU(AMD_K7,	0x00,	"AMD K7")		\
 	__PMC_CPU(AMD_K8,	0x01,	"AMD K8")		\
+	__PMC_CPU(AMD_F17H,     0x02,   "AMD F17H")		\
 	__PMC_CPU(INTEL_P5,	0x80,	"Intel Pentium")	\
 	__PMC_CPU(INTEL_P6,	0x81,	"Intel Pentium Pro")	\
 	__PMC_CPU(INTEL_CL,	0x82,	"Intel Celeron")	\
@@ -91,11 +92,31 @@
 	__PMC_CPU(INTEL_SANDYBRIDGE_XEON, 0x8F,   "Intel Sandy Bridge Xeon")	\
 	__PMC_CPU(INTEL_IVYBRIDGE_XEON, 0x90,   "Intel Ivy Bridge Xeon")	\
 	__PMC_CPU(INTEL_HASWELL, 0x91,   "Intel Haswell")	\
+	__PMC_CPU(INTEL_ATOM_SILVERMONT, 0x92,	"Intel Atom Silvermont")    \
+	__PMC_CPU(INTEL_NEHALEM_EX, 0x93,   "Intel Nehalem Xeon 7500")	\
+	__PMC_CPU(INTEL_WESTMERE_EX, 0x94,   "Intel Westmere Xeon E7")	\
+	__PMC_CPU(INTEL_HASWELL_XEON, 0x95,   "Intel Haswell Xeon E5 v3") \
+	__PMC_CPU(INTEL_BROADWELL, 0x96,   "Intel Broadwell") \
+	__PMC_CPU(INTEL_BROADWELL_XEON, 0x97,   "Intel Broadwell Xeon") \
+	__PMC_CPU(INTEL_SKYLAKE, 0x98,   "Intel Skylake")		\
+	__PMC_CPU(INTEL_SKYLAKE_XEON, 0x99,   "Intel Skylake Xeon")	\
 	__PMC_CPU(INTEL_XSCALE,	0x100,	"Intel XScale")		\
 	__PMC_CPU(MIPS_24K,     0x200,  "MIPS 24K")		\
 	__PMC_CPU(MIPS_OCTEON,  0x201,  "Cavium Octeon")	\
+	__PMC_CPU(MIPS_74K,     0x202,  "MIPS 74K")		\
 	__PMC_CPU(PPC_7450,     0x300,  "PowerPC MPC7450")	\
-	__PMC_CPU(GENERIC, 	0x400,  "Generic")
+	__PMC_CPU(PPC_E500,     0x340,  "PowerPC e500 Core")	\
+	__PMC_CPU(PPC_MPC85XX,  0x340,  "Freescale PowerPC MPC85XX")	\
+	__PMC_CPU(PPC_970,      0x380,  "IBM PowerPC 970")	\
+	__PMC_CPU(GENERIC, 	0x400,  "Generic")		\
+	__PMC_CPU(ARMV7_CORTEX_A5,	0x500,	"ARMv7 Cortex A5")	\
+	__PMC_CPU(ARMV7_CORTEX_A7,	0x501,	"ARMv7 Cortex A7")	\
+	__PMC_CPU(ARMV7_CORTEX_A8,	0x502,	"ARMv7 Cortex A8")	\
+	__PMC_CPU(ARMV7_CORTEX_A9,	0x503,	"ARMv7 Cortex A9")	\
+	__PMC_CPU(ARMV7_CORTEX_A15,	0x504,	"ARMv7 Cortex A15")	\
+	__PMC_CPU(ARMV7_CORTEX_A17,	0x505,	"ARMv7 Cortex A17")	\
+	__PMC_CPU(ARMV8_CORTEX_A53,	0x600,	"ARMv8 Cortex A53")	\
+	__PMC_CPU(ARMV8_CORTEX_A57,	0x601,	"ARMv8 Cortex A57")
 
 enum pmc_cputype {
 #undef	__PMC_CPU
@@ -111,30 +132,36 @@ enum pmc_cputype {
  */
 
 #define	__PMC_CLASSES()							\
-	__PMC_CLASS(TSC)	/* CPU Timestamp counter */		\
-	__PMC_CLASS(K7)		/* AMD K7 performance counters */	\
-	__PMC_CLASS(K8)		/* AMD K8 performance counters */	\
-	__PMC_CLASS(P5)		/* Intel Pentium counters */		\
-	__PMC_CLASS(P6)		/* Intel Pentium Pro counters */	\
-	__PMC_CLASS(P4)		/* Intel Pentium-IV counters */		\
-	__PMC_CLASS(IAF)	/* Intel Core2/Atom, fixed function */	\
-	__PMC_CLASS(IAP)	/* Intel Core...Atom, programmable */	\
-	__PMC_CLASS(UCF)	/* Intel Uncore fixed function */	\
-	__PMC_CLASS(UCP)	/* Intel Uncore programmable */		\
-	__PMC_CLASS(XSCALE)	/* Intel XScale counters */		\
-	__PMC_CLASS(MIPS24K)	/* MIPS 24K */				\
-	__PMC_CLASS(OCTEON)	/* Cavium Octeon */			\
-	__PMC_CLASS(PPC7450)	/* Motorola MPC7450 class */		\
-	__PMC_CLASS(SOFT)	/* Software events */
+	__PMC_CLASS(TSC,	0x00,	"CPU Timestamp counter")	\
+	__PMC_CLASS(K7,		0x01,	"AMD K7 performance counters")	\
+	__PMC_CLASS(K8,		0x02,	"AMD K8 performance counters")	\
+	__PMC_CLASS(P5,		0x03,	"Intel Pentium counters")	\
+	__PMC_CLASS(P6,		0x04,	"Intel Pentium Pro counters")	\
+	__PMC_CLASS(P4,		0x05,	"Intel Pentium-IV counters")	\
+	__PMC_CLASS(IAF,	0x06,	"Intel Core2/Atom, fixed function") \
+	__PMC_CLASS(IAP,	0x07,	"Intel Core...Atom, programmable") \
+	__PMC_CLASS(UCF,	0x08,	"Intel Uncore fixed function")	\
+	__PMC_CLASS(UCP,	0x09,	"Intel Uncore programmable")	\
+	__PMC_CLASS(XSCALE,	0x0A,	"Intel XScale counters")	\
+	__PMC_CLASS(MIPS24K,	0x0B,	"MIPS 24K")			\
+	__PMC_CLASS(OCTEON,	0x0C,	"Cavium Octeon")		\
+	__PMC_CLASS(PPC7450,	0x0D,	"Motorola MPC7450 class")	\
+	__PMC_CLASS(PPC970,	0x0E,	"IBM PowerPC 970 class")	\
+	__PMC_CLASS(SOFT,	0x0F,	"Software events")		\
+	__PMC_CLASS(ARMV7,	0x10,	"ARMv7")			\
+	__PMC_CLASS(ARMV8,	0x11,	"ARMv8")			\
+	__PMC_CLASS(MIPS74K,	0x12,	"MIPS 74K")			\
+	__PMC_CLASS(E500,	0x13,	"Freescale e500 class")		\
+	__PMC_CLASS(F17H,       0x14,   "AMD F17H performance counters")
 
 enum pmc_class {
 #undef  __PMC_CLASS
-#define	__PMC_CLASS(N)	PMC_CLASS_##N ,
+#define	__PMC_CLASS(S,V,D)	PMC_CLASS_##S = V,
 	__PMC_CLASSES()
 };
 
 #define	PMC_CLASS_FIRST	PMC_CLASS_TSC
-#define	PMC_CLASS_LAST	PMC_CLASS_SOFT
+#define	PMC_CLASS_LAST	PMC_CLASS_F17H
 
 /*
  * A PMC can be in the following states:
@@ -258,7 +285,7 @@ enum pmc_disp {
 	__PMC_CAP(THRESHOLD,	4, "ignore events below a threshold")	\
 	__PMC_CAP(READ,		5, "read PMC counter")			\
 	__PMC_CAP(WRITE,	6, "reprogram PMC counter")		\
-	__PMC_CAP(INVERT,	7, "invert comparision sense")		\
+	__PMC_CAP(INVERT,	7, "invert comparison sense")		\
 	__PMC_CAP(QUALIFIER,	8, "further qualify monitored events")	\
 	__PMC_CAP(PRECISE,	9, "perform precise sampling")		\
 	__PMC_CAP(TAGGING,	10, "tag upstream events")		\
@@ -344,7 +371,7 @@ enum pmc_ops {
 #define	PMC_F_NEEDS_LOGFILE	0x00020000 /*needs log file */
 #define	PMC_F_ATTACH_DONE	0x00040000 /*attached at least once */
 
-#define	PMC_CALLCHAIN_DEPTH_MAX	32
+#define	PMC_CALLCHAIN_DEPTH_MAX	128
 
 #define	PMC_CC_F_USERSPACE	0x01	   /*userspace callchain*/
 
@@ -528,14 +555,15 @@ struct pmc_op_configurelog {
  */
 
 struct pmc_op_getdriverstats {
-	int	pm_intr_ignored;	/* #interrupts ignored */
-	int	pm_intr_processed;	/* #interrupts processed */
-	int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
-	int	pm_syscalls;		/* #syscalls */
-	int	pm_syscall_errors;	/* #syscalls with errors */
-	int	pm_buffer_requests;	/* #buffer requests */
-	int	pm_buffer_requests_failed; /* #failed buffer requests */
-	int	pm_log_sweeps;		/* #sample buffer processing passes */
+	unsigned int	pm_intr_ignored;	/* #interrupts ignored */
+	unsigned int	pm_intr_processed;	/* #interrupts processed */
+	unsigned int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
+	unsigned int	pm_syscalls;		/* #syscalls */
+	unsigned int	pm_syscall_errors;	/* #syscalls with errors */
+	unsigned int	pm_buffer_requests;	/* #buffer requests */
+	unsigned int	pm_buffer_requests_failed; /* #failed buffer requests */
+	unsigned int	pm_log_sweeps;		/* #sample buffer processing
+						   passes */
 };
 
 /*
@@ -561,7 +589,7 @@ struct pmc_op_writelog {
 /*
  * OP GETMSR
  *
- * Retrieve the machine specific address assoicated with the allocated
+ * Retrieve the machine specific address associated with the allocated
  * PMC.  This number can be used subsequently with a read-performance-counter
  * instruction.
  */
@@ -592,15 +620,16 @@ struct pmc_op_getdyneventinfo {
 
 #include <sys/malloc.h>
 #include <sys/sysctl.h>
+#include <sys/_cpuset.h>
 
 #include <machine/frame.h>
 
-#define	PMC_HASH_SIZE				16
-#define	PMC_MTXPOOL_SIZE			32
+#define	PMC_HASH_SIZE				1024
+#define	PMC_MTXPOOL_SIZE			2048
 #define	PMC_LOG_BUFFER_SIZE			4
-#define	PMC_NLOGBUFFERS				64
-#define	PMC_NSAMPLES				512
-#define	PMC_CALLCHAIN_DEPTH			8
+#define	PMC_NLOGBUFFERS				1024
+#define	PMC_NSAMPLES				1024
+#define	PMC_CALLCHAIN_DEPTH			32
 
 #define PMC_SYSCTL_NAME_PREFIX "kern." PMC_MODULE_NAME "."
 
@@ -707,7 +736,8 @@ struct pmc {
 		pmc_value_t	pm_initial;	/* counting PMC modes */
 	} pm_sc;
 
-	uint32_t	pm_stalled;	/* marks stalled sampling PMCs */
+	volatile cpuset_t pm_stalled;	/* marks stalled sampling PMCs */
+	volatile cpuset_t pm_cpustate;	/* CPUs where PMC should be active */
 	uint32_t	pm_caps;	/* PMC capabilities */
 	enum pmc_event	pm_event;	/* event being measured */
 	uint32_t	pm_flags;	/* additional flags PMC_F_... */
@@ -984,7 +1014,8 @@ extern struct pmc_cpu **pmc_pcpu;
 /* driver statistics */
 extern struct pmc_op_getdriverstats pmc_stats;
 
-#if	defined(DEBUG)
+#if	defined(HWPMC_DEBUG)
+#include <sys/ktr.h>
 
 /* debug flags, major flag groups */
 struct pmc_debugflags {
@@ -1001,14 +1032,42 @@ struct pmc_debugflags {
 
 extern struct pmc_debugflags pmc_debugflags;
 
+#define	KTR_PMC			KTR_SUBSYS
+
 #define	PMC_DEBUG_STRSIZE		128
-#define	PMC_DEBUG_DEFAULT_FLAGS		{ 0, 0, 0, 0, 0, 0, 0, 0 }
+#define	PMC_DEBUG_DEFAULT_FLAGS		{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
-#define	PMCDBG(M,N,L,F,...) do {					\
+#define	PMCDBG0(M, N, L, F) do {					\
 	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
-		printf(#M ":" #N ":" #L  ": " F "\n", __VA_ARGS__);	\
+		CTR0(KTR_PMC, #M ":" #N ":" #L  ": " F);		\
 } while (0)
-
+#define	PMCDBG1(M, N, L, F, p1) do {					\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR1(KTR_PMC, #M ":" #N ":" #L  ": " F, p1);		\
+} while (0)
+#define	PMCDBG2(M, N, L, F, p1, p2) do {				\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR2(KTR_PMC, #M ":" #N ":" #L  ": " F, p1, p2);	\
+} while (0)
+#define	PMCDBG3(M, N, L, F, p1, p2, p3) do {				\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR3(KTR_PMC, #M ":" #N ":" #L  ": " F, p1, p2, p3);	\
+} while (0)
+#define	PMCDBG4(M, N, L, F, p1, p2, p3, p4) do {			\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR4(KTR_PMC, #M ":" #N ":" #L  ": " F, p1, p2, p3, p4);\
+} while (0)
+#define	PMCDBG5(M, N, L, F, p1, p2, p3, p4, p5) do {			\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR5(KTR_PMC, #M ":" #N ":" #L  ": " F, p1, p2, p3, p4,	\
+		    p5);						\
+} while (0)
+#define	PMCDBG6(M, N, L, F, p1, p2, p3, p4, p5, p6) do {		\
+	if (pmc_debugflags.pdb_ ## M & (1 << PMC_DEBUG_MIN_ ## N))	\
+		CTR6(KTR_PMC, #M ":" #N ":" #L  ": " F, p1, p2, p3, p4,	\
+		    p5, p6);						\
+} while (0)
+	
 /* Major numbers */
 #define	PMC_DEBUG_MAJ_CPU		0 /* cpu switches */
 #define	PMC_DEBUG_MAJ_CSW		1 /* context switches */
@@ -1074,7 +1133,13 @@ extern struct pmc_debugflags pmc_debugflags;
 #define	PMC_DEBUG_MIN_CLO	       12 /* close */
 
 #else
-#define	PMCDBG(M,N,L,F,...)		/* nothing */
+#define	PMCDBG0(M, N, L, F)		/* nothing */
+#define	PMCDBG1(M, N, L, F, p1)
+#define	PMCDBG2(M, N, L, F, p1, p2)
+#define	PMCDBG3(M, N, L, F, p1, p2, p3)
+#define	PMCDBG4(M, N, L, F, p1, p2, p3, p4)
+#define	PMCDBG5(M, N, L, F, p1, p2, p3, p4, p5)
+#define	PMCDBG6(M, N, L, F, p1, p2, p3, p4, p5, p6)
 #endif
 
 /* declare a dedicated memory pool */

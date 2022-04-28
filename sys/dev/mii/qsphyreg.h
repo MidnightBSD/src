@@ -1,6 +1,6 @@
 /*	OpenBSD: qsphyreg.h,v 1.2 1999/03/09 00:02:45 jason Exp 	*/
 /*	NetBSD: qsphyreg.h,v 1.1 1998/08/11 00:01:03 thorpej Exp 	*/
-/*	$FreeBSD: release/10.0.0/sys/dev/mii/qsphyreg.h 204646 2010-03-03 17:55:51Z joel $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.

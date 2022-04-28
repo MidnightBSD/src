@@ -33,7 +33,7 @@
  *
  *      @(#)bpfdesc.h	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: release/10.0.0/sys/net/bpfdesc.h 244090 2012-12-10 16:14:44Z ghelmer $
+ * $FreeBSD$
  */
 
 #ifndef _NET_BPFDESC_H_
@@ -115,9 +115,6 @@ struct bpf_d {
 #define BPF_PID_REFRESH(bd, td)	(bd)->bd_pid = (td)->td_proc->p_pid
 #define BPF_PID_REFRESH_CUR(bd)	(bd)->bd_pid = curthread->td_proc->p_pid
 
-#define BPF_LOCK()		mtx_lock(&bpf_mtx)
-#define BPF_UNLOCK()		mtx_unlock(&bpf_mtx)
-#define BPF_LOCK_ASSERT()	mtx_assert(&bpf_mtx, MA_OWNED)
 /*
  * External representation of the bpf descriptor
  */

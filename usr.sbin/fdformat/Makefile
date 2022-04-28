@@ -1,11 +1,12 @@
-# $FreeBSD: release/10.0.0/usr.sbin/fdformat/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../fdread
+.PATH: ${.CURDIR:H}/fdread
 
 PROG=	fdformat
+MAN=	fdformat.8
 SRCS=	fdformat.c fdutil.c
 
-CFLAGS+= -I${.CURDIR}/../fdread
+CFLAGS+= -I${.CURDIR:H}/fdread
 
 .if ${MACHINE} == "pc98"
 CFLAGS+= -DPC98

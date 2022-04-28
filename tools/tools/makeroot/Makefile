@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/makeroot/Makefile 250698 2013-05-16 14:38:12Z brooks $
+# $FreeBSD$
 
 SCRIPTS=	makeroot.sh
 MAN=		makeroot.8

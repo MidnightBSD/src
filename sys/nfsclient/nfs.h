@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD: release/10.0.0/sys/nfsclient/nfs.h 221986 2011-05-16 13:12:09Z rmacklem $
+ * $FreeBSD$
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -114,10 +114,7 @@
 #ifdef _KERNEL
 
 #ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_NFSREQ);
 MALLOC_DECLARE(M_NFSDIROFF);
-MALLOC_DECLARE(M_NFSBIGFH);
-MALLOC_DECLARE(M_NFSHASH);
 MALLOC_DECLARE(M_NFSDIRECTIO);
 #endif
 

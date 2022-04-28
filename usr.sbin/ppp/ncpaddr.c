@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/ncpaddr.c 146187 2005-05-13 16:31:11Z ume $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -75,8 +77,6 @@
 #define ncprange_ip6width	u.ip6.width
 #define ncpaddr_ip6addr		u.ip6addr
 #endif
-
-#define	NCP_ASCIIBUFFERSIZE	52
 
 static struct in_addr
 bits2mask4(int bits)

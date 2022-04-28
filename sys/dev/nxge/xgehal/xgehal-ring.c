@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nxge/xgehal/xgehal-ring.c 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD$
  */
 
 #include <dev/nxge/include/xgehal-ring.h>
@@ -609,7 +609,7 @@ __hal_ring_hw_initialize(xge_hal_device_h devh)
 
 	    if (!hldev->config.ring.queue[i].configured ||
 	        !hldev->config.ring.queue[i].intr_vector ||
-	        !hldev->config.intr_mode != XGE_HAL_INTR_MODE_MSIX)
+	        hldev->config.intr_mode != XGE_HAL_INTR_MODE_MSIX)
 	        continue;
 
 	    /* find channel */

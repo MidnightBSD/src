@@ -1,8 +1,10 @@
-/* $FreeBSD: release/10.0.0/usr.bin/mkesdb/yacc.y 250984 2013-05-25 15:36:15Z ed $ */
+/* $FreeBSD$ */
 /* $NetBSD: yacc.y,v 1.4 2005/06/02 02:09:25 lukem Exp $	*/
 
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003 Citrus Project,
  * All rights reserved.
  *
@@ -278,8 +280,8 @@ usage(void)
 {
 	errx(EXIT_FAILURE,
 	    "usage:\n"
-	    "\t%s [-o outfile] [infile]\n"
-	    "\t%s -m [-o outfile] [infile]",
+	    "\t%s [-d] [-o outfile] [infile]\n"
+	    "\t%s -m [-d] [-o outfile] [infile]",
 	    getprogname(), getprogname());
 }
 

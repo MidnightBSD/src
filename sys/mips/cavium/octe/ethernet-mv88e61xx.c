@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-mv88e61xx.c 213762 2010-10-13 09:17:44Z jmallett $
+ * $FreeBSD$
  */
 
 /*
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-mv88e61xx.c 213762 2010-10-13 09:17:44Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-mv88e61xx.c 213
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"

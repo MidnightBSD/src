@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_systm.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/netinet/in_systm.h 188578 2009-02-13 15:14:43Z luigi $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IN_SYSTM_H_
@@ -44,12 +44,15 @@
  * Internally the system keeps counters in the headers with the bytes
  * swapped so that VAX instructions will work on them.  It reverses
  * the bytes before transmission at each protocol level.  The n_ types
- * represent the types with the bytes in ``high-ender'' order.
+ * represent the types with the bytes in ``high-ender'' order. Network
+ * byte order is usually referered to as big-endian these days rather
+ * than high-ender, which sadly invokes an Orson Scott Card novel, or
+ * worse, the movie.
  */
 typedef u_int16_t n_short;		/* short as received from the net */
 typedef u_int32_t n_long;		/* long as received from the net */
 
-typedef	u_int32_t n_time;		/* ms since 00:00 GMT, byte rev */
+typedef	u_int32_t n_time;		/* ms since 00:00 UTC, byte rev */
 
 #ifdef _KERNEL
 uint32_t	 iptime(void);

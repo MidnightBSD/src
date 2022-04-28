@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/emu10kx-pcm.c 246128 2013-01-30 18:01:20Z sbz $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -261,11 +261,12 @@ emu_dspmixer_uninit(struct snd_mixer *m)
 
 	/* drop submixer for AC97 codec */
 	sc = mix_getdevinfo(m);
-	if (sc->sm != NULL)
+	if (sc->sm != NULL) {
 		err = mixer_delete(sc->sm);
 		if (err)
 			return (err);
 		sc->sm = NULL;
+	}
 	return (0);
 }
 

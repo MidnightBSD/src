@@ -1,5 +1,5 @@
 /*	$NetBSD: fpu_emu.h,v 1.3 2005/12/11 12:18:42 christos Exp $ */
-/* $FreeBSD: release/10.0.0/sys/powerpc/fpu/fpu_emu.h 176501 2008-02-24 03:01:26Z marcel $ */
+/* $FreeBSD$ */
 
 /*
  * Copyright (c) 1992, 1993
@@ -138,7 +138,7 @@ struct fpn {
  * Emulator state.
  */
 struct fpemu {
-	struct	fpreg *fe_fpstate;	/* registers, etc */
+	struct	fpu *fe_fpstate;	/* registers, etc */
 	int	fe_fpscr;		/* fpscr copy (modified during op) */
 	int	fe_cx;			/* keep track of exceptions */
 	struct	fpn fe_f1;		/* operand 1 */

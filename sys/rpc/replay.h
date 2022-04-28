@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/rpc/replay.h 184588 2008-11-03 10:38:00Z dfr $
+ * $FreeBSD$
  */
 
 #ifndef _RPC_REPLAY_H

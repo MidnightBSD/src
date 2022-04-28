@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/tools/ath/ath_ee_9300_print/Makefile 251738 2013-06-14 08:12:40Z adrian $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../../sys/dev/ath/ath_hal
 
 PROG=	ath_ee_9300_print
-NOMAN=	yes
-NO_MAN=	yes
+MAN=
 SRCS=	main.c
 SRCS+=	opt_ah.h
 CLEANFILES+=	opt_ah.h

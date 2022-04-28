@@ -20,7 +20,9 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2016 by Delphix. All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
+ * Copyright (c) 2017 Datto Inc.
  */
 
 #include <sys/bpobj.h>
@@ -36,22 +38,20 @@
 uint64_t
 bpobj_alloc_empty(objset_t *os, int blocksize, dmu_tx_t *tx)
 {
-	zfeature_info_t *empty_bpobj_feat =
-	    &spa_feature_table[SPA_FEATURE_EMPTY_BPOBJ];
 	spa_t *spa = dmu_objset_spa(os);
 	dsl_pool_t *dp = dmu_objset_pool(os);
 
-	if (spa_feature_is_enabled(spa, empty_bpobj_feat)) {
-		if (!spa_feature_is_active(spa, empty_bpobj_feat)) {
+	if (spa_feature_is_enabled(spa, SPA_FEATURE_EMPTY_BPOBJ)) {
+		if (!spa_feature_is_active(spa, SPA_FEATURE_EMPTY_BPOBJ)) {
 			ASSERT0(dp->dp_empty_bpobj);
 			dp->dp_empty_bpobj =
-			    bpobj_alloc(os, SPA_MAXBLOCKSIZE, tx);
+			    bpobj_alloc(os, SPA_OLD_MAXBLOCKSIZE, tx);
 			VERIFY(zap_add(os,
 			    DMU_POOL_DIRECTORY_OBJECT,
 			    DMU_POOL_EMPTY_BPOBJ, sizeof (uint64_t), 1,
 			    &dp->dp_empty_bpobj, tx) == 0);
 		}
-		spa_feature_incr(spa, empty_bpobj_feat, tx);
+		spa_feature_incr(spa, SPA_FEATURE_EMPTY_BPOBJ, tx);
 		ASSERT(dp->dp_empty_bpobj != 0);
 		return (dp->dp_empty_bpobj);
 	} else {
@@ -62,12 +62,11 @@ bpobj_alloc_empty(objset_t *os, int blocksize, dmu_tx_t *tx)
 void
 bpobj_decr_empty(objset_t *os, dmu_tx_t *tx)
 {
-	zfeature_info_t *empty_bpobj_feat =
-	    &spa_feature_table[SPA_FEATURE_EMPTY_BPOBJ];
 	dsl_pool_t *dp = dmu_objset_pool(os);
 
-	spa_feature_decr(dmu_objset_spa(os), empty_bpobj_feat, tx);
-	if (!spa_feature_is_active(dmu_objset_spa(os), empty_bpobj_feat)) {
+	spa_feature_decr(dmu_objset_spa(os), SPA_FEATURE_EMPTY_BPOBJ, tx);
+	if (!spa_feature_is_active(dmu_objset_spa(os),
+	    SPA_FEATURE_EMPTY_BPOBJ)) {
 		VERIFY3U(0, ==, zap_remove(dp->dp_meta_objset,
 		    DMU_POOL_DIRECTORY_OBJECT,
 		    DMU_POOL_EMPTY_BPOBJ, tx));
@@ -177,6 +176,12 @@ bpobj_open(bpobj_t *bpo, objset_t *os, uint64_t object)
 	return (0);
 }
 
+boolean_t
+bpobj_is_open(const bpobj_t *bpo)
+{
+	return (bpo->bpo_object != 0);
+}
+
 void
 bpobj_close(bpobj_t *bpo)
 {
@@ -195,6 +200,13 @@ bpobj_close(bpobj_t *bpo)
 	mutex_destroy(&bpo->bpo_lock);
 }
 
+boolean_t
+bpobj_is_empty(bpobj_t *bpo)
+{
+	return (bpo->bpo_phys->bpo_num_blkptrs == 0 &&
+	    (!bpo->bpo_havesubobj || bpo->bpo_phys->bpo_num_subobjs == 0));
+}
+
 static int
 bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
     boolean_t free)
@@ -205,6 +217,7 @@ bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
 	int err = 0;
 	dmu_buf_t *dbuf = NULL;
 
+	ASSERT(bpobj_is_open(bpo));
 	mutex_enter(&bpo->bpo_lock);
 
 	if (free)
@@ -252,9 +265,8 @@ bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
 		dbuf = NULL;
 	}
 	if (free) {
-		i++;
 		VERIFY3U(0, ==, dmu_free_range(bpo->bpo_os, bpo->bpo_object,
-		    i * sizeof (blkptr_t), -1ULL, tx));
+		    (i + 1) * sizeof (blkptr_t), -1ULL, tx));
 	}
 	if (err || !bpo->bpo_havesubobj || bpo->bpo_phys->bpo_subobjs == 0)
 		goto out;
@@ -265,6 +277,7 @@ bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
 		mutex_exit(&bpo->bpo_lock);
 		return (err);
 	}
+	ASSERT3U(doi.doi_type, ==, DMU_OT_BPOBJ_SUBOBJ);
 	epb = doi.doi_data_block_size / sizeof (uint64_t);
 
 	for (i = bpo->bpo_phys->bpo_num_subobjs - 1; i >= 0; i--) {
@@ -296,8 +309,10 @@ bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
 		if (free) {
 			err = bpobj_space(&sublist,
 			    &used_before, &comp_before, &uncomp_before);
-			if (err)
+			if (err != 0) {
+				bpobj_close(&sublist);
 				break;
+			}
 		}
 		err = bpobj_iterate_impl(&sublist, func, arg, tx, free);
 		if (free) {
@@ -334,9 +349,11 @@ bpobj_iterate_impl(bpobj_t *bpo, bpobj_itor_t func, void *arg, dmu_tx_t *tx,
 
 out:
 	/* If there are no entries, there should be no bytes. */
-	ASSERT(bpo->bpo_phys->bpo_num_blkptrs > 0 ||
-	    (bpo->bpo_havesubobj && bpo->bpo_phys->bpo_num_subobjs > 0) ||
-	    bpo->bpo_phys->bpo_bytes == 0);
+	if (bpobj_is_empty(bpo)) {
+		ASSERT0(bpo->bpo_phys->bpo_bytes);
+		ASSERT0(bpo->bpo_phys->bpo_comp);
+		ASSERT0(bpo->bpo_phys->bpo_uncomp);
+	}
 
 	mutex_exit(&bpo->bpo_lock);
 	return (err);
@@ -367,6 +384,8 @@ bpobj_enqueue_subobj(bpobj_t *bpo, uint64_t subobj, dmu_tx_t *tx)
 	bpobj_t subbpo;
 	uint64_t used, comp, uncomp, subsubobjs;
 
+	ASSERT(bpobj_is_open(bpo));
+	ASSERT(subobj != 0);
 	ASSERT(bpo->bpo_havesubobj);
 	ASSERT(bpo->bpo_havecomp);
 	ASSERT(bpo->bpo_object != dmu_objset_pool(bpo->bpo_os)->dp_empty_bpobj);
@@ -379,24 +398,25 @@ bpobj_enqueue_subobj(bpobj_t *bpo, uint64_t subobj, dmu_tx_t *tx)
 	VERIFY3U(0, ==, bpobj_open(&subbpo, bpo->bpo_os, subobj));
 	VERIFY3U(0, ==, bpobj_space(&subbpo, &used, &comp, &uncomp));
 
-	if (used == 0) {
+	if (bpobj_is_empty(&subbpo)) {
 		/* No point in having an empty subobj. */
 		bpobj_close(&subbpo);
 		bpobj_free(bpo->bpo_os, subobj, tx);
 		return;
 	}
 
+	mutex_enter(&bpo->bpo_lock);
 	dmu_buf_will_dirty(bpo->bpo_dbuf, tx);
 	if (bpo->bpo_phys->bpo_subobjs == 0) {
 		bpo->bpo_phys->bpo_subobjs = dmu_object_alloc(bpo->bpo_os,
-		    DMU_OT_BPOBJ_SUBOBJ, SPA_MAXBLOCKSIZE, DMU_OT_NONE, 0, tx);
+		    DMU_OT_BPOBJ_SUBOBJ, SPA_OLD_MAXBLOCKSIZE,
+		    DMU_OT_NONE, 0, tx);
 	}
 
 	dmu_object_info_t doi;
 	ASSERT0(dmu_object_info(bpo->bpo_os, bpo->bpo_phys->bpo_subobjs, &doi));
 	ASSERT3U(doi.doi_type, ==, DMU_OT_BPOBJ_SUBOBJ);
 
-	mutex_enter(&bpo->bpo_lock);
 	dmu_write(bpo->bpo_os, bpo->bpo_phys->bpo_subobjs,
 	    bpo->bpo_phys->bpo_num_subobjs * sizeof (subobj),
 	    sizeof (subobj), &subobj, tx);
@@ -452,15 +472,32 @@ bpobj_enqueue(bpobj_t *bpo, const blkptr_t *bp, dmu_tx_t *tx)
 	int blkoff;
 	blkptr_t *bparray;
 
+	ASSERT(bpobj_is_open(bpo));
 	ASSERT(!BP_IS_HOLE(bp));
 	ASSERT(bpo->bpo_object != dmu_objset_pool(bpo->bpo_os)->dp_empty_bpobj);
 
+	if (BP_IS_EMBEDDED(bp)) {
+		/*
+		 * The bpobj will compress better without the payload.
+		 *
+		 * Note that we store EMBEDDED bp's because they have an
+		 * uncompressed size, which must be accounted for.  An
+		 * alternative would be to add their size to bpo_uncomp
+		 * without storing the bp, but that would create additional
+		 * complications: bpo_uncomp would be inconsistent with the
+		 * set of BP's stored, and bpobj_iterate() wouldn't visit
+		 * all the space accounted for in the bpobj.
+		 */
+		bzero(&stored_bp, sizeof (stored_bp));
+		stored_bp.blk_prop = bp->blk_prop;
+		stored_bp.blk_birth = bp->blk_birth;
+	} else if (!BP_GET_DEDUP(bp)) {
+		/* The bpobj will compress better without the checksum */
+		bzero(&stored_bp.blk_cksum, sizeof (stored_bp.blk_cksum));
+	}
+
 	/* We never need the fill count. */
 	stored_bp.blk_fill = 0;
-
-	/* The bpobj will compress better if we can leave off the checksum */
-	if (!BP_GET_DEDUP(bp))
-		bzero(&stored_bp.blk_cksum, sizeof (stored_bp.blk_cksum));
 
 	mutex_enter(&bpo->bpo_lock);
 
@@ -521,6 +558,7 @@ space_range_cb(void *arg, const blkptr_t *bp, dmu_tx_t *tx)
 int
 bpobj_space(bpobj_t *bpo, uint64_t *usedp, uint64_t *compp, uint64_t *uncompp)
 {
+	ASSERT(bpobj_is_open(bpo));
 	mutex_enter(&bpo->bpo_lock);
 
 	*usedp = bpo->bpo_phys->bpo_bytes;
@@ -546,6 +584,8 @@ bpobj_space_range(bpobj_t *bpo, uint64_t mintxg, uint64_t maxtxg,
 {
 	struct space_range_arg sra = { 0 };
 	int err;
+
+	ASSERT(bpobj_is_open(bpo));
 
 	/*
 	 * As an optimization, if they want the whole txg range, just

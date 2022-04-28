@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/i387/s_lrintl.S 217108 2011-01-07 16:13:12Z kib $"); 
+__FBSDID("$FreeBSD$"); 
 	
 ENTRY(lrintl)
 	fldt	4(%esp)

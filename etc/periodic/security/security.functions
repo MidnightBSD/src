@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/periodic/security/security.functions 254974 2013-08-27 21:20:28Z jlh $
+# $FreeBSD$
 #
 
 # This is a library file, so we only try to do something when sourced.
@@ -48,10 +48,11 @@ rc=0
 #   LABEL is the base name of the ${LOG}/${label}.{today,yesterday} files.
 
 check_diff() {
+  unset IFS
   rc=0
   if [ "$1" = "new_only" ]; then
     shift
-    filter="grep '^[>+]'"
+    filter="grep '^[>+][^+]'"
   else
     filter="cat"
   fi

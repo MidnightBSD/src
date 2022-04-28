@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfi/cfi_bus_nexus.c 255207 2013-09-04 17:19:21Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,14 +50,25 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfi/cfi_bus_nexus.c 255207 2013-09-04
 static int
 cfi_nexus_probe(device_t dev)
 {
+	return (BUS_PROBE_NOWILDCARD);
+}
 
-	return cfi_probe(dev);
+static int
+cfi_nexus_attach(device_t dev)
+{
+	int error;
+
+	error = cfi_probe(dev);
+	if (error != 0)
+		return (error);
+
+	return cfi_attach(dev);
 }
 
 static device_method_t cfi_nexus_methods[] = {
 	/* device interface */
 	DEVMETHOD(device_probe,		cfi_nexus_probe),
-	DEVMETHOD(device_attach,	cfi_attach),
+	DEVMETHOD(device_attach,	cfi_nexus_attach),
 	DEVMETHOD(device_detach,	cfi_detach),
 
 	{0, 0}

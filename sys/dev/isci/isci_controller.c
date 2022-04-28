@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_controller.c 249468 2013-04-14 09:55:48Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 
@@ -300,6 +300,8 @@ SCI_STATUS isci_controller_initialize(struct ISCI_CONTROLLER *controller)
 	SCI_CONTROLLER_HANDLE_T scic_controller_handle;
 	char led_name[64];
 	unsigned long tunable;
+	uint32_t io_shortage;
+	uint32_t fail_on_timeout;
 	int i;
 
 	scic_controller_handle =
@@ -365,9 +367,13 @@ SCI_STATUS isci_controller_initialize(struct ISCI_CONTROLLER *controller)
 	 *  this io_shortage parameter, which will tell CAM that we have a
 	 *  large queue depth than we really do.
 	 */
-	uint32_t io_shortage = 0;
+	io_shortage = 0;
 	TUNABLE_INT_FETCH("hw.isci.io_shortage", &io_shortage);
 	controller->sim_queue_depth += io_shortage;
+
+	fail_on_timeout = 1;
+	TUNABLE_INT_FETCH("hw.isci.fail_on_task_timeout", &fail_on_timeout);
+	controller->fail_on_task_timeout = fail_on_timeout;
 
 	/* Attach to CAM using xpt_bus_register now, then immediately freeze
 	 *  the simq.  It will get released later when initial domain discovery
@@ -464,7 +470,7 @@ int isci_controller_allocate_memory(struct ISCI_CONTROLLER *controller)
 
 	/* Create DMA tag for our I/O requests.  Then we can create DMA maps based off
 	 *  of this tag and store them in each of our ISCI_IO_REQUEST objects.  This
-	 *  will enable better performance than creating the DMA maps everytime we get
+	 *  will enable better performance than creating the DMA maps every time we get
 	 *  an I/O.
 	 */
 	status = bus_dma_tag_create(bus_get_dma_tag(device), 0x1, 0x0,
@@ -685,9 +691,9 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->bus_id = bus;
 			cpi->initiator_id = SCI_MAX_REMOTE_DEVICES;
 			cpi->base_transfer_speed = 300000;
-			strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-			strncpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
-			strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+			strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+			strlcpy(cpi->hba_vid, "Intel Corp.", HBA_IDLEN);
+			strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 			cpi->transport = XPORT_SAS;
 			cpi->transport_version = 0;
 			cpi->protocol = PROTO_SCSI;
@@ -734,6 +740,11 @@ void isci_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		break;
 	case XPT_SCSI_IO:
+		if (ccb->ccb_h.flags & CAM_CDB_PHYS) {
+			ccb->ccb_h.status = CAM_REQ_INVALID;
+			xpt_done(ccb);
+			break;
+		}
 		isci_io_request_execute_scsi_io(ccb, controller);
 		break;
 #if __FreeBSD_version >= 900026
@@ -796,6 +807,7 @@ isci_controller_release_queued_ccbs(struct ISCI_CONTROLLER *controller)
 {
 	struct ISCI_REMOTE_DEVICE *dev;
 	struct ccb_hdr *ccb_h;
+	uint8_t *ptr;
 	int dev_idx;
 
 	KASSERT(mtx_owned(&controller->lock), ("controller lock not owned"));
@@ -815,8 +827,8 @@ isci_controller_release_queued_ccbs(struct ISCI_CONTROLLER *controller)
 			if (ccb_h == NULL)
 				continue;
 
-			isci_log_message(1, "ISCI", "release %p %x\n", ccb_h,
-			    ((union ccb *)ccb_h)->csio.cdb_io.cdb_bytes[0]);
+			ptr = scsiio_cdb_ptr(&((union ccb *)ccb_h)->csio);
+			isci_log_message(1, "ISCI", "release %p %x\n", ccb_h, *ptr);
 
 			dev->queued_ccb_in_progress = (union ccb *)ccb_h;
 			isci_io_request_execute_scsi_io(

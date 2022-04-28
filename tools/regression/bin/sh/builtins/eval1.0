@@ -1,9 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/eval1.0 193178 2009-05-31 17:23:27Z stefanf $
-set -e
-
-eval
-eval "" ""
-eval "true"
-! eval "false
-
-"

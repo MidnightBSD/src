@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/ip6addrctl 250240 2013-05-04 15:42:55Z hrs $
+# $FreeBSD$
 #
 
 # PROVIDE: ip6addrctl
@@ -12,6 +12,7 @@
 . /etc/network.subr
 
 name="ip6addrctl"
+desc="configure address selection policy for IPv6 and IPv4"
 rcvar="ip6addrctl_enable"
 start_cmd="ip6addrctl_start"
 stop_cmd="ip6addrctl_stop"
@@ -74,6 +75,8 @@ ip6addrctl_start()
 			${IP6ADDRCTL_CMD} install "${config_file}"
 		else
 			if checkyesno ipv6_activate_all_interfaces; then
+				ip6addrctl_prefer_ipv6
+			elif [ -n "$(list_vars ifconfig_\*_ipv6)" ]; then
 				ip6addrctl_prefer_ipv6
 			else
 				ip6addrctl_prefer_ipv4

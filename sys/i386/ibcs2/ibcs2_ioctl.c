@@ -27,11 +27,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_ioctl.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/consio.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>

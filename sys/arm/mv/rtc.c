@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/rtc.c 209131 2010-06-13 13:28:53Z raj $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/lock.h>
@@ -96,6 +96,9 @@ DRIVER_MODULE(mv_rtc, simplebus, mv_rtc_driver, mv_rtc_devclass, 0, 0);
 static int
 mv_rtc_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "mrvl,rtc"))
 		return (ENXIO);

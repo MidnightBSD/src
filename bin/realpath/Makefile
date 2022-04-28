@@ -1,5 +1,6 @@
-# $FreeBSD: release/10.0.0/bin/realpath/Makefile 90523 2002-02-11 07:32:17Z mike $
+# $FreeBSD$
 
+PACKAGE=runtime
 PROG=	realpath
 
 .include <bsd.prog.mk>

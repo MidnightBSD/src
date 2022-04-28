@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_rtc.c 241333 2012-10-07 20:36:46Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -232,18 +232,18 @@ at91_rtc_deactivate(device_t dev)
 	WR4(sc, RTC_IDR, 0xffffffff);
 	if (sc->intrhand)
 		bus_teardown_intr(dev, sc->irq_res, sc->intrhand);
-	sc->intrhand = 0;
+	sc->intrhand = NULL;
 #endif
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
 		bus_release_resource(dev, SYS_RES_MEMORY,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
-	sc->mem_res = 0;
+	sc->mem_res = NULL;
 #ifdef AT91_RTC_USE_INTERRUPTS
 	if (sc->irq_res)
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->irq_res), sc->irq_res);
-	sc->irq_res = 0;
+	sc->irq_res = NULL;
 #endif	
 	return;
 }

@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/lib/libiconv_modules/Makefile.inc 255298 2013-09-06 10:40:38Z theraven $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../libc/iconv
+.PATH: ${SRCTOP}/lib/libc/iconv
 
 SHLIB_MAJOR= 4
 WARNS?=	6
-CFLAGS+= -I${.CURDIR}/../../libc/iconv
+CFLAGS+= -I${SRCTOP}/lib/libc/iconv
 
 CFLAGS+=	-Dbool=_Bool
 
@@ -14,4 +14,4 @@ SHLIBDIR= /usr/lib/i18n
 SHLIBDIR= /usr/lib32/i18n
 .endif
 LIBDIR=	 ${SHLIBDIR}
-NO_PROFILE=
+MK_PROFILE=	no

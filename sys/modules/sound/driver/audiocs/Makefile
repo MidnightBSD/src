@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/audiocs/Makefile 136944 2004-10-25 10:29:57Z yongari $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/sbus
+.PATH: ${SRCTOP}/sys/dev/sound/sbus
 
 KMOD=	snd_audiocs
 SRCS=	device_if.h bus_if.h ofw_bus_if.h

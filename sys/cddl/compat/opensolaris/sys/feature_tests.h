@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/feature_tests.h 179204 2008-05-22 09:08:41Z jb $
+ * $FreeBSD$
  *
  */
 

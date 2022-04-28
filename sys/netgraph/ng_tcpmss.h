@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_tcpmss.h 147231 2005-06-10 08:02:34Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_TCPMSS_H_

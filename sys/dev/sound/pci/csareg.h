@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/csareg.h 230897 2012-02-01 21:38:01Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _CSA_REG_H

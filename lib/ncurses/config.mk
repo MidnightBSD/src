@@ -1,26 +1,26 @@
-# $FreeBSD: release/10.0.0/lib/ncurses/config.mk 171527 2007-07-21 00:27:17Z rafan $
+# $FreeBSD$
 
 # This Makefile is shared by libncurses, libform, libmenu, libpanel.
 
-NCURSES_DIR=	${.CURDIR}/../../../contrib/ncurses
+NCURSES_DIR=	${SRCTOP}/contrib/ncurses
 
 .if defined(ENABLE_WIDEC)
 LIB_SUFFIX=	w
 CFLAGS+=	-D_XOPEN_SOURCE_EXTENDED -DENABLE_WIDEC
-NCURSES_CFG_H=	${.CURDIR}/../ncurses/ncurses_cfg.h
+NCURSES_CFG_H=	${.CURDIR:H}/ncurses/ncurses_cfg.h
 .else
 LIB_SUFFIX=
 NCURSES_CFG_H=	${.CURDIR}/ncurses_cfg.h
 .endif
 
 CFLAGS+=	-I.
-.if exists(${.OBJDIR}/../ncurses${LIB_SUFFIX})
-CFLAGS+=	-I${.OBJDIR}/../ncurses${LIB_SUFFIX}
+.if exists(${.OBJDIR:H}/ncurses${LIB_SUFFIX})
+CFLAGS+=	-I${.OBJDIR:H}/ncurses${LIB_SUFFIX}
 .endif
-CFLAGS+=	-I${.CURDIR}/../ncurses${LIB_SUFFIX}
+CFLAGS+=	-I${.CURDIR:H}/ncurses${LIB_SUFFIX}
 
 # for ${NCURSES_CFG_H}
-CFLAGS+=	-I${.CURDIR}/../ncurses
+CFLAGS+=	-I${.CURDIR:H}/ncurses
 
 CFLAGS+=	-I${NCURSES_DIR}/include
 CFLAGS+=	-I${NCURSES_DIR}/ncurses

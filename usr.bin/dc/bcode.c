@@ -1,4 +1,4 @@
-/*	$OpenBSD: bcode.c,v 1.40 2009/10/27 23:59:37 deraadt Exp $	*/
+/*	$OpenBSD: bcode.c,v 1.45 2012/11/07 11:06:14 otto Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/bcode.c 244861 2012-12-30 15:20:27Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>
@@ -29,7 +29,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/bcode.c 244861 2012-12-30 15:20:27
 
 #include "extern.h"
 
-#define __inline	
+/* #define	DEBUGGING */
 
 #define MAX_ARRAY_INDEX		2048
 #define READSTACK_SIZE		8
@@ -69,6 +69,7 @@ static __inline struct number	*pop_number(void);
 static __inline char	*pop_string(void);
 static __inline void	 clear_stack(void);
 static __inline void	 print_tos(void);
+static void		 print_err(void);
 static void		 pop_print(void);
 static void		 pop_printn(void);
 static __inline void	 print_stack(void);
@@ -198,6 +199,7 @@ static const struct jump_entry jump_table_data[] = {
 	{ 'a',	to_ascii	},
 	{ 'c',	clear_stack	},
 	{ 'd',	dup		},
+	{ 'e',	print_err	},
 	{ 'f',	print_stack	},
 	{ 'i',	set_ibase	},
 	{ 'k',	set_scale	},
@@ -253,7 +255,7 @@ init_bmachine(bool extended_registers)
 u_int
 bmachine_scale(void)
 {
-	return (bmachine.scale);
+	return bmachine.scale;
 }
 
 /* Reset the things needed before processing a (new) file */
@@ -428,7 +430,6 @@ get_ulong(struct number *n)
 void
 negate(struct number *n)
 {
-
 	BN_set_negative(n->number, !BN_is_negative(n->number));
 }
 
@@ -503,6 +504,18 @@ print_tos(void)
 	if (value != NULL) {
 		print_value(stdout, value, "", bmachine.obase);
 		putchar('\n');
+	}
+	else
+		warnx("stack empty");
+}
+
+static void
+print_err(void)
+{
+	struct value *value = tos();
+	if (value != NULL) {
+		print_value(stderr, value, "", bmachine.obase);
+		(void)putc('\n', stderr);
 	}
 	else
 		warnx("stack empty");
@@ -695,7 +708,7 @@ count_digits(const struct number *n)
 	u_int i;
 
 	if (BN_is_zero(n->number))
-		return (n->scale ? n->scale : 1);
+		return n->scale ? n->scale : 1;
 
 	int_part = new_number();
 	fract_part = new_number();
@@ -961,9 +974,8 @@ badd(void)
 	struct number	*a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -988,9 +1000,8 @@ bsub(void)
 	struct number	*a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1036,9 +1047,8 @@ bmul(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1061,9 +1071,8 @@ bdiv(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1098,9 +1107,8 @@ bmod(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1135,9 +1143,8 @@ bdivmod(void)
 	u_int scale;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1171,14 +1178,14 @@ bdivmod(void)
 static void
 bexp(void)
 {
-	struct number *a, *p, *r;
-	u_int rscale;
-	bool neg;
+	struct number	*a, *p;
+	struct number	*r;
+	bool		neg;
+	u_int		rscale;
 
 	p = pop_number();
-	if (p == NULL) {
+	if (p == NULL)
 		return;
-	}
 	a = pop_number();
 	if (a == NULL) {
 		push_number(p);
@@ -1193,8 +1200,7 @@ bexp(void)
 		bn_checkp(f);
 		split_number(p, i, f);
 		if (!BN_is_zero(f))
-			warnx("Runtime warning: non-zero fractional part "
-			    "in exponent");
+			warnx("Runtime warning: non-zero fractional part in exponent");
 		BN_free(i);
 		BN_free(f);
 	}
@@ -1300,9 +1306,8 @@ bsqrt(void)
 
 	onecount = 0;
 	n = pop_number();
-	if (n == NULL) {
+	if (n == NULL)
 		return;
-	}
 	if (BN_is_zero(n->number)) {
 		r = new_number();
 		push_number(r);
@@ -1343,9 +1348,8 @@ not(void)
 	struct number *a;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	a->scale = 0;
 	bn_check(BN_set_word(a->number, BN_get_word(a->number) ? 0 : 1));
 	push_number(a);
@@ -1364,9 +1368,8 @@ equal_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1384,9 +1387,8 @@ less_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1404,9 +1406,8 @@ lesseq_numbers(void)
 	struct number *a, *b, *r;
 
 	a = pop_number();
-	if (a == NULL) {
+	if (a == NULL)
 		return;
-	}
 	b = pop_number();
 	if (b == NULL) {
 		push_number(a);
@@ -1737,9 +1738,8 @@ eval_tos(void)
 	char *p;
 
 	p = pop_string();
-	if (p == NULL)
-		return;
-	eval_string(p);
+	if (p != NULL)
+		eval_string(p);
 }
 
 void

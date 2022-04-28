@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/arswitch/arswitch_8226.c 253572 2013-07-23 14:24:22Z loos $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -50,7 +50,7 @@
 #include <dev/iicbus/iicbus.h>
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
-#include <dev/etherswitch/mdio.h>
+#include <dev/mdio/mdio.h>
 
 #include <dev/etherswitch/etherswitch.h>
 

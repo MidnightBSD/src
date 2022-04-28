@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/iscsictl 255570 2013-09-14 15:29:06Z trasz $
+# $FreeBSD$
 #
 
 # PROVIDE: iscsictl
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="iscsictl"
+desc="iSCSI initiator management utility"
 rcvar="iscsictl_enable"
 command="/usr/bin/${name}"
 command_args="${iscsictl_flags}"

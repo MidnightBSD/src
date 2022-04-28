@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/svn/lib/libsvn_fs/Makefile 251886 2013-06-18 02:53:45Z peter $
+# $FreeBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -7,7 +7,7 @@
 INTERNALLIB=	yes
 LIB=		svn_fs
 
-SRCS=		access.c editor.c fs-loader.c
+SRCS=		access.c deprecated.c editor.c fs-loader.c
 
 CFLAGS+=	-I${SVNDIR}/include -I${SVNDIR} -I${.CURDIR}/../.. \
 		-I${.CURDIR}/../libapr \

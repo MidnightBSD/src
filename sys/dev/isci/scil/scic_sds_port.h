@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_port.h 240518 2012-09-14 21:28:56Z eadler $
+ * $FreeBSD$
  */
 #ifndef _SCIC_SDS_PORT_H_
 #define _SCIC_SDS_PORT_H_
@@ -214,7 +214,7 @@ typedef struct SCIC_SDS_PORT
    SCU_PORT_PE_CONFIGURATION_REGISTER_T *port_pe_configuration_register;
 
    /**
-    * This field is the VIIT register space for ths port object.
+    * This field is the VIIT register space for this port object.
     */
    SCU_VIIT_ENTRY_T *viit_registers;
 

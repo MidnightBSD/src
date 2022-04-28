@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/stripe/geom_stripe.c 213662 2010-10-09 20:20:27Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -62,7 +64,7 @@ struct g_command class_commands[] = {
 		{ 's', "stripesize", GSTRIPE_STRIPESIZE, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] [-s stripesize] name prov prov ..."
+	    "[-v] [-s stripesize] name prov prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
@@ -128,6 +130,7 @@ stripe_label(struct gctl_req *req)
 	const char *name;
 	int error, i, nargs, hardcode;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 3) {
 		gctl_error(req, "Too few arguments.");

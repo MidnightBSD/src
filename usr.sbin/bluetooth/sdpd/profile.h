@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: profile.h,v 1.6 2004/01/13 19:31:54 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/profile.h 177358 2008-03-18 18:21:39Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _PROFILE_H_

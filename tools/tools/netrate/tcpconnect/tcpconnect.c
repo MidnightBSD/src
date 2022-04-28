@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/netrate/tcpconnect/tcpconnect.c 213574 2010-10-08 14:31:49Z pluknet $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

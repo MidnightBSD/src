@@ -1,13 +1,13 @@
-# $FreeBSD: release/10.0.0/sys/modules/vesa/Makefile 198251 2009-10-19 20:58:10Z jkim $
+# $FreeBSD$
 
 KMOD=	vesa
 SRCS=	opt_vga.h opt_vesa.h
 SRCS+=	bus_if.h device_if.h pci_if.h
 
-.PATH:	${.CURDIR}/../../dev/fb
+.PATH:	${SRCTOP}/sys/dev/fb
 SRCS+=	vesa.c
 
-.PATH:	${.CURDIR}/../../dev/syscons
+.PATH:	${SRCTOP}/sys/dev/syscons
 SRCS+=	scvesactl.c
 
 .include <bsd.kmod.mk>

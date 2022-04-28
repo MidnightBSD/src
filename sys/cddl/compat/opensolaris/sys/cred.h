@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/cred.h 248571 2013-03-21 08:38:03Z mm $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_CRED_H_

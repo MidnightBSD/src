@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/tinybsd/conf/vpn/tinybsd.basefiles 171023 2007-06-25 05:06:57Z rafan $
+# $FreeBSD$
 # contents of ${WORKDIR}/boot
 boot/boot0
 boot/boot1

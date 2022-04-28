@@ -25,8 +25,10 @@
  * SUCH DAMAGE.
  */
 
+#include "opt_platform.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_spi.c 239626 2012-08-23 22:38:37Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,6 +50,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_spi.c 239626 2012-08-23 22:
 
 #include <dev/spibus/spi.h>
 #include <dev/spibus/spibusvar.h>
+
+#ifdef FDT
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#endif
 
 #include "spibus_if.h"
 
@@ -96,7 +104,10 @@ static void at91_spi_intr(void *arg);
 static int
 at91_spi_probe(device_t dev)
 {
-
+#ifdef FDT
+	if (!ofw_bus_is_compatible(dev, "atmel,at91rm9200-spi"))
+		return (ENXIO);
+#endif
 	device_set_desc(dev, "AT91 SPI");
 	return (0);
 }
@@ -119,6 +130,15 @@ at91_spi_attach(device_t dev)
 	err = at91_spi_activate(dev);
 	if (err)
 		goto out;
+
+#ifdef FDT
+	/*
+	 * Disable devices need to hold their resources, so return now and not attach
+	 * the spibus, setup interrupt handlers, etc.
+	 */
+	if (!ofw_bus_status_okay(dev))
+		return 0;
+#endif
 
 	/*
 	 * Set up the hardware.
@@ -271,7 +291,8 @@ at91_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
 	struct at91_spi_softc *sc;
 	bus_addr_t addr;
-	int err, i, j, mode[4], cs;
+	int err, i, j, mode[4];
+	uint32_t cs;
 
 	KASSERT(cmd->tx_cmd_sz == cmd->rx_cmd_sz,
 	    ("%s: TX/RX command sizes should be equal", __func__));
@@ -280,6 +301,8 @@ at91_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 
 	/* get the proper chip select */
 	spibus_get_cs(child, &cs);
+
+	cs &= ~SPIBUS_CS_HIGH;
 
 	sc = device_get_softc(dev);
 	i = 0;
@@ -295,7 +318,7 @@ at91_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	 * PSCDEC = 0 has a range of 0..3 for chip select.  We
 	 * don't support PSCDEC = 1 which has a range of 0..15.
 	 */
-	if (cs < 0 || cs > 3) {
+	if (cs > 3) {
 		device_printf(dev,
 		    "Invalid chip select %d requested by %s\n", cs,
 		    device_get_nameunit(child));
@@ -428,5 +451,10 @@ static driver_t at91_spi_driver = {
 	sizeof(struct at91_spi_softc),
 };
 
+#ifdef FDT
+DRIVER_MODULE(at91_spi, simplebus, at91_spi_driver, at91_spi_devclass, NULL,
+    NULL);
+#else
 DRIVER_MODULE(at91_spi, atmelarm, at91_spi_driver, at91_spi_devclass, NULL,
     NULL);
+#endif

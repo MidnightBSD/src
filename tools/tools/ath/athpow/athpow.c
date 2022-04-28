@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athpow/athpow.c 218057 2011-01-29 04:34:30Z adrian $
+ * $FreeBSD$
  */
 #include "diag.h"
 

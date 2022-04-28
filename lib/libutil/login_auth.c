@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/login_auth.c 255007 2013-08-28 21:10:37Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libutil/login_auth.c 255007 2013-08-28 21
 
 /*
  * auth_checknologin()
- * Checks for the existance of a nologin file in the login_cap
+ * Checks for the existence of a nologin file in the login_cap
  * capability <lc>.  If there isn't one specified, then it checks
  * to see if this class should just ignore nologin files.  Lastly,
  * it tries to print out the default nologin file, and, if such

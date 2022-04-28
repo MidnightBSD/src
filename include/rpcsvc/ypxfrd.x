@@ -66,11 +66,11 @@
 
 #ifndef RPC_HDR
 %#include <sys/cdefs.h>
-%__FBSDID("$FreeBSD: release/10.0.0/include/rpcsvc/ypxfrd.x 249583 2013-04-17 11:42:40Z gabor $");
+%__FBSDID("$FreeBSD$");
 #endif
 
 /* XXX cribbed from yp.x */
-const _YPMAXRECORD = 1024;
+const _YPMAXRECORD = 16777216;
 const _YPMAXDOMAIN = 64;
 const _YPMAXMAP = 64;
 const _YPMAXPEER = 64;

@@ -1,11 +1,12 @@
-/* $FreeBSD: release/10.0.0/lib/libc/include/port_before.h 236695 2012-06-06 21:16:26Z dim $ */
+/* $FreeBSD$ */
 
 #ifndef _PORT_BEFORE_H_
 #define _PORT_BEFORE_H_
 
 #define _LIBC		1
 #define DO_PTHREADS	1
-#define USE_KQUEUE	1
+#define USE_POLL	1
+#define HAVE_MD5	1
 
 #define ISC_SOCKLEN_T	socklen_t
 #define ISC_FORMAT_PRINTF(fmt, args) \

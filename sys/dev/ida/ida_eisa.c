@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ida/ida_eisa.c 239740 2012-08-27 17:24:07Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -296,14 +296,14 @@ ida_eisa_attach(device_t dev)
 
 	error = bus_dma_tag_create(
 		/* parent	*/	bus_get_dma_tag(dev),
-		/* alignment	*/	0,
+		/* alignment	*/	1,
 		/* boundary	*/	0,
 		/* lowaddr	*/	BUS_SPACE_MAXADDR_32BIT,
 		/* highaddr	*/	BUS_SPACE_MAXADDR,
 		/* filter	*/	NULL,
 		/* filterarg	*/	NULL,
-		/* maxsize	*/	MAXBSIZE,
-		/* nsegments	*/	IDA_NSEG,
+		/* maxsize	*/	BUS_SPACE_MAXSIZE_32BIT,
+		/* nsegments	*/	BUS_SPACE_UNRESTRICTED,
 		/* maxsegsize	*/	BUS_SPACE_MAXSIZE_32BIT,
 		/* flags	*/	BUS_DMA_ALLOCNOW,
 		/* lockfunc	*/	NULL,
@@ -333,7 +333,7 @@ ida_eisa_attach(device_t dev)
 		return (ENOMEM);
 	}
 
-	error = ida_init(ida);
+	error = ida_setup(ida);
 	if (error) {
 		ida_free(ida);
 		return (error);

@@ -52,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/fuse/fuse_internal.h 253498 2013-07-20 14:50:35Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef _FUSE_INTERNAL_H_

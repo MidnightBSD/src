@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Global Technology Associates, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kgzip/elfhdr.h 110330 2003-02-04 16:01:00Z ru $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

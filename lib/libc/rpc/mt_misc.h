@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/rpc/mt_misc.h 204950 2010-03-10 13:23:25Z jhb $
+ * $FreeBSD$
  */
 #ifndef _MT_MISC_H
 #define	_MT_MISC_H

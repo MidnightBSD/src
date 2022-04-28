@@ -1,12 +1,10 @@
-# $FreeBSD: release/10.0.0/etc/mtree/BSD.include.dist 255953 2013-09-30 18:00:54Z des $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
 
 /set type=dir uname=root gname=wheel mode=0755
 .
-    altq
-    ..
     arpa
     ..
     atf-c
@@ -81,6 +79,8 @@
             ..
         ..
         v1
+            experimental
+            ..
             ext
             ..
             tr1
@@ -90,12 +90,12 @@
     cam
         ata
         ..
+        nvme
+        ..
         scsi
         ..
     ..
-    clang
-        3.3
-        ..
+    casper
     ..
     crypto
     ..
@@ -110,15 +110,17 @@
         ..
         ciss
         ..
+        evdev
+        ..
         filemon
         ..
         firewire
         ..
         hwpmc
         ..
-        ic
+        hyperv
         ..
-        ieee488
+        ic
         ..
         iicbus
         ..
@@ -127,6 +129,10 @@
         lmc
         ..
         mfi
+        ..
+        mlx5
+        ..
+        mmc
         ..
         mpt
             mpilib
@@ -159,11 +165,15 @@
         wi
         ..
     ..
+    devdctl
+    ..
     edit
         readline
         ..
     ..
     fs
+        cuse
+        ..
         devfs
         ..
         fdescfs
@@ -225,8 +235,6 @@
         posix
         ..
     ..
-    gpib
-    ..
     gssapi
     ..
     infiniband
@@ -247,7 +255,11 @@
     ..
     krb5
     ..
+    lib80211
+    ..
     libmilter
+    ..
+    libxo
     ..
     lzma
     ..
@@ -256,10 +268,10 @@
         ..
     ..
     net
+        altq
+        ..
     ..
     net80211
-    ..
-    netatalk
     ..
     netgraph
         atm
@@ -272,12 +284,12 @@
         ..
     ..
     netinet
+        cc
+        ..
     ..
     netinet6
     ..
     netipsec
-    ..
-    netipx
     ..
     netnatm
         api
@@ -287,6 +299,10 @@
         saal
         ..
         sig
+        ..
+    ..
+    netpfil
+        pf
         ..
     ..
     netsmb
@@ -304,8 +320,6 @@
     protocols
     ..
     rdma
-    ..
-    readline
     ..
     rpc
     ..
@@ -328,6 +342,8 @@
     ssp
     ..
     sys
+    ..
+    teken
     ..
     ufs
         ffs

@@ -30,8 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * P4: //depot/projects/trustedbsd/openbsm/sys/bsm/audit_internal.h#6
- * $FreeBSD: release/10.0.0/sys/bsm/audit_internal.h 243751 2012-12-01 13:46:37Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _AUDIT_INTERNAL_H

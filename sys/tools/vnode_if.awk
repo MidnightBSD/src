@@ -30,7 +30,7 @@
 
 #
 #	@(#)vnode_if.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: release/10.0.0/sys/tools/vnode_if.awk 247116 2013-02-21 19:02:50Z jhb $
+# $FreeBSD$
 #
 # Script to produce VFS front-end sugar.
 #
@@ -142,7 +142,7 @@ common_head = \
     " * This file is produced automatically.\n" \
     " * Do not modify anything in here by hand.\n" \
     " *\n" \
-    " * Created from $FreeBSD: release/10.0.0/sys/tools/vnode_if.awk 247116 2013-02-21 19:02:50Z jhb $\n" \
+    " * Created from $FreeBSD$\n" \
     " */\n" \
     "\n";
 
@@ -165,8 +165,6 @@ if (hfile) {
 
 if (cfile) {
 	printc(common_head \
-	    "#include \"opt_kdtrace.h\"\n" \
-	    "\n" \
 	    "#include <sys/param.h>\n" \
 	    "#include <sys/event.h>\n" \
 	    "#include <sys/kernel.h>\n" \
@@ -342,8 +340,8 @@ while ((getline < srcfile) > 0) {
 		printc("};");
 
 		printc("\n");
-		printc("SDT_PROBE_DEFINE2(vfs, vop, " name ", entry, entry, \"struct vnode *\", \"struct " name "_args *\");\n");
-		printc("SDT_PROBE_DEFINE3(vfs, vop, " name ", return, return, \"struct vnode *\", \"struct " name "_args *\", \"int\");\n");
+		printc("SDT_PROBE_DEFINE2(vfs, vop, " name ", entry, \"struct vnode *\", \"struct " name "_args *\");\n");
+		printc("SDT_PROBE_DEFINE3(vfs, vop, " name ", return, \"struct vnode *\", \"struct " name "_args *\", \"int\");\n");
 
 		# Print out function.
 		printc("\nint\n" uname "_AP(struct " name "_args *a)");
@@ -361,7 +359,7 @@ while ((getline < srcfile) > 0) {
 		printc("\t    vop->"name" == NULL && vop->vop_bypass == NULL)")
 		printc("\t\tvop = vop->vop_default;")
 		printc("\tVNASSERT(vop != NULL, a->a_" args[0]", (\"No "name"(%p, %p)\", a->a_" args[0]", a));")
-		printc("\tSDT_PROBE(vfs, vop, " name ", entry, a->a_" args[0] ", a, 0, 0, 0);\n");
+		printc("\tSDT_PROBE2(vfs, vop, " name ", entry, a->a_" args[0] ", a);\n");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "Entry", "\t");
 		printc("\tKTR_START" ctrstr);
@@ -372,7 +370,7 @@ while ((getline < srcfile) > 0) {
 		printc("\telse")
 		printc("\t\trc = vop->vop_bypass(&a->a_gen);")
 		printc("\tVFS_EPILOGUE(a->a_" args[0]"->v_mount);")
-		printc("\tSDT_PROBE(vfs, vop, " name ", return, a->a_" args[0] ", a, rc, 0, 0);\n");
+		printc("\tSDT_PROBE3(vfs, vop, " name ", return, a->a_" args[0] ", a, rc);\n");
 		printc("\tif (rc == 0) {");
 		for (i = 0; i < numargs; ++i)
 			add_debug_code(name, args[i], "OK", "\t\t");

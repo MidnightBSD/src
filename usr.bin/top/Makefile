@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.bin/top/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
 
-TOPDIR=	${.CURDIR}/../../contrib/top
+TOPDIR=	${SRCTOP}/contrib/top
 .PATH: ${TOPDIR}
 
 PROG=	top
@@ -21,18 +21,18 @@ WARNS?=	0
 CFLAGS+= -D"Table_size=${TOP_TABLE_SIZE}"
 .endif
 
-DPADD=	${LIBTERMCAP} ${LIBM} ${LIBKVM}
-LDADD=	-ltermcap -lm -lkvm
+LIBADD=	ncursesw m kvm jail
 
 CLEANFILES= sigdesc.h
-SIGCONV_AWK= ${.CURDIR}/../../contrib/top/sigconv.awk
-SIGNAL_H= ${DESTDIR}/usr/include/sys/signal.h
+SIGCONV_AWK= ${SRCTOP}/contrib/top/sigconv.awk
+STAGED_INCLUDE_DIR?= ${DESTDIR}/usr/include
+SIGNAL_H= ${STAGED_INCLUDE_DIR}/sys/signal.h
 sigdesc.h: ${SIGCONV_AWK} ${SIGNAL_H}
 	awk -f ${SIGCONV_AWK} < ${SIGNAL_H} > ${.TARGET}
 
 CLEANFILES+= top.local.h top.x
-.SUFFIXES: .X .x .H .h
-.X.x .H.h:
+.SUFFIXES: .xs .x .hs .h
+.xs.x .hs.h:
 	@${ECHO} Making ${.TARGET} from ${.IMPSRC}
 	@sed -e's,%LoadMax%,5.0,g' \
 	-e's,%TableSize%,20011,g' \

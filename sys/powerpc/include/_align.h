@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: release/10.0.0/sys/powerpc/include/_align.h 209975 2010-07-13 05:32:19Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _POWERPC_INCLUDE__ALIGN_H_

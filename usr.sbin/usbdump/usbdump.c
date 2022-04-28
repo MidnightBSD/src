@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/usbdump/usbdump.c 238279 2012-07-09 07:25:09Z hrs $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -34,6 +36,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/utsname.h>
 #include <sys/queue.h>
 #include <net/if.h>
@@ -94,8 +97,6 @@ struct usbcap_filehdr {
 	uint8_t		reserved[26];
 } __packed;
 
-#define	HEADER_ALIGN(x,a) (((x) + (a) - 1) & ~((a) - 1))
-
 struct header_32 {
 	/* capture timestamp */
 	uint32_t ts_sec;
@@ -148,7 +149,9 @@ static const char *errstr_table[USB_ERR_MAX] = {
 	[USB_ERR_NOT_LOCKED]		= "NOT_LOCKED",
 };
 
-static const char *xfertype_table[4] = {
+#define	USB_XFERTYPE_MAX 4
+
+static const char *xfertype_table[USB_XFERTYPE_MAX] = {
 	[UE_CONTROL]			= "CTRL",
 	[UE_ISOCHRONOUS]		= "ISOC",
 	[UE_BULK]			= "BULK",
@@ -319,6 +322,15 @@ usb_speedstr(uint8_t speed)
 		return (speed_table[speed]);
 }
 
+static const char *
+usb_xferstr(uint8_t type)
+{
+	if (type >= USB_XFERTYPE_MAX  || xfertype_table[type] == NULL)
+		return ("UNKN");
+	else
+		return (xfertype_table[type]);
+}
+
 static void
 print_flags(uint32_t flags)
 {
@@ -472,7 +484,6 @@ print_apacket(const struct header_32 *hdr, const uint8_t *ptr, int ptr_len)
 	 */
 	up->up_totlen = le32toh(up->up_totlen);
 	up->up_busunit = le32toh(up->up_busunit);
-	up->up_address = le32toh(up->up_address);
 	up->up_flags = le32toh(up->up_flags);
 	up->up_status = le32toh(up->up_status);
 	up->up_error = le32toh(up->up_error);
@@ -496,7 +507,7 @@ print_apacket(const struct header_32 *hdr, const uint8_t *ptr, int ptr_len)
 		    (int)len, buf, tv.tv_usec,
 		    (int)up->up_busunit, (int)up->up_address,
 		    (up->up_type == USBPF_XFERTAP_SUBMIT) ? "SUBM" : "DONE",
-		    xfertype_table[up->up_xfertype],
+		    usb_xferstr(up->up_xfertype),
 		    (unsigned int)up->up_endpoint,
 		    usb_speedstr(up->up_speed),
 		    (int)up->up_frames,
@@ -622,7 +633,7 @@ print_packets(uint8_t *data, const int datalen)
 		temp.hdrlen = hdr32->hdrlen;
 		temp.align = hdr32->align;
 
-		next = ptr + HEADER_ALIGN(temp.hdrlen + temp.caplen, temp.align);
+		next = ptr + roundup2(temp.hdrlen + temp.caplen, temp.align);
 
 		if (next <= ptr)
 			err(EXIT_FAILURE, "Invalid length");
@@ -780,6 +791,23 @@ usage(void)
 	exit(EX_USAGE);
 }
 
+static void
+check_usb_pf_sysctl(void)
+{
+	int error;
+	int no_pf_val = 0;
+	size_t no_pf_len = sizeof(int);
+
+	/* check "hw.usb.no_pf" sysctl for 8- and 9- stable */
+
+	error = sysctlbyname("hw.usb.no_pf", &no_pf_val,
+	    &no_pf_len, NULL, 0);
+	if (error == 0 && no_pf_val != 0) {
+		warnx("The USB packet filter might be disabled.");
+		warnx("See the \"hw.usb.no_pf\" sysctl for more information.");
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -871,6 +899,8 @@ main(int argc, char *argv[])
 		read_file(p);
 		exit(EXIT_SUCCESS);
 	}
+
+	check_usb_pf_sysctl();
 
 	p->fd = fd = open("/dev/bpf", O_RDONLY);
 	if (p->fd < 0)

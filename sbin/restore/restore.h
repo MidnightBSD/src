@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)restore.h	8.3 (Berkeley) 9/13/94
- * $FreeBSD: release/10.0.0/sbin/restore/restore.h 204111 2010-02-20 10:19:19Z uqs $
+ * $FreeBSD$
  */
 
 /*

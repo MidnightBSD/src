@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_controller.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCIC_CONTROLLER_H_
 #define _SCIC_CONTROLLER_H_
@@ -133,7 +133,7 @@ typedef BOOL (*SCIC_CONTROLLER_INTERRUPT_HANDLER)(
  *        called some time after the interrupt handler.
  *
  * @note  Most, if not all, of the user callback APIs are invoked from within
- *        this API.  As a result, the user should be cognizent of the operating
+ *        this API.  As a result, the user should be cognizant of the operating
  *        level at which they invoke this API.
  *
  */

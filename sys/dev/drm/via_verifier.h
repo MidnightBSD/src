@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/via_verifier.h 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _VIA_VERIFIER_H_
 #define _VIA_VERIFIER_H_

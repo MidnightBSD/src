@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet/ip_options.h 241480 2012-10-12 09:24:24Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_IP_OPTIONS_H_
@@ -47,7 +47,8 @@ struct ipopt_tag {
 	struct	ipoptrt ip_srcrt;
 };
 
-extern	int	ip_doopts;		/* process or ignore IP options */
+VNET_DECLARE(int, ip_doopts);		/* process or ignore IP options */
+#define	V_ip_doopts	VNET(ip_doopts)
 
 int		 ip_checkrouteralert(struct mbuf *);
 int		 ip_dooptions(struct mbuf *, int);

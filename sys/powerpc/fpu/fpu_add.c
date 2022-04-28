@@ -47,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/fpu/fpu_add.c 178030 2008-04-09 08:50:37Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>

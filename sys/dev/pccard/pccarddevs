@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/sys/dev/pccard/pccarddevs 191468 2009-04-24 17:27:45Z imp $
+$FreeBSD$
 /* $NetBSD: pcmciadevs,v 1.226 2008/06/19 18:20:33 imp Exp $ */
 /* $OpenBSD: pcmciadevs,v 1.93 2002/06/21 08:31:10 henning Exp $ */
 

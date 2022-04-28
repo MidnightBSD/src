@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/smcphy.c 239275 2012-08-15 04:03:55Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the SEEQ 80220 and 84220.
@@ -134,12 +134,6 @@ smcphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
                 break;
 
         case MII_MEDIACHG:
-                /*
-                 * If the interface is not up, don't do anything.
-                 */
-                if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-                        break;
-
 		switch (IFM_SUBTYPE(ife->ifm_media)) {
 		case IFM_AUTO:
 			smcphy_auto(sc, ife->ifm_media);
@@ -153,10 +147,6 @@ smcphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
                 break;
 
         case MII_TICK:
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0) {
-			return (0);
-		}
-
 		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO) {
 			break;
 		}

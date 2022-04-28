@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/agp/agp_amd64.c 244926 2013-01-01 18:16:49Z antoine $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -241,8 +241,6 @@ agp_amd64_attach(device_t dev)
 		    4);
 	}
 
-	agp_flush_cache();
-
 	return (0);
 }
 
@@ -276,8 +274,7 @@ static uint32_t agp_amd64_table[] = {
 	0x80000000,	/* 2048 MB */
 };
 
-#define AGP_AMD64_TABLE_SIZE \
-	(sizeof(agp_amd64_table) / sizeof(agp_amd64_table[0]))
+#define AGP_AMD64_TABLE_SIZE nitems(agp_amd64_table)
 
 static uint32_t
 agp_amd64_get_aperture(device_t dev)

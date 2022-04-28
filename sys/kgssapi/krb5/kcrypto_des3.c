@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/krb5/kcrypto_des3.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -52,11 +52,14 @@ struct des3_state {
 static void
 des3_init(struct krb5_key_state *ks)
 {
+	static struct timeval lastwarn;
 	struct des3_state *ds;
 
 	ds = malloc(sizeof(struct des3_state), M_GSSAPI, M_WAITOK|M_ZERO);
 	mtx_init(&ds->ds_lock, "gss des3 lock", NULL, MTX_DEF);
 	ks->ks_priv = ds;
+	if (ratecheck(&lastwarn, &krb5_warn_interval))
+		gone_in(13, "DES3 cipher for Kerberos GSS");
 }
 
 static void

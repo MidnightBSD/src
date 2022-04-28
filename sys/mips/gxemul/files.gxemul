@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/gxemul/files.gxemul 235117 2012-05-07 04:15:46Z jmallett $
+# $FreeBSD$
 dev/gxemul/cons/gxemul_cons.c		optional gxemul_cons
 mips/gxemul/gxemul_machdep.c		standard
 mips/mips/intr_machdep.c		standard

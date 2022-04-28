@@ -1,6 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/conf/Makefile 209514 2010-06-24 22:29:36Z imp $
-
-NO_OBJ=
+# $FreeBSD$
 
 FILESGROUPS=	CONF LICENSE
 CONF=		exclude-from-upgrade pc-sysinstall.conf avail-langs

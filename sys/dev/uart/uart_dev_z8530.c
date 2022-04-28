@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_z8530.c 248965 2013-04-01 00:44:20Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -281,6 +281,8 @@ static int z8530_bus_probe(struct uart_softc *);
 static int z8530_bus_receive(struct uart_softc *);
 static int z8530_bus_setsig(struct uart_softc *, int);
 static int z8530_bus_transmit(struct uart_softc *);
+static void z8530_bus_grab(struct uart_softc *);
+static void z8530_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t z8530_methods[] = {
 	KOBJMETHOD(uart_attach,		z8530_bus_attach),
@@ -294,6 +296,8 @@ static kobj_method_t z8530_methods[] = {
 	KOBJMETHOD(uart_receive,	z8530_bus_receive),
 	KOBJMETHOD(uart_setsig,		z8530_bus_setsig),
 	KOBJMETHOD(uart_transmit,	z8530_bus_transmit),
+	KOBJMETHOD(uart_grab,		z8530_bus_grab),
+	KOBJMETHOD(uart_ungrab,		z8530_bus_ungrab),
 	{ 0, 0 }
 };
 
@@ -303,7 +307,8 @@ struct uart_class uart_z8530_class = {
 	sizeof(struct z8530_softc),
 	.uc_ops = &uart_z8530_ops,
 	.uc_range = 2,
-	.uc_rclk = DEFAULT_RCLK
+	.uc_rclk = DEFAULT_RCLK,
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)				\
@@ -620,4 +625,28 @@ z8530_bus_transmit(struct uart_softc *sc)
 	z8530->txidle = 1;	/* Report SER_INT_TXIDLE again. */
 	uart_unlock(sc->sc_hwmtx);
 	return (0);
+}
+
+static void
+z8530_bus_grab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	uart_setmreg(bas, WR_IDT, IDT_XIE | IDT_TIE);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
+}
+
+static void
+z8530_bus_ungrab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	uart_setmreg(bas, WR_IDT, IDT_XIE | IDT_TIE | IDT_RIA);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
 }

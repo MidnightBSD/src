@@ -1,6 +1,8 @@
-/*	$FreeBSD: release/10.0.0/usr.bin/sort/bwstring.h 251245 2013-06-02 09:43:48Z gabor $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #if !defined(__BWSTRING_H__)
-#define __BWSTRING_H__
+#define	__BWSTRING_H__
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -41,7 +43,7 @@
 extern bool byte_sort;
 
 /* wchar_t is of 4 bytes: */
-#define SIZEOF_WCHAR_STRING(LEN) ((LEN)*sizeof(wchar_t))
+#define	SIZEOF_WCHAR_STRING(LEN) ((LEN)*sizeof(wchar_t))
 
 /*
  * Binary "wide" string
@@ -64,7 +66,7 @@ struct reader_buffer
 
 typedef void *bwstring_iterator;
 
-#define BWSLEN(s) ((s)->len)
+#define	BWSLEN(s) ((s)->len)
 
 struct bwstring *bwsalloc(size_t sz);
 
@@ -135,7 +137,7 @@ bws_get_iter_value(bwstring_iterator iter)
 int
 bws_iterator_cmp(bwstring_iterator iter1, bwstring_iterator iter2, size_t len);
 
-#define BWS_GET(bws, pos) ((MB_CUR_MAX == 1) ? ((bws)->data.cstr[(pos)]) : (bws)->data.wstr[(pos)])
+#define	BWS_GET(bws, pos) ((MB_CUR_MAX == 1) ? ((bws)->data.cstr[(pos)]) : (bws)->data.wstr[(pos)])
 
 void initialise_months(void);
 

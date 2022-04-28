@@ -1,7 +1,8 @@
 #	@(#)Makefile	8.3 (Berkeley) 5/8/95
-# $FreeBSD: release/10.0.0/bin/df/Makefile 129678 2004-05-24 22:22:29Z pjd $
+# $FreeBSD$
 
-MOUNT=	${.CURDIR}/../../sbin/mount
+PACKAGE=runtime
+MOUNT=	${SRCTOP}/sbin/mount
 .PATH: ${MOUNT}
 
 PROG=	df
@@ -9,7 +10,9 @@ SRCS=	df.c vfslist.c
 
 CFLAGS+= -I${MOUNT}
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+CFLAGS+= -DMOUNT_CHAR_DEVS
+SRCS+=	getmntopts.c
+
+LIBADD=	xo util
 
 .include <bsd.prog.mk>

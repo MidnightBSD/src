@@ -1,12 +1,14 @@
-# $FreeBSD: release/10.0.0/sys/modules/dtrace/dtraceall/Makefile 253996 2013-08-06 15:51:56Z avg $
+# $FreeBSD$
+
+SYSDIR?=	${SRCTOP}/sys
 
 KMOD=		dtraceall
 SRCS=		dtraceall.c opt_compat.h opt_nfs.h
 
-CFLAGS+=	-I${.CURDIR}/../../..
+CFLAGS+=	-I${SYSDIR}
 
 .if !defined(KERNBUILDDIR)
-.if ${MACHINE_ARCH} == "amd64"
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "mips64"
 opt_compat.h:
 	echo "#define COMPAT_FREEBSD32 1" >> ${.TARGET}
 .endif
@@ -14,4 +16,4 @@ opt_compat.h:
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CFLAGS+=	-include ${SYSDIR}/cddl/compat/opensolaris/sys/debug_compat.h

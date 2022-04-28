@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc/gen/signalcontext.c 132399 2004-07-19 12:08:03Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ucontext.h>

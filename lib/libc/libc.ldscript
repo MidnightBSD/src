@@ -1,2 +1,2 @@
-/* $FreeBSD: release/10.0.0/lib/libc/libc.ldscript 258398 2013-11-20 20:24:59Z peter $ */
+/* $FreeBSD$ */
 GROUP ( @@SHLIB@@ @@LIBDIR@@/libc_nonshared.a @@LIBDIR@@/libssp_nonshared.a )

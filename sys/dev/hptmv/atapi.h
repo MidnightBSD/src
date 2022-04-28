@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptmv/atapi.h 194900 2009-06-24 20:43:51Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _ATAPI_H_

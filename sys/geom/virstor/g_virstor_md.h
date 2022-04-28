@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/virstor/g_virstor_md.h 172302 2007-09-23 07:34:23Z pjd $
+ * $FreeBSD$
  */
 
 

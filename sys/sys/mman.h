@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mman.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: release/10.0.0/sys/sys/mman.h 255426 2013-09-09 18:11:59Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MMAN_H_
@@ -43,6 +43,7 @@
 #define INHERIT_SHARE	0
 #define INHERIT_COPY	1
 #define INHERIT_NONE	2
+#define INHERIT_ZERO	3
 #endif
 
 /*
@@ -69,8 +70,8 @@
 #define	MAP_FIXED	 0x0010	/* map addr must be exactly as requested */
 
 #if __BSD_VISIBLE
-#define	MAP_RENAME	 0x0020	/* Sun: rename private pages to file */
-#define	MAP_NORESERVE	 0x0040	/* Sun: don't reserve needed swap area */
+#define	MAP_RESERVED0020 0x0020	/* previously unimplemented MAP_RENAME */
+#define	MAP_RESERVED0040 0x0040	/* previously unimplemented MAP_NORESERVE */
 #define	MAP_RESERVED0080 0x0080	/* previously misimplemented MAP_INHERIT */
 #define	MAP_RESERVED0100 0x0100	/* previously unimplemented MAP_NOEXTEND */
 #define	MAP_HASSEMAPHORE 0x0200	/* region may contain semaphores */
@@ -89,6 +90,8 @@
 /*
  * Extended flags
  */
+#define	MAP_GUARD	 0x00002000 /* reserve but don't map address range */
+#define	MAP_EXCL	 0x00004000 /* for MAP_FIXED, fail if address is used */
 #define	MAP_NOCORE	 0x00020000 /* dont include these pages in a coredump */
 #define	MAP_PREFAULT_READ 0x00040000 /* prefault mapping for reading */
 #ifdef __LP64__
@@ -218,6 +221,7 @@ struct shmfd {
 	struct timespec	shm_mtime;
 	struct timespec	shm_ctime;
 	struct timespec	shm_birthtime;
+	ino_t		shm_ino;
 
 	struct label	*shm_label;		/* MAC label */
 	const char	*shm_path;
@@ -228,12 +232,16 @@ struct shmfd {
 #endif
 
 #ifdef _KERNEL
-int	shm_mmap(struct shmfd *shmfd, vm_size_t objsize, vm_ooffset_t foff,
-	    vm_object_t *obj);
 int	shm_map(struct file *fp, size_t size, off_t offset, void **memp);
 int	shm_unmap(struct file *fp, void *mem, size_t size);
-void	shm_path(struct shmfd *shmfd, char *path, size_t size);
 
+int	shm_access(struct shmfd *shmfd, struct ucred *ucred, int flags);
+struct shmfd *shm_alloc(struct ucred *ucred, mode_t mode);
+struct shmfd *shm_hold(struct shmfd *shmfd);
+void	shm_drop(struct shmfd *shmfd);
+int	shm_dotruncate(struct shmfd *shmfd, off_t length);
+
+extern struct fileops shm_ops;
 #else /* !_KERNEL */
 
 __BEGIN_DECLS

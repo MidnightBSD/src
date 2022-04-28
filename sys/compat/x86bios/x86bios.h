@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/x86bios/x86bios.h 211824 2010-08-25 21:03:50Z jkim $
+ * $FreeBSD$
  */
 /*
  * x86 registers were borrowed from x86emu.h x86emu_regs.h
- * for compatability.
+ * for compatibility.
  */
 
 #ifndef _X86BIOS_H_

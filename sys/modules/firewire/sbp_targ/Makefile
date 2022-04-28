@@ -1,8 +1,8 @@
-# $FreeBSD: release/10.0.0/sys/modules/firewire/sbp_targ/Makefile 155824 2006-02-18 23:49:28Z yar $
+# $FreeBSD$
 
 # Makefile for the SBP-II Target mode
 
-.PATH: ${.CURDIR}/../../../dev/firewire
+.PATH: ${SRCTOP}/sys/dev/firewire
 
 KMOD	= sbp_targ
 SRCS	= bus_if.h device_if.h \

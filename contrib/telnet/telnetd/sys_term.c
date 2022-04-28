@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)sys_term.c	8.4+1 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnetd/sys_term.c 251188 2013-05-31 17:30:12Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/tty.h>
@@ -46,6 +42,8 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnetd/sys_term.c 251188 2013
 
 #include "telnetd.h"
 #include "pathnames.h"
+#include "types.h"
+#include "baud.h"
 
 #ifdef	AUTHENTICATION
 #include <libtelnet/auth.h>
@@ -378,8 +376,6 @@ spcset(int func, cc_t *valp, cc_t **valpp)
  *
  * Returns the file descriptor of the opened pty.
  */
-char line[32];
-
 int
 getpty(int *ptynum __unused)
 {
@@ -743,56 +739,6 @@ tty_iscrnl(void)
 #endif
 }
 
-/*
- * Try to guess whether speeds are "encoded" (4.2BSD) or just numeric (4.4BSD).
- */
-#if B4800 != 4800
-#define	DECODE_BAUD
-#endif
-
-#ifdef	DECODE_BAUD
-
-/*
- * A table of available terminal speeds
- */
-struct termspeeds {
-	int	speed;
-	int	value;
-} termspeeds[] = {
-	{ 0,      B0 },      { 50,    B50 },    { 75,     B75 },
-	{ 110,    B110 },    { 134,   B134 },   { 150,    B150 },
-	{ 200,    B200 },    { 300,   B300 },   { 600,    B600 },
-	{ 1200,   B1200 },   { 1800,  B1800 },  { 2400,   B2400 },
-	{ 4800,   B4800 },
-#ifdef	B7200
-	{ 7200,  B7200 },
-#endif
-	{ 9600,   B9600 },
-#ifdef	B14400
-	{ 14400,  B14400 },
-#endif
-#ifdef	B19200
-	{ 19200,  B19200 },
-#endif
-#ifdef	B28800
-	{ 28800,  B28800 },
-#endif
-#ifdef	B38400
-	{ 38400,  B38400 },
-#endif
-#ifdef	B57600
-	{ 57600,  B57600 },
-#endif
-#ifdef	B115200
-	{ 115200, B115200 },
-#endif
-#ifdef	B230400
-	{ 230400, B230400 },
-#endif
-	{ -1,     0 }
-};
-#endif	/* DECODE_BAUD */
-
 void
 tty_tspeed(int val)
 {
@@ -1052,11 +998,11 @@ start_login(char *host undef1, int autologin undef1, char *name undef1)
 	 */
 	if ((auth_level < 0) || (autologin != AUTH_VALID))
 # endif
+#endif /* AUTHENTICATION */
 	{
 		argv = addarg(argv, "-h");
 		argv = addarg(argv, host);
 	}
-#endif /* AUTHENTICATION */
 #endif
 #if	!defined(NO_LOGIN_P)
 	argv = addarg(argv, "-p");
@@ -1207,7 +1153,7 @@ addarg(char **argv, const char *val)
 		 */
 		argv = (char **)malloc(sizeof(*argv) * 12);
 		if (argv == NULL)
-			return(NULL);
+			fatal(net, "failure allocating argument space");
 		*argv++ = (char *)10;
 		*argv = (char *)0;
 	}
@@ -1218,11 +1164,12 @@ addarg(char **argv, const char *val)
 		*argv = (char *)((long)(*argv) + 10);
 		argv = (char **)realloc(argv, sizeof(*argv)*((long)(*argv) + 2));
 		if (argv == NULL)
-			return(NULL);
+			fatal(net, "failure allocating argument space");
 		argv++;
 		cpp = &argv[(long)argv[-1] - 10];
 	}
-	*cpp++ = strdup(val);
+	if ((*cpp++ = strdup(val)) == NULL)
+		fatal(net, "failure allocating argument space");
 	*cpp = 0;
 	return(argv);
 }

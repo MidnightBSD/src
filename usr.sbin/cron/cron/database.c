@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/cron/cron/database.c 173412 2007-11-07 10:53:41Z kevlo $";
+  "$FreeBSD$";
 #endif
 
 /* vix 26jan87 [RCS has the log]
@@ -44,10 +44,19 @@ load_database(old_db)
 {
 	DIR		*dir;
 	struct stat	statbuf;
-	struct stat	syscron_stat;
+	struct stat	syscron_stat, st;
+	time_t		maxmtime;
 	DIR_T   	*dp;
 	cron_db		new_db;
 	user		*u, *nu;
+	struct {
+		const char *name;
+		struct stat st;
+	} syscrontabs [] = {
+		{ SYSCRONTABS },
+		{ LOCALSYSCRONTABS }
+	};
+	int i, ret;
 
 	Debug(DLOAD, ("[%d] load_database()\n", getpid()))
 
@@ -65,6 +74,28 @@ load_database(old_db)
 	if (stat(SYSCRONTAB, &syscron_stat) < OK)
 		syscron_stat.st_mtime = 0;
 
+	maxmtime = TMAX(statbuf.st_mtime, syscron_stat.st_mtime);
+
+	for (i = 0; i < nitems(syscrontabs); i++) {
+		if (stat(syscrontabs[i].name, &syscrontabs[i].st) != -1) {
+			maxmtime = TMAX(syscrontabs[i].st.st_mtime, maxmtime);
+			/* Traverse into directory */
+			if (!(dir = opendir(syscrontabs[i].name)))
+				continue;
+			while (NULL != (dp = readdir(dir))) {
+				if (dp->d_name[0] == '.')
+					continue;
+				ret = fstatat(dirfd(dir), dp->d_name, &st, 0);
+				if (ret != 0 || !S_ISREG(st.st_mode))
+					continue;
+				maxmtime = TMAX(st.st_mtime, maxmtime);
+			}
+			closedir(dir);
+		} else {
+			syscrontabs[i].st.st_mtime = 0;
+		}
+	}
+
 	/* if spooldir's mtime has not changed, we don't need to fiddle with
 	 * the database.
 	 *
@@ -72,7 +103,7 @@ load_database(old_db)
 	 * so is guaranteed to be different than the stat() mtime the first
 	 * time this function is called.
 	 */
-	if (old_db->mtime == TMAX(statbuf.st_mtime, syscron_stat.st_mtime)) {
+	if (old_db->mtime == maxmtime) {
 		Debug(DLOAD, ("[%d] spool dir mtime unch, no load needed.\n",
 			      getpid()))
 		return;
@@ -83,13 +114,37 @@ load_database(old_db)
 	 * actually changed.  Whatever is left in the old database when
 	 * we're done is chaff -- crontabs that disappeared.
 	 */
-	new_db.mtime = TMAX(statbuf.st_mtime, syscron_stat.st_mtime);
+	new_db.mtime = maxmtime;
 	new_db.head = new_db.tail = NULL;
 
 	if (syscron_stat.st_mtime) {
 		process_crontab("root", SYS_NAME,
 				SYSCRONTAB, &syscron_stat,
 				&new_db, old_db);
+	}
+
+	for (i = 0; i < nitems(syscrontabs); i++) {
+		char tabname[MAXPATHLEN];
+		if (syscrontabs[i].st.st_mtime == 0)
+			continue;
+		if (!(dir = opendir(syscrontabs[i].name))) {
+			log_it("CRON", getpid(), "OPENDIR FAILED",
+			    syscrontabs[i].name);
+			(void) exit(ERROR_EXIT);
+		}
+
+		while (NULL != (dp = readdir(dir))) {
+			if (dp->d_name[0] == '.')
+				continue;
+			if (fstatat(dirfd(dir), dp->d_name, &st, 0) == 0 &&
+			    !S_ISREG(st.st_mode))
+				continue;
+			snprintf(tabname, sizeof(tabname), "%s/%s",
+			    syscrontabs[i].name, dp->d_name);
+			process_crontab("root", SYS_NAME, tabname,
+			    &syscrontabs[i].st, &new_db, old_db);
+		}
+		closedir(dir);
 	}
 
 	/* we used to keep this dir open all the time, for the sake of
@@ -204,6 +259,8 @@ process_crontab(uname, fname, tabname, statbuf, new_db, old_db)
 	struct passwd	*pw = NULL;
 	int		crontab_fd = OK - 1;
 	user		*u;
+	entry		*e;
+	time_t		now;
 
 	if (strcmp(fname, SYS_NAME) && !(pw = getpwnam(uname))) {
 		/* file doesn't have a user in passwd file.
@@ -252,6 +309,21 @@ process_crontab(uname, fname, tabname, statbuf, new_db, old_db)
 	u = load_user(crontab_fd, pw, fname);
 	if (u != NULL) {
 		u->mtime = statbuf->st_mtime;
+		/*
+		 * TargetTime == 0 when we're initially populating the database,
+		 * and TargetTime > 0 any time after that (i.e. we're reloading
+		 * cron.d/ files because they've been created/modified).  In the
+		 * latter case, we should check for any interval jobs and run
+		 * them 'n' seconds from the time the job was loaded/reloaded.
+		 * Otherwise, they will not be run until cron is restarted.
+		 */
+		if (TargetTime != 0) {
+			now = time(NULL);
+			for (e = u->crontab; e != NULL; e = e->next) {
+				if ((e->flags & INTERVAL) != 0)
+					e->lastexit = now;
+			}
+		}
 		link_user(new_db, u);
 	}
 

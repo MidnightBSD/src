@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/src/s_isnan.c 242879 2012-11-10 21:22:10Z dim $
+ * $FreeBSD$
  */
 
 #include <math.h>
@@ -42,6 +42,12 @@ isnan(double d)
 	return (u.bits.exp == 2047 && (u.bits.manl != 0 || u.bits.manh != 0));
 }
 #endif /* !PIC */
+
+/*
+ * Because math.h defines __isnanf as an alias for compatibility with glibc and
+ * CUDA, we have to undefine it here to avoid redefinition errors.
+ */
+#undef __isnanf
 
 int
 __isnanf(float f)

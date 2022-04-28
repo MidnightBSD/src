@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_eisa.c 241592 2012-10-15 16:13:55Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,7 +78,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_eisa.c 241592 2012-10-15 
 #define EISA_IRQ_TYPE                   0x08D
 #define       LEVEL                     0x40
 
-/* Definitions for the AMI Series 48 controler */
+/* Definitions for the AMI Series 48 controller */
 #define	AMI_EISA_IOSIZE			0x500	/* Two separate ranges?? */
 #define	AMI_EISA_SLOT_OFFSET		0x800
 #define	AMI_EISA_IOCONF			0x000

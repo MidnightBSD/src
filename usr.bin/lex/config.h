@@ -1,6 +1,6 @@
 /* config.h.  Generated from conf.in by configure.  */
 /* conf.in.  Generated from configure.in by autoheader.  */
-/* $FreeBSD: release/10.0.0/usr.bin/lex/config.h 250881 2013-05-21 19:32:35Z jkim $ */
+/* $FreeBSD$ */
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.

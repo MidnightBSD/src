@@ -25,7 +25,7 @@
  *
  *	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.25 2002/01/05
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/bus_private.h 225931 2011-10-02 23:22:38Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_BUS_PRIVATE_H_
@@ -40,8 +40,7 @@ int sparc64_bus_mem_map(bus_space_tag_t tag, bus_addr_t addr, bus_size_t size,
     int flags, vm_offset_t vaddr, bus_space_handle_t *hp);
 int sparc64_bus_mem_unmap(bus_space_tag_t tag, bus_space_handle_t handle,
     bus_size_t size);
-bus_space_tag_t sparc64_alloc_bus_tag(void *cookie,
-    struct bus_space_tag *ptag, int type, void *barrier);
+bus_space_tag_t sparc64_alloc_bus_tag(void *cookie, int type);
 bus_space_handle_t sparc64_fake_bustag(int space, bus_addr_t addr,
     struct bus_space_tag *ptag);
 

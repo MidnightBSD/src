@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_acl.c 216084 2010-11-30 21:04:05Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,6 +64,8 @@ struct zfs2bsd flags[] = {{ACE_FILE_INHERIT_ACE,
 			    ACL_ENTRY_NO_PROPAGATE_INHERIT},
 			{ACE_INHERIT_ONLY_ACE,
 			    ACL_ENTRY_INHERIT_ONLY},
+			{ACE_INHERITED_ACE,
+			    ACL_ENTRY_INHERITED},
 			{ACE_SUCCESSFUL_ACCESS_ACE_FLAG,
 			    ACL_ENTRY_SUCCESSFUL_ACCESS},
 			{ACE_FAILED_ACCESS_ACE_FLAG,

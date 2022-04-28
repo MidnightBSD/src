@@ -1,6 +1,0 @@
-# ASCII
-#
-# $FreeBSD: release/10.0.0/share/colldef/la_LN.US-ASCII.src 50477 1999-08-28 01:08:13Z peter $
-#
-order \
-	\x00;...;\xff

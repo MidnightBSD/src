@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_pctrie.c 250551 2013-05-12 04:05:01Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -58,20 +58,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_pctrie.c 250551 2013-05-12 04:0
 #include <ddb/ddb.h>
 #endif
 
-/*
- * These widths should allow the pointers to a node's children to fit within
- * a single cache line.  The extra levels from a narrow width should not be
- * a problem thanks to path compression.
- */
-#ifdef __LP64__
-#define	PCTRIE_WIDTH	4
-#else
-#define	PCTRIE_WIDTH	3
-#endif
-
-#define	PCTRIE_COUNT	(1 << PCTRIE_WIDTH)
 #define	PCTRIE_MASK	(PCTRIE_COUNT - 1)
-#define	PCTRIE_LIMIT	(howmany((sizeof(uint64_t) * NBBY), PCTRIE_WIDTH) - 1)
+#define	PCTRIE_LIMIT	(howmany(sizeof(uint64_t) * NBBY, PCTRIE_WIDTH) - 1)
 
 /* Flag bits stored in node pointers. */
 #define	PCTRIE_ISLEAF	0x1

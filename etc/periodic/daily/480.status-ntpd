@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/periodic/daily/480.status-ntpd 220017 2011-03-26 01:24:55Z dougb $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.
@@ -18,7 +18,7 @@ case "$daily_status_ntpd_enable" in
 	echo ""
 	echo "NTP status:"
 
-	synchronized=$(ntpq -p | tee /dev/stderr | grep '^\*')
+	synchronized=$(ntpq -pn | tee /dev/stderr | grep '^\*')
 	if [ -z "$synchronized" ]; then
 		rc=1
 	fi

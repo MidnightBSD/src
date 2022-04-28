@@ -8,7 +8,7 @@
  *
  *	from: src/sys/alpha/include/smp.h,v 1.8 2005/01/05 20:05:50 imp
  *	JNPR: smp.h,v 1.3 2006/12/02 09:53:41 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/smp.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD$
  *
  */
 
@@ -20,6 +20,11 @@
 #include <sys/_cpuset.h>
 
 #include <machine/pcb.h>
+
+#ifdef INTRNG
+# define MIPS_IPI_COUNT 	1
+# define INTR_IPI_COUNT 	MIPS_IPI_COUNT
+#endif
 
 /*
  * Interprocessor interrupts for SMP.

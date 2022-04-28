@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/tar/test/test_stdio.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_stdio)
 {
@@ -116,6 +116,7 @@ DEFINE_TEST(test_stdio)
 	assertEqualInt((int)s, 3);
 	assertEqualMem(p, "abc", 3);
 	/* TODO: Verify xvf.err */
+	free(p);
 
 	/* 'xvf -' should generate list on stderr, empty stdout. */
 	r = systemf("%s xvf - < archive >xvf-.out 2>xvf-.err", testprog);

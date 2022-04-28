@@ -25,13 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gdtoa/_ldtoa.c 174488 2007-12-09 19:48:57Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include "../stdio/floatio.h"
 #include "fpmath.h"
 #include "gdtoaimp.h"
 

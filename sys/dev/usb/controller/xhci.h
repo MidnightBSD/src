@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/xhci.h 255768 2013-09-21 21:40:57Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -30,7 +30,7 @@
 
 #define	XHCI_MAX_DEVICES	MIN(USB_MAX_DEVICES, 128)
 #define	XHCI_MAX_ENDPOINTS	32	/* hardcoded - do not change */
-#define	XHCI_MAX_SCRATCHPADS	32
+#define	XHCI_MAX_SCRATCHPADS	256	/* theoretical max is 1023 */
 #define	XHCI_MAX_EVENTS		(16 * 13)
 #define	XHCI_MAX_COMMANDS	(16 * 1)
 #define	XHCI_MAX_RSEG		1
@@ -113,6 +113,14 @@ struct xhci_endp_ctx {
 	volatile uint32_t	dwEpCtx0;
 #define	XHCI_EPCTX_0_EPSTATE_SET(x)		((x) & 0x7)
 #define	XHCI_EPCTX_0_EPSTATE_GET(x)		((x) & 0x7)
+#define	XHCI_EPCTX_0_EPSTATE_DISABLED		0
+#define	XHCI_EPCTX_0_EPSTATE_RUNNING		1
+#define	XHCI_EPCTX_0_EPSTATE_HALTED		2
+#define	XHCI_EPCTX_0_EPSTATE_STOPPED		3
+#define	XHCI_EPCTX_0_EPSTATE_ERROR		4
+#define	XHCI_EPCTX_0_EPSTATE_RESERVED_5		5
+#define	XHCI_EPCTX_0_EPSTATE_RESERVED_6		6
+#define	XHCI_EPCTX_0_EPSTATE_RESERVED_7		7
 #define	XHCI_EPCTX_0_MULT_SET(x)		(((x) & 0x3) << 8)
 #define	XHCI_EPCTX_0_MULT_GET(x)		(((x) >> 8) & 0x3)
 #define	XHCI_EPCTX_0_MAXP_STREAMS_SET(x)	(((x) & 0x1F) << 10)
@@ -192,6 +200,7 @@ struct xhci_stream_ctx {
 
 struct xhci_trb {
 	volatile uint64_t	qwTrb0;
+#define	XHCI_TRB_0_DIR_IN_MASK		(0x80ULL << 0)
 #define	XHCI_TRB_0_WLENGTH_MASK		(0xFFFFULL << 48)
 	volatile uint32_t	dwTrb2;
 #define	XHCI_TRB_2_ERROR_GET(x)		(((x) >> 24) & 0xFF)
@@ -315,15 +324,27 @@ struct xhci_trb {
 } __aligned(4);
 
 struct xhci_dev_endpoint_trbs {
-	struct xhci_trb		trb[XHCI_MAX_ENDPOINTS]
-	    [(XHCI_MAX_STREAMS * XHCI_MAX_TRANSFERS) + XHCI_MAX_STREAMS];
+	struct xhci_trb		trb[(XHCI_MAX_STREAMS *
+	    XHCI_MAX_TRANSFERS) + XHCI_MAX_STREAMS];
 };
 
-#define	XHCI_TD_PAGE_NBUF	17	/* units, room enough for 64Kbytes */
-#define	XHCI_TD_PAGE_SIZE	4096	/* bytes */
-#define	XHCI_TD_PAYLOAD_MAX	(XHCI_TD_PAGE_SIZE * (XHCI_TD_PAGE_NBUF - 1))
+#if (USB_PAGE_SIZE < 4096)
+#error "The XHCI driver needs a pagesize above or equal to 4K"
+#endif
+
+/* Define the maximum payload which we will handle in a single TRB */
+#define	XHCI_TD_PAYLOAD_MAX	65536	/* bytes */
+
+/* Define the maximum payload of a single scatter-gather list element */
+#define	XHCI_TD_PAGE_SIZE \
+  ((USB_PAGE_SIZE < XHCI_TD_PAYLOAD_MAX) ? USB_PAGE_SIZE : XHCI_TD_PAYLOAD_MAX)
+
+/* Define the maximum length of the scatter-gather list */
+#define	XHCI_TD_PAGE_NBUF \
+  (((XHCI_TD_PAYLOAD_MAX + XHCI_TD_PAGE_SIZE - 1) / XHCI_TD_PAGE_SIZE) + 1)
 
 struct xhci_td {
+	/* one LINK TRB has been added to the TRB array */
 	struct xhci_trb		td_trb[XHCI_TD_PAGE_NBUF + 1];
 
 /*
@@ -370,6 +391,7 @@ struct xhci_endpoint_ext {
 	uint8_t			trb_halted;
 	uint8_t			trb_running;
 	uint8_t			trb_ep_mode;
+	uint8_t			trb_ep_maxp;
 };
 
 enum {
@@ -384,13 +406,15 @@ enum {
 struct xhci_hw_dev {
 	struct usb_page_cache	device_pc;
 	struct usb_page_cache	input_pc;
-	struct usb_page_cache	endpoint_pc;
+	struct usb_page_cache	endpoint_pc[XHCI_MAX_ENDPOINTS];
 
 	struct usb_page		device_pg;
 	struct usb_page		input_pg;
-	struct usb_page		endpoint_pg;
+	struct usb_page		endpoint_pg[XHCI_MAX_ENDPOINTS];
 
 	struct xhci_endpoint_ext endp[XHCI_MAX_ENDPOINTS];
+
+	uint32_t		ep_configured;
 
 	uint8_t			state;
 	uint8_t			nports;
@@ -451,8 +475,8 @@ struct xhci_softc {
 
 	struct usb_device	*sc_devices[XHCI_MAX_DEVICES];
 	struct resource		*sc_io_res;
-	int			sc_irq_rid;
 	struct resource		*sc_irq_res;
+	struct resource		*sc_msix_res;
 
 	void			*sc_intr_hdl;
 	bus_size_t		sc_io_size;
@@ -480,6 +504,10 @@ struct xhci_softc {
 	uint16_t		sc_erst_max;
 	uint16_t		sc_event_idx;
 	uint16_t		sc_command_idx;
+	uint16_t		sc_imod_default;
+
+	/* number of scratch pages */
+	uint16_t		sc_noscratch;
 
 	uint8_t			sc_event_ccs;
 	uint8_t			sc_command_ccs;
@@ -487,11 +515,12 @@ struct xhci_softc {
 	uint8_t			sc_noslot;
 	/* number of ports on root HUB */
 	uint8_t			sc_noport;
-	/* number of scratch pages */
-	uint8_t			sc_noscratch;
 	/* root HUB device configuration */
 	uint8_t			sc_conf;
-	uint8_t			sc_hub_idata[2];
+	/* step status stage of all control transfers */
+	uint8_t			sc_ctlstep;
+	/* root HUB port event bitmap, max 256 ports */
+	uint8_t			sc_hub_idata[32];
 
 	/* size of context */
 	uint8_t			sc_ctx_is_64_byte;
@@ -508,7 +537,8 @@ struct xhci_softc {
 
 uint8_t 	xhci_use_polling(void);
 usb_error_t xhci_halt_controller(struct xhci_softc *);
-usb_error_t xhci_init(struct xhci_softc *, device_t);
+usb_error_t xhci_reset_controller(struct xhci_softc *);
+usb_error_t xhci_init(struct xhci_softc *, device_t, uint8_t);
 usb_error_t xhci_start_controller(struct xhci_softc *);
 void	xhci_interrupt(struct xhci_softc *);
 void	xhci_uninit(struct xhci_softc *);

@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/ar.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/types.h>
@@ -100,10 +100,12 @@ main(int argc, char **argv)
 	struct bsdar	*bsdar, bsdar_storage;
 	char		*p;
 	size_t		 len;
-	int		 i, opt;
+	int		 i, opt, Dflag, Uflag;
 
 	bsdar = &bsdar_storage;
 	memset(bsdar, 0, sizeof(*bsdar));
+	Dflag = 0;
+	Uflag = 0;
 
 	if ((bsdar->progname = getprogname()) == NULL)
 		bsdar->progname = "ar";
@@ -113,14 +115,19 @@ main(int argc, char **argv)
 	len = strlen(bsdar->progname);
 	if (len >= strlen("ranlib") &&
 	    strcmp(bsdar->progname + len - strlen("ranlib"), "ranlib") == 0) {
-		while ((opt = getopt_long(argc, argv, "tDV", longopts,
+		while ((opt = getopt_long(argc, argv, "tDUV", longopts,
 		    NULL)) != -1) {
 			switch(opt) {
 			case 't':
 				/* Ignored. */
 				break;
 			case 'D':
-				bsdar->options |= AR_D;
+				Dflag = 1;
+				Uflag = 0;
+				break;
+			case 'U':
+				Uflag = 1;
+				Dflag = 0;
 				break;
 			case 'V':
 				ranlib_version();
@@ -137,8 +144,11 @@ main(int argc, char **argv)
 		if (*argv == NULL)
 			ranlib_usage();
 
+		/* Enable determinstic mode unless -U is set. */
+		if (Uflag == 0)
+			bsdar->options |= AR_D;
 		bsdar->options |= AR_S;
-		for (;(bsdar->filename = *argv++) != NULL;)
+		while ((bsdar->filename = *argv++) != NULL)
 			ar_mode_s(bsdar);
 
 		exit(EX_OK);
@@ -157,7 +167,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((opt = getopt_long(argc, argv, "abCcdDfijlMmopqrSsTtuVvxz",
+	while ((opt = getopt_long(argc, argv, "abCcdDfijlMmopqrSsTtUuVvxz",
 	    longopts, NULL)) != -1) {
 		switch(opt) {
 		case 'a':
@@ -177,7 +187,8 @@ main(int argc, char **argv)
 			set_mode(bsdar, opt);
 			break;
 		case 'D':
-			bsdar->options |= AR_D;
+			Dflag = 1;
+			Uflag = 0;
 			break;
 		case 'f':
 		case 'T':
@@ -215,6 +226,10 @@ main(int argc, char **argv)
 			break;
 		case 't':
 			set_mode(bsdar, opt);
+			break;
+		case 'U':
+			Uflag = 1;
+			Dflag = 0;
 			break;
 		case 'u':
 			bsdar->options |= AR_U;
@@ -257,15 +272,20 @@ main(int argc, char **argv)
 		    "only one of -s and -S options allowed");
 
 	if (bsdar->options & (AR_A | AR_B)) {
-		if ((bsdar->posarg = *argv) == NULL)
+		if (*argv == NULL)
 			bsdar_errc(bsdar, EX_USAGE, 0,
 			    "no position operand specified");
-		if ((bsdar->posarg = basename(bsdar->posarg)) == NULL)
+		if ((bsdar->posarg = basename(*argv)) == NULL)
 			bsdar_errc(bsdar, EX_SOFTWARE, errno,
 			    "basename failed");
 		argc--;
 		argv++;
 	}
+
+	/* Set determinstic mode for -D, and by default without -U. */
+	if (Dflag || (Uflag == 0 && (bsdar->mode == 'q' || bsdar->mode == 'r' ||
+	    (bsdar->mode == '\0' && bsdar->options & AR_S))))
+		bsdar->options |= AR_D;
 
 	if (bsdar->options & AR_A)
 		only_mode(bsdar, "-a", "mqr");
@@ -275,8 +295,10 @@ main(int argc, char **argv)
 		only_mode(bsdar, "-c", "qr");
 	if (bsdar->options & AR_CC)
 		only_mode(bsdar, "-C", "x");
-	if (bsdar->options & AR_D)
+	if (Dflag)
 		only_mode(bsdar, "-D", "qr");
+	if (Uflag)
+		only_mode(bsdar, "-U", "qr");
 	if (bsdar->options & AR_O)
 		only_mode(bsdar, "-o", "x");
 	if (bsdar->options & AR_SS)
@@ -364,9 +386,9 @@ bsdar_usage(void)
 	(void)fprintf(stderr, "\tar -m [-Tjsvz] archive file ...\n");
 	(void)fprintf(stderr, "\tar -m [-Tabijsvz] position archive file ...\n");
 	(void)fprintf(stderr, "\tar -p [-Tv] archive [file ...]\n");
-	(void)fprintf(stderr, "\tar -q [-TcDjsvz] archive file ...\n");
-	(void)fprintf(stderr, "\tar -r [-TcDjsuvz] archive file ...\n");
-	(void)fprintf(stderr, "\tar -r [-TabcDijsuvz] position archive file ...\n");
+	(void)fprintf(stderr, "\tar -q [-TcDjsUvz] archive file ...\n");
+	(void)fprintf(stderr, "\tar -r [-TcDjsUuvz] archive file ...\n");
+	(void)fprintf(stderr, "\tar -r [-TabcDijsUuvz] position archive file ...\n");
 	(void)fprintf(stderr, "\tar -s [-jz] archive\n");
 	(void)fprintf(stderr, "\tar -t [-Tv] archive [file ...]\n");
 	(void)fprintf(stderr, "\tar -x [-CTouv] archive [file ...]\n");
@@ -378,7 +400,7 @@ static void
 ranlib_usage(void)
 {
 
-	(void)fprintf(stderr, "usage:	ranlib [-t] archive ...\n");
+	(void)fprintf(stderr, "usage:	ranlib [-DtU] archive ...\n");
 	(void)fprintf(stderr, "\tranlib -V\n");
 	exit(EX_USAGE);
 }

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $FreeBSD: release/10.0.0/lib/libgssapi/gss_release_oid.c 229784 2012-01-07 16:13:56Z uqs $ */
+/* $FreeBSD$ */
 
 #include <gssapi/gssapi.h>
 #include <stdlib.h>

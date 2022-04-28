@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/regression/sysvshm/README 101902 2002-08-15 06:34:37Z alfred $
+$FreeBSD$
 
 SysV IPC Shared Memory Regression Utility.
 

@@ -18,11 +18,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -49,7 +45,7 @@
 static const char sccsid[] = "@(#)rmpproto.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/libexec/rbootd/rmpproto.c 239991 2012-09-01 14:45:15Z ed $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -334,7 +330,8 @@ SendBootRepl(struct rmp_packet *req, RMPCONN *rconn, char *filelist[])
 	 *  stripped file name and spoof the client into thinking that it
 	 *  really got what it wanted.
 	 */
-	filename = (filename = strrchr(filepath,'/'))? ++filename: filepath;
+	filename = strrchr(filepath,'/');
+	filename = filename? filename + 1: filepath;
 
 	/*
 	 *  Check that this is a valid boot file name.

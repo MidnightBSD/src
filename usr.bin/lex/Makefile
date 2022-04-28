@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/lex/Makefile 250881 2013-05-21 19:32:35Z jkim $
+# $FreeBSD$
 #
 # By default, flex will be configured to generate 8-bit scanners only if the
 # -8 flag is given.  If you want it to always generate 8-bit scanners, add
@@ -14,7 +14,7 @@ LINKS+=	${BINDIR}/lex ${BINDIR}/lex++
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex++
 
-FLEXDIR=	${.CURDIR}/../../contrib/flex
+FLEXDIR=	${SRCTOP}/contrib/flex
 
 .PATH:		${FLEXDIR}
 
@@ -31,6 +31,8 @@ MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
 
 WARNS?=		3
+
+NO_WMISLEADING_INDENTATION=
 
 CLEANFILES=	scan.c skel.c
 GENFILES=	parse.c parse.h scan.c skel.c
@@ -51,7 +53,7 @@ bootstrap: ${GENFILES:S/^/init/g}
 	@diff -I '^#line ' -I '\$$FreeBS[D]: .*\$$' -q \
 	    ${.CURDIR}/init${_f} ${_f} 2> /dev/null || { \
 		echo "Bootstrapping ${_f}" ; \
-		cp -f ${.CURDIR}/init${_f} ${_f} ; \
+		${CP} ${.CURDIR}/init${_f} ${_f} ; \
 	}
 .endfor
 

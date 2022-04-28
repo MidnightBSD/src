@@ -1,6 +1,6 @@
 # Doxyfile 1.5.2
 
-# $FreeBSD: release/10.0.0/tools/kerneldoc/subsys/Doxyfile-kern 196511 2009-08-24 13:10:55Z netchild $
+# $FreeBSD$
 
 #---------------------------------------------------------------------------
 # Project related configuration options

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/vge/if_vgevar.h 200759 2009-12-20 19:45:46Z yongari $
+ * $FreeBSD$
  */
 
 #define VGE_JUMBO_MTU	9000

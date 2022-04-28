@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/vte/if_vtereg.h 219787 2011-03-19 22:36:59Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_VTEREG_H

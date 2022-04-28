@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tx/if_txreg.h 119690 2003-09-02 17:30:40Z jhb $
+ * $FreeBSD$
  */
 
 #define	EPIC_MAX_MTU		1600	/* This is experiment-derived value */
@@ -90,7 +90,7 @@
 #define INTSTAT_CNT	0x00000200
 #define INTSTAT_PREI	0x00000400
 #define INTSTAT_RCT	0x00000800	
-#define INTSTAT_FATAL	0x00001000	/* One of DPE,APE,PMA,PTA happend */	
+#define	INTSTAT_FATAL	0x00001000	/* One of DPE,APE,PMA,PTA happened */	
 #define INTSTAT_UNUSED1	0x00002000
 #define INTSTAT_UNUSED2	0x00004000	
 #define INTSTAT_GP2	0x00008000	/* PHY Event */	

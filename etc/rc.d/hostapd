@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/hostapd 252230 2013-06-26 04:00:52Z rpaulo $
+# $FreeBSD$
 #
 
 # PROVIDE: hostapd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="hostapd"
+desc="Authenticator for IEEE 802.11 networks"
 command="/usr/sbin/${name}"
 
 ifn="$2"

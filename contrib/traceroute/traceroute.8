@@ -14,9 +14,9 @@
 .\" WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
 .\"	$Id: traceroute.8,v 1.19 2000/09/21 08:44:19 leres Exp $
-.\"	$FreeBSD: release/10.0.0/contrib/traceroute/traceroute.8 237635 2012-06-27 07:41:21Z joel $
+.\"	$FreeBSD$
 .\"
-.Dd June 19, 2012
+.Dd June 20, 2019
 .Dt TRACEROUTE 8
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Op Fl m Ar max_ttl
 .Op Fl P Ar proto
 .Op Fl p Ar port
-.Op Fl q Ar nqueries
+.Op Fl q Ar nprobes
 .Op Fl s Ar src_addr
 .Op Fl t Ar tos
 .Op Fl w Ar waittime
@@ -65,7 +65,7 @@ Turn  on  AS#  lookups  and  use the given server instead of the
 default.
 .It Fl e
 Firewall evasion mode.
-Use fixed destination ports for UDP and TCP probes.
+Use fixed destination ports for UDP, UDP-Lite, TCP and SCTP probes.
 The destination port does NOT increment with each packet sent.
 .It Fl f Ar first_ttl
 Set the initial time-to-live used in the first outgoing probe packet.
@@ -110,26 +110,29 @@ Print hop addresses numerically rather than symbolically and numerically
 path).
 .It Fl P Ar proto
 Send packets of specified IP protocol. The currently supported protocols
-are: UDP, TCP, GRE and ICMP. Other protocols may also be specified (either by
-name or by number), though
+are: UDP, UDP-Lite, TCP, SCTP, GRE and ICMP. Other protocols may also be
+specified (either by name or by number), though
 .Nm
 does not implement any special knowledge of their packet formats. This
 option is useful for determining which router along a path may be
 blocking packets based on IP protocol number. But see BUGS below.
 .It Fl p Ar port
-Protocol specific. For UDP and TCP, sets
+Protocol specific. For UDP, UDP-Lite, TCP and SCTP, sets
 the base
 .Ar port
 number used in probes (default is 33434).
-Traceroute hopes that nothing is listening on UDP ports
-.Em base
+Traceroute hopes that nothing is listening on UDP ports (or UDP-Lite ports
+if used by
+.Nm
+and supported by the peer)
+.Em port + 1
 to
-.Em base + nhops * nprobes - 1
+.Em port + (max_ttl - first_ttl + 1) * nprobes
 at the destination host (so an ICMP PORT_UNREACHABLE message will
 be returned to terminate the route tracing).  If something is
 listening on a port in the default range, this option can be used
 to pick an unused port range.
-.It Fl q Ar nqueries
+.It Fl q Ar nprobes
 Set the number of probes per hop (default is 3,
 unless
 .Fl D

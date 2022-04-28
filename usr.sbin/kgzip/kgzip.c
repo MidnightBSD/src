@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Global Technology Associates, Inc.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/kgzip/kgzip.c 116222 2003-06-11 21:37:19Z obrien $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>

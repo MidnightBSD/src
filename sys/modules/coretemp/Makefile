@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/coretemp/Makefile 171854 2007-08-15 19:26:03Z des $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/coretemp
+.PATH: ${SRCTOP}/sys/dev/coretemp
 
 KMOD=	coretemp
 SRCS=	coretemp.c bus_if.h device_if.h

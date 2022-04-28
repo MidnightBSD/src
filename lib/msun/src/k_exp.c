@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/k_exp.c 226597 2011-10-21 06:27:56Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 
@@ -103,6 +103,6 @@ __ldexp_cexp(double complex z, int expt)
 	half_expt = expt - half_expt;
 	INSERT_WORDS(scale2, (0x3ff + half_expt) << 20, 0);
 
-	return (cpack(cos(y) * exp_x * scale1 * scale2,
+	return (CMPLX(cos(y) * exp_x * scale1 * scale2,
 	    sin(y) * exp_x * scale1 * scale2));
 }

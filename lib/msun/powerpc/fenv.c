@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/powerpc/fenv.c 226415 2011-10-16 05:37:56Z das $
+ * $FreeBSD$
  */
 
 #define	__fenv_static

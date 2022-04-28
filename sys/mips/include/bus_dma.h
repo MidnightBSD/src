@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/bus_dma.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_BUS_DMA_H_

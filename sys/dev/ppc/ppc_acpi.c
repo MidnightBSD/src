@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ppc/ppc_acpi.c 187576 2009-01-21 23:10:06Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 

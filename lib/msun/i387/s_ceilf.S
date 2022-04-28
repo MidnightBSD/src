@@ -5,7 +5,7 @@
 
 #include <machine/asm.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/i387/s_ceilf.S 217108 2011-01-07 16:13:12Z kib $");
+__FBSDID("$FreeBSD$");
 /* RCSID("$NetBSD: s_ceilf.S,v 1.3 1995/05/08 23:52:44 jtc Exp $") */
 
 ENTRY(ceilf)

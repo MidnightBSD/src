@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/modf.c 226606 2011-10-21 06:40:36Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * modf(double x, double *iptr)

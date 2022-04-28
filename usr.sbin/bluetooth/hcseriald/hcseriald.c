@@ -1,5 +1,7 @@
-/*
+/*-
  * hcseriald.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: hcseriald.c,v 1.3 2003/05/21 22:40:32 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hcseriald/hcseriald.c 244040 2012-12-08 22:16:36Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

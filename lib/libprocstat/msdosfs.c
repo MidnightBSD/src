@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libprocstat/msdosfs.c 221807 2011-05-12 10:11:39Z stas $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>

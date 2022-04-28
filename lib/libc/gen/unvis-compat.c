@@ -27,12 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/gen/unvis-compat.c 244401 2012-12-18 16:37:24Z brooks $
+ * $FreeBSD$
  */
 
 #include <vis.h>
 
 #define	_UNVIS_END	1
+
+int __unvis_44bsd(char *, int, int *, int);
 
 int
 __unvis_44bsd(char *cp, int c, int *astate, int flag)

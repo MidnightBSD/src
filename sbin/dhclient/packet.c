@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/packet.c 252615 2013-07-03 21:49:10Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
 
@@ -58,7 +58,7 @@ u_int32_t	wrapsum(u_int32_t);
 u_int32_t
 checksum(unsigned char *buf, unsigned nbytes, u_int32_t sum)
 {
-	int i;
+	unsigned i;
 
 	/* Checksum all the pairs of bytes first... */
 	for (i = 0; i < (nbytes & ~1U); i += 2) {
@@ -127,17 +127,6 @@ assemble_udp_ip_header(unsigned char *buf, int *bufix, u_int32_t from,
 	ip.ip_dst.s_addr = to;
 
 	ip.ip_sum = wrapsum(checksum((unsigned char *)&ip, sizeof(ip), 0));
-
-	/*
-	 * While the BPF -- used for broadcasts -- expects a "true" IP header
-	 * with all the bytes in network byte order, the raw socket interface
-	 * which is used for unicasts expects the ip_len field to be in host
-	 * byte order.  In both cases, the checksum has to be correct, so this
-	 * is as good a place as any to turn the bytes around again.
-	 */
-	if (to != INADDR_BROADCAST)
-		ip.ip_len = ntohs(ip.ip_len);
-
 	memcpy(&buf[*bufix], &ip, sizeof(ip));
 	*bufix += sizeof(ip);
 
@@ -192,7 +181,7 @@ decode_udp_ip_header(unsigned char *buf, int bufix, struct sockaddr_in *from,
 	ip_packets_seen++;
 	if (wrapsum(checksum(buf + bufix, ip_len, 0)) != 0) {
 		ip_packets_bad_checksum++;
-		if (ip_packets_seen > 4 &&
+		if (ip_packets_seen > 4 && ip_packets_bad_checksum != 0 &&
 		    (ip_packets_seen / ip_packets_bad_checksum) < 2) {
 			note("%d bad IP checksums seen in %d packets",
 			    ip_packets_bad_checksum, ip_packets_seen);
@@ -244,7 +233,7 @@ decode_udp_ip_header(unsigned char *buf, int bufix, struct sockaddr_in *from,
 	udp_packets_seen++;
 	if (usum && usum != sum) {
 		udp_packets_bad_checksum++;
-		if (udp_packets_seen > 4 &&
+		if (udp_packets_seen > 4 && udp_packets_bad_checksum != 0 &&
 		    (udp_packets_seen / udp_packets_bad_checksum) < 2) {
 			note("%d bad udp checksums in %d packets",
 			    udp_packets_bad_checksum, udp_packets_seen);

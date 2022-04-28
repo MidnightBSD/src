@@ -26,8 +26,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/common/dumpregs_5212.c 196696 2009-08-31 13:23:55Z jhb $
+ * $FreeBSD$
  */
+
+#include <sys/param.h>
+
 #include "diag.h"
 
 #include "ah.h"
@@ -36,8 +39,6 @@
 #include "ar5212/ar5212phy.h"
 
 #include "dumpregs.h"
-
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 
 #define	MAC5212	SREV(4,5), SREV(16,0)
 #define	MAC5213	SREV(5,9), SREV(16,0)
@@ -421,7 +422,7 @@ static struct dumpreg ar5212regs[] = {
 static __constructor void
 ar5212_ctor(void)
 {
-	register_regs(ar5212regs, N(ar5212regs), MAC5212, PHYANY);
+	register_regs(ar5212regs, nitems(ar5212regs), MAC5212, PHYANY);
 	register_keycache(128, MAC5212, PHYANY);
 
 	register_range(0x9800, 0x987c, DUMP_BASEBAND, MAC5212, PHYANY);

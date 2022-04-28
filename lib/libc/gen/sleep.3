@@ -26,14 +26,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)sleep.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/gen/sleep.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
 .Dd February 13, 1998
 .Dt SLEEP 3
 .Os
 .Sh NAME
 .Nm sleep
-.Nd suspend process execution for an interval measured in seconds
+.Nd suspend thread execution for an interval measured in seconds
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
@@ -43,11 +43,11 @@
 .Sh DESCRIPTION
 The
 .Fn sleep
-function suspends execution of the calling process until either
+function suspends execution of the calling thread until either
 .Fa seconds
-seconds have elapsed or a signal is delivered to the process and its
+seconds have elapsed or a signal is delivered to the thread and its
 action is to invoke a signal-catching function or to terminate the
-process.
+thread or process.
 System activity may lengthen the sleep by an indeterminate amount.
 .Pp
 This function is implemented using

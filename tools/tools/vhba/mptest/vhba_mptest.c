@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/tools/tools/vhba/mptest/vhba_mptest.c 211183 2010-08-11 17:25:14Z mjacob $ */
+/* $FreeBSD$ */
 /*
  * "Faulty" Multipath Device. Creates to devices to be set up as multipath,
  * makes one or both of them non existent (or re existent) on demand.

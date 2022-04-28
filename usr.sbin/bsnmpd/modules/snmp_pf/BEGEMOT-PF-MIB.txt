@@ -1,4 +1,4 @@
--- 
+--
 -- ----------------------------------------------------------------------------
 -- "THE BEER-WARE LICENSE" (Revision 42):
 -- <philip@FreeBSD.org> wrote this file.  As long as you retain this notice you
@@ -6,8 +6,8 @@
 -- this stuff is worth it, you can buy me a beer in return.   -Philip Paeps
 -- ----------------------------------------------------------------------------
 --
--- $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_pf/BEGEMOT-PF-MIB.txt 240233 2012-09-08 06:41:54Z glebius $
--- 
+-- $FreeBSD$
+--
 
 BEGEMOT-PF-MIB DEFINITIONS ::= BEGIN
 
@@ -612,7 +612,7 @@ pfInterfacesIfIndex OBJECT-TYPE
     DESCRIPTION
 	"A unique value, greater than zero, for each interface."
     ::= { pfInterfacesIfEntry 1 }
-    
+
 pfInterfacesIfDescr OBJECT-TYPE
     SYNTAX	OCTET STRING
     MAX-ACCESS	read-only
@@ -876,7 +876,7 @@ pfTablesTblTZero OBJECT-TYPE
         cleared or the time since this table was loaded, whichever is
         sooner."
     ::= { pfTablesTblEntry 4 }
-	
+
 pfTablesTblRefsAnchor OBJECT-TYPE
     SYNTAX	Integer32
     MAX-ACCESS  read-only
@@ -1294,7 +1294,7 @@ pfLabelsLblIndex OBJECT-TYPE
     STATUS	current
     DESCRIPTION
 	"A unique value, greater than zero, for each label."
-    ::= { pfLabelsLblEntry 1 } 
+    ::= { pfLabelsLblEntry 1 }
 
 pfLabelsLblName OBJECT-TYPE
     SYNTAX	OCTET STRING

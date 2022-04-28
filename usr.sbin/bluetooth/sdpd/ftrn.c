@@ -1,5 +1,7 @@
-/*
+/*-
  * ftrn.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: ftrn.c,v 1.5 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/ftrn.c 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <string.h>

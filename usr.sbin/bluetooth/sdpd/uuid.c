@@ -1,5 +1,7 @@
-/*
+/*-
  * uuid.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2005 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,9 +28,9 @@
  * SUCH DAMAGE.
  *
  * $Id: uuid.c,v 1.1 2004/12/09 18:20:26 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/uuid.c 139721 2005-01-05 18:37:37Z emax $
+ * $FreeBSD$
  */
-
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <uuid.h>

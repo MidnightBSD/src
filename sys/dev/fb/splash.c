@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fb/splash.c 218661 2011-02-13 19:25:48Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_splash.h"
 
@@ -115,7 +115,7 @@ splash_register(splash_decoder_t *decoder)
 
 	if (splash_adp != NULL) {
 		/*
-		 * If the video card has aleady been initialized, test
+		 * If the video card has already been initialized, test
 		 * this decoder immediately.
 		 */
 		error = splash_test(decoder);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002 Networks Associates Technologies, Inc.
  * All rights reserved.
  *
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/passwd/passwd.c 201385 2010-01-02 10:14:35Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_controller_state_handlers.c 231296 2012-02-09 17:50:24Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file

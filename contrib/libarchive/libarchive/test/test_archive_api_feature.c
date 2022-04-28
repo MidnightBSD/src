@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_archive_api_feature.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_archive_api_feature)
 {
@@ -42,8 +42,12 @@ DEFINE_TEST(test_archive_api_feature)
 	if (strlen(buff) < strlen(archive_version_string())) {
 		p = archive_version_string() + strlen(buff);
 		failure("Version string is: %s", archive_version_string());
-		assert(*p == 'a' || *p == 'b' || *p == 'c' || *p == 'd');
-		++p;
+		if (p[0] == 'd'&& p[1] == 'e' && p[2] == 'v')
+			p += 3;
+		else {
+			assert(*p == 'a' || *p == 'b' || *p == 'c' || *p == 'd');
+			++p;
+		}
 		failure("Version string is: %s", archive_version_string());
 		assert(*p == '\0');
 	}

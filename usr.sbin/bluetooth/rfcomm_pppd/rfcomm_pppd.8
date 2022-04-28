@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $Id: rfcomm_pppd.8,v 1.7 2003/09/07 18:32:11 max Exp $
-.\" $FreeBSD: release/10.0.0/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.8 208027 2010-05-13 12:07:55Z uqs $
+.\" $FreeBSD$
 .\"
 .Dd February 4, 2003
 .Dt RFCOMM_PPPD 8
@@ -343,12 +343,12 @@ label.
 .Xr sdpcontrol 8 ,
 .Xr sdpd 8
 .Sh AUTHORS
-.An Maksim Yevmenkin Aq m_evmenkin@yahoo.com
+.An Maksim Yevmenkin Aq Mt m_evmenkin@yahoo.com
 .Sh CAVEATS
 The
 .Nm
 utility in server mode will try to register the Bluetooth LAN Access Over PPP
-service with the local SPD daemon.
+service with the local SDP daemon.
 If the local SDP daemon is not running,
 .Nm
 will exit with an error.

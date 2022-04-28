@@ -1,3 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/builtins/command2.0 151797 2005-10-28 14:02:42Z stefanf $
-PATH=
-command -p cat < /dev/null

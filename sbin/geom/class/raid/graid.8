@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/sbin/geom/class/raid/graid.8 249092 2013-04-04 10:26:09Z joel $
+.\" $FreeBSD$
 .\"
 .Dd April 4, 2013
 .Dt GRAID 8
@@ -304,9 +304,6 @@ Write errors are always considered as disk failures.
 Time to wait for missing array components on startup.
 .It Va kern.geom.raid. Ns Ar X Ns Va .enable : No 1
 Enable taste for specific metadata or transformation module.
-.It Va kern.geom.raid.legacy_aliases : No 0
-Enable geom raid emulation of legacy /dev/ar%d devices.
-This should aid the upgrade of systems from legacy to modern releases.
 .El
 .Sh EXIT STATUS
 Exit status is 0 on success, and non-zero if the command fails.
@@ -320,5 +317,5 @@ The
 utility appeared in
 .Fx 9.0 .
 .Sh AUTHORS
-.An Alexander Motin Aq mav@FreeBSD.org
-.An M. Warner Losh Aq imp@FreeBSD.org
+.An Alexander Motin Aq Mt mav@FreeBSD.org
+.An M. Warner Losh Aq Mt imp@FreeBSD.org

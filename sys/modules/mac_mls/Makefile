@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mac_mls/Makefile 105725 2002-10-22 17:10:15Z rwatson $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../security/mac_mls
+.PATH: ${SRCTOP}/sys/security/mac_mls
 
 KMOD=	mac_mls
 SRCS=	vnode_if.h \

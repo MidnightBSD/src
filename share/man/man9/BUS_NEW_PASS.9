@@ -1,6 +1,6 @@
 .\" -*- nroff -*-
 .\"
-.\" Copyright (c) 2009 Advanced Computing Technologies LLC
+.\" Copyright (c) 2009 Hudson River Trading LLC
 .\" Written by: John H. Baldwin <jhb@FreeBSD.org>
 .\" All rights reserved.
 .\"
@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/BUS_NEW_PASS.9 210933 2010-08-06 14:33:42Z joel $
+.\" $FreeBSD$
 .\"
 .Dd June 8, 2009
 .Dt BUS_NEW_PASS 9
@@ -44,7 +44,7 @@ The
 method is called on each bus device to rescan the device tree when the pass
 level has been changed.
 This method is responsible for invoking
-.Xr BUS_NEW_PASS 9
+.Nm
 on child bus devices to propagate the rescan to child devices.
 It is also responsible for reprobing any unattached child devices and
 allowing drivers for the current pass to identify new children.

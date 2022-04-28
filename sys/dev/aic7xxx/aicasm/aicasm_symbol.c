@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_symbol.c#24 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_symbol.c 233479 2012-03-25 21:54:36Z rmh $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

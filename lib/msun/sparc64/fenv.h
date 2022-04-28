@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/sparc64/fenv.h 226218 2011-10-10 15:43:09Z das $
+ * $FreeBSD$
  */
 
 #ifndef	_FENV_H_
@@ -108,9 +108,9 @@ fesetexceptflag(const fexcept_t *__flagp, int __excepts)
 }
 
 /*
- * In contrast with the ia64 platform, it seems to be worthwhile to
- * inline this function on sparc64 even when the arguments are not
- * compile-time constants.  Perhaps this depends on the register window.
+ * It seems to be worthwhile to inline this function even when the
+ * arguments are not compile-time constants.  Perhaps this depends
+ * on the register window.
  */
 __fenv_static inline int
 feraiseexcept(int __excepts)

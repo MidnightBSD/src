@@ -1,9 +1,10 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/src/utils/lkbib/Makefile 114412 2003-05-01 13:22:21Z ru $
+# $FreeBSD$
 
 PROG_CXX=	lkbib
 SRCS=		lkbib.cpp
-DPADD=		${LIBBIB} ${LIBGROFF} ${LIBM}
-LDADD=		${LIBBIB} ${LIBGROFF} -lm
+DPADD=		${LIBBIB} ${LIBGROFF}
+LDADD=		${LIBBIB} ${LIBGROFF}
+LIBADD=		m
 CLEANFILES=	${MAN}
 
 .include <bsd.prog.mk>

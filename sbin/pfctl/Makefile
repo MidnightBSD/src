@@ -1,8 +1,11 @@
-# $FreeBSD: release/10.0.0/sbin/pfctl/Makefile 240494 2012-09-14 11:51:49Z glebius $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 # pf_ruleset.c is shared between kernel and pfctl
-.PATH: ${.CURDIR}/../../sys/netpfil/pf
+.PATH: ${SRCTOP}/sys/netpfil/pf
 
+PACKAGE=pf
 PROG=	pfctl
 MAN=	pfctl.8
 
@@ -16,9 +19,16 @@ CFLAGS+= -Wall -Wmissing-prototypes -Wno-uninitialized
 CFLAGS+= -Wstrict-prototypes
 CFLAGS+= -DENABLE_ALTQ -I${.CURDIR}
 
+# Need to use "WITH_" prefix to not conflict with the l/y INET/INET6 keywords
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DWITH_INET6
+.endif
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+= -DWITH_INET
+.endif
+
 YFLAGS=
 
-LDADD+=	-lm -lmd
-DPADD+=	${LIBM} ${LIBMD}
+LIBADD=	m md
 
 .include <bsd.prog.mk>

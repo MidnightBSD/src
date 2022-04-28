@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ppbus/ppb_1284.h 55957 2000-01-14 08:03:15Z nsouch $
+ * $FreeBSD$
  *
  */
 #ifndef __1284_H

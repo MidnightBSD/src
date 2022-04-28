@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/sys/dev/e1000/README 250168 2013-05-02 01:36:52Z eadler $
+$FreeBSD$
 FreeBSD* Driver for Intel Network Connection
 =============================================
 

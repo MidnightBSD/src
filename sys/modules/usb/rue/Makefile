@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/rue/Makefile 226154 2011-10-08 12:33:10Z marius $
+# $FreeBSD$
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

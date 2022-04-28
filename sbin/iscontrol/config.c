@@ -1,4 +1,6 @@
- /*-
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2009 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/config.c 254657 2013-08-22 14:02:34Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -210,7 +212,7 @@ setOption(isc_opt_t *op, int which, void *rval)
 }
 
 static char *
-getline(FILE *fd)
+get_line(FILE *fd)
 {
      static char	*sp, line[BUFSIZ];
      char		*lp, *p;
@@ -248,7 +250,7 @@ getConfig(FILE *fd, char *key, char **Ar, int *nargs)
      else
 	  len = 0;
      state = 0;
-     while((lp = getline(fd)) != NULL) {
+     while((lp = get_line(fd)) != NULL) {
 	  for(; isspace((unsigned char)*lp); lp++)
 	       ;
 	  switch(state) {

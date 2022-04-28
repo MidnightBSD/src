@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_support.c 209147 2010-06-14 02:26:13Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -367,7 +367,7 @@ _posix1e_acl_add_entry(acl_t acl, acl_tag_t tag, uid_t id, acl_perm_t perm)
 
 /*
  * Convert "old" type - ACL_TYPE_{ACCESS,DEFAULT}_OLD - into its "new"
- * counterpart.  It's neccessary for the old (pre-NFSv4 ACLs) binaries
+ * counterpart.  It's necessary for the old (pre-NFSv4 ACLs) binaries
  * to work with new libc and kernel.  Fixing 'type' for old binaries with
  * old libc and new kernel is being done by kern/vfs_acl.c:type_unold().
  */

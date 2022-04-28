@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/Osd/OsdDebug.c 222544 2011-05-31 19:45:58Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include <sys/param.h>
@@ -99,16 +99,15 @@ AcpiOsSignal(UINT32 Function, void *Info)
 void
 acpi_EnterDebugger(void)
 {
-    ACPI_PARSE_OBJECT	obj;
     static int		initted = 0;
 
     if (!initted) {
 	printf("Initialising ACPICA debugger...\n");
-	AcpiDbInitialize();
+	AcpiInitializeDebugger();
 	initted = 1;
     }
 
     printf("Entering ACPICA debugger...\n");
-    AcpiDbUserCommands('A', &obj);
+    AcpiDbUserCommands();
 }
 #endif /* ACPI_DEBUGGER */

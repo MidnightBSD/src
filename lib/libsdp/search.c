@@ -26,12 +26,13 @@
  * SUCH DAMAGE.
  *
  * $Id: search.c,v 1.2 2003/09/04 22:12:13 max Exp $
- * $FreeBSD: release/10.0.0/lib/libsdp/search.c 173673 2007-11-16 15:13:12Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/uio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <stdio.h>

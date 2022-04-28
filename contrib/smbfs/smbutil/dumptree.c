@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/contrib/smbfs/smbutil/dumptree.c 148496 2005-07-28 22:35:38Z imura $ */
+/* $FreeBSD$ */
 
 #include <sys/param.h>
 #include <sys/time.h>

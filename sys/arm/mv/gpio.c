@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/gpio.c 239367 2012-08-18 11:33:21Z hrs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/gpio.c 239367 2012-08-18 11:33:21Z
 #include <sys/queue.h>
 #include <sys/timetc.h>
 #include <machine/bus.h>
-#include <machine/fdt.h>
 #include <machine/intr.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -74,6 +73,7 @@ static uint32_t	gpio_setup[MV_GPIO_MAX_NPINS];
 static int	mv_gpio_probe(device_t);
 static int	mv_gpio_attach(device_t);
 static int	mv_gpio_intr(void *);
+static int	mv_gpio_init(void);
 
 static void	mv_gpio_intr_handler(int pin);
 static uint32_t	mv_gpio_reg_read(uint32_t reg);
@@ -113,7 +113,7 @@ struct gpio_ctrl_entry {
 	gpios_phandler_t	handler;
 };
 
-int mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len);
+static int mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len);
 int gpio_get_config_from_dt(void);
 
 struct gpio_ctrl_entry gpio_controllers[] = {
@@ -124,6 +124,9 @@ struct gpio_ctrl_entry gpio_controllers[] = {
 static int
 mv_gpio_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "mrvl,gpio"))
 		return (ENXIO);
@@ -198,7 +201,7 @@ mv_gpio_attach(device_t dev)
 		}
 	}
 
-	return (platform_gpio_init());
+	return (mv_gpio_init());
 }
 
 static int
@@ -537,7 +540,7 @@ mv_gpio_value_set(uint32_t pin, uint8_t val)
 		mv_gpio_reg_clear(reg, pin);
 }
 
-int
+static int
 mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len)
 {
 	pcell_t gpio_cells, pincnt;
@@ -551,10 +554,8 @@ mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len)
 		/* Node is not a GPIO controller. */
 		return (ENXIO);
 
-	if (OF_getprop(ctrl, "#gpio-cells", &gpio_cells, sizeof(pcell_t)) < 0)
+	if (OF_getencprop(ctrl, "#gpio-cells", &gpio_cells, sizeof(pcell_t)) < 0)
 		return (ENXIO);
-
-	gpio_cells = fdt32_to_cpu(gpio_cells);
 	if (gpio_cells != 3)
 		return (ENXIO);
 
@@ -564,9 +565,9 @@ mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len)
 	if (fdt_regsize(ctrl, &gpio_ctrl, &size))
 		return (ENXIO);
 
-	if (OF_getprop(ctrl, "pin-count", &pincnt, sizeof(pcell_t)) < 0)
+	if (OF_getencprop(ctrl, "pin-count", &pincnt, sizeof(pcell_t)) < 0)
 		return (ENXIO);
-	sc.pin_num = fdt32_to_cpu(pincnt);
+	sc.pin_num = pincnt;
 
 	/*
 	 * Skip controller reference, since controller's phandle is given
@@ -576,9 +577,9 @@ mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len)
 	gpios += inc;
 
 	for (t = 0; t < tuples; t++) {
-		pin = fdt32_to_cpu(gpios[0]);
-		dir = fdt32_to_cpu(gpios[1]);
-		flags = fdt32_to_cpu(gpios[2]);
+		pin = gpios[0];
+		dir = gpios[1];
+		flags = gpios[2];
 
 		mv_gpio_configure(pin, flags);
 
@@ -601,11 +602,10 @@ mv_handle_gpios_prop(phandle_t ctrl, pcell_t *gpios, int len)
 
 #define MAX_PINS_PER_NODE	5
 #define GPIOS_PROP_CELLS	4
-int
-platform_gpio_init(void)
+static int
+mv_gpio_init(void)
 {
 	phandle_t child, parent, root, ctrl;
-	ihandle_t ctrl_ihandle;
 	pcell_t gpios[MAX_PINS_PER_NODE * GPIOS_PROP_CELLS];
 	struct gpio_ctrl_entry *e;
 	int len, rv;
@@ -628,7 +628,7 @@ platform_gpio_init(void)
 				return (ENXIO);
 
 			/* Get 'gpios' property. */
-			OF_getprop(child, "gpios", &gpios, len);
+			OF_getencprop(child, "gpios", gpios, len);
 
 			e = (struct gpio_ctrl_entry *)&gpio_controllers;
 
@@ -639,9 +639,7 @@ platform_gpio_init(void)
 				 * contain a ref. to a node defining GPIO
 				 * controller.
 				 */
-				ctrl_ihandle = (ihandle_t)gpios[0];
-				ctrl_ihandle = fdt32_to_cpu(ctrl_ihandle);
-				ctrl = OF_instance_to_package(ctrl_ihandle);
+				ctrl = OF_node_from_xref(gpios[0]);
 
 				if (fdt_is_compatible(ctrl, e->compat))
 					/* Call a handler. */

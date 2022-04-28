@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/kttcp/sys/Makefile 122592 2003-11-13 00:30:27Z sam $
+# $FreeBSD$
 
 KMOD	= kttcp
 SRCS	= kttcp.c

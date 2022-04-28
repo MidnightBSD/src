@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/test/netfibs/README 232114 2012-02-24 14:13:06Z bz $
+# $FreeBSD$
 
 This directory holds scripts and a support program for multiple test cases
 exercising multi-IP FIBs.  At this time only IPv6 test cases are provided.

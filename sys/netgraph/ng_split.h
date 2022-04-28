@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_split.h 151676 2005-10-25 20:56:12Z ru $
+ * $FreeBSD$
  *
  */
 
@@ -40,6 +40,6 @@
 /* My hook names */
 #define NG_SPLIT_HOOK_MIXED	"mixed"	/* Mixed stream (in/out) */
 #define NG_SPLIT_HOOK_OUT	"out"	/* Output to outhook (sending out) */
-#define NG_SPLIT_HOOK_IN	"in"	/* Input from inhook (recieving) */
+#define NG_SPLIT_HOOK_IN	"in"	/* Input from inhook (receiving) */
 
 #endif /* _NETGRAPH_NG_SPLIT_H_ */

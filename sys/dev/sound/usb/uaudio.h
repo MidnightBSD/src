@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/sound/usb/uaudio.h 228484 2011-12-14 00:48:20Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
@@ -39,7 +39,7 @@ struct pcm_channel;
 extern int	uaudio_attach_sub(device_t dev, kobj_class_t mixer_class,
 		    kobj_class_t chan_class);
 extern int	uaudio_detach_sub(device_t dev);
-extern void	*uaudio_chan_init(struct uaudio_softc *sc, struct snd_dbuf *b,
+extern void	*uaudio_chan_init(struct uaudio_chan *ch, struct snd_dbuf *b,
 		    struct pcm_channel *c, int dir);
 extern int	uaudio_chan_free(struct uaudio_chan *ch);
 extern int	uaudio_chan_set_param_blocksize(struct uaudio_chan *ch,
@@ -54,14 +54,14 @@ extern struct	pcmchan_matrix *uaudio_chan_getmatrix(struct uaudio_chan *ch,
 		    uint32_t format);
 extern int	uaudio_chan_set_param_format(struct uaudio_chan *ch,
 		    uint32_t format);
-extern int	uaudio_chan_start(struct uaudio_chan *ch);
-extern int	uaudio_chan_stop(struct uaudio_chan *ch);
-extern int	uaudio_mixer_init_sub(struct uaudio_softc *sc,
-		    struct snd_mixer *m);
-extern int	uaudio_mixer_uninit_sub(struct uaudio_softc *sc);
-extern void	uaudio_mixer_set(struct uaudio_softc *sc, unsigned type,
-		    unsigned left, unsigned right);
-extern uint32_t	uaudio_mixer_setrecsrc(struct uaudio_softc *sc, uint32_t src);
+extern void	uaudio_chan_start(struct uaudio_chan *ch);
+extern void	uaudio_chan_stop(struct uaudio_chan *ch);
+extern int	uaudio_mixer_init_sub(struct uaudio_softc *, struct snd_mixer *);
+extern int	uaudio_mixer_uninit_sub(struct uaudio_softc *, struct snd_mixer *);
+extern void	uaudio_mixer_set(struct uaudio_softc *, struct snd_mixer *,
+		    unsigned type, unsigned left, unsigned right);
+extern uint32_t	uaudio_mixer_setrecsrc(struct uaudio_softc *, struct snd_mixer *,
+		    uint32_t src);
 
 int	uaudio_get_vendor(device_t dev);
 int	uaudio_get_product(device_t dev);

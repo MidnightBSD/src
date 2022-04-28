@@ -23,16 +23,16 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_entry.3 238856 2012-07-28 06:38:44Z mm $
+.\" $FreeBSD$
 .\"
-.Dd Feburary 2, 2012
+.Dd February 2, 2012
 .Dt ARCHIVE_ENTRY 3
 .Os
 .Sh NAME
 .Nm archive_entry_clear ,
 .Nm archive_entry_clone ,
 .Nm archive_entry_free ,
-.Nm archive_entry_new ,
+.Nm archive_entry_new
 .Nd functions for managing archive entry descriptions
 .Sh LIBRARY
 Streaming Archive Library (libarchive, -larchive)
@@ -126,16 +126,15 @@ using the current locale.
 Similarly, if you store a wide string and then store a
 narrow string for the same data, the previously-set wide string will
 be discarded in favor of the new data.
-.Pp
 .\" .Sh EXAMPLE
 .\" .Sh RETURN VALUES
 .\" .Sh ERRORS
 .Sh SEE ALSO
-.Xr archive 3 ,
 .Xr archive_entry_acl 3 ,
 .Xr archive_entry_paths 3 ,
 .Xr archive_entry_perms 3 ,
-.Xr archive_entry_time 3
+.Xr archive_entry_time 3 ,
+.Xr libarchive 3
 .Sh HISTORY
 The
 .Nm libarchive

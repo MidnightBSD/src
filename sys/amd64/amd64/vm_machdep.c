@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/vm_machdep.c 255844 2013-09-24 12:24:48Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 #include "opt_cpu.h"
@@ -80,19 +80,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/vm_machdep.c 255844 2013-09-2
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
 
-#include <x86/isa/isa.h>
-
-static void	cpu_reset_real(void);
-#ifdef SMP
-static void	cpu_reset_proxy(void);
-static u_int	cpu_reset_proxyid;
-static volatile u_int	cpu_reset_proxy_active;
-#endif
-
 _Static_assert(OFFSETOF_CURTHREAD == offsetof(struct pcpu, pc_curthread),
     "OFFSETOF_CURTHREAD does not correspond with offset of pc_curthread.");
 _Static_assert(OFFSETOF_CURPCB == offsetof(struct pcpu, pc_curpcb),
     "OFFSETOF_CURPCB does not correspond with offset of pc_curpcb.");
+_Static_assert(OFFSETOF_MONITORBUF == offsetof(struct pcpu, pc_monitorbuf),
+    "OFFSETOF_MONITORBUF does not correspond with offset of pc_monitorbuf.");
 
 struct savefpu *
 get_pcb_user_save_td(struct thread *td)
@@ -100,8 +93,8 @@ get_pcb_user_save_td(struct thread *td)
 	vm_offset_t p;
 
 	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
-	    cpu_max_ext_state_size;
-	KASSERT((p % 64) == 0, ("Unaligned pcb_user_save area"));
+	    roundup2(cpu_max_ext_state_size, XSAVE_AREA_ALIGN);
+	KASSERT((p % XSAVE_AREA_ALIGN) == 0, ("Unaligned pcb_user_save area"));
 	return ((struct savefpu *)p);
 }
 
@@ -120,14 +113,15 @@ get_pcb_td(struct thread *td)
 	vm_offset_t p;
 
 	p = td->td_kstack + td->td_kstack_pages * PAGE_SIZE -
-	    cpu_max_ext_state_size - sizeof(struct pcb);
+	    roundup2(cpu_max_ext_state_size, XSAVE_AREA_ALIGN) -
+	    sizeof(struct pcb);
 	return ((struct pcb *)p);
 }
 
 void *
 alloc_fpusave(int flags)
 {
-	struct pcb *res;
+	void *res;
 	struct savefpu_ymm *sf;
 
 	res = malloc(cpu_max_ext_state_size, M_DEVBUF, flags);
@@ -145,17 +139,12 @@ alloc_fpusave(int flags)
  * ready to run and return to user mode.
  */
 void
-cpu_fork(td1, p2, td2, flags)
-	register struct thread *td1;
-	register struct proc *p2;
-	struct thread *td2;
-	int flags;
+cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 {
-	register struct proc *p1;
+	struct proc *p1;
 	struct pcb *pcb2;
 	struct mdproc *mdp1, *mdp2;
 	struct proc_ldt *pldt;
-	pmap_t pmap2;
 
 	p1 = td1->td_proc;
 	if ((flags & RFPROC) == 0) {
@@ -174,6 +163,7 @@ cpu_fork(td1, p2, td2, flags)
 
 	/* Ensure that td1's pcb is up to date. */
 	fpuexit(td1);
+	update_pcb_bases(td1->td_pcb);
 
 	/* Point the pcb to the top of the stack */
 	pcb2 = get_pcb_td(td2);
@@ -218,8 +208,6 @@ cpu_fork(td1, p2, td2, flags)
 	 * Set registers for trampoline to user mode.  Leave space for the
 	 * return address on stack.  These are the kernel mode register values.
 	 */
-	pmap2 = vmspace_pmap(p2->p_vmspace);
-	pcb2->pcb_cr3 = pmap2->pm_cr3;
 	pcb2->pcb_r12 = (register_t)fork_return;	/* fork_trampoline argument */
 	pcb2->pcb_rbp = 0;
 	pcb2->pcb_rsp = (register_t)td2->td_frame - sizeof(void *);
@@ -236,12 +224,13 @@ cpu_fork(td1, p2, td2, flags)
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
+	td2->td_md.md_invl_gen.gen = 0;
 
 	/* As an i386, do not copy io permission bitmap. */
 	pcb2->pcb_tssp = NULL;
 
 	/* New segment registers. */
-	set_pcb_flags(pcb2, PCB_FULL_IRET);
+	set_pcb_flags_raw(pcb2, PCB_FULL_IRET);
 
 	/* Copy the LDT, if necessary. */
 	mdp1 = &td1->td_proc->p_md;
@@ -284,10 +273,7 @@ cpu_fork(td1, p2, td2, flags)
  * This is needed to make kernel threads stay in kernel mode.
  */
 void
-cpu_set_fork_handler(td, func, arg)
-	struct thread *td;
-	void (*func)(void *);
-	void *arg;
+cpu_fork_kthread_handler(struct thread *td, void (*func)(void *), void *arg)
 {
 	/*
 	 * Note that the trap frame follows the args, so the function
@@ -341,6 +327,8 @@ cpu_thread_clean(struct thread *td)
 	 * Clean TSS/iomap
 	 */
 	if (pcb->pcb_tssp != NULL) {
+		pmap_pti_remove_kva((vm_offset_t)pcb->pcb_tssp,
+		    (vm_offset_t)pcb->pcb_tssp + ctob(IOPAGES + 1));
 		kmem_free(kernel_arena, (vm_offset_t)pcb->pcb_tssp,
 		    ctob(IOPAGES + 1));
 		pcb->pcb_tssp = NULL;
@@ -413,27 +401,21 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		break;
 
 	default:
-		if (td->td_proc->p_sysent->sv_errsize) {
-			if (error >= td->td_proc->p_sysent->sv_errsize)
-				error = -1;	/* XXX */
-			else
-				error = td->td_proc->p_sysent->sv_errtbl[error];
-		}
-		td->td_frame->tf_rax = error;
+		td->td_frame->tf_rax = SV_ABI_ERRNO(td->td_proc, error);
 		td->td_frame->tf_rflags |= PSL_C;
 		break;
 	}
 }
 
 /*
- * Initialize machine state (pcb and trap frame) for a new thread about to
- * upcall. Put enough state in the new thread's PCB to get it to go back 
- * userret(), where we can intercept it again to set the return (upcall)
- * Address and stack, along with those from upcals that are from other sources
- * such as those generated in thread_userret() itself.
+ * Initialize machine state, mostly pcb and trap frame for a new
+ * thread, about to return to userspace.  Put enough state in the new
+ * thread's PCB to get it to go back to the fork_return(), which
+ * finalizes the thread state and handles peculiarities of the first
+ * return to userspace for the new thread.
  */
 void
-cpu_set_upcall(struct thread *td, struct thread *td0)
+cpu_copy_thread(struct thread *td, struct thread *td0)
 {
 	struct pcb *pcb2;
 
@@ -445,12 +427,14 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 * Those not loaded individually below get their default
 	 * values here.
 	 */
+	update_pcb_bases(td0->td_pcb);
 	bcopy(td0->td_pcb, pcb2, sizeof(*pcb2));
-	clear_pcb_flags(pcb2, PCB_FPUINITDONE | PCB_USERFPUINITDONE);
+	clear_pcb_flags(pcb2, PCB_FPUINITDONE | PCB_USERFPUINITDONE |
+	    PCB_KERNFPU);
 	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
 	bcopy(get_pcb_user_save_td(td0), pcb2->pcb_save,
 	    cpu_max_ext_state_size);
-	set_pcb_flags(pcb2, PCB_FULL_IRET);
+	set_pcb_flags_raw(pcb2, PCB_FULL_IRET);
 
 	/*
 	 * Create a new fresh stack for the new thread.
@@ -476,7 +460,6 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb2->pcb_rip = (register_t)fork_trampoline;
 	/*
 	 * If we didn't copy the pcb, we'd need to do the following registers:
-	 * pcb2->pcb_cr3:	cloned above.
 	 * pcb2->pcb_dr*:	cloned above.
 	 * pcb2->pcb_savefpu:	cloned above.
 	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
@@ -489,13 +472,12 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 }
 
 /*
- * Set that machine state for performing an upcall that has to
- * be done in thread_userret() so that those upcalls generated
- * in thread_userret() itself can be done as well.
+ * Set that machine state for performing an upcall that starts
+ * the entry function with the given argument.
  */
 void
-cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
-	stack_t *stack)
+cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
+    stack_t *stack)
 {
 
 	/* 
@@ -510,7 +492,7 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 #ifdef COMPAT_FREEBSD32
 	if (SV_PROC_FLAG(td->td_proc, SV_ILP32)) {
 		/*
-	 	 * Set the trap frame to point at the beginning of the uts
+		 * Set the trap frame to point at the beginning of the entry
 		 * function.
 		 */
 		td->td_frame->tf_rbp = 0;
@@ -518,10 +500,10 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 		   (((uintptr_t)stack->ss_sp + stack->ss_size - 4) & ~0x0f) - 4;
 		td->td_frame->tf_rip = (uintptr_t)entry;
 
-		/*
-		 * Pass the address of the mailbox for this kse to the uts
-		 * function as a parameter on the stack.
-		 */
+		/* Return address sentinel value to stop stack unwinding. */
+		suword32((void *)td->td_frame->tf_rsp, 0);
+
+		/* Pass the argument to the entry point. */
 		suword32((void *)(td->td_frame->tf_rsp + sizeof(int32_t)),
 		    (uint32_t)(uintptr_t)arg);
 
@@ -544,10 +526,10 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	td->td_frame->tf_gs = _ugssel;
 	td->td_frame->tf_flags = TF_HASSEGS;
 
-	/*
-	 * Pass the address of the mailbox for this kse to the uts
-	 * function as a parameter on the stack.
-	 */
+	/* Return address sentinel value to stop stack unwinding. */
+	suword((void *)td->td_frame->tf_rsp, 0);
+
+	/* Pass the argument to the entry point. */
 	td->td_frame->tf_rdi = (register_t)arg;
 }
 
@@ -569,132 +551,6 @@ cpu_set_user_tls(struct thread *td, void *tls_base)
 #endif
 	pcb->pcb_fsbase = (register_t)tls_base;
 	return (0);
-}
-
-#ifdef SMP
-static void
-cpu_reset_proxy()
-{
-	cpuset_t tcrp;
-
-	cpu_reset_proxy_active = 1;
-	while (cpu_reset_proxy_active == 1)
-		ia32_pause(); /* Wait for other cpu to see that we've started */
-
-	CPU_SETOF(cpu_reset_proxyid, &tcrp);
-	stop_cpus(tcrp);
-	printf("cpu_reset_proxy: Stopped CPU %d\n", cpu_reset_proxyid);
-	DELAY(1000000);
-	cpu_reset_real();
-}
-#endif
-
-void
-cpu_reset()
-{
-#ifdef SMP
-	cpuset_t map;
-	u_int cnt;
-
-	if (smp_active) {
-		map = all_cpus;
-		CPU_CLR(PCPU_GET(cpuid), &map);
-		CPU_NAND(&map, &stopped_cpus);
-		if (!CPU_EMPTY(&map)) {
-			printf("cpu_reset: Stopping other CPUs\n");
-			stop_cpus(map);
-		}
-
-		if (PCPU_GET(cpuid) != 0) {
-			cpu_reset_proxyid = PCPU_GET(cpuid);
-			cpustop_restartfunc = cpu_reset_proxy;
-			cpu_reset_proxy_active = 0;
-			printf("cpu_reset: Restarting BSP\n");
-
-			/* Restart CPU #0. */
-			CPU_SETOF(0, &started_cpus);
-			wmb();
-
-			cnt = 0;
-			while (cpu_reset_proxy_active == 0 && cnt < 10000000) {
-				ia32_pause();
-				cnt++;	/* Wait for BSP to announce restart */
-			}
-			if (cpu_reset_proxy_active == 0)
-				printf("cpu_reset: Failed to restart BSP\n");
-			enable_intr();
-			cpu_reset_proxy_active = 2;
-
-			while (1)
-				ia32_pause();
-			/* NOTREACHED */
-		}
-
-		DELAY(1000000);
-	}
-#endif
-	cpu_reset_real();
-	/* NOTREACHED */
-}
-
-static void
-cpu_reset_real()
-{
-	struct region_descriptor null_idt;
-	int b;
-
-	disable_intr();
-
-	/*
-	 * Attempt to do a CPU reset via the keyboard controller,
-	 * do not turn off GateA20, as any machine that fails
-	 * to do the reset here would then end up in no man's land.
-	 */
-	outb(IO_KBD + 4, 0xFE);
-	DELAY(500000);	/* wait 0.5 sec to see if that did it */
-
-	/*
-	 * Attempt to force a reset via the Reset Control register at
-	 * I/O port 0xcf9.  Bit 2 forces a system reset when it
-	 * transitions from 0 to 1.  Bit 1 selects the type of reset
-	 * to attempt: 0 selects a "soft" reset, and 1 selects a
-	 * "hard" reset.  We try a "hard" reset.  The first write sets
-	 * bit 1 to select a "hard" reset and clears bit 2.  The
-	 * second write forces a 0 -> 1 transition in bit 2 to trigger
-	 * a reset.
-	 */
-	outb(0xcf9, 0x2);
-	outb(0xcf9, 0x6);
-	DELAY(500000);  /* wait 0.5 sec to see if that did it */
-
-	/*
-	 * Attempt to force a reset via the Fast A20 and Init register
-	 * at I/O port 0x92.  Bit 1 serves as an alternate A20 gate.
-	 * Bit 0 asserts INIT# when set to 1.  We are careful to only
-	 * preserve bit 1 while setting bit 0.  We also must clear bit
-	 * 0 before setting it if it isn't already clear.
-	 */
-	b = inb(0x92);
-	if (b != 0xff) {
-		if ((b & 0x1) != 0)
-			outb(0x92, b & 0xfe);
-		outb(0x92, b | 0x1);
-		DELAY(500000);  /* wait 0.5 sec to see if that did it */
-	}
-
-	printf("No known reset method worked, attempting CPU shutdown\n");
-	DELAY(1000000);	/* wait 1 sec for printf to complete */
-
-	/* Wipe the IDT. */
-	null_idt.rd_limit = 0;
-	null_idt.rd_base = 0;
-	lidt(&null_idt);
-
-	/* "good night, sweet prince .... <THUNK!>" */
-	breakpoint();
-
-	/* NOTREACHED */
-	while(1);
 }
 
 /*

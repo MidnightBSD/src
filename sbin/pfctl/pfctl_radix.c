@@ -1,6 +1,8 @@
 /*	$OpenBSD: pfctl_radix.c,v 1.27 2005/05/21 21:03:58 henning Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2002 Cedric Berger
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/pfctl/pfctl_radix.c 240494 2012-09-14 11:51:49Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>

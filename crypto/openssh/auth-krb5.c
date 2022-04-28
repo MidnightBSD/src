@@ -1,8 +1,8 @@
-/* $OpenBSD: auth-krb5.c,v 1.20 2013/07/20 01:55:13 djm Exp $ */
+/* $OpenBSD: auth-krb5.c,v 1.22 2016/05/04 14:22:33 markus Exp $ */
 /*
  *    Kerberos v5 authentication and ticket-passing routines.
  *
- * $FreeBSD: src/crypto/openssh/auth-krb5.c,v 1.6 2001/02/13 16:58:04 assar Exp $
+ * From: FreeBSD: src/crypto/openssh/auth-krb5.c,v 1.6 2001/02/13 16:58:04 assar
  */
 /*
  * Copyright (c) 2002 Daniel Kouril.  All rights reserved.
@@ -36,10 +36,10 @@
 
 #include "xmalloc.h"
 #include "ssh.h"
-#include "ssh1.h"
 #include "packet.h"
 #include "log.h"
 #include "buffer.h"
+#include "misc.h"
 #include "servconf.h"
 #include "uidswap.h"
 #include "key.h"
@@ -157,7 +157,8 @@ auth_krb5_password(Authctxt *authctxt, const char *password)
 	if (problem)
 		goto out;
 
-	if (!krb5_kuserok(authctxt->krb5_ctx, authctxt->krb5_user, client)) {
+	if (!krb5_kuserok(authctxt->krb5_ctx, authctxt->krb5_user,
+	    authctxt->pw->pw_name)) {
 		problem = -1;
 		goto out;
 	}

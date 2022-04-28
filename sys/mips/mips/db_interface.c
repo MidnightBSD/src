@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/db_interface.c 250138 2013-05-01 06:57:46Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -117,7 +117,7 @@ struct db_variable db_regs[] = {
 	{ "cs",  DB_OFFSET(cause),	db_frame },
 	{ "pc",  DB_OFFSET(pc),		db_frame },
 };
-struct db_variable *db_eregs = db_regs + sizeof(db_regs)/sizeof(db_regs[0]);
+struct db_variable *db_eregs = db_regs + nitems(db_regs);
 
 int (*do_db_log_stack_trace_cmd)(char *);
 
@@ -150,6 +150,7 @@ db_read_bytes(vm_offset_t addr, size_t size, char *data)
 		/*
 		 * 'addr' could be a memory-mapped I/O address.  Try to
 		 * do atomic load/store in unit of size requested.
+		 * size == 8 is only atomic on 64bit or n32 kernel.
 		 */
 		if ((size == 2 || size == 4 || size == 8) &&
 		    ((addr & (size -1)) == 0) &&
@@ -162,9 +163,8 @@ db_read_bytes(vm_offset_t addr, size_t size, char *data)
 				*(uint32_t *)data = *(uint32_t *)addr;
 				break;
 			case 8:
-				atomic_load_64((volatile u_int64_t *)addr,
-				    (u_int64_t *)data);
-			break;
+				*(uint64_t *)data = *(uint64_t *)addr;
+				break;
 			}
 		} else {
 			char *src;
@@ -193,6 +193,7 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 		/*
 		 * 'addr' could be a memory-mapped I/O address.  Try to
 		 * do atomic load/store in unit of size requested.
+		 * size == 8 is only atomic on 64bit or n32 kernel.
 		 */
 		if ((size == 2 || size == 4 || size == 8) &&
 		    ((addr & (size -1)) == 0) &&
@@ -205,9 +206,8 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 				*(uint32_t *)addr = *(uint32_t *)data;
 				break;
 			case 8:
-				atomic_store_64((volatile u_int64_t *)addr,
-				    (u_int64_t *)data);
-			break;
+				*(uint64_t *)addr = *(uint64_t *)data;
+				break;
 			}
 		} else {
 			char *dst;

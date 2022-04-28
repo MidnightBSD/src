@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libthr/arch/sparc64/include/pthread_md.h 223228 2011-06-18 11:07:09Z marius $
+ * $FreeBSD$
  */
 
 /*
@@ -49,12 +49,6 @@ struct tcb {
 	struct pthread		*tcb_thread;	/* our hook */
 	void			*tcb_spare[1];
 };
-
-/*
- * The tcb constructors.
- */
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *);
 
 /* Called from the thread to set its private data. */
 static __inline void

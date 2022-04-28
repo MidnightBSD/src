@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/stripe/g_stripe.h 155174 2006-02-01 12:06:01Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_G_STRIPE_H_
@@ -76,6 +76,7 @@ struct g_stripe_softc {
 	uint16_t	 sc_ndisks;
 	uint32_t	 sc_stripesize;
 	uint32_t	 sc_stripebits;
+	struct mtx	 sc_lock;
 };
 #define	sc_name	sc_geom->name
 #endif	/* _KERNEL */

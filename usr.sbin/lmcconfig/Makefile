@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/usr.sbin/lmcconfig/Makefile 216600 2010-12-20 19:08:15Z uqs $
+# $FreeBSD$
 
 PROG=	lmcconfig
 MAN=	lmcconfig.8
 
-DPADD=	${LIBNETGRAPH}
-LDADD=	-lnetgraph
+LIBADD=	netgraph
 
 WARNS?=	3
 

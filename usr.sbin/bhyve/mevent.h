@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/mevent.h 255690 2013-09-19 04:48:26Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef	_MEVENT_H_
@@ -32,7 +34,8 @@
 enum ev_type {
 	EVF_READ,
 	EVF_WRITE,
-	EVF_TIMER
+	EVF_TIMER,
+	EVF_SIGNAL
 };
 
 struct mevent;

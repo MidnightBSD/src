@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/cpio/cpio_platform.h 228763 2011-12-21 11:13:29Z mm $
+ * $FreeBSD$
  */
 
 /*
@@ -40,6 +40,10 @@
 #else
 /* Read config.h or die trying. */
 #include "config.h"
+#endif
+
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include "cpio_windows.h"
 #endif
 
 /* Get a real definition for __FBSDID if we can */
@@ -68,10 +72,6 @@
 #define __LA_DEAD       __attribute__((__noreturn__))
 #else
 #define __LA_DEAD
-#endif
-
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#include "cpio_windows.h"
 #endif
 
 #endif /* !CPIO_PLATFORM_H_INCLUDED */

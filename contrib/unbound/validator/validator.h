@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -67,6 +67,13 @@ struct config_strlist;
 /** max number of query restarts, number of IPs to probe */
 #define VAL_MAX_RESTART_COUNT 5
 
+/** Root key sentinel is ta preamble */
+#define SENTINEL_IS		"root-key-sentinel-is-ta-"
+/** Root key sentinel is not ta preamble */
+#define SENTINEL_NOT		"root-key-sentinel-not-ta-"
+/** Root key sentinal keytag length */
+#define SENTINEL_KEYTAG_LEN	5
+
 /**
  * Global state for the validator. 
  */
@@ -93,19 +100,6 @@ struct val_env {
 	 * seconds. */
 	uint32_t bogus_ttl;
 
-	/** If set, the validator should clean the additional section of
-	 * secure messages.
-	 */
-	int clean_additional;
-
-	/**
-	 * If set, the validator will not make messages bogus, instead
-	 * indeterminate is issued, so that no clients receive SERVFAIL.
-	 * This allows an operator to run validation 'shadow' without
-	 * hurting responses to clients.
-	 */
-	int permissive_mode;
-
 	/**
 	 * Number of entries in the NSEC3 maximum iteration count table.
 	 * Keep this table short, and sorted by size
@@ -126,7 +120,7 @@ struct val_env {
 	size_t* nsec3_maxiter;
 
 	/** lock on bogus counter */
-	lock_basic_t bogus_lock;
+	lock_basic_type bogus_lock;
 	/** number of times rrsets marked bogus */
 	size_t num_rrset_bogus;
 };

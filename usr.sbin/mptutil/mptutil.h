@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/mptutil/mptutil.h 196212 2009-08-14 13:13:12Z scottl $
+ * $FreeBSD$
  */
 
 #ifndef __MPTUTIL_H__

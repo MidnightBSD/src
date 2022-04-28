@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_remainder.c 177765 2008-03-30 20:47:42Z das $");
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_remainder(x,p)
  * Return :                  

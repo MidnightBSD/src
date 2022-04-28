@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ex/if_exreg.h 230132 2012-01-15 13:23:18Z uqs $
+ * $FreeBSD$
  */
 
 /*

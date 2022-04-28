@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_piv.h 184802 2008-11-09 17:37:54Z jkoshy $
+ * $FreeBSD$
  */
 
 /* Machine dependent interfaces */
@@ -39,7 +39,7 @@
 #define	P4_MAX_ESCR_PER_EVENT	2
 #define	P4_MAX_PMC_PER_ESCR	3
 
-#define	P4_CCCR_OVF			(1 << 31)
+#define	P4_CCCR_OVF			(1U << 31)
 #define	P4_CCCR_CASCADE			(1 << 30)
 #define	P4_CCCR_OVF_PMI_T1		(1 << 27)
 #define	P4_CCCR_OVF_PMI_T0		(1 << 26)

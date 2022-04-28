@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005 Ivan Voras <ivoras@freebsd.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/virstor/geom_virstor.c 215704 2010-11-22 20:10:48Z brucec $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -183,6 +185,7 @@ my_g_metadata_store(const char *name, u_char *md, size_t size)
 		goto out;
 	}
 	bcopy(md, sector, size);
+	bzero(sector + size, sectorsize - size);
 	if (pwrite(fd, sector, sectorsize, mediasize - sectorsize) !=
 	    (ssize_t)sectorsize) {
 		error = errno;
@@ -255,7 +258,7 @@ virstor_label(struct gctl_req *req)
 	if (md.md_chunk_size % MAXPHYS != 0) {
 		/* XXX: This is not strictly needed, but it's convenient to
 		 * impose some limitations on it, so why not MAXPHYS. */
-		size_t new_size = (md.md_chunk_size / MAXPHYS) * MAXPHYS;
+		size_t new_size = rounddown(md.md_chunk_size, MAXPHYS);
 		if (new_size < md.md_chunk_size)
 			new_size += MAXPHYS;
 		fprintf(stderr, "Resizing chunk size to be a multiple of "

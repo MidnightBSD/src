@@ -9,11 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)core.5	8.3 (Berkeley) 12/11/93
-.\" $FreeBSD: release/10.0.0/share/man/man5/core.5 243399 2012-11-22 10:24:30Z pluknet $
+.\" $FreeBSD$
 .\"
-.Dd November 22, 2012
+.Dd October 5, 2015
 .Dt CORE 5
 .Os
 .Sh NAME
@@ -105,27 +101,48 @@ variable
 .Va kern.sugid_coredump
 to 1.
 .Pp
-Corefiles can be compressed by the kernel if the following items
-are included in the kernel configuration file:
+Corefiles can be compressed by the kernel if the following item
+is included in the kernel configuration file:
 .Bl -tag -width "1234567890" -compact -offset "12345"
 .It options
-COMPRESS_USER_CORES
-.It devices
-gzio
+GZIO
 .El
 .Pp
-When COMPRESS_USER_CORES is included the following sysctls can control
-if core files will be compressed:
+When the GZIO option is included, the following sysctls control whether core
+files will be compressed:
 .Bl -tag -width "kern.compress_user_cores_gzlevel" -compact -offset "12345"
 .It Em kern.compress_user_cores_gzlevel
 Gzip compression level.
-Defaults to -1.
+Defaults to 6.
 .It Em kern.compress_user_cores
 Actually compress user cores.
-Core files will have the suffix
-.Em .gz
+Compressed core files will have a suffix of
+.Ql .gz
 appended to them.
 .El
+.Sh NOTES
+Corefiles are written with open file descriptor information as an ELF note.
+By default, file paths are packed to only use as much space as needed.
+However, file paths can change at any time, including during core dump,
+and this can result in truncated file descriptor data.
+.Pp
+All file descriptor information can be preserved by disabling packing.
+This potentially wastes up to PATH_MAX bytes per open fd.
+Packing is disabled with
+.Dl sysctl kern.coredump_pack_fileinfo=0 .
+.Pp
+Similarly, corefiles are written with vmmap information as an ELF note, which
+contains file paths.
+By default, they are packed to only use as much space as
+needed.
+By the same mechanism as for the open files note, these paths can also
+change at any time and result in a truncated note.
+.Pp
+All vmmap information can be preserved by disabling packing.
+Like the file information, this potentially wastes up to PATH_MAX bytes per
+mapped object.
+Packing is disabled with
+.Dl sysctl kern.coredump_pack_vmmapinfo=0 .
 .Sh EXAMPLES
 In order to store all core images in per-user private areas under
 .Pa /var/coredumps ,

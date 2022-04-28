@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/sys_generic.c 258324 2013-11-18 22:37:01Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
 #include "opt_compat.h"
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/sys_generic.c 258324 2013-11-18 22:3
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/filedesc.h>
 #include <sys/filio.h>
 #include <sys/fcntl.h>
@@ -75,12 +75,28 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/sys_generic.c 258324 2013-11-18 22:3
 
 #include <security/audit/audit.h>
 
-int iosize_max_clamp = 1;
+/*
+ * The following macro defines how many bytes will be allocated from
+ * the stack instead of memory allocated when passing the IOCTL data
+ * structures from userspace and to the kernel. Some IOCTLs having
+ * small data structures are used very frequently and this small
+ * buffer on the stack gives a significant speedup improvement for
+ * those requests. The value of this define should be greater or equal
+ * to 64 bytes and should also be power of two. The data structure is
+ * currently hard-aligned to a 8-byte boundary on the stack. This
+ * should currently be sufficient for all supported platforms.
+ */
+#define	SYS_IOCTL_SMALL_SIZE	128	/* bytes */
+#define	SYS_IOCTL_SMALL_ALIGN	8	/* bytes */
+
+#ifdef __LP64__
+static int iosize_max_clamp = 0;
 SYSCTL_INT(_debug, OID_AUTO, iosize_max_clamp, CTLFLAG_RW,
     &iosize_max_clamp, 0, "Clamp max i/o size to INT_MAX");
-int devfs_iosize_max_clamp = 1;
+static int devfs_iosize_max_clamp = 1;
 SYSCTL_INT(_debug, OID_AUTO, devfs_iosize_max_clamp, CTLFLAG_RW,
     &devfs_iosize_max_clamp, 0, "Clamp max i/o size to INT_MAX for devices");
+#endif
 
 /*
  * Assert that the return value of read(2) and write(2) syscalls fits
@@ -139,10 +155,29 @@ struct selfd {
 	struct mtx		*sf_mtx;	/* Pointer to selinfo mtx. */
 	struct seltd		*sf_td;		/* (k) owning seltd. */
 	void			*sf_cookie;	/* (k) fd or pollfd. */
+	u_int			sf_refs;
 };
 
 static uma_zone_t selfd_zone;
 static struct mtx_pool *mtxpool_select;
+
+#ifdef __LP64__
+size_t
+devfs_iosize_max(void)
+{
+
+	return (devfs_iosize_max_clamp || SV_CURPROC_FLAG(SV_ILP32) ?
+	    INT_MAX : SSIZE_MAX);
+}
+
+size_t
+iosize_max(void)
+{
+
+	return (iosize_max_clamp || SV_CURPROC_FLAG(SV_ILP32) ?
+	    INT_MAX : SSIZE_MAX);
+}
+#endif
 
 #ifndef _SYS_SYSPROTO_H_
 struct read_args {
@@ -185,39 +220,39 @@ struct pread_args {
 };
 #endif
 int
-sys_pread(td, uap)
-	struct thread *td;
-	struct pread_args *uap;
+sys_pread(struct thread *td, struct pread_args *uap)
+{
+
+	return (kern_pread(td, uap->fd, uap->buf, uap->nbyte, uap->offset));
+}
+
+int
+kern_pread(struct thread *td, int fd, void *buf, size_t nbyte, off_t offset)
 {
 	struct uio auio;
 	struct iovec aiov;
 	int error;
 
-	if (uap->nbyte > IOSIZE_MAX)
+	if (nbyte > IOSIZE_MAX)
 		return (EINVAL);
-	aiov.iov_base = uap->buf;
-	aiov.iov_len = uap->nbyte;
+	aiov.iov_base = buf;
+	aiov.iov_len = nbyte;
 	auio.uio_iov = &aiov;
 	auio.uio_iovcnt = 1;
-	auio.uio_resid = uap->nbyte;
+	auio.uio_resid = nbyte;
 	auio.uio_segflg = UIO_USERSPACE;
-	error = kern_preadv(td, uap->fd, &auio, uap->offset);
-	return(error);
+	error = kern_preadv(td, fd, &auio, offset);
+	return (error);
 }
 
+#if defined(COMPAT_FREEBSD6)
 int
-freebsd6_pread(td, uap)
-	struct thread *td;
-	struct freebsd6_pread_args *uap;
+freebsd6_pread(struct thread *td, struct freebsd6_pread_args *uap)
 {
-	struct pread_args oargs;
 
-	oargs.fd = uap->fd;
-	oargs.buf = uap->buf;
-	oargs.nbyte = uap->nbyte;
-	oargs.offset = uap->offset;
-	return (sys_pread(td, &oargs));
+	return (kern_pread(td, uap->fd, uap->buf, uap->nbyte, uap->offset));
 }
+#endif
 
 /*
  * Scatter read system call.
@@ -299,7 +334,8 @@ kern_preadv(td, fd, auio, offset)
 		return (error);
 	if (!(fp->f_ops->fo_flags & DFLAG_SEEKABLE))
 		error = ESPIPE;
-	else if (offset < 0 && fp->f_vnode->v_type != VCHR)
+	else if (offset < 0 &&
+	    (fp->f_vnode == NULL || fp->f_vnode->v_type != VCHR))
 		error = EINVAL;
 	else
 		error = dofileread(td, fd, fp, auio, offset, FOF_OFFSET);
@@ -325,6 +361,8 @@ dofileread(td, fd, fp, auio, offset, flags)
 #ifdef KTRACE
 	struct uio *ktruio = NULL;
 #endif
+
+	AUDIT_ARG_FD(fd);
 
 	/* Finish zero length reads right here */
 	if (auio->uio_resid == 0) {
@@ -396,39 +434,40 @@ struct pwrite_args {
 };
 #endif
 int
-sys_pwrite(td, uap)
-	struct thread *td;
-	struct pwrite_args *uap;
+sys_pwrite(struct thread *td, struct pwrite_args *uap)
+{
+
+	return (kern_pwrite(td, uap->fd, uap->buf, uap->nbyte, uap->offset));
+}
+
+int
+kern_pwrite(struct thread *td, int fd, const void *buf, size_t nbyte,
+    off_t offset)
 {
 	struct uio auio;
 	struct iovec aiov;
 	int error;
 
-	if (uap->nbyte > IOSIZE_MAX)
+	if (nbyte > IOSIZE_MAX)
 		return (EINVAL);
-	aiov.iov_base = (void *)(uintptr_t)uap->buf;
-	aiov.iov_len = uap->nbyte;
+	aiov.iov_base = (void *)(uintptr_t)buf;
+	aiov.iov_len = nbyte;
 	auio.uio_iov = &aiov;
 	auio.uio_iovcnt = 1;
-	auio.uio_resid = uap->nbyte;
+	auio.uio_resid = nbyte;
 	auio.uio_segflg = UIO_USERSPACE;
-	error = kern_pwritev(td, uap->fd, &auio, uap->offset);
+	error = kern_pwritev(td, fd, &auio, offset);
 	return(error);
 }
 
+#if defined(COMPAT_FREEBSD6)
 int
-freebsd6_pwrite(td, uap)
-	struct thread *td;
-	struct freebsd6_pwrite_args *uap;
+freebsd6_pwrite(struct thread *td, struct freebsd6_pwrite_args *uap)
 {
-	struct pwrite_args oargs;
 
-	oargs.fd = uap->fd;
-	oargs.buf = uap->buf;
-	oargs.nbyte = uap->nbyte;
-	oargs.offset = uap->offset;
-	return (sys_pwrite(td, &oargs));
+	return (kern_pwrite(td, uap->fd, uap->buf, uap->nbyte, uap->offset));
 }
+#endif
 
 /*
  * Gather write system call.
@@ -510,7 +549,8 @@ kern_pwritev(td, fd, auio, offset)
 		return (error);
 	if (!(fp->f_ops->fo_flags & DFLAG_SEEKABLE))
 		error = ESPIPE;
-	else if (offset < 0 && fp->f_vnode->v_type != VCHR)
+	else if (offset < 0 &&
+	    (fp->f_vnode == NULL || fp->f_vnode->v_type != VCHR))
 		error = EINVAL;
 	else
 		error = dofilewrite(td, fd, fp, auio, offset, FOF_OFFSET);
@@ -537,6 +577,7 @@ dofilewrite(td, fd, fp, auio, offset, flags)
 	struct uio *ktruio = NULL;
 #endif
 
+	AUDIT_ARG_FD(fd);
 	auio->uio_rw = UIO_WRITE;
 	auio->uio_td = td;
 	auio->uio_offset = offset;
@@ -646,18 +687,20 @@ struct ioctl_args {
 int
 sys_ioctl(struct thread *td, struct ioctl_args *uap)
 {
-	u_long com;
+	u_char smalldata[SYS_IOCTL_SMALL_SIZE] __aligned(SYS_IOCTL_SMALL_ALIGN);
+	uint32_t com;
 	int arg, error;
 	u_int size;
 	caddr_t data;
 
+#ifdef INVARIANTS
 	if (uap->com > 0xffffffff) {
 		printf(
 		    "WARNING pid %d (%s): ioctl sign-extension ioctl %lx\n",
 		    td->td_proc->p_pid, td->td_name, uap->com);
-		uap->com &= 0xffffffff;
 	}
-	com = uap->com;
+#endif
+	com = (uint32_t)uap->com;
 
 	/*
 	 * Interpret high order word to find amount of data to be
@@ -680,17 +723,18 @@ sys_ioctl(struct thread *td, struct ioctl_args *uap)
 			arg = (intptr_t)uap->data;
 			data = (void *)&arg;
 			size = 0;
-		} else
-			data = malloc((u_long)size, M_IOCTLOPS, M_WAITOK);
+		} else {
+			if (size > SYS_IOCTL_SMALL_SIZE)
+				data = malloc((u_long)size, M_IOCTLOPS, M_WAITOK);
+			else
+				data = smalldata;
+		}
 	} else
 		data = (void *)&uap->data;
 	if (com & IOC_IN) {
 		error = copyin(uap->data, data, (u_int)size);
-		if (error) {
-			if (size > 0)
-				free(data, M_IOCTLOPS);
-			return (error);
-		}
+		if (error != 0)
+			goto out;
 	} else if (com & IOC_OUT) {
 		/*
 		 * Zero the buffer so the user always
@@ -704,7 +748,8 @@ sys_ioctl(struct thread *td, struct ioctl_args *uap)
 	if (error == 0 && (com & IOC_OUT))
 		error = copyout(data, uap->data, (u_int)size);
 
-	if (size > 0)
+out:
+	if (size > SYS_IOCTL_SMALL_SIZE)
 		free(data, M_IOCTLOPS);
 	return (error);
 }
@@ -1072,7 +1117,7 @@ kern_select(struct thread *td, int nd, fd_set *fd_in, fd_set *fd_ou,
 			precision >>= tc_precexp;
 			if (TIMESEL(&asbt, rsbt))
 				asbt += tc_tick_sbt;
-			if (asbt <= INT64_MAX - rsbt)
+			if (asbt <= SBT_MAX - rsbt)
 				asbt += rsbt;
 			else
 				asbt = -1;
@@ -1197,7 +1242,7 @@ getselfd_cap(struct filedesc *fdp, int fd, struct file **fpp)
 
 	cap_rights_init(&rights, CAP_EVENT);
 
-	return (fget_unlocked(fdp, fd, &rights, 0, fpp, NULL));
+	return (fget_unlocked(fdp, fd, &rights, fpp, NULL));
 }
 
 /*
@@ -1283,26 +1328,60 @@ selscan(td, ibits, obits, nfd)
 	return (0);
 }
 
-#ifndef _SYS_SYSPROTO_H_
-struct poll_args {
-	struct pollfd *fds;
-	u_int	nfds;
-	int	timeout;
-};
-#endif
 int
-sys_poll(td, uap)
-	struct thread *td;
-	struct poll_args *uap;
+sys_poll(struct thread *td, struct poll_args *uap)
+{
+	struct timespec ts, *tsp;
+
+	if (uap->timeout != INFTIM) {
+		if (uap->timeout < 0)
+			return (EINVAL);
+		ts.tv_sec = uap->timeout / 1000;
+		ts.tv_nsec = (uap->timeout % 1000) * 1000000;
+		tsp = &ts;
+	} else
+		tsp = NULL;
+
+	return (kern_poll(td, uap->fds, uap->nfds, tsp, NULL));
+}
+
+int
+kern_poll(struct thread *td, struct pollfd *fds, u_int nfds,
+    struct timespec *tsp, sigset_t *uset)
 {
 	struct pollfd *bits;
 	struct pollfd smallbits[32];
-	sbintime_t asbt, precision, rsbt;
-	u_int nfds;
+	sbintime_t sbt, precision, tmp;
+	time_t over;
+	struct timespec ts;
 	int error;
 	size_t ni;
 
-	nfds = uap->nfds;
+	precision = 0;
+	if (tsp != NULL) {
+		if (tsp->tv_sec < 0)
+			return (EINVAL);
+		if (tsp->tv_nsec < 0 || tsp->tv_nsec >= 1000000000)
+			return (EINVAL);
+		if (tsp->tv_sec == 0 && tsp->tv_nsec == 0)
+			sbt = 0;
+		else {
+			ts = *tsp;
+			if (ts.tv_sec > INT32_MAX / 2) {
+				over = ts.tv_sec - INT32_MAX / 2;
+				ts.tv_sec -= over;
+			} else
+				over = 0;
+			tmp = tstosbt(ts);
+			precision = tmp;
+			precision >>= tc_precexp;
+			if (TIMESEL(&sbt, tmp))
+				sbt += tc_tick_sbt;
+			sbt += tmp;
+		}
+	} else
+		sbt = -1;
+
 	if (nfds > maxfilesperproc && nfds > FD_SETSIZE) 
 		return (EINVAL);
 	ni = nfds * sizeof(struct pollfd);
@@ -1310,34 +1389,33 @@ sys_poll(td, uap)
 		bits = malloc(ni, M_TEMP, M_WAITOK);
 	else
 		bits = smallbits;
-	error = copyin(uap->fds, bits, ni);
+	error = copyin(fds, bits, ni);
 	if (error)
 		goto done;
-	precision = 0;
-	if (uap->timeout != INFTIM) {
-		if (uap->timeout < 0) {
-			error = EINVAL;
+
+	if (uset != NULL) {
+		error = kern_sigprocmask(td, SIG_SETMASK, uset,
+		    &td->td_oldsigmask, 0);
+		if (error)
 			goto done;
-		}
-		if (uap->timeout == 0)
-			asbt = 0;
-		else {
-			rsbt = SBT_1MS * uap->timeout;
-			precision = rsbt;
-			precision >>= tc_precexp;
-			if (TIMESEL(&asbt, rsbt))
-				asbt += tc_tick_sbt;
-			asbt += rsbt;
-		}
-	} else
-		asbt = -1;
+		td->td_pflags |= TDP_OLDMASK;
+		/*
+		 * Make sure that ast() is called on return to
+		 * usermode and TDP_OLDMASK is cleared, restoring old
+		 * sigmask.
+		 */
+		thread_lock(td);
+		td->td_flags |= TDF_ASTPENDING;
+		thread_unlock(td);
+	}
+
 	seltdinit(td);
 	/* Iterate until the timeout expires or descriptors become ready. */
 	for (;;) {
 		error = pollscan(td, bits, nfds);
 		if (error || td->td_retval[0] != 0)
 			break;
-		error = seltdwait(td, asbt, precision);
+		error = seltdwait(td, sbt, precision);
 		if (error)
 			break;
 		error = pollrescan(td);
@@ -1353,7 +1431,7 @@ done:
 	if (error == EWOULDBLOCK)
 		error = 0;
 	if (error == 0) {
-		error = pollout(td, bits, uap->fds, nfds);
+		error = pollout(td, bits, fds, nfds);
 		if (error)
 			goto out;
 	}
@@ -1361,6 +1439,35 @@ out:
 	if (ni > sizeof(smallbits))
 		free(bits, M_TEMP);
 	return (error);
+}
+
+int
+sys_ppoll(struct thread *td, struct ppoll_args *uap)
+{
+	struct timespec ts, *tsp;
+	sigset_t set, *ssp;
+	int error;
+
+	if (uap->ts != NULL) {
+		error = copyin(uap->ts, &ts, sizeof(ts));
+		if (error)
+			return (error);
+		tsp = &ts;
+	} else
+		tsp = NULL;
+	if (uap->set != NULL) {
+		error = copyin(uap->set, &set, sizeof(set));
+		if (error)
+			return (error);
+		ssp = &set;
+	} else
+		ssp = NULL;
+	/*
+	 * fds is still a pointer to user space. kern_poll() will
+	 * take care of copyin that array to the kernel space.
+	 */
+
+	return (kern_poll(td, uap->fds, uap->nfds, tsp, ssp));
 }
 
 static int
@@ -1458,7 +1565,7 @@ pollscan(td, fds, nfd)
 
 	FILEDESC_SLOCK(fdp);
 	for (i = 0; i < nfd; i++, fds++) {
-		if (fds->fd >= fdp->fd_nfiles) {
+		if (fds->fd > fdp->fd_lastfile) {
 			fds->revents = POLLNVAL;
 			n++;
 		} else if (fds->fd < 0) {
@@ -1547,7 +1654,7 @@ selsocket(struct socket *so, int events, struct timeval *tvp, struct thread *td)
 			precision >>= tc_precexp;
 			if (TIMESEL(&asbt, rsbt))
 				asbt += tc_tick_sbt;
-			if (asbt <= INT64_MAX - rsbt)
+			if (asbt <= SBT_MAX - rsbt)
 				asbt += rsbt;
 			else
 				asbt = -1;
@@ -1600,11 +1707,16 @@ static void
 selfdfree(struct seltd *stp, struct selfd *sfp)
 {
 	STAILQ_REMOVE(&stp->st_selq, sfp, selfd, sf_link);
-	mtx_lock(sfp->sf_mtx);
-	if (sfp->sf_si)
-		TAILQ_REMOVE(&sfp->sf_si->si_tdlist, sfp, sf_threads);
-	mtx_unlock(sfp->sf_mtx);
-	uma_zfree(selfd_zone, sfp);
+	if (sfp->sf_si != NULL) {
+		mtx_lock(sfp->sf_mtx);
+		if (sfp->sf_si != NULL) {
+			TAILQ_REMOVE(&sfp->sf_si->si_tdlist, sfp, sf_threads);
+			refcount_release(&sfp->sf_refs);
+		}
+		mtx_unlock(sfp->sf_mtx);
+	}
+	if (refcount_release(&sfp->sf_refs))
+		uma_zfree(selfd_zone, sfp);
 }
 
 /* Drain the waiters tied to all the selfd belonging the specified selinfo. */
@@ -1660,6 +1772,7 @@ selrecord(selector, sip)
 	 */
 	sfp->sf_si = sip;
 	sfp->sf_mtx = mtxp;
+	refcount_init(&sfp->sf_refs, 2);
 	STAILQ_INSERT_TAIL(&stp->st_selq, sfp, sf_link);
 	/*
 	 * Now that we've locked the sip, check for initialization.
@@ -1724,6 +1837,8 @@ doselwakeup(sip, pri)
 		stp->st_flags |= SELTD_PENDING;
 		cv_broadcastpri(&stp->st_wait, pri);
 		mtx_unlock(&stp->st_mtx);
+		if (refcount_release(&sfp->sf_refs))
+			uma_zfree(selfd_zone, sfp);
 	}
 	mtx_unlock(sip->si_mtx);
 }
@@ -1788,6 +1903,8 @@ seltdfini(struct thread *td)
 	if (stp->st_free2)
 		uma_zfree(selfd_zone, stp->st_free2);
 	td->td_sel = NULL;
+	cv_destroy(&stp->st_wait);
+	mtx_destroy(&stp->st_mtx);
 	free(stp, M_SELECT);
 }
 
@@ -1817,4 +1934,20 @@ selectinit(void *dummy __unused)
 	selfd_zone = uma_zcreate("selfd", sizeof(struct selfd), NULL, NULL,
 	    NULL, NULL, UMA_ALIGN_PTR, 0);
 	mtxpool_select = mtx_pool_create("select mtxpool", 128, MTX_DEF);
+}
+
+/*
+ * Set up a syscall return value that follows the convention specified for
+ * posix_* functions.
+ */
+int
+kern_posix_error(struct thread *td, int error)
+{
+
+	if (error <= 0)
+		return (error);
+	td->td_errno = error;
+	td->td_pflags |= TDP_NERRNO;
+	td->td_retval[0] = error;
+	return (0);
 }

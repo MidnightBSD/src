@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ngctl/main.c 216588 2010-12-20 09:36:54Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -324,8 +324,10 @@ DoInteractive(void)
 		history(hist, &hev, H_ENTER, buf);
 		pthread_kill(monitor, SIGUSR1);
 		pthread_mutex_lock(&mutex);
-		if (DoParseCommand(buf) == CMDRTN_QUIT)
+		if (DoParseCommand(buf) == CMDRTN_QUIT) {
+			pthread_mutex_unlock(&mutex);
 			break;
+		}
 		pthread_cond_signal(&cond);
 		pthread_mutex_unlock(&mutex);
 	}

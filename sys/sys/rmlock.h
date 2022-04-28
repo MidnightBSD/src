@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/rmlock.h 252209 2013-06-25 18:44:15Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_RMLOCK_H_
@@ -45,13 +45,13 @@
 #define	RM_NOWITNESS	0x00000001
 #define	RM_RECURSE	0x00000002
 #define	RM_SLEEPABLE	0x00000004
+#define	RM_NEW		0x00000008
 
 void	rm_init(struct rmlock *rm, const char *name);
 void	rm_init_flags(struct rmlock *rm, const char *name, int opts);
 void	rm_destroy(struct rmlock *rm);
 int	rm_wowned(const struct rmlock *rm);
 void	rm_sysinit(void *arg);
-void	rm_sysinit_flags(void *arg);
 
 void	_rm_wlock_debug(struct rmlock *rm, const char *file, int line);
 void	_rm_wunlock_debug(struct rmlock *rm, const char *file, int line);
@@ -100,35 +100,21 @@ void	_rm_assert(const struct rmlock *rm, int what, const char *file,
 struct rm_args {
 	struct rmlock	*ra_rm;
 	const char 	*ra_desc;
+	int		ra_flags;
 };
 
-struct rm_args_flags {
-	struct rmlock	*ra_rm;
-	const char 	*ra_desc;
-	int		ra_opts;
-};
-
-#define	RM_SYSINIT(name, rm, desc)       				\
+#define	RM_SYSINIT_FLAGS(name, rm, desc, flags)				\
 	static struct rm_args name##_args = {				\
 		(rm),							\
 		(desc),							\
+		(flags),						\
 	};								\
 	SYSINIT(name##_rm_sysinit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
 	    rm_sysinit, &name##_args);					\
 	SYSUNINIT(name##_rm_sysuninit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
 	    rm_destroy, (rm))
 
-
-#define	RM_SYSINIT_FLAGS(name, rm, desc, opts)       			\
-	static struct rm_args name##_args = {				\
-		(rm),							\
-		(desc),							\
-                (opts),							\
-	};								\
-	SYSINIT(name##_rm_sysinit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
-	    rm_sysinit_flags, &name##_args);				\
-	SYSUNINIT(name##_rm_sysuninit, SI_SUB_LOCK, SI_ORDER_MIDDLE,	\
-	    rm_destroy, (rm))
+#define	RM_SYSINIT(name, rm, desc)	RM_SYSINIT_FLAGS(name, rm, desc, 0)
 
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
 #define	RA_LOCKED		LA_LOCKED

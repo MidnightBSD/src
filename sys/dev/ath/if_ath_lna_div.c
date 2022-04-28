@@ -26,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/if_ath_lna_div.c 251730 2013-06-14 03:42:10Z adrian $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_lna_div.c 251730 2013-06-14 03:42:10Z adrian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This module handles LNA diversity for those chips which implement LNA
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_lna_div.c 251730 2013-06-1
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -54,6 +55,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_lna_div.c 251730 2013-06-1
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */
@@ -71,7 +73,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/if_ath_lna_div.c 251730 2013-06-1
 #include <dev/ath/if_ath_debug.h>
 #include <dev/ath/if_ath_lna_div.h>
 
-/* Linux compability macros */
+/* Linux compatibility macros */
 /*
  * XXX these don't handle rounding, underflow, overflow, wrapping!
  */
@@ -185,7 +187,7 @@ ath_lna_div_ioctl(struct ath_softc *sc, struct ath_diag *ad)
 		 * pointer for us to use below in reclaiming the buffer;
 		 * may want to be more defensive.
 		 */
-		outdata = malloc(outsize, M_TEMP, M_NOWAIT);
+		outdata = malloc(outsize, M_TEMP, M_NOWAIT | M_ZERO);
 		if (outdata == NULL) {
 			error = ENOMEM;
 			goto bad;
@@ -194,6 +196,7 @@ ath_lna_div_ioctl(struct ath_softc *sc, struct ath_diag *ad)
 	switch (id) {
 		default:
 			error = EINVAL;
+			goto bad;
 	}
 	if (outsize < ad->ad_out_size)
 		ad->ad_out_size = outsize;
@@ -207,6 +210,10 @@ bad:
 	return (error);
 }
 
+/*
+ * XXX need to low_rssi_thresh config from ath9k, to support CUS198
+ * antenna diversity correctly.
+ */
 static HAL_BOOL
 ath_is_alt_ant_ratio_better(int alt_ratio, int maxdelta, int mindelta,
     int main_rssi_avg, int alt_rssi_avg, int pkt_count)
@@ -760,7 +767,7 @@ ath_lna_rx_comb_scan(struct ath_softc *sc, struct ath_rx_status *rs,
 
 	/* Short scan check */
 	if (antcomb->scan && antcomb->alt_good) {
-		if (time_after(ticks, antcomb->scan_start_time +
+		if (ieee80211_time_after(ticks, antcomb->scan_start_time +
 		    msecs_to_jiffies(ATH_ANT_DIV_COMB_SHORT_SCAN_INTR)))
 			short_scan = AH_TRUE;
 		else

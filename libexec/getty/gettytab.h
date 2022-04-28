@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)gettytab.h	8.2 (Berkeley) 3/30/94
- * $FreeBSD: release/10.0.0/libexec/getty/gettytab.h 116164 2003-06-10 18:30:41Z yar $
+ * $FreeBSD$
  */
 
 /*
@@ -92,6 +88,7 @@ struct gettyflags {
 #define AC	gettystrs[28].value
 #define AL	gettystrs[29].value
 #define DF	gettystrs[30].value
+#define IMP	gettystrs[31].value
 
 /*
  * Numeric definitions.

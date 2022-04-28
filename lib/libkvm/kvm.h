@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: release/10.0.0/lib/libkvm/kvm.h 253167 2013-07-10 19:44:43Z trociny $
+ * $FreeBSD$
  */
 
 #ifndef _KVM_H_
@@ -51,6 +51,14 @@ typedef	__ssize_t	ssize_t;
 #define	_SSIZE_T_DECLARED
 #endif
 
+typedef	uint64_t kvaddr_t;		/* An address in a target image. */
+
+struct kvm_nlist {
+	const char *n_name;
+	unsigned char n_type;
+	kvaddr_t n_value;
+};
+
 typedef struct __kvm kvm_t;
 
 struct kinfo_proc;
@@ -58,11 +66,11 @@ struct proc;
 
 struct kvm_swap {
 	char	ksw_devname[32];
-	int	ksw_used;
-	int	ksw_total;
+	u_int	ksw_used;
+	u_int	ksw_total;
 	int	ksw_flags;
-	int	ksw_reserved1;
-	int	ksw_reserved2;
+	u_int	ksw_reserved1;
+	u_int	ksw_reserved2;
 };
 
 #define SWIF_DEV_PREFIX	0x0002
@@ -74,21 +82,27 @@ char	**kvm_getargv(kvm_t *, const struct kinfo_proc *, int);
 int	  kvm_getcptime(kvm_t *, long *);
 char	**kvm_getenvv(kvm_t *, const struct kinfo_proc *, int);
 char	 *kvm_geterr(kvm_t *);
-char	 *kvm_getfiles(kvm_t *, int, int, int *);
 int	  kvm_getloadavg(kvm_t *, double [], int);
 int	  kvm_getmaxcpu(kvm_t *);
+int	  kvm_getncpus(kvm_t *);
 void	 *kvm_getpcpu(kvm_t *, int);
 uint64_t  kvm_counter_u64_fetch(kvm_t *, u_long);
 struct kinfo_proc *
 	  kvm_getprocs(kvm_t *, int, int, int *);
 int	  kvm_getswapinfo(kvm_t *, struct kvm_swap *, int, int);
+int	  kvm_native(kvm_t *);
 int	  kvm_nlist(kvm_t *, struct nlist *);
+int	  kvm_nlist2(kvm_t *, struct kvm_nlist *);
 kvm_t	 *kvm_open
 	    (const char *, const char *, const char *, int, const char *);
 kvm_t	 *kvm_openfiles
 	    (const char *, const char *, const char *, int, char *);
+kvm_t	 *kvm_open2
+	    (const char *, const char *, int, char *,
+	    int (*)(const char *, kvaddr_t *));
 ssize_t	  kvm_read(kvm_t *, unsigned long, void *, size_t);
-ssize_t	  kvm_read_zpcpu(kvm_t *, void *, u_long, size_t, int);
+ssize_t	  kvm_read_zpcpu(kvm_t *, unsigned long, void *, size_t, int);
+ssize_t	  kvm_read2(kvm_t *, kvaddr_t, void *, size_t);
 ssize_t	  kvm_write(kvm_t *, unsigned long, const void *, size_t);
 __END_DECLS
 

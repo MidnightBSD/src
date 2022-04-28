@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)table1	8.1 (Berkeley) 8/14/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/usd/21.troff/table1 96904 2002-05-19 04:02:29Z grog $
+.\" $FreeBSD$
 .pn 30
 .rm mx
 .br

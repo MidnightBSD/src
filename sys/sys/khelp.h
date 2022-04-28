@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/khelp.h 220560 2011-04-12 08:13:18Z lstewart $
+ * $FreeBSD$
  */
 
 /*
@@ -55,6 +55,7 @@ struct osd;
 
 /* Helper classes. */
 #define	HELPER_CLASS_TCP	0x00000001
+#define	HELPER_CLASS_SOCKET	0x00000002
 
 /* Public KPI functions. */
 int	khelp_register_helper(struct helper *h);

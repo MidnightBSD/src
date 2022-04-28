@@ -1,5 +1,6 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/Makefile.inc 245539 2013-01-17 05:56:28Z andrew $
+# $FreeBSD$
 
+.include <src.opts.mk>
 .include "../Makefile.inc"
 
 # Sometimes this is .include'd several times...
@@ -23,10 +24,10 @@ CFLAGS+=	-DPREFIX=\"${TOOLS_PREFIX}/usr\"
 CSTD?=	gnu89
 
 .if ${TARGET_ARCH} != ${MACHINE_ARCH}
-CFLAGS+=	-DCROSS_COMPILE
+CFLAGS+=	-DCROSS_DIRECTORY_STRUCTURE
 .endif
 
-.if ${TARGET_CPUARCH} == "arm" && ${MK_ARM_EABI} != "no"
+.if ${TARGET_CPUARCH} == "arm"
 CFLAGS+=	-DTARGET_ARM_EABI
 .endif
 

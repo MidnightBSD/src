@@ -13,7 +13,7 @@
  * works or modified versions.
  *
  * $Cronyx: ng_ce.h,v 1.2 2005/04/23 20:11:57 rik Exp $
- * $FreeBSD: release/10.0.0/sys/dev/ce/ng_ce.h 154899 2006-01-27 09:02:09Z rik $
+ * $FreeBSD$
  */
 
 #ifdef NETGRAPH

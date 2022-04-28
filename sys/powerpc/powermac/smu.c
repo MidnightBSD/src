@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/smu.c 250290 2013-05-05 22:42:10Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -210,7 +210,7 @@ static driver_t smu_driver = {
 
 static devclass_t smu_devclass;
 
-DRIVER_MODULE(smu, nexus, smu_driver, smu_devclass, 0, 0);
+DRIVER_MODULE(smu, ofwbus, smu_driver, smu_devclass, 0, 0);
 static MALLOC_DEFINE(M_SMU, "smu", "SMU Sensor Information");
 
 #define SMU_MAILBOX		0x8000860c
@@ -888,7 +888,7 @@ smu_fanrpm_sysctl(SYSCTL_HANDLER_ARGS)
 		default:
 			/* This should never happen */
 			return (EINVAL);
-		};
+		}
 	}
 	/* We can only read the RPM from a PWM controlled fan, so return. */
 	if ((arg2 & 0xff00) == SMU_PWM_SYSCTL_RPM)
@@ -1033,12 +1033,12 @@ smu_attach_fans(device_t dev, phandle_t fanroot)
 					      OID_AUTO, sysctl_name,
 					      CTLFLAG_RD, 0, "Fan Information");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-				       "minrpm", CTLTYPE_INT | CTLFLAG_RD,
-				       &fan->fan.min_rpm, sizeof(int),
+				       "minrpm", CTLFLAG_RD,
+				       &fan->fan.min_rpm, 0,
 				       "Minimum allowed RPM");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-				       "maxrpm", CTLTYPE_INT | CTLFLAG_RD,
-				       &fan->fan.max_rpm, sizeof(int),
+				       "maxrpm", CTLFLAG_RD,
+				       &fan->fan.max_rpm, 0,
 				       "Maximum allowed RPM");
 			SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 					"rpm",CTLTYPE_INT | CTLFLAG_RW |
@@ -1054,12 +1054,12 @@ smu_attach_fans(device_t dev, phandle_t fanroot)
 					      OID_AUTO, sysctl_name,
 					      CTLFLAG_RD, 0, "Fan Information");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-				       "minpwm", CTLTYPE_INT | CTLFLAG_RD,
-				       &fan->fan.min_rpm, sizeof(int),
+				       "minpwm", CTLFLAG_RD,
+				       &fan->fan.min_rpm, 0,
 				       "Minimum allowed PWM in %");
 			SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
-				       "maxpwm", CTLTYPE_INT | CTLFLAG_RD,
-				       &fan->fan.max_rpm, sizeof(int),
+				       "maxpwm", CTLFLAG_RD,
+				       &fan->fan.max_rpm, 0,
 				       "Maximum allowed PWM in %");
 			SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 					"pwm",CTLTYPE_INT | CTLFLAG_RW |
@@ -1110,7 +1110,7 @@ smu_sensor_read(struct smu_sensor *sens)
 		value <<= 1;
 
 		/* Convert from 16.16 fixed point degC into integer 0.1 K. */
-		value = 10*(value >> 16) + ((10*(value & 0xffff)) >> 16) + 2732;
+		value = 10*(value >> 16) + ((10*(value & 0xffff)) >> 16) + 2731;
 		break;
 	case SMU_VOLTAGE_SENSOR:
 		value *= sc->sc_cpu_volt_scale;
@@ -1245,8 +1245,8 @@ smu_attach_sensors(device_t dev, phandle_t sensroot)
 
 		if (sens->type == SMU_TEMP_SENSOR) {
 			/* Make up some numbers */
-			sens->therm.target_temp = 500 + 2732; /* 50 C */
-			sens->therm.max_temp = 900 + 2732; /* 90 C */
+			sens->therm.target_temp = 500 + 2731; /* 50 C */
+			sens->therm.max_temp = 900 + 2731; /* 90 C */
 
 			sens->therm.read =
 			    (int (*)(struct pmac_therm *))smu_sensor_read;

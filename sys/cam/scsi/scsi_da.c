@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_da.c 257049 2013-10-24 10:33:31Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_da.c 257049 2013-10-24 10:3
 #include <sys/cons.h>
 #include <sys/endian.h>
 #include <sys/proc.h>
+#include <sys/sbuf.h>
 #include <geom/geom.h>
 #include <geom/geom_disk.h>
 #endif /* _KERNEL */
@@ -59,38 +60,62 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_da.c 257049 2013-10-24 10:3
 #include <cam/cam_ccb.h>
 #include <cam/cam_periph.h>
 #include <cam/cam_xpt_periph.h>
+#ifdef _KERNEL
+#include <cam/cam_xpt_internal.h>
+#endif /* _KERNEL */
 #include <cam/cam_sim.h>
+#include <cam/cam_iosched.h>
 
 #include <cam/scsi/scsi_message.h>
-
-#ifndef _KERNEL 
 #include <cam/scsi/scsi_da.h>
-#endif /* !_KERNEL */
 
 #ifdef _KERNEL
+/*
+ * Note that there are probe ordering dependencies here.  The order isn't
+ * controlled by this enumeration, but by explicit state transitions in
+ * dastart() and dadone().  Here are some of the dependencies:
+ * 
+ * 1. RC should come first, before RC16, unless there is evidence that RC16
+ *    is supported.
+ * 2. BDC needs to come before any of the ATA probes, or the ZONE probe.
+ * 3. The ATA probes should go in this order:
+ *    ATA -> LOGDIR -> IDDIR -> SUP -> ATA_ZONE
+ */
 typedef enum {
+	DA_STATE_PROBE_WP,
 	DA_STATE_PROBE_RC,
 	DA_STATE_PROBE_RC16,
 	DA_STATE_PROBE_LBP,
 	DA_STATE_PROBE_BLK_LIMITS,
 	DA_STATE_PROBE_BDC,
 	DA_STATE_PROBE_ATA,
+	DA_STATE_PROBE_ATA_LOGDIR,
+	DA_STATE_PROBE_ATA_IDDIR,
+	DA_STATE_PROBE_ATA_SUP,
+	DA_STATE_PROBE_ATA_ZONE,
+	DA_STATE_PROBE_ZONE,
 	DA_STATE_NORMAL
 } da_state;
 
 typedef enum {
-	DA_FLAG_PACK_INVALID	= 0x001,
-	DA_FLAG_NEW_PACK	= 0x002,
-	DA_FLAG_PACK_LOCKED	= 0x004,
-	DA_FLAG_PACK_REMOVABLE	= 0x008,
-	DA_FLAG_NEED_OTAG	= 0x020,
-	DA_FLAG_WENT_IDLE	= 0x040,
-	DA_FLAG_RETRY_UA	= 0x080,
-	DA_FLAG_OPEN		= 0x100,
-	DA_FLAG_SCTX_INIT	= 0x200,
-	DA_FLAG_CAN_RC16	= 0x400,
-	DA_FLAG_PROBED		= 0x800,
-	DA_FLAG_DIRTY		= 0x1000
+	DA_FLAG_PACK_INVALID	= 0x000001,
+	DA_FLAG_NEW_PACK	= 0x000002,
+	DA_FLAG_PACK_LOCKED	= 0x000004,
+	DA_FLAG_PACK_REMOVABLE	= 0x000008,
+	DA_FLAG_NEED_OTAG	= 0x000020,
+	DA_FLAG_WAS_OTAG	= 0x000040,
+	DA_FLAG_RETRY_UA	= 0x000080,
+	DA_FLAG_OPEN		= 0x000100,
+	DA_FLAG_SCTX_INIT	= 0x000200,
+	DA_FLAG_CAN_RC16	= 0x000400,
+	DA_FLAG_PROBED		= 0x000800,
+	DA_FLAG_DIRTY		= 0x001000,
+	DA_FLAG_ANNOUNCED	= 0x002000,
+	DA_FLAG_CAN_ATA_DMA	= 0x004000,
+	DA_FLAG_CAN_ATA_LOG	= 0x008000,
+	DA_FLAG_CAN_ATA_IDLOG	= 0x010000,
+	DA_FLAG_CAN_ATA_SUPCAP	= 0x020000,
+	DA_FLAG_CAN_ATA_ZONE	= 0x040000
 } da_flags;
 
 typedef enum {
@@ -99,7 +124,12 @@ typedef enum {
 	DA_Q_NO_6_BYTE		= 0x02,
 	DA_Q_NO_PREVENT		= 0x04,
 	DA_Q_4K			= 0x08,
-	DA_Q_NO_RC16		= 0x10
+	DA_Q_NO_RC16		= 0x10,
+	DA_Q_NO_UNMAP		= 0x20,
+	DA_Q_RETRY_BUSY		= 0x40,
+	DA_Q_SMR_DM		= 0x80,
+	DA_Q_STRICT_UNMAP	= 0x100,
+	DA_Q_128KB		= 0x200
 } da_quirks;
 
 #define DA_Q_BIT_STRING		\
@@ -108,7 +138,12 @@ typedef enum {
 	"\002NO_6_BYTE"		\
 	"\003NO_PREVENT"	\
 	"\0044K"		\
-	"\005NO_RC16"
+	"\005NO_RC16"		\
+	"\006NO_UNMAP"		\
+	"\007RETRY_BUSY"	\
+	"\010SMR_DM"		\
+	"\011STRICT_UNMAP"	\
+	"\012128KB"
 
 typedef enum {
 	DA_CCB_PROBE_RC		= 0x01,
@@ -118,12 +153,17 @@ typedef enum {
 	DA_CCB_PROBE_BDC	= 0x05,
 	DA_CCB_PROBE_ATA	= 0x06,
 	DA_CCB_BUFFER_IO	= 0x07,
-	DA_CCB_WAITING		= 0x08,
 	DA_CCB_DUMP		= 0x0A,
 	DA_CCB_DELETE		= 0x0B,
  	DA_CCB_TUR		= 0x0C,
-	DA_CCB_TYPE_MASK	= 0x0F,
-	DA_CCB_RETRY_UA		= 0x10
+	DA_CCB_PROBE_ZONE	= 0x0D,
+	DA_CCB_PROBE_ATA_LOGDIR	= 0x0E,
+	DA_CCB_PROBE_ATA_IDDIR	= 0x0F,
+	DA_CCB_PROBE_ATA_SUP	= 0x10,
+	DA_CCB_PROBE_ATA_ZONE	= 0x11,
+	DA_CCB_PROBE_WP		= 0x12,
+	DA_CCB_TYPE_MASK	= 0x1F,
+	DA_CCB_RETRY_UA		= 0x20
 } da_ccb_state;
 
 /*
@@ -146,6 +186,63 @@ typedef enum {
 	DA_DELETE_MIN = DA_DELETE_ATA_TRIM,
 	DA_DELETE_MAX = DA_DELETE_ZERO
 } da_delete_methods;
+
+/*
+ * For SCSI, host managed drives show up as a separate device type.  For
+ * ATA, host managed drives also have a different device signature.
+ * XXX KDM figure out the ATA host managed signature.
+ */
+typedef enum {
+	DA_ZONE_NONE		= 0x00,
+	DA_ZONE_DRIVE_MANAGED	= 0x01,
+	DA_ZONE_HOST_AWARE	= 0x02,
+	DA_ZONE_HOST_MANAGED	= 0x03
+} da_zone_mode;
+
+/*
+ * We distinguish between these interface cases in addition to the drive type:
+ * o ATA drive behind a SCSI translation layer that knows about ZBC/ZAC
+ * o ATA drive behind a SCSI translation layer that does not know about
+ *   ZBC/ZAC, and so needs to be managed via ATA passthrough.  In this
+ *   case, we would need to share the ATA code with the ada(4) driver.
+ * o SCSI drive.
+ */
+typedef enum {
+	DA_ZONE_IF_SCSI,
+	DA_ZONE_IF_ATA_PASS,
+	DA_ZONE_IF_ATA_SAT,
+} da_zone_interface;
+
+typedef enum {
+	DA_ZONE_FLAG_RZ_SUP		= 0x0001,
+	DA_ZONE_FLAG_OPEN_SUP		= 0x0002,
+	DA_ZONE_FLAG_CLOSE_SUP		= 0x0004,
+	DA_ZONE_FLAG_FINISH_SUP		= 0x0008,
+	DA_ZONE_FLAG_RWP_SUP		= 0x0010,
+	DA_ZONE_FLAG_SUP_MASK		= (DA_ZONE_FLAG_RZ_SUP |
+					   DA_ZONE_FLAG_OPEN_SUP |
+					   DA_ZONE_FLAG_CLOSE_SUP |
+					   DA_ZONE_FLAG_FINISH_SUP |
+					   DA_ZONE_FLAG_RWP_SUP),
+	DA_ZONE_FLAG_URSWRZ		= 0x0020,
+	DA_ZONE_FLAG_OPT_SEQ_SET	= 0x0040,
+	DA_ZONE_FLAG_OPT_NONSEQ_SET	= 0x0080,
+	DA_ZONE_FLAG_MAX_SEQ_SET	= 0x0100,
+	DA_ZONE_FLAG_SET_MASK		= (DA_ZONE_FLAG_OPT_SEQ_SET |
+					   DA_ZONE_FLAG_OPT_NONSEQ_SET |
+					   DA_ZONE_FLAG_MAX_SEQ_SET)
+} da_zone_flags;
+
+static struct da_zone_desc {
+	da_zone_flags value;
+	const char *desc;
+} da_zone_desc_table[] = {
+	{DA_ZONE_FLAG_RZ_SUP, "Report Zones" },
+	{DA_ZONE_FLAG_OPEN_SUP, "Open" },
+	{DA_ZONE_FLAG_CLOSE_SUP, "Close" },
+	{DA_ZONE_FLAG_FINISH_SUP, "Finish" },
+	{DA_ZONE_FLAG_RWP_SUP, "Reset Write Pointer" },
+};
 
 typedef void da_delete_func_t (struct cam_periph *periph, union ccb *ccb,
 			      struct bio *bp);
@@ -195,29 +292,41 @@ struct disk_params {
 #define ATA_TRIM_MAX_RANGES	((UNMAP_BUF_SIZE / \
 	(ATA_DSM_RANGE_SIZE * ATA_DSM_BLK_SIZE)) * ATA_DSM_BLK_SIZE)
 
+#define DA_WORK_TUR		(1 << 16)
+
 struct da_softc {
-	struct	 bio_queue_head bio_queue;
-	struct	 bio_queue_head delete_queue;
+	struct   cam_iosched_softc *cam_iosched;
 	struct	 bio_queue_head delete_run_queue;
-	SLIST_ENTRY(da_softc) links;
 	LIST_HEAD(, ccb_hdr) pending_ccbs;
+	int	 refcount;		/* Active xpt_action() calls */
 	da_state state;
 	da_flags flags;	
 	da_quirks quirks;
-	int	 sort_io_queue;
 	int	 minimum_cmd_size;
 	int	 error_inject;
-	int	 ordered_tag_count;
-	int	 outstanding_cmds;
 	int	 trim_max_ranges;
-	int	 delete_running;
-	int	 tur;
 	int	 delete_available;	/* Delete methods possibly available */
+	da_zone_mode 			zone_mode;
+	da_zone_interface		zone_interface;
+	da_zone_flags			zone_flags;
+	struct ata_gp_log_dir		ata_logdir;
+	int				valid_logdir_len;
+	struct ata_identify_log_pages	ata_iddir;
+	int				valid_iddir_len;
+	uint64_t			optimal_seq_zones;
+	uint64_t			optimal_nonseq_zones;
+	uint64_t			max_seq_zones;
+	u_int	 		maxio;
 	uint32_t		unmap_max_ranges;
-	uint32_t		unmap_max_lba;
+	uint32_t		unmap_max_lba; /* Max LBAs in UNMAP req */
+	uint32_t		unmap_gran;
+	uint32_t		unmap_gran_align;
 	uint64_t		ws_max_blks;
+	da_delete_methods	delete_method_pref;
 	da_delete_methods	delete_method;
 	da_delete_func_t	*delete_func;
+	int			unmappedio;
+	int			rotating;
 	struct	 disk_params params;
 	struct	 disk *disk;
 	union	 ccb saved_ccb;
@@ -229,6 +338,13 @@ struct da_softc {
 	uint8_t	 unmap_buf[UNMAP_BUF_SIZE];
 	struct scsi_read_capacity_data_long rcaplong;
 	struct callout		mediapoll_c;
+#ifdef CAM_IO_STATS
+	struct sysctl_ctx_list	sysctl_stats_ctx;
+	struct sysctl_oid	*sysctl_stats_tree;
+	u_int	errors;
+	u_int	timeouts;
+	u_int	invalidations;
+#endif
 };
 
 #define dadeleteflag(softc, delete_method, enable)			\
@@ -351,6 +467,22 @@ static struct da_quirk_entry da_quirk_table[] =
 		 */
 		{T_DIRECT, SIP_MEDIA_FIXED, "COMPAQ", "RAID*", "*"},
 		/*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * The STEC SSDs sometimes hang on UNMAP.
+		 */
+		{T_DIRECT, SIP_MEDIA_FIXED, "STEC", "*", "*"},
+		/*quirks*/ DA_Q_NO_UNMAP
+	},
+	{
+		/*
+		 * VMware returns BUSY status when storage has transient
+		 * connectivity problems, so better wait.
+		 * Also VMware returns odd errors on misaligned UNMAPs.
+		 */
+		{T_DIRECT, SIP_MEDIA_FIXED, "VMware*", "*", "*"},
+		/*quirks*/ DA_Q_RETRY_BUSY | DA_Q_STRICT_UNMAP
 	},
 	/* USB mass storage devices supported by umass(4) */
 	{
@@ -540,11 +672,25 @@ static struct da_quirk_entry da_quirk_table[] =
 	},
 	{
 		/*
+		 * PNY USB 3.0 Flash Drives
+		*/
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "PNY", "USB 3.0 FD*",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE | DA_Q_NO_RC16
+	},
+	{
+		/*
 		 * PNY USB Flash keys
 		 * PR: usb/75578, usb/72344, usb/65436 
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "*" , "USB DISK*",
 		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Genesys GL3224
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Generic*", "STORAGE DEVICE*",
+		"120?"}, /*quirks*/ DA_Q_NO_SYNC_CACHE | DA_Q_4K | DA_Q_NO_RC16
 	},
 	{
 		/*
@@ -687,10 +833,37 @@ static struct da_quirk_entry da_quirk_table[] =
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "JetFlash", "Transcend*",
 		 "*"}, /*quirks*/ DA_Q_NO_RC16
 	},
+	{
+		/*
+		 * I-O Data USB Flash Disk
+		 * PR: usb/211716
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "I-O DATA", "USB Flash Disk*",
+		 "*"}, /*quirks*/ DA_Q_NO_RC16
+	},
+	{
+		/*
+		 * SLC CHIPFANCIER USB drives
+		 * PR: usb/234503 (RC10 right, RC16 wrong)
+		 * 16GB, 32GB and 128GB confirmed to have same issue
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "*SLC", "CHIPFANCIER",
+		 "*"}, /*quirks*/ DA_Q_NO_RC16
+       },
 	/* ATA/SATA devices over SAS/USB/... */
+	{
+		/* Sandisk X400 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "SanDisk SD8SB8U1*", "*" },
+		/*quirks*/DA_Q_128KB
+	},
 	{
 		/* Hitachi Advanced Format (4k) drives */
 		{ T_DIRECT, SIP_MEDIA_FIXED, "Hitachi", "H??????????E3*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/* Micron Advanced Format (4k) drives */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Micron 5100 MTFDDAK*", "*" },
 		/*quirks*/DA_Q_4K
 	},
 	{
@@ -905,6 +1078,30 @@ static struct da_quirk_entry da_quirk_table[] =
 	},
 	{
 		/*
+		 * Olympus digital cameras (C-3040ZOOM, C-2040ZOOM, C-1)
+		 * PR: usb/97472
+		 */
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "OLYMPUS", "C*", "*"},
+		/*quirks*/ DA_Q_NO_6_BYTE | DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Olympus digital cameras (D-370)
+		 * PR: usb/97472
+		 */
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "OLYMPUS", "D*", "*"},
+		/*quirks*/ DA_Q_NO_6_BYTE
+	},
+	{
+		/*
+		 * Olympus digital cameras (E-100RS, E-10).
+		 * PR: usb/97472
+		 */
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "OLYMPUS", "E*", "*"},
+		/*quirks*/ DA_Q_NO_6_BYTE | DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
 		 * Olympus FE-210 camera
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "OLYMPUS", "FE210*",
@@ -950,12 +1147,20 @@ static struct da_quirk_entry da_quirk_table[] =
 		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Corsair Force 3*", "*" },
 		/*quirks*/DA_Q_4K
 	},
-	{
+        {
 		/*
-		 * Corsair Force GT SSDs
+		 * Corsair Neutron GTX SSDs
 		 * 4k optimised & trim only works in 4k requests + 4k aligned
 		 */
-		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Corsair Force GT*", "*" },
+		{ T_DIRECT, SIP_MEDIA_FIXED, "*", "Corsair Neutron GTX*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Corsair Force GT & GS SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Corsair Force G*", "*" },
 		/*quirks*/DA_Q_4K
 	},
 	{
@@ -1004,6 +1209,14 @@ static struct da_quirk_entry da_quirk_table[] =
 		 * 4k optimised & trim only works in 4k requests + 4k aligned
 		 */
 		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "INTEL SSDSC2BW*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Intel S3610 Series SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "INTEL SSDSC2BX*", "*" },
 		/*quirks*/DA_Q_4K
 	},
 	{
@@ -1088,10 +1301,61 @@ static struct da_quirk_entry da_quirk_table[] =
 	},
 	{
 		/*
+		 * Samsung 750 Series SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Samsung SSD 750*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
 		 * Samsung 830 Series SSDs
 		 * 4k optimised & trim only works in 4k requests + 4k aligned
 		 */
 		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "SAMSUNG SSD 830 Series*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Samsung 840 SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Samsung SSD 840*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Samsung 845 SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Samsung SSD 845*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Samsung 850 SSDs
+		 * 4k optimised & trim only works in 4k requests + 4k aligned
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "Samsung SSD 850*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Samsung 843T Series SSDs (MZ7WD*)
+		 * Samsung PM851 Series SSDs (MZ7TE*)
+		 * Samsung PM853T Series SSDs (MZ7GE*)
+		 * Samsung SM863 Series SSDs (MZ7KM*)
+		 * 4k optimised
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "SAMSUNG MZ7*", "*" },
+		/*quirks*/DA_Q_4K
+	},
+	{
+		/*
+		 * Same as for SAMSUNG MZ7* but enable the quirks for SSD
+		 * starting with MZ7* too
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "MZ7*", "*" },
 		/*quirks*/DA_Q_4K
 	},
 	{
@@ -1110,6 +1374,29 @@ static struct da_quirk_entry da_quirk_table[] =
 		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "SG9XCS2D*", "*" },
 		/*quirks*/DA_Q_4K
 	},
+	{
+		/*
+		 * Hama Innostor USB-Stick 
+		 */
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "Innostor", "Innostor*", "*" }, 
+		/*quirks*/DA_Q_NO_RC16
+	},
+	{
+		/*
+		 * Seagate Lamarr 8TB Shingled Magnetic Recording (SMR)
+		 * Drive Managed SATA hard drive.  This drive doesn't report
+		 * in firmware that it is a drive managed SMR drive.
+		 */
+		{ T_DIRECT, SIP_MEDIA_FIXED, "ATA", "ST8000AS000[23]*", "*" },
+		/*quirks*/DA_Q_SMR_DM
+	},
+	{
+		/*
+		 * MX-ES USB Drive by Mach Xtreme
+		 */
+		{ T_DIRECT, SIP_MEDIA_REMOVABLE, "MX", "MXUB3*", "*"},
+		/*quirks*/DA_Q_NO_RC16
+	},
 };
 
 static	disk_strategy_t	dastrategy;
@@ -1118,8 +1405,11 @@ static	periph_init_t	dainit;
 static	void		daasync(void *callback_arg, u_int32_t code,
 				struct cam_path *path, void *arg);
 static	void		dasysctlinit(void *context, int pending);
+static	int		dasysctlsofttimeout(SYSCTL_HANDLER_ARGS);
 static	int		dacmdsizesysctl(SYSCTL_HANDLER_ARGS);
 static	int		dadeletemethodsysctl(SYSCTL_HANDLER_ARGS);
+static	int		dazonemodesysctl(SYSCTL_HANDLER_ARGS);
+static	int		dazonesupsysctl(SYSCTL_HANDLER_ARGS);
 static	int		dadeletemaxsysctl(SYSCTL_HANDLER_ARGS);
 static	void		dadeletemethodset(struct da_softc *softc,
 					  da_delete_methods delete_method);
@@ -1133,6 +1423,7 @@ static	periph_ctor_t	daregister;
 static	periph_dtor_t	dacleanup;
 static	periph_start_t	dastart;
 static	periph_oninv_t	daoninvalidate;
+static	void		dazonedone(struct cam_periph *periph, union ccb *ccb);
 static	void		dadone(struct cam_periph *periph,
 			       union ccb *done_ccb);
 static  int		daerror(union ccb *ccb, u_int32_t cam_flags,
@@ -1155,6 +1446,10 @@ static timeout_t	damediapoll;
 #define DA_DEFAULT_TIMEOUT 60	/* Timeout in seconds */
 #endif
 
+#ifndef DA_DEFAULT_SOFTTIMEOUT
+#define DA_DEFAULT_SOFTTIMEOUT	0
+#endif
+
 #ifndef	DA_DEFAULT_RETRY
 #define	DA_DEFAULT_RETRY	4
 #endif
@@ -1163,28 +1458,31 @@ static timeout_t	damediapoll;
 #define	DA_DEFAULT_SEND_ORDERED	1
 #endif
 
-#define DA_SIO (softc->sort_io_queue >= 0 ? \
-    softc->sort_io_queue : cam_sort_io_queues)
-
 static int da_poll_period = DA_DEFAULT_POLL_PERIOD;
 static int da_retry_count = DA_DEFAULT_RETRY;
 static int da_default_timeout = DA_DEFAULT_TIMEOUT;
+static sbintime_t da_default_softtimeout = DA_DEFAULT_SOFTTIMEOUT;
 static int da_send_ordered = DA_DEFAULT_SEND_ORDERED;
+static int da_disable_wp_detection = 0;
 
 static SYSCTL_NODE(_kern_cam, OID_AUTO, da, CTLFLAG_RD, 0,
             "CAM Direct Access Disk driver");
-SYSCTL_INT(_kern_cam_da, OID_AUTO, poll_period, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_da, OID_AUTO, poll_period, CTLFLAG_RWTUN,
            &da_poll_period, 0, "Media polling period in seconds");
-TUNABLE_INT("kern.cam.da.poll_period", &da_poll_period);
-SYSCTL_INT(_kern_cam_da, OID_AUTO, retry_count, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_da, OID_AUTO, retry_count, CTLFLAG_RWTUN,
            &da_retry_count, 0, "Normal I/O retry count");
-TUNABLE_INT("kern.cam.da.retry_count", &da_retry_count);
-SYSCTL_INT(_kern_cam_da, OID_AUTO, default_timeout, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_da, OID_AUTO, default_timeout, CTLFLAG_RWTUN,
            &da_default_timeout, 0, "Normal I/O timeout (in seconds)");
-TUNABLE_INT("kern.cam.da.default_timeout", &da_default_timeout);
-SYSCTL_INT(_kern_cam_da, OID_AUTO, send_ordered, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_da, OID_AUTO, send_ordered, CTLFLAG_RWTUN,
            &da_send_ordered, 0, "Send Ordered Tags");
-TUNABLE_INT("kern.cam.da.send_ordered", &da_send_ordered);
+SYSCTL_INT(_kern_cam_da, OID_AUTO, disable_wp_detection, CTLFLAG_RWTUN,
+           &da_disable_wp_detection, 0,
+	   "Disable detection of write-protected disks");
+
+SYSCTL_PROC(_kern_cam_da, OID_AUTO, default_softtimeout,
+    CTLTYPE_UINT | CTLFLAG_RW, NULL, 0, dasysctlsofttimeout, "I",
+    "Soft I/O timeout (ms)");
+TUNABLE_INT64("kern.cam.da.default_softtimeout", &da_default_softtimeout);
 
 /*
  * DA_ORDEREDTAG_INTERVAL determines how often, relative
@@ -1241,7 +1539,7 @@ daopen(struct disk *dp)
 	error = cam_periph_sleep(periph, &softc->disk->d_mediasize, PRIBIO,
 	    "dareprobe", 0);
 	if (error != 0)
-		xpt_print(periph->path, "unable to retrieve capacity data");
+		xpt_print(periph->path, "unable to retrieve capacity data\n");
 
 	if (periph->flags & CAM_PERIPH_INVALID)
 		error = ENXIO;
@@ -1269,86 +1567,66 @@ daclose(struct disk *dp)
 {
 	struct	cam_periph *periph;
 	struct	da_softc *softc;
+	union	ccb *ccb;
 	int error;
 
 	periph = (struct cam_periph *)dp->d_drv1;
-	cam_periph_lock(periph);
-	if (cam_periph_hold(periph, PRIBIO) != 0) {
-		cam_periph_unlock(periph);
-		cam_periph_release(periph);
-		return (0);
-	}
-
 	softc = (struct da_softc *)periph->softc;
-
+	cam_periph_lock(periph);
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE | CAM_DEBUG_PERIPH,
 	    ("daclose\n"));
 
-	if ((softc->flags & DA_FLAG_DIRTY) != 0 &&
-	    (softc->quirks & DA_Q_NO_SYNC_CACHE) == 0 &&
-	    (softc->flags & DA_FLAG_PACK_INVALID) == 0) {
-		union	ccb *ccb;
+	if (cam_periph_hold(periph, PRIBIO) == 0) {
 
-		ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
-
-		scsi_synchronize_cache(&ccb->csio,
-				       /*retries*/1,
-				       /*cbfcnp*/dadone,
-				       MSG_SIMPLE_Q_TAG,
-				       /*begin_lba*/0,/* Cover the whole disk */
-				       /*lb_count*/0,
-				       SSD_FULL_SIZE,
-				       5 * 60 * 1000);
-
-		error = cam_periph_runccb(ccb, daerror, /*cam_flags*/0,
-				  /*sense_flags*/SF_RETRY_UA | SF_QUIET_IR,
-				  softc->disk->d_devstat);
-		if (error == 0)
+		/* Flush disk cache. */
+		if ((softc->flags & DA_FLAG_DIRTY) != 0 &&
+		    (softc->quirks & DA_Q_NO_SYNC_CACHE) == 0 &&
+		    (softc->flags & DA_FLAG_PACK_INVALID) == 0) {
+			ccb = cam_periph_getccb(periph, CAM_PRIORITY_NORMAL);
+			scsi_synchronize_cache(&ccb->csio, /*retries*/1,
+			    /*cbfcnp*/dadone, MSG_SIMPLE_Q_TAG,
+			    /*begin_lba*/0, /*lb_count*/0, SSD_FULL_SIZE,
+			    5 * 60 * 1000);
+			error = cam_periph_runccb(ccb, daerror, /*cam_flags*/0,
+			    /*sense_flags*/SF_RETRY_UA | SF_QUIET_IR,
+			    softc->disk->d_devstat);
 			softc->flags &= ~DA_FLAG_DIRTY;
-		xpt_release_ccb(ccb);
+			xpt_release_ccb(ccb);
+		}
 
-	}
-
-	if ((softc->flags & DA_FLAG_PACK_REMOVABLE) != 0) {
-		if ((softc->quirks & DA_Q_NO_PREVENT) == 0)
+		/* Allow medium removal. */
+		if ((softc->flags & DA_FLAG_PACK_REMOVABLE) != 0 &&
+		    (softc->quirks & DA_Q_NO_PREVENT) == 0)
 			daprevent(periph, PR_ALLOW);
-		/*
-		 * If we've got removeable media, mark the blocksize as
-		 * unavailable, since it could change when new media is
-		 * inserted.
-		 */
-		softc->disk->d_devstat->flags |= DEVSTAT_BS_UNAVAILABLE;
+
+		cam_periph_unhold(periph);
 	}
+
+	/*
+	 * If we've got removeable media, mark the blocksize as
+	 * unavailable, since it could change when new media is
+	 * inserted.
+	 */
+	if ((softc->flags & DA_FLAG_PACK_REMOVABLE) != 0)
+		softc->disk->d_devstat->flags |= DEVSTAT_BS_UNAVAILABLE;
 
 	softc->flags &= ~DA_FLAG_OPEN;
-	cam_periph_unhold(periph);
+	while (softc->refcount != 0)
+		cam_periph_sleep(periph, &softc->refcount, PRIBIO, "daclose", 1);
 	cam_periph_unlock(periph);
 	cam_periph_release(periph);
-	return (0);	
+	return (0);
 }
 
 static void
 daschedule(struct cam_periph *periph)
 {
 	struct da_softc *softc = (struct da_softc *)periph->softc;
-	uint32_t prio;
 
 	if (softc->state != DA_STATE_NORMAL)
 		return;
 
-	/* Check if cam_periph_getccb() was called. */
-	prio = periph->immediate_priority;
-
-	/* Check if we have more work to do. */
-	if (bioq_first(&softc->bio_queue) ||
-	    (!softc->delete_running && bioq_first(&softc->delete_queue)) ||
-	    softc->tur) {
-		prio = CAM_PRIORITY_NORMAL;
-	}
-
-	/* Schedule CCB if any of above is true. */
-	if (prio != CAM_PRIORITY_NONE)
-		xpt_schedule(periph, prio);
+	cam_iosched_schedule(softc->cam_iosched, periph);
 }
 
 /*
@@ -1379,20 +1657,17 @@ dastrategy(struct bio *bp)
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE, ("dastrategy(%p)\n", bp));
 
 	/*
+	 * Zone commands must be ordered, because they can depend on the
+	 * effects of previously issued commands, and they may affect
+	 * commands after them.
+	 */
+	if (bp->bio_cmd == BIO_ZONE)
+		bp->bio_flags |= BIO_ORDERED;
+
+	/*
 	 * Place it in the queue of disk activities for this disk
 	 */
-	if (bp->bio_cmd == BIO_DELETE) {
-		if (bp->bio_bcount == 0)
-			biodone(bp);
-		else if (DA_SIO)
-			bioq_disksort(&softc->delete_queue, bp);
-		else
-			bioq_insert_tail(&softc->delete_queue, bp);
-	} else if (DA_SIO) {
-		bioq_disksort(&softc->bio_queue, bp);
-	} else {
-		bioq_insert_tail(&softc->bio_queue, bp);
-	}
+	cam_iosched_queue_work(softc->cam_iosched, bp);
 
 	/*
 	 * Schedule ourselves for performing the work.
@@ -1467,7 +1742,7 @@ dadump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size_t leng
 				       /*begin_lba*/0,/* Cover the whole disk */
 				       /*lb_count*/0,
 				       SSD_FULL_SIZE,
-				       5 * 60 * 1000);
+				       5 * 1000);
 		xpt_polled_action((union ccb *)&csio);
 
 		error = cam_periph_error((union ccb *)&csio,
@@ -1547,14 +1822,16 @@ daoninvalidate(struct cam_periph *periph)
 	xpt_register_async(0, daasync, periph, periph->path);
 
 	softc->flags |= DA_FLAG_PACK_INVALID;
+#ifdef CAM_IO_STATS
+	softc->invalidations++;
+#endif
 
 	/*
 	 * Return all queued I/O with ENXIO.
 	 * XXX Handle any transactions queued to the card
 	 *     with XPT_ABORT_CCB.
 	 */
-	bioq_flush(&softc->bio_queue, NULL, ENXIO);
-	bioq_flush(&softc->delete_queue, NULL, ENXIO);
+	cam_iosched_flush(softc->cam_iosched, NULL, ENXIO);
 
 	/*
 	 * Tell GEOM that we've gone away, we'll get a callback when it is
@@ -1572,12 +1849,20 @@ dacleanup(struct cam_periph *periph)
 
 	cam_periph_unlock(periph);
 
+	cam_iosched_fini(softc->cam_iosched);
+
 	/*
 	 * If we can't free the sysctl tree, oh well...
 	 */
-	if ((softc->flags & DA_FLAG_SCTX_INIT) != 0
-	    && sysctl_ctx_free(&softc->sysctl_ctx) != 0) {
-		xpt_print(periph->path, "can't remove sysctl context\n");
+	if ((softc->flags & DA_FLAG_SCTX_INIT) != 0) {
+#ifdef CAM_IO_STATS
+		if (sysctl_ctx_free(&softc->sysctl_stats_ctx) != 0)
+			xpt_print(periph->path,
+			    "can't remove sysctl stats context\n");
+#endif
+		if (sysctl_ctx_free(&softc->sysctl_ctx) != 0)
+			xpt_print(periph->path,
+			    "can't remove sysctl context\n");
 	}
 
 	callout_drain(&softc->mediapoll_c);
@@ -1607,10 +1892,12 @@ daasync(void *callback_arg, u_int32_t code,
 
 		if (cgd->protocol != PROTO_SCSI)
 			break;
-
+		if (SID_QUAL(&cgd->inq_data) != SID_QUAL_LU_CONNECTED)
+			break;
 		if (SID_TYPE(&cgd->inq_data) != T_DIRECT
 		    && SID_TYPE(&cgd->inq_data) != T_RBC
-		    && SID_TYPE(&cgd->inq_data) != T_OPTICAL)
+		    && SID_TYPE(&cgd->inq_data) != T_OPTICAL
+		    && SID_TYPE(&cgd->inq_data) != T_ZBC_HM)
 			break;
 
 		/*
@@ -1621,7 +1908,7 @@ daasync(void *callback_arg, u_int32_t code,
 		status = cam_periph_alloc(daregister, daoninvalidate,
 					  dacleanup, dastart,
 					  "da", CAM_PERIPH_BIO,
-					  cgd->ccb_h.path, daasync,
+					  path, daasync,
 					  AC_FOUND_DEVICE, cgd);
 
 		if (status != CAM_REQ_CMP
@@ -1661,19 +1948,27 @@ daasync(void *callback_arg, u_int32_t code,
 		     &error_code, &sense_key, &asc, &ascq)) {
 			if (asc == 0x2A && ascq == 0x09) {
 				xpt_print(ccb->ccb_h.path,
-				    "capacity data has changed\n");
+				    "Capacity data has changed\n");
+				softc->flags &= ~DA_FLAG_PROBED;
 				dareprobe(periph);
-			} else if (asc == 0x28 && ascq == 0x00)
+			} else if (asc == 0x28 && ascq == 0x00) {
+				softc->flags &= ~DA_FLAG_PROBED;
 				disk_media_changed(softc->disk, M_NOWAIT);
+			} else if (asc == 0x3F && ascq == 0x03) {
+				xpt_print(ccb->ccb_h.path,
+				    "INQUIRY data has changed\n");
+				softc->flags &= ~DA_FLAG_PROBED;
+				dareprobe(periph);
+			}
 		}
 		cam_periph_async(periph, code, path, arg);
 		break;
 	}
 	case AC_SCSI_AEN:
 		softc = (struct da_softc *)periph->softc;
-		if (!softc->tur) {
+		if (!cam_iosched_has_work_flags(softc->cam_iosched, DA_WORK_TUR)) {
 			if (cam_periph_acquire(periph) == CAM_REQ_CMP) {
-				softc->tur = 1;
+				cam_iosched_set_work_flags(softc->cam_iosched, DA_WORK_TUR);
 				daschedule(periph);
 			}
 		}
@@ -1693,6 +1988,11 @@ daasync(void *callback_arg, u_int32_t code,
 			ccbh->ccb_state |= DA_CCB_RETRY_UA;
 		break;
 	}
+	case AC_INQ_CHANGED:
+		softc = (struct da_softc *)periph->softc;
+		softc->flags &= ~DA_FLAG_PROBED;
+		dareprobe(periph);
+		break;
 	default:
 		break;
 	}
@@ -1704,7 +2004,7 @@ dasysctlinit(void *context, int pending)
 {
 	struct cam_periph *periph;
 	struct da_softc *softc;
-	char tmpstr[80], tmpstr2[80];
+	char tmpstr[32], tmpstr2[16];
 	struct ccb_trans_settings cts;
 
 	periph = (struct cam_periph *)context;
@@ -1736,7 +2036,7 @@ dasysctlinit(void *context, int pending)
 	 * the fly.
 	 */
 	SYSCTL_ADD_PROC(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
-		OID_AUTO, "delete_method", CTLTYPE_STRING | CTLFLAG_RW,
+		OID_AUTO, "delete_method", CTLTYPE_STRING | CTLFLAG_RWTUN,
 		softc, 0, dadeletemethodsysctl, "A",
 		"BIO_DELETE execution method");
 	SYSCTL_ADD_PROC(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
@@ -1747,9 +2047,29 @@ dasysctlinit(void *context, int pending)
 		OID_AUTO, "minimum_cmd_size", CTLTYPE_INT | CTLFLAG_RW,
 		&softc->minimum_cmd_size, 0, dacmdsizesysctl, "I",
 		"Minimum CDB size");
-	SYSCTL_ADD_INT(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
-		OID_AUTO, "sort_io_queue", CTLFLAG_RW, &softc->sort_io_queue, 0,
-		"Sort IO queue to try and optimise disk access patterns");
+
+	SYSCTL_ADD_PROC(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
+		OID_AUTO, "zone_mode", CTLTYPE_STRING | CTLFLAG_RD,
+		softc, 0, dazonemodesysctl, "A",
+		"Zone Mode");
+	SYSCTL_ADD_PROC(&softc->sysctl_ctx, SYSCTL_CHILDREN(softc->sysctl_tree),
+		OID_AUTO, "zone_support", CTLTYPE_STRING | CTLFLAG_RD,
+		softc, 0, dazonesupsysctl, "A",
+		"Zone Support");
+	SYSCTL_ADD_UQUAD(&softc->sysctl_ctx,
+		SYSCTL_CHILDREN(softc->sysctl_tree), OID_AUTO,
+		"optimal_seq_zones", CTLFLAG_RD, &softc->optimal_seq_zones,
+		"Optimal Number of Open Sequential Write Preferred Zones");
+	SYSCTL_ADD_UQUAD(&softc->sysctl_ctx,
+		SYSCTL_CHILDREN(softc->sysctl_tree), OID_AUTO,
+		"optimal_nonseq_zones", CTLFLAG_RD,
+		&softc->optimal_nonseq_zones,
+		"Optimal Number of Non-Sequentially Written Sequential Write "
+		"Preferred Zones");
+	SYSCTL_ADD_UQUAD(&softc->sysctl_ctx,
+		SYSCTL_CHILDREN(softc->sysctl_tree), OID_AUTO,
+		"max_seq_zones", CTLFLAG_RD, &softc->max_seq_zones,
+		"Maximum Number of Open Sequential Write Required Zones");
 
 	SYSCTL_ADD_INT(&softc->sysctl_ctx,
 		       SYSCTL_CHILDREN(softc->sysctl_tree),
@@ -1760,6 +2080,23 @@ dasysctlinit(void *context, int pending)
 		       0,
 		       "error_inject leaf");
 
+	SYSCTL_ADD_INT(&softc->sysctl_ctx,
+		       SYSCTL_CHILDREN(softc->sysctl_tree),
+		       OID_AUTO,
+		       "unmapped_io",
+		       CTLFLAG_RD, 
+		       &softc->unmappedio,
+		       0,
+		       "Unmapped I/O leaf");
+
+	SYSCTL_ADD_INT(&softc->sysctl_ctx,
+		       SYSCTL_CHILDREN(softc->sysctl_tree),
+		       OID_AUTO,
+		       "rotating",
+		       CTLFLAG_RD, 
+		       &softc->rotating,
+		       0,
+		       "Rotating media");
 
 	/*
 	 * Add some addressing info.
@@ -1785,6 +2122,44 @@ dasysctlinit(void *context, int pending)
 			    &softc->wwpn, "World Wide Port Name");
 		}
 	}
+
+#ifdef CAM_IO_STATS
+	/*
+	 * Now add some useful stats.
+	 * XXX These should live in cam_periph and be common to all periphs
+	 */
+	softc->sysctl_stats_tree = SYSCTL_ADD_NODE(&softc->sysctl_stats_ctx,
+	    SYSCTL_CHILDREN(softc->sysctl_tree), OID_AUTO, "stats",
+	    CTLFLAG_RD, 0, "Statistics");
+	SYSCTL_ADD_INT(&softc->sysctl_stats_ctx,
+		       SYSCTL_CHILDREN(softc->sysctl_stats_tree),
+		       OID_AUTO,
+		       "errors",
+		       CTLFLAG_RD,
+		       &softc->errors,
+		       0,
+		       "Transport errors reported by the SIM");
+	SYSCTL_ADD_INT(&softc->sysctl_stats_ctx,
+		       SYSCTL_CHILDREN(softc->sysctl_stats_tree),
+		       OID_AUTO,
+		       "timeouts",
+		       CTLFLAG_RD,
+		       &softc->timeouts,
+		       0,
+		       "Device timeouts reported by the SIM");
+	SYSCTL_ADD_INT(&softc->sysctl_stats_ctx,
+		       SYSCTL_CHILDREN(softc->sysctl_stats_tree),
+		       OID_AUTO,
+		       "pack_invalidations",
+		       CTLFLAG_RD,
+		       &softc->invalidations,
+		       0,
+		       "Device pack invalidations");
+#endif
+
+	cam_iosched_sysctl_init(softc->cam_iosched, &softc->sysctl_ctx,
+	    softc->sysctl_tree);
+
 	cam_periph_release(periph);
 }
 
@@ -1843,10 +2218,29 @@ dacmdsizesysctl(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
+static int
+dasysctlsofttimeout(SYSCTL_HANDLER_ARGS)
+{
+	sbintime_t value;
+	int error;
+
+	value = da_default_softtimeout / SBT_1MS;
+
+	error = sysctl_handle_int(oidp, (int *)&value, 0, req);
+	if ((error != 0) || (req->newptr == NULL))
+		return (error);
+
+	/* XXX Should clip this to a reasonable level */
+	if (value > da_default_timeout * 1000)
+		return (EINVAL);
+
+	da_default_softtimeout = value * SBT_1MS;
+	return (0);
+}
+
 static void
 dadeletemethodset(struct da_softc *softc, da_delete_methods delete_method)
 {
-
 
 	softc->delete_method = delete_method;
 	softc->disk->d_delmaxsize = dadeletemaxsize(softc, delete_method);
@@ -1865,24 +2259,24 @@ dadeletemaxsize(struct da_softc *softc, da_delete_methods delete_method)
 
 	switch(delete_method) {
 	case DA_DELETE_UNMAP:
-		sectors = (off_t)softc->unmap_max_lba * softc->unmap_max_ranges;
+		sectors = (off_t)softc->unmap_max_lba;
 		break;
 	case DA_DELETE_ATA_TRIM:
 		sectors = (off_t)ATA_DSM_RANGE_MAX * softc->trim_max_ranges;
 		break;
 	case DA_DELETE_WS16:
-		sectors = (off_t)min(softc->ws_max_blks, WS16_MAX_BLKS);
+		sectors = omin(softc->ws_max_blks, WS16_MAX_BLKS);
 		break;
 	case DA_DELETE_ZERO:
 	case DA_DELETE_WS10:
-		sectors = (off_t)min(softc->ws_max_blks, WS10_MAX_BLKS);
+		sectors = omin(softc->ws_max_blks, WS10_MAX_BLKS);
 		break;
 	default:
 		return 0;
 	}
 
 	return (off_t)softc->params.secsize *
-	    min(sectors, (off_t)softc->params.sectors);
+	    omin(sectors, softc->params.sectors);
 }
 
 static void
@@ -1894,35 +2288,32 @@ daprobedone(struct cam_periph *periph, union ccb *ccb)
 
 	dadeletemethodchoose(softc, DA_DELETE_NONE);
 
-	if (bootverbose && (softc->flags & DA_FLAG_PROBED) == 0) {
+	if (bootverbose && (softc->flags & DA_FLAG_ANNOUNCED) == 0) {
 		char buf[80];
 		int i, sep;
 
 		snprintf(buf, sizeof(buf), "Delete methods: <");
 		sep = 0;
-		for (i = DA_DELETE_MIN; i <= DA_DELETE_MAX; i++) {
-			if (softc->delete_available & (1 << i)) {
-				if (sep) {
-					strlcat(buf, ",", sizeof(buf));
-				} else {
-				    sep = 1;
-				}
-				strlcat(buf, da_delete_method_names[i],
-				    sizeof(buf));
-				if (i == softc->delete_method) {
-					strlcat(buf, "(*)", sizeof(buf));
-				}
-			}
-		}
-		if (sep == 0) {
-			if (softc->delete_method == DA_DELETE_NONE) 
-				strlcat(buf, "NONE(*)", sizeof(buf));
-			else
-				strlcat(buf, "DISABLED(*)", sizeof(buf));
+		for (i = 0; i <= DA_DELETE_MAX; i++) {
+			if ((softc->delete_available & (1 << i)) == 0 &&
+			    i != softc->delete_method)
+				continue;
+			if (sep)
+				strlcat(buf, ",", sizeof(buf));
+			strlcat(buf, da_delete_method_names[i],
+			    sizeof(buf));
+			if (i == softc->delete_method)
+				strlcat(buf, "(*)", sizeof(buf));
+			sep = 1;
 		}
 		strlcat(buf, ">", sizeof(buf));
 		printf("%s%d: %s\n", periph->periph_name,
 		    periph->unit_number, buf);
+	}
+	if ((softc->disk->d_flags & DISKFLAG_WRITE_PROTECT) != 0 &&
+	    (softc->flags & DA_FLAG_ANNOUNCED) == 0) {
+		printf("%s%d: Write Protected\n", periph->periph_name,
+		    periph->unit_number);
 	}
 
 	/*
@@ -1935,10 +2326,11 @@ daprobedone(struct cam_periph *periph, union ccb *ccb)
 	 */
 	xpt_release_ccb(ccb);
 	softc->state = DA_STATE_NORMAL;
+	softc->flags |= DA_FLAG_PROBED;
 	daschedule(periph);
 	wakeup(&softc->disk->d_mediasize);
-	if ((softc->flags & DA_FLAG_PROBED) == 0) {
-		softc->flags |= DA_FLAG_PROBED;
+	if ((softc->flags & DA_FLAG_ANNOUNCED) == 0) {
+		softc->flags |= DA_FLAG_ANNOUNCED;
 		cam_periph_unhold(periph);
 	} else
 		cam_periph_release_locked(periph);
@@ -1947,21 +2339,28 @@ daprobedone(struct cam_periph *periph, union ccb *ccb)
 static void
 dadeletemethodchoose(struct da_softc *softc, da_delete_methods default_method)
 {
-	int i, delete_method;
+	int i, methods;
 
-	delete_method = default_method;
+	/* If available, prefer the method requested by user. */
+	i = softc->delete_method_pref;
+	methods = softc->delete_available | (1 << DA_DELETE_DISABLE);
+	if (methods & (1 << i)) {
+		dadeletemethodset(softc, i);
+		return;
+	}
 
-	/*
-	 * Use the pre-defined order to choose the best
-	 * performing delete.
-	 */
+	/* Use the pre-defined order to choose the best performing delete. */
 	for (i = DA_DELETE_MIN; i <= DA_DELETE_MAX; i++) {
+		if (i == DA_DELETE_ZERO)
+			continue;
 		if (softc->delete_available & (1 << i)) {
 			dadeletemethodset(softc, i);
 			return;
 		}
 	}
-	dadeletemethodset(softc, delete_method);
+
+	/* Fallback to default. */
+	dadeletemethodset(softc, default_method);
 }
 
 static int
@@ -1970,7 +2369,7 @@ dadeletemethodsysctl(SYSCTL_HANDLER_ARGS)
 	char buf[16];
 	const char *p;
 	struct da_softc *softc;
-	int i, error, value;
+	int i, error, methods, value;
 
 	softc = (struct da_softc *)arg1;
 
@@ -1983,14 +2382,82 @@ dadeletemethodsysctl(SYSCTL_HANDLER_ARGS)
 	error = sysctl_handle_string(oidp, buf, sizeof(buf), req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
+	methods = softc->delete_available | (1 << DA_DELETE_DISABLE);
 	for (i = 0; i <= DA_DELETE_MAX; i++) {
-		if (!(softc->delete_available & (1 << i)) ||
-		    strcmp(buf, da_delete_method_names[i]) != 0)
-			continue;
-		dadeletemethodset(softc, i);
-		return (0);
+		if (strcmp(buf, da_delete_method_names[i]) == 0)
+			break;
 	}
-	return (EINVAL);
+	if (i > DA_DELETE_MAX)
+		return (EINVAL);
+	softc->delete_method_pref = i;
+	dadeletemethodchoose(softc, DA_DELETE_NONE);
+	return (0);
+}
+
+static int
+dazonemodesysctl(SYSCTL_HANDLER_ARGS)
+{
+	char tmpbuf[40];
+	struct da_softc *softc;
+	int error;
+
+	softc = (struct da_softc *)arg1;
+
+	switch (softc->zone_mode) {
+	case DA_ZONE_DRIVE_MANAGED:
+		snprintf(tmpbuf, sizeof(tmpbuf), "Drive Managed");
+		break;
+	case DA_ZONE_HOST_AWARE:
+		snprintf(tmpbuf, sizeof(tmpbuf), "Host Aware");
+		break;
+	case DA_ZONE_HOST_MANAGED:
+		snprintf(tmpbuf, sizeof(tmpbuf), "Host Managed");
+		break;
+	case DA_ZONE_NONE:
+	default:
+		snprintf(tmpbuf, sizeof(tmpbuf), "Not Zoned");
+		break;
+	}
+
+	error = sysctl_handle_string(oidp, tmpbuf, sizeof(tmpbuf), req);
+
+	return (error);
+}
+
+static int
+dazonesupsysctl(SYSCTL_HANDLER_ARGS)
+{
+	char tmpbuf[180];
+	struct da_softc *softc;
+	struct sbuf sb;
+	int error, first;
+	unsigned int i;
+
+	softc = (struct da_softc *)arg1;
+
+	error = 0;
+	first = 1;
+	sbuf_new(&sb, tmpbuf, sizeof(tmpbuf), 0);
+
+	for (i = 0; i < sizeof(da_zone_desc_table) /
+	     sizeof(da_zone_desc_table[0]); i++) {
+		if (softc->zone_flags & da_zone_desc_table[i].value) {
+			if (first == 0)
+				sbuf_printf(&sb, ", ");
+			else
+				first = 0;
+			sbuf_cat(&sb, da_zone_desc_table[i].desc);
+		}
+	}
+
+	if (first == 1)
+		sbuf_printf(&sb, "None");
+
+	sbuf_finish(&sb);
+
+	error = sysctl_handle_string(oidp, sbuf_data(&sb), sbuf_len(&sb), req);
+
+	return (error);
 }
 
 static cam_status
@@ -2013,22 +2480,29 @@ daregister(struct cam_periph *periph, void *arg)
 
 	if (softc == NULL) {
 		printf("daregister: Unable to probe new device. "
-		       "Unable to allocate softc\n");				
+		       "Unable to allocate softc\n");
 		return(CAM_REQ_CMP_ERR);
 	}
 
+	if (cam_iosched_init(&softc->cam_iosched, periph) != 0) {
+		printf("daregister: Unable to probe new device. "
+		       "Unable to allocate iosched memory\n");
+		free(softc, M_DEVBUF);
+		return(CAM_REQ_CMP_ERR);
+	}
+	
 	LIST_INIT(&softc->pending_ccbs);
-	softc->state = DA_STATE_PROBE_RC;
-	bioq_init(&softc->bio_queue);
-	bioq_init(&softc->delete_queue);
+	softc->state = DA_STATE_PROBE_WP;
 	bioq_init(&softc->delete_run_queue);
 	if (SID_IS_REMOVABLE(&cgd->inq_data))
 		softc->flags |= DA_FLAG_PACK_REMOVABLE;
 	softc->unmap_max_ranges = UNMAP_MAX_RANGES;
 	softc->unmap_max_lba = UNMAP_RANGE_MAX;
+	softc->unmap_gran = 0;
+	softc->unmap_gran_align = 0;
 	softc->ws_max_blks = WS16_MAX_BLKS;
 	softc->trim_max_ranges = ATA_TRIM_MAX_RANGES;
-	softc->sort_io_queue = -1;
+	softc->rotating = 1;
 
 	periph->softc = softc;
 
@@ -2037,7 +2511,7 @@ daregister(struct cam_periph *periph, void *arg)
 	 */
 	match = cam_quirkmatch((caddr_t)&cgd->inq_data,
 			       (caddr_t)da_quirk_table,
-			       sizeof(da_quirk_table)/sizeof(*da_quirk_table),
+			       nitems(da_quirk_table),
 			       sizeof(*da_quirk_table), scsi_inquiry_match);
 
 	if (match != NULL)
@@ -2046,12 +2520,26 @@ daregister(struct cam_periph *periph, void *arg)
 		softc->quirks = DA_Q_NONE;
 
 	/* Check if the SIM does not want 6 byte commands */
-	bzero(&cpi, sizeof(cpi));
-	xpt_setup_ccb(&cpi.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
-	cpi.ccb_h.func_code = XPT_PATH_INQ;
-	xpt_action((union ccb *)&cpi);
+	xpt_path_inq(&cpi, periph->path);
 	if (cpi.ccb_h.status == CAM_REQ_CMP && (cpi.hba_misc & PIM_NO_6_BYTE))
 		softc->quirks |= DA_Q_NO_6_BYTE;
+
+	if (SID_TYPE(&cgd->inq_data) == T_ZBC_HM)
+		softc->zone_mode = DA_ZONE_HOST_MANAGED;
+	else if (softc->quirks & DA_Q_SMR_DM)
+		softc->zone_mode = DA_ZONE_DRIVE_MANAGED;
+	else
+		softc->zone_mode = DA_ZONE_NONE;
+
+	if (softc->zone_mode != DA_ZONE_NONE) {
+		if (scsi_vpd_supported_page(periph, SVPD_ATA_INFORMATION)) {
+			if (scsi_vpd_supported_page(periph, SVPD_ZONED_BDC))
+				softc->zone_interface = DA_ZONE_IF_ATA_SAT;
+			else
+				softc->zone_interface = DA_ZONE_IF_ATA_PASS;
+		} else
+			softc->zone_interface = DA_ZONE_IF_SCSI;
+	}
 
 	TASK_INIT(&softc->sysctl_task, 0, dasysctlinit, periph);
 
@@ -2066,7 +2554,7 @@ daregister(struct cam_periph *periph, void *arg)
 	 * Schedule a periodic event to occasionally send an
 	 * ordered tag to a device.
 	 */
-	callout_init_mtx(&softc->sendordered_c, periph->sim->mtx, 0);
+	callout_init_mtx(&softc->sendordered_c, cam_periph_mtx(periph), 0);
 	callout_reset(&softc->sendordered_c,
 	    (da_default_timeout * hz) / DA_ORDEREDTAG_INTERVAL,
 	    dasendorderedtag, softc);
@@ -2105,7 +2593,6 @@ daregister(struct cam_periph *periph, void *arg)
 	if (SID_ANSI_REV(&cgd->inq_data) >= SCSI_REV_SPC3 &&
 	    (softc->quirks & DA_Q_NO_RC16) == 0) {
 		softc->flags |= DA_FLAG_CAN_RC16;
-		softc->state = DA_STATE_PROBE_RC16;
 	}
 
 	/*
@@ -2127,17 +2614,22 @@ daregister(struct cam_periph *periph, void *arg)
 	softc->disk->d_name = "da";
 	softc->disk->d_drv1 = periph;
 	if (cpi.maxio == 0)
-		softc->disk->d_maxsize = DFLTPHYS;	/* traditional default */
+		softc->maxio = DFLTPHYS;	/* traditional default */
 	else if (cpi.maxio > MAXPHYS)
-		softc->disk->d_maxsize = MAXPHYS;	/* for safety */
+		softc->maxio = MAXPHYS;		/* for safety */
 	else
-		softc->disk->d_maxsize = cpi.maxio;
+		softc->maxio = cpi.maxio;
+	if (softc->quirks & DA_Q_128KB)
+		softc->maxio = min(softc->maxio, 128 * 1024);
+	softc->disk->d_maxsize = softc->maxio;
 	softc->disk->d_unit = periph->unit_number;
-	softc->disk->d_flags = 0;
+	softc->disk->d_flags = DISKFLAG_DIRECT_COMPLETION | DISKFLAG_CANZONE;
 	if ((softc->quirks & DA_Q_NO_SYNC_CACHE) == 0)
 		softc->disk->d_flags |= DISKFLAG_CANFLUSHCACHE;
-	if ((cpi.hba_misc & PIM_UNMAPPED) != 0)
+	if ((cpi.hba_misc & PIM_UNMAPPED) != 0) {
+		softc->unmappedio = 1;
 		softc->disk->d_flags |= DISKFLAG_UNMAPPED_BIO;
+	}
 	cam_strvis(softc->disk->d_descr, cgd->inq_data.vendor,
 	    sizeof(cgd->inq_data.vendor), sizeof(softc->disk->d_descr));
 	strlcat(softc->disk->d_descr, " ", sizeof(softc->disk->d_descr));
@@ -2172,8 +2664,8 @@ daregister(struct cam_periph *periph, void *arg)
 	 * would be to not attach the device on failure.
 	 */
 	xpt_register_async(AC_SENT_BDR | AC_BUS_RESET | AC_LOST_DEVICE |
-	    AC_ADVINFO_CHANGED | AC_SCSI_AEN | AC_UNIT_ATTENTION,
-	    daasync, periph, periph->path);
+	    AC_ADVINFO_CHANGED | AC_SCSI_AEN | AC_UNIT_ATTENTION |
+	    AC_INQ_CHANGED, daasync, periph, periph->path);
 
 	/*
 	 * Emit an attribute changed notification just in case 
@@ -2186,7 +2678,7 @@ daregister(struct cam_periph *periph, void *arg)
 	/*
 	 * Schedule a periodic media polling events.
 	 */
-	callout_init_mtx(&softc->mediapoll_c, periph->sim->mtx, 0);
+	callout_init_mtx(&softc->mediapoll_c, cam_periph_mtx(periph), 0);
 	if ((softc->flags & DA_FLAG_PACK_REMOVABLE) &&
 	    (cgd->inq_flags & SID_AEN) == 0 &&
 	    da_poll_period != 0)
@@ -2196,6 +2688,300 @@ daregister(struct cam_periph *periph, void *arg)
 	xpt_schedule(periph, CAM_PRIORITY_DEV);
 
 	return(CAM_REQ_CMP);
+}
+
+static int
+da_zone_bio_to_scsi(int disk_zone_cmd)
+{
+	switch (disk_zone_cmd) {
+	case DISK_ZONE_OPEN:
+		return ZBC_OUT_SA_OPEN;
+	case DISK_ZONE_CLOSE:
+		return ZBC_OUT_SA_CLOSE;
+	case DISK_ZONE_FINISH:
+		return ZBC_OUT_SA_FINISH;
+	case DISK_ZONE_RWP:
+		return ZBC_OUT_SA_RWP;
+	}
+
+	return -1;
+}
+
+static int
+da_zone_cmd(struct cam_periph *periph, union ccb *ccb, struct bio *bp,
+	    int *queue_ccb)
+{
+	struct da_softc *softc;
+	int error;
+
+	error = 0;
+
+	if (bp->bio_cmd != BIO_ZONE) {
+		error = EINVAL;
+		goto bailout;
+	}
+
+	softc = periph->softc;
+
+	switch (bp->bio_zone.zone_cmd) {
+	case DISK_ZONE_OPEN:
+	case DISK_ZONE_CLOSE:
+	case DISK_ZONE_FINISH:
+	case DISK_ZONE_RWP: {
+		int zone_flags;
+		int zone_sa;
+		uint64_t lba;
+
+		zone_sa = da_zone_bio_to_scsi(bp->bio_zone.zone_cmd);
+		if (zone_sa == -1) {
+			xpt_print(periph->path, "Cannot translate zone "
+			    "cmd %#x to SCSI\n", bp->bio_zone.zone_cmd);
+			error = EINVAL;
+			goto bailout;
+		}
+
+		zone_flags = 0;
+		lba = bp->bio_zone.zone_params.rwp.id;
+
+		if (bp->bio_zone.zone_params.rwp.flags &
+		    DISK_ZONE_RWP_FLAG_ALL)
+			zone_flags |= ZBC_OUT_ALL;
+
+		if (softc->zone_interface != DA_ZONE_IF_ATA_PASS) {
+			scsi_zbc_out(&ccb->csio,
+				     /*retries*/ da_retry_count,
+				     /*cbfcnp*/ dadone,
+				     /*tag_action*/ MSG_SIMPLE_Q_TAG,
+				     /*service_action*/ zone_sa,
+				     /*zone_id*/ lba,
+				     /*zone_flags*/ zone_flags,
+				     /*data_ptr*/ NULL,
+				     /*dxfer_len*/ 0,
+				     /*sense_len*/ SSD_FULL_SIZE,
+				     /*timeout*/ da_default_timeout * 1000);
+		} else {
+			/*
+			 * Note that in this case, even though we can
+			 * technically use NCQ, we don't bother for several
+			 * reasons:
+			 * 1. It hasn't been tested on a SAT layer that
+			 *    supports it.  This is new as of SAT-4.
+			 * 2. Even when there is a SAT layer that supports
+			 *    it, that SAT layer will also probably support
+			 *    ZBC -> ZAC translation, since they are both
+			 *    in the SAT-4 spec.
+			 * 3. Translation will likely be preferable to ATA
+			 *    passthrough.  LSI / Avago at least single
+			 *    steps ATA passthrough commands in the HBA,
+			 *    regardless of protocol, so unless that
+			 *    changes, there is a performance penalty for
+			 *    doing ATA passthrough no matter whether
+			 *    you're using NCQ/FPDMA, DMA or PIO.
+			 * 4. It requires a 32-byte CDB, which at least at
+			 *    this point in CAM requires a CDB pointer, which
+			 *    would require us to allocate an additional bit
+			 *    of storage separate from the CCB.
+			 */
+			error = scsi_ata_zac_mgmt_out(&ccb->csio,
+			    /*retries*/ da_retry_count,
+			    /*cbfcnp*/ dadone,
+			    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+			    /*use_ncq*/ 0,
+			    /*zm_action*/ zone_sa,
+			    /*zone_id*/ lba,
+			    /*zone_flags*/ zone_flags,
+			    /*data_ptr*/ NULL,
+			    /*dxfer_len*/ 0,
+			    /*cdb_storage*/ NULL,
+			    /*cdb_storage_len*/ 0,
+			    /*sense_len*/ SSD_FULL_SIZE,
+			    /*timeout*/ da_default_timeout * 1000);
+			if (error != 0) {
+				error = EINVAL;
+				xpt_print(periph->path,
+				    "scsi_ata_zac_mgmt_out() returned an "
+				    "error!");
+				goto bailout;
+			}
+		}
+		*queue_ccb = 1;
+
+		break;
+	}
+	case DISK_ZONE_REPORT_ZONES: {
+		uint8_t *rz_ptr;
+		uint32_t num_entries, alloc_size;
+		struct disk_zone_report *rep;
+
+		rep = &bp->bio_zone.zone_params.report;
+
+		num_entries = rep->entries_allocated;
+		if (num_entries == 0) {
+			xpt_print(periph->path, "No entries allocated for "
+			    "Report Zones request\n");
+			error = EINVAL;
+			goto bailout;
+		}
+		alloc_size = sizeof(struct scsi_report_zones_hdr) +
+		    (sizeof(struct scsi_report_zones_desc) * num_entries);
+		alloc_size = min(alloc_size, softc->disk->d_maxsize);
+		rz_ptr = malloc(alloc_size, M_SCSIDA, M_NOWAIT | M_ZERO);
+		if (rz_ptr == NULL) {
+			xpt_print(periph->path, "Unable to allocate memory "
+			   "for Report Zones request\n");
+			error = ENOMEM;
+			goto bailout;
+		}
+		
+		if (softc->zone_interface != DA_ZONE_IF_ATA_PASS) {
+			scsi_zbc_in(&ccb->csio,
+				    /*retries*/ da_retry_count,
+				    /*cbcfnp*/ dadone,
+				    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+				    /*service_action*/ ZBC_IN_SA_REPORT_ZONES,
+				    /*zone_start_lba*/ rep->starting_id,
+				    /*zone_options*/ rep->rep_options,
+				    /*data_ptr*/ rz_ptr,
+				    /*dxfer_len*/ alloc_size,
+				    /*sense_len*/ SSD_FULL_SIZE,
+				    /*timeout*/ da_default_timeout * 1000);
+		} else {
+			/*
+			 * Note that in this case, even though we can
+			 * technically use NCQ, we don't bother for several
+			 * reasons:
+			 * 1. It hasn't been tested on a SAT layer that
+			 *    supports it.  This is new as of SAT-4.
+			 * 2. Even when there is a SAT layer that supports
+			 *    it, that SAT layer will also probably support
+			 *    ZBC -> ZAC translation, since they are both
+			 *    in the SAT-4 spec.
+			 * 3. Translation will likely be preferable to ATA
+			 *    passthrough.  LSI / Avago at least single
+			 *    steps ATA passthrough commands in the HBA,
+			 *    regardless of protocol, so unless that
+			 *    changes, there is a performance penalty for
+			 *    doing ATA passthrough no matter whether
+			 *    you're using NCQ/FPDMA, DMA or PIO.
+			 * 4. It requires a 32-byte CDB, which at least at
+			 *    this point in CAM requires a CDB pointer, which
+			 *    would require us to allocate an additional bit
+			 *    of storage separate from the CCB.
+			 */
+			error = scsi_ata_zac_mgmt_in(&ccb->csio,
+			    /*retries*/ da_retry_count,
+			    /*cbcfnp*/ dadone,
+			    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+			    /*use_ncq*/ 0,
+			    /*zm_action*/ ATA_ZM_REPORT_ZONES,
+			    /*zone_id*/ rep->starting_id,
+			    /*zone_flags*/ rep->rep_options,
+			    /*data_ptr*/ rz_ptr,
+			    /*dxfer_len*/ alloc_size,
+			    /*cdb_storage*/ NULL,
+			    /*cdb_storage_len*/ 0,
+			    /*sense_len*/ SSD_FULL_SIZE,
+			    /*timeout*/ da_default_timeout * 1000);
+			if (error != 0) {
+				error = EINVAL;
+				xpt_print(periph->path,
+				    "scsi_ata_zac_mgmt_in() returned an "
+				    "error!");
+				goto bailout;
+			}
+		}
+
+		/*
+		 * For BIO_ZONE, this isn't normally needed.  However, it
+		 * is used by devstat_end_transaction_bio() to determine
+		 * how much data was transferred.
+		 */
+		/*
+		 * XXX KDM we have a problem.  But I'm not sure how to fix
+		 * it.  devstat uses bio_bcount - bio_resid to calculate
+		 * the amount of data transferred.   The GEOM disk code
+		 * uses bio_length - bio_resid to calculate the amount of
+		 * data in bio_completed.  We have different structure
+		 * sizes above and below the ada(4) driver.  So, if we
+		 * use the sizes above, the amount transferred won't be
+		 * quite accurate for devstat.  If we use different sizes
+		 * for bio_bcount and bio_length (above and below
+		 * respectively), then the residual needs to match one or
+		 * the other.  Everything is calculated after the bio
+		 * leaves the driver, so changing the values around isn't
+		 * really an option.  For now, just set the count to the
+		 * passed in length.  This means that the calculations
+		 * above (e.g. bio_completed) will be correct, but the
+		 * amount of data reported to devstat will be slightly
+		 * under or overstated.
+		 */
+		bp->bio_bcount = bp->bio_length;
+
+		*queue_ccb = 1;
+
+		break;
+	}
+	case DISK_ZONE_GET_PARAMS: {
+		struct disk_zone_disk_params *params;
+
+		params = &bp->bio_zone.zone_params.disk_params;
+		bzero(params, sizeof(*params));
+
+		switch (softc->zone_mode) {
+		case DA_ZONE_DRIVE_MANAGED:
+			params->zone_mode = DISK_ZONE_MODE_DRIVE_MANAGED;
+			break;
+		case DA_ZONE_HOST_AWARE:
+			params->zone_mode = DISK_ZONE_MODE_HOST_AWARE;
+			break;
+		case DA_ZONE_HOST_MANAGED:
+			params->zone_mode = DISK_ZONE_MODE_HOST_MANAGED;
+			break;
+		default:
+		case DA_ZONE_NONE:
+			params->zone_mode = DISK_ZONE_MODE_NONE;
+			break;
+		}
+
+		if (softc->zone_flags & DA_ZONE_FLAG_URSWRZ)
+			params->flags |= DISK_ZONE_DISK_URSWRZ;
+
+		if (softc->zone_flags & DA_ZONE_FLAG_OPT_SEQ_SET) {
+			params->optimal_seq_zones = softc->optimal_seq_zones;
+			params->flags |= DISK_ZONE_OPT_SEQ_SET;
+		}
+
+		if (softc->zone_flags & DA_ZONE_FLAG_OPT_NONSEQ_SET) {
+			params->optimal_nonseq_zones =
+			    softc->optimal_nonseq_zones;
+			params->flags |= DISK_ZONE_OPT_NONSEQ_SET;
+		}
+
+		if (softc->zone_flags & DA_ZONE_FLAG_MAX_SEQ_SET) {
+			params->max_seq_zones = softc->max_seq_zones;
+			params->flags |= DISK_ZONE_MAX_SEQ_SET;
+		}
+		if (softc->zone_flags & DA_ZONE_FLAG_RZ_SUP)
+			params->flags |= DISK_ZONE_RZ_SUP;
+
+		if (softc->zone_flags & DA_ZONE_FLAG_OPEN_SUP)
+			params->flags |= DISK_ZONE_OPEN_SUP;
+
+		if (softc->zone_flags & DA_ZONE_FLAG_CLOSE_SUP)
+			params->flags |= DISK_ZONE_CLOSE_SUP;
+
+		if (softc->zone_flags & DA_ZONE_FLAG_FINISH_SUP)
+			params->flags |= DISK_ZONE_FINISH_SUP;
+
+		if (softc->zone_flags & DA_ZONE_FLAG_RWP_SUP)
+			params->flags |= DISK_ZONE_RWP_SUP;
+		break;
+	}
+	default:
+		break;
+	}
+bailout:
+	return (error);
 }
 
 static void
@@ -2214,37 +3000,11 @@ skipstate:
 		struct bio *bp;
 		uint8_t tag_code;
 
-		/* Execute immediate CCB if waiting. */
-		if (periph->immediate_priority <= periph->pinfo.priority) {
-			CAM_DEBUG(periph->path, CAM_DEBUG_SUBTRACE,
-					("queuing for immediate ccb\n"));
-			start_ccb->ccb_h.ccb_state = DA_CCB_WAITING;
-			SLIST_INSERT_HEAD(&periph->ccb_list, &start_ccb->ccb_h,
-					  periph_links.sle);
-			periph->immediate_priority = CAM_PRIORITY_NONE;
-			wakeup(&periph->ccb_list);
-			/* May have more work to do, so ensure we stay scheduled */
-			daschedule(periph);
-			break;
-		}
-
-		/* Run BIO_DELETE if not running yet. */
-		if (!softc->delete_running &&
-		    (bp = bioq_first(&softc->delete_queue)) != NULL) {
-			if (softc->delete_func != NULL) {
-				softc->delete_func(periph, start_ccb, bp);
-				goto out;
-			} else {
-				bioq_flush(&softc->delete_queue, NULL, 0);
-				/* FALLTHROUGH */
-			}
-		}
-
-		/* Run regular command. */
-		bp = bioq_takefirst(&softc->bio_queue);
+more:
+		bp = cam_iosched_next_bio(softc->cam_iosched);
 		if (bp == NULL) {
-			if (softc->tur) {
-				softc->tur = 0;
+			if (cam_iosched_has_work_flags(softc->cam_iosched, DA_WORK_TUR)) {
+				cam_iosched_clr_work_flags(softc->cam_iosched, DA_WORK_TUR);
 				scsi_test_unit_ready(&start_ccb->csio,
 				     /*retries*/ da_retry_count,
 				     dadone,
@@ -2258,15 +3018,27 @@ skipstate:
 				xpt_release_ccb(start_ccb);
 			break;
 		}
-		if (softc->tur) {
-			softc->tur = 0;
+
+		if (bp->bio_cmd == BIO_DELETE) {
+			if (softc->delete_func != NULL) {
+				softc->delete_func(periph, start_ccb, bp);
+				goto out;
+			} else {
+				/* Not sure this is possible, but failsafe by lying and saying "sure, done." */
+				biofinish(bp, NULL, 0);
+				goto more;
+			}
+		}
+
+		if (cam_iosched_has_work_flags(softc->cam_iosched, DA_WORK_TUR)) {
+			cam_iosched_clr_work_flags(softc->cam_iosched, DA_WORK_TUR);
 			cam_periph_release_locked(periph);
 		}
 
 		if ((bp->bio_flags & BIO_ORDERED) != 0 ||
 		    (softc->flags & DA_FLAG_NEED_OTAG) != 0) {
 			softc->flags &= ~DA_FLAG_NEED_OTAG;
-			softc->ordered_tag_count++;
+			softc->flags |= DA_FLAG_WAS_OTAG;
 			tag_code = MSG_ORDERED_Q_TAG;
 		} else {
 			tag_code = MSG_SIMPLE_Q_TAG;
@@ -2274,57 +3046,98 @@ skipstate:
 
 		switch (bp->bio_cmd) {
 		case BIO_WRITE:
-			softc->flags |= DA_FLAG_DIRTY;
-			/* FALLTHROUGH */
 		case BIO_READ:
+		{
+			void *data_ptr;
+			int rw_op;
+
+			if (bp->bio_cmd == BIO_WRITE) {
+				softc->flags |= DA_FLAG_DIRTY;
+				rw_op = SCSI_RW_WRITE;
+			} else {
+				rw_op = SCSI_RW_READ;
+			}
+
+			data_ptr = bp->bio_data;
+			if ((bp->bio_flags & (BIO_UNMAPPED|BIO_VLIST)) != 0) {
+				rw_op |= SCSI_RW_BIO;
+				data_ptr = bp;
+			}
+
 			scsi_read_write(&start_ccb->csio,
 					/*retries*/da_retry_count,
 					/*cbfcnp*/dadone,
 					/*tag_action*/tag_code,
-					/*read_op*/(bp->bio_cmd == BIO_READ ?
-					SCSI_RW_READ : SCSI_RW_WRITE) |
-					((bp->bio_flags & BIO_UNMAPPED) != 0 ?
-					SCSI_RW_BIO : 0),
+					rw_op,
 					/*byte2*/0,
 					softc->minimum_cmd_size,
 					/*lba*/bp->bio_pblkno,
 					/*block_count*/bp->bio_bcount /
 					softc->params.secsize,
-					/*data_ptr*/ (bp->bio_flags &
-					BIO_UNMAPPED) != 0 ? (void *)bp :
-					bp->bio_data,
+					data_ptr,
 					/*dxfer_len*/ bp->bio_bcount,
 					/*sense_len*/SSD_FULL_SIZE,
 					da_default_timeout * 1000);
 			break;
+		}
 		case BIO_FLUSH:
+			/*
+			 * If we don't support sync cache, or the disk
+			 * isn't dirty, FLUSH is a no-op.  Use the
+			 * allocated * CCB for the next bio if one is
+			 * available.
+			 */
+			if ((softc->quirks & DA_Q_NO_SYNC_CACHE) != 0 ||
+			    (softc->flags & DA_FLAG_DIRTY) == 0) {
+				biodone(bp);
+				goto skipstate;
+			}
+
 			/*
 			 * BIO_FLUSH doesn't currently communicate
 			 * range data, so we synchronize the cache
-			 * over the whole disk.  We also force
-			 * ordered tag semantics the flush applies
-			 * to all previously queued I/O.
+			 * over the whole disk.
 			 */
 			scsi_synchronize_cache(&start_ccb->csio,
 					       /*retries*/1,
 					       /*cbfcnp*/dadone,
-					       MSG_ORDERED_Q_TAG,
+					       /*tag_action*/tag_code,
 					       /*begin_lba*/0,
 					       /*lb_count*/0,
 					       SSD_FULL_SIZE,
 					       da_default_timeout*1000);
+			/*
+			 * Clear the dirty flag before sending the command.
+			 * Either this sync cache will be successful, or it
+			 * will fail after a retry.  If it fails, it is
+			 * unlikely to be successful if retried later, so
+			 * we'll save ourselves time by just marking the
+			 * device clean.
+			 */
+			softc->flags &= ~DA_FLAG_DIRTY;
+			break;
+		case BIO_ZONE: {
+			int error, queue_ccb;
+
+			queue_ccb = 0;
+
+			error = da_zone_cmd(periph, start_ccb, bp,&queue_ccb);
+			if ((error != 0)
+			 || (queue_ccb == 0)) {
+				biofinish(bp, NULL, error);
+				xpt_release_ccb(start_ccb);
+				return;
+			}
 			break;
 		}
+		}
 		start_ccb->ccb_h.ccb_state = DA_CCB_BUFFER_IO;
+		start_ccb->ccb_h.flags |= CAM_UNLOCKED;
+		start_ccb->ccb_h.softtimeout = sbttotv(da_default_softtimeout);
 
 out:
-		/*
-		 * Block out any asynchronous callbacks
-		 * while we touch the pending ccb list.
-		 */
 		LIST_INSERT_HEAD(&softc->pending_ccbs,
 				 &start_ccb->ccb_h, periph_links.le);
-		softc->outstanding_cmds++;
 
 		/* We expect a unit attention from this device */
 		if ((softc->flags & DA_FLAG_RETRY_UA) != 0) {
@@ -2333,10 +3146,54 @@ out:
 		}
 
 		start_ccb->ccb_h.ccb_bp = bp;
+		softc->refcount++;
+		cam_periph_unlock(periph);
 		xpt_action(start_ccb);
+		cam_periph_lock(periph);
+		softc->refcount--;
 
 		/* May have more work to do, so ensure we stay scheduled */
 		daschedule(periph);
+		break;
+	}
+	case DA_STATE_PROBE_WP:
+	{
+		void  *mode_buf;
+		int    mode_buf_len;
+
+		if (da_disable_wp_detection) {
+			if ((softc->flags & DA_FLAG_CAN_RC16) != 0)
+				softc->state = DA_STATE_PROBE_RC16;
+			else
+				softc->state = DA_STATE_PROBE_RC;
+			goto skipstate;
+		}
+		mode_buf_len = 192;
+		mode_buf = malloc(mode_buf_len, M_SCSIDA, M_NOWAIT);
+		if (mode_buf == NULL) {
+			xpt_print(periph->path, "Unable to send mode sense - "
+			    "malloc failure\n");
+			if ((softc->flags & DA_FLAG_CAN_RC16) != 0)
+				softc->state = DA_STATE_PROBE_RC16;
+			else
+				softc->state = DA_STATE_PROBE_RC;
+			goto skipstate;
+		}
+		scsi_mode_sense_len(&start_ccb->csio,
+				    /*retries*/ da_retry_count,
+				    /*cbfcnp*/ dadone,
+				    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+				    /*dbd*/ FALSE,
+				    /*pc*/ SMS_PAGE_CTRL_CURRENT,
+				    /*page*/ SMS_ALL_PAGES_PAGE,
+				    /*param_buf*/ mode_buf,
+				    /*param_len*/ mode_buf_len,
+				    /*minimum_cmd_size*/ softc->minimum_cmd_size,
+				    /*sense_len*/ SSD_FULL_SIZE,
+				    /*timeout*/ da_default_timeout * 1000);
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_WP;
+		xpt_action(start_ccb);
 		break;
 	}
 	case DA_STATE_PROBE_RC:
@@ -2503,18 +3360,23 @@ out:
 		struct ata_params *ata_params;
 
 		if (!scsi_vpd_supported_page(periph, SVPD_ATA_INFORMATION)) {
+			if ((softc->zone_mode == DA_ZONE_HOST_AWARE)
+			 || (softc->zone_mode == DA_ZONE_HOST_MANAGED)) {
+				/*
+				 * Note that if the ATA VPD page isn't
+				 * supported, we aren't talking to an ATA
+				 * device anyway.  Support for that VPD
+				 * page is mandatory for SCSI to ATA (SAT)
+				 * translation layers.
+				 */
+				softc->state = DA_STATE_PROBE_ZONE;
+				goto skipstate;
+			}
 			daprobedone(periph, start_ccb);
 			break;
 		}
 
-		ata_params = (struct ata_params*)
-			malloc(sizeof(*ata_params), M_SCSIDA, M_NOWAIT|M_ZERO);
-
-		if (ata_params == NULL) {
-			printf("dastart: Couldn't malloc ata_params data\n");
-			/* da_free_periph??? */
-			break;
-		}
+		ata_params = &periph->path->device->ident_data;
 
 		scsi_ata_identify(&start_ccb->csio,
 				  /*retries*/da_retry_count,
@@ -2526,6 +3388,252 @@ out:
 				  /*timeout*/da_default_timeout * 1000);
 		start_ccb->ccb_h.ccb_bp = NULL;
 		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ATA;
+		xpt_action(start_ccb);
+		break;
+	}
+	case DA_STATE_PROBE_ATA_LOGDIR:
+	{
+		struct ata_gp_log_dir *log_dir;
+		int retval;
+
+		retval = 0;
+
+		if ((softc->flags & DA_FLAG_CAN_ATA_LOG) == 0) {
+			/*
+			 * If we don't have log support, not much point in
+			 * trying to probe zone support.
+			 */
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		/*
+		 * If we have an ATA device (the SCSI ATA Information VPD
+		 * page should be present and the ATA identify should have
+		 * succeeded) and it supports logs, ask for the log directory.
+		 */
+
+		log_dir = malloc(sizeof(*log_dir), M_SCSIDA, M_NOWAIT|M_ZERO);
+		if (log_dir == NULL) {
+			xpt_print(periph->path, "Couldn't malloc log_dir "
+			    "data\n");
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		retval = scsi_ata_read_log(&start_ccb->csio,
+		    /*retries*/ da_retry_count,
+		    /*cbfcnp*/ dadone,
+		    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+		    /*log_address*/ ATA_LOG_DIRECTORY,
+		    /*page_number*/ 0,
+		    /*block_count*/ 1,
+		    /*protocol*/ softc->flags & DA_FLAG_CAN_ATA_DMA ?
+				 AP_PROTO_DMA : AP_PROTO_PIO_IN,
+		    /*data_ptr*/ (uint8_t *)log_dir,
+		    /*dxfer_len*/ sizeof(*log_dir),
+		    /*sense_len*/ SSD_FULL_SIZE,
+		    /*timeout*/ da_default_timeout * 1000);
+
+		if (retval != 0) {
+			xpt_print(periph->path, "scsi_ata_read_log() failed!");
+			free(log_dir, M_SCSIDA);
+			daprobedone(periph, start_ccb);
+			break;
+		}
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ATA_LOGDIR;
+		xpt_action(start_ccb);
+		break;
+	}
+	case DA_STATE_PROBE_ATA_IDDIR:
+	{
+		struct ata_identify_log_pages *id_dir;
+		int retval;
+
+		retval = 0;
+
+		/*
+		 * Check here to see whether the Identify Device log is
+		 * supported in the directory of logs.  If so, continue
+		 * with requesting the log of identify device pages.
+		 */
+		if ((softc->flags & DA_FLAG_CAN_ATA_IDLOG) == 0) {
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		id_dir = malloc(sizeof(*id_dir), M_SCSIDA, M_NOWAIT | M_ZERO);
+		if (id_dir == NULL) {
+			xpt_print(periph->path, "Couldn't malloc id_dir "
+			    "data\n");
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		retval = scsi_ata_read_log(&start_ccb->csio,
+		    /*retries*/ da_retry_count,
+		    /*cbfcnp*/ dadone,
+		    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+		    /*log_address*/ ATA_IDENTIFY_DATA_LOG,
+		    /*page_number*/ ATA_IDL_PAGE_LIST,
+		    /*block_count*/ 1,
+		    /*protocol*/ softc->flags & DA_FLAG_CAN_ATA_DMA ?
+				 AP_PROTO_DMA : AP_PROTO_PIO_IN,
+		    /*data_ptr*/ (uint8_t *)id_dir,
+		    /*dxfer_len*/ sizeof(*id_dir),
+		    /*sense_len*/ SSD_FULL_SIZE,
+		    /*timeout*/ da_default_timeout * 1000);
+
+		if (retval != 0) {
+			xpt_print(periph->path, "scsi_ata_read_log() failed!");
+			free(id_dir, M_SCSIDA);
+			daprobedone(periph, start_ccb);
+			break;
+		}
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ATA_IDDIR;
+		xpt_action(start_ccb);
+		break;
+	}
+	case DA_STATE_PROBE_ATA_SUP:
+	{
+		struct ata_identify_log_sup_cap *sup_cap;
+		int retval;
+
+		retval = 0;
+
+		/*
+		 * Check here to see whether the Supported Capabilities log
+		 * is in the list of Identify Device logs.
+		 */
+		if ((softc->flags & DA_FLAG_CAN_ATA_SUPCAP) == 0) {
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		sup_cap = malloc(sizeof(*sup_cap), M_SCSIDA, M_NOWAIT|M_ZERO);
+		if (sup_cap == NULL) {
+			xpt_print(periph->path, "Couldn't malloc sup_cap "
+			    "data\n");
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		retval = scsi_ata_read_log(&start_ccb->csio,
+		    /*retries*/ da_retry_count,
+		    /*cbfcnp*/ dadone,
+		    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+		    /*log_address*/ ATA_IDENTIFY_DATA_LOG,
+		    /*page_number*/ ATA_IDL_SUP_CAP,
+		    /*block_count*/ 1,
+		    /*protocol*/ softc->flags & DA_FLAG_CAN_ATA_DMA ?
+				 AP_PROTO_DMA : AP_PROTO_PIO_IN,
+		    /*data_ptr*/ (uint8_t *)sup_cap,
+		    /*dxfer_len*/ sizeof(*sup_cap),
+		    /*sense_len*/ SSD_FULL_SIZE,
+		    /*timeout*/ da_default_timeout * 1000);
+
+		if (retval != 0) {
+			xpt_print(periph->path, "scsi_ata_read_log() failed!");
+			free(sup_cap, M_SCSIDA);
+			daprobedone(periph, start_ccb);
+			break;
+
+		}
+
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ATA_SUP;
+		xpt_action(start_ccb);
+		break;
+	}
+	case DA_STATE_PROBE_ATA_ZONE:
+	{
+		struct ata_zoned_info_log *ata_zone;
+		int retval;
+
+		retval = 0;
+
+		/*
+		 * Check here to see whether the zoned device information
+		 * page is supported.  If so, continue on to request it.
+		 * If not, skip to DA_STATE_PROBE_LOG or done.
+		 */
+		if ((softc->flags & DA_FLAG_CAN_ATA_ZONE) == 0) {
+			daprobedone(periph, start_ccb);
+			break;
+		}
+		ata_zone = malloc(sizeof(*ata_zone), M_SCSIDA,
+				  M_NOWAIT|M_ZERO);
+		if (ata_zone == NULL) {
+			xpt_print(periph->path, "Couldn't malloc ata_zone "
+			    "data\n");
+			daprobedone(periph, start_ccb);
+			break;
+		}
+
+		retval = scsi_ata_read_log(&start_ccb->csio,
+		    /*retries*/ da_retry_count,
+		    /*cbfcnp*/ dadone,
+		    /*tag_action*/ MSG_SIMPLE_Q_TAG,
+		    /*log_address*/ ATA_IDENTIFY_DATA_LOG,
+		    /*page_number*/ ATA_IDL_ZDI,
+		    /*block_count*/ 1,
+		    /*protocol*/ softc->flags & DA_FLAG_CAN_ATA_DMA ?
+				 AP_PROTO_DMA : AP_PROTO_PIO_IN,
+		    /*data_ptr*/ (uint8_t *)ata_zone,
+		    /*dxfer_len*/ sizeof(*ata_zone),
+		    /*sense_len*/ SSD_FULL_SIZE,
+		    /*timeout*/ da_default_timeout * 1000);
+
+		if (retval != 0) {
+			xpt_print(periph->path, "scsi_ata_read_log() failed!");
+			free(ata_zone, M_SCSIDA);
+			daprobedone(periph, start_ccb);
+			break;
+		}
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ATA_ZONE;
+		xpt_action(start_ccb);
+
+		break;
+	}
+	case DA_STATE_PROBE_ZONE:
+	{
+		struct scsi_vpd_zoned_bdc *bdc;
+
+		/*
+		 * Note that this page will be supported for SCSI protocol
+		 * devices that support ZBC (SMR devices), as well as ATA
+		 * protocol devices that are behind a SAT (SCSI to ATA
+		 * Translation) layer that supports converting ZBC commands
+		 * to their ZAC equivalents.
+		 */
+		if (!scsi_vpd_supported_page(periph, SVPD_ZONED_BDC)) {
+			daprobedone(periph, start_ccb);
+			break;
+		}
+		bdc = (struct scsi_vpd_zoned_bdc *)
+			malloc(sizeof(*bdc), M_SCSIDA, M_NOWAIT|M_ZERO);
+
+		if (bdc == NULL) {
+			xpt_release_ccb(start_ccb);
+			xpt_print(periph->path, "Couldn't malloc zone VPD "
+			    "data\n");
+			break;
+		}
+		scsi_inquiry(&start_ccb->csio,
+			     /*retries*/da_retry_count,
+			     /*cbfcnp*/dadone,
+			     /*tag_action*/MSG_SIMPLE_Q_TAG,
+			     /*inq_buf*/(u_int8_t *)bdc,
+			     /*inq_len*/sizeof(*bdc),
+			     /*evpd*/TRUE,
+			     /*page_code*/SVPD_ZONED_BDC,
+			     /*sense_len*/SSD_FULL_SIZE,
+			     /*timeout*/da_default_timeout * 1000);
+		start_ccb->ccb_h.ccb_bp = NULL;
+		start_ccb->ccb_h.ccb_state = DA_CCB_PROBE_ZONE;
 		xpt_action(start_ccb);
 		break;
 	}
@@ -2549,11 +3657,11 @@ da_delete_unmap(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 	struct da_softc *softc = (struct da_softc *)periph->softc;;
 	struct bio *bp1;
 	uint8_t *buf = softc->unmap_buf;
+	struct scsi_unmap_desc *d = (void *)&buf[UNMAP_HEAD_SIZE];
 	uint64_t lba, lastlba = (uint64_t)-1;
 	uint64_t totalcount = 0;
 	uint64_t count;
-	uint32_t lastcount = 0, c;
-	uint32_t off, ranges = 0;
+	uint32_t c, lastcount = 0, ranges = 0;
 
 	/*
 	 * Currently this doesn't take the UNMAP
@@ -2565,11 +3673,19 @@ da_delete_unmap(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 	 * fewer LBA's than requested.
 	 */
 
-	softc->delete_running = 1;
 	bzero(softc->unmap_buf, sizeof(softc->unmap_buf));
 	bp1 = bp;
 	do {
-		bioq_remove(&softc->delete_queue, bp1);
+		/*
+		 * Note: ada and da are different in how they store the
+		 * pending bp's in a trim. ada stores all of them in the
+		 * trim_req.bps. da stores all but the first one in the
+		 * delete_run_queue. ada then completes all the bps in
+		 * its adadone() loop. da completes all the bps in the
+		 * delete_run_queue in dadone, and relies on the biodone
+		 * after to complete. This should be reconciled since there's
+		 * no real reason to do it differently. XXX
+		 */
 		if (bp1 != bp)
 			bioq_insert_tail(&softc->delete_run_queue, bp1);
 		lba = bp1->bio_pblkno;
@@ -2577,18 +3693,44 @@ da_delete_unmap(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 
 		/* Try to extend the previous range. */
 		if (lba == lastlba) {
-			c = min(count, softc->unmap_max_lba - lastcount);
+			c = omin(count, UNMAP_RANGE_MAX - lastcount);
+			lastlba += c;
 			lastcount += c;
-			off = ((ranges - 1) * UNMAP_RANGE_SIZE) +
-			      UNMAP_HEAD_SIZE;
-			scsi_ulto4b(lastcount, &buf[off + 8]);
+			scsi_ulto4b(lastcount, d[ranges - 1].length);
 			count -= c;
-			lba +=c;
+			lba += c;
 			totalcount += c;
+		} else if ((softc->quirks & DA_Q_STRICT_UNMAP) &&
+		    softc->unmap_gran != 0) {
+			/* Align length of the previous range. */
+			if ((c = lastcount % softc->unmap_gran) != 0) {
+				if (lastcount <= c) {
+					totalcount -= lastcount;
+					lastlba = (uint64_t)-1;
+					lastcount = 0;
+					ranges--;
+				} else {
+					totalcount -= c;
+					lastlba -= c;
+					lastcount -= c;
+					scsi_ulto4b(lastcount, d[ranges - 1].length);
+				}
+			}
+			/* Align beginning of the new range. */
+			c = (lba - softc->unmap_gran_align) % softc->unmap_gran;
+			if (c != 0) {
+				c = softc->unmap_gran - c;
+				if (count <= c) {
+					count = 0;
+				} else {
+					lba += c;
+					count -= c;
+				}
+			}
 		}
 
 		while (count > 0) {
-			c = min(count, softc->unmap_max_lba);
+			c = omin(count, UNMAP_RANGE_MAX);
 			if (totalcount + c > softc->unmap_max_lba ||
 			    ranges >= softc->unmap_max_ranges) {
 				xpt_print(periph->path,
@@ -2599,22 +3741,35 @@ da_delete_unmap(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 				    ranges, softc->unmap_max_ranges);
 				break;
 			}
-			off = (ranges * UNMAP_RANGE_SIZE) + UNMAP_HEAD_SIZE;
-			scsi_u64to8b(lba, &buf[off + 0]);
-			scsi_ulto4b(c, &buf[off + 8]);
+			scsi_u64to8b(lba, d[ranges].lba);
+			scsi_ulto4b(c, d[ranges].length);
 			lba += c;
 			totalcount += c;
 			ranges++;
 			count -= c;
+			lastlba = lba;
 			lastcount = c;
 		}
-		lastlba = lba;
-		bp1 = bioq_first(&softc->delete_queue);
-		if (bp1 == NULL || ranges >= softc->unmap_max_ranges ||
-		    totalcount + bp1->bio_bcount /
-		    softc->params.secsize > softc->unmap_max_lba)
+		bp1 = cam_iosched_next_trim(softc->cam_iosched);
+		if (bp1 == NULL)
 			break;
+		if (ranges >= softc->unmap_max_ranges ||
+		    totalcount + bp1->bio_bcount /
+		    softc->params.secsize > softc->unmap_max_lba) {
+			cam_iosched_put_back_trim(softc->cam_iosched, bp1);
+			break;
+		}
 	} while (1);
+
+	/* Align length of the last range. */
+	if ((softc->quirks & DA_Q_STRICT_UNMAP) && softc->unmap_gran != 0 &&
+	    (c = lastcount % softc->unmap_gran) != 0) {
+		if (lastcount <= c)
+			ranges--;
+		else
+			scsi_ulto4b(lastcount - c, d[ranges - 1].length);
+	}
+
 	scsi_ulto2b(ranges * 16 + 6, &buf[0]);
 	scsi_ulto2b(ranges * 16, &buf[2]);
 
@@ -2628,6 +3783,8 @@ da_delete_unmap(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 		   /*sense_len*/SSD_FULL_SIZE,
 		   da_default_timeout * 1000);
 	ccb->ccb_h.ccb_state = DA_CCB_DELETE;
+	ccb->ccb_h.flags |= CAM_UNLOCKED;
+	cam_iosched_submit_trim(softc->cam_iosched);
 }
 
 static void
@@ -2642,12 +3799,10 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 	uint32_t lastcount = 0, c, requestcount;
 	int ranges = 0, off, block_count;
 
-	softc->delete_running = 1;
 	bzero(softc->unmap_buf, sizeof(softc->unmap_buf));
 	bp1 = bp;
 	do {
-		bioq_remove(&softc->delete_queue, bp1);
-		if (bp1 != bp)
+		if (bp1 != bp)//XXX imp XXX
 			bioq_insert_tail(&softc->delete_run_queue, bp1);
 		lba = bp1->bio_pblkno;
 		count = bp1->bio_bcount / softc->params.secsize;
@@ -2655,7 +3810,7 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 
 		/* Try to extend the previous range. */
 		if (lba == lastlba) {
-			c = min(count, ATA_DSM_RANGE_MAX - lastcount);
+			c = omin(count, ATA_DSM_RANGE_MAX - lastcount);
 			lastcount += c;
 			off = (ranges - 1) * 8;
 			buf[off + 6] = lastcount & 0xff;
@@ -2665,7 +3820,7 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 		}
 
 		while (count > 0) {
-			c = min(count, ATA_DSM_RANGE_MAX);
+			c = omin(count, ATA_DSM_RANGE_MAX);
 			off = ranges * 8;
 
 			buf[off + 0] = lba & 0xff;
@@ -2682,7 +3837,7 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 			lastcount = c;
 			if (count != 0 && ranges == softc->trim_max_ranges) {
 				xpt_print(periph->path,
-				    "%s issuing short delete %ld > %ld",
+				    "%s issuing short delete %ld > %ld\n",
 				    da_delete_method_desc[softc->delete_method],
 				    requestcount,
 				    (softc->trim_max_ranges - ranges) *
@@ -2691,13 +3846,17 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 			}
 		}
 		lastlba = lba;
-		bp1 = bioq_first(&softc->delete_queue);
-		if (bp1 == NULL || bp1->bio_bcount / softc->params.secsize >
-		    (softc->trim_max_ranges - ranges) * ATA_DSM_RANGE_MAX)
+		bp1 = cam_iosched_next_trim(softc->cam_iosched);
+		if (bp1 == NULL)
 			break;
+		if (bp1->bio_bcount / softc->params.secsize >
+		    (softc->trim_max_ranges - ranges) * ATA_DSM_RANGE_MAX) {
+			cam_iosched_put_back_trim(softc->cam_iosched, bp1);
+			break;
+		}
 	} while (1);
 
-	block_count = (ranges + ATA_DSM_BLK_RANGES - 1) / ATA_DSM_BLK_RANGES;
+	block_count = howmany(ranges, ATA_DSM_BLK_RANGES);
 	scsi_ata_trim(&ccb->csio,
 		      /*retries*/da_retry_count,
 		      /*cbfcnp*/dadone,
@@ -2708,12 +3867,14 @@ da_delete_trim(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 		      /*sense_len*/SSD_FULL_SIZE,
 		      da_default_timeout * 1000);
 	ccb->ccb_h.ccb_state = DA_CCB_DELETE;
+	ccb->ccb_h.flags |= CAM_UNLOCKED;
+	cam_iosched_submit_trim(softc->cam_iosched);
 }
 
 /*
  * We calculate ws_max_blks here based off d_delmaxsize instead
  * of using softc->ws_max_blks as it is absolute max for the
- * device not the protocol max which may well be lower
+ * device not the protocol max which may well be lower.
  */
 static void
 da_delete_ws(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
@@ -2726,28 +3887,30 @@ da_delete_ws(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 
 	softc = (struct da_softc *)periph->softc;
 	ws_max_blks = softc->disk->d_delmaxsize / softc->params.secsize;
-	softc->delete_running = 1;
 	lba = bp->bio_pblkno;
 	count = 0;
 	bp1 = bp;
 	do {
-		bioq_remove(&softc->delete_queue, bp1);
-		if (bp1 != bp)
+		if (bp1 != bp)//XXX imp XXX
 			bioq_insert_tail(&softc->delete_run_queue, bp1);
 		count += bp1->bio_bcount / softc->params.secsize;
 		if (count > ws_max_blks) {
-			count = min(count, ws_max_blks);
 			xpt_print(periph->path,
-			    "%s issuing short delete %ld > %ld",
+			    "%s issuing short delete %ld > %ld\n",
 			    da_delete_method_desc[softc->delete_method],
 			    count, ws_max_blks);
+			count = omin(count, ws_max_blks);
 			break;
 		}
-		bp1 = bioq_first(&softc->delete_queue);
-		if (bp1 == NULL || lba + count != bp1->bio_pblkno ||
-		    count + bp1->bio_bcount /
-		    softc->params.secsize > ws_max_blks)
+		bp1 = cam_iosched_next_trim(softc->cam_iosched);
+		if (bp1 == NULL)
 			break;
+		if (lba + count != bp1->bio_pblkno ||
+		    count + bp1->bio_bcount /
+		    softc->params.secsize > ws_max_blks) {
+			cam_iosched_put_back_trim(softc->cam_iosched, bp1);
+			break;
+		}
 	} while (1);
 
 	scsi_write_same(&ccb->csio,
@@ -2764,6 +3927,8 @@ da_delete_ws(struct cam_periph *periph, union ccb *ccb, struct bio *bp)
 			/*sense_len*/SSD_FULL_SIZE,
 			da_default_timeout * 1000);
 	ccb->ccb_h.ccb_state = DA_CCB_DELETE;
+	ccb->ccb_h.flags |= CAM_UNLOCKED;
+	cam_iosched_submit_trim(softc->cam_iosched);
 }
 
 static int
@@ -2789,7 +3954,7 @@ cmd6workaround(union ccb *ccb)
 		 *
 		 * While we will attempt to choose an alternative delete method
 		 * this may result in short deletes if the existing delete
-		 * requests from geom are big for the new method choosen.
+		 * requests from geom are big for the new method chosen.
 		 *
 		 * This method assumes that the error which triggered this
 		 * will not retry the io otherwise a panic will occur
@@ -2806,16 +3971,9 @@ cmd6workaround(union ccb *ccb)
 				  da_delete_method_desc[old_method],
 				  da_delete_method_desc[softc->delete_method]);
 
-		if (DA_SIO) {
-			while ((bp = bioq_takefirst(&softc->delete_run_queue))
-			    != NULL)
-				bioq_disksort(&softc->delete_queue, bp);
-		} else {
-			while ((bp = bioq_takefirst(&softc->delete_run_queue))
-			    != NULL)
-				bioq_insert_tail(&softc->delete_queue, bp);
-		}
-		bioq_insert_tail(&softc->delete_queue,
+		while ((bp = bioq_takefirst(&softc->delete_run_queue)) != NULL)
+			cam_iosched_queue_work(softc->cam_iosched, bp);
+		cam_iosched_queue_work(softc->cam_iosched,
 		    (struct bio *)ccb->ccb_h.ccb_bp);
 		ccb->ccb_h.ccb_bp = NULL;
 		return (0);
@@ -2878,6 +4036,153 @@ cmd6workaround(union ccb *ccb)
 }
 
 static void
+dazonedone(struct cam_periph *periph, union ccb *ccb)
+{
+	struct da_softc *softc;
+	struct bio *bp;
+
+	softc = periph->softc;
+	bp = (struct bio *)ccb->ccb_h.ccb_bp;
+
+	switch (bp->bio_zone.zone_cmd) {
+	case DISK_ZONE_OPEN:
+	case DISK_ZONE_CLOSE:
+	case DISK_ZONE_FINISH:
+	case DISK_ZONE_RWP:
+		break;
+	case DISK_ZONE_REPORT_ZONES: {
+		uint32_t avail_len;
+		struct disk_zone_report *rep;
+		struct scsi_report_zones_hdr *hdr;
+		struct scsi_report_zones_desc *desc;
+		struct disk_zone_rep_entry *entry;
+		uint32_t num_alloced, hdr_len, num_avail;
+		uint32_t num_to_fill, i;
+		int ata;
+
+		rep = &bp->bio_zone.zone_params.report;
+		avail_len = ccb->csio.dxfer_len - ccb->csio.resid;
+		/*
+		 * Note that bio_resid isn't normally used for zone
+		 * commands, but it is used by devstat_end_transaction_bio()
+		 * to determine how much data was transferred.  Because
+		 * the size of the SCSI/ATA data structures is different
+		 * than the size of the BIO interface structures, the
+		 * amount of data actually transferred from the drive will
+		 * be different than the amount of data transferred to
+		 * the user.
+		 */
+		bp->bio_resid = ccb->csio.resid;
+		num_alloced = rep->entries_allocated;
+		hdr = (struct scsi_report_zones_hdr *)ccb->csio.data_ptr;
+		if (avail_len < sizeof(*hdr)) {
+			/*
+			 * Is there a better error than EIO here?  We asked
+			 * for at least the header, and we got less than
+			 * that.
+			 */
+			bp->bio_error = EIO;
+			bp->bio_flags |= BIO_ERROR;
+			bp->bio_resid = bp->bio_bcount;
+			break;
+		}
+
+		if (softc->zone_interface == DA_ZONE_IF_ATA_PASS)
+			ata = 1;
+		else
+			ata = 0;
+
+		hdr_len = ata ? le32dec(hdr->length) :
+				scsi_4btoul(hdr->length);
+		if (hdr_len > 0)
+			rep->entries_available = hdr_len / sizeof(*desc);
+		else
+			rep->entries_available = 0;
+		/*
+		 * NOTE: using the same values for the BIO version of the
+		 * same field as the SCSI/ATA values.  This means we could
+		 * get some additional values that aren't defined in bio.h
+		 * if more values of the same field are defined later.
+		 */
+		rep->header.same = hdr->byte4 & SRZ_SAME_MASK;
+		rep->header.maximum_lba = ata ?  le64dec(hdr->maximum_lba) :
+					  scsi_8btou64(hdr->maximum_lba);
+		/*
+		 * If the drive reports no entries that match the query,
+		 * we're done.
+		 */
+		if (hdr_len == 0) {
+			rep->entries_filled = 0;
+			break;
+		}
+
+		num_avail = min((avail_len - sizeof(*hdr)) / sizeof(*desc),
+				hdr_len / sizeof(*desc));
+		/*
+		 * If the drive didn't return any data, then we're done.
+		 */
+		if (num_avail == 0) {
+			rep->entries_filled = 0;
+			break;
+		}
+
+		num_to_fill = min(num_avail, rep->entries_allocated);
+		/*
+		 * If the user didn't allocate any entries for us to fill,
+		 * we're done.
+		 */
+		if (num_to_fill == 0) {
+			rep->entries_filled = 0;
+			break;
+		}
+
+		for (i = 0, desc = &hdr->desc_list[0], entry=&rep->entries[0];
+		     i < num_to_fill; i++, desc++, entry++) {
+			/*
+			 * NOTE: we're mapping the values here directly
+			 * from the SCSI/ATA bit definitions to the bio.h
+			 * definitons.  There is also a warning in
+			 * disk_zone.h, but the impact is that if
+			 * additional values are added in the SCSI/ATA
+			 * specs these will be visible to consumers of
+			 * this interface.
+			 */
+			entry->zone_type = desc->zone_type & SRZ_TYPE_MASK;
+			entry->zone_condition =
+			    (desc->zone_flags & SRZ_ZONE_COND_MASK) >>
+			    SRZ_ZONE_COND_SHIFT;
+			entry->zone_flags |= desc->zone_flags &
+			    (SRZ_ZONE_NON_SEQ|SRZ_ZONE_RESET);
+			entry->zone_length =
+			    ata ? le64dec(desc->zone_length) :
+				  scsi_8btou64(desc->zone_length);
+			entry->zone_start_lba =
+			    ata ? le64dec(desc->zone_start_lba) :
+				  scsi_8btou64(desc->zone_start_lba);
+			entry->write_pointer_lba =
+			    ata ? le64dec(desc->write_pointer_lba) :
+				  scsi_8btou64(desc->write_pointer_lba);
+		}
+		rep->entries_filled = num_to_fill;
+		break;
+	}
+	case DISK_ZONE_GET_PARAMS:
+	default:
+		/*
+		 * In theory we should not get a GET_PARAMS bio, since it
+		 * should be handled without queueing the command to the
+		 * drive.
+		 */
+		panic("%s: Invalid zone command %d", __func__,
+		    bp->bio_zone.zone_cmd);
+		break;
+	}
+
+	if (bp->bio_zone.zone_cmd == DISK_ZONE_REPORT_ZONES)
+		free(ccb->csio.data_ptr, M_SCSIDA);
+}
+
+static void
 dadone(struct cam_periph *periph, union ccb *done_ccb)
 {
 	struct da_softc *softc;
@@ -2898,6 +4203,7 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 	{
 		struct bio *bp, *bp1;
 
+		cam_periph_lock(periph);
 		bp = (struct bio *)done_ccb->ccb_h.ccb_bp;
 		if ((done_ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
 			int error;
@@ -2914,6 +4220,7 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				 * A retry was scheduled, so
 				 * just return.
 				 */
+				cam_periph_unlock(periph);
 				return;
 			}
 			bp = (struct bio *)done_ccb->ccb_h.ccb_bp;
@@ -2940,9 +4247,12 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 					xpt_print(periph->path,
 					    "Invalidating pack\n");
 					softc->flags |= DA_FLAG_PACK_INVALID;
+#ifdef CAM_IO_STATS
+					softc->invalidations++;
+#endif
 					queued_error = ENXIO;
 				}
-				bioq_flush(&softc->bio_queue, NULL,
+				cam_iosched_flush(softc->cam_iosched, NULL,
 					   queued_error);
 				if (bp != NULL) {
 					bp->bio_error = error;
@@ -2967,11 +4277,14 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 		} else if (bp != NULL) {
 			if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0)
 				panic("REQ_CMP with QFRZN");
-			if (state == DA_CCB_DELETE)
+			if (bp->bio_cmd == BIO_ZONE)
+				dazonedone(periph, done_ccb);
+			else if (state == DA_CCB_DELETE)
 				bp->bio_resid = 0;
 			else
 				bp->bio_resid = csio->resid;
-			if (csio->resid > 0)
+			if ((csio->resid > 0)
+			 && (bp->bio_cmd != BIO_ZONE))
 				bp->bio_flags |= BIO_ERROR;
 			if (softc->error_inject != 0) {
 				bp->bio_error = softc->error_inject;
@@ -2981,18 +4294,33 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			}
 		}
 
-		/*
-		 * Block out any asynchronous callbacks
-		 * while we touch the pending ccb list.
-		 */
 		LIST_REMOVE(&done_ccb->ccb_h, periph_links.le);
-		softc->outstanding_cmds--;
-		if (softc->outstanding_cmds == 0)
-			softc->flags |= DA_FLAG_WENT_IDLE;
+		if (LIST_EMPTY(&softc->pending_ccbs))
+			softc->flags |= DA_FLAG_WAS_OTAG;
 
+		cam_iosched_bio_complete(softc->cam_iosched, bp, done_ccb);
+		xpt_release_ccb(done_ccb);
 		if (state == DA_CCB_DELETE) {
-			while ((bp1 = bioq_takefirst(&softc->delete_run_queue))
-			    != NULL) {
+			TAILQ_HEAD(, bio) queue;
+
+			TAILQ_INIT(&queue);
+			TAILQ_CONCAT(&queue, &softc->delete_run_queue.queue, bio_queue);
+			softc->delete_run_queue.insert_point = NULL;
+			/*
+			 * Normally, the xpt_release_ccb() above would make sure
+			 * that when we have more work to do, that work would
+			 * get kicked off. However, we specifically keep
+			 * delete_running set to 0 before the call above to
+			 * allow other I/O to progress when many BIO_DELETE
+			 * requests are pushed down. We set delete_running to 0
+			 * and call daschedule again so that we don't stall if
+			 * there are no other I/Os pending apart from BIO_DELETEs.
+			 */
+			cam_iosched_trim_done(softc->cam_iosched);
+			daschedule(periph);
+			cam_periph_unlock(periph);
+			while ((bp1 = TAILQ_FIRST(&queue)) != NULL) {
+				TAILQ_REMOVE(&queue, bp1, bio_queue);
 				bp1->bio_error = bp->bio_error;
 				if (bp->bio_flags & BIO_ERROR) {
 					bp1->bio_flags |= BIO_ERROR;
@@ -3001,13 +4329,59 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 					bp1->bio_resid = 0;
 				biodone(bp1);
 			}
-			softc->delete_running = 0;
-			if (bp != NULL)
-				biodone(bp);
+		} else {
 			daschedule(periph);
-		} else if (bp != NULL)
+			cam_periph_unlock(periph);
+		}
+		if (bp != NULL)
 			biodone(bp);
-		break;
+		return;
+	}
+	case DA_CCB_PROBE_WP:
+	{
+		struct scsi_mode_header_6 *mode_hdr6;
+		struct scsi_mode_header_10 *mode_hdr10;
+		uint8_t dev_spec;
+
+		if (softc->minimum_cmd_size > 6) {
+			mode_hdr10 = (struct scsi_mode_header_10 *)csio->data_ptr;
+			dev_spec = mode_hdr10->dev_spec;
+		} else {
+			mode_hdr6 = (struct scsi_mode_header_6 *)csio->data_ptr;
+			dev_spec = mode_hdr6->dev_spec;
+		}
+		if (cam_ccb_status(done_ccb) == CAM_REQ_CMP) {
+			if ((dev_spec & 0x80) != 0)
+				softc->disk->d_flags |= DISKFLAG_WRITE_PROTECT;
+			else
+				softc->disk->d_flags &= ~DISKFLAG_WRITE_PROTECT;
+		} else {
+			int error;
+
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				if ((done_ccb->ccb_h.status & CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+		}
+
+		free(csio->data_ptr, M_SCSIDA);
+		xpt_release_ccb(done_ccb);
+		if ((softc->flags & DA_FLAG_CAN_RC16) != 0)
+			softc->state = DA_STATE_PROBE_RC16;
+		else
+			softc->state = DA_STATE_PROBE_RC;
+		xpt_schedule(periph, priority);
+		return;
 	}
 	case DA_CCB_PROBE_RC:
 	case DA_CCB_PROBE_RC16:
@@ -3030,13 +4404,11 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			struct disk_params *dp;
 			uint32_t block_size;
 			uint64_t maxsector;
-			u_int lbppbe;	/* LB per physical block exponent. */
 			u_int lalba;	/* Lowest aligned LBA. */
 
 			if (state == DA_CCB_PROBE_RC) {
 				block_size = scsi_4btoul(rdcap->length);
 				maxsector = scsi_4btoul(rdcap->addr);
-				lbppbe = 0;
 				lalba = 0;
 
 				/*
@@ -3057,7 +4429,6 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			} else {
 				block_size = scsi_4btoul(rcaplong->length);
 				maxsector = scsi_8btou64(rcaplong->addr);
-				lbppbe = rcaplong->prot_lbppbe & SRC16_LBPPBE;
 				lalba = scsi_2btoul(rcaplong->lalba_lbp);
 			}
 
@@ -3066,11 +4437,12 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			 * give them an 'illegal' value we'll avoid that
 			 * here.
 			 */
-			if (block_size == 0 && maxsector == 0) {
+			if (block_size == 0) {
 				block_size = 512;
-				maxsector = -1;
+				if (maxsector == 0)
+					maxsector = -1;
 			}
-			if (block_size >= MAXPHYS || block_size == 0) {
+			if (block_size >= MAXPHYS) {
 				xpt_print(periph->path,
 				    "unsupportable block size %ju\n",
 				    (uintmax_t) block_size);
@@ -3087,13 +4459,10 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				lbp = (lalba & SRC16_LBPME_A);
 				dp = &softc->params;
 				snprintf(announce_buf, sizeof(announce_buf),
-				        "%juMB (%ju %u byte sectors: %dH %dS/T "
-                                        "%dC)", (uintmax_t)
-	                                (((uintmax_t)dp->secsize *
-				        dp->sectors) / (1024*1024)),
-			                (uintmax_t)dp->sectors,
-				        dp->secsize, dp->heads,
-                                        dp->secs_per_track, dp->cylinders);
+				    "%juMB (%ju %u byte sectors)",
+				    ((uintmax_t)dp->secsize * dp->sectors) /
+				     (1024 * 1024),
+				    (uintmax_t)dp->sectors, dp->secsize);
 			}
 		} else {
 			int	error;
@@ -3150,7 +4519,8 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				    (((csio->ccb_h.status & CAM_STATUS_MASK) ==
 					CAM_REQ_INVALID) ||
 				     ((have_sense) &&
-				      (error_code == SSD_CURRENT_ERROR) &&
+				      (error_code == SSD_CURRENT_ERROR ||
+				       error_code == SSD_DESC_CURRENT_ERROR) &&
 				      (sense_key == SSD_KEY_ILLEGAL_REQUEST)))) {
 					softc->flags &= ~DA_FLAG_CAN_RC16;
 					free(rdcap, M_SCSIDA);
@@ -3158,7 +4528,8 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 					softc->state = DA_STATE_PROBE_RC;
 					xpt_schedule(periph, priority);
 					return;
-				} else
+				}
+
 				/*
 				 * Attach to anything that claims to be a
 				 * direct access or optical disk device,
@@ -3166,7 +4537,8 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				 * unit not supported" (0x25) error.
 				 */
 				if ((have_sense) && (asc != 0x25)
-				 && (error_code == SSD_CURRENT_ERROR)) {
+				 && (error_code == SSD_CURRENT_ERROR
+				  || error_code == SSD_DESC_CURRENT_ERROR)) {
 					const char *sense_key_desc;
 					const char *asc_desc;
 
@@ -3202,7 +4574,8 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			}
 		}
 		free(csio->data_ptr, M_SCSIDA);
-		if (announce_buf[0] != '\0' && ((softc->flags & DA_FLAG_PROBED) == 0)) {
+		if (announce_buf[0] != '\0' &&
+		    ((softc->flags & DA_FLAG_ANNOUNCED) == 0)) {
 			/*
 			 * Create our sysctl variables, now that we know
 			 * we have successfully attached.
@@ -3220,14 +4593,21 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			}
 		}
 
+		/* We already probed the device. */
+		if (softc->flags & DA_FLAG_PROBED) {
+			daprobedone(periph, done_ccb);
+			return;
+		}
+
 		/* Ensure re-probe doesn't see old delete. */
 		softc->delete_available = 0;
-		if (lbp) {
+		dadeleteflag(softc, DA_DELETE_ZERO, 1);
+		if (lbp && (softc->quirks & DA_Q_NO_UNMAP) == 0) {
 			/*
 			 * Based on older SBC-3 spec revisions
 			 * any of the UNMAP methods "may" be
 			 * available via LBP given this flag so
-			 * we flag all of them as availble and
+			 * we flag all of them as available and
 			 * then remove those which further
 			 * probes confirm aren't available
 			 * later.
@@ -3238,7 +4618,6 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			 */
 			dadeleteflag(softc, DA_DELETE_WS16, 1);
 			dadeleteflag(softc, DA_DELETE_WS10, 1);
-			dadeleteflag(softc, DA_DELETE_ZERO, 1);
 			dadeleteflag(softc, DA_DELETE_UNMAP, 1);
 
 			xpt_release_ccb(done_ccb);
@@ -3267,18 +4646,8 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				     (lbp->flags & SVPD_LBP_WS16));
 			dadeleteflag(softc, DA_DELETE_WS10,
 				     (lbp->flags & SVPD_LBP_WS10));
-			dadeleteflag(softc, DA_DELETE_ZERO,
-				     (lbp->flags & SVPD_LBP_WS10));
 			dadeleteflag(softc, DA_DELETE_UNMAP,
 				     (lbp->flags & SVPD_LBP_UNMAP));
-
-			if (lbp->flags & SVPD_LBP_UNMAP) {
-				free(lbp, M_SCSIDA);
-				xpt_release_ccb(done_ccb);
-				softc->state = DA_STATE_PROBE_BLK_LIMITS;
-				xpt_schedule(periph, priority);
-				return;
-			}
 		} else {
 			int error;
 			error = daerror(done_ccb, CAM_RETRY_SELTO,
@@ -3304,7 +4673,7 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 
 		free(lbp, M_SCSIDA);
 		xpt_release_ccb(done_ccb);
-		softc->state = DA_STATE_PROBE_BDC;
+		softc->state = DA_STATE_PROBE_BLK_LIMITS;
 		xpt_schedule(periph, priority);
 		return;
 	}
@@ -3315,12 +4684,24 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 		block_limits = (struct scsi_vpd_block_limits *)csio->data_ptr;
 
 		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			uint32_t max_txfer_len = scsi_4btoul(
+				block_limits->max_txfer_len);
 			uint32_t max_unmap_lba_cnt = scsi_4btoul(
 				block_limits->max_unmap_lba_cnt);
 			uint32_t max_unmap_blk_cnt = scsi_4btoul(
 				block_limits->max_unmap_blk_cnt);
+			uint32_t unmap_gran = scsi_4btoul(
+				block_limits->opt_unmap_grain);
+			uint32_t unmap_gran_align = scsi_4btoul(
+				block_limits->unmap_grain_align);
 			uint64_t ws_max_blks = scsi_8btou64(
 				block_limits->max_write_same_length);
+
+			if (max_txfer_len != 0) {
+				softc->disk->d_maxsize = MIN(softc->maxio,
+				    (off_t)max_txfer_len * softc->params.secsize);
+			}
+
 			/*
 			 * We should already support UNMAP but we check lba
 			 * and block count to be sure
@@ -3330,6 +4711,14 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 				softc->unmap_max_lba = max_unmap_lba_cnt;
 				softc->unmap_max_ranges = min(max_unmap_blk_cnt,
 					UNMAP_MAX_RANGES);
+				if (unmap_gran > 1) {
+					softc->unmap_gran = unmap_gran;
+					if (unmap_gran_align & 0x80000000) {
+						softc->unmap_gran_align =
+						    unmap_gran_align &
+						    0x7fffffff;
+					}
+				}
 			} else {
 				/*
 				 * Unexpected UNMAP limits which means the
@@ -3373,18 +4762,70 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 	}
 	case DA_CCB_PROBE_BDC:
 	{
-		struct scsi_vpd_block_characteristics *bdc;
+		struct scsi_vpd_block_device_characteristics *bdc;
 
-		bdc = (struct scsi_vpd_block_characteristics *)csio->data_ptr;
+		bdc = (struct scsi_vpd_block_device_characteristics *)
+		    csio->data_ptr;
 
 		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			uint32_t valid_len;
+
 			/*
 			 * Disable queue sorting for non-rotational media
 			 * by default.
 			 */
-			if (scsi_2btoul(bdc->medium_rotation_rate) ==
-			    SVPD_BDC_RATE_NONE_ROTATING)
-				softc->sort_io_queue = 0;
+			u_int16_t old_rate = softc->disk->d_rotation_rate;
+
+			valid_len = csio->dxfer_len - csio->resid;
+			if (SBDC_IS_PRESENT(bdc, valid_len,
+			    medium_rotation_rate)) {
+				softc->disk->d_rotation_rate =
+					scsi_2btoul(bdc->medium_rotation_rate);
+				if (softc->disk->d_rotation_rate ==
+				    SVPD_BDC_RATE_NON_ROTATING) {
+					cam_iosched_set_sort_queue(
+					    softc->cam_iosched, 0);
+					softc->rotating = 0;
+				}
+				if (softc->disk->d_rotation_rate != old_rate) {
+					disk_attr_changed(softc->disk,
+					    "GEOM::rotation_rate", M_NOWAIT);
+				}
+			}
+			if ((SBDC_IS_PRESENT(bdc, valid_len, flags))
+			 && (softc->zone_mode == DA_ZONE_NONE)) {
+				int ata_proto;
+
+				if (scsi_vpd_supported_page(periph,
+				    SVPD_ATA_INFORMATION))
+					ata_proto = 1;
+				else
+					ata_proto = 0;
+
+				/*
+				 * The Zoned field will only be set for
+				 * Drive Managed and Host Aware drives.  If
+				 * they are Host Managed, the device type
+				 * in the standard INQUIRY data should be
+				 * set to T_ZBC_HM (0x14).
+				 */
+				if ((bdc->flags & SVPD_ZBC_MASK) ==
+				     SVPD_HAW_ZBC) {
+					softc->zone_mode = DA_ZONE_HOST_AWARE;
+					softc->zone_interface = (ata_proto) ?
+					   DA_ZONE_IF_ATA_SAT : DA_ZONE_IF_SCSI;
+				} else if ((bdc->flags & SVPD_ZBC_MASK) ==
+				     SVPD_DM_ZBC) {
+					softc->zone_mode =DA_ZONE_DRIVE_MANAGED;
+					softc->zone_interface = (ata_proto) ?
+					   DA_ZONE_IF_ATA_SAT : DA_ZONE_IF_SCSI;
+				} else if ((bdc->flags & SVPD_ZBC_MASK) != 
+					  SVPD_ZBC_NR) {
+					xpt_print(periph->path, "Unknown zoned "
+					    "type %#x",
+					    bdc->flags & SVPD_ZBC_MASK);
+				}
+			}
 		} else {
 			int error;
 			error = daerror(done_ccb, CAM_RETRY_SELTO,
@@ -3413,15 +4854,22 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 	{
 		int i;
 		struct ata_params *ata_params;
+		int continue_probe;
+		int error;
 		int16_t *ptr;
 
 		ata_params = (struct ata_params *)csio->data_ptr;
 		ptr = (uint16_t *)ata_params;
+		continue_probe = 0;
+		error = 0;
 
 		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			uint16_t old_rate;
+
 			for (i = 0; i < sizeof(*ata_params) / 2; i++)
 				ptr[i] = le16toh(ptr[i]);
-			if (ata_params->support_dsm & ATA_SUPPORT_DSM_TRIM) {
+			if (ata_params->support_dsm & ATA_SUPPORT_DSM_TRIM &&
+			    (softc->quirks & DA_Q_NO_UNMAP) == 0) {
 				dadeleteflag(softc, DA_DELETE_ATA_TRIM, 1);
 				if (ata_params->max_dsm_blocks != 0)
 					softc->trim_max_ranges = min(
@@ -3433,10 +4881,514 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			 * Disable queue sorting for non-rotational media
 			 * by default.
 			 */
-			if (ata_params->media_rotation_rate == 1)
-				softc->sort_io_queue = 0;
+			old_rate = softc->disk->d_rotation_rate;
+			softc->disk->d_rotation_rate =
+			    ata_params->media_rotation_rate;
+			if (softc->disk->d_rotation_rate ==
+			    ATA_RATE_NON_ROTATING) {
+				cam_iosched_set_sort_queue(softc->cam_iosched, 0);
+				softc->rotating = 0;
+			}
+			if (softc->disk->d_rotation_rate != old_rate) {
+				disk_attr_changed(softc->disk,
+				    "GEOM::rotation_rate", M_NOWAIT);
+			}
+
+			if (ata_params->capabilities1 & ATA_SUPPORT_DMA)
+				softc->flags |= DA_FLAG_CAN_ATA_DMA;
+
+			if (ata_params->support.extension &
+			    ATA_SUPPORT_GENLOG)
+				softc->flags |= DA_FLAG_CAN_ATA_LOG;
+
+			/*
+			 * At this point, if we have a SATA host aware drive,
+			 * we communicate via ATA passthrough unless the
+			 * SAT layer supports ZBC -> ZAC translation.  In
+			 * that case,
+			 */
+			/*
+			 * XXX KDM figure out how to detect a host managed
+			 * SATA drive.
+			 */
+			if (softc->zone_mode == DA_ZONE_NONE) {
+				/*
+				 * Note that we don't override the zone
+				 * mode or interface if it has already been
+				 * set.  This is because it has either been
+				 * set as a quirk, or when we probed the
+				 * SCSI Block Device Characteristics page,
+				 * the zoned field was set.  The latter
+				 * means that the SAT layer supports ZBC to
+				 * ZAC translation, and we would prefer to
+				 * use that if it is available.
+				 */
+				if ((ata_params->support3 &
+				    ATA_SUPPORT_ZONE_MASK) ==
+				    ATA_SUPPORT_ZONE_HOST_AWARE) {
+					softc->zone_mode = DA_ZONE_HOST_AWARE;
+					softc->zone_interface =
+					    DA_ZONE_IF_ATA_PASS;
+				} else if ((ata_params->support3 &
+					    ATA_SUPPORT_ZONE_MASK) ==
+					    ATA_SUPPORT_ZONE_DEV_MANAGED) {
+					softc->zone_mode =DA_ZONE_DRIVE_MANAGED;
+					softc->zone_interface =
+					    DA_ZONE_IF_ATA_PASS;
+				}
+			}
+
 		} else {
-			int error;
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				if ((done_ccb->ccb_h.status &
+				     CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+		}
+
+		if ((softc->zone_mode == DA_ZONE_HOST_AWARE)
+		 || (softc->zone_mode == DA_ZONE_HOST_MANAGED)) {
+			/*
+			 * If the ATA IDENTIFY failed, we could be talking
+			 * to a SCSI drive, although that seems unlikely,
+			 * since the drive did report that it supported the 
+			 * ATA Information VPD page.  If the ATA IDENTIFY
+			 * succeeded, and the SAT layer doesn't support
+			 * ZBC -> ZAC translation, continue on to get the
+			 * directory of ATA logs, and complete the rest of
+			 * the ZAC probe.  If the SAT layer does support
+			 * ZBC -> ZAC translation, we want to use that,
+			 * and we'll probe the SCSI Zoned Block Device
+			 * Characteristics VPD page next.
+			 */
+			if ((error == 0)
+			 && (softc->flags & DA_FLAG_CAN_ATA_LOG)
+			 && (softc->zone_interface == DA_ZONE_IF_ATA_PASS))
+				softc->state = DA_STATE_PROBE_ATA_LOGDIR;
+			else
+				softc->state = DA_STATE_PROBE_ZONE;
+			continue_probe = 1;
+		}
+		if (continue_probe != 0) {
+			xpt_release_ccb(done_ccb);
+			xpt_schedule(periph, priority);
+			return;
+		} else
+			daprobedone(periph, done_ccb);
+		return;
+	}
+	case DA_CCB_PROBE_ATA_LOGDIR:
+	{
+		int error;
+
+		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			error = 0;
+			softc->valid_logdir_len = 0;
+			bzero(&softc->ata_logdir, sizeof(softc->ata_logdir));
+			softc->valid_logdir_len =
+				csio->dxfer_len - csio->resid;
+			if (softc->valid_logdir_len > 0)
+				bcopy(csio->data_ptr, &softc->ata_logdir,
+				    min(softc->valid_logdir_len,
+					sizeof(softc->ata_logdir)));
+			/*
+			 * Figure out whether the Identify Device log is
+			 * supported.  The General Purpose log directory
+			 * has a header, and lists the number of pages
+			 * available for each GP log identified by the
+			 * offset into the list.
+			 */
+			if ((softc->valid_logdir_len >=
+			    ((ATA_IDENTIFY_DATA_LOG + 1) * sizeof(uint16_t)))
+			 && (le16dec(softc->ata_logdir.header) == 
+			     ATA_GP_LOG_DIR_VERSION)
+			 && (le16dec(&softc->ata_logdir.num_pages[
+			     (ATA_IDENTIFY_DATA_LOG *
+			     sizeof(uint16_t)) - sizeof(uint16_t)]) > 0)){
+				softc->flags |= DA_FLAG_CAN_ATA_IDLOG;
+			} else {
+				softc->flags &= ~DA_FLAG_CAN_ATA_IDLOG;
+			}
+		} else {
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				/*
+				 * If we can't get the ATA log directory,
+				 * then ATA logs are effectively not
+				 * supported even if the bit is set in the
+				 * identify data.
+				 */ 
+				softc->flags &= ~(DA_FLAG_CAN_ATA_LOG |
+						  DA_FLAG_CAN_ATA_IDLOG);
+				if ((done_ccb->ccb_h.status &
+				     CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+		}
+
+		free(csio->data_ptr, M_SCSIDA);
+
+		if ((error == 0)
+		 && (softc->flags & DA_FLAG_CAN_ATA_IDLOG)) {
+			softc->state = DA_STATE_PROBE_ATA_IDDIR;
+			xpt_release_ccb(done_ccb);
+			xpt_schedule(periph, priority);
+			return;
+		} 
+		daprobedone(periph, done_ccb);
+		return;
+	}
+	case DA_CCB_PROBE_ATA_IDDIR:
+	{
+		int error;
+
+		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			off_t entries_offset, max_entries;
+			error = 0;
+
+			softc->valid_iddir_len = 0;
+			bzero(&softc->ata_iddir, sizeof(softc->ata_iddir));
+			softc->flags &= ~(DA_FLAG_CAN_ATA_SUPCAP |
+					  DA_FLAG_CAN_ATA_ZONE);
+			softc->valid_iddir_len =
+				csio->dxfer_len - csio->resid;
+			if (softc->valid_iddir_len > 0)
+				bcopy(csio->data_ptr, &softc->ata_iddir,
+				    min(softc->valid_iddir_len,
+					sizeof(softc->ata_iddir)));
+
+			entries_offset =
+			    __offsetof(struct ata_identify_log_pages,entries);
+			max_entries = softc->valid_iddir_len - entries_offset;
+			if ((softc->valid_iddir_len > (entries_offset + 1))
+			 && (le64dec(softc->ata_iddir.header) ==
+			     ATA_IDLOG_REVISION)
+			 && (softc->ata_iddir.entry_count > 0)) {
+				int num_entries, i;
+
+				num_entries = softc->ata_iddir.entry_count;
+				num_entries = min(num_entries,
+				   softc->valid_iddir_len - entries_offset);
+				for (i = 0; i < num_entries &&
+				     i < max_entries; i++) {
+					if (softc->ata_iddir.entries[i] ==
+					    ATA_IDL_SUP_CAP)
+						softc->flags |=
+						    DA_FLAG_CAN_ATA_SUPCAP;
+					else if (softc->ata_iddir.entries[i]==
+						 ATA_IDL_ZDI)
+						softc->flags |=
+						    DA_FLAG_CAN_ATA_ZONE;
+
+					if ((softc->flags &
+					     DA_FLAG_CAN_ATA_SUPCAP)
+					 && (softc->flags &
+					     DA_FLAG_CAN_ATA_ZONE))
+						break;
+				}
+			}
+		} else {
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				/*
+				 * If we can't get the ATA Identify Data log
+				 * directory, then it effectively isn't
+				 * supported even if the ATA Log directory
+				 * a non-zero number of pages present for
+				 * this log.
+				 */
+				softc->flags &= ~DA_FLAG_CAN_ATA_IDLOG;
+				if ((done_ccb->ccb_h.status &
+				     CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+		}
+
+		free(csio->data_ptr, M_SCSIDA);
+
+		if ((error == 0)
+		 && (softc->flags & DA_FLAG_CAN_ATA_SUPCAP)) {
+			softc->state = DA_STATE_PROBE_ATA_SUP;
+			xpt_release_ccb(done_ccb);
+			xpt_schedule(periph, priority);
+			return;
+		} 
+		daprobedone(periph, done_ccb);
+		return;
+	}
+	case DA_CCB_PROBE_ATA_SUP:
+	{
+		int error;
+
+		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			uint32_t valid_len;
+			size_t needed_size;
+			struct ata_identify_log_sup_cap *sup_cap;
+			error = 0;
+
+			sup_cap = (struct ata_identify_log_sup_cap *)
+			    csio->data_ptr;
+			valid_len = csio->dxfer_len - csio->resid;
+			needed_size =
+			    __offsetof(struct ata_identify_log_sup_cap,
+			    sup_zac_cap) + 1 + sizeof(sup_cap->sup_zac_cap);
+			if (valid_len >= needed_size) {
+				uint64_t zoned, zac_cap;
+
+				zoned = le64dec(sup_cap->zoned_cap);
+				if (zoned & ATA_ZONED_VALID) {
+					/*
+					 * This should have already been
+					 * set, because this is also in the
+					 * ATA identify data.
+					 */
+					if ((zoned & ATA_ZONED_MASK) ==
+					    ATA_SUPPORT_ZONE_HOST_AWARE)
+						softc->zone_mode =
+						    DA_ZONE_HOST_AWARE;
+					else if ((zoned & ATA_ZONED_MASK) ==
+					    ATA_SUPPORT_ZONE_DEV_MANAGED)
+						softc->zone_mode =
+						    DA_ZONE_DRIVE_MANAGED;
+				}
+
+				zac_cap = le64dec(sup_cap->sup_zac_cap);
+				if (zac_cap & ATA_SUP_ZAC_CAP_VALID) {
+					if (zac_cap & ATA_REPORT_ZONES_SUP)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_RZ_SUP;
+					if (zac_cap & ATA_ND_OPEN_ZONE_SUP)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_OPEN_SUP;
+					if (zac_cap & ATA_ND_CLOSE_ZONE_SUP)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_CLOSE_SUP;
+					if (zac_cap & ATA_ND_FINISH_ZONE_SUP)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_FINISH_SUP;
+					if (zac_cap & ATA_ND_RWP_SUP)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_RWP_SUP;
+				} else {
+					/*
+					 * This field was introduced in
+					 * ACS-4, r08 on April 28th, 2015.
+					 * If the drive firmware was written
+					 * to an earlier spec, it won't have
+					 * the field.  So, assume all
+					 * commands are supported.
+					 */ 
+					softc->zone_flags |=
+					    DA_ZONE_FLAG_SUP_MASK;
+				}
+					    
+			}
+		} else {
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				/*
+				 * If we can't get the ATA Identify Data
+				 * Supported Capabilities page, clear the
+				 * flag...
+				 */
+				softc->flags &= ~DA_FLAG_CAN_ATA_SUPCAP;
+				/*
+				 * And clear zone capabilities.
+				 */
+				softc->zone_flags &= ~DA_ZONE_FLAG_SUP_MASK;
+				if ((done_ccb->ccb_h.status &
+				     CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+		}
+
+		free(csio->data_ptr, M_SCSIDA);
+
+		if ((error == 0)
+		 && (softc->flags & DA_FLAG_CAN_ATA_ZONE)) {
+			softc->state = DA_STATE_PROBE_ATA_ZONE;
+			xpt_release_ccb(done_ccb);
+			xpt_schedule(periph, priority);
+			return;
+		} 
+		daprobedone(periph, done_ccb);
+		return;
+	}
+	case DA_CCB_PROBE_ATA_ZONE:
+	{
+		int error;
+
+		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			struct ata_zoned_info_log *zi_log;
+			uint32_t valid_len;
+			size_t needed_size;
+
+			zi_log = (struct ata_zoned_info_log *)csio->data_ptr;
+
+			valid_len = csio->dxfer_len - csio->resid;
+			needed_size = __offsetof(struct ata_zoned_info_log,
+			    version_info) + 1 + sizeof(zi_log->version_info);
+			if (valid_len >= needed_size) {
+				uint64_t tmpvar;
+
+				tmpvar = le64dec(zi_log->zoned_cap);
+				if (tmpvar & ATA_ZDI_CAP_VALID) {
+					if (tmpvar & ATA_ZDI_CAP_URSWRZ)
+						softc->zone_flags |=
+						    DA_ZONE_FLAG_URSWRZ;
+					else
+						softc->zone_flags &=
+						    ~DA_ZONE_FLAG_URSWRZ;
+				}
+				tmpvar = le64dec(zi_log->optimal_seq_zones);
+				if (tmpvar & ATA_ZDI_OPT_SEQ_VALID) {
+					softc->zone_flags |=
+					    DA_ZONE_FLAG_OPT_SEQ_SET;
+					softc->optimal_seq_zones = (tmpvar &
+					    ATA_ZDI_OPT_SEQ_MASK);
+				} else {
+					softc->zone_flags &=
+					    ~DA_ZONE_FLAG_OPT_SEQ_SET;
+					softc->optimal_seq_zones = 0;
+				}
+
+				tmpvar =le64dec(zi_log->optimal_nonseq_zones);
+				if (tmpvar & ATA_ZDI_OPT_NS_VALID) {
+					softc->zone_flags |=
+					    DA_ZONE_FLAG_OPT_NONSEQ_SET;
+					softc->optimal_nonseq_zones =
+					    (tmpvar & ATA_ZDI_OPT_NS_MASK);
+				} else {
+					softc->zone_flags &=
+					    ~DA_ZONE_FLAG_OPT_NONSEQ_SET;
+					softc->optimal_nonseq_zones = 0;
+				}
+
+				tmpvar = le64dec(zi_log->max_seq_req_zones);
+				if (tmpvar & ATA_ZDI_MAX_SEQ_VALID) {
+					softc->zone_flags |=
+					    DA_ZONE_FLAG_MAX_SEQ_SET;
+					softc->max_seq_zones =
+					    (tmpvar & ATA_ZDI_MAX_SEQ_MASK);
+				} else {
+					softc->zone_flags &=
+					    ~DA_ZONE_FLAG_MAX_SEQ_SET;
+					softc->max_seq_zones = 0;
+				}
+			}
+		} else {
+			error = daerror(done_ccb, CAM_RETRY_SELTO,
+					SF_RETRY_UA|SF_NO_PRINT);
+			if (error == ERESTART)
+				return;
+			else if (error != 0) {
+				softc->flags &= ~DA_FLAG_CAN_ATA_ZONE;
+				softc->flags &= ~DA_ZONE_FLAG_SET_MASK;
+
+				if ((done_ccb->ccb_h.status &
+				     CAM_DEV_QFRZN) != 0) {
+					/* Don't wedge this device's queue */
+					cam_release_devq(done_ccb->ccb_h.path,
+							 /*relsim_flags*/0,
+							 /*reduction*/0,
+							 /*timeout*/0,
+							 /*getcount_only*/0);
+				}
+			}
+	
+		}
+		free(csio->data_ptr, M_SCSIDA);
+
+		daprobedone(periph, done_ccb);
+		return;
+	}
+	case DA_CCB_PROBE_ZONE:
+	{
+		int error;
+
+		if ((csio->ccb_h.status & CAM_STATUS_MASK) == CAM_REQ_CMP) {
+			uint32_t valid_len;
+			size_t needed_len;
+			struct scsi_vpd_zoned_bdc *zoned_bdc;
+
+			error = 0;
+			zoned_bdc = (struct scsi_vpd_zoned_bdc *)
+				csio->data_ptr;
+			valid_len = csio->dxfer_len - csio->resid;
+			needed_len = __offsetof(struct scsi_vpd_zoned_bdc,
+			    max_seq_req_zones) + 1 +
+			    sizeof(zoned_bdc->max_seq_req_zones);
+			if ((valid_len >= needed_len)
+			 && (scsi_2btoul(zoned_bdc->page_length) >=
+			     SVPD_ZBDC_PL)) {
+				if (zoned_bdc->flags & SVPD_ZBDC_URSWRZ)
+					softc->zone_flags |=
+					    DA_ZONE_FLAG_URSWRZ;
+				else
+					softc->zone_flags &= 
+					    ~DA_ZONE_FLAG_URSWRZ;
+				softc->optimal_seq_zones =
+				    scsi_4btoul(zoned_bdc->optimal_seq_zones);
+				softc->zone_flags |= DA_ZONE_FLAG_OPT_SEQ_SET;
+				softc->optimal_nonseq_zones = scsi_4btoul(
+				    zoned_bdc->optimal_nonseq_zones);
+				softc->zone_flags |=
+				    DA_ZONE_FLAG_OPT_NONSEQ_SET;
+				softc->max_seq_zones =
+				    scsi_4btoul(zoned_bdc->max_seq_req_zones);
+				softc->zone_flags |= DA_ZONE_FLAG_MAX_SEQ_SET;
+			}
+			/*
+			 * All of the zone commands are mandatory for SCSI
+			 * devices.
+			 *
+			 * XXX KDM this is valid as of September 2015.
+			 * Re-check this assumption once the SAT spec is
+			 * updated to support SCSI ZBC to ATA ZAC mapping.
+			 * Since ATA allows zone commands to be reported
+			 * as supported or not, this may not necessarily
+			 * be true for an ATA device behind a SAT (SCSI to
+			 * ATA Translation) layer.
+			 */
+			softc->zone_flags |= DA_ZONE_FLAG_SUP_MASK;
+		} else {
 			error = daerror(done_ccb, CAM_RETRY_SELTO,
 					SF_RETRY_UA|SF_NO_PRINT);
 			if (error == ERESTART)
@@ -3453,14 +5405,9 @@ dadone(struct cam_periph *periph, union ccb *done_ccb)
 			}
 		}
 
-		free(ata_params, M_SCSIDA);
+		free(csio->data_ptr, M_SCSIDA);
+
 		daprobedone(periph, done_ccb);
-		return;
-	}
-	case DA_CCB_WAITING:
-	{
-		/* Caller will release the CCB */
-		wakeup(&done_ccb->ccb_h.cbfcnp);
 		return;
 	}
 	case DA_CCB_DUMP:
@@ -3507,11 +5454,7 @@ dareprobe(struct cam_periph *periph)
 	KASSERT(status == CAM_REQ_CMP,
 	    ("dareprobe: cam_periph_acquire failed"));
 
-	if (softc->flags & DA_FLAG_CAN_RC16)
-		softc->state = DA_STATE_PROBE_RC16;
-	else
-		softc->state = DA_STATE_PROBE_RC;
-
+	softc->state = DA_STATE_PROBE_WP;
 	xpt_schedule(periph, CAM_PRIORITY_DEV);
 }
 
@@ -3542,13 +5485,21 @@ daerror(union ccb *ccb, u_int32_t cam_flags, u_int32_t sense_flags)
 		 */
 		else if (sense_key == SSD_KEY_UNIT_ATTENTION &&
 		    asc == 0x2A && ascq == 0x09) {
-			xpt_print(periph->path, "capacity data has changed\n");
+			xpt_print(periph->path, "Capacity data has changed\n");
+			softc->flags &= ~DA_FLAG_PROBED;
 			dareprobe(periph);
 			sense_flags |= SF_NO_PRINT;
 		} else if (sense_key == SSD_KEY_UNIT_ATTENTION &&
-		    asc == 0x28 && ascq == 0x00)
+		    asc == 0x28 && ascq == 0x00) {
+			softc->flags &= ~DA_FLAG_PROBED;
 			disk_media_changed(softc->disk, M_NOWAIT);
-		else if (sense_key == SSD_KEY_NOT_READY &&
+		} else if (sense_key == SSD_KEY_UNIT_ATTENTION &&
+		    asc == 0x3F && ascq == 0x03) {
+			xpt_print(periph->path, "INQUIRY data has changed\n");
+			softc->flags &= ~DA_FLAG_PROBED;
+			dareprobe(periph);
+			sense_flags |= SF_NO_PRINT;
+		} else if (sense_key == SSD_KEY_NOT_READY &&
 		    asc == 0x3a && (softc->flags & DA_FLAG_PACK_INVALID) == 0) {
 			softc->flags |= DA_FLAG_PACK_INVALID;
 			disk_media_gone(softc->disk, M_NOWAIT);
@@ -3557,12 +5508,32 @@ daerror(union ccb *ccb, u_int32_t cam_flags, u_int32_t sense_flags)
 	if (error == ERESTART)
 		return (ERESTART);
 
+#ifdef CAM_IO_STATS
+	switch (ccb->ccb_h.status & CAM_STATUS_MASK) {
+	case CAM_CMD_TIMEOUT:
+		softc->timeouts++;
+		break;
+	case CAM_REQ_ABORTED:
+	case CAM_REQ_CMP_ERR:
+	case CAM_REQ_TERMIO:
+	case CAM_UNREC_HBA_ERROR:
+	case CAM_DATA_RUN_ERR:
+		softc->errors++;
+		break;
+	default:
+		break;
+	}
+#endif
+
 	/*
 	 * XXX
 	 * Until we have a better way of doing pack validation,
 	 * don't treat UAs as errors.
 	 */
 	sense_flags |= SF_RETRY_UA;
+
+	if (softc->quirks & DA_Q_RETRY_BUSY)
+		sense_flags |= SF_RETRY_BUSY;
 	return(cam_periph_error(ccb, cam_flags, sense_flags,
 				&softc->saved_ccb));
 }
@@ -3573,9 +5544,10 @@ damediapoll(void *arg)
 	struct cam_periph *periph = arg;
 	struct da_softc *softc = periph->softc;
 
-	if (!softc->tur && softc->outstanding_cmds == 0) {
+	if (!cam_iosched_has_work_flags(softc->cam_iosched, DA_WORK_TUR) &&
+	    LIST_EMPTY(&softc->pending_ccbs)) {
 		if (cam_periph_acquire(periph) == CAM_REQ_CMP) {
-			softc->tur = 1;
+			cam_iosched_set_work_flags(softc->cam_iosched, DA_WORK_TUR);
 			daschedule(periph);
 		}
 	}
@@ -3654,6 +5626,10 @@ dasetgeom(struct cam_periph *periph, uint32_t block_len, uint64_t maxsector,
 	} else if (softc->quirks & DA_Q_4K) {
 		dp->stripesize = 4096;
 		dp->stripeoffset = 0;
+	} else if (softc->unmap_gran != 0) {
+		dp->stripesize = block_len * softc->unmap_gran;
+		dp->stripeoffset = (dp->stripesize - block_len *
+		    softc->unmap_gran_align) % dp->stripesize;
 	} else {
 		dp->stripesize = 0;
 		dp->stripeoffset = 0;
@@ -3706,7 +5682,7 @@ dasetgeom(struct cam_periph *periph, uint32_t block_len, uint64_t maxsector,
 		xpt_setup_ccb(&cdai.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 		cdai.ccb_h.func_code = XPT_DEV_ADVINFO;
 		cdai.buftype = CDAI_TYPE_RCAPLONG;
-		cdai.flags |= CDAI_FLAG_STORE;
+		cdai.flags = CDAI_FLAG_STORE;
 		cdai.bufsiz = rcap_len;
 		cdai.buf = (uint8_t *)rcaplong;
 		xpt_action((union ccb *)&cdai);
@@ -3745,14 +5721,11 @@ dasendorderedtag(void *arg)
 	struct da_softc *softc = arg;
 
 	if (da_send_ordered) {
-		if ((softc->ordered_tag_count == 0) 
-		 && ((softc->flags & DA_FLAG_WENT_IDLE) == 0)) {
-			softc->flags |= DA_FLAG_NEED_OTAG;
+		if (!LIST_EMPTY(&softc->pending_ccbs)) {
+			if ((softc->flags & DA_FLAG_WAS_OTAG) == 0)
+				softc->flags |= DA_FLAG_NEED_OTAG;
+			softc->flags &= ~DA_FLAG_WAS_OTAG;
 		}
-		if (softc->outstanding_cmds > 0)
-			softc->flags &= ~DA_FLAG_WENT_IDLE;
-
-		softc->ordered_tag_count = 0;
 	}
 	/* Queue us up again */
 	callout_reset(&softc->sendordered_c,
@@ -3817,9 +5790,9 @@ dashutdown(void * arg, int howto)
 #else /* !_KERNEL */
 
 /*
- * XXX This is only left out of the kernel build to silence warnings.  If,
- * for some reason this function is used in the kernel, the ifdefs should
- * be moved so it is included both in the kernel and userland.
+ * XXX These are only left out of the kernel build to silence warnings.  If,
+ * for some reason these functions are used in the kernel, the ifdefs should
+ * be moved so they are included both in the kernel and userland.
  */
 void
 scsi_format_unit(struct ccb_scsiio *csio, u_int32_t retries,
@@ -3844,6 +5817,59 @@ scsi_format_unit(struct ccb_scsiio *csio, u_int32_t retries,
 		      dxfer_len,
 		      sense_len,
 		      sizeof(*scsi_cmd),
+		      timeout);
+}
+
+void
+scsi_read_defects(struct ccb_scsiio *csio, uint32_t retries,
+		  void (*cbfcnp)(struct cam_periph *, union ccb *),
+		  uint8_t tag_action, uint8_t list_format,
+		  uint32_t addr_desc_index, uint8_t *data_ptr,
+		  uint32_t dxfer_len, int minimum_cmd_size, 
+		  uint8_t sense_len, uint32_t timeout)
+{
+	uint8_t cdb_len;
+
+	/*
+	 * These conditions allow using the 10 byte command.  Otherwise we
+	 * need to use the 12 byte command.
+	 */
+	if ((minimum_cmd_size <= 10)
+	 && (addr_desc_index == 0) 
+	 && (dxfer_len <= SRDD10_MAX_LENGTH)) {
+		struct scsi_read_defect_data_10 *cdb10;
+
+		cdb10 = (struct scsi_read_defect_data_10 *)
+			&csio->cdb_io.cdb_bytes;
+
+		cdb_len = sizeof(*cdb10);
+		bzero(cdb10, cdb_len);
+                cdb10->opcode = READ_DEFECT_DATA_10;
+                cdb10->format = list_format;
+                scsi_ulto2b(dxfer_len, cdb10->alloc_length);
+	} else {
+		struct scsi_read_defect_data_12 *cdb12;
+
+		cdb12 = (struct scsi_read_defect_data_12 *)
+			&csio->cdb_io.cdb_bytes;
+
+		cdb_len = sizeof(*cdb12);
+		bzero(cdb12, cdb_len);
+                cdb12->opcode = READ_DEFECT_DATA_12;
+                cdb12->format = list_format;
+                scsi_ulto4b(dxfer_len, cdb12->alloc_length);
+		scsi_ulto4b(addr_desc_index, cdb12->address_descriptor_index);
+	}
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/ CAM_DIR_IN,
+		      tag_action,
+		      data_ptr,
+		      dxfer_len,
+		      sense_len,
+		      cdb_len,
 		      timeout);
 }
 
@@ -3875,3 +5901,254 @@ scsi_sanitize(struct ccb_scsiio *csio, u_int32_t retries,
 }
 
 #endif /* _KERNEL */
+
+void
+scsi_zbc_out(struct ccb_scsiio *csio, uint32_t retries, 
+	     void (*cbfcnp)(struct cam_periph *, union ccb *),
+	     uint8_t tag_action, uint8_t service_action, uint64_t zone_id,
+	     uint8_t zone_flags, uint8_t *data_ptr, uint32_t dxfer_len,
+	     uint8_t sense_len, uint32_t timeout)
+{
+	struct scsi_zbc_out *scsi_cmd;
+
+	scsi_cmd = (struct scsi_zbc_out *)&csio->cdb_io.cdb_bytes;
+	scsi_cmd->opcode = ZBC_OUT;
+	scsi_cmd->service_action = service_action;
+	scsi_u64to8b(zone_id, scsi_cmd->zone_id);
+	scsi_cmd->zone_flags = zone_flags;
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/ (dxfer_len > 0) ? CAM_DIR_OUT : CAM_DIR_NONE,
+		      tag_action,
+		      data_ptr,
+		      dxfer_len,
+		      sense_len,
+		      sizeof(*scsi_cmd),
+		      timeout);
+}
+
+void
+scsi_zbc_in(struct ccb_scsiio *csio, uint32_t retries, 
+	    void (*cbfcnp)(struct cam_periph *, union ccb *),
+	    uint8_t tag_action, uint8_t service_action, uint64_t zone_start_lba,
+	    uint8_t zone_options, uint8_t *data_ptr, uint32_t dxfer_len,
+	    uint8_t sense_len, uint32_t timeout)
+{
+	struct scsi_zbc_in *scsi_cmd;
+
+	scsi_cmd = (struct scsi_zbc_in *)&csio->cdb_io.cdb_bytes;
+	scsi_cmd->opcode = ZBC_IN;
+	scsi_cmd->service_action = service_action;
+	scsi_ulto4b(dxfer_len, scsi_cmd->length);
+	scsi_u64to8b(zone_start_lba, scsi_cmd->zone_start_lba);
+	scsi_cmd->zone_options = zone_options;
+
+	cam_fill_csio(csio,
+		      retries,
+		      cbfcnp,
+		      /*flags*/ (dxfer_len > 0) ? CAM_DIR_IN : CAM_DIR_NONE,
+		      tag_action,
+		      data_ptr,
+		      dxfer_len,
+		      sense_len,
+		      sizeof(*scsi_cmd),
+		      timeout);
+
+}
+
+int
+scsi_ata_zac_mgmt_out(struct ccb_scsiio *csio, uint32_t retries, 
+		      void (*cbfcnp)(struct cam_periph *, union ccb *),
+		      uint8_t tag_action, int use_ncq,
+		      uint8_t zm_action, uint64_t zone_id, uint8_t zone_flags,
+		      uint8_t *data_ptr, uint32_t dxfer_len,
+		      uint8_t *cdb_storage, size_t cdb_storage_len,
+		      uint8_t sense_len, uint32_t timeout)
+{
+	uint8_t command_out, protocol, ata_flags;
+	uint16_t features_out;
+	uint32_t sectors_out, auxiliary;
+	int retval;
+
+	retval = 0;
+
+	if (use_ncq == 0) {
+		command_out = ATA_ZAC_MANAGEMENT_OUT;
+		features_out = (zm_action & 0xf) | (zone_flags << 8);
+		ata_flags = AP_FLAG_BYT_BLOK_BLOCKS;
+		if (dxfer_len == 0) {
+			protocol = AP_PROTO_NON_DATA;
+			ata_flags |= AP_FLAG_TLEN_NO_DATA;
+			sectors_out = 0;
+		} else {
+			protocol = AP_PROTO_DMA;
+			ata_flags |= AP_FLAG_TLEN_SECT_CNT |
+				     AP_FLAG_TDIR_TO_DEV;
+			sectors_out = ((dxfer_len >> 9) & 0xffff);
+		}
+		auxiliary = 0;
+	} else {
+		ata_flags = AP_FLAG_BYT_BLOK_BLOCKS;
+		if (dxfer_len == 0) {
+			command_out = ATA_NCQ_NON_DATA;
+			features_out = ATA_NCQ_ZAC_MGMT_OUT;
+			/*
+			 * We're assuming the SCSI to ATA translation layer
+			 * will set the NCQ tag number in the tag field.
+			 * That isn't clear from the SAT-4 spec (as of rev 05).
+			 */
+			sectors_out = 0;
+			ata_flags |= AP_FLAG_TLEN_NO_DATA;
+		} else {
+			command_out = ATA_SEND_FPDMA_QUEUED;
+			/*
+			 * Note that we're defaulting to normal priority,
+			 * and assuming that the SCSI to ATA translation
+			 * layer will insert the NCQ tag number in the tag
+			 * field.  That isn't clear in the SAT-4 spec (as
+			 * of rev 05).
+			 */
+			sectors_out = ATA_SFPDMA_ZAC_MGMT_OUT << 8;
+
+			ata_flags |= AP_FLAG_TLEN_FEAT |
+				     AP_FLAG_TDIR_TO_DEV;
+
+			/*
+			 * For SEND FPDMA QUEUED, the transfer length is
+			 * encoded in the FEATURE register, and 0 means
+			 * that 65536 512 byte blocks are to be tranferred.
+			 * In practice, it seems unlikely that we'll see
+			 * a transfer that large, and it may confuse the
+			 * the SAT layer, because generally that means that
+			 * 0 bytes should be transferred.
+			 */
+			if (dxfer_len == (65536 * 512)) {
+				features_out = 0;
+			} else if (dxfer_len <= (65535 * 512)) {
+				features_out = ((dxfer_len >> 9) & 0xffff);
+			} else {
+				/* The transfer is too big. */
+				retval = 1;
+				goto bailout;
+			}
+
+		}
+
+		auxiliary = (zm_action & 0xf) | (zone_flags << 8);
+		protocol = AP_PROTO_FPDMA;
+	}
+
+	protocol |= AP_EXTEND;
+
+	retval = scsi_ata_pass(csio,
+	    retries,
+	    cbfcnp,
+	    /*flags*/ (dxfer_len > 0) ? CAM_DIR_OUT : CAM_DIR_NONE,
+	    tag_action,
+	    /*protocol*/ protocol,
+	    /*ata_flags*/ ata_flags,
+	    /*features*/ features_out,
+	    /*sector_count*/ sectors_out,
+	    /*lba*/ zone_id,
+	    /*command*/ command_out,
+	    /*device*/ 0,
+	    /*icc*/ 0,
+	    /*auxiliary*/ auxiliary,
+	    /*control*/ 0,
+	    /*data_ptr*/ data_ptr,
+	    /*dxfer_len*/ dxfer_len,
+	    /*cdb_storage*/ cdb_storage,
+	    /*cdb_storage_len*/ cdb_storage_len,
+	    /*minimum_cmd_size*/ 0,
+	    /*sense_len*/ SSD_FULL_SIZE,
+	    /*timeout*/ timeout);
+
+bailout:
+
+	return (retval);
+}
+
+int
+scsi_ata_zac_mgmt_in(struct ccb_scsiio *csio, uint32_t retries, 
+		     void (*cbfcnp)(struct cam_periph *, union ccb *),
+		     uint8_t tag_action, int use_ncq,
+		     uint8_t zm_action, uint64_t zone_id, uint8_t zone_flags,
+		     uint8_t *data_ptr, uint32_t dxfer_len,
+		     uint8_t *cdb_storage, size_t cdb_storage_len,
+		     uint8_t sense_len, uint32_t timeout)
+{
+	uint8_t command_out, protocol;
+	uint16_t features_out, sectors_out;
+	uint32_t auxiliary;
+	int ata_flags;
+	int retval;
+
+	retval = 0;
+	ata_flags = AP_FLAG_TDIR_FROM_DEV | AP_FLAG_BYT_BLOK_BLOCKS;
+
+	if (use_ncq == 0) {
+		command_out = ATA_ZAC_MANAGEMENT_IN;
+		/* XXX KDM put a macro here */
+		features_out = (zm_action & 0xf) | (zone_flags << 8);
+		sectors_out = dxfer_len >> 9; /* XXX KDM macro */
+		protocol = AP_PROTO_DMA;
+		ata_flags |= AP_FLAG_TLEN_SECT_CNT;
+		auxiliary = 0;
+	} else {
+		ata_flags |= AP_FLAG_TLEN_FEAT;
+
+		command_out = ATA_RECV_FPDMA_QUEUED;
+		sectors_out = ATA_RFPDMA_ZAC_MGMT_IN << 8;
+
+		/*
+		 * For RECEIVE FPDMA QUEUED, the transfer length is
+		 * encoded in the FEATURE register, and 0 means
+		 * that 65536 512 byte blocks are to be tranferred.
+		 * In practice, it seems unlikely that we'll see
+		 * a transfer that large, and it may confuse the
+		 * the SAT layer, because generally that means that
+		 * 0 bytes should be transferred.
+		 */
+		if (dxfer_len == (65536 * 512)) {
+			features_out = 0;
+		} else if (dxfer_len <= (65535 * 512)) {
+			features_out = ((dxfer_len >> 9) & 0xffff);
+		} else {
+			/* The transfer is too big. */
+			retval = 1;
+			goto bailout;
+		}
+		auxiliary = (zm_action & 0xf) | (zone_flags << 8),
+		protocol = AP_PROTO_FPDMA;
+	}
+
+	protocol |= AP_EXTEND;
+
+	retval = scsi_ata_pass(csio,
+	    retries,
+	    cbfcnp,
+	    /*flags*/ CAM_DIR_IN,
+	    tag_action,
+	    /*protocol*/ protocol,
+	    /*ata_flags*/ ata_flags,
+	    /*features*/ features_out,
+	    /*sector_count*/ sectors_out,
+	    /*lba*/ zone_id,
+	    /*command*/ command_out,
+	    /*device*/ 0,
+	    /*icc*/ 0,
+	    /*auxiliary*/ auxiliary,
+	    /*control*/ 0,
+	    /*data_ptr*/ data_ptr,
+	    /*dxfer_len*/ (dxfer_len >> 9) * 512, /* XXX KDM */
+	    /*cdb_storage*/ cdb_storage,
+	    /*cdb_storage_len*/ cdb_storage_len,
+	    /*minimum_cmd_size*/ 0,
+	    /*sense_len*/ SSD_FULL_SIZE,
+	    /*timeout*/ timeout);
+
+bailout:
+	return (retval);
+}

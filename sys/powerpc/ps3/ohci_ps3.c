@@ -22,11 +22,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/ps3/ohci_ps3.c 228483 2011-12-14 00:28:54Z hselasky $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ohci_ps3.c 228483 2011-12-14 00:28:54Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -85,7 +85,9 @@ ohci_ps3_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = OHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
+	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
 	    USB_GET_DMA_TAG(dev), &ohci_iterate_hw_softc))
 		return (ENOMEM);

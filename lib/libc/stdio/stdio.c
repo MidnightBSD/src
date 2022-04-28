@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)stdio.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/stdio.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -117,7 +117,7 @@ _swrite(FILE *fp, char const *buf, int n)
 	ret = (*fp->_write)(fp->_cookie, buf, n);
 	/* __SOFF removed even on success in case O_APPEND mode is set. */
 	if (ret >= 0) {
-		if ((fp->_flags & (__SAPP|__SOFF)) == (__SAPP|__SOFF) &&
+		if ((fp->_flags & __SOFF) && !(fp->_flags2 & __S2OAP) &&
 		    fp->_offset <= OFF_MAX - ret)
 			fp->_offset += ret;
 		else
@@ -165,4 +165,12 @@ _sseek(FILE *fp, fpos_t offset, int whence)
 		fp->_offset = ret;
 	}
 	return (ret);
+}
+
+void
+__stdio_cancel_cleanup(void * arg)
+{
+
+	if (arg != NULL)
+		_funlockfile((FILE *)arg);
 }

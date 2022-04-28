@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/armelf_fbsd.sh 245101 2013-01-06 07:14:04Z andrew $
+# $FreeBSD$
 . ${srcdir}/emulparams/armelf.sh
 . ${srcdir}/emulparams/elf_fbsd.sh
 TARGET2_TYPE=got-rel

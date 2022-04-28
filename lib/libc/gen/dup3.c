@@ -27,13 +27,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/dup3.c 254409 2013-08-16 13:10:30Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include "un-namespace.h"
+
+int __dup3(int, int, int);
 
 int
 __dup3(int oldfd, int newfd, int flags)

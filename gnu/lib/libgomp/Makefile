@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/lib/libgomp/Makefile 218182 2011-02-02 03:27:31Z imp $
+# $FreeBSD$
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -12,7 +12,7 @@ SHLIB_MAJOR=	1
 SRCS=	alloc.c barrier.c critical.c env.c \
 	error.c iter.c loop.c ordered.c parallel.c sections.c \
 	single.c team.c work.c lock.c mutex.c proc.c sem.c \
-	bar.c time.c fortran.c
+	bar.c time.c fortran.c affinity.c
 SRCS+=	gstdint.h libgomp_f.h omp.h omp_lib.h
 
 INCS+=	omp.h

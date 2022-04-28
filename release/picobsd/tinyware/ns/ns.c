@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/release/picobsd/tinyware/ns/ns.c 191565 2009-04-27 16:57:19Z luigi $
+ * $FreeBSD$
  */
 
 
@@ -700,7 +700,7 @@ stats(char *proto)
 		return 0;
 	if (pflag) {
 		if (proto == NULL) {
-			fprintf(stderr, "Option '-p' requires paramter.\n");
+			fprintf(stderr, "Option '-p' requires parameter.\n");
 			usage();
 			exit(-1);
 		}

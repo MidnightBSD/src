@@ -18,7 +18,7 @@
 .\" MERCHANTABILITY OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR
 .\" PURPOSE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/mbuf_tags.9 246751 2013-02-13 07:32:09Z glebius $
+.\" $FreeBSD$
 .\"
 .Dd January 12, 2008
 .Dt MBUF_TAGS 9
@@ -33,7 +33,7 @@
 .Ft "struct m_tag *"
 .Fn m_tag_copy "struct m_tag *t" "int how"
 .Ft int
-.Fn m_tag_copy_chain "struct mbuf *to" "struct mbuf *from" "int how"
+.Fn m_tag_copy_chain "struct mbuf *to" "const struct mbuf *from" "int how"
 .Ft void
 .Fn m_tag_delete "struct mbuf *m" "struct m_tag *t"
 .Ft void
@@ -283,4 +283,4 @@ Inlined functions are defined in
 The packet tags first appeared in
 .Ox 2.9
 and were written by
-.An Angelos D. Keromytis Aq angelos@openbsd.org .
+.An Angelos D. Keromytis Aq Mt angelos@openbsd.org .

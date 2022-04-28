@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/ungetwc.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -76,10 +76,10 @@ ungetwc_l(wint_t wc, FILE *fp, locale_t locale)
 	wint_t r;
 	FIX_LOCALE(locale);
 
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	ORIENT(fp, 1);
 	r = __ungetwc(wc, fp, locale);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 
 	return (r);
 }

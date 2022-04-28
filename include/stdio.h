@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdio.h	8.5 (Berkeley) 4/29/95
- * $FreeBSD: release/10.0.0/include/stdio.h 247411 2013-02-27 19:50:46Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef	_STDIO_H_
@@ -40,6 +40,8 @@
 #include <sys/_null.h>
 #include <sys/_types.h>
 
+__NULLABILITY_PRAGMA_PUSH
+
 typedef	__off_t		fpos_t;
 
 #ifndef _SIZE_T_DECLARED
@@ -47,7 +49,12 @@ typedef	__size_t	size_t;
 #define	_SIZE_T_DECLARED
 #endif
 
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+#ifndef _RSIZE_T_DEFINED
+#define _RSIZE_T_DEFINED
+typedef size_t rsize_t;
+#endif
+
+#if __POSIX_VISIBLE >= 200809
 #ifndef _OFF_T_DECLARED
 #define	_OFF_T_DECLARED
 typedef	__off_t		off_t;
@@ -58,7 +65,12 @@ typedef	__ssize_t	ssize_t;
 #endif
 #endif
 
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
+#ifndef _OFF64_T_DECLARED
+#define	_OFF64_T_DECLARED
+typedef	__off64_t	off64_t;
+#endif
+
+#if __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
 #ifndef _VA_LIST_DECLARED
 typedef	__va_list	va_list;
 #define	_VA_LIST_DECLARED
@@ -118,10 +130,10 @@ struct __sFILE {
 
 	/* operations */
 	void	*_cookie;	/* (*) cookie passed to io functions */
-	int	(*_close)(void *);
-	int	(*_read)(void *, char *, int);
-	fpos_t	(*_seek)(void *, fpos_t, int);
-	int	(*_write)(void *, const char *, int);
+	int	(* _Nullable _close)(void *);
+	int	(* _Nullable _read)(void *, char *, int);
+	fpos_t	(* _Nullable _seek)(void *, fpos_t, int);
+	int	(* _Nullable _write)(void *, const char *, int);
 
 	/* separate buffer for long sequences of ungetc() */
 	struct	__sbuf _ub;	/* ungetc buffer */
@@ -144,6 +156,7 @@ struct __sFILE {
 	int	_fl_count;	/* recursive lock count */
 	int	_orientation;	/* orientation for fwide() */
 	__mbstate_t _mbstate;	/* multibyte conversion state */
+	int	_flags2;	/* additional flags */
 };
 #ifndef _STDFILE_DECLARED
 #define _STDFILE_DECLARED
@@ -166,7 +179,7 @@ __END_DECLS
 #define	__SRW	0x0010		/* open for reading & writing */
 #define	__SEOF	0x0020		/* found EOF */
 #define	__SERR	0x0040		/* found error */
-#define	__SMBF	0x0080		/* _buf is from malloc */
+#define	__SMBF	0x0080		/* _bf._base is from malloc */
 #define	__SAPP	0x0100		/* fdopen()ed in append mode */
 #define	__SSTR	0x0200		/* this is an sprintf/snprintf string */
 #define	__SOPT	0x0400		/* do fseek() optimization */
@@ -175,6 +188,8 @@ __END_DECLS
 #define	__SMOD	0x2000		/* true => fgetln modified _p text */
 #define	__SALC	0x4000		/* allocate string space dynamically */
 #define	__SIGN	0x8000		/* ignore this file in _fwalk */
+
+#define	__S2OAP	0x0001		/* O_APPEND mode is set */
 
 /*
  * The following three definitions are for ANSI C, which took them
@@ -253,6 +268,9 @@ size_t	 fwrite(const void * __restrict, size_t, size_t, FILE * __restrict);
 int	 getc(FILE *);
 int	 getchar(void);
 char	*gets(char *);
+#if __EXT1_VISIBLE
+char	*gets_s(char *, rsize_t);
+#endif
 void	 perror(const char *);
 int	 printf(const char * __restrict, ...);
 int	 putc(int, FILE *);
@@ -275,14 +293,16 @@ int	 vprintf(const char * __restrict, __va_list);
 int	 vsprintf(char * __restrict, const char * __restrict,
 	    __va_list);
 
-#if __ISO_C_VISIBLE >= 1999
+#if __ISO_C_VISIBLE >= 1999 || __POSIX_VISIBLE >= 199506
 int	 snprintf(char * __restrict, size_t, const char * __restrict,
 	    ...) __printflike(3, 4);
+int	 vsnprintf(char * __restrict, size_t, const char * __restrict,
+	    __va_list) __printflike(3, 0);
+#endif
+#if __ISO_C_VISIBLE >= 1999
 int	 vfscanf(FILE * __restrict, const char * __restrict, __va_list)
 	    __scanflike(2, 0);
 int	 vscanf(const char * __restrict, __va_list) __scanflike(1, 0);
-int	 vsnprintf(char * __restrict, size_t, const char * __restrict,
-	    __va_list) __printflike(3, 0);
 int	 vsscanf(const char * __restrict, const char * __restrict, __va_list)
 	    __scanflike(2, 0);
 #endif
@@ -290,7 +310,7 @@ int	 vsscanf(const char * __restrict, const char * __restrict, __va_list)
 /*
  * Functions defined in all versions of POSIX 1003.1.
  */
-#if __BSD_VISIBLE || __POSIX_VISIBLE <= 199506
+#if __BSD_VISIBLE || (__POSIX_VISIBLE && __POSIX_VISIBLE <= 199506)
 #define	L_cuserid	17	/* size for cuserid(3); MAXLOGNAME, legacy */
 #endif
 
@@ -325,7 +345,13 @@ int	 putchar_unlocked(int);
 void	 clearerr_unlocked(FILE *);
 int	 feof_unlocked(FILE *);
 int	 ferror_unlocked(FILE *);
+int	 fflush_unlocked(FILE *);
 int	 fileno_unlocked(FILE *);
+int	 fputc_unlocked(int, FILE *);
+int	 fputs_unlocked(const char * __restrict, FILE * __restrict);
+size_t	 fread_unlocked(void * __restrict, size_t, size_t, FILE * __restrict);
+size_t	 fwrite_unlocked(const void * __restrict, size_t, size_t,
+    FILE * __restrict);
 #endif
 
 #if __POSIX_VISIBLE >= 200112
@@ -342,13 +368,13 @@ int	 putw(int, FILE *);
 char	*tempnam(const char *, const char *);
 #endif
 
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+#if __POSIX_VISIBLE >= 200809
 FILE	*fmemopen(void * __restrict, size_t, const char * __restrict);
 ssize_t	 getdelim(char ** __restrict, size_t * __restrict, int,
 	    FILE * __restrict);
 FILE	*open_memstream(char **, size_t *);
 int	 renameat(int, const char *, int, const char *);
-int	 vdprintf(int, const char * __restrict, __va_list);
+int	 vdprintf(int, const char * __restrict, __va_list) __printflike(2, 0);
 
 /*
  * Every programmer and his dog wrote functions called getline() and dprintf()
@@ -384,10 +410,10 @@ ssize_t	 getline(char ** __restrict, size_t * __restrict, FILE * __restrict);
 #endif
 
 #ifdef _WITH_DPRINTF
-int	 (dprintf)(int, const char * __restrict, ...);
+int	 (dprintf)(int, const char * __restrict, ...) __printflike(2, 3);
 #endif
 
-#endif /* __BSD_VISIBLE || __POSIX_VISIBLE >= 200809 */
+#endif /* __POSIX_VISIBLE >= 200809 */
 
 /*
  * Routines that are purely local.
@@ -396,6 +422,7 @@ int	 (dprintf)(int, const char * __restrict, ...);
 int	 asprintf(char **, const char *, ...) __printflike(2, 3);
 char	*ctermid_r(char *);
 void	 fcloseall(void);
+int	 fdclose(FILE *, int *);
 char	*fgetln(FILE *, size_t *);
 const char *fmtcheck(const char *, const char *) __format_arg(2);
 int	 fpurge(FILE *);
@@ -416,12 +443,24 @@ extern const char * const sys_errlist[];
  * Stdio function-access interface.
  */
 FILE	*funopen(const void *,
-	    int (*)(void *, char *, int),
-	    int (*)(void *, const char *, int),
-	    fpos_t (*)(void *, fpos_t, int),
-	    int (*)(void *));
+	    int (* _Nullable)(void *, char *, int),
+	    int (* _Nullable)(void *, const char *, int),
+	    fpos_t (* _Nullable)(void *, fpos_t, int),
+	    int (* _Nullable)(void *));
 #define	fropen(cookie, fn) funopen(cookie, fn, 0, 0, 0)
 #define	fwopen(cookie, fn) funopen(cookie, 0, fn, 0, 0)
+
+typedef __ssize_t cookie_read_function_t(void *, char *, size_t);
+typedef __ssize_t cookie_write_function_t(void *, const char *, size_t);
+typedef int cookie_seek_function_t(void *, off64_t *, int);
+typedef int cookie_close_function_t(void *);
+typedef struct {
+	cookie_read_function_t	*read;
+	cookie_write_function_t	*write;
+	cookie_seek_function_t	*seek;
+	cookie_close_function_t	*close;
+} cookie_io_functions_t;
+FILE	*fopencookie(void *, const char *, cookie_io_functions_t);
 
 /*
  * Portability hacks.  See <sys/types.h>.
@@ -476,7 +515,10 @@ static __inline int __sputc(int _c, FILE *_p) {
 		(*(p)->_p = (c), (int)*(p)->_p++))
 #endif
 
+#ifndef __LIBC_ISTHREADED_DECLARED
+#define __LIBC_ISTHREADED_DECLARED
 extern int __isthreaded;
+#endif
 
 #ifndef __cplusplus
 
@@ -505,10 +547,11 @@ extern int __isthreaded;
  * See ISO/IEC 9945-1 ANSI/IEEE Std 1003.1 Second Edition 1996-07-12
  * B.8.2.7 for the rationale behind the *_unlocked() macros.
  */
+#define	clearerr_unlocked(p)	__sclearerr(p)
 #define	feof_unlocked(p)	__sfeof(p)
 #define	ferror_unlocked(p)	__sferror(p)
-#define	clearerr_unlocked(p)	__sclearerr(p)
 #define	fileno_unlocked(p)	__sfileno(p)
+#define	fputc_unlocked(s, p)	__sputc(s, p)
 #endif
 #if __POSIX_VISIBLE >= 199506
 #define	getc_unlocked(fp)	__sgetc(fp)
@@ -520,4 +563,6 @@ extern int __isthreaded;
 #endif /* __cplusplus */
 
 __END_DECLS
+__NULLABILITY_PRAGMA_POP
+
 #endif /* !_STDIO_H_ */

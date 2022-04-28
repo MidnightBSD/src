@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/cbus/gdc.c 201223 2009-12-29 21:51:28Z rnoland $
+ * $FreeBSD$
  */
 
 #include "opt_gdc.h"
@@ -585,7 +585,7 @@ map_gen_mode_num(int type, int color, int mode)
     };
     int i;
 
-    for (i = 0; i < sizeof(mode_map)/sizeof(mode_map[0]); ++i) {
+    for (i = 0; i < nitems(mode_map); ++i) {
         if (mode_map[i].from == mode)
             return mode_map[i].to;
     }

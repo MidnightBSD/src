@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/vm/uma.h 252226 2013-06-26 00:57:38Z jeff $
+ * $FreeBSD$
  *
  */
 
@@ -33,8 +33,8 @@
  *
 */
 
-#ifndef VM_UMA_H
-#define VM_UMA_H
+#ifndef _VM_UMA_H_
+#define _VM_UMA_H_
 
 #include <sys/param.h>		/* For NULL */
 #include <sys/malloc.h>		/* For M_* */
@@ -262,8 +262,8 @@ uma_zone_t uma_zcache_create(char *name, int size, uma_ctor ctor, uma_dtor dtor,
 					 * information in the vm_page.
 					 */
 #define	UMA_ZONE_SECONDARY	0x0200	/* Zone is a Secondary Zone */
-#define	UMA_ZONE_REFCNT		0x0400	/* Allocate refcnts in slabs */
-#define	UMA_ZONE_MAXBUCKET	0x0800	/* Use largest buckets */
+#define	UMA_ZONE_NOBUCKET	0x0400	/* Do not use buckets. */
+#define	UMA_ZONE_MAXBUCKET	0x0800	/* Use largest buckets. */
 #define	UMA_ZONE_CACHESPREAD	0x1000	/*
 					 * Spread memory start locations across
 					 * all possible cache lines.  May
@@ -276,7 +276,7 @@ uma_zone_t uma_zcache_create(char *name, int size, uma_ctor ctor, uma_dtor dtor,
 					 * mini-dumps.
 					 */
 #define	UMA_ZONE_PCPU		0x8000	/*
-					 * Allocates mp_ncpus slabs sized to
+					 * Allocates mp_maxid + 1 slabs sized to
 					 * sizeof(struct pcpu).
 					 */
 
@@ -287,7 +287,7 @@ uma_zone_t uma_zcache_create(char *name, int size, uma_ctor ctor, uma_dtor dtor,
  */
 #define	UMA_ZONE_INHERIT						\
     (UMA_ZONE_OFFPAGE | UMA_ZONE_MALLOC | UMA_ZONE_NOFREE |		\
-    UMA_ZONE_HASH | UMA_ZONE_REFCNT | UMA_ZONE_VTOSLAB | UMA_ZONE_PCPU)
+    UMA_ZONE_HASH | UMA_ZONE_VTOSLAB | UMA_ZONE_PCPU)
 
 /* Definitions for align */
 #define UMA_ALIGN_PTR	(sizeof(void *) - 1)	/* Alignment fit for ptr */
@@ -296,6 +296,7 @@ uma_zone_t uma_zcache_create(char *name, int size, uma_ctor ctor, uma_dtor dtor,
 #define UMA_ALIGN_SHORT	(sizeof(short) - 1)	/* "" short */
 #define UMA_ALIGN_CHAR	(sizeof(char) - 1)	/* "" char */
 #define UMA_ALIGN_CACHE	(0 - 1)			/* Cache line size align */
+#define	UMA_ALIGNOF(type) (_Alignof(type) - 1)	/* Alignment fit for 'type' */
 
 /*
  * Destroys an empty uma zone.  If the zone is not empty uma complains loudly.
@@ -365,6 +366,11 @@ uma_zfree(uma_zone_t zone, void *item)
 }
 
 /*
+ * Wait until the specified zone can allocate an item.
+ */
+void uma_zwait(uma_zone_t zone);
+
+/*
  * XXX The rest of the prototypes in this header are h0h0 magic for the VM.
  * If you think you need to use it for a normal zone you're probably incorrect.
  */
@@ -382,7 +388,8 @@ uma_zfree(uma_zone_t zone, void *item)
  *	A pointer to the allocated memory or NULL on failure.
  */
 
-typedef void *(*uma_alloc)(uma_zone_t zone, int size, uint8_t *pflag, int wait);
+typedef void *(*uma_alloc)(uma_zone_t zone, vm_size_t size, uint8_t *pflag,
+    int wait);
 
 /*
  * Backend page free routines
@@ -395,7 +402,7 @@ typedef void *(*uma_alloc)(uma_zone_t zone, int size, uint8_t *pflag, int wait);
  * Returns:
  *	None
  */
-typedef void (*uma_free)(void *item, int size, uint8_t pflag);
+typedef void (*uma_free)(void *item, vm_size_t size, uint8_t pflag);
 
 
 
@@ -520,6 +527,19 @@ int uma_zone_get_max(uma_zone_t zone);
 void uma_zone_set_warning(uma_zone_t zone, const char *warning);
 
 /*
+ * Sets a function to run when limit is reached
+ *
+ * Arguments:
+ *	zone  The zone to which this applies
+ *	fx  The function ro run
+ *
+ * Returns:
+ *	Nothing
+ */
+typedef void (*uma_maxaction_t)(uma_zone_t, int);
+void uma_zone_set_maxaction(uma_zone_t zone, uma_maxaction_t);
+
+/*
  * Obtains the approximate current number of items allocated from a zone
  *
  * Arguments:
@@ -609,21 +629,6 @@ void uma_zone_set_freef(uma_zone_t zone, uma_free freef);
 void uma_prealloc(uma_zone_t zone, int itemcnt);
 
 /*
- * Used to lookup the reference counter allocated for an item
- * from a UMA_ZONE_REFCNT zone.  For UMA_ZONE_REFCNT zones,
- * reference counters are allocated for items and stored in
- * the underlying slab header.
- *
- * Arguments:
- *	zone  The UMA_ZONE_REFCNT zone to which the item belongs.
- *	item  The address of the item for which we want a refcnt.
- *
- * Returns:
- *	A pointer to a uint32_t reference counter.
- */
-uint32_t *uma_find_refcnt(uma_zone_t zone, void *item);
-
-/*
  * Used to determine if a fixed-size zone is exhausted.
  *
  * Arguments:
@@ -634,6 +639,12 @@ uint32_t *uma_find_refcnt(uma_zone_t zone, void *item);
  */
 int uma_zone_exhausted(uma_zone_t zone);
 int uma_zone_exhausted_nolock(uma_zone_t zone);
+
+/*
+ * Common UMA_ZONE_PCPU zones.
+ */
+extern uma_zone_t pcpu_zone_64;
+extern uma_zone_t pcpu_zone_ptr;
 
 /*
  * Exported statistics structures to be used by user space monitoring tools.
@@ -683,4 +694,7 @@ struct uma_percpu_stat {
 	uint64_t	_ups_reserved[5];	/* Reserved. */
 };
 
-#endif
+void uma_reclaim_wakeup(void);
+void uma_reclaim_worker(void *);
+
+#endif	/* _VM_UMA_H_ */

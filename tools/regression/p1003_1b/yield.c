@@ -28,7 +28,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * $FreeBSD: release/10.0.0/tools/regression/p1003_1b/yield.c 95258 2002-04-22 13:44:47Z des $
+ * $FreeBSD$
  *
  */
 #include <sys/types.h>
@@ -89,7 +89,7 @@ int yield(int argc, char *argv[])
 		n = nslaves = atoi(argv[1]);
 
 	p = (int *)mmap(0, sizeof(int),
-	PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED|MAP_INHERIT, -1, 0);
+	PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
 
 	if (p == (int *)-1)
 		err(errno, "mmap");

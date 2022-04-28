@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic7xxx.reg 210055 2010-07-14 14:31:18Z gibbs $
+ * $FreeBSD$
  */
 VERSION = "$Id: //depot/aic7xxx/aic7xxx/aic7xxx.reg#40 $"
 
@@ -329,7 +329,7 @@ register SSTAT2 {
 	address			0x00d
 	access_mode RO
 	field	OVERRUN		0x80
-	field	SHVALID		0x40	/* Shaddow Layer non-zero */
+	field	SHVALID		0x40	/* Shadow Layer non-zero */
 	field	EXP_ACTIVE	0x10	/* SCSI Expander Active */
 	field	CRCVALERR	0x08	/* CRC doesn't match (U3 only) */
 	field	CRCENDERR	0x04	/* No terminal CRC packet (U3 only) */

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/include/apm_bios.h 215140 2010-11-11 19:36:21Z jkim $
+ * $FreeBSD$
  */
 
 #ifndef _PC98_INCLUDE_APM_BIOS_H_

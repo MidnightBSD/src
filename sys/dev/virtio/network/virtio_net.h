@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/virtio/network/virtio_net.h 255111 2013-09-01 04:23:54Z bryanv $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_NET_H

@@ -27,9 +27,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.bin/stat/stat.1 234577 2012-04-22 18:18:49Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd April 22, 2012
+.Dd June 22, 2017
 .Dt STAT 1
 .Os
 .Sh NAME
@@ -38,7 +38,7 @@
 .Nd display file status
 .Sh SYNOPSIS
 .Nm
-.Op Fl FLnq
+.Op Fl FHLnq
 .Op Fl f Ar format | Fl l | r | s | x
 .Op Fl t Ar timefmt
 .Op Ar
@@ -124,6 +124,13 @@ The use of
 .Fl F
 implies
 .Fl l .
+.It Fl H
+Treat each argument as the hexadecimal representation of an NFS file handle,
+and use
+.Xr fhstat 2
+instead of
+.Xr lstat 2 .
+This requires root privileges.
 .It Fl L
 Use
 .Xr stat 2
@@ -172,15 +179,15 @@ Display information in
 .Dq shell output
 format,
 suitable for initializing variables.
-.It Fl x
-Display information in a more verbose way as known from some
-.Tn Linux
-distributions.
 .It Fl t Ar timefmt
 Display timestamps using the specified format.
 This format is
 passed directly to
 .Xr strftime 3 .
+.It Fl x
+Display information in a more verbose way as known from some
+.Tn Linux
+distributions.
 .El
 .Ss Formats
 Format strings are similar to
@@ -594,8 +601,6 @@ and
 The
 .Nm
 utility was written by
-.An Andrew Brown
-.Aq atatat@NetBSD.org .
+.An Andrew Brown Aq Mt atatat@NetBSD.org .
 This man page was written by
-.An Jan Schaumann
-.Aq jschauma@NetBSD.org .
+.An Jan Schaumann Aq Mt jschauma@NetBSD.org .

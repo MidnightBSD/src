@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/stdio/xprintf_vis.c 154815 2006-01-25 12:45:24Z phk $
+ * $FreeBSD$
  */
 
 #include <namespace.h>

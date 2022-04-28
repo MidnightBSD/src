@@ -1,5 +1,5 @@
 /*
- * validator/val_nsec3.h - validator NSEC3 denial of existance functions.
+ * validator/val_nsec3.h - validator NSEC3 denial of existence functions.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -38,7 +38,7 @@
  *
  * This file contains helper functions for the validator module.
  * The functions help with NSEC3 checking, the different NSEC3 proofs
- * for denial of existance, and proofs for presence of types.
+ * for denial of existence, and proofs for presence of types.
  *
  * NSEC3
  *                      1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
@@ -71,10 +71,12 @@
 struct val_env;
 struct regional;
 struct module_env;
+struct module_qstate;
 struct ub_packed_rrset_key;
 struct reply_info;
 struct query_info;
 struct key_entry_key;
+struct sldns_buffer;
 
 /**
  *     0 1 2 3 4 5 6 7
@@ -184,6 +186,7 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
  * @param qinfo: query that is verified for.
  * @param kkey: key entry that signed the NSEC3s.
  * @param reason: string for bogus result.
+ * @param qstate: qstate with region.
  * @return:
  * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
  * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
@@ -193,7 +196,8 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
 enum sec_status
 nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
-	struct query_info* qinfo, struct key_entry_key* kkey, char** reason);
+	struct query_info* qinfo, struct key_entry_key* kkey, char** reason,
+	struct module_qstate* qstate);
 
 /**
  * Prove NXDOMAIN or NODATA.
@@ -223,7 +227,7 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
  */
 struct nsec3_cached_hash {
 	/** rbtree node, key is this structure */
-	rbnode_t node;
+	rbnode_type node;
 	/** where are the parameters for conversion, in this rrset data */
 	struct ub_packed_rrset_key* nsec3;
 	/** where are the parameters for conversion, this RR number in data */
@@ -255,7 +259,7 @@ int nsec3_hash_cmp(const void* c1, const void* c2);
  * Used internally by the nsec3 proof functions in this file.
  * published to enable unit testing of hash algorithms and cache.
  *
- * @param table: the cache table. Must be inited at start.
+ * @param table: the cache table. Must be initialised at start.
  * @param region: scratch region to use for allocation.
  * 	This region holds the tree, if you wipe the region, reinit the tree.
  * @param buf: temporary buffer.
@@ -270,9 +274,9 @@ int nsec3_hash_cmp(const void* c1, const void* c2);
  * 	0 on a malloc failure.
  * 	-1 if the NSEC3 rr was badly formatted (i.e. formerr).
  */
-int nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
-	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
-	size_t dname_len, struct nsec3_cached_hash** hash);
+int nsec3_hash_name(rbtree_type* table, struct regional* region,
+	struct sldns_buffer* buf, struct ub_packed_rrset_key* nsec3, int rr,
+	uint8_t* dname, size_t dname_len, struct nsec3_cached_hash** hash);
 
 /**
  * Get next owner name, converted to base32 encoding and with the
@@ -328,8 +332,9 @@ int nsec3_get_params(struct ub_packed_rrset_key* rrset, int r,
  * @param max: maximum space for result.
  * @return 0 on failure, otherwise bytelength stored.
  */
-size_t nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo, 
-	size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res, size_t max);
+size_t nsec3_get_hashed(struct sldns_buffer* buf, uint8_t* nm, size_t nmlen,
+	int algo, size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res,
+	size_t max);
 
 /** 
  * see if NSEC3 RR contains given type
@@ -373,6 +378,6 @@ int nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
  * @return true if covers, false if not.
  */
 int nsec3_covers(uint8_t* zone, struct nsec3_cached_hash* hash,
-	struct ub_packed_rrset_key* rrset, int rr, ldns_buffer* buf);
+	struct ub_packed_rrset_key* rrset, int rr, struct sldns_buffer* buf);
 
 #endif /* VALIDATOR_VAL_NSEC3_H */

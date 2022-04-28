@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/tftpd/tftp-transfer.c 224536 2011-07-31 03:12:20Z rodrigc $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -277,6 +277,8 @@ tftp_receive(int peer, uint16_t *block, struct tftp_stats *ts,
 					send_error(peer, ENOSPACE);
 				goto abort;
 			}
+			if (n_data != segsize)
+				write_close();
 		}
 
 send_ack:

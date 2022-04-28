@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)hexdump.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/hexdump/hexdump.c 229403 2012-01-03 18:51:58Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <locale.h>

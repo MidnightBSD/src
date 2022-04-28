@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getlogin.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getlogin.c 254463 2013-08-17 19:24:58Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -87,11 +87,16 @@ getlogin_r(char *logname, int namelen)
 	char	*result;
 	int	len;
 	int	status;
-	
+
+	if (namelen < 1)
+		return (ERANGE);
+	logname[0] = '\0';
+
 	THREAD_LOCK();
 	result = getlogin_basic(&status);
-	if (status == 0) {
-		if ((len = strlen(result) + 1) > namelen)
+	if (status == 0 && result != NULL) {
+		len = strlen(result) + 1;
+		if (len > namelen)
 			status = ERANGE;
 		else
 			strncpy(logname, result, len);

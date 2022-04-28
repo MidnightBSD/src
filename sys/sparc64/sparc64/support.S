@@ -25,7 +25,9 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/support.S 239941 2012-08-31 11:15:01Z marius $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_kstack_pages.h"
 
 #include <sys/errno.h>
 
@@ -517,7 +519,7 @@ fs_nofault_end:
 ENTRY(fs_fault)
 	retl
 	 mov	-1, %o0
-END(fsfault)
+END(fs_fault)
 
 	.globl	fas_nofault_begin
 fas_nofault_begin:

@@ -41,12 +41,17 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/dsp.c 249585 2013-04-17 11:45:15Z gabor $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 static int dsp_mmap_allow_prot_exec = 0;
-SYSCTL_INT(_hw_snd, OID_AUTO, compat_linux_mmap, CTLFLAG_RW,
+SYSCTL_INT(_hw_snd, OID_AUTO, compat_linux_mmap, CTLFLAG_RWTUN,
     &dsp_mmap_allow_prot_exec, 0,
     "linux mmap compatibility (-1=force disable 0=auto 1=force enable)");
+
+static int dsp_basename_clone = 1;
+SYSCTL_INT(_hw_snd, OID_AUTO, basename_clone, CTLFLAG_RWTUN,
+    &dsp_basename_clone, 0,
+    "DSP basename cloning (0: Disable; 1: Enabled)");
 
 struct dsp_cdevinfo {
 	struct pcm_channel *rdch, *wrch;
@@ -453,7 +458,7 @@ dsp_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 		return (ENODEV);
 
 	d = dsp_get_info(i_dev);
-	if (!PCM_REGISTERED(d))
+	if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 		return (EBADF);
 
 	PCM_GIANT_ENTER(d);
@@ -823,7 +828,7 @@ dsp_io_ops(struct cdev *i_dev, struct uio *buf)
 	    ("%s(): io train wreck!", __func__));
 
 	d = dsp_get_info(i_dev);
-	if (!DSP_REGISTERED(d, i_dev))
+	if (PCM_DETACHING(d) || !DSP_REGISTERED(d, i_dev))
 		return (EBADF);
 
 	PCM_GIANT_ENTER(d);
@@ -1068,7 +1073,7 @@ dsp_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 	int *arg_i, ret, tmp;
 
 	d = dsp_get_info(i_dev);
-	if (!DSP_REGISTERED(d, i_dev))
+	if (PCM_DETACHING(d) || !DSP_REGISTERED(d, i_dev))
 		return (EBADF);
 
 	PCM_GIANT_ENTER(d);
@@ -2163,9 +2168,11 @@ dsp_poll(struct cdev *i_dev, int events, struct thread *td)
 	int ret, e;
 
 	d = dsp_get_info(i_dev);
-	if (!DSP_REGISTERED(d, i_dev))
-		return (EBADF);
-
+	if (PCM_DETACHING(d) || !DSP_REGISTERED(d, i_dev)) {
+		/* XXX many clients don't understand POLLNVAL */
+		return (events & (POLLHUP | POLLPRI | POLLIN |
+		    POLLRDNORM | POLLOUT | POLLWRNORM));
+	}
 	PCM_GIANT_ENTER(d);
 
 	wrch = NULL;
@@ -2236,7 +2243,7 @@ dsp_mmap_single(struct cdev *i_dev, vm_ooffset_t *offset,
 		return (EINVAL);
 
 	d = dsp_get_info(i_dev);
-	if (!DSP_REGISTERED(d, i_dev))
+	if (PCM_DETACHING(d) || !DSP_REGISTERED(d, i_dev))
 		return (EINVAL);
 
 	PCM_GIANT_ENTER(d);
@@ -2324,9 +2331,7 @@ dsp_stdclone(char *name, char *namep, char *sep, int use_sep, int *u, int *c)
 
 static void
 dsp_clone(void *arg,
-#if __FreeBSD_version >= 600034
     struct ucred *cred,
-#endif
     char *name, int namelen, struct cdev **dev)
 {
 	struct snddev_info *d;
@@ -2359,9 +2364,10 @@ dsp_clone(void *arg,
 			devname = devcmp;
 		devhw = dsp_cdevs[i].hw;
 		devcmax = dsp_cdevs[i].max - 1;
-		if (strcmp(name, devcmp) == 0)
-			unit = snd_unit;
-		else if (dsp_stdclone(name, devcmp, devsep,
+		if (strcmp(name, devcmp) == 0) {
+			if (dsp_basename_clone != 0)
+				unit = snd_unit;
+		} else if (dsp_stdclone(name, devcmp, devsep,
 		    dsp_cdevs[i].use_sep, &unit, &cunit) != 0) {
 			unit = -1;
 			cunit = -1;

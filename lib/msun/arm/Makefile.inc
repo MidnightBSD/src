@@ -1,4 +1,10 @@
-# $FreeBSD: release/10.0.0/lib/msun/arm/Makefile.inc 230370 2012-01-20 07:01:58Z das $
+# $FreeBSD$
 
 LDBL_PREC = 53
 SYM_MAPS += ${.CURDIR}/arm/Symbol.map
+
+.if ${MACHINE_ARCH:Marmv6*} && defined(CPUTYPE) && ${CPUTYPE:M*soft*} != ""
+ARCH_SRCS = fenv-softfp.c fenv-vfp.c
+.endif
+
+CFLAGS.fenv-vfp.c=	-mfpu=vfp -mfloat-abi=softfp

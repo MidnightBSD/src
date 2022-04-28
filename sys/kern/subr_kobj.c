@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_kobj.c 227537 2011-11-15 20:11:03Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -213,19 +213,11 @@ kobj_lookup_method(kobj_class_t cls,
 {
 	kobj_method_t *ce;
 
-#ifdef KOBJ_STATS
-	/*
-	 * Correct for the 'hit' assumption in KOBJOPLOOKUP and record
-	 * a 'miss'.
-	 */
-	kobj_lookup_hits--;
-	kobj_lookup_misses++;
-#endif
-
 	ce = kobj_lookup_method_mi(cls, desc);
 	if (!ce)
 		ce = &desc->deflt;
-	*cep = ce;
+	if (cep)
+		*cep = ce;
 	return ce;
 }
 

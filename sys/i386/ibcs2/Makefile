@@ -1,32 +1,36 @@
 # Makefile for syscall tables
 #
-# $FreeBSD: release/10.0.0/sys/i386/ibcs2/Makefile 155359 2006-02-05 23:25:19Z rwatson $
+# $FreeBSD$
+
+# Don't use an OBJDIR
+.OBJDIR: ${.CURDIR}
+
+MAKESYSCALLS=		../../kern/makesyscalls.sh
+BASE_GENERATED=		ibcs2_syscall.h		\
+			ibcs2_sysent.c		\
+			ibcs2_proto.h
+ISC_GENERATED=		ibcs2_isc_syscall.h	\
+			ibcs2_isc_sysent.c
+XENIX_GENERATED=	ibcs2_xenix_syscall.h	\
+			ibcs2_xenix_sysent.c	\
+			ibcs2_xenix_proto.h
 
 all:
 	@echo "make sysent, isc_sysent or xenix_sysent only"
 
-sysent:  ibcs2_sysent.c ibcs2_syscall.h ibcs2_proto.h
+.ORDER: ${BASE_GENERATED}
+.ORDER: ${ISC_GENERATED}
+.ORDER: ${XENIX_GENERATED}
 
-ibcs2_sysent.c ibcs2_syscall.h ibcs2_proto.h: ../../kern/makesyscalls.sh \
-		syscalls.master syscalls.conf
-	-mv -f ibcs2_sysent.c ibcs2_sysent.c.bak
-	-mv -f ibcs2_syscall.h ibcs2_syscall.h.bak
-	-mv -f ibcs2_proto.h ibcs2_proto.h.bak
-	sh ../../kern/makesyscalls.sh syscalls.master syscalls.conf
+sysent:  ${BASE_GENERATED}
+isc_sysent: ${ISC_GENERATED}
+xenix_sysent: ${XENIX_GENERATED}
 
-isc_sysent:  ibcs2_isc_sysent.c ibcs2_isc_syscall.h
+${BASE_GENERATED}: ${MAKESYSCALLS} syscalls.master syscalls.conf
+	sh ${MAKESYSCALLS} syscalls.master syscalls.conf
 
-ibcs2_isc_sysent.c ibcs2_isc_syscall.h : ../../kern/makesyscalls.sh \
-		syscalls.isc syscalls.isc.conf
-	-mv -f ibcs2_isc_sysent.c ibcs2_isc_sysent.c.bak
-	-mv -f ibcs2_isc_syscall.h ibcs2_isc_syscall.h.bak
-	sh ../../kern/makesyscalls.sh syscalls.isc syscalls.isc.conf
+${ISC_GENERATED}: ${MAKESYSCALLS} syscalls.isc syscalls.isc.conf
+	sh ${MAKESYSCALLS} syscalls.isc syscalls.isc.conf
 
-xenix_sysent:  ibcs2_xenix_sysent.c ibcs2_xenix_syscall.h ibcs2_xenix.h
-
-ibcs2_xenix_sysent.c ibcs2_xenix_syscall.h ibcs2_xenix.h: \
-		../../kern/makesyscalls.sh syscalls.xenix syscalls.xenix.conf
-	-mv -f ibcs2_xenix_sysent.c ibcs2_xenix_sysent.c.bak
-	-mv -f ibcs2_xenix_syscall.h ibcs2_xenix_syscall.h.bak
-	-mv -f ibcs2_xenix.h ibcs2_xenix.h.bak
-	sh ../../kern/makesyscalls.sh syscalls.xenix syscalls.xenix.conf
+${XENIX_GENERATED}: ${MAKESYSCALLS} syscalls.xenix syscalls.xenix.conf
+	sh ${MAKESYSCALLS} syscalls.xenix syscalls.xenix.conf

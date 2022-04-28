@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sbin/rcorder/ealloc.c 201227 2009-12-29 22:53:27Z ed $	*/
+/*	$FreeBSD$	*/
 /*	$NetBSD: ealloc.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $	*/
 
 /*

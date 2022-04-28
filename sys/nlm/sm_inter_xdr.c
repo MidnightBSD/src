@@ -5,7 +5,7 @@
 
 #include <nlm/sm_inter.h>
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/nlm/sm_inter_xdr.c 177685 2008-03-28 09:50:32Z dfr $");
+__FBSDID("$FreeBSD$");
 
 bool_t
 xdr_sm_name(XDR *xdrs, sm_name *objp)

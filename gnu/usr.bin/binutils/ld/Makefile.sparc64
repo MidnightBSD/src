@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/Makefile.sparc64 219811 2011-03-21 04:03:55Z marcel $
+# $FreeBSD$
 
 NATIVE_EMULATION= elf64_sparc_fbsd
 
@@ -17,6 +17,7 @@ e${NATIVE_EMULATION}.c: emulparams/${NATIVE_EMULATION}.sh emultempl/elf32.em \
 EMS+=		elf${BITS}_sparc
 .for ext in ${ELF_SCR_EXT}
 LDSCRIPTS+=	elf${BITS}_sparc.${ext}
+ldscripts/elf${BITS}_sparc.${ext}: eelf${BITS}_sparc.c
 .endfor
 
 SRCS+=		eelf${BITS}_sparc.c

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/hastd/ebuf.h 204076 2010-02-18 23:16:19Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_EBUF_H_

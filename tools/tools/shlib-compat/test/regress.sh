@@ -1,7 +1,7 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/tools/tools/shlib-compat/test/regress.sh 248693 2013-03-25 00:31:14Z gleb $
+# $FreeBSD$
 
-run() { ../shlib-compat.py --no-dump -vv libtest$1/libtest$1.so.0.debug libtest$2/libtest$2.so.0.debug; }
+run() { ../shlib-compat.py --no-dump -vv libtest$1/libtest$1.so.0.full libtest$2/libtest$2.so.0.full; }
 echo 1..9
 REGRESSION_START($1)
 REGRESSION_TEST(`1-1', `run 1 1')

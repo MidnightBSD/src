@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/malo/if_malohal.h 218909 2011-02-21 09:01:34Z brucec $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MALOHAL_H

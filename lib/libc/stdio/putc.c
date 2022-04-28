@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)putc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/putc.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -49,11 +49,11 @@ int
 putc(int c, FILE *fp)
 {
 	int retval;
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	/* Orientation set by __sputc() when buffer is full. */
 	/* ORIENT(fp, -1); */
 	retval = __sputc(c, fp);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }
 

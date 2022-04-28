@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/net80211/wlaninject/wlaninject.c 195848 2009-07-24 15:31:22Z sam $
+ * $FreeBSD$
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -600,7 +600,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'w':
-			wh->i_fc[1] |= IEEE80211_FC1_WEP;
+			wh->i_fc[1] |= IEEE80211_FC1_PROTECTED;
 			break;
 
 		case 'o':

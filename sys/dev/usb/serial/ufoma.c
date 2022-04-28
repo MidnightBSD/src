@@ -1,7 +1,7 @@
 /*	$NetBSD: umodem.c,v 1.45 2002/09/23 05:51:23 simonb Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/ufoma.c 240382 2012-09-12 07:59:28Z kevlo $");
+__FBSDID("$FreeBSD$");
 #define UFOMA_HANDSFREE
 /*-
  * Copyright (c) 2005, Takanori Watanabe
@@ -46,13 +46,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/ufoma.c 240382 2012-09-12 
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -324,15 +317,16 @@ static driver_t ufoma_driver = {
 	.size = sizeof(struct ufoma_softc),
 };
 
-DRIVER_MODULE(ufoma, uhub, ufoma_driver, ufoma_devclass, NULL, 0);
-MODULE_DEPEND(ufoma, ucom, 1, 1, 1);
-MODULE_DEPEND(ufoma, usb, 1, 1, 1);
-MODULE_VERSION(ufoma, 1);
-
 static const STRUCT_USB_HOST_ID ufoma_devs[] = {
 	{USB_IFACE_CLASS(UICLASS_CDC),
 	 USB_IFACE_SUBCLASS(UISUBCLASS_MCPC),},
 };
+
+DRIVER_MODULE(ufoma, uhub, ufoma_driver, ufoma_devclass, NULL, 0);
+MODULE_DEPEND(ufoma, ucom, 1, 1, 1);
+MODULE_DEPEND(ufoma, usb, 1, 1, 1);
+MODULE_VERSION(ufoma, 1);
+USB_PNP_HOST_INFO(ufoma_devs);
 
 static int
 ufoma_probe(device_t dev)
@@ -906,6 +900,7 @@ ufoma_cfg_get_status(struct ucom_softc *ucom, uint8_t *lsr, uint8_t *msr)
 {
 	struct ufoma_softc *sc = ucom->sc_parent;
 
+	/* XXX Note: sc_lsr is always zero */
 	*lsr = sc->sc_lsr;
 	*msr = sc->sc_msr;
 }

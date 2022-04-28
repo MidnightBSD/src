@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/twl/twl_clks.c 239281 2012-08-15 06:31:32Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.
@@ -62,9 +62,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/twl/twl_clks.c 239281 2012-08-15 0
 #include <sys/malloc.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
-#include <machine/frame.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 

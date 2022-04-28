@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/sdcard/altera_sdcard.c 257445 2013-10-31 13:47:39Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_altera_sdcard.h"
 

@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  */
 
@@ -41,6 +41,7 @@
  */
 
 #include "config.h"
+#include "util/mini_event.h"
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -48,7 +49,6 @@
 
 #if defined(USE_MINI_EVENT) && !defined(USE_WINSOCK)
 #include <signal.h>
-#include "util/mini_event.h"
 #include "util/fptr_wlist.h"
 
 /** compare events in tree, based on timevalue, ptr for uniqueness */
@@ -79,13 +79,13 @@ settime(struct event_base* base)
 		return -1;
 	}
 #ifndef S_SPLINT_S
-	*base->time_secs = (uint32_t)base->time_tv->tv_sec;
+	*base->time_secs = (time_t)base->time_tv->tv_sec;
 #endif
 	return 0;
 }
 
 /** create event base */
-void *event_init(uint32_t* time_secs, struct timeval* time_tv)
+void *event_init(time_t* time_secs, struct timeval* time_tv)
 {
 	struct event_base* base = (struct event_base*)malloc(
 		sizeof(struct event_base));
@@ -147,7 +147,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
 	wait->tv_sec = (time_t)-1;
 #endif
 
-	while((rbnode_t*)(p = (struct event*)rbtree_first(base->times))
+	while((rbnode_type*)(p = (struct event*)rbtree_first(base->times))
 		!=RBTREE_NULL) {
 #ifndef S_SPLINT_S
 		if(p->ev_timeout.tv_sec > now->tv_sec ||
@@ -261,12 +261,9 @@ void event_base_free(struct event_base* base)
 {
 	if(!base)
 		return;
-	if(base->times)
-		free(base->times);
-	if(base->fds)
-		free(base->fds);
-	if(base->signals)
-		free(base->signals);
+	free(base->times);
+	free(base->fds);
+	free(base->signals);
 	free(base);
 }
 
@@ -316,7 +313,7 @@ int event_add(struct event* ev, struct timeval* tv)
 		struct timeval *now = ev->ev_base->time_tv;
 		ev->ev_timeout.tv_sec = tv->tv_sec + now->tv_sec;
 		ev->ev_timeout.tv_usec = tv->tv_usec + now->tv_usec;
-		while(ev->ev_timeout.tv_usec > 1000000) {
+		while(ev->ev_timeout.tv_usec >= 1000000) {
 			ev->ev_timeout.tv_usec -= 1000000;
 			ev->ev_timeout.tv_sec++;
 		}

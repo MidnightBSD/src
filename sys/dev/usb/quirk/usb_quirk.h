@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/quirk/usb_quirk.h 243435 2012-11-23 08:22:06Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -102,11 +102,15 @@ enum {
 	UQ_MSC_EJECT_WAIT,		/* wait for the device to eject */
 	UQ_MSC_EJECT_SAEL_M460,		/* ejects after Sael USB commands */ 
 	UQ_MSC_EJECT_HUAWEISCSI,	/* ejects after Huawei SCSI command */
+	UQ_MSC_EJECT_HUAWEISCSI2,	/* ejects after Huawei SCSI 2 command */
 	UQ_MSC_EJECT_TCT,		/* ejects after TCT SCSI command */
 
 	UQ_BAD_MIDI,		/* device claims MIDI class, but isn't */
 	UQ_AU_VENDOR_CLASS,	/* audio device uses vendor and not audio class */
 	UQ_SINGLE_CMD_MIDI,	/* at most one command per USB packet */
+	UQ_MSC_DYMO_EJECT,	/* ejects Dymo MSC device */
+	UQ_AU_SET_SPDIF_CM6206,	/* enable S/PDIF audio output */
+	UQ_WMT_IGNORE,          /* device should be ignored by wmt driver */
 
 	USB_QUIRK_MAX
 };

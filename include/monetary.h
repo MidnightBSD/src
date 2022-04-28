@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/monetary.h 233600 2012-03-28 12:11:54Z theraven $
+ * $FreeBSD$
  */
 
 #ifndef _MONETARY_H_
@@ -43,7 +43,7 @@ typedef	__ssize_t	ssize_t;
 #endif
 
 __BEGIN_DECLS
-#ifdef _XLOCALE_H_
+#if __POSIX_VISIBLE >= 200809 || defined(_XLOCALE_H_)
 #include <xlocale/_monetary.h>
 #endif
 ssize_t	strfmon(char * __restrict, size_t, const char * __restrict, ...);

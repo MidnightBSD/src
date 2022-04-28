@@ -59,13 +59,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/login/login_fbtab.c 231651 2012-02-14 10:11:45Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <glob.h>
-#include <paths.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
@@ -97,15 +96,15 @@ login_fbtab(char *tty, uid_t uid, gid_t gid)
     while (fgets(buf, sizeof(buf), fp)) {
 	if ((cp = strchr(buf, '#')))
 	    *cp = 0;				/* strip comment */
-	if ((cp = devname = strtok(buf, WSPACE)) == 0)
+	if ((cp = devname = strtok(buf, WSPACE)) == NULL)
 	    continue;				/* empty or comment */
 	if (strncmp(devname, _PATH_DEV, sizeof _PATH_DEV - 1) != 0
-	       || (cp = strtok(NULL, WSPACE)) == 0
+	       || (cp = strtok(NULL, WSPACE)) == NULL
 	       || *cp != '0'
 	       || sscanf(cp, "%o", &prot) == 0
 	       || prot == 0
 	       || (prot & 0777) != prot
-	       || (cp = strtok(NULL, WSPACE)) == 0) {
+	       || (cp = strtok(NULL, WSPACE)) == NULL) {
 	    syslog(LOG_ERR, "%s: bad entry: %s", table, cp ? cp : "(null)");
 	    continue;
 	}
@@ -120,7 +119,7 @@ login_fbtab(char *tty, uid_t uid, gid_t gid)
 
 /* login_protect - protect one device entry */
 
-void
+static void
 login_protect(const char *table, char *pattern, int mask, uid_t uid, gid_t gid)
 {
     glob_t  gl;

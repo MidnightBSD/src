@@ -10,9 +10,8 @@
  * ====================================================
  */
 
-#ifndef lint
-static char rcsid[] = "$FreeBSD: release/10.0.0/lib/msun/src/s_fabs.c 97413 2002-05-28 18:15:04Z alfred $";
-#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 /*
  * fabs(x) returns the absolute value of x.

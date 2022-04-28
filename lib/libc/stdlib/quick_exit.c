@@ -23,9 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/stdlib/quick_exit.c 228528 2011-12-15 11:16:41Z theraven $
+ * $FreeBSD$
  */
 
+#include <sys/types.h>
+#include <machine/atomic.h>
 #include <stdlib.h>
 #include <pthread.h>
 
@@ -60,6 +62,7 @@ at_quick_exit(void (*func)(void))
 	h->cleanup = func;
 	pthread_mutex_lock(&atexit_mutex);
 	h->next = handlers;
+	__compiler_membar();
 	handlers = h;
 	pthread_mutex_unlock(&atexit_mutex);
 	return (0);
@@ -74,7 +77,9 @@ quick_exit(int status)
 	 * XXX: The C++ spec requires us to call std::terminate if there is an
 	 * exception here.
 	 */
-	for (h = handlers; NULL != h; h = h->next)
+	for (h = handlers; NULL != h; h = h->next) {
+		__compiler_membar();
 		h->cleanup();
+	}
 	_Exit(status);
 }

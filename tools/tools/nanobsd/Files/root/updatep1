@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/Files/root/updatep1 205584 2010-03-24 11:21:33Z phk $
+# $FreeBSD$
 #
 # Script to update partition 1 on a NanoBSD system.
 #

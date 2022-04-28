@@ -1,4 +1,0 @@
-$FreeBSD: release/10.0.0/sys/boot/userboot/userboot/version 223695 2011-06-30 16:08:56Z dfr $
-
-1.1:	Initial userland boot
-

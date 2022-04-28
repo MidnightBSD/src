@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1993-98 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/filters.ru/koi2alt/koi2alt.c 117609 2003-07-15 07:01:01Z gad $");
+__FBSDID("$FreeBSD$");
 
 /*
  * KOI8-R -> CP866 conversion filter (Russian character sets)

@@ -191,7 +191,7 @@ L1st:
 
 	addi	$j,$j,$BNSZ	; j++
 	addi	$tp,$tp,$BNSZ	; tp++
-	bdnz-	L1st
+	bdnz	L1st
 ;L1st
 	addc	$lo0,$alo,$hi0
 	addze	$hi0,$ahi
@@ -253,7 +253,7 @@ Linner:
 	addze	$hi1,$hi1
 	$ST	$lo1,0($tp)	; tp[j-1]
 	addi	$tp,$tp,$BNSZ	; tp++
-	bdnz-	Linner
+	bdnz	Linner
 ;Linner
 	$LD	$tj,$BNSZ($tp)	; tp[j]
 	addc	$lo0,$alo,$hi0
@@ -276,7 +276,7 @@ Linner:
 	slwi	$tj,$num,`log($BNSZ)/log(2)`
 	$UCMP	$i,$tj
 	addi	$i,$i,$BNSZ
-	ble-	Louter
+	ble	Louter
 
 	addi	$num,$num,2	; restore $num
 	subfc	$j,$j,$j	; j=0 and "clear" XER[CA]
@@ -289,22 +289,23 @@ Lsub:	$LDX	$tj,$tp,$j
 	subfe	$aj,$nj,$tj	; tp[j]-np[j]
 	$STX	$aj,$rp,$j
 	addi	$j,$j,$BNSZ
-	bdnz-	Lsub
+	bdnz	Lsub
 
 	li	$j,0
 	mtctr	$num
 	subfe	$ovf,$j,$ovf	; handle upmost overflow bit
-	and	$ap,$tp,$ovf
-	andc	$np,$rp,$ovf
-	or	$ap,$ap,$np	; ap=borrow?tp:rp
 
 .align	4
-Lcopy:				; copy or in-place refresh
-	$LDX	$tj,$ap,$j
-	$STX	$tj,$rp,$j
+Lcopy:				; conditional copy
+	$LDX	$tj,$tp,$j
+	$LDX	$aj,$rp,$j
+	and	$tj,$tj,$ovf
+	andc	$aj,$aj,$ovf
 	$STX	$j,$tp,$j	; zap at once
+	or	$aj,$aj,$tj
+	$STX	$aj,$rp,$j
 	addi	$j,$j,$BNSZ
-	bdnz-	Lcopy
+	bdnz	Lcopy
 
 	$POP	$tj,0($sp)
 	li	r3,1
@@ -325,6 +326,7 @@ Lcopy:				; copy or in-place refresh
 	.long	0
 	.byte	0,12,4,0,0x80,12,6,0
 	.long	0
+.size	.bn_mul_mont_int,.-.bn_mul_mont_int
 
 .asciz  "Montgomery Multiplication for PPC, CRYPTOGAMS by <appro\@openssl.org>"
 ___

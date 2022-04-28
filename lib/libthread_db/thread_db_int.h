@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libthread_db/thread_db_int.h 209689 2010-07-04 12:08:04Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _THREAD_DB_INT_H_

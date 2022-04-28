@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/stdio/printflocal.h 189268 2009-03-02 04:07:58Z das $
+ * $FreeBSD$
  */
 
 /*

@@ -44,7 +44,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/keyserv/crypt_server.c 228662 2011-12-17 20:53:06Z dim $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -180,12 +180,13 @@ void load_des(warn, libpath)
 {
 	char dlpath[MAXPATHLEN];
 
-	if (libpath == NULL) {
-		snprintf(dlpath, sizeof(dlpath), "%s/%s", _PATH_USRLIB, LIBCRYPTO);
-	} else
+	if (libpath == NULL)
+		snprintf(dlpath, sizeof(dlpath), "%s/%s", _PATH_USRLIB,
+		    LIBCRYPTO);
+	else
 		snprintf(dlpath, sizeof(dlpath), "%s", libpath);
 
-	if (dlpath != NULL && (dlhandle = dlopen(dlpath, 0444)) != NULL)
+	if ((dlhandle = dlopen(dlpath, 0444)) != NULL)
 		_my_crypt = (int (*)())dlsym(dlhandle, "_des_crypt");
 
 	if (_my_crypt == NULL) {

@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/dev/patm/if_patmvar.h 147256 2005-06-10 16:49:24Z brooks $
+ * $FreeBSD$
  *
  * Driver for IDT77252 (ABR) based cards like ProSum's.
  */
@@ -256,7 +256,7 @@ struct patm_softc {
 	struct callout		tst_callout;
 	u_int			tst_free;	/* free slots */
 	u_int			tst_reserve;	/* non-CBR reserve */
-	u_int			bwrem;		/* remaining bandwith */
+	u_int			bwrem;		/* remaining bandwidth */
 
 	/* sysctl support */
 	struct sysctl_ctx_list	sysctl_ctx;

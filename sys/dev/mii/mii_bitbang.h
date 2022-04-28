@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mii/mii_bitbang.h 226995 2011-11-01 16:13:59Z marius $
+ * $FreeBSD$
  */
 
 #define	MII_BIT_MDO		0	/* data out (host->PHY) */

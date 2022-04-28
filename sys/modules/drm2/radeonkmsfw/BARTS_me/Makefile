@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm2/radeonkmsfw/BARTS_me/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
 KMOD=	radeonkmsfw_BARTS_me
 IMG=	BARTS_me

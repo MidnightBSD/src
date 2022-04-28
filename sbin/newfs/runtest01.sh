@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/sbin/newfs/runtest01.sh 92722 2002-03-19 21:05:29Z phk $
+# $FreeBSD$
 
 set -e
 

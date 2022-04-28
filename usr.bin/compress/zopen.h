@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	FreeBSD Inc. All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/compress/zopen.h 92920 2002-03-22 01:22:50Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _ZOPEN_H_

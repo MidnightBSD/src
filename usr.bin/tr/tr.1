@@ -29,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)tr.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/tr/tr.1 233510 2012-03-26 15:18:14Z joel $
+.\" $FreeBSD$
 .\"
 .Dd October 13, 2006
 .Dt TR 1
@@ -333,6 +333,10 @@ should be used instead of explicit character ranges like
 .Dq Li a-z
 and
 .Dq Li A-Z .
+.Pp
+.Dq Li [=equiv=]
+expression and collation for ranges
+are implemented for single byte locales only.
 .Pp
 System V has historically implemented character ranges using the syntax
 .Dq Li [c-c]

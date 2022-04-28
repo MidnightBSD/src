@@ -37,22 +37,50 @@ static const char copyright[] =
 #if 0
 static char sccsid[] = "@(#)yes.c	8.1 (Berkeley) 6/6/93";
 #else
-static const char rcsid[] = "$FreeBSD: release/10.0.0/usr.bin/yes/yes.c 216370 2010-12-11 08:32:16Z joel $";
+static const char rcsid[] = "$FreeBSD$";
 #endif
 #endif /* not lint */
 
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 int
 main(int argc, char **argv)
 {
-	if (argc > 1)
-		while (puts(argv[1]) != EOF)
-			;
-	else
-		while (puts("y") != EOF)
-			;
+	char buf[8192];
+	char y[2] = { 'y', '\n' };
+	char * exp = y;
+	size_t buflen = 0;
+	size_t explen = sizeof(y);
+	size_t more;
+	ssize_t ret;
+
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
+
+	if (argc > 1) {
+		exp = argv[1];
+		explen = strlen(exp) + 1;
+		exp[explen - 1] = '\n';
+	}
+
+	if (explen <= sizeof(buf)) {
+		while (buflen < sizeof(buf) - explen) {
+			memcpy(buf + buflen, exp, explen);
+			buflen += explen;
+		}
+		exp = buf;
+		explen = buflen;
+	}
+
+	more = explen;
+	while ((ret = write(STDOUT_FILENO, exp + (explen - more), more)) > 0)
+		if ((more -= ret) == 0)
+			more = explen;
+
 	err(1, "stdout");
 	/*NOTREACHED*/
 }

@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/security/mac_portacl/mac_portacl.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD$
  */
 
 /*
@@ -87,27 +87,21 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, portacl, CTLFLAG_RW, 0,
     "TrustedBSD mac_portacl policy controls");
 
 static int	portacl_enabled = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &portacl_enabled, 0, "Enforce portacl policy");
-TUNABLE_INT("security.mac.portacl.enabled", &portacl_enabled);
 
 static int	portacl_suser_exempt = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, suser_exempt, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, suser_exempt, CTLFLAG_RWTUN,
     &portacl_suser_exempt, 0, "Privilege permits binding of any port");
-TUNABLE_INT("security.mac.portacl.suser_exempt",
-    &portacl_suser_exempt);
 
 static int	portacl_autoport_exempt = 1;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, autoport_exempt, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, autoport_exempt, CTLFLAG_RWTUN,
     &portacl_autoport_exempt, 0, "Allow automatic allocation through "
     "binding port 0 if not IP_PORTRANGELOW");
-TUNABLE_INT("security.mac.portacl.autoport_exempt",
-    &portacl_autoport_exempt);
 
 static int	portacl_port_high = 1023;
-SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RWTUN,
     &portacl_port_high, 0, "Highest port to enforce for");
-TUNABLE_INT("security.mac.portacl.port_high", &portacl_port_high);
 
 static MALLOC_DEFINE(M_PORTACL, "portacl_rule", "Rules for mac_portacl");
 
@@ -493,3 +487,4 @@ static struct mac_policy_ops portacl_ops =
 
 MAC_POLICY_SET(&portacl_ops, mac_portacl, "TrustedBSD MAC/portacl",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);
+MODULE_VERSION(mac_portacl, 1);

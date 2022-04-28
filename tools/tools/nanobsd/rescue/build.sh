@@ -1,7 +1,9 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/rescue/build.sh 213324 2010-10-01 10:34:35Z mr $
+# $FreeBSD$
 #
+
+today=`date '+%Y%m%d'`
 
 if [ -z "${1}" -o \! -f "${1}" ]; then
   echo "Usage: $0 cfg_file [-bhiknw]"
@@ -15,4 +17,29 @@ fi
 CFG="${1}"
 shift;
 
+if [ \! -d /usr/obj/Rescue ]; then
+  mkdir -p /usr/obj/Rescue
+fi
+
 sh ../nanobsd.sh $* -c ${CFG}
+
+if [ \! -d /usr/obj/Rescue ]; then
+  mkdir -p /usr/obj/Rescue
+fi
+F32="/usr/obj/Rescue/rescue_${today}_x32"
+D32="/usr/obj/nanobsd.rescue_i386"
+if [ -f "${D32}/_.disk.full" ]; then
+  cp "${D32}/_.disk.full" "${F32}.img"
+fi
+if [ -f "${D32}/_.disk.iso" ]; then
+  cp "${D32}/_.disk.iso" "${F32}.iso"
+fi
+
+F64="/usr/obj/Rescue/rescue_${today}_x64"
+D64="/usr/obj/nanobsd.rescue_amd64"
+if [ -f "${D64}/_.disk.full" ]; then
+  cp "${D64}/_.disk.full" "${F64}.img"
+fi
+if [ -f "${D64}/_.disk.iso" ]; then
+  cp "${D64}/_.disk.iso" "${F64}.iso"
+fi

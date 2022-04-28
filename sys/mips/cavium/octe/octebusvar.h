@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/cavium/octe/octebusvar.h 219695 2011-03-16 08:56:22Z jmallett $
+ * $FreeBSD$
  */
 
 #ifndef	_CAVIUM_OCTE_OCTEBUSVAR_H_

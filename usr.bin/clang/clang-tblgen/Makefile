@@ -1,23 +1,25 @@
-# $FreeBSD: release/10.0.0/usr.bin/clang/clang-tblgen/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD$
 
-NO_MAN=
-.include <bsd.own.mk>
+PROG_CXX=	clang-tblgen
+MAN=
 
-PROG_CXX=clang-tblgen
+SRCDIR=		clang/utils/TableGen
+SRCS+=		ASTTableGen.cpp
+SRCS+=		ClangASTNodesEmitter.cpp
+SRCS+=		ClangASTPropertiesEmitter.cpp
+SRCS+=		ClangAttrEmitter.cpp
+SRCS+=		ClangCommentCommandInfoEmitter.cpp
+SRCS+=		ClangCommentHTMLNamedCharacterReferenceEmitter.cpp
+SRCS+=		ClangCommentHTMLTagsEmitter.cpp
+SRCS+=		ClangDataCollectorsEmitter.cpp
+SRCS+=		ClangDiagnosticsEmitter.cpp
+SRCS+=		ClangOpcodesEmitter.cpp
+SRCS+=		ClangOpenCLBuiltinEmitter.cpp
+SRCS+=		ClangOptionDocEmitter.cpp
+SRCS+=		ClangSACheckersEmitter.cpp
+SRCS+=		ClangTypeNodesEmitter.cpp
+SRCS+=		MveEmitter.cpp
+SRCS+=		NeonEmitter.cpp
+SRCS+=		TableGen.cpp
 
-SRCDIR=	tools/clang/utils/TableGen
-SRCS=	ClangASTNodesEmitter.cpp \
-	ClangAttrEmitter.cpp \
-	ClangCommentCommandInfoEmitter.cpp \
-	ClangCommentHTMLNamedCharacterReferenceEmitter.cpp \
-	ClangCommentHTMLTagsEmitter.cpp \
-	ClangDiagnosticsEmitter.cpp \
-	ClangSACheckersEmitter.cpp \
-	NeonEmitter.cpp \
-	OptParserEmitter.cpp \
-	TableGen.cpp
-
-LIBDEPS=llvmtablegen \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

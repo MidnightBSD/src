@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/fsck/preen.c 241807 2012-10-21 12:01:19Z uqs $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -106,7 +106,7 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 			warnx("Can't open checklist file: %s\n", _PATH_FSTAB);
 			return (8);
 		}
-		while ((fs = getfsent()) != 0) {
+		while ((fs = getfsent()) != NULL) {
 			name = fs->fs_spec;
 			if (fs->fs_passno > passno && fs->fs_passno < nextpass)
 				nextpass = fs->fs_passno;

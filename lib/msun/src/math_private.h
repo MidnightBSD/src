@@ -11,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: release/10.0.0/lib/msun/src/math_private.h 255361 2013-09-07 14:04:10Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MATH_PRIVATE_H_
@@ -46,6 +46,47 @@
 #endif
 #else /* __arm__ */
 #define	IEEE_WORD_ORDER	BYTE_ORDER
+#endif
+
+/* A union which permits us to convert between a long double and
+   four 32 bit ints.  */
+
+#if IEEE_WORD_ORDER == BIG_ENDIAN
+
+typedef union
+{
+  long double value;
+  struct {
+    u_int32_t mswhi;
+    u_int32_t mswlo;
+    u_int32_t lswhi;
+    u_int32_t lswlo;
+  } parts32;
+  struct {
+    u_int64_t msw;
+    u_int64_t lsw;
+  } parts64;
+} ieee_quad_shape_type;
+
+#endif
+
+#if IEEE_WORD_ORDER == LITTLE_ENDIAN
+
+typedef union
+{
+  long double value;
+  struct {
+    u_int32_t lswlo;
+    u_int32_t lswhi;
+    u_int32_t mswlo;
+    u_int32_t mswhi;
+  } parts32;
+  struct {
+    u_int64_t lsw;
+    u_int64_t msw;
+  } parts64;
+} ieee_quad_shape_type;
+
 #endif
 
 #if IEEE_WORD_ORDER == BIG_ENDIAN
@@ -294,8 +335,9 @@ do {								\
 
 /* Support switching the mode to FP_PE if necessary. */
 #if defined(__i386__) && !defined(NO_FPSETPREC)
-#define	ENTERI()				\
-	long double __retval;			\
+#define	ENTERI() ENTERIT(long double)
+#define	ENTERIT(returntype)			\
+	returntype __retval;			\
 	fp_prec_t __oprec;			\
 						\
 	if ((__oprec = fpgetprec()) != FP_PE)	\
@@ -306,9 +348,22 @@ do {								\
 		fpsetprec(__oprec);		\
 	RETURNF(__retval);			\
 } while (0)
+#define	ENTERV()				\
+	fp_prec_t __oprec;			\
+						\
+	if ((__oprec = fpgetprec()) != FP_PE)	\
+		fpsetprec(FP_PE)
+#define	RETURNV() do {				\
+	if (__oprec != FP_PE)			\
+		fpsetprec(__oprec);		\
+	return;			\
+} while (0)
 #else
-#define	ENTERI(x)
+#define	ENTERI()
+#define	ENTERIT(x)
 #define	RETURNI(x)	RETURNF(x)
+#define	ENTERV()
+#define	RETURNV()	return
 #endif
 
 /* Default return statement if hack*_t() is not used. */
@@ -454,9 +509,15 @@ typedef union {
  * (0.0+I)*(y+0.0*I) and laboriously computing the full complex product.
  * In particular, I*Inf is corrupted to NaN+I*Inf, and I*-0 is corrupted
  * to -0.0+I*0.0.
+ *
+ * The C11 standard introduced the macros CMPLX(), CMPLXF() and CMPLXL()
+ * to construct complex values.  Compilers that conform to the C99
+ * standard require the following functions to avoid the above issues.
  */
+
+#ifndef CMPLXF
 static __inline float complex
-cpackf(float x, float y)
+CMPLXF(float x, float y)
 {
 	float_complex z;
 
@@ -464,9 +525,11 @@ cpackf(float x, float y)
 	IMAGPART(z) = y;
 	return (z.f);
 }
+#endif
 
+#ifndef CMPLX
 static __inline double complex
-cpack(double x, double y)
+CMPLX(double x, double y)
 {
 	double_complex z;
 
@@ -474,9 +537,11 @@ cpack(double x, double y)
 	IMAGPART(z) = y;
 	return (z.f);
 }
+#endif
 
+#ifndef CMPLXL
 static __inline long double complex
-cpackl(long double x, long double y)
+CMPLXL(long double x, long double y)
 {
 	long_double_complex z;
 
@@ -484,6 +549,8 @@ cpackl(long double x, long double y)
 	IMAGPART(z) = y;
 	return (z.f);
 }
+#endif
+
 #endif /* _COMPLEX_H */
  
 #ifdef __GNUCLIKE_ASM

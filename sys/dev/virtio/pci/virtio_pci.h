@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/virtio/pci/virtio_pci.h 238360 2012-07-11 02:57:19Z grehan $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_PCI_H
@@ -72,8 +72,7 @@
  * The remaining space is defined by each driver as the per-driver
  * configuration space.
  */
-#define VIRTIO_PCI_CONFIG(sc) \
-    (((sc)->vtpci_flags & VTPCI_FLAG_MSIX) ? 24 : 20)
+#define VIRTIO_PCI_CONFIG_OFF(msix_enabled)     ((msix_enabled) ? 24 : 20)
 
 /*
  * How many bits to shift physical queue address written to QUEUE_PFN.

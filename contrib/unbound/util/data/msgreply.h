@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -43,13 +43,20 @@
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
 #include "util/data/packed_rrset.h"
+struct sldns_buffer;
 struct comm_reply;
 struct alloc_cache;
 struct iovec;
 struct regional;
 struct edns_data;
+struct edns_option;
+struct inplace_cb;
+struct module_qstate;
+struct module_env;
 struct msg_parse;
 struct rrset_parse;
+struct local_rrset;
+struct dns_msg;
 
 /** calculate the prefetch TTL as 90% of original. Calculation
  * without numerical overflow (uin32_t) */
@@ -72,6 +79,23 @@ struct query_info {
 	uint16_t qtype;
 	/** qclass, host byte order */
 	uint16_t qclass;
+	/**
+	 * Alias local answer(s) for the qname.  If 'qname' is an alias defined
+	 * in a local zone, this field will be set to the corresponding local
+	 * RRset when the alias is determined.
+	 * In the initial implementation this can only be a single CNAME RR
+	 * (or NULL), but it could possibly be extended to be a DNAME or a
+	 * chain of aliases.
+	 * Users of this structure are responsible to initialize this field
+	 * to be NULL; otherwise other part of query handling code may be
+	 * confused.
+	 * Users also have to be careful about the lifetime of data.  On return
+	 * from local zone lookup, it may point to data derived from
+	 * configuration that may be dynamically invalidated or data allocated
+	 * in an ephemeral regional allocator.  A deep copy of the data may
+	 * have to be generated if it has to be kept during iterative
+	 * resolution. */
+	struct local_rrset* local_alias;
 };
 
 /**
@@ -81,7 +105,7 @@ struct rrset_ref {
 	/** the key with lock, and ptr to packed data. */
 	struct ub_packed_rrset_key* key;
 	/** id needed */
-	rrset_id_t id;
+	rrset_id_type id;
 };
 
 /**
@@ -116,21 +140,27 @@ struct reply_info {
 	 */
 	uint8_t qdcount;
 
+	/** 32 bit padding to pad struct member alignment to 64 bits. */
+	uint32_t padding;
+
 	/** 
 	 * TTL of the entire reply (for negative caching).
 	 * only for use when there are 0 RRsets in this message.
 	 * if there are RRsets, check those instead.
 	 */
-	uint32_t ttl;
+	time_t ttl;
 
 	/**
 	 * TTL for prefetch. After it has expired, a prefetch is suitable.
 	 * Smaller than the TTL, otherwise the prefetch would not happen.
 	 */
-	uint32_t prefetch_ttl;
+	time_t prefetch_ttl;
 
-	/** 32 bit padding to pad struct member alignment to 64 bits. */
-	uint32_t padding;
+	/** 
+	 * Reply TTL extended with serve expired TTL, to limit time to serve
+	 * expired message.
+	 */
+	time_t serve_expired_ttl;
 
 	/**
 	 * The security status from DNSSEC validation of this message.
@@ -191,6 +221,27 @@ struct msgreply_entry {
 	struct lruhash_entry entry;
 };
 
+/**
+ * Constructor for replyinfo.
+ * @param region: where to allocate the results, pass NULL to use malloc.
+ * @param flags: flags for the replyinfo.
+ * @param qd: qd count
+ * @param ttl: TTL of replyinfo
+ * @param prettl: prefetch ttl
+ * @param expttl: serve expired ttl
+ * @param an: an count
+ * @param ns: ns count
+ * @param ar: ar count
+ * @param total: total rrset count (presumably an+ns+ar).
+ * @param sec: security status of the reply info.
+ * @return the reply_info base struct with the array for putting the rrsets
+ * in.  The array has been zeroed.  Returns NULL on malloc failure.
+ */
+struct reply_info*
+construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
+		time_t ttl, time_t prettl, time_t expttl, size_t an, size_t ns,
+		size_t ar, size_t total, enum sec_status sec);
+
 /** 
  * Parse wire query into a queryinfo structure, return 0 on parse error. 
  * initialises the (prealloced) queryinfo structure as well.
@@ -201,7 +252,7 @@ struct msgreply_entry {
  * @param query: the wireformat packet query. starts with ID.
  * @return: 0 on format error.
  */
-int query_info_parse(struct query_info* m, ldns_buffer* query);
+int query_info_parse(struct query_info* m, struct sldns_buffer* query);
 
 /**
  * Parse query reply.
@@ -218,7 +269,7 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  *	o FORMERR for parse errors.
  *	o SERVFAIL for memory allocation errors.
  */
-int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
+int reply_info_parse(struct sldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep, 
 	struct regional* region, struct edns_data* edns);
 
@@ -237,9 +288,13 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
  *	and no rrset_ref array in the reply is built up.
  * @return 0 if allocation failed.
  */
-int parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
+int parse_create_msg(struct sldns_buffer* pkt, struct msg_parse* msg,
         struct alloc_cache* alloc, struct query_info* qinf,
 	struct reply_info** rep, struct regional* region);
+
+/** get msg reply struct (in temp region) */
+struct reply_info* parse_reply_in_temp_region(struct sldns_buffer* pkt,
+	struct regional* region, struct query_info* qi);
 
 /**
  * Sorts the ref array.
@@ -253,7 +308,7 @@ void reply_info_sortref(struct reply_info* rep);
  *	Also refs must be filled in.
  * @param timenow: the current time.
  */
-void reply_info_set_ttls(struct reply_info* rep, uint32_t timenow);
+void reply_info_set_ttls(struct reply_info* rep, time_t timenow);
 
 /** 
  * Delete reply_info and packed_rrsets (while they are not yet added to the
@@ -284,8 +339,9 @@ void query_entry_delete(void *q, void* arg);
 /** delete reply_info data structure */
 void reply_info_delete(void* d, void* arg);
 
-/** calculate hash value of query_info, lowercases the qname */
-hashvalue_t query_info_hash(struct query_info *q);
+/** calculate hash value of query_info, lowercases the qname,
+ * uses CD flag for AAAA qtype */
+hashvalue_type query_info_hash(struct query_info *q, uint16_t flags);
 
 /**
  * Setup query info entry
@@ -295,7 +351,7 @@ hashvalue_t query_info_hash(struct query_info *q);
  * @return: newly allocated message reply cache item.
  */
 struct msgreply_entry* query_info_entrysetup(struct query_info* q,
-	struct reply_info* r, hashvalue_t h);
+	struct reply_info* r, hashvalue_type h);
 
 /**
  * Copy reply_info and all rrsets in it and allocate.
@@ -312,6 +368,21 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
 	struct alloc_cache* alloc, struct regional* region);
 
 /**
+ * Allocate (special) rrset keys.
+ * @param rep: reply info in which the rrset keys to be allocated, rrset[]
+ *	array should have bee allocated with NULL pointers.
+ * @param alloc: how to allocate rrset keys.
+ *	Not used if region!=NULL, it can be NULL in that case.
+ * @param region: if this parameter is NULL then the alloc is used.
+ *	otherwise, rrset keys are allocated in this region.
+ *	In a region, no special rrset key structures are needed (not shared).
+ *	and no rrset_ref array in the reply needs to be built up.
+ * @return 1 on success, 0 on error
+ */
+int reply_info_alloc_rrset_keys(struct reply_info* rep,
+	struct alloc_cache* alloc, struct regional* region);
+
+/**
  * Copy a parsed rrset into given key, decompressing and allocating rdata.
  * @param pkt: packet for decompression
  * @param msg: the parser message (for flags for trust).
@@ -322,7 +393,7 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
  *	Note that TTL will still be relative on return.
  * @return false on alloc failure.
  */
-int parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
+int parse_copy_decompress_rrset(struct sldns_buffer* pkt, struct msg_parse* msg,
 	struct rrset_parse *pset, struct regional* region, 
 	struct ub_packed_rrset_key* pk);
 
@@ -337,10 +408,11 @@ uint8_t* reply_find_final_cname_target(struct query_info* qinfo,
 
 /**
  * Check if cname chain in cached reply is still valid.
+ * @param qinfo: query info with query name.
  * @param rep: reply to check.
  * @return: true if valid, false if invalid.
  */
-int reply_check_cname_chain(struct reply_info* rep);
+int reply_check_cname_chain(struct query_info* qinfo, struct reply_info* rep);
 
 /**
  * Check security status of all RRs in the message.
@@ -402,8 +474,25 @@ struct ub_packed_rrset_key* reply_find_rrset(struct reply_info* rep,
  * @param qinfo: query section.
  * @param rep: rest of message.
  */
-void log_dns_msg(const char* str, struct query_info* qinfo, 
+void log_dns_msg(const char* str, struct query_info* qinfo,
 	struct reply_info* rep);
+
+/**
+ * Print string with neat domain name, type, class,
+ * status code from, and size of a query response.
+ *
+ * @param v: at what verbosity level to print this.
+ * @param qinf: query section.
+ * @param addr: address of the client.
+ * @param addrlen: length of the client address.
+ * @param dur: how long it took to complete the query.
+ * @param cached: whether or not the reply is coming from
+ *                    the cache, or an outside network.
+ * @param rmsg: sldns buffer packet.
+ */
+void log_reply_info(enum verbosity_value v, struct query_info *qinf,
+	struct sockaddr_storage *addr, socklen_t addrlen, struct timeval dur,
+	int cached, struct sldns_buffer *rmsg);
 
 /**
  * Print string with neat domain name, type, class from query info.
@@ -413,5 +502,188 @@ void log_dns_msg(const char* str, struct query_info* qinfo,
  */
 void log_query_info(enum verbosity_value v, const char* str, 
 	struct query_info* qinf);
+
+/**
+ * Append edns option to edns data structure
+ * @param edns: the edns data structure to append the edns option to.
+ * @param region: region to allocate the new edns option.
+ * @param code: the edns option's code.
+ * @param len: the edns option's length.
+ * @param data: the edns option's data.
+ * @return false on failure.
+ */
+int edns_opt_append(struct edns_data* edns, struct regional* region,
+	uint16_t code, size_t len, uint8_t* data);
+
+/**
+ * Append edns option to edns option list
+ * @param list: the edns option list to append the edns option to.
+ * @param code: the edns option's code.
+ * @param len: the edns option's length.
+ * @param data: the edns option's data.
+ * @param region: region to allocate the new edns option.
+ * @return false on failure.
+ */
+int edns_opt_list_append(struct edns_option** list, uint16_t code, size_t len,
+	uint8_t* data, struct regional* region);
+
+/**
+ * Remove any option found on the edns option list that matches the code.
+ * @param list: the list of edns options.
+ * @param code: the opt code to remove.
+ * @return true when at least one edns option was removed, false otherwise.
+ */
+int edns_opt_list_remove(struct edns_option** list, uint16_t code);
+
+/**
+ * Find edns option in edns list
+ * @param list: list of edns options (eg. edns.opt_list)
+ * @param code: opt code to find.
+ * @return NULL or the edns_option element.
+ */
+struct edns_option* edns_opt_list_find(struct edns_option* list, uint16_t code);
+
+/**
+ * Call the registered functions in the inplace_cb_reply linked list.
+ * This function is going to get called while answering with a resolved query.
+ * @param env: module environment.
+ * @param qinfo: query info.
+ * @param qstate: module qstate.
+ * @param rep: Reply info. Could be NULL.
+ * @param rcode: return code.
+ * @param edns: edns data of the reply.
+ * @param repinfo: comm_reply. NULL.
+ * @param region: region to store data.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_reply_call(struct module_env* env, struct query_info* qinfo,
+	struct module_qstate* qstate, struct reply_info* rep, int rcode,
+	struct edns_data* edns, struct comm_reply* repinfo, struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_reply_cache linked list.
+ * This function is going to get called while answering from cache.
+ * @param env: module environment.
+ * @param qinfo: query info.
+ * @param qstate: module qstate. NULL when replying from cache.
+ * @param rep: Reply info.
+ * @param rcode: return code.
+ * @param edns: edns data of the reply. Edns input can be found here.
+ * @param repinfo: comm_reply. Reply information for a communication point.
+ * @param region: region to store data.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_reply_cache_call(struct module_env* env,
+	struct query_info* qinfo, struct module_qstate* qstate,
+	struct reply_info* rep, int rcode, struct edns_data* edns,
+	struct comm_reply* repinfo, struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_reply_local linked list.
+ * This function is going to get called while answering with local data.
+ * @param env: module environment.
+ * @param qinfo: query info.
+ * @param qstate: module qstate. NULL when replying from cache.
+ * @param rep: Reply info.
+ * @param rcode: return code.
+ * @param edns: edns data of the reply. Edns input can be found here.
+ * @param repinfo: comm_reply. Reply information for a communication point.
+ * @param region: region to store data.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_reply_local_call(struct module_env* env,
+	struct query_info* qinfo, struct module_qstate* qstate,
+	struct reply_info* rep, int rcode, struct edns_data* edns,
+	struct comm_reply* repinfo, struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_reply linked list.
+ * This function is going to get called while answering with a servfail.
+ * @param env: module environment.
+ * @param qinfo: query info.
+ * @param qstate: module qstate. Contains the edns option lists. Could be NULL.
+ * @param rep: Reply info. NULL when servfail.
+ * @param rcode: return code. LDNS_RCODE_SERVFAIL.
+ * @param edns: edns data of the reply. Edns input can be found here if qstate
+ *	is NULL.
+ * @param repinfo: comm_reply. Reply information for a communication point.
+ * @param region: region to store data.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_reply_servfail_call(struct module_env* env,
+	struct query_info* qinfo, struct module_qstate* qstate,
+	struct reply_info* rep, int rcode, struct edns_data* edns,
+	struct comm_reply* repinfo, struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_query linked list.
+ * This function is going to get called just before sending a query to a
+ * nameserver.
+ * @param env: module environment.
+ * @param qinfo: query info.
+ * @param flags: flags of the query.
+ * @param addr: to which server to send the query.
+ * @param addrlen: length of addr.
+ * @param zone: name of the zone of the delegation point. wireformat dname.
+ *	This is the delegation point name for which the server is deemed
+ *	authoritative.
+ * @param zonelen: length of zone.
+ * @param qstate: module qstate.
+ * @param region: region to store data.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_query_call(struct module_env* env, struct query_info* qinfo,
+	uint16_t flags, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, struct module_qstate* qstate,
+	struct regional* region);
+
+/**
+ * Call the registered functions in the inplace_cb_edns_back_parsed linked list.
+ * This function is going to get called after parsing the EDNS data on the
+ * reply from a nameserver.
+ * @param env: module environment.
+ * @param qstate: module qstate.
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_edns_back_parsed_call(struct module_env* env, 
+	struct module_qstate* qstate);
+
+/**
+ * Call the registered functions in the inplace_cb_query_response linked list.
+ * This function is going to get called after receiving a reply from a
+ * nameserver.
+ * @param env: module environment.
+ * @param qstate: module qstate.
+ * @param response: received response
+ * @return false on failure (a callback function returned an error).
+ */
+int inplace_cb_query_response_call(struct module_env* env,
+	struct module_qstate* qstate, struct dns_msg* response);
+
+/**
+ * Copy edns option list allocated to the new region
+ */
+struct edns_option* edns_opt_copy_region(struct edns_option* list,
+	struct regional* region);
+
+/**
+ * Copy edns option list allocated with malloc
+ */
+struct edns_option* edns_opt_copy_alloc(struct edns_option* list);
+
+/**
+ * Free edns option list allocated with malloc
+ */
+void edns_opt_list_free(struct edns_option* list);
+
+/**
+ * Compare an edns option. (not entire list).  Also compares contents.
+ */
+int edns_opt_compare(struct edns_option* p, struct edns_option* q);
+
+/**
+ * Compare edns option lists, also the order and contents of edns-options.
+ */
+int edns_opt_list_compare(struct edns_option* p, struct edns_option* q);
 
 #endif /* UTIL_DATA_MSGREPLY_H */

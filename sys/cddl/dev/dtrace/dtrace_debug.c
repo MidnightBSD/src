@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/dtrace_debug.c 244631 2012-12-23 15:50:37Z rstone $
+ * $FreeBSD$
  *
  */
 
@@ -106,7 +106,7 @@ dtrace_debug_output(void)
 
 			for (p = d->first; p < d->next; p++)
 				*p1++ = *p;
-		} else if (d->next > d->first) {
+		} else if (d->first > d->next) {
 			char *p1 = dtrace_debug_bufr;
 
 			count = (uintptr_t) d->last - (uintptr_t) d->first;

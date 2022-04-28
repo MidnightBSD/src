@@ -1,4 +1,4 @@
-#$FreeBSD: release/10.0.0/contrib/ngatm/FREEBSD-Xlist 133491 2004-08-11 12:19:32Z harti $
+#$FreeBSD$
 */VERSION
 */README
 */Makefile.in

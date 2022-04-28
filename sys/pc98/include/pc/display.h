@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/include/pc/display.h 145010 2005-04-13 13:12:12Z nyan $
+ * $FreeBSD$
  */
 
 #ifndef _PC98_INCLUDE_PC_DISPLAY_H_

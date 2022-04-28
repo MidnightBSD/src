@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/adjkerntz 239570 2012-08-22 18:49:02Z obrien $
+# $FreeBSD$
 #
 
 # PROVIDE: adjkerntz
-# REQUIRE: FILESYSTEMS postrandom
+# REQUIRE: FILESYSTEMS
 # BEFORE: netif
 # KEYWORD: nojail
 

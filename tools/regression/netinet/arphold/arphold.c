@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Advanced Computing Technologies LLC
+ * Copyright (c) 2010 Hudson River Trading LLC
  * Written by George Neville-Neil gnn@freebsd.org
  * All rights reserved.
  *
@@ -40,7 +40,7 @@
  * important not to run this code in a fast loop or the test will
  * fail.
  *
- * $FreeBSD: release/10.0.0/tools/regression/netinet/arphold/arphold.c 243319 2012-11-20 01:42:18Z emaste $
+ * $FreeBSD$
  */
 
 #include <unistd.h>

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/stg/tmc18c30_pci.c 240325 2012-09-10 18:49:49Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,8 +99,8 @@ stg_pci_attach(device_t dev)
 	}
 
 	/* XXXX remove INTR_ENTROPY below for MFC */
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			       NULL, stg_intr, (void *)sc, &sc->stg_intrhand);
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY |
+	    INTR_MPSAFE, NULL, stg_intr, sc, &sc->stg_intrhand);
 	if (error) {
 		stg_release_resource(dev);
 		return(error);

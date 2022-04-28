@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mxge/mxge_rss_ethp_z8e/Makefile 175365 2008-01-15 20:34:49Z gallatin $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../dev/mxge
+.PATH: ${SRCTOP}/sys/dev/mxge
 KMOD=	mxge_rss_ethp_z8e
 SRCS=	mxge_rss_ethp_z8e.c
 

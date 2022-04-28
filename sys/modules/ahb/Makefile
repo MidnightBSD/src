@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/ahb/Makefile 217070 2011-01-06 21:04:00Z imp $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../dev/ahb
 

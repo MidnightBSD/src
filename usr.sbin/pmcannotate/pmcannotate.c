@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Nokia Corporation
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcannotate/pmcannotate.c 250304 2013-05-06 18:30:49Z hiren $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -41,8 +43,9 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcannotate/pmcannotate.c 250304 201
 
 #include <unistd.h>
 
-#define	FNBUFF	161
-#define	LNBUFF	161
+/* NB: Make sure FNBUFF is as large as LNBUFF, otherwise it could overflow */
+#define	FNBUFF	512
+#define	LNBUFF	512
 
 #define	TMPPATH	"/tmp/pmcannotate.XXXXXX"
 

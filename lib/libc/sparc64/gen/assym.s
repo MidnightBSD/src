@@ -2,7 +2,7 @@
  * Offsets into into structures used from asm.  Must be kept in sync with
  * appropriate headers.
  *
- * $FreeBSD: release/10.0.0/lib/libc/sparc64/gen/assym.s 92054 2002-03-11 03:13:02Z tmm $
+ * $FreeBSD$
  */
 
 #define	_JB_FP		0x0

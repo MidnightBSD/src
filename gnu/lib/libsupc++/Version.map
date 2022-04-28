@@ -19,7 +19,7 @@
 ## Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
 ## USA.
 
-## $FreeBSD: release/10.0.0/gnu/lib/libsupc++/Version.map 251820 2013-06-16 21:15:35Z theraven $
+## $FreeBSD$
 
 
 # Symbols in the support library (libsupc++) have their own tag.
@@ -132,7 +132,7 @@ CXXABI_1.3 {
 
 GLIBCXX_3.4 {
     # operator new and new[]
-    _Znai[jm];
+    _Zna[jm];
     _Zna[jm]RKSt9nothrow_t;
     _Znw[jm];
     _Znw[jm]RKSt9nothrow_t;

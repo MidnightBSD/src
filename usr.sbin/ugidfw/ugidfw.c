@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002, 2004 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ugidfw/ugidfw.c 186480 2008-12-24 22:40:13Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>

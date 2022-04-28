@@ -38,7 +38,7 @@
  *
  * machdep.c
  *
- * Machine dependant functions for kernel setup
+ * Machine dependent functions for kernel setup
  *
  * This file needs a lot of work.
  *
@@ -46,7 +46,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_machdep.c 247564 2013-03-01 19:02:41Z alc $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_kstack_pages.h"
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -70,6 +72,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_machdep.c 247564 
 #include <sys/exec.h>
 #include <sys/kdb.h>
 #include <sys/msgbuf.h>
+#include <sys/devmap.h>
+#include <machine/physmem.h>
 #include <machine/reg.h>
 #include <machine/cpu.h>
 
@@ -90,11 +94,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_machdep.c 247564 
 #include <arm/xscale/ixp425/ixp425reg.h>
 #include <arm/xscale/ixp425/ixp425var.h>
 
-/* kernel text starts where we were loaded at boot */
-#define	KERNEL_TEXT_OFF		(KERNPHYSADDR  - PHYSADDR)
-#define	KERNEL_TEXT_BASE	(KERNBASE + KERNEL_TEXT_OFF)
-#define	KERNEL_TEXT_PHYS	(PHYSADDR + KERNEL_TEXT_OFF)
-
 #define KERNEL_PT_SYS		0	/* Page table for mapping proc0 zero page */
 #define	KERNEL_PT_IO		1
 #define KERNEL_PT_IO_NUM	3
@@ -105,16 +104,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/avila_machdep.c 247564 
 /* this should be evenly divisable by PAGE_SIZE / L2_TABLE_SIZE_REAL (or 4) */
 #define NUM_KERNEL_PTS		(KERNEL_PT_AFKERNEL + KERNEL_PT_AFKERNEL_NUM)
 
-extern u_int data_abort_handler_address;
-extern u_int prefetch_abort_handler_address;
-extern u_int undefined_handler_address;
-
 struct pv_addr kernel_pt_table[NUM_KERNEL_PTS];
 
 /* Physical and virtual addresses for some global pages */
-
-vm_paddr_t phys_avail[10];
-vm_paddr_t dump_avail[4];
 
 struct pv_addr systempage;
 struct pv_addr msgbufpv;
@@ -125,81 +117,65 @@ struct pv_addr kernelstack;
 struct pv_addr minidataclean;
 
 /* Static device mappings. */
-static const struct pmap_devmap ixp425_devmap[] = {
+static const struct devmap_entry ixp425_devmap[] = {
 	/* Physical/Virtual address for I/O space */
-    { IXP425_IO_VBASE, IXP425_IO_HWBASE, IXP425_IO_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_IO_VBASE, IXP425_IO_HWBASE, IXP425_IO_SIZE, },
 
 	/* Expansion Bus */
-    { IXP425_EXP_VBASE, IXP425_EXP_HWBASE, IXP425_EXP_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_EXP_VBASE, IXP425_EXP_HWBASE, IXP425_EXP_SIZE, },
 
 	/* CFI Flash on the Expansion Bus */
     { IXP425_EXP_BUS_CS0_VBASE, IXP425_EXP_BUS_CS0_HWBASE,
-      IXP425_EXP_BUS_CS0_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+      IXP425_EXP_BUS_CS0_SIZE, },
 
 	/* IXP425 PCI Configuration */
-    { IXP425_PCI_VBASE, IXP425_PCI_HWBASE, IXP425_PCI_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_PCI_VBASE, IXP425_PCI_HWBASE, IXP425_PCI_SIZE, },
 
 	/* SDRAM Controller */
-    { IXP425_MCU_VBASE, IXP425_MCU_HWBASE, IXP425_MCU_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_MCU_VBASE, IXP425_MCU_HWBASE, IXP425_MCU_SIZE, },
 
 	/* PCI Memory Space */
-    { IXP425_PCI_MEM_VBASE, IXP425_PCI_MEM_HWBASE, IXP425_PCI_MEM_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_PCI_MEM_VBASE, IXP425_PCI_MEM_HWBASE, IXP425_PCI_MEM_SIZE, },
 
 	/* Q-Mgr Memory Space */
-    { IXP425_QMGR_VBASE, IXP425_QMGR_HWBASE, IXP425_QMGR_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_QMGR_VBASE, IXP425_QMGR_HWBASE, IXP425_QMGR_SIZE, },
 
     { 0 },
 };
 
 /* Static device mappings. */
-static const struct pmap_devmap ixp435_devmap[] = {
+static const struct devmap_entry ixp435_devmap[] = {
 	/* Physical/Virtual address for I/O space */
-    { IXP425_IO_VBASE, IXP425_IO_HWBASE, IXP425_IO_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_IO_VBASE, IXP425_IO_HWBASE, IXP425_IO_SIZE, },
 
-    { IXP425_EXP_VBASE, IXP425_EXP_HWBASE, IXP425_EXP_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_EXP_VBASE, IXP425_EXP_HWBASE, IXP425_EXP_SIZE, },
 
 	/* IXP425 PCI Configuration */
-    { IXP425_PCI_VBASE, IXP425_PCI_HWBASE, IXP425_PCI_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_PCI_VBASE, IXP425_PCI_HWBASE, IXP425_PCI_SIZE, },
 
 	/* DDRII Controller NB: mapped same place as IXP425 */
-    { IXP425_MCU_VBASE, IXP435_MCU_HWBASE, IXP425_MCU_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_MCU_VBASE, IXP435_MCU_HWBASE, IXP425_MCU_SIZE, },
 
 	/* PCI Memory Space */
-    { IXP425_PCI_MEM_VBASE, IXP425_PCI_MEM_HWBASE, IXP425_PCI_MEM_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_PCI_MEM_VBASE, IXP425_PCI_MEM_HWBASE, IXP425_PCI_MEM_SIZE, },
 
 	/* Q-Mgr Memory Space */
-    { IXP425_QMGR_VBASE, IXP425_QMGR_HWBASE, IXP425_QMGR_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP425_QMGR_VBASE, IXP425_QMGR_HWBASE, IXP425_QMGR_SIZE, },
 
 	/* CFI Flash on the Expansion Bus */
     { IXP425_EXP_BUS_CS0_VBASE, IXP425_EXP_BUS_CS0_HWBASE,
-      IXP425_EXP_BUS_CS0_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+      IXP425_EXP_BUS_CS0_SIZE, },
 
 	/* USB1 Memory Space */
-    { IXP435_USB1_VBASE, IXP435_USB1_HWBASE, IXP435_USB1_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP435_USB1_VBASE, IXP435_USB1_HWBASE, IXP435_USB1_SIZE, },
 	/* USB2 Memory Space */
-    { IXP435_USB2_VBASE, IXP435_USB2_HWBASE, IXP435_USB2_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { IXP435_USB2_VBASE, IXP435_USB2_HWBASE, IXP435_USB2_SIZE, },
 
 	/* GPS Memory Space */
-    { CAMBRIA_GPS_VBASE, CAMBRIA_GPS_HWBASE, CAMBRIA_GPS_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { CAMBRIA_GPS_VBASE, CAMBRIA_GPS_HWBASE, CAMBRIA_GPS_SIZE, },
 
 	/* RS485 Memory Space */
-    { CAMBRIA_RS485_VBASE, CAMBRIA_RS485_HWBASE, CAMBRIA_RS485_SIZE,
-      VM_PROT_READ|VM_PROT_WRITE, PTE_NOCACHE, },
+    { CAMBRIA_RS485_VBASE, CAMBRIA_RS485_HWBASE, CAMBRIA_RS485_SIZE, },
 
     { 0 }
 };
@@ -222,10 +198,18 @@ initarm(struct arm_boot_params *abp)
 	vm_offset_t lastaddr;
 	uint32_t memsize;
 
+	/* kernel text starts where we were loaded at boot */
+#define	KERNEL_TEXT_OFF		(abp->abp_physaddr  - PHYSADDR)
+#define	KERNEL_TEXT_BASE	(KERNBASE + KERNEL_TEXT_OFF)
+#define	KERNEL_TEXT_PHYS	(PHYSADDR + KERNEL_TEXT_OFF)
+
 	lastaddr = parse_boot_param(abp);
+	arm_physmem_kernaddr = abp->abp_physaddr;
 	set_cpufuncs();		/* NB: sets cputype */
 	pcpu_init(pcpup, 0, sizeof(struct pcpu));
 	PCPU_SET(curthread, &thread0);
+
+	init_static_kenv(NULL, 0);
 
 	/* Do basic tuning, hz etc */
       	init_param1();
@@ -239,7 +223,7 @@ initarm(struct arm_boot_params *abp)
 	 * write-through).  Note this leaves a gap for expansion
 	 * (or might be repurposed).
 	 */
-	freemempos = KERNPHYSADDR;
+	freemempos = abp->abp_physaddr;
 
 	/* macros to simplify initial memory allocation */
 #define alloc_pages(var, np) do {					\
@@ -250,7 +234,7 @@ initarm(struct arm_boot_params *abp)
 } while (0)
 #define	valloc_pages(var, np) do {					\
 	alloc_pages((var).pv_pa, (np));					\
-	(var).pv_va = (var).pv_pa + (KERNVIRTADDR - KERNPHYSADDR);	\
+	(var).pv_va = (var).pv_pa + (KERNVIRTADDR - abp->abp_physaddr);	\
 } while (0)
 
 	/* force L1 page table alignment */
@@ -269,7 +253,7 @@ initarm(struct arm_boot_params *abp)
 			    L2_TABLE_SIZE_REAL;
 			kernel_pt_table[loop].pv_va =
 			    kernel_pt_table[loop].pv_pa +
-				(KERNVIRTADDR - KERNPHYSADDR);
+				(KERNVIRTADDR - abp->abp_physaddr);
 		}
 	}
 	freemem_pt = freemempos;		/* base of allocated pt's */
@@ -295,27 +279,9 @@ initarm(struct arm_boot_params *abp)
 	valloc_pages(irqstack, IRQ_STACK_SIZE);
 	valloc_pages(abtstack, ABT_STACK_SIZE);
 	valloc_pages(undstack, UND_STACK_SIZE);
-	valloc_pages(kernelstack, KSTACK_PAGES);
+	valloc_pages(kernelstack, kstack_pages);
 	alloc_pages(minidataclean.pv_pa, 1);
 	valloc_pages(msgbufpv, round_page(msgbufsize) / PAGE_SIZE);
-#ifdef ARM_USE_SMALL_ALLOC
-	freemempos -= PAGE_SIZE;
-	freemem_pt = trunc_page(freemem_pt);
-	freemem_after = freemempos - ((freemem_pt - (PHYSADDR + 0x100000)) /
-	    PAGE_SIZE) * sizeof(struct arm_small_page);
-	arm_add_smallalloc_pages(
-	    (void *)(freemem_after + (KERNVIRTADDR - KERNPHYSADDR)),
-	    (void *)0xc0100000,
-	    freemem_pt - (PHYSADDR + 0x100000), 1);
-	freemem_after -= ((freemem_after - (PHYSADDR + 0x1000)) / PAGE_SIZE) *
-	    sizeof(struct arm_small_page);
-	arm_add_smallalloc_pages(
-	    (void *)(freemem_after + (KERNVIRTADDR - KERNPHYSADDR)),
-	    (void *)0xc0001000,
-	    trunc_page(freemem_after) - (PHYSADDR + 0x1000), 0);
-	freemempos = trunc_page(freemem_after);
-	freemempos -= PAGE_SIZE;
-#endif
 
 	/*
 	 * Now construct the L1 page table.  First map the L2
@@ -325,7 +291,7 @@ initarm(struct arm_boot_params *abp)
 	l1pagetable = kernel_l1pt.pv_va;
 
 	/* Map the L2 pages tables in the L1 page table */
-	pmap_link_l2pt(l1pagetable, ARM_VECTORS_HIGH & ~(0x00100000 - 1),
+	pmap_link_l2pt(l1pagetable, rounddown2(ARM_VECTORS_HIGH, 0x00100000),
 	    &kernel_pt_table[KERNEL_PT_SYS]);
 	pmap_link_l2pt(l1pagetable, IXP425_IO_VBASE,
 	    &kernel_pt_table[KERNEL_PT_IO]);
@@ -351,14 +317,6 @@ initarm(struct arm_boot_params *abp)
 	pmap_map_entry(l1pagetable, afterkern, minidataclean.pv_pa,
 	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 
-#ifdef ARM_USE_SMALL_ALLOC
-	if ((freemem_after + 2 * PAGE_SIZE) <= afterkern) {
-		arm_add_smallalloc_pages((void *)(freemem_after),
-		    (void*)(freemem_after + PAGE_SIZE),
-		    afterkern - (freemem_after + PAGE_SIZE), 0);
-		
-	}
-#endif
 
 	/* Map the Mini-Data cache clean area. */
 	xscale_setup_minidata(l1pagetable, afterkern,
@@ -368,9 +326,9 @@ initarm(struct arm_boot_params *abp)
 	pmap_map_entry(l1pagetable, ARM_VECTORS_HIGH, systempage.pv_pa,
 	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	if (cpu_is_ixp43x())
-		pmap_devmap_bootstrap(l1pagetable, ixp435_devmap);
+		devmap_bootstrap(l1pagetable, ixp435_devmap);
 	else
-		pmap_devmap_bootstrap(l1pagetable, ixp425_devmap);
+		devmap_bootstrap(l1pagetable, ixp425_devmap);
 	/*
 	 * Give the XScale global cache clean code an appropriately
 	 * sized chunk of unmapped VA space starting at 0xff000000
@@ -379,7 +337,7 @@ initarm(struct arm_boot_params *abp)
 	xscale_cache_clean_addr = 0xff000000U;
 
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2)) | DOMAIN_CLIENT);
-	setttb(kernel_l1pt.pv_pa);
+	cpu_setttb(kernel_l1pt.pv_pa);
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL*2));
 
@@ -396,7 +354,7 @@ initarm(struct arm_boot_params *abp)
 	/*
 	 * We must now clean the cache again....
 	 * Cleaning may be done by reading new data to displace any
-	 * dirty data in the cache. This will have happened in setttb()
+	 * dirty data in the cache. This will have happened in cpu_setttb()
 	 * but since we are boot strapping the addresses used for the read
 	 * may have just been remapped and thus the cache could be out
 	 * of sync. A re-clean after the switch will cure this.
@@ -404,6 +362,8 @@ initarm(struct arm_boot_params *abp)
 	 * this problem will not occur after initarm().
 	 */
 	cpu_idcache_wbinv_all();
+	cpu_setup();
+
 	/* ready to setup the console (XXX move earlier if possible) */
 	cninit();
 	/*
@@ -414,13 +374,7 @@ initarm(struct arm_boot_params *abp)
 		memsize = ixp435_ddram_size();
 	else
 		memsize = ixp425_sdram_size();
-	physmem = memsize / PAGE_SIZE;
 
-	/* Set stack for exception handlers */
-
-	data_abort_handler_address = (u_int)data_abort_handler;
-	prefetch_abort_handler_address = (u_int)prefetch_abort_handler;
-	undefined_handler_address = (u_int)undefinedinstruction_bounce;
 	undefined_init();
 
 	init_proc0(kernelstack.pv_va);
@@ -428,32 +382,33 @@ initarm(struct arm_boot_params *abp)
 	arm_vector_init(ARM_VECTORS_HIGH, ARM_VEC_ALL);
 
 	pmap_curmaxkvaddr = afterkern + PAGE_SIZE;
-	arm_dump_avail_init(memsize, sizeof(dump_avail) / sizeof(dump_avail[0]));
-	vm_max_kernel_address = 0xd0000000;
+	vm_max_kernel_address = 0xe0000000;
 	pmap_bootstrap(pmap_curmaxkvaddr, &kernel_l1pt);
 	msgbufp = (void*)msgbufpv.pv_va;
 	msgbufinit(msgbufp, msgbufsize);
 	mutex_init();
 
-	i = 0;
-#ifdef ARM_USE_SMALL_ALLOC
-	phys_avail[i++] = PHYSADDR;
-	phys_avail[i++] = PHYSADDR + PAGE_SIZE; 	/*
-					 *XXX: Gross hack to get our
-					 * pages in the vm_page_array.
-					 */
-#endif
-	phys_avail[i++] = round_page(virtual_avail - KERNBASE + PHYSADDR);
-	phys_avail[i++] = trunc_page(PHYSADDR + memsize - 1);
-	phys_avail[i++] = 0;
-	phys_avail[i] = 0;
+	/*
+	 * Add the physical ram we have available.
+	 *
+	 * Exclude the kernel, and all the things we allocated which immediately
+	 * follow the kernel, from the VM allocation pool but not from crash
+	 * dumps.  virtual_avail is a global variable which tracks the kva we've
+	 * "allocated" while setting up pmaps.
+	 *
+	 * Prepare the list of physical memory available to the vm subsystem.
+	 */
+	arm_physmem_hardware_region(PHYSADDR, memsize);
+	arm_physmem_exclude_region(freemem_pt, abp->abp_physaddr -
+	    freemem_pt, EXFLAG_NOALLOC);
+	arm_physmem_exclude_region(freemempos, abp->abp_physaddr - 0x100000 -
+	    freemempos, EXFLAG_NOALLOC);
+	arm_physmem_exclude_region(abp->abp_physaddr, 
+	    virtual_avail - KERNVIRTADDR, EXFLAG_NOALLOC);
+	arm_physmem_init_kernel_globals();
 
 	init_param2(physmem);
 	kdb_init();
-
-	/* use static kernel environment if so configured */
-	if (envmode == 1)
-		kern_envp = static_env;
 
 	return ((void *)(kernelstack.pv_va + USPACE_SVC_STACK_TOP -
 	    sizeof(struct pcb)));

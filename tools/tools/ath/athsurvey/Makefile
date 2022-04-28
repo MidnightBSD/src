@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/ath/athsurvey/Makefile 234751 2012-04-28 08:17:19Z adrian $
+# $FreeBSD$
 
 PROG=	athsurvey
 

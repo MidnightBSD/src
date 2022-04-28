@@ -1,17 +1,24 @@
 /*-
  * This program is in the public domain
  *
- * $FreeBSD: release/10.0.0/bin/dd/gen.c 139969 2005-01-10 08:39:26Z imp $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
+#include <string.h>
 
 int
-main(int argc __unused, char **argv __unused)
+main(int argc, char **argv)
 {
 	int i;
 
-	for (i = 0; i < 256; i++)
-		putchar(i);
+	if (argc > 1 && !strcmp(argv[1], "189284")) {
+		fputs("ABCDEFGH", stdout);
+		for (i = 0; i < 8; i++)
+			putchar(0);
+	} else {
+		for (i = 0; i < 256; i++)
+			putchar(i);
+	}
 	return (0);
 }

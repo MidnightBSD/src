@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_eiface.h 215673 2010-11-22 12:32:19Z zec $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_EIFACE_H_

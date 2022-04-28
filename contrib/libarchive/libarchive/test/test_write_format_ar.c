@@ -26,10 +26,10 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
-char buff[4096];
-char buff2[64];
+static char buff[4096];
+static char buff2[64];
 static char strtab[] = "abcdefghijklmn.o/\nggghhhjjjrrrttt.o/\niiijjjdddsssppp.o/\n";
 
 DEFINE_TEST(test_write_format_ar)

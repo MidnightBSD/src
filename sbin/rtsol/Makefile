@@ -12,17 +12,16 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: release/10.0.0/sbin/rtsol/Makefile 222883 2011-06-08 21:59:07Z ken $
+# $FreeBSD$
 
-SRCDIR=	${.CURDIR}/../../usr.sbin/rtsold
+.PATH:	${SRCTOP}/usr.sbin/rtsold
 
-.PATH:	${SRCDIR}
-
+PACKAGE=runtime
 PROG=	rtsol
 SRCS=	rtsold.c rtsol.c if.c probe.c dump.c rtsock.c
-NO_MAN=
+MAN=
 
 WARNS?=	3
-CFLAGS+= -DHAVE_ARC4RANDOM -DHAVE_POLL_H -DSMALL
+CFLAGS+= -DSMALL
 
 .include <bsd.prog.mk>

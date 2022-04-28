@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rpc.ypxfrd/ypxfrd_extern.h 90297 2002-02-06 13:30:31Z des $
+ * $FreeBSD$
  */
 
 #ifndef MAX_CHILDREN

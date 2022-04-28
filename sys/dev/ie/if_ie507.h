@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/sys/dev/ie/if_ie507.h 112734 2003-03-28 06:27:08Z mdodd $
+ * $FreeBSD$
  * Definitions for 3C507
  */
 

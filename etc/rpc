@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/etc/rpc 130151 2004-06-06 11:46:29Z schweikh $
+# $FreeBSD$
 # rpc 88/08/01 4.0 RPCSRC; from 1.12   99/07/25 SMI
 #
 rpcbind		100000  portmap sunrpc rpcbind

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rpcgen/rpc_svcout.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
@@ -551,7 +551,7 @@ write_program(definition *def, const char *storage)
 			(void) sprintf(_errbuf, "unable to free results");
 			print_err_message("\t\t");
 			f_print(fout, "\n");
-		};
+		}
 		print_return("\t");
 		f_print(fout, "}\n");
 	}
@@ -728,7 +728,8 @@ write_timeout_func(void)
 	if (tirpcflag) {
 		f_print(fout, "\t\t\tstruct rlimit rl;\n\n");
 		f_print(fout, "\t\t\trl.rlim_max = 0;\n");
-		f_print(fout, "\t\t\tgetrlimit(RLIMIT_NOFILE, &rl);\n");
+		f_print(fout, "\t\t\tif (getrlimit(RLIMIT_NOFILE, &rl) == -1)\n");
+		f_print(fout, "\t\t\t\treturn;\n");
 		f_print(fout, "\t\t\tif ((size = rl.rlim_max) == 0) {\n");
 		
 		if (mtflag)
@@ -902,7 +903,11 @@ write_rpc_svc_fg(const char *infile, const char *sp)
 	/* get number of file descriptors */
 	if (tirpcflag) {
 		f_print(fout, "%srl.rlim_max = 0;\n", sp);
-		f_print(fout, "%sgetrlimit(RLIMIT_NOFILE, &rl);\n", sp);
+		f_print(fout, "%sif (getrlimit(RLIMIT_NOFILE, &rl) == -1) {\n",
+		    sp);
+		f_print(fout, "%s\tperror(\"getrlimit\");\n", sp);
+		f_print(fout, "%s\texit(1);\n", sp);
+		f_print(fout, "%s}\n", sp);
 		f_print(fout, "%sif ((size = rl.rlim_max) == 0)\n", sp);
 		f_print(fout, "%s\texit(1);\n", sp);
 	} else {

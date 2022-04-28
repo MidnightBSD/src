@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/cbus/sio.c 228631 2011-12-17 15:08:43Z avg $
+ * $FreeBSD$
  *	from: @(#)com.c	7.5 (Berkeley) 5/16/91
  *	from: i386/isa sio.c,v 1.234
  */
@@ -704,7 +704,7 @@ sysctl_machdep_comdefaultrate(SYSCTL_HANDLER_ARGS)
 	return error;
 }
 
-SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NOFETCH,
 	    0, 0, sysctl_machdep_comdefaultrate, "I", "");
 TUNABLE_INT("machdep.conspeed", __DEVOLATILE(int *, &comdefaultrate));
 
@@ -795,7 +795,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 	} else if (iod.if_type == COM_IF_MODEM_CARD ||
 		   iod.if_type == COM_IF_RSA98III ||
 		   isa_get_vendorid(dev)) {
-		port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
+		port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
 		  if_16550a_type[iod.if_type & 0x0f].iatsz, RF_ACTIVE);
 	} else {
 		port = isa_alloc_resourcev(dev, SYS_RES_IOPORT, &rid,
@@ -803,8 +803,8 @@ sioprobe(dev, xrid, rclk, noprobe)
 		   if_16550a_type[iod.if_type & 0x0f].iatsz, RF_ACTIVE);
 	}
 #else
-	port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				  0, ~0, IO_COMSIZE, RF_ACTIVE);
+	port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   IO_COMSIZE, RF_ACTIVE);
 #endif
 	if (!port)
 		return (ENXIO);
@@ -1384,7 +1384,7 @@ sioattach(dev, xrid, rclk)
 	} else if (if_type == COM_IF_MODEM_CARD ||
 		   if_type == COM_IF_RSA98III ||
 		   isa_get_vendorid(dev)) {
-		port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid, 0, ~0,
+		port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
 			  if_16550a_type[if_type & 0x0f].iatsz, RF_ACTIVE);
 	} else {
 		port = isa_alloc_resourcev(dev, SYS_RES_IOPORT, &rid,
@@ -1392,8 +1392,8 @@ sioattach(dev, xrid, rclk)
 			   if_16550a_type[if_type & 0x0f].iatsz, RF_ACTIVE);
 	}
 #else
-	port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				  0, ~0, IO_COMSIZE, RF_ACTIVE);
+	port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   IO_COMSIZE, RF_ACTIVE);
 #endif
 	if (!port)
 		return (ENXIO);

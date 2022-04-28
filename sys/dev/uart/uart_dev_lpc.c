@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_lpc.c 239278 2012-08-15 05:37:10Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_lpc.c 239278 2012-08-15
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
+#include <dev/uart/uart_cpu_fdt.h>
 #include <dev/uart/uart_bus.h>
 
 #include <dev/ic/ns16550.h>
@@ -43,16 +44,13 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_lpc.c 239278 2012-08-15
 #include "uart_if.h"
 
 #define	DEFAULT_RCLK		(13 * 1000 * 1000)
-#define	LPC_UART_NO(_bas)	(((_bas->bsh) - LPC_UART_BASE) >> 15)
 
-#define	lpc_ns8250_get_auxreg(_bas, _reg)	\
-    bus_space_read_4((_bas)->bst, LPC_UART_CONTROL_BASE, _reg)
-#define	lpc_ns8250_set_auxreg(_bas, _reg, _val)	\
-    bus_space_write_4((_bas)->bst, LPC_UART_CONTROL_BASE, _reg, _val);
+static bus_space_handle_t bsh_clkpwr;
+
 #define	lpc_ns8250_get_clkreg(_bas, _reg)	\
-    bus_space_read_4((_bas)->bst, LPC_CLKPWR_BASE, (_reg))
+    bus_space_read_4((_bas)->bst, bsh_clkpwr, (_reg))
 #define	lpc_ns8250_set_clkreg(_bas, _reg, _val)	\
-    bus_space_write_4((_bas)->bst, LPC_CLKPWR_BASE, (_reg), (_val))
+    bus_space_write_4((_bas)->bst, bsh_clkpwr, (_reg), (_val))
 
 /*
  * Clear pending interrupts. THRE is cleared by reading IIR. Data
@@ -293,9 +291,12 @@ lpc_ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 	u_long	clkmode;
 	
 	/* Enable UART clock */
-	clkmode = lpc_ns8250_get_auxreg(bas, LPC_UART_CLKMODE);
-	lpc_ns8250_set_auxreg(bas, LPC_UART_CLKMODE,
-	    clkmode | LPC_UART_CLKMODE_UART5(1));
+	bus_space_map(bas->bst, LPC_CLKPWR_PHYS_BASE, LPC_CLKPWR_SIZE, 0,
+	    &bsh_clkpwr);
+	clkmode = lpc_ns8250_get_clkreg(bas, LPC_UART_CLKMODE);
+	lpc_ns8250_set_clkreg(bas, LPC_UART_CLKMODE, clkmode | 
+	    LPC_UART_CLKMODE_UART5(1));
+
 #if 0
 	/* Work around H/W bug */
 	uart_setreg(bas, REG_DATA, 0x00);
@@ -344,9 +345,6 @@ lpc_ns8250_putc(struct uart_bas *bas, int c)
 		DELAY(4);
 	uart_setreg(bas, REG_DATA, c);
 	uart_barrier(bas);
-	limit = 250000;
-	while ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0 && --limit)
-		DELAY(4);
 }
 
 static int
@@ -400,6 +398,8 @@ static int lpc_ns8250_bus_probe(struct uart_softc *);
 static int lpc_ns8250_bus_receive(struct uart_softc *);
 static int lpc_ns8250_bus_setsig(struct uart_softc *, int);
 static int lpc_ns8250_bus_transmit(struct uart_softc *);
+static void lpc_ns8250_bus_grab(struct uart_softc *);
+static void lpc_ns8250_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t lpc_ns8250_methods[] = {
 	KOBJMETHOD(uart_attach,		lpc_ns8250_bus_attach),
@@ -413,17 +413,26 @@ static kobj_method_t lpc_ns8250_methods[] = {
 	KOBJMETHOD(uart_receive,	lpc_ns8250_bus_receive),
 	KOBJMETHOD(uart_setsig,		lpc_ns8250_bus_setsig),
 	KOBJMETHOD(uart_transmit,	lpc_ns8250_bus_transmit),
+	KOBJMETHOD(uart_grab,		lpc_ns8250_bus_grab),
+	KOBJMETHOD(uart_ungrab,		lpc_ns8250_bus_ungrab),
 	{ 0, 0 }
 };
 
-struct uart_class uart_lpc_class = {
+static struct uart_class uart_lpc_class = {
 	"lpc_ns8250",
 	lpc_ns8250_methods,
 	sizeof(struct lpc_ns8250_softc),
 	.uc_ops = &uart_lpc_ns8250_ops,
 	.uc_range = 8,
-	.uc_rclk = DEFAULT_RCLK
+	.uc_rclk = DEFAULT_RCLK,
+	.uc_rshift = 0
 };
+
+static struct ofw_compat_data compat_data[] = {
+	{"lpc,uart",		(uintptr_t)&uart_lpc_class},
+	{NULL,			(uintptr_t)NULL},
+};
+UART_FDT_CLASS_AND_DEVICE(compat_data);
 
 #define	SIGCHG(c, i, s, d)				\
 	if (c) {					\
@@ -646,6 +655,7 @@ lpc_ns8250_bus_ipend(struct uart_softc *sc)
 		if (iir & IIR_TXRDY) {
 			ipend |= SER_INT_TXIDLE;
 			uart_setreg(bas, REG_IER, lpc_ns8250->ier);
+			uart_barrier(bas);
 		} else
 			ipend |= SER_INT_SIGCHG;
 	}
@@ -790,7 +800,7 @@ done:
 #if 0
 	/*
 	 * XXX there are some issues related to hardware flow control and
-	 * it's likely that uart(4) is the cause. This basicly needs more
+	 * it's likely that uart(4) is the cause. This basically needs more
 	 * investigation, but we avoid using for hardware flow control
 	 * until then.
 	 */
@@ -877,15 +887,51 @@ lpc_ns8250_bus_transmit(struct uart_softc *sc)
 
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
-	while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0)
-		;
-	uart_setreg(bas, REG_IER, lpc_ns8250->ier | IER_ETXRDY);
-	uart_barrier(bas);
+	if (sc->sc_txdatasz > 1) {
+		if ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0)
+			lpc_ns8250_drain(bas, UART_DRAIN_TRANSMITTER);
+	} else {
+		while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0)
+			DELAY(4);
+	}
 	for (i = 0; i < sc->sc_txdatasz; i++) {
 		uart_setreg(bas, REG_DATA, sc->sc_txbuf[i]);
 		uart_barrier(bas);
 	}
+	uart_setreg(bas, REG_IER, lpc_ns8250->ier | IER_ETXRDY);
+	uart_barrier(bas);
 	sc->sc_txbusy = 1;
 	uart_unlock(sc->sc_hwmtx);
 	return (0);
+}
+
+void
+lpc_ns8250_bus_grab(struct uart_softc *sc)
+{
+	struct uart_bas *bas = &sc->sc_bas;
+
+	/*
+	 * turn off all interrupts to enter polling mode. Leave the
+	 * saved mask alone. We'll restore whatever it was in ungrab.
+	 * All pending interrupt signals are reset when IER is set to 0.
+	 */
+	uart_lock(sc->sc_hwmtx);
+	uart_setreg(bas, REG_IER, 0);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
+}
+
+void
+lpc_ns8250_bus_ungrab(struct uart_softc *sc)
+{
+	struct lpc_ns8250_softc *lpc_ns8250 = (struct lpc_ns8250_softc*)sc;
+	struct uart_bas *bas = &sc->sc_bas;
+
+	/*
+	 * Restore previous interrupt mask
+	 */
+	uart_lock(sc->sc_hwmtx);
+	uart_setreg(bas, REG_IER, lpc_ns8250->ier);
+	uart_barrier(bas);
+	uart_unlock(sc->sc_hwmtx);
 }

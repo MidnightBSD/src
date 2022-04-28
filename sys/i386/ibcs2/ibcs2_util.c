@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_util.c 177997 2008-04-08 09:45:49Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/fcntl.h>
 #include <sys/param.h>

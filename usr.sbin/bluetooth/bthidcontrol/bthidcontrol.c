@@ -1,5 +1,7 @@
-/*
+/*-
  * bthidcontrol.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,11 +28,12 @@
  * SUCH DAMAGE.
  *
  * $Id: bthidcontrol.c,v 1.2 2004/02/13 21:44:41 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/bthidcontrol/bthidcontrol.c 163811 2006-10-31 00:26:58Z markus $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

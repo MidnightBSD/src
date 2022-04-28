@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -63,6 +63,9 @@
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
 #include "validator/val_utils.h"
+#include "validator/val_sigcrypt.h"
+#include "sldns/sbuffer.h"
+#include "sldns/str2wire.h"
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
@@ -103,6 +106,40 @@ read_fetch_policy(struct iter_env* ie, const char* str)
 	return 1;
 }
 
+/** apply config caps whitelist items to name tree */
+static int
+caps_white_apply_cfg(rbtree_type* ntree, struct config_file* cfg)
+{
+	struct config_strlist* p;
+	for(p=cfg->caps_whitelist; p; p=p->next) {
+		struct name_tree_node* n;
+		size_t len;
+		uint8_t* nm = sldns_str2wire_dname(p->str, &len);
+		if(!nm) {
+			log_err("could not parse %s", p->str);
+			return 0;
+		}
+		n = (struct name_tree_node*)calloc(1, sizeof(*n));
+		if(!n) {
+			log_err("out of memory");
+			free(nm);
+			return 0;
+		}
+		n->node.key = n;
+		n->name = nm;
+		n->len = len;
+		n->labs = dname_count_labels(nm);
+		n->dclass = LDNS_RR_CLASS_IN;
+		if(!name_tree_insert(ntree, n, nm, len, n->labs, n->dclass)) {
+			/* duplicate element ignored, idempotent */
+			free(n->name);
+			free(n);
+		}
+	}
+	name_tree_init_parents(ntree);
+	return 1;
+}
+
 int 
 iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 {
@@ -125,6 +162,16 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	if(!iter_env->priv || !priv_apply_cfg(iter_env->priv, cfg)) {
 		log_err("Could not set private addresses");
 		return 0;
+	}
+	if(cfg->caps_whitelist) {
+		if(!iter_env->caps_white)
+			iter_env->caps_white = rbtree_create(name_tree_compare);
+		if(!iter_env->caps_white || !caps_white_apply_cfg(
+			iter_env->caps_white, cfg)) {
+			log_err("Could not set capsforid whitelist");
+			return 0;
+		}
+
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;
 	iter_env->supports_ipv4 = cfg->do_ip4;
@@ -177,7 +224,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
  */
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
+	uint8_t* name, size_t namelen, uint16_t qtype, time_t now, 
 	struct delegpt_addr* a)
 {
 	int rtt, lame, reclame, dnsseclame;
@@ -208,7 +255,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
 			/* server is unresponsive,
-			 * we used to return TOP_TIMOUT, but fairly useless,
+			 * we used to return TOP_TIMEOUT, but fairly useless,
 			 * because if == TOP_TIMEOUT is dropped because
 			 * blacklisted later, instead, remove it here, so
 			 * other choices (that are not blacklisted) can be
@@ -217,14 +264,16 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		/* select remainder from worst to best */
 		else if(reclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*3; /* nonpref */
-		else if(dnsseclame )
+		else if(dnsseclame || a->dnsseclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 		else if(a->lame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
 		else	return rtt;
 	}
 	/* no server information present */
-	if(a->lame)
+	if(a->dnsseclame)
+		return UNKNOWN_SERVER_NICENESS+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
+	else if(a->lame)
 		return USEFUL_SERVER_TOP_TIMEOUT+1+UNKNOWN_SERVER_NICENESS; /* nonpref */
 	return UNKNOWN_SERVER_NICENESS;
 }
@@ -232,11 +281,14 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 /** lookup RTT information, and also store fastest rtt (if any) */
 static int
 iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
-	struct delegpt* dp, int* best_rtt, struct sock_list* blacklist)
+	uint8_t* name, size_t namelen, uint16_t qtype, time_t now, 
+	struct delegpt* dp, int* best_rtt, struct sock_list* blacklist,
+	size_t* num_suitable_results)
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
+	*num_suitable_results = 0;
+
 	if(dp->bogus)
 		return 0; /* NS bogus, all bogus, nothing found */
 	for(a=dp->result_list; a; a = a->next_result) {
@@ -252,25 +304,73 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 			} else if(a->sel_rtt < *best_rtt) {
 				*best_rtt = a->sel_rtt;
 			}
+			(*num_suitable_results)++;
 		}
 	}
 	return got_it;
 }
 
-/** filter the addres list, putting best targets at front,
+/** compare two rtts, return -1, 0 or 1 */
+static int
+rtt_compare(const void* x, const void* y)
+{
+	if(*(int*)x == *(int*)y)
+		return 0;
+	if(*(int*)x > *(int*)y)
+		return 1;
+	return -1;
+}
+
+/** get RTT for the Nth fastest server */
+static int
+nth_rtt(struct delegpt_addr* result_list, size_t num_results, size_t n)
+{
+	int rtt_band;
+	size_t i;
+	int* rtt_list, *rtt_index;
+	
+	if(num_results < 1 || n >= num_results) {
+		return -1;
+	}
+
+	rtt_list = calloc(num_results, sizeof(int));
+	if(!rtt_list) {
+		log_err("malloc failure: allocating rtt_list");
+		return -1;
+	}
+	rtt_index = rtt_list;
+
+	for(i=0; i<num_results && result_list; i++) {
+		if(result_list->sel_rtt != -1) {
+			*rtt_index = result_list->sel_rtt;
+			rtt_index++;
+		}
+		result_list=result_list->next_result;
+	}
+	qsort(rtt_list, num_results, sizeof(*rtt_list), rtt_compare);
+
+	log_assert(n > 0);
+	rtt_band = rtt_list[n-1];
+	free(rtt_list);
+
+	return rtt_band;
+}
+
+/** filter the address list, putting best targets at front,
  * returns number of best targets (or 0, no suitable targets) */
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
+	uint8_t* name, size_t namelen, uint16_t qtype, time_t now, 
 	struct delegpt* dp, int* selected_rtt, int open_target, 
-	struct sock_list* blacklist)
+	struct sock_list* blacklist, time_t prefetch)
 {
-	int got_num = 0, low_rtt = 0, swap_to_front;
+	int got_num = 0, low_rtt = 0, swap_to_front, rtt_band = RTT_BAND, nth;
+	size_t num_results;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
 	/* fillup sel_rtt and find best rtt in the bunch */
 	got_num = iter_fill_rtt(iter_env, env, name, namelen, qtype, now, dp, 
-		&low_rtt, blacklist);
+		&low_rtt, blacklist, &num_results);
 	if(got_num == 0) 
 		return 0;
 	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
@@ -278,6 +378,21 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		verbose(VERB_ALGO, "Bad choices, trying to get more choice");
 		return 0; /* we want more choice. The best choice is a bad one.
 			     return 0 to force the caller to fetch more */
+	}
+
+	if(env->cfg->fast_server_permil != 0 && prefetch == 0 &&
+		num_results > env->cfg->fast_server_num &&
+		ub_random_max(env->rnd, 1000) < env->cfg->fast_server_permil) {
+		/* the query is not prefetch, but for a downstream client,
+		 * there are more servers available then the fastest N we want
+		 * to choose from. Limit our choice to the fastest servers. */
+		nth = nth_rtt(dp->result_list, num_results,
+			env->cfg->fast_server_num);
+		if(nth > 0) {
+			rtt_band = nth - low_rtt;
+			if(rtt_band > RTT_BAND)
+				rtt_band = RTT_BAND;
+		}
 	}
 
 	got_num = 0;
@@ -291,10 +406,10 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		}
 		/* classify the server address and determine what to do */
 		swap_to_front = 0;
-		if(a->sel_rtt >= low_rtt && a->sel_rtt - low_rtt <= RTT_BAND) {
+		if(a->sel_rtt >= low_rtt && a->sel_rtt - low_rtt <= rtt_band) {
 			got_num++;
 			swap_to_front = 1;
-		} else if(a->sel_rtt<low_rtt && low_rtt-a->sel_rtt<=RTT_BAND) {
+		} else if(a->sel_rtt<low_rtt && low_rtt-a->sel_rtt<=rtt_band) {
 			got_num++;
 			swap_to_front = 1;
 		}
@@ -311,6 +426,65 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		}
 	}
 	*selected_rtt = low_rtt;
+
+	if (env->cfg->prefer_ip6) {
+		int got_num6 = 0;
+		int low_rtt6 = 0;
+		int i;
+		int attempt = -1; /* filter to make sure addresses have
+		  less attempts on them than the first, to force round
+		  robin when all the IPv6 addresses fail */
+		int num4ok = 0; /* number ip4 at low attempt count */
+		int num4_lowrtt = 0;
+		prev = NULL;
+		a = dp->result_list;
+		for(i = 0; i < got_num; i++) {
+			swap_to_front = 0;
+			if(a->addr.ss_family != AF_INET6 && attempt == -1) {
+				/* if we only have ip4 at low attempt count,
+				 * then ip6 is failing, and we need to
+				 * select one of the remaining IPv4 addrs */
+				attempt = a->attempts;
+				num4ok++;
+				num4_lowrtt = a->sel_rtt;
+			} else if(a->addr.ss_family != AF_INET6 && attempt == a->attempts) {
+				num4ok++;
+				if(num4_lowrtt == 0 || a->sel_rtt < num4_lowrtt) {
+					num4_lowrtt = a->sel_rtt;
+				}
+			}
+			if(a->addr.ss_family == AF_INET6) {
+				if(attempt == -1) {
+					attempt = a->attempts;
+				} else if(a->attempts > attempt) {
+					break;
+				}
+				got_num6++;
+				swap_to_front = 1;
+				if(low_rtt6 == 0 || a->sel_rtt < low_rtt6) {
+					low_rtt6 = a->sel_rtt;
+				}
+			}
+			/* swap to front if IPv6, or move to next result */
+			if(swap_to_front && prev) {
+				n = a->next_result;
+				prev->next_result = n;
+				a->next_result = dp->result_list;
+				dp->result_list = a;
+				a = n;
+			} else {
+				prev = a;
+				a = a->next_result;
+			}
+		}
+		if(got_num6 > 0) {
+			got_num = got_num6;
+			*selected_rtt = low_rtt6;
+		} else if(num4ok > 0) {
+			got_num = num4ok;
+			*selected_rtt = num4_lowrtt;
+		}
+	}
 	return got_num;
 }
 
@@ -318,13 +492,14 @@ struct delegpt_addr*
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
 	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_lame,
-	int* chase_to_rd, int open_target, struct sock_list* blacklist)
+	int* chase_to_rd, int open_target, struct sock_list* blacklist,
+	time_t prefetch)
 {
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
 	int num = iter_filter_order(iter_env, env, name, namelen, qtype,
-		*env->now, dp, &selrtt, open_target, blacklist);
+		*env->now, dp, &selrtt, open_target, blacklist, prefetch);
 
 	if(num == 0)
 		return NULL;
@@ -387,7 +562,7 @@ iter_server_selection(struct iter_env* iter_env,
 }
 
 struct dns_msg* 
-dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
+dns_alloc_msg(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* region)
 {
 	struct dns_msg* m = (struct dns_msg*)regional_alloc(region,
@@ -420,11 +595,11 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 
 void 
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
-	struct reply_info* msgrep, int is_referral, uint32_t leeway, int pside,
-	struct regional* region)
+	struct reply_info* msgrep, int is_referral, time_t leeway, int pside,
+	struct regional* region, uint16_t flags)
 {
 	if(!dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		pside, region))
+		pside, region, flags))
 		log_err("out of memory: cannot store data in cache");
 }
 
@@ -450,10 +625,12 @@ causes_cycle(struct module_qstate* qstate, uint8_t* name, size_t namelen,
 	qinf.qname_len = namelen;
 	qinf.qtype = t;
 	qinf.qclass = c;
+	qinf.local_alias = NULL;
 	fptr_ok(fptr_whitelist_modenv_detect_cycle(
 		qstate->env->detect_cycle));
 	return (*qstate->env->detect_cycle)(qstate, &qinf, 
-		(uint16_t)(BIT_RD|BIT_CD), qstate->is_priming);
+		(uint16_t)(BIT_RD|BIT_CD), qstate->is_priming,
+		qstate->is_valrec);
 }
 
 void 
@@ -540,6 +717,27 @@ iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
 	return 1;
 }
 
+int
+iter_qname_indicates_dnssec(struct module_env* env, struct query_info *qinfo)
+{
+	struct trust_anchor* a;
+	if(!env || !env->anchors || !qinfo || !qinfo->qname)
+		return 0;
+	/* a trust anchor exists above the name? */
+	if((a=anchors_lookup(env->anchors, qinfo->qname, qinfo->qname_len,
+		qinfo->qclass))) { 
+		if(a->numDS == 0 && a->numDNSKEY == 0) {
+			/* insecure trust point */
+			lock_basic_unlock(&a->lock);
+			return 0;
+		}
+		lock_basic_unlock(&a->lock);
+		return 1;
+	}
+	/* no trust anchor above it. */
+	return 0;
+}
+
 int 
 iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
         struct dns_msg* msg, uint16_t dclass)
@@ -551,6 +749,11 @@ iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
 	/* a trust anchor exists with this name, RRSIGs expected */
 	if((a=anchor_find(env->anchors, dp->name, dp->namelabs, dp->namelen,
 		dclass))) {
+		if(a->numDS == 0 && a->numDNSKEY == 0) {
+			/* insecure trust point */
+			lock_basic_unlock(&a->lock);
+			return 0;
+		}
 		lock_basic_unlock(&a->lock);
 		return 1;
 	}
@@ -662,7 +865,7 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 		k1->rk.rrset_class != k2->rk.rrset_class ||
 		query_dname_compare(k1->rk.dname, k2->rk.dname) != 0)
 		return 0;
-	if(d1->ttl != d2->ttl ||
+	if(	/* do not check ttl: d1->ttl != d2->ttl || */
 		d1->count != d2->count ||
 		d1->rrsig_count != d2->rrsig_count ||
 		d1->trust != d2->trust ||
@@ -671,7 +874,7 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 	t = d1->count + d1->rrsig_count;
 	for(i=0; i<t; i++) {
 		if(d1->rr_len[i] != d2->rr_len[i] ||
-			d1->rr_ttl[i] != d2->rr_ttl[i] ||
+			/* no ttl check: d1->rr_ttl[i] != d2->rr_ttl[i] ||*/
 			memcmp(d1->rr_data[i], d2->rr_data[i], 
 				d1->rr_len[i]) != 0)
 			return 0;
@@ -679,46 +882,128 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 	return 1;
 }
 
+/** compare rrsets and sort canonically.  Compares rrset name, type, class.
+ * return 0 if equal, +1 if x > y, and -1 if x < y.
+ */
+static int
+rrset_canonical_sort_cmp(const void* x, const void* y)
+{
+	struct ub_packed_rrset_key* rrx = *(struct ub_packed_rrset_key**)x;
+	struct ub_packed_rrset_key* rry = *(struct ub_packed_rrset_key**)y;
+	int r = dname_canonical_compare(rrx->rk.dname, rry->rk.dname);
+	if(r != 0)
+		return r;
+	if(rrx->rk.type != rry->rk.type) {
+		if(ntohs(rrx->rk.type) > ntohs(rry->rk.type))
+			return 1;
+		else	return -1;
+	}
+	if(rrx->rk.rrset_class != rry->rk.rrset_class) {
+		if(ntohs(rrx->rk.rrset_class) > ntohs(rry->rk.rrset_class))
+			return 1;
+		else	return -1;
+	}
+	return 0;
+}
+
 int 
-reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* scratch)
+reply_equal(struct reply_info* p, struct reply_info* q, struct regional* region)
 {
 	size_t i;
+	struct ub_packed_rrset_key** sorted_p, **sorted_q;
 	if(p->flags != q->flags ||
 		p->qdcount != q->qdcount ||
+		/* do not check TTL, this may differ */
+		/*
 		p->ttl != q->ttl ||
 		p->prefetch_ttl != q->prefetch_ttl ||
+		*/
 		p->security != q->security ||
 		p->an_numrrsets != q->an_numrrsets ||
 		p->ns_numrrsets != q->ns_numrrsets ||
 		p->ar_numrrsets != q->ar_numrrsets ||
 		p->rrset_count != q->rrset_count)
 		return 0;
+	/* sort the rrsets in the authority and additional sections before
+	 * compare, the query and answer sections are ordered in the sequence
+	 * they should have (eg. one after the other for aliases). */
+	sorted_p = (struct ub_packed_rrset_key**)regional_alloc_init(
+		region, p->rrsets, sizeof(*sorted_p)*p->rrset_count);
+	if(!sorted_p) return 0;
+	log_assert(p->an_numrrsets + p->ns_numrrsets + p->ar_numrrsets <=
+		p->rrset_count);
+	qsort(sorted_p + p->an_numrrsets, p->ns_numrrsets,
+		sizeof(*sorted_p), rrset_canonical_sort_cmp);
+	qsort(sorted_p + p->an_numrrsets + p->ns_numrrsets, p->ar_numrrsets,
+		sizeof(*sorted_p), rrset_canonical_sort_cmp);
+
+	sorted_q = (struct ub_packed_rrset_key**)regional_alloc_init(
+		region, q->rrsets, sizeof(*sorted_q)*q->rrset_count);
+	if(!sorted_q) {
+		regional_free_all(region);
+		return 0;
+	}
+	log_assert(q->an_numrrsets + q->ns_numrrsets + q->ar_numrrsets <=
+		q->rrset_count);
+	qsort(sorted_q + q->an_numrrsets, q->ns_numrrsets,
+		sizeof(*sorted_q), rrset_canonical_sort_cmp);
+	qsort(sorted_q + q->an_numrrsets + q->ns_numrrsets, q->ar_numrrsets,
+		sizeof(*sorted_q), rrset_canonical_sort_cmp);
+
+	/* compare the rrsets */
 	for(i=0; i<p->rrset_count; i++) {
-		if(!rrset_equal(p->rrsets[i], q->rrsets[i])) {
-			/* fallback procedure: try to sort and canonicalize */
-			ldns_rr_list* pl, *ql;
-			pl = packed_rrset_to_rr_list(p->rrsets[i], scratch);
-			ql = packed_rrset_to_rr_list(q->rrsets[i], scratch);
-			if(!pl || !ql) {
-				ldns_rr_list_deep_free(pl);
-				ldns_rr_list_deep_free(ql);
+		if(!rrset_equal(sorted_p[i], sorted_q[i])) {
+			if(!rrset_canonical_equal(region, sorted_p[i],
+				sorted_q[i])) {
+				regional_free_all(region);
 				return 0;
 			}
-			ldns_rr_list2canonical(pl);
-			ldns_rr_list2canonical(ql);
-			ldns_rr_list_sort(pl);
-			ldns_rr_list_sort(ql);
-			if(ldns_rr_list_compare(pl, ql) != 0) {
-				ldns_rr_list_deep_free(pl);
-				ldns_rr_list_deep_free(ql);
-				return 0;
-			}
-			ldns_rr_list_deep_free(pl);
-			ldns_rr_list_deep_free(ql);
-			continue;
 		}
 	}
+	regional_free_all(region);
 	return 1;
+}
+
+void 
+caps_strip_reply(struct reply_info* rep)
+{
+	size_t i;
+	if(!rep) return;
+	/* see if message is a referral, in which case the additional and
+	 * NS record cannot be removed */
+	/* referrals have the AA flag unset (strict check, not elsewhere in
+	 * unbound, but for 0x20 this is very convenient). */
+	if(!(rep->flags&BIT_AA))
+		return;
+	/* remove the additional section from the reply */
+	if(rep->ar_numrrsets != 0) {
+		verbose(VERB_ALGO, "caps fallback: removing additional section");
+		rep->rrset_count -= rep->ar_numrrsets;
+		rep->ar_numrrsets = 0;
+	}
+	/* is there an NS set in the authority section to remove? */
+	/* the failure case (Cisco firewalls) only has one rrset in authsec */
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		struct ub_packed_rrset_key* s = rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NS) {
+			/* remove NS rrset and break from loop (loop limits
+			 * have changed) */
+			/* move last rrset into this position (there is no
+			 * additional section any more) */
+			verbose(VERB_ALGO, "caps fallback: removing NS rrset");
+			if(i < rep->rrset_count-1)
+				rep->rrsets[i]=rep->rrsets[rep->rrset_count-1];
+			rep->rrset_count --;
+			rep->ns_numrrsets --;
+			break;
+		}
+	}
+}
+
+int caps_failed_rcode(struct reply_info* rep)
+{
+	return !(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR ||
+		FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN);
 }
 
 void 
@@ -768,7 +1053,7 @@ void iter_store_parentside_neg(struct module_env* env,
 	/* TTL: NS from referral in iq->deleg_msg,
 	 *      or first RR from iq->response,
 	 *      or servfail5secs if !iq->response */ 
-	uint32_t ttl = NORR_TTL;
+	time_t ttl = NORR_TTL;
 	struct ub_packed_rrset_key* neg;
 	struct packed_rrset_data* newd;
 	if(rep) {
@@ -798,7 +1083,7 @@ void iter_store_parentside_neg(struct module_env* env,
 	neg->entry.hash = rrset_key_hash(&neg->rk);
 	newd = (struct packed_rrset_data*)regional_alloc_zero(env->scratch, 
 		sizeof(struct packed_rrset_data) + sizeof(size_t) +
-		sizeof(uint8_t*) + sizeof(uint32_t) + sizeof(uint16_t));
+		sizeof(uint8_t*) + sizeof(time_t) + sizeof(uint16_t));
 	if(!newd) {
 		log_err("out of memory in store_parentside_neg");
 		return;
@@ -815,7 +1100,7 @@ void iter_store_parentside_neg(struct module_env* env,
 	newd->rr_len[0] = 0 /* zero len rdata */ + sizeof(uint16_t);
 	packed_rrset_ptr_fixup(newd);
 	newd->rr_ttl[0] = newd->ttl;
-	ldns_write_uint16(newd->rr_data[0], 0 /* zero len rdata */);
+	sldns_write_uint16(newd->rr_data[0], 0 /* zero len rdata */);
 	/* store it */
 	log_rrset_key(VERB_ALGO, "store parent-side negative", neg);
 	iter_store_parentside_rrset(env, neg);
@@ -926,6 +1211,19 @@ iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns, uint8_t* z)
 	}
 }
 
+void
+iter_scrub_nxdomain(struct dns_msg* msg)
+{
+	if(msg->rep->an_numrrsets == 0)
+		return;
+
+	memmove(msg->rep->rrsets, msg->rep->rrsets+msg->rep->an_numrrsets,
+		sizeof(struct ub_packed_rrset_key*) *
+		(msg->rep->rrset_count-msg->rep->an_numrrsets));
+	msg->rep->rrset_count -= msg->rep->an_numrrsets;
+	msg->rep->an_numrrsets = 0;
+}
+
 void iter_dec_attempts(struct delegpt* dp, int d)
 {
 	struct delegpt_addr* a;
@@ -1032,4 +1330,51 @@ int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp)
 	if(dname_count_labels(qinfo->qname) == dp->namelabs+1)
 		return 0;
 	return 1;
+}
+
+int
+iter_stub_fwd_no_cache(struct module_qstate *qstate, struct query_info *qinf)
+{
+	struct iter_hints_stub *stub;
+	struct delegpt *dp;
+
+	/* Check for stub. */
+	stub = hints_lookup_stub(qstate->env->hints, qinf->qname,
+	    qinf->qclass, NULL);
+	dp = forwards_lookup(qstate->env->fwds, qinf->qname, qinf->qclass);
+
+	/* see if forward or stub is more pertinent */
+	if(stub && stub->dp && dp) {
+		if(dname_strict_subdomain(dp->name, dp->namelabs,
+			stub->dp->name, stub->dp->namelabs)) {
+			stub = NULL; /* ignore stub, forward is lower */
+		} else {
+			dp = NULL; /* ignore forward, stub is lower */
+		}
+	}
+
+	/* check stub */
+	if (stub != NULL && stub->dp != NULL) {
+		if(stub->dp->no_cache) {
+			char qname[255+1];
+			char dpname[255+1];
+			dname_str(qinf->qname, qname);
+			dname_str(stub->dp->name, dpname);
+			verbose(VERB_ALGO, "stub for %s %s has no_cache", qname, dpname);
+		}
+		return (stub->dp->no_cache);
+	}
+
+	/* Check for forward. */
+	if (dp) {
+		if(dp->no_cache) {
+			char qname[255+1];
+			char dpname[255+1];
+			dname_str(qinf->qname, qname);
+			dname_str(dp->name, dpname);
+			verbose(VERB_ALGO, "forward for %s %s has no_cache", qname, dpname);
+		}
+		return (dp->no_cache);
+	}
+	return 0;
 }

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/uuid/uuid_hash.c 139601 2005-01-03 02:56:15Z marcel $
+ * $FreeBSD$
  */
 
 #include <uuid.h>

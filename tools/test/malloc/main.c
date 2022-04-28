@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/test/malloc/main.c 219511 2011-03-11 17:33:31Z brucec $ */
+/* $FreeBSD$ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

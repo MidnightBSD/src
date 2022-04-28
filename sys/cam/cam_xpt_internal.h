@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cam/cam_xpt_internal.h 253958 2013-08-05 11:48:40Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_XPT_INTERNAL_H
 #define _CAM_CAM_XPT_INTERNAL_H 1
+
+#include <sys/taskqueue.h>
 
 /* Forward Declarations */
 struct cam_eb;
@@ -46,7 +48,7 @@ typedef void (*xpt_dev_async_func)(u_int32_t async_code,
 				   void *async_arg);
 typedef void (*xpt_announce_periph_func)(struct cam_periph *periph);
 
-struct xpt_xport {
+struct xpt_xport_ops {
 	xpt_alloc_device_func	alloc_device;
 	xpt_release_device_func	reldev;
 	xpt_action_func		action;
@@ -54,15 +56,35 @@ struct xpt_xport {
 	xpt_announce_periph_func announce;
 };
 
-/*
- * Structure for queueing a device in a run queue.
- * There is one run queue for allocating new ccbs,
- * and another for sending ccbs to the controller.
- */
-struct cam_ed_qinfo {
-	cam_pinfo pinfo;
-	struct	  cam_ed *device;
+struct xpt_xport {
+	cam_xport		xport;
+	const char		*name;
+	struct xpt_xport_ops	*ops;
 };
+
+SET_DECLARE(cam_xpt_xport_set, struct xpt_xport);
+#define CAM_XPT_XPORT(data) 				\
+	DATA_SET(cam_xpt_xport_set, data)
+
+typedef void (*xpt_proto_announce_func)(struct cam_ed *);
+typedef void (*xpt_proto_debug_out_func)(union ccb *);
+
+struct xpt_proto_ops {
+	xpt_proto_announce_func	announce;
+	xpt_proto_announce_func	denounce;
+	xpt_proto_debug_out_func debug_out;
+};
+
+struct xpt_proto {
+	cam_proto		proto;
+	const char		*name;
+	struct xpt_proto_ops	*ops;
+};
+
+SET_DECLARE(cam_xpt_proto_set, struct xpt_proto);
+#define CAM_XPT_PROTO(data) 				\
+	DATA_SET(cam_xpt_proto_set, data)
+
 
 /*
  * The CAM EDT (Existing Device Table) contains the device information for
@@ -70,15 +92,11 @@ struct cam_ed_qinfo {
  * cam_ed structure for each device on the bus.
  */
 struct cam_ed {
+	cam_pinfo	 devq_entry;
 	TAILQ_ENTRY(cam_ed) links;
-	struct	cam_ed_qinfo devq_entry;
 	struct	cam_et	 *target;
 	struct	cam_sim  *sim;
 	lun_id_t	 lun_id;
-	struct	camq drvq;		/*
-					 * Queue of type drivers wanting to do
-					 * work on this device.
-					 */
 	struct	cam_ccbq ccbq;		/* Queue of pending ccbs */
 	struct	async_list asyncs;	/* Async callback info for this B/T/L */
 	struct	periph_list periphs;	/* All attached devices */
@@ -95,6 +113,8 @@ struct cam_ed {
 	uint8_t		 supported_vpds_len;
 	uint32_t	 device_id_len;
 	uint8_t		 *device_id;
+	uint32_t	 ext_inq_len;
+	uint8_t		 *ext_inq;
 	uint8_t		 physpath_len;
 	uint8_t		 *physpath;	/* physical path string form */
 	uint32_t	 rcap_len;
@@ -125,6 +145,10 @@ struct cam_ed {
 	u_int32_t	 refcount;
 	struct callout	 callout;
 	STAILQ_ENTRY(cam_ed) highpowerq_entry;
+	struct mtx	 device_mtx;
+	struct task	 device_destroy_task;
+	const struct	 nvme_controller_data *nvme_cdata;
+	const struct	 nvme_namespace_data *nvme_data;
 };
 
 /*
@@ -143,6 +167,7 @@ struct cam_et {
 	struct		timeval last_reset;
 	u_int		rpl_size;
 	struct scsi_report_luns_data *luns;
+	struct mtx	luns_mtx;	/* Protection for luns field. */
 };
 
 /*
@@ -162,6 +187,7 @@ struct cam_eb {
 	u_int		     generation;
 	device_t	     parent_dev;
 	struct xpt_xport     *xport;
+	struct mtx	     eb_mtx;	/* Bus topology mutex. */
 };
 
 struct cam_path {
@@ -171,16 +197,11 @@ struct cam_path {
 	struct cam_ed	  *device;
 };
 
-struct xpt_xport *	scsi_get_xport(void);
-struct xpt_xport *	ata_get_xport(void);
-
 struct cam_ed *		xpt_alloc_device(struct cam_eb *bus,
 					 struct cam_et *target,
 					 lun_id_t lun_id);
 void			xpt_acquire_device(struct cam_ed *device);
 void			xpt_release_device(struct cam_ed *device);
-int			xpt_schedule_dev(struct camq *queue, cam_pinfo *dev_pinfo,
-					 u_int32_t new_priority);
 u_int32_t		xpt_dev_ccbq_resize(struct cam_path *path, int newopenings);
 void			xpt_start_tags(struct cam_path *path);
 void			xpt_stop_tags(struct cam_path *path);

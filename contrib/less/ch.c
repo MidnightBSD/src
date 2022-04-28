@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2019  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -54,7 +54,7 @@ struct buf {
  * The file state is maintained in a filestate structure.
  * A pointer to the filestate is kept in the ifile structure.
  */
-#define	BUFHASH_SIZE	64
+#define	BUFHASH_SIZE	1024
 struct filestate {
 	struct bufnode buflist;
 	struct bufnode hashtbl[BUFHASH_SIZE];
@@ -144,13 +144,13 @@ static int ch_addbuf();
  * Get the character pointed to by the read pointer.
  */
 	int
-ch_get()
+ch_get(VOID_PARAM)
 {
-	register struct buf *bp;
-	register struct bufnode *bn;
-	register int n;
-	register int slept;
-	register int h;
+	struct buf *bp;
+	struct bufnode *bn;
+	int n;
+	int slept;
+	int h;
 	POSITION pos;
 	POSITION len;
 
@@ -323,13 +323,16 @@ ch_get()
 #if HAVE_STAT_INO
 			if (follow_mode == FOLLOW_NAME)
 			{
-				/* See whether the file's i-number has changed.
+				/* See whether the file's i-number has changed,
+				 * or the file has shrunk.
 				 * If so, force the file to be closed and
 				 * reopened. */
 				struct stat st;
+				POSITION curr_pos = ch_tell();
 				int r = stat(get_filename(curr_ifile), &st);
 				if (r == 0 && (st.st_ino != curr_ino ||
-					st.st_dev != curr_dev))
+					st.st_dev != curr_dev ||
+					(curr_pos != NULL_POSITION && st.st_size < curr_pos)))
 				{
 					/* screen_trashed=2 causes
 					 * make_display to reopen the file. */
@@ -389,7 +392,7 @@ ch_ungetchar(c)
  * If we haven't read all of standard input into it, do that now.
  */
 	public void
-end_logfile()
+end_logfile(VOID_PARAM)
 {
 	static int tried = FALSE;
 
@@ -414,10 +417,10 @@ end_logfile()
  * Write all the existing buffered data to the log file.
  */
 	public void
-sync_logfile()
+sync_logfile(VOID_PARAM)
 {
-	register struct buf *bp;
-	register struct bufnode *bn;
+	struct buf *bp;
+	struct bufnode *bn;
 	int warned = FALSE;
 	BLOCKNUM block;
 	BLOCKNUM nblocks;
@@ -454,9 +457,9 @@ sync_logfile()
 buffered(block)
 	BLOCKNUM block;
 {
-	register struct buf *bp;
-	register struct bufnode *bn;
-	register int h;
+	struct buf *bp;
+	struct bufnode *bn;
+	int h;
 
 	h = BUFHASH(block);
 	FOR_BUFS_IN_CHAIN(h, bn)
@@ -474,7 +477,7 @@ buffered(block)
  */
 	public int
 ch_seek(pos)
-	register POSITION pos;
+	POSITION pos;
 {
 	BLOCKNUM new_block;
 	POSITION len;
@@ -512,7 +515,7 @@ ch_seek(pos)
  * Seek to the end of the file.
  */
 	public int
-ch_end_seek()
+ch_end_seek(VOID_PARAM)
 {
 	POSITION len;
 
@@ -536,15 +539,41 @@ ch_end_seek()
 }
 
 /*
+ * Seek to the last position in the file that is currently buffered.
+ */
+	public int
+ch_end_buffer_seek(VOID_PARAM)
+{
+	struct buf *bp;
+	struct bufnode *bn;
+	POSITION buf_pos;
+	POSITION end_pos;
+
+	if (thisfile == NULL || (ch_flags & CH_CANSEEK))
+		return (ch_end_seek());
+
+	end_pos = 0;
+	FOR_BUFS(bn)
+	{
+		bp = bufnode_buf(bn);
+		buf_pos = (bp->block * LBUFSIZE) + bp->datasize;
+		if (buf_pos > end_pos)
+			end_pos = buf_pos;
+	}
+
+	return (ch_seek(end_pos));
+}
+
+/*
  * Seek to the beginning of the file, or as close to it as we can get.
  * We may not be able to seek there if input is a pipe and the
  * beginning of the pipe is no longer buffered.
  */
 	public int
-ch_beg_seek()
+ch_beg_seek(VOID_PARAM)
 {
-	register struct bufnode *bn;
-	register struct bufnode *firstbn;
+	struct bufnode *bn;
+	struct bufnode *firstbn;
 
 	/*
 	 * Try a plain ch_seek first.
@@ -573,7 +602,7 @@ ch_beg_seek()
  * Return the length of the file, if known.
  */
 	public POSITION
-ch_length()
+ch_length(VOID_PARAM)
 {
 	if (thisfile == NULL)
 		return (NULL_POSITION);
@@ -590,7 +619,7 @@ ch_length()
  * Return the current position in the file.
  */
 	public POSITION
-ch_tell()
+ch_tell(VOID_PARAM)
 {
 	if (thisfile == NULL)
 		return (NULL_POSITION);
@@ -601,9 +630,9 @@ ch_tell()
  * Get the current char and post-increment the read pointer.
  */
 	public int
-ch_forw_get()
+ch_forw_get(VOID_PARAM)
 {
-	register int c;
+	int c;
 
 	if (thisfile == NULL)
 		return (EOI);
@@ -624,7 +653,7 @@ ch_forw_get()
  * Pre-decrement the read pointer and get the new current char.
  */
 	public int
-ch_back_get()
+ch_back_get(VOID_PARAM)
 {
 	if (thisfile == NULL)
 		return (EOI);
@@ -664,9 +693,9 @@ ch_setbufspace(bufspace)
  * Flush (discard) any saved file state, including buffer contents.
  */
 	public void
-ch_flush()
+ch_flush(VOID_PARAM)
 {
-	register struct bufnode *bn;
+	struct bufnode *bn;
 
 	if (thisfile == NULL)
 		return;
@@ -731,10 +760,10 @@ ch_flush()
  * The buffer is added to the tail of the buffer chain.
  */
 	static int
-ch_addbuf()
+ch_addbuf(VOID_PARAM)
 {
-	register struct buf *bp;
-	register struct bufnode *bn;
+	struct buf *bp;
+	struct bufnode *bn;
 
 	/*
 	 * Allocate and initialize a new buffer and link it 
@@ -756,9 +785,9 @@ ch_addbuf()
  *
  */
 	static void
-init_hashtbl()
+init_hashtbl(VOID_PARAM)
 {
-	register int h;
+	int h;
 
 	for (h = 0;  h < BUFHASH_SIZE;  h++)
 	{
@@ -771,9 +800,9 @@ init_hashtbl()
  * Delete all buffers for this file.
  */
 	static void
-ch_delbufs()
+ch_delbufs(VOID_PARAM)
 {
-	register struct bufnode *bn;
+	struct bufnode *bn;
 
 	while (ch_bufhead != END_OF_CHAIN)
 	{
@@ -811,7 +840,7 @@ seekable(f)
  * This is used after an ignore_eof read, during which the EOF may change.
  */
 	public void
-ch_set_eof()
+ch_set_eof(VOID_PARAM)
 {
 	ch_fsize = ch_fpos;
 }
@@ -838,13 +867,12 @@ ch_init(f, flags)
 				calloc(1, sizeof(struct filestate));
 		thisfile->buflist.next = thisfile->buflist.prev = END_OF_CHAIN;
 		thisfile->nbufs = 0;
-		thisfile->flags = 0;
+		thisfile->flags = flags;
 		thisfile->fpos = 0;
 		thisfile->block = 0;
 		thisfile->offset = 0;
 		thisfile->file = -1;
 		thisfile->fsize = NULL_POSITION;
-		ch_flags = flags;
 		init_hashtbl();
 		/*
 		 * Try to seek; set CH_CANSEEK if it works.
@@ -862,14 +890,14 @@ ch_init(f, flags)
  * Close a filestate.
  */
 	public void
-ch_close()
+ch_close(VOID_PARAM)
 {
 	int keepstate = FALSE;
 
 	if (thisfile == NULL)
 		return;
 
-	if (ch_flags & (CH_CANSEEK|CH_POPENED|CH_HELPFILE))
+	if ((ch_flags & (CH_CANSEEK|CH_POPENED|CH_HELPFILE)) && !(ch_flags & CH_KEEPOPEN))
 	{
 		/*
 		 * We can seek or re-open, so we don't need to keep buffers.
@@ -905,7 +933,7 @@ ch_close()
  * Return ch_flags for the current file.
  */
 	public int
-ch_getflags()
+ch_getflags(VOID_PARAM)
 {
 	if (thisfile == NULL)
 		return (0);

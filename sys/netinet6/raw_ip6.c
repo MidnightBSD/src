@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/raw_ip6.c 253571 2013-07-23 14:14:24Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ipsec.h"
 #include "opt_inet6.h"
@@ -82,6 +82,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/raw_ip6.c 253571 2013-07-23 14:1
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 #include <net/route.h>
 #include <net/vnet.h>
@@ -103,10 +104,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/raw_ip6.c 253571 2013-07-23 14:1
 #include <netinet6/scope6_var.h>
 #include <netinet6/send.h>
 
-#ifdef IPSEC
-#include <netipsec/ipsec.h>
-#include <netipsec/ipsec6.h>
-#endif /* IPSEC */
+#include <netipsec/ipsec_support.h>
 
 #include <machine/stdarg.h>
 
@@ -160,19 +158,13 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 {
 	struct ifnet *ifp;
 	struct mbuf *m = *mp;
-	register struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
-	register struct inpcb *in6p;
-	struct inpcb *last = 0;
+	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
+	struct inpcb *in6p;
+	struct inpcb *last = NULL;
 	struct mbuf *opts = NULL;
 	struct sockaddr_in6 fromsa;
 
 	RIP6STAT_INC(rip6s_ipackets);
-
-	if (faithprefix_p != NULL && (*faithprefix_p)(&ip6->ip6_dst)) {
-		/* XXX Send icmp6 host/port unreach? */
-		m_freem(m);
-		return (IPPROTO_DONE);
-	}
 
 	init_sin6(&fromsa, m); /* general init */
 
@@ -206,7 +198,8 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 		INP_RLOCK(in6p);
 		if (in6p->in6p_cksum != -1) {
 			RIP6STAT_INC(rip6s_isum);
-			if (in6_cksum(m, proto, *offp,
+			if (m->m_pkthdr.len - (*offp + in6p->in6p_cksum) < 2 ||
+			    in6_cksum(m, proto, *offp,
 			    m->m_pkthdr.len - *offp)) {
 				INP_RUNLOCK(in6p);
 				RIP6STAT_INC(rip6s_badsum);
@@ -263,15 +256,18 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 		if (last != NULL) {
 			struct mbuf *n = m_copy(m, 0, (int)M_COPYALL);
 
-#ifdef IPSEC
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
 			/*
 			 * Check AH/ESP integrity.
 			 */
-			if (n && ipsec6_in_reject(n, last)) {
-				m_freem(n);
-				IPSEC6STAT_INC(ips_in_polvio);
-				/* Do not inject data into pcb. */
-			} else
+			if (IPSEC_ENABLED(ipv6)) {
+				if (n != NULL &&
+				    IPSEC_CHECK_POLICY(ipv6, n, last) != 0) {
+					m_freem(n);
+					/* Do not inject data into pcb. */
+					n = NULL;
+				}
+			}
 #endif /* IPSEC */
 			if (n) {
 				if (last->inp_flags & INP_CONTROLOPTS ||
@@ -295,13 +291,13 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 		last = in6p;
 	}
 	INP_INFO_RUNLOCK(&V_ripcbinfo);
-#ifdef IPSEC
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	/*
 	 * Check AH/ESP integrity.
 	 */
-	if ((last != NULL) && ipsec6_in_reject(m, last)) {
+	if (IPSEC_ENABLED(ipv6) && last != NULL &&
+	    IPSEC_CHECK_POLICY(ipv6, m, last) != 0) {
 		m_freem(m);
-		IPSEC6STAT_INC(ips_in_polvio);
 		IP6STAT_DEC(ip6s_delivered);
 		/* Do not inject data into pcb. */
 		INP_RUNLOCK(last);
@@ -328,12 +324,10 @@ rip6_input(struct mbuf **mp, int *offp, int proto)
 			RIP6STAT_INC(rip6s_nosockmcast);
 		if (proto == IPPROTO_NONE)
 			m_freem(m);
-		else {
-			char *prvnxtp = ip6_get_prevhdr(m, *offp); /* XXX */
+		else
 			icmp6_error(m, ICMP6_PARAM_PROB,
 			    ICMP6_PARAMPROB_NEXTHEADER,
-			    prvnxtp - mtod(m, char *));
-		}
+			    ip6_get_prevhdr(m, *offp));
 		IP6STAT_DEC(ip6s_delivered);
 	}
 	return (IPPROTO_DONE);
@@ -389,17 +383,10 @@ rip6_ctlinput(int cmd, struct sockaddr *sa, void *d)
  * may have setup with control call.
  */
 int
-#if __STDC__
-rip6_output(struct mbuf *m, ...)
-#else
-rip6_output(m, va_alist)
-	struct mbuf *m;
-	va_dcl
-#endif
+rip6_output(struct mbuf *m, struct socket *so, ...)
 {
 	struct mbuf *control;
 	struct m_tag *mtag;
-	struct socket *so;
 	struct sockaddr_in6 *dstsock;
 	struct in6_addr *dst;
 	struct ip6_hdr *ip6;
@@ -411,11 +398,11 @@ rip6_output(m, va_alist)
 	int type = 0, code = 0;		/* for ICMPv6 output statistics only */
 	int scope_ambiguous = 0;
 	int use_defzone = 0;
+	int hlim = 0;
 	struct in6_addr in6a;
 	va_list ap;
 
-	va_start(ap, m);
-	so = va_arg(ap, struct socket *);
+	va_start(ap, so);
 	dstsock = va_arg(ap, struct sockaddr_in6 *);
 	control = va_arg(ap, struct mbuf *);
 	va_end(ap);
@@ -475,8 +462,9 @@ rip6_output(m, va_alist)
 	/*
 	 * Source address selection.
 	 */
-	error = in6_selectsrc(dstsock, optp, in6p, NULL, so->so_cred,
-	    &oifp, &in6a);
+	error = in6_selectsrc_socket(dstsock, optp, in6p, so->so_cred,
+	    scope_ambiguous, &in6a, &hlim);
+
 	if (error)
 		goto bad;
 	error = prison_check_ip6(in6p->inp_cred, &in6a);
@@ -484,19 +472,6 @@ rip6_output(m, va_alist)
 		goto bad;
 	ip6->ip6_src = in6a;
 
-	if (oifp && scope_ambiguous) {
-		/*
-		 * Application should provide a proper zone ID or the use of
-		 * default zone IDs should be enabled.  Unfortunately, some
-		 * applications do not behave as it should, so we need a
-		 * workaround.  Even if an appropriate ID is not determined
-		 * (when it's required), if we can determine the outgoing
-		 * interface. determine the zone ID based on the interface.
-		 */
-		error = in6_setscope(&dstsock->sin6_addr, oifp, NULL);
-		if (error != 0)
-			goto bad;
-	}
 	ip6->ip6_dst = dstsock->sin6_addr;
 
 	/*
@@ -511,7 +486,7 @@ rip6_output(m, va_alist)
 	 * ip6_plen will be filled in ip6_output, so not fill it here.
 	 */
 	ip6->ip6_nxt = in6p->inp_ip_p;
-	ip6->ip6_hlim = in6_selecthlim(in6p, oifp);
+	ip6->ip6_hlim = hlim;
 
 	if (so->so_proto->pr_protocol == IPPROTO_ICMPV6 ||
 	    in6p->in6p_cksum != -1) {
@@ -524,7 +499,7 @@ rip6_output(m, va_alist)
 			off = offsetof(struct icmp6_hdr, icmp6_cksum);
 		else
 			off = in6p->in6p_cksum;
-		if (plen < off + 1) {
+		if (plen < off + 2) {
 			error = EINVAL;
 			goto bad;
 		}
@@ -799,7 +774,6 @@ rip6_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct inpcb *inp;
 	struct sockaddr_in6 *addr = (struct sockaddr_in6 *)nam;
 	struct in6_addr in6a;
-	struct ifnet *ifp = NULL;
 	int error = 0, scope_ambiguous = 0;
 
 	inp = sotoinpcb(so);
@@ -828,21 +802,14 @@ rip6_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	INP_INFO_WLOCK(&V_ripcbinfo);
 	INP_WLOCK(inp);
 	/* Source address selection. XXX: need pcblookup? */
-	error = in6_selectsrc(addr, inp->in6p_outputopts,
-	    inp, NULL, so->so_cred, &ifp, &in6a);
+	error = in6_selectsrc_socket(addr, inp->in6p_outputopts,
+	    inp, so->so_cred, scope_ambiguous, &in6a, NULL);
 	if (error) {
 		INP_WUNLOCK(inp);
 		INP_INFO_WUNLOCK(&V_ripcbinfo);
 		return (error);
 	}
 
-	/* XXX: see above */
-	if (ifp && scope_ambiguous &&
-	    (error = in6_setscope(&addr->sin6_addr, ifp, NULL)) != 0) {
-		INP_WUNLOCK(inp);
-		INP_INFO_WUNLOCK(&V_ripcbinfo);
-		return (error);
-	}
 	inp->in6p_faddr = addr->sin6_addr;
 	inp->in6p_laddr = in6a;
 	soisconnected(so);

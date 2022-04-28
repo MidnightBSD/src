@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: release/10.0.0/share/termcap/Makefile 148724 2005-08-05 09:52:25Z phk $
+# $FreeBSD$
 
 # reorder gives an editor command for most common terminals
 # (in reverse order from n'th to 1'st most commonly used)
@@ -9,10 +9,7 @@ MAN=	termcap.5
 
 FILES=		termcap termcap.db
 FILESDIR=	${BINDIR}/misc
-CLEANFILES+=	termcap termcap.db
-
-termcap: reorder termcap.src
-	TERM=dumb TERMCAP=dumb: ex - ${.CURDIR}/termcap.src < ${.CURDIR}/reorder
+CLEANFILES+=	termcap.db
 
 .include <bsd.endian.mk>
 .if ${TARGET_ENDIANNESS} == "1234"
@@ -24,9 +21,9 @@ CAP_MKDB_ENDIAN=
 .endif
 
 termcap.db: termcap
-	cap_mkdb ${CAP_MKDB_ENDIAN} termcap
+	cap_mkdb ${CAP_MKDB_ENDIAN} -f ${.TARGET:R} ${.ALLSRC}
 
 etc-termcap:
-	ln -fs ${BINDIR}/misc/termcap ${DESTDIR}/etc/termcap
+	${INSTALL_SYMLINK} ${BINDIR}/misc/termcap ${DESTDIR}/etc/termcap
 
 .include <bsd.prog.mk>

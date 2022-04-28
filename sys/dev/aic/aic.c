@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aic/aic.c 246713 2013-02-12 16:57:20Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -280,10 +280,10 @@ aic_action(struct cam_sim *sim, union ccb *ccb)
                 cpi->max_lun = 7;
                 cpi->initiator_id = aic->initiator;
                 cpi->bus_id = cam_sim_bus(sim);
-		cpi->base_transfer_speed = 3300;
-                strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-                strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
-                strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+                cpi->base_transfer_speed = 3300;
+                strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+                strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
+                strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
                 cpi->unit_number = cam_sim_unit(sim);
                 cpi->transport = XPORT_SPI;
                 cpi->transport_version = 2;
@@ -319,8 +319,8 @@ aic_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
 	TAILQ_INSERT_TAIL(&aic->pending_ccbs, &ccb->ccb_h, sim_links.tqe);
 
-	callout_reset(&scb->timer, (ccb->ccb_h.timeout * hz) / 1000,
-	    aic_timeout, scb);
+	callout_reset_sbt(&scb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    aic_timeout, scb, 0);
 
 	aic_start(aic);
 }
@@ -1075,9 +1075,9 @@ aic_done(struct aic_softc *aic, struct aic_scb *scb)
 				    &pending_scb->ccb->ccb_h, sim_links.tqe);
 				aic_done(aic, pending_scb);
 			} else {
-				callout_reset(&pending_scb->timer,
-				    (ccb_h->timeout * hz) / 1000, aic_timeout,
-				    pending_scb);
+				callout_reset_sbt(&pending_scb->timer,
+				    SBT_1MS * ccb_h->timeout, 0, aic_timeout,
+				    pending_scb, 0);
 				ccb_h = TAILQ_NEXT(ccb_h, sim_links.tqe);
 			}
 		}
@@ -1094,9 +1094,9 @@ aic_done(struct aic_softc *aic, struct aic_scb *scb)
 				    &nexus_scb->ccb->ccb_h, sim_links.tqe);
 				aic_done(aic, nexus_scb);
 			} else {
-				callout_reset(&nexus_scb->timer,
-				    (ccb_h->timeout * hz) / 1000, aic_timeout,
-				    nexus_scb);
+				callout_reset_sbt(&nexus_scb->timer,
+				    SBT_1MS * ccb_h->timeout, 0, aic_timeout,
+				    nexus_scb, 0);
 				ccb_h = TAILQ_NEXT(ccb_h, sim_links.tqe);
 			}
 		}
@@ -1443,7 +1443,7 @@ aic_init(struct aic_softc *aic)
 	aic->chip_type = AIC6260;
 	aic_insb(aic, ID, chip_id, sizeof(chip_id) - 1);
 	chip_id[sizeof(chip_id) - 1] = '\0';
-	for (i = 0; i < sizeof(aic_chip_ids) / sizeof(aic_chip_ids[0]); i++) {
+	for (i = 0; i < nitems(aic_chip_ids); i++) {
 		if (!strcmp(chip_id, aic_chip_ids[i].idstring)) {
 			aic->chip_type = aic_chip_ids[i].type;
 			break;

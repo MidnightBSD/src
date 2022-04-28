@@ -1,5 +1,5 @@
 /*-
- * $FreeBSD: release/10.0.0/sys/dev/ie/if_ievar.h 181134 2008-08-01 21:33:07Z jhb $
+ * $FreeBSD$
  */
 
 enum ie_hardware {

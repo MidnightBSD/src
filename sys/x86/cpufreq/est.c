@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/cpufreq/est.c 241885 2012-10-22 13:06:09Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -1288,10 +1288,9 @@ est_set_id16(device_t dev, uint16_t id16, int need_check)
 	msr = (msr & ~0xffff) | id16;
 	wrmsr(MSR_PERF_CTL, msr);
 
-	/* Wait a short while for the new setting.  XXX Is this necessary? */
-	DELAY(EST_TRANS_LAT);
-
 	if  (need_check) {
+		/* Wait a short while and read the new status. */
+		DELAY(EST_TRANS_LAT);
 		est_get_id16(&new_id16);
 		if (new_id16 != id16) {
 			if (bootverbose)

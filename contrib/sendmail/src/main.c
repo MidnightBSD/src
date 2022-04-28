@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2006, 2008, 2009, 2011 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2006, 2008, 2009, 2011 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -19,14 +19,14 @@
 
 #ifndef lint
 SM_UNUSED(static char copyright[]) =
-"@(#) Copyright (c) 1998-2003 Sendmail, Inc. and its suppliers.\n\
+"@(#) Copyright (c) 1998-2013 Proofpoint, Inc. and its suppliers.\n\
 	All rights reserved.\n\
      Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.\n\
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* ! lint */
 
-SM_RCSID("@(#)$Id: main.c,v 8.983 2013/03/12 15:24:52 ca Exp $")
+SM_RCSID("@(#)$Id: main.c,v 8.988 2013-11-23 02:52:37 gshapiro Exp $")
 
 
 #if NETINET || NETINET6
@@ -77,17 +77,19 @@ static SIGFUNC_DECL	sigusr1 __P((int));
 **				(11/88 - 9/89).
 **			     UCB/Mammoth Project (10/89 - 7/95).
 **			     InReference, Inc. (8/95 - 1/97).
-**			     Sendmail, Inc. (1/98 - present).
+**			     Sendmail, Inc. (1/98 - 9/13).
 **		The support of my employers is gratefully acknowledged.
 **			Few of them (Britton-Lee in particular) have had
 **			anything to gain from my involvement in this project.
 **
 **		Gregory Neil Shapiro,
 **			Worcester Polytechnic Institute	(until 3/98).
-**			Sendmail, Inc. (3/98 - present).
+**			Sendmail, Inc. (3/98 - 10/13).
+**			Proofpoint, Inc. (10/13 - present).
 **
 **		Claus Assmann,
-**			Sendmail, Inc. (12/98 - present).
+**			Sendmail, Inc. (12/98 - 10/13).
+**			Proofpoint, Inc. (10/13 - present).
 */
 
 char		*FullName;	/* sender's full name */
@@ -404,9 +406,7 @@ main(argc, argv, envp)
 			  case MD_HOSTSTAT:
 			  case MD_PURGESTAT:
 			  case MD_ARPAFTP:
-#if _FFR_CHECKCONFIG
 			  case MD_CHECKCONFIG:
-#endif /* _FFR_CHECKCONFIG */
 				OpMode = j;
 				break;
 
@@ -642,6 +642,17 @@ main(argc, argv, envp)
 		sm_dprintf("   FFR Defines:");
 		sm_printoptions(FFRCompileOptions);
 	}
+
+#if STARTTLS
+	if (tTd(0, 14))
+	{
+		/* exit(EX_CONFIG) if different? */
+		sm_dprintf("       OpenSSL: compiled 0x%08x\n",
+			   (uint) OPENSSL_VERSION_NUMBER);
+		sm_dprintf("       OpenSSL: linked   0x%08x\n",
+			   (uint) SSLeay());
+	}
+#endif /* STARTTLS */
 
 	/* clear sendmail's environment */
 	ExternalEnviron = environ;
@@ -2564,6 +2575,38 @@ main(argc, argv, envp)
 		**  Set _ macro in BlankEnvelope before calling newenvelope().
 		*/
 
+#if _FFR_XCNCT
+		if (bitnset(D_XCNCT, *p_flags) || bitnset(D_XCNCT_M, *p_flags))
+		{
+			/* copied from getauthinfo() */
+			if (RealHostName == NULL)
+			{
+				RealHostName = newstr(hostnamebyanyaddr(&RealHostAddr));
+				if (strlen(RealHostName) > MAXNAME)
+					RealHostName[MAXNAME] = '\0'; /* XXX - 1 ? */
+			}
+			snprintf(buf, sizeof(buf), "%s [%s]",
+				RealHostName, anynet_ntoa(&RealHostAddr));
+
+			forged = bitnset(D_XCNCT_M, *p_flags);
+			if (forged)
+			{
+				(void) sm_strlcat(buf, " (may be forged)",
+						sizeof(buf));
+				macdefine(&BlankEnvelope.e_macro, A_PERM,
+					  macid("{client_resolve}"), "FORGED");
+			}
+
+			/* HACK! variable used only two times right below */
+			authinfo = buf;
+			if (tTd(75, 9))
+				sm_syslog(LOG_INFO, NOQID,
+					"main: where=not_calling_getauthinfo, RealHostAddr=%s",
+					anynet_ntoa(&RealHostAddr));
+		}
+		else
+		/* WARNING: "non-braced" else */
+#endif /* _FFR_XCNCT */
 		authinfo = getauthinfo(sm_io_getinfo(InChannel, SM_IO_WHAT_FD,
 						     NULL), &forged);
 		macdefine(&BlankEnvelope.e_macro, A_TEMP, '_', authinfo);
@@ -2620,13 +2663,13 @@ main(argc, argv, envp)
 #if NETINET
 		  case AF_INET:
 			(void) sm_snprintf(pbuf, sizeof(pbuf), "%d",
-					   RealHostAddr.sin.sin_port);
+					   ntohs(RealHostAddr.sin.sin_port));
 			break;
 #endif /* NETINET */
 #if NETINET6
 		  case AF_INET6:
 			(void) sm_snprintf(pbuf, sizeof(pbuf), "%d",
-					   RealHostAddr.sin6.sin6_port);
+					   ntohs(RealHostAddr.sin6.sin6_port));
 			break;
 #endif /* NETINET6 */
 		  default:
@@ -3694,12 +3737,12 @@ drop_privileges(to_real_uid)
 	GIDSET_T emptygidset[1];
 
 	if (tTd(47, 1))
-		sm_dprintf("drop_privileges(%d): Real[UG]id=%d:%d, get[ug]id=%d:%d, gete[ug]id=%d:%d, RunAs[UG]id=%d:%d\n",
+		sm_dprintf("drop_privileges(%d): Real[UG]id=%ld:%ld, get[ug]id=%ld:%ld, gete[ug]id=%ld:%ld, RunAs[UG]id=%ld:%ld\n",
 			   (int) to_real_uid,
-			   (int) RealUid, (int) RealGid,
-			   (int) getuid(), (int) getgid(),
-			   (int) geteuid(), (int) getegid(),
-			   (int) RunAsUid, (int) RunAsGid);
+			   (long) RealUid, (long) RealGid,
+			   (long) getuid(), (long) getgid(),
+			   (long) geteuid(), (long) getegid(),
+			   (long) RunAsUid, (long) RunAsGid);
 
 	if (to_real_uid)
 	{
@@ -3774,15 +3817,15 @@ drop_privileges(to_real_uid)
 	{
 		if (setgid(RunAsGid) < 0 && (!UseMSP || getegid() != RunAsGid))
 		{
-			syserr("drop_privileges: setgid(%d) failed",
-			       (int) RunAsGid);
+			syserr("drop_privileges: setgid(%ld) failed",
+			       (long) RunAsGid);
 			rval = EX_OSERR;
 		}
 		errno = 0;
 		if (rval == EX_OK && getegid() != RunAsGid)
 		{
-			syserr("drop_privileges: Unable to set effective gid=%d to RunAsGid=%d",
-			       (int) getegid(), (int) RunAsGid);
+			syserr("drop_privileges: Unable to set effective gid=%ld to RunAsGid=%ld",
+			       (long) getegid(), (long) RunAsGid);
 			rval = EX_OSERR;
 		}
 	}
@@ -4484,6 +4527,25 @@ testmodeline(line, e)
 			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
 					     "ul = %lu\n", ul);
 		}
+#if NETINET || NETINET6
+		else if (sm_strcasecmp(&line[1], "gethostbyname") == 0)
+		{
+			int family = AF_INET;
+
+			q = strpbrk(p, " \t");
+			if (q != NULL)
+			{
+				while (isascii(*q) && isspace(*q))
+					*q++ = '\0';
+# if NETINET6
+				if (*q != '\0' && (strcmp(q, "inet6") == 0 ||
+						   strcmp(q, "AAAA") == 0))
+					family = AF_INET6;
+# endif /* NETINET6 */
+			}
+			(void) sm_gethostbyname(p, family);
+		}
+#endif /* NETINET || NETINET6 */
 		else
 		{
 			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,

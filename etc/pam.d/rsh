@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/etc/pam.d/rsh 170510 2007-06-10 18:57:20Z yar $
+# $FreeBSD$
 #
 # PAM configuration for the "rsh" service
 #

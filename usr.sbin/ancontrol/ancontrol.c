@@ -37,7 +37,7 @@ static const char copyright[] = "@(#) Copyright (c) 1997, 1998, 1999\
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ancontrol/ancontrol.c 238221 2012-07-08 00:52:54Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ancontrol/ancontrol.c 238221 2012-07
 #include <arpa/inet.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/ethernet.h>
 
 #include <dev/an/if_aironet_ieee.h>
@@ -574,9 +573,9 @@ an_dumpstats(const char *iface)
 	printf("Management frames transmitted:\t\t\t[ %u ]\n",
 	    stats->an_tx_mgmt_pkts);
 	printf("Refresh frames received:\t\t\t[ %u ]\n",
-	    stats->an_rx_refresh_pkts),
+	    stats->an_rx_refresh_pkts);
 	printf("Refresh frames transmitted:\t\t\t[ %u ]\n",
-	    stats->an_tx_refresh_pkts),
+	    stats->an_tx_refresh_pkts);
 	printf("Poll frames received:\t\t\t\t[ %u ]\n",
 	    stats->an_rx_poll_pkts);
 	printf("Poll frames transmitted:\t\t\t[ %u ]\n",

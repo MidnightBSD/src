@@ -1,12 +1,11 @@
-# $FreeBSD: release/10.0.0/usr.bin/smbutil/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
 
 PROG=	smbutil
 SRCS=	smbutil.c dumptree.c login.c lookup.c view.c print.c
 
-DPADD=	${LIBSMB} ${LIBKICONV}
-LDADD=	-lsmb -lkiconv
+LIBADD=	smb
 
-CONTRIBDIR=	${.CURDIR}/../../contrib/smbfs
+CONTRIBDIR=	${SRCTOP}/contrib/smbfs
 CFLAGS+=	-I${CONTRIBDIR}/include
 
 WARNS?=	0

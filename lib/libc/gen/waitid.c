@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/waitid.c 242960 2012-11-13 12:55:52Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -37,6 +37,9 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/waitid.c 242960 2012-11-13 12:55
 #include <signal.h>
 #include <errno.h>
 #include "un-namespace.h"
+#include "libc_private.h"
+
+int __waitid(idtype_t, id_t, siginfo_t *, int);
 
 int
 __waitid(idtype_t idtype, id_t id, siginfo_t *info, int flags)
@@ -44,7 +47,9 @@ __waitid(idtype_t idtype, id_t id, siginfo_t *info, int flags)
 	int status;
 	pid_t ret;
 
-	ret = _wait6(idtype, id, &status, flags, NULL, info);
+	ret = ((pid_t (*)(idtype_t, id_t, int *, int, struct __wrusage *,
+	    siginfo_t *))__libc_interposing[INTERPOS_wait6])(idtype, id,
+	    &status, flags, NULL, info);
 
 	/*
 	 * According to SUSv4, waitid() shall not return a PID when a

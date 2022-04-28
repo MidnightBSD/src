@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/include/errlst.h 255108 2013-08-31 22:32:42Z jilles $
+ * $FreeBSD$
  */
 
 #ifndef __ERRLST_H__

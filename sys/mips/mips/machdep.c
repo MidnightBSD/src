@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/machdep.c 248084 2013-03-09 02:32:23Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_md.h"
@@ -167,9 +167,6 @@ extern char MipsCache[], MipsCacheEnd[];
 extern char MipsWaitStart[], MipsWaitEnd[];
 
 extern char edata[], end[];
-#ifdef DDB
-extern vm_offset_t ksym_start, ksym_end;
-#endif
 
 u_int32_t bootdev;
 struct bootinfo bootinfo;
@@ -211,8 +208,8 @@ cpu_startup(void *dummy)
 	vm_ksubmap_init(&kmi);
 
 	printf("avail memory = %ju (%juMB)\n", 
-	    ptoa((uintmax_t)cnt.v_free_count),
-	    ptoa((uintmax_t)cnt.v_free_count) / 1048576);
+	    ptoa((uintmax_t)vm_cnt.v_free_count),
+	    ptoa((uintmax_t)vm_cnt.v_free_count) / 1048576);
 	cpu_init_interrupts();
 
 	/*
@@ -319,7 +316,7 @@ cpu_initclocks(void)
 	cpu_initclocks_bsp();
 }
 
-struct msgbuf *msgbufp=0;
+struct msgbuf *msgbufp = NULL;
 
 /*
  * Initialize the hardware exception vectors, and the jump table used to
@@ -351,7 +348,7 @@ mips_vector_init(void)
 	 * XXXRW: Why don't we install the XTLB handler for all 64-bit
 	 * architectures?
 	 */
-#if defined(__mips_n64) || defined(CPU_RMI) || defined(CPU_NLM) || defined (CPU_BERI)
+#if defined(__mips_n64) || defined(CPU_RMI) || defined(CPU_NLM) || defined(CPU_BERI)
 /* Fake, but sufficient, for the 32-bit with 64-bit hardware addresses  */
 	bcopy(MipsTLBMiss, (void *)MIPS_XTLB_MISS_EXC_VEC,
 	      MipsTLBMissEnd - MipsTLBMiss);
@@ -434,6 +431,8 @@ mips_postboot_fixup(void)
 #ifdef DDB
 	Elf_Size *trampoline_data = (Elf_Size*)kernel_kseg0_end;
 	Elf_Size symtabsize = 0;
+	vm_offset_t ksym_start;
+	vm_offset_t ksym_end;
 
 	if (trampoline_data[0] == SYMTAB_MAGIC) {
 		symtabsize = trampoline_data[1];
@@ -443,6 +442,7 @@ mips_postboot_fixup(void)
 		kernel_kseg0_end += symtabsize;
 		/* end of .strtab */
 		ksym_end = kernel_kseg0_end;
+		db_fetch_ksymtab(ksym_start, ksym_end);
 	}
 #endif
 }

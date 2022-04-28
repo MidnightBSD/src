@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: release/10.0.0/libexec/rtld-aout/support.h 140072 2005-01-11 16:40:29Z trhodes $
+ * $FreeBSD$
  */
 
 /*

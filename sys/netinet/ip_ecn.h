@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/netinet/ip_ecn.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ip_ecn.h,v 1.8 2002/01/07 11:34:47 kjc Exp $	*/
 
 /*-
@@ -37,10 +37,6 @@
 
 #ifndef _NETINET_IP_ECN_H_
 #define _NETINET_IP_ECN_H_
-
-#if defined(_KERNEL) && !defined(_LKM)
-#include "opt_inet.h"
-#endif
 
 #define ECN_ALLOWED	1	/* ECN allowed */
 #define ECN_FORBIDDEN	0	/* ECN forbidden */

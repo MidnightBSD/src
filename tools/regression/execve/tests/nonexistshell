@@ -1,4 +1,0 @@
-#! /foo/bar/baz
-# $FreeBSD: release/10.0.0/tools/regression/execve/tests/nonexistshell 159097 2006-05-31 11:13:10Z maxim $
-
-echo foo

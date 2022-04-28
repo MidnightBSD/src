@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/posix1e/acl_to_text.3 233665 2012-03-29 16:02:40Z joel $
+.\" $FreeBSD$
 .\"
 .Dd June 25, 2009
 .Dt ACL_TO_TEXT 3
@@ -58,8 +58,9 @@ including the NULL terminator) in the location pointed to by
 .Va len_p .
 If the ACL is POSIX.1e, the format of the text string returned by
 .Fn acl_to_text
-shall be the POSIX.1e long ACL form.  If the ACL is NFSv4, the format
-of the text string shall be the compact form, unless the
+shall be the POSIX.1e long ACL form.
+If the ACL is NFSv4, the format of the text string shall be the compact form, unless
+the
 .Va ACL_TEXT_VERBOSE
 flag is given.
 .Pp

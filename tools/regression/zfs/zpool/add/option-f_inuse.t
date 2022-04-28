@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/tools/regression/zfs/zpool/add/option-f_inuse.t 185029 2008-11-17 20:49:29Z pjd $
+# $FreeBSD$
 
 dir=`dirname $0`
 . ${dir}/../../misc.sh

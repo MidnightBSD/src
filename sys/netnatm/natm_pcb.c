@@ -39,16 +39,19 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netnatm/natm_pcb.c 184205 2008-10-23 15:53:51Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 
 #include <net/if.h>
+#include <net/if_var.h>		/* XXX: db_show_natm() */
 
 #include <netinet/in.h>
 

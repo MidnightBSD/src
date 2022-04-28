@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/nfs/nfsclstate.h 244042 2012-12-08 22:52:39Z rmacklem $
+ * $FreeBSD$
  */
 
 #ifndef _NFS_NFSCLSTATE_H_
@@ -57,6 +57,7 @@ struct nfsclsession {
 	struct mtx	nfsess_mtx;
 	struct nfsslot	nfsess_cbslots[NFSV4_CBSLOTS];
 	nfsquad_t	nfsess_clientid;
+	SVCXPRT		*nfsess_xprt;		/* For backchannel callback */
 	uint32_t	nfsess_slotseq[64];	/* Max for 64bit nm_slots */
 	uint64_t	nfsess_slots;
 	uint32_t	nfsess_sequenceid;
@@ -64,6 +65,7 @@ struct nfsclsession {
 	uint16_t	nfsess_foreslots;
 	uint16_t	nfsess_backslots;
 	uint8_t		nfsess_sessionid[NFSX_V4SESSIONID];
+	uint8_t		nfsess_defunct;		/* Non-zero for old sessions */
 };
 
 /*
@@ -89,6 +91,7 @@ struct nfsclds {
 #define	NFSCLDS_HASWRITEVERF	0x0001
 #define	NFSCLDS_MDS		0x0002
 #define	NFSCLDS_DS		0x0004
+#define	NFSCLDS_CLOSED		0x0008
 
 struct nfsclclient {
 	LIST_ENTRY(nfsclclient) nfsc_list;

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)globals.h	8.1 (Berkeley) 6/6/93
- *	$FreeBSD: release/10.0.0/usr.sbin/timed/timed/globals.h 228720 2011-12-19 20:33:53Z dim $
+ *	$FreeBSD$
  */
 
 #include <sys/param.h>

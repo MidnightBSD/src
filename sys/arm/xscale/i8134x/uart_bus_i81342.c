@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/uart_bus_i81342.c 171626 2007-07-27 14:50:57Z cognet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,8 +74,8 @@ uart_i81342_probe(device_t dev)
 		sc->sc_sysdev = SLIST_FIRST(&uart_sysdevs);
 		bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
 	}
-	sc->sc_rres = bus_alloc_resource(dev, SYS_RES_IOPORT, &sc->sc_rrid,
-            0, ~0, uart_getrange(sc->sc_class), RF_ACTIVE);
+	sc->sc_rres = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT,
+	    &sc->sc_rrid, uart_getrange(sc->sc_class), RF_ACTIVE);
 	
 	sc->sc_bas.bsh = rman_get_bushandle(sc->sc_rres);
 	sc->sc_bas.bst = rman_get_bustag(sc->sc_rres);
@@ -83,7 +83,7 @@ uart_i81342_probe(device_t dev)
 	    0x40 | 0x10);
         bus_release_resource(dev, sc->sc_rtype, sc->sc_rrid, sc->sc_rres);
 
-	err = uart_bus_probe(dev, 2, 33334000, 0, device_get_unit(dev));
+	err = uart_bus_probe(dev, 2, 0, 33334000, 0, device_get_unit(dev), 0);
 	sc->sc_rxfifosz = sc->sc_txfifosz = 1;
 	return (err);
 }

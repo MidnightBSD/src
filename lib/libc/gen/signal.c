@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)signal.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/signal.c 252429 2013-06-30 20:51:15Z jilles $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Almost backwards compatible signal.
@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/signal.c 252429 2013-06-30 20:51
 sigset_t _sigintr __hidden;	/* shared with siginterrupt */
 
 sig_t
-signal(s, a)
-	int s;
-	sig_t a;
+signal(int s, sig_t a)
 {
 	struct sigaction sa, osa;
 
@@ -55,7 +53,7 @@ signal(s, a)
 	sa.sa_flags = 0;
 	if (!sigismember(&_sigintr, s))
 		sa.sa_flags |= SA_RESTART;
-	if (_sigaction(s, &sa, &osa) < 0)
+	if (__libc_sigaction(s, &sa, &osa) < 0)
 		return (SIG_ERR);
 	return (osa.sa_handler);
 }

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/Makefile.powerpc 227739 2011-11-19 19:25:57Z andreast $
+# $FreeBSD$
 
 NATIVE_EMULATION=	elf32ppc_fbsd
 

@@ -1,7 +1,9 @@
-/* $FreeBSD: release/10.0.0/usr.bin/mkcsmapper/ldef.h 250984 2013-05-25 15:36:15Z ed $ */
+/* $FreeBSD$ */
 /* $NetBSD: ldef.h,v 1.2 2006/09/09 14:35:17 tnozaki Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c)2003, 2006 Citrus Project,
  * All rights reserved.
  *

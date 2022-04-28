@@ -1,4 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.bin/getconf/Makefile 107224 2002-11-25 09:00:05Z ru $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	getconf
 
@@ -13,8 +15,9 @@ CLEANFILES+=	confstr.c limits.c pathconf.c progenv.c sysconf.c \
 
 all:	conflicts
 
-.gperf.c:
-	LC_ALL=C awk -f ${.CURDIR}/fake-gperf.awk ${.IMPSRC} >${.TARGET}
+FAKE_GPERF=	${.CURDIR}/fake-gperf.awk
+.gperf.c: ${FAKE_GPERF}
+	LC_ALL=C awk -f ${FAKE_GPERF} ${.IMPSRC} >${.TARGET}
 
 .gperf.names:
 	LC_ALL=C awk '/^[_A-Z]/ { print; }' ${.IMPSRC} | \
@@ -33,5 +36,9 @@ conflicting.names:	confstr.names limits.names sysconf.names
 
 unique.names:		conflicting.names
 	LC_ALL=C sort -u ${.ALLSRC} >${.TARGET}
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

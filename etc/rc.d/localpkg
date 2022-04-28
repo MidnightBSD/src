@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/localpkg 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: localpkg
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="localpkg"
+desc="Run local init scripts"
 start_cmd="pkg_start"
 stop_cmd="pkg_stop"
 

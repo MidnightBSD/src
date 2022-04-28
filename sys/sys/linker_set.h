@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/linker_set.h 215701 2010-11-22 19:32:54Z dim $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_LINKER_SET_H_
@@ -40,15 +40,26 @@
  * For ELF, this is done by constructing a separate segment for each set.
  */
 
+#if defined(__powerpc64__)
+/*
+ * Move the symbol pointer from ".text" to ".data" segment, to make
+ * the GCC compiler happy:
+ */
+#define	__MAKE_SET_CONST
+#else
+#define	__MAKE_SET_CONST const
+#endif
+
 /*
  * Private macros, not to be used outside this header file.
  */
 #ifdef __GNUCLIKE___SECTION
-#define __MAKE_SET(set, sym)						\
-	__GLOBL(__CONCAT(__start_set_,set));				\
-	__GLOBL(__CONCAT(__stop_set_,set));				\
-	static void const * const __set_##set##_sym_##sym 		\
-	__section("set_" #set) __used = &sym
+#define __MAKE_SET(set, sym)				\
+	__GLOBL(__CONCAT(__start_set_,set));		\
+	__GLOBL(__CONCAT(__stop_set_,set));		\
+	static void const * __MAKE_SET_CONST		\
+	__set_##set##_sym_##sym __section("set_" #set)	\
+	__used = &(sym)
 #else /* !__GNUCLIKE___SECTION */
 #ifndef lint
 #error this file needs to be ported to your compiler
@@ -68,9 +79,9 @@
 /*
  * Initialize before referring to a given linker set.
  */
-#define SET_DECLARE(set, ptype)						\
-	extern ptype *__CONCAT(__start_set_,set);			\
-	extern ptype *__CONCAT(__stop_set_,set)
+#define SET_DECLARE(set, ptype)					\
+	extern ptype __weak_symbol *__CONCAT(__start_set_,set);	\
+	extern ptype __weak_symbol *__CONCAT(__stop_set_,set)
 
 #define SET_BEGIN(set)							\
 	(&__CONCAT(__start_set_,set))

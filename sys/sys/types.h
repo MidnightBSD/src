@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)types.h	8.6 (Berkeley) 2/19/95
- * $FreeBSD: release/10.0.0/sys/sys/types.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_TYPES_H_
@@ -174,6 +174,11 @@ typedef	__off_t		off_t;		/* file offset */
 #define	_OFF_T_DECLARED
 #endif
 
+#ifndef _OFF64_T_DECLARED
+typedef	__off64_t	off64_t;	/* file offset (alias) */
+#define	_OFF64_T_DECLARED
+#endif
+
 #ifndef _PID_T_DECLARED
 typedef	__pid_t		pid_t;		/* process id */
 #define	_PID_T_DECLARED
@@ -232,6 +237,11 @@ typedef	__useconds_t	useconds_t;	/* microseconds (unsigned) */
 #define	_USECONDS_T_DECLARED
 #endif
 
+#ifndef _CAP_IOCTL_T_DECLARED
+#define	_CAP_IOCTL_T_DECLARED
+typedef	unsigned long	cap_ioctl_t;
+#endif
+
 #ifndef _CAP_RIGHTS_T_DECLARED
 #define	_CAP_RIGHTS_T_DECLARED
 struct cap_rights;
@@ -240,10 +250,12 @@ typedef	struct cap_rights	cap_rights_t;
 #endif
 
 typedef	__vm_offset_t	vm_offset_t;
-typedef	__vm_ooffset_t	vm_ooffset_t;
+typedef	__int64_t	vm_ooffset_t;
 typedef	__vm_paddr_t	vm_paddr_t;
-typedef	__vm_pindex_t	vm_pindex_t;
+typedef	__uint64_t	vm_pindex_t;
 typedef	__vm_size_t	vm_size_t;
+
+typedef __rman_res_t    rman_res_t;
 
 #ifdef _KERNEL
 typedef	int		boolean_t;
@@ -279,12 +291,75 @@ typedef	_Bool	bool;
 
 #define offsetof(type, field) __offsetof(type, field)
 
-#endif /* !_KERNEL */
+#endif /* _KERNEL */
 
 /*
  * The following are all things that really shouldn't exist in this header,
  * since its purpose is to provide typedefs, not miscellaneous doodads.
  */
+
+#ifdef __POPCNT__
+#define	__bitcount64(x)	__builtin_popcountll((__uint64_t)(x))
+#define	__bitcount32(x)	__builtin_popcount((__uint32_t)(x))
+#define	__bitcount16(x)	__builtin_popcount((__uint16_t)(x))
+#define	__bitcountl(x)	__builtin_popcountl((unsigned long)(x))
+#define	__bitcount(x)	__builtin_popcount((unsigned int)(x))
+#else
+/*
+ * Population count algorithm using SWAR approach
+ * - "SIMD Within A Register".
+ */
+static __inline __uint16_t
+__bitcount16(__uint16_t _x)
+{
+
+	_x = (_x & 0x5555) + ((_x & 0xaaaa) >> 1);
+	_x = (_x & 0x3333) + ((_x & 0xcccc) >> 2);
+	_x = (_x + (_x >> 4)) & 0x0f0f;
+	_x = (_x + (_x >> 8)) & 0x00ff;
+	return (_x);
+}
+
+static __inline __uint32_t
+__bitcount32(__uint32_t _x)
+{
+
+	_x = (_x & 0x55555555) + ((_x & 0xaaaaaaaa) >> 1);
+	_x = (_x & 0x33333333) + ((_x & 0xcccccccc) >> 2);
+	_x = (_x + (_x >> 4)) & 0x0f0f0f0f;
+	_x = (_x + (_x >> 8));
+	_x = (_x + (_x >> 16)) & 0x000000ff;
+	return (_x);
+}
+
+#ifdef __LP64__
+static __inline __uint64_t
+__bitcount64(__uint64_t _x)
+{
+
+	_x = (_x & 0x5555555555555555) + ((_x & 0xaaaaaaaaaaaaaaaa) >> 1);
+	_x = (_x & 0x3333333333333333) + ((_x & 0xcccccccccccccccc) >> 2);
+	_x = (_x + (_x >> 4)) & 0x0f0f0f0f0f0f0f0f;
+	_x = (_x + (_x >> 8));
+	_x = (_x + (_x >> 16));
+	_x = (_x + (_x >> 32)) & 0x000000ff;
+	return (_x);
+}
+
+#define	__bitcountl(x)	__bitcount64((unsigned long)(x))
+#else
+static __inline __uint64_t
+__bitcount64(__uint64_t _x)
+{
+
+	return (__bitcount32(_x >> 32) + __bitcount32(_x));
+}
+
+#define	__bitcountl(x)	__bitcount32((unsigned long)(x))
+#endif
+#define	__bitcount(x)	__bitcount32((unsigned int)(x))
+#endif
+
 #if __BSD_VISIBLE
 
 #include <sys/select.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libradius/radlib.h 243956 2012-12-06 19:00:37Z sem $
+ *	$FreeBSD$
  */
 
 #ifndef _RADLIB_H_
@@ -98,7 +98,7 @@
 #define RAD_TERMINATION_ACTION		29	/* Integer */
 #define RAD_CALLED_STATION_ID		30	/* String */
 #define RAD_CALLING_STATION_ID		31	/* String */
-#define RAD_NAS_IDENTIFIER		32	/* Integer */
+#define RAD_NAS_IDENTIFIER		32	/* String */
 #define RAD_PROXY_STATE			33	/* Integer */
 #define RAD_LOGIN_LAT_SERVICE		34	/* Integer */
 #define RAD_LOGIN_LAT_NODE		35	/* Integer */

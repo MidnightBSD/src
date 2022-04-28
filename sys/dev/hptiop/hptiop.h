@@ -27,7 +27,7 @@
 #define _HPTIOP_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hptiop/hptiop.h 255871 2013-09-25 17:16:21Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #define DBG 0
 
@@ -460,7 +460,7 @@ struct hpt_iop_srb {
 	u_int64_t            phy_addr;
 	u_int32_t            srb_flag;
 	int                  index;
-	struct callout_handle	timeout_ch;
+	struct callout	     timeout;
 };
 
 #define hptiop_lock_adapter(hba)   mtx_lock(&(hba)->lock)

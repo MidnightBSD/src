@@ -29,12 +29,12 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cxgbe/iw_cxgbe/user.h 256694 2013-10-17 18:37:25Z np $
+ * $FreeBSD$
  */
 #ifndef __C4IW_USER_H__
 #define __C4IW_USER_H__
 
-#define C4IW_UVERBS_ABI_VERSION	2
+#define C4IW_UVERBS_ABI_VERSION	3
 
 /*
  * Make sure that all structs defined in this file remain laid out so
@@ -50,6 +50,7 @@ struct c4iw_create_cq_resp {
 	__u32 cqid;
 	__u32 size;
 	__u32 qid_mask;
+	__u32 reserved; /* explicit padding (optional for i386) */
 };
 
 struct c4iw_create_qp_resp {
@@ -66,5 +67,11 @@ struct c4iw_create_qp_resp {
 	__u32 rq_size;
 	__u32 qid_mask;
 	__u32 flags;
+};
+
+struct c4iw_alloc_ucontext_resp {
+	__u64 status_page_key;
+	__u32 status_page_size;
+	__u32 reserved; /* explicit padding (optional for i386) */
 };
 #endif

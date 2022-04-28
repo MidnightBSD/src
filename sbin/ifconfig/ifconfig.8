@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)ifconfig.8	8.3 (Berkeley) 1/5/94
-.\" $FreeBSD: release/10.0.0/sbin/ifconfig/ifconfig.8 257321 2013-10-29 09:24:39Z glebius $
+.\" $FreeBSD$
 .\"
-.Dd October 21, 2013
+.Dd September 17, 2016
 .Dt IFCONFIG 8
 .Os
 .Sh NAME
@@ -36,6 +36,7 @@
 .Nd configure network interface parameters
 .Sh SYNOPSIS
 .Nm
+.Op Fl f Ar type:format Ns Op Ar ,type:format
 .Op Fl L
 .Op Fl k
 .Op Fl m
@@ -141,13 +142,19 @@ The link-level
 .Pq Dq link
 address
 is specified as a series of colon-separated hex digits.
-This can be used to
-e.g.,\& set a new MAC address on an ethernet interface, though the
-mechanism used is not ethernet-specific.
+This can be used to, for example,
+set a new MAC address on an Ethernet interface, though the
+mechanism used is not Ethernet specific.
+Use the
+.Pq Dq random
+keyword to set a randomly generated MAC address.
+A randomly-generated MAC address might be the same as one already in use
+in the network.
+Such duplications are extremely unlikely.
 If the interface is already
 up when this option is used, it will be briefly brought down and
 then brought back up again in order to ensure that the receive
-filter in the underlying ethernet hardware is properly reprogrammed.
+filter in the underlying Ethernet hardware is properly reprogrammed.
 .It Ar address_family
 Specify the
 address family
@@ -158,13 +165,8 @@ The address or protocol families currently
 supported are
 .Dq inet ,
 .Dq inet6 ,
-.Dq atalk ,
-.Dq ipx ,
-.\" .Dq iso ,
 and
 .Dq link .
-.\" and
-.\" .Dq ns .
 The default if available is
 .Dq inet
 or otherwise
@@ -174,6 +176,18 @@ and
 .Dq lladdr
 are synonyms for
 .Dq link .
+When using the
+.Fl l
+flag, the
+.Dq ether
+address family has special meaning and is no longer synonymous with
+.Dq link
+or
+.Dq lladdr .
+Specifying
+.Fl l Dq ether
+will list only Ethernet interfaces, excluding all other interface types,
+including the loopback interface.
 .It Ar dest_address
 Specify the address of the correspondent on the other end
 of a point to point link.
@@ -185,6 +199,86 @@ for example,
 .Dq Li ed0 .
 .It Ar groupname
 List the interfaces in the given group.
+.El
+.Pp
+The output format of
+.Nm
+can be controlled using the
+.Fl f
+flag or the
+.Ev IFCONFIG_FORMAT
+environment variable.
+The format is specified as a comma separated list of
+.Sy type:format
+pairs.
+See the
+.Sx EXAMPLES
+section for more information.
+The
+.Sy types
+and their associated
+.Sy format
+strings are:
+.Bl -tag -width ether
+.It Sy addr
+Adjust the display of inet and inet6 addresses
+.Bl -tag -width default
+.It Sy default
+Display inet and inet6 addresses in the default format,
+.Sy numeric
+.It Sy fqdn
+Display inet and inet6 addresses as fully qualified domain names
+.Pq FQDN
+.It Sy host
+Display inet and inet6 addresses as unqualified hostnames
+.It Sy numeric
+Display inet and inet6 addresses in numeric format
+.El
+.It Sy ether
+Adjust the display of link-level ethernet (MAC) addresses
+.Bl -tag -width default
+.It Sy colon
+Separate address segments with a colon
+.It Sy dash
+Separate address segments with a dash
+.It Sy default
+Display ethernet addresses in the default format,
+.Sy colon
+.El
+.It Sy inet
+Adjust the display of inet address subnet masks:
+.Bl -tag -width default
+.It Sy cidr
+Display subnet masks in CIDR notation, for example:
+.br
+10.0.0.0/8 or 203.0.113.224/26
+.It Sy default
+Display subnet masks in the default format,
+.Sy hex
+.It Sy dotted
+Display subnet masks in dotted quad notation, for example:
+.br
+255.255.0.0 or 255.255.255.192
+.It Sy hex
+Display subnet masks in hexadecimal, for example:
+.br
+0xffff0000 or 0xffffffc0
+.El
+.It Sy inet6
+Adjust the display of inet6 address prefixes (subnet masks):
+.Bl -tag -width default
+.It Sy cidr
+Display subnet prefix in CIDR notation, for example:
+.br
+::1/128 or fe80::1%lo0/64
+.It Sy default
+Display subnet prefix in the default format
+.Sy numeric
+.It Sy numeric
+Display subnet prefix in integer format, for example:
+.br
+prefixlen 64
+.El
 .El
 .Pp
 The following parameters may be set with
@@ -309,12 +403,14 @@ using the
 kernel configuration option, or the
 .Va net.fibs
 tunable.
-.It Cm ipdst
-This is used to specify an Internet host who is willing to receive
-IP packets encapsulating IPX packets bound for a remote network.
-An apparent point to point link is constructed, and
-the address specified will be taken as the IPX address and network
-of the destination.
+.It Cm tunnelfib Ar fib_number
+Specify tunnel FIB.
+A FIB
+.Ar fib_number
+is assigned to all packets encapsulated by tunnel interface, e.g.,
+.Xr gif 4
+and
+.Xr gre 4 .
 .It Cm maclabel Ar label
 If Mandatory Access Control support is enabled in the kernel,
 set the MAC label to
@@ -572,42 +668,6 @@ The prefix can also be specified using the slash notation after the address.
 See the
 .Ar address
 option above for more information.
-.\" see
-.\" Xr eon 5 .
-.\" .It Cm nsellength Ar n
-.\" .Pf ( Tn ISO
-.\" only)
-.\" This specifies a trailing number of bytes for a received
-.\" .Tn NSAP
-.\" used for local identification, the remaining leading part of which is
-.\" taken to be the
-.\" .Tn NET
-.\" (Network Entity Title).
-.\" The default value is 1, which is conformant to US
-.\" .Tn GOSIP .
-.\" When an ISO address is set in an ifconfig command,
-.\" it is really the
-.\" .Tn NSAP
-.\" which is being specified.
-.\" For example, in
-.\" .Tn US GOSIP ,
-.\" 20 hex digits should be
-.\" specified in the
-.\" .Tn ISO NSAP
-.\" to be assigned to the interface.
-.\" There is some evidence that a number different from 1 may be useful
-.\" for
-.\" .Tn AFI
-.\" 37 type addresses.
-.It Cm range Ar netrange
-Under appletalk, set the interface to respond to a
-.Ar netrange
-of the form
-.Ar startnet Ns - Ns Ar endnet .
-Appletalk uses this scheme instead of
-netmasks though
-.Fx
-implements it internally as a set of netmasks.
 .It Cm remove
 Another name for the
 .Fl alias
@@ -615,10 +675,6 @@ parameter.
 Introduced for compatibility
 with
 .Bsx .
-.It Cm phase
-The argument following this specifies the version (phase) of the
-Appletalk network attached to the interface.
-Values of 1 or 2 are permitted.
 .Sm off
 .It Cm link Op Cm 0 No - Cm 2
 .Sm on
@@ -666,6 +722,10 @@ controls whether this flag is set by default or not.
 .It Cm -accept_rtadv
 Clear a flag
 .Cm accept_rtadv .
+.It Cm autoconf
+Set a flag to accept router advertisements on an interface.
+.It Fl autoconf
+Disable autoconfiguration.
 .It Cm no_radr
 Set a flag to control whether routers from which the system accepts
 Router Advertisement messages will be added to the Default Router List
@@ -700,7 +760,8 @@ Clear a flag
 .Cm defaultif .
 .It Cm ifdisabled
 Set a flag to disable all of IPv6 network communications on the
-specified interface.  Note that if there are already configured IPv6
+specified interface.
+Note that if there are already configured IPv6
 addresses on that interface, all of them are marked as
 .Dq tentative
 and DAD will be performed when this flag is cleared.
@@ -717,12 +778,40 @@ Set a flag to enable Neighbor Unreachability Detection.
 Clear a flag
 .Cm nud .
 .It Cm no_prefer_iface
-Set a flag to not prefer address on the interface as candidates of the
-source address for outgoing packets, even when the interface is
-outgoing interface.
+Set a flag to not honor rule 5 of source address selection in RFC 3484.
+In practice this means the address on the outgoing interface will not be
+preferred, effectively yielding the decision to the address selection
+policy table, configurable with
+.Xr ip6addrctl 8 .
 .It Cm -no_prefer_iface
 Clear a flag
 .Cm no_prefer_iface .
+.It Cm no_dad
+Set a flag to disable Duplicate Address Detection.
+.It Cm -no_dad
+Clear a flag
+.Cm no_dad .
+.El
+.Pp
+The following parameters are specific for IPv6 addresses.
+Note that the address family keyword
+.Dq Li inet6
+is needed for them:
+.Bl -tag -width indent
+.It Cm deprecated
+Set the IPv6 deprecated address bit.
+.It Fl deprecated
+Clear the IPv6 deprecated address bit.
+.It Cm pltime Ar n
+Set preferred lifetime for the address.
+.It Cm prefer_source
+Set a flag to prefer address as a candidate of the source address for
+outgoing packets.
+.It Cm -prefer_source
+Clear a flag
+.Cm prefer_source .
+.It Cm vltime Ar n
+Set valid lifetime for the address.
 .El
 .Pp
 The following parameters are specific to cloning
@@ -1126,7 +1215,8 @@ specifies the number of beacon intervals between DTIM
 and must be in the range 1 to 15.
 By default DTIM is 1 (i.e., DTIM occurs at each beacon).
 .It Cm quiet
-Enable the use of quiet IE.  Hostap will use this to silence other
+Enable the use of quiet IE.
+Hostap will use this to silence other
 stations to reduce interference for radar detection when
 operating on 5GHz frequency and doth support is enabled.
 Use
@@ -1141,9 +1231,11 @@ scheduled quiet intervals defined by Quiet element.
 Set the QUIET
 .Ar count
 to the number of TBTTs until the beacon interval during which the
-next quiet interval shall start.  A value of 1 indicates the quiet
+next quiet interval shall start.
+A value of 1 indicates the quiet
 interval will start during the beacon interval starting at the next
-TBTT. A value 0 is reserved.
+TBTT.
+A value 0 is reserved.
 .It Cm quiet_offset Ar offset
 Set the QUIET
 .Ar offset
@@ -2351,9 +2443,16 @@ Remove the interface named by
 from the aggregation interface.
 .It Cm laggproto Ar proto
 Set the aggregation protocol.
-The default is failover.
-The available options are failover, fec, lacp, loadbalance, roundrobin and
-none.
+The default is
+.Li failover .
+The available options are
+.Li failover ,
+.Li lacp ,
+.Li loadbalance ,
+.Li roundrobin ,
+.Li broadcast
+and
+.Li none .
 .It Cm lagghash Ar option Ns Oo , Ns Ar option Oc
 Set the packet layers to hash for aggregation protocols which load balance.
 The default is
@@ -2368,7 +2467,53 @@ src/dst address for IPv4 or IPv6.
 .It Cm l4
 src/dst port for TCP/UDP/SCTP.
 .El
-.Pp
+.It Cm -use_flowid
+Enable local hash computation for RSS hash on the interface.
+The
+.Li loadbalance
+and
+.Li lacp
+modes will use the RSS hash from the network card if available
+to avoid computing one, this may give poor traffic distribution
+if the hash is invalid or uses less of the protocol header information.
+.Cm -use_flowid
+disables use of RSS hash from the network card.
+The default value can be set via the
+.Va net.link.lagg.default_use_flowid
+.Xr sysctl 8
+variable.
+.Li 0
+means
+.Dq disabled
+and
+.Li 1
+means
+.Dq enabled .
+.It Cm use_flowid
+Use the RSS hash from the network card if available.
+.It Cm flowid_shift Ar number
+Set a shift parameter for RSS local hash computation.
+Hash is calculated by using flowid bits in a packet header mbuf
+which are shifted by the number of this parameter.
+.It Cm lacp_fast_timeout
+Enable lacp fast-timeout on the interface.
+.It Cm -lacp_fast_timeout
+Disable lacp fast-timeout on the interface.
+.It Cm lacp_strict
+Enable lacp strict compliance on the interface.
+The default value can be set via the
+.Va net.link.lagg.lacp.default_strict_mode
+.Xr sysctl 8
+variable.
+.Li 0
+means
+.Dq disabled
+and
+.Li 1
+means
+.Dq enabled .
+.It Cm -lacp_strict
+Disable lacp strict compliance on the interface.
 .El
 .Pp
 The following parameters are specific to IP tunnel interfaces,
@@ -2393,16 +2538,26 @@ Another name for the
 parameter.
 .It Cm accept_rev_ethip_ver
 Set a flag to accept both correct EtherIP packets and ones
-with reversed version field.  Enabled by default.
+with reversed version field.
+Enabled by default.
 This is for backward compatibility with
 .Fx 6.1 ,
 6.2, 6.3, 7.0, and 7.1.
 .It Cm -accept_rev_ethip_ver
 Clear a flag
 .Cm accept_rev_ethip_ver .
+.It Cm ignore_source
+Set a flag to accept encapsulated packets destined to this host
+independently from source address.
+This may be useful for hosts, that receive encapsulated packets
+from the load balancers.
+.It Cm -ignore_source
+Clear a flag
+.Cm ignore_source .
 .It Cm send_rev_ethip_ver
 Set a flag to send EtherIP packets with reversed version
-field intentionally.  Disabled by default.
+field intentionally.
+Disabled by default.
 This is for backward compatibility with
 .Fx 6.1 ,
 6.2, 6.3, 7.0, and 7.1.
@@ -2465,6 +2620,29 @@ Note that
 and
 .Cm vlandev
 must both be set at the same time.
+.It Cm vlanpcp Ar priority_code_point
+Priority code point
+.Pq Dv PCP
+is an 3-bit field which refers to the IEEE 802.1p
+class of service and maps to the frame priority level.
+.Pp
+Values in order of priority are:
+.Cm 1
+.Pq Dv Background (lowest) ,
+.Cm 0
+.Pq Dv Best effort (default) ,
+.Cm 2
+.Pq Dv Excellent effort ,
+.Cm 3
+.Pq Dv Critical applications ,
+.Cm 4
+.Pq Dv Video, < 100ms latency ,
+.Cm 5
+.Pq Dv Video, < 10ms latency ,
+.Cm 6
+.Pq Dv Internetwork control ,
+.Cm 7
+.Pq Dv Network control (highest) .
 .It Cm vlandev Ar iface
 Associate the physical interface
 .Ar iface
@@ -2485,7 +2663,7 @@ pseudo-interface.
 The
 .Xr vlan 4
 interface is assigned a
-copy of the parent interface's flags and the parent's ethernet address.
+copy of the parent interface's flags and the parent's Ethernet address.
 The
 .Cm vlandev
 and
@@ -2522,6 +2700,76 @@ down.
 The
 .Ar iface
 argument is useless and hence deprecated.
+.El
+.Pp
+The following parameters are used to configure
+.Xr vxlan 4
+interfaces.
+.Bl -tag -width indent
+.It Cm vxlanid Ar identifier
+This value is a 24-bit VXLAN Network Identifier (VNI) that identifies the
+virtual network segment membership of the interface.
+.It Cm vxlanlocal Ar address
+The source address used in the encapsulating IPv4/IPv6 header.
+The address should already be assigned to an existing interface.
+When the interface is configured in unicast mode, the listening socket
+is bound to this address.
+.It Cm vxlanremote Ar address
+The interface can be configured in a unicast, or point-to-point, mode
+to create a tunnel between two hosts.
+This is the IP address of the remote end of the tunnel.
+.It Cm vxlangroup Ar address
+The interface can be configured in a multicast mode
+to create a virtual network of hosts.
+This is the IP multicast group address the interface will join.
+.It Cm vxlanlocalport Ar port
+The port number the interface will listen on.
+The default port number is 4789.
+.It Cm vxlanremoteport Ar port
+The destination port number used in the encapsulating IPv4/IPv6 header.
+The remote host should be listening on this port.
+The default port number is 4789.
+Note some other implementations, such as Linux,
+do not default to the IANA assigned port,
+but instead listen on port 8472.
+.It Cm vxlanportrange Ar low high
+The range of source ports used in the encapsulating IPv4/IPv6 header.
+The port selected within the range is based on a hash of the inner frame.
+A range is useful to provide entropy within the outer IP header
+for more effective load balancing.
+The default range is between the
+.Xr sysctl 8
+variables
+.Va net.inet.ip.portrange.first
+and
+.Va net.inet.ip.portrange.last
+.It Cm vxlantimeout Ar timeout
+The maximum time, in seconds, before an entry in the forwarding table
+is pruned.
+The default is 1200 seconds (20 minutes).
+.It Cm vxlanmaxaddr Ar max
+The maximum number of entries in the forwarding table.
+The default is 2000.
+.It Cm vxlandev Ar dev
+When the interface is configured in multicast mode, the
+.Cm dev
+interface is used to transmit IP multicast packets.
+.It Cm vxlanttl Ar ttl
+The TTL used in the encapsulating IPv4/IPv6 header.
+The default is 64.
+.It Cm vxlanlearn
+The source IP address and inner source Ethernet MAC address of
+received packets are used to dynamically populate the forwarding table.
+When in multicast mode, an entry in the forwarding table allows the
+interface to send the frame directly to the remote host instead of
+broadcasting the frame to the multicast group.
+This is the default.
+.It Fl vxlanlearn
+The forwarding table is not populated by received packets.
+.It Cm vxlanflush
+Delete all dynamically-learned addresses from the forwarding table.
+.It Cm vxlanflushall
+Delete all addresses, including static addresses, from the forwarding table.
 .El
 .Pp
 The following parameters are used to configure
@@ -2605,6 +2853,11 @@ The
 .Fl l
 flag may be used to list all available interfaces on the system, with
 no other additional information.
+If an
+.Ar address_family
+is specified, only interfaces of that type will be listed.
+.Fl l Dq ether
+will list only Ethernet adapters, excluding the loopback interface.
 Use of this flag is mutually exclusive
 with all other flags and commands, except for
 .Fl d
@@ -2712,6 +2965,9 @@ Destroy the software network interface
 Display available wireless networks using
 .Li wlan0 :
 .Dl # ifconfig wlan0 list scan
+.Pp
+Display inet and inet6 address subnet masks in CIDR notation
+.Dl # ifconfig -f inet:cidr,inet6:cidr
 .Sh DIAGNOSTICS
 Messages indicating the specified interface does not exist, the
 requested address is unknown, or the user is not privileged and
@@ -2724,12 +2980,13 @@ tried to alter an interface's configuration.
 .Xr pfsync 4 ,
 .Xr polling 4 ,
 .Xr vlan 4 ,
+.Xr vxlan 4 ,
 .Xr devd.conf 5 ,
 .\" .Xr eon 5 ,
 .Xr devd 8 ,
+.Xr jail 8 ,
 .Xr rc 8 ,
 .Xr routed 8 ,
-.Xr jail 8 ,
 .Xr sysctl 8
 .Sh HISTORY
 The

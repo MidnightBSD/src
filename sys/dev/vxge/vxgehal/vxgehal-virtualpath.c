@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxgehal/vxgehal-virtualpath.c 221167 2011-04-28 14:33:15Z gnn $*/
+/*$FreeBSD$*/
 #include <dev/vxge/vxgehal/vxgehal.h>
 
 
@@ -2899,7 +2899,7 @@ vxge_hal_vpath_rts_rth_get(vxge_hal_vpath_h vpath_handle,
  *
  * @vpath_handle: Virtual Path ahandle.
  * @KeySize: Number of 64-bit words
- * @Key: upto 40-byte array of 64-bit values
+ * @Key: up to 40-byte array of 64-bit values
  * This function configures the 40-byte secret which is used for hash
  * calculation.
  *
@@ -5547,7 +5547,7 @@ __hal_vpath_alarm_process(__hal_virtualpath_t *vpath, u32 skip_alarms)
 					    hldev->header.regh0,
 					    VXGE_HAL_MRPCIM_TO_VPATH_ALARM_REG_ALARM,
 					    &vpath->vp_reg->mrpcim_to_vpath_alarm_reg);
-					return (VXGE_HAL_ERR_EVENT_MRPCIM_CRITICAL);
+				return (VXGE_HAL_ERR_EVENT_MRPCIM_CRITICAL);
 			}
 
 			if (!skip_alarms)
@@ -7532,7 +7532,7 @@ vxge_hal_vpath_msix_unmask_all(vxge_hal_vpath_h vpath_handle)
  * vxge_hal_vpath_poll_rx - Poll Rx Virtual Path for completed
  *			descriptors and process the same.
  * @vpath_handle: Virtual Path ahandle.
- * @got_rx: Buffer to return the flag set if receive interrupt is occured
+ * @got_rx: Buffer to return the flag set if receive interrupt is occurred
  *
  * The function	polls the Rx for the completed	descriptors and	calls
  * the upper-layer driver (ULD)	via supplied completion	callback.
@@ -7597,7 +7597,7 @@ vxge_hal_vpath_poll_rx(vxge_hal_vpath_h vpath_handle, u32 *got_rx)
  * vxge_hal_vpath_poll_tx - Poll Tx for completed descriptors and process
  *			the same.
  * @vpath_handle: Virtual Path ahandle.
- * @got_tx: Buffer to return the flag set if transmit interrupt is occured
+ * @got_tx: Buffer to return the flag set if transmit interrupt is occurred
  *
  * The function	polls the Tx for the completed	descriptors and	calls
  * the upper-layer driver (ULD)	via supplied completion callback.

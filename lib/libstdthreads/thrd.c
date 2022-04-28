@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libstdthreads/thrd.c 228904 2011-12-26 21:51:53Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libstdthreads/thrd.c 228904 2011-12-26 21:51:53Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <pthread.h>
 #include <stdint.h>
@@ -108,7 +108,8 @@ thrd_join(thrd_t thr, int *res)
 
 	if (pthread_join(thr, &value_ptr) != 0)
 		return (thrd_error);
-	*res = (intptr_t)value_ptr;
+	if (res != NULL)
+		*res = (intptr_t)value_ptr;
 	return (thrd_success);
 }
 

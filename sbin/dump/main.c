@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/dump/main.c 229403 2012-01-03 18:51:58Z ed $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -267,7 +267,7 @@ main(int argc, char *argv[])
 	}
 
 	if (blocksperfile)
-		blocksperfile = blocksperfile / ntrec * ntrec; /* round down */
+		blocksperfile = rounddown(blocksperfile, ntrec);
 	else if (!unlimited) {
 		/*
 		 * Determine how to default tape size and density
@@ -340,7 +340,7 @@ main(int argc, char *argv[])
 	spcl.c_dev[NAMELEN-1]='\0';
 	spcl.c_filesys[NAMELEN-1]='\0';
 
-	if ((mntpt = getmntpt(disk, &mntflags)) != 0) {
+	if ((mntpt = getmntpt(disk, &mntflags)) != NULL) {
 		if (mntflags & MNT_RDONLY) {
 			if (snapdump != 0) {
 				msg("WARNING: %s\n",

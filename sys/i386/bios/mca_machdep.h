@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/bios/mca_machdep.h 50823 1999-09-03 02:04:28Z mdodd $
+ * $FreeBSD$
  */
 
 extern int	MCA_system;

@@ -13,7 +13,7 @@ char *copyright =
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
  *
- * $FreeBSD: release/10.0.0/contrib/top/top.c 237656 2012-06-27 18:08:48Z jhb $
+ * $FreeBSD$
  */
 
 /*
@@ -34,13 +34,20 @@ char *copyright =
  */
 
 #include "os.h"
-#include <errno.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <ctype.h>
+
+#include <sys/jail.h>
 #include <sys/time.h>
 
+#include <ctype.h>
+#include <curses.h>
+#include <errno.h>
+#include <jail.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <unistd.h>
+
 /* includes specific to top */
+#include "commands.h"
 #include "display.h"		/* interface to display package */
 #include "screen.h"		/* interface to screen package */
 #include "top.h"
@@ -48,6 +55,7 @@ char *copyright =
 #include "boolean.h"
 #include "machine.h"
 #include "utils.h"
+#include "username.h"
 
 /* Size of the stdio buffer given to stdout */
 #define Buffersize	2048
@@ -72,7 +80,7 @@ int pcpu_stats = No;
 sigret_t leave();
 sigret_t tstop();
 #ifdef SIGWINCH
-sigret_t winch();
+sigret_t top_winch(int);
 #endif
 
 volatile sig_atomic_t leaveflag;
@@ -112,38 +120,125 @@ caddr_t get_process_info();
 char *username();
 char *itoa7();
 
-/* display routines that need to be predeclared */
-int i_loadave();
-int u_loadave();
-int i_procstates();
-int u_procstates();
-int i_cpustates();
-int u_cpustates();
-int i_memory();
-int u_memory();
-int i_arc();
-int u_arc();
-int i_swap();
-int u_swap();
-int i_message();
-int u_message();
-int i_header();
-int u_header();
-int i_process();
-int u_process();
-
 /* pointers to display routines */
-int (*d_loadave)() = i_loadave;
-int (*d_procstates)() = i_procstates;
-int (*d_cpustates)() = i_cpustates;
-int (*d_memory)() = i_memory;
-int (*d_arc)() = i_arc;
-int (*d_swap)() = i_swap;
-int (*d_message)() = i_message;
-int (*d_header)() = i_header;
-int (*d_process)() = i_process;
+void (*d_loadave)() = i_loadave;
+void (*d_procstates)() = i_procstates;
+void (*d_cpustates)() = i_cpustates;
+void (*d_memory)() = i_memory;
+void (*d_arc)() = i_arc;
+void (*d_carc)() = i_carc;
+void (*d_swap)() = i_swap;
+void (*d_message)() = i_message;
+void (*d_header)() = i_header;
+void (*d_process)() = i_process;
 
+void reset_display(void);
 
+static void
+reset_uids()
+{
+    for (size_t i = 0; i < TOP_MAX_UIDS; ++i)
+	ps.uid[i] = -1;
+}
+
+static int
+add_uid(int uid)
+{
+    size_t i = 0;
+
+    /* Add the uid if there's room */
+    for (; i < TOP_MAX_UIDS; ++i)
+    {
+	if (ps.uid[i] == -1 || ps.uid[i] == uid)
+	{
+	    ps.uid[i] = uid;
+	    break;
+	}
+    }
+
+    return (i == TOP_MAX_UIDS);
+}
+
+static void
+rem_uid(int uid)
+{
+    size_t i = 0;
+    size_t where = TOP_MAX_UIDS;
+
+    /* Look for the user to remove - no problem if it's not there */
+    for (; i < TOP_MAX_UIDS; ++i)
+    {
+	if (ps.uid[i] == -1)
+	    break;
+	if (ps.uid[i] == uid)
+	    where = i;
+    }
+
+    /* Make sure we don't leave a hole in the middle */
+    if (where != TOP_MAX_UIDS)
+    {
+	ps.uid[where] = ps.uid[i-1];
+	ps.uid[i-1] = -1;
+    }
+}
+
+static int
+handle_user(char *buf, size_t buflen)
+{
+    int rc = 0;
+    int uid = -1;
+    char *buf2 = buf;
+
+    new_message(MT_standout, "Username to show (+ for all): ");
+    if (readline(buf, buflen, No) <= 0)
+    {
+	clear_message();
+	return rc;
+    }
+
+    if (buf[0] == '+' || buf[0] == '-')
+    {
+	if (buf[1] == '\0')
+	{
+	    reset_uids();
+	    goto end;
+	}
+	else
+	    ++buf2;
+    }
+
+    if ((uid = userid(buf2)) == -1)
+    {
+	new_message(MT_standout, " %s: unknown user", buf2);
+	rc = 1;
+	goto end;
+    }
+
+    if (buf2 == buf)
+    {
+	reset_uids();
+	ps.uid[0] = uid;
+	goto end;
+    }
+
+    if (buf[0] == '+')
+    {
+	if (add_uid(uid))
+	{
+	    new_message(MT_standout, " too many users, reset with '+'");
+	    rc = 1;
+	    goto end;
+	}
+    }
+    else
+	rem_uid(uid);
+
+end:
+    putchar('\r');
+    return rc;
+}
+
+int
 main(argc, argv)
 
 int  argc;
@@ -198,9 +293,9 @@ char *argv[];
     fd_set readfds;
 
 #ifdef ORDER
-    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzPo";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzPJwo";
 #else
-    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzP";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCajzPJw";
 #endif
 /* these defines enumerate the "strchr"s of the commands in command_chars */
 #define CMD_redraw	0
@@ -228,8 +323,10 @@ char *argv[];
 #define	CMD_jidtog	21
 #define CMD_kidletog	22
 #define CMD_pcputog	23
+#define CMD_jail	24
+#define CMD_swaptog	25
 #ifdef ORDER
-#define CMD_order       24
+#define CMD_order       26
 #endif
 
     /* set the buffer for stdout */
@@ -258,10 +355,12 @@ char *argv[];
     ps.idle    = Yes;
     ps.self    = -1;
     ps.system  = No;
-    ps.uid     = -1;
+    reset_uids();
     ps.thread  = No;
     ps.wcpu    = 1;
+    ps.jid     = -1;
     ps.jail    = No;
+    ps.swap    = No;
     ps.kidle   = Yes;
     ps.command = NULL;
 
@@ -288,7 +387,7 @@ char *argv[];
 	    optind = 1;
 	}
 
-	while ((i = getopt(ac, av, "CSIHPabijnquvzs:d:U:m:o:t")) != EOF)
+	while ((i = getopt(ac, av, "CSIHPabijJ:nquvzs:d:U:m:o:tw")) != EOF)
 	{
 	    switch(i)
 	    {
@@ -303,7 +402,7 @@ char *argv[];
 		break;
 
 	      case 'U':			/* display only username's processes */
-		if ((ps.uid = userid(optarg)) == -1)
+		if ((ps.uid[0] = userid(optarg)) == -1)
 		{
 		    fprintf(stderr, "%s: unknown user\n", optarg);
 		    exit(1);
@@ -413,8 +512,21 @@ char *argv[];
 		ps.jail = !ps.jail;
 		break;
 
+	      case 'J':			/* display only jail's processes */
+		if ((ps.jid = jail_getid(optarg)) == -1)
+		{
+		    fprintf(stderr, "%s: unknown jail\n", optarg);
+		    exit(1);
+		}
+		ps.jail = 1;
+		break;
+
 	      case 'P':
 		pcpu_stats = !pcpu_stats;
+		break;
+
+	      case 'w':
+		ps.swap = 1;
 		break;
 
 	      case 'z':
@@ -424,8 +536,8 @@ char *argv[];
 	      default:
 		fprintf(stderr,
 "Top version %s\n"
-"Usage: %s [-abCHIijnPqStuvz] [-d count] [-m io | cpu] [-o field] [-s time]\n"
-"       [-U username] [number]\n",
+"Usage: %s [-abCHIijnPqStuvwz] [-d count] [-m io | cpu] [-o field] [-s time]\n"
+"       [-J jail] [-U username] [number]\n",
 			version_string(), myname);
 		exit(1);
 	    }
@@ -570,7 +682,7 @@ char *argv[];
     (void) signal(SIGQUIT, leave);
     (void) signal(SIGTSTP, tstop);
 #ifdef SIGWINCH
-    (void) signal(SIGWINCH, winch);
+    (void) signal(SIGWINCH, top_winch);
 #endif
 #ifdef SIGRELSE
     sigrelse(SIGINT);
@@ -651,6 +763,7 @@ restart:
 	/* display memory stats */
 	(*d_memory)(system_info.memory);
 	(*d_arc)(system_info.arc);
+	(*d_carc)(system_info.carc);
 
 	/* display swap stats */
 	(*d_swap)(system_info.swap);
@@ -717,6 +830,7 @@ restart:
 		    d_cpustates = u_cpustates;
 		    d_memory = u_memory;
 		    d_arc = u_arc;
+		    d_carc = u_carc;
 		    d_swap = u_swap;
 		    d_message = u_message;
 		    d_header = u_header;
@@ -783,7 +897,7 @@ restart:
 		    max_topn = display_resize();
 
 		    /* reset the signal handler */
-		    (void) signal(SIGWINCH, winch);
+		    (void) signal(SIGWINCH, top_winch);
 
 		    reset_display();
 		    winchflag = 0;
@@ -857,9 +971,9 @@ restart:
 			    case CMD_help1:	/* help */
 			    case CMD_help2:
 				reset_display();
-				clear();
+				top_clear();
 				show_help();
-				standout("Hit any key to continue: ");
+				top_standout("Hit any key to continue: ");
 				fflush(stdout);
 				(void) read(0, &ch, 1);
 				break;
@@ -875,9 +989,9 @@ restart:
 				else
 				{
 				    reset_display();
-				    clear();
+				    top_clear();
 				    show_errors();
-				    standout("Hit any key to continue: ");
+				    top_standout("Hit any key to continue: ");
 				    fflush(stdout);
 				    (void) read(0, &ch, 1);
 				}
@@ -993,31 +1107,8 @@ restart:
 				break;
 
 			    case CMD_user:
-				new_message(MT_standout,
-				    "Username to show: ");
-				if (readline(tempbuf2, sizeof(tempbuf2), No) > 0)
-				{
-				    if (tempbuf2[0] == '+' &&
-					tempbuf2[1] == '\0')
-				    {
-					ps.uid = -1;
-				    }
-				    else if ((i = userid(tempbuf2)) == -1)
-				    {
-					new_message(MT_standout,
-					    " %s: unknown user", tempbuf2);
-					no_command = Yes;
-				    }
-				    else
-				    {
-					ps.uid = i;
-				    }
-				    putchar('\r');
-				}
-				else
-				{
-				    clear_message();
-				}
+				if (handle_user(tempbuf2, sizeof(tempbuf2)))
+				    no_command = Yes;
 				break;
 	    
 			    case CMD_thrtog:
@@ -1085,6 +1176,44 @@ restart:
 				reset_display();
 				putchar('\r');
 				break;
+
+			    case CMD_jail:
+				new_message(MT_standout,
+				    "Jail to show (+ for all): ");
+				if (readline(tempbuf2, sizeof(tempbuf2), No) > 0)
+				{
+				    if (tempbuf2[0] == '+' &&
+					tempbuf2[1] == '\0')
+				    {
+					ps.jid = -1;
+				    }
+				    else if ((i = jail_getid(tempbuf2)) == -1)
+				    {
+					new_message(MT_standout,
+					    " %s: unknown jail", tempbuf2);
+					no_command = Yes;
+				    }
+				    else
+				    {
+					ps.jid = i;
+				    }
+				    if (ps.jail == 0) {
+					    ps.jail = 1;
+					    new_message(MT_standout |
+						MT_delayed, " Displaying jail "
+						"ID.");
+					    header_text =
+						format_header(uname_field);
+					    reset_display();
+				    }
+				    putchar('\r');
+				}
+				else
+				{
+				    clear_message();
+				}
+				break;
+	    
 			    case CMD_kidletog:
 				ps.kidle = !ps.kidle;
 				new_message(MT_standout | MT_delayed,
@@ -1099,6 +1228,15 @@ restart:
 				    pcpu_stats ? "per-" : "global ");
 				toggle_pcpustats();
 				max_topn = display_updatecpus(&statics);
+				reset_display();
+				putchar('\r');
+				break;
+			    case CMD_swaptog:
+				ps.swap = !ps.swap;
+				new_message(MT_standout | MT_delayed,
+				    " %sisplaying per-process swap usage.",
+				    ps.swap ? "D" : "Not d");
+				header_text = format_header(uname_field);
 				reset_display();
 				putchar('\r');
 				break;
@@ -1127,6 +1265,7 @@ restart:
  *	screen will get redrawn.
  */
 
+void
 reset_display()
 
 {
@@ -1135,6 +1274,7 @@ reset_display()
     d_cpustates  = i_cpustates;
     d_memory     = i_memory;
     d_arc        = i_arc;
+    d_carc       = i_carc;
     d_swap       = i_swap;
     d_message	 = i_message;
     d_header	 = i_header;
@@ -1160,10 +1300,7 @@ int i;
 }
 
 #ifdef SIGWINCH
-sigret_t winch(i)		/* SIGWINCH handler */
-
-int i;
-
+sigret_t top_winch(int i)		/* SIGWINCH handler */
 {
     winchflag = 1;
 }

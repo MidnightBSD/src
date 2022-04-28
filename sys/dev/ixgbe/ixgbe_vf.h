@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2017, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,10 +30,10 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/ixgbe/ixgbe_vf.h 247822 2013-03-04 23:07:40Z jfv $*/
+/*$FreeBSD$*/
 
-#ifndef __IXGBE_VF_H__
-#define __IXGBE_VF_H__
+#ifndef _IXGBE_VF_H_
+#define _IXGBE_VF_H_
 
 #define IXGBE_VF_IRQ_CLEAR_MASK	7
 #define IXGBE_VF_MAX_TX_QUEUES	8
@@ -84,6 +84,9 @@
 #define IXGBE_VFGOTC_LSB	0x02020
 #define IXGBE_VFGOTC_MSB	0x02024
 #define IXGBE_VFMPRC		0x01034
+#define IXGBE_VFMRQC		0x3000
+#define IXGBE_VFRSSRK(x)	(0x3100 + ((x) * 4))
+#define IXGBE_VFRETA(x)	(0x3200 + ((x) * 4))
 
 
 struct ixgbevf_hw_stats {
@@ -112,6 +115,7 @@ struct ixgbevf_hw_stats {
 	u64 saved_reset_vfmprc;
 };
 
+s32 ixgbe_init_ops_vf(struct ixgbe_hw *hw);
 s32 ixgbe_init_hw_vf(struct ixgbe_hw *hw);
 s32 ixgbe_start_hw_vf(struct ixgbe_hw *hw);
 s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw);
@@ -129,8 +133,10 @@ s32 ixgbevf_set_uc_addr_vf(struct ixgbe_hw *hw, u32 index, u8 *addr);
 s32 ixgbe_update_mc_addr_list_vf(struct ixgbe_hw *hw, u8 *mc_addr_list,
 				 u32 mc_addr_count, ixgbe_mc_addr_itr,
 				 bool clear);
-s32 ixgbe_set_vfta_vf(struct ixgbe_hw *hw, u32 vlan, u32 vind, bool vlan_on);
-void ixgbevf_rlpml_set_vf(struct ixgbe_hw *hw, u16 max_size);
+s32 ixgbevf_update_xcast_mode(struct ixgbe_hw *hw, int xcast_mode);
+s32 ixgbe_set_vfta_vf(struct ixgbe_hw *hw, u32 vlan, u32 vind,
+		      bool vlan_on, bool vlvf_bypass);
+s32 ixgbevf_rlpml_set_vf(struct ixgbe_hw *hw, u16 max_size);
 int ixgbevf_negotiate_api_version(struct ixgbe_hw *hw, int api);
 int ixgbevf_get_queues(struct ixgbe_hw *hw, unsigned int *num_tcs,
 		       unsigned int *default_tc);

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/jtag_uart/altera_jtag_uart_cons.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -221,6 +221,9 @@ aju_cons_write(char ch)
 	 * disconnection.
 	 *
 	 * XXXRW: The polling delay may require tuning.
+	 *
+	 * XXXRW: Notice the inherent race with hardware: in clearing the
+	 * bit, we may race with hardware setting the same bit.
 	 */
 	v = aju_cons_control_read();
 	if (v & ALTERA_JTAG_UART_CONTROL_AC) {

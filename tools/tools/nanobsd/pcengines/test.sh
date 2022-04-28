@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/pcengines/test.sh 199536 2009-11-19 16:27:51Z mr $
+# $FreeBSD$
 #
 
 _run () {

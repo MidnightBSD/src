@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/conf/ldscript.mips.octeon1 217656 2011-01-20 19:24:50Z imp $ */
+/* $FreeBSD$ */
 
 ENTRY(_start)
 
@@ -28,7 +28,6 @@ SECTIONS {
                 _rwdata = .;
 	    	*(.data)
 		. = ALIGN(32);
-		CONSTRUCTORS;
 	}
 
 	_gp = (. + 0x8000);

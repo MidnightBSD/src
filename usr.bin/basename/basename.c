@@ -40,8 +40,9 @@ static char sccsid[] = "@(#)basename.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/basename/basename.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD$");
 
+#include <capsicum_helpers.h>
 #include <err.h>
 #include <libgen.h>
 #include <limits.h>
@@ -63,6 +64,9 @@ main(int argc, char **argv)
 	int aflag, ch;
 
 	setlocale(LC_ALL, "");
+
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
 
 	aflag = 0;
 	suffix = NULL;

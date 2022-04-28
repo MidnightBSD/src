@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/elf64.h 186667 2009-01-01 02:08:56Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ELF64_H_
@@ -77,6 +77,18 @@ typedef struct {
 	Elf64_Half	e_shnum;	/* Number of section header entries. */
 	Elf64_Half	e_shstrndx;	/* Section name strings section. */
 } Elf64_Ehdr;
+
+/*
+ * Shared object information, found in SHT_MIPS_LIBLIST.
+ */
+
+typedef struct {
+	Elf64_Word l_name;		/* The name of a shared object. */
+	Elf64_Word l_time_stamp;	/* 64-bit timestamp. */
+	Elf64_Word l_checksum;		/* Checksum of visible symbols, sizes. */
+	Elf64_Word l_version;		/* Interface version string index. */
+	Elf64_Word l_flags;		/* Flags (LL_*). */
+} Elf64_Lib;
 
 /*
  * Section header.
@@ -244,5 +256,12 @@ typedef struct {
 	Elf64_Half	si_boundto;	/* direct bindings - symbol bound to */
 	Elf64_Half	si_flags;	/* per symbol flags */
 } Elf64_Syminfo;
+
+typedef struct {
+	Elf64_Word	ch_type;
+	Elf64_Word	ch_reserved;
+	Elf64_Xword	ch_size;
+	Elf64_Xword	ch_addralign;
+} Elf64_Chdr;
 
 #endif /* !_SYS_ELF64_H_ */

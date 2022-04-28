@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_tgammaf.c 176388 2008-02-18 17:27:11Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <math.h>
 

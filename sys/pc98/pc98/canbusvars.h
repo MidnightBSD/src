@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/pc98/canbusvars.h 110333 2003-02-04 16:17:13Z nyan $
+ * $FreeBSD$
  */
 
 #ifndef _PC98_PC98_CANBUSVARS_H_

@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/ath_prom_read/ath_prom_read.c 244969 2013-01-02 18:33:48Z adrian $
+ * $FreeBSD$
  */
 #include "diag.h"
 

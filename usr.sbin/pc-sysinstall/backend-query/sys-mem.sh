@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/sys-mem.sh 232681 2012-03-08 02:00:52Z emaste $
+# $FreeBSD$
 
 if smbios_mem=$(kenv -q smbios.memory.enabled); then
 	smbios_mem=$(expr $smbios_mem / 1024)

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/journal/g_journal.c 253141 2013-07-10 10:11:43Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -84,7 +84,6 @@ const struct g_journal_desc *g_journal_filesystems[] = {
 SYSCTL_DECL(_kern_geom);
 
 int g_journal_debug = 0;
-TUNABLE_INT("kern.geom.journal.debug", &g_journal_debug);
 static u_int g_journal_switch_time = 10;
 static u_int g_journal_force_switch = 70;
 static u_int g_journal_parallel_flushes = 16;
@@ -95,7 +94,7 @@ static u_int g_journal_do_optimize = 1;
 
 static SYSCTL_NODE(_kern_geom, OID_AUTO, journal, CTLFLAG_RW, 0,
     "GEOM_JOURNAL stuff");
-SYSCTL_INT(_kern_geom_journal, OID_AUTO, debug, CTLFLAG_RW, &g_journal_debug, 0,
+SYSCTL_INT(_kern_geom_journal, OID_AUTO, debug, CTLFLAG_RWTUN, &g_journal_debug, 0,
     "Debug level");
 SYSCTL_UINT(_kern_geom_journal, OID_AUTO, switch_time, CTLFLAG_RW,
     &g_journal_switch_time, 0, "Switch journals every N seconds");
@@ -131,28 +130,26 @@ SYSCTL_PROC(_kern_geom_journal, OID_AUTO, record_entries,
 SYSCTL_UINT(_kern_geom_journal, OID_AUTO, optimize, CTLFLAG_RW,
     &g_journal_do_optimize, 0, "Try to combine bios on flush and copy");
 
-static u_int g_journal_cache_used = 0;
-static u_int g_journal_cache_limit = 64 * 1024 * 1024;
-TUNABLE_INT("kern.geom.journal.cache.limit", &g_journal_cache_limit);
+static u_long g_journal_cache_used = 0;
+static u_long g_journal_cache_limit = 64 * 1024 * 1024;
 static u_int g_journal_cache_divisor = 2;
-TUNABLE_INT("kern.geom.journal.cache.divisor", &g_journal_cache_divisor);
 static u_int g_journal_cache_switch = 90;
 static u_int g_journal_cache_misses = 0;
 static u_int g_journal_cache_alloc_failures = 0;
-static u_int g_journal_cache_low = 0;
+static u_long g_journal_cache_low = 0;
 
 static SYSCTL_NODE(_kern_geom_journal, OID_AUTO, cache, CTLFLAG_RW, 0,
     "GEOM_JOURNAL cache");
-SYSCTL_UINT(_kern_geom_journal_cache, OID_AUTO, used, CTLFLAG_RD,
+SYSCTL_ULONG(_kern_geom_journal_cache, OID_AUTO, used, CTLFLAG_RD,
     &g_journal_cache_used, 0, "Number of allocated bytes");
 static int
 g_journal_cache_limit_sysctl(SYSCTL_HANDLER_ARGS)
 {
-	u_int limit;
+	u_long limit;
 	int error;
 
 	limit = g_journal_cache_limit;
-	error = sysctl_handle_int(oidp, &limit, 0, req);
+	error = sysctl_handle_long(oidp, &limit, 0, req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
 	g_journal_cache_limit = limit;
@@ -160,7 +157,7 @@ g_journal_cache_limit_sysctl(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 SYSCTL_PROC(_kern_geom_journal_cache, OID_AUTO, limit,
-    CTLTYPE_UINT | CTLFLAG_RW, NULL, 0, g_journal_cache_limit_sysctl, "I",
+    CTLTYPE_ULONG | CTLFLAG_RWTUN, NULL, 0, g_journal_cache_limit_sysctl, "I",
     "Maximum number of allocated bytes");
 SYSCTL_UINT(_kern_geom_journal_cache, OID_AUTO, divisor, CTLFLAG_RDTUN,
     &g_journal_cache_divisor, 0,
@@ -175,7 +172,7 @@ g_journal_cache_switch_sysctl(SYSCTL_HANDLER_ARGS)
 	error = sysctl_handle_int(oidp, &cswitch, 0, req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
-	if (cswitch < 0 || cswitch > 100)
+	if (cswitch > 100)
 		return (EINVAL);
 	g_journal_cache_switch = cswitch;
 	g_journal_cache_low = (g_journal_cache_limit / 100) * cswitch;
@@ -230,11 +227,14 @@ struct g_class g_journal_class = {
 
 static int g_journal_destroy(struct g_journal_softc *sc);
 static void g_journal_metadata_update(struct g_journal_softc *sc);
+static void g_journal_start_switcher(struct g_class *mp);
+static void g_journal_stop_switcher(void);
 static void g_journal_switch_wait(struct g_journal_softc *sc);
 
 #define	GJ_SWITCHER_WORKING	0
 #define	GJ_SWITCHER_DIE		1
 #define	GJ_SWITCHER_DIED	2
+static struct proc *g_journal_switcher_proc = NULL;
 static int g_journal_switcher_state = GJ_SWITCHER_WORKING;
 static int g_journal_switcher_wokenup = 0;
 static int g_journal_sync_requested = 0;
@@ -523,7 +523,7 @@ g_journal_write_header(struct g_journal_softc *sc)
 /*
  * Every journal record has a header and data following it.
  * Functions below are used to decode the header before storing it to
- * little endian and to encode it after reading to system endianess.
+ * little endian and to encode it after reading to system endianness.
  */
 static void
 g_journal_record_header_encode(struct g_journal_record_header *hdr,
@@ -584,7 +584,7 @@ g_journal_record_header_decode(const u_char *data,
 
 /*
  * Function reads metadata from a provider (via the given consumer), decodes
- * it to system endianess and verifies its correctness.
+ * it to system endianness and verifies its correctness.
  */
 static int
 g_journal_metadata_read(struct g_consumer *cp, struct g_journal_metadata *md)
@@ -1236,7 +1236,7 @@ g_journal_flush(struct g_journal_softc *sc)
 	struct g_provider *pp;
 	struct bio **bioq;
 	struct bio *bp, *fbp, *pbp;
-	off_t joffset, size;
+	off_t joffset;
 	u_char *data, hash[16];
 	MD5_CTX ctx;
 	u_int i;
@@ -1244,7 +1244,6 @@ g_journal_flush(struct g_journal_softc *sc)
 	if (sc->sc_current_count == 0)
 		return;
 
-	size = 0;
 	pp = sc->sc_jprovider;
 	GJ_VALIDATE_OFFSET(sc->sc_journal_offset, sc);
 	joffset = sc->sc_journal_offset;
@@ -1261,7 +1260,7 @@ g_journal_flush(struct g_journal_softc *sc)
 	strlcpy(hdr.jrh_magic, GJ_RECORD_HEADER_MAGIC, sizeof(hdr.jrh_magic));
 
 	bioq = &sc->sc_active.jj_queue;
-	pbp = sc->sc_flush_queue;
+	GJQ_LAST(sc->sc_flush_queue, pbp);
 
 	fbp = g_alloc_bio();
 	fbp->bio_parent = NULL;
@@ -1294,12 +1293,11 @@ g_journal_flush(struct g_journal_softc *sc)
 		ent->je_offset = bp->bio_offset;
 		ent->je_joffset = joffset;
 		ent->je_length = bp->bio_length;
-		size += ent->je_length;
 
 		data = bp->bio_data;
 		if (sc->sc_flags & GJF_DEVICE_CHECKSUM)
 			MD5Update(&ctx, data, ent->je_length);
-		bzero(bp, sizeof(*bp));
+		g_reset_bio(bp);
 		bp->bio_cflags = GJ_BIO_JOURNAL;
 		bp->bio_offset = ent->je_offset;
 		bp->bio_joffset = ent->je_joffset;
@@ -1516,49 +1514,10 @@ g_journal_read_find(struct bio *head, int sorted, struct bio *pbp, off_t ostart,
 }
 
 /*
- * Try to find requested data in cache.
- */
-static struct bio *
-g_journal_read_queue_find(struct bio_queue *head, struct bio *pbp, off_t ostart,
-    off_t oend)
-{
-	off_t cstart, cend;
-	struct bio *bp;
-
-	TAILQ_FOREACH(bp, head, bio_queue) {
-		cstart = MAX(ostart, bp->bio_offset);
-		cend = MIN(oend, bp->bio_offset + bp->bio_length);
-		if (cend <= ostart)
-			continue;
-		else if (cstart >= oend)
-			continue;
-		KASSERT(bp->bio_data != NULL,
-		    ("%s: bio_data == NULL", __func__));
-		GJ_DEBUG(3, "READ(%p): (%jd, %jd) (bp=%p)", head, cstart, cend,
-		    bp);
-		bcopy(bp->bio_data + cstart - bp->bio_offset,
-		    pbp->bio_data + cstart - pbp->bio_offset, cend - cstart);
-		pbp->bio_completed += cend - cstart;
-		if (pbp->bio_completed == pbp->bio_length) {
-			/*
-			 * Cool, the whole request was in cache, deliver happy
-			 * message.
-			 */
-			g_io_deliver(pbp, 0);
-			return (pbp);
-		}
-		break;
-	}
-	return (bp);
-}
-
-/*
- * This function is used for colecting data on read.
+ * This function is used for collecting data on read.
  * The complexity is because parts of the data can be stored in four different
  * places:
- * - in delayed requests
  * - in memory - the data not yet send to the active journal provider
- * - in requests which are going to be sent to the active journal
  * - in the active journal
  * - in the inactive journal
  * - in the data provider
@@ -1576,20 +1535,14 @@ g_journal_read(struct g_journal_softc *sc, struct bio *pbp, off_t ostart,
 	cstart = cend = -1;
 	bp = NULL;
 	head = NULL;
-	for (i = 0; i <= 5; i++) {
+	for (i = 1; i <= 5; i++) {
 		switch (i) {
-		case 0:	/* Delayed requests. */
-			head = NULL;
-			sorted = 0;
-			break;
 		case 1:	/* Not-yet-send data. */
 			head = sc->sc_current_queue;
 			sorted = 1;
 			break;
-		case 2:	/* In-flight to the active journal. */
-			head = sc->sc_flush_queue;
-			sorted = 0;
-			break;
+		case 2: /* Skip flush queue as they are also in active queue */
+			continue;
 		case 3:	/* Active journal. */
 			head = sc->sc_active.jj_queue;
 			sorted = 1;
@@ -1608,10 +1561,7 @@ g_journal_read(struct g_journal_softc *sc, struct bio *pbp, off_t ostart,
 		default:
 			panic("gjournal %s: i=%d", __func__, i);
 		}
-		if (i == 0)
-			bp = g_journal_read_queue_find(&sc->sc_delayed_queue.queue, pbp, ostart, oend);
-		else
-			bp = g_journal_read_find(head, sorted, pbp, ostart, oend);
+		bp = g_journal_read_find(head, sorted, pbp, ostart, oend);
 		if (bp == pbp) { /* Got the whole request. */
 			GJ_DEBUG(2, "Got the whole request from %u.", i);
 			return;
@@ -1775,7 +1725,7 @@ g_journal_sync_read(struct g_consumer *cp, struct bio *bp, off_t offset,
 {
 	int error;
 
-	bzero(bp, sizeof(*bp));
+	g_reset_bio(bp);
 	bp->bio_cmd = BIO_READ;
 	bp->bio_done = NULL;
 	bp->bio_offset = offset;
@@ -1849,7 +1799,7 @@ g_journal_sync(struct g_journal_softc *sc)
 	for (;;) {
 		/*
 		 * If the biggest record won't fit, look for a record header or
-		 * journal header from the begining.
+		 * journal header from the beginning.
 		 */
 		GJ_VALIDATE_OFFSET(offset, sc);
 		error = g_journal_sync_read(cp, bp, offset, buf);
@@ -2317,7 +2267,7 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		sc->sc_rootmount = root_mount_hold("GJOURNAL");
 		GJ_DEBUG(1, "root_mount_hold %p", sc->sc_rootmount);
 
-		callout_init(&sc->sc_callout, CALLOUT_MPSAFE);
+		callout_init(&sc->sc_callout, 1);
 		if (md->md_type != GJ_TYPE_COMPLETE) {
 			/*
 			 * Journal and data are on separate providers.
@@ -2385,6 +2335,10 @@ g_journal_create(struct g_class *mp, struct g_provider *pp,
 		}
 		sc->sc_jconsumer = cp;
 	}
+
+	/* Start switcher kproc if needed. */
+	if (g_journal_switcher_proc == NULL)
+		g_journal_start_switcher(mp);
 
 	if ((sc->sc_type & GJ_TYPE_COMPLETE) != GJ_TYPE_COMPLETE) {
 		/* Journal is not complete yet. */
@@ -2465,8 +2419,7 @@ g_journal_destroy(struct g_journal_softc *sc)
 		GJ_DEBUG(1, "Marking %s as clean.", sc->sc_name);
 		g_journal_metadata_update(sc);
 		g_topology_lock();
-		pp->flags |= G_PF_WITHER;
-		g_orphan_provider(pp, ENXIO);
+		g_wither_provider(pp, ENXIO);
 	} else {
 		g_topology_lock();
 	}
@@ -2477,6 +2430,7 @@ g_journal_destroy(struct g_journal_softc *sc)
 		    sc->sc_current_count);
 	}
 
+	gp->softc = NULL;
 	LIST_FOREACH(cp, &gp->consumer, consumer) {
 		if (cp->acr + cp->acw + cp->ace > 0)
 			g_access(cp, -1, -1, -1);
@@ -2488,7 +2442,6 @@ g_journal_destroy(struct g_journal_softc *sc)
 		 */
 		g_post_event(g_journal_destroy_consumer, cp, M_WAITOK, NULL);
 	}
-	gp->softc = NULL;
 	g_wither_geom(gp, ENXIO);
 	free(sc, M_JOURNAL);
 	return (0);
@@ -2700,7 +2653,6 @@ g_journal_shutdown(void *arg, int howto __unused)
 	if (panicstr != NULL)
 		return;
 	mp = arg;
-	DROP_GIANT();
 	g_topology_lock();
 	LIST_FOREACH_SAFE(gp, &mp->geom, geom, gp2) {
 		if (gp->softc == NULL)
@@ -2709,7 +2661,6 @@ g_journal_shutdown(void *arg, int howto __unused)
 		g_journal_destroy(gp->softc);
 	}
 	g_topology_unlock();
-	PICKUP_GIANT();
 }
 
 /*
@@ -2728,7 +2679,6 @@ g_journal_lowmem(void *arg, int howto __unused)
 
 	g_journal_stats_low_mem++;
 	mp = arg;
-	DROP_GIANT();
 	g_topology_lock();
 	LIST_FOREACH(gp, &mp->geom, geom) {
 		sc = gp->softc;
@@ -2759,7 +2709,6 @@ g_journal_lowmem(void *arg, int howto __unused)
 			break;
 	}
 	g_topology_unlock();
-	PICKUP_GIANT();
 }
 
 static void g_journal_switcher(void *arg);
@@ -2767,7 +2716,6 @@ static void g_journal_switcher(void *arg);
 static void
 g_journal_init(struct g_class *mp)
 {
-	int error;
 
 	/* Pick a conservative value if provided value sucks. */
 	if (g_journal_cache_divisor <= 0 ||
@@ -2787,9 +2735,6 @@ g_journal_init(struct g_class *mp)
 	    g_journal_lowmem, mp, EVENTHANDLER_PRI_FIRST);
 	if (g_journal_event_lowmem == NULL)
 		GJ_DEBUG(0, "Warning! Cannot register lowmem event.");
-	error = kproc_create(g_journal_switcher, mp, NULL, 0, 0,
-	    "g_journal switcher");
-	KASSERT(error == 0, ("Cannot create switcher thread."));
 }
 
 static void
@@ -2802,11 +2747,7 @@ g_journal_fini(struct g_class *mp)
 	}
 	if (g_journal_event_lowmem != NULL)
 		EVENTHANDLER_DEREGISTER(vm_lowmem, g_journal_event_lowmem);
-	g_journal_switcher_state = GJ_SWITCHER_DIE;
-	wakeup(&g_journal_switcher_state);
-	while (g_journal_switcher_state != GJ_SWITCHER_DIED)
-		tsleep(&g_journal_switcher_state, PRIBIO, "jfini:wait", hz / 5);
-	GJ_DEBUG(1, "Switcher died.");
+	g_journal_stop_switcher();
 }
 
 DECLARE_GEOM_CLASS(g_journal_class, g_journal);
@@ -2874,7 +2815,6 @@ g_journal_do_switch(struct g_class *classp)
 	char *mountpoint;
 	int error, save;
 
-	DROP_GIANT();
 	g_topology_lock();
 	LIST_FOREACH(gp, &classp->geom, geom) {
 		sc = gp->softc;
@@ -2889,7 +2829,6 @@ g_journal_do_switch(struct g_class *classp)
 		mtx_unlock(&sc->sc_mtx);
 	}
 	g_topology_unlock();
-	PICKUP_GIANT();
 
 	mtx_lock(&mountlist_mtx);
 	TAILQ_FOREACH(mp, &mountlist, mnt_list) {
@@ -2904,11 +2843,9 @@ g_journal_do_switch(struct g_class *classp)
 			continue;
 		/* mtx_unlock(&mountlist_mtx) was done inside vfs_busy() */
 
-		DROP_GIANT();
 		g_topology_lock();
 		sc = g_journal_find_device(classp, mp->mnt_gjprovider);
 		g_topology_unlock();
-		PICKUP_GIANT();
 
 		if (sc == NULL) {
 			GJ_DEBUG(0, "Cannot find journal geom for %s.",
@@ -2987,7 +2924,6 @@ next:
 
 	sc = NULL;
 	for (;;) {
-		DROP_GIANT();
 		g_topology_lock();
 		LIST_FOREACH(gp, &g_journal_class.geom, geom) {
 			sc = gp->softc;
@@ -3003,7 +2939,6 @@ next:
 			sc = NULL;
 		}
 		g_topology_unlock();
-		PICKUP_GIANT();
 		if (sc == NULL)
 			break;
 		mtx_assert(&sc->sc_mtx, MA_OWNED);
@@ -3012,9 +2947,34 @@ next:
 	}
 }
 
+static void
+g_journal_start_switcher(struct g_class *mp)
+{
+	int error;
+
+	g_topology_assert();
+	MPASS(g_journal_switcher_proc == NULL);
+	g_journal_switcher_state = GJ_SWITCHER_WORKING;
+	error = kproc_create(g_journal_switcher, mp, &g_journal_switcher_proc,
+	    0, 0, "g_journal switcher");
+	KASSERT(error == 0, ("Cannot create switcher thread."));
+}
+
+static void
+g_journal_stop_switcher(void)
+{
+	g_topology_assert();
+	MPASS(g_journal_switcher_proc != NULL);
+	g_journal_switcher_state = GJ_SWITCHER_DIE;
+	wakeup(&g_journal_switcher_state);
+	while (g_journal_switcher_state != GJ_SWITCHER_DIED)
+		tsleep(&g_journal_switcher_state, PRIBIO, "jfini:wait", hz / 5);
+	GJ_DEBUG(1, "Switcher died.");
+	g_journal_switcher_proc = NULL;
+}
+
 /*
- * TODO: Switcher thread should be started on first geom creation and killed on
- * last geom destruction.
+ * TODO: Kill switcher thread on last geom destruction?
  */
 static void
 g_journal_switcher(void *arg)
@@ -3036,9 +2996,9 @@ g_journal_switcher(void *arg)
 			kproc_exit(0);
 		}
 		if (error == 0 && g_journal_sync_requested == 0) {
-			GJ_DEBUG(1, "Out of cache, force switch (used=%u "
-			    "limit=%u).", g_journal_cache_used,
-			    g_journal_cache_limit);
+			GJ_DEBUG(1, "Out of cache, force switch (used=%jd "
+			    "limit=%jd).", (intmax_t)g_journal_cache_used,
+			    (intmax_t)g_journal_cache_limit);
 		}
 		GJ_TIMER_START(1, &bt);
 		g_journal_do_switch(mp);

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/skel/dot.rhosts 50476 1999-08-28 00:22:10Z peter $
+# $FreeBSD$
 #
 # .rhosts - trusted remote host name and user data base
 #

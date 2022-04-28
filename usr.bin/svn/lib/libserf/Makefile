@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/svn/lib/libserf/Makefile 253895 2013-08-02 19:21:46Z peter $
+# $FreeBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -13,8 +13,6 @@ SRCS=		aggregate_buckets.c allocator.c auth.c auth_basic.c \
 		mmap_buckets.c outgoing.c request_buckets.c \
 		response_body_buckets.c response_buckets.c simple_buckets.c \
 		socket_buckets.c ssl_buckets.c ssltunnel.c
-
-NOMAN=		internalonly
 
 .PATH:		${SERF}/buckets ${SERF}/auth ${SERF}
 

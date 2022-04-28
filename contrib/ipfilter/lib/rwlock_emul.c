@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/rwlock_emul.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -55,6 +55,27 @@ void eMrwlock_write_enter(rw, file, line)
 	rw->eMrw_heldat = line;
 }
 
+
+void eMrwlock_try_upgrade(rw, file, line)
+	eMrwlock_t *rw;
+	char *file;
+	int line;
+{
+	if (rw->eMrw_magic != EMM_MAGIC) {
+		fprintf(stderr, "%s:eMrwlock_write_enter(%p): bad magic: %#x\n",
+			rw->eMrw_owner, rw, rw->eMrw_magic);
+		abort();
+	}
+	if (rw->eMrw_read != 0 || rw->eMrw_write != 0) {
+		fprintf(stderr,
+			"%s:eMrwlock_try_upgrade(%p): already locked: %d/%d\n",
+			rw->eMrw_owner, rw, rw->eMrw_read, rw->eMrw_write);
+		abort();
+	}
+	rw->eMrw_write++;
+	rw->eMrw_heldin = file;
+	rw->eMrw_heldat = line;
+}
 
 void eMrwlock_downgrade(rw, file, line)
 	eMrwlock_t *rw;

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-sis.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -154,7 +154,7 @@ ata_sis_probe(device_t dev)
     device_set_desc_copy(dev, buffer);
     ctlr->chip = idx;
     ctlr->chipinit = ata_sis_chipinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int

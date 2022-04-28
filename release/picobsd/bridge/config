@@ -1,5 +1,5 @@
 # configuration for picobsd build script.
-# $FreeBSD: release/10.0.0/release/picobsd/bridge/config 190421 2009-03-25 18:48:46Z luigi $
+# $FreeBSD$
 # it should only contain variable definitions -- it is sourced
 # by the shell much like rc.conf* files
 

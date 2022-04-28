@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/multipath/g_multipath.h 227464 2011-11-12 09:52:27Z mav $
+ * $FreeBSD$
  */
 /*
  * Based upon work by Pawel Jakub Dawidek <pjd@FreeBSD.org> for all of the
@@ -48,6 +48,7 @@ struct g_multipath_softc {
 	struct mtx		sc_mtx;
 	char			sc_name[16];
 	char			sc_uuid[40];
+	off_t			sc_size;
 	int			sc_opened;
 	int			sc_stopping;
 	int			sc_ndisks;

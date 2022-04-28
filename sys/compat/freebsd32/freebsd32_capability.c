@@ -28,12 +28,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_capability.c 255657 2013-09-17 20:48:19Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_capsicum.h"
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/filedesc.h>
 #include <sys/malloc.h>
 #include <sys/proc.h>
@@ -47,18 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_capability.c 2
 #ifdef CAPABILITIES
 
 MALLOC_DECLARE(M_FILECAPS);
-
-int
-freebsd32_cap_enter(struct thread *td,
-    struct freebsd32_cap_enter_args *uap)
-{
-
-	/*
-	 * We do not have an equivalent of capabilities.conf for freebsd32
-	 * compatibility, so do not allow capability mode for now.
-	 */
-	return (ENOSYS);
-}
 
 int
 freebsd32_cap_ioctls_limit(struct thread *td,
@@ -146,14 +134,6 @@ out:
 }
 
 #else /* !CAPABILITIES */
-
-int
-freebsd32_cap_enter(struct thread *td,
-    struct freebsd32_cap_enter_args *uap)
-{
-
-	return (ENOSYS);
-}
 
 int
 freebsd32_cap_ioctls_limit(struct thread *td,

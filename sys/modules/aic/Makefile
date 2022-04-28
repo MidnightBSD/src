@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/aic/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/aic
+.PATH: ${SRCTOP}/sys/dev/aic
 
 KMOD=	aic
 SRCS=	aic.c aic_pccard.c

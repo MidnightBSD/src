@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_osl.h 246713 2013-02-12 16:57:20Z kib $
+ *	$FreeBSD$
  */
 
 /*

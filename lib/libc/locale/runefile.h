@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/locale/runefile.h 146261 2005-05-16 09:32:41Z ru $
+ * $FreeBSD$
  */
 
 #ifndef _RUNEFILE_H_

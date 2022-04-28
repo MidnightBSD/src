@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/lib/libalias/libalias/Makefile 204596 2010-03-02 18:44:08Z uqs $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../sys/netinet/libalias
+.PATH: ${SRCTOP}/sys/netinet/libalias
 
+PACKAGE=lib${LIB}
 LIB=	alias
 SHLIBDIR?= /lib
 SHLIB_MAJOR= 7

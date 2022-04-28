@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cardbus/cardbusvar.h 185545 2008-12-02 04:54:31Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -69,6 +69,9 @@ struct cardbus_devinfo
 struct cardbus_softc 
 {
 	device_t	sc_dev;
+#ifdef PCI_RES_BUS
+	struct resource *sc_bus;
+#endif
 };
 
 /*

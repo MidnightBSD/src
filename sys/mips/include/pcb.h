@@ -36,7 +36,7 @@
  *	from: Utah Hdr: pcb.h 1.13 89/04/23
  *	from: @(#)pcb.h 8.1 (Berkeley) 6/10/93
  *	JNPR: pcb.h,v 1.2 2006/08/07 11:51:17 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/pcb.h 249882 2013-04-25 06:29:23Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCB_H_
@@ -60,6 +60,61 @@
 #define	PCB_REG_GP	12
 #define	PCB_REG_PC	13
 
+/*
+ * Call ast if required
+ *
+ * XXX Do we really need to disable interrupts?
+ */
+#define DO_AST				             \
+44:				                     \
+	mfc0	t0, MIPS_COP_0_STATUS               ;\
+	and	a0, t0, MIPS_SR_INT_IE              ;\
+	xor	t0, a0, t0                          ;\
+	mtc0	t0, MIPS_COP_0_STATUS               ;\
+	COP0_SYNC                                   ;\
+	GET_CPU_PCPU(s1)                            ;\
+	PTR_L	s3, PC_CURPCB(s1)                   ;\
+	PTR_L	s1, PC_CURTHREAD(s1)                ;\
+	lw	s2, TD_FLAGS(s1)                    ;\
+	li	s0, TDF_ASTPENDING | TDF_NEEDRESCHED;\
+	and	s2, s0                              ;\
+	mfc0	t0, MIPS_COP_0_STATUS               ;\
+	or	t0, a0, t0                          ;\
+	mtc0	t0, MIPS_COP_0_STATUS               ;\
+	COP0_SYNC                                   ;\
+	beq	s2, zero, 4f                        ;\
+	nop                                         ;\
+	PTR_LA	s0, _C_LABEL(ast)                   ;\
+	jalr	s0                                  ;\
+	PTR_ADDU a0, s3, U_PCB_REGS                 ;\
+	j	44b		                    ;\
+        nop                                         ;\
+4:
+
+#define	SAVE_U_PCB_REG(reg, offs, base) \
+	REG_S	reg, U_PCB_REGS + (SZREG * offs) (base)
+
+#define	RESTORE_U_PCB_REG(reg, offs, base) \
+	REG_L	reg, U_PCB_REGS + (SZREG * offs) (base)
+
+#define	SAVE_U_PCB_FPREG(reg, offs, base) \
+	FP_S	reg, U_PCB_FPREGS + (SZFPREG * offs) (base)
+
+#define	RESTORE_U_PCB_FPREG(reg, offs, base) \
+	FP_L	reg, U_PCB_FPREGS + (SZFPREG * offs) (base)
+
+#define	SAVE_U_PCB_FPSR(reg, offs, base) \
+	REG_S	reg, U_PCB_FPREGS + (SZFPREG * offs) (base)
+
+#define	RESTORE_U_PCB_FPSR(reg, offs, base) \
+	REG_L	reg, U_PCB_FPREGS + (SZFPREG * offs) (base)
+
+#define	SAVE_U_PCB_CONTEXT(reg, offs, base) \
+	REG_S	reg, U_PCB_CONTEXT + (SZREG * offs) (base)
+
+#define	RESTORE_U_PCB_CONTEXT(reg, offs, base) \
+	REG_L	reg, U_PCB_CONTEXT + (SZREG * offs) (base)
+
 #ifndef LOCORE
 #include <machine/frame.h>
 
@@ -79,6 +134,7 @@ extern struct pcb *curpcb;		/* the current running pcb */
 
 void makectx(struct trapframe *, struct pcb *);
 int savectx(struct pcb *) __returns_twice;
+
 #endif
 #endif
 

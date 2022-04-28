@@ -1,6 +1,17 @@
-/* $Id: mkpar.c,v 1.12 2012/05/26 00:42:18 tom Exp $ */
+/* $Id: mkpar.c,v 1.15 2016/06/07 00:22:12 tom Exp $ */
 
 #include "defs.h"
+
+#define NotSuppressed(p)	((p)->suppressed == 0)
+
+#if defined(YYBTYACC)
+#define MaySuppress(p)		((backtrack ? ((p)->suppressed <= 1) : (p)->suppressed == 0))
+    /* suppress the preferred action => enable backtracking */
+#define StartBacktrack(p)	if (backtrack && (p) != NULL && NotSuppressed(p)) (p)->suppressed = 1
+#else
+#define MaySuppress(p)		((p)->suppressed == 0)
+#define StartBacktrack(p)	/*nothing */
+#endif
 
 static action *add_reduce(action *actions, int ruleno, int symbol);
 static action *add_reductions(int stateno, action *actions);
@@ -73,7 +84,7 @@ get_shifts(int stateno)
     if (sp)
     {
 	to_state2 = sp->shift;
-	for (i = (Value_t) (sp->nshifts - 1); i >= 0; i--)
+	for (i = (Value_t)(sp->nshifts - 1); i >= 0; i--)
 	{
 	    k = to_state2[i];
 	    symbol = accessing_symbol[k];
@@ -142,8 +153,8 @@ add_reduce(action *actions,
 
     temp = NEW(action);
     temp->next = next;
-    temp->symbol = (Value_t) symbol;
-    temp->number = (Value_t) ruleno;
+    temp->symbol = (Value_t)symbol;
+    temp->number = (Value_t)ruleno;
     temp->prec = rprec[ruleno];
     temp->action_code = REDUCE;
     temp->assoc = rassoc[ruleno];
@@ -190,7 +201,7 @@ unused_rules(void)
     {
 	for (p = parser[i]; p; p = p->next)
 	{
-	    if (p->action_code == REDUCE && p->suppressed == 0)
+	    if ((p->action_code == REDUCE) && MaySuppress(p))
 		rules_used[p->number] = 1;
 	}
     }
@@ -225,17 +236,23 @@ remove_conflicts(void)
 	SRcount = 0;
 	RRcount = 0;
 	symbol = -1;
+#if defined(YYBTYACC)
+	pref = NULL;
+#endif
 	for (p = parser[i]; p; p = p->next)
 	{
 	    if (p->symbol != symbol)
 	    {
+		/* the first parse action for each symbol is the preferred action */
 		pref = p;
 		symbol = p->symbol;
 	    }
+	    /* following conditions handle multiple, i.e., conflicting, parse actions */
 	    else if (i == final_state && symbol == 0)
 	    {
 		SRcount++;
 		p->suppressed = 1;
+		StartBacktrack(pref);
 	    }
 	    else if (pref != 0 && pref->action_code == SHIFT)
 	    {
@@ -269,12 +286,14 @@ remove_conflicts(void)
 		{
 		    SRcount++;
 		    p->suppressed = 1;
+		    StartBacktrack(pref);
 		}
 	    }
 	    else
 	    {
 		RRcount++;
 		p->suppressed = 1;
+		StartBacktrack(pref);
 	    }
 	}
 	SRtotal += SRcount;
@@ -329,9 +348,9 @@ sole_reduction(int stateno)
     ruleno = 0;
     for (p = parser[stateno]; p; p = p->next)
     {
-	if (p->action_code == SHIFT && p->suppressed == 0)
+	if (p->action_code == SHIFT && MaySuppress(p))
 	    return (0);
-	else if (p->action_code == REDUCE && p->suppressed == 0)
+	else if ((p->action_code == REDUCE) && MaySuppress(p))
 	{
 	    if (ruleno > 0 && p->number != ruleno)
 		return (0);
@@ -353,7 +372,7 @@ defreds(void)
 
     defred = NEW2(nstates, Value_t);
     for (i = 0; i < nstates; i++)
-	defred[i] = (Value_t) sole_reduction(i);
+	defred[i] = (Value_t)sole_reduction(i);
 }
 
 static void

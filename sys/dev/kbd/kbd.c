@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/kbd/kbd.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 
@@ -96,7 +96,7 @@ kbd_realloc_array(void)
 	int s;
 
 	s = spltty();
-	newsize = ((keyboards + ARRAY_DELTA)/ARRAY_DELTA)*ARRAY_DELTA;
+	newsize = rounddown(keyboards + ARRAY_DELTA, ARRAY_DELTA);
 	new_kbd = malloc(sizeof(*new_kbd)*newsize, M_DEVBUF, M_NOWAIT|M_ZERO);
 	if (new_kbd == NULL) {
 		splx(s);
@@ -173,6 +173,10 @@ kbd_add_driver(keyboard_driver_t *driver)
 {
 	if (SLIST_NEXT(driver, link))
 		return (EINVAL);
+	if (driver->kbdsw->get_fkeystr == NULL)
+		driver->kbdsw->get_fkeystr = genkbd_get_fkeystr;
+	if (driver->kbdsw->diag == NULL)
+		driver->kbdsw->diag = genkbd_diag;
 	SLIST_INSERT_HEAD(&keyboard_drivers, driver, link);
 	return (0);
 }
@@ -283,9 +287,9 @@ kbd_unregister(keyboard_t *kbd)
 	return (0);
 }
 
-/* find a funciton table by the driver name */
-keyboard_switch_t
-*kbd_get_switch(char *driver)
+/* find a function table by the driver name */
+keyboard_switch_t *
+kbd_get_switch(char *driver)
 {
 	const keyboard_driver_t **list;
 	const keyboard_driver_t *p;
@@ -419,8 +423,8 @@ kbd_change_callback(keyboard_t *kbd, void *id, kbd_callback_func_t *func,
 }
 
 /* get a keyboard structure */
-keyboard_t
-*kbd_get_keyboard(int index)
+keyboard_t *
+kbd_get_keyboard(int index)
 {
 	if ((index < 0) || (index >= keyboards))
 		return (NULL);
@@ -884,11 +888,11 @@ genkbd_commonioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 			omapp->key[i].spcl = mapp->key[i].spcl;
 			omapp->key[i].flgs = mapp->key[i].flgs;
 		}
-		return (0);
+		break;
 	case PIO_KEYMAP:	/* set keyboard translation table */
 	case OPIO_KEYMAP:	/* set keyboard translation table (compat) */
 #ifndef KBD_DISABLE_KEYMAP_LOAD
-		mapp = malloc(sizeof *mapp, M_TEMP, M_NOWAIT);
+		mapp = malloc(sizeof *mapp, M_TEMP, M_WAITOK);
 		if (cmd == OPIO_KEYMAP) {
 			omapp = (okeymap_t *)arg;
 			mapp->n_keys = omapp->n_keys;
@@ -996,7 +1000,7 @@ genkbd_commonioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 			splx(s);
 			return (error);
 		}
-		kbd->kb_fkeytab[fkeyp->keynum].len = imin(fkeyp->flen, MAXFK);
+		kbd->kb_fkeytab[fkeyp->keynum].len = min(fkeyp->flen, MAXFK);
 		bcopy(fkeyp->keydef, kbd->kb_fkeytab[fkeyp->keynum].str,
 		    kbd->kb_fkeytab[fkeyp->keynum].len);
 		break;
@@ -1118,8 +1122,8 @@ fkey_change_ok(fkeytab_t *oldkey, fkeyarg_t *newkey, struct thread *td)
 #endif
 
 /* get a pointer to the string associated with the given function key */
-u_char
-*genkbd_get_fkeystr(keyboard_t *kbd, int fkey, size_t *len)
+u_char *
+genkbd_get_fkeystr(keyboard_t *kbd, int fkey, size_t *len)
 {
 	if (kbd == NULL)
 		return (NULL);
@@ -1131,8 +1135,8 @@ u_char
 }
 
 /* diagnostic dump */
-static char
-*get_kbd_type_name(int type)
+static char *
+get_kbd_type_name(int type)
 {
 	static struct {
 		int type;
@@ -1144,7 +1148,7 @@ static char
 	};
 	int i;
 
-	for (i = 0; i < sizeof(name_table)/sizeof(name_table[0]); ++i) {
+	for (i = 0; i < nitems(name_table); ++i) {
 		if (type == name_table[i].type)
 			return (name_table[i].name);
 	}
@@ -1485,3 +1489,20 @@ genkbd_keyaction(keyboard_t *kbd, int keycode, int up, int *shiftstate,
 	}
 	/* NOT REACHED */
 }
+
+static void
+kbd_drv_init(void)
+{
+	const keyboard_driver_t **list;
+	const keyboard_driver_t *p;
+
+	SET_FOREACH(list, kbddriver_set) {
+		p = *list;
+		if (p->kbdsw->get_fkeystr == NULL)
+			p->kbdsw->get_fkeystr = genkbd_get_fkeystr;
+		if (p->kbdsw->diag == NULL)
+			p->kbdsw->diag = genkbd_diag;
+	}
+}
+
+SYSINIT(kbd_drv_init, SI_SUB_DRIVERS, SI_ORDER_FIRST, kbd_drv_init, NULL);

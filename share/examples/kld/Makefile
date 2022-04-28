@@ -64,9 +64,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#	$FreeBSD: release/10.0.0/share/examples/kld/Makefile 255362 2013-09-07 14:15:13Z markm $
+#	$FreeBSD$
 #
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/kld
 SUBDIR=	cdev dyn_sysctl firmware khelp random_adaptor syscall
 
 .include <bsd.subdir.mk>

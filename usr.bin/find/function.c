@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/find/function.c 253886 2013-08-02 14:14:23Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -224,7 +224,7 @@ nextarg(OPTION *option, char ***argvp)
 {
 	char *arg;
 
-	if ((arg = **argvp) == 0)
+	if ((arg = **argvp) == NULL)
 		errx(1, "%s: requires additional arguments", option->name);
 	(*argvp)++;
 	return arg;
@@ -404,7 +404,6 @@ f_acl(PLAN *plan __unused, FTSENT *entry)
 	acl_free(facl);
 	if (ret) {
 		warn("%s", entry->fts_accpath);
-		acl_free(facl);
 		return (0);
 	}
 	if (trivial)
@@ -671,7 +670,13 @@ doexec:	if ((plan->flags & F_NEEDOK) && !queryuser(plan->e_argv))
 		plan->e_psize = plan->e_pbsize;
 	}
 	pid = waitpid(pid, &status, 0);
-	return (pid != -1 && WIFEXITED(status) && !WEXITSTATUS(status));
+	if (pid != -1 && WIFEXITED(status) && !WEXITSTATUS(status))
+		return (1);
+	if (plan->flags & F_EXECPLUS) {
+		exitstatus = 1;
+		return (1);
+	}
+	return (0);
 }
 
 /*
@@ -897,8 +902,13 @@ f_fstype(PLAN *plan, FTSENT *entry)
 		} else
 			p = NULL;
 
-		if (statfs(entry->fts_accpath, &sb))
-			err(1, "%s", entry->fts_accpath);
+		if (statfs(entry->fts_accpath, &sb)) {
+			if (!ignore_readdir_race || errno != ENOENT) {
+				warn("statfs: %s", entry->fts_accpath);
+				exitstatus = 1;
+			}
+			return 0;
+		}
 
 		if (p) {
 			p[0] = save[0];
@@ -1122,11 +1132,24 @@ f_name(PLAN *plan, FTSENT *entry)
 {
 	char fn[PATH_MAX];
 	const char *name;
+	ssize_t len;
 
 	if (plan->flags & F_LINK) {
-		name = fn;
-		if (readlink(entry->fts_path, fn, sizeof(fn)) == -1)
+		/*
+		 * The below test both avoids obviously useless readlink()
+		 * calls and ensures that symlinks with existent target do
+		 * not match if symlinks are being followed.
+		 * Assumption: fts will stat all symlinks that are to be
+		 * followed and will return the stat information.
+		 */
+		if (entry->fts_info != FTS_NSOK && entry->fts_info != FTS_SL &&
+		    entry->fts_info != FTS_SLNONE)
 			return 0;
+		len = readlink(entry->fts_accpath, fn, sizeof(fn) - 1);
+		if (len == -1)
+			return 0;
+		fn[len] = '\0';
+		name = fn;
 	} else
 		name = entry->fts_name;
 	return !fnmatch(plan->c_data, name,
@@ -1488,7 +1511,7 @@ c_size(OPTION *option, char ***argvp)
 			scale = 0x40000000LL;
 			break;
 		case 'T':                       /* terabytes 1<<40 */
-			scale = 0x1000000000LL;
+			scale = 0x10000000000LL;
 			break;
 		case 'P':                       /* petabytes 1<<50 */
 			scale = 0x4000000000000LL;
@@ -1539,7 +1562,12 @@ c_sparse(OPTION *option, char ***argvp __unused)
 int
 f_type(PLAN *plan, FTSENT *entry)
 {
-	return (entry->fts_statp->st_mode & S_IFMT) == plan->m_data;
+	if (plan->m_data == S_IFDIR)
+		return (entry->fts_info == FTS_D || entry->fts_info == FTS_DC ||
+		    entry->fts_info == FTS_DNR || entry->fts_info == FTS_DOT ||
+		    entry->fts_info == FTS_DP);
+	else
+		return (entry->fts_statp->st_mode & S_IFMT) == plan->m_data;
 }
 
 PLAN *
@@ -1550,7 +1578,8 @@ c_type(OPTION *option, char ***argvp)
 	mode_t  mask;
 
 	typestring = nextarg(option, argvp);
-	ftsoptions &= ~FTS_NOSTAT;
+	if (typestring[0] != 'd')
+		ftsoptions &= ~FTS_NOSTAT;
 
 	switch (typestring[0]) {
 	case 'b':
@@ -1755,7 +1784,8 @@ f_false(PLAN *plan __unused, FTSENT *entry __unused)
 int
 f_quit(PLAN *plan __unused, FTSENT *entry __unused)
 {
-	exit(0);
+	finish_execplus();
+	exit(exitstatus);
 }
 
 /* c_quit == c_simple */

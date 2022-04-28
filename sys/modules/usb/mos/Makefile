@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/mos/Makefile 218729 2011-02-16 08:33:30Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2011 Rick van der Zwet <info@rickvanderzwet.nl>
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

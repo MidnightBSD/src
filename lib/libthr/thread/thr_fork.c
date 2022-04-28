@@ -23,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_fork.c 239609 2012-08-23 05:15:15Z davidxu $
  */
 
 /*
@@ -57,6 +55,10 @@
  *
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+#include <sys/syscall.h>
 #include "namespace.h"
 #include <errno.h>
 #include <link.h>
@@ -127,12 +129,10 @@ __pthread_cxa_finalize(struct dl_phdr_info *phdr_info)
 	_thr_sigact_unload(phdr_info);
 }
 
-__weak_reference(_fork, fork);
-
-pid_t _fork(void);
+__weak_reference(__thr_fork, _fork);
 
 pid_t
-_fork(void)
+__thr_fork(void)
 {
 	struct pthread *curthread;
 	struct pthread_atfork *af;
@@ -169,13 +169,21 @@ _fork(void)
 	if (_thr_isthreaded() != 0) {
 		was_threaded = 1;
 		_malloc_prefork();
+		__thr_pshared_atfork_pre();
 		_rtld_atfork_pre(rtld_locks);
 	} else {
 		was_threaded = 0;
 	}
 
-	/* Fork a new process: */
-	if ((ret = __sys_fork()) == 0) {
+	/*
+	 * Fork a new process.
+	 * There is no easy way to pre-resolve the __sys_fork symbol
+	 * without performing the fork.  Use the syscall(2)
+	 * indirection, the syscall symbol is resolved in
+	 * _thr_rtld_init() with side-effect free call.
+	 */
+	ret = syscall(SYS_fork);
+	if (ret == 0) {
 		/* Child process */
 		errsave = errno;
 		curthread->cancel_pending = 0;
@@ -196,14 +204,16 @@ _fork(void)
 
 		_thr_signal_postfork_child();
 
-		if (was_threaded)
+		if (was_threaded) {
 			_rtld_atfork_post(rtld_locks);
+			__thr_pshared_atfork_post();
+		}
 		_thr_setthreaded(0);
 
 		/* reinitalize library. */
 		_libpthread_init(curthread);
 
-		/* atfork is reinitializeded by _libpthread_init()! */
+		/* atfork is reinitialized by _libpthread_init()! */
 		_thr_rwl_rdlock(&_thr_atfork_lock);
 
 		if (was_threaded) {
@@ -230,6 +240,7 @@ _fork(void)
 
 		if (was_threaded) {
 			_rtld_atfork_post(rtld_locks);
+			__thr_pshared_atfork_post();
 			_malloc_postfork();
 		}
 
@@ -250,6 +261,5 @@ _fork(void)
 	}
 	errno = errsave;
 
-	/* Return the process ID: */
 	return (ret);
 }

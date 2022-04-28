@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/partedit.h 245701 2013-01-20 23:04:21Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _PARTEDIT_PARTEDIT_H
@@ -54,9 +56,10 @@ struct partition_metadata {
 struct partition_metadata *get_part_metadata(const char *name, int create);
 void delete_part_metadata(const char *name);
 
-int part_wizard(void);
+int part_wizard(const char *fstype);
 int scripted_editor(int argc, const char **argv);
-int wizard_makeparts(struct gmesh *mesh, const char *disk, int interactive);
+int wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
+    int interactive);
 
 /* gpart operations */
 void gpart_delete(struct gprovider *pp);
@@ -71,12 +74,16 @@ void gpart_commit(struct gmesh *mesh);
 int gpart_partition(const char *lg_name, const char *scheme);
 void set_default_part_metadata(const char *name, const char *scheme,
     const char *type, const char *mountpoint, const char *newfs);
+void gpart_set_root(const char *lg_name, const char *attribute);
+const char *choose_part_type(const char *def_scheme);
 
 /* machine-dependent bootability checks */
 const char *default_scheme(void);
-int is_scheme_bootable(const char *part_type);
-size_t bootpart_size(const char *part_type);
-const char *bootcode_path(const char *part_type);
-const char *partcode_path(const char *part_type);
+int is_scheme_bootable(const char *scheme);
+int is_fs_bootable(const char *scheme, const char *fs);
+size_t bootpart_size(const char *scheme);
+const char *bootpart_type(const char *scheme);
+const char *bootcode_path(const char *scheme);
+const char *partcode_path(const char *scheme, const char *fs_type);
 
 #endif

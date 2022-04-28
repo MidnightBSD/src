@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)strncmp.c	8.1 (Berkeley) 6/4/93";
 __RCSID("$NetBSD: wcsncmp.c,v 1.3 2001/01/05 12:13:13 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/wcsncmp.c 251069 2013-05-28 20:57:40Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <wchar.h>
 

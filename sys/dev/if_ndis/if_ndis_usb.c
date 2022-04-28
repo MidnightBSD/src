@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/if_ndis/if_ndis_usb.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/if_ndis/if_ndis_usb.c 227843 2011-11-
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>

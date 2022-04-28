@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/contrib/libreadline/rlconf.h 165675 2006-12-31 09:22:31Z ache $ */
+/* $FreeBSD$ */
 /* rlconf.h -- readline configuration definitions */
 
 /* Copyright (C) 1994 Free Software Foundation, Inc.

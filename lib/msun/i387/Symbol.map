@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/msun/i387/Symbol.map 226218 2011-10-10 15:43:09Z das $
+ * $FreeBSD$
  */
 FBSD_1.0 {
 	__has_sse;

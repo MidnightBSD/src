@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)float.h	7.1 (Berkeley) 5/8/90
- * $FreeBSD: release/10.0.0/sys/x86/include/float.h 235939 2012-05-24 21:44:46Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FLOAT_H_

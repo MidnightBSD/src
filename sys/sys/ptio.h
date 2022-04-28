@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/ptio.h 50477 1999-08-28 01:08:13Z peter $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PTIO_H_

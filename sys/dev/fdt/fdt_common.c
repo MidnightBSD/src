@@ -1,7 +1,9 @@
 /*-
- * Copyright (c) 2009-2010 The FreeBSD Foundation
+ * Copyright (c) 2009-2014 The FreeBSD Foundation
  * All rights reserved.
  *
+ * This software was developed by Andrew Turner under sponsorship from
+ * the FreeBSD Foundation.
  * This software was developed by Semihalf under sponsorship from
  * the FreeBSD Foundation.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdt/fdt_common.c 257457 2013-10-31 16:18:36Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,7 +39,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/fdt/fdt_common.c 257457 2013-10-31 16
 #include <sys/bus.h>
 #include <sys/limits.h>
 
-#include <machine/fdt.h>
 #include <machine/resource.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -65,12 +66,88 @@ vm_offset_t fdt_immr_size;
 
 struct fdt_ic_list fdt_ic_list_head = SLIST_HEAD_INITIALIZER(fdt_ic_list_head);
 
+static int
+fdt_get_range_by_busaddr(phandle_t node, u_long addr, u_long *base,
+    u_long *size)
+{
+	pcell_t ranges[32], *rangesptr;
+	pcell_t addr_cells, size_cells, par_addr_cells;
+	u_long bus_addr, par_bus_addr, pbase, psize;
+	int err, i, len, tuple_size, tuples;
+
+	if (node == 0) {
+		*base = 0;
+		*size = ULONG_MAX;
+		return (0);
+	}
+
+	if ((fdt_addrsize_cells(node, &addr_cells, &size_cells)) != 0)
+		return (ENXIO);
+	/*
+	 * Process 'ranges' property.
+	 */
+	par_addr_cells = fdt_parent_addr_cells(node);
+	if (par_addr_cells > 2) {
+		return (ERANGE);
+	}
+
+	len = OF_getproplen(node, "ranges");
+	if (len < 0)
+		return (-1);
+	if (len > sizeof(ranges))
+		return (ENOMEM);
+	if (len == 0) {
+		return (fdt_get_range_by_busaddr(OF_parent(node), addr,
+		    base, size));
+	}
+
+	if (OF_getprop(node, "ranges", ranges, sizeof(ranges)) <= 0)
+		return (EINVAL);
+
+	tuple_size = addr_cells + par_addr_cells + size_cells;
+	tuples = len / (tuple_size * sizeof(cell_t));
+
+	if (par_addr_cells > 2 || addr_cells > 2 || size_cells > 2)
+		return (ERANGE);
+
+	*base = 0;
+	*size = 0;
+
+	for (i = 0; i < tuples; i++) {
+		rangesptr = &ranges[i * tuple_size];
+
+		bus_addr = fdt_data_get((void *)rangesptr, addr_cells);
+		if (bus_addr != addr)
+			continue;
+		rangesptr += addr_cells;
+
+		par_bus_addr = fdt_data_get((void *)rangesptr, par_addr_cells);
+		rangesptr += par_addr_cells;
+
+		err = fdt_get_range_by_busaddr(OF_parent(node), par_bus_addr,
+		    &pbase, &psize);
+		if (err > 0)
+			return (err);
+		if (err == 0)
+			*base = pbase;
+		else
+			*base = par_bus_addr;
+
+		*size = fdt_data_get((void *)rangesptr, size_cells);
+
+		return (0);
+	}
+
+	return (EINVAL);
+}
+
 int
 fdt_get_range(phandle_t node, int range_id, u_long *base, u_long *size)
 {
 	pcell_t ranges[6], *rangesptr;
 	pcell_t addr_cells, size_cells, par_addr_cells;
-	int len, tuple_size, tuples;
+	u_long par_bus_addr, pbase, psize;
+	int err, len, tuple_size, tuples;
 
 	if ((fdt_addrsize_cells(node, &addr_cells, &size_cells)) != 0)
 		return (ENXIO);
@@ -100,18 +177,26 @@ fdt_get_range(phandle_t node, int range_id, u_long *base, u_long *size)
 	    size_cells);
 	tuples = len / tuple_size;
 
-	if (fdt_ranges_verify(ranges, tuples, par_addr_cells,
-	    addr_cells, size_cells)) {
+	if (par_addr_cells > 2 || addr_cells > 2 || size_cells > 2)
 		return (ERANGE);
-	}
+
 	*base = 0;
 	*size = 0;
 	rangesptr = &ranges[range_id];
 
 	*base = fdt_data_get((void *)rangesptr, addr_cells);
 	rangesptr += addr_cells;
-	*base += fdt_data_get((void *)rangesptr, par_addr_cells);
+
+	par_bus_addr = fdt_data_get((void *)rangesptr, par_addr_cells);
 	rangesptr += par_addr_cells;
+
+	err = fdt_get_range_by_busaddr(OF_parent(node), par_bus_addr,
+	   &pbase, &psize);
+	if (err == 0)
+		*base += pbase;
+	else
+		*base += par_bus_addr;
+
 	*size = fdt_data_get((void *)rangesptr, size_cells);
 	return (0);
 }
@@ -127,7 +212,7 @@ fdt_immr_addr(vm_offset_t immr_va)
 	 * Try to access the SOC node directly i.e. through /aliases/.
 	 */
 	if ((node = OF_finddevice("soc")) != 0)
-		if (fdt_is_compatible_strict(node, "simple-bus"))
+		if (fdt_is_compatible(node, "simple-bus"))
 			goto moveon;
 	/*
 	 * Find the node the long way.
@@ -135,7 +220,7 @@ fdt_immr_addr(vm_offset_t immr_va)
 	if ((node = OF_finddevice("/")) == 0)
 		return (ENXIO);
 
-	if ((node = fdt_find_compatible(node, "simple-bus", 1)) == 0)
+	if ((node = fdt_find_compatible(node, "simple-bus", 0)) == 0)
 		return (ENXIO);
 
 moveon:
@@ -224,6 +309,27 @@ fdt_find_compatible(phandle_t start, const char *compat, int strict)
 	return (0);
 }
 
+phandle_t
+fdt_depth_search_compatible(phandle_t start, const char *compat, int strict)
+{
+	phandle_t child, node;
+
+	/*
+	 * Depth-search all descendants of 'start' node, and find first with
+	 * matching 'compatible' property.
+	 */
+	for (node = OF_child(start); node != 0; node = OF_peer(node)) {
+		if (fdt_is_compatible(node, compat) && 
+		    (strict == 0 || fdt_is_compatible_strict(node, compat))) {
+			return (node);
+		}
+		child = fdt_depth_search_compatible(node, compat, strict);
+		if (child != 0)
+			return (child);
+	}
+	return (0);
+}
+
 int
 fdt_is_enabled(phandle_t node)
 {
@@ -242,7 +348,7 @@ fdt_is_enabled(phandle_t node)
 	if (strncmp((char *)stat, "okay", len) == 0)
 		ena = 1;
 
-	free(stat, M_OFWPROP);
+	OF_prop_free(stat);
 	return (ena);
 }
 
@@ -272,23 +378,9 @@ fdt_parent_addr_cells(phandle_t node)
 	/* Find out #address-cells of the superior bus. */
 	if (OF_searchprop(OF_parent(node), "#address-cells", &addr_cells,
 	    sizeof(addr_cells)) <= 0)
-		addr_cells = 2;
+		return (2);
 
 	return ((int)fdt32_to_cpu(addr_cells));
-}
-
-int
-fdt_data_verify(void *data, int cells)
-{
-	uint64_t d64;
-
-	if (cells > 1) {
-		d64 = fdt64_to_cpu(*((uint64_t *)data));
-		if (((d64 >> 32) & 0xffffffffull) != 0 || cells > 2)
-			return (ERANGE);
-	}
-
-	return (0);
 }
 
 int
@@ -338,61 +430,19 @@ fdt_addrsize_cells(phandle_t node, int *addr_cells, int *size_cells)
 }
 
 int
-fdt_ranges_verify(pcell_t *ranges, int tuples, int par_addr_cells,
-    int this_addr_cells, int this_size_cells)
-{
-	int i, rv, ulsz;
-
-	if (par_addr_cells > 2 || this_addr_cells > 2 || this_size_cells > 2)
-		return (ERANGE);
-
-	/*
-	 * This is the max size the resource manager can handle for addresses
-	 * and sizes.
-	 */
-	ulsz = sizeof(u_long);
-	if (par_addr_cells <= ulsz && this_addr_cells <= ulsz &&
-	    this_size_cells <= ulsz)
-		/* We can handle everything */
-		return (0);
-
-	rv = 0;
-	for (i = 0; i < tuples; i++) {
-
-		if (fdt_data_verify((void *)ranges, par_addr_cells))
-			goto err;
-		ranges += par_addr_cells;
-
-		if (fdt_data_verify((void *)ranges, this_addr_cells))
-			goto err;
-		ranges += this_addr_cells;
-
-		if (fdt_data_verify((void *)ranges, this_size_cells))
-			goto err;
-		ranges += this_size_cells;
-	}
-
-	return (0);
-
-err:
-	debugf("using address range >%d-bit not supported\n", ulsz * 8);
-	return (ERANGE);
-}
-
-int
 fdt_data_to_res(pcell_t *data, int addr_cells, int size_cells, u_long *start,
     u_long *count)
 {
 
 	/* Address portion. */
-	if (fdt_data_verify((void *)data, addr_cells))
+	if (addr_cells > 2)
 		return (ERANGE);
 
 	*start = fdt_data_get((void *)data, addr_cells);
 	data += addr_cells;
 
 	/* Size portion. */
-	if (fdt_data_verify((void *)data, size_cells))
+	if (size_cells > 2)
 		return (ERANGE);
 
 	*count = fdt_data_get((void *)data, size_cells);
@@ -469,100 +519,7 @@ fdt_reg_to_rl(phandle_t node, struct resource_list *rl)
 	rv = 0;
 
 out:
-	free(regptr, M_OFWPROP);
-	return (rv);
-}
-
-int
-fdt_intr_decode(phandle_t intr_parent, pcell_t *intr, int *interrupt,
-    int *trig, int *pol)
-{
-	fdt_pic_decode_t intr_decode;
-	int i, rv;
-
-	for (i = 0; fdt_pic_table[i] != NULL; i++) {
-
-		/* XXX check if pic_handle has interrupt-controller prop? */
-
-		intr_decode = fdt_pic_table[i];
-		rv = intr_decode(intr_parent, intr, interrupt, trig, pol);
-
-		if (rv == 0)
-			/* This was recognized as our PIC and decoded. */
-			return (0);
-	}
-
-	return (ENXIO);
-}
-
-int
-fdt_intr_to_rl(phandle_t node, struct resource_list *rl,
-    struct fdt_sense_level *intr_sl)
-{
-	phandle_t intr_par;
-	ihandle_t iph;
-	pcell_t *intr;
-	pcell_t intr_cells;
-	int interrupt, trig, pol;
-	int i, intr_num, irq, rv;
-
-	if (OF_getproplen(node, "interrupts") <= 0)
-		/* Node does not have 'interrupts' property. */
-		return (0);
-
-	/*
-	 * Find #interrupt-cells of the interrupt domain.
-	 */
-	if (OF_getprop(node, "interrupt-parent", &iph, sizeof(iph)) <= 0) {
-		debugf("no intr-parent phandle\n");
-		intr_par = OF_parent(node);
-	} else {
-		iph = fdt32_to_cpu(iph);
-		intr_par = OF_instance_to_package(iph);
-	}
-
-	if (OF_getprop(intr_par, "#interrupt-cells", &intr_cells,
-	    sizeof(intr_cells)) <= 0) {
-		debugf("no intr-cells defined, defaulting to 1\n");
-		intr_cells = 1;
-	}
-	else 
-		intr_cells = fdt32_to_cpu(intr_cells);
-
-	intr_num = OF_getprop_alloc(node, "interrupts",
-	    intr_cells * sizeof(pcell_t), (void **)&intr);
-	if (intr_num <= 0 || intr_num > DI_MAX_INTR_NUM)
-		return (ERANGE);
-
-	rv = 0;
-	for (i = 0; i < intr_num; i++) {
-
-		interrupt = -1;
-		trig = pol = 0;
-
-		if (fdt_intr_decode(intr_par, &intr[i * intr_cells],
-		    &interrupt, &trig, &pol) != 0) {
-			rv = ENXIO;
-			goto out;
-		}
-
-		if (interrupt < 0) {
-			rv = ERANGE;
-			goto out;
-		}
-
-		debugf("decoded intr = %d, trig = %d, pol = %d\n", interrupt,
-		    trig, pol);
-
-		intr_sl[i].trig = trig;
-		intr_sl[i].pol = pol;
-
-		irq = FDT_MAP_IRQ(intr_par, interrupt);
-		resource_list_add(rl, SYS_RES_IRQ, i, irq, irq, 1);
-	}
-
-out:
-	free(intr, M_OFWPROP);
+	OF_prop_free(regptr);
 	return (rv);
 }
 
@@ -570,18 +527,15 @@ int
 fdt_get_phyaddr(phandle_t node, device_t dev, int *phy_addr, void **phy_sc)
 {
 	phandle_t phy_node;
-	ihandle_t phy_ihandle;
 	pcell_t phy_handle, phy_reg;
 	uint32_t i;
 	device_t parent, child;
 
-	if (OF_getprop(node, "phy-handle", (void *)&phy_handle,
+	if (OF_getencprop(node, "phy-handle", (void *)&phy_handle,
 	    sizeof(phy_handle)) <= 0)
 		return (ENXIO);
 
-	phy_ihandle = (ihandle_t)phy_handle;
-	phy_ihandle = fdt32_to_cpu(phy_ihandle);
-	phy_node = OF_instance_to_package(phy_ihandle);
+	phy_node = OF_node_from_xref(phy_handle);
 
 	if (OF_getprop(phy_node, "reg", (void *)&phy_reg,
 	    sizeof(phy_reg)) <= 0)
@@ -693,12 +647,12 @@ out:
 }
 
 int
-fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint32_t *memsize)
+fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint64_t *memsize)
 {
 	pcell_t reg[FDT_REG_CELLS * FDT_MEM_REGIONS];
 	pcell_t *regp;
 	phandle_t memory;
-	uint32_t memory_size;
+	uint64_t memory_size;
 	int addr_cells, size_cells;
 	int i, max_size, reg_len, rv, tuple_size, tuples;
 
@@ -751,7 +705,8 @@ fdt_get_mem_regions(struct mem_region *mr, int *mrcnt, uint32_t *memsize)
 	}
 
 	*mrcnt = i;
-	*memsize = memory_size;
+	if (memsize != NULL)
+		*memsize = memory_size;
 	rv = 0;
 out:
 	return (rv);
@@ -766,4 +721,17 @@ fdt_get_unit(device_t dev)
 	name = strchr(name, '@') + 1;
 
 	return (strtol(name,NULL,0));
+}
+
+int
+fdt_get_chosen_bootargs(char *bootargs, size_t max_size)
+{
+	phandle_t chosen;
+
+	chosen = OF_finddevice("/chosen");
+	if (chosen == -1)
+		return (ENXIO);
+	if (OF_getprop(chosen, "bootargs", bootargs, max_size) == -1)
+		return (ENXIO);
+	return (0);
 }

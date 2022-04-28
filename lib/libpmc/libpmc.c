@@ -25,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libpmc/libpmc.c 248842 2013-03-28 19:15:54Z sbruno $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/module.h>
 #include <sys/pmc.h>
 #include <sys/syscall.h>
@@ -60,6 +61,8 @@ static int ucp_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
 static int k8_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
+static int f17h_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
+		struct pmc_op_pmcallocate *_pmc_config);
 static int p4_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
 #endif
@@ -73,8 +76,16 @@ static int p6_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
 static int tsc_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
 #endif
+#if defined(__arm__)
 #if defined(__XSCALE__)
 static int xscale_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
+    struct pmc_op_pmcallocate *_pmc_config);
+#endif
+static int armv7_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
+    struct pmc_op_pmcallocate *_pmc_config);
+#endif
+#if defined(__aarch64__)
+static int arm64_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
 #endif
 #if defined(__mips__)
@@ -85,7 +96,7 @@ static int soft_allocate_pmc(enum pmc_event _pe, char *_ctrspec,
     struct pmc_op_pmcallocate *_pmc_config);
 
 #if defined(__powerpc__)
-static int ppc7450_allocate_pmc(enum pmc_event _pe, char* ctrspec,
+static int powerpc_allocate_pmc(enum pmc_event _pe, char* ctrspec,
 			     struct pmc_op_pmcallocate *_pmc_config);
 #endif /* __powerpc__ */
 
@@ -148,14 +159,20 @@ struct pmc_class_descr {
 PMC_CLASSDEP_TABLE(iaf, IAF);
 PMC_CLASSDEP_TABLE(k7, K7);
 PMC_CLASSDEP_TABLE(k8, K8);
+PMC_CLASSDEP_TABLE(f17h, F17H);
 PMC_CLASSDEP_TABLE(p4, P4);
 PMC_CLASSDEP_TABLE(p5, P5);
 PMC_CLASSDEP_TABLE(p6, P6);
 PMC_CLASSDEP_TABLE(xscale, XSCALE);
+PMC_CLASSDEP_TABLE(armv7, ARMV7);
+PMC_CLASSDEP_TABLE(armv8, ARMV8);
 PMC_CLASSDEP_TABLE(mips24k, MIPS24K);
+PMC_CLASSDEP_TABLE(mips74k, MIPS74K);
 PMC_CLASSDEP_TABLE(octeon, OCTEON);
 PMC_CLASSDEP_TABLE(ucf, UCF);
 PMC_CLASSDEP_TABLE(ppc7450, PPC7450);
+PMC_CLASSDEP_TABLE(ppc970, PPC970);
+PMC_CLASSDEP_TABLE(e500, E500);
 
 static struct pmc_event_descr soft_event_table[PMC_EV_DYN_COUNT];
 
@@ -165,6 +182,11 @@ static struct pmc_event_descr soft_event_table[PMC_EV_DYN_COUNT];
 static const struct pmc_event_descr atom_event_table[] =
 {
 	__PMC_EV_ALIAS_ATOM()
+};
+
+static const struct pmc_event_descr atom_silvermont_event_table[] =
+{
+	__PMC_EV_ALIAS_ATOM_SILVERMONT()
 };
 
 static const struct pmc_event_descr core_event_table[] =
@@ -183,9 +205,39 @@ static const struct pmc_event_descr corei7_event_table[] =
 	__PMC_EV_ALIAS_COREI7()
 };
 
+static const struct pmc_event_descr nehalem_ex_event_table[] =
+{
+	__PMC_EV_ALIAS_COREI7()
+};
+
 static const struct pmc_event_descr haswell_event_table[] =
 {
 	__PMC_EV_ALIAS_HASWELL()
+};
+
+static const struct pmc_event_descr haswell_xeon_event_table[] =
+{
+	__PMC_EV_ALIAS_HASWELL_XEON()
+};
+
+static const struct pmc_event_descr broadwell_event_table[] =
+{
+	__PMC_EV_ALIAS_BROADWELL()
+};
+
+static const struct pmc_event_descr broadwell_xeon_event_table[] =
+{
+	__PMC_EV_ALIAS_BROADWELL_XEON()
+};
+
+static const struct pmc_event_descr skylake_event_table[] =
+{
+	__PMC_EV_ALIAS_SKYLAKE()
+};
+
+static const struct pmc_event_descr skylake_xeon_event_table[] =
+{
+	__PMC_EV_ALIAS_SKYLAKE_XEON()
 };
 
 static const struct pmc_event_descr ivybridge_event_table[] =
@@ -213,6 +265,11 @@ static const struct pmc_event_descr westmere_event_table[] =
 	__PMC_EV_ALIAS_WESTMERE()
 };
 
+static const struct pmc_event_descr westmere_ex_event_table[] =
+{
+	__PMC_EV_ALIAS_WESTMERE()
+};
+
 static const struct pmc_event_descr corei7uc_event_table[] =
 {
 	__PMC_EV_ALIAS_COREI7UC()
@@ -223,6 +280,11 @@ static const struct pmc_event_descr haswelluc_event_table[] =
 	__PMC_EV_ALIAS_HASWELLUC()
 };
 
+static const struct pmc_event_descr broadwelluc_event_table[] =
+{
+	__PMC_EV_ALIAS_BROADWELLUC()
+};
+
 static const struct pmc_event_descr sandybridgeuc_event_table[] =
 {
 	__PMC_EV_ALIAS_SANDYBRIDGEUC()
@@ -231,6 +293,26 @@ static const struct pmc_event_descr sandybridgeuc_event_table[] =
 static const struct pmc_event_descr westmereuc_event_table[] =
 {
 	__PMC_EV_ALIAS_WESTMEREUC()
+};
+
+static const struct pmc_event_descr cortex_a8_event_table[] = 
+{
+	__PMC_EV_ALIAS_ARMV7_CORTEX_A8()
+};
+
+static const struct pmc_event_descr cortex_a9_event_table[] = 
+{
+	__PMC_EV_ALIAS_ARMV7_CORTEX_A9()
+};
+
+static const struct pmc_event_descr cortex_a53_event_table[] = 
+{
+	__PMC_EV_ALIAS_ARMV8_CORTEX_A53()
+};
+
+static const struct pmc_event_descr cortex_a57_event_table[] = 
+{
+	__PMC_EV_ALIAS_ARMV8_CORTEX_A57()
 };
 
 /*
@@ -244,24 +326,40 @@ static const struct pmc_event_descr westmereuc_event_table[] =
 	}
 
 PMC_MDEP_TABLE(atom, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
+PMC_MDEP_TABLE(atom_silvermont, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(core, IAP, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(core2, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(corei7, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(nehalem_ex, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(haswell, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(haswell_xeon, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(broadwell, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(broadwell_xeon, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(skylake, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(skylake_xeon, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(ivybridge, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(ivybridge_xeon, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(sandybridge, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
 PMC_MDEP_TABLE(sandybridge_xeon, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(westmere, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC, PMC_CLASS_UCF, PMC_CLASS_UCP);
+PMC_MDEP_TABLE(westmere_ex, IAP, PMC_CLASS_SOFT, PMC_CLASS_IAF, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(k7, K7, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(k8, K8, PMC_CLASS_SOFT, PMC_CLASS_TSC);
+PMC_MDEP_TABLE(f17h, F17H, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(p4, P4, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(p5, P5, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(p6, P6, PMC_CLASS_SOFT, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(xscale, XSCALE, PMC_CLASS_SOFT, PMC_CLASS_XSCALE);
+PMC_MDEP_TABLE(cortex_a8, ARMV7, PMC_CLASS_SOFT, PMC_CLASS_ARMV7);
+PMC_MDEP_TABLE(cortex_a9, ARMV7, PMC_CLASS_SOFT, PMC_CLASS_ARMV7);
+PMC_MDEP_TABLE(cortex_a53, ARMV8, PMC_CLASS_SOFT, PMC_CLASS_ARMV8);
+PMC_MDEP_TABLE(cortex_a57, ARMV8, PMC_CLASS_SOFT, PMC_CLASS_ARMV8);
 PMC_MDEP_TABLE(mips24k, MIPS24K, PMC_CLASS_SOFT, PMC_CLASS_MIPS24K);
+PMC_MDEP_TABLE(mips74k, MIPS74K, PMC_CLASS_SOFT, PMC_CLASS_MIPS74K);
 PMC_MDEP_TABLE(octeon, OCTEON, PMC_CLASS_SOFT, PMC_CLASS_OCTEON);
-PMC_MDEP_TABLE(ppc7450, PPC7450, PMC_CLASS_SOFT, PMC_CLASS_PPC7450);
+PMC_MDEP_TABLE(ppc7450, PPC7450, PMC_CLASS_SOFT, PMC_CLASS_PPC7450, PMC_CLASS_TSC);
+PMC_MDEP_TABLE(ppc970, PPC970, PMC_CLASS_SOFT, PMC_CLASS_PPC970, PMC_CLASS_TSC);
+PMC_MDEP_TABLE(e500, E500, PMC_CLASS_SOFT, PMC_CLASS_E500, PMC_CLASS_TSC);
 PMC_MDEP_TABLE(generic, SOFT, PMC_CLASS_SOFT);
 
 static const struct pmc_event_descr tsc_event_table[] =
@@ -285,18 +383,27 @@ static const struct pmc_class_descr NAME##_class_table_descr =	\
 #if	defined(__i386__) || defined(__amd64__)
 PMC_CLASS_TABLE_DESC(iaf, IAF, iaf, iaf);
 PMC_CLASS_TABLE_DESC(atom, IAP, atom, iap);
+PMC_CLASS_TABLE_DESC(atom_silvermont, IAP, atom_silvermont, iap);
 PMC_CLASS_TABLE_DESC(core, IAP, core, iap);
 PMC_CLASS_TABLE_DESC(core2, IAP, core2, iap);
 PMC_CLASS_TABLE_DESC(corei7, IAP, corei7, iap);
+PMC_CLASS_TABLE_DESC(nehalem_ex, IAP, nehalem_ex, iap);
 PMC_CLASS_TABLE_DESC(haswell, IAP, haswell, iap);
+PMC_CLASS_TABLE_DESC(haswell_xeon, IAP, haswell_xeon, iap);
+PMC_CLASS_TABLE_DESC(broadwell, IAP, broadwell, iap);
+PMC_CLASS_TABLE_DESC(broadwell_xeon, IAP, broadwell_xeon, iap);
+PMC_CLASS_TABLE_DESC(skylake, IAP, skylake, iap);
+PMC_CLASS_TABLE_DESC(skylake_xeon, IAP, skylake_xeon, iap);
 PMC_CLASS_TABLE_DESC(ivybridge, IAP, ivybridge, iap);
 PMC_CLASS_TABLE_DESC(ivybridge_xeon, IAP, ivybridge_xeon, iap);
 PMC_CLASS_TABLE_DESC(sandybridge, IAP, sandybridge, iap);
 PMC_CLASS_TABLE_DESC(sandybridge_xeon, IAP, sandybridge_xeon, iap);
 PMC_CLASS_TABLE_DESC(westmere, IAP, westmere, iap);
+PMC_CLASS_TABLE_DESC(westmere_ex, IAP, westmere_ex, iap);
 PMC_CLASS_TABLE_DESC(ucf, UCF, ucf, ucf);
 PMC_CLASS_TABLE_DESC(corei7uc, UCP, corei7uc, ucp);
 PMC_CLASS_TABLE_DESC(haswelluc, UCP, haswelluc, ucp);
+PMC_CLASS_TABLE_DESC(broadwelluc, UCP, broadwelluc, ucp);
 PMC_CLASS_TABLE_DESC(sandybridgeuc, UCP, sandybridgeuc, ucp);
 PMC_CLASS_TABLE_DESC(westmereuc, UCP, westmereuc, ucp);
 #endif
@@ -305,6 +412,7 @@ PMC_CLASS_TABLE_DESC(k7, K7, k7, k7);
 #endif
 #if	defined(__i386__) || defined(__amd64__)
 PMC_CLASS_TABLE_DESC(k8, K8, k8, k8);
+PMC_CLASS_TABLE_DESC(f17h, F17H, f17h, f17h);
 PMC_CLASS_TABLE_DESC(p4, P4, p4, p4);
 #endif
 #if	defined(__i386__)
@@ -314,15 +422,26 @@ PMC_CLASS_TABLE_DESC(p6, P6, p6, p6);
 #if	defined(__i386__) || defined(__amd64__)
 PMC_CLASS_TABLE_DESC(tsc, TSC, tsc, tsc);
 #endif
+#if	defined(__arm__)
 #if	defined(__XSCALE__)
 PMC_CLASS_TABLE_DESC(xscale, XSCALE, xscale, xscale);
 #endif
+PMC_CLASS_TABLE_DESC(cortex_a8, ARMV7, cortex_a8, armv7);
+PMC_CLASS_TABLE_DESC(cortex_a9, ARMV7, cortex_a9, armv7);
+#endif
+#if	defined(__aarch64__)
+PMC_CLASS_TABLE_DESC(cortex_a53, ARMV8, cortex_a53, arm64);
+PMC_CLASS_TABLE_DESC(cortex_a57, ARMV8, cortex_a57, arm64);
+#endif
 #if defined(__mips__)
 PMC_CLASS_TABLE_DESC(mips24k, MIPS24K, mips24k, mips);
+PMC_CLASS_TABLE_DESC(mips74k, MIPS74K, mips74k, mips);
 PMC_CLASS_TABLE_DESC(octeon, OCTEON, octeon, mips);
 #endif /* __mips__ */
 #if defined(__powerpc__)
-PMC_CLASS_TABLE_DESC(ppc7450, PPC7450, ppc7450, ppc7450);
+PMC_CLASS_TABLE_DESC(ppc7450, PPC7450, ppc7450, powerpc);
+PMC_CLASS_TABLE_DESC(ppc970, PPC970, ppc970, powerpc);
+PMC_CLASS_TABLE_DESC(e500, E500, e500, powerpc);
 #endif
 
 static struct pmc_class_descr soft_class_table_descr =
@@ -354,9 +473,14 @@ static const char * pmc_capability_names[] = {
 	__PMC_CAPS()
 };
 
-static const char * pmc_class_names[] = {
+struct pmc_class_map {
+	enum pmc_class	pm_class;
+	const char	*pm_name;
+};
+
+static const struct pmc_class_map pmc_class_names[] = {
 #undef	__PMC_CLASS
-#define __PMC_CLASS(C)	#C ,
+#define __PMC_CLASS(S,V,D) { .pm_class = PMC_CLASS_##S, .pm_name = #S } ,
 	__PMC_CLASSES()
 };
 
@@ -593,10 +717,24 @@ static struct pmc_event_alias core2_aliases_without_iaf[] = {
 
 #define	atom_aliases			core2_aliases
 #define	atom_aliases_without_iaf	core2_aliases_without_iaf
+#define	atom_silvermont_aliases		core2_aliases
+#define	atom_silvermont_aliases_without_iaf	core2_aliases_without_iaf
 #define corei7_aliases			core2_aliases
 #define corei7_aliases_without_iaf	core2_aliases_without_iaf
+#define nehalem_ex_aliases		core2_aliases
+#define nehalem_ex_aliases_without_iaf	core2_aliases_without_iaf
 #define haswell_aliases			core2_aliases
 #define haswell_aliases_without_iaf	core2_aliases_without_iaf
+#define haswell_xeon_aliases			core2_aliases
+#define haswell_xeon_aliases_without_iaf	core2_aliases_without_iaf
+#define broadwell_aliases			core2_aliases
+#define broadwell_aliases_without_iaf	core2_aliases_without_iaf
+#define broadwell_xeon_aliases			core2_aliases
+#define broadwell_xeon_aliases_without_iaf	core2_aliases_without_iaf
+#define skylake_aliases			core2_aliases
+#define skylake_aliases_without_iaf	core2_aliases_without_iaf
+#define skylake_xeon_aliases		core2_aliases
+#define skylake_xeon_aliases_without_iaf	core2_aliases_without_iaf
 #define ivybridge_aliases		core2_aliases
 #define ivybridge_aliases_without_iaf	core2_aliases_without_iaf
 #define ivybridge_xeon_aliases		core2_aliases
@@ -607,6 +745,8 @@ static struct pmc_event_alias core2_aliases_without_iaf[] = {
 #define sandybridge_xeon_aliases_without_iaf	core2_aliases_without_iaf
 #define westmere_aliases		core2_aliases
 #define westmere_aliases_without_iaf	core2_aliases_without_iaf
+#define westmere_ex_aliases		core2_aliases
+#define westmere_ex_aliases_without_iaf	core2_aliases_without_iaf
 
 #define	IAF_KW_OS		"os"
 #define	IAF_KW_USR		"usr"
@@ -755,6 +895,7 @@ static struct pmc_masks iap_rsp_mask_sb_sbx_ib[] = {
 	NULLMASK
 };
 
+/* Broadwell is defined to use the same mask as Haswell */
 static struct pmc_masks iap_rsp_mask_haswell[] = {
 	PMCMASK(REQ_DMND_DATA_RD,	(1ULL <<  0)),
 	PMCMASK(REQ_DMND_RFO,		(1ULL <<  1)),
@@ -770,6 +911,10 @@ static struct pmc_masks iap_rsp_mask_haswell[] = {
 	PMCMASK(RES_SUPPLIER_LLC_HITS,	(1ULL << 20)),
 	PMCMASK(RES_SUPPLIER_LLC_HITF,	(1ULL << 21)),
 	PMCMASK(RES_SUPPLIER_LOCAL,	(1ULL << 22)),
+	/* 
+	 * For processor type 06_45H 22 is L4_HIT_LOCAL_L4
+	 * and 23, 24 and 25 are also defined.
+	 */
 	PMCMASK(RES_SNOOP_SNP_NONE,	(1ULL << 31)),
 	PMCMASK(RES_SNOOP_SNP_NO_NEEDED,(1ULL << 32)),
 	PMCMASK(RES_SNOOP_SNP_MISS,	(1ULL << 33)),
@@ -779,6 +924,33 @@ static struct pmc_masks iap_rsp_mask_haswell[] = {
 	PMCMASK(RES_NON_DRAM,		(1ULL << 37)),
 	NULLMASK
 };
+
+static struct pmc_masks iap_rsp_mask_skylake[] = {
+	PMCMASK(REQ_DMND_DATA_RD,	(1ULL <<  0)),
+	PMCMASK(REQ_DMND_RFO,		(1ULL <<  1)),
+	PMCMASK(REQ_DMND_IFETCH,	(1ULL <<  2)),
+	PMCMASK(REQ_PF_DATA_RD,		(1ULL <<  7)),
+	PMCMASK(REQ_PF_RFO,		(1ULL <<  8)),
+	PMCMASK(REQ_STRM_ST,		(1ULL << 11)),
+	PMCMASK(REQ_OTHER,		(1ULL << 15)),
+	PMCMASK(RES_ANY,		(1ULL << 16)),
+	PMCMASK(RES_SUPPLIER_SUPP,	(1ULL << 17)),
+	PMCMASK(RES_SUPPLIER_LLC_HITM,	(1ULL << 18)),
+	PMCMASK(RES_SUPPLIER_LLC_HITE,	(1ULL << 19)),
+	PMCMASK(RES_SUPPLIER_LLC_HITS,	(1ULL << 20)),
+	PMCMASK(RES_SUPPLIER_L4_HIT,	(1ULL << 22)),
+	PMCMASK(RES_SUPPLIER_DRAM,	(1ULL << 26)),
+	PMCMASK(RES_SUPPLIER_SPL_HIT,	(1ULL << 30)),
+	PMCMASK(RES_SNOOP_SNP_NONE,	(1ULL << 31)),
+	PMCMASK(RES_SNOOP_SNP_NO_NEEDED,(1ULL << 32)),
+	PMCMASK(RES_SNOOP_SNP_MISS,	(1ULL << 33)),
+	PMCMASK(RES_SNOOP_HIT_NO_FWD,	(1ULL << 34)),
+	PMCMASK(RES_SNOOP_HIT_FWD,	(1ULL << 35)),
+	PMCMASK(RES_SNOOP_HITM,		(1ULL << 36)),
+	PMCMASK(RES_NON_DRAM,		(1ULL << 37)),
+	NULLMASK
+};
+
 
 static int
 iap_allocate_pmc(enum pmc_event pe, char *ctrspec,
@@ -838,6 +1010,7 @@ iap_allocate_pmc(enum pmc_event pe, char *ctrspec,
 			if (n != 1)
 				return (-1);
 		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_ATOM ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_ATOM_SILVERMONT ||
 		    cpu_info.pm_cputype == PMC_CPU_INTEL_CORE2 ||
 		    cpu_info.pm_cputype == PMC_CPU_INTEL_CORE2EXTREME) {
 			if (KWPREFIXMATCH(p, IAP_KW_SNOOPRESPONSE "=")) {
@@ -849,24 +1022,42 @@ iap_allocate_pmc(enum pmc_event pe, char *ctrspec,
 			} else
 				return (-1);
 		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_COREI7 ||
-		    cpu_info.pm_cputype == PMC_CPU_INTEL_WESTMERE) {
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_WESTMERE ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_NEHALEM_EX ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_WESTMERE_EX) {
 			if (KWPREFIXMATCH(p, IAP_KW_RSP "=")) {
 				n = pmc_parse_mask(iap_rsp_mask_i7_wm, p, &rsp);
 			} else
 				return (-1);
 		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_SANDYBRIDGE ||
 		    cpu_info.pm_cputype == PMC_CPU_INTEL_SANDYBRIDGE_XEON ||
-			cpu_info.pm_cputype == PMC_CPU_INTEL_IVYBRIDGE ||
-			cpu_info.pm_cputype == PMC_CPU_INTEL_IVYBRIDGE_XEON ) {
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_IVYBRIDGE ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_IVYBRIDGE_XEON ) {
 			if (KWPREFIXMATCH(p, IAP_KW_RSP "=")) {
 				n = pmc_parse_mask(iap_rsp_mask_sb_sbx_ib, p, &rsp);
 			} else
 				return (-1);
-		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_HASWELL) {
+		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_HASWELL ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_HASWELL_XEON) {
 			if (KWPREFIXMATCH(p, IAP_KW_RSP "=")) {
 				n = pmc_parse_mask(iap_rsp_mask_haswell, p, &rsp);
 			} else
 				return (-1);
+		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_BROADWELL ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_BROADWELL_XEON) {
+			/* Broadwell is defined to use same mask as haswell */
+			if (KWPREFIXMATCH(p, IAP_KW_RSP "=")) {
+				n = pmc_parse_mask(iap_rsp_mask_haswell, p, &rsp);
+			} else
+				return (-1);
+
+		} else if (cpu_info.pm_cputype == PMC_CPU_INTEL_SKYLAKE ||
+		    cpu_info.pm_cputype == PMC_CPU_INTEL_SKYLAKE_XEON) {
+			if (KWPREFIXMATCH(p, IAP_KW_RSP "=")) {
+				n = pmc_parse_mask(iap_rsp_mask_skylake, p, &rsp);
+			} else
+				return (-1);
+
 		} else
 			return (-1);
 
@@ -972,7 +1163,717 @@ ucp_allocate_pmc(enum pmc_event pe, char *ctrspec,
 
 	return (0);
 }
+/* AMD Fam17H PMCs */
+static struct pmc_event_alias f17h_aliases[] = {
+	EV_ALIAS("branches",		"ex_ret_brn_tkn"),
+	EV_ALIAS("branch-mispredicts",
+	    "ex_ret_brn_tkn_misp"),
+	EV_ALIAS("cycles",		"tsc"),
+	EV_ALIAS("dc-access",		"ls_dc_access"),
+	EV_ALIAS("ic-misses",		"ic_fw32_miss"),
+	EV_ALIAS("instructions",	"ex_ret_inst"),
+	EV_ALIAS("unhalted-cycles",	"ls_not_halted_cycle"),
+	EV_ALIAS(NULL, NULL)
+};
+#define	__F17HMASK(N, V) PMCMASK(N, (1 << (V)))
+static const struct pmc_masks f17h_mask_FPU_PIPEASSIGMENT[] = {
+	__F17HMASK(FPU_PIPEASSIGMENT_uOP_P0,	0),
+	__F17HMASK(FPU_PIPEASSIGMENT_uOP_P1,	1),
+	__F17HMASK(FPU_PIPEASSIGMENT_uOP_P2,	2),
+	__F17HMASK(FPU_PIPEASSIGMENT_uOP_P3,	3),
+	__F17HMASK(FPU_PIPEASSIGMENT_MultiuOP_P0,	4),
+	__F17HMASK(FPU_PIPEASSIGMENT_MultiuOP_P1,	5),
+	__F17HMASK(FPU_PIPEASSIGMENT_MultiuOP_P2,	6),
+	__F17HMASK(FPU_PIPEASSIGMENT_MultiuOP_P3,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_FP_SCHED_EMPTY[] = {
+	__F17HMASK(FP_SCHED_EMPTY,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_FP_RET_X87_FPOPS[] = {
+	__F17HMASK(FP_RET_X87_ADDSUBOPS,   0),
+	__F17HMASK(FP_RET_X87_MULOPS,      1),
+	__F17HMASK(FP_RET_X87_DIVSQRTOPS,  2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_FP_RET_SSEAVX_OPS[] = {
+	__F17HMASK(FP_RET_SSEAVX_SPADDSUBOPS,	0),
+	__F17HMASK(FP_RET_SSEAVX_SPMULOPS,	1),
+	__F17HMASK(FP_RET_SSEAVX_SPDIVOPS,	2),
+	__F17HMASK(FP_RET_SSEAVX_SPMULADDOPS,	3),
+	__F17HMASK(FP_RET_SSEAVX_DPADDSUBOPS,	4),
+	__F17HMASK(FP_RET_SSEAVX_DPMULOPS,	5),
+	__F17HMASK(FP_RET_SSEAVX_DPDIVOPS,	6),
+	__F17HMASK(FP_RET_SSEAVX_DPMULADDOPS,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_FP_NUM_MOVELIM_SCAL_OPT[] = {
+	__F17HMASK(FP_NUM_SSEMOV_OPS,	0),
+	__F17HMASK(FP_NUM_SSEMOV_ELIM,	1),
+	__F17HMASK(FP_NUM_OPS_OPTPOT,	2),
+	__F17HMASK(FP_NUM_OPS_OPT,	3),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_FP_RET_SEROPS[] = {
+	__F17HMASK(FP_RET_SSE_BOTEXEC,	0),
+	__F17HMASK(FP_RET_SSE_CTRL,	1),
+	__F17HMASK(FP_RET_BOTEXEC,	2),
+	__F17HMASK(FP_RET_X87_CTRL,	3),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_BAD_STATUS2[] = {
+	__F17HMASK(LS_BAD_STATUS2_STLI_NOSTATE,	0),
+	__F17HMASK(LS_BAD_STATUS2_STLI_OTHER,	1),
+	__F17HMASK(LS_BAD_STATUS2_STLF_NODATA,	2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_LOCKS[] = {
+	__F17HMASK(LS_LOCKS_BUSLOCKS,	         0),
+	__F17HMASK(LS_LOCKS_NONSPECLOCK,	 1),
+	__F17HMASK(LS_SPECLOCK,			 2),
+	__F17HMASK(LS_SPECLCOK_MAPCOMMIT,	 3),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_RET_CLFLUSH_INST[] = {
+	__F17HMASK(LS_RET_CLFLUSH_INST,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_RET_CPUID_INST[] = {
+	__F17HMASK(LS_RET_CPUID_INST,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_DISPATCH[] = {
+	__F17HMASK(LS_DISPATCH_LD,	0),
+	__F17HMASK(LS_DISPATCH_STR,	1),
+	__F17HMASK(LS_DISPATCH_LDSTR,	2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_SMI_RX[] = {
+	__F17HMASK(LS_SMI_RX,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_STLF[] = {
+	__F17HMASK(LS_STLF,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_STLF_COMMITCANCEL[] = {
+	__F17HMASK(LS_STLF_COMMITCANCEL,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_DC_ACCESS[] = {
+	__F17HMASK(LS_DC_ACCESS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_MAB_ALLOCPIPE[] = {
+	__F17HMASK(LS_MAB_ALLOCPIPE_DATAPIPE,	  0),
+	__F17HMASK(LS_MAB_ALLOCPIPE_STPIPE,	  1),
+	__F17HMASK(LS_MAB_ALLOCPIPE_TLBPIPELATE,  2),
+	__F17HMASK(LS_MAB_ALLOCPIPE_HWPF,	  3),
+	__F17HMASK(LS_MAB_ALLOCPIPE_TLPPIPEEARLY, 4),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_REFFILS_FROM_SYS[] = {
+	__F17HMASK(LS_MABRESP_LCL_L2,	     0),
+	__F17HMASK(LS_MABRESP_LCL_CACHE,     1),
+	__F17HMASK(LS_MABRESP_LCL_DRAM,	     3),
+	__F17HMASK(LS_MABRESP_LCL_RMT_CACHE, 4),
+	__F17HMASK(LS_MABRESP_LCL_RMT_DRAM,  6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_L1_DTLBMISS[] = {
+	__F17HMASK(LS_TLBRELOAD_4KL2HIT,	 0),
+	__F17HMASK(LS_TLBRELOAD_32KL2HIT,	 1),
+	__F17HMASK(LS_TLBRELOAD_2ML2HIT,	 2),
+	__F17HMASK(LS_TLBRELOAD_1GL2HIT,	 3),
+	__F17HMASK(LS_TLBRELOAD_4KL2MISS,	 4),
+	__F17HMASK(LS_TLBRELOAD_32KML2MISS,	 5),
+	__F17HMASK(LS_TLBRELOAD_2ML2MISS,	 6),
+	__F17HMASK(LS_TLBRELOAD_1GL2MISS,	 7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_TABLEWALKER[] = {
+	__F17HMASK(LS_PERFMON_TW_ALLOCDSIDE0,	0),
+	__F17HMASK(LS_PERFMON_TW_ALLOCDSIDE1,	1),
+	__F17HMASK(LS_PERFMON_TW_ALLOCISIDE0,	2),
+	__F17HMASK(LS_PERFMON_TW_ALLOCISIDE1,	3),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_MISAL_ACCESS[] = {
+	__F17HMASK(LS_MISAL_ACCESS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_PREF_INST_DISPATCH[] = {
+	__F17HMASK(LS_LOAD_PREF_W,	 0),
+	__F17HMASK(LS_STORE_PREF_W,	 1),
+	__F17HMASK(LS_PREF_PREFETCH_NTA, 2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_HWPF_ALLOCATED[] = {
+	__F17HMASK(LS_ALLOC_STREAM_PF,	0),
+	__F17HMASK(LS_ALLOC_STRIDE_PF,	1),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_HWPF_HIT[] = {
+	__F17HMASK(LS_HIT_STREAM_PF,	0),
+	__F17HMASK(LS_HIT_STRIDE_PF,	1),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_TW_INPROG_DSIDE[] = {
+	__F17HMASK(LS_TW_INPROG_DSIDE0,	0),
+	__F17HMASK(LS_TW_INPROG_ISIDE0,	1),
+	__F17HMASK(LS_TW_INPROG_DSIDE1,	2),
+	__F17HMASK(LS_TW_INPROG_ISIDE1,	3),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_INEF_SW_PREF[] = {
+	__F17HMASK(LS_INEF_SW_PREF_DATAPIPE_SW_PF_DCHIT,	0),
+	__F17HMASK(LS_INEF_SW_PREF_MAB_MCH_CNT,	                1),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_MAB_MCH_CNT[] = {
+	__F17HMASK(LS_MAB_MCH_CNT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_HW_PF_MABALLOC[] = {
+	__F17HMASK(LS_MABALLOC_HW_PFSTREAM,	0),
+	__F17HMASK(LS_MABALLOC_HW_PFSTRIDE,	1),
+	__F17HMASK(LS_MABALLOC_PFREGION,	2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_HW_PF_MATCH[] = {
+	__F17HMASK(LS_MATCH_HW_PFSTREAM,	0),
+	__F17HMASK(LS_MATCH_HW_PFSTRIDE,	1),
+	__F17HMASK(LS_MATCH_HW_PFREGION,	2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_SW_PF_DCFILLS[] = {
+	__F17HMASK(LS_SW_PF_MABRESP_LCL_L2,	  0),
+	__F17HMASK(LS_SW_PF_MABRESP_LCL_L2_CACHE, 1),
+	__F17HMASK(LS_SW_PF_MABRESP_LCL_DRM,	  3),
+	__F17HMASK(LS_SW_PF_MABRESP_RMT_CACHE,	  4),
+	__F17HMASK(LS_SW_PF_MABRESP_RMT_DRAM,	  6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_HW_PF_DCFILLS[] = {
+	__F17HMASK(LS_HW_PF_MABRESP_LCL_L2,	  0),
+	__F17HMASK(LS_HW_PF_MABRESP_LCL_CACHE,    1),
+	__F17HMASK(LS_HW_PF_MABRESP_LCL_DRAM,	  3),
+	__F17HMASK(LS_HW_PF_MABRESP_RMT_CACHE,	  4),
+	__F17HMASK(LS_HW_PF_MABRESP_RMT_DRAM,	  6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_TW_DCFILLS[] = {
+	__F17HMASK(LS_TW_MABRESP_LCL_L2,	0),
+	__F17HMASK(LS_TW_MABRESP_LCL_CACHE,	1),
+	__F17HMASK(LS_TW_MABRESP_LCL_DRAM,	3),
+	__F17HMASK(LS_TW_MABRESP_RMT_CACHE,	4),
+	__F17HMASK(LS_TW_MABRESP_RMT_DRAM,	6),
+	NULLMASK
+};
 
+static const struct pmc_masks f17h_mask_LS_ALLOC_MAB_COUNT[] = {
+	__F17HMASK(LS_ALLOC_MAB_COUNT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_TW_INITLEVEL[] = {
+	__F17HMASK(LS_TW_INITLGH_NATIVE_PDPT,	0),
+	__F17HMASK(LS_TW_INITLGH_NATIVE_PDT,	1),
+	__F17HMASK(LS_TW_INITLGH_NATIVE_PFT,	2),
+	__F17HMASK(LS_TW_INITLGH_NATIVE_PG,	3),
+	__F17HMASK(LS_TW_INITL_NESTED_PDPT,	4),
+	__F17HMASK(LS_TW_INITL_NESTED_PDT,	5),
+	__F17HMASK(LS_TW_INITL_NESTED_PFT,	6),
+	__F17HMASK(LS_TW_INITL_NESTED_PG,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_NOT_HALTED_CYCLE[] = {
+	__F17HMASK(LS_NOT_HALTED_CYCLE,	0x00),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_LS_TW_RETURN_TYPES[] = {
+	__F17HMASK(LS_TWC_RET_TYPE_SPEC_VALID,		0),
+	__F17HMASK(LS_TWC_RET_TYPE_SPEC_FAULT_NAB,	2),
+	__F17HMASK(LS_TWC_RET_TYPE_SPEC_FAULT_AB,	3),
+	__F17HMASK(LS_TWC_RET_TYPE_NONSPEC_VALID,	6),
+	__F17HMASK(LS_TWC_RET_TYPE_NONSPEC_FAULT,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_FW32[] = {
+	__F17HMASK(IC_FW32,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_FW32_MISS[] = {
+	__F17HMASK(IC_FW32_MISS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_CACHEFILL_L2[] = {
+	__F17HMASK(IC_CACHEFILL_L2,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_CACHEFILL_SYS[] = {
+	__F17HMASK(IC_CACHEFILL_SYS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_BP_L1TLBMISS_L2HIT[] = {
+	__F17HMASK(BP_L1TLBMISS_L2HIT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_BP_L1TLBMISS_L2MISS[] = {
+	__F17HMASK(BP_L1TLBMISS_L2MISS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_FETCHSTALL[] = {
+	__F17HMASK(IC_FETCHSTALL_BACKPRESSURE,	0),
+	__F17HMASK(IC_FETCHSTALL_DQEMPTY,	1),
+	__F17HMASK(IC_FETCHSTALL_ANY,	        2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_BP_L1_BTBCORRECT[] = {
+	__F17HMASK(BP_L1_BTBCORRECT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_BP_L2_BTBCORRECT[] = {
+	__F17HMASK(BP_L2_BTBCORRECT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_IC_CACHEINVAL[] = {
+	__F17HMASK(IC_CACHEINVAL_FILLINV,	0),
+	__F17HMASK(IC_CACHEINVAL_L2_INV_PROVBE,	1),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_BP_TLB_REL[] = {
+	__F17HMASK(BP_TLB_REL,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_ICOC_MODE_SWITCH[] = {
+	__F17HMASK(IC2OC_MODE_SWITCH,	0),
+	__F17HMASK(OC2IC_MODE_SWITCH,	1),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_DE_DISPATCH_TOKEN_STALLS[] = {
+	__F17HMASK(DE_ALSQ1_TOKEN_STALL,	0),
+	__F17HMASK(DE_ALSQ2_TOKEN_STALL,	1),
+	__F17HMASK(DE_ALSQ3_TOKEN_STALL,	2),
+	__F17HMASK(DE_ALSQ3_0_TOKEN_STALL,	3),
+	__F17HMASK(DE_ALU_TOKEN_STALL,		4),
+	__F17HMASK(DE_AGSQ_TOKEN_STALL,		5),
+	__F17HMASK(DE_RETIRE_TOKEN_STALLS,	6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_INST[] = {
+	__F17HMASK(EX_RET_INST,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_COPS[] = {
+	__F17HMASK(EX_RET_COPS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN[] = {
+	__F17HMASK(EX_RET_BRN,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_MISP[] = {
+	__F17HMASK(EX_RET_BRN_MISP,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_TKN[] = {
+	__F17HMASK(EX_RET_BRN_TKN,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_TKN_MISP[] = {
+	__F17HMASK(EX_RET_BRN_TKN_MISP,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_FAR[] = {
+	__F17HMASK(EX_RET_BRN_FAR,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_RESYNC[] = {
+	__F17HMASK(EX_RET_BRN_RESYNC,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_NEAR_RET[] = {
+	__F17HMASK(EX_RET_BRN_NEAR_RET,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_NEAR_RET_MISPRED[] = {
+	__F17HMASK(EX_RET_BRN_NEAR_RET_MISPRED,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_BRN_IND_MISP[] = {
+	__F17HMASK(EX_RET_BRN_IND_MISP,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_MMX_FP_INSTR[] = {
+	__F17HMASK(EX_RET_MMX_X87_INST,	0),
+	__F17HMASK(EX_RET_MMX_INSTR,	1),
+	__F17HMASK(EX_RET_MMX_SSE_INSTR,	2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_COND_BRN[] = {
+	__F17HMASK(EX_RET_COND_BRN,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_DIV_BUSY[] = {
+	__F17HMASK(EX_DIV_BUSY,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_DIV_COUNT[] = {
+	__F17HMASK(EX_DIV_COUNT,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_REQUEST_G1[] = {
+	__F17HMASK(L2_REQUEST_G1_OTHERREQ,	0),
+	__F17HMASK(L2_REQUEST_G1_HWPF,		1),
+	__F17HMASK(L2_REQUEST_G1_PREFETCHL2,	2),
+	__F17HMASK(L2_REQUEST_G1_CHANGETOX,	3),
+	__F17HMASK(L2_REQUEST_G1_CACHEABLEICRD,	4),
+	__F17HMASK(L2_REQUEST_G1_LSRDBLKC,	5),
+	__F17HMASK(L2_REQUEST_G1_RDBLKX,	6),
+	__F17HMASK(L2_REQUEST_G1_RDBLKL,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_REQUEST_G2[] = {
+	__F17HMASK(L2_REQUEST_G2_BUSLOCKRESP,	0),
+	__F17HMASK(L2_REQUEST_G2_BUSLOCKORIG,	1),
+	__F17HMASK(L2_REQUEST_G2_SMCINV,	2),
+	__F17HMASK(L2_REQUEST_G2_ICRDSIZENC,	3),
+	__F17HMASK(L2_REQUEST_G2_ICRDSIZE,	4),
+	__F17HMASK(L2_REQUEST_G2_LSRDSIZENC,	5),
+	__F17HMASK(L2_REQUEST_G2_LSRDSIZE,	6),
+	__F17HMASK(L2_REQUEST_G2_GROUP1,	7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_LATENCY[] = {
+	__F17HMASK(L2_LATENCY_CYC_WAITINGONFILLS,	0x0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_WBCREQ[] = {
+	__F17HMASK(L2_WBCREQ_CLZERO,		0),
+	__F17HMASK(L2_WBCREQ_LOCALICCLR,	1),
+	__F17HMASK(L2_WBCREQ_ZEROBYTESTORE,	2),
+	__F17HMASK(L2_WBCREQ_ILINEFLUSH,	3),
+	__F17HMASK(L2_WBCREQ_CACHELINEFLUSH,	4),
+	__F17HMASK(L2_WBCREQ_WBCCLOSE,		5),
+	__F17HMASK(L2_WBCREQ_WCBWRITE,		6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_CACHEREQSTAT[] = {
+	__F17HMASK(L2_CACHEREQSTAT_ICFILLMISS,	0),
+	__F17HMASK(L2_CACHEREQSTAT_ICFILLHITS,	1),
+	__F17HMASK(L2_CACHEREQSTAT_ICFILLHITX,	2),
+	__F17HMASK(L2_CACHEREQSTAT_LSRDBLKC,	3),
+	__F17HMASK(L2_CACHEREQSTAT_LSRDBLKX,	4),
+	__F17HMASK(L2_CACHEREQSTAT_LSRDBLKLHITS, 5),
+	__F17HMASK(L2_CACHEREQSTAT_LSRDBLKLHITX, 6),
+	__F17HMASK(L2_CACHEREQSTAT_LSRDBLKCS,	 7),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_SMCEVENTS[] = {
+	__F17HMASK(L2_SMCEVENTS_ICFILLSTQCAMMATOT,      0),
+	__F17HMASK(L2_SMCEVENTS_ICFILLSTQCAMMATTT,	1),
+	__F17HMASK(L2_SMCEVENTS_LSRDBLKLSXCHGTOX,	2),
+	__F17HMASK(L2_SMCEVENTS_RDBLKXCHGTOX,	        3),
+	__F17HMASK(L2_SMCEVENTS_LSRDBLKLSCHITL2ICVAL,	4),
+	__F17HMASK(L2_SMCEVENTS_ICFETCHHITL2,           5),
+	__F17HMASK(L2_SMCEVENTS_ICFETCHHITL2DCVAL,      6),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_L2_FILLPENDING[] = {
+	__F17HMASK(L2_FILLPENDING_L2FILLBUSY,	0),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_TAGGED_IBSOPS[] = {
+	__F17HMASK(EX_TAGGED_IBSOPS,		0x0),
+	__F17HMASK(EX_TAGGED_IBSOPS_RET,	0x1),
+	__F17HMASK(EX_TAGGED_IBSOPS_CNT_RLOVER,	0x2),
+	NULLMASK
+};
+static const struct pmc_masks f17h_mask_EX_RET_FUSED_BRNCH_INST[] = {
+	__F17HMASK(EX_RET_FUSED_BRNCH_INST,	0x0),
+	NULLMASK
+};
+
+#define	F17H_KW_COUNT	"count"
+#define	F17H_KW_EDGE	"edge"
+#define	F17H_KW_INV	"inv"
+#define	F17H_KW_MASK	"mask"
+#define	F17H_KW_OS	"os"
+#define	F17H_KW_USR	"usr"
+
+static int
+f17h_allocate_pmc(enum pmc_event pe, char *ctrspec,
+		struct pmc_op_pmcallocate *pmc_config)
+{
+	char		*e, *p, *q;
+	int		n;
+	uint32_t	count;
+	const struct pmc_masks	 *pmask;
+	uint64_t	evmask = 0;
+	(void)ctrspec;
+
+	pmc_config->pm_caps |= (PMC_CAP_READ | PMC_CAP_WRITE);
+	pmc_config->pm_md.pm_amd.pm_amd_config = 0;
+
+
+#define	__F17HSETMASK(M) pmask = f17h_mask_##M
+	switch (pe) {
+	case PMC_EV_F17H_FPU_PIPEASSIGMENT:
+		__F17HSETMASK(FPU_PIPEASSIGMENT);
+		break;
+	case PMC_EV_F17H_FP_SCHED_EMPTY:
+		__F17HSETMASK(FP_SCHED_EMPTY);
+		break;
+	case PMC_EV_F17H_FP_RET_X87_FPOPS:
+		__F17HSETMASK(FP_RET_X87_FPOPS);
+		break;
+	case PMC_EV_F17H_FP_RET_SSEAVX_OPS:
+		__F17HSETMASK(FP_RET_SSEAVX_OPS);
+		break;
+	case PMC_EV_F17H_FP_NUM_MOVELIM_SCAL_OPT:
+		__F17HSETMASK(FP_NUM_MOVELIM_SCAL_OPT);
+		break;
+	case PMC_EV_F17H_FP_RET_SEROPS:
+		__F17HSETMASK(FP_RET_SEROPS);
+		break;
+	case PMC_EV_F17H_LS_BAD_STATUS2:
+		__F17HSETMASK(LS_BAD_STATUS2);
+		break;
+	case PMC_EV_F17H_LS_LOCKS:
+		__F17HSETMASK(LS_LOCKS);
+		break;
+	case PMC_EV_F17H_LS_RET_CLFLUSH_INST:
+		__F17HSETMASK(LS_RET_CLFLUSH_INST);
+		break;
+	case PMC_EV_F17H_LS_RET_CPUID_INST:
+		__F17HSETMASK(LS_RET_CPUID_INST);
+		break;
+	case PMC_EV_F17H_LS_DISPATCH:
+		__F17HSETMASK(LS_DISPATCH);
+		break;
+	case PMC_EV_F17H_LS_SMI_RX:
+		__F17HSETMASK(LS_SMI_RX);
+		break;
+	case PMC_EV_F17H_LS_STLF:
+		__F17HSETMASK(LS_STLF);
+		break;
+	case PMC_EV_F17H_LS_STLF_COMMITCANCEL:
+		__F17HSETMASK(LS_STLF_COMMITCANCEL);
+		break;
+	case PMC_EV_F17H_LS_DC_ACCESS:
+		__F17HSETMASK(LS_DC_ACCESS);
+		break;
+	case PMC_EV_F17H_LS_MAB_ALLOCPIPE:
+		__F17HSETMASK(LS_MAB_ALLOCPIPE);
+		break;
+	case PMC_EV_F17H_LS_REFFILS_FROM_SYS:
+		__F17HSETMASK(LS_REFFILS_FROM_SYS);
+		break;
+	case PMC_EV_F17H_LS_L1_DTLBMISS:
+		__F17HSETMASK(LS_L1_DTLBMISS);
+		break;
+	case PMC_EV_F17H_LS_TABLEWALKER:
+		__F17HSETMASK(LS_TABLEWALKER);
+		break;
+	case PMC_EV_F17H_LS_MISAL_ACCESS:
+		__F17HSETMASK(LS_MISAL_ACCESS);
+		break;
+	case PMC_EV_F17H_LS_PREF_INST_DISPATCH:
+		__F17HSETMASK(LS_PREF_INST_DISPATCH);
+		break;
+	case PMC_EV_F17H_LS_HWPF_ALLOCATED:
+		__F17HSETMASK(LS_HWPF_ALLOCATED);
+		break;
+	case PMC_EV_F17H_LS_HWPF_HIT:
+		__F17HSETMASK(LS_HWPF_HIT);
+		break;
+	case PMC_EV_F17H_LS_TW_INPROG_DSIDE:
+		__F17HSETMASK(LS_TW_INPROG_DSIDE);
+		break;
+	case PMC_EV_F17H_LS_INEF_SW_PREF:
+		__F17HSETMASK(LS_INEF_SW_PREF);
+		break;
+	case PMC_EV_F17H_LS_MAB_MCH_CNT:
+		__F17HSETMASK(LS_MAB_MCH_CNT);
+		break;
+	case PMC_EV_F17H_LS_HW_PF_MABALLOC:
+		__F17HSETMASK(LS_HW_PF_MABALLOC);
+		break;
+	case PMC_EV_F17H_LS_HW_PF_MATCH:
+		__F17HSETMASK(LS_HW_PF_MATCH);
+		break;
+	case PMC_EV_F17H_LS_SW_PF_DCFILLS:
+		__F17HSETMASK(LS_SW_PF_DCFILLS);
+		break;
+	case PMC_EV_F17H_LS_HW_PF_DCFILLS:
+		__F17HSETMASK(LS_HW_PF_DCFILLS);
+		break;
+	case PMC_EV_F17H_LS_TW_DCFILLS:
+	__F17HSETMASK(LS_TW_DCFILLS);
+		break;
+	case PMC_EV_F17H_LS_ALLOC_MAB_COUNT:
+		__F17HSETMASK(LS_ALLOC_MAB_COUNT);
+		break;
+	case PMC_EV_F17H_LS_TW_INITLEVEL:
+		__F17HSETMASK(LS_TW_INITLEVEL);
+		break;
+	case PMC_EV_F17H_LS_NOT_HALTED_CYCLE:
+		__F17HSETMASK(LS_NOT_HALTED_CYCLE);
+		break;
+	case PMC_EV_F17H_LS_TW_RETURN_TYPES:
+		__F17HSETMASK(LS_TW_RETURN_TYPES);
+		break;
+	case PMC_EV_F17H_IC_FW32:
+		__F17HSETMASK(IC_FW32);
+		break;
+	case PMC_EV_F17H_IC_FW32_MISS:
+		__F17HSETMASK(IC_FW32_MISS);
+		break;
+	case PMC_EV_F17H_IC_CACHEFILL_L2:
+		__F17HSETMASK(IC_CACHEFILL_L2);
+		break;
+	case PMC_EV_F17H_IC_CACHEFILL_SYS:
+		__F17HSETMASK(IC_CACHEFILL_SYS);
+		break;
+	case PMC_EV_F17H_BP_L1TLBMISS_L2HIT:
+		__F17HSETMASK(BP_L1TLBMISS_L2HIT);
+		break;
+	case PMC_EV_F17H_BP_L1TLBMISS_L2MISS:
+		__F17HSETMASK(BP_L1TLBMISS_L2MISS);
+		break;
+	case PMC_EV_F17H_IC_FETCHSTALL:
+		__F17HSETMASK(IC_FETCHSTALL);
+		break;
+	case PMC_EV_F17H_BP_L1_BTBCORRECT:
+		__F17HSETMASK(BP_L1_BTBCORRECT);
+		break;
+	case PMC_EV_F17H_BP_L2_BTBCORRECT:
+		__F17HSETMASK(BP_L2_BTBCORRECT);
+		break;
+	case PMC_EV_F17H_IC_CACHEINVAL:
+		__F17HSETMASK(IC_CACHEINVAL);
+		break;
+	case PMC_EV_F17H_BP_TLB_REL:
+		__F17HSETMASK(BP_TLB_REL);
+		break;
+	case PMC_EV_F17H_ICOC_MODE_SWITCH:
+		__F17HSETMASK(ICOC_MODE_SWITCH);
+		break;
+	case PMC_EV_F17H_DE_DISPATCH_TOKEN_STALLS:
+		__F17HSETMASK(DE_DISPATCH_TOKEN_STALLS);
+		break;
+	case PMC_EV_F17H_EX_RET_INST:
+		__F17HSETMASK(EX_RET_INST);
+		break;
+	case PMC_EV_F17H_EX_RET_COPS:
+		__F17HSETMASK(EX_RET_COPS);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN:
+		__F17HSETMASK(EX_RET_BRN);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_MISP:
+		__F17HSETMASK(EX_RET_BRN_MISP);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_TKN:
+		__F17HSETMASK(EX_RET_BRN_TKN);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_TKN_MISP:
+		__F17HSETMASK(EX_RET_BRN_TKN_MISP);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_FAR:
+		__F17HSETMASK(EX_RET_BRN_FAR);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_RESYNC:
+		__F17HSETMASK(EX_RET_BRN_RESYNC);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_NEAR_RET:
+		__F17HSETMASK(EX_RET_BRN_NEAR_RET);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_NEAR_RET_MISPRED:
+		__F17HSETMASK(EX_RET_BRN_NEAR_RET_MISPRED);
+		break;
+	case PMC_EV_F17H_EX_RET_BRN_IND_MISP:
+		__F17HSETMASK(EX_RET_BRN_IND_MISP);
+		break;
+	case PMC_EV_F17H_EX_RET_MMX_FP_INSTR:
+		__F17HSETMASK(EX_RET_MMX_FP_INSTR);
+		break;
+	case PMC_EV_F17H_EX_RET_COND_BRN:
+		__F17HSETMASK(EX_RET_COND_BRN);
+		break;
+	case PMC_EV_F17H_EX_DIV_BUSY:
+		__F17HSETMASK(EX_DIV_BUSY);
+		break;
+	case PMC_EV_F17H_EX_DIV_COUNT:
+		__F17HSETMASK(EX_DIV_COUNT);
+		break;
+	case PMC_EV_F17H_L2_REQUEST_G1:
+		__F17HSETMASK(L2_REQUEST_G1);
+		break;
+	case PMC_EV_F17H_L2_REQUEST_G2:
+		__F17HSETMASK(L2_REQUEST_G2);
+		break;
+	case PMC_EV_F17H_L2_LATENCY:
+		__F17HSETMASK(L2_LATENCY);
+		break;
+	case PMC_EV_F17H_L2_WBCREQ:
+		__F17HSETMASK(L2_WBCREQ);
+		break;
+	case PMC_EV_F17H_L2_CACHEREQSTAT:
+		__F17HSETMASK(L2_CACHEREQSTAT);
+		break;
+	case PMC_EV_F17H_L2_SMCEVENTS:
+		__F17HSETMASK(L2_SMCEVENTS);
+		break;
+	case PMC_EV_F17H_L2_FILLPENDING:
+		__F17HSETMASK(L2_FILLPENDING);
+		break;
+	case PMC_EV_F17H_EX_TAGGED_IBSOPS:
+		__F17HSETMASK(EX_TAGGED_IBSOPS);
+		break;
+	case PMC_EV_F17H_EX_RET_FUSED_BRNCH_INST:
+		__F17HSETMASK(EX_RET_FUSED_BRNCH_INST);
+		break;
+	default:
+		printf(" %s failed, event not supported\n", __FUNCTION__);
+		return -1;
+	}
+	while ((p = strsep(&ctrspec, ",")) != NULL) {
+		if (KWPREFIXMATCH(p, F17H_KW_COUNT "=")) {
+			q = strchr(p, '=');
+			if (*++q == '\0') /* skip '=' */
+				return (-1);
+
+			count = strtol(q, &e, 0);
+			if (e == q || *e != '\0')
+				return (-1);
+
+			pmc_config->pm_caps |= PMC_CAP_THRESHOLD;
+			pmc_config->pm_md.pm_amd.pm_amd_config |=
+			    AMD_PMC_TO_COUNTER(count);
+
+		} else if (KWMATCH(p, F17H_KW_EDGE)) {
+			pmc_config->pm_caps |= PMC_CAP_EDGE;
+		} else if (KWMATCH(p, F17H_KW_INV)) {
+			pmc_config->pm_caps |= PMC_CAP_INVERT;
+		} else if (KWPREFIXMATCH(p, F17H_KW_MASK "=")) {
+			if ((n = pmc_parse_mask(pmask, p, &evmask)) < 0)
+				return (-1);
+			pmc_config->pm_caps |= PMC_CAP_QUALIFIER;
+		} else if (KWMATCH(p, F17H_KW_OS)) {
+			pmc_config->pm_caps |= PMC_CAP_SYSTEM;
+		} else if (KWMATCH(p, F17H_KW_USR)) {
+			pmc_config->pm_caps |= PMC_CAP_USER;
+		} else
+			return (-1);
+}
+	if (pmc_config->pm_caps & PMC_CAP_QUALIFIER) {
+		pmc_config->pm_md.pm_amd.pm_amd_config =
+		    AMD_PMC_TO_UNITMASK(evmask);
+	}
+	return 0;
+}
 /*
  * AMD K8 PMCs.
  *
@@ -2326,6 +3227,7 @@ soft_allocate_pmc(enum pmc_event pe, char *ctrspec,
 	return (0);
 }
 
+#if	defined(__arm__)
 #if	defined(__XSCALE__)
 
 static struct pmc_event_alias xscale_aliases[] = {
@@ -2349,12 +3251,66 @@ xscale_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
 }
 #endif
 
+static struct pmc_event_alias cortex_a8_aliases[] = {
+	EV_ALIAS("dc-misses",		"L1_DCACHE_REFILL"),
+	EV_ALIAS("ic-misses",		"L1_ICACHE_REFILL"),
+	EV_ALIAS("instructions",	"INSTR_EXECUTED"),
+	EV_ALIAS(NULL, NULL)
+};
+
+static struct pmc_event_alias cortex_a9_aliases[] = {
+	EV_ALIAS("dc-misses",		"L1_DCACHE_REFILL"),
+	EV_ALIAS("ic-misses",		"L1_ICACHE_REFILL"),
+	EV_ALIAS("instructions",	"INSTR_EXECUTED"),
+	EV_ALIAS(NULL, NULL)
+};
+
+static int
+armv7_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
+    struct pmc_op_pmcallocate *pmc_config __unused)
+{
+	switch (pe) {
+	default:
+		break;
+	}
+
+	return (0);
+}
+#endif
+
+#if	defined(__aarch64__)
+static struct pmc_event_alias cortex_a53_aliases[] = {
+	EV_ALIAS(NULL, NULL)
+};
+static struct pmc_event_alias cortex_a57_aliases[] = {
+	EV_ALIAS(NULL, NULL)
+};
+static int
+arm64_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
+    struct pmc_op_pmcallocate *pmc_config __unused)
+{
+	switch (pe) {
+	default:
+		break;
+	}
+
+	return (0);
+}
+#endif
+
 #if defined(__mips__)
 
 static struct pmc_event_alias mips24k_aliases[] = {
 	EV_ALIAS("instructions",	"INSTR_EXECUTED"),
 	EV_ALIAS("branches",		"BRANCH_COMPLETED"),
 	EV_ALIAS("branch-mispredicts",	"BRANCH_MISPRED"),
+	EV_ALIAS(NULL, NULL)
+};
+
+static struct pmc_event_alias mips74k_aliases[] = {
+	EV_ALIAS("instructions",	"INSTR_EXECUTED"),
+	EV_ALIAS("branches",		"BRANCH_INSNS"),
+	EV_ALIAS("branch-mispredicts",	"MISPREDICTED_BRANCH_INSNS"),
 	EV_ALIAS(NULL, NULL)
 };
 
@@ -2404,13 +3360,25 @@ static struct pmc_event_alias ppc7450_aliases[] = {
 	EV_ALIAS(NULL, NULL)
 };
 
-#define	PPC7450_KW_OS		"os"
-#define	PPC7450_KW_USR		"usr"
-#define	PPC7450_KW_ANYTHREAD	"anythread"
+static struct pmc_event_alias ppc970_aliases[] = {
+	EV_ALIAS("instructions", "INSTR_COMPLETED"),
+	EV_ALIAS("cycles",       "CYCLES"),
+	EV_ALIAS(NULL, NULL)
+};
+
+static struct pmc_event_alias e500_aliases[] = {
+	EV_ALIAS("instructions", "INSTR_COMPLETED"),
+	EV_ALIAS("cycles",       "CYCLES"),
+	EV_ALIAS(NULL, NULL)
+};
+
+#define	POWERPC_KW_OS		"os"
+#define	POWERPC_KW_USR		"usr"
+#define	POWERPC_KW_ANYTHREAD	"anythread"
 
 static int
-ppc7450_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
-		  struct pmc_op_pmcallocate *pmc_config __unused)
+powerpc_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
+		     struct pmc_op_pmcallocate *pmc_config __unused)
 {
 	char *p;
 
@@ -2419,11 +3387,11 @@ ppc7450_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
 	pmc_config->pm_caps |= (PMC_CAP_READ | PMC_CAP_WRITE);
 	
 	while ((p = strsep(&ctrspec, ",")) != NULL) {
-		if (KWMATCH(p, PPC7450_KW_OS))
+		if (KWMATCH(p, POWERPC_KW_OS))
 			pmc_config->pm_caps |= PMC_CAP_SYSTEM;
-		else if (KWMATCH(p, PPC7450_KW_USR))
+		else if (KWMATCH(p, POWERPC_KW_USR))
 			pmc_config->pm_caps |= PMC_CAP_USER;
-		else if (KWMATCH(p, PPC7450_KW_ANYTHREAD))
+		else if (KWMATCH(p, POWERPC_KW_ANYTHREAD))
 			pmc_config->pm_caps |= (PMC_CAP_USER | PMC_CAP_SYSTEM);
 		else
 			return (-1);
@@ -2431,6 +3399,7 @@ ppc7450_allocate_pmc(enum pmc_event pe, char *ctrspec __unused,
 
 	return (0);
 }
+
 #endif /* __powerpc__ */
 
 
@@ -2722,6 +3691,10 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 			ev = atom_event_table;
 			count = PMC_EVENT_TABLE_SIZE(atom);
 			break;
+		case PMC_CPU_INTEL_ATOM_SILVERMONT:
+			ev = atom_silvermont_event_table;
+			count = PMC_EVENT_TABLE_SIZE(atom_silvermont);
+			break;
 		case PMC_CPU_INTEL_CORE:
 			ev = core_event_table;
 			count = PMC_EVENT_TABLE_SIZE(core);
@@ -2735,9 +3708,33 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 			ev = corei7_event_table;
 			count = PMC_EVENT_TABLE_SIZE(corei7);
 			break;
+		case PMC_CPU_INTEL_NEHALEM_EX:
+			ev = nehalem_ex_event_table;
+			count = PMC_EVENT_TABLE_SIZE(nehalem_ex);
+			break;
 		case PMC_CPU_INTEL_HASWELL:
 			ev = haswell_event_table;
 			count = PMC_EVENT_TABLE_SIZE(haswell);
+			break;
+		case PMC_CPU_INTEL_HASWELL_XEON:
+			ev = haswell_xeon_event_table;
+			count = PMC_EVENT_TABLE_SIZE(haswell_xeon);
+			break;
+		case PMC_CPU_INTEL_BROADWELL:
+			ev = broadwell_event_table;
+			count = PMC_EVENT_TABLE_SIZE(broadwell);
+			break;
+		case PMC_CPU_INTEL_BROADWELL_XEON:
+			ev = broadwell_xeon_event_table;
+			count = PMC_EVENT_TABLE_SIZE(broadwell_xeon);
+			break;
+		case PMC_CPU_INTEL_SKYLAKE:
+			ev = skylake_event_table;
+			count = PMC_EVENT_TABLE_SIZE(skylake);
+			break;
+		case PMC_CPU_INTEL_SKYLAKE_XEON:
+			ev = skylake_xeon_event_table;
+			count = PMC_EVENT_TABLE_SIZE(skylake_xeon);
 			break;
 		case PMC_CPU_INTEL_IVYBRIDGE:
 			ev = ivybridge_event_table;
@@ -2759,6 +3756,10 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 			ev = westmere_event_table;
 			count = PMC_EVENT_TABLE_SIZE(westmere);
 			break;
+		case PMC_CPU_INTEL_WESTMERE_EX:
+			ev = westmere_ex_event_table;
+			count = PMC_EVENT_TABLE_SIZE(westmere_ex);
+			break;
 		}
 		break;
 	case PMC_CLASS_UCF:
@@ -2779,6 +3780,10 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 		case PMC_CPU_INTEL_HASWELL:
 			ev = haswelluc_event_table;
 			count = PMC_EVENT_TABLE_SIZE(haswelluc);
+			break;
+		case PMC_CPU_INTEL_BROADWELL:
+			ev = broadwelluc_event_table;
+			count = PMC_EVENT_TABLE_SIZE(broadwelluc);
 			break;
 		case PMC_CPU_INTEL_SANDYBRIDGE:
 			ev = sandybridgeuc_event_table;
@@ -2802,6 +3807,10 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 		ev = k8_event_table;
 		count = PMC_EVENT_TABLE_SIZE(k8);
 		break;
+	case PMC_CLASS_F17H:
+		ev = f17h_event_table;
+		count = PMC_EVENT_TABLE_SIZE(f17h);
+		break;
 	case PMC_CLASS_P4:
 		ev = p4_event_table;
 		count = PMC_EVENT_TABLE_SIZE(p4);
@@ -2818,9 +3827,39 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 		ev = xscale_event_table;
 		count = PMC_EVENT_TABLE_SIZE(xscale);
 		break;
+	case PMC_CLASS_ARMV7:
+		switch (cpu_info.pm_cputype) {
+		default:
+		case PMC_CPU_ARMV7_CORTEX_A8:
+			ev = cortex_a8_event_table;
+			count = PMC_EVENT_TABLE_SIZE(cortex_a8);
+			break;
+		case PMC_CPU_ARMV7_CORTEX_A9:
+			ev = cortex_a9_event_table;
+			count = PMC_EVENT_TABLE_SIZE(cortex_a9);
+			break;
+		}
+		break;
+	case PMC_CLASS_ARMV8:
+		switch (cpu_info.pm_cputype) {
+		default:
+		case PMC_CPU_ARMV8_CORTEX_A53:
+			ev = cortex_a53_event_table;
+			count = PMC_EVENT_TABLE_SIZE(cortex_a53);
+			break;
+		case PMC_CPU_ARMV8_CORTEX_A57:
+			ev = cortex_a57_event_table;
+			count = PMC_EVENT_TABLE_SIZE(cortex_a57);
+			break;
+		}
+		break;
 	case PMC_CLASS_MIPS24K:
 		ev = mips24k_event_table;
 		count = PMC_EVENT_TABLE_SIZE(mips24k);
+		break;
+	case PMC_CLASS_MIPS74K:
+		ev = mips74k_event_table;
+		count = PMC_EVENT_TABLE_SIZE(mips74k);
 		break;
 	case PMC_CLASS_OCTEON:
 		ev = octeon_event_table;
@@ -2829,6 +3868,14 @@ pmc_event_names_of_class(enum pmc_class cl, const char ***eventnames,
 	case PMC_CLASS_PPC7450:
 		ev = ppc7450_event_table;
 		count = PMC_EVENT_TABLE_SIZE(ppc7450);
+		break;
+	case PMC_CLASS_PPC970:
+		ev = ppc970_event_table;
+		count = PMC_EVENT_TABLE_SIZE(ppc970);
+		break;
+	case PMC_CLASS_E500:
+		ev = e500_event_table;
+		count = PMC_EVENT_TABLE_SIZE(e500);
 		break;
 	case PMC_CLASS_SOFT:
 		ev = soft_event_table;
@@ -2926,7 +3973,7 @@ pmc_init(void)
 	if (PMC_CALL(GETMODULEVERSION, &abi_version) < 0)
 		return (pmc_syscall = -1);
 
-	/* ignore patch & minor numbers for the comparision */
+	/* ignore patch & minor numbers for the comparison */
 	if ((abi_version & 0xFF000000) != (PMC_VERSION & 0xFF000000)) {
 		errno  = EPROGMISMATCH;
 		return (pmc_syscall = -1);
@@ -2940,7 +3987,8 @@ pmc_init(void)
 	cpu_info.pm_npmc    = op_cpu_info.pm_npmc;
 	cpu_info.pm_nclass  = op_cpu_info.pm_nclass;
 	for (n = 0; n < cpu_info.pm_nclass; n++)
-		cpu_info.pm_classes[n] = op_cpu_info.pm_classes[n];
+		memcpy(&cpu_info.pm_classes[n], &op_cpu_info.pm_classes[n],
+		    sizeof(cpu_info.pm_classes[n]));
 
 	pmc_class_table = malloc(PMC_CLASS_TABLE_SIZE *
 	    sizeof(struct pmc_class_descr *));
@@ -3031,8 +4079,15 @@ pmc_init(void)
 		PMC_MDEP_INIT(k8);
 		pmc_class_table[n] = &k8_class_table_descr;
 		break;
+	case PMC_CPU_AMD_F17H:
+		PMC_MDEP_INIT(f17h);
+		pmc_class_table[n] = &f17h_class_table_descr;
+		break;
 	case PMC_CPU_INTEL_ATOM:
 		PMC_MDEP_INIT_INTEL_V2(atom);
+		break;
+	case PMC_CPU_INTEL_ATOM_SILVERMONT:
+		PMC_MDEP_INIT_INTEL_V2(atom_silvermont);
 		break;
 	case PMC_CPU_INTEL_CORE:
 		PMC_MDEP_INIT(core);
@@ -3047,10 +4102,30 @@ pmc_init(void)
 		pmc_class_table[n++] = &corei7uc_class_table_descr;
 		PMC_MDEP_INIT_INTEL_V2(corei7);
 		break;
+	case PMC_CPU_INTEL_NEHALEM_EX:
+		PMC_MDEP_INIT_INTEL_V2(nehalem_ex);
+		break;
 	case PMC_CPU_INTEL_HASWELL:
 		pmc_class_table[n++] = &ucf_class_table_descr;
 		pmc_class_table[n++] = &haswelluc_class_table_descr;
 		PMC_MDEP_INIT_INTEL_V2(haswell);
+		break;
+	case PMC_CPU_INTEL_HASWELL_XEON:
+		PMC_MDEP_INIT_INTEL_V2(haswell_xeon);
+		break;
+	case PMC_CPU_INTEL_BROADWELL:
+		pmc_class_table[n++] = &ucf_class_table_descr;
+		pmc_class_table[n++] = &broadwelluc_class_table_descr;
+		PMC_MDEP_INIT_INTEL_V2(broadwell);
+		break;
+	case PMC_CPU_INTEL_BROADWELL_XEON:
+		PMC_MDEP_INIT_INTEL_V2(broadwell_xeon);
+		break;
+	case PMC_CPU_INTEL_SKYLAKE:
+		PMC_MDEP_INIT_INTEL_V2(skylake);
+		break;
+	case PMC_CPU_INTEL_SKYLAKE_XEON:
+		PMC_MDEP_INIT_INTEL_V2(skylake_xeon);
 		break;
 	case PMC_CPU_INTEL_IVYBRIDGE:
 		PMC_MDEP_INIT_INTEL_V2(ivybridge);
@@ -3071,6 +4146,9 @@ pmc_init(void)
 		pmc_class_table[n++] = &westmereuc_class_table_descr;
 		PMC_MDEP_INIT_INTEL_V2(westmere);
 		break;
+	case PMC_CPU_INTEL_WESTMERE_EX:
+		PMC_MDEP_INIT_INTEL_V2(westmere_ex);
+		break;
 	case PMC_CPU_INTEL_PIV:
 		PMC_MDEP_INIT(p4);
 		pmc_class_table[n] = &p4_class_table_descr;
@@ -3079,16 +4157,40 @@ pmc_init(void)
 	case PMC_CPU_GENERIC:
 		PMC_MDEP_INIT(generic);
 		break;
+#if defined(__arm__)
 #if defined(__XSCALE__)
 	case PMC_CPU_INTEL_XSCALE:
 		PMC_MDEP_INIT(xscale);
 		pmc_class_table[n] = &xscale_class_table_descr;
 		break;
 #endif
+	case PMC_CPU_ARMV7_CORTEX_A8:
+		PMC_MDEP_INIT(cortex_a8);
+		pmc_class_table[n] = &cortex_a8_class_table_descr;
+		break;
+	case PMC_CPU_ARMV7_CORTEX_A9:
+		PMC_MDEP_INIT(cortex_a9);
+		pmc_class_table[n] = &cortex_a9_class_table_descr;
+		break;
+#endif
+#if defined(__aarch64__)
+	case PMC_CPU_ARMV8_CORTEX_A53:
+		PMC_MDEP_INIT(cortex_a53);
+		pmc_class_table[n] = &cortex_a53_class_table_descr;
+		break;
+	case PMC_CPU_ARMV8_CORTEX_A57:
+		PMC_MDEP_INIT(cortex_a57);
+		pmc_class_table[n] = &cortex_a57_class_table_descr;
+		break;
+#endif
 #if defined(__mips__)
 	case PMC_CPU_MIPS_24K:
 		PMC_MDEP_INIT(mips24k);
 		pmc_class_table[n] = &mips24k_class_table_descr;
+		break;
+	case PMC_CPU_MIPS_74K:
+		PMC_MDEP_INIT(mips74k);
+		pmc_class_table[n] = &mips74k_class_table_descr;
 		break;
 	case PMC_CPU_MIPS_OCTEON:
 		PMC_MDEP_INIT(octeon);
@@ -3099,6 +4201,14 @@ pmc_init(void)
 	case PMC_CPU_PPC_7450:
 		PMC_MDEP_INIT(ppc7450);
 		pmc_class_table[n] = &ppc7450_class_table_descr;
+		break;
+	case PMC_CPU_PPC_970:
+		PMC_MDEP_INIT(ppc970);
+		pmc_class_table[n] = &ppc970_class_table_descr;
+		break;
+	case PMC_CPU_PPC_E500:
+		PMC_MDEP_INIT(e500);
+		pmc_class_table[n] = &e500_class_table_descr;
 		break;
 #endif
 	default:
@@ -3136,9 +4246,11 @@ pmc_name_of_capability(enum pmc_caps cap)
 const char *
 pmc_name_of_class(enum pmc_class pc)
 {
-	if ((int) pc >= PMC_CLASS_FIRST &&
-	    pc <= PMC_CLASS_LAST)
-		return (pmc_class_names[pc]);
+	size_t n;
+
+	for (n = 0; n < PMC_TABLE_SIZE(pmc_class_names); n++)
+		if (pc == pmc_class_names[n].pm_class)
+			return (pmc_class_names[n].pm_name);
 
 	errno = EINVAL;
 	return (NULL);
@@ -3183,6 +4295,11 @@ _pmc_name_of_event(enum pmc_event pe, enum pmc_cputype cpu)
 			ev = atom_event_table;
 			evfence = atom_event_table + PMC_EVENT_TABLE_SIZE(atom);
 			break;
+		case PMC_CPU_INTEL_ATOM_SILVERMONT:
+			ev = atom_silvermont_event_table;
+			evfence = atom_silvermont_event_table +
+			    PMC_EVENT_TABLE_SIZE(atom_silvermont);
+			break;
 		case PMC_CPU_INTEL_CORE:
 			ev = core_event_table;
 			evfence = core_event_table + PMC_EVENT_TABLE_SIZE(core);
@@ -3196,9 +4313,36 @@ _pmc_name_of_event(enum pmc_event pe, enum pmc_cputype cpu)
 			ev = corei7_event_table;
 			evfence = corei7_event_table + PMC_EVENT_TABLE_SIZE(corei7);
 			break;
+		case PMC_CPU_INTEL_NEHALEM_EX:
+			ev = nehalem_ex_event_table;
+			evfence = nehalem_ex_event_table +
+			    PMC_EVENT_TABLE_SIZE(nehalem_ex);
+			break;
 		case PMC_CPU_INTEL_HASWELL:
 			ev = haswell_event_table;
 			evfence = haswell_event_table + PMC_EVENT_TABLE_SIZE(haswell);
+			break;
+		case PMC_CPU_INTEL_HASWELL_XEON:
+			ev = haswell_xeon_event_table;
+			evfence = haswell_xeon_event_table + PMC_EVENT_TABLE_SIZE(haswell_xeon);
+			break;
+		case PMC_CPU_INTEL_BROADWELL:
+			ev = broadwell_event_table;
+			evfence = broadwell_event_table + PMC_EVENT_TABLE_SIZE(broadwell);
+			break;
+		case PMC_CPU_INTEL_BROADWELL_XEON:
+			ev = broadwell_xeon_event_table;
+			evfence = broadwell_xeon_event_table + PMC_EVENT_TABLE_SIZE(broadwell_xeon);
+			break;
+		case PMC_CPU_INTEL_SKYLAKE:
+			ev = skylake_event_table;
+			evfence = skylake_event_table +
+			    PMC_EVENT_TABLE_SIZE(skylake);
+			break;
+		case PMC_CPU_INTEL_SKYLAKE_XEON:
+			ev = skylake_xeon_event_table;
+			evfence = skylake_xeon_event_table +
+			    PMC_EVENT_TABLE_SIZE(skylake_xeon);
 			break;
 		case PMC_CPU_INTEL_IVYBRIDGE:
 			ev = ivybridge_event_table;
@@ -3219,6 +4363,11 @@ _pmc_name_of_event(enum pmc_event pe, enum pmc_cputype cpu)
 		case PMC_CPU_INTEL_WESTMERE:
 			ev = westmere_event_table;
 			evfence = westmere_event_table + PMC_EVENT_TABLE_SIZE(westmere);
+			break;
+		case PMC_CPU_INTEL_WESTMERE_EX:
+			ev = westmere_ex_event_table;
+			evfence = westmere_ex_event_table +
+			    PMC_EVENT_TABLE_SIZE(westmere_ex);
 			break;
 		default:	/* Unknown CPU type. */
 			break;
@@ -3249,6 +4398,10 @@ _pmc_name_of_event(enum pmc_event pe, enum pmc_cputype cpu)
 	} else if (pe >= PMC_EV_K8_FIRST && pe <= PMC_EV_K8_LAST) {
 		ev = k8_event_table;
 		evfence = k8_event_table + PMC_EVENT_TABLE_SIZE(k8);
+	} else if ((int)pe >= PMC_EV_F17H_FIRST &&
+			(int)pe <= PMC_EV_F17H_LAST) {
+		ev = f17h_event_table;
+		evfence = f17h_event_table + PMC_EVENT_TABLE_SIZE(f17h);
 	} else if (pe >= PMC_EV_P4_FIRST && pe <= PMC_EV_P4_LAST) {
 		ev = p4_event_table;
 		evfence = p4_event_table + PMC_EVENT_TABLE_SIZE(p4);
@@ -3261,15 +4414,50 @@ _pmc_name_of_event(enum pmc_event pe, enum pmc_cputype cpu)
 	} else if (pe >= PMC_EV_XSCALE_FIRST && pe <= PMC_EV_XSCALE_LAST) {
 		ev = xscale_event_table;
 		evfence = xscale_event_table + PMC_EVENT_TABLE_SIZE(xscale);
+	} else if (pe >= PMC_EV_ARMV7_FIRST && pe <= PMC_EV_ARMV7_LAST) {
+		switch (cpu) {
+		case PMC_CPU_ARMV7_CORTEX_A8:
+			ev = cortex_a8_event_table;
+			evfence = cortex_a8_event_table + PMC_EVENT_TABLE_SIZE(cortex_a8);
+			break;
+		case PMC_CPU_ARMV7_CORTEX_A9:
+			ev = cortex_a9_event_table;
+			evfence = cortex_a9_event_table + PMC_EVENT_TABLE_SIZE(cortex_a9);
+			break;
+		default:	/* Unknown CPU type. */
+			break;
+		}
+	} else if (pe >= PMC_EV_ARMV8_FIRST && pe <= PMC_EV_ARMV8_LAST) {
+		switch (cpu) {
+		case PMC_CPU_ARMV8_CORTEX_A53:
+			ev = cortex_a53_event_table;
+			evfence = cortex_a53_event_table + PMC_EVENT_TABLE_SIZE(cortex_a53);
+			break;
+		case PMC_CPU_ARMV8_CORTEX_A57:
+			ev = cortex_a57_event_table;
+			evfence = cortex_a57_event_table + PMC_EVENT_TABLE_SIZE(cortex_a57);
+			break;
+		default:	/* Unknown CPU type. */
+			break;
+		}
 	} else if (pe >= PMC_EV_MIPS24K_FIRST && pe <= PMC_EV_MIPS24K_LAST) {
 		ev = mips24k_event_table;
 		evfence = mips24k_event_table + PMC_EVENT_TABLE_SIZE(mips24k);
+	} else if (pe >= PMC_EV_MIPS74K_FIRST && pe <= PMC_EV_MIPS74K_LAST) {
+		ev = mips74k_event_table;
+		evfence = mips74k_event_table + PMC_EVENT_TABLE_SIZE(mips74k);
 	} else if (pe >= PMC_EV_OCTEON_FIRST && pe <= PMC_EV_OCTEON_LAST) {
 		ev = octeon_event_table;
 		evfence = octeon_event_table + PMC_EVENT_TABLE_SIZE(octeon);
 	} else if (pe >= PMC_EV_PPC7450_FIRST && pe <= PMC_EV_PPC7450_LAST) {
 		ev = ppc7450_event_table;
 		evfence = ppc7450_event_table + PMC_EVENT_TABLE_SIZE(ppc7450);
+	} else if (pe >= PMC_EV_PPC970_FIRST && pe <= PMC_EV_PPC970_LAST) {
+		ev = ppc970_event_table;
+		evfence = ppc970_event_table + PMC_EVENT_TABLE_SIZE(ppc970);
+	} else if (pe >= PMC_EV_E500_FIRST && pe <= PMC_EV_E500_LAST) {
+		ev = e500_event_table;
+		evfence = e500_event_table + PMC_EVENT_TABLE_SIZE(e500);
 	} else if (pe == PMC_EV_TSC_TSC) {
 		ev = tsc_event_table;
 		evfence = tsc_event_table + PMC_EVENT_TABLE_SIZE(tsc);

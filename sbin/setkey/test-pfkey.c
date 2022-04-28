@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sbin/setkey/test-pfkey.c 173412 2007-11-07 10:53:41Z kevlo $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: test-pfkey.c,v 1.4 2000/06/07 00:29:14 itojun Exp $	*/
 
 /*

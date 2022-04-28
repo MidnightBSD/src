@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/sshd 256126 2013-10-07 21:39:42Z delphij $
+# $FreeBSD$
 #
 
 # PROVIDE: sshd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="sshd"
+desc="Secure Shell Daemon"
 rcvar="sshd_enable"
 command="/usr/sbin/${name}"
 keygen_cmd="sshd_keygen"
@@ -20,10 +21,11 @@ configtest_cmd="sshd_configtest"
 pidfile="/var/run/${name}.pid"
 extra_commands="configtest keygen reload"
 
-: ${sshd_rsa1_enable:="yes"}
+: ${sshd_rsa1_enable:="no"}
 : ${sshd_rsa_enable:="yes"}
-: ${sshd_dsa_enable:="yes"}
+: ${sshd_dsa_enable:="no"}
 : ${sshd_ecdsa_enable:="yes"}
+: ${sshd_ed25519_enable:="yes"}
 
 sshd_keygen_alg()
 {
@@ -39,7 +41,7 @@ sshd_keygen_alg()
 	rsa1)
 		keyfile="/etc/ssh/ssh_host_key"
 		;;
-	rsa|dsa|ecdsa)
+	rsa|dsa|ecdsa|ed25519)
 		keyfile="/etc/ssh/ssh_host_${alg}_key"
 		;;
 	*)
@@ -67,6 +69,7 @@ sshd_keygen()
 	sshd_keygen_alg rsa
 	sshd_keygen_alg dsa
 	sshd_keygen_alg ecdsa
+	sshd_keygen_alg ed25519
 }
 
 sshd_configtest()

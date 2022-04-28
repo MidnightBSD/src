@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/posix_spawn.c 223907 2011-07-10 14:20:11Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/queue.h>
@@ -118,15 +118,18 @@ process_spawnattr(const posix_spawnattr_t sa)
 			return (errno);
 	}
 
-	/* Set signal masks/defaults */
+	/*
+	 * Set signal masks/defaults.
+	 * Use unwrapped syscall, libthr is in undefined state after vfork().
+	 */
 	if (sa->sa_flags & POSIX_SPAWN_SETSIGMASK) {
-		_sigprocmask(SIG_SETMASK, &sa->sa_sigmask, NULL);
+		__sys_sigprocmask(SIG_SETMASK, &sa->sa_sigmask, NULL);
 	}
 
 	if (sa->sa_flags & POSIX_SPAWN_SETSIGDEF) {
 		for (i = 1; i <= _SIG_MAXSIG; i++) {
 			if (sigismember(&sa->sa_sigdefault, i))
-				if (_sigaction(i, &sigact, NULL) != 0)
+				if (__sys_sigaction(i, &sigact, NULL) != 0)
 					return (errno);
 		}
 	}
@@ -137,7 +140,7 @@ process_spawnattr(const posix_spawnattr_t sa)
 static int
 process_file_actions_entry(posix_spawn_file_actions_entry_t *fae)
 {
-	int fd;
+	int fd, saved_errno;
 
 	switch (fae->fae_action) {
 	case FAE_OPEN:
@@ -146,8 +149,11 @@ process_file_actions_entry(posix_spawn_file_actions_entry_t *fae)
 		if (fd < 0)
 			return (errno);
 		if (fd != fae->fae_fildes) {
-			if (_dup2(fd, fae->fae_fildes) == -1)
-				return (errno);
+			if (_dup2(fd, fae->fae_fildes) == -1) {
+				saved_errno = errno;
+				(void)_close(fd);
+				return (saved_errno);
+			}
 			if (_close(fd) != 0) {
 				if (errno == EBADF)
 					return (EBADF);
@@ -186,43 +192,115 @@ process_file_actions(const posix_spawn_file_actions_t fa)
 	return (0);
 }
 
+struct posix_spawn_args {
+	const char *path;
+	const posix_spawn_file_actions_t *fa;
+	const posix_spawnattr_t *sa;
+	char * const * argv;
+	char * const * envp;
+	int use_env_path;
+	volatile int error;
+};
+
+#if defined(__i386__) || defined(__amd64__)
+#define	_RFORK_THREAD_STACK_SIZE	4096
+#endif
+
+static int
+_posix_spawn_thr(void *data)
+{
+	struct posix_spawn_args *psa;
+	char * const *envp;
+
+	psa = data;
+	if (psa->sa != NULL) {
+		psa->error = process_spawnattr(*psa->sa);
+		if (psa->error)
+			_exit(127);
+	}
+	if (psa->fa != NULL) {
+		psa->error = process_file_actions(*psa->fa);
+		if (psa->error)
+			_exit(127);
+	}
+	envp = psa->envp != NULL ? psa->envp : environ;
+	if (psa->use_env_path)
+		_execvpe(psa->path, psa->argv, envp);
+	else
+		_execve(psa->path, psa->argv, envp);
+	psa->error = errno;
+
+	/* This is called in such a way that it must not exit. */
+	_exit(127);
+}
+
 static int
 do_posix_spawn(pid_t *pid, const char *path,
     const posix_spawn_file_actions_t *fa,
     const posix_spawnattr_t *sa,
     char * const argv[], char * const envp[], int use_env_path)
 {
+	struct posix_spawn_args psa;
 	pid_t p;
-	volatile int error = 0;
+#ifdef _RFORK_THREAD_STACK_SIZE
+	char *stack;
 
-	p = vfork();
-	switch (p) {
-	case -1:
-		return (errno);
-	case 0:
-		if (sa != NULL) {
-			error = process_spawnattr(*sa);
-			if (error)
-				_exit(127);
-		}
-		if (fa != NULL) {
-			error = process_file_actions(*fa);
-			if (error)
-				_exit(127);
-		}
-		if (use_env_path)
-			_execvpe(path, argv, envp != NULL ? envp : environ);
-		else
-			_execve(path, argv, envp != NULL ? envp : environ);
-		error = errno;
-		_exit(127);
-	default:
-		if (error != 0)
-			_waitpid(p, NULL, WNOHANG);
-		else if (pid != NULL)
-			*pid = p;
-		return (error);
+	stack = malloc(_RFORK_THREAD_STACK_SIZE);
+	if (stack == NULL)
+		return (ENOMEM);
+#endif
+	psa.path = path;
+	psa.fa = fa;
+	psa.sa = sa;
+	psa.argv = argv;
+	psa.envp = envp;
+	psa.use_env_path = use_env_path;
+	psa.error = 0;
+
+	/*
+	 * Passing RFSPAWN to rfork(2) gives us effectively a vfork that drops
+	 * non-ignored signal handlers.  We'll fall back to the slightly less
+	 * ideal vfork(2) if we get an EINVAL from rfork -- this should only
+	 * happen with newer libc on older kernel that doesn't accept
+	 * RFSPAWN.
+	 */
+#ifdef _RFORK_THREAD_STACK_SIZE
+	/*
+	 * x86 stores the return address on the stack, so rfork(2) cannot work
+	 * as-is because the child would clobber the return address om the
+	 * parent.  Because of this, we must use rfork_thread instead while
+	 * almost every other arch stores the return address in a register.
+	 */
+	p = rfork_thread(RFSPAWN, stack + _RFORK_THREAD_STACK_SIZE,
+	    _posix_spawn_thr, &psa);
+	free(stack);
+#else
+	p = rfork(RFSPAWN);
+	if (p == 0)
+		/* _posix_spawn_thr does not return */
+		_posix_spawn_thr(&psa);
+#endif
+	/*
+	 * The above block should leave us in a state where we've either
+	 * succeeded and we're ready to process the results, or we need to
+	 * fallback to vfork() if the kernel didn't like RFSPAWN.
+	 */
+
+	if (p == -1 && errno == EINVAL) {
+		p = vfork();
+		if (p == 0)
+			/* _posix_spawn_thr does not return */
+			_posix_spawn_thr(&psa);
 	}
+	if (p == -1)
+		return (errno);
+	if (psa.error != 0)
+		/* Failed; ready to reap */
+		_waitpid(p, NULL, WNOHANG);
+	else if (pid != NULL)
+		/* exec succeeded */
+		*pid = p;
+	return (psa.error);
 }
 
 int

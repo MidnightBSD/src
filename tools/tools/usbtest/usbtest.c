@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/tools/usbtest/usbtest.c 254159 2013-08-09 20:08:42Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *

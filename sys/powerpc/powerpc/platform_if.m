@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/powerpc/powerpc/platform_if.m 255417 2013-09-09 12:49:19Z nwhitehorn $
+# $FreeBSD$
 #
 
 #include <sys/param.h>
@@ -84,6 +84,14 @@ CODE {
 	{
 		return;
 	}
+	static void platform_null_idle(platform_t plat, int cpu)
+	{
+		return;
+	}
+	static int platform_null_idle_wakeup(platform_t plat, int cpu)
+	{
+		return (0);
+	}
 };
 
 /**
@@ -120,9 +128,9 @@ METHOD int attach {
 
 METHOD void mem_regions {
 	platform_t	    _plat;
-	struct mem_region **_memp;
+	struct mem_region  *_memp;
 	int		   *_memsz;
-	struct mem_region **_availp;
+	struct mem_region  *_availp;
 	int		   *_availsz;
 };
 
@@ -207,6 +215,29 @@ METHOD cpu_group_t smp_topo {
  * @brief Reset system
  */
 METHOD void reset {
+	platform_t	_plat;
+};
+
+/**
+ * @brief Idle a CPU
+ */
+METHOD void idle {
+	platform_t	_plat;
+	int		_cpu;
+} DEFAULT platform_null_idle;
+
+/**
+ * @brief Wake up an idle CPU
+ */
+METHOD int idle_wakeup {
+	platform_t	_plat;
+	int		_cpu;
+} DEFAULT platform_null_idle_wakeup;
+
+/**
+ * @brief Suspend the CPU
+ */
+METHOD void sleep {
 	platform_t	_plat;
 };
 

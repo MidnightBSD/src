@@ -33,7 +33,7 @@
 __RCSID("$NetBSD: wcslcat.c,v 1.1 2000/12/23 23:14:36 itojun Exp $");
 #endif /* LIBC_SCCS and not lint */
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/wcslcat.c 188080 2009-02-03 17:58:20Z danger $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <wchar.h>
@@ -54,7 +54,7 @@ wcslcat(wchar_t *dst, const wchar_t *src, size_t siz)
 	size_t dlen;
 
 	/* Find the end of dst and adjust bytes left but don't go past end */
-	while (*d != '\0' && n-- != 0)
+	while (n-- != 0 && *d != '\0')
 		d++;
 	dlen = d - dst;
 	n = siz - dlen;

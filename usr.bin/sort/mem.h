@@ -1,6 +1,8 @@
-/*	$FreeBSD: release/10.0.0/usr.bin/sort/mem.h 251245 2013-06-02 09:43:48Z gabor $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #if !defined(__SORT_MEM_H__)
-#define __SORT_MEM_H__
+#define	__SORT_MEM_H__
 
 #include <errno.h>
 #include <stdbool.h>

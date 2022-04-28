@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_wlan/wlan_snmp.h 228657 2011-12-17 19:53:08Z dim $
+ * $FreeBSD$
  */
 
 #define	WLAN_IFMODE_MAX				WlanIfaceOperatingModeType_tdma
@@ -182,7 +184,7 @@ struct wlan_iface {
 	enum wlanHWMPRootMode		hwmp_root_mode;
 	uint32_t			hwmp_max_hops;
 	struct wlan_mesh_routes		mesh_routelist;
-		
+
 	SLIST_ENTRY(wlan_iface)		w_if;
 };
 

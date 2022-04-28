@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/partedit_powerpc.c 255817 2013-09-23 14:18:34Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -60,17 +62,47 @@ is_scheme_bootable(const char *part_type) {
 	if (strcmp(platform, "ps3") == 0 && strcmp(part_type, "GPT") == 0)
 		return (1);
 	if (strcmp(platform, "chrp") == 0 &&
-	    (strcmp(part_type, "MBR") == 0 || strcmp(part_type, "BSD") == 0))
+	    (strcmp(part_type, "MBR") == 0 || strcmp(part_type, "BSD") == 0 ||
+	     strcmp(part_type, "GPT") == 0))
 		return (1);
 
 	return (0);
 }
 
+int
+is_fs_bootable(const char *part_type, const char *fs)
+{
+	if (strcmp(fs, "freebsd-ufs") == 0)
+		return (1);
+	
+	return (0);
+}
+
 size_t
 bootpart_size(const char *part_type) {
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
 	if (strcmp(part_type, "APM") == 0 || strcmp(part_type, "MBR") == 0)
 		return (800*1024);
+	if (strcmp(platform, "chrp") == 0 && strcmp(part_type, "GPT") == 0)
+		return (800*1024);
 	return (0);
+}
+
+const char *
+bootpart_type(const char *scheme) {
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
+	if (strcmp(platform, "chrp") == 0)
+		return ("prep-boot");
+	if (strcmp(platform, "powermac") == 0)
+		return ("apple-boot");
+
+	return ("freebsd-boot");
 }
 
 const char *
@@ -79,10 +111,15 @@ bootcode_path(const char *part_type) {
 }
 	
 const char *
-partcode_path(const char *part_type) {
+partcode_path(const char *part_type, const char *fs_type) {
+	size_t platlen = sizeof(platform);
+	if (strlen(platform) == 0)
+		sysctlbyname("hw.platform", platform, &platlen, NULL, -1);
+
 	if (strcmp(part_type, "APM") == 0)
 		return ("/boot/boot1.hfs");
-	if (strcmp(part_type, "MBR") == 0)
+	if (strcmp(part_type, "MBR") == 0 ||
+	    (strcmp(platform, "chrp") == 0 && strcmp(part_type, "GPT") == 0))
 		return ("/boot/boot1.elf");
 	return (NULL);
 }

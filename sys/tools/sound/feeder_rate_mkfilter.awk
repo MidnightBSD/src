@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/tools/sound/feeder_rate_mkfilter.awk 195378 2009-07-05 18:15:06Z ariff $
+# $FreeBSD$
 #
 
 #

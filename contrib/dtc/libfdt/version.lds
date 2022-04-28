@@ -8,6 +8,7 @@ LIBFDT_1.2 {
 		fdt_get_mem_rsv;
 		fdt_subnode_offset_namelen;
 		fdt_subnode_offset;
+		fdt_path_offset_namelen;
 		fdt_path_offset;
 		fdt_get_name;
 		fdt_get_property_namelen;
@@ -48,6 +49,19 @@ LIBFDT_1.2 {
 		fdt_strerror;
 		fdt_offset_ptr;
 		fdt_next_tag;
+		fdt_appendprop;
+		fdt_create_empty_tree;
+		fdt_first_property_offset;
+		fdt_get_property_by_offset;
+		fdt_getprop_by_offset;
+		fdt_next_property_offset;
+		fdt_first_subnode;
+		fdt_next_subnode;
+		fdt_address_cells;
+		fdt_size_cells;
+		fdt_stringlist_contains;
+		fdt_resize;
+		fdt_overlay_apply;
 
 	local:
 		*;

@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/pdq/if_fea.c 201758 2010-01-07 21:01:37Z mbr $
+ * $FreeBSD$
  */
 
 /*
@@ -32,10 +32,11 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
-
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 
 #include <machine/bus.h>
@@ -43,6 +44,7 @@
 #include <sys/rman.h> 
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/fddi.h>
 
@@ -232,6 +234,7 @@ pdq_eisa_attach (dev)
 		return (error);
 	}
 
+	gone_in_dev(dev, 12, "fea(4) driver");
 	return (0);
 bad:
 	pdq_free(dev);

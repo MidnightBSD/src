@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/counter.h 252434 2013-07-01 02:48:27Z kib $
+ * $FreeBSD$
  */
 
 #ifndef __MACHINE_COUNTER_H__
@@ -34,7 +34,7 @@
 #include <sys/proc.h>
 #endif
 
-#if defined(AIM) && defined(__powerpc64__)
+#ifdef __powerpc64__
 
 #define	counter_enter()	do {} while (0)
 #define	counter_exit()	do {} while (0)
@@ -54,7 +54,7 @@ counter_u64_fetch_inline(uint64_t *p)
 	int i;
 
 	r = 0;
-	for (i = 0; i < mp_ncpus; i++)
+	CPU_FOREACH(i)
 		r += counter_u64_read_one((uint64_t *)p, i);
 
 	return (r);
@@ -72,8 +72,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 
@@ -95,10 +95,10 @@ counter_u64_add(counter_u64_t c, int64_t inc)
 	    "bne-	1b"
 	    : "=&b" (ccpu), "=&r" (old)
 	    : "r" ((char *)c - (char *)&__pcpu[0]), "r" (inc)
-	    : "cc", "memory");
+	    : "cr0", "memory");
 }
 
-#else	/* !AIM || !64bit */
+#else	/* !64bit */
 
 #define	counter_enter()	critical_enter()
 #define	counter_exit()	critical_exit()
@@ -138,8 +138,8 @@ static inline void
 counter_u64_zero_inline(counter_u64_t c)
 {
 
-	smp_rendezvous(smp_no_rendevous_barrier, counter_u64_zero_one_cpu,
-	    smp_no_rendevous_barrier, c);
+	smp_rendezvous(smp_no_rendezvous_barrier, counter_u64_zero_one_cpu,
+	    smp_no_rendezvous_barrier, c);
 }
 #endif
 
@@ -157,6 +157,6 @@ counter_u64_add(counter_u64_t c, int64_t inc)
 	counter_exit();
 }
 
-#endif	/* AIM 64bit */
+#endif	/* 64bit */
 
 #endif	/* ! __MACHINE_COUNTER_H__ */

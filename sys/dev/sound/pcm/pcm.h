@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/pcm.h 193640 2009-06-07 19:12:08Z ariff $
+ * $FreeBSD$
  */
 
 #ifndef _SND_PCM_H_
@@ -42,7 +42,7 @@
 
 /*
  * Automatically turn on 64bit arithmetic on suitable archs
- * (amd64 64bit, ia64, etc..) for wider 32bit samples / integer processing.
+ * (amd64 64bit, etc..) for wider 32bit samples / integer processing.
  */
 #if LONG_BIT >= 64
 #undef SND_PCM_64

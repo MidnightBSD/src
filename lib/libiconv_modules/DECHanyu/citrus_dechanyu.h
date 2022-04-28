@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libiconv_modules/DECHanyu/citrus_dechanyu.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_dechanyu.h,v 1.1 2007/04/01 18:52:32 tnozaki Exp $ */
 
 /*-

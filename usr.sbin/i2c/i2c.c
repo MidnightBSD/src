@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2008-2009 Semihalf, Michal Hajduk and Bartlomiej Sieka
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/i2c/i2c.c 230356 2012-01-20 01:38:44Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>
@@ -45,6 +47,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/i2c/i2c.c 230356 2012-01-20 01:38:44
 #define	I2C_MODE_NONE		1
 #define	I2C_MODE_STOP_START	2
 #define	I2C_MODE_REPEATED_START	3
+#define	I2C_MODE_TRANSFER	4
 
 struct options {
 	int	width;
@@ -71,7 +74,7 @@ usage(void)
 {
 
 	fprintf(stderr, "usage: %s -a addr [-f device] [-d [r|w]] [-o offset] "
-	    "[-w [0|8|16]] [-c count] [-m [ss|rs|no]] [-b] [-v]\n",
+	    "[-w [0|8|16]] [-c count] [-m [tr|ss|rs|no]] [-b] [-v]\n",
 	    getprogname());
 	fprintf(stderr, "       %s -s [-f device] [-n skip_addr] -v\n",
 	    getprogname());
@@ -121,9 +124,12 @@ skip_get_tokens(char *skip_addr, int *sk_addr, int max_index)
 static int
 scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 {
+	struct iic_msg rdmsg;
+	struct iic_rdwr_data rdwrdata;
 	struct skip_range addr_range = { 0, 0 };
 	int *tokens, fd, error, i, index, j;
-	int len = 0, do_skip = 0, no_range = 1;
+	int len = 0, do_skip = 0, no_range = 1, num_found = 0, use_read_xfer = 0;
+	uint8_t rdbyte;
 
 	fd = open(dev, O_RDWR);
 	if (fd == -1) {
@@ -142,6 +148,7 @@ scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 			if (tokens == NULL) {
 				fprintf(stderr, "Error allocating tokens "
 				    "buffer\n");
+				error = -1;
 				goto out;
 			}
 			index = skip_get_tokens(skip_addr, tokens,
@@ -150,11 +157,20 @@ scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 
 		if (!no_range && (addr_range.start > addr_range.end)) {
 			fprintf(stderr, "Skip address out of range\n");
+			error = -1;
 			goto out;
 		}
 	}
 
 	printf("Scanning I2C devices on %s: ", dev);
+
+start_over:
+	if (use_read_xfer) {
+		fprintf(stderr, 
+		    "Hardware may not support START/STOP scanning; "
+		    "trying less-reliable read method.\n");
+	}
+
 	for (i = 1; i < 127; i++) {
 
 		if (skip && ( addr_range.start < addr_range.end)) {
@@ -178,17 +194,45 @@ scan_bus(struct iiccmd cmd, char *dev, int skip, char *skip_addr)
 		cmd.last = 1;
 		cmd.count = 0;
 		error = ioctl(fd, I2CRSTCARD, &cmd);
-		if (error)
+		if (error) {
+			fprintf(stderr, "Controller reset failed\n");
 			goto out;
+		}
+		if (use_read_xfer) {
+			rdmsg.buf = &rdbyte;
+			rdmsg.len = 1;
+			rdmsg.flags = IIC_M_RD;
+			rdmsg.slave = i << 1;
+			rdwrdata.msgs = &rdmsg;
+			rdwrdata.nmsgs = 1;
+			error = ioctl(fd, I2CRDWR, &rdwrdata);
+		} else {
+			cmd.slave = i << 1;
+			cmd.last = 1;
+			error = ioctl(fd, I2CSTART, &cmd);
+			if (errno == ENODEV || errno == EOPNOTSUPP) {
+				/* If START not supported try reading. */
+				use_read_xfer = 1;
+				goto start_over;
+			}
+			ioctl(fd, I2CSTOP);
+		}
+		if (error == 0) {
+			++num_found;
+			printf("%02x ", i);
+		}
+	}
 
-		cmd.slave = i << 1;
-		cmd.last = 1;
-		error = ioctl(fd, I2CSTART, &cmd);
-		if (!error)
-			printf("%x ", i);
-		cmd.slave = i << 1;
-		cmd.last = 1;
-		error = ioctl(fd, I2CSTOP, &cmd);
+	/*
+	 * If we found nothing, maybe START is not supported and returns a
+	 * generic error code such as EIO or ENXIO, so try again using reads.
+	 */
+	if (num_found == 0) {
+		if (!use_read_xfer) {
+			use_read_xfer = 1;
+			goto start_over;
+		}
+		printf("<none found>");
 	}
 	printf("\n");
 
@@ -254,23 +298,8 @@ static int
 i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 {
 	struct iiccmd cmd;
-	int ch, i, error, fd, bufsize;
+	int error, fd, bufsize;
 	char *err_msg, *buf;
-
-	/*
-	 * Read data to be written to the chip from stdin
-	 */
-	if (i2c_opt.verbose && !i2c_opt.binary)
-		fprintf(stderr, "Enter %u bytes of data: ", i2c_opt.count);
-
-	for (i = 0; i < i2c_opt.count; i++) {
-		ch = getchar();
-		if (ch == EOF) {
-			free(i2c_buf);
-			err(1, "not enough data, exiting\n");
-		}
-		i2c_buf[i] = ch;
-	}
 
 	fd = open(dev, O_RDWR);
 	if (fd == -1) {
@@ -278,9 +307,6 @@ i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 		err(1, "open failed");
 	}
 
-	/*
-	 * Write offset where the data will go
-	 */
 	cmd.slave = i2c_opt.addr;
 	error = ioctl(fd, I2CSTART, &cmd);
 	if (error == -1) {
@@ -295,21 +321,28 @@ i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 			err_msg = "error: offset malloc";
 			goto err1;
 		}
-
-		cmd.count = bufsize;
-		cmd.buf = buf;
-		error = ioctl(fd, I2CWRITE, &cmd);
-		free(buf);
-		if (error == -1) {
-			err_msg = "ioctl: error when write offset";
-			goto err1;
-		}
+	} else {
+		bufsize = 0;
+		buf = NULL;
 	}
 
-	/* Mode - stop start */
-	if (i2c_opt.mode == I2C_MODE_STOP_START) {
-		cmd.slave = i2c_opt.addr;
-		error = ioctl(fd, I2CSTOP, &cmd);
+	switch(i2c_opt.mode) {
+	case I2C_MODE_STOP_START:
+		/*
+		 * Write offset where the data will go
+		 */
+		if (i2c_opt.width) {
+			cmd.count = bufsize;
+			cmd.buf = buf;
+			error = ioctl(fd, I2CWRITE, &cmd);
+			free(buf);
+			if (error == -1) {
+				err_msg = "ioctl: error writing offset";
+				goto err1;
+			}
+		}
+
+		error = ioctl(fd, I2CSTOP);
 		if (error == -1) {
 			err_msg = "ioctl: error sending stop condition";
 			goto err2;
@@ -320,9 +353,35 @@ i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 			err_msg = "ioctl: error sending start condition";
 			goto err1;
 		}
-	}
-	/* Mode - repeated start */
-	if (i2c_opt.mode == I2C_MODE_REPEATED_START) {
+
+		/*
+		 * Write the data
+		 */
+		cmd.count = i2c_opt.count;
+		cmd.buf = i2c_buf;
+		cmd.last = 0;
+		error = ioctl(fd, I2CWRITE, &cmd);
+		if (error == -1) {
+			err_msg = "ioctl: error writing";
+			goto err1;
+		}
+		break;
+
+	case I2C_MODE_REPEATED_START:
+		/*
+		 * Write offset where the data will go
+		 */
+		if (i2c_opt.width) {
+			cmd.count = bufsize;
+			cmd.buf = buf;
+			error = ioctl(fd, I2CWRITE, &cmd);
+			free(buf);
+			if (error == -1) {
+				err_msg = "ioctl: error writing offset";
+				goto err1;
+			}
+		}
+
 		cmd.slave = i2c_opt.addr;
 		error = ioctl(fd, I2CRPTSTART, &cmd);
 		if (error == -1) {
@@ -330,21 +389,44 @@ i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 			    "condition";
 			goto err1;
 		}
-	}
 
-	/*
-	 * Write the data
-	 */
-	cmd.count = i2c_opt.count;
-	cmd.buf = i2c_buf;
-	cmd.last = 0;
-	error = ioctl(fd, I2CWRITE, &cmd);
-	if (error == -1) {
-		err_msg = "ioctl: error when write";
-		goto err1;
+		/*
+		 * Write the data
+		 */
+		cmd.count = i2c_opt.count;
+		cmd.buf = i2c_buf;
+		cmd.last = 0;
+		error = ioctl(fd, I2CWRITE, &cmd);
+		if (error == -1) {
+			err_msg = "ioctl: error writing";
+			goto err1;
+		}
+		break;
+
+	case I2C_MODE_NONE: /* fall through */
+	default:		
+		buf = realloc(buf, bufsize + i2c_opt.count);
+		if (buf == NULL) {
+			err_msg = "error: data malloc";
+			goto err1;
+		}
+
+		memcpy(buf + bufsize, i2c_buf, i2c_opt.count);
+		/*
+		 * Write offset and data
+		 */
+		cmd.count = bufsize + i2c_opt.count;
+		cmd.buf = buf;
+		cmd.last = 0;
+		error = ioctl(fd, I2CWRITE, &cmd);
+		free(buf);
+		if (error == -1) {
+			err_msg = "ioctl: error writing";
+			goto err1;
+		}
+		break;
 	}
-	cmd.slave = i2c_opt.addr;
-	error = ioctl(fd, I2CSTOP, &cmd);
+	error = ioctl(fd, I2CSTOP);
 	if (error == -1) {
 		err_msg = "ioctl: error sending stop condition";
 		goto err2;
@@ -354,13 +436,12 @@ i2c_write(char *dev, struct options i2c_opt, char *i2c_buf)
 	return (0);
 
 err1:
-	cmd.slave = i2c_opt.addr;
-	error = ioctl(fd, I2CSTOP, &cmd);
+	error = ioctl(fd, I2CSTOP);
 	if (error == -1)
-		fprintf(stderr, "error sending stop condtion\n");
+		fprintf(stderr, "error sending stop condition\n");
 err2:
 	if (err_msg)
-		fprintf(stderr, "%s", err_msg);
+		fprintf(stderr, "%s\n", err_msg);
 
 	close(fd);
 	return (1);
@@ -370,7 +451,7 @@ static int
 i2c_read(char *dev, struct options i2c_opt, char *i2c_buf)
 {
 	struct iiccmd cmd;
-	int i, fd, error, bufsize;
+	int fd, error, bufsize;
 	char *err_msg, data = 0, *buf;
 
 	fd = open(dev, O_RDWR);
@@ -402,26 +483,27 @@ i2c_read(char *dev, struct options i2c_opt, char *i2c_buf)
 		error = ioctl(fd, I2CWRITE, &cmd);
 		free(buf);
 		if (error == -1) {
-			err_msg = "ioctl: error when write offset";
+			err_msg = "ioctl: error writing offset";
 			goto err1;
 		}
 
 		if (i2c_opt.mode == I2C_MODE_STOP_START) {
-			cmd.slave = i2c_opt.addr;
-			error = ioctl(fd, I2CSTOP, &cmd);
-			if (error == -1)
+			error = ioctl(fd, I2CSTOP);
+			if (error == -1) {
+				err_msg = "error sending stop condition";
 				goto err2;
+			}
 		}
 	}
-	cmd.slave = i2c_opt.addr;
+	cmd.slave = i2c_opt.addr | 1;
 	cmd.count = 1;
 	cmd.last = 0;
 	cmd.buf = &data;
-	if (i2c_opt.mode == I2C_MODE_STOP_START) {
+	if (i2c_opt.mode == I2C_MODE_STOP_START || i2c_opt.width == 0) {
 		error = ioctl(fd, I2CSTART, &cmd);
 		if (error == -1) {
 			err_msg = "ioctl: error sending start condition";
-			goto err1;
+			goto err2;
 		}
 	} else if (i2c_opt.mode == I2C_MODE_REPEATED_START) {
 		error = ioctl(fd, I2CRPTSTART, &cmd);
@@ -431,32 +513,101 @@ i2c_read(char *dev, struct options i2c_opt, char *i2c_buf)
 			goto err1;
 		}
 	}
-	error = ioctl(fd, I2CSTOP, &cmd);
-	if (error == -1)
-		goto err2;
 
-	for (i = 0; i < i2c_opt.count; i++) {
-		error = read(fd, &i2c_buf[i], 1);
-		if (error == -1) {
-			err_msg = "ioctl: error while reading";
-			goto err1;
-		}
+	cmd.count = i2c_opt.count;
+	cmd.buf = i2c_buf;
+	cmd.last = 1;
+	error = ioctl(fd, I2CREAD, &cmd);
+	if (error == -1) {
+		err_msg = "ioctl: error while reading";
+		goto err1;
+	}
+
+	error = ioctl(fd, I2CSTOP);
+	if (error == -1) {
+		err_msg = "error sending stop condtion\n";
+		goto err2;
 	}
 
 	close(fd);
 	return (0);
 
 err1:
-	cmd.slave = i2c_opt.addr;
-	error = ioctl(fd, I2CSTOP, &cmd);
+	error = ioctl(fd, I2CSTOP);
 	if (error == -1)
-		fprintf(stderr, "error sending stop condtion\n");
+		fprintf(stderr, "error sending stop condition\n");
 err2:
 	if (err_msg)
-		fprintf(stderr, "%s", err_msg);
+		fprintf(stderr, "%s\n", err_msg);
 
 	close(fd);
 	return (1);
+}
+
+/*
+ * i2c_rdwr_transfer() - use I2CRDWR to conduct a complete i2c transfer.
+ *
+ * Some i2c hardware is unable to provide direct control over START, REPEAT-
+ * START, and STOP operations.  Such hardware can only perform a complete
+ * START-<data>-STOP or START-<data>-REPEAT-START-<data>-STOP sequence as a
+ * single operation.  The driver framework refers to this sequence as a
+ * "transfer" so we call it "transfer mode".  We assemble either one or two
+ * iic_msg structures to describe the IO operations, and hand them off to the
+ * driver to be handled as a single transfer.
+ */
+static int
+i2c_rdwr_transfer(char *dev, struct options i2c_opt, char *i2c_buf)
+{
+	struct iic_msg msgs[2];
+	struct iic_rdwr_data xfer;
+	int fd, i;
+	union {
+		uint8_t  buf[2];
+		uint8_t  off8;
+		uint16_t off16;
+	} off;
+
+	i = 0;
+	if (i2c_opt.width > 0) {
+		msgs[i].flags = IIC_M_WR | IIC_M_NOSTOP;
+		msgs[i].slave = i2c_opt.addr;
+		msgs[i].buf   = off.buf;
+		if (i2c_opt.width == 8) {
+			off.off8 = (uint8_t)i2c_opt.off;
+			msgs[i].len = 1;
+		} else {
+			off.off16 = (uint16_t)i2c_opt.off;
+			msgs[i].len = 2;
+		}
+		++i;
+	}
+
+	/*
+	 * If the transfer direction is write and we did a write of the offset
+	 * above, then we need to elide the start; this transfer is just more
+	 * writing that follows the one started above.  For a read, we always do
+	 * a start; if we did an offset write above it'll be a repeat-start
+	 * because of the NOSTOP flag used above.
+	 */
+	if (i2c_opt.dir == 'w')
+		msgs[i].flags = IIC_M_WR | ((i > 0) ? IIC_M_NOSTART : 0);
+	else
+		msgs[i].flags = IIC_M_RD;
+	msgs[i].slave = i2c_opt.addr;
+	msgs[i].len   = i2c_opt.count;
+	msgs[i].buf   = i2c_buf;
+	++i;
+
+	xfer.msgs = msgs;
+	xfer.nmsgs = i;
+
+	if ((fd = open(dev, O_RDWR)) == -1)
+		err(1, "open(%s) failed", dev);
+	if (ioctl(fd, I2CRDWR, &xfer) == -1 )
+		err(1, "ioctl(I2CRDWR) failed");
+	close(fd);
+
+	return (0);
 }
 
 int
@@ -521,6 +672,8 @@ main(int argc, char** argv)
 				i2c_opt.mode = I2C_MODE_STOP_START;
 			else if (!strcmp(optarg, "rs"))
 				i2c_opt.mode = I2C_MODE_REPEATED_START;
+			else if (!strcmp(optarg, "tr"))
+				i2c_opt.mode = I2C_MODE_TRANSFER;
 			else
 				usage();
 			break;
@@ -588,19 +741,33 @@ main(int argc, char** argv)
 	if (i2c_buf == NULL)
 		err(1, "data malloc");
 
+	/*
+	 * For a write, read the data to be written to the chip from stdin.
+	 */
 	if (i2c_opt.dir == 'w') {
-		error = i2c_write(dev, i2c_opt, i2c_buf);
-		if (error) {
-			free(i2c_buf);
-			return (1);
+		if (i2c_opt.verbose && !i2c_opt.binary)
+			fprintf(stderr, "Enter %u bytes of data: ",
+			    i2c_opt.count);
+		for (i = 0; i < i2c_opt.count; i++) {
+			ch = getchar();
+			if (ch == EOF) {
+				free(i2c_buf);
+				err(1, "not enough data, exiting\n");
+			}
+			i2c_buf[i] = ch;
 		}
 	}
-	if (i2c_opt.dir == 'r') {
+
+	if (i2c_opt.mode == I2C_MODE_TRANSFER)
+		error = i2c_rdwr_transfer(dev, i2c_opt, i2c_buf);
+	else if (i2c_opt.dir == 'w')
+		error = i2c_write(dev, i2c_opt, i2c_buf);
+	else
 		error = i2c_read(dev, i2c_opt, i2c_buf);
-		if (error) {
-			free(i2c_buf);
-			return (1);
-		}
+
+	if (error != 0) {
+		free(i2c_buf);
+		return (1);
 	}
 
 	if (i2c_opt.verbose)

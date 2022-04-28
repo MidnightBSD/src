@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/tools/ipnat_y.y 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -6,15 +6,6 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 %{
-#ifdef  __FreeBSD__
-# ifndef __FreeBSD_cc_version
-#  include <osreldate.h>
-# else
-#  if __FreeBSD_cc_version < 430000
-#   include <osreldate.h>
-#  endif
-# endif
-#endif
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -35,9 +26,6 @@
 #include <sys/time.h>
 #include <syslog.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <netdb.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
@@ -871,9 +859,9 @@ mapport:
 			  }
 			  free($2);
 			  if ($3.p1 < 0 || $3.p1 > 65535)
-				yyerror("invalid ICMP Id number");
+				yyerror("invalid 1st ICMP Id number");
 			  if ($3.p2 < 0 || $3.p2 > 65535)
-				yyerror("invalid ICMP Id number");
+				yyerror("invalid 2nd ICMP Id number");
 			  if (strcmp($2, "ipv6-icmp") == 0) {
 				nat->in_pr[0] = IPPROTO_ICMPV6;
 				nat->in_pr[1] = IPPROTO_ICMPV6;
@@ -1058,7 +1046,7 @@ hash:	IPNY_HASH			{ if (!(nat->in_flags & IPN_FILTER)) {
 	;
 
 portstuff:
-	compare portspec		{ $$.pc = $1; $$.p1 = $2; }
+	compare portspec		{ $$.pc = $1; $$.p1 = $2; $$.p2 = 0; }
 	| portspec range portspec	{ $$.pc = $2; $$.p1 = $1; $$.p2 = $3; }
 	;
 
@@ -1151,7 +1139,7 @@ proto:	YY_NUMBER			{ $$ = $1;
 	| YY_STR			{ $$ = getproto($1);
 					  free($1);
 					  if ($$ == -1)
-						yyerror("unknwon protocol");
+						yyerror("unknown protocol");
 					  if ($$ != IPPROTO_TCP &&
 					      $$ != IPPROTO_UDP)
 						suggest_port = 0;
@@ -1164,17 +1152,20 @@ hexnumber:
 
 hostname:
 	YY_STR				{ i6addr_t addr;
+					  int family;
 
-					  bzero(&$$, sizeof($$));
-					  if (gethost(AF_INET, $1,
+#ifdef USE_INET6
+					  if (nat->in_v[0] == 6)
+						family = AF_INET6;
+					  else
+#endif
+						family = AF_INET;
+					  memset(&($$), 0, sizeof($$));
+					  memset(&addr, 0, sizeof(addr));
+					  $$.f = family;
+					  if (gethost(family, $1,
 						      &addr) == 0) {
 						$$.a = addr;
-						$$.f = AF_INET;
-					  } else
-					  if (gethost(AF_INET6, $1,
-						      &addr) == 0) {
-						$$.a = addr;
-						$$.f = AF_INET6;
 					  } else {
 						FPRINTF(stderr,
 							"Unknown host '%s'\n",
@@ -1182,17 +1173,17 @@ hostname:
 					  }
 					  free($1);
 					}
-	| YY_NUMBER			{ bzero(&$$, sizeof($$));
+	| YY_NUMBER			{ memset(&($$), 0, sizeof($$));
 					  $$.a.in4.s_addr = htonl($1);
 					  if ($$.a.in4.s_addr != 0)
 						$$.f = AF_INET;
 					}
 	| ipv4				{ $$ = $1; }
-	| YY_IPV6			{ bzero(&$$, sizeof($$));
+	| YY_IPV6			{ memset(&($$), 0, sizeof($$));
 					  $$.a = $1;
 					  $$.f = AF_INET6;
 					}
-	| YY_NUMBER YY_IPV6		{ bzero(&$$, sizeof($$));
+	| YY_NUMBER YY_IPV6		{ memset(&($$), 0, sizeof($$));
 					  $$.a = $2;
 					  $$.f = AF_INET6;
 					}
@@ -1427,6 +1418,9 @@ setnatproto(p)
 		nat->in_flags |= IPN_UDP;
 		nat->in_flags &= ~IPN_TCP;
 		break;
+#ifdef USE_INET6
+	case IPPROTO_ICMPV6 :
+#endif
 	case IPPROTO_ICMP :
 		nat->in_flags &= ~IPN_TCPUDP;
 		if (!(nat->in_flags & IPN_ICMPQUERY) &&
@@ -1506,7 +1500,7 @@ ipnat_addrule(fd, ioctlfunc, ptr)
 		printnat(ipn, opts);
 
 	if (opts & OPT_DEBUG)
-		binprint(ipn, sizeof(*ipn));
+		binprint(ipn, ipn->in_size);
 
 	if ((opts & OPT_ZERORULEST) != 0) {
 		if ((*ioctlfunc)(fd, add, (void *)&obj) == -1) {

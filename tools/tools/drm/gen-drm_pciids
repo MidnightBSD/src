@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $FreeBSD: release/10.0.0/tools/tools/drm/gen-drm_pciids 254852 2013-08-25 12:20:57Z dumbbell $
+# $FreeBSD$
 
 use strict;
 use warnings;

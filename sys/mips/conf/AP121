@@ -6,8 +6,10 @@
 # * 4MB flash
 # * Integrated 1x1 2GHz wifi and 10/100 bridge
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/AP121 249124 2013-04-05 01:38:13Z adrian $
+# $FreeBSD$
 #
+
+#NO_UNIVERSE
 
 # Include the default AR933x parameters
 include         "AR933X_BASE"
@@ -34,18 +36,18 @@ device		etherswitch
 device		arswitch
 
 # read MSDOS formatted disks - USB
-#options		MSDOSFS
+#options 	MSDOSFS
 
 # Enable the uboot environment stuff rather then the
 # redboot stuff.
-options		AR71XX_ENV_UBOOT
+options 	AR71XX_ENV_UBOOT
 
 # uzip - to boot natively from flash
-device		geom_uncompress
-options 	GEOM_UNCOMPRESS
+device		xz
+options 	GEOM_UZIP
 
 # Used for the static uboot partition map
 device          geom_map
 
 # Boot off of the rootfs, as defined in the geom_map setup.
-options		ROOTDEVNAME=\"ufs:map/rootfs.uncompress\"
+options 	ROOTDEVNAME=\"ufs:map/rootfs.uzip\"

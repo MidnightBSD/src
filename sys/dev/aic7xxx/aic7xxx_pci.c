@@ -48,7 +48,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aic7xxx/aic7xxx_pci.c 253646 2013-07-25 09:30:00Z uqs $");
+__FBSDID("$FreeBSD$");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>
@@ -865,7 +865,7 @@ ahc_pci_config(struct ahc_softc *ahc, struct ahc_pci_identity *entry)
 	ahc->bus_suspend = ahc_pci_suspend;
 	ahc->bus_resume = ahc_pci_resume;
 
-	/* Remeber how the card was setup in case there is no SEEPROM */
+	/* Remember how the card was setup in case there is no SEEPROM */
 	if ((ahc_inb(ahc, HCNTRL) & POWRDN) == 0) {
 		ahc_pause(ahc);
 		if ((ahc->features & AHC_ULTRA2) != 0)
@@ -936,7 +936,7 @@ ahc_pci_config(struct ahc_softc *ahc, struct ahc_pci_identity *entry)
 	}
 
 	/*
-	 * We cannot perform ULTRA speeds without the presense
+	 * We cannot perform ULTRA speeds without the presence
 	 * of the external precision resistor.
 	 */
 	if ((ahc->features & AHC_ULTRA) != 0) {
@@ -1054,7 +1054,7 @@ ahc_pci_config(struct ahc_softc *ahc, struct ahc_pci_identity *entry)
 }
 
 /*
- * Test for the presense of external sram in an
+ * Test for the presence of external sram in an
  * "unshared" configuration.
  */
 static int

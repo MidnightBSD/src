@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/scc/scc_bfe.h 253902 2013-08-02 23:31:51Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_SCC_BFE_H_
@@ -143,8 +143,8 @@ int scc_bfe_detach(device_t dev);
 int scc_bfe_probe(device_t dev, u_int regshft, u_int rclk, u_int rid);
 
 struct resource *scc_bus_alloc_resource(device_t, device_t, int, int *,
-    u_long, u_long, u_long, u_int);
-int scc_bus_get_resource(device_t, device_t, int, int, u_long *, u_long *);
+    rman_res_t, rman_res_t, rman_res_t, u_int);
+int scc_bus_get_resource(device_t, device_t, int, int, rman_res_t *, rman_res_t *);
 int scc_bus_read_ivar(device_t, device_t, int, uintptr_t *);
 int scc_bus_release_resource(device_t, device_t, int, int, struct resource *);
 int scc_bus_setup_intr(device_t, device_t, struct resource *, int,

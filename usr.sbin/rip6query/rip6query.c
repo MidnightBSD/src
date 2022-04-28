@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rip6query/rip6query.c 227258 2011-11-06 19:02:31Z ed $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -46,9 +46,6 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
-#include <net/if_var.h>
-#endif /* __FreeBSD__ >= 3 */
 #include <netinet/in.h>
 #include <netinet/in_var.h>
 #include <arpa/inet.h>

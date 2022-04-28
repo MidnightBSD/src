@@ -1,5 +1,5 @@
 # Auto-Generated pc-sysinstall configuration
-#$FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/examples/pcinstall.cfg.geli 209513 2010-06-24 22:21:47Z imp $
+#$FreeBSD$
 
 installInteractive=no
 installMode=fresh

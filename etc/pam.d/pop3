@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/etc/pam.d/pop3 170771 2007-06-15 11:33:13Z yar $
+# $FreeBSD$
 #
 # PAM configuration for the "pop3" service
 #

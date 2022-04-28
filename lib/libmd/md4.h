@@ -1,5 +1,5 @@
 /* MD4.H - header file for MD4C.C
- * $FreeBSD: release/10.0.0/lib/libmd/md4.h 154479 2006-01-17 15:35:57Z phk $
+ * $FreeBSD$
  */
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
@@ -35,11 +35,47 @@ typedef struct MD4Context {
 #include <sys/cdefs.h>
 
 __BEGIN_DECLS
+
+/* Ensure libmd symbols do not clash with libcrypto */
+
+#ifndef MD4Init
+#define MD4Init		_libmd_MD4Init
+#endif
+#ifndef MD4Update
+#define MD4Update	_libmd_MD4Update
+#endif
+#ifndef MD4Pad
+#define MD4Pad		_libmd_MD4Pad
+#endif
+#ifndef MD4Final
+#define MD4Final	_libmd_MD4Final
+#endif
+#ifndef MD4End
+#define MD4End		_libmd_MD4End
+#endif
+#ifndef MD4Fd
+#define MD4Fd		_libmd_MD4Fd
+#endif
+#ifndef MD4FdChunk
+#define MD4FdChunk	_libmd_MD4FdChunk
+#endif
+#ifndef MD4File
+#define MD4File		_libmd_MD4File
+#endif
+#ifndef MD4FileChunk
+#define MD4FileChunk	_libmd_MD4FileChunk
+#endif
+#ifndef MD4Data
+#define MD4Data		_libmd_MD4Data
+#endif
+
 void   MD4Init(MD4_CTX *);
 void   MD4Update(MD4_CTX *, const void *, unsigned int);
 void   MD4Pad(MD4_CTX *);
 void   MD4Final(unsigned char [16], MD4_CTX *);
 char * MD4End(MD4_CTX *, char *);
+char * MD4Fd(int, char *);
+char * MD4FdChunk(int, char *, off_t, off_t);
 char * MD4File(const char *, char *);
 char * MD4FileChunk(const char *, char *, off_t, off_t);
 char * MD4Data(const void *, unsigned int, char *);

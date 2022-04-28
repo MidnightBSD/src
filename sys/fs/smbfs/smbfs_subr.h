@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/smbfs/smbfs_subr.h 242386 2012-10-31 03:34:07Z davide $
+ * $FreeBSD$
  */
 #ifndef _FS_SMBFS_SMBFS_SUBR_H_
 #define _FS_SMBFS_SMBFS_SUBR_H_
@@ -107,7 +107,7 @@ struct smbfs_fctx {
 		struct smb_t2rq * uf_t2;
 	} f_urq;
 	int		f_left;		/* entries left */
-	int		f_ecnt;		/* entries left in the current reponse */
+	int		f_ecnt;		/* entries left in the current response */
 	int		f_eofs;		/* entry offset in the parameter block */
 	u_char 		f_skey[SMB_SKEYLEN]; /* server side search context */
 	u_char		f_fname[8 + 1 + 3 + 1]; /* common case for 8.3 filenames */
@@ -126,11 +126,10 @@ struct smbfs_fctx {
  */
 int  smbfs_smb_lock(struct smbnode *np, int op, caddr_t id,
 	off_t start, off_t end,	struct smb_cred *scred);
-int  smbfs_smb_statfs2(struct smb_share *ssp, struct statfs *sbp,
-	struct smb_cred *scred);
 int  smbfs_smb_statfs(struct smb_share *ssp, struct statfs *sbp,
 	struct smb_cred *scred);
-int  smbfs_smb_setfsize(struct smbnode *np, int newsize, struct smb_cred *scred);
+int  smbfs_smb_setfsize(struct smbnode *np, int64_t newsize,
+	struct smb_cred *scred);
 
 int  smbfs_smb_query_info(struct smbnode *np, const char *name, int len,
 	struct smbfattr *fap, struct smb_cred *scred);

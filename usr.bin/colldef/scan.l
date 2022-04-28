@@ -1,6 +1,8 @@
 %x string name charmap defn nchar subs subs2
 %{
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1995 Alex Tatmanjants <alex@elvisti.kiev.ua>
  *		at Electronni Visti IA, Kiev, Ukraine.
  *			All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/colldef/scan.l 175038 2008-01-01 10:04:10Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>

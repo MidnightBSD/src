@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/CNS/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: Makefile.inc,v 1.3 2007/03/05 16:57:14 tnozaki Exp $
 
 CODE=	CNS

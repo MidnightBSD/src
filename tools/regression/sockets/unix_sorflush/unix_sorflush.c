@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/sockets/unix_sorflush/unix_sorflush.c 175821 2008-01-30 13:23:34Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/socket.h>
 
@@ -68,7 +68,7 @@ shutdown_and_exit(int s)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	pid_t pida, pidb;
 	int sv[2];

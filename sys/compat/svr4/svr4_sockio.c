@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_sockio.c 196019 2009-08-01 19:26:27Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_sockio.c 196019 2009-08-
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/vnet.h>
 
 #include <compat/svr4/svr4.h>
@@ -71,6 +72,8 @@ bsd_to_svr4_flags(bf)
 	bsd_to_svr4_flag(FF_MULTICAST);
 	return sf;
 }
+
+#define	OSIOCGIFCONF	_IOWR('i', 20, struct ifconf)
 
 int
 svr4_sock_ioctl(fp, td, retval, fd, cmd, data)

@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/share/examples/hast/ucarp.sh 204076 2010-02-18 23:16:19Z pjd $
+# $FreeBSD$
 
 # Shared IP address, unused for now.
 addr="10.99.0.3"

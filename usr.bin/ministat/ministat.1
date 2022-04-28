@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.bin/ministat/ministat.1 243079 2012-11-15 15:06:12Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd November 10, 2012
 .Dt MINISTAT 1
@@ -68,7 +68,9 @@ See
 .Xr strtok 3
 for details.
 .It Fl w Ar width
-Width of ASCII-art plot in characters, default is 74.
+Width of ASCII-art plot in characters.
+The default is the terminal width, or 74 if standard output is not a
+terminal.
 .El
 .Pp
 A sample output could look like this:

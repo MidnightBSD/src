@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/AR71XX_BASE.hints 228944 2011-12-29 05:51:48Z adrian $
+# $FreeBSD$
 #
 hint.apb.0.at="nexus0"
 hint.apb.0.irq=4

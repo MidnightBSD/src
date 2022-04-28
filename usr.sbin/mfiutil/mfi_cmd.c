@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_cmd.c 237259 2012-06-19 06:18:37Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/errno.h>

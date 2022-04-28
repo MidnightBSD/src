@@ -15,7 +15,7 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $FreeBSD: release/10.0.0/lib/libc/include/isc/list.h 170247 2007-06-03 18:13:59Z ume $ */
+/* $FreeBSD$ */
 
 #ifndef LIST_H
 #define LIST_H 1
@@ -38,7 +38,8 @@
 	} while (0)
 #define INIT_LINK(elt, link) \
 	INIT_LINK_TYPE(elt, link, void)
-#define LINKED(elt, link) ((void *)((elt)->link.prev) != (void *)(-1))
+#define LINKED(elt, link) ((void *)((elt)->link.prev) != (void *)(-1) && \
+			   (void *)((elt)->link.next) != (void *)(-1))
 
 #define HEAD(list) ((list).head)
 #define TAIL(list) ((list).tail)

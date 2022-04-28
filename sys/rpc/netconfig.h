@@ -1,5 +1,5 @@
 /*	$NetBSD: netconfig.h,v 1.1 2000/06/02 22:57:54 fvdl Exp $	*/
-/*	$FreeBSD: release/10.0.0/sys/rpc/netconfig.h 177633 2008-03-26 15:23:12Z dfr $ */
+/*	$FreeBSD$ */
 
 
 #ifndef _NETCONFIG_H_

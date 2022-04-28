@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_svc_udp.c 114601 2003-05-03 21:06:42Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <rpc/rpc.h>
 #include <rpc/svc_dg.h>

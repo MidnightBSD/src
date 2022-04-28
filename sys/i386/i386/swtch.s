@@ -29,10 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/i386/swtch.s 237027 2012-06-13 21:03:01Z jkim $
+ * $FreeBSD$
  */
 
-#include "opt_npx.h"
 #include "opt_sched.h"
 
 #include <machine/asmacros.h>
@@ -75,20 +74,16 @@
  */
 ENTRY(cpu_throw)
 	movl	PCPU(CPUID), %esi
-	movl	4(%esp),%ecx			/* Old thread */
-	testl	%ecx,%ecx			/* no thread? */
-	jz	1f
 	/* release bit from old pm_active */
 	movl	PCPU(CURPMAP), %ebx
 #ifdef SMP
 	lock
 #endif
 	btrl	%esi, PM_ACTIVE(%ebx)		/* clear old */
-1:
 	movl	8(%esp),%ecx			/* New thread */
 	movl	TD_PCB(%ecx),%edx
 	movl	PCB_CR3(%edx),%eax
-	LOAD_CR3(%eax)
+	movl	%eax,%cr3
 	/* set bit in new pm_active */
 	movl	TD_PROC(%ecx),%eax
 	movl	P_VMSPACE(%eax), %ebx
@@ -152,7 +147,6 @@ ENTRY(cpu_switch)
 	movl    %eax,PCB_DR0(%edx)
 1:
 
-#ifdef DEV_NPX
 	/* have we used fp, and need a save? */
 	cmpl	%ecx,PCPU(FPCURTHREAD)
 	jne	1f
@@ -160,7 +154,6 @@ ENTRY(cpu_switch)
 	call	npxsave				/* do it in a big C function */
 	popl	%eax
 1:
-#endif
 
 	/* Save is done.  Now fire up new thread. Leave old vmspace. */
 	movl	4(%esp),%edi
@@ -174,16 +167,10 @@ ENTRY(cpu_switch)
 
 	/* switch address space */
 	movl	PCB_CR3(%edx),%eax
-#ifdef PAE
-	cmpl	%eax,IdlePDPT			/* Kernel address space? */
-#else
-	cmpl	%eax,IdlePTD			/* Kernel address space? */
-#endif
-	je	sw0
-	READ_CR3(%ebx)				/* The same address space? */
+	movl	%cr3,%ebx			/* The same address space? */
 	cmpl	%ebx,%eax
 	je	sw0
-	LOAD_CR3(%eax)				/* new address space */
+	movl	%eax,%cr3			/* new address space */
 	movl	%esi,%eax
 	movl	PCPU(CPUID),%esi
 	SETOP	%eax,TD_LOCK(%edi)		/* Switchout td_lock */
@@ -210,18 +197,6 @@ sw0:
 	SETOP	%esi,TD_LOCK(%edi)		/* Switchout td_lock */
 sw1:
 	BLOCK_SPIN(%ecx)
-#ifdef XEN
-	pushl	%eax
-	pushl	%ecx
-	pushl	%edx
-	call	xen_handle_thread_switch
-	popl	%edx
-	popl	%ecx
-	popl	%eax
-	/*
-	 * XXX set IOPL
-	 */
-#else		
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
@@ -270,7 +245,7 @@ sw1:
 	movl	12(%esi), %ebx
 	movl	%eax, 8(%edi)
 	movl	%ebx, 12(%edi)
-#endif
+
 	/* Restore context. */
 	movl	PCB_EBX(%edx),%ebx
 	movl	PCB_ESP(%edx),%esp
@@ -283,7 +258,6 @@ sw1:
 	popfl
 
 	movl	%edx, PCPU(CURPCB)
-	movl	TD_TID(%ecx),%eax
 	movl	%ecx, PCPU(CURTHREAD)		/* into next thread */
 
 	/*
@@ -296,7 +270,7 @@ sw1:
 	movl	_default_ldt,%eax
 	cmpl	PCPU(CURRENTLDT),%eax
 	je	2f
-	LLDT(_default_ldt)
+	lldt	_default_ldt
 	movl	%eax,PCPU(CURRENTLDT)
 	jmp	2f
 1:
@@ -304,6 +278,10 @@ sw1:
 	pushl	%edx				/* Preserve pointer to pcb. */
 	addl	$P_MD,%eax			/* Pointer to mdproc is arg. */
 	pushl	%eax
+	/*
+	 * Holding dt_lock prevents context switches, so dt_lock cannot
+	 * be held now and set_user_ldt() will not deadlock acquiring it.
+	 */
 	call	set_user_ldt
 	addl	$4,%esp
 	popl	%edx
@@ -313,6 +291,12 @@ sw1:
 	.globl	cpu_switch_load_gs
 cpu_switch_load_gs:
 	mov	PCB_GS(%edx),%gs
+
+	pushl	%edx
+	pushl	PCPU(CURTHREAD)
+	call	npxswitch
+	popl	%edx
+	popl	%edx
 
 	/* Test if debug registers should be restored. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%edx)
@@ -416,45 +400,6 @@ ENTRY(savectx)
 	sldt	PCB_LDT(%ecx)
 	str	PCB_TR(%ecx)
 
-#ifdef DEV_NPX
-	/*
-	 * If fpcurthread == NULL, then the npx h/w state is irrelevant and the
-	 * state had better already be in the pcb.  This is true for forks
-	 * but not for dumps (the old book-keeping with FP flags in the pcb
-	 * always lost for dumps because the dump pcb has 0 flags).
-	 *
-	 * If fpcurthread != NULL, then we have to save the npx h/w state to
-	 * fpcurthread's pcb and copy it to the requested pcb, or save to the
-	 * requested pcb and reload.  Copying is easier because we would
-	 * have to handle h/w bugs for reloading.  We used to lose the
-	 * parent's npx state for forks by forgetting to reload.
-	 */
-	pushfl
-	CLI
-	movl	PCPU(FPCURTHREAD),%eax
-	testl	%eax,%eax
-	je	1f
-
-	pushl	%ecx
-	movl	TD_PCB(%eax),%eax
-	movl	PCB_SAVEFPU(%eax),%eax
-	pushl	%eax
-	pushl	%eax
-	call	npxsave
-	addl	$4,%esp
-	popl	%eax
-	popl	%ecx
-
-	pushl	$PCB_SAVEFPU_SIZE
-	leal	PCB_USERFPU(%ecx),%ecx
-	pushl	%ecx
-	pushl	%eax
-	call	bcopy
-	addl	$12,%esp
-1:
-	popfl
-#endif	/* DEV_NPX */
-
 	movl	$1,%eax
 	ret
 END(savectx)
@@ -518,10 +463,6 @@ ENTRY(resumectx)
 	movl	%eax,%dr6
 	movl	PCB_DR7(%ecx),%eax
 	movl	%eax,%dr7
-
-#ifdef DEV_NPX
-	/* XXX FIX ME */
-#endif
 
 	/* Restore other registers */
 	movl	PCB_EDI(%ecx),%edi

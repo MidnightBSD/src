@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/bufobj.h 251171 2013-05-31 00:43:41Z jeff $
+ * $FreeBSD$
  */
 
 /*
@@ -63,7 +63,7 @@ extern struct buf_ops buf_ops_bio;
 
 TAILQ_HEAD(buflists, buf);
 
-/* A Buffer splay list */
+/* A Buffer list & trie */
 struct bufv {
 	struct buflists	bv_hd;		/* Sorted blocklist */
 	struct pctrie	bv_root;	/* Buf trie */
@@ -88,6 +88,12 @@ struct buf_ops {
 #define BO_WRITE(bo, bp)	((bo)->bo_ops->bop_write((bp)))
 #define BO_BDFLUSH(bo, bp)	((bo)->bo_ops->bop_bdflush((bo), (bp)))
 
+/*
+ * Locking notes:
+ * 'S' is sync_mtx
+ * 'v' is the vnode lock which embeds the bufobj.
+ * '-' Constant and unchanging after initialization.
+ */
 struct bufobj {
 	struct rwlock	bo_lock;	/* Lock which protects "i" things */
 	struct buf_ops	*bo_ops;	/* - Buffer operations */
@@ -112,6 +118,7 @@ struct bufobj {
  */
 #define	BO_ONWORKLST	(1 << 0)	/* On syncer work-list */
 #define	BO_WWAIT	(1 << 1)	/* Wait for output to complete */
+#define	BO_DEAD		(1 << 2)	/* Dead; only with INVARIANTS */
 
 #define	BO_LOCKPTR(bo)		(&(bo)->bo_lock)
 #define	BO_LOCK(bo)		rw_wlock(BO_LOCKPTR((bo)))

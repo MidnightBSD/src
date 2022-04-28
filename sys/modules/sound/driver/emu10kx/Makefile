@@ -1,5 +1,5 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/emu10kx/Makefile 230915 2012-02-02 17:25:39Z joel $
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+# $FreeBSD$
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_emu10kx
 

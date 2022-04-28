@@ -28,15 +28,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_cpu_fdt.c 254598 2013-08-21 14:33:02Z ian $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_platform.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/systm.h>
+
+#include <vm/vm.h>
+#include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
@@ -44,6 +49,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_cpu_fdt.c 254598 2013-08-21
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_bus.h>
 #include <dev/uart/uart_cpu.h>
+#include <dev/uart/uart_cpu_fdt.h>
 
 /*
  * UART console routines.
@@ -51,58 +57,29 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_cpu_fdt.c 254598 2013-08-21
 bus_space_tag_t uart_bus_space_io;
 bus_space_tag_t uart_bus_space_mem;
 
-static int
-uart_fdt_get_clock(phandle_t node, pcell_t *cell)
-{
-	pcell_t clock;
-
-	if ((OF_getprop(node, "clock-frequency", &clock,
-	    sizeof(clock))) <= 0)
-		return (ENXIO);
-
-	if (clock == 0)
-		/* Try to retrieve parent 'bus-frequency' */
-		/* XXX this should go to simple-bus fixup or so */
-		if ((OF_getprop(OF_parent(node), "bus-frequency", &clock,
-		    sizeof(clock))) <= 0)
-			clock = 0;
-
-	*cell = fdt32_to_cpu(clock);
-	return (0);
-}
-
-static int
-uart_fdt_get_shift(phandle_t node, pcell_t *cell)
-{
-	pcell_t shift;
-
-	if ((OF_getprop(node, "reg-shift", &shift, sizeof(shift))) <= 0)
-		shift = 0;
-	*cell = fdt32_to_cpu(shift);
-	return (0);
-}
-
 int
 uart_cpu_eqres(struct uart_bas *b1, struct uart_bas *b2)
 {
 
-	return ((b1->bsh == b2->bsh && b1->bst == b2->bst) ? 1 : 0);
+	if (b1->bst != b2->bst)
+		return (0);
+	if (pmap_kextract(b1->bsh) == 0)
+		return (0);
+	if (pmap_kextract(b2->bsh) == 0)
+		return (0);
+	return ((pmap_kextract(b1->bsh) == pmap_kextract(b2->bsh)) ? 1 : 0);
 }
 
 int
 uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 {
-	char buf[64];
 	struct uart_class *class;
-	phandle_t node, chosen;
-	pcell_t shift, br, rclk;
-	u_long start, size, pbase, psize;
-	int err;
+	bus_space_tag_t bst;
+	bus_space_handle_t bsh;
+	u_int shift, rclk;
+	int br, err;
 
-	uart_bus_space_mem = fdtbus_bs_tag;
-	uart_bus_space_io = NULL;
-
-	/* Allow overriding the FDT uning the environment. */
+	/* Allow overriding the FDT using the environment. */
 	class = &uart_ns8250_class;
 	err = uart_getenv(devtype, di, class);
 	if (!err)
@@ -111,69 +88,26 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	if (devtype != UART_DEV_CONSOLE)
 		return (ENXIO);
 
-	/*
-	 * Retrieve /chosen/std{in,out}.
-	 */
-	if ((chosen = OF_finddevice("/chosen")) == -1)
-		return (ENXIO);
-	if (OF_getprop(chosen, "stdin", buf, sizeof(buf)) <= 0)
-		return (ENXIO);
-	if ((node = OF_finddevice(buf)) == -1)
-		return (ENXIO);
-	if (OF_getprop(chosen, "stdout", buf, sizeof(buf)) <= 0)
-		return (ENXIO);
-	if (OF_finddevice(buf) != node)
-		/* Only stdin == stdout is supported. */
-		return (ENXIO);
-	/*
-	 * Retrieve serial attributes.
-	 */
-	uart_fdt_get_shift(node, &shift);
-
-	if (OF_getprop(node, "current-speed", &br, sizeof(br)) <= 0)
-		br = 0;
-	br = fdt32_to_cpu(br);
-
-	if ((err = uart_fdt_get_clock(node, &rclk)) != 0)
+	err = uart_cpu_fdt_probe(&class, &bst, &bsh, &br, &rclk, &shift);
+	if (err != 0)
 		return (err);
+
 	/*
 	 * Finalize configuration.
 	 */
-	if (fdt_is_compatible(node, "fsl,imx-uart"))
-		class = &uart_imx_class;
-	else if (fdt_is_compatible(node, "quicc"))
-		class = &uart_quicc_class;
-	else if (fdt_is_compatible(node, "lpc"))
-		class = &uart_lpc_class;
-	else if (fdt_is_compatible(node, "arm,pl011"))
-		class = &uart_pl011_class;
-	else if (fdt_is_compatible(node, "exynos"))
-		class = &uart_s3c2410_class;
-	else if (fdt_is_compatible(node, "cadence,uart"))
-		class = &uart_cdnc_class;
-	else if (fdt_is_compatible(node, "ti,ns16550"))
-		class = &uart_ti8250_class;
-	else if (fdt_is_compatible(node, "ns16550"))
-		class = &uart_ns8250_class;
-
 	di->bas.chan = 0;
-	di->bas.regshft = (u_int)shift;
+	di->bas.regshft = shift;
 	di->baudrate = br;
-	di->bas.rclk = (u_int)rclk;
+	di->bas.rclk = rclk;
 	di->ops = uart_getops(class);
 	di->databits = 8;
 	di->stopbits = 1;
 	di->parity = UART_PARITY_NONE;
-	di->bas.bst = uart_bus_space_mem;
+	di->bas.bst = bst;
+	di->bas.bsh = bsh;
 
-	err = fdt_regsize(node, &start, &size);
-	if (err)
-		return (ENXIO);
-	err = fdt_get_range(OF_parent(node), 0, &pbase, &psize);
-	if (err)
-		pbase = 0;
+	uart_bus_space_mem = di->bas.bst;
+	uart_bus_space_io = NULL;
 
-	start += pbase;
-
-	return (bus_space_map(di->bas.bst, start, size, 0, &di->bas.bsh));
+	return (err);
 }

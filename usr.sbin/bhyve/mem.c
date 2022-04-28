@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/mem.c 249342 2013-04-10 18:53:14Z neel $
+ * $FreeBSD$
  */
 
 /*
@@ -33,17 +35,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/mem.c 249342 2013-04-10 18:53:14Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
-#include <sys/tree.h>
 #include <sys/errno.h>
+#include <sys/tree.h>
 #include <machine/vmm.h>
+#include <machine/vmm_instruction_emul.h>
 
+#include <assert.h>
+#include <err.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <pthread.h>
 
 #include "mem.h"
 
@@ -120,6 +124,7 @@ mmio_rb_add(struct mmio_rb_tree *rbt, struct mmio_rb_range *new)
 static void
 mmio_rb_dump(struct mmio_rb_tree *rbt)
 {
+	int perror;
 	struct mmio_rb_range *np;
 
 	pthread_rwlock_rdlock(&mmio_rwlock);
@@ -127,7 +132,8 @@ mmio_rb_dump(struct mmio_rb_tree *rbt)
 		printf(" %lx:%lx, %s\n", np->mr_base, np->mr_end,
 		       np->mr_param.name);
 	}
-	pthread_rwlock_unlock(&mmio_rwlock);
+	perror = pthread_rwlock_unlock(&mmio_rwlock);
+	assert(perror == 0);
 }
 #endif
 
@@ -156,10 +162,12 @@ mem_write(void *ctx, int vcpu, uint64_t gpa, uint64_t wval, int size, void *arg)
 }
 
 int
-emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie)
+emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie,
+    struct vm_guest_paging *paging)
+
 {
 	struct mmio_rb_range *entry;
-	int err;
+	int err, perror, immutable;
 	
 	pthread_rwlock_rdlock(&mmio_rwlock);
 	/*
@@ -177,16 +185,40 @@ emulate_mem(struct vmctx *ctx, int vcpu, uint64_t paddr, struct vie *vie)
 			/* Update the per-vCPU cache */
 			mmio_hint[vcpu] = entry;			
 		} else if (mmio_rb_lookup(&mmio_rb_fallback, paddr, &entry)) {
-			pthread_rwlock_unlock(&mmio_rwlock);
+			perror = pthread_rwlock_unlock(&mmio_rwlock);
+			assert(perror == 0);
 			return (ESRCH);
 		}
 	}
 
 	assert(entry != NULL);
-	err = vmm_emulate_instruction(ctx, vcpu, paddr, vie,
+
+	/*
+	 * An 'immutable' memory range is guaranteed to be never removed
+	 * so there is no need to hold 'mmio_rwlock' while calling the
+	 * handler.
+	 *
+	 * XXX writes to the PCIR_COMMAND register can cause register_mem()
+	 * to be called. If the guest is using PCI extended config space
+	 * to modify the PCIR_COMMAND register then register_mem() can
+	 * deadlock on 'mmio_rwlock'. However by registering the extended
+	 * config space window as 'immutable' the deadlock can be avoided.
+	 */
+	immutable = (entry->mr_param.flags & MEM_F_IMMUTABLE);
+	if (immutable) {
+		perror = pthread_rwlock_unlock(&mmio_rwlock);
+		assert(perror == 0);
+	}
+
+	err = vmm_emulate_instruction(ctx, vcpu, paddr, vie, paging,
 				      mem_read, mem_write, &entry->mr_param);
-	pthread_rwlock_unlock(&mmio_rwlock);
-	
+
+	if (!immutable) {
+		perror = pthread_rwlock_unlock(&mmio_rwlock);
+		assert(perror == 0);
+	}
+
+
 	return (err);
 }
 
@@ -194,24 +226,27 @@ static int
 register_mem_int(struct mmio_rb_tree *rbt, struct mem_range *memp)
 {
 	struct mmio_rb_range *entry, *mrp;
-	int		err;
+	int err, perror;
 
 	err = 0;
 
 	mrp = malloc(sizeof(struct mmio_rb_range));
-	
-	if (mrp != NULL) {
+	if (mrp == NULL) {
+		warn("%s: couldn't allocate memory for mrp\n",
+		     __func__);
+		err = ENOMEM;
+	} else {
 		mrp->mr_param = *memp;
 		mrp->mr_base = memp->base;
 		mrp->mr_end = memp->base + memp->size - 1;
 		pthread_rwlock_wrlock(&mmio_rwlock);
 		if (mmio_rb_lookup(rbt, memp->base, &entry) != 0)
 			err = mmio_rb_add(rbt, mrp);
-		pthread_rwlock_unlock(&mmio_rwlock);
+		perror = pthread_rwlock_unlock(&mmio_rwlock);
+		assert(perror == 0);
 		if (err)
 			free(mrp);
-	} else
-		err = ENOMEM;
+	}
 
 	return (err);
 }
@@ -235,7 +270,7 @@ unregister_mem(struct mem_range *memp)
 {
 	struct mem_range *mr;
 	struct mmio_rb_range *entry = NULL;
-	int err, i;
+	int err, perror, i;
 	
 	pthread_rwlock_wrlock(&mmio_rwlock);
 	err = mmio_rb_lookup(&mmio_rb_root, memp->base, &entry);
@@ -243,6 +278,7 @@ unregister_mem(struct mem_range *memp)
 		mr = &entry->mr_param;
 		assert(mr->name == memp->name);
 		assert(mr->base == memp->base && mr->size == memp->size); 
+		assert((mr->flags & MEM_F_IMMUTABLE) == 0);
 		RB_REMOVE(mmio_rb_tree, &mmio_rb_root, entry);
 
 		/* flush Per-vCPU cache */	
@@ -251,7 +287,8 @@ unregister_mem(struct mem_range *memp)
 				mmio_hint[i] = NULL;
 		}
 	}
-	pthread_rwlock_unlock(&mmio_rwlock);
+	perror = pthread_rwlock_unlock(&mmio_rwlock);
+	assert(perror == 0);
 
 	if (entry)
 		free(entry);

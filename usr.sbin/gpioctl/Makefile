@@ -1,6 +1,10 @@
-# $FreeBSD: release/10.0.0/usr.sbin/gpioctl/Makefile 213238 2010-09-28 03:28:20Z gonzo $
+# $FreeBSD$
 
 PROG=	gpioctl
 MAN=	gpioctl.8
+
+CFLAGS+= -I${SRCTOP}/lib/libgpio
+
+LIBADD=	gpio
 
 .include <bsd.prog.mk>

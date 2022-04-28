@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ehci_pci.c 254438 2013-08-17 06:29:45Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -84,6 +84,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/ehci_pci.c 254438 2013
 #define	PCI_EHCI_VENDORID_APPLE		0x106b
 #define	PCI_EHCI_VENDORID_ATI		0x1002
 #define	PCI_EHCI_VENDORID_CMDTECH	0x1095
+#define	PCI_EHCI_VENDORID_HYGON		0x1d94
 #define	PCI_EHCI_VENDORID_INTEL		0x8086
 #define	PCI_EHCI_VENDORID_NEC		0x1033
 #define	PCI_EHCI_VENDORID_OPTI		0x1045
@@ -112,6 +113,8 @@ ehci_pci_match(device_t self)
 
 	case 0x20951022:
 		return ("AMD CS5536 (Geode) USB 2.0 controller");
+	case 0x78081022:
+		return ("AMD FCH USB 2.0 controller");
 
 	case 0x43451002:
 		return "ATI SB200 USB 2.0 controller";
@@ -120,10 +123,22 @@ ehci_pci_match(device_t self)
 	case 0x43961002:
 		return ("AMD SB7x0/SB8x0/SB9x0 USB 2.0 controller");
 
+	case 0x0f348086:
+		return ("Intel BayTrail USB 2.0 controller");
+	case 0x1c268086:
+		return ("Intel Cougar Point USB 2.0 controller");
+	case 0x1c2d8086:
+		return ("Intel Cougar Point USB 2.0 controller");
+	case 0x1d268086:
+		return ("Intel Patsburg USB 2.0 controller");
+	case 0x1d2d8086:
+		return ("Intel Patsburg USB 2.0 controller");
 	case 0x1e268086:
 		return ("Intel Panther Point USB 2.0 controller");
 	case 0x1e2d8086:
 		return ("Intel Panther Point USB 2.0 controller");
+	case 0x1f2c8086:
+		return ("Intel Avoton USB 2.0 controller");
 	case 0x25ad8086:
 		return "Intel 6300ESB USB 2.0 controller";
 	case 0x24cd8086:
@@ -152,9 +167,25 @@ ehci_pci_match(device_t self)
 		return ("Intel PCH USB 2.0 controller USB-A");
 	case 0x3b3c8086:
 		return ("Intel PCH USB 2.0 controller USB-B");
+	case 0x8c268086:
+		return ("Intel Lynx Point USB 2.0 controller USB-A");
+	case 0x8c2d8086:
+		return ("Intel Lynx Point USB 2.0 controller USB-B");
+	case 0x8ca68086:
+		return ("Intel Wildcat Point USB 2.0 controller USB-A");
+	case 0x8cad8086:
+		return ("Intel Wildcat Point USB 2.0 controller USB-B");
+	case 0x8d268086:
+		return ("Intel Wellsburg USB 2.0 controller");
+	case 0x8d2d8086:
+		return ("Intel Wellsburg USB 2.0 controller");
+	case 0x9c268086:
+		return ("Intel Lynx Point-LP USB 2.0 controller");
+	case 0x9ca68086:
+		return ("Intel Wildcat Point-LP USB 2.0 controller");
 
 	case 0x00e01033:
-		return ("NEC uPD 720100 USB 2.0 controller");
+		return ("NEC uPD 72010x USB 2.0 controller");
 
 	case 0x006810de:
 		return "NVIDIA nForce2 USB 2.0 controller";
@@ -202,7 +233,7 @@ ehci_pci_probe(device_t self)
 
 	if (desc) {
 		device_set_desc(self, desc);
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	} else {
 		return (ENXIO);
 	}
@@ -264,6 +295,7 @@ ehci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
@@ -338,6 +370,9 @@ ehci_pci_attach(device_t self)
 		break;
 	case PCI_EHCI_VENDORID_CMDTECH:
 		sprintf(sc->sc_vendor, "CMDTECH");
+		break;
+	case PCI_EHCI_VENDORID_HYGON:
+		sprintf(sc->sc_vendor, "Hygon");
 		break;
 	case PCI_EHCI_VENDORID_INTEL:
 		sprintf(sc->sc_vendor, "Intel");
@@ -452,13 +487,7 @@ static int
 ehci_pci_detach(device_t self)
 {
 	ehci_softc_t *sc = device_get_softc(self);
-	device_t bdev;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(self, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(self);
 

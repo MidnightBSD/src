@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/crypt_client.c 228538 2011-12-15 20:27:36Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <err.h>
@@ -43,10 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/crypt_client.c 228538 2011-12-15
 #include "un-namespace.h"
 
 int
-_des_crypt_call(buf, len, dparms)
-	char *buf;
-	int len;
-	struct desparams *dparms;
+_des_crypt_call(char *buf, int len, struct desparams *dparms)
 {
 	CLIENT *clnt;
 	desresp  *result_1;
@@ -64,6 +61,7 @@ _des_crypt_call(buf, len, dparms)
 	}
 	if (nconf == NULL) {
 		warnx("getnetconfig: %s", nc_sperror());
+		endnetconfig(localhandle);
 		return(DESERR_HWERROR);
 	}
 	clnt = clnt_tp_create(NULL, CRYPT_PROG, CRYPT_VERS, nconf);

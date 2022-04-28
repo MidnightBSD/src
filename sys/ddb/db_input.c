@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_input.c 229272 2012-01-02 12:12:10Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -97,7 +97,7 @@ db_delete(n, bwd)
 	int	n;
 	int	bwd;
 {
-	register char *p;
+	char *p;
 
 	if (bwd) {
 	    db_lc -= n;
@@ -112,7 +112,7 @@ db_delete(n, bwd)
 	db_le -= n;
 }
 
-/* returns TRUE at end-of-line */
+/* returns true at end-of-line */
 static int
 db_inputchar(c)
 	int	c;
@@ -195,6 +195,7 @@ db_inputchar(c)
 		    db_delete(1, DEL_FWD);
 		break;
 	    case CTRL('u'):
+	    case CTRL('c'):
 		/* kill entire line: */
 		/* at first, delete to beginning of line */
 		if (db_lc > db_lbuf_start)
@@ -215,6 +216,19 @@ db_inputchar(c)
 		    cnputc(BACKUP);
 		    cnputc(db_lc[-2]);
 		    cnputc(db_lc[-1]);
+		}
+		break;
+	    case CTRL('w'):
+		/* erase previous word */
+		for (; db_lc > db_lbuf_start;) {
+		    if (*(db_lc - 1) != ' ')
+			break;
+		    db_delete(1, DEL_BWD);
+		}
+		for (; db_lc > db_lbuf_start;) {
+		    if (*(db_lc - 1) == ' ')
+			break;
+		    db_delete(1, DEL_BWD);
 		}
 		break;
 	    case CTRL('r'):
@@ -276,7 +290,7 @@ db_inputchar(c)
 		    cnputc('\007');
 		}
 		else if (c >= ' ' && c <= '~') {
-		    register char *p;
+		    char *p;
 
 		    for (p = db_le; p > db_lc; p--)
 			*p = *(p-1);
@@ -346,9 +360,9 @@ db_readline(lstart, lsize)
 }
 
 void
-db_check_interrupt()
+db_check_interrupt(void)
 {
-	register int	c;
+	int	c;
 
 	c = cnmaygetc();
 	switch (c) {

@@ -26,11 +26,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athrd/athrd.c 219398 2011-03-08 12:08:23Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
 #include "ah.h"
+
+#include <sys/param.h>
 
 #include <net80211/_ieee80211.h>
 #include <net80211/ieee80211_regdomain.h>
@@ -38,12 +40,12 @@
 #include "ah_internal.h"
 #include "ah_eeprom_v3.h"		/* XXX */
 
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 
 int		ath_hal_debug = 0;
 HAL_CTRY_CODE	cc = CTRY_DEFAULT;
@@ -535,43 +537,37 @@ static struct {
 static HAL_BOOL
 rdlookup(const char *name, HAL_REG_DOMAIN *rd)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(domains); i++)
+	for (i = 0; i < nitems(domains); i++)
 		if (strcasecmp(domains[i].name, name) == 0) {
 			*rd = domains[i].rd;
 			return AH_TRUE;
 		}
 	return AH_FALSE;
-#undef N
 }
 
 static const char *
 getrdname(HAL_REG_DOMAIN rd)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(domains); i++)
+	for (i = 0; i < nitems(domains); i++)
 		if (domains[i].rd == rd)
 			return domains[i].name;
 	return NULL;
-#undef N
 }
 
 static void
 rdlist()
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
 	printf("\nRegulatory domains:\n\n");
-	for (i = 0; i < N(domains); i++)
+	for (i = 0; i < nitems(domains); i++)
 		printf("%-15s%s", domains[i].name,
 			((i+1)%5) == 0 ? "\n" : "");
 	printf("\n");
-#undef N
 }
 
 typedef struct {
@@ -728,10 +724,9 @@ static COUNTRY_CODE_TO_ENUM_RD allCountries[] = {
 static HAL_BOOL
 cclookup(const char *name, HAL_REG_DOMAIN *rd, HAL_CTRY_CODE *cc)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(allCountries); i++)
+	for (i = 0; i < nitems(allCountries); i++)
 		if (strcasecmp(allCountries[i].isoName, name) == 0 ||
 		    strcasecmp(allCountries[i].name, name) == 0) {
 			*rd = allCountries[i].regDmnEnum;
@@ -739,49 +734,42 @@ cclookup(const char *name, HAL_REG_DOMAIN *rd, HAL_CTRY_CODE *cc)
 			return AH_TRUE;
 		}
 	return AH_FALSE;
-#undef N
 }
 
 static const char *
 getccname(HAL_CTRY_CODE cc)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(allCountries); i++)
+	for (i = 0; i < nitems(allCountries); i++)
 		if (allCountries[i].countryCode == cc)
 			return allCountries[i].name;
 	return NULL;
-#undef N
 }
 
 static const char *
 getccisoname(HAL_CTRY_CODE cc)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(allCountries); i++)
+	for (i = 0; i < nitems(allCountries); i++)
 		if (allCountries[i].countryCode == cc)
 			return allCountries[i].isoName;
 	return NULL;
-#undef N
 }
 
 static void
 cclist()
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
 
 	printf("\nCountry codes:\n");
-	for (i = 0; i < N(allCountries); i++)
+	for (i = 0; i < nitems(allCountries); i++)
 		printf("%2s %-15.15s%s",
 			allCountries[i].isoName,
 			allCountries[i].name,
 			((i+1)%4) == 0 ? "\n" : " ");
 	printf("\n");
-#undef N
 }
 
 static HAL_BOOL

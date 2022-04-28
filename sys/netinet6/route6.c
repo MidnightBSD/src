@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/route6.c 249294 2013-04-09 07:11:22Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/route6.c 249294 2013-04-09 07:11
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet6/in6_var.h>
@@ -107,5 +108,6 @@ route6_input(struct mbuf **mp, int *offp, int proto)
 	}
 
 	*offp += rhlen;
+	*mp = m;
 	return (rh->ip6r_nxt);
 }

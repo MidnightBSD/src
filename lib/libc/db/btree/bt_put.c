@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_put.c	8.8 (Berkeley) 7/26/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/btree/bt_put.c 190484 2009-03-28 05:45:29Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -55,7 +55,7 @@ static EPG *bt_fast(BTREE *, const DBT *, const DBT *, int *);
  *	dbp:	pointer to access method
  *	key:	key
  *	data:	data
- *	flag:	R_NOOVERWRITE
+ *	flag:	R_NOOVERWRITE, R_SETCURSOR, R_CURSOR
  *
  * Returns:
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key is already in the
@@ -91,6 +91,7 @@ __bt_put(const DB *dbp, DBT *key, const DBT *data, u_int flags)
 	switch (flags) {
 	case 0:
 	case R_NOOVERWRITE:
+	case R_SETCURSOR:
 		break;
 	case R_CURSOR:
 		/*

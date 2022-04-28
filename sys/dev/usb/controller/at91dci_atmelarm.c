@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/at91dci_atmelarm.c 249232 2013-04-07 13:03:57Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 /*-
  * Copyright (c) 2007-2008 Hans Petter Selasky. All rights reserved.
@@ -156,6 +156,7 @@ at91_udp_attach(device_t dev)
 	sc->sc_dci.sc_bus.parent = dev;
 	sc->sc_dci.sc_bus.devices = sc->sc_dci.sc_devices;
 	sc->sc_dci.sc_bus.devices_max = AT91_MAX_DEVICES;
+	sc->sc_dci.sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_dci.sc_bus,
@@ -212,13 +213,8 @@ at91_udp_attach(device_t dev)
 	}
 	device_set_ivars(sc->sc_dci.sc_bus.bdev, &sc->sc_dci.sc_bus);
 
-#if (__FreeBSD_version >= 700031)
-	err = bus_setup_intr(dev, sc->sc_dci.sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
-	    NULL, (driver_intr_t *)at91dci_interrupt, sc, &sc->sc_dci.sc_intr_hdl);
-#else
-	err = bus_setup_intr(dev, sc->sc_dci.sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
-	    (driver_intr_t *)at91dci_interrupt, sc, &sc->sc_dci.sc_intr_hdl);
-#endif
+	err = bus_setup_intr(dev, sc->sc_dci.sc_irq_res, INTR_TYPE_TTY | INTR_MPSAFE,
+	    at91dci_filter_interrupt, at91dci_interrupt, sc, &sc->sc_dci.sc_intr_hdl);
 	if (err) {
 		sc->sc_dci.sc_intr_hdl = NULL;
 		goto error;
@@ -247,14 +243,8 @@ static int
 at91_udp_detach(device_t dev)
 {
 	struct at91_udp_softc *sc = device_get_softc(dev);
-	device_t bdev;
 	int err;
 
-	if (sc->sc_dci.sc_bus.bdev) {
-		bdev = sc->sc_dci.sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(dev, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
 

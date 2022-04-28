@@ -29,7 +29,7 @@
  *
  *	From: @(#)ansi.h	8.2 (Berkeley) 1/4/94
  *	From: @(#)types.h	8.3 (Berkeley) 1/5/94
- * $FreeBSD: release/10.0.0/sys/sparc64/include/_types.h 237517 2012-06-24 04:15:58Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE__TYPES_H_
@@ -56,8 +56,10 @@ typedef	unsigned long		__uint64_t;
  */
 typedef	__int32_t	__clock_t;		/* clock()... */
 typedef	__int64_t	__critical_t;
+#ifndef _STANDALONE
 typedef	double		__double_t;
 typedef	float		__float_t;
+#endif
 typedef	__int64_t	__intfptr_t;
 typedef	__int64_t	__intmax_t;
 typedef	__int64_t	__intptr_t;
@@ -88,11 +90,9 @@ typedef	__uint32_t	__uint_least32_t;
 typedef	__uint64_t	__uint_least64_t;
 typedef	__uint64_t	__u_register_t;
 typedef	__uint64_t	__vm_offset_t;
-typedef	__int64_t	__vm_ooffset_t;
 typedef	__uint64_t	__vm_paddr_t;
-typedef	__uint64_t	__vm_pindex_t;
 typedef	__uint64_t	__vm_size_t;
-typedef	int		__wchar_t;
+typedef	int		___wchar_t;
 
 #define	__WCHAR_MIN	__INT_MIN	/* min value for a wchar_t */
 #define	__WCHAR_MAX	__INT_MAX	/* max value for a wchar_t */

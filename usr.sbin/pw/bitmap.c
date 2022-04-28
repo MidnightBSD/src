@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
  *
@@ -26,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/pw/bitmap.c 243894 2012-12-05 13:56:43Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdlib.h>

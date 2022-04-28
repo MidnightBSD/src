@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/smbfs/smbutil/view.c 202980 2010-01-25 18:35:58Z yongari $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/endian.h>
 #include <sys/param.h>

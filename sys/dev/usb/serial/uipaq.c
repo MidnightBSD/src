@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/serial/uipaq.c 239299 2012-08-15 15:42:57Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -1088,6 +1088,7 @@ DRIVER_MODULE(uipaq, uhub, uipaq_driver, uipaq_devclass, NULL, 0);
 MODULE_DEPEND(uipaq, ucom, 1, 1, 1);
 MODULE_DEPEND(uipaq, usb, 1, 1, 1);
 MODULE_VERSION(uipaq, 1);
+USB_PNP_HOST_INFO(uipaq_devs);
 
 static int
 uipaq_probe(device_t dev)

@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_J_upper.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_option_J_upper)
 {
@@ -47,10 +47,13 @@ DEFINE_TEST(test_option_J_upper)
 		}
 		failure("-J option is broken");
 		assertEqualInt(r, 0);
-		return;
+		goto done;
 	}
+	free(p);
 	/* Check that the archive file has an xz signature. */
 	p = slurpfile(&s, "archive.out");
 	assert(s > 2);
 	assertEqualMem(p, "\3757zXZ", 5);
+done:
+	free(p);
 }

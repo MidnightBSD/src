@@ -22,18 +22,18 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_string.h 238856 2012-07-28 06:38:44Z mm $
+ * $FreeBSD$
  *
  */
+
+#ifndef ARCHIVE_STRING_H_INCLUDED
+#define ARCHIVE_STRING_H_INCLUDED
 
 #ifndef __LIBARCHIVE_BUILD
 #ifndef __LIBARCHIVE_TEST
 #error This header is only to be used internally to libarchive.
 #endif
 #endif
-
-#ifndef ARCHIVE_STRING_H_INCLUDED
-#define	ARCHIVE_STRING_H_INCLUDED
 
 #include <stdarg.h>
 #ifdef HAVE_STDLIB_H
@@ -81,6 +81,10 @@ archive_strappend_char(struct archive_string *, char);
 struct archive_wstring *
 archive_wstrappend_wchar(struct archive_wstring *, wchar_t);
 
+/* Append a raw array to an archive_string, resizing as necessary */
+struct archive_string *
+archive_array_append(struct archive_string *, const char *, size_t);
+
 /* Convert a Unicode string to current locale and append the result. */
 /* Returns -1 if conversion fails. */
 int
@@ -115,13 +119,13 @@ archive_string_conversion_set_opt(struct archive_string_conv *, int);
 
 
 /* Copy one archive_string to another in locale conversion.
- * Return -1 if conversion failes. */
+ * Return -1 if conversion fails. */
 int
 archive_strncpy_l(struct archive_string *, const void *, size_t,
     struct archive_string_conv *);
 
 /* Copy one archive_string to another in locale conversion.
- * Return -1 if conversion failes. */
+ * Return -1 if conversion fails. */
 int
 archive_strncat_l(struct archive_string *, const void *, size_t,
     struct archive_string_conv *);

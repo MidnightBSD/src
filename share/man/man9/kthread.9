@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/kthread.9 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd January 24, 2010
+.Dd July 15, 2014
 .Dt KTHREAD 9
 .Os
 .Sh NAME
@@ -275,7 +275,7 @@ buf_daemon()
 	    bufdaemonthread, SHUTDOWN_PRI_LAST);
 	...
 	for (;;) {
-		kthread_suspend_check(bufdaemonthread);
+		kthread_suspend_check();
 		...
 	}
 }

@@ -26,10 +26,11 @@
  * SUCH DAMAGE.
  *
  * $Id: util.c,v 1.5 2003/09/08 02:29:35 max Exp $
- * $FreeBSD: release/10.0.0/lib/libsdp/util.c 161662 2006-08-26 23:16:35Z markus $
+ * $FreeBSD$
  */
 
 #include <netinet/in.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <stdio.h>
 #include <sdp.h>

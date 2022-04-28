@@ -32,7 +32,7 @@
  *    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  *    OR OTHERWISE), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cfe/cfe_api.h 183370 2008-09-26 03:53:10Z imp $
+ * $FreeBSD$
  */
 
 /*  *********************************************************************

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/ia32/ia32_util.h 238687 2012-07-22 13:41:45Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_COMPAT_IA32_IA32_UTIL_H
@@ -39,17 +39,10 @@
 #include <sys/sysent.h>
 #include <sys/cdefs.h>
 
-#ifdef __ia64__
-#define	FREEBSD32_MAXUSER	((1ul << 32) - IA32_PAGE_SIZE * 2)
-#define	FREEBSD32_MINUSER	0
-#define	FREEBSD32_SHAREDPAGE	0
-#define	FREEBSD32_USRSTACK	FREEBSD32_MAXUSER
-#else	/* __ia64__ */
 #define	FREEBSD32_MAXUSER	((1ul << 32) - IA32_PAGE_SIZE)
 #define	FREEBSD32_MINUSER	0
 #define	FREEBSD32_SHAREDPAGE	(FREEBSD32_MAXUSER - IA32_PAGE_SIZE)
 #define	FREEBSD32_USRSTACK	FREEBSD32_SHAREDPAGE
-#endif	/* __ia64 */
 
 #define	IA32_PAGE_SIZE	4096
 #define	IA32_MAXDSIZ	(512*1024*1024)		/* 512MB */
@@ -57,7 +50,7 @@
 #define	IA32_MAXVMEM	0			/* Unlimited */
 
 struct syscall_args;
-int ia32_fetch_syscall_args(struct thread *td, struct syscall_args *sa);
+int ia32_fetch_syscall_args(struct thread *td);
 void ia32_set_syscall_retval(struct thread *, int);
 void ia32_fixlimit(struct rlimit *rl, int which);
 

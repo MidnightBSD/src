@@ -6,7 +6,7 @@
 # traffic from stations associated to the (local) ap.  The sta
 # will follow it's peer ap, dragging the ap vap with it.
 #
-# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/setup.wdsrelay 178361 2008-04-20 20:43:42Z sam $
+# $FreeBSD$
 #
 PATH=.:$PATH
 . config

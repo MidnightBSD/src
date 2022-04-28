@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris.c 222670 2011-06-04 07:02:06Z avg $
+ * $FreeBSD$
  *
  */
 

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/debugscripts/kgdb 143864 2005-03-20 02:08:21Z jmg $
+# $FreeBSD$
 
 crashpath="/var/crash"
 kld_debpy="kld_deb.py"

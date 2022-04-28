@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_tz.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char archive[] = {
 31,157,144,'.',0,8,28,'H',176,160,193,131,8,19,'*','\\',200,176,'!','B',24,
@@ -51,6 +51,8 @@ DEFINE_TEST(test_read_format_tz)
 	assertEqualInt(archive_filter_code(a, 0), ARCHIVE_FILTER_COMPRESS);
 	failure("archive_format_name(a)=\"%s\"", archive_format_name(a));
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_USTAR);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

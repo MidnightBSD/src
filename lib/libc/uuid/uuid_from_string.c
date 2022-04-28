@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/uuid/uuid_from_string.c 118670 2003-08-08 19:18:43Z marcel $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ed/dl100xxreg.h 190650 2009-04-02 18:02:00Z imp $
+ * $FreeBSD$
  */
 
 /* Dlink chipset used on some Netgear and Dlink PCMCIA cards */

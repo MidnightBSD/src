@@ -23,10 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/crypto/ubsecstats.c 158719 2006-05-18 13:22:44Z pjd $
+ * $FreeBSD$
  */
-#include <stdio.h>
+
 #include <sys/types.h>
+#include <sys/sysctl.h>
+
+#include <err.h>
+#include <stdio.h>
+
 #include "../../../sys/dev/ubsec/ubsecvar.h"
 
 /*
@@ -39,7 +44,7 @@ main(int argc, char *argv[])
 	size_t slen;
 
 	slen = sizeof (stats);
-	if (sysctlbyname("hw.ubsec.stats", &stats, &slen, NULL, NULL) < 0)
+	if (sysctlbyname("hw.ubsec.stats", &stats, &slen, NULL, 0) < 0)
 		err(1, "kern.ubsec_stats");
 
 	printf("input %llu bytes %u packets\n",

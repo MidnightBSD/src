@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * Copyright (c) 2009, Fabien Thomas
@@ -28,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcpl_gprof.h 203790 2010-02-11 22:51:44Z fabient $
+ * $FreeBSD$
  */
 
 #ifndef	_PMCSTAT_PL_GPROF_H_

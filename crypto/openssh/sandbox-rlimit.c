@@ -1,4 +1,4 @@
-/* $OpenBSD: sandbox-rlimit.c,v 1.3 2011/06/23 09:34:13 djm Exp $ */
+/* $OpenBSD: sandbox-rlimit.c,v 1.4 2016/09/12 01:22:38 deraadt Exp $ */
 /*
  * Copyright (c) 2011 Damien Miller <djm@mindrot.org>
  *
@@ -20,7 +20,6 @@
 #ifdef SANDBOX_RLIMIT
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -42,7 +41,7 @@ struct ssh_sandbox {
 };
 
 struct ssh_sandbox *
-ssh_sandbox_init(void)
+ssh_sandbox_init(struct monitor *monitor)
 {
 	struct ssh_sandbox *box;
 
@@ -69,9 +68,11 @@ ssh_sandbox_child(struct ssh_sandbox *box)
 		fatal("%s: setrlimit(RLIMIT_FSIZE, { 0, 0 }): %s",
 			__func__, strerror(errno));
 #endif
+#ifndef SANDBOX_SKIP_RLIMIT_NOFILE
 	if (setrlimit(RLIMIT_NOFILE, &rl_zero) == -1)
 		fatal("%s: setrlimit(RLIMIT_NOFILE, { 0, 0 }): %s",
 			__func__, strerror(errno));
+#endif
 #ifdef HAVE_RLIMIT_NPROC
 	if (setrlimit(RLIMIT_NPROC, &rl_zero) == -1)
 		fatal("%s: setrlimit(RLIMIT_NPROC, { 0, 0 }): %s",

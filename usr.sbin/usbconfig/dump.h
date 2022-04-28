@@ -1,5 +1,7 @@
-/* $FreeBSD: release/10.0.0/usr.sbin/usbconfig/dump.h 201705 2010-01-07 00:50:45Z thompsa $ */
+/* $FreeBSD$ */
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +37,7 @@ void	dump_device_info(struct libusb20_device *pdev, uint8_t show_drv);
 void	dump_be_quirk_names(struct libusb20_backend *pbe);
 void	dump_be_dev_quirks(struct libusb20_backend *pbe);
 void	dump_device_desc(struct libusb20_device *pdev);
+void	dump_device_stats(struct libusb20_device *pdev);
 void	dump_config(struct libusb20_device *pdev, uint8_t all_cfg);
 
 #endif	/* _DUMP_H_ */

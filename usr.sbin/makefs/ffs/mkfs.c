@@ -1,4 +1,4 @@
-/*	$NetBSD: mkfs.c,v 1.20 2004/06/24 22:30:13 lukem Exp $	*/
+/*	$NetBSD: mkfs.c,v 1.22 2011/10/09 22:30:13 christos Exp $	*/
 
 /*
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/mkfs.c 226169 2011-10-09 16:22:31Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/mkfs.c 226169 2011-10-09 
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <util.h>
 
 #include "makefs.h"
 #include "ffs.h"
@@ -113,7 +114,7 @@ static int     avgfilesize;	   /* expected average file size */
 static int     avgfpdir;	   /* expected number of files per directory */
 
 struct fs *
-ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
+ffs_mkfs(const char *fsys, const fsinfo_t *fsopts, time_t tstamp)
 {
 	int fragsperinode, optimalfpg, origdensity, minfpg, lastminfpg;
 	int32_t cylno, i, csfrags;
@@ -248,15 +249,16 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 		exit(21);
 	}
 	sblock.fs_fsbtodb = ilog2(sblock.fs_fsize / sectorsize);
-	sblock.fs_size = fssize = dbtofsb(&sblock, fssize);
+	sblock.fs_size = sblock.fs_providersize = fssize =
+	    dbtofsb(&sblock, fssize);
 
 	if (Oflag <= 1) {
 		sblock.fs_magic = FS_UFS1_MAGIC;
 		sblock.fs_sblockloc = SBLOCK_UFS1;
-		sblock.fs_nindir = sblock.fs_bsize / sizeof(int32_t);
+		sblock.fs_nindir = sblock.fs_bsize / sizeof(ufs1_daddr_t);
 		sblock.fs_inopb = sblock.fs_bsize / sizeof(struct ufs1_dinode);
 		sblock.fs_maxsymlinklen = ((NDADDR + NIADDR) *
-		    sizeof (int32_t));
+		    sizeof (ufs1_daddr_t));
 		sblock.fs_old_inodefmt = FS_44INODEFMT;
 		sblock.fs_old_cgoffset = 0;
 		sblock.fs_old_cgmask = 0xffffffff;
@@ -272,15 +274,11 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 		sblock.fs_old_nrpos = 1;
 	} else {
 		sblock.fs_magic = FS_UFS2_MAGIC;
-#if 0 /* XXX makefs is used for small filesystems. */
 		sblock.fs_sblockloc = SBLOCK_UFS2;
-#else
-		sblock.fs_sblockloc = SBLOCK_UFS1;
-#endif
-		sblock.fs_nindir = sblock.fs_bsize / sizeof(int64_t);
+		sblock.fs_nindir = sblock.fs_bsize / sizeof(ufs2_daddr_t);
 		sblock.fs_inopb = sblock.fs_bsize / sizeof(struct ufs2_dinode);
 		sblock.fs_maxsymlinklen = ((NDADDR + NIADDR) *
-		    sizeof (int64_t));
+		    sizeof (ufs2_daddr_t));
 	}
 
 	sblock.fs_sblkno =
@@ -406,8 +404,7 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 	blks = howmany(size, sblock.fs_fsize);
 	if (sblock.fs_contigsumsize > 0)
 		size += sblock.fs_ncg * sizeof(int32_t);
-	if ((space = (char *)calloc(1, size)) == NULL)
-		err(1, "memory allocation error for cg summaries");
+	space = ecalloc(1, size);
 	sblock.fs_csp = space;
 	space = (char *)space + sblock.fs_cssize;
 	if (sblock.fs_contigsumsize > 0) {
@@ -437,7 +434,7 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 	sblock.fs_state = 0;
 	sblock.fs_clean = FS_ISCLEAN;
 	sblock.fs_ronly = 0;
-	sblock.fs_id[0] = start_time.tv_sec;
+	sblock.fs_id[0] = tstamp;
 	sblock.fs_id[1] = random();
 	sblock.fs_fsmnt[0] = '\0';
 	csfrags = howmany(sblock.fs_cssize, sblock.fs_fsize);
@@ -453,9 +450,9 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 	sblock.fs_cstotal.cs_nifree = sblock.fs_ncg * sblock.fs_ipg - ROOTINO;
 	sblock.fs_cstotal.cs_ndir = 0;
 	sblock.fs_dsize -= csfrags;
-	sblock.fs_time = start_time.tv_sec;
+	sblock.fs_time = tstamp;
 	if (Oflag <= 1) {
-		sblock.fs_old_time = start_time.tv_sec;
+		sblock.fs_old_time = tstamp;
 		sblock.fs_old_dsize = sblock.fs_dsize;
 		sblock.fs_old_csaddr = sblock.fs_csaddr;
 		sblock.fs_old_cstotal.cs_ndir = sblock.fs_cstotal.cs_ndir;
@@ -495,11 +492,7 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 		iobufsize = SBLOCKSIZE + 3 * sblock.fs_bsize;
 	else
 		iobufsize = 4 * sblock.fs_bsize;
-	if ((iobuf = malloc(iobufsize)) == 0) {
-		printf("Cannot allocate I/O buffer\n");
-		exit(38);
-	}
-	memset(iobuf, 0, iobufsize);
+	iobuf = ecalloc(1, iobufsize);
 	/*
 	 * Make a copy of the superblock into the buffer that we will be
 	 * writing out in each cylinder group.
@@ -511,7 +504,7 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 
 	printf("super-block backups (for fsck -b #) at:");
 	for (cylno = 0; cylno < sblock.fs_ncg; cylno++) {
-		initcg(cylno, start_time.tv_sec, fsopts);
+		initcg(cylno, tstamp, fsopts);
 		if (cylno % nprintcols == 0)
 			printf("\n");
 		printf(" %*lld,", printcolwidth,
@@ -524,7 +517,7 @@ ffs_mkfs(const char *fsys, const fsinfo_t *fsopts)
 	 * Now construct the initial file system,
 	 * then write out the super-block.
 	 */
-	sblock.fs_time = start_time.tv_sec;
+	sblock.fs_time = tstamp;
 	if (Oflag <= 1) {
 		sblock.fs_old_cstotal.cs_ndir = sblock.fs_cstotal.cs_ndir;
 		sblock.fs_old_cstotal.cs_nbfree = sblock.fs_cstotal.cs_nbfree;
@@ -565,8 +558,7 @@ ffs_write_superblock(struct fs *fs, const fsinfo_t *fsopts)
 	size = fs->fs_cssize;
 	blks = howmany(size, fs->fs_fsize);
 	space = (void *)fs->fs_csp;
-	if ((wrbuf = malloc(size)) == NULL)
-		err(1, "ffs_write_superblock: malloc %d", size);
+	wrbuf = emalloc(size);
 	for (i = 0; i < blks; i+= fs->fs_frag) {
 		size = fs->fs_bsize;
 		if (i + fs->fs_frag > blks)
@@ -613,8 +605,7 @@ initcg(int cylno, time_t utime, const fsinfo_t *fsopts)
 	acg.cg_magic = CG_MAGIC;
 	acg.cg_cgx = cylno;
 	acg.cg_niblk = sblock.fs_ipg;
-	acg.cg_initediblk = sblock.fs_ipg < 2 * INOPB(&sblock) ?
-	    sblock.fs_ipg : 2 * INOPB(&sblock);
+	acg.cg_initediblk = MIN(sblock.fs_ipg, 2 * INOPB(&sblock));
 	acg.cg_ndblk = dmax - cbase;
 	if (sblock.fs_contigsumsize > 0)
 		acg.cg_nclusterblks = acg.cg_ndblk >> sblock.fs_fragshift;
@@ -733,7 +724,7 @@ initcg(int cylno, time_t utime, const fsinfo_t *fsopts)
 	 * Write out the duplicate super block, the cylinder group map
 	 * and two blocks worth of inodes in a single write.
 	 */
-	start = sblock.fs_bsize > SBLOCKSIZE ? sblock.fs_bsize : SBLOCKSIZE;
+	start = MAX(sblock.fs_bsize, SBLOCKSIZE);
 	memcpy(&iobuf[start], &acg, sblock.fs_cgsize);
 	if (fsopts->needswap)
 		ffs_cg_swap(&acg, (struct cg*)&iobuf[start], &sblock);

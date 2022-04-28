@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/cam_queue.c 253958 2013-08-05 11:48:40Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -122,7 +122,7 @@ camq_resize(struct camq *queue, int new_size)
 	cam_pinfo **new_array;
 
 	KASSERT(new_size >= queue->entries, ("camq_resize: "
-	    "New queue size can't accomodate queued entries (%d < %d).",
+	    "New queue size can't accommodate queued entries (%d < %d).",
 	    new_size, queue->entries));
 	new_array = (cam_pinfo **)malloc(new_size * sizeof(cam_pinfo *),
 					 M_CAMQ, M_NOWAIT);
@@ -176,8 +176,11 @@ camq_remove(struct camq *queue, int index)
 {
 	cam_pinfo *removed_entry;
 
-	if (index == 0 || index > queue->entries)
-		return (NULL);
+	if (index <= 0 || index > queue->entries)
+		panic("%s: Attempt to remove out-of-bounds index %d "
+		    "from queue %p of size %d", __func__, index, queue,
+		    queue->entries);
+
 	removed_entry = queue->queue_array[index];
 	if (queue->entries != index) {
 		queue->queue_array[index] = queue->queue_array[queue->entries];
@@ -220,27 +223,30 @@ cam_devq_alloc(int devices, int openings)
 	}
 	if (cam_devq_init(devq, devices, openings) != 0) {
 		free(devq, M_CAMDEVQ);
-		return (NULL);		
+		return (NULL);
 	}
-	
 	return (devq);
 }
 
 int
 cam_devq_init(struct cam_devq *devq, int devices, int openings)
 {
+
 	bzero(devq, sizeof(*devq));
+	mtx_init(&devq->send_mtx, "CAM queue lock", NULL, MTX_DEF);
 	if (camq_init(&devq->send_queue, devices) != 0)
 		return (1);
 	devq->send_openings = openings;
-	devq->send_active = 0;	
-	return (0);	
+	devq->send_active = 0;
+	return (0);
 }
 
 void
 cam_devq_free(struct cam_devq *devq)
 {
+
 	camq_fini(&devq->send_queue);
+	mtx_destroy(&devq->send_mtx);
 	free(devq, M_CAMDEVQ);
 }
 
@@ -286,7 +292,7 @@ cam_ccbq_resize(struct cam_ccbq *ccbq, int new_size)
 	int delta;
 
 	delta = new_size - (ccbq->dev_active + ccbq->dev_openings);
-	ccbq->devq_openings += delta;
+	ccbq->total_openings += delta;
 	ccbq->dev_openings += delta;
 
 	new_size = imax(64, 1 << fls(new_size + new_size / 2));
@@ -303,7 +309,7 @@ cam_ccbq_init(struct cam_ccbq *ccbq, int openings)
 	if (camq_init(&ccbq->queue,
 	    imax(64, 1 << fls(openings + openings / 2))) != 0)
 		return (1);
-	ccbq->devq_openings = openings;
+	ccbq->total_openings = openings;
 	ccbq->dev_openings = openings;
 	return (0);
 }

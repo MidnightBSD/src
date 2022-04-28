@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/mem.c 217515 2011-01-17 22:58:28Z jkim $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -99,8 +99,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 
 	cnt = 0;
 	error = 0;
-
-	GIANT_REQUIRED;
 
 	while (uio->uio_resid > 0 && !error) {
 		iov = uio->uio_iov;
@@ -179,21 +177,10 @@ memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
 {
 	int i;
 
-	/*
-	 * /dev/mem is the only one that makes sense through this
-	 * interface.  For /dev/kmem any physaddr we return here
-	 * could be transient and hence incorrect or invalid at
-	 * a later time.
-	 */
-	if (dev2unit(dev) != CDEV_MINOR_MEM)
-		return (-1);
-
-	/* Only direct-mapped addresses. */
-	if (mem_valid(offset, 0)
-	    && pmap_dev_direct_mapped(offset, 0))
+	if (dev2unit(dev) == CDEV_MINOR_MEM)
+		*paddr = offset;
+	else
 		return (EFAULT);
-
-	*paddr = offset;
 
 	for (i = 0; i < mem_range_softc.mr_ndesc; i++) {
 		if (!(mem_range_softc.mr_desc[i].mr_flags & MDF_ACTIVE))
@@ -231,9 +218,7 @@ ppc_mrinit(struct mem_range_softc *sc)
 	sc->mr_cap = 0;
 	sc->mr_ndesc = 8; /* XXX: Should be dynamically expandable */
 	sc->mr_desc = malloc(sc->mr_ndesc * sizeof(struct mem_range_desc),
-	    M_MEMDESC, M_NOWAIT | M_ZERO);
-	if (sc->mr_desc == NULL)
-		panic("%s: malloc returns NULL", __func__);
+	    M_MEMDESC, M_WAITOK | M_ZERO);
 }
 
 static int
@@ -328,3 +313,4 @@ memioctl(struct cdev *dev __unused, u_long cmd, caddr_t data, int flags,
 	}
 	return (error);
 }
+

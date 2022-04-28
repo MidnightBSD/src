@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/rtas_dev.c 255643 2013-09-17 17:37:04Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,7 +73,7 @@ static driver_t rtasdev_driver = {
 
 static devclass_t rtasdev_devclass;
 
-DRIVER_MODULE(rtasdev, nexus, rtasdev_driver, rtasdev_devclass, 0, 0);
+DRIVER_MODULE(rtasdev, ofwbus, rtasdev_driver, rtasdev_devclass, 0, 0);
 
 static int
 rtasdev_probe(device_t dev)

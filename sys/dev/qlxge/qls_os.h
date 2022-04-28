@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/qlxge/qls_os.h 252206 2013-06-25 17:50:22Z davidcs $
+ * $FreeBSD$
  */
 /*
  * File: qls_os.h
@@ -53,6 +53,7 @@
 #endif
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>

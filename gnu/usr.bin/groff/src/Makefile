@@ -1,5 +1,11 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/src/Makefile 75592 2001-04-17 12:37:18Z ru $
+# $FreeBSD$
 
 SUBDIR=		libs devices preproc roff utils
+
+SUBDIR_PARALLEL=
+
+.for subdir in ${SUBDIR:Nlibs}
+SUBDIR_DEPEND_${subdir}=	libs
+.endfor
 
 .include <bsd.subdir.mk>

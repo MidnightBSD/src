@@ -1,5 +1,5 @@
-# $FreeBSD: release/10.0.0/sys/modules/hyperv/Makefile 252649 2013-07-03 23:27:59Z grehan $
+# $FreeBSD$
 
-SUBDIR = vmbus netvsc stordisengage storvsc utilities
+SUBDIR = vmbus netvsc storvsc utilities
 
 .include <bsd.subdir.mk>

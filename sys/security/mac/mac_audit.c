@@ -41,9 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_audit.c 191731 2009-05-01 21:05:40Z rwatson $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

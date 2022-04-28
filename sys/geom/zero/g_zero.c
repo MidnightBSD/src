@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/zero/g_zero.c 254936 2013-08-26 20:39:02Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -106,6 +106,7 @@ g_zero_init(struct g_class *mp)
 	gp->start = g_zero_start;
 	gp->access = g_std_access;
 	gpp = pp = g_new_providerf(gp, "%s", gp->name);
+	pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
 	if (!g_zero_clear)
 		pp->flags |= G_PF_ACCEPT_UNMAPPED;
 	pp->mediasize = 1152921504606846976LLU;
@@ -140,3 +141,4 @@ static struct g_class g_zero_class = {
 };
 
 DECLARE_GEOM_CLASS(g_zero_class, g_zero);
+MODULE_VERSION(geom_zero, 0);

@@ -39,13 +39,11 @@
  *	JNPR: trap.c,v 1.13.2.2 2007/08/29 10:03:49 girish
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/trap.c 250138 2013-05-01 06:57:46Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
-#include "opt_global.h"
 #include "opt_ktrace.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -94,29 +92,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/trap.c 250138 2013-05-01 06:57:
 
 #ifdef KDTRACE_HOOKS
 #include <sys/dtrace_bsd.h>
-
-/*
- * This is a hook which is initialised by the dtrace module
- * to handle traps which might occur during DTrace probe
- * execution.
- */
-dtrace_trap_func_t	dtrace_trap_func;
-
-dtrace_doubletrap_func_t	dtrace_doubletrap_func;
-
-/*
- * This is a hook which is initialised by the systrace module
- * when it is loaded. This keeps the DTrace syscall provider
- * implementation opaque. 
- */
-systrace_probe_func_t	systrace_probe_func;
-
-/*
- * These hooks are necessary for the pid, usdt and fasttrap providers.
- */
-dtrace_fasttrap_probe_ptr_t	dtrace_fasttrap_probe_ptr;
-dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
-dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
 #endif
 
 #ifdef TRAP_DEBUG
@@ -184,6 +159,8 @@ static void log_illegal_instruction(const char *, struct trapframe *);
 static void log_bad_page_fault(char *, struct trapframe *, int);
 static void log_frame_dump(struct trapframe *frame);
 static void get_mapping_info(vm_offset_t, pd_entry_t **, pt_entry_t **);
+
+int (*dtrace_invop_jump_addr)(struct trapframe *);
 
 #ifdef TRAP_DEBUG
 static void trap_frame_dump(struct trapframe *frame);
@@ -362,12 +339,16 @@ static int emulate_unaligned_access(struct trapframe *frame, int mode);
 extern void fswintrberr(void); /* XXX */
 
 int
-cpu_fetch_syscall_args(struct thread *td, struct syscall_args *sa)
+cpu_fetch_syscall_args(struct thread *td)
 {
-	struct trapframe *locr0 = td->td_frame;
+	struct trapframe *locr0;
 	struct sysentvec *se;
+	struct syscall_args *sa;
 	int error, nsaved;
 
+	locr0 = td->td_frame;
+	sa = &td->td_sa;
+	
 	bzero(sa->args, sizeof(sa->args));
 
 	/* compute next PC after syscall instruction */
@@ -552,7 +533,12 @@ trap(struct trapframe *trapframe)
 	register_t *frame_regs;
 
 	trapdebug_enter(trapframe, 0);
-	
+#ifdef KDB
+	if (kdb_active) {
+		kdb_reenter();
+		return (0);
+	}
+#endif
 	type = (trapframe->cause & MIPS_CR_EXC_CODE) >> MIPS_CR_EXC_CODE_SHIFT;
 	if (TRAPF_USERMODE(trapframe)) {
 		type |= T_USER;
@@ -629,7 +615,7 @@ trap(struct trapframe *trapframe)
 	/*
 	 * A trap can occur while DTrace executes a probe. Before
 	 * executing the probe, DTrace blocks re-scheduling and sets
-	 * a flag in it's per-cpu flags to indicate that it doesn't
+	 * a flag in its per-cpu flags to indicate that it doesn't
 	 * want to fault. On returning from the probe, the no-fault
 	 * flag is cleared and finally re-scheduling is enabled.
 	 *
@@ -639,10 +625,11 @@ trap(struct trapframe *trapframe)
 	 * function can return normally.
 	 */
 	/*
-	 * XXXDTRACE: add fasttrap and pid  probes handlers here (if ever)
+	 * XXXDTRACE: add pid probe handler here (if ever)
 	 */
 	if (!usermode) {
-		if (dtrace_trap_func != NULL && (*dtrace_trap_func)(trapframe, type))
+		if (dtrace_trap_func != NULL &&
+		    (*dtrace_trap_func)(trapframe, type) != 0)
 			return (trapframe->pc);
 	}
 #endif
@@ -738,19 +725,7 @@ dofault:
 				goto nogo;
 			}
 
-			/*
-			 * Keep swapout from messing with us during this
-			 * critical time.
-			 */
-			PROC_LOCK(p);
-			++p->p_lock;
-			PROC_UNLOCK(p);
-
 			rv = vm_fault(map, va, ftype, VM_FAULT_NORMAL);
-
-			PROC_LOCK(p);
-			--p->p_lock;
-			PROC_UNLOCK(p);
 			/*
 			 * XXXDTRACE: add dtrace_doubletrap_func here?
 			 */
@@ -820,19 +795,18 @@ dofault:
 
 	case T_SYSCALL + T_USER:
 		{
-			struct syscall_args sa;
 			int error;
 
-			sa.trapframe = trapframe;
-			error = syscallenter(td, &sa);
+			td->td_sa.trapframe = trapframe;
+			error = syscallenter(td);
 
 #if !defined(SMP) && (defined(DDB) || defined(DEBUG))
 			if (trp == trapdebug)
-				trapdebug[TRAPSIZE - 1].code = sa.code;
+				trapdebug[TRAPSIZE - 1].code = td->td_sa.code;
 			else
-				trp[-1].code = sa.code;
+				trp[-1].code = td->td_sa.code;
 #endif
-			trapdebug_enter(td->td_frame, -sa.code);
+			trapdebug_enter(td->td_frame, -td->td_sa.code);
 
 			/*
 			 * The sync'ing of I & D caches for SYS_ptrace() is
@@ -840,14 +814,22 @@ dofault:
 			 * instead of being done here under a special check
 			 * for SYS_ptrace().
 			 */
-			syscallret(td, error, &sa);
+			syscallret(td, error);
 			return (trapframe->pc);
 		}
 
-#ifdef DDB
+#if defined(KDTRACE_HOOKS) || defined(DDB)
 	case T_BREAK:
+#ifdef KDTRACE_HOOKS
+		if (!usermode && dtrace_invop_jump_addr != 0) {
+			dtrace_invop_jump_addr(trapframe);
+			return (trapframe->pc);
+		}
+#endif
+#ifdef DDB
 		kdb_trap(type, 0, trapframe);
 		return (trapframe->pc);
+#endif
 #endif
 
 	case T_BREAK + T_USER:
@@ -870,17 +852,19 @@ dofault:
 			if (td->td_md.md_ss_addr != va ||
 			    instr != MIPS_BREAK_SSTEP) {
 				i = SIGTRAP;
+				ucode = TRAP_BRKPT;
 				addr = trapframe->pc;
 				break;
 			}
 			/*
 			 * The restoration of the original instruction and
-			 * the clearing of the berakpoint will be done later
+			 * the clearing of the breakpoint will be done later
 			 * by the call to ptrace_clear_single_step() in
 			 * issignal() when SIGTRAP is processed.
 			 */
 			addr = trapframe->pc;
 			i = SIGTRAP;
+			ucode = TRAP_TRACE;
 			break;
 		}
 
@@ -895,6 +879,7 @@ dofault:
 				va += sizeof(int);
 			printf("watch exception @ %p\n", (void *)va);
 			i = SIGTRAP;
+			ucode = TRAP_BRKPT;
 			addr = va;
 			break;
 		}
@@ -1127,8 +1112,10 @@ err:
 #endif
 
 #ifdef KDB
-		if (debugger_on_panic || kdb_active) {
+		if (debugger_on_trap) {
+			kdb_why = KDB_WHY_TRAP;
 			kdb_trap(type, 0, trapframe);
+			kdb_why = KDB_WHY_UNSET;
 		}
 #endif
 		panic("trap");
@@ -1456,7 +1443,7 @@ log_illegal_instruction(const char *msg, struct trapframe *frame)
 {
 	pt_entry_t *ptep;
 	pd_entry_t *pdep;
-	unsigned int *addr;
+	unsigned int *addr, instr[4];
 	struct thread *td;
 	struct proc *p;
 	register_t pc;
@@ -1483,17 +1470,16 @@ log_illegal_instruction(const char *msg, struct trapframe *frame)
 	 * Dump a few words around faulting instruction, if the addres is
 	 * valid.
 	 */
-	if (!(pc & 3) &&
-	    useracc((caddr_t)(intptr_t)pc, sizeof(int) * 4, VM_PROT_READ)) {
+	addr = (unsigned int *)(intptr_t)pc;
+	if ((pc & 3) == 0 && copyin(addr, instr, sizeof(instr)) == 0) {
 		/* dump page table entry for faulting instruction */
 		log(LOG_ERR, "Page table info for pc address %#jx: pde = %p, pte = %#jx\n",
 		    (intmax_t)pc, (void *)(intptr_t)*pdep, (uintmax_t)(ptep ? *ptep : 0));
 
-		addr = (unsigned int *)(intptr_t)pc;
 		log(LOG_ERR, "Dumping 4 words starting at pc address %p: \n",
 		    addr);
 		log(LOG_ERR, "%08x %08x %08x %08x\n",
-		    addr[0], addr[1], addr[2], addr[3]);
+		    instr[0], instr[1], instr[2], instr[3]);
 	} else {
 		log(LOG_ERR, "pc address %#jx is inaccessible, pde = %p, pte = %#jx\n",
 		    (intmax_t)pc, (void *)(intptr_t)*pdep, (uintmax_t)(ptep ? *ptep : 0));
@@ -1505,7 +1491,7 @@ log_bad_page_fault(char *msg, struct trapframe *frame, int trap_type)
 {
 	pt_entry_t *ptep;
 	pd_entry_t *pdep;
-	unsigned int *addr;
+	unsigned int *addr, instr[4];
 	struct thread *td;
 	struct proc *p;
 	char *read_or_write;
@@ -1520,6 +1506,7 @@ log_bad_page_fault(char *msg, struct trapframe *frame, int trap_type)
 	printf("cpuid = %d\n", PCPU_GET(cpuid));
 #endif
 	switch (trap_type) {
+	case T_TLB_MOD:
 	case T_TLB_ST_MISS:
 	case T_ADDR_ERR_ST:
 		read_or_write = "write";
@@ -1552,18 +1539,18 @@ log_bad_page_fault(char *msg, struct trapframe *frame, int trap_type)
 	 * Dump a few words around faulting instruction, if the addres is
 	 * valid.
 	 */
-	if (!(pc & 3) && (pc != frame->badvaddr) &&
-	    (trap_type != T_BUS_ERR_IFETCH) &&
-	    useracc((caddr_t)(intptr_t)pc, sizeof(int) * 4, VM_PROT_READ)) {
+	addr = (unsigned int *)(intptr_t)pc;
+	if ((pc & 3) == 0 && pc != frame->badvaddr &&
+	    trap_type != T_BUS_ERR_IFETCH &&
+	    copyin((caddr_t)(intptr_t)pc, instr, sizeof(instr)) == 0) {
 		/* dump page table entry for faulting instruction */
 		log(LOG_ERR, "Page table info for pc address %#jx: pde = %p, pte = %#jx\n",
 		    (intmax_t)pc, (void *)(intptr_t)*pdep, (uintmax_t)(ptep ? *ptep : 0));
 
-		addr = (unsigned int *)(intptr_t)pc;
 		log(LOG_ERR, "Dumping 4 words starting at pc address %p: \n",
 		    addr);
 		log(LOG_ERR, "%08x %08x %08x %08x\n",
-		    addr[0], addr[1], addr[2], addr[3]);
+		    instr[0], instr[1], instr[2], instr[3]);
 	} else {
 		log(LOG_ERR, "pc address %#jx is inaccessible, pde = %p, pte = %#jx\n",
 		    (intmax_t)pc, (void *)(intptr_t)*pdep, (uintmax_t)(ptep ? *ptep : 0));
@@ -1611,7 +1598,7 @@ mips_unaligned_load_store(struct trapframe *frame, int mode, register_t addr, re
 		return (0);
 	}
 
-	if (!useracc((void *)((vm_offset_t)addr & ~(size - 1)), size * 2, mode))
+	if (!useracc((void *)rounddown2((vm_offset_t)addr, size), size * 2, mode))
 		return (0);
 
 	/*
@@ -1695,11 +1682,25 @@ mips_unaligned_load_store(struct trapframe *frame, int mode, register_t addr, re
 }
 
 
+/*
+ * XXX TODO: SMP?
+ */
+static struct timeval unaligned_lasterr;
+static int unaligned_curerr;
+
+static int unaligned_pps_log_limit = 4;
+
+SYSCTL_INT(_machdep, OID_AUTO, unaligned_log_pps_limit, CTLFLAG_RWTUN,
+    &unaligned_pps_log_limit, 0,
+    "limit number of userland unaligned log messages per second");
+
 static int
 emulate_unaligned_access(struct trapframe *frame, int mode)
 {
 	register_t pc;
 	int access_type = 0;
+	struct thread *td = curthread;
+	struct proc *p = curproc;
 
 	pc = frame->pc + (DELAYBRANCH(frame->cause) ? 4 : 0);
 
@@ -1726,9 +1727,19 @@ emulate_unaligned_access(struct trapframe *frame, int mode)
 			else
 				frame->pc += 4;
 
-			log(LOG_INFO, "Unaligned %s: pc=%#jx, badvaddr=%#jx\n",
-			    access_name[access_type - 1], (intmax_t)pc,
-			    (intmax_t)frame->badvaddr);
+			if (ppsratecheck(&unaligned_lasterr,
+			    &unaligned_curerr, unaligned_pps_log_limit)) {
+				/* XXX TODO: keep global/tid/pid counters? */
+				log(LOG_INFO,
+				    "Unaligned %s: pid=%ld (%s), tid=%ld, "
+				    "pc=%#jx, badvaddr=%#jx\n",
+				    access_name[access_type - 1],
+				    (long) p->p_pid,
+				    p->p_comm,
+				    (long) td->td_tid,
+				    (intmax_t)pc,
+				    (intmax_t)frame->badvaddr);
+			}
 		}
 	}
 	return access_type;

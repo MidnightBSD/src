@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91board.h 238189 2012-07-07 05:02:39Z imp $ */
+/* $FreeBSD$ */
 
 #ifndef _ARM_AT91_AT91BOARD_H_
 #define _ARM_AT91_AT91BOARD_H_

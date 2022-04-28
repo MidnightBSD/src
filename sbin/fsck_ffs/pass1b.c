@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass1b.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/pass1b.c 136346 2004-10-10 06:37:56Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -80,8 +80,10 @@ pass1b(void)
 				continue;
 			idesc.id_number = inumber;
 			if (inoinfo(inumber)->ino_state != USTATE &&
-			    (ckinode(dp, &idesc) & STOP))
+			    (ckinode(dp, &idesc) & STOP)) {
+				rerun = 1;
 				return;
+			}
 		}
 	}
 }
@@ -106,8 +108,10 @@ pass1bcheck(struct inodesc *idesc)
 			if (dlp == muldup)
 				break;
 		}
-		if (muldup == 0 || duphead == muldup->next)
+		if (muldup == NULL || duphead == muldup->next) {
+			rerun = 1;
 			return (STOP);
+		}
 	}
 	return (res);
 }

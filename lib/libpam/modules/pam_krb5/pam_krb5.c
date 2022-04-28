@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libpam/modules/pam_krb5/pam_krb5.c 241844 2012-10-22 03:00:37Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -239,6 +239,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags __unused,
 		retval = PAM_SERVICE_ERR;
 		goto cleanup2;
 	}
+	krb5_get_init_creds_opt_set_default_flags(pam_context,
+	    service, NULL, opts);
 
 	if (openpam_get_option(pamh, PAM_OPT_FORWARDABLE))
 		krb5_get_init_creds_opt_set_forwardable(opts, 1);
@@ -860,7 +862,7 @@ verify_krb_v5_tgt(krb5_context context, krb5_ccache ccache,
 	services[0] = "host";
 	services[1] = pam_service;
 	services[2] = NULL;
-	keyblock = 0;
+	keyblock = NULL;
 	retval = -1;
 	for (service = &services[0]; *service != NULL; service++) {
 		retval = krb5_sname_to_principal(context, NULL, *service,

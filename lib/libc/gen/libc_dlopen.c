@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/libc_dlopen.c 228843 2011-12-23 15:00:37Z cperciva $");
+__FBSDID("$FreeBSD$");
 
 #include <dlfcn.h>
 #include <stddef.h>
@@ -47,8 +47,8 @@ libc_dlopen(const char *path, int mode)
 	if (__libc_restricted_mode) {
 		_rtld_error("Service unavailable -- libc in restricted mode");
 		return (NULL);
-	} else
-		return (dlopen(path, mode));
+	}
+	return (dlopen(path, mode));
 }
 
 void
@@ -56,6 +56,5 @@ __FreeBSD_libc_enter_restricted_mode(void)
 {
 
 	__libc_restricted_mode = 1;
-	return;
 }
 

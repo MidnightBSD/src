@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/share/dict/freebsd 241636 2012-10-17 11:30:00Z attilio $
+$FreeBSD$
 ABI
 ACL
 ACPI
@@ -79,7 +79,6 @@ ISBN
 ISDN
 ISP
 Iomega
-Itanium
 JDK
 JRE
 JSP

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/string/strcpy.c 224246 2011-07-21 16:32:13Z gnn $");
+__FBSDID("$FreeBSD$");
 
 char *__stpcpy(char * __restrict, const char * __restrict);
 

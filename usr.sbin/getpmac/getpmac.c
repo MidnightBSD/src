@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2002 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/getpmac/getpmac.c 195971 2009-07-30 09:51:04Z rwatson $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <sys/mac.h>

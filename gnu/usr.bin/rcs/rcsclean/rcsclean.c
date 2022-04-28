@@ -38,7 +38,7 @@ static void cleanup P((void));
 static RILE *workptr;
 static int exitstatus;
 
-mainProg(rcscleanId, "rcsclean", "$FreeBSD: release/10.0.0/gnu/usr.bin/rcs/rcsclean/rcsclean.c 50472 1999-08-27 23:37:10Z peter $")
+mainProg(rcscleanId, "rcsclean", "$FreeBSD$")
 {
 	static char const usage[] =
 		"\nrcsclean: usage: rcsclean -ksubst -{nqru}[rev] -T -Vn -xsuff -zzone file ...";

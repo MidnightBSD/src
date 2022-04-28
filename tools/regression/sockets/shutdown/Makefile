@@ -1,9 +1,9 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/sockets/shutdown/Makefile 156735 2006-03-15 10:46:38Z ru $
+# $FreeBSD$
 #
 
 PROG=	shutdown
-NO_MAN=
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

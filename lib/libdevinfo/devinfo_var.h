@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libdevinfo/devinfo_var.h 218505 2011-02-10 04:53:09Z imp $
+ *	$FreeBSD$
  */
 
 #include <sys/types.h>

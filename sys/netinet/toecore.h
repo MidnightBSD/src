@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet/toecore.h 239511 2012-08-21 18:09:33Z np $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_TOE_H_

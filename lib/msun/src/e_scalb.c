@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_scalb.c 176451 2008-02-22 02:30:36Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * __ieee754_scalb(x, fn) is provide for

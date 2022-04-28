@@ -7,7 +7,7 @@
  * If you figure out how to do this on another system,
  * please let me know.  <gwr@mc.com>
  *
- * $FreeBSD: release/10.0.0/libexec/bootpd/getether.c 108470 2002-12-30 21:18:15Z schweikh $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -124,10 +124,10 @@ getether(ifname, eap)
 	char *eap;					/* Ether address (output) */
 {
 	int fd, rc = -1;
-	register int n;
+	int n;
 	struct ifreq ibuf[16];
 	struct ifconf ifc;
-	register struct ifreq *ifrp, *ifend;
+	struct ifreq *ifrp, *ifend;
 
 	/* Fetch the interface configuration */
 	fd = socket(AF_INET, SOCK_DGRAM, 0);

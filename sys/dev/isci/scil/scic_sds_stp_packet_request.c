@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_stp_packet_request.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #if !defined(DISABLE_ATAPI)
 
@@ -124,7 +124,7 @@ SCI_STATUS scic_sds_stp_packet_request_construct(
  *          -# task_type == SCU_TASK_TYPE_PACKET_DMA.  This simply indicates
  *             that a normal request type (i.e. non-raw frame) is being
  *             utilized to perform task management.
- *          -# control_frame == 1.  This ensures that the proper endianess
+ *          -# control_frame == 1.  This ensures that the proper endianness
  *             is set so that the bytes are transmitted in the right order
  *             for a smp request frame.
  *
@@ -454,7 +454,7 @@ SCI_STATUS scic_sds_stp_packet_request_packet_phase_await_pio_setup_frame_handle
  * @brief This method processes the completions transport layer (TL) status
  *        to determine if the PACKET command data FIS was sent successfully.
  *        If successfully, then the state for the packet request
- *        transits to COMPLETE state. If not successfuly, the request transits
+ *        transits to COMPLETE state. If not successfully, the request transits
  *        to COMMAND_PHASE_AWAIT_D2H_FIS_SUBSTATE.
  *
  * @param[in] this_request This parameter specifies the request for which

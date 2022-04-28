@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2001 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2001 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -8,19 +8,19 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $FreeBSD: release/10.0.0/contrib/sendmail/rmail/rmail.c 249729 2013-04-21 17:08:44Z gshapiro $
+ * $FreeBSD$
  *
  */
 
 #include <sm/gen.h>
 
 SM_IDSTR(copyright,
-"@(#) Copyright (c) 1998-2001 Sendmail, Inc. and its suppliers.\n\
+"@(#) Copyright (c) 1998-2001 Proofpoint, Inc. and its suppliers.\n\
 	All rights reserved.\n\
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: rmail.c,v 8.62 2013/03/12 15:24:52 ca Exp $")
+SM_IDSTR(id, "@(#)$Id: rmail.c,v 8.63 2013-11-22 20:51:53 ca Exp $")
 
 /*
  * RMAIL -- UUCP mail server.

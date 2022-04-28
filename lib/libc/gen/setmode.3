@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)setmode.3	8.2 (Berkeley) 4/28/95
-.\" $FreeBSD: release/10.0.0/lib/libc/gen/setmode.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd April 28, 1995
+.Dd July 18, 2019
 .Dt SETMODE 3
 .Os
 .Sh NAME
@@ -99,7 +99,20 @@ The
 function
 may fail and set errno for any of the errors specified for the library
 routine
-.Xr malloc 3 .
+.Xr malloc 3
+or
+.Xr strtol 3 .
+In addition,
+.Fn setmode
+will fail and set
+.Va errno
+to:
+.Bl -tag -width Er
+.It Bq Er EINVAL
+The
+.Fa mode
+argument does not represent a valid mode.
+.El
 .Sh SEE ALSO
 .Xr chmod 1 ,
 .Xr stat 2 ,
@@ -112,3 +125,10 @@ and
 .Fn setmode
 functions first appeared in
 .Bx 4.4 .
+.Sh BUGS
+The
+.Fn setmode
+function is not thread safe.
+Files created in other threads while
+.Fn setmode
+is being called may be created with a umask of 0.

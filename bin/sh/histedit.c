@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)histedit.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/sh/histedit.c 240541 2012-09-15 21:56:30Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <limits.h>
@@ -166,9 +166,10 @@ sethistsize(const char *hs)
 	HistEvent he;
 
 	if (hist != NULL) {
-		if (hs == NULL || *hs == '\0' ||
-		   (histsize = atoi(hs)) < 0)
+		if (hs == NULL || !is_number(hs))
 			histsize = 100;
+		else
+			histsize = atoi(hs);
 		history(hist, &he, H_SETSIZE, histsize);
 		history(hist, &he, H_SETUNIQUE, 1);
 	}
@@ -337,8 +338,8 @@ histcmd(int argc, char **argv __unused)
 				out1fmt("%5d ", he.num);
 			out1str(he.str);
 		} else {
-			char *s = pat ?
-			   fc_replace(he.str, pat, repl) : (char *)he.str;
+			const char *s = pat ?
+			   fc_replace(he.str, pat, repl) : he.str;
 
 			if (sflg) {
 				if (displayhist) {
@@ -358,7 +359,7 @@ histcmd(int argc, char **argv __unused)
 					 * cursor, set it back to the current
 					 * entry.
 					 */
-					retval = history(hist, &he,
+					history(hist, &he,
 					    H_NEXT_EVENT, oldhistnum);
 				}
 			} else
@@ -473,10 +474,31 @@ str_to_event(const char *str, int last)
 int
 bindcmd(int argc, char **argv)
 {
+	int ret;
+	FILE *old;
+	FILE *out;
 
 	if (el == NULL)
 		error("line editing is disabled");
-	return (el_parse(el, argc, (const char **)argv));
+
+	INTOFF;
+
+	out = out1fp();
+	if (out == NULL)
+		error("Out of space");
+
+	el_get(el, EL_GETFP, 1, &old);
+	el_set(el, EL_SETFP, 1, out);
+
+	ret = el_parse(el, argc, __DECONST(const char **, argv));
+
+	el_set(el, EL_SETFP, 1, old);
+
+	fclose(out);
+
+	INTON;
+
+	return ret;
 }
 
 #else

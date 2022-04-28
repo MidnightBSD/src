@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_stp_remote_device.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -197,7 +197,7 @@ scif_sas_stp_remote_device_get_request_by_ncq_tag(
       pending_request =
          (SCIF_SAS_REQUEST_T*) sci_fast_list_get_object(pending_request_element);
 
-      // The current element may be deleted from the list becasue of
+      // The current element may be deleted from the list because of
       // IO completion so advance to the next element early
       pending_request_element = sci_fast_list_get_next(pending_request_element);
 

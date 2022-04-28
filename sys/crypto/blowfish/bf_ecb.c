@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/crypto/blowfish/bf_ecb.c 121072 2003-10-13 19:26:08Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <crypto/blowfish/blowfish.h>

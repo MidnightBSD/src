@@ -1,5 +1,7 @@
-/*
+/*-
  * hcsecd.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: hcsecd.h,v 1.3 2003/09/08 18:54:21 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hcsecd/hcsecd.h 128079 2004-04-09 23:58:53Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _HCSECD_H_

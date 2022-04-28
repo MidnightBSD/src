@@ -36,7 +36,7 @@
  * 
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_l2tp.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_NG_L2TP_H_
@@ -54,7 +54,7 @@
 #define NG_L2TP_HOOK_SESSION_P	"session_"	/* session data hook (prefix) */
 #define NG_L2TP_HOOK_SESSION_F	"session_%04x"	/* session data hook (format) */
 
-/* Set intial sequence numbers to not yet enabled node. */
+/* Set initial sequence numbers to not yet enabled node. */
 struct ng_l2tp_seq_config {
 	u_int16_t	ns;		/* sequence number to send next */
 	u_int16_t	nr;		/* sequence number to be recved next */

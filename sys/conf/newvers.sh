@@ -11,7 +11,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 4. Neither the name of the University nor the names of its contributors
+# 3. Neither the name of the University nor the names of its contributors
 #    may be used to endorse or promote products derived from this software
 #    without specific prior written permission.
 #
@@ -28,22 +28,56 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: release/10.0.0/sys/conf/newvers.sh 260664 2014-01-15 01:14:52Z gjb $
+# $FreeBSD$
+
+# Command line options:
+#
+#     -r               Reproducible build.  Do not embed directory names, user
+#                      names, time stamps or other dynamic information into
+#                      the output file.  This is intended to allow two builds
+#                      done at different times and even by different people on
+#                      different hosts to produce identical output.
+#
+#     -R               Reproducible build if the tree represents an unmodified
+#                      checkout from a version control system.  Metadata is
+#                      included if the tree is modified.
 
 TYPE="FreeBSD"
-REVISION="10.0"
-BRANCH="RELEASE"
-if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
+REVISION="11.4"
+BRANCH="STABLE"
+if [ -n "${BRANCH_OVERRIDE}" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
 RELEASE="${REVISION}-${BRANCH}"
 VERSION="${TYPE} ${RELEASE}"
 
-if [ "X${SYSDIR}" = "X" ]; then
+#
+# findvcs dir
+#	Looks up directory dir at world root and up the filesystem
+#
+findvcs()
+{
+	local savedir
+
+	savedir=$(pwd)
+	cd ${SYSDIR}/..
+	while [ $(pwd) != "/" ]; do
+		if [ -e "./$1" ]; then
+			VCSDIR=$(pwd)"/$1"
+			cd ${savedir}
+			return 0
+		fi
+		cd ..
+	done
+	cd ${savedir}
+	return 1
+}
+
+if [ -z "${SYSDIR}" ]; then
     SYSDIR=$(dirname $0)/..
 fi
 
-if [ "X${PARAMFILE}" != "X" ]; then
+if [ -n "${PARAMFILE}" ]; then
 	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
 		${PARAMFILE})
 else
@@ -52,7 +86,11 @@ else
 fi
 
 b=share/examples/etc/bsd-style-copyright
-year=`date '+%Y'`
+if [ -r "${SYSDIR}/../COPYRIGHT" ]; then
+	year=$(sed -Ee '/^Copyright .* The FreeBSD Project/!d;s/^.*1992-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)
+else
+	year=$(date +%Y)
+fi
 # look for copyright template
 for bsd_copyright in ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
 do
@@ -68,7 +106,7 @@ do
 done
 
 # no copyright found, use a dummy
-if [ X"$COPYRIGHT" = X ]; then
+if [ -z "$COPYRIGHT" ]; then
 	COPYRIGHT="/*-
  * Copyright (c) 1992-$year The FreeBSD Project.
  * All rights reserved.
@@ -80,6 +118,12 @@ fi
 COPYRIGHT="$COPYRIGHT
 "
 
+# VARS_ONLY means no files should be generated, this is just being
+# included.
+if [ -n "$VARS_ONLY" ]; then
+	return 0
+fi
+
 LC_ALL=C; export LC_ALL
 if [ ! -r version ]
 then
@@ -87,9 +131,20 @@ then
 fi
 
 touch version
-v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
+v=`cat version`
+u=${USER:-root}
+d=`pwd`
+h=${HOSTNAME:-`hostname`}
+if [ -n "$SOURCE_DATE_EPOCH" ]; then
+	if ! t=`date -r $SOURCE_DATE_EPOCH 2>/dev/null`; then
+		echo "Invalid SOURCE_DATE_EPOCH" >&2
+		exit 1
+	fi
+else
+	t=`date`
+fi
 i=`${MAKE:-make} -V KERN_IDENT`
-compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep 'version')
+compiler_v=$($(${MAKE:-make} -V CC) -v 2>&1 | grep -w 'version')
 
 for dir in /usr/bin /usr/local/bin; do
 	if [ ! -z "${svnversion}" ] ; then
@@ -121,10 +176,20 @@ for dir in /usr/bin /usr/local/bin; do
 		p4_cmd=${dir}/p4
 	fi
 done
-if [ -d "${SYSDIR}/../.git" ] ; then
+
+if findvcs .git; then
 	for dir in /usr/bin /usr/local/bin; do
 		if [ -x "${dir}/git" ] ; then
-			git_cmd="${dir}/git --git-dir=${SYSDIR}/../.git"
+			git_cmd="${dir}/git --git-dir=${VCSDIR}"
+			break
+		fi
+	done
+fi
+
+if findvcs .hg; then
+	for dir in /usr/bin /usr/local/bin; do
+		if [ -x "${dir}/hg" ] ; then
+			hg_cmd="${dir}/hg -R ${VCSDIR}"
 			break
 		fi
 	done
@@ -133,8 +198,16 @@ fi
 if [ -n "$svnversion" ] ; then
 	svn=`cd ${SYSDIR} && $svnversion 2>/dev/null`
 	case "$svn" in
-	[0-9]*)	svn=" r${svn}" ;;
-	*)	unset svn ;;
+	[0-9]*[MSP]|*:*)
+		svn=" r${svn}"
+		modified=true
+		;;
+	[0-9]*)
+		svn=" r${svn}"
+		;;
+	*)
+		unset svn
+		;;
 	esac
 fi
 
@@ -145,8 +218,9 @@ if [ -n "$git_cmd" ] ; then
 		svn=" r${svn}"
 		git="=${git}"
 	else
-		svn=`$git_cmd log | fgrep 'git-svn-id:' | head -1 | \
-		     sed -n 's/^.*@\([0-9][0-9]*\).*$/\1/p'`
+		svn=`$git_cmd log --grep '^git-svn-id:' | \
+		    grep '^    git-svn-id:' | head -1 | \
+		    sed -n 's/^.*@\([0-9][0-9]*\).*$/\1/p'`
 		if [ -z "$svn" ] ; then
 			svn=`$git_cmd log --format='format:%N' | \
 			     grep '^svn ' | head -1 | \
@@ -163,9 +237,10 @@ if [ -n "$git_cmd" ] ; then
 	if [ -n "$git_b" ] ; then
 		git="${git}(${git_b})"
 	fi
-	if $git_cmd --work-tree=${SYSDIR}/.. diff-index \
+	if $git_cmd --work-tree=${VCSDIR}/.. diff-index \
 	    --name-only HEAD | read dummy; then
 		git="${git}-dirty"
+		modified=true
 	fi
 fi
 
@@ -178,18 +253,54 @@ if [ -n "$p4_cmd" ] ; then
 		p4opened=`cd ${SYSDIR} && $p4_cmd opened ./... 2>&1`
 		case "$p4opened" in
 		File*) ;;
-		//*)	p4version="${p4version}+edit" ;;
+		//*)
+			p4version="${p4version}+edit"
+			modified=true
+			;;
 		esac
 		;;
 	*)	unset p4version ;;
 	esac
 fi
-	
+
+if [ -n "$hg_cmd" ] ; then
+	hg=`$hg_cmd id 2>/dev/null`
+	svn=`$hg_cmd svn info 2>/dev/null | \
+		awk -F': ' '/Revision/ { print $2 }'`
+	if [ -n "$svn" ] ; then
+		svn=" r${svn}"
+	fi
+	if [ -n "$hg" ] ; then
+		hg=" ${hg}"
+	fi
+fi
+
+include_metadata=true
+while getopts rR opt; do
+	case "$opt" in
+	r)
+		include_metadata=
+		;;
+	R)
+		if [ -z "${modified}" ]; then
+			include_metadata=
+		fi
+	esac
+done
+shift $((OPTIND - 1))
+
+if [ -z "${include_metadata}" ]; then
+	VERINFO="${VERSION} ${svn}${git}${hg}${p4version}"
+	VERSTR="${VERINFO}\\n"
+else
+	VERINFO="${VERSION} #${v}${svn}${git}${hg}${p4version}: ${t}"
+	VERSTR="${VERINFO}\\n    ${u}@${h}:${d}\\n"
+fi
 
 cat << EOF > vers.c
 $COPYRIGHT
-#define SCCSSTR "@(#)${VERSION} #${v}${svn}${git}${p4version}: ${t}"
-#define VERSTR "${VERSION} #${v}${svn}${git}${p4version}: ${t}\\n    ${u}@${h}:${d}\\n"
+#define SCCSSTR "@(#)${VERINFO}"
+#define VERSTR "${VERSTR}"
 #define RELSTR "${RELEASE}"
 
 char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;

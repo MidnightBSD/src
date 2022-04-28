@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libusb/libusb20_ugen20.c 255242 2013-09-05 12:21:11Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -77,8 +77,8 @@ static libusb20_reset_device_t ugen20_reset_device;
 static libusb20_check_connected_t ugen20_check_connected;
 static libusb20_set_power_mode_t ugen20_set_power_mode;
 static libusb20_get_power_mode_t ugen20_get_power_mode;
-static libusb20_get_port_path_t ugen20_get_port_path;
 static libusb20_get_power_usage_t ugen20_get_power_usage;
+static libusb20_get_stats_t ugen20_get_stats;
 static libusb20_kernel_driver_active_t ugen20_kernel_driver_active;
 static libusb20_detach_kernel_driver_t ugen20_detach_kernel_driver;
 static libusb20_do_request_sync_t ugen20_do_request_sync;
@@ -134,6 +134,7 @@ ugen20_enumerate(struct libusb20_device *pdev, const char *id)
 	const char *tmp = id;
 	struct usb_device_descriptor ddesc;
 	struct usb_device_info devinfo;
+	struct usb_device_port_path udpp;
 	uint32_t plugtime;
 	char buf[64];
 	int f;
@@ -214,8 +215,15 @@ ugen20_enumerate(struct libusb20_device *pdev, const char *id)
 
 	snprintf(pdev->usb_desc, sizeof(pdev->usb_desc),
 	    USB_GENERIC_NAME "%u.%u: <%s %s> at usbus%u", pdev->bus_number,
-	    pdev->device_address, devinfo.udi_product,
-	    devinfo.udi_vendor, pdev->bus_number);
+	    pdev->device_address, devinfo.udi_vendor,
+	    devinfo.udi_product, pdev->bus_number);
+
+	/* get device port path, if any */
+	if (ioctl(f, IOUSB(USB_GET_DEV_PORT_PATH), &udpp) == 0 &&
+	    udpp.udp_port_level < LIBUSB20_DEVICE_PORT_PATH_MAX) {
+		memcpy(pdev->port_path, udpp.udp_port_no, udpp.udp_port_level);
+		pdev->port_level = udpp.udp_port_level;
+	}
 
 	error = 0;
 done:
@@ -649,22 +657,6 @@ ugen20_get_power_mode(struct libusb20_device *pdev, uint8_t *power_mode)
 }
 
 static int
-ugen20_get_port_path(struct libusb20_device *pdev, uint8_t *buf, uint8_t bufsize)
-{
-	struct usb_device_port_path udpp;
-
-	if (ioctl(pdev->file_ctrl, IOUSB(USB_GET_DEV_PORT_PATH), &udpp))
-		return (LIBUSB20_ERROR_OTHER);
-
-	if (udpp.udp_port_level > bufsize)
-		return (LIBUSB20_ERROR_OVERFLOW);
-
-	memcpy(buf, udpp.udp_port_no, udpp.udp_port_level);
-
-	return (udpp.udp_port_level);	/* success */
-}
-
-static int
 ugen20_get_power_usage(struct libusb20_device *pdev, uint16_t *power_usage)
 {
 	int temp;
@@ -673,6 +665,29 @@ ugen20_get_power_usage(struct libusb20_device *pdev, uint16_t *power_usage)
 		return (LIBUSB20_ERROR_OTHER);
 	}
 	*power_usage = temp;
+	return (0);			/* success */
+}
+
+static int
+ugen20_get_stats(struct libusb20_device *pdev, struct libusb20_device_stats *pstats)
+{
+	struct usb_device_stats st;
+
+	if (ioctl(pdev->file_ctrl, IOUSB(USB_DEVICESTATS), &st))
+		return (LIBUSB20_ERROR_OTHER);
+
+	memset(pstats, 0, sizeof(*pstats));
+
+	pstats->xfer_ok[0] = st.uds_requests_ok[0];
+	pstats->xfer_ok[1] = st.uds_requests_ok[1];
+	pstats->xfer_ok[2] = st.uds_requests_ok[2];
+	pstats->xfer_ok[3] = st.uds_requests_ok[3];
+
+	pstats->xfer_fail[0] = st.uds_requests_fail[0];
+	pstats->xfer_fail[1] = st.uds_requests_fail[1];
+	pstats->xfer_fail[2] = st.uds_requests_fail[2];
+	pstats->xfer_fail[3] = st.uds_requests_fail[3];
+
 	return (0);			/* success */
 }
 

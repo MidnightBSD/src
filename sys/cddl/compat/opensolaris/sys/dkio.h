@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/dkio.h 240868 2012-09-23 19:40:58Z pjd $
+ * $FreeBSD$
  */
 /*
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
@@ -74,8 +74,6 @@ extern "C" {
  * returns.  The caller's locking strategy should be prepared for this case.
  */
 #define	DKIOCFLUSHWRITECACHE	(DKIOC|34)	/* flush cache to phys medium */
-
-#define	DKIOCTRIM		(DKIOC|35)	/* TRIM a block */
 
 struct dk_callback {
 	void (*dkc_callback)(void *dkc_cookie, int error);

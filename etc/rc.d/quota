@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/quota 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # Enable/Check the quotas (must be after ypbind if using NIS)
@@ -13,6 +13,7 @@
 . /etc/rc.subr
 
 name="quota"
+desc="Enable/check the quotas"
 rcvar="quota_enable"
 load_rc_config $name
 start_cmd="quota_start"

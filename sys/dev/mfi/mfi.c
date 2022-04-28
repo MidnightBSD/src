@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi.c 252471 2013-07-01 17:57:22Z smh $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_mfi.h"
@@ -132,33 +132,27 @@ static int mfi_check_for_sscd(struct mfi_softc *sc, struct mfi_command *cm);
 
 SYSCTL_NODE(_hw, OID_AUTO, mfi, CTLFLAG_RD, 0, "MFI driver parameters");
 static int	mfi_event_locale = MFI_EVT_LOCALE_ALL;
-TUNABLE_INT("hw.mfi.event_locale", &mfi_event_locale);
 SYSCTL_INT(_hw_mfi, OID_AUTO, event_locale, CTLFLAG_RWTUN, &mfi_event_locale,
            0, "event message locale");
 
 static int	mfi_event_class = MFI_EVT_CLASS_INFO;
-TUNABLE_INT("hw.mfi.event_class", &mfi_event_class);
 SYSCTL_INT(_hw_mfi, OID_AUTO, event_class, CTLFLAG_RWTUN, &mfi_event_class,
            0, "event message class");
 
 static int	mfi_max_cmds = 128;
-TUNABLE_INT("hw.mfi.max_cmds", &mfi_max_cmds);
 SYSCTL_INT(_hw_mfi, OID_AUTO, max_cmds, CTLFLAG_RDTUN, &mfi_max_cmds,
 	   0, "Max commands limit (-1 = controller limit)");
 
 static int	mfi_detect_jbod_change = 1;
-TUNABLE_INT("hw.mfi.detect_jbod_change", &mfi_detect_jbod_change);
 SYSCTL_INT(_hw_mfi, OID_AUTO, detect_jbod_change, CTLFLAG_RWTUN,
 	   &mfi_detect_jbod_change, 0, "Detect a change to a JBOD");
 
 int		mfi_polled_cmd_timeout = MFI_POLL_TIMEOUT_SECS;
-TUNABLE_INT("hw.mfi.polled_cmd_timeout", &mfi_polled_cmd_timeout);
 SYSCTL_INT(_hw_mfi, OID_AUTO, polled_cmd_timeout, CTLFLAG_RWTUN,
 	   &mfi_polled_cmd_timeout, 0,
 	   "Polled command timeout - used for firmware flash etc (in seconds)");
 
 static int	mfi_cmd_timeout = MFI_CMD_TIMEOUT;
-TUNABLE_INT("hw.mfi.cmd_timeout", &mfi_cmd_timeout);
 SYSCTL_INT(_hw_mfi, OID_AUTO, cmd_timeout, CTLFLAG_RWTUN, &mfi_cmd_timeout,
 	   0, "Command timeout (in seconds)");
 
@@ -375,6 +369,7 @@ mfi_attach(struct mfi_softc *sc)
 	int error, commsz, framessz, sensesz;
 	int frames, unit, max_fw_sge, max_fw_cmds;
 	uint32_t tb_mem_size = 0;
+	struct cdev *dev_t;
 
 	if (sc == NULL)
 		return EINVAL;
@@ -544,7 +539,7 @@ mfi_attach(struct mfi_softc *sc)
 
 		/*
 		  Allocate DMA memory mapping for MPI2 IOC Init descriptor,
-		  we are taking it diffrent from what we have allocated for Request
+		  we are taking it different from what we have allocated for Request
 		  and reply descriptors to avoid confusion later
 		*/
 		tb_mem_size = sizeof(struct MPI2_IOC_INIT_REQUEST);
@@ -769,7 +764,8 @@ mfi_attach(struct mfi_softc *sc)
 	sc->mfi_cdev = make_dev(&mfi_cdevsw, unit, UID_ROOT, GID_OPERATOR,
 	    0640, "mfi%d", unit);
 	if (unit == 0)
-		make_dev_alias(sc->mfi_cdev, "megaraid_sas_ioctl_node");
+		make_dev_alias_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK, &dev_t,
+		    sc->mfi_cdev, "%s", "megaraid_sas_ioctl_node");
 	if (sc->mfi_cdev != NULL)
 		sc->mfi_cdev->si_drv1 = sc;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(sc->mfi_dev),
@@ -786,7 +782,7 @@ mfi_attach(struct mfi_softc *sc)
 	bus_generic_attach(sc->mfi_dev);
 
 	/* Start the timeout watchdog */
-	callout_init(&sc->mfi_watchdog_callout, CALLOUT_MPSAFE);
+	callout_init(&sc->mfi_watchdog_callout, 1);
 	callout_reset(&sc->mfi_watchdog_callout, mfi_cmd_timeout * hz,
 	    mfi_timeout, sc);
 
@@ -1268,8 +1264,6 @@ mfi_startup(void *arg)
 
 	sc = (struct mfi_softc *)arg;
 
-	config_intrhook_disestablish(&sc->mfi_ich);
-
 	sc->mfi_enable_intr(sc);
 	sx_xlock(&sc->mfi_config_lock);
 	mtx_lock(&sc->mfi_io_lock);
@@ -1278,6 +1272,8 @@ mfi_startup(void *arg)
 	    mfi_syspdprobe(sc);
 	mtx_unlock(&sc->mfi_io_lock);
 	sx_xunlock(&sc->mfi_config_lock);
+
+	config_intrhook_disestablish(&sc->mfi_ich);
 }
 
 static void
@@ -2122,6 +2118,8 @@ mfi_build_cdb(int readop, uint8_t byte2, u_int64_t lba, u_int32_t block_count, u
 	return cdb_len;
 }
 
+extern char *unmapped_buf;
+
 static struct mfi_command *
 mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 {
@@ -2143,13 +2141,13 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 	pass = &cm->cm_frame->pass;
 	bzero(pass->cdb, 16);
 	pass->header.cmd = MFI_CMD_PD_SCSI_IO;
-	switch (bio->bio_cmd & 0x03) {
+	switch (bio->bio_cmd) {
 	case BIO_READ:
-		flags = MFI_CMD_DATAIN;
+		flags = MFI_CMD_DATAIN | MFI_CMD_BIO;
 		readop = 1;
 		break;
 	case BIO_WRITE:
-		flags = MFI_CMD_DATAOUT;
+		flags = MFI_CMD_DATAOUT | MFI_CMD_BIO;
 		readop = 0;
 		break;
 	default:
@@ -2158,7 +2156,7 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 	}
 
 	/* Cheat with the sector length to avoid a non-constant division */
-	blkcount = (bio->bio_bcount + MFI_SECTOR_LEN - 1) / MFI_SECTOR_LEN;
+	blkcount = howmany(bio->bio_bcount, MFI_SECTOR_LEN);
 	/* Fill the LBA and Transfer length in CDB */
 	cdb_len = mfi_build_cdb(readop, 0, bio->bio_pblkno, blkcount,
 	    pass->cdb);
@@ -2174,7 +2172,7 @@ mfi_build_syspdio(struct mfi_softc *sc, struct bio *bio)
 	pass->sense_addr_hi = (uint32_t)((uint64_t)cm->cm_sense_busaddr >> 32);
 	cm->cm_complete = mfi_bio_complete;
 	cm->cm_private = bio;
-	cm->cm_data = bio->bio_data;
+	cm->cm_data = unmapped_buf;
 	cm->cm_len = bio->bio_bcount;
 	cm->cm_sg = &pass->sgl;
 	cm->cm_total_frame_size = MFI_PASS_FRAME_SIZE;
@@ -2202,14 +2200,14 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 	bzero(cm->cm_frame, sizeof(union mfi_frame));
 	cm->cm_frame->header.context = context;
 	io = &cm->cm_frame->io;
-	switch (bio->bio_cmd & 0x03) {
+	switch (bio->bio_cmd) {
 	case BIO_READ:
 		io->header.cmd = MFI_CMD_LD_READ;
-		flags = MFI_CMD_DATAIN;
+		flags = MFI_CMD_DATAIN | MFI_CMD_BIO;
 		break;
 	case BIO_WRITE:
 		io->header.cmd = MFI_CMD_LD_WRITE;
-		flags = MFI_CMD_DATAOUT;
+		flags = MFI_CMD_DATAOUT | MFI_CMD_BIO;
 		break;
 	default:
 		/* TODO: what about BIO_DELETE??? */
@@ -2217,7 +2215,7 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 	}
 
 	/* Cheat with the sector length to avoid a non-constant division */
-	blkcount = (bio->bio_bcount + MFI_SECTOR_LEN - 1) / MFI_SECTOR_LEN;
+	blkcount = howmany(bio->bio_bcount, MFI_SECTOR_LEN);
 	io->header.target_id = (uintptr_t)bio->bio_driver1;
 	io->header.timeout = 0;
 	io->header.flags = 0;
@@ -2230,7 +2228,7 @@ mfi_build_ldio(struct mfi_softc *sc, struct bio *bio)
 	io->lba_lo = bio->bio_pblkno & 0xffffffff;
 	cm->cm_complete = mfi_bio_complete;
 	cm->cm_private = bio;
-	cm->cm_data = bio->bio_data;
+	cm->cm_data = unmapped_buf;
 	cm->cm_len = bio->bio_bcount;
 	cm->cm_sg = &io->sgl;
 	cm->cm_total_frame_size = MFI_IO_FRAME_SIZE;
@@ -2316,6 +2314,10 @@ mfi_mapcmd(struct mfi_softc *sc, struct mfi_command *cm)
 			error = bus_dmamap_load_ccb(sc->mfi_buffer_dmat,
 			    cm->cm_dmamap, cm->cm_data, mfi_data_cb, cm,
 			    polled);
+		else if (cm->cm_flags & MFI_CMD_BIO)
+			error = bus_dmamap_load_bio(sc->mfi_buffer_dmat,
+			    cm->cm_dmamap, cm->cm_private, mfi_data_cb, cm,
+			    polled);
 		else
 			error = bus_dmamap_load(sc->mfi_buffer_dmat,
 			    cm->cm_dmamap, cm->cm_data, cm->cm_len,
@@ -2349,7 +2351,7 @@ mfi_data_cb(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 	/*
 	 * We need to check if we have the lock as this is async
 	 * callback so even though our caller mfi_mapcmd asserts
-	 * it has the lock, there is no garantee that hasn't been
+	 * it has the lock, there is no guarantee that hasn't been
 	 * dropped if bus_dmamap_load returned prior to our
 	 * completion.
 	 */
@@ -2620,7 +2622,7 @@ mfi_dump_blocks(struct mfi_softc *sc, int id, uint64_t lba, void *virt,
 	io->header.flags = 0;
 	io->header.scsi_status = 0;
 	io->header.sense_len = MFI_SENSE_LEN;
-	io->header.data_len = (len + MFI_SECTOR_LEN - 1) / MFI_SECTOR_LEN;
+	io->header.data_len = howmany(len, MFI_SECTOR_LEN);
 	io->sense_addr_lo = (uint32_t)cm->cm_sense_busaddr;
 	io->sense_addr_hi = (uint32_t)((uint64_t)cm->cm_sense_busaddr >> 32);
 	io->lba_hi = (lba & 0xffffffff00000000) >> 32;
@@ -2658,7 +2660,7 @@ mfi_dump_syspd_blocks(struct mfi_softc *sc, int id, uint64_t lba, void *virt,
 	pass->header.cmd = MFI_CMD_PD_SCSI_IO;
 
 	readop = 0;
-	blkcount = (len + MFI_SECTOR_LEN - 1) / MFI_SECTOR_LEN;
+	blkcount = howmany(len, MFI_SECTOR_LEN);
 	cdb_len = mfi_build_cdb(readop, 0, lba, blkcount, pass->cdb);
 	pass->header.target_id = id;
 	pass->header.timeout = 0;
@@ -3228,10 +3230,6 @@ mfi_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td
 		    (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT))) {
 			cm->cm_data = data = malloc(cm->cm_len, M_MFIBUF,
 			    M_WAITOK | M_ZERO);
-			if (cm->cm_data == NULL) {
-				device_printf(sc->mfi_dev, "Malloc failed\n");
-				goto out;
-			}
 		} else {
 			cm->cm_data = 0;
 		}
@@ -3525,10 +3523,6 @@ mfi_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct 
 		      (cm->cm_flags & (MFI_CMD_DATAIN | MFI_CMD_DATAOUT))) {
 			cm->cm_data = data = malloc(cm->cm_len, M_MFIBUF,
 			    M_WAITOK | M_ZERO);
-			if (cm->cm_data == NULL) {
-				device_printf(sc->mfi_dev, "Malloc failed\n");
-				goto out;
-			}
 		} else {
 			cm->cm_data = 0;
 		}

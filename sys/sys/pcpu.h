@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pcpu.h 249265 2013-04-08 19:19:10Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PCPU_H_
@@ -162,7 +162,7 @@ struct pcpu {
 	long		pc_cp_time[CPUSTATES];	/* statclock ticks */
 	struct device	*pc_device;
 	void		*pc_netisr;		/* netisr SWI cookie */
-	int		pc_dnweight;		/* vm_page_dontneed() */
+	int		pc_unused1;		/* unused field */
 	int		pc_domain;		/* Memory domain. */
 	struct rm_queue	pc_rm_queue;		/* rmlock list of trackers */
 	uintptr_t	pc_dynamic;		/* Dynamic per-cpu data area */
@@ -208,6 +208,13 @@ zpcpu_get(void *base)
 {
 
 	return ((char *)(base) + sizeof(struct pcpu) * curcpu);
+}
+
+static inline void *
+zpcpu_get_cpu(void *base, int cpu)
+{
+
+	return ((char *)(base) + sizeof(struct pcpu) * cpu);
 }
 
 /*

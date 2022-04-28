@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)chroot.c	8.1 (Berkeley) 6/9/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/chroot/chroot.c 227223 2011-11-06 16:40:17Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

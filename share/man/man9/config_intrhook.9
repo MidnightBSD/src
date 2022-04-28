@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/config_intrhook.9 165213 2006-12-14 14:33:13Z mpp $
+.\" $FreeBSD$
 .\"
-.Dd September 24, 2006
+.Dd August 10, 2017
 .Dt CONFIG_INTRHOOK 9
 .Os
 .Sh NAME
@@ -35,10 +35,13 @@
 but before root is mounted
 .Sh SYNOPSIS
 .In sys/kernel.h
+.Vt typedef void (*ich_func_t)(void *arg);
 .Ft int
 .Fn config_intrhook_establish "struct intr_config_hook *hook"
 .Ft void
 .Fn config_intrhook_disestablish "struct intr_config_hook *hook"
+.Ft void
+.Fn config_intrhook_oneshot "ich_func_t func" "void *arg"
 .Sh DESCRIPTION
 The
 .Fn config_intrhook_establish
@@ -50,6 +53,18 @@ the function is called immediately.
 The
 .Fn config_intrhook_disestablish
 function removes the entry from the hook queue.
+.Pp
+The
+.Fn config_intrhook_oneshot
+function schedules a function to be run as described for
+.Fn config_intrhook_establish ;
+the entry is automatically removed from the hook queue
+after that function runs.
+This is appropriate when additional device configuration must be done
+after interrupts are enabled, but there is no need to stall the
+boot process after that.
+This function allocates memory using M_WAITOK; do not call this while
+holding any non-sleepable locks.
 .Pp
 Before root is mounted, all the previously established hooks are
 run.
@@ -71,8 +86,8 @@ This structure is defined as follows:
 .Bd -literal
 struct intr_config_hook {
 	TAILQ_ENTRY(intr_config_hook) ich_links;/* Private */
-	void	(*ich_func)(void *arg);		/* function to call */
-	void	*ich_arg;			/* Argument to call */
+	ich_func_t	ich_func;		/* function to call */
+	void		*ich_arg;		/* Argument to call */
 };
 .Ed
 .Pp
@@ -100,6 +115,6 @@ with the CAM subsystem, but are available for any driver to use.
 .Sh AUTHORS
 .An -nosplit
 The functions were written by
-.An Justin Gibbs Aq gibbs@FreeBSD.org .
+.An Justin Gibbs Aq Mt gibbs@FreeBSD.org .
 This manual page was written by
-.An M. Warner Losh Aq imp@FreeBSD.org .
+.An M. Warner Losh Aq Mt imp@FreeBSD.org .

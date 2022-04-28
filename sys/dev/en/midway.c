@@ -32,7 +32,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/en/midway.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
  *
@@ -138,6 +138,7 @@ enum {
 #include <vm/uma.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 
@@ -343,6 +344,7 @@ en_k2sz(int k)
 }
 #define en_log2(X) en_k2sz(X)
 
+#if 0
 /*
  * en_b2sz: convert a DMA burst code to its byte size
  */
@@ -364,6 +366,7 @@ en_b2sz(int b)
 	}
 	return (0);
 }
+#endif
 
 /*
  * en_sz2b: convert a burst size (bytes) to DMA burst code
@@ -771,7 +774,7 @@ en_txdma(struct en_softc *sc, struct en_txslot *slot)
 	}
 
 	EN_COUNT(sc->stats.launch);
-	sc->ifp->if_opackets++;
+	if_inc_counter(sc->ifp, IFCOUNTER_OPACKETS, 1);
 
 	sc->vccs[tx.vci]->opackets++;
 	sc->vccs[tx.vci]->obytes += tx.datalen;
@@ -1484,7 +1487,7 @@ en_init(struct en_softc *sc)
 		loc = sc->txslot[slot].cur = sc->txslot[slot].start;
 		loc = loc - MID_RAMOFF;
 		/* mask, cvt to words */
-		loc = (loc & ~((EN_TXSZ * 1024) - 1)) >> 2;
+		loc = rounddown2(loc, EN_TXSZ * 1024) >> 2;
 		/* top 11 bits */
 		loc = loc >> MIDV_LOCTOPSHFT;
 		en_write(sc, MIDX_PLACE(slot), MIDX_MKPLACE(en_k2sz(EN_TXSZ),
@@ -1606,7 +1609,7 @@ en_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	  case SIOCATMGVCCS:	/* return vcc table */
 		vtab = atm_getvccs((struct atmio_vcc **)sc->vccs,
 		    MID_N_VC, sc->vccs_open, &sc->en_mtx, 1);
-		error = copyout(vtab, ifr->ifr_data, sizeof(*vtab) +
+		error = copyout(vtab, ifr_data_get_ptr(ifr), sizeof(*vtab) +
 		    vtab->count * sizeof(vtab->vccs[0]));
 		free(vtab, M_DEVBUF);
 		break;
@@ -1848,7 +1851,7 @@ en_rx_drain(struct en_softc *sc, u_int drq)
 		    EN_DQ_LEN(drq), vc->rxhand));
 
 		m->m_pkthdr.rcvif = sc->ifp;
-		sc->ifp->if_ipackets++;
+		if_inc_counter(sc->ifp, IFCOUNTER_IPACKETS, 1);
 
 		vc->ipackets++;
 		vc->ibytes += m->m_pkthdr.len;
@@ -1932,7 +1935,7 @@ en_mget(struct en_softc *sc, u_int pktlen)
 	m->m_pkthdr.rcvif = NULL;
 	m->m_pkthdr.len = pktlen;
 	m->m_len = EN_RX1BUF;
-	MH_ALIGN(m, EN_RX1BUF);
+	M_ALIGN(m, EN_RX1BUF);
 	if (m->m_len >= totlen) {
 		m->m_len = totlen;
 
@@ -2246,13 +2249,13 @@ en_service(struct en_softc *sc)
 			device_printf(sc->dev, "invalid AAL5 length\n");
 			rx.post_skip = MID_RBD_CNT(rbd) * MID_ATMDATASZ;
 			mlen = 0;
-			sc->ifp->if_ierrors++;
+			if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 
 		} else if (rbd & MID_RBD_CRCERR) {
 			device_printf(sc->dev, "CRC error\n");
 			rx.post_skip = MID_RBD_CNT(rbd) * MID_ATMDATASZ;
 			mlen = 0;
-			sc->ifp->if_ierrors++;
+			if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 
 		} else {
 			mlen = MID_PDU_LEN(pdu);
@@ -2989,7 +2992,7 @@ en_attach(struct en_softc *sc)
 		sc->rxslot[lcv].stop = ptr;
 		midvloc = midvloc - MID_RAMOFF;
 		/* mask, cvt to words */
-		midvloc = (midvloc & ~((EN_RXSZ*1024) - 1)) >> 2;
+		midvloc = rounddown2(midvloc, EN_RXSZ * 1024) >> 2;
 		/* we only want the top 11 bits */
 		midvloc = midvloc >> MIDV_LOCTOPSHFT;
 		midvloc = (midvloc & MIDV_LOCMASK) << MIDV_LOCSHIFT;

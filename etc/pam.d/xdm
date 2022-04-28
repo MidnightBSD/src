@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/etc/pam.d/xdm 197769 2009-10-05 09:28:54Z des $
+# $FreeBSD$
 #
 # PAM configuration for the "xdm" service
 #

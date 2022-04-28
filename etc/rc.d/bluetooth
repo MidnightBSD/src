@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/bluetooth 208060 2010-05-14 04:53:57Z dougb $
+# $FreeBSD$
 
 # PROVIDE: bluetooth
 # REQUIRE: DAEMON
@@ -33,6 +33,7 @@
 . /etc/rc.subr
 
 name="bluetooth"
+desc="Bluetooth setup script"
 rcvar=
 start_cmd="bluetooth_start"
 stop_cmd="bluetooth_stop"

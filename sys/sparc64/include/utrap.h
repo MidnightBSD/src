@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/utrap.h 154419 2006-01-16 01:35:25Z kris $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_UTRAP_H_

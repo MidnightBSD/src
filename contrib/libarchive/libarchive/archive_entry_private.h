@@ -22,15 +22,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_entry_private.h 232153 2012-02-25 10:58:02Z mm $
+ * $FreeBSD$
  */
+
+#ifndef ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
+#define ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 
 #ifndef __LIBARCHIVE_BUILD
 #error This header is only to be used internally to libarchive.
 #endif
-
-#ifndef ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
-#define	ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 
 #include "archive_acl_private.h"
 #include "archive_string.h"
@@ -154,6 +154,11 @@ struct archive_entry {
 	/* Not used within libarchive; useful for some clients. */
 	struct archive_mstring ae_sourcepath;	/* Path this entry is sourced from. */
 
+#define AE_ENCRYPTION_NONE 0
+#define AE_ENCRYPTION_DATA 1
+#define AE_ENCRYPTION_METADATA 2
+	char encryption;
+	
 	void *mac_metadata;
 	size_t mac_metadata_size;
 
@@ -171,6 +176,9 @@ struct archive_entry {
 
 	/* Miscellaneous. */
 	char		 strmode[12];
+
+	/* Symlink type support */
+	int ae_symlink_type;
 };
 
 #endif /* ARCHIVE_ENTRY_PRIVATE_H_INCLUDED */

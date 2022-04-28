@@ -1,52 +1,59 @@
 /*-
- * Copyright 2009 Solarflare Communications Inc.  All rights reserved.
+ * Copyright (c) 2009-2016 Solarflare Communications Inc.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ * modification, are permitted provided that the following conditions are met:
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation are
+ * those of the authors and should not be interpreted as representing official
+ * policies, either expressed or implied, of the FreeBSD Project.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sfxge/common/siena_nic.c 228078 2011-11-28 17:19:05Z philip $");
+__FBSDID("$FreeBSD$");
 
-#include "efsys.h"
 #include "efx.h"
 #include "efx_impl.h"
+#include "mcdi_mon.h"
 
 #if EFSYS_OPT_SIENA
 
-static	__checkReturn		int
+#if EFSYS_OPT_VPD || EFSYS_OPT_NVRAM
+
+static	__checkReturn		efx_rc_t
 siena_nic_get_partn_mask(
 	__in			efx_nic_t *enp,
 	__out			unsigned int *maskp)
 {
 	efx_mcdi_req_t req;
-	uint8_t outbuf[MC_CMD_NVRAM_TYPES_OUT_LEN];
-	int rc;
+	EFX_MCDI_DECLARE_BUF(payload, MC_CMD_NVRAM_TYPES_IN_LEN,
+		MC_CMD_NVRAM_TYPES_OUT_LEN);
+	efx_rc_t rc;
 
 	req.emr_cmd = MC_CMD_NVRAM_TYPES;
-	EFX_STATIC_ASSERT(MC_CMD_NVRAM_TYPES_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = sizeof (outbuf);
+	req.emr_in_buf = payload;
+	req.emr_in_length = MC_CMD_NVRAM_TYPES_IN_LEN;
+	req.emr_out_buf = payload;
+	req.emr_out_length = MC_CMD_NVRAM_TYPES_OUT_LEN;
 
 	efx_mcdi_execute(enp, &req);
 
@@ -67,285 +74,198 @@ siena_nic_get_partn_mask(
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-static	__checkReturn	int
-siena_nic_exit_assertion_handler(
-	__in		efx_nic_t *enp)
-{
-	efx_mcdi_req_t req;
-	uint8_t payload[MC_CMD_REBOOT_IN_LEN];
-	int rc;
+#endif /* EFSYS_OPT_VPD || EFSYS_OPT_NVRAM */
 
-	req.emr_cmd = MC_CMD_REBOOT;
-	req.emr_in_buf = payload;
-	req.emr_in_length = MC_CMD_REBOOT_IN_LEN;
-	EFX_STATIC_ASSERT(MC_CMD_REBOOT_OUT_LEN == 0);
-	req.emr_out_buf = NULL;
-	req.emr_out_length = 0;
-
-	MCDI_IN_SET_DWORD(req, REBOOT_IN_FLAGS,
-			    MC_CMD_REBOOT_FLAGS_AFTER_ASSERTION);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0 && req.emr_rc != EIO) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	return (0);
-
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-static	__checkReturn	int
-siena_nic_read_assertion(
-	__in		efx_nic_t *enp)
-{
-	efx_mcdi_req_t req;
-	uint8_t payload[MAX(MC_CMD_GET_ASSERTS_IN_LEN,
-			    MC_CMD_GET_ASSERTS_OUT_LEN)];
-	const char *reason;
-	unsigned int flags;
-	unsigned int index;
-	unsigned int ofst;
-	int retry;
-	int rc;
-
-	/*
-	 * Before we attempt to chat to the MC, we should verify that the MC
-	 * isn't in it's assertion handler, either due to a previous reboot,
-	 * or because we're reinitializing due to an eec_exception().
-	 *
-	 * Use GET_ASSERTS to read any assertion state that may be present.
-	 * Retry this command twice. Once because a boot-time assertion failure
-	 * might cause the 1st MCDI request to fail. And once again because
-	 * we might race with siena_nic_exit_assertion_handler() running on the
-	 * other port.
-	 */
-	retry = 2;
-	do {
-		req.emr_cmd = MC_CMD_GET_ASSERTS;
-		req.emr_in_buf = payload;
-		req.emr_in_length = MC_CMD_GET_ASSERTS_IN_LEN;
-		req.emr_out_buf = payload;
-		req.emr_out_length = MC_CMD_GET_ASSERTS_OUT_LEN;
-
-		MCDI_IN_SET_DWORD(req, GET_ASSERTS_IN_CLEAR, 1);
-		efx_mcdi_execute(enp, &req);
-
-	} while ((req.emr_rc == EINTR || req.emr_rc == EIO) && retry-- > 0);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	if (req.emr_out_length_used < MC_CMD_GET_ASSERTS_OUT_LEN) {
-		rc = EMSGSIZE;
-		goto fail2;
-	}
-
-	/* Print out any assertion state recorded */
-	flags = MCDI_OUT_DWORD(req, GET_ASSERTS_OUT_GLOBAL_FLAGS);
-	if (flags == MC_CMD_GET_ASSERTS_FLAGS_NO_FAILS)
-		return (0);
-
-	reason = (flags == MC_CMD_GET_ASSERTS_FLAGS_SYS_FAIL)
-		? "system-level assertion"
-		: (flags == MC_CMD_GET_ASSERTS_FLAGS_THR_FAIL)
-		? "thread-level assertion"
-		: (flags == MC_CMD_GET_ASSERTS_FLAGS_WDOG_FIRED)
-		? "watchdog reset"
-		: "unknown assertion";
-	EFSYS_PROBE3(mcpu_assertion,
-	    const char *, reason, unsigned int,
-	    MCDI_OUT_DWORD(req, GET_ASSERTS_OUT_SAVED_PC_OFFS),
-	    unsigned int,
-	    MCDI_OUT_DWORD(req, GET_ASSERTS_OUT_THREAD_OFFS));
-
-	/* Print out the registers */
-	ofst = MC_CMD_GET_ASSERTS_OUT_GP_REGS_OFFS_OFST;
-	for (index = 1; index < 32; index++) {
-		EFSYS_PROBE2(mcpu_register, unsigned int, index, unsigned int,
-			    EFX_DWORD_FIELD(*MCDI_OUT(req, efx_dword_t, ofst),
-					    EFX_DWORD_0));
-		ofst += sizeof (efx_dword_t);
-	}
-	EFSYS_ASSERT(ofst <= MC_CMD_GET_ASSERTS_OUT_LEN);
-
-	return (0);
-
-fail2:
-	EFSYS_PROBE(fail2);
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-static	__checkReturn	int
-siena_nic_attach(
-	__in		efx_nic_t *enp,
-	__in		boolean_t attach)
-{
-	efx_mcdi_req_t req;
-	uint8_t payload[MC_CMD_DRV_ATTACH_IN_LEN];
-	int rc;
-
-	req.emr_cmd = MC_CMD_DRV_ATTACH;
-	req.emr_in_buf = payload;
-	req.emr_in_length = MC_CMD_DRV_ATTACH_IN_LEN;
-	req.emr_out_buf = NULL;
-	req.emr_out_length = 0;
-
-	MCDI_IN_SET_DWORD(req, DRV_ATTACH_IN_NEW_STATE, attach ? 1 : 0);
-	MCDI_IN_SET_DWORD(req, DRV_ATTACH_IN_UPDATE, 1);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	if (req.emr_out_length_used < MC_CMD_DRV_ATTACH_OUT_LEN) {
-		rc = EMSGSIZE;
-		goto fail2;
-	}
-
-	return (0);
-
-fail2:
-	EFSYS_PROBE(fail2);
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-#if EFSYS_OPT_PCIE_TUNE
-
-	__checkReturn	int
-siena_nic_pcie_extended_sync(
-	__in		efx_nic_t *enp)
-{
-	uint8_t inbuf[MC_CMD_WORKAROUND_IN_LEN];
-	efx_mcdi_req_t req;
-	int rc;
-
-	EFSYS_ASSERT3U(enp->en_family, ==, EFX_FAMILY_SIENA);
-
-	req.emr_cmd = MC_CMD_WORKAROUND;
-	req.emr_in_buf = inbuf;
-	req.emr_in_length = sizeof (inbuf);
-	EFX_STATIC_ASSERT(MC_CMD_WORKAROUND_OUT_LEN == 0);
-	req.emr_out_buf = NULL;
-	req.emr_out_length = 0;
-
-	MCDI_IN_SET_DWORD(req, WORKAROUND_IN_TYPE, MC_CMD_WORKAROUND_BUG17230);
-	MCDI_IN_SET_DWORD(req, WORKAROUND_IN_ENABLED, 1);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	return (0);
-
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-#endif	/* EFSYS_OPT_PCIE_TUNE */
-
-static	__checkReturn	int
+static	__checkReturn	efx_rc_t
 siena_board_cfg(
 	__in		efx_nic_t *enp)
 {
 	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
-	efx_mcdi_iface_t *emip = &(enp->en_u.siena.enu_mip);
-	uint8_t outbuf[MAX(MC_CMD_GET_BOARD_CFG_OUT_LEN,
-		    MC_CMD_GET_RESOURCE_LIMITS_OUT_LEN)];
-	efx_mcdi_req_t req;
-	uint8_t *src;
-	int rc;
+	uint8_t mac_addr[6];
+	efx_dword_t capabilities;
+	uint32_t board_type;
+	uint32_t nevq, nrxq, ntxq;
+	efx_rc_t rc;
+
+	/* External port identifier using one-based port numbering */
+	encp->enc_external_port = (uint8_t)enp->en_mcdi.em_emip.emi_port;
 
 	/* Board configuration */
-	req.emr_cmd = MC_CMD_GET_BOARD_CFG;
-	EFX_STATIC_ASSERT(MC_CMD_GET_BOARD_CFG_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = MC_CMD_GET_BOARD_CFG_OUT_LEN;
+	if ((rc = efx_mcdi_get_board_cfg(enp, &board_type,
+		    &capabilities, mac_addr)) != 0)
+		goto fail1;
 
-	efx_mcdi_execute(enp, &req);
+	EFX_MAC_ADDR_COPY(encp->enc_mac_addr, mac_addr);
 
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
+	encp->enc_board_type = board_type;
+
+	/*
+	 * There is no possibility to determine the number of PFs on Siena
+	 * by issuing MCDI request, and it is not an easy task to find the
+	 * value based on the board type, so 'enc_hw_pf_count' is set to 1
+	 */
+	encp->enc_hw_pf_count = 1;
+
+	/* Additional capabilities */
+	encp->enc_clk_mult = 1;
+	if (EFX_DWORD_FIELD(capabilities, MC_CMD_CAPABILITIES_TURBO)) {
+		enp->en_features |= EFX_FEATURE_TURBO;
+
+		if (EFX_DWORD_FIELD(capabilities,
+			MC_CMD_CAPABILITIES_TURBO_ACTIVE)) {
+			encp->enc_clk_mult = 2;
+		}
+	}
+
+	encp->enc_evq_timer_quantum_ns =
+		EFX_EVQ_SIENA_TIMER_QUANTUM_NS / encp->enc_clk_mult;
+	encp->enc_evq_timer_max_us = (encp->enc_evq_timer_quantum_ns <<
+		FRF_CZ_TC_TIMER_VAL_WIDTH) / 1000;
+
+	/* When hash header insertion is enabled, Siena inserts 16 bytes */
+	encp->enc_rx_prefix_size = 16;
+
+	/* Alignment for receive packet DMA buffers */
+	encp->enc_rx_buf_align_start = 1;
+	encp->enc_rx_buf_align_end = 1;
+
+	/* Alignment for WPTR updates */
+	encp->enc_rx_push_align = 1;
+
+	encp->enc_tx_dma_desc_size_max = EFX_MASK32(FSF_AZ_TX_KER_BYTE_COUNT);
+	/* Fragments must not span 4k boundaries. */
+	encp->enc_tx_dma_desc_boundary = 4096;
+
+	/* Resource limits */
+	rc = efx_mcdi_get_resource_limits(enp, &nevq, &nrxq, &ntxq);
+	if (rc != 0) {
+		if (rc != ENOTSUP)
+			goto fail2;
+
+		nevq = 1024;
+		nrxq = EFX_RXQ_LIMIT_TARGET;
+		ntxq = EFX_TXQ_LIMIT_TARGET;
+	}
+	encp->enc_evq_limit = nevq;
+	encp->enc_rxq_limit = MIN(EFX_RXQ_LIMIT_TARGET, nrxq);
+	encp->enc_txq_limit = MIN(EFX_TXQ_LIMIT_TARGET, ntxq);
+
+	encp->enc_txq_max_ndescs = 4096;
+
+	encp->enc_buftbl_limit = SIENA_SRAM_ROWS -
+	    (encp->enc_txq_limit * EFX_TXQ_DC_NDESCS(EFX_TXQ_DC_SIZE)) -
+	    (encp->enc_rxq_limit * EFX_RXQ_DC_NDESCS(EFX_RXQ_DC_SIZE));
+
+	encp->enc_hw_tx_insert_vlan_enabled = B_FALSE;
+	encp->enc_fw_assisted_tso_enabled = B_FALSE;
+	encp->enc_fw_assisted_tso_v2_enabled = B_FALSE;
+	encp->enc_fw_assisted_tso_v2_n_contexts = 0;
+	encp->enc_allow_set_mac_with_installed_filters = B_TRUE;
+
+	/* Siena supports two 10G ports, and 8 lanes of PCIe Gen2 */
+	encp->enc_required_pcie_bandwidth_mbps = 2 * 10000;
+	encp->enc_max_pcie_link_gen = EFX_PCIE_LINK_SPEED_GEN2;
+
+	encp->enc_fw_verified_nvram_update_required = B_FALSE;
+
+	return (0);
+
+fail2:
+	EFSYS_PROBE(fail2);
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	return (rc);
+}
+
+static	__checkReturn	efx_rc_t
+siena_phy_cfg(
+	__in		efx_nic_t *enp)
+{
+#if EFSYS_OPT_PHY_STATS
+	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
+#endif	/* EFSYS_OPT_PHY_STATS */
+	efx_rc_t rc;
+
+	/* Fill out fields in enp->en_port and enp->en_nic_cfg from MCDI */
+	if ((rc = efx_mcdi_get_phy_cfg(enp)) != 0)
+		goto fail1;
+
+#if EFSYS_OPT_PHY_STATS
+	/* Convert the MCDI statistic mask into the EFX_PHY_STAT mask */
+	siena_phy_decode_stats(enp, encp->enc_mcdi_phy_stat_mask,
+			    NULL, &encp->enc_phy_stat_mask, NULL);
+#endif	/* EFSYS_OPT_PHY_STATS */
+
+	return (0);
+
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	return (rc);
+}
+
+#define	SIENA_BIU_MAGIC0	0x01234567
+#define	SIENA_BIU_MAGIC1	0xfedcba98
+
+static	__checkReturn	efx_rc_t
+siena_nic_biu_test(
+	__in		efx_nic_t *enp)
+{
+	efx_oword_t oword;
+	efx_rc_t rc;
+
+	/*
+	 * Write magic values to scratch registers 0 and 1, then
+	 * verify that the values were written correctly.  Interleave
+	 * the accesses to ensure that the BIU is not just reading
+	 * back the cached value that was last written.
+	 */
+	EFX_POPULATE_OWORD_1(oword, FRF_AZ_DRIVER_DW0, SIENA_BIU_MAGIC0);
+	EFX_BAR_TBL_WRITEO(enp, FR_AZ_DRIVER_REG, 0, &oword, B_TRUE);
+
+	EFX_POPULATE_OWORD_1(oword, FRF_AZ_DRIVER_DW0, SIENA_BIU_MAGIC1);
+	EFX_BAR_TBL_WRITEO(enp, FR_AZ_DRIVER_REG, 1, &oword, B_TRUE);
+
+	EFX_BAR_TBL_READO(enp, FR_AZ_DRIVER_REG, 0, &oword, B_TRUE);
+	if (EFX_OWORD_FIELD(oword, FRF_AZ_DRIVER_DW0) != SIENA_BIU_MAGIC0) {
+		rc = EIO;
 		goto fail1;
 	}
 
-	if (req.emr_out_length_used < MC_CMD_GET_BOARD_CFG_OUT_LEN) {
-		rc = EMSGSIZE;
+	EFX_BAR_TBL_READO(enp, FR_AZ_DRIVER_REG, 1, &oword, B_TRUE);
+	if (EFX_OWORD_FIELD(oword, FRF_AZ_DRIVER_DW0) != SIENA_BIU_MAGIC1) {
+		rc = EIO;
 		goto fail2;
 	}
 
-	if (emip->emi_port == 1)
-		src = MCDI_OUT2(req, uint8_t,
-			    GET_BOARD_CFG_OUT_MAC_ADDR_BASE_PORT0);
-	else
-		src = MCDI_OUT2(req, uint8_t,
-			    GET_BOARD_CFG_OUT_MAC_ADDR_BASE_PORT1);
-	EFX_MAC_ADDR_COPY(encp->enc_mac_addr, src);
+	/*
+	 * Perform the same test, with the values swapped.  This
+	 * ensures that subsequent tests don't start with the correct
+	 * values already written into the scratch registers.
+	 */
+	EFX_POPULATE_OWORD_1(oword, FRF_AZ_DRIVER_DW0, SIENA_BIU_MAGIC1);
+	EFX_BAR_TBL_WRITEO(enp, FR_AZ_DRIVER_REG, 0, &oword, B_TRUE);
 
-	encp->enc_board_type = MCDI_OUT_DWORD(req,
-				    GET_BOARD_CFG_OUT_BOARD_TYPE);
+	EFX_POPULATE_OWORD_1(oword, FRF_AZ_DRIVER_DW0, SIENA_BIU_MAGIC0);
+	EFX_BAR_TBL_WRITEO(enp, FR_AZ_DRIVER_REG, 1, &oword, B_TRUE);
 
-	/* Resource limits */
-	req.emr_cmd = MC_CMD_GET_RESOURCE_LIMITS;
-	EFX_STATIC_ASSERT(MC_CMD_GET_RESOURCE_LIMITS_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = MC_CMD_GET_RESOURCE_LIMITS_OUT_LEN;
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc == 0) {
-		if (req.emr_out_length_used < MC_CMD_GET_RESOURCE_LIMITS_OUT_LEN) {
-			rc = EMSGSIZE;
-			goto fail3;
-		}
-
-		encp->enc_evq_limit = MCDI_OUT_DWORD(req,
-		    GET_RESOURCE_LIMITS_OUT_EVQ);
-		encp->enc_txq_limit = MIN(EFX_TXQ_LIMIT_TARGET,
-		    MCDI_OUT_DWORD(req, GET_RESOURCE_LIMITS_OUT_TXQ));
-		encp->enc_rxq_limit = MIN(EFX_RXQ_LIMIT_TARGET,
-		    MCDI_OUT_DWORD(req, GET_RESOURCE_LIMITS_OUT_RXQ));
-	} else if (req.emr_rc == ENOTSUP) {
-		encp->enc_evq_limit = 1024;
-		encp->enc_txq_limit = EFX_TXQ_LIMIT_TARGET;
-		encp->enc_rxq_limit = EFX_RXQ_LIMIT_TARGET;
-	} else {
-		rc = req.emr_rc;
-		goto fail4;
+	EFX_BAR_TBL_READO(enp, FR_AZ_DRIVER_REG, 0, &oword, B_TRUE);
+	if (EFX_OWORD_FIELD(oword, FRF_AZ_DRIVER_DW0) != SIENA_BIU_MAGIC1) {
+		rc = EIO;
+		goto fail3;
 	}
 
-	encp->enc_buftbl_limit = SIENA_SRAM_ROWS -
-	    (encp->enc_txq_limit * 16) - (encp->enc_rxq_limit * 64);
+	EFX_BAR_TBL_READO(enp, FR_AZ_DRIVER_REG, 1, &oword, B_TRUE);
+	if (EFX_OWORD_FIELD(oword, FRF_AZ_DRIVER_DW0) != SIENA_BIU_MAGIC0) {
+		rc = EIO;
+		goto fail4;
+	}
 
 	return (0);
 
@@ -356,230 +276,12 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-static	__checkReturn	int
-siena_phy_cfg(
-	__in		efx_nic_t *enp)
-{
-	efx_port_t *epp = &(enp->en_port);
-	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
-	efx_mcdi_req_t req;
-	uint8_t outbuf[MC_CMD_GET_PHY_CFG_OUT_LEN];
-	int rc;
-
-	req.emr_cmd = MC_CMD_GET_PHY_CFG;
-	EFX_STATIC_ASSERT(MC_CMD_GET_PHY_CFG_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = sizeof (outbuf);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	if (req.emr_out_length_used < MC_CMD_GET_PHY_CFG_OUT_LEN) {
-		rc = EMSGSIZE;
-		goto fail2;
-	}
-
-	encp->enc_phy_type = MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_TYPE);
-#if EFSYS_OPT_NAMES
-	(void) strncpy(encp->enc_phy_name,
-		MCDI_OUT2(req, char, GET_PHY_CFG_OUT_NAME),
-		MIN(sizeof (encp->enc_phy_name) - 1,
-		    MC_CMD_GET_PHY_CFG_OUT_NAME_LEN));
-#endif	/* EFSYS_OPT_NAMES */
-	(void) memset(encp->enc_phy_revision, 0,
-	    sizeof (encp->enc_phy_revision));
-	memcpy(encp->enc_phy_revision,
-		MCDI_OUT2(req, char, GET_PHY_CFG_OUT_REVISION),
-		MIN(sizeof (encp->enc_phy_revision) - 1,
-		    MC_CMD_GET_PHY_CFG_OUT_REVISION_LEN));
-#if EFSYS_OPT_PHY_LED_CONTROL
-	encp->enc_led_mask = ((1 << EFX_PHY_LED_DEFAULT) |
-			    (1 << EFX_PHY_LED_OFF) |
-			    (1 << EFX_PHY_LED_ON));
-#endif	/* EFSYS_OPT_PHY_LED_CONTROL */
-
-#if EFSYS_OPT_PHY_PROPS
-	encp->enc_phy_nprops  = 0;
-#endif	/* EFSYS_OPT_PHY_PROPS */
-
-	/* Get the media type of the fixed port, if recognised. */
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_XAUI == EFX_PHY_MEDIA_XAUI);
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_CX4 == EFX_PHY_MEDIA_CX4);
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_KX4 == EFX_PHY_MEDIA_KX4);
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_XFP == EFX_PHY_MEDIA_XFP);
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_SFP_PLUS == EFX_PHY_MEDIA_SFP_PLUS);
-	EFX_STATIC_ASSERT(MC_CMD_MEDIA_BASE_T == EFX_PHY_MEDIA_BASE_T);
-	epp->ep_fixed_port_type =
-		MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_MEDIA_TYPE);
-	if (epp->ep_fixed_port_type >= EFX_PHY_MEDIA_NTYPES)
-		epp->ep_fixed_port_type = EFX_PHY_MEDIA_INVALID;
-
-	epp->ep_phy_cap_mask =
-		MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_SUPPORTED_CAP);
-#if EFSYS_OPT_PHY_FLAGS
-	encp->enc_phy_flags_mask = MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_FLAGS);
-#endif	/* EFSYS_OPT_PHY_FLAGS */
-
-	encp->enc_port = (uint8_t)MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_PRT);
-
-	/* Populate internal state */
-	encp->enc_siena_channel =
-		(uint8_t)MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_CHANNEL);
-
-#if EFSYS_OPT_PHY_STATS
-	encp->enc_siena_phy_stat_mask =
-		MCDI_OUT_DWORD(req, GET_PHY_CFG_OUT_STATS_MASK);
-
-	/* Convert the MCDI statistic mask into the EFX_PHY_STAT mask */
-	siena_phy_decode_stats(enp, encp->enc_siena_phy_stat_mask,
-			    NULL, &encp->enc_phy_stat_mask, NULL);
-#endif	/* EFSYS_OPT_PHY_STATS */
-
-#if EFSYS_OPT_PHY_BIST
-	encp->enc_bist_mask = 0;
-	if (MCDI_OUT_DWORD_FIELD(req, GET_PHY_CFG_OUT_FLAGS,
-	    GET_PHY_CFG_OUT_BIST_CABLE_SHORT))
-		encp->enc_bist_mask |= (1 << EFX_PHY_BIST_TYPE_CABLE_SHORT);
-	if (MCDI_OUT_DWORD_FIELD(req, GET_PHY_CFG_OUT_FLAGS,
-	    GET_PHY_CFG_OUT_BIST_CABLE_LONG))
-		encp->enc_bist_mask |= (1 << EFX_PHY_BIST_TYPE_CABLE_LONG);
-	if (MCDI_OUT_DWORD_FIELD(req, GET_PHY_CFG_OUT_FLAGS,
-	    GET_PHY_CFG_OUT_BIST))
-		encp->enc_bist_mask |= (1 << EFX_PHY_BIST_TYPE_NORMAL);
-#endif	/* EFSYS_OPT_BIST */
-
-	return (0);
-
-fail2:
-	EFSYS_PROBE(fail2);
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-#if EFSYS_OPT_LOOPBACK
-
-static	__checkReturn	int
-siena_loopback_cfg(
-	__in		efx_nic_t *enp)
-{
-	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
-	efx_mcdi_req_t req;
-	uint8_t outbuf[MC_CMD_GET_LOOPBACK_MODES_OUT_LEN];
-	int rc;
-
-	req.emr_cmd = MC_CMD_GET_LOOPBACK_MODES;
-	EFX_STATIC_ASSERT(MC_CMD_GET_LOOPBACK_MODES_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = sizeof (outbuf);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	if (req.emr_out_length_used < MC_CMD_GET_LOOPBACK_MODES_OUT_LEN) {
-		rc = EMSGSIZE;
-		goto fail2;
-	}
-
-	/*
-	 * We assert the MC_CMD_LOOPBACK and EFX_LOOPBACK namespaces agree
-	 * in siena_phy.c:siena_phy_get_link()
-	 */
-	encp->enc_loopback_types[EFX_LINK_100FDX] = EFX_LOOPBACK_MASK &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_100M) &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_SUGGESTED);
-	encp->enc_loopback_types[EFX_LINK_1000FDX] = EFX_LOOPBACK_MASK &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_1G) &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_SUGGESTED);
-	encp->enc_loopback_types[EFX_LINK_10000FDX] = EFX_LOOPBACK_MASK &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_10G) &
-	    MCDI_OUT_DWORD(req, GET_LOOPBACK_MODES_OUT_SUGGESTED);
-	encp->enc_loopback_types[EFX_LINK_UNKNOWN] =
-	    (1 << EFX_LOOPBACK_OFF) |
-	    encp->enc_loopback_types[EFX_LINK_100FDX] |
-	    encp->enc_loopback_types[EFX_LINK_1000FDX] |
-	    encp->enc_loopback_types[EFX_LINK_10000FDX];
-
-	return (0);
-
-fail2:
-	EFSYS_PROBE(fail2);
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-#endif	/* EFSYS_OPT_LOOPBACK */
-
-#if EFSYS_OPT_MON_STATS
-
-static	__checkReturn	int
-siena_monitor_cfg(
-	__in		efx_nic_t *enp)
-{
-	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
-	efx_mcdi_req_t req;
-	uint8_t outbuf[MCDI_CTL_SDU_LEN_MAX];
-	int rc;
-
-	req.emr_cmd = MC_CMD_SENSOR_INFO;
-	EFX_STATIC_ASSERT(MC_CMD_SENSOR_INFO_IN_LEN == 0);
-	req.emr_in_buf = NULL;
-	req.emr_in_length = 0;
-	req.emr_out_buf = outbuf;
-	req.emr_out_length = sizeof (outbuf);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	if (req.emr_out_length_used < MC_CMD_SENSOR_INFO_OUT_MASK_OFST + 4) {
-		rc = EMSGSIZE;
-		goto fail2;
-	}
-
-	encp->enc_siena_mon_stat_mask =
-		MCDI_OUT_DWORD(req, SENSOR_INFO_OUT_MASK);
-	encp->enc_mon_type = EFX_MON_SFC90X0;
-
-	siena_mon_decode_stats(enp, encp->enc_siena_mon_stat_mask,
-			    NULL, &(encp->enc_mon_stat_mask), NULL);
-
-	return (0);
-
-fail2:
-	EFSYS_PROBE(fail2);
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
-}
-
-#endif	/* EFSYS_OPT_MON_STATS */
-
-	__checkReturn	int
+	__checkReturn	efx_rc_t
 siena_nic_probe(
 	__in		efx_nic_t *enp)
 {
@@ -587,59 +289,69 @@ siena_nic_probe(
 	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
 	siena_link_state_t sls;
 	unsigned int mask;
-	int rc;
+	efx_oword_t oword;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_family, ==, EFX_FAMILY_SIENA);
 
-	/* Read clear any assertion state */
-	if ((rc = siena_nic_read_assertion(enp)) != 0)
+	/* Test BIU */
+	if ((rc = siena_nic_biu_test(enp)) != 0)
 		goto fail1;
 
-	/* Exit the assertion handler */
-	if ((rc = siena_nic_exit_assertion_handler(enp)) != 0)
+	/* Clear the region register */
+	EFX_POPULATE_OWORD_4(oword,
+	    FRF_AZ_ADR_REGION0, 0,
+	    FRF_AZ_ADR_REGION1, (1 << 16),
+	    FRF_AZ_ADR_REGION2, (2 << 16),
+	    FRF_AZ_ADR_REGION3, (3 << 16));
+	EFX_BAR_WRITEO(enp, FR_AZ_ADR_REGION_REG, &oword);
+
+	/* Read clear any assertion state */
+	if ((rc = efx_mcdi_read_assertion(enp)) != 0)
 		goto fail2;
 
-	/* Wrestle control from the BMC */
-	if ((rc = siena_nic_attach(enp, B_TRUE)) != 0)
+	/* Exit the assertion handler */
+	if ((rc = efx_mcdi_exit_assertion_handler(enp)) != 0)
 		goto fail3;
 
-	if ((rc = siena_board_cfg(enp)) != 0)
+	/* Wrestle control from the BMC */
+	if ((rc = efx_mcdi_drv_attach(enp, B_TRUE)) != 0)
 		goto fail4;
 
-	encp->enc_evq_moderation_max =
-		EFX_EV_TIMER_QUANTUM << FRF_CZ_TIMER_VAL_WIDTH;
+	if ((rc = siena_board_cfg(enp)) != 0)
+		goto fail5;
 
 	if ((rc = siena_phy_cfg(enp)) != 0)
-		goto fail5;
+		goto fail6;
 
 	/* Obtain the default PHY advertised capabilities */
 	if ((rc = siena_nic_reset(enp)) != 0)
-		goto fail6;
-	if ((rc = siena_phy_get_link(enp, &sls)) != 0)
 		goto fail7;
+	if ((rc = siena_phy_get_link(enp, &sls)) != 0)
+		goto fail8;
 	epp->ep_default_adv_cap_mask = sls.sls_adv_cap_mask;
 	epp->ep_adv_cap_mask = sls.sls_adv_cap_mask;
 
 #if EFSYS_OPT_VPD || EFSYS_OPT_NVRAM
 	if ((rc = siena_nic_get_partn_mask(enp, &mask)) != 0)
-		goto fail8;
+		goto fail9;
 	enp->en_u.siena.enu_partn_mask = mask;
 #endif
 
 #if EFSYS_OPT_MAC_STATS
 	/* Wipe the MAC statistics */
-	if ((rc = siena_mac_stats_clear(enp)) != 0)
-		goto fail9;
-#endif
-
-#if EFSYS_OPT_LOOPBACK
-	if ((rc = siena_loopback_cfg(enp)) != 0)
+	if ((rc = efx_mcdi_mac_stats_clear(enp)) != 0)
 		goto fail10;
 #endif
 
-#if EFSYS_OPT_MON_STATS
-	if ((rc = siena_monitor_cfg(enp)) != 0)
+#if EFSYS_OPT_LOOPBACK
+	if ((rc = efx_mcdi_get_loopback_modes(enp)) != 0)
 		goto fail11;
+#endif
+
+#if EFSYS_OPT_MON_STATS
+	if ((rc = mcdi_mon_cfg_build(enp)) != 0)
+		goto fail12;
 #endif
 
 	encp->enc_features = enp->en_features;
@@ -647,21 +359,23 @@ siena_nic_probe(
 	return (0);
 
 #if EFSYS_OPT_MON_STATS
+fail12:
+	EFSYS_PROBE(fail12);
+#endif
+#if EFSYS_OPT_LOOPBACK
 fail11:
 	EFSYS_PROBE(fail11);
 #endif
-#if EFSYS_OPT_LOOPBACK
+#if EFSYS_OPT_MAC_STATS
 fail10:
 	EFSYS_PROBE(fail10);
 #endif
-#if EFSYS_OPT_MAC_STATS
+#if EFSYS_OPT_VPD || EFSYS_OPT_NVRAM
 fail9:
 	EFSYS_PROBE(fail9);
 #endif
-#if EFSYS_OPT_VPD || EFSYS_OPT_NVRAM
 fail8:
 	EFSYS_PROBE(fail8);
-#endif
 fail7:
 	EFSYS_PROBE(fail7);
 fail6:
@@ -675,31 +389,35 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn	int
+	__checkReturn	efx_rc_t
 siena_nic_reset(
 	__in		efx_nic_t *enp)
 {
 	efx_mcdi_req_t req;
-	int rc;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_family, ==, EFX_FAMILY_SIENA);
 
 	/* siena_nic_reset() is called to recover from BADASSERT failures. */
-	if ((rc = siena_nic_read_assertion(enp)) != 0)
+	if ((rc = efx_mcdi_read_assertion(enp)) != 0)
 		goto fail1;
-	if ((rc = siena_nic_exit_assertion_handler(enp)) != 0)
+	if ((rc = efx_mcdi_exit_assertion_handler(enp)) != 0)
 		goto fail2;
 
-	req.emr_cmd = MC_CMD_PORT_RESET;
-	EFX_STATIC_ASSERT(MC_CMD_PORT_RESET_IN_LEN == 0);
+	/*
+	 * Bug24908: ENTITY_RESET_IN_LEN is non zero but zero may be supplied
+	 * for backwards compatibility with PORT_RESET_IN_LEN.
+	 */
+	EFX_STATIC_ASSERT(MC_CMD_ENTITY_RESET_OUT_LEN == 0);
+
+	req.emr_cmd = MC_CMD_ENTITY_RESET;
 	req.emr_in_buf = NULL;
 	req.emr_in_length = 0;
-	EFX_STATIC_ASSERT(MC_CMD_PORT_RESET_OUT_LEN == 0);
 	req.emr_out_buf = NULL;
 	req.emr_out_length = 0;
 
@@ -717,43 +435,9 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (0);
-}
-
-static	__checkReturn	int
-siena_nic_logging(
-	__in		efx_nic_t *enp)
-{
-	efx_mcdi_req_t req;
-	uint8_t payload[MC_CMD_LOG_CTRL_IN_LEN];
-	int rc;
-
-	req.emr_cmd = MC_CMD_LOG_CTRL;
-	req.emr_in_buf = payload;
-	req.emr_in_length = MC_CMD_LOG_CTRL_IN_LEN;
-	EFX_STATIC_ASSERT(MC_CMD_LOG_CTRL_OUT_LEN == 0);
-	req.emr_out_buf = NULL;
-	req.emr_out_length = 0;
-
-	MCDI_IN_SET_DWORD(req, LOG_CTRL_IN_LOG_DEST,
-		    MC_CMD_LOG_CTRL_IN_LOG_DEST_EVQ);
-	MCDI_IN_SET_DWORD(req, LOG_CTRL_IN_LOG_DEST_EVQ, 0);
-
-	efx_mcdi_execute(enp, &req);
-
-	if (req.emr_rc != 0) {
-		rc = req.emr_rc;
-		goto fail1;
-	}
-
-	return (0);
-
-fail1:
-	EFSYS_PROBE1(fail1, int, rc);
-
-	return (rc);
 }
 
 static			void
@@ -786,15 +470,16 @@ siena_nic_usrev_dis(
 	EFX_BAR_WRITEO(enp, FR_CZ_USR_EV_CFG, &oword);
 }
 
-	__checkReturn	int
+	__checkReturn	efx_rc_t
 siena_nic_init(
 	__in		efx_nic_t *enp)
 {
-	int rc;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_family, ==, EFX_FAMILY_SIENA);
 
-	if ((rc = siena_nic_logging(enp)) != 0)
+	/* Enable reporting of some events (e.g. link change) */
+	if ((rc = efx_mcdi_log_ctrl(enp)) != 0)
 		goto fail1;
 
 	siena_sram_init(enp);
@@ -809,12 +494,14 @@ siena_nic_init(
 	if ((rc = siena_phy_reconfigure(enp)) != 0)
 		goto fail2;
 
+	enp->en_nic_cfg.enc_mcdi_max_payload_length = MCDI_CTL_SDU_LEN_MAX_V1;
+
 	return (0);
 
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
@@ -830,12 +517,15 @@ siena_nic_fini(
 siena_nic_unprobe(
 	__in		efx_nic_t *enp)
 {
-	(void) siena_nic_attach(enp, B_FALSE);
+#if EFSYS_OPT_MON_STATS
+	mcdi_mon_cfg_free(enp);
+#endif /* EFSYS_OPT_MON_STATS */
+	(void) efx_mcdi_drv_attach(enp, B_FALSE);
 }
 
 #if EFSYS_OPT_DIAG
 
-static efx_register_set_t __cs	__siena_registers[] = {
+static siena_register_set_t __siena_registers[] = {
 	{ FR_AZ_ADR_REGION_REG_OFST, 0, 1 },
 	{ FR_CZ_USR_EV_CFG_OFST, 0, 1 },
 	{ FR_AZ_RX_CFG_REG_OFST, 0, 1 },
@@ -851,7 +541,7 @@ static efx_register_set_t __cs	__siena_registers[] = {
 	{ FR_CZ_RX_RSS_IPV6_REG3_OFST, 0, 1}
 };
 
-static const uint32_t __cs	__siena_register_masks[] = {
+static const uint32_t __siena_register_masks[] = {
 	0x0003FFFF, 0x0003FFFF, 0x0003FFFF, 0x0003FFFF,
 	0x000103FF, 0x00000000, 0x00000000, 0x00000000,
 	0xFFFFFFFE, 0xFFFFFFFF, 0x0003FFFF, 0x00000000,
@@ -867,7 +557,7 @@ static const uint32_t __cs	__siena_register_masks[] = {
 	0xFFFFFFFF, 0xFFFFFFFF, 0x00000007, 0x00000000
 };
 
-static efx_register_set_t __cs	__siena_tables[] = {
+static siena_register_set_t __siena_tables[] = {
 	{ FR_AZ_RX_FILTER_TBL0_OFST, FR_AZ_RX_FILTER_TBL0_STEP,
 	    FR_AZ_RX_FILTER_TBL0_ROWS },
 	{ FR_CZ_RX_MAC_FILTER_TBL0_OFST, FR_CZ_RX_MAC_FILTER_TBL0_STEP,
@@ -883,25 +573,159 @@ static efx_register_set_t __cs	__siena_tables[] = {
 	    FR_CZ_TX_MAC_FILTER_TBL0_STEP, FR_CZ_TX_MAC_FILTER_TBL0_ROWS }
 };
 
-static const uint32_t __cs	__siena_table_masks[] = {
+static const uint32_t __siena_table_masks[] = {
 	0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x000003FF,
 	0xFFFF0FFF, 0xFFFFFFFF, 0x00000E7F, 0x00000000,
-	0xFFFFFFFF, 0x0FFFFFFF, 0x01800000, 0x00000000,
+	0xFFFFFFFE, 0x0FFFFFFF, 0x01800000, 0x00000000,
 	0xFFFFFFFE, 0x0FFFFFFF, 0x0C000000, 0x00000000,
 	0x3FFFFFFF, 0x00000000, 0x00000000, 0x00000000,
 	0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x000013FF,
 	0xFFFF07FF, 0xFFFFFFFF, 0x0000007F, 0x00000000,
 };
 
-	__checkReturn	int
+	__checkReturn	efx_rc_t
+siena_nic_test_registers(
+	__in		efx_nic_t *enp,
+	__in		siena_register_set_t *rsp,
+	__in		size_t count)
+{
+	unsigned int bit;
+	efx_oword_t original;
+	efx_oword_t reg;
+	efx_oword_t buf;
+	efx_rc_t rc;
+
+	while (count > 0) {
+		/* This function is only suitable for registers */
+		EFSYS_ASSERT(rsp->rows == 1);
+
+		/* bit sweep on and off */
+		EFSYS_BAR_READO(enp->en_esbp, rsp->address, &original,
+			    B_TRUE);
+		for (bit = 0; bit < 128; bit++) {
+			/* Is this bit in the mask? */
+			if (~(rsp->mask.eo_u32[bit >> 5]) & (1 << bit))
+				continue;
+
+			/* Test this bit can be set in isolation */
+			reg = original;
+			EFX_AND_OWORD(reg, rsp->mask);
+			EFX_SET_OWORD_BIT(reg, bit);
+
+			EFSYS_BAR_WRITEO(enp->en_esbp, rsp->address, &reg,
+				    B_TRUE);
+			EFSYS_BAR_READO(enp->en_esbp, rsp->address, &buf,
+				    B_TRUE);
+
+			EFX_AND_OWORD(buf, rsp->mask);
+			if (memcmp(&reg, &buf, sizeof (reg))) {
+				rc = EIO;
+				goto fail1;
+			}
+
+			/* Test this bit can be cleared in isolation */
+			EFX_OR_OWORD(reg, rsp->mask);
+			EFX_CLEAR_OWORD_BIT(reg, bit);
+
+			EFSYS_BAR_WRITEO(enp->en_esbp, rsp->address, &reg,
+				    B_TRUE);
+			EFSYS_BAR_READO(enp->en_esbp, rsp->address, &buf,
+				    B_TRUE);
+
+			EFX_AND_OWORD(buf, rsp->mask);
+			if (memcmp(&reg, &buf, sizeof (reg))) {
+				rc = EIO;
+				goto fail2;
+			}
+		}
+
+		/* Restore the old value */
+		EFSYS_BAR_WRITEO(enp->en_esbp, rsp->address, &original,
+			    B_TRUE);
+
+		--count;
+		++rsp;
+	}
+
+	return (0);
+
+fail2:
+	EFSYS_PROBE(fail2);
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	/* Restore the old value */
+	EFSYS_BAR_WRITEO(enp->en_esbp, rsp->address, &original, B_TRUE);
+
+	return (rc);
+}
+
+	__checkReturn	efx_rc_t
+siena_nic_test_tables(
+	__in		efx_nic_t *enp,
+	__in		siena_register_set_t *rsp,
+	__in		efx_pattern_type_t pattern,
+	__in		size_t count)
+{
+	efx_sram_pattern_fn_t func;
+	unsigned int index;
+	unsigned int address;
+	efx_oword_t reg;
+	efx_oword_t buf;
+	efx_rc_t rc;
+
+	EFSYS_ASSERT(pattern < EFX_PATTERN_NTYPES);
+	func = __efx_sram_pattern_fns[pattern];
+
+	while (count > 0) {
+		/* Write */
+		address = rsp->address;
+		for (index = 0; index < rsp->rows; ++index) {
+			func(2 * index + 0, B_FALSE, &reg.eo_qword[0]);
+			func(2 * index + 1, B_FALSE, &reg.eo_qword[1]);
+			EFX_AND_OWORD(reg, rsp->mask);
+			EFSYS_BAR_WRITEO(enp->en_esbp, address, &reg, B_TRUE);
+
+			address += rsp->step;
+		}
+
+		/* Read */
+		address = rsp->address;
+		for (index = 0; index < rsp->rows; ++index) {
+			func(2 * index + 0, B_FALSE, &reg.eo_qword[0]);
+			func(2 * index + 1, B_FALSE, &reg.eo_qword[1]);
+			EFX_AND_OWORD(reg, rsp->mask);
+			EFSYS_BAR_READO(enp->en_esbp, address, &buf, B_TRUE);
+			if (memcmp(&reg, &buf, sizeof (reg))) {
+				rc = EIO;
+				goto fail1;
+			}
+
+			address += rsp->step;
+		}
+
+		++rsp;
+		--count;
+	}
+
+	return (0);
+
+fail1:
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
+
+	return (rc);
+}
+
+
+	__checkReturn	efx_rc_t
 siena_nic_register_test(
 	__in		efx_nic_t *enp)
 {
-	efx_register_set_t *rsp;
+	siena_register_set_t *rsp;
 	const uint32_t *dwordp;
 	unsigned int nitems;
 	unsigned int count;
-	int rc;
+	efx_rc_t rc;
 
 	/* Fill out the register mask entries */
 	EFX_STATIC_ASSERT(EFX_ARRAY_SIZE(__siena_register_masks)
@@ -931,21 +755,21 @@ siena_nic_register_test(
 		rsp->mask.eo_u32[3] = *dwordp++;
 	}
 
-	if ((rc = efx_nic_test_registers(enp, __siena_registers,
+	if ((rc = siena_nic_test_registers(enp, __siena_registers,
 	    EFX_ARRAY_SIZE(__siena_registers))) != 0)
 		goto fail1;
 
-	if ((rc = efx_nic_test_tables(enp, __siena_tables,
+	if ((rc = siena_nic_test_tables(enp, __siena_tables,
 	    EFX_PATTERN_BYTE_ALTERNATE,
 	    EFX_ARRAY_SIZE(__siena_tables))) != 0)
 		goto fail2;
 
-	if ((rc = efx_nic_test_tables(enp, __siena_tables,
+	if ((rc = siena_nic_test_tables(enp, __siena_tables,
 	    EFX_PATTERN_BYTE_CHANGING,
 	    EFX_ARRAY_SIZE(__siena_tables))) != 0)
 		goto fail3;
 
-	if ((rc = efx_nic_test_tables(enp, __siena_tables,
+	if ((rc = siena_nic_test_tables(enp, __siena_tables,
 	    EFX_PATTERN_BIT_SWEEP, EFX_ARRAY_SIZE(__siena_tables))) != 0)
 		goto fail4;
 
@@ -958,7 +782,7 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }

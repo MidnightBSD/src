@@ -1,6 +1,6 @@
 /*-
  *	$NetBSD: setjmp.h,v 1.3 1998/09/16 23:51:27 thorpej Exp $
- * $FreeBSD: release/10.0.0/sys/powerpc/include/setjmp.h 104505 2002-10-05 05:47:56Z mike $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SETJMP_H_
@@ -8,7 +8,11 @@
 
 #include <sys/cdefs.h>
 
+#ifdef _KERNEL
+#define	_JBLEN	25	/* Kernel doesn't save FP and Altivec regs */
+#else
 #define	_JBLEN	100
+#endif
 
 /*
  * jmp_buf and sigjmp_buf are encapsulated in different structs to force

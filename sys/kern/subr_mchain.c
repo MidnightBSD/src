@@ -28,13 +28,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_mchain.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/endian.h>
 #include <sys/errno.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/uio.h>
@@ -101,7 +102,7 @@ mb_fixhdr(struct mbchain *mbp)
 /*
  * Check if object of size 'size' fit to the current position and
  * allocate new mbuf if not. Advance pointers and increase length of mbuf(s).
- * Return pointer to the object placeholder or NULL if any error occured.
+ * Return pointer to the object placeholder or NULL if any error occurred.
  * Note: size should be <= MLEN 
  */
 caddr_t

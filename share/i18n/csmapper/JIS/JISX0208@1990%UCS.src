@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/JIS/JISX0208@1990%UCS.src 258293 2013-11-18 04:42:58Z hrs $
+# $FreeBSD$
 # $NetBSD: JISX0208@1990%UCS.src,v 1.5 2006/12/02 14:36:13 tnozaki Exp $
 
 TYPE		ROWCOL

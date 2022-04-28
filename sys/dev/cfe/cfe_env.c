@@ -29,7 +29,7 @@
 
 #include <dev/cfe/cfe_api.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfe/cfe_env.c 211158 2010-08-11 02:13:50Z neel $");
+__FBSDID("$FreeBSD$");
 
 #ifndef	CFE_ENV_SIZE
 #define	CFE_ENV_SIZE	PAGE_SIZE	/* default is one page */
@@ -52,7 +52,7 @@ cfe_env_init(void)
 		if (cfe_enumenv(idx, name, sizeof(name), val, sizeof(val)) != 0)
 			break;
 
-		if (setenv(name, val) != 0) {
+		if (kern_setenv(name, val) != 0) {
 			printf("No space to store CFE env: \"%s=%s\"\n",
 				name, val);
 		}

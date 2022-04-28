@@ -30,12 +30,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/tcp_output.c 254889 2013-08-25 21:54:41Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
-#include "opt_kdtrace.h"
 #include "opt_tcpdebug.h"
 
 #include <sys/param.h>
@@ -56,7 +55,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/tcp_output.c 254889 2013-08-25 21
 #include <net/route.h>
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
 #include <netinet/in.h>
 #include <netinet/in_kdtrace.h>
 #include <netinet/in_systm.h>
@@ -69,12 +67,20 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/tcp_output.c 254889 2013-08-25 21
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
 #endif
+#ifdef TCP_RFC7413
+#include <netinet/tcp_fastopen.h>
+#endif
+#include <netinet/tcp.h>
 #define	TCPOUTFLAGS
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
 #include <netinet/tcpip.h>
+#include <netinet/cc/cc.h>
+#ifdef TCPPCAP
+#include <netinet/tcp_pcap.h>
+#endif
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif
@@ -82,47 +88,55 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/tcp_output.c 254889 2013-08-25 21
 #include <netinet/tcp_offload.h>
 #endif
 
-#ifdef IPSEC
-#include <netipsec/ipsec.h>
-#endif /*IPSEC*/
+#include <netipsec/ipsec_support.h>
 
 #include <machine/in_cksum.h>
 
 #include <security/mac/mac_framework.h>
 
 VNET_DEFINE(int, path_mtu_discovery) = 1;
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, path_mtu_discovery, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, path_mtu_discovery, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(path_mtu_discovery), 1,
 	"Enable Path MTU Discovery");
 
 VNET_DEFINE(int, tcp_do_tso) = 1;
 #define	V_tcp_do_tso		VNET(tcp_do_tso)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, tso, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, tso, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(tcp_do_tso), 0,
 	"Enable TCP Segmentation Offload");
 
 VNET_DEFINE(int, tcp_sendspace) = 1024*32;
 #define	V_tcp_sendspace	VNET(tcp_sendspace)
-SYSCTL_VNET_INT(_net_inet_tcp, TCPCTL_SENDSPACE, sendspace, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, TCPCTL_SENDSPACE, sendspace, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(tcp_sendspace), 0, "Initial send socket buffer size");
 
 VNET_DEFINE(int, tcp_do_autosndbuf) = 1;
 #define	V_tcp_do_autosndbuf	VNET(tcp_do_autosndbuf)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, sendbuf_auto, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, sendbuf_auto, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(tcp_do_autosndbuf), 0,
 	"Enable automatic send buffer sizing");
 
 VNET_DEFINE(int, tcp_autosndbuf_inc) = 8*1024;
 #define	V_tcp_autosndbuf_inc	VNET(tcp_autosndbuf_inc)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, sendbuf_inc, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, sendbuf_inc, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(tcp_autosndbuf_inc), 0,
 	"Incrementor step size of automatic send buffer");
 
 VNET_DEFINE(int, tcp_autosndbuf_max) = 2*1024*1024;
 #define	V_tcp_autosndbuf_max	VNET(tcp_autosndbuf_max)
-SYSCTL_VNET_INT(_net_inet_tcp, OID_AUTO, sendbuf_max, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, sendbuf_max, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(tcp_autosndbuf_max), 0,
 	"Max size of automatic send buffer");
+
+/*
+ * Make sure that either retransmit or persist timer is set for SYN, FIN and
+ * non-ACK.
+ */
+#define TCP_XMIT_TIMER_ASSERT(tp, len, th_flags)			\
+	KASSERT(((len) == 0 && ((th_flags) & (TH_SYN | TH_FIN)) == 0) ||\
+	    tcp_timer_active((tp), TT_REXMT) ||				\
+	    tcp_timer_active((tp), TT_PERSIST),				\
+	    ("neither rexmt nor persist timer is set"))
 
 static void inline	hhook_run_tcp_est_out(struct tcpcb *tp,
 			    struct tcphdr *th, struct tcpopt *to,
@@ -177,7 +191,7 @@ tcp_output(struct tcpcb *tp)
 	struct tcphdr *th;
 	u_char opt[TCP_MAXOLEN];
 	unsigned ipoptlen, optlen, hdrlen;
-#ifdef IPSEC
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	unsigned ipsec_optlen = 0;
 #endif
 	int idle, sendalot;
@@ -202,6 +216,17 @@ tcp_output(struct tcpcb *tp)
 		return (tcp_offload_output(tp));
 #endif
 
+#ifdef TCP_RFC7413
+	/*
+	 * For TFO connections in SYN_RECEIVED, only allow the initial
+	 * SYN|ACK and those sent by the retransmit timer.
+	 */
+	if ((tp->t_flags & TF_FASTOPEN) &&
+	    (tp->t_state == TCPS_SYN_RECEIVED) &&
+	    SEQ_GT(tp->snd_max, tp->snd_una) &&    /* initial SYN|ACK sent */
+	    (tp->snd_nxt != tp->snd_una))          /* not a retransmit */
+		return (0);
+#endif
 	/*
 	 * Determine length of data that should be transmitted,
 	 * and flags that will be used.
@@ -323,7 +348,7 @@ after_sack_rexmit:
 			 * to send then the probe will be the FIN
 			 * itself.
 			 */
-			if (off < so->so_snd.sb_cc)
+			if (off < sbused(&so->so_snd))
 				flags &= ~TH_FIN;
 			sendwin = 1;
 		} else {
@@ -349,7 +374,8 @@ after_sack_rexmit:
 	 */
 	if (sack_rxmit == 0) {
 		if (sack_bytes_rxmt == 0)
-			len = ((long)ulmin(so->so_snd.sb_cc, sendwin) - off);
+			len = ((long)ulmin(sbavail(&so->so_snd), sendwin) -
+			    off);
 		else {
 			long cwin;
 
@@ -358,8 +384,8 @@ after_sack_rexmit:
 			 * sending new data, having retransmitted all the
 			 * data possible in the scoreboard.
 			 */
-			len = ((long)ulmin(so->so_snd.sb_cc, tp->snd_wnd) 
-			       - off);
+			len = ((long)ulmin(sbavail(&so->so_snd), tp->snd_wnd) -
+			    off);
 			/*
 			 * Don't remove this (len > 0) check !
 			 * We explicitly check for len > 0 here (although it 
@@ -387,6 +413,15 @@ after_sack_rexmit:
 	if ((flags & TH_SYN) && SEQ_GT(tp->snd_nxt, tp->snd_una)) {
 		if (tp->t_state != TCPS_SYN_RECEIVED)
 			flags &= ~TH_SYN;
+#ifdef TCP_RFC7413
+		/*
+		 * When sending additional segments following a TFO SYN|ACK,
+		 * do not include the SYN bit.
+		 */
+		if ((tp->t_flags & TF_FASTOPEN) &&
+		    (tp->t_state == TCPS_SYN_RECEIVED))
+			flags &= ~TH_SYN;
+#endif
 		off--, len++;
 	}
 
@@ -400,7 +435,18 @@ after_sack_rexmit:
 		flags &= ~TH_FIN;
 	}
 
-	if (len < 0) {
+#ifdef TCP_RFC7413
+	/*
+	 * When retransmitting SYN|ACK on a passively-created TFO socket,
+	 * don't include data, as the presence of data may have caused the
+	 * original SYN|ACK to have been dropped by a middlebox.
+	 */
+	if ((tp->t_flags & TF_FASTOPEN) &&
+	    (((tp->t_state == TCPS_SYN_RECEIVED) && (tp->t_rxtshift > 0)) ||
+	     (flags & TH_RST)))
+		len = 0;
+#endif
+	if (len <= 0) {
 		/*
 		 * If FIN has been sent but not acked,
 		 * but we haven't been called to retransmit,
@@ -410,9 +456,16 @@ after_sack_rexmit:
 		 * to (closed) window, and set the persist timer
 		 * if it isn't already going.  If the window didn't
 		 * close completely, just wait for an ACK.
+		 *
+		 * We also do a general check here to ensure that
+		 * we will set the persist timer when we have data
+		 * to send, but a 0-byte window. This makes sure
+		 * the persist timer is set even if the packet
+		 * hits one of the "goto send" lines below.
 		 */
 		len = 0;
-		if (sendwin == 0) {
+		if ((sendwin == 0) && (TCPS_HAVEESTABLISHED(tp->t_state)) &&
+			(off < (int) sbavail(&so->so_snd))) {
 			tcp_timer_activate(tp, TT_REXMT, 0);
 			tp->t_rxtshift = 0;
 			tp->snd_nxt = tp->snd_una;
@@ -450,20 +503,23 @@ after_sack_rexmit:
 	 * and does at most one step per received ACK.  This fast
 	 * scaling has the drawback of growing the send buffer beyond
 	 * what is strictly necessary to make full use of a given
-	 * delay*bandwith product.  However testing has shown this not
+	 * delay*bandwidth product.  However testing has shown this not
 	 * to be much of an problem.  At worst we are trading wasting
-	 * of available bandwith (the non-use of it) for wasting some
+	 * of available bandwidth (the non-use of it) for wasting some
 	 * socket buffer memory.
 	 *
 	 * TODO: Shrink send buffer during idle periods together
 	 * with congestion window.  Requires another timer.  Has to
 	 * wait for upcoming tcp timer rewrite.
+	 *
+	 * XXXGL: should there be used sbused() or sbavail()?
 	 */
 	if (V_tcp_do_autosndbuf && so->so_snd.sb_flags & SB_AUTOSIZE) {
 		if ((tp->snd_wnd / 4 * 5) >= so->so_snd.sb_hiwat &&
-		    so->so_snd.sb_cc >= (so->so_snd.sb_hiwat / 8 * 7) &&
-		    so->so_snd.sb_cc < V_tcp_autosndbuf_max &&
-		    sendwin >= (so->so_snd.sb_cc - (tp->snd_nxt - tp->snd_una))) {
+		    sbused(&so->so_snd) >= (so->so_snd.sb_hiwat / 8 * 7) &&
+		    sbused(&so->so_snd) < V_tcp_autosndbuf_max &&
+		    sendwin >= (sbused(&so->so_snd) -
+		    (tp->snd_nxt - tp->snd_una))) {
 			if (!sbreserve_locked(&so->so_snd,
 			    min(so->so_snd.sb_hiwat + V_tcp_autosndbuf_inc,
 			     V_tcp_autosndbuf_max), so, curthread))
@@ -481,29 +537,55 @@ after_sack_rexmit:
 	 * (except for the sequence number) for all generated packets.  This
 	 * makes it impossible to transmit any options which vary per generated
 	 * segment or packet.
+	 *
+	 * IPv4 handling has a clear separation of ip options and ip header
+	 * flags while IPv6 combines both in in6p_outputopts. ip6_optlen() does
+	 * the right thing below to provide length of just ip options and thus
+	 * checking for ipoptlen is enough to decide if ip options are present.
 	 */
-#ifdef IPSEC
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	/*
 	 * Pre-calculate here as we save another lookup into the darknesses
 	 * of IPsec that way and can actually decide if TSO is ok.
 	 */
-	ipsec_optlen = ipsec_hdrsiz_tcp(tp);
+#ifdef INET6
+	if (isipv6 && IPSEC_ENABLED(ipv6))
+		ipsec_optlen = IPSEC_HDRSIZE(ipv6, tp->t_inpcb);
+#ifdef INET
+	else
 #endif
+#endif /* INET6 */
+#ifdef INET
+	if (IPSEC_ENABLED(ipv4))
+		ipsec_optlen = IPSEC_HDRSIZE(ipv4, tp->t_inpcb);
+#endif /* INET */
+#endif /* IPSEC */
+#ifdef INET6
+	if (isipv6)
+		ipoptlen = ip6_optlen(tp->t_inpcb);
+	else
+#endif
+	if (tp->t_inpcb->inp_options)
+		ipoptlen = tp->t_inpcb->inp_options->m_len -
+				offsetof(struct ipoption, ipopt_list);
+	else
+		ipoptlen = 0;
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
+	ipoptlen += ipsec_optlen;
+#endif
+
 	if ((tp->t_flags & TF_TSO) && V_tcp_do_tso && len > tp->t_maxseg &&
 	    ((tp->t_flags & TF_SIGNATURE) == 0) &&
 	    tp->rcv_numsacks == 0 && sack_rxmit == 0 &&
-#ifdef IPSEC
-	    ipsec_optlen == 0 &&
-#endif
-	    tp->t_inpcb->inp_options == NULL &&
-	    tp->t_inpcb->in6p_options == NULL)
+	    ipoptlen == 0)
 		tso = 1;
 
 	if (sack_rxmit) {
-		if (SEQ_LT(p->rxmit + len, tp->snd_una + so->so_snd.sb_cc))
+		if (SEQ_LT(p->rxmit + len, tp->snd_una + sbused(&so->so_snd)))
 			flags &= ~TH_FIN;
 	} else {
-		if (SEQ_LT(tp->snd_nxt + len, tp->snd_una + so->so_snd.sb_cc))
+		if (SEQ_LT(tp->snd_nxt + len, tp->snd_una +
+		    sbused(&so->so_snd)))
 			flags &= ~TH_FIN;
 	}
 
@@ -533,7 +615,7 @@ after_sack_rexmit:
 		 */
 		if (!(tp->t_flags & TF_MORETOCOME) &&	/* normal case */
 		    (idle || (tp->t_flags & TF_NODELAY)) &&
-		    len + off >= so->so_snd.sb_cc &&
+		    len + off >= sbavail(&so->so_snd) &&
 		    (tp->t_flags & TF_NOPUSH) == 0) {
 			goto send;
 		}
@@ -595,16 +677,19 @@ after_sack_rexmit:
 			oldwin = 0;
 
 		/* 
-		 * If the new window size ends up being the same as the old
-		 * size when it is scaled, then don't force a window update.
+		 * If the new window size ends up being the same as or less
+		 * than the old size when it is scaled, then don't force
+		 * a window update.
 		 */
-		if (oldwin >> tp->rcv_scale == (adv + oldwin) >> tp->rcv_scale)
+		if (oldwin >> tp->rcv_scale >= (adv + oldwin) >> tp->rcv_scale)
 			goto dontupdate;
 
 		if (adv >= (long)(2 * tp->t_maxseg) &&
 		    (adv >= (long)(so->so_rcv.sb_hiwat / 4) ||
 		     recwin <= (long)(so->so_rcv.sb_hiwat / 8) ||
 		     so->so_rcv.sb_hiwat <= 8 * tp->t_maxseg))
+			goto send;
+		if (2 * adv >= (int32_t)so->so_rcv.sb_hiwat)
 			goto send;
 	}
 dontupdate:
@@ -661,7 +746,7 @@ dontupdate:
 	 * if window is nonzero, transmit what we can,
 	 * otherwise force out a byte.
 	 */
-	if (so->so_snd.sb_cc && !tcp_timer_active(tp, TT_REXMT) &&
+	if (sbavail(&so->so_snd) && !tcp_timer_active(tp, TT_REXMT) &&
 	    !tcp_timer_active(tp, TT_PERSIST)) {
 		tp->t_rxtshift = 0;
 		tcp_setpersist(tp);
@@ -676,6 +761,12 @@ just_return:
 
 send:
 	SOCKBUF_LOCK_ASSERT(&so->so_snd);
+	if (len > 0) {
+		if (len >= tp->t_maxseg)
+			tp->t_flags2 |= TF2_PLPMTU_MAXSEGSNT;
+		else
+			tp->t_flags2 &= ~TF2_PLPMTU_MAXSEGSNT;
+	}
 	/*
 	 * Before ESTABLISHED, force sending of initial options
 	 * unless TCP set not to do any options.
@@ -698,13 +789,29 @@ send:
 	 * segments.  Options for SYN-ACK segments are handled in TCP
 	 * syncache.
 	 */
+	to.to_flags = 0;
 	if ((tp->t_flags & TF_NOOPT) == 0) {
-		to.to_flags = 0;
 		/* Maximum segment size. */
 		if (flags & TH_SYN) {
 			tp->snd_nxt = tp->iss;
 			to.to_mss = tcp_mssopt(&tp->t_inpcb->inp_inc);
 			to.to_flags |= TOF_MSS;
+#ifdef TCP_RFC7413
+			/*
+			 * Only include the TFO option on the first
+			 * transmission of the SYN|ACK on a
+			 * passively-created TFO socket, as the presence of
+			 * the TFO option may have caused the original
+			 * SYN|ACK to have been dropped by a middlebox.
+			 */
+			if ((tp->t_flags & TF_FASTOPEN) &&
+			    (tp->t_state == TCPS_SYN_RECEIVED) &&
+			    (tp->t_rxtshift == 0)) {
+				to.to_tfo_len = TCP_FASTOPEN_COOKIE_LEN;
+				to.to_tfo_cookie = (u_char *)&tp->t_tfo_cookie;
+				to.to_flags |= TOF_FASTOPEN;
+			}
+#endif
 		}
 		/* Window scaling. */
 		if ((flags & TH_SYN) && (tp->t_flags & TF_REQ_SCALE)) {
@@ -717,11 +824,13 @@ send:
 			to.to_tsval = tcp_ts_getticks() + tp->ts_offset;
 			to.to_tsecr = tp->ts_recent;
 			to.to_flags |= TOF_TS;
-			/* Set receive buffer autosizing timestamp. */
-			if (tp->rfbuf_ts == 0 &&
-			    (so->so_rcv.sb_flags & SB_AUTOSIZE))
-				tp->rfbuf_ts = tcp_ts_getticks();
 		}
+
+		/* Set receive buffer autosizing timestamp. */
+		if (tp->rfbuf_ts == 0 &&
+		    (so->so_rcv.sb_flags & SB_AUTOSIZE))
+			tp->rfbuf_ts = tcp_ts_getticks();
+
 		/* Selective ACK's. */
 		if (tp->t_flags & TF_SACK_PERMIT) {
 			if (flags & TH_SYN)
@@ -734,8 +843,12 @@ send:
 				to.to_sacks = (u_char *)tp->sackblks;
 			}
 		}
-#ifdef TCP_SIGNATURE
+#if defined(IPSEC_SUPPORT) || defined(TCP_SIGNATURE)
 		/* TCP-MD5 (RFC2385). */
+		/*
+		 * Check that TCP_MD5SIG is enabled in tcpcb to
+		 * account the size needed to set this TCP option.
+		 */
 		if (tp->t_flags & TF_SIGNATURE)
 			to.to_flags |= TOF_SIGNATURE;
 #endif /* TCP_SIGNATURE */
@@ -744,52 +857,132 @@ send:
 		hdrlen += optlen = tcp_addoptions(&to, opt);
 	}
 
-#ifdef INET6
-	if (isipv6)
-		ipoptlen = ip6_optlen(tp->t_inpcb);
-	else
-#endif
-	if (tp->t_inpcb->inp_options)
-		ipoptlen = tp->t_inpcb->inp_options->m_len -
-				offsetof(struct ipoption, ipopt_list);
-	else
-		ipoptlen = 0;
-#ifdef IPSEC
-	ipoptlen += ipsec_optlen;
-#endif
-
 	/*
 	 * Adjust data length if insertion of options will
-	 * bump the packet length beyond the t_maxopd length.
+	 * bump the packet length beyond the t_maxseg length.
 	 * Clear the FIN bit because we cut off the tail of
 	 * the segment.
 	 */
-	if (len + optlen + ipoptlen > tp->t_maxopd) {
+	if (len + optlen + ipoptlen > tp->t_maxseg) {
 		flags &= ~TH_FIN;
 
 		if (tso) {
+			u_int if_hw_tsomax;
+			u_int if_hw_tsomaxsegcount;
+			u_int if_hw_tsomaxsegsize;
+			struct mbuf *mb;
+			u_int moff;
+			int max_len;
+
+			/* extract TSO information */
+			if_hw_tsomax = tp->t_tsomax;
+			if_hw_tsomaxsegcount = tp->t_tsomaxsegcount;
+			if_hw_tsomaxsegsize = tp->t_tsomaxsegsize;
+
+			/*
+			 * Limit a TSO burst to prevent it from
+			 * overflowing or exceeding the maximum length
+			 * allowed by the network interface:
+			 */
 			KASSERT(ipoptlen == 0,
 			    ("%s: TSO can't do IP options", __func__));
 
 			/*
-			 * Limit a burst to t_tsomax minus IP,
-			 * TCP and options length to keep ip->ip_len
-			 * from overflowing or exceeding the maximum
-			 * length allowed by the network interface.
+			 * Check if we should limit by maximum payload
+			 * length:
 			 */
-			if (len > tp->t_tsomax - hdrlen) {
-				len = tp->t_tsomax - hdrlen;
-				sendalot = 1;
+			if (if_hw_tsomax != 0) {
+				/* compute maximum TSO length */
+				max_len = (if_hw_tsomax - hdrlen -
+				    max_linkhdr);
+				if (max_len <= 0) {
+					len = 0;
+				} else if (len > max_len) {
+					sendalot = 1;
+					len = max_len;
+				}
+			}
+
+			/*
+			 * Check if we should limit by maximum segment
+			 * size and count:
+			 */
+			if (if_hw_tsomaxsegcount != 0 &&
+			    if_hw_tsomaxsegsize != 0) {
+				/*
+				 * Subtract one segment for the LINK
+				 * and TCP/IP headers mbuf that will
+				 * be prepended to this mbuf chain
+				 * after the code in this section
+				 * limits the number of mbufs in the
+				 * chain to if_hw_tsomaxsegcount.
+				 */
+				if_hw_tsomaxsegcount -= 1;
+				max_len = 0;
+				mb = sbsndmbuf(&so->so_snd, off, &moff);
+
+				while (mb != NULL && max_len < len) {
+					u_int mlen;
+					u_int frags;
+
+					/*
+					 * Get length of mbuf fragment
+					 * and how many hardware frags,
+					 * rounded up, it would use:
+					 */
+					mlen = (mb->m_len - moff);
+					frags = howmany(mlen,
+					    if_hw_tsomaxsegsize);
+
+					/* Handle special case: Zero Length Mbuf */
+					if (frags == 0)
+						frags = 1;
+
+					/*
+					 * Check if the fragment limit
+					 * will be reached or exceeded:
+					 */
+					if (frags >= if_hw_tsomaxsegcount) {
+						max_len += min(mlen,
+						    if_hw_tsomaxsegcount *
+						    if_hw_tsomaxsegsize);
+						break;
+					}
+					max_len += mlen;
+					if_hw_tsomaxsegcount -= frags;
+					moff = 0;
+					mb = mb->m_next;
+				}
+				if (max_len <= 0) {
+					len = 0;
+				} else if (len > max_len) {
+					sendalot = 1;
+					len = max_len;
+				}
 			}
 
 			/*
 			 * Prevent the last segment from being
-			 * fractional unless the send sockbuf can
-			 * be emptied.
+			 * fractional unless the send sockbuf can be
+			 * emptied:
 			 */
-			if (sendalot && off + len < so->so_snd.sb_cc) {
-				len -= len % (tp->t_maxopd - optlen);
+			max_len = (tp->t_maxseg - optlen);
+			if ((off + len) < sbavail(&so->so_snd)) {
+				moff = len % max_len;
+				if (moff != 0) {
+					len -= moff;
+					sendalot = 1;
+				}
+			}
+
+			/*
+			 * In case there are too many small fragments
+			 * don't use TSO:
+			 */
+			if (len <= max_len) {
+				len = max_len;
 				sendalot = 1;
+				tso = 0;
 			}
 
 			/*
@@ -803,7 +996,7 @@ send:
 				sendalot = 1;
 
 		} else {
-			len = tp->t_maxopd - optlen - ipoptlen;
+			len = tp->t_maxseg - optlen - ipoptlen;
 			sendalot = 1;
 		}
 	} else
@@ -890,7 +1083,7 @@ send:
 		 * give data to the user when a buffer fills or
 		 * a PUSH comes in.)
 		 */
-		if (off + len == so->so_snd.sb_cc)
+		if ((off + len == sbused(&so->so_snd)) && !(flags & TH_SYN))
 			flags |= TH_PUSH;
 		SOCKBUF_UNLOCK(&so->so_snd);
 	} else {
@@ -913,7 +1106,7 @@ send:
 #ifdef INET6
 		if (isipv6 && (MHLEN < hdrlen + max_linkhdr) &&
 		    MHLEN >= hdrlen) {
-			MH_ALIGN(m, hdrlen);
+			M_ALIGN(m, hdrlen);
 		} else
 #endif
 		m->m_data += max_linkhdr;
@@ -952,7 +1145,7 @@ send:
 	 * resend those bits a number of times as per
 	 * RFC 3168.
 	 */
-	if (tp->t_state == TCPS_SYN_SENT && V_tcp_do_ecn) {
+	if (tp->t_state == TCPS_SYN_SENT && V_tcp_do_ecn == 1) {
 		if (tp->t_rxtshift >= 1) {
 			if (tp->t_rxtshift <= V_tcp_ecn_maxretries)
 				flags |= TH_ECE|TH_CWR;
@@ -1068,25 +1261,37 @@ send:
 		 */
 		tp->snd_up = tp->snd_una;		/* drag it along */
 
-#ifdef TCP_SIGNATURE
-	if (tp->t_flags & TF_SIGNATURE) {
-		int sigoff = to.to_signature - opt;
-		tcp_signature_compute(m, 0, len, optlen,
-		    (u_char *)(th + 1) + sigoff, IPSEC_DIR_OUTBOUND);
-	}
-#endif
-
 	/*
 	 * Put TCP length in extended header, and then
 	 * checksum extended header and data.
 	 */
 	m->m_pkthdr.len = hdrlen + len; /* in6_cksum() need this */
 	m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
+
+#if defined(IPSEC_SUPPORT) || defined(TCP_SIGNATURE)
+	if (to.to_flags & TOF_SIGNATURE) {
+		/*
+		 * Calculate MD5 signature and put it into the place
+		 * determined before.
+		 * NOTE: since TCP options buffer doesn't point into
+		 * mbuf's data, calculate offset and use it.
+		 */
+		if (!TCPMD5_ENABLED() || (error = TCPMD5_OUTPUT(m, th,
+		    (u_char *)(th + 1) + (to.to_signature - opt))) != 0) {
+			/*
+			 * Do not send segment if the calculation of MD5
+			 * digest has failed.
+			 */
+			m_freem(m);
+			goto out;
+		}
+	}
+#endif
 #ifdef INET6
 	if (isipv6) {
 		/*
-		 * ip6_plen is not need to be filled now, and will be filled
-		 * in ip6_output.
+		 * There is no need to fill in ip6_plen right now.
+		 * It will be filled later by ip6_output.
 		 */
 		m->m_pkthdr.csum_flags = CSUM_TCP_IPV6;
 		th->th_sum = in6_cksum_pseudo(ip6, sizeof(struct tcphdr) +
@@ -1111,16 +1316,15 @@ send:
 	/*
 	 * Enable TSO and specify the size of the segments.
 	 * The TCP pseudo header checksum is always provided.
-	 * XXX: Fixme: This is currently not the case for IPv6.
 	 */
 	if (tso) {
-		KASSERT(len > tp->t_maxopd - optlen,
+		KASSERT(len > tp->t_maxseg - optlen,
 		    ("%s: len <= tso_segsz", __func__));
 		m->m_pkthdr.csum_flags |= CSUM_TSO;
-		m->m_pkthdr.tso_segsz = tp->t_maxopd - optlen;
+		m->m_pkthdr.tso_segsz = tp->t_maxseg - optlen;
 	}
 
-#ifdef IPSEC
+#if defined(IPSEC) || defined(IPSEC_SUPPORT)
 	KASSERT(len + hdrlen + ipoptlen - ipsec_optlen == m_length(m, NULL),
 	    ("%s: mbuf chain shorter than expected: %ld + %u + %u - %u != %u",
 	    __func__, len, hdrlen, ipoptlen, ipsec_optlen, m_length(m, NULL)));
@@ -1153,6 +1357,7 @@ send:
 		ipov->ih_len = save;
 	}
 #endif /* TCPDEBUG */
+	TCP_PROBE3(debug__output, tp, th, m);
 
 	/*
 	 * Fill in IP length and desired time to live and
@@ -1161,14 +1366,11 @@ send:
 	 * the template, but need a way to checksum without them.
 	 */
 	/*
-	 * m->m_pkthdr.len should have been set before cksum calcuration,
+	 * m->m_pkthdr.len should have been set before checksum calculation,
 	 * because in6_cksum() need it.
 	 */
 #ifdef INET6
 	if (isipv6) {
-		struct route_in6 ro;
-
-		bzero(&ro, sizeof(ro));
 		/*
 		 * we separately set hoplimit for every segment, since the
 		 * user might want to change the value via setsockopt.
@@ -1184,19 +1386,29 @@ send:
 		 */
 		ip6->ip6_plen = htons(m->m_pkthdr.len - sizeof(*ip6));
 
+		if (V_path_mtu_discovery && tp->t_maxseg > V_tcp_minmss)
+			tp->t_flags2 |= TF2_PLPMTU_PMTUD;
+		else
+			tp->t_flags2 &= ~TF2_PLPMTU_PMTUD;
+
 		if (tp->t_state == TCPS_SYN_SENT)
-			TCP_PROBE5(connect_request, NULL, tp, ip6, tp, th);
+			TCP_PROBE5(connect__request, NULL, tp, ip6, tp, th);
 
 		TCP_PROBE5(send, NULL, tp, ip6, tp, th);
 
+#ifdef TCPPCAP
+		/* Save packet, if requested. */
+		tcp_pcap_add(th, m, &(tp->t_outpkts));
+#endif
+
 		/* TODO: IPv6 IP6TOS_ECT bit on */
-		error = ip6_output(m, tp->t_inpcb->in6p_outputopts, &ro,
+		error = ip6_output(m, tp->t_inpcb->in6p_outputopts,
+		    &tp->t_inpcb->inp_route6,
 		    ((so->so_options & SO_DONTROUTE) ?  IP_ROUTETOIF : 0),
 		    NULL, NULL, tp->t_inpcb);
 
-		if (error == EMSGSIZE && ro.ro_rt != NULL)
-			mtu = ro.ro_rt->rt_rmx.rmx_mtu;
-		RO_RTFREE(&ro);
+		if (error == EMSGSIZE && tp->t_inpcb->inp_route6.ro_rt != NULL)
+			mtu = tp->t_inpcb->inp_route6.ro_rt->rt_mtu;
 	}
 #endif /* INET6 */
 #if defined(INET) && defined(INET6)
@@ -1204,9 +1416,6 @@ send:
 #endif
 #ifdef INET
     {
-	struct route ro;
-
-	bzero(&ro, sizeof(ro));
 	ip->ip_len = htons(m->m_pkthdr.len);
 #ifdef INET6
 	if (tp->t_inpcb->inp_vflag & INP_IPV6PROTO)
@@ -1220,21 +1429,29 @@ send:
 	 *
 	 * NB: Don't set DF on small MTU/MSS to have a safe fallback.
 	 */
-	if (V_path_mtu_discovery && tp->t_maxopd > V_tcp_minmss)
+	if (V_path_mtu_discovery && tp->t_maxseg > V_tcp_minmss) {
 		ip->ip_off |= htons(IP_DF);
+		tp->t_flags2 |= TF2_PLPMTU_PMTUD;
+	} else {
+		tp->t_flags2 &= ~TF2_PLPMTU_PMTUD;
+	}
 
 	if (tp->t_state == TCPS_SYN_SENT)
-		TCP_PROBE5(connect_request, NULL, tp, ip, tp, th);
+		TCP_PROBE5(connect__request, NULL, tp, ip, tp, th);
 
 	TCP_PROBE5(send, NULL, tp, ip, tp, th);
 
-	error = ip_output(m, tp->t_inpcb->inp_options, &ro,
+#ifdef TCPPCAP
+	/* Save packet, if requested. */
+	tcp_pcap_add(th, m, &(tp->t_outpkts));
+#endif
+
+	error = ip_output(m, tp->t_inpcb->inp_options, &tp->t_inpcb->inp_route,
 	    ((so->so_options & SO_DONTROUTE) ? IP_ROUTETOIF : 0), 0,
 	    tp->t_inpcb);
 
-	if (error == EMSGSIZE && ro.ro_rt != NULL)
-		mtu = ro.ro_rt->rt_rmx.rmx_mtu;
-	RO_RTFREE(&ro);
+	if (error == EMSGSIZE && tp->t_inpcb->inp_route.ro_rt != NULL)
+		mtu = tp->t_inpcb->inp_route.ro_rt->rt_mtu;
     }
 #endif /* INET */
 
@@ -1291,6 +1508,30 @@ timer:
 				tp->t_rxtshift = 0;
 			}
 			tcp_timer_activate(tp, TT_REXMT, tp->t_rxtcur);
+		} else if (len == 0 && sbavail(&so->so_snd) &&
+		    !tcp_timer_active(tp, TT_REXMT) &&
+		    !tcp_timer_active(tp, TT_PERSIST)) {
+			/*
+			 * Avoid a situation where we do not set persist timer
+			 * after a zero window condition. For example:
+			 * 1) A -> B: packet with enough data to fill the window
+			 * 2) B -> A: ACK for #1 + new data (0 window
+			 *    advertisement)
+			 * 3) A -> B: ACK for #2, 0 len packet
+			 *
+			 * In this case, A will not activate the persist timer,
+			 * because it chose to send a packet. Unless tcp_output
+			 * is called for some other reason (delayed ack timer,
+			 * another input packet from B, socket syscall), A will
+			 * not send zero window probes.
+			 *
+			 * So, if you send a 0-length packet, but there is data
+			 * in the socket buffer, and neither the rexmt or
+			 * persist timer is already set, then activate the
+			 * persist timer.
+			 */
+			tp->t_rxtshift = 0;
+			tcp_setpersist(tp);
 		}
 	} else {
 		/*
@@ -1305,9 +1546,15 @@ timer:
 			tp->t_flags |= TF_SENTFIN;
 		}
 		if (SEQ_GT(tp->snd_nxt + xlen, tp->snd_max))
-			tp->snd_max = tp->snd_nxt + len;
+			tp->snd_max = tp->snd_nxt + xlen;
 	}
-
+	if ((error == 0) &&
+	    (TCPS_HAVEESTABLISHED(tp->t_state) &&
+	     (tp->t_flags & TF_SACK_PERMIT) &&
+	     tp->rcv_numsacks > 0)) {
+		    /* Clean up any DSACK's sent */
+		    tcp_clean_dsack_blocks(tp);
+	}
 	if (error) {
 
 		/*
@@ -1337,13 +1584,12 @@ timer:
 		}
 		SOCKBUF_UNLOCK_ASSERT(&so->so_snd);	/* Check gotos. */
 		switch (error) {
+		case EACCES:
 		case EPERM:
 			tp->t_softerror = error;
 			return (error);
 		case ENOBUFS:
-	                if (!tcp_timer_active(tp, TT_REXMT) &&
-			    !tcp_timer_active(tp, TT_PERSIST))
-	                        tcp_timer_activate(tp, TT_REXMT, tp->t_rxtcur);
+			TCP_XMIT_TIMER_ASSERT(tp, len, flags);
 			tp->snd_cwnd = tp->t_maxseg;
 			return (0);
 		case EMSGSIZE:
@@ -1415,10 +1661,10 @@ tcp_setpersist(struct tcpcb *tp)
 	if (tcp_timer_active(tp, TT_REXMT))
 		panic("tcp_setpersist: retransmit pending");
 	/*
-	 * Start/restart persistance timer.
+	 * Start/restart persistence timer.
 	 */
 	TCPT_RANGESET(tt, t * tcp_backoff[tp->t_rxtshift],
-		      TCPTV_PERSMIN, TCPTV_PERSMAX);
+		      tcp_persmin, tcp_persmax);
 	tcp_timer_activate(tp, TT_PERSIST, tt);
 	if (tp->t_rxtshift < TCP_MAXRXTSHIFT)
 		tp->t_rxtshift++;
@@ -1444,7 +1690,7 @@ tcp_setpersist(struct tcpcb *tp)
 int
 tcp_addoptions(struct tcpopt *to, u_char *optp)
 {
-	u_int mask, optlen = 0;
+	u_int32_t mask, optlen = 0;
 
 	for (mask = 1; mask < TOF_MAXOPT; mask <<= 1) {
 		if ((to->to_flags & mask) != mask)
@@ -1514,8 +1760,10 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
-			if (TCP_MAXOLEN - optlen < TCPOLEN_SIGNATURE)
+			if (TCP_MAXOLEN - optlen < TCPOLEN_SIGNATURE) {
+				to->to_flags &= ~TOF_SIGNATURE;
 				continue;
+			}
 			optlen += TCPOLEN_SIGNATURE;
 			*optp++ = TCPOPT_SIGNATURE;
 			*optp++ = TCPOLEN_SIGNATURE;
@@ -1554,6 +1802,25 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 			TCPSTAT_INC(tcps_sack_send_blocks);
 			break;
 			}
+#ifdef TCP_RFC7413
+		case TOF_FASTOPEN:
+			{
+			int total_len;
+
+			/* XXX is there any point to aligning this option? */
+			total_len = TCPOLEN_FAST_OPEN_EMPTY + to->to_tfo_len;
+			if (TCP_MAXOLEN - optlen < total_len)
+				continue;
+			*optp++ = TCPOPT_FAST_OPEN;
+			*optp++ = total_len;
+			if (to->to_tfo_len > 0) {
+				bcopy(to->to_tfo_cookie, optp, to->to_tfo_len);
+				optp += to->to_tfo_len;
+			}
+			optlen += total_len;
+			break;
+			}
+#endif
 		default:
 			panic("%s: unknown TCP option type", __func__);
 			break;

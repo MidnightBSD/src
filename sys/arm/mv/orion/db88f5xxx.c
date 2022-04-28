@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/orion/db88f5xxx.c 209131 2010-06-13 13:28:53Z raj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,8 +42,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/orion/db88f5xxx.c 209131 2010-06-1
 
 #include <machine/bus.h>
 #include <machine/intr.h>
-#include <machine/pte.h>
-#include <machine/pmap.h>
 #include <machine/vmparam.h>
 
 #include <arm/mv/mvreg.h>
@@ -75,7 +73,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/orion/db88f5xxx.c 209131 2010-06-1
 int platform_pci_get_irq(u_int bus, u_int slot, u_int func, u_int pin);
 
 /* Static device mappings. */
-const struct pmap_devmap pmap_devmap[] = {
+const struct devmap_entry db88f5xxx_devmap[] = {
 	/*
 	 * Map the on-board devices VA == PA so that we can access them
 	 * with the MMU on or off.
@@ -84,45 +82,33 @@ const struct pmap_devmap pmap_devmap[] = {
 		MV_BASE,
 		MV_PHYS_BASE,
 		MV_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{ /* PCIE I/O */
 		MV_PCIE_IO_BASE,
 		MV_PCIE_IO_PHYS_BASE,
 		MV_PCIE_IO_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{ /* PCIE Memory */
 		MV_PCIE_MEM_BASE,
 		MV_PCIE_MEM_PHYS_BASE,
 		MV_PCIE_MEM_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{ /* PCI I/O */
 		MV_PCI_IO_BASE,
 		MV_PCI_IO_PHYS_BASE,
 		MV_PCI_IO_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{ /* PCI Memory */
 		MV_PCI_MEM_BASE,
 		MV_PCI_MEM_PHYS_BASE,
 		MV_PCI_MEM_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{ /* 7-seg LED */
 		MV_DEV_CS0_BASE,
 		MV_DEV_CS0_PHYS_BASE,
 		MV_DEV_CS0_SIZE,
-		VM_PROT_READ | VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
-	{ 0, 0, 0, 0, 0, }
+	{ 0, 0, 0, }
 };
 
 /*

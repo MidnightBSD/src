@@ -29,4 +29,4 @@ Programs needed to generate the API docs:
  - graphics/graphviz
 
 -- 
-$FreeBSD: release/10.0.0/tools/kerneldoc/subsys/README 160171 2006-07-08 12:31:33Z netchild $
+$FreeBSD$

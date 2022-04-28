@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ip_msnrpc_pxy.c 145519 2005-04-25 18:20:15Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2000-2003 by Darren Reed

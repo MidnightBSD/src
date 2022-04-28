@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/bde/g_bde.h 120876 2003-10-07 09:28:07Z phk $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_GEOM_BDE_G_BDE_H_
@@ -182,7 +182,7 @@ AES_init(cipherInstance *ci)
 }
 
 static __inline void
-AES_makekey(keyInstance *ki, int dir, u_int len, void *key)
+AES_makekey(keyInstance *ki, int dir, u_int len, const void *key)
 {
 	int error;
 
@@ -191,7 +191,7 @@ AES_makekey(keyInstance *ki, int dir, u_int len, void *key)
 }
 
 static __inline void
-AES_encrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
+AES_encrypt(cipherInstance *ci, keyInstance *ki, const void *in, void *out, u_int len)
 {
 	int error;
 
@@ -200,7 +200,7 @@ AES_encrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
 }
 
 static __inline void
-AES_decrypt(cipherInstance *ci, keyInstance *ki, void *in, void *out, u_int len)
+AES_decrypt(cipherInstance *ci, keyInstance *ki, const void *in, void *out, u_int len)
 {
 	int error;
 

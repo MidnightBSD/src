@@ -1,32 +1,31 @@
 /*	$NetBSD: clnt_dg.c,v 1.4 2000/07/14 08:40:41 fvdl Exp $	*/
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
  * 
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- * 
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- * 
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- * 
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 /*
  * Copyright (c) 1986-1991 by Sun Microsystems Inc. 
@@ -37,7 +36,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/rpc/clnt_dg.c 255284 2013-09-06 02:34:34Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Implements a connectionless client side RPC.
@@ -93,7 +92,7 @@ static struct clnt_ops clnt_dg_ops = {
 	.cl_control =	clnt_dg_control
 };
 
-static const char mem_err_clnt_dg[] = "clnt_dg_create: out of memory";
+static volatile uint32_t rpc_xid = 0;
 
 /*
  * A pending RPC request which awaits a reply. Requests which have
@@ -194,6 +193,7 @@ clnt_dg_create(
 	struct __rpc_sockinfo si;
 	XDR xdrs;
 	int error;
+	uint32_t newxid;
 
 	if (svcaddr == NULL) {
 		rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
@@ -222,8 +222,8 @@ clnt_dg_create(
 	/*
 	 * Should be multiple of 4 for XDR.
 	 */
-	sendsz = ((sendsz + 3) / 4) * 4;
-	recvsz = ((recvsz + 3) / 4) * 4;
+	sendsz = rounddown(sendsz + 3, 4);
+	recvsz = rounddown(recvsz + 3, 4);
 	cu = mem_alloc(sizeof (*cu));
 	cu->cu_threads = 0;
 	cu->cu_closing = FALSE;
@@ -246,8 +246,10 @@ clnt_dg_create(
 	cu->cu_sent = 0;
 	cu->cu_cwnd_wait = FALSE;
 	(void) getmicrotime(&now);
-	cu->cu_xid = __RPC_GETXID(&now);
-	call_msg.rm_xid = cu->cu_xid;
+	/* Clip at 28bits so that it will not wrap around. */
+	newxid = __RPC_GETXID(&now) & 0xfffffff;
+	atomic_cmpset_32(&rpc_xid, 0, newxid);
+	call_msg.rm_xid = atomic_fetchadd_32(&rpc_xid, 1);
 	call_msg.rm_call.cb_prog = program;
 	call_msg.rm_call.cb_vers = version;
 	xdrmem_create(&xdrs, cu->cu_mcallc, MCALL_MSG_SIZE, XDR_ENCODE);
@@ -316,11 +318,9 @@ recheck_socket:
 	cl->cl_netid = NULL;
 	return (cl);
 err2:
-	if (cl) {
-		mem_free(cl, sizeof (CLIENT));
-		if (cu)
-			mem_free(cu, sizeof (*cu));
-	}
+	mem_free(cl, sizeof (CLIENT));
+	mem_free(cu, sizeof (*cu));
+
 	return (NULL);
 }
 
@@ -425,8 +425,7 @@ clnt_dg_call(
 call_again:
 	mtx_assert(&cs->cs_lock, MA_OWNED);
 
-	cu->cu_xid++;
-	xid = cu->cu_xid;
+	xid = atomic_fetchadd_32(&rpc_xid, 1);
 
 send_again:
 	mtx_unlock(&cs->cs_lock);
@@ -745,7 +744,7 @@ got_reply:
 			}
 		}		/* end successful completion */
 		/*
-		 * If unsuccesful AND error is an authentication error
+		 * If unsuccessful AND error is an authentication error
 		 * then refresh credentials and try again, else break
 		 */
 		else if (stat == RPC_AUTHERROR)
@@ -872,20 +871,20 @@ clnt_dg_control(CLIENT *cl, u_int request, void *info)
 		(void) memcpy(&cu->cu_raddr, addr, addr->sa_len);
 		break;
 	case CLGET_XID:
-		*(uint32_t *)info = cu->cu_xid;
+		*(uint32_t *)info = atomic_load_32(&rpc_xid);
 		break;
 
 	case CLSET_XID:
 		/* This will set the xid of the NEXT call */
 		/* decrement by 1 as clnt_dg_call() increments once */
-		cu->cu_xid = *(uint32_t *)info - 1;
+		atomic_store_32(&rpc_xid, *(uint32_t *)info - 1);
 		break;
 
 	case CLGET_VERS:
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the version number field is the fifth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		*(uint32_t *)info =
@@ -902,7 +901,7 @@ clnt_dg_control(CLIENT *cl, u_int request, void *info)
 		/*
 		 * This RELIES on the information that, in the call body,
 		 * the program number field is the fourth field from the
-		 * begining of the RPC header. MUST be changed if the
+		 * beginning of the RPC header. MUST be changed if the
 		 * call_struct is changed
 		 */
 		*(uint32_t *)info =

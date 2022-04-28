@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pcn/if_pcn.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * AMD Am79c972 fast ethernet PCI NIC driver. Datasheets are available
@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/pcn/if_pcn.c 243857 2012-12-04 09:32:
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -679,6 +680,8 @@ fail:
 	if (error)
 		pcn_detach(dev);
 
+	gone_by_fcp101_dev(dev);
+
 	return(error);
 }
 
@@ -802,8 +805,7 @@ pcn_newbuf(sc, idx, m)
 		if (m_new == NULL)
 			return(ENOBUFS);
 
-		MCLGET(m_new, M_NOWAIT);
-		if (!(m_new->m_flags & M_EXT)) {
+		if (!(MCLGET(m_new, M_NOWAIT))) {
 			m_freem(m_new);
 			return(ENOBUFS);
 		}
@@ -855,7 +857,7 @@ pcn_rxeof(sc)
 	 	 * comes up in the ring.
 		 */
 		if (cur_rx->pcn_rxstat & PCN_RXSTAT_ERR) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			pcn_newbuf(sc, i, m);
 			PCN_INC(i, PCN_RX_LIST_CNT);
 			continue;
@@ -864,7 +866,7 @@ pcn_rxeof(sc)
 		if (pcn_newbuf(sc, i, NULL)) {
 			/* Ran out of mbufs; recycle this one. */
 			pcn_newbuf(sc, i, m);
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			PCN_INC(i, PCN_RX_LIST_CNT);
 			continue;
 		}
@@ -872,7 +874,7 @@ pcn_rxeof(sc)
 		PCN_INC(i, PCN_RX_LIST_CNT);
 
 		/* No errors; receive the packet. */
-		ifp->if_ipackets++;
+		if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 		m->m_len = m->m_pkthdr.len =
 		    cur_rx->pcn_rxlen - ETHER_CRC_LEN;
 		m->m_pkthdr.rcvif = ifp;
@@ -920,17 +922,17 @@ pcn_txeof(sc)
 		}
 
 		if (cur_tx->pcn_txctl & PCN_TXCTL_ERR) {
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			if (cur_tx->pcn_txstat & PCN_TXSTAT_EXDEF)
-				ifp->if_collisions++;
+				if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 			if (cur_tx->pcn_txstat & PCN_TXSTAT_RTRY)
-				ifp->if_collisions++;
+				if_inc_counter(ifp, IFCOUNTER_COLLISIONS, 1);
 		}
 
-		ifp->if_collisions +=
-		    cur_tx->pcn_txstat & PCN_TXSTAT_TRC;
+		if_inc_counter(ifp, IFCOUNTER_COLLISIONS,
+		    cur_tx->pcn_txstat & PCN_TXSTAT_TRC);
 
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		if (sc->pcn_cdata.pcn_tx_chain[idx] != NULL) {
 			m_freem(sc->pcn_cdata.pcn_tx_chain[idx]);
 			sc->pcn_cdata.pcn_tx_chain[idx] = NULL;
@@ -1435,7 +1437,7 @@ pcn_watchdog(struct pcn_softc *sc)
 	PCN_LOCK_ASSERT(sc);
 	ifp = sc->pcn_ifp;
 
-	ifp->if_oerrors++;
+	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	if_printf(ifp, "watchdog timeout\n");
 
 	pcn_stop(sc);
@@ -1453,7 +1455,7 @@ pcn_watchdog(struct pcn_softc *sc)
 static void
 pcn_stop(struct pcn_softc *sc)
 {
-	register int		i;
+	int			i;
 	struct ifnet		*ifp;
 
 	PCN_LOCK_ASSERT(sc);

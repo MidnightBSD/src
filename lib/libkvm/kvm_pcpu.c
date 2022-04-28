@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libkvm/kvm_pcpu.c 249344 2013-04-10 20:26:53Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pcpu.h>
@@ -60,7 +60,7 @@ static struct nlist kvm_pcpu_nl[] = {
 
 /*
  * Kernel per-CPU data state.  We cache this stuff on the first
- * access.	
+ * access.
  *
  * XXXRW: Possibly, this (and kvmpcpu_nl) should be per-kvm_t, in case the
  * consumer has multiple handles in flight to differently configured
@@ -173,6 +173,16 @@ kvm_getmaxcpu(kvm_t *kd)
 	return (maxcpu);
 }
 
+int
+kvm_getncpus(kvm_t *kd)
+{
+
+	if (mp_ncpus == 0)
+		if (_kvm_pcpu_init(kd) < 0)
+			return (-1);
+	return (mp_ncpus);
+}
+
 static int
 _kvm_dpcpu_setcpu(kvm_t *kd, u_int cpu, int report_error)
 {
@@ -206,7 +216,7 @@ _kvm_dpcpu_setcpu(kvm_t *kd, u_int cpu, int report_error)
 static int
 _kvm_dpcpu_init(kvm_t *kd)
 {
-	struct nlist nl[] = {
+	struct kvm_nlist nl[] = {
 #define	NLIST_START_SET_PCPU	0
 		{ .n_name = "___start_" DPCPU_SETNAME },
 #define	NLIST_STOP_SET_PCPU	1
@@ -220,6 +230,12 @@ _kvm_dpcpu_init(kvm_t *kd)
 	uintptr_t *dpcpu_off_buf;
 	size_t len;
 	u_int dpcpu_maxcpus;
+
+	/*
+	 * XXX: This only works for native kernels for now.
+	 */
+	if (!kvm_native(kd))
+		return (-1);
 
 	/*
 	 * Locate and cache locations of important symbols using the internal
@@ -250,7 +266,7 @@ _kvm_dpcpu_init(kvm_t *kd)
 }
 
 /*
- * Check whether the dpcpu module has been initialized sucessfully or not,
+ * Check whether the dpcpu module has been initialized successfully or not,
  * initialize it if permitted.
  */
 int
@@ -269,8 +285,8 @@ _kvm_dpcpu_initialized(kvm_t *kd, int intialize)
  * Check whether the value is within the dpcpu symbol range and only if so
  * adjust the offset relative to the current offset.
  */
-uintptr_t
-_kvm_dpcpu_validaddr(kvm_t *kd, uintptr_t value)
+kvaddr_t
+_kvm_dpcpu_validaddr(kvm_t *kd, kvaddr_t value)
 {
 
 	if (value == 0)
@@ -306,9 +322,11 @@ kvm_dpcpu_setcpu(kvm_t *kd, u_int cpu)
  * Obtain a per-CPU copy for given cpu from UMA_ZONE_PCPU allocation.
  */
 ssize_t
-kvm_read_zpcpu(kvm_t *kd, void *buf, u_long base, size_t size, int cpu)
+kvm_read_zpcpu(kvm_t *kd, u_long base, void *buf, size_t size, int cpu)
 {
 
+	if (!kvm_native(kd))
+		return (-1);
 	return (kvm_read(kd, (uintptr_t)(base + sizeof(struct pcpu) * cpu),
 	    buf, size));
 }
@@ -327,7 +345,7 @@ kvm_counter_u64_fetch(kvm_t *kd, u_long base)
 
 	r = 0;
 	for (int i = 0; i < mp_ncpus; i++) {
-		if (kvm_read_zpcpu(kd, &c, base, sizeof(c), i) != sizeof(c))
+		if (kvm_read_zpcpu(kd, base, &c, sizeof(c), i) != sizeof(c))
 			return (0);
 		r += c;
 	}

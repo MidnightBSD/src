@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/zlib/Makefile 130799 2004-06-20 17:42:35Z markm $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../net
+.PATH: ${SRCTOP}/sys/libkern
 
 KMOD=	zlib
 SRCS=	zlib.c

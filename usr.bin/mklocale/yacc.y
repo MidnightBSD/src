@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)yacc.y	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mklocale/yacc.y 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD$");
 
 #include <arpa/inet.h>
 
@@ -123,7 +123,7 @@ entry	:	ENCODING STRING
 		      strcmp($2, "BIG5") &&
 		      strcmp($2, "MSKanji"))
 			warnx("ENCODING %s is not supported by libc", $2);
-		strncpy(new_locale.encoding, $2,
+		strlcpy(new_locale.encoding, $2,
 		    sizeof(new_locale.encoding)); }
 	|	VARIABLE
 		{ new_locale.variable_len = strlen($1) + 1;

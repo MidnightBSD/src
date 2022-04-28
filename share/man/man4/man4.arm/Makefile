@@ -1,8 +1,19 @@
-# $FreeBSD: release/10.0.0/share/man/man4/man4.arm/Makefile 249999 2013-04-27 23:07:49Z wkoszek $
+# $FreeBSD$
 
-MAN=	mge.4 npe.4 devcfg.4
+PACKAGE=runtime-manuals
 
-MLINKS= mge.4 if_mge.4
+MAN=	cgem.4 \
+	devcfg.4 \
+	imx6_ahci.4 \
+	imx6_snvs.4 \
+	imx_wdog.4 \
+	mge.4 \
+	npe.4 \
+	ti_adc.4
+
+MLINKS= cgem.4 if_cgem.4
+MLINKS+= imx_wdog.4 imxwdt.4
+MLINKS+= mge.4 if_mge.4
 MLINKS+=npe.4 if_npe.4
 
 MANSUBDIR=/arm

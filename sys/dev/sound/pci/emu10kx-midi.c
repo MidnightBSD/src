@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/emu10kx-midi.c 246128 2013-01-30 18:01:20Z sbz $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

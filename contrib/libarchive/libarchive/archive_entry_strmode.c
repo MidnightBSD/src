@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_entry_strmode.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -80,7 +80,7 @@ archive_entry_strmode(struct archive_entry *entry)
 		if (mode & 0001) bp[9] = 't';
 		else bp[9] = 'T';
 	}
-	if (archive_entry_acl_count(entry, ARCHIVE_ENTRY_ACL_TYPE_ACCESS))
+	if (archive_entry_acl_types(entry) != 0)
 		bp[10] = '+';
 
 	return (bp);

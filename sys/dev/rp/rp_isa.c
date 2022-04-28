@@ -35,16 +35,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/rp/rp_isa.c 153084 2005-12-04 10:06:06Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
-#include <sys/tty.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/bus.h>
@@ -194,10 +195,10 @@ rp_probe(device_t dev)
 	ctlp->io_rid[0] = 0;
 	if (rp_controller != NULL) {
 		controller = rp_controller;
-		ctlp->io[0] = bus_alloc_resource(dev, SYS_RES_IOPORT, &ctlp->io_rid[0], 0, ~0, 0x40, RF_ACTIVE);
+		ctlp->io[0] = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &ctlp->io_rid[0], 0x40, RF_ACTIVE);
 	} else {
 		controller = rp_controller = ctlp;
-		ctlp->io[0] = bus_alloc_resource(dev, SYS_RES_IOPORT, &ctlp->io_rid[0], 0, ~0, 0x44, RF_ACTIVE);
+		ctlp->io[0] = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &ctlp->io_rid[0], 0x44, RF_ACTIVE);
 	}
 	if (ctlp->io[0] == NULL) {
 		device_printf(dev, "rp_attach: Resource not available.\n");

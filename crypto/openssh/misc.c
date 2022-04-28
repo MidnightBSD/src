@@ -1,5 +1,4 @@
-/* $OpenBSD: misc.c,v 1.91 2013/07/12 00:43:50 djm Exp $ */
-/* $FreeBSD: release/10.0.0/crypto/openssh/misc.c 255767 2013-09-21 21:36:09Z des $ */
+/* $OpenBSD: misc.c,v 1.109 2017/03/14 00:55:37 dtucker Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005,2006 Damien Miller.  All rights reserved.
@@ -30,8 +29,11 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/time.h>
+#include <sys/un.h>
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +46,7 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -82,9 +85,9 @@ set_nonblock(int fd)
 {
 	int val;
 
-	val = fcntl(fd, F_GETFL, 0);
+	val = fcntl(fd, F_GETFL);
 	if (val < 0) {
-		error("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
+		error("fcntl(%d, F_GETFL): %s", fd, strerror(errno));
 		return (-1);
 	}
 	if (val & O_NONBLOCK) {
@@ -106,9 +109,9 @@ unset_nonblock(int fd)
 {
 	int val;
 
-	val = fcntl(fd, F_GETFL, 0);
+	val = fcntl(fd, F_GETFL);
 	if (val < 0) {
-		error("fcntl(%d, F_GETFL, 0): %s", fd, strerror(errno));
+		error("fcntl(%d, F_GETFL): %s", fd, strerror(errno));
 		return (-1);
 	}
 	if (!(val & O_NONBLOCK)) {
@@ -304,7 +307,7 @@ a2tun(const char *s, int *remote)
 long
 convtime(const char *s)
 {
-	long total, secs;
+	long total, secs, multiplier = 1;
 	const char *p;
 	char *endp;
 
@@ -331,23 +334,28 @@ convtime(const char *s)
 			break;
 		case 'm':
 		case 'M':
-			secs *= MINUTES;
+			multiplier = MINUTES;
 			break;
 		case 'h':
 		case 'H':
-			secs *= HOURS;
+			multiplier = HOURS;
 			break;
 		case 'd':
 		case 'D':
-			secs *= DAYS;
+			multiplier = DAYS;
 			break;
 		case 'w':
 		case 'W':
-			secs *= WEEKS;
+			multiplier = WEEKS;
 			break;
 		default:
 			return -1;
 		}
+		if (secs >= LONG_MAX / multiplier)
+			return -1;
+		secs *= multiplier;
+		if  (total >= LONG_MAX - secs)
+			return -1;
 		total += secs;
 		if (total < 0)
 			return -1;
@@ -449,6 +457,67 @@ colon(char *cp)
 	return NULL;
 }
 
+/*
+ * Parse a [user@]host[:port] string.
+ * Caller must free returned user and host.
+ * Any of the pointer return arguments may be NULL (useful for syntax checking).
+ * If user was not specified then *userp will be set to NULL.
+ * If port was not specified then *portp will be -1.
+ * Returns 0 on success, -1 on failure.
+ */
+int
+parse_user_host_port(const char *s, char **userp, char **hostp, int *portp)
+{
+	char *sdup, *cp, *tmp;
+	char *user = NULL, *host = NULL;
+	int port = -1, ret = -1;
+
+	if (userp != NULL)
+		*userp = NULL;
+	if (hostp != NULL)
+		*hostp = NULL;
+	if (portp != NULL)
+		*portp = -1;
+
+	if ((sdup = tmp = strdup(s)) == NULL)
+		return -1;
+	/* Extract optional username */
+	if ((cp = strchr(tmp, '@')) != NULL) {
+		*cp = '\0';
+		if (*tmp == '\0')
+			goto out;
+		if ((user = strdup(tmp)) == NULL)
+			goto out;
+		tmp = cp + 1;
+	}
+	/* Extract mandatory hostname */
+	if ((cp = hpdelim(&tmp)) == NULL || *cp == '\0')
+		goto out;
+	host = xstrdup(cleanhostname(cp));
+	/* Convert and verify optional port */
+	if (tmp != NULL && *tmp != '\0') {
+		if ((port = a2port(tmp)) <= 0)
+			goto out;
+	}
+	/* Success */
+	if (userp != NULL) {
+		*userp = user;
+		user = NULL;
+	}
+	if (hostp != NULL) {
+		*hostp = host;
+		host = NULL;
+	}
+	if (portp != NULL)
+		*portp = port;
+	ret = 0;
+ out:
+	free(sdup);
+	free(user);
+	free(host);
+	return ret;
+}
+
 /* function to assist building execv() arguments */
 void
 addargs(arglist *args, char *fmt, ...)
@@ -471,7 +540,7 @@ addargs(arglist *args, char *fmt, ...)
 	} else if (args->num+2 >= nalloc)
 		nalloc *= 2;
 
-	args->list = xrealloc(args->list, nalloc, sizeof(char *));
+	args->list = xreallocarray(args->list, nalloc, sizeof(char *));
 	args->nalloc = nalloc;
 	args->list[args->num++] = cp;
 	args->list[args->num] = NULL;
@@ -550,7 +619,7 @@ tilde_expand_filename(const char *filename, uid_t uid)
 	if (path != NULL)
 		filename = path + 1;
 
-	if (xasprintf(&ret, "%s%s%s", pw->pw_dir, sep, filename) >= MAXPATHLEN)
+	if (xasprintf(&ret, "%s%s%s", pw->pw_dir, sep, filename) >= PATH_MAX)
 		fatal("tilde_expand_filename: Path too long");
 
 	return (ret);
@@ -603,6 +672,8 @@ percent_expand(const char *string, ...)
 		/* %% case */
 		if (*string == '%')
 			goto append;
+		if (*string == '\0')
+			fatal("%s: invalid format", __func__);
 		for (j = 0; j < num_keys; j++) {
 			if (strchr(keys[j].key, *string) != NULL) {
 				i = strlcat(buf, keys[j].repl, sizeof(buf));
@@ -652,62 +723,63 @@ tun_open(int tun, int mode)
 	struct ifreq ifr;
 	char name[100];
 	int fd = -1, sock;
+	const char *tunbase = "tun";
+
+	if (mode == SSH_TUNMODE_ETHERNET)
+		tunbase = "tap";
 
 	/* Open the tunnel device */
 	if (tun <= SSH_TUNID_MAX) {
-		snprintf(name, sizeof(name), "/dev/tun%d", tun);
+		snprintf(name, sizeof(name), "/dev/%s%d", tunbase, tun);
 		fd = open(name, O_RDWR);
 	} else if (tun == SSH_TUNID_ANY) {
 		for (tun = 100; tun >= 0; tun--) {
-			snprintf(name, sizeof(name), "/dev/tun%d", tun);
+			snprintf(name, sizeof(name), "/dev/%s%d",
+			    tunbase, tun);
 			if ((fd = open(name, O_RDWR)) >= 0)
 				break;
 		}
 	} else {
 		debug("%s: invalid tunnel %u", __func__, tun);
-		return (-1);
+		return -1;
 	}
 
 	if (fd < 0) {
-		debug("%s: %s open failed: %s", __func__, name, strerror(errno));
-		return (-1);
+		debug("%s: %s open: %s", __func__, name, strerror(errno));
+		return -1;
 	}
 
 	debug("%s: %s mode %d fd %d", __func__, name, mode, fd);
 
-	/* Set the tunnel device operation mode */
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "tun%d", tun);
+	/* Bring interface up if it is not already */
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s%d", tunbase, tun);
 	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) == -1)
 		goto failed;
 
-	if (ioctl(sock, SIOCGIFFLAGS, &ifr) == -1)
+	if (ioctl(sock, SIOCGIFFLAGS, &ifr) == -1) {
+		debug("%s: get interface %s flags: %s", __func__,
+		    ifr.ifr_name, strerror(errno));
 		goto failed;
+	}
 
-	/* Set interface mode */
-	ifr.ifr_flags &= ~IFF_UP;
-	if (mode == SSH_TUNMODE_ETHERNET)
-		ifr.ifr_flags |= IFF_LINK0;
-	else
-		ifr.ifr_flags &= ~IFF_LINK0;
-	if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1)
-		goto failed;
-
-	/* Bring interface up */
-	ifr.ifr_flags |= IFF_UP;
-	if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1)
-		goto failed;
+	if (!(ifr.ifr_flags & IFF_UP)) {
+		ifr.ifr_flags |= IFF_UP;
+		if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1) {
+			debug("%s: activate interface %s: %s", __func__,
+			    ifr.ifr_name, strerror(errno));
+			goto failed;
+		}
+	}
 
 	close(sock);
-	return (fd);
+	return fd;
 
  failed:
 	if (fd >= 0)
 		close(fd);
 	if (sock >= 0)
 		close(sock);
-	debug("%s: failed to set %s mode %d: %s", __func__, name,
-	    mode, strerror(errno));
-	return (-1);
+	return -1;
 #else
 	error("Tunnel interfaces are not supported on this platform");
 	return (-1);
@@ -724,16 +796,16 @@ sanitise_stdfd(void)
 		    strerror(errno));
 		exit(1);
 	}
-	while (++dupfd <= 2) {
-		/* Only clobber closed fds */
-		if (fcntl(dupfd, F_GETFL, 0) >= 0)
-			continue;
-		if (dup2(nullfd, dupfd) == -1) {
-			fprintf(stderr, "dup2: %s\n", strerror(errno));
-			exit(1);
+	while (++dupfd <= STDERR_FILENO) {
+		/* Only populate closed fds. */
+		if (fcntl(dupfd, F_GETFL) == -1 && errno == EBADF) {
+			if (dup2(nullfd, dupfd) == -1) {
+				fprintf(stderr, "dup2: %s\n", strerror(errno));
+				exit(1);
+			}
 		}
 	}
-	if (nullfd > 2)
+	if (nullfd > STDERR_FILENO)
 		close(nullfd);
 }
 
@@ -788,6 +860,20 @@ get_u32(const void *vp)
 	return (v);
 }
 
+u_int32_t
+get_u32_le(const void *vp)
+{
+	const u_char *p = (const u_char *)vp;
+	u_int32_t v;
+
+	v  = (u_int32_t)p[0];
+	v |= (u_int32_t)p[1] << 8;
+	v |= (u_int32_t)p[2] << 16;
+	v |= (u_int32_t)p[3] << 24;
+
+	return (v);
+}
+
 u_int16_t
 get_u16(const void *vp)
 {
@@ -826,6 +912,16 @@ put_u32(void *vp, u_int32_t v)
 	p[3] = (u_char)v & 0xff;
 }
 
+void
+put_u32_le(void *vp, u_int32_t v)
+{
+	u_char *p = (u_char *)vp;
+
+	p[0] = (u_char)v & 0xff;
+	p[1] = (u_char)(v >> 8) & 0xff;
+	p[2] = (u_char)(v >> 16) & 0xff;
+	p[3] = (u_char)(v >> 24) & 0xff;
+}
 
 void
 put_u16(void *vp, u_int16_t v)
@@ -858,19 +954,51 @@ ms_to_timeval(struct timeval *tv, int ms)
 time_t
 monotime(void)
 {
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+#if defined(HAVE_CLOCK_GETTIME) && \
+    (defined(CLOCK_MONOTONIC) || defined(CLOCK_BOOTTIME))
 	struct timespec ts;
 	static int gettime_failed = 0;
 
 	if (!gettime_failed) {
+#if defined(CLOCK_BOOTTIME)
+		if (clock_gettime(CLOCK_BOOTTIME, &ts) == 0)
+			return (ts.tv_sec);
+#endif
+#if defined(CLOCK_MONOTONIC)
 		if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
 			return (ts.tv_sec);
+#endif
 		debug3("clock_gettime: %s", strerror(errno));
 		gettime_failed = 1;
 	}
-#endif
+#endif /* HAVE_CLOCK_GETTIME && (CLOCK_MONOTONIC || CLOCK_BOOTTIME */
 
 	return time(NULL);
+}
+
+double
+monotime_double(void)
+{
+#if defined(HAVE_CLOCK_GETTIME) && \
+    (defined(CLOCK_MONOTONIC) || defined(CLOCK_BOOTTIME))
+	struct timespec ts;
+	static int gettime_failed = 0;
+
+	if (!gettime_failed) {
+#if defined(CLOCK_BOOTTIME)
+		if (clock_gettime(CLOCK_BOOTTIME, &ts) == 0)
+			return (ts.tv_sec + (double)ts.tv_nsec / 1000000000);
+#endif
+#if defined(CLOCK_MONOTONIC)
+		if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+			return (ts.tv_sec + (double)ts.tv_nsec / 1000000000);
+#endif
+		debug3("clock_gettime: %s", strerror(errno));
+		gettime_failed = 1;
+	}
+#endif /* HAVE_CLOCK_GETTIME && (CLOCK_MONOTONIC || CLOCK_BOOTTIME */
+
+	return (double)time(NULL);
 }
 
 void
@@ -1018,10 +1146,64 @@ iptos2str(int iptos)
 	snprintf(iptos_str, sizeof iptos_str, "0x%02x", iptos);
 	return iptos_str;
 }
+
+void
+lowercase(char *s)
+{
+	for (; *s; s++)
+		*s = tolower((u_char)*s);
+}
+
+int
+unix_listener(const char *path, int backlog, int unlink_first)
+{
+	struct sockaddr_un sunaddr;
+	int saved_errno, sock;
+
+	memset(&sunaddr, 0, sizeof(sunaddr));
+	sunaddr.sun_family = AF_UNIX;
+	if (strlcpy(sunaddr.sun_path, path, sizeof(sunaddr.sun_path)) >= sizeof(sunaddr.sun_path)) {
+		error("%s: \"%s\" too long for Unix domain socket", __func__,
+		    path);
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	sock = socket(PF_UNIX, SOCK_STREAM, 0);
+	if (sock < 0) {
+		saved_errno = errno;
+		error("socket: %.100s", strerror(errno));
+		errno = saved_errno;
+		return -1;
+	}
+	if (unlink_first == 1) {
+		if (unlink(path) != 0 && errno != ENOENT)
+			error("unlink(%s): %.100s", path, strerror(errno));
+	}
+	if (bind(sock, (struct sockaddr *)&sunaddr, sizeof(sunaddr)) < 0) {
+		saved_errno = errno;
+		error("bind: %.100s", strerror(errno));
+		close(sock);
+		error("%s: cannot bind to path: %s", __func__, path);
+		errno = saved_errno;
+		return -1;
+	}
+	if (listen(sock, backlog) < 0) {
+		saved_errno = errno;
+		error("listen: %.100s", strerror(errno));
+		close(sock);
+		unlink(path);
+		error("%s: cannot listen on path: %s", __func__, path);
+		errno = saved_errno;
+		return -1;
+	}
+	return sock;
+}
+
 void
 sock_set_v6only(int s)
 {
-#ifdef IPV6_V6ONLY
+#if defined(IPV6_V6ONLY) && !defined(__OpenBSD__)
 	int on = 1;
 
 	debug3("%s: set socket %d IPV6_V6ONLY", __func__, s);
@@ -1030,33 +1212,82 @@ sock_set_v6only(int s)
 #endif
 }
 
-void
-sock_get_rcvbuf(int *size, int rcvbuf)
+/*
+ * Compares two strings that maybe be NULL. Returns non-zero if strings
+ * are both NULL or are identical, returns zero otherwise.
+ */
+static int
+strcmp_maybe_null(const char *a, const char *b)
 {
-	int sock, socksize;
-	socklen_t socksizelen = sizeof(socksize);
+	if ((a == NULL && b != NULL) || (a != NULL && b == NULL))
+		return 0;
+	if (a != NULL && strcmp(a, b) != 0)
+		return 0;
+	return 1;
+}
 
-	/*
-	 * Create a socket but do not connect it.  We use it
-	 * only to get the rcv socket size.
-	 */
-	sock = socket(AF_INET6, SOCK_STREAM, 0);
-	if (sock < 0)
-		sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-		return;
+/*
+ * Compare two forwards, returning non-zero if they are identical or
+ * zero otherwise.
+ */
+int
+forward_equals(const struct Forward *a, const struct Forward *b)
+{
+	if (strcmp_maybe_null(a->listen_host, b->listen_host) == 0)
+		return 0;
+	if (a->listen_port != b->listen_port)
+		return 0;
+	if (strcmp_maybe_null(a->listen_path, b->listen_path) == 0)
+		return 0;
+	if (strcmp_maybe_null(a->connect_host, b->connect_host) == 0)
+		return 0;
+	if (a->connect_port != b->connect_port)
+		return 0;
+	if (strcmp_maybe_null(a->connect_path, b->connect_path) == 0)
+		return 0;
+	/* allocated_port and handle are not checked */
+	return 1;
+}
 
-	/*
-	 * If the tcp_rcv_buf option is set and passed in, attempt to set the
-	 *  buffer size to its value.
-	 */
-	if (rcvbuf)
-		setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void *)&rcvbuf,
-		    sizeof(rcvbuf));
+static int
+ipport_reserved(void)
+{
+#if __FreeBSD__
+	int old, ret;
+	size_t len = sizeof(old);
 
-	if (getsockopt(sock, SOL_SOCKET, SO_RCVBUF,
-	    &socksize, &socksizelen) == 0)
-		if (size != NULL)
-			*size = socksize;
-	close(sock);
+	ret = sysctlbyname("net.inet.ip.portrange.reservedhigh",
+	    &old, &len, NULL, 0);
+	if (ret == 0)
+		return (old + 1);
+#endif
+	return (IPPORT_RESERVED);
+}
+
+/* returns 1 if bind to specified port by specified user is permitted */
+int
+bind_permitted(int port, uid_t uid)
+{
+
+	if (port < ipport_reserved() && uid != 0)
+		return 0;
+	return 1;
+}
+
+/* returns 1 if process is already daemonized, 0 otherwise */
+int
+daemonized(void)
+{
+	int fd;
+
+	if ((fd = open(_PATH_TTY, O_RDONLY | O_NOCTTY)) >= 0) {
+		close(fd);
+		return 0;	/* have controlling terminal */
+	}
+	if (getppid() != 1)
+		return 0;	/* parent is not init */
+	if (getsid(0) != getpid())
+		return 0;	/* not session leader */
+	debug3("already daemonized");
+	return 1;
 }

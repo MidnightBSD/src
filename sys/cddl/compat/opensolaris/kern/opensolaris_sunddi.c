@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_sunddi.c 219092 2011-02-28 05:45:31Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -41,10 +41,6 @@ ddi_strtol(const char *str, char **nptr, int base, long *result)
 {
 
 	*result = strtol(str, nptr, base);
-	if (*result == 0)
-		return (EINVAL);
-	else if (*result == LONG_MIN || *result == LONG_MAX)
-		return (ERANGE);
 	return (0);
 }
 
@@ -58,10 +54,6 @@ ddi_strtoul(const char *str, char **nptr, int base, unsigned long *result)
 	}
 
 	*result = strtoul(str, nptr, base);
-	if (*result == 0)
-		return (EINVAL);
-	else if (*result == ULONG_MAX)
-		return (ERANGE);
 	return (0);
 }
 
@@ -70,10 +62,14 @@ ddi_strtoull(const char *str, char **nptr, int base, unsigned long long *result)
 {
 
 	*result = (unsigned long long)strtouq(str, nptr, base);
-	if (*result == 0)
-		return (EINVAL);
-	else if (*result == ULLONG_MAX)
-		return (ERANGE);
+	return (0);
+}
+
+int
+ddi_strtoll(const char *str, char **nptr, int base, long long *result)
+{
+
+	*result = (long long)strtoq(str, nptr, base);
 	return (0);
 }
 

@@ -25,25 +25,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/mirror/g_mirror_ctl.c 235600 2012-05-18 09:22:21Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/module.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
 #include <sys/bio.h>
-#include <sys/sysctl.h>
+#include <sys/kernel.h>
+#include <sys/limits.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/bitstring.h>
-#include <vm/uma.h>
-#include <machine/atomic.h>
-#include <geom/geom.h>
-#include <sys/proc.h>
-#include <sys/kthread.h>
-#include <geom/mirror/g_mirror.h>
+#include <sys/sbuf.h>
+#include <sys/sx.h>
 
+#include <geom/geom.h>
+#include <geom/geom_int.h>
+#include <geom/mirror/g_mirror.h>
 
 static struct g_mirror_softc *
 g_mirror_find_device(struct g_class *mp, const char *name)
@@ -299,6 +295,182 @@ g_mirror_ctl_configure(struct gctl_req *req, struct g_class *mp)
 }
 
 static void
+g_mirror_create_orphan(struct g_consumer *cp)
+{
+
+	KASSERT(1 == 0, ("%s called while creating %s.", __func__,
+	    cp->provider->name));
+}
+
+static void
+g_mirror_ctl_create(struct gctl_req *req, struct g_class *mp)
+{
+	struct g_mirror_metadata md;
+	struct g_geom *gp;
+	struct g_consumer *cp;
+	struct g_provider *pp;
+	struct g_mirror_softc *sc;
+	struct sbuf *sb;
+	const char *name;
+	char param[16];
+	int *nargs;
+	intmax_t *val;
+	int *ival;
+	const char *sval;
+	int bal;
+	unsigned attached, no, sectorsize;
+	off_t mediasize;
+
+	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
+	if (nargs == NULL) {
+		gctl_error(req, "No '%s' argument.", "nargs");
+		return;
+	}
+	if (*nargs <= 2) {
+		gctl_error(req, "Too few arguments.");
+		return;
+	}
+
+	strlcpy(md.md_magic, G_MIRROR_MAGIC, sizeof(md.md_magic));
+	md.md_version = G_MIRROR_VERSION;
+	name = gctl_get_asciiparam(req, "arg0");
+	if (name == NULL) {
+		gctl_error(req, "No 'arg%u' argument.", 0);
+		return;
+	}
+	strlcpy(md.md_name, name, sizeof(md.md_name));
+	md.md_mid = arc4random();
+	md.md_all = *nargs - 1;
+	md.md_genid = 0;
+	md.md_syncid = 1;
+	md.md_sync_offset = 0;
+	val = gctl_get_paraml(req, "slice", sizeof(*val));
+	if (val == NULL) {
+		gctl_error(req, "No slice argument.");
+		return;
+	}
+	md.md_slice = *val;
+	sval = gctl_get_asciiparam(req, "balance");
+	if (sval == NULL) {
+		gctl_error(req, "No balance argument.");
+		return;
+	}
+	bal = balance_id(sval);
+	if (bal < 0) {
+		gctl_error(req, "Invalid balance algorithm.");
+		return;
+	}
+	md.md_balance = bal;
+	md.md_mflags = 0;
+	md.md_dflags = 0;
+	ival = gctl_get_paraml(req, "noautosync", sizeof(*ival));
+	if (ival != NULL && *ival)
+		md.md_mflags |= G_MIRROR_DEVICE_FLAG_NOAUTOSYNC;
+	ival = gctl_get_paraml(req, "nofailsync", sizeof(*ival));
+	if (ival != NULL && *ival)
+		md.md_mflags |= G_MIRROR_DEVICE_FLAG_NOFAILSYNC;
+	/* These fields not used in manual mode. */
+	bzero(md.md_provider, sizeof(md.md_provider));
+	md.md_provsize = 0;
+
+	g_topology_lock();
+	mediasize = OFF_MAX;
+	sectorsize = 0;
+	gp = g_new_geomf(mp, "%s", md.md_name);
+	gp->orphan = g_mirror_create_orphan;
+	cp = g_new_consumer(gp);
+	for (no = 1; no < *nargs; no++) {
+		snprintf(param, sizeof(param), "arg%u", no);
+		name = gctl_get_asciiparam(req, param);
+		if (name == NULL) {
+			gctl_error(req, "No 'arg%u' argument.", no);
+err:
+			g_destroy_consumer(cp);
+			g_destroy_geom(gp);
+			g_topology_unlock();
+			return;
+		}
+		if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
+			name += strlen("/dev/");
+		pp = g_provider_by_name(name);
+		if (pp == NULL) {
+			G_MIRROR_DEBUG(1, "Disk %s is invalid.", name);
+			gctl_error(req, "Disk %s is invalid.", name);
+			goto err;
+		}
+		g_attach(cp, pp);
+		if (g_access(cp, 1, 0, 0) != 0) {
+			G_MIRROR_DEBUG(1, "Can't open disk %s.", name);
+			gctl_error(req, "Can't open disk %s.", name);
+err2:
+			g_detach(cp);
+			goto err;
+		}
+		if (pp->mediasize == 0 || pp->sectorsize == 0) {
+			G_MIRROR_DEBUG(1, "Disk %s has no media.", name);
+			gctl_error(req, "Disk %s has no media.", name);
+			g_access(cp, -1, 0, 0);
+			goto err2;
+		}
+		if (pp->mediasize < mediasize)
+			mediasize = pp->mediasize;
+		if (pp->sectorsize > sectorsize)
+			sectorsize = pp->sectorsize;
+		g_access(cp, -1, 0, 0);
+		g_detach(cp);
+	}
+	g_destroy_consumer(cp);
+	g_destroy_geom(gp);
+	md.md_mediasize = mediasize;
+	md.md_sectorsize = sectorsize;
+	md.md_mediasize -= (md.md_mediasize % md.md_sectorsize);
+
+	gp = g_mirror_create(mp, &md, G_MIRROR_TYPE_MANUAL);
+	if (gp == NULL) {
+		gctl_error(req, "Can't create %s.", md.md_name);
+		g_topology_unlock();
+		return;
+	}
+
+	sc = gp->softc;
+	g_topology_unlock();
+	sx_xlock(&sc->sc_lock);
+	sc->sc_flags |= G_MIRROR_DEVICE_FLAG_TASTING;
+	sb = sbuf_new_auto();
+	sbuf_printf(sb, "Can't attach disk(s) to %s:", gp->name);
+	for (attached = 0, no = 1; no < *nargs; no++) {
+		snprintf(param, sizeof(param), "arg%u", no);
+		name = gctl_get_asciiparam(req, param);
+		if (strncmp(name, "/dev/", strlen("/dev/")) == 0)
+			name += strlen("/dev/");
+		pp = g_provider_by_name(name);
+		if (pp == NULL) {
+			G_MIRROR_DEBUG(1, "Provider %s disappear?!", name);
+			sbuf_printf(sb, " %s", name);
+			continue;
+		}
+		md.md_did = arc4random();
+		md.md_priority = no - 1;
+		if (g_mirror_add_disk(sc, pp, &md) != 0) {
+			G_MIRROR_DEBUG(1, "Disk %u (%s) not attached to %s.",
+			    no, pp->name, gp->name);
+			sbuf_printf(sb, " %s", pp->name);
+			continue;
+		}
+		attached++;
+	}
+	sbuf_finish(sb);
+	sc->sc_flags &= ~G_MIRROR_DEVICE_FLAG_TASTING;
+	if (md.md_all != attached ||
+	    (sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROY) != 0) {
+		g_mirror_destroy(gp->softc, G_MIRROR_DESTROY_HARD);
+		gctl_error(req, "%s", sbuf_data(sb));
+	} else
+		sx_xunlock(&sc->sc_lock);
+	sbuf_delete(sb);
+}
+
+static void
 g_mirror_ctl_rebuild(struct gctl_req *req, struct g_class *mp)
 {
 	struct g_mirror_metadata md;
@@ -399,6 +571,7 @@ g_mirror_ctl_insert(struct gctl_req *req, struct g_class *mp)
 		struct g_provider	*provider;
 		struct g_consumer	*consumer;
 	} *disks;
+	off_t mdsize;
 
 	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
 	if (nargs == NULL) {
@@ -460,16 +633,6 @@ g_mirror_ctl_insert(struct gctl_req *req, struct g_class *mp)
 			gctl_error(req, "Unknown provider %s.", name);
 			continue;
 		}
-		if (sc->sc_provider->mediasize >
-		    pp->mediasize - pp->sectorsize) {
-			gctl_error(req, "Provider %s too small.", name);
-			continue;
-		}
-		if ((sc->sc_provider->sectorsize % pp->sectorsize) != 0) {
-			gctl_error(req, "Invalid sectorsize of provider %s.",
-			    name);
-			continue;
-		}
 		cp = g_new_consumer(sc->sc_geom);
 		if (g_attach(cp, pp) != 0) {
 			g_destroy_consumer(cp);
@@ -477,9 +640,40 @@ g_mirror_ctl_insert(struct gctl_req *req, struct g_class *mp)
 			continue;
 		}
 		if (g_access(cp, 0, 1, 1) != 0) {
+			gctl_error(req, "Cannot access provider %s.", name);
+err:
 			g_detach(cp);
 			g_destroy_consumer(cp);
-			gctl_error(req, "Cannot access provider %s.", name);
+			continue;
+		}
+		mdsize = (sc->sc_type == G_MIRROR_TYPE_AUTOMATIC) ?
+		    pp->sectorsize : 0;
+		if (sc->sc_provider->mediasize > pp->mediasize - mdsize) {
+			gctl_error(req, "Provider %s too small.", name);
+err2:
+			g_access(cp, 0, -1, -1);
+			goto err;
+		}
+		if ((sc->sc_provider->sectorsize % pp->sectorsize) != 0) {
+			gctl_error(req, "Invalid sectorsize of provider %s.",
+			    name);
+			goto err2;
+		}
+		if (sc->sc_type != G_MIRROR_TYPE_AUTOMATIC) {
+			g_access(cp, 0, -1, -1);
+			g_detach(cp);
+			g_destroy_consumer(cp);
+			g_topology_unlock();
+			sc->sc_ndisks++;
+			g_mirror_fill_metadata(sc, NULL, &md);
+			md.md_priority = *priority;
+			if (*inactive)
+				md.md_dflags |= G_MIRROR_DISK_FLAG_INACTIVE;
+			if (g_mirror_add_disk(sc, pp, &md) != 0) {
+				sc->sc_ndisks--;
+				gctl_error(req, "Disk %s not inserted.", name);
+			}
+			g_topology_lock();
 			continue;
 		}
 		disks[n].provider = pp;
@@ -617,6 +811,74 @@ g_mirror_ctl_remove(struct gctl_req *req, struct g_class *mp)
 }
 
 static void
+g_mirror_ctl_resize(struct gctl_req *req, struct g_class *mp)
+{
+	struct g_mirror_softc *sc;
+	struct g_mirror_disk *disk;
+	uint64_t mediasize;
+	const char *name, *s;
+	char *x;
+	int *nargs;
+
+	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
+	if (nargs == NULL) {
+		gctl_error(req, "No '%s' argument.", "nargs");
+		return;
+	}
+	if (*nargs != 1) {
+		gctl_error(req, "Missing device.");
+		return;
+	}
+	name = gctl_get_asciiparam(req, "arg0");
+	if (name == NULL) {
+		gctl_error(req, "No 'arg%u' argument.", 0);
+		return;
+	}
+	s = gctl_get_asciiparam(req, "size");
+	if (s == NULL) {
+		gctl_error(req, "No '%s' argument.", "size");
+		return;
+	}
+	mediasize = strtouq(s, &x, 0);
+	if (*x != '\0' || mediasize == 0) {
+		gctl_error(req, "Invalid '%s' argument.", "size");
+		return;
+	}
+	sc = g_mirror_find_device(mp, name);
+	if (sc == NULL) {
+		gctl_error(req, "No such device: %s.", name);
+		return;
+	}
+	/* Deny shrinking of an opened provider */
+	if ((g_debugflags & 16) == 0 && sc->sc_provider_open > 0) {
+		if (sc->sc_mediasize > mediasize) {
+			gctl_error(req, "Device %s is busy.",
+			    sc->sc_provider->name);
+			sx_xunlock(&sc->sc_lock);
+			return;
+		}
+	}
+	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
+		if (mediasize > disk->d_consumer->provider->mediasize -
+		    disk->d_consumer->provider->sectorsize) {
+			gctl_error(req, "Provider %s is too small.",
+			    disk->d_name);
+			sx_xunlock(&sc->sc_lock);
+			return;
+		}
+	}
+	/* Update the size. */
+	sc->sc_mediasize = mediasize;
+	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
+		g_mirror_update_metadata(disk);
+	}
+	g_topology_lock();
+	g_resize_provider(sc->sc_provider, mediasize);
+	g_topology_unlock();
+	sx_xunlock(&sc->sc_lock);
+}
+
+static void
 g_mirror_ctl_deactivate(struct gctl_req *req, struct g_class *mp)
 {
 	struct g_mirror_softc *sc;
@@ -624,7 +886,7 @@ g_mirror_ctl_deactivate(struct gctl_req *req, struct g_class *mp)
 	const char *name;
 	char param[16];
 	int *nargs;
-	u_int i;
+	u_int i, active;
 
 	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
 	if (nargs == NULL) {
@@ -645,6 +907,7 @@ g_mirror_ctl_deactivate(struct gctl_req *req, struct g_class *mp)
 		gctl_error(req, "No such device: %s.", name);
 		return;
 	}
+	active = g_mirror_ndisks(sc, G_MIRROR_DISK_STATE_ACTIVE);
 	for (i = 1; i < (u_int)*nargs; i++) {
 		snprintf(param, sizeof(param), "arg%u", i);
 		name = gctl_get_asciiparam(req, param);
@@ -656,6 +919,16 @@ g_mirror_ctl_deactivate(struct gctl_req *req, struct g_class *mp)
 		if (disk == NULL) {
 			gctl_error(req, "No such provider: %s.", name);
 			continue;
+		}
+		if (disk->d_state == G_MIRROR_DISK_STATE_ACTIVE) {
+			if (active > 1)
+				active--;
+			else {
+				gctl_error(req, "%s: Can't deactivate the "
+				    "last ACTIVE component %s.",
+				    sc->sc_geom->name, name);
+				continue;
+			}
 		}
 		disk->d_flags |= G_MIRROR_DISK_FLAG_INACTIVE;
 		disk->d_flags &= ~G_MIRROR_DISK_FLAG_FORCE_SYNC;
@@ -715,7 +988,7 @@ g_mirror_ctl_forget(struct gctl_req *req, struct g_class *mp)
 }
 
 static void
-g_mirror_ctl_stop(struct gctl_req *req, struct g_class *mp)
+g_mirror_ctl_stop(struct gctl_req *req, struct g_class *mp, int wipe)
 {
 	struct g_mirror_softc *sc;
 	int *force, *nargs, error;
@@ -756,10 +1029,14 @@ g_mirror_ctl_stop(struct gctl_req *req, struct g_class *mp)
 			return;
 		}
 		g_cancel_event(sc);
+		if (wipe)
+			sc->sc_flags |= G_MIRROR_DEVICE_FLAG_WIPE;
 		error = g_mirror_destroy(sc, how);
 		if (error != 0) {
 			gctl_error(req, "Cannot destroy device %s (error=%d).",
 			    sc->sc_geom->name, error);
+			if (wipe)
+				sc->sc_flags &= ~G_MIRROR_DEVICE_FLAG_WIPE;
 			sx_xunlock(&sc->sc_lock);
 			return;
 		}
@@ -787,18 +1064,24 @@ g_mirror_config(struct gctl_req *req, struct g_class *mp, const char *verb)
 	g_topology_unlock();
 	if (strcmp(verb, "configure") == 0)
 		g_mirror_ctl_configure(req, mp);
+	else if (strcmp(verb, "create") == 0)
+		g_mirror_ctl_create(req, mp);
 	else if (strcmp(verb, "rebuild") == 0)
 		g_mirror_ctl_rebuild(req, mp);
 	else if (strcmp(verb, "insert") == 0)
 		g_mirror_ctl_insert(req, mp);
 	else if (strcmp(verb, "remove") == 0)
 		g_mirror_ctl_remove(req, mp);
+	else if (strcmp(verb, "resize") == 0)
+		g_mirror_ctl_resize(req, mp);
 	else if (strcmp(verb, "deactivate") == 0)
 		g_mirror_ctl_deactivate(req, mp);
 	else if (strcmp(verb, "forget") == 0)
 		g_mirror_ctl_forget(req, mp);
 	else if (strcmp(verb, "stop") == 0)
-		g_mirror_ctl_stop(req, mp);
+		g_mirror_ctl_stop(req, mp, 0);
+	else if (strcmp(verb, "destroy") == 0)
+		g_mirror_ctl_stop(req, mp, 1);
 	else
 		gctl_error(req, "Unknown verb.");
 	g_topology_lock();

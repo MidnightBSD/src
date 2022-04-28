@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)join.c	8.6 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/join/join.c 246319 2013-02-04 10:05:55Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -467,9 +467,15 @@ outoneline(INPUT *F, LINE *lp)
 			else
 				outfield(lp, 0, 1);
 		}
-	else
+	else {
+		/*
+		 * Output the join field, then the remaining fields.
+		 */
+		outfield(lp, F->joinf, 0);
 		for (cnt = 0; cnt < lp->fieldcnt; ++cnt)
-			outfield(lp, cnt, 0);
+			if (F->joinf != cnt)
+				outfield(lp, cnt, 0);
+	}
 	(void)printf("\n");
 	if (ferror(stdout))
 		err(1, "stdout");

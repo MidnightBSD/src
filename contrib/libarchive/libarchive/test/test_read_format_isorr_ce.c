@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_isorr_ce.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
 Execute the following command to rebuild the data for this program:
@@ -109,6 +109,9 @@ DEFINE_TEST(test_read_format_isorr_ce)
 	 * verify that each one is what we expect. */
 	for (i = 0; i < 8; ++i) {
 		assertEqualInt(0, archive_read_next_header(a, &ae));
+		
+		assertEqualInt(archive_entry_is_encrypted(ae), 0);
+		assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 		if (strcmp(".", archive_entry_pathname(ae)) == 0) {
 			/* '.' root directory. */

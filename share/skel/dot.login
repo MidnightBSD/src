@@ -1,8 +1,12 @@
-# $FreeBSD: release/10.0.0/share/skel/dot.login 190477 2009-03-27 21:13:14Z ru $
+# $FreeBSD$
 #
 # .login - csh login script, read by login shell, after `.cshrc' at login.
 #
-# see also csh(1), environ(7).
+# See also csh(1), environ(7).
 #
 
-if ( -x /usr/games/fortune ) /usr/games/fortune freebsd-tips
+# Query terminal size; useful for serial lines.
+if ( -x /usr/bin/resizewin ) /usr/bin/resizewin -z
+
+# Display a random cookie on each login.
+if ( -x /usr/bin/fortune ) /usr/bin/fortune freebsd-tips

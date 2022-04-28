@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/cpucontrol.h 228271 2011-12-05 02:56:08Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_HAL_CPUCONTROL_H__

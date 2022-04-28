@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: George V. Neville-Neil <gnn@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/perror/perror.c 199642 2009-11-22 05:17:22Z edwin $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

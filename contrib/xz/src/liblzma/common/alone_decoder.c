@@ -15,7 +15,7 @@
 #include "lz_decoder.h"
 
 
-struct lzma_coder_s {
+typedef struct {
 	lzma_next_coder next;
 
 	enum {
@@ -25,6 +25,11 @@ struct lzma_coder_s {
 		SEQ_CODER_INIT,
 		SEQ_CODE,
 	} sequence;
+
+	/// If true, reject files that are unlikely to be .lzma files.
+	/// If false, more non-.lzma files get accepted and will give
+	/// LZMA_DATA_ERROR either immediately or after a few output bytes.
+	bool picky;
 
 	/// Position in the header fields
 	size_t pos;
@@ -41,17 +46,18 @@ struct lzma_coder_s {
 	/// Options decoded from the header needed to initialize
 	/// the LZMA decoder
 	lzma_options_lzma options;
-};
+} lzma_alone_coder;
 
 
 static lzma_ret
-alone_decode(lzma_coder *coder,
-		lzma_allocator *allocator lzma_attribute((__unused__)),
+alone_decode(void *coder_ptr, const lzma_allocator *allocator,
 		const uint8_t *restrict in, size_t *restrict in_pos,
 		size_t in_size, uint8_t *restrict out,
 		size_t *restrict out_pos, size_t out_size,
 		lzma_action action)
 {
+	lzma_alone_coder *coder = coder_ptr;
+
 	while (*out_pos < out_size
 			&& (coder->sequence == SEQ_CODE || *in_pos < in_size))
 	switch (coder->sequence) {
@@ -68,13 +74,13 @@ alone_decode(lzma_coder *coder,
 				|= (size_t)(in[*in_pos]) << (coder->pos * 8);
 
 		if (++coder->pos == 4) {
-			if (coder->options.dict_size != UINT32_MAX) {
+			if (coder->picky && coder->options.dict_size
+					!= UINT32_MAX) {
 				// A hack to ditch tons of false positives:
 				// We allow only dictionary sizes that are
 				// 2^n or 2^n + 2^(n-1). LZMA_Alone created
 				// only files with 2^n, but accepts any
-				// dictionary size. If someone complains, this
-				// will be reconsidered.
+				// dictionary size.
 				uint32_t d = coder->options.dict_size - 1;
 				d |= d >> 2;
 				d |= d >> 3;
@@ -103,9 +109,9 @@ alone_decode(lzma_coder *coder,
 
 		// Another hack to ditch false positives: Assume that
 		// if the uncompressed size is known, it must be less
-		// than 256 GiB. Again, if someone complains, this
-		// will be reconsidered.
-		if (coder->uncompressed_size != LZMA_VLI_UNKNOWN
+		// than 256 GiB.
+		if (coder->picky
+				&& coder->uncompressed_size != LZMA_VLI_UNKNOWN
 				&& coder->uncompressed_size
 					>= (LZMA_VLI_C(1) << 38))
 			return LZMA_FORMAT_ERROR;
@@ -161,8 +167,9 @@ alone_decode(lzma_coder *coder,
 
 
 static void
-alone_decoder_end(lzma_coder *coder, lzma_allocator *allocator)
+alone_decoder_end(void *coder_ptr, const lzma_allocator *allocator)
 {
+	lzma_alone_coder *coder = coder_ptr;
 	lzma_next_end(&coder->next, allocator);
 	lzma_free(coder, allocator);
 	return;
@@ -170,9 +177,11 @@ alone_decoder_end(lzma_coder *coder, lzma_allocator *allocator)
 
 
 static lzma_ret
-alone_decoder_memconfig(lzma_coder *coder, uint64_t *memusage,
+alone_decoder_memconfig(void *coder_ptr, uint64_t *memusage,
 		uint64_t *old_memlimit, uint64_t new_memlimit)
 {
+	lzma_alone_coder *coder = coder_ptr;
+
 	*memusage = coder->memusage;
 	*old_memlimit = coder->memlimit;
 
@@ -188,33 +197,34 @@ alone_decoder_memconfig(lzma_coder *coder, uint64_t *memusage,
 
 
 extern lzma_ret
-lzma_alone_decoder_init(lzma_next_coder *next, lzma_allocator *allocator,
-		uint64_t memlimit)
+lzma_alone_decoder_init(lzma_next_coder *next, const lzma_allocator *allocator,
+		uint64_t memlimit, bool picky)
 {
 	lzma_next_coder_init(&lzma_alone_decoder_init, next, allocator);
 
-	if (memlimit == 0)
-		return LZMA_PROG_ERROR;
+	lzma_alone_coder *coder = next->coder;
 
-	if (next->coder == NULL) {
-		next->coder = lzma_alloc(sizeof(lzma_coder), allocator);
-		if (next->coder == NULL)
+	if (coder == NULL) {
+		coder = lzma_alloc(sizeof(lzma_alone_coder), allocator);
+		if (coder == NULL)
 			return LZMA_MEM_ERROR;
 
+		next->coder = coder;
 		next->code = &alone_decode;
 		next->end = &alone_decoder_end;
 		next->memconfig = &alone_decoder_memconfig;
-		next->coder->next = LZMA_NEXT_CODER_INIT;
+		coder->next = LZMA_NEXT_CODER_INIT;
 	}
 
-	next->coder->sequence = SEQ_PROPERTIES;
-	next->coder->pos = 0;
-	next->coder->options.dict_size = 0;
-	next->coder->options.preset_dict = NULL;
-	next->coder->options.preset_dict_size = 0;
-	next->coder->uncompressed_size = 0;
-	next->coder->memlimit = memlimit;
-	next->coder->memusage = LZMA_MEMUSAGE_BASE;
+	coder->sequence = SEQ_PROPERTIES;
+	coder->picky = picky;
+	coder->pos = 0;
+	coder->options.dict_size = 0;
+	coder->options.preset_dict = NULL;
+	coder->options.preset_dict_size = 0;
+	coder->uncompressed_size = 0;
+	coder->memlimit = my_max(1, memlimit);
+	coder->memusage = LZMA_MEMUSAGE_BASE;
 
 	return LZMA_OK;
 }
@@ -223,7 +233,7 @@ lzma_alone_decoder_init(lzma_next_coder *next, lzma_allocator *allocator,
 extern LZMA_API(lzma_ret)
 lzma_alone_decoder(lzma_stream *strm, uint64_t memlimit)
 {
-	lzma_next_strm_init(lzma_alone_decoder_init, strm, memlimit);
+	lzma_next_strm_init(lzma_alone_decoder_init, strm, memlimit, false);
 
 	strm->internal->supported_actions[LZMA_RUN] = true;
 	strm->internal->supported_actions[LZMA_FINISH] = true;

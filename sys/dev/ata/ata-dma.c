@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/ata-dma.c 249083 2013-04-04 07:12:24Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -132,7 +132,6 @@ ata_dmafini(device_t dev)
 	bus_dmamap_unload(ch->dma.work_tag, ch->dma.work_map);
 	bus_dmamem_free(ch->dma.work_tag, ch->dma.work, ch->dma.work_map);
 	ch->dma.work_bus = 0;
-	ch->dma.work_map = NULL;
 	ch->dma.work = NULL;
     }
     if (ch->dma.work_tag) {
@@ -224,11 +223,9 @@ ata_dmafree(device_t dev)
             bus_dmamap_unload(slot->sg_tag, slot->sg_map);
             slot->sg_bus = 0;
 	}
-	if (slot->sg_map) {
+	if (slot->sg) {
             bus_dmamem_free(slot->sg_tag, slot->sg, slot->sg_map);
-            bus_dmamap_destroy(slot->sg_tag, slot->sg_map);
             slot->sg = NULL;
-            slot->sg_map = NULL;
 	}
 	if (slot->data_map) {
             bus_dmamap_destroy(slot->data_tag, slot->data_map);

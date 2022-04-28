@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/rtas.h 222613 2011-06-02 14:12:37Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_RTAS_H_

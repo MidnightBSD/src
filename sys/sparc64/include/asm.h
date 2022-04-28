@@ -31,7 +31,7 @@
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
  *	from: FreeBSD: src/sys/i386/include/asm.h,v 1.7 2000/01/25
- * $FreeBSD: release/10.0.0/sys/sparc64/include/asm.h 212705 2010-09-15 21:11:29Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -101,6 +101,16 @@ CNAME(x):
 #define	ALTENTRY(x)	_ALTENTRY(x)
 #define	ENTRY(x)	_ENTRY(x)
 #define	END(x)		.size x, . - x
+
+/*
+ * WEAK_REFERENCE(): create a weak reference alias from sym.
+ * The macro is not a general asm macro that takes arbitrary names,
+ * but one that takes only C names.  It does the non-null name
+ * translation inside the macro.
+ */
+#define	WEAK_REFERENCE(sym, alias) \
+	.weak	CNAME(alias); \
+	.equ	CNAME(alias),CNAME(sym)
 
 /*
  * Kernel RCS ID tag and copyright macros

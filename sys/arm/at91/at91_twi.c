@@ -23,8 +23,10 @@
  * SUCH DAMAGE.
  */
 
+#include "opt_platform.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_twi.c 237432 2012-06-22 06:44:22Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,6 +47,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_twi.c 237432 2012-06-22 06:
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
 #include "iicbus_if.h"
+
+#ifdef FDT
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#endif
 
 #define	TWI_SLOW_CLOCK		 1500
 #define	TWI_FAST_CLOCK		45000
@@ -104,7 +112,11 @@ static void at91_twi_deactivate(device_t dev);
 static int
 at91_twi_probe(device_t dev)
 {
-
+#ifdef FDT
+	/* XXXX need a whole list, since there's at least 4 different ones */
+	if (!ofw_bus_is_compatible(dev, "atmel,at91sam9g20-i2c"))
+		return (ENXIO);
+#endif
 	device_set_desc(dev, "TWI");
 	return (0);
 }
@@ -121,6 +133,15 @@ at91_twi_attach(device_t dev)
 		goto out;
 
 	AT91_TWI_LOCK_INIT(sc);
+
+#ifdef FDT
+	/*
+	 * Disable devices need to hold their resources, so return now and not attach
+	 * the iicbus, setup interrupt handlers, etc.
+	 */
+	if (!ofw_bus_status_okay(dev))
+		return 0;
+#endif
 
 	/*
 	 * Activate the interrupt
@@ -140,8 +161,8 @@ at91_twi_attach(device_t dev)
 
 	if ((sc->iicbus = device_add_child(dev, "iicbus", -1)) == NULL)
 		device_printf(dev, "could not allocate iicbus instance\n");
-	/* probe and attach the iicbus */
-	bus_generic_attach(dev);
+	/* Probe and attach the iicbus when interrupts are available. */
+	config_intrhook_oneshot((ich_func_t)bus_generic_attach, dev);
 out:
 	if (err)
 		at91_twi_deactivate(dev);
@@ -195,16 +216,16 @@ at91_twi_deactivate(device_t dev)
 	sc = device_get_softc(dev);
 	if (sc->intrhand)
 		bus_teardown_intr(dev, sc->irq_res, sc->intrhand);
-	sc->intrhand = 0;
+	sc->intrhand = NULL;
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
 		bus_release_resource(dev, SYS_RES_MEMORY,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
-	sc->mem_res = 0;
+	sc->mem_res = NULL;
 	if (sc->irq_res)
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    rman_get_rid(sc->irq_res), sc->irq_res);
-	sc->irq_res = 0;
+	sc->irq_res = NULL;
 	return;
 }
 
@@ -397,7 +418,12 @@ static driver_t at91_twi_driver = {
 	sizeof(struct at91_twi_softc),
 };
 
+#ifdef FDT
+DRIVER_MODULE(at91_twi, simplebus, at91_twi_driver, at91_twi_devclass, NULL,
+    NULL);
+#else
 DRIVER_MODULE(at91_twi, atmelarm, at91_twi_driver, at91_twi_devclass, NULL,
     NULL);
+#endif
 DRIVER_MODULE(iicbus, at91_twi, iicbus_driver, iicbus_devclass, NULL, NULL);
 MODULE_DEPEND(at91_twi, iicbus, 1, 1, 1);

@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/dev/uart/uart_if.m 234194 2012-04-12 18:46:48Z grehan $
+# $FreeBSD$
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -139,5 +139,21 @@ METHOD int setsig {
 # additionally should make sure that a transmit interrupt is generated
 # when transmission is complete.
 METHOD int transmit {
+	struct uart_softc *this;
+};
+
+# grab() - Up call from the console to the upper layers of the driver when
+# the kernel asks to grab the console. This is valid only for console
+# drivers. This method is responsible for transitioning the hardware
+# from an interrupt driven state to a polled state that works with the
+# low-level console interface defined for this device. The kernel
+# currently only calls this when it wants to grab input from the
+# console. Output can still happen asyncrhonously to these calls.
+METHOD void grab {
+	struct uart_softc *this;
+};
+
+# ungrab() - Undoes the effects of grab().
+METHOD void ungrab {
 	struct uart_softc *this;
 };

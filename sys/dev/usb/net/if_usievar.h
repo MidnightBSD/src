@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/net/if_usievar.h 223864 2011-07-08 10:58:56Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2011 Anybots Inc

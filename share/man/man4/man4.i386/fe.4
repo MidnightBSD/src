@@ -21,8 +21,8 @@
 .\" Contributed by M. Sekiguchi <seki@sysrap.cs.fujitsu.co.jp>.
 .\" for fe driver.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/man4.i386/fe.4 190428 2009-03-25 22:14:46Z imp $
-.Dd July 16, 2005
+.\" $FreeBSD$
+.Dd October 24, 2018
 .Dt FE 4 i386
 .Os
 .Sh NAME
@@ -48,6 +48,14 @@ In
 .Cd hint.fe.0.at="isa"
 .Cd hint.fe.0.port="0x300"
 .Cd hint.fe.0.flags="0x0"
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
+See https://github.com/freebsd/fcp/blob/master/fcp-0101.md for more
+information.
 .Sh DESCRIPTION
 The
 .Nm
@@ -259,7 +267,7 @@ driver appeared in
 The
 .Nm
 driver was originally written and contributed by
-.An M. Sekiguchi Aq seki@sysrap.cs.fujitsu.co.jp ,
+.An M. Sekiguchi Aq Mt seki@sysrap.cs.fujitsu.co.jp ,
 following the
 .Nm ed
 driver written by
@@ -267,7 +275,7 @@ driver written by
 PC card support in
 .Nm
 is written by
-.An Hidetoshi Kimura Aq h-kimura@tokyo.se.fujitsu.co.jp .
+.An Hidetoshi Kimura Aq Mt h-kimura@tokyo.se.fujitsu.co.jp .
 This manual page was written by
 .An M. Sekiguchi .
 .Pp

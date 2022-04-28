@@ -1,11 +1,12 @@
-# $FreeBSD: release/10.0.0/lib/libblocksruntime/Makefile 215125 2010-11-11 15:13:11Z ed $
+# $FreeBSD$
 
+PACKAGE=lib${LIB:tl}
 LIB=	BlocksRuntime
 SHLIB_MAJOR=0
 CFLAGS+=-I${.CURDIR}
 WARNS?=	2
 
-.PATH: ${.CURDIR}/../../contrib/compiler-rt/BlocksRuntime
+.PATH: ${SRCTOP}/contrib/llvm-project/compiler-rt/lib/BlocksRuntime
 
 INCS=	Block.h Block_private.h
 SRCS=	data.c runtime.c

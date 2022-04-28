@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	$Id: if_xe.c,v 1.20 1999/06/13 19:17:40 scott Exp $
- * $FreeBSD: release/10.0.0/sys/dev/xe/if_xevar.h 179551 2008-06-04 20:26:57Z jhb $
+ * $FreeBSD$
  */
 #ifndef DEV_XE_IF_XEDEV_H
 #define DEV_XE_IF_XEDEV_H

@@ -27,7 +27,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/csu/sparc64/crtn.S 216338 2010-12-09 21:31:21Z dim $");
+__FBSDID("$FreeBSD$");
 
  	.file	"crtn.S"
 

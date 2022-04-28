@@ -1,12 +1,10 @@
-# $FreeBSD: release/10.0.0/sys/modules/geom/geom_part/geom_part_bsd/Makefile 177512 2008-03-23 01:42:47Z marcel $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../geom/part
+.PATH: ${SRCTOP}/sys/geom/part ${SRCTOP}/sys/geom
 
 KMOD=	geom_part_bsd
-SRCS=	g_part_bsd.c
+SRCS=	g_part_bsd.c geom_bsd_enc.c
 
 SRCS+=	bus_if.h device_if.h g_part_if.h
-
-MFILES=	kern/bus_if.m kern/device_if.m geom/part/g_part_if.m
 
 .include <bsd.kmod.mk>

@@ -1,14 +1,13 @@
-# $FreeBSD: release/10.0.0/sbin/ggate/ggated/Makefile 147887 2005-07-10 21:10:20Z pjd $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../shared
+.PATH: ${.CURDIR:H}/shared
 
 PROG=	ggated
 MAN=	ggated.8
 SRCS=	ggated.c ggate.c
 
-DPADD=	${LIBPTHREAD}
-LDADD=	-lpthread
+LIBADD=	pthread util
 
-CFLAGS+= -I${.CURDIR}/../shared
+CFLAGS+= -I${.CURDIR:H}/shared
 
 .include <bsd.prog.mk>

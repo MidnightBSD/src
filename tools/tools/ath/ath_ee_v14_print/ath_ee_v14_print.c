@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/ath_ee_v14_print/ath_ee_v14_print.c 232807 2012-03-11 02:00:59Z adrian $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

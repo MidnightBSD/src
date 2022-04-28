@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/mp_machdep.c 254025 2013-08-07 06:21:20Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -317,7 +317,6 @@ smp_init_secondary(u_int32_t cpuid)
 
 	if (smp_cpus == mp_ncpus) {
 		atomic_store_rel_int(&smp_started, 1);
-		smp_active = 1;
 	}
 
 	mtx_unlock_spin(&ap_boot_mtx);

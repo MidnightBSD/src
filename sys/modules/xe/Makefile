@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/xe/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/xe
+.PATH: ${SRCTOP}/sys/dev/xe
 
 KMOD=	if_xe
 SRCS=	if_xe.c if_xe_pccard.c

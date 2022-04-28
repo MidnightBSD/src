@@ -15,9 +15,9 @@
 .\" * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
 .\" */
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/cron/cron/cron.8 180096 2008-06-29 16:56:18Z marck $
+.\" $FreeBSD$
 .\"
-.Dd June 29, 2008
+.Dd April 15, 2019
 .Dt CRON 8
 .Os
 .Sh NAME
@@ -28,6 +28,7 @@
 .Op Fl j Ar jitter
 .Op Fl J Ar rootjitter
 .Op Fl m Ar mailto
+.Op Fl n
 .Op Fl s
 .Op Fl o
 .Op Fl x Ar debugflag Ns Op , Ns Ar ...
@@ -52,7 +53,11 @@ The
 .Nm
 utility also searches for
 .Pa /etc/crontab
-which is in a different format (see
+and files in
+.Pa /etc/cron.d
+and
+.Pa /usr/local/etc/cron.d
+which are in a different format (see
 .Xr crontab 5 ) .
 .Pp
 The
@@ -74,6 +79,9 @@ commands, any output is mailed to the owner of the crontab (or to the user
 named in the
 .Ev MAILTO
 environment variable in the crontab, if such exists).
+The from address of this mail may be set with the
+.Ev MAILFROM
+environment variable.
 .Pp
 Additionally,
 .Nm
@@ -132,6 +140,8 @@ set to a null string, usually specified in a shell as
 .Li ''
 or
 .Li \*q\*q .
+.It Fl n
+Do not daemonize; run in foreground instead.
 .It Fl s
 Enable special handling of situations when the GMT offset of the local
 timezone changes, such as the switches between the standard time and
@@ -202,13 +212,17 @@ trace through the execution, but do not perform any actions
 .El
 .El
 .Sh FILES
-.Bl -tag -width /etc/pam.d/cron -compact
+.Bl -tag -width /usr/local/etc/cron.d -compact
 .It Pa /etc/crontab
 System crontab file
+.It Pa /etc/cron.d
+Directory for optional/modularized system crontab files.
 .It Pa /etc/pam.d/cron
 .Xr pam.conf 5
 configuration file for
 .Nm
+.It Pa /usr/local/etc/cron.d
+Directory for third-party package provided crontab files.
 .It Pa /var/cron/tabs
 Directory for personal crontab files
 .El
@@ -218,4 +232,4 @@ Directory for personal crontab files
 .Xr crontab 5 ,
 .Xr pam.conf 5
 .Sh AUTHORS
-.An Paul Vixie Aq paul@vix.com
+.An Paul Vixie Aq Mt paul@vix.com

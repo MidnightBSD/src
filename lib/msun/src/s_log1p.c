@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_log1p.c 251292 2013-06-03 09:14:31Z das $");
+__FBSDID("$FreeBSD$");
 
 /* double log1p(double x)
  *

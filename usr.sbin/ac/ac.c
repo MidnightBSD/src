@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1994 Christopher G. Demetriou
  * Copyright (c) 1994 Simon J. Gerraty
  * Copyright (c) 2012 Ed Schouten <ed@FreeBSD.org>
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ac/ac.c 239954 2012-08-31 18:26:39Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/time.h>

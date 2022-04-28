@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_redboot.c 203411 2010-02-03 01:12:19Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -343,3 +343,4 @@ static struct g_class g_redboot_class	= {
 	.ioctl		= g_redboot_ioctl,
 };
 DECLARE_GEOM_CLASS(g_redboot_class, g_redboot);
+MODULE_VERSION(geom_redboot, 0);

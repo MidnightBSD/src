@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_calc_mask.c 196740 2009-09-01 18:30:17Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -104,6 +104,7 @@ acl_calc_mask(acl_t *acl_p)
 		/* if no mask exists, check acl_cnt... */
 		if (acl_int_new->acl_cnt == ACL_MAX_ENTRIES) {
 			errno = ENOMEM;
+			acl_free(acl_new);
 			return (-1);
 		}
 		/* ...and add the mask entry */

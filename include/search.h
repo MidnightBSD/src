@@ -1,9 +1,9 @@
 /*-
- * Written by J.T. Conklin <jtc@netbsd.org>
+ * Written by J.T. Conklin <jtc@NetBSD.org>
  * Public domain.
  *
- *	$NetBSD: search.h,v 1.12 1999/02/22 10:34:28 christos Exp $
- * $FreeBSD: release/10.0.0/include/search.h 105250 2002-10-16 14:29:23Z robert $
+ *	$NetBSD: search.h,v 1.16 2005/02/03 04:39:32 perry Exp $
+ * $FreeBSD$
  */
 
 #ifndef _SEARCH_H_
@@ -34,14 +34,23 @@ typedef	enum {
 } VISIT;
 
 #ifdef _SEARCH_PRIVATE
-typedef	struct node {
-	char         *key;
-	struct node  *llink, *rlink;
-} node_t;
+typedef struct __posix_tnode {
+	void			*key;
+	struct __posix_tnode	*llink, *rlink;
+	signed char		 balance;
+} posix_tnode;
 
 struct que_elem {
 	struct que_elem *next;
 	struct que_elem *prev;
+};
+#else
+typedef void posix_tnode;
+#endif
+
+#if __BSD_VISIBLE
+struct hsearch_data {
+	struct __hsearch *__hsearch;
 };
 #endif
 
@@ -55,12 +64,22 @@ void	*lfind(const void *, const void *, size_t *, size_t,
 void	*lsearch(const void *, void *, size_t *, size_t,
 	    int (*)(const void *, const void *));
 void	 remque(void *);
-void	*tdelete(const void * __restrict, void ** __restrict,
+void	*tdelete(const void * __restrict, posix_tnode ** __restrict,
 	    int (*)(const void *, const void *));
-void	*tfind(const void *, void * const *,
+posix_tnode *
+	 tfind(const void *, posix_tnode * const *,
 	    int (*)(const void *, const void *));
-void	*tsearch(const void *, void **, int (*)(const void *, const void *));
-void	 twalk(const void *, void (*)(const void *, VISIT, int));
+posix_tnode *
+	 tsearch(const void *, posix_tnode **,
+	    int (*)(const void *, const void *));
+void	 twalk(const posix_tnode *, void (*)(const posix_tnode *, VISIT, int));
+
+#if __BSD_VISIBLE
+int	 hcreate_r(size_t, struct hsearch_data *);
+void	 hdestroy_r(struct hsearch_data *);
+int	 hsearch_r(ENTRY, ACTION, ENTRY **, struct hsearch_data *);
+#endif
+
 __END_DECLS
 
 #endif /* !_SEARCH_H_ */

@@ -4,7 +4,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/string/strcmp.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: strcmp.S,v 1.3 2004/07/19 20:04:41 drochner Exp $")
@@ -29,7 +29,7 @@ ENTRY(strcmp)
 	jmp	.Ldone
 
 	/*
-	 * Check whether s2 is aligned to a word boundry.  If it is, we
+	 * Check whether s2 is aligned to a word boundary.  If it is, we
 	 * can compare by words.  Otherwise we have to compare by bytes.
 	 */
 .Ls1aligned:

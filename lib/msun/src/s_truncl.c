@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_truncl.c 176280 2008-02-14 15:10:34Z bde $");
+__FBSDID("$FreeBSD$");
 
 /*
  * truncl(x)

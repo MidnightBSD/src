@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008-2009 Fredrik Lindberg
  * All rights reserved.
  *
@@ -22,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/uhsoctl/uhsoctl.c 229467 2012-01-04 07:21:37Z pjd $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -37,7 +39,6 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
-#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/route.h>
 #include <netinet/in.h>
@@ -359,7 +360,7 @@ logger(int pri, const char *fmt, ...)
 
 /* Add/remove IP address from an interface */
 static int
-ifaddr_ad(int d, const char *ifnam, struct sockaddr *sa, struct sockaddr *mask)
+ifaddr_ad(unsigned long d, const char *ifnam, struct sockaddr *sa, struct sockaddr *mask)
 {
 	struct ifaliasreq req;
 	int fd, error;
@@ -453,6 +454,7 @@ set_nameservers(struct ctx *ctx, const char *respath, int ns, ...)
 			free(ctx->ns[i]);
 		}
 		free(ctx->ns);
+		ctx->ns = NULL;
 	}
 
 	fd = open(respath, O_RDWR | O_CREAT | O_NOFOLLOW, 0666);
@@ -601,7 +603,7 @@ at_cmd(struct ctx *ctx, const char *resp, resp_cb cb, resp_arg *ra, const char *
 	if (resp != NULL) {
 		l = strlen(resp);
 #ifdef DEBUG
-		fprintf(stderr, "SYNC_EXP: %s (%d)\n", resp, l);
+		fprintf(stderr, "SYNC_EXP: %s (%zu)\n", resp, l);
 #endif
 	}
 

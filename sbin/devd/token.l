@@ -2,6 +2,8 @@
 /*-
  * DEVD (Device action daemon)
  *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 M. Warner Losh <imp@freebsd.org>.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/devd/token.l 250227 2013-05-03 23:51:32Z jkim $
+ * $FreeBSD$
  */
 
 #include <ctype.h>
@@ -48,6 +50,7 @@ update_lineno(const char *cp)
 
 %}
 
+%option noyywrap
 %option nounput
 %option noinput
 

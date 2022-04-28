@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/atapci/chipsets/atamarvell/Makefile 249213 2013-04-06 19:12:49Z marius $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../../dev/ata/chipsets
+.PATH: ${SRCTOP}/sys/dev/ata/chipsets
 
 KMOD=	atamarvell
 SRCS=	ata-marvell.c

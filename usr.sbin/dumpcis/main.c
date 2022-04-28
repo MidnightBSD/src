@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 M. Warner Losh.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/dumpcis/main.c 185125 2008-11-20 08:32:19Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <fcntl.h>
 #include <stdio.h>

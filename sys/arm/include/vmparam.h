@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/vmparam.h 254915 2013-08-26 16:23:54Z raj $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -42,7 +42,7 @@
  * Virtual memory related constants, all in bytes
  */
 #ifndef	MAXTSIZ
-#define	MAXTSIZ		(64UL*1024*1024)	/* max text size */
+#define	MAXTSIZ		(256UL*1024*1024)	/* max text size */
 #endif
 #ifndef	DFLDSIZ
 #define	DFLDSIZ		(128UL*1024*1024)	/* initial data size limit */
@@ -68,7 +68,22 @@
  * The line between user space and kernel space
  * Mappings >= KERNEL_BASE are constant across all processes
  */
+#ifndef KERNBASE
 #define	KERNBASE		0xc0000000
+#endif
+
+/*
+ * The virtual address the kernel is linked to run at.  For armv4/5 platforms
+ * the low-order 30 bits of this must match the low-order bits of the physical
+ * address the kernel is loaded at, so the value is most often provided as a
+ * kernel config option in the std.platform file. For armv6/7 the kernel can
+ * be loaded at any 2MB boundary, and KERNVIRTADDR can also be set to any 2MB
+ * boundary.  It is typically overridden in the std.platform file only when
+ * KERNBASE is also set to a lower address to provide more KVA.
+ */
+#ifndef KERNVIRTADDR
+#define	KERNVIRTADDR		0xc0000000
+#endif
 
 /*
  * max number of non-contig chunks of physical RAM you can have
@@ -77,31 +92,25 @@
 #define	VM_PHYSSEG_MAX		32
 
 /*
- * The physical address space is densely populated.
+ * The physical address space may be sparsely populated on some ARM systems.
  */
-#define	VM_PHYSSEG_DENSE
+#define	VM_PHYSSEG_SPARSE
 
 /*
- * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
- * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
- * the pool from which physical pages for small UMA objects are
- * allocated.
+ * Create one free page pool.  Since the ARM kernel virtual address
+ * space does not include a mapping onto the machine's entire physical
+ * memory, VM_FREEPOOL_DIRECT is defined as an alias for the default
+ * pool, VM_FREEPOOL_DEFAULT.
  */
-#define	VM_NFREEPOOL		3
-#define	VM_FREEPOOL_CACHE	2
+#define	VM_NFREEPOOL		1
 #define	VM_FREEPOOL_DEFAULT	0
-#define	VM_FREEPOOL_DIRECT	1
+#define	VM_FREEPOOL_DIRECT	0
 
 /*
- * we support 2 free lists:
- *
- *	- DEFAULT for all systems
- *	- ISADMA for the ISA DMA range on Sharks only
+ * We need just one free list:  DEFAULT.
  */
-
-#define	VM_NFREELIST		2
+#define	VM_NFREELIST		1
 #define	VM_FREELIST_DEFAULT	0
-#define	VM_FREELIST_ISADMA	1
 
 /*
  * The largest allocation size is 1MB.
@@ -122,30 +131,14 @@
 #define	VM_LEVEL_0_ORDER	8
 #endif
 
-#define UPT_MAX_ADDRESS		VADDR(UPTPTDI + 3, 0)
-#define UPT_MIN_ADDRESS		VADDR(UPTPTDI, 0)
-
 #define VM_MIN_ADDRESS          (0x00001000)
-#ifdef ARM_USE_SMALL_ALLOC
-/*
- * ARM_KERN_DIRECTMAP is used to make sure there's enough space between
- * VM_MAXUSER_ADDRESS and KERNBASE to map the whole memory.
- * It has to be a compile-time constant, even if arm_init_smallalloc(),
- * which will do the mapping, gets the real amount of memory at runtime,
- * because VM_MAXUSER_ADDRESS is a constant.
- */
-#ifndef ARM_KERN_DIRECTMAP
-#define ARM_KERN_DIRECTMAP 512 * 1024 * 1024 /* 512 MB */
-#endif
-#define VM_MAXUSER_ADDRESS	KERNBASE - ARM_KERN_DIRECTMAP
-#else /* ARM_USE_SMALL_ALLOC */
 #ifndef VM_MAXUSER_ADDRESS
-#define VM_MAXUSER_ADDRESS      KERNBASE
-#endif /* VM_MAXUSER_ADDRESS */
-#endif /* ARM_USE_SMALL_ALLOC */
+#define VM_MAXUSER_ADDRESS      (KERNBASE - 0x00400000) /* !!! PT2MAP_SIZE */
+#endif
 #define VM_MAX_ADDRESS          VM_MAXUSER_ADDRESS
 
-#define USRSTACK        VM_MAXUSER_ADDRESS
+#define	SHAREDPAGE		(VM_MAXUSER_ADDRESS - PAGE_SIZE)
+#define	USRSTACK		SHAREDPAGE
 
 /* initial pagein size of beginning of executable file */
 #ifndef VM_INITIAL_PAGEIN
@@ -159,26 +152,27 @@
 #define	VM_MAX_KERNEL_ADDRESS	(vm_max_kernel_address)
 
 /*
- * Virtual size (bytes) for various kernel submaps.
+ * How many physical pages per kmem arena virtual page.
  */
-#ifndef VM_KMEM_SIZE
-#define VM_KMEM_SIZE		(12*1024*1024)
-#endif
 #ifndef VM_KMEM_SIZE_SCALE
-#define VM_KMEM_SIZE_SCALE	(3)
+#define	VM_KMEM_SIZE_SCALE	(3)
 #endif
 
 /*
- * Ceiling on the size of the kmem submap: 40% of the kernel map.
+ * Optional floor (in bytes) on the size of the kmem arena.
+ */
+#ifndef VM_KMEM_SIZE_MIN
+#define	VM_KMEM_SIZE_MIN	(12 * 1024 * 1024)
+#endif
+
+/*
+ * Optional ceiling (in bytes) on the size of the kmem arena: 40% of the
+ * kernel map.
  */
 #ifndef VM_KMEM_SIZE_MAX
 #define	VM_KMEM_SIZE_MAX	((vm_max_kernel_address - \
     VM_MIN_KERNEL_ADDRESS + 1) * 2 / 5)
 #endif
-
-#ifdef ARM_USE_SMALL_ALLOC
-#define UMA_MD_SMALL_ALLOC
-#endif /* ARM_USE_SMALL_ALLOC */
 
 extern vm_offset_t vm_max_kernel_address;
 
@@ -187,5 +181,10 @@ extern vm_offset_t vm_max_kernel_address;
 #ifndef VM_MAX_AUTOTUNE_MAXUSERS
 #define	VM_MAX_AUTOTUNE_MAXUSERS	384
 #endif
+
+#define	SFBUF
+#define	SFBUF_MAP
+
+#define	DEVMAP_MAX_VADDR	ARM_VECTORS_HIGH
 
 #endif	/* _MACHINE_VMPARAM_H_ */

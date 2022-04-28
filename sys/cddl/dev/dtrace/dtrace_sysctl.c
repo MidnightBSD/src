@@ -18,13 +18,9 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/dtrace_sysctl.c 179237 2008-05-23 05:59:42Z jb $
+ * $FreeBSD$
  *
  */
-
-int	dtrace_debug = 0;
-TUNABLE_INT("debug.dtrace.debug", &dtrace_debug);
-SYSCTL_INT(_debug_dtrace, OID_AUTO, debug, CTLFLAG_RW, &dtrace_debug, 0, "");
 
 /* Report registered DTrace providers. */
 static int
@@ -77,6 +73,25 @@ sysctl_dtrace_providers(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_PROC(_debug_dtrace, OID_AUTO, providers, CTLTYPE_STRING | CTLFLAG_RD,
-    0, 0, sysctl_dtrace_providers, "A", "");
+SYSCTL_NODE(_debug, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace debug parameters");
 
+SYSCTL_PROC(_debug_dtrace, OID_AUTO, providers, CTLTYPE_STRING | CTLFLAG_RD,
+    0, 0, sysctl_dtrace_providers, "A", "available DTrace providers");
+
+SYSCTL_NODE(_kern, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace parameters");
+
+SYSCTL_INT(_kern_dtrace, OID_AUTO, err_verbose, CTLFLAG_RW,
+    &dtrace_err_verbose, 0,
+    "print DIF and DOF validation errors to the message buffer");
+
+SYSCTL_INT(_kern_dtrace, OID_AUTO, memstr_max, CTLFLAG_RW, &dtrace_memstr_max,
+    0, "largest allowed argument to memstr(), 0 indicates no limit");
+
+SYSCTL_QUAD(_kern_dtrace, OID_AUTO, dof_maxsize, CTLFLAG_RW,
+    &dtrace_dof_maxsize, 0, "largest allowed DOF table");
+
+SYSCTL_QUAD(_kern_dtrace, OID_AUTO, helper_actions_max, CTLFLAG_RW,
+    &dtrace_helper_actions_max, 0, "maximum number of allowed helper actions");
+
+SYSCTL_INT(_security_bsd, OID_AUTO, allow_destructive_dtrace, CTLFLAG_RDTUN,
+    &dtrace_allow_destructive, 1, "Allow destructive mode DTrace scripts");

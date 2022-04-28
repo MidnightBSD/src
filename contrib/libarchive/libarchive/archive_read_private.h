@@ -22,15 +22,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_private.h 248616 2013-03-22 13:36:03Z mm $
+ * $FreeBSD$
  */
 
+#ifndef ARCHIVE_READ_PRIVATE_H_INCLUDED
+#define ARCHIVE_READ_PRIVATE_H_INCLUDED
+
 #ifndef __LIBARCHIVE_BUILD
+#ifndef __LIBARCHIVE_TEST
 #error This header is only to be used internally to libarchive.
 #endif
-
-#ifndef ARCHIVE_READ_PRIVATE_H_INCLUDED
-#define	ARCHIVE_READ_PRIVATE_H_INCLUDED
+#endif
 
 #include "archive.h"
 #include "archive_string.h"
@@ -96,6 +98,8 @@ struct archive_read_filter {
 	int (*close)(struct archive_read_filter *self);
 	/* Function that handles switching from reading one block to the next/prev */
 	int (*sswitch)(struct archive_read_filter *self, unsigned int iindex);
+	/* Read any header metadata if available. */
+	int (*read_header)(struct archive_read_filter *self, struct archive_entry *entry);
 	/* My private data. */
 	void *data;
 
@@ -141,6 +145,18 @@ struct archive_read_client {
 	int64_t position;
 	struct archive_read_data_node *dataset;
 };
+struct archive_read_passphrase {
+	char	*passphrase;
+	struct archive_read_passphrase *next;
+};
+
+struct archive_read_extract {
+	struct archive *ad; /* archive_write_disk object */
+
+	/* Progress function invoked during extract. */
+	void			(*extract_progress)(void *);
+	void			 *extract_progress_user_data;
+};
 
 struct archive_read {
 	struct archive	archive;
@@ -152,28 +168,11 @@ struct archive_read {
 	int64_t		  skip_file_dev;
 	int64_t		  skip_file_ino;
 
-	/*
-	 * Used by archive_read_data() to track blocks and copy
-	 * data to client buffers, filling gaps with zero bytes.
-	 */
-	const char	 *read_data_block;
-	int64_t		  read_data_offset;
-	int64_t		  read_data_output_offset;
-	size_t		  read_data_remaining;
-
-	/*
-	 * Used by formats/filters to determine the amount of data
-	 * requested from a call to archive_read_data(). This is only
-	 * useful when the format/filter has seek support.
-	 */
-	char		  read_data_is_posix_read;
-	size_t		  read_data_requested;
-
 	/* Callbacks to open/read/write/close client archive streams. */
 	struct archive_read_client client;
 
 	/* Registered filter bidders. */
-	struct archive_read_filter_bidder bidders[14];
+	struct archive_read_filter_bidder bidders[16];
 
 	/* Last filter in chain */
 	struct archive_read_filter *filter;
@@ -207,26 +206,41 @@ struct archive_read {
 		int	(*read_data_skip)(struct archive_read *);
 		int64_t	(*seek_data)(struct archive_read *, int64_t, int);
 		int	(*cleanup)(struct archive_read *);
+		int	(*format_capabilties)(struct archive_read *);
+		int	(*has_encrypted_entries)(struct archive_read *);
 	}	formats[16];
 	struct archive_format_descriptor	*format; /* Active format. */
 
 	/*
 	 * Various information needed by archive_extract.
 	 */
-	struct extract		 *extract;
+	struct archive_read_extract		*extract;
 	int			(*cleanup_archive_extract)(struct archive_read *);
+
+	/*
+	 * Decryption passphrase.
+	 */
+	struct {
+		struct archive_read_passphrase *first;
+		struct archive_read_passphrase **last;
+		int candidate;
+		archive_passphrase_callback *callback;
+		void *client_data;
+	}		passphrases;
 };
 
 int	__archive_read_register_format(struct archive_read *a,
-	    void *format_data,
-	    const char *name,
-	    int (*bid)(struct archive_read *, int),
-	    int (*options)(struct archive_read *, const char *, const char *),
-	    int (*read_header)(struct archive_read *, struct archive_entry *),
-	    int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
-	    int (*read_data_skip)(struct archive_read *),
-	    int64_t (*seek_data)(struct archive_read *, int64_t, int),
-	    int (*cleanup)(struct archive_read *));
+		void *format_data,
+		const char *name,
+		int (*bid)(struct archive_read *, int),
+		int (*options)(struct archive_read *, const char *, const char *),
+		int (*read_header)(struct archive_read *, struct archive_entry *),
+		int (*read_data)(struct archive_read *, const void **, size_t *, int64_t *),
+		int (*read_data_skip)(struct archive_read *),
+		int64_t (*seek_data)(struct archive_read *, int64_t, int),
+		int (*cleanup)(struct archive_read *),
+		int (*format_capabilities)(struct archive_read *),
+		int (*has_encrypted_entries)(struct archive_read *));
 
 int __archive_read_get_bidder(struct archive_read *a,
     struct archive_read_filter_bidder **bidder);
@@ -238,7 +252,15 @@ int64_t	__archive_read_seek(struct archive_read*, int64_t, int);
 int64_t	__archive_read_filter_seek(struct archive_read_filter *, int64_t, int);
 int64_t	__archive_read_consume(struct archive_read *, int64_t);
 int64_t	__archive_read_filter_consume(struct archive_read_filter *, int64_t);
+int __archive_read_header(struct archive_read *, struct archive_entry *);
 int __archive_read_program(struct archive_read_filter *, const char *);
 void __archive_read_free_filters(struct archive_read *);
-int  __archive_read_close_filters(struct archive_read *);
+struct archive_read_extract *__archive_read_get_extract(struct archive_read *);
+
+
+/*
+ * Get a decryption passphrase.
+ */
+void __archive_read_reset_passphrase(struct archive_read *a);
+const char * __archive_read_next_passphrase(struct archive_read *a);
 #endif

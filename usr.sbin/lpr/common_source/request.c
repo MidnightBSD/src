@@ -31,7 +31,7 @@ static const char copyright[] =
 	"Copyright (C) 1997, Massachusetts Institute of Technology\r\n";
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/request.c 117592 2003-07-14 20:20:58Z gad $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -69,11 +69,11 @@ free_request(struct request *rp)
 		free(rp->prettyname);
 	if (rp->authinfo)
 		free(rp->authinfo);
-	while ((ru = TAILQ_FIRST(&rp->users)) != 0) {
+	while ((ru = TAILQ_FIRST(&rp->users)) != NULL) {
 		TAILQ_REMOVE(&rp->users, ru, ru_link);
 		free(ru);
 	}
-	while ((rj = TAILQ_FIRST(&rp->jobids)) != 0) {
+	while ((rj = TAILQ_FIRST(&rp->jobids)) != NULL) {
 		TAILQ_REMOVE(&rp->jobids, rj, rj_link);
 		free(rj);
 	}

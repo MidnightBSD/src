@@ -1,10 +1,13 @@
-# $FreeBSD: release/10.0.0/lib/libcrypt/tests/Makefile 242713 2012-11-07 22:03:59Z sjg $
+# $FreeBSD$
 
-# exercise libcrypt
+ATF_TESTS_C+= crypt_tests
 
-TESTS_C= crypt_tests
+NETBSD_ATF_TESTS_C+= crypt_test
 
+WARNS?=		6
 CFLAGS+= -I${.CURDIR:H}
-LDADD+= -L${.OBJDIR:H} -lcrypt
+LIBADD=	crypt
 
-.include <atf.test.mk>
+.include <netbsd-tests.test.mk>
+
+.include <bsd.test.mk>

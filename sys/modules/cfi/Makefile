@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/cfi/Makefile 229032 2011-12-30 21:22:10Z marius $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/cfi
+.PATH: ${SRCTOP}/sys/dev/cfi
 
 KMOD=   cfi
 SRCS=   ${_cfi_bus} cfi_core.c cfi_dev.c

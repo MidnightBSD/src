@@ -1,2 +1,2 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_CDDL 163861 2006-11-01 09:02:11Z jb $
+.\" $FreeBSD$
 Set to not build code licensed under Sun's CDDL.

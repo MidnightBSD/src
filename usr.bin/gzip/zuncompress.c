@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  * from: NetBSD: zopen.c,v 1.8 2003/08/07 11:13:29 agc Exp
- * $FreeBSD: release/10.0.0/usr.bin/gzip/zuncompress.c 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD$
  */
 
 /* This file is #included by gzip.c */
@@ -145,7 +145,7 @@ zuncompress(FILE *in, FILE *out, char *pre, size_t prelen,
 	else
 		compressed_pre = NULL;
 
-	while ((bin = fread(buf, 1, sizeof(buf), in)) != 0) {
+	while ((bin = fread(buf, 1, BUFSIZE, in)) != 0) {
 		if (tflag == 0 && (off_t)fwrite(buf, 1, bin, out) != bin) {
 			free(buf);
 			return -1;
@@ -279,7 +279,7 @@ zread(void *cookie, char *rbp, int num)
 			if (zs->u.r.zs_code > zs->zs_free_ent ||
 			    zs->u.r.zs_oldcode == -1) {
 				/* Bad stream. */
-				errno = EINVAL;
+				errno = EFTYPE;
 				return (-1);
 			}
 			*zs->u.r.zs_stackp++ = zs->u.r.zs_finchar;

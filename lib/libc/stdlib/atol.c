@@ -36,22 +36,19 @@
 static char sccsid[] = "@(#)atol.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/atol.c 251069 2013-05-28 20:57:40Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <xlocale.h>
 
 long
-atol(str)
-	const char *str;
+atol(const char *str)
 {
 	return strtol(str, (char **)NULL, 10);
 }
 
 long
-atol_l(str, locale)
-	const char *str;
-	locale_t locale;
+atol_l(const char *str, locale_t locale)
 {
 	return strtol_l(str, (char **)NULL, 10, locale);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/src/s_conj.c 181374 2008-08-07 14:39:56Z das $
+ * $FreeBSD$
  */
 
 #include <complex.h>
@@ -34,5 +34,5 @@ double complex
 conj(double complex z)
 {
 
-	return (cpack(creal(z), -cimag(z)));
+	return (CMPLX(creal(z), -cimag(z)));
 }

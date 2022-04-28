@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/svn/lib/libsvn_ra_svn/Makefile 251886 2013-06-18 02:53:45Z peter $
+# $FreeBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 

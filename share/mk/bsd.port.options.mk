@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/mk/bsd.port.options.mk 170185 2007-06-01 15:17:51Z pav $
+# $FreeBSD$
 
 USEOPTIONSMK=	yes
 INOPTIONSMK=	yes

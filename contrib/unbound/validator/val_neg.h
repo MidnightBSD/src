@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -38,7 +38,7 @@
  *
  * This file contains helper functions for the validator module.
  * The functions help with aggressive negative caching.
- * This creates new denials of existance, and proofs for absence of types
+ * This creates new denials of existence, and proofs for absence of types
  * from cached NSEC records.
  */
 
@@ -46,6 +46,7 @@
 #define VALIDATOR_VAL_NEG_H
 #include "util/locks.h"
 #include "util/rbtree.h"
+struct sldns_buffer;
 struct val_neg_data;
 struct config_file;
 struct reply_info;
@@ -66,9 +67,9 @@ struct ub_packed_rrset_key;
 struct val_neg_cache {
 	/** the big lock on the negative cache.  Because we use a rbtree 
 	 * for the data (quick lookup), we need a big lock */
-	lock_basic_t lock;
+	lock_basic_type lock;
 	/** The zone rbtree. contents sorted canonical, type val_neg_zone */
-	rbtree_t tree;
+	rbtree_type tree;
 	/** the first in linked list of LRU of val_neg_data */
 	struct val_neg_data* first;
 	/** last in lru (least recently used element) */
@@ -79,6 +80,12 @@ struct val_neg_cache {
 	size_t max;
 	/** max nsec3 iterations allowed */
 	size_t nsec3_max_iter;
+	/** number of times neg cache records were used to generate NOERROR
+	 * responses. */
+	size_t num_neg_cache_noerror;
+	/** number of times neg cache records were used to generate NXDOMAIN
+	 * responses. */
+	size_t num_neg_cache_nxdomain;
 };
 
 /**
@@ -86,7 +93,7 @@ struct val_neg_cache {
  */
 struct val_neg_zone {
 	/** rbtree node element, key is this struct: the name, class */
-	rbnode_t node;
+	rbnode_type node;
 	/** name; the key */
 	uint8_t* name;
 	/** length of name */
@@ -113,7 +120,7 @@ struct val_neg_zone {
 
 	/** tree of NSEC data for this zone, sorted canonical 
 	 * by NSEC owner name */
-	rbtree_t tree;
+	rbtree_type tree;
 
 	/** class of node; host order */
 	uint16_t dclass;
@@ -134,7 +141,7 @@ struct val_neg_zone {
  */
 struct val_neg_data {
 	/** rbtree node element, key is this struct: the name */
-	rbnode_t node;
+	rbnode_type node;
 	/** name; the key */
 	uint8_t* name;
 	/** length of name */
@@ -229,7 +236,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
  *	  thus, qname DLV qclass does not exist.
  */
 int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
-	uint16_t qclass, struct rrset_cache* rrset_cache, uint32_t now);
+	uint16_t qclass, struct rrset_cache* rrset_cache, time_t now);
 
 /**
  * For the given query, try to get a reply out of the negative cache.
@@ -249,14 +256,15 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  * 	more conservative, especially for opt-out zones, since the receiver
  * 	may have a trust-anchor below the optout and thus the optout cannot
  * 	be used to create a proof from the negative cache.
+ * @param cfg: config options.
  * @return a reply message if something was found. 
  * 	This reply may still need validation.
  * 	NULL if nothing found (or out of memory).
  */
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
-	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now,
-	int addsoa, uint8_t* topname);
+	struct rrset_cache* rrset_cache, struct sldns_buffer* buf, time_t now,
+	int addsoa, uint8_t* topname, struct config_file* cfg);
 
 
 /**** functions exposed for unit test ****/

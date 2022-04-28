@@ -6,7 +6,7 @@
 #
 # Trust me, RUN THIS SCRIPT :)
 #
-# $FreeBSD: release/10.0.0/share/examples/drivers/make_pseudo_driver.sh 183416 2008-09-27 16:52:57Z ed $
+# $FreeBSD$
 #
 #-------cut here------------------
 
@@ -96,7 +96,6 @@ fi
 cat >${TOP}/dev/${1}/${1}.c <<DONE
 /*
  * Copyright (c) [year] [your name]
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

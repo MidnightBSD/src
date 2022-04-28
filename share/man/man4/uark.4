@@ -14,9 +14,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/uark.4 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd November 20, 2011
+.Dd April 26, 2017
 .Dt UARK 4
 .Os
 .Sh NAME
@@ -57,6 +57,20 @@ KQ-U8A Data Cable
 .It
 Skymaster USB to RS232
 .El
+.Sh FILES
+.Bl -tag -width "/dev/ttyU*.init" -compact
+.It Pa /dev/ttyU*
+for callin ports
+.It Pa /dev/ttyU*.init
+.It Pa /dev/ttyU*.lock
+corresponding callin initial-state and lock-state devices
+.Pp
+.It Pa /dev/cuaU*
+for callout ports
+.It Pa /dev/cuaU*.init
+.It Pa /dev/cuaU*.lock
+corresponding callout initial-state and lock-state devices
+.El
 .Sh SEE ALSO
 .Xr tty 4 ,
 .Xr ucom 4 ,
@@ -75,8 +89,7 @@ release to include it was
 The
 .Nm
 driver was written by
-.An Jonathan Gray
-.Aq jsg@openbsd.org .
+.An Jonathan Gray Aq Mt jsg@openbsd.org .
 .Sh CAVEATS
 Setting hardware flow control is not currently supported.
 It is not yet known how to ask the hardware to send a break.

@@ -23,16 +23,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/ti/am335x/am335x_scm.h 251016 2013-05-27 00:09:04Z gonzo $
+ * $FreeBSD$
  */
 #ifndef __AM335X_SCM_H__
 #define __AM335X_SCM_H__
 
 /* AM335x-specific registers for control module (scm) */
+#define	SCM_CTRL_STATUS	0x40
+#define	SCM_BGAP_CTRL	0x448
+#define	SCM_BGAP_TEMP_MASK	0xff
+#define	SCM_BGAP_TEMP_SHIFT	8
+#define	SCM_BGAP_BGOFF		(1 << 6)
+#define	SCM_BGAP_SOC		(1 << 4)
+#define	SCM_BGAP_CLRZ		(1 << 3)
+#define	SCM_BGAP_CONTCONV	(1 << 2)
+#define	SCM_BGAP_EOCZ		(1 << 1)
 #define	SCM_USB_CTRL0	0x620
 #define	SCM_USB_STS0	0x624
 #define	SCM_USB_CTRL1	0x628
 #define	SCM_USB_STS1	0x62C
+#define	SCM_MAC_ID0_LO	0x630
+#define	SCM_MAC_ID0_HI	0x634
 #define	SCM_PWMSS_CTRL	0x664
 
 #endif /* __AM335X_SCM_H__ */

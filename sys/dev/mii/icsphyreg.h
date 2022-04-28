@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mii/icsphyreg.h 204646 2010-03-03 17:55:51Z joel $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_MII_ICSPHYREG_H_

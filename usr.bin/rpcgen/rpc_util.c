@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_util.c 1.11 89/02/22 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rpcgen/rpc_util.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_util.c, Utility routines for the RPC protocol compiler
@@ -261,7 +261,7 @@ error(const char *msg)
  * Something went wrong, unlink any files that we may have created and then
  * die.
  */
-void
+void __dead2
 crash(void)
 {
 	int i;
@@ -454,7 +454,7 @@ add_type(int len, const char *type)
 	{
 		typ_list_t->next = ptr;
 		typ_list_t = ptr;
-	};
+	}
 }
 
 
@@ -470,7 +470,7 @@ find_type(const char *type)
 			return (ptr);
 		else
 			ptr = ptr->next;
-	};
+	}
 	return (NULL);
 }
 

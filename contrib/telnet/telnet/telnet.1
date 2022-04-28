@@ -9,11 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)telnet.1	8.6 (Berkeley) 6/1/94
-.\" $FreeBSD: release/10.0.0/contrib/telnet/telnet/telnet.1 237190 2012-06-17 11:04:38Z joel $
+.\" $FreeBSD$
 .\"
 .Dd September 18, 2006
 .Dt TELNET 1
@@ -43,6 +39,7 @@ protocol
 .Sh SYNOPSIS
 .Nm
 .Op Fl 468EFKLNacdfruxy
+.Op Fl B Ar baudrate
 .Op Fl S Ar tos
 .Op Fl X Ar authtype
 .Op Fl e Ar escapechar
@@ -89,6 +86,9 @@ This causes an attempt to
 negotiate the
 .Dv TELNET BINARY
 option on both input and output.
+.It Fl B Ar baudrate
+Sets the baud rate to
+.Ar baudrate .
 .It Fl E
 Stops any character from being recognized as an escape character.
 .It Fl F

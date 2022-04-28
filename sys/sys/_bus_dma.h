@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_bus_dma.h 161927 2006-09-03 00:26:17Z jmg $
+ * $FreeBSD$
  *
  */
 

@@ -29,7 +29,7 @@
 #
 #	@(#)lorder.sh	8.1 (Berkeley) 6/6/93
 #
-# $FreeBSD: release/10.0.0/usr.bin/lorder/lorder.sh 216370 2010-12-11 08:32:16Z joel $
+# $FreeBSD$
 #
 
 # only one argument is a special case, just output the name twice
@@ -60,7 +60,7 @@ done
 #
 # if the line has " U " it's a globally undefined symbol, put it into
 # the reference file.
-${NM} -go $* | sed "
+${NM} ${NMFLAGS} -go $* | sed "
 	/ [TDW] / {
 		s/:.* [TDW] / /
 		w $S
@@ -73,6 +73,7 @@ ${NM} -go $* | sed "
 	d
 "
 
+export LC_ALL=C
 # eliminate references that can be resolved by the same library.
 if [ $(expr "$*" : '.*\.a[[:>:]]') -ne 0 ]; then
 	sort -u -o $S $S

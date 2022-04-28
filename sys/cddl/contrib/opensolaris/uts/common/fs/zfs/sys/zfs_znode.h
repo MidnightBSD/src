@@ -20,7 +20,9 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2015 by Delphix. All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
+ * Copyright 2016 Nexenta Systems, Inc. All rights reserved.
  */
 
 #ifndef	_SYS_FS_ZFS_ZNODE_H
@@ -133,19 +135,6 @@ extern "C" {
 #define	ZFS_SHARES_DIR		"SHARES"
 #define	ZFS_SA_ATTRS		"SA_ATTRS"
 
-#define	ZFS_MAX_BLOCKSIZE	(SPA_MAXBLOCKSIZE)
-
-/*
- * Path component length
- *
- * The generic fs code uses MAXNAMELEN to represent
- * what the largest component length is.  Unfortunately,
- * this length includes the terminating NULL.  ZFS needs
- * to tell the users via pathconf() and statvfs() what the
- * true maximum length of a component is, excluding the NULL.
- */
-#define	ZFS_MAXNAMELEN	(MAXNAMELEN - 1)
-
 /*
  * Convert mode bits (zp_mode) to BSD-style DT_* values for storing in
  * the directory entries.
@@ -182,10 +171,12 @@ typedef struct znode {
 	struct zfsvfs	*z_zfsvfs;
 	vnode_t		*z_vnode;
 	uint64_t	z_id;		/* object ID for this znode */
+#ifdef illumos
 	kmutex_t	z_lock;		/* znode modification lock */
 	krwlock_t	z_parent_lock;	/* parent lock for directories */
 	krwlock_t	z_name_lock;	/* "master" lock for dirent locks */
 	zfs_dirlock_t	*z_dirlocks;	/* directory entry lock list */
+#endif
 	kmutex_t	z_range_lock;	/* protects changes to z_range_avl */
 	avl_tree_t	z_range_avl;	/* avl tree of file range locks */
 	uint8_t		z_unlinked;	/* file has been unlinked */
@@ -237,7 +228,7 @@ ZTOV(znode_t *zp)
 {
 	vnode_t *vp = zp->z_vnode;
 
-	ASSERT(vp == NULL || vp->v_data == NULL || vp->v_data == zp);
+	ASSERT(vp != NULL && vp->v_data == zp);
 	return (vp);
 }
 static __inline znode_t *
@@ -245,7 +236,7 @@ VTOZ(vnode_t *vp)
 {
 	znode_t *zp = (znode_t *)vp->v_data;
 
-	ASSERT(zp == NULL || zp->z_vnode == NULL || zp->z_vnode == vp);
+	ASSERT(zp != NULL && zp->z_vnode == vp);
 	return (zp);
 }
 #else
@@ -256,19 +247,15 @@ VTOZ(vnode_t *vp)
 /* Called on entry to each ZFS vnode and vfs operation  */
 #define	ZFS_ENTER(zfsvfs) \
 	{ \
-		rrw_enter_read(&(zfsvfs)->z_teardown_lock, FTAG); \
+		rrm_enter_read(&(zfsvfs)->z_teardown_lock, FTAG); \
 		if ((zfsvfs)->z_unmounted) { \
 			ZFS_EXIT(zfsvfs); \
 			return (EIO); \
 		} \
 	}
 
-/* Called on entry to each ZFS vnode and vfs operation that can not return EIO */
-#define	ZFS_ENTER_NOERROR(zfsvfs) \
-	rrw_enter(&(zfsvfs)->z_teardown_lock, RW_READER, FTAG)
-
 /* Must be called before exiting the vop */
-#define	ZFS_EXIT(zfsvfs) rrw_exit(&(zfsvfs)->z_teardown_lock, FTAG)
+#define	ZFS_EXIT(zfsvfs) rrm_exit(&(zfsvfs)->z_teardown_lock, FTAG)
 
 /* Verifies the znode is valid */
 #define	ZFS_VERIFY_ZP(zp) \
@@ -335,6 +322,7 @@ extern int	zfs_create_op_tables();
 extern dev_t	zfs_cmpldev(uint64_t);
 extern int	zfs_get_zplprop(objset_t *os, zfs_prop_t prop, uint64_t *value);
 extern int	zfs_get_stats(objset_t *os, nvlist_t *nv);
+extern boolean_t zfs_get_vfs_flag_unmounted(objset_t *os);
 extern void	zfs_znode_dmu_fini(znode_t *);
 
 extern void zfs_log_create(zilog_t *zilog, dmu_tx_t *tx, uint64_t txtype,
@@ -368,6 +356,8 @@ extern int zfs_create_share_dir(zfsvfs_t *zfsvfs, dmu_tx_t *tx);
 extern zil_get_data_t zfs_get_data;
 extern zil_replay_func_t *zfs_replay_vector[TX_MAX_TYPE];
 extern int zfsfstype;
+
+extern int zfs_znode_parent_and_name(znode_t *zp, znode_t **dzpp, char *buf);
 
 #endif /* _KERNEL */
 

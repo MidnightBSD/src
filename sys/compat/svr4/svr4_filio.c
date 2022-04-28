@@ -27,12 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_filio.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/file.h>
 #include <sys/filio.h>
 #include <sys/lock.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/svr4_filio.c 255219 2013-09-0
 #include <sys/mutex.h>
 
 #include <sys/sysproto.h>
+#include <sys/syscallsubr.h>
 
 #include <compat/svr4/svr4.h>
 #include <compat/svr4/svr4_types.h>
@@ -250,3 +251,19 @@ svr4_fil_ioctl(fp, td, retval, fd, cmd, data)
 		return 0;	/* ENOSYS really */
 	}
 }
+
+int
+svr4_pipe(struct thread *td, struct svr4_pipe_args *uap) {
+	int error;
+	int fildes[2];
+
+	error = kern_pipe(td, fildes, 0, NULL, NULL);
+	if (error)
+	return (error);
+
+	td->td_retval[0] = fildes[0];
+	td->td_retval[1] = fildes[1];
+
+	return (0);
+}
+

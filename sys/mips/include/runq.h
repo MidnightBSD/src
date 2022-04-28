@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/i386/include/runq.h,v 1.3 2005/01/06 22:18:15 imp
- * $FreeBSD: release/10.0.0/sys/mips/include/runq.h 210605 2010-07-29 13:52:46Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_RUNQ_H_

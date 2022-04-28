@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/ld128/invtrig.h 181074 2008-07-31 22:41:26Z das $
+ * $FreeBSD$
  */
 
 #include <float.h>

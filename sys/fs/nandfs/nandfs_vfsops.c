@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nandfs/nandfs_vfsops.c 242833 2012-11-09 18:02:25Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -285,6 +285,7 @@ nandfs_sblocks_in_block(struct nandfs_device *fsdev)
 	return (fsdev->nd_devblocksize / sizeof(struct nandfs_super_block));
 }
 
+#if 0
 static __inline int
 nandfs_sblocks_in_first_block(struct nandfs_device *fsdev)
 {
@@ -297,6 +298,7 @@ nandfs_sblocks_in_first_block(struct nandfs_device *fsdev)
 
 	return (n);
 }
+#endif
 
 static int
 nandfs_write_superblock_at(struct nandfs_device *fsdev,
@@ -329,8 +331,8 @@ nandfs_write_superblock_at(struct nandfs_device *fsdev,
 	    super->s_last_pseg, super->s_last_cno, super->s_last_seq,
 	    super->s_wtime, index));
 
-	read_block = btodb(offset + ((index / sb_per_sector) * sb_per_sector)
-	    * sizeof(struct nandfs_super_block));
+	read_block = btodb(offset + rounddown(index, sb_per_sector) *
+	    sizeof(struct nandfs_super_block));
 
 	DPRINTF(SYNC, ("%s: read_block %#x\n", __func__, read_block));
 
@@ -716,15 +718,24 @@ nandfs_mount_base(struct nandfs_device *nandfsdev, struct mount *mp,
 	nandfsdev->nd_ts.tv_sec = nandfsdev->nd_last_segsum.ss_create;
 	nandfsdev->nd_last_cno = nandfsdev->nd_super.s_last_cno;
 	nandfsdev->nd_fakevblk = 1;
+	/*
+	 * FIXME: bogus calculation. Should use actual number of usable segments
+	 * instead of total amount.
+	 */
+	nandfsdev->nd_segs_reserved =
+	    nandfsdev->nd_fsdata.f_nsegments *
+	    nandfsdev->nd_fsdata.f_r_segments_percentage / 100;
 	nandfsdev->nd_last_ino  = NANDFS_USER_INO;
 	DPRINTF(VOLUMES, ("%s: last_pseg %#jx last_cno %#jx last_seq %#jx\n"
-	    "fsdev: last_seg: seq %#jx num %#jx, next_seg_num %#jx\n",
+	    "fsdev: last_seg: seq %#jx num %#jx, next_seg_num %#jx "
+	    "segs_reserved %#jx\n",
 	    __func__, (uintmax_t)nandfsdev->nd_last_pseg,
 	    (uintmax_t)nandfsdev->nd_last_cno,
 	    (uintmax_t)nandfsdev->nd_seg_sequence,
 	    (uintmax_t)nandfsdev->nd_seg_sequence,
 	    (uintmax_t)nandfsdev->nd_seg_num,
-	    (uintmax_t)nandfsdev->nd_next_seg_num));
+	    (uintmax_t)nandfsdev->nd_next_seg_num,
+	    (uintmax_t)nandfsdev->nd_segs_reserved));
 
 	DPRINTF(VOLUMES, ("nandfs_mount: accepted super root\n"));
 
@@ -901,8 +912,7 @@ nandfs_mount_device(struct vnode *devvp, struct mount *mp,
 			/*
 			 * We conclude that this is not NAND storage
 			 */
-			nandfsdev->nd_erasesize = NANDFS_DEF_ERASESIZE;
-			nandfsdev->nd_is_nand = 0;
+			erasesize = NANDFS_DEF_ERASESIZE;
 		} else {
 			DROP_GIANT();
 			g_topology_lock();
@@ -913,10 +923,8 @@ nandfs_mount_device(struct vnode *devvp, struct mount *mp,
 			free(nandfsdev, M_NANDFSMNT);
 			return (error);
 		}
-	} else {
-		nandfsdev->nd_erasesize = erasesize;
-		nandfsdev->nd_is_nand = 1;
 	}
+	nandfsdev->nd_erasesize = erasesize;
 
 	DPRINTF(VOLUMES, ("%s: erasesize %x\n", __func__,
 	    nandfsdev->nd_erasesize));
@@ -1383,6 +1391,7 @@ nandfs_mountfs(struct vnode *devvp, struct mount *mp)
 	nmp->nm_ronly = ronly;
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	mp->mnt_kern_flag |= MNTK_USES_BCACHE;
 	MNT_IUNLOCK(mp);
 	nmp->nm_nandfsdev = nandfsdev;
 	/* Add our mountpoint */

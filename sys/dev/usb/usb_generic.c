@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_generic.c 257375 2013-10-30 08:05:39Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -131,9 +131,8 @@ struct usb_fifo_methods usb_ugen_methods = {
 static int ugen_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, ugen, CTLFLAG_RW, 0, "USB generic");
-SYSCTL_INT(_hw_usb_ugen, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN, &ugen_debug,
+SYSCTL_INT(_hw_usb_ugen, OID_AUTO, debug, CTLFLAG_RWTUN, &ugen_debug,
     0, "Debug level");
-TUNABLE_INT("hw.usb.ugen.debug", &ugen_debug);
 #endif
 
 
@@ -182,7 +181,8 @@ ugen_open(struct usb_fifo *f, int fflags)
 	struct usb_endpoint_descriptor *ed = ep->edesc;
 	uint8_t type;
 
-	DPRINTFN(6, "flag=0x%x\n", fflags);
+	DPRINTFN(1, "flag=0x%x pid=%d name=%s\n", fflags,
+	    curthread->td_proc->p_pid, curthread->td_proc->p_comm);
 
 	mtx_lock(f->priv_mtx);
 	switch (usbd_get_speed(f->udev)) {
@@ -212,7 +212,9 @@ ugen_open(struct usb_fifo *f, int fflags)
 static void
 ugen_close(struct usb_fifo *f, int fflags)
 {
-	DPRINTFN(6, "flag=0x%x\n", fflags);
+
+	DPRINTFN(1, "flag=0x%x pid=%d name=%s\n", fflags,
+	    curthread->td_proc->p_pid, curthread->td_proc->p_comm);
 
 	/* cleanup */
 
@@ -616,24 +618,17 @@ ugen_set_config(struct usb_fifo *f, uint8_t index)
 		/* not possible in device side mode */
 		return (ENOTTY);
 	}
-	if (f->udev->curr_config_index == index) {
-		/* no change needed */
-		return (0);
-	}
+
 	/* make sure all FIFO's are gone */
 	/* else there can be a deadlock */
 	if (ugen_fs_uninit(f)) {
 		/* ignore any errors */
 		DPRINTFN(6, "no FIFOs\n");
 	}
-	/* change setting - will free generic FIFOs, if any */
-	if (usbd_set_config_index(f->udev, index)) {
+
+	if (usbd_start_set_config(f->udev, index) != 0)
 		return (EIO);
-	}
-	/* probe and attach */
-	if (usb_probe_and_attach(f->udev, USB_IFACE_INDEX_ANY)) {
-		return (EIO);
-	}
+
 	return (0);
 }
 
@@ -722,16 +717,16 @@ ugen_get_cdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 	return (error);
 }
 
-/*
- * This function is called having the enumeration SX locked which
- * protects the scratch area used.
- */
 static int
 ugen_get_sdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 {
 	void *ptr;
 	uint16_t size;
 	int error;
+	uint8_t do_unlock;
+
+	/* Protect scratch area */
+	do_unlock = usbd_ctrl_lock(f->udev);
 
 	ptr = f->udev->scratch.data;
 	size = sizeof(f->udev->scratch.data);
@@ -752,6 +747,9 @@ ugen_get_sdesc(struct usb_fifo *f, struct usb_gen_descriptor *ugd)
 
 		error = copyout(ptr, ugd->ugd_data, size);
 	}
+	if (do_unlock)
+		usbd_ctrl_unlock(f->udev);
+
 	return (error);
 }
 
@@ -969,11 +967,6 @@ ugen_re_enumerate(struct usb_fifo *f)
 		/* not possible in device side mode */
 		DPRINTFN(6, "device mode\n");
 		return (ENOTTY);
-	}
-	if (udev->parent_hub == NULL) {
-		/* the root HUB cannot be re-enumerated */
-		DPRINTFN(6, "cannot reset root HUB\n");
-		return (EINVAL);
 	}
 	/* make sure all FIFO's are gone */
 	/* else there can be a deadlock */
@@ -1224,6 +1217,40 @@ complete:
 }
 
 static int
+ugen_fs_copy_out_cancelled(struct usb_fs_endpoint *fs_ep_uptr)
+{
+	struct usb_fs_endpoint fs_ep;
+	int error;
+
+	error = copyin(fs_ep_uptr, &fs_ep, sizeof(fs_ep));
+	if (error)
+		return (error);
+
+	fs_ep.status = USB_ERR_CANCELLED;
+	fs_ep.aFrames = 0;
+	fs_ep.isoc_time_complete = 0;
+
+	/* update "aFrames" */
+	error = copyout(&fs_ep.aFrames, &fs_ep_uptr->aFrames,
+	    sizeof(fs_ep.aFrames));
+	if (error)
+		goto done;
+
+	/* update "isoc_time_complete" */
+	error = copyout(&fs_ep.isoc_time_complete,
+	    &fs_ep_uptr->isoc_time_complete,
+	    sizeof(fs_ep.isoc_time_complete));
+	if (error)
+		goto done;
+
+	/* update "status" */
+	error = copyout(&fs_ep.status, &fs_ep_uptr->status,
+	    sizeof(fs_ep.status));
+done:
+	return (error);
+}
+
+static int
 ugen_fs_copy_out(struct usb_fifo *f, uint8_t ep_index)
 {
 	struct usb_device_request *req;
@@ -1248,7 +1275,12 @@ ugen_fs_copy_out(struct usb_fifo *f, uint8_t ep_index)
 		return (EINVAL);
 
 	mtx_lock(f->priv_mtx);
-	if (usbd_transfer_pending(xfer)) {
+	if (!xfer->flags_int.transferring &&
+	    !xfer->flags_int.started) {
+		mtx_unlock(f->priv_mtx);
+		DPRINTF("Returning fake cancel event\n");
+		return (ugen_fs_copy_out_cancelled(f->fs_ep_ptr + ep_index));
+	} else if (usbd_transfer_pending(xfer)) {
 		mtx_unlock(f->priv_mtx);
 		return (EBUSY);		/* should not happen */
 	}
@@ -1369,6 +1401,7 @@ complete:
 	    sizeof(fs_ep.isoc_time_complete));
 	if (error)
 		goto done;
+
 	/* update "status" */
 	error = copyout(&fs_ep.status, &fs_ep_uptr->status,
 	    sizeof(fs_ep.status));
@@ -1457,12 +1490,15 @@ ugen_ioctl(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		xfer = f->fs_xfer[u.pstart->ep_index];
 		if (usbd_transfer_pending(xfer)) {
 			usbd_transfer_stop(xfer);
+
 			/*
 			 * Check if the USB transfer was stopped
-			 * before it was even started. Else a cancel
-			 * callback will be pending.
+			 * before it was even started and fake a
+			 * cancel event.
 			 */
-			if (!xfer->flags_int.transferring) {
+			if (!xfer->flags_int.transferring &&
+			    !xfer->flags_int.started) {
+				DPRINTF("Issuing fake completion event\n");
 				ugen_fs_set_complete(xfer->priv_sc,
 				    USB_P2U(xfer->priv_fifo));
 			}
@@ -1862,14 +1898,13 @@ ugen_get_port_path(struct usb_fifo *f, struct usb_device_port_path *dpp)
 	if (nlevel > USB_DEVICE_PORT_PATH_MAX)
 		goto error;
 
+	/* store total level of ports */
+	dpp->udp_port_level = nlevel;
+
 	/* store port index array */
 	next = udev;
 	while (next->parent_hub != NULL) {
-		nlevel--;
-
-		dpp->udp_port_no[nlevel] = next->port_no;
-		dpp->udp_port_level = nlevel;
-
+		dpp->udp_port_no[--nlevel] = next->port_no;
 		next = next->parent_hub;
 	}
 	return (0);	/* success */
@@ -2186,10 +2221,9 @@ ugen_ioctl_post(struct usb_fifo *f, u_long cmd, void *addr, int fflags)
 		for (n = 0; n != 4; n++) {
 
 			u.stat->uds_requests_fail[n] =
-			    f->udev->bus->stats_err.uds_requests[n];
-
+			    f->udev->stats_err.uds_requests[n];
 			u.stat->uds_requests_ok[n] =
-			    f->udev->bus->stats_ok.uds_requests[n];
+			    f->udev->stats_ok.uds_requests[n];
 		}
 		break;
 

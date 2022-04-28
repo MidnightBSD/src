@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2006, 2007, 2008, 2009, 2010 Marc Balmer <marc@msys.ch>
  * Copyright (C) 2000 Eugene M. Kim.  All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/wake/wake.c 232102 2012-02-24 07:54:08Z jh $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>

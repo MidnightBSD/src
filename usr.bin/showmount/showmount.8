@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)showmount.8	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: release/10.0.0/usr.bin/showmount/showmount.8 216370 2010-12-11 08:32:16Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 29, 1995
+.Dd March 20, 2016
 .Dt SHOWMOUNT 8
 .Os
 .Sh NAME
@@ -40,7 +40,10 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl a | d
-.Op Fl e3
+.Op Fl E
+.Op Fl e
+.Op Fl 1
+.Op Fl 3
 .Op Ar host
 .Sh DESCRIPTION
 The
@@ -71,19 +74,25 @@ List all mount points in the form:
 .Ed
 .It Fl d
 List directory paths of mount points instead of hosts.
+.It Fl E
+Show the
+.Ar host Ns 's
+exports list in a script-friendly format.
+Client addresses and the header are not shown, and special
+characters are escaped.
 .It Fl e
 Show the
 .Ar host Ns 's
 exports list.
+.It Fl 1
+Use mount protocol Version 1, compatible with legacy servers.
 .It Fl 3
-Use mount protocol Version 3, compatible with
-.Tn NFS
-Version 3.
+Ignored for backwards compatibility.
 .El
 .Sh SEE ALSO
 .Xr mount 8 ,
-.Xr mountd 8 ,
-.Xr mount_nfs 8
+.Xr mount_nfs 8 ,
+.Xr mountd 8
 .Sh HISTORY
 The
 .Nm

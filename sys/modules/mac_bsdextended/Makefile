@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mac_bsdextended/Makefile 184331 2008-10-27 12:09:15Z rwatson $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../security/mac_bsdextended
+.PATH: ${SRCTOP}/sys/security/mac_bsdextended
 
 KMOD=	mac_bsdextended
 SRCS=	vnode_if.h \

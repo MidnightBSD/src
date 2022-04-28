@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342var.h 171626 2007-07-27 14:50:57Z cognet $ */
+/* $FreeBSD$ */
 #ifndef I81342VAR_H_
 #define I81342VAR_H_
 

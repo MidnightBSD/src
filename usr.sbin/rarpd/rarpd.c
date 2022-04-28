@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: 0BSD
+ *
  * Copyright (c) 1990, 1991, 1992, 1993, 1996
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -22,7 +24,7 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rarpd/rarpd.c 249234 2013-04-07 15:33:06Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rarpd - Reverse ARP Daemon
@@ -739,7 +741,7 @@ update_arptab(u_char *ep, in_addr_t ipaddr)
 
 	/* Get the type and interface index */
 	rt = &rtmsg.rthdr;
-	bzero(rt, sizeof(rtmsg));
+	bzero(&rtmsg, sizeof(rtmsg));
 	rt->rtm_version = RTM_VERSION;
 	rt->rtm_addrs = RTA_DST;
 	rt->rtm_type = RTM_GET;

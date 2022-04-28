@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libgssapi/gss_display_status.c 234011 2012-04-08 03:55:25Z stas $
+ *	$FreeBSD$
  */
 /*
  * Copyright (c) 1998 - 2005 Kungliga Tekniska Högskolan

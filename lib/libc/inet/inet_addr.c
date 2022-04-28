@@ -66,14 +66,13 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)inet_addr.c	8.1 (Berkeley) 6/17/93";
-static const char rcsid[] = "$Id: inet_addr.c,v 1.4.18.1 2005/04/27 05:00:52 sra Exp $";
+static const char rcsid[] = "$Id: inet_addr.c,v 1.5 2005/04/27 04:56:19 sra Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_addr.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
-#include <sys/types.h>
 #include <sys/param.h>
 
 #include <netinet/in.h>
@@ -183,19 +182,20 @@ inet_aton(const char *cp, struct in_addr *addr) {
 	case 2:				/*%< a.b -- 8.24 bits */
 		if (val > 0xffffffU)
 			return (0);
-		val |= parts[0] << 24;
+		val |= (uint32_t)parts[0] << 24;
 		break;
 
 	case 3:				/*%< a.b.c -- 8.8.16 bits */
 		if (val > 0xffffU)
 			return (0);
-		val |= (parts[0] << 24) | (parts[1] << 16);
+		val |= ((uint32_t)parts[0] << 24) | (parts[1] << 16);
 		break;
 
 	case 4:				/*%< a.b.c.d -- 8.8.8.8 bits */
 		if (val > 0xffU)
 			return (0);
-		val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
+		val |= ((uint32_t)parts[0] << 24) | (parts[1] << 16) |
+		    (parts[2] << 8);
 		break;
 	}
 	if (addr != NULL)

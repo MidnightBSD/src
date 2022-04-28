@@ -1,6 +1,8 @@
 /*	$OpenBSD: pfctl.c,v 1.278 2008/08/31 20:18:17 jmc Exp $ */
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Daniel Hartmeier
  * Copyright (c) 2002,2003 Henning Brauer
  * All rights reserved.
@@ -32,22 +34,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/pfctl/pfctl.c 240494 2012-09-14 11:51:49Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-
-#ifdef __FreeBSD__
 #include <sys/endian.h>
-#endif
 
 #include <net/if.h>
 #include <netinet/in.h>
 #include <net/pfvar.h>
 #include <arpa/inet.h>
-#include <altq/altq.h>
+#include <net/altq/altq.h>
 #include <sys/sysctl.h>
 
 #include <err.h>
@@ -55,6 +54,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/pfctl/pfctl.c 240494 2012-09-14 11:51:49
 #include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +67,9 @@ void	 usage(void);
 int	 pfctl_enable(int, int);
 int	 pfctl_disable(int, int);
 int	 pfctl_clear_stats(int, int);
+int	 pfctl_get_skip_ifaces(void);
+int	 pfctl_check_skip_ifaces(char *);
+int	 pfctl_adjust_skip_ifaces(struct pfctl *);
 int	 pfctl_clear_interface_flags(int, int);
 int	 pfctl_clear_rules(int, int, char *);
 int	 pfctl_clear_nat(int, int, char *);
@@ -93,6 +96,7 @@ int	 pfctl_show_nat(int, int, char *);
 int	 pfctl_show_src_nodes(int, int);
 int	 pfctl_show_states(int, const char *, int);
 int	 pfctl_show_status(int, int);
+int	 pfctl_show_running(int);
 int	 pfctl_show_timeouts(int, int);
 int	 pfctl_show_limits(int, int);
 void	 pfctl_debug(int, u_int32_t, int);
@@ -106,6 +110,7 @@ const char	*pfctl_lookup_option(char *, const char **);
 
 struct pf_anchor_global	 pf_anchors;
 struct pf_anchor	 pf_main_anchor;
+static struct pfr_buffer skip_b;
 
 const char	*clearopt;
 char		*rulesopt;
@@ -213,7 +218,7 @@ static const char *clearopt_list[] = {
 static const char *showopt_list[] = {
 	"nat", "queue", "rules", "Anchors", "Sources", "states", "info",
 	"Interfaces", "labels", "timeouts", "memory", "Tables", "osfp",
-	"all", NULL
+	"Running", "all", NULL
 };
 
 static const char *tblcmdopt_list[] = {
@@ -234,13 +239,13 @@ usage(void)
 {
 	extern char *__progname;
 
-	fprintf(stderr, "usage: %s [-AdeghmNnOPqRrvz] ", __progname);
-	fprintf(stderr, "[-a anchor] [-D macro=value] [-F modifier]\n");
-	fprintf(stderr, "\t[-f file] [-i interface] [-K host | network]\n");
-	fprintf(stderr, "\t[-k host | network | label | id] ");
-	fprintf(stderr, "[-o level] [-p device]\n");
-	fprintf(stderr, "\t[-s modifier] ");
-	fprintf(stderr, "[-t table -T command [address ...]] [-x level]\n");
+	fprintf(stderr,
+"usage: %s [-AdeghmNnOPqRrvz] [-a anchor] [-D macro=value] [-F modifier]\n"
+	"\t[-f file] [-i interface] [-K host | network]\n"
+	"\t[-k host | network | label | id] [-o level] [-p device]\n"
+	"\t[-s modifier] [-t table -T command [address ...]] [-x level]\n",
+	    __progname);
+
 	exit(1);
 }
 
@@ -250,10 +255,8 @@ pfctl_enable(int dev, int opts)
 	if (ioctl(dev, DIOCSTART)) {
 		if (errno == EEXIST)
 			errx(1, "pf already enabled");
-#ifdef __FreeBSD__
 		else if (errno == ESRCH)
 			errx(1, "pfil registeration failed");
-#endif
 		else
 			err(1, "DIOCSTART");
 	}
@@ -293,6 +296,89 @@ pfctl_clear_stats(int dev, int opts)
 		err(1, "DIOCCLRSTATUS");
 	if ((opts & PF_OPT_QUIET) == 0)
 		fprintf(stderr, "pf: statistics cleared\n");
+	return (0);
+}
+
+int
+pfctl_get_skip_ifaces(void)
+{
+	bzero(&skip_b, sizeof(skip_b));
+	skip_b.pfrb_type = PFRB_IFACES;
+	for (;;) {
+		pfr_buf_grow(&skip_b, skip_b.pfrb_size);
+		skip_b.pfrb_size = skip_b.pfrb_msize;
+		if (pfi_get_ifaces(NULL, skip_b.pfrb_caddr, &skip_b.pfrb_size))
+			err(1, "pfi_get_ifaces");
+		if (skip_b.pfrb_size <= skip_b.pfrb_msize)
+			break;
+	}
+	return (0);
+}
+
+int
+pfctl_check_skip_ifaces(char *ifname)
+{
+	struct pfi_kif		*p;
+	struct node_host	*h = NULL, *n = NULL;
+
+	PFRB_FOREACH(p, &skip_b) {
+		if (!strcmp(ifname, p->pfik_name) &&
+		    (p->pfik_flags & PFI_IFLAG_SKIP))
+			p->pfik_flags &= ~PFI_IFLAG_SKIP;
+		if (!strcmp(ifname, p->pfik_name) && p->pfik_group != NULL) {
+			if ((h = ifa_grouplookup(p->pfik_name, 0)) == NULL)
+				continue;
+
+			for (n = h; n != NULL; n = n->next) {
+				if (p->pfik_ifp == NULL)
+					continue;
+				if (strncmp(p->pfik_name, ifname, IFNAMSIZ))
+					continue;
+
+				p->pfik_flags &= ~PFI_IFLAG_SKIP;
+			}
+		}
+	}
+	return (0);
+}
+
+int
+pfctl_adjust_skip_ifaces(struct pfctl *pf)
+{
+	struct pfi_kif		*p, *pp;
+	struct node_host	*h = NULL, *n = NULL;
+
+	PFRB_FOREACH(p, &skip_b) {
+		if (p->pfik_group == NULL || !(p->pfik_flags & PFI_IFLAG_SKIP))
+			continue;
+
+		pfctl_set_interface_flags(pf, p->pfik_name, PFI_IFLAG_SKIP, 0);
+		if ((h = ifa_grouplookup(p->pfik_name, 0)) == NULL)
+			continue;
+
+		for (n = h; n != NULL; n = n->next)
+			PFRB_FOREACH(pp, &skip_b) {
+				if (pp->pfik_ifp == NULL)
+					continue;
+
+				if (strncmp(pp->pfik_name, n->ifname, IFNAMSIZ))
+					continue;
+
+				if (!(pp->pfik_flags & PFI_IFLAG_SKIP))
+					pfctl_set_interface_flags(pf,
+					    pp->pfik_name, PFI_IFLAG_SKIP, 1);
+				if (pp->pfik_flags & PFI_IFLAG_SKIP)
+					pp->pfik_flags &= ~PFI_IFLAG_SKIP;
+			}
+	}
+
+	PFRB_FOREACH(p, &skip_b) {
+		if (p->pfik_ifp == NULL || ! (p->pfik_flags & PFI_IFLAG_SKIP))
+			continue;
+
+		pfctl_set_interface_flags(pf, p->pfik_name, PFI_IFLAG_SKIP, 0);
+	}
+
 	return (0);
 }
 
@@ -796,17 +882,17 @@ pfctl_print_rule_counters(struct pf_rule *rule, int opts)
 	}
 	if (opts & PF_OPT_VERBOSE) {
 		printf("  [ Evaluations: %-8llu  Packets: %-8llu  "
-			    "Bytes: %-10llu  States: %-6u]\n",
+			    "Bytes: %-10llu  States: %-6ju]\n",
 			    (unsigned long long)rule->evaluations,
 			    (unsigned long long)(rule->packets[0] +
 			    rule->packets[1]),
 			    (unsigned long long)(rule->bytes[0] +
-			    rule->bytes[1]), rule->states_cur);
+			    rule->bytes[1]), (uintmax_t)rule->u_states_cur);
 		if (!(opts & PF_OPT_DEBUG))
 			printf("  [ Inserted: uid %u pid %u "
-			    "State Creations: %-6u]\n",
+			    "State Creations: %-6ju]\n",
 			    (unsigned)rule->cuid, (unsigned)rule->cpid,
-			    rule->states_tot);
+			    (uintmax_t)rule->u_states_tot);
 	}
 }
 
@@ -908,7 +994,7 @@ pfctl_show_rules(int dev, char *path, int opts, enum pfctl_show format,
 		case PFCTL_SHOW_LABELS:
 			if (pr.rule.label[0]) {
 				printf("%s %llu %llu %llu %llu"
-				    " %llu %llu %llu %llu\n",
+				    " %llu %llu %llu %ju\n",
 				    pr.rule.label,
 				    (unsigned long long)pr.rule.evaluations,
 				    (unsigned long long)(pr.rule.packets[0] +
@@ -919,7 +1005,7 @@ pfctl_show_rules(int dev, char *path, int opts, enum pfctl_show format,
 				    (unsigned long long)pr.rule.bytes[0],
 				    (unsigned long long)pr.rule.packets[1],
 				    (unsigned long long)pr.rule.bytes[1],
-				    (unsigned long long)pr.rule.states_tot);
+				    (uintmax_t)pr.rule.u_states_tot);
 			}
 			break;
 		case PFCTL_SHOW_RULES:
@@ -1112,6 +1198,20 @@ pfctl_show_status(int dev, int opts)
 		pfctl_print_title("INFO:");
 	print_status(&status, opts);
 	return (0);
+}
+
+int
+pfctl_show_running(int dev)
+{
+	struct pf_status status;
+
+	if (ioctl(dev, DIOCGETSTATUS, &status)) {
+		warn("DIOCGETSTATUS");
+		return (-1);
+	}
+
+	print_running(&status);
+	return (!status.running);
 }
 
 int
@@ -1481,6 +1581,8 @@ pfctl_rules(int dev, char *filename, int opts, int optimize,
 		else
 			goto _error;
 	}
+	if (loadopt & PFCTL_FLAG_OPTION)
+		pfctl_adjust_skip_ifaces(&pf);
 
 	if ((pf.loadopt & PFCTL_FLAG_FILTER &&
 	    (pfctl_load_ruleset(&pf, path, rs, PF_RULESET_SCRUB, 0))) ||
@@ -1844,6 +1946,7 @@ pfctl_set_debug(struct pfctl *pf, char *d)
 	}
 
 	pf->debug_set = 1;
+	level = pf->debug;
 
 	if ((pf->opts & PF_OPT_NOACTION) == 0)
 		if (ioctl(dev, DIOCSETDEBUG, &level))
@@ -1869,6 +1972,7 @@ int
 pfctl_set_interface_flags(struct pfctl *pf, char *ifname, int flags, int how)
 {
 	struct pfioc_iface	pi;
+	struct node_host	*h = NULL, *n = NULL;
 
 	if ((loadopt & PFCTL_FLAG_OPTION) == 0)
 		return (0);
@@ -1876,6 +1980,12 @@ pfctl_set_interface_flags(struct pfctl *pf, char *ifname, int flags, int how)
 	bzero(&pi, sizeof(pi));
 
 	pi.pfiio_flags = flags;
+
+	/* Make sure our cache matches the kernel. If we set or clear the flag
+	 * for a group this applies to all members. */
+	h = ifa_grouplookup(ifname, 0);
+	for (n = h; n != NULL; n = n->next)
+		pfctl_set_interface_flags(pf, n->ifname, flags, how);
 
 	if (strlcpy(pi.pfiio_name, ifname, sizeof(pi.pfiio_name)) >=
 	    sizeof(pi.pfiio_name))
@@ -1888,6 +1998,7 @@ pfctl_set_interface_flags(struct pfctl *pf, char *ifname, int flags, int how)
 		} else {
 			if (ioctl(pf->dev, DIOCSETIFFLAG, &pi))
 				err(1, "DIOCSETIFFLAG");
+			pfctl_check_skip_ifaces(ifname);
 		}
 	}
 	return (0);
@@ -1928,7 +2039,7 @@ pfctl_test_altqsupport(int dev, int opts)
 
 	if (ioctl(dev, DIOCGETALTQS, &pa)) {
 		if (errno == ENODEV) {
-			if (!(opts & PF_OPT_QUIET))
+			if (opts & PF_OPT_VERBOSE)
 				fprintf(stderr, "No ALTQ support in kernel\n"
 				    "ALTQ related functions disabled\n");
 			return (0);
@@ -2185,7 +2296,7 @@ main(int argc, char *argv[])
 		/* turn off options */
 		opts &= ~ (PF_OPT_DISABLE | PF_OPT_ENABLE);
 		clearopt = showopt = debugopt = NULL;
-#if defined(__FreeBSD__) && !defined(ENABLE_ALTQ)
+#if !defined(ENABLE_ALTQ)
 		altqsupport = 0;
 #else
 		altqsupport = 1;
@@ -2227,6 +2338,9 @@ main(int argc, char *argv[])
 			break;
 		case 'i':
 			pfctl_show_status(dev, opts);
+			break;
+		case 'R':
+			error = pfctl_show_running(dev);
 			break;
 		case 't':
 			pfctl_show_timeouts(dev, opts);
@@ -2345,8 +2459,8 @@ main(int argc, char *argv[])
 	}
 
 	if ((rulesopt != NULL) && (loadopt & PFCTL_FLAG_OPTION) &&
-	    !anchorname[0])
-		if (pfctl_clear_interface_flags(dev, opts | PF_OPT_QUIET))
+	    !anchorname[0] && !(opts & PF_OPT_NOACTION))
+		if (pfctl_get_skip_ifaces())
 			error = 1;
 
 	if (rulesopt != NULL && !(opts & (PF_OPT_MERGE|PF_OPT_NOACTION)) &&

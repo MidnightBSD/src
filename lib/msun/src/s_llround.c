@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_llround.c 144771 2005-04-08 00:52:27Z das $");
+__FBSDID("$FreeBSD$");
 
 #define type		double
 #define	roundit		round

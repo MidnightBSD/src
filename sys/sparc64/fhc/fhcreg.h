@@ -50,7 +50,7 @@
  *
  *	from: OpenBSD: fhcreg.h,v 1.3 2004/09/28 16:26:03 jason Exp
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/fhc/fhcreg.h 143825 2005-03-19 00:48:34Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _SPARC64_FHC_FHCREG_H_

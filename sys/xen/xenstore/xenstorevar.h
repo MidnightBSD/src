@@ -28,7 +28,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/xen/xenstore/xenstorevar.h 255040 2013-08-29 19:52:18Z gibbs $
+ * $FreeBSD$
  */
 
 #ifndef _XEN_XENSTORE_XENSTOREVAR_H
@@ -338,4 +338,15 @@ void xs_unregister_watch(struct xs_watch *watch);
  */
 struct sbuf *xs_join(const char *, const char *);
 
+/**
+ * Lock the xenstore request mutex.
+ */
+void xs_lock(void);
+
+/**
+ * Unlock the xenstore request mutex.
+ */
+void xs_unlock(void);
+
 #endif /* _XEN_XENSTORE_XENSTOREVAR_H */
+

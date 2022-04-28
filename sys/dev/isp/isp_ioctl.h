@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/isp/isp_ioctl.h 196008 2009-08-01 01:04:26Z mjacob $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 1997-2006 by Matthew Jacob
  * All rights reserved.

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptmv/mvOs.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD$
  */
 #ifndef __INCmvOsBsdh
 #define __INCmvOsBsdh
@@ -72,7 +72,7 @@ typedef enum mvBoolean{MV_FALSE, MV_TRUE} MV_BOOLEAN;
 #define NULL  0
 #endif
 
-/* System dependant typedefs */
+/* System dependent typedefs */
 typedef void			MV_VOID;
 typedef unsigned int 	MV_U32;
 typedef unsigned short	MV_U16;

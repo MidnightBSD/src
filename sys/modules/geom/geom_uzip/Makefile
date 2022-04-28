@@ -1,9 +1,17 @@
-# $FreeBSD: release/10.0.0/sys/modules/geom/geom_uzip/Makefile 150706 2005-09-29 11:56:16Z fjoe $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../geom/uzip ${.CURDIR}/../../../net
+.PATH: ${SRCTOP}/sys/geom/uzip ${SRCTOP}/sys/net
 
 KMOD=	geom_uzip
-SRCS=	g_uzip.c
+SRCS=	g_uzip.c g_uzip_zlib.c g_uzip_lzma.c g_uzip_wrkthr.c
+SRCS+=	g_uzip.h g_uzip_dapi.h g_uzip_lzma.h g_uzip_zlib.h g_uzip_softc.h \
+    g_uzip_wrkthr.h
 #CFLAGS=	-g -DINVARIANT_SUPPORT -DINVARIANTS
+
+.PATH:	${SRCTOP}/sys/net
+
+CFLAGS+= -I${SRCTOP}/sys/contrib/xz-embedded/freebsd \
+	-I${SRCTOP}/sys/contrib/xz-embedded/linux/lib/xz/
+SRCS+=	opt_geom.h
 
 .include <bsd.kmod.mk>

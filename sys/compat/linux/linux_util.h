@@ -28,7 +28,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: release/10.0.0/sys/compat/linux/linux_util.h 235063 2012-05-05 19:42:38Z netchild $
+ * $FreeBSD$
  */
 
 #ifndef	_LINUX_UTIL_H_
@@ -37,12 +37,16 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
-#include <machine/vmparam.h>
 #include <sys/exec.h>
 #include <sys/sysent.h>
 #include <sys/syslog.h>
 #include <sys/cdefs.h>
 #include <sys/uio.h>
+
+MALLOC_DECLARE(M_LINUX);
+MALLOC_DECLARE(M_EPOLL);
+MALLOC_DECLARE(M_FUTEX);
+MALLOC_DECLARE(M_FUTEX_WP);
 
 extern const char linux_emul_path[];
 
@@ -58,7 +62,7 @@ int linux_emul_convpath(struct thread *, const char *, enum uio_seg, char **, in
 			return (_error);				\
 	} while (0)
 
-#define LCONVPATH(td, upath, pathp, i) 	\
+#define LCONVPATH(td, upath, pathp, i)	\
    LCONVPATH_AT(td, upath, pathp, i, AT_FDCWD)
 
 #define LCONVPATHEXIST(td, upath, pathp) LCONVPATH(td, upath, pathp, 0)
@@ -89,6 +93,14 @@ linux_ ## s(struct thread *td, struct linux_ ## s ## _args *args)	\
 }									\
 struct __hack
 
+/*
+ * This is for the syscalls that are not even yet implemented in Linux.
+ *
+ * They're marked as UNIMPL in syscall.master so it will
+ * have nosys record in linux_sysent[].
+ */
+#define UNIMPLEMENTED(s)
+
 void linux_msg(const struct thread *td, const char *fmt, ...)
 	__printflike(2, 3);
 
@@ -115,7 +127,6 @@ void	linux_free_get_char_devices(char *string);
 #define	LINUX_CTRFMT(nm, fmt)	#nm"("fmt")"
 
 #define	LINUX_CTR6(f, m, p1, p2, p3, p4, p5, p6) do {			\
-	if (ldebug(f))							\
 		CTR6(KTR_LINUX, LINUX_CTRFMT(f, m),			\
 		    p1, p2, p3, p4, p5, p6);				\
 } while (0)

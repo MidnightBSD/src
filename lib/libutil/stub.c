@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/stub.c 121193 2003-10-18 10:04:16Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

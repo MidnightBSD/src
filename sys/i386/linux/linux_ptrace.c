@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_ptrace.c 246085 2013-01-29 18:41:30Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -47,10 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_ptrace.c 246085 2013-01-
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_signal.h>
 
-#if !defined(CPU_DISABLE_SSE) && defined(I686_CPU)
-#define CPU_ENABLE_SSE
-#endif
-
 /*
  *   Linux ptrace requests numbers. Mostly identical to FreeBSD,
  *   except for MD ones and PT_ATTACH/PT_DETACH.
@@ -69,7 +65,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_ptrace.c 246085 2013-01-
 #define PTRACE_ATTACH		16
 #define PTRACE_DETACH		17
 
-#define	PTRACE_SYSCALL		24
+#define	LINUX_PTRACE_SYSCALL	24
 
 #define PTRACE_GETREGS		12
 #define PTRACE_SETREGS		13
@@ -91,8 +87,7 @@ static __inline int
 map_signum(int signum)
 {
 
-	if (signum > 0 && signum <= LINUX_SIGTBLSZ)
-		signum = linux_to_bsd_signal[_SIG_IDX(signum)];
+	signum = linux_to_bsd_signal(signum);
 	return ((signum == SIGSTOP)? 0 : signum);
 }
 
@@ -217,7 +212,6 @@ struct linux_pt_fpxreg {
 	l_long		padding[56];
 };
 
-#ifdef CPU_ENABLE_SSE
 static int
 linux_proc_read_fpxregs(struct thread *td, struct linux_pt_fpxreg *fpxregs)
 {
@@ -225,7 +219,7 @@ linux_proc_read_fpxregs(struct thread *td, struct linux_pt_fpxreg *fpxregs)
 	PROC_LOCK_ASSERT(td->td_proc, MA_OWNED);
 	if (cpu_fxsr == 0 || (td->td_proc->p_flag & P_INMEM) == 0)
 		return (EIO);
-	bcopy(&td->td_pcb->pcb_user_save.sv_xmm, fpxregs, sizeof(*fpxregs));
+	bcopy(&get_pcb_user_save_td(td)->sv_xmm, fpxregs, sizeof(*fpxregs));
 	return (0);
 }
 
@@ -236,10 +230,9 @@ linux_proc_write_fpxregs(struct thread *td, struct linux_pt_fpxreg *fpxregs)
 	PROC_LOCK_ASSERT(td->td_proc, MA_OWNED);
 	if (cpu_fxsr == 0 || (td->td_proc->p_flag & P_INMEM) == 0)
 		return (EIO);
-	bcopy(fpxregs, &td->td_pcb->pcb_user_save.sv_xmm, sizeof(*fpxregs));
+	bcopy(fpxregs, &get_pcb_user_save_td(td)->sv_xmm, sizeof(*fpxregs));
 	return (0);
 }
-#endif
 
 int
 linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
@@ -331,14 +324,11 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 		}
 		break;
 	case PTRACE_SETFPXREGS:
-#ifdef CPU_ENABLE_SSE
 		error = copyin((void *)uap->data, &r.fpxreg, sizeof(r.fpxreg));
 		if (error)
 			break;
-#endif
 		/* FALL THROUGH */
 	case PTRACE_GETFPXREGS: {
-#ifdef CPU_ENABLE_SSE
 		struct proc *p;
 		struct thread *td2;
 
@@ -412,9 +402,6 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 
 	fail:
 		PROC_UNLOCK(p);
-#else
-		error = EIO;
-#endif
 		break;
 	}
 	case PTRACE_PEEKUSR:
@@ -425,7 +412,7 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 		if (uap->addr < 0 || uap->addr & (sizeof(l_int) - 1))
 			break;
 		/*
-		 * Allow linux programs to access register values in
+		 * Allow Linux programs to access register values in
 		 * user struct. We simulate this through PT_GET/SETREGS
 		 * as necessary.
 		 */
@@ -474,7 +461,7 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 
 		break;
 	}
-	case PTRACE_SYSCALL:
+	case LINUX_PTRACE_SYSCALL:
 		/* fall through */
 	default:
 		printf("linux: ptrace(%u, ...) not implemented\n",

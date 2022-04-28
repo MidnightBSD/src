@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)siginterrupt.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/siginterrupt.c 252429 2013-06-30 20:51:15Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <signal.h>
@@ -43,14 +43,13 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/siginterrupt.c 252429 2013-06-30
  * after an instance of the indicated signal.
  */
 int
-siginterrupt(sig, flag)
-	int sig, flag;
+siginterrupt(int sig, int flag)
 {
 	extern sigset_t _sigintr __hidden;
 	struct sigaction sa;
 	int ret;
 
-	if ((ret = _sigaction(sig, (struct sigaction *)0, &sa)) < 0)
+	if ((ret = __libc_sigaction(sig, (struct sigaction *)0, &sa)) < 0)
 		return (ret);
 	if (flag) {
 		sigaddset(&_sigintr, sig);
@@ -59,5 +58,5 @@ siginterrupt(sig, flag)
 		sigdelset(&_sigintr, sig);
 		sa.sa_flags |= SA_RESTART;
 	}
-	return (_sigaction(sig, &sa, (struct sigaction *)0));
+	return (__libc_sigaction(sig, &sa, (struct sigaction *)0));
 }

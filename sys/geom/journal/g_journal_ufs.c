@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/journal/g_journal_ufs.c 163837 2006-10-31 21:31:00Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,3 +105,4 @@ const struct g_journal_desc g_journal_ufs = {
 };
 
 MODULE_DEPEND(g_journal, ufs, 1, 1, 1);
+MODULE_VERSION(geom_journal, 0);

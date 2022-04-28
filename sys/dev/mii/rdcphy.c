@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mii/rdcphy.c 227848 2011-11-22 21:55:40Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for the RDC Semiconductor R6040 10/100 PHY.
@@ -121,12 +121,6 @@ rdcphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		break;
 
 	case MII_MEDIACHG:
-		/*
-		 * If the interface is not up, don't do anything.
-		 */
-		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
-			break;
-
 		mii_phy_setmedia(sc);
 		switch (IFM_SUBTYPE(ife->ifm_media)) {
 		case IFM_100_TX:

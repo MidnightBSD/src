@@ -1,11 +1,11 @@
-#	$FreeBSD: release/10.0.0/sbin/ipf/ipfstat/Makefile 145524 2005-04-25 18:55:52Z darrenr $
+#	$FreeBSD$
 
 NOGCCERROR=	# defined
 
+PACKAGE=	ipf
 PROG=		ipfstat
 SRCS=		ipfstat.c
 MAN=		ipfstat.8
-DPADD+=  	${LIBCURSES}
-LDADD+=  	-lcurses
+LIBADD+=	ncursesw
 
 .include <bsd.prog.mk>

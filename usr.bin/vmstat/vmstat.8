@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)vmstat.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/vmstat/vmstat.8 216370 2010-12-11 08:32:16Z joel $
+.\" $FreeBSD$
 .\"
-.Dd October 21, 2006
+.Dd January 18, 2018
 .Dt VMSTAT 8
 .Os
 .Sh NAME
@@ -37,10 +37,10 @@
 .Sh SYNOPSIS
 .Nm
 .\" .Op Fl fimst
-.Op Fl afHhimPsz
-.Op Fl c Ar count
+.Op Fl -libxo
+.Op Fl afHhimoPsz
 .Op Fl M Ar core Op Fl N Ar system
-.Op Fl w Ar wait
+.Op Fl c Ar count
 .Op Fl n Ar devs
 .Oo
 .Fl p
@@ -48,7 +48,9 @@
 .Ar type , if , pass
 .Sm on
 .Oc
-.Op Ar disks
+.Op Fl w Ar wait
+.Op Ar disks ...
+.Op wait Op count
 .Sh DESCRIPTION
 The
 .Nm
@@ -67,6 +69,13 @@ the default image).
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl -libxo
+Generate output via
+.Xr libxo 3
+in a selection of different human and machine readable formats.
+See
+.Xr xo_parse_args 3
+for details on command line arguments.
 .It Fl a
 When used with
 .Fl i ,
@@ -91,10 +100,12 @@ and
 system calls since system startup, and the number of pages of virtual memory
 involved in each.
 .It Fl h
-Changes memory columns into more easily human readable form.  Default if
+Changes memory columns into more easily human readable form.
+The default if
 standard output is a terminal device.
 .It Fl H
-Changes memory columns into straight numbers.  Default if standard output
+Changes memory columns into straight numbers.
+The default if standard output
 is not a terminal device (such as a script).
 .It Fl i
 Report on the number of interrupts taken by each device since system
@@ -116,6 +127,9 @@ Report on the usage of kernel dynamic memory allocated using
 by type.
 .It Fl n
 Change the maximum number of disks to display from the default of 2.
+.It Fl o
+Display a list of virtual memory objects in the system and the resident
+memory used by each object.
 .It Fl P
 Report per-cpu system/user/idle cpu statistics.
 .It Fl p
@@ -214,36 +228,59 @@ Report on memory used by the kernel zone allocator,
 by zone.
 .El
 .Pp
+The
+.Ar wait
+and
+.Ar count
+arguments may be given after their respective flags at any point
+on the command line before the
+.Ar disks
+argument(s), or without their flags, as the final argument(s).
+The latter form is accepted for backwards compatibility, but it is
+preferred to use the forms with
+.Fl w
+and
+.Fl c
+to avoid ambiguity.
+.Pp
 By default,
 .Nm
 displays the following information:
 .Bl -tag -width indent
 .It procs
-Information about the numbers of processes in various states.
+Information about the number of threads in various states:
 .Pp
 .Bl -tag -width indent -compact
 .It r
-in run queue
+running or in run queue
 .It b
 blocked for resources (i/o, paging, etc.)
 .It w
-runnable or short sleeper (< 20 secs) but swapped
+swapped out
 .El
 .It memory
 Information about the usage of virtual and real memory.
-Virtual pages (reported in units of 1024 bytes) are considered active if
-they belong to processes which are running or have run in the last 20
-seconds.
+.Pp
+Mapped virtual memory is a sum of all of the virtual pages belonging
+to mapped virtual memory objects.
+Note that the entire memory object's size is considered mapped even if
+only a subset of the object's pages are currently mapped.
+This statistic is not related to the active page queue which is used to track
+real memory.
 .Pp
 .Bl -tag -width indent -compact
 .It avm
-active virtual pages
+mapped virtual memory
+.Po previously called active in
+.Nm
+output
+.Pc
 .It fre
 size of the free list
 .El
 .It page
 Information about page faults and paging activity.
-These are averaged each five seconds, and given in units per second.
+These are given in units per second.
 .Pp
 .Bl -tag -width indent -compact
 .It flt
@@ -257,11 +294,11 @@ pages paged in
 .It po
 pages paged out
 .It fr
-pages freed per second
+pages freed
 .\" .It de
 .\" anticipated short term memory shortfall
 .It sr
-pages scanned by clock algorithm, per-second
+pages scanned by page daemon
 .El
 .It disks
 Disk operations per second (this field is system dependent).
@@ -290,15 +327,15 @@ matching pattern is specified (see above),
 will only display the given devices or the devices matching the pattern,
 and will not randomly select other devices in the system.
 .It faults
-Trap/interrupt rate averages per second over last 5 seconds.
+Trap/interrupt rates per second.
 .Pp
 .Bl -tag -width indent -compact
 .It in
-device interrupts per interval (including clock interrupts)
+device interrupts (including clock interrupts)
 .It sy
-system calls per interval
+system calls
 .It cs
-cpu context switch rate (switches/interval)
+cpu context switches
 .El
 .It cpu
 Breakdown of percentage usage of CPU time.
@@ -307,7 +344,7 @@ Breakdown of percentage usage of CPU time.
 .It us
 user time for normal and low priority processes
 .It sy
-system time
+system and interrupt time
 .It id
 cpu idle
 .El
@@ -323,10 +360,7 @@ default memory file
 The command:
 .Dl vmstat -w 5
 will print what the system is doing every five
-seconds; this is a good choice of printing interval since this is how often
-some of the statistics are sampled in the system.
-Others vary every second and running the output for a while will make it
-apparent which are recomputed every second.
+seconds.
 .Pp
 The command:
 .Dl vmstat -p da -p cd -w 1
@@ -340,6 +374,8 @@ statistics every second.
 .Xr ps 1 ,
 .Xr systat 1 ,
 .Xr libmemstat 3 ,
+.Xr libxo 3 ,
+.Xr xo_parse_args 3 ,
 .Xr gstat 8 ,
 .Xr iostat 8 ,
 .Xr pstat 8 ,

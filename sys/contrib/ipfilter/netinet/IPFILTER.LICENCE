@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/IPFILTER.LICENCE 95418 2002-04-25 03:31:39Z darrenr $
+$FreeBSD$
 
 Copyright (C) 1993-2002 by Darren Reed.
 

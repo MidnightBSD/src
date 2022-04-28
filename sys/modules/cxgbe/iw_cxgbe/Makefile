@@ -1,27 +1,25 @@
-# $FreeBSD: release/10.0.0/sys/modules/cxgbe/iw_cxgbe/Makefile 256694 2013-10-17 18:37:25Z np $
+# $FreeBSD$
 
-.include <bsd.own.mk>
-
-CXGBE = ${.CURDIR}/../../../dev/cxgbe
+CXGBE=	${SRCTOP}/sys/dev/cxgbe
 .PATH: ${CXGBE}/iw_cxgbe
 
-KMOD=   iw_cxgbe
-SRCS=   device.c cm.c provider.c mem.c cq.c qp.c resource.c ev.c id_table.c
-SRCS+=  bus_if.h device_if.h opt_sched.h pci_if.h pcib_if.h opt_ktr.h
-SRCS+=  opt_inet.h opt_ofed.h vnode_if.h
-CFLAGS+= -I${CXGBE} -I${.CURDIR}/../../../ofed/include -DLINUX_TYPES_DEFINED
+KMOD=	iw_cxgbe
+SRCS+=	cm.c
+SRCS+=	cq.c
+SRCS+=	device.c
+SRCS+=	ev.c
+SRCS+=	id_table.c
+SRCS+=	mem.c
+SRCS+=	provider.c
+SRCS+=	qp.c
+SRCS+=	resource.c
+SRCS+=	${LINUXKPI_GENSRCS}
+SRCS+=	opt_inet.h opt_inet6.h opt_ktr.h opt_ofed.h opt_sched.h
 
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-	@echo "#define TCP_OFFLOAD 1" >> ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
+CFLAGS+= -I${CXGBE} -I${SRCTOP}/sys/ofed/include -DLINUX_TYPES_DEFINED
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
+CFLAGS+= -DCONFIG_INFINIBAND_USER_MEM
+CFLAGS+= -DINET6 -DINET
 
 .include <bsd.kmod.mk>

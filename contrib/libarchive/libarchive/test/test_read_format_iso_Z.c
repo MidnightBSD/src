@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_iso_Z.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 static void
 test1(void)
@@ -47,6 +47,8 @@ test1(void)
 	assertEqualInt(archive_filter_code(a, 0),
 	    ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }
@@ -88,6 +90,8 @@ test2(void)
 	assertEqualInt(archive_filter_code(a, 0),
 	    ARCHIVE_FILTER_COMPRESS);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_ISO9660);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 }

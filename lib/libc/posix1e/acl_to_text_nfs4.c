@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_to_text_nfs4.c 208811 2010-06-05 07:40:32Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cy/cyvar.h 166901 2007-02-23 12:19:07Z piso $
+ * $FreeBSD$
  */
 
 typedef u_char volatile *cy_addr;

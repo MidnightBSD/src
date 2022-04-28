@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/quicc/quicc_bfe_fdt.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,7 +38,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/quicc/quicc_bfe_fdt.c 227843 2011-11-
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/rman.h>
-#include <sys/tty.h>
 #include <machine/bus.h>
 
 #include <dev/ofw/ofw_bus.h>
@@ -74,6 +73,9 @@ quicc_fdt_probe(device_t dev)
 {
 	phandle_t par;
 	pcell_t clock;
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "fsl,cpm2"))
 		return (ENXIO);

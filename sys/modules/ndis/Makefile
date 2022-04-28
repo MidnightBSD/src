@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/ndis/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../compat/ndis
+.PATH: ${SRCTOP}/sys/compat/ndis
 
 KMOD=	ndis
 SRCS=	subr_pe.c subr_ndis.c subr_hal.c subr_ntoskrnl.c kern_ndis.c

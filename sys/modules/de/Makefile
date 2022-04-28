@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/de/Makefile 156033 2006-02-26 17:51:22Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/de
+.PATH: ${SRCTOP}/sys/dev/de
 
 KMOD=	if_de
 SRCS=	if_de.c opt_ddb.h device_if.h bus_if.h pci_if.h

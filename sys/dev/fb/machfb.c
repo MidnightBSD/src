@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fb/machfb.c 225931 2011-10-02 23:22:38Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for ATI Mach64 graphics chips.  Some code is derived from the
@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/fb/machfb.c 225931 2011-10-02 23:22:3
 #include <machine/bus.h>
 #include <machine/bus_private.h>
 #include <machine/ofw_machdep.h>
-#include <machine/pmap.h>
 #include <machine/resource.h>
 #include <machine/sc_machdep.h>
 
@@ -131,7 +130,7 @@ static const struct {
 	uint16_t	chip_id;
 	const char	*name;
 	uint32_t	ramdac_freq;
-} const machfb_info[] = {
+} machfb_info[] = {
 	{ ATI_MACH64_CT, "ATI Mach64 CT", 135000 },
 	{ ATI_RAGE_PRO_AGP, "ATI 3D Rage Pro (AGP)", 230000 },
 	{ ATI_RAGE_PRO_AGP1X, "ATI 3D Rage Pro (AGP 1x)", 230000 },
@@ -169,7 +168,7 @@ static const struct machfb_cmap {
 	uint8_t red;
 	uint8_t green;
 	uint8_t blue;
-} const machfb_default_cmap[16] = {
+} machfb_default_cmap[16] = {
 	{0x00, 0x00, 0x00},	/* black */
 	{0x00, 0x00, 0xff},	/* blue */
 	{0x00, 0xff, 0x00},	/* green */
@@ -190,7 +189,7 @@ static const struct machfb_cmap {
 
 #define	MACHFB_CMAP_OFF		16
 
-static const u_char const machfb_mouse_pointer_bits[64][8] = {
+static const u_char machfb_mouse_pointer_bits[64][8] = {
 	{ 0x00, 0x00, },	/* ............ */
 	{ 0x80, 0x00, },	/* *........... */
 	{ 0xc0, 0x00, },	/* **.......... */
@@ -219,7 +218,7 @@ static const u_char const machfb_mouse_pointer_bits[64][8] = {
  * Lookup table to perform a bit-swap of the mouse pointer bits,
  * map set bits to CUR_CLR0 and unset bits to transparent.
  */
-static const u_char const machfb_mouse_pointer_lut[] = {
+static const u_char machfb_mouse_pointer_lut[] = {
 	0xaa, 0x2a, 0x8a, 0x0a, 0xa2, 0x22, 0x82, 0x02,
 	0xa8, 0x28, 0x88, 0x08, 0xa0, 0x20, 0x80, 0x00
 };
@@ -479,7 +478,7 @@ machfb_configure(int flags)
 		return (0);
 	if (OF_getprop(output, "device-id", &id, sizeof(id)) == -1)
 		return (0);
-	for (i = 0; i < sizeof(machfb_info) / sizeof(machfb_info[0]); i++) {
+	for (i = 0; i < nitems(machfb_info); i++) {
 		if (id == machfb_info[i].chip_id) {
 			sc->sc_flags = MACHFB_CONSOLE;
 			sc->sc_node = output;
@@ -533,7 +532,7 @@ machfb_init(int unit, video_adapter_t *adp, int flags)
 		return (ENXIO);
 
 	sc->sc_ramdac_freq = 0;
-	for (i = 0; i < sizeof(machfb_info) / sizeof(machfb_info[0]); i++) {
+	for (i = 0; i < nitems(machfb_info); i++) {
 		if (sc->sc_chip_id == machfb_info[i].chip_id) {
 			sc->sc_ramdac_freq = machfb_info[i].ramdac_freq;
 			break;
@@ -1140,7 +1139,7 @@ machfb_pci_probe(device_t dev)
 	    pci_get_subclass(dev) != PCIS_DISPLAY_VGA)
 		return (ENXIO);
 
-	for (i = 0; i < sizeof(machfb_info) / sizeof(machfb_info[0]); i++) {
+	for (i = 0; i < nitems(machfb_info); i++) {
 		if (pci_get_device(dev) == machfb_info[i].chip_id) {
 			device_set_desc(dev, machfb_info[i].name);
 			return (BUS_PROBE_DEFAULT);
@@ -1279,7 +1278,7 @@ machfb_pci_attach(device_t dev)
 	 * Test whether the aperture is byte swapped or not, set
 	 * va_window and va_window_size as appropriate.  Note that
 	 * the aperture could be mapped either big or little endian
-	 * independently of the endianess of the host so this has
+	 * independently of the endianness of the host so this has
 	 * to be a runtime test.
 	 */
 	p32 = (uint32_t *)adp->va_buffer;
@@ -1418,7 +1417,7 @@ static int
 machfb_get_memsize(struct machfb_softc *sc)
 {
 	int tmp, memsize;
-	const int const mem_tab[] = {
+	const int mem_tab[] = {
 		512, 1024, 2048, 4096, 6144, 8192, 12288, 16384
 	};
 

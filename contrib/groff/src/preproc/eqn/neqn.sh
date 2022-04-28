@@ -1,7 +1,7 @@
 #! /bin/sh
 # Provision of this shell script should not be taken to imply that use of
 # GNU eqn with groff -Tascii|-Tlatin1|-Tkoi8-r|-Tutf8|-Tcp1047 is supported.
-# $FreeBSD: release/10.0.0/contrib/groff/src/preproc/eqn/neqn.sh 151503 2005-10-20 10:53:15Z ru $
+# $FreeBSD$
 
 # Default device.
 case "${LC_ALL-${LC_CTYPE-${LANG}}}" in

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm.c 254804 2013-08-24 19:51:18Z andre $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm.c 254804 2013-08-24 19:5
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 #include <net/route.h>

@@ -1,15 +1,12 @@
-# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-ar/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-ar
 
-PROG_CXX=llvm-ar
+SRCDIR=		llvm/tools/llvm-ar
+SRCS+=		llvm-ar.cpp
 
-SRCDIR=	tools/llvm-ar
-SRCS=	llvm-ar.cpp
+LIBADD+=	z
 
-LIBDEPS=llvmarchive \
-	llvmbitreader \
-	llvmcore \
-	llvmsupport
+LINKS+=		${BINDIR}/llvm-ar ${BINDIR}/llvm-ranlib
 
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/cd9660/cd9660_util.c 166639 2007-02-11 13:54:25Z rodrigc $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,7 +80,8 @@ isochar(isofn, isoend, joliet_level, c, clen, flags, handle)
               inbuf[2]='\0';
               inp = inbuf;
               outp = outbuf;
-              cd9660_iconv->convchr(handle, (const char **)&inp, &i, &outp, &j);
+              cd9660_iconv->convchr(handle, __DECONST(const char **, &inp), &i,
+                  &outp, &j);
               len -= j;
               if (clen) *clen = len;
               *c = '\0';
@@ -121,7 +122,8 @@ isofncmp(fn, fnlen, isofn, isolen, joliet_level, flags, handle, lhandle)
 	u_char *fnend = fn + fnlen, *isoend = isofn + isolen;
 
 	for (; fn < fnend; ) {
-		d = sgetrune(fn, fnend - fn, (char const **)&fn, flags, lhandle);
+		d = sgetrune(fn, fnend - fn, __DECONST(const char **, &fn),
+		    flags, lhandle);
 		if (isofn == isoend)
 			return d;
 		isofn += isochar(isofn, isoend, joliet_level, &c, NULL, flags, handle);

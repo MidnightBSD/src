@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/startup/rcconf 256181 2013-10-09 08:12:26Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -39,8 +39,8 @@ f_include $BSDCFG_SHARE/startup/rcconf.subr
 BSDCFG_LIBE="/usr/libexec/bsdconfig" APP_DIR="140.startup"
 f_include_lang $BSDCFG_LIBE/$APP_DIR/include/messages.subr
 
-ipgm=$( f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" )
-[ $? -eq $SUCCESS -a "$ipgm" ] && pgm="$ipgm"
+f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" ipgm &&
+	pgm="${ipgm:-$pgm}"
 
 ############################################################ GLOBALS
 

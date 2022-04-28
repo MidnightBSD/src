@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2003 Poul-Henning Kamp
  * Copyright (c) 1995 Jason R. Thorpe.
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/ccdconfig/ccdconfig.c 241848 2012-10-22 03:07:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/linker.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_sysvec.c 256119 2013-10-07 16:57:48Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -57,7 +57,7 @@ extern struct sysent ibcs2_sysent[IBCS2_SYS_MAXSYSCALL];
 static int ibcs2_fixup(register_t **, struct image_params *);
 
 struct sysentvec ibcs2_svr3_sysvec = {
-        .sv_size	= sizeof (ibcs2_sysent) / sizeof (ibcs2_sysent[0]),
+        .sv_size	= nitems(ibcs2_sysent),
         .sv_table	= ibcs2_sysent,
         .sv_mask	= 0xff,
         .sv_sigsize	= IBCS2_SIGTBLSZ,
@@ -89,6 +89,8 @@ struct sysentvec ibcs2_svr3_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = NULL,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 
 static int

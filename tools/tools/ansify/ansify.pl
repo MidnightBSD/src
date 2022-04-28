@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tools/ansify/ansify.pl 228953 2011-12-29 12:33:27Z uqs $
+# $FreeBSD$
 #
 
 use v5.6.0;

@@ -1,10 +1,10 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/22/94
-# $FreeBSD: release/10.0.0/usr.sbin/nologin/Makefile 139112 2004-12-21 09:59:45Z ru $
+# $FreeBSD$
 
 PROG=	nologin
 MAN=	nologin.5 nologin.8
 
-SYMLINKS=	${BINDIR}/nologin /sbin/nologin
+SYMLINKS=	..${BINDIR}/nologin /sbin/nologin
 
 # It is important that nologin be statically linked for security
 # reasons.  A dynamic non-setuid binary can be linked against a trojan

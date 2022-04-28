@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxge.c 246128 2013-01-30 18:01:20Z sbz $*/
+/*$FreeBSD$*/
 
 #include <dev/vxge/vxge.h>
 
@@ -234,6 +234,7 @@ _exit0:
 		err = ENXIO;
 	}
 
+	gone_in_dev(ndev, 12, "vxge(4) driver");
 	return (err);
 }
 
@@ -322,7 +323,7 @@ vxge_init_locked(vxge_dev_t *vdev)
 		status = vxge_hal_device_mtu_check(vpath_handle, ifp->if_mtu);
 		if (status != VXGE_HAL_OK) {
 			device_printf(vdev->ndev,
-			    "invalid mtu size %ld specified\n", ifp->if_mtu);
+			    "invalid mtu size %u specified\n", ifp->if_mtu);
 			goto _exit1;
 		}
 
@@ -660,7 +661,7 @@ vxge_mq_send(ifnet_t ifp, mbuf_t m_head)
 
 	if (vdev->config.tx_steering) {
 		i = vxge_vpath_get(vdev, m_head);
-	} else if ((m_head->m_flags & M_FLOWID) != 0) {
+	} else if (M_HASHTYPE_GET(m_head) != M_HASHTYPE_NONE) {
 		i = m_head->m_pkthdr.flowid % vdev->no_of_vpath;
 	}
 
@@ -709,9 +710,9 @@ vxge_mq_send_locked(ifnet_t ifp, vxge_vpath_t *vpath, mbuf_t m_head)
 			VXGE_DRV_STATS(vpath, tx_again);
 			break;
 		}
-		ifp->if_obytes += next->m_pkthdr.len;
+		if_inc_counter(ifp, IFCOUNTER_OBYTES, next->m_pkthdr.len);
 		if (next->m_flags & M_MCAST)
-			ifp->if_omcasts++;
+			if_inc_counter(ifp, IFCOUNTER_OMCASTS, 1);
 
 		/* Send a copy of the frame to the BPF listener */
 		ETHER_BPF_MTAP(ifp, next);
@@ -904,11 +905,11 @@ vxge_tx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_txdl_h txdlh,
 			device_printf(vdev->ndev, "tx transfer code %d\n",
 			    t_code);
 
-			ifp->if_oerrors++;
+			if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			VXGE_DRV_STATS(vpath, tx_tcode);
 			vxge_hal_fifo_handle_tcode(vpath_handle, txdlh, t_code);
 		}
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		txdl_priv = (vxge_txdl_priv_t *) dtr_priv;
 
 		bus_dmamap_unload(vpath->dma_tag_tx, txdl_priv->dma_map);
@@ -996,7 +997,6 @@ vxge_rx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_rxd_h rxdh,
 	vxge_vpath_t *vpath = (vxge_vpath_t *) userdata;
 	vxge_dev_t *vdev = vpath->vdev;
 
-	struct lro_entry *queued = NULL;
 	struct lro_ctrl *lro = &vpath->lro;
 
 	/* get the interface pointer */
@@ -1024,7 +1024,7 @@ vxge_rx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_rxd_h rxdh,
 		mbuf_up = rxd_priv->mbuf_pkt;
 		if (t_code != VXGE_HAL_RING_RXD_T_CODE_OK) {
 
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			VXGE_DRV_STATS(vpath, rx_tcode);
 			status = vxge_hal_ring_handle_tcode(vpath_handle,
 			    rxdh, t_code);
@@ -1070,7 +1070,7 @@ vxge_rx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_rxd_h rxdh,
 		vxge_rx_checksum(ext_info, mbuf_up);
 
 #if __FreeBSD_version >= 800000
-		mbuf_up->m_flags |= M_FLOWID;
+		M_HASHTYPE_SET(mbuf_up, M_HASHTYPE_OPAQUE);
 		mbuf_up->m_pkthdr.flowid = vpath->vp_index;
 #endif
 		/* Post-Read sync for buffers */
@@ -1083,12 +1083,8 @@ vxge_rx_compl(vxge_hal_vpath_h vpath_handle, vxge_hal_rxd_h rxdh,
 	    &dtr_priv, &t_code) == VXGE_HAL_OK);
 
 	/* Flush any outstanding LRO work */
-	if (vpath->lro_enable && vpath->lro.lro_cnt) {
-		while ((queued = SLIST_FIRST(&lro->lro_active)) != NULL) {
-			SLIST_REMOVE_HEAD(&lro->lro_active, next);
-			tcp_lro_flush(lro, queued);
-		}
-	}
+	if (vpath->lro_enable && vpath->lro.lro_cnt)
+		tcp_lro_flush_all(lro);
 
 	return (status);
 }
@@ -1395,7 +1391,7 @@ vxge_ifp_setup(device_t ndev)
 	IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
 	/* IFQ_SET_READY(&ifp->if_snd); */
 
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
 	ifp->if_capabilities |= IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM;
 	ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING | IFCAP_VLAN_MTU;
@@ -2317,7 +2313,7 @@ vxge_vpath_open(vxge_dev_t *vdev)
 		vpath->rx_ticks = ticks;
 
 		vpath->tti_rtimer_val = VXGE_DEFAULT_TTI_RTIMER_VAL;
-		vpath->tti_rtimer_val = VXGE_DEFAULT_TTI_RTIMER_VAL;
+		vpath->rti_rtimer_val = VXGE_DEFAULT_RTI_RTIMER_VAL;
 
 		vpath->tx_intr_coalesce = vdev->config.intr_coalesce;
 		vpath->rx_intr_coalesce = vdev->config.intr_coalesce;
@@ -2908,7 +2904,7 @@ vxge_change_mtu(vxge_dev_t *vdev, unsigned long new_mtu)
 		goto _exit0;
 
 	(vdev->ifp)->if_mtu = new_mtu;
-	device_printf(vdev->ndev, "MTU changed to %ld\n", (vdev->ifp)->if_mtu);
+	device_printf(vdev->ndev, "MTU changed to %u\n", (vdev->ifp)->if_mtu);
 
 	if (vdev->is_initialized) {
 		if_down(vdev->ifp);
@@ -3241,7 +3237,7 @@ vxge_device_hw_info_print(vxge_dev_t *vdev)
 
 	snprintf(vdev->config.nic_attr[VXGE_PRINT_MTU_SIZE],
 	    sizeof(vdev->config.nic_attr[VXGE_PRINT_MTU_SIZE]),
-	    "%lu", vdev->ifp->if_mtu);
+	    "%u", vdev->ifp->if_mtu);
 
 	snprintf(vdev->config.nic_attr[VXGE_PRINT_LRO_MODE],
 	    sizeof(vdev->config.nic_attr[VXGE_PRINT_LRO_MODE]),
@@ -3357,100 +3353,100 @@ vxge_device_hw_info_print(vxge_dev_t *vdev)
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Driver version", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_DRV_VERSION],
+	    vdev->config.nic_attr[VXGE_PRINT_DRV_VERSION],
 	    0, "Driver version");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Serial number", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_SERIAL_NO],
+	    vdev->config.nic_attr[VXGE_PRINT_SERIAL_NO],
 	    0, "Serial number");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Part number", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_PART_NO],
+	    vdev->config.nic_attr[VXGE_PRINT_PART_NO],
 	    0, "Part number");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Firmware version", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_FW_VERSION],
+	    vdev->config.nic_attr[VXGE_PRINT_FW_VERSION],
 	    0, "Firmware version");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Firmware date", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_FW_DATE],
+	    vdev->config.nic_attr[VXGE_PRINT_FW_DATE],
 	    0, "Firmware date");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Link width", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_PCIE_INFO],
+	    vdev->config.nic_attr[VXGE_PRINT_PCIE_INFO],
 	    0, "Link width");
 
 	if (vdev->is_privilaged) {
 		SYSCTL_ADD_STRING(ctx, children,
 		    OID_AUTO, "Function mode", CTLFLAG_RD,
-		    &vdev->config.nic_attr[VXGE_PRINT_FUNC_MODE],
+		    vdev->config.nic_attr[VXGE_PRINT_FUNC_MODE],
 		    0, "Function mode");
 	}
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Interrupt type", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_INTR_MODE],
+	    vdev->config.nic_attr[VXGE_PRINT_INTR_MODE],
 	    0, "Interrupt type");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "VPath(s) opened", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_VPATH_COUNT],
+	    vdev->config.nic_attr[VXGE_PRINT_VPATH_COUNT],
 	    0, "VPath(s) opened");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "Adapter Type", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_ADAPTER_TYPE],
+	    vdev->config.nic_attr[VXGE_PRINT_ADAPTER_TYPE],
 	    0, "Adapter Type");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "pmd port 0", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_PMD_PORTS_0],
+	    vdev->config.nic_attr[VXGE_PRINT_PMD_PORTS_0],
 	    0, "pmd port");
 
 	if (hw_info->ports > 1) {
 
 		SYSCTL_ADD_STRING(ctx, children,
 		    OID_AUTO, "pmd port 1", CTLFLAG_RD,
-		    &vdev->config.nic_attr[VXGE_PRINT_PMD_PORTS_1],
+		    vdev->config.nic_attr[VXGE_PRINT_PMD_PORTS_1],
 		    0, "pmd port");
 
 		if (vdev->is_privilaged) {
 			SYSCTL_ADD_STRING(ctx, children,
 			    OID_AUTO, "Port Mode", CTLFLAG_RD,
-			    &vdev->config.nic_attr[VXGE_PRINT_PORT_MODE],
+			    vdev->config.nic_attr[VXGE_PRINT_PORT_MODE],
 			    0, "Port Mode");
 
 			if (vdev->port_mode != VXGE_HAL_DP_NP_MODE_SINGLE_PORT)
 				SYSCTL_ADD_STRING(ctx, children,
 				    OID_AUTO, "Port Failure", CTLFLAG_RD,
-				    &vdev->config.nic_attr[VXGE_PRINT_PORT_FAILURE],
+				    vdev->config.nic_attr[VXGE_PRINT_PORT_FAILURE],
 				    0, "Port Failure");
 
 			SYSCTL_ADD_STRING(ctx, children,
 			    OID_AUTO, "L2 Switch", CTLFLAG_RD,
-			    &vdev->config.nic_attr[VXGE_PRINT_L2SWITCH_MODE],
+			    vdev->config.nic_attr[VXGE_PRINT_L2SWITCH_MODE],
 			    0, "L2 Switch");
 		}
 	}
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "LRO mode", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_LRO_MODE],
+	    vdev->config.nic_attr[VXGE_PRINT_LRO_MODE],
 	    0, "LRO mode");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "RTH mode", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_RTH_MODE],
+	    vdev->config.nic_attr[VXGE_PRINT_RTH_MODE],
 	    0, "RTH mode");
 
 	SYSCTL_ADD_STRING(ctx, children,
 	    OID_AUTO, "TSO mode", CTLFLAG_RD,
-	    &vdev->config.nic_attr[VXGE_PRINT_TSO_MODE],
+	    vdev->config.nic_attr[VXGE_PRINT_TSO_MODE],
 	    0, "TSO mode");
 }
 
@@ -3713,8 +3709,8 @@ vxge_ioctl_regs(vxge_dev_t *vdev, struct ifreq *ifr)
 	u32 offset, reqd_size = 0;
 	int i, err = EINVAL;
 
-	char *command = (char *) ifr->ifr_data;
-	void *reg_info = (void *) ifr->ifr_data;
+	char *command = ifr_data_get_ptr(ifr);
+	void *reg_info = ifr_data_get_ptr(ifr);
 
 	vxge_vpath_t *vpath;
 	vxge_hal_status_e status = VXGE_HAL_OK;
@@ -3821,7 +3817,7 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 	vxge_drv_stats_t *drv_stat;
 
 	char *buffer = NULL;
-	char *command = (char *) ifr->ifr_data;
+	char *command = ifr_data_get_ptr(ifr);
 	vxge_hal_status_e status = VXGE_HAL_OK;
 
 	switch (*command) {
@@ -3832,7 +3828,8 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 			status = vxge_hal_aux_pci_config_read(vdev->devh,
 			    bufsize, buffer, &retsize);
 			if (status == VXGE_HAL_OK)
-				err = copyout(buffer, ifr->ifr_data, retsize);
+				err = copyout(buffer, ifr_data_get_ptr(ifr),
+				    retsize);
 			else
 				device_printf(vdev->ndev,
 				    "failed pciconfig statistics query\n");
@@ -3851,7 +3848,8 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 			status = vxge_hal_aux_stats_mrpcim_read(vdev->devh,
 			    bufsize, buffer, &retsize);
 			if (status == VXGE_HAL_OK)
-				err = copyout(buffer, ifr->ifr_data, retsize);
+				err = copyout(buffer, ifr_data_get_ptr(ifr),
+				    retsize);
 			else
 				device_printf(vdev->ndev,
 				    "failed mrpcim statistics query\n");
@@ -3867,7 +3865,8 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 			status = vxge_hal_aux_stats_device_read(vdev->devh,
 			    bufsize, buffer, &retsize);
 			if (status == VXGE_HAL_OK)
-				err = copyout(buffer, ifr->ifr_data, retsize);
+				err = copyout(buffer, ifr_data_get_ptr(ifr),
+				    retsize);
 			else
 				device_printf(vdev->ndev,
 				    "failed device statistics query\n");
@@ -3891,7 +3890,7 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 			((vxge_device_hw_info_t *) buffer)->port_failure =
 			    vdev->port_failure;
 
-			err = copyout(buffer, ifr->ifr_data, bufsize);
+			err = copyout(buffer, ifr_data_get_ptr(ifr), bufsize);
 			if (err != 0)
 				device_printf(vdev->ndev,
 				    "failed device hardware info query\n");
@@ -3918,7 +3917,7 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 				    sizeof(vxge_drv_stats_t));
 			}
 
-			err = copyout(drv_stat, ifr->ifr_data, bufsize);
+			err = copyout(drv_stat, ifr_data_get_ptr(ifr), bufsize);
 			if (err != 0)
 				device_printf(vdev->ndev,
 				    "failed driver statistics query\n");
@@ -3928,7 +3927,7 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 		break;
 
 	case VXGE_GET_BANDWIDTH:
-		bw_info = (vxge_bw_info_t *) ifr->ifr_data;
+		bw_info = ifr_data_get_ptr(ifr);
 
 		if ((vdev->config.hw_info.func_id != 0) &&
 		    (vdev->hw_fw_version < VXGE_FW_VERSION(1, 8, 0)))
@@ -3941,7 +3940,8 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 		if (status != VXGE_HAL_OK)
 			break;
 
-		err = copyout(bw_info, ifr->ifr_data, sizeof(vxge_bw_info_t));
+		err = copyout(bw_info, ifr_data_get_ptr(ifr),
+		    sizeof(vxge_bw_info_t));
 		break;
 
 	case VXGE_SET_BANDWIDTH:
@@ -3952,7 +3952,7 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 	case VXGE_SET_PORT_MODE:
 		if (vdev->is_privilaged) {
 			if (vdev->config.hw_info.ports == VXGE_DUAL_PORT_MODE) {
-				port_info = (vxge_port_info_t *) ifr->ifr_data;
+				port_info = ifr_data_get_ptr(ifr);
 				vdev->config.port_mode = port_info->port_mode;
 				err = vxge_port_mode_update(vdev);
 				if (err != ENXIO)
@@ -3969,10 +3969,11 @@ vxge_ioctl_stats(vxge_dev_t *vdev, struct ifreq *ifr)
 	case VXGE_GET_PORT_MODE:
 		if (vdev->is_privilaged) {
 			if (vdev->config.hw_info.ports == VXGE_DUAL_PORT_MODE) {
-				port_info = (vxge_port_info_t *) ifr->ifr_data;
+				port_info = ifr_data_get_ptr(ifr);
 				err = vxge_port_mode_get(vdev, port_info);
 				if (err == VXGE_HAL_OK) {
-					err = copyout(port_info, ifr->ifr_data,
+					err = copyout(port_info,
+					    ifr_data_get_ptr(ifr),
 					    sizeof(vxge_port_info_t));
 				}
 			}
@@ -4008,7 +4009,7 @@ vxge_bw_priority_set(vxge_dev_t *vdev, struct ifreq *ifr)
 	u32 func_id;
 	vxge_bw_info_t *bw_info;
 
-	bw_info = (vxge_bw_info_t *) ifr->ifr_data;
+	bw_info = ifr_data_get_ptr(ifr);
 	func_id = bw_info->func_id;
 
 	vdev->config.bw_info[func_id].priority = bw_info->priority;

@@ -10,7 +10,7 @@
 # template (e.g. because the boot block or the CHRP script have grown),
 # you must install it from ports.
 
-# $FreeBSD: release/10.0.0/release/powerpc/generate-hfs.sh 221465 2011-05-04 23:34:10Z nwhitehorn $
+# $FreeBSD$
 
 HFS_SIZE=400		#Size in 2048-byte blocks of the produced image
 LOADER_SIZE=300k
@@ -32,7 +32,7 @@ cat > bootinfo.txt << EOF
 <CHRP-BOOT>
 <DESCRIPTION>FreeBSD/powerpc bootloader</DESCRIPTION>
 <OS-NAME>FreeBSD</OS-NAME>
-<VERSION> $FreeBSD: head/sys/boot/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10
+<VERSION> $FreeBSD: head/stand/powerpc/boot1.chrp/bootinfo.txt 184490 2008-10
 -31 00:52:31Z nwhitehorn $ </VERSION>
 
 <COMPATIBLE>
@@ -57,7 +57,7 @@ rm loader.tmp
 bzip2 $OUTPUT_FILE
 echo 'HFS boot filesystem created by generate-hfs.sh' > $OUTPUT_FILE.bz2.uu
 echo 'DO NOT EDIT' >> $OUTPUT_FILE.bz2.uu
-echo '$FreeBSD: release/10.0.0/release/powerpc/generate-hfs.sh 221465 2011-05-04 23:34:10Z nwhitehorn $' >> $OUTPUT_FILE.bz2.uu
+echo '$FreeBSD$' >> $OUTPUT_FILE.bz2.uu
 
 uuencode $OUTPUT_FILE.bz2 $OUTPUT_FILE.bz2 >> $OUTPUT_FILE.bz2.uu
 rm $OUTPUT_FILE.bz2

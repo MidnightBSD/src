@@ -8,7 +8,7 @@
  */
 #include <sys/types.h>
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/lsearch.c 105250 2002-10-16 14:29:23Z robert $");
+__FBSDID("$FreeBSD$");
 
 #define	_SEARCH_PRIVATE
 #include <search.h>
@@ -39,11 +39,7 @@ lwork(const void *key, const void *base, size_t *nelp, size_t width,
 {
 	uint8_t *ep, *endp;
 
-	/*
-	 * Cast to an integer value first to avoid the warning for removing
-	 * 'const' via a cast.
-	 */
-	ep = (uint8_t *)(uintptr_t)base;
+	ep = __DECONST(uint8_t *, base);
 	for (endp = (uint8_t *)(ep + width * *nelp); ep < endp; ep += width) {
 		if (compar(key, ep) == 0)
 			return (ep);

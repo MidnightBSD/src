@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/digi/digi_CX_PCI/Makefile 76195 2001-05-02 01:08:09Z brian $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../dev/digi
 KMOD=	digi_CX_PCI

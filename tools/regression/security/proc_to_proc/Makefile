@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/tools/regression/security/proc_to_proc/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=	testuid
-NO_MAN=
+MAN=
 
 ADDITIONAL_FLAGS=-DSETSUGID_SUPPORTED
 #ADDITIONAL_FLAGS=	-DSETSUGID_SUPPORTED_BUT_NO_LIBC_STUB

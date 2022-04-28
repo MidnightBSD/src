@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/fsutil.c 254553 2013-08-20 07:19:58Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -74,6 +74,25 @@ static struct bufarea cgblk;	/* backup buffer for cylinder group blocks */
 static TAILQ_HEAD(buflist, bufarea) bufhead;	/* head of buffer cache list */
 static int numbufs;				/* size of buffer cache */
 static char *buftype[BT_NUMBUFTYPES] = BT_NAMES;
+static struct bufarea *cgbufs;	/* header for cylinder group cache */
+static int flushtries;		/* number of tries to reclaim memory */
+
+void
+fsutilinit(void)
+{
+	diskreads = totaldiskreads = totalreads = 0;
+	bzero(&startpass, sizeof(struct timespec));
+	bzero(&finishpass, sizeof(struct timespec));
+	bzero(&slowio_starttime, sizeof(struct timeval));
+	slowio_delay_usec = 10000;
+	slowio_pollcnt = 0;
+	bzero(&cgblk, sizeof(struct bufarea));
+	TAILQ_INIT(&bufhead);
+	numbufs = 0;
+	/* buftype ? */
+	cgbufs = NULL;
+	flushtries = 0;
+}
 
 int
 ftypeok(union dinode *dp)
@@ -165,7 +184,7 @@ bufinit(void)
 
 	pbp = pdirbp = (struct bufarea *)0;
 	bufp = Malloc((unsigned int)sblock.fs_bsize);
-	if (bufp == 0)
+	if (bufp == NULL)
 		errx(EEXIT, "cannot allocate buffer pool");
 	cgblk.b_un.b_buf = bufp;
 	initbarea(&cgblk, BT_CYLGRP);
@@ -206,7 +225,7 @@ cgget(int cg)
 	struct cg *cgp;
 
 	if (cgbufs == NULL) {
-		cgbufs = Calloc(sblock.fs_ncg, sizeof(struct bufarea));
+		cgbufs = calloc(sblock.fs_ncg, sizeof(struct bufarea));
 		if (cgbufs == NULL)
 			errx(EEXIT, "cannot allocate cylinder group buffers");
 	}
@@ -235,6 +254,8 @@ flushentry(void)
 {
 	struct bufarea *cgbp;
 
+	if (flushtries == sblock.fs_ncg || cgbufs == NULL)
+		return (0);
 	cgbp = &cgbufs[flushtries++];
 	if (cgbp->b_un.b_cg == NULL)
 		return (0);
@@ -344,8 +365,7 @@ flush(int fd, struct bufarea *bp)
 	for (i = 0, j = 0; i < sblock.fs_cssize; i += sblock.fs_bsize, j++) {
 		blwrite(fswritefd, (char *)sblock.fs_csp + i,
 		    fsbtodb(&sblock, sblock.fs_csaddr + j * sblock.fs_frag),
-		    sblock.fs_cssize - i < sblock.fs_bsize ?
-		    sblock.fs_cssize - i : sblock.fs_bsize);
+		    MIN(sblock.fs_cssize - i, sblock.fs_bsize));
 	}
 }
 
@@ -415,13 +435,15 @@ ckfini(int markclean)
 	}
 	if (numbufs != cnt)
 		errx(EEXIT, "panic: lost %d buffers", numbufs - cnt);
-	for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
-		if (cgbufs[cnt].b_un.b_cg == NULL)
-			continue;
-		flush(fswritefd, &cgbufs[cnt]);
-		free(cgbufs[cnt].b_un.b_cg);
+	if (cgbufs != NULL) {
+		for (cnt = 0; cnt < sblock.fs_ncg; cnt++) {
+			if (cgbufs[cnt].b_un.b_cg == NULL)
+				continue;
+			flush(fswritefd, &cgbufs[cnt]);
+			free(cgbufs[cnt].b_un.b_cg);
+		}
+		free(cgbufs);
 	}
-	free(cgbufs);
 	pbp = pdirbp = (struct bufarea *)0;
 	if (cursnapshot == 0 && sblock.fs_clean != markclean) {
 		if ((sblock.fs_clean = markclean) != 0) {
@@ -650,7 +672,7 @@ blzero(int fd, ufs2_daddr_t blk, long size)
 	if (lseek(fd, offset, 0) < 0)
 		rwerror("SEEK BLK", blk);
 	while (size > 0) {
-		len = size > ZEROBUFSIZE ? ZEROBUFSIZE : size;
+		len = MIN(ZEROBUFSIZE, size);
 		if (write(fd, zero, len) != len)
 			rwerror("WRITE BLK", blk);
 		blk += len / dev_bsize;
@@ -695,8 +717,7 @@ check_cgmagic(int cg, struct bufarea *cgbp)
 	cgp->cg_magic = CG_MAGIC;
 	cgp->cg_cgx = cg;
 	cgp->cg_niblk = sblock.fs_ipg;
-	cgp->cg_initediblk = sblock.fs_ipg < 2 * INOPB(&sblock) ?
-	    sblock.fs_ipg : 2 * INOPB(&sblock);
+	cgp->cg_initediblk = MIN(sblock.fs_ipg, 2 * INOPB(&sblock));
 	if (cgbase(&sblock, cg) + sblock.fs_fpg < sblock.fs_size)
 		cgp->cg_ndblk = sblock.fs_fpg;
 	else

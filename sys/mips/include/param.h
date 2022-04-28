@@ -36,7 +36,7 @@
  *	from: Utah Hdr: machparam.h 1.11 89/08/14
  *	from: @(#)param.h	8.1 (Berkeley) 6/10/93
  *	JNPR: param.h,v 1.6.2.1 2007/09/10 07:49:36 girish
- * $FreeBSD: release/10.0.0/sys/mips/include/param.h 250338 2013-05-07 22:46:24Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_INCLUDE_PARAM_H_
@@ -146,12 +146,14 @@
 #define	SEGSHIFT		(PAGE_SHIFT + NPTEPGSHIFT + NPDEPGSHIFT)
 #define	NBSEG			(1ul << SEGSHIFT)
 #define	PDRSHIFT		(PAGE_SHIFT + NPTEPGSHIFT)
+#define	PDRSIZE			(1ul << PDRSHIFT)
 #define	PDRMASK			((1 << PDRSHIFT) - 1)
 #else
 #define	NPDEPGSHIFT		10               /* LOG2(NPTEPG) */
 #define	SEGSHIFT		(PAGE_SHIFT + NPTEPGSHIFT)
 #define	NBSEG			(1 << SEGSHIFT)	/* bytes/segment */
 #define	PDRSHIFT		SEGSHIFT	/* alias for SEG in 32 bit */
+#define	PDRSIZE			(1ul << PDRSHIFT)
 #define	PDRMASK			((1 << PDRSHIFT) - 1)
 #endif
 #define	NBPDR			(1 << PDRSHIFT)	/* bytes/pagedir */
@@ -177,5 +179,9 @@
 #define	ptoa(x)			((x) << PAGE_SHIFT)
 
 #define	pgtok(x)		((x) * (PAGE_SIZE / 1024))
+
+#ifdef _KERNEL
+#define	NO_FUEWORD	1
+#endif
 
 #endif /* !_MIPS_INCLUDE_PARAM_H_ */

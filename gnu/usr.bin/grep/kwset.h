@@ -20,7 +20,7 @@
    The author may be reached (Email) at the address mike@ai.mit.edu,
    or (US mail) as Mike Haertel c/o Free Software Foundation. */
 
-/* $FreeBSD: release/10.0.0/gnu/usr.bin/grep/kwset.h 131557 2004-07-04 10:02:03Z tjr $ */
+/* $FreeBSD$ */
 
 struct kwsmatch
 {

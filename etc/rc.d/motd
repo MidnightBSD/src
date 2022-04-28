@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/motd 197947 2009-10-10 22:17:03Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: motd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="motd"
+desc="Update /etc/motd"
 rcvar="update_motd"
 start_cmd="motd_start"
 stop_cmd=":"

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/ypbind 231667 2012-02-14 10:51:24Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ypbind
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="ypbind"
+desc="NIS domain binding daemon"
 rcvar="nis_client_enable"
 
 load_rc_config $name

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendar.h 255715 2013-09-19 20:17:50Z db $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -167,10 +167,6 @@ void	cal(void);
 void	closecal(FILE *);
 FILE	*opencalin(void);
 FILE	*opencalout(void);
-
-/* calcpp.c */
-void	initcpp(void);
-FILE	*fincludegets(char *buf, int size, FILE *fp);
 
 /* ostern.c / paskha.c */
 int	paskha(int);

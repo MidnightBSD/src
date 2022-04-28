@@ -38,7 +38,7 @@
 #define	__ATH_RATE_SAMPLE_TXSCHEDULES_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/ath_rate/sample/tx_schedules.h 239286 2012-08-15 07:50:42Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #define A(_r) \
     (((_r) == 6)   ? 0 : (((_r) == 9)   ? 1 : (((_r) == 12)  ? 2 : \

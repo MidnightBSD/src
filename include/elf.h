@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/elf.h 174044 2007-11-28 22:09:12Z jb $
+ * $FreeBSD$
  */
 
 /*

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/10.0.0/lib/ncurses/ncurses/pathnames.h 194628 2009-06-22 15:00:15Z rafan $
+ * $FreeBSD$
  */
 
 #define	_PATH_DEF	".termcap /usr/share/misc/termcap /etc/termcap.small"

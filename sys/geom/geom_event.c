@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_event.c 248674 2013-03-24 03:15:20Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -83,7 +83,6 @@ g_waitidle(void)
 {
 
 	g_topology_assert_not();
-	mtx_assert(&Giant, MA_NOTOWNED);
 
 	mtx_lock(&g_eventlock);
 	while (!TAILQ_EMPTY(&g_events))
@@ -206,6 +205,14 @@ g_orphan_register(struct g_provider *pp)
 		KASSERT(cp->geom->orphan != NULL,
 		    ("geom %s has no orphan, class %s",
 		    cp->geom->name, cp->geom->class->name));
+		/*
+		 * XXX: g_dev_orphan method does deferred destroying
+		 * and it is possible, that other event could already
+		 * call the orphan method. Check consumer's flags to
+		 * do not schedule it twice.
+		 */
+		if (cp->flags & G_CF_ORPHAN)
+			continue;
 		cp->flags |= G_CF_ORPHAN;
 		cp->geom->orphan(cp);
 	}

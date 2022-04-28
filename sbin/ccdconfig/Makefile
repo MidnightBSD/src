@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/sbin/ccdconfig/Makefile 198236 2009-10-19 16:00:24Z ru $
+# $FreeBSD$
 
+PACKAGE=ccdconfig
 PROG=	ccdconfig
 MAN=	ccdconfig.8
 
-DPADD=	${LIBGEOM}
-LDADD=	-lgeom
+LIBADD=	geom
 
 .include <bsd.prog.mk>

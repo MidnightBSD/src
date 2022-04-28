@@ -52,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: release/10.0.0/sys/dev/amr/amrio.h 153409 2005-12-14 03:26:49Z scottl $
+ *	$FreeBSD$
  */
 
 /*
@@ -108,7 +108,7 @@ struct amr_user_ioctl {
 
 #define AMR_IO_COMMAND	_IOWR('A', 0x201, struct amr_user_ioctl)
 
-#if defined(__amd64__) || defined(__ia64__)
+#if defined(__amd64__)
 
 struct amr_user_ioctl32 {
     unsigned char	au_cmd[32];	/* command text from userspace */

@@ -23,19 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/rt305x/rt305x_gpiovar.h 220297 2011-04-03 14:39:55Z adrian $
+ * $FreeBSD$
  */
 #ifndef _RT305X_GPIOVAR_H_
 #define _RT305X_GPIOVAR_H_
 
 struct rt305x_gpio_softc {
 	device_t		dev;
-        struct mtx		gpio_mtx;
-        struct resource		*gpio_mem_res;
-        int			gpio_mem_rid;
-        struct resource		*gpio_irq_res;
-        int			gpio_irq_rid;
-        void			*gpio_ih;
+	device_t		busdev;
+	struct mtx		gpio_mtx;
+	struct resource		*gpio_mem_res;
+	int			gpio_mem_rid;
+	struct resource		*gpio_irq_res;
+	int			gpio_irq_rid;
+	void			*gpio_ih;
 	int			gpio_npins;
 	struct gpio_pin		gpio_pins[NGPIO];
 	int			reset_gpio;

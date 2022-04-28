@@ -61,7 +61,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/admpci.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,7 +79,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/admpci.c 227843 2011-11-22 2
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -181,7 +180,7 @@ admpci_attach(device_t dev)
 		panic("bus_space_map failed");
 	}
 
-	device_add_child(dev, "pci", busno);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -356,7 +355,7 @@ admpci_write_ivar(device_t dev, device_t child, int which, uintptr_t result)
 
 static struct resource *
 admpci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
 	return (NULL);

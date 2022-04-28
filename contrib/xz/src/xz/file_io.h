@@ -20,7 +20,10 @@
 
 
 /// is_sparse() accesses the buffer as uint64_t for maximum speed.
-/// Use an union to make sure that the buffer is properly aligned.
+/// The u32 and u64 members must only be access through this union
+/// to avoid strict aliasing violations. Taking a pointer of u8
+/// should be fine as long as uint8_t maps to unsigned char which
+/// can alias anything.
 typedef union {
 	uint8_t u8[IO_BUFFER_SIZE];
 	uint32_t u32[IO_BUFFER_SIZE / sizeof(uint32_t)];
@@ -46,6 +49,13 @@ typedef struct {
 	/// True once end of the source file has been detected.
 	bool src_eof;
 
+	/// For --flush-timeout: True if at least one byte has been read
+	/// since the previous flush or the start of the file.
+	bool src_has_seen_input;
+
+	/// For --flush-timeout: True when flushing is needed.
+	bool flush_needed;
+
 	/// If true, we look for long chunks of zeros and try to create
 	/// a sparse file.
 	bool dest_try_sparse;
@@ -68,8 +78,22 @@ typedef struct {
 extern void io_init(void);
 
 
+#ifndef TUKLIB_DOSLIKE
+/// \brief      Write a byte to user_abort_pipe[1]
+///
+/// This is called from a signal handler.
+extern void io_write_to_user_abort_pipe(void);
+#endif
+
+
 /// \brief      Disable creation of sparse files when decompressing
 extern void io_no_sparse(void);
+
+
+#ifdef ENABLE_SANDBOX
+/// \brief      main() calls this if conditions for sandboxing have been met.
+extern void io_allow_sandbox(void);
+#endif
 
 
 /// \brief      Open the source file
@@ -100,6 +124,19 @@ extern void io_close(file_pair *pair, bool success);
 ///             file zero is returned and pair->src_eof set to true.
 ///             On error, SIZE_MAX is returned and error message printed.
 extern size_t io_read(file_pair *pair, io_buf *buf, size_t size);
+
+
+/// \brief      Fix the position in src_fd
+///
+/// This is used when --single-thream has been specified and decompression
+/// is successful. If the input file descriptor supports seeking, this
+/// function fixes the input position to point to the next byte after the
+/// decompressed stream.
+///
+/// \param      pair        File pair having the source file open for reading
+/// \param      rewind_size How many bytes of extra have been read i.e.
+///                         how much to seek backwards.
+extern void io_fix_src_pos(file_pair *pair, size_t rewind_size);
 
 
 /// \brief      Read from source file from given offset to a buffer

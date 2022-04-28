@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/tools/ippool_y.y 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -10,15 +10,10 @@
 #include <sys/time.h>
 #include <sys/param.h>
 #include <sys/socket.h>
-#if defined(BSD) && (BSD >= 199306)
 # include <sys/cdefs.h>
-#endif
 #include <sys/ioctl.h>
 
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <netinet/in.h>
 
 #include <arpa/inet.h>
@@ -314,11 +309,27 @@ range:	addrmask			{ $$ = calloc(1, sizeof(*$$));
 					  $$->ipn_info = 0;
 					  $$->ipn_addr = $1[0];
 					  $$->ipn_mask = $1[1];
+#ifdef USE_INET6
+					  if (use_inet6)
+						$$->ipn_addr.adf_family =
+							AF_INET6;
+					  else
+#endif
+						$$->ipn_addr.adf_family =
+							AF_INET;
 					}
 	| '!' addrmask			{ $$ = calloc(1, sizeof(*$$));
 					  $$->ipn_info = 1;
 					  $$->ipn_addr = $2[0];
 					  $$->ipn_mask = $2[1];
+#ifdef USE_INET6
+					  if (use_inet6)
+						$$->ipn_addr.adf_family =
+							AF_INET6;
+					  else
+#endif
+						$$->ipn_addr.adf_family =
+							AF_INET;
 					}
 	| YY_STR			{ $$ = add_poolhosts($1);
 					  free($1);

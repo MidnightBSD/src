@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/msk/Makefile 165140 2006-12-13 02:37:48Z yongari $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/msk
+.PATH: ${SRCTOP}/sys/dev/msk
 
 KMOD=	if_msk
 SRCS=	if_msk.c device_if.h bus_if.h pci_if.h

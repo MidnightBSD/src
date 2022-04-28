@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athkey/athkey.c 244963 2013-01-02 18:12:06Z adrian $
+ * $FreeBSD$
  */
 
 #include "diag.h"

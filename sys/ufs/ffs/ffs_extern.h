@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_extern.h 243245 2012-11-18 18:57:19Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_FFS_EXTERN_H
@@ -77,7 +77,6 @@ void	ffs_fserr(struct fs *, ino_t, char *);
 int	ffs_isblock(struct fs *, u_char *, ufs1_daddr_t);
 int	ffs_isfreeblock(struct fs *, u_char *, ufs1_daddr_t);
 void	ffs_load_inode(struct buf *, struct inode *, struct fs *, ino_t);
-int	ffs_mountroot(void);
 void	ffs_oldfscompat_write(struct fs *, struct ufsmount *);
 int	ffs_own_mount(const struct mount *mp);
 int	ffs_reallocblks(struct vop_reallocblks_args *);
@@ -106,6 +105,9 @@ void	ffs_susp_initialize(void);
 void	ffs_susp_uninitialize(void);
 
 #define	FFSV_FORCEINSMQ	0x0001
+
+#define	FFSR_FORCE	0x0001
+#define	FFSR_UNSUSPEND	0x0002
 
 extern struct vop_vector ffs_vnodeops1;
 extern struct vop_vector ffs_fifoops1;
@@ -152,9 +154,7 @@ void	softdep_setup_sbupdate(struct ufsmount *, struct fs *, struct buf *);
 void	softdep_fsync_mountdev(struct vnode *);
 int	softdep_sync_metadata(struct vnode *);
 int	softdep_sync_buf(struct vnode *, struct buf *, int);
-int     softdep_process_worklist(struct mount *, int);
 int     softdep_fsync(struct vnode *);
-int	softdep_waitidle(struct mount *);
 int	softdep_prealloc(struct vnode *, int);
 int	softdep_journal_lookup(struct mount *, struct vnode **);
 void	softdep_journal_freeblocks(struct inode *, struct ucred *, off_t, int);
@@ -167,16 +167,21 @@ void	softdep_freework(struct workhead *);
 /*
  * Things to request flushing in softdep_request_cleanup()
  */
-#define FLUSH_INODES		1
-#define FLUSH_INODES_WAIT	2
-#define FLUSH_BLOCKS		3
-#define FLUSH_BLOCKS_WAIT	4
+#define	FLUSH_INODES		1
+#define	FLUSH_INODES_WAIT	2
+#define	FLUSH_BLOCKS		3
+#define	FLUSH_BLOCKS_WAIT	4
 /*
  * Flag to ffs_syncvnode() to request flushing of data only,
  * but skip the ffs_update() on the inode itself. Used to avoid
  * deadlock when flushing snapshot inodes while holding snaplk.
  */
 #define	NO_INO_UPDT		0x00000001
+/*
+ * Request data sync only from ffs_syncvnode(), not touching even more
+ * metadata than NO_INO_UPDT.
+ */
+#define	DATA_ONLY		0x00000002
 
 int	ffs_rdonly(struct inode *);
 

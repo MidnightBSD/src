@@ -9,7 +9,7 @@ static char sccsid[] = "from: @(#)nlm_prot.x 1.8 87/09/21 Copyr 1987 Sun Micro";
 static char sccsid[] = "from: * @(#)nlm_prot.x	2.1 88/08/01 4.0 RPCSRC";
 #else
 __RCSID("$NetBSD: test.c,v 1.2 1997/10/18 04:01:21 lukem Exp $");
-static const char rcsid[] = "$FreeBSD: release/10.0.0/usr.sbin/rpc.lockd/test.c 74462 2001-03-19 12:50:13Z alfred $";
+static const char rcsid[] = "$FreeBSD$";
 #endif
 #endif				/* not lint */
 

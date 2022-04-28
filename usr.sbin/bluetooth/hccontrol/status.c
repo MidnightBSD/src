@@ -1,5 +1,7 @@
-/*
+/*-
  * status.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: status.c,v 1.2 2003/05/21 22:40:30 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hccontrol/status.c 128079 2004-04-09 23:58:53Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

@@ -2,7 +2,7 @@
  * hwaddr.c - routines that deal with hardware addresses.
  * (i.e. Ethernet)
  *
- * $FreeBSD: release/10.0.0/libexec/bootpd/hwaddr.c 105041 2002-10-13 11:27:36Z kris $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -295,7 +295,7 @@ static u_char conv802table[256] =
 
 void
 haddr_conv802(addr_in, addr_out, len)
-	register u_char *addr_in, *addr_out;
+	u_char *addr_in, *addr_out;
 	int len;
 {
 	u_char *lim;

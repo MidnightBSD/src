@@ -19,7 +19,7 @@
  * Agency (DARPA) and Air Force Research Laboratory, Air Force
  * Materiel Command, USAF, under agreement number F39502-99-1-0512.
  *
- * $FreeBSD: release/10.0.0/include/ftw.h 134244 2004-08-24 13:00:55Z tjr $
+ * $FreeBSD$
  */
 
 #ifndef	_FTW_H

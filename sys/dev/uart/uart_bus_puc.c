@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_bus_puc.c 158124 2006-04-28 21:21:53Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,7 +81,7 @@ uart_puc_probe(device_t dev)
 
 	if (BUS_READ_IVAR(parent, dev, PUC_IVAR_CLOCK, &rclk))
 		rclk = 0;
-	return (uart_bus_probe(dev, 0, rclk, 0, 0));
+	return (uart_bus_probe(dev, 0, 0, rclk, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, puc, uart_puc_driver, uart_devclass, 0, 0);

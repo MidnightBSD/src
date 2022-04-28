@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/ohci/Makefile 188943 2009-02-23 18:32:59Z thompsa $
+# $FreeBSD$
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=	${.CURDIR}/../../..
+S=	${SRCTOP}/sys
 
 .PATH: $S/dev/usb/controller
 

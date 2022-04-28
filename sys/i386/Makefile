@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/i386/Makefile 224063 2011-07-15 17:27:26Z mckusick $
+# $FreeBSD$
 #	@(#)Makefile	8.1 (Berkeley) 6/11/93
 
 # Makefile for i386 links, tags file

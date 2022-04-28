@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994 SigmaSoft, Th. Lockert <tholo@sigmasoft.com>
  * All rights reserved.
  *
@@ -26,15 +28,16 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ipcs/ipcs.c 224016 2011-07-14 14:18:14Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/proc.h>
-#define _KERNEL
-#include <sys/sem.h>
-#include <sys/shm.h>
+#define	_WANT_SYSVMSG_INTERNALS
 #include <sys/msg.h>
-#undef _KERNEL
+#define	_WANT_SYSVSEM_INTERNALS
+#include <sys/sem.h>
+#define	_WANT_SYSVSHM_INTERNALS
+#include <sys/shm.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -112,6 +115,7 @@ main(int argc, char *argv[])
 	char   *core = NULL, *user = NULL, *namelist = NULL;
 	char	kvmoferr[_POSIX2_LINE_MAX];  /* Error buf for kvm_openfiles. */
 	int     i;
+	u_long  shmidx;
 	uid_t   uid = 0;
 
 	while ((i = getopt(argc, argv, "MmQqSsabC:cN:optTu:y")) != -1)
@@ -195,7 +199,7 @@ main(int argc, char *argv[])
 	}
 
 	kget(X_MSGINFO, &msginfo, sizeof(msginfo));
-	if ((display & (MSGINFO | MSGTOTAL))) {
+	if (display & (MSGINFO | MSGTOTAL)) {
 		if (display & MSGTOTAL)
 			print_kmsqtotal(msginfo);
 
@@ -223,15 +227,10 @@ main(int argc, char *argv[])
 
 			printf("\n");
 		}
-	} else
-		if (display & (MSGINFO | MSGTOTAL)) {
-			fprintf(stderr,
-			    "SVID messages facility "
-			    "not configured in the system\n");
-		}
+	}
 
 	kget(X_SHMINFO, &shminfo, sizeof(shminfo));
-	if ((display & (SHMINFO | SHMTOTAL))) {
+	if (display & (SHMINFO | SHMTOTAL)) {
 
 		if (display & SHMTOTAL)
 			print_kshmtotal(shminfo);
@@ -247,26 +246,21 @@ main(int argc, char *argv[])
 
 			print_kshmheader(option);
 
-			for (i = 0; i < shminfo.shmmni; i += 1) {
-				if (kxshmids[i].u.shm_perm.mode & 0x0800) {
+			for (shmidx = 0; shmidx < shminfo.shmmni; shmidx += 1) {
+				if (kxshmids[shmidx].u.shm_perm.mode & 0x0800) {
 					if (user &&
-					    uid != kxshmids[i].u.shm_perm.uid)
+					    uid != kxshmids[shmidx].u.shm_perm.uid)
 						continue;
 
-					print_kshmptr(i, option, &kxshmids[i]);
+					print_kshmptr(shmidx, option, &kxshmids[shmidx]);
 				}
 			}
 			printf("\n");
 		}
-	} else
-		if (display & (SHMINFO | SHMTOTAL)) {
-			fprintf(stderr,
-			    "SVID shared memory facility "
-			    "not configured in the system\n");
-		}
+	}
 
 	kget(X_SEMINFO, &seminfo, sizeof(seminfo));
-	if ((display & (SEMINFO | SEMTOTAL))) {
+	if (display & (SEMINFO | SEMTOTAL)) {
 		struct semid_kernel *kxsema;
 		size_t kxsema_len;
 
@@ -295,12 +289,7 @@ main(int argc, char *argv[])
 
 			printf("\n");
 		}
-	} else
-		if (display & (SEMINFO | SEMTOTAL)) {
-			fprintf(stderr,
-			    "SVID semaphores facility "
-			    "not configured in the system\n");
-		}
+	}
 
 	if (!use_sysctl)
 		kvm_close(kd);
@@ -309,22 +298,22 @@ main(int argc, char *argv[])
 }
 
 void
-print_kmsqtotal(struct msginfo msginfo)
+print_kmsqtotal(struct msginfo local_msginfo)
 {
 
 	printf("msginfo:\n");
 	printf("\tmsgmax: %12d\t(max characters in a message)\n",
-	    msginfo.msgmax);
+	    local_msginfo.msgmax);
 	printf("\tmsgmni: %12d\t(# of message queues)\n",
-	    msginfo.msgmni);
+	    local_msginfo.msgmni);
 	printf("\tmsgmnb: %12d\t(max characters in a message queue)\n",
-	    msginfo.msgmnb);
+	    local_msginfo.msgmnb);
 	printf("\tmsgtql: %12d\t(max # of messages in system)\n",
-	    msginfo.msgtql);
+	    local_msginfo.msgtql);
 	printf("\tmsgssz: %12d\t(size of a message segment)\n",
-	    msginfo.msgssz);
+	    local_msginfo.msgssz);
 	printf("\tmsgseg: %12d\t(# of message segments in system)\n\n",
-	    msginfo.msgseg);
+	    local_msginfo.msgseg);
 }
 
 void print_kmsqheader(int option)
@@ -390,20 +379,20 @@ print_kmsqptr(int i, int option, struct msqid_kernel *kmsqptr)
 }
 
 void
-print_kshmtotal(struct shminfo shminfo)
+print_kshmtotal(struct shminfo local_shminfo)
 {
 
 	printf("shminfo:\n");
 	printf("\tshmmax: %12lu\t(max shared memory segment size)\n",
-	    shminfo.shmmax);
+	    local_shminfo.shmmax);
 	printf("\tshmmin: %12lu\t(min shared memory segment size)\n",
-	    shminfo.shmmin);
+	    local_shminfo.shmmin);
 	printf("\tshmmni: %12lu\t(max number of shared memory identifiers)\n",
-	    shminfo.shmmni);
+	    local_shminfo.shmmni);
 	printf("\tshmseg: %12lu\t(max shared memory segments per process)\n",
-	    shminfo.shmseg);
+	    local_shminfo.shmseg);
 	printf("\tshmall: %12lu\t(max amount of shared memory in pages)\n\n",
-	    shminfo.shmall);
+	    local_shminfo.shmall);
 }
 
 void
@@ -470,28 +459,28 @@ print_kshmptr(int i, int option, struct shmid_kernel *kshmptr)
 }
 
 void
-print_ksemtotal(struct seminfo seminfo)
+print_ksemtotal(struct seminfo local_seminfo)
 {
 
 	printf("seminfo:\n");
 	printf("\tsemmni: %12d\t(# of semaphore identifiers)\n",
-	    seminfo.semmni);
+	    local_seminfo.semmni);
 	printf("\tsemmns: %12d\t(# of semaphores in system)\n",
-	    seminfo.semmns);
+	    local_seminfo.semmns);
 	printf("\tsemmnu: %12d\t(# of undo structures in system)\n",
-	    seminfo.semmnu);
+	    local_seminfo.semmnu);
 	printf("\tsemmsl: %12d\t(max # of semaphores per id)\n",
-	    seminfo.semmsl);
+	    local_seminfo.semmsl);
 	printf("\tsemopm: %12d\t(max # of operations per semop call)\n",
-	    seminfo.semopm);
+	    local_seminfo.semopm);
 	printf("\tsemume: %12d\t(max # of undo entries per process)\n",
-	    seminfo.semume);
+	    local_seminfo.semume);
 	printf("\tsemusz: %12d\t(size in bytes of undo structure)\n",
-	    seminfo.semusz);
+	    local_seminfo.semusz);
 	printf("\tsemvmx: %12d\t(semaphore maximum value)\n",
-	    seminfo.semvmx);
+	    local_seminfo.semvmx);
 	printf("\tsemaem: %12d\t(adjust on exit max value)\n\n",
-	    seminfo.semaem);
+	    local_seminfo.semaem);
 }
 
 void

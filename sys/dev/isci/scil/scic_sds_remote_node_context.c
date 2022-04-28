@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_remote_node_context.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
 * @file
@@ -302,7 +302,7 @@ void scic_sds_remote_node_context_setup_to_resume(
 
 /**
 * This method will setup the remote node context object so it will
-* transistion to its final state.
+* transition to its final state.
 *
 * @param[in] this_rnc
 * @param[in] the_callback
@@ -897,7 +897,7 @@ SCI_STATUS scic_sds_remote_node_context_tx_suspended_state_resume_handler(
 *
 * @param[in] this_rnc The remote node context which is to receive the task
 *       request.
-* @param[in] the_request The task request to be transmitted to to the remote
+* @param[in] the_request The task request to be transmitted to the remote
 *       target device.
 *
 * @return SCI_STATUS

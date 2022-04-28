@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/hme/Makefile 178762 2008-05-04 14:59:25Z marius $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/hme
+.PATH: ${SRCTOP}/sys/dev/hme
 
 KMOD=	if_hme
 SRCS=	bus_if.h device_if.h if_hme.c if_hme_pci.c ${if_hme_sbus} miibus_if.h

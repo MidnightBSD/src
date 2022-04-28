@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/xlocale/_ctype.h 243032 2012-11-14 17:44:37Z demon $
+ * $FreeBSD$
  */
 
 
@@ -119,7 +119,7 @@ __sbistype_l(__ct_rune_t __c, unsigned long __f, locale_t __loc)
 		{ return __sbistype_l(__c, __cat, __l); }
 #endif
 
-XLOCALE_ISCTYPE(alnum, _CTYPE_A|_CTYPE_D)
+XLOCALE_ISCTYPE(alnum, _CTYPE_A|_CTYPE_D|_CTYPE_N)
 XLOCALE_ISCTYPE(alpha, _CTYPE_A)
 XLOCALE_ISCTYPE(blank, _CTYPE_B)
 XLOCALE_ISCTYPE(cntrl, _CTYPE_C)
@@ -128,7 +128,7 @@ XLOCALE_ISCTYPE(graph, _CTYPE_G)
 XLOCALE_ISCTYPE(hexnumber, _CTYPE_X)
 XLOCALE_ISCTYPE(ideogram, _CTYPE_I)
 XLOCALE_ISCTYPE(lower, _CTYPE_L)
-XLOCALE_ISCTYPE(number, _CTYPE_D)
+XLOCALE_ISCTYPE(number, _CTYPE_D|_CTYPE_N)
 XLOCALE_ISCTYPE(phonogram, _CTYPE_Q)
 XLOCALE_ISCTYPE(print, _CTYPE_R)
 XLOCALE_ISCTYPE(punct, _CTYPE_P)

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libcrypt/misc.c 220497 2011-04-09 14:02:04Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

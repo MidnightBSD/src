@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/usr.sbin/apmd/contrib/pccardq.c 208075 2010-05-14 14:26:56Z uqs $ */
+/* $FreeBSD$ */
 
 #include <err.h>
 #include <errno.h>

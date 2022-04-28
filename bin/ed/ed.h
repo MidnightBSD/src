@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ed.h,v 1.5 1994/02/01 00:34:39 alm Exp
- * $FreeBSD: release/10.0.0/bin/ed/ed.h 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -115,7 +115,7 @@ if (--mutex == 0) { \
 /* REALLOC: assure at least a minimum size for buffer b */
 #define REALLOC(b,n,i,err) \
 if ((i) > (n)) { \
-	int ti = (n); \
+	size_t ti = (n); \
 	char *ts; \
 	SPL1(); \
 	if ((b) != NULL) { \
@@ -141,7 +141,7 @@ if ((i) > (n)) { \
 /* REALLOC: assure at least a minimum size for buffer b */
 #define REALLOC(b,n,i,err) \
 if ((i) > (n)) { \
-	int ti = (n); \
+	size_t ti = (n); \
 	char *ts; \
 	SPL1(); \
 	if ((ts = (char *) realloc((b), ti += max((i), MINBUFSZ))) == NULL) { \

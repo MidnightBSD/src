@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/rfcomm_pppd_server 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: rfcomm_pppd_server
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="rfcomm_pppd_server"
+desc="RFCOMM PPP daemon"
 rcvar="rfcomm_pppd_server_enable"
 command="/usr/sbin/rfcomm_pppd"
 start_cmd="rfcomm_pppd_server_start"

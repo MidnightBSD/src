@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/bin/ed/POSIX 222178 2011-05-22 14:03:46Z uqs $
+$FreeBSD$
 
 This version of ed(1) is not strictly POSIX compliant, as described in
 the POSIX 1003.2 document.  The following is a summary of the omissions,

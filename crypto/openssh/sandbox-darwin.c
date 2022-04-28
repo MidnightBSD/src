@@ -31,6 +31,7 @@
 
 #include "log.h"
 #include "sandbox.h"
+#include "monitor.h"
 #include "xmalloc.h"
 
 /* Darwin/OS X sandbox */
@@ -40,7 +41,7 @@ struct ssh_sandbox {
 };
 
 struct ssh_sandbox *
-ssh_sandbox_init(void)
+ssh_sandbox_init(struct monitor *monitor)
 {
 	struct ssh_sandbox *box;
 

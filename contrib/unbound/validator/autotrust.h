@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -47,7 +47,9 @@ struct val_anchors;
 struct trust_anchor;
 struct ub_packed_rrset_key;
 struct module_env;
+struct module_qstate;
 struct val_env;
+struct sldns_buffer;
 
 /** Autotrust anchor states */
 typedef enum {
@@ -57,7 +59,7 @@ typedef enum {
 	AUTR_STATE_MISSING = 3,
 	AUTR_STATE_REVOKED = 4,
 	AUTR_STATE_REMOVED = 5
-} autr_state_t;
+} autr_state_type;
 
 /** 
  * Autotrust metadata for one trust anchor key.
@@ -66,11 +68,13 @@ struct autr_ta {
 	/** next key */
 	struct autr_ta* next;
 	/** the RR */
-	ldns_rr* rr;
+	uint8_t* rr;
+	/** length of rr */
+	size_t rr_len, dname_len;
 	/** last update of key state (new pending count keeps date the same) */
 	time_t last_change;
 	/** 5011 state */
-	autr_state_t s;
+	autr_state_type s;
 	/** pending count */
 	uint8_t pending_count;
 	/** fresh TA was seen */
@@ -87,7 +91,7 @@ struct autr_point_data {
 	/** file to store the trust point in. chrootdir already applied. */
 	char* file;
 	/** rbtree node for probe sort, key is struct trust_anchor */
-	rbnode_t pnode;
+	rbnode_type pnode;
 
 	/** the keys */
 	struct autr_ta* keys;
@@ -104,9 +108,9 @@ struct autr_point_data {
 	time_t next_probe_time;
 
 	/** when to query if !failed */
-	uint32_t query_interval;
+	time_t query_interval;
 	/** when to retry if failed */
-	uint32_t retry_time;
+	time_t retry_time;
 
 	/** 
 	 * How many times did it fail. diagnostic only (has no effect).
@@ -123,7 +127,7 @@ struct autr_point_data {
 struct autr_global_data {
 	/** rbtree of autotrust anchors sorted by next probe time.
 	 * When time is equal, sorted by anchor class, name. */
-	rbtree_t probe;
+	rbtree_type probe;
 };
 
 /**
@@ -151,7 +155,7 @@ size_t autr_get_num_anchors(struct val_anchors* anchors);
  * @return time of next probe (in seconds from now).
  * 	If 0, then there is no next probe anymore (trust points deleted).
  */
-uint32_t autr_probe_timer(struct module_env* env);
+time_t autr_probe_timer(struct module_env* env);
 
 /** probe tree compare function */
 int probetree_cmp(const void* x, const void* y);
@@ -185,12 +189,14 @@ void autr_point_delete(struct trust_anchor* tp);
  * @param tp: trust anchor to process.
  * @param dnskey_rrset: DNSKEY rrset probed (can be NULL if bad prime result).
  * 	allocated in a region. Has not been validated yet.
+ * @param qstate: qstate with region.
  * @return false if trust anchor was revoked completely.
  * 	Otherwise logs errors to log, does not change return value.
  * 	On errors, likely the trust point has been unchanged.
  */
 int autr_process_prime(struct module_env* env, struct val_env* ve,
-	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset);
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset,
+	struct module_qstate* qstate);
 
 /**
  * Debug printout of rfc5011 tracked anchors
@@ -199,7 +205,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 void autr_debug_print(struct val_anchors* anchors);
 
 /** callback for query answer to 5011 probe */
-void probe_answer_cb(void* arg, int rcode, ldns_buffer* buf, 
-	enum sec_status sec, char* errinf);
+void probe_answer_cb(void* arg, int rcode, struct sldns_buffer* buf, 
+	enum sec_status sec, char* errinf, int was_ratelimited);
 
 #endif /* VALIDATOR_AUTOTRUST_H */

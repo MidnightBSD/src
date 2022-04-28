@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_pci_link.c 249767 2013-04-22 15:51:06Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -577,6 +577,9 @@ acpi_pci_link_search_irq(int bus, int device, int pin)
 	uint8_t func, maxfunc;
 
 	/* See if we have a valid device at function 0. */
+	value = pci_cfgregread(bus, device, 0, PCIR_VENDOR, 2);
+	if (value == PCIV_INVALID)
+		return (PCI_INVALID_IRQ);
 	value = pci_cfgregread(bus, device, 0, PCIR_HDRTYPE, 1);
 	if ((value & PCIM_HDRTYPE) > PCI_MAXHDRTYPE)
 		return (PCI_INVALID_IRQ);
@@ -587,8 +590,8 @@ acpi_pci_link_search_irq(int bus, int device, int pin)
 
 	/* Scan all possible functions at this device. */
 	for (func = 0; func <= maxfunc; func++) {
-		value = pci_cfgregread(bus, device, func, PCIR_DEVVENDOR, 4);
-		if (value == 0xffffffff)
+		value = pci_cfgregread(bus, device, func, PCIR_VENDOR, 2);
+		if (value == PCIV_INVALID)
 			continue;
 		value = pci_cfgregread(bus, device, func, PCIR_INTPIN, 1);
 

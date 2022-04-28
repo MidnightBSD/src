@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/gxemul/disk/gxemul_disk.c 255212 2013-09-04 20:34:36Z gonzo $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/gxemul/disk/gxemul_disk.c 255212 2013-09-04 20:34:36Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -158,7 +158,7 @@ gxemul_disk_probe(device_t dev)
 {
 	device_set_desc(dev, "GXemul test disk");
 
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static void

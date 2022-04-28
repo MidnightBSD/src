@@ -22,9 +22,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/sn.4 151046 2005-10-07 02:32:16Z trhodes $
+.\" $FreeBSD$
 .\"
-.Dd July 16, 2005
+.Dd October 24, 2018
 .Dt SN 4
 .Os
 .Sh NAME
@@ -44,6 +44,14 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_sn_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 13.0
+and later.
+See https://github.com/freebsd/fcp/blob/master/fcp-0101.md for more
+information.
 .Sh DESCRIPTION
 The
 .Nm

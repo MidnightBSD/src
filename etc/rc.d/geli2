@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/geli2 239595 2012-08-22 22:17:35Z delphij $
+# $FreeBSD$
 #
 
 # PROVIDE: geli2
@@ -34,6 +34,7 @@
 . /etc/rc.subr
 
 name="geli2"
+desc="GELI disk encryption"
 start_cmd="geli2_start"
 stop_cmd=":"
 

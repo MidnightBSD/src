@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5416/ar5416_spectral.c 244950 2013-01-02 03:56:20Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -119,7 +119,7 @@ ar5416ConfigureSpectralScan(struct ath_hal *ah, HAL_SPECTRAL_PARAM *ss)
 	} else {
 		if (ss->ss_count != HAL_SPECTRAL_PARAM_NOVAL) {
 			/*
-			 * In Merlin, for continous scan, scan_count = 128.
+			 * In Merlin, for continuous scan, scan_count = 128.
 			 * In case of Kiwi, this value should be 0
 			 */
 			if (ss->ss_count == 128)

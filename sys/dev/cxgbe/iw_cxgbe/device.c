@@ -30,7 +30,7 @@
  * SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgbe/iw_cxgbe/device.c 256819 2013-10-21 01:10:37Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -44,8 +44,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgbe/iw_cxgbe/device.c 256819 2013-1
 
 #ifdef TCP_OFFLOAD
 #include "iw_cxgbe.h"
-
-int spg_creds = 2; /* Default status page size is 2 credits = 128B */
 
 void
 c4iw_release_dev_ucontext(struct c4iw_rdev *rdev,
@@ -68,7 +66,7 @@ c4iw_release_dev_ucontext(struct c4iw_rdev *rdev,
 		kfree(entry);
 	}
 
-	list_for_each_safe(pos, nxt, &uctx->qpids) {
+	list_for_each_safe(pos, nxt, &uctx->cqids) {
 		entry = list_entry(pos, struct c4iw_qid_list, entry);
 		list_del_init(&entry->entry);
 		kfree(entry);
@@ -89,27 +87,39 @@ static int
 c4iw_rdev_open(struct c4iw_rdev *rdev)
 {
 	struct adapter *sc = rdev->adap;
+	struct sge_params *sp = &sc->params.sge;
 	int rc;
+	unsigned short ucq_density = 1 << sp->iq_s_qpp; /* # of user CQs/page */
+	unsigned short udb_density = 1 << sp->eq_s_qpp; /* # of user DB/page */
+
 
 	c4iw_init_dev_ucontext(rdev, &rdev->uctx);
 
-	/* Save the status page size set by if_cxgbe */
-	spg_creds = (t4_read_reg(sc, A_SGE_CONTROL) & F_EGRSTATUSPAGESIZE) ?
-	    2 : 1;
-
-	/* XXX: we can probably make this work */
-	if (sc->sge.eq_s_qpp > PAGE_SHIFT || sc->sge.iq_s_qpp > PAGE_SHIFT) {
-		device_printf(sc->dev,
-		    "doorbell density too high (eq %d, iq %d, pg %d).\n",
-		    sc->sge.eq_s_qpp, sc->sge.eq_s_qpp, PAGE_SHIFT);
+	/*
+	 * This implementation assumes udb_density == ucq_density!  Eventually
+	 * we might need to support this but for now fail the open. Also the
+	 * cqid and qpid range must match for now.
+	 */
+	if (udb_density != ucq_density) {
+		device_printf(sc->dev, "unsupported udb/ucq densities %u/%u\n",
+		    udb_density, ucq_density);
+		rc = -EINVAL;
+		goto err1;
+	}
+	if (sc->vres.qp.start != sc->vres.cq.start ||
+	    sc->vres.qp.size != sc->vres.cq.size) {
+		device_printf(sc->dev, "%s: unsupported qp and cq id ranges "
+			"qp start %u size %u cq start %u size %u\n", __func__,
+			sc->vres.qp.start, sc->vres.qp.size, sc->vres.cq.start,
+			sc->vres.cq.size);
 		rc = -EINVAL;
 		goto err1;
 	}
 
-	rdev->qpshift = PAGE_SHIFT - sc->sge.eq_s_qpp;
-	rdev->qpmask = (1 << sc->sge.eq_s_qpp) - 1;
-	rdev->cqshift = PAGE_SHIFT - sc->sge.iq_s_qpp;
-	rdev->cqmask = (1 << sc->sge.iq_s_qpp) - 1;
+	rdev->qpshift = PAGE_SHIFT - sp->eq_s_qpp;
+	rdev->qpmask = udb_density - 1;
+	rdev->cqshift = PAGE_SHIFT - sp->iq_s_qpp;
+	rdev->cqmask = ucq_density - 1;
 
 	if (c4iw_num_stags(rdev) == 0) {
 		rc = -EINVAL;
@@ -137,8 +147,34 @@ c4iw_rdev_open(struct c4iw_rdev *rdev)
 		device_printf(sc->dev, "error %d initializing rqt pool\n", rc);
 		goto err3;
 	}
+	rdev->status_page = (struct t4_dev_status_page *)
+				__get_free_page(GFP_KERNEL);
+	if (!rdev->status_page) {
+		rc = -ENOMEM;
+		goto err4;
+	}
+	rdev->status_page->qp_start = sc->vres.qp.start;
+	rdev->status_page->qp_size = sc->vres.qp.size;
+	rdev->status_page->cq_start = sc->vres.cq.start;
+	rdev->status_page->cq_size = sc->vres.cq.size;
 
+	/* T5 and above devices don't need Doorbell recovery logic,
+	 * so db_off is always set to '0'.
+	 */
+	rdev->status_page->db_off = 0;
+
+	rdev->status_page->wc_supported = rdev->adap->iwt.wc_en;
+
+	rdev->free_workq = create_singlethread_workqueue("iw_cxgb4_free");
+	if (!rdev->free_workq) {
+		rc = -ENOMEM;
+		goto err5;
+	}
 	return (0);
+err5:
+	free_page((unsigned long)rdev->status_page);
+err4:
+	c4iw_rqtpool_destroy(rdev);
 err3:
 	c4iw_pblpool_destroy(rdev);
 err2:
@@ -149,6 +185,7 @@ err1:
 
 static void c4iw_rdev_close(struct c4iw_rdev *rdev)
 {
+	free_page((unsigned long)rdev->status_page);
 	c4iw_pblpool_destroy(rdev);
 	c4iw_rqtpool_destroy(rdev);
 	c4iw_destroy_resource(&rdev->resource);
@@ -178,6 +215,29 @@ c4iw_alloc(struct adapter *sc)
 	}
 	iwsc->rdev.adap = sc;
 
+	/* init various hw-queue params based on lld info */
+	iwsc->rdev.hw_queue.t4_eq_status_entries =
+		sc->params.sge.spg_len / EQ_ESIZE;
+	iwsc->rdev.hw_queue.t4_max_eq_size = 65520;
+	iwsc->rdev.hw_queue.t4_max_iq_size = 65520;
+	iwsc->rdev.hw_queue.t4_max_rq_size = 8192 -
+		iwsc->rdev.hw_queue.t4_eq_status_entries - 1;
+	iwsc->rdev.hw_queue.t4_max_sq_size =
+		iwsc->rdev.hw_queue.t4_max_eq_size -
+		iwsc->rdev.hw_queue.t4_eq_status_entries - 1;
+	iwsc->rdev.hw_queue.t4_max_qp_depth =
+		iwsc->rdev.hw_queue.t4_max_rq_size;
+	iwsc->rdev.hw_queue.t4_max_cq_depth =
+		iwsc->rdev.hw_queue.t4_max_iq_size - 2;
+	iwsc->rdev.hw_queue.t4_stat_len = iwsc->rdev.adap->params.sge.spg_len;
+
+	/* As T5 and above devices support BAR2 kernel doorbells & WC, we map
+	 * all of BAR2, for both User and Kernel Doorbells-GTS.
+	 */
+	iwsc->rdev.bar2_kva = (void __iomem *)((u64)iwsc->rdev.adap->udbs_base);
+	iwsc->rdev.bar2_pa = vtophys(iwsc->rdev.adap->udbs_base);
+	iwsc->rdev.bar2_len = rman_get_size(iwsc->rdev.adap->udbs_res);
+
 	rc = c4iw_rdev_open(&iwsc->rdev);
 	if (rc != 0) {
 		device_printf(sc->dev, "Unable to open CXIO rdev (%d)\n", rc);
@@ -190,6 +250,7 @@ c4iw_alloc(struct adapter *sc)
 	idr_init(&iwsc->mmidr);
 	spin_lock_init(&iwsc->lock);
 	mutex_init(&iwsc->rdev.stats.lock);
+	iwsc->avail_ird = iwsc->rdev.adap->params.max_ird_adapter;
 
 	return (iwsc);
 }
@@ -213,7 +274,13 @@ c4iw_activate(struct adapter *sc)
 
 	ASSERT_SYNCHRONIZED_OP(sc);
 
-	if (isset(&sc->offload_map, MAX_NPORTS)) {
+	if (is_t4(sc)) {
+		device_printf(sc->dev, "No iWARP support for T4 devices, "
+				"please install T5 or above devices.\n");
+		return (ENOSYS);
+	}
+
+	if (uld_active(sc, ULD_IWARP)) {
 		KASSERT(0, ("%s: RDMA already eanbled on sc %p", __func__, sc));
 		return (0);
 	}
@@ -232,7 +299,6 @@ c4iw_activate(struct adapter *sc)
 	}
 
 	sc->iwarp_softc = iwsc;
-	c4iw_cm_init_cpl(sc);
 
 	rc = -c4iw_register_device(iwsc);
 	if (rc) {
@@ -265,9 +331,9 @@ c4iw_activate_all(struct adapter *sc, void *arg __unused)
 	if (begin_synchronized_op(sc, NULL, SLEEP_OK | INTR_OK, "t4iwact") != 0)
 		return;
 
-	if (!isset(&sc->offload_map, MAX_NPORTS) &&
-	    t4_activate_uld(sc, ULD_IWARP) == 0)
-		setbit(&sc->offload_map, MAX_NPORTS);
+	/* Activate iWARP if any port on this adapter has IFCAP_TOE enabled. */
+	if (sc->offload_map && !uld_active(sc, ULD_IWARP))
+		(void) t4_activate_uld(sc, ULD_IWARP);
 
 	end_synchronized_op(sc, 0);
 }
@@ -279,9 +345,8 @@ c4iw_deactivate_all(struct adapter *sc, void *arg __unused)
 	if (begin_synchronized_op(sc, NULL, SLEEP_OK | INTR_OK, "t4iwdea") != 0)
 		return;
 
-	if (isset(&sc->offload_map, MAX_NPORTS) &&
-	    t4_deactivate_uld(sc, ULD_IWARP) == 0)
-		clrbit(&sc->offload_map, MAX_NPORTS);
+	if (uld_active(sc, ULD_IWARP))
+	    (void) t4_deactivate_uld(sc, ULD_IWARP);
 
 	end_synchronized_op(sc, 0);
 }
@@ -321,8 +386,6 @@ c4iw_mod_unload(void)
 }
 
 #endif
-#undef MODULE_VERSION
-#include <sys/module.h>
 
 /*
  * t4_tom won't load on kernels without TCP_OFFLOAD and this module's dependency
@@ -339,7 +402,7 @@ c4iw_modevent(module_t mod, int cmd, void *arg)
 	case MOD_LOAD:
 		rc = c4iw_mod_load();
 		if (rc == 0)
-			printf("iw_cxgbe: Chelsio T4/T5 RDMA driver loaded.\n");
+			printf("iw_cxgbe: Chelsio T5/T6 RDMA driver loaded.\n");
 		break;
 
 	case MOD_UNLOAD:
@@ -366,4 +429,5 @@ MODULE_VERSION(iw_cxgbe, 1);
 MODULE_DEPEND(iw_cxgbe, t4nex, 1, 1, 1);
 MODULE_DEPEND(iw_cxgbe, t4_tom, 1, 1, 1);
 MODULE_DEPEND(iw_cxgbe, ibcore, 1, 1, 1);
+MODULE_DEPEND(iw_cxgbe, linuxkpi, 1, 1, 1);
 DECLARE_MODULE(iw_cxgbe, c4iw_mod_data, SI_SUB_EXEC, SI_ORDER_ANY);

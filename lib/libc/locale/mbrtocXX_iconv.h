@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/mbrtocXX_iconv.h 252547 2013-07-03 07:03:19Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 
@@ -99,8 +99,7 @@ mbrtocXX_l(charXX_t * __restrict pc, const char * __restrict s, size_t n,
 
 	/* Convert as few characters to the dst buffer as possible. */
 	for (i = 0; ; i++) {
-		const char *src;
-		char *dst;
+		char *src, *dst;
 		size_t srcleft, dstleft, invlen;
 		int err;
 

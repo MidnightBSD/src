@@ -1,5 +1,5 @@
-/* $FreeBSD: release/10.0.0/lib/libiconv_modules/DECHanyu/citrus_dechanyu.c 252583 2013-07-03 18:27:45Z peter $ */
-/* $NetBSD: citrus_dechanyu.c,v 1.3 2008/06/14 16:01:07 tnozaki Exp $ */
+/* $FreeBSD$ */
+/* $NetBSD: citrus_dechanyu.c,v 1.4 2011/11/19 18:20:13 tnozaki Exp $ */
 
 /*-
  * Copyright (c)2007 Citrus Project,
@@ -78,6 +78,7 @@ _citrus_DECHanyu_init_state(_DECHanyuEncodingInfo * __restrict ei __unused,
 	psenc->chlen = 0;
 }
 
+#if 0
 static __inline void
 /*ARGSUSED*/
 _citrus_DECHanyu_pack_state(_DECHanyuEncodingInfo * __restrict ei __unused,
@@ -96,6 +97,7 @@ _citrus_DECHanyu_unpack_state(_DECHanyuEncodingInfo * __restrict ei __unused,
 
 	memcpy((void *)psenc, pspriv, sizeof(*psenc));
 }
+#endif
 
 static void
 /*ARGSUSED*/
@@ -163,10 +165,10 @@ is_94charset(int c)
 static int
 /*ARGSUSED*/
 _citrus_DECHanyu_mbrtowc_priv(_DECHanyuEncodingInfo * __restrict ei,
-    wchar_t * __restrict pwc, const char ** __restrict s, size_t n,
+    wchar_t * __restrict pwc, char ** __restrict s, size_t n,
     _DECHanyuState * __restrict psenc, size_t * __restrict nresult)
 {
-	const char *s0;
+	char *s0;
 	wchar_t wc;
 	int ch;
 

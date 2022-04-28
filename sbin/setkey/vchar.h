@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sbin/setkey/vchar.h 62583 2000-07-04 16:22:05Z itojun $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: vchar.h,v 1.2 2000/06/07 00:29:14 itojun Exp $	*/
 
 /*

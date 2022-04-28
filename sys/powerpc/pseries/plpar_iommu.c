@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/plpar_iommu.c 255643 2013-09-17 17:37:04Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -69,14 +69,15 @@ struct dma_window {
 };
 
 int
-phyp_iommu_set_dma_tag(device_t dev, device_t child, bus_dma_tag_t tag)
+phyp_iommu_set_dma_tag(device_t bus, device_t dev, bus_dma_tag_t tag)
 {
 	device_t p;
 	phandle_t node;
-	cell_t dma_acells, dma_scells, dmawindow[5];
+	cell_t dma_acells, dma_scells, dmawindow[6];
 	struct iommu_map *i;
+	int cell;
 
-	for (p = child; p != NULL; p = device_get_parent(p)) {
+	for (p = dev; device_get_parent(p) != NULL; p = device_get_parent(p)) {
 		if (ofw_bus_has_prop(p, "ibm,my-dma-window"))
 			break;
 		if (ofw_bus_has_prop(p, "ibm,dma-window"))
@@ -87,34 +88,38 @@ phyp_iommu_set_dma_tag(device_t dev, device_t child, bus_dma_tag_t tag)
 		return (ENXIO);
 
 	node = ofw_bus_get_node(p);
-	if (OF_getprop(node, "ibm,#dma-size-cells", &dma_scells,
+	if (OF_getencprop(node, "ibm,#dma-size-cells", &dma_scells,
 	    sizeof(cell_t)) <= 0)
-		OF_searchprop(node, "#size-cells", &dma_scells, sizeof(cell_t));
-	if (OF_getprop(node, "ibm,#dma-address-cells", &dma_acells,
+		OF_searchencprop(node, "#size-cells", &dma_scells,
+		    sizeof(cell_t));
+	if (OF_getencprop(node, "ibm,#dma-address-cells", &dma_acells,
 	    sizeof(cell_t)) <= 0)
-		OF_searchprop(node, "#address-cells", &dma_acells,
+		OF_searchencprop(node, "#address-cells", &dma_acells,
 		    sizeof(cell_t));
 
 	if (ofw_bus_has_prop(p, "ibm,my-dma-window"))
-		OF_getprop(node, "ibm,my-dma-window", dmawindow,
+		OF_getencprop(node, "ibm,my-dma-window", dmawindow,
 		    sizeof(cell_t)*(dma_scells + dma_acells + 1));
 	else
-		OF_getprop(node, "ibm,dma-window", dmawindow,
+		OF_getencprop(node, "ibm,dma-window", dmawindow,
 		    sizeof(cell_t)*(dma_scells + dma_acells + 1));
 
 	struct dma_window *window = malloc(sizeof(struct dma_window),
 	    M_PHYPIOMMU, M_WAITOK);
-	if (dma_acells == 1)
-		window->start = dmawindow[1];
-	else
-		window->start = ((uint64_t)(dmawindow[1]) << 32) | dmawindow[2];
-	if (dma_scells == 1)
-		window->end = window->start + dmawindow[dma_acells + 1];
-	else
-		window->end = window->start +
-		    (((uint64_t)(dmawindow[dma_acells + 1]) << 32) |
-		    dmawindow[dma_acells + 2]);
+	window->start = 0;
+	for (cell = 1; cell < 1 + dma_acells; cell++) {
+		window->start <<= 32;
+		window->start |= dmawindow[cell];
+	}
+	window->end = 0;
+	for (; cell < 1 + dma_acells + dma_scells; cell++) {
+		window->end <<= 32;
+		window->end |= dmawindow[cell];
+	}
+	window->end += window->start;
 
+	if (bootverbose)
+		device_printf(dev, "Mapping IOMMU domain %#x\n", dmawindow[0]);
 	window->map = NULL;
 	SLIST_FOREACH(i, &iommu_map_head, entries) {
 		if (i->iobn == dmawindow[0]) {
@@ -134,6 +139,7 @@ phyp_iommu_set_dma_tag(device_t dev, device_t child, bus_dma_tag_t tag)
 		window->map->vmem = vmem_create("IOMMU mappings", PAGE_SIZE,
 		    trunc_page(VMEM_ADDR_MAX) - PAGE_SIZE, PAGE_SIZE, 0,
 		    M_BESTFIT | M_NOWAIT);
+		SLIST_INSERT_HEAD(&iommu_map_head, window->map, entries);
 	}
 
 	/*
@@ -145,7 +151,7 @@ phyp_iommu_set_dma_tag(device_t dev, device_t child, bus_dma_tag_t tag)
 		papr_supports_stuff_tce = !(phyp_hcall(H_STUFF_TCE,
 		    window->map->iobn, 0, 0, 0) == H_FUNCTION);
 
-	bus_dma_tag_set_iommu(tag, dev, window);
+	bus_dma_tag_set_iommu(tag, bus, window);
 
 	return (0);
 }
@@ -186,13 +192,13 @@ phyp_iommu_map(device_t dev, bus_dma_segment_t *segs, int *nsegs,
 
 		tce = trunc_page(segs[i].ds_addr);
 		tce |= 0x3; /* read/write */
-		if (papr_supports_stuff_tce) {
-			error = phyp_hcall(H_STUFF_TCE, window->map->iobn,
-			    alloced, tce, allocsize/PAGE_SIZE);
-		} else {
-			for (j = 0; j < allocsize; j += PAGE_SIZE)
-				error = phyp_hcall(H_PUT_TCE, window->map->iobn,
-				    alloced + j, tce + j);
+		for (j = 0; j < allocsize; j += PAGE_SIZE) {
+			error = phyp_hcall(H_PUT_TCE, window->map->iobn,
+			    alloced + j, tce + j);
+			if (error < 0) {
+				panic("IOMMU mapping error: %d\n", error);
+				return (ENOMEM);
+			}
 		}
 
 		segs[i].ds_addr = alloced + (segs[i].ds_addr & PAGE_MASK);

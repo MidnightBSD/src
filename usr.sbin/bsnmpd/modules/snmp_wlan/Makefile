@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_wlan/Makefile 222772 2011-06-06 20:24:17Z ed $
+# $FreeBSD$
 #
 
 MOD=	wlan

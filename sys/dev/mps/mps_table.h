@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mps/mps_table.h 212420 2010-09-10 15:03:56Z ken $
+ * $FreeBSD$
  */
 
 #ifndef _MPS_TABLE_H
@@ -43,11 +43,21 @@ extern struct mps_table_lookup mps_linkrate_names[];
 
 void mps_print_iocfacts(struct mps_softc *, MPI2_IOC_FACTS_REPLY *);
 void mps_print_portfacts(struct mps_softc *, MPI2_PORT_FACTS_REPLY *);
-void mps_print_event(struct mps_softc *, MPI2_EVENT_NOTIFICATION_REPLY *);
+void mps_print_evt_generic(struct mps_softc *, MPI2_EVENT_NOTIFICATION_REPLY *);
 void mps_print_sasdev0(struct mps_softc *, MPI2_CONFIG_PAGE_SAS_DEV_0 *);
 void mps_print_evt_sas(struct mps_softc *, MPI2_EVENT_NOTIFICATION_REPLY *);
 void mps_print_expander1(struct mps_softc *, MPI2_CONFIG_PAGE_EXPANDER_1 *);
 void mps_print_sasphy0(struct mps_softc *, MPI2_CONFIG_PAGE_SAS_PHY_0 *);
 void mps_print_sgl(struct mps_softc *, struct mps_command *, int);
 void mps_print_scsiio_cmd(struct mps_softc *, struct mps_command *);
+
+#define MPS_DPRINT_PAGE(sc, level, func, buf)		\
+do {							\
+	if ((sc)->mps_debug & level)			\
+		mps_print_##func((sc), buf);		\
+} while (0)
+
+#define MPS_DPRINT_EVENT(sc, func, buf)			\
+	MPS_DPRINT_PAGE(sc, MPS_EVENT, evt_##func, buf)
+
 #endif

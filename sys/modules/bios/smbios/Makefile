@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/modules/bios/smbios/Makefile 204309 2010-02-25 14:13:39Z attilio $
+# $FreeBSD$
 #
 
-.PATH:  ${.CURDIR}/../../../x86/bios
+.PATH:  ${SRCTOP}/sys/x86/bios
 
 KMOD=	smbios
 SRCS=	smbios.c \

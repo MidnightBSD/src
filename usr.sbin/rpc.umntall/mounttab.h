@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Martin Blapp
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rpc.umntall/mounttab.h 194880 2009-06-24 18:42:21Z dfr $
+ * $FreeBSD$
  */
 
 #define STRSIZ  (MNTNAMLEN+MNTPATHLEN+100)

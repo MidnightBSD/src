@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_error.c 114601 2003-05-03 21:06:42Z obrien $");
+__FBSDID("$FreeBSD$");
 
 /*
  * error logging/reporting facilities
@@ -45,14 +45,12 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/ypserv/yp_error.c 114601 2003-05-03 
 #include <syslog.h>
 #include "yp_extern.h"
 
-int debug;
 extern int _rpcpmstart;
-
 extern char *progname;
-
 static void __verr(const char *fmt, va_list ap) __printflike(1, 0);
 
-static void __verr(const char *fmt, va_list ap)
+static void
+__verr(const char *fmt, va_list ap)
 {
 	if (debug && !_rpcpmstart) {
 		fprintf(stderr,"%s: ",progname);

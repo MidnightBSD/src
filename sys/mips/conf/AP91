@@ -10,15 +10,17 @@
 # + 16MB RAM
 # + uboot environment
 
-# $FreeBSD: release/10.0.0/sys/mips/conf/AP91 239799 2012-08-29 01:08:36Z adrian $
+# $FreeBSD$
+
+#NO_UNIVERSE
 
 include		"AR724X_BASE"
 ident		"AP91"
 hints		"AP91.hints"
 
-options		AR71XX_REALMEM=16*1024*1024
+options 	AR71XX_REALMEM=16*1024*1024
 
-options		AR71XX_ENV_UBOOT
+options 	AR71XX_ENV_UBOOT
 
 # Limit inlines
 makeoptions	INLINE_LIMIT=768
@@ -36,9 +38,9 @@ options 	NO_SWAPPING
 # options 	MSDOSFS
 
 # uncompress - to boot read-only lzma natively from flash
-device		geom_uncompress
-options		GEOM_UNCOMPRESS
-options		ROOTDEVNAME=\"ufs:/dev/map/rootfs.uncompress\"
+device		xz
+options 	GEOM_UZIP
+options 	ROOTDEVNAME=\"ufs:/dev/map/rootfs.uzip\"
 
 # Not enough space for these..
 nooptions 	INVARIANTS

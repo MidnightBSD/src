@@ -30,6 +30,9 @@
  * SOFTWARE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #include "ipoib.h"
 
 #ifdef CONFIG_INFINIBAND_IPOIB_CM
@@ -287,7 +290,7 @@ static void ipoib_cm_init_rx_wr(struct ipoib_dev_priv *priv,
 	int i;
 
 	for (i = 0; i < IPOIB_CM_RX_SG; i++)
-		sge[i].lkey = priv->mr->lkey;
+		sge[i].lkey = priv->pd->local_dma_lkey;
 
 	wr->next    = NULL;
 	wr->sg_list = sge;
@@ -481,6 +484,8 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 	int has_srq;
 	u_short proto;
 
+	CURVNET_SET_QUIET(dev->if_vnet);
+
 	ipoib_dbg_data(priv, "cm recv completion: id %d, status: %d\n",
 		       wr_id, wc->status);
 
@@ -496,7 +501,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 		} else
 			ipoib_warn(priv, "cm recv completion event with wrid %d (> %d)\n",
 				   wr_id, ipoib_recvq_size);
-		return;
+		goto done;
 	}
 
 	p = wc->qp->qp_context;
@@ -510,7 +515,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 		ipoib_dbg(priv, "cm recv error "
 			   "(status=%d, wrid=%d vend_err %x)\n",
 			   wc->status, wr_id, wc->vendor_err);
-		++dev->if_ierrors;
+		if_inc_counter(dev, IFCOUNTER_IERRORS, 1);
 		if (has_srq)
 			goto repost;
 		else {
@@ -520,7 +525,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 				queue_work(ipoib_workqueue, &priv->cm.rx_reap_task);
 				spin_unlock(&priv->lock);
 			}
-			return;
+			goto done;
 		}
 	}
 
@@ -542,7 +547,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 		 * this packet and reuse the old buffer.
 		 */
 		ipoib_dbg(priv, "failed to allocate receive buffer %d\n", wr_id);
-		++dev->if_ierrors;
+		if_inc_counter(dev, IFCOUNTER_IERRORS, 1);
 		memcpy(&rx_ring[wr_id], &saverx, sizeof(saverx));
 		goto repost;
 	}
@@ -554,8 +559,8 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 
 	ipoib_dma_mb(priv, mb, wc->byte_len);
 
-	++dev->if_ipackets;
-	dev->if_ibytes += mb->m_pkthdr.len;
+	if_inc_counter(dev, IFCOUNTER_IPACKETS, 1);
+	if_inc_counter(dev, IFCOUNTER_IBYTES, mb->m_pkthdr.len);
 
 	mb->m_pkthdr.rcvif = dev;
 	proto = *mtod(mb, uint16_t *);
@@ -579,6 +584,9 @@ repost:
 				   "for buf %d\n", wr_id);
 		}
 	}
+done:
+	CURVNET_RESTORE();
+	return;
 }
 
 static inline int post_send(struct ipoib_dev_priv *priv,
@@ -596,11 +604,11 @@ static inline int post_send(struct ipoib_dev_priv *priv,
 		priv->tx_sge[i].addr = mapping[i];
 		priv->tx_sge[i].length = m->m_len;
 	}
-	priv->tx_wr.num_sge = i;
-	priv->tx_wr.wr_id = wr_id | IPOIB_OP_CM;
-	priv->tx_wr.opcode = IB_WR_SEND;
+	priv->tx_wr.wr.num_sge = i;
+	priv->tx_wr.wr.wr_id = wr_id | IPOIB_OP_CM;
+	priv->tx_wr.wr.opcode = IB_WR_SEND;
 
-	return ib_post_send(tx->qp, &priv->tx_wr, &bad_wr);
+	return ib_post_send(tx->qp, &priv->tx_wr.wr, &bad_wr);
 }
 
 void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm_tx *tx)
@@ -608,14 +616,16 @@ void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm
 	struct ipoib_cm_tx_buf *tx_req;
 	struct ifnet *dev = priv->dev;
 
-	if (unlikely(priv->tx_outstanding > MAX_SEND_CQE))
-		while (ipoib_poll_tx(priv)); /* nothing */
+	if (unlikely(priv->tx_outstanding > MAX_SEND_CQE)) {
+		while (ipoib_poll_tx(priv, false))
+			;	/* nothing */
+	}
 
 	m_adj(mb, sizeof(struct ipoib_pseudoheader));
 	if (unlikely(mb->m_pkthdr.len > tx->mtu)) {
 		ipoib_warn(priv, "packet len %d (> %d) too long to send, dropping\n",
 			   mb->m_pkthdr.len, tx->mtu);
-		++dev->if_oerrors;
+		if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 		ipoib_cm_mb_too_long(priv, mb, IPOIB_CM_MTU(tx->mtu));
 		return;
 	}
@@ -635,7 +645,7 @@ void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm
 	tx_req->mb = mb;
 	if (unlikely(ipoib_dma_map_tx(priv->ca, (struct ipoib_tx_buf *)tx_req,
 	    priv->cm.num_frags))) {
-		++dev->if_oerrors;
+		if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 		if (tx_req->mb)
 			m_freem(tx_req->mb);
 		return;
@@ -643,7 +653,7 @@ void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm
 
 	if (unlikely(post_send(priv, tx, tx_req, tx->tx_head & (ipoib_sendq_size - 1)))) {
 		ipoib_warn(priv, "post_send failed\n");
-		++dev->if_oerrors;
+		if_inc_counter(dev, IFCOUNTER_OERRORS, 1);
 		ipoib_dma_unmap_tx(priv->ca, (struct ipoib_tx_buf *)tx_req);
 		m_freem(mb);
 	} else {
@@ -681,7 +691,7 @@ void ipoib_cm_handle_tx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 	ipoib_dma_unmap_tx(priv->ca, (struct ipoib_tx_buf *)tx_req);
 
 	/* FIXME: is this right? Shouldn't we only increment on success? */
-	++dev->if_opackets;
+	if_inc_counter(dev, IFCOUNTER_OPACKETS, 1);
 
 	m_freem(tx_req->mb);
 
@@ -731,8 +741,7 @@ int ipoib_cm_dev_open(struct ipoib_dev_priv *priv)
 		goto err_cm;
 	}
 
-	ret = ib_cm_listen(priv->cm.id, cpu_to_be64(IPOIB_CM_IETF_ID | priv->qp->qp_num),
-			   0, NULL);
+	ret = ib_cm_listen(priv->cm.id, cpu_to_be64(IPOIB_CM_IETF_ID | priv->qp->qp_num), 0);
 	if (ret) {
 		printk(KERN_WARNING "%s: failed to listen on ID 0x%llx\n", priv->ca->name,
 		       IPOIB_CM_IETF_ID | priv->qp->qp_num);
@@ -826,7 +835,7 @@ void ipoib_cm_dev_stop(struct ipoib_dev_priv *priv)
 
 	ipoib_cm_free_rx_reap_list(priv);
 
-	cancel_delayed_work(&priv->cm.stale_task);
+	cancel_delayed_work_sync(&priv->cm.stale_task);
 }
 
 static int ipoib_cm_rep_handler(struct ib_cm_id *cm_id, struct ib_cm_event *event)
@@ -1254,6 +1263,8 @@ static void ipoib_cm_mb_reap(struct work_struct *work)
 
 	spin_lock_irqsave(&priv->lock, flags);
 
+	CURVNET_SET_QUIET(priv->dev->if_vnet);
+
 	for (;;) {
 		IF_DEQUEUE(&priv->cm.mb_queue, mb);
 		if (mb == NULL)
@@ -1279,6 +1290,8 @@ static void ipoib_cm_mb_reap(struct work_struct *work)
 
 		spin_lock_irqsave(&priv->lock, flags);
 	}
+
+	CURVNET_RESTORE();
 
 	spin_unlock_irqrestore(&priv->lock, flags);
 }
@@ -1362,8 +1375,8 @@ static void ipoib_cm_create_srq(struct ipoib_dev_priv *priv, int max_sge)
 int ipoib_cm_dev_init(struct ipoib_dev_priv *priv)
 {
 	struct ifnet *dev = priv->dev;
-	int i, ret;
-	struct ib_device_attr attr;
+	int i;
+	int max_srq_sge;
 
 	INIT_LIST_HEAD(&priv->cm.passive_ids);
 	INIT_LIST_HEAD(&priv->cm.reap_list);
@@ -1382,19 +1395,15 @@ int ipoib_cm_dev_init(struct ipoib_dev_priv *priv)
 	mtx_init(&priv->cm.mb_queue.ifq_mtx,
 	    dev->if_xname, "if send queue", MTX_DEF);
 
-	ret = ib_query_device(priv->ca, &attr);
-	if (ret) {
-		printk(KERN_WARNING "ib_query_device() failed with %d\n", ret);
-		return ret;
-	}
+	max_srq_sge = priv->ca->attrs.max_srq_sge;
 
-	ipoib_dbg(priv, "max_srq_sge=%d\n", attr.max_srq_sge);
+	ipoib_dbg(priv, "max_srq_sge=%d\n", max_srq_sge);
 
-	attr.max_srq_sge = min_t(int, IPOIB_CM_RX_SG, attr.max_srq_sge);
-	ipoib_cm_create_srq(priv, attr.max_srq_sge);
+	max_srq_sge = min_t(int, IPOIB_CM_RX_SG, max_srq_sge);
+	ipoib_cm_create_srq(priv, max_srq_sge);
 	if (ipoib_cm_has_srq(priv)) {
-		priv->cm.max_cm_mtu = attr.max_srq_sge * MJUMPAGESIZE;
-		priv->cm.num_frags  = attr.max_srq_sge;
+		priv->cm.max_cm_mtu = max_srq_sge * MJUMPAGESIZE;
+		priv->cm.num_frags  = max_srq_sge;
 		ipoib_dbg(priv, "max_cm_mtu = 0x%x, num_frags=%d\n",
 			  priv->cm.max_cm_mtu, priv->cm.num_frags);
 	} else {

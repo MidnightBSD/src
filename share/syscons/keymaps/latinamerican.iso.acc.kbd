@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/syscons/keymaps/latinamerican.iso.acc.kbd 116762 2003-06-23 21:01:57Z ache $
+# $FreeBSD$
 #                                                         alt
 # scan                       cntrl          alt    alt   cntrl lock
 # code  base   shift  cntrl  shift  alt    shift  cntrl  shift state

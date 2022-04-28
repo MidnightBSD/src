@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rtsold/rtsol.c 254462 2013-08-17 19:23:35Z hrs $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -347,7 +347,7 @@ rtsol_input(int s)
 	/* xxx: more validation? */
 
 	if ((ifi = find_ifinfo(pi->ipi6_ifindex)) == NULL) {
-		warnmsg(LOG_INFO, __func__,
+		warnmsg(LOG_DEBUG, __func__,
 		    "received RA from %s on an unexpected IF(%s)",
 		    inet_ntop(AF_INET6, &from.sin6_addr, ntopbuf,
 			sizeof(ntopbuf)),
@@ -933,7 +933,8 @@ dname_labeldec(char *dst, size_t dlen, const char *src)
 	dst_origin = dst;
 	memset(dst, '\0', dlen);
 	while (src && (len = (uint8_t)(*src++) & 0x3f) &&
-	    (src + len) <= src_last) {
+	    (src + len) <= src_last &&
+	    (dst - dst_origin < (ssize_t)dlen)) {
 		if (dst != dst_origin)
 			*dst++ = '.';
 		warnmsg(LOG_DEBUG, __func__, "labellen = %zd", len);

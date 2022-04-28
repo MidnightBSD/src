@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)bt_close.c	8.7 (Berkeley) 8/17/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/btree/bt_close.c 189291 2009-03-02 23:47:18Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -134,7 +134,8 @@ __bt_sync(const DB *dbp, u_int flags)
 		return (RET_ERROR);
 	}
 
-	if (F_ISSET(t, B_INMEM | B_RDONLY) || !F_ISSET(t, B_MODIFIED))
+	if (F_ISSET(t, B_INMEM | B_RDONLY) ||
+	    !F_ISSET(t, B_MODIFIED | B_METADIRTY))
 		return (RET_SUCCESS);
 
 	if (F_ISSET(t, B_METADIRTY) && bt_meta(t) == RET_ERROR)

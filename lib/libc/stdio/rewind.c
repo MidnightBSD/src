@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)rewind.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/rewind.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -53,9 +53,8 @@ rewind(FILE *fp)
 		__sinit();
 
 	FLOCKFILE(fp);
-	if (_fseeko(fp, (off_t)0, SEEK_SET, 1) == 0) {
-		clearerr_unlocked(fp);
+	if (_fseeko(fp, (off_t)0, SEEK_SET, 1) == 0)
 		errno = serrno;
-	}
+	clearerr_unlocked(fp);	/* POSIX: clear stdio error regardless */
 	FUNLOCKFILE(fp);
 }

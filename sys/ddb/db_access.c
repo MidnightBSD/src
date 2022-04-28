@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ddb/db_access.c 153072 2005-12-04 02:12:43Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -54,14 +54,11 @@ static unsigned db_extend[] = {	/* table for sign-extending */
 #endif
 
 db_expr_t
-db_get_value(addr, size, is_signed)
-	db_addr_t	addr;
-	register int	size;
-	boolean_t	is_signed;
+db_get_value(db_addr_t addr, int size, bool is_signed)
 {
 	char		data[sizeof(u_int64_t)];
-	register db_expr_t value;
-	register int	i;
+	db_expr_t	value;
+	int		i;
 
 	if (db_read_bytes(addr, size, data) != 0) {
 		db_printf("*** error reading from address %llx ***\n",
@@ -87,13 +84,10 @@ db_get_value(addr, size, is_signed)
 }
 
 void
-db_put_value(addr, size, value)
-	db_addr_t	addr;
-	register int	size;
-	register db_expr_t value;
+db_put_value(db_addr_t addr, int size, db_expr_t value)
 {
 	char		data[sizeof(int)];
-	register int	i;
+	int		i;
 
 #if	BYTE_MSF
 	for (i = size - 1; i >= 0; i--)

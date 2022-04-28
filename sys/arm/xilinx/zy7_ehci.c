@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/xilinx/zy7_ehci.c 250015 2013-04-28 07:00:36Z wkoszek $
+ * $FreeBSD$
  */
 
 /*
@@ -36,7 +36,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xilinx/zy7_ehci.c 250015 2013-04-28 07:00:36Z wkoszek $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -138,6 +138,18 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xilinx/zy7_ehci.c 250015 2013-04-28 0
 #define EHCI_REG_OFFSET	ZY7_USB_CAPLENGTH_HCIVERSION
 #define EHCI_REG_SIZE	0x100
 
+static void
+zy7_ehci_post_reset(struct ehci_softc *ehci_softc)
+{
+	uint32_t usbmode;
+
+	/* Force HOST mode */
+	usbmode = EOREAD4(ehci_softc, EHCI_USBMODE_NOLPM);
+	usbmode &= ~EHCI_UM_CM;
+	usbmode |= EHCI_UM_CM_HOST;
+	EOWRITE4(ehci_softc, EHCI_USBMODE_NOLPM, usbmode);
+}
+
 static int
 zy7_phy_config(device_t dev, bus_space_tag_t io_tag, bus_space_handle_t bsh)
 {
@@ -193,6 +205,9 @@ static int
 zy7_ehci_probe(device_t dev)
 {
 
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "xlnx,zy7_ehci"))
 		return (ENXIO);
 
@@ -213,6 +228,7 @@ zy7_ehci_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
@@ -271,8 +287,9 @@ zy7_ehci_attach(device_t dev)
 	}
 
 	/* Customization. */
-	sc->sc_flags |= EHCI_SCFLG_SETMODE | EHCI_SCFLG_TT |
-		EHCI_SCFLG_NORESTERM;
+	sc->sc_flags |= EHCI_SCFLG_TT |	EHCI_SCFLG_NORESTERM;
+	sc->sc_vendor_post_reset = zy7_ehci_post_reset;
+	sc->sc_vendor_get_port_speed = ehci_get_port_speed_portsc;
 
 	/* Modify FIFO burst threshold from 2 to 8. */
 	bus_space_write_4(sc->sc_io_tag, bsh,
@@ -306,20 +323,17 @@ zy7_ehci_detach(device_t dev)
 {
 	ehci_softc_t *sc = device_get_softc(dev);
 
+	/* during module unload there are lots of children leftover */
+	device_delete_children(dev);
+	
 	sc->sc_flags &= ~EHCI_SCFLG_DONEINIT;
-
-	if (device_is_attached(dev))
-		bus_generic_detach(dev);
 
 	if (sc->sc_irq_res && sc->sc_intr_hdl)
 		/* call ehci_detach() after ehci_init() called after
 		 * successful bus_setup_intr().
 		 */
 		ehci_detach(sc);
-	if (sc->sc_bus.bdev) {
-		device_detach(sc->sc_bus.bdev);
-		device_delete_child(dev, sc->sc_bus.bdev);
-	}
+
 	if (sc->sc_irq_res) {
 		if (sc->sc_intr_hdl != NULL)
 			bus_teardown_intr(dev, sc->sc_irq_res,
@@ -358,5 +372,5 @@ static driver_t ehci_driver = {
 };
 static devclass_t ehci_devclass;
 
-DRIVER_MODULE(ehci, simplebus, ehci_driver, ehci_devclass, NULL, NULL);
-MODULE_DEPEND(ehci, usb, 1, 1, 1);
+DRIVER_MODULE(zy7_ehci, simplebus, ehci_driver, ehci_devclass, NULL, NULL);
+MODULE_DEPEND(zy7_ehci, usb, 1, 1, 1);

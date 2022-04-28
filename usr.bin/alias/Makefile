@@ -1,8 +1,7 @@
-# $FreeBSD: release/10.0.0/usr.bin/alias/Makefile 207196 2010-04-25 17:38:53Z jilles $
+# $FreeBSD$
 
 SCRIPTS=generic.sh
 SCRIPTSNAME=alias
-NO_OBJ=
 
 LINKS=	${BINDIR}/alias ${BINDIR}/bg \
 	${BINDIR}/alias ${BINDIR}/cd \

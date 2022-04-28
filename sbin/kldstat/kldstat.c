@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Doug Rabson
  * All rights reserved.
  *
@@ -25,9 +27,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/kldstat/kldstat.c 215248 2010-11-13 16:49:07Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
+#include <libutil.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -35,34 +38,52 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/kldstat/kldstat.c 215248 2010-11-13 16:4
 #include <sys/param.h>
 #include <sys/module.h>
 #include <sys/linker.h>
+#include <strings.h>
 
 #define	POINTER_WIDTH	((int)(sizeof(void *) * 2 + 2))
+
+static int showdata = 0;
 
 static void
 printmod(int modid)
 {
     struct module_stat stat;
 
+    bzero(&stat, sizeof(stat));
     stat.version = sizeof(struct module_stat);
     if (modstat(modid, &stat) < 0)
 	warn("can't stat module id %d", modid);
     else
-	printf("\t\t%2d %s\n", stat.id, stat.name);
+	if (showdata) {
+	    printf("\t\t%2d %s (%d, %u, 0x%lx)\n", stat.id, stat.name, 
+	        stat.data.intval, stat.data.uintval, stat.data.ulongval);
+	} else {
+		printf("\t\t%2d %s\n", stat.id, stat.name);
+	}
 }
 
 static void
-printfile(int fileid, int verbose)
+printfile(int fileid, int verbose, int humanized)
 {
     struct kld_file_stat stat;
     int modid;
+    char buf[5];
 
     stat.version = sizeof(struct kld_file_stat);
-    if (kldstat(fileid, &stat) < 0)
+    if (kldstat(fileid, &stat) < 0) {
 	err(1, "can't stat file id %d", fileid);
-    else
-	printf("%2d %4d %p %-8zx %s",
-	       stat.id, stat.refs, stat.address, stat.size, 
-	       stat.name);
+    } else {
+	if (humanized) {
+	       humanize_number(buf, sizeof(buf), stat.size,
+	           "", HN_AUTOSCALE, HN_DECIMAL | HN_NOSPACE);
+
+	       printf("%2d %4d %p %5s %s",
+	           stat.id, stat.refs, stat.address, buf, stat.name);
+	} else {
+		printf("%2d %4d %p %-8zx %s",
+		    stat.id, stat.refs, stat.address, stat.size, stat.name);
+	}
+    }
 
     if (verbose) {
 	printf(" (%s)\n", stat.pathname);
@@ -78,8 +99,8 @@ printfile(int fileid, int verbose)
 static void
 usage(void)
 {
-    fprintf(stderr, "usage: kldstat [-v] [-i id] [-n filename]\n");
-    fprintf(stderr, "       kldstat [-q] [-m modname]\n");
+    fprintf(stderr, "usage: kldstat [-d] [-h] [-q] [-v] [-i id] [-n filename]\n");
+    fprintf(stderr, "       kldstat [-d] [-q] [-m modname]\n");
     exit(1);
 }
 
@@ -87,6 +108,7 @@ int
 main(int argc, char** argv)
 {
     int c;
+    int humanized = 0;
     int verbose = 0;
     int fileid = 0;
     int quiet = 0;
@@ -94,8 +116,14 @@ main(int argc, char** argv)
     char* modname = NULL;
     char* p;
 
-    while ((c = getopt(argc, argv, "i:m:n:qv")) != -1)
+    while ((c = getopt(argc, argv, "dhi:m:n:qv")) != -1)
 	switch (c) {
+	case 'd':
+	    showdata = 1;
+	    break;
+	case 'h':
+	    humanized = 1;
+	    break;
 	case 'i':
 	    fileid = (int)strtoul(optarg, &p, 10);
 	    if (*p != '\0')
@@ -138,24 +166,38 @@ main(int argc, char** argv)
 	if (modstat(modid, &stat) < 0)
 	    warn("can't stat module id %d", modid);
 	else {
-	    printf("Id  Refs Name\n");
-	    printf("%3d %4d %s\n", stat.id, stat.refs, stat.name);
+		if (showdata) {
+		    printf("Id  Refs Name data..(int, uint, ulong)\n");
+		    printf("%3d %4d %s (%d, %u, 0x%lx)\n", stat.id, stat.refs, stat.name, 
+		        stat.data.intval, stat.data.uintval, stat.data.ulongval);
+		} else {
+		    printf("Id  Refs Name\n");
+		    printf("%3d %4d %s\n", stat.id, stat.refs, stat.name);
+		}
 	}
 
 	return 0;
     }
 
     if (filename != NULL) {
-	if ((fileid = kldfind(filename)) < 0)
-	    err(1, "can't find file %s", filename);
+	if ((fileid = kldfind(filename)) < 0) {
+	    if (!quiet)
+		warn("can't find file %s", filename);
+	    return 1;
+	} else if (quiet) {
+	    return 0;
+	}
     }
 
-    printf("Id Refs Address%*c Size     Name\n", POINTER_WIDTH - 7, ' ');
+    if (humanized)
+	    printf("Id Refs Address%*c  Size Name\n", POINTER_WIDTH - 7, ' ');
+    else
+	    printf("Id Refs Address%*c Size     Name\n", POINTER_WIDTH - 7, ' ');
     if (fileid != 0)
-	printfile(fileid, verbose);
+	printfile(fileid, verbose, humanized);
     else
 	for (fileid = kldnext(0); fileid > 0; fileid = kldnext(fileid))
-	    printfile(fileid, verbose);
+	    printfile(fileid, verbose, humanized);
 
     return 0;
 }

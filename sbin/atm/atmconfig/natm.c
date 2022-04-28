@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/atm/atmconfig/natm.c 132800 2004-07-28 16:32:17Z harti $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -575,7 +575,7 @@ natm_delete(int argc, char *argv[])
 		TAILQ_FOREACH(aif, &diagif_list, link)
 			if (strcmp(aif->ifname, argv[0]) == 0)
 				break;
-		if (aif == 0)
+		if (aif == NULL)
 			errx(1, "no such interface '%s'", argv[0]);
 
 		vpi = parse_num(argv[1], "VPI", 0xff);

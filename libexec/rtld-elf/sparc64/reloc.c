@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/rtld-elf/sparc64/reloc.c 234841 2012-04-30 13:31:10Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mman.h>
@@ -266,8 +266,8 @@ do_copy_relocations(Obj_Entry *dstobj)
 			    ELF_R_SYM(rela->r_info));
 			req.flags = SYMLOOK_EARLY;
 
-			for (srcobj = dstobj->next; srcobj != NULL;
-			    srcobj = srcobj->next) {
+			for (srcobj = globallist_next(dstobj); srcobj != NULL;
+			    srcobj = globallist_next(srcobj)) {
 				res = symlook_obj(&req, srcobj);
 				if (res == 0) {
 					srcsym = req.sym_out;
@@ -299,6 +299,10 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 	const Elf_Rela *rela;
 	SymCache *cache;
 	int r = -1;
+
+	if ((flags & SYMLOOK_IFUNC) != 0)
+		/* XXX not implemented */
+		return (0);
 
 	/*
 	 * The dynamic loader may be called from a thread, we have
@@ -361,8 +365,7 @@ reloc_nonplt_object(Obj_Entry *obj, const Elf_Rela *rela, SymCache *cache,
 	 * Note: R_SPARC_TLS_TPOFF64 must be the numerically largest
 	 * relocation type.
 	 */
-	if (type >= sizeof(reloc_target_bitmask) /
-	    sizeof(*reloc_target_bitmask)) {
+	if (type >= nitems(reloc_target_bitmask)) {
 		_rtld_error("%s: Unsupported relocation type %d in non-PLT "
 		    "object\n", obj->path, type);
 		return (-1);
@@ -499,7 +502,7 @@ reloc_plt(Obj_Entry *obj)
 		assert(ELF64_R_TYPE_ID(rela->r_info) == R_SPARC_JMP_SLOT);
 		where = (Elf_Addr *)(obj->relocbase + rela->r_offset);
 		def = find_symdef(ELF_R_SYM(rela->r_info), obj, &defobj,
-		    true, NULL, lockstate);
+		    SYMLOOK_IN_PLT, NULL, lockstate);
 		value = (Elf_Addr)(defobj->relocbase + def->st_value);
 		*where = value;
 	}
@@ -577,7 +580,9 @@ reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *obj,
 	Elf_Addr offset;
 	Elf_Word *where;
 
-	if (rela - refobj->pltrela < 32764) {
+	if (ld_bind_not) {
+		/* Skip any PLT modifications */
+	} else if (rela - refobj->pltrela < 32764) {
 		/*
 		 * At the PLT entry pointed at by `where', we now construct
 		 * a direct transfer to the now fully resolved function
@@ -782,6 +787,21 @@ reloc_jmpslot(Elf_Addr *wherep, Elf_Addr target, const Obj_Entry *obj,
 	return (target);
 }
 
+void
+ifunc_init(Elf_Auxinfo aux_info[__min_size(AT_COUNT)] __unused)
+{
+
+}
+
+extern void __sparc_utrap_setup(void);
+
+void
+pre_init(void)
+{
+
+	__sparc_utrap_setup();
+}
+
 /*
  * Install rtld function call into this PLT slot.
  */
@@ -810,6 +830,7 @@ init_pltgot(Obj_Entry *obj)
 static void
 install_plt(Elf_Word *pltgot, Elf_Addr proc)
 {
+
 	pltgot[0] = SAVE;
 	flush(pltgot, 0);
 	pltgot[1] = SETHI_l0 | HIVAL(proc, 42);

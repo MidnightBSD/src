@@ -23,10 +23,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sbin/kldstat/Makefile 202532 2010-01-17 21:56:27Z ed $
+# $FreeBSD$
 #
 
+PACKAGE=runtime
 PROG=	kldstat
 MAN=	kldstat.8
+
+LIBADD=	util
 
 .include <bsd.prog.mk>

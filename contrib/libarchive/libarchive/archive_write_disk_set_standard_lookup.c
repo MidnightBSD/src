@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_disk_set_standard_lookup.c 238856 2012-07-28 06:38:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -67,7 +67,7 @@ static void	cleanup(void *);
  * a simple cache to accelerate such lookups---into the archive_write_disk
  * object.  This is in a separate file because getpwnam()/getgrnam()
  * can pull in a LOT of library code (including NIS/LDAP functions, which
- * pull in DNS resolveers, etc).  This can easily top 500kB, which makes
+ * pull in DNS resolvers, etc).  This can easily top 500kB, which makes
  * it inappropriate for some space-constrained applications.
  *
  * Applications that are size-sensitive may want to just use the
@@ -84,10 +84,13 @@ static void	cleanup(void *);
 int
 archive_write_disk_set_standard_lookup(struct archive *a)
 {
-	struct bucket *ucache = malloc(cache_size * sizeof(struct bucket));
-	struct bucket *gcache = malloc(cache_size * sizeof(struct bucket));
-	memset(ucache, 0, cache_size * sizeof(struct bucket));
-	memset(gcache, 0, cache_size * sizeof(struct bucket));
+	struct bucket *ucache = calloc(cache_size, sizeof(struct bucket));
+	struct bucket *gcache = calloc(cache_size, sizeof(struct bucket));
+	if (ucache == NULL || gcache == NULL) {
+		free(ucache);
+		free(gcache);
+		return (ARCHIVE_FATAL);
+	}
 	archive_write_disk_set_group_lookup(a, gcache, lookup_gid, cleanup);
 	archive_write_disk_set_user_lookup(a, ucache, lookup_uid, cleanup);
 	return (ARCHIVE_OK);
@@ -111,8 +114,7 @@ lookup_gid(void *private_data, const char *gname, int64_t gid)
 		return ((gid_t)b->id);
 
 	/* Free the cache slot for a new entry. */
-	if (b->name != NULL)
-		free(b->name);
+	free(b->name);
 	b->name = strdup(gname);
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;
@@ -181,8 +183,7 @@ lookup_uid(void *private_data, const char *uname, int64_t uid)
 		return ((uid_t)b->id);
 
 	/* Free the cache slot for a new entry. */
-	if (b->name != NULL)
-		free(b->name);
+	free(b->name);
 	b->name = strdup(uname);
 	/* Note: If strdup fails, that's okay; we just won't cache. */
 	b->hash = h;

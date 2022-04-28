@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-mountoptical.sh 220059 2011-03-27 16:57:54Z jpaetzel $
+# $FreeBSD$
 
 # Functions which perform mounting / unmounting and switching of 
 # optical / usb media

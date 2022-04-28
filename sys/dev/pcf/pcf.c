@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pcf/pcf.c 194026 2009-06-11 17:15:44Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -170,7 +170,7 @@ pcf_start(device_t dev, u_char slave, int timeout)
 		printf("pcf: busy!\n");
 #endif
 		PCF_UNLOCK(sc);
-		return (IIC_EBUSBSY);
+		return (IIC_EBUSERR);
 	}
 
 	/* set slave address to PCF. Last bit (LSB) must be set correctly
@@ -466,7 +466,7 @@ pcf_read(device_t dev, char *buf, int len, int *read, int last,
 
 		len --;
 		bytes ++;
-	};
+	}
 
 error:
 	*read = bytes;

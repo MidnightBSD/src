@@ -1,6 +1,6 @@
 /*
  * Taken from http://burtleburtle.net/bob/c/lookup3.c
- * $FreeBSD: release/10.0.0/sys/libkern/jenkins_hash.c 240521 2012-09-14 22:00:03Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/hash.h>

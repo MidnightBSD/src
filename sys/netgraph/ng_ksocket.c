@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_ksocket.c 259757 2013-12-23 01:15:55Z glebius $
+ * $FreeBSD$
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -66,7 +66,7 @@
 #include <netgraph/ng_ksocket.h>
 
 #include <netinet/in.h>
-#include <netatalk/at.h>
+#include <netinet/ip.h>
 
 #ifdef NG_SEPARATE_MALLOC
 static MALLOC_DEFINE(M_NETGRAPH_KSOCKET, "netgraph_ksock",
@@ -120,8 +120,6 @@ static const struct ng_ksocket_alias ng_ksocket_families[] = {
 	{ "local",	PF_LOCAL	},
 	{ "inet",	PF_INET		},
 	{ "inet6",	PF_INET6	},
-	{ "atalk",	PF_APPLETALK	},
-	{ "ipx",	PF_IPX		},
 	{ "atm",	PF_ATM		},
 	{ NULL,		-1		},
 };
@@ -151,8 +149,6 @@ static const struct ng_ksocket_alias ng_ksocket_protos[] = {
 	{ "encap",	IPPROTO_ENCAP,		PF_INET		},
 	{ "divert",	IPPROTO_DIVERT,		PF_INET		},
 	{ "pim",	IPPROTO_PIM,		PF_INET		},
-	{ "ddp",	ATPROTO_DDP,		PF_APPLETALK	},
-	{ "aarp",	ATPROTO_AARP,		PF_APPLETALK	},
 	{ NULL,		-1					},
 };
 
@@ -300,9 +296,7 @@ ng_ksocket_sockaddr_parse(const struct ng_parse_type *type,
 	    }
 
 #if 0
-	case PF_APPLETALK:	/* XXX implement these someday */
-	case PF_INET6:
-	case PF_IPX:
+	case PF_INET6:	/* XXX implement this someday */
 #endif
 
 	default:
@@ -364,9 +358,7 @@ ng_ksocket_sockaddr_unparse(const struct ng_parse_type *type,
 	    }
 
 #if 0
-	case PF_APPLETALK:	/* XXX implement these someday */
-	case PF_INET6:
-	case PF_IPX:
+	case PF_INET6:	/* XXX implement this someday */
 #endif
 
 	default:
@@ -640,7 +632,7 @@ ng_ksocket_connect(hook_p hook)
 	 * first created and now (on another processesor) will
 	 * be earlier on the queue than the request to finalise the hook.
 	 * By the time the hook is finalised,
-	 * The queued upcalls will have happenned and the code
+	 * The queued upcalls will have happened and the code
 	 * will have discarded them because of a lack of a hook.
 	 * (socket not open).
 	 *
@@ -650,9 +642,9 @@ ng_ksocket_connect(hook_p hook)
 	 * Since we are a netgraph operation
 	 * We know that we hold a lock on this node. This forces the
 	 * request we make below to be queued rather than implemented
-	 * immediatly which will cause the upcall function to be called a bit
+	 * immediately which will cause the upcall function to be called a bit
 	 * later.
-	 * However, as we will run any waiting queued operations immediatly
+	 * However, as we will run any waiting queued operations immediately
 	 * after doing this one, if we have not finalised the other end
 	 * of the hook, those queued operations will fail.
 	 */
@@ -1043,8 +1035,7 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int arg2)
 	struct socket *so = arg1;
 	const priv_p priv = NG_NODE_PRIVATE(node);
 	struct ng_mesg *response;
-	struct uio auio;
-	int flags, error;
+	int error;
 
 	KASSERT(so == priv->so, ("%s: wrong socket", __func__));
 
@@ -1093,20 +1084,27 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int arg2)
 	if (priv->hook == NULL)
 		return;
 
-	/* Read and forward available mbuf's */
-	auio.uio_td = NULL;
-	auio.uio_resid = 1000000000;
-	flags = MSG_DONTWAIT;
+	/* Read and forward available mbufs. */
 	while (1) {
-		struct sockaddr *sa = NULL;
+		struct uio uio;
+		struct sockaddr *sa;
 		struct mbuf *m;
+		int flags;
 
-		/* Try to get next packet from socket */
+		/* Try to get next packet from socket. */
+		uio.uio_td = NULL;
+		uio.uio_resid = IP_MAXPACKET;
+		flags = MSG_DONTWAIT;
+		sa = NULL;
 		if ((error = soreceive(so, (so->so_state & SS_ISCONNECTED) ?
-		    NULL : &sa, &auio, &m, NULL, &flags)) != 0)
+		    NULL : &sa, &uio, &m, NULL, &flags)) != 0)
 			break;
 
-		/* See if we got anything */
+		/* See if we got anything. */
+		if (flags & MSG_TRUNC) {
+			m_freem(m);
+			m = NULL;
+		}
 		if (m == NULL) {
 			if (sa != NULL)
 				free(sa, M_SONAME);

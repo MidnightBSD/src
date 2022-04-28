@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/cc/cc_chd.c 220592 2011-04-13 11:28:46Z pluknet $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -65,19 +65,16 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/cc/cc_chd.c 220592 2011-04-13 11:
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 
-#include <net/if.h>
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_module.h>
 
 #include <netinet/khelp/h_ertt.h>
-
-#define	CAST_PTR_INT(X)	(*((int*)(X)))
 
 /*
  * Private signal type for rate based congestion signal.
@@ -421,7 +418,7 @@ chd_loss_fair_handler(SYSCTL_HANDLER_ARGS)
 	new = V_chd_loss_fair;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) > 1)
+		if (new > 1)
 			error = EINVAL;
 		else
 			V_chd_loss_fair = new;
@@ -439,8 +436,7 @@ chd_pmax_handler(SYSCTL_HANDLER_ARGS)
 	new = V_chd_pmax;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) == 0 ||
-		    CAST_PTR_INT(req->newptr) > 100)
+		if (new == 0 || new > 100)
 			error = EINVAL;
 		else
 			V_chd_pmax = new;
@@ -458,7 +454,7 @@ chd_qthresh_handler(SYSCTL_HANDLER_ARGS)
 	new = V_chd_qthresh;
 	error = sysctl_handle_int(oidp, &new, 0, req);
 	if (error == 0 && req->newptr != NULL) {
-		if (CAST_PTR_INT(req->newptr) <= V_chd_qmin)
+		if (new <= V_chd_qmin)
 			error = EINVAL;
 		else
 			V_chd_qthresh = new;
@@ -471,24 +467,27 @@ SYSCTL_DECL(_net_inet_tcp_cc_chd);
 SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, chd, CTLFLAG_RW, NULL,
     "CAIA Hamilton delay-based congestion control related settings");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_chd, OID_AUTO, loss_fair,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(chd_loss_fair), 1, &chd_loss_fair_handler,
+SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, loss_fair,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    &VNET_NAME(chd_loss_fair), 1, &chd_loss_fair_handler,
     "IU", "Flag to enable shadow window functionality.");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_chd, OID_AUTO, pmax,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(chd_pmax), 5, &chd_pmax_handler,
+SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, pmax,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    &VNET_NAME(chd_pmax), 5, &chd_pmax_handler,
     "IU", "Per RTT maximum backoff probability as a percentage");
 
-SYSCTL_VNET_PROC(_net_inet_tcp_cc_chd, OID_AUTO, queue_threshold,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(chd_qthresh), 20, &chd_qthresh_handler,
+SYSCTL_PROC(_net_inet_tcp_cc_chd, OID_AUTO, queue_threshold,
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
+    &VNET_NAME(chd_qthresh), 20, &chd_qthresh_handler,
     "IU", "Queueing congestion threshold in ticks");
 
-SYSCTL_VNET_UINT(_net_inet_tcp_cc_chd, OID_AUTO, queue_min,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(chd_qmin), 5,
+SYSCTL_UINT(_net_inet_tcp_cc_chd, OID_AUTO, queue_min,
+    CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(chd_qmin), 5,
     "Minimum queueing delay threshold in ticks");
 
-SYSCTL_VNET_UINT(_net_inet_tcp_cc_chd,  OID_AUTO, use_max,
-    CTLTYPE_UINT|CTLFLAG_RW, &VNET_NAME(chd_use_max), 1,
+SYSCTL_UINT(_net_inet_tcp_cc_chd,  OID_AUTO, use_max,
+    CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(chd_use_max), 1,
     "Use the maximum RTT seen within the measurement period (RTT) "
     "as the basic delay measurement for the algorithm.");
 

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mly/Makefile 79695 2001-07-14 00:12:23Z msmith $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/mly
+.PATH: ${SRCTOP}/sys/dev/mly
 
 KMOD=	mly
 SRCS=	mly.c

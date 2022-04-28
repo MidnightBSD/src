@@ -28,7 +28,7 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
  *
- * $FreeBSD: release/10.0.0/usr.bin/mail/pathnames.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD$
  */
 
 #define	_PATH_EX	"/usr/bin/ex"

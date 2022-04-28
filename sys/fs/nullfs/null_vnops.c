@@ -36,7 +36,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: release/10.0.0/sys/fs/nullfs/null_vnops.c 255442 2013-09-10 10:05:59Z des $
+ * $FreeBSD$
  */
 
 /*
@@ -117,7 +117,7 @@
  * are created as a result of vnode operations on
  * this or other null vnode stacks.
  *
- * New vnode stacks come into existance as a result of
+ * New vnode stacks come into existence as a result of
  * an operation which returns a vnode.
  * The bypass routine stacks a null-node above the new
  * vnode before returning it to the caller.
@@ -361,9 +361,11 @@ null_lookup(struct vop_lookup_args *ap)
 	struct vnode *dvp = ap->a_dvp;
 	int flags = cnp->cn_flags;
 	struct vnode *vp, *ldvp, *lvp;
+	struct mount *mp;
 	int error;
 
-	if ((flags & ISLASTCN) && (dvp->v_mount->mnt_flag & MNT_RDONLY) &&
+	mp = dvp->v_mount;
+	if ((flags & ISLASTCN) != 0 && (mp->mnt_flag & MNT_RDONLY) != 0 &&
 	    (cnp->cn_nameiop == DELETE || cnp->cn_nameiop == RENAME))
 		return (EROFS);
 	/*
@@ -372,9 +374,47 @@ null_lookup(struct vop_lookup_args *ap)
 	 */
 	ldvp = NULLVPTOLOWERVP(dvp);
 	vp = lvp = NULL;
+	KASSERT((ldvp->v_vflag & VV_ROOT) == 0 ||
+	    ((dvp->v_vflag & VV_ROOT) != 0 && (flags & ISDOTDOT) == 0),
+	    ("ldvp %p fl %#x dvp %p fl %#x flags %#x", ldvp, ldvp->v_vflag,
+	     dvp, dvp->v_vflag, flags));
+
+	/*
+	 * Hold ldvp.  The reference on it, owned by dvp, is lost in
+	 * case of dvp reclamation, and we need ldvp to move our lock
+	 * from ldvp to dvp.
+	 */
+	vhold(ldvp);
+
 	error = VOP_LOOKUP(ldvp, &lvp, cnp);
-	if (error == EJUSTRETURN && (flags & ISLASTCN) &&
-	    (dvp->v_mount->mnt_flag & MNT_RDONLY) &&
+
+	/*
+	 * VOP_LOOKUP() on lower vnode may unlock ldvp, which allows
+	 * dvp to be reclaimed due to shared v_vnlock.  Check for the
+	 * doomed state and return error.
+	 */
+	if ((error == 0 || error == EJUSTRETURN) &&
+	    (dvp->v_iflag & VI_DOOMED) != 0) {
+		error = ENOENT;
+		if (lvp != NULL)
+			vput(lvp);
+
+		/*
+		 * If vgone() did reclaimed dvp before curthread
+		 * relocked ldvp, the locks of dvp and ldpv are no
+		 * longer shared.  In this case, relock of ldvp in
+		 * lower fs VOP_LOOKUP() does not restore the locking
+		 * state of dvp.  Compensate for this by unlocking
+		 * ldvp and locking dvp, which is also correct if the
+		 * locks are still shared.
+		 */
+		VOP_UNLOCK(ldvp, 0);
+		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY);
+	}
+	vdrop(ldvp);
+
+	if (error == EJUSTRETURN && (flags & ISLASTCN) != 0 &&
+	    (mp->mnt_flag & MNT_RDONLY) != 0 &&
 	    (cnp->cn_nameiop == CREATE || cnp->cn_nameiop == RENAME))
 		error = EROFS;
 
@@ -384,7 +424,7 @@ null_lookup(struct vop_lookup_args *ap)
 			VREF(dvp);
 			vrele(lvp);
 		} else {
-			error = null_nodeget(dvp->v_mount, lvp, &vp);
+			error = null_nodeget(mp, lvp, &vp);
 			if (error == 0)
 				*ap->a_vpp = vp;
 		}
@@ -528,14 +568,16 @@ static int
 null_remove(struct vop_remove_args *ap)
 {
 	int retval, vreleit;
-	struct vnode *lvp;
+	struct vnode *lvp, *vp;
 
-	if (vrefcnt(ap->a_vp) > 1) {
-		lvp = NULLVPTOLOWERVP(ap->a_vp);
+	vp = ap->a_vp;
+	if (vrefcnt(vp) > 1) {
+		lvp = NULLVPTOLOWERVP(vp);
 		VREF(lvp);
 		vreleit = 1;
 	} else
 		vreleit = 0;
+	VTONULL(vp)->null_flags |= NULLV_DROP;
 	retval = null_bypass(&ap->a_gen);
 	if (vreleit != 0)
 		vrele(lvp);
@@ -575,6 +617,14 @@ null_rename(struct vop_rename_args *ap)
 		tnn->null_flags |= NULLV_DROP;
 	}
 	return (null_bypass((struct vop_generic_args *)ap));
+}
+
+static int
+null_rmdir(struct vop_rmdir_args *ap)
+{
+
+	VTONULL(ap->a_vp)->null_flags |= NULLV_DROP;
+	return (null_bypass(&ap->a_gen));
 }
 
 /*
@@ -738,7 +788,7 @@ null_reclaim(struct vop_reclaim_args *ap)
 	lowervp = xp->null_lowervp;
 
 	KASSERT(lowervp != NULL && vp->v_vnlock != &vp->v_lock,
-	    ("Reclaiming inclomplete null vnode %p", vp));
+	    ("Reclaiming incomplete null vnode %p", vp));
 
 	null_hashrem(xp);
 	/*
@@ -818,14 +868,14 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	struct vnode **dvp = ap->a_vpp;
 	struct vnode *lvp, *ldvp;
 	struct ucred *cred = ap->a_cred;
+	struct mount *mp;
 	int error, locked;
-
-	if (vp->v_type == VDIR)
-		return (vop_stdvptocnp(ap));
 
 	locked = VOP_ISLOCKED(vp);
 	lvp = NULLVPTOLOWERVP(vp);
 	vhold(lvp);
+	mp = vp->v_mount;
+	vfs_ref(mp);
 	VOP_UNLOCK(vp, 0); /* vp is held by vn_vptocnp_locked that called us */
 	ldvp = lvp;
 	vref(lvp);
@@ -833,6 +883,7 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	vdrop(lvp);
 	if (error != 0) {
 		vn_lock(vp, locked | LK_RETRY);
+		vfs_rel(mp);
 		return (ENOENT);
 	}
 
@@ -844,10 +895,10 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 	if (error != 0) {
 		vrele(ldvp);
 		vn_lock(vp, locked | LK_RETRY);
+		vfs_rel(mp);
 		return (ENOENT);
 	}
-	vref(ldvp);
-	error = null_nodeget(vp->v_mount, ldvp, dvp);
+	error = null_nodeget(mp, ldvp, dvp);
 	if (error == 0) {
 #ifdef DIAGNOSTIC
 		NULLVPTOLOWERVP(*dvp);
@@ -855,16 +906,8 @@ null_vptocnp(struct vop_vptocnp_args *ap)
 		VOP_UNLOCK(*dvp, 0); /* keep reference on *dvp */
 	}
 	vn_lock(vp, locked | LK_RETRY);
+	vfs_rel(mp);
 	return (error);
-}
-
-static int
-null_link(struct vop_link_args *ap)
-{
-
-	if (ap->a_tdvp->v_mount != ap->a_vp->v_mount)
-		return (EXDEV);
-	return (null_bypass((struct vop_generic_args *)ap));
 }
 
 /*
@@ -880,7 +923,6 @@ struct vop_vector null_vnodeops = {
 	.vop_getwritemount =	null_getwritemount,
 	.vop_inactive =		null_inactive,
 	.vop_islocked =		vop_stdislocked,
-	.vop_link =		null_link,
 	.vop_lock1 =		null_lock,
 	.vop_lookup =		null_lookup,
 	.vop_open =		null_open,
@@ -888,6 +930,7 @@ struct vop_vector null_vnodeops = {
 	.vop_reclaim =		null_reclaim,
 	.vop_remove =		null_remove,
 	.vop_rename =		null_rename,
+	.vop_rmdir =		null_rmdir,
 	.vop_setattr =		null_setattr,
 	.vop_strategy =		VOP_EOPNOTSUPP,
 	.vop_unlock =		null_unlock,

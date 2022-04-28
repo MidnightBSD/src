@@ -45,7 +45,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdaa.c 246983 2013-02-19 10:25:51Z uqs $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 #define hdaa_lock(devinfo)	snd_mtxlock((devinfo)->lock)
 #define hdaa_unlock(devinfo)	snd_mtxunlock((devinfo)->lock)
@@ -53,7 +53,7 @@ SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdaa.c 246983 2
 #define hdaa_lockowned(devinfo)	mtx_owned((devinfo)->lock)
 
 static const struct {
-	char *key;
+	const char *key;
 	uint32_t value;
 } hdaa_quirks_tab[] = {
 	{ "softpcmvol", HDAA_QUIRK_SOFTPCMVOL },
@@ -71,28 +71,26 @@ static const struct {
 	{ "ovref", HDAA_QUIRK_OVREF },
 	{ "vref", HDAA_QUIRK_VREF },
 };
-#define HDAA_QUIRKS_TAB_LEN	\
-		(sizeof(hdaa_quirks_tab) / sizeof(hdaa_quirks_tab[0]))
 
 #define HDA_PARSE_MAXDEPTH	10
 
 MALLOC_DEFINE(M_HDAA, "hdaa", "HDA Audio");
 
-const char *HDA_COLORS[16] = {"Unknown", "Black", "Grey", "Blue", "Green", "Red",
-    "Orange", "Yellow", "Purple", "Pink", "Res.A", "Res.B", "Res.C", "Res.D",
-    "White", "Other"};
+static const char *HDA_COLORS[16] = {"Unknown", "Black", "Grey", "Blue",
+    "Green", "Red", "Orange", "Yellow", "Purple", "Pink", "Res.A", "Res.B",
+    "Res.C", "Res.D", "White", "Other"};
 
-const char *HDA_DEVS[16] = {"Line-out", "Speaker", "Headphones", "CD",
+static const char *HDA_DEVS[16] = {"Line-out", "Speaker", "Headphones", "CD",
     "SPDIF-out", "Digital-out", "Modem-line", "Modem-handset", "Line-in",
     "AUX", "Mic", "Telephony", "SPDIF-in", "Digital-in", "Res.E", "Other"};
 
-const char *HDA_CONNS[4] = {"Jack", "None", "Fixed", "Both"};
+static const char *HDA_CONNS[4] = {"Jack", "None", "Fixed", "Both"};
 
-const char *HDA_CONNECTORS[16] = {
+static const char *HDA_CONNECTORS[16] = {
     "Unknown", "1/8", "1/4", "ATAPI", "RCA", "Optical", "Digital", "Analog",
     "DIN", "XLR", "RJ-11", "Combo", "0xc", "0xd", "0xe", "Other" };
 
-const char *HDA_LOCS[64] = {
+static const char *HDA_LOCS[64] = {
     "0x00", "Rear", "Front", "Left", "Right", "Top", "Bottom", "Rear-panel",
 	"Drive-bay", "0x09", "0x0a", "0x0b", "0x0c", "0x0d", "0x0e", "0x0f",
     "Internal", "0x11", "0x12", "0x13", "0x14", "0x15", "0x16", "Riser",
@@ -102,10 +100,10 @@ const char *HDA_LOCS[64] = {
     "Other", "0x31", "0x32", "0x33", "0x34", "0x35", "Other-Bott", "Lid-In",
 	"Lid-Out", "0x39", "0x3a", "0x3b", "0x3c", "0x3d", "0x3e", "0x3f" };
 
-const char *HDA_GPIO_ACTIONS[8] = {
+static const char *HDA_GPIO_ACTIONS[8] = {
     "keep", "set", "clear", "disable", "input", "0x05", "0x06", "0x07"};
 
-const char *HDA_HDMI_CODING_TYPES[18] = {
+static const char *HDA_HDMI_CODING_TYPES[18] = {
     "undefined", "LPCM", "AC-3", "MPEG1", "MP3", "MPEG2", "AAC-LC", "DTS",
     "ATRAC", "DSD", "E-AC-3", "DTS-HD", "MLP", "DST", "WMAPro", "HE-AAC",
     "HE-AACv2", "MPEG-Surround"
@@ -781,7 +779,7 @@ hdaa_sense_init(struct hdaa_devinfo *devinfo)
 					    (w->unsol < 0) ? "polling" :
 					    "unsolicited responses");
 				);
-			};
+			}
 		}
 		hdaa_presence_handler(w);
 		if (!HDA_PARAM_PIN_CAP_DP(w->wclass.pin.cap) &&
@@ -849,7 +847,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 			if (bad[0] == 0) {
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_COLOR_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_COLOR_MASK);
-			};
+			}
 			for (i = 0; i < 16; i++) {
 				if (strcasecmp(HDA_COLORS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_COLOR_SHIFT);
@@ -874,7 +872,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_DEVICE_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_DEVICE_MASK);
 				continue;
-			};
+			}
 			for (i = 0; i < 16; i++) {
 				if (strcasecmp(HDA_DEVS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_DEVICE_SHIFT);
@@ -900,7 +898,7 @@ hdaa_widget_pin_patch(uint32_t config, const char *str)
 				config |= ((ival << HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_SHIFT) &
 				    HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_MASK);
 				continue;
-			};
+			}
 			for (i = 0; i < 4; i++) {
 				if (strcasecmp(HDA_CONNS[i], value) == 0) {
 					config |= (i << HDA_CONFIG_DEFAULTCONF_CONNECTIVITY_SHIFT);
@@ -1113,7 +1111,7 @@ hdaa_dump_pin_sb(struct sbuf *sb, struct hdaa_widget *w)
 }
 
 static void
-hdaa_dump_amp_sb(struct sbuf *sb, uint32_t cap, char *banner)
+hdaa_dump_amp_sb(struct sbuf *sb, uint32_t cap, const char *banner)
 {
 	int offset, size, step;
 
@@ -1274,7 +1272,7 @@ hdaa_config_fetch(const char *str, uint32_t *on, uint32_t *off)
 			inv = 2;
 		else
 			inv = 0;
-		for (k = 0; len > inv && k < HDAA_QUIRKS_TAB_LEN; k++) {
+		for (k = 0; len > inv && k < nitems(hdaa_quirks_tab); k++) {
 			if (strncmp(str + i + inv,
 			    hdaa_quirks_tab[k].key, len - inv) != 0)
 				continue;
@@ -1302,7 +1300,7 @@ hdaa_sysctl_quirks(SYSCTL_HANDLER_ARGS)
 
 	quirks = *(uint32_t *)oidp->oid_arg1;
 	buf[0] = 0;
-	for (i = 0; i < HDAA_QUIRKS_TAB_LEN; i++) {
+	for (i = 0; i < nitems(hdaa_quirks_tab); i++) {
 		if ((quirks & hdaa_quirks_tab[i].value) != 0)
 			n += snprintf(buf + n, sizeof(buf) - n, "%s%s",
 			    n != 0 ? "," : "", hdaa_quirks_tab[i].key);
@@ -1555,20 +1553,20 @@ hdaa_widget_parse(struct hdaa_widget *w)
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    buf, CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
-	    w, sizeof(w), hdaa_sysctl_caps, "A", "Node capabilities");
+	    w, 0, hdaa_sysctl_caps, "A", "Node capabilities");
 	if (w->type == HDA_PARAM_AUDIO_WIDGET_CAP_TYPE_PIN_COMPLEX) {
 		snprintf(buf, sizeof(buf), "nid%d_config", w->nid);
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 		    buf, CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
-		    &w->wclass.pin.newconf, sizeof(&w->wclass.pin.newconf),
-		    hdaa_sysctl_config, "A", "Current pin configuration");
+		    &w->wclass.pin.newconf, 0, hdaa_sysctl_config, "A",
+		    "Current pin configuration");
 		snprintf(buf, sizeof(buf), "nid%d_original", w->nid);
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 		    buf, CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
-		    &w->wclass.pin.original, sizeof(&w->wclass.pin.original),
-		    hdaa_sysctl_config, "A", "Original pin configuration");
+		    &w->wclass.pin.original, 0, hdaa_sysctl_config, "A",
+		    "Original pin configuration");
 	}
 	hdaa_lock(w->devinfo);
 }
@@ -1576,7 +1574,7 @@ hdaa_widget_parse(struct hdaa_widget *w)
 static void
 hdaa_widget_postprocess(struct hdaa_widget *w)
 {
-	char *typestr;
+	const char *typestr;
 
 	w->type = HDA_PARAM_AUDIO_WIDGET_CAP_TYPE(w->param.widget_cap);
 	switch (w->type) {
@@ -2132,7 +2130,8 @@ hdaa_channel_start(struct hdaa_chan *ch)
 	uint32_t fmt;
 
 	fmt = hdaa_stream_format(ch);
-	ch->stripectl = fls(ch->stripecap & hdaa_allowed_stripes(fmt)) - 1;
+	ch->stripectl = fls(ch->stripecap & hdaa_allowed_stripes(fmt) &
+	    hda_get_stripes_mask(devinfo->dev)) - 1;
 	ch->sid = HDAC_STREAM_ALLOC(device_get_parent(devinfo->dev), devinfo->dev,
 	    ch->dir == PCMDIR_PLAY ? 1 : 0, fmt, ch->stripectl, &ch->dmapos);
 	if (ch->sid <= 0)
@@ -3205,7 +3204,7 @@ hdaa_audio_as_parse(struct hdaa_devinfo *devinfo)
 
 	/* Scan associations skipping as=0. */
 	cnt = 0;
-	for (j = 1; j < 16; j++) {
+	for (j = 1; j < 16 && cnt < max; j++) {
 		first = 16;
 		hpredir = 0;
 		for (i = devinfo->startnode; i < devinfo->endnode; i++) {
@@ -5778,7 +5777,7 @@ hdaa_dump_pin_configs(struct hdaa_devinfo *devinfo)
 }
 
 static void
-hdaa_dump_amp(device_t dev, uint32_t cap, char *banner)
+hdaa_dump_amp(device_t dev, uint32_t cap, const char *banner)
 {
 	int offset, size, step;
 
@@ -6209,7 +6208,7 @@ hdaa_configure(device_t dev)
 	HDA_BOOTVERBOSE(
 		if (devinfo->quirks != 0) {
 			device_printf(dev, "FG config/quirks:");
-			for (i = 0; i < HDAA_QUIRKS_TAB_LEN; i++) {
+			for (i = 0; i < nitems(hdaa_quirks_tab); i++) {
 				if ((devinfo->quirks &
 				    hdaa_quirks_tab[i].value) ==
 				    hdaa_quirks_tab[i].value)
@@ -6594,7 +6593,7 @@ hdaa_attach(device_t dev)
 	devinfo->newquirks = -1;
 	devinfo->newgpio = -1;
 	devinfo->newgpo = -1;
-	callout_init(&devinfo->poll_jack, CALLOUT_MPSAFE);
+	callout_init(&devinfo->poll_jack, 1);
 	devinfo->poll_ival = hz;
 
 	hdaa_lock(devinfo);
@@ -6643,38 +6642,32 @@ hdaa_attach(device_t dev)
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "config", CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
-	    &devinfo->newquirks, sizeof(&devinfo->newquirks),
-	    hdaa_sysctl_quirks, "A", "Configuration options");
+	    &devinfo->newquirks, 0, hdaa_sysctl_quirks, "A",
+	    "Configuration options");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "gpi_state", CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
-	    devinfo, sizeof(devinfo),
-	    hdaa_sysctl_gpi_state, "A", "GPI state");
+	    devinfo, 0, hdaa_sysctl_gpi_state, "A", "GPI state");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "gpio_state", CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
-	    devinfo, sizeof(devinfo),
-	    hdaa_sysctl_gpio_state, "A", "GPIO state");
+	    devinfo, 0, hdaa_sysctl_gpio_state, "A", "GPIO state");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "gpio_config", CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
-	    devinfo, sizeof(devinfo),
-	    hdaa_sysctl_gpio_config, "A", "GPIO configuration");
+	    devinfo, 0, hdaa_sysctl_gpio_config, "A", "GPIO configuration");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "gpo_state", CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE,
-	    devinfo, sizeof(devinfo),
-	    hdaa_sysctl_gpo_state, "A", "GPO state");
+	    devinfo, 0, hdaa_sysctl_gpo_state, "A", "GPO state");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "gpo_config", CTLTYPE_STRING | CTLFLAG_RW | CTLFLAG_MPSAFE,
-	    devinfo, sizeof(devinfo),
-	    hdaa_sysctl_gpo_config, "A", "GPO configuration");
+	    devinfo, 0, hdaa_sysctl_gpo_config, "A", "GPO configuration");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
 	    "reconfig", CTLTYPE_INT | CTLFLAG_RW,
-	    dev, sizeof(dev),
-	    hdaa_sysctl_reconfig, "I", "Reprocess configuration");
+	    dev, 0, hdaa_sysctl_reconfig, "I", "Reprocess configuration");
 	bus_generic_attach(dev);
 	return (0);
 }
@@ -6834,7 +6827,7 @@ static device_method_t hdaa_methods[] = {
 	DEVMETHOD(hdac_stream_intr,	hdaa_stream_intr),
 	DEVMETHOD(hdac_unsol_intr,	hdaa_unsol_intr),
 	DEVMETHOD(hdac_pindump,		hdaa_pindump),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hdaa_driver = {
@@ -6845,7 +6838,7 @@ static driver_t hdaa_driver = {
 
 static devclass_t hdaa_devclass;
 
-DRIVER_MODULE(snd_hda, hdacc, hdaa_driver, hdaa_devclass, 0, 0);
+DRIVER_MODULE(snd_hda, hdacc, hdaa_driver, hdaa_devclass, NULL, NULL);
 
 static void
 hdaa_chan_formula(struct hdaa_devinfo *devinfo, int asid,
@@ -7094,7 +7087,7 @@ hdaa_pcm_attach(device_t dev)
 		    "rec.autosrc", &pdevinfo->autorecsrc);
 		SYSCTL_ADD_INT(&d->rec_sysctl_ctx,
 		    SYSCTL_CHILDREN(d->rec_sysctl_tree), OID_AUTO,
-		    "autosrc", CTLTYPE_INT | CTLFLAG_RW,
+		    "autosrc", CTLFLAG_RW,
 		    &pdevinfo->autorecsrc, 0,
 		    "Automatic recording source selection");
 	}
@@ -7143,7 +7136,7 @@ static device_method_t hdaa_pcm_methods[] = {
 	DEVMETHOD(device_probe,		hdaa_pcm_probe),
 	DEVMETHOD(device_attach,	hdaa_pcm_attach),
 	DEVMETHOD(device_detach,	hdaa_pcm_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t hdaa_pcm_driver = {
@@ -7152,6 +7145,6 @@ static driver_t hdaa_pcm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_hda_pcm, hdaa, hdaa_pcm_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_hda_pcm, hdaa, hdaa_pcm_driver, pcm_devclass, NULL, NULL);
 MODULE_DEPEND(snd_hda, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_hda, 1);

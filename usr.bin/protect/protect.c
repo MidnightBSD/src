@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2013 Advanced Computing Technologies LLC
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2013 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/protect/protect.c 255708 2013-09-19 18:53:42Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/procctl.h>
 #include <sys/types.h>

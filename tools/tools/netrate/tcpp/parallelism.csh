@@ -1,6 +1,6 @@
 #!/bin/csh
 #
-# $FreeBSD: release/10.0.0/tools/tools/netrate/tcpp/parallelism.csh 209429 2010-06-22 10:46:57Z rwatson $
+# $FreeBSD$
 #
 # Run tcpp -s -p 8 on the server, then this on the client.
 #

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/pccard/pccardvarp.h 237692 2012-06-28 07:26:44Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _PCCARD_PCCARDVARP_H
@@ -48,14 +48,14 @@
 #define PCCARD_CFE_AUDIO		0x0800
 
 struct pccard_ce_iospace {
-	u_long	length;
-	u_long	start;
+	rman_res_t	length;
+	rman_res_t	start;
 };
 
 struct pccard_ce_memspace {
-	u_long	length;
-	u_long	cardaddr;
-	u_long	hostaddr;
+	rman_res_t	length;
+	rman_res_t	cardaddr;
+	rman_res_t	hostaddr;
 };
 
 struct pccard_config_entry {

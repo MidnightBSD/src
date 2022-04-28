@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_unsolicited_frame_control.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -279,7 +279,7 @@ SCI_STATUS scic_sds_unsolicited_frame_control_get_header(
 {
    if (frame_index < uf_control->address_table.count)
    {
-      // Skip the first word in the frame since this is a controll word used
+      // Skip the first word in the frame since this is a control word used
       // by the hardware.
       *frame_header = &uf_control->buffers.array[frame_index].header->data;
 

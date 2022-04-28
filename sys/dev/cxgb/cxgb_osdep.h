@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/cxgb_osdep.h 240680 2012-09-18 22:04:59Z gavin $
+$FreeBSD$
 
 ***************************************************************************/
 
@@ -38,6 +38,8 @@ $FreeBSD: release/10.0.0/sys/dev/cxgb/cxgb_osdep.h 240680 2012-09-18 22:04:59Z g
 
 #include <sys/lock.h>
 #include <sys/mutex.h>
+
+#include <sys/kdb.h>
 
 #include <dev/mii/mii.h>
 
@@ -91,8 +93,6 @@ struct t3_mbuf_hdr {
 #endif
 #endif
 
-#define __read_mostly __attribute__((__section__(".data.read_mostly")))
-
 /*
  * Workaround for weird Chelsio issue
  */
@@ -130,10 +130,8 @@ void prefetch(void *x)
 #define smp_mb() mb()
 
 #define L1_CACHE_BYTES 128
-extern void kdb_backtrace(void);
-
 #define WARN_ON(condition) do { \
-       if (__predict_false((condition)!=0)) {  \
+	if (__predict_false((condition)!=0)) {  \
                 log(LOG_WARNING, "BUG: warning at %s:%d/%s()\n", __FILE__, __LINE__, __FUNCTION__); \
                 kdb_backtrace(); \
         } \
@@ -171,7 +169,7 @@ static const int debug_flags = DBG_RX;
 #define test_and_clear_bit(bit, p) atomic_cmpset_int((p), ((*(p)) | (1<<bit)), ((*(p)) & ~(1<<bit)))
 
 #define max_t(type, a, b) (type)max((a), (b))
-#define cpu_to_be32            htobe32
+#define cpu_to_be32(x)		htobe32(x)
 
 /* Standard PHY definitions */
 #define BMCR_LOOPBACK		BMCR_LOOP
@@ -233,7 +231,9 @@ static const int debug_flags = DBG_RX;
 #define le16_to_cpu(x) le16toh(x)
 #define cpu_to_le32(x) htole32(x)
 #define swab32(x) bswap32(x)
-#define simple_strtoul strtoul
+#ifndef simple_strtoul
+#define simple_strtoul(...) strtoul(__VA_ARGS__)
+#endif
 
 
 #ifndef LINUX_TYPES_DEFINED

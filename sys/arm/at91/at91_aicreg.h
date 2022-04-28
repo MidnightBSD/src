@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_aicreg.h 210040 2010-07-14 00:48:53Z cognet $ */
+/* $FreeBSD$ */
 
 #ifndef ARM_AT91_AT91_AICREG_H
 #define ARM_AT91_AT91_AICREG_H

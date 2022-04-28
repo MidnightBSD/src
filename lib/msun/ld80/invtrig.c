@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/ld80/invtrig.c 181074 2008-07-31 22:41:26Z das $");
+__FBSDID("$FreeBSD$");
 
 #include "invtrig.h"
 

@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_hw.h 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_HW_H_
 #define _E1000_HW_H_
@@ -133,6 +133,27 @@ struct e1000_hw;
 #define E1000_DEV_ID_PCH_LPT_I217_V		0x153B
 #define E1000_DEV_ID_PCH_LPTLP_I218_LM		0x155A
 #define E1000_DEV_ID_PCH_LPTLP_I218_V		0x1559
+#define E1000_DEV_ID_PCH_I218_LM2		0x15A0
+#define E1000_DEV_ID_PCH_I218_V2		0x15A1
+#define E1000_DEV_ID_PCH_I218_LM3		0x15A2 /* Wildcat Point PCH */
+#define E1000_DEV_ID_PCH_I218_V3		0x15A3 /* Wildcat Point PCH */
+#define E1000_DEV_ID_PCH_SPT_I219_LM		0x156F /* Sunrise Point PCH */
+#define E1000_DEV_ID_PCH_SPT_I219_V		0x1570 /* Sunrise Point PCH */
+#define E1000_DEV_ID_PCH_SPT_I219_LM2		0x15B7 /* Sunrise Point-H PCH */
+#define E1000_DEV_ID_PCH_SPT_I219_V2		0x15B8 /* Sunrise Point-H PCH */
+#define E1000_DEV_ID_PCH_LBG_I219_LM3		0x15B9 /* LEWISBURG PCH */
+#define E1000_DEV_ID_PCH_SPT_I219_LM4		0x15D7
+#define E1000_DEV_ID_PCH_SPT_I219_V4		0x15D8
+#define E1000_DEV_ID_PCH_SPT_I219_LM5		0x15E3
+#define E1000_DEV_ID_PCH_SPT_I219_V5		0x15D6
+#define E1000_DEV_ID_PCH_CNP_I219_LM6		0x15BD
+#define E1000_DEV_ID_PCH_CNP_I219_V6		0x15BE
+#define E1000_DEV_ID_PCH_CNP_I219_LM7		0x15BB
+#define E1000_DEV_ID_PCH_CNP_I219_V7		0x15BC
+#define E1000_DEV_ID_PCH_ICP_I219_LM8		0x15DF
+#define E1000_DEV_ID_PCH_ICP_I219_V8		0x15E0
+#define E1000_DEV_ID_PCH_ICP_I219_LM9		0x15E1
+#define E1000_DEV_ID_PCH_ICP_I219_V9		0x15E2
 #define E1000_DEV_ID_82576			0x10C9
 #define E1000_DEV_ID_82576_FIBER		0x10E6
 #define E1000_DEV_ID_82576_SERDES		0x10E7
@@ -218,6 +239,8 @@ enum e1000_mac_type {
 	e1000_pchlan,
 	e1000_pch2lan,
 	e1000_pch_lpt,
+	e1000_pch_spt,
+	e1000_pch_cnp,
 	e1000_82575,
 	e1000_82576,
 	e1000_82580,
@@ -696,7 +719,7 @@ struct e1000_mac_operations {
 	s32  (*setup_led)(struct e1000_hw *);
 	void (*write_vfta)(struct e1000_hw *, u32, u32);
 	void (*config_collision_dist)(struct e1000_hw *);
-	void (*rar_set)(struct e1000_hw *, u8*, u32);
+	int  (*rar_set)(struct e1000_hw *, u8*, u32);
 	s32  (*read_mac_addr)(struct e1000_hw *);
 	s32  (*validate_mdi_setting)(struct e1000_hw *);
 	s32  (*set_obff_timer)(struct e1000_hw *, u32);
@@ -783,7 +806,7 @@ struct e1000_mac_info {
 	u16 uta_reg_count;
 
 	/* Maximum size of the MTA register table in all supported adapters */
-	#define MAX_MTA_REG 128
+#define MAX_MTA_REG 128
 	u32 mta_shadow[MAX_MTA_REG];
 	u16 rar_entry_count;
 
@@ -801,7 +824,7 @@ struct e1000_mac_info {
 	enum e1000_serdes_link_state serdes_link_state;
 	bool serdes_has_link;
 	bool tx_pkt_filtering;
-	u32 max_frame_size;
+	u32  max_frame_size;
 };
 
 struct e1000_phy_info {
@@ -934,14 +957,26 @@ struct e1000_shadow_ram {
 
 #define E1000_SHADOW_RAM_WORDS		2048
 
+/* I218 PHY Ultra Low Power (ULP) states */
+enum e1000_ulp_state {
+	e1000_ulp_state_unknown,
+	e1000_ulp_state_off,
+	e1000_ulp_state_on,
+};
+
 struct e1000_dev_spec_ich8lan {
 	bool kmrn_lock_loss_workaround_enabled;
 	struct e1000_shadow_ram shadow_ram[E1000_SHADOW_RAM_WORDS];
 	E1000_MUTEX nvm_mutex;
 	E1000_MUTEX swflag_mutex;
 	bool nvm_k1_enabled;
+	bool disable_k1_off;
 	bool eee_disable;
 	u16 eee_lp_ability;
+	enum e1000_ulp_state ulp_state;
+	bool ulp_capability_disabled;
+	bool during_suspend_flow;
+	bool during_dpg_exit;
 };
 
 struct e1000_dev_spec_82575 {

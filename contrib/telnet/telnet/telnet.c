@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)telnet.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/telnet.c 207449 2010-04-30 19:52:35Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -52,6 +48,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/telnet.c 207449 2010-04
 #include <stdlib.h>
 #include <term.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <arpa/telnet.h>
 
 #include "ring.h"
@@ -68,7 +65,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/telnet.c 207449 2010-04
 #include <libtelnet/encrypt.h>
 #endif
 #include <libtelnet/misc.h>
-
+
 #define	strip(x) ((my_want_state_is_wont(TELOPT_BINARY)) ? ((x)&0x7f) : (x))
 
 static unsigned char	subbuffer[SUBBUFSIZE],
@@ -162,7 +159,7 @@ static int is_unique(char *, char **, char **);
  */
 
 Clocks clocks;
-
+
 /*
  * Initialize telnet environment.
  */
@@ -196,7 +193,7 @@ init_telnet(void)
     flushline = 1;
     telrcv_state = TS_DATA;
 }
-
+
 
 /*
  * These routines are in charge of sending option negotiations
@@ -205,6 +202,42 @@ init_telnet(void)
  * The basic idea is that we send the negotiation if either side
  * is in disagreement as to what the current state should be.
  */
+
+unsigned char ComPortBaudRate[256];
+
+void
+DoBaudRate(char *arg)
+{
+    char *temp, temp2[10];
+    int i;
+    uint32_t baudrate;
+
+    errno = 0;
+    baudrate = (uint32_t)strtol(arg, &temp, 10);
+    if (temp[0] != '\0' || (baudrate == 0 && errno != 0))
+	ExitString("Invalid baud rate provided.\n", 1);
+
+    for (i = 1; termspeeds[i].speed != -1; i++)
+	if (baudrate == termspeeds[i].speed)
+	    break;
+    if (termspeeds[i].speed == -1)
+	ExitString("Invalid baud rate provided.\n", 1);
+
+    strlcpy(ComPortBaudRate, arg, sizeof(ComPortBaudRate));
+
+    if (NETROOM() < sizeof(temp2)) {
+	ExitString("No room in buffer for baud rate.\n", 1);
+	/* NOTREACHED */
+    }
+
+    snprintf(temp2, sizeof(temp2), "%c%c%c%c....%c%c", IAC, SB, TELOPT_COMPORT,
+	COMPORT_SET_BAUDRATE, IAC, SE);
+
+    baudrate = htonl(baudrate);
+    memcpy(&temp2[4], &baudrate, sizeof(baudrate));
+    ring_supply_data(&netoring, temp2, sizeof(temp2));
+    printsub('>', &temp[2], sizeof(temp2) - 2);
+}
 
 void
 send_do(int c, int init)
@@ -748,7 +781,7 @@ suboption(void)
 	    name = gettermname();
 	    len = strlen(name) + 4 + 2;
 	    if (len < NETROOM()) {
-		sprintf(temp, "%c%c%c%c%s%c%c", IAC, SB, TELOPT_TTYPE,
+		snprintf(temp, sizeof(temp), "%c%c%c%c%s%c%c", IAC, SB, TELOPT_TTYPE,
 				TELQUAL_IS, name, IAC, SE);
 		ring_supply_data(&netoring, temp, len);
 		printsub('>', &temp[2], len-2);
@@ -770,7 +803,7 @@ suboption(void)
 
 	    TerminalSpeeds(&ispeed, &ospeed);
 
-	    sprintf((char *)temp, "%c%c%c%c%ld,%ld%c%c", IAC, SB, TELOPT_TSPEED,
+	    snprintf((char *)temp, sizeof(temp), "%c%c%c%c%ld,%ld%c%c", IAC, SB, TELOPT_TSPEED,
 		    TELQUAL_IS, ospeed, ispeed, IAC, SE);
 	    len = strlen((char *)temp+4) + 4;	/* temp[3] is 0 ... */
 
@@ -1084,7 +1117,7 @@ lm_mode(unsigned char *cmd, int len, int init)
 	setconnmode(0);	/* set changed mode */
 }
 
-
+
 
 /*
  * slc()
@@ -1628,7 +1661,7 @@ env_opt_end(int emptyok)
 	}
 }
 
-
+
 
 int
 telrcv(void)
@@ -2013,7 +2046,7 @@ telsnd(void)
 	ring_consumed(&ttyiring, count);
     return returnValue||count;		/* Non-zero if we did anything */
 }
-
+
 /*
  * Scheduler()
  *

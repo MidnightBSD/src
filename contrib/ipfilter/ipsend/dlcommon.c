@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipsend/dlcommon.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Common (shared) DLPI test routines.
@@ -20,11 +20,7 @@ typedef	unsigned long	ulong;
 #include	<sys/types.h>
 #include	<sys/stream.h>
 #include	<sys/stropts.h>
-#ifdef __osf__
-# include	<sys/dlpihdr.h>
-#else
 # include	<sys/dlpi.h>
-#endif
 #include	<sys/signal.h>
 #include	<stdio.h>
 #include	<string.h>

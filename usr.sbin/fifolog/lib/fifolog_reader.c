@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/fifolog/lib/fifolog_reader.c 219027 2011-02-25 09:40:17Z phk $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -59,7 +61,7 @@ fifolog_reader_open(const char *fname)
 	struct fifolog_reader *fr;
 	int i;
 
-	fr = calloc(sizeof *fr, 1);
+	fr = calloc(1, sizeof(*fr));
 	if (fr == NULL)
 		err(1, "Cannot malloc");
 
@@ -67,10 +69,10 @@ fifolog_reader_open(const char *fname)
 	if (retval != NULL)
 		err(1, "%s", retval);
 
-	fr->olen = fr->ff->recsize * 16;
-	fr->obuf = calloc(fr->olen, 1);
+	fr->obuf = calloc(16, fr->ff->recsize);
 	if (fr->obuf == NULL)
 		err(1, "Cannot malloc");
+	fr->olen = fr->ff->recsize * 16;
 
 	i = inflateInit(fr->ff->zs);
 	assert(i == Z_OK);

@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/vlan.4 255736 2013-09-20 20:18:49Z davidch $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 2012
+.Dd September 20, 2017
 .Dt VLAN 4
 .Os
 .Sh NAME
@@ -135,6 +135,7 @@ in hardware:
 .Xr ixgb 4 ,
 .Xr ixgbe 4 ,
 .Xr jme 4 ,
+.Xr liquidio 4 ,
 .Xr msk 4 ,
 .Xr mxge 4 ,
 .Xr nxge 4 ,
@@ -176,7 +177,6 @@ These interfaces natively support long frames for
 .Xr hme 4 ,
 .Xr le 4 ,
 .Xr nfe 4 ,
-.Xr nve 4 ,
 .Xr rl 4 ,
 .Xr sf 4 ,
 .Xr sis 4 ,
@@ -204,5 +204,3 @@ can be corrected manually if used in conjunction with such a parent interface.
 .Sh SEE ALSO
 .Xr ifconfig 8 ,
 .Xr sysctl 8
-.Sh BUGS
-No 802.1Q features except VLAN tagging are implemented.

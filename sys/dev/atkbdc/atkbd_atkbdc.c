@@ -25,9 +25,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/atkbdc/atkbd_atkbdc.c 245315 2013-01-11 21:42:23Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
+#include "opt_evdev.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -169,3 +170,6 @@ atkbdintr(void *arg)
 }
 
 DRIVER_MODULE(atkbd, atkbdc, atkbd_driver, atkbd_devclass, 0, 0);
+#ifdef EVDEV_SUPPORT
+MODULE_DEPEND(atkbd, evdev, 1, 1, 1);
+#endif

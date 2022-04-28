@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_gtar_lzma.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char archive[] = {
 0x5d, 0x0, 0x0, 0x80, 0x0, 0x0, 0x28, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -66,6 +66,8 @@ DEFINE_TEST(test_read_format_gtar_lzma)
 	    archive_read_next_header(a, &ae));
 	assertEqualInt(archive_filter_code(a, 0), ARCHIVE_FILTER_LZMA);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR_GNUTAR);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 finish:
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));

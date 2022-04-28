@@ -25,7 +25,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/gen/sem_wait.3 249567 2013-04-16 20:31:15Z joel $
+.\" $FreeBSD$
 .\"
 .Dd April 16, 2013
 .Dt SEM_WAIT 3
@@ -81,6 +81,7 @@ will fail if:
 .It Bq Er EINTR
 A signal interrupted this function.
 .El
+.Pp
 Additionally,
 .Fn sem_trywait
 will fail if:
@@ -91,8 +92,7 @@ The semaphore value was zero, and thus could not be decremented.
 .Sh SEE ALSO
 .Xr sem_getvalue 3 ,
 .Xr sem_post 3 ,
-.Xr sem_timedwait 3 ,
-.Xr sem 4
+.Xr sem_timedwait 3
 .Sh STANDARDS
 The
 .Fn sem_wait

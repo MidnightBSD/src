@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/lib/libugidfw/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 LIB=		ugidfw
-SHLIB_MAJOR=	4
+SHLIB_MAJOR=	5
 SRCS=		ugidfw.c
 INCS=		ugidfw.h
 

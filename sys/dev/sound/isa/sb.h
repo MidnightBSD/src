@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/isa/sb.h 166425 2007-02-02 13:33:35Z joel $
+ * $FreeBSD$
  */
 
 #ifndef SB_H

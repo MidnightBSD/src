@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ah_desc.h 251399 2013-06-05 00:39:20Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_ATH_DESC_H
@@ -280,7 +280,8 @@ struct ath_desc_status {
 #define	HAL_TXDESC_EXT_AND_CTL	0x0100	/* send on ext + ctl channels (11n) */
 #define	HAL_TXDESC_VMF		0x0200	/* virtual more frag */
 #define	HAL_TXDESC_LOWRXCHAIN	0x0400	/* switch to low RX chain */
-#define	HAL_TXDESC_LDPC		0x1000
+#define	HAL_TXDESC_LDPC		0x1000	/* Set LDPC TX for all rates */
+#define	HAL_TXDESC_HWTS		0x2000	/* Request Azimuth Timestamp in TX payload */
 
 /* flags passed to rx descriptor setup methods */
 #define	HAL_RXDESC_INTREQ	0x0020	/* enable per-descriptor interrupt */

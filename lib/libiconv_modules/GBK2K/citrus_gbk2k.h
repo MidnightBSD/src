@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libiconv_modules/GBK2K/citrus_gbk2k.h 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_gbk2k.h,v 1.2 2003/06/25 09:51:43 tshiozak Exp $ */
 
 /*-

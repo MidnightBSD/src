@@ -21,7 +21,7 @@
  * Cronyx Id: ctddk.c,v 1.1.2.3 2003/11/14 16:55:36 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ctau/ctddk.c 139749 2005-01-06 01:43:34Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/ctau/ctddk.h>
@@ -104,7 +104,7 @@ int ct_open_board (ct_board_t *b, int num, port_t port, int irq, int dma)
 	case B_TAU2_E1D:
 		fw = ctau2_fw_data;
 		flen = 0;
-		ft = 0;
+		ft = NULL;
 		break;
 #ifndef CT_DDK_NO_G703
 	case B_TAU_G703:

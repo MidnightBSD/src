@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/fuse/Makefile 241519 2012-10-13 23:54:26Z attilio $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../fs/fuse
+.PATH: ${SRCTOP}/sys/fs/fuse
 
 KMOD=	fuse
 SRCS=	vnode_if.h \

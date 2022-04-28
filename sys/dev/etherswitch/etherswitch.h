@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/etherswitch.h 253569 2013-07-23 13:56:38Z loos $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_DEV_ETHERSWITCH_ETHERSWITCH_H

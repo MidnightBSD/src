@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/cmdtab.c 253360 2013-07-15 12:15:14Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)cmdtab.c	8.1 (Berkeley) 6/6/93";
@@ -69,12 +69,18 @@ struct	cmdtab cmdtab[] = {
 	  initip6,	openip6,	closeip6,	cmdmode,
 	  resetip6,	CF_LOADAV },
 #endif
+	{ "sctp",	showsctp,	fetchsctp,	labelsctp,
+	  initsctp,	opensctp,	closesctp,	cmdmode,
+	  resetsctp,	CF_LOADAV },
 	{ "tcp",	showtcp,	fetchtcp,	labeltcp,
 	  inittcp,	opentcp,	closetcp,	cmdmode,
 	  resettcp,	CF_LOADAV },
 	{ "ifstat",	showifstat,	fetchifstat,	labelifstat,
 	  initifstat,	openifstat,	closeifstat,	cmdifstat,
 	  0,		CF_LOADAV },
+	{ "zarc",	showzarc,	fetchzarc,	labelzarc,
+	  initzarc,	openzarc,	closezarc,	0,
+	  resetzarc,	CF_ZFSARC },
 	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0 }
 };
 struct  cmdtab *curcmd = &cmdtab[0];

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/jail.h 254741 2013-08-23 22:52:20Z delphij $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_JAIL_H_
@@ -134,6 +134,7 @@ MALLOC_DECLARE(M_PRISON);
 #include <sys/osd.h>
 
 #define	HOSTUUIDLEN	64
+#define	OSRELEASELEN	32
 
 struct racct;
 struct prison_racct;
@@ -148,7 +149,6 @@ struct prison_racct;
  *   (p) locked by pr_mtx
  *   (c) set only during creation before the structure is shared, no mutex
  *       required to read
- *   (d) set only during destruction of jail, no mutex needed
  */
 struct prison {
 	TAILQ_ENTRY(prison) pr_list;			/* (a) all prisons */
@@ -160,7 +160,7 @@ struct prison {
 	LIST_ENTRY(prison) pr_sibling;			/* (a) next in parent's list */
 	struct prison	*pr_parent;			/* (c) containing jail */
 	struct mtx	 pr_mtx;
-	struct task	 pr_task;			/* (d) destroy task */
+	struct task	 pr_task;			/* (c) destroy task */
 	struct osd	 pr_osd;			/* (p) additional data */
 	struct cpuset	*pr_cpuset;			/* (p) cpuset */
 	struct vnet	*pr_vnet;			/* (c) network stack */
@@ -177,13 +177,15 @@ struct prison {
 	int		 pr_securelevel;		/* (p) securelevel */
 	int		 pr_enforce_statfs;		/* (p) statfs permission */
 	int		 pr_devfs_rsnum;		/* (p) devfs ruleset */
-	int		 pr_spare[4];
+	int		 pr_spare[3];
+	int		 pr_osreldate;			/* (c) kern.osreldate value */
 	unsigned long	 pr_hostid;			/* (p) jail hostid */
 	char		 pr_name[MAXHOSTNAMELEN];	/* (p) admin jail name */
 	char		 pr_path[MAXPATHLEN];		/* (c) chroot path */
 	char		 pr_hostname[MAXHOSTNAMELEN];	/* (p) jail hostname */
 	char		 pr_domainname[MAXHOSTNAMELEN];	/* (p) jail domainname */
 	char		 pr_hostuuid[HOSTUUIDLEN];	/* (p) jail hostuuid */
+	char		 pr_osrelease[OSRELEASELEN];	/* (c) kern.osrelease value */
 };
 
 struct prison_racct {
@@ -201,15 +203,12 @@ struct prison_racct {
 #define	PR_IP4_USER	0x00000004	/* Restrict IPv4 addresses */
 #define	PR_IP6_USER	0x00000008	/* Restrict IPv6 addresses */
 #define	PR_VNET		0x00000010	/* Virtual network stack */
-#define	PR_IP4_DISABLE	0x00000020	/* Disable IPv4 */
-#define	PR_IP6_DISABLE	0x00000040	/* Disable IPv6 */
 #define	PR_IP4_SADDRSEL	0x00000080	/* Do IPv4 src addr sel. or use the */
 					/* primary jail address. */
 #define	PR_IP6_SADDRSEL	0x00000100	/* Do IPv6 src addr sel. or use the */
 					/* primary jail address. */
 
 /* Internal flag bits */
-#define	PR_REMOVE	0x01000000	/* In process of being removed */
 #define	PR_IP4		0x02000000	/* IPv4 restricted or disabled */
 					/* by this jail or an ancestor */
 #define	PR_IP6		0x04000000	/* IPv6 restricted or disabled */
@@ -228,7 +227,11 @@ struct prison_racct {
 #define	PR_ALLOW_MOUNT_ZFS		0x0200
 #define	PR_ALLOW_MOUNT_PROCFS		0x0400
 #define	PR_ALLOW_MOUNT_TMPFS		0x0800
-#define	PR_ALLOW_ALL			0x0fff
+#define	PR_ALLOW_MOUNT_FDESCFS		0x1000
+#define	PR_ALLOW_MOUNT_LINPROCFS	0x2000
+#define	PR_ALLOW_MOUNT_LINSYSFS		0x4000
+#define	PR_ALLOW_READ_MSGBUF		0x8000
+#define	PR_ALLOW_ALL			0xffff
 
 /*
  * OSD methods
@@ -238,7 +241,8 @@ struct prison_racct {
 #define	PR_METHOD_SET		2
 #define	PR_METHOD_CHECK		3
 #define	PR_METHOD_ATTACH	4
-#define	PR_MAXMETHOD		5
+#define	PR_METHOD_REMOVE	5
+#define	PR_MAXMETHOD		6
 
 /*
  * Lock/unlock a prison.
@@ -363,6 +367,8 @@ void getcredhostname(struct ucred *, char *, size_t);
 void getcreddomainname(struct ucred *, char *, size_t);
 void getcredhostuuid(struct ucred *, char *, size_t);
 void getcredhostid(struct ucred *, unsigned long *);
+void getjailname(struct ucred *cred, char *name, size_t len);
+void prison0_init(void);
 int prison_allow(struct ucred *, unsigned);
 int prison_check(struct ucred *cred1, struct ucred *cred2);
 int prison_owns_vnet(struct ucred *);
@@ -384,15 +390,21 @@ int prison_equal_ip4(struct prison *, struct prison *);
 int prison_get_ip4(struct ucred *cred, struct in_addr *ia);
 int prison_local_ip4(struct ucred *cred, struct in_addr *ia);
 int prison_remote_ip4(struct ucred *cred, struct in_addr *ia);
-int prison_check_ip4(struct ucred *cred, struct in_addr *ia);
+int prison_check_ip4(const struct ucred *, const struct in_addr *);
+int prison_check_ip4_locked(const struct prison *, const struct in_addr *);
 int prison_saddrsel_ip4(struct ucred *, struct in_addr *);
+int prison_restrict_ip4(struct prison *, struct in_addr *);
+int prison_qcmp_v4(const void *, const void *);
 #ifdef INET6
 int prison_equal_ip6(struct prison *, struct prison *);
 int prison_get_ip6(struct ucred *, struct in6_addr *);
 int prison_local_ip6(struct ucred *, struct in6_addr *, int);
 int prison_remote_ip6(struct ucred *, struct in6_addr *);
-int prison_check_ip6(struct ucred *, struct in6_addr *);
+int prison_check_ip6(const struct ucred *, const struct in6_addr *);
+int prison_check_ip6_locked(const struct prison *, const struct in6_addr *);
 int prison_saddrsel_ip6(struct ucred *, struct in6_addr *);
+int prison_restrict_ip6(struct prison *, struct in6_addr *);
+int prison_qcmp_v6(const void *, const void *);
 #endif
 int prison_check_af(struct ucred *cred, int af);
 int prison_if(struct ucred *cred, struct sockaddr *sa);
@@ -400,7 +412,8 @@ char *prison_name(struct prison *, struct prison *);
 int prison_priv_check(struct ucred *cred, int priv);
 int sysctl_jail_param(SYSCTL_HANDLER_ARGS);
 void prison_racct_foreach(void (*callback)(struct racct *racct,
-    void *arg2, void *arg3), void *arg2, void *arg3);
+    void *arg2, void *arg3), void (*pre)(void), void (*post)(void),
+    void *arg2, void *arg3);
 struct prison_racct *prison_racct_find(const char *name);
 void prison_racct_hold(struct prison_racct *prr);
 void prison_racct_free(struct prison_racct *prr);

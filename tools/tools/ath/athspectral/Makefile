@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/ath/athspectral/Makefile 244953 2013-01-02 04:02:27Z adrian $
+# $FreeBSD$
 
 PROG=	athspectral
 

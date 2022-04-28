@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342.c 238545 2012-07-17 03:18:12Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/i8134x/i81342.c 238545 2012-07
 #include <sys/module.h>
 
 #define	_ARM32_BUS_DMA_PRIVATE
+#include <machine/armreg.h>
 #include <machine/bus.h>
 #include <machine/intr.h>
 
@@ -248,7 +249,7 @@ void
 cpu_reset(void)
 {
 
-	disable_interrupts(I32_bit);
+	disable_interrupts(PSR_I);
 	/* XXX: Use the watchdog to reset for now */
 	__asm __volatile("mcr p6, 0, %0, c8, c9, 0\n"
 	    		 "mcr p6, 0, %1, c7, c9, 0\n"
@@ -408,7 +409,7 @@ i81342_attach(device_t dev)
 
 static struct resource *
 i81342_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct i81342_softc *sc = device_get_softc(dev);
 	struct resource *rv;

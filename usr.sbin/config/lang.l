@@ -28,12 +28,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)lang.l	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.sbin/config/lang.l 250926 2013-05-23 05:42:35Z jkim $
+ * $FreeBSD$
  */
 
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
+#include <stdlib.h>
 #include <string.h>
 #include "y.tab.h"
 #include "config.h"
@@ -67,6 +68,7 @@ struct kt {
 	{ "nodevice",	NODEVICE },
 	{ "nodevices",	NODEVICE },
 	{ "env",	ENV },
+	{ "envvar",	ENVVAR },
 	{ "hints",	HINTS },
 	{ "ident",	IDENT },
 	{ "machine",	ARCH }, /* MACHINE is defined in /sys/param.h */
@@ -102,7 +104,13 @@ int yyerror(const char *);
 ID	[A-Za-z_][-A-Za-z_0-9]*
 PATH	[./][-/.%^A-Za-z_0-9]+
 %START TOEOL
+%START ENVC
 %%
+<ENVC>[^#\n]*	{
+			BEGIN 0;
+			yylval.str = strdup(yytext);
+			return ENVLINE;
+		}
 {ID}		{
 			int i;
 
@@ -112,9 +120,12 @@ PATH	[./][-/.%^A-Za-z_0-9]+
 				yylval.str = strdup(yytext);
 				return ID;
 			}
+			/* We'll glom onto the rest of an envvar line */
+			if (i == ENVVAR)
+				BEGIN ENVC;
 			return i;
 		}
-\\\"[^"]+\\\"	{
+\\\"[^"]*\\\"	{
 			BEGIN 0;
 			yytext[yyleng-2] = '"';
 			yytext[yyleng-1] = '\0';
@@ -257,6 +268,7 @@ include(const char *fname, int ateof)
 {
 	FILE *fp;
 	struct incl *in;
+	struct includepath* ipath;
 	char *fnamebuf;
 
 	fnamebuf = NULL;
@@ -265,6 +277,18 @@ include(const char *fname, int ateof)
 		asprintf(&fnamebuf, "../../conf/%s", fname);
 		if (fnamebuf != NULL) {
 			fp = fopen(fnamebuf, "r");
+			if (fp == NULL)
+				free(fnamebuf);
+		}
+	}
+	if (fp == NULL) {
+		SLIST_FOREACH(ipath, &includepath, path_next) {
+			asprintf(&fnamebuf, "%s/%s", ipath->path, fname);
+			if (fnamebuf != NULL) {
+				fp = fopen(fnamebuf, "r");
+			}
+			if (fp != NULL)
+				break;
 			free(fnamebuf);
 		}
 	}

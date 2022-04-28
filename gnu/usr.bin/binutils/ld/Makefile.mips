@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/ld/Makefile.mips 219811 2011-03-21 04:03:55Z marcel $
+# $FreeBSD$
 
 .if ${TARGET_ARCH:Mmips*el} != ""
 _EMULATION_ENDIAN=l
@@ -22,6 +22,7 @@ EMS+= ${abi}
 #.endif
 .for ext in ${ELF_SCR_EXT}
 LDSCRIPTS+= ${abi}.${ext}
+ldscripts/${abi}.${ext}: e${abi}.c
 .endfor
 SRCS+=	e${abi}.c 
 CLEANFILES+=	e${abi}.c

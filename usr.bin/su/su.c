@@ -70,7 +70,7 @@ static char sccsid[] = "@(#)su.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/su/su.c 254259 2013-08-12 21:01:01Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -172,7 +172,7 @@ main(int argc, char *argv[])
 	au_id_t		 auid;
 #endif
 
-	shell = class = cleanenv = NULL;
+	p = shell = class = cleanenv = NULL;
 	asme = asthem = fastlogin = statusp = 0;
 	user = "root";
 	iscsh = UNSET;
@@ -275,9 +275,9 @@ main(int argc, char *argv[])
 	if (asme) {
 		if (pwd->pw_shell != NULL && *pwd->pw_shell != '\0') {
 			/* must copy - pwd memory is recycled */
-			shell = strncpy(shellbuf, pwd->pw_shell,
+			strlcpy(shellbuf, pwd->pw_shell,
 			    sizeof(shellbuf));
-			shellbuf[sizeof(shellbuf) - 1] = '\0';
+			shell = shellbuf;
 		}
 		else {
 			shell = _PATH_BSHELL;

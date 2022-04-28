@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-/// \file       filter_common.c
+/// \file       filter_common.h
 /// \brief      Filter-specific stuff common for both encoder and decoder
 //
 //  Author:     Lasse Collin
@@ -36,7 +36,7 @@ typedef const lzma_filter_coder *(*lzma_filter_find)(lzma_vli id);
 
 
 extern lzma_ret lzma_raw_coder_init(
-		lzma_next_coder *next, lzma_allocator *allocator,
+		lzma_next_coder *next, const lzma_allocator *allocator,
 		const lzma_filter *filters,
 		lzma_filter_find coder_find, bool is_encoder);
 

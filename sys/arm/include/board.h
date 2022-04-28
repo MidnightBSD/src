@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/include/board.h 238189 2012-07-07 05:02:39Z imp $ */
+/* $FreeBSD$ */
 
 #ifndef _ARM_INCLUDE_BOARD_H_
 #define _ARM_INCLUDE_BOARD_H_
@@ -37,7 +37,7 @@ struct arm_board {
 	const char	*board_name;	/* Human readable name */
 	arm_board_init_fn *board_init;	/* Board initialize code */
 };
- 
+
 #if defined(ARM_MANY_BOARD)
 
 #include "board_id.h"

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nvram/nvram.c 181132 2008-08-01 20:39:18Z jhb $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

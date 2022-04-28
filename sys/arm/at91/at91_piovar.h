@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_piovar.h 249232 2013-04-07 13:03:57Z hselasky $ */
+/* $FreeBSD$ */
 
 #ifndef ARM_AT91_AT91_PIOVAR_H
 #define	ARM_AT91_AT91_PIOVAR_H
@@ -45,5 +45,6 @@ void at91_pio_gpio_set_deglitch(uint32_t pio, uint32_t data_mask,
 void at91_pio_gpio_set_interrupt(uint32_t pio, uint32_t data_mask,
     int enable_interrupt);
 uint32_t at91_pio_gpio_clear_interrupt(uint32_t pio);
+void at91_pio_gpio_pullup(uint32_t pio, uint32_t data_mask, int do_pullup);
 
 #endif /* ARM_AT91_AT91_PIOVAR_H */

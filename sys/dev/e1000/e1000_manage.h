@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2012, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_manage.h 238148 2012-07-05 20:26:57Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_MANAGE_H_
 #define _E1000_MANAGE_H_

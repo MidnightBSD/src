@@ -1,6 +1,10 @@
 /*-
  * Copyright (c) 2003 Peter Wemm
+ * Copyright (c) 2017 The FreeBSD Foundation
  * All rights reserved.
+ *
+ * Portions of this software were developed by Konstantin Belousov
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +29,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/sys/amd64_get_fsbase.c 124296 2004-01-09 16:52:09Z nectar $");
+__FBSDID("$FreeBSD$");
 
+#include <sys/types.h>
+#include <machine/cpufunc.h>
 #include <machine/sysarch.h>
+#include "amd64_detect_rdfsgsbase.h"
 
 int
 amd64_get_fsbase(void **addr)
 {
 
+	if (amd64_detect_rdfsgsbase() == RDFSGS_SUPPORTED) {
+		*addr = (void *)rdfsbase();
+		return (0);
+	}
 	return (sysarch(AMD64_GET_FSBASE, addr));
 }

@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/tools/regression/sockets/zerosend/Makefile 165982 2007-01-12 21:49:36Z rwatson $
+# $FreeBSD$
 
 PROG=	zerosend
-NO_MAN=
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

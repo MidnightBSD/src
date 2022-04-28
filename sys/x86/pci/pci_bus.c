@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/pci/pci_bus.c 234153 2012-04-11 21:00:33Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_cpu.h"
 
@@ -92,7 +92,7 @@ legacy_pcib_route_interrupt(device_t pcib, device_t dev, int pin)
 
 /* Pass MSI requests up to the nexus. */
 
-static int
+int
 legacy_pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
     int *irqs)
 {
@@ -103,7 +103,7 @@ legacy_pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
 	    irqs));
 }
 
-static int
+int
 legacy_pcib_alloc_msix(device_t pcib, device_t dev, int *irq)
 {
 	device_t bus;
@@ -524,7 +524,7 @@ legacy_pcib_attach(device_t dev)
 			device_probe_and_attach(pir);
 	}
 #endif
-	device_add_child(dev, "pci", bus);
+	device_add_child(dev, "pci", -1);
 	return bus_generic_attach(dev);
 }
 
@@ -575,12 +575,11 @@ legacy_pcib_write_ivar(device_t dev, device_t child, int which,
 SYSCTL_DECL(_hw_pci);
 
 static unsigned long host_mem_start = 0x80000000;
-TUNABLE_ULONG("hw.pci.host_mem_start", &host_mem_start);
 SYSCTL_ULONG(_hw_pci, OID_AUTO, host_mem_start, CTLFLAG_RDTUN, &host_mem_start,
     0, "Limit the host bridge memory to being above this address.");
 
-u_long
-hostb_alloc_start(int type, u_long start, u_long end, u_long count)
+rman_res_t
+hostb_alloc_start(int type, rman_res_t start, rman_res_t end, rman_res_t count)
 {
 
 	if (start + count - 1 != end) {
@@ -594,13 +593,40 @@ hostb_alloc_start(int type, u_long start, u_long end, u_long count)
 
 struct resource *
 legacy_pcib_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
-    start = hostb_alloc_start(type, start, end, count);
-    return (bus_generic_alloc_resource(dev, child, type, rid, start, end,
-	count, flags));
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+	if (type == PCI_RES_BUS)
+		return (pci_domain_alloc_bus(0, child, rid, start, end, count,
+		    flags));
+#endif
+	start = hostb_alloc_start(type, start, end, count);
+	return (bus_generic_alloc_resource(dev, child, type, rid, start, end,
+	    count, flags));
 }
+
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+int
+legacy_pcib_adjust_resource(device_t dev, device_t child, int type,
+    struct resource *r, rman_res_t start, rman_res_t end)
+{
+
+	if (type == PCI_RES_BUS)
+		return (pci_domain_adjust_bus(0, child, r, start, end));
+	return (bus_generic_adjust_resource(dev, child, type, r, start, end));
+}
+
+int
+legacy_pcib_release_resource(device_t dev, device_t child, int type, int rid,
+    struct resource *r)
+{
+
+	if (type == PCI_RES_BUS)
+		return (pci_domain_release_bus(0, child, rid, r));
+	return (bus_generic_release_resource(dev, child, type, rid, r));
+}
+#endif
 
 static device_method_t legacy_pcib_methods[] = {
 	/* Device interface */
@@ -615,8 +641,13 @@ static device_method_t legacy_pcib_methods[] = {
 	DEVMETHOD(bus_read_ivar,	legacy_pcib_read_ivar),
 	DEVMETHOD(bus_write_ivar,	legacy_pcib_write_ivar),
 	DEVMETHOD(bus_alloc_resource,	legacy_pcib_alloc_resource),
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+	DEVMETHOD(bus_adjust_resource,	legacy_pcib_adjust_resource),
+	DEVMETHOD(bus_release_resource,	legacy_pcib_release_resource),
+#else
 	DEVMETHOD(bus_adjust_resource,	bus_generic_adjust_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
+#endif
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),

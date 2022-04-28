@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_sarea.h 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _DRM_SAREA_H_
 #define _DRM_SAREA_H_
@@ -40,8 +40,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_sarea.h 182080 2008-08-23 20:
 /* SAREA area needs to be at least a page */
 #if defined(__alpha__)
 #define SAREA_MAX                       0x2000
-#elif defined(__ia64__)
-#define SAREA_MAX                       0x10000	/* 64kB */
 #else
 /* Intel 830M driver needs at least 8k SAREA */
 #define SAREA_MAX                       0x2000UL

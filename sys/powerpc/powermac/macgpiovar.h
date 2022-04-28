@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/macgpiovar.h 185757 2008-12-08 03:00:45Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _MACIO_MACGPIOVAR_H_
@@ -31,6 +31,12 @@
 /* relative offsets into gpio space */
 #define GPIO_EXTINT_BASE	0x08
 #define GPIO_BASE		0x1a
+
+#define GPIO_EXTINT_COUNT	0x12
+#define GPIO_COUNT		0x11
+
+#define GPIO_LEVELS_0	0x50
+#define GPIO_LEVELS_1	0x54
 
 /* gpio bit definitions */
 #define GPIO_DATA		0x01 /* GPIO data */

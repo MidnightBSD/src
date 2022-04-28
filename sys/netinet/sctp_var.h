@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp_var.h 242327 2012-10-29 20:47:32Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_VAR_H_
 #define _NETINET_SCTP_VAR_H_
@@ -72,7 +72,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 	  ((stcb->asoc.sctp_features & feature) == 0)) || \
 	 ((stcb == NULL) && (inp != NULL) && \
 	  ((inp->sctp_features & feature) == 0)) || \
-         ((stcb == NULL) && (inp == NULL)))
+	 ((stcb == NULL) && (inp == NULL)))
 
 /* managing mobility_feature in inpcb (by micchie) */
 #define sctp_mobility_feature_on(inp, feature)  (inp->sctp_mobility_features |= feature)
@@ -86,7 +86,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) ((sctp_maxspace(sb) > (sb)->sb_cc) ? (sctp_maxspace(sb) - (sb)->sb_cc) : 0))
 
-#define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
+#define sctp_sbspace_sub(a,b) (((a) > (b)) ? ((a) - (b)) : 0)
 
 /*
  * I tried to cache the readq entries at one point. But the reality
@@ -97,16 +97,24 @@ extern struct pr_usrreqs sctp_usrreqs;
  * an mbuf cache as well so it is not really worth doing, at least
  * right now :-D
  */
-
+#ifdef INVARIANTS
+#define sctp_free_a_readq(_stcb, _readq) { \
+	if ((_readq)->on_strm_q) \
+		panic("On strm q stcb:%p readq:%p", (_stcb), (_readq)); \
+	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), (_readq)); \
+	SCTP_DECR_READQ_COUNT(); \
+}
+#else
 #define sctp_free_a_readq(_stcb, _readq) { \
 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), (_readq)); \
 	SCTP_DECR_READQ_COUNT(); \
 }
+#endif
 
 #define sctp_alloc_a_readq(_stcb, _readq) { \
 	(_readq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_readq), struct sctp_queued_to_read); \
 	if ((_readq)) { \
- 	     SCTP_INCR_READQ_COUNT(); \
+	     SCTP_INCR_READQ_COUNT(); \
 	} \
 }
 
@@ -121,11 +129,11 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
 	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
-         if ((_strmoq)) {			  \
+	if ((_strmoq)) { \
 		memset(_strmoq, 0, sizeof(struct sctp_stream_queue_pending)); \
 		SCTP_INCR_STRMOQ_COUNT(); \
 		(_strmoq)->holds_key_ref = 0; \
- 	} \
+	} \
 }
 
 #define sctp_free_a_chunk(_stcb, _chk, _so_locked) { \
@@ -133,22 +141,22 @@ extern struct pr_usrreqs sctp_usrreqs;
 		sctp_auth_key_release((_stcb), (_chk)->auth_keyid, _so_locked); \
 		(_chk)->holds_key_ref = 0; \
 	} \
-        if (_stcb) { \
-          SCTP_TCB_LOCK_ASSERT((_stcb)); \
-          if ((_chk)->whoTo) { \
-                  sctp_free_remote_addr((_chk)->whoTo); \
-                  (_chk)->whoTo = NULL; \
-          } \
-          if (((_stcb)->asoc.free_chunk_cnt > SCTP_BASE_SYSCTL(sctp_asoc_free_resc_limit)) || \
-               (SCTP_BASE_INFO(ipi_free_chunks) > SCTP_BASE_SYSCTL(sctp_system_free_resc_limit))) { \
-	 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
-	 	SCTP_DECR_CHK_COUNT(); \
-	  } else { \
-	 	TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
-	 	(_stcb)->asoc.free_chunk_cnt++; \
-	 	atomic_add_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
-          } \
-        } else { \
+	if (_stcb) { \
+		SCTP_TCB_LOCK_ASSERT((_stcb)); \
+		if ((_chk)->whoTo) { \
+			sctp_free_remote_addr((_chk)->whoTo); \
+			(_chk)->whoTo = NULL; \
+		} \
+		if (((_stcb)->asoc.free_chunk_cnt > SCTP_BASE_SYSCTL(sctp_asoc_free_resc_limit)) || \
+		    (SCTP_BASE_INFO(ipi_free_chunks) > SCTP_BASE_SYSCTL(sctp_system_free_resc_limit))) { \
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
+			SCTP_DECR_CHK_COUNT(); \
+		} else { \
+			TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+			(_stcb)->asoc.free_chunk_cnt++; \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
+		} \
+	} else { \
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 		SCTP_DECR_CHK_COUNT(); \
 	} \
@@ -159,7 +167,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 		(_chk) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_chunk), struct sctp_tmit_chunk); \
 		if ((_chk)) { \
 			SCTP_INCR_CHK_COUNT(); \
-                        (_chk)->whoTo = NULL; \
+			(_chk)->whoTo = NULL; \
 			(_chk)->holds_key_ref = 0; \
 		} \
 	} else { \
@@ -167,7 +175,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
 		(_chk)->holds_key_ref = 0; \
-                SCTP_STAT_INCR(sctps_cached_chk); \
+		SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \
 }
@@ -177,16 +185,15 @@ extern struct pr_usrreqs sctp_usrreqs;
 	if ((__net)) {  \
 		if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(&(__net)->ref_count)) { \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
-			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
-                        if ((__net)->ro.ro_rt) { \
+			if ((__net)->ro.ro_rt) { \
 				RTFREE((__net)->ro.ro_rt); \
 				(__net)->ro.ro_rt = NULL; \
-                        } \
+			} \
 			if ((__net)->src_addr_selected) { \
 				sctp_free_ifa((__net)->ro._s_addr); \
 				(__net)->ro._s_addr = NULL; \
 			} \
-                        (__net)->src_addr_selected = 0; \
+			(__net)->src_addr_selected = 0; \
 			(__net)->dest_state &= ~SCTP_ADDR_REACHABLE; \
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
@@ -210,7 +217,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 	atomic_add_int(&(sb)->sb_cc,SCTP_BUF_LEN((m))); \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
 	if (stcb) { \
-		atomic_add_int(&(stcb)->asoc.sb_cc,SCTP_BUF_LEN((m))); \
+		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
 		atomic_add_int(&(stcb)->asoc.my_rwnd_control_len, MSIZE); \
 	} \
 	if (SCTP_BUF_TYPE(m) != MT_DATA && SCTP_BUF_TYPE(m) != MT_HEADER && \
@@ -250,21 +257,21 @@ extern struct pr_usrreqs sctp_usrreqs;
 } while (0)
 
 #define sctp_flight_size_increase(tp1) do { \
-       (tp1)->whoTo->flight_size += (tp1)->book_size; \
+	(tp1)->whoTo->flight_size += (tp1)->book_size; \
 } while (0)
 
 #ifdef SCTP_FS_SPEC_LOG
 #define sctp_total_flight_decrease(stcb, tp1) do { \
-        if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
+	if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
 		stcb->asoc.fs_index = 0;\
 	stcb->asoc.fslog[stcb->asoc.fs_index].total_flight = stcb->asoc.total_flight; \
-	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.TSN_seq; \
+	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.tsn; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].book = tp1->book_size; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].sent = tp1->sent; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].incr = 0; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].decr = 1; \
 	stcb->asoc.fs_index++; \
-        tp1->window_probe = 0; \
+	tp1->window_probe = 0; \
 	if (stcb->asoc.total_flight >= tp1->book_size) { \
 		stcb->asoc.total_flight -= tp1->book_size; \
 		if (stcb->asoc.total_flight_count > 0) \
@@ -276,23 +283,23 @@ extern struct pr_usrreqs sctp_usrreqs;
 } while (0)
 
 #define sctp_total_flight_increase(stcb, tp1) do { \
-        if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
+	if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
 		stcb->asoc.fs_index = 0;\
 	stcb->asoc.fslog[stcb->asoc.fs_index].total_flight = stcb->asoc.total_flight; \
-	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.TSN_seq; \
+	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.tsn; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].book = tp1->book_size; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].sent = tp1->sent; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].incr = 1; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].decr = 0; \
 	stcb->asoc.fs_index++; \
-       (stcb)->asoc.total_flight_count++; \
-       (stcb)->asoc.total_flight += (tp1)->book_size; \
+	(stcb)->asoc.total_flight_count++; \
+	(stcb)->asoc.total_flight += (tp1)->book_size; \
 } while (0)
 
 #else
 
 #define sctp_total_flight_decrease(stcb, tp1) do { \
-        tp1->window_probe = 0; \
+	tp1->window_probe = 0; \
 	if (stcb->asoc.total_flight >= tp1->book_size) { \
 		stcb->asoc.total_flight -= tp1->book_size; \
 		if (stcb->asoc.total_flight_count > 0) \
@@ -304,8 +311,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 } while (0)
 
 #define sctp_total_flight_increase(stcb, tp1) do { \
-       (stcb)->asoc.total_flight_count++; \
-       (stcb)->asoc.total_flight += (tp1)->book_size; \
+	(stcb)->asoc.total_flight_count++; \
+	(stcb)->asoc.total_flight += (tp1)->book_size; \
 } while (0)
 
 #endif
@@ -323,23 +330,19 @@ void sctp_close(struct socket *so);
 int sctp_disconnect(struct socket *so);
 void sctp_ctlinput(int, struct sockaddr *, void *);
 int sctp_ctloutput(struct socket *, struct sockopt *);
-
 #ifdef INET
 void sctp_input_with_port(struct mbuf *, int, uint16_t);
-void sctp_input(struct mbuf *, int);
-
+int sctp_input(struct mbuf **, int *, int);
 #endif
 void sctp_pathmtu_adjustment(struct sctp_tcb *, uint16_t);
 void sctp_drain(void);
 void sctp_init(void);
-void sctp_finish(void);
+void
+sctp_notify(struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *,
+    uint8_t, uint8_t, uint16_t, uint32_t);
 int sctp_flush(struct socket *, int);
 int sctp_shutdown(struct socket *);
-void 
-sctp_notify(struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
-    struct sockaddr *, struct sctp_tcb *,
-    struct sctp_nets *);
-int 
+int
 sctp_bindx(struct socket *, int, struct sockaddr_storage *,
     int, int, struct proc *);
 

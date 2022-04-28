@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/teken/stress/teken_stress.c 226100 2011-10-07 12:42:03Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

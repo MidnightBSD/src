@@ -26,7 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/VOP_LOCK.9 206622 2010-04-14 19:08:06Z uqs $
+.\" $FreeBSD$
 .\"
 .Dd February 25, 2008
 .Dt VOP_LOCK 9
@@ -100,8 +100,9 @@ with these control flags:
 .Bl -tag -width ".Dv LK_CANRECURSE" -offset indent -compact
 .It Dv LK_INTERLOCK
 Specify when the caller already has a simple lock
-.Fn ( VOP_LOCK
-will unlock the simple lock after getting the lock).
+.Po Fn VOP_LOCK
+will unlock the simple lock after getting the lock
+.Pc .
 .It Dv LK_RETRY
 Retry until locked.
 .El

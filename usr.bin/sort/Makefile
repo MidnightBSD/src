@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.bin/sort/Makefile 241695 2012-10-18 15:39:29Z ed $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	sort
 
@@ -11,16 +11,16 @@ sort.1: sort.1.in
 
 CLEANFILES+= sort.1
 
-.if defined(WITH_THREADS)
+.if ${MK_SORT_THREADS} != "no"
 CFLAGS+= -DSORT_THREADS
-LDFLAGS+= -lpthread -lmd
+LIBADD=	pthread md
 MAN_SUB+= -e 's|%%THREADS%%||g'
 .else
-LDFLAGS+= -lmd
+LIBADD=	md
 MAN_SUB+= -e 's|%%THREADS%%|\.\\"|g'
 .endif
 
-.if !defined(WITHOUT_NLS)
+.if ${MK_NLS} != "no"
 NLS+=	hu_HU.ISO8859-2
 NLSSRCFILES= ${NLS:S@$@.msg@}
 MAN_SUB+= -e 's|%%NLS%%||g'

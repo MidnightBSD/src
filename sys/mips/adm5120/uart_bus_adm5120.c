@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/adm5120/uart_bus_adm5120.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,7 +87,7 @@ uart_adm5120_probe(device_t dev)
 	sc->sc_class = &uart_adm5120_uart_class;
 	bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
 
-	return (uart_bus_probe(dev, 0, 0, 0, 0));
+	return (uart_bus_probe(dev, 0, 0, 0, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_adm5120_driver, uart_devclass, 0, 0);

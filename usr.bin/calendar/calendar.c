@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)calendar.c	8.3 (Berkeley) 3/25/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/calendar/calendar.c 251678 2013-06-13 04:11:21Z grog $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <errno.h>
@@ -96,10 +96,14 @@ main(int argc, char *argv[])
 
 		case 'A': /* days after current date */
 			f_dayAfter = atoi(optarg);
+			if (f_dayAfter < 0)
+				errx(1, "number of days must be positive");
 			break;
 
 		case 'B': /* days before current date */
 			f_dayBefore = atoi(optarg);
+			if (f_dayBefore < 0)
+				errx(1, "number of days must be positive");
 			break;
 
 		case 'D': /* debug output of sun and moon info */

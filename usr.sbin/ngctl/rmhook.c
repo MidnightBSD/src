@@ -34,7 +34,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ngctl/rmhook.c 160002 2006-06-28 10:38:38Z glebius $
+ * $FreeBSD$
  */
 
 #include <err.h>

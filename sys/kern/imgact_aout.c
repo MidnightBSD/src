@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/imgact_aout.c 238687 2012-07-22 13:41:45Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -70,8 +70,6 @@ struct sysentvec aout_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -79,7 +77,6 @@ struct sysentvec aout_sysvec = {
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD a.out",
 	.sv_coredump	= NULL,
 	.sv_imgact_try	= NULL,
@@ -99,6 +96,8 @@ struct sysentvec aout_sysvec = {
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
 	.sv_schedtail	= NULL,
+	.sv_thread_detach = NULL,
+	.sv_trap	= NULL,
 };
 
 #elif defined(__amd64__)
@@ -115,8 +114,6 @@ struct sysentvec aout_sysvec = {
 	.sv_size	= FREEBSD32_SYS_MAXSYSCALL,
 	.sv_table	= freebsd32_sysent,
 	.sv_mask	= 0,
-	.sv_sigsize	= 0,
-	.sv_sigtbl	= NULL,
 	.sv_errsize	= 0,
 	.sv_errtbl	= NULL,
 	.sv_transtrap	= NULL,
@@ -124,7 +121,6 @@ struct sysentvec aout_sysvec = {
 	.sv_sendsig	= ia32_sendsig,
 	.sv_sigcode	= ia32_sigcode,
 	.sv_szsigcode	= &sz_ia32_sigcode,
-	.sv_prepsyscall	= NULL,
 	.sv_name	= "FreeBSD a.out",
 	.sv_coredump	= NULL,
 	.sv_imgact_try	= NULL,
@@ -247,7 +243,7 @@ exec_aout_imgact(struct image_params *imgp)
 	    a_out->a_text > maxtsiz ||
 
 	    /* data + bss can't exceed rlimit */
-	    a_out->a_data + bss_size > lim_cur(imgp->proc, RLIMIT_DATA) ||
+	    a_out->a_data + bss_size > lim_cur_proc(imgp->proc, RLIMIT_DATA) ||
 	    racct_set(imgp->proc, RACCT_DATA, a_out->a_data + bss_size) != 0) {
 			PROC_UNLOCK(imgp->proc);
 			return (ENOMEM);

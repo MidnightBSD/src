@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nand/nfc_fsl.h 238046 2012-07-03 01:00:29Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _NAND_NFC_FSL_H_

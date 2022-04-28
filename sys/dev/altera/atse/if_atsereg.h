@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/altera/atse/if_atsereg.h 256752 2013-10-18 20:44:19Z brooks $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_IF_ATSEREG_H

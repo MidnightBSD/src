@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libprocstat/Symbol.map 250223 2013-05-03 21:11:57Z jhb $
+ * $FreeBSD$
  */
 FBSD_1.2 {
 	procstat_close;
@@ -35,4 +35,9 @@ FBSD_1.3 {
 	procstat_getumask;
 	procstat_getvmmap;
 	procstat_open_core;
+};
+
+FBSD_1.5 {
+	procstat_freeptlwpinfo;
+	procstat_getptlwpinfo;
 };

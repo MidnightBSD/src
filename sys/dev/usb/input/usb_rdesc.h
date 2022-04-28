@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/usb/input/usb_rdesc.h 196219 2009-08-14 20:03:53Z jhb $
+ * $FreeBSD$
  *
  * This file contains replacements for broken HID report descriptors.
  */

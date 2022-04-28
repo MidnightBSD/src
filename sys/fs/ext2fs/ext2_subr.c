@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_subr.c	8.2 (Berkeley) 9/21/93
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/ext2_subr.c 254326 2013-08-14 14:22:46Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -53,10 +53,6 @@
 #include <fs/ext2fs/ext2_extents.h>
 #include <fs/ext2fs/ext2_mount.h>
 #include <fs/ext2fs/ext2_dinode.h>
-
-#ifdef KDB
-void	ext2_checkoverlap(struct buf *, struct inode *);
-#endif
 
 /*
  * Return buffer with the contents of block "offset" from the beginning of
@@ -82,10 +78,10 @@ ext2_blkatoff(struct vnode *vp, off_t offset, char **res, struct buf **bpp)
 	*bpp = NULL;
 
 	/*
-	 * The EXT4_EXTENTS requires special treatment, otherwise we can
-	 * fall back to the normal path.
+	 * IN_E4EXTENTS requires special treatment as we can otherwise fall
+	 * back to the normal path.
 	 */
-	if (!(ip->i_flags & EXT4_EXTENTS))
+	if (!(ip->i_flag & IN_E4EXTENTS))
 		goto normal;
 
 	memset(&path, 0, sizeof(path));
@@ -110,7 +106,7 @@ ext2_blkatoff(struct vnode *vp, off_t offset, char **res, struct buf **bpp)
 	if (res)
 		*res = (char *)bp->b_data + blkoff(fs, offset);
 	/*
-	 * If EXT4_EXTENTS is enabled we would get a wrong offset so
+	 * If IN_E4EXTENTS is enabled we would get a wrong offset so
 	 * reset b_offset here.
 	 */
 	bp->b_offset = lbn * bsize;
@@ -130,34 +126,6 @@ normal:
 	return (0);
 }
 
-#ifdef KDB
-void
-ext2_checkoverlap(struct buf *bp, struct inode *ip)
-{
-	struct buf *ebp, *ep;
-	e4fs_daddr_t start, last;
-	struct vnode *vp;
-
-	ebp = &buf[nbuf];
-	start = bp->b_blkno;
-	last = start + btodb(bp->b_bcount) - 1;
-	for (ep = buf; ep < ebp; ep++) {
-		if (ep == bp || (ep->b_flags & B_INVAL))
-			continue;
-		vp = ip->i_ump->um_devvp;
-		/* look for overlap */
-		if (ep->b_bcount == 0 || ep->b_blkno > last ||
-		    ep->b_blkno + btodb(ep->b_bcount) <= start)
-			continue;
-		vprint("Disk overlap", vp);
-		printf("\tstart %jd, end %jd overlap start %jd, end %jd\n",
-		    (intmax_t)start, (intmax_t)last, (intmax_t)ep->b_blkno,
-		    (intmax_t)(ep->b_blkno + btodb(ep->b_bcount) - 1));
-		panic("ext2_checkoverlap: Disk buffer overlap");
-	}
-}
-#endif /* KDB */
-
 /*
  * Update the cluster map because of an allocation of free like ffs.
  *
@@ -173,6 +141,7 @@ ext2_clusteracct(struct m_ext2fs *fs, char *bbp, int cg, daddr_t bno, int cnt)
 	/* Initialize the cluster summary array. */
 	if (fs->e2fs_clustersum[cg].cs_init == 0) {
 		int run = 0;
+
 		bit = 1;
 		loc = 0;
 

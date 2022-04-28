@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/gai_strerror.c 199083 2009-11-09 12:46:59Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <netdb.h>

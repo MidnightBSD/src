@@ -50,41 +50,59 @@
 # or the SD Card Association to disclose or distribute any technical
 # information, know-how or other confidential information to any third party.
 #
-# $FreeBSD: release/10.0.0/sys/dev/mmc/mmcbus_if.m 170002 2007-05-26 05:23:36Z imp $
+# $FreeBSD$
 #
 
+#include <sys/types.h>
 #include <dev/mmc/mmcreg.h>
-#include <dev/mmc/bridge.h>
 
 #
-# This is the set of callbacks that mmc bridges call into the bus, or
-# that mmc/sd card drivers call to make requests.
+# This is the set of callbacks that the MMC subroutines and the mmc/sd card
+# driver call into the bus to make requests.
 #
 
 INTERFACE mmcbus;
 
 #
-# Queue and wait for a request.
+# Pause re-tuning, optionally with triggering re-tuning up-front.  Requires
+# the bus to be claimed.
+#
+METHOD void retune_pause {
+	device_t	busdev;
+	device_t	reqdev;
+	bool		retune;
+};
+
+#
+# Unpause re-tuning.  Requires the bus to be claimed.
+#
+METHOD void retune_unpause {
+	device_t	busdev;
+	device_t	reqdev;
+};
+
+#
+# Queue and wait for a request.  Requires the bus to be claimed.
 #
 METHOD int wait_for_request {
-	device_t	brdev;
+	device_t	busdev;
 	device_t	reqdev;
 	struct mmc_request *req;
 };
 
 #
-# Claim the current bridge, blocking the current thread until the host
-# is no longer busy.
+# Claim the current bus, blocking the current thread until the host is no
+# longer busy.
 #
 METHOD int acquire_bus {
-	device_t	brdev;
+	device_t	busdev;
 	device_t	reqdev;
-}
+};
 
 #
-# Release the current bridge.
+# Release the current bus.
 #
 METHOD int release_bus {
-	device_t	brdev;
+	device_t	busdev;
 	device_t	reqdev;
-}
+};

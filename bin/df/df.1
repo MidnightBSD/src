@@ -27,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)df.1	8.3 (Berkeley) 5/8/95
-.\" $FreeBSD: release/10.0.0/bin/df/df.1 257989 2013-11-11 14:04:26Z brueffer $
+.\" $FreeBSD$
 .\"
-.Dd January 24, 2013
+.Dd August 8, 2017
 .Dt DF 1
 .Os
 .Sh NAME
@@ -37,6 +37,7 @@
 .Nd display free disk space
 .Sh SYNOPSIS
 .Nm
+.Op Fl -libxo
 .Op Fl b | g | H | h | k | m | P
 .Op Fl acilnT
 .Op Fl \&,
@@ -61,6 +62,13 @@ option below).
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl -libxo
+Generate output via
+.Xr libxo 3
+in a selection of different human and machine readable formats.
+See
+.Xr xo_parse_args 3
+for details on command line arguments.
 .It Fl a
 Show all mount points, including those that were mounted with the
 .Dv MNT_IGNORE
@@ -83,13 +91,13 @@ Use 1073741824 byte (1 Gibibyte) blocks rather than the default.
 This overrides any
 .Ev BLOCKSIZE
 specification from the environment.
-.It Fl H
+.It Fl h
 .Dq Human-readable
 output.
 Use unit suffixes: Byte, Kibibyte, Mebibyte, Gibibyte, Tebibyte and
 Pebibyte (based on powers of 1024) in order to reduce the number of
 digits to four or fewer.
-.It Fl h
+.It Fl H , Fl Fl si
 .Dq Human-readable
 output.
 Use unit suffixes: Byte, Kilobyte, Megabyte,
@@ -193,7 +201,9 @@ If the value is outside, it will be set to the appropriate limit.
 .Xr statfs 2 ,
 .Xr getbsize 3 ,
 .Xr getmntinfo 3 ,
+.Xr libxo 3 ,
 .Xr localeconv 3 ,
+.Xr xo_parse_args 3 ,
 .Xr fstab 5 ,
 .Xr mount 8 ,
 .Xr pstat 8 ,

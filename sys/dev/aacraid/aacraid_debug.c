@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aacraid/aacraid_debug.c 250963 2013-05-24 09:22:43Z achim $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Debugging support.
@@ -265,7 +265,7 @@ aacraid_print_aif(struct aac_softc *sc, struct aac_aif_command *aif)
 			device_printf(sc->aac_dev, "(ClusterEvent) event %d\n",
 				      aif->data.EN.data.ECLE.eventType);
 			break;
-		case AifEnDiskSetEvent:		/* A disk set event occured. */
+		case AifEnDiskSetEvent:		/* A disk set event occurred. */
 			device_printf(sc->aac_dev, "(DiskSetEvent) event %d "
 				      "diskset %jd creator %jd\n",
 				      aif->data.EN.data.EDS.eventType,

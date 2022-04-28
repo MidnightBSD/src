@@ -15156,6 +15156,7 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
 
   /* Cavium Networks Octeon CPU core */
   { "octeon",         0,      ISA_MIPS64R2,   CPU_OCTEON },
+  { "octeon+",        0,      ISA_MIPS64R2,   CPU_OCTEON },
 
   /* End marker */
   { NULL, 0, 0, 0 }
@@ -15418,21 +15419,6 @@ MIPS options:\n\
   fprintf (stream, _("\
 -mocteon-useun    generate Octeon unaligned load/store instructions\n\
 -mno-octeon-useun generate MIPS unaligned load/store instructions\n"));
-}
-
-enum dwarf2_format
-mips_dwarf2_format (void)
-{
-  if (HAVE_64BIT_SYMBOLS)
-    {
-#ifdef TE_IRIX
-      return dwarf2_format_64bit_irix;
-#else
-      return dwarf2_format_64bit;
-#endif
-    }
-  else
-    return dwarf2_format_32bit;
 }
 
 int

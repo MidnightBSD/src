@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3-hvcall.S 228689 2011-12-18 16:53:21Z nwhitehorn $ */
+/* $FreeBSD$ */
 
 #include <machine/asm.h>
 

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  *                    Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/nat_cmd.c 223492 2011-06-24 07:05:20Z kevlo $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

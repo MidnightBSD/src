@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/kerberos5/usr.bin/kcc/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $FreeBSD$
 
 PROG=	kcc
 MAN=	klist.1 kswitch.1
@@ -8,10 +8,7 @@ CFLAGS+=	-I${KRB5DIR}/lib/hx509 \
 		-I${KRB5DIR}/lib/asn1 \
 		-I${KRB5DIR}/lib/roken \
 		-I${KRB5DIR}/lib/sl -I.
-DPADD=	${LIBKRB5} ${LIBHEIMNTLM} ${LIBROKEN} ${LIBASN1} ${LIBCRYPTO} \
-	${LIBCRYPT} ${LIBKAFS5} ${LIBSL} ${LIBVERS} ${LIBEDIT}
-LDADD=	-lkrb5 -lheimntlm -lroken -lasn1 -lcrypto -lcrypt -lkafs5 ${LIBSL} \
-	${LIBVERS} -ledit
+LIBADD=	krb5 roken asn1 kafs5 edit sl vers
 SRCS=	kcc.c \
 	kcc-commands.c \
 	kcc-commands.h \
@@ -19,12 +16,12 @@ SRCS=	kcc.c \
 	kswitch.c \
 	copy_cred_cache.c
 
+CLEANFILES=	kcc-commands.h kcc-commands.c
+
 kcc-commands.h: kcc-commands.in
 	${SLC} ${.ALLSRC:M*.in}
 
-.for ext in c o
-kcc-commands.${ext}: kcc-commands.h
-.endfor
+kcc-commands.c: kcc-commands.h
 
 .include <bsd.prog.mk>
 

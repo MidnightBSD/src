@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/net80211/wlanwds/wlanwds.c 191247 2009-04-18 16:14:03Z sam $
+ * $FreeBSD$
  */
 
 /*
@@ -50,7 +50,6 @@
 #include <net/if_dl.h>
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
-#include <netatalk/at.h>
 #include "net80211/ieee80211_ioctl.h"
 #include "net80211/ieee80211_freebsd.h"
 #include <arpa/inet.h>

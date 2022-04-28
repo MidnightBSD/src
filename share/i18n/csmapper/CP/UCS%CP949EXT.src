@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/CP/UCS%CP949EXT.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: UCS%CP949EXT.src,v 1.6 2006/02/11 17:31:43 tnozaki Exp $
 
 TYPE		ROWCOL

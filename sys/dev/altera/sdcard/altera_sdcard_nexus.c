@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/sdcard/altera_sdcard_nexus.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -62,7 +62,7 @@ altera_sdcard_nexus_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Altera Secure Data Card IP Core");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

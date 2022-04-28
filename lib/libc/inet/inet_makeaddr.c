@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_makeaddr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_makeaddr.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_makeaddr.c 170244 2007-06-
  * building addresses stored in the ifnet structure.
  */
 struct in_addr
-inet_makeaddr(net, host)
-	in_addr_t net, host;
+inet_makeaddr(in_addr_t net, in_addr_t host)
 {
 	struct in_addr a;
 

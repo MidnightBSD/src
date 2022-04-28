@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/ggate/ggatec/ggatec.c 241720 2012-10-19 05:43:38Z ed $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -447,6 +449,7 @@ g_gatec_create(void)
 	/*
 	 * Ok, got both sockets, time to create provider.
 	 */
+	memset(&ggioc, 0, sizeof(ggioc));
 	ggioc.gctl_version = G_GATE_VERSION;
 	ggioc.gctl_mediasize = mediasize;
 	ggioc.gctl_sectorsize = sectorsize;

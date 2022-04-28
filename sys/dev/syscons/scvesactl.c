@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/syscons/scvesactl.c 197025 2009-09-09 09:50:31Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vga.h"
 

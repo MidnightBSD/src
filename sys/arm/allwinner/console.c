@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2012 Ganbold Tsagaankhuu <ganbold@gmail.com>
+ * Copyright (c) 2012 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 /* Simple UART console driver for Allwinner A10 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/allwinner/console.c 245500 2013-01-16 08:04:55Z ganbold $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>

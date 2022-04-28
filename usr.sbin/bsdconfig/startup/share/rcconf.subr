@@ -24,7 +24,7 @@ if [ ! "$_STARTUP_RCCONF_SUBR" ]; then _STARTUP_RCCONF_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/startup/share/rcconf.subr 258420 2013-11-21 03:38:47Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -106,6 +106,7 @@ f_startup_rcconf_list()
 #
 f_startup_rcconf_map()
 {
+	local __funcname=f_startup_rcconf_map
 	local __var_to_set="$1"
 
 	# If the in-memory cached value is available, return it immediately
@@ -123,15 +124,15 @@ f_startup_rcconf_map()
 	#
 
 	#
-	# Calculate digest used to determine if the on-disk global persistant
+	# Calculate digest used to determine if the on-disk global persistent
 	# cache file (containing this digest on the first line) is valid and
 	# can be used to quickly populate the cache value for immediate return.
 	#
 	local __rc_defaults_digest
-	__rc_defaults_digest=$( md5 < "$RC_DEFAULTS" )
+	__rc_defaults_digest=$( exec 2> /dev/null; md5 < "$RC_DEFAULTS" )
 
 	#
-	# Check to see if the global persistant cache file exists
+	# Check to see if the global persistent cache file exists
 	#
 	if [ -f "$STARTUP_RCCONF_MAP_CACHEFILE" ]; then
 		#
@@ -175,7 +176,7 @@ f_startup_rcconf_map()
 
 	#
 	# If we reach this point, we need to generate the data from scratch
-	# (and after we do, we'll attempt to create the global persistant
+	# (and after we do, we'll attempt to create the global persistent
 	# cache file to speed up future executions).
 	#
 
@@ -214,12 +215,13 @@ f_startup_rcconf_map()
 	fi
 
 	#
-	# Attempt to create the persistant global cache
+	# Attempt to create the persistent global cache
 	#
 
 	# Create a new temporary file to write to
-	local __tmpfile="$( mktemp -t "$pgm" )"
-	[ "$__tmpfile" ] || return $FAILURE
+	local __tmpfile
+	f_eval_catch -dk __tmpfile $__funcname mktemp \
+		'mktemp -t "%s"' "$pgm" || return $FAILURE
 
 	# Write the temporary file contents
 	echo "$__rc_defaults_digest" > "$__tmpfile"
@@ -227,9 +229,11 @@ f_startup_rcconf_map()
 
 	# Finally, move the temporary file into place
 	case "$STARTUP_RCCONF_MAP_CACHEFILE" in
-	*/*) f_quietly mkdir -p "${STARTUP_RCCONF_MAP_CACHEFILE%/*}"
+	*/*) f_eval_catch -d $__funcname mkdir \
+		'mkdir -p "%s"' "${STARTUP_RCCONF_MAP_CACHEFILE%/*}"
 	esac
-	mv "$__tmpfile" "$STARTUP_RCCONF_MAP_CACHEFILE"
+	f_eval_catch -d $__funcname mv \
+		'mv "%s" "%s"' "$__tmpfile" "$STARTUP_RCCONF_MAP_CACHEFILE"
 }
 
 # f_startup_rcconf_map_expand $var_to_get
@@ -243,7 +247,7 @@ f_startup_rcconf_map()
 f_startup_rcconf_map_expand()
 {
 	local var_to_get="$1"
-	eval "$( f_getvar "$var_to_get" | awk '
+	eval "$( debug= f_getvar "$var_to_get" | awk '
 	BEGIN {
 		rword = "^[[:space:]]*[^[:space:]]*[[:space:]]*"
 	}

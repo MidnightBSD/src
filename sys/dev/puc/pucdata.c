@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/puc/pucdata.c 251715 2013-06-13 22:13:41Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * PCI "universal" communications card driver configuration data (used to
@@ -36,17 +36,22 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/puc/pucdata.c 251715 2013-06-13 22:13
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
+#include <sys/sysctl.h>
 
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
 
+#include <dev/ic/ns16550.h>
+
+#include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
 #include <dev/puc/puc_bus.h>
 #include <dev/puc/puc_cfg.h>
 #include <dev/puc/puc_bfe.h>
 
+static puc_config_f puc_config_advantech;
 static puc_config_f puc_config_amc;
 static puc_config_f puc_config_diva;
 static puc_config_f puc_config_exar;
@@ -58,11 +63,11 @@ static puc_config_f puc_config_oxford_pcie;
 static puc_config_f puc_config_quatech;
 static puc_config_f puc_config_syba;
 static puc_config_f puc_config_siig;
+static puc_config_f puc_config_sunix;
 static puc_config_f puc_config_timedia;
 static puc_config_f puc_config_titan;
 
 const struct puc_cfg puc_pci_devices[] = {
-
 	{   0x0009, 0x7168, 0xffff, 0,
 	    "Sunix SUN1889",
 	    DEFAULT_RCLK * 8,
@@ -175,6 +180,55 @@ const struct puc_cfg puc_pci_devices[] = {
 	    DEFAULT_RCLK,
 	    PUC_PORT_8S, 0x14, -1, -1,
 	    .config_function = puc_config_amc
+	},
+
+	/*
+	 * The following members of the Digi International Neo series are
+	 * based on Exar PCI chips, f. e. the 8 port variants on XR17V258IV.
+	 * Accordingly, the PCIe versions of these cards incorporate a PLX
+	 * PCIe-PCI-bridge.
+	 */
+
+	{   0x114f, 0x00b0, 0xffff, 0,
+	    "Digi Neo PCI 4 Port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
+	},
+
+	{   0x114f, 0x00b1, 0xffff, 0,
+	    "Digi Neo PCI 8 Port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_8S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
+	},
+
+	{   0x114f, 0x00f0, 0xffff, 0,
+	    "Digi Neo PCIe 8 Port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_8S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
+	},
+
+	{   0x114f, 0x00f1, 0xffff, 0,
+	    "Digi Neo PCIe 4 Port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
+	},
+
+	{   0x114f, 0x00f2, 0xffff, 0,
+	    "Digi Neo PCIe 4 Port RJ45",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
+	},
+
+	{   0x114f, 0x00f3, 0xffff, 0,
+	    "Digi Neo PCIe 8 Port RJ45",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_8S, 0x10, 0, -1,
+	    .config_function = puc_config_exar
 	},
 
 	{   0x11fe, 0x8010, 0xffff, 0,
@@ -641,10 +695,25 @@ const struct puc_cfg puc_pci_devices[] = {
 	    .config_function = puc_config_exar_pcie
 	},
 
+	/*
+	 * The Advantech PCI-1602 Rev. A use the first two ports of an Oxford
+	 * Semiconductor OXuPCI954.  Note these boards have a hardware bug in
+	 * that they drive the RS-422/485 transmitters after power-on until a
+	 * driver initalizes the UARTs.
+	 */
 	{   0x13fe, 0x1600, 0x1602, 0x0002,
-	    "Advantech PCI-1602",
+	    "Advantech PCI-1602 Rev. A",
 	    DEFAULT_RCLK * 8,
 	    PUC_PORT_2S, 0x10, 0, 8,
+	    .config_function = puc_config_advantech
+	},
+
+	/* Advantech PCI-1602 Rev. B1/PCI-1603 are also based on OXuPCI952. */
+	{   0x13fe, 0xa102, 0x13fe, 0xa102,
+	    "Advantech 2-port PCI (PCI-1602 Rev. B1/PCI-1603)",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S, 0x10, 4, 0,
+	    .config_function = puc_config_advantech
 	},
 
 	{   0x1407, 0x0100, 0xffff, 0,
@@ -761,6 +830,12 @@ const struct puc_cfg puc_pci_devices[] = {
 	    PUC_PORT_4S, 0x10, 0, 8,
 	},
 
+	{   0x1415, 0x950a, 0x131f, 0x2061,
+	    "SIIG Cyber 2SP1 PCIe",
+	    DEFAULT_RCLK * 10,
+	    PUC_PORT_2S, 0x10, 0, 8,
+	},
+
 	{   0x1415, 0x950a, 0xffff, 0,
 	    "Oxford Semiconductor OX16PCI954 UARTs",
 	    DEFAULT_RCLK,
@@ -836,6 +911,13 @@ const struct puc_cfg puc_pci_devices[] = {
 	 * StarTech.com PEX4S952 (4 port) and PEX8S952 (8 port)
 	 * <URL:http://www.startech.com>
 	 */
+
+	{   0x1415, 0xc11b, 0xffff, 0,
+	    "Oxford Semiconductor OXPCIe952 1S1P",
+	    DEFAULT_RCLK * 0x22,
+	    PUC_PORT_NONSTANDARD, 0x10, 0, -1,
+	    .config_function = puc_config_oxford_pcie
+	},
 
 	{   0x1415, 0xc138, 0xffff, 0,
 	    "Oxford Semiconductor OXPCIe952 UARTs",
@@ -986,10 +1068,50 @@ const struct puc_cfg puc_pci_devices[] = {
 	    .config_function = puc_config_syba
 	},
 
-	{   0x1fd4, 0x1999, 0xffff, 0,
-	    "Sunix SER5437A",
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0002,
+	    "Sunix SER5xxxx 2-port serial",
 	    DEFAULT_RCLK * 8,
 	    PUC_PORT_2S, 0x10, 0, 8,
+	},
+
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0004,
+	    "Sunix SER5xxxx 4-port serial",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S, 0x10, 0, 8,
+	},
+
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0008,
+	    "Sunix SER5xxxx 8-port serial",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_8S, -1, -1, -1,
+	    .config_function = puc_config_sunix
+	},
+
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0101,
+	    "Sunix MIO5xxxx 1-port serial and 1284 Printer port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_1S1P, -1, -1, -1,
+	    .config_function = puc_config_sunix
+	},
+
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0102,
+	    "Sunix MIO5xxxx 2-port serial and 1284 Printer port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_2S1P, -1, -1, -1,
+	    .config_function = puc_config_sunix
+	},
+
+	{   0x1fd4, 0x1999, 0x1fd4, 0x0104,
+	    "Sunix MIO5xxxx 4-port serial and 1284 Printer port",
+	    DEFAULT_RCLK * 8,
+	    PUC_PORT_4S1P, -1, -1, -1,
+	    .config_function = puc_config_sunix
+	},
+
+	{   0x5372, 0x6872, 0xffff, 0,
+	    "Feasso PCI FPP-02 2S1P",
+	    DEFAULT_RCLK,
+	    PUC_PORT_2S1P, 0x10, 4, 0,
 	},
 
 	{   0x5372, 0x6873, 0xffff, 0,
@@ -1023,8 +1145,8 @@ const struct puc_cfg puc_pci_devices[] = {
 	},
 
 	/*
-	 * This is more specific than the generic NM9835 entry that follows, and
-	 * is placed here to _prevent_ puc from claiming this single port card.
+	 * This is more specific than the generic NM9835 entry, and is placed
+	 * here to _prevent_ puc(4) from claiming this single port card.
 	 *
 	 * uart(4) will claim this device.
 	 */
@@ -1153,9 +1275,96 @@ const struct puc_cfg puc_pci_devices[] = {
 };
 
 static int
-puc_config_amc(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
+puc_config_advantech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
+    intptr_t *res __unused)
+{
+	const struct puc_cfg *cfg;
+	struct resource *cres;
+	struct puc_bar *bar;
+	device_t cdev, dev;
+	bus_size_t off;
+	int base, crtype, fixed, high, i, oxpcie;
+	uint8_t acr, func, mask;
+
+	if (cmd != PUC_CFG_SETUP)
+		return (ENXIO);
+
+	base = fixed = oxpcie = 0;
+	crtype = SYS_RES_IOPORT;
+	acr = mask = 0x0;
+	func = high = 1;
+	off = 0x60;
+
+	cfg = sc->sc_cfg;
+	switch (cfg->subvendor) {
+	case 0x13fe:
+		switch (cfg->device) {
+		case 0xa102:
+			high = 0;
+			break;
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	if (fixed == 1)
+		goto setup;
+
+	dev = sc->sc_dev;
+	cdev = pci_find_dbsf(pci_get_domain(dev), pci_get_bus(dev),
+	    pci_get_slot(dev), func);
+	if (cdev == NULL) {
+		device_printf(dev, "could not find config function\n");
+		return (ENXIO);
+	}
+
+	i = PCIR_BAR(0);
+	cres = bus_alloc_resource_any(cdev, crtype, &i, RF_ACTIVE);
+	if (cres == NULL) {
+		device_printf(dev, "could not allocate config resource\n");
+		return (ENXIO);
+	}
+
+	if (oxpcie == 0) {
+		mask = bus_read_1(cres, off);
+		if (pci_get_function(dev) == 1)
+			base = 4;
+	}
+
+ setup:
+	for (i = 0; i < sc->sc_nports; ++i) {
+		device_printf(dev, "port %d: ", i);
+		bar = puc_get_bar(sc, cfg->rid + i * cfg->d_rid);
+		if (bar == NULL) {
+			printf("could not get BAR\n");
+			continue;
+		}
+
+		if (fixed == 0) {
+			if ((mask & (1 << (base + i))) == 0) {
+				acr = 0;
+				printf("RS-232\n");
+			} else {
+				acr = (high == 1 ? 0x18 : 0x10);
+				printf("RS-422/RS-485, active-%s auto-DTR\n",
+				    high == 1 ? "high" : "low");
+			}
+		}
+
+		bus_write_1(bar->b_res, REG_SPR, REG_ACR);
+		bus_write_1(bar->b_res, REG_ICR, acr);
+	}
+
+	bus_release_resource(cdev, crtype, rman_get_rid(cres), cres);
+	return (0);
+}
+
+static int
+puc_config_amc(struct puc_softc *sc __unused, enum puc_cfg_cmd cmd, int port,
     intptr_t *res)
 {
+
 	switch (cmd) {
 	case PUC_CFG_GET_OFS:
 		*res = 8 * (port & 1);
@@ -1187,9 +1396,10 @@ puc_config_diva(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 }
 
 static int
-puc_config_exar(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
-    intptr_t *res)
+puc_config_exar(struct puc_softc *sc __unused, enum puc_cfg_cmd cmd,
+    int port, intptr_t *res)
 {
+
 	if (cmd == PUC_CFG_GET_OFS) {
 		*res = port * 0x200;
 		return (0);
@@ -1198,9 +1408,10 @@ puc_config_exar(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 }
 
 static int
-puc_config_exar_pcie(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
-    intptr_t *res)
+puc_config_exar_pcie(struct puc_softc *sc __unused, enum puc_cfg_cmd cmd,
+    int port, intptr_t *res)
 {
+
 	if (cmd == PUC_CFG_GET_OFS) {
 		*res = port * 0x400;
 		return (0);
@@ -1209,9 +1420,10 @@ puc_config_exar_pcie(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 }
 
 static int
-puc_config_icbook(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
-    intptr_t *res)
+puc_config_icbook(struct puc_softc *sc __unused, enum puc_cfg_cmd cmd,
+    int port __unused, intptr_t *res)
 {
+
 	if (cmd == PUC_CFG_GET_ILR) {
 		*res = PUC_ILR_DIGI;
 		return (0);
@@ -1223,10 +1435,11 @@ static int
 puc_config_moxa(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
     intptr_t *res)
 {
-	if (cmd == PUC_CFG_GET_OFS) {
-		const struct puc_cfg *cfg = sc->sc_cfg;
+	const struct puc_cfg *cfg = sc->sc_cfg;
 
-		if (port == 3 && (cfg->device == 0x1045 || cfg->device == 0x1144))
+	if (cmd == PUC_CFG_GET_OFS) {
+		if (port == 3 && (cfg->device == 0x1045 ||
+		    cfg->device == 0x1144))
 			port = 7;
 		*res = port * 0x200;
 
@@ -1236,8 +1449,8 @@ puc_config_moxa(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 }
 
 static int
-puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
-    intptr_t *res)
+puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd,
+    int port __unused, intptr_t *res)
 {
 	const struct puc_cfg *cfg = sc->sc_cfg;
 	struct puc_bar *bar;
@@ -1252,24 +1465,17 @@ puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 		bar = puc_get_bar(sc, cfg->rid);
 		if (bar == NULL)
 			return (ENXIO);
-		/* Set DLAB in the LCR register of UART 0. */
-		bus_write_1(bar->b_res, 3, 0x80);
-		/* Write 0 to the SPR register of UART 0. */
-		bus_write_1(bar->b_res, 7, 0);
-		/* Read back the contents of the SPR register of UART 0. */
-		v0 = bus_read_1(bar->b_res, 7);
-		/* Write a specific value to the SPR register of UART 0. */
-		bus_write_1(bar->b_res, 7, 0x80 + -cfg->clock);
-		/* Read back the contents of the SPR register of UART 0. */
-		v1 = bus_read_1(bar->b_res, 7);
-		/* Clear DLAB in the LCR register of UART 0. */
-		bus_write_1(bar->b_res, 3, 0);
-		/* Save the two values read-back from the SPR register. */
+		bus_write_1(bar->b_res, REG_LCR, LCR_DLAB);
+		bus_write_1(bar->b_res, REG_SPR, 0);
+		v0 = bus_read_1(bar->b_res, REG_SPR);
+		bus_write_1(bar->b_res, REG_SPR, 0x80 + -cfg->clock);
+		v1 = bus_read_1(bar->b_res, REG_SPR);
+		bus_write_1(bar->b_res, REG_LCR, 0);
 		sc->sc_cfg_data = (v0 << 8) | v1;
 		if (v0 == 0 && v1 == 0x80 + -cfg->clock) {
 			/*
 			 * The SPR register echoed the two values written
-			 * by us. This means that the SPAD jumper is set.
+			 * by us.  This means that the SPAD jumper is set.
 			 */
 			device_printf(sc->sc_dev, "warning: extra features "
 			    "not usable -- SPAD compatibility enabled\n");
@@ -1277,7 +1483,7 @@ puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 		}
 		if (v0 != 0) {
 			/*
-			 * The first value doesn't match. This can only mean
+			 * The first value doesn't match.  This can only mean
 			 * that the SPAD jumper is not set and that a non-
 			 * standard fixed clock multiplier jumper is set.
 			 */
@@ -1291,8 +1497,8 @@ puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 			return (0);
 		}
 		/*
-		 * The first value matched, but the second didn't. We know
-		 * that the SPAD jumper is not set. We also know that the
+		 * The first value matched, but the second didn't.  We know
+		 * that the SPAD jumper is not set.  We also know that the
 		 * clock rate multiplier is software controlled *and* that
 		 * we just programmed it to the maximum allowed.
 		 */
@@ -1307,8 +1513,8 @@ puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 			/*
 			 * XXX With the SPAD jumper applied, there's no
 			 * easy way of knowing if there's also a clock
-			 * rate multiplier jumper installed. Let's hope
-			 * not...
+			 * rate multiplier jumper installed.  Let's hope
+			 * not ...
 			 */
 			*res = DEFAULT_RCLK;
 		} else if (v0 == 0) {
@@ -1325,8 +1531,8 @@ puc_config_quatech(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 	case PUC_CFG_GET_ILR:
 		v0 = (sc->sc_cfg_data >> 8) & 0xff;
 		v1 = sc->sc_cfg_data & 0xff;
-		*res = (v0 == 0 && v1 == 0x80 + -cfg->clock)
-		    ? PUC_ILR_NONE : PUC_ILR_QUATECH;
+		*res = (v0 == 0 && v1 == 0x80 + -cfg->clock) ?
+		    PUC_ILR_NONE : PUC_ILR_QUATECH;
 		return (0);
 	default:
 		break;
@@ -1570,15 +1776,15 @@ puc_config_oxford_pcie(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 	case PUC_CFG_GET_NPORTS:
 		/*
 		 * Check if we are being called from puc_bfe_attach()
-		 * or puc_bfe_probe(). If puc_bfe_probe(), we cannot
-		 * puc_get_bar(), so we return a value of 16. This has cosmetic
-		 * side-effects at worst; in PUC_CFG_GET_DESC,
-		 * (int)sc->sc_cfg_data will not contain the true number of
-		 * ports in PUC_CFG_GET_DESC, but we are not implementing that
-		 * call for this device family anyway.
+		 * or puc_bfe_probe().  If puc_bfe_probe(), we cannot
+		 * puc_get_bar(), so we return a value of 16.  This has
+		 * cosmetic side-effects at worst; in PUC_CFG_GET_DESC,
+		 * sc->sc_cfg_data will not contain the true number of
+		 * ports in PUC_CFG_GET_DESC, but we are not implementing
+		 * that call for this device family anyway.
 		 *
-		 * The check is for initialisation of sc->sc_bar[idx], which is
-		 * only done in puc_bfe_attach().
+		 * The check is for initialization of sc->sc_bar[idx],
+		 * which is only done in puc_bfe_attach().
 		 */
 		idx = 0;
 		do {
@@ -1613,9 +1819,35 @@ puc_config_oxford_pcie(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
 }
 
 static int
-puc_config_titan(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
+puc_config_sunix(struct puc_softc *sc, enum puc_cfg_cmd cmd, int port,
     intptr_t *res)
 {
+	int error;
+
+	switch (cmd) {
+	case PUC_CFG_GET_OFS:
+		error = puc_config(sc, PUC_CFG_GET_TYPE, port, res);
+		if (error != 0)
+			return (error);
+		*res = (*res == PUC_TYPE_SERIAL) ? (port & 3) * 8 : 0;
+		return (0);
+	case PUC_CFG_GET_RID:
+		error = puc_config(sc, PUC_CFG_GET_TYPE, port, res);
+		if (error != 0)
+			return (error);
+		*res = (*res == PUC_TYPE_SERIAL && port <= 3) ? 0x10 : 0x14;
+		return (0);
+	default:
+		break;
+	}
+	return (ENXIO);
+}
+
+static int
+puc_config_titan(struct puc_softc *sc __unused, enum puc_cfg_cmd cmd,
+    int port, intptr_t *res)
+{
+
 	switch (cmd) {
 	case PUC_CFG_GET_OFS:
 		*res = (port < 3) ? 0 : (port - 2) << 3;

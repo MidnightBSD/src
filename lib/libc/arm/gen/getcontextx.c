@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Konstantin Belousov <kib@FreeBSD.org>
+ * Copyright (c) 2017 Michal Meloun <mmel@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,34 +25,57 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/gen/getcontextx.c 251047 2013-05-28 04:54:16Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ucontext.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <machine/sysarch.h>
+
+struct ucontextx {
+	ucontext_t	ucontext;
+	mcontext_vfp_t	mcontext_vfp;
+};
 
 int
 __getcontextx_size(void)
 {
 
-	return (sizeof(ucontext_t));
+	return (sizeof(struct ucontextx));
 }
 
 int
 __fillcontextx2(char *ctx)
 {
+	struct ucontextx *ucxp;
+	ucontext_t	 *ucp;
+	mcontext_vfp_t	 *mvp;
+	struct arm_get_vfpstate_args vfp_arg;
 
+	ucxp = (struct ucontextx *)ctx;
+	ucp = &ucxp->ucontext;
+	mvp = &ucxp->mcontext_vfp;
+
+	vfp_arg.mc_vfp_size = sizeof(mcontext_vfp_t);
+	vfp_arg.mc_vfp = mvp;
+	if (sysarch(ARM_GET_VFPSTATE, &vfp_arg) == -1)
+			return (-1);
+	ucp->uc_mcontext.mc_vfp_size = sizeof(mcontext_vfp_t);
+	ucp->uc_mcontext.mc_vfp_ptr = mvp;
 	return (0);
 }
 
 int
 __fillcontextx(char *ctx)
 {
-	ucontext_t *ucp;
+	struct ucontextx *ucxp;
 
-	ucp = (ucontext_t *)ctx;
-	return (getcontext(ucp));
+	ucxp = (struct ucontextx *)ctx;
+	if (getcontext(&ucxp->ucontext) == -1)
+		return (-1);
+	__fillcontextx2(ctx);
+	return (0);
 }
 
 __weak_reference(__getcontextx, getcontextx);

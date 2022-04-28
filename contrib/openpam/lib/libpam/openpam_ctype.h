@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2012 Dag-Erling Smørgrav
+ * Copyright (c) 2012-2014 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: openpam_ctype.h 666 2013-03-17 14:22:17Z des $
+ * $OpenPAM: openpam_ctype.h 938 2017-04-30 21:34:42Z des $
  */
 
 #ifndef OPENPAM_CTYPE_H_INCLUDED
@@ -39,10 +39,18 @@
 	(ch >= '0' && ch <= '9')
 
 /*
+ * Evaluates to non-zero if the argument is a hex digit.
+ */
+#define is_xdigit(ch)				\
+	((ch >= '0' && ch <= '9') ||		\
+	 (ch >= 'a' && ch <= 'f') ||		\
+	 (ch >= 'A' && ch <= 'F'))
+
+/*
  * Evaluates to non-zero if the argument is an uppercase letter.
  */
 #define is_upper(ch)				\
-	(ch >= 'A' && ch <= 'A')
+	(ch >= 'A' && ch <= 'Z')
 
 /*
  * Evaluates to non-zero if the argument is a lowercase letter.

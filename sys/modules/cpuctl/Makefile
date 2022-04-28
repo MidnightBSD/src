@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/cpuctl/Makefile 181430 2008-08-08 16:26:53Z stas $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/cpuctl
+.PATH: ${SRCTOP}/sys/dev/cpuctl
 
 KMOD=	cpuctl
 SRCS=	cpuctl.c

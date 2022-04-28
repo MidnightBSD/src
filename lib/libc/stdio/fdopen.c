@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fdopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fdopen.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -70,7 +70,8 @@ fdopen(int fd, const char *mode)
 	/* Make sure the mode the user wants is a subset of the actual mode. */
 	if ((fdflags = _fcntl(fd, F_GETFL, 0)) < 0)
 		return (NULL);
-	tmp = fdflags & O_ACCMODE;
+	/* Work around incorrect O_ACCMODE. */
+	tmp = fdflags & (O_ACCMODE | O_EXEC);
 	if (tmp != O_RDWR && (tmp != (oflags & O_ACCMODE))) {
 		errno = EINVAL;
 		return (NULL);
@@ -90,7 +91,9 @@ fdopen(int fd, const char *mode)
 	 * O_APPEND bit set, assert __SAPP so that __swrite() caller
 	 * will _sseek() to the end before write.
 	 */
-	if ((oflags & O_APPEND) && !(fdflags & O_APPEND))
+	if (fdflags & O_APPEND)
+		fp->_flags2 |= __S2OAP;
+	else if (oflags & O_APPEND)
 		fp->_flags |= __SAPP;
 	fp->_file = fd;
 	fp->_cookie = fp;

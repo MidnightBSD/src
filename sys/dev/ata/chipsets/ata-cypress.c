@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-cypress.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -75,7 +75,7 @@ ata_cypress_probe(device_t dev)
 	pci_get_subclass(dev) == PCIS_STORAGE_IDE) {
 	device_set_desc(dev, "Cypress 82C693 ATA controller");
 	ctlr->chipinit = ata_cypress_chipinit;
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_LOW_PRIORITY);
     }
     return ENXIO;
 }

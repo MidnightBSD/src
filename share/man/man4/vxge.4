@@ -22,7 +22,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/vxge.4 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd March 16, 2011
 .Dt VXGE 4
@@ -44,6 +44,12 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_vxge_load="YES"
 .Ed
+.Sh DEPRECATION NOTICE
+The
+.Nm
+driver is not present in
+.Fx 12.0
+and later.
 .Sh DESCRIPTION
 The
 .Nm
@@ -98,7 +104,7 @@ For troubleshooting tips and FAQs, please visit
 .Pa http://trac.neterion.com/cgi-bin/trac.cgi/wiki/TitleIndex?anonymous .
 .Pp
 For any issues please send an email to
-.Aq support@neterion.com .
+.Aq Mt support@neterion.com .
 .Sh SEE ALSO
 .Xr arp 8 ,
 .Xr ifconfig 8
@@ -106,5 +112,4 @@ For any issues please send an email to
 The
 .Nm
 driver was written by
-.An Neterion
-.Aq support@neterion.com .
+.An Neterion Aq Mt support@neterion.com .

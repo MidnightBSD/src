@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/Makefile.inc 151504 2005-10-20 10:57:53Z ru $
+# $FreeBSD$
 
 BINDIR?=	/usr/bin
 SHELL=		/bin/sh
+PACKAGE=	groff
 
 # Define `page' to be letter if your PostScript printer uses 8.5x11
 # paper (USA) and define it to be A4, if it uses A4 paper (rest of the
@@ -118,7 +119,7 @@ revision=`sed -e 's/^0$$//' -e 's/^[1-9].*$$/.&/' $(GROFF_DIST)/REVISION`
 	-e "s;@TMAC_MDIR@;$(tmacdir)/mm;g" \
 	-e "s;@BROKEN_SPOOLER_FLAGS@;$(BROKEN_SPOOLER_FLAGS);g" \
 	-e "s;@VERSION@;$(version)$(revision);g" \
-	-e "s;@MDATE@;`$(SHELL) ${GROFF_DIST}/mdate.sh $<`;g" \
+	-e "s;@MDATE@;$(MDATE);g" \
 	-e "s;@g@;$(g);g" \
 	-e "s;@G@;`echo $(g) | LC_ALL=C tr a-z A-Z`;g" \
 	$< >$@
@@ -127,6 +128,7 @@ revision=`sed -e 's/^0$$//' -e 's/^[1-9].*$$/.&/' $(GROFF_DIST)/REVISION`
 
 .sh .pl:
 	@${ECHO} Making ${.TARGET} from ${.IMPSRC}
+	@rm -f ${.TARGET}
 	@sed -e "s|@BINDIR@|${BINDIR}|g" \
 	     -e 's|@GROFF_BIN_PATH_SETUP@|GROFF_RUNTIME="$${GROFF_BIN_PATH=${BINDIR}}:"|g' \
 	     -e "s;@FONTDIR@;$(fontdir);g" \
@@ -139,4 +141,5 @@ TOPREL?=	..
 GROFF_DIST=	${.CURDIR}/${TOPREL}/../../../contrib/groff
 DIST_SUBDIR?=	${.CURDIR:T}
 DIST_DIR=	${GROFF_DIST}/${DIST_SUBDIR}
+MDATE!=		sh ${.CURDIR}/${TOPREL}/mdate.sh ${GROFF_DIST}/ChangeLog
 .PATH: ${DIST_DIR}

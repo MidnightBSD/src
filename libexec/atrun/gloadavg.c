@@ -25,7 +25,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/libexec/atrun/gloadavg.c 170768 2007-06-15 10:12:37Z yar $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #ifndef __FreeBSD__

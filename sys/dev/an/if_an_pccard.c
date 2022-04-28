@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/an/if_an_pccard.c 199756 2009-11-24 16:54:54Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 
@@ -108,6 +108,7 @@ static const struct pccard_product an_pccard_products[] = {
 	PCMCIA_CARD(XIRCOM, CWE1130), 
 	{ NULL }
 };
+PCCARD_PNP_INFO(an_pccard_products);
 
 static int
 an_pccard_probe(device_t dev)
@@ -140,8 +141,6 @@ an_pccard_attach(device_t dev)
 		goto fail;
 
 	an_alloc_irq(dev, sc->irq_rid, 0);
-
-	sc->an_dev = dev;
 
 	error = an_attach(sc, flags);
 	if (error)

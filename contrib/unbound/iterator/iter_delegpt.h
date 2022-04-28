@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -81,6 +81,12 @@ struct delegpt {
 	uint8_t has_parent_side_NS;
 	/** for assertions on type of delegpt */
 	uint8_t dp_type_mlc;
+	/** use SSL for upstream query */
+	uint8_t ssl_upstream;
+	/** delegpt from authoritative zone that is locally hosted */
+	uint8_t auth_dp;
+	/*** no cache */
+	int no_cache;
 };
 
 /**
@@ -140,9 +146,15 @@ struct delegpt_addr {
 	int sel_rtt;
 	/** if true, the A or AAAA RR was bogus, so this address is bad.
 	 * Also check the dp->bogus to see if everything is bogus. */
-	int bogus;
+	uint8_t bogus;
 	/** if true, this address is dispreferred: it is a lame IP address */
-	int lame;
+	uint8_t lame;
+	/** if the address is dnsseclame, but this cannot be cached, this
+	 * option is useful to mark the address dnsseclame.
+	 * This value is not copied in addr-copy and dp-copy. */
+	uint8_t dnsseclame;
+	/** the TLS authentication name, (if not NULL) to use. */
+	char* tls_auth_name;
 };
 
 /**
@@ -179,7 +191,7 @@ int delegpt_set_name(struct delegpt* dp, struct regional* regional,
  * @return false on error.
  */
 int delegpt_add_ns(struct delegpt* dp, struct regional* regional, 
-	uint8_t* name, int lame);
+	uint8_t* name, uint8_t lame);
 
 /**
  * Add NS rrset; calls add_ns repeatedly.
@@ -190,7 +202,7 @@ int delegpt_add_ns(struct delegpt* dp, struct regional* regional,
  * @return 0 on alloc error.
  */
 int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
-	struct ub_packed_rrset_key* ns_rrset, int lame);
+	struct ub_packed_rrset_key* ns_rrset, uint8_t lame);
 
 /**
  * Add target address to the delegation point.
@@ -207,7 +219,7 @@ int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
  */
 int delegpt_add_target(struct delegpt* dp, struct regional* regional, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int bogus, int lame);
+	socklen_t addrlen, uint8_t bogus, uint8_t lame);
 
 /**
  * Add A RRset to delegpt.
@@ -218,7 +230,7 @@ int delegpt_add_target(struct delegpt* dp, struct regional* regional,
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_A(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset, int lame);
+	struct ub_packed_rrset_key* rrset, uint8_t lame);
 
 /**
  * Add AAAA RRset to delegpt.
@@ -229,7 +241,7 @@ int delegpt_add_rrset_A(struct delegpt* dp, struct regional* regional,
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset, int lame);
+	struct ub_packed_rrset_key* rrset, uint8_t lame);
 
 /**
  * Add any RRset to delegpt.
@@ -241,7 +253,7 @@ int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional,
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset, int lame);
+	struct ub_packed_rrset_key* rrset, uint8_t lame);
 
 /**
  * Add address to the delegation point. No servername is associated or checked.
@@ -251,10 +263,12 @@ int delegpt_add_rrset(struct delegpt* dp, struct regional* regional,
  * @param addrlen: the length of addr.
  * @param bogus: if address is bogus.
  * @param lame: if address is lame.
+ * @param tls_auth_name: TLS authentication name (or NULL).
  * @return false on error.
  */
 int delegpt_add_addr(struct delegpt* dp, struct regional* regional, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame);
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t bogus, uint8_t lame, char* tls_auth_name);
 
 /** 
  * Find NS record in name list of delegation point.
@@ -350,7 +364,7 @@ void delegpt_no_ipv4(struct delegpt* dp);
 
 /** 
  * create malloced delegation point, with the given name 
- * @param name: uncompressed wireformat of degegpt name.
+ * @param name: uncompressed wireformat of delegpt name.
  * @return NULL on alloc failure
  */
 struct delegpt* delegpt_create_mlc(uint8_t* name);
@@ -376,7 +390,7 @@ int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name);
  * @param lame: the name is lame, disprefer.
  * @return false on error.
  */
-int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame);
+int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame);
 
 /**
  * add an address to a malloced delegation point.
@@ -385,10 +399,11 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame);
  * @param addrlen: the length of addr.
  * @param bogus: if address is bogus.
  * @param lame: if address is lame.
+ * @param tls_auth_name: TLS authentication name (or NULL).
  * @return false on error.
  */
 int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
-	socklen_t addrlen, int bogus, int lame);
+	socklen_t addrlen, uint8_t bogus, uint8_t lame, char* tls_auth_name);
 
 /**
  * Add target address to the delegation point.
@@ -403,7 +418,8 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
  * @return false on error.
  */
 int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame);
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus,
+	uint8_t lame);
 
 /** get memory in use by dp */
 size_t delegpt_get_mem(struct delegpt* dp);

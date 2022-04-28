@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/capsicum/syscalls/misc.c 247606 2013-03-02 01:00:26Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/select.h>

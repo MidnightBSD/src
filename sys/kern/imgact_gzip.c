@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/imgact_gzip.c 255426 2013-09-09 18:11:59Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -212,7 +212,7 @@ do_aout_hdr(struct imgact_gzip * gz)
 
 	/* data + bss can't exceed rlimit */
 	    gz->a_out.a_data + gz->bss_size >
-	    lim_cur(gz->ip->proc, RLIMIT_DATA) ||
+	    lim_cur_proc(gz->ip->proc, RLIMIT_DATA) ||
 	    racct_set(gz->ip->proc, RACCT_DATA,
 	    gz->a_out.a_data + gz->bss_size) != 0) {
 		PROC_UNLOCK(gz->ip->proc);

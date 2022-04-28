@@ -1,6 +1,8 @@
 /*	$NetBSD: fsutil.h,v 1.114 2009/10/21 01:07:46 snj Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 1996 Christos Zoulas.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/fsck/fsutil.h 241807 2012-10-21 12:01:19Z uqs $
+ * $FreeBSD$
  */
 
 void pfatal(const char *, ...) __printflike(1, 2);

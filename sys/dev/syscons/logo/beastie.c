@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/syscons/logo/beastie.c 206362 2010-04-07 17:03:05Z jkim $ */
+/* $FreeBSD$ */
 
 #define logo_width 88
 #define logo_height 88

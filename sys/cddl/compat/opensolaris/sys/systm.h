@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/systm.h 221409 2011-05-03 20:13:27Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_SYSTM_H_
@@ -41,6 +41,9 @@
 #define	PAGEMASK	(~PAGEOFFSET)
 
 #define	delay(x)	pause("soldelay", (x))
+
+#define	timeout_generic(type, fn, arg, t, r, f)			\
+    timeout(fn, arg, t / (NANOSEC/hz) + 1)
 
 #endif	/* _KERNEL */
 

@@ -4,9 +4,117 @@
  *
  *****************************************************************************/
 
-/*
- * Copyright (C) 2000 - 2013, Intel Corp.
+/******************************************************************************
+ *
+ * 1. Copyright Notice
+ *
+ * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
  * All rights reserved.
+ *
+ * 2. License
+ *
+ * 2.1. This is your license from Intel Corp. under its intellectual property
+ * rights. You may have additional license terms from the party that provided
+ * you this software, covering your right to use that party's intellectual
+ * property rights.
+ *
+ * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
+ * copy of the source code appearing in this file ("Covered Code") an
+ * irrevocable, perpetual, worldwide license under Intel's copyrights in the
+ * base code distributed originally by Intel ("Original Intel Code") to copy,
+ * make derivatives, distribute, use and display any portion of the Covered
+ * Code in any form, with the right to sublicense such rights; and
+ *
+ * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
+ * license (with the right to sublicense), under only those claims of Intel
+ * patents that are infringed by the Original Intel Code, to make, use, sell,
+ * offer to sell, and import the Covered Code and derivative works thereof
+ * solely to the minimum extent necessary to exercise the above copyright
+ * license, and in no event shall the patent license extend to any additions
+ * to or modifications of the Original Intel Code. No other license or right
+ * is granted directly or by implication, estoppel or otherwise;
+ *
+ * The above copyright and patent license is granted only if the following
+ * conditions are met:
+ *
+ * 3. Conditions
+ *
+ * 3.1. Redistribution of Source with Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification with rights to further distribute source must include
+ * the above Copyright Notice, the above License, this list of Conditions,
+ * and the following Disclaimer and Export Compliance provision. In addition,
+ * Licensee must cause all Covered Code to which Licensee contributes to
+ * contain a file documenting the changes Licensee made to create that Covered
+ * Code and the date of any change. Licensee must include in that file the
+ * documentation of any changes made by any predecessor Licensee. Licensee
+ * must include a prominent statement that the modification is derived,
+ * directly or indirectly, from Original Intel Code.
+ *
+ * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification without rights to further distribute source must
+ * include the following Disclaimer and Export Compliance provision in the
+ * documentation and/or other materials provided with distribution. In
+ * addition, Licensee may not authorize further sublicense of source of any
+ * portion of the Covered Code, and must include terms to the effect that the
+ * license from Licensee to its licensee is limited to the intellectual
+ * property embodied in the software Licensee provides to its licensee, and
+ * not to intellectual property embodied in modifications its licensee may
+ * make.
+ *
+ * 3.3. Redistribution of Executable. Redistribution in executable form of any
+ * substantial portion of the Covered Code or modification must reproduce the
+ * above Copyright Notice, and the following Disclaimer and Export Compliance
+ * provision in the documentation and/or other materials provided with the
+ * distribution.
+ *
+ * 3.4. Intel retains all right, title, and interest in and to the Original
+ * Intel Code.
+ *
+ * 3.5. Neither the name Intel nor any other trademark owned or controlled by
+ * Intel shall be used in advertising or otherwise to promote the sale, use or
+ * other dealings in products derived from or relating to the Covered Code
+ * without prior written authorization from Intel.
+ *
+ * 4. Disclaimer and Export Compliance
+ *
+ * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
+ * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
+ * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
+ * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
+ * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
+ * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+ * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
+ * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
+ * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
+ * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
+ * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
+ * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
+ * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
+ * LIMITED REMEDY.
+ *
+ * 4.3. Licensee shall not export, either directly or indirectly, any of this
+ * software or system incorporating such software without first obtaining any
+ * required license or other approval from the U. S. Department of Commerce or
+ * any other agency or department of the United States Government. In the
+ * event Licensee exports any such software from the United States or
+ * re-exports any such software from a foreign destination, Licensee shall
+ * ensure that the distribution and export/re-export of the software is in
+ * compliance with all laws, regulations, orders, or other restrictions of the
+ * U.S. Export Administration Regulations. Licensee agrees that neither it nor
+ * any of its subsidiaries will export/re-export any technical data, process,
+ * software, or service, directly or indirectly, to any country for which the
+ * United States government or any agency thereof requires an export license,
+ * other governmental approval, or letter of assurance, without first obtaining
+ * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,24 +131,23 @@
  *    of any contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * Alternatively, this software may be distributed under the terms of the
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
  * GNU General Public License ("GPL") version 2 as published by the Free
  * Software Foundation.
  *
- * NO WARRANTY
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGES.
- */
-
+ *****************************************************************************/
 
 #include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include "aslcompiler.y.h"
@@ -123,22 +230,10 @@ RsSmallAddressCheck (
         return;
     }
 
-    /* Special case for Memory24, values are compressed */
-
-    if (Type == ACPI_RESOURCE_NAME_MEMORY24)
-    {
-        if (!Alignment) /* Alignment==0 means 64K - no invalid alignment */
-        {
-            Alignment = ACPI_UINT16_MAX + 1;
-        }
-
-        Minimum <<= 8;
-        Maximum <<= 8;
-        Length *= 256;
-    }
-
-    /* IO descriptor has different definition of min/max, don't check */
-
+    /*
+     * Range checks for Memory24 and Memory32.
+     * IO descriptor has different definition of min/max, don't check.
+     */
     if (Type != ACPI_RESOURCE_NAME_IO)
     {
         /* Basic checks on Min/Max/Length */
@@ -150,6 +245,19 @@ RsSmallAddressCheck (
         else if (Length > (Maximum - Minimum + 1))
         {
             AslError (ASL_ERROR, ASL_MSG_INVALID_LENGTH, LengthOp, NULL);
+        }
+
+        /* Special case for Memory24, min/max values are compressed */
+
+        if (Type == ACPI_RESOURCE_NAME_MEMORY24)
+        {
+            if (!Alignment) /* Alignment==0 means 64K alignment */
+            {
+                Alignment = ACPI_UINT16_MAX + 1;
+            }
+
+            Minimum <<= 8;
+            Maximum <<= 8;
         }
     }
 
@@ -396,6 +504,7 @@ RsGetStringDataLength (
         {
             return ((UINT16) (strlen (InitializerOp->Asl.Value.String) + 1));
         }
+
         InitializerOp = ASL_GET_PEER_NODE (InitializerOp);
     }
 
@@ -431,7 +540,6 @@ RsAllocateResourceNode (
 
     Rnode->Buffer = UtLocalCalloc (Size);
     Rnode->BufferLength = Size;
-
     return (Rnode);
 }
 
@@ -465,8 +573,7 @@ RsCreateResourceField (
 {
 
     Op->Asl.ExternalName = Name;
-    Op->Asl.CompileFlags |= NODE_IS_RESOURCE_FIELD;
-
+    Op->Asl.CompileFlags |= OP_IS_RESOURCE_FIELD;
 
     Op->Asl.Value.Tag.BitOffset = (ByteOffset * 8) + BitOffset;
     Op->Asl.Value.Tag.BitLength = BitLength;
@@ -612,9 +719,9 @@ RsCheckListForDuplicates (
                 {
                     /* Emit error only once per duplicate node */
 
-                    if (!(NextOp->Asl.CompileFlags & NODE_IS_DUPLICATE))
+                    if (!(NextOp->Asl.CompileFlags & OP_IS_DUPLICATE))
                     {
-                        NextOp->Asl.CompileFlags |= NODE_IS_DUPLICATE;
+                        NextOp->Asl.CompileFlags |= OP_IS_DUPLICATE;
                         AslError (ASL_ERROR, ASL_MSG_DUPLICATE_ITEM,
                             NextOp, NULL);
                     }
@@ -645,8 +752,7 @@ RsCheckListForDuplicates (
 
 ASL_RESOURCE_NODE *
 RsDoOneResourceDescriptor (
-    ACPI_PARSE_OBJECT       *DescriptorTypeOp,
-    UINT32                  CurrentByteOffset,
+    ASL_RESOURCE_INFO       *Info,
     UINT8                   *State)
 {
     ASL_RESOURCE_NODE       *Rnode = NULL;
@@ -654,36 +760,31 @@ RsDoOneResourceDescriptor (
 
     /* Construct the resource */
 
-    switch (DescriptorTypeOp->Asl.ParseOpcode)
+    switch (Info->DescriptorTypeOp->Asl.ParseOpcode)
     {
     case PARSEOP_DMA:
 
-        Rnode = RsDoDmaDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoDmaDescriptor (Info);
         break;
 
     case PARSEOP_FIXEDDMA:
 
-        Rnode = RsDoFixedDmaDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoFixedDmaDescriptor (Info);
         break;
 
     case PARSEOP_DWORDIO:
 
-        Rnode = RsDoDwordIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoDwordIoDescriptor (Info);
         break;
 
     case PARSEOP_DWORDMEMORY:
 
-        Rnode = RsDoDwordMemoryDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoDwordMemoryDescriptor (Info);
         break;
 
     case PARSEOP_DWORDSPACE:
 
-        Rnode = RsDoDwordSpaceDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoDwordSpaceDescriptor (Info);
         break;
 
     case PARSEOP_ENDDEPENDENTFN:
@@ -693,13 +794,13 @@ RsDoOneResourceDescriptor (
         case ACPI_RSTATE_NORMAL:
 
             AslError (ASL_ERROR, ASL_MSG_MISSING_STARTDEPENDENT,
-                DescriptorTypeOp, NULL);
+                Info->DescriptorTypeOp, NULL);
             break;
 
         case ACPI_RSTATE_START_DEPENDENT:
 
             AslError (ASL_ERROR, ASL_MSG_DEPENDENT_NESTING,
-                DescriptorTypeOp, NULL);
+                Info->DescriptorTypeOp, NULL);
             break;
 
         case ACPI_RSTATE_DEPENDENT_LIST:
@@ -709,104 +810,87 @@ RsDoOneResourceDescriptor (
         }
 
         *State = ACPI_RSTATE_NORMAL;
-        Rnode = RsDoEndDependentDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoEndDependentDescriptor (Info);
         break;
 
     case PARSEOP_ENDTAG:
 
-        Rnode = RsDoEndTagDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoEndTagDescriptor (Info);
         break;
 
     case PARSEOP_EXTENDEDIO:
 
-        Rnode = RsDoExtendedIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoExtendedIoDescriptor (Info);
         break;
 
     case PARSEOP_EXTENDEDMEMORY:
 
-        Rnode = RsDoExtendedMemoryDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoExtendedMemoryDescriptor (Info);
         break;
 
     case PARSEOP_EXTENDEDSPACE:
 
-        Rnode = RsDoExtendedSpaceDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoExtendedSpaceDescriptor (Info);
         break;
 
     case PARSEOP_FIXEDIO:
 
-        Rnode = RsDoFixedIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoFixedIoDescriptor (Info);
         break;
 
     case PARSEOP_INTERRUPT:
 
-        Rnode = RsDoInterruptDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoInterruptDescriptor (Info);
         break;
 
     case PARSEOP_IO:
 
-        Rnode = RsDoIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoIoDescriptor (Info);
         break;
 
     case PARSEOP_IRQ:
 
-        Rnode = RsDoIrqDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoIrqDescriptor (Info);
         break;
 
     case PARSEOP_IRQNOFLAGS:
 
-        Rnode = RsDoIrqNoFlagsDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoIrqNoFlagsDescriptor (Info);
         break;
 
     case PARSEOP_MEMORY24:
 
-        Rnode = RsDoMemory24Descriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoMemory24Descriptor (Info);
         break;
 
     case PARSEOP_MEMORY32:
 
-        Rnode = RsDoMemory32Descriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoMemory32Descriptor (Info);
         break;
 
     case PARSEOP_MEMORY32FIXED:
 
-        Rnode = RsDoMemory32FixedDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoMemory32FixedDescriptor (Info);
         break;
 
     case PARSEOP_QWORDIO:
 
-        Rnode = RsDoQwordIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoQwordIoDescriptor (Info);
         break;
 
     case PARSEOP_QWORDMEMORY:
 
-        Rnode = RsDoQwordMemoryDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoQwordMemoryDescriptor (Info);
         break;
 
     case PARSEOP_QWORDSPACE:
 
-        Rnode = RsDoQwordSpaceDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoQwordSpaceDescriptor (Info);
         break;
 
     case PARSEOP_REGISTER:
 
-        Rnode = RsDoGeneralRegisterDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoGeneralRegisterDescriptor (Info);
         break;
 
     case PARSEOP_STARTDEPENDENTFN:
@@ -816,7 +900,7 @@ RsDoOneResourceDescriptor (
         case ACPI_RSTATE_START_DEPENDENT:
 
             AslError (ASL_ERROR, ASL_MSG_DEPENDENT_NESTING,
-                DescriptorTypeOp, NULL);
+                Info->DescriptorTypeOp, NULL);
             break;
 
         case ACPI_RSTATE_NORMAL:
@@ -827,8 +911,7 @@ RsDoOneResourceDescriptor (
         }
 
         *State = ACPI_RSTATE_START_DEPENDENT;
-        Rnode = RsDoStartDependentDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoStartDependentDescriptor (Info);
         *State = ACPI_RSTATE_DEPENDENT_LIST;
         break;
 
@@ -839,7 +922,7 @@ RsDoOneResourceDescriptor (
         case ACPI_RSTATE_START_DEPENDENT:
 
             AslError (ASL_ERROR, ASL_MSG_DEPENDENT_NESTING,
-                DescriptorTypeOp, NULL);
+                Info->DescriptorTypeOp, NULL);
             break;
 
         case ACPI_RSTATE_NORMAL:
@@ -850,69 +933,86 @@ RsDoOneResourceDescriptor (
         }
 
         *State = ACPI_RSTATE_START_DEPENDENT;
-        Rnode = RsDoStartDependentNoPriDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoStartDependentNoPriDescriptor (Info);
         *State = ACPI_RSTATE_DEPENDENT_LIST;
         break;
 
     case PARSEOP_VENDORLONG:
 
-        Rnode = RsDoVendorLargeDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoVendorLargeDescriptor (Info);
         break;
 
     case PARSEOP_VENDORSHORT:
 
-        Rnode = RsDoVendorSmallDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoVendorSmallDescriptor (Info);
         break;
 
     case PARSEOP_WORDBUSNUMBER:
 
-        Rnode = RsDoWordBusNumberDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoWordBusNumberDescriptor (Info);
         break;
 
     case PARSEOP_WORDIO:
 
-        Rnode = RsDoWordIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoWordIoDescriptor (Info);
         break;
 
     case PARSEOP_WORDSPACE:
 
-        Rnode = RsDoWordSpaceDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoWordSpaceDescriptor (Info);
         break;
 
     case PARSEOP_GPIO_INT:
 
-        Rnode = RsDoGpioIntDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoGpioIntDescriptor (Info);
         break;
 
     case PARSEOP_GPIO_IO:
 
-        Rnode = RsDoGpioIoDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoGpioIoDescriptor (Info);
         break;
 
     case PARSEOP_I2C_SERIALBUS:
+    case PARSEOP_I2C_SERIALBUS_V2:
 
-        Rnode = RsDoI2cSerialBusDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoI2cSerialBusDescriptor (Info);
         break;
 
     case PARSEOP_SPI_SERIALBUS:
+    case PARSEOP_SPI_SERIALBUS_V2:
 
-        Rnode = RsDoSpiSerialBusDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoSpiSerialBusDescriptor (Info);
         break;
 
     case PARSEOP_UART_SERIALBUS:
+    case PARSEOP_UART_SERIALBUS_V2:
 
-        Rnode = RsDoUartSerialBusDescriptor (DescriptorTypeOp,
-                    CurrentByteOffset);
+        Rnode = RsDoUartSerialBusDescriptor (Info);
+        break;
+
+    case PARSEOP_PINCONFIG:
+
+        Rnode = RsDoPinConfigDescriptor (Info);
+        break;
+
+    case PARSEOP_PINFUNCTION:
+
+        Rnode = RsDoPinFunctionDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUP:
+
+        Rnode = RsDoPinGroupDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUPFUNCTION:
+
+        Rnode = RsDoPinGroupFunctionDescriptor (Info);
+        break;
+
+    case PARSEOP_PINGROUPCONFIG:
+
+        Rnode = RsDoPinGroupConfigDescriptor (Info);
         break;
 
     case PARSEOP_DEFAULT_ARG:
@@ -923,7 +1023,7 @@ RsDoOneResourceDescriptor (
     default:
 
         printf ("Unknown resource descriptor type [%s]\n",
-                    DescriptorTypeOp->Asl.ParseOpName);
+            Info->DescriptorTypeOp->Asl.ParseOpName);
         break;
     }
 
@@ -932,14 +1032,15 @@ RsDoOneResourceDescriptor (
      * This allows the resource to be installed in the namespace so that
      * references to the descriptor can be resolved.
      */
-    DescriptorTypeOp->Asl.ParseOpcode = PARSEOP_DEFAULT_ARG;
-    DescriptorTypeOp->Asl.CompileFlags = NODE_IS_RESOURCE_DESC;
-    DescriptorTypeOp->Asl.Value.Integer = CurrentByteOffset;
+    Info->DescriptorTypeOp->Asl.ParseOpcode = PARSEOP_DEFAULT_ARG;
+    Info->DescriptorTypeOp->Asl.CompileFlags = OP_IS_RESOURCE_DESC;
+    Info->DescriptorTypeOp->Asl.Value.Integer = Info->CurrentByteOffset;
 
     if (Rnode)
     {
-        DescriptorTypeOp->Asl.FinalAmlLength = Rnode->BufferLength;
-        DescriptorTypeOp->Asl.Extra = ((AML_RESOURCE *) Rnode->Buffer)->DescriptorType;
+        Info->DescriptorTypeOp->Asl.FinalAmlLength = Rnode->BufferLength;
+        Info->DescriptorTypeOp->Asl.Extra =
+            ((AML_RESOURCE *) Rnode->Buffer)->DescriptorType;
     }
 
     return (Rnode);
@@ -1023,6 +1124,7 @@ RsDoResourceTemplate (
     ASL_RESOURCE_NODE       HeadRnode;
     ASL_RESOURCE_NODE       *PreviousRnode;
     ASL_RESOURCE_NODE       *Rnode;
+    ASL_RESOURCE_INFO       Info;
     UINT8                   State;
 
 
@@ -1030,7 +1132,7 @@ RsDoResourceTemplate (
 
     if (Op->Asl.Parent)
     {
-        Op->Asl.Parent->Asl.CompileFlags |= NODE_IS_RESOURCE_DESC;
+        Op->Asl.Parent->Asl.CompileFlags |= OP_IS_RESOURCE_DESC;
     }
 
     /* ResourceTemplate Opcode is first (Op) */
@@ -1046,6 +1148,14 @@ RsDoResourceTemplate (
 
     DescriptorTypeOp = ASL_GET_PEER_NODE (BufferOp);
 
+    /* DEFAULT_ARG indicates null template - ResourceTemplate(){} */
+
+    if (DescriptorTypeOp->Asl.ParseOpcode == PARSEOP_DEFAULT_ARG)
+    {
+        AslError (ASL_WARNING, ASL_MSG_NULL_RESOURCE_TEMPLATE,
+            DescriptorTypeOp, DescriptorTypeOp->Asl.Value.String);
+    }
+
     /*
      * Process all resource descriptors in the list
      * Note: It is assumed that the EndTag node has been automatically
@@ -1055,9 +1165,22 @@ RsDoResourceTemplate (
     PreviousRnode = &HeadRnode;
     while (DescriptorTypeOp)
     {
-        DescriptorTypeOp->Asl.CompileFlags |= NODE_IS_RESOURCE_DESC;
-        Rnode = RsDoOneResourceDescriptor (DescriptorTypeOp, CurrentByteOffset,
-                    &State);
+        /* Save information for optional mapfile */
+
+        if (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_CONNECTION)
+        {
+            Info.MappingOp = Op->Asl.Parent;
+        }
+        else
+        {
+            Info.MappingOp = DescriptorTypeOp;
+        }
+
+        Info.DescriptorTypeOp = DescriptorTypeOp;
+        Info.CurrentByteOffset = CurrentByteOffset;
+
+        DescriptorTypeOp->Asl.CompileFlags |= OP_IS_RESOURCE_DESC;
+        Rnode = RsDoOneResourceDescriptor (&Info, &State);
 
         /*
          * Update current byte offset to indicate the number of bytes from the
@@ -1091,7 +1214,7 @@ RsDoResourceTemplate (
      */
     Op->Asl.ParseOpcode               = PARSEOP_BUFFER;
     Op->Asl.AmlOpcode                 = AML_BUFFER_OP;
-    Op->Asl.CompileFlags              = NODE_AML_PACKAGE | NODE_IS_RESOURCE_DESC;
+    Op->Asl.CompileFlags              = OP_AML_PACKAGE | OP_IS_RESOURCE_DESC;
     UtSetParseOpName (Op);
 
     BufferLengthOp->Asl.ParseOpcode   = PARSEOP_INTEGER;
@@ -1104,7 +1227,7 @@ RsDoResourceTemplate (
     BufferOp->Asl.AmlOpcodeLength     = 0;
     BufferOp->Asl.AmlLength           = CurrentByteOffset;
     BufferOp->Asl.Value.Buffer        = (UINT8 *) HeadRnode.Next;
-    BufferOp->Asl.CompileFlags       |= NODE_IS_RESOURCE_DATA;
+    BufferOp->Asl.CompileFlags       |= OP_IS_RESOURCE_DATA;
     UtSetParseOpName (BufferOp);
 
     return;

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/binutils/libbfd/Makefile.arm 239272 2012-08-15 03:21:56Z gonzo $
+# $FreeBSD$
 
 .if ${TARGET_ARCH} == "armeb" || ${TARGET_ARCH} == "armv6eb"
 DEFAULT_VECTOR=	bfd_elf32_bigarm_vec

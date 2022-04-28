@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/isa/ofw_isa.c 219567 2011-03-12 14:33:32Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Helper functions which can be used in both ISA and EBus code.
@@ -129,7 +129,6 @@ ofw_isa_route_intr(device_t bridge, phandle_t node, struct ofw_bus_iinfo *ii,
     ofw_isa_intr_t intr)
 {
 	struct isa_regs reg;
-	uint8_t maskbuf[sizeof(reg) + sizeof(intr)];
 	device_t pbridge;
 	ofw_isa_intr_t mintr;
 
@@ -139,7 +138,7 @@ ofw_isa_route_intr(device_t bridge, phandle_t node, struct ofw_bus_iinfo *ii,
 	 * fully specified, so we may not continue to map.
 	 */
 	if (!ofw_bus_lookup_imap(node, ii, &reg, sizeof(reg),
-	    &intr, sizeof(intr), &mintr, sizeof(mintr), NULL, maskbuf)) {
+	    &intr, sizeof(intr), &mintr, sizeof(mintr), NULL)) {
 		/* Try routing at the parent bridge. */
 		mintr = PCIB_ROUTE_INTERRUPT(pbridge, bridge, intr);
 	}

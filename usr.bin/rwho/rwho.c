@@ -41,9 +41,9 @@ static char sccsid[] = "@(#)rwho.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/rwho/rwho.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/param.h>
 #include <sys/file.h>
 

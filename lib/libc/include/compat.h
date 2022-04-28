@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -24,11 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/include/compat.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD$
  */
 
 /*
- * This file defines compatiblity symbol versions for old system calls.  It
+ * This file defines compatibility symbol versions for old system calls.  It
  * is included in all generated system call files.
  */
 
@@ -38,11 +38,20 @@
 #define	__sym_compat(sym,impl,verid)	\
 	.symver impl, sym@verid
 
+#ifndef NO_COMPAT7
 __sym_compat(__semctl, freebsd7___semctl, FBSD_1.0);
 __sym_compat(msgctl, freebsd7_msgctl, FBSD_1.0);
 __sym_compat(shmctl, freebsd7_shmctl, FBSD_1.0);
+#endif
 
 #undef __sym_compat
+
+#define	__weak_reference(sym,alias)	\
+	.weak	alias;.equ	alias,sym
+
+__weak_reference(__sys_fcntl,__fcntl_compat)
+
+#undef __weak_reference
 
 #endif	/* __LIBC_COMPAT_H__ */
 

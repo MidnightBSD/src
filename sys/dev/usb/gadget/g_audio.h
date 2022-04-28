@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/gadget/g_audio.h 253544 2013-07-22 13:39:33Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
  *

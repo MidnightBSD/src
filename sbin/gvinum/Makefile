@@ -1,15 +1,15 @@
-# $FreeBSD: release/10.0.0/sbin/gvinum/Makefile 239781 2012-08-28 14:20:41Z brooks $
+# $FreeBSD$
 
+PACKAGE=runtime
 PROG=	gvinum
 SRCS=	gvinum.c gvinum.h geom_vinum_share.c
 MAN=	gvinum.8
 
 WARNS?=	2
-CFLAGS+=	-I${.CURDIR}/../../sys -I${DESTDIR}/${INCLUDEDIR}/edit
+CFLAGS+=	-I${SRCTOP}/sys -I${DESTDIR}/${INCLUDEDIR}/edit
 
-DPADD=	${LIBEDIT} ${LIBTERMCAP} ${LIBDEVSTAT} ${LIBKVM} ${LIBGEOM}
-LDADD=	-ledit -ltermcap -ldevstat -lkvm -lgeom
+LIBADD=	edit geom
 
-.PATH: ${.CURDIR}/../../sys/geom/vinum
+.PATH: ${SRCTOP}/sys/geom/vinum
 
 .include <bsd.prog.mk>

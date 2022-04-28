@@ -1,8 +1,7 @@
-# $FreeBSD: release/10.0.0/tools/tools/vimage/Makefile 196409 2009-08-20 22:39:20Z zec $
+# $FreeBSD$
 
 PROG=	vimage
-LDADD=	-ljail
-DPADD=	${LIBJAIL}
+LIBADD=	jail
 
 WARNS?=	2
 CFLAGS+= -I../../../sys

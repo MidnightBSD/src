@@ -25,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_timer.c 247463 2013-02-28 13:46:03Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,10 +38,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_timer.c 247463 2013-02-28 13:
 #include <sys/timeet.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -112,6 +110,9 @@ static int
 lpc_timer_probe(device_t dev)
 {
 
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "lpc,timer"))
 		return (ENXIO);
 
@@ -156,15 +157,13 @@ lpc_timer_attach(device_t dev)
 
 	/* Get PERIPH_CLK encoded in parent bus 'bus-frequency' property */
 	node = ofw_bus_get_node(dev);
-	if (OF_getprop(OF_parent(node), "bus-frequency", &freq,
+	if (OF_getencprop(OF_parent(node), "bus-frequency", &freq,
 	    sizeof(pcell_t)) <= 0) {
 		bus_release_resources(dev, lpc_timer_spec, sc->lt_res);
 		bus_teardown_intr(dev, sc->lt_res[2], intrcookie);
 		device_printf(dev, "could not obtain base clock frequency\n");
 		return (ENXIO);
 	}
-
-	freq = fdt32_to_cpu(freq);
 
 	/* Set desired frequency in event timer and timecounter */
 	sc->lt_et.et_frequency = (uint64_t)freq;
@@ -275,12 +274,6 @@ static unsigned
 lpc_get_timecount(struct timecounter *tc)
 {
 	return timer1_read_4(timer_softc, LPC_TIMER_TC);
-}
-
-void
-cpu_initclocks(void)
-{
-	cpu_initclocks_bsp();
 }
 
 void

@@ -1,9 +1,10 @@
-# $FreeBSD: release/10.0.0/sbin/camcontrol/Makefile 237281 2012-06-20 00:17:29Z scottl $
+# $FreeBSD$
 
+PACKAGE=runtime
 PROG=	camcontrol
 SRCS=	camcontrol.c util.c
 .if !defined(RELEASE_CRUNCH)
-SRCS+=	fwdownload.c modeedit.c progress.c
+SRCS+=	attrib.c epc.c fwdownload.c modeedit.c persist.c progress.c timestamp.c zone.c
 .else
 CFLAGS+= -DMINIMALISTIC
 .endif
@@ -11,8 +12,7 @@ CFLAGS+= -DMINIMALISTIC
 .if ${MACHINE_CPUARCH} == "arm"
 WARNS?= 3
 .endif
-DPADD=	${LIBCAM} ${LIBSBUF} ${LIBUTIL}
-LDADD=	-lcam -lsbuf -lutil
+LIBADD=	cam sbuf util
 MAN=	camcontrol.8
 
 .include <bsd.prog.mk>

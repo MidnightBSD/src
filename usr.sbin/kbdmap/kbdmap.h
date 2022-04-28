@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002 Jonathan Belson <jon@witchspace.com>
  * All rights reserved.
  *
@@ -23,12 +25,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kbdmap/kbdmap.h 99357 2002-07-03 14:56:08Z markm $
+ * $FreeBSD$
  */
 
 
 #define DEFAULT_LANG		"en"
-#define DEFAULT_KEYMAP_DIR	"/usr/share/syscons/keymaps"
-#define DEFAULT_FONT_DIR	"/usr/share/syscons/fonts"
 #define DEFAULT_SYSCONFIG	"/etc/rc.conf"
-#define DEFAULT_FONT		"cp437-8x16.fnt"
+
+#define DEFAULT_SC_KEYMAP_DIR	"/usr/share/syscons/keymaps"
+#define DEFAULT_SC_FONT_DIR	"/usr/share/syscons/fonts"
+#define DEFAULT_SC_FONT		"cp437-8x16.fnt"
+
+#define DEFAULT_VT_KEYMAP_DIR	"/usr/share/vt/keymaps"
+#define DEFAULT_VT_FONT_DIR	"/usr/share/vt/fonts"
+#define DEFAULT_VT_FONT		"vgarom-thin-8x16.fnt"

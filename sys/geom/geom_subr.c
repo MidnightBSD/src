@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_subr.c 255860 2013-09-24 20:05:16Z des $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -247,9 +247,7 @@ g_modevent(module_t mod, int type, void *data)
 		break;
 	case MOD_UNLOAD:
 		g_trace(G_T_TOPOLOGY, "g_modevent(%s, UNLOAD)", mp->name);
-		DROP_GIANT();
 		error = g_unload_class(mp);
-		PICKUP_GIANT();
 		if (error == 0) {
 			KASSERT(LIST_EMPTY(&mp->geom),
 			    ("Unloaded class (%s) still has geom", mp->name));
@@ -622,11 +620,21 @@ g_resize_provider_event(void *arg, int flag)
 	g_free(hh);
 
 	G_VALID_PROVIDER(pp);
+	KASSERT(!(pp->flags & G_PF_WITHER),
+	    ("g_resize_provider_event but withered"));
 	g_trace(G_T_TOPOLOGY, "g_resize_provider_event(%p)", pp);
 
 	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
 		gp = cp->geom;
 		if (gp->resize == NULL && size < pp->mediasize) {
+			/*
+			 * XXX: g_dev_orphan method does deferred destroying
+			 * and it is possible, that other event could already
+			 * call the orphan method. Check consumer's flags to
+			 * do not schedule it twice.
+			 */
+			if (cp->flags & G_CF_ORPHAN)
+				continue;
 			cp->flags |= G_CF_ORPHAN;
 			cp->geom->orphan(cp);
 		}
@@ -636,7 +644,7 @@ g_resize_provider_event(void *arg, int flag)
 	
 	LIST_FOREACH_SAFE(cp, &pp->consumers, consumers, cp2) {
 		gp = cp->geom;
-		if (gp->resize != NULL)
+		if ((gp->flags & G_GEOM_WITHER) == 0 && gp->resize != NULL)
 			gp->resize(cp);
 	}
 
@@ -664,6 +672,8 @@ g_resize_provider(struct g_provider *pp, off_t size)
 	struct g_hh00 *hh;
 
 	G_VALID_PROVIDER(pp);
+	if (pp->flags & G_PF_WITHER)
+		return;
 
 	if (size == pp->mediasize)
 		return;
@@ -683,21 +693,27 @@ g_provider_by_name(char const *arg)
 {
 	struct g_class *cp;
 	struct g_geom *gp;
-	struct g_provider *pp;
+	struct g_provider *pp, *wpp;
 
 	if (strncmp(arg, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
 		arg += sizeof(_PATH_DEV) - 1;
 
+	wpp = NULL;
 	LIST_FOREACH(cp, &g_classes, class) {
 		LIST_FOREACH(gp, &cp->geom, geom) {
 			LIST_FOREACH(pp, &gp->provider, provider) {
-				if (!strcmp(arg, pp->name))
+				if (strcmp(arg, pp->name) != 0)
+					continue;
+				if ((gp->flags & G_GEOM_WITHER) == 0 &&
+				    (pp->flags & G_PF_WITHER) == 0)
 					return (pp);
+				else
+					wpp = pp;
 			}
 		}
 	}
 
-	return (NULL);
+	return (wpp);
 }
 
 void
@@ -808,6 +824,7 @@ g_attach(struct g_consumer *cp, struct g_provider *pp)
 	g_trace(G_T_TOPOLOGY, "g_attach(%p, %p)", cp, pp);
 	KASSERT(cp->provider == NULL, ("attach but attached"));
 	cp->provider = pp;
+	cp->flags &= ~G_CF_ORPHAN;
 	LIST_INSERT_HEAD(&pp->consumers, cp, consumers);
 	error = redo_rank(cp->geom);
 	if (error) {
@@ -853,7 +870,11 @@ int
 g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 {
 	struct g_provider *pp;
-	int pr,pw,pe;
+	struct g_geom *gp;
+	int pw, pe;
+#ifdef INVARIANTS
+	int sr, sw, se;
+#endif
 	int error;
 
 	g_topology_assert();
@@ -861,6 +882,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	pp = cp->provider;
 	KASSERT(pp != NULL, ("access but not attached"));
 	G_VALID_PROVIDER(pp);
+	gp = pp->geom;
 
 	g_trace(G_T_ACCESS, "g_access(%p(%s), %d, %d, %d)",
 	    cp, pp->name, dcr, dcw, dce);
@@ -869,7 +891,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	KASSERT(cp->acw + dcw >= 0, ("access resulting in negative acw"));
 	KASSERT(cp->ace + dce >= 0, ("access resulting in negative ace"));
 	KASSERT(dcr != 0 || dcw != 0 || dce != 0, ("NOP access request"));
-	KASSERT(pp->geom->access != NULL, ("NULL geom->access"));
+	KASSERT(gp->access != NULL, ("NULL geom->access"));
 
 	/*
 	 * If our class cares about being spoiled, and we have been, we
@@ -881,10 +903,30 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 		return (ENXIO);
 
 	/*
+	 * A number of GEOM classes either need to perform an I/O on the first
+	 * open or to acquire a different subsystem's lock.  To do that they
+	 * may have to drop the topology lock.
+	 * Other GEOM classes perform special actions when opening a lower rank
+	 * geom for the first time.  As a result, more than one thread may
+	 * end up performing the special actions.
+	 * So, we prevent concurrent "first" opens by marking the consumer with
+	 * special flag.
+	 *
+	 * Note that if the geom's access method never drops the topology lock,
+	 * then we will never see G_GEOM_IN_ACCESS here.
+	 */
+	while ((gp->flags & G_GEOM_IN_ACCESS) != 0) {
+		g_trace(G_T_ACCESS,
+		    "%s: race on geom %s via provider %s and consumer of %s",
+		    __func__, gp->name, pp->name, cp->geom->name);
+		gp->flags |= G_GEOM_ACCESS_WAIT;
+		g_topology_sleep(gp, 0);
+	}
+
+	/*
 	 * Figure out what counts the provider would have had, if this
 	 * consumer had (r0w0e0) at this time.
 	 */
-	pr = pp->acr - cp->acr;
 	pw = pp->acw - cp->acw;
 	pe = pp->ace - cp->ace;
 
@@ -896,7 +938,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	    pp, pp->name);
 
 	/* If foot-shooting is enabled, any open on rank#1 is OK */
-	if ((g_debugflags & 16) && pp->geom->rank == 1)
+	if ((g_debugflags & 16) && gp->rank == 1)
 		;
 	/* If we try exclusive but already write: fail */
 	else if (dce > 0 && pw > 0)
@@ -905,15 +947,35 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 	else if (dcw > 0 && pe > 0)
 		return (EPERM);
 	/* If we try to open more but provider is error'ed: fail */
-	else if ((dcr > 0 || dcw > 0 || dce > 0) && pp->error != 0)
+	else if ((dcr > 0 || dcw > 0 || dce > 0) && pp->error != 0) {
+		printf("%s(%d): provider %s has error %d set\n",
+		    __func__, __LINE__, pp->name, pp->error);
 		return (pp->error);
+	}
 
 	/* Ok then... */
 
-	error = pp->geom->access(pp, dcr, dcw, dce);
+#ifdef INVARIANTS
+	sr = cp->acr;
+	sw = cp->acw;
+	se = cp->ace;
+#endif
+	gp->flags |= G_GEOM_IN_ACCESS;
+	error = gp->access(pp, dcr, dcw, dce);
 	KASSERT(dcr > 0 || dcw > 0 || dce > 0 || error == 0,
-	    ("Geom provider %s::%s failed closing ->access()",
-	    pp->geom->class->name, pp->name));
+	    ("Geom provider %s::%s dcr=%d dcw=%d dce=%d error=%d failed "
+	    "closing ->access()", gp->class->name, pp->name, dcr, dcw,
+	    dce, error));
+
+	g_topology_assert();
+	gp->flags &= ~G_GEOM_IN_ACCESS;
+	KASSERT(cp->acr == sr && cp->acw == sw && cp->ace == se,
+	    ("Access counts changed during geom->access"));
+	if ((gp->flags & G_GEOM_ACCESS_WAIT) != 0) {
+		gp->flags &= ~G_GEOM_ACCESS_WAIT;
+		wakeup(gp);
+	}
+
 	if (!error) {
 		/*
 		 * If we open first write, spoil any partner consumers.
@@ -923,7 +985,7 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 		if (pp->acw == 0 && dcw != 0)
 			g_spoil(pp, cp);
 		else if (pp->acw != 0 && pp->acw == -dcw && pp->error == 0 &&
-		    !(pp->geom->flags & G_GEOM_WITHER))
+		    !(gp->flags & G_GEOM_WITHER))
 			g_post_event(g_new_provider_event, pp, M_WAITOK, 
 			    pp, NULL);
 
@@ -945,6 +1007,13 @@ g_access(struct g_consumer *cp, int dcr, int dcw, int dce)
 
 int
 g_handleattr_int(struct bio *bp, const char *attribute, int val)
+{
+
+	return (g_handleattr(bp, attribute, &val, sizeof val));
+}
+
+int
+g_handleattr_uint16_t(struct bio *bp, const char *attribute, uint16_t val)
 {
 
 	return (g_handleattr(bp, attribute, &val, sizeof val));
@@ -1063,6 +1132,8 @@ g_spoil_event(void *arg, int flag)
 		return;
 	pp = arg;
 	G_VALID_PROVIDER(pp);
+	g_trace(G_T_TOPOLOGY, "%s %p(%s:%s:%s)", __func__, pp,
+	    pp->geom->class->name, pp->geom->name, pp->name);
 	for (cp = LIST_FIRST(&pp->consumers); cp != NULL; cp = cp2) {
 		cp2 = LIST_NEXT(cp, consumers);
 		if ((cp->flags & G_CF_SPOILED) == 0)
@@ -1455,6 +1526,7 @@ db_print_bio_cmd(struct bio *bp)
 	case BIO_CMD0: db_printf("BIO_CMD0"); break;
 	case BIO_CMD1: db_printf("BIO_CMD1"); break;
 	case BIO_CMD2: db_printf("BIO_CMD2"); break;
+	case BIO_ZONE: db_printf("BIO_ZONE"); break;
 	default: db_printf("UNKNOWN"); break;
 	}
 	db_printf("\n");
@@ -1492,8 +1564,8 @@ DB_SHOW_COMMAND(bio, db_show_bio)
 		db_printf("BIO %p\n", bp);
 		db_print_bio_cmd(bp);
 		db_print_bio_flags(bp);
-		db_printf("  cflags: 0x%hhx\n", bp->bio_cflags);
-		db_printf("  pflags: 0x%hhx\n", bp->bio_pflags);
+		db_printf("  cflags: 0x%hx\n", bp->bio_cflags);
+		db_printf("  pflags: 0x%hx\n", bp->bio_pflags);
 		db_printf("  offset: %jd\n", (intmax_t)bp->bio_offset);
 		db_printf("  length: %jd\n", (intmax_t)bp->bio_length);
 		db_printf("  bcount: %ld\n", bp->bio_bcount);

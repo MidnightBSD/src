@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/ie/Makefile 140867 2005-01-26 16:29:07Z imp $
+# $FreeBSD$
 #
 
 .PATH:	${.CURDIR}/../../dev/ie

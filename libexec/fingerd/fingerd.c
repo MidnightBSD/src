@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -42,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)fingerd.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/libexec/fingerd/fingerd.c 206040 2010-04-01 13:16:32Z des $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -61,6 +57,9 @@ static const char rcsid[] =
 #include <stdlib.h>
 #include <string.h>
 #include "pathnames.h"
+#ifdef USE_BLACKLIST
+#include <blacklist.h>
+#endif
 
 void logerr(const char *, ...) __printflike(1, 2) __dead2;
 
@@ -157,12 +156,18 @@ main(int argc, char *argv[])
 		*ap = strtok(lp, " \t\r\n");
 		if (!*ap) {
 			if (secure && ap == &av[4]) {
+#ifdef USE_BLACKLIST
+				blacklist(1, STDIN_FILENO, "nousername");
+#endif
 				puts("must provide username\r\n");
 				exit(1);
 			}
 			break;
 		}
 		if (secure && strchr(*ap, '@')) {
+#ifdef USE_BLACKLIST
+			blacklist(1, STDIN_FILENO, "noforwarding");
+#endif
 			puts("forwarding service denied\r\n");
 			exit(1);
 		}
@@ -201,6 +206,9 @@ main(int argc, char *argv[])
 		}
 		dup2(STDOUT_FILENO, STDERR_FILENO);
 
+#ifdef USE_BLACKLIST
+		blacklist(0, STDIN_FILENO, "success");
+#endif
 		execv(prog, comp);
 		write(STDERR_FILENO, prog, strlen(prog));
 #define MSG ": cannot execute\n"

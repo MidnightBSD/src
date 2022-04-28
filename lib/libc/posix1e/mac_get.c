@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/mac_get.c 176901 2008-03-07 15:25:56Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/mac.h>

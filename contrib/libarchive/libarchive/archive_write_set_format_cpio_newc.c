@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_set_format_cpio_newc.c 238856 2012-07-28 06:38:44Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_s
 #include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_write_private.h"
+#include "archive_write_set_format_private.h"
 
 static ssize_t	archive_write_newc_data(struct archive_write *,
 		    const void *buff, size_t s);
@@ -116,12 +117,11 @@ archive_write_set_format_cpio_newc(struct archive *_a)
 	if (a->format_free != NULL)
 		(a->format_free)(a);
 
-	cpio = (struct cpio *)malloc(sizeof(*cpio));
+	cpio = (struct cpio *)calloc(1, sizeof(*cpio));
 	if (cpio == NULL) {
 		archive_set_error(&a->archive, ENOMEM, "Can't allocate cpio data");
 		return (ARCHIVE_FATAL);
 	}
-	memset(cpio, 0, sizeof(*cpio));
 	a->format_data = cpio;
 	a->format_name = "cpio";
 	a->format_options = archive_write_newc_options;
@@ -232,7 +232,7 @@ write_header(struct archive_write *a, struct archive_entry *entry)
 	sconv = get_sconv(a);
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	/* Make sure the path separators in pahtname, hardlink and symlink
+	/* Make sure the path separators in pathname, hardlink and symlink
 	 * are all slash '/', not the Windows path separator '\'. */
 	entry_main = __la_win_entry_in_posix_pathseparator(entry);
 	if (entry_main == NULL) {
@@ -367,8 +367,7 @@ write_header(struct archive_write *a, struct archive_entry *entry)
 		}
 	}
 exit_write_header:
-	if (entry_main)
-		archive_entry_free(entry_main);
+	archive_entry_free(entry_main);
 	return (ret_final);
 }
 

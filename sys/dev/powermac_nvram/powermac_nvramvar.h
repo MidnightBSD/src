@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/powermac_nvram/powermac_nvramvar.h 212240 2010-09-05 20:04:02Z mav $
+ * $FreeBSD$
  */
 
 #ifndef	_POWERPC_POWERMAC_POWERMAC_NVRAMVAR_H_

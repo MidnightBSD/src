@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/ip6.c 240605 2012-09-17 13:36:47Z melifaro $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";

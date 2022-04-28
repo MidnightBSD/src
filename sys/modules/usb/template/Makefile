@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/template/Makefile 223467 2011-06-23 07:54:03Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/template
 
@@ -38,6 +38,9 @@ SRCS=	opt_bus.h opt_usb.h device_if.h bus_if.h usb_if.h vnode_if.h usbdevs.h \
 	usb_template_modem.c \
 	usb_template_mouse.c \
 	usb_template_msc.c \
-	usb_template_mtp.c
+	usb_template_mtp.c \
+	usb_template_phone.c \
+	usb_template_serialnet.c \
+	usb_template_midi.c
 
 .include <bsd.kmod.mk>

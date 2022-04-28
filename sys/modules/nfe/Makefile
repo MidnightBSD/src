@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/nfe/Makefile 163962 2006-11-03 21:41:19Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/nfe
+.PATH: ${SRCTOP}/sys/dev/nfe
 
 KMOD=	if_nfe
 SRCS=	if_nfe.c device_if.h bus_if.h pci_if.h miibus_if.h

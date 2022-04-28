@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/aac/aacreg.h 213272 2010-09-29 14:22:00Z emaste $
+ *	$FreeBSD$
  */
 
 /*
@@ -886,7 +886,7 @@ typedef enum {
 	AifEnSMARTEvent,		/* SMART Event */
 	AifEnBatteryNeedsRecond,	/* The battery needs reconditioning */
 	AifEnClusterEvent,		/* Some cluster event */
-	AifEnDiskSetEvent,		/* A disk set event occured. */
+	AifEnDiskSetEvent,		/* A disk set event occurred. */
 	AifEnContainerScsiEvent,	/* a container event with no. and scsi id */
 	AifEnPicBatteryEvent,	/* An event gen. by pic_battery.c for an ABM */
 	AifEnExpEvent,		/* Exp. Event Type to replace CTPopUp messages */

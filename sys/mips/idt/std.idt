@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/idt/std.idt 232896 2012-03-12 21:25:32Z jmallett $
+# $FreeBSD$
 # Standard include file for IDT
 
 files	"../idt/files.idt"

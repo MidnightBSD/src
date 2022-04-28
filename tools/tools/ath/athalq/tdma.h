@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athalq/tdma.h 246935 2013-02-18 04:20:43Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__TDMA_H__
 #define	__TDMA_H__

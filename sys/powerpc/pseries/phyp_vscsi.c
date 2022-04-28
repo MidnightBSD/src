@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/phyp_vscsi.c 255927 2013-09-28 15:46:03Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -290,7 +290,8 @@ vscsi_attach(device_t dev)
 	mtx_init(&sc->io_lock, "vscsi", NULL, MTX_DEF);
 
 	/* Get properties */
-	OF_getprop(ofw_bus_get_node(dev), "reg", &sc->unit, sizeof(sc->unit));
+	OF_getencprop(ofw_bus_get_node(dev), "reg", &sc->unit,
+	    sizeof(sc->unit));
 
 	/* Setup interrupt */
 	sc->irqid = 0;
@@ -426,11 +427,11 @@ vscsi_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->target_sprt = 0;
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = 0;
-		cpi->max_lun = ~(lun_id_t)(0);
+		cpi->max_lun = 0;
 		cpi->initiator_id = ~0;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "IBM", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "IBM", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
@@ -548,12 +549,6 @@ vscsi_task_management(struct vscsi_softc *sc, union ccb *ccb)
 	TAILQ_REMOVE(&sc->free_xferq, xp, queue);
 	TAILQ_INSERT_TAIL(&sc->active_xferq, xp, queue);
 
-	if (!(ccb->ccb_h.xflags & CAM_EXTLUN_VALID)) {
-		ccb->ccb_h.xflags |= CAM_EXTLUN_VALID;
-		ccb->ccb_h.ext_lun.lun64 = (0x1UL << 62) |
-		    ((uint64_t)ccb->ccb_h.target_lun << 48);
-	}
-
 	xp->srp_iu_size = crq.iu_length = sizeof(*cmd);
 	err = vmem_alloc(xp->sc->srp_iu_arena, xp->srp_iu_size,
 	    M_BESTFIT | M_NOWAIT, &xp->srp_iu_offset);
@@ -565,7 +560,7 @@ vscsi_task_management(struct vscsi_softc *sc, union ccb *ccb)
 	bzero(cmd, xp->srp_iu_size);
 	cmd->type = SRP_TSK_MGMT;
 	cmd->tag = (uint64_t)xp;
-	cmd->lun = ccb->ccb_h.ext_lun.lun64;
+	cmd->lun = htobe64(CAM_EXTLUN_BYTE_SWIZZLE(ccb->ccb_h.target_lun));
 
 	switch (ccb->ccb_h.func_code) {
 	case XPT_RESET_DEV:
@@ -608,12 +603,6 @@ vscsi_scsi_command(void *xxp, bus_dma_segment_t *segs, int nsegs, int err)
 	cdb = (ccb->ccb_h.flags & CAM_CDB_POINTER) ?
 	    ccb->csio.cdb_io.cdb_ptr : ccb->csio.cdb_io.cdb_bytes;
 
-	if (!(ccb->ccb_h.xflags & CAM_EXTLUN_VALID)) {
-		ccb->ccb_h.xflags |= CAM_EXTLUN_VALID;
-		ccb->ccb_h.ext_lun.lun64 = (0x1UL << 62) |
-		    ((uint64_t)ccb->ccb_h.target_lun << 48);
-	}
-
 	/* Command format from Table 20, page 37 of SRP spec */
 	crq.iu_length = 48 + ((nsegs > 1) ? 20 : 16) + 
 	    ((ccb->csio.cdb_len > 16) ? (ccb->csio.cdb_len - 16) : 0);
@@ -635,7 +624,7 @@ vscsi_scsi_command(void *xxp, bus_dma_segment_t *segs, int nsegs, int err)
 	memcpy(cmd->cdb, cdb, ccb->csio.cdb_len);
 
 	cmd->tag = (uint64_t)(xp); /* Let the responder find this again */
-	cmd->lun = ccb->ccb_h.ext_lun.lun64;
+	cmd->lun = htobe64(CAM_EXTLUN_BYTE_SWIZZLE(ccb->ccb_h.target_lun));
 
 	if (nsegs > 1) {
 		/* Use indirect descriptors */
@@ -943,10 +932,11 @@ vscsi_check_response_queue(struct vscsi_softc *sc)
 
 	mtx_assert(&sc->io_lock, MA_OWNED);
 
-	phyp_hcall(H_VIO_SIGNAL, sc->unit, 0);
-	bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_POSTREAD);
-
 	while (sc->crq_queue[sc->cur_crq].valid != 0) {
+		/* The hypercalls at both ends of this are not optimal */
+		phyp_hcall(H_VIO_SIGNAL, sc->unit, 0);
+		bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_POSTREAD);
+
 		crq = &sc->crq_queue[sc->cur_crq];
 
 		switch (crq->valid) {
@@ -995,9 +985,9 @@ vscsi_check_response_queue(struct vscsi_softc *sc)
 
 		crq->valid = 0;
 		sc->cur_crq = (sc->cur_crq + 1) % sc->n_crqs;
-	};
 
-	bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_PREWRITE);
-	phyp_hcall(H_VIO_SIGNAL, sc->unit, 1);
+		bus_dmamap_sync(sc->crq_tag, sc->crq_map, BUS_DMASYNC_PREWRITE);
+		phyp_hcall(H_VIO_SIGNAL, sc->unit, 1);
+	}
 }
 

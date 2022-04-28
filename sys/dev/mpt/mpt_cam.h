@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/mpt/mpt_cam.h 203108 2010-01-28 08:41:30Z mav $ */
+/* $FreeBSD$ */
 /*-
  * LSI MPT Host Adapter FreeBSD Wrapper Definitions (CAM version)
  *

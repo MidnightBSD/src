@@ -24,7 +24,7 @@ if [ ! "$_MEDIA_HTTPPROXY_SUBR" ]; then _MEDIA_HTTPPROXY_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/share/media/httpproxy.subr 253333 2013-07-14 03:08:52Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -452,7 +452,7 @@ f_media_get_http_proxy()
 	 44) f_show_msg "$msg_url_was_not_found" "$url" ;;
 	  4) f_show_msg "$msg_client_error" ;;
 	  *) f_show_msg "$msg_error_when_requesting_url" "$url" ;;
-	esac
+	esac 2>&1 >&$DIALOG_TERMINAL_PASSTHRU_FD
 	return $FAILURE
 }
 

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cam/cam_queue.h 253958 2013-08-05 11:48:40Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _CAM_CAM_QUEUE_H
@@ -33,6 +33,8 @@
 
 #ifdef _KERNEL
 
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/queue.h>
 #include <cam/cam.h>
 
@@ -59,19 +61,19 @@ struct cam_ccbq {
 	struct	camq queue;
 	struct ccb_hdr_tailq	queue_extra_head;
 	int	queue_extra_entries;
-	int	devq_openings;
-	int	devq_allocating;
+	int	total_openings;
+	int	allocated;
 	int	dev_openings;
 	int	dev_active;
-	int	held;
 };
 
 struct cam_ed;
 
 struct cam_devq {
-	struct	camq send_queue;
-	int	send_openings;
-	int	send_active;
+	struct mtx	 send_mtx;
+	struct camq	 send_queue;
+	int		 send_openings;
+	int		 send_active;
 };
 
 
@@ -185,8 +187,8 @@ cam_ccbq_pending_ccb_count(struct cam_ccbq *ccbq)
 static __inline void
 cam_ccbq_take_opening(struct cam_ccbq *ccbq)
 {
-	ccbq->devq_openings--;
-	ccbq->held++;
+
+	ccbq->allocated++;
 }
 
 static __inline void
@@ -195,7 +197,10 @@ cam_ccbq_insert_ccb(struct cam_ccbq *ccbq, union ccb *new_ccb)
 	struct ccb_hdr *old_ccb;
 	struct camq *queue = &ccbq->queue;
 
-	ccbq->held--;
+	KASSERT((new_ccb->ccb_h.func_code & XPT_FC_QUEUED) != 0 &&
+	    (new_ccb->ccb_h.func_code & XPT_FC_USER_CCB) == 0,
+	    ("%s: Cannot queue ccb %p func_code %#x", __func__, new_ccb,
+	     new_ccb->ccb_h.func_code));
 
 	/*
 	 * If queue is already full, try to resize.
@@ -218,6 +223,7 @@ cam_ccbq_remove_ccb(struct cam_ccbq *ccbq, union ccb *ccb)
 {
 	struct ccb_hdr *cccb, *bccb;
 	struct camq *queue = &ccbq->queue;
+	cam_pinfo *removed_entry __unused;
 
 	/* If the CCB is on the TAILQ, remove it from there. */
 	if (ccb->ccb_h.pinfo.index == CAM_EXTRAQ_INDEX) {
@@ -228,7 +234,10 @@ cam_ccbq_remove_ccb(struct cam_ccbq *ccbq, union ccb *ccb)
 		return;
 	}
 
-	camq_remove(queue, ccb->ccb_h.pinfo.index);
+	removed_entry = camq_remove(queue, ccb->ccb_h.pinfo.index);
+	KASSERT(removed_entry == &ccb->ccb_h.pinfo,
+	    ("%s: Removed wrong entry from queue (%p != %p)", __func__,
+	     removed_entry, &ccb->ccb_h.pinfo));
 
 	/*
 	 * If there are some CCBs on TAILQ, find the best one and move it
@@ -261,7 +270,7 @@ cam_ccbq_send_ccb(struct cam_ccbq *ccbq, union ccb *send_ccb)
 
 	send_ccb->ccb_h.pinfo.index = CAM_ACTIVE_INDEX;
 	ccbq->dev_active++;
-	ccbq->dev_openings--;		
+	ccbq->dev_openings--;
 }
 
 static __inline void
@@ -269,15 +278,14 @@ cam_ccbq_ccb_done(struct cam_ccbq *ccbq, union ccb *done_ccb)
 {
 
 	ccbq->dev_active--;
-	ccbq->dev_openings++;	
-	ccbq->held++;
+	ccbq->dev_openings++;
 }
 
 static __inline void
 cam_ccbq_release_opening(struct cam_ccbq *ccbq)
 {
-	ccbq->held--;
-	ccbq->devq_openings++;
+
+	ccbq->allocated--;
 }
 
 #endif /* _KERNEL */

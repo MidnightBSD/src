@@ -2,7 +2,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libmd/md4c.c 154479 2006-01-17 15:35:57Z phk $");
+__FBSDID("$FreeBSD$");
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. All rights reserved.
 
@@ -290,3 +290,18 @@ unsigned int len;
     output[i] = ((UINT4)input[j]) | (((UINT4)input[j+1]) << 8) |
       (((UINT4)input[j+2]) << 16) | (((UINT4)input[j+3]) << 24);
 }
+
+#ifdef WEAK_REFS
+/* When building libmd, provide weak references. Note: this is not
+   activated in the context of compiling these sources for internal
+   use in libcrypt.
+ */
+#undef MD4Init
+__weak_reference(_libmd_MD4Init, MD4Init);
+#undef MD4Update
+__weak_reference(_libmd_MD4Update, MD4Update);
+#undef MD4Pad
+__weak_reference(_libmd_MD4Pad, MD4Pad);
+#undef MD4Final
+__weak_reference(_libmd_MD4Final, MD4Final);
+#endif

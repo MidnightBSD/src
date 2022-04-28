@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Mikolaj Golub <trociny@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hast/hast_snmp.c 252516 2013-07-02 18:54:39Z trociny $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -79,6 +81,11 @@ struct hast_snmp_resource {
 	uint64_t	delete_errors;
 	uint64_t	flush_errors;
 	pid_t		workerpid;
+	uint32_t	local_queue;
+	uint32_t	send_queue;
+	uint32_t	recv_queue;
+	uint32_t	done_queue;
+	uint32_t	idle_queue;
 };
 
 static TAILQ_HEAD(, hast_snmp_resource) resources =
@@ -345,6 +352,16 @@ update_resources(void)
 		res->flush_errors =
 		    nv_get_uint64(nvout, "stat_flush_error%u", i);
 		res->workerpid = nv_get_int32(nvout, "workerpid%u", i);
+		res->local_queue =
+		    nv_get_uint64(nvout, "local_queue_size%u", i);
+		res->send_queue =
+		    nv_get_uint64(nvout, "send_queue_size%u", i);
+		res->recv_queue =
+		    nv_get_uint64(nvout, "recv_queue_size%u", i);
+		res->done_queue =
+		    nv_get_uint64(nvout, "done_queue_size%u", i);
+		res->idle_queue =
+		    nv_get_uint64(nvout, "idle_queue_size%u", i);
 		TAILQ_INSERT_TAIL(&resources, res, link);
 	}
 	nv_free(nvout);
@@ -502,6 +519,21 @@ op_hastResourceTable(struct snmp_context *context __unused,
 		break;
 	case LEAF_hastResourceWorkerPid:
 		value->v.integer = res->workerpid;
+		break;
+	case LEAF_hastResourceLocalQueue:
+		value->v.uint32 = res->local_queue;
+		break;
+	case LEAF_hastResourceSendQueue:
+		value->v.uint32 = res->send_queue;
+		break;
+	case LEAF_hastResourceRecvQueue:
+		value->v.uint32 = res->recv_queue;
+		break;
+	case LEAF_hastResourceDoneQueue:
+		value->v.uint32 = res->done_queue;
+		break;
+	case LEAF_hastResourceIdleQueue:
+		value->v.uint32 = res->idle_queue;
 		break;
 	default:
 		ret = SNMP_ERR_RES_UNAVAIL;

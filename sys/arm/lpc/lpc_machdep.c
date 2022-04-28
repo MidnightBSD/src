@@ -39,75 +39,64 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_machdep.c 242531 2012-11-03 22:39:07Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/frame.h> /* For trapframe_t, used in <machine/machdep.h> */
+#include <machine/fdt.h>
 #include <machine/machdep.h>
-#include <machine/pmap.h>
+#include <machine/platform.h> 
 
 #include <arm/lpc/lpcreg.h>
 #include <arm/lpc/lpcvar.h>
 
 #include <dev/fdt/fdt_common.h>
-#include <dev/ic/ns16550.h>
 
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
-	if (fdt_immr_addr(LPC_DEV_BASE) != 0)
-		while (1);
-
-	/* Platform-specific initialisation */
-	return (fdt_immr_va - ARM_NOCACHE_KVA_SIZE);
+	return (devmap_lastaddr());
 }
 
 void
-initarm_gpio_init(void)
+platform_probe_and_attach(void)
+{
+}
+
+void
+platform_gpio_init(void)
 {
 
 	/*
 	 * Set initial values of GPIO output ports
 	 */
-	platform_gpio_init();
+	lpc_gpio_init();
 }
 
 void
-initarm_late_init(void)
+platform_late_init(void)
 {
 }
 
-#define FDT_DEVMAP_MAX	(1 + 2 + 1 + 1)
-static struct pmap_devmap fdt_devmap[FDT_DEVMAP_MAX] = {
-	{ 0, 0, 0, 0, 0, }
-};
-
 /*
- * Construct pmap_devmap[] with DT-derived config data.
+ * Add a single static device mapping.
+ * The values used were taken from the ranges property of the SoC node in the
+ * dts file when this code was converted to devmap_add_entry().
  */
 int
 platform_devmap_init(void)
 {
 
-	/*
-	 * IMMR range.
-	 */
-	fdt_devmap[0].pd_va = fdt_immr_va;
-	fdt_devmap[0].pd_pa = fdt_immr_pa;
-	fdt_devmap[0].pd_size = fdt_immr_size;
-	fdt_devmap[0].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	fdt_devmap[0].pd_cache = PTE_NOCACHE;
-	
-	pmap_devmap_bootstrap_table = &fdt_devmap[0];
+	devmap_add_entry(LPC_DEV_PHYS_BASE, LPC_DEV_SIZE);
 	return (0);
 }
 
@@ -128,15 +117,24 @@ bus_dma_get_range_nb(void)
 void
 cpu_reset(void)
 {
+	bus_space_tag_t bst;
+	bus_space_handle_t bsh;
+
+	bst = fdtbus_bs_tag;
+
 	/* Enable WDT */
-	bus_space_write_4(fdtbus_bs_tag, 
-	    LPC_CLKPWR_BASE, LPC_CLKPWR_TIMCLK_CTRL,
+	bus_space_map(bst, LPC_CLKPWR_PHYS_BASE, LPC_CLKPWR_SIZE, 0, &bsh);
+	bus_space_write_4(bst, bsh, LPC_CLKPWR_TIMCLK_CTRL,
 	    LPC_CLKPWR_TIMCLK_CTRL_WATCHDOG);
+	bus_space_unmap(bst, bsh, LPC_CLKPWR_SIZE);
 
 	/* Instant assert of RESETOUT_N with pulse length 1ms */
-	bus_space_write_4(fdtbus_bs_tag, LPC_WDTIM_BASE, LPC_WDTIM_PULSE, 13000);
-	bus_space_write_4(fdtbus_bs_tag, LPC_WDTIM_BASE, LPC_WDTIM_MCTRL, 0x70);
+	bus_space_map(bst, LPC_WDTIM_PHYS_BASE, LPC_WDTIM_SIZE, 0, &bsh);
+	bus_space_write_4(bst, bsh, LPC_WDTIM_PULSE, 13000);
+	bus_space_write_4(bst, bsh, LPC_WDTIM_MCTRL, 0x70);
+	bus_space_unmap(bst, bsh, LPC_WDTIM_SIZE);
 
-	for (;;);
+	for (;;)
+		continue;
 }
 

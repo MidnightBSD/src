@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/dev/hatm/if_hatmconf.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  *
  * Default configuration
  */

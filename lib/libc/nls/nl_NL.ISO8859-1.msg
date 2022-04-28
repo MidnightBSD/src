@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/nl_NL.ISO8859-1.msg 199190 2009-11-11 18:28:12Z rene $
+$ $FreeBSD$
 $
 $ Message catalog for nl_NL.ISO8859-1 locale
 $

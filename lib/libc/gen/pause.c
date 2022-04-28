@@ -31,12 +31,14 @@
 static char sccsid[] = "@(#)pause.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/pause.c 204307 2010-02-25 13:51:11Z kib $");
+__FBSDID("$FreeBSD$");
 
-#include "namespace.h"
 #include <signal.h>
 #include <unistd.h>
-#include "un-namespace.h"
+
+#include "libc_private.h"
+
+int __pause(void);
 
 /*
  * Backwards compatible pause.
@@ -46,9 +48,10 @@ __pause(void)
 {
 	sigset_t oset;
 
-	if (_sigprocmask(SIG_BLOCK, NULL, &oset) == -1)
+	if (sigprocmask(SIG_BLOCK, NULL, &oset) == -1)
 		return (-1);
-	return (_sigsuspend(&oset));
+	return (sigsuspend(&oset));
 }
+
 __weak_reference(__pause, pause);
 __weak_reference(__pause, _pause);

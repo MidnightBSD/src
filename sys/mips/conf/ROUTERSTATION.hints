@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/ROUTERSTATION.hints 254989 2013-08-28 14:43:04Z loos $
+# $FreeBSD$
 #
 
 # arge0 mdio bus

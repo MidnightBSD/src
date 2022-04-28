@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/fbtab 51237 1999-09-13 17:09:08Z peter $
+# $FreeBSD$
 #
 #/dev/ttyv0	0600	/dev/console
 #/dev/ttyv0	0600	/dev/pcaudio:/dev/pcaudioctl

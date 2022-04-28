@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mklocale.1	8.2 (Berkeley) 4/18/94
-.\" $FreeBSD: release/10.0.0/usr.bin/mklocale/mklocale.1 235400 2012-05-13 14:16:04Z joel $
+.\" $FreeBSD$
 .\"
-.Dd October 17, 2004
+.Dd April 18, 2016
 .Dt MKLOCALE 1
 .Os
 .Sh NAME
@@ -282,8 +282,15 @@ Defines runes with display width 3.
 .Pp
 If no display width explicitly defined, width 1 assumed
 for printable runes by default.
+.Sh NOTES
+.Nm
+has been replaced by
+.Xr localedef 1
+in
+.Fx 11.0 .
 .Sh SEE ALSO
 .Xr colldef 1 ,
+.Xr localedef 1 ,
 .Xr setlocale 3 ,
 .Xr wcwidth 3 ,
 .Xr big5 5 ,

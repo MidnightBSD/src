@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/template/usb_template.h 223467 2011-06-23 07:54:03Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2007 Hans Petter Selasky <hselasky@FreeBSD.org>
  * All rights reserved.
@@ -98,16 +98,25 @@ struct usb_temp_data {
 
 /* prototypes */
 
-extern const struct usb_temp_device_desc usb_template_audio;
-extern const struct usb_temp_device_desc usb_template_cdce;
-extern const struct usb_temp_device_desc usb_template_kbd;
-extern const struct usb_temp_device_desc usb_template_modem;
-extern const struct usb_temp_device_desc usb_template_mouse;
-extern const struct usb_temp_device_desc usb_template_msc;
-extern const struct usb_temp_device_desc usb_template_mtp;
+extern struct usb_temp_device_desc usb_template_audio;
+extern struct usb_temp_device_desc usb_template_cdce;
+extern struct usb_temp_device_desc usb_template_kbd;
+extern struct usb_temp_device_desc usb_template_modem;
+extern struct usb_temp_device_desc usb_template_mouse;
+extern struct usb_temp_device_desc usb_template_msc;
+extern struct usb_temp_device_desc usb_template_mtp;
+extern struct usb_temp_device_desc usb_template_phone;
+extern struct usb_temp_device_desc usb_template_serialnet;
+extern struct usb_temp_device_desc usb_template_midi;
 
+
+void		usb_decode_str_desc(struct usb_string_descriptor *sd,
+		    char *buf, size_t buflen);
 usb_error_t	usb_temp_setup(struct usb_device *,
 		    const struct usb_temp_device_desc *);
-void	usb_temp_unsetup(struct usb_device *);
+void		usb_temp_unsetup(struct usb_device *);
+int		usb_temp_sysctl(SYSCTL_HANDLER_ARGS);
+
+SYSCTL_DECL(_hw_usb_templates);
 
 #endif					/* _USB_TEMPLATE_H_ */

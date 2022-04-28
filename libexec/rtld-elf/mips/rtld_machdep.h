@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/rtld-elf/mips/rtld_machdep.h 232831 2012-03-11 20:03:09Z kib $
+ * $FreeBSD$
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -39,9 +39,8 @@ struct Struct_Obj_Entry;
 #define rtld_dynamic(obj) (&_DYNAMIC)
 
 Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
-		       const struct Struct_Obj_Entry *defobj,
-		       const struct Struct_Obj_Entry *obj,
-		       const Elf_Rel *rel);
+    const struct Struct_Obj_Entry *defobj, const struct Struct_Obj_Entry *obj,
+    const Elf_Rel *rel);
 
 #define make_function_pointer(def, defobj) \
 	((defobj)->relocbase + (def)->st_value)
@@ -51,6 +50,9 @@ Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 
 #define call_init_pointer(obj, target) \
 	(((InitArrFunc)(target))(main_argc, main_argv, environ))
+
+#define	call_ifunc_resolver(ptr) \
+	(((Elf_Addr (*)(void))ptr)())
 
 typedef struct {
 	unsigned long ti_module;
@@ -65,14 +67,11 @@ typedef struct {
     round(prev_offset + prev_size, align)
 #define calculate_tls_end(off, size)    ((off) + (size))
 
-/*
- * Lazy binding entry point, called via PLT.
- */
-void _rtld_bind_start(void);
-
 extern void *__tls_get_addr(tls_index *ti);
 
 #define	RTLD_DEFAULT_STACK_PF_EXEC	PF_X
 #define	RTLD_DEFAULT_STACK_EXEC		PROT_EXEC
+
+#define md_abi_variant_hook(x)
 
 #endif

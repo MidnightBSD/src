@@ -4,7 +4,7 @@
  *	All rights reserved.
  *
  * Author: Harti Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -77,7 +77,7 @@ ifchange_func(struct snmp_context *ctx __unused, struct snmp_dependency *dep,
 	switch (op) {
 
 	  case SNMP_DEPOP_COMMIT:
-		strncpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
+		strlcpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
 		if (ioctl(mib_netsock, SIOCGIFFLAGS, &ifr) == -1) {
 			syslog(LOG_ERR, "GIFFLAGS(%s): %m", ifp->name);
 			return (SNMP_ERR_GENERR);
@@ -95,7 +95,7 @@ ifchange_func(struct snmp_context *ctx __unused, struct snmp_dependency *dep,
 			ifc->rb |= IFRB_FLAGS;
 		}
 		if (ifc->rb & IFRB_FLAGS) {
-			strncpy(ifr1.ifr_name, ifp->name, sizeof(ifr1.ifr_name));
+			strlcpy(ifr1.ifr_name, ifp->name, sizeof(ifr1.ifr_name));
 			if (ioctl(mib_netsock, SIOCGIFFLAGS, &ifr1) == -1) {
 				syslog(LOG_ERR, "GIFFLAGS(%s): %m", ifp->name);
 				return (SNMP_ERR_GENERR);
@@ -116,7 +116,7 @@ ifchange_func(struct snmp_context *ctx __unused, struct snmp_dependency *dep,
 
 	  case SNMP_DEPOP_ROLLBACK:
 		if (ifc->rb & IFRB_FLAGS) {
-			strncpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
+			strlcpy(ifr.ifr_name, ifp->name, sizeof(ifr.ifr_name));
 			ifr.ifr_flags = ifc->rb_flags;
 			if (ioctl(mib_netsock, SIOCSIFFLAGS, &ifr) == -1) {
 				syslog(LOG_ERR, "SIFFLAGS(%s): %m", ifp->name);
@@ -356,7 +356,7 @@ op_ifentry(struct snmp_context *ctx, struct snmp_value *value,
 		value->v.oid = ifp->spec_oid;
 		break;
 	}
-	return (SNMP_ERR_NOERROR);
+	return (ret);
 }
 
 /*
@@ -372,11 +372,6 @@ op_ifxtable(struct snmp_context *ctx, struct snmp_value *value,
 	struct asn_oid idx;
 
 	switch (op) {
-
-  again:
-		if (op != SNMP_OP_GETNEXT)
-			return (SNMP_ERR_NOSUCHNAME);
-		/* FALLTHROUGH */
 
 	  case SNMP_OP_GETNEXT:
 		if ((ifp = NEXT_OBJECT_INT(&mibif_list, &value->var, sub)) == NULL)
@@ -460,52 +455,36 @@ op_ifxtable(struct snmp_context *ctx, struct snmp_value *value,
 		break;
 
 	  case LEAF_ifHCInOctets:
-		if (!(ifp->flags & MIBIF_HIGHSPEED))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_inoctets;
 		break;
 
 	  case LEAF_ifHCInUcastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_ipackets -
 		    MIBIF_PRIV(ifp)->hc_imcasts;
 		break;
 
 	  case LEAF_ifHCInMulticastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_imcasts;
 		break;
 
 	  case LEAF_ifHCInBroadcastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = 0;
 		break;
 
 	  case LEAF_ifHCOutOctets:
-		if (!(ifp->flags & MIBIF_HIGHSPEED))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_outoctets;
 		break;
 
 	  case LEAF_ifHCOutUcastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_opackets -
 		    MIBIF_PRIV(ifp)->hc_omcasts;
 		break;
 
 	  case LEAF_ifHCOutMulticastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = MIBIF_PRIV(ifp)->hc_omcasts;
 		break;
 
 	  case LEAF_ifHCOutBroadcastPkts:
-		if (!(ifp->flags & (MIBIF_VERYHIGHSPEED|MIBIF_HIGHSPEED)))
-			goto again;
 		value->v.counter64 = 0;
 		break;
 
@@ -528,7 +507,7 @@ op_ifxtable(struct snmp_context *ctx, struct snmp_value *value,
 		break;
 
 	  case LEAF_ifAlias:
-		ret = string_get(value, "", -1);
+		ret = string_get(value, ifp->alias, ifp->alias_size - 1);
 		break;
 
 	  case LEAF_ifCounterDiscontinuityTime:

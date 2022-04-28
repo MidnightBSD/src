@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/libiberty/Makefile 245539 2013-01-17 05:56:28Z andrew $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 

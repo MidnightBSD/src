@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cpio.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: release/10.0.0/bin/pax/cpio.h 203613 2010-02-07 17:05:22Z imp $
+ * $FreeBSD$
  */
 
 /*

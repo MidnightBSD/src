@@ -28,7 +28,7 @@
 #elif defined(HAVE_SYS_UTIME_H)
 #include <sys/utime.h>
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_u.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_option_u)
 {
@@ -49,6 +49,7 @@ DEFINE_TEST(test_option_u)
 	p = slurpfile(&s, "copy/f");
 	assertEqualInt(s, 1);
 	assertEqualMem(p, "a", 1);
+	free(p);
 
 	/* Recreate the file with a single "b" */
 	assertMakeFile("f", 0644, "b");
@@ -68,6 +69,7 @@ DEFINE_TEST(test_option_u)
 	p = slurpfile(&s, "copy/f");
 	assertEqualInt(s, 1);
 	assertEqualMem(p, "a", 1);
+	free(p);
 
 	/* Copy the file to the "copy" dir with -u (force) */
 	r = systemf("echo f| %s -pud copy >copy.out 2>copy.err",
@@ -78,4 +80,5 @@ DEFINE_TEST(test_option_u)
 	p = slurpfile(&s, "copy/f");
 	assertEqualInt(s, 1);
 	assertEqualMem(p, "b", 1);
+	free(p);
 }

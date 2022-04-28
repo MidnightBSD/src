@@ -16,7 +16,7 @@
  */
 
 #if !defined(lint) && !defined(LINT)
-static char rcsid[] = "$FreeBSD: release/10.0.0/usr.sbin/cron/lib/compat.c 69793 2000-12-09 09:35:55Z obrien $";
+static char rcsid[] = "$FreeBSD$";
 #endif
 
 /* vix 30dec93 [broke this out of misc.c - see RCS log for history]
@@ -33,18 +33,6 @@ static char rcsid[] = "$FreeBSD: release/10.0.0/usr.sbin/cron/lib/compat.c 69793
 #endif
 #include <errno.h>
 #include <paths.h>
-
-
-/* the code does not depend on any of vfork's
- * side-effects; it just uses it as a quick
- * fork-and-exec.
- */
-#ifdef NEED_VFORK
-PID_T
-vfork() {
-	return (fork());
-}
-#endif
 
 
 #ifdef NEED_STRDUP

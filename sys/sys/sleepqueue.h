@@ -10,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -26,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/sleepqueue.h 248470 2013-03-18 17:23:58Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
@@ -48,13 +45,6 @@
  * If the thread only wishes to sleep for a limited amount of time, it can
  * call sleepq_set_timeout() after sleepq_add() to setup a timeout.  It
  * should then use one of the sleepq_timedwait() functions to block.
- *
- * If the thread wants the sleep to be interruptible by signals, it can
- * call sleepq_catch_signals() after sleepq_add().  It should then use
- * one of the sleepq_wait_sig() functions to block.  After the thread has
- * been resumed, it should call sleepq_calc_signal_retval() to determine
- * if it should return EINTR or ERESTART passing in the value returned from
- * the earlier call to sleepq_catch_signals().
  *
  * A thread is normally resumed from a sleep queue by either the
  * sleepq_signal() or sleepq_broadcast() functions.  Sleepq_signal() wakes
@@ -93,6 +83,7 @@ struct thread;
 #define	SLEEPQ_SX		0x03		/* Used by an sx lock. */
 #define	SLEEPQ_LK		0x04		/* Used by a lockmgr. */
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
+#define	SLEEPQ_UNFAIR		0x200		/* Unfair wakeup order. */
 
 void	init_sleepqueues(void);
 int	sleepq_abort(struct thread *td, int intrval);
@@ -100,11 +91,14 @@ void	sleepq_add(void *wchan, struct lock_object *lock, const char *wmesg,
 	    int flags, int queue);
 struct sleepqueue *sleepq_alloc(void);
 int	sleepq_broadcast(void *wchan, int flags, int pri, int queue);
+void	sleepq_chains_remove_matching(bool (*matches)(struct thread *));
 void	sleepq_free(struct sleepqueue *sq);
 void	sleepq_lock(void *wchan);
 struct sleepqueue *sleepq_lookup(void *wchan);
 void	sleepq_release(void *wchan);
 void	sleepq_remove(struct thread *td, void *wchan);
+int	sleepq_remove_matching(struct sleepqueue *sq, int queue,
+	    bool (*matches)(struct thread *), int pri);
 int	sleepq_signal(void *wchan, int flags, int pri, int queue);
 void	sleepq_set_timeout_sbt(void *wchan, sbintime_t sbt,
 	    sbintime_t pr, int flags);
@@ -116,6 +110,12 @@ int	sleepq_timedwait_sig(void *wchan, int pri);
 int	sleepq_type(void *wchan);
 void	sleepq_wait(void *wchan, int pri);
 int	sleepq_wait_sig(void *wchan, int pri);
+
+#ifdef STACK
+struct sbuf;
+int sleepq_sbuf_print_stacks(struct sbuf *sb, void *wchan, int queue,
+    int *count_stacks_printed);
+#endif
 
 #endif	/* _KERNEL */
 #endif	/* !_SYS_SLEEPQUEUE_H_ */

@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/cxgb_ioctl.h 207643 2010-05-05 00:41:40Z np $
+$FreeBSD$
 
 ***************************************************************************/
 #ifndef __CHIOCTL_H__

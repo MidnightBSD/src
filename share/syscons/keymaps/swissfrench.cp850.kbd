@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/syscons/keymaps/swissfrench.cp850.kbd 74119 2001-03-11 23:41:19Z ache $
+# $FreeBSD$
 #
 # swiss-french cp850 keymap
 # original 13.06.1998 by Francois Tamone <tamone@eig.unige.ch>

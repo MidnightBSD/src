@@ -1,6 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/lib/libregex/Makefile 251438 2013-06-05 21:31:06Z jkim $
-
-SUBDIR=		doc
+# $FreeBSD$
 
 LIB=		gnuregex
 SHLIB_MAJOR=	5

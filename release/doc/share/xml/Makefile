@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/doc/share/xml/Makefile 250746 2013-05-17 18:53:29Z gabor $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/../..
 

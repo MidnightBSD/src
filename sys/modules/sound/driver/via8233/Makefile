@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/via8233/Makefile 110498 2003-02-07 13:56:33Z nyan $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_via8233
 SRCS=	device_if.h bus_if.h pci_if.h

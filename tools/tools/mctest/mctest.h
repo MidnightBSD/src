@@ -24,7 +24,7 @@
 // SUCH DAMAGE.
 //
 //
-// $FreeBSD: release/10.0.0/tools/tools/mctest/mctest.h 177872 2008-04-03 05:26:54Z gnn $
+// $FreeBSD$
 //
 
 const char* DEFAULT_GROUP = "239.255.255.1";

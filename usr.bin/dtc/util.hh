@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 David Chisnall
  * All rights reserved.
  *
@@ -27,12 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/dtc/util.hh 245803 2013-01-22 17:49:51Z theraven $
+ * $FreeBSD$
  */
 
 #ifndef _UTIL_HH_
 #define _UTIL_HH_
 
+#include <memory>
+#include <stdint.h>
+#include <string>
 #include <vector>
 
 // If we aren't using C++11, then just ignore static asserts.
@@ -40,6 +45,38 @@
 #ifndef static_assert
 #define static_assert(x, y) ((void)0)
 #endif
+#endif
+
+#ifdef MISSING_DIGITTOINT
+namespace
+{
+	/**
+	 * Glibc doesn't have a definition of digittoint, so provide our own.
+	 */
+	inline int digittoint(int c)
+	{
+		switch (c)
+		{
+			default:
+			case '0': return 0;
+			case '1': return 1;
+			case '2': return 2;
+			case '3': return 3;
+			case '4': return 4;
+			case '5': return 5;
+			case '6': return 6;
+			case '7': return 7;
+			case '8': return 8;
+			case '9': return 9;
+			case 'a': return 10;
+			case 'b': return 11;
+			case 'c': return 12;
+			case 'd': return 13;
+			case 'e': return 14;
+			case 'f': return 15;
+		}
+	}
+}
 #endif
 
 namespace dtc {
@@ -68,6 +105,8 @@ inline void push_big_endian(byte_buffer &v, T val)
 	}
 }
 
+void push_string(byte_buffer &v, const std::string &s, bool escapes=false);
+
 /**
  * Simple inline non-locale-aware check that this is a valid ASCII
  * digit.
@@ -84,8 +123,29 @@ inline bool isdigit(char c)
 inline bool ishexdigit(char c)
 {
 	return ((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'f')) ||
-		((c >= 'A') && (c <= 'Z'));
+		((c >= 'A') && (c <= 'F'));
 }
+
+/**
+ * Simple inline non-locale-aware check that this is a valid ASCII
+ * letter.
+ */
+inline bool isalpha(char c)
+{
+	return ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z'));
+}
+
+/**
+ * A wrapper around dirname(3) that handles inconsistencies relating to memory
+ * management between platforms and provides a std::string interface.
+ */
+std::string dirname(const std::string&);
+
+/**
+ * A wrapper around basename(3) that handles inconsistencies relating to memory
+ * management between platforms and provides a std::string interface.
+ */
+std::string basename(const std::string&);
 
 }// namespace dtc
 

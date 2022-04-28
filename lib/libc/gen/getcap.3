@@ -29,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getcap.3	8.4 (Berkeley) 5/13/94
-.\" $FreeBSD: release/10.0.0/lib/libc/gen/getcap.3 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD$
 .\"
 .Dd March 22, 2002
 .Dt GETCAP 3
@@ -137,9 +137,10 @@ It must be called before the
 call.
 If a sequential access is being performed (see below), it must be called
 before the first sequential access call
-.Fn ( cgetfirst
+.Po Fn cgetfirst
 or
-.Fn cgetnext ) ,
+.Fn cgetnext
+.Pc ,
 or be directly preceded by a
 .Fn cgetclose
 call.

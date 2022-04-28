@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * 	From: @(#)lp.h	8.2 (Berkeley) 4/28/95
- * $FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/lp.h 242091 2012-10-25 20:16:38Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -281,7 +281,7 @@ void	 fatal(const struct printer *_pp, const char *_msg, ...)
 int	 firstprinter(struct printer *_pp, int *_error);
 void	 free_printer(struct printer *_pp);
 void	 free_request(struct request *_rp);
-int	 getline(FILE *_cfp);
+int	 get_line(FILE *_cfp);
 int	 getport(const struct printer *_pp, const char *_rhost, int _rport);
 int	 getprintcap(const char *_printer, struct printer *_pp);
 int	 getq(const struct printer *_pp, struct jobqueue *(*_namelist[]));

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/sed/defs.h 192732 2009-05-25 06:45:33Z brian $
+ * $FreeBSD$
  */
 
 /*
@@ -143,6 +143,7 @@ typedef struct {
 	char *space;		/* Current space pointer. */
 	size_t len;		/* Current length. */
 	int deleted;		/* If deleted. */
+	int append_newline;	/* If originally terminated by \n. */
 	char *back;		/* Backing memory. */
 	size_t blen;		/* Backing memory length. */
 } SPACE;

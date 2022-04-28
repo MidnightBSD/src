@@ -1,4 +1,4 @@
-/*	$NetBSD: str.c,v 1.34 2012/03/03 23:16:47 dholland Exp $	*/
+/*	$NetBSD: str.c,v 1.38 2017/04/21 22:15:44 sjg Exp $	*/
 
 /*-
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -69,14 +69,14 @@
  */
 
 #ifndef MAKE_NATIVE
-static char rcsid[] = "$NetBSD: str.c,v 1.34 2012/03/03 23:16:47 dholland Exp $";
+static char rcsid[] = "$NetBSD: str.c,v 1.38 2017/04/21 22:15:44 sjg Exp $";
 #else
 #include <sys/cdefs.h>
 #ifndef lint
 #if 0
 static char     sccsid[] = "@(#)str.c	5.8 (Berkeley) 6/1/90";
 #else
-__RCSID("$NetBSD: str.c,v 1.34 2012/03/03 23:16:47 dholland Exp $");
+__RCSID("$NetBSD: str.c,v 1.38 2017/04/21 22:15:44 sjg Exp $");
 #endif
 #endif				/* not lint */
 #endif
@@ -102,7 +102,7 @@ str_concat(const char *s1, const char *s2, int flags)
 	len2 = strlen(s2);
 
 	/* allocate length plus separator plus EOS */
-	result = bmake_malloc((u_int)(len1 + len2 + 2));
+	result = bmake_malloc((unsigned int)(len1 + len2 + 2));
 
 	/* copy first string into place */
 	memcpy(result, s1, len1);
@@ -145,7 +145,7 @@ brk_string(const char *str, int *store_argc, Boolean expand, char **buffer)
 	const char *p;
 	int len;
 	int argmax = 50, curlen = 0;
-    	char **argv = bmake_malloc((argmax + 1) * sizeof(char *));
+    	char **argv;
 
 	/* skip leading space chars. */
 	for (; *str == ' ' || *str == '\t'; ++str)
@@ -154,6 +154,12 @@ brk_string(const char *str, int *store_argc, Boolean expand, char **buffer)
 	/* allocate room for a copy of the string */
 	if ((len = strlen(str) + 1) > curlen)
 		*buffer = bmake_malloc(curlen = len);
+
+	/*
+	 * initial argmax based on len
+	 */
+	argmax = MAX((len / 5), 50);
+	argv = bmake_malloc((argmax + 1) * sizeof(char *));
 
 	/*
 	 * copy the string; at the same time, parse backslashes,
@@ -367,16 +373,26 @@ Str_Match(const char *string, const char *pattern)
 		 * by a range (two characters separated by "-").
 		 */
 		if (*pattern == '[') {
+			int nomatch;
+
 			++pattern;
+			if (*pattern == '^') {
+				++pattern;
+				nomatch = 1;
+			} else
+				nomatch = 0;
 			for (;;) {
-				if ((*pattern == ']') || (*pattern == 0))
+				if ((*pattern == ']') || (*pattern == 0)) {
+					if (nomatch)
+						break;
 					return(0);
+				}
 				if (*pattern == *string)
 					break;
 				if (pattern[1] == '-') {
 					c2 = pattern[2];
 					if (c2 == 0)
-						return(0);
+						return(nomatch);
 					if ((*pattern <= *string) &&
 					    (c2 >= *string))
 						break;
@@ -387,6 +403,8 @@ Str_Match(const char *string, const char *pattern)
 				}
 				++pattern;
 			}
+			if (nomatch && (*pattern != ']') && (*pattern != 0))
+				return 0;
 			while ((*pattern != ']') && (*pattern != 0))
 				++pattern;
 			goto thisCharOK;

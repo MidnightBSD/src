@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/share/examples/hast/ucarp_up.sh 204076 2010-02-18 23:16:19Z pjd $
+# $FreeBSD$
 
 # Resource name as defined in /etc/hast.conf.
 resource="test"

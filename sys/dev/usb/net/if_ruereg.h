@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/usb/net/if_ruereg.h 215335 2010-11-15 06:04:25Z kevlo $
+ * $FreeBSD$
  */
 
 #define	RUE_CONFIG_IDX		0	/* config number 1 */

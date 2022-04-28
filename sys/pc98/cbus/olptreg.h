@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/cbus/olptreg.h 146216 2005-05-14 10:51:16Z nyan $
+ * $FreeBSD$
  */
 
 /*

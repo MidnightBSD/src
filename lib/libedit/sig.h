@@ -1,3 +1,5 @@
+/*	$NetBSD: sig.h,v 1.10 2016/02/16 15:53:48 christos Exp $	*/
+
 /*-
  * Copyright (c) 1992, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -30,8 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sig.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: sig.h,v 1.8 2009/02/19 15:20:22 christos Exp $
- * $FreeBSD: release/10.0.0/lib/libedit/sig.h 238378 2012-07-11 22:20:19Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -41,8 +42,6 @@
 #define	_h_el_sig
 
 #include <signal.h>
-
-#include "histedit.h"
 
 /*
  * Define here all the signals we are going to handle

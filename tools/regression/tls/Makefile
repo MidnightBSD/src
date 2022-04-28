@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/regression/tls/Makefile 145467 2005-04-23 23:47:58Z davidxu $
+# $FreeBSD$
 
 SUBDIR=libxx libyy ttls1 ttls2 ttls4
 

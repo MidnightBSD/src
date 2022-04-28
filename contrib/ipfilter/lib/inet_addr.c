@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/lib/inet_addr.c 153881 2005-12-30 11:52:26Z guido $	*/
+/*	$FreeBSD$	*/
 
 /*
  * ++Copyright++ 1983, 1990, 1993
@@ -72,7 +72,6 @@ static const char rcsid[] = "@(#)$Id: inet_addr.c,v 1.8.2.3 2004/12/09 19:41:20 
 #  define	__P(x)	()
 # endif
 #endif
-#ifndef linux
 int inet_aton __P((const char *, struct in_addr *));
 
 /*
@@ -189,7 +188,6 @@ inet_aton(cp, addr)
 		addr->s_addr = htonl(val);
 	return (1);
 }
-#endif
 
 /* these are compatibility routines, not needed on recent BSD releases */
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_cprojf.c 181377 2008-08-07 15:07:48Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 #include <math.h>
@@ -39,5 +39,5 @@ cprojf(float complex z)
 	if (!isinf(crealf(z)) && !isinf(cimagf(z)))
 		return (z);
 	else
-		return (cpackf(INFINITY, copysignf(0.0, cimagf(z))));
+		return (CMPLXF(INFINITY, copysignf(0.0, cimagf(z))));
 }

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sf/if_sfreg.h 232203 2012-02-27 08:55:32Z kevlo $
+ * $FreeBSD$
  */
 
 /*

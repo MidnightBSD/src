@@ -1,4 +1,6 @@
-# $FreeBSD: release/10.0.0/share/man/man4/man4.i386/Makefile 221961 2011-05-15 14:01:23Z brix $
+# $FreeBSD$
+
+PACKAGE=runtime-manuals
 
 MAN=	aic.4 \
 	apm.4 \

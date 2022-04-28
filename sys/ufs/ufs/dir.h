@@ -15,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dir.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: release/10.0.0/sys/ufs/ufs/dir.h 171147 2007-07-02 01:31:43Z peter $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_DIR_H_
@@ -44,7 +44,7 @@
  * quantity to keep down the cost of doing lookup on a 32-bit machine.
  */
 #define	doff_t		int32_t
-#define MAXDIRSIZE	(0x7fffffff)
+#define	MAXDIRSIZE	(0x7fffffff)
 
 /*
  * A directory consists of some number of blocks of DIRBLKSIZ
@@ -71,7 +71,7 @@
  * Entries other than the first in a directory do not normally have
  * dp->d_ino set to 0.
  */
-#define DIRBLKSIZ	DEV_BSIZE
+#define	DIRBLKSIZ	DEV_BSIZE
 #define	MAXNAMLEN	255
 
 struct	direct {
@@ -105,22 +105,20 @@ struct	direct {
  * The DIRSIZ macro gives the minimum record length which will hold
  * the directory entry.  This requires the amount of space in struct direct
  * without the d_name field, plus enough space for the name with a terminating
- * null byte (dp->d_namlen+1), rounded up to a 4 byte boundary.
- *
- * 
+ * null byte (dp->d_namlen + 1), rounded up to a 4 byte boundary.
  */
-#define	DIRECTSIZ(namlen)						\
-	(((uintptr_t)&((struct direct *)0)->d_name +			\
-	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
+#define	DIR_ROUNDUP	4	/* Directory name roundup size */
+#define	DIRECTSIZ(namlen) \
+    (roundup2(__offsetof(struct direct, d_name) + (namlen) + 1, DIR_ROUNDUP))
 #if (BYTE_ORDER == LITTLE_ENDIAN)
-#define DIRSIZ(oldfmt, dp) \
+#define	DIRSIZ(oldfmt, dp) \
     ((oldfmt) ? DIRECTSIZ((dp)->d_type) : DIRECTSIZ((dp)->d_namlen))
 #else
-#define DIRSIZ(oldfmt, dp) \
+#define	DIRSIZ(oldfmt, dp) \
     DIRECTSIZ((dp)->d_namlen)
 #endif
-#define OLDDIRFMT	1
-#define NEWDIRFMT	0
+#define	OLDDIRFMT	1
+#define	NEWDIRFMT	0
 
 /*
  * Template for manipulating directories.  Should use struct direct's,

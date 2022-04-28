@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/tools/KSE/rr/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG=		rr	
-NO_MAN=
+MAN=
 CFLAGS+=	-g -Wall
 SRCS=		kse_asm.S rr.c 
 

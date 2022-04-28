@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001, 2009 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/timer.c 192798 2009-05-26 07:32:08Z brian $
+ * $FreeBSD$
  */
 
 #include <errno.h>

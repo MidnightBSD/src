@@ -22,10 +22,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_cancel.c 251985 2013-06-19 04:47:41Z kib $
- *
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -63,7 +63,7 @@ _pthread_cancel(pthread_t pthread)
 	 * _thr_find_thread and THR_THREAD_UNLOCK will enter and leave critical
 	 * region automatically.
 	 */
-	if ((ret = _thr_find_thread(curthread, pthread, 0)) == 0) {
+	if ((ret = _thr_find_thread(curthread, pthread, 1)) == 0) {
 		if (!pthread->cancel_pending) {
 			pthread->cancel_pending = 1;
 			if (pthread->state != PS_DEAD)
@@ -130,8 +130,10 @@ _pthread_setcanceltype(int type, int *oldtype)
 void
 _pthread_testcancel(void)
 {
-	struct pthread *curthread = _get_curthread();
+	struct pthread *curthread;
 
+	_thr_check_init();
+	curthread = _get_curthread();
 	testcancel(curthread);
 }
 

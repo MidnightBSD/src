@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_disk.c 248627 2013-03-22 22:46:19Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -169,6 +169,7 @@ mfi_disk_attach(device_t dev)
 		sc->ld_disk->d_fwheads = 64;
 		sc->ld_disk->d_fwsectors = 32;
 	}
+	sc->ld_disk->d_flags = DISKFLAG_UNMAPPED_BIO;
 	disk_create(sc->ld_disk, DISK_VERSION);
 
 	return (0);

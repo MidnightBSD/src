@@ -26,24 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/fdt.h 245332 2013-01-12 15:58:20Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FDT_H_
 #define _MACHINE_FDT_H_
 
 #include <machine/bus.h>
-#include <machine/intr_machdep.h>
-
-/* Max interrupt number */
-#if defined(CPU_RMI) || defined(CPU_NLM)
-#define FDT_INTR_MAX	XLR_MAX_INTR
-#else
-#define FDT_INTR_MAX	(NHARD_IRQS + NSOFT_IRQS)
-#endif
-
-/* Map phandle/intpin pair to global IRQ number */ 
-#define	FDT_MAP_IRQ(node, pin)	(pin)
 
 /*
  * Bus space tag. XXX endianess info needs to be derived from the blob.
@@ -51,7 +40,7 @@
 #if defined(CPU_RMI) || defined(CPU_NLM)
 #define fdtbus_bs_tag	rmi_uart_bus_space
 #else
-#define fdtbus_bs_tag	mips_bus_space_fdt
+#define fdtbus_bs_tag	mips_bus_space_generic
 #endif
 
 #endif /* _MACHINE_FDT_H_ */

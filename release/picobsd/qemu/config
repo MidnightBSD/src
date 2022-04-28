@@ -1,5 +1,5 @@
 # configuration for picobsd build script.
-# $FreeBSD: release/10.0.0/release/picobsd/qemu/config 201076 2009-12-28 01:25:05Z luigi $
+# $FreeBSD$
 # it should only contain variable definitions -- it is sourced
 # by the shell much like rc.conf* files
 

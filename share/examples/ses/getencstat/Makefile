@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/examples/ses/getencstat/Makefile 153291 2005-12-10 12:09:54Z ru $
+# $FreeBSD$
 #
 # Copyright (c) 2000 by Matthew Jacob
 # All rights reserved.
@@ -34,6 +34,8 @@
 
 .PATH: ${.CURDIR}/../srcs
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/ses/${PROG}
 PROG=	getencstat
 SRCS=	getencstat.c eltsub.c
 MAN=	getencstat.8

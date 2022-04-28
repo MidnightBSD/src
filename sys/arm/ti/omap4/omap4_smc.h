@@ -23,7 +23,7 @@
  */
 
 /*
- * $FreeBSD: release/10.0.0/sys/arm/ti/omap4/omap4_smc.h 244914 2012-12-31 21:19:44Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef OMAP4_SMC_H_

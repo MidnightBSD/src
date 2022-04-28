@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mvs/mvs.h 236952 2012-06-12 11:08:51Z mav $
+ * $FreeBSD$
  */
 
 #include "mvs_if.h"
@@ -141,7 +141,7 @@
 #define EDMA_IE_LINKDATARXERR(x)	((x) << 17)	/* Link Data Recv Err */
 #define EDMA_IE_LINKCTLTXERR(x)		((x) << 21)	/* Link Ctrl Tx Error */
 #define EDMA_IE_LINKDATATXERR(x)	((x) << 26)	/* Link Data Tx Error */
-#define EDMA_IE_TRANSPROTERR		(1 << 31)	/* Transport Proto E */
+#define EDMA_IE_TRANSPROTERR		(1U << 31)	/* Transport Proto E */
 #define EDMA_IE_TRANSIENT		(EDMA_IE_LINKCTLRXERR(0x0b) | \
 					 EDMA_IE_LINKCTLTXERR(0x1f))
 							/* Non-fatal Errors */
@@ -263,7 +263,7 @@
 #define        SATA_SS_SPD_NO_SPEED     0x00000000
 #define        SATA_SS_SPD_GEN1         0x00000010
 #define        SATA_SS_SPD_GEN2         0x00000020
-#define        SATA_SS_SPD_GEN3         0x00000040
+#define        SATA_SS_SPD_GEN3         0x00000030
 
 #define        SATA_SS_IPM_MASK         0x00000f00
 #define        SATA_SS_IPM_NO_DEVICE    0x00000000
@@ -298,7 +298,7 @@
 #define        SATA_SC_SPD_NO_SPEED     0x00000000
 #define        SATA_SC_SPD_SPEED_GEN1   0x00000010
 #define        SATA_SC_SPD_SPEED_GEN2   0x00000020
-#define        SATA_SC_SPD_SPEED_GEN3   0x00000040
+#define        SATA_SC_SPD_SPEED_GEN3   0x00000030
 
 #define        SATA_SC_IPM_MASK         0x00000f00
 #define        SATA_SC_IPM_NONE         0x00000000
@@ -566,7 +566,7 @@ struct mvs_channel {
 	int			numtslotspd[16];/* Number of NCQ slots per dev */
 	int			numhslots;	/* Number of held slots */
 	int			recoverycmd;	/* Our READ LOG active */
-	int			fatalerr;	/* Fatal error happend */
+	int			fatalerr;	/* Fatal error happened */
 	int			lastslot;	/* Last used slot */
 	int			taggedtarget;	/* Last tagged target */
 	int			resetting;	/* Hard-reset in progress. */

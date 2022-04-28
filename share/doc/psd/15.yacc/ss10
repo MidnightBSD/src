@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)ssA	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/psd/15.yacc/ss10 210167 2010-07-16 17:01:36Z emaste $
+.\" $FreeBSD$
 .SH
 10: Advanced Topics
 .PP

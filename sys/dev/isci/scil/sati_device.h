@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sati_device.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SATI_DEVICE_H_
 #define _SATI_DEVICE_H_
@@ -151,7 +151,7 @@ typedef struct SATI_DEVICE
    U8 unit_attention_ascq;
 
    /**
-    * This field indicates the ATA standby timer value set throught the
+    * This field indicates the ATA standby timer value set through the
     * ATA IDLE and ATA Standby commands
     */
    U8 ata_standby_timer;

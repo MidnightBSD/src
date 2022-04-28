@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/ld80/k_sinl.c 176357 2008-02-17 07:32:14Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ld80 version of k_sin.c.  See ../src/k_sin.c for most comments.

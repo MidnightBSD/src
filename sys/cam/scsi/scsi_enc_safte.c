@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/scsi/scsi_enc_safte.c 239213 2012-08-12 17:01:07Z mjacob $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -225,10 +225,8 @@ static char *safte_2little = "Too Little Data Returned (%d) at line %d\n";
 	}
 
 int emulate_array_devices = 1;
-SYSCTL_DECL(_kern_cam_enc);
-SYSCTL_INT(_kern_cam_enc, OID_AUTO, emulate_array_devices, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_enc, OID_AUTO, emulate_array_devices, CTLFLAG_RWTUN,
            &emulate_array_devices, 0, "Emulate Array Devices for SAF-TE");
-TUNABLE_INT("kern.cam.enc.emulate_array_devices", &emulate_array_devices);
 
 static int
 safte_fill_read_buf_io(enc_softc_t *enc, struct enc_fsm_state *state,
@@ -243,12 +241,12 @@ safte_fill_read_buf_io(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	if (enc->enc_type == ENC_SEMB_SAFT) {
 		semb_read_buffer(&ccb->ataio, /*retries*/5,
-				enc_done, MSG_SIMPLE_Q_TAG,
+				NULL, MSG_SIMPLE_Q_TAG,
 				state->page_code, buf, state->buf_size,
 				state->timeout);
 	} else {
 		scsi_read_buffer(&ccb->csio, /*retries*/5,
-				enc_done, MSG_SIMPLE_Q_TAG, 1,
+				NULL, MSG_SIMPLE_Q_TAG, 1,
 				state->page_code, 0, buf, state->buf_size,
 				SSD_FULL_SIZE, state->timeout);
 	}
@@ -292,11 +290,8 @@ safte_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	    cfg->DoorLock + cfg->Ntherm + cfg->Nspkrs + cfg->Ntstats + 1;
 	ENC_FREE_AND_NULL(enc->enc_cache.elm_map);
 	enc->enc_cache.elm_map =
-	    ENC_MALLOCZ(enc->enc_cache.nelms * sizeof(enc_element_t));
-	if (enc->enc_cache.elm_map == NULL) {
-		enc->enc_cache.nelms = 0;
-		return (ENOMEM);
-	}
+	    malloc(enc->enc_cache.nelms * sizeof(enc_element_t),
+	    M_SCSIENC, M_WAITOK|M_ZERO);
 
 	r = 0;
 	/*
@@ -304,21 +299,21 @@ safte_process_config(enc_softc_t *enc, struct enc_fsm_state *state,
 	 * in later fetches of status.
 	 */
 	for (i = 0; i < cfg->Nfans; i++)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_FAN;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_FAN;
 	cfg->pwroff = (uint8_t) r;
 	for (i = 0; i < cfg->Npwr; i++)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_POWER;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_POWER;
 	for (i = 0; i < cfg->DoorLock; i++)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_DOORLOCK;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_DOORLOCK;
 	if (cfg->Nspkrs > 0)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_ALARM;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_ALARM;
 	for (i = 0; i < cfg->Ntherm; i++)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_THERM;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_THERM;
 	for (i = 0; i <= cfg->Ntstats; i++)
-		enc->enc_cache.elm_map[r++].enctype = ELMTYP_THERM;
+		enc->enc_cache.elm_map[r++].elm_type = ELMTYP_THERM;
 	cfg->slotoff = (uint8_t) r;
 	for (i = 0; i < cfg->Nslots; i++)
-		enc->enc_cache.elm_map[r++].enctype =
+		enc->enc_cache.elm_map[r++].elm_type =
 		    emulate_array_devices ? ELMTYP_ARRAY_DEV :
 		     ELMTYP_DEVICE;
 
@@ -508,7 +503,7 @@ safte_process_status(enc_softc_t *enc, struct enc_fsm_state *state,
 	 */
 	for (i = 0; i < cfg->Nslots; i++) {
 		SAFT_BAIL(r, xfer_len);
-		if (cache->elm_map[cfg->slotoff + i].enctype == ELMTYP_DEVICE)
+		if (cache->elm_map[cfg->slotoff + i].elm_type == ELMTYP_DEVICE)
 			cache->elm_map[cfg->slotoff + i].encstat[1] = buf[r];
 		r++;
 	}
@@ -681,7 +676,7 @@ safte_process_slotstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 	oid = cfg->slotoff;
 	for (r = i = 0; i < cfg->Nslots; i++, r += 4) {
 		SAFT_BAIL(r+3, xfer_len);
-		if (cache->elm_map[oid].enctype == ELMTYP_ARRAY_DEV)
+		if (cache->elm_map[oid].elm_type == ELMTYP_ARRAY_DEV)
 			cache->elm_map[oid].encstat[1] = 0;
 		cache->elm_map[oid].encstat[2] &= SESCTL_RQSID;
 		cache->elm_map[oid].encstat[3] = 0;
@@ -708,7 +703,7 @@ safte_process_slotstatus(enc_softc_t *enc, struct enc_fsm_state *state,
 			cache->elm_map[oid].encstat[3] |= SESCTL_RQSFLT;
 		if (buf[r+0] & 0x40)
 			cache->elm_map[oid].encstat[0] |= SESCTL_PRDFAIL;
-		if (cache->elm_map[oid].enctype == ELMTYP_ARRAY_DEV) {
+		if (cache->elm_map[oid].elm_type == ELMTYP_ARRAY_DEV) {
 			if (buf[r+0] & 0x01)
 				cache->elm_map[oid].encstat[1] |= 0x80;
 			if (buf[r+0] & 0x04)
@@ -774,7 +769,7 @@ safte_fill_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 	} else {
 		ep = &enc->enc_cache.elm_map[idx];
 
-		switch (ep->enctype) {
+		switch (ep->elm_type) {
 		case ELMTYP_DEVICE:
 		case ELMTYP_ARRAY_DEV:
 			switch (cfg->current_request_stage) {
@@ -784,7 +779,7 @@ safte_fill_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 					ep->priv |= 0x40;
 				if (req->elm_stat[3] & SESCTL_RQSFLT)
 					ep->priv |= 0x02;
-				if (ep->enctype == ELMTYP_ARRAY_DEV) {
+				if (ep->elm_type == ELMTYP_ARRAY_DEV) {
 					if (req->elm_stat[1] & 0x01)
 						ep->priv |= 0x200;
 					if (req->elm_stat[1] & 0x02)
@@ -942,11 +937,11 @@ safte_fill_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 
 	if (enc->enc_type == ENC_SEMB_SAFT) {
 		semb_write_buffer(&ccb->ataio, /*retries*/5,
-				enc_done, MSG_SIMPLE_Q_TAG,
+				NULL, MSG_SIMPLE_Q_TAG,
 				buf, xfer_len, state->timeout);
 	} else {
 		scsi_write_buffer(&ccb->csio, /*retries*/5,
-				enc_done, MSG_SIMPLE_Q_TAG, 1,
+				NULL, MSG_SIMPLE_Q_TAG, 1,
 				0, 0, buf, xfer_len,
 				SSD_FULL_SIZE, state->timeout);
 	}
@@ -973,7 +968,7 @@ safte_process_control_request(enc_softc_t *enc, struct enc_fsm_state *state,
 		if (idx == SES_SETSTATUS_ENC_IDX)
 			type = -1;
 		else
-			type = enc->enc_cache.elm_map[idx].enctype;
+			type = enc->enc_cache.elm_map[idx].elm_type;
 		if (type == ELMTYP_DEVICE || type == ELMTYP_ARRAY_DEV)
 			enc_update_request(enc, SAFTE_UPDATE_READSLOTSTATUS);
 		else

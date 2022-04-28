@@ -1,8 +1,8 @@
-# $FreeBSD: release/10.0.0/usr.sbin/lpr/filters.ru/koi2alt/Makefile 156512 2006-03-09 19:52:44Z gad $
+# $FreeBSD$
 
 PROG=	koi2alt
-NO_MAN=
+MAN=
 
-CFLAGS+= -I${.CURDIR}/../../common_source
+CFLAGS+= -I${.CURDIR:H:H}/common_source
 
 .include <bsd.prog.mk>

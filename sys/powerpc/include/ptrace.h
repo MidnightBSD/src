@@ -1,6 +1,6 @@
 /*-
- * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2014 Justin Hibbits
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)ptrace.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/10.0.0/sys/powerpc/include/ptrace.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PTRACE_H_
 #define _MACHINE_PTRACE_H_
+
+#define	__HAVE_PTRACE_MACHDEP
+
+#define PT_GETVRREGS	(PT_FIRSTMACH + 0)
+#define PT_SETVRREGS	(PT_FIRSTMACH + 1)
 
 #endif

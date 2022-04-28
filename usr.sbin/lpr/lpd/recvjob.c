@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)recvjob.c	8.2 (Berkeley) 4/27/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lpd/recvjob.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Receive printer jobs from the network, queue them and
@@ -140,7 +140,7 @@ recvjob(const char *printer)
 
 /*
  * Read printer jobs sent by lpd and copy them to the spooling directory.
- * Return the number of jobs successfully transfered.
+ * Return the number of jobs successfully transferred.
  */
 static int
 readjob(struct printer *pp)
@@ -356,7 +356,7 @@ read_number(const char *fn)
 }
 
 /*
- * Remove all the files associated with the current job being transfered.
+ * Remove all the files associated with the current job being transferred.
  */
 static void
 rcleanup(int signo __unused)

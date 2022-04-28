@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/idt/uart_bus_rc32434.c 202175 2010-01-12 21:36:08Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -94,7 +94,7 @@ uart_rc32434_probe(device_t dev)
 	sc->sc_bas.bst = mips_bus_space_generic;
 	sc->sc_bas.bsh = MIPS_PHYS_TO_KSEG1(IDT_BASE_UART0);
 
-	return (uart_bus_probe(dev, 2, 330000000UL/2, 0, 0));
+	return (uart_bus_probe(dev, 2, 0, 330000000UL/2, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_rc32434_driver, uart_devclass, 0, 0);

@@ -30,8 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/locale/mbtowc.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD$");
 
+#include <errno.h>
 #include <stdlib.h>
 #include <wchar.h>
 #include "mblocal.h"
@@ -49,9 +50,15 @@ mbtowc_l(wchar_t * __restrict pwc, const char * __restrict s, size_t n, locale_t
 		return (0);
 	}
 	rval = XLOCALE_CTYPE(locale)->__mbrtowc(pwc, s, n, &locale->mbtowc);
-	if (rval == (size_t)-1 || rval == (size_t)-2)
+	switch (rval) {
+	case (size_t)-2:
+		errno = EILSEQ;
+		/* FALLTHROUGH */
+	case (size_t)-1:
 		return (-1);
-	return ((int)rval);
+	default:
+		return ((int)rval);
+	}
 }
 int
 mbtowc(wchar_t * __restrict pwc, const char * __restrict s, size_t n)

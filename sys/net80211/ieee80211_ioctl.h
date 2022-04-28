@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/net80211/ieee80211_ioctl.h 246501 2013-02-07 21:20:28Z monthadar $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_IOCTL_H_
 #define _NET80211_IEEE80211_IOCTL_H_
@@ -246,7 +246,10 @@ struct ieee80211_stats {
 	uint32_t	is_ampdu_bar_tx_retry;	/* A-MPDU BAR frames TX rtry */
 	uint32_t	is_ampdu_bar_tx_fail;	/* A-MPDU BAR frames TX fail */
 
-	uint32_t	is_spare[7];
+	uint32_t	is_ff_encapfail;	/* failed FF encap */
+	uint32_t	is_amsdu_encapfail;	/* failed A-MSDU encap */
+
+	uint32_t	is_spare[5];
 };
 
 /*
@@ -699,6 +702,7 @@ struct ieee80211req {
 #define	IEEE80211_IOC_RIFS		111	/* RIFS config (on, off) */
 #define	IEEE80211_IOC_GREENFIELD	112	/* Greenfield (on, off) */
 #define	IEEE80211_IOC_STBC		113	/* STBC Tx/RX (on, off) */
+#define	IEEE80211_IOC_LDPC		114	/* LDPC Tx/RX (on, off) */
 
 #define	IEEE80211_IOC_MESH_ID		170	/* mesh identifier */
 #define	IEEE80211_IOC_MESH_AP		171	/* accepting peerings */

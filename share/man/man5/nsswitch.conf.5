@@ -31,9 +31,9 @@
 .\" TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 .\" USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man5/nsswitch.conf.5 206155 2010-04-04 08:31:03Z ume $
+.\" $FreeBSD$
 .\"
-.Dd April 4, 2010
+.Dd June 6, 2016
 .Dt NSSWITCH.CONF 5
 .Os
 .Sh NAME
@@ -148,7 +148,9 @@ The following databases are used by the following C library functions:
 .Xr getprotoent 3
 .It netgroup
 .Xr getnetgrent 3 ,
+.Xr getnetgrent_r 3 ,
 .Xr setnetgrent 3 ,
+.Xr endnetgrent 3 ,
 .Xr innetgr 3
 .El
 .Ss Status codes
@@ -221,7 +223,7 @@ and continue on anything else (i.e,
 You can enable caching for the particular database by specifying
 .Dq cache
 as the first source in the
-.Xr nsswitch.conf 5
+.Nm
 file.
 You should also enable caching for this database in
 .Xr nscd.conf 5 .
@@ -362,7 +364,6 @@ databases.
 .Xr nscd.conf 5 ,
 .Xr resolv.conf 5 ,
 .Xr nscd 8 ,
-.Xr named 8 ,
 .Xr ypbind 8
 .Sh HISTORY
 The
@@ -374,8 +375,7 @@ It was imported from the
 Project, where it appeared first in
 .Nx 1.4 .
 .Sh AUTHORS
-Luke Mewburn
-.Aq lukem@netbsd.org
+.An Luke Mewburn Aq Mt lukem@netbsd.org
 wrote this freely distributable name-service switch implementation,
 using ideas from the
 .Tn ULTRIX

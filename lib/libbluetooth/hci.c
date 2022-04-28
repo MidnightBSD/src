@@ -27,10 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libbluetooth/hci.c 192113 2009-05-14 17:10:19Z emax $
+ * $FreeBSD$
  */
 
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <inttypes.h>
 #include <stdio.h>

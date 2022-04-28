@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libfetch/fetch.c 252375 2013-06-29 15:51:27Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -270,6 +270,7 @@ fetchMakeURL(const char *scheme, const char *host, int port, const char *doc,
 		fetch_syserr();
 		return (NULL);
 	}
+	u->netrcfd = -1;
 
 	if ((u->doc = strdup(doc ? doc : "/")) == NULL) {
 		fetch_syserr();
@@ -327,6 +328,8 @@ fetch_pctdecode(char *dst, const char *src, size_t dlen)
 		}
 		if (dlen-- > 0)
 			*dst++ = c;
+		else
+			return (NULL);
 	}
 	return (s);
 }
@@ -349,6 +352,7 @@ fetchParseURL(const char *URL)
 		fetch_syserr();
 		return (NULL);
 	}
+	u->netrcfd = -1;
 
 	/* scheme name */
 	if ((p = strstr(URL, ":/"))) {
@@ -373,29 +377,32 @@ fetchParseURL(const char *URL)
 	if (p && *p == '@') {
 		/* username */
 		q = fetch_pctdecode(u->user, URL, URL_USERLEN);
+		if (q == NULL)
+			goto ouch;
 
 		/* password */
-		if (*q == ':')
+		if (*q == ':') {
 			q = fetch_pctdecode(u->pwd, q + 1, URL_PWDLEN);
-
+			if (q == NULL)
+				goto ouch;
+		}
 		p++;
 	} else {
 		p = URL;
 	}
 
 	/* hostname */
-#ifdef INET6
 	if (*p == '[' && (q = strchr(p + 1, ']')) != NULL &&
 	    (*++q == '\0' || *q == '/' || *q == ':')) {
-		if ((i = q - p - 2) > MAXHOSTNAMELEN)
+		if ((i = q - p) > MAXHOSTNAMELEN)
 			i = MAXHOSTNAMELEN;
-		strncpy(u->host, ++p, i);
+		strncpy(u->host, p, i);
 		p = q;
-	} else
-#endif
+	} else {
 		for (i = 0; *p && (*p != '/') && (*p != ':'); p++)
 			if (i < MAXHOSTNAMELEN)
 				u->host[i++] = *p;
+	}
 
 	/* port */
 	if (*p == ':') {
@@ -441,15 +448,14 @@ nohost:
 		goto ouch;
 	}
 
-	DEBUG(fprintf(stderr,
-		  "scheme:   [%s]\n"
-		  "user:     [%s]\n"
-		  "password: [%s]\n"
-		  "host:     [%s]\n"
-		  "port:     [%d]\n"
-		  "document: [%s]\n",
-		  u->scheme, u->user, u->pwd,
-		  u->host, u->port, u->doc));
+	DEBUGF("scheme:   \"%s\"\n"
+	    "user:     \"%s\"\n"
+	    "password: \"%s\"\n"
+	    "host:     \"%s\"\n"
+	    "port:     \"%d\"\n"
+	    "document: \"%s\"\n",
+	    u->scheme, u->user, u->pwd,
+	    u->host, u->port, u->doc);
 
 	return (u);
 

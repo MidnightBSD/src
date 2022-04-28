@@ -16,7 +16,7 @@
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
    02111-1307, USA.  */
 
-/* $FreeBSD: release/10.0.0/gnu/usr.bin/grep/kwset.c 131557 2004-07-04 10:02:03Z tjr $ */
+/* $FreeBSD$ */
 
 /* Written August 1989 by Mike Haertel.
    The author may be reached (Email) at the address mike@ai.mit.edu,

@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/common/dumpregs.h 196696 2009-08-31 13:23:55Z jhb $
+ * $FreeBSD$
  */
 
 #define	__constructor	__attribute__((constructor))

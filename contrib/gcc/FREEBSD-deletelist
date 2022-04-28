@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/gcc/FREEBSD-deletelist 125920 2004-02-17 03:22:35Z ache $
+$FreeBSD$
 CVS
 .cvsignore
 ABOUT*NLS

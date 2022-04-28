@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/periodic/daily/460.status-mail-rejects 192970 2009-05-28 07:43:06Z brian $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.

@@ -10,15 +10,17 @@
 # + 32MB RAM
 # + uboot environment
 
-# $FreeBSD: release/10.0.0/sys/mips/conf/PICOSTATION_M2HP 255086 2013-08-30 20:46:01Z hiren $
+# $FreeBSD$
+
+#NO_UNIVERSE
 
 include		"AR724X_BASE"
 ident		"PICOSTATION_M2HP"
 hints		"PICOSTATION_M2HP.hints"
 
-options		AR71XX_REALMEM=32*1024*1024
+options 	AR71XX_REALMEM=32*1024*1024
 
-options		AR71XX_ENV_UBOOT
+options 	AR71XX_ENV_UBOOT
 
 # Limit inlines
 makeoptions	INLINE_LIMIT=768
@@ -36,9 +38,9 @@ options 	NO_SWAPPING
 # options 	MSDOSFS
 
 # uncompress - to boot read-only lzma natively from flash
-device		geom_uncompress
-options		GEOM_UNCOMPRESS
-options		ROOTDEVNAME=\"ufs:/dev/map/rootfs.uncompress\"
+device		xz
+options 	GEOM_UZIP
+options 	ROOTDEVNAME=\"ufs:/dev/map/rootfs.uzip\"
 
 # Not enough space for these..
 nooptions 	INVARIANTS

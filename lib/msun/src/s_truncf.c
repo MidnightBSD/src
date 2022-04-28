@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_truncf.c 130767 2004-06-20 09:25:43Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * truncf(x)

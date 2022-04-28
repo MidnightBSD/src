@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mac_portacl/Makefile 139435 2004-12-30 13:49:01Z rwatson $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../security/mac_portacl
+.PATH: ${SRCTOP}/sys/security/mac_portacl
 
 KMOD=	mac_portacl
 SRCS=	mac_portacl.c

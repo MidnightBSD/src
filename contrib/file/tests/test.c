@@ -80,7 +80,8 @@ main(int argc, char **argv)
 		return 10;
 	}
 	if (magic_load(ms, NULL) == -1) {
-		(void)fprintf(stderr, "ERROR loading with NULL file: %s\n", magic_error(ms));
+		(void)fprintf(stderr, "ERROR loading with NULL file: %s\n",
+		    magic_error(ms));
 		return 11;
 	}
 
@@ -101,10 +102,10 @@ main(int argc, char **argv)
 				desired = slurp(fp, &desired_len);
 				fclose(fp);
 				(void)printf("%s: %s\n", argv[1], result);
-                                if (strcmp(result, desired) != 0) {
+				if (strcmp(result, desired) != 0) {
 					(void)fprintf(stderr, "Error: result was\n%s\nexpected:\n%s\n", result, desired);
 					return 1;
-                                }
+				}
 			}
 		}
 	}

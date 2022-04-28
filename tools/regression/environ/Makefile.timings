@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/environ/Makefile.timings 171195 2007-07-04 00:00:41Z scf $
+# $FreeBSD$
 #
 SRCS=	timings.c
 PROG=	timings
@@ -8,7 +8,7 @@ CFLAGS+=-Wall -I../../../include
 
 CLEANFILES=	${PROG}.core
 
-NO_MAN=	yes
+MAN=
 
 .include <bsd.prog.mk>
 

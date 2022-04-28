@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)utilities.c	8.6 (Berkeley) 5/19/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/utilities.c 221110 2011-04-27 02:55:03Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -68,7 +68,7 @@ blockcheck(char *origname)
 	newname = origname;
 	if (stat(newname, &stblock) < 0) {
 		cp = strrchr(newname, '/');
-		if (cp == 0) {
+		if (cp == NULL) {
 			(void)snprintf(device, sizeof(device), "%s%s",
 				_PATH_DEV, newname);
 			newname = device;
@@ -108,14 +108,3 @@ retry:
 	return (origname);
 }
 
-void
-infohandler(int sig __unused)
-{
-	got_siginfo = 1;
-}
-
-void
-alarmhandler(int sig __unused)
-{
-	got_sigalarm = 1;
-}

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/posix4_mib.c 224159 2011-07-17 23:05:24Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,8 +77,7 @@ SYSCTL_NODE(_kern, OID_AUTO, p1003_1b, CTLFLAG_RW, 0, "P1003.1B");
 
 #endif
 
-SYSCTL_INT(_p1003_1b, CTL_P1003_1B_ASYNCHRONOUS_IO, \
-	asynchronous_io, CTLFLAG_RD, &async_io_version, 0, "");
+P1B_SYSCTL(CTL_P1003_1B_ASYNCHRONOUS_IO, asynchronous_io);
 P1B_SYSCTL(CTL_P1003_1B_MAPPED_FILES, mapped_files);
 P1B_SYSCTL(CTL_P1003_1B_MEMLOCK, memlock);
 P1B_SYSCTL(CTL_P1003_1B_MEMLOCK_RANGE, memlock_range);
@@ -92,7 +91,6 @@ P1B_SYSCTL(CTL_P1003_1B_FSYNC, fsync);
 P1B_SYSCTL(CTL_P1003_1B_SHARED_MEMORY_OBJECTS, shared_memory_objects);
 P1B_SYSCTL(CTL_P1003_1B_SYNCHRONIZED_IO, synchronized_io);
 P1B_SYSCTL(CTL_P1003_1B_TIMERS, timers);
-P1B_SYSCTL(CTL_P1003_1B_AIO_LISTIO_MAX, aio_listio_max);
 P1B_SYSCTL(CTL_P1003_1B_AIO_MAX, aio_max);
 P1B_SYSCTL(CTL_P1003_1B_AIO_PRIO_DELTA_MAX, aio_prio_delta_max);
 P1B_SYSCTL(CTL_P1003_1B_DELAYTIMER_MAX, delaytimer_max);
@@ -114,9 +112,9 @@ p31b_sysctl_proc(SYSCTL_HANDLER_ARGS)
 	num = arg2;
 	if (!P31B_VALID(num))
 		return (EINVAL);
-	val = facility_initialized[num] ? facility[num - 1] : 0;
+	val = facility_initialized[num - 1] ? facility[num - 1] : 0;
 	error = sysctl_handle_int(oidp, &val, 0, req);
-	if (error == 0 && req->newptr != NULL && facility_initialized[num])
+	if (error == 0 && req->newptr != NULL && facility_initialized[num - 1])
 		facility[num - 1] = val;
 	return (error);
 }
@@ -138,7 +136,7 @@ p31b_unsetcfg(int num)
 {
 
 	facility[num - 1] = 0;
-	facility_initialized[num -1] = 0;
+	facility_initialized[num - 1] = 0;
 }
 
 int
@@ -170,14 +168,8 @@ p31b_set_standard(void *dummy)
 	p31b_setcfg(CTL_P1003_1B_MAPPED_FILES, 200112L);
 	p31b_setcfg(CTL_P1003_1B_SHARED_MEMORY_OBJECTS, 200112L);
 	p31b_setcfg(CTL_P1003_1B_PAGESIZE, PAGE_SIZE);
-	if (!p31b_iscfg(CTL_P1003_1B_AIO_LISTIO_MAX))
-		p31b_setcfg(CTL_P1003_1B_AIO_LISTIO_MAX, -1);
-	if (!p31b_iscfg(CTL_P1003_1B_AIO_MAX))
-		p31b_setcfg(CTL_P1003_1B_AIO_MAX, -1);
-	if (!p31b_iscfg(CTL_P1003_1B_AIO_PRIO_DELTA_MAX))
-		p31b_setcfg(CTL_P1003_1B_AIO_PRIO_DELTA_MAX, -1);
 }
 
 SYSINIT(p31b_set_standard, SI_SUB_P1003_1B, SI_ORDER_ANY, p31b_set_standard, 
-	0);
+    NULL);
 

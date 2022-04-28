@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/autoconf.c 221869 2011-05-14 01:53:38Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_isa.h"
 

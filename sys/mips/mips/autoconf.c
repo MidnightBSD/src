@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/autoconf.c 206834 2010-04-19 07:34:26Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Setup the system to run on the current machine.

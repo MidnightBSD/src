@@ -18,7 +18,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
-/* $FreeBSD: release/10.0.0/contrib/gcc/config/freebsd-spec.h 200038 2009-12-02 16:34:20Z kib $ */
+/* $FreeBSD$ */
 
 /* Common FreeBSD configuration. 
    All FreeBSD architectures should include this file, which will specify

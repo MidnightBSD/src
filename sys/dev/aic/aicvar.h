@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic/aicvar.h 241591 2012-10-15 16:09:59Z jhb $
+ * $FreeBSD$
  */
 
 struct aic_transinfo {

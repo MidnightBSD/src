@@ -1,13 +1,13 @@
 # ex:ts=8
 #
-# $FreeBSD: release/10.0.0/usr.sbin/amd/include/Makefile 156813 2006-03-17 18:54:44Z ru $
+# $FreeBSD$
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998.
 #	Portions derived from amd/libamu/Makefile
 #	$NetBSD: Makefile,v 1.8 1998/08/08 22:33:37 christos Exp $
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SRCS=	config_local.h
 .if ${MK_NIS} == "no"
@@ -17,9 +17,9 @@ CLEANFILES=	${SRCS}
 
 all depend: ${SRCS}
 
-config_local.h: newvers.sh
+config_local.h: newvers.sh ${.CURDIR}/../../../sys/conf/newvers.sh
 	@rm -f ${.TARGET}
-	sh ${.ALLSRC} ${.CURDIR}/../../../sys/conf/newvers.sh > ${.TARGET}
+	sh ${.ALLSRC} > ${.TARGET}
 
 localconfig.h:
 	@rm -f ${.TARGET}

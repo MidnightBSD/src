@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/geom/geom_multipath/Makefile 167050 2007-02-27 04:01:58Z mjacob $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../geom/multipath
+.PATH: ${SRCTOP}/sys/geom/multipath
 
 KMOD=	geom_multipath
 SRCS=	g_multipath.c

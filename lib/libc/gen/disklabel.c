@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 5/3/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/disklabel.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #define DKTYPENAMES
@@ -85,10 +85,13 @@ getdiskbyname(const char *name)
 		cq++, cp++;
 	*cq = '\0';
 
-	if (cgetstr(buf, "ty", &cq) > 0 && strcmp(cq, "removable") == 0)
-		dp->d_flags |= D_REMOVABLE;
-	else  if (cq && strcmp(cq, "simulated") == 0)
-		dp->d_flags |= D_RAMDISK;
+	if (cgetstr(buf, "ty", &cq) > 0) {
+		if (strcmp(cq, "removable") == 0)
+			dp->d_flags |= D_REMOVABLE;
+		else  if (cq && strcmp(cq, "simulated") == 0)
+			dp->d_flags |= D_RAMDISK;
+		free(cq);
+	}
 	if (cgetcap(buf, "sf", ':') != NULL)
 		dp->d_flags |= D_BADSECT;
 
@@ -100,9 +103,10 @@ getdiskbyname(const char *name)
 	getnumdflt(dp->d_nsectors, "ns", 0);
 	getnumdflt(dp->d_ncylinders, "nc", 0);
 
-	if (cgetstr(buf, "dt", &cq) > 0)
+	if (cgetstr(buf, "dt", &cq) > 0) {
 		dp->d_type = gettype(cq, dktypenames);
-	else
+		free(cq);
+	} else
 		getnumdflt(dp->d_type, "dt", 0);
 	getnumdflt(dp->d_secpercyl, "sc", dp->d_nsectors * dp->d_ntracks);
 	getnumdflt(dp->d_secperunit, "su", dp->d_secpercyl * dp->d_ncylinders);
@@ -140,8 +144,11 @@ getdiskbyname(const char *name)
 					pp->p_frag = 8;
 			}
 			getnumdflt(pp->p_fstype, ptype, 0);
-			if (pp->p_fstype == 0 && cgetstr(buf, ptype, &cq) > 0)
-				pp->p_fstype = gettype(cq, fstypenames);
+			if (pp->p_fstype == 0)
+				if (cgetstr(buf, ptype, &cq) >= 0) {
+					pp->p_fstype = gettype(cq, fstypenames);
+					free(cq);
+				}
 			max = p;
 		}
 	}

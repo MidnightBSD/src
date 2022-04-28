@@ -1,5 +1,7 @@
-/*
+/*-
  * sar.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: sar.c,v 1.2 2004/01/08 23:46:51 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/sar.c 126297 2004-02-26 20:44:55Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -34,6 +36,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <sdp.h>

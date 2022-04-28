@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ppbus/immio.c 187576 2009-01-21 23:10:06Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Iomega ZIP+ Matchmaker Parallel Port Interface driver
@@ -674,10 +674,10 @@ imm_do_scsi(struct vpoio_data *vpo, int host, int target, char *command,
 		int *ret)
 {
 	device_t ppbus = device_get_parent(vpo->vpo_dev);
-	register char r;
+	char r;
 	char l, h = 0;
 	int len, error = 0, not_connected = 0;
-	register int k;
+	int k;
 	int negociated = 0;
 
 	/*

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/ds1553_reg.h 194632 2009-06-22 15:48:47Z raj $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_RTC_DS1553_H_

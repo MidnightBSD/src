@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/rpcbind 258121 2013-11-14 09:14:33Z glebius $
+# $FreeBSD$
 #
 
 # PROVIDE: rpcbind
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="rpcbind"
+desc="Universal addresses to RPC program number mapper"
 rcvar="rpcbind_enable"
 command="/usr/sbin/${name}"
 

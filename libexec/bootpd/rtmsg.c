@@ -16,11 +16,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -42,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/bootpd/rtmsg.c 246143 2013-01-31 08:55:21Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 /*
@@ -122,9 +118,9 @@ int bsd_arp_set(ia, eaddr, len)
 	char *eaddr;
 	int len;
 {
-	register struct sockaddr_in *sin = &sin_m;
-	register struct sockaddr_dl *sdl;
-	register struct rt_msghdr *rtm = &(m_rtmsg.m_rtm);
+	struct sockaddr_in *sin = &sin_m;
+	struct sockaddr_dl *sdl;
+	struct rt_msghdr *rtm = &(m_rtmsg.m_rtm);
 	u_char *ea;
 	struct timespec tp;
 	int op = RTM_ADD;
@@ -183,9 +179,9 @@ static int rtmsg(cmd)
 {
 	static int seq;
 	int rlen;
-	register struct rt_msghdr *rtm = &m_rtmsg.m_rtm;
-	register char *cp = m_rtmsg.m_space;
-	register int l;
+	struct rt_msghdr *rtm = &m_rtmsg.m_rtm;
+	char *cp = m_rtmsg.m_space;
+	int l;
 
 	errno = 0;
 	bzero((char *)&m_rtmsg, sizeof(m_rtmsg));

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/std.XLP 253845 2013-07-31 17:21:18Z obrien $
+# $FreeBSD$
 
 include		"../nlm/std.xlp"
 makeoptions	MODULES_OVERRIDE=""
@@ -19,9 +19,9 @@ options 	FFS			# Berkeley Fast Filesystem
 #options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
 options 	UFS_DIRHASH		# Improve performance on big directories
-options		NFSCL
-options		NFS_ROOT
-options		MSDOSFS			#MSDOS Filesystem
+options 	NFSCL
+options 	NFS_ROOT
+options 	MSDOSFS			#MSDOS Filesystem
 #
 #options 	BOOTP
 #options 	BOOTP_NFSROOT
@@ -31,8 +31,8 @@ options		MSDOSFS			#MSDOS Filesystem
 #options 	ROOTDEVNAME=\"nfs:10.1.1.8:/usr/extra/nfsroot\"
 
 options 	MD_ROOT			# MD is a potential root device
-options		MD_ROOT_SIZE=132000
-options		ROOTDEVNAME=\"ufs:md0\"
+options 	MD_ROOT_SIZE=132000
+options 	ROOTDEVNAME=\"ufs:md0\"
 options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	HZ=1000	
 options 	NO_SWAPPING
@@ -55,6 +55,7 @@ options 	ALT_BREAK_TO_DEBUGGER
 #options 	LOCK_DEBUG
 #options 	LOCK_PROFILING
 
+device		xz
 options 	GEOM_UZIP
 
 # Device tree
@@ -94,7 +95,7 @@ device		umass			# Requires scbus and da
 device		iic
 device		iicbus
 device		iicoc
-device		ds1374			# RTC on XLP boards
+device		ds13rtc			# RTC on XLP boards
 
 # Crypto
 device		crypto

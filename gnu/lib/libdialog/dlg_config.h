@@ -2,7 +2,7 @@
 /*
  * The configure script expands this as a set of definitions
  *
- * $FreeBSD: release/10.0.0/gnu/lib/libdialog/dlg_config.h 255852 2013-09-24 14:52:43Z dteske $
+ * $FreeBSD$
  */
 
 #define CURSES_WACS_ARRAY _nc_wacs

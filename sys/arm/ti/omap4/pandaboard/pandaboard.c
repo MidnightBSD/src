@@ -27,7 +27,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/omap4/pandaboard/pandaboard.c 239281 2012-08-15 06:31:32Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,12 +38,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/omap4/pandaboard/pandaboard.c 2392
 #include <vm/pmap.h>
 
 #include <machine/bus.h>
-#include <machine/pte.h>
-#include <machine/pmap.h>
 #include <machine/vmparam.h>
 #include <machine/fdt.h>
 
-#include <arm/ti/omap4/omap4var.h>
 #include <arm/ti/omap4/omap4_reg.h>
 
 /* Registers in the SCRM that control the AUX clocks */

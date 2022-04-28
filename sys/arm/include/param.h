@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: release/10.0.0/sys/arm/include/param.h 254918 2013-08-26 17:12:30Z raj $
+ * $FreeBSD$
  */
 
 #ifndef _ARM_INCLUDE_PARAM_H_
@@ -52,25 +52,24 @@
 
 #define __PCI_REROUTE_INTERRUPT
 
+#if __ARM_ARCH >= 6
+#define	_V6_SUFFIX "v6"
+#else
+#define	_V6_SUFFIX ""
+#endif
+
+#ifdef __ARM_BIG_ENDIAN
+#define	_EB_SUFFIX "eb"
+#else
+#define	_EB_SUFFIX ""
+#endif
+
 #ifndef MACHINE
 #define	MACHINE		"arm"
 #endif
 #ifndef MACHINE_ARCH
-#if defined(__FreeBSD_ARCH_armv6__) || (defined(__ARM_ARCH) && __ARM_ARCH >= 6)
-#ifdef __ARMEB__
-#define	MACHINE_ARCH	"armv6eb"
-#else
-#define	MACHINE_ARCH	"armv6"
+#define	MACHINE_ARCH	"arm" _V6_SUFFIX _EB_SUFFIX
 #endif
-#else
-#ifdef __ARMEB__
-#define	MACHINE_ARCH	"armeb"
-#else
-#define	MACHINE_ARCH	"arm"
-#endif
-#endif
-#endif
-#define	MID_MACHINE	MID_ARM6
 
 #if defined(SMP) || defined(KLD_MODULE)
 #ifndef MAXCPU
@@ -91,6 +90,14 @@
  * is valid to fetch data elements of type t from on this architecture.
  * This does not reflect the optimal alignment, just the possibility
  * (within reasonable limits).
+ *
+ * armv4 and v5 require alignment to the type's size.  armv6 requires 8-byte
+ * alignment for the ldrd/strd instructions, but otherwise follows armv7 rules.
+ * armv7 requires that an 8-byte type be aligned to at least a 4-byte boundary;
+ * access to smaller types can be unaligned, except that the compiler may
+ * optimize access to adjacent uint32_t values into a single load/store-multiple
+ * instruction which requires 4-byte alignment, so we must provide the most-
+ * pessimistic answer possible even on armv7.
  */
 #define	ALIGNED_POINTER(p, t)	((((unsigned)(p)) & (sizeof(t)-1)) == 0)
 
@@ -104,7 +111,6 @@
 #define	PAGE_SHIFT	12
 #define	PAGE_SIZE	(1 << PAGE_SHIFT)	/* Page size */
 #define	PAGE_MASK	(PAGE_SIZE - 1)
-#define	NPTEPG		(PAGE_SIZE/(sizeof (pt_entry_t)))
 
 #define PDR_SHIFT	20 /* log2(NBPDR) */
 #define NBPDR		(1 << PDR_SHIFT)
@@ -125,10 +131,8 @@
 #define KSTACK_GUARD_PAGES	1
 #endif /* !KSTACK_GUARD_PAGES */
 
-#define USPACE_SVC_STACK_TOP		KSTACK_PAGES * PAGE_SIZE
-#define USPACE_SVC_STACK_BOTTOM		(USPACE_SVC_STACK_TOP - 0x1000)
-#define USPACE_UNDEF_STACK_TOP		(USPACE_SVC_STACK_BOTTOM - 0x10)
-#define USPACE_UNDEF_STACK_BOTTOM	(FPCONTEXTSIZE + 10)
+#define USPACE_SVC_STACK_TOP		(kstack_pages * PAGE_SIZE)
+
 /*
  * Mach derived conversion macros
  */

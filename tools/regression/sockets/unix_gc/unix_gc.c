@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/sockets/unix_gc/unix_gc.c 216151 2010-12-03 16:17:53Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -752,7 +752,7 @@ recursion(void)
 
 #define	RMDIR	"rm -Rf "
 int
-main(int argc, char *argv[])
+main(void)
 {
 	char cmd[sizeof(RMDIR) + PATH_MAX];
 	int serrno;

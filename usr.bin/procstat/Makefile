@@ -1,4 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.bin/procstat/Makefile 235642 2012-05-19 05:07:03Z marcel $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	procstat
 MAN=	procstat.1
@@ -8,14 +10,20 @@ SRCS=	procstat.c		\
 	procstat_basic.c	\
 	procstat_bin.c		\
 	procstat_cred.c		\
+	procstat_cs.c		\
 	procstat_files.c	\
 	procstat_kstack.c	\
+	procstat_ptlwpinfo.c	\
 	procstat_rlimit.c	\
+	procstat_rusage.c	\
 	procstat_sigs.c		\
 	procstat_threads.c	\
 	procstat_vm.c
 
-LDADD+=	-lutil -lprocstat -lkvm
-DPADD+=	${LIBUTIL} ${LIBPROCSTAT} ${LIBKVM}
+LIBADD+=	procstat xo util sbuf
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

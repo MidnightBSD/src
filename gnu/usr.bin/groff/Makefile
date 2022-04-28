@@ -1,5 +1,11 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/Makefile 114480 2003-05-02 00:55:52Z ru $
+# $FreeBSD$
 
-SUBDIR=		contrib doc font man src tmac
+SUBDIR=		contrib font man src tmac
+
+.for subdir in ${SUBDIR:Nsrc}
+SUBDIR_DEPEND_${subdir}=	src
+.endfor
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

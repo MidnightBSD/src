@@ -30,22 +30,24 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ffs/ffs_inode.c 251171 2013-05-31 00:43:41Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_quota.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/mount.h>
-#include <sys/proc.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/vnode.h>
 #include <sys/malloc.h>
+#include <sys/mount.h>
+#include <sys/proc.h>
+#include <sys/racct.h>
+#include <sys/random.h>
 #include <sys/resourcevar.h>
 #include <sys/rwlock.h>
-#include <sys/vmmeter.h>
 #include <sys/stat.h>
+#include <sys/vmmeter.h>
+#include <sys/vnode.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -90,8 +92,8 @@ ffs_update(vp, waitfor)
 	if ((ip->i_flag & IN_MODIFIED) == 0 && waitfor == 0)
 		return (0);
 	ip->i_flag &= ~(IN_LAZYACCESS | IN_LAZYMOD | IN_MODIFIED);
-	fs = ip->i_fs;
-	if (fs->fs_ronly && ip->i_ump->um_fsckpid == 0)
+	fs = ITOFS(ip);
+	if (fs->fs_ronly && ITOUMP(ip)->um_fsckpid == 0)
 		return (0);
 	/*
 	 * If we are updating a snapshot and another process is currently
@@ -108,14 +110,12 @@ ffs_update(vp, waitfor)
 	if (IS_SNAPSHOT(ip))
 		flags = GB_LOCK_NOWAIT;
 loop:
-	error = breadn_flags(ip->i_devvp,
+	error = breadn_flags(ITODEVVP(ip),
 	     fsbtodb(fs, ino_to_fsba(fs, ip->i_number)),
 	     (int) fs->fs_bsize, 0, 0, 0, NOCRED, flags, &bp);
 	if (error != 0) {
-		if (error != EBUSY) {
-			brelse(bp);
+		if (error != EBUSY)
 			return (error);
-		}
 		KASSERT((IS_SNAPSHOT(ip)), ("EBUSY from non-snapshot"));
 		/*
 		 * Wait for our inode block to become available.
@@ -143,12 +143,17 @@ loop:
 		softdep_update_inodeblock(ip, bp, waitfor);
 	else if (ip->i_effnlink != ip->i_nlink)
 		panic("ffs_update: bad link cnt");
-	if (ip->i_ump->um_fstype == UFS1)
+	if (I_IS_UFS1(ip)) {
 		*((struct ufs1_dinode *)bp->b_data +
 		    ino_to_fsbo(fs, ip->i_number)) = *ip->i_din1;
-	else
+		/* XXX: FIX? The entropy here is desirable, but the harvesting may be expensive */
+		random_harvest_queue(&(ip->i_din1), sizeof(ip->i_din1), 1, RANDOM_FS_ATIME);
+	} else {
 		*((struct ufs2_dinode *)bp->b_data +
 		    ino_to_fsbo(fs, ip->i_number)) = *ip->i_din2;
+		/* XXX: FIX? The entropy here is desirable, but the harvesting may be expensive */
+		random_harvest_queue(&(ip->i_din2), sizeof(ip->i_din2), 1, RANDOM_FS_ATIME);
+	}
 	if (waitfor && !DOINGASYNC(vp))
 		error = bwrite(bp);
 	else if (vm_page_count_severe() || buf_dirty_count_severe()) {
@@ -180,7 +185,7 @@ ffs_truncate(vp, length, flags, cred)
 	struct inode *ip;
 	ufs2_daddr_t bn, lbn, lastblock, lastiblock[NIADDR], indir_lbn[NIADDR];
 	ufs2_daddr_t oldblks[NDADDR + NIADDR], newblks[NDADDR + NIADDR];
-	ufs2_daddr_t count, blocksreleased = 0, datablocks;
+	ufs2_daddr_t count, blocksreleased = 0, datablocks, blkno;
 	struct bufobj *bo;
 	struct fs *fs;
 	struct buf *bp;
@@ -188,12 +193,12 @@ ffs_truncate(vp, length, flags, cred)
 	int softdeptrunc, journaltrunc;
 	int needextclean, extblocks;
 	int offset, size, level, nblocks;
-	int i, error, allerror;
+	int i, error, allerror, indiroff;
 	off_t osize;
 
 	ip = VTOI(vp);
-	fs = ip->i_fs;
-	ump = ip->i_ump;
+	ump = VFSTOUFS(vp->v_mount);
+	fs = ump->um_fs;
 	bo = &vp->v_bufobj;
 
 	ASSERT_VOP_LOCKED(vp, "ffs_truncate");
@@ -264,7 +269,7 @@ ffs_truncate(vp, length, flags, cred)
 			for (i = 0; i < NXADDR; i++) {
 				if (oldblks[i] == 0)
 					continue;
-				ffs_blkfree(ump, fs, ip->i_devvp, oldblks[i],
+				ffs_blkfree(ump, fs, ITODEVVP(ip), oldblks[i],
 				    sblksize(fs, osize, i), ip->i_number,
 				    vp->v_type, NULL);
 			}
@@ -325,16 +330,57 @@ ffs_truncate(vp, length, flags, cred)
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
 		return (ffs_update(vp, !DOINGASYNC(vp)));
 	}
-	if (DOINGSOFTDEP(vp)) {
+	/*
+	 * Lookup block number for a given offset. Zero length files
+	 * have no blocks, so return a blkno of -1.
+	 */
+	lbn = lblkno(fs, length - 1);
+	if (length == 0) {
+		blkno = -1;
+	} else if (lbn < NDADDR) {
+		blkno = DIP(ip, i_db[lbn]);
+	} else {
+		error = UFS_BALLOC(vp, lblktosize(fs, (off_t)lbn), fs->fs_bsize,
+		    cred, BA_METAONLY, &bp);
+		if (error)
+			return (error);
+		indiroff = (lbn - NDADDR) % NINDIR(fs);
+		if (I_IS_UFS1(ip))
+			blkno = ((ufs1_daddr_t *)(bp->b_data))[indiroff];
+		else
+			blkno = ((ufs2_daddr_t *)(bp->b_data))[indiroff];
+		/*
+		 * If the block number is non-zero, then the indirect block
+		 * must have been previously allocated and need not be written.
+		 * If the block number is zero, then we may have allocated
+		 * the indirect block and hence need to write it out.
+		 */
+		if (blkno != 0)
+			brelse(bp);
+		else if (DOINGSOFTDEP(vp) || DOINGASYNC(vp))
+			bdwrite(bp);
+		else
+			bwrite(bp);
+	}
+	/*
+	 * If the block number at the new end of the file is zero,
+	 * then we must allocate it to ensure that the last block of 
+	 * the file is allocated. Soft updates does not handle this
+	 * case, so here we have to clean up the soft updates data
+	 * structures describing the allocation past the truncation
+	 * point. Finding and deallocating those structures is a lot of
+	 * work. Since partial truncation with a hole at the end occurs
+	 * rarely, we solve the problem by syncing the file so that it
+	 * will have no soft updates data structures left.
+	 */
+	if (blkno == 0 && (error = ffs_syncvnode(vp, MNT_WAIT, 0)) != 0)
+		return (error);
+	if (blkno != 0 && DOINGSOFTDEP(vp)) {
 		if (softdeptrunc == 0 && journaltrunc == 0) {
 			/*
-			 * If a file is only partially truncated, then
-			 * we have to clean up the data structures
-			 * describing the allocation past the truncation
-			 * point. Finding and deallocating those structures
-			 * is a lot of work. Since partial truncation occurs
-			 * rarely, we solve the problem by syncing the file
-			 * so that it will have no data structures left.
+			 * If soft updates cannot handle this truncation,
+			 * clean up soft dependency data structures and
+			 * fall through to the synchronous truncation.
 			 */
 			if ((error = ffs_syncvnode(vp, MNT_WAIT, 0)) != 0)
 				return (error);
@@ -354,15 +400,17 @@ ffs_truncate(vp, length, flags, cred)
 		}
 	}
 	/*
-	 * Shorten the size of the file. If the file is not being
-	 * truncated to a block boundary, the contents of the
-	 * partial block following the end of the file must be
-	 * zero'ed in case it ever becomes accessible again because
-	 * of subsequent file growth. Directories however are not
+	 * Shorten the size of the file. If the last block of the
+	 * shortened file is unallocated, we must allocate it.
+	 * Additionally, if the file is not being truncated to a
+	 * block boundary, the contents of the partial block
+	 * following the end of the file must be zero'ed in
+	 * case it ever becomes accessible again because of
+	 * subsequent file growth. Directories however are not
 	 * zero'ed as they should grow back initialized to empty.
 	 */
 	offset = blkoff(fs, length);
-	if (offset == 0) {
+	if (blkno != 0 && offset == 0) {
 		ip->i_size = length;
 		DIP_SET(ip, i_size, length);
 	} else {
@@ -386,7 +434,7 @@ ffs_truncate(vp, length, flags, cred)
 		ip->i_size = length;
 		DIP_SET(ip, i_size, length);
 		size = blksize(fs, ip, lbn);
-		if (vp->v_type != VDIR)
+		if (vp->v_type != VDIR && offset != 0)
 			bzero((char *)bp->b_data + offset,
 			    (u_int)(size - offset));
 		/* Kirk's code has reallocbuf(bp, size, 1) here */
@@ -449,7 +497,7 @@ ffs_truncate(vp, length, flags, cred)
 	ip->i_size = osize;
 	DIP_SET(ip, i_size, osize);
 
-	error = vtruncbuf(vp, cred, length, fs->fs_bsize);
+	error = vtruncbuf(vp, length, fs->fs_bsize);
 	if (error && (allerror == 0))
 		allerror = error;
 
@@ -469,7 +517,7 @@ ffs_truncate(vp, length, flags, cred)
 			blocksreleased += count;
 			if (lastiblock[level] < 0) {
 				DIP_SET(ip, i_ib[level], 0);
-				ffs_blkfree(ump, fs, ip->i_devvp, bn,
+				ffs_blkfree(ump, fs, ump->um_devvp, bn,
 				    fs->fs_bsize, ip->i_number,
 				    vp->v_type, NULL);
 				blocksreleased += nblocks;
@@ -490,7 +538,7 @@ ffs_truncate(vp, length, flags, cred)
 			continue;
 		DIP_SET(ip, i_db[i], 0);
 		bsize = blksize(fs, ip, i);
-		ffs_blkfree(ump, fs, ip->i_devvp, bn, bsize, ip->i_number,
+		ffs_blkfree(ump, fs, ump->um_devvp, bn, bsize, ip->i_number,
 		    vp->v_type, NULL);
 		blocksreleased += btodb(bsize);
 	}
@@ -522,7 +570,7 @@ ffs_truncate(vp, length, flags, cred)
 			 * required for the storage we're keeping.
 			 */
 			bn += numfrags(fs, newspace);
-			ffs_blkfree(ump, fs, ip->i_devvp, bn,
+			ffs_blkfree(ump, fs, ump->um_devvp, bn,
 			   oldspace - newspace, ip->i_number, vp->v_type, NULL);
 			blocksreleased += btodb(oldspace - newspace);
 		}
@@ -562,7 +610,7 @@ extclean:
 		softdep_journal_freeblocks(ip, cred, length, IO_EXT);
 	else
 		softdep_setup_freeblocks(ip, length, IO_EXT);
-	return (ffs_update(vp, !DOINGASYNC(vp)));
+	return (ffs_update(vp, (flags & IO_SYNC) != 0 || !DOINGASYNC(vp)));
 }
 
 /*
@@ -581,7 +629,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 	ufs2_daddr_t *countp;
 {
 	struct buf *bp;
-	struct fs *fs = ip->i_fs;
+	struct fs *fs;
 	struct vnode *vp;
 	caddr_t copy = NULL;
 	int i, nblocks, error = 0, allerror = 0;
@@ -589,7 +637,9 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 	ufs2_daddr_t blkcount, factor, blocksreleased = 0;
 	ufs1_daddr_t *bap1 = NULL;
 	ufs2_daddr_t *bap2 = NULL;
-#	define BAP(ip, i) (((ip)->i_ump->um_fstype == UFS1) ? bap1[i] : bap2[i])
+#define BAP(ip, i) (I_IS_UFS1(ip) ? bap1[i] : bap2[i])
+
+	fs = ITOFS(ip);
 
 	/*
 	 * Calculate index in current block of last
@@ -612,6 +662,13 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 	vp = ITOV(ip);
 	bp = getblk(vp, lbn, (int)fs->fs_bsize, 0, 0, 0);
 	if ((bp->b_flags & B_CACHE) == 0) {
+#ifdef RACCT
+		if (racct_enable) {
+			PROC_LOCK(curproc);
+			racct_add_buf(curproc, bp, 0);
+			PROC_UNLOCK(curproc);
+		}
+#endif /* RACCT */
 		curthread->td_ru.ru_inblock++;	/* pay for read */
 		bp->b_iocmd = BIO_READ;
 		bp->b_flags &= ~B_INVAL;
@@ -630,7 +687,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 		return (error);
 	}
 
-	if (ip->i_ump->um_fstype == UFS1)
+	if (I_IS_UFS1(ip))
 		bap1 = (ufs1_daddr_t *)bp->b_data;
 	else
 		bap2 = (ufs2_daddr_t *)bp->b_data;
@@ -638,7 +695,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 		copy = malloc(fs->fs_bsize, M_TEMP, M_WAITOK);
 		bcopy((caddr_t)bp->b_data, copy, (u_int)fs->fs_bsize);
 		for (i = last + 1; i < NINDIR(fs); i++)
-			if (ip->i_ump->um_fstype == UFS1)
+			if (I_IS_UFS1(ip))
 				bap1[i] = 0;
 			else
 				bap2[i] = 0;
@@ -649,7 +706,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 			if (error)
 				allerror = error;
 		}
-		if (ip->i_ump->um_fstype == UFS1)
+		if (I_IS_UFS1(ip))
 			bap1 = (ufs1_daddr_t *)copy;
 		else
 			bap2 = (ufs2_daddr_t *)copy;
@@ -669,7 +726,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 				allerror = error;
 			blocksreleased += blkcount;
 		}
-		ffs_blkfree(ip->i_ump, fs, ip->i_devvp, nb, fs->fs_bsize,
+		ffs_blkfree(ITOUMP(ip), fs, ITODEVVP(ip), nb, fs->fs_bsize,
 		    ip->i_number, vp->v_type, NULL);
 		blocksreleased += nblocks;
 	}
@@ -703,6 +760,6 @@ int
 ffs_rdonly(struct inode *ip)
 {
 
-	return (ip->i_ump->um_fs->fs_ronly != 0);
+	return (ITOFS(ip)->fs_ronly != 0);
 }
 

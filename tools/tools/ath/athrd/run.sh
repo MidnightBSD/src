@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/ath/athrd/run.sh 187322 2009-01-15 23:38:21Z sam $
+# $FreeBSD$
 
 COUNTRIES=${@:-"
 	DB NA AL DZ AR AM AU AT AZ BH BY BE BZ BO BR BN BG

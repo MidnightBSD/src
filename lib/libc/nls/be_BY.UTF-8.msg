@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/be_BY.UTF-8.msg 192653 2009-05-23 17:13:35Z des $
+$ $FreeBSD$
 $
 $ Message catalog for be_BY.UTF-8 locale
 $

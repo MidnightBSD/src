@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/vx/if_vx_pci.c 246128 2013-01-30 18:0
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 
 #include <machine/bus.h>

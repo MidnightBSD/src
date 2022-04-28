@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/speaker/Makefile 152306 2005-11-11 09:57:32Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/speaker
+.PATH: ${SRCTOP}/sys/dev/speaker
 
 KMOD=	speaker
 SRCS=	spkr.c

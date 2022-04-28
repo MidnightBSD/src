@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/tools/tools/vimage/vimage.8 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd August 25, 2009
 .Dt VIMAGE 8
@@ -178,8 +178,8 @@ The
 .Nm
 command exits 0 on success, and >0 if an error occurs.
 .Sh SEE ALSO
-.Xr jail 8
-.Xr jexec 8
+.Xr jail 8 ,
+.Xr jexec 8 ,
 .Xr jls 8
 .Sh HISTORY
 Network stack virtualization framework first appeared as a patchset
@@ -188,8 +188,8 @@ of the main FreeBSD tree.
 As a result of a project sponsored by the FreeBSD Foundation and
 Stiching NLNet, integrated virtualized network stack first appeared
 in FreeBSD 8.0.
+.Sh AUTHORS
+.An Marko Zec Aq Mt zec@fer.hr
 .Sh BUGS
 Deletion of vimages / vnets is known to leak kernel memory and fail at
 stopping various timers, hence may lead to system crashes.
-.Sh AUTHOR
-.An "Marko Zec" Aq zec@fer.hr

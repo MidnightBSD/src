@@ -1,6 +1,6 @@
 if [ ! "$_PACKAGES_INDEX_SUBR" ]; then _PACKAGES_INDEX_SUBR=1
 #
-# Copyright (c) 2013 Devin Teske
+# Copyright (c) 2013-2016 Devin Teske
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@ if [ ! "$_PACKAGES_INDEX_SUBR" ]; then _PACKAGES_INDEX_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/share/packages/index.subr 259534 2013-12-18 01:27:30Z gjb $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -33,6 +33,7 @@ BSDCFG_SHARE="/usr/share/bsdconfig"
 f_dprintf "%s: loading includes..." packages/index.subr
 f_include $BSDCFG_SHARE/device.subr
 f_include $BSDCFG_SHARE/media/common.subr
+f_include $BSDCFG_SHARE/packages/musthavepkg.subr
 f_include $BSDCFG_SHARE/strings.subr
 
 BSDCFG_LIBE="/usr/libexec/bsdconfig"
@@ -46,33 +47,12 @@ _INDEX_INITTED=
 #
 # Default path to pkg(8) repo-packagesite.sqlite database
 #
-SQLITE_REPO="/var/db/pkg/repo-packagesite.sqlite"
+SQLITE_REPO="/var/db/pkg/repo-FreeBSD.sqlite"
 
 #
 # Default path to on-disk cache INDEX file
 #
 PACKAGES_INDEX_CACHEFILE="/var/run/bsdconfig/packages_INDEX.cache"
-
-#
-# INDEX format for FreeBSD-6.0 or higher:
-#
-# 	package|port-origin|install-prefix|comment|port-desc-file|maintainer|
-# 	categories|build-deps|run-deps|www-site|reserve|reserve|reserve|disc
-#
-INDEX_FORMAT="%n-%v" # package
-INDEX_FORMAT="$INDEX_FORMAT|/usr/ports/%o"	# port-origin
-INDEX_FORMAT="$INDEX_FORMAT|%p"			# install-prefix
-INDEX_FORMAT="$INDEX_FORMAT|%c"			# comment
-INDEX_FORMAT="$INDEX_FORMAT|/usr/ports/%o/pkg-descr"	# port-desc-file
-INDEX_FORMAT="$INDEX_FORMAT|%m"			# maintainer
-INDEX_FORMAT="$INDEX_FORMAT|@CATEGORIES@"	# place-holder
-INDEX_FORMAT="$INDEX_FORMAT|"			# build-deps
-INDEX_FORMAT="$INDEX_FORMAT|@RUNDEPS@"		# place-holder
-INDEX_FORMAT="$INDEX_FORMAT|%w"			# www-site
-INDEX_FORMAT="$INDEX_FORMAT|"			# reserved
-INDEX_FORMAT="$INDEX_FORMAT|"			# reserved
-INDEX_FORMAT="$INDEX_FORMAT|"			# reserved
-INDEX_FORMAT="$INDEX_FORMAT|"			# disc
 
 ############################################################ FUNCTIONS
 
@@ -87,15 +67,18 @@ INDEX_FORMAT="$INDEX_FORMAT|"			# disc
 f_index_initialize()
 {
 	local __funcname=f_index_initialize
-	local __var_to_set="${2:-PACKAGE_INDEX}"
+	local __var_to_set="${1:-PACKAGE_INDEX}"
 
 	[ "$_INDEX_INITTED" ] && return $SUCCESS
 
 	# Got any media?
 	f_media_verify || return $FAILURE
 
+	# Make sure we have a usable pkg(8) with $PKG_ABI
+	f_musthavepkg_init
+
 	# Does it move when you kick it?
-	f_device_init media || return $FAILURE
+	f_device_init device_media || return $FAILURE
 
 	f_show_info "$msg_attempting_to_update_repository_catalogue"
 
@@ -126,11 +109,12 @@ f_index_initialize()
 		__site="file://$MOUNTPOINT/packages/$PKG_ABI"
 	esac
 
-	export PACKAGESITE="$__site"
-	f_dprintf "PACKAGESITE=[%s]" "$PACKAGESITE"
-	if ! f_eval_catch $__funcname pkg "pkg update"; then
+	f_dprintf "PACKAGESITE=[%s]" "$__site"
+	if ! f_eval_catch $__funcname pkg \
+		'PACKAGESITE="%s" pkg update' "$__site"
+	then
 		f_show_err "$msg_unable_to_update_pkg_from_selected_media"
-		f_device_shutdown media
+		f_device_shutdown device_media
 		return $FAILURE
 	fi
 
@@ -139,19 +123,19 @@ f_index_initialize()
 	#
 
 	#
-	# Calculate digest used to determine if the on-disk persistant cache
+	# Calculate digest used to determine if the on-disk persistent cache
 	# INDEX (containing this digest on the first line) is valid and can be
 	# used to quickly populate the environment.
 	#
 	local __sqlite_digest
 	if ! __sqlite_digest=$( md5 < "$SQLITE_REPO" 2> /dev/null ); then
 		f_show_err "$msg_no_pkg_database_found"
-		f_device_shutdown media
+		f_device_shutdown device_media
 		return $FAILURE
 	fi
 
 	#
-	# Check to see if the persistant cache INDEX file exists
+	# Check to see if the persistent cache INDEX file exists
 	#
 	if [ -f "$PACKAGES_INDEX_CACHEFILE" ]; then
 		#
@@ -178,8 +162,6 @@ f_index_initialize()
 				fi
 			) < "$PACKAGES_INDEX_CACHEFILE" 2> /dev/null
 		)'; then
-			f_show_info \
-			  "$msg_located_index_now_reading_package_data_from_it"
 			if ! f_index_read "$__var_to_set"; then
 				f_show_err \
 					"$msg_io_or_format_error_on_index_file"
@@ -195,73 +177,34 @@ f_index_initialize()
 	# If we reach this point, we need to generate the data from scratch
 	#
 
-	f_show_info "$msg_getting_package_categories_via_pkg_rquery"
-	if ! eval "$( pkg rquery "%n-%v %C" | awk '
-	{ categories[$1] = categories[$1] " " $2 }
-	END {
-		for (package in categories)
-		{
-			cats = categories[package]
-			sub(/^ /, "", cats)
-			gsub(/[^[:alnum:]_]/, "_", package)
-			printf "local _%s_categories=\"%s\";\n", package, cats
-		}
-	}' )"; then
-		f_show_err "$msg_unable_to_pkg_rquery_package_dependencies"
-		f_device_shutdown media
-		return $FAILURE
-	fi
-
-	f_show_info "$msg_getting_package_dependencies_via_pkg_rquery"
-	if ! eval "$( pkg rquery "%n-%v %dn-%dv" | awk '
-	{ rundeps[$1] = rundeps[$1] " " $2 }
-	END {
-		for (package in rundeps)
-		{
-			deps = rundeps[package]
-			sub(/^ /, "", deps)
-			gsub(/[^[:alnum:]_]/, "_", package)
-			printf "local _%s_rundeps=\"%s\";\n", package, deps
-		}
-	}' )"; then
-		f_show_err "$msg_unable_to_pkg_rquery_package_dependencies"
-		f_device_shutdown media
-		return $FAILURE
-	fi
-
-	f_show_info "$msg_generating_index_from_pkg_database"
-	eval "$__var_to_set"='$( pkg rquery "$INDEX_FORMAT" |
-		while read LINE; do
-			package="${LINE%%|*}";
-			f_str2varname "$package" varpkg;
-			eval f_replaceall \"\$LINE\" \"\|@CATEGORIES@\|\" \
-				\"\|\$_${varpkg}_categories\|\" LINE
-			eval f_replaceall \"\$LINE\" \"\|@RUNDEPS@\|\" \
-				\"\|\$_${varpkg}_rundeps\|\" LINE
-			echo "$LINE"
-		done
-	)' # always returns true (status of last item in pipe-chain)
-	eval "$__var_to_set"='$( debug= f_getvar "$__var_to_set" | sort )'
+	eval "$__var_to_set"='$( pkg rquery -I | (
+		exec 2<&1; dpv -ko /dev/stderr >&$TERMINAL_STDOUT_PASSTHRU \
+			-b "$DIALOG_BACKTITLE" \
+			-- "$msg_generating_index_from_pkg_database"
+	) | sort )'
 
 	#
-	# Attempt to create the persistant on-disk cache
+	# Attempt to create the persistent on-disk cache
 	#
 
 	# Create a new temporary file to write to
-	local __tmpfile="$( mktemp -t "$pgm" )"
-	if [ "$__tmpfile" ]; then
+	local __tmpfile
+	if f_eval_catch -dk __tmpfile $__funcname mktemp \
+		'mktemp -t "%s"' "$pgm"
+	then
 		# Write the temporary file contents
 		echo "$__sqlite_digest" > "$__tmpfile"
 		debug= f_getvar "$__var_to_set" >> "$__tmpfile"
 
 		# Finally, move the temporary file into place
 		case "$PACKAGES_INDEX_CACHEFILE" in
-		*/*) f_quietly mkdir -p "${PACKAGES_INDEX_CACHEFILE%/*}"
+		*/*) f_eval_catch -d $__funcname mkdir \
+			'mkdir -p "%s"' "${PACKAGES_INDEX_CACHEFILE%/*}"
 		esac
-		f_quietly mv -f "$__tmpfile" "$PACKAGES_INDEX_CACHEFILE"
+		f_eval_catch -d $__funcname mv 'mv -f "%s" "%s"' \
+			"$__tmpfile" "$PACKAGES_INDEX_CACHEFILE"
 	fi
 
-	f_show_info "$msg_located_index_now_reading_package_data_from_it"
 	if ! f_index_read "$__var_to_set"; then
 		f_show_err "$msg_io_or_format_error_on_index_file"
 		return $FAILURE
@@ -298,10 +241,12 @@ f_index_read()
 	export msg_packages
 
 	eval "$( debug= f_getvar "$var_to_get" | awk -F'|' '
-	function asorti(src, dest)
+	function _asorti(src, dest)
 	{
+		k = nitems = 0
+
 		# Copy src indices to dest and calculate array length
-		nitems = 0; for (i in src) dest[++nitems] = i
+		for (i in src) dest[++nitems] = i
 
 		# Sort the array of indices (dest) using insertion sort method
 		for (i = 1; i <= nitems; k = i++)
@@ -347,7 +292,7 @@ f_index_read()
 	END {
 		print "_npkgs=" tpkgs # For convenience, total package count
 
-		n = asorti(categories, categories_sorted)
+		n = _asorti(categories, categories_sorted)
 
 		# Produce package counts for each category
 		for (i = 1; i <= n; i++)
@@ -384,7 +329,9 @@ f_index_read()
 		sub(/^ /, "", category_list)
 		print "PACKAGE_CATEGORIES=\"" category_list "\""
 
-	}' )" # End-Quote
+	}' | ( exec 2<&1; dpv -ko /dev/stderr >&$TERMINAL_STDOUT_PASSTHRU \
+		-b "$DIALOG_BACKTITLE" -- "$msg_reading_package_index_data"
+	) )" # End-Quote
 }
 
 # f_index_extract_pages $var_to_get $var_basename $pagesize [$category]

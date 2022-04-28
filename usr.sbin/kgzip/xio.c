@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Global Technology Associates, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kgzip/xio.c 68966 2000-11-20 20:35:35Z rnordier $
+ * $FreeBSD$
  */
 
 #include <err.h>

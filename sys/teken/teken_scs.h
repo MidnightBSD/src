@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/teken/teken_scs.h 203659 2010-02-08 09:16:59Z ed $
+ * $FreeBSD$
  */
 
 static inline teken_char_t

@@ -1,6 +1,8 @@
 /*	$NetBSD: ufs_bswap.h,v 1.13 2003/10/05 17:48:50 bouyer Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1998 Manuel Bouyer.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ufs_bswap.h 253675 2013-07-26 14:22:03Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_BSWAP_H_

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sio/sio.c 237693 2012-06-28 07:28:39Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_gdb.h"
@@ -372,7 +372,7 @@ sysctl_machdep_comdefaultrate(SYSCTL_HANDLER_ARGS)
 	return error;
 }
 
-SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RW,
+SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
 	    0, 0, sysctl_machdep_comdefaultrate, "I", "");
 TUNABLE_INT("machdep.conspeed", __DEVOLATILE(int *, &comdefaultrate));
 
@@ -444,8 +444,8 @@ sioprobe(dev, xrid, rclk, noprobe)
 	struct resource *port;
 
 	rid = xrid;
-	port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				  0, ~0, IO_COMSIZE, RF_ACTIVE);
+	port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   IO_COMSIZE, RF_ACTIVE);
 	if (!port)
 		return (ENXIO);
 
@@ -590,7 +590,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 	 * junk after a (very fast) soft reboot and (apparently) after
 	 * master reset.
 	 * XXX what about the UART bug avoided by waiting in comparam()?
-	 * We don't want to to wait long enough to drain at 2 bps.
+	 * We don't want to wait long enough to drain at 2 bps.
 	 */
 	if (iobase == siocniobase)
 		DELAY((16 + 1) * 1000000 / (comdefaultrate / 10));
@@ -884,8 +884,8 @@ sioattach(dev, xrid, rclk)
 	struct tty	*tp;
 
 	rid = xrid;
-	port = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				  0, ~0, IO_COMSIZE, RF_ACTIVE);
+	port = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					   IO_COMSIZE, RF_ACTIVE);
 	if (!port)
 		return (ENXIO);
 
@@ -1638,7 +1638,7 @@ txrdy:
 				outb(com->data_port, *ioptr++);
 				++com->bytes_out;
 				if (com->unit == siotsunit
-				    && siotso < sizeof siots / sizeof siots[0])
+				    && siotso < nitems(siots))
 					nanouptime(&siots[siotso++]);
 			}
 			com->obufq.l_head = ioptr;
@@ -2323,7 +2323,7 @@ siocntxwait(iobase)
 /*
  * Read the serial port specified and try to figure out what speed
  * it's currently running at.  We're assuming the serial port has
- * been initialized and is basicly idle.  This routine is only intended
+ * been initialized and is basically idle.  This routine is only intended
  * to be run at system startup.
  *
  * If the value read from the serial port doesn't make sense, return 0.

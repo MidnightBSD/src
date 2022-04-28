@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ntp/Makefile.inc 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 DEFS_LOCAL= -DPARSE -DHAVE_CONFIG_H
 NTPDEFS=   -DSYS_FREEBSD
@@ -11,13 +11,11 @@ NTPDEFS=   -DSYS_FREEBSD
 CFLAGS+= ${NTPDEFS} ${DEFS_LOCAL} ${CLOCKDEFS}
 
 .if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
-CFLAGS+= -DOPENSSL
+CFLAGS+= -DOPENSSL -DUSE_OPENSSL_CRYPTO_RAND -DAUTOKEY
 .endif
 
-LIBOPTS=	${.OBJDIR}/../libopts/libopts.a
-LIBPARSE=	${.OBJDIR}/../libparse/libparse.a
-LIBNTP=	${.OBJDIR}/../libntp/libntp.a
-
 WARNS?=	0
+
+.export ECHO
 
 .include "../Makefile.inc"

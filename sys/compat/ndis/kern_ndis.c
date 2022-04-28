@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/kern_ndis.c 254842 2013-08-25 10:57:09Z andre $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/kern_ndis.c 254842 2013-08-25
 #include <sys/rman.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -78,6 +79,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/compat/ndis/kern_ndis.c 254842 2013-08-25
 #include <dev/if_ndis/if_ndisvar.h>
 
 #define NDIS_DUMMY_PATH "\\\\some\\bogus\\path"
+#define	NDIS_FLAG_RDONLY 1
 
 static void ndis_status_func(ndis_handle, ndis_status, void *, uint32_t);
 static void ndis_statusdone_func(ndis_handle);
@@ -208,8 +210,8 @@ ndis_status_func(adapter, status, sbuf, slen)
 
 	block = adapter;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
-	ifp = sc->ifp;
-	if (ifp->if_flags & IFF_DEBUG)
+	ifp = NDISUSB_GET_IFNET(sc);
+	if ( ifp && ifp->if_flags & IFF_DEBUG)
 		device_printf(sc->ndis_dev, "status: %x\n", status);
 }
 
@@ -223,8 +225,8 @@ ndis_statusdone_func(adapter)
 
 	block = adapter;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
-	ifp = sc->ifp;
-	if (ifp->if_flags & IFF_DEBUG)
+	ifp = NDISUSB_GET_IFNET(sc);
+	if (ifp && ifp->if_flags & IFF_DEBUG)
 		device_printf(sc->ndis_dev, "status complete\n");
 }
 
@@ -262,9 +264,9 @@ ndis_resetdone_func(ndis_handle adapter, ndis_status status,
 
 	block = adapter;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
-	ifp = sc->ifp;
+	ifp = NDISUSB_GET_IFNET(sc);
 
-	if (ifp->if_flags & IFF_DEBUG)
+	if (ifp && ifp->if_flags & IFF_DEBUG)
 		device_printf(sc->ndis_dev, "reset done...\n");
 	KeSetEvent(&block->nmb_resetevent, IO_NO_INCREMENT, FALSE);
 }
@@ -283,6 +285,9 @@ ndis_create_sysctls(arg)
 		return (EINVAL);
 
 	sc = arg;
+	/*
+	device_printf(sc->ndis_dev, "ndis_create_sysctls() sc=%p\n", sc);
+	*/
 	vals = sc->ndis_regvals;
 
 	TAILQ_INIT(&sc->ndis_cfglist_head);
@@ -325,48 +330,48 @@ ndis_create_sysctls(arg)
 	 * We qualify as the latter.
 	 */
 	ndis_add_sysctl(sc, "Environment",
-	    "Windows environment", "1", CTLFLAG_RD);
+	    "Windows environment", "1", NDIS_FLAG_RDONLY);
 
 	/* NDIS version should be 5.1. */
 	ndis_add_sysctl(sc, "NdisVersion",
-	    "NDIS API Version", "0x00050001", CTLFLAG_RD);
+	    "NDIS API Version", "0x00050001", NDIS_FLAG_RDONLY);
 
 	/*
 	 * Some miniport drivers rely on the existence of the SlotNumber,
 	 * NetCfgInstanceId and DriverDesc keys.
 	 */
-	ndis_add_sysctl(sc, "SlotNumber", "Slot Numer", "01", CTLFLAG_RD);
+	ndis_add_sysctl(sc, "SlotNumber", "Slot Numer", "01", NDIS_FLAG_RDONLY);
 	ndis_add_sysctl(sc, "NetCfgInstanceId", "NetCfgInstanceId",
-	    "{12345678-1234-5678-CAFE0-123456789ABC}", CTLFLAG_RD);
+	    "{12345678-1234-5678-CAFE0-123456789ABC}", NDIS_FLAG_RDONLY);
 	ndis_add_sysctl(sc, "DriverDesc", "Driver Description",
-	    "NDIS Network Adapter", CTLFLAG_RD);
+	    "NDIS Network Adapter", NDIS_FLAG_RDONLY);
 
 	/* Bus type (PCI, PCMCIA, etc...) */
 	sprintf(buf, "%d", (int)sc->ndis_iftype);
-	ndis_add_sysctl(sc, "BusType", "Bus Type", buf, CTLFLAG_RD);
+	ndis_add_sysctl(sc, "BusType", "Bus Type", buf, NDIS_FLAG_RDONLY);
 
 	if (sc->ndis_res_io != NULL) {
-		sprintf(buf, "0x%lx", rman_get_start(sc->ndis_res_io));
+		sprintf(buf, "0x%jx", rman_get_start(sc->ndis_res_io));
 		ndis_add_sysctl(sc, "IOBaseAddress",
-		    "Base I/O Address", buf, CTLFLAG_RD);
+		    "Base I/O Address", buf, NDIS_FLAG_RDONLY);
 	}
 
 	if (sc->ndis_irq != NULL) {
-		sprintf(buf, "%lu", rman_get_start(sc->ndis_irq));
+		sprintf(buf, "%ju", rman_get_start(sc->ndis_irq));
 		ndis_add_sysctl(sc, "InterruptNumber",
-		    "Interrupt Number", buf, CTLFLAG_RD);
+		    "Interrupt Number", buf, NDIS_FLAG_RDONLY);
 	}
 
 	return (0);
 }
 
 int
-ndis_add_sysctl(arg, key, desc, val, flag)
+ndis_add_sysctl(arg, key, desc, val, flag_rdonly)
 	void			*arg;
 	char			*key;
 	char			*desc;
 	char			*val;
-	int			flag;
+	int			flag_rdonly;
 {
 	struct ndis_softc	*sc;
 	struct ndis_cfglist	*cfg;
@@ -391,13 +396,21 @@ ndis_add_sysctl(arg, key, desc, val, flag)
 
 	TAILQ_INSERT_TAIL(&sc->ndis_cfglist_head, cfg, link);
 
-	cfg->ndis_oid =
-	SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
-	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
-	    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, flag,
-	    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
-	    cfg->ndis_cfg.nc_cfgdesc);
-
+	if (flag_rdonly != 0) {
+		cfg->ndis_oid =
+		    SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
+		    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
+		    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, CTLFLAG_RD,
+		    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
+		    cfg->ndis_cfg.nc_cfgdesc);
+	} else {
+		cfg->ndis_oid =
+		    SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
+		    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
+		    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, CTLFLAG_RW,
+		    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
+		    cfg->ndis_cfg.nc_cfgdesc);
+	}
 	return (0);
 }
 
@@ -482,14 +495,14 @@ ndis_return(dobj, arg)
 	KeReleaseSpinLock(&block->nmb_returnlock, irql);
 }
 
-int
+void
 ndis_return_packet(struct mbuf *m, void *buf, void *arg)
 {
 	ndis_packet		*p;
 	ndis_miniport_block	*block;
 
 	if (arg == NULL)
-		return (EXT_FREE_OK);
+		return;
 
 	p = arg;
 
@@ -498,7 +511,7 @@ ndis_return_packet(struct mbuf *m, void *buf, void *arg)
 
 	/* Release packet when refcount hits zero, otherwise return. */
 	if (p->np_refcnt)
-		return (EXT_FREE_OK);
+		return;
 
 	block = ((struct ndis_softc *)p->np_softc)->ndis_block;
 
@@ -510,8 +523,6 @@ ndis_return_packet(struct mbuf *m, void *buf, void *arg)
 	IoQueueWorkItem(block->nmb_returnitem,
 	    (io_workitem_func)kernndis_functbl[7].ipt_wrap,
 	    WORKQUEUE_CRITICAL, block);
-
-	return (EXT_FREE_OK);
 }
 
 void
@@ -690,8 +701,8 @@ ndis_ptom(m0, p)
 	 */
 
 	eh = mtod((*m0), struct ether_header *);
-	ifp = ((struct ndis_softc *)p->np_softc)->ifp;
-	if (totlen > ETHER_MAX_FRAME(ifp, eh->ether_type, FALSE)) {
+	ifp = NDISUSB_GET_IFNET((struct ndis_softc *)p->np_softc);
+	if (ifp && totlen > ETHER_MAX_FRAME(ifp, eh->ether_type, FALSE)) {
 		diff = totlen - ETHER_MAX_FRAME(ifp, eh->ether_type, FALSE);
 		totlen -= diff;
 		m->m_len -= diff;
@@ -709,7 +720,7 @@ ndis_ptom(m0, p)
  * send routine.
  *
  * NDIS packets consist of two parts: an ndis_packet structure,
- * which is vaguely analagous to the pkthdr portion of an mbuf,
+ * which is vaguely analogous to the pkthdr portion of an mbuf,
  * and one or more ndis_buffer structures, which define the
  * actual memory segments in which the packet data resides.
  * We need to allocate one ndis_buffer for each mbuf in a chain,

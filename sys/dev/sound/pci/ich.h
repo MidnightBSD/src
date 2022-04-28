@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/ich.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 #define PCIR_NAMBAR 0x10

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/contrib/gcc/version.c 171836 2007-08-14 03:04:42Z kan $ */
+/* $FreeBSD$ */
 #include "version.h"
 
 /* This is the trailing component of the string reported as the
@@ -18,7 +18,7 @@
    forward us bugs reported to you, if you determine that they are
    not bugs in your modifications.)  */
 
-const char bug_report_url[] = "<URL:http://gcc.gnu.org/bugs.html>";
+const char bug_report_url[] = "<URL:http://www.freebsd.org/support.html>";
 
 /* The complete version string, assembled from several pieces.
    BASEVER, DATESTAMP, and DEVPHASE are defined by the Makefile.  */

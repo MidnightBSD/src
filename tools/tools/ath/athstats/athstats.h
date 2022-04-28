@@ -26,21 +26,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athstats/athstats.h 188560 2009-02-13 05:45:23Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _ATHSTATS_H_
 #define	_ATHSTATS_H_
 
-#include "statfoo.h"
+#include <bsdstat.h>
 
 /*
  * ath statistics class.
  */
 struct athstatfoo {
-	struct statfoo base;
+	struct bsdstat base;
 
-	STATFOO_DECL_METHODS(struct athstatfoo *);
+	BSDSTAT_DECL_METHODS(struct athstatfoo *);
 
 	/* set the network interface name for collection */
 	void (*setifname)(struct athstatfoo *, const char *ifname);

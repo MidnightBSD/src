@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Colin Percival
  * Copyright (c) 2005 Nate Lawson
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/powerd/powerd.c 252713 2013-07-04 18:59:58Z wblock $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -111,14 +113,16 @@ static int	vflag;
 
 static volatile sig_atomic_t exit_requested;
 static power_src_t acline_status;
-static enum {
+typedef enum {
 	ac_none,
 	ac_sysctl,
 	ac_acpi_devd,
 #ifdef USE_APM
 	ac_apm,
 #endif
-} acline_mode;
+} acline_mode_t;
+static acline_mode_t acline_mode;
+static acline_mode_t acline_mode_user = ac_none;
 #ifdef USE_APM
 static int	apm_fd = -1;
 #endif
@@ -127,6 +131,12 @@ static int	devd_pipe = -1;
 #define DEVD_RETRY_INTERVAL 60 /* seconds */
 static struct timeval tried_devd;
 
+/*
+ * This function returns summary load of all CPUs.  It was made so
+ * intentionally to not reduce performance in scenarios when several
+ * threads are processing requests as a pipeline -- running one at
+ * a time on different CPUs and waiting for each other.
+ */
 static int
 read_usage_times(int *load)
 {
@@ -278,20 +288,28 @@ get_freq_id(int freq, int *freqs, int numfreqs)
 static void
 acline_init(void)
 {
-	acline_mib_len = 4;
+	int skip_source_check;
 
-	if (sysctlnametomib(ACPIAC, acline_mib, &acline_mib_len) == 0) {
+	acline_mib_len = 4;
+	acline_status = SRC_UNKNOWN;
+	skip_source_check = (acline_mode_user == ac_none ||
+			     acline_mode_user == ac_acpi_devd);
+
+	if ((skip_source_check || acline_mode_user == ac_sysctl) &&
+	    sysctlnametomib(ACPIAC, acline_mib, &acline_mib_len) == 0) {
 		acline_mode = ac_sysctl;
 		if (vflag)
 			warnx("using sysctl for AC line status");
 #if __powerpc__
-	} else if (sysctlnametomib(PMUAC, acline_mib, &acline_mib_len) == 0) {
+	} else if ((skip_source_check || acline_mode_user == ac_sysctl) &&
+		   sysctlnametomib(PMUAC, acline_mib, &acline_mib_len) == 0) {
 		acline_mode = ac_sysctl;
 		if (vflag)
 			warnx("using sysctl for AC line status");
 #endif
 #ifdef USE_APM
-	} else if ((apm_fd = open(APMDEV, O_RDONLY)) >= 0) {
+	} else if ((skip_source_check || acline_mode_user == ac_apm) &&
+		   (apm_fd = open(APMDEV, O_RDONLY)) >= 0) {
 		if (vflag)
 			warnx("using APM for AC line status");
 		acline_mode = ac_apm;
@@ -351,7 +369,17 @@ acline_read(void)
 	}
 #endif
 	/* try to (re)connect to devd */
-	if (acline_mode == ac_sysctl) {
+#ifdef USE_APM
+	if ((acline_mode == ac_sysctl &&
+	    (acline_mode_user == ac_none ||
+	     acline_mode_user == ac_acpi_devd)) ||
+	    (acline_mode == ac_apm &&
+	     acline_mode_user == ac_acpi_devd)) {
+#else
+	if (acline_mode == ac_sysctl &&
+	    (acline_mode_user == ac_none ||
+	     acline_mode_user == ac_acpi_devd)) {
+#endif
 		struct timeval now;
 
 		gettimeofday(&now, NULL);
@@ -372,7 +400,7 @@ devd_init(void)
 	struct sockaddr_un devd_addr;
 
 	bzero(&devd_addr, sizeof(devd_addr));
-	if ((devd_pipe = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
+	if ((devd_pipe = socket(PF_LOCAL, SOCK_STREAM|SOCK_NONBLOCK, 0)) < 0) {
 		if (vflag)
 			warn("%s(): socket()", __func__);
 		return (-1);
@@ -386,13 +414,6 @@ devd_init(void)
 			warn("%s(): connect()", __func__);
 		close(devd_pipe);
 		devd_pipe = -1;
-		return (-1);
-	}
-
-	if (fcntl(devd_pipe, F_SETFL, O_NONBLOCK) == -1) {
-		if (vflag)
-			warn("%s(): fcntl()", __func__);
-		close(devd_pipe);
 		return (-1);
 	}
 
@@ -424,6 +445,21 @@ parse_mode(char *arg, int *mode, int ch)
 }
 
 static void
+parse_acline_mode(char *arg, int ch)
+{
+	if (strcmp(arg, "sysctl") == 0)
+		acline_mode_user = ac_sysctl;
+	else if (strcmp(arg, "devd") == 0)
+		acline_mode_user = ac_acpi_devd;
+#ifdef USE_APM
+	else if (strcmp(arg, "apm") == 0)
+		acline_mode_user = ac_apm;
+#endif
+	else
+		errx(1, "bad option: -%c %s", (char)ch, optarg);
+}
+
+static void
 handle_sigs(int __unused sig)
 {
 
@@ -435,7 +471,7 @@ usage(void)
 {
 
 	fprintf(stderr,
-"usage: powerd [-v] [-a mode] [-b mode] [-i %%] [-m freq] [-M freq] [-n mode] [-p ival] [-r %%] [-P pidfile]\n");
+"usage: powerd [-v] [-a mode] [-b mode] [-i %%] [-m freq] [-M freq] [-n mode] [-p ival] [-r %%] [-s source] [-P pidfile]\n");
 	exit(1);
 }
 
@@ -466,13 +502,16 @@ main(int argc, char * argv[])
 	if (geteuid() != 0)
 		errx(1, "must be root to run");
 
-	while ((ch = getopt(argc, argv, "a:b:i:m:M:n:p:P:r:v")) != -1)
+	while ((ch = getopt(argc, argv, "a:b:i:m:M:n:p:P:r:s:v")) != -1)
 		switch (ch) {
 		case 'a':
 			parse_mode(optarg, &mode_ac, ch);
 			break;
 		case 'b':
 			parse_mode(optarg, &mode_battery, ch);
+			break;
+		case 's':
+			parse_acline_mode(optarg, ch);
 			break;
 		case 'i':
 			cpu_idle_mark = atoi(optarg);

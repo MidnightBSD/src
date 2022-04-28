@@ -1,7 +1,7 @@
 /*
  * Névnapok
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/hu_HU.ISO8859-2/calendar.nevnapok 133833 2004-08-16 09:31:09Z dwmalone $
+ * $FreeBSD$
  */
 
 #ifndef _hu_HU_ISO8859_2_nevnapok_

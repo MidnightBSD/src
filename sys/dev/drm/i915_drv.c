@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/i915_drv.c 203287 2010-01-31 14:25:29Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -147,19 +147,11 @@ static device_method_t i915_methods[] = {
 };
 
 static driver_t i915_driver = {
-#if __FreeBSD_version >= 700010
 	"drm",
-#else
-	"drmsub",
-#endif
 	i915_methods,
 	sizeof(struct drm_device)
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(i915, vgapci, i915_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(i915, agp, i915_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(i915, drm, 1, 1, 1);

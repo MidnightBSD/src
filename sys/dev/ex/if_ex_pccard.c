@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ex/if_ex_pccard.c 182227 2008-08-27 04:11:03Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -228,3 +228,4 @@ static driver_t ex_pccard_driver = {
 
 DRIVER_MODULE(ex, pccard, ex_pccard_driver, ex_devclass, 0, 0);
 MODULE_DEPEND(ex, pccard, 1, 1, 1);
+PCCARD_PNP_INFO(ex_pccard_products);

@@ -40,14 +40,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/csu/arm/crt1.c 255874 2013-09-26 07:53:18Z andrew $");
+__FBSDID("$FreeBSD$");
 
-#ifndef lint
-#ifndef __GNUC__
-#error "GCC is needed to compile this file"
-#endif
-#endif /* lint */
-
+#include <sys/param.h>
+#include <sys/elf_common.h>
 #include <stdlib.h>
 
 #include "libc_private.h"
@@ -123,8 +119,8 @@ static const struct {
 	char	desc[sizeof(MACHINE_ARCH)];
 } archtag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
 	.namesz = sizeof(NOTE_FREEBSD_VENDOR),
-	.descsz = sizeof(int32_t),
-	.type = ARCH_NOTETYPE,
+	.descsz = sizeof(MACHINE_ARCH),
+	.type = NT_FREEBSD_ARCH_TAG,
 	.name = NOTE_FREEBSD_VENDOR,
 	.desc = MACHINE_ARCH
 };

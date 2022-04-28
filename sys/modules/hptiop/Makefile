@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/hptiop/Makefile 169412 2007-05-09 07:07:26Z scottl $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/hptiop
+.PATH: ${SRCTOP}/sys/dev/hptiop
 
 KMOD=	hptiop
 SRCS=	hptiop.c

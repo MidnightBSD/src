@@ -21,7 +21,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man5/quota.user.5 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd October 30, 2007
 .Dt QUOTA.USER 5
@@ -98,7 +98,8 @@ utility will truncate the data files to the minimum size needed
 to store the highest id with either non-zero file usage or
 non-zero quota limits.
 .Pp
-The data record for id 0 has special meaning.  If the
+The data record for id 0 has special meaning.
+If the
 .Dq Dv dqb_btime
 or
 .Dq Dv dbq_itime

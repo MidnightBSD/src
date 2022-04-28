@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/gnu/lib/libregex/config.h 251438 2013-06-05 21:31:06Z jkim $ */
+/* $FreeBSD$ */
 
 #define	_REGEX_RE_COMP	1
 #define	HAVE_LANGINFO_H	1

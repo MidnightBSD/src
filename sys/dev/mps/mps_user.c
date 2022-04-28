@@ -27,10 +27,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD userland interface
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD userland interface
  */
 /*-
- * Copyright (c) 2011, 2012 LSI Corp.
+ * Copyright (c) 2011-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,13 +55,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: release/10.0.0/sys/dev/mps/mps_user.c 253550 2013-07-22 18:41:53Z ken $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mps/mps_user.c 253550 2013-07-22 18:41:53Z ken $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 
@@ -74,6 +75,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/mps/mps_user.c 253550 2013-07-22 18:4
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/bio.h>
+#include <sys/abi_compat.h>
 #include <sys/malloc.h>
 #include <sys/uio.h>
 #include <sys/sysctl.h>
@@ -90,6 +92,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/mps/mps_user.c 253550 2013-07-22 18:4
 #include <sys/rman.h>
 
 #include <cam/cam.h>
+#include <cam/cam_ccb.h>
 #include <cam/scsi/scsi_all.h>
 
 #include <dev/mps/mpi/mpi2_type.h>
@@ -177,16 +180,6 @@ static int mps_user_reg_access(struct mps_softc *sc, mps_reg_access_t *data);
 static int mps_user_btdh(struct mps_softc *sc, mps_btdh_mapping_t *data);
 
 static MALLOC_DEFINE(M_MPSUSER, "mps_user", "Buffers for mps(4) ioctls");
-
-/* Macros from compat/freebsd32/freebsd32.h */
-#define	PTRIN(v)	(void *)(uintptr_t)(v)
-#define	PTROUT(v)	(uint32_t)(uintptr_t)(v)
-
-#define	CP(src,dst,fld) do { (dst).fld = (src).fld; } while (0)
-#define	PTRIN_CP(src,dst,fld)				\
-	do { (dst).fld = PTRIN((src).fld); } while (0)
-#define	PTROUT_CP(src,dst,fld) \
-	do { (dst).fld = PTROUT((src).fld); } while (0)
 
 int
 mps_attach_user(struct mps_softc *sc)
@@ -310,6 +303,10 @@ mps_user_read_extcfg_header(struct mps_softc *sc,
 	hdr->PageNumber = ext_page_req->header.PageNumber;
 	hdr->ExtPageType = ext_page_req->header.ExtPageType;
 	params.page_address = le32toh(ext_page_req->page_address);
+	params.buffer = NULL;
+	params.length = 0;
+	params.callback = NULL;
+
 	if ((error = mps_read_config_page(sc, &params)) != 0) {
 		/*
 		 * Leave the request. Without resetting the chip, it's
@@ -671,7 +668,7 @@ mps_user_command(struct mps_softc *sc, struct mps_usr_command *cmd)
 	if (cm == NULL) {
 		mps_printf(sc, "%s: no mps requests\n", __func__);
 		err = ENOMEM;
-		goto Ret;
+		goto RetFree;
 	}
 	mps_unlock(sc);
 
@@ -693,11 +690,6 @@ mps_user_command(struct mps_softc *sc, struct mps_usr_command *cmd)
 
 	if (cmd->len > 0) {
 		buf = malloc(cmd->len, M_MPSUSER, M_WAITOK|M_ZERO);
-		if(!buf) {
-			mps_printf(sc, "Cannot allocate memory %s %d\n",
-			 __func__, __LINE__);
-			return (ENOMEM);
-    	}
 		cm->cm_data = buf;
 		cm->cm_length = cmd->len;
 	} else {
@@ -718,12 +710,12 @@ mps_user_command(struct mps_softc *sc, struct mps_usr_command *cmd)
 		goto RetFreeUnlocked;
 
 	mps_lock(sc);
-	err = mps_wait_command(sc, cm, 60, CAN_SLEEP);
+	err = mps_wait_command(sc, &cm, 60, CAN_SLEEP);
 
-	if (err) {
+	if (err || (cm == NULL)) {
 		mps_printf(sc, "%s: invalid request: error %d\n",
 		    __func__, err);
-		goto Ret;
+		goto RetFree;
 	}
 
 	rpl = (MPI2_DEFAULT_REPLY *)cm->cm_reply;
@@ -746,9 +738,9 @@ mps_user_command(struct mps_softc *sc, struct mps_usr_command *cmd)
 
 RetFreeUnlocked:
 	mps_lock(sc);
+RetFree:
 	if (cm != NULL)
 		mps_free_command(sc, cm);
-Ret:
 	mps_unlock(sc);
 	if (buf != NULL)
 		free(buf, M_MPSUSER);
@@ -759,11 +751,12 @@ static int
 mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 {
 	MPI2_REQUEST_HEADER	*hdr, tmphdr;	
-	MPI2_DEFAULT_REPLY	*rpl;
+	MPI2_DEFAULT_REPLY	*rpl = NULL;
 	struct mps_command	*cm = NULL;
 	int			err = 0, dir = 0, sz;
 	uint8_t			function = 0;
 	u_int			sense_len;
+	struct mpssas_target	*targ = NULL;
 
 	/*
 	 * Only allow one passthru command at a time.  Use the MPS_FLAGS_BUSY
@@ -845,11 +838,22 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 		task->TaskMID = cm->cm_desc.Default.SMID;
 
 		cm->cm_data = NULL;
-		cm->cm_desc.HighPriority.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_HIGH_PRIORITY;
+		cm->cm_desc.HighPriority.RequestFlags =
+		    MPI2_REQ_DESCRIPT_FLAGS_HIGH_PRIORITY;
 		cm->cm_complete = NULL;
 		cm->cm_complete_data = NULL;
 
-		err = mps_wait_command(sc, cm, 30, CAN_SLEEP);
+		targ = mpssas_find_target_by_handle(sc->sassc, 0,
+		    task->DevHandle);
+		if (targ == NULL) {
+			mps_dprint(sc, MPS_INFO,
+			   "%s %d : invalid handle for requested TM 0x%x \n",
+			   __func__, __LINE__, task->DevHandle);
+			err = 1;
+		} else {
+			mpssas_prepare_for_tm(sc, cm, targ, CAM_LUN_WILDCARD);
+			err = mps_wait_command(sc, &cm, 30, CAN_SLEEP);
+		}
 
 		if (err != 0) {
 			err = EIO;
@@ -859,7 +863,7 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 		/*
 		 * Copy the reply data and sense data to user space.
 		 */
-		if (cm->cm_reply != NULL) {
+		if ((cm != NULL) && (cm->cm_reply != NULL)) {
 			rpl = (MPI2_DEFAULT_REPLY *)cm->cm_reply;
 			sz = rpl->MsgLength * 4;
 	
@@ -912,25 +916,20 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 	if (cm->cm_length != 0) {
 		cm->cm_data = malloc(cm->cm_length, M_MPSUSER, M_WAITOK |
 		    M_ZERO);
-		if (cm->cm_data == NULL) {
-			mps_dprint(sc, MPS_FAULT, "%s: alloc failed for IOCTL "
-			    "passthru length %d\n", __func__, cm->cm_length);
-		} else {
-			cm->cm_flags = MPS_CM_FLAGS_DATAIN;
-			if (data->DataOutSize) {
-				cm->cm_flags |= MPS_CM_FLAGS_DATAOUT;
-				err = copyin(PTRIN(data->PtrDataOut),
-				    cm->cm_data, data->DataOutSize);
-			} else if (data->DataDirection ==
-			    MPS_PASS_THRU_DIRECTION_WRITE) {
-				cm->cm_flags = MPS_CM_FLAGS_DATAOUT;
-				err = copyin(PTRIN(data->PtrData),
-				    cm->cm_data, data->DataSize);
-			}
-			if (err != 0)
-				mps_dprint(sc, MPS_FAULT, "%s: failed to copy "
-				    "IOCTL data from user space\n", __func__);
+		cm->cm_flags = MPS_CM_FLAGS_DATAIN;
+		if (data->DataOutSize) {
+			cm->cm_flags |= MPS_CM_FLAGS_DATAOUT;
+			err = copyin(PTRIN(data->PtrDataOut),
+			    cm->cm_data, data->DataOutSize);
+		} else if (data->DataDirection ==
+		    MPS_PASS_THRU_DIRECTION_WRITE) {
+			cm->cm_flags = MPS_CM_FLAGS_DATAOUT;
+			err = copyin(PTRIN(data->PtrData),
+			    cm->cm_data, data->DataSize);
 		}
+		if (err != 0)
+			mps_dprint(sc, MPS_FAULT, "%s: failed to copy "
+			    "IOCTL data from user space\n", __func__);
 	}
 	cm->cm_flags |= MPS_CM_FLAGS_SGE_SIMPLE;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
@@ -985,9 +984,9 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 
 	mps_lock(sc);
 
-	err = mps_wait_command(sc, cm, 30, CAN_SLEEP);
+	err = mps_wait_command(sc, &cm, 30, CAN_SLEEP);
 
-	if (err) {
+	if (err || (cm == NULL)) {
 		mps_printf(sc, "%s: invalid request: error %d\n", __func__,
 		    err);
 		mps_unlock(sc);
@@ -1153,7 +1152,7 @@ mps_post_fw_diag_buffer(struct mps_softc *sc,
     mps_fw_diagnostic_buffer_t *pBuffer, uint32_t *return_code)
 {
 	MPI2_DIAG_BUFFER_POST_REQUEST	*req;
-	MPI2_DIAG_BUFFER_POST_REPLY	*reply;
+	MPI2_DIAG_BUFFER_POST_REPLY	*reply = NULL;
 	struct mps_command		*cm = NULL;
 	int				i, status;
 
@@ -1200,8 +1199,8 @@ mps_post_fw_diag_buffer(struct mps_softc *sc,
 	/*
 	 * Send command synchronously.
 	 */
-	status = mps_wait_command(sc, cm, 30, CAN_SLEEP);
-	if (status) {
+	status = mps_wait_command(sc, &cm, 30, CAN_SLEEP);
+	if (status || (cm == NULL)) {
 		mps_printf(sc, "%s: invalid request: error %d\n", __func__,
 		    status);
 		status = MPS_DIAG_FAILURE;
@@ -1212,12 +1211,14 @@ mps_post_fw_diag_buffer(struct mps_softc *sc,
 	 * Process POST reply.
 	 */
 	reply = (MPI2_DIAG_BUFFER_POST_REPLY *)cm->cm_reply;
-	if (reply->IOCStatus != MPI2_IOCSTATUS_SUCCESS) {
+	if ((le16toh(reply->IOCStatus) & MPI2_IOCSTATUS_MASK) !=
+	    MPI2_IOCSTATUS_SUCCESS) {
 		status = MPS_DIAG_FAILURE;
 		mps_dprint(sc, MPS_FAULT, "%s: post of FW  Diag Buffer failed "
 		    "with IOCStatus = 0x%x, IOCLogInfo = 0x%x and "
-		    "TransferLength = 0x%x\n", __func__, reply->IOCStatus,
-		    reply->IOCLogInfo, reply->TransferLength);
+		    "TransferLength = 0x%x\n", __func__,
+		    le16toh(reply->IOCStatus), le32toh(reply->IOCLogInfo),
+		    le32toh(reply->TransferLength));
 		goto done;
 	}
 
@@ -1230,7 +1231,8 @@ mps_post_fw_diag_buffer(struct mps_softc *sc,
 	status = MPS_DIAG_SUCCESS;
 
 done:
-	mps_free_command(sc, cm);
+	if (cm != NULL)
+		mps_free_command(sc, cm);
 	return (status);
 }
 
@@ -1240,7 +1242,7 @@ mps_release_fw_diag_buffer(struct mps_softc *sc,
     uint32_t diag_type)
 {
 	MPI2_DIAG_RELEASE_REQUEST	*req;
-	MPI2_DIAG_RELEASE_REPLY		*reply;
+	MPI2_DIAG_RELEASE_REPLY		*reply = NULL;
 	struct mps_command		*cm = NULL;
 	int				status;
 
@@ -1284,8 +1286,8 @@ mps_release_fw_diag_buffer(struct mps_softc *sc,
 	/*
 	 * Send command synchronously.
 	 */
-	status = mps_wait_command(sc, cm, 30, CAN_SLEEP);
-	if (status) {
+	status = mps_wait_command(sc, &cm, 30, CAN_SLEEP);
+	if (status || (cm == NULL)) {
 		mps_printf(sc, "%s: invalid request: error %d\n", __func__,
 		    status);
 		status = MPS_DIAG_FAILURE;
@@ -1296,12 +1298,13 @@ mps_release_fw_diag_buffer(struct mps_softc *sc,
 	 * Process RELEASE reply.
 	 */
 	reply = (MPI2_DIAG_RELEASE_REPLY *)cm->cm_reply;
-	if ((reply->IOCStatus != MPI2_IOCSTATUS_SUCCESS) ||
-	    pBuffer->owned_by_firmware) {
+	if (((le16toh(reply->IOCStatus) & MPI2_IOCSTATUS_MASK) !=
+	    MPI2_IOCSTATUS_SUCCESS) || pBuffer->owned_by_firmware) {
 		status = MPS_DIAG_FAILURE;
 		mps_dprint(sc, MPS_FAULT, "%s: release of FW Diag Buffer "
 		    "failed with IOCStatus = 0x%x and IOCLogInfo = 0x%x\n",
-		    __func__, reply->IOCStatus, reply->IOCLogInfo);
+		    __func__, le16toh(reply->IOCStatus),
+		    le32toh(reply->IOCLogInfo));
 		goto done;
 	}
 
@@ -1319,6 +1322,9 @@ mps_release_fw_diag_buffer(struct mps_softc *sc,
 	}
 
 done:
+	if (cm != NULL)
+		mps_free_command(sc, cm);
+
 	return (status);
 }
 
@@ -2041,7 +2047,7 @@ mps_user_btdh(struct mps_softc *sc, mps_btdh_mapping_t *data)
 			data->DevHandle = dev_handle;
 	} else {
 		bus = 0;
-		target = mps_mapping_get_sas_id_from_handle(sc, dev_handle);
+		target = mps_mapping_get_tid_from_handle(sc, dev_handle);
 		data->Bus = bus;
 		data->TargetID = target;
 	}
@@ -2072,11 +2078,6 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		break;
 	case MPSIO_READ_CFG_PAGE:
 		mps_page = malloc(page_req->len, M_MPSUSER, M_WAITOK | M_ZERO);
-		if(!mps_page) {
-			mps_printf(sc, "Cannot allocate memory %s %d\n",
-			 __func__, __LINE__);
-			return (ENOMEM);
-    	}
 		error = copyin(page_req->buf, mps_page,
 		    sizeof(MPI2_CONFIG_PAGE_HEADER));
 		if (error)
@@ -2095,11 +2096,6 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		break;
 	case MPSIO_READ_EXT_CFG_PAGE:
 		mps_page = malloc(ext_page_req->len, M_MPSUSER, M_WAITOK|M_ZERO);
-		if(!mps_page) {
-			mps_printf(sc, "Cannot allocate memory %s %d\n",
-			 __func__, __LINE__);
-			return (ENOMEM);
-	}
 		error = copyin(ext_page_req->buf, mps_page,
 		    sizeof(MPI2_CONFIG_EXTENDED_PAGE_HEADER));
 		if (error)
@@ -2113,11 +2109,6 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		break;
 	case MPSIO_WRITE_CFG_PAGE:
 		mps_page = malloc(page_req->len, M_MPSUSER, M_WAITOK|M_ZERO);
-		if(!mps_page) {
-			mps_printf(sc, "Cannot allocate memory %s %d\n",
-			 __func__, __LINE__);
-			return (ENOMEM);
-	}
 		error = copyin(page_req->buf, mps_page, page_req->len);
 		if (error)
 			break;

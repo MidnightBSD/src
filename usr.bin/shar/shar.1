@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)shar.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/shar/shar.1 216370 2010-12-11 08:32:16Z joel $
+.\" $FreeBSD$
 .\"
-.Dd June 6, 1993
+.Dd January 31, 2019
 .Dt SHAR 1
 .Os
 .Sh NAME
@@ -103,5 +103,5 @@ Archives produced using this implementation of
 .Nm
 may be easily examined with the command:
 .Bd -literal -offset indent
-egrep -v '^[X#]' shar.file
+egrep -av '^[X#]' shar.file
 .Ed

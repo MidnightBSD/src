@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000 Robert Nordier
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kgzip/aouthdr.h 68313 2000-11-04 13:02:00Z rnordier $
+ * $FreeBSD$
  */
 
 #include <a.out.h>

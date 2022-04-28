@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/sys/sem.h 224016 2011-07-14 14:18:14Z bz $ */
+/* $FreeBSD$ */
 /*	$NetBSD: sem.h,v 1.5 1994/06/29 06:45:15 cgd Exp $	*/
 
 /*
@@ -10,6 +10,9 @@
 #ifndef _SYS_SEM_H_
 #define _SYS_SEM_H_
 
+#ifdef _WANT_SYSVSEM_INTERNALS
+#define	_WANT_SYSVIPC_INTERNALS
+#endif
 #include <sys/ipc.h>
 
 #ifndef _PID_T_DECLARED
@@ -37,7 +40,7 @@ struct semid_ds_old {
 	long		sem_pad1;	/* SVABI/386 says I need this here */
 	time_t		sem_ctime;	/* last change time */
     					/* Times measured in secs since */
-    					/* 00:00:00 GMT, Jan. 1, 1970 */
+    					/* 00:00:00 UTC, Jan. 1, 1970, without leap seconds */
 	long		sem_pad2;	/* SVABI/386 says I need this here */
 	long		sem_pad3[4];	/* SVABI/386 says I need this here */
 };
@@ -50,7 +53,7 @@ struct semid_ds {
 	time_t		sem_otime;	/* last operation time */
 	time_t		sem_ctime;	/* last change time */
     					/* Times measured in secs since */
-    					/* 00:00:00 GMT, Jan. 1, 1970 */
+    					/* 00:00:00 UTC, Jan. 1, 1970, without leap seconds */
 };
 
 /*
@@ -101,8 +104,7 @@ union semun {
 #define SEM_A		IPC_W	/* alter permission */
 #define SEM_R		IPC_R	/* read permission */
 
-#ifdef _KERNEL
-
+#if defined(_KERNEL) || defined(_WANT_SYSVSEM_INTERNALS)
 /*
  * semaphore info struct
  */
@@ -117,7 +119,6 @@ struct seminfo {
 		semvmx,		/* semaphore maximum value */
 		semaem;		/* adjust on exit max value */
 };
-extern struct seminfo	seminfo;
 
 /*
  * Kernel wrapper for the user-level structure
@@ -131,13 +132,16 @@ struct semid_kernel {
 /* internal "mode" bits */
 #define	SEM_ALLOC	01000	/* semaphore is allocated */
 #define	SEM_DEST	02000	/* semaphore will be destroyed on last detach */
+#endif
 
+#ifdef _KERNEL
+extern struct seminfo	seminfo;
 /*
  * Process sem_undo vectors at proc exit.
  */
 void	semexit(struct proc *p);
 
-#else /* ! _KERNEL */
+#else /* !_KERNEL */
 
 __BEGIN_DECLS
 #if __BSD_VISIBLE

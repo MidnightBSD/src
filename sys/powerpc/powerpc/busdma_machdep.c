@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/busdma_machdep.c 255639 2013-09-17 17:29:07Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -514,14 +514,14 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 
 	/* 
 	 * XXX:
-	 * (dmat->alignment < dmat->maxsize) is just a quick hack; the exact
+	 * (dmat->alignment <= dmat->maxsize) is just a quick hack; the exact
 	 * alignment guarantees of malloc need to be nailed down, and the
 	 * code below should be rewritten to take that into account.
 	 *
 	 * In the meantime, we'll warn the user if malloc gets it wrong.
 	 */
 	if ((dmat->maxsize <= PAGE_SIZE) &&
-	   (dmat->alignment < dmat->maxsize) &&
+	   (dmat->alignment <= dmat->maxsize) &&
 	    dmat->lowaddr >= ptoa((vm_paddr_t)Maxmem) &&
 	    attr == VM_MEMATTR_DEFAULT) {
 		*vaddr = malloc(dmat->maxsize, M_DEVBUF, mflags);
@@ -752,6 +752,16 @@ _bus_dmamap_load_phys(bus_dma_tag_t dmat,
 	 * Did we fit?
 	 */
 	return (buflen != 0 ? EFBIG : 0); /* XXX better return value here? */
+}
+
+int
+_bus_dmamap_load_ma(bus_dma_tag_t dmat, bus_dmamap_t map,
+    struct vm_page **ma, bus_size_t tlen, int ma_offs, int flags,
+    bus_dma_segment_t *segs, int *segp)
+{
+
+	return (bus_dmamap_load_ma_triv(dmat, map, ma, tlen, ma_offs, flags,
+	    segs, segp));
 }
 
 /*
@@ -1017,9 +1027,9 @@ alloc_bounce_zone(bus_dma_tag_t dmat)
 	SYSCTL_ADD_STRING(busdma_sysctl_tree(bz),
 	    SYSCTL_CHILDREN(busdma_sysctl_tree_top(bz)), OID_AUTO,
 	    "lowaddr", CTLFLAG_RD, bz->lowaddrid, 0, "");
-	SYSCTL_ADD_INT(busdma_sysctl_tree(bz),
+	SYSCTL_ADD_UAUTO(busdma_sysctl_tree(bz),
 	    SYSCTL_CHILDREN(busdma_sysctl_tree_top(bz)), OID_AUTO,
-	    "alignment", CTLFLAG_RD, &bz->alignment, 0, "");
+	    "alignment", CTLFLAG_RD, &bz->alignment, "");
 
 	return (0);
 }
@@ -1111,8 +1121,8 @@ add_bounce_page(bus_dma_tag_t dmat, bus_dmamap_t map, vm_offset_t vaddr,
 
 	if (dmat->flags & BUS_DMA_KEEP_PG_OFFSET) {
 		/* Page offset needs to be preserved. */
-		bpage->vaddr |= vaddr & PAGE_MASK;
-		bpage->busaddr |= vaddr & PAGE_MASK;
+		bpage->vaddr |= addr & PAGE_MASK;
+		bpage->busaddr |= addr & PAGE_MASK;
 	}
 	bpage->datavaddr = vaddr;
 	bpage->dataaddr = addr;

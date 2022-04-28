@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2012 Advanced Computing Technologies LLC
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2012 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-    "$FreeBSD: release/10.0.0/usr.sbin/pciconf/err.c 240680 2012-09-18 22:04:59Z gavin $";
+    "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>

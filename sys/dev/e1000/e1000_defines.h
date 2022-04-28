@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_defines.h 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_DEFINES_H_
 #define _E1000_DEFINES_H_
@@ -77,6 +77,7 @@
 #define E1000_CTRL_EXT_EE_RST	0x00002000 /* Reinitialize from EEPROM */
 /* Physical Func Reset Done Indication */
 #define E1000_CTRL_EXT_PFRSTD	0x00004000
+#define E1000_CTRL_EXT_SDLPE	0X00040000  /* SerDes Low Power Enable */
 #define E1000_CTRL_EXT_SPD_BYPS	0x00008000 /* Speed Select Bypass */
 #define E1000_CTRL_EXT_RO_DIS	0x00020000 /* Relaxed Ordering disable */
 #define E1000_CTRL_EXT_DMA_DYN_CLK_EN	0x00080000 /* DMA Dynamic Clk Gating */
@@ -157,10 +158,12 @@
 	E1000_RXDEXT_STATERR_CXE |	\
 	E1000_RXDEXT_STATERR_RXE)
 
+#define E1000_MRQC_RSS_ENABLE_2Q		0x00000001
 #define E1000_MRQC_RSS_FIELD_MASK		0xFFFF0000
 #define E1000_MRQC_RSS_FIELD_IPV4_TCP		0x00010000
 #define E1000_MRQC_RSS_FIELD_IPV4		0x00020000
 #define E1000_MRQC_RSS_FIELD_IPV6_TCP_EX	0x00040000
+#define E1000_MRQC_RSS_FIELD_IPV6_EX		0x00080000
 #define E1000_MRQC_RSS_FIELD_IPV6		0x00100000
 #define E1000_MRQC_RSS_FIELD_IPV6_TCP		0x00200000
 
@@ -194,6 +197,8 @@
 #define E1000_RCTL_LBM_TCVR	0x000000C0 /* tcvr loopback mode */
 #define E1000_RCTL_DTYP_PS	0x00000400 /* Packet Split descriptor */
 #define E1000_RCTL_RDMTS_HALF	0x00000000 /* Rx desc min thresh size */
+#define E1000_RCTL_RDMTS_HEX	0x00010000
+#define E1000_RCTL_RDMTS1_HEX	E1000_RCTL_RDMTS_HEX
 #define E1000_RCTL_MO_SHIFT	12 /* multicast offset shift */
 #define E1000_RCTL_MO_3		0x00003000 /* multicast offset 15:4 */
 #define E1000_RCTL_BAM		0x00008000 /* broadcast enable */
@@ -464,6 +469,9 @@
 
 #define ETHERNET_FCS_SIZE		4
 #define MAX_JUMBO_FRAME_SIZE		0x3F00
+/* The datasheet maximum supported RX size is 9.5KB (9728 bytes) */
+#define MAX_RX_JUMBO_FRAME_SIZE		0x2600
+#define E1000_TX_PTR_GAP		0x1F
 
 /* Extended Configuration Control and Size */
 #define E1000_EXTCNF_CTRL_MDIO_SW_OWNERSHIP	0x00000020
@@ -749,6 +757,12 @@
 #define E1000_TSYNCTXCTL_VALID		0x00000001 /* Tx timestamp valid */
 #define E1000_TSYNCTXCTL_ENABLED	0x00000010 /* enable Tx timestamping */
 
+/* HH Time Sync */
+#define E1000_TSYNCTXCTL_MAX_ALLOWED_DLY_MASK	0x0000F000 /* max delay */
+#define E1000_TSYNCTXCTL_SYNC_COMP_ERR		0x20000000 /* sync err */
+#define E1000_TSYNCTXCTL_SYNC_COMP		0x40000000 /* sync complete */
+#define E1000_TSYNCTXCTL_START_SYNC		0x80000000 /* initiate sync */
+
 #define E1000_TSYNCRXCTL_VALID		0x00000001 /* Rx timestamp valid */
 #define E1000_TSYNCRXCTL_TYPE_MASK	0x0000000E /* Rx type mask */
 #define E1000_TSYNCRXCTL_TYPE_L2_V2	0x00
@@ -845,6 +859,7 @@
 #define E1000_M88E1543_PAGE_ADDR	0x16       /* Page Offset Register */
 #define E1000_M88E1543_EEE_CTRL_1	0x0
 #define E1000_M88E1543_EEE_CTRL_1_MS	0x0001     /* EEE Master/Slave */
+#define E1000_M88E1543_FIBER_CTRL	0x0        /* Fiber Control Register */
 #define E1000_EEE_ADV_DEV_I354		7
 #define E1000_EEE_ADV_ADDR_I354		60
 #define E1000_EEE_ADV_100_SUPPORTED	(1 << 1)   /* 100BaseTx EEE Supported */
@@ -853,6 +868,10 @@
 #define E1000_PCS_STATUS_ADDR_I354	1
 #define E1000_PCS_STATUS_RX_LPI_RCVD	0x0400
 #define E1000_PCS_STATUS_TX_LPI_RCVD	0x0800
+#define E1000_M88E1512_CFG_REG_1	0x0010
+#define E1000_M88E1512_CFG_REG_2	0x0011
+#define E1000_M88E1512_CFG_REG_3	0x0007
+#define E1000_M88E1512_MODE		0x0014
 #define E1000_EEE_SU_LPI_CLK_STP	0x00800000 /* EEE LPI Clock Stop */
 #define E1000_EEE_LP_ADV_DEV_I210	7          /* EEE LP Adv Device */
 #define E1000_EEE_LP_ADV_ADDR_I210	61         /* EEE LP Adv Register */
@@ -1012,9 +1031,7 @@
 /* NVM Addressing bits based on type 0=small, 1=large */
 #define E1000_EECD_ADDR_BITS	0x00000400
 #define E1000_EECD_TYPE		0x00002000 /* NVM Type (1-SPI, 0-Microwire) */
-#ifndef E1000_NVM_GRANT_ATTEMPTS
 #define E1000_NVM_GRANT_ATTEMPTS	1000 /* NVM # attempts to gain grant */
-#endif
 #define E1000_EECD_AUTO_RD		0x00000200  /* NVM Auto Read done */
 #define E1000_EECD_SIZE_EX_MASK		0x00007800  /* NVM Size */
 #define E1000_EECD_SIZE_EX_SHIFT	11
@@ -1429,6 +1446,9 @@
 #define E1000_RXPBS_CFG_TS_EN		0x80000000 /* Timestamp in Rx buffer */
 #define E1000_RXPBS_SIZE_I210_MASK	0x0000003F /* Rx packet buffer size */
 #define E1000_TXPB0S_SIZE_I210_MASK	0x0000003F /* Tx packet buffer 0 size */
+#define I210_RXPBSIZE_DEFAULT		0x000000A2 /* RXPBSIZE default */
+#define I210_TXPBSIZE_DEFAULT		0x04000014 /* TXPBSIZE default */
+
 #define E1000_DOBFFCTL_OBFFTHR_MASK	0x000000FF /* OBFF threshold */
 #define E1000_DOBFFCTL_EXIT_ACT_MASK	0x01000000 /* Exit active CB */
 
@@ -1455,5 +1475,7 @@
 #define E1000_STATUS_LAN_ID_OFFSET	2
 #define E1000_VFTA_ENTRIES		128
 #define E1000_UNUSEDARG
+#ifndef ERROR_REPORT
 #define ERROR_REPORT(fmt)	do { } while (0)
+#endif /* ERROR_REPORT */
 #endif /* _E1000_DEFINES_H_ */

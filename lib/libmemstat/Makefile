@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/lib/libmemstat/Makefile 195767 2009-07-19 17:25:24Z kensmith $
+# $FreeBSD$
 
+PACKAGE=lib${LIB}
 WARNS?=		3
 LIB=		memstat
 SHLIB_MAJOR=	3
-DPADD=		${LIBKVM}
-LDADD=		-lkvm
+LIBADD+=	kvm
 SRCS+=		memstat.c
 SRCS+=		memstat_all.c
 SRCS+=		memstat_malloc.c

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/softfloat/Symbol.map 230190 2012-01-16 04:06:56Z das $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

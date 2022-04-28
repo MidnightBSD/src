@@ -1,10 +1,19 @@
-# $FreeBSD: release/10.0.0/sbin/ipfw/Makefile 204869 2010-03-08 14:43:55Z luigi $
+# $FreeBSD$
 
+.include <src.opts.mk>
+
+PACKAGE=ipfw
 PROG=	ipfw
-SRCS=	ipfw2.c dummynet.c ipv6.c main.c nat.c altq.c
+SRCS=	ipfw2.c dummynet.c ipv6.c main.c nat.c tables.c
+SRCS+=	nat64clat.c nat64lsn.c nat64stl.c nptv6.c
 WARNS?=	2
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+
+.if ${MK_PF} != "no"
+SRCS+=	altq.c
+CFLAGS+=-DPF
+.endif
+
+LIBADD=	jail util
 MAN=	ipfw.8
 
 .include <bsd.prog.mk>

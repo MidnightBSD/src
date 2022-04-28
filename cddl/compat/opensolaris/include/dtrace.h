@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/include/dtrace.h 179163 2008-05-21 00:26:38Z jb $
+ * $FreeBSD$
  *
  */
 

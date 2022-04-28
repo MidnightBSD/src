@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/savage_drv.c 189563 2009-03-09 07:55:18Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -113,9 +113,5 @@ static driver_t savage_driver = {
 };
 
 extern devclass_t drm_devclass;
-#if __FreeBSD_version >= 700010
 DRIVER_MODULE(savage, vgapci, savage_driver, drm_devclass, 0, 0);
-#else
-DRIVER_MODULE(savage, pci, savage_driver, drm_devclass, 0, 0);
-#endif
 MODULE_DEPEND(savage, drm, 1, 1, 1);

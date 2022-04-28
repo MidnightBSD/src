@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfe/cfe_resource.c 183370 2008-09-26 03:53:10Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,7 +61,7 @@ static int
 cferes_probe(device_t dev)
 {
 
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

@@ -52,7 +52,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/fuse/fuse_ipc.h 241519 2012-10-13 23:54:26Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _FUSE_IPC_H_

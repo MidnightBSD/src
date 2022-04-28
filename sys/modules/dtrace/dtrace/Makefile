@@ -1,28 +1,33 @@
-# $FreeBSD: release/10.0.0/sys/modules/dtrace/dtrace/Makefile 253996 2013-08-06 15:51:56Z avg $
+# $FreeBSD$
+
+SYSDIR?=	${SRCTOP}/sys
 
 ARCHDIR=	${MACHINE_CPUARCH}
 
-.PATH: ${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common/dtrace
-.PATH: ${.CURDIR}/../../../cddl/compat/opensolaris/kern
-.PATH: ${.CURDIR}/../../../cddl/kern
-.PATH: ${.CURDIR}/../../../cddl/dev/dtrace
-.PATH: ${.CURDIR}/../../../cddl/dev/dtrace/${ARCHDIR}
+.PATH: ${SYSDIR}/cddl/contrib/opensolaris/uts/common/dtrace
+.PATH: ${SYSDIR}/cddl/compat/opensolaris/kern
+.PATH: ${SYSDIR}/cddl/kern
+.PATH: ${SYSDIR}/cddl/dev/dtrace
+.PATH: ${SYSDIR}/cddl/dev/dtrace/${ARCHDIR}
 
 KMOD=		dtrace
 SRCS=		dtrace.c \
+		dtrace_xoroshiro128_plus.c \
 		dtrace_asm.S \
 		dtrace_subr.c
 
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+.PATH: ${SYSDIR}/cddl/dev/dtrace/x86
 SRCS+=		dis_tables.c \
 		instr_size.c
-CFLAGS+=	-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/intel
+CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/intel \
+		-I${SYSDIR}/cddl/dev/dtrace/x86
 .endif
 
 SRCS+=		bus_if.h device_if.h vnode_if.h
 
 # Needed for dtrace_asm.S
-SRCS+=		assym.s
+DPSRCS+=	assym.s
 
 # These are needed for assym.s
 SRCS+=		opt_compat.h opt_kstack_pages.h opt_nfs.h opt_hwpmc_hooks.h
@@ -34,11 +39,13 @@ SRCS += 	opensolaris_taskq.c
 SRCS+=		opt_apic.h
 .endif
 
-CFLAGS+=	-I${.CURDIR}/../../../cddl/compat/opensolaris \
-		-I${.CURDIR}/../../../cddl/dev/dtrace \
-		-I${.CURDIR}/../../../cddl/dev/dtrace/${ARCHDIR} \
-		-I${.CURDIR}/../../../cddl/contrib/opensolaris/uts/common \
-		-I${.CURDIR}/../../.. -DDIS_MEM
+CFLAGS+=	-I${SYSDIR}/cddl/compat/opensolaris \
+		-I${SYSDIR}/cddl/dev/dtrace \
+		-I${SYSDIR}/cddl/dev/dtrace/${ARCHDIR} \
+		-I${SYSDIR}/cddl/contrib/opensolaris/uts/common \
+		-I${SYSDIR}/cddl/contrib/opensolaris/uts/common/dtrace \
+		-I${SYSDIR}/cddl/contrib/opensolaris/common/util \
+		-I${SYSDIR} -DDIS_MEM
 
 CFLAGS+=	-DSMP
 
@@ -50,7 +57,7 @@ dtrace_asm.o:  assym.s
 
 .include <bsd.kmod.mk>
 
-CFLAGS+=	-include ${.CURDIR}/../../../cddl/compat/opensolaris/sys/debug_compat.h
+CFLAGS+=	-include ${SYSDIR}/cddl/compat/opensolaris/sys/debug_compat.h
 
 CWARNFLAGS+=	-Wno-parentheses
 CWARNFLAGS+=	-Wno-uninitialized

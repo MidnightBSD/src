@@ -27,7 +27,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet.c 243263 2012-11-19 08:29:53Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet.c 243263 2012-1
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 
 #include "wrapper-cvmx-includes.h"
@@ -454,7 +455,7 @@ int cvm_oct_init_module(device_t bus)
 		cvmx_write_csr(CVMX_POW_WQ_INT_THRX(pow_receive_group), 0x1001);
 	}
 
-	callout_init(&cvm_oct_poll_timer, CALLOUT_MPSAFE);
+	callout_init(&cvm_oct_poll_timer, 1);
 	callout_reset(&cvm_oct_poll_timer, hz, cvm_do_timer, NULL);
 
 	return 0;

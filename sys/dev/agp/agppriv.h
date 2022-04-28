@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/agp/agppriv.h 235782 2012-05-22 10:59:26Z kib $
+ *	$FreeBSD$
  */
 
 #ifndef _PCI_AGPPRIV_H_
@@ -83,7 +83,6 @@ struct agp_gatt {
 	vm_offset_t	ag_physical;
 };
 
-void			agp_flush_cache(void);
 u_int8_t		agp_find_caps(device_t dev);
 struct agp_gatt	       *agp_alloc_gatt(device_t dev);
 void			agp_set_aperture_resource(device_t dev, int rid);

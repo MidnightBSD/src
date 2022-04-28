@@ -1,7 +1,7 @@
 /*-
  * Test 0028:	BPF_ALU+BPF_AND+BPF_X
  *
- * $FreeBSD: release/10.0.0/tools/regression/bpf/bpf_filter/tests/test0028.h 182393 2008-08-28 18:38:55Z jkim $
+ * $FreeBSD$
  */
 
 /* BPF program */

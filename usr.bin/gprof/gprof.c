@@ -40,13 +40,14 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/gprof/gprof.c 246783 2013-02-14 08:16:03Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
+#define	EXTERN
 #include "gprof.h"
 
 static int valcmp(const void *, const void *);
@@ -407,7 +408,7 @@ readsamples(FILE *pfile)
 
     if (samples == 0) {
 	samples = (double *) calloc(nsamples, sizeof(double));
-	if (samples == 0)
+	if (samples == NULL)
 	    errx(0, "no room for %d sample pc's", nsamples);
     }
     for (i = 0; i < nsamples; i++) {

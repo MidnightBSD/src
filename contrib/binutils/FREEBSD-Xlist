@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/binutils/FREEBSD-Xlist 77357 2001-05-28 17:48:04Z obrien $
+$FreeBSD$
 .cvsignore
 mkdep
 *-hp*

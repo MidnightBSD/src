@@ -1,13 +1,13 @@
 #
 # From: Id: Makefile,v 1.2 2004/01/15 16:20:56 pkern Exp
 #
-# $FreeBSD: release/10.0.0/usr.sbin/ipfwpcap/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 #
 
 PROG=	ipfwpcap
 
-LDADD=	-lpcap
-DPADD=	${LIBPCAP}
+LIBADD=	pcap
+CFLAGS+=-I${.CURDIR}/../../contrib/libpcap
 
 MAN=	ipfwpcap.8
 

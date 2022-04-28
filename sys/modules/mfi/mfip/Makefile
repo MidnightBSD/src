@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mfi/mfip/Makefile 169609 2007-05-16 17:19:47Z scottl $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../dev/mfi
+.PATH: ${SRCTOP}/sys/dev/mfi
 
 KMOD=	mfip
 SRCS=	mfi_cam.c

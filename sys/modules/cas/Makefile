@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/cas/Makefile 209991 2010-07-13 12:47:31Z nwhitehorn $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/cas
+.PATH: ${SRCTOP}/sys/dev/cas
 
 KMOD=	if_cas
 SRCS=	bus_if.h device_if.h if_cas.c miibus_if.h pci_if.h ${ofw_bus_if}

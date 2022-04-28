@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_tar.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Each of these archives is a short archive with a single entry.  The
@@ -74,6 +74,8 @@ static void verifyEmpty(void)
 	assertEqualString(archive_filter_name(a, 0), "none");
 	failure("512 zero bytes should be recognized as a tar archive.");
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_TAR);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
@@ -439,6 +441,8 @@ static void verify(unsigned char *d, size_t s,
 	assertA(0 == archive_read_next_header(a, &ae));
 	assertEqualInt(archive_filter_code(a, 0), compression);
 	assertEqualInt(archive_format(a), format);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 	/* Verify the only entry. */
 	f(ae);

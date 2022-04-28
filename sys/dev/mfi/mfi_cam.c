@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_cam.c 254742 2013-08-23 22:55:52Z markj $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -90,8 +90,7 @@ static struct mfi_command * mfip_start(void *);
 static void	mfip_done(struct mfi_command *cm);
 
 static int mfi_allow_disks = 0;
-TUNABLE_INT("hw.mfi.allow_cam_disk_passthrough", &mfi_allow_disks);
-SYSCTL_INT(_hw_mfi, OID_AUTO, allow_cam_disk_passthrough, CTLFLAG_RD,
+SYSCTL_INT(_hw_mfi, OID_AUTO, allow_cam_disk_passthrough, CTLFLAG_RDTUN,
     &mfi_allow_disks, 0, "event message locale");
 
 static devclass_t	mfip_devclass;
@@ -216,16 +215,16 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		struct ccb_pathinq *cpi = &ccb->cpi;
 
 		cpi->version_num = 1;
-		cpi->hba_inquiry = PI_SDTR_ABLE|PI_TAG_ABLE|PI_WIDE_16;
+		cpi->hba_inquiry = PI_TAG_ABLE;
 		cpi->target_sprt = 0;
-		cpi->hba_misc = PIM_NOBUSRESET|PIM_SEQSCAN;
+		cpi->hba_misc = PIM_NOBUSRESET | PIM_SEQSCAN | PIM_UNMAPPED;
 		cpi->hba_eng_cnt = 0;
 		cpi->max_target = MFI_SCSI_MAX_TARGETS;
 		cpi->max_lun = MFI_SCSI_MAX_LUNS;
 		cpi->initiator_id = MFI_SCSI_INITIATOR_ID;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "LSI", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
@@ -244,6 +243,8 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		break;
 	case XPT_GET_TRAN_SETTINGS:
 	{
+		struct ccb_trans_settings_scsi *scsi =
+		    &ccb->cts.proto_specific.scsi;
 		struct ccb_trans_settings_sas *sas =
 		    &ccb->cts.xport_specific.sas;
 
@@ -251,6 +252,9 @@ mfip_cam_action(struct cam_sim *sim, union ccb *ccb)
 		ccb->cts.protocol_version = SCSI_REV_2;
 		ccb->cts.transport = XPORT_SAS;
 		ccb->cts.transport_version = 0;
+
+		scsi->valid = CTS_SCSI_VALID_TQ;
+		scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
 
 		sas->valid &= ~CTS_SAS_VALID_SPEED;
 		sas->bitrate = 150000;

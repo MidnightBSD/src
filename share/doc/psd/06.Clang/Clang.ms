@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)Clang.ms	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/psd/06.Clang/Clang.ms 104986 2002-10-12 14:50:50Z schweikh $
+.\" $FreeBSD$
 .nr Cl 2
 .TL
 The C Programming Language - Reference Manual

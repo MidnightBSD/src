@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/APPLE/INUIT%UCS.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: INUIT%UCS.src,v 1.1 2006/03/13 19:45:36 tnozaki Exp $
 
 TYPE		ROWCOL

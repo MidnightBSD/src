@@ -28,7 +28,7 @@
  *
  * Helper functions common for all tools.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/tools/libbsnmptools/bsnmptools.h 229933 2012-01-10 15:29:03Z syrinx $
+ * $FreeBSD$
  */
 
 #ifndef	_BSNMP_TOOLS_H_
@@ -231,7 +231,7 @@ extern struct snmp_toolinfo snmptool;
 #define	SET_NONREP(ctx, i)	(((ctx)->flags |= (((i) & 0xff) << 24)))
 #define	GET_NONREP(ctx)		(((ctx)->flags & NONREP_BITS) >> 24)
 
-
+extern int _bsnmptools_debug;
 extern const struct asn_oid IsoOrgDod_OID;
 
 int snmptool_init(struct snmp_toolinfo *);

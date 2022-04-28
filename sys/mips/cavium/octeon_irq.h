@@ -41,7 +41,7 @@
 #define __OCTEON_IRQ_H__
 
 /*
- * $FreeBSD: release/10.0.0/sys/mips/cavium/octeon_irq.h 233417 2012-03-24 06:28:15Z gonzo $
+ * $FreeBSD$
  */
 
 /**

@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)conv.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/dd/conv.c 127958 2004-04-06 20:06:54Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -74,7 +74,7 @@ def(void)
 		dd_out(0);
 
 		/*
-		 * Ddout copies the leftover output to the beginning of
+		 * dd_out copies the leftover output to the beginning of
 		 * the buffer and resets the output buffer.  Reset the
 		 * input buffer to match it.
 	 	 */

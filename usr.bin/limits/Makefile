@@ -1,7 +1,12 @@
-# $FreeBSD: release/10.0.0/usr.bin/limits/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	limits
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

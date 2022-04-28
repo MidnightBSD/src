@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/kbd/kbdreg.h 190870 2009-04-09 19:11:08Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_KBD_KBDREG_H_
@@ -203,14 +203,19 @@ typedef struct keyboard_switch {
 #define kbdd_poll(kbd, on)						\
 	(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
 #define kbdd_diag(kbd, level)						\
-	(*kbdsw[(kbd)->kb_index]->diag)((kbd), (leve))
+	(*kbdsw[(kbd)->kb_index]->diag)((kbd), (level))
 
-/* keyboard driver */
+/*
+ * Keyboard driver definition.  Some of these be immutable after definition
+ * time, e.g. one shouldn't be able to rename a driver or use a different kbdsw
+ * entirely, but patching individual methods is acceptable.
+ */
 typedef struct keyboard_driver {
     SLIST_ENTRY(keyboard_driver) link;
-    char		*name;
-    keyboard_switch_t	*kbdsw;
-    int			(*configure)(int); /* backdoor for the console driver */
+    const char * const		name;
+    keyboard_switch_t * const	kbdsw;
+    /* backdoor for the console driver */
+    int				(* const configure)(int);
 } keyboard_driver_t;
 
 #ifdef _KERNEL

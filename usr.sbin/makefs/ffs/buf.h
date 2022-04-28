@@ -1,6 +1,8 @@
-/*	$NetBSD: buf.h,v 1.2 2001/11/02 03:12:49 lukem Exp $	*/
+/*	$NetBSD: buf.h,v 1.3 2001/11/02 03:12:49 lukem Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 2001 Wasabi Systems, Inc.
  * All rights reserved.
  *
@@ -34,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/buf.h 186334 2008-12-19 18:45:43Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _FFS_BUF_H
@@ -42,6 +44,15 @@
 
 #include <sys/param.h>
 #include <sys/queue.h>
+
+struct ucred;
+
+struct vnode {
+	int fd;
+	void *fs;
+	void *v_data;
+	int offset;
+};
 
 struct buf {
 	void *		b_data;
@@ -56,10 +67,11 @@ struct buf {
 };
 
 void		bcleanup(void);
-int		bread(int, struct fs *, daddr_t, int, struct buf **);
-void		brelse(struct buf *);
+int		bread(struct vnode *, daddr_t, int, struct ucred *,
+    struct buf **);
+void		brelse(struct buf *, int);
 int		bwrite(struct buf *);
-struct buf *	getblk(int, struct fs *, daddr_t, int);
+struct buf *	getblk(struct vnode *, daddr_t, int, int, int, int);
 
 #define	bdwrite(bp)	bwrite(bp)
 #define	clrbuf(bp)	memset((bp)->b_data, 0, (u_int)(bp)->b_bcount)

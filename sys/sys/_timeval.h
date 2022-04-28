@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_timeval.h 158471 2006-05-12 05:04:46Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__TIMEVAL_H_

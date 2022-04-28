@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/fuse/fuse_internal.c 242727 2012-11-08 00:32:49Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -355,7 +355,7 @@ fuse_internal_readdir_processdata(struct uio *uio,
 		memcpy((char *)cookediov->base + sizeof(struct dirent) - 
 		       MAXNAMLEN - 1,
 		       (char *)buf + FUSE_NAME_OFFSET, fudge->namelen);
-		((char *)cookediov->base)[bytesavail] = '\0';
+		dirent_terminate(de);
 
 		err = uiomove(cookediov->base, cookediov->len, uio);
 		if (err) {

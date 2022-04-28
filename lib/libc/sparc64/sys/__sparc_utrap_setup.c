@@ -25,14 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/sys/__sparc_utrap_setup.c 124296 2004-01-09 16:52:09Z nectar $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
+#include <sys/param.h>
 
 #include <machine/utrap.h>
 #include <machine/sysarch.h>
-
-#include <stdlib.h>
 
 #include "__sparc_utrap_private.h"
 
@@ -45,14 +43,14 @@ static const struct sparc_utrap_args ua[] = {
 };
 
 static const struct sparc_utrap_install_args uia[] = {
-	{ sizeof (ua) / sizeof (*ua), ua }
+	{ nitems(ua), ua }
 };
 
-void __sparc_utrap_setup(void) __attribute__((constructor));
+void __sparc_utrap_setup(void);
 
 void
 __sparc_utrap_setup(void)
 {
 
-	sysarch(SPARC_UTRAP_INSTALL, &uia);
+	sysarch(SPARC_UTRAP_INSTALL, (void *)&uia);
 }

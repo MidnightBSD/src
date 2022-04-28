@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_cl_misc.c 242827 2012-11-09 15:29:52Z rdivacky $
+ *	$FreeBSD$
  */
 
 /*

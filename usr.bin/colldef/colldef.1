@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.bin/colldef/colldef.1 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD$
 .\"
-.Dd January 27, 1995
+.Dd April 18, 2016
 .Dt COLLDEF 1
 .Os
 .Sh NAME
@@ -265,7 +265,14 @@ No errors were found and the output was successfully created.
 .It Li !=0
 Errors were found.
 .El
+.Sh NOTES
+.Nm
+has been replaced by
+.Xr localedef 1
+in
+.Fx 11.0 .
 .Sh SEE ALSO
+.Xr localedef 1 ,
 .Xr mklocale 1 ,
 .Xr setlocale 3 ,
 .Xr strcoll 3 ,

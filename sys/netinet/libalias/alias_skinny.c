@@ -27,7 +27,7 @@
  *
  * Author: Joe Marcus Clarke <marcus@FreeBSD.org>
  *
- * $FreeBSD: release/10.0.0/sys/netinet/libalias/alias_skinny.c 240725 2012-09-20 03:29:43Z kevlo $
+ * $FreeBSD$
  */
 
 #ifdef _KERNEL
@@ -56,7 +56,7 @@
 static void
 AliasHandleSkinny(struct libalias *, struct ip *, struct alias_link *);
 
-static int 
+static int
 fingerprint(struct libalias *la, struct alias_data *ah)
 {
 
@@ -68,7 +68,7 @@ fingerprint(struct libalias *la, struct alias_data *ah)
 	return (-1);
 }
 
-static int 
+static int
 protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 {
 	
@@ -77,13 +77,13 @@ protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
 }
 
 struct proto_handler handlers[] = {
-	{ 
-	  .pri = 110, 
-	  .dir = IN|OUT, 
-	  .proto = TCP, 
-	  .fingerprint = &fingerprint, 
+	{
+	  .pri = 110,
+	  .dir = IN|OUT,
+	  .proto = TCP,
+	  .fingerprint = &fingerprint,
 	  .protohandler = &protohandler
-	}, 
+	},
 	{ EOH }
 };
 
@@ -108,7 +108,7 @@ mod_handler(module_t mod, int type, void *data)
 }
 
 #ifdef _KERNEL
-static 
+static
 #endif
 moduledata_t alias_mod = {
        "alias_skinny", mod_handler, NULL

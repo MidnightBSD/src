@@ -1,6 +1,9 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013  Chris Torek <torek @ torek net>
  * All rights reserved.
+ * Copyright (c) 2019 Joyent, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +28,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/virtio.c 255647 2013-09-17 18:42:13Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/uio.h>
 
+#include <machine/atomic.h>
+
 #include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <pthread_np.h>
 
 #include "bhyverun.h"
 #include "pci_emul.h"
@@ -48,7 +54,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/virtio.c 255647 2013-09-17 18:
  * front of virtio-based device softc" constraint, let's use
  * this to convert.
  */
-#define DEV_SOFTC(vs) ((void *)(vs))
+#define	DEV_SOFTC(vs) ((void *)(vs))
 
 /*
  * Link a virtio_softc to its constants, the device softc, and
@@ -89,16 +95,22 @@ vi_reset_dev(struct virtio_softc *vs)
 	struct vqueue_info *vq;
 	int i, nvq;
 
+	if (vs->vs_mtx)
+		assert(pthread_mutex_isowned_np(vs->vs_mtx));
+
 	nvq = vs->vs_vc->vc_nvq;
 	for (vq = vs->vs_queues, i = 0; i < nvq; vq++, i++) {
 		vq->vq_flags = 0;
 		vq->vq_last_avail = 0;
+		vq->vq_save_used = 0;
 		vq->vq_pfn = 0;
 		vq->vq_msix_idx = VIRTIO_MSI_NO_VECTOR;
 	}
 	vs->vs_negotiated_caps = 0;
 	vs->vs_curq = 0;
 	/* vs->vs_status = 0; -- redundant */
+	if (vs->vs_isr)
+		pci_lintr_deassert(vs->vs_pi);
 	vs->vs_isr = 0;
 	vs->vs_msix_cfg_idx = VIRTIO_MSI_NO_VECTOR;
 }
@@ -133,15 +145,21 @@ vi_intr_init(struct virtio_softc *vs, int barnum, int use_msix)
 
 	if (use_msix) {
 		vs->vs_flags |= VIRTIO_USE_MSIX;
+		VS_LOCK(vs);
 		vi_reset_dev(vs); /* set all vectors to NO_VECTOR */
+		VS_UNLOCK(vs);
 		nvec = vs->vs_vc->vc_nvq + 1;
 		if (pci_emul_add_msixcap(vs->vs_pi, nvec, barnum))
 			return (1);
-	} else {
+	} else
 		vs->vs_flags &= ~VIRTIO_USE_MSIX;
-		/* Only 1 MSI vector for bhyve */
-		pci_emul_add_msicap(vs->vs_pi, 1);
-	}
+
+	/* Only 1 MSI vector for bhyve */
+	pci_emul_add_msicap(vs->vs_pi, 1);
+
+	/* Legacy interrupts are mandatory for virtio devices */
+	pci_lintr_request(vs->vs_pi);
+
 	return (0);
 }
 
@@ -160,7 +178,7 @@ vi_vq_init(struct virtio_softc *vs, uint32_t pfn)
 
 	vq = &vs->vs_queues[vs->vs_curq];
 	vq->vq_pfn = pfn;
-	phys = pfn << VRING_PFN;
+	phys = (uint64_t)pfn << VRING_PFN;
 	size = vring_size(vq->vq_qsize);
 	base = paddr_guest2host(vs->vs_pi->pi_vmctx, phys, size);
 
@@ -181,6 +199,7 @@ vi_vq_init(struct virtio_softc *vs, uint32_t pfn)
 	/* Mark queue as allocated, and start at 0 when we use it. */
 	vq->vq_flags = VQ_ALLOC;
 	vq->vq_last_avail = 0;
+	vq->vq_save_used = 0;
 }
 
 /*
@@ -240,12 +259,12 @@ _vq_record(int i, volatile struct virtio_desc *vd, struct vmctx *ctx,
  * that vq_has_descs() does one).
  */
 int
-vq_getchain(struct vqueue_info *vq,
+vq_getchain(struct vqueue_info *vq, uint16_t *pidx,
 	    struct iovec *iov, int n_iov, uint16_t *flags)
 {
 	int i;
 	u_int ndesc, n_indir;
-	u_int idx, head, next;
+	u_int idx, next;
 	volatile struct virtio_desc *vdir, *vindir, *vp;
 	struct vmctx *ctx;
 	struct virtio_softc *vs;
@@ -288,8 +307,8 @@ vq_getchain(struct vqueue_info *vq,
 	 * index, but we just abort if the count gets excessive.
 	 */
 	ctx = vs->vs_pi->pi_vmctx;
-	head = vq->vq_avail->va_ring[idx & (vq->vq_qsize - 1)];
-	next = head;
+	*pidx = next = vq->vq_avail->va_ring[idx & (vq->vq_qsize - 1)];
+	vq->vq_last_avail++;
 	for (i = 0; i < VQ_MAX_DESCRIPTORS; next = vdir->vd_next) {
 		if (next >= vq->vq_qsize) {
 			fprintf(stderr,
@@ -302,7 +321,7 @@ vq_getchain(struct vqueue_info *vq,
 		if ((vdir->vd_flags & VRING_DESC_F_INDIRECT) == 0) {
 			_vq_record(i, vdir, ctx, iov, n_iov, flags);
 			i++;
-		} else if ((vs->vs_negotiated_caps &
+		} else if ((vs->vs_vc->vc_hv_caps &
 		    VIRTIO_RING_F_INDIRECT_DESC) == 0) {
 			fprintf(stderr,
 			    "%s: descriptor has forbidden INDIRECT flag, "
@@ -363,16 +382,29 @@ loopy:
 }
 
 /*
- * Return the currently-first request chain to the guest, setting
- * its I/O length to the provided value.
+ * Return the currently-first request chain back to the available queue.
  *
  * (This chain is the one you handled when you called vq_getchain()
  * and used its positive return value.)
  */
 void
-vq_relchain(struct vqueue_info *vq, uint32_t iolen)
+vq_retchain(struct vqueue_info *vq)
 {
-	uint16_t head, uidx, mask;
+
+	vq->vq_last_avail--;
+}
+
+/*
+ * Return specified request chain to the guest, setting its I/O length
+ * to the provided value.
+ *
+ * (This chain is the one you handled when you called vq_getchain()
+ * and used its positive return value.)
+ */
+void
+vq_relchain(struct vqueue_info *vq, uint16_t idx, uint32_t iolen)
+{
+	uint16_t uidx, mask;
 	volatile struct vring_used *vuh;
 	volatile struct virtio_used *vue;
 
@@ -388,12 +420,18 @@ vq_relchain(struct vqueue_info *vq, uint32_t iolen)
 	 */
 	mask = vq->vq_qsize - 1;
 	vuh = vq->vq_used;
-	head = vq->vq_avail->va_ring[vq->vq_last_avail++ & mask];
 
 	uidx = vuh->vu_idx;
 	vue = &vuh->vu_ring[uidx++ & mask];
-	vue->vu_idx = head; /* ie, vue->id = head */
+	vue->vu_idx = idx;
 	vue->vu_tlen = iolen;
+
+	/*
+	 * Ensure the used descriptor is visible before updating the index.
+	 * This is necessary on ISAs with memory ordering less strict than x86
+	 * (and even on x86 to act as a compiler barrier).
+	 */
+	atomic_thread_fence_rel();
 	vuh->vu_idx = uidx;
 }
 
@@ -429,12 +467,19 @@ vq_endchains(struct vqueue_info *vq, int used_all_avail)
 	 * entire avail was processed, we need to interrupt always.
 	 */
 	vs = vq->vq_vs;
-	new_idx = vq->vq_used->vu_idx;
 	old_idx = vq->vq_save_used;
+	vq->vq_save_used = new_idx = vq->vq_used->vu_idx;
+
+	/*
+	 * Use full memory barrier between vu_idx store from preceding
+	 * vq_relchain() call and the loads from VQ_USED_EVENT_IDX() or
+	 * va_flags below.
+	 */
+	atomic_thread_fence_seq_cst();
 	if (used_all_avail &&
 	    (vs->vs_negotiated_caps & VIRTIO_F_NOTIFY_ON_EMPTY))
 		intr = 1;
-	else if (vs->vs_flags & VIRTIO_EVENT_IDX) {
+	else if (vs->vs_negotiated_caps & VIRTIO_RING_F_EVENT_IDX) {
 		event_idx = VQ_USED_EVENT_IDX(vq);
 		/*
 		 * This calculation is per docs and the kernel
@@ -591,6 +636,8 @@ bad:
 	case VTCFG_R_ISR:
 		value = vs->vs_isr;
 		vs->vs_isr = 0;		/* a read clears this flag */
+		if (value)
+			pci_lintr_deassert(pi);
 		break;
 	case VTCFG_R_CFGVEC:
 		value = vs->vs_msix_cfg_idx;
@@ -689,6 +736,9 @@ bad:
 	switch (offset) {
 	case VTCFG_R_GUESTCAP:
 		vs->vs_negotiated_caps = value & vc->vc_hv_caps;
+		if (vc->vc_apply_features)
+			(*vc->vc_apply_features)(DEV_SOFTC(vs),
+			    vs->vs_negotiated_caps);
 		break;
 	case VTCFG_R_PFN:
 		if (vs->vs_curq >= vc->vc_nvq)

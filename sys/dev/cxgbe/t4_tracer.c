@@ -26,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgbe/t4_tracer.c 255011 2013-08-28 23:15:05Z np $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/lock.h>
 #include <sys/types.h>
 #include <sys/mbuf.h>
@@ -123,7 +124,8 @@ t4_cloner_match(struct if_clone *ifc, const char *name)
 {
 
 	if (strncmp(name, "t4nex", 5) != 0 &&
-	    strncmp(name, "t5nex", 5) != 0)
+	    strncmp(name, "t5nex", 5) != 0 &&
+	    strncmp(name, "t6nex", 5) != 0)
 		return (0);
 	if (name[5] < '0' || name[5] > '9')
 		return (0);
@@ -192,7 +194,6 @@ t4_cloner_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	ifmedia_add(&sc->media, IFM_ETHER | IFM_FDX | IFM_NONE, 0, NULL);
 	ifmedia_set(&sc->media, IFM_ETHER | IFM_FDX | IFM_NONE);
 	ether_ifattach(ifp, lla);
-	if_up(ifp);
 
 	mtx_lock(&sc->ifp_lock);
 	ifp->if_softc = sc;
@@ -471,6 +472,7 @@ tracer_ioctl(struct ifnet *ifp, unsigned long cmd, caddr_t data)
 		break;
 	case SIOCSIFMEDIA:
 	case SIOCGIFMEDIA:
+	case SIOCGIFXMEDIA:
 		sx_xlock(&t4_trace_lock);
 		sc = ifp->if_softc;
 		if (sc == NULL)

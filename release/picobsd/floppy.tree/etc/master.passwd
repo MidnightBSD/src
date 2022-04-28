@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/floppy.tree/etc/master.passwd 250100 2013-04-30 13:20:11Z luigi $
+# $FreeBSD$
 root:$1$xOOaGnKU$U9QdsCI40XXcCUMBN.7Az.:0:0::0:0:Charlie &:/root:/bin/sh
 toor:*:0:0::0:0:Bourne-again Superuser:/root:
 daemon:*:1:1::0:0:Owner of many system processes:/root:/nonexistent

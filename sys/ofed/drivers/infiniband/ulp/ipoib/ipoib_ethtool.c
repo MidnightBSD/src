@@ -30,8 +30,10 @@
  * SOFTWARE.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
 #include <linux/kernel.h>
-#include <linux/ethtool.h>
 #include <linux/netdevice.h>
 
 #include "ipoib.h"

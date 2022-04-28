@@ -25,7 +25,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_fb.c 239278 2012-08-15 05:37:10Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,13 +49,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/lpc/lpc_fb.c 239278 2012-08-15 05:37:
 #include <sys/kdb.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/resource.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
-#include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
@@ -139,6 +135,10 @@ static struct cdevsw lpc_fb_cdevsw = {
 static int
 lpc_fb_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "lpc,fb"))
 		return (ENXIO);
 
@@ -279,10 +279,9 @@ lpc_fb_intr(void *arg)
 static int
 lpc_fb_fdt_read(phandle_t node, const char *name, uint32_t *ret)
 {
-	if (OF_getprop(node, name, ret, sizeof(uint32_t)) <= 0)
+	if (OF_getencprop(node, name, ret, sizeof(uint32_t)) <= 0)
 		return (ENOENT);
 
-	*ret = fdt32_to_cpu(*ret);
 	return (0);
 }
 

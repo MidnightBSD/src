@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_controller.c 231296 2012-02-09 17:50:24Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -1077,7 +1077,7 @@ void scic_sds_controller_afe_initialization(
       scu_afe_register_write(this_controller, afe_bias_control, 0x00005F00);
    else if (this_controller->pci_revision == SCIC_SDS_PCI_REVISION_C1)
       scu_afe_register_write(this_controller, afe_bias_control, 0x00005500);
-   // For C0 the AFE BIAS Controll is unchanged
+   // For C0 the AFE BIAS Control is unchanged
 
    scic_cb_stall_execution(AFE_REGISTER_WRITE_DELAY);
 
@@ -2429,7 +2429,7 @@ void scic_sds_controller_process_completions(
    SCIC_LOG_TRACE((
       sci_base_object_get_logger(this_controller),
       SCIC_LOG_OBJECT_COMPLETION_QUEUE,
-      "completion queue begining get : 0x%08x\n",
+      "completion queue beginning get : 0x%08x\n",
       this_controller->completion_queue_get
    ));
 
@@ -2544,7 +2544,7 @@ void scic_sds_controller_transitioned_process_completions(
    SCIC_LOG_TRACE((
       sci_base_object_get_logger(this_controller),
       SCIC_LOG_OBJECT_COMPLETION_QUEUE,
-      "completion queue begining get : 0x%08x\n",
+      "completion queue beginning get : 0x%08x\n",
       this_controller->completion_queue_get
    ));
 

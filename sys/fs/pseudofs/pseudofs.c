@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/pseudofs/pseudofs.c 242833 2012-11-09 18:02:25Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -52,9 +52,11 @@ static MALLOC_DEFINE(M_PFSNODES, "pfs_nodes", "pseudofs nodes");
 SYSCTL_NODE(_vfs, OID_AUTO, pfs, CTLFLAG_RW, 0,
     "pseudofs");
 
+#ifdef PSEUDOFS_TRACE
 int pfs_trace;
 SYSCTL_INT(_vfs_pfs, OID_AUTO, trace, CTLFLAG_RW, &pfs_trace, 0,
     "enable tracing of pseudofs vnode operations");
+#endif
 
 #if PFS_FSNAMELEN != MFSNAMELEN
 #error "PFS_FSNAMELEN is not equal to MFSNAMELEN"
@@ -381,11 +383,9 @@ pfs_init(struct pfs_info *pi, struct vfsconf *vfc)
 	struct pfs_node *root;
 	int error;
 
-	mtx_assert(&Giant, MA_OWNED);
-
 	pfs_fileno_init(pi);
 
-	/* set up the root diretory */
+	/* set up the root directory */
 	root = pfs_alloc_node(pi, "/", pfstype_root);
 	pi->pi_root = root;
 	pfs_fileno_alloc(root);
@@ -411,8 +411,6 @@ int
 pfs_uninit(struct pfs_info *pi, struct vfsconf *vfc)
 {
 	int error;
-
-	mtx_assert(&Giant, MA_OWNED);
 
 	pfs_destroy(pi->pi_root);
 	pi->pi_root = NULL;

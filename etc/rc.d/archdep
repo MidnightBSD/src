@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/archdep 193119 2009-05-30 21:51:38Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: archdep

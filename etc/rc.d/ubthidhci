@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/ubthidhci 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: ubthidhci

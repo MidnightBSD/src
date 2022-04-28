@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_lockmgr.h 200447 2009-12-12 21:31:07Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__LOCKMGR_H_

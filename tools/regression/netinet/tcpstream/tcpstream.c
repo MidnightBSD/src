@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/netinet/tcpstream/tcpstream.c 136843 2004-10-23 22:11:35Z rwatson $
+ * $FreeBSD$
  */
 
 /*

@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/tools/net80211/wlaninject/README 228975 2011-12-30 00:04:11Z uqs $
+$FreeBSD$
 
 This tool generates raw 802.11 frames.  The resulting frame will
 depend on the capabilities of the hardware.  Some hardware mangles

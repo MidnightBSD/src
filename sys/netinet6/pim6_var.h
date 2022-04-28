@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: pim6_var.h,v 1.8 2000/06/06 08:07:43 jinmei Exp $
- * $FreeBSD: release/10.0.0/sys/netinet6/pim6_var.h 254925 2013-08-26 18:16:05Z jhb $
+ * $FreeBSD$
  */
 
 /*
@@ -56,9 +56,8 @@ int pim6_input(struct mbuf **, int*, int);
 #endif /* KERNEL */
 
 /*
- * Names for PIM sysctl objects
+ * Identifiers for PIM sysctl nodes
  */
 #define PIM6CTL_STATS		1	/* statistics (read-only) */
-#define PIM6CTL_MAXID		2
 
 #endif /* _NETINET6_PIM6_VAR_H_ */

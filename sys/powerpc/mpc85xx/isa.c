@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mpc85xx/isa.c 221526 2011-05-06 13:48:53Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -52,7 +52,7 @@ isa_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	struct resource_list *rl = &idev->id_resources;
 	int isdefault, passthrough, rids;
 
-	isdefault = (start == 0UL && end == ~0UL) ? 1 : 0;
+	isdefault = RMAN_IS_DEFAULT_RANGE(start, end) ? 1 : 0;
 	passthrough = (device_get_parent(child) != bus) ? 1 : 0;
 
 	if (!passthrough && !isdefault &&

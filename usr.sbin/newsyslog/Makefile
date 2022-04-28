@@ -1,7 +1,13 @@
-# $FreeBSD: release/10.0.0/usr.sbin/newsyslog/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	newsyslog
 MAN=	newsyslog.8 newsyslog.conf.5
 SRCS=	newsyslog.c ptimes.c
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

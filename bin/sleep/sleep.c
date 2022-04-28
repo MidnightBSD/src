@@ -39,8 +39,9 @@ static char sccsid[] = "@(#)sleep.c	8.3 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/sleep/sleep.c 251433 2013-06-05 20:15:18Z jilles $");
+__FBSDID("$FreeBSD$");
 
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -68,6 +69,9 @@ main(int argc, char *argv[])
 	double d;
 	time_t original;
 	char buf[2];
+
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
 
 	if (argc != 2)
 		usage();

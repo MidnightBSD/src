@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/systat/extern.h 253360 2013-07-15 12:15:14Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -163,3 +163,15 @@ void	 showtcp(void);
 void	 status(void);
 void	 suspend(int);
 char	*sysctl_dynread(const char *, size_t *);
+
+#define SYSTAT_CMD(name)	\
+	void	 close ## name(WINDOW *); \
+	void	 fetch ## name(void); \
+	int	 init ## name(void); \
+	void	 label ## name(void); \
+	WINDOW	*open ## name(void); \
+	void	 reset ## name(void); \
+	void	 show ## name(void)
+
+SYSTAT_CMD( zarc );
+SYSTAT_CMD ( sctp );

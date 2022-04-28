@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive_fe/err.h 238856 2012-07-28 06:38:44Z mm $
+ * $FreeBSD$
  */
 
 #ifndef LAFE_ERR_H
@@ -37,15 +37,21 @@
 
 #if defined(__GNUC__) && (__GNUC__ > 2 || \
 			  (__GNUC__ == 2 && __GNUC_MINOR__ >= 7))
-#define	__LA_PRINTFLIKE(f,a)	__attribute__((__format__(__printf__, f, a)))
+# ifdef __MINGW_PRINTF_FORMAT
+#  define __LA_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
+# else
+#  define __LA_PRINTF_FORMAT __printf__
+# endif
+# define __LA_PRINTFLIKE(f,a)	__attribute__((__format__(__LA_PRINTF_FORMAT, f, a)))
 #else
-#define	__LA_PRINTFLIKE(f,a)
+# define __LA_PRINTFLIKE(f,a)
 #endif
-
-extern const char *lafe_progname;
 
 void	lafe_warnc(int code, const char *fmt, ...) __LA_PRINTFLIKE(2, 3);
 void	lafe_errc(int eval, int code, const char *fmt, ...) __LA_DEAD
 		  __LA_PRINTFLIKE(3, 4);
+
+const char *	lafe_getprogname(void);
+void		lafe_setprogname(const char *name, const char *defaultname);
 
 #endif

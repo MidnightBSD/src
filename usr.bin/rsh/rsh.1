@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)rsh.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/rsh/rsh.1 236892 2012-06-11 16:18:39Z des $
+.\" $FreeBSD$
 .\"
-.Dd October 16, 2002
+.Dd July 3, 2017
 .Dt RSH 1
 .Os
 .Sh NAME
@@ -36,11 +36,20 @@
 .Nd remote shell
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46dn
+.Op Fl 46dnN
 .Op Fl l Ar username
 .Op Fl t Ar timeout
 .Ar host
 .Op command
+.Sh DEPRECATION NOTICE
+.Nm
+is deprecated and will be removed from future versions of the
+.Fx
+base system.
+If
+.Nm
+is still required, it can be installed from ports or packages
+(net/bsdrcmds).
 .Sh DESCRIPTION
 The
 .Nm
@@ -78,12 +87,22 @@ By default, the remote username is the same as the local username.
 Authorization is determined
 as in
 .Xr rlogin 1 .
+.It Fl N
+Opposite to
+.Fl n
+option: do not send the "end of file" (EOF) indication for input stream
+to the remote host. This option makes the
+.Nm
+utility compatible with protocol implementations confused by receiving
+EOF, like some Cisco IOS versions. Disables
+.Fl n .
 .It Fl n
 Redirect input from the special device
 .Pa /dev/null
 (see the
 .Sx BUGS
-section of this manual page).
+section of this manual page). Disables
+.Fl N .
 .It Fl t Ar timeout
 Allow a
 .Ar timeout

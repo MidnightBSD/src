@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nxge/include/xgehal-types.h 173139 2007-10-29 14:19:32Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef XGE_HAL_TYPES_H

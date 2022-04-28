@@ -32,7 +32,7 @@
 #include "opt_mca.h"
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/x86/legacy.c 233707 2012-03-30 19:10:14Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This code implements a system driver for legacy systems that do not

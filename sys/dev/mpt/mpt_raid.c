@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mpt/mpt_raid.c 251187 2013-05-31 17:27:44Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_raid.h>
@@ -595,7 +595,7 @@ mpt_issue_raid_req(struct mpt_softc *mpt, struct mpt_raid_volume *vol,
 	rap->Function = MPI_FUNCTION_RAID_ACTION;
 	rap->VolumeID = vol->config_page->VolumeID;
 	rap->VolumeBus = vol->config_page->VolumeBus;
-	if (disk != 0)
+	if (disk != NULL)
 		rap->PhysDiskNum = disk->config_page.PhysDiskNum;
 	else
 		rap->PhysDiskNum = 0xFF;
@@ -636,7 +636,7 @@ mpt_spawn_raid_thread(struct mpt_softc *mpt)
 	MPT_LOCK(mpt);
 	xpt_freeze_simq(mpt->phydisk_sim, 1);
 	MPT_UNLOCK(mpt);
-	error = mpt_kthread_create(mpt_raid_thread, mpt,
+	error = kproc_create(mpt_raid_thread, mpt,
 	    &mpt->raid_thread, /*flags*/0, /*altstack*/0,
 	    "mpt_raid%d", mpt->unit);
 	if (error != 0) {
@@ -719,7 +719,7 @@ mpt_raid_thread(void *arg)
 	mpt->raid_thread = NULL;
 	wakeup(&mpt->raid_thread);
 	MPT_UNLOCK(mpt);
-	mpt_kthread_exit(0);
+	kproc_exit(0);
 }
 
 #if 0

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)read.2	8.4 (Berkeley) 2/26/94
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/read.2 255486 2013-09-12 00:53:38Z bdrewery $
+.\" $FreeBSD$
 .\"
-.Dd September 11, 2013
+.Dd July 6, 2019
 .Dt READ 2
 .Os
 .Sh NAME
@@ -40,7 +40,6 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
-.In sys/types.h
 .In unistd.h
 .Ft ssize_t
 .Fn read "int fd" "void *buf" "size_t nbytes"
@@ -129,6 +128,25 @@ return the number of bytes actually read and placed in the buffer.
 The system guarantees to read the number of bytes requested if
 the descriptor references a normal file that has that many bytes left
 before the end-of-file, but in no other case.
+.Pp
+In accordance with
+.St -p1003.1-2004 ,
+both
+.Xr read 2
+and
+.Xr write 2
+syscalls are atomic with respect to each other in the effects on file
+content, when they operate on regular files.
+If two threads each call one of the
+.Xr read 2
+or
+.Xr write 2 ,
+syscalls, each call will see either all of the changes of the other call,
+or none of them.
+The
+.Fx
+kernel implements this guarantee by locking the file ranges affected by
+the calls.
 .Sh RETURN VALUES
 If successful, the
 number of bytes actually read is returned.

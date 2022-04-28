@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/bpf.9 235744 2012-05-21 22:13:48Z melifaro $
+.\" $FreeBSD$
 .\"
 .Dd May 11, 2012
 .Dt BPF 9
@@ -256,8 +256,8 @@ Pointer to
 .Pq Vt "struct ifnet *"
 is passed as the first argument, interface
 .Fa dlt
-follows. Last argument indicates listener is attached (1) or
-detached (0).
+follows.
+Last argument indicates listener is attached (1) or detached (0).
 Note that handler is invoked with
 .Nm
 global lock held, which implies restriction on sleeping and calling

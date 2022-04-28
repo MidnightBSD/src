@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/modules/ex/Makefile 129740 2004-05-26 00:53:10Z imp $
+# $FreeBSD$
 #
 
-.PATH:	${.CURDIR}/../../dev/ex
+.PATH:	${SRCTOP}/sys/dev/ex
 
 KMOD=	if_ex
 SRCS=	if_ex.c \

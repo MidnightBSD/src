@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/net/if_mosreg.h 232257 2012-02-28 15:45:42Z kevlo $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2010, 2011 Rick van der Zwet <info@rickvanderzwet.nl>
  *

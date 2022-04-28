@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/nss.h 124289 2004-01-09 13:43:49Z nectar $
+ * $FreeBSD$
  *
  * Compatibility header for the GNU C Library-style nsswitch interface.
  */

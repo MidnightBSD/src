@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/gen/fpsetround.c 103323 2002-09-14 18:06:21Z tmm $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/fsr.h>
 #include <ieeefp.h>

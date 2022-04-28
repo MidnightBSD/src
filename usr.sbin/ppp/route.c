@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/route.c 191316 2009-04-20 14:38:48Z bz $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -158,25 +160,15 @@ static struct bits {
   { RTF_MODIFIED, 'M' },
   { RTF_DONE, 'd' },
   { RTF_XRESOLVE, 'X' },
-#ifdef RTF_CLONING
-  { RTF_CLONING, 'C' },
-#endif
   { RTF_STATIC, 'S' },
   { RTF_PROTO1, '1' },
   { RTF_PROTO2, '2' },
   { RTF_BLACKHOLE, 'B' },
-
 #ifdef RTF_LLINFO
   { RTF_LLINFO, 'L' },
 #endif
 #ifdef RTF_CLONING  
   { RTF_CLONING, 'C' },
-#endif
-#ifdef RTF_WASCLONED
-  { RTF_WASCLONED, 'W' },
-#endif
-#ifdef RTF_PRCLONING
-  { RTF_PRCLONING, 'c' },
 #endif
 #ifdef RTF_PROTO3
   { RTF_PROTO3, '3' },
@@ -186,10 +178,6 @@ static struct bits {
 #endif
   { 0, '\0' }
 };
-
-#ifndef RTF_WASCLONED
-#define RTF_WASCLONED (0)
-#endif
 
 static void
 p_flags(struct prompt *prompt, u_int32_t f, unsigned max)
@@ -434,7 +422,7 @@ route_IfDelete(struct bundle *bundle, int all)
      * route X was cloned from route Y (and is no longer there 'cos it
      * may have gone with route Y).
      */
-    if (RTF_WASCLONED == 0 && pass == 0)
+    if (pass == 0)
       /* So we can't tell ! */
       continue;
     for (cp = sp; cp < ep; cp += rtm->rtm_msglen) {
@@ -449,7 +437,7 @@ route_IfDelete(struct bundle *bundle, int all)
            ) &&
           (all || (rtm->rtm_flags & RTF_GATEWAY))) {
         if (log_IsKept(LogDEBUG)) {
-          char gwstr[41];
+          char gwstr[NCP_ASCIIBUFFERSIZE];
           struct ncpaddr gw;
           ncprange_setsa(&range, sa[RTAX_DST], sa[RTAX_NETMASK]);
           ncpaddr_setsa(&gw, sa[RTAX_GATEWAY]);
@@ -461,8 +449,7 @@ route_IfDelete(struct bundle *bundle, int all)
             sa[RTAX_GATEWAY]->sa_family == AF_INET6 ||
 #endif
             sa[RTAX_GATEWAY]->sa_family == AF_LINK) {
-          if ((pass == 0 && (rtm->rtm_flags & RTF_WASCLONED)) ||
-              (pass == 1 && !(rtm->rtm_flags & RTF_WASCLONED))) {
+          if (pass == 1) {
             ncprange_setsa(&range, sa[RTAX_DST], sa[RTAX_NETMASK]);
             rt_Set(bundle, RTM_DELETE, &range, NULL, 0, 0);
           } else
@@ -816,7 +803,8 @@ rt_Set(struct bundle *bundle, int cmd, const struct ncprange *dst,
   if (!ncprange_ishost(dst)) {
     cp += memcpy_roundup(cp, &samask, samask.ss_len);
     rtmes.m_rtm.rtm_addrs |= RTA_NETMASK;
-  }
+  } else
+    rtmes.m_rtm.rtm_flags |= RTF_HOST;
 
   nb = cp - (char *)&rtmes;
   rtmes.m_rtm.rtm_msglen = nb;
@@ -855,7 +843,7 @@ failed:
   }
 
   if (log_IsKept(LogDEBUG)) {
-    char gwstr[40];
+    char gwstr[NCP_ASCIIBUFFERSIZE];
 
     if (gw)
       snprintf(gwstr, sizeof gwstr, "%s", ncpaddr_ntoa(gw));
@@ -920,7 +908,8 @@ rt_Update(struct bundle *bundle, const struct sockaddr *dst,
   if (mask) {
     rtmes.m_rtm.rtm_addrs |= RTA_NETMASK;
     p += memcpy_roundup(p, mask, mask->sa_len);
-  }
+  } else
+    rtmes.m_rtm.rtm_flags |= RTF_HOST;
 
   if (ifa && ifp && ifp->sa_family == AF_LINK) {
     rtmes.m_rtm.rtm_addrs |= RTA_IFP;

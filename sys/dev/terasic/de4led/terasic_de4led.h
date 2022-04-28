@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/terasic/de4led/terasic_de4led.h 245380 2013-01-13 16:57:11Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_TERASIC_DE4LED_H_

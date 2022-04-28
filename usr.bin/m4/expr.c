@@ -15,7 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/m4/expr.c 241777 2012-10-20 10:33:15Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <stdint.h>
 #include <stdio.h>

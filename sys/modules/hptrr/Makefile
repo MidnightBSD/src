@@ -1,7 +1,7 @@
 # $Id: Makefile.def,v 1.18 2007/03/22 11:20:15 gmm Exp $
-# $FreeBSD: release/10.0.0/sys/modules/hptrr/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD$
 
-HPTRR=  ${.CURDIR}/../../dev/hptrr
+HPTRR=  ${SRCTOP}/sys/dev/hptrr
 .PATH: ${HPTRR}
 KMOD = hptrr
 SRCS = opt_scsi.h opt_cam.h bus_if.h device_if.h pci_if.h os_bsd.h

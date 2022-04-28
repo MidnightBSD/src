@@ -1,6 +1,8 @@
 %{
-/*
+/*-
  * lexer.l
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -27,7 +29,7 @@
  * SUCH DAMAGE.
  *
  * $Id: lexer.l,v 1.1 2002/11/24 20:22:39 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hcsecd/lexer.l 215676 2010-11-22 14:16:22Z brucec $
+ * $FreeBSD$
  */
 
 #include <string.h>

@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/sati.c 240518 2012-09-14 21:28:56Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file

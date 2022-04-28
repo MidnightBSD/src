@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/athstats/main.c 217680 2011-01-21 02:53:32Z adrian $
+ * $FreeBSD$
  */
 
 /*
@@ -41,12 +41,14 @@
  * print a list of all possible statistics for use with the -o option.
  */
 
+#include <sys/param.h>
+
+#include <err.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
 #include <string.h>
-#include <err.h>
+#include <unistd.h>
 
 #include "athstats.h"
 
@@ -68,13 +70,11 @@ static struct {
 static const char *
 getfmt(const char *tag)
 {
-#define	N(a)	(sizeof(a)/sizeof(a[0]))
 	int i;
-	for (i = 0; i < N(tags); i++)
+	for (i = 0; i < nitems(tags); i++)
 		if (strcasecmp(tags[i].tag, tag) == 0)
 			return tags[i].fmt;
 	return tag;
-#undef N
 }
 
 static int signalled;
@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 
 	ifname = getenv("ATH");
 	if (ifname == NULL)
-		ifname = "ath0";
+		ifname = ATH_DEFAULT;
 	wf = athstats_new(ifname, getfmt("default"));
 	while ((c = getopt(argc, argv, "bi:lo:z")) != -1) {
 		switch (c) {

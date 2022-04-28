@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sys/dev/fatm/if_fatmvar.h 199559 2009-11-19 22:06:40Z jhb $
+ * $FreeBSD$
  *
  * Fore PCA200E driver definitions.
  */
@@ -118,7 +118,7 @@ typedef void (*completion_cb)(struct fatm_softc *, struct cmdqueue *);
 struct cmdqueue {		/* command queue element */
 	struct fqelem	q;
 	completion_cb	cb;	/* call on command completion */
-	int		error;	/* set if error occured */
+	int		error;	/* set if error occurred */
 };
 
 /*

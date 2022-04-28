@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/netoptions 225521 2011-09-13 00:06:11Z hrs $
+# $FreeBSD$
 #
 
 # PROVIDE: netoptions
@@ -12,6 +12,7 @@
 . /etc/network.subr
 
 name="netoptions"
+desc="Network options setup"
 start_cmd="netoptions_start"
 stop_cmd=:
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/netrate/netreceive/netreceive.c 244672 2012-12-25 07:29:25Z luigi $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_NS_CACHING 172803 2007-10-19 14:01:25Z ru $
+.\" $FreeBSD$
 Set to disable name caching in the
 .Pa nsswitch
 subsystem.

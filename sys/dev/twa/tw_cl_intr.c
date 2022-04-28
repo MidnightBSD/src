@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_cl_intr.c 212008 2010-08-30 19:15:04Z delphij $
+ *	$FreeBSD$
  */
 
 /*

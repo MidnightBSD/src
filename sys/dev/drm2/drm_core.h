@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_core.h 254792 2013-08-24 15:47:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define CORE_AUTHOR		"Gareth Hughes, Leif Delgass, José Fonseca, Jon Smirl"
 

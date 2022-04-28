@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/iscsi_initiator/iscsi.h 211095 2010-08-09 12:36:36Z des $
+ * $FreeBSD$
  */
 /*
  | $Id: iscsi.h 743 2009-08-08 10:54:53Z danny $
@@ -356,7 +356,7 @@ typedef struct text_req {
 
 typedef struct logout_req {
      char	cmd;	// 0x06
-     char	reason;	// 0 - close session
+     u_char	reason;	// 0 - close session
      			// 1 - close connection
      			// 2 - remove the connection for recovery
      char	_2[2];

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: release/10.0.0/sys/compat/svr4/svr4_util.h 160249 2006-07-10 21:38:17Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef	_SVR4_UTIL_H_
@@ -35,7 +35,6 @@
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
-#include <machine/vmparam.h>
 #include <sys/exec.h>
 #include <sys/sysent.h>
 #include <sys/cdefs.h>

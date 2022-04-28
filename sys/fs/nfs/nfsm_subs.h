@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/nfs/nfsm_subs.h 249592 2013-04-17 21:00:22Z ken $
+ * $FreeBSD$
  */
 
 #ifndef _NFS_NFSM_SUBS_H_
@@ -46,16 +46,6 @@
 /*
  * First define what the actual subs. return
  */
-#define	M_HASCL(m)	((m)->m_flags & M_EXT)
-#define	NFSMINOFF(m) 							\
-		if (M_HASCL(m)) 					\
-			(m)->m_data = (m)->m_ext.ext_buf; 		\
-		else if ((m)->m_flags & M_PKTHDR) 			\
-			(m)->m_data = (m)->m_pktdat; 			\
-				else 					\
-			(m)->m_data = (m)->m_dat
-#define	NFSMSIZ(m)	((M_HASCL(m))?MCLBYTES: 			\
-				(((m)->m_flags & M_PKTHDR)?MHLEN:MLEN))
 #define	NFSM_DATAP(m, s)	(m)->m_data += (s)
 
 /*

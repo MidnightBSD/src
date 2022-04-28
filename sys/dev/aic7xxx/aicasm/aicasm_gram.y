@@ -40,7 +40,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_gram.y#29 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_gram.y 243906 2012-12-05 20:28:44Z bapt $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -1286,8 +1286,8 @@ code:
 ;
 
 	/*
-	 * This grammer differs from the one in the aic7xxx
-	 * reference manual since the grammer listed there is
+	 * This grammar differs from the one in the aic7xxx
+	 * reference manual since the grammar listed there is
 	 * ambiguous and causes a shift/reduce conflict.
 	 * It also seems more logical as the "immediate"
 	 * argument is listed as the second arg like the
@@ -1753,7 +1753,7 @@ format_3_instr(int opcode, symbol_ref_t *src,
 	instr = seq_alloc();
 	f3_instr = &instr->format.format3;
 	if (address->symbol == NULL) {
-		/* 'dot' referrence.  Use the current instruction pointer */
+		/* 'dot' reference.  Use the current instruction pointer */
 		addr = instruction_ptr + address->offset;
 	} else if (address->symbol->type == UNINITIALIZED) {
 		/* forward reference */

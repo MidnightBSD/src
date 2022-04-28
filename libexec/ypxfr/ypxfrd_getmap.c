@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfrd_getmap.c 121538 2003-10-26 04:32:53Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfrd_getmap.c 121538 2003-10-
 #include <sys/types.h>
 #include "ypxfr_extern.h"
 
-int fp = 0;
+static int fp = 0;
 
 static bool_t
 xdr_my_xfr(register XDR *xdrs, xfr *objp)

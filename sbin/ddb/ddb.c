@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/ddb/ddb.c 241844 2012-10-22 03:00:37Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdio.h>

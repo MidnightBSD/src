@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/platform_ps3.c 247454 2013-02-28 10:46:54Z davide $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,10 +44,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/platform_ps3.c 247454 2013-02
 #include <machine/hid.h>
 #include <machine/platform.h>
 #include <machine/platformvar.h>
-#include <machine/pmap.h>
 #include <machine/smp.h>
 #include <machine/spr.h>
 #include <machine/vmparam.h>
+
+#include <dev/ofw/openfirm.h>
 
 #include "platform_if.h"
 #include "ps3-hvcall.h"
@@ -58,8 +59,8 @@ extern void *ap_pcpu;
 
 static int ps3_probe(platform_t);
 static int ps3_attach(platform_t);
-static void ps3_mem_regions(platform_t, struct mem_region **phys, int *physsz,
-    struct mem_region **avail, int *availsz);
+static void ps3_mem_regions(platform_t, struct mem_region *phys, int *physsz,
+    struct mem_region *avail, int *availsz);
 static vm_offset_t ps3_real_maxaddr(platform_t);
 static u_long ps3_timebase_freq(platform_t, struct cpuref *cpuref);
 #ifdef SMP
@@ -103,15 +104,35 @@ PLATFORM_DEF(ps3_platform);
 static int
 ps3_probe(platform_t plat)
 {
+	phandle_t root;
+	char compatible[64];
 
-	return (BUS_PROBE_NOWILDCARD);
+	root = OF_finddevice("/");
+	if (OF_getprop(root, "compatible", compatible, sizeof(compatible)) <= 0)
+                return (BUS_PROBE_NOWILDCARD);
+	
+	if (strncmp(compatible, "sony,ps3", sizeof(compatible)) != 0)
+		return (BUS_PROBE_NOWILDCARD);
+
+	return (BUS_PROBE_SPECIFIC);
 }
-
-#define MEM_REGIONS	2
-static struct mem_region avail_regions[MEM_REGIONS];
 
 static int
 ps3_attach(platform_t plat)
+{
+
+	pmap_mmu_install("mmu_ps3", BUS_PROBE_SPECIFIC);
+	cpu_idle_hook = ps3_cpu_idle;
+
+	/* Set a breakpoint to make NULL an invalid address */
+	lv1_set_dabr(0x7 /* read and write, MMU on */, 2 /* kernel accesses */);
+
+	return (0);
+}
+
+void
+ps3_mem_regions(platform_t plat, struct mem_region *phys, int *physsz,
+    struct mem_region *avail_regions, int *availsz)
 {
 	uint64_t lpar_id, junk, ppe_id;
 
@@ -134,25 +155,16 @@ ps3_attach(platform_t plat)
 	avail_regions[1].mr_size -= avail_regions[0].mr_size;
 	avail_regions[1].mr_size -= avail_regions[1].mr_size % (16*1024*1024);
 
+	/* Allocate extended memory region */
 	lv1_allocate_memory(avail_regions[1].mr_size, 24 /* 16 MB pages */,
 	    0, 0x04 /* any address */, &avail_regions[1].mr_start, &junk);
 
-	pmap_mmu_install("mmu_ps3", BUS_PROBE_SPECIFIC);
-	cpu_idle_hook = ps3_cpu_idle;
+	*availsz = 2;
 
-	/* Set a breakpoint to make NULL an invalid address */
-	lv1_set_dabr(0x7 /* read and write, MMU on */, 2 /* kernel accesses */);
-
-	return (0);
-}
-
-void
-ps3_mem_regions(platform_t plat, struct mem_region **phys, int *physsz,
-    struct mem_region **avail, int *availsz)
-{
-
-	*phys = *avail = avail_regions;
-	*physsz = *availsz = MEM_REGIONS;
+	if (phys != NULL) {
+		memcpy(phys, avail_regions, sizeof(*phys)*2);
+		*physsz = 2;
+	}
 }
 
 static u_long
@@ -241,7 +253,12 @@ ps3_reset(platform_t plat)
 static vm_offset_t
 ps3_real_maxaddr(platform_t plat)
 {
-	return (avail_regions[0].mr_start + avail_regions[0].mr_size);
+	struct mem_region *phys, *avail;
+	int nphys, navail;
+
+	mem_regions(&phys, &nphys, &avail, &navail);
+
+	return (phys[0].mr_start + phys[0].mr_size);
 }
 
 static void

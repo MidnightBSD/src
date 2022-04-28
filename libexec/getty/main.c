@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -43,7 +39,7 @@ static char sccsid[] = "@(#)from: main.c	8.1 (Berkeley) 6/20/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/getty/main.c 216582 2010-12-20 08:29:54Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -191,7 +187,7 @@ main(int argc, char *argv[])
 	signal(SIGINT, SIG_IGN);
 	signal(SIGQUIT, SIG_IGN);
 
-	openlog("getty", LOG_ODELAY|LOG_CONS|LOG_PID, LOG_AUTH);
+	openlog("getty", LOG_CONS|LOG_PID, LOG_AUTH);
 	gethostname(hostname, sizeof(hostname) - 1);
 	hostname[sizeof(hostname) - 1] = '\0';
 	if (hostname[0] == '\0')
@@ -328,6 +324,8 @@ main(int argc, char *argv[])
 		}
 		first_time = 0;
 
+		if (IMP && *IMP && !(PL && PP))
+			system(IMP);
 		if (IM && *IM && !(PL && PP))
 			putf(IM);
 		if (setjmp(timeout)) {

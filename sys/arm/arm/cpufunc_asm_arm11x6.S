@@ -60,9 +60,9 @@
 
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm11x6.S 248361 2013-03-16 02:48:49Z andrew $");
+__FBSDID("$FreeBSD$");
 
-	.cpu arm1136js
+	.cpu arm1176jz-s
 
 #if 0
 #define Invalidate_I_cache(Rtmp1, Rtmp2) \
@@ -73,7 +73,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm11x6.S 248361 2013
  *
  *    Erratum 411920 in ARM1136 (fixed in r1p4)
  *    Erratum 415045 in ARM1176 (fixed in r0p5?)
- * 
+ *
  *	- value of arg 'reg' Should Be Zero
  */
 #define Invalidate_I_cache(Rtmp1, Rtmp2) \
@@ -114,12 +114,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/cpufunc_asm_arm11x6.S 248361 2013
 #endif
 
 ENTRY(arm11x6_setttb)
-#ifdef PMAP_CACHE_VIVT
-	Flush_D_cache(r1)
-	Invalidate_I_cache(r1, r2)
-#else
 	mov	r1, #0
-#endif
 	mcr	p15, 0, r0, c2, c0, 0	/* load new TTB */
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
 	mcr	p15, 0, r1, c7, c10, 4	/* drain write buffer */
@@ -137,17 +132,6 @@ ENTRY_NP(arm11x6_dcache_wbinv_all)
 	RET
 END(arm11x6_dcache_wbinv_all)
 
-ENTRY_NP(arm11x6_icache_sync_all)
-	Flush_D_cache(r0)
-	Invalidate_I_cache(r0, r1)
-	RET
-END(arm11x6_icache_sync_all)
-
-ENTRY_NP(arm11x6_flush_prefetchbuf)
-	mcr	p15, 0, r0, c7, c5, 4	/* Flush Prefetch Buffer */
-	RET
-END(arm11x6_flush_prefetchbuf)
-
 ENTRY_NP(arm11x6_icache_sync_range)
 	add	r1, r1, r0
 	sub	r1, r1, #1
@@ -155,20 +139,20 @@ ENTRY_NP(arm11x6_icache_sync_range)
 	/* Erratum ARM1176 371367 */
 	mrs	r2, cpsr		/* save the CPSR */
 	cpsid	ifa			/* disable interrupts (irq,fiq,abort) */
-	mov	r3, #0 
+	mov	r3, #0
 	mcr	p15, 0, r3, c13, c0, 0	/* write FCSE (uTLB invalidate) */
 	mcr	p15, 0, r3, c7, c5, 4	/* flush prefetch buffer */
-	add	r3, pc, #0x24 
+	add	r3, pc, #0x24
 	mcr	p15, 0, r3, c7, c13, 1	/* prefetch I-cache line */
 	mcrr	p15, 0, r1, r0, c5	/* invalidate I-cache range */
 	msr	cpsr_cx, r2		/* local_irq_restore */
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 
 	mcrr	p15, 0, r1, r0, c12	/* clean and invalidate D cache range */ /* XXXNH */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain the write buffer */
@@ -182,20 +166,20 @@ ENTRY_NP(arm11x6_idcache_wbinv_range)
 	/* Erratum ARM1176 371367 */
 	mrs	r2, cpsr		/* save the CPSR */
 	cpsid	ifa			/* disable interrupts (irq,fiq,abort) */
-	mov	r3, #0 
+	mov	r3, #0
 	mcr	p15, 0, r3, c13, c0, 0	/* write FCSE (uTLB invalidate) */
 	mcr	p15, 0, r3, c7, c5, 4	/* flush prefetch buffer */
-	add	r3, pc, #0x24 
+	add	r3, pc, #0x24
 	mcr	p15, 0, r3, c7, c13, 1	/* prefetch I-cache line */
 	mcrr	p15, 0, r1, r0, c5	/* invalidate I-cache range */
 	msr	cpsr_cx, r2		/* local_irq_restore */
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
-	nop 
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 
 	mcrr	p15, 0, r1, r0, c14	/* clean and invalidate D cache range */
 	mcr	p15, 0, r0, c7, c10, 4	/* drain the write buffer */
@@ -204,7 +188,7 @@ END(arm11x6_idcache_wbinv_range)
 
 /*
  * Preload the cache before issuing the WFI by conditionally disabling the
- * mcr intstructions the first time around the loop. Ensure the function is 
+ * mcr intstructions the first time around the loop. Ensure the function is
  * cacheline aligned.
  */
 	.arch	armv6

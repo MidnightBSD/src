@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_data_large.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Test read/write of a 10M block of data in a single operation.
@@ -38,9 +38,9 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_
 #define close _close
 #endif
 
-char buff1[11000000];
-char buff2[10000000];
-char buff3[10000000];
+static char buff1[11000000];
+static char buff2[10000000];
+static char buff3[10000000];
 
 DEFINE_TEST(test_read_data_large)
 {

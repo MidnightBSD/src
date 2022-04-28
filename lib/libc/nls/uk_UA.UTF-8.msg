@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/uk_UA.UTF-8.msg 199044 2009-11-08 11:55:03Z gabor $
+$ $FreeBSD$
 $
 $ Message catalog for uk_UA.UTF-8 locale
 $

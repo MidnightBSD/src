@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/snc/if_sncvar.h 194023 2009-06-11 17:14:28Z avg $
+ * $FreeBSD$
  */
 
 /*

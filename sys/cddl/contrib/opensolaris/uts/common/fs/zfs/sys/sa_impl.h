@@ -20,7 +20,8 @@
  */
 /*
  * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  */
 
 #ifndef	_SYS_SA_IMPL_H
@@ -153,12 +154,13 @@ struct sa_os {
  *
  * The header has a fixed portion with a variable number
  * of "lengths" depending on the number of variable sized
- * attribues which are determined by the "layout number"
+ * attributes which are determined by the "layout number"
  */
 
 #define	SA_MAGIC	0x2F505A  /* ZFS SA */
 typedef struct sa_hdr_phys {
 	uint32_t sa_magic;
+	/* BEGIN CSTYLED */
 	/*
 	 * Encoded with hdrsize and layout number as follows:
 	 * 16      10       0
@@ -175,6 +177,7 @@ typedef struct sa_hdr_phys {
 	 *          2 ==> 16 byte header
 	 *
 	 */
+	/* END CSTYLED */
 	uint16_t sa_layout_info;
 	uint16_t sa_lengths[1];	/* optional sizes for variable length attrs */
 	/* ... Data follows the lengths.  */
@@ -208,11 +211,12 @@ typedef enum sa_data_op {
  */
 
 struct sa_handle {
+	dmu_buf_user_t	sa_dbu;
 	kmutex_t	sa_lock;
 	dmu_buf_t	*sa_bonus;
 	dmu_buf_t	*sa_spill;
 	objset_t	*sa_os;
-	void 		*sa_userp;
+	void		*sa_userp;
 	sa_idx_tab_t	*sa_bonus_tab;	 /* idx of bonus */
 	sa_idx_tab_t	*sa_spill_tab; /* only present if spill activated */
 };

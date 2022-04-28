@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/tinyware/oinit/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 #
 PROG=		oinit
 
@@ -14,8 +14,8 @@ CFLAGS=		-DSH_PATH=\"${SH_PATH}\" -DSH_NAME=\"${SH_NAME}\" \
 #CFLAGS+=	-DOINIT_RC=\"/etc/oinit.rc\"
 
 #LDADD=		-lutil -ledit -ltermcap
-LDADD=-lutil
-NO_MAN=
+LIBADD=	util
+MAN=
 
 .include <bsd.prog.mk>
 

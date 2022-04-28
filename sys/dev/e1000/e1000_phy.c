@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_phy.c 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #include "e1000_api.h"
 
@@ -1297,6 +1297,7 @@ s32 e1000_copper_link_setup_m88_gen2(struct e1000_hw *hw)
 			phy_data |= M88E1000_PSCR_AUTO_X_1000T;
 			break;
 		}
+		/* FALLTHROUGH */
 	case 0:
 	default:
 		phy_data |= M88E1000_PSCR_AUTO_X_MODE;
@@ -1827,9 +1828,9 @@ s32 e1000_phy_force_speed_duplex_m88(struct e1000_hw *hw)
 					     phy_data);
 		if (ret_val)
 			return ret_val;
-	}
 
-	DEBUGOUT1("M88E1000 PSCR: %X\n", phy_data);
+		DEBUGOUT1("M88E1000 PSCR: %X\n", phy_data);
+	}
 
 	ret_val = phy->ops.read_reg(hw, PHY_CONTROL, &phy_data);
 	if (ret_val)
@@ -2362,19 +2363,23 @@ s32 e1000_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 		 * it across the board.
 		 */
 		ret_val = hw->phy.ops.read_reg(hw, PHY_STATUS, &phy_status);
-		if (ret_val)
+		if (ret_val) {
 			/* If the first read fails, another entity may have
 			 * ownership of the resources, wait and try again to
 			 * see if they have relinquished the resources yet.
 			 */
-			usec_delay(usec_interval);
+			if (usec_interval >= 1000)
+				msec_delay(usec_interval/1000);
+			else
+				usec_delay(usec_interval);
+		}
 		ret_val = hw->phy.ops.read_reg(hw, PHY_STATUS, &phy_status);
 		if (ret_val)
 			break;
 		if (phy_status & MII_SR_LINK_STATUS)
 			break;
 		if (usec_interval >= 1000)
-			msec_delay_irq(usec_interval/1000);
+			msec_delay(usec_interval/1000);
 		else
 			usec_delay(usec_interval);
 	}
@@ -3118,7 +3123,7 @@ s32 e1000_write_phy_reg_bm(struct e1000_hw *hw, u32 offset, u16 data)
 	/* Page 800 works differently than the rest so it has its own func */
 	if (page == BM_WUC_PAGE) {
 		ret_val = e1000_access_phy_wakeup_reg_bm(hw, offset, &data,
-							 FALSE, FALSE);
+							 FALSE, false);
 		goto release;
 	}
 
@@ -3282,7 +3287,7 @@ s32 e1000_write_phy_reg_bm2(struct e1000_hw *hw, u32 offset, u16 data)
 	/* Page 800 works differently than the rest so it has its own func */
 	if (page == BM_WUC_PAGE) {
 		ret_val = e1000_access_phy_wakeup_reg_bm(hw, offset, &data,
-							 FALSE, FALSE);
+							 FALSE, false);
 		goto release;
 	}
 
@@ -3487,16 +3492,10 @@ static s32 e1000_access_phy_wakeup_reg_bm(struct e1000_hw *hw, u32 offset,
 void e1000_power_up_phy_copper(struct e1000_hw *hw)
 {
 	u16 mii_reg = 0;
-	u16 power_reg = 0;
 
 	/* The PHY will retain its settings across a power down/up cycle */
 	hw->phy.ops.read_reg(hw, PHY_CONTROL, &mii_reg);
 	mii_reg &= ~MII_CR_POWER_DOWN;
-	if (hw->phy.type == e1000_phy_i210) {
-		hw->phy.ops.read_reg(hw, GS40G_COPPER_SPEC, &power_reg);
-		power_reg &= ~GS40G_CS_POWER_DOWN;
-		hw->phy.ops.write_reg(hw, GS40G_COPPER_SPEC, power_reg);
-	}
 	hw->phy.ops.write_reg(hw, PHY_CONTROL, mii_reg);
 }
 
@@ -3511,17 +3510,10 @@ void e1000_power_up_phy_copper(struct e1000_hw *hw)
 void e1000_power_down_phy_copper(struct e1000_hw *hw)
 {
 	u16 mii_reg = 0;
-	u16 power_reg = 0;
 
 	/* The PHY will retain its settings across a power down/up cycle */
 	hw->phy.ops.read_reg(hw, PHY_CONTROL, &mii_reg);
 	mii_reg |= MII_CR_POWER_DOWN;
-	/* i210 Phy requires an additional bit for power up/down */
-	if (hw->phy.type == e1000_phy_i210) {
-		hw->phy.ops.read_reg(hw, GS40G_COPPER_SPEC, &power_reg);
-		power_reg |= GS40G_CS_POWER_DOWN;
-		hw->phy.ops.write_reg(hw, GS40G_COPPER_SPEC, power_reg);
-	}
 	hw->phy.ops.write_reg(hw, PHY_CONTROL, mii_reg);
 	msec_delay(1);
 }
@@ -3552,7 +3544,6 @@ static s32 __e1000_read_phy_reg_hv(struct e1000_hw *hw, u32 offset, u16 *data,
 		if (ret_val)
 			return ret_val;
 	}
-
 	/* Page 800 works differently than the rest so it has its own func */
 	if (page == BM_WUC_PAGE) {
 		ret_val = e1000_access_phy_wakeup_reg_bm(hw, offset, data,
@@ -3606,7 +3597,7 @@ out:
  **/
 s32 e1000_read_phy_reg_hv(struct e1000_hw *hw, u32 offset, u16 *data)
 {
-	return __e1000_read_phy_reg_hv(hw, offset, data, FALSE, FALSE);
+	return __e1000_read_phy_reg_hv(hw, offset, data, FALSE, false);
 }
 
 /**
@@ -3662,7 +3653,6 @@ static s32 __e1000_write_phy_reg_hv(struct e1000_hw *hw, u32 offset, u16 data,
 		if (ret_val)
 			return ret_val;
 	}
-
 	/* Page 800 works differently than the rest so it has its own func */
 	if (page == BM_WUC_PAGE) {
 		ret_val = e1000_access_phy_wakeup_reg_bm(hw, offset, &data,
@@ -3732,7 +3722,7 @@ out:
  **/
 s32 e1000_write_phy_reg_hv(struct e1000_hw *hw, u32 offset, u16 data)
 {
-	return __e1000_write_phy_reg_hv(hw, offset, data, FALSE, FALSE);
+	return __e1000_write_phy_reg_hv(hw, offset, data, FALSE, false);
 }
 
 /**
@@ -4119,7 +4109,7 @@ s32 e1000_read_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 *data)
 {
 	u32 mphy_ctrl = 0;
 	bool locked = FALSE;
-	bool ready = FALSE;
+	bool ready;
 
 	DEBUGFUNC("e1000_read_phy_reg_mphy");
 
@@ -4159,10 +4149,10 @@ s32 e1000_read_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 *data)
 	/* Disable access to mPHY if it was originally disabled */
 	if (locked)
 		ready = e1000_is_mphy_ready(hw);
-		if (!ready)
-			return -E1000_ERR_PHY;
-		E1000_WRITE_REG(hw, E1000_MPHY_ADDR_CTRL,
-				E1000_MPHY_DIS_ACCESS);
+	if (!ready)
+		return -E1000_ERR_PHY;
+	E1000_WRITE_REG(hw, E1000_MPHY_ADDR_CTRL,
+			E1000_MPHY_DIS_ACCESS);
 
 	return E1000_SUCCESS;
 }
@@ -4181,7 +4171,7 @@ s32 e1000_write_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 data,
 {
 	u32 mphy_ctrl = 0;
 	bool locked = FALSE;
-	bool ready = FALSE;
+	bool ready;
 
 	DEBUGFUNC("e1000_write_phy_reg_mphy");
 
@@ -4224,10 +4214,10 @@ s32 e1000_write_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 data,
 	/* Disable access to mPHY if it was originally disabled */
 	if (locked)
 		ready = e1000_is_mphy_ready(hw);
-		if (!ready)
-			return -E1000_ERR_PHY;
-		E1000_WRITE_REG(hw, E1000_MPHY_ADDR_CTRL,
-				E1000_MPHY_DIS_ACCESS);
+	if (!ready)
+		return -E1000_ERR_PHY;
+	E1000_WRITE_REG(hw, E1000_MPHY_ADDR_CTRL,
+			E1000_MPHY_DIS_ACCESS);
 
 	return E1000_SUCCESS;
 }

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)icu.h	5.6 (Berkeley) 5/9/91
- * $FreeBSD: release/10.0.0/sys/x86/isa/icu.h 233031 2012-03-16 12:13:44Z nyan $
+ * $FreeBSD$
  */
 
 /*
@@ -87,7 +87,6 @@
 #endif
 
 #define	IRQ_MASK(irq)		(1 << (irq))
-#define	IMEN_MASK(ai)		(IRQ_MASK((ai)->at_irq))
 
 void	atpic_handle_intr(u_int vector, struct trapframe *frame);
 void	atpic_startup(void);

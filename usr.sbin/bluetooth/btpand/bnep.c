@@ -1,6 +1,8 @@
 /*	$NetBSD: bnep.c,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -25,12 +27,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/bnep.c 187938 2009-01-30 22:23:21Z emax $ */
+/* $FreeBSD$ */
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: bnep.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");
 
 #include <sys/uio.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <sdp.h>
 #include <stdarg.h>
@@ -573,7 +576,7 @@ bnep_recv_filter_multi_addr_rsp(channel_t *chan, uint8_t *ptr, size_t size)
 }
 
 void
-bnep_send_control(channel_t *chan, uint8_t type, ...)
+bnep_send_control(channel_t *chan, unsigned type, ...)
 {
 	packet_t *pkt;
 	uint8_t *p;
@@ -589,7 +592,7 @@ bnep_send_control(channel_t *chan, uint8_t type, ...)
 	va_start(ap, type);
 
 	*p++ = BNEP_CONTROL;
-	*p++ = type;
+	*p++ = (uint8_t)type;
 
 	switch(type) {
 	case BNEP_CONTROL_COMMAND_NOT_UNDERSTOOD:

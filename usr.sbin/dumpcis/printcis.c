@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 Andrew McRae.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +28,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/dumpcis/printcis.c 250460 2013-05-10 16:41:26Z eadler $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /* 

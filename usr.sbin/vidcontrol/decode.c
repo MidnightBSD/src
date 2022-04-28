@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1994 Søren Schmidt
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/vidcontrol/decode.c 228976 2011-12-30 00:59:08Z uqs $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <stdio.h>

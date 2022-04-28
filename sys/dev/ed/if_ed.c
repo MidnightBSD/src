@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ed/if_ed.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Device driver for National Semiconductor DS8390/WD83C690 based ethernet
@@ -43,8 +43,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ed/if_ed.c 243857 2012-12-04 09:32:43
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
-#include <sys/mbuf.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
@@ -57,6 +58,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ed/if_ed.c 243857 2012-12-04 09:32:43
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_mib.h>
@@ -162,8 +164,8 @@ ed_alloc_port(device_t dev, int rid, int size)
 	struct ed_softc *sc = device_get_softc(dev);
 	struct resource *res;
 
-	res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0ul, ~0ul, size, RF_ACTIVE);
+	res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    size, RF_ACTIVE);
 	if (res) {
 		sc->port_res = res;
 		sc->port_used = size;
@@ -183,8 +185,8 @@ ed_alloc_memory(device_t dev, int rid, int size)
 	struct ed_softc *sc = device_get_softc(dev);
 	struct resource *res;
 
-	res = bus_alloc_resource(dev, SYS_RES_MEMORY, &rid,
-	    0ul, ~0ul, size, RF_ACTIVE);
+	res = bus_alloc_resource_anywhere(dev, SYS_RES_MEMORY, &rid,
+	    size, RF_ACTIVE);
 	if (res) {
 		sc->mem_res = res;
 		sc->mem_used = size;
@@ -361,6 +363,9 @@ ed_attach(device_t dev)
 #endif
 		printf("\n");
 	}
+
+	gone_by_fcp101_dev(dev);
+
 	return (0);
 }
 
@@ -419,7 +424,11 @@ ed_stop_hw(struct ed_softc *sc)
 	/*
 	 * Stop everything on the interface, and select page 0 registers.
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STP);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/*
 	 * Wait for interface to enter stopped state, but limit # of checks to
@@ -480,7 +489,7 @@ ed_watchdog(struct ed_softc *sc)
 
 	ifp = sc->ifp;
 	log(LOG_ERR, "%s: device timeout\n", ifp->if_xname);
-	ifp->if_oerrors++;
+	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 
 	ed_reset(ifp);
 }
@@ -527,7 +536,11 @@ ed_init_locked(struct ed_softc *sc)
 	/*
 	 * Set interface for page 0, Remote DMA complete, Stopped
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STP);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	if (sc->isa16bit)
 		/*
@@ -590,7 +603,11 @@ ed_init_locked(struct ed_softc *sc)
 	/*
 	 * Program Command Register for page 1
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_PAGE_1 | ED_CR_STP);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/*
 	 * Copy out our station address
@@ -644,7 +661,11 @@ ed_xmit(struct ed_softc *sc)
 	/*
 	 * Set NIC for page 0 register access
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/*
 	 * Set TX buffer start page
@@ -661,7 +682,11 @@ ed_xmit(struct ed_softc *sc)
 	/*
 	 * Set page 0, Remote DMA complete, Transmit Packet, and *Start*
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_TXP | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	sc->xmit_busy = 1;
 
 	/*
@@ -729,7 +754,7 @@ outloop:
 		return;
 	}
 	IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
-	if (m == 0) {
+	if (m == NULL) {
 
 		/*
 		 * We are using the !OACTIVE flag to indicate to the outside
@@ -800,7 +825,11 @@ ed_rint(struct ed_softc *sc)
 	/*
 	 * Set NIC to page 1 registers to get 'current' pointer
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_PAGE_1 | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/*
 	 * 'sc->next_packet' is the logical beginning of the ring-buffer -
@@ -875,7 +904,7 @@ ed_rint(struct ed_softc *sc)
 			 */
 			ed_get_packet(sc, packet_ptr + sizeof(struct ed_ring),
 				      len - sizeof(struct ed_ring));
-			ifp->if_ipackets++;
+			if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 		} else {
 			/*
 			 * Really BAD. The ring pointers are corrupted.
@@ -883,7 +912,7 @@ ed_rint(struct ed_softc *sc)
 			log(LOG_ERR,
 			    "%s: NIC memory corrupt - invalid packet length %d\n",
 			    ifp->if_xname, len);
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			ed_reset(ifp);
 			return;
 		}
@@ -904,14 +933,22 @@ ed_rint(struct ed_softc *sc)
 		/*
 		 * Set NIC to page 0 registers to update boundry register
 		 */
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 		ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 		ed_nic_outb(sc, ED_P0_BNRY, boundry);
 
 		/*
 		 * Set NIC to page 1 registers before looping to top (prepare
 		 * to get 'CURR' current pointer)
 		 */
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 		ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_PAGE_1 | ED_CR_STA);
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	}
 }
 
@@ -934,13 +971,19 @@ edintr(void *arg)
 	/*
 	 * Set NIC to page 0 registers
 	 */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/*
 	 * loop until there are no more new interrupts.  When the card goes
 	 * away, the hardware will read back 0xff.  Looking at the interrupts,
-	 * it would appear that 0xff is impossible, or at least extremely
-	 * unlikely.
+	 * it would appear that 0xff is impossible as ED_ISR_RST is normally
+	 * clear. ED_ISR_RDC is also normally clear and only set while
+	 * we're transferring memory to the card and we're holding the
+	 * ED_LOCK (so we can't get into here).
 	 */
 	while ((isr = ed_nic_inb(sc, ED_P0_ISR)) != 0 && isr != 0xff) {
 
@@ -1018,14 +1061,14 @@ edintr(void *arg)
 				/*
 				 * update output errors counter
 				 */
-				ifp->if_oerrors++;
+				if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 			} else {
 
 				/*
 				 * Update total number of successfully
 				 * transmitted packets.
 				 */
-				ifp->if_opackets++;
+				if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 			}
 
 			/*
@@ -1043,7 +1086,7 @@ edintr(void *arg)
 			 * Add in total number of collisions on last
 			 * transmission.
 			 */
-			ifp->if_collisions += collisions;
+			if_inc_counter(ifp, IFCOUNTER_COLLISIONS, collisions);
 			switch(collisions) {
 			case 0:
 			case 16:
@@ -1086,7 +1129,7 @@ edintr(void *arg)
 			 * fixed in later revs. -DG
 			 */
 			if (isr & ED_ISR_OVW) {
-				ifp->if_ierrors++;
+				if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 #ifdef DIAGNOSTIC
 				log(LOG_WARNING,
 				    "%s: warning - receiver ring buffer overrun\n",
@@ -1113,7 +1156,7 @@ edintr(void *arg)
 						sc->mibdata.dot3StatsAlignmentErrors++;
 					if (rsr & ED_RSR_FO)
 						sc->mibdata.dot3StatsInternalMacReceiveErrors++;
-					ifp->if_ierrors++;
+					if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 #ifdef ED_DEBUG
 					if_printf(ifp, "receive error %x\n",
 					       ed_nic_inb(sc, ED_P0_RSR));
@@ -1152,7 +1195,11 @@ edintr(void *arg)
 		 * set in the transmit routine, is *okay* - it is 'edge'
 		 * triggered from low to high)
 		 */
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+	  	  BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 		ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STA);
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 		/*
 		 * If the Network Talley Counters overflow, read them to reset
@@ -1282,10 +1329,7 @@ ed_get_packet(struct ed_softc *sc, bus_size_t buf, u_short len)
 	 */
 	if ((len + 2) > MHLEN) {
 		/* Attach an mbuf cluster */
-		MCLGET(m, M_NOWAIT);
-
-		/* Insist on getting a cluster */
-		if ((m->m_flags & M_EXT) == 0) {
+		if (!(MCLGET(m, M_NOWAIT))) {
 			m_freem(m);
 			return;
 		}
@@ -1354,7 +1398,11 @@ ed_pio_readmem(struct ed_softc *sc, bus_size_t src, uint8_t *dst,
 {
 	/* Regular Novell cards */
 	/* select page 0 registers */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, ED_CR_RD2 | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/* round up to a word */
 	if (amount & 1)
@@ -1387,7 +1435,11 @@ ed_pio_writemem(struct ed_softc *sc, uint8_t *src, uint16_t dst, uint16_t len)
 	int     maxwait = 200;	/* about 240us */
 
 	/* select page 0 registers */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, ED_CR_RD2 | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/* reset remote DMA complete flag */
 	ed_nic_outb(sc, ED_P0_ISR, ED_ISR_RDC);
@@ -1444,7 +1496,11 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 		dma_len++;
 
 	/* select page 0 registers */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, ED_CR_RD2 | ED_CR_STA);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	/* reset remote DMA complete flag */
 	ed_nic_outb(sc, ED_P0_ISR, ED_ISR_RDC);
@@ -1555,7 +1611,11 @@ ed_setrcr(struct ed_softc *sc)
 		reg1 = 0x00;
 
 	/* set page 1 registers */
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 	ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_PAGE_1 | ED_CR_STP);
+	ed_nic_barrier(sc, ED_P0_CR, 1,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 	if (ifp->if_flags & IFF_PROMISC) {
 
@@ -1570,7 +1630,11 @@ ed_setrcr(struct ed_softc *sc)
 		 * runts and packets with CRC & alignment errors.
 		 */
 		/* Set page 0 registers */
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 		ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STP);
+		ed_nic_barrier(sc, ED_P0_CR, 1,
+		    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 		ed_nic_outb(sc, ED_P0_RCR, ED_RCR_PRO | ED_RCR_AM |
 			    ED_RCR_AB | ED_RCR_AR | ED_RCR_SEP | reg1);
@@ -1592,7 +1656,11 @@ ed_setrcr(struct ed_softc *sc)
 				ed_nic_outb(sc, ED_P1_MAR(i), ((u_char *) mcaf)[i]);
 
 			/* Set page 0 registers */
+			ed_nic_barrier(sc, ED_P0_CR, 1,
+			    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 			ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STP);
+			ed_nic_barrier(sc, ED_P0_CR, 1,
+			    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 
 			ed_nic_outb(sc, ED_P0_RCR, ED_RCR_AM | ED_RCR_AB | reg1);
 		} else {
@@ -1605,6 +1673,8 @@ ed_setrcr(struct ed_softc *sc)
 				ed_nic_outb(sc, ED_P1_MAR(i), 0x00);
 
 			/* Set page 0 registers */
+			ed_nic_barrier(sc, ED_P0_CR, 1,
+			    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
 			ed_nic_outb(sc, ED_P0_CR, sc->cr_proto | ED_CR_STP);
 
 			ed_nic_outb(sc, ED_P0_RCR, ED_RCR_AB | reg1);

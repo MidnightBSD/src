@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
 
 
-/* $FreeBSD: release/10.0.0/contrib/binutils/bfd/elf.c 218822 2011-02-18 20:54:12Z dim $ */
+/* $FreeBSD$ */
 
 
 /*
@@ -8934,14 +8934,14 @@ elf_create_symbuf (bfd_size_type symcount, Elf_Internal_Sym *isymbuf)
 	shndx_count++;
 
   ssymbuf = bfd_malloc ((shndx_count + 1) * sizeof (*ssymbuf)
-			+ (indbufend - indbuf) * sizeof (*ssymbuf));
+			+ (indbufend - indbuf) * sizeof (*ssym));
   if (ssymbuf == NULL)
     {
       free (indbuf);
       return NULL;
     }
 
-  ssym = (struct elf_symbuf_symbol *) (ssymbuf + shndx_count);
+  ssym = (struct elf_symbuf_symbol *) (ssymbuf + shndx_count + 1);
   ssymbuf->ssym = NULL;
   ssymbuf->count = shndx_count;
   ssymbuf->st_shndx = 0;

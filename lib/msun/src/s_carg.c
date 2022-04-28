@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_carg.c 174561 2007-12-12 23:43:51Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <complex.h>
 #include <math.h>

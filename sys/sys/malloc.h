@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)malloc.h	8.5 (Berkeley) 5/3/95
- * $FreeBSD: release/10.0.0/sys/sys/malloc.h 252330 2013-06-28 03:51:20Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MALLOC_H_
@@ -39,6 +39,7 @@
 #include <sys/queue.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <machine/_limits.h>
 
 #define	MINALLOCSIZE	UMA_SMALLEST_UNIT
 
@@ -134,7 +135,7 @@ struct malloc_type_header {
 	struct malloc_type type[1] = {					\
 		{ NULL, M_MAGIC, shortdesc, NULL }			\
 	};								\
-	SYSINIT(type##_init, SI_SUB_KMEM, SI_ORDER_SECOND, malloc_init,	\
+	SYSINIT(type##_init, SI_SUB_KMEM, SI_ORDER_THIRD, malloc_init,	\
 	    type);							\
 	SYSUNINIT(type##_uninit, SI_SUB_KMEM, SI_ORDER_ANY,		\
 	    malloc_uninit, type)
@@ -145,9 +146,6 @@ struct malloc_type_header {
 MALLOC_DECLARE(M_CACHE);
 MALLOC_DECLARE(M_DEVBUF);
 MALLOC_DECLARE(M_TEMP);
-
-MALLOC_DECLARE(M_IP6OPT); /* for INET6 */
-MALLOC_DECLARE(M_IP6NDP); /* for INET6 */
 
 /*
  * Deprecated macro versions of not-quite-malloc() and free().
@@ -173,9 +171,14 @@ typedef void malloc_type_list_func_t(struct malloc_type *, void *);
 void	contigfree(void *addr, unsigned long size, struct malloc_type *type);
 void	*contigmalloc(unsigned long size, struct malloc_type *type, int flags,
 	    vm_paddr_t low, vm_paddr_t high, unsigned long alignment,
-	    vm_paddr_t boundary) __malloc_like;
+	    vm_paddr_t boundary) __malloc_like __result_use_check
+	    __alloc_size(1) __alloc_align(6);
 void	free(void *addr, struct malloc_type *type);
-void	*malloc(unsigned long size, struct malloc_type *type, int flags) __malloc_like;
+void	*malloc(unsigned long size, struct malloc_type *type, int flags)
+	    __malloc_like __result_use_check __alloc_size(1);
+void	*mallocarray(size_t nmemb, size_t size, struct malloc_type *type,
+	    int flags) __malloc_like __result_use_check
+	    __alloc_size2(1, 2);
 void	malloc_init(void *);
 int	malloc_last_fail(void);
 void	malloc_type_allocated(struct malloc_type *type, unsigned long size);
@@ -183,11 +186,25 @@ void	malloc_type_freed(struct malloc_type *type, unsigned long size);
 void	malloc_type_list(malloc_type_list_func_t *, void *);
 void	malloc_uninit(void *);
 void	*realloc(void *addr, unsigned long size, struct malloc_type *type,
-	    int flags);
+	    int flags) __result_use_check __alloc_size(2);
 void	*reallocf(void *addr, unsigned long size, struct malloc_type *type,
-	    int flags);
+	    int flags) __result_use_check __alloc_size(2);
 
 struct malloc_type *malloc_desc2type(const char *desc);
+
+/*
+ * This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
+ * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW
+ */
+#define MUL_NO_OVERFLOW		(1UL << (sizeof(size_t) * 8 / 2))
+static inline bool
+WOULD_OVERFLOW(size_t nmemb, size_t size)
+{
+
+	return ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
+	    nmemb > 0 && __SIZE_T_MAX / nmemb < size);
+}
+#undef MUL_NO_OVERFLOW
 #endif /* _KERNEL */
 
 #endif /* !_SYS_MALLOC_H_ */

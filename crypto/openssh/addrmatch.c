@@ -1,4 +1,4 @@
-/*	$OpenBSD: addrmatch.c,v 1.7 2013/05/17 00:13:13 djm Exp $ */
+/*	$OpenBSD: addrmatch.c,v 1.13 2016/09/21 16:55:42 djm Exp $ */
 
 /*
  * Copyright (c) 2004-2008 Damien Miller <djm@mindrot.org>
@@ -31,7 +31,6 @@
 
 #include "match.h"
 #include "log.h"
-#include "xmalloc.h"
 
 struct xaddr {
 	sa_family_t	af;
@@ -88,13 +87,13 @@ addr_sa_to_xaddr(struct sockaddr *sa, socklen_t slen, struct xaddr *xa)
 
 	switch (sa->sa_family) {
 	case AF_INET:
-		if (slen < sizeof(*in4))
+		if (slen < (socklen_t)sizeof(*in4))
 			return -1;
 		xa->af = AF_INET;
 		memcpy(&xa->v4, &in4->sin_addr, sizeof(xa->v4));
 		break;
 	case AF_INET6:
-		if (slen < sizeof(*in6))
+		if (slen < (socklen_t)sizeof(*in6))
 			return -1;
 		xa->af = AF_INET6;
 		memcpy(&xa->v6, &in6->sin6_addr, sizeof(xa->v6));
@@ -399,8 +398,8 @@ addr_match_list(const char *addr, const char *_list)
 		/* Prefer CIDR address matching */
 		r = addr_pton_cidr(cp, &match_addr, &masklen);
 		if (r == -2) {
-			error("Inconsistent mask length for "
-			    "network \"%.100s\"", cp);
+			debug2("%s: inconsistent mask length for "
+			    "match network \"%.100s\"", __func__, cp);
 			ret = -2;
 			break;
 		} else if (r == 0) {

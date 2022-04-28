@@ -39,7 +39,7 @@
 static const char sccsid[] = "@(#)pw_util.c	8.3 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/lib/libutil/pw_util.c 244744 2012-12-27 20:24:44Z bapt $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -58,7 +58,6 @@ static const char rcsid[] =
 #include <err.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <libgen.h>
 #include <paths.h>
 #include <pwd.h>
 #include <signal.h>
@@ -226,7 +225,7 @@ pw_tmp(int mfd)
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
-	if ((tfd = mkstemp(tempname)) == -1)
+	if ((tfd = mkostemp(tempname, 0)) == -1)
 		return (-1);
 	if (mfd != -1) {
 		while ((nr = read(mfd, buf, sizeof(buf))) > 0)
@@ -315,7 +314,7 @@ pw_edit(int notsetuid)
 			(void)setuid(getuid());
 		}
 		errno = 0;
-		execlp(editor, basename(editor), tempname, (char *)NULL);
+		execlp(editor, editor, tempname, (char *)NULL);
 		_exit(errno);
 	default:
 		/* parent */
@@ -428,11 +427,12 @@ pw_make_v7(const struct passwd *pw)
 int
 pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 {
-	char buf[8192], *end, *line, *p, *q, *r, t;
+	char *buf, *end, *line, *p, *q, *r, *tmp;
 	struct passwd *fpw;
 	const struct passwd *spw;
-	size_t len;
+	size_t len, size;
 	int eof, readlen;
+	char t;
 
 	if (old_pw == NULL && pw == NULL)
 			return (-1);
@@ -450,6 +450,10 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 	if (spw == NULL)
 		spw = pw;
 
+	/* initialize the buffer */
+	if ((buf = malloc(size = 1024)) == NULL)
+		goto err;
+
 	eof = 0;
 	len = 0;
 	p = q = end = buf;
@@ -463,10 +467,16 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 		if (q >= end) {
 			if (eof)
 				break;
-			if ((size_t)(q - p) >= sizeof(buf)) {
-				warnx("passwd line too long");
-				errno = EINVAL; /* hack */
-				goto err;
+			while ((size_t)(q - p) >= size) {
+				if ((tmp = reallocarray(buf, 2, size)) == NULL) {
+					warnx("passwd line too long");
+					goto err;
+				}
+				p = tmp + (p - buf);
+				q = tmp + (q - buf);
+				end = tmp + (end - buf);
+				buf = tmp;
+				size = size * 2;
 			}
 			if (p < end) {
 				q = memmove(buf, p, end - p);
@@ -474,7 +484,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 			} else {
 				p = q = end = buf;
 			}
-			readlen = read(ffd, end, sizeof(buf) - (end - buf));
+			readlen = read(ffd, end, size - (end - buf));
 			if (readlen == -1)
 				goto err;
 			else
@@ -483,7 +493,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 				break;
 			end += len;
 			len = end - buf;
-			if (len < (ssize_t)sizeof(buf)) {
+			if (len < size) {
 				eof = 1;
 				if (len > 0 && buf[len - 1] != '\n')
 					++len, *end++ = '\n';
@@ -546,7 +556,7 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 			if (write(tfd, q, end - q) != end - q)
 				goto err;
 			q = buf;
-			readlen = read(ffd, buf, sizeof(buf));
+			readlen = read(ffd, buf, size);
 			if (readlen == 0)
 				break;
 			else
@@ -568,12 +578,12 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 	    write(tfd, "\n", 1) != 1)
 		goto err;
  done:
-	if (line != NULL)
-		free(line);
+	free(line);
+	free(buf);
 	return (0);
  err:
-	if (line != NULL)
-		free(line);
+	free(line);
+	free(buf);
 	return (-1);
 }
 
@@ -644,8 +654,16 @@ pw_dup(const struct passwd *pw)
 #include "pw_scan.h"
 
 /*
- * Wrapper around an internal libc function
+ * Wrapper around some internal libc functions.
  */
+
+void
+pw_initpwd(struct passwd *pw)
+{
+
+	__pw_initpwd(pw);
+}
+
 struct passwd *
 pw_scan(const char *line, int flags)
 {
@@ -654,6 +672,7 @@ pw_scan(const char *line, int flags)
 
 	if ((bp = strdup(line)) == NULL)
 		return (NULL);
+	__pw_initpwd(&pw);
 	if (!__pw_scan(bp, &pw, flags)) {
 		free(bp);
 		return (NULL);

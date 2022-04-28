@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/pci_uart.c 257396 2013-10-30 20:42:09Z neel $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/pci_uart.c 257396 2013-10-30 20:42:09Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -85,28 +87,13 @@ pci_uart_read(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 	return (val);
 }
 
-static int pci_uart_nldevs;	/* number of legacy uart ports allocated */
-
 static int
 pci_uart_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 {
 	struct uart_softc *sc;
-	int ioaddr, ivec;
 
-	if (pci_is_legacy(pi)) {
-		if (uart_legacy_alloc(pci_uart_nldevs, &ioaddr, &ivec) != 0) {
-			fprintf(stderr, "Unable to allocate resources for "
-			    "legacy COM%d port at pci device %d:%d\n",
-			    pci_uart_nldevs + 1, pi->pi_slot, pi->pi_func);
-			return (-1);
-		}
-		pci_uart_nldevs++;
-		pci_emul_alloc_pbar(pi, 0, ioaddr, PCIBAR_IO, UART_IO_BAR_SIZE);
-	} else {
-		ivec = -1;
-		pci_emul_alloc_bar(pi, 0, PCIBAR_IO, UART_IO_BAR_SIZE);
-	}
-	pci_lintr_request(pi, ivec);
+	pci_emul_alloc_bar(pi, 0, PCIBAR_IO, UART_IO_BAR_SIZE);
+	pci_lintr_request(pi);
 
 	/* initialize config space */
 	pci_set_cfgdata16(pi, PCIR_DEVICE, COM_DEV);

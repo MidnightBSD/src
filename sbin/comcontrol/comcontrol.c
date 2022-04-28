@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1992 Christopher G. Demetriou
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/comcontrol/comcontrol.c 201227 2009-12-29 22:53:27Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>

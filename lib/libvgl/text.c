@@ -27,13 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libvgl/text.c 229784 2012-01-07 16:13:56Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <sys/fbio.h>
 #include "vgl.h"
 
-static VGLText		*VGLTextFont = 0;
+static VGLText		*VGLTextFont;
 
 extern byte VGLFont[];
 

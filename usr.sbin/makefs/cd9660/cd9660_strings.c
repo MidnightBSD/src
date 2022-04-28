@@ -1,6 +1,8 @@
 /*	$NetBSD: cd9660_strings.c,v 1.4 2007/01/16 17:32:05 hubertf Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
  * Perez-Rathke and Ram Vedam.  All rights reserved.
  *
@@ -35,7 +37,7 @@
 #include <sys/mount.h>
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/cd9660_strings.c 219956 2011-03-24 12:35:59Z bapt $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <ctype.h>
 

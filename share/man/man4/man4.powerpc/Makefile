@@ -1,4 +1,6 @@
-# $FreeBSD: release/10.0.0/share/man/man4/man4.powerpc/Makefile 226449 2011-10-16 21:01:42Z nwhitehorn $
+# $FreeBSD$
+
+PACKAGE=runtime-manuals
 
 MAN=	adb.4 \
 	akbd.4 \
@@ -6,6 +8,7 @@ MAN=	adb.4 \
 	ams.4 \
 	bm.4 \
 	cuda.4 \
+	llan.4 \
 	pmu.4 \
 	powermac_nvram.4 \
 	smu.4 \

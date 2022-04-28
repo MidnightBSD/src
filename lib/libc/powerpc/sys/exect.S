@@ -26,7 +26,7 @@
 /*      $NetBSD: exect.S,v 1.3 1998/05/25 15:28:03 ws Exp $     */
 	
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/powerpc/sys/exect.S 217398 2011-01-14 11:33:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -37,5 +37,6 @@ ENTRY(exect)
 	blr
 1:
 	b	PIC_PLT(HIDENAME(cerror))
+END(exect)
 
 	.section .note.GNU-stack,"",%progbits

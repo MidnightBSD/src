@@ -28,7 +28,7 @@
  *
  *      from: @(#)proc.h        7.1 (Berkeley) 5/15/91
  *	from: FreeBSD: src/sys/i386/include/proc.h,v 1.11 2001/06/29
- * $FreeBSD: release/10.0.0/sys/sparc64/include/proc.h 255937 2013-09-29 13:09:25Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PROC_H_
@@ -53,6 +53,13 @@ struct mdproc {
 
 #define	KINFO_PROC_SIZE 1088
 
+struct syscall_args {
+	u_int code;
+	struct sysent *callp;
+	register_t args[8];
+	int narg;
+};
+
 #ifdef _KERNEL
 
 #include <machine/pcb.h>
@@ -65,13 +72,6 @@ struct mdproc {
 	    td->td_kstack_pages * PAGE_SIZE -				\
 	    (char *)&td;						\
 } while (0)
-
-struct syscall_args {
-	u_int code;
-	struct sysent *callp;
-	register_t args[8];
-	int narg;
-};
 
 #endif
 

@@ -1,5 +1,5 @@
 $NetBSD: softfloat-history.txt,v 1.1 2000/06/06 08:15:08 bjh21 Exp $
-$FreeBSD: release/10.0.0/lib/libc/softfloat/softfloat-history.txt 129203 2004-05-14 12:13:06Z cognet $
+$FreeBSD$
 
 History of Major Changes to SoftFloat, up to Release 2a
 

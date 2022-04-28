@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003 Ryan McBride. All rights reserved.
  * Copyright (c) 2004 Max Laier. All rights reserved.
  *
@@ -23,10 +25,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/ifconfig/ifpfsync.c 233847 2012-04-03 18:10:48Z glebius $
+ * $FreeBSD$
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
@@ -120,6 +122,7 @@ setpfsync_syncpeer(const char *val, int d, int s, const struct afswtch *rafp)
 
 	if (ioctl(s, SIOCSETPFSYNC, (caddr_t)&ifr) == -1)
 		err(1, "SIOCSETPFSYNC");
+	freeaddrinfo(peerres);
 }
 
 /* ARGSUSED */
@@ -192,16 +195,16 @@ pfsync_status(int s)
 		return;
 
 	if (preq.pfsyncr_syncdev[0] != '\0' ||
-	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+	    preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP))
 			printf("\t");
 
 	if (preq.pfsyncr_syncdev[0] != '\0')
 		printf("pfsync: syncdev: %s ", preq.pfsyncr_syncdev);
-	if (preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+	if (preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP))
 		printf("syncpeer: %s ", inet_ntoa(preq.pfsyncr_syncpeer));
 
 	if (preq.pfsyncr_syncdev[0] != '\0' ||
-	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP) {
+	    preq.pfsyncr_syncpeer.s_addr != htonl(INADDR_PFSYNC_GROUP)) {
 		printf("maxupd: %d ", preq.pfsyncr_maxupdates);
 		printf("defer: %s\n", preq.pfsyncr_defer ? "on" : "off");
 	}
@@ -227,11 +230,9 @@ static struct afswtch af_pfsync = {
 static __constructor void
 pfsync_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	int i;
 
-	for (i = 0; i < N(pfsync_cmds);  i++)
+	for (i = 0; i < nitems(pfsync_cmds);  i++)
 		cmd_register(&pfsync_cmds[i]);
 	af_register(&af_pfsync);
-#undef N
 }

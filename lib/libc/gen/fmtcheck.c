@@ -29,13 +29,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/fmtcheck.c 194800 2009-06-23 23:52:12Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
 __weak_reference(__fmtcheck, fmtcheck);
+const char * __fmtcheck(const char *, const char *);
 
 enum __e_fmtcheck_types {
 	FMTCHECK_START,

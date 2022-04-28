@@ -25,14 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/pxa/if_smc_smi.c 236987 2012-06-13 04:38:09Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/socket.h>
-
-#include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
+#include <sys/socket.h>
+#include <sys/systm.h>
+#include <sys/taskqueue.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libthr/arch/amd64/include/pthread_md.h 228536 2011-12-15 19:42:25Z dim $
+ * $FreeBSD$
  */
 
 /*
@@ -76,9 +76,6 @@ struct tcb {
 								\
 	__result;						\
 })
-
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *tcb);
 
 static __inline void
 _tcb_set(struct tcb *tcb)

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/rtld-elf/rtld_lock.h 216695 2010-12-25 08:51:20Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _RTLD_LOCK_H_
@@ -44,9 +44,9 @@ struct RtldLockInfo
 	void  (*at_fork)(void);
 };
 
-extern void _rtld_thread_init(struct RtldLockInfo *);
-extern void _rtld_atfork_pre(int *);
-extern void _rtld_atfork_post(int *);
+extern void _rtld_thread_init(struct RtldLockInfo *) __exported;
+extern void _rtld_atfork_pre(int *) __exported;
+extern void _rtld_atfork_post(int *) __exported;
 
 #ifdef IN_RTLD
 

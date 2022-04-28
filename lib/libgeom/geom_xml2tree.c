@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libgeom/geom_xml2tree.c 253469 2013-07-19 06:42:15Z scottl $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -186,6 +186,7 @@ static void
 EndElement(void *userData, const char *name)
 {
 	struct mystate *mt;
+	struct gconf *c;
 	struct gconfig *gc;
 	char *p;
 
@@ -256,16 +257,25 @@ EndElement(void *userData, const char *name)
 
 	if (!strcmp(name, "config")) {
 		mt->config = NULL;
+		free(p);
 		return;
 	}
 
-	if (mt->config != NULL) {
+	if (mt->config != NULL || (!strcmp(name, "wither") &&
+	    (mt->provider != NULL || mt->geom != NULL))) {
+		if (mt->config != NULL)
+			c = mt->config;
+		else if (mt->provider != NULL)
+			c = &mt->provider->lg_config;
+		else
+			c = &mt->geom->lg_config;
 		gc = calloc(1, sizeof *gc);
 		if (gc == NULL) {
 			mt->error = errno;
 			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
+			free(p);
 			return;
 		}
 		gc->lg_name = strdup(name);
@@ -274,10 +284,12 @@ EndElement(void *userData, const char *name)
 			XML_StopParser(mt->parser, 0);
 			warn("Cannot allocate memory during processing of '%s' "
 			    "element", name);
+			free(gc);
+			free(p);
 			return;
 		}
 		gc->lg_val = p;
-		LIST_INSERT_HEAD(mt->config, gc, lg_config);
+		LIST_INSERT_HEAD(c, gc, lg_config);
 		return;
 	}
 

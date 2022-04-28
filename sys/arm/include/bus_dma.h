@@ -60,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/bus_dma.h 203974 2010-02-16 21:59:17Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _ARM_BUS_DMA_H
@@ -72,7 +72,7 @@
 
 #define BUS_DMA_TAG_VALID(t)    ((t) != (bus_dma_tag_t)0)
 
-#ifdef _ARM32_BUS_DMA_PRIVATE
+#if defined(_ARM32_BUS_DMA_PRIVATE) && __ARM_ARCH < 6
 /*
  *	arm32_dma_range
  *
@@ -93,8 +93,6 @@ struct arm32_dma_range {
 
 struct arm32_dma_range	*bus_dma_get_range(void);
 int	bus_dma_get_range_nb(void);
-
-extern bus_dma_tag_t arm_root_dma_tag;
 
 #endif /* _ARM32_BUS_DMA_PRIVATE */
 

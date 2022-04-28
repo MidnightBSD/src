@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/mac.h 166537 2007-02-06 16:24:57Z rwatson $
+ * $FreeBSD$
  */
 /*
  * Userland interface for Mandatory Access Control.  Loosely based on the

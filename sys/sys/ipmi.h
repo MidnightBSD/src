@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/ipmi.h 162562 2006-09-22 22:11:29Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_IPMI_H__
@@ -122,7 +122,7 @@ struct ipmi_ipmb_addr {
 };
 
 #if defined(__amd64__)
-/* Compatiblity with 32-bit binaries. */
+/* Compatibility with 32-bit binaries. */
 
 #define IPMICTL_RECEIVE_MSG_TRUNC_32	_IOWR(IPMI_IOC_MAGIC, 11, struct ipmi_recv32)
 #define IPMICTL_RECEIVE_MSG_32		_IOWR(IPMI_IOC_MAGIC, 12, struct ipmi_recv32)

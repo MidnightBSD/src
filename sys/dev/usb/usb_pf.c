@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_pf.c 253477 2013-07-19 21:54:48Z np $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 1990, 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -45,6 +45,7 @@
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_types.h>
 #include <net/if_clone.h>
 #include <net/bpf.h>
@@ -220,7 +221,13 @@ usbpf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 	ubus = ifp->if_softc;
 	unit = ifp->if_dunit;
 
+	/*
+	 * Lock USB before clearing the "ifp" pointer, to avoid
+	 * clearing the pointer in the middle of a TAP operation:
+	 */
+	USB_BUS_LOCK(ubus);
 	ubus->ifp = NULL;
+	USB_BUS_UNLOCK(ubus);
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
@@ -394,7 +401,7 @@ usbpf_xfertap(struct usb_xfer *xfer, int type)
 	bus = xfer->xroot->bus;
 
 	/* sanity checks */
-	if (bus->ifp == NULL)
+	if (bus->ifp == NULL || bus->ifp->if_bpf == NULL)
 		return;
 	if (!bpf_peers_present(bus->ifp->if_bpf))
 		return;

@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sati_util.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SATI_UTIL_H_
 #define _SATI_UTIL_H_
@@ -61,6 +61,8 @@
  *        by a user to construct ATA/ATAPI commands, copy ATA device
  *        structure data, fill in sense data, etc.
  */
+
+#include <sys/param.h>
 
 #include <dev/isci/scil/sati_types.h>
 #include <dev/isci/scil/sati_translator_sequence.h>
@@ -143,15 +145,6 @@
 
 #define ATA_MICROCODE_OFFSET_DOWNLOAD        0x03
 #define ATA_MICROCODE_DOWNLOAD_SAVE          0x07
-
-#ifndef MIN
-#define MIN(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
-#ifndef MAX
-#define MAX(x,y) ((x) > (y) ? (x) : (y))
-#endif
-
 
 void sati_ata_non_data_command(
    void                        * ata_io,

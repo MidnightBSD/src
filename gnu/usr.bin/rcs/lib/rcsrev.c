@@ -105,7 +105,7 @@ Report problems and direct all questions to:
 
 #include "rcsbase.h"
 
-libId(revId, "$FreeBSD: release/10.0.0/gnu/usr.bin/rcs/lib/rcsrev.c 50472 1999-08-27 23:37:10Z peter $")
+libId(revId, "$FreeBSD$")
 
 static char const *branchtip P((char const*));
 static char const *lookupsym P((char const*));

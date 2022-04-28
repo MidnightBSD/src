@@ -24,161 +24,199 @@
  */
 
 /*
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2017 by Delphix. All rights reserved.
  */
 
 #ifndef _SYS_SPACE_MAP_H
 #define	_SYS_SPACE_MAP_H
 
 #include <sys/avl.h>
+#include <sys/range_tree.h>
 #include <sys/dmu.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
-typedef struct space_map_ops space_map_ops_t;
+/*
+ * The size of the space map object has increased to include a histogram.
+ * The SPACE_MAP_SIZE_V0 designates the original size and is used to
+ * maintain backward compatibility.
+ */
+#define	SPACE_MAP_SIZE_V0	(3 * sizeof (uint64_t))
+#define	SPACE_MAP_HISTOGRAM_SIZE	32
 
+/*
+ * The space_map_phys is the on-disk representation of the space map.
+ * Consumers of space maps should never reference any of the members of this
+ * structure directly. These members may only be updated in syncing context.
+ *
+ * Note the smp_object is no longer used but remains in the structure
+ * for backward compatibility.
+ */
+typedef struct space_map_phys {
+	uint64_t	smp_object;	/* on-disk space map object */
+	uint64_t	smp_objsize;	/* size of the object */
+	int64_t		smp_alloc;	/* space allocated from the map */
+	uint64_t	smp_pad[5];	/* reserved */
+
+	/*
+	 * The smp_histogram maintains a histogram of free regions. Each
+	 * bucket, smp_histogram[i], contains the number of free regions
+	 * whose size is:
+	 * 2^(i+sm_shift) <= size of free region in bytes < 2^(i+sm_shift+1)
+	 */
+	uint64_t	smp_histogram[SPACE_MAP_HISTOGRAM_SIZE];
+} space_map_phys_t;
+
+/*
+ * The space map object defines a region of space, its size, how much is
+ * allocated, and the on-disk object that stores this information.
+ * Consumers of space maps may only access the members of this structure.
+ *
+ * Note: the space_map may not be accessed concurrently; consumers
+ * must provide external locking if required.
+ */
 typedef struct space_map {
-	avl_tree_t	sm_root;	/* offset-ordered segment AVL tree */
-	uint64_t	sm_space;	/* sum of all segments in the map */
 	uint64_t	sm_start;	/* start of map */
 	uint64_t	sm_size;	/* size of map */
 	uint8_t		sm_shift;	/* unit shift */
-	uint8_t		sm_loaded;	/* map loaded? */
-	uint8_t		sm_loading;	/* map loading? */
-	uint8_t		sm_condensing;	/* map condensing? */
-	kcondvar_t	sm_load_cv;	/* map load completion */
-	space_map_ops_t	*sm_ops;	/* space map block picker ops vector */
-	avl_tree_t	*sm_pp_root;	/* size-ordered, picker-private tree */
-	void		*sm_ppd;	/* picker-private data */
-	kmutex_t	*sm_lock;	/* pointer to lock that protects map */
+	uint64_t	sm_length;	/* synced length */
+	int64_t		sm_alloc;	/* synced space allocated */
+	objset_t	*sm_os;		/* objset for this map */
+	uint64_t	sm_object;	/* object id for this map */
+	uint32_t	sm_blksz;	/* block size for space map */
+	dmu_buf_t	*sm_dbuf;	/* space_map_phys_t dbuf */
+	space_map_phys_t *sm_phys;	/* on-disk space map */
 } space_map_t;
-
-typedef struct space_seg {
-	avl_node_t	ss_node;	/* AVL node */
-	avl_node_t	ss_pp_node;	/* AVL picker-private node */
-	uint64_t	ss_start;	/* starting offset of this segment */
-	uint64_t	ss_end;		/* ending offset (non-inclusive) */
-} space_seg_t;
-
-typedef struct space_ref {
-	avl_node_t	sr_node;	/* AVL node */
-	uint64_t	sr_offset;	/* offset (start or end) */
-	int64_t		sr_refcnt;	/* associated reference count */
-} space_ref_t;
-
-typedef struct space_map_obj {
-	uint64_t	smo_object;	/* on-disk space map object */
-	uint64_t	smo_objsize;	/* size of the object */
-	uint64_t	smo_alloc;	/* space allocated from the map */
-} space_map_obj_t;
-
-struct space_map_ops {
-	void	(*smop_load)(space_map_t *sm);
-	void	(*smop_unload)(space_map_t *sm);
-	uint64_t (*smop_alloc)(space_map_t *sm, uint64_t size);
-	void	(*smop_claim)(space_map_t *sm, uint64_t start, uint64_t size);
-	void	(*smop_free)(space_map_t *sm, uint64_t start, uint64_t size);
-	uint64_t (*smop_max)(space_map_t *sm);
-	boolean_t (*smop_fragmented)(space_map_t *sm);
-};
 
 /*
  * debug entry
  *
- *    1      3         10                     50
- *  ,---+--------+------------+---------------------------------.
- *  | 1 | action |  syncpass  |        txg (lower bits)         |
- *  `---+--------+------------+---------------------------------'
- *   63  62    60 59        50 49                               0
+ *     2     2        10                     50
+ *  +-----+-----+------------+----------------------------------+
+ *  | 1 0 | act |  syncpass  |        txg (lower bits)          |
+ *  +-----+-----+------------+----------------------------------+
+ *   63 62 61 60 59        50 49                                0
  *
  *
- * non-debug entry
+ * one-word entry
  *
  *    1               47                   1           15
- *  ,-----------------------------------------------------------.
+ *  +-----------------------------------------------------------+
  *  | 0 |   offset (sm_shift units)    | type |       run       |
- *  `-----------------------------------------------------------'
- *   63  62                          17   16   15               0
+ *  +-----------------------------------------------------------+
+ *   63  62                          16   15   14               0
+ *
+ *
+ * two-word entry
+ *
+ *     2     2               36                      24
+ *  +-----+-----+---------------------------+-------------------+
+ *  | 1 1 | pad |            run            |       vdev        |
+ *  +-----+-----+---------------------------+-------------------+
+ *   63 62 61 60 59                       24 23                 0
+ *
+ *     1                            63
+ *  +------+----------------------------------------------------+
+ *  | type |                      offset                        |
+ *  +------+----------------------------------------------------+
+ *     63   62                                                  0
+ *
+ * Note that a two-word entry will not strandle a block boundary.
+ * If necessary, the last word of a block will be padded with a
+ * debug entry (with act = syncpass = txg = 0).
  */
 
-/* All this stuff takes and returns bytes */
-#define	SM_RUN_DECODE(x)	(BF64_DECODE(x, 0, 15) + 1)
-#define	SM_RUN_ENCODE(x)	BF64_ENCODE((x) - 1, 0, 15)
-#define	SM_TYPE_DECODE(x)	BF64_DECODE(x, 15, 1)
-#define	SM_TYPE_ENCODE(x)	BF64_ENCODE(x, 15, 1)
-#define	SM_OFFSET_DECODE(x)	BF64_DECODE(x, 16, 47)
-#define	SM_OFFSET_ENCODE(x)	BF64_ENCODE(x, 16, 47)
-#define	SM_DEBUG_DECODE(x)	BF64_DECODE(x, 63, 1)
-#define	SM_DEBUG_ENCODE(x)	BF64_ENCODE(x, 63, 1)
+typedef enum {
+	SM_ALLOC,
+	SM_FREE
+} maptype_t;
 
-#define	SM_DEBUG_ACTION_DECODE(x)	BF64_DECODE(x, 60, 3)
-#define	SM_DEBUG_ACTION_ENCODE(x)	BF64_ENCODE(x, 60, 3)
+typedef struct space_map_entry {
+	maptype_t sme_type;
+	uint32_t sme_vdev;	/* max is 2^24-1; SM_NO_VDEVID if not present */
+	uint64_t sme_offset;	/* max is 2^63-1; units of sm_shift */
+	uint64_t sme_run;	/* max is 2^36; units of sm_shift */
+} space_map_entry_t;
 
+#define	SM_NO_VDEVID	(1 << SPA_VDEVBITS)
+
+/* one-word entry constants */
+#define	SM_DEBUG_PREFIX	2
+#define	SM_OFFSET_BITS	47
+#define	SM_RUN_BITS	15
+
+/* two-word entry constants */
+#define	SM2_PREFIX	3
+#define	SM2_OFFSET_BITS	63
+#define	SM2_RUN_BITS	36
+
+#define	SM_PREFIX_DECODE(x)	BF64_DECODE(x, 62, 2)
+#define	SM_PREFIX_ENCODE(x)	BF64_ENCODE(x, 62, 2)
+
+#define	SM_DEBUG_ACTION_DECODE(x)	BF64_DECODE(x, 60, 2)
+#define	SM_DEBUG_ACTION_ENCODE(x)	BF64_ENCODE(x, 60, 2)
 #define	SM_DEBUG_SYNCPASS_DECODE(x)	BF64_DECODE(x, 50, 10)
 #define	SM_DEBUG_SYNCPASS_ENCODE(x)	BF64_ENCODE(x, 50, 10)
-
 #define	SM_DEBUG_TXG_DECODE(x)		BF64_DECODE(x, 0, 50)
 #define	SM_DEBUG_TXG_ENCODE(x)		BF64_ENCODE(x, 0, 50)
 
-#define	SM_RUN_MAX			SM_RUN_DECODE(~0ULL)
+#define	SM_OFFSET_DECODE(x)	BF64_DECODE(x, 16, SM_OFFSET_BITS)
+#define	SM_OFFSET_ENCODE(x)	BF64_ENCODE(x, 16, SM_OFFSET_BITS)
+#define	SM_TYPE_DECODE(x)	BF64_DECODE(x, 15, 1)
+#define	SM_TYPE_ENCODE(x)	BF64_ENCODE(x, 15, 1)
+#define	SM_RUN_DECODE(x)	(BF64_DECODE(x, 0, SM_RUN_BITS) + 1)
+#define	SM_RUN_ENCODE(x)	BF64_ENCODE((x) - 1, 0, SM_RUN_BITS)
+#define	SM_RUN_MAX		SM_RUN_DECODE(~0ULL)
+#define	SM_OFFSET_MAX		SM_OFFSET_DECODE(~0ULL)
 
-#define	SM_ALLOC	0x0
-#define	SM_FREE		0x1
+#define	SM2_RUN_DECODE(x)	(BF64_DECODE(x, SPA_VDEVBITS, SM2_RUN_BITS) + 1)
+#define	SM2_RUN_ENCODE(x)	BF64_ENCODE((x) - 1, SPA_VDEVBITS, SM2_RUN_BITS)
+#define	SM2_VDEV_DECODE(x)	BF64_DECODE(x, 0, SPA_VDEVBITS)
+#define	SM2_VDEV_ENCODE(x)	BF64_ENCODE(x, 0, SPA_VDEVBITS)
+#define	SM2_TYPE_DECODE(x)	BF64_DECODE(x, SM2_OFFSET_BITS, 1)
+#define	SM2_TYPE_ENCODE(x)	BF64_ENCODE(x, SM2_OFFSET_BITS, 1)
+#define	SM2_OFFSET_DECODE(x)	BF64_DECODE(x, 0, SM2_OFFSET_BITS)
+#define	SM2_OFFSET_ENCODE(x)	BF64_ENCODE(x, 0, SM2_OFFSET_BITS)
+#define	SM2_RUN_MAX		SM2_RUN_DECODE(~0ULL)
+#define	SM2_OFFSET_MAX		SM2_OFFSET_DECODE(~0ULL)
 
-/*
- * The data for a given space map can be kept on blocks of any size.
- * Larger blocks entail fewer i/o operations, but they also cause the
- * DMU to keep more data in-core, and also to waste more i/o bandwidth
- * when only a few blocks have changed since the last transaction group.
- * This could use a lot more research, but for now, set the freelist
- * block size to 4k (2^12).
- */
-#define	SPACE_MAP_BLOCKSHIFT	12
+boolean_t sm_entry_is_debug(uint64_t e);
+boolean_t sm_entry_is_single_word(uint64_t e);
+boolean_t sm_entry_is_double_word(uint64_t e);
 
-typedef void space_map_func_t(space_map_t *sm, uint64_t start, uint64_t size);
+typedef int (*sm_cb_t)(space_map_entry_t *sme, void *arg);
 
-extern void space_map_init(void);
-extern void space_map_fini(void);
-extern void space_map_create(space_map_t *sm, uint64_t start, uint64_t size,
-    uint8_t shift, kmutex_t *lp);
-extern void space_map_destroy(space_map_t *sm);
-extern void space_map_add(space_map_t *sm, uint64_t start, uint64_t size);
-extern void space_map_remove(space_map_t *sm, uint64_t start, uint64_t size);
-extern boolean_t space_map_contains(space_map_t *sm,
-    uint64_t start, uint64_t size);
-extern space_seg_t *space_map_find(space_map_t *sm, uint64_t start,
-    uint64_t size, avl_index_t *wherep);
-extern void space_map_swap(space_map_t **msrc, space_map_t **mdest);
-extern void space_map_vacate(space_map_t *sm,
-    space_map_func_t *func, space_map_t *mdest);
-extern void space_map_walk(space_map_t *sm,
-    space_map_func_t *func, space_map_t *mdest);
+int space_map_load(space_map_t *sm, range_tree_t *rt, maptype_t maptype);
+int space_map_iterate(space_map_t *sm, sm_cb_t callback, void *arg);
+int space_map_incremental_destroy(space_map_t *sm, sm_cb_t callback, void *arg,
+    dmu_tx_t *tx);
 
-extern void space_map_load_wait(space_map_t *sm);
-extern int space_map_load(space_map_t *sm, space_map_ops_t *ops,
-    uint8_t maptype, space_map_obj_t *smo, objset_t *os);
-extern void space_map_unload(space_map_t *sm);
+void space_map_histogram_clear(space_map_t *sm);
+void space_map_histogram_add(space_map_t *sm, range_tree_t *rt,
+    dmu_tx_t *tx);
 
-extern uint64_t space_map_alloc(space_map_t *sm, uint64_t size);
-extern void space_map_claim(space_map_t *sm, uint64_t start, uint64_t size);
-extern void space_map_free(space_map_t *sm, uint64_t start, uint64_t size);
-extern uint64_t space_map_maxsize(space_map_t *sm);
+void space_map_update(space_map_t *sm);
 
-extern void space_map_sync(space_map_t *sm, uint8_t maptype,
-    space_map_obj_t *smo, objset_t *os, dmu_tx_t *tx);
-extern void space_map_truncate(space_map_obj_t *smo,
-    objset_t *os, dmu_tx_t *tx);
+uint64_t space_map_object(space_map_t *sm);
+uint64_t space_map_allocated(space_map_t *sm);
+uint64_t space_map_length(space_map_t *sm);
 
-extern void space_map_ref_create(avl_tree_t *t);
-extern void space_map_ref_destroy(avl_tree_t *t);
-extern void space_map_ref_add_seg(avl_tree_t *t,
-    uint64_t start, uint64_t end, int64_t refcnt);
-extern void space_map_ref_add_map(avl_tree_t *t,
-    space_map_t *sm, int64_t refcnt);
-extern void space_map_ref_generate_map(avl_tree_t *t,
-    space_map_t *sm, int64_t minref);
+void space_map_write(space_map_t *sm, range_tree_t *rt, maptype_t maptype,
+    uint64_t vdev_id, dmu_tx_t *tx);
+uint64_t space_map_estimate_optimal_size(space_map_t *sm, range_tree_t *rt,
+    uint64_t vdev_id);
+void space_map_truncate(space_map_t *sm, int blocksize, dmu_tx_t *tx);
+uint64_t space_map_alloc(objset_t *os, int blocksize, dmu_tx_t *tx);
+void space_map_free(space_map_t *sm, dmu_tx_t *tx);
+void space_map_free_obj(objset_t *os, uint64_t smobj, dmu_tx_t *tx);
+
+int space_map_open(space_map_t **smp, objset_t *os, uint64_t object,
+    uint64_t start, uint64_t size, uint8_t shift);
+void space_map_close(space_map_t *sm);
+
+int64_t space_map_alloc_delta(space_map_t *sm);
 
 #ifdef	__cplusplus
 }

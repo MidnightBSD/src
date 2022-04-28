@@ -25,12 +25,13 @@
  * SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/pcpu.h,v 1.15 2004/11/05 19:16:44 jhb
- * $FreeBSD: release/10.0.0/sys/mips/include/pcpu.h 249265 2013-04-08 19:19:10Z glebius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
 
+#include <machine/cpufunc.h>
 #include <machine/pte.h>
 
 #define	PCPU_MD_COMMON_FIELDS						\

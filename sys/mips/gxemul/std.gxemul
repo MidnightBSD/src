@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/gxemul/std.gxemul 234920 2012-05-02 08:10:15Z rwatson $
+# $FreeBSD$
 files	"../gxemul/files.gxemul"
 
 cpu		CPU_MIPS4KC

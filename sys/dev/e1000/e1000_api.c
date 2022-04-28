@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_api.c 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #include "e1000_api.h"
 
@@ -293,7 +293,32 @@ s32 e1000_set_mac_type(struct e1000_hw *hw)
 	case E1000_DEV_ID_PCH_LPT_I217_V:
 	case E1000_DEV_ID_PCH_LPTLP_I218_LM:
 	case E1000_DEV_ID_PCH_LPTLP_I218_V:
+	case E1000_DEV_ID_PCH_I218_LM2:
+	case E1000_DEV_ID_PCH_I218_V2:
+	case E1000_DEV_ID_PCH_I218_LM3:
+	case E1000_DEV_ID_PCH_I218_V3:
 		mac->type = e1000_pch_lpt;
+		break;
+	case E1000_DEV_ID_PCH_SPT_I219_LM:
+	case E1000_DEV_ID_PCH_SPT_I219_V:
+	case E1000_DEV_ID_PCH_SPT_I219_LM2:
+	case E1000_DEV_ID_PCH_SPT_I219_V2:
+	case E1000_DEV_ID_PCH_LBG_I219_LM3:
+	case E1000_DEV_ID_PCH_SPT_I219_LM4:
+	case E1000_DEV_ID_PCH_SPT_I219_V4:
+	case E1000_DEV_ID_PCH_SPT_I219_LM5:
+	case E1000_DEV_ID_PCH_SPT_I219_V5:
+		mac->type = e1000_pch_spt;
+		break;
+	case E1000_DEV_ID_PCH_CNP_I219_LM6:
+	case E1000_DEV_ID_PCH_CNP_I219_V6:
+	case E1000_DEV_ID_PCH_CNP_I219_LM7:
+	case E1000_DEV_ID_PCH_CNP_I219_V7:
+	case E1000_DEV_ID_PCH_ICP_I219_LM8:
+	case E1000_DEV_ID_PCH_ICP_I219_V8:
+	case E1000_DEV_ID_PCH_ICP_I219_LM9:
+	case E1000_DEV_ID_PCH_ICP_I219_V9:
+		mac->type = e1000_pch_cnp;
 		break;
 	case E1000_DEV_ID_82575EB_COPPER:
 	case E1000_DEV_ID_82575EB_FIBER_SERDES:
@@ -445,6 +470,8 @@ s32 e1000_setup_init_funcs(struct e1000_hw *hw, bool init_device)
 	case e1000_pchlan:
 	case e1000_pch2lan:
 	case e1000_pch_lpt:
+	case e1000_pch_spt:
+	case e1000_pch_cnp:
 		e1000_init_function_pointers_ich8lan(hw);
 		break;
 	case e1000_82575:
@@ -828,10 +855,12 @@ void e1000_config_collision_dist(struct e1000_hw *hw)
  *
  *  Sets a Receive Address Register (RAR) to the specified address.
  **/
-void e1000_rar_set(struct e1000_hw *hw, u8 *addr, u32 index)
+int e1000_rar_set(struct e1000_hw *hw, u8 *addr, u32 index)
 {
 	if (hw->mac.ops.rar_set)
-		hw->mac.ops.rar_set(hw, addr, index);
+		return hw->mac.ops.rar_set(hw, addr, index);
+
+	return E1000_SUCCESS;
 }
 
 /**

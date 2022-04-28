@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/main.c 253822 2013-07-30 22:57:12Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/main.c 253822 2013-07-30 22:57:
 #include <errno.h>
 #include <fstab.h>
 #include <grp.h>
+#include <inttypes.h>
 #include <mntopts.h>
 #include <paths.h>
 #include <stdint.h>
@@ -65,8 +66,10 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/main.c 253822 2013-07-30 22:57:
 
 #include "fsck.h"
 
+int	restarts;
+
 static void usage(void) __dead2;
-static int argtoi(int flag, const char *req, const char *str, int base);
+static intmax_t argtoimax(int flag, const char *req, const char *str, int base);
 static int checkfilesys(char *filesys);
 static int chkdoreload(struct statfs *mntp);
 static struct statfs *getmntpt(const char *);
@@ -77,17 +80,18 @@ main(int argc, char *argv[])
 	int ch;
 	struct rlimit rlimit;
 	struct itimerval itimerval;
+	int fsret;
 	int ret = 0;
 
 	sync();
 	skipclean = 1;
 	inoopt = 0;
-	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:nprSyZ")) != -1) {
+	while ((ch = getopt(argc, argv, "b:Bc:CdEfFm:npRrSyZz")) != -1) {
 		switch (ch) {
 		case 'b':
 			skipclean = 0;
-			bflag = argtoi('b', "number", optarg, 10);
-			printf("Alternate super block location: %d\n", bflag);
+			bflag = argtoimax('b', "number", optarg, 10);
+			printf("Alternate super block location: %jd\n", bflag);
 			break;
 
 		case 'B':
@@ -96,7 +100,8 @@ main(int argc, char *argv[])
 
 		case 'c':
 			skipclean = 0;
-			cvtlevel = argtoi('c', "conversion level", optarg, 10);
+			cvtlevel = argtoimax('c', "conversion level", optarg,
+			    10);
 			if (cvtlevel < 3)
 				errx(EEXIT, "cannot do level %d conversion",
 				    cvtlevel);
@@ -119,7 +124,7 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm':
-			lfmode = argtoi('m', "mode", optarg, 8);
+			lfmode = argtoimax('m', "mode", optarg, 8);
 			if (lfmode &~ 07777)
 				errx(EEXIT, "bad mode to -m: %o", lfmode);
 			printf("** lost+found creation mode %o\n", lfmode);
@@ -138,6 +143,9 @@ main(int argc, char *argv[])
 			ckclean++;
 			break;
 
+		case 'R':
+			wantrestart = 1;
+			break;
 		case 'r':
 			inoopt++;
 			break;
@@ -153,6 +161,10 @@ main(int argc, char *argv[])
 
 		case 'Z':
 			Zflag++;
+			break;
+
+		case 'z':
+			zflag++;
 			break;
 
 		default:
@@ -186,21 +198,26 @@ main(int argc, char *argv[])
 		rlimit.rlim_cur = rlimit.rlim_max;
 		(void)setrlimit(RLIMIT_DATA, &rlimit);
 	}
-	while (argc-- > 0)
-		(void)checkfilesys(*argv++);
+	while (argc > 0) {
+		if ((fsret = checkfilesys(*argv)) == ERESTART)
+			continue;
+		ret |= fsret;
+		argc--;
+		argv++;
+	}
 
 	if (returntosingle)
 		ret = 2;
 	exit(ret);
 }
 
-static int
-argtoi(int flag, const char *req, const char *str, int base)
+static intmax_t
+argtoimax(int flag, const char *req, const char *str, int base)
 {
 	char *cp;
-	int ret;
+	intmax_t ret;
 
-	ret = (int)strtol(str, &cp, base);
+	ret = strtoimax(str, &cp, base);
 	if (cp == str || *cp)
 		errx(EEXIT, "-%c flag requires a %s", flag, req);
 	return (ret);
@@ -220,6 +237,7 @@ checkfilesys(char *filesys)
 	struct group *grp;
 	struct iovec *iov;
 	char errmsg[255];
+	int ofsmodified;
 	int iovlen;
 	int cylno;
 	intmax_t blks, files;
@@ -228,6 +246,8 @@ checkfilesys(char *filesys)
 	iov = NULL;
 	iovlen = 0;
 	errmsg[0] = '\0';
+	fsutilinit();
+	fsckinit();
 
 	cdevname = filesys;
 	if (debug && ckclean)
@@ -338,10 +358,10 @@ checkfilesys(char *filesys)
 					pfatal(
 	"CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
 					    snapname, strerror(errno));
-				} else if ((grp = getgrnam("operator")) == 0 ||
-				    mkdir(snapname, 0770) < 0 ||
-				    chown(snapname, -1, grp->gr_gid) < 0 ||
-				    chmod(snapname, 0770) < 0) {
+				} else if ((grp = getgrnam("operator")) == NULL ||
+					   mkdir(snapname, 0770) < 0 ||
+					   chown(snapname, -1, grp->gr_gid) < 0 ||
+					   chmod(snapname, 0770) < 0) {
 					bkgrdflag = 0;
 					pfatal(
 	"CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
@@ -400,22 +420,25 @@ checkfilesys(char *filesys)
 	 */
 	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
 		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
-			if (preen || reply("USE JOURNAL")) {
-				if (suj_check(filesys) == 0) {
-					printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
-					if (chkdoreload(mntp) == 0)
-						exit(0);
-					exit(4);
-				}
+			if (suj_check(filesys) == 0) {
+				printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
+				if (chkdoreload(mntp) == 0)
+					exit(0);
+				exit(4);
 			}
 			printf("** Skipping journal, falling through to full fsck\n\n");
 		}
 		/*
 		 * Write the superblock so we don't try to recover the
-		 * journal on another pass.
+		 * journal on another pass. If this is the only change
+		 * to the filesystem, we do not want it to be called
+		 * out as modified.
 		 */
 		sblock.fs_mtime = time(NULL);
 		sbdirty();
+		ofsmodified = fsmodified;
+		flush(fswritefd, &sblk);
+		fsmodified = ofsmodified;
 	}
 
 	/*
@@ -550,8 +573,12 @@ checkfilesys(char *filesys)
 	inostathead = NULL;
 	if (fsmodified && !preen)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
-	if (rerun)
+	if (rerun) {
+		if (wantrestart && (restarts++ < 10) &&
+		    (preen || reply("RESTART")))
+			return (ERESTART);
 		printf("\n***** PLEASE RERUN FSCK *****\n");
+	}
 	if (chkdoreload(mntp) != 0) {
 		if (!fsmodified)
 			return (0);
@@ -560,7 +587,7 @@ checkfilesys(char *filesys)
 		sync();
 		return (4);
 	}
-	return (0);
+	return (rerun ? ERERUN : 0);
 }
 
 static int
@@ -629,6 +656,9 @@ getmntpt(const char *name)
 		statfsp = &mntbuf[i];
 		ddevname = statfsp->f_mntfromname;
 		if (*ddevname != '/') {
+			if (strlen(_PATH_DEV) + strlen(ddevname) + 1 >
+			    sizeof(statfsp->f_mntfromname))
+				continue;
 			strcpy(device, _PATH_DEV);
 			strcat(device, ddevname);
 			strcpy(statfsp->f_mntfromname, device);
@@ -650,7 +680,19 @@ static void
 usage(void)
 {
 	(void) fprintf(stderr,
-"usage: %s [-BEFfnpry] [-b block] [-c level] [-m mode] filesystem ...\n",
+"usage: %s [-BCdEFfnpRrSyZ] [-b block] [-c level] [-m mode] filesystem ...\n",
 	    getprogname());
 	exit(1);
+}
+
+void
+infohandler(int sig __unused)
+{
+	got_siginfo = 1;
+}
+
+void
+alarmhandler(int sig __unused)
+{
+	got_sigalarm = 1;
 }

@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)tmpfile.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/tmpfile.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -46,9 +46,10 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/tmpfile.c 249808 2013-04-23 13
 #include <string.h>
 #include <paths.h>
 #include "un-namespace.h"
+#include "libc_private.h"
 
 FILE *
-tmpfile()
+tmpfile(void)
 {
 	sigset_t set, oset;
 	FILE *fp;
@@ -69,7 +70,7 @@ tmpfile()
 		return (NULL);
 
 	sigfillset(&set);
-	(void)_sigprocmask(SIG_BLOCK, &set, &oset);
+	(void)__libc_sigprocmask(SIG_BLOCK, &set, &oset);
 
 	fd = mkstemp(buf);
 	if (fd != -1)
@@ -77,7 +78,7 @@ tmpfile()
 
 	free(buf);
 
-	(void)_sigprocmask(SIG_SETMASK, &oset, NULL);
+	(void)__libc_sigprocmask(SIG_SETMASK, &oset, NULL);
 
 	if (fd == -1)
 		return (NULL);

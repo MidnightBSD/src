@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netsmb/smb_trantcp.c 258123 2013-11-14 09:19:50Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/condvar.h>

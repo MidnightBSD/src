@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/clone.h 170719 2007-06-14 11:10:21Z ariff $
+ * $FreeBSD$
  */
 
 #ifndef _SND_CLONE_H_

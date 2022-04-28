@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)ldiv.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/ldiv.c 251672 2013-06-13 00:19:30Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>		/* ldiv_t */
 
@@ -48,9 +48,11 @@ ldiv(num, denom)
 
 	r.quot = num / denom;
 	r.rem = num % denom;
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
 	if (num >= 0 && r.rem < 0) {
 		r.quot++;
 		r.rem -= denom;
 	}
+#endif
 	return (r);
 }

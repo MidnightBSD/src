@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Marius Strobl
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/eeprom/ofw_options.c 190097 2009-03-19 20:24:30Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Handlers for Open Firmware /options node.
@@ -63,7 +65,7 @@ static int	ofwo_secmode(const struct ofwo_extabent *, int, const void *,
 static int	ofwo_secpwd(const struct ofwo_extabent *, int, const void *,
 		    int, const char *);
 
-static const struct ofwo_extabent const ofwo_extab[] = {
+static const struct ofwo_extabent ofwo_extab[] = {
 	{ "oem-logo",			ofwo_oemlogo },
 	{ "security-mode",		ofwo_secmode },
 	{ "security-password",		ofwo_secpwd },

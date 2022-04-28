@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/elf_generic.h 186667 2009-01-01 02:08:56Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_ELF_GENERIC_H_
@@ -84,5 +84,6 @@ __ElfType(Ssize);
 #define	ELF_ST_BIND	__ELFN(ST_BIND)
 #define	ELF_ST_TYPE	__ELFN(ST_TYPE)
 #define	ELF_ST_INFO	__ELFN(ST_INFO)
+#define	ELF_ST_VISIBILITY	__ELFN(ST_VISIBILITY)
 
 #endif /* !_SYS_ELF_GENERIC_H_ */

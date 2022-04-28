@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet6/send.h 222712 2011-06-05 11:40:30Z hrs $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET6_SEND_H_

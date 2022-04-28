@@ -1,8 +1,7 @@
-# $FreeBSD: release/10.0.0/usr.bin/unzip/Makefile 204352 2010-02-26 09:41:16Z ru $
+# $FreeBSD$
 
 PROG = unzip
 CSTD = c99
-DPADD = ${LIBARCHIVE} ${LIBZ}
-LDADD = -larchive -lz
+LIBADD=	archive
 
 .include <bsd.prog.mk>

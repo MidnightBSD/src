@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_single_np.c 165967 2007-01-12 07:26:21Z imp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>
@@ -36,7 +37,8 @@
 
 __weak_reference(_pthread_single_np, pthread_single_np);
 
-int _pthread_single_np()
+int
+_pthread_single_np(void)
 {
 
 	/* Enter single-threaded (non-POSIX) scheduling mode: */

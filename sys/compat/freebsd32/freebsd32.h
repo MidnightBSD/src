@@ -23,24 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32.h 258885 2013-12-03 19:40:32Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
 #define _COMPAT_FREEBSD32_FREEBSD32_H_
 
+#include <sys/abi_compat.h>
 #include <sys/procfs.h>
 #include <sys/socket.h>
 #include <sys/user.h>
-
-#define PTRIN(v)	(void *)(uintptr_t) (v)
-#define PTROUT(v)	(u_int32_t)(uintptr_t) (v)
-
-#define CP(src,dst,fld) do { (dst).fld = (src).fld; } while (0)
-#define PTRIN_CP(src,dst,fld) \
-	do { (dst).fld = PTRIN((src).fld); } while (0)
-#define PTROUT_CP(src,dst,fld) \
-	do { (dst).fld = PTROUT((src).fld); } while (0)
 
 /*
  * Being a newer port, 32-bit FreeBSD/MIPS uses 64-bit time_t.
@@ -55,28 +47,21 @@ struct timeval32 {
 	time32_t tv_sec;
 	int32_t tv_usec;
 };
-#define TV_CP(src,dst,fld) do {			\
-	CP((src).fld,(dst).fld,tv_sec);		\
-	CP((src).fld,(dst).fld,tv_usec);	\
-} while (0)
 
 struct timespec32 {
 	time32_t tv_sec;
 	int32_t tv_nsec;
 };
-#define TS_CP(src,dst,fld) do {			\
-	CP((src).fld,(dst).fld,tv_sec);		\
-	CP((src).fld,(dst).fld,tv_nsec);	\
-} while (0)
 
 struct itimerspec32 {
 	struct timespec32  it_interval;
 	struct timespec32  it_value;
 };
-#define ITS_CP(src, dst) do {			\
-	TS_CP((src), (dst), it_interval);	\
-	TS_CP((src), (dst), it_value);		\
-} while (0)
+
+struct bintime32 {
+	uint32_t sec;
+	uint32_t frac[2];
+};
 
 struct rusage32 {
 	struct timeval32 ru_utime;
@@ -133,15 +118,6 @@ struct statfs32 {
 	char	f_mntfromname[FREEBSD4_MNAMELEN];
 	int16_t	f_spares2 __packed;
 	int32_t f_spare[2];
-};
-
-struct kevent32 {
-	u_int32_t	ident;		/* identifier for this event */
-	short		filter;		/* filter for event */
-	u_short		flags;
-	u_int		fflags;
-	int32_t		data;
-	u_int32_t	udata;		/* opaque user data identifier */
 };
 
 struct iovec32 {
@@ -243,32 +219,6 @@ struct i386_ldt_args32 {
 	uint32_t num;
 };
 
-/*
- * Alternative layouts for <sys/procfs.h>
- */
-struct prstatus32 {
-        int     pr_version;
-        u_int   pr_statussz;
-        u_int   pr_gregsetsz;
-        u_int   pr_fpregsetsz;
-        int     pr_osreldate;
-        int     pr_cursig;
-        pid_t   pr_pid;
-        struct reg32 pr_reg;
-};
-
-struct prpsinfo32 {
-        int     pr_version;
-        u_int   pr_psinfosz;
-        char    pr_fname[PRFNAMESZ+1];
-        char    pr_psargs[PRARGSZ+1];
-};
-
-struct thrmisc32 {
-        char    pr_tname[MAXCOMLEN+1];
-        u_int   _pad;
-};
-
 struct mq_attr32 {
 	int	mq_flags;
 	int	mq_maxmsg;
@@ -332,8 +282,8 @@ struct kinfo_proc32 {
 	signed char ki_nice;
 	char	ki_lock;
 	char	ki_rqindex;
-	u_char	ki_oncpu;
-	u_char	ki_lastcpu;
+	u_char	ki_oncpu_old;
+	u_char	ki_lastcpu_old;
 	char	ki_tdname[TDNAMLEN+1];
 	char	ki_wmesg[WMESGLEN+1];
 	char	ki_login[LOGNAMELEN+1];
@@ -341,8 +291,12 @@ struct kinfo_proc32 {
 	char	ki_comm[COMMLEN+1];
 	char	ki_emul[KI_EMULNAMELEN+1];
 	char	ki_loginclass[LOGINCLASSLEN+1];
-	char	ki_sparestrings[50];
+	char	ki_moretdname[MAXCOMLEN-TDNAMLEN+1];
+	char	ki_sparestrings[46];
 	int	ki_spareints[KI_NSPARE_INT];
+	int	ki_oncpu;
+	int	ki_lastcpu;
+	int	ki_tracer;
 	int	ki_flag2;
 	int	ki_fibnum;
 	u_int	ki_cr_flags;
@@ -385,6 +339,12 @@ struct kld32_file_stat {
 	uint32_t address;	/* load address */
 	uint32_t size;		/* size in bytes */
 	char	pathname[MAXPATHLEN];
+};
+
+struct procctl_reaper_pids32 {
+	u_int	rp_count;
+	u_int	rp_pad0[15];
+	uint32_t rp_pids;
 };
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_H_ */

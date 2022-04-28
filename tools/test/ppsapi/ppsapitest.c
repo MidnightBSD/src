@@ -6,7 +6,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/test/ppsapi/ppsapitest.c 126820 2004-03-10 20:30:19Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdint.h>
@@ -72,7 +72,7 @@ main(int argc, char **argv)
 	if (argc > 0) {
 		fd = open(argv[0], O_RDONLY);
 		if (fd < 0) 
-			err(1, argv[0]);
+			err(1, "%s", argv[0]);
 	} else {
 		fd = 0;
 	}

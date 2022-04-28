@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# $FreeBSD: release/10.0.0/contrib/gcc/FREEBSD-libiberty 96330 2002-05-10 05:21:15Z obrien $
+# $FreeBSD$
 
 for F in \
 	choose-temp.c	\

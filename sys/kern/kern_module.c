@@ -27,7 +27,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_module.c 239586 2012-08-22 20:01:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -89,7 +89,7 @@ module_init(void *arg)
 	    SHUTDOWN_PRI_DEFAULT);
 }
 
-SYSINIT(module, SI_SUB_KLD, SI_ORDER_FIRST, module_init, 0);
+SYSINIT(module, SI_SUB_KLD, SI_ORDER_FIRST, module_init, NULL);
 
 static void
 module_shutdown(void *arg1, int arg2)
@@ -158,16 +158,12 @@ module_register(const moduledata_t *data, linker_file_t container)
 	newmod = module_lookupbyname(data->name);
 	if (newmod != NULL) {
 		MOD_XUNLOCK;
-		printf("module_register: module %s already exists!\n",
-		    data->name);
+		printf("%s: cannot register %s from %s; already loaded from %s\n",
+		    __func__, data->name, container->filename, newmod->file->filename);
 		return (EEXIST);
 	}
 	namelen = strlen(data->name) + 1;
 	newmod = malloc(sizeof(struct module) + namelen, M_MODULE, M_WAITOK);
-	if (newmod == NULL) {
-		MOD_XUNLOCK;
-		return (ENOMEM);
-	}
 	newmod->refs = 1;
 	newmod->id = nextid++;
 	newmod->name = (char *)(newmod + 1);

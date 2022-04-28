@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_h4.c,v 1.10 2005/10/31 17:57:43 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/drivers/h4/ng_h4.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD$
  * 
  * Based on:
  * ---------
@@ -798,7 +798,6 @@ ng_h4_rcvdata(hook_p hook, item_p item)
 			NG_NODE_NAME(sc->node), m->m_pkthdr.len);
 
 		NG_H4_STAT_OERROR(sc->stat);
-		_IF_DROP(&sc->outq);
 
 		NG_H4_UNLOCK(sc);
 

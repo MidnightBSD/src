@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/contrib/opensolaris/uts/common/sys/dtrace_impl.h 250574 2013-05-12 16:26:33Z markj $
+ * $FreeBSD$
  */
 
 /*
@@ -50,7 +50,8 @@ extern "C" {
  */
 
 #include <sys/dtrace.h>
-#if !defined(sun)
+
+#ifndef illumos
 #ifdef __sparcv9
 typedef uint32_t		pc_t;
 #else
@@ -64,6 +65,10 @@ typedef	u_long			greg_t;
  */
 #define	DTRACE_MAXPROPLEN		128
 #define	DTRACE_DYNVAR_CHUNKSIZE		256
+
+#ifdef __FreeBSD__
+#define	NCPU		MAXCPU
+#endif /* __FreeBSD__ */
 
 struct dtrace_probe;
 struct dtrace_ecb;
@@ -934,6 +939,7 @@ typedef struct dtrace_mstate {
 	uintptr_t dtms_strtok;			/* saved strtok() pointer */
 	uint32_t dtms_access;			/* memory access rights */
 	dtrace_difo_t *dtms_difo;		/* current dif object */
+	file_t *dtms_getf;			/* cached rval of getf() */
 } dtrace_mstate_t;
 
 #define	DTRACE_COND_OWNER	0x1
@@ -1121,7 +1127,7 @@ typedef struct dtrace_cred {
  * dtrace_state structure.
  */
 struct dtrace_state {
-#if defined(sun)
+#ifdef illumos
 	dev_t dts_dev;				/* device */
 #else
 	struct cdev *dts_dev;			/* device */
@@ -1139,7 +1145,7 @@ struct dtrace_state {
 	int dts_nspeculations;			/* number of speculations */
 	int dts_naggregations;			/* number of aggregations */
 	dtrace_aggregation_t **dts_aggregations; /* aggregation array */
-#if defined(sun)
+#ifdef illumos
 	vmem_t *dts_aggid_arena;		/* arena for aggregation IDs */
 #else
 	struct unrhdr *dts_aggid_arena;		/* arena for aggregation IDs */
@@ -1151,7 +1157,7 @@ struct dtrace_state {
 	uint32_t dts_dblerrors;			/* errors in ERROR probes */
 	uint32_t dts_reserve;			/* space reserved for END */
 	hrtime_t dts_laststatus;		/* time of last status */
-#if defined(sun)
+#ifdef illumos
 	cyclic_id_t dts_cleaner;		/* cleaning cyclic */
 	cyclic_id_t dts_deadman;		/* deadman cyclic */
 #else
@@ -1166,6 +1172,8 @@ struct dtrace_state {
 	dtrace_optval_t dts_options[DTRACEOPT_MAX]; /* options */
 	dtrace_cred_t dts_cred;			/* credentials */
 	size_t dts_nretained;			/* number of retained enabs */
+	int dts_getf;				/* number of getf() calls */
+	uint64_t dts_rstate[NCPU][2];		/* per-CPU random state */
 };
 
 struct dtrace_provider {
@@ -1268,7 +1276,11 @@ typedef struct dtrace_toxrange {
 	uintptr_t	dtt_limit;		/* limit of toxic range */
 } dtrace_toxrange_t;
 
+#ifdef illumos
 extern uint64_t dtrace_getarg(int, int);
+#else
+extern uint64_t __noinline dtrace_getarg(int, int);
+#endif
 extern greg_t dtrace_getfp(void);
 extern int dtrace_getipl(void);
 extern uintptr_t dtrace_caller(int);
@@ -1294,7 +1306,7 @@ extern void dtrace_probe_error(dtrace_state_t *, dtrace_epid_t, int, int,
     int, uintptr_t);
 extern int dtrace_assfail(const char *, const char *, int);
 extern int dtrace_attached(void);
-#if defined(sun)
+#ifdef illumos
 extern hrtime_t dtrace_gethrestime(void);
 #endif
 
@@ -1311,16 +1323,19 @@ extern void dtrace_copystr(uintptr_t, uintptr_t, size_t, volatile uint16_t *);
 /*
  * DTrace Assertions
  *
- * DTrace calls ASSERT from probe context.  To assure that a failed ASSERT
- * does not induce a markedly more catastrophic failure (e.g., one from which
- * a dump cannot be gleaned), DTrace must define its own ASSERT to be one that
- * may safely be called from probe context.  This header file must thus be
- * included by any DTrace component that calls ASSERT from probe context, and
- * _only_ by those components.  (The only exception to this is kernel
- * debugging infrastructure at user-level that doesn't depend on calling
- * ASSERT.)
+ * DTrace calls ASSERT and VERIFY from probe context.  To assure that a failed
+ * ASSERT or VERIFY does not induce a markedly more catastrophic failure (e.g.,
+ * one from which a dump cannot be gleaned), DTrace must define its own ASSERT
+ * and VERIFY macros to be ones that may safely be called from probe context.
+ * This header file must thus be included by any DTrace component that calls
+ * ASSERT and/or VERIFY from probe context, and _only_ by those components.
+ * (The only exception to this is kernel debugging infrastructure at user-level
+ * that doesn't depend on calling ASSERT.)
  */
 #undef ASSERT
+#undef VERIFY
+#define	VERIFY(EX)	((void)((EX) || \
+			dtrace_assfail(#EX, __FILE__, __LINE__)))
 #ifdef DEBUG
 #define	ASSERT(EX)	((void)((EX) || \
 			dtrace_assfail(#EX, __FILE__, __LINE__)))

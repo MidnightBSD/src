@@ -36,7 +36,7 @@
  *
  * From @(#)ctype.h	8.4 (Berkeley) 1/21/94
  * From FreeBSD: src/include/ctype.h,v 1.27 2004/06/23 07:11:39 tjr Exp
- * $FreeBSD: release/10.0.0/include/_ctype.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD$
  */
 
 #ifndef __CTYPE_H_
@@ -59,6 +59,7 @@
 #define	_CTYPE_I	0x00080000L		/* Ideogram */
 #define	_CTYPE_T	0x00100000L		/* Special */
 #define	_CTYPE_Q	0x00200000L		/* Phonogram */
+#define	_CTYPE_N 	0x00400000L		/* Number (superset of digit) */
 #define	_CTYPE_SW0	0x20000000L		/* 0 width character */
 #define	_CTYPE_SW1	0x40000000L		/* 1 width character */
 #define	_CTYPE_SW2	0x80000000L		/* 2 width character */

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/shlib-compat/test/regress.m4 248693 2013-03-25 00:31:14Z gleb $
+# $FreeBSD$
 
 dnl A library of routines for doing regression tests for userland utilities.
 

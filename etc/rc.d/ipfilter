@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/ipfilter 255450 2013-09-10 13:48:33Z cy $
+# $FreeBSD$
 #
 
 # PROVIDE: ipfilter
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="ipfilter"
+desc="IP packet filter"
 rcvar="ipfilter_enable"
 load_rc_config $name
 stop_precmd="test -f ${ipfilter_rules} -o -f ${ipv6_ipfilter_rules}"
@@ -65,7 +66,6 @@ ipfilter_reload()
 			err 1 'Load of rules into alternate set failed; aborting reload'
 		fi
 	fi
-	${ipfilter_program:-/sbin/ipf} -I -6 -Fa
 	if [ -r "${ipv6_ipfilter_rules}" ]; then
 		${ipfilter_program:-/sbin/ipf} -I -6 \
 		    -f "${ipv6_ipfilter_rules}" ${ipfilter_flags}

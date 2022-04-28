@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/release/picobsd/qemu/PICOBSD 210125 2010-07-15 16:32:59Z luigi $
+# $FreeBSD$
 # A configuration file to run tests on qemu.
 # We disable SMP because it does not work well with qemu, and set HZ=1000
 # to avoid it being overridden.
@@ -114,7 +114,6 @@ device		tun		# Packet tunnel.
 device		pty		# Pseudo-ttys (telnet etc)
 device		md		# Memory "disks"
 #device		gif	4	# IPv6 and IPv4 tunneling
-#device		faith	1	# IPv6-to-IPv4 relaying (translation)
 device		tap
 
 #options 	VIMAGE		# soner or later we may want to test this

@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/tools/tools/ath/athaggrstats/Makefile 239161 2012-08-09 23:04:20Z adrian $
+# $FreeBSD$
 
 .PATH:	${.CURDIR}/../../../../sys/dev/ath/ath_hal
 
 PROG=	athaggrstats
 
-SRCS=	main.c statfoo.c athaggrstats.c opt_ah.h ah_osdep.h
+SRCS=	main.c athaggrstats.c opt_ah.h ah_osdep.h
 
 CLEANFILES+=	opt_ah.h
 
@@ -12,6 +12,8 @@ CLEANFILES+=	opt_ah.h
 
 CFLAGS+=-DATH_SUPPORT_ANI
 CFLAGS+=-DATH_SUPPORT_TDMA
+CFLAGS+=-I${.CURDIR}/../../../../lib/libbsdstat/
+LIBADD+=	bsdstat
 
 opt_ah.h:
 	echo "#define AH_DEBUG 1" > opt_ah.h

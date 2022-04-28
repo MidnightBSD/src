@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/grep/nls/Makefile.inc 212927 2010-09-20 19:42:52Z delphij $
+# $FreeBSD$
 NLSNAME= grep
 
 NLS=	es_ES.ISO8859-1

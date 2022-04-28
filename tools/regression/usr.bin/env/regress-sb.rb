@@ -24,7 +24,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 # -------+---------+---------+-------- + --------+---------+---------+---------+
-# $FreeBSD: release/10.0.0/tools/regression/usr.bin/env/regress-sb.rb 228975 2011-12-30 00:04:11Z uqs $
+# $FreeBSD$
 # -------+---------+---------+-------- + --------+---------+---------+---------+
 #   This script was written to provide a battery of regression-tests for some
 # changes I am making to the `env' command.  I wrote a new script for this
@@ -346,6 +346,7 @@ class RGTestOptions
 	#   "just anything" that matches the general pattern.  There are
 	#   no blanks in the recognized values, but I use an x-tended
 	#   regexp and then add blanks to make it more readable.
+	optval.gsub!(/\[%- testpgm\.pathname -%\]/x, $testpgm)
 	optval.gsub!(/\[%- testpgm\.basename -%\]/x, File.basename($testpgm))
 	optval.gsub!(/\[%- script\.pathname  -%\]/x, $scriptfile)
 

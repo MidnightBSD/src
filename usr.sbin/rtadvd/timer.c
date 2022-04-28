@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.sbin/rtadvd/timer.c 253995 2013-08-06 15:49:18Z hrs $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: timer.c,v 1.9 2002/06/10 19:59:47 itojun Exp $	*/
 
 /*

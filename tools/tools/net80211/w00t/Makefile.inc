@@ -1,12 +1,13 @@
-# $FreeBSD: release/10.0.0/tools/tools/net80211/w00t/Makefile.inc 204311 2010-02-25 14:42:26Z ru $
+# $FreeBSD$
 
 W00T=	../libw00t
 # NB: we get crc32 from -lz
-DPADD=	${W00T}/libw00t.a ${LIBCRYPTO} ${LIBZ}
+DPADD=	${W00T}/libw00t.a
 LDFLAGS= -L${W00T}
-LDADD=	-lw00t  -lcrypto -lz
+LDADD=	-lw00t
+LIBADD+= crypto z
 
 BINDIR=	/usr/local/bin
 CFLAGS=	-g -I${W00T}
 
-NO_MAN=
+MAN=

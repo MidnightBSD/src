@@ -1,6 +1,8 @@
-/*	$FreeBSD: release/10.0.0/usr.bin/sort/vsort.h 251863 2013-06-17 20:15:39Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * Copyright (C) 2012 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +30,7 @@
  */
 
 #ifndef _VSORT_H_
-#define _VSORT_H_
+#define	_VSORT_H_
 
 #include "bwstring.h"
 

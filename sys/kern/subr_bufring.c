@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_bufring.c 207673 2010-05-05 20:39:02Z joel $");
+__FBSDID("$FreeBSD$");
 
 
 #include <sys/param.h>

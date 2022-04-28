@@ -28,7 +28,7 @@ AND WITH ALL FAULTS AND CAVIUM  NETWORKS MAKES NO PROMISES, REPRESENTATIONS OR W
 *************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-spi.c 232812 2012-03-11 06:17:49Z jmallett $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octe/ethernet-spi.c 232812 20
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 
 #include "wrapper-cvmx-includes.h"
 #include "ethernet-headers.h"

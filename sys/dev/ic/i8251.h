@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ic/i8251.h 182835 2008-09-07 04:35:04Z nyan $
+ * $FreeBSD$
  */
 
 /*

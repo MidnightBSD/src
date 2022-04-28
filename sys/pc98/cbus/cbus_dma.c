@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/pc98/cbus/cbus_dma.c 199220 2009-11-12 11:27:07Z nyan $");
+__FBSDID("$FreeBSD$");
 
 /*
  * code to manage AT bus
@@ -336,9 +336,9 @@ isa_dmarangecheck(caddr_t va, u_int length, int chan)
 	for (; va < (caddr_t) endva ; va += PAGE_SIZE) {
 		phys = trunc_page(pmap_extract(kernel_pmap, (vm_offset_t)va));
 #ifdef EPSON_BOUNCEDMA
-#define ISARAM_END	0xf00000
+#define ISARAM_END	0x0f00000
 #else
-#define ISARAM_END	RAM_END
+#define ISARAM_END	0x1000000
 #endif
 		if (phys == 0)
 			panic("isa_dmacheck: no physical page present");

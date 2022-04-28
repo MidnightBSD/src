@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/savage_bci.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD$");
 #include "dev/drm/drmP.h"
 #include "dev/drm/savage_drm.h"
 #include "dev/drm/savage_drv.h"
@@ -555,7 +555,7 @@ int savage_driver_load(struct drm_device *dev, unsigned long chipset)
 }
 
 /*
- * Initalize mappings. On Savage4 and SavageIX the alignment
+ * Initialize mappings. On Savage4 and SavageIX the alignment
  * and size of the aperture is not suitable for automatic MTRR setup
  * in drm_addmap. Therefore we add them manually before the maps are
  * initialized, and tear them down on last close.

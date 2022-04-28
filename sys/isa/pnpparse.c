@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/isa/pnpparse.c 165654 2006-12-30 11:55:47Z ceri $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -499,7 +499,7 @@ pnp_parse_resources(device_t dev, u_char *resources, int len, int ldn)
 				/*
 				 * Back to the common part; clear it
 				 * as its contents has already been copied
-				 * to each dependant.
+				 * to each dependent.
 				 */
 				config = &configs[0];
 				bzero(config, sizeof(*config));

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/hastd 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: hastd
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="hastd"
+desc="Highly Available Storage daemon"
 rcvar="hastd_enable"
 pidfile="/var/run/${name}.pid"
 command="/sbin/${name}"

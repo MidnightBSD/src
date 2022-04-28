@@ -28,7 +28,7 @@
  *
  *	@(#)ctags.h	8.3 (Berkeley) 4/2/94
  *
- * $FreeBSD: release/10.0.0/usr.bin/ctags/ctags.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD$
  *
  */
 
@@ -84,7 +84,7 @@ extern char    *lbp;
 extern char	searchar;		/* ex search character */
 
 extern int	cicmp(const char *);
-extern void	getline(void);
+extern void	get_line(void);
 extern void	pfnote(const char *, int);
 extern int	skip_key(int);
 extern void	put_entries(NODE *);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/sockets/fstat/fstat.c 183652 2008-10-06 19:42:03Z rwatson $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -57,7 +57,7 @@ dotest(int domain, int type, int protocol)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 
 	dotest(PF_INET, SOCK_DGRAM, 0);

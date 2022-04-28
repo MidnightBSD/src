@@ -1,6 +1,6 @@
 #!/bin/sh -e
 #
-# $FreeBSD: release/10.0.0/tools/tools/shlib-compat/shlib-compat-dirs.sh 248693 2013-03-25 00:31:14Z gleb $
+# $FreeBSD$
 
 SHLIB_COMPAT=$(dirname $0)/shlib-compat.py
 

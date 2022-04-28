@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/crypto/openssh/FREEBSD-vendor 196164 2009-08-13 06:07:38Z des $
+# $FreeBSD$
 Project:	Portable OpenSSH
 ProjectURL:	http://www.openssh.com/portable.html
 Version:	5.2p1

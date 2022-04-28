@@ -1,6 +1,15 @@
-# $FreeBSD: release/10.0.0/usr.sbin/nfsdumpstate/Makefile 192811 2009-05-26 15:19:04Z rmacklem $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	nfsdumpstate
 MAN=	nfsdumpstate.8
+
+.if ${MK_INET_SUPPORT} != "no"
+CFLAGS+= -DINET
+.endif
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
 
 .include <bsd.prog.mk>

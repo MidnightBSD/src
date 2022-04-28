@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -52,7 +52,7 @@
 
 /** setup new special type */
 static void
-alloc_setup_special(alloc_special_t* t)
+alloc_setup_special(alloc_special_type* t)
 {
 	memset(t, 0, sizeof(*t));
 	lock_rw_init(&t->entry.lock);
@@ -64,12 +64,13 @@ alloc_setup_special(alloc_special_t* t)
  * @param alloc: the structure to fill up.
  */
 static void
-prealloc(struct alloc_cache* alloc)
+prealloc_setup(struct alloc_cache* alloc)
 {
-	alloc_special_t* p;
+	alloc_special_type* p;
 	int i;
 	for(i=0; i<ALLOC_SPECIAL_MAX; i++) {
-		if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t)))) {
+		if(!(p = (alloc_special_type*)malloc(
+			sizeof(alloc_special_type)))) {
 			log_err("prealloc: out of memory");
 			return;
 		}
@@ -125,10 +126,40 @@ alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
 	}
 }
 
+/** free the special list */
+static void
+alloc_clear_special_list(struct alloc_cache* alloc)
+{
+	alloc_special_type* p, *np;
+	/* free */
+	p = alloc->quar;
+	while(p) {
+		np = alloc_special_next(p);
+		/* deinit special type */
+		lock_rw_destroy(&p->entry.lock);
+		free(p);
+		p = np;
+	}
+}
+
+void
+alloc_clear_special(struct alloc_cache* alloc)
+{
+	if(!alloc->super) {
+		lock_quick_lock(&alloc->lock);
+	}
+	alloc_clear_special_list(alloc);
+	alloc->quar = 0;
+	alloc->num_quar = 0;
+	if(!alloc->super) {
+		lock_quick_unlock(&alloc->lock);
+	}
+}
+
 void 
 alloc_clear(struct alloc_cache* alloc)
 {
-	alloc_special_t* p, *np;
+	alloc_special_type* p;
 	struct regional* r, *nr;
 	if(!alloc)
 		return;
@@ -146,15 +177,7 @@ alloc_clear(struct alloc_cache* alloc)
 		alloc->super->num_quar += alloc->num_quar;
 		lock_quick_unlock(&alloc->super->lock);
 	} else {
-		/* free */
-		p = alloc->quar;
-		while(p) {
-			np = alloc_special_next(p);
-			/* deinit special type */
-			lock_rw_destroy(&p->entry.lock);
-			free(p);
-			p = np;
-		}
+		alloc_clear_special_list(alloc);
 	}
 	alloc->quar = 0;
 	alloc->num_quar = 0;
@@ -187,10 +210,10 @@ alloc_get_id(struct alloc_cache* alloc)
 	return id;
 }
 
-alloc_special_t* 
+alloc_special_type* 
 alloc_special_obtain(struct alloc_cache* alloc)
 {
-	alloc_special_t* p;
+	alloc_special_type* p;
 	log_assert(alloc);
 	/* see if in local cache */
 	if(alloc->quar) {
@@ -216,8 +239,8 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		}
 	}
 	/* allocate new */
-	prealloc(alloc);
-	if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t)))) {
+	prealloc_setup(alloc);
+	if(!(p = (alloc_special_type*)malloc(sizeof(alloc_special_type)))) {
 		log_err("alloc_special_obtain: out of memory");
 		return NULL;
 	}
@@ -228,10 +251,10 @@ alloc_special_obtain(struct alloc_cache* alloc)
 
 /** push mem and some more items to the super */
 static void 
-pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
+pushintosuper(struct alloc_cache* alloc, alloc_special_type* mem)
 {
 	int i;
-	alloc_special_t *p = alloc->quar;
+	alloc_special_type *p = alloc->quar;
 	log_assert(p);
 	log_assert(alloc && alloc->super && 
 		alloc->num_quar >= ALLOC_SPECIAL_MAX);
@@ -253,7 +276,7 @@ pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
 }
 
 void 
-alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
+alloc_special_release(struct alloc_cache* alloc, alloc_special_type* mem)
 {
 	log_assert(alloc);
 	if(!mem)
@@ -286,12 +309,12 @@ alloc_stats(struct alloc_cache* alloc)
 
 size_t alloc_get_mem(struct alloc_cache* alloc)
 {
-	alloc_special_t* p;
+	alloc_special_type* p;
 	size_t s = sizeof(*alloc);
 	if(!alloc->super) { 
 		lock_quick_lock(&alloc->lock); /* superalloc needs locking */
 	}
-	s += sizeof(alloc_special_t) * alloc->num_quar;
+	s += sizeof(alloc_special_type) * alloc->num_quar;
 	for(p = alloc->quar; p; p = alloc_special_next(p)) {
 		s += lock_get_mem(&p->entry.lock);
 	}
@@ -353,6 +376,7 @@ void *unbound_stat_malloc(size_t size)
 {
 	void* res;
 	if(size == 0) size = 1;
+	log_assert(size <= SIZE_MAX-16);
 	res = malloc(size+16);
 	if(!res) return NULL;
 	unbound_mem_alloc += size;
@@ -364,11 +388,19 @@ void *unbound_stat_malloc(size_t size)
 #ifdef calloc
 #undef calloc
 #endif
+#ifndef INT_MAX
+#define INT_MAX (((int)-1)>>1)
+#endif
 /** calloc with stats */
 void *unbound_stat_calloc(size_t nmemb, size_t size)
 {
-	size_t s = (nmemb*size==0)?(size_t)1:nmemb*size;
-	void* res = calloc(1, s+16);
+	size_t s;
+	void* res;
+	if(nmemb != 0 && INT_MAX/nmemb < size)
+		return NULL; /* integer overflow check */
+	s = (nmemb*size==0)?(size_t)1:nmemb*size;
+	log_assert(s <= SIZE_MAX-16);
+	res = calloc(1, s+16);
 	if(!res) return NULL;
 	log_info("stat %p=calloc(%u, %u)", res+16, (unsigned)nmemb, (unsigned)size);
 	unbound_mem_alloc += s;
@@ -417,6 +449,7 @@ void *unbound_stat_realloc(void *ptr, size_t size)
 		/* nothing changes */
 		return ptr;
 	}
+	log_assert(size <= SIZE_MAX-16);
 	res = malloc(size+16);
 	if(!res) return NULL;
 	unbound_mem_alloc += size;
@@ -491,7 +524,9 @@ void *unbound_stat_malloc_lite(size_t size, const char* file, int line,
         const char* func)
 {
 	/*  [prefix .. len .. actual data .. suffix] */
-	void* res = malloc(size+lite_pad*2+sizeof(size_t));
+	void* res;
+	log_assert(size <= SIZE_MAX-(lite_pad*2+sizeof(size_t)));
+	res = malloc(size+lite_pad*2+sizeof(size_t));
 	if(!res) return NULL;
 	memmove(res, lite_pre, lite_pad);
 	memmove(res+lite_pad, &size, sizeof(size_t));
@@ -503,8 +538,13 @@ void *unbound_stat_malloc_lite(size_t size, const char* file, int line,
 void *unbound_stat_calloc_lite(size_t nmemb, size_t size, const char* file,
         int line, const char* func)
 {
-	size_t req = nmemb * size;
-	void* res = malloc(req+lite_pad*2+sizeof(size_t));
+	size_t req;
+	void* res;
+	if(nmemb != 0 && INT_MAX/nmemb < size)
+		return NULL; /* integer overflow check */
+	req = nmemb * size;
+	log_assert(req <= SIZE_MAX-(lite_pad*2+sizeof(size_t)));
+	res = malloc(req+lite_pad*2+sizeof(size_t));
 	if(!res) return NULL;
 	memmove(res, lite_pre, lite_pad);
 	memmove(res+lite_pad, &req, sizeof(size_t));
@@ -601,13 +641,13 @@ char* unbound_lite_wrapstr(char* s)
 	return n;
 }
 
-#undef ldns_pkt2wire
-ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, 
+#undef sldns_pkt2wire
+sldns_status unbound_lite_pkt2wire(uint8_t **dest, const sldns_pkt *p, 
 	size_t *size)
 {
 	uint8_t* md = NULL;
 	size_t ms = 0;
-	ldns_status s = ldns_pkt2wire(&md, p, &ms);
+	sldns_status s = sldns_pkt2wire(&md, p, &ms);
 	if(md) {
 		*dest = unbound_stat_malloc_lite(ms, __FILE__, __LINE__, 
 			__func__);

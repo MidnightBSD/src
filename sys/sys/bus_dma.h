@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -67,7 +60,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/sys/sys/bus_dma.h 248896 2013-03-29 16:26:25Z jimharris $ */
+/* $FreeBSD$ */
 
 #ifndef _BUS_DMA_H_
 #define _BUS_DMA_H_
@@ -247,6 +240,15 @@ int bus_dmamap_load_mem(bus_dma_tag_t dmat, bus_dmamap_t map,
 			void *callback_arg, int flags);
 
 /*
+ * Placeholder for use by busdma implementations which do not benefit
+ * from optimized procedure to load an array of vm_page_t.  Falls back
+ * to do _bus_dmamap_load_phys() in loop.
+ */
+int bus_dmamap_load_ma_triv(bus_dma_tag_t dmat, bus_dmamap_t map,
+    struct vm_page **ma, bus_size_t tlen, int ma_offs, int flags,
+    bus_dma_segment_t *segs, int *segp);
+
+/*
  * XXX sparc64 uses the same interface, but a much different implementation.
  *     <machine/bus_dma.h> for the sparc64 arch contains the equivalent
  *     declarations.
@@ -280,13 +282,25 @@ int bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 void bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map);
 
 /*
- * Perform a synchronization operation on the given map.
+ * Perform a synchronization operation on the given map. If the map
+ * is NULL we have a fully IO-coherent system. On every ARM architecture
+ * there must be a memory barrier placed to ensure that all data
+ * accesses are visible before going any further.
  */
 void _bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t, bus_dmasync_op_t);
+#if defined(__arm__)
+	#define __BUS_DMAMAP_SYNC_DEFAULT		mb()
+#elif defined(__aarch64__)
+	#define	__BUS_DMAMAP_SYNC_DEFAULT		dmb(sy)
+#else
+	#define	__BUS_DMAMAP_SYNC_DEFAULT		do {} while (0)
+#endif
 #define bus_dmamap_sync(dmat, dmamap, op) 			\
 	do {							\
 		if ((dmamap) != NULL)				\
 			_bus_dmamap_sync(dmat, dmamap, op);	\
+		else						\
+			__BUS_DMAMAP_SYNC_DEFAULT;		\
 	} while (0)
 
 /*
@@ -323,6 +337,10 @@ int _bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dmamap_t map,
 int _bus_dmamap_load_phys(bus_dma_tag_t dmat, bus_dmamap_t map,
 			  vm_paddr_t paddr, bus_size_t buflen,
 			  int flags, bus_dma_segment_t *segs, int *segp);
+
+int _bus_dmamap_load_ma(bus_dma_tag_t dmat, bus_dmamap_t map,
+    struct vm_page **ma, bus_size_t tlen, int ma_offs, int flags,
+    bus_dma_segment_t *segs, int *segp);
 
 bus_dma_segment_t *_bus_dmamap_complete(bus_dma_tag_t dmat,
 			   		bus_dmamap_t map,

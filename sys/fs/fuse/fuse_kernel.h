@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/fuse/fuse_kernel.h 253619 2013-07-24 20:21:29Z pfg $
+ * $FreeBSD$
  */
 
 #ifndef linux

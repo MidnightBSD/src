@@ -63,6 +63,8 @@ tests:
 lint:
 	lint -DLINT $(INCLUDES) $(SRC)>fluff
 
+update: depend
+
 depend:
 	@[ -n "$(MAKEDEPEND)" ] # should be set by upper Makefile...
 	$(MAKEDEPEND) -- $(CFLAG) $(INCLUDES) $(DEPFLAG) -- $(PROGS) $(LIBSRC)
@@ -155,10 +157,11 @@ rand_win.o: ../../include/openssl/rand.h ../../include/openssl/safestack.h
 rand_win.o: ../../include/openssl/sha.h ../../include/openssl/stack.h
 rand_win.o: ../../include/openssl/symhacks.h ../cryptlib.h rand_lcl.h
 rand_win.o: rand_win.c
-randfile.o: ../../e_os.h ../../include/openssl/buffer.h
-randfile.o: ../../include/openssl/crypto.h ../../include/openssl/e_os2.h
-randfile.o: ../../include/openssl/opensslconf.h
+randfile.o: ../../e_os.h ../../include/openssl/bio.h
+randfile.o: ../../include/openssl/buffer.h ../../include/openssl/crypto.h
+randfile.o: ../../include/openssl/e_os2.h ../../include/openssl/err.h
+randfile.o: ../../include/openssl/lhash.h ../../include/openssl/opensslconf.h
 randfile.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
 randfile.o: ../../include/openssl/rand.h ../../include/openssl/safestack.h
 randfile.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
-randfile.o: randfile.c
+randfile.o: ../cryptlib.h randfile.c

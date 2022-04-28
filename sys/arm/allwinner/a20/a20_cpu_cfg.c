@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@gmail.com>
+ * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 /* CPU configuration module for Allwinner A20 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/allwinner/a20/a20_cpu_cfg.c 254056 2013-08-07 11:07:56Z ganbold $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,7 +41,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/allwinner/a20/a20_cpu_cfg.c 254056 20
 #include <sys/watchdog.h>
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/frame.h>
 #include <machine/intr.h>
 
 #include <dev/fdt/fdt_common.h>
@@ -50,7 +49,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/allwinner/a20/a20_cpu_cfg.c 254056 20
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <machine/bus.h>
-#include <machine/fdt.h>
 
 #include "a20_cpu_cfg.h"
 
@@ -70,6 +68,9 @@ static struct a20_cpu_cfg_softc *a20_cpu_cfg_sc = NULL;
 static int
 a20_cpu_cfg_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (ofw_bus_is_compatible(dev, "allwinner,sun7i-cpu-cfg")) {
 		device_set_desc(dev, "A20 CPU Configuration Module");
@@ -116,7 +117,8 @@ static driver_t a20_cpu_cfg_driver = {
 
 static devclass_t a20_cpu_cfg_devclass;
 
-DRIVER_MODULE(a20_cpu_cfg, simplebus, a20_cpu_cfg_driver, a20_cpu_cfg_devclass, 0, 0);
+EARLY_DRIVER_MODULE(a20_cpu_cfg, simplebus, a20_cpu_cfg_driver, a20_cpu_cfg_devclass, 0, 0,
+    BUS_PASS_RESOURCE + BUS_PASS_ORDER_MIDDLE);
 
 uint64_t
 a20_read_counter64(void)

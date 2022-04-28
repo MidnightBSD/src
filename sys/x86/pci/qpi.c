@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010 Advanced Computing Technologies LLC
+ * Copyright (c) 2010 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,14 +26,14 @@
  */
 
 /*
- * This driver provides a psuedo-bus to enumerate the PCI buses
- * present on a sytem using a QPI chipset.  It creates a qpi0 bus that
- * is a child of nexus0 and then creates two Host-PCI bridges as a
+ * This driver provides a pseudo-bus to enumerate the PCI buses
+ * present on a system using a QPI chipset.  It creates a qpi0 bus that
+ * is a child of nexus0 and then creates Host-PCI bridges as a
  * child of that.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/pci/qpi.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -45,8 +45,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/x86/pci/qpi.c 227843 2011-11-22 21:28:20Z
 
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
-#include <machine/pci_cfgreg.h>
-#include <machine/specialreg.h>
+#include <x86/legacyvar.h>
+#include <x86/pci_cfgreg.h>
+#include <x86/specialreg.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -62,16 +63,22 @@ static MALLOC_DEFINE(M_QPI, "qpidrv", "qpi system device");
 static void
 qpi_identify(driver_t *driver, device_t parent)
 {
+	int do_qpi;
 
-        /* Check CPUID to ensure this is an i7 CPU of some sort. */
-        if (!(cpu_vendor_id == CPU_VENDOR_INTEL &&
-	    CPUID_TO_FAMILY(cpu_id) == 0x6 &&
-	    (CPUID_TO_MODEL(cpu_id) == 0x1a || CPUID_TO_MODEL(cpu_id) == 0x2c)))
-                return;
+	/* Check CPUID to ensure this is an i7 CPU of some sort. */
+	if (cpu_vendor_id != CPU_VENDOR_INTEL ||
+	    CPUID_TO_FAMILY(cpu_id) != 0x6)
+		return;
 
-        /* PCI config register access is required. */
-        if (pci_cfgregopen() == 0)
-                return;
+	/* Only discover buses with configuration devices if allowed by user */
+	do_qpi = 0;
+	TUNABLE_INT_FETCH("hw.attach_intel_csr_pci", &do_qpi);
+	if (!do_qpi)
+		return;
+
+	/* PCI config register access is required. */
+	if (pci_cfgregopen() == 0)
+		return;
 
 	/* Add a qpi bus device. */
 	if (BUS_ADD_CHILD(parent, 20, "qpi", -1) == NULL)
@@ -96,6 +103,7 @@ qpi_probe_pcib(device_t dev, int bus)
 	struct qpi_device *qdev;
 	device_t child;
 	uint32_t devid;
+	int s;
 
 	/*
 	 * If a PCI bus already exists for this bus number, then
@@ -105,18 +113,23 @@ qpi_probe_pcib(device_t dev, int bus)
 		return (EEXIST);
 
 	/*
-	 * Attempt to read the device id for device 0, function 0 on
-	 * the bus.  A value of 0xffffffff means that the bus is not
-	 * present.
+	 * Attempt to read the device id for every slot, function 0 on
+	 * the bus.  If all read values are 0xffffffff this means that
+	 * the bus is not present.
 	 */
-	devid = pci_cfgregread(bus, 0, 0, PCIR_DEVVENDOR, 4);
+	for (s = 0; s <= PCI_SLOTMAX; s++) {
+		devid = pci_cfgregread(bus, s, 0, PCIR_DEVVENDOR, 4);
+		if (devid != 0xffffffff)
+			break;
+	}
 	if (devid == 0xffffffff)
 		return (ENOENT);
 
 	if ((devid & 0xffff) != 0x8086) {
-		device_printf(dev,
-		    "Device at pci%d.0.0 has non-Intel vendor 0x%x\n", bus,
-		    devid & 0xffff);
+		if (bootverbose)
+			device_printf(dev,
+			    "Device at pci%d.%d.0 has non-Intel vendor 0x%x\n",
+			    bus, s, devid & 0xffff);
 		return (ENXIO);
 	}
 
@@ -136,12 +149,12 @@ qpi_attach(device_t dev)
 	int bus;
 
 	/*
-	 * Each processor socket has a dedicated PCI bus counting down from
-	 * 255.  We keep probing buses until one fails.
+	 * Each processor socket has a dedicated PCI bus, sometimes
+	 * not enumerated by ACPI.  Probe all unattached buses from 0
+	 * to 255.
 	 */
-	for (bus = 255;; bus--)
-		if (qpi_probe_pcib(dev, bus) != 0)
-			break;
+	for (bus = PCI_BUSMAX; bus >= 0; bus--)
+		qpi_probe_pcib(dev, bus);
 
 	return (bus_generic_attach(dev));
 }
@@ -217,8 +230,8 @@ static int
 qpi_pcib_attach(device_t dev)
 {
 
-	device_add_child(dev, "pci", pcib_get_bus(dev));      
-        return (bus_generic_attach(dev));
+	device_add_child(dev, "pci", -1);
+	return (bus_generic_attach(dev));
 }
 
 static int
@@ -237,41 +250,19 @@ qpi_pcib_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	}
 }
 
-static uint32_t
-qpi_pcib_read_config(device_t dev, u_int bus, u_int slot, u_int func,
-    u_int reg, int bytes)
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+static struct resource *
+qpi_pcib_alloc_resource(device_t dev, device_t child, int type, int *rid,
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
-	return (pci_cfgregread(bus, slot, func, reg, bytes));
+	if (type == PCI_RES_BUS)
+		return (pci_domain_alloc_bus(0, child, rid, start, end, count,
+		    flags));
+	return (bus_generic_alloc_resource(dev, child, type, rid, start, end,
+	    count, flags));
 }
-
-static void
-qpi_pcib_write_config(device_t dev, u_int bus, u_int slot, u_int func,
-    u_int reg, uint32_t data, int bytes)
-{
-
-	pci_cfgregwrite(bus, slot, func, reg, data, bytes);
-}
-
-static int
-qpi_pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
-    int *irqs)
-{
-	device_t bus;
-
-	bus = device_get_parent(pcib);
-	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
-	    irqs));
-}
-
-static int
-qpi_pcib_alloc_msix(device_t pcib, device_t dev, int *irq)
-{
-	device_t bus;
-
-	bus = device_get_parent(pcib);
-	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
-}
+#endif
 
 static int
 qpi_pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
@@ -293,8 +284,14 @@ static device_method_t qpi_pcib_methods[] = {
 
 	/* Bus interface */
 	DEVMETHOD(bus_read_ivar,	qpi_pcib_read_ivar),
+#if defined(NEW_PCIB) && defined(PCI_RES_BUS)
+	DEVMETHOD(bus_alloc_resource,	qpi_pcib_alloc_resource),
+	DEVMETHOD(bus_adjust_resource,	legacy_pcib_adjust_resource),
+	DEVMETHOD(bus_release_resource,	legacy_pcib_release_resource),
+#else
 	DEVMETHOD(bus_alloc_resource,	bus_generic_alloc_resource),
 	DEVMETHOD(bus_release_resource,	bus_generic_release_resource),
+#endif
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
@@ -302,11 +299,11 @@ static device_method_t qpi_pcib_methods[] = {
 
 	/* pcib interface */
 	DEVMETHOD(pcib_maxslots,	pcib_maxslots),
-	DEVMETHOD(pcib_read_config,	qpi_pcib_read_config),
-	DEVMETHOD(pcib_write_config,	qpi_pcib_write_config),
-	DEVMETHOD(pcib_alloc_msi,	qpi_pcib_alloc_msi),
+	DEVMETHOD(pcib_read_config,	legacy_pcib_read_config),
+	DEVMETHOD(pcib_write_config,	legacy_pcib_write_config),
+	DEVMETHOD(pcib_alloc_msi,	legacy_pcib_alloc_msi),
 	DEVMETHOD(pcib_release_msi,	pcib_release_msi),
-	DEVMETHOD(pcib_alloc_msix,	qpi_pcib_alloc_msix),
+	DEVMETHOD(pcib_alloc_msix,	legacy_pcib_alloc_msix),
 	DEVMETHOD(pcib_release_msix,	pcib_release_msix),
 	DEVMETHOD(pcib_map_msi,		qpi_pcib_map_msi),
 

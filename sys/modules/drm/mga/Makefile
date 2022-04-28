@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm/mga/Makefile 124472 2004-01-13 11:28:51Z ru $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../../dev/drm
+.PATH:	${SRCTOP}/sys/dev/drm
 KMOD	= mga
 SRCS	= mga_drv.c mga_state.c mga_warp.c mga_dma.c \
 	mga_irq.c

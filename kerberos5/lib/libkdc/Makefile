@@ -1,11 +1,9 @@
-#$FreeBSD: release/10.0.0/kerberos5/lib/libkdc/Makefile 236337 2012-05-30 22:21:25Z obrien $
+#$FreeBSD$
 
 LIB=	kdc
 LDFLAGS=	-Wl,--no-undefined
 VERSION_MAP= ${KRB5DIR}/kdc/version-script.map
-LDADD=	-lroken -lhdb -lhx509 -lkrb5 -lheimntlm -lasn1 -lcrypt -lcrypto
-DPADD=	${LIBROKEN} ${LIBHDB} ${LIBHX509} ${LIBKRB5} ${LIBHEIMNTLM} \
-	${LIBASN1} ${LIBCRYPT} ${LIBCRYPTO}
+LIBADD=	roken hdb hx509 krb5 heimntlm asn1 crypto
 
 INCS=	kdc.h \
 	kdc-protos.h
@@ -30,7 +28,8 @@ SRCS=	\
 CFLAGS+=	-I${KRB5DIR}/lib/roken \
 		-I${KRB5DIR}/lib/krb5 \
 		-I${KRB5DIR}/lib/hdb \
-		-I${KRB5DIR}/kdc
+		-I${KRB5DIR}/kdc \
+		-I${SRCTOP}/contrib/com_err
 
 .include <bsd.lib.mk>
 

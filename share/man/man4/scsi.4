@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/scsi.4 236712 2012-06-07 10:05:51Z mav $
+.\" $FreeBSD$
 .Dd June 7, 2012
 .Dt CAM 4
 .Os
@@ -195,7 +195,7 @@ hint.scbus.0.bus="1"
 This assigns
 .Nm
 bus 0 to the bus 1 instance on
-.Em ahc0 .
+.Em ahc1 .
 Peripheral drivers can be wired to a specific bus, target, and lun as so:
 .Bd -literal -offset indent
 hint.da.0.at="scbus0"
@@ -351,4 +351,4 @@ The
 .Nm
 .Tn ATA
 support was added by
-.An Alexander Motin Aq mav@FreeBSD.org .
+.An Alexander Motin Aq Mt mav@FreeBSD.org .

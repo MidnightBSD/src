@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/e1000_regs.h 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 #ifndef _E1000_REGS_H_
 #define _E1000_REGS_H_
@@ -59,11 +59,15 @@
 #define E1000_SCTL	0x00024  /* SerDes Control - RW */
 #define E1000_FCAL	0x00028  /* Flow Control Address Low - RW */
 #define E1000_FCAH	0x0002C  /* Flow Control Address High -RW */
+#define E1000_FEXT	0x0002C  /* Future Extended - RW */
 #define E1000_FEXTNVM	0x00028  /* Future Extended NVM - RW */
 #define E1000_FEXTNVM3	0x0003C  /* Future Extended NVM 3 - RW */
 #define E1000_FEXTNVM4	0x00024  /* Future Extended NVM 4 - RW */
 #define E1000_FEXTNVM6	0x00010  /* Future Extended NVM 6 - RW */
 #define E1000_FEXTNVM7	0x000E4  /* Future Extended NVM 7 - RW */
+#define E1000_FEXTNVM9	0x5BB4  /* Future Extended NVM 9 - RW */
+#define E1000_FEXTNVM11	0x5BBC  /* Future Extended NVM 11 - RW */
+#define E1000_PCIEANACFG	0x00F18 /* PCIE Analog Config */
 #define E1000_FCT	0x00030  /* Flow Control Type - RW */
 #define E1000_CONNSW	0x00034  /* Copper/Fiber switch control - RW */
 #define E1000_VET	0x00038  /* VLAN Ether Type - RW */
@@ -106,8 +110,11 @@
 #define E1000_PBA	0x01000  /* Packet Buffer Allocation - RW */
 #define E1000_PBS	0x01008  /* Packet Buffer Size */
 #define E1000_PBECCSTS	0x0100C  /* Packet Buffer ECC Status - RW */
+#define E1000_IOSFPC	0x00F28  /* TX corrupted data  */
 #define E1000_EEMNGCTL	0x01010  /* MNG EEprom Control */
+#define E1000_EEMNGCTL_I210	0x01010  /* i210 MNG EEprom Mode Control */
 #define E1000_EEARBC	0x01024  /* EEPROM Auto Read Bus Control */
+#define E1000_EEARBC_I210	0x12024 /* EEPROM Auto Read Bus Control */
 #define E1000_FLASHT	0x01028  /* FLASH Timer Register */
 #define E1000_EEWR	0x0102C  /* EEPROM Write Register - RW */
 #define E1000_FLSWCTL	0x01030  /* FLASH control register */
@@ -200,20 +207,20 @@
 /* Queues fetch arbitration priority control register */
 #define E1000_I210_TQAVARBCTRL			0x3574
 /* Queues priority masks where _n and _p can be 0-3. */
-#define E1000_TQAVARBCTRL_QUEUE_PRI(_n, _p)	((_p) << (2 * _n))
+#define E1000_TQAVARBCTRL_QUEUE_PRI(_n, _p)	((_p) << (2 * (_n)))
 /* QAV Tx mode control registers where _n can be 0 or 1. */
 #define E1000_I210_TQAVCC(_n)			(0x3004 + 0x40 * (_n))
 
 /* QAV Tx mode control register bitfields masks */
 #define E1000_TQAVCC_IDLE_SLOPE		0xFFFF /* Idle slope */
 #define E1000_TQAVCC_KEEP_CREDITS	(1 << 30) /* Keep credits opt enable */
-#define E1000_TQAVCC_QUEUE_MODE		(1 << 31) /* SP vs. SR Tx mode */
+#define E1000_TQAVCC_QUEUE_MODE		(1U << 31) /* SP vs. SR Tx mode */
 
 /* Good transmitted packets counter registers */
 #define E1000_PQGPTC(_n)		(0x010014 + (0x100 * (_n)))
 
 /* Queues packet buffer size masks where _n can be 0-3 and _s 0-63 [kB] */
-#define E1000_I210_TXPBS_SIZE(_n, _s)	((_s) << (6 * _n))
+#define E1000_I210_TXPBS_SIZE(_n, _s)	((_s) << (6 * (_n)))
 
 #define E1000_MMDAC			13 /* MMD Access Control */
 #define E1000_MMDAAD			14 /* MMD Access Address/Data */
@@ -550,7 +557,7 @@
 #define E1000_WVBR	0x03554 /* VM Wrong Behavior - RWS */
 #define E1000_RPLOLR	0x05AF0 /* Replication Offload - RW */
 #define E1000_UTA	0x0A000 /* Unicast Table Array - RW */
-#define E1000_IOVTCL	0x05BBC /* IOV Control Register */
+#define E1000_IOVCTL	0x05BBC /* IOV Control Register */
 #define E1000_VMRCTL	0X05D80 /* Virtual Mirror Rule Control */
 #define E1000_VMRVLAN	0x05D90 /* Virtual Mirror Rule VLAN */
 #define E1000_VMRVM	0x05DA0 /* Virtual Mirror Rule VM */
@@ -586,6 +593,10 @@
 #define E1000_TIMADJL	0x0B60C /* Time sync time adjustment offset Low - RW */
 #define E1000_TIMADJH	0x0B610 /* Time sync time adjustment offset High - RW */
 #define E1000_TSAUXC	0x0B640 /* Timesync Auxiliary Control register */
+#define	E1000_SYSSTMPL	0x0B648 /* HH Timesync system stamp low register */
+#define	E1000_SYSSTMPH	0x0B64C /* HH Timesync system stamp hi register */
+#define	E1000_PLTSTMPL	0x0B640 /* HH Timesync platform stamp low register */
+#define	E1000_PLTSTMPH	0x0B644 /* HH Timesync platform stamp hi register */
 #define E1000_SYSTIMR	0x0B6F8 /* System time register Residue */
 #define E1000_TSICR	0x0B66C /* Interrupt Cause Register */
 #define E1000_TSIM	0x0B674 /* Interrupt Mask Register */

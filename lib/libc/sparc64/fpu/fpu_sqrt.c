@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/fpu/fpu_sqrt.c 178139 2008-04-12 03:10:13Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Perform an FPU square root (return sqrt(x)).
@@ -257,7 +257,7 @@ __fpu_sqrt(fe)
 	 * double x correctly while doing the `known q=1.0'.
 	 *
 	 * We do this one mantissa-word at a time, as noted above, to
-	 * save work.  To avoid `(1 << 31) << 1', we also do the top bit
+	 * save work.  To avoid `(1U << 31) << 1', we also do the top bit
 	 * outside of each per-word loop.
 	 *
 	 * The calculation `t = y + bit' breaks down into `t0 = y0, ...,

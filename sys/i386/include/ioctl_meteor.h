@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/include/ioctl_meteor.h 143063 2005-03-02 21:33:29Z joerg $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_IOCTL_METEOR_H_

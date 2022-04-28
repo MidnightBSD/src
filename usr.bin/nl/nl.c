@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -32,7 +34,7 @@
 __COPYRIGHT(
 "@(#) Copyright (c) 1999\
  The NetBSD Foundation, Inc.  All rights reserved.");
-__RCSID("$FreeBSD: release/10.0.0/usr.bin/nl/nl.c 226362 2011-10-14 07:28:39Z ed $");
+__RCSID("$FreeBSD$");
 #endif    
 
 #define	_WITH_GETLINE
@@ -242,7 +244,8 @@ main(int argc, char *argv[])
 	case 0:
 		break;
 	case 1:
-		if (freopen(argv[0], "r", stdin) == NULL)
+		if (strcmp(argv[0], "-") != 0 &&
+		    freopen(argv[0], "r", stdin) == NULL)
 			err(EXIT_FAILURE, "%s", argv[0]);
 		break;
 	default:

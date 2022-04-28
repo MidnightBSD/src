@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/bin/csh/iconv_stub.c 198189 2009-10-17 15:53:15Z ume $
+ * $FreeBSD$
  */
 
 #include <dlfcn.h>
@@ -36,9 +36,9 @@
 #undef iconv_close
 
 #define ICONVLIB	"libiconv.so"
-#define ICONV_ENGINE	"iconv"
-#define ICONV_OPEN	"iconv_open"
-#define ICONV_CLOSE	"iconv_close"
+#define ICONV_ENGINE	"libiconv"
+#define ICONV_OPEN	"libiconv_open"
+#define ICONV_CLOSE	"libiconv_close"
 
 typedef iconv_t iconv_open_t(const char *, const char *);
 

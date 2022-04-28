@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/wall/wall.c 241848 2012-10-22 03:07:05Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =

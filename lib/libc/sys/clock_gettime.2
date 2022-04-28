@@ -27,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/clock_gettime.2 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD$
 .\"
-.Dd December 29, 2009
+.Dd December 7, 2019
 .Dt CLOCK_GETTIME 2
 .Os
 .Sh NAME
@@ -58,31 +58,39 @@ used by a clock which is specified by
 .Pp
 The
 .Fa clock_id
-argument
-can be one of the following values:
-.Dv CLOCK_REALTIME ,
-.Dv CLOCK_REALTIME_PRECISE ,
-.Dv CLOCK_REALTIME_FAST
-for time that increments as
-a wall clock should;
-.Dv CLOCK_MONOTONIC ,
-.Dv CLOCK_MONOTONIC_PRECISE ,
-.Dv CLOCK_MONOTONIC_FAST
-which increments in SI seconds;
-.Dv CLOCK_UPTIME ,
-.Dv CLOCK_UPTIME_PRECISE ,
-.Dv CLOCK_UPTIME_FAST
-which starts at zero when the kernel boots and increments
-monotonically in SI seconds while the machine is running;
-.Dv CLOCK_VIRTUAL
-for time that increments only when
-the CPU is running in user mode on behalf of the calling process;
-.Dv CLOCK_PROF
-for time that increments when the CPU is running in user or
-kernel mode; or
-.Dv CLOCK_SECOND
-which returns the current second without performing a full time counter
-query, using in-kernel cached value of current second.
+argument can be a value obtained from
+.Xr clock_getcpuclockid 3
+or
+.Xr pthread_getcpuclockid 3
+as well as the following values:
+.Pp
+.Bl -tag -width indent -compact
+.It Dv CLOCK_REALTIME
+.It Dv CLOCK_REALTIME_PRECISE
+.It Dv CLOCK_REALTIME_FAST
+Increments as a wall clock should.
+.It Dv CLOCK_MONOTONIC
+.It Dv CLOCK_MONOTONIC_PRECISE
+.It Dv CLOCK_MONOTONIC_FAST
+Increments in SI seconds.
+.It Dv CLOCK_UPTIME
+.It Dv CLOCK_UPTIME_PRECISE
+.It Dv CLOCK_UPTIME_FAST
+Starts at zero when the kernel boots and increments
+monotonically in SI seconds while the machine is running.
+.It Dv CLOCK_VIRTUAL
+Increments only when
+the CPU is running in user mode on behalf of the calling process.
+.It Dv CLOCK_PROF
+Increments when the CPU is running in user or kernel mode.
+.It Dv CLOCK_SECOND
+Returns the current second without performing a full time counter
+query, using an in-kernel cached value of the current second.
+.It Dv CLOCK_PROCESS_CPUTIME_ID
+Returns the execution time of the calling process.
+.It Dv CLOCK_THREAD_CPUTIME_ID
+Returns the execution time of the calling thread.
+.El
 .Pp
 The clock IDs
 .Fa CLOCK_REALTIME_FAST ,
@@ -134,19 +142,19 @@ The following error codes may be set in
 .It Bq Er EINVAL
 The
 .Fa clock_id
+or
+.Fa timespec
 argument
 was not a valid value.
-.It Bq Er EFAULT
-The
-.Fa *tp
-argument address referenced invalid memory.
 .It Bq Er EPERM
 A user other than the super-user attempted to set the time.
 .El
 .Sh SEE ALSO
 .Xr date 1 ,
 .Xr adjtime 2 ,
+.Xr clock_getcpuclockid 3 ,
 .Xr ctime 3 ,
+.Xr pthread_getcpuclockid 3 ,
 .Xr timed 8
 .Sh STANDARDS
 The
@@ -166,3 +174,11 @@ The clock IDs
 .Fa CLOCK_UPTIME_PRECISE ,
 .Fa CLOCK_SECOND
 are FreeBSD extensions to the POSIX interface.
+.Sh HISTORY
+The
+.Fn clock_gettime ,
+.Fn clock_settime ,
+and
+.Fn clock_getres
+system calls first appeared in
+.Fx 3.0 .

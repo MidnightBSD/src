@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm_ioctl.c 148887 2005-08-09 10:20:02Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/patm/if_patm_ioctl.c 148887 2005-08-0
 #include <sys/socket.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_atm.h>
 #include <net/route.h>
@@ -386,7 +387,7 @@ patm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		/* return vcc table */
 		vtab = atm_getvccs((struct atmio_vcc **)sc->vccs,
 		    sc->mmap->max_conn, sc->vccs_open, &sc->mtx, 1);
-		error = copyout(vtab, ifr->ifr_data, sizeof(*vtab) +
+		error = copyout(vtab, ifr_data_get_ptr(ifr), sizeof(*vtab) +
 		    vtab->count * sizeof(vtab->vccs[0]));
 		free(vtab, M_DEVBUF);
 		break;

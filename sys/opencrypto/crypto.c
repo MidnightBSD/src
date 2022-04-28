@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/crypto.c 208834 2010-06-05 16:00:53Z kib $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Cryptographic Subsystem.
@@ -57,13 +57,13 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/crypto.c 208834 2010-06-05 16:
 #define	CRYPTO_TIMING				/* enable timing support */
 
 #include "opt_ddb.h"
-#include "opt_kdtrace.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/crypto.c 208834 2010-06-05 16:
 #include <ddb/ddb.h>
 
 #include <vm/uma.h>
+#include <crypto/intake.h>
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>			/* XXX for M_XDATA */
 
@@ -85,6 +86,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/crypto.c 208834 2010-06-05 16:
 #if defined(__i386__) || defined(__amd64__)
 #include <machine/pcb.h>
 #endif
+#include <machine/metadata.h>
 
 SDT_PROVIDER_DEFINE(opencrypto);
 
@@ -162,10 +164,10 @@ int	crypto_userasymcrypto = 1;	/* userland may do asym crypto reqs */
 SYSCTL_INT(_kern, OID_AUTO, userasymcrypto, CTLFLAG_RW,
 	   &crypto_userasymcrypto, 0,
 	   "Enable/disable user-mode access to asymmetric crypto support");
-int	crypto_devallowsoft = 0;	/* only use hardware crypto for asym */
+int	crypto_devallowsoft = 0;	/* only use hardware crypto */
 SYSCTL_INT(_kern, OID_AUTO, cryptodevallowsoft, CTLFLAG_RW,
 	   &crypto_devallowsoft, 0,
-	   "Enable/disable use of software asym crypto support");
+	   "Enable/disable use of software crypto by /dev/crypto");
 
 MALLOC_DEFINE(M_CRYPTO_DATA, "crypto", "crypto session records");
 
@@ -186,6 +188,37 @@ static	int crypto_timing = 0;
 SYSCTL_INT(_debug, OID_AUTO, crypto_timing, CTLFLAG_RW,
 	   &crypto_timing, 0, "Enable/disable crypto timing support");
 #endif
+
+/* Try to avoid directly exposing the key buffer as a symbol */
+static struct keybuf *keybuf;
+
+static struct keybuf empty_keybuf = {
+        .kb_nents = 0
+};
+
+/* Obtain the key buffer from boot metadata */
+static void
+keybuf_init(void)
+{
+	caddr_t kmdp;
+
+	kmdp = preload_search_by_type("elf kernel");
+
+	if (kmdp == NULL)
+		kmdp = preload_search_by_type("elf64 kernel");
+
+	keybuf = (struct keybuf *)preload_search_info(kmdp,
+	    MODINFO_METADATA | MODINFOMD_KEYBUF);
+
+        if (keybuf == NULL)
+                keybuf = &empty_keybuf;
+}
+
+/* It'd be nice if we could store these in some kind of secure memory... */
+struct keybuf * get_keybuf(void) {
+
+        return (keybuf);
+}
 
 static int
 crypto_init(void)
@@ -239,6 +272,9 @@ crypto_init(void)
 			error);
 		goto bad;
 	}
+
+        keybuf_init();
+
 	return 0;
 bad:
 	crypto_destroy();
@@ -283,7 +319,7 @@ crypto_destroy(void)
 
 	/* XXX flush queues??? */
 
-	/* 
+	/*
 	 * Reclaim dynamically allocated resources.
 	 */
 	if (crypto_drivers != NULL)
@@ -369,9 +405,8 @@ again:
 				best = cap;
 		}
 	}
-	if (best != NULL)
-		return best;
-	if (match == CRYPTOCAP_F_HARDWARE && (flags & CRYPTOCAP_F_SOFTWARE)) {
+	if (best == NULL && match == CRYPTOCAP_F_HARDWARE &&
+	    (flags & CRYPTOCAP_F_SOFTWARE)) {
 		/* sort of an Algol 68-style for loop */
 		match = CRYPTOCAP_F_SOFTWARE;
 		goto again;
@@ -422,9 +457,12 @@ crypto_newsession(u_int64_t *sid, struct cryptoini *cri, int crid)
 			(*sid) <<= 32;
 			(*sid) |= (lid & 0xffffffff);
 			cap->cc_sessions++;
-		}
-	} else
+		} else
+			CRYPTDEB("dev newsession failed");
+	} else {
+		CRYPTDEB("no driver");
 		err = EINVAL;
+	}
 	CRYPTO_DRIVER_UNLOCK();
 	return err;
 }
@@ -910,7 +948,7 @@ again:
 }
 
 /*
- * Dispatch an assymetric crypto request.
+ * Dispatch an asymmetric crypto request.
  */
 static int
 crypto_kinvoke(struct cryptkop *krp, int crid)
@@ -1180,8 +1218,8 @@ crypto_kdone(struct cryptkop *krp)
 	/* XXX: What if driver is loaded in the meantime? */
 	if (krp->krp_hid < crypto_drivers_num) {
 		cap = &crypto_drivers[krp->krp_hid];
+		KASSERT(cap->cc_koperations > 0, ("cc_koperations == 0"));
 		cap->cc_koperations--;
-		KASSERT(cap->cc_koperations >= 0, ("cc_koperations < 0"));
 		if (cap->cc_flags & CRYPTOCAP_F_CLEANUP)
 			crypto_remove(cap);
 	}

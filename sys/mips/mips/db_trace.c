@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/db_trace.c 251103 2013-05-29 16:51:03Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -260,7 +260,7 @@ loop:
 			case OP_SYSCALL:
 			case OP_BREAK:
 				more = 1;	/* stop now */
-			};
+			}
 			break;
 
 		case OP_BCOND:
@@ -281,7 +281,7 @@ loop:
 			case OP_BCx:
 			case OP_BCy:
 				more = 2;	/* stop after next instruction */
-			};
+			}
 			break;
 
 		case OP_SW:

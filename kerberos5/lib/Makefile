@@ -1,8 +1,18 @@
+# $FreeBSD$
 
-# $FreeBSD: release/10.0.0/kerberos5/lib/Makefile 233294 2012-03-22 08:48:42Z stas $
+.include <src.opts.mk>
 
-SUBDIR=	libasn1 libgssapi_krb5 libgssapi_ntlm libgssapi_spnego libhdb \
-	libheimntlm libhx509 libkadm5clnt libkadm5srv libkafs5 libkrb5 \
-	libroken libsl libvers libkdc libwind libheimsqlite libheimbase libheimipcc libheimipcs
+SUBDIR=	libasn1 libhdb \
+	libheimntlm libhx509 libkadm5clnt libkadm5srv libkrb5 \
+	libroken libsl libvers libkdc libwind libheimbase libheimipcc libheimipcs
+
+SUBDIR+= libkafs5  # requires krb_err.h from libkrb5
+SUBDIR_DEPEND_libkafs5=	libkrb5
+
+.if ${MK_GSSAPI} != "no"
+SUBDIR+=	libgssapi_krb5
+SUBDIR+=	libgssapi_ntlm
+SUBDIR+=	libgssapi_spnego
+.endif
 
 .include <bsd.subdir.mk>

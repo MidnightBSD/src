@@ -27,7 +27,7 @@
 /* Driver for the VirtIO PCI interface. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/virtio/pci/virtio_pci.c 255110 2013-09-01 04:20:23Z bryanv $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -168,6 +168,9 @@ static void	vtpci_vq_intr(void *);
 static void	vtpci_config_intr(void *);
 
 #define vtpci_setup_msi_interrupt vtpci_setup_legacy_interrupt
+
+#define VIRTIO_PCI_CONFIG(_sc) \
+    VIRTIO_PCI_CONFIG_OFF((((_sc)->vtpci_flags & VTPCI_FLAG_MSIX)) != 0)
 
 /*
  * I/O port read/write wrappers.
@@ -727,7 +730,7 @@ vtpci_describe_features(struct vtpci_softc *sc, const char *msg,
 	dev = sc->vtpci_dev;
 	child = sc->vtpci_child_dev;
 
-	if (device_is_attached(child) && bootverbose == 0)
+	if (device_is_attached(child) || bootverbose == 0)
 		return;
 
 	virtio_describe(dev, msg, features, sc->vtpci_child_feat_desc);
@@ -1084,7 +1087,8 @@ vtpci_set_host_msix_vectors(struct vtpci_softc *sc)
 		 * For shared MSIX, all the virtqueues share the first
 		 * interrupt.
 		 */
-		if ((sc->vtpci_flags & VTPCI_FLAG_SHARED_MSIX) == 0)
+		if (!sc->vtpci_vqs[idx].vtv_no_intr &&
+		    (sc->vtpci_flags & VTPCI_FLAG_SHARED_MSIX) == 0)
 			intr++;
 	}
 

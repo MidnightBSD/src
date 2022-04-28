@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: release/10.0.0/sys/arm/include/pcpu.h 254461 2013-08-17 18:51:38Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -32,8 +32,8 @@
 
 #ifdef _KERNEL
 
-#include <machine/cpuconf.h>
-#include <machine/frame.h>
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
 
 #define	ALT_STACK_SIZE	128
 
@@ -41,15 +41,29 @@ struct vmspace;
 
 #endif	/* _KERNEL */
 
-#ifdef VFP
+#if __ARM_ARCH >= 6
+/* Branch predictor hardening method */
+#define PCPU_BP_HARDEN_KIND_NONE		0
+#define PCPU_BP_HARDEN_KIND_BPIALL		1
+#define PCPU_BP_HARDEN_KIND_ICIALLU		2
+
 #define PCPU_MD_FIELDS							\
-	unsigned int pc_cpu;						\
 	unsigned int pc_vfpsid;						\
 	unsigned int pc_vfpmvfr0;					\
 	unsigned int pc_vfpmvfr1;					\
-	struct thread *pc_vfpcthread;					\
 	struct pmap *pc_curpmap;					\
-	char __pad[133]
+	struct mtx pc_cmap_lock;					\
+	void *pc_cmap1_pte2p;						\
+	void *pc_cmap2_pte2p;						\
+	caddr_t pc_cmap1_addr;						\
+	caddr_t pc_cmap2_addr;						\
+	vm_offset_t pc_qmap_addr;					\
+	void *pc_qmap_pte2p;						\
+	unsigned int pc_dbreg[32];					\
+	int pc_dbreg_cmd;						\
+	int pc_bp_harden_kind;						\
+	uint32_t pc_original_actlr;					\
+	char __pad[11]
 #else
 #define PCPU_MD_FIELDS							\
 	char __pad[157]
@@ -57,34 +71,51 @@ struct vmspace;
 
 #ifdef _KERNEL
 
+#define	PC_DBREG_CMD_NONE	0
+#define	PC_DBREG_CMD_LOAD	1
+
 struct pcb;
 struct pcpu;
 
 extern struct pcpu *pcpup;
-#if ARM_ARCH_6 || ARM_ARCH_7A
-/* or ARM_TP_ADDRESS 	mark REMOVE ME NOTE */
-static inline struct pcpu *
-get_pcpu(void)
-{
-	void *pcpu;
 
-	__asm __volatile("mrc p15, 0, %0, c13, c0, 4" : "=r" (pcpu));
-	return (pcpu);
+#if __ARM_ARCH >= 6
+#define CPU_MASK (0xf)
+
+#ifndef SMP
+#define get_pcpu() (pcpup)
+#else
+#define get_pcpu() __extension__ ({			  		\
+    	int id;								\
+        __asm __volatile("mrc p15, 0, %0, c0, c0, 5" : "=r" (id));	\
+    	(pcpup + (id & CPU_MASK));					\
+    })
+#endif
+
+static inline struct thread *
+get_curthread(void)
+{
+	void *ret;
+
+	__asm __volatile("mrc p15, 0, %0, c13, c0, 4" : "=r" (ret));
+	return (ret);
 }
 
 static inline void
-set_pcpu(void *pcpu)
+set_curthread(struct thread *td)
 {
 
-	__asm __volatile("mcr p15, 0, %0, c13, c0, 4" : : "r" (pcpu));
+	__asm __volatile("mcr p15, 0, %0, c13, c0, 4" : : "r" (td));
 }
+
 
 static inline void *
 get_tls(void)
 {
 	void *tls;
 
-	__asm __volatile("mrc p15, 0, %0, c13, c0, 3" : "=r" (tls));
+	/* TPIDRURW contains the authoritative value. */
+	__asm __volatile("mrc p15, 0, %0, c13, c0, 2" : "=r" (tls));
 	return (tls);
 }
 
@@ -92,8 +123,19 @@ static inline void
 set_tls(void *tls)
 {
 
-	__asm __volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (tls));
+	/*
+	 * Update both TPIDRURW and TPIDRURO. TPIDRURW needs to be written
+	 * first to ensure that a context switch between the two writes will
+	 * still give the desired result of updating both.
+	 */
+	__asm __volatile(
+	    "mcr p15, 0, %0, c13, c0, 2\n"
+	    "mcr p15, 0, %0, c13, c0, 3\n"
+	     : : "r" (tls));
 }
+
+#define curthread get_curthread()
+
 #else
 #define get_pcpu()	pcpup
 #endif

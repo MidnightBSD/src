@@ -40,7 +40,7 @@ static char copyright[] =
 static char sccsid[] = "@(#)driver2.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/test/hash.tests/driver2.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Test driver, to try to tackle the large ugly-split problem.

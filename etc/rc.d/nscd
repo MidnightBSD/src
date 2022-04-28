@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/nscd 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: nscd
@@ -19,6 +19,7 @@
 . /etc/rc.subr
 
 name="nscd"
+desc="Name-service caching daemon"
 rcvar="nscd_enable"
 
 command=/usr/sbin/nscd

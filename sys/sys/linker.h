@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/linker.h 254267 2013-08-13 03:09:00Z markj $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_LINKER_H_
@@ -79,6 +79,8 @@ struct linker_file {
     int			id;		/* unique id */
     caddr_t		address;	/* load address */
     size_t		size;		/* size of file */
+    caddr_t		ctors_addr;	/* address of .ctors */
+    size_t		ctors_size;	/* size of .ctors */
     int			ndeps;		/* number of dependencies */
     linker_file_t*	deps;		/* list of dependencies */
     STAILQ_HEAD(, common_symbol) common; /* list of common symbols */
@@ -140,7 +142,7 @@ int linker_file_foreach(linker_predicate_t *_predicate, void *_context);
  * Lookup a symbol in a file.  If deps is TRUE, look in dependencies
  * if not found in file.
  */
-caddr_t linker_file_lookup_symbol(linker_file_t _file, const char* _name, 
+caddr_t linker_file_lookup_symbol(linker_file_t _file, const char* _name,
 				  int _deps);
 
 /*
@@ -154,11 +156,11 @@ int linker_file_lookup_set(linker_file_t _file, const char *_name,
 /*
  * List all functions in a file.
  */
-int linker_file_function_listall(linker_file_t, 
+int linker_file_function_listall(linker_file_t,
 				 linker_function_nameval_callback_t, void *);
 
 /*
- * Functions soley for use by the linker class handlers.
+ * Functions solely for use by the linker class handlers.
  */
 int linker_add_class(linker_class_t _cls);
 int linker_file_unload(linker_file_t _file, int flags);
@@ -211,6 +213,10 @@ void *linker_hwpmc_list_objects(void);
 #define MODINFOMD_KERNEND	0x0008		/* kernend */
 #endif
 #define MODINFOMD_SHDR		0x0009		/* section header table */
+#define MODINFOMD_CTORS_ADDR	0x000a		/* address of .ctors */
+#define MODINFOMD_CTORS_SIZE	0x000b		/* size of .ctors */
+#define MODINFOMD_FW_HANDLE	0x000c		/* Firmware dependent handle */
+#define MODINFOMD_KEYBUF	0x000d		/* Crypto key intake buffer */
 #define MODINFOMD_NOCOPY	0x8000		/* don't copy this metadata to the kernel */
 
 #define MODINFOMD_DEPLIST	(0x4001 | MODINFOMD_NOCOPY)	/* depends on */
@@ -224,6 +230,7 @@ void *linker_hwpmc_list_objects(void);
 #endif
 
 #define	LINKER_HINTS_VERSION	1		/* linker.hints file version */
+#define	LINKER_HINTS_MAX	(1 << 20)	/* Allow at most 1MB for linker.hints */
 
 #ifdef _KERNEL
 
@@ -259,14 +266,18 @@ extern int kld_debug;
 
 #endif
 
-typedef Elf_Addr elf_lookup_fn(linker_file_t, Elf_Size, int);
+typedef int elf_lookup_fn(linker_file_t, Elf_Size, int, Elf_Addr *);
 
 /* Support functions */
-int	elf_reloc(linker_file_t _lf, Elf_Addr base, const void *_rel, int _type, elf_lookup_fn _lu);
-int	elf_reloc_local(linker_file_t _lf, Elf_Addr base, const void *_rel, int _type, elf_lookup_fn _lu);
+bool	elf_is_ifunc_reloc(Elf_Size r_info);
+int	elf_reloc(linker_file_t _lf, Elf_Addr base, const void *_rel,
+	    int _type, elf_lookup_fn _lu);
+int	elf_reloc_local(linker_file_t _lf, Elf_Addr base, const void *_rel,
+	    int _type, elf_lookup_fn _lu);
 Elf_Addr elf_relocaddr(linker_file_t _lf, Elf_Addr addr);
 const Elf_Sym *elf_get_sym(linker_file_t _lf, Elf_Size _symidx);
 const char *elf_get_symname(linker_file_t _lf, Elf_Size _symidx);
+void	link_elf_ireloc(caddr_t kmdp);
 
 typedef struct linker_ctf {
 	const uint8_t 	*ctftab;	/* Decompressed CTF data. */

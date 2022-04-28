@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/mp_locore.S 222828 2011-06-07 17:33:39Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>

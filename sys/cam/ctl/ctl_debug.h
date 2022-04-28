@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * $Id: //depot/users/kenm/FreeBSD-test2/sys/cam/ctl/ctl_debug.h#2 $
- * $FreeBSD: release/10.0.0/sys/cam/ctl/ctl_debug.h 229997 2012-01-12 00:34:33Z ken $
+ * $FreeBSD$
  */
 /*
  * CAM Target Layer debugging interface.
@@ -38,6 +38,16 @@
 
 #ifndef	_CTL_DEBUG_H_
 #define	_CTL_DEBUG_H_
+
+/*
+ * Debugging flags.
+ */
+typedef enum {
+	CTL_DEBUG_NONE		= 0x00,	/* no debugging */
+	CTL_DEBUG_INFO		= 0x01,	/* SCSI errors */
+	CTL_DEBUG_CDB		= 0x02,	/* SCSI CDBs and tasks */
+	CTL_DEBUG_CDB_DATA	= 0x04	/* SCSI CDB DATA */
+} ctl_debug_flags;
 
 #ifdef	CAM_CTL_DEBUG
 #define	CTL_DEBUG_PRINT(X)		\

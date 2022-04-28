@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getproto.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/getproto.c 213453 2010-10-05 15:40:59Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <netdb.h>
@@ -46,12 +46,6 @@ static const ns_src defaultsrc[] = {
 	{ NSSRC_FILES, NS_SUCCESS },
 	{ NULL, 0 }
 };
-
-#ifdef NS_CACHING
-extern int __proto_id_func(char *, size_t *, va_list, void *);
-extern int __proto_marshal_func(char *, size_t *, void *, va_list, void *);
-extern int __proto_unmarshal_func(char *, size_t, void *, va_list, void *);
-#endif
 
 static int
 files_getprotobynumber(void *retval, void *mdata, va_list ap)

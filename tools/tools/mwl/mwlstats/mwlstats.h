@@ -26,21 +26,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/tools/tools/mwl/mwlstats/mwlstats.h 193242 2009-06-01 18:27:16Z sam $
+ * $FreeBSD$
  */
 
 #ifndef _MWLSTATS_H_
 #define	_MWLSTATS_H_
 
-#include "statfoo.h"
+#include "bsdstat.h"
 
 /*
  * mv statistics class.
  */
 struct mwlstatfoo {
-	struct statfoo base;
+	struct bsdstat base;
 
-	STATFOO_DECL_METHODS(struct mwlstatfoo *);
+	BSDSTAT_DECL_METHODS(struct mwlstatfoo *);
 
 	/* set the network interface name for collection */
 	void (*setifname)(struct mwlstatfoo *, const char *ifname);

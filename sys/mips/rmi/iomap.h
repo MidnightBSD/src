@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  * RMI_BSD
- * $FreeBSD: release/10.0.0/sys/mips/rmi/iomap.h 211994 2010-08-30 13:05:21Z jchandra $
+ * $FreeBSD$
  */
 #ifndef _RMI_IOMAP_H_
 #define _RMI_IOMAP_H_

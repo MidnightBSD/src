@@ -1,47 +1,44 @@
 /*	$NetBSD: getrpcent.c,v 1.17 2000/01/22 22:19:17 mycroft Exp $	*/
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user or with the express written consent of
- * Sun Microsystems, Inc.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
  *
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- *
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- *
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- *
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- *
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char *sccsid = "@(#)getrpcent.c 1.14 91/03/11 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/getrpcent.c 199787 2009-11-25 04:53:38Z wollman $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Copyright (c) 1984 by Sun Microsystems, Inc.
  */
 
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <assert.h>
@@ -228,7 +225,7 @@ files_rpcent(void *retval, void *mdata, va_list ap)
 	int stayopen;
 	enum nss_lookup_type how;
 
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how)
 	{
 	case nss_lt_name:
@@ -348,7 +345,7 @@ files_setrpcent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata)
+	switch ((enum constants)(uintptr_t)mdata)
 	{
 	case SETRPCENT:
 		f = va_arg(ap,int);
@@ -401,14 +398,14 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 	char	*lastkey;
 	char	*resultbuf;
 	int	resultbuflen;
-	char	buf[YPMAXRECORD + 2];
+	char	*buf;
 
 	struct nis_state	*st;
 	int		rv;
 	enum nss_lookup_type	how;
 	int	no_name_active;
 
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how)
 	{
 	case nss_lt_name:
@@ -423,6 +420,7 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		return (NS_NOTFOUND);
 	}
 
+	buf = NULL;
 	rpc = va_arg(ap, struct rpcent *);
 	buffer = va_arg(ap, char *);
 	bufsize = va_arg(ap, size_t);
@@ -446,7 +444,10 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		case nss_lt_name:
 			if (!st->no_name_map)
 			{
-				snprintf(buf, sizeof buf, "%s", name);
+				free(buf);
+				asprintf(&buf, "%s", name);
+				if (buf == NULL)
+					return (NS_TRYAGAIN);
 				rv = yp_match(st->domain, "rpc.byname", buf,
 			    		strlen(buf), &resultbuf, &resultbuflen);
 
@@ -474,7 +475,10 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 			}
 		break;
 		case nss_lt_id:
-			snprintf(buf, sizeof buf, "%d", number);
+			free(buf);
+			asprintf(&buf, "%d", number);
+			if (buf == NULL)
+				return (NS_TRYAGAIN);
 			if (yp_match(st->domain, "rpc.bynumber", buf,
 			    	strlen(buf), &resultbuf, &resultbuflen)) {
 				rv = NS_NOTFOUND;
@@ -514,6 +518,7 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		    sizeof(char *)) {
 			*errnop = ERANGE;
 			rv = NS_RETURN;
+			free(resultbuf);
 			break;
 		}
 
@@ -523,6 +528,7 @@ nis_rpcent(void *retval, void *mdata, va_list ap)
 		if (aliases_size < 1) {
 			*errnop = ERANGE;
 			rv = NS_RETURN;
+			free(resultbuf);
 			break;
 		}
 
@@ -559,6 +565,7 @@ done:
 	} while (!(rv & NS_TERMINATE) && (how == nss_lt_all));
 
 fin:
+	free(buf);
 	if ((rv == NS_SUCCESS) && (retval != NULL))
 		*((struct rpcent **)retval) = rpc;
 
@@ -575,7 +582,7 @@ nis_setrpcent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata)
+	switch ((enum constants)(uintptr_t)mdata)
 	{
 	case SETRPCENT:
 	case ENDRPCENT:
@@ -602,7 +609,7 @@ rpc_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	enum nss_lookup_type lookup_type;
 	int res = NS_UNAVAIL;
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -659,7 +666,7 @@ rpc_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -745,7 +752,7 @@ rpc_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	char *p;
 	char **alias;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		break;
@@ -971,7 +978,7 @@ getrpc(int (*fn)(union key, struct rpcent *, char *, size_t, struct rpcent **),
 }
 
 struct rpcent *
-getrpcbyname(char *name)
+getrpcbyname(const char *name)
 {
 	union key key;
 
@@ -991,7 +998,7 @@ getrpcbynumber(int number)
 }
 
 struct rpcent *
-getrpcent()
+getrpcent(void)
 {
 	union key key;
 
@@ -1025,7 +1032,7 @@ setrpcent(int stayopen)
 }
 
 void
-endrpcent()
+endrpcent(void)
 {
 #ifdef NS_CACHING
 	static const nss_cache_info cache_info = NS_MP_CACHE_INFO_INITIALIZER(

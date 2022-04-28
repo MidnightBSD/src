@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/svn/lib/libapr_util/Makefile 253734 2013-07-28 06:02:40Z peter $
+# $FreeBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -28,7 +28,7 @@ CFLAGS+= 	-DHAVE_CONFIG_H \
 		-I${APR}/include/arch/unix \
 		-I${APR}/include
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .if ${MK_ICONV} == "yes"
 CFLAGS+=	-DHAVE_ICONV_H=1 -DAPU_HAVE_ICONV=1

@@ -22,7 +22,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/share/mk/version_gen.awk 172747 2007-10-18 10:32:28Z yar $
+# $FreeBSD$
 #
 
 #

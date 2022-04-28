@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_owner_parse.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 #include "../cpio.h"
 #include "err.h"
@@ -38,7 +38,7 @@ static const int root_gids[] = { 0, 1 };
  * its primary group membership depends on how the user set up
  * their /etc/passwd. Likely values are 513 (None), 545 (Users),
  * or 544 (Administrators). Just check for one of those...
- * TODO: Handle non-English localizations...e.g. French 'Administrateur'
+ * TODO: Handle non-English localizations... e.g. French 'Administrateur'
  *       Use CreateWellKnownSID() and LookupAccountName()?
  */
 #define ROOT "Administrator"

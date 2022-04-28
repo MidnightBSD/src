@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/modules/vxge/Makefile 221167 2011-04-28 14:33:15Z gnn $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/vxge
-VPATH =	${.CURDIR}/../../dev/vxge/vxgehal
+.PATH: ${SRCTOP}/sys/dev/vxge
+VPATH =	${SRCTOP}/sys/dev/vxge/vxgehal
 
 CFLAGS_VXGE = 
 

@@ -37,10 +37,6 @@
 
 #include "svn_private_config.h"
 
-/* A handy constant */
-static const svn_opt_revision_t unspecified_revision
-  = { svn_opt_revision_unspecified, { 0 } };
-
 
 /*** Code. ***/
 
@@ -126,6 +122,11 @@ run_merge(svn_boolean_t two_sources_specified,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Merge sources must both be "
                                   "either paths or URLs"));
+
+      if (svn_path_is_url(targetpath))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Merge target '%s' must be a local path "
+                                   "but looks like a URL"), targetpath);
 
       if (opt_state->verbose)
         SVN_ERR(svn_cmdline_printf(scratch_pool, _("--- Merging\n")));

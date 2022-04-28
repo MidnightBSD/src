@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_rintl.c 176461 2008-02-22 11:59:05Z bde $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 #include <math.h>

@@ -1,19 +1,10 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/tools/ipf.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
-#ifdef	__FreeBSD__
-# ifndef __FreeBSD_cc_version
-#  include <osreldate.h>
-# else
-#  if __FreeBSD_cc_version < 430000
-#   include <osreldate.h>
-#  endif
-# endif
-#endif
 #include "ipf.h"
 #include <fcntl.h>
 #include <ctype.h>
@@ -296,7 +287,7 @@ static void packetlogon(opt)
 			printf("set log flag: nomatch\n");
 		change = 1;
 	}
-	if (strstr(opt, "block") || index(opt, 'd')) {
+	if (strstr(opt, "block") || strchr(opt, 'd')) {
 		flag |= FF_LOGBLOCK;
 		if (opts & OPT_VERBOSE)
 			printf("set log flag: block\n");
@@ -408,31 +399,16 @@ static void flushfilter(arg, filter)
 		}
 		closedevice();
 		return;
-	}
-
-#ifdef	SIOCIPFFA
-	if (!strcmp(arg, "u")) {
-		closedevice();
-		/*
-		 * Flush auth rules and packets
-		 */
-		if (opendevice(IPL_AUTH, 1) == -1)
-			perror("open(IPL_AUTH)");
-		else {
-			if (ioctl(fd, SIOCIPFFA, &fl) == -1)
-				ipferror(fd, "ioctl(SIOCIPFFA)");
-		}
-		closedevice();
-		return;
-	}
-#endif
-
-	if (strchr(arg, 'i') || strchr(arg, 'I'))
+	} else if (strchr(arg, 'i') || strchr(arg, 'I'))
 		fl = FR_INQUE;
-	if (strchr(arg, 'o') || strchr(arg, 'O'))
+	else if (strchr(arg, 'o') || strchr(arg, 'O'))
 		fl = FR_OUTQUE;
-	if (strchr(arg, 'a') || strchr(arg, 'A'))
+	else if (strchr(arg, 'a') || strchr(arg, 'A'))
 		fl = FR_OUTQUE|FR_INQUE;
+	else {
+		fprintf(stderr, "Incorrect flush argument: %s\n", arg);
+		usage();
+	}
 	if (opts & OPT_INACTIVE)
 		fl |= FR_INACTIVE;
 	rem = fl;

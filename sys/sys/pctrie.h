@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pctrie.h 250578 2013-05-12 20:44:28Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PCTRIE_H_
@@ -76,21 +76,21 @@ name##_PCTRIE_LOOKUP(struct pctrie *ptree, uint64_t key)		\
 	return name##_PCTRIE_VAL2PTR(pctrie_lookup(ptree, key));	\
 }									\
 									\
-static __inline struct type *						\
+static __inline __unused struct type *						\
 name##_PCTRIE_LOOKUP_LE(struct pctrie *ptree, uint64_t key)		\
 {									\
 									\
 	return name##_PCTRIE_VAL2PTR(pctrie_lookup_le(ptree, key));	\
 }									\
 									\
-static __inline struct type *						\
+static __inline __unused struct type *					\
 name##_PCTRIE_LOOKUP_GE(struct pctrie *ptree, uint64_t key)		\
 {									\
 									\
 	return name##_PCTRIE_VAL2PTR(pctrie_lookup_ge(ptree, key));	\
 }									\
 									\
-static __inline void							\
+static __inline __unused void						\
 name##_PCTRIE_RECLAIM(struct pctrie *ptree)				\
 {									\
 									\
@@ -118,6 +118,33 @@ void		pctrie_remove(struct pctrie *ptree, uint64_t key,
 		    pctrie_free_t freefn);
 size_t		pctrie_node_size(void);
 int		pctrie_zone_init(void *mem, int size, int flags);
+
+static __inline void
+pctrie_init(struct pctrie *ptree)
+{
+
+	ptree->pt_root = 0;
+}
+
+static __inline boolean_t
+pctrie_is_empty(struct pctrie *ptree)
+{
+
+	return (ptree->pt_root == 0);
+}
+
+/*
+ * These widths should allow the pointers to a node's children to fit within
+ * a single cache line.  The extra levels from a narrow width should not be
+ * a problem thanks to path compression.
+ */
+#ifdef __LP64__
+#define	PCTRIE_WIDTH	4
+#else
+#define	PCTRIE_WIDTH	3
+#endif
+
+#define	PCTRIE_COUNT	(1 << PCTRIE_WIDTH)
 
 #endif /* _KERNEL */
 #endif /* !_SYS_PCTRIE_H_ */

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_ibm.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_ibm.c 246128 2013-0
 
 #include "opt_acpi.h"
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <machine/cpufunc.h>
@@ -192,82 +193,104 @@ static struct {
 	char	*name;
 	int	method;
 	char	*description;
-	int	access;
+	int	flag_rdonly;
 } acpi_ibm_sysctls[] = {
 	{
 		.name		= "events",
 		.method		= ACPI_IBM_METHOD_EVENTS,
 		.description	= "ACPI events enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "eventmask",
 		.method		= ACPI_IBM_METHOD_EVENTMASK,
 		.description	= "ACPI eventmask",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "hotkey",
 		.method		= ACPI_IBM_METHOD_HOTKEY,
 		.description	= "Key Status",
-		.access		= CTLTYPE_INT | CTLFLAG_RD
+		.flag_rdonly	= 1
 	},
 	{
 		.name		= "lcd_brightness",
 		.method		= ACPI_IBM_METHOD_BRIGHTNESS,
 		.description	= "LCD Brightness",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "volume",
 		.method		= ACPI_IBM_METHOD_VOLUME,
 		.description	= "Volume",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "mute",
 		.method		= ACPI_IBM_METHOD_MUTE,
 		.description	= "Mute",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "thinklight",
 		.method		= ACPI_IBM_METHOD_THINKLIGHT,
 		.description	= "Thinklight enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "bluetooth",
 		.method		= ACPI_IBM_METHOD_BLUETOOTH,
 		.description	= "Bluetooth enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "wlan",
 		.method		= ACPI_IBM_METHOD_WLAN,
 		.description	= "WLAN enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RD
+		.flag_rdonly	= 1
 	},
 	{
 		.name		= "fan_speed",
 		.method		= ACPI_IBM_METHOD_FANSPEED,
 		.description	= "Fan speed",
-		.access		= CTLTYPE_INT | CTLFLAG_RD
+		.flag_rdonly	= 1
 	},
 	{
 		.name		= "fan_level",
 		.method		= ACPI_IBM_METHOD_FANLEVEL,
 		.description	= "Fan level",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 	{
 		.name		= "fan",
 		.method		= ACPI_IBM_METHOD_FANSTATUS,
 		.description	= "Fan enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 
 	{ NULL, 0, NULL, 0 }
+};
+
+/*
+ * Per-model default list of event mask.
+ */
+#define	ACPI_IBM_HKEY_RFKILL_MASK		(1 << 4)
+#define	ACPI_IBM_HKEY_DSWITCH_MASK		(1 << 6)
+#define	ACPI_IBM_HKEY_BRIGHTNESS_UP_MASK	(1 << 15)
+#define	ACPI_IBM_HKEY_BRIGHTNESS_DOWN_MASK	(1 << 16)
+#define	ACPI_IBM_HKEY_SEARCH_MASK		(1 << 18)
+#define	ACPI_IBM_HKEY_MICMUTE_MASK		(1 << 26)
+#define	ACPI_IBM_HKEY_SETTINGS_MASK		(1 << 28)
+#define	ACPI_IBM_HKEY_VIEWOPEN_MASK		(1 << 30)
+#define	ACPI_IBM_HKEY_VIEWALL_MASK		(1 << 31)
+
+struct acpi_ibm_models {
+	const char *maker;
+	const char *product;
+	uint32_t eventmask;
+} acpi_ibm_models[] = {
+	{ "LENOVO", "20BSCTO1WW",
+	  ACPI_IBM_HKEY_RFKILL_MASK |
+	  ACPI_IBM_HKEY_DSWITCH_MASK |
+	  ACPI_IBM_HKEY_BRIGHTNESS_UP_MASK |
+	  ACPI_IBM_HKEY_BRIGHTNESS_DOWN_MASK |
+	  ACPI_IBM_HKEY_SEARCH_MASK |
+	  ACPI_IBM_HKEY_MICMUTE_MASK |
+	  ACPI_IBM_HKEY_SETTINGS_MASK |
+	  ACPI_IBM_HKEY_VIEWOPEN_MASK |
+	  ACPI_IBM_HKEY_VIEWALL_MASK
+	}
 };
 
 ACPI_SERIAL_DECL(ibm, "ACPI IBM extras");
@@ -317,7 +340,7 @@ static devclass_t acpi_ibm_devclass;
 DRIVER_MODULE(acpi_ibm, acpi, acpi_ibm_driver, acpi_ibm_devclass,
 	      0, 0);
 MODULE_DEPEND(acpi_ibm, acpi, 1, 1, 1);
-static char    *ibm_ids[] = {"IBM0068", "LEN0068", NULL};
+static char    *ibm_ids[] = {"IBM0068", "LEN0068", "LEN0268", NULL};
 
 static void
 ibm_led(void *softc, int onoff)
@@ -363,8 +386,15 @@ acpi_ibm_probe(device_t dev)
 static int
 acpi_ibm_attach(device_t dev)
 {
+	int i;
+	int hkey;
 	struct acpi_ibm_softc	*sc;
-	devclass_t		ec_devclass;
+	char *maker, *product;
+	ACPI_OBJECT_LIST input;
+	ACPI_OBJECT params[1];
+	ACPI_OBJECT out_obj;
+	ACPI_BUFFER result;
+	devclass_t ec_devclass;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t) __func__);
 
@@ -399,15 +429,42 @@ acpi_ibm_attach(device_t dev)
 		    "initialmask", CTLFLAG_RD,
 		    &sc->events_initialmask, 0, "Initial eventmask");
 
-		/* The availmask is the bitmask of supported events */
-		if (ACPI_FAILURE(acpi_GetInteger(sc->handle,
-		    IBM_NAME_EVENTS_AVAILMASK, &sc->events_availmask)))
+		if (ACPI_SUCCESS (acpi_GetInteger(sc->handle, "MHKV", &hkey))) {
+			device_printf(dev, "Firmware version is 0x%X\n", hkey);
+			switch(hkey >> 8)
+			{
+			case 1:
+				/* The availmask is the bitmask of supported events */
+				if (ACPI_FAILURE(acpi_GetInteger(sc->handle,
+				    IBM_NAME_EVENTS_AVAILMASK, &sc->events_availmask)))
+					sc->events_availmask = 0xffffffff;
+				break;
+
+			case 2:
+				result.Length = sizeof(out_obj);
+				result.Pointer = &out_obj;
+				params[0].Type = ACPI_TYPE_INTEGER;
+				params[0].Integer.Value = 1;
+				input.Pointer = params;
+				input.Count = 1;
+
+				sc->events_availmask = 0xffffffff;
+
+				if (ACPI_SUCCESS(AcpiEvaluateObject (sc->handle,
+				    IBM_NAME_EVENTS_AVAILMASK, &input, &result)))
+					sc->events_availmask = out_obj.Integer.Value;
+				break;
+			default:
+				device_printf(dev, "Unknown firmware version 0x%x\n", hkey);
+				break;
+			}
+		} else
 			sc->events_availmask = 0xffffffff;
 
 		SYSCTL_ADD_UINT(sc->sysctl_ctx,
-		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		    "availmask", CTLFLAG_RD,
-		    &sc->events_availmask, 0, "Mask of supported events");
+				SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+				"availmask", CTLFLAG_RD,
+				&sc->events_availmask, 0, "Mask of supported events");
 	}
 
 	/* Hook up proc nodes */
@@ -415,11 +472,19 @@ acpi_ibm_attach(device_t dev)
 		if (!acpi_ibm_sysctl_init(sc, acpi_ibm_sysctls[i].method))
 			continue;
 
-		SYSCTL_ADD_PROC(sc->sysctl_ctx,
-		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
-		    acpi_ibm_sysctls[i].name, acpi_ibm_sysctls[i].access,
-		    sc, i, acpi_ibm_sysctl, "I",
-		    acpi_ibm_sysctls[i].description);
+		if (acpi_ibm_sysctls[i].flag_rdonly != 0) {
+			SYSCTL_ADD_PROC(sc->sysctl_ctx,
+			    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+			    acpi_ibm_sysctls[i].name, CTLTYPE_INT | CTLFLAG_RD,
+			    sc, i, acpi_ibm_sysctl, "I",
+			    acpi_ibm_sysctls[i].description);
+		} else {
+			SYSCTL_ADD_PROC(sc->sysctl_ctx,
+			    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
+			    acpi_ibm_sysctls[i].name, CTLTYPE_INT | CTLFLAG_RW,
+			    sc, i, acpi_ibm_sysctl, "I",
+			    acpi_ibm_sysctls[i].description);
+		}
 	}
 
 	/* Hook up thermal node */
@@ -446,7 +511,34 @@ acpi_ibm_attach(device_t dev)
 
 	/* Hook up light to led(4) */
 	if (sc->light_set_supported)
-		sc->led_dev = led_create_state(ibm_led, sc, "thinklight", sc->light_val);
+		sc->led_dev = led_create_state(ibm_led, sc, "thinklight",
+		    (sc->light_val ? 1 : 0));
+
+	/* Enable per-model events. */
+	maker = kern_getenv("smbios.system.maker");
+	product = kern_getenv("smbios.system.product");
+	if (maker == NULL || product == NULL)
+		goto nosmbios;
+
+	for (i = 0; i < nitems(acpi_ibm_models); i++) {
+		if (strcmp(maker, acpi_ibm_models[i].maker) == 0 &&
+		    strcmp(product, acpi_ibm_models[i].product) == 0) {
+			ACPI_SERIAL_BEGIN(ibm);
+			acpi_ibm_sysctl_set(sc, ACPI_IBM_METHOD_EVENTMASK,
+			    acpi_ibm_models[i].eventmask);
+			ACPI_SERIAL_END(ibm);
+		}
+	}
+
+nosmbios:
+	freeenv(maker);
+	freeenv(product);
+
+	/* Enable events by default. */
+	ACPI_SERIAL_BEGIN(ibm);
+	acpi_ibm_sysctl_set(sc, ACPI_IBM_METHOD_EVENTS, 1);
+	ACPI_SERIAL_END(ibm);
+
 
 	return (0);
 }
@@ -483,15 +575,10 @@ acpi_ibm_resume(device_t dev)
 	for (int i = 0; acpi_ibm_sysctls[i].name != NULL; i++) {
 		int val;
 
-		if ((acpi_ibm_sysctls[i].access & CTLFLAG_RD) == 0) {
-			continue;
-		}
-
 		val = acpi_ibm_sysctl_get(sc, i);
 
-		if ((acpi_ibm_sysctls[i].access & CTLFLAG_WR) == 0) {
+		if (acpi_ibm_sysctls[i].flag_rdonly != 0)
 			continue;
-		}
 
 		acpi_ibm_sysctl_set(sc, i, val);
 	}
@@ -536,7 +623,7 @@ acpi_ibm_sysctl(SYSCTL_HANDLER_ARGS)
 	int			error = 0;
 	int			function;
 	int			method;
-	
+
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
 	sc = (struct acpi_ibm_softc *)oidp->oid_arg1;
@@ -775,7 +862,6 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	switch (method) {
 	case ACPI_IBM_METHOD_EVENTS:
-		/* Events are disabled by default */
 		return (TRUE);
 
 	case ACPI_IBM_METHOD_EVENTMASK:
@@ -785,7 +871,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 	case ACPI_IBM_METHOD_BRIGHTNESS:
 	case ACPI_IBM_METHOD_VOLUME:
 	case ACPI_IBM_METHOD_MUTE:
-		/* EC is required here, which was aready checked before */
+		/* EC is required here, which was already checked before */
 		return (TRUE);
 
 	case ACPI_IBM_METHOD_THINKLIGHT:
@@ -829,7 +915,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 		return (FALSE);
 
 	case ACPI_IBM_METHOD_FANSPEED:
-		/* 
+		/*
 		 * Some models report the fan speed in levels from 0-7
 		 * Newer models report it contiguously
 		 */
@@ -840,7 +926,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	case ACPI_IBM_METHOD_FANLEVEL:
 	case ACPI_IBM_METHOD_FANSTATUS:
-		/* 
+		/*
 		 * Fan status is only supported on those models,
 		 * which report fan RPM contiguously, not in levels
 		 */
@@ -877,17 +963,17 @@ acpi_ibm_thermal_sysctl(SYSCTL_HANDLER_ARGS)
 
 	for (int i = 0; i < 8; ++i) {
 		temp_cmd[3] = '0' + i;
-		
-		/* 
+
+		/*
 		 * The TMPx methods seem to return +/- 128 or 0
-		 * when the respecting sensor is not available 
+		 * when the respecting sensor is not available
 		 */
 		if (ACPI_FAILURE(acpi_GetInteger(sc->ec_handle, temp_cmd,
 		    &temp[i])) || ABS(temp[i]) == 128 || temp[i] == 0)
 			temp[i] = -1;
 		else if (sc->thermal_updt_supported)
 			/* Temperature is reported in tenth of Kelvin */
-			temp[i] = (temp[i] - 2732 + 5) / 10;
+			temp[i] = (temp[i] - 2731 + 5) / 10;
 	}
 
 	error = sysctl_handle_opaque(oidp, &temp, 8*sizeof(int), req);
@@ -905,6 +991,7 @@ acpi_ibm_handlerevents_sysctl(SYSCTL_HANDLER_ARGS)
 	char			*cp, *ep;
 	int			l, val;
 	unsigned int		handler_events;
+	char			temp[128];
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
@@ -926,17 +1013,18 @@ acpi_ibm_handlerevents_sysctl(SYSCTL_HANDLER_ARGS)
 
 	sbuf_trim(&sb);
 	sbuf_finish(&sb);
-
-	/* Copy out the old values to the user. */
-	error = SYSCTL_OUT(req, sbuf_data(&sb), sbuf_len(&sb));
+	strlcpy(temp, sbuf_data(&sb), sizeof(temp));
 	sbuf_delete(&sb);
 
+	error = sysctl_handle_string(oidp, temp, sizeof(temp), req);
+
+	/* Check for error or no change */
 	if (error != 0 || req->newptr == NULL)
 		goto out;
 
 	/* If the user is setting a string, parse it. */
 	handler_events = 0;
-	cp = (char *)req->newptr;
+	cp = temp;
 	while (*cp) {
 		if (isspace(*cp)) {
 			cp++;
@@ -1232,7 +1320,6 @@ acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 
 	for (;;) {
 		acpi_GetInteger(acpi_get_handle(dev), IBM_NAME_EVENTS_GET, &event);
-
 		if (event == 0)
 			break;
 

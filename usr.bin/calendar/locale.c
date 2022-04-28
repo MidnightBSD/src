@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/calendar/locale.c 211517 2010-08-19 21:59:39Z edwin $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <err.h>

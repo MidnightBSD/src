@@ -24,9 +24,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	From: @(#)style	1.14 (Berkeley) 4/28/95
-.\" $FreeBSD: release/10.0.0/share/man/man9/style.9 217087 2011-01-07 08:34:12Z trasz $
+.\" $FreeBSD$
 .\"
-.Dd January 7, 2010
+.Dd December 5, 2015
 .Dt STYLE 9
 .Os
 .Sh NAME
@@ -46,7 +46,7 @@ is silent on an issue.
  * Style guide for FreeBSD.  Based on the CSRG's KNF (Kernel Normal Form).
  *
  *	@(#)style	1.14 (Berkeley) 4/28/95
- * $FreeBSD: release/10.0.0/share/man/man9/style.9 217087 2011-01-07 08:34:12Z trasz $
+ * $FreeBSD$
  */
 
 /*
@@ -111,7 +111,7 @@ static char sccsid[] = "@(#)style	1.14 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/share/man/man9/style.9 217087 2011-01-07 08:34:12Z trasz $");
+__FBSDID("$FreeBSD$");
 .Ed
 .Pp
 Leave another blank line before the header files.
@@ -287,6 +287,30 @@ there is no overriding reason to prefer the older
 Like white-space commits, care should be taken in making
 .Vt uintXX_t
 only commits.
+.Pp
+Similarly, the project is slowly moving to use the
+.St -isoC-99
+.Vt bool
+in preference to the older
+.Vt int
+or
+.Vt boolean_t .
+New code should use
+.Vt bool ,
+and old code may be converted if it is
+reasonable to do so.
+Literal values are named
+.Dv true
+and
+.Dv false .
+These are preferred to the old spellings
+.Dv TRUE
+and
+.Dv FALSE .
+Userspace code should include
+.In stdbool.h ,
+while kernel code should include
+.In sys/types.h .
 .Pp
 Enumeration values are all uppercase.
 .Bd -literal
@@ -503,13 +527,14 @@ Code which is unreachable for non-obvious reasons may be marked /*
 .Pp
 Space after keywords
 .Pq Ic if , while , for , return , switch .
-No braces
+Two styles of braces
 .Ql ( \&{
 and
 .Ql \&} )
-are
-used for control statements with zero or only a single statement unless that
-statement is more than a single line in which case they are permitted.
+are allowed for single line statements.
+Either they are used for all single statements, or
+they are used only where needed for clarity.
+Usage within a function should be consistent.
 Forever loops are done with
 .Ic for Ns 's ,
 not
@@ -833,7 +858,7 @@ Whenever possible, code should be run through a code checker
 (e.g.,
 .Xr lint 1
 or
-.Nm gcc Fl Wall )
+.Nm cc Fl Wall )
 and produce minimal warnings.
 .Sh SEE ALSO
 .Xr indent 1 ,

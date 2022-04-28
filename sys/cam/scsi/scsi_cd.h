@@ -41,7 +41,7 @@
  * Ported to run under 386BSD by Julian Elischer (julian@tfs.com) Sept 1992
  *
  *	from: scsi_cd.h,v 1.10 1997/02/22 09:44:28 peter Exp $
- * $FreeBSD: release/10.0.0/sys/cam/scsi/scsi_cd.h 111206 2003-02-21 06:19:38Z ken $
+ * $FreeBSD$
  */
 #ifndef	_SCSI_SCSI_CD_H
 #define _SCSI_SCSI_CD_H 1
@@ -55,6 +55,83 @@
 /*
  * SCSI command format
  */
+
+struct scsi_get_config
+{
+	uint8_t opcode;
+	uint8_t rt;
+#define	SGC_RT_ALL		0x00
+#define	SGC_RT_CURRENT		0x01
+#define	SGC_RT_SPECIFIC		0x02
+#define	SGC_RT_MASK		0x03
+	uint8_t starting_feature[2];
+	uint8_t reserved[3];
+	uint8_t length[2];
+	uint8_t control;
+};
+
+struct scsi_get_config_header
+{
+	uint8_t data_length[4];
+	uint8_t reserved[2];
+	uint8_t current_profile[2];
+};
+
+struct scsi_get_config_feature
+{
+	uint8_t feature_code[2];
+	uint8_t flags;
+#define	SGC_F_CURRENT		0x01
+#define	SGC_F_PERSISTENT	0x02
+#define	SGC_F_VERSION_MASK	0x2C
+#define	SGC_F_VERSION_SHIFT	2
+	uint8_t add_length;
+	uint8_t feature_data[];
+};
+
+struct scsi_get_event_status
+{
+	uint8_t opcode;
+	uint8_t byte2;
+#define	SGESN_POLLED		1
+	uint8_t reserved[2];
+	uint8_t notif_class;
+	uint8_t reserved2[2];
+	uint8_t length[2];
+	uint8_t control;
+};
+
+struct scsi_get_event_status_header
+{
+	uint8_t descr_length[4];
+	uint8_t nea_class;
+#define	SGESN_NEA		0x80
+	uint8_t supported_class;
+};
+
+struct scsi_get_event_status_descr
+{
+	uint8_t event_code;
+	uint8_t event_info[];
+};
+
+struct scsi_mechanism_status
+{
+	uint8_t opcode;
+	uint8_t reserved[7];
+	uint8_t length[2];
+	uint8_t reserved2;
+	uint8_t control;
+};
+
+struct scsi_mechanism_status_header
+{
+	uint8_t state1;
+	uint8_t state2;
+	uint8_t lba[3];
+	uint8_t slots_num;
+	uint8_t slots_length[2];
+};
 
 struct scsi_pause
 {
@@ -151,10 +228,33 @@ struct scsi_read_toc
 {
 	u_int8_t op_code;
 	u_int8_t byte2;
-	u_int8_t unused[4];
+	u_int8_t format;
+#define	SRTOC_FORMAT_TOC	0x00
+#define	SRTOC_FORMAT_LAST_ADDR	0x01
+#define	SRTOC_FORMAT_QSUB_TOC	0x02
+#define	SRTOC_FORMAT_QSUB_PMA	0x03
+#define	SRTOC_FORMAT_ATIP	0x04
+#define	SRTOC_FORMAT_CD_TEXT	0x05
+	u_int8_t unused[3];
 	u_int8_t from_track;
 	u_int8_t data_len[2];
 	u_int8_t control;
+};
+
+struct scsi_read_toc_hdr
+{
+	uint8_t data_length[2];
+	uint8_t first;
+	uint8_t last;
+};
+
+struct scsi_read_toc_type01_descr
+{
+	uint8_t reserved;
+	uint8_t addr_ctl;
+	uint8_t track_number;
+	uint8_t reserved2;
+	uint8_t track_start[4];
 };
 
 struct scsi_read_cd_capacity
@@ -252,9 +352,11 @@ struct scsi_read_dvd_structure
 #define READ_TOC		0x43	/* cdrom read TOC */
 #define READ_HEADER		0x44	/* cdrom read header */
 #define PLAY_10			0x45	/* cdrom play  'play audio' mode */
+#define GET_CONFIGURATION	0x46	/* Get device configuration */
 #define PLAY_MSF		0x47	/* cdrom play Min,Sec,Frames mode */
 #define PLAY_TRACK		0x48	/* cdrom play track/index mode */
 #define PLAY_TRACK_REL		0x49	/* cdrom play track/index mode */
+#define GET_EVENT_STATUS	0x4a	/* Get event status notification */
 #define PAUSE			0x4b	/* cdrom pause in 'play audio' mode */
 #define SEND_KEY		0xa3	/* dvd send key command */
 #define REPORT_KEY		0xa4	/* dvd report key command */
@@ -262,6 +364,7 @@ struct scsi_read_dvd_structure
 #define PLAY_TRACK_REL_BIG	0xa9	/* cdrom play track/index mode */
 #define READ_DVD_STRUCTURE	0xad	/* read dvd structure */
 #define SET_CD_SPEED		0xbb	/* set c/dvd speed */
+#define MECHANISM_STATUS	0xbd	/* get status of c/dvd mechanics */
 
 struct scsi_report_key_data_header
 {
@@ -686,6 +789,37 @@ struct cd_audio_page
 #define	RIGHT_PORT		1
 };
 
+struct scsi_cddvd_capabilities_page_sd {
+	uint8_t reserved;
+	uint8_t rotation_control;
+	uint8_t write_speed_supported[2];
+};
+
+struct scsi_cddvd_capabilities_page {
+	uint8_t page_code;
+#define	SMS_CDDVD_CAPS_PAGE		0x2a
+	uint8_t page_length;
+	uint8_t caps1;
+	uint8_t caps2;
+	uint8_t caps3;
+	uint8_t caps4;
+	uint8_t caps5;
+	uint8_t caps6;
+	uint8_t obsolete[2];
+	uint8_t nvol_levels[2];
+	uint8_t buffer_size[2];
+	uint8_t obsolete2[2];
+	uint8_t reserved;
+	uint8_t digital;
+	uint8_t obsolete3;
+	uint8_t copy_management;
+	uint8_t reserved2;
+	uint8_t rotation_control;
+	uint8_t cur_write_speed;
+	uint8_t num_speed_descr;
+	struct scsi_cddvd_capabilities_page_sd speed_descr[];
+};
+
 union cd_pages
 {
 	struct cd_audio_page audio;
@@ -740,6 +874,12 @@ void scsi_read_dvd_structure(struct ccb_scsiio *csio, u_int32_t retries,
 			     u_int8_t agid, u_int8_t *data_ptr,
 			     u_int32_t dxfer_len, u_int8_t sense_len,
 			     u_int32_t timeout);
+
+void scsi_read_toc(struct ccb_scsiio *csio, uint32_t retries,
+		   void (*cbfcnp)(struct cam_periph *, union ccb *),
+		   uint8_t tag_action, uint8_t byte1_flags, uint8_t format,
+		   uint8_t track, uint8_t *data_ptr, uint32_t dxfer_len,
+		   int sense_len, int timeout);
 
 __END_DECLS
 

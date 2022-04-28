@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/wtap/wtap_hal/handler.h 229970 2012-01-11 17:41:14Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef _WTAP_HANDLER_H_

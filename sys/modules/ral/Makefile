@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/ral/Makefile 235233 2012-05-10 17:41:16Z bschmidt $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/ral
+.PATH: ${SRCTOP}/sys/dev/ral
 
 KMOD=	if_ral
 SRCS=	rt2560.c rt2661.c rt2860.c if_ral_pci.c

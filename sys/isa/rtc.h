@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)rtc.h	7.1 (Berkeley) 5/12/91
- * $FreeBSD: release/10.0.0/sys/isa/rtc.h 209371 2010-06-20 21:33:29Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _I386_ISA_RTC_H_
@@ -112,7 +112,7 @@
 #define	RTC_CENTURY	0x32	/* current century */
 
 #ifdef _KERNEL
-extern  struct mtx clock_lock;
+extern  struct mtx atrtc_time_lock;
 extern	int atrtcclock_disable;
 int	rtcin(int reg);
 void	atrtc_restore(void);

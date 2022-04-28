@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright © 2002, Jörg Wunsch
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,12 +24,11 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/whereis/pathnames.h 228991 2011-12-30 10:59:15Z uqs $
+ * $FreeBSD$
  */
 
-/* Where to look for libexec and games */
+/* Where to look for libexec */
 #define PATH_LIBEXEC "/usr/libexec"
-#define PATH_GAMES "/usr/games"
 
 /* Where to look for sources. */
 #define PATH_SOURCES					\

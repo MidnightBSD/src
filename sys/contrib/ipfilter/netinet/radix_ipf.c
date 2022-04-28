@@ -9,12 +9,14 @@
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <net/if.h>
-#if !defined(_KERNEL)
+#ifdef _KERNEL
+#include <sys/systm.h>
+#else
 # include <stddef.h>
 # include <stdlib.h>
 # include <strings.h>
 # include <string.h>
-#endif
+#endif /* !_KERNEL */
 #include "netinet/ip_compat.h"
 #include "netinet/ip_fil.h"
 #ifdef RDX_DEBUG
@@ -101,7 +103,6 @@ buildnodes(addr, mask, nodes)
 	ipf_rdx_node_t nodes[2];
 {
 	u_32_t maskbits;
-	u_32_t lastbits;
 	u_32_t lastmask;
 	u_32_t *last;
 	int masklen;
@@ -115,7 +116,6 @@ buildnodes(addr, mask, nodes)
 		masklen = last - (u_32_t *)mask;
 		lastmask = *last;
 	}
-	lastbits = maskbits & 0x1f;
 
 	bzero(&nodes[0], sizeof(ipf_rdx_node_t) * 2);
 	nodes[0].maskbitcount = maskbits;
@@ -1323,7 +1323,7 @@ dumptree(rnh)
 void
 test_addr(rnh, pref, addr, limit)
 	ipf_rdx_head_t *rnh;
-	int pref;
+	int pref, limit;
 	addrfamily_t *addr;
 {
 	static int extras[14] = { 0, -1, 1, 3, 5, 8, 9,
@@ -1507,6 +1507,8 @@ random_add(rnh)
 		add_addr(rnh, i, order[i]);
 		checktree(rnh);
 	}
+
+	free(order);
 }
 
 
@@ -1524,5 +1526,7 @@ random_delete(rnh)
 		delete_addr(rnh, i);
 		checktree(rnh);
 	}
+
+	free(order);
 }
 #endif /* RDX_DEBUG */

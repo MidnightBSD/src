@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/wlandebug/wlandebug.c 195746 2009-07-17 21:11:08Z sam $
+ * $FreeBSD$
  */
 
 /*
@@ -177,7 +179,7 @@ main(int argc, char *argv[])
 			setoid(oid, sizeof(oid), NULL);
 			argc -= 1, argv += 1;
 		} else if (strcmp(argv[1], "-i") == 0) {
-			if (argc < 2)
+			if (argc <= 2)
 				errx(1, "missing interface name for -i option");
 			if (strncmp(argv[2], "wlan", 4) != 0)
 				errx(1, "expecting a wlan interface name");

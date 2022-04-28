@@ -33,7 +33,7 @@
  *
  *	from: @(#)vmparam.h     5.9 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/vmparam.h,v 1.33 2000/03/30
- * $FreeBSD: release/10.0.0/sys/sparc64/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -75,13 +75,12 @@
 #define	VM_PHYSSEG_MAX		64
 
 /*
- * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * Create two free page pools: VM_FREEPOOL_DEFAULT is the default pool
  * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
  * the pool from which physical pages for small UMA objects are
  * allocated.
  */
-#define	VM_NFREEPOOL		3
-#define	VM_FREEPOOL_CACHE	2
+#define	VM_NFREEPOOL		2
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	1
 
@@ -198,24 +197,22 @@
 #define	USRSTACK		(VM_MAX_USER_ADDRESS)
 
 /*
- * Virtual size (bytes) for various kernel submaps.
- */
-#ifndef	VM_KMEM_SIZE
-#define	VM_KMEM_SIZE		(16*1024*1024)
-#endif
-
-/*
- * How many physical pages per KVA page allocated.
- * min(max(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE),
- *     VM_KMEM_SIZE_MIN), VM_KMEM_SIZE_MAX)
- * is the total KVA space allocated for kmem_map.
+ * How many physical pages per kmem arena virtual page.
  */
 #ifndef VM_KMEM_SIZE_SCALE
 #define	VM_KMEM_SIZE_SCALE	(tsb_kernel_ldd_phys == 0 ? 3 : 2)
 #endif
 
 /*
- * Ceiling on amount of kmem_map kva space.
+ * Optional floor (in bytes) on the size of the kmem arena.
+ */
+#ifndef VM_KMEM_SIZE_MIN
+#define	VM_KMEM_SIZE_MIN	(16 * 1024 * 1024)
+#endif
+
+/*
+ * Optional ceiling (in bytes) on the size of the kmem arena: 60% of the
+ * kernel map.
  */
 #ifndef VM_KMEM_SIZE_MAX
 #define	VM_KMEM_SIZE_MAX	((VM_MAX_KERNEL_ADDRESS - \
@@ -240,5 +237,11 @@ extern vm_offset_t vm_max_kernel_address;
  * caching disabled.
  */
 #define	ZERO_REGION_SIZE	PAGE_SIZE
+
+#define	SFBUF
+#define	SFBUF_MAP
+#define	SFBUF_OPTIONAL_DIRECT_MAP	dcache_color_ignore
+#include <machine/tlb.h>
+#define	SFBUF_PHYS_DMAP(x)		TLB_PHYS_TO_DIRECT(x)
 
 #endif /* !_MACHINE_VMPARAM_H_ */

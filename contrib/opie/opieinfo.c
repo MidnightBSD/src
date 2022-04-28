@@ -30,7 +30,7 @@ License Agreement applies to this software.
 	Written at Bellcore for the S/Key Version 1 software distribution
 		(keyinfo)
 
-$FreeBSD: release/10.0.0/contrib/opie/opieinfo.c 92914 2002-03-21 23:42:52Z markm $
+$FreeBSD$
 
 */
 
@@ -38,6 +38,7 @@ $FreeBSD: release/10.0.0/contrib/opie/opieinfo.c 92914 2002-03-21 23:42:52Z mark
 #include <sys/param.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>

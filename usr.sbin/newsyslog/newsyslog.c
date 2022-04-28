@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/newsyslog/newsyslog.c 252378 2013-06-29 15:58:03Z kientzle $");
+__FBSDID("$FreeBSD$");
 
 #define	OSF
 
@@ -79,6 +79,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/newsyslog/newsyslog.c 252378 2013-06
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -126,6 +127,8 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/newsyslog/newsyslog.c 252378 2013-06
 #define	CE_CREATE	0x0100	/* Create the log file if it does not exist. */
 #define	CE_NODUMP	0x0200	/* Set 'nodump' on newly created log file. */
 #define	CE_PID2CMD	0x0400	/* Replace PID file with a shell command.*/
+#define	CE_PLAIN0	0x0800	/* Do not compress zero'th history file */
+#define	CE_RFC5424	0x1000	/* Use RFC5424 format rotation message */
 
 #define	MIN_PID         5	/* Don't touch pids lower than this */
 #define	MAX_PID		99999	/* was lower, see /usr/include/sys/proc.h */
@@ -241,13 +244,23 @@ static struct ptime_data *timenow; /* The time to use for checking at-fields */
 #define	DAYTIME_LEN	16
 static char daytime[DAYTIME_LEN];/* The current time in human readable form,
 				  * used for rotation-tracking messages. */
+
+/* Another buffer to hold the current time in RFC5424 format. Fractional
+ * seconds are allowed by the RFC, but are not included in the
+ * rotation-tracking messages written by newsyslog and so are not accounted for
+ * in the length below.
+ */
+#define	DAYTIME_RFC5424_LEN	sizeof("YYYY-MM-DDTHH:MM:SS+00:00")
+static char daytime_rfc5424[DAYTIME_RFC5424_LEN];
+
 static char hostname[MAXHOSTNAMELEN]; /* hostname */
+static size_t hostname_shortlen;
 
 static const char *path_syslogpid = _PATH_SYSLOGPID;
 
 static struct cflist *get_worklist(char **files);
 static void parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
-		    struct conf_entry *defconf_p, struct ilist *inclist);
+		    struct conf_entry **defconf, struct ilist *inclist);
 static void add_to_queue(const char *fname, struct ilist *inclist);
 static char *sob(char *p);
 static char *son(char *p);
@@ -280,6 +293,7 @@ static int age_old_log(const char *file);
 static void savelog(char *from, char *to);
 static void createdir(const struct conf_entry *ent, char *dirpart);
 static void createlog(const struct conf_entry *ent);
+static int parse_signal(const char *str);
 
 /*
  * All the following take a parameter of 'int', but expect values in the
@@ -332,13 +346,15 @@ main(int argc, char **argv)
 			printf("Signal all daemon process(es)...\n");
 		SLIST_FOREACH(stmp, &swhead, sw_nextp)
 			do_sigwork(stmp);
-		if (noaction)
-			printf("\tsleep 10\n");
-		else {
-			if (verbose)
-				printf("Pause 10 seconds to allow daemon(s)"
-				    " to close log file(s)\n");
-			sleep(10);
+		if (!(rotatereq && nosignal)) {
+			if (noaction)
+				printf("\tsleep 10\n");
+			else {
+				if (verbose)
+					printf("Pause 10 seconds to allow "
+					    "daemon(s) to close log file(s)\n");
+				sleep(10);
+			}
 		}
 	}
 	/*
@@ -621,13 +637,11 @@ parse_args(int argc, char **argv)
 	timenow = ptime_init(NULL);
 	ptimeset_time(timenow, time(NULL));
 	strlcpy(daytime, ptimeget_ctime(timenow) + 4, DAYTIME_LEN);
+	ptimeget_ctime_rfc5424(timenow, daytime_rfc5424, DAYTIME_RFC5424_LEN);
 
 	/* Let's get our hostname */
 	(void)gethostname(hostname, sizeof(hostname));
-
-	/* Truncate domain */
-	if ((p = strchr(hostname, '.')) != NULL)
-		*p = '\0';
+	hostname_shortlen = strcspn(hostname, ".");
 
 	/* Parse command line options. */
 	while ((ch = getopt(argc, argv, "a:d:f:nrst:vCD:FNPR:S:")) != -1)
@@ -834,7 +848,7 @@ get_worklist(char **files)
 
 		if (verbose)
 			printf("Processing %s\n", inc->file);
-		parse_file(f, filelist, globlist, defconf, &inclist);
+		parse_file(f, filelist, globlist, &defconf, &inclist);
 		(void) fclose(f);
 	}
 
@@ -851,7 +865,6 @@ get_worklist(char **files)
 		if (defconf != NULL)
 			free_entry(defconf);
 		return (filelist);
-		/* NOTREACHED */
 	}
 
 	/*
@@ -908,7 +921,7 @@ get_worklist(char **files)
 		 * for a "glob" entry which does match.
 		 */
 		gmatch = 0;
-		if (verbose > 2 && globlist != NULL)
+		if (verbose > 2)
 			printf("\t+ Checking globs for %s\n", *given);
 		STAILQ_FOREACH(ent, globlist, cf_nextp) {
 			fnres = fnmatch(ent->log, *given, FNM_PATHNAME);
@@ -1039,7 +1052,7 @@ expand_globs(struct cflist *work_p, struct cflist *glob_p)
  */
 static void
 parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
-    struct conf_entry *defconf_p, struct ilist *inclist)
+    struct conf_entry **defconf_p, struct ilist *inclist)
 {
 	char line[BUFSIZ], *parse, *q;
 	char *cp, *errline, *group;
@@ -1130,12 +1143,12 @@ parse_file(FILE *cf, struct cflist *work_p, struct cflist *glob_p,
 		working = init_entry(q, NULL);
 		if (strcasecmp(DEFAULT_MARKER, q) == 0) {
 			special = 1;
-			if (defconf_p != NULL) {
+			if (*defconf_p != NULL) {
 				warnx("Ignoring duplicate entry for %s!", q);
 				free_entry(working);
 				continue;
 			}
-			defconf_p = working;
+			*defconf_p = working;
 		}
 
 		q = parse = missing_field(sob(parse + 1), errline);
@@ -1270,20 +1283,6 @@ no_trimat:
 				working->flags |= CE_BINARY;
 				break;
 			case 'c':
-				/*
-				 * XXX - 	Ick! Ugly! Remove ASAP!
-				 * We want `c' and `C' for "create".  But we
-				 * will temporarily treat `c' as `g', because
-				 * FreeBSD releases <= 4.8 have a typo of
-				 * checking  ('G' || 'c')  for CE_GLOB.
-				 */
-				if (*q == 'c') {
-					warnx("Assuming 'g' for 'c' in flags for line:\n%s",
-					    errline);
-					warnx("The 'c' flag will eventually mean 'CREATE'");
-					working->flags |= CE_GLOB;
-					break;
-				}
 				working->flags |= CE_CREATE;
 				break;
 			case 'd':
@@ -1298,14 +1297,20 @@ no_trimat:
 			case 'n':
 				working->flags |= CE_NOSIGNAL;
 				break;
+			case 'p':
+				working->flags |= CE_PLAIN0;
+				break;
 			case 'r':
 				working->flags |= CE_PID2CMD;
+				break;
+			case 't':
+				working->flags |= CE_RFC5424;
 				break;
 			case 'u':
 				working->flags |= CE_SIGNALGROUP;
 				break;
 			case 'w':
-				/* Depreciated flag - keep for compatibility purposes */
+				/* Deprecated flag - keep for compatibility purposes */
 				break;
 			case 'x':
 				working->compress = COMPRESS_XZ;
@@ -1317,7 +1322,6 @@ no_trimat:
 				break;
 			case 'f':	/* Used by OpenBSD for "CE_FOLLOW" */
 			case 'm':	/* Used by OpenBSD for "CE_MONITOR" */
-			case 'p':	/* Used by NetBSD  for "CE_PLAIN0" */
 			default:
 				errx(1, "illegal flag in config file -- %c",
 				    *q);
@@ -1338,33 +1342,31 @@ no_trimat:
 		if (q && *q) {
 			if (*q == '/')
 				working->pid_cmd_file = strdup(q);
-			else if (isdigit(*q))
+			else if (isalnum(*q))
 				goto got_sig;
-			else
+			else {
 				errx(1,
-			"illegal pid file or signal number in config file:\n%s",
+			"illegal pid file or signal in config file:\n%s",
 				    errline);
+			}
 		}
 		if (eol)
 			q = NULL;
 		else {
 			q = parse = sob(parse + 1);	/* Optional field */
-			*(parse = son(parse)) = '\0';
+			parse = son(parse);
+			*parse = '\0';
 		}
 
 		working->sig = SIGHUP;
 		if (q && *q) {
-			if (isdigit(*q)) {
-		got_sig:
-				working->sig = atoi(q);
-			} else {
-		err_sig:
+got_sig:
+			working->sig = parse_signal(q);
+			if (working->sig < 1 || working->sig >= sys_nsig) {
 				errx(1,
-				    "illegal signal number in config file:\n%s",
+				    "illegal signal in config file:\n%s",
 				    errline);
 			}
-			if (working->sig < 1 || working->sig >= NSIG)
-				goto err_sig;
 		}
 
 		/*
@@ -1491,6 +1493,7 @@ validate_old_timelog(int fd, const struct dirent *dp, const char *logfname,
 			    &dp->d_name[logfname_len]);
 		return (0);
 	}
+	memset(tm, 0, sizeof(*tm));
 	if ((s = strptime(&dp->d_name[logfname_len + 1],
 	    timefnamefmt, tm)) == NULL) {
 		/*
@@ -1824,8 +1827,18 @@ do_rotate(const struct conf_entry *ent)
 		else {
 			/* XXX - Ought to be checking for failure! */
 			(void)rename(zfile1, zfile2);
+			change_attrs(zfile2, ent);
+			if (ent->compress && !strlen(logfile_suffix)) {
+				/* compress old rotation */
+				struct zipwork_entry zwork;
+
+				memset(&zwork, 0, sizeof(zwork));
+				zwork.zw_conf = ent;
+				zwork.zw_fsize = sizefile(zfile2);
+				strcpy(zwork.zw_fname, zfile2);
+				do_zipwork(&zwork);
+			}
 		}
-		change_attrs(zfile2, ent);
 	}
 
 	if (ent->numlogs > 0) {
@@ -1874,12 +1887,15 @@ do_rotate(const struct conf_entry *ent)
 	if (ent->pid_cmd_file != NULL)
 		swork = save_sigwork(ent);
 	if (ent->numlogs > 0 && ent->compress > COMPRESS_NONE) {
-		/*
-		 * The zipwork_entry will include a pointer to this
-		 * conf_entry, so the conf_entry should not be freed.
-		 */
-		free_or_keep = KEEP_ENT;
-		save_zipwork(ent, swork, ent->fsize, file1);
+		if (!(ent->flags & CE_PLAIN0) ||
+		    strcmp(&file1[strlen(file1) - 2], ".0") != 0) {
+			/*
+			 * The zipwork_entry will include a pointer to this
+			 * conf_entry, so the conf_entry should not be freed.
+			 */
+			free_or_keep = KEEP_ENT;
+			save_zipwork(ent, swork, ent->fsize, file1);
+		}
 	}
 
 	return (free_or_keep);
@@ -1914,7 +1930,7 @@ do_sigwork(struct sigwork_entry *swork)
 	/*
 	 * Compute the pause between consecutive signals.  Use a longer
 	 * sleep time if we will be sending two signals to the same
-	 * deamon or process-group.
+	 * daemon or process-group.
 	 */
 	secs = 0;
 	nextsig = SLIST_NEXT(swork, sw_nextp);
@@ -1967,8 +1983,8 @@ do_sigwork(struct sigwork_entry *swork)
 		 */
 		if (errno != ESRCH)
 			swork->sw_pidok = 0;
-		warn("can't notify %s, pid %d", swork->sw_pidtype,
-		    (int)swork->sw_pid);
+		warn("can't notify %s, pid %d = %s", swork->sw_pidtype,
+		    (int)swork->sw_pid, swork->sw_fname);
 	} else {
 		if (verbose)
 			printf("Notified %s pid %d = %s\n", swork->sw_pidtype,
@@ -2105,7 +2121,7 @@ save_sigwork(const struct conf_entry *ent)
 
 	tmpsiz = sizeof(struct sigwork_entry) + strlen(ent->pid_cmd_file) + 1;
 	stmp = malloc(tmpsiz);
-	
+
 	stmp->sw_runcmd = 0;
 	/* If this is a command to run we just set the flag and run command */
 	if (ent->flags & CE_PID2CMD) {
@@ -2261,15 +2277,40 @@ log_trim(const char *logname, const struct conf_entry *log_ent)
 	xtra = "";
 	if (log_ent->def_cfg)
 		xtra = " using <default> rule";
-	if (log_ent->firstcreate)
-		fprintf(f, "%s %s newsyslog[%d]: logfile first created%s\n",
-		    daytime, hostname, (int) getpid(), xtra);
-	else if (log_ent->r_reason != NULL)
-		fprintf(f, "%s %s newsyslog[%d]: logfile turned over%s%s\n",
-		    daytime, hostname, (int) getpid(), log_ent->r_reason, xtra);
-	else
-		fprintf(f, "%s %s newsyslog[%d]: logfile turned over%s\n",
-		    daytime, hostname, (int) getpid(), xtra);
+	if (log_ent->flags & CE_RFC5424) {
+		if (log_ent->firstcreate) {
+			fprintf(f, "<%d>1 %s %s newsyslog %d - - %s%s\n",
+			    LOG_MAKEPRI(LOG_USER, LOG_INFO),
+			    daytime_rfc5424, hostname, getpid(),
+			    "logfile first created", xtra);
+		} else if (log_ent->r_reason != NULL) {
+			fprintf(f, "<%d>1 %s %s newsyslog %d - - %s%s%s\n",
+			    LOG_MAKEPRI(LOG_USER, LOG_INFO),
+			    daytime_rfc5424, hostname, getpid(),
+			    "logfile turned over", log_ent->r_reason, xtra);
+		} else {
+			fprintf(f, "<%d>1 %s %s newsyslog %d - - %s%s\n",
+			    LOG_MAKEPRI(LOG_USER, LOG_INFO),
+			    daytime_rfc5424, hostname, getpid(),
+			    "logfile turned over", xtra);
+		}
+	} else {
+		if (log_ent->firstcreate)
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile first created%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    xtra);
+		else if (log_ent->r_reason != NULL)
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile turned over%s%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    log_ent->r_reason, xtra);
+		else
+			fprintf(f,
+			    "%s %.*s newsyslog[%d]: logfile turned over%s\n",
+			    daytime, (int)hostname_shortlen, hostname, getpid(),
+			    xtra);
+	}
 	if (fclose(f) == EOF)
 		err(1, "log_trim: fclose");
 	return (0);
@@ -2283,7 +2324,7 @@ sizefile(const char *file)
 
 	if (stat(file, &sb) < 0)
 		return (-1);
-	return (kbytes(dbtob(sb.st_blocks)));
+	return (kbytes(sb.st_size));
 }
 
 /*
@@ -2660,4 +2701,29 @@ change_attrs(const char *fname, const struct conf_entry *ent)
 		if (failed)
 			warn("can't chflags %s NODUMP", fname);
 	}
+}
+
+/*
+ * Parse a signal number or signal name. Returns the signal number parsed or -1
+ * on failure.
+ */
+static int
+parse_signal(const char *str)
+{
+	int sig, i;
+	const char *errstr;
+
+	sig = strtonum(str, 1, sys_nsig - 1, &errstr);
+
+	if (errstr == NULL)
+		return (sig);
+	if (strncasecmp(str, "SIG", 3) == 0)
+		str += 3;
+
+	for (i = 1; i < sys_nsig; i++) {
+		if (strcasecmp(str, sys_signame[i]) == 0)
+			return (i);
+	}
+
+	return (-1);
 }

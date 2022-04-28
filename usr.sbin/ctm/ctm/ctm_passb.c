@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Joseph Koshy
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ctm/ctm/ctm_passb.c 76300 2001-05-06 03:03:45Z kris $
+ * $FreeBSD$
  *
  */
 

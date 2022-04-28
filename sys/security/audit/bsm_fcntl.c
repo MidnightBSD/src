@@ -25,12 +25,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * P4: //depot/projects/trustedbsd/openbsm/libbsm/bsm_fcntl.c#2
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/audit/bsm_fcntl.c 244267 2012-12-15 15:21:09Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/fcntl.h>
@@ -239,8 +237,7 @@ static const bsm_fcntl_cmd_t bsm_fcntl_cmdtab[] = {
 	{ BSM_F_FS_SPECIFIC_15,	FCNTL_FS_SPECIFIC_BASE + 15},
 #endif	/* FCNTL_FS_SPECIFIC_BASE */
 };
-static const int bsm_fcntl_cmd_count = sizeof(bsm_fcntl_cmdtab) /
-	    sizeof(bsm_fcntl_cmdtab[0]);
+static const int bsm_fcntl_cmd_count = nitems(bsm_fcntl_cmdtab);
 
 static const bsm_fcntl_cmd_t *
 bsm_lookup_local_fcntl_cmd(int local_fcntl_cmd)

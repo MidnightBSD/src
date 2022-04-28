@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/tools/tools/ath/athdecode/Makefile 220534 2011-04-11 06:53:45Z adrian $
+# $FreeBSD$
 
 PROG=	athdecode
 

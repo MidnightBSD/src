@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/contrib/diff/FREEBSD-Xlist 171490 2007-07-19 06:57:46Z delphij $
+# $FreeBSD$
 
 INSTALL
 Makefile.am

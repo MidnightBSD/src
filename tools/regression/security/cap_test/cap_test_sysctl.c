@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/security/cap_test/cap_test_sysctl.c 224651 2011-08-04 14:20:13Z jonathan $
+ * $FreeBSD$
  */
 
 /*
@@ -32,10 +32,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/security/cap_test/cap_test_sysctl.c 224651 2011-08-04 14:20:13Z jonathan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/errno.h>
 #include <sys/sysctl.h>
 #include <sys/wait.h>

@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/nae.h 255368 2013-09-07 18:26:16Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_NAE_H__
@@ -457,7 +457,7 @@
 #define	XLP8XX_MS_FIFO_SZ		2048
 #define	XLP8XX_PKT_FIFO_SZ		16384
 #define	XLP8XX_PKTLEN_FIFO_SZ		2048
-        
+
 #define	XLP8XX_MAX_STG2_OFFSET		0x7F
 #define	XLP8XX_MAX_EH_OFFSET		0x7F
 #define	XLP8XX_MAX_FREE_OUT_OFFSET	0x7F

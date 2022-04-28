@@ -2,17 +2,18 @@
 #
 # Wait for the default route to be up if DHCP is in use
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/defaultroute 213270 2010-09-29 13:08:23Z emaste $
+# $FreeBSD$
 #
 
 # PROVIDE: defaultroute
-# REQUIRE: devd faith netif stf
+# REQUIRE: devd netif stf
 # KEYWORD: nojail
 
 . /etc/rc.subr
 . /etc/network.subr
 
 name="defaultroute"
+desc="Setup default router"
 start_cmd="defaultroute_start"
 stop_cmd=":"
 

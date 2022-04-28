@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * Bridge MIB implementation for SNMPd.
  * Bridge interface objects.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_bridge/bridge_if.c 228990 2011-12-30 10:58:14Z uqs $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
@@ -433,7 +435,7 @@ bridge_update_bif(struct bridge_if *bif)
 }
 
 /*
- * Update all bridge interfaces' ports only - 
+ * Update all bridge interfaces' ports only -
  * make sure each bridge interface exists first.
  */
 void

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)talk.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/talk/talk.h 227185 2011-11-06 08:17:23Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -69,7 +69,6 @@ extern	int	check_local(void);
 extern	void	check_writeable(void);
 extern	void	ctl_transact(struct in_addr,CTL_MSG,int,CTL_RESPONSE *);
 extern	void	disp_msg(int);
-extern	void	display(xwin_t *, char *, int);
 extern	void	end_msgs(void);
 extern	void	get_addrs(const char *, const char *);
 extern	int	get_iface(struct in_addr *, struct in_addr *);

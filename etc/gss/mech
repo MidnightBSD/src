@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/gss/mech 184588 2008-11-03 10:38:00Z dfr $
+# $FreeBSD$
 #
 # Name		OID			Library name			Kernel module
 kerberosv5	1.2.840.113554.1.2.2	/usr/lib/libgssapi_krb5.so.10	kgssapi_krb5

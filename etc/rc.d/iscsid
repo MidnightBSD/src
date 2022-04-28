@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/iscsid 255570 2013-09-14 15:29:06Z trasz $
+# $FreeBSD$
 #
 
 # PROVIDE: iscsid
@@ -11,6 +11,7 @@
 . /etc/rc.subr
 
 name="iscsid"
+desc="iSCSI initiator daemon"
 rcvar="iscsid_enable"
 pidfile="/var/run/${name}.pid"
 command="/usr/sbin/${name}"

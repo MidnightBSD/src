@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
  * \file
@@ -41,6 +41,10 @@
 #include "config.h"
 #ifdef USE_WINSOCK
 #include <signal.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 #include "util/winsock_event.h"
 #include "util/fptr_wlist.h"
 
@@ -71,7 +75,7 @@ settime(struct event_base* base)
                 return -1;
         }
 #ifndef S_SPLINT_S
-        *base->time_secs = (uint32_t)base->time_tv->tv_sec;
+        *base->time_secs = (time_t)base->time_tv->tv_sec;
 #endif
         return 0;
 }
@@ -108,7 +112,7 @@ zero_waitfor(WSAEVENT waitfor[], WSAEVENT x)
 	}
 }
 
-void *event_init(uint32_t* time_secs, struct timeval* time_tv)
+void *event_init(time_t* time_secs, struct timeval* time_tv)
 {
         struct event_base* base = (struct event_base*)malloc(
 		sizeof(struct event_base));
@@ -165,7 +169,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
 #endif
 	verbose(VERB_CLIENT, "winsock_event handle_timeouts");
 
-        while((rbnode_t*)(p = (struct event*)rbtree_first(base->times))
+        while((rbnode_type*)(p = (struct event*)rbtree_first(base->times))
                 !=RBTREE_NULL) {
 #ifndef S_SPLINT_S
                 if(p->ev_timeout.tv_sec > now->tv_sec ||
@@ -181,8 +185,8 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
                                 wait->tv_usec = p->ev_timeout.tv_usec
                                         - now->tv_usec;
                         }
-			verbose(VERB_CLIENT, "winsock_event wait=%d.%6.6d",
-				(int)wait->tv_sec, (int)wait->tv_usec);
+			verbose(VERB_CLIENT, "winsock_event wait=" ARG_LL "d.%6.6d",
+				(long long)wait->tv_sec, (int)wait->tv_usec);
                         return;
                 }
 #endif
@@ -258,8 +262,9 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 			break; /* sanity check */
 	}
 	log_assert(numwait <= WSA_MAXIMUM_WAIT_EVENTS);
-	verbose(VERB_CLIENT, "winsock_event bmax=%d numwait=%d wait=%x "
-		"timeout=%d", base->max, numwait, (int)wait, (int)timeout);
+	verbose(VERB_CLIENT, "winsock_event bmax=%d numwait=%d wait=%s "
+		"timeout=%d", base->max, numwait, (wait?"<wait>":"<null>"),
+		(int)timeout);
 
 	/* do the wait */
 	if(numwait == 0) {
@@ -455,12 +460,9 @@ void event_base_free(struct event_base *base)
 	verbose(VERB_CLIENT, "winsock_event event_base_free");
         if(!base)
                 return;
-	if(base->items)
-		free(base->items);
-        if(base->times)
-                free(base->times);
-        if(base->signals)
-                free(base->signals);
+	free(base->items);
+        free(base->times);
+        free(base->signals);
         free(base);
 }
 
@@ -488,9 +490,9 @@ int event_base_set(struct event_base *base, struct event *ev)
 
 int event_add(struct event *ev, struct timeval *tv)
 {
-	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=%d %s%s%s", 
+	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=" ARG_LL "d %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
-		(tv?(int)tv->tv_sec*1000+(int)tv->tv_usec/1000:-1),
+		(tv?(long long)tv->tv_sec*1000+(long long)tv->tv_usec/1000:-1),
 		(ev->ev_events&EV_READ)?" EV_READ":"",
 		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
 		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");
@@ -556,7 +558,7 @@ int event_add(struct event *ev, struct timeval *tv)
                 struct timeval *now = ev->ev_base->time_tv;
                 ev->ev_timeout.tv_sec = tv->tv_sec + now->tv_sec;
                 ev->ev_timeout.tv_usec = tv->tv_usec + now->tv_usec;
-                while(ev->ev_timeout.tv_usec > 1000000) {
+                while(ev->ev_timeout.tv_usec >= 1000000) {
                         ev->ev_timeout.tv_usec -= 1000000;
                         ev->ev_timeout.tv_sec++;
                 }
@@ -569,10 +571,10 @@ int event_add(struct event *ev, struct timeval *tv)
 
 int event_del(struct event *ev)
 {
-	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=%d %s%s%s", 
+	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=" ARG_LL "d %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
-		(ev->ev_events&EV_TIMEOUT)?(int)ev->ev_timeout.tv_sec*1000+
-		(int)ev->ev_timeout.tv_usec/1000:-1,
+		(ev->ev_events&EV_TIMEOUT)?(long long)ev->ev_timeout.tv_sec*1000+
+		(long long)ev->ev_timeout.tv_usec/1000:-1,
 		(ev->ev_events&EV_READ)?" EV_READ":"",
 		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
 		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");

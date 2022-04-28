@@ -25,7 +25,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __FreeBSD__
-__FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_alq.c 233255 2012-03-21 03:19:50Z adrian $");
+__FBSDID("$FreeBSD$");
 #endif
 
 /*
@@ -53,10 +53,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net80211/ieee80211_alq.c 233255 2012-03-2
 
 #include <net/if.h>
 #include <net/if_var.h>
-#include <net/if_dl.h>
-#include <net/if_clone.h>
 #include <net/if_media.h>
-#include <net/if_types.h>
+#include <net/ethernet.h>
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_freebsd.h>

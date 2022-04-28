@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/gss_impl.c 253049 2013-07-09 01:05:28Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -70,7 +70,7 @@ kgss_init(void *dummy)
 
 	LIST_INIT(&kgss_mechs);
 	error = syscall_register(&gssd_syscall_offset, &gssd_syscall_sysent,
-	    &gssd_syscall_prev_sysent);
+	    &gssd_syscall_prev_sysent, SY_THR_STATIC_KLD);
 	if (error)
 		printf("Can't register GSSD syscall\n");
 	else
@@ -104,15 +104,29 @@ sys_gssd_syscall(struct thread *td, struct gssd_syscall_args *uap)
 	error = copyinstr(uap->path, path, sizeof(path), NULL);
 	if (error)
 		return (error);
+	if (strlen(path) + 1 > sizeof(sun.sun_path))
+		return (EINVAL);
 
-        sun.sun_family = AF_LOCAL;
-        strcpy(sun.sun_path, path);
-        sun.sun_len = SUN_LEN(&sun);
-        
-        nconf = getnetconfigent("local");
-        cl = clnt_reconnect_create(nconf,
-	    (struct sockaddr *) &sun, GSSD, GSSDVERS,
-	    RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+	if (path[0] != '\0') {
+		sun.sun_family = AF_LOCAL;
+		strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+		sun.sun_len = SUN_LEN(&sun);
+		
+		nconf = getnetconfigent("local");
+		cl = clnt_reconnect_create(nconf,
+		    (struct sockaddr *) &sun, GSSD, GSSDVERS,
+		    RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+		/*
+		 * The number of retries defaults to INT_MAX, which effectively
+		 * means an infinite, uninterruptable loop.  Limiting it to
+		 * five retries keeps it from running forever.
+		 */
+		if (cl != NULL) {
+			int retry_count = 5;
+			CLNT_CONTROL(cl, CLSET_RETRIES, &retry_count);
+		}
+	} else
+		cl = NULL;
 
 	mtx_lock(&kgss_gssd_lock);
 	oldcl = kgss_gssd_handle;
@@ -320,7 +334,7 @@ kgssapi_modevent(module_t mod, int type, void *data)
 		/* FALLTHROUGH */
 	default:
 		error = EOPNOTSUPP;
-	};
+	}
 	return (error);
 }
 static moduledata_t kgssapi_mod = {

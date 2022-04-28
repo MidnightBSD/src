@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/OCTEON1.hints 210311 2010-07-20 19:25:11Z jmallett $
+# $FreeBSD$
 # device.hints
 # All these values are complete nonsense...
 hw.uart.console="io:0x1"

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/softfloat/fpgetmask.c 189647 2009-03-10 21:13:26Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 

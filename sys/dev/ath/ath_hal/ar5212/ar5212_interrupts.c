@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5212/ar5212_interrupts.c 201758 2010-01-07 21:01:37Z mbr $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 

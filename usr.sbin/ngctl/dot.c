@@ -35,7 +35,7 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ngctl/dot.c 166529 2007-02-06 08:48:28Z kevlo $
+ * $FreeBSD$
  */
 
 #include <err.h>
@@ -187,7 +187,7 @@ DotCmd(int ac, char **av)
 		free(hlresp);
 	}
 
-	fprintf(f, "};\n");
+	fprintf(f, "}\n");
 
 	free(nlresp);
 	if (f != stdout)

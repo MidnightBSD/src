@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libutil/pidfile.c 255007 2013-08-28 21:10:37Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -119,7 +119,7 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 
 	/*
 	 * Open the PID file and obtain exclusive lock.
-	 * We truncate PID file here only to remove old PID immediatelly,
+	 * We truncate PID file here only to remove old PID immediately,
 	 * PID file will be truncated again in pidfile_write(), so
 	 * pidfile_write() can be called multiple times.
 	 */

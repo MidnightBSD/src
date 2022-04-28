@@ -29,7 +29,7 @@
 #define __R100D_H__
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/r100d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define CP_PACKET0			0x00000000
 #define		PACKET0_BASE_INDEX_SHIFT	0

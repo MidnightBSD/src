@@ -36,7 +36,7 @@
 .\" 
 .\"	@(#)lex.ms	8.1 (Berkeley) 6/8/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/psd/16.lex/lex.ms 105871 2002-10-24 13:21:29Z ru $
+.\" $FreeBSD$
 .nr tm 0
 .de MH
 Bell Laboratories, Murray Hill, NJ 07974.

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)egetopt.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/pr/egetopt.c 204359 2010-02-26 13:48:04Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <stdio.h>
@@ -76,7 +76,7 @@ egetopt(int nargc, char * const *nargv, const char *ostr)
 {
 	static char *place = emsg;	/* option letter processing */
 	char *oli;			/* option letter list index */
-	static int delim;		/* which option delimeter */
+	static int delim;		/* which option delimiter */
 	char *p;
 	static char savec = '\0';
 

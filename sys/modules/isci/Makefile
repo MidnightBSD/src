@@ -1,8 +1,8 @@
 # isci driver Makefile
 #
-# $FreeBSD: release/10.0.0/sys/modules/isci/Makefile 245952 2013-01-26 22:08:21Z pfg $
+# $FreeBSD$
 
-ISCI_SRC_PATH = ${.CURDIR}/../..
+ISCI_SRC_PATH = ${SRCTOP}/sys
 
 .PATH:  ${ISCI_SRC_PATH}/dev/isci ${ISCI_SRC_PATH}/dev/isci/scil
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/strfmon.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>
@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/strfmon.c 227753 2011-11-20 1
 #define	SIGN_POSN_USED		0x02	/* '+' or '(' usage flag */
 #define	LOCALE_POSN		0x04	/* use locale defined +/- (default) */
 #define	PARENTH_POSN		0x08	/* enclose negative amount in () */
-#define	SUPRESS_CURR_SYMBOL	0x10	/* supress the currency from output */
+#define	SUPRESS_CURR_SYMBOL	0x10	/* suppress the currency from output */
 #define	LEFT_JUSTIFY		0x20	/* left justify */
 #define	USE_INTL_CURRENCY	0x40	/* use international currency symbol */
 #define IS_NEGATIVE		0x80	/* is argument value negative ? */
@@ -526,7 +526,6 @@ __format_grouped_double(double value, int *flags,
 	char		*rslt;
 	char		*avalue;
 	int		avalue_size;
-	char		fmt[32];
 
 	size_t		bufsize;
 	char		*bufend;
@@ -567,14 +566,13 @@ __format_grouped_double(double value, int *flags,
 		left_prec += get_groups(left_prec, grouping);
 
 	/* convert to string */
-	snprintf(fmt, sizeof(fmt), "%%%d.%df", left_prec + right_prec + 1,
-	    right_prec);
-	avalue_size = asprintf(&avalue, fmt, value);
+	avalue_size = asprintf(&avalue, "%*.*f", left_prec + right_prec + 1,
+	    right_prec, value);
 	if (avalue_size < 0)
 		return (NULL);
 
 	/* make sure that we've enough space for result string */
-	bufsize = strlen(avalue)*2+1;
+	bufsize = avalue_size * 2 + 1;
 	rslt = calloc(1, bufsize);
 	if (rslt == NULL) {
 		free(avalue);
@@ -582,7 +580,7 @@ __format_grouped_double(double value, int *flags,
 	}
 	bufend = rslt + bufsize - 1;	/* reserve space for trailing '\0' */
 
-	/* skip spaces at beggining */
+	/* skip spaces at beginning */
 	padded = 0;
 	while (avalue[padded] == ' ') {
 		padded++;

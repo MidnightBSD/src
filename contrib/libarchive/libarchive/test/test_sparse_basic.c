@@ -40,6 +40,9 @@ __FBSDID("$FreeBSD$");
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
 #ifdef HAVE_LINUX_FIEMAP_H
 #include <linux/fiemap.h>
 #endif
@@ -47,9 +50,14 @@ __FBSDID("$FreeBSD$");
 #include <linux/fs.h>
 #endif
 
+/* The logic to compare sparse file data read from disk with the
+ * specification is a little involved.  Set to 1 to have the progress
+ * dumped. */
+#define DEBUG 0
+
 /*
  * NOTE: On FreeBSD and Solaris, this test needs ZFS.
- * You may should perfom this test as
+ * You may perform this test as
  * 'TMPDIR=<a directory on the ZFS> libarchive_test'.
  */
 
@@ -59,6 +67,14 @@ struct sparse {
 };
 
 static void create_sparse_file(const char *, const struct sparse *);
+
+#if defined(__APPLE__)
+/* On APFS holes need to be at least 4096x4097 bytes */
+#define MIN_HOLE 16781312
+#else
+/* Elsewhere we work with 4096*10 bytes */
+#define MIN_HOLE 409600
+#endif
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <winioctl.h>
@@ -110,13 +126,26 @@ create_sparse_file(const char *path, const struct sparse *s)
 	assert(handle != INVALID_HANDLE_VALUE);
 	assert(DeviceIoControl(handle, FSCTL_SET_SPARSE, NULL, 0,
 	    NULL, 0, &dmy, NULL) != 0);
+
+	uint64_t offsetSoFar = 0;
+
 	while (s->type != END) {
 		if (s->type == HOLE) {
-			LARGE_INTEGER distance;
+			LARGE_INTEGER fileOffset, beyondOffset, distanceToMove;
+			fileOffset.QuadPart = offsetSoFar;
+			beyondOffset.QuadPart = offsetSoFar + s->size;
+			distanceToMove.QuadPart = s->size;
 
-			distance.QuadPart = s->size;
-			assert(SetFilePointerEx(handle, distance,
-			    NULL, FILE_CURRENT) != 0);
+			FILE_ZERO_DATA_INFORMATION zeroInformation;
+			zeroInformation.FileOffset = fileOffset;
+			zeroInformation.BeyondFinalZero = beyondOffset;
+
+			DWORD bytesReturned;
+			assert(SetFilePointerEx(handle, distanceToMove,
+				NULL, FILE_CURRENT) != 0);
+			assert(SetEndOfFile(handle) != 0);
+			assert(DeviceIoControl(handle, FSCTL_SET_ZERO_DATA, &zeroInformation,
+				sizeof(FILE_ZERO_DATA_INFORMATION), NULL, 0, &bytesReturned, NULL) != 0);
 		} else {
 			DWORD w, wr;
 			size_t size;
@@ -131,6 +160,7 @@ create_sparse_file(const char *path, const struct sparse *s)
 				size -= wr;
 			}
 		}
+		offsetSoFar += s->size;
 		s++;
 	}
 	assertEqualInt(CloseHandle(handle), 1);
@@ -138,28 +168,14 @@ create_sparse_file(const char *path, const struct sparse *s)
 
 #else
 
-#if defined(_PC_MIN_HOLE_SIZE)
-
-/*
- * FreeBSD and Solaris can detect 'hole' of a sparse file
- * through lseek(HOLE) on ZFS. (UFS does not support yet)
- */
-
-static int
-is_sparse_supported(const char *path)
-{
-	return (pathconf(path, _PC_MIN_HOLE_SIZE) > 0);
-}
-
-#elif defined(__linux__)&& defined(HAVE_LINUX_FIEMAP_H)
-
+#if defined(HAVE_LINUX_FIEMAP_H)
 /*
  * FIEMAP, which can detect 'hole' of a sparse file, has
  * been supported from 2.6.28
  */
 
 static int
-is_sparse_supported(const char *path)
+is_sparse_supported_fiemap(const char *path)
 {
 	const struct sparse sparse_file[] = {
  		/* This hole size is too small to create a sparse
@@ -190,7 +206,58 @@ is_sparse_supported(const char *path)
 	return (r >= 0);
 }
 
-#else
+#if !defined(SEEK_HOLE) || !defined(SEEK_DATA)
+static int
+is_sparse_supported(const char *path)
+{
+	return is_sparse_supported_fiemap(path);
+}
+#endif
+#endif
+
+#if defined(_PC_MIN_HOLE_SIZE)
+
+/*
+ * FreeBSD and Solaris can detect 'hole' of a sparse file
+ * through lseek(HOLE) on ZFS. (UFS does not support yet)
+ */
+
+static int
+is_sparse_supported(const char *path)
+{
+	return (pathconf(path, _PC_MIN_HOLE_SIZE) > 0);
+}
+
+#elif defined(SEEK_HOLE) && defined(SEEK_DATA)
+
+static int
+is_sparse_supported(const char *path)
+{
+	const struct sparse sparse_file[] = {
+ 		/* This hole size is too small to create a sparse
+		 * files for almost filesystem. */
+		{ HOLE,	 1024 }, { DATA, 10240 },
+		{ END,	0 }
+	};
+	int fd, r;
+	const char *testfile = "can_sparse";
+
+	(void)path; /* UNUSED */
+	create_sparse_file(testfile, sparse_file);
+	fd = open(testfile,  O_RDWR);
+	if (fd < 0)
+		return (0);
+	r = lseek(fd, 0, SEEK_HOLE);
+	close(fd);
+	unlink(testfile);
+#if defined(HAVE_LINUX_FIEMAP_H)
+	if (r < 0)
+		return (is_sparse_supported_fiemap(path));
+#endif
+	return (r >= 0);
+}
+
+#elif !defined(HAVE_LINUX_FIEMAP_H)
 
 /*
  * Other system may do not have the API such as lseek(HOLE),
@@ -215,9 +282,19 @@ create_sparse_file(const char *path, const struct sparse *s)
 {
 	char buff[1024];
 	int fd;
+	uint64_t total_size = 0;
+	const struct sparse *cur = s;
 
 	memset(buff, ' ', sizeof(buff));
 	assert((fd = open(path, O_CREAT | O_WRONLY, 0600)) != -1);
+
+	/* Handle holes at the end by extending the file */
+	while (cur->type != END) {
+		total_size += cur->size;
+		++cur;
+	}
+	assert(ftruncate(fd, total_size) != -1);
+
 	while (s->type != END) {
 		if (s->type == HOLE) {
 			assert(lseek(fd, s->size, SEEK_CUR) != (off_t)-1);
@@ -246,38 +323,115 @@ create_sparse_file(const char *path, const struct sparse *s)
  */
 static void
 verify_sparse_file(struct archive *a, const char *path,
-    const struct sparse *sparse, int blocks)
+    const struct sparse *sparse, int expected_holes)
 {
 	struct archive_entry *ae;
 	const void *buff;
 	size_t bytes_read;
-	int64_t offset;
-	int64_t total;
-	int data_blocks, hole;
+	int64_t offset, expected_offset, last_offset;
+	int holes_seen = 0;
 
 	create_sparse_file(path, sparse);
 	assert((ae = archive_entry_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, path));
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
-	/* Verify the number of holes only, not its offset nor its
-	 * length because those alignments are deeply dependence on
-	 * its filesystem. */ 
-	assertEqualInt(blocks, archive_entry_sparse_count(ae));
-	total = 0;
-	data_blocks = 0;
-	hole = 0;
+
+	expected_offset = 0;
+	last_offset = 0;
 	while (ARCHIVE_OK == archive_read_data_block(a, &buff, &bytes_read,
 	    &offset)) {
-		if (offset > total || offset == 0) {
-			if (offset > total)
-				hole = 1;
-			data_blocks++;
+		const char *start = buff;
+#if DEBUG
+		fprintf(stderr, "%s: bytes_read=%d offset=%d\n", path, (int)bytes_read, (int)offset);
+#endif
+		if (offset > last_offset) {
+			++holes_seen;
 		}
-		total = offset + bytes_read;
+		/* Blocks entirely before the data we just read. */
+		while (expected_offset + (int64_t)sparse->size < offset) {
+#if DEBUG
+			fprintf(stderr, "    skipping expected_offset=%d, size=%d\n", (int)expected_offset, (int)sparse->size);
+#endif
+			/* Must be holes. */
+			assert(sparse->type == HOLE);
+			expected_offset += sparse->size;
+			++sparse;
+		}
+		/* Block that overlaps beginning of data */
+		if (expected_offset < offset
+		    && expected_offset + (int64_t)sparse->size <= offset + (int64_t)bytes_read) {
+			const char *end = (const char *)buff + (expected_offset - offset) + (size_t)sparse->size;
+#if DEBUG
+			fprintf(stderr, "    overlapping hole expected_offset=%d, size=%d\n", (int)expected_offset, (int)sparse->size);
+#endif
+			/* Must be a hole, overlap must be filled with '\0' */
+			if (assert(sparse->type == HOLE)) {
+				assertMemoryFilledWith(start, end - start, '\0');
+			}
+			start = end;
+			expected_offset += sparse->size;
+			++sparse;
+		}
+		/* Blocks completely contained in data we just read. */
+		while (expected_offset + (int64_t)sparse->size <= offset + (int64_t)bytes_read) {
+			const char *end = (const char *)buff + (expected_offset - offset) + (size_t)sparse->size;
+			if (sparse->type == HOLE) {
+#if DEBUG
+				fprintf(stderr, "    contained hole expected_offset=%d, size=%d\n", (int)expected_offset, (int)sparse->size);
+#endif
+
+				/* verify data corresponding to hole is '\0' */
+				if (end > (const char *)buff + bytes_read) {
+					end = (const char *)buff + bytes_read;
+				}
+				assertMemoryFilledWith(start, end - start, '\0');
+				start = end;
+				expected_offset += sparse->size;
+				++sparse;
+			} else if (sparse->type == DATA) {
+#if DEBUG
+				fprintf(stderr, "    contained data expected_offset=%d, size=%d\n", (int)expected_offset, (int)sparse->size);
+#endif
+				/* verify data corresponding to hole is ' ' */
+				if (assert(expected_offset + sparse->size <= offset + bytes_read)) {
+					assert(start == (const char *)buff + (size_t)(expected_offset - offset));
+					assertMemoryFilledWith(start, end - start, ' ');
+				}
+				start = end;
+				expected_offset += sparse->size;
+				++sparse;
+			} else {
+				break;
+			}
+		}
+		/* Block that overlaps end of data */
+		if (expected_offset < offset + (int64_t)bytes_read) {
+			const char *end = (const char *)buff + bytes_read;
+#if DEBUG
+			fprintf(stderr, "    trailing overlap expected_offset=%d, size=%d\n", (int)expected_offset, (int)sparse->size);
+#endif
+			/* Must be a hole, overlap must be filled with '\0' */
+			if (assert(sparse->type == HOLE)) {
+				assertMemoryFilledWith(start, end - start, '\0');
+			}
+		}
+		last_offset = offset + bytes_read;
 	}
-	if (!hole && data_blocks == 1)
-		data_blocks = 0;/* There are no holes */
-	assertEqualInt(blocks, data_blocks);
+	/* Count a hole at EOF? */
+	if (last_offset < archive_entry_size(ae)) {
+		++holes_seen;
+	}
+
+	/* Verify blocks after last read */
+	while (sparse->type == HOLE) {
+		expected_offset += sparse->size;
+		++sparse;
+	}
+	assert(sparse->type == END);
+	assertEqualInt(expected_offset, archive_entry_size(ae));
+
+	failure("%s", path);
+	assertEqualInt(holes_seen, expected_holes);
 
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
 	archive_entry_free(ae);
@@ -312,12 +466,13 @@ verify_sparse_file2(struct archive *a, const char *path,
 	/* Verify the number of holes only, not its offset nor its
 	 * length because those alignments are deeply dependence on
 	 * its filesystem. */ 
+	failure("%s", path);
 	assertEqualInt(blocks, archive_entry_sparse_count(ae));
 	archive_entry_free(ae);
 }
 
 static void
-test_sparse_whole_file_data()
+test_sparse_whole_file_data(void)
 {
 	struct archive_entry *ae;
 	int64_t offset;
@@ -344,6 +499,7 @@ DEFINE_TEST(test_sparse_basic)
 {
 	char *cwd;
 	struct archive *a;
+	const char *skip_sparse_tests;
 	/*
 	 * The alignment of the hole of sparse files deeply depends
 	 * on filesystem. In my experience, sparse_file2 test with
@@ -353,45 +509,57 @@ DEFINE_TEST(test_sparse_basic)
 	 * on all platform.
 	 */
 	const struct sparse sparse_file0[] = {
-		{ DATA,	 1024 }, { HOLE,   2048000 },
-		{ DATA,	 2048 }, { HOLE,   2048000 },
-		{ DATA,	 4096 }, { HOLE,  20480000 },
-		{ DATA,	 8192 }, { HOLE, 204800000 },
+		// 0             // 1024
+		{ DATA,	 1024 }, { HOLE,   MIN_HOLE + 1638400 },
+		// 2049024       // 2051072
+		{ DATA,	 2048 }, { HOLE,   MIN_HOLE + 1638400 },
+		// 4099072       // 4103168
+		{ DATA,	 4096 }, { HOLE,  MIN_HOLE + 20070400 },
+		// 24583168      // 24591360
+		{ DATA,	 8192 }, { HOLE, MIN_HOLE + 204390400 },
+		// 229391360     // 229391361
 		{ DATA,     1 }, { END,	0 }
 	};
 	const struct sparse sparse_file1[] = {
-		{ HOLE,	409600 }, { DATA, 1 },
-		{ HOLE,	409600 }, { DATA, 1 },
-		{ HOLE,	409600 }, { END,  0 }
+		{ HOLE,	MIN_HOLE }, { DATA, 1 },
+		{ HOLE,	MIN_HOLE }, { DATA, 1 },
+		{ HOLE, MIN_HOLE }, { END,  0 }
 	};
 	const struct sparse sparse_file2[] = {
-		{ HOLE,	409600 * 1 }, { DATA, 1024 },
-		{ HOLE,	409600 * 2 }, { DATA, 1024 },
-		{ HOLE,	409600 * 3 }, { DATA, 1024 },
-		{ HOLE,	409600 * 4 }, { DATA, 1024 },
-		{ HOLE,	409600 * 5 }, { DATA, 1024 },
-		{ HOLE,	409600 * 6 }, { DATA, 1024 },
-		{ HOLE,	409600 * 7 }, { DATA, 1024 },
-		{ HOLE,	409600 * 8 }, { DATA, 1024 },
-		{ HOLE,	409600 * 9 }, { DATA, 1024 },
-		{ HOLE,	409600 * 10}, { DATA, 1024 },/* 10 */
-		{ HOLE,	409600 * 1 }, { DATA, 1024 * 1 },
-		{ HOLE,	409600 * 2 }, { DATA, 1024 * 2 },
-		{ HOLE,	409600 * 3 }, { DATA, 1024 * 3 },
-		{ HOLE,	409600 * 4 }, { DATA, 1024 * 4 },
-		{ HOLE,	409600 * 5 }, { DATA, 1024 * 5 },
-		{ HOLE,	409600 * 6 }, { DATA, 1024 * 6 },
-		{ HOLE,	409600 * 7 }, { DATA, 1024 * 7 },
-		{ HOLE,	409600 * 8 }, { DATA, 1024 * 8 },
-		{ HOLE,	409600 * 9 }, { DATA, 1024 * 9 },
-		{ HOLE,	409600 * 10}, { DATA, 1024 * 10},/* 20 */
+		{ HOLE,	MIN_HOLE }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 1 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 2 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 3 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 4 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 5 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 6 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 7 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 8 }, { DATA, 1024 },
+		{ HOLE,	MIN_HOLE + 409600 * 9}, { DATA, 1024 },/* 10 */
+		{ HOLE,	MIN_HOLE }, { DATA, 1024 * 1 },
+		{ HOLE,	MIN_HOLE + 409600 * 1 }, { DATA, 1024 * 2 },
+		{ HOLE,	MIN_HOLE + 409600 * 2 }, { DATA, 1024 * 3 },
+		{ HOLE,	MIN_HOLE + 409600 * 3 }, { DATA, 1024 * 4 },
+		{ HOLE,	MIN_HOLE + 409600 * 4 }, { DATA, 1024 * 5 },
+		{ HOLE,	MIN_HOLE + 409600 * 5 }, { DATA, 1024 * 6 },
+		{ HOLE,	MIN_HOLE + 409600 * 6 }, { DATA, 1024 * 7 },
+		{ HOLE,	MIN_HOLE + 409600 * 7 }, { DATA, 1024 * 8 },
+		{ HOLE,	MIN_HOLE + 409600 * 8 }, { DATA, 1024 * 9 },
+		{ HOLE,	MIN_HOLE + 409600 * 9}, { DATA, 1024 * 10},/* 20 */
 		{ END,	0 }
 	};
 	const struct sparse sparse_file3[] = {
- 		/* This hole size is too small to create a sparse
-		 * files for almost filesystem. */
-		{ HOLE,	 1024 }, { DATA, 10240 },
+ 		/* This hole size is too small to create a sparse file */
+		{ HOLE,	 1 }, { DATA, 10240 },
+		{ HOLE,	 1 }, { DATA, 10240 },
+		{ HOLE,	 1 }, { DATA, 10240 },
 		{ END,	0 }
+	};
+	const struct sparse sparse_file4[] = {
+		{ DATA, 4096 }, { HOLE, 0xc0000000 },
+		/* This hole overflows the offset if stored in 32 bits. */
+		{ DATA, 4096 }, { HOLE, 0x50000000 },
+		{ END, 0 }
 	};
 
 	/*
@@ -399,6 +567,13 @@ DEFINE_TEST(test_sparse_basic)
 	 * data.
 	 */
 	test_sparse_whole_file_data();
+
+	skip_sparse_tests = getenv("SKIP_TEST_SPARSE");
+	if (skip_sparse_tests != NULL) {
+		skipping("Skipping sparse tests due to SKIP_TEST_SPARSE "
+		    "environment variable");
+		return;
+	}
 
 	/* Check if the filesystem where CWD on can
 	 * report the number of the holes of a sparse file. */
@@ -422,10 +597,12 @@ DEFINE_TEST(test_sparse_basic)
 	 */
 	assert((a = archive_read_disk_new()) != NULL);
 
-	verify_sparse_file(a, "file0", sparse_file0, 5);
-	verify_sparse_file(a, "file1", sparse_file1, 2);
+	verify_sparse_file(a, "file0", sparse_file0, 4);
+	verify_sparse_file(a, "file1", sparse_file1, 3);
 	verify_sparse_file(a, "file2", sparse_file2, 20);
+	/* Encoded non sparse; expect a data block but no sparse entries. */
 	verify_sparse_file(a, "file3", sparse_file3, 0);
+	verify_sparse_file(a, "file4", sparse_file4, 2);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 
@@ -436,6 +613,49 @@ DEFINE_TEST(test_sparse_basic)
 
 	verify_sparse_file2(a, "file0", sparse_file0, 5, 0);
 	verify_sparse_file2(a, "file0", sparse_file0, 5, 1);
+
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	free(cwd);
+}
+
+DEFINE_TEST(test_fully_sparse_files)
+{
+	char *cwd;
+	struct archive *a;
+	const char *skip_sparse_tests;
+
+	const struct sparse sparse_file[] = {
+		{ HOLE, MIN_HOLE }, { END, 0 }
+	};
+
+	skip_sparse_tests = getenv("SKIP_TEST_SPARSE");
+	if (skip_sparse_tests != NULL) {
+		skipping("Skipping sparse tests due to SKIP_TEST_SPARSE "
+		    "environment variable");
+		return;
+	}
+
+	/* Check if the filesystem where CWD on can
+	 * report the number of the holes of a sparse file. */
+#ifdef PATH_MAX
+	cwd = getcwd(NULL, PATH_MAX);/* Solaris getcwd needs the size. */
+#else
+	cwd = getcwd(NULL, 0);
+#endif
+	if (!assert(cwd != NULL))
+		return;
+	if (!is_sparse_supported(cwd)) {
+		free(cwd);
+		skipping("This filesystem or platform do not support "
+		    "the reporting of the holes of a sparse file through "
+		    "API such as lseek(HOLE)");
+		return;
+	}
+
+	assert((a = archive_read_disk_new()) != NULL);
+
+	/* Fully sparse files are encoded with a zero-length "data" block. */
+	verify_sparse_file(a, "file0", sparse_file, 1);
 
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
 	free(cwd);

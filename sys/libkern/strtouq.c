@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strtouq.c 189065 2009-02-26 12:06:46Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,7 +101,7 @@ strtouq(const char *nptr, char **endptr, int base)
 		acc = UQUAD_MAX;
 	} else if (neg)
 		acc = -acc;
-	if (endptr != 0)
-		*((const char **)endptr) = any ? s - 1 : nptr;
+	if (endptr != NULL)
+		*endptr = __DECONST(char *, any ? s - 1 : nptr);
 	return (acc);
 }

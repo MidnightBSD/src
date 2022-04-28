@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/pfsync 253357 2013-07-15 08:48:45Z des $
+# $FreeBSD$
 #
 
 # PROVIDE: pfsync
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="pfsync"
+desc="Packet filter state table sychronisation interface"
 rcvar="pfsync_enable"
 start_precmd="pfsync_prestart"
 start_cmd="pfsync_start"

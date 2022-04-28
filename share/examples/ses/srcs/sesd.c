@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/share/examples/ses/srcs/sesd.c 242638 2012-11-06 00:22:33Z mav $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

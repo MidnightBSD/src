@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/cron/crontab/Makefile 185040 2008-11-18 00:12:15Z matteo $
+# $FreeBSD$
 
 BINDIR=	/usr/bin
 
@@ -10,9 +10,8 @@ PRECIOUSPROG=
 
 WARNS?=	3
 
-CFLAGS+= -I${.CURDIR}/../cron
+CFLAGS+= -I${.CURDIR:H}/cron
 
-DPADD=	${LIBCRON} ${LIBMD} ${LIBUTIL}
-LDADD=	${LIBCRON} -lmd -lutil
+LIBADD=	cron md util
 
 .include <bsd.prog.mk>

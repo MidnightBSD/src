@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: release/10.0.0/sys/ddb/db_break.h 139747 2005-01-06 01:34:41Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -38,7 +38,7 @@
  */
 
 #ifndef BKPT_INST_TYPE
-#define BKPT_INST_TYPE int
+#define	BKPT_INST_TYPE int
 #endif
 
 struct db_breakpoint {

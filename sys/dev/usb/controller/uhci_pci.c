@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/uhci_pci.c 228483 2011-12-14 00:28:54Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 /* Universal Host Controller Interface
  *
@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/usb/controller/uhci_pci.c 228483 2011
 #include "usb_if.h"
 
 #define	PCI_UHCI_VENDORID_INTEL		0x8086
+#define	PCI_UHCI_VENDORID_HP		0x103c
 #define	PCI_UHCI_VENDORID_VIA		0x1106
 
 /* PIIX4E has no separate stepping */
@@ -160,6 +161,12 @@ uhci_pci_match(device_t self)
 	case 0x24de8086:
 		return ("Intel 82801EB (ICH5) USB controller USB-D");
 
+	case 0x25a98086:
+		return ("Intel 6300ESB USB controller USB-A");
+
+	case 0x25aa8086:
+		return ("Intel 6300ESB USB controller USB-B");
+
 	case 0x26588086:
 		return ("Intel 82801FB/FR/FW/FRW (ICH6) USB controller USB-A");
 
@@ -222,6 +229,9 @@ uhci_pci_match(device_t self)
 	case 0x76028086:
 		return ("Intel 82372FB/82468GX USB controller");
 
+	case 0x3300103c:
+		return ("HP iLO Standard Virtual USB controller");
+
 	case 0x30381106:
 		return ("VIA 83C572 USB controller");
 
@@ -244,7 +254,7 @@ uhci_pci_probe(device_t self)
 
 	if (desc) {
 		device_set_desc(self, desc);
-		return (0);
+		return (BUS_PROBE_DEFAULT);
 	} else {
 		return (ENXIO);
 	}
@@ -261,6 +271,7 @@ uhci_pci_attach(device_t self)
 	sc->sc_bus.parent = self;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = UHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
 	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus, USB_GET_DMA_TAG(self),
@@ -307,6 +318,9 @@ uhci_pci_attach(device_t self)
 	switch (pci_get_vendor(self)) {
 	case PCI_UHCI_VENDORID_INTEL:
 		sprintf(sc->sc_vendor, "Intel");
+		break;
+	case PCI_UHCI_VENDORID_HP:
+		sprintf(sc->sc_vendor, "HP");
 		break;
 	case PCI_UHCI_VENDORID_VIA:
 		sprintf(sc->sc_vendor, "VIA");
@@ -379,13 +393,7 @@ int
 uhci_pci_detach(device_t self)
 {
 	uhci_softc_t *sc = device_get_softc(self);
-	device_t bdev;
 
-	if (sc->sc_bus.bdev) {
-		bdev = sc->sc_bus.bdev;
-		device_detach(bdev);
-		device_delete_child(self, bdev);
-	}
 	/* during module unload there are lots of children leftover */
 	device_delete_children(self);
 

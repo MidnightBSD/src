@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)generic.c 1.2 91/03/11 Copyr 1986 Sun Micro";
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/newkey/generic.c 189092 2009-02-26 21:43:15Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/file.h>
 
@@ -82,7 +82,7 @@ genkeys(char *public, char *secret, char *pass)
 	MINT *pk = mp_itom(0);
 	MINT *sk = mp_itom(0);
 	MINT *tmp;
-	MINT *base = mp_itom(BASE);
+	MINT *base = mp_itom((short)BASE);
 	MINT *root = mp_itom(PROOT);
 	MINT *modulus = mp_xtom(HEXMODULUS);
 	short r;

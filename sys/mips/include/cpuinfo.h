@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/cpuinfo.h 204690 2010-03-04 05:37:19Z neel $
+ * $FreeBSD$
  *	@(#)cpu.h	8.4 (Berkeley) 1/4/94
  */
 
@@ -54,6 +54,7 @@ struct mips_cpuinfo {
 	u_int8_t	cpu_rev;
 	u_int8_t	cpu_impl;
 	u_int8_t	tlb_type;
+	u_int32_t	tlb_pgmask;
 	u_int16_t	tlb_nentries;
 	u_int8_t	icache_virtual;
 	boolean_t	cache_coherent_dma;
@@ -67,6 +68,12 @@ struct mips_cpuinfo {
 		u_int8_t	dc_nways;
 		u_int16_t	dc_nsets;
 	} l1;
+	struct {
+		u_int32_t	dc_size;
+		u_int8_t	dc_linesize;
+		u_int8_t	dc_nways;
+		u_int16_t	dc_nsets;
+	} l2;
 };
 
 extern struct mips_cpuinfo cpuinfo;

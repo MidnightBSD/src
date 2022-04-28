@@ -1,5 +1,6 @@
-# $FreeBSD: release/10.0.0/lib/libcalendar/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 
+PACKAGE=	lib${LIB}
 LIB=	calendar
 
 SRCS=	calendar.c easter.c

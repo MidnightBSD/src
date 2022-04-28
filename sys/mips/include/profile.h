@@ -32,7 +32,7 @@
  *
  *	from: @(#)profile.h	8.1 (Berkeley) 6/10/93
  *	JNPR: profile.h,v 1.4 2006/12/02 09:53:41 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/profile.h 210606 2010-07-29 14:04:29Z jchandra $
+ * $FreeBSD$
  */
 #ifndef _MACHINE_PROFILE_H_
 #define	_MACHINE_PROFILE_H_
@@ -44,7 +44,8 @@
 /*XXX This is not MIPS64 safe. */
 
 #define	MCOUNT \
-	__asm(".globl _mcount;"		\
+	__asm(".text;"			\
+	".globl _mcount;"		\
 	".type _mcount,@function;"	\
 	"_mcount:;"			\
 	".set noreorder;"		\

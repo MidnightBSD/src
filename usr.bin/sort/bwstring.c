@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/sort/bwstring.c 251245 2013-06-02 09:43:48Z gabor $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 #include <errno.h>
@@ -65,18 +67,12 @@ initialise_months(void)
 			for (int i = 0; i < 12; i++) {
 				cmonths[i] = NULL;
 				tmp = (unsigned char *) nl_langinfo(item[i]);
-				if (tmp == NULL)
-					continue;
 				if (debug_sort)
 					printf("month[%d]=%s\n", i, tmp);
-				len = strlen((char*)tmp);
-				if (len < 1)
+				if (*tmp == '\0')
 					continue;
-				while (isblank(*tmp))
-					++tmp;
-				m = sort_malloc(len + 1);
-				memcpy(m, tmp, len + 1);
-				m[len] = '\0';
+				m = sort_strdup(tmp);
+				len = strlen(tmp);
 				for (unsigned int j = 0; j < len; j++)
 					m[j] = toupper(m[j]);
 				cmonths[i] = m;
@@ -91,18 +87,17 @@ initialise_months(void)
 			for (int i = 0; i < 12; i++) {
 				wmonths[i] = NULL;
 				tmp = (unsigned char *) nl_langinfo(item[i]);
-				if (tmp == NULL)
-					continue;
 				if (debug_sort)
 					printf("month[%d]=%s\n", i, tmp);
-				len = strlen((char*)tmp);
-				if (len < 1)
+				if (*tmp == '\0')
 					continue;
-				while (isblank(*tmp))
-					++tmp;
+				len = strlen(tmp);
 				m = sort_malloc(SIZEOF_WCHAR_STRING(len + 1));
-				if (mbstowcs(m, (char*)tmp, len) == ((size_t) -1))
+				if (mbstowcs(m, (char*)tmp, len) ==
+				    ((size_t) - 1)) {
+					sort_free(m);
 					continue;
+				}
 				m[len] = L'\0';
 				for (unsigned int j = 0; j < len; j++)
 					m[j] = towupper(m[j]);
@@ -234,7 +229,7 @@ bwsdup(const struct bwstring *s)
 }
 
 /*
- * Create a new binary string from a raw binary buffer.
+ * Create a new binary string from a wide character buffer.
  */
 struct bwstring *
 bwssbdup(const wchar_t *str, size_t len)
@@ -304,7 +299,7 @@ bwscsbdup(const unsigned char *str, size_t len)
 						/* NOTREACHED */
 						err(2, "mbrtowc error");
 					cptr += charlen;
-				};
+				}
 			}
 
 			ret->len = chars;
@@ -917,15 +912,12 @@ bws_month_score(const struct bwstring *s0)
 
 	if (MB_CUR_MAX == 1) {
 		const unsigned char *end, *s;
-		size_t len;
 
 		s = s0->data.cstr;
 		end = s + s0->len;
 
 		while (isblank(*s) && s < end)
 			++s;
-
-		len = strlen((const char*)s);
 
 		for (int i = 11; i >= 0; --i) {
 			if (cmonths[i] &&
@@ -935,15 +927,12 @@ bws_month_score(const struct bwstring *s0)
 
 	} else {
 		const wchar_t *end, *s;
-		size_t len;
 
 		s = s0->data.wstr;
 		end = s + s0->len;
 
 		while (iswblank(*s) && s < end)
 			++s;
-
-		len = wcslen(s);
 
 		for (int i = 11; i >= 0; --i) {
 			if (wmonths[i] && (s == wcsstr(s, wmonths[i])))

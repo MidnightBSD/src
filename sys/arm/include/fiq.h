@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/fiq.h 139735 2005-01-05 21:58:49Z imp $
+ * $FreeBSD$
  *
  */
 

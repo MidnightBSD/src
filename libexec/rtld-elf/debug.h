@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/rtld-elf/debug.h 157219 2006-03-28 18:26:47Z des $
+ * $FreeBSD$
  */
 
 /*
@@ -32,19 +32,15 @@
 #ifndef DEBUG_H
 #define DEBUG_H 1
 
-#ifndef __GNUC__
-#error "This file must be compiled with GCC"
-#endif
-
 #include <sys/cdefs.h>
 
 #include <string.h>
 #include <unistd.h>
 
-extern void debug_printf(const char *, ...) __printflike(1, 2);
+void debug_printf(const char *, ...) __printflike(1, 2);
 extern int debug;
 
-#ifdef DEBUG
+#ifndef NO_LD_DEBUG
 #define dbg(...)	debug_printf(__VA_ARGS__)
 #else
 #define dbg(...)	((void) 0)

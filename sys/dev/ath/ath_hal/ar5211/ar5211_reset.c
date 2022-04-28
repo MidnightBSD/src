@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5211/ar5211_reset.c 234450 2012-04-19 03:26:21Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -154,6 +154,7 @@ static void ar5211SetOperatingMode(struct ath_hal *, int opmode);
 HAL_BOOL
 ar5211Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 	struct ieee80211_channel *chan, HAL_BOOL bChannelChange,
+	HAL_RESET_TYPE resetType,
 	HAL_STATUS *status)
 {
 uint32_t softLedCfg, softLedState;
@@ -912,7 +913,7 @@ getNoiseFloorThresh(struct ath_hal *ah, const struct ieee80211_channel *chan,
 }
 
 /*
- * Read the NF and check it against the noise floor threshhold
+ * Read the NF and check it against the noise floor threshold
  *
  * Returns: TRUE if the NF is good
  */

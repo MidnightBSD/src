@@ -23,12 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/arswitch/arswitch_reg.h 253572 2013-07-23 14:24:22Z loos $
+ * $FreeBSD$
  */
 #ifndef	__ARSWITCH_REG_H__
 #define	__ARSWITCH_REG_H__
 
 extern	void arswitch_writedbg(device_t dev, int phy, uint16_t dbg_addr,
+	    uint16_t dbg_data);
+extern	void arswitch_writemmd(device_t dev, int phy, uint16_t dbg_addr,
 	    uint16_t dbg_data);
 
 extern	int arswitch_readreg(device_t dev, int addr);

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/powerpc/include/endian.h 232745 2012-03-09 20:34:31Z dim $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ENDIAN_H_
@@ -39,8 +39,13 @@
 /*
  * Define the order of 32-bit words in 64-bit words.
  */
+#ifdef __LITTLE_ENDIAN__
+#define	_QUAD_HIGHWORD 1
+#define	_QUAD_LOWWORD 0
+#else
 #define	_QUAD_HIGHWORD 0
 #define	_QUAD_LOWWORD 1
+#endif
 
 /*
  * GCC defines _BIG_ENDIAN and _LITTLE_ENDIAN equal to __BIG_ENDIAN__
@@ -131,9 +136,16 @@ __bswap64_var(__uint64_t _x)
 #define	__bswap64(x)	(__is_constant(x) ? __bswap64_const(x) : \
 	__bswap64_var(x))
 
+#ifdef __LITTLE_ENDIAN__
+#define	__htonl(x)	(__bswap32((__uint32_t)(x)))
+#define	__htons(x)	(__bswap16((__uint16_t)(x)))
+#define	__ntohl(x)	(__bswap32((__uint32_t)(x)))
+#define	__ntohs(x)	(__bswap16((__uint16_t)(x)))
+#else
 #define	__htonl(x)	((__uint32_t)(x))
 #define	__htons(x)	((__uint16_t)(x))
 #define	__ntohl(x)	((__uint32_t)(x))
 #define	__ntohs(x)	((__uint16_t)(x))
+#endif
 
 #endif /* !_MACHINE_ENDIAN_H_ */

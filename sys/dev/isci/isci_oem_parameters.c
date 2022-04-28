@@ -29,12 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_oem_parameters.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
-#include <machine/pmap.h>
 #include <machine/vmparam.h>
 #include <machine/pc/bios.h>
 #include <dev/isci/scil/scu_bios_definitions.h>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/dcr.h 206450 2010-04-10 11:13:51Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_DCR_H_

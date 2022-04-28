@@ -1,18 +1,16 @@
-# $FreeBSD: release/10.0.0/kerberos5/libexec/digest-service/Makefile 255455 2013-09-10 18:40:43Z des $
+# $FreeBSD$
 
 PROG=	digest-service
-NO_MAN=	1
+MAN=
 CFLAGS+=	-I${KRB5DIR}/kdc \
 		-I${KRB5DIR}/lib/asn1 \
 		-I${KRB5DIR}/lib/krb5 \
 		-I${KRB5DIR}/lib/ipc \
 		-I${KRB5DIR}/lib/wind \
-		-I${KRB5DIR}/lib/roken
-DPADD=	${LIBHDB} ${LIBKDC} ${LIBHEIMIPCS} ${LIBKRB5} ${LIBROKEN} ${LIBASN1} \
-	${LIBCRYPTO} ${LIBCRYPT} ${LIBVERS}
-LDADD=	-lhdb -lkdc -lheimipcs -lkrb5 -lroken -lasn1 -lcrypto -lcrypt \
-	${LIBVERS} -lheimntlm
-USEPRIVATELIB= heimipcs
+		-I${KRB5DIR}/lib/roken \
+		-I${SRCTOP}/contrib/com_err
+LIBADD=	hdb kdc heimipcs krb5 roken asn1 crypto vers heimntlm
+LDFLAGS=${LDAPLDFLAGS}
 
 .include <bsd.prog.mk>
 

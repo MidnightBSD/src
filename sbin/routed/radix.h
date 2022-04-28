@@ -28,7 +28,7 @@
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
  *
- * $FreeBSD: release/10.0.0/sbin/routed/radix.h 190718 2009-04-05 17:33:07Z phk $
+ * $FreeBSD$
  */
 
 #ifndef __RADIX_H_

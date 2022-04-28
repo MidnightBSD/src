@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_octeon.c 233334 2012-03-23 00:09:27Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -103,8 +103,7 @@ const struct mips_event_code_map mips_event_codes[] =
     { PMC_EV_OCTEON_SYNCW, MIPS_CTR_ALL, CVMX_CORE_PERF_SYNCW },
 };
 
-const int mips_event_codes_size =
-	sizeof(mips_event_codes) / sizeof(mips_event_codes[0]);
+const int mips_event_codes_size = nitems(mips_event_codes);
 
 struct mips_pmc_spec mips_pmc_spec = {
 	.ps_cpuclass = PMC_CLASS_OCTEON,
@@ -189,7 +188,8 @@ mips_get_perfctl(int cpu, int ri, uint32_t event, uint32_t caps)
 	if (caps & PMC_CAP_INTERRUPT)
 		control.s.ie = 1;
 
-	PMCDBG(MDP,ALL,2,"mips-allocate ri=%d -> config=0x%x", ri, control.u32);
+	PMCDBG2(MDP,ALL,2,"mips-allocate ri=%d -> config=0x%x", ri,
+	    control.u32);
 
 	return (control.u32);
 }

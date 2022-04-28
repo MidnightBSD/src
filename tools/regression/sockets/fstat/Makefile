@@ -1,9 +1,9 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/sockets/fstat/Makefile 183652 2008-10-06 19:42:03Z rwatson $
+# $FreeBSD$
 #
 
 PROG=	fstat
-NO_MAN=
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

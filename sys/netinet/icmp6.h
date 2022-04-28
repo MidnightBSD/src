@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/netinet/icmp6.h 253086 2013-07-09 09:59:46Z ae $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: icmp6.h,v 1.46 2001/04/27 15:09:48 itojun Exp $	*/
 
 /*-
@@ -144,6 +144,9 @@ struct icmp6_hdr {
 #define ICMP6_DST_UNREACH_BEYONDSCOPE	2	/* beyond scope of source address */
 #define ICMP6_DST_UNREACH_ADDR		3	/* address unreachable */
 #define ICMP6_DST_UNREACH_NOPORT	4	/* port unreachable */
+#define ICMP6_DST_UNREACH_POLICY	5	/* failed ingress/egress policy */
+#define ICMP6_DST_UNREACH_REJECT	6	/* Reject route to destination */
+#define ICMP6_DST_UNREACH_SRCROUTE	7	/* Error in source routing header */
 
 #define ICMP6_TIME_EXCEED_TRANSIT 	0	/* ttl==0 in transit */
 #define ICMP6_TIME_EXCEED_REASSEMBLY	1	/* ttl==0 in reass */
@@ -297,9 +300,11 @@ struct nd_opt_hdr {		/* Neighbor discovery option header */
 #define ND_OPT_PREFIX_INFORMATION	3
 #define ND_OPT_REDIRECTED_HEADER	4
 #define ND_OPT_MTU			5
+#define ND_OPT_NONCE			14	/* RFC 3971 */
 #define ND_OPT_ROUTE_INFO		24	/* RFC 4191 */
 #define ND_OPT_RDNSS			25	/* RFC 6106 */
 #define ND_OPT_DNSSL			31	/* RFC 6106 */
+#define ND_OPT_MAX			31
 
 struct nd_opt_prefix_info {	/* prefix information */
 	u_int8_t	nd_opt_pi_type;
@@ -328,6 +333,16 @@ struct nd_opt_mtu {		/* MTU option */
 	u_int8_t	nd_opt_mtu_len;
 	u_int16_t	nd_opt_mtu_reserved;
 	u_int32_t	nd_opt_mtu_mtu;
+} __packed;
+
+#define	ND_OPT_NONCE_LEN	((1 * 8) - 2)
+#if ((ND_OPT_NONCE_LEN + 2) % 8) != 0
+#error "(ND_OPT_NONCE_LEN + 2) must be a multiple of 8."
+#endif 
+struct nd_opt_nonce {		/* nonce option */
+	u_int8_t	nd_opt_nonce_type;
+	u_int8_t	nd_opt_nonce_len;
+	u_int8_t	nd_opt_nonce[ND_OPT_NONCE_LEN];
 } __packed;
 
 struct nd_opt_route_info {	/* route info */
@@ -611,7 +626,7 @@ struct icmp6stat {
 	uint64_t icp6s_nd_badopt;	/* bad ND options */
 	uint64_t icp6s_badns;		/* bad neighbor solicitation */
 	uint64_t icp6s_badna;		/* bad neighbor advertisement */
-	uint64_t icp6s_badrs;		/* bad router advertisement */
+	uint64_t icp6s_badrs;		/* bad router solicitation */
 	uint64_t icp6s_badra;		/* bad router advertisement */
 	uint64_t icp6s_badredirect;	/* bad redirect message */
 };

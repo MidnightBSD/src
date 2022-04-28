@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Qlogic Corporation
+ * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/qlxgbe/ql_ver.h 250661 2013-05-15 17:03:09Z davidcs $
+ * $FreeBSD$
  */
 /*
  * File: ql_ver.h
@@ -36,6 +36,6 @@
 
 #define QLA_VERSION_MAJOR 	3
 #define QLA_VERSION_MINOR	10
-#define QLA_VERSION_BUILD       10
+#define QLA_VERSION_BUILD       38
 
 #endif /* #ifndef _QL_VER_H_ */

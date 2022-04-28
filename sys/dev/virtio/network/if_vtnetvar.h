@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/virtio/network/if_vtnetvar.h 255167 2013-09-03 02:28:31Z bryanv $
+ * $FreeBSD$
  */
 
 #ifndef _IF_VTNETVAR_H
@@ -44,6 +44,8 @@ struct vtnet_statistics {
 	uint64_t	tx_csum_bad_ethtype;
 	uint64_t	tx_tso_bad_ethtype;
 	uint64_t	tx_tso_not_tcp;
+	uint64_t	tx_defragged;
+	uint64_t	tx_defrag_failed;
 
 	/*
 	 * These are accumulated from each Rx/Tx queue.
@@ -70,11 +72,14 @@ struct vtnet_rxq {
 	struct mtx		 vtnrx_mtx;
 	struct vtnet_softc	*vtnrx_sc;
 	struct virtqueue	*vtnrx_vq;
+	struct sglist		*vtnrx_sg;
 	int			 vtnrx_id;
-	int			 vtnrx_process_limit;
 	struct vtnet_rxq_stats	 vtnrx_stats;
 	struct taskqueue	*vtnrx_tq;
 	struct task		 vtnrx_intrtask;
+#ifdef DEV_NETMAP
+	struct virtio_net_hdr_mrg_rxbuf vtnrx_shrhdr;
+#endif  /* DEV_NETMAP */
 	char			 vtnrx_name[16];
 } __aligned(CACHE_LINE_SIZE);
 
@@ -91,7 +96,6 @@ struct vtnet_txq_stats {
 	uint64_t vtxs_omcasts;	/* if_omcasts */
 	uint64_t vtxs_csum;
 	uint64_t vtxs_tso;
-	uint64_t vtxs_collapsed;
 	uint64_t vtxs_rescheduled;
 };
 
@@ -99,6 +103,7 @@ struct vtnet_txq {
 	struct mtx		 vtntx_mtx;
 	struct vtnet_softc	*vtntx_sc;
 	struct virtqueue	*vtntx_vq;
+	struct sglist		*vtntx_sg;
 #ifndef VTNET_LEGACY_TX
 	struct buf_ring		*vtntx_br;
 #endif
@@ -110,6 +115,9 @@ struct vtnet_txq {
 #ifndef VTNET_LEGACY_TX
 	struct task		 vtntx_defrtask;
 #endif
+#ifdef DEV_NETMAP
+	struct virtio_net_hdr_mrg_rxbuf vtntx_shrhdr;
+#endif  /* DEV_NETMAP */
 	char			 vtntx_name[16];
 } __aligned(CACHE_LINE_SIZE);
 
@@ -138,17 +146,22 @@ struct vtnet_softc {
 #define VTNET_FLAG_MRG_RXBUFS	 0x0080
 #define VTNET_FLAG_LRO_NOMRG	 0x0100
 #define VTNET_FLAG_MULTIQ	 0x0200
-#define VTNET_FLAG_EVENT_IDX	 0x0400
+#define VTNET_FLAG_INDIRECT	 0x0400
+#define VTNET_FLAG_EVENT_IDX	 0x0800
 
 	int			 vtnet_link_active;
 	int			 vtnet_hdr_size;
 	int			 vtnet_rx_process_limit;
+	int			 vtnet_rx_nsegs;
 	int			 vtnet_rx_nmbufs;
 	int			 vtnet_rx_clsize;
 	int			 vtnet_rx_new_clsize;
+	int			 vtnet_tx_intr_thresh;
+	int			 vtnet_tx_nsegs;
 	int			 vtnet_if_flags;
 	int			 vtnet_act_vq_pairs;
 	int			 vtnet_max_vq_pairs;
+	int			 vtnet_requested_vq_pairs;
 
 	struct virtqueue	*vtnet_ctrl_vq;
 	struct vtnet_mac_filter	*vtnet_mac_filter;
@@ -177,6 +190,14 @@ struct vtnet_softc {
  * taskqueue to process the completed entries.
  */
 #define VTNET_INTR_DISABLE_RETRIES	4
+
+/*
+ * Similarly, additional completed entries can appear in a virtqueue
+ * between when lasted checked and before notifying the host. Number
+ * of times to retry before scheduling the taskqueue to process the
+ * queue.
+ */
+#define VTNET_NOTIFY_RETRIES		4
 
 /*
  * Fake the media type. The host does not provide us with any real media
@@ -245,8 +266,8 @@ struct vtnet_mac_filter {
 CTASSERT(sizeof(struct vtnet_mac_filter) <= PAGE_SIZE);
 
 #define VTNET_TX_TIMEOUT	5
-#define VTNET_CSUM_OFFLOAD	(CSUM_TCP | CSUM_UDP | CSUM_SCTP)
-#define VTNET_CSUM_OFFLOAD_IPV6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6 | CSUM_SCTP_IPV6)
+#define VTNET_CSUM_OFFLOAD	(CSUM_TCP | CSUM_UDP)
+#define VTNET_CSUM_OFFLOAD_IPV6	(CSUM_TCP_IPV6 | CSUM_UDP_IPV6)
 
 #define VTNET_CSUM_ALL_OFFLOAD	\
     (VTNET_CSUM_OFFLOAD | VTNET_CSUM_OFFLOAD_IPV6 | CSUM_TSO)
@@ -293,11 +314,14 @@ CTASSERT(sizeof(struct vtnet_mac_filter) <= PAGE_SIZE);
 
 /*
  * Used to preallocate the Vq indirect descriptors. The first segment
- * is reserved for the header.
+ * is reserved for the header, except for mergeable buffers since the
+ * header is placed inline with the data.
  */
+#define VTNET_MRG_RX_SEGS	1
 #define VTNET_MIN_RX_SEGS	2
 #define VTNET_MAX_RX_SEGS	34
-#define VTNET_MAX_TX_SEGS	34
+#define VTNET_MIN_TX_SEGS	4
+#define VTNET_MAX_TX_SEGS	64
 
 /*
  * Assert we can receive and transmit the maximum with regular
@@ -314,7 +338,7 @@ CTASSERT(((VTNET_MAX_TX_SEGS - 1) * MCLBYTES) >= VTNET_MAX_MTU);
 
 /*
  * Determine how many mbufs are in each receive buffer. For LRO without
- * mergeable descriptors, we must allocate an mbuf chain large enough to
+ * mergeable buffers, we must allocate an mbuf chain large enough to
  * hold both the vtnet_rx_header and the maximum receivable data.
  */
 #define VTNET_NEEDED_RX_MBUFS(_sc, _clsize)				\

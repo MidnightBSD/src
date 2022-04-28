@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/mixer.h 246454 2013-02-07 08:20:03Z hselasky $
+ * $FreeBSD$
  */
 
 #ifndef _PCM_MIXER_H_
@@ -54,6 +54,7 @@ int mix_get(struct snd_mixer *m, u_int dev);
 int mix_setrecsrc(struct snd_mixer *m, u_int32_t src);
 u_int32_t mix_getrecsrc(struct snd_mixer *m);
 int mix_get_type(struct snd_mixer *m);
+device_t mix_get_dev(struct snd_mixer *m);
 
 void mix_setdevs(struct snd_mixer *m, u_int32_t v);
 void mix_setrecdevs(struct snd_mixer *m, u_int32_t v);

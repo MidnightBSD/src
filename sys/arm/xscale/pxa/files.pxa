@@ -1,8 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/arm/xscale/pxa/files.pxa 179700 2008-06-10 03:44:14Z kevlo $
-
-arm/arm/bus_space_generic.c		standard
-arm/arm/cpufunc_asm_xscale.S		standard
-arm/arm/irq_dispatch.S			standard
+# $FreeBSD$
 
 arm/xscale/pxa/pxa_gpio.c		standard
 arm/xscale/pxa/pxa_icu.c		standard

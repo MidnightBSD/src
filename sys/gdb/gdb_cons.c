@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/gdb/gdb_cons.c 253604 2013-07-24 09:45:31Z avg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,9 +58,8 @@ struct gdbcons {
 static struct gdbcons state = { -1 };
 
 static	int gdbcons_enable = 0;
-SYSCTL_INT(_debug, OID_AUTO, gdbcons, CTLFLAG_RW, &gdbcons_enable,
-	    0, "copy console messages to gdb");
-TUNABLE_INT("debug.gdbcons", &gdbcons_enable);
+SYSCTL_INT(_debug, OID_AUTO, gdbcons, CTLFLAG_RWTUN, &gdbcons_enable,
+	    0, "copy console messages to GDB");
 
 static void
 gdb_cnprobe(struct consdev *cp)
@@ -77,7 +76,7 @@ gdb_cninit(struct consdev *cp)
 	/* setup tx buffer and callout */
 	if (c->npending == -1) {
 		c->npending = 0;
-		callout_init(&c->flush, CALLOUT_MPSAFE);
+		callout_init(&c->flush, 1);
 		cp->cn_arg = c;
 	}
 }

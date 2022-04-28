@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_raudio_pxy.c 259128 2013-12-09 13:44:07Z gjb $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -105,11 +105,7 @@ ipf_p_raudio_out(arg, fin, aps, nat)
 	off = (char *)tcp - (char *)fin->fin_ip;
 	off += (TCP_OFF(tcp) << 2) + fin->fin_ipoff;
 
-#ifdef __sgi
-	dlen = fin->fin_plen - off;
-#else
 	dlen = MSGDSIZE(m) - off;
-#endif
 	if (dlen <= 0)
 		return 0;
 
@@ -222,11 +218,7 @@ ipf_p_raudio_in(arg, fin, aps, nat)
 	off = (char *)tcp - (char *)fin->fin_ip;
 	off += (TCP_OFF(tcp) << 2) + fin->fin_ipoff;
 
-#ifdef __sgi
-	dlen = fin->fin_plen - off;
-#else
 	dlen = MSGDSIZE(m) - off;
-#endif
 	if (dlen <= 0)
 		return 0;
 

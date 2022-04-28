@@ -1,7 +1,7 @@
 /*
  * French calendar file(s)
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/calendar.french 95753 2002-04-29 20:57:36Z dwmalone $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_french_

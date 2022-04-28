@@ -1,7 +1,0 @@
-This is a bootstrap bootloader.  It is intended to be used when the
-AT91RM9200 is running xmodem over DBGU.  It will download the next stage
-of the booting process (or the recovery program) and jump to it.  It loads
-the program at a 1MB offset into SDRAM.  Programs are expected to be
-smaller than this and copy themselves to the right location.
-
-$FreeBSD: release/10.0.0/sys/boot/arm/at91/boot0/README 157697 2006-04-12 21:22:44Z imp $

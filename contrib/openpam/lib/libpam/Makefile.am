@@ -1,4 +1,4 @@
-# $Id: Makefile.am 660 2013-03-11 15:08:52Z des $
+# $OpenPAM: Makefile.am 938 2017-04-30 21:34:42Z des $
 
 NULL =
 
@@ -18,6 +18,7 @@ noinst_HEADERS = \
 	openpam_strlcat.h \
 	openpam_strlcmp.h \
 	openpam_strlcpy.h \
+	openpam_strlset.h \
 	openpam_vasprintf.h
 
 libpam_la_SOURCES = \
@@ -44,9 +45,10 @@ libpam_la_SOURCES = \
 	openpam_set_option.c \
 	openpam_set_feature.c \
 	openpam_static.c \
+	openpam_straddch.c \
 	openpam_strlcat.c \
 	openpam_strlcpy.c \
-	openpam_straddch.c \
+	openpam_strlset.c \
 	openpam_subst.c \
 	openpam_vasprintf.c \
 	openpam_ttyconv.c \
@@ -77,8 +79,8 @@ libpam_la_SOURCES = \
 	pam_vprompt.c \
 	$(NULL)
 
-libpam_la_LDFLAGS = -no-undefined -version-info @LIB_MAJ@
-libpam_la_LIBADD = @DL_LIBS@
+libpam_la_LDFLAGS = -no-undefined -version-info $(LIB_MAJ)
+libpam_la_LIBADD = $(DL_LIBS)
 
 EXTRA_DIST = \
 	pam_authenticate_secondary.c \

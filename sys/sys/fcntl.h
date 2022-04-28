@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fcntl.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: release/10.0.0/sys/sys/fcntl.h 254888 2013-08-25 21:52:04Z jilles $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_FCNTL_H_
@@ -96,7 +96,7 @@ typedef	__pid_t		pid_t;
 #define	O_FSYNC		0x0080		/* synchronous writes */
 #endif
 #define	O_SYNC		0x0080		/* POSIX synonym for O_FSYNC */
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809
 #define	O_NOFOLLOW	0x0100		/* don't follow symlinks */
 #endif
 #define	O_CREAT		0x0200		/* create if nonexistent */
@@ -114,13 +114,14 @@ typedef	__pid_t		pid_t;
 #define	O_DIRECT	0x00010000
 #endif
 
-/* Defined by POSIX Extended API Set Part 2 */
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809
 #define	O_DIRECTORY	0x00020000	/* Fail if not directory */
 #define	O_EXEC		0x00040000	/* Open for execute only */
+#define	O_SEARCH	O_EXEC
 #endif
 #ifdef	_KERNEL
 #define	FEXEC		O_EXEC
+#define	FSEARCH		O_SEARCH
 #endif
 
 #if __POSIX_VISIBLE >= 200809
@@ -130,11 +131,22 @@ typedef	__pid_t		pid_t;
 #define	O_CLOEXEC	0x00100000
 #endif
 
+#if __BSD_VISIBLE
+#define	O_VERIFY	0x00200000	/* open only after verification */
+#endif
+
 /*
  * XXX missing O_DSYNC, O_RSYNC.
  */
 
 #ifdef _KERNEL
+
+/* Only for devfs d_close() flags. */
+#define	FLASTCLOSE	O_DIRECTORY
+#define	FREVOKE		O_VERIFY
+/* Only for fo_close() from half-succeeded open */
+#define	FOPENFAILED	O_TTY_INIT
+
 /* convert from open() flags to/from fflags; convert O_RD/WR to FREAD/FWRITE */
 #define	FFLAGS(oflags)	((oflags) & O_EXEC ? (oflags) : (oflags) + 1)
 #define	OFLAGS(fflags)	((fflags) & O_EXEC ? (fflags) : (fflags) - 1)
@@ -183,8 +195,7 @@ typedef	__pid_t		pid_t;
 #define	FRDAHEAD	O_CREAT
 #endif
 
-/* Defined by POSIX Extended API Set Part 2 */
-#if __BSD_VISIBLE
+#if __POSIX_VISIBLE >= 200809
 /*
  * Magic value that specify the use of the current working directory
  * to determine the target of relative file paths in the openat() and
@@ -211,7 +222,7 @@ typedef	__pid_t		pid_t;
 #define	F_SETFD		2		/* set file descriptor flags */
 #define	F_GETFL		3		/* get file status flags */
 #define	F_SETFL		4		/* set file status flags */
-#if __BSD_VISIBLE || __XSI_VISIBLE || __POSIX_VISIBLE >= 200112
+#if __XSI_VISIBLE || __POSIX_VISIBLE >= 200112
 #define	F_GETOWN	5		/* get SIGIO/SIGURG proc/pgrp */
 #define	F_SETOWN	6		/* set SIGIO/SIGURG proc/pgrp */
 #endif
@@ -229,7 +240,7 @@ typedef	__pid_t		pid_t;
 #define	F_READAHEAD	15		/* read ahead */
 #define	F_RDAHEAD	16		/* Darwin compatible read ahead */
 #endif
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+#if __POSIX_VISIBLE >= 200809
 #define	F_DUPFD_CLOEXEC	17		/* Like F_DUPFD, but FD_CLOEXEC is set */
 #endif
 #if __BSD_VISIBLE
@@ -310,10 +321,10 @@ int	fcntl(int, int, ...);
 #if __BSD_VISIBLE
 int	flock(int, int);
 #endif
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200809
+#if __POSIX_VISIBLE >= 200809
 int	openat(int, const char *, int, ...);
 #endif
-#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112
+#if __POSIX_VISIBLE >= 200112
 int	posix_fadvise(int, off_t, off_t, int);
 int	posix_fallocate(int, off_t, off_t);
 #endif

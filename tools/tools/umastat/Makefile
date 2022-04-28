@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/tools/umastat/Makefile 204585 2010-03-02 16:58:04Z uqs $
+# $FreeBSD$
 
 PROG=	umastat
-NO_MAN=
+MAN=
 WARNS?=	3
 
-DPADD=	${LIBKVM}
-LDADD=	-lkvm
+LIBADD=	kvm
 
 .include <bsd.prog.mk>

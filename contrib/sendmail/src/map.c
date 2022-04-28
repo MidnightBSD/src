@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2008 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2008 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1992, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: map.c,v 8.711 2013/03/12 15:24:52 ca Exp $")
+SM_RCSID("@(#)$Id: map.c,v 8.713 2013-11-22 20:51:55 ca Exp $")
 
 #if LDAPMAP
 # include <sm/ldap.h>
@@ -202,6 +202,20 @@ map_parseargs(map, ap)
 
 		  case 'a':
 			map->map_app = ++p;
+			break;
+
+		  case 'd':
+			{
+				char *h;
+
+				++p;
+				h = strchr(p, ' ');
+				if (h != NULL)
+					*h = '\0';
+				map->map_timeout = convtime(p, 's');
+				if (h != NULL)
+					*h = ' ';
+			}
 			break;
 
 		  case 'T':
@@ -1826,7 +1840,7 @@ ndbm_map_store(map, lhs, rhs)
 				data.dptr = buf;
 				if (tTd(38, 9))
 					sm_dprintf("ndbm_map_store append=%s\n",
-						data.dptr);
+						(char *)data.dptr);
 			}
 		}
 		status = dbm_store((DBM *) map->map_db1,
@@ -7366,6 +7380,85 @@ arith_map_lookup(map, name, av, statp)
 	return NULL;
 }
 
+char *
+arpa_map_lookup(map, name, av, statp)
+	MAP *map;
+	char *name;
+	char **av;
+	int *statp;
+{
+	int r;
+	char *rval;
+	char result[128];	/* IPv6: 64 + 10 + 1 would be enough */
+
+	if (tTd(38, 2))
+		sm_dprintf("arpa_map_lookup: key '%s'\n", name);
+	*statp = EX_DATAERR;
+	r = 1;
+	memset(result, '\0', sizeof(result));
+	rval = NULL;
+
+# if NETINET6
+	if (sm_strncasecmp(name, "IPv6:", 5) == 0)
+	{
+		struct in6_addr in6_addr;
+
+		r = anynet_pton(AF_INET6, name, &in6_addr);
+		if (r == 1)
+		{
+			static char hex_digits[] =
+				{ '0', '1', '2', '3', '4', '5', '6', '7', '8',
+				  '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+			unsigned char *src;
+			char *dst;
+			int i;
+
+			src = (unsigned char *) &in6_addr;
+			dst = result;
+			for (i = 15; i >= 0; i--) {
+				*dst++ = hex_digits[src[i] & 0x0f];
+				*dst++ = '.';
+				*dst++ = hex_digits[(src[i] >> 4) & 0x0f];
+				if (i > 0)
+					*dst++ = '.';
+			}
+			*statp = EX_OK;
+		}
+	}
+	else
+# endif /* NETINET6 */
+# if NETINET
+	{
+		struct in_addr in_addr;
+
+		r = inet_pton(AF_INET, name, &in_addr);
+		if (r == 1)
+		{
+			unsigned char *src;
+
+			src = (unsigned char *) &in_addr;
+			(void) snprintf(result, sizeof(result),
+				"%u.%u.%u.%u",
+				src[3], src[2], src[1], src[0]);
+			*statp = EX_OK;
+		}
+	}
+# endif /* NETINET */
+	if (r < 0)
+		*statp = EX_UNAVAILABLE;
+	if (tTd(38, 2))
+		sm_dprintf("arpa_map_lookup: r=%d, result='%s'\n", r, result);
+	if (*statp == EX_OK)
+	{
+		if (bitset(MF_MATCHONLY, map->map_mflags))
+			rval = map_rewrite(map, name, strlen(name), NULL);
+		else
+			rval = map_rewrite(map, result, strlen(result), av);
+	}
+	return rval;
+}
+
 #if SOCKETMAP
 
 # if NETINET || NETINET6
@@ -7385,6 +7478,7 @@ socket_map_open(map, mode)
 {
 	STAB *s;
 	int sock = 0;
+	int tmo;
 	SOCKADDR_LEN_T addrlen = 0;
 	int addrno = 0;
 	int save_errno;
@@ -7784,6 +7878,13 @@ socket_map_open(map, mode)
 		return false;
 	}
 
+	tmo = map->map_timeout;
+	if (tmo == 0)
+		tmo = 30000;	/* default: 30s */
+	else
+		tmo *= 1000;	/* s -> ms */
+	sm_io_setinfo(map->map_db1, SM_IO_WHAT_TIMEOUT, &tmo);
+
 	/* Save connection for reuse */
 	s->s_socketmap = map;
 	return true;
@@ -7918,8 +8019,16 @@ socket_map_lookup(map, name, av, statp)
 
 	if (sm_io_fscanf(f, SM_TIME_DEFAULT, "%9u", &replylen) != 1)
 	{
-		syserr("451 4.3.0 socket_map_lookup(%s): failed to read length parameter of reply",
-			map->map_mname);
+		if (errno == EAGAIN)
+		{
+			syserr("451 4.3.0 socket_map_lookup(%s): read timeout",
+				map->map_mname);
+		}
+		else
+		{
+			syserr("451 4.3.0 socket_map_lookup(%s): failed to read length parameter of reply %d",
+				map->map_mname, errno);
+		}
 		*statp = EX_TEMPFAIL;
 		goto errcl;
 	}

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/genassym.c 254671 2013-08-22 20:07:06Z gibbs $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_apic.h"
 #include "opt_compat.h"
@@ -88,7 +88,6 @@ ASSYM(TD_PCB, offsetof(struct thread, td_pcb));
 ASSYM(TD_PFLAGS, offsetof(struct thread, td_pflags));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
 ASSYM(TD_MD, offsetof(struct thread, td_md));
-ASSYM(TD_TID, offsetof(struct thread, td_tid));
 
 ASSYM(TDP_CALLCHAIN, TDP_CALLCHAIN);
 
@@ -101,8 +100,7 @@ ASSYM(TDF_NEEDRESCHED, TDF_NEEDRESCHED);
 ASSYM(V_TRAP, offsetof(struct vmmeter, v_trap));
 ASSYM(V_SYSCALL, offsetof(struct vmmeter, v_syscall));
 ASSYM(V_INTR, offsetof(struct vmmeter, v_intr));
-/* ASSYM(UPAGES, UPAGES);*/
-ASSYM(KSTACK_PAGES, KSTACK_PAGES);
+ASSYM(TD0_KSTACK_PAGES, TD0_KSTACK_PAGES);
 ASSYM(PAGE_SIZE, PAGE_SIZE);
 ASSYM(NPTEPG, NPTEPG);
 ASSYM(NPDEPG, NPDEPG);
@@ -116,11 +114,9 @@ ASSYM(PAGE_SHIFT, PAGE_SHIFT);
 ASSYM(PAGE_MASK, PAGE_MASK);
 ASSYM(PDRSHIFT, PDRSHIFT);
 ASSYM(PDRMASK, PDRMASK);
-ASSYM(USRSTACK, USRSTACK);
 ASSYM(VM_MAXUSER_ADDRESS, VM_MAXUSER_ADDRESS);
 ASSYM(KERNBASE, KERNBASE);
 ASSYM(KERNLOAD, KERNLOAD);
-ASSYM(MCLBYTES, MCLBYTES);
 ASSYM(PCB_CR0, offsetof(struct pcb, pcb_cr0));
 ASSYM(PCB_CR2, offsetof(struct pcb, pcb_cr2));
 ASSYM(PCB_CR3, offsetof(struct pcb, pcb_cr3));
@@ -144,7 +140,6 @@ ASSYM(PCB_DR2, offsetof(struct pcb, pcb_dr2));
 ASSYM(PCB_DR3, offsetof(struct pcb, pcb_dr3));
 ASSYM(PCB_DR6, offsetof(struct pcb, pcb_dr6));
 ASSYM(PCB_DR7, offsetof(struct pcb, pcb_dr7));
-ASSYM(PCB_USERFPU, offsetof(struct pcb, pcb_user_save));
 ASSYM(PCB_PSL, offsetof(struct pcb, pcb_psl));
 ASSYM(PCB_DBREGS, PCB_DBREGS);
 ASSYM(PCB_EXT, offsetof(struct pcb, pcb_ext));
@@ -154,7 +149,6 @@ ASSYM(PCB_GSD, offsetof(struct pcb, pcb_gsd));
 ASSYM(PCB_VM86, offsetof(struct pcb, pcb_vm86));
 ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
 ASSYM(PCB_SAVEFPU, offsetof(struct pcb, pcb_save));
-ASSYM(PCB_SAVEFPU_SIZE, sizeof(union savefpu));
 ASSYM(PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
 
 ASSYM(PCB_SIZE, sizeof(struct pcb));
@@ -165,11 +159,15 @@ ASSYM(PCB_IDT, offsetof(struct pcb, pcb_idt));
 ASSYM(PCB_LDT, offsetof(struct pcb, pcb_ldt));
 ASSYM(PCB_TR, offsetof(struct pcb, pcb_tr));
 
+ASSYM(TF_FS, offsetof(struct trapframe, tf_fs));
+ASSYM(TF_ES, offsetof(struct trapframe, tf_es));
+ASSYM(TF_DS, offsetof(struct trapframe, tf_ds));
 ASSYM(TF_TRAPNO, offsetof(struct trapframe, tf_trapno));
 ASSYM(TF_ERR, offsetof(struct trapframe, tf_err));
 ASSYM(TF_EIP, offsetof(struct trapframe, tf_eip));
 ASSYM(TF_CS, offsetof(struct trapframe, tf_cs));
 ASSYM(TF_EFLAGS, offsetof(struct trapframe, tf_eflags));
+
 ASSYM(SIGF_HANDLER, offsetof(struct sigframe, sf_ahu.sf_handler));
 #ifdef COMPAT_43
 ASSYM(SIGF_SC, offsetof(struct osigframe, sf_siginfo.si_sc));
@@ -219,15 +217,13 @@ ASSYM(PC_CURRENTLDT, offsetof(struct pcpu, pc_currentldt));
 ASSYM(PC_CPUID, offsetof(struct pcpu, pc_cpuid));
 ASSYM(PC_CURPMAP, offsetof(struct pcpu, pc_curpmap));
 ASSYM(PC_PRIVATE_TSS, offsetof(struct pcpu, pc_private_tss));
+ASSYM(PC_MDS_TMP, offsetof(struct pcpu, pc_mds_tmp));
+ASSYM(PC_MDS_BUF, offsetof(struct pcpu, pc_mds_buf));
+ASSYM(PC_MDS_BUF64, offsetof(struct pcpu, pc_mds_buf64));
 
 #ifdef DEV_APIC
-ASSYM(LA_VER, offsetof(struct LAPIC, version));
-ASSYM(LA_TPR, offsetof(struct LAPIC, tpr));
-ASSYM(LA_EOI, offsetof(struct LAPIC, eoi));
-ASSYM(LA_SVR, offsetof(struct LAPIC, svr));
-ASSYM(LA_ICR_LO, offsetof(struct LAPIC, icr_lo));
-ASSYM(LA_ICR_HI, offsetof(struct LAPIC, icr_hi));
-ASSYM(LA_ISR, offsetof(struct LAPIC, isr0));
+ASSYM(LA_EOI, LAPIC_EOI * LAPIC_MEM_MUL);
+ASSYM(LA_ISR, LAPIC_ISR0 * LAPIC_MEM_MUL);
 #endif
 
 ASSYM(KCSEL, GSEL(GCODE_SEL, SEL_KPL));
@@ -243,11 +239,6 @@ ASSYM(VM86_FRAMESIZE, sizeof(struct vm86frame));
 
 ASSYM(BUS_SPACE_HANDLE_BASE, offsetof(struct bus_space_handle, bsh_base));
 ASSYM(BUS_SPACE_HANDLE_IAT, offsetof(struct bus_space_handle, bsh_iat));
-#endif
-
-#ifdef XEN
-ASSYM(PC_CR3, offsetof(struct pcpu, pc_cr3));
-ASSYM(XEN_HYPERVISOR_VIRT_START, HYPERVISOR_VIRT_START);
 #endif
 
 #ifdef	HWPMC_HOOKS

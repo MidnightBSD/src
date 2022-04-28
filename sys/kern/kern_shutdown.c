@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_shutdown.c 248084 2013-03-09 02:32:23Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 #include "opt_kdb.h"
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_shutdown.c 248084 2013-03-09 02
 #include <sys/conf.h>
 #include <sys/cons.h>
 #include <sys/eventhandler.h>
+#include <sys/filedesc.h>
 #include <sys/jail.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
@@ -67,12 +68,14 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_shutdown.c 248084 2013-03-09 02
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 #include <sys/sysproto.h>
+#include <sys/taskqueue.h>
 #include <sys/vnode.h>
 #include <sys/watchdog.h>
 
 #include <ddb/ddb.h>
 
 #include <machine/cpu.h>
+#include <machine/dump.h>
 #include <machine/pcb.h>
 #include <machine/smp.h>
 
@@ -86,9 +89,15 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_shutdown.c 248084 2013-03-09 02
 
 #include <sys/signalvar.h>
 
+static MALLOC_DEFINE(M_DUMPER, "dumper", "dumper block buffer");
+
 #ifndef PANIC_REBOOT_WAIT_TIME
 #define PANIC_REBOOT_WAIT_TIME 15 /* default to 15 seconds */
 #endif
+static int panic_reboot_wait_time = PANIC_REBOOT_WAIT_TIME;
+SYSCTL_INT(_kern, OID_AUTO, panic_reboot_wait_time, CTLFLAG_RWTUN,
+    &panic_reboot_wait_time, 0,
+    "Seconds to wait before rebooting after a panic");
 
 /*
  * Note that stdarg.h and the ANSI style va_start macro is used for both
@@ -98,14 +107,18 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_shutdown.c 248084 2013-03-09 02
 
 #ifdef KDB
 #ifdef KDB_UNATTENDED
-int debugger_on_panic = 0;
+static int debugger_on_panic = 0;
 #else
-int debugger_on_panic = 1;
+static int debugger_on_panic = 1;
 #endif
 SYSCTL_INT(_debug, OID_AUTO, debugger_on_panic,
-    CTLFLAG_RW | CTLFLAG_SECURE | CTLFLAG_TUN,
+    CTLFLAG_RWTUN | CTLFLAG_SECURE,
     &debugger_on_panic, 0, "Run debugger on kernel panic");
-TUNABLE_INT("debug.debugger_on_panic", &debugger_on_panic);
+
+int debugger_on_trap = 0;
+SYSCTL_INT(_debug, OID_AUTO, debugger_on_trap,
+    CTLFLAG_RWTUN | CTLFLAG_SECURE,
+    &debugger_on_trap, 0, "Run debugger on kernel trap before panic");
 
 #ifdef KDB_TRACE
 static int trace_on_panic = 1;
@@ -113,15 +126,13 @@ static int trace_on_panic = 1;
 static int trace_on_panic = 0;
 #endif
 SYSCTL_INT(_debug, OID_AUTO, trace_on_panic,
-    CTLFLAG_RW | CTLFLAG_SECURE | CTLFLAG_TUN,
+    CTLFLAG_RWTUN | CTLFLAG_SECURE,
     &trace_on_panic, 0, "Print stack trace on kernel panic");
-TUNABLE_INT("debug.trace_on_panic", &trace_on_panic);
 #endif /* KDB */
 
 static int sync_on_panic = 0;
-SYSCTL_INT(_kern, OID_AUTO, sync_on_panic, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_kern, OID_AUTO, sync_on_panic, CTLFLAG_RWTUN,
 	&sync_on_panic, 0, "Do a sync before rebooting from a panic");
-TUNABLE_INT("kern.sync_on_panic", &sync_on_panic);
 
 static SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0,
     "Shutdown environment");
@@ -133,6 +144,10 @@ static int show_busybufs = 1;
 #endif
 SYSCTL_INT(_kern_shutdown, OID_AUTO, show_busybufs, CTLFLAG_RW,
 	&show_busybufs, 0, "");
+
+int suspend_blocked = 0;
+SYSCTL_INT(_kern, OID_AUTO, suspend_blocked, CTLFLAG_RW,
+	&suspend_blocked, 0, "Block suspend due to a pending shutdown");
 
 /*
  * Variable panicstr contains argument to first call to panic; used as flag
@@ -148,11 +163,16 @@ static struct dumperinfo dumper;	/* our selected dumper */
 static struct pcb dumppcb;		/* Registers. */
 lwpid_t dumptid;			/* Thread ID. */
 
+static struct cdevsw reroot_cdevsw = {
+     .d_version = D_VERSION,
+     .d_name    = "reroot",
+};
+
 static void poweroff_wait(void *, int);
 static void shutdown_halt(void *junk, int howto);
 static void shutdown_panic(void *junk, int howto);
 static void shutdown_reset(void *junk, int howto);
-static void vpanic(const char *fmt, va_list ap) __dead2;
+static int kern_reroot(void);
 
 /* register various local shutdown events */
 static void
@@ -172,6 +192,26 @@ shutdown_conf(void *unused)
 SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL);
 
 /*
+ * The only reason this exists is to create the /dev/reroot/ directory,
+ * used by reroot code in init(8) as a mountpoint for tmpfs.
+ */
+static void
+reroot_conf(void *unused)
+{
+	int error;
+	struct cdev *cdev;
+
+	error = make_dev_p(MAKEDEV_CHECKNAME | MAKEDEV_WAITOK, &cdev,
+	    &reroot_cdevsw, NULL, UID_ROOT, GID_WHEEL, 0600, "reroot/reroot");
+	if (error != 0) {
+		printf("%s: failed to create device node, error %d",
+		    __func__, error);
+	}
+}
+
+SYSINIT(reroot_conf, SI_SUB_DEVFS, SI_ORDER_ANY, reroot_conf, NULL);
+
+/*
  * The system call that results in a reboot.
  */
 /* ARGSUSED */
@@ -187,36 +227,55 @@ sys_reboot(struct thread *td, struct reboot_args *uap)
 	if (error == 0)
 		error = priv_check(td, PRIV_REBOOT);
 	if (error == 0) {
-		mtx_lock(&Giant);
-		kern_reboot(uap->opt);
-		mtx_unlock(&Giant);
+		if (uap->opt & RB_REROOT) {
+			error = kern_reroot();
+		} else {
+			mtx_lock(&Giant);
+			kern_reboot(uap->opt);
+			mtx_unlock(&Giant);
+		}
 	}
 	return (error);
 }
 
+static void
+shutdown_nice_task_fn(void *arg, int pending __unused)
+{
+	int howto;
+
+	howto = (uintptr_t)arg;
+	/* Send a signal to init(8) and have it shutdown the world. */
+	PROC_LOCK(initproc);
+	if (howto & RB_POWEROFF)
+		kern_psignal(initproc, SIGUSR2);
+	else if (howto & RB_HALT)
+		kern_psignal(initproc, SIGUSR1);
+	else
+		kern_psignal(initproc, SIGINT);
+	PROC_UNLOCK(initproc);
+}
+
+static struct task shutdown_nice_task = TASK_INITIALIZER(0,
+    &shutdown_nice_task_fn, NULL);
+
 /*
  * Called by events that want to shut down.. e.g  <CTL><ALT><DEL> on a PC
  */
-static int shutdown_howto = 0;
-
 void
 shutdown_nice(int howto)
 {
 
-	shutdown_howto = howto;
-
-	/* Send a signal to init(8) and have it shutdown the world */
-	if (initproc != NULL) {
-		PROC_LOCK(initproc);
-		kern_psignal(initproc, SIGINT);
-		PROC_UNLOCK(initproc);
+	if (initproc != NULL && !SCHEDULER_STOPPED()) {
+		shutdown_nice_task.ta_context = (void *)(uintptr_t)howto;
+		taskqueue_enqueue(taskqueue_fast, &shutdown_nice_task);
 	} else {
-		/* No init(8) running, so simply reboot */
-		kern_reboot(RB_NOSYNC);
+		/*
+		 * No init(8) running, or scheduler would not allow it
+		 * to run, so simply reboot.
+		 */
+		kern_reboot(howto | RB_NOSYNC);
 	}
-	return;
 }
-static int	waittime = -1;
 
 static void
 print_uptime(void)
@@ -249,7 +308,9 @@ int
 doadump(boolean_t textdump)
 {
 	boolean_t coredump;
+	int error;
 
+	error = 0;
 	if (dumping)
 		return (EBUSY);
 	if (dumper.dumper == NULL)
@@ -267,20 +328,10 @@ doadump(boolean_t textdump)
 	}
 #endif
 	if (coredump)
-		dumpsys(&dumper);
+		error = dumpsys(&dumper);
 
 	dumping--;
-	return (0);
-}
-
-static int
-isbufbusy(struct buf *bp)
-{
-	if (((bp->b_flags & (B_INVAL | B_PERSISTENT)) == 0 &&
-	    BUF_ISLOCKED(bp)) ||
-	    ((bp->b_flags & (B_DELWRI | B_INVAL)) == B_DELWRI))
-		return (1);
-	return (0);
+	return (error);
 }
 
 /*
@@ -289,7 +340,7 @@ isbufbusy(struct buf *bp)
 void
 kern_reboot(int howto)
 {
-	static int first_buf_printf = 1;
+	static int once = 0;
 
 #if defined(SMP)
 	/*
@@ -307,9 +358,6 @@ kern_reboot(int howto)
 	/* We're in the process of rebooting. */
 	rebooting = 1;
 
-	/* collect extra flags that shutdown_nice might have set */
-	howto |= shutdown_howto;
-
 	/* We are out of the debugger now. */
 	kdb_active = 0;
 
@@ -321,116 +369,9 @@ kern_reboot(int howto)
 	/* 
 	 * Now sync filesystems
 	 */
-	if (!cold && (howto & RB_NOSYNC) == 0 && waittime < 0) {
-		register struct buf *bp;
-		int iter, nbusy, pbusy;
-#ifndef PREEMPTION
-		int subiter;
-#endif
-
-		waittime = 0;
-
-		wdog_kern_pat(WD_LASTVAL);
-		sys_sync(curthread, NULL);
-
-		/*
-		 * With soft updates, some buffers that are
-		 * written will be remarked as dirty until other
-		 * buffers are written.
-		 */
-		for (iter = pbusy = 0; iter < 20; iter++) {
-			nbusy = 0;
-			for (bp = &buf[nbuf]; --bp >= buf; )
-				if (isbufbusy(bp))
-					nbusy++;
-			if (nbusy == 0) {
-				if (first_buf_printf)
-					printf("All buffers synced.");
-				break;
-			}
-			if (first_buf_printf) {
-				printf("Syncing disks, buffers remaining... ");
-				first_buf_printf = 0;
-			}
-			printf("%d ", nbusy);
-			if (nbusy < pbusy)
-				iter = 0;
-			pbusy = nbusy;
-
-			wdog_kern_pat(WD_LASTVAL);
-			sys_sync(curthread, NULL);
-
-#ifdef PREEMPTION
-			/*
-			 * Drop Giant and spin for a while to allow
-			 * interrupt threads to run.
-			 */
-			DROP_GIANT();
-			DELAY(50000 * iter);
-			PICKUP_GIANT();
-#else
-			/*
-			 * Drop Giant and context switch several times to
-			 * allow interrupt threads to run.
-			 */
-			DROP_GIANT();
-			for (subiter = 0; subiter < 50 * iter; subiter++) {
-				thread_lock(curthread);
-				mi_switch(SW_VOL, NULL);
-				thread_unlock(curthread);
-				DELAY(1000);
-			}
-			PICKUP_GIANT();
-#endif
-		}
-		printf("\n");
-		/*
-		 * Count only busy local buffers to prevent forcing 
-		 * a fsck if we're just a client of a wedged NFS server
-		 */
-		nbusy = 0;
-		for (bp = &buf[nbuf]; --bp >= buf; ) {
-			if (isbufbusy(bp)) {
-#if 0
-/* XXX: This is bogus.  We should probably have a BO_REMOTE flag instead */
-				if (bp->b_dev == NULL) {
-					TAILQ_REMOVE(&mountlist,
-					    bp->b_vp->v_mount, mnt_list);
-					continue;
-				}
-#endif
-				nbusy++;
-				if (show_busybufs > 0) {
-					printf(
-	    "%d: buf:%p, vnode:%p, flags:%0x, blkno:%jd, lblkno:%jd, buflock:",
-					    nbusy, bp, bp->b_vp, bp->b_flags,
-					    (intmax_t)bp->b_blkno,
-					    (intmax_t)bp->b_lblkno);
-					BUF_LOCKPRINTINFO(bp);
-					if (show_busybufs > 1)
-						vn_printf(bp->b_vp,
-						    "vnode content: ");
-				}
-			}
-		}
-		if (nbusy) {
-			/*
-			 * Failed to sync all blocks. Indicate this and don't
-			 * unmount filesystems (thus forcing an fsck on reboot).
-			 */
-			printf("Giving up on %d buffers\n", nbusy);
-			DELAY(5000000);	/* 5 seconds */
-		} else {
-			if (!first_buf_printf)
-				printf("Final sync complete\n");
-			/*
-			 * Unmount filesystems
-			 */
-			if (panicstr == 0)
-				vfs_unmountall();
-		}
-		swapoff_all();
-		DELAY(100000);		/* wait for console output to finish */
+	if (!cold && (howto & RB_NOSYNC) == 0 && once == 0) {
+		once = 1;
+		bufshutdown(show_busybufs);
 	}
 
 	print_uptime();
@@ -454,6 +395,102 @@ kern_reboot(int howto)
 }
 
 /*
+ * The system call that results in changing the rootfs.
+ */
+static int
+kern_reroot(void)
+{
+	struct vnode *oldrootvnode, *vp;
+	struct mount *mp, *devmp;
+	int error;
+
+	if (curproc != initproc)
+		return (EPERM);
+
+	/*
+	 * Mark the filesystem containing currently-running executable
+	 * (the temporary copy of init(8)) busy.
+	 */
+	vp = curproc->p_textvp;
+	error = vn_lock(vp, LK_SHARED);
+	if (error != 0)
+		return (error);
+	mp = vp->v_mount;
+	error = vfs_busy(mp, MBF_NOWAIT);
+	if (error != 0) {
+		vfs_ref(mp);
+		VOP_UNLOCK(vp, 0);
+		error = vfs_busy(mp, 0);
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		vfs_rel(mp);
+		if (error != 0) {
+			VOP_UNLOCK(vp, 0);
+			return (ENOENT);
+		}
+		if (vp->v_iflag & VI_DOOMED) {
+			VOP_UNLOCK(vp, 0);
+			vfs_unbusy(mp);
+			return (ENOENT);
+		}
+	}
+	VOP_UNLOCK(vp, 0);
+
+	/*
+	 * Remove the filesystem containing currently-running executable
+	 * from the mount list, to prevent it from being unmounted
+	 * by vfs_unmountall(), and to avoid confusing vfs_mountroot().
+	 *
+	 * Also preserve /dev - forcibly unmounting it could cause driver
+	 * reinitialization.
+	 */
+
+	vfs_ref(rootdevmp);
+	devmp = rootdevmp;
+	rootdevmp = NULL;
+
+	mtx_lock(&mountlist_mtx);
+	TAILQ_REMOVE(&mountlist, mp, mnt_list);
+	TAILQ_REMOVE(&mountlist, devmp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+
+	oldrootvnode = rootvnode;
+
+	/*
+	 * Unmount everything except for the two filesystems preserved above.
+	 */
+	vfs_unmountall();
+
+	/*
+	 * Add /dev back; vfs_mountroot() will move it into its new place.
+	 */
+	mtx_lock(&mountlist_mtx);
+	TAILQ_INSERT_HEAD(&mountlist, devmp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+	rootdevmp = devmp;
+	vfs_rel(rootdevmp);
+
+	/*
+	 * Mount the new rootfs.
+	 */
+	vfs_mountroot();
+
+	/*
+	 * Update all references to the old rootvnode.
+	 */
+	mountcheckdirs(oldrootvnode, rootvnode);
+
+	/*
+	 * Add the temporary filesystem back and unbusy it.
+	 */
+	mtx_lock(&mountlist_mtx);
+	TAILQ_INSERT_TAIL(&mountlist, mp, mnt_list);
+	mtx_unlock(&mountlist_mtx);
+	vfs_unbusy(mp);
+
+	return (0);
+}
+
+/*
  * If the shutdown was a clean halt, behave accordingly.
  */
 static void
@@ -464,6 +501,9 @@ shutdown_halt(void *junk, int howto)
 		printf("\n");
 		printf("The operating system has halted.\n");
 		printf("Please press any key to reboot.\n\n");
+
+		wdog_kern_pat(WD_TO_NEVER);
+
 		switch (cngetc()) {
 		case -1:		/* No console, just die */
 			cpu_halt();
@@ -485,12 +525,12 @@ shutdown_panic(void *junk, int howto)
 	int loop;
 
 	if (howto & RB_DUMP) {
-		if (PANIC_REBOOT_WAIT_TIME != 0) {
-			if (PANIC_REBOOT_WAIT_TIME != -1) {
+		if (panic_reboot_wait_time != 0) {
+			if (panic_reboot_wait_time != -1) {
 				printf("Automatic reboot in %d seconds - "
 				       "press a key on the console to abort\n",
-					PANIC_REBOOT_WAIT_TIME);
-				for (loop = PANIC_REBOOT_WAIT_TIME * 10;
+					panic_reboot_wait_time);
+				for (loop = panic_reboot_wait_time * 10;
 				     loop > 0; --loop) {
 					DELAY(1000 * 100); /* 1/10th second */
 					/* Did user type a key? */
@@ -541,7 +581,7 @@ shutdown_reset(void *junk, int howto)
 	/* NOTREACHED */ /* assuming reset worked */
 }
 
-#if defined(WITNESS) || defined(INVARIANTS)
+#if defined(WITNESS) || defined(INVARIANT_SUPPORT)
 static int kassert_warn_only = 0;
 #ifdef KDB
 static int kassert_do_kdb = 0;
@@ -557,43 +597,35 @@ static int kassert_warnings = 0;
 
 SYSCTL_NODE(_debug, OID_AUTO, kassert, CTLFLAG_RW, NULL, "kassert options");
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, warn_only, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, warn_only, CTLFLAG_RWTUN,
     &kassert_warn_only, 0,
     "KASSERT triggers a panic (1) or just a warning (0)");
-TUNABLE_INT("debug.kassert.warn_only", &kassert_warn_only);
 
 #ifdef KDB
-SYSCTL_INT(_debug_kassert, OID_AUTO, do_kdb, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, do_kdb, CTLFLAG_RWTUN,
     &kassert_do_kdb, 0, "KASSERT will enter the debugger");
-TUNABLE_INT("debug.kassert.do_kdb", &kassert_do_kdb);
 #endif
 
 #ifdef KTR
-SYSCTL_UINT(_debug_kassert, OID_AUTO, do_ktr, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_UINT(_debug_kassert, OID_AUTO, do_ktr, CTLFLAG_RWTUN,
     &kassert_do_ktr, 0,
     "KASSERT does a KTR, set this to the KTRMASK you want");
-TUNABLE_INT("debug.kassert.do_ktr", &kassert_do_ktr);
 #endif
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, do_log, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, do_log, CTLFLAG_RWTUN,
     &kassert_do_log, 0, "KASSERT triggers a panic (1) or just a warning (0)");
-TUNABLE_INT("debug.kassert.do_log", &kassert_do_log);
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, warnings, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, warnings, CTLFLAG_RWTUN,
     &kassert_warnings, 0, "number of KASSERTs that have been triggered");
-TUNABLE_INT("debug.kassert.warnings", &kassert_warnings);
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, log_panic_at, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_panic_at, CTLFLAG_RWTUN,
     &kassert_log_panic_at, 0, "max number of KASSERTS before we will panic");
-TUNABLE_INT("debug.kassert.log_panic_at", &kassert_log_panic_at);
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, log_pps_limit, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_pps_limit, CTLFLAG_RWTUN,
     &kassert_log_pps_limit, 0, "limit number of log messages per second");
-TUNABLE_INT("debug.kassert.log_pps_limit", &kassert_log_pps_limit);
 
-SYSCTL_INT(_debug_kassert, OID_AUTO, log_mute_at, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_debug_kassert, OID_AUTO, log_mute_at, CTLFLAG_RWTUN,
     &kassert_log_mute_at, 0, "max number of KASSERTS to log");
-TUNABLE_INT("debug.kassert.log_mute_at", &kassert_log_mute_at);
 
 static int kassert_sysctl_kassert(SYSCTL_HANDLER_ARGS);
 
@@ -683,7 +715,7 @@ panic(const char *fmt, ...)
 	vpanic(fmt, ap);
 }
 
-static void
+void
 vpanic(const char *fmt, va_list ap)
 {
 #ifdef SMP
@@ -706,15 +738,13 @@ vpanic(const char *fmt, va_list ap)
 		CPU_CLR(PCPU_GET(cpuid), &other_cpus);
 		stop_cpus_hard(other_cpus);
 	}
+#endif
 
 	/*
-	 * We set stop_scheduler here and not in the block above,
-	 * because we want to ensure that if panic has been called and
-	 * stop_scheduler_on_panic is true, then stop_scheduler will
-	 * always be set.  Even if panic has been entered from kdb.
+	 * Ensure that the scheduler is stopped while panicking, even if panic
+	 * has been entered from kdb.
 	 */
 	td->td_stopsched = 1;
-#endif
 
 	bootopt = RB_AUTOBOOT;
 	newpanic = 0;
@@ -799,7 +829,7 @@ kproc_shutdown(void *arg, int howto)
 		return;
 
 	p = (struct proc *)arg;
-	printf("Waiting (max %d seconds) for system process `%s' to stop...",
+	printf("Waiting (max %d seconds) for system process `%s' to stop... ",
 	    kproc_shutdown_wait, p->p_comm);
 	error = kproc_suspend(p, kproc_shutdown_wait * hz);
 
@@ -819,7 +849,7 @@ kthread_shutdown(void *arg, int howto)
 		return;
 
 	td = (struct thread *)arg;
-	printf("Waiting (max %d seconds) for system thread `%s' to stop...",
+	printf("Waiting (max %d seconds) for system thread `%s' to stop... ",
 	    kproc_shutdown_wait, td->td_name);
 	error = kthread_suspend(td, kproc_shutdown_wait * hz);
 
@@ -835,12 +865,19 @@ SYSCTL_STRING(_kern_shutdown, OID_AUTO, dumpdevname, CTLFLAG_RD,
 
 /* Registration of dumpers */
 int
-set_dumper(struct dumperinfo *di, const char *devname)
+set_dumper(struct dumperinfo *di, const char *devname, struct thread *td)
 {
 	size_t wantcopy;
+	int error;
+
+	error = priv_check(td, PRIV_SETDUMPER);
+	if (error != 0)
+		return (error);
 
 	if (di == NULL) {
-		bzero(&dumper, sizeof dumper);
+		if (dumper.blockbuf != NULL)
+			free(dumper.blockbuf, M_DUMPER);
+		bzero(&dumper, sizeof(dumper));
 		dumpdevname[0] = '\0';
 		return (0);
 	}
@@ -852,6 +889,7 @@ set_dumper(struct dumperinfo *di, const char *devname)
 		printf("set_dumper: device name truncated from '%s' -> '%s'\n",
 			devname, dumpdevname);
 	}
+	dumper.blockbuf = malloc(di->blocksize, M_DUMPER, M_WAITOK | M_ZERO);
 	return (0);
 }
 
@@ -872,22 +910,61 @@ dump_write(struct dumperinfo *di, void *virtual, vm_offset_t physical,
 	return (di->dumper(di->priv, virtual, physical, offset, length));
 }
 
+/* Call dumper with bounds checking. */
+int
+dump_write_pad(struct dumperinfo *di, void *virtual, vm_offset_t physical,
+    off_t offset, size_t length, size_t *size)
+{
+	char *temp;
+	int ret;
+
+	if (length > di->blocksize)
+		return (ENOMEM);
+
+	*size = di->blocksize;
+	if (length == di->blocksize)
+		temp = virtual;
+	else {
+		temp = di->blockbuf;
+		memset(temp + length, 0, di->blocksize - length);
+		memcpy(temp, virtual, length);
+	}
+	ret = dump_write(di, temp, physical, offset, *size);
+
+	return (ret);
+}
+
+
 void
 mkdumpheader(struct kerneldumpheader *kdh, char *magic, uint32_t archver,
     uint64_t dumplen, uint32_t blksz)
 {
+	size_t dstsize;
 
 	bzero(kdh, sizeof(*kdh));
-	strncpy(kdh->magic, magic, sizeof(kdh->magic));
-	strncpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
+	strlcpy(kdh->magic, magic, sizeof(kdh->magic));
+	strlcpy(kdh->architecture, MACHINE_ARCH, sizeof(kdh->architecture));
 	kdh->version = htod32(KERNELDUMPVERSION);
 	kdh->architectureversion = htod32(archver);
 	kdh->dumplength = htod64(dumplen);
 	kdh->dumptime = htod64(time_second);
 	kdh->blocksize = htod32(blksz);
-	strncpy(kdh->hostname, prison0.pr_hostname, sizeof(kdh->hostname));
-	strncpy(kdh->versionstring, version, sizeof(kdh->versionstring));
+	strlcpy(kdh->hostname, prison0.pr_hostname, sizeof(kdh->hostname));
+	dstsize = sizeof(kdh->versionstring);
+	if (strlcpy(kdh->versionstring, version, dstsize) >= dstsize)
+		kdh->versionstring[dstsize - 2] = '\n';
 	if (panicstr != NULL)
-		strncpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
+		strlcpy(kdh->panicstring, panicstr, sizeof(kdh->panicstring));
 	kdh->parity = kerneldump_parity(kdh);
 }
+
+#ifdef DDB
+DB_SHOW_COMMAND(panic, db_show_panic)
+{
+
+	if (panicstr == NULL)
+		db_printf("panicstr not set\n");
+	else
+		db_printf("panic: %s\n", panicstr);
+}
+#endif

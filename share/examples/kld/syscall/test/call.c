@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/share/examples/kld/syscall/test/call.c 253421 2013-07-17 13:13:44Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>

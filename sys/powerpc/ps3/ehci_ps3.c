@@ -22,11 +22,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/ps3/ehci_ps3.c 228483 2011-12-14 00:28:54Z hselasky $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ehci_ps3.c 228483 2011-12-14 00:28:54Z hselasky $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>
@@ -69,6 +69,17 @@ struct ps3_ehci_softc {
 	struct bus_space         tag;
 };
 
+static void
+ehci_ps3_post_reset(struct ehci_softc *ehci_softc)
+{
+	uint32_t usbmode;
+
+	/* Select big-endian mode */
+	usbmode = EOREAD4(ehci_softc, EHCI_USBMODE_NOLPM);
+	usbmode |= EHCI_UM_ES_BE;
+	EOWRITE4(ehci_softc, EHCI_USBMODE_NOLPM, usbmode);
+}
+
 static int
 ehci_ps3_probe(device_t dev)
 {
@@ -89,7 +100,9 @@ ehci_ps3_attach(device_t dev)
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
 	sc->sc_bus.devices_max = EHCI_MAX_DEVICES;
+	sc->sc_bus.dma_bits = 32;
 
+	/* get all DMA memory */
 	if (usb_bus_mem_alloc_all(&sc->sc_bus,
 	    USB_GET_DMA_TAG(dev), &ehci_iterate_hw_softc))
 		return (ENOMEM);
@@ -133,7 +146,7 @@ ehci_ps3_attach(device_t dev)
 		goto error;
 	}
 
-	sc->sc_flags |= EHCI_SCFLG_BIGEMMIO;
+	sc->sc_vendor_post_reset = ehci_ps3_post_reset;
 	err = ehci_init(sc);
 	if (err) {
 		device_printf(dev, "USB init failed err=%d\n", err);

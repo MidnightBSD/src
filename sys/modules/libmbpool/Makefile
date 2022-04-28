@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/libmbpool/Makefile 117624 2003-07-15 08:59:38Z harti $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../kern
+.PATH: ${SRCTOP}/sys/kern
 
 KMOD=	libmbpool
 SRCS=	subr_mbpool.c

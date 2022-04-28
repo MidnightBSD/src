@@ -25,18 +25,20 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/rtas_pci.c 255643 2013-09-17 17:37:04Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/rman.h>
 
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_pci.h>
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
+#include <dev/ofw/ofwpci.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -48,12 +50,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/rtas_pci.c 255643 2013-09
 #include <machine/resource.h>
 #include <machine/rtas.h>
 
-#include <sys/rman.h>
-
 #include <vm/vm.h>
 #include <vm/pmap.h>
 
-#include <powerpc/ofw/ofw_pci.h>
 #include <powerpc/pseries/plpar_iommu.h>
 
 #include "pcib_if.h"
@@ -74,11 +73,6 @@ static void		rtaspci_write_config(device_t, u_int, u_int, u_int,
 			    u_int, u_int32_t, int);
 
 /*
- * IOMMU LPAR interface
- */
-static bus_dma_tag_t	rtaspci_get_dma_tag(device_t dev, device_t child);
-
-/*
  * Driver methods.
  */
 static device_method_t	rtaspci_methods[] = {
@@ -90,19 +84,13 @@ static device_method_t	rtaspci_methods[] = {
 	DEVMETHOD(pcib_read_config,	rtaspci_read_config),
 	DEVMETHOD(pcib_write_config,	rtaspci_write_config),
 
-	/* IOMMU functions */
-	DEVMETHOD(bus_get_dma_tag,	rtaspci_get_dma_tag),
-#ifdef __powerpc64__
-	DEVMETHOD(iommu_map,		phyp_iommu_map),
-	DEVMETHOD(iommu_unmap,		phyp_iommu_unmap),
-#endif
-
 	DEVMETHOD_END
 };
 
 struct rtaspci_softc {
 	struct ofw_pci_softc	pci_sc;
-	bus_dma_tag_t		dma_tag;
+
+	struct ofw_pci_register	sc_pcir;
 
 	cell_t			read_pci_config, write_pci_config;
 	cell_t			ex_read_pci_config, ex_write_pci_config;
@@ -112,7 +100,7 @@ struct rtaspci_softc {
 static devclass_t	rtaspci_devclass;
 DEFINE_CLASS_1(pcib, rtaspci_driver, rtaspci_methods,
     sizeof(struct rtaspci_softc), ofw_pci_driver);
-DRIVER_MODULE(rtaspci, nexus, rtaspci_driver, rtaspci_devclass, 0, 0);
+DRIVER_MODULE(rtaspci, ofwbus, rtaspci_driver, rtaspci_devclass, 0, 0);
 
 static int
 rtaspci_probe(device_t dev)
@@ -140,23 +128,18 @@ rtaspci_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 
+	if (OF_getencprop(ofw_bus_get_node(dev), "reg", (pcell_t *)&sc->sc_pcir,
+	    sizeof(sc->sc_pcir)) == -1)
+		return (ENXIO);
+
 	sc->read_pci_config = rtas_token_lookup("read-pci-config");
 	sc->write_pci_config = rtas_token_lookup("write-pci-config");
 	sc->ex_read_pci_config = rtas_token_lookup("ibm,read-pci-config");
 	sc->ex_write_pci_config = rtas_token_lookup("ibm,write-pci-config");
 
 	sc->sc_extended_config = 0;
-	OF_getprop(ofw_bus_get_node(dev), "ibm,pci-config-space-type",
+	OF_getencprop(ofw_bus_get_node(dev), "ibm,pci-config-space-type",
 	    &sc->sc_extended_config, sizeof(sc->sc_extended_config));
-
-	bus_dma_tag_create(bus_get_dma_tag(dev),
-	    1, 0, BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR,
-	    NULL, NULL, BUS_SPACE_MAXSIZE, BUS_SPACE_UNRESTRICTED,
-	    BUS_SPACE_MAXSIZE, 0, NULL, NULL, &sc->dma_tag);
-#ifdef __powerpc64__
-	if (!(mfmsr() & PSL_HV))
-		phyp_iommu_set_dma_tag(dev, dev, sc->dma_tag);
-#endif
 
 	return (ofw_pci_attach(dev));
 }
@@ -179,8 +162,8 @@ rtaspci_read_config(device_t dev, u_int bus, u_int slot, u_int func, u_int reg,
 		
 	if (sc->ex_read_pci_config != -1)
 		error = rtas_call_method(sc->ex_read_pci_config, 4, 2,
-		    config_addr, sc->pci_sc.sc_pcir.phys_hi,
-		    sc->pci_sc.sc_pcir.phys_mid, width, &pcierror, &retval);
+		    config_addr, sc->sc_pcir.phys_hi,
+		    sc->sc_pcir.phys_mid, width, &pcierror, &retval);
 	else
 		error = rtas_call_method(sc->read_pci_config, 2, 2,
 		    config_addr, width, &pcierror, &retval);
@@ -218,19 +201,10 @@ rtaspci_write_config(device_t dev, u_int bus, u_int slot, u_int func,
 		
 	if (sc->ex_write_pci_config != -1)
 		rtas_call_method(sc->ex_write_pci_config, 5, 1, config_addr,
-		    sc->pci_sc.sc_pcir.phys_hi, sc->pci_sc.sc_pcir.phys_mid,
+		    sc->sc_pcir.phys_hi, sc->sc_pcir.phys_mid,
 		    width, val, &pcierror);
 	else
 		rtas_call_method(sc->write_pci_config, 3, 1, config_addr,
 		    width, val, &pcierror);
-}
-
-static bus_dma_tag_t
-rtaspci_get_dma_tag(device_t dev, device_t child)
-{
-	struct rtaspci_softc *sc;
-
-	sc = device_get_softc(dev);
-	return (sc->dma_tag);
 }
 

@@ -46,14 +46,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/fpu/fpu_explode.c 178030 2008-04-09 08:50:37Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>
 
 #include <machine/fpu.h>
 #include <machine/ieee.h>
-#include <machine/reg.h>
+#include <machine/pcb.h>
 
 #include <powerpc/fpu/fpu_arith.h>
 #include <powerpc/fpu/fpu_emu.h>
@@ -211,9 +211,9 @@ fpu_explode(struct fpemu *fe, struct fpn *fp, int type, int reg)
 	u_int s, *space;
 	u_int64_t l, *xspace;
 
-	xspace = (u_int64_t *)&fe->fe_fpstate->fpreg[reg];
+	xspace = (u_int64_t *)&fe->fe_fpstate->fpr[reg].fpr;
 	l = xspace[0];
-	space = (u_int *)&fe->fe_fpstate->fpreg[reg];
+	space = (u_int *)&fe->fe_fpstate->fpr[reg].fpr;
 	s = space[0];
 	fp->fp_sign = s >> 31;
 	fp->fp_sticky = 0;
@@ -235,6 +235,7 @@ fpu_explode(struct fpemu *fe, struct fpn *fp, int type, int reg)
 		s = fpu_dtof(fp, s, space[1]);
 		break;
 
+	default:
 		panic("fpu_explode");
 		panic("fpu_explode: invalid type %d", type);
 	}

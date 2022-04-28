@@ -1,6 +1,6 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_device.h 257375 2013-10-30 08:05:39Z hselasky $ */
+/* $FreeBSD$ */
 /*-
- * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2008-2019 Hans Petter Selasky. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,7 @@ struct usb_symlink;		/* UGEN */
 #define	USB_UNCFG_FLAG_NONE 0x00
 #define	USB_UNCFG_FLAG_FREE_EP0	0x02		/* endpoint zero is freed */
 
-struct usb_clear_stall_msg {
+struct usb_udev_msg {
 	struct usb_proc_msg hdr;
 	struct usb_device *udev;
 };
@@ -139,7 +139,7 @@ struct usb_hw_ep_scratch {
 	struct usb_hw_ep_scratch_sub *ep_max;
 	struct usb_config_descriptor *cd;
 	struct usb_device *udev;
-	struct usb_bus_methods *methods;
+	const struct usb_bus_methods *methods;
 	uint8_t	bmOutAlloc[(USB_EP_MAX + 15) / 16];
 	uint8_t	bmInAlloc[(USB_EP_MAX + 15) / 16];
 };
@@ -162,7 +162,7 @@ struct usb_temp_setup {
 
 /* 
  * The scratch area for USB devices. Access to this structure is
- * protected by the enumeration SX lock.
+ * protected by the control SX lock.
  */
 union usb_device_scratch {
 	struct usb_hw_ep_scratch hw_ep_scratch[1];
@@ -175,14 +175,27 @@ union usb_device_scratch {
 };
 
 /*
+ * Helper structure to keep track of USB device statistics.
+ */
+struct usb_device_statistics {
+	uint32_t uds_requests[4];
+};
+
+/*
  * The following structure defines an USB device. There exists one of
  * these structures for every USB device.
  */
 struct usb_device {
-	struct usb_clear_stall_msg cs_msg[2];	/* generic clear stall
-						 * messages */
+	/* statistics */
+	struct usb_device_statistics stats_err;
+	struct usb_device_statistics stats_ok;
+  	struct usb_device_statistics stats_cancelled;
+
+	/* generic clear stall message */
+	struct usb_udev_msg cs_msg[2];
 	struct sx enum_sx;
 	struct sx sr_sx;
+  	struct sx ctrl_sx;
 	struct mtx device_mtx;
 	struct cv ctrlreq_cv;
 	struct cv ref_cv;
@@ -228,6 +241,7 @@ struct usb_device {
 	uint8_t	address;		/* device addess */
 	uint8_t	device_index;		/* device index in "bus->devices" */
 	uint8_t	controller_slot_id;	/* controller specific value */
+	uint8_t next_config_index;	/* used by USB_RE_ENUM_SET_CONFIG */
 	uint8_t	curr_config_index;	/* current configuration index */
 	uint8_t	curr_config_no;		/* current configuration number */
 	uint8_t	depth;			/* distance from root HUB */
@@ -241,6 +255,7 @@ struct usb_device {
 #define	USB_RE_ENUM_DONE	0
 #define	USB_RE_ENUM_START	1
 #define	USB_RE_ENUM_PWR_OFF	2
+#define	USB_RE_ENUM_SET_CONFIG	3
 	uint8_t ifaces_max;		/* number of interfaces present */
 	uint8_t endpoints_max;		/* number of endpoints present */
 
@@ -291,6 +306,7 @@ struct usb_device *usb_alloc_device(device_t parent_dev, struct usb_bus *bus,
 struct usb_fs_privdata *usb_make_dev(struct usb_device *, const char *,
 		    int, int, int, uid_t, gid_t, int);
 void	usb_destroy_dev(struct usb_fs_privdata *);
+void	usb_destroy_dev_sync(struct usb_fs_privdata *);
 #endif
 usb_error_t	usb_probe_and_attach(struct usb_device *udev,
 		    uint8_t iface_index);
@@ -311,9 +327,20 @@ void	usb_set_device_state(struct usb_device *, enum usb_dev_state);
 enum usb_dev_state usb_get_device_state(struct usb_device *);
 
 uint8_t	usbd_enum_lock(struct usb_device *);
+#if USB_HAVE_UGEN
+uint8_t	usbd_enum_lock_sig(struct usb_device *);
+#endif
 void	usbd_enum_unlock(struct usb_device *);
 void	usbd_sr_lock(struct usb_device *);
 void	usbd_sr_unlock(struct usb_device *);
+uint8_t	usbd_ctrl_lock(struct usb_device *);
+void	usbd_ctrl_unlock(struct usb_device *);
 uint8_t usbd_enum_is_locked(struct usb_device *);
+
+#if USB_HAVE_TT_SUPPORT
+void	uhub_tt_buffer_reset_async_locked(struct usb_device *, struct usb_endpoint *);
+#endif
+
+uint8_t uhub_count_active_host_ports(struct usb_device *, enum usb_dev_speed);
 
 #endif					/* _USB_DEVICE_H_ */

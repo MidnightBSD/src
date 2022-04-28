@@ -16,10 +16,10 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_samedomain.c,v 1.5.18.1 2005/04/27 05:01:09 sra Exp $";
+static const char rcsid[] = "$Id: ns_samedomain.c,v 1.6 2005/04/27 04:56:40 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/nameser/ns_samedomain.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/nameser/ns_samedomain.c 170244 2007-
  *	Check whether a name belongs to a domain.
  *
  * Inputs:
- *\li	a - the domain whose ancestory is being verified
+ *\li	a - the domain whose ancestry is being verified
  *\li	b - the potential ancestor we're checking against
  *
  * Return:

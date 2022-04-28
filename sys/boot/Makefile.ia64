@@ -1,4 +1,0 @@
-# $FreeBSD: release/10.0.0/sys/boot/Makefile.ia64 239378 2012-08-18 23:23:14Z marcel $
-
-SUBDIR+=		efi
-SUBDIR+=		zfs

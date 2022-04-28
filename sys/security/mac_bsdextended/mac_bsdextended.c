@@ -37,7 +37,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/security/mac_bsdextended/mac_bsdextended.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD$
  */
 
 /*
@@ -76,9 +76,8 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, bsdextended, CTLFLAG_RW, 0,
     "TrustedBSD extended BSD MAC policy controls");
 
 static int	ugidfw_enabled = 1;
-SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &ugidfw_enabled, 0, "Enforce extended BSD policy");
-TUNABLE_INT("security.mac.bsdextended.enabled", &ugidfw_enabled);
 
 static MALLOC_DEFINE(M_MACBSDEXTENDED, "mac_bsdextended",
     "BSD Extended MAC rule");
@@ -126,7 +125,7 @@ ugidfw_rule_valid(struct mac_bsdextended_rule *rule)
 		return (EINVAL);
 	if ((rule->mbr_object.mbo_neg | MBO_ALL_FLAGS) != MBO_ALL_FLAGS)
 		return (EINVAL);
-	if ((rule->mbr_object.mbo_neg | MBO_TYPE_DEFINED) &&
+	if (((rule->mbr_object.mbo_flags & MBO_TYPE_DEFINED) != 0) &&
 	    (rule->mbr_object.mbo_type | MBO_ALL_TYPE) != MBO_ALL_TYPE)
 		return (EINVAL);
 	if ((rule->mbr_mode | MBI_ALLPERM) != MBI_ALLPERM)

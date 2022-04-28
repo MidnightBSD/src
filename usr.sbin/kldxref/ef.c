@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/kldxref/ef.c 251439 2013-06-05 21:55:20Z delphij $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -47,6 +47,7 @@
 
 #include "ef.h"
 
+#define	MAXSEGS 3
 struct ef_file {
 	char*		ef_name;
 	struct elf_file *ef_efile;
@@ -68,7 +69,7 @@ struct ef_file {
 	Elf_Off		ef_symoff;
 	Elf_Sym*	ef_symtab;
 	int		ef_nsegs;
-	Elf_Phdr *	ef_segs[2];
+	Elf_Phdr *	ef_segs[MAXSEGS];
 	int		ef_verbose;
 	Elf_Rel *	ef_rel;			/* relocation table */
 	int		ef_relsz;		/* number of entries */
@@ -87,6 +88,8 @@ static int ef_read_entry(elf_file_t ef, Elf_Off offset, size_t len, void **ptr);
 static int ef_seg_read(elf_file_t ef, Elf_Off offset, size_t len, void *dest);
 static int ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len,
     void *dest);
+static int ef_seg_read_string(elf_file_t ef, Elf_Off offset, size_t len,
+    char *dest);
 static int ef_seg_read_entry(elf_file_t ef, Elf_Off offset, size_t len,
     void **ptr);
 static int ef_seg_read_entry_rel(elf_file_t ef, Elf_Off offset, size_t len,
@@ -103,6 +106,7 @@ static struct elf_file_ops ef_file_ops = {
 	ef_read_entry,
 	ef_seg_read,
 	ef_seg_read_rel,
+	ef_seg_read_string,
 	ef_seg_read_entry,
 	ef_seg_read_entry_rel,
 	ef_symaddr,
@@ -472,7 +476,7 @@ ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len, void*dest)
 
 	if (ofs == 0) {
 		if (ef->ef_verbose)
-			warnx("ef_seg_read(%s): zero offset (%lx:%ld)",
+			warnx("ef_seg_read_rel(%s): zero offset (%lx:%ld)",
 			    ef->ef_name, (long)offset, ofs);
 		return EFAULT;
 	}
@@ -491,6 +495,28 @@ ef_seg_read_rel(elf_file_t ef, Elf_Off offset, size_t len, void*dest)
 		if (error != 0)
 			return (error);
 	}
+	return (0);
+}
+
+static int
+ef_seg_read_string(elf_file_t ef, Elf_Off offset, size_t len, char *dest)
+{
+	u_long ofs = ef_get_offset(ef, offset);
+	ssize_t r;
+
+	if (ofs == 0 || ofs == (Elf_Off)-1) {
+		if (ef->ef_verbose)
+			warnx("ef_seg_read_string(%s): bad offset (%lx:%ld)",
+			    ef->ef_name, (long)offset, ofs);
+		return (EFAULT);
+	}
+
+	r = pread(ef->ef_fd, dest, len, ofs);
+	if (r < 0)
+		return (errno);
+	if (strnlen(dest, len) == len)
+		return (EFAULT);
+
 	return (0);
 }
 
@@ -580,12 +606,9 @@ ef_open(const char *filename, struct elf_file *efile, int verbose)
 				ef_print_phdr(phdr);
 			switch (phdr->p_type) {
 			case PT_LOAD:
-				if (nsegs == 2) {
-					warnx("%s: too many sections",
-					    filename);
-					break;
-				}
-				ef->ef_segs[nsegs++] = phdr;
+				if (nsegs < MAXSEGS)
+					ef->ef_segs[nsegs] = phdr;
+				nsegs++;
 				break;
 			case PT_PHDR:
 				break;
@@ -597,12 +620,15 @@ ef_open(const char *filename, struct elf_file *efile, int verbose)
 		}
 		if (verbose > 1)
 			printf("\n");
-		ef->ef_nsegs = nsegs;
 		if (phdyn == NULL) {
 			warnx("Skipping %s: not dynamically-linked",
 			    filename);
 			break;
+		} else if (nsegs > MAXSEGS) {
+			warnx("%s: too many segments", filename);
+			break;
 		}
+		ef->ef_nsegs = nsegs;
 		if (ef_read_entry(ef, phdyn->p_offset,
 			phdyn->p_filesz, (void**)&ef->ef_dyn) != 0) {
 			printf("ef_read_entry failed\n");

@@ -4,6 +4,8 @@
  *-------------------------------------------------------------------------
  */
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1995 Andrew McRae.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +31,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/dumpcis/cardinfo.h 199141 2009-11-10 14:32:09Z jhb $ */
+/* $FreeBSD$ */
 
 #ifndef	_PCCARD_CARDINFO_H_
 #define	_PCCARD_CARDINFO_H_

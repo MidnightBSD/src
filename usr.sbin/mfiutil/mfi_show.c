@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_show.c 251516 2013-06-08 02:54:59Z sbruno $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -320,7 +322,7 @@ print_pd(struct mfi_pd_info *info, int state_len)
 	const char *s;
 	char buf[256];
 
-	humanize_number(buf, sizeof(buf), info->raw_size * 512, "",
+	humanize_number(buf, 6, info->raw_size * 512, "",
 	    HN_AUTOSCALE, HN_B | HN_NOSPACE |HN_DECIMAL);
 	printf("(%6s) ", buf);
 	if (info->state.ddf.v.pd_type.is_foreign) {
@@ -766,7 +768,7 @@ show_progress(int ac, char **av __unused)
 			printf("drive %s ", mfi_drive_name(NULL, device_id,
 			    MFI_DNAME_DEVICE_ID|MFI_DNAME_HONOR_OPTS));
 			mfi_display_progress("Clear", &pinfo.prog_info.clear);
-			
+			busy = 1;
 		}
 	}
 

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/wb/if_wbreg.h 226995 2011-11-01 16:13:59Z marius $
+ * $FreeBSD$
  */
 
 /*

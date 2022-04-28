@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)nice.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/nice.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -43,14 +43,20 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/nice.c 165903 2007-01-09 00:28:1
  * Backwards compatible nice.
  */
 int
-nice(incr)
-	int incr;
+nice(int incr)
 {
-	int prio;
+	int saverrno, prio;
 
+	saverrno = errno;
 	errno = 0;
 	prio = getpriority(PRIO_PROCESS, 0);
-	if (prio == -1 && errno)
+	if (prio == -1 && errno != 0)
 		return (-1);
-	return (setpriority(PRIO_PROCESS, 0, prio + incr));
+	if (setpriority(PRIO_PROCESS, 0, prio + incr) == -1) {
+		if (errno == EACCES)
+			errno = EPERM;
+		return (-1);
+	}
+	errno = saverrno;
+	return (0);
 }

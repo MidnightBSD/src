@@ -16,4 +16,4 @@ more general (and less complicated) sysctl(3).
 (As of 1998.07.31 this program is no longer used in PicoBSD. See sps(1) in
 TinyWare collection).
 
-$FreeBSD: release/10.0.0/release/picobsd/tinyware/aps/README 50479 1999-08-28 01:35:59Z peter $
+$FreeBSD$

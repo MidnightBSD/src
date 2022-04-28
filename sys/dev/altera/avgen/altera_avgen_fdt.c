@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen_fdt.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen_fdt.c 24538
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/vm.h>
 
 #include <vm/vm.h>
 
@@ -61,6 +60,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen_fdt.c 24538
 static int
 altera_avgen_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (ofw_bus_is_compatible(dev, "sri-cambridge,avgen")) {
 		device_set_desc(dev, "Generic Altera Avalon device attachment");
@@ -118,11 +120,11 @@ altera_avgen_fdt_attach(device_t dev)
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->avg_rid,
 		    sc->avg_res);
 	if (str_fileio != NULL)
-		free(str_fileio, M_OFWPROP);
+		OF_prop_free(str_fileio);
 	if (str_mmapio != NULL)
-		free(str_mmapio, M_OFWPROP);
+		OF_prop_free(str_mmapio);
 	if (str_devname != NULL)
-		free(str_devname, M_OFWPROP);
+		OF_prop_free(str_devname);
 	return (error);
 }
 

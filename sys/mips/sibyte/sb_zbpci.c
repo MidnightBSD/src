@@ -44,7 +44,6 @@
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcib_private.h>
 
-#include <machine/pmap.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
 
@@ -53,7 +52,7 @@
 #include "sb_bus_space.h"
 #include "sb_scd.h"
 
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/sibyte/sb_zbpci.c 254025 2013-08-07 06:21:20Z jeff $");
+__FBSDID("$FreeBSD$");
 
 static struct {
 	vm_offset_t vaddr;
@@ -165,7 +164,7 @@ zbpci_attach(device_t dev)
 
 static struct resource *
 zbpci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-		     u_long start, u_long end, u_long count, u_int flags)
+		     rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct resource *res;
 
@@ -346,7 +345,7 @@ zbpci_config_space_va(int bus, int slot, int func, int reg, int bytes)
 #if _BYTE_ORDER == _BIG_ENDIAN
 		pa = pa ^ (4 - bytes);
 #endif
-		pa_page = pa & ~(PAGE_SIZE - 1);
+		pa_page = rounddown2(pa, PAGE_SIZE);
 		if (zbpci_config_space[cpu].paddr != pa_page) {
 			pmap_kremove(va_page);
 			pmap_kenter_attr(va_page, pa_page, PTE_C_UNCACHED);

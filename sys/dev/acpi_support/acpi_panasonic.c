@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpi_support/acpi_panasonic.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -493,6 +493,10 @@ acpi_panasonic_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 		}
 		ACPI_SERIAL_END(panasonic);
 		break;
+	case 0x81:
+		if (!bootverbose)
+			break;
+		/* FALLTHROUGH */
 	default:
 		device_printf(sc->dev, "unknown notify: %#x\n", notify);
 		break;

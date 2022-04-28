@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/mv_ts.c 239371 2012-08-18 12:37:07Z hrs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,7 +35,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/mv/mv_ts.c 239371 2012-08-18 12:37:07
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/sysctl.h>
-#include <machine/fdt.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofw_bus.h>
@@ -59,6 +58,9 @@ ts_probe(device_t dev)
 {
 	uint32_t d, r;
 
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
 	if (!ofw_bus_is_compatible(dev, "mrvl,ts"))
 		return (ENXIO);
 	soc_id(&d, &r);
@@ -78,7 +80,7 @@ ts_probe(device_t dev)
 #define	MV_TEMP_SENS_OFFS	10
 #define	MV_TEMP_SENS_MASK	0x1ff
 #define	MV_TEMP_SENS_READ_MAX	16
-#define	TZ_ZEROC		2732
+#define	TZ_ZEROC		2731
 #define	MV_TEMP_CONVERT(x)	((((322 - x) * 100000) / 13625) + TZ_ZEROC)
 
 /*

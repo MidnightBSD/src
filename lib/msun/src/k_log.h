@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/k_log.h 226376 2011-10-15 05:23:28Z das $");
+__FBSDID("$FreeBSD$");
 
 /*
  * k_log1p(f):

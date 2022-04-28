@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ce/ceddk.c 154899 2006-01-27 09:02:09Z rik $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cx/machdep.h>
 #include <dev/ce/ceddk.h>
@@ -623,7 +623,7 @@ void ce_stop_chan (ce_chan_t *c)
 
 	/* XXXRIK: This function should be for comleteness, but for now I
 	 * don't use it. So I just start to write and didn't finished it yet.
-	 * It and it is VERY BUGGY!!! Do not use it. If you realy
+	 * It and it is VERY BUGGY!!! Do not use it. If you really
 	 * need it ask me to fix it or rewrite it by your self.
 	 * Note: most buggy part of it in ce_on_config_stop!
 	 */

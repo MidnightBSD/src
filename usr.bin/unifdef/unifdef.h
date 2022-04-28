@@ -1,5 +1,7 @@
-/*
- * Copyright (c) 2012 Tony Finch <dot@dotat.at>
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2012 - 2013 Tony Finch <dot@dotat.at>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/unifdef/unifdef.h 248849 2013-03-28 20:33:07Z fanf $
+ * $FreeBSD$
  */
 
 #include <sys/stat.h>
@@ -36,9 +38,11 @@
 #include <string.h>
 #include <unistd.h>
 
-/* portabiity stubs */
+/* portability stubs */
 
 #define fbinmode(fp) (fp)
+
+#define replace(old,new) rename(old,new)
 
 static FILE *
 mktempmode(char *tmp, int mode)

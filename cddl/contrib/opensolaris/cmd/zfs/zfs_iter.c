@@ -18,10 +18,12 @@
  *
  * CDDL HEADER END
  */
+
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 Pawel Jakub Dawidek <pawel@dawidek.net>.
- * All rights reserved.
+ * Copyright (c) 2012 Pawel Jakub Dawidek. All rights reserved.
+ * Copyright 2013 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright (c) 2013 by Delphix. All rights reserved.
  */
 
 #include <libintl.h>
@@ -70,7 +72,7 @@ uu_avl_pool_t *avl_pool;
  * Include snaps if they were requested or if this a zfs list where types
  * were not specified and the "listsnapshots" property is set on this pool.
  */
-static int
+static boolean_t
 zfs_include_snapshots(zfs_handle_t *zhp, callback_data_t *cb)
 {
 	zpool_handle_t *zph;
@@ -90,8 +92,9 @@ static int
 zfs_callback(zfs_handle_t *zhp, void *data)
 {
 	callback_data_t *cb = data;
-	int dontclose = 0;
-	int include_snaps = zfs_include_snapshots(zhp, cb);
+	boolean_t should_close = B_TRUE;
+	boolean_t include_snaps = zfs_include_snapshots(zhp, cb);
+	boolean_t include_bmarks = (cb->cb_types & ZFS_TYPE_BOOKMARK);
 
 	if ((zfs_get_type(zhp) & cb->cb_types) ||
 	    ((zfs_get_type(zhp) == ZFS_TYPE_SNAPSHOT) && include_snaps)) {
@@ -109,14 +112,15 @@ zfs_callback(zfs_handle_t *zhp, void *data)
 					    cb->cb_props_table);
 
 				if (zfs_expand_proplist(zhp, cb->cb_proplist,
-				    (cb->cb_flags & ZFS_ITER_RECVD_PROPS))
+				    (cb->cb_flags & ZFS_ITER_RECVD_PROPS),
+				    (cb->cb_flags & ZFS_ITER_LITERAL_PROPS))
 				    != 0) {
 					free(node);
 					return (-1);
 				}
 			}
 			uu_avl_insert(cb->cb_avl, node, idx);
-			dontclose = 1;
+			should_close = B_FALSE;
 		} else {
 			free(node);
 		}
@@ -131,15 +135,18 @@ zfs_callback(zfs_handle_t *zhp, void *data)
 		cb->cb_depth++;
 		if (zfs_get_type(zhp) == ZFS_TYPE_FILESYSTEM)
 			(void) zfs_iter_filesystems(zhp, zfs_callback, data);
-		if ((zfs_get_type(zhp) != ZFS_TYPE_SNAPSHOT) && include_snaps) {
+		if (((zfs_get_type(zhp) & (ZFS_TYPE_SNAPSHOT |
+		    ZFS_TYPE_BOOKMARK)) == 0) && include_snaps)
 			(void) zfs_iter_snapshots(zhp,
 			    (cb->cb_flags & ZFS_ITER_SIMPLE) != 0, zfs_callback,
 			    data);
-		}
+		if (((zfs_get_type(zhp) & (ZFS_TYPE_SNAPSHOT |
+		    ZFS_TYPE_BOOKMARK)) == 0) && include_bmarks)
+			(void) zfs_iter_bookmarks(zhp, zfs_callback, data);
 		cb->cb_depth--;
 	}
 
-	if (!dontclose)
+	if (should_close)
 		zfs_close(zhp);
 
 	return (0);
@@ -218,7 +225,7 @@ zfs_compare(const void *larg, const void *rarg, void *unused)
 		*rat = '\0';
 
 	ret = strcmp(lname, rname);
-	if (ret == 0) {
+	if (ret == 0 && (lat != NULL || rat != NULL)) {
 		/*
 		 * If we're comparing a dataset to one of its snapshots, we
 		 * always make the full dataset first.
@@ -312,8 +319,8 @@ zfs_sort(const void *larg, const void *rarg, void *data)
 		} else if (psc->sc_prop == ZFS_PROP_NAME) {
 			lvalid = rvalid = B_TRUE;
 
-			(void) strlcpy(lbuf, zfs_get_name(l), sizeof(lbuf));
-			(void) strlcpy(rbuf, zfs_get_name(r), sizeof(rbuf));
+			(void) strlcpy(lbuf, zfs_get_name(l), sizeof (lbuf));
+			(void) strlcpy(rbuf, zfs_get_name(r), sizeof (rbuf));
 
 			lstr = lbuf;
 			rstr = rbuf;
@@ -438,13 +445,13 @@ zfs_for_each(int argc, char **argv, int flags, zfs_type_t types,
 
 		/*
 		 * If we're recursive, then we always allow filesystems as
-		 * arguments.  If we also are interested in snapshots, then we
-		 * can take volumes as well.
+		 * arguments.  If we also are interested in snapshots or
+		 * bookmarks, then we can take volumes as well.
 		 */
 		argtype = types;
 		if (flags & ZFS_ITER_RECURSE) {
 			argtype |= ZFS_TYPE_FILESYSTEM;
-			if (types & ZFS_TYPE_SNAPSHOT)
+			if (types & (ZFS_TYPE_SNAPSHOT | ZFS_TYPE_BOOKMARK))
 				argtype |= ZFS_TYPE_VOLUME;
 		}
 

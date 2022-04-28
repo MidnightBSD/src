@@ -33,10 +33,11 @@ static const char sccsid[] = "@(#)dir.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/dir.c 247212 2013-02-24 06:44:29Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/sysctl.h>
 
 #include <ufs/ufs/dinode.h>
@@ -48,23 +49,17 @@ __FBSDID("$FreeBSD: release/10.0.0/sbin/fsck_ffs/dir.c 247212 2013-02-24 06:44:2
 
 #include "fsck.h"
 
-const char	*lfname = "lost+found";
-int	lfmode = 0700;
-struct	dirtemplate emptydir = {
+static struct	dirtemplate emptydir = {
 	0, DIRBLKSIZ, DT_UNKNOWN, 0, "",
 	0, 0, DT_UNKNOWN, 0, ""
 };
-struct	dirtemplate dirhead = {
+static struct	dirtemplate dirhead = {
 	0, 12, DT_DIR, 1, ".",
 	0, DIRBLKSIZ - 12, DT_DIR, 2, ".."
 };
-struct	odirtemplate odirhead = {
-	0, 12, 1, ".",
-	0, DIRBLKSIZ - 12, 2, ".."
-};
 
 static int chgino(struct inodesc *);
-static int dircheck(struct inodesc *, struct direct *);
+static int dircheck(struct inodesc *, struct bufarea *, struct direct *);
 static int expanddir(union dinode *dp, char *name);
 static void freedir(ino_t ino, ino_t parent);
 static struct direct *fsck_readdir(struct inodesc *);
@@ -133,6 +128,7 @@ dirscan(struct inodesc *idesc)
 			    (size_t)dsize);
 			dirty(bp);
 			sbdirty();
+			rerun = 1;
 		}
 		if (n & STOP)
 			return (n);
@@ -141,99 +137,179 @@ dirscan(struct inodesc *idesc)
 }
 
 /*
- * get next entry in a directory.
+ * Get and verify the next entry in a directory.
+ * We also verify that if there is another entry in the block that it is
+ * valid, so if it is not valid it can be subsumed into the current entry. 
  */
 static struct direct *
 fsck_readdir(struct inodesc *idesc)
 {
 	struct direct *dp, *ndp;
 	struct bufarea *bp;
-	long size, blksiz, fix, dploc;
+	long size, blksiz, subsume_ndp;
 
+	subsume_ndp = 0;
 	blksiz = idesc->id_numfrags * sblock.fs_fsize;
-	bp = getdirblk(idesc->id_blkno, blksiz);
-	if (idesc->id_loc % DIRBLKSIZ == 0 && idesc->id_filesize > 0 &&
-	    idesc->id_loc < blksiz) {
-		dp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
-		if (dircheck(idesc, dp))
-			goto dpok;
-		if (idesc->id_fix == IGNORE)
-			return (0);
-		fix = dofix(idesc, "DIRECTORY CORRUPTED");
-		bp = getdirblk(idesc->id_blkno, blksiz);
-		dp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
-		dp->d_reclen = DIRBLKSIZ;
-		dp->d_ino = 0;
-		dp->d_type = 0;
-		dp->d_namlen = 0;
-		dp->d_name[0] = '\0';
-		if (fix)
-			dirty(bp);
-		idesc->id_loc += DIRBLKSIZ;
-		idesc->id_filesize -= DIRBLKSIZ;
-		return (dp);
-	}
-dpok:
 	if (idesc->id_filesize <= 0 || idesc->id_loc >= blksiz)
-		return NULL;
-	dploc = idesc->id_loc;
-	dp = (struct direct *)(bp->b_un.b_buf + dploc);
-	idesc->id_loc += dp->d_reclen;
-	idesc->id_filesize -= dp->d_reclen;
-	if ((idesc->id_loc % DIRBLKSIZ) == 0)
-		return (dp);
-	ndp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
-	if (idesc->id_loc < blksiz && idesc->id_filesize > 0 &&
-	    dircheck(idesc, ndp) == 0) {
-		size = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
-		idesc->id_loc += size;
-		idesc->id_filesize -= size;
-		if (idesc->id_fix == IGNORE)
-			return (0);
-		fix = dofix(idesc, "DIRECTORY CORRUPTED");
-		bp = getdirblk(idesc->id_blkno, blksiz);
-		dp = (struct direct *)(bp->b_un.b_buf + dploc);
-		dp->d_reclen += size;
-		if (fix)
-			dirty(bp);
+		return (NULL);
+	bp = getdirblk(idesc->id_blkno, blksiz);
+	dp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
+	/*
+	 * Only need to check current entry if it is the first in the
+	 * the block, as later entries will have been checked in the
+	 * previous call to this function.
+	 */
+	if (idesc->id_loc % DIRBLKSIZ != 0 || dircheck(idesc, bp, dp) != 0) {
+		/*
+		 * Current entry is good, update to point at next.
+		 */
+		idesc->id_loc += dp->d_reclen;
+		idesc->id_filesize -= dp->d_reclen;
+		/*
+		 * If at end of directory block, just return this entry.
+		 */
+		if (idesc->id_filesize <= 0 || idesc->id_loc >= blksiz ||
+		    idesc->id_loc % DIRBLKSIZ == 0)
+			return (dp);
+		/*
+		 * If the next entry good, return this entry.
+		 */
+		ndp = (struct direct *)(bp->b_un.b_buf + idesc->id_loc);
+		if (dircheck(idesc, bp, ndp) != 0)
+			return (dp);
+		/*
+		 * The next entry is bad, so subsume it and the remainder
+		 * of this directory block into this entry.
+		 */
+		subsume_ndp = 1;
 	}
+	/*
+	 * Current or next entry is bad. Zap current entry or
+	 * subsume next entry into current entry as appropriate.
+	 */
+	size = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
+	idesc->id_loc += size;
+	idesc->id_filesize -= size;
+	if (idesc->id_fix == IGNORE)
+		return (NULL);
+	if (subsume_ndp) {
+		memset(ndp, 0, size);
+		dp->d_reclen += size;
+	} else {
+		memset(dp, 0, size);
+		dp->d_reclen = size;
+	}
+	if (dofix(idesc, "DIRECTORY CORRUPTED"))
+		dirty(bp);
 	return (dp);
 }
 
 /*
  * Verify that a directory entry is valid.
  * This is a superset of the checks made in the kernel.
+ * Also optionally clears padding and unused directory space.
+ *
+ * Returns 0 if the entry is bad, 1 if the entry is good.
  */
 static int
-dircheck(struct inodesc *idesc, struct direct *dp)
+dircheck(struct inodesc *idesc, struct bufarea *bp, struct direct *dp)
 {
 	size_t size;
 	char *cp;
-	u_char type;
 	u_int8_t namlen;
-	int spaceleft;
+	int spaceleft, modified, unused;
 
 	spaceleft = DIRBLKSIZ - (idesc->id_loc % DIRBLKSIZ);
+	size = DIRSIZ(0, dp);
 	if (dp->d_reclen == 0 ||
 	    dp->d_reclen > spaceleft ||
-	    (dp->d_reclen & 0x3) != 0)
-		goto bad;
-	if (dp->d_ino == 0)
-		return (1);
-	size = DIRSIZ(0, dp);
-	namlen = dp->d_namlen;
-	type = dp->d_type;
-	if (dp->d_reclen < size ||
+	    dp->d_reclen < size ||
 	    idesc->id_filesize < size ||
-	    namlen == 0 ||
-	    type > 15)
+	    (dp->d_reclen & (DIR_ROUNDUP - 1)) != 0)
 		goto bad;
-	for (cp = dp->d_name, size = 0; size < namlen; size++)
-		if (*cp == '\0' || (*cp++ == '/'))
+	modified = 0;
+	if (dp->d_ino == 0) {
+		if (!zflag || fswritefd < 0)
+			return (1);
+		/*
+		 * Special case of an unused directory entry. Normally only
+		 * occurs at the beginning of a directory block when the block
+		 * contains no entries. Other than the first entry in a
+		 * directory block, the kernel coalesces unused space with
+		 * the previous entry by extending its d_reclen. However,
+		 * when cleaning up a directory, fsck may set d_ino to zero
+		 * in the middle of a directory block. If we're clearing out
+		 * directory cruft (-z flag), then make sure that all directory
+		 * space in entries with d_ino == 0 gets fully cleared.
+		 */
+		if (dp->d_type != 0) {
+			dp->d_type = 0;
+			modified = 1;
+		}
+		if (dp->d_namlen != 0) {
+			dp->d_namlen = 0;
+			modified = 1;
+		}
+		unused = dp->d_reclen - __offsetof(struct direct, d_name);
+		for (cp = dp->d_name; unused > 0; unused--, cp++) {
+			if (*cp != '\0') {
+				*cp = '\0';
+				modified = 1;
+			}
+		}
+		if (modified)
+			dirty(bp);
+		return (1);
+	}
+	/*
+	 * The d_type field should not be tested here. A bad type is an error
+	 * in the entry itself but is not a corruption of the directory
+	 * structure itself. So blowing away all the remaining entries in the
+	 * directory block is inappropriate. Rather the type error should be
+	 * checked in pass1 and fixed there.
+	 *
+	 * The name validation should also be done in pass1 although the
+	 * check to see if the name is longer than fits in the space
+	 * allocated for it (i.e., the *cp != '\0' fails after exiting the
+	 * loop below) then it really is a structural error that requires
+	 * the stronger action taken here.
+	 */
+	namlen = dp->d_namlen;
+	if (namlen == 0 || dp->d_type > 15)
+		goto bad;
+	for (cp = dp->d_name, size = 0; size < namlen; size++) {
+		if (*cp == '\0' || *cp++ == '/')
 			goto bad;
+	}
 	if (*cp != '\0')
 		goto bad;
+	if (zflag && fswritefd >= 0) {
+		/*
+		 * Clear unused directory entry space, including the d_name
+		 * padding.
+		 */
+		/* First figure the number of pad bytes. */
+		unused = roundup2(namlen + 1, DIR_ROUNDUP) - (namlen + 1);
+
+		/* Add in the free space to the end of the record. */
+		unused += dp->d_reclen - DIRSIZ(0, dp);
+
+		/*
+		 * Now clear out the unused space, keeping track if we actually
+		 * changed anything.
+		 */
+		for (cp = &dp->d_name[namlen + 1]; unused > 0; unused--, cp++) {
+			if (*cp != '\0') {
+				*cp = '\0';
+				modified = 1;
+			}
+		}
+		
+		if (modified)
+			dirty(bp);
+	}
 	return (1);
+
 bad:
 	if (debug)
 		printf("Bad dir: ino %d reclen %d namlen %d type %d name %s\n",
@@ -325,7 +401,7 @@ adjust(struct inodesc *idesc, int lcnt)
 		if (preen || reply("ADJUST") == 1) {
 			if (bkgrdflag == 0) {
 				DIP_SET(dp, di_nlink, DIP(dp, di_nlink) - lcnt);
-				inodirty();
+				inodirty(dp);
 			} else {
 				cmd.value = idesc->id_number;
 				cmd.size = -lcnt;
@@ -450,7 +526,7 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
 			pfatal("SORRY. CANNOT CREATE lost+found DIRECTORY\n\n");
 			return (0);
 		}
-		inodirty();
+		inodirty(dp);
 		idesc.id_type = ADDR;
 		idesc.id_func = pass4check;
 		idesc.id_number = oldlfdir;
@@ -475,7 +551,7 @@ linkup(ino_t orphan, ino_t parentdir, char *name)
 			(void)makeentry(orphan, lfdir, "..");
 		dp = ginode(lfdir);
 		DIP_SET(dp, di_nlink, DIP(dp, di_nlink) + 1);
-		inodirty();
+		inodirty(dp);
 		inoinfo(lfdir)->ino_linkcnt++;
 		pwarn("DIR I=%lu CONNECTED. ", (u_long)orphan);
 		if (parentdir != (ino_t)-1) {
@@ -536,7 +612,7 @@ makeentry(ino_t parent, ino_t ino, const char *name)
 	dp = ginode(parent);
 	if (DIP(dp, di_size) % DIRBLKSIZ) {
 		DIP_SET(dp, di_size, roundup(DIP(dp, di_size), DIRBLKSIZ));
-		inodirty();
+		inodirty(dp);
 	}
 	if ((ckinode(dp, &idesc) & ALTERED) != 0)
 		return (1);
@@ -592,7 +668,7 @@ expanddir(union dinode *dp, char *name)
 	else if (reply("EXPAND") == 0)
 		goto bad;
 	dirty(bp);
-	inodirty();
+	inodirty(dp);
 	return (1);
 bad:
 	DIP_SET(dp, di_db[lastbn], DIP(dp, di_db[lastbn + 1]));
@@ -633,7 +709,7 @@ allocdir(ino_t parent, ino_t request, int mode)
 		memmove(cp, &emptydir, sizeof emptydir);
 	dirty(bp);
 	DIP_SET(dp, di_nlink, 2);
-	inodirty();
+	inodirty(dp);
 	if (ino == ROOTINO) {
 		inoinfo(ino)->ino_linkcnt = DIP(dp, di_nlink);
 		cacheino(dp, ino);
@@ -654,7 +730,7 @@ allocdir(ino_t parent, ino_t request, int mode)
 	}
 	dp = ginode(parent);
 	DIP_SET(dp, di_nlink, DIP(dp, di_nlink) + 1);
-	inodirty();
+	inodirty(dp);
 	return (ino);
 }
 
@@ -669,7 +745,7 @@ freedir(ino_t ino, ino_t parent)
 	if (ino != parent) {
 		dp = ginode(parent);
 		DIP_SET(dp, di_nlink, DIP(dp, di_nlink) - 1);
-		inodirty();
+		inodirty(dp);
 	}
 	freeino(ino);
 }
@@ -706,7 +782,7 @@ static struct bufarea *
 getdirblk(ufs2_daddr_t blkno, long size)
 {
 
-	if (pdirbp != 0)
+	if (pdirbp != NULL)
 		pdirbp->b_flags &= ~B_INUSE;
 	pdirbp = getdatablk(blkno, size, BT_DIRDATA);
 	return (pdirbp);

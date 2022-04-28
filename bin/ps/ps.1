@@ -27,9 +27,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ps.1	8.3 (Berkeley) 4/18/94
-.\" $FreeBSD: release/10.0.0/bin/ps/ps.1 254943 2013-08-26 23:48:21Z will $
+.\" $FreeBSD$
 .\"
-.Dd March 15, 2013
+.Dd October 31, 2018
 .Dt PS 1
 .Os
 .Sh NAME
@@ -37,15 +37,18 @@
 .Nd process status
 .Sh SYNOPSIS
 .Nm
+.Op Fl -libxo
 .Op Fl aCcdefHhjlmrSTuvwXxZ
 .Op Fl O Ar fmt | Fl o Ar fmt
 .Op Fl G Ar gid Ns Op , Ns Ar gid Ns Ar ...
+.Op Fl J Ar jid Ns Op , Ns Ar jid Ns Ar ...
 .Op Fl M Ar core
 .Op Fl N Ar system
 .Op Fl p Ar pid Ns Op , Ns Ar pid Ns Ar ...
 .Op Fl t Ar tty Ns Op , Ns Ar tty Ns Ar ...
 .Op Fl U Ar user Ns Op , Ns Ar user Ns Ar ...
 .Nm
+.Op Fl -libxo
 .Op Fl L
 .Sh DESCRIPTION
 The
@@ -62,7 +65,7 @@ will also display processes that do not have controlling terminals.
 .Pp
 A different set of processes can be selected for display by using any
 combination of the
-.Fl a , G , p , T , t ,
+.Fl a , G , J , p , T , t ,
 and
 .Fl U
 options.
@@ -100,6 +103,13 @@ and associated command.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl -libxo
+Generate output via
+.Xr libxo 3
+in a selection of different human and machine readable formats.
+See
+.Xr xo_parse_args 3
+for details on command line arguments.
 .It Fl a
 Display information about other users' processes as well as your own.
 If the
@@ -119,7 +129,7 @@ time (this normally has
 no effect).
 .It Fl d
 Arrange processes into descendancy order and prefix each command with
-indentation text showing sibling and parent/child relationships.
+indentation text showing sibling and parent/child relationships as a tree.
 If either of the
 .Fl m
 and
@@ -132,18 +142,13 @@ column is not the last column displayed.
 .It Fl e
 Display the environment as well.
 .It Fl f
-Show commandline and environment information about swapped out processes.
+Show command-line and environment information about swapped out processes.
 This option is honored only if the UID of the user is 0.
 .It Fl G
 Display information about processes which are running with the specified
 real group IDs.
 .It Fl H
-Show all of the
-.Em kernel visible
-threads associated with each process.
-Depending on the threading package that
-is in use, this may show only the process, only the kernel scheduled entities,
-or all of the process threads.
+Show all of the threads associated with each process.
 .It Fl h
 Repeat the information header as often as necessary to guarantee one
 header per page of information.
@@ -152,6 +157,20 @@ Print information associated with the following keywords:
 .Cm user , pid , ppid , pgid , sid , jobc , state , tt , time ,
 and
 .Cm command .
+.It Fl J
+Display information about processes which match the specified jail IDs.
+This may be either the
+.Cm jid
+or
+.Cm name
+of the jail.
+Use
+.Fl J
+.Sy 0
+to display only host processes.
+This flag implies
+.Fl x
+by default.
 .It Fl L
 List the set of keywords available for the
 .Fl O
@@ -294,8 +313,7 @@ the include file
 .Bl -column P_SINGLE_BOUNDARY 0x40000000
 .It Dv "P_ADVLOCK" Ta No "0x00001" Ta "Process may hold a POSIX advisory lock"
 .It Dv "P_CONTROLT" Ta No "0x00002" Ta "Has a controlling terminal"
-.It Dv "P_KTHREAD" Ta No "0x00004" Ta "Kernel thread"
-.It Dv "P_FOLLOWFORK" Ta No "0x00008" Ta "Attach debugger to new children"
+.It Dv "P_KPROC" Ta No "0x00004" Ta "Kernel process"
 .It Dv "P_PPWAIT" Ta No "0x00010" Ta "Parent is waiting for child to exec/exit"
 .It Dv "P_PROFIL" Ta No "0x00020" Ta "Has started profiling"
 .It Dv "P_STOPPROF" Ta No "0x00040" Ta "Has thread in requesting to stop prof"
@@ -317,13 +335,26 @@ the include file
 .It Dv "P_SINGLE_BOUNDARY" Ta No "0x400000" Ta "Threads should suspend at user boundary"
 .It Dv "P_HWPMC" Ta No "0x800000" Ta "Process is using HWPMCs"
 .It Dv "P_JAILED" Ta No "0x1000000" Ta "Process is in jail"
-.It Dv "P_ORPHAN" Ta No "0x2000000" Ta "Orphaned by original parent, reparented to debugger"
-.It Dv "P_INEXEC" Ta No "0x4000000" Ta "Process is in execve()"
+.It Dv "P_TOTAL_STOP" Ta No "0x2000000" Ta "Stopped for system suspend"
+.It Dv "P_INEXEC" Ta No "0x4000000" Ta Process is in Xr execve 2
 .It Dv "P_STATCHILD" Ta No "0x8000000" Ta "Child process stopped or exited"
 .It Dv "P_INMEM" Ta No "0x10000000" Ta "Loaded into memory"
 .It Dv "P_SWAPPINGOUT" Ta No "0x20000000" Ta "Process is being swapped out"
 .It Dv "P_SWAPPINGIN" Ta No "0x40000000" Ta "Process is being swapped in"
 .It Dv "P_PPTRACE" Ta No "0x80000000" Ta "Vforked child issued ptrace(PT_TRACEME)"
+.El
+.It Cm flags2
+The flags kept in
+.Va p_flag2
+associated with the process as in
+the include file
+.In sys/proc.h :
+.Bl -column P2_INHERIT_PROTECTED 0x00000001
+.It Dv "P2_INHERIT_PROTECTED" Ta No "0x00000001" Ta "New children get P_PROTECTED"
+.It Dv "P2_NOTRACE" Ta No "0x00000002" Ta "No" Xr ptrace 2 attach or coredumps
+.It Dv "P2_NOTRACE_EXEC" Ta No "0x00000004" Ta Keep P2_NOPTRACE on Xr execve 2
+.It Dv "P2_AST_SU" Ta No "0x00000008" Ta "Handles SU ast for kthreads"
+.It Dv "P2_PTRACE_FSTP" Ta No "0x00000010" Ta "SIGSTOP from PT_ATTACH not yet handled"
 .El
 .It Cm label
 The MAC label of the process.
@@ -357,12 +388,12 @@ the real memory (resident set) size of the process (in 1024 byte units).
 The time the command started.
 If the command started less than 24 hours ago, the start time is
 displayed using the
-.Dq Li %l:ps.1p
+.Dq Li %H:%M
 format described in
 .Xr strftime 3 .
 If the command started less than 7 days ago, the start time is
 displayed using the
-.Dq Li %a6.15p
+.Dq Li %a%H
 format.
 Otherwise, the start time is displayed using the
 .Dq Li %e%b%y
@@ -400,6 +431,10 @@ information:
 The process is in the foreground process group of its control terminal.
 .It Li <
 The process has raised CPU scheduling priority.
+.It Li C
+The process is in
+.Xr capsicum 4
+capability mode.
 .It Li E
 The process is trying to exit.
 .It Li J
@@ -408,16 +443,16 @@ Marks a process which is in
 The hostname of the prison can be found in
 .Pa /proc/ Ns Ao Ar pid Ac Ns Pa /status .
 .It Li L
-The process has pages locked in core (for example, for raw
-.Tn I/O ) .
+The process has pages locked in core (for example, for raw I/O).
 .It Li N
 The process has reduced CPU scheduling priority (see
 .Xr setpriority 2 ) .
 .It Li s
 The process is a session leader.
 .It Li V
-The process is suspended during a
-.Xr vfork 2 .
+The process' parent is suspended during a
+.Xr vfork 2 ,
+waiting for the process to exec or exit.
 .It Li W
 The process is swapped out.
 .It Li X
@@ -504,12 +539,14 @@ short-term CPU usage factor (for scheduling)
 .It Cm dsiz
 data size (in Kbytes)
 .It Cm emul
-system-call emulation environment
+system-call emulation environment (ABI)
 .It Cm etime
 elapsed running time, format
+.Do
 .Op days- Ns
-.Op hours: Ns
-minutes:seconds.
+.Op hours\&: Ns
+minutes:seconds
+.Dc
 .It Cm etimes
 elapsed running time, in decimal integer seconds
 .It Cm fib
@@ -518,6 +555,9 @@ default FIB number, see
 .It Cm flags
 the process flags, in hexadecimal (alias
 .Cm f )
+.It Cm flags2
+the additional set of process flags, in hexadecimal (alias
+.Cm f2 )
 .It Cm gid
 effective group ID (alias
 .Cm egid )
@@ -527,6 +567,8 @@ group name (from egid) (alias
 .It Cm inblk
 total blocks read (alias
 .Cm inblock )
+.It Cm jail
+jail name
 .It Cm jid
 jail ID
 .It Cm jobc
@@ -544,7 +586,8 @@ login name of user who started the session
 .It Cm lstart
 time started
 .It Cm lwp
-process thread-id
+thread (light-weight process) ID (alias
+.Cm tid )
 .It Cm majflt
 total page faults
 .It Cm minflt
@@ -561,7 +604,7 @@ nice value (alias
 .It Cm nivcsw
 total involuntary context switches
 .It Cm nlwp
-number of threads tied to a process
+number of threads (light-weight processes) tied to a process
 .It Cm nsigs
 total signals taken (alias
 .Cm nsignals )
@@ -631,6 +674,8 @@ saved UID from a setuid executable
 accumulated system CPU time
 .It Cm tdaddr
 thread address
+.It Cm tdname
+thread name
 .It Cm tdev
 control terminal device number
 .It Cm time
@@ -638,6 +683,8 @@ accumulated CPU time, user + system (alias
 .Cm cputime )
 .It Cm tpgid
 control terminal process group ID
+.It Cm tracer
+tracer process ID
 .\".It Cm trss
 .\"text resident set size (in Kbytes)
 .It Cm tsid
@@ -662,6 +709,8 @@ process pointer
 user name (from UID)
 .It Cm usertime
 accumulated user CPU time
+.It Cm vmaddr
+vmspace pointer
 .It Cm vsz
 virtual size in Kbytes (alias
 .Cm vsize )
@@ -692,6 +741,8 @@ attempts to automatically determine the terminal width.
 .It Pa /boot/kernel/kernel
 default system namelist
 .El
+.Sh EXIT STATUS
+.Ex -std
 .Sh EXAMPLES
 Display information on all system processes:
 .Pp
@@ -703,7 +754,9 @@ Display information on all system processes:
 .Xr procstat 1 ,
 .Xr w 1 ,
 .Xr kvm 3 ,
+.Xr libxo 3 ,
 .Xr strftime 3 ,
+.Xr xo_parse_args 3 ,
 .Xr mac 4 ,
 .Xr procfs 5 ,
 .Xr pstat 8 ,
@@ -723,7 +776,8 @@ operating systems.
 The
 .Nm
 command appeared in
-.At v4 .
+.At v3
+in section 8 of the manual.
 .Sh BUGS
 Since
 .Nm

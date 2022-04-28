@@ -1,6 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/Makefile 232337 2012-03-01 13:10:18Z mav $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+SYSDIR?=${SRCTOP}/sys
+.include "${SYSDIR}/conf/kern.opts.mk"
 
 # Modules that include binary-only blobs of microcode should be selectable by
 # MK_SOURCELESS_UCODE option (see below).

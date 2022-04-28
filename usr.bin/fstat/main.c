@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/fstat/main.c 221807 2011-05-12 10:11:39Z stas $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <libgen.h>

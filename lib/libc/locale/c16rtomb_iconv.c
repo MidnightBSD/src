@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libc/locale/c16rtomb_iconv.c 251314 2013-06-03 17:17:56Z ed $ */
+/* $FreeBSD$ */
 #define	charXX_t	char16_t
 #define	cXXrtomb	c16rtomb
 #define	cXXrtomb_l	c16rtomb_l

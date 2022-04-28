@@ -28,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD: release/10.0.0/sbin/dump/dump.h 243665 2012-11-29 05:16:50Z eadler $
+ * $FreeBSD$
  */
 
 /*

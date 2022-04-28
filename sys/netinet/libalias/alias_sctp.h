@@ -45,7 +45,7 @@
  *
  */
 
-/* $FreeBSD: release/10.0.0/sys/netinet/libalias/alias_sctp.h 235644 2012-05-19 05:14:24Z marcel $ */
+/* $FreeBSD$ */
 
 #ifndef _ALIAS_SCTP_H_
 #define _ALIAS_SCTP_H_

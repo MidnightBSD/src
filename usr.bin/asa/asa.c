@@ -1,6 +1,8 @@
 /*	$NetBSD: asa.c,v 1.11 1997/09/20 14:55:00 lukem Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1993,94 Winning Strategies, Inc.
  * All rights reserved.
  *
@@ -36,7 +38,7 @@
 __RCSID("$NetBSD: asa.c,v 1.11 1997/09/20 14:55:00 lukem Exp $");
 #endif
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/asa/asa.c 146466 2005-05-21 09:55:10Z ru $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stdio.h>

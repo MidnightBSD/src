@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)waitpid.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/waitpid.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -40,10 +40,16 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/waitpid.c 165903 2007-01-09 00:2
 #include <sys/resource.h>
 #include "un-namespace.h"
 
+#include "libc_private.h"
+
+pid_t __waitpid(pid_t, int *, int);
+
 pid_t
 __waitpid(pid_t pid, int *istat, int options)
 {
-	return (_wait4(pid, istat, options, (struct rusage *)0));
+
+	return (((pid_t (*)(pid_t, int *, int, struct rusage *))
+	    __libc_interposing[INTERPOS_wait4])(pid, istat, options, NULL));
 }
 
 __weak_reference(__waitpid, waitpid);

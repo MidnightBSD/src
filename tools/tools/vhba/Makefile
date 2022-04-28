@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/vhba/Makefile 211088 2010-08-09 00:36:22Z mjacob $
+# $FreeBSD$
 #
 # Copyright (c) 2010 by Panasas Inc
 # All rights reserved.

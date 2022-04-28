@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)flags.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/flags.c 255303 2013-09-06 13:47:16Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/file.h>
@@ -96,6 +96,10 @@ __sflags(const char *mode, int *optr)
 		case 'e':
 			/* set close-on-exec */
 			o |= O_CLOEXEC;
+			break;
+		case 'v':
+			/* verify */
+			o |= O_VERIFY;
 			break;
 		default:
 			known = 0;

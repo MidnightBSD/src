@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/atkbdc/atkbdc.c 216592 2010-12-20 16:39:43Z tijl $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kbd.h"
 
@@ -114,12 +114,47 @@ static int wait_for_kbd_ack(atkbdc_softc_t *kbdc);
 static int wait_for_aux_data(atkbdc_softc_t *kbdc);
 static int wait_for_aux_ack(atkbdc_softc_t *kbdc);
 
+struct atkbdc_quirks {
+    const char* bios_vendor;
+    const char*	maker;
+    const char*	product;
+    int		quirk;
+};
+
+static struct atkbdc_quirks quirks[] = {
+    {"coreboot", "Acer", "Peppy",
+	KBDC_QUIRK_KEEP_ACTIVATED | KBDC_QUIRK_IGNORE_PROBE_RESULT |
+	KBDC_QUIRK_RESET_AFTER_PROBE | KBDC_QUIRK_SETLEDS_ON_INIT},
+
+    {NULL, NULL, NULL, 0}
+};
+
+#define QUIRK_STR_MATCH(s1, s2) (s1 == NULL || \
+    (s2 != NULL && !strcmp(s1, s2)))
+
+static int
+atkbdc_getquirks(void)
+{
+    int i;
+    char* bios_vendor = kern_getenv("smbios.bios.vendor");
+    char* maker = kern_getenv("smbios.system.maker");
+    char* product = kern_getenv("smbios.system.product");
+
+    for (i=0; quirks[i].quirk != 0; ++i)
+	if (QUIRK_STR_MATCH(quirks[i].bios_vendor, bios_vendor) &&
+	    QUIRK_STR_MATCH(quirks[i].maker, maker) &&
+	    QUIRK_STR_MATCH(quirks[i].product, product))
+		return (quirks[i].quirk);
+
+    return (0);
+}
+
 atkbdc_softc_t
 *atkbdc_get_softc(int unit)
 {
 	atkbdc_softc_t *sc;
 
-	if (unit >= sizeof(atkbdc_softc)/sizeof(atkbdc_softc[0]))
+	if (unit >= nitems(atkbdc_softc))
 		return NULL;
 	sc = atkbdc_softc[unit];
 	if (sc == NULL) {
@@ -176,8 +211,6 @@ atkbdc_configure(void)
 	/* XXX: tag should be passed from the caller */
 #if defined(__amd64__) || defined(__i386__)
 	tag = X86_BUS_SPACE_IO;
-#elif defined(__ia64__)
-	tag = IA64_BUS_SPACE_IO;
 #elif defined(__sparc64__)
 	tag = &atkbdc_bst_store[0];
 #else
@@ -261,6 +294,7 @@ atkbdc_setup(atkbdc_softc_t *sc, bus_space_tag_t tag, bus_space_handle_t h0,
 	    sc->lock = FALSE;
 	    sc->kbd.head = sc->kbd.tail = 0;
 	    sc->aux.head = sc->aux.tail = 0;
+	    sc->aux_mux_enabled = FALSE;
 #if KBDIO_DEBUG >= 2
 	    sc->kbd.call_count = 0;
 	    sc->kbd.qcount = sc->kbd.max_qcount = 0;
@@ -297,6 +331,7 @@ atkbdc_setup(atkbdc_softc_t *sc, bus_space_tag_t tag, bus_space_handle_t h0,
 #else
 	sc->retry = 5000;
 #endif
+	sc->quirks = atkbdc_getquirks();
 
 	return 0;
 }
@@ -603,7 +638,12 @@ write_kbd_command(KBDC p, int c)
 int
 write_aux_command(KBDC p, int c)
 {
-    if (!write_controller_command(p, KBDC_WRITE_TO_AUX))
+    int f;
+
+    f = aux_mux_is_enabled(p) ?
+        KBDC_WRITE_TO_AUX_MUX + kbdcp(p)->aux_mux_port : KBDC_WRITE_TO_AUX;
+
+    if (!write_controller_command(p, f))
 	return FALSE;
     return write_controller_data(p, c);
 }
@@ -1126,7 +1166,8 @@ void
 kbdc_set_device_mask(KBDC p, int mask)
 {
     kbdcp(p)->command_mask = 
-	mask & (KBD_KBD_CONTROL_BITS | KBD_AUX_CONTROL_BITS);
+	mask & (((kbdcp(p)->quirks & KBDC_QUIRK_KEEP_ACTIVATED)
+	    ? 0 : KBD_KBD_CONTROL_BITS) | KBD_AUX_CONTROL_BITS);
 }
 
 int
@@ -1163,4 +1204,79 @@ set_controller_command_byte(KBDC p, int mask, int command)
 	    command);
 
     return TRUE;
+}
+
+/*
+ * Rudimentary support for active PS/2 AUX port multiplexing.
+ * Only write commands can be routed to a selected AUX port.
+ * Source port of data processed by read commands is totally ignored.
+ */
+static int
+set_aux_mux_state(KBDC p, int enabled)
+{
+	int command, version;
+
+	if (write_controller_command(p, KBDC_FORCE_AUX_OUTPUT) == 0 ||
+	    write_controller_data(p, 0xF0) == 0 ||
+	    read_controller_data(p) != 0xF0)
+		return (-1);
+
+	if (write_controller_command(p, KBDC_FORCE_AUX_OUTPUT) == 0 ||
+	    write_controller_data(p, 0x56) == 0 ||
+	    read_controller_data(p) != 0x56)
+		return (-1);
+
+	command = enabled ? 0xa4 : 0xa5;
+	if (write_controller_command(p, KBDC_FORCE_AUX_OUTPUT) == 0 ||
+	    write_controller_data(p, command) == 0 ||
+	    (version = read_controller_data(p)) == command)
+		return (-1);
+
+	return (version);
+}
+
+int
+set_active_aux_mux_port(KBDC p, int port)
+{
+
+	if (!aux_mux_is_enabled(p))
+		return (FALSE);
+
+	if (port < 0 || port >= KBDC_AUX_MUX_NUM_PORTS)
+		return (FALSE);
+
+	kbdcp(p)->aux_mux_port = port;
+
+	return (TRUE);
+}
+
+/* Checks for active multiplexing support and enables it */
+int
+enable_aux_mux(KBDC p)
+{
+	int version;
+
+	version = set_aux_mux_state(p, TRUE);
+	if (version >= 0) {
+		kbdcp(p)->aux_mux_enabled = TRUE;
+		set_active_aux_mux_port(p, 0);
+	}
+
+	return (version);
+}
+
+int
+disable_aux_mux(KBDC p)
+{
+
+	kbdcp(p)->aux_mux_enabled = FALSE;
+
+	return (set_aux_mux_state(p, FALSE));
+}
+
+int
+aux_mux_is_enabled(KBDC p)
+{
+
+	return (kbdcp(p)->aux_mux_enabled);
 }

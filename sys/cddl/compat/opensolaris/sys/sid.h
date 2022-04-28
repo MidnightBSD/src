@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/sid.h 240162 2012-09-06 13:43:48Z mm $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_SID_H_

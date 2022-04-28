@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/r600_microcode.h 189499 2009-03-07 21:36:57Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 static const int ME_JUMP_TABLE_START = 1764;
 static const int ME_JUMP_TABLE_END   = 1792;

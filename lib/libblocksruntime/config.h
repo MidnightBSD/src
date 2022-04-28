@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libblocksruntime/config.h 215125 2010-11-11 15:13:11Z ed $ */
+/* $FreeBSD$ */
 
 /* #undef HAVE_SYS_BYTEORDER_H */
 /* #undef HAVE_AVAILABILITY_MACROS_H */

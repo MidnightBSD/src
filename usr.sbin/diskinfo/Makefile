@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/usr.sbin/diskinfo/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	diskinfo
 MAN=	diskinfo.8
 
-DPADD=	${LIBUTIL}
-LDADD=	-lutil
+LIBADD=	util
 
 .include <bsd.prog.mk>
 

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/calendar/pathnames.h 255715 2013-09-19 20:17:50Z db $
+ * $FreeBSD$
  */
 
 #include <paths.h>

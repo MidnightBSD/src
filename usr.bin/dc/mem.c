@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/mem.c 203443 2010-02-03 21:06:13Z gabor $");
+__FBSDID("$FreeBSD$");
 
 #include <openssl/err.h>
 

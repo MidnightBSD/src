@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_open_file.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -83,8 +83,9 @@ archive_read_open_FILE(struct archive *a, FILE *f)
 	mine->f = f;
 	/*
 	 * If we can't fstat() the file, it may just be that it's not
-	 * a file.  (FILE * objects can wrap many kinds of I/O
-	 * streams, some of which don't support fileno()).)
+	 * a file.  (On some platforms, FILE * objects can wrap I/O
+	 * streams that don't support fileno()).  As a result, fileno()
+	 * should be used cautiously.)
 	 */
 	if (fstat(fileno(mine->f), &st) == 0 && S_ISREG(st.st_mode)) {
 		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
@@ -150,7 +151,10 @@ file_skip(struct archive *a, void *client_data, int64_t request)
 			skip = max_skip;
 	}
 
-#if HAVE_FSEEKO
+#ifdef __ANDROID__
+        /* fileno() isn't safe on all platforms ... see above. */
+	if (lseek(fileno(mine->f), skip, SEEK_CUR) < 0)
+#elif HAVE_FSEEKO
 	if (fseeko(mine->f, skip, SEEK_CUR) != 0)
 #elif HAVE__FSEEKI64
 	if (_fseeki64(mine->f, skip, SEEK_CUR) != 0)
@@ -170,8 +174,7 @@ file_close(struct archive *a, void *client_data)
 	struct read_FILE_data *mine = (struct read_FILE_data *)client_data;
 
 	(void)a; /* UNUSED */
-	if (mine->buffer != NULL)
-		free(mine->buffer);
+	free(mine->buffer);
 	free(mine);
 	return (ARCHIVE_OK);
 }

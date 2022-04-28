@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_services.h 226887 2011-10-28 17:53:34Z delphij $
+ * $FreeBSD$
  */
 
 

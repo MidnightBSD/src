@@ -45,7 +45,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/fb/creatorreg.h 166059 2007-01-16 21:08:22Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_FB_CREATORREG_H_

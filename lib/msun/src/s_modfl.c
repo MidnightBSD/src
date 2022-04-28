@@ -33,7 +33,7 @@
  * is preserved.
  * ====================================================
  *
- * $FreeBSD: release/10.0.0/lib/msun/src/s_modfl.c 165855 2007-01-07 07:54:21Z das $
+ * $FreeBSD$
  */
 
 #include <float.h>

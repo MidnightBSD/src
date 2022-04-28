@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_task_request.c 256231 2013-10-09 19:37:41Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 
@@ -206,8 +206,18 @@ isci_task_request_complete(SCI_CONTROLLER_HANDLE_T scif_controller,
 		break;
 
 	case SCI_FAILURE_TIMEOUT:
-		retry_task = TRUE;
-		isci_log_message(0, "ISCI", "task timeout - retrying\n");
+		if (isci_controller->fail_on_task_timeout) {
+			retry_task = FALSE;
+			isci_log_message(0, "ISCI",
+			    "task timeout - not retrying\n");
+			scif_cb_domain_device_removed(scif_controller,
+			    isci_remote_device->domain->sci_object,
+			    remote_device);
+		} else {
+			retry_task = TRUE;
+			isci_log_message(0, "ISCI",
+			    "task timeout - retrying\n");
+		}
 		break;
 
 	case SCI_TASK_FAILURE:

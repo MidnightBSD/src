@@ -1,5 +1,5 @@
 /*	$NetBSD: security.c,v 1.5 2000/06/08 09:01:05 fvdl Exp $	*/
-/*	$FreeBSD: release/10.0.0/usr.sbin/rpcbind/security.c 107952 2002-12-16 22:24:26Z mbr $ */
+/*	$FreeBSD$ */
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -108,13 +108,15 @@ check_access(SVCXPRT *xprt, rpcproc_t proc, void *args, unsigned int rpcbvers)
 	}
 
 #ifdef LIBWRAP
-	if (addr->sa_family == AF_LOCAL)
-		return 1;
-	request_init(&req, RQ_DAEMON, "rpcbind", RQ_CLIENT_SIN, addr, 0);
-	sock_methods(&req);
-	if(!hosts_access(&req)) {
-		logit(deny_severity, addr, proc, prog, ": request from unauthorized host");
-		return 0;
+	if (libwrap && addr->sa_family != AF_LOCAL) {
+		request_init(&req, RQ_DAEMON, "rpcbind", RQ_CLIENT_SIN, addr,
+		    0);
+		sock_methods(&req);
+		if(!hosts_access(&req)) {
+			logit(deny_severity, addr, proc, prog,
+			    ": request from unauthorized host");
+			return 0;
+		}
 	}
 #endif
 	if (verboselog)

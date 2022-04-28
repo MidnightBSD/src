@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/ar71xx/Makefile 230151 2012-01-15 19:42:55Z adrian $
+# $FreeBSD$
 #
 # Copyright (c) 2011 Adrian Chadd.  All rights reserved.
 #

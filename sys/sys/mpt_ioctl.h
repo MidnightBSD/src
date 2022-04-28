@@ -29,7 +29,7 @@
  *
  * LSI MPT-Fusion Host Adapter FreeBSD userland interface
  *
- * $FreeBSD: release/10.0.0/sys/sys/mpt_ioctl.h 178814 2008-05-06 20:49:53Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _MPT_IOCTL_H_

@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -41,7 +41,7 @@
 
 #ifndef UTIL_LOG_H
 #define UTIL_LOG_H
-#include <ldns/buffer.h>
+struct sldns_buffer;
 
 /**
  * verbosity value:
@@ -98,17 +98,19 @@ void log_file(FILE *f);
 void log_thread_set(int* num);
 
 /**
+ * Get the thread id from logging system.  Set after log_init is
+ * initialised, or log_thread_set for newly created threads.
+ * This initialisation happens in unbound as a daemon, in daemon
+ * startup code, when that spawns threads.
+ * @return thread number, from 0 and up.  Before initialised, returns 0.
+ */
+int log_thread_get(void);
+
+/**
  * Set identity to print, default is 'unbound'. 
  * @param id: string to print. Name of executable.
  */
 void log_ident_set(const char* id);
-
-/**
- * Set the time value to print in log entries.
- * @param t: the point is copied and used to find the time.
- * 	if NULL, time(2) is used.
- */
-void log_set_time(uint32_t* t);
 
 /**
  * Set if the time value is printed ascii or decimal in log entries.
@@ -117,6 +119,9 @@ void log_set_time(uint32_t* t);
  *	decimal is printed.
  */
 void log_set_time_asc(int use_asc);
+
+/** get log lock */
+void* log_get_lock(void);
 
 /**
  * Log informational message.
@@ -149,20 +154,34 @@ void log_warn(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 void log_hex(const char* msg, void* data, size_t length);
 
 /**
- * Easy alternative for log_hex, takes a ldns_buffer.
+ * Log query.
+ * Pass printf formatted arguments. No trailing newline is needed.
+ * @param format: printf-style format string. Arguments follow.
+ */
+void log_query(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+
+/**
+ * Log reply.
+ * Pass printf formatted arguments. No trailing newline is needed.
+ * @param format: printf-style format string. Arguments follow.
+ */
+void log_reply(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+
+/**
+ * Easy alternative for log_hex, takes a sldns_buffer.
  * @param level: verbosity level for this message, compared to global 
  *	verbosity setting.
  * @param msg: string desc to print
  * @param buf: the buffer.
  */
-void log_buf(enum verbosity_value level, const char* msg, ldns_buffer* buf);
+void log_buf(enum verbosity_value level, const char* msg, struct sldns_buffer* buf);
 
 /**
  * Log fatal error message, and exit the current process.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.
  */
-void fatal_exit(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+void fatal_exit(const char* format, ...) ATTR_FORMAT(printf, 1, 2) ATTR_NORETURN;
 
 /**
  * va_list argument version of log_info.
@@ -177,11 +196,17 @@ void log_vmsg(int pri, const char* type, const char* format, va_list args);
  * an assertion that is thrown to the logfile.
  */
 #ifdef UNBOUND_DEBUG
+#ifdef __clang_analyzer__
+/* clang analyzer needs to know that log_assert is an assertion, otherwise
+ * it could complain about the nullptr the assert is guarding against. */
+#define log_assert(x) assert(x)
+#else
 #  define log_assert(x) \
 	do { if(!(x)) \
 		fatal_exit("%s:%d: %s: assertion %s failed", \
 			__FILE__, __LINE__, __func__, #x); \
 	} while(0);
+#endif
 #else
 #  define log_assert(x) /*nothing*/
 #endif

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/tipout.c 230654 2012-01-28 20:45:47Z phk $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

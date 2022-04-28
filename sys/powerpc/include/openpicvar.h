@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/openpicvar.h 222813 2011-06-07 08:46:13Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef	_POWERPC_OPENPICVAR_H_
@@ -31,6 +31,14 @@
 #define OPENPIC_DEVSTR	"OpenPIC Interrupt Controller"
 
 #define OPENPIC_IRQMAX	256	/* h/w allows more */
+
+/* Names match the macros in openpicreg.h. */
+struct openpic_timer {
+    	uint32_t	tcnt;
+    	uint32_t	tbase;
+    	uint32_t	tvec;
+    	uint32_t	tdst;
+};
 
 struct openpic_softc {
 	device_t	sc_dev;
@@ -45,6 +53,14 @@ struct openpic_softc {
 	u_int		sc_ncpu;
 	u_int		sc_nirq;
 	int		sc_psim;
+
+	/* Saved states. */
+	uint32_t		sc_saved_config;
+	uint32_t		sc_saved_ipis[4];
+	uint32_t		sc_saved_prios[4];
+	struct openpic_timer	sc_saved_timers[OPENPIC_TIMERS];
+	uint32_t		sc_saved_vectors[OPENPIC_SRC_VECTOR_COUNT];
+	
 };
 
 extern devclass_t openpic_devclass;
@@ -65,5 +81,8 @@ void	openpic_eoi(device_t, u_int);
 void	openpic_ipi(device_t, u_int);
 void	openpic_mask(device_t, u_int);
 void	openpic_unmask(device_t, u_int);
+
+int	openpic_suspend(device_t dev);
+int	openpic_resume(device_t dev);
 
 #endif /* _POWERPC_OPENPICVAR_H_ */

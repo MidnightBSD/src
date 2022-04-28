@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/bsnmpd 254511 2013-08-19 05:37:49Z peter $
+# $FreeBSD$
 #
 
 # PROVIDE: bsnmpd
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="bsnmpd"
+desc="Simple and extensible SNMP daemon"
 rcvar="bsnmpd_enable"
 command="/usr/sbin/${name}"
 

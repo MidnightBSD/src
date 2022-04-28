@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/devfs/devfs_int.h 240539 2012-09-15 19:28:54Z ed $
+ * $FreeBSD$
  */
 
 /*
@@ -56,6 +56,7 @@ struct cdev_priv {
 	u_int			cdp_flags;
 #define CDP_ACTIVE		(1 << 0)
 #define CDP_SCHED_DTR		(1 << 1)
+#define	CDP_UNREF_DTR		(1 << 2)
 
 	u_int			cdp_inuse;
 	u_int			cdp_maxdirent;

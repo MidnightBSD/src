@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)banner.c	8.4 (Berkeley) 4/29/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/banner/banner.c 227152 2011-11-06 08:13:51Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * banner - prints large signs
@@ -1062,10 +1062,10 @@ main(int argc, char *argv[])
 			j += strlen(argv[i]) + 1;
 		if ((message = malloc((size_t)j)) == NULL) 
 			err(1, "malloc");
-		strcpy(message, *argv);
+		strlcpy(message, *argv, j);
 		while (*++argv) {
-			strcat(message, " ");
-			strcat(message, *argv);
+			strlcat(message, " ", j);
+			strlcat(message, *argv, j);
 		}
 		nchars = strlen(message);
 	} else {

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/time.h 255437 2013-09-10 01:46:47Z delphij $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_TIME_H_
@@ -40,6 +40,12 @@
 #define	MSEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MILLISEC))
 #define	NSEC2MSEC(n)	((n) / (NANOSEC / MILLISEC))
 
+#define	USEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / MICROSEC))
+#define	NSEC2USEC(n)	((n) / (NANOSEC / MICROSEC))
+
+#define	NSEC2SEC(n)	((n) / (NANOSEC / SEC))
+#define	SEC2NSEC(m)	((hrtime_t)(m) * (NANOSEC / SEC))
+
 typedef longlong_t	hrtime_t;
 
 #if defined(__i386__) || defined(__powerpc__)
@@ -51,7 +57,7 @@ typedef longlong_t	hrtime_t;
 #endif
 
 #define	SEC_TO_TICK(sec)	((sec) * hz)
-#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
+#define	NSEC_TO_TICK(nsec)	((nsec) / (NANOSEC / hz))
 
 #ifdef _KERNEL
 static __inline hrtime_t
@@ -71,19 +77,9 @@ gethrtime(void) {
 
 extern int nsec_per_tick;	/* nanoseconds per clock tick */
 
-static __inline int64_t
-ddi_get_lbolt64(void)
-{
-
-	return (gethrtime() / nsec_per_tick);
-}
-
-static __inline clock_t
-ddi_get_lbolt(void)
-{
-
-	return (ddi_get_lbolt64());
-}
+#define ddi_get_lbolt64()				\
+    (int64_t)(((getsbinuptime() >> 16) * hz) >> 16)
+#define ddi_get_lbolt()		(clock_t)ddi_get_lbolt64()
 
 #else
 

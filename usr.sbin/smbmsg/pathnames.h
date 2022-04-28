@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2004 Joerg Wunsch
  * All Rights Reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/smbmsg/pathnames.h 129331 2004-05-17 10:56:05Z joerg $
+ * $FreeBSD$
  */
 
 #define PATH_DEFAULTSMBDEV	"/dev/smb0"

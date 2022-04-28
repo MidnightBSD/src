@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_kbd_sun.c 224126 2011-07-17 08:19:19Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_compat.h"
 #include "opt_kbd.h"
@@ -117,25 +117,24 @@ static int keycode2scancode(int keycode, int shift, int up);
 #endif
 
 static keyboard_switch_t sunkbdsw = {
-	sunkbd_probe,
-	sunkbd_init,
-	sunkbd_term,
-	sunkbd_intr,
-	sunkbd_test_if,
-	sunkbd_enable,
-	sunkbd_disable,
-	sunkbd_read,
-	sunkbd_check,
-	sunkbd_read_char,
-	sunkbd_check_char,
-	sunkbd_ioctl,
-	sunkbd_lock,
-	sunkbd_clear_state,
-	sunkbd_get_state,
-	sunkbd_set_state,
-	genkbd_get_fkeystr,
-	sunkbd_poll_mode,
-	sunkbd_diag
+	.probe =	sunkbd_probe,
+	.init =		sunkbd_init,
+	.term =		sunkbd_term,
+	.intr =		sunkbd_intr,
+	.test_if =	sunkbd_test_if,
+	.enable =	sunkbd_enable,
+	.disable =	sunkbd_disable,
+	.read =		sunkbd_read,
+	.check =	sunkbd_check,
+	.read_char =	sunkbd_read_char,
+	.check_char =	sunkbd_check_char,
+	.ioctl =	sunkbd_ioctl,
+	.lock =		sunkbd_lock,
+	.clear_state =	sunkbd_clear_state,
+	.get_state =	sunkbd_get_state,
+	.set_state =	sunkbd_set_state,
+	.poll =		sunkbd_poll_mode,
+	.diag =		sunkbd_diag
 };
 
 KEYBOARD_DRIVER(sunkbd, sunkbdsw, sunkbd_configure);
@@ -857,7 +856,7 @@ keycode2scancode(int keycode, int shift, int up)
 	int scancode;
 
 	scancode = keycode;
-	if ((keycode >= 89) && (keycode < 89 + sizeof(scan) / sizeof(scan[0])))
+	if ((keycode >= 89) && (keycode < 89 + nitems(scan)))
 	scancode = scan[keycode - 89] | SCAN_PREFIX_E0;
 	/* pause/break */
 	if ((keycode == 104) && !(shift & CTLS))

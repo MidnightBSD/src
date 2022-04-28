@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_interrupt.c 235751 2012-05-21 22:54:33Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 
@@ -136,8 +136,8 @@ isci_interrupt_setup(struct isci_softc *isci)
 	    pci_msix_count(isci->device) >= max_msix_messages) {
 
 		isci->num_interrupts = max_msix_messages;
-		pci_alloc_msix(isci->device, &isci->num_interrupts);
-		if (isci->num_interrupts == max_msix_messages)
+		if (pci_alloc_msix(isci->device, &isci->num_interrupts) == 0 &&
+		    isci->num_interrupts == max_msix_messages)
 			use_msix = TRUE;
 	}
 

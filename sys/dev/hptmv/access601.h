@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptmv/access601.h 190809 2009-04-07 16:38:25Z delphij $
+ * $FreeBSD$
  */
 #ifndef _ACCESS601_H_
 #define _ACCESS601_H_

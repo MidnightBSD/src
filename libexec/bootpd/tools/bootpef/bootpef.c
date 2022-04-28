@@ -19,7 +19,7 @@ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
 ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
 SOFTWARE.
 
- $FreeBSD: release/10.0.0/libexec/bootpd/tools/bootpef/bootpef.c 97419 2002-05-28 18:39:53Z alfred $
+ $FreeBSD$
 
 ************************************************************************/
 

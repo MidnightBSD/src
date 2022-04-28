@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/share/doc/legal/intel_iwi/Makefile 167177 2007-03-02 18:10:55Z flz $
+# $FreeBSD$
 
-NO_OBJ=
 FILES=		${.CURDIR}/../../../../sys/contrib/dev/iwi/LICENSE
-FILESDIR=	${SHAREDIR}/doc/legal/intel_iwi
+FILESDIR=	${SHAREDIR}/doc/legal
+FILESNAME=	intel_iwi.LICENSE
 
 .include <bsd.prog.mk>

@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/sys/getcontext.S 240178 2012-09-06 20:59:49Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <SYS.h>
 
@@ -34,10 +34,8 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/sys/getcontext.S 240178 2012-0
  * Otherwise, the setcontext() syscall will return here and we'll
  * pop off the return address and go to the *setcontext* call.
  */
-	.weak	_getcontext
-	.set	_getcontext,__sys_getcontext
-	.weak	getcontext
-	.set	getcontext,__sys_getcontext
+	WEAK_REFERENCE(__sys_getcontext, _getcontext)
+	WEAK_REFERENCE(__sys_getcontext, getcontext)
 ENTRY(__sys_getcontext)
 	movq	(%rsp),%rsi	/* save getcontext return address */
 	mov	$SYS_getcontext,%rax

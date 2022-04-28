@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/systat/netstat.c 231011 2012-02-05 09:17:49Z ed $");
+__FBSDID("$FreeBSD$");
 
 #ifdef lint
 static const char sccsid[] = "@(#)netstat.c	8.1 (Berkeley) 6/6/93";
@@ -59,10 +59,10 @@ static const char sccsid[] = "@(#)netstat.c	8.1 (Berkeley) 6/6/93";
 #include <netinet/tcp.h>
 #include <netinet/tcpip.h>
 #include <netinet/tcp_seq.h>
-#include <netinet/tcp_var.h>
 #define TCPSTATES
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_timer.h>
+#include <netinet/tcp_var.h>
 #include <netinet/tcp_debug.h>
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
@@ -85,7 +85,7 @@ static char *inetname(struct sockaddr *);
 static void inetprint(struct sockaddr *, const char *);
 
 #define	streq(a,b)	(strcmp(a,b)==0)
-#define	YMAX(w)		((w)->_maxy-1)
+#define	YMAX(w)		(getmaxy(w)-2)
 
 WINDOW *
 opennetstat(void)
@@ -333,8 +333,8 @@ enter_kvm(struct inpcb *inp, struct socket *so, int state, const char *proto)
 	struct netinfo *p;
 
 	if ((p = enter(inp, state, proto)) != NULL) {
-		p->ni_rcvcc = so->so_rcv.sb_cc;
-		p->ni_sndcc = so->so_snd.sb_cc;
+		p->ni_rcvcc = so->so_rcv.sb_ccc;
+		p->ni_sndcc = so->so_snd.sb_ccc;
 	}
 }
 
@@ -605,7 +605,7 @@ inetname(struct sockaddr *sa)
 			if (np)
 				cp = np->n_name;
 		}
-		if (cp == 0) {
+		if (cp == NULL) {
 			hp = gethostbyaddr((char *)&in, sizeof (in), AF_INET);
 			if (hp)
 				cp = hp->h_name;

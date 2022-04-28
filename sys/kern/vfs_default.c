@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_default.c 251171 2013-05-31 00:43:41Z jeff $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,6 +83,8 @@ static int vop_stdset_text(struct vop_set_text_args *ap);
 static int vop_stdunset_text(struct vop_unset_text_args *ap);
 static int vop_stdget_writecount(struct vop_get_writecount_args *ap);
 static int vop_stdadd_writecount(struct vop_add_writecount_args *ap);
+static int vop_stdfdatasync(struct vop_fdatasync_args *ap);
+static int vop_stdgetpages_async(struct vop_getpages_async_args *ap);
 
 /*
  * This vnode table stores what we want to do if the filesystem doesn't
@@ -110,7 +112,9 @@ struct vop_vector default_vnodeops = {
 	.vop_bmap =		vop_stdbmap,
 	.vop_close =		VOP_NULL,
 	.vop_fsync =		VOP_NULL,
+	.vop_fdatasync =	vop_stdfdatasync,
 	.vop_getpages =		vop_stdgetpages,
+	.vop_getpages_async =	vop_stdgetpages_async,
 	.vop_getwritemount = 	vop_stdgetwritemount,
 	.vop_inactive =		VOP_NULL,
 	.vop_ioctl =		VOP_ENOTTY,
@@ -254,7 +258,7 @@ static int
 vop_nostrategy (struct vop_strategy_args *ap)
 {
 	printf("No strategy for buffer at %p\n", ap->a_bp);
-	vprint("vnode", ap->a_vp);
+	vn_printf(ap->a_vp, "vnode ");
 	ap->a_bp->b_ioflags |= BIO_ERROR;
 	ap->a_bp->b_error = EOPNOTSUPP;
 	bufdone(ap->a_bp);
@@ -399,17 +403,24 @@ int
 vop_stdadvlock(struct vop_advlock_args *ap)
 {
 	struct vnode *vp;
-	struct ucred *cred;
 	struct vattr vattr;
 	int error;
 
 	vp = ap->a_vp;
-	cred = curthread->td_ucred;
-	vn_lock(vp, LK_SHARED | LK_RETRY);
-	error = VOP_GETATTR(vp, &vattr, cred);
-	VOP_UNLOCK(vp, 0);
-	if (error)
-		return (error);
+	if (ap->a_fl->l_whence == SEEK_END) {
+		/*
+		 * The NFSv4 server must avoid doing a vn_lock() here, since it
+		 * can deadlock the nfsd threads, due to a LOR.  Fortunately
+		 * the NFSv4 server always uses SEEK_SET and this code is
+		 * only required for the SEEK_END case.
+		 */
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
+		VOP_UNLOCK(vp, 0);
+		if (error)
+			return (error);
+	} else
+		vattr.va_size = 0;
 
 	return (lf_advlock(ap, &(vp->v_lockf), vattr.va_size));
 }
@@ -418,17 +429,19 @@ int
 vop_stdadvlockasync(struct vop_advlockasync_args *ap)
 {
 	struct vnode *vp;
-	struct ucred *cred;
 	struct vattr vattr;
 	int error;
 
 	vp = ap->a_vp;
-	cred = curthread->td_ucred;
-	vn_lock(vp, LK_SHARED | LK_RETRY);
-	error = VOP_GETATTR(vp, &vattr, cred);
-	VOP_UNLOCK(vp, 0);
-	if (error)
-		return (error);
+	if (ap->a_fl->l_whence == SEEK_END) {
+		/* The size argument is only needed for SEEK_END. */
+		vn_lock(vp, LK_SHARED | LK_RETRY);
+		error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
+		VOP_UNLOCK(vp, 0);
+		if (error)
+			return (error);
+	} else
+		vattr.va_size = 0;
 
 	return (lf_advlockasync(ap, &(vp->v_lockf), vattr.va_size));
 }
@@ -461,29 +474,18 @@ vop_stdpathconf(ap)
 {
 
 	switch (ap->a_name) {
-		case _PC_NAME_MAX:
-			*ap->a_retval = NAME_MAX;
+		case _PC_ASYNC_IO:
+			*ap->a_retval = _POSIX_ASYNCHRONOUS_IO;
 			return (0);
 		case _PC_PATH_MAX:
 			*ap->a_retval = PATH_MAX;
 			return (0);
-		case _PC_LINK_MAX:
-			*ap->a_retval = LINK_MAX;
-			return (0);
-		case _PC_MAX_CANON:
-			*ap->a_retval = MAX_CANON;
-			return (0);
-		case _PC_MAX_INPUT:
-			*ap->a_retval = MAX_INPUT;
-			return (0);
-		case _PC_PIPE_BUF:
-			*ap->a_retval = PIPE_BUF;
-			return (0);
-		case _PC_CHOWN_RESTRICTED:
-			*ap->a_retval = 1;
-			return (0);
-		case _PC_VDISABLE:
-			*ap->a_retval = _POSIX_VDISABLE;
+		case _PC_ACL_EXTENDED:
+		case _PC_ACL_NFS4:
+		case _PC_CAP_PRESENT:
+		case _PC_INF_PRESENT:
+		case _PC_MAC_PRESENT:
+			*ap->a_retval = 0;
 			return (0);
 		default:
 			return (EINVAL);
@@ -504,10 +506,11 @@ vop_stdlock(ap)
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
+	struct mtx *ilk;
 
-	return (_lockmgr_args(vp->v_vnlock, ap->a_flags, VI_MTX(vp),
-	    LK_WMESG_DEFAULT, LK_PRIO_DEFAULT, LK_TIMO_DEFAULT, ap->a_file,
-	    ap->a_line));
+	ilk = VI_MTX(vp);
+	return (lockmgr_lock_fast_path(vp->v_vnlock, ap->a_flags,
+	    (ilk != NULL) ? &ilk->lock_object : NULL, ap->a_file, ap->a_line));
 }
 
 /* See above. */
@@ -519,8 +522,11 @@ vop_stdunlock(ap)
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
+	struct mtx *ilk;
 
-	return (lockmgr(vp->v_vnlock, ap->a_flags | LK_RELEASE, VI_MTX(vp)));
+	ilk = VI_MTX(vp);
+	return (lockmgr_unlock_fast_path(vp->v_vnlock, ap->a_flags,
+	    (ilk != NULL) ? &ilk->lock_object : NULL));
 }
 
 /* See above. */
@@ -598,7 +604,13 @@ vop_stdgetwritemount(ap)
 	return (0);
 }
 
-/* XXX Needs good comment and VOP_BMAP(9) manpage */
+/*
+ * If the file system doesn't implement VOP_BMAP, then return sensible defaults:
+ * - Return the vnode's bufobj instead of any underlying device's bufobj
+ * - Calculate the physical block number as if there were equal size
+ *   consecutive blocks, but
+ * - Report no contiguous runs of blocks.
+ */
 int
 vop_stdbmap(ap)
 	struct vop_bmap_args /* {
@@ -626,18 +638,25 @@ int
 vop_stdfsync(ap)
 	struct vop_fsync_args /* {
 		struct vnode *a_vp;
-		struct ucred *a_cred;
 		int a_waitfor;
 		struct thread *a_td;
 	} */ *ap;
 {
-	struct vnode *vp = ap->a_vp;
-	struct buf *bp;
+	struct vnode *vp;
+	struct buf *bp, *nbp;
 	struct bufobj *bo;
-	struct buf *nbp;
-	int error = 0;
-	int maxretry = 1000;     /* large, arbitrarily chosen */
+	struct mount *mp;
+	int error, maxretry;
 
+	error = 0;
+	maxretry = 10000;     /* large, arbitrarily chosen */
+	vp = ap->a_vp;
+	mp = NULL;
+	if (vp->v_type == VCHR) {
+		VI_LOCK(vp);
+		mp = vp->v_rdev->si_mountpt;
+		VI_UNLOCK(vp);
+	}
 	bo = &vp->v_bufobj;
 	BO_LOCK(bo);
 loop1:
@@ -680,6 +699,8 @@ loop2:
 			bremfree(bp);
 			bawrite(bp);
 		}
+		if (maxretry < 1000)
+			pause("dirty", hz < 1000 ? 1 : hz / 1000);
 		BO_LOCK(bo);
 		goto loop2;
 	}
@@ -701,16 +722,36 @@ loop2:
 			TAILQ_FOREACH(bp, &bo->bo_dirty.bv_hd, b_bobufs)
 				if ((error = bp->b_error) == 0)
 					continue;
-			if (error == 0 && --maxretry >= 0)
+			if ((mp != NULL && mp->mnt_secondary_writes > 0) ||
+			    (error == 0 && --maxretry >= 0))
 				goto loop1;
-			error = EAGAIN;
+			if (error == 0)
+				error = EAGAIN;
 		}
 	}
 	BO_UNLOCK(bo);
-	if (error == EAGAIN)
-		vprint("fsync: giving up on dirty", vp);
+	if (error != 0)
+		vn_printf(vp, "fsync: giving up on dirty (error = %d) ", error);
 
 	return (error);
+}
+
+static int
+vop_stdfdatasync(struct vop_fdatasync_args *ap)
+{
+
+	return (VOP_FSYNC(ap->a_vp, MNT_WAIT, ap->a_td));
+}
+
+int
+vop_stdfdatasync_buf(struct vop_fdatasync_args *ap)
+{
+	struct vop_fsync_args apf;
+
+	apf.a_vp = ap->a_vp;
+	apf.a_waitfor = MNT_WAIT;
+	apf.a_td = ap->a_td;
+	return (vop_stdfsync(&apf));
 }
 
 /* XXX Needs good comment and more info in the manpage (VOP_GETPAGES(9)). */
@@ -720,13 +761,24 @@ vop_stdgetpages(ap)
 		struct vnode *a_vp;
 		vm_page_t *a_m;
 		int a_count;
-		int a_reqpage;
-		vm_ooffset_t a_offset;
+		int *a_rbehind;
+		int *a_rahead;
 	} */ *ap;
 {
 
 	return vnode_pager_generic_getpages(ap->a_vp, ap->a_m,
-	    ap->a_count, ap->a_reqpage);
+	    ap->a_count, ap->a_rbehind, ap->a_rahead, NULL, NULL);
+}
+
+static int
+vop_stdgetpages_async(struct vop_getpages_async_args *ap)
+{
+	int error;
+
+	error = VOP_GETPAGES(ap->a_vp, ap->a_m, ap->a_count, ap->a_rbehind,
+	    ap->a_rahead);
+	ap->a_iodone(ap->a_arg, ap->a_m, ap->a_count, error);
+	return (error);
 }
 
 int
@@ -744,7 +796,6 @@ vop_stdputpages(ap)
 		int a_count;
 		int a_sync;
 		int *a_rtvals;
-		vm_ooffset_t a_offset;
 	} */ *ap;
 {
 
@@ -791,7 +842,7 @@ vop_stdvptocnp(struct vop_vptocnp_args *ap)
 	VREF(vp);
 	locked = VOP_ISLOCKED(vp);
 	VOP_UNLOCK(vp, 0);
-	NDINIT_ATVP(&nd, LOOKUP, FOLLOW | LOCKLEAF, UIO_SYSSPACE,
+	NDINIT_ATVP(&nd, LOOKUP, FOLLOW | LOCKSHARED | LOCKLEAF, UIO_SYSSPACE,
 	    "..", vp, td);
 	flags = FREAD;
 	error = vn_open_cred(&nd, &flags, 0, VN_OPEN_NOAUDIT, cred, NULL);
@@ -811,7 +862,7 @@ vop_stdvptocnp(struct vop_vptocnp_args *ap)
 		VOP_UNLOCK(mvp, 0);
 		vn_close(mvp, FREAD, cred, td);
 		VREF(*dvp);
-		vn_lock(*dvp, LK_EXCLUSIVE | LK_RETRY);
+		vn_lock(*dvp, LK_SHARED | LK_RETRY);
 		covered = 1;
 	}
 
@@ -840,15 +891,15 @@ vop_stdvptocnp(struct vop_vptocnp_args *ap)
 		    (dp->d_fileno == fileno)) {
 			if (covered) {
 				VOP_UNLOCK(*dvp, 0);
-				vn_lock(mvp, LK_EXCLUSIVE | LK_RETRY);
+				vn_lock(mvp, LK_SHARED | LK_RETRY);
 				if (dirent_exists(mvp, dp->d_name, td)) {
 					error = ENOENT;
 					VOP_UNLOCK(mvp, 0);
-					vn_lock(*dvp, LK_EXCLUSIVE | LK_RETRY);
+					vn_lock(*dvp, LK_SHARED | LK_RETRY);
 					goto out;
 				}
 				VOP_UNLOCK(mvp, 0);
-				vn_lock(*dvp, LK_EXCLUSIVE | LK_RETRY);
+				vn_lock(*dvp, LK_SHARED | LK_RETRY);
 			}
 			i -= dp->d_namlen;
 
@@ -888,7 +939,8 @@ int
 vop_stdallocate(struct vop_allocate_args *ap)
 {
 #ifdef __notyet__
-	struct statfs sfs;
+	struct statfs *sfs;
+	off_t maxfilesize = 0;
 #endif
 	struct iovec aiov;
 	struct vattr vattr, *vap;
@@ -924,12 +976,16 @@ vop_stdallocate(struct vop_allocate_args *ap)
 	 * Check if the filesystem sets f_maxfilesize; if not use
 	 * VOP_SETATTR to perform the check.
 	 */
-	error = VFS_STATFS(vp->v_mount, &sfs, td);
+	sfs = malloc(sizeof(struct statfs), M_STATFS, M_WAITOK);
+	error = VFS_STATFS(vp->v_mount, sfs, td);
+	if (error == 0)
+		maxfilesize = sfs->f_maxfilesize;
+	free(sfs, M_STATFS);
 	if (error != 0)
 		goto out;
-	if (sfs.f_maxfilesize) {
-		if (offset > sfs.f_maxfilesize || len > sfs.f_maxfilesize ||
-		    offset + len > sfs.f_maxfilesize) {
+	if (maxfilesize) {
+		if (offset > maxfilesize || len > maxfilesize ||
+		    offset + len > maxfilesize) {
 			error = EFBIG;
 			goto out;
 		}
@@ -1016,8 +1072,10 @@ int
 vop_stdadvise(struct vop_advise_args *ap)
 {
 	struct vnode *vp;
+	struct bufobj *bo;
+	daddr_t startn, endn;
 	off_t start, end;
-	int error;
+	int bsize, error;
 
 	vp = ap->a_vp;
 	switch (ap->a_advice) {
@@ -1030,28 +1088,37 @@ vop_stdadvise(struct vop_advise_args *ap)
 		error = 0;
 		break;
 	case POSIX_FADV_DONTNEED:
-		/*
-		 * Flush any open FS buffers and then remove pages
-		 * from the backing VM object.  Using vinvalbuf() here
-		 * is a bit heavy-handed as it flushes all buffers for
-		 * the given vnode, not just the buffers covering the
-		 * requested range.
-		 */
 		error = 0;
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 		if (vp->v_iflag & VI_DOOMED) {
 			VOP_UNLOCK(vp, 0);
 			break;
 		}
-		vinvalbuf(vp, V_CLEANONLY, 0, 0);
+
+		/*
+		 * Deactivate pages in the specified range from the backing VM
+		 * object.  Pages that are resident in the buffer cache will
+		 * remain wired until their corresponding buffers are released
+		 * below.
+		 */
 		if (vp->v_object != NULL) {
 			start = trunc_page(ap->a_start);
 			end = round_page(ap->a_end);
-			VM_OBJECT_WLOCK(vp->v_object);
-			vm_object_page_cache(vp->v_object, OFF_TO_IDX(start),
+			VM_OBJECT_RLOCK(vp->v_object);
+			vm_object_page_noreuse(vp->v_object, OFF_TO_IDX(start),
 			    OFF_TO_IDX(end));
-			VM_OBJECT_WUNLOCK(vp->v_object);
+			VM_OBJECT_RUNLOCK(vp->v_object);
 		}
+
+		bo = &vp->v_bufobj;
+		BO_RLOCK(bo);
+		bsize = vp->v_bufobj.bo_bsize;
+		startn = ap->a_start / bsize;
+		endn = ap->a_end / bsize;
+		error = bnoreuselist(&bo->bo_clean, bo, startn, endn);
+		if (error == 0)
+			error = bnoreuselist(&bo->bo_dirty, bo, startn, endn);
+		BO_RUNLOCK(bo);
 		VOP_UNLOCK(vp, 0);
 		break;
 	default:

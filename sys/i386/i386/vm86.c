@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/vm86.c 238792 2012-07-26 09:11:37Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,8 +128,7 @@ POPL(struct vm86frame *vmf)
 }
 
 int
-vm86_emulate(vmf)
-	struct vm86frame *vmf;
+vm86_emulate(struct vm86frame *vmf)
 {
 	struct vm86_kernel *vm86;
 	caddr_t addr;
@@ -171,7 +170,7 @@ vm86_emulate(vmf)
 					PUSHL((vmf->vmf_eflags & PUSH_MASK)
 					    | PSL_IOPL, vmf);
 				vmf->vmf_ip += inc_ip;
-				return (0);
+				return (retcode);
 
 			case POPF:
 				temp_flags = POPL(vmf) & POP_MASK;
@@ -185,7 +184,7 @@ vm86_emulate(vmf)
 				} else {
 					vmf->vmf_eflags &= ~PSL_VIF;
 				}
-				return (0);
+				return (retcode);
 			}
 			break;
 
@@ -203,7 +202,7 @@ vm86_emulate(vmf)
 		case INTn:
 			break;
 
-		/* VME if trying to set PSL_TF, or PSL_I when VIP is set */
+		/* VME if trying to set PSL_T, or PSL_I when VIP is set */
 		case POPF:
 			temp_flags = POP(vmf) & POP_MASK;
 			vmf->vmf_flags = (vmf->vmf_flags & ~POP_MASK)
@@ -218,7 +217,7 @@ vm86_emulate(vmf)
 			}
 			return (retcode);
 
-		/* VME if trying to set PSL_TF, or PSL_I when VIP is set */
+		/* VME if trying to set PSL_T, or PSL_I when VIP is set */
 		case IRET:
 			vmf->vmf_ip = POP(vmf);
 			vmf->vmf_cs = POP(vmf);
@@ -416,8 +415,8 @@ vm86_initialize(void)
 	 * pcb_esp	=    stack frame pointer at time of switch
 	 * pcb_ebx	= va of vm86 page table
 	 * pcb_eip	=    argument pointer to initial call
-	 * pcb_spare[0]	=    saved TSS descriptor, word 0
-	 * pcb_space[1]	=    saved TSS descriptor, word 1
+	 * pcb_vm86[0]	=    saved TSS descriptor, word 0
+	 * pcb_vm86[1]	=    saved TSS descriptor, word 1
 	 */
 #define new_ptd		pcb_esi
 #define vm86_frame	pcb_ebp
@@ -586,10 +585,7 @@ vm86_intcall(int intnum, struct vm86frame *vmf)
  * caller's cs:ip routine.  
  */
 int
-vm86_datacall(intnum, vmf, vmc)
-	int intnum;
-	struct vm86frame *vmf;
-	struct vm86context *vmc;
+vm86_datacall(int intnum, struct vm86frame *vmf, struct vm86context *vmc)
 {
 	pt_entry_t *pte = (pt_entry_t *)vm86paddr;
 	vm_paddr_t page;
@@ -634,11 +630,8 @@ vm86_getaddr(struct vm86context *vmc, u_short sel, u_short off)
 }
 
 int
-vm86_getptr(vmc, kva, sel, off)
-	struct vm86context *vmc;
-	vm_offset_t kva;
-	u_short *sel;
-	u_short *off;
+vm86_getptr(struct vm86context *vmc, vm_offset_t kva, u_short *sel,
+     u_short *off)
 {
 	int i;
 
@@ -653,9 +646,7 @@ vm86_getptr(vmc, kva, sel, off)
 }
 	
 int
-vm86_sysarch(td, args)
-	struct thread *td;
-	char *args;
+vm86_sysarch(struct thread *td, char *args)
 {
 	int error = 0;
 	struct i386_vm86_args ua;

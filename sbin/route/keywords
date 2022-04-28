@@ -1,8 +1,9 @@
 #	@(#)keywords	8.2 (Berkeley) 3/19/94
-# $FreeBSD: release/10.0.0/sbin/route/keywords 243185 2012-11-17 19:54:23Z hrs $
+# $FreeBSD$
 
+4
+6
 add
-atalk
 blackhole
 change
 cloning

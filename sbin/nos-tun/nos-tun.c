@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996, Nickolay Dudorov
  * All rights reserved.
  *
@@ -57,7 +59,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/nos-tun/nos-tun.c 204966 2010-03-10 18:51:13Z uqs $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -96,7 +98,7 @@ Set_address(char *addr, struct sockaddr_in *sin)
 
   bzero((char *)sin, sizeof(struct sockaddr));
   sin->sin_family = AF_INET;
-  if((sin->sin_addr.s_addr = inet_addr(addr)) == (in_addr_t)-1) {
+  if((sin->sin_addr.s_addr = inet_addr(addr)) == INADDR_NONE) {
     hp = gethostbyname(addr);
     if (!hp) {
       syslog(LOG_ERR,"unknown host %s", addr);

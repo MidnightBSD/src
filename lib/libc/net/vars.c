@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/vars.c 95023 2002-04-19 04:46:24Z suz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <netinet/in.h>

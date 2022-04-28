@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_ns8250.h 254597 2013-08-21 14:26:15Z ian $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_UART_DEV_NS8250_H_
@@ -56,5 +56,7 @@ int ns8250_bus_probe(struct uart_softc *);
 int ns8250_bus_receive(struct uart_softc *);
 int ns8250_bus_setsig(struct uart_softc *, int);
 int ns8250_bus_transmit(struct uart_softc *);
+void ns8250_bus_grab(struct uart_softc *);
+void ns8250_bus_ungrab(struct uart_softc *);
 
 #endif /* _DEV_UART_DEV_NS8250_H_ */

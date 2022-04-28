@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/sbin/geom/class/mirror/Makefile 216468 2010-12-15 23:24:34Z obrien $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../misc
+PACKAGE=runtime
+.PATH: ${.CURDIR:H:H}/misc
 
 GEOM_CLASS=	mirror
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.lib.mk>

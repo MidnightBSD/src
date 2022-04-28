@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2004, 2006, 2007 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2004, 2006, 2007 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -14,7 +14,7 @@
 #include <sendmail.h>
 #include <sm/sendmail.h>
 
-SM_RCSID("@(#)$Id: headers.c,v 8.318 2012/06/14 23:54:02 ca Exp $")
+SM_RCSID("@(#)$Id: headers.c,v 8.320 2013-11-22 20:51:55 ca Exp $")
 
 static HDR	*allocheader __P((char *, char *, int, SM_RPOOL_T *, bool));
 static size_t	fix_mime_header __P((HDR *, ENVELOPE *));
@@ -360,7 +360,7 @@ hse:
 				macdefine(&e->e_macro, A_PERM,
 					macid("{addr_type}"), "h");
 			(void) rscheck(rs, fvalue, NULL, e, rscheckflags, 3,
-				       NULL, e->e_id, NULL);
+				       NULL, e->e_id, NULL, NULL);
 		}
 	}
 
@@ -377,17 +377,18 @@ hse:
 	if (!bitset(pflag, CHHDR_DEF) && !headeronly &&
 	    !bitset(EF_QUEUERUN, e->e_flags) && sm_strcasecmp(fname, p) == 0)
 	{
-		if (tTd(31, 2))
-		{
-			sm_dprintf("comparing header from (%s) against default (%s or %s)\n",
-				fvalue, e->e_from.q_paddr, e->e_from.q_user);
-		}
 		if (e->e_from.q_paddr != NULL &&
 		    e->e_from.q_mailer != NULL &&
 		    bitnset(M_LOCALMAILER, e->e_from.q_mailer->m_flags) &&
 		    (strcmp(fvalue, e->e_from.q_paddr) == 0 ||
 		     strcmp(fvalue, e->e_from.q_user) == 0))
 			dropfrom = true;
+		if (tTd(31, 2))
+		{
+			sm_dprintf("comparing header from (%s) against default (%s or %s), drop=%d\n",
+				fvalue, e->e_from.q_paddr, e->e_from.q_user,
+				dropfrom);
+		}
 	}
 
 	/* delete default value for this header */
@@ -406,6 +407,19 @@ hse:
 			{
 				/* make this look like the user entered it */
 				h->h_flags |= H_USER;
+
+				/*
+				**  If the MH hack is selected, allow to turn
+				**  it off via a mailer flag to avoid problems
+				**  with setups that remove the F flag from
+				**  the RCPT mailer.
+				*/
+
+				if (bitnset(M_NOMHHACK,
+					    e->e_from.q_mailer->m_flags))
+				{
+					h->h_flags &= ~H_CHECK;
+				}
 				return hi->hi_flags;
 			}
 			h->h_value = NULL;
@@ -1180,6 +1194,22 @@ logsender(e, msgid)
 				", daemon=%.20s", p);
 		sbp += strlen(sbp);
 	}
+# if _FFR_LOG_MORE1
+#  if STARTTLS
+	p = macvalue(macid("{verify}"), e);
+	if (p == NULL || *p == '\0')
+		p = "NONE";
+	(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp), ", tls_verify=%.20s", p);
+	sbp += strlen(sbp);
+#  endif /* STARTTLS */
+#  if SASL
+	p = macvalue(macid("{auth_type}"), e);
+	if (p == NULL || *p == '\0')
+		p = "NONE";
+	(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp), ", auth=%.20s", p);
+	sbp += strlen(sbp);
+#  endif /* SASL */
+# endif /* _FFR_LOG_MORE1 */
 	sm_syslog(LOG_INFO, e->e_id, "%.850s, relay=%s", sbuf, name);
 
 #else /* (SYSLOG_BUFSIZE) >= 256 */
@@ -1878,8 +1908,10 @@ putheader(mci, hdr, e, flags)
 
 			if (bitset(H_FROM, h->h_flags))
 				oldstyle = false;
-			commaize(h, p, oldstyle, mci, e,
-				 PXLF_HEADER | PXLF_STRIPMQUOTE);
+			if (!commaize(h, p, oldstyle, mci, e,
+				      PXLF_HEADER | PXLF_STRIPMQUOTE)
+			    && bitnset(M_xSMTP, mci->mci_mailer->m_flags))
+				goto writeerr;
 		}
 		else
 		{
@@ -2155,6 +2187,12 @@ commaize(h, p, oldstyle, mci, e, putflags)
 #endif /* USERDB */
 		status = EX_OK;
 		name = remotename(name, mci->mci_mailer, flags, &status, e);
+		if (status != EX_OK && bitnset(M_xSMTP, mci->mci_mailer->m_flags))
+		{
+			if (status == EX_TEMPFAIL)
+				mci->mci_flags |= MCIF_NOTSTICKY;
+			goto writeerr;
+		}
 		if (*name == '\0')
 		{
 			*p = savechar;

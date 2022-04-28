@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/cpufreq/powernow.c 221102 2011-04-27 00:32:35Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -700,9 +700,9 @@ pn_decode_pst(device_t dev)
 			if (sc->pn_type != PN8_TYPE)
 				return (EINVAL);
 			sc->vst = psb->settlingtime;
-			sc->rvo = PN8_PSB_TO_RVO(psb->res1),
-			sc->irt = PN8_PSB_TO_IRT(psb->res1),
-			sc->mvs = PN8_PSB_TO_MVS(psb->res1),
+			sc->rvo = PN8_PSB_TO_RVO(psb->res1);
+			sc->irt = PN8_PSB_TO_IRT(psb->res1);
+			sc->mvs = PN8_PSB_TO_MVS(psb->res1);
 			sc->low = PN8_PSB_TO_BATT(psb->res1);
 			if (bootverbose) {
 				device_printf(dev, "PSB: VST: %d\n",

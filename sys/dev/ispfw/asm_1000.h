@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/ispfw/asm_1000.h 139749 2005-01-06 01:43:34Z imp $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000 Qlogic, Inc.
  * All rights reserved.

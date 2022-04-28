@@ -1,6 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/build/mk/Makefile.boot 142640 2005-02-27 11:22:58Z ru $
+# $FreeBSD$
 
 CFLAGS+=	-I${WORLDTMP}/legacy/usr/include
 DPADD+=		${WORLDTMP}/legacy/usr/lib/libegacy.a
 LDADD+=		-legacy
 LDFLAGS+=	-L${WORLDTMP}/legacy/usr/lib
+
+# we do not want to capture dependencies referring to the above
+UPDATE_DEPENDFILE= no

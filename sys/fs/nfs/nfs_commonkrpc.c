@@ -32,13 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfs/nfs_commonkrpc.c 253049 2013-07-09 01:05:28Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Socket operations for use by nfs
  */
 
-#include "opt_kdtrace.h"
 #include "opt_kgssapi.h"
 #include "opt_nfs.h"
 
@@ -59,6 +58,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfs/nfs_commonkrpc.c 253049 2013-07-09
 #include <sys/vnode.h>
 
 #include <rpc/rpc.h>
+#include <rpc/krpc.h>
 
 #include <kgssapi/krb5/kcrypto.h>
 
@@ -89,7 +89,8 @@ uint32_t	nfscl_nfs4_done_probes[NFSV41_NPROCS + 1];
 NFSSTATESPINLOCK;
 NFSREQSPINLOCK;
 NFSDLOCKMUTEX;
-extern struct nfsstats newnfsstats;
+NFSCLSTATEMUTEX;
+extern struct nfsstatsv1 nfsstatsv1;
 extern struct nfsreqhead nfsd_reqq;
 extern int nfscl_ticks;
 extern void (*ncl_call_invalcaches)(struct vnode *);
@@ -160,7 +161,7 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
     struct ucred *cred, NFSPROC_T *p, int callback_retry_mult)
 {
 	int rcvreserve, sndreserve;
-	int pktscale;
+	int pktscale, pktscalesav;
 	struct sockaddr *saddr;
 	struct ucred *origcred;
 	CLIENT *client;
@@ -209,6 +210,7 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 		pktscale = 2;
 	if (pktscale > 64)
 		pktscale = 64;
+	pktscalesav = pktscale;
 	/*
 	 * soreserve() can fail if sb_max is too small, so shrink pktscale
 	 * and try again if there is an error.
@@ -227,8 +229,12 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 		goto out;
 	}
 	do {
-	    if (error != 0 && pktscale > 2)
+	    if (error != 0 && pktscale > 2) {
+		if (nmp != NULL && nrp->nr_sotype == SOCK_STREAM &&
+		    pktscale == pktscalesav)
+		    printf("Consider increasing kern.ipc.maxsockbuf\n");
 		pktscale--;
+	    }
 	    if (nrp->nr_sotype == SOCK_DGRAM) {
 		if (nmp != NULL) {
 			sndreserve = (NFS_MAXDGRAMDATA + NFS_MAXPKTHDR) *
@@ -242,15 +248,19 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 		if (nrp->nr_sotype != SOCK_STREAM)
 			panic("nfscon sotype");
 		if (nmp != NULL) {
-			sndreserve = (NFS_MAXBSIZE + NFS_MAXPKTHDR +
+			sndreserve = (NFS_MAXBSIZE + NFS_MAXXDR +
 			    sizeof (u_int32_t)) * pktscale;
-			rcvreserve = (NFS_MAXBSIZE + NFS_MAXPKTHDR +
+			rcvreserve = (NFS_MAXBSIZE + NFS_MAXXDR +
 			    sizeof (u_int32_t)) * pktscale;
 		} else {
 			sndreserve = rcvreserve = 1024 * pktscale;
 		}
 	    }
 	    error = soreserve(so, sndreserve, rcvreserve);
+	    if (error != 0 && nmp != NULL && nrp->nr_sotype == SOCK_STREAM &&
+		pktscale <= 2)
+		printf("Must increase kern.ipc.maxsockbuf or reduce"
+		    " rsize, wsize\n");
 	} while (error != 0 && pktscale > 2);
 	soclose(so);
 	if (error) {
@@ -260,7 +270,7 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 
 	client = clnt_reconnect_create(nconf, saddr, nrp->nr_prog,
 	    nrp->nr_vers, sndreserve, rcvreserve);
-	CLNT_CONTROL(client, CLSET_WAITCHAN, "newnfsreq");
+	CLNT_CONTROL(client, CLSET_WAITCHAN, "nfsreq");
 	if (nmp != NULL) {
 		if ((nmp->nm_flag & NFSMNT_INT))
 			CLNT_CONTROL(client, CLSET_INTERRUPTIBLE, &one);
@@ -279,7 +289,8 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 				retries = nmp->nm_retry;
 		} else
 			retries = INT_MAX;
-		if (NFSHASNFSV4N(nmp)) {
+		/* cred == NULL for DS connects. */
+		if (NFSHASNFSV4N(nmp) && cred != NULL) {
 			/*
 			 * Make sure the nfscbd_pool doesn't get destroyed
 			 * while doing this.
@@ -336,24 +347,25 @@ newnfs_connect(struct nfsmount *nmp, struct nfssockreq *nrp,
 
 	mtx_lock(&nrp->nr_mtx);
 	if (nrp->nr_client != NULL) {
+		mtx_unlock(&nrp->nr_mtx);
 		/*
 		 * Someone else already connected.
 		 */
 		CLNT_RELEASE(client);
 	} else {
 		nrp->nr_client = client;
+		/*
+		 * Protocols that do not require connections may be optionally
+		 * left unconnected for servers that reply from a port other
+		 * than NFS_PORT.
+		 */
+		if (nmp == NULL || (nmp->nm_flag & NFSMNT_NOCONN) == 0) {
+			mtx_unlock(&nrp->nr_mtx);
+			CLNT_CONTROL(client, CLSET_CONNECT, &one);
+		} else
+			mtx_unlock(&nrp->nr_mtx);
 	}
 
-	/*
-	 * Protocols that do not require connections may be optionally left
-	 * unconnected for servers that reply from a port other than NFS_PORT.
-	 */
-	if (nmp == NULL || (nmp->nm_flag & NFSMNT_NOCONN) == 0) {
-		mtx_unlock(&nrp->nr_mtx);
-		CLNT_CONTROL(client, CLSET_CONNECT, &one);
-	} else {
-		mtx_unlock(&nrp->nr_mtx);
-	}
 
 	/* Restore current thread's credentials. */
 	td->td_ucred = origcred;
@@ -472,13 +484,13 @@ int
 newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
     struct nfsclient *clp, struct nfssockreq *nrp, vnode_t vp,
     struct thread *td, struct ucred *cred, u_int32_t prog, u_int32_t vers,
-    u_char *retsum, int toplevel, u_int64_t *xidp, struct nfsclsession *sep)
+    u_char *retsum, int toplevel, u_int64_t *xidp, struct nfsclsession *dssep)
 {
-	u_int32_t retseq, retval, *tl;
+	uint32_t retseq, retval, slotseq, *tl;
 	time_t waituntil;
 	int i = 0, j = 0, opcnt, set_sigset = 0, slot;
 	int trycnt, error = 0, usegssname = 0, secflavour = AUTH_SYS;
-	int freeslot, timeo;
+	int freeslot, maxslot, reterr, slotpos, timeo;
 	u_int16_t procnum;
 	u_int trylater_delay = 1;
 	struct nfs_feedback_arg nf;
@@ -490,11 +502,14 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 	char *srv_principal = NULL, *clnt_principal = NULL;
 	sigset_t oldset;
 	struct ucred *authcred;
+	struct nfsclsession *sep;
+	uint8_t sessionid[NFSX_V4SESSIONID];
 
+	sep = dssep;
 	if (xidp != NULL)
 		*xidp = 0;
 	/* Reject requests while attempting a forced unmount. */
-	if (nmp != NULL && (nmp->nm_mountp->mnt_kern_flag & MNTK_UNMOUNTF)) {
+	if (nmp != NULL && NFSCL_FORCEDISM(nmp->nm_mountp)) {
 		m_freem(nd->nd_mreq);
 		return (ESTALE);
 	}
@@ -641,7 +656,7 @@ newnfs_request(struct nfsrv_descript *nd, struct nfsmount *nmp,
 		procnum = NFSV4PROC_COMPOUND;
 
 	if (nmp != NULL) {
-		NFSINCRGLOBAL(newnfsstats.rpcrequests);
+		NFSINCRGLOBAL(nfsstatsv1.rpcrequests);
 
 		/* Map the procnum to the old NFSv2 one, as required. */
 		if ((nd->nd_flag & ND_NFSV2) != 0) {
@@ -738,8 +753,12 @@ tryagain:
 	}
 
 	nd->nd_mrep = NULL;
-	stat = CLNT_CALL_MBUF(nrp->nr_client, &ext, procnum, nd->nd_mreq,
-	    &nd->nd_mrep, timo);
+	if (clp != NULL && sep != NULL)
+		stat = clnt_bck_call(nrp->nr_client, &ext, procnum,
+		    nd->nd_mreq, &nd->nd_mrep, timo, sep->nfsess_xprt);
+	else
+		stat = CLNT_CALL_MBUF(nrp->nr_client, &ext, procnum,
+		    nd->nd_mreq, &nd->nd_mrep, timo);
 
 	if (rep != NULL) {
 		/*
@@ -757,18 +776,18 @@ tryagain:
 	if (stat == RPC_SUCCESS) {
 		error = 0;
 	} else if (stat == RPC_TIMEDOUT) {
-		NFSINCRGLOBAL(newnfsstats.rpctimeouts);
+		NFSINCRGLOBAL(nfsstatsv1.rpctimeouts);
 		error = ETIMEDOUT;
 	} else if (stat == RPC_VERSMISMATCH) {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EOPNOTSUPP;
 	} else if (stat == RPC_PROGVERSMISMATCH) {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EPROTONOSUPPORT;
 	} else if (stat == RPC_INTR) {
 		error = EINTR;
 	} else {
-		NFSINCRGLOBAL(newnfsstats.rpcinvalid);
+		NFSINCRGLOBAL(nfsstatsv1.rpcinvalid);
 		error = EACCES;
 	}
 	if (error) {
@@ -794,10 +813,11 @@ tryagain:
 	nd->nd_md = nd->nd_mrep;
 	nd->nd_dpos = NFSMTOD(nd->nd_md, caddr_t);
 	nd->nd_repstat = 0;
-	if (nd->nd_procnum != NFSPROC_NULL) {
+	if (nd->nd_procnum != NFSPROC_NULL &&
+	    nd->nd_procnum != NFSV4PROC_CBNULL) {
 		/* If sep == NULL, set it to the default in nmp. */
 		if (sep == NULL && nmp != NULL)
-			sep = NFSMNT_MDSSESSION(nmp);
+			sep = nfsmnt_mdssession(nmp);
 		/*
 		 * and now the actual NFS xdr.
 		 */
@@ -811,7 +831,8 @@ tryagain:
 		 * Get rid of the tag, return count and SEQUENCE result for
 		 * NFSv4.
 		 */
-		if ((nd->nd_flag & ND_NFSV4) != 0) {
+		if ((nd->nd_flag & ND_NFSV4) != 0 && nd->nd_repstat !=
+		    NFSERR_MINORVERMISMATCH) {
 			NFSM_DISSECT(tl, u_int32_t *, NFSX_UNSIGNED);
 			i = fxdr_unsigned(int, *tl);
 			error = nfsm_advance(nd, NFSM_RNDUP(i), -1);
@@ -826,24 +847,40 @@ tryagain:
 			/*
 			 * If the first op is Sequence, free up the slot.
 			 */
-			if (nmp != NULL && i == NFSV4OP_SEQUENCE && j != 0)
+			if ((nmp != NULL && i == NFSV4OP_SEQUENCE && j != 0) ||
+			    (clp != NULL && i == NFSV4OP_CBSEQUENCE && j != 0))
 				NFSCL_DEBUG(1, "failed seq=%d\n", j);
-			if (nmp != NULL && i == NFSV4OP_SEQUENCE && j == 0) {
-				NFSM_DISSECT(tl, uint32_t *, NFSX_V4SESSIONID +
-				    5 * NFSX_UNSIGNED);
+			if (((nmp != NULL && i == NFSV4OP_SEQUENCE && j == 0) ||
+			    (clp != NULL && i == NFSV4OP_CBSEQUENCE &&
+			    j == 0)) && sep != NULL) {
+				if (i == NFSV4OP_SEQUENCE)
+					NFSM_DISSECT(tl, uint32_t *,
+					    NFSX_V4SESSIONID +
+					    5 * NFSX_UNSIGNED);
+				else
+					NFSM_DISSECT(tl, uint32_t *,
+					    NFSX_V4SESSIONID +
+					    4 * NFSX_UNSIGNED);
 				mtx_lock(&sep->nfsess_mtx);
-				tl += NFSX_V4SESSIONID / NFSX_UNSIGNED;
-				retseq = fxdr_unsigned(uint32_t, *tl++);
-				slot = fxdr_unsigned(int, *tl++);
-				freeslot = slot;
-				if (retseq != sep->nfsess_slotseq[slot])
-					printf("retseq diff 0x%x\n", retseq);
-				retval = fxdr_unsigned(uint32_t, *++tl);
-				if ((retval + 1) < sep->nfsess_foreslots)
-					sep->nfsess_foreslots = (retval + 1);
-				else if ((retval + 1) > sep->nfsess_foreslots)
-					sep->nfsess_foreslots = (retval < 64) ?
-					    (retval + 1) : 64;
+				if (bcmp(tl, sep->nfsess_sessionid,
+				    NFSX_V4SESSIONID) == 0) {
+					tl += NFSX_V4SESSIONID / NFSX_UNSIGNED;
+					retseq = fxdr_unsigned(uint32_t, *tl++);
+					slot = fxdr_unsigned(int, *tl++);
+					freeslot = slot;
+					if (retseq != sep->nfsess_slotseq[slot])
+						printf("retseq diff 0x%x\n",
+						    retseq);
+					retval = fxdr_unsigned(uint32_t, *++tl);
+					if ((retval + 1) < sep->nfsess_foreslots
+					    )
+						sep->nfsess_foreslots = (retval
+						    + 1);
+					else if ((retval + 1) >
+					    sep->nfsess_foreslots)
+						sep->nfsess_foreslots = (retval
+						    < 64) ? (retval + 1) : 64;
+				}
 				mtx_unlock(&sep->nfsess_mtx);
 
 				/* Grab the op and status for the next one. */
@@ -856,10 +893,85 @@ tryagain:
 			}
 		}
 		if (nd->nd_repstat != 0) {
+			if (nd->nd_repstat == NFSERR_BADSESSION &&
+			    nmp != NULL && dssep == NULL &&
+			    (nd->nd_flag & ND_NFSV41) != 0) {
+				/*
+				 * If this is a client side MDS RPC, mark
+				 * the MDS session defunct and initiate
+				 * recovery, as required.
+				 * The nfsess_defunct field is protected by
+				 * the NFSLOCKMNT()/nm_mtx lock and not the
+				 * nfsess_mtx lock to simplify its handling,
+				 * for the MDS session. This lock is also
+				 * sufficient for nfsess_sessionid, since it
+				 * never changes in the structure.
+				 */
+				NFSCL_DEBUG(1, "Got badsession\n");
+				NFSLOCKCLSTATE();
+				NFSLOCKMNT(nmp);
+				sep = NFSMNT_MDSSESSION(nmp);
+				if (bcmp(sep->nfsess_sessionid, nd->nd_sequence,
+				    NFSX_V4SESSIONID) == 0) {
+					/* Initiate recovery. */
+					sep->nfsess_defunct = 1;
+					NFSCL_DEBUG(1, "Marked defunct\n");
+					if (nmp->nm_clp != NULL) {
+						nmp->nm_clp->nfsc_flags |=
+						    NFSCLFLAGS_RECOVER;
+						wakeup(nmp->nm_clp);
+					}
+				}
+				NFSUNLOCKCLSTATE();
+				/*
+				 * Sleep for up to 1sec waiting for a new
+				 * session.
+				 */
+				mtx_sleep(&nmp->nm_sess, &nmp->nm_mtx, PZERO,
+				    "nfsbadsess", hz);
+				/*
+				 * Get the session again, in case a new one
+				 * has been created during the sleep.
+				 */
+				sep = NFSMNT_MDSSESSION(nmp);
+				NFSUNLOCKMNT(nmp);
+				if ((nd->nd_flag & ND_LOOPBADSESS) != 0) {
+					reterr = nfsv4_sequencelookup(nmp, sep,
+					    &slotpos, &maxslot, &slotseq,
+					    sessionid);
+					if (reterr == 0) {
+						/* Fill in new session info. */
+						NFSCL_DEBUG(1,
+						  "Filling in new sequence\n");
+						tl = nd->nd_sequence;
+						bcopy(sessionid, tl,
+						    NFSX_V4SESSIONID);
+						tl += NFSX_V4SESSIONID /
+						    NFSX_UNSIGNED;
+						*tl++ = txdr_unsigned(slotseq);
+						*tl++ = txdr_unsigned(slotpos);
+						*tl = txdr_unsigned(maxslot);
+					}
+					if (reterr == NFSERR_BADSESSION ||
+					    reterr == 0) {
+						NFSCL_DEBUG(1,
+						    "Badsession looping\n");
+						m_freem(nd->nd_mrep);
+						nd->nd_mrep = NULL;
+						goto tryagain;
+					}
+					nd->nd_repstat = reterr;
+					NFSCL_DEBUG(1, "Got err=%d\n", reterr);
+				}
+			}
+			/*
+			 * When clp != NULL, it is a callback and all
+			 * callback operations can be retried for NFSERR_DELAY.
+			 */
 			if (((nd->nd_repstat == NFSERR_DELAY ||
 			      nd->nd_repstat == NFSERR_GRACE) &&
-			     (nd->nd_flag & ND_NFSV4) &&
-			     nd->nd_procnum != NFSPROC_DELEGRETURN &&
+			     (nd->nd_flag & ND_NFSV4) && (clp != NULL ||
+			     (nd->nd_procnum != NFSPROC_DELEGRETURN &&
 			     nd->nd_procnum != NFSPROC_SETATTR &&
 			     nd->nd_procnum != NFSPROC_READ &&
 			     nd->nd_procnum != NFSPROC_READDS &&
@@ -871,7 +983,7 @@ tryagain:
 			     nd->nd_procnum != NFSPROC_OPENDOWNGRADE &&
 			     nd->nd_procnum != NFSPROC_CLOSE &&
 			     nd->nd_procnum != NFSPROC_LOCK &&
-			     nd->nd_procnum != NFSPROC_LOCKU) ||
+			     nd->nd_procnum != NFSPROC_LOCKU))) ||
 			    (nd->nd_repstat == NFSERR_DELAY &&
 			     (nd->nd_flag & ND_NFSV4) == 0) ||
 			    nd->nd_repstat == NFSERR_RESOURCE) {
@@ -946,8 +1058,10 @@ tryagain:
 			/*
 			 * If this op's status is non-zero, mark
 			 * that there is no more data to process.
+			 * The exception is Setattr, which always has xdr
+			 * when it has failed.
 			 */
-			if (j)
+			if (j != 0 && i != NFSV4OP_SETATTR)
 				nd->nd_flag |= ND_NOMOREDATA;
 
 			/*
@@ -1011,9 +1125,29 @@ nfsmout:
 int
 newnfs_nmcancelreqs(struct nfsmount *nmp)
 {
+	struct nfsclds *dsp;
+	struct __rpc_client *cl;
 
 	if (nmp->nm_sockreq.nr_client != NULL)
 		CLNT_CLOSE(nmp->nm_sockreq.nr_client);
+lookformore:
+	NFSLOCKMNT(nmp);
+	TAILQ_FOREACH(dsp, &nmp->nm_sess, nfsclds_list) {
+		NFSLOCKDS(dsp);
+		if (dsp != TAILQ_FIRST(&nmp->nm_sess) &&
+		    (dsp->nfsclds_flags & NFSCLDS_CLOSED) == 0 &&
+		    dsp->nfsclds_sockp != NULL &&
+		    dsp->nfsclds_sockp->nr_client != NULL) {
+			dsp->nfsclds_flags |= NFSCLDS_CLOSED;
+			cl = dsp->nfsclds_sockp->nr_client;
+			NFSUNLOCKDS(dsp);
+			NFSUNLOCKMNT(nmp);
+			CLNT_CLOSE(cl);
+			goto lookformore;
+		}
+		NFSUNLOCKDS(dsp);
+	}
+	NFSUNLOCKMNT(nmp);
 	return (0);
 }
 
@@ -1038,7 +1172,7 @@ nfs_sig_pending(sigset_t set)
 {
 	int i;
 	
-	for (i = 0 ; i < sizeof(newnfs_sig_set)/sizeof(int) ; i++)
+	for (i = 0 ; i < nitems(newnfs_sig_set); i++)
 		if (SIGISMEMBER(set, newnfs_sig_set[i]))
 			return (1);
 	return (0);
@@ -1063,7 +1197,7 @@ newnfs_set_sigmask(struct thread *td, sigset_t *oldset)
 	/* Remove the NFS set of signals from newset */
 	PROC_LOCK(p);
 	mtx_lock(&p->p_sigacts->ps_mtx);
-	for (i = 0 ; i < sizeof(newnfs_sig_set)/sizeof(int) ; i++) {
+	for (i = 0 ; i < nitems(newnfs_sig_set); i++) {
 		/*
 		 * But make sure we leave the ones already masked
 		 * by the process, ie. remove the signal from the
@@ -1121,7 +1255,7 @@ newnfs_sigintr(struct nfsmount *nmp, struct thread *td)
 	sigset_t tmpset;
 	
 	/* Terminate all requests while attempting a forced unmount. */
-	if (nmp->nm_mountp->mnt_kern_flag & MNTK_UNMOUNTF)
+	if (NFSCL_FORCEDISM(nmp->nm_mountp))
 		return (EIO);
 	if (!(nmp->nm_flag & NFSMNT_INT))
 		return (0);
@@ -1151,10 +1285,10 @@ nfs_msg(struct thread *td, const char *server, const char *msg, int error)
 
 	p = td ? td->td_proc : NULL;
 	if (error) {
-		tprintf(p, LOG_INFO, "newnfs server %s: %s, error %d\n",
+		tprintf(p, LOG_INFO, "nfs server %s: %s, error %d\n",
 		    server, msg, error);
 	} else {
-		tprintf(p, LOG_INFO, "newnfs server %s: %s\n", server, msg);
+		tprintf(p, LOG_INFO, "nfs server %s: %s\n", server, msg);
 	}
 	return (0);
 }

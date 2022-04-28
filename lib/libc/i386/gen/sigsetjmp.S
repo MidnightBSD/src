@@ -37,7 +37,7 @@
 	.asciz "$Id: sigsetjmp.S,v 1.1 1993/12/05 13:01:05 ats Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/gen/sigsetjmp.S 227024 2011-11-02 18:08:30Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "SYS.h"
 
@@ -59,21 +59,12 @@ ENTRY(sigsetjmp)
 	movl	%eax,44(%ecx)
 	testl	%eax,%eax
 	jz	2f
-	PIC_PROLOGUE
-#ifdef PIC
-	subl	$12,%esp		/* make the stack 16-byte aligned */
-#endif
 	leal	28(%ecx), %eax
 	pushl	%eax			/* (sigset_t*)oset */
 	pushl	$0			/* (sigset_t*)set  */
 	pushl	$1			/* SIG_BLOCK       */
-	call	PIC_PLT(CNAME(_sigprocmask))
-#ifdef PIC
-	addl	$24,%esp
-#else
+	call	__libc_sigprocmask
 	addl	$12,%esp
-#endif
-	PIC_EPILOGUE
 	movl	4(%esp),%ecx
 2:	movl	0(%esp),%edx
 	movl	%edx, 0(%ecx)
@@ -87,27 +78,17 @@ ENTRY(sigsetjmp)
 	ret
 END(sigsetjmp)
 
-	.weak CNAME(siglongjmp);
-	.set CNAME(siglongjmp),CNAME(__siglongjmp)
+	WEAK_REFERENCE(__siglongjmp, siglongjmp)
 ENTRY(__siglongjmp)
 	movl	4(%esp),%edx
 	cmpl	$0,44(%edx)
 	jz	2f
-	PIC_PROLOGUE
-#ifdef PIC
-	subl	$12,%esp		/* make the stack 16-byte aligned */
-#endif
 	pushl	$0			/* (sigset_t*)oset */
 	leal	28(%edx), %eax
 	pushl	%eax			/* (sigset_t*)set  */
 	pushl	$3			/* SIG_SETMASK     */
-	call	PIC_PLT(CNAME(_sigprocmask))
-#ifdef PIC
-	addl	$24,%esp
-#else
+	call	__libc_sigprocmask
 	addl	$12,%esp
-#endif
-	PIC_EPILOGUE
 	movl	4(%esp),%edx
 2:	movl	8(%esp),%eax
 	movl	0(%edx),%ecx
@@ -116,7 +97,6 @@ ENTRY(__siglongjmp)
 	movl	12(%edx),%ebp
 	movl	16(%edx),%esi
 	movl	20(%edx),%edi
-	fninit
 	fldcw	24(%edx)
 	testl	%eax,%eax
 	jnz	1f

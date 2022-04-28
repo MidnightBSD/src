@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/floppy.tree/etc/fstab 91849 2002-03-08 03:55:19Z luigi $
+# $FreeBSD$
 proc				/proc		procfs	rw 0 0
 /dev/fd0c			/fd	ufs	rw,noauto 0 0
 /dev/ad0s1			/dos		msdosfs	rw,noauto 0 0

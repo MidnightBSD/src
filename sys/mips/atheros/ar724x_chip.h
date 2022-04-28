@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/mips/atheros/ar724x_chip.h 211503 2010-08-19 11:53:55Z adrian $ */
+/* $FreeBSD$ */
 
 #ifndef	__AR724X_CHIP_H__
 #define	__AR724X_CHIP_H__

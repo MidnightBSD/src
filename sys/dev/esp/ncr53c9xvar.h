@@ -16,13 +16,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the NetBSD
- *	Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -66,7 +59,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/dev/esp/ncr53c9xvar.h 226947 2011-10-30 21:17:42Z marius $ */
+/* $FreeBSD$ */
 
 #ifndef _NCR53C9XVAR_H_
 #define	_NCR53C9XVAR_H_
@@ -109,7 +102,7 @@
 /*
  * ECB. Holds additional information for each SCSI command Comments: We
  * need a separate scsi command block because we may need to overwrite it
- * with a request sense command.  Basicly, we refrain from fiddling with
+ * with a request sense command.  Basically, we refrain from fiddling with
  * the ccb union (except do the expected updating of return values).
  * We'll generally update: ccb->ccb_h.status and ccb->csio.{resid,
  * scsi_status,sense_data}.

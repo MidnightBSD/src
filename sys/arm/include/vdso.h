@@ -22,13 +22,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/vdso.h 237433 2012-06-22 07:06:40Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _ARM_VDSO_H
 #define	_ARM_VDSO_H
 
 #define	VDSO_TIMEHANDS_MD			\
-	uint32_t	th_res[8];
+	uint32_t	th_physical;		\
+	uint32_t	th_res[7];
+
+#define	VDSO_TH_ALGO_ARM_GENTIM	VDSO_TH_ALGO_1
 
 #endif

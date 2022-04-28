@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/ed/cbc.c 248656 2013-03-23 19:04:57Z jmg $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -90,16 +90,13 @@ void
 init_des_cipher(void)
 {
 #ifdef DES
-	int i;
-
 	des_ct = des_n = 0;
 
 	/* initialize the initialization vector */
 	MEMZERO(ivec, 8);
 
 	/* initialize the padding vector */
-	for (i = 0; i < 8; i++)
-		pvec[i] = (char) (arc4random() % 256);
+	arc4random_buf(pvec, sizeof(pvec));
 #endif
 }
 
@@ -164,7 +161,7 @@ get_keyword(void)
 	/*
 	 * get the key
 	 */
-	if (*(p = getpass("Enter key: "))) {
+	if ((p = getpass("Enter key: ")) != NULL && *p != '\0') {
 
 		/*
 		 * copy it, nul-padded, into the key area
@@ -237,7 +234,7 @@ expand_des_key(char *obuf, char *kbuf)
 		/*
 		 * now translate it, bombing on any illegal hex digit
 		 */
-		for (i = 0; kbuf[i] && i < 16; i++)
+		for (i = 0; i < 16 && kbuf[i]; i++)
 			if ((nbuf[i] = hex_to_binary((int) kbuf[i], 16)) == -1)
 				des_error("bad hex digit in key");
 		while (i < 16)
@@ -257,7 +254,7 @@ expand_des_key(char *obuf, char *kbuf)
 		/*
 		 * now translate it, bombing on any illegal binary digit
 		 */
-		for (i = 0; kbuf[i] && i < 16; i++)
+		for (i = 0; i < 16 && kbuf[i]; i++)
 			if ((nbuf[i] = hex_to_binary((int) kbuf[i], 2)) == -1)
 				des_error("bad binary digit in key");
 		while (i < 64)

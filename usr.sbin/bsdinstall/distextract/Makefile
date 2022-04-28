@@ -1,11 +1,10 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/distextract/Makefile 250511 2013-05-11 13:46:05Z antoine $
+# $FreeBSD$
 
-BINDIR= /usr/libexec/bsdinstall
+BINDIR= ${LIBEXECDIR}/bsdinstall
 PROG=	distextract
-DPADD=	${LIBARCHIVE} ${LIBNCURSESW} ${LIBDIALOG} ${LIBM}
-LDADD=	-larchive -lncursesw -ldialog -lm
+LIBADD=	archive dpv figpar ncursesw dialog m
 
 WARNS?=	6
-NO_MAN=	true
+MAN=
 
 .include <bsd.prog.mk>

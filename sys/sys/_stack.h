@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_stack.h 177957 2008-04-06 20:08:51Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__STACK_H_

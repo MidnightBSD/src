@@ -32,7 +32,7 @@
 .\"
 .\" Author: Archie Cobbs <archie@FreeBSD.org>
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/ng_bpf.4 242997 2012-11-13 20:41:36Z joel $
+.\" $FreeBSD$
 .\" $Whistle: ng_bpf.8,v 1.2 1999/12/03 01:57:12 archie Exp $
 .\"
 .Dd November 13, 2012
@@ -156,7 +156,7 @@ INHOOK="hook1"
 MATCHHOOK="hook2"
 NOTMATCHHOOK="hook3"
 
-BPFPROG=$( tcpdump -s 8192 -ddd ${PATTERN} | \\
+BPFPROG=$( tcpdump -s 8192 -p -ddd ${PATTERN} | \\
            ( read len ; \\
              echo -n "bpf_prog_len=$len" ; \\
              echo -n "bpf_prog=[" ; \\
@@ -180,7 +180,7 @@ The
 node type was implemented in
 .Fx 4.0 .
 .Sh AUTHORS
-.An Archie Cobbs Aq archie@FreeBSD.org
+.An Archie Cobbs Aq Mt archie@FreeBSD.org
 .Sh BUGS
 When built as a loadable kernel module, this module includes the file
 .Pa net/bpf_filter.c .

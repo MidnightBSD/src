@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_syscons.c 255904 2013-09-26 22:47:02Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,9 +57,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_syscons.c 255904 2013-09-
 #include <powerpc/ofw/ofw_syscons.h>
 
 static int ofwfb_ignore_mmap_checks = 1;
+static int ofwfb_reset_on_switch = 1;
 static SYSCTL_NODE(_hw, OID_AUTO, ofwfb, CTLFLAG_RD, 0, "ofwfb");
 SYSCTL_INT(_hw_ofwfb, OID_AUTO, relax_mmap, CTLFLAG_RW,
     &ofwfb_ignore_mmap_checks, 0, "relaxed mmap bounds checking");
+SYSCTL_INT(_hw_ofwfb, OID_AUTO, reset_on_mode_switch, CTLFLAG_RW,
+    &ofwfb_reset_on_switch, 0, "reset the framebuffer driver on mode switch");
 
 extern u_char dflt_font_16[];
 extern u_char dflt_font_14[];
@@ -339,7 +342,7 @@ ofwfb_configure(int flags)
 		if (fb_phys == sc->sc_num_pciaddrs)
 			return (0);
 
-		OF_decode_addr(node, fb_phys, &sc->sc_tag, &sc->sc_addr);
+		OF_decode_addr(node, fb_phys, &sc->sc_tag, &sc->sc_addr, NULL);
 	}
 
 	ofwfb_init(0, &sc->sc_va, 0);
@@ -409,7 +412,7 @@ ofwfb_init(int unit, video_adapter_t *adp, int flags)
 	adp->va_window = (vm_offset_t) ofwfb_static_window;
 
 	/*
-	 * Enable future font-loading and flag color support, as well as 
+	 * Enable future font-loading and flag color support, as well as
 	 * adding V_ADP_MODECHANGE so that we ofwfb_set_mode() gets called
 	 * when the X server shuts down. This enables us to get the console
 	 * back when X disappears.
@@ -447,26 +450,28 @@ ofwfb_set_mode(video_adapter_t *adp, int mode)
 
 	sc = (struct ofwfb_softc *)adp;
 
-	/*
-	 * Open the display device, which will initialize it.
-	 */
-
-	memset(name, 0, sizeof(name));
-	OF_package_to_path(sc->sc_node, name, sizeof(name));
-	ih = OF_open(name);
-
-	if (sc->sc_depth == 8) {
+	if (ofwfb_reset_on_switch) {
 		/*
-		 * Install the ISO6429 colormap - older OFW systems
-		 * don't do this by default
+		 * Open the display device, which will initialize it.
 		 */
-		for (i = 0; i < 16; i++) {
-			OF_call_method("color!", ih, 4, 1,
-				       ofwfb_cmap[i].red,
-				       ofwfb_cmap[i].green,
-				       ofwfb_cmap[i].blue,
-				       i,
-				       &retval);
+
+		memset(name, 0, sizeof(name));
+		OF_package_to_path(sc->sc_node, name, sizeof(name));
+		ih = OF_open(name);
+
+		if (sc->sc_depth == 8) {
+			/*
+			 * Install the ISO6429 colormap - older OFW systems
+			 * don't do this by default
+			 */
+			for (i = 0; i < 16; i++) {
+				OF_call_method("color!", ih, 4, 1,
+						   ofwfb_cmap[i].red,
+						   ofwfb_cmap[i].green,
+						   ofwfb_cmap[i].blue,
+						   i,
+						   &retval);
+			}
 		}
 	}
 
@@ -869,7 +874,7 @@ ofwfb_putc32(video_adapter_t *adp, vm_offset_t off, uint8_t c, uint8_t a)
 	addr = (uint32_t *)sc->sc_addr
 		+ (row + sc->sc_ymargin)*(sc->sc_stride/4)
 		+ col + sc->sc_xmargin;
-	
+
 	fg = ofwfb_pix32(sc, ofwfb_foreground(a));
 	bg = ofwfb_pix32(sc, ofwfb_background(a));
 
@@ -995,12 +1000,6 @@ ofwfb_scidentify(driver_t *driver, device_t parent)
 	device_t child;
 
 	/*
-	 * The Nintendo Wii doesn't have open firmware, so don't probe ofwfb
-	 * because otherwise we will crash.
-	 */
-	if (strcmp(installed_platform(), "wii") == 0)
-		return;
-	/*
 	 * Add with a priority guaranteed to make it last on
 	 * the device list
 	 */
@@ -1014,7 +1013,7 @@ ofwfb_scprobe(device_t dev)
 
 	device_set_desc(dev, "System console");
 
-	error = sc_probe_unit(device_get_unit(dev), 
+	error = sc_probe_unit(device_get_unit(dev),
 	    device_get_flags(dev) | SC_AUTODETECT_KBD);
 	if (error != 0)
 		return (error);
@@ -1046,25 +1045,6 @@ static driver_t ofwfb_sc_driver = {
 static devclass_t	sc_devclass;
 
 DRIVER_MODULE(ofwfb, nexus, ofwfb_sc_driver, sc_devclass, 0, 0);
-
-/*
- * Define a stub keyboard driver in case one hasn't been
- * compiled into the kernel
- */
-#include <sys/kbio.h>
-#include <dev/kbd/kbdreg.h>
-
-static int dummy_kbd_configure(int flags);
-
-keyboard_switch_t dummysw;
-
-static int
-dummy_kbd_configure(int flags)
-{
-
-	return (0);
-}
-KEYBOARD_DRIVER(dummy, dummysw, dummy_kbd_configure);
 
 /*
  * Utility routines from <dev/fb/fbreg.h>

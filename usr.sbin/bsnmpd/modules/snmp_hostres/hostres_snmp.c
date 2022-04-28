@@ -37,7 +37,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_snmp.c 200953 2009-12-24 17:55:47Z ed $
+ * $FreeBSD$
  */
 
 /*
@@ -163,7 +163,7 @@ hostres_start(void)
 	start_processor_tbl(hostres_module);
 	start_network_tbl();
 
-        HRDBG("done.");
+	HRDBG("done.");
 }
 
 /* this identifies the HOST RESOURCES mib module */
@@ -175,8 +175,8 @@ const struct snmp_module config = {
 	NULL,
 	NULL,
 	hostres_start,
-	NULL,                   /* proxy a PDU */
-	hostres_ctree,          /* see the generated hostres_tree.h */
+	NULL,		   /* proxy a PDU */
+	hostres_ctree,	  /* see the generated hostres_tree.h */
 	hostres_CTREE_SIZE,     /* see the generated hostres_tree.h */
 	NULL
 };
@@ -201,8 +201,8 @@ make_date_time(u_char *str, const struct tm *tm, u_int decisecs)
 	else
 		str[8] = '+';
 
-	str[9] = (u_char)(abs(tm->tm_gmtoff) / 3600);
-	str[10] = (u_char)((abs(tm->tm_gmtoff) % 3600) / 60);
+	str[9] = (u_char)(labs(tm->tm_gmtoff) / 3600);
+	str[10] = (u_char)((labs(tm->tm_gmtoff) % 3600) / 60);
 
 	return (11);
 }

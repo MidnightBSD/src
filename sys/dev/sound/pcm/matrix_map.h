@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/matrix_map.h 243138 2012-11-16 07:05:57Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _SND_MATRIX_MAP_H_

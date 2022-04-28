@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/mail/virtusertable.sample 68266 2000-11-02 23:32:31Z dirk $
+# $FreeBSD$
 #
 # Map one or all usernames at a source hostname to a specific (or the same)
 # username at another target hostname.  Remember to add the source hostname

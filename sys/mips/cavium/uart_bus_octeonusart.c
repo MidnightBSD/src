@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/uart_bus_octeonusart.c 237687 2012-06-28 06:49:04Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,7 +105,7 @@ uart_octeon_probe(device_t dev)
 	if (bus_space_map(sc->sc_bas.bst, CVMX_MIO_UARTX_RBR(0),
 	    uart_getrange(sc->sc_class), 0, &sc->sc_bas.bsh) != 0)
 		return (ENXIO);
-	return (uart_bus_probe(dev, sc->sc_bas.regshft, 0, 0, unit));
+	return (uart_bus_probe(dev, sc->sc_bas.regshft, 0, 0, 0, unit, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_octeon_driver, uart_devclass, 0, 0);

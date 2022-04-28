@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_signal.h 253527 2013-07-21 19:33:48Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_FREEBSD32_SIGNAL_H_
@@ -33,44 +33,6 @@ struct sigaltstack32 {
 	u_int32_t	ss_sp;		/* signal stack base */
 	u_int32_t	ss_size;	/* signal stack length */
 	int		ss_flags;	/* SS_DISABLE and/or SS_ONSTACK */
-};
-
-union sigval32 {
-	int			sival_int;
-	u_int32_t		sival_ptr;
-	/* 6.0 compatibility */
-	int			sigval_int;
-	u_int32_t		sigval_ptr;
-};
-
-struct siginfo32 {
-	int			si_signo;	/* signal number */
-	int			si_errno;	/* errno association */
-	int			si_code;	/* signal code */
-	int32_t			si_pid;		/* sending process */
-	u_int32_t		si_uid;		/* sender's ruid */
-	int			si_status;	/* exit value */
-	u_int32_t		si_addr;	/* faulting instruction */
-	union sigval32		si_value;	/* signal value */
-	union	{
-		struct {
-			int	_trapno;/* machine specific trap code */
-		} _fault;
-		struct {
-			int	_timerid;
-			int	_overrun;
-		} _timer;
-		struct {
-			int	_mqd;
-		} _mesgq;
-		struct {
-			int	_band;		/* band event for SIGPOLL */
-		} _poll;			/* was this ever used ? */
-		struct {
-			int	__spare1__;
-			int	__spare2__[7];
-		} __spare__;
-	} _reason;
 };
 
 struct osigevent32 {

@@ -37,13 +37,13 @@
  *
  * From: src/sys/sys/vnioctl.h,v 1.4
  *
- * $FreeBSD: release/10.0.0/sys/sys/mdioctl.h 238215 2012-07-07 20:32:21Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MDIOCTL_H_
 #define _SYS_MDIOCTL_H_
 
-enum md_types {MD_MALLOC, MD_PRELOAD, MD_VNODE, MD_SWAP};
+enum md_types {MD_MALLOC, MD_PRELOAD, MD_VNODE, MD_SWAP, MD_NULL};
 
 /*
  * Ioctl definitions for memory disk pseudo-device.

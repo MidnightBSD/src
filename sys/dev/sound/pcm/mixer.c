@@ -35,13 +35,12 @@
 #include "feeder_if.h"
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/mixer.c 246454 2013-02-07 08:20:03Z hselasky $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 static MALLOC_DEFINE(M_MIXER, "mixer", "mixer");
 
 static int mixer_bypass = 1;
-TUNABLE_INT("hw.snd.vpc_mixer_bypass", &mixer_bypass);
-SYSCTL_INT(_hw_snd, OID_AUTO, vpc_mixer_bypass, CTLFLAG_RW,
+SYSCTL_INT(_hw_snd, OID_AUTO, vpc_mixer_bypass, CTLFLAG_RWTUN,
     &mixer_bypass, 0,
     "control channel pcm/rec volume, bypassing real mixer device");
 
@@ -82,7 +81,7 @@ static u_int16_t snd_mixerdefaults[SOUND_MIXER_NRDEVICES] = {
 	[SOUND_MIXER_PCM]	= 75,
 	[SOUND_MIXER_SPEAKER]	= 75,
 	[SOUND_MIXER_LINE]	= 75,
-	[SOUND_MIXER_MIC] 	= 0,
+	[SOUND_MIXER_MIC] 	= 25,
 	[SOUND_MIXER_CD]	= 75,
 	[SOUND_MIXER_IGAIN]	= 0,
 	[SOUND_MIXER_LINE1]	= 75,
@@ -152,7 +151,7 @@ mixer_set_softpcmvol(struct snd_mixer *m, struct snddev_info *d,
 	struct pcm_channel *c;
 	int dropmtx, acquiremtx;
 
-	if (!PCM_REGISTERED(d))
+	if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 		return (EINVAL);
 
 	if (mtx_owned(m->lock))
@@ -205,7 +204,7 @@ mixer_set_eq(struct snd_mixer *m, struct snddev_info *d,
 	else
 		return (EINVAL);
 
-	if (!PCM_REGISTERED(d))
+	if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 		return (EINVAL);
 
 	if (mtx_owned(m->lock))
@@ -323,6 +322,7 @@ mixer_set(struct snd_mixer *m, u_int dev, u_int lev)
 	MIXER_SET_LOCK(m, dropmtx);
 
 	m->level[dev] = l | (r << 8);
+	m->modify_counter++;
 
 	return 0;
 }
@@ -884,10 +884,10 @@ mixer_hwvol_init(device_t dev)
 	m->hwvol_step = 5;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-            OID_AUTO, "hwvol_step", CTLFLAG_RW, &m->hwvol_step, 0, "");
+            OID_AUTO, "hwvol_step", CTLFLAG_RWTUN, &m->hwvol_step, 0, "");
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-            OID_AUTO, "hwvol_mixer", CTLTYPE_STRING | CTLFLAG_RW, m, 0,
+            OID_AUTO, "hwvol_mixer", CTLTYPE_STRING | CTLFLAG_RWTUN, m, 0,
 	    sysctl_hw_snd_hwvol_mixer, "A", "");
 	return 0;
 }
@@ -1030,6 +1030,14 @@ mix_get_type(struct snd_mixer *m)
 	return (m->type);
 }
 
+device_t
+mix_get_dev(struct snd_mixer *m)
+{
+	KASSERT(m != NULL, ("NULL snd_mixer"));
+
+	return (m->dev);
+}
+
 /* ----------------------------------------------------------------------- */
 
 static int
@@ -1044,7 +1052,7 @@ mixer_open(struct cdev *i_dev, int flags, int mode, struct thread *td)
 
 	m = i_dev->si_drv1;
 	d = device_get_softc(m->dev);
-	if (!PCM_REGISTERED(d))
+	if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 		return (EBADF);
 
 	/* XXX Need Giant magic entry ??? */
@@ -1200,7 +1208,7 @@ mixer_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 		return (EBADF);
 
 	d = device_get_softc(((struct snd_mixer *)i_dev->si_drv1)->dev);
-	if (!PCM_REGISTERED(d))
+	if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 		return (EBADF);
 
 	PCM_GIANT_ENTER(d);
@@ -1220,6 +1228,15 @@ mixer_ioctl(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 	PCM_GIANT_LEAVE(d);
 
 	return (ret);
+}
+
+static void
+mixer_mixerinfo(struct snd_mixer *m, mixer_info *mi)
+{
+	bzero((void *)mi, sizeof(*mi));
+	strlcpy(mi->id, m->name, sizeof(mi->id));
+	strlcpy(mi->name, device_get_desc(m->dev), sizeof(mi->name));
+	mi->modify_counter = m->modify_counter;
 }
 
 /*
@@ -1280,6 +1297,10 @@ mixer_ioctl_cmd(struct cdev *i_dev, u_long cmd, caddr_t arg, int mode,
 		*arg_i = SOUND_VERSION;
 		ret = 0;
 		goto done;
+	case SOUND_MIXER_INFO:
+		mixer_mixerinfo(m, (mixer_info *)arg);
+		ret = 0;
+		goto done;
 	}
 	if ((cmd & ~0xff) == MIXER_WRITE(0)) {
 		if (j == SOUND_MIXER_RECSRC)
@@ -1316,9 +1337,7 @@ done:
 
 static void
 mixer_clone(void *arg,
-#if __FreeBSD_version >= 600034
     struct ucred *cred,
-#endif
     char *name, int namelen, struct cdev **dev)
 {
 	struct snddev_info *d;
@@ -1398,7 +1417,7 @@ mixer_oss_mixerinfo(struct cdev *i_dev, oss_mixerinfo *mi)
 	for (i = 0; pcm_devclass != NULL &&
 	    i < devclass_get_maxunit(pcm_devclass); i++) {
 		d = devclass_get_softc(pcm_devclass, i);
-		if (!PCM_REGISTERED(d))
+		if (PCM_DETACHING(d) || !PCM_REGISTERED(d))
 			continue;
 
 		/* XXX Need Giant magic entry */

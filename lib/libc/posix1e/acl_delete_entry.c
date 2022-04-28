@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_delete_entry.c 200992 2009-12-25 18:05:06Z markus $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -111,7 +111,7 @@ acl_delete_entry(acl_t acl, acl_entry_t entry_d)
 			    sizeof(struct acl_entry));
 			acl->ats_cur_entry = 0;
 			
-			/* Continue with the loop to remove all maching entries. */
+			/* Continue with the loop to remove all matching entries. */
 			found = 1;
 		} else
 			i++;

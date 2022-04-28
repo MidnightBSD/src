@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/tdfx/tdfx_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD$");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -127,7 +127,7 @@ tdfx_probe(device_t dev)
 	case PCI_DEVICE_3DFX_VOODOO1:
 		device_set_desc(dev, "3DFX Voodoo Graphics 3D Accelerator");
 		return BUS_PROBE_DEFAULT;
-	};
+	}
 
 	return ENXIO;
 }

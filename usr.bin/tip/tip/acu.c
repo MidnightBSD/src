@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/acu.c 169514 2007-05-12 23:29:33Z pav $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0
@@ -188,7 +188,7 @@ acutype(char *s)
 	acu_t *p;
 	extern acu_t acutable[];
 
-	for (p = acutable; p->acu_name != '\0'; p++)
+	for (p = acutable; p->acu_name != NULL; p++)
 		if (!strcmp(s, p->acu_name))
 			return (p);
 	return (NOACU);

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_device_tbl.c 228990 2011-12-30 10:58:14Z uqs $
+ * $FreeBSD$
  */
 
 /*
@@ -123,7 +123,7 @@ device_entry_create(const char *name, const char *location, const char *descr)
 	if (map == NULL) {
 		/* new object - get a new index */
 		if (next_device_index > INT_MAX) {
-		        syslog(LOG_ERR,
+			syslog(LOG_ERR,
 			    "%s: hrDeviceTable index wrap", __func__);
 			/* There isn't much we can do here.
 			 * If the next_swins_index is consumed
@@ -479,7 +479,9 @@ again:
 	} else {
 		if (read_len == sizeof(buf))
 			goto again;
-		refresh_device_tbl(1);
+		/* Only refresh device table on a device add or remove event. */
+		if (buf[0] == '+' || buf[0] == '-')
+			refresh_device_tbl(1);
 	}
 }
 

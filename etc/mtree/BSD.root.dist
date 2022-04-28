@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/mtree/BSD.root.dist 257572 2013-11-03 13:00:12Z bdrewery $
+# $FreeBSD$
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
 #
@@ -10,7 +10,13 @@
     boot
         defaults
         ..
+        dtb
+            overlays              tags=package=runtime
+            ..
+        ..
         firmware
+        ..
+        lua
         ..
         kernel
         ..
@@ -24,19 +30,27 @@
     etc
         X11
         ..
+        autofs
+        ..
         bluetooth
+        ..
+        casper
+        ..
+        cron.d
         ..
         defaults
         ..
         devd
         ..
-        gnats
+        dma
         ..
         gss
         ..
         mail
         ..
         mtree
+        ..
+        newsyslog.conf.d
         ..
         ntp             mode=0700
         ..
@@ -56,6 +70,8 @@
         ..
         ppp
         ..
+        rc.conf.d
+        ..
         rc.d
         ..
         security
@@ -66,10 +82,14 @@
         ..
         ssl
         ..
+        syslog.d
+        ..
         zfs
         ..
     ..
     lib
+        casper
+        ..
         geom
         ..
     ..
@@ -80,6 +100,8 @@
     media
     ..
     mnt
+    ..
+    net
     ..
     proc            mode=0555
     ..

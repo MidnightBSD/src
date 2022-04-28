@@ -28,7 +28,7 @@
  *
  *	from: NetBSD: hmereg.h,v 1.16 2003/11/02 11:07:45 wiz Exp
  *
- * $FreeBSD: release/10.0.0/sys/dev/hme/if_hmereg.h 220940 2011-04-22 09:39:05Z marius $
+ * $FreeBSD$
  */
 
 /*

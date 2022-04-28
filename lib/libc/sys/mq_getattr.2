@@ -35,9 +35,9 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/mq_getattr.2 208914 2010-06-08 16:48:59Z uqs $
+.\" $FreeBSD$
 .\"
-.Dd November 29, 2005
+.Dd February 21, 2014
 .Dt MQ_GETATTR 2
 .Os
 .Sh NAME
@@ -83,8 +83,8 @@ structure referenced by the
 .Fa mqstat
 argument will be set to the current state
 of the message queue:
-.Bl -tag -width ".Va mq_flags"
-.It Va mq_flags
+.Bl -tag -width ".Va mq_curmsgs"
+.It Va mq_curmsgs
 The number of messages currently on the queue.
 .El
 .Sh RETURN VALUES

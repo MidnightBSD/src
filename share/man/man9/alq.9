@@ -29,7 +29,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/alq.9 207223 2010-04-26 13:48:22Z lstewart $
+.\" $FreeBSD$
 .\"
 .Dd April 26, 2010
 .Dt ALQ 9
@@ -360,8 +360,8 @@ Performance critical code paths may wish to consider using
 .Fn alq_getn
 (variable length queues) or
 .Fn alq_get
-(fixed length queues) to avoid the extra memory copy. Note that a queue
-remains locked between calls to
+(fixed length queues) to avoid the extra memory copy.
+Note that a queue remains locked between calls to
 .Fn alq_getn
 or
 .Fn alq_get
@@ -417,10 +417,10 @@ and either the queue is full or the system is shutting down.
 NOTE: invalid arguments to non-void functions will result in
 undefined behaviour.
 .Sh SEE ALSO
+.Xr syslog 3 ,
 .Xr kproc 9 ,
 .Xr ktr 9 ,
 .Xr msleep_spin 9 ,
-.Xr syslog 3 ,
 .Xr vnode 9
 .Sh HISTORY
 The
@@ -431,11 +431,11 @@ Asynchronous Logging Queues (ALQ) facility first appeared in
 The
 .Nm
 facility was written by
-.An Jeffrey Roberson Aq jeff@FreeBSD.org
+.An Jeffrey Roberson Aq Mt jeff@FreeBSD.org
 and extended by
-.An Lawrence Stewart Aq lstewart@freebsd.org .
+.An Lawrence Stewart Aq Mt lstewart@freebsd.org .
 .Pp
 This manual page was written by
-.An Hiten Pandya Aq hmp@FreeBSD.org
+.An Hiten Pandya Aq Mt hmp@FreeBSD.org
 and revised by
-.An Lawrence Stewart Aq lstewart@freebsd.org .
+.An Lawrence Stewart Aq Mt lstewart@freebsd.org .

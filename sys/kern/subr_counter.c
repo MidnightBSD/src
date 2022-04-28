@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_counter.c 253565 2013-07-23 11:16:40Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,8 +41,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_counter.c 253565 2013-07-23 11:
 #define IN_SUBR_COUNTER_C
 #include <sys/counter.h>
  
-static uma_zone_t uint64_pcpu_zone;
-
 void
 counter_u64_zero(counter_u64_t c)
 {
@@ -62,7 +60,7 @@ counter_u64_alloc(int flags)
 {
 	counter_u64_t r;
 
-	r = uma_zalloc(uint64_pcpu_zone, flags);
+	r = uma_zalloc(pcpu_zone_64, flags);
 	if (r != NULL)
 		counter_u64_zero(r);
 
@@ -73,7 +71,7 @@ void
 counter_u64_free(counter_u64_t c)
 {
 
-	uma_zfree(uint64_pcpu_zone, c);
+	uma_zfree(pcpu_zone_64, c);
 }
 
 int
@@ -97,11 +95,27 @@ sysctl_handle_counter_u64(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
-static void
-counter_startup(void)
+int
+sysctl_handle_counter_u64_array(SYSCTL_HANDLER_ARGS)
 {
+	uint64_t *out;
+	int error;
 
-	uint64_pcpu_zone = uma_zcreate("uint64 pcpu", sizeof(uint64_t),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_PCPU);
+	out = malloc(arg2 * sizeof(uint64_t), M_TEMP, M_WAITOK);
+	for (int i = 0; i < arg2; i++)
+		out[i] = counter_u64_fetch(((counter_u64_t *)arg1)[i]);
+
+	error = SYSCTL_OUT(req, out, arg2 * sizeof(uint64_t));
+	free(out, M_TEMP);
+
+	if (error || !req->newptr)
+		return (error);
+
+	/*
+	 * Any write attempt to a counter zeroes it.
+	 */
+	for (int i = 0; i < arg2; i++)
+		counter_u64_zero(((counter_u64_t *)arg1)[i]);
+ 
+	return (0);
 }
-SYSINIT(counter, SI_SUB_KMEM, SI_ORDER_ANY, counter_startup, NULL);

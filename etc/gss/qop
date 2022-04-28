@@ -1,3 +1,3 @@
-# $FreeBSD: release/10.0.0/etc/gss/qop 153838 2005-12-29 14:40:22Z dfr $
+# $FreeBSD$
 GSS_KRB5_CONF_C_QOP_DES		0x0100	kerberosv5
 GSS_KRB5_CONF_C_QOP_DES3_KD	0x0200	kerberosv5

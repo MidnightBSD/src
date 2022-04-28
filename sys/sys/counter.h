@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/counter.h 253082 2013-07-09 09:37:21Z ae $
+ * $FreeBSD$
  */
 
 #ifndef __SYS_COUNTER_H__
@@ -31,6 +31,7 @@
 
 typedef uint64_t *counter_u64_t;
 
+#ifdef _KERNEL
 #include <machine/counter.h>
 
 counter_u64_t	counter_u64_alloc(int);
@@ -40,22 +41,23 @@ void		counter_u64_zero(counter_u64_t);
 uint64_t	counter_u64_fetch(counter_u64_t);
 
 #define	COUNTER_ARRAY_ALLOC(a, n, wait)	do {			\
-	for (int i = 0; i < (n); i++)				\
-		(a)[i] = counter_u64_alloc(wait);		\
+	for (int _i = 0; _i < (n); _i++)			\
+		(a)[_i] = counter_u64_alloc(wait);		\
 } while (0)
 
 #define	COUNTER_ARRAY_FREE(a, n)	do {			\
-	for (int i = 0; i < (n); i++)				\
-		counter_u64_free((a)[i]);			\
+	for (int _i = 0; _i < (n); _i++)			\
+		counter_u64_free((a)[_i]);			\
 } while (0)
 
 #define	COUNTER_ARRAY_COPY(a, dstp, n)	do {			\
-	for (int i = 0; i < (n); i++)				\
-		((uint64_t *)(dstp))[i] = counter_u64_fetch((a)[i]);\
+	for (int _i = 0; _i < (n); _i++)			\
+		((uint64_t *)(dstp))[_i] = counter_u64_fetch((a)[_i]);\
 } while (0)
 
 #define	COUNTER_ARRAY_ZERO(a, n)	do {			\
-	for (int i = 0; i < (n); i++)				\
-		counter_u64_zero((a)[i]);			\
+	for (int _i = 0; _i < (n); _i++)			\
+		counter_u64_zero((a)[_i]);			\
 } while (0)
+#endif	/* _KERNEL */
 #endif	/* ! __SYS_COUNTER_H__ */

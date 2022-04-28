@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/xhci/Makefile 213437 2010-10-04 23:22:03Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=	${.CURDIR}/../../..
+S=	${SRCTOP}/sys
 
 .PATH: $S/dev/usb/controller
 

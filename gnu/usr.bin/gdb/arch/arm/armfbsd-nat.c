@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/gnu/usr.bin/gdb/arch/arm/armfbsd-nat.c 225190 2011-08-26 15:24:54Z cognet $ */
+/* $FreeBSD$ */
 
  /* Native-dependent code for BSD Unix running on ARM's, for GDB.
    Copyright 1988, 1989, 1991, 1992, 1994, 1996, 1999, 2002

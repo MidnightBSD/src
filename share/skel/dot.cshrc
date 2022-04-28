@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/skel/dot.cshrc 243893 2012-12-05 13:56:39Z eadler $
+# $FreeBSD$
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -12,14 +12,15 @@ alias la	ls -aF
 alias lf	ls -FA
 alias ll	ls -lAF
 
+# These are normally set through /etc/login.conf.  You may override them here
+# if wanted.
+# set path = (/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin $HOME/bin)
+# setenv	BLOCKSIZE	K
 # A righteous umask
-umask 22
-
-set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin $HOME/bin)
+# umask 22
 
 setenv	EDITOR	vi
 setenv	PAGER	more
-setenv	BLOCKSIZE	K
 
 if ($?prompt) then
 	# An interactive shell -- set some stuff up

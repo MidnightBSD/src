@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/Makefile.i386 252356 2013-06-28 21:00:08Z davide $
+# $FreeBSD$
 
 .if ${MK_APM} != "no"
 SUBDIR+=	apm
@@ -12,7 +12,6 @@ SUBDIR+=	cpucontrol
 SUBDIR+=	kgmon
 SUBDIR+=	kgzip
 SUBDIR+=	lptcontrol
-SUBDIR+=	mount_smbfs
 SUBDIR+=	mptable
 .if ${MK_NDIS} != "no"
 SUBDIR+=	ndiscvt
@@ -28,6 +27,9 @@ SUBDIR+=	zzz
 SUBDIR+=	acpi
 .endif
 SUBDIR+=	boot0cfg
+.if ${MK_HYPERV} != "no"
+SUBDIR+=	hyperv
+.endif
 .if ${MK_WIRELESS} != "no"
 SUBDIR+=	wlconfig
 .endif

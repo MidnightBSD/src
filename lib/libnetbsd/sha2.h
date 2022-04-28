@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/lib/libnetbsd/sha2.h 244557 2012-12-21 20:37:38Z brooks $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2012 SRI International
@@ -34,6 +34,7 @@
 #define _SHA2_H_
 
 #include <sha256.h>
+#include <sha384.h>
 #include <sha512.h>
 
 #endif /* _SHA2_H_ */

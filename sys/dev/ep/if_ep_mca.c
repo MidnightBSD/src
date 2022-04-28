@@ -25,12 +25,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ep/if_ep_mca.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 
 #include <machine/bus.h>
@@ -38,7 +41,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ep/if_ep_mca.c 246128 2013-01-30 18:0
 #include <sys/rman.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_media.h>
 
 #include <dev/mca/mca_busreg.h>

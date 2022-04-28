@@ -914,8 +914,8 @@ fits_in_signed_long (offsetT num ATTRIBUTE_UNUSED)
 #ifndef BFD64
   return 1;
 #else
-  return (!(((offsetT) -1 << 31) & num)
-	  || (((offsetT) -1 << 31) & num) == ((offsetT) -1 << 31));
+  return (!(-((offsetT) 1 << 31) & num)
+	  || (-((offsetT) 1 << 31) & num) == -((offsetT) 1 << 31));
 #endif
 }				/* fits_in_signed_long() */
 
@@ -1827,7 +1827,7 @@ md_assemble (line)
     {
       expressionS *exp;
 
-      if ((i.tm.cpu_flags & CpuSSE3) && i.operands > 0)
+      if ((i.tm.cpu_flags & (CpuSSE3|CpuSMAP)) && i.operands > 0)
 	{
 	  /* Streaming SIMD extensions 3 Instructions have the fixed
 	     operands with an opcode suffix which is coded in the same

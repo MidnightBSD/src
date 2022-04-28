@@ -1,7 +1,7 @@
 /*
  * German calendar file(s)
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/calendar.german 78049 2001-06-11 04:24:43Z ache $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_german_

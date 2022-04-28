@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/netipsec/ah.h 139823 2005-01-07 01:45:51Z imp $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: ah.h,v 1.13 2000/10/18 21:28:00 itojun Exp $	*/
 
 /*-

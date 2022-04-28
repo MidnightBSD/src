@@ -1,9 +1,5 @@
 /*-
- * Copyright (c) 2007-2013 Broadcom Corporation. All rights reserved.
- *
- * Eric Davis        <edavis@broadcom.com>
- * David Christensen <davidch@broadcom.com>
- * Gary Zambrano     <zambrano@broadcom.com>
+ * Copyright (c) 2007-2017 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,11 +10,8 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bxe/bxe_elink.c 258203 2013-11-16 00:31:32Z edavis $");
+__FBSDID("$FreeBSD$");
 
 #include "bxe.h"
 #include "bxe_elink.h"
@@ -488,6 +481,9 @@ Theotherbitsarereservedandshouldbezero*/
 #define MDIO_AN_REG_8481_LEGACY_MII_CTRL	0xffe0
 	#define MDIO_AN_REG_8481_MII_CTRL_FORCE_1G	0x40
 #define MDIO_AN_REG_8481_LEGACY_MII_STATUS	0xffe1
+#define MDIO_AN_REG_848xx_ID_MSB		0xffe2
+	#define BCM84858_PHY_ID					0x600d
+#define MDIO_AN_REG_848xx_ID_LSB		0xffe3
 #define MDIO_AN_REG_8481_LEGACY_AN_ADV		0xffe4
 #define MDIO_AN_REG_8481_LEGACY_AN_EXPANSION	0xffe6
 #define MDIO_AN_REG_8481_1000T_CTRL		0xffe9
@@ -531,32 +527,32 @@ Theotherbitsarereservedandshouldbezero*/
 	#define MDIO_84833_TOP_CFG_FW_NO_EEE		0x1f81
 #define MDIO_84833_TOP_CFG_XGPHY_STRAP1 		0x401a
 	#define MDIO_84833_SUPER_ISOLATE 		0x8000
-/* These are mailbox register set used by 84833. */
-#define MDIO_84833_TOP_CFG_SCRATCH_REG0			0x4005
-#define MDIO_84833_TOP_CFG_SCRATCH_REG1 		0x4006
-#define MDIO_84833_TOP_CFG_SCRATCH_REG2			0x4007
-#define MDIO_84833_TOP_CFG_SCRATCH_REG3			0x4008
-#define MDIO_84833_TOP_CFG_SCRATCH_REG4			0x4009
-#define MDIO_84833_TOP_CFG_SCRATCH_REG26		0x4037
-#define MDIO_84833_TOP_CFG_SCRATCH_REG27		0x4038
-#define MDIO_84833_TOP_CFG_SCRATCH_REG28		0x4039
-#define MDIO_84833_TOP_CFG_SCRATCH_REG29		0x403a
-#define MDIO_84833_TOP_CFG_SCRATCH_REG30		0x403b
-#define MDIO_84833_TOP_CFG_SCRATCH_REG31		0x403c
-#define MDIO_84833_CMD_HDLR_COMMAND	MDIO_84833_TOP_CFG_SCRATCH_REG0
-#define MDIO_84833_CMD_HDLR_STATUS	MDIO_84833_TOP_CFG_SCRATCH_REG26
-#define MDIO_84833_CMD_HDLR_DATA1	MDIO_84833_TOP_CFG_SCRATCH_REG27
-#define MDIO_84833_CMD_HDLR_DATA2	MDIO_84833_TOP_CFG_SCRATCH_REG28
-#define MDIO_84833_CMD_HDLR_DATA3	MDIO_84833_TOP_CFG_SCRATCH_REG29
-#define MDIO_84833_CMD_HDLR_DATA4	MDIO_84833_TOP_CFG_SCRATCH_REG30
-#define MDIO_84833_CMD_HDLR_DATA5	MDIO_84833_TOP_CFG_SCRATCH_REG31
+/* These are mailbox register set used by 84833/84858. */
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG0			0x4005
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG1 		0x4006
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG2			0x4007
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG3			0x4008
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG4			0x4009
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG26		0x4037
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG27		0x4038
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG28		0x4039
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG29		0x403a
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG30		0x403b
+#define MDIO_848xx_TOP_CFG_SCRATCH_REG31		0x403c
+#define MDIO_848xx_CMD_HDLR_COMMAND	(MDIO_848xx_TOP_CFG_SCRATCH_REG0)
+#define MDIO_848xx_CMD_HDLR_STATUS	(MDIO_848xx_TOP_CFG_SCRATCH_REG26)
+#define MDIO_848xx_CMD_HDLR_DATA1	(MDIO_848xx_TOP_CFG_SCRATCH_REG27)
+#define MDIO_848xx_CMD_HDLR_DATA2	(MDIO_848xx_TOP_CFG_SCRATCH_REG28)
+#define MDIO_848xx_CMD_HDLR_DATA3	(MDIO_848xx_TOP_CFG_SCRATCH_REG29)
+#define MDIO_848xx_CMD_HDLR_DATA4	(MDIO_848xx_TOP_CFG_SCRATCH_REG30)
+#define MDIO_848xx_CMD_HDLR_DATA5	(MDIO_848xx_TOP_CFG_SCRATCH_REG31)
 
-/* Mailbox command set used by 84833. */
-#define PHY84833_CMD_SET_PAIR_SWAP			0x8001
-#define PHY84833_CMD_GET_EEE_MODE			0x8008
-#define PHY84833_CMD_SET_EEE_MODE			0x8009
-#define PHY84833_CMD_GET_CURRENT_TEMP			0x8031
-/* Mailbox status set used by 84833. */
+/* Mailbox command set used by 84833/84858 */
+#define PHY848xx_CMD_SET_PAIR_SWAP			0x8001
+#define PHY848xx_CMD_GET_EEE_MODE			0x8008
+#define PHY848xx_CMD_SET_EEE_MODE			0x8009
+#define PHY848xx_CMD_GET_CURRENT_TEMP			0x8031
+/* Mailbox status set used by 84833 only */
 #define PHY84833_STATUS_CMD_RECEIVED			0x0001
 #define PHY84833_STATUS_CMD_IN_PROGRESS			0x0002
 #define PHY84833_STATUS_CMD_COMPLETE_PASS		0x0004
@@ -566,6 +562,18 @@ Theotherbitsarereservedandshouldbezero*/
 #define PHY84833_STATUS_CMD_NOT_OPEN_FOR_CMDS		0x0040
 #define PHY84833_STATUS_CMD_CLEAR_COMPLETE		0x0080
 #define PHY84833_STATUS_CMD_OPEN_OVERRIDE		0xa5a5
+/* Mailbox Process */
+#define PHY84833_MB_PROCESS1				1
+#define PHY84833_MB_PROCESS2				2
+#define PHY84833_MB_PROCESS3				3
+
+
+/* Mailbox status set used by 84858 only */
+#define PHY84858_STATUS_CMD_RECEIVED			0x0001
+#define PHY84858_STATUS_CMD_IN_PROGRESS			0x0002
+#define PHY84858_STATUS_CMD_COMPLETE_PASS		0x0004
+#define PHY84858_STATUS_CMD_COMPLETE_ERROR		0x0008
+#define PHY84858_STATUS_CMD_SYSTEM_BUSY                 0xbbbb
 
 
 /* Warpcore clause 45 addressing */
@@ -592,6 +600,8 @@ Theotherbitsarereservedandshouldbezero*/
 #define MDIO_WC_REG_TX2_ANA_CTRL0			0x8081
 #define MDIO_WC_REG_TX3_ANA_CTRL0			0x8091
 #define MDIO_WC_REG_TX0_TX_DRIVER			0x8067
+#define MDIO_WC_REG_TX0_TX_DRIVER_IFIR_OFFSET			0x01
+#define MDIO_WC_REG_TX0_TX_DRIVER_IFIR_MASK				0x000e
 #define MDIO_WC_REG_TX0_TX_DRIVER_IPRE_DRIVER_OFFSET		0x04
 #define MDIO_WC_REG_TX0_TX_DRIVER_IPRE_DRIVER_MASK			0x00f0
 #define MDIO_WC_REG_TX0_TX_DRIVER_IDRIVER_OFFSET		0x08
@@ -609,6 +619,7 @@ Theotherbitsarereservedandshouldbezero*/
 #define MDIO_WC_REG_RX3_PCI_CTRL			0x80ea
 #define MDIO_WC_REG_RXB_ANA_RX_CONTROL_PCI		0x80fa
 #define MDIO_WC_REG_XGXSBLK2_UNICORE_MODE_10G 		0x8104
+#define MDIO_WC_REG_XGXSBLK2_LANE_RESET 		0x810a
 #define MDIO_WC_REG_XGXS_STATUS3			0x8129
 #define MDIO_WC_REG_PAR_DET_10G_STATUS			0x8130
 #define MDIO_WC_REG_PAR_DET_10G_CTRL			0x8131
@@ -870,15 +881,22 @@ typedef elink_status_t (*read_sfp_module_eeprom_func_p)(struct elink_phy *phy,
 			 LINK_STATUS_LINK_PARTNER_ASYMMETRIC_PAUSE)
 
 #define ELINK_SFP_EEPROM_CON_TYPE_ADDR		0x2
+	#define ELINK_SFP_EEPROM_CON_TYPE_VAL_UNKNOWN	0x0
 	#define ELINK_SFP_EEPROM_CON_TYPE_VAL_LC	0x7
 	#define ELINK_SFP_EEPROM_CON_TYPE_VAL_COPPER	0x21
 	#define ELINK_SFP_EEPROM_CON_TYPE_VAL_RJ45	0x22
 
 
-#define ELINK_SFP_EEPROM_COMP_CODE_ADDR		0x3
-	#define ELINK_SFP_EEPROM_COMP_CODE_SR_MASK	(1<<4)
-	#define ELINK_SFP_EEPROM_COMP_CODE_LR_MASK	(1<<5)
-	#define ELINK_SFP_EEPROM_COMP_CODE_LRM_MASK	(1<<6)
+#define ELINK_SFP_EEPROM_10G_COMP_CODE_ADDR		0x3
+	#define ELINK_SFP_EEPROM_10G_COMP_CODE_SR_MASK	(1<<4)
+	#define ELINK_SFP_EEPROM_10G_COMP_CODE_LR_MASK	(1<<5)
+	#define ELINK_SFP_EEPROM_10G_COMP_CODE_LRM_MASK	(1<<6)
+
+#define ELINK_SFP_EEPROM_1G_COMP_CODE_ADDR		0x6
+	#define ELINK_SFP_EEPROM_1G_COMP_CODE_SX	(1<<0)
+	#define ELINK_SFP_EEPROM_1G_COMP_CODE_LX	(1<<1)
+	#define ELINK_SFP_EEPROM_1G_COMP_CODE_CX	(1<<2)
+	#define ELINK_SFP_EEPROM_1G_COMP_CODE_BASE_T	(1<<3)
 
 #define ELINK_SFP_EEPROM_FC_TX_TECH_ADDR		0x8
 	#define ELINK_SFP_EEPROM_FC_TX_TECH_BITMASK_COPPER_PASSIVE 0x4
@@ -904,6 +922,10 @@ typedef elink_status_t (*read_sfp_module_eeprom_func_p)(struct elink_phy *phy,
 
 #define ELINK_MAX_PACKET_SIZE					(9700)
 #define MAX_KR_LINK_RETRY				4
+#define DEFAULT_TX_DRV_BRDCT		2
+#define DEFAULT_TX_DRV_IFIR		0
+#define DEFAULT_TX_DRV_POST2		3
+#define DEFAULT_TX_DRV_IPRE_DRIVER	6
 
 /**********************************************************/
 /*                     INTERFACE                          */
@@ -920,6 +942,11 @@ typedef elink_status_t (*read_sfp_module_eeprom_func_p)(struct elink_phy *phy,
 		(_phy)->def_md_devad, \
 		(_bank + (_addr & 0xf)), \
 		_val)
+
+static elink_status_t elink_check_half_open_conn(struct elink_params *params,
+				      struct elink_vars *vars, uint8_t notify);
+static elink_status_t elink_sfp_module_detection(struct elink_phy *phy,
+				      struct elink_params *params);
 
 static uint32_t elink_bits_en(struct bxe_softc *sc, uint32_t reg, uint32_t bits)
 {
@@ -1267,7 +1294,7 @@ static void elink_ets_e3b0_set_credit_upper_bound_nig(
 *	Will return the NIG ETS registers to init values.Except
 *	credit_upper_bound.
 *	That isn't used in this configuration (No WFQ is enabled) and will be
-*	configured acording to spec
+*	configured according to spec.
 *.
 ******************************************************************************/
 static void elink_ets_e3b0_nig_disabled(const struct elink_params *params,
@@ -1384,7 +1411,7 @@ static void elink_ets_e3b0_set_credit_upper_bound_pbf(
 *	Will return the PBF ETS registers to init values.Except
 *	credit_upper_bound.
 *	That isn't used in this configuration (No WFQ is enabled) and will be
-*	configured acording to spec
+*	configured according to spec.
 *.
 ******************************************************************************/
 static void elink_ets_e3b0_pbf_disabled(const struct elink_params *params)
@@ -1442,7 +1469,7 @@ static void elink_ets_e3b0_pbf_disabled(const struct elink_params *params)
 }
 /******************************************************************************
 * Description:
-*	E3B0 disable will return basicly the values to init values.
+*	E3B0 disable will return basically the values to init values.
 *.
 ******************************************************************************/
 static elink_status_t elink_ets_e3b0_disabled(const struct elink_params *params,
@@ -1465,7 +1492,7 @@ static elink_status_t elink_ets_e3b0_disabled(const struct elink_params *params,
 
 /******************************************************************************
 * Description:
-*	Disable will return basicly the values to init values.
+*	Disable will return basically the values to init values.
 *
 ******************************************************************************/
 elink_status_t elink_ets_disabled(struct elink_params *params,
@@ -2115,7 +2142,6 @@ static void elink_update_pfc_xmac(struct elink_params *params,
 	DELAY(30);
 }
 
-
 static void elink_emac_get_pfc_stat(struct elink_params *params,
 				    uint32_t pfc_frames_sent[2],
 				    uint32_t pfc_frames_received[2])
@@ -2199,17 +2225,6 @@ static void elink_set_mdio_clk(struct bxe_softc *sc, uint32_t chip_id,
 	DELAY(40);
 }
 
-static void elink_set_mdio_emac_per_phy(struct bxe_softc *sc,
-					struct elink_params *params)
-{
-	uint8_t phy_index;
-	/* Set mdio clock per phy */
-	for (phy_index = ELINK_INT_PHY; phy_index < params->num_phys;
-	      phy_index++)
-		elink_set_mdio_clk(sc, params->chip_id,
-				   params->phy[phy_index].mdio_ctrl);
-}
-
 static uint8_t elink_is_4_port_mode(struct bxe_softc *sc)
 {
 	uint32_t port4mode_ovwr_val;
@@ -2221,6 +2236,18 @@ static uint8_t elink_is_4_port_mode(struct bxe_softc *sc)
 	}
 	/* Return 4-port mode from input pin */
 	return (uint8_t)REG_RD(sc, MISC_REG_PORT4MODE_EN);
+}
+
+static void elink_set_mdio_emac_per_phy(struct bxe_softc *sc,
+					struct elink_params *params)
+{
+	uint8_t phy_index;
+
+	/* Set mdio clock per phy */
+	for (phy_index = ELINK_INT_PHY; phy_index < params->num_phys;
+	      phy_index++)
+		elink_set_mdio_clk(sc, params->chip_id,
+				   params->phy[phy_index].mdio_ctrl);
 }
 
 static void elink_emac_init(struct elink_params *params,
@@ -2903,16 +2930,6 @@ static void elink_update_mng(struct elink_params *params, uint32_t link_status)
 			port_mb[params->port].link_status), link_status);
 }
 
-static void elink_update_link_attr(struct elink_params *params, uint32_t link_attr)
-{
-	struct bxe_softc *sc = params->sc;
-
-	if (SHMEM2_HAS(sc, link_attr_sync))
-		REG_WR(sc, params->shmem2_base +
-		       offsetof(struct shmem2_region,
-				link_attr_sync[params->port]), link_attr);
-}
-
 static void elink_update_pfc_nig(struct elink_params *params,
 		struct elink_vars *vars,
 		struct elink_nig_brb_pfc_port_params *nig_params)
@@ -3019,7 +3036,6 @@ elink_status_t elink_update_pfc(struct elink_params *params,
 	 */
 	uint32_t val;
 	struct bxe_softc *sc = params->sc;
-	elink_status_t elink_status = ELINK_STATUS_OK;
 	uint8_t bmac_loopback = (params->loopback_mode == ELINK_LOOPBACK_BMAC);
 
 	if (params->feature_config_flags & ELINK_FEATURE_CONFIG_PFC_ENABLED)
@@ -3033,7 +3049,7 @@ elink_status_t elink_update_pfc(struct elink_params *params,
 	elink_update_pfc_nig(params, vars, pfc_params);
 
 	if (!vars->link_up)
-		return elink_status;
+		return ELINK_STATUS_OK;
 
 	ELINK_DEBUG_P0(sc, "About to update PFC in BMAC\n");
 
@@ -3047,7 +3063,7 @@ elink_status_t elink_update_pfc(struct elink_params *params,
 		    == 0) {
 			ELINK_DEBUG_P0(sc, "About to update PFC in EMAC\n");
 			elink_emac_enable(params, vars, 0);
-			return elink_status;
+			return ELINK_STATUS_OK;
 		}
 		if (CHIP_IS_E2(sc))
 			elink_update_pfc_bmac2(params, vars, bmac_loopback);
@@ -3061,7 +3077,7 @@ elink_status_t elink_update_pfc(struct elink_params *params,
 			val = 1;
 		REG_WR(sc, NIG_REG_BMAC0_PAUSE_OUT_EN + params->port*4, val);
 	}
-	return elink_status;
+	return ELINK_STATUS_OK;
 }
 
 static elink_status_t elink_bmac1_enable(struct elink_params *params,
@@ -3746,7 +3762,7 @@ static elink_status_t elink_eee_initial_config(struct elink_params *params,
 {
 	vars->eee_status |= ((uint32_t) mode) << SHMEM_EEE_SUPPORTED_SHIFT;
 
-	/* Propogate params' bits --> vars (for migration exposure) */
+	/* Propagate params' bits --> vars (for migration exposure) */
 	if (params->eee_mode & ELINK_EEE_MODE_ENABLE_LPI)
 		vars->eee_status |= SHMEM_EEE_LPI_REQUESTED_BIT;
 	else
@@ -3888,8 +3904,7 @@ static void elink_bsc_module_sel(struct elink_params *params)
 		elink_set_cfg_pin(sc, i2c_pins[idx], i2c_val[idx]);
 }
 
-static elink_status_t elink_bsc_read(struct elink_params *params,
-			  struct bxe_softc *sc,
+static elink_status_t elink_bsc_read(struct bxe_softc *sc,
 			  uint8_t sl_devid,
 			  uint16_t sl_addr,
 			  uint8_t lc_addr,
@@ -3904,8 +3919,6 @@ static elink_status_t elink_bsc_read(struct elink_params *params,
 					xfer_cnt);
 		return ELINK_STATUS_ERROR;
 	}
-	if (params)
-		elink_bsc_module_sel(params);
 
 	xfer_cnt = 16 - lc_addr;
 
@@ -4026,6 +4039,7 @@ elink_status_t elink_phy_write(struct elink_params *params, uint8_t phy_addr,
 	}
 	return ELINK_STATUS_ERROR;
 }
+
 static uint8_t elink_get_warpcore_lane(struct elink_phy *phy,
 				  struct elink_params *params)
 {
@@ -4079,6 +4093,7 @@ static uint8_t elink_get_warpcore_lane(struct elink_phy *phy,
 	}
 	return lane;
 }
+
 
 static void elink_set_aer_mmd(struct elink_params *params,
 			      struct elink_phy *phy)
@@ -4196,9 +4211,9 @@ static void elink_calc_ieee_aneg_adv(struct elink_phy *phy,
 	case ELINK_FLOW_CTRL_AUTO:
 		switch (params->req_fc_auto_adv) {
 		case ELINK_FLOW_CTRL_BOTH:
+		case ELINK_FLOW_CTRL_RX:
 			*ieee_fc |= MDIO_COMBO_IEEE0_AUTO_NEG_ADV_PAUSE_BOTH;
 			break;
-		case ELINK_FLOW_CTRL_RX:
 		case ELINK_FLOW_CTRL_TX:
 			*ieee_fc |=
 				MDIO_COMBO_IEEE0_AUTO_NEG_ADV_PAUSE_ASYMMETRIC;
@@ -4292,14 +4307,21 @@ static void elink_ext_phy_set_pause(struct elink_params *params,
 	elink_cl45_write(sc, phy, MDIO_AN_DEVAD, MDIO_AN_REG_ADV_PAUSE, val);
 }
 
-static void elink_pause_resolve(struct elink_vars *vars, uint32_t pause_result)
-{						/*  LD	    LP	 */
+static void elink_pause_resolve(struct elink_phy *phy,
+				struct elink_params *params,
+				struct elink_vars *vars,
+				uint32_t pause_result)
+{
+	struct bxe_softc *sc = params->sc;
+						/*  LD	    LP	 */
 	switch (pause_result) {			/* ASYM P ASYM P */
 	case 0xb:				/*   1  0   1  1 */
+		ELINK_DEBUG_P0(sc, "Flow Control: TX only\n");
 		vars->flow_ctrl = ELINK_FLOW_CTRL_TX;
 		break;
 
 	case 0xe:				/*   1  1   1  0 */
+		ELINK_DEBUG_P0(sc, "Flow Control: RX only\n");
 		vars->flow_ctrl = ELINK_FLOW_CTRL_RX;
 		break;
 
@@ -4307,10 +4329,22 @@ static void elink_pause_resolve(struct elink_vars *vars, uint32_t pause_result)
 	case 0x7:				/*   0  1   1  1 */
 	case 0xd:				/*   1  1   0  1 */
 	case 0xf:				/*   1  1   1  1 */
-		vars->flow_ctrl = ELINK_FLOW_CTRL_BOTH;
-		break;
+		/* If the user selected to advertise RX ONLY,
+		 * although we advertised both, need to enable
+		 * RX only.
+		 */
 
+		if (params->req_fc_auto_adv == ELINK_FLOW_CTRL_BOTH) {
+			ELINK_DEBUG_P0(sc, "Flow Control: RX & TX\n");
+		vars->flow_ctrl = ELINK_FLOW_CTRL_BOTH;
+		} else {
+			ELINK_DEBUG_P0(sc, "Flow Control: RX only\n");
+			vars->flow_ctrl = ELINK_FLOW_CTRL_RX;
+		}
+		break;
 	default:
+		ELINK_DEBUG_P0(sc, "Flow Control: None\n");
+		vars->flow_ctrl = ELINK_FLOW_CTRL_NONE;
 		break;
 	}
 	if (pause_result & (1<<0))
@@ -4371,7 +4405,7 @@ static void elink_ext_phy_update_adv_fc(struct elink_phy *phy,
 	pause_result |= (lp_pause &
 			 MDIO_AN_REG_ADV_PAUSE_MASK) >> 10;
 	ELINK_DEBUG_P1(sc, "Ext PHY pause result 0x%x\n", pause_result);
-	elink_pause_resolve(vars, pause_result);
+	elink_pause_resolve(phy, params, vars, pause_result);
 
 }
 
@@ -4403,15 +4437,26 @@ static uint8_t elink_ext_phy_resolve_fc(struct elink_phy *phy,
  * init configuration, and set/clear SGMII flag. Internal
  * phy init is done purely in phy_init stage.
  */
-#define WC_TX_DRIVER(post2, idriver, ipre) \
+#define WC_TX_DRIVER(post2, idriver, ipre, ifir) \
 	((post2 << MDIO_WC_REG_TX0_TX_DRIVER_POST2_COEFF_OFFSET) | \
 	 (idriver << MDIO_WC_REG_TX0_TX_DRIVER_IDRIVER_OFFSET) | \
-	 (ipre << MDIO_WC_REG_TX0_TX_DRIVER_IPRE_DRIVER_OFFSET))
+	 (ipre << MDIO_WC_REG_TX0_TX_DRIVER_IPRE_DRIVER_OFFSET) | \
+	 (ifir << MDIO_WC_REG_TX0_TX_DRIVER_IFIR_OFFSET))
 
 #define WC_TX_FIR(post, main, pre) \
 	((post << MDIO_WC_REG_TX_FIR_TAP_POST_TAP_OFFSET) | \
 	 (main << MDIO_WC_REG_TX_FIR_TAP_MAIN_TAP_OFFSET) | \
 	 (pre << MDIO_WC_REG_TX_FIR_TAP_PRE_TAP_OFFSET))
+
+static void elink_update_link_attr(struct elink_params *params, uint32_t link_attr)
+{
+	struct bxe_softc *sc = params->sc;
+
+	if (SHMEM2_HAS(sc, link_attr_sync))
+		REG_WR(sc, params->shmem2_base +
+		       offsetof(struct shmem2_region,
+				link_attr_sync[params->port]), link_attr);
+}
 
 static void elink_warpcore_enable_AN_KR2(struct elink_phy *phy,
 					 struct elink_params *params,
@@ -4448,8 +4493,8 @@ static void elink_warpcore_enable_AN_KR2(struct elink_phy *phy,
 				 reg_set[i].val);
 
 	/* Start KR2 work-around timer which handles BCM8073 link-parner */
-	vars->link_attr_sync |= LINK_ATTR_SYNC_KR2_ENABLE;
-	elink_update_link_attr(params, vars->link_attr_sync);
+	params->link_attr_sync |= LINK_ATTR_SYNC_KR2_ENABLE;
+	elink_update_link_attr(params, params->link_attr_sync);
 }
 
 static void elink_disable_kr2(struct elink_params *params,
@@ -4481,8 +4526,8 @@ static void elink_disable_kr2(struct elink_params *params,
 	for (i = 0; i < ARRAY_SIZE(reg_set); i++)
 		elink_cl45_write(sc, phy, reg_set[i].devad, reg_set[i].reg,
 				 reg_set[i].val);
-	vars->link_attr_sync &= ~LINK_ATTR_SYNC_KR2_ENABLE;
-	elink_update_link_attr(params, vars->link_attr_sync);
+	params->link_attr_sync &= ~LINK_ATTR_SYNC_KR2_ENABLE;
+	elink_update_link_attr(params, params->link_attr_sync);
 
 	vars->check_kr2_recovery_cnt = ELINK_CHECK_KR2_RECOVERY_CNT;
 }
@@ -4517,7 +4562,8 @@ static void elink_warpcore_restart_AN_KR(struct elink_phy *phy,
 static void elink_warpcore_enable_AN_KR(struct elink_phy *phy,
 					struct elink_params *params,
 					struct elink_vars *vars) {
-	uint16_t lane, i, cl72_ctrl, an_adv = 0;
+	uint16_t lane, i, cl72_ctrl, an_adv = 0, val;
+	uint32_t wc_lane_config;
 	struct bxe_softc *sc = params->sc;
 	static struct elink_reg_set reg_set[] = {
 		{MDIO_WC_DEVAD, MDIO_WC_REG_SERDESDIGITAL_CONTROL1000X2, 0x7},
@@ -4572,12 +4618,12 @@ static void elink_warpcore_enable_AN_KR(struct elink_phy *phy,
 	lane = elink_get_warpcore_lane(phy, params);
 	elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 			 MDIO_WC_REG_TX0_TX_DRIVER + 0x10*lane,
-			 WC_TX_DRIVER(0x02, 0x06, 0x09));
+			 WC_TX_DRIVER(0x02, 0x06, 0x09, 0));
 	/* Configure the next lane if dual mode */
 	if (phy->flags & ELINK_FLAGS_WC_DUAL_MODE)
 		elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 				 MDIO_WC_REG_TX0_TX_DRIVER + 0x10*(lane+1),
-				 WC_TX_DRIVER(0x02, 0x06, 0x09));
+				 WC_TX_DRIVER(0x02, 0x06, 0x09, 0));
 	elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 			 MDIO_WC_REG_CL72_USERB0_CL72_OS_DEF_CTRL,
 			 0x03f0);
@@ -4636,15 +4682,27 @@ static void elink_warpcore_enable_AN_KR(struct elink_phy *phy,
 		/* Enable Auto-Detect to support 1G over CL37 as well */
 		elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 				 MDIO_WC_REG_SERDESDIGITAL_CONTROL1000X1, 0x10);
-
+		wc_lane_config = REG_RD(sc, params->shmem_base +
+					offsetof(struct shmem_region, dev_info.
+					shared_hw_config.wc_lane_config));
+		elink_cl45_read(sc, phy, MDIO_WC_DEVAD,
+				MDIO_WC_REG_RX0_PCI_CTRL + (lane << 4), &val);
 		/* Force cl48 sync_status LOW to avoid getting stuck in CL73
 		 * parallel-detect loop when CL73 and CL37 are enabled.
 		 */
-		CL22_WR_OVER_CL45(sc, phy, MDIO_REG_BANK_AER_BLOCK,
-				  MDIO_AER_BLOCK_AER_REG, 0);
+		val |= 1 << 11;
+
+		/* Restore Polarity settings in case it was run over by
+		 * previous link owner
+		 */
+		if (wc_lane_config &
+		    (SHARED_HW_CFG_RX_LANE0_POL_FLIP_ENABLED << lane))
+			val |= 3 << 2;
+		else
+			val &= ~(3 << 2);
 		elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
-				 MDIO_WC_REG_RXB_ANA_RX_CONTROL_PCI, 0x0800);
-		elink_set_aer_mmd(params, phy);
+				 MDIO_WC_REG_RX0_PCI_CTRL + (lane << 4),
+				 val);
 
 		elink_disable_kr2(params, vars, phy);
 	}
@@ -4728,7 +4786,7 @@ static void elink_warpcore_set_10G_XFI(struct elink_phy *phy,
 	struct bxe_softc *sc = params->sc;
 	uint16_t misc1_val, tap_val, tx_driver_val, lane, val;
 	uint32_t cfg_tap_val, tx_drv_brdct, tx_equal;
-
+	uint32_t ifir_val, ipost2_val, ipre_driver_val;
 	/* Hold rxSeqStart */
 	elink_cl45_read_or_write(sc, phy, MDIO_WC_DEVAD,
 				 MDIO_WC_REG_DSC2B0_DSC_MISC_CTRL0, 0x8000);
@@ -4773,7 +4831,7 @@ static void elink_warpcore_set_10G_XFI(struct elink_phy *phy,
 	if (is_xfi) {
 		misc1_val |= 0x5;
 		tap_val = WC_TX_FIR(0x08, 0x37, 0x00);
-		tx_driver_val = WC_TX_DRIVER(0x00, 0x02, 0x03);
+		tx_driver_val = WC_TX_DRIVER(0x00, 0x02, 0x03, 0);
 	} else {
 		cfg_tap_val = REG_RD(sc, params->shmem_base +
 				     offsetof(struct shmem_region, dev_info.
@@ -4781,10 +4839,6 @@ static void elink_warpcore_set_10G_XFI(struct elink_phy *phy,
 					      sfi_tap_values));
 
 		tx_equal = cfg_tap_val & PORT_HW_CFG_TX_EQUALIZATION_MASK;
-
-		tx_drv_brdct = (cfg_tap_val &
-				PORT_HW_CFG_TX_DRV_BROADCAST_MASK) >>
-			       PORT_HW_CFG_TX_DRV_BROADCAST_SHIFT;
 
 		misc1_val |= 0x9;
 
@@ -4794,11 +4848,36 @@ static void elink_warpcore_set_10G_XFI(struct elink_phy *phy,
 		else
 			tap_val = WC_TX_FIR(0x0f, 0x2b, 0x02);
 
-		if (tx_drv_brdct)
-			tx_driver_val = WC_TX_DRIVER(0x03, (uint16_t)tx_drv_brdct,
-						     0x06);
-		else
-			tx_driver_val = WC_TX_DRIVER(0x03, 0x02, 0x06);
+		ifir_val = DEFAULT_TX_DRV_IFIR;
+		ipost2_val = DEFAULT_TX_DRV_POST2;
+		ipre_driver_val = DEFAULT_TX_DRV_IPRE_DRIVER;
+		tx_drv_brdct = DEFAULT_TX_DRV_BRDCT;
+
+		/* If any of the IFIR/IPRE_DRIVER/POST@ is set, apply all
+		 * configuration.
+		 */
+		if (cfg_tap_val & (PORT_HW_CFG_TX_DRV_IFIR_MASK |
+				   PORT_HW_CFG_TX_DRV_IPREDRIVER_MASK |
+				   PORT_HW_CFG_TX_DRV_POST2_MASK)) {
+			ifir_val = (cfg_tap_val &
+				    PORT_HW_CFG_TX_DRV_IFIR_MASK) >>
+				PORT_HW_CFG_TX_DRV_IFIR_SHIFT;
+			ipre_driver_val = (cfg_tap_val &
+					   PORT_HW_CFG_TX_DRV_IPREDRIVER_MASK)
+			>> PORT_HW_CFG_TX_DRV_IPREDRIVER_SHIFT;
+			ipost2_val = (cfg_tap_val &
+				      PORT_HW_CFG_TX_DRV_POST2_MASK) >>
+				PORT_HW_CFG_TX_DRV_POST2_SHIFT;
+		}
+
+		if (cfg_tap_val & PORT_HW_CFG_TX_DRV_BROADCAST_MASK) {
+			tx_drv_brdct = (cfg_tap_val &
+					PORT_HW_CFG_TX_DRV_BROADCAST_MASK) >>
+				PORT_HW_CFG_TX_DRV_BROADCAST_SHIFT;
+		}
+
+		tx_driver_val = WC_TX_DRIVER(ipost2_val, tx_drv_brdct,
+					     ipre_driver_val, ifir_val);
 	}
 	elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 			 MDIO_WC_REG_SERDESDIGITAL_MISC1, misc1_val);
@@ -4939,7 +5018,7 @@ static void elink_warpcore_set_20G_DXGXS(struct bxe_softc *sc,
 			  MDIO_WC_REG_TX_FIR_TAP_ENABLE));
 	elink_cl45_write(sc, phy, MDIO_WC_DEVAD,
 			 MDIO_WC_REG_TX0_TX_DRIVER + 0x10*lane,
-			 WC_TX_DRIVER(0x02, 0x02, 0x02));
+			 WC_TX_DRIVER(0x02, 0x02, 0x02, 0));
 }
 
 static void elink_warpcore_set_sgmii_speed(struct elink_phy *phy,
@@ -5460,6 +5539,7 @@ static void elink_sync_link(struct elink_params *params,
 	vars->link_up = (vars->link_status & LINK_STATUS_LINK_UP);
 	if (vars->link_up) {
 		ELINK_DEBUG_P0(sc, "phy link up\n");
+		ELINK_DEBUG_P1(sc, "link status = %x\n", vars->link_status);
 
 		vars->phy_link_up = 1;
 		vars->duplex = DUPLEX_FULL;
@@ -5614,7 +5694,7 @@ void elink_link_status_update(struct elink_params *params,
 					~ELINK_FEATURE_CONFIG_PFC_ENABLED;
 
 	if (SHMEM2_HAS(sc, link_attr_sync))
-		vars->link_attr_sync = SHMEM2_RD(sc,
+		params->link_attr_sync = SHMEM2_RD(sc,
 						 link_attr_sync[params->port]);
 
 	ELINK_DEBUG_P3(sc, "link_status 0x%x  phy_link_up %x int_mask 0x%x\n",
@@ -6166,7 +6246,7 @@ static void elink_update_adv_fc(struct elink_phy *phy,
 				 MDIO_COMBO_IEEE0_AUTO_NEG_ADV_PAUSE_MASK)>>7;
 		ELINK_DEBUG_P1(sc, "pause_result CL37 0x%x\n", pause_result);
 	}
-	elink_pause_resolve(vars, pause_result);
+	elink_pause_resolve(phy, params, vars, pause_result);
 
 }
 
@@ -6365,6 +6445,8 @@ static elink_status_t elink_get_link_speed_duplex(struct elink_phy *phy,
 		vars->flow_ctrl = ELINK_FLOW_CTRL_NONE;
 		vars->mac_type = ELINK_MAC_TYPE_NONE;
 	}
+	ELINK_DEBUG_P2(sc, " in elink_get_link_speed_duplex vars->link_status = %x, vars->duplex = %x\n",
+			vars->link_status, vars->duplex);
 	ELINK_DEBUG_P2(sc, " phy_link_up %x line_speed %d\n",
 		    vars->phy_link_up, vars->line_speed);
 	return ELINK_STATUS_OK;
@@ -6384,8 +6466,16 @@ static elink_status_t elink_link_settings_status(struct elink_phy *phy,
 			  MDIO_REG_BANK_GP_STATUS,
 			  MDIO_GP_STATUS_TOP_AN_STATUS1,
 			  &gp_status);
-	if (gp_status & MDIO_GP_STATUS_TOP_AN_STATUS1_DUPLEX_STATUS)
+	if (gp_status & MDIO_GP_STATUS_TOP_AN_STATUS1_DUPLEX_STATUS) {
 		duplex = DUPLEX_FULL;
+		ELINK_DEBUG_P1(sc, "duplex status read from phy is = %x\n",
+				duplex);
+	} else {
+		ELINK_DEBUG_P1(sc, "phy status does not allow interface to be FULL_DUPLEX : %x\n",
+			gp_status);
+	}		
+
+
 	if (gp_status & MDIO_GP_STATUS_TOP_AN_STATUS1_LINK_STATUS)
 		link_up = 1;
 	speed_mask = gp_status & ELINK_GP_STATUS_SPEED_MASK;
@@ -6461,6 +6551,8 @@ static elink_status_t elink_warpcore_read_status(struct elink_phy *phy,
 		elink_cl45_read(sc, phy, MDIO_WC_DEVAD,
 				MDIO_WC_REG_DIGITAL5_LINK_STATUS, &link_up);
 		link_up &= 0x1;
+		ELINK_DEBUG_P1(sc, "params->loopback_mode link_up read = %x\n",
+				link_up);
 	} else if ((phy->req_line_speed > ELINK_SPEED_10000) &&
 		(phy->supported & ELINK_SUPPORTED_20000baseMLD2_Full)) {
 		uint16_t temp_link_up;
@@ -6490,6 +6582,8 @@ static elink_status_t elink_warpcore_read_status(struct elink_phy *phy,
 			elink_cl45_read(sc, phy, MDIO_AN_DEVAD,
 					MDIO_AN_REG_STATUS, &an_link);
 			link_up |= (an_link & (1<<2));
+			ELINK_DEBUG_P2(sc,"an_link = %x, link_up = %x\n", an_link,
+						link_up);
 		}
 		if (link_up && ELINK_SINGLE_MEDIA_DIRECT(params)) {
 			uint16_t pd, gp_status4;
@@ -6509,12 +6603,17 @@ static elink_status_t elink_warpcore_read_status(struct elink_phy *phy,
 				if (pd & (1<<15))
 					vars->link_status |=
 					LINK_STATUS_PARALLEL_DETECTION_USED;
+				ELINK_DEBUG_P2(sc, "pd = %x, link_status = %x\n",
+						pd, vars->link_status);
 			}
 			elink_ext_phy_resolve_fc(phy, params, vars);
 			vars->duplex = duplex;
+			ELINK_DEBUG_P3(sc, " ELINK_SINGLE_MEDIA_DIRECT duplex %x  flow_ctrl 0x%x link_status 0x%x\n",
+					vars->duplex, vars->flow_ctrl, vars->link_status);
 		}
 	}
-
+	ELINK_DEBUG_P3(sc, "duplex %x  flow_ctrl 0x%x link_status 0x%x\n",
+			vars->duplex, vars->flow_ctrl, vars->link_status);
 	if ((vars->link_status & LINK_STATUS_AUTO_NEGOTIATE_COMPLETE) &&
 	    ELINK_SINGLE_MEDIA_DIRECT(params)) {
 		uint16_t val;
@@ -6529,7 +6628,8 @@ static elink_status_t elink_warpcore_read_status(struct elink_phy *phy,
 			   MDIO_CL73_IEEEB1_AN_ADV2_ADVR_10G_KR))
 			vars->link_status |=
 				LINK_STATUS_LINK_PARTNER_10GXFD_CAPABLE;
-
+		ELINK_DEBUG_P2(sc, "val = %x, link_status = %x\n",
+				val, vars->link_status);
 		elink_cl45_read(sc, phy, MDIO_WC_DEVAD,
 				MDIO_WC_REG_DIGITAL3_LP_UP1, &val);
 
@@ -6539,6 +6639,8 @@ static elink_status_t elink_warpcore_read_status(struct elink_phy *phy,
 		if (val & (MDIO_OVER_1G_UP1_10G | MDIO_OVER_1G_UP1_10GH))
 			vars->link_status |=
 				LINK_STATUS_LINK_PARTNER_10GXFD_CAPABLE;
+		ELINK_DEBUG_P2(sc, "val = %x, link_status = %x\n",
+				val, vars->link_status);
 
 	}
 
@@ -7303,7 +7405,6 @@ elink_status_t elink_test_link(struct elink_params *params, struct elink_vars *v
 static elink_status_t elink_link_initialize(struct elink_params *params,
 				 struct elink_vars *vars)
 {
-	elink_status_t rc = ELINK_STATUS_OK;
 	uint8_t phy_index, non_ext_phy;
 	struct bxe_softc *sc = params->sc;
 	/* In case of external phy existence, the line speed would be the
@@ -7376,7 +7477,7 @@ static elink_status_t elink_link_initialize(struct elink_params *params,
 			ELINK_NIG_STATUS_XGXS0_LINK_STATUS |
 			ELINK_NIG_STATUS_SERDES0_LINK_STATUS |
 			ELINK_NIG_MASK_MI_INT));
-	return rc;
+	return ELINK_STATUS_OK;
 }
 
 static void elink_int_link_reset(struct elink_phy *phy,
@@ -7543,6 +7644,25 @@ static elink_status_t elink_update_link_up(struct elink_params *params,
 	DELAY(1000 * 20);
 	return rc;
 }
+
+static void elink_chng_link_count(struct elink_params *params, uint8_t clear)
+{
+	struct bxe_softc *sc = params->sc;
+	uint32_t addr, val;
+
+	/* Verify the link_change_count is supported by the MFW */
+	if (!(SHMEM2_HAS(sc, link_change_count)))
+		return;
+
+	addr = params->shmem2_base +
+		offsetof(struct shmem2_region, link_change_count[params->port]);
+	if (clear)
+		val = 0;
+	else
+		val = REG_RD(sc, addr) + 1;
+	REG_WR(sc, addr, val);
+}
+
 /* The elink_link_update function should be called upon link
  * interrupt.
  * Link is considered up as follows:
@@ -7561,9 +7681,9 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 	struct elink_vars phy_vars[ELINK_MAX_PHYS];
 	uint8_t port = params->port;
 	uint8_t link_10g_plus, phy_index;
+	uint32_t prev_link_status = vars->link_status;
 	uint8_t ext_phy_link_up = 0, cur_link_up;
 	elink_status_t rc = ELINK_STATUS_OK;
-	uint8_t is_mi_int = 0;
 	uint16_t ext_phy_line_speed = 0, prev_line_speed = vars->line_speed;
 	uint8_t active_external_phy = ELINK_INT_PHY;
 	vars->phy_flags &= ~PHY_HALF_OPEN_CONN_FLAG;
@@ -7588,11 +7708,9 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 		 port, (vars->phy_flags & PHY_XGXS_FLAG),
 		 REG_RD(sc, NIG_REG_STATUS_INTERRUPT_PORT0 + port*4));
 
-	is_mi_int = (uint8_t)(REG_RD(sc, NIG_REG_EMAC0_STATUS_MISC_MI_INT +
-				port*0x18) > 0);
 	ELINK_DEBUG_P3(sc, "int_mask 0x%x MI_INT %x, SERDES_LINK %x\n",
 		 REG_RD(sc, NIG_REG_MASK_INTERRUPT_PORT0 + port*4),
-		 is_mi_int,
+		 REG_RD(sc, NIG_REG_EMAC0_STATUS_MISC_MI_INT + port*0x18) > 0,
 		 REG_RD(sc, NIG_REG_SERDES0_STATUS_LINK_STATUS + port*0x3c));
 
 	ELINK_DEBUG_P2(sc, " 10G %x, XGXS_LINK %x\n",
@@ -7714,6 +7832,19 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 		ELINK_DEBUG_P1(sc, "Active external phy selected: %x\n",
 			   active_external_phy);
 	}
+	
+        ELINK_DEBUG_P3(sc, "vars : phy_flags = %x, mac_type = %x, phy_link_up = %x\n",
+                       vars->phy_flags, vars->mac_type, vars->phy_link_up);
+        ELINK_DEBUG_P3(sc, "vars : link_up = %x, line_speed = %x, duplex = %x\n",
+                       vars->link_up, vars->line_speed, vars->duplex);
+        ELINK_DEBUG_P3(sc, "vars : flow_ctrl = %x, ieee_fc = %x, link_status = %x\n",
+                       vars->flow_ctrl, vars->ieee_fc, vars->link_status);
+        ELINK_DEBUG_P3(sc, "vars : eee_status = %x, fault_detected = %x, check_kr2_recovery_cnt = %x\n",
+                       vars->eee_status, vars->fault_detected, vars->check_kr2_recovery_cnt);
+        ELINK_DEBUG_P3(sc, "vars : periodic_flags = %x, aeu_int_mask = %x, rx_tx_asic_rst = %x\n",
+                       vars->periodic_flags, vars->aeu_int_mask, vars->rx_tx_asic_rst);
+        ELINK_DEBUG_P2(sc, "vars : turn_to_run_wc_rt = %x, rsrv2 = %x\n",
+                       vars->turn_to_run_wc_rt, vars->rsrv2);	
 
 	for (phy_index = ELINK_EXT_PHY1; phy_index < params->num_phys;
 	      phy_index++) {
@@ -7741,6 +7872,7 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 				   " link speed %d\n", vars->line_speed,
 				   ext_phy_line_speed);
 			vars->phy_link_up = 0;
+			ELINK_DEBUG_P0(sc, "phy_link_up set to 0\n");
 		} else if (prev_line_speed != vars->line_speed) {
 			REG_WR(sc, NIG_REG_EGRESS_DRAIN0_MODE + params->port*4,
 			       0);
@@ -7789,6 +7921,12 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 			  ELINK_SINGLE_MEDIA_DIRECT(params)) &&
 			 (phy_vars[active_external_phy].fault_detected == 0));
 
+	if(vars->link_up) {
+                ELINK_DEBUG_P0(sc, "local phy and external phy are up\n");
+        } else {
+                ELINK_DEBUG_P0(sc, "either local phy or external phy or both are down\n");
+        }
+
 	/* Update the PFC configuration in case it was changed */
 	if (params->feature_config_flags & ELINK_FEATURE_CONFIG_PFC_ENABLED)
 		vars->link_status |= LINK_STATUS_PFC_ENABLED;
@@ -7799,6 +7937,9 @@ elink_status_t elink_link_update(struct elink_params *params, struct elink_vars 
 		rc = elink_update_link_up(params, vars, link_10g_plus);
 	else
 		rc = elink_update_link_down(params, vars);
+
+	if ((prev_link_status ^ vars->link_status) & LINK_STATUS_LINK_UP)
+		elink_chng_link_count(params, 0);
 
 	/* Update MCP link status was changed */
 	if (params->feature_config_flags & ELINK_FEATURE_CONFIG_BC_SUPPORTS_AFEX)
@@ -7891,7 +8032,7 @@ static void elink_8073_resolve_fc(struct elink_phy *phy,
 		pause_result |= (lp_pause &
 				 MDIO_COMBO_IEEE0_AUTO_NEG_ADV_PAUSE_BOTH) >> 7;
 
-		elink_pause_resolve(vars, pause_result);
+		elink_pause_resolve(phy, params, vars, pause_result);
 		ELINK_DEBUG_P1(sc, "Ext PHY CL37 pause result 0x%x\n",
 			   pause_result);
 	}
@@ -8719,7 +8860,9 @@ static elink_status_t elink_warpcore_read_sfp_module_eeprom(struct elink_phy *ph
 			DELAY(1000 * 1);
 			elink_warpcore_power_module(params, 1);
 		}
-		rc = elink_bsc_read(params, sc, dev_addr, addr32, 0, byte_cnt,
+
+		elink_bsc_module_sel(params);
+		rc = elink_bsc_read(sc, dev_addr, addr32, 0, byte_cnt,
 				    data_array);
 	} while ((rc != ELINK_STATUS_OK) && (++cnt < I2C_WA_RETRY_CNT));
 
@@ -8875,21 +9018,24 @@ static elink_status_t elink_get_edc_mode(struct elink_phy *phy,
 {
 	struct bxe_softc *sc = params->sc;
 	uint32_t sync_offset = 0, phy_idx, media_types;
-	uint8_t gport, val[2], check_limiting_mode = 0;
+	uint8_t val[ELINK_SFP_EEPROM_FC_TX_TECH_ADDR + 1], check_limiting_mode = 0;
 	*edc_mode = ELINK_EDC_MODE_LIMITING;
 	phy->media_type = ELINK_ETH_PHY_UNSPECIFIED;
 	/* First check for copper cable */
 	if (elink_read_sfp_module_eeprom(phy,
 					 params,
 					 ELINK_I2C_DEV_ADDR_A0,
-					 ELINK_SFP_EEPROM_CON_TYPE_ADDR,
-					 2,
+					 0,
+					 ELINK_SFP_EEPROM_FC_TX_TECH_ADDR + 1,
 					 (uint8_t *)val) != 0) {
 		ELINK_DEBUG_P0(sc, "Failed to read from SFP+ module EEPROM\n");
 		return ELINK_STATUS_ERROR;
 	}
-
-	switch (val[0]) {
+	params->link_attr_sync &= ~LINK_SFP_EEPROM_COMP_CODE_MASK;
+	params->link_attr_sync |= val[ELINK_SFP_EEPROM_10G_COMP_CODE_ADDR] <<
+		LINK_SFP_EEPROM_COMP_CODE_SHIFT;
+	elink_update_link_attr(params, params->link_attr_sync);
+	switch (val[ELINK_SFP_EEPROM_CON_TYPE_ADDR]) {
 	case ELINK_SFP_EEPROM_CON_TYPE_VAL_COPPER:
 	{
 		uint8_t copper_module_type;
@@ -8897,18 +9043,7 @@ static elink_status_t elink_get_edc_mode(struct elink_phy *phy,
 		/* Check if its active cable (includes SFP+ module)
 		 * of passive cable
 		 */
-		if (elink_read_sfp_module_eeprom(phy,
-					       params,
-					       ELINK_I2C_DEV_ADDR_A0,
-					       ELINK_SFP_EEPROM_FC_TX_TECH_ADDR,
-					       1,
-					       &copper_module_type) != 0) {
-			ELINK_DEBUG_P0(sc,
-				"Failed to read copper-cable-type"
-				" from SFP+ EEPROM\n");
-			return ELINK_STATUS_ERROR;
-		}
-
+		copper_module_type = val[ELINK_SFP_EEPROM_FC_TX_TECH_ADDR];
 		if (copper_module_type &
 		    ELINK_SFP_EEPROM_FC_TX_TECH_BITMASK_COPPER_ACTIVE) {
 			ELINK_DEBUG_P0(sc, "Active Copper cable detected\n");
@@ -8933,16 +9068,22 @@ static elink_status_t elink_get_edc_mode(struct elink_phy *phy,
 		}
 		break;
 	}
+	case ELINK_SFP_EEPROM_CON_TYPE_VAL_UNKNOWN:
 	case ELINK_SFP_EEPROM_CON_TYPE_VAL_LC:
 	case ELINK_SFP_EEPROM_CON_TYPE_VAL_RJ45:
 		check_limiting_mode = 1;
-		if ((val[1] & (ELINK_SFP_EEPROM_COMP_CODE_SR_MASK |
-			       ELINK_SFP_EEPROM_COMP_CODE_LR_MASK |
-			       ELINK_SFP_EEPROM_COMP_CODE_LRM_MASK)) == 0) {
+		/* Module is considered as 1G in case it's NOT compliant with
+		 * any 10G ethernet protocol, but is 1G Ethernet compliant.
+		 */
+		if (((val[ELINK_SFP_EEPROM_10G_COMP_CODE_ADDR] &
+		      (ELINK_SFP_EEPROM_10G_COMP_CODE_SR_MASK |
+		       ELINK_SFP_EEPROM_10G_COMP_CODE_LR_MASK |
+		       ELINK_SFP_EEPROM_10G_COMP_CODE_LRM_MASK)) == 0) &&
+		    (val[ELINK_SFP_EEPROM_1G_COMP_CODE_ADDR] != 0)) {
 			ELINK_DEBUG_P0(sc, "1G SFP module detected\n");
-			gport = params->port;
 			phy->media_type = ELINK_ETH_PHY_SFP_1G_FIBER;
 			if (phy->req_line_speed != ELINK_SPEED_1000) {
+				uint8_t gport = params->port;
 				phy->req_line_speed = ELINK_SPEED_1000;
 				if (!CHIP_IS_E1x(sc)) {
 					gport = SC_PATH(sc) +
@@ -8951,7 +9092,17 @@ static elink_status_t elink_get_edc_mode(struct elink_phy *phy,
 				elink_cb_event_log(sc, ELINK_LOG_ID_NON_10G_MODULE, gport); //"Warning: Link speed was forced to 1000Mbps."
 				     // " Current SFP module in port %d is not"
 				     // " compliant with 10G Ethernet\n",
+			}
 
+			if (val[ELINK_SFP_EEPROM_1G_COMP_CODE_ADDR] &
+			    ELINK_SFP_EEPROM_1G_COMP_CODE_BASE_T) {
+				/* Some 1G-baseT modules will not link up,
+				 * unless TX_EN is toggled with long delay in
+				 * between.
+				 */
+				elink_sfp_set_transmitter(params, phy, 0);
+				DELAY(1000 * 40);
+				elink_sfp_set_transmitter(params, phy, 1);
 			}
 		} else {
 			int idx, cfg_idx = 0;
@@ -8968,7 +9119,7 @@ static elink_status_t elink_get_edc_mode(struct elink_phy *phy,
 		break;
 	default:
 		ELINK_DEBUG_P1(sc, "Unable to determine module type 0x%x !!!\n",
-			 val[0]);
+			 val[ELINK_SFP_EEPROM_CON_TYPE_ADDR]);
 		return ELINK_STATUS_ERROR;
 	}
 	sync_offset = params->shmem_base +
@@ -10222,7 +10373,7 @@ static uint8_t elink_8727_read_status(struct elink_phy *phy,
 
 {
 	struct bxe_softc *sc = params->sc;
-	uint8_t link_up = 0, oc_port = params->port;
+	uint8_t link_up = 0;
 	uint16_t link_status = 0;
 	uint16_t rx_alarm_status, lasi_ctrl, val1;
 
@@ -10262,6 +10413,7 @@ static uint8_t elink_8727_read_status(struct elink_phy *phy,
 				&val1);
 
 		if ((val1 & (1<<8)) == 0) {
+			uint8_t oc_port = params->port;
 			if (!CHIP_IS_E1x(sc))
 				oc_port = SC_PATH(sc) + (params->port << 1);
 			ELINK_DEBUG_P1(sc,
@@ -10392,6 +10544,13 @@ static void elink_8727_link_reset(struct elink_phy *phy,
 /******************************************************************/
 /*		BCM8481/BCM84823/BCM84833 PHY SECTION	          */
 /******************************************************************/
+static int elink_is_8483x_8485x(struct elink_phy *phy)
+{
+	return ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
+		(phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834) ||
+		(phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858));
+}
+
 static void elink_save_848xx_spirom_version(struct elink_phy *phy,
 					    struct bxe_softc *sc,
 					    uint8_t port)
@@ -10406,8 +10565,7 @@ static void elink_save_848xx_spirom_version(struct elink_phy *phy,
 	};
 	uint16_t fw_ver1;
 
-	if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-	    (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) {
+	if (elink_is_8483x_8485x(phy)) {
 		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD, 0x400f, &fw_ver1);
 		elink_save_spirom_version(sc, port, fw_ver1 & 0xfff,
 				phy->ver_addr);
@@ -10489,8 +10647,7 @@ static void elink_848xx_set_led(struct bxe_softc *sc,
 		elink_cl45_write(sc, phy, reg_set[i].devad, reg_set[i].reg,
 				 reg_set[i].val);
 
-	if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-	    (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834))
+	if (elink_is_8483x_8485x(phy))
 		offset = MDIO_PMA_REG_84833_CTL_LED_CTL_1;
 	else
 		offset = MDIO_PMA_REG_84823_CTL_LED_CTL_1;
@@ -10508,8 +10665,7 @@ static void elink_848xx_specific_func(struct elink_phy *phy,
 	struct bxe_softc *sc = params->sc;
 	switch (action) {
 	case ELINK_PHY_INIT:
-		if ((phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) &&
-		    (phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) {
+		if (!elink_is_8483x_8485x(phy)) {
 			/* Save spirom version */
 			elink_save_848xx_spirom_version(phy, sc, params->port);
 		}
@@ -10641,8 +10797,7 @@ static elink_status_t elink_848xx_cmn_config_init(struct elink_phy *phy,
 	/* Always write this if this is not 84833/4.
 	 * For 84833/4, write it only when it's a forced speed.
 	 */
-	if (((phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) &&
-	     (phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) ||
+	if (!elink_is_8483x_8485x(phy) ||
 	    ((autoneg_val & (1<<12)) == 0))
 		elink_cl45_write(sc, phy,
 			 MDIO_AN_DEVAD,
@@ -10689,70 +10844,191 @@ static elink_status_t elink_8481_config_init(struct elink_phy *phy,
 	return elink_848xx_cmn_config_init(phy, params, vars);
 }
 
-#define PHY84833_CMDHDLR_WAIT 300
-#define PHY84833_CMDHDLR_MAX_ARGS 5
-static elink_status_t elink_84833_cmd_hdlr(struct elink_phy *phy,
-				struct elink_params *params, uint16_t fw_cmd,
-				uint16_t cmd_args[], int argc)
+#define PHY848xx_CMDHDLR_WAIT 300
+#define PHY848xx_CMDHDLR_MAX_ARGS 5
+
+static elink_status_t elink_84858_cmd_hdlr(struct elink_phy *phy,
+					   struct elink_params *params,
+					   uint16_t fw_cmd,
+					   uint16_t cmd_args[], int argc)
 {
 	int idx;
 	uint16_t val;
 	struct bxe_softc *sc = params->sc;
-	/* Write CMD_OPEN_OVERRIDE to STATUS reg */
-	elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
-			MDIO_84833_CMD_HDLR_STATUS,
-			PHY84833_STATUS_CMD_OPEN_OVERRIDE);
-	for (idx = 0; idx < PHY84833_CMDHDLR_WAIT; idx++) {
+
+	/* Step 1: Poll the STATUS register to see whether the previous command
+	 * is in progress or the system is busy (CMD_IN_PROGRESS or
+	 * SYSTEM_BUSY). If previous command is in progress or system is busy,
+	 * check again until the previous command finishes execution and the
+	 * system is available for taking command
+	 */
+
+	for (idx = 0; idx < PHY848xx_CMDHDLR_WAIT; idx++) {
 		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
-				MDIO_84833_CMD_HDLR_STATUS, &val);
-		if (val == PHY84833_STATUS_CMD_OPEN_FOR_CMDS)
+				MDIO_848xx_CMD_HDLR_STATUS, &val);
+		if ((val != PHY84858_STATUS_CMD_IN_PROGRESS) &&
+		    (val != PHY84858_STATUS_CMD_SYSTEM_BUSY))
 			break;
 		DELAY(1000 * 1);
 	}
-	if (idx >= PHY84833_CMDHDLR_WAIT) {
+	if (idx >= PHY848xx_CMDHDLR_WAIT) {
 		ELINK_DEBUG_P0(sc, "FW cmd: FW not ready.\n");
 		return ELINK_STATUS_ERROR;
 	}
 
-	/* Prepare argument(s) and issue command */
+	/* Step2: If any parameters are required for the function, write them
+	 * to the required DATA registers
+	 */
+
 	for (idx = 0; idx < argc; idx++) {
 		elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
-				MDIO_84833_CMD_HDLR_DATA1 + idx,
+				 MDIO_848xx_CMD_HDLR_DATA1 + idx,
+				 cmd_args[idx]);
+	}
+
+	/* Step3: When the firmware is ready for commands, write the 'Command
+	 * code' to the CMD register
+	 */
+	elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
+			 MDIO_848xx_CMD_HDLR_COMMAND, fw_cmd);
+
+	/* Step4: Once the command has been written, poll the STATUS register
+	 * to check whether the command has completed (CMD_COMPLETED_PASS/
+	 * CMD_FOR_CMDS or CMD_COMPLETED_ERROR).
+	 */
+
+	for (idx = 0; idx < PHY848xx_CMDHDLR_WAIT; idx++) {
+		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
+				MDIO_848xx_CMD_HDLR_STATUS, &val);
+		if ((val == PHY84858_STATUS_CMD_COMPLETE_PASS) ||
+		    (val == PHY84858_STATUS_CMD_COMPLETE_ERROR))
+			break;
+		DELAY(1000 * 1);
+	}
+	if ((idx >= PHY848xx_CMDHDLR_WAIT) ||
+	    (val == PHY84858_STATUS_CMD_COMPLETE_ERROR)) {
+		ELINK_DEBUG_P0(sc, "FW cmd failed.\n");
+		return ELINK_STATUS_ERROR;
+	}
+	/* Step5: Once the command has completed, read the specficied DATA
+	 * registers for any saved results for the command, if applicable
+	 */
+
+	/* Gather returning data */
+	for (idx = 0; idx < argc; idx++) {
+		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
+				MDIO_848xx_CMD_HDLR_DATA1 + idx,
+				&cmd_args[idx]);
+	}
+
+	return ELINK_STATUS_OK;
+}
+
+static elink_status_t elink_84833_cmd_hdlr(struct elink_phy *phy,
+				struct elink_params *params, uint16_t fw_cmd,
+				uint16_t cmd_args[], int argc, int process)
+{
+	int idx;
+	uint16_t val;
+	struct bxe_softc *sc = params->sc;
+	elink_status_t rc = ELINK_STATUS_OK;
+
+	if (process == PHY84833_MB_PROCESS2) {
+	/* Write CMD_OPEN_OVERRIDE to STATUS reg */
+	elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
+				 MDIO_848xx_CMD_HDLR_STATUS,
+			PHY84833_STATUS_CMD_OPEN_OVERRIDE);
+	}
+
+	for (idx = 0; idx < PHY848xx_CMDHDLR_WAIT; idx++) {
+		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
+			       MDIO_848xx_CMD_HDLR_STATUS, &val);
+		if (val == PHY84833_STATUS_CMD_OPEN_FOR_CMDS)
+			break;
+		DELAY(1000 * 1);
+	}
+	if (idx >= PHY848xx_CMDHDLR_WAIT) {
+		ELINK_DEBUG_P0(sc, "FW cmd: FW not ready.\n");
+		/* if the status is CMD_COMPLETE_PASS or CMD_COMPLETE_ERROR
+		 * clear the status to CMD_CLEAR_COMPLETE
+		 */
+		if (val == PHY84833_STATUS_CMD_COMPLETE_PASS ||
+		    val == PHY84833_STATUS_CMD_COMPLETE_ERROR) {
+			elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
+					 MDIO_848xx_CMD_HDLR_STATUS,
+					 PHY84833_STATUS_CMD_CLEAR_COMPLETE);
+		}
+		return ELINK_STATUS_ERROR;
+	}
+	if (process == PHY84833_MB_PROCESS1 ||
+	    process == PHY84833_MB_PROCESS2) {
+		/* Prepare argument(s) */
+	for (idx = 0; idx < argc; idx++) {
+		elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
+					 MDIO_848xx_CMD_HDLR_DATA1 + idx,
 				cmd_args[idx]);
 	}
+	}
+
+	/* Issue command */
 	elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
-			MDIO_84833_CMD_HDLR_COMMAND, fw_cmd);
-	for (idx = 0; idx < PHY84833_CMDHDLR_WAIT; idx++) {
+			MDIO_848xx_CMD_HDLR_COMMAND, fw_cmd);
+	for (idx = 0; idx < PHY848xx_CMDHDLR_WAIT; idx++) {
 		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
-				MDIO_84833_CMD_HDLR_STATUS, &val);
+			       MDIO_848xx_CMD_HDLR_STATUS, &val);
 		if ((val == PHY84833_STATUS_CMD_COMPLETE_PASS) ||
 			(val == PHY84833_STATUS_CMD_COMPLETE_ERROR))
 			break;
 		DELAY(1000 * 1);
 	}
-	if ((idx >= PHY84833_CMDHDLR_WAIT) ||
+	if ((idx >= PHY848xx_CMDHDLR_WAIT) ||
 		(val == PHY84833_STATUS_CMD_COMPLETE_ERROR)) {
 		ELINK_DEBUG_P0(sc, "FW cmd failed.\n");
-		return ELINK_STATUS_ERROR;
+		rc = ELINK_STATUS_ERROR;
 	}
+	if (process == PHY84833_MB_PROCESS3 && rc == ELINK_STATUS_OK) {
 	/* Gather returning data */
 	for (idx = 0; idx < argc; idx++) {
 		elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
-				MDIO_84833_CMD_HDLR_DATA1 + idx,
+					MDIO_848xx_CMD_HDLR_DATA1 + idx,
 				&cmd_args[idx]);
 	}
+	}
+	if (val == PHY84833_STATUS_CMD_COMPLETE_ERROR ||
+	    val == PHY84833_STATUS_CMD_COMPLETE_PASS) {
 	elink_cl45_write(sc, phy, MDIO_CTL_DEVAD,
-			MDIO_84833_CMD_HDLR_STATUS,
+				 MDIO_848xx_CMD_HDLR_STATUS,
 			PHY84833_STATUS_CMD_CLEAR_COMPLETE);
-	return ELINK_STATUS_OK;
+	}
+	return rc;
 }
 
-static elink_status_t elink_84833_pair_swap_cfg(struct elink_phy *phy,
+static elink_status_t elink_848xx_cmd_hdlr(struct elink_phy *phy,
+					   struct elink_params *params,
+					   uint16_t fw_cmd,
+					   uint16_t cmd_args[], int argc,
+					   int process)
+{
+	struct bxe_softc *sc = params->sc;
+
+	if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858) ||
+	    (REG_RD(sc, params->shmem2_base +
+		    offsetof(struct shmem2_region,
+			     link_attr_sync[params->port])) & LINK_ATTR_84858)) {
+		return elink_84858_cmd_hdlr(phy, params, fw_cmd, cmd_args,
+					    argc);
+	} else {
+		return elink_84833_cmd_hdlr(phy, params, fw_cmd, cmd_args,
+					    argc, process);
+	}
+}
+
+static elink_status_t elink_848xx_pair_swap_cfg(struct elink_phy *phy,
 				   struct elink_params *params,
 				   struct elink_vars *vars)
 {
 	uint32_t pair_swap;
-	uint16_t data[PHY84833_CMDHDLR_MAX_ARGS];
+	uint16_t data[PHY848xx_CMDHDLR_MAX_ARGS];
 	elink_status_t status;
 	struct bxe_softc *sc = params->sc;
 
@@ -10768,8 +11044,9 @@ static elink_status_t elink_84833_pair_swap_cfg(struct elink_phy *phy,
 	/* Only the second argument is used for this command */
 	data[1] = (uint16_t)pair_swap;
 
-	status = elink_84833_cmd_hdlr(phy, params,
-		PHY84833_CMD_SET_PAIR_SWAP, data, PHY84833_CMDHDLR_MAX_ARGS);
+	status = elink_848xx_cmd_hdlr(phy, params,
+				      PHY848xx_CMD_SET_PAIR_SWAP, data,
+				      2, PHY84833_MB_PROCESS2);
 	if (status == ELINK_STATUS_OK)
 		ELINK_DEBUG_P1(sc, "Pairswap OK, val=0x%x\n", data[1]);
 
@@ -10858,8 +11135,8 @@ static elink_status_t elink_8483x_disable_eee(struct elink_phy *phy,
 	ELINK_DEBUG_P0(sc, "Don't Advertise 10GBase-T EEE\n");
 
 	/* Prevent Phy from working in EEE and advertising it */
-	rc = elink_84833_cmd_hdlr(phy, params,
-		PHY84833_CMD_SET_EEE_MODE, &cmd_args, 1);
+	rc = elink_848xx_cmd_hdlr(phy, params, PHY848xx_CMD_SET_EEE_MODE,
+				  &cmd_args, 1, PHY84833_MB_PROCESS1);
 	if (rc != ELINK_STATUS_OK) {
 		ELINK_DEBUG_P0(sc, "EEE disable failed.\n");
 		return rc;
@@ -10876,8 +11153,8 @@ static elink_status_t elink_8483x_enable_eee(struct elink_phy *phy,
 	struct bxe_softc *sc = params->sc;
 	uint16_t cmd_args = 1;
 
-	rc = elink_84833_cmd_hdlr(phy, params,
-		PHY84833_CMD_SET_EEE_MODE, &cmd_args, 1);
+	rc = elink_848xx_cmd_hdlr(phy, params, PHY848xx_CMD_SET_EEE_MODE,
+				  &cmd_args, 1, PHY84833_MB_PROCESS1);
 	if (rc != ELINK_STATUS_OK) {
 		ELINK_DEBUG_P0(sc, "EEE enable failed.\n");
 		return rc;
@@ -10895,7 +11172,7 @@ static elink_status_t elink_848x3_config_init(struct elink_phy *phy,
 	uint8_t port, initialize = 1;
 	uint16_t val;
 	uint32_t actual_phy_selection;
-	uint16_t cmd_args[PHY84833_CMDHDLR_MAX_ARGS];
+	uint16_t cmd_args[PHY848xx_CMDHDLR_MAX_ARGS];
 	elink_status_t rc = ELINK_STATUS_OK;
 
 	DELAY(1000 * 1);
@@ -10920,8 +11197,7 @@ static elink_status_t elink_848x3_config_init(struct elink_phy *phy,
 
 	/* Wait for GPHY to come out of reset */
 	DELAY(1000 * 50);
-	if ((phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) &&
-	    (phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) {
+	if (!elink_is_8483x_8485x(phy)) {
 		/* BCM84823 requires that XGXS links up first @ 10G for normal
 		 * behavior.
 		 */
@@ -10932,7 +11208,19 @@ static elink_status_t elink_848x3_config_init(struct elink_phy *phy,
 		elink_program_serdes(&params->phy[ELINK_INT_PHY], params, vars);
 		vars->line_speed = temp;
 	}
+	/* Check if this is actually BCM84858 */
+	if (phy->type != PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858) {
+		uint16_t hw_rev;
 
+		elink_cl45_read(sc, phy, MDIO_AN_DEVAD,
+				MDIO_AN_REG_848xx_ID_MSB, &hw_rev);
+		if (hw_rev == BCM84858_PHY_ID) {
+			params->link_attr_sync |= LINK_ATTR_84858;
+			elink_update_link_attr(params, params->link_attr_sync);
+		}
+	}
+
+	/* Set dual-media configuration according to configuration */
 	elink_cl45_read(sc, phy, MDIO_CTL_DEVAD,
 			MDIO_CTL_REG_84823_MEDIA, &val);
 	val &= ~(MDIO_CTL_REG_84823_MEDIA_MAC_MASK |
@@ -10977,18 +11265,17 @@ static elink_status_t elink_848x3_config_init(struct elink_phy *phy,
 	ELINK_DEBUG_P2(sc, "Multi_phy config = 0x%x, Media control = 0x%x\n",
 		   params->multi_phy_config, val);
 
-	if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-	    (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) {
-		elink_84833_pair_swap_cfg(phy, params, vars);
+	if (elink_is_8483x_8485x(phy)) {
+		elink_848xx_pair_swap_cfg(phy, params, vars);
 
 		/* Keep AutogrEEEn disabled. */
 		cmd_args[0] = 0x0;
 		cmd_args[1] = 0x0;
 		cmd_args[2] = PHY84833_CONSTANT_LATENCY + 1;
 		cmd_args[3] = PHY84833_CONSTANT_LATENCY;
-		rc = elink_84833_cmd_hdlr(phy, params,
-			PHY84833_CMD_SET_EEE_MODE, cmd_args,
-			PHY84833_CMDHDLR_MAX_ARGS);
+		rc = elink_848xx_cmd_hdlr(phy, params,
+					  PHY848xx_CMD_SET_EEE_MODE, cmd_args,
+					  4, PHY84833_MB_PROCESS1);
 		if (rc != ELINK_STATUS_OK)
 			ELINK_DEBUG_P0(sc, "Cfg AutogrEEEn failed.\n");
 	}
@@ -11042,8 +11329,7 @@ static elink_status_t elink_848x3_config_init(struct elink_phy *phy,
 		vars->eee_status &= ~SHMEM_EEE_SUPPORTED_MASK;
 	}
 
-	if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-	    (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) {
+	if (elink_is_8483x_8485x(phy)) {
 		/* Bring PHY out of super isolate mode as the final step. */
 		elink_cl45_read_and_write(sc, phy,
 					  MDIO_CTL_DEVAD,
@@ -11078,7 +11364,7 @@ static uint8_t elink_848xx_read_status(struct elink_phy *phy,
 		link_up = 1;
 		elink_ext_phy_10G_an_resolve(sc, phy, vars);
 	} else { /* Check Legacy speed link */
-		uint16_t legacy_status, legacy_speed, mii_ctrl;
+		uint16_t legacy_status, legacy_speed;
 
 		/* Enable expansion register 0x42 (Operation mode status) */
 		elink_cl45_write(sc, phy,
@@ -11108,6 +11394,8 @@ static uint8_t elink_848xx_read_status(struct elink_phy *phy,
 
 		if (params->feature_config_flags &
 			ELINK_FEATURE_CONFIG_IEEE_PHY_TEST) {
+			uint16_t mii_ctrl;
+
 			elink_cl45_read(sc, phy,
 					MDIO_AN_DEVAD,
 					MDIO_AN_REG_8481_LEGACY_MII_CTRL,
@@ -11185,8 +11473,7 @@ static uint8_t elink_848xx_read_status(struct elink_phy *phy,
 				LINK_STATUS_LINK_PARTNER_10GXFD_CAPABLE;
 
 		/* Determine if EEE was negotiated */
-		if ((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-		    (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834))
+		if (elink_is_8483x_8485x(phy))
 			elink_eee_an_resolve(phy, params, vars);
 	}
 
@@ -11258,7 +11545,6 @@ static void elink_848xx_set_link_led(struct elink_phy *phy,
 		port = SC_PATH(sc);
 	else
 		port = params->port;
-
 	switch (mode) {
 	case ELINK_LED_MODE_OFF:
 
@@ -11661,7 +11947,7 @@ static elink_status_t elink_54618se_config_init(struct elink_phy *phy,
 			ELINK_DEBUG_P0(sc, "Advertising 10M-HD\n");
 		}
 		if (phy->speed_cap_mask &
-		    PORT_HW_CFG_SPEED_CAPABILITY_D0_10M_HALF) {
+		    PORT_HW_CFG_SPEED_CAPABILITY_D0_10M_FULL) {
 			an_10_100_val |= (1<<6);
 			autoneg_val |= (1<<9 | 1<<12);
 			ELINK_DEBUG_P0(sc, "Advertising 10M-FD\n");
@@ -11727,8 +12013,8 @@ static elink_status_t elink_54618se_config_init(struct elink_phy *phy,
 			elink_eee_disable(phy, params, vars);
 		}
 	} else {
-		vars->eee_status &= ~SHMEM_EEE_1G_ADV <<
-				    SHMEM_EEE_SUPPORTED_SHIFT;
+		vars->eee_status &= ((uint32_t)(~SHMEM_EEE_1G_ADV) <<
+				    SHMEM_EEE_SUPPORTED_SHIFT);
 
 		if (phy->flags & ELINK_FLAGS_EEE) {
 			/* Handle legacy auto-grEEEn */
@@ -12243,7 +12529,9 @@ static const struct elink_phy phy_warpcore = {
 			   ELINK_SUPPORTED_100baseT_Half |
 			   ELINK_SUPPORTED_100baseT_Full |
 			   ELINK_SUPPORTED_1000baseT_Full |
+			   ELINK_SUPPORTED_1000baseKX_Full |
 			   ELINK_SUPPORTED_10000baseT_Full |
+			   ELINK_SUPPORTED_10000baseKR_Full |
 			   ELINK_SUPPORTED_20000baseKR2_Full |
 			   ELINK_SUPPORTED_20000baseMLD2_Full |
 			   ELINK_SUPPORTED_FIBRE |
@@ -12591,6 +12879,41 @@ static const struct elink_phy phy_84834 = {
 	.phy_specific_func = (phy_specific_func_t)elink_848xx_specific_func
 };
 
+static const struct elink_phy phy_84858 = {
+	.type		= PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858,
+	.addr		= 0xff,
+	.def_md_devad	= 0,
+	.flags		= ELINK_FLAGS_FAN_FAILURE_DET_REQ |
+			    ELINK_FLAGS_REARM_LATCH_SIGNAL,
+	.rx_preemphasis	= {0xffff, 0xffff, 0xffff, 0xffff},
+	.tx_preemphasis	= {0xffff, 0xffff, 0xffff, 0xffff},
+	.mdio_ctrl	= 0,
+	.supported	= (ELINK_SUPPORTED_100baseT_Half |
+			   ELINK_SUPPORTED_100baseT_Full |
+			   ELINK_SUPPORTED_1000baseT_Full |
+			   ELINK_SUPPORTED_10000baseT_Full |
+			   ELINK_SUPPORTED_TP |
+			   ELINK_SUPPORTED_Autoneg |
+			   ELINK_SUPPORTED_Pause |
+			   ELINK_SUPPORTED_Asym_Pause),
+	.media_type	= ELINK_ETH_PHY_BASE_T,
+	.ver_addr	= 0,
+	.req_flow_ctrl	= 0,
+	.req_line_speed	= 0,
+	.speed_cap_mask	= 0,
+	.req_duplex	= 0,
+	.rsrv		= 0,
+	.config_init	= (config_init_t)elink_848x3_config_init,
+	.read_status	= (read_status_t)elink_848xx_read_status,
+	.link_reset	= (link_reset_t)elink_848x3_link_reset,
+	.config_loopback = (config_loopback_t)NULL,
+	.format_fw_ver	= (format_fw_ver_t)elink_848xx_format_ver,
+	.hw_reset	= (hw_reset_t)elink_84833_hw_reset_phy,
+	.set_link_led	= (set_link_led_t)elink_848xx_set_link_led,
+	.phy_specific_func = (phy_specific_func_t)elink_848xx_specific_func
+};
+
+
 static const struct elink_phy phy_54618se = {
 	.type		= PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM54618SE,
 	.addr		= 0xff,
@@ -12664,6 +12987,8 @@ static void elink_populate_preemphasis(struct bxe_softc *sc, uint32_t shmem_base
 
 		phy->tx_preemphasis[i << 1] = ((tx>>16) & 0xffff);
 		phy->tx_preemphasis[(i << 1) + 1] = (tx & 0xffff);
+		ELINK_DEBUG_P2(sc,"phy->rx_preemphasis = %x, phy->tx_preemphasis = %x\n",
+			phy->rx_preemphasis[i << 1], phy->tx_preemphasis[i << 1]);
 	}
 }
 
@@ -12750,8 +13075,8 @@ static elink_status_t elink_populate_int_phy(struct bxe_softc *sc, uint32_t shme
 			break;
 		case PORT_HW_CFG_NET_SERDES_IF_KR:
 			phy->media_type = ELINK_ETH_PHY_KR;
-			phy->supported &= (ELINK_SUPPORTED_1000baseT_Full |
-					   ELINK_SUPPORTED_10000baseT_Full |
+			phy->supported &= (ELINK_SUPPORTED_1000baseKX_Full |
+					   ELINK_SUPPORTED_10000baseKR_Full |
 					   ELINK_SUPPORTED_FIBRE |
 					   ELINK_SUPPORTED_Autoneg |
 					   ELINK_SUPPORTED_Pause |
@@ -12769,8 +13094,8 @@ static elink_status_t elink_populate_int_phy(struct bxe_softc *sc, uint32_t shme
 			phy->media_type = ELINK_ETH_PHY_KR;
 			phy->flags |= ELINK_FLAGS_WC_DUAL_MODE;
 			phy->supported &= (ELINK_SUPPORTED_20000baseKR2_Full |
-					   ELINK_SUPPORTED_10000baseT_Full |
-					   ELINK_SUPPORTED_1000baseT_Full |
+					   ELINK_SUPPORTED_10000baseKR_Full |
+					   ELINK_SUPPORTED_1000baseKX_Full |
 					   ELINK_SUPPORTED_Autoneg |
 					   ELINK_SUPPORTED_FIBRE |
 					   ELINK_SUPPORTED_Pause |
@@ -12791,6 +13116,8 @@ static elink_status_t elink_populate_int_phy(struct bxe_softc *sc, uint32_t shme
 			phy->flags |= ELINK_FLAGS_MDC_MDIO_WA;
 		else
 			phy->flags |= ELINK_FLAGS_MDC_MDIO_WA_B0;
+		ELINK_DEBUG_P3(sc, "media_type = %x, flags = %x, supported = %x\n",
+				phy->media_type, phy->flags, phy->supported);
 	} else
 	{
 		switch (switch_cfg) {
@@ -12878,6 +13205,9 @@ static elink_status_t elink_populate_ext_phy(struct bxe_softc *sc,
 	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834:
 		*phy = phy_84834;
 		break;
+	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858:
+		*phy = phy_84858;
+		break;
 	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM54616:
 	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM54618SE:
 		*phy = phy_54618se;
@@ -12934,9 +13264,7 @@ static elink_status_t elink_populate_ext_phy(struct bxe_softc *sc,
 	}
 	phy->mdio_ctrl = elink_get_emac_base(sc, mdc_mdio_access, port);
 
-	if (((phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833) ||
-	     (phy->type == PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834)) &&
-	    (phy->ver_addr)) {
+	if (elink_is_8483x_8485x(phy) && (phy->ver_addr)) {
 		/* Remove 100Mb link supported for BCM84833/4 when phy fw
 		 * version lower than or equal to 1.39
 		 */
@@ -13020,6 +13348,9 @@ static void elink_phy_def_cfg(struct elink_params *params,
 		break;
 	}
 
+	ELINK_DEBUG_P2(sc, "Default config phy idx %x, req_duplex config %x\n",
+			phy_index, phy->req_duplex);
+
 	switch (link_config  & PORT_FEATURE_FLOW_CONTROL_MASK) {
 	case PORT_FEATURE_FLOW_CONTROL_AUTO:
 		phy->req_flow_ctrl = ELINK_FLOW_CTRL_AUTO;
@@ -13037,6 +13368,8 @@ static void elink_phy_def_cfg(struct elink_params *params,
 		phy->req_flow_ctrl = ELINK_FLOW_CTRL_NONE;
 		break;
 	}
+	ELINK_DEBUG_P3(sc, "Requested Duplex = %x, line_speed = %x, flow_ctrl = %x\n",
+			phy->req_duplex, phy->req_line_speed, phy->req_flow_ctrl);
 }
 
 uint32_t elink_phy_selection(struct elink_params *params)
@@ -13490,6 +13823,7 @@ static elink_status_t elink_avoid_link_flap(struct elink_params *params,
 	uint32_t dont_clear_stat, lfa_sts;
 	struct bxe_softc *sc = params->sc;
 
+	elink_set_mdio_emac_per_phy(sc, params);
 	/* Sync the link parameters */
 	elink_link_status_update(params, vars);
 
@@ -13639,9 +13973,22 @@ elink_status_t elink_phy_init(struct elink_params *params, struct elink_vars *va
 	params->link_flags = ELINK_PHY_INITIALIZED;
 	/* Driver opens NIG-BRB filters */
 	elink_set_rx_filter(params, 1);
+	elink_chng_link_count(params, 1);
 	/* Check if link flap can be avoided */
 	lfa_status = elink_check_lfa(params);
 
+	ELINK_DEBUG_P3(sc, " params : port = %x, loopback_mode = %x req_duplex = %x\n",
+                        params->port, params->loopback_mode, params->req_duplex[0]);
+        ELINK_DEBUG_P3(sc, " params : switch_cfg = %x, lane_config = %x req_duplex[1] = %x\n",
+                        params->switch_cfg, params->lane_config, params->req_duplex[1]);
+        ELINK_DEBUG_P3(sc, " params : chip_id = %x, feature_config_flags = %x, num_phys = %x\n",
+                       params->chip_id, params->feature_config_flags, params->num_phys);
+        ELINK_DEBUG_P3(sc, " params : rsrv = %x, eee_mode = %x, hw_led_mode = x\n",
+                        params->rsrv, params->eee_mode, params->hw_led_mode);
+        ELINK_DEBUG_P3(sc, " params : multi_phy = %x, req_fc_auto_adv = %x, link_flags = %x\n",
+                        params->multi_phy_config, params->req_fc_auto_adv, params->link_flags);
+        ELINK_DEBUG_P2(sc, " params : lfa_base = %x, link_attr = %x\n",
+                        params->lfa_base, params->link_attr_sync);
 	if (lfa_status == 0) {
 		ELINK_DEBUG_P0(sc, "Link Flap Avoidance in progress\n");
 		return elink_avoid_link_flap(params, vars);
@@ -13728,6 +14075,7 @@ elink_status_t elink_link_reset(struct elink_params *params, struct elink_vars *
 	ELINK_DEBUG_P1(sc, "Resetting the link of port %d\n", port);
 	/* Disable attentions */
 	vars->link_status = 0;
+	elink_chng_link_count(params, 1);
 	elink_update_mng(params, vars->link_status);
 	vars->eee_status &= ~(SHMEM_EEE_LP_ADV_STATUS_MASK |
 			      SHMEM_EEE_ACTIVE_BIT);
@@ -14244,6 +14592,7 @@ static elink_status_t elink_ext_phy_common_init(struct bxe_softc *sc, uint32_t s
 		break;
 	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84833:
 	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84834:
+	case PORT_HW_CFG_XGXS_EXT_PHY_TYPE_BCM84858:
 		/* GPIO3's are linked, and so both need to be toggled
 		 * to obtain required 2us pulse.
 		 */
@@ -14348,7 +14697,7 @@ static void elink_check_over_curr(struct elink_params *params,
 		vars->phy_flags &= ~PHY_OVER_CURRENT_FLAG;
 }
 
-/* Returns 0 if no change occured since last check; 1 otherwise. */
+/* Returns 0 if no change occurred since last check; 1 otherwise. */
 static uint8_t elink_analyze_link_error(struct elink_params *params,
 				    struct elink_vars *vars, uint32_t status,
 				    uint32_t phy_flag, uint32_t link_flag, uint8_t notify)
@@ -14428,6 +14777,7 @@ static uint8_t elink_analyze_link_error(struct elink_params *params,
 *	a fault, for example, due to break in the TX side of fiber.
 *
 ******************************************************************************/
+static
 elink_status_t elink_check_half_open_conn(struct elink_params *params,
 				struct elink_vars *vars,
 				uint8_t notify)
@@ -14556,7 +14906,7 @@ static void elink_check_kr2_wa(struct elink_params *params,
 
 	sigdet = elink_warpcore_get_sigdet(phy, params);
 	if (!sigdet) {
-		if (!(vars->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
+		if (!(params->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
 			elink_kr2_recovery(params, vars, phy);
 			ELINK_DEBUG_P0(sc, "No sigdet\n");
 		}
@@ -14574,7 +14924,7 @@ static void elink_check_kr2_wa(struct elink_params *params,
 
 	/* CL73 has not begun yet */
 	if (base_page == 0) {
-		if (!(vars->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
+		if (!(params->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
 			elink_kr2_recovery(params, vars, phy);
 			ELINK_DEBUG_P0(sc, "No BP\n");
 		}
@@ -14587,10 +14937,10 @@ static void elink_check_kr2_wa(struct elink_params *params,
 	 */
 	not_kr2_device = (((base_page & 0x8000) == 0) ||
 			  (((base_page & 0x8000) &&
-			    ((next_page & 0xe0) == 0x2))));
+			    ((next_page & 0xe0) == 0x20))));
 
 	/* In case KR2 is already disabled, check if we need to re-enable it */
-	if (!(vars->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
+	if (!(params->link_attr_sync & LINK_ATTR_SYNC_KR2_ENABLE)) {
 		if (!not_kr2_device) {
 			ELINK_DEBUG_P2(sc, "BP=0x%x, NP=0x%x\n", base_page,
 			   next_page);
@@ -14626,8 +14976,10 @@ void elink_period_func(struct elink_params *params, struct elink_vars *vars)
 	if (CHIP_IS_E3(sc)) {
 		struct elink_phy *phy = &params->phy[ELINK_INT_PHY];
 		elink_set_aer_mmd(params, phy);
-		if ((phy->supported & ELINK_SUPPORTED_20000baseKR2_Full) &&
-		    (phy->speed_cap_mask & PORT_HW_CFG_SPEED_CAPABILITY_D0_20G))
+		if (((phy->req_line_speed == ELINK_SPEED_AUTO_NEG) &&
+		     (phy->speed_cap_mask &
+		      PORT_HW_CFG_SPEED_CAPABILITY_D0_20G)) ||
+		    (phy->req_line_speed == ELINK_SPEED_20000))
 			elink_check_kr2_wa(params, vars, phy);
 		elink_check_over_curr(params, vars);
 		if (vars->rx_tx_asic_rst)

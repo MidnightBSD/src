@@ -29,7 +29,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/dev/esp/ncr53c9xreg.h 226950 2011-10-30 21:45:36Z marius $ */
+/* $FreeBSD$ */
 
 #ifndef _NCR53C9XREG_H_
 #define	_NCR53C9XREG_H_

@@ -28,7 +28,7 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_format_zip_empty.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_write_format_zip_empty)
 {
@@ -49,7 +49,7 @@ DEFINE_TEST(test_write_format_zip_empty)
 	assertEqualIntA(a, ARCHIVE_OK, archive_write_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_write_free(a));
 
-	/* Verify the correct format for an empy Zip archive. */
+	/* Verify the correct format for an empty Zip archive. */
 	assertEqualInt(used, 22);
 	assertEqualMem(buff,
 	    "PK\005\006\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",

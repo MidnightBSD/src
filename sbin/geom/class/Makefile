@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sbin/geom/class/Makefile 219974 2011-03-24 21:31:32Z mav $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	cache
 SUBDIR+=concat

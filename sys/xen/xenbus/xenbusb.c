@@ -52,7 +52,7 @@
  *                        xnb1
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/xen/xenbus/xenbusb.c 250917 2013-05-22 19:22:44Z gibbs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -330,7 +330,7 @@ xenbusb_device_sysctl_handler(SYSCTL_HANDLER_ARGS)
 	default:
 		return (EINVAL);
 	}
-	return (SYSCTL_OUT(req, value, strlen(value)));
+	return (SYSCTL_OUT_STR(req, value));
 }
 
 /**
@@ -561,7 +561,6 @@ xenbusb_devices_changed(struct xs_watch *watch, const char **vec,
 	struct xenbusb_softc *xbs;
 	device_t dev;
 	char *node;
-	char *bus;
 	char *type;
 	char *id;
 	char *p;
@@ -580,7 +579,6 @@ xenbusb_devices_changed(struct xs_watch *watch, const char **vec,
 	p = strchr(node, '/');
 	if (p == NULL)
 		goto out;
-	bus = node;
 	*p = 0;
 	type = p + 1;
 
@@ -792,6 +790,11 @@ xenbusb_resume(device_t dev)
 		for (i = 0; i < count; i++) {
 			if (device_get_state(kids[i]) == DS_NOTPRESENT)
 				continue;
+
+			if (xen_suspend_cancelled) {
+				DEVICE_RESUME(kids[i]);
+				continue;
+			}
 
 			ivars = device_get_ivars(kids[i]);
 

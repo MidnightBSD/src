@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/pcpu.h 251356 2013-06-04 00:40:26Z jhibbits $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -35,6 +35,7 @@
 #include <machine/tlb.h>
 
 struct pmap;
+struct pvo_entry;
 #define	CPUSAVE_LEN	9
 
 #define	PCPU_MD_COMMON_FIELDS						\
@@ -49,9 +50,13 @@ struct pmap;
 	uint32_t	pc_ipimask;					\
 	register_t	pc_tempsave[CPUSAVE_LEN];			\
 	register_t	pc_disisave[CPUSAVE_LEN];			\
-	register_t	pc_dbsave[CPUSAVE_LEN];
+	register_t	pc_dbsave[CPUSAVE_LEN];				\
+	void		*pc_restore;
 
 #define PCPU_MD_AIM32_FIELDS						\
+	vm_offset_t	pc_qmap_addr;					\
+	struct pvo_entry *pc_qmap_pvo;					\
+	struct mtx	pc_qmap_lock;					\
 	/* char		__pad[0] */
 
 #define PCPU_MD_AIM64_FIELDS						\
@@ -59,7 +64,10 @@ struct pmap;
 	struct slb	**pc_userslb;					\
 	register_t	pc_slbsave[18];					\
 	uint8_t		pc_slbstack[1024];				\
-	char		__pad[1137]
+	vm_offset_t	pc_qmap_addr;					\
+	struct pvo_entry *pc_qmap_pvo;					\
+	struct mtx	pc_qmap_lock;					\
+	char		__pad[1121 - sizeof(struct mtx)]
 
 #ifdef __powerpc64__
 #define PCPU_MD_AIM_FIELDS	PCPU_MD_AIM64_FIELDS
@@ -77,9 +85,10 @@ struct pmap;
 	register_t	pc_booke_mchksave[CPUSAVE_LEN];			\
 	register_t	pc_booke_tlbsave[BOOKE_TLBSAVE_LEN];		\
 	register_t	pc_booke_tlb_level;				\
+	vm_offset_t	pc_qmap_addr;					\
 	uint32_t	*pc_booke_tlb_lock;				\
 	int		pc_tid_next;					\
-	char		__pad[173]
+	char		__pad[165]
 
 /* Definitions for register offsets within the exception tmp save areas */
 #define	CPUSAVE_R27	0		/* where r27 gets saved */
@@ -135,7 +144,6 @@ struct pmap;
 
 #define pcpup	((struct pcpu *) powerpc_get_pcpup())
 
-#ifdef AIM /* Book-E not yet adapted */
 static __inline __pure2 struct thread *
 __curthread(void)
 {
@@ -148,7 +156,6 @@ __curthread(void)
 	return (td);
 }
 #define curthread (__curthread())
-#endif
 
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
 

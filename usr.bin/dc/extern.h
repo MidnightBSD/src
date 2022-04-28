@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.bin/dc/extern.h 202719 2010-01-20 21:30:52Z gabor $						*/
+/*	$FreeBSD$						*/
 /*	$OpenBSD: extern.h,v 1.3 2006/01/16 08:09:25 otto Exp $	*/
 
 /*

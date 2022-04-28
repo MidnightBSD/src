@@ -1,13 +1,16 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/tools/Makefile.inc 216295 2010-12-08 14:30:25Z syrinx $
+# $FreeBSD$
 # Author: Shteryana Shopova <syrinx@FreeBSD.org>
 
 BINDIR?= /usr/bin
+PACKAGE=	bsnmp
 
 CFLAGS+= -I. -I${.CURDIR}
 
-.if exists(${.OBJDIR}/../libbsnmptools)
-LIBBSNMPTOOLSDIR=      ${.OBJDIR}/../libbsnmptools
+.if exists(${.OBJDIR:H}/libbsnmptools)
+LIBBSNMPTOOLSDIR=      ${.OBJDIR:H}/libbsnmptools
 .else
-LIBBSNMPTOOLSDIR=      ${.CURDIR}/../libbsnmptools
+LIBBSNMPTOOLSDIR=      ${.CURDIR:H}/libbsnmptools
 .endif
 LIBBSNMPTOOLS=         ${LIBBSNMPTOOLSDIR}/libbsnmptools.a
+
+WARNS?=		6

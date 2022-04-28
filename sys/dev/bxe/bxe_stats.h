@@ -1,9 +1,5 @@
 /*-
- * Copyright (c) 2007-2013 Broadcom Corporation. All rights reserved.
- *
- * Eric Davis        <edavis@broadcom.com>
- * David Christensen <davidch@broadcom.com>
- * Gary Zambrano     <zambrano@broadcom.com>
+ * Copyright (c) 2007-2014 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -35,7 +28,7 @@
 #define BXE_STATS_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bxe/bxe_stats.h 255736 2013-09-20 20:18:49Z davidch $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -225,6 +218,9 @@ struct bxe_eth_stats {
     uint32_t rx_calls;
     uint32_t rx_pkts;
     uint32_t rx_tpa_pkts;
+    uint32_t rx_erroneous_jumbo_sge_pkts;
+    uint32_t rx_bxe_service_rxsgl;
+    uint32_t rx_jumbo_sge_pkts;
     uint32_t rx_soft_errors;
     uint32_t rx_hw_csum_errors;
     uint32_t rx_ofld_frames_csum_ip;
@@ -267,6 +263,17 @@ struct bxe_eth_stats {
     uint32_t mbuf_alloc_rx;
     uint32_t mbuf_alloc_sge;
     uint32_t mbuf_alloc_tpa;
+
+    /* num. of times tx queue full occurred */
+    uint32_t tx_queue_full_return;
+    /* debug stats */
+    uint32_t bxe_tx_mq_sc_state_failures;
+    uint32_t tx_request_link_down_failures;
+    uint32_t bd_avail_too_less_failures;
+    uint32_t tx_mq_not_empty;
+    uint32_t nsegs_path1_errors;
+    uint32_t nsegs_path2_errors;
+
 };
 
 
@@ -325,6 +332,9 @@ struct bxe_eth_q_stats {
     uint32_t rx_calls;
     uint32_t rx_pkts;
     uint32_t rx_tpa_pkts;
+    uint32_t rx_erroneous_jumbo_sge_pkts;
+    uint32_t rx_bxe_service_rxsgl;
+    uint32_t rx_jumbo_sge_pkts;
     uint32_t rx_soft_errors;
     uint32_t rx_hw_csum_errors;
     uint32_t rx_ofld_frames_csum_ip;
@@ -367,6 +377,18 @@ struct bxe_eth_q_stats {
     uint32_t mbuf_alloc_rx;
     uint32_t mbuf_alloc_sge;
     uint32_t mbuf_alloc_tpa;
+
+    /* num. of times tx queue full occurred */
+    uint32_t tx_queue_full_return;
+
+    /* debug stats */
+    uint32_t bxe_tx_mq_sc_state_failures;
+    uint32_t tx_request_link_down_failures;
+    uint32_t bd_avail_too_less_failures;
+    uint32_t tx_mq_not_empty;
+    uint32_t nsegs_path1_errors;
+    uint32_t nsegs_path2_errors;
+
 };
 
 struct bxe_eth_stats_old {
@@ -418,6 +440,9 @@ struct bxe_eth_q_stats_old {
     uint32_t rx_calls_old;
     uint32_t rx_pkts_old;
     uint32_t rx_tpa_pkts_old;
+    uint32_t rx_erroneous_jumbo_sge_pkts_old;
+    uint32_t rx_bxe_service_rxsgl_old;
+    uint32_t rx_jumbo_sge_pkts_old;
     uint32_t rx_soft_errors_old;
     uint32_t rx_hw_csum_errors_old;
     uint32_t rx_ofld_frames_csum_ip_old;
@@ -682,6 +707,7 @@ void bxe_stats_init(struct bxe_softc *sc);
 void bxe_stats_handle(struct bxe_softc *sc, enum bxe_stats_event event);
 void bxe_save_statistics(struct bxe_softc *sc);
 void bxe_afex_collect_stats(struct bxe_softc *sc, void *void_afex_stats, uint32_t stats_type);
+uint64_t bxe_get_counter(if_t, ift_counter);
 
 #endif /* BXE_STATS_H */
 

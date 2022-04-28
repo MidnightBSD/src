@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/tools/regression/pthread/unwind/cond_wait_cancel2.cpp 213155 2010-09-25 04:26:40Z davidxu $
+ * $FreeBSD$
  *
  * Test stack unwinding for mixed pthread_cleanup_push/pop and C++
  * object, both should work together.

@@ -1,4 +1,4 @@
-#	$FreeBSD: release/10.0.0/tools/tools/kttcp/Makefile 122628 2003-11-13 21:24:09Z sam $
+#	$FreeBSD$
 
 SHELL=	/bin/sh
 

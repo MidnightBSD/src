@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/ndis/pe_var.h 189488 2009-03-07 07:26:22Z weongyo $
+ * $FreeBSD$
  */
 
 #ifndef _PE_VAR_H_
@@ -111,7 +111,6 @@ typedef struct image_file_header image_file_header;
 #define	IMAGE_FILE_MACHINE_AM33         0x01d3
 #define	IMAGE_FILE_MACHINE_POWERPC      0x01f0
 #define	IMAGE_FILE_MACHINE_POWERPCFP    0x01f1
-#define	IMAGE_FILE_MACHINE_IA64         0x0200
 #define	IMAGE_FILE_MACHINE_MIPS16       0x0266
 #define	IMAGE_FILE_MACHINE_ALPHA64      0x0284
 #define	IMAGE_FILE_MACHINE_MIPSFPU      0x0366
@@ -333,7 +332,6 @@ typedef struct image_base_reloc image_base_reloc;
 #define	IMAGE_REL_BASED_SECTION			6
 #define	IMAGE_REL_BASED_REL			7
 #define	IMAGE_REL_BASED_MIPS_JMPADDR16		9
-#define	IMAGE_REL_BASED_IA64_IMM64		9 /* yes, 9 too */
 #define	IMAGE_REL_BASED_DIR64			10
 #define	IMAGE_REL_BASED_HIGH3ADJ		11
 
@@ -460,22 +458,30 @@ extern uint64_t x86_64_call5(void *, uint64_t, uint64_t, uint64_t, uint64_t,
 extern uint64_t x86_64_call6(void *, uint64_t, uint64_t, uint64_t, uint64_t,
 	uint64_t, uint64_t);
 
+uint64_t _x86_64_call1(void *, uint64_t);
+uint64_t _x86_64_call2(void *, uint64_t, uint64_t);
+uint64_t _x86_64_call3(void *, uint64_t, uint64_t, uint64_t);
+uint64_t _x86_64_call4(void *, uint64_t, uint64_t, uint64_t, uint64_t);
+uint64_t _x86_64_call5(void *, uint64_t, uint64_t, uint64_t, uint64_t,
+    uint64_t);
+uint64_t _x86_64_call6(void *, uint64_t, uint64_t, uint64_t, uint64_t,
+    uint64_t, uint64_t);
 
 #define	MSCALL1(fn, a)						\
-	x86_64_call1((fn), (uint64_t)(a))
+	_x86_64_call1((fn), (uint64_t)(a))
 #define	MSCALL2(fn, a, b)					\
-	x86_64_call2((fn), (uint64_t)(a), (uint64_t)(b))
+	_x86_64_call2((fn), (uint64_t)(a), (uint64_t)(b))
 #define	MSCALL3(fn, a, b, c)					\
-	x86_64_call3((fn), (uint64_t)(a), (uint64_t)(b),		\
+	_x86_64_call3((fn), (uint64_t)(a), (uint64_t)(b),		\
 	(uint64_t)(c))
 #define	MSCALL4(fn, a, b, c, d)					\
-	x86_64_call4((fn), (uint64_t)(a), (uint64_t)(b),		\
+	_x86_64_call4((fn), (uint64_t)(a), (uint64_t)(b),		\
 	(uint64_t)(c), (uint64_t)(d))
 #define	MSCALL5(fn, a, b, c, d, e)				\
-	x86_64_call5((fn), (uint64_t)(a), (uint64_t)(b),		\
+	_x86_64_call5((fn), (uint64_t)(a), (uint64_t)(b),		\
 	(uint64_t)(c), (uint64_t)(d), (uint64_t)(e))
 #define	MSCALL6(fn, a, b, c, d, e, f)				\
-	x86_64_call6((fn), (uint64_t)(a), (uint64_t)(b),		\
+	_x86_64_call6((fn), (uint64_t)(a), (uint64_t)(b),		\
 	(uint64_t)(c), (uint64_t)(d), (uint64_t)(e), (uint64_t)(f))
 
 #endif /* __amd64__ */

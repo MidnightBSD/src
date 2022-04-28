@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
  *
@@ -72,6 +72,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe.c 243857 2012-12-04 09:32:43
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -83,6 +84,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/fe/if_fe.c 243857 2012-12-04 09:32:43
 
 #include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_mib.h>
 #include <net/if_media.h>
@@ -868,6 +870,8 @@ fe_attach (device_t dev)
 	if (sc->stability & UNSTABLE_TYPE)
 		device_printf(dev, "warning: hardware type was not validated\n");
 
+	gone_by_fcp101_dev(dev);
+
 	return 0;
 }
 
@@ -879,8 +883,8 @@ fe_alloc_port(device_t dev, int size)
 	int rid;
 
 	rid = 0;
-	res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-				 0ul, ~0ul, size, RF_ACTIVE);
+	res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+					  size, RF_ACTIVE);
 	if (res) {
 		sc->port_used = size;
 		sc->port_res = res;
@@ -929,7 +933,7 @@ static void
 fe_reset (struct fe_softc *sc)
 {
 	/* Record how many packets are lost by this accident.  */
-	sc->ifp->if_oerrors += sc->txb_sched + sc->txb_count;
+	if_inc_counter(sc->ifp, IFCOUNTER_OERRORS, sc->txb_sched + sc->txb_count);
 	sc->mibdata.dot3StatsInternalMacTransmitErrors++;
 
 	/* Put the interface into known initial state.  */
@@ -996,12 +1000,15 @@ fe_watchdog (void *arg)
 	FE_ASSERT_LOCKED(sc);
 
 	if (sc->tx_timeout && --sc->tx_timeout == 0) {
+		struct ifnet *ifp = sc->ifp;
+
 		/* A "debug" message.  */
-		if_printf(sc->ifp, "transmission timeout (%d+%d)%s\n",
+		if_printf(ifp, "transmission timeout (%d+%d)%s\n",
 		    sc->txb_sched, sc->txb_count,
-		    (sc->ifp->if_flags & IFF_UP) ? "" : " when down");
-		if (sc->ifp->if_opackets == 0 && sc->ifp->if_ipackets == 0)
-			if_printf(sc->ifp, "wrong IRQ setting in config?\n");
+		    (ifp->if_flags & IFF_UP) ? "" : " when down");
+		if (ifp->if_get_counter(ifp, IFCOUNTER_OPACKETS) == 0 &&
+		    ifp->if_get_counter(ifp, IFCOUNTER_IPACKETS) == 0)
+			if_printf(ifp, "wrong IRQ setting in config?\n");
 		fe_reset(sc);
 	}
 	callout_reset(&sc->timer, hz, fe_watchdog, sc);
@@ -1518,7 +1525,7 @@ fe_tint (struct fe_softc * sc, u_char tstat)
 				 */
 				col = 1;
 			}
-			sc->ifp->if_collisions += col;
+			if_inc_counter(sc->ifp, IFCOUNTER_COLLISIONS, col);
 			if (col == 1)
 				sc->mibdata.dot3StatsSingleCollisionFrames++;
 			else
@@ -1531,9 +1538,9 @@ fe_tint (struct fe_softc * sc, u_char tstat)
 		 * Be sure to reflect number of excessive collisions.
 		 */
 		col = sc->tx_excolls;
-		sc->ifp->if_opackets += sc->txb_sched - col;
-		sc->ifp->if_oerrors += col;
-		sc->ifp->if_collisions += col * 16;
+		if_inc_counter(sc->ifp, IFCOUNTER_OPACKETS, sc->txb_sched - col);
+		if_inc_counter(sc->ifp, IFCOUNTER_OERRORS, col);
+		if_inc_counter(sc->ifp, IFCOUNTER_COLLISIONS, col * 16);
 		sc->mibdata.dot3StatsExcessiveCollisions += col;
 		sc->mibdata.dot3StatsCollFrequencies[15] += col;
 		sc->txb_sched = 0;
@@ -1590,7 +1597,7 @@ fe_rint (struct fe_softc * sc, u_char rstat)
 		if (rstat & FE_D1_SRTPKT)
 			sc->mibdata.dot3StatsFrameTooShorts++; /* :-) */
 #endif
-		sc->ifp->if_ierrors++;
+		if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 	}
 
 	/*
@@ -1650,7 +1657,7 @@ fe_rint (struct fe_softc * sc, u_char rstat)
 		    len < ETHER_MIN_LEN - ETHER_CRC_LEN) {
 			if_printf(sc->ifp,
 			    "RX buffer out-of-sync\n");
-			sc->ifp->if_ierrors++;
+			if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 			sc->mibdata.dot3StatsInternalMacReceiveErrors++;
 			fe_reset(sc);
 			return;
@@ -1667,14 +1674,14 @@ fe_rint (struct fe_softc * sc, u_char rstat)
 			 * in the buffer.  We hope we can get more
 			 * mbuf next time.
 			 */
-			sc->ifp->if_ierrors++;
+			if_inc_counter(sc->ifp, IFCOUNTER_IERRORS, 1);
 			sc->mibdata.dot3StatsMissedFrames++;
 			fe_droppacket(sc, len);
 			return;
 		}
 
 		/* Successfully received a packet.  Update stat.  */
-		sc->ifp->if_ipackets++;
+		if_inc_counter(sc->ifp, IFCOUNTER_IPACKETS, 1);
 	}
 
 	/* Maximum number of frames has been received.  Something
@@ -1876,8 +1883,7 @@ fe_get_packet (struct fe_softc * sc, u_short len)
 
 	/* Attach a cluster if this packet doesn't fit in a normal mbuf.  */
 	if (len > MHLEN - NFS_MAGIC_OFFSET) {
-		MCLGET(m, M_NOWAIT);
-		if (!(m->m_flags & M_EXT)) {
+		if (!(MCLGET(m, M_NOWAIT))) {
 			m_freem(m);
 			return -1;
 		}
@@ -1960,7 +1966,7 @@ fe_write_mbufs (struct fe_softc *sc, struct mbuf *m)
 	    length > ETHER_MAX_LEN - ETHER_CRC_LEN) {
 		if_printf(sc->ifp,
 		    "got an out-of-spec packet (%u bytes) to send\n", length);
-		sc->ifp->if_oerrors++;
+		if_inc_counter(sc->ifp, IFCOUNTER_OERRORS, 1);
 		sc->mibdata.dot3StatsInternalMacTransmitErrors++;
 		return;
 	}
@@ -2007,7 +2013,7 @@ fe_write_mbufs (struct fe_softc *sc, struct mbuf *m)
 	if ((sc->proto_dlcr6 & FE_D6_SBW) == FE_D6_SBW_BYTE)
 	{
 		/* 8-bit cards are easy.  */
-		for (mp = m; mp != 0; mp = mp->m_next) {
+		for (mp = m; mp != NULL; mp = mp->m_next) {
 			if (mp->m_len)
 				fe_outsb(sc, FE_BMPR8, mtod(mp, caddr_t),
 					 mp->m_len);
@@ -2017,7 +2023,7 @@ fe_write_mbufs (struct fe_softc *sc, struct mbuf *m)
 	{
 		/* 16-bit cards are a pain.  */
 		savebyte = NO_PENDING_BYTE;
-		for (mp = m; mp != 0; mp = mp->m_next) {
+		for (mp = m; mp != NULL; mp = mp->m_next) {
 
 			/* Ignore empty mbuf.  */
 			len = mp->m_len;

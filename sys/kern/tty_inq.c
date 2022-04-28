@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/tty_inq.c 229272 2012-01-02 12:12:10Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -112,7 +112,7 @@ static uma_zone_t ttyinq_zone;
 		TTYINQ_INSERT_TAIL(ti, tib);				\
 } while (0)
 
-void
+int 
 ttyinq_setsize(struct ttyinq *ti, struct tty *tp, size_t size)
 {
 	struct ttyinq_block *tib;
@@ -134,8 +134,14 @@ ttyinq_setsize(struct ttyinq *ti, struct tty *tp, size_t size)
 		tib = uma_zalloc(ttyinq_zone, M_WAITOK);
 		tty_lock(tp);
 
+		if (tty_gone(tp)) {
+			uma_zfree(ttyinq_zone, tib);
+			return (ENXIO);
+		}
+
 		TTYINQ_INSERT_TAIL(ti, tib);
 	}
+	return (0);
 }
 
 void

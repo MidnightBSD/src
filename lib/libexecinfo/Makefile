@@ -1,6 +1,7 @@
-# $FreeBSD: release/10.0.0/lib/libexecinfo/Makefile 255175 2013-09-03 13:31:43Z emaste $
+# $FreeBSD$
 
-LIBEXECINFO=	${.CURDIR}/../../contrib/libexecinfo
+PACKAGE=lib${LIB}
+LIBEXECINFO=	${SRCTOP}/contrib/libexecinfo
 
 LIB=		execinfo
 SHLIB_MAJOR=	1
@@ -9,9 +10,9 @@ SHLIB_MAJOR=	1
 
 INCS=		execinfo.h
 SRCS=		backtrace.c symtab.c unwind.c
+CFLAGS+=	-I${SRCTOP}/contrib/llvm-project/libunwind/include
 
-DPADD=		${LIBELF}
-LDADD=		-lelf
+LIBADD=		elf
 
 MAN=		backtrace.3
 

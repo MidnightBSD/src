@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/nsp/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/nsp
+.PATH: ${SRCTOP}/sys/dev/nsp
 
 KMOD=	nsp
 SRCS=	nsp.c nsp_pccard.c

@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/tools/net80211/README 178681 2008-04-29 22:05:26Z rpaulo $
+$FreeBSD$
 
 This directory has various tools for use with the net80211 layer.
 Some may not work depending on the capabilities of the underyling

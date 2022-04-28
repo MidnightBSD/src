@@ -62,7 +62,7 @@
  *	and
  *	from: FreeBSD: src/sys/alpha/include/bus.h,v 1.9 2001/01/09
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/bus_dma.h 246713 2013-02-12 16:57:20Z kib $
+ * $FreeBSD$
  */
 
 #ifndef _SPARC64_BUS_DMA_H
@@ -146,5 +146,7 @@ struct bus_dma_tag {
 	((t)->dt_mt->dm_dmamem_alloc((t), (v), (f), (m)))
 #define	bus_dmamem_free(t, v, m)					\
 	((t)->dt_mt->dm_dmamem_free((t), (v), (m)))
+#define _bus_dmamap_load_ma(t, m, a, tt, o, f, s, p)			\
+	bus_dmamap_load_ma_triv((t), (m), (a), (tt), (o), (f), (s), (p))
 
 #endif /* !_SPARC64_BUS_DMA_H_ */

@@ -1,6 +1,6 @@
 if [ ! "$_KEYMAP_SUBR" ]; then _KEYMAP_SUBR=1
 #
-# Copyright (c) 2013 Devin Teske
+# Copyright (c) 2013-2015 Devin Teske
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@ if [ ! "$_KEYMAP_SUBR" ]; then _KEYMAP_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/share/keymap.subr 256361 2013-10-11 23:12:05Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -39,11 +39,15 @@ f_include $BSDCFG_SHARE/struct.subr
 # Defaults taken from usr.sbin/kbdmap/kbdmap.h
 #
 : ${DEFAULT_LANG:=en}
-: ${DEFAULT_KEYMAP_DIR:=/usr/share/syscons/keymaps}
+case "$( sysctl -n kern.vty )" in
+vt)	: ${DEFAULT_KEYMAP_DIR:=/usr/share/vt/keymaps}		;;
+*)	: ${DEFAULT_KEYMAP_DIR:=/usr/share/syscons/keymaps}	;;
+esac
 
 ############################################################ GLOBALS
 
 KEYMAPS=
+NKEYMAPS=0
 
 # A "keymap" from kbdmap's point of view
 f_struct_define KEYMAP \
@@ -164,7 +168,7 @@ f_keymap_get_all()
 			marks[keym] = mark
 			name = keym
 			gsub(/[^[:alnum:]_]/, "_", name)
-			gsub(/'\''/, "'\''\\'\'''\''", desc);
+			gsub(/'\''/, "'\''\\'\'\''", desc);
 			printf "f_keymap_checkfile %s && " \
 			       "f_keymap_register %s '\'%s\'' %s %u\n",
 			       keym, name, desc, keym, mark
@@ -218,7 +222,7 @@ f_keymap_get_all()
 			echo -n "$k "
 			# NOTE: Translate '8x8' to '8x08' before sending to
 			# sort(1) so that things work out as we might expect.
-			debug= keymap_$k get desc | sed -e 's/8x8/8x08/g'
+			debug= keymap_$k get desc | awk 'gsub(/8x8/,"8x08")||1'
 		done | sort -k2 | awk '{
 			printf "%s%s", (started ? " " : ""), $1; started = 1
 		}'
@@ -254,8 +258,8 @@ case "$KEYMAP_SELF_SCAN_ALL" in
 *) f_keymap_get_all
 esac
 
-f_dprintf "%s: Found %u keymap file(s)." keymap.subr \
-          "$( set -- $KEYMAPS; echo $# )"
+f_count NKEYMAPS $KEYMAPS
+f_dprintf "%s: Found %u keymap file(s)." keymap.subr $NKEYMAPS
 
 f_dprintf "%s: Successfully loaded." keymap.subr
 

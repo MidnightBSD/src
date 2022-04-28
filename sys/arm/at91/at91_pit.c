@@ -24,8 +24,10 @@
  * SUCH DAMAGE.
  */
 
+#include "opt_platform.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_pit.c 238370 2012-07-11 17:11:54Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -40,13 +42,18 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_pit.c 238370 2012-07-11 17:
 
 #include <machine/bus.h>
 #include <machine/cpu.h>
-#include <machine/cpufunc.h>
 #include <machine/frame.h>
 #include <machine/intr.h>
 #include <machine/resource.h>
 
 #include <arm/at91/at91var.h>
 #include <arm/at91/at91_pitreg.h>
+
+#ifdef FDT
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#endif
 
 #ifndef PIT_PRESCALE
 #define PIT_PRESCALE (16)
@@ -83,11 +90,14 @@ at91_pit_delay(int us)
 	uint64_t pit_freq;
 	const uint64_t mhz  = 1E6;
 
+	if (sc == NULL)
+		return;
+
 	last = PIT_PIV(RD4(sc, PIT_PIIR));
 
 	/* Max delay ~= 260s. @ 133Mhz */
 	pit_freq = at91_master_clock / PIT_PRESCALE;
-	cnt  = ((pit_freq * us) + (mhz -1)) / mhz;
+	cnt  = howmany(pit_freq * us, mhz);
 	cnt  = (cnt <= 0) ? 1 : cnt;
 
 	while (cnt > 0) {
@@ -111,7 +121,10 @@ static struct timecounter at91_pit_timecounter = {
 static int
 at91_pit_probe(device_t dev)
 {
-
+#ifdef FDT
+	if (!ofw_bus_is_compatible(dev, "atmel,at91sam9260-pit"))
+		return (ENXIO);
+#endif
 	device_set_desc(dev, "AT91SAM9 PIT");
         return (0);
 }
@@ -121,10 +134,8 @@ at91_pit_attach(device_t dev)
 {
 	void *ih;
 	int rid, err = 0;
-	struct at91_softc *at91_sc;
 	struct resource *irq;
 
-	at91_sc = device_get_softc(device_get_parent(dev));
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
 
@@ -158,22 +169,6 @@ out:
 	return (err);
 }
 
-static device_method_t at91_pit_methods[] = {
-	DEVMETHOD(device_probe, at91_pit_probe),
-	DEVMETHOD(device_attach, at91_pit_attach),
-	DEVMETHOD_END
-};
-
-static driver_t at91_pit_driver = {
-	"at91_pit",
-	at91_pit_methods,
-	sizeof(struct pit_softc),
-};
-
-static devclass_t at91_pit_devclass;
-
-DRIVER_MODULE(at91_pit, atmelarm, at91_pit_driver, at91_pit_devclass, NULL,
-    NULL);
 
 static int
 pit_intr(void *arg)
@@ -202,3 +197,25 @@ at91_pit_get_timecount(struct timecounter *tc)
 	icnt = piir >> 20;	/* Overflows */
 	return (timecount + PIT_PIV(piir) + PIT_PIV(RD4(sc, PIT_MR)) * icnt);
 }
+
+static device_method_t at91_pit_methods[] = {
+	DEVMETHOD(device_probe, at91_pit_probe),
+	DEVMETHOD(device_attach, at91_pit_attach),
+	DEVMETHOD_END
+};
+
+static driver_t at91_pit_driver = {
+	"at91_pit",
+	at91_pit_methods,
+	sizeof(struct pit_softc),
+};
+
+static devclass_t at91_pit_devclass;
+
+#ifdef FDT
+EARLY_DRIVER_MODULE(at91_pit, simplebus, at91_pit_driver, at91_pit_devclass,
+    NULL, NULL, BUS_PASS_TIMER);
+#else
+EARLY_DRIVER_MODULE(at91_pit, atmelarm, at91_pit_driver, at91_pit_devclass,
+    NULL, NULL, BUS_PASS_TIMER);
+#endif

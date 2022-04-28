@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/include/mp_watchdog.h 133759 2004-08-15 18:02:09Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MP_WATCHDOG_H_

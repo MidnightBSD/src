@@ -34,7 +34,7 @@
 	.asciz "@(#)_setjmp.s	5.1 (Berkeley) 4/23/90"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/gen/_setjmp.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 /*
  * C library -- _setjmp, _longjmp
@@ -63,8 +63,7 @@ ENTRY(_setjmp)
 	ret
 END(_setjmp)
 
-	.weak	CNAME(_longjmp)
-	.set	CNAME(_longjmp),CNAME(___longjmp)
+	WEAK_REFERENCE(___longjmp, _longjmp)
 ENTRY(___longjmp)
 	movq	%rdi,%rdx
 	/* Restore the mxcsr, but leave exception flags intact. */

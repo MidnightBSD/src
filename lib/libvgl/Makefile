@@ -1,4 +1,5 @@
-# $FreeBSD: release/10.0.0/lib/libvgl/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
+PACKAGE=lib${LIB}
 LIB=	vgl
 SHLIB_MAJOR= 6
 CFLAGS+=-Wall -I${.CURDIR}

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_perf.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -267,8 +267,6 @@ acpi_perf_evaluate(device_t dev)
 
 	sc->px_states = malloc(sc->px_count * sizeof(struct acpi_px),
 	    M_ACPIPERF, M_WAITOK | M_ZERO);
-	if (sc->px_states == NULL)
-		goto out;
 
 	/*
 	 * Each state is a package of {CoreFreq, Power, TransitionLatency,

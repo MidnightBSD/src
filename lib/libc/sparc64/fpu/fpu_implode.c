@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/fpu/fpu_implode.c 205397 2010-03-20 22:32:13Z marius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * FPU subroutines: `implode' internal format numbers into the machine's

@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/dev/sound/pci/hda/hdac_if.m 230326 2012-01-19 01:55:48Z mav $
+# $FreeBSD$
 
 #include <sys/rman.h>
 

@@ -3,8 +3,10 @@
 # RISC # Implementation) FPGA soft core, as configured in its Terasic DE-4
 # reference configuration.
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/BERI_DE4_MDROOT 257527 2013-11-01 21:15:39Z brooks $
+# $FreeBSD$
 #
+
+#NO_UNIVERSE
 
 include "BERI_DE4_BASE"
 

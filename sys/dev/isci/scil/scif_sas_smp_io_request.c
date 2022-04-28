@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_smp_io_request.c 231137 2012-02-07 17:45:11Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libjail/jail.h 195870 2009-07-25 14:48:57Z jamie $
+ * $FreeBSD$
  */
 
 #ifndef _JAIL_H

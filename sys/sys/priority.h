@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/priority.h 221829 2011-05-13 05:27:58Z mdf $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PRIORITY_H_
@@ -126,7 +126,7 @@
 struct priority {
 	u_char	pri_class;	/* Scheduling class. */
 	u_char	pri_level;	/* Normal priority level. */
-	u_char	pri_native;	/* Priority before propogation. */
+	u_char	pri_native;	/* Priority before propagation. */
 	u_char	pri_user;	/* User priority based on p_cpu and p_nice. */
 };
 

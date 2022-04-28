@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/Makefile 212337 2010-09-08 20:10:24Z imp $
+# $FreeBSD$
 
 FILES=	functions-bsdlabel.sh functions-cleanup.sh functions-disk.sh \
 	functions-extractimage.sh functions-ftp.sh functions-installcomponents.sh \
@@ -10,6 +10,5 @@ FILES=	functions-bsdlabel.sh functions-cleanup.sh functions-disk.sh \
 	functions.sh parseconfig.sh startautoinstall.sh installimage.sh
 FILESMODE=	${BINMODE}
 FILESDIR=${SHAREDIR}/pc-sysinstall/backend
-NO_OBJ=
 
 .include <bsd.prog.mk>

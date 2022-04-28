@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/priv/priv_vfs_extattr_system.c 196172 2009-08-13 09:11:47Z bz $
+ * $FreeBSD$
  */
 
 /*

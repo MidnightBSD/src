@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/capsicum.4 257771 2013-11-06 23:59:19Z pjd $
+.\" $FreeBSD$
 .\"
-.Dd October 19, 2013
+.Dd May 18, 2017
 .Dt CAPSICUM 4
 .Os
 .Sh NAME
@@ -35,7 +35,6 @@
 .Sh SYNOPSIS
 .Cd "options CAPABILITY_MODE"
 .Cd "options CAPABILITIES"
-.Cd "options PROCDESC"
 .Sh DESCRIPTION
 .Nm
 is a lightweight OS capability and sandbox framework implementing a hybrid
@@ -89,6 +88,16 @@ An extension to the POSIX shared memory API to support anonymous swap objects
 associated with file descriptors; described in greater detail in
 .Xr shm_open 2 .
 .El
+.Pp
+In some cases,
+.Nm
+limits the valid values of some parameters to traditional APIs in order to
+restrict access to global namespaces:
+.Bl -tag -width indent
+.It process IDs
+Processes can only act upon their own process ID with syscalls such as
+.Xr cpuset_setaffinity 2 .
+.El
 .Sh SEE ALSO
 .Xr cap_enter 2 ,
 .Xr cap_fcntls_limit 2 ,
@@ -105,6 +114,7 @@ associated with file descriptors; described in greater detail in
 .Xr shm_open 2 ,
 .Xr write 2 ,
 .Xr cap_rights_get 3 ,
+.Xr libcasper 3 ,
 .Xr procdesc 4
 .Sh HISTORY
 .Nm
@@ -115,16 +125,12 @@ and was developed at the University of Cambridge.
 .Nm
 was developed by
 .An -nosplit
-.An "Robert Watson" Aq rwatson@FreeBSD.org
+.An Robert Watson Aq Mt rwatson@FreeBSD.org
 and
-.An "Jonathan Anderson" Aq jonathan@FreeBSD.org
+.An Jonathan Anderson Aq Mt jonathan@FreeBSD.org
 at the University of Cambridge, and
-.An "Ben Laurie" Aq benl@FreeBSD.org
+.An Ben Laurie Aq Mt benl@FreeBSD.org
 and
-.An "Kris Kennaway" Aq kris@FreeBSD.org
+.An Kris Kennaway Aq Mt kris@FreeBSD.org
 at Google, Inc., and
-.An "Pawel Jakub Dawidek" Aq pawel@dawidek.net .
-.Sh BUGS
-.Nm
-is considered experimental in
-.Fx .
+.An Pawel Jakub Dawidek Aq Mt pawel@dawidek.net .

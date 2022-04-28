@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Mathew Jacob <mjacob@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/multipath/geom_multipath.c 239012 2012-08-03 14:55:35Z thomas $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <errno.h>
 #include <paths.h>
@@ -221,17 +223,15 @@ mp_label(struct gctl_req *req)
 	/*
 	 * Allocate a sector to write as metadata.
 	 */
-	sector = malloc(secsize);
+	sector = calloc(1, secsize);
 	if (sector == NULL) {
 		gctl_error(req, "unable to allocate metadata buffer");
 		return;
 	}
-	memset(sector, 0, secsize);
 	rsector = malloc(secsize);
 	if (rsector == NULL) {
-		free(sector);
 		gctl_error(req, "unable to allocate metadata buffer");
-		return;
+		goto done;
 	}
 
 	/*
@@ -246,7 +246,7 @@ mp_label(struct gctl_req *req)
 	error = g_metadata_store(name, sector, secsize);
 	if (error != 0) {
 		gctl_error(req, "cannot store metadata on %s: %s.", name, strerror(error));
-		return;
+		goto done;
 	}
 
 	/*
@@ -274,6 +274,9 @@ mp_label(struct gctl_req *req)
 			    name2, name);
 		}
 	}
+done:
+	free(rsector);
+	free(sector);
 }
 
 

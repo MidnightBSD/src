@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/netinet/tcpdrop/tcpdrop.c 224688 2011-08-06 19:20:17Z rwatson $
+ * $FreeBSD$
  */
 
 /*

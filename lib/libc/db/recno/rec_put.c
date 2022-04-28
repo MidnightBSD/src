@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)rec_put.c	8.7 (Berkeley) 8/18/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/db/recno/rec_put.c 190484 2009-03-28 05:45:29Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
@@ -140,8 +140,7 @@ einval:		errno = EINVAL;
 			return (RET_ERROR);
 		if (nrec > t->bt_nrecs + 1) {
 			if (F_ISSET(t, R_FIXLEN)) {
-				if ((tdata.data =
-				    (void *)malloc(t->bt_reclen)) == NULL)
+				if ((tdata.data = malloc(t->bt_reclen)) == NULL)
 					return (RET_ERROR);
 				tdata.size = t->bt_reclen;
 				memset(tdata.data, t->bt_bval, tdata.size);
@@ -208,7 +207,7 @@ __rec_iput(BTREE *t, recno_t nrec, const DBT *data, u_int flags)
 			return (RET_ERROR);
 		tdata.data = db;
 		tdata.size = NOVFLSIZE;
-		*(pgno_t *)db = pg;
+		memcpy(db, &pg, sizeof(pg));
 		*(u_int32_t *)(db + sizeof(pgno_t)) = data->size;
 		dflags = P_BIGDATA;
 		data = &tdata;

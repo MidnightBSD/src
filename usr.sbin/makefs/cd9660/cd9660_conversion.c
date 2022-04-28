@@ -1,6 +1,8 @@
 /*	$NetBSD: cd9660_conversion.c,v 1.4 2007/03/14 14:11:17 christos Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
  * Perez-Rathke and Ram Vedam.  All rights reserved.
  *
@@ -34,7 +36,7 @@
 #include "cd9660.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/cd9660_conversion.c 224762 2011-08-10 19:12:21Z marius $");
+__FBSDID("$FreeBSD$");
 
 static char cd9660_compute_gm_offset(time_t);
 

@@ -1,3 +1,0 @@
-@c $FreeBSD: release/10.0.0/gnu/usr.bin/send-pr/doc/version.texi 67908 2000-10-29 22:05:52Z steve $
-
-@set VERSION 3.113

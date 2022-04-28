@@ -148,6 +148,9 @@
 #define FILE_ATTRIBUTE_DIRECTORY 0x10
 #endif
 
+#undef minimum
+#define minimum(a, b)	((a)<(b)?(a):(b))
+
 /* Fields common to all headers */
 struct rar_header
 {
@@ -186,6 +189,7 @@ struct huffman_code
 {
   struct huffman_tree_node *tree;
   int numentries;
+  int numallocatedentries;
   int minlength;
   int maxlength;
   int tablesize;
@@ -225,6 +229,7 @@ struct rar
   mode_t mode;
   char *filename;
   char *filename_save;
+  size_t filename_save_size;
   size_t filename_allocated;
 
   /* File header optional entries */
@@ -256,6 +261,7 @@ struct rar
   struct data_block_offsets *dbo;
   unsigned int cursor;
   unsigned int nodes;
+  char filename_must_match;
 
   /* LZSS members */
   struct huffman_code maincode;
@@ -304,8 +310,15 @@ struct rar
     ssize_t		 avail_in;
     const unsigned char *next_in;
   } br;
+
+  /*
+   * Custom field to denote that this archive contains encrypted entries
+   */
+  int has_encrypted_entries;
 };
 
+static int archive_read_support_format_rar_capabilities(struct archive_read *);
+static int archive_read_format_rar_has_encrypted_entries(struct archive_read *);
 static int archive_read_format_rar_bid(struct archive_read *, int);
 static int archive_read_format_rar_options(struct archive_read *,
     const char *, const char *);
@@ -595,20 +608,6 @@ lzss_emit_match(struct rar *rar, int offset, int length)
   rar->lzss.position += length;
 }
 
-static void *
-ppmd_alloc(void *p, size_t size)
-{
-  (void)p;
-  return malloc(size);
-}
-static void
-ppmd_free(void *p, void *address)
-{
-  (void)p;
-  free(address);
-}
-static ISzAlloc g_szalloc = { ppmd_alloc, ppmd_free };
-
 static Byte
 ppmd_read(void *p)
 {
@@ -638,13 +637,18 @@ archive_read_support_format_rar(struct archive *_a)
   archive_check_magic(_a, ARCHIVE_READ_MAGIC, ARCHIVE_STATE_NEW,
                       "archive_read_support_format_rar");
 
-  rar = (struct rar *)malloc(sizeof(*rar));
+  rar = (struct rar *)calloc(sizeof(*rar), 1);
   if (rar == NULL)
   {
     archive_set_error(&a->archive, ENOMEM, "Can't allocate rar data");
     return (ARCHIVE_FATAL);
   }
-  memset(rar, 0, sizeof(*rar));
+
+	/*
+	 * Until enough data has been read, we cannot tell about
+	 * any encrypted entries yet.
+	 */
+	rar->has_encrypted_entries = ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW;
 
   r = __archive_read_register_format(a,
                                      rar,
@@ -655,12 +659,35 @@ archive_read_support_format_rar(struct archive *_a)
                                      archive_read_format_rar_read_data,
                                      archive_read_format_rar_read_data_skip,
                                      archive_read_format_rar_seek_data,
-                                     archive_read_format_rar_cleanup);
+                                     archive_read_format_rar_cleanup,
+                                     archive_read_support_format_rar_capabilities,
+                                     archive_read_format_rar_has_encrypted_entries);
 
   if (r != ARCHIVE_OK)
     free(rar);
   return (r);
 }
+
+static int
+archive_read_support_format_rar_capabilities(struct archive_read * a)
+{
+	(void)a; /* UNUSED */
+	return (ARCHIVE_READ_FORMAT_CAPS_ENCRYPT_DATA
+			| ARCHIVE_READ_FORMAT_CAPS_ENCRYPT_METADATA);
+}
+
+static int
+archive_read_format_rar_has_encrypted_entries(struct archive_read *_a)
+{
+	if (_a && _a->format) {
+		struct rar * rar = (struct rar *)_a->format->data;
+		if (rar) {
+			return rar->has_encrypted_entries;
+		}
+	}
+	return ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW;
+}
+
 
 static int
 archive_read_format_rar_bid(struct archive_read *a, int best_bid)
@@ -755,7 +782,7 @@ archive_read_format_rar_options(struct archive_read *a,
 {
   struct rar *rar;
   int ret = ARCHIVE_FAILED;
-        
+
   rar = (struct rar *)(a->format->data);
   if (strcmp(key, "hdrcharset")  == 0) {
     if (val == NULL || val[0] == 0)
@@ -790,12 +817,24 @@ archive_read_format_rar_read_header(struct archive_read *a,
   char head_type;
   int ret;
   unsigned flags;
+  unsigned long crc32_expected;
 
   a->archive.archive_format = ARCHIVE_FORMAT_RAR;
   if (a->archive.archive_format_name == NULL)
     a->archive.archive_format_name = "RAR";
 
   rar = (struct rar *)(a->format->data);
+
+  /*
+   * It should be sufficient to call archive_read_next_header() for
+   * a reader to determine if an entry is encrypted or not. If the
+   * encryption of an entry is only detectable when calling
+   * archive_read_data(), so be it. We'll do the same check there
+   * as well.
+   */
+  if (rar->has_encrypted_entries == ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW) {
+	  rar->has_encrypted_entries = 0;
+  }
 
   /* RAR files can be generated without EOF headers, so return ARCHIVE_EOF if
   * this fails.
@@ -857,9 +896,14 @@ archive_read_format_rar_read_header(struct archive_read *a,
                             sizeof(rar->reserved2));
       }
 
+      /* Main header is password encrypted, so we cannot read any
+         file names or any other info about files from the header. */
       if (rar->main_flags & MHD_PASSWORD)
       {
-        archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+        archive_entry_set_is_metadata_encrypted(entry, 1);
+        archive_entry_set_is_data_encrypted(entry, 1);
+        rar->has_encrypted_entries = 1;
+         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                           "RAR encryption support unavailable.");
         return (ARCHIVE_FATAL);
       }
@@ -886,36 +930,50 @@ archive_read_format_rar_read_header(struct archive_read *a,
       skip = archive_le16dec(p + 5);
       if (skip < 7) {
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-          "Invalid header size");
+          "Invalid header size too small");
         return (ARCHIVE_FATAL);
-      }
-      if (skip > 7) {
-        if ((h = __archive_read_ahead(a, skip, NULL)) == NULL)
-          return (ARCHIVE_FATAL);
-        p = h;
       }
       if (flags & HD_ADD_SIZE_PRESENT)
       {
         if (skip < 7 + 4) {
           archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-            "Invalid header size");
+            "Invalid header size too small");
           return (ARCHIVE_FATAL);
         }
-        skip += archive_le32dec(p + 7);
         if ((h = __archive_read_ahead(a, skip, NULL)) == NULL)
           return (ARCHIVE_FATAL);
         p = h;
+        skip += archive_le32dec(p + 7);
       }
 
-      crc32_val = crc32(0, (const unsigned char *)p + 2, (unsigned)skip - 2);
-      if ((crc32_val & 0xffff) != archive_le16dec(p)) {
-        archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-          "Header CRC error");
-        return (ARCHIVE_FATAL);
+      /* Skip over the 2-byte CRC at the beginning of the header. */
+      crc32_expected = archive_le16dec(p);
+      __archive_read_consume(a, 2);
+      skip -= 2;
+
+      /* Skim the entire header and compute the CRC. */
+      crc32_val = 0;
+      while (skip > 0) {
+	      size_t to_read = skip;
+	      ssize_t did_read;
+	      if (to_read > 32 * 1024) {
+		      to_read = 32 * 1024;
+	      }
+	      if ((h = __archive_read_ahead(a, to_read, &did_read)) == NULL) {
+		      return (ARCHIVE_FATAL);
+	      }
+	      p = h;
+	      crc32_val = crc32(crc32_val, (const unsigned char *)p, (unsigned)did_read);
+	      __archive_read_consume(a, did_read);
+	      skip -= did_read;
       }
-      __archive_read_consume(a, skip);
+      if ((crc32_val & 0xffff) != crc32_expected) {
+	      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		  "Header CRC error");
+	      return (ARCHIVE_FATAL);
+      }
       if (head_type == ENDARC_HEAD)
-        return (ARCHIVE_EOF);
+	      return (ARCHIVE_EOF);
       break;
 
     case NEWSUB_HEAD:
@@ -938,14 +996,18 @@ archive_read_format_rar_read_data(struct archive_read *a, const void **buff,
   struct rar *rar = (struct rar *)(a->format->data);
   int ret;
 
+  if (rar->has_encrypted_entries == ARCHIVE_READ_FORMAT_ENCRYPTION_DONT_KNOW) {
+	  rar->has_encrypted_entries = 0;
+  }
+
   if (rar->bytes_unconsumed > 0) {
       /* Consume as much as the decompressor actually used. */
       __archive_read_consume(a, rar->bytes_unconsumed);
       rar->bytes_unconsumed = 0;
   }
 
+  *buff = NULL;
   if (rar->entry_eof || rar->offset_seek >= rar->unp_size) {
-    *buff = NULL;
     *size = 0;
     *offset = rar->offset;
     if (*offset < rar->unp_size)
@@ -957,7 +1019,7 @@ archive_read_format_rar_read_data(struct archive_read *a, const void **buff,
   {
   case COMPRESS_METHOD_STORE:
     ret = read_data_stored(a, buff, size, offset);
-    break; 
+    break;
 
   case COMPRESS_METHOD_FASTEST:
   case COMPRESS_METHOD_FAST:
@@ -965,15 +1027,18 @@ archive_read_format_rar_read_data(struct archive_read *a, const void **buff,
   case COMPRESS_METHOD_GOOD:
   case COMPRESS_METHOD_BEST:
     ret = read_data_compressed(a, buff, size, offset);
-    if (ret != ARCHIVE_OK && ret != ARCHIVE_WARN)
-      __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context, &g_szalloc);
-    break; 
+    if (ret != ARCHIVE_OK && ret != ARCHIVE_WARN) {
+      __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context);
+      rar->start_new_table = 1;
+      rar->ppmd_valid = 0;
+    }
+    break;
 
   default:
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                       "Unsupported compression method for RAR file.");
     ret = ARCHIVE_FATAL;
-    break; 
+    break;
   }
   return (ret);
 }
@@ -1145,10 +1210,8 @@ archive_read_format_rar_seek_data(struct archive_read *a, int64_t offset,
     ret -= rar->dbo[0].start_offset;
 
     /* Always restart reading the file after a seek */
-    a->read_data_block = NULL;
-    a->read_data_offset = 0;
-    a->read_data_output_offset = 0;
-    a->read_data_remaining = 0;
+    __archive_reset_read_data(&a->archive);
+
     rar->bytes_unconsumed = 0;
     rar->offset = 0;
 
@@ -1183,7 +1246,7 @@ archive_read_format_rar_cleanup(struct archive_read *a)
   free(rar->dbo);
   free(rar->unp_buffer);
   free(rar->lzss.window);
-  __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context, &g_szalloc);
+  __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context);
   free(rar);
   (a->format->data) = NULL;
   return (ARCHIVE_OK);
@@ -1290,9 +1353,14 @@ read_header(struct archive_read *a, struct archive_entry *entry,
 
   if (rar->file_flags & FHD_PASSWORD)
   {
+	archive_entry_set_is_data_encrypted(entry, 1);
+	rar->has_encrypted_entries = 1;
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                       "RAR encryption support unavailable.");
-    return (ARCHIVE_FATAL);
+    /* Since it is only the data part itself that is encrypted we can at least
+       extract information about the currently processed entry and don't need
+       to return ARCHIVE_FATAL here. */
+    /*return (ARCHIVE_FATAL);*/
   }
 
   if (rar->file_flags & FHD_LARGE)
@@ -1377,7 +1445,7 @@ read_header(struct archive_read *a, struct archive_entry *entry,
           flagbyte = *(p + offset++);
           flagbits = 8;
         }
-	
+
         flagbits -= 2;
         switch((flagbyte >> flagbits) & 3)
         {
@@ -1421,7 +1489,11 @@ read_header(struct archive_read *a, struct archive_entry *entry,
         return (ARCHIVE_FATAL);
       }
       filename[filename_size++] = '\0';
-      filename[filename_size++] = '\0';
+      /*
+       * Do not increment filename_size here as the computations below
+       * add the space for the terminating NUL explicitly.
+       */
+      filename[filename_size] = '\0';
 
       /* Decoded unicode form is UTF-16BE, so we have to update a string
        * conversion object for it. */
@@ -1469,6 +1541,7 @@ read_header(struct archive_read *a, struct archive_entry *entry,
 
   /* Split file in multivolume RAR. No more need to process header. */
   if (rar->filename_save &&
+    filename_size == rar->filename_save_size &&
     !memcmp(rar->filename, rar->filename_save, filename_size + 1))
   {
     __archive_read_consume(a, header_size - 7);
@@ -1494,10 +1567,17 @@ read_header(struct archive_read *a, struct archive_entry *entry,
     }
     return ret;
   }
+  else if (rar->filename_must_match)
+  {
+    archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+      "Mismatch of file parts split across multi-volume archive");
+    return (ARCHIVE_FATAL);
+  }
 
   rar->filename_save = (char*)realloc(rar->filename_save,
                                       filename_size + 1);
   memcpy(rar->filename_save, rar->filename, filename_size + 1);
+  rar->filename_save_size = filename_size;
 
   /* Set info for seeking */
   free(rar->dbo);
@@ -1577,7 +1657,7 @@ read_header(struct archive_read *a, struct archive_entry *entry,
   rar->unp_offset = 0;
   rar->unp_buffer_size = UNP_BUFFER_SIZE;
   memset(rar->lengthtable, 0, sizeof(rar->lengthtable));
-  __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context, &g_szalloc);
+  __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context);
   rar->ppmd_valid = rar->ppmd_eod = 0;
 
   /* Don't set any archive entries for non-file header types */
@@ -1645,6 +1725,13 @@ read_exttime(const char *p, struct rar *rar, const char *endp)
   struct tm *tm;
   time_t t;
   long nsec;
+#if defined(HAVE_LOCALTIME_R) || defined(HAVE__LOCALTIME64_S)
+  struct tm tmbuf;
+#endif
+#if defined(HAVE__LOCALTIME64_S)
+  errno_t terr;
+  __time64_t tmptime;
+#endif
 
   if (p + 2 > endp)
     return (-1);
@@ -1673,10 +1760,21 @@ read_exttime(const char *p, struct rar *rar, const char *endp)
         return (-1);
       for (j = 0; j < count; j++)
       {
-        rem = ((*p) << 16) | (rem >> 8);
+        rem = (((unsigned)(unsigned char)*p) << 16) | (rem >> 8);
         p++;
       }
+#if defined(HAVE_LOCALTIME_R)
+      tm = localtime_r(&t, &tmbuf);
+#elif defined(HAVE__LOCALTIME64_S)
+      tmptime = t;
+      terr = _localtime64_s(&tmbuf, &tmptime);
+      if (terr)
+        tm = NULL;
+      else
+        tm = &tmbuf;
+#else
       tm = localtime(&t);
+#endif
       nsec = tm->tm_sec + rem / NS_UNIT;
       if (rmode & 4)
       {
@@ -2041,7 +2139,7 @@ parse_codes(struct archive_read *a)
 
       /* Make sure ppmd7_contest is freed before Ppmd7_Construct
        * because reading a broken file cause this abnormal sequence. */
-      __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context, &g_szalloc);
+      __archive_ppmd7_functions.Ppmd7_Free(&rar->ppmd7_context);
 
       rar->bytein.a = a;
       rar->bytein.Read = &ppmd_read;
@@ -2049,8 +2147,14 @@ parse_codes(struct archive_read *a)
       rar->range_dec.Stream = &rar->bytein;
       __archive_ppmd7_functions.Ppmd7_Construct(&rar->ppmd7_context);
 
+      if (rar->dictionary_size == 0) {
+	      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+                          "Invalid zero dictionary size");
+	      return (ARCHIVE_FATAL);
+      }
+
       if (!__archive_ppmd7_functions.Ppmd7_Alloc(&rar->ppmd7_context,
-        rar->dictionary_size, &g_szalloc))
+        rar->dictionary_size))
       {
         archive_set_error(&a->archive, ENOMEM,
                           "Out of memory");
@@ -2227,6 +2331,11 @@ parse_codes(struct archive_read *a)
       new_size = DICTIONARY_MAX_SIZE;
     else
       new_size = rar_fls((unsigned int)rar->unp_size) << 1;
+    if (new_size == 0) {
+      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+                        "Zero window size is invalid.");
+      return (ARCHIVE_FATAL);
+    }
     new_window = realloc(rar->lzss.window, new_size);
     if (new_window == NULL) {
       archive_set_error(&a->archive, ENOMEM,
@@ -2345,6 +2454,8 @@ create_code(struct archive_read *a, struct huffman_code *code,
 {
   int i, j, codebits = 0, symbolsleft = numsymbols;
 
+  code->numentries = 0;
+  code->numallocatedentries = 0;
   if (new_node(code) < 0) {
     archive_set_error(&a->archive, ENOMEM,
                       "Unable to allocate memory for node data.");
@@ -2362,8 +2473,11 @@ create_code(struct archive_read *a, struct huffman_code *code,
       if (add_value(a, code, j, codebits, i) != ARCHIVE_OK)
         return (ARCHIVE_FATAL);
       codebits++;
-      if (--symbolsleft <= 0) { break; break; }
+      if (--symbolsleft <= 0)
+        break;
     }
+    if (symbolsleft <= 0)
+      break;
     codebits <<= 1;
   }
   return (ARCHIVE_OK);
@@ -2373,7 +2487,8 @@ static int
 add_value(struct archive_read *a, struct huffman_code *code, int value,
           int codebits, int length)
 {
-  int repeatpos, lastnode, bitpos, bit, repeatnode, nextnode;
+  int lastnode, bitpos, bit;
+  /* int repeatpos, repeatnode, nextnode; */
 
   free(code->table);
   code->table = NULL;
@@ -2383,6 +2498,9 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
   if(length < code->minlength)
     code->minlength = length;
 
+  /*
+   * Dead code, repeatpos was is -1
+   *
   repeatpos = -1;
   if (repeatpos == 0 || (repeatpos >= 0
     && (((codebits >> (repeatpos - 1)) & 3) == 0
@@ -2392,6 +2510,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
                       "Invalid repeat position");
     return (ARCHIVE_FATAL);
   }
+  */
 
   lastnode = 0;
   for (bitpos = length - 1; bitpos >= 0; bitpos--)
@@ -2407,9 +2526,12 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
       return (ARCHIVE_FATAL);
     }
 
+    /*
+     * Dead code, repeatpos was -1, bitpos >=0
+     *
     if (bitpos == repeatpos)
     {
-      /* Open branch check */
+      * Open branch check *
       if (!(code->tree[lastnode].branches[bit] < 0))
       {
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
@@ -2428,16 +2550,17 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
         return (ARCHIVE_FATAL);
       }
 
-      /* Set branches */
+      * Set branches *
       code->tree[lastnode].branches[bit] = repeatnode;
       code->tree[repeatnode].branches[bit] = repeatnode;
       code->tree[repeatnode].branches[bit^1] = nextnode;
       lastnode = nextnode;
 
-      bitpos++; /* terminating bit already handled, skip it */
+      bitpos++; * terminating bit already handled, skip it *
     }
     else
     {
+    */
       /* Open branch check */
       if (code->tree[lastnode].branches[bit] < 0)
       {
@@ -2451,7 +2574,7 @@ add_value(struct archive_read *a, struct huffman_code *code, int value,
 
       /* set to branch */
       lastnode = code->tree[lastnode].branches[bit];
-    }
+ /* } */
   }
 
   if (!(code->tree[lastnode].branches[0] == -1
@@ -2473,11 +2596,17 @@ static int
 new_node(struct huffman_code *code)
 {
   void *new_tree;
-
-  new_tree = realloc(code->tree, (code->numentries + 1) * sizeof(*code->tree));
-  if (new_tree == NULL)
-    return (-1);
-  code->tree = (struct huffman_tree_node *)new_tree;
+  if (code->numallocatedentries == code->numentries) {
+    int new_num_entries = 256;
+    if (code->numentries > 0) {
+        new_num_entries = code->numentries * 2;
+    }
+    new_tree = realloc(code->tree, new_num_entries * sizeof(*code->tree));
+    if (new_tree == NULL)
+        return (-1);
+    code->tree = (struct huffman_tree_node *)new_tree;
+    code->numallocatedentries = new_num_entries;
+  }
   code->tree[code->numentries].branches[0] = -1;
   code->tree[code->numentries].branches[1] = -2;
   return 1;
@@ -2529,11 +2658,15 @@ make_table_recurse(struct archive_read *a, struct huffman_code *code, int node,
       table[i].value = code->tree[node].branches[0];
     }
   }
+  /*
+   * Dead code, node >= 0
+   *
   else if (node < 0)
   {
     for(i = 0; i < currtablesize; i++)
       table[i].length = -1;
   }
+   */
   else
   {
     if(depth == maxdepth)
@@ -2565,6 +2698,10 @@ expand(struct archive_read *a, int64_t end)
       0, 1, 1, 1, 1, 2, 2,
       2, 2, 3, 3, 3, 3, 4,
       4, 4, 4, 5, 5, 5, 5 };
+  static const int lengthb_min = minimum(
+    (int)(sizeof(lengthbases)/sizeof(lengthbases[0])),
+    (int)(sizeof(lengthbits)/sizeof(lengthbits[0]))
+  );
   static const unsigned int offsetbases[] =
     {       0,       1,       2,       3,       4,       6,
             8,      12,      16,      24,      32,      48,
@@ -2582,6 +2719,10 @@ expand(struct archive_read *a, int64_t end)
       11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16,
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
       18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18 };
+  static const int offsetb_min = minimum(
+    (int)(sizeof(offsetbases)/sizeof(offsetbases[0])),
+    (int)(sizeof(offsetbits)/sizeof(offsetbits[0]))
+  );
   static const unsigned char shortbases[] =
     { 0, 4, 8, 16, 32, 64, 128, 192 };
   static const unsigned char shortbits[] =
@@ -2611,7 +2752,7 @@ expand(struct archive_read *a, int64_t end)
     if ((symbol = read_next_symbol(a, &rar->maincode)) < 0)
       return (ARCHIVE_FATAL);
     rar->output_last_match = 0;
-    
+
     if (symbol < 256)
     {
       lzss_emit_literal(rar, symbol);
@@ -2661,9 +2802,7 @@ expand(struct archive_read *a, int64_t end)
 
       if ((lensymbol = read_next_symbol(a, &rar->lengthcode)) < 0)
         goto bad_data;
-      if (lensymbol > (int)(sizeof(lengthbases)/sizeof(lengthbases[0])))
-        goto bad_data;
-      if (lensymbol > (int)(sizeof(lengthbits)/sizeof(lengthbits[0])))
+      if (lensymbol > lengthb_min)
         goto bad_data;
       len = lengthbases[lensymbol] + 2;
       if (lengthbits[lensymbol] > 0) {
@@ -2695,9 +2834,7 @@ expand(struct archive_read *a, int64_t end)
     }
     else
     {
-      if (symbol-271 > (int)(sizeof(lengthbases)/sizeof(lengthbases[0])))
-        goto bad_data;
-      if (symbol-271 > (int)(sizeof(lengthbits)/sizeof(lengthbits[0])))
+      if (symbol-271 > lengthb_min)
         goto bad_data;
       len = lengthbases[symbol-271]+3;
       if(lengthbits[symbol-271] > 0) {
@@ -2709,9 +2846,7 @@ expand(struct archive_read *a, int64_t end)
 
       if ((offssymbol = read_next_symbol(a, &rar->offsetcode)) < 0)
         goto bad_data;
-      if (offssymbol > (int)(sizeof(offsetbases)/sizeof(offsetbases[0])))
-        goto bad_data;
-      if (offssymbol > (int)(sizeof(offsetbits)/sizeof(offsetbits[0])))
+      if (offssymbol > offsetb_min)
         goto bad_data;
       offs = offsetbases[offssymbol]+1;
       if(offsetbits[offssymbol] > 0)
@@ -2798,11 +2933,10 @@ copy_from_lzss_window(struct archive_read *a, const void **buffer,
   }
 
   windowoffs = lzss_offset_for_position(&rar->lzss, startpos);
-  if(windowoffs + length <= lzss_size(&rar->lzss))
+  if(windowoffs + length <= lzss_size(&rar->lzss)) {
     memcpy(&rar->unp_buffer[rar->unp_offset], &rar->lzss.window[windowoffs],
            length);
-  else
-  {
+  } else if (length <= lzss_size(&rar->lzss)) {
     firstpart = lzss_size(&rar->lzss) - windowoffs;
     if (firstpart < 0) {
       archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
@@ -2814,9 +2948,14 @@ copy_from_lzss_window(struct archive_read *a, const void **buffer,
              &rar->lzss.window[windowoffs], firstpart);
       memcpy(&rar->unp_buffer[rar->unp_offset + firstpart],
              &rar->lzss.window[0], length - firstpart);
-    } else
+    } else {
       memcpy(&rar->unp_buffer[rar->unp_offset],
              &rar->lzss.window[windowoffs], length);
+    }
+  } else {
+      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+                        "Bad RAR file data");
+      return (ARCHIVE_FATAL);
   }
   rar->unp_offset += length;
   if (rar->unp_offset >= rar->unp_buffer_size)
@@ -2834,8 +2973,8 @@ rar_read_ahead(struct archive_read *a, size_t min, ssize_t *avail)
   int ret;
   if (avail)
   {
-    if (a->read_data_is_posix_read && *avail > (ssize_t)a->read_data_requested)
-      *avail = a->read_data_requested;
+    if (a->archive.read_data_is_posix_read && *avail > (ssize_t)a->archive.read_data_requested)
+      *avail = a->archive.read_data_requested;
     if (*avail > rar->bytes_remaining)
       *avail = (ssize_t)rar->bytes_remaining;
     if (*avail < 0)
@@ -2843,12 +2982,14 @@ rar_read_ahead(struct archive_read *a, size_t min, ssize_t *avail)
     else if (*avail == 0 && rar->main_flags & MHD_VOLUME &&
       rar->file_flags & FHD_SPLIT_AFTER)
     {
+      rar->filename_must_match = 1;
       ret = archive_read_format_rar_read_header(a, a->entry);
       if (ret == (ARCHIVE_EOF))
       {
         rar->has_endarc_header = 1;
         ret = archive_read_format_rar_read_header(a, a->entry);
       }
+      rar->filename_must_match = 0;
       if (ret != (ARCHIVE_OK))
         return NULL;
       return rar_read_ahead(a, min, avail);

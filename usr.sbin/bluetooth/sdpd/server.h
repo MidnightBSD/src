@@ -1,5 +1,7 @@
-/*
+/*-
  * server.h
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: server.h,v 1.5 2004/01/13 01:54:39 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/server.h 153176 2005-12-06 17:56:36Z emax $
+ * $FreeBSD$
  */
 
 #ifndef _SERVER_H_

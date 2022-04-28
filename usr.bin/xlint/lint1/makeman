@@ -59,7 +59,7 @@ cat << \__EOF
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.bin/xlint/lint1/makeman 240257 2012-09-09 07:23:15Z joel $
+.\" $FreeBSD$
 .\"
 .Dd July 5, 2000
 .Dt LINT 7
@@ -74,7 +74,7 @@ It is intended to be used with
 .Fl X
 flag of
 .Xr lint 1 .
-.Bl -column -offset indent "Id#" "Message"
+.Bl -column -offset indent "XXXX"
 __EOF
 "$@" | sed -e 's/\\/\\e/g' -e "s/'/\\'/"
 echo ".El"

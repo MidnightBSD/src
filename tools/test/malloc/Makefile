@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/test/malloc/Makefile 219511 2011-03-11 17:33:31Z brucec $
+# $FreeBSD$
 PROG=	malloc
 SRCS=	main.c
 .PATH:	${.CURDIR}/../../../lib/libc/stdlib
 
-NO_MAN=
+MAN=
 WARNS?=6
 
 test:	malloc

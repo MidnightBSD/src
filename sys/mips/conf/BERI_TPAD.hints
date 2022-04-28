@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/BERI_TPAD.hints 239679 2012-08-25 12:02:13Z rwatson $
+# $FreeBSD$
 
 #
 # Altera JTAG UARTs configured for console, debugging, and data putput on the

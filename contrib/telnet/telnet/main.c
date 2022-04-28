@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)main.c	8.3 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnet/main.c 139937 2005-01-09 10:24:46Z maxim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -91,10 +87,10 @@ usage(void)
 	fprintf(stderr, "usage: %s %s%s%s%s\n",
 	    prompt,
 #ifdef	AUTHENTICATION
-	    "[-4] [-6] [-8] [-E] [-K] [-L] [-N] [-S tos] [-X atype] [-c] [-d]",
-	    "\n\t[-e char] [-k realm] [-l user] [-f/-F] [-n tracefile] ",
+	    "[-4] [-6] [-8] [-B baudrate] [-E] [-K] [-L] [-N] [-S tos] [-X atype]",
+	    "\n\t[-c] [-d] [-e char] [-k realm] [-l user] [-f/-F] [-n tracefile] ",
 #else
-	    "[-4] [-6] [-8] [-E] [-L] [-N] [-S tos] [-c] [-d]",
+	    "[-4] [-6] [-8] [-B baudrate] [-E] [-L] [-N] [-S tos] [-c] [-d]",
 	    "\n\t[-e char] [-l user] [-n tracefile] ",
 #endif
 	    "[-r] [-s src_addr] [-u] ",
@@ -154,7 +150,7 @@ main(int argc, char *argv[])
 #define IPSECOPT
 #endif
 	while ((ch = getopt(argc, argv,
-			    "468EKLNS:X:acde:fFk:l:n:rs:uxy" IPSECOPT)) != -1)
+			    "468B:EKLNS:X:acde:fFk:l:n:rs:uxy" IPSECOPT)) != -1)
 #undef IPSECOPT
 	{
 		switch(ch) {
@@ -168,6 +164,9 @@ main(int argc, char *argv[])
 #endif
 		case '8':
 			eight = 3;	/* binary output and input */
+			break;
+		case 'B':
+			DoBaudRate(optarg);
 			break;
 		case 'E':
 			rlogin = escape = _POSIX_VDISABLE;

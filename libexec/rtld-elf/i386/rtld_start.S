@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/libexec/rtld-elf/i386/rtld_start.S 226436 2011-10-16 14:30:28Z eadler $
+ * $FreeBSD$
  */
 
 	.text
@@ -42,7 +42,7 @@
 	pushl	%ecx			# Pass address of obj_main
 	pushl	%ebx			# Pass address of exit proc
 	pushl	%eax			# Pass initial stack pointer to rtld
-	call	_rtld@PLT		# Call rtld(sp); returns entry point
+	call	_rtld			# Call rtld(sp); returns entry point
 	addl	$16,%esp		# Remove arguments from stack
 	popl	%edx			# Get exit procedure address
 	movl	%esi,%esp		# Ignore obj_main
@@ -78,7 +78,7 @@ _rtld_bind_start:
 	pushl	20(%esp)		# Copy reloff argument
 	pushl	20(%esp)		# Copy obj argument
 
-	call	_rtld_bind@PLT		# Transfer control to the binder
+	call	_rtld_bind		# Transfer control to the binder
 	/* Now %eax contains the entry point of the function being called. */
 
 	addl	$8,%esp			# Discard binder arguments

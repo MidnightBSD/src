@@ -30,7 +30,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/xen/xenbus/xenbusb.h 222975 2011-06-11 04:59:01Z gibbs $
+ * $FreeBSD$
  */
 #ifndef _XEN_XENBUS_XENBUSB_H
 #define _XEN_XENBUS_XENBUSB_H

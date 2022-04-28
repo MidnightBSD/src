@@ -5,7 +5,7 @@
 #
 # Arguments: 0x00 (AC offline, economy) or 0x01 (AC online, performance)
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/power_profile 240343 2012-09-11 06:25:10Z avg $
+# $FreeBSD$
 #
 
 # PROVIDE: power_profile
@@ -15,6 +15,7 @@
 . /etc/rc.subr
 
 name="power_profile"
+desc="Modify the power profile based on AC line state"
 stop_cmd=':'
 LOGGER="logger -t power_profile -p daemon.notice"
 

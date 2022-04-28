@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/sci_simple_list.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCI_SIMPLE_LIST_HEADER_
 #define _SCI_SIMPLE_LIST_HEADER_
@@ -305,7 +305,7 @@ static void sci_simple_list_insert_list_at_head(
       }
 
       // Wipe the source list to make sure the list elements can not be accessed
-      // from two seperate lists at the same time.
+      // from two separate lists at the same time.
       sci_simple_list_init(source_anchor);
    }
 }
@@ -342,7 +342,7 @@ static void sci_simple_list_insert_list_at_tail(
       }
 
       // Wipe the source list to make sure the list elements can not be accessed
-      // from two seperate lists at the same time.
+      // from two separate lists at the same time.
       sci_simple_list_init(source_anchor);
    }
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/iicbb.c 232365 2012-03-01 20:58:20Z kan $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Generic I2C bit-banging code
@@ -43,6 +43,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/iicbb.c 232365 2012-03-01 20:5
  *
  */
 
+#include "opt_platform.h"
+
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -50,6 +52,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/iicbus/iicbb.c 232365 2012-03-01 20:5
 #include <sys/bus.h>
 #include <sys/uio.h>
 
+#ifdef FDT
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#include <dev/fdt/fdt_common.h>
+#endif
 
 #include <dev/iicbus/iiconf.h>
 #include <dev/iicbus/iicbus.h>
@@ -77,6 +84,9 @@ static int iicbb_write(device_t, const char *, int, int *, int);
 static int iicbb_read(device_t, char *, int, int *, int, int);
 static int iicbb_reset(device_t, u_char, u_char, u_char *);
 static int iicbb_transfer(device_t dev, struct iic_msg *msgs, uint32_t nmsgs);
+#ifdef FDT
+static phandle_t iicbb_get_node(device_t, device_t);
+#endif
 
 static device_method_t iicbb_methods[] = {
 	/* device interface */
@@ -97,6 +107,11 @@ static device_method_t iicbb_methods[] = {
 	DEVMETHOD(iicbus_read,		iicbb_read),
 	DEVMETHOD(iicbus_reset,		iicbb_reset),
 	DEVMETHOD(iicbus_transfer,	iicbb_transfer),
+
+#ifdef FDT
+	/* ofw_bus interface */
+	DEVMETHOD(ofw_bus_get_node,	iicbb_get_node),
+#endif
 
 	{ 0, 0 }
 };
@@ -134,25 +149,22 @@ iicbb_attach(device_t dev)
 static int
 iicbb_detach(device_t dev)
 {
-	struct iicbb_softc *sc = (struct iicbb_softc *)device_get_softc(dev);
-	device_t child;
 
-	/*
-	 * We need to save child because the detach indirectly causes
-	 * sc->iicbus to be zeroed.  Since we added the device
-	 * unconditionally in iicbb_attach, we need to make sure we
-	 * delete it here.  See iicbb_child_detached.  We need that
-	 * callback in case newbus detached our children w/o detaching
-	 * us (say iicbus is a module and unloaded w/o iicbb being
-	 * unloaded).
-	 */
-	child = sc->iicbus;
 	bus_generic_detach(dev);
-	if (child)
-		device_delete_child(dev, child);
+	device_delete_children(dev);
 
 	return (0);
 }
+
+#ifdef FDT
+static phandle_t
+iicbb_get_node(device_t bus, device_t dev)
+{
+
+	/* We only have one child, the I2C bus, which needs our own node. */
+	return (ofw_bus_get_node(bus));
+}
+#endif
 
 static void
 iicbb_child_detached( device_t dev, device_t child )

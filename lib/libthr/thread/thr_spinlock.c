@@ -25,10 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_spinlock.c 178446 2008-04-23 21:06:51Z delphij $
- *
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <pthread.h>
@@ -61,16 +61,16 @@ static void	init_spinlock(spinlock_t *lck);
  */
 
 void
-_spinunlock(spinlock_t *lck)
+__thr_spinunlock(spinlock_t *lck)
 {
 	struct spinlock_extra	*_extra;
 
-	_extra = (struct spinlock_extra *)lck->fname;
+	_extra = lck->thr_extra;
 	THR_UMUTEX_UNLOCK(_get_curthread(), &_extra->lock);
 }
 
 void
-_spinlock(spinlock_t *lck)
+__thr_spinlock(spinlock_t *lck)
 {
 	struct spinlock_extra *_extra;
 
@@ -78,16 +78,10 @@ _spinlock(spinlock_t *lck)
 		PANIC("Spinlock called when not threaded.");
 	if (!initialized)
 		PANIC("Spinlocks not initialized.");
-	if (lck->fname == NULL)
+	if (lck->thr_extra == NULL)
 		init_spinlock(lck);
-	_extra = (struct spinlock_extra *)lck->fname;
+	_extra = lck->thr_extra;
 	THR_UMUTEX_LOCK(_get_curthread(), &_extra->lock);
-}
-
-void
-_spinlock_debug(spinlock_t *lck, char *fname __unused, int lineno __unused)
-{
-	_spinlock(lck);
 }
 
 static void
@@ -96,14 +90,14 @@ init_spinlock(spinlock_t *lck)
 	struct pthread *curthread = _get_curthread();
 
 	THR_UMUTEX_LOCK(curthread, &spinlock_static_lock);
-	if ((lck->fname == NULL) && (spinlock_count < MAX_SPINLOCKS)) {
-		lck->fname = (char *)&extra[spinlock_count];
+	if ((lck->thr_extra == NULL) && (spinlock_count < MAX_SPINLOCKS)) {
+		lck->thr_extra = &extra[spinlock_count];
 		_thr_umutex_init(&extra[spinlock_count].lock);
 		extra[spinlock_count].owner = lck;
 		spinlock_count++;
 	}
 	THR_UMUTEX_UNLOCK(curthread, &spinlock_static_lock);
-	if (lck->fname == NULL)
+	if (lck->thr_extra == NULL)
 		PANIC("Warning: exceeded max spinlocks");
 }
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 HighPoint Technologies, Inc.
+ * Copyright (c) 2004-2011 HighPoint Technologies, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hpt27xx/array.h 228940 2011-12-28 23:26:58Z delphij $
+ * $FreeBSD$
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>

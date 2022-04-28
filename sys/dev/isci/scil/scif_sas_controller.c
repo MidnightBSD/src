@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_controller.c 231296 2012-02-09 17:50:24Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -911,7 +911,7 @@ void scif_sas_controller_free_internal_request(
       fw_controller, fw_internal_request_buffer
    ));
 
-   //return the memory to to pool.
+   //return the memory to the pool.
    if( !sci_pool_full(fw_controller->internal_request_memory_pool) )
    {
       sci_pool_put(

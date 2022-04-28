@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/ftpusers 256366 2013-10-12 06:08:18Z rpaulo $
+# $FreeBSD$
 #
 # list of users disallowed any ftp access.
 # read by ftpd(8).

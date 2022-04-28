@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)pstat.c	8.16 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pstat/pstat.c 225847 2011-09-28 18:53:36Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -174,8 +174,6 @@ main(int argc, char *argv[])
 		default:
 			usage();
 		}
-	argc -= optind;
-	argv += optind;
 
 	/*
 	 * Initialize symbol names list.
@@ -339,7 +337,7 @@ static void
 ttyprt(struct xtty *xt)
 {
 	int i, j;
-	char *name;
+	const char *name;
 
 	if (xt->xt_size != sizeof *xt)
 		errx(1, "struct xtty size mismatch");

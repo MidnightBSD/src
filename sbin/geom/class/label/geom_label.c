@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/label/geom_label.c 212554 2010-09-13 13:48:18Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -53,6 +55,7 @@ static void label_main(struct gctl_req *req, unsigned flags);
 static void label_clear(struct gctl_req *req);
 static void label_dump(struct gctl_req *req);
 static void label_label(struct gctl_req *req);
+static void label_refresh(struct gctl_req *req);
 
 struct g_command PUBSYM(class_commands)[] = {
 	{ "clear", G_FLAG_VERBOSE, label_main, G_NULL_OPTS,
@@ -73,6 +76,9 @@ struct g_command PUBSYM(class_commands)[] = {
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, label_main, G_NULL_OPTS,
 	    "[-v] name dev"
+	},
+	{ "refresh", 0, label_main, G_NULL_OPTS,
+	    "dev ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
@@ -105,6 +111,8 @@ label_main(struct gctl_req *req, unsigned flags)
 		label_clear(req);
 	else if (strcmp(name, "dump") == 0)
 		label_dump(req);
+	else if (strcmp(name, "refresh") == 0)
+		label_refresh(req);
 	else
 		gctl_error(req, "Unknown command: %s.", name);
 }
@@ -117,6 +125,7 @@ label_label(struct gctl_req *req)
 	u_char sector[512];
 	int error, nargs;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 2) {
 		gctl_error(req, "Invalid number of arguments.");
@@ -137,6 +146,7 @@ label_label(struct gctl_req *req)
 	strlcpy(md.md_magic, G_LABEL_MAGIC, sizeof(md.md_magic));
 	md.md_version = G_LABEL_VERSION;
 	label = gctl_get_ascii(req, "arg0");
+	bzero(md.md_label, sizeof(md.md_label));
 	strlcpy(md.md_label, label, sizeof(md.md_label));
 	md.md_provsize = g_get_mediasize(name);
 	if (md.md_provsize == 0) {
@@ -221,5 +231,30 @@ label_dump(struct gctl_req *req)
 		printf("Metadata on %s:\n", name);
 		label_metadata_dump(&md);
 		printf("\n");
+	}
+}
+
+static void
+label_refresh(struct gctl_req *req)
+{
+	const char *name;
+	int i, nargs, fd;
+
+	nargs = gctl_get_int(req, "nargs");
+	if (nargs < 1) {
+		gctl_error(req, "Too few arguments.");
+		return;
+	}
+
+	for (i = 0; i < nargs; i++) {
+		name = gctl_get_ascii(req, "arg%d", i);
+		fd = g_open(name, 1);
+		if (fd == -1) {
+			printf("Can't refresh metadata from %s: %s.\n",
+			    name, strerror(errno));
+		} else {
+			printf("Metadata from %s refreshed.\n", name);
+			(void)g_close(fd);
+		}
 	}
 }

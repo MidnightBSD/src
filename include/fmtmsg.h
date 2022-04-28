@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/fmtmsg.h 236629 2012-06-05 19:42:57Z ed $
+ * $FreeBSD$
  */
 
 #ifndef _FMTMSG_H_

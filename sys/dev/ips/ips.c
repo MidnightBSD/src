@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ips/ips.c 249595 2013-04-17 21:21:27Z hiren $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
@@ -41,7 +41,6 @@ MALLOC_DEFINE(M_IPSBUF, "ipsbuf","IPS driver buffer");
 
 static struct cdevsw ips_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	ips_open,
 	.d_close =	ips_close,
 	.d_ioctl =	ips_ioctl,
@@ -74,14 +73,19 @@ static const char* ips_adapter_name[] = {
 static int ips_open(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	ips_softc_t *sc = dev->si_drv1;
+	mtx_lock(&sc->queue_mtx);
 	sc->state |= IPS_DEV_OPEN;
+	mtx_unlock(&sc->queue_mtx);
         return 0;
 }
 
 static int ips_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	ips_softc_t *sc = dev->si_drv1;
+
+	mtx_lock(&sc->queue_mtx);
 	sc->state &= ~IPS_DEV_OPEN;
+	mtx_unlock(&sc->queue_mtx);
 
         return 0;
 }
@@ -103,7 +107,7 @@ static void ips_cmd_dmaload(void *cmdptr, bus_dma_segment_t *segments,int segnum
 
 }
 
-/* is locking needed? what locking guarentees are there on removal? */
+/* is locking needed? what locking guarantees are there on removal? */
 static int ips_cmdqueue_free(ips_softc_t *sc)
 {
 	int i, error = -1;
@@ -277,10 +281,11 @@ static int ips_diskdev_free(ips_softc_t *sc)
 	int i;
 	int error = 0;
 	for(i = 0; i < IPS_MAX_NUM_DRIVES; i++){
-		if(sc->diskdev[i])
+		if(sc->diskdev[i]) {
 			error = device_delete_child(sc->dev, sc->diskdev[i]);
 			if(error)
 				return error;
+		}
 	}
 	bus_generic_detach(sc->dev);
 	return 0;
@@ -299,7 +304,7 @@ static void ips_timeout(void *arg)
 	int i, state = 0;
 	ips_command_t *command;
 
-	mtx_lock(&sc->queue_mtx);
+	mtx_assert(&sc->queue_mtx, MA_OWNED);
 	command = &sc->commandarray[0];
 	for(i = 0; i < sc->max_cmds; i++){
 		if(!command[i].timeout){
@@ -329,8 +334,7 @@ static void ips_timeout(void *arg)
 			sc->state &= ~IPS_TIMEOUT;
 	}
 	if (sc->state != IPS_OFFLINE)
-		sc->timer = timeout(ips_timeout, sc, 10*hz);
-	mtx_unlock(&sc->queue_mtx);
+		callout_reset(&sc->timer, 10 * hz, ips_timeout, sc);
 }
 
 /* check card and initialize it */
@@ -379,7 +383,6 @@ int ips_adapter_init(ips_softc_t *sc)
            can handle */
 	sc->max_cmds = 1;
 	ips_cmdqueue_init(sc);
-	callout_handle_init(&sc->timer);
 
 	if(sc->ips_adapter_reinit(sc, 0))
 		goto error;
@@ -417,7 +420,7 @@ int ips_adapter_init(ips_softc_t *sc)
                                         S_IRUSR | S_IWUSR, "ips%d", device_get_unit(sc->dev));
 	sc->device_file->si_drv1 = sc;
 	ips_diskdev_init(sc);
-	sc->timer = timeout(ips_timeout, sc, 10*hz);
+	callout_reset(&sc->timer, 10 * hz, ips_timeout, sc);
         return 0;
 
 error:
@@ -492,7 +495,7 @@ int ips_adapter_free(ips_softc_t *sc)
 		return EBUSY;
 	}
 	DEVICE_PRINTF(1, sc->dev, "free\n");
-	untimeout(ips_timeout, sc, sc->timer);
+	callout_drain(&sc->timer);
 
 	if(sc->sg_dmatag)
 		bus_dma_tag_destroy(sc->sg_dmatag);

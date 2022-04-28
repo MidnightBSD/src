@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/pswitch.c 174898 2007-12-25 17:52:02Z rwatson $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"

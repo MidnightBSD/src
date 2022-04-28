@@ -32,10 +32,10 @@
 .\"
 .\" Author: Archie Cobbs <archie@whistle.com>
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libnetgraph/netgraph.3 131548 2004-07-04 04:03:37Z jmallett $
+.\" $FreeBSD$
 .\" $Whistle: netgraph.3,v 1.7 1999/01/25 07:14:06 archie Exp $
 .\"
-.Dd January 27, 2004
+.Dd November 25, 2013
 .Dt NETGRAPH 3
 .Os
 .Sh NAME
@@ -43,7 +43,7 @@
 .Nm NgNameNode ,
 .Nm NgSendMsg ,
 .Nm NgSendAsciiMsg ,
-.Nm NgSendMsgReply ,
+.Nm NgSendReplyMsg ,
 .Nm NgRecvMsg ,
 .Nm NgAllocRecvMsg ,
 .Nm NgRecvAsciiMsg ,
@@ -57,7 +57,7 @@
 .Sh LIBRARY
 .Lb libnetgraph
 .Sh SYNOPSIS
-.In netgraph.h
+.In netgraph/netgraph.h
 .Ft int
 .Fn NgMkSockNode "const char *name" "int *csp" "int *dsp"
 .Ft int
@@ -70,7 +70,7 @@
 .Ft int
 .Fn NgSendAsciiMsg "int cs" "const char *path" "const char *fmt" ...
 .Ft int
-.Fo NgSendMsgReply
+.Fo NgSendReplyMsg
 .Fa "int cs" "const char *path" "struct ng_mesg *msg" "const void *arg"
 .Fa "size_t arglen"
 .Fc
@@ -162,7 +162,7 @@ header is returned.
 This value is typically used to associate replies.
 .Pp
 Use
-.Fn NgSendMsgReply
+.Fn NgSendReplyMsg
 to send reply to a previously received control message.
 The original message header should be pointed to by
 .Fa msg .
@@ -395,4 +395,4 @@ a version of
 .Fx 2.2
 customized for the Whistle InterJet.
 .Sh AUTHORS
-.An "Archie Cobbs" Aq archie@FreeBSD.org
+.An Archie Cobbs Aq Mt archie@FreeBSD.org

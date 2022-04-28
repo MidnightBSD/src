@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/lib/libbegemot/Makefile 201381 2010-01-02 09:58:07Z ed $
+# $FreeBSD$
 
-LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
+LIBBEGEMOT_DIR=${SRCTOP}/contrib/libbegemot
 
+PACKAGE=lib${LIB}
 .PATH: ${LIBBEGEMOT_DIR}
 
 LIB=	begemot

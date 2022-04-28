@@ -1,11 +1,13 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/Makefile 250323 2013-05-07 05:40:20Z dteske $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 SUBDIR=	console \
 	diskmgmt \
 	docsinstall \
 	dot \
-	examples \
 	include \
+	includes \
 	mouse \
 	networking \
 	packages \
@@ -17,16 +19,15 @@ SUBDIR=	console \
 	ttys \
 	usermgmt
 
+.if ${MK_EXAMPLES} != "no"
+SUBDIR+= examples
+.endif
+
 FILESDIR=	${LIBEXECDIR}/bsdconfig
 FILES=		USAGE
 
 SCRIPTS= bsdconfig
 
 MAN= bsdconfig.8
-
-beforeinstall:
-	mkdir -p ${DESTDIR}${FILESDIR}
-	mkdir -p ${DESTDIR}${SCRIPTSDIR}
-	mkdir -p ${DESTDIR}${MANDIR}8
 
 .include <bsd.prog.mk>

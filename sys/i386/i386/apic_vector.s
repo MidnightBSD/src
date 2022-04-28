@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: release/10.0.0/sys/i386/i386/apic_vector.s 255040 2013-08-29 19:52:18Z gibbs $
+ * $FreeBSD$
  */
 
 /*
@@ -39,9 +39,26 @@
 #include "opt_smp.h"
 
 #include <machine/asmacros.h>
+#include <machine/specialreg.h>
 #include <x86/apicreg.h>
 
 #include "assym.s"
+
+	.text
+	SUPERALIGN_TEXT
+	/* End Of Interrupt to APIC */
+as_lapic_eoi:
+	cmpl	$0,x2apic_mode
+	jne	1f
+	movl	lapic_map,%eax
+	movl	$0,LA_EOI(%eax)
+	ret
+1:
+	movl	$MSR_APIC_EOI,%ecx
+	xorl	%eax,%eax
+	xorl	%edx,%edx
+	wrmsr
+	ret
 
 /*
  * I/O Interrupt Entry Point.  Rather than having one entry point for
@@ -53,21 +70,29 @@
 #define	ISR_VEC(index, vec_name)					\
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
+IDTVEC(vec_name ## _pti) ;						\
 IDTVEC(vec_name) ;							\
 	PUSH_FRAME ;							\
 	SET_KERNEL_SREGS ;						\
 	cld ;								\
 	FAKE_MCOUNT(TF_EIP(%esp)) ;					\
-	movl	lapic, %edx ;	/* pointer to local APIC */		\
+	cmpl	$0,x2apic_mode ;					\
+	je	1f ;							\
+	movl	$(MSR_APIC_ISR0 + index),%ecx ;				\
+	rdmsr ;								\
+	jmp	2f ;							\
+1: ;									\
+	movl	lapic_map, %edx ;/* pointer to local APIC */		\
 	movl	LA_ISR + 16 * (index)(%edx), %eax ;	/* load ISR */	\
+2: ;									\
 	bsrl	%eax, %eax ;	/* index of highest set bit in ISR */	\
-	jz	1f ;							\
+	jz	3f ;							\
 	addl	$(32 * index),%eax ;					\
 	pushl	%esp		;                                       \
 	pushl	%eax ;		/* pass the IRQ */			\
 	call	lapic_handle_intr ;					\
 	addl	$8, %esp ;	/* discard parameter */			\
-1: ;									\
+3: ;									\
 	MEXITCOUNT ;							\
 	jmp	doreti
 
@@ -99,6 +124,7 @@ IDTVEC(spuriousint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(timerint_pti)
 IDTVEC(timerint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -115,6 +141,7 @@ IDTVEC(timerint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(cmcint_pti)
 IDTVEC(cmcint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -129,6 +156,7 @@ IDTVEC(cmcint)
  */
 	.text
 	SUPERALIGN_TEXT
+IDTVEC(errorint_pti)
 IDTVEC(errorint)
 	PUSH_FRAME
 	SET_KERNEL_SREGS
@@ -163,39 +191,19 @@ IDTVEC(xen_intr_upcall)
  */
 	.text
 	SUPERALIGN_TEXT
+invltlb_ret:
+	call	as_lapic_eoi
+	jmp	doreti
+
+	SUPERALIGN_TEXT
 IDTVEC(invltlb)
-	pushl	%eax
-	pushl	%ds
-	movl	$KDSEL, %eax		/* Kernel data selector */
-	movl	%eax, %ds
+	PUSH_FRAME
+	SET_KERNEL_SREGS
+	cld
 
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
-	pushl	%fs
-	movl	$KPSEL, %eax		/* Private space selector */
-	movl	%eax, %fs
-	movl	PCPU(CPUID), %eax
-	popl	%fs
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_gbl(,%eax,4)
-#endif
-#ifdef COUNT_IPIS
-	movl	ipi_invltlb_counts(,%eax,4),%eax
-	incl	(%eax)
-#endif
-#endif
+	call	invltlb_handler
 
-	movl	%cr3, %eax		/* invalidate the TLB */
-	movl	%eax, %cr3
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popl	%ds
-	popl	%eax
-	iret
+	jmp	invltlb_ret
 
 /*
  * Single page TLB shootdown
@@ -203,38 +211,13 @@ IDTVEC(invltlb)
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(invlpg)
-	pushl	%eax
-	pushl	%ds
-	movl	$KDSEL, %eax		/* Kernel data selector */
-	movl	%eax, %ds
+	PUSH_FRAME
+	SET_KERNEL_SREGS
+	cld
 
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
-	pushl	%fs
-	movl	$KPSEL, %eax		/* Private space selector */
-	movl	%eax, %fs
-	movl	PCPU(CPUID), %eax
-	popl	%fs
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_pg(,%eax,4)
-#endif
-#ifdef COUNT_IPIS
-	movl	ipi_invlpg_counts(,%eax,4),%eax
-	incl	(%eax)
-#endif
-#endif
+	call	invlpg_handler
 
-	movl	smp_tlb_addr1, %eax
-	invlpg	(%eax)			/* invalidate single page */
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popl	%ds
-	popl	%eax
-	iret
+	jmp	invltlb_ret
 
 /*
  * Page range TLB shootdown.
@@ -242,44 +225,13 @@ IDTVEC(invlpg)
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(invlrng)
-	pushl	%eax
-	pushl	%edx
-	pushl	%ds
-	movl	$KDSEL, %eax		/* Kernel data selector */
-	movl	%eax, %ds
+	PUSH_FRAME
+	SET_KERNEL_SREGS
+	cld
 
-#if defined(COUNT_XINVLTLB_HITS) || defined(COUNT_IPIS)
-	pushl	%fs
-	movl	$KPSEL, %eax		/* Private space selector */
-	movl	%eax, %fs
-	movl	PCPU(CPUID), %eax
-	popl	%fs
-#ifdef COUNT_XINVLTLB_HITS
-	incl	xhits_rng(,%eax,4)
-#endif
-#ifdef COUNT_IPIS
-	movl	ipi_invlrng_counts(,%eax,4),%eax
-	incl	(%eax)
-#endif
-#endif
+	call	invlrng_handler
 
-	movl	smp_tlb_addr1, %edx
-	movl	smp_tlb_addr2, %eax
-1:	invlpg	(%edx)			/* invalidate single page */
-	addl	$PAGE_SIZE, %edx
-	cmpl	%eax, %edx
-	jb	1b
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popl	%ds
-	popl	%edx
-	popl	%eax
-	iret
+	jmp	invltlb_ret
 
 /*
  * Invalidate cache.
@@ -287,37 +239,17 @@ IDTVEC(invlrng)
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(invlcache)
-	pushl	%eax
-	pushl	%ds
-	movl	$KDSEL, %eax		/* Kernel data selector */
-	movl	%eax, %ds
+	PUSH_FRAME
+	SET_KERNEL_SREGS
+	cld
 
-#ifdef COUNT_IPIS
-	pushl	%fs
-	movl	$KPSEL, %eax		/* Private space selector */
-	movl	%eax, %fs
-	movl	PCPU(CPUID), %eax
-	popl	%fs
-	movl	ipi_invlcache_counts(,%eax,4),%eax
-	incl	(%eax)
-#endif
+	call	invlcache_handler
 
-	wbinvd
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
-	lock
-	incl	smp_tlb_wait
-
-	popl	%ds
-	popl	%eax
-	iret
+	jmp	invltlb_ret
 
 /*
  * Handler for IPIs sent via the per-cpu IPI bitmap.
  */
-#ifndef XEN
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(ipi_intr_bitmap_handler)	
@@ -325,15 +257,14 @@ IDTVEC(ipi_intr_bitmap_handler)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %edx
-	movl	$0, LA_EOI(%edx)	/* End Of Interrupt to APIC */
+	call	as_lapic_eoi
 	
 	FAKE_MCOUNT(TF_EIP(%esp))
 
 	call	ipi_bitmap_handler
 	MEXITCOUNT
 	jmp	doreti
-#endif
+
 /*
  * Executed by a CPU when it receives an IPI_STOP from another CPU.
  */
@@ -344,18 +275,13 @@ IDTVEC(cpustop)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
+	call	as_lapic_eoi
 	call	cpustop_handler
-
-	POP_FRAME
-	iret
+	jmp	doreti
 
 /*
  * Executed by a CPU when it receives an IPI_SUSPEND from another CPU.
  */
-#ifndef XEN
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(cpususpend)
@@ -363,14 +289,9 @@ IDTVEC(cpususpend)
 	SET_KERNEL_SREGS
 	cld
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-
+	call	as_lapic_eoi
 	call	cpususpend_handler
-
-	POP_FRAME
-	jmp	doreti_iret
-#endif
+	jmp	doreti
 
 /*
  * Executed by a CPU when it receives a RENDEZVOUS IPI from another CPU.
@@ -391,25 +312,7 @@ IDTVEC(rendezvous)
 #endif
 	call	smp_rendezvous_action
 
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-	POP_FRAME
-	iret
+	call	as_lapic_eoi
+	jmp	doreti
 	
-/*
- * Clean up when we lose out on the lazy context switch optimization.
- * ie: when we are about to release a PTD but a cpu is still borrowing it.
- */
-	SUPERALIGN_TEXT
-IDTVEC(lazypmap)
-	PUSH_FRAME
-	SET_KERNEL_SREGS
-	cld
-
-	call	pmap_lazyfix_action
-
-	movl	lapic, %eax
-	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
-	POP_FRAME
-	iret
 #endif /* SMP */

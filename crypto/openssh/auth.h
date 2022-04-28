@@ -1,4 +1,4 @@
-/* $OpenBSD: auth.h,v 1.76 2013/07/19 07:37:48 markus Exp $ */
+/* $OpenBSD: auth.h,v 1.89 2016/08/13 17:47:41 markus Exp $ */
 
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
@@ -42,6 +42,9 @@
 #include <krb5.h>
 #endif
 
+struct ssh;
+struct sshkey;
+
 typedef struct Authctxt Authctxt;
 typedef struct Authmethod Authmethod;
 typedef struct KbdintDevice KbdintDevice;
@@ -53,7 +56,7 @@ struct Authctxt {
 	int		 valid;		/* user exists and is allowed to login */
 	int		 attempt;
 	int		 failures;
-	int		 server_caused_failure; 
+	int		 server_caused_failure;
 	int		 force_pwchange;
 	char		*user;		/* username sent by the client */
 	char		*service;
@@ -61,7 +64,6 @@ struct Authctxt {
 	char		*style;
 	void		*kbdintctxt;
 	char		*info;		/* Extra info for next auth_log */
-	void		*jpake_ctx;
 #ifdef BSD_AUTH
 	auth_session_t	*as;
 #endif
@@ -76,6 +78,9 @@ struct Authctxt {
 #endif
 	Buffer		*loginmsg;
 	void		*methoddata;
+
+	struct sshkey	**prev_userkeys;
+	u_int		 nprev_userkeys;
 };
 /*
  * Every authentication method has to handle authentication requests for
@@ -107,23 +112,17 @@ struct KbdintDevice
 	void	(*free_ctx)(void *ctx);
 };
 
-int      auth_rhosts(struct passwd *, const char *);
 int
 auth_rhosts2(struct passwd *, const char *, const char *, const char *);
 
-int	 auth_rhosts_rsa(Authctxt *, char *, Key *);
 int      auth_password(Authctxt *, const char *);
-int      auth_rsa(Authctxt *, BIGNUM *);
-int      auth_rsa_challenge_dialog(Key *);
-BIGNUM	*auth_rsa_generate_challenge(Key *);
-int	 auth_rsa_verify_response(Key *, BIGNUM *, u_char[]);
-int	 auth_rsa_key_allowed(struct passwd *, BIGNUM *, Key **);
 
-int	 auth_rhosts_rsa_key_allowed(struct passwd *, char *, char *, Key *);
 int	 hostbased_key_allowed(struct passwd *, const char *, char *, Key *);
-int	 user_key_allowed(struct passwd *, Key *);
+int	 user_key_allowed(struct passwd *, Key *, int);
 void	 pubkey_auth_info(Authctxt *, const Key *, const char *, ...)
 	    __attribute__((__format__ (printf, 3, 4)));
+void	 auth2_record_userkey(Authctxt *, struct sshkey *);
+int	 auth2_userkey_already_used(Authctxt *, struct sshkey *);
 
 struct stat;
 int	 auth_secure_path(const char *, struct stat *, const char *, uid_t,
@@ -148,13 +147,13 @@ void remove_kbdint_device(const char *);
 
 void disable_forwarding(void);
 
-void	do_authentication(Authctxt *);
 void	do_authentication2(Authctxt *);
 
 void	auth_info(Authctxt *authctxt, const char *, ...)
 	    __attribute__((__format__ (printf, 2, 3)))
 	    __attribute__((__nonnull__ (2)));
 void	auth_log(Authctxt *, int, int, const char *, const char *);
+void	auth_maxtries_exceeded(Authctxt *) __attribute__((noreturn));
 void	userauth_finish(Authctxt *, int, const char *, const char *);
 int	auth_root_allowed(const char *);
 
@@ -175,15 +174,8 @@ int	bsdauth_respond(void *, u_int, char **);
 int	skey_query(void *, char **, char **, u_int *, char ***, u_int **);
 int	skey_respond(void *, u_int, char **);
 
-void	auth2_jpake_get_pwdata(Authctxt *, BIGNUM **, char **, char **);
-void	auth2_jpake_stop(Authctxt *);
-
 int	allowed_user(struct passwd *);
 struct passwd * getpwnamallow(const char *user);
-
-char	*get_challenge(Authctxt *);
-int	verify_response(Authctxt *, const char *);
-void	abandon_challenge_response(Authctxt *);
 
 char	*expand_authorized_keys(const char *, struct passwd *pw);
 char	*authorized_principals_file(struct passwd *);
@@ -192,18 +184,20 @@ FILE	*auth_openkeyfile(const char *, struct passwd *, int);
 FILE	*auth_openprincipals(const char *, struct passwd *, int);
 int	 auth_key_is_revoked(Key *);
 
+const char	*auth_get_canonical_hostname(struct ssh *, int);
+
 HostStatus
 check_key_in_hostfiles(struct passwd *, Key *, const char *,
     const char *, const char *);
 
 /* hostkey handling */
 Key	*get_hostkey_by_index(int);
-Key	*get_hostkey_public_by_index(int);
-Key	*get_hostkey_public_by_type(int);
-Key	*get_hostkey_private_by_type(int);
-int	 get_hostkey_index(Key *);
-int	 ssh1_session_key(BIGNUM *);
-void	 sshd_hostkey_sign(Key *, Key *, u_char **, u_int *, u_char *, u_int);
+Key	*get_hostkey_public_by_index(int, struct ssh *);
+Key	*get_hostkey_public_by_type(int, int, struct ssh *);
+Key	*get_hostkey_private_by_type(int, int, struct ssh *);
+int	 get_hostkey_index(Key *, int, struct ssh *);
+int	 sshd_hostkey_sign(Key *, Key *, u_char **, size_t *,
+	     const u_char *, size_t, const char *, u_int);
 
 /* debug messages during authentication */
 void	 auth_debug_add(const char *fmt,...) __attribute__((format(printf, 1, 2)));
@@ -213,8 +207,6 @@ void	 auth_debug_reset(void);
 struct passwd *fakepw(void);
 
 int	 sys_auth_passwd(Authctxt *, const char *);
-
-#define AUTH_FAIL_MSG "Too many authentication failures for %.100s"
 
 #define SKEY_PROMPT "\nS/Key Password: "
 

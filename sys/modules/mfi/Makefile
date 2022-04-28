@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mfi/Makefile 233711 2012-03-30 23:05:48Z ambrisko $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/mfi
+.PATH: ${SRCTOP}/sys/dev/mfi
 
 SUBDIR= mfip
 

@@ -15,7 +15,7 @@
  *
  * Sep, 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
  *
- * $FreeBSD: release/10.0.0/sys/i386/bios/apm.h 183328 2008-09-24 18:46:39Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef __APM_H__

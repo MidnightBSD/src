@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/puc/puc_cfg.c 160030 2006-06-29 16:27:19Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/rman.h>
+#include <sys/sysctl.h>
 
 #include <dev/puc/puc_bus.h>
 #include <dev/puc/puc_cfg.h>

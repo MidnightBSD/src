@@ -23,14 +23,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_write_format_cpio_newc.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 
 static int
 is_hex(const char *p, size_t l)
 {
 	while (l > 0) {
-		if (*p >= 0 && *p <= '9') {
+		if (*p >= '0' && *p <= '9') {
 			/* Ascii digit */
 		} else if (*p >= 'a' && *p <= 'f') {
 			/* lowercase letter a-f */

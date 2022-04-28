@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/pc98/pc98/canbepm.c 110333 2003-02-04 16:17:13Z nyan $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>

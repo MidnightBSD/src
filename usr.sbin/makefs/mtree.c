@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Marcel Moolenaar
  * All rights reserved.
  *
@@ -24,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/mtree.c 250605 2013-05-13 18:34:33Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -44,9 +46,16 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/makefs/mtree.c 250605 2013-05-13 18:
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <time.h>
 #include <unistd.h>
+#include <util.h>
+#include <vis.h>
 
 #include "makefs.h"
+
+#ifndef ENOATTR
+#define	ENOATTR	ENODATA
+#endif
 
 #define	IS_DOT(nm)	((nm)[0] == '.' && (nm)[1] == '\0')
 #define	IS_DOTDOT(nm)	((nm)[0] == '.' && (nm)[1] == '.' && (nm)[2] == '\0')
@@ -75,14 +84,11 @@ mtree_file_push(const char *name, FILE *fp)
 {
 	struct mtree_fileinfo *fi;
 
-	fi = malloc(sizeof(*fi));
-	if (fi == NULL)
-		return (ENOMEM);
-
+	fi = emalloc(sizeof(*fi));
 	if (strcmp(name, "-") == 0)
-		fi->name = strdup("(stdin)");
+		fi->name = estrdup("(stdin)");
 	else
-		fi->name = strdup(name);
+		fi->name = estrdup(name);
 	if (fi->name == NULL) {
 		free(fi);
 		return (ENOMEM);
@@ -150,14 +156,14 @@ mtree_file_path(fsnode *node)
 
 	depth = 0;
 	rp[depth] = node->name;
-	for (pnode = node->parent; pnode && depth < MAKEFS_MAX_TREE_DEPTH;
+	for (pnode = node->parent; pnode && depth < MAKEFS_MAX_TREE_DEPTH - 1;
 	     pnode = pnode->parent) {
 		if (strcmp(pnode->name, ".") == 0)
 			break;
 		rp[++depth] = pnode->name;
 	}
 	
-	sb = sbuf_new(NULL, NULL, 0, SBUF_AUTOEXTEND);
+	sb = sbuf_new_auto();
 	if (sb == NULL) {
 		errno = ENOMEM;
 		return (NULL);
@@ -168,7 +174,7 @@ mtree_file_path(fsnode *node)
 	}
 	sbuf_cat(sb, rp[depth]);
 	sbuf_finish(sb);
-	res = strdup(sbuf_data(sb));
+	res = estrdup(sbuf_data(sb));
 	sbuf_delete(sb);
 	if (res == NULL)
 		errno = ENOMEM;
@@ -181,7 +187,7 @@ static char *
 mtree_resolve(const char *spec, int *istemp)
 {
 	struct sbuf *sb;
-	char *res, *var;
+	char *res, *var = NULL;
 	const char *base, *p, *v;
 	size_t len;
 	int c, error, quoted, subst;
@@ -198,8 +204,8 @@ mtree_resolve(const char *spec, int *istemp)
 	quoted = (subst || c == '\'') ? 1 : 0;
 
 	if (!subst) {
-		res = strdup(spec + quoted);
-		if (res != NULL && quoted)
+		res = estrdup(spec + quoted);
+		if (quoted)
 			res[len - 2] = '\0';
 		return (res);
 	}
@@ -255,25 +261,18 @@ mtree_resolve(const char *spec, int *istemp)
 		}
 
 		error = ENOMEM;
-		var = calloc(p - v, 1);
-		if (var == NULL)
-			break;
-
+		var = ecalloc(p - v, 1);
 		memcpy(var, v + 1, p - v - 1);
 		if (strcmp(var, ".CURDIR") == 0) {
 			res = getcwd(NULL, 0);
 			if (res == NULL)
 				break;
 		} else if (strcmp(var, ".PROG") == 0) {
-			res = strdup(getprogname());
-			if (res == NULL)
-				break;
+			res = estrdup(getprogname());
 		} else {
 			v = getenv(var);
 			if (v != NULL) {
-				res = strdup(v);
-				if (res == NULL)
-					break;
+				res = estrdup(v);
 			} else
 				res = NULL;
 		}
@@ -284,8 +283,10 @@ mtree_resolve(const char *spec, int *istemp)
 			free(res);
 		}
 		free(var);
+		var = NULL;
 	}
 
+	free(var);
 	sbuf_finish(sb);
 	res = (error == 0) ? strdup(sbuf_data(sb)) : NULL;
 	sbuf_delete(sb);
@@ -348,10 +349,15 @@ read_word(FILE *fp, char *buf, size_t bufsz)
 			if (error == -1)
 				mtree_error("unexpected end of file");
 			return (error);
+		case '#':		/* comment -- skip to end of line. */
+			if (!esc) {
+				error = skip_to(fp, "\n");
+				if (!error)
+					continue;
+			}
+			break;
 		case '\\':
 			esc++;
-			if (esc == 1)
-				continue;
 			break;
 		case '`':
 		case '\'':
@@ -396,33 +402,9 @@ read_word(FILE *fp, char *buf, size_t bufsz)
 				fi->line++;
 			}
 			break;
-		case 'a':
+		default:
 			if (esc)
-				c = '\a';
-			break;
-		case 'b':
-			if (esc)
-				c = '\b';
-			break;
-		case 'f':
-			if (esc)
-				c = '\f';
-			break;
-		case 'n':
-			if (esc)
-				c = '\n';
-			break;
-		case 'r':
-			if (esc)
-				c = '\r';
-			break;
-		case 't':
-			if (esc)
-				c = '\t';
-			break;
-		case 'v':
-			if (esc)
-				c = '\v';
+				buf[idx++] = '\\';
 			break;
 		}
 		buf[idx++] = c;
@@ -442,25 +424,12 @@ create_node(const char *name, u_int type, fsnode *parent, fsnode *global)
 {
 	fsnode *n;
 
-	n = calloc(1, sizeof(*n));
-	if (n == NULL)
-		return (NULL);
-
-	n->name = strdup(name);
-	if (n->name == NULL) {
-		free(n);
-		return (NULL);
-	}
-
+	n = ecalloc(1, sizeof(*n));
+	n->name = estrdup(name);
 	n->type = (type == 0) ? global->type : type;
 	n->parent = parent;
 
-	n->inode = calloc(1, sizeof(*n->inode));
-	if (n->inode == NULL) {
-		free(n->name);
-		free(n);
-		return (NULL);
-	}
+	n->inode = ecalloc(1, sizeof(*n->inode));
 
 	/* Assign global options/defaults. */
 	bcopy(global->inode, n->inode, sizeof(*n->inode));
@@ -551,7 +520,7 @@ read_mtree_keywords(FILE *fp, fsnode *node)
 					error = ENOATTR;
 					break;
 				}
-				node->contents = strdup(value);
+				node->contents = estrdup(value);
 			} else
 				error = ENOSYS;
 			break;
@@ -598,7 +567,15 @@ read_mtree_keywords(FILE *fp, fsnode *node)
 					error = ENOATTR;
 					break;
 				}
-				node->symlink = strdup(value);
+				node->symlink = emalloc(strlen(value) + 1);
+				if (node->symlink == NULL) {
+					error = errno;
+					break;
+				}
+				if (strunvis(node->symlink, value) < 0) {
+					error = errno;
+					break;
+				}
 			} else
 				error = ENOSYS;
 			break;
@@ -660,6 +637,8 @@ read_mtree_keywords(FILE *fp, fsnode *node)
 				st->st_atime = num;
 				st->st_ctime = num;
 				st->st_mtime = num;
+				if (p == NULL)
+					break;
 				error = read_number(p, 10, &num, 0,
 				    INTMAX_MAX);
 				if (error)
@@ -976,13 +955,18 @@ read_mtree_spec1(FILE *fp, bool def, const char *name)
 static int
 read_mtree_spec(FILE *fp)
 {
-	char pathspec[PATH_MAX];
+	char pathspec[PATH_MAX], pathtmp[4*PATH_MAX + 1];
 	char *cp;
 	int error;
 
-	error = read_word(fp, pathspec, sizeof(pathspec));
+	error = read_word(fp, pathtmp, sizeof(pathtmp));
 	if (error)
 		goto out;
+	if (strnunvis(pathspec, PATH_MAX, pathtmp) == -1) {
+		error = errno;
+		goto out;
+	}
+	error = 0;
 
 	cp = strchr(pathspec, '/');
 	if (cp != NULL) {

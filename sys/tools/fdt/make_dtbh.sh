@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/sys/tools/fdt/make_dtbh.sh 208749 2010-06-02 17:22:38Z raj $
+# $FreeBSD$
 
 # Script generates a $2/fdt_static_dtb.h file.
 

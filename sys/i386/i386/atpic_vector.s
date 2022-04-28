@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: release/10.0.0/sys/i386/i386/atpic_vector.s 209483 2010-06-23 20:44:07Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -46,6 +46,7 @@
 #define	INTR(irq_num, vec_name) \
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
+IDTVEC(vec_name ##_pti) ;						\
 IDTVEC(vec_name) ;							\
 	PUSH_FRAME ;							\
 	SET_KERNEL_SREGS ;						\

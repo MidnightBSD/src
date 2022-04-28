@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/kerberos5/libexec/kadmind/Makefile 236337 2012-05-30 22:21:25Z obrien $
+# $FreeBSD$
 
 PROG=	kadmind
 MAN=	kadmind.8
@@ -8,11 +8,10 @@ SRCS=	rpc.c \
 	kadm_conn.c
 
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
-	${LDAPCFLAGS}
-DPADD=	${LIBKADM5SRV} ${LIBGSSAPI} ${LIBHDB} ${LIBKRB5} ${LIBROKEN} \
-	${LIBASN1} ${LIBVERS} ${LIBCRYPTO} ${LIBCRYPT} ${LDAPDPADD}
-LDADD=	-lkadm5srv -lgssapi -lhdb -lkrb5 -lroken \
-	-lasn1 ${LIBVERS} -lcrypto -lcrypt ${LDAPLDADD}
+	-I${SRCTOP}/contrib/com_err ${LDAPCFLAGS}
+LIBADD=	kadm5srv gssapi hdb krb5 roken vers
+DPADD=	${LDAPDPADD}
+LDADD=	${LDAPLDADD}
 LDFLAGS=${LDAPLDFLAGS}
 
 .include <bsd.prog.mk>

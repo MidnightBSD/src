@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3bus.c 232356 2012-03-01 19:58:34Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,7 +43,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3bus.c 232356 2012-03-01 19
 
 #include <machine/bus.h>
 #include <machine/platform.h>
-#include <machine/pmap.h>
 #include <machine/resource.h>
 
 #include "ps3bus.h"
@@ -58,8 +57,8 @@ static int	ps3bus_print_child(device_t dev, device_t child);
 static int	ps3bus_read_ivar(device_t bus, device_t child, int which,
 		    uintptr_t *result);
 static struct resource *ps3bus_alloc_resource(device_t bus, device_t child,
-		    int type, int *rid, u_long start, u_long end,
-		    u_long count, u_int flags);
+		    int type, int *rid, rman_res_t start, rman_res_t end,
+		    rman_res_t count, u_int flags);
 static int	ps3bus_activate_resource(device_t bus, device_t child, int type,
 		    int rid, struct resource *res);
 static bus_dma_tag_t ps3bus_get_dma_tag(device_t dev, device_t child);
@@ -127,6 +126,7 @@ static device_method_t ps3bus_methods[] = {
 
 struct ps3bus_softc {
 	struct rman sc_mem_rman;
+	struct rman sc_intr_rman;
 	struct mem_region *regions;
 	int rcount;
 };
@@ -328,7 +328,11 @@ ps3bus_attach(device_t self)
 	sc = device_get_softc(self);
 	sc->sc_mem_rman.rm_type = RMAN_ARRAY;
 	sc->sc_mem_rman.rm_descr = "PS3Bus Memory Mapped I/O";
+	sc->sc_intr_rman.rm_type = RMAN_ARRAY;
+	sc->sc_intr_rman.rm_descr = "PS3Bus Interrupts";
 	rman_init(&sc->sc_mem_rman);
+	rman_init(&sc->sc_intr_rman);
+	rman_manage_region(&sc->sc_intr_rman, 0, ~0);
 
 	/* Get memory regions for DMA */
 	mem_regions(&sc->regions, &sc->rcount, &sc->regions, &sc->rcount);
@@ -476,9 +480,9 @@ ps3bus_print_child(device_t dev, device_t child)
 
 	retval += bus_print_child_header(dev, child);
 	retval += resource_list_print_type(&dinfo->resources, "mem",
-	    SYS_RES_MEMORY, "%#lx");
+	    SYS_RES_MEMORY, "%#jx");
 	retval += resource_list_print_type(&dinfo->resources, "irq",
-	    SYS_RES_IRQ, "%ld");
+	    SYS_RES_IRQ, "%jd");
 
 	retval += bus_print_child_footer(dev, child);
 
@@ -518,14 +522,14 @@ ps3bus_read_ivar(device_t bus, device_t child, int which, uintptr_t *result)
 
 static struct resource *
 ps3bus_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct	ps3bus_devinfo *dinfo;
 	struct	ps3bus_softc *sc;
 	int	needactivate;
         struct	resource *rv;
         struct	rman *rm;
-        u_long	adjstart, adjend, adjcount;
+        rman_res_t	adjstart, adjend, adjcount;
         struct	resource_list_entry *rle;
 
 	sc = device_get_softc(bus);
@@ -562,8 +566,13 @@ ps3bus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		rm = &sc->sc_mem_rman;
 		break;
 	case SYS_RES_IRQ:
-		return (resource_list_alloc(&dinfo->resources, bus, child,
-		    type, rid, start, end, count, flags));
+		rle = resource_list_find(&dinfo->resources, SYS_RES_IRQ,
+		    *rid);
+		rm = &sc->sc_intr_rman;
+		adjstart = rle->start;
+		adjcount = ulmax(count, rle->count);
+		adjend = ulmax(rle->end, rle->start + adjcount - 1);
+		break;
 	default:
 		device_printf(bus, "unknown resource request from %s\n",
 			      device_get_nameunit(child));
@@ -618,7 +627,7 @@ ps3bus_activate_resource(device_t bus, device_t child, int type, int rid,
 			return (ENOMEM);
 		rman_set_virtual(res, p);
 		rman_set_bustag(res, &bs_be_tag);
-		rman_set_bushandle(res, (u_long)p);
+		rman_set_bushandle(res, (rman_res_t)p);
 	}
 
 	return (rman_activate_resource(res));

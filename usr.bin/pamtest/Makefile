@@ -1,11 +1,11 @@
-# $FreeBSD: release/10.0.0/usr.bin/pamtest/Makefile 236109 2012-05-26 17:10:16Z des $
+# $FreeBSD$
 
-OPENPAM=	${.CURDIR}/../../contrib/openpam
+OPENPAM=	${SRCTOP}/contrib/openpam
 .PATH: ${OPENPAM}/include ${OPENPAM}/bin/pamtest
 
 PROG= pamtest
 SRCS= pamtest.c
-DPADD= ${LIBPAM}
-LDADD= ${MINUSLPAM}
+
+LIBADD=	pam
 
 .include <bsd.prog.mk>

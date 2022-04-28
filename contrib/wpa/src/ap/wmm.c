@@ -4,14 +4,8 @@
  * Copyright 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * Alternatively, this software may be distributed under the terms of BSD
- * license.
- *
- * See README and COPYING for more details.
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
  */
 
 #include "utils/includes.h"
@@ -26,10 +20,12 @@
 #include "ap_drv_ops.h"
 #include "wmm.h"
 
-
-/* TODO: maintain separate sequence and fragment numbers for each AC
- * TODO: IGMP snooping to track which multicasts to forward - and use QOS-DATA
- * if only WMM stations are receiving a certain group */
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
 
 
 static inline u8 wmm_aci_aifsn(int aifsn, int acm, int aci)
@@ -50,6 +46,62 @@ static inline u8 wmm_ecw(int ecwmin, int ecwmax)
 }
 
 
+static void
+wmm_set_regulatory_limit(const struct hostapd_wmm_ac_params *wmm_conf,
+			 struct hostapd_wmm_ac_params *wmm,
+			 const struct hostapd_wmm_rule *wmm_reg)
+{
+	int ac;
+
+	for (ac = 0; ac < WMM_AC_NUM; ac++) {
+		wmm[ac].cwmin = MAX(wmm_conf[ac].cwmin, wmm_reg[ac].min_cwmin);
+		wmm[ac].cwmax = MAX(wmm_conf[ac].cwmax, wmm_reg[ac].min_cwmax);
+		wmm[ac].aifs = MAX(wmm_conf[ac].aifs, wmm_reg[ac].min_aifs);
+		wmm[ac].txop_limit =
+			MIN(wmm_conf[ac].txop_limit, wmm_reg[ac].max_txop);
+		wmm[ac].admission_control_mandatory =
+			wmm_conf[ac].admission_control_mandatory;
+	}
+}
+
+
+/*
+ * Calculate WMM regulatory limit if any.
+ */
+static void wmm_calc_regulatory_limit(struct hostapd_data *hapd,
+				      struct hostapd_wmm_ac_params *acp)
+{
+	struct hostapd_hw_modes *mode = hapd->iface->current_mode;
+	int c;
+
+	os_memcpy(acp, hapd->iconf->wmm_ac_params,
+		  sizeof(hapd->iconf->wmm_ac_params));
+
+	for (c = 0; mode && c < mode->num_channels; c++) {
+		struct hostapd_channel_data *chan = &mode->channels[c];
+
+		if (chan->freq != hapd->iface->freq)
+			continue;
+
+		if (chan->wmm_rules_valid)
+			wmm_set_regulatory_limit(hapd->iconf->wmm_ac_params,
+						 acp, chan->wmm_rules);
+		break;
+	}
+
+	/*
+	 * Check if we need to update set count. Since both were initialized to
+	 * zero we can compare the whole array in one shot.
+	 */
+	if (os_memcmp(acp, hapd->iface->prev_wmm,
+		      sizeof(hapd->iconf->wmm_ac_params)) != 0) {
+		os_memcpy(hapd->iface->prev_wmm, acp,
+			  sizeof(hapd->iconf->wmm_ac_params));
+		hapd->parameter_set_count++;
+	}
+}
+
+
 /*
  * Add WMM Parameter Element to Beacon, Probe Response, and (Re)Association
  * Response frames.
@@ -59,10 +111,12 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 	u8 *pos = eid;
 	struct wmm_parameter_element *wmm =
 		(struct wmm_parameter_element *) (pos + 2);
+	struct hostapd_wmm_ac_params wmmp[WMM_AC_NUM] = { 0 };
 	int e;
 
 	if (!hapd->conf->wmm_enabled)
 		return eid;
+	wmm_calc_regulatory_limit(hapd, wmmp);
 	eid[0] = WLAN_EID_VENDOR_SPECIFIC;
 	wmm->oui[0] = 0x00;
 	wmm->oui[1] = 0x50;
@@ -81,8 +135,7 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 	/* fill in a parameter set record for each AC */
 	for (e = 0; e < 4; e++) {
 		struct wmm_ac_parameter *ac = &wmm->ac[e];
-		struct hostapd_wmm_ac_params *acp =
-			&hapd->iconf->wmm_ac_params[e];
+		struct hostapd_wmm_ac_params *acp = &wmmp[e];
 
 		ac->aci_aifsn = wmm_aci_aifsn(acp->aifs,
 					      acp->admission_control_mandatory,
@@ -157,14 +210,15 @@ static void wmm_send_action(struct hostapd_data *hapd, const u8 *addr,
 	len = ((u8 *) (t + 1)) - buf;
 
 	if (hostapd_drv_send_mlme(hapd, m, len, 0) < 0)
-		perror("wmm_send_action: send");
+		wpa_printf(MSG_INFO, "wmm_send_action: send failed");
 }
 
 
 int wmm_process_tspec(struct wmm_tspec_element *tspec)
 {
-	int medium_time, pps, duration;
-	int up, psb, dir, tid;
+	u64 medium_time;
+	unsigned int pps, duration;
+	unsigned int up, psb, dir, tid;
 	u16 val, surplus;
 
 	up = (tspec->ts_info[1] >> 3) & 0x07;
@@ -212,8 +266,9 @@ int wmm_process_tspec(struct wmm_tspec_element *tspec)
 		return WMM_ADDTS_STATUS_INVALID_PARAMETERS;
 	}
 
-	medium_time = surplus * pps * duration / 0x2000;
-	wpa_printf(MSG_DEBUG, "WMM: Estimated medium time: %u", medium_time);
+	medium_time = (u64) surplus * pps * duration / 0x2000;
+	wpa_printf(MSG_DEBUG, "WMM: Estimated medium time: %lu",
+		   (unsigned long) medium_time);
 
 	/*
 	 * TODO: store list of granted (and still active) TSPECs and check
@@ -279,6 +334,9 @@ void hostapd_wmm_action(struct hostapd_data *hapd,
 		/* TODO: respond with action frame refused status code */
 		return;
 	}
+
+	if (left < 0)
+		return; /* not a valid WMM Action frame */
 
 	/* extract the tspec info element */
 	if (ieee802_11_parse_elems(pos, left, &elems, 1) == ParseFailed) {

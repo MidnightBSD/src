@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/netgraph/source/Makefile 106266 2002-10-31 23:03:09Z julian $
+# $FreeBSD$
 
 KMOD=		ng_source
 SRCS= 		ng_source.c

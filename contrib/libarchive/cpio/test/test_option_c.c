@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_c.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 static int
 is_octal(const char *p, size_t l)
@@ -65,17 +65,13 @@ DEFINE_TEST(test_option_c)
 {
 	FILE *filelist;
 	int r;
-	int uid = -1;
-	int dev, ino, gid;
+	int uid = 1000;
+	int dev, ino, gid = 1000;
 	time_t t, now;
 	char *p, *e;
 	size_t s;
 
 	assertUmask(0);
-
-#if !defined(_WIN32)
-	uid = getuid();
-#endif
 
 	/*
 	 * Create an assortment of files.
@@ -89,7 +85,7 @@ DEFINE_TEST(test_option_c)
 
 	/* "symlink" */
 	if (canSymlink()) {
-		assertMakeSymlink("symlink", "file");
+		assertMakeSymlink("symlink", "file", 0);
 		fprintf(filelist, "symlink\n");
 	}
 
@@ -101,7 +97,7 @@ DEFINE_TEST(test_option_c)
 
 	/* Use the cpio program to create an archive. */
 	fclose(filelist);
-	r = systemf("%s -oc <filelist >basic.out 2>basic.err", testprog);
+	r = systemf("%s -R 1000:1000 -oc <filelist >basic.out 2>basic.err", testprog);
 	/* Verify that nothing went to stderr. */
 	assertTextFileContents("1 block\n", "basic.err");
 

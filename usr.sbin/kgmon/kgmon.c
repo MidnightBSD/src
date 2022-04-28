@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)kgmon.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/kgmon/kgmon.c 246792 2013-02-14 14:44:08Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -355,7 +355,7 @@ dumpstate(struct kvmvars *kvp)
 
 	setprof(kvp, GMON_PROF_OFF);
 	fp = fopen("gmon.out", "w");
-	if (fp == 0) {
+	if (fp == NULL) {
 		warn("gmon.out");
 		return;
 	}

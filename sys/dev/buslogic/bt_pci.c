@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/buslogic/bt_pci.c 254263 2013-08-12 23:30:01Z scottl $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -58,8 +58,8 @@ static int
 bt_pci_alloc_resources(device_t dev)
 {
 	int		type = 0, rid, zero;
-	struct resource *regs = 0;
-	struct resource *irq = 0;
+	struct resource *regs = NULL;
+	struct resource *irq = NULL;
 
 #if 0
 	/* XXX Memory Mapped I/O seems to cause problems */

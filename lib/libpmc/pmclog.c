@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libpmc/pmclog.c 233628 2012-03-28 20:58:30Z fabient $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
@@ -333,6 +333,8 @@ pmclog_get_event(void *cookie, char **data, ssize_t *len,
 			ev->pl_u.pl_cc.pl_pc[npc] = (uintfptr_t) 0;
 		break;
 	case PMCLOG_TYPE_CLOSELOG:
+		ev->pl_state = PMCLOG_EOF;
+		return (-1);
 	case PMCLOG_TYPE_DROPNOTIFY:
 		/* nothing to do */
 		break;

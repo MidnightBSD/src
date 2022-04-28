@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/bwi/if_bwivar.h,v 1.14 2008/02/15 11:15:38 sephe Exp $
- * $FreeBSD: release/10.0.0/sys/dev/bwi/if_bwivar.h 206358 2010-04-07 15:29:13Z rpaulo $
+ * $FreeBSD$
  */
 
 #ifndef _IF_BWIVAR_H
@@ -511,7 +511,7 @@ struct bwi_tx_radiotap_hdr {
 	uint8_t		wt_rate;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-};
+} __packed;
 
 #define BWI_RX_RADIOTAP_PRESENT				\
 	((1 << IEEE80211_RADIOTAP_TSFT) |		\
@@ -531,7 +531,7 @@ struct bwi_rx_radiotap_hdr {
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
 	/* TODO: sq */
-};
+} __packed __aligned(8);
 
 struct bwi_vap {
 	struct ieee80211vap	bv_vap;
@@ -541,10 +541,11 @@ struct bwi_vap {
 #define	BWI_VAP(vap)	((struct bwi_vap *)(vap))
 
 struct bwi_softc {
-	struct ifnet		*sc_ifp;
 	uint32_t		sc_flags;	/* BWI_F_ */
 	device_t		sc_dev;
 	struct mtx		sc_mtx;
+	struct ieee80211com	sc_ic;
+	struct mbufq		sc_snd;
 	int			sc_invalid;
 
 	uint32_t		sc_cap;		/* BWI_CAP_ */
@@ -647,6 +648,7 @@ struct bwi_softc {
 #define BWI_F_BUS_INITED	0x1
 #define BWI_F_PROMISC		0x2
 #define BWI_F_STOP		0x4
+#define	BWI_F_RUNNING		0x8
 
 #define BWI_DBG_MAC		0x00000001
 #define BWI_DBG_RF		0x00000002

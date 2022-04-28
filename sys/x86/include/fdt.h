@@ -23,29 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/x86/include/fdt.h 250840 2013-05-21 03:05:49Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FDT_H_
 #define _MACHINE_FDT_H_
-
-#include <machine/intr_machdep.h>
-#include <x86/bus.h>
-
-/* Max interrupt number. */
-#define FDT_INTR_MAX	NUM_IO_INTS
-
-/* Map phandle/intpin pair to global IRQ number */
-#define	FDT_MAP_IRQ(node, pin)	\
-	    (panic("%s: FDT_MAP_IRQ(%#x, %#x)", __func__, node, pin), -1)
-
-/* Bus space tag. XXX we only support I/O port space this way. */
-#define fdtbus_bs_tag	X86_BUS_SPACE_IO
-
-struct mem_region {
-	vm_offset_t	mr_start;
-	vm_size_t	mr_size;
-};
 
 __BEGIN_DECLS
 int x86_init_fdt(void);

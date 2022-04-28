@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptnr/hptnr_config.c 252867 2013-07-06 07:49:41Z delphij $
+ * $FreeBSD$
  */
 
 #include <dev/hptnr/hptnr_config.h>
@@ -46,7 +46,7 @@ int init_config(void)
 
 const char driver_name[] = "hptnr";
 const char driver_name_long[] = "R750/DC7280 controller driver";
-const char driver_ver[] = "v1.0";
+const char driver_ver[] = "v1.1.5";
 int  osm_max_targets = 0xff;
 
 

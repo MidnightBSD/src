@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/uart_dev_at91usart.c 259748 2013-12-22 22:31:39Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,6 +40,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/uart_dev_at91usart.c 259748 2013
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_cpu.h>
+#ifdef FDT
+#include <dev/uart/uart_cpu_fdt.h>
+#endif
 #include <dev/uart/uart_bus.h>
 #include <arm/at91/at91_usartreg.h>
 #include <arm/at91/at91_pdcreg.h>
@@ -72,7 +75,6 @@ struct at91_usart_softc {
 	uint32_t flags;
 #define	HAS_TIMEOUT		0x1
 #define	USE_RTS0_WORKAROUND	0x2
-#define	NEEDS_RXRDY		0x4
 	bus_dma_tag_t rx_tag;
 	struct at91_usart_rx ping_pong[2];
 	struct at91_usart_rx *ping;
@@ -229,6 +231,27 @@ static struct uart_ops at91_usart_ops = {
 	.getc = at91_usart_getc,
 };
 
+#ifdef EARLY_PRINTF
+/*
+ * Early printf support. This assumes that we have the SoC "system" devices
+ * mapped into AT91_BASE. To use this before we adjust the boostrap tables,
+ * you'll need to define SOCDEV_VA to be 0xdc000000 and SOCDEV_PA to be
+ * 0xfc000000 in your config file where you define EARLY_PRINTF
+ */
+volatile uint32_t *at91_dbgu = (volatile uint32_t *)(AT91_BASE + AT91_DBGU0);
+
+static void
+eputc(int c)
+{
+
+	while (!(at91_dbgu[USART_CSR / 4] & USART_CSR_TXRDY))
+		continue;
+	at91_dbgu[USART_THR / 4] = c;
+}
+
+early_putc_t * early_putc = eputc;
+#endif
+
 static int
 at91_usart_probe(struct uart_bas *bas)
 {
@@ -244,6 +267,22 @@ static void
 at91_usart_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
+
+#ifdef EARLY_PRINTF
+	if (early_putc != NULL) {
+		printf("Early printf yielding control to the real console.\n");
+		early_putc = NULL;
+	}
+#endif
+
+	/*
+	 * This routine is called multiple times, sometimes right after writing
+	 * some output, and the last byte is still shifting out.  If that's the
+	 * case delay briefly before resetting, but don't loop on TXRDY because
+	 * we don't want to hang here forever if the hardware is in a bad state.
+	 */
+	if (!(RD4(bas, USART_CSR) & USART_CSR_TXRDY))
+		DELAY(10000);
 
 	at91_usart_param(bas, baudrate, databits, stopbits, parity);
 
@@ -316,6 +355,8 @@ static int at91_usart_bus_param(struct uart_softc *, int, int, int, int);
 static int at91_usart_bus_receive(struct uart_softc *);
 static int at91_usart_bus_setsig(struct uart_softc *, int);
 static int at91_usart_bus_transmit(struct uart_softc *);
+static void at91_usart_bus_grab(struct uart_softc *);
+static void at91_usart_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t at91_usart_methods[] = {
 	KOBJMETHOD(uart_probe,		at91_usart_bus_probe),
@@ -328,6 +369,8 @@ static kobj_method_t at91_usart_methods[] = {
 	KOBJMETHOD(uart_receive,	at91_usart_bus_receive),
 	KOBJMETHOD(uart_setsig,		at91_usart_bus_setsig),
 	KOBJMETHOD(uart_transmit,	at91_usart_bus_transmit),
+	KOBJMETHOD(uart_grab,		at91_usart_bus_grab),
+	KOBJMETHOD(uart_ungrab,		at91_usart_bus_ungrab),
 
 	KOBJMETHOD_END
 };
@@ -396,7 +439,6 @@ at91_usart_bus_attach(struct uart_softc *sc)
 {
 	int err;
 	int i;
-	uint32_t cr;
 	struct at91_usart_softc *atsc;
 
 	atsc = (struct at91_usart_softc *)sc;
@@ -465,8 +507,8 @@ at91_usart_bus_attach(struct uart_softc *sc)
 	}
 
 	/* Turn on rx and tx */
-	cr = USART_CR_RSTSTA | USART_CR_RSTRX | USART_CR_RSTTX;
-	WR4(&sc->sc_bas, USART_CR, cr);
+	DELAY(1000);		/* Give pending character a chance to drain.  */
+	WR4(&sc->sc_bas, USART_CR, USART_CR_RSTSTA | USART_CR_RSTRX | USART_CR_RSTTX);
 	WR4(&sc->sc_bas, USART_CR, USART_CR_RXEN | USART_CR_TXEN);
 
 	/*
@@ -491,13 +533,7 @@ at91_usart_bus_attach(struct uart_softc *sc)
 		WR4(&sc->sc_bas, USART_IER, USART_CSR_TIMEOUT |
 		    USART_CSR_RXBUFF | USART_CSR_ENDRX);
 	} else {
-		/*
-		 * Defer turning on the RXRDY bit until we're opened. This is to make the
-		 * mountroot prompt work before we've opened the console. This is a workaround
-		 * for not being able to change the UART interface for the 10.0 release.
-		 */
-		atsc->flags |= NEEDS_RXRDY;
-		/* WR4(&sc->sc_bas, USART_IER, USART_CSR_RXRDY); */
+		WR4(&sc->sc_bas, USART_IER, USART_CSR_RXRDY);
 	}
 	WR4(&sc->sc_bas, USART_IER, USART_CSR_RXBRK | USART_DCE_CHANGE_BITS);
 
@@ -619,12 +655,6 @@ at91_usart_bus_ipend(struct uart_softc *sc)
 	uart_lock(sc->sc_hwmtx);
 	csr = RD4(&sc->sc_bas, USART_CSR);
 
-	/* Kludge -- Enable the RXRDY we deferred in attach */
-	if (sc->sc_opened && (atsc->flags & NEEDS_RXRDY)) {
-		WR4(&sc->sc_bas, USART_IER, USART_CSR_RXRDY);
-		atsc->flags &= ~NEEDS_RXRDY;
-	}
-	
 	if (csr & USART_CSR_OVRE) {
 		WR4(&sc->sc_bas, USART_CR, USART_CR_RSTSTA);
 		ipend |= SER_INT_OVERRUN;
@@ -812,6 +842,25 @@ at91_usart_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 	return (EINVAL);
 }
 
+
+static void
+at91_usart_bus_grab(struct uart_softc *sc)
+{
+
+	uart_lock(sc->sc_hwmtx);
+	WR4(&sc->sc_bas, USART_IDR, USART_CSR_RXRDY);
+	uart_unlock(sc->sc_hwmtx);
+}
+
+static void
+at91_usart_bus_ungrab(struct uart_softc *sc)
+{
+
+	uart_lock(sc->sc_hwmtx);
+	WR4(&sc->sc_bas, USART_IER, USART_CSR_RXRDY);
+	uart_unlock(sc->sc_hwmtx);
+}
+
 struct uart_class at91_usart_class = {
 	"at91_usart",
 	at91_usart_methods,
@@ -819,3 +868,12 @@ struct uart_class at91_usart_class = {
 	.uc_ops = &at91_usart_ops,
 	.uc_range = 8
 };
+
+#ifdef FDT
+static struct ofw_compat_data compat_data[] = {
+	{"atmel,at91rm9200-usart",(uintptr_t)&at91_usart_class},
+	{"atmel,at91sam9260-usart",(uintptr_t)&at91_usart_class},
+	{NULL,			(uintptr_t)NULL},
+};
+UART_FDT_CLASS_AND_DEVICE(compat_data);
+#endif

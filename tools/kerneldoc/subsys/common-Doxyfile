@@ -1,6 +1,6 @@
 # Doxyfile 1.5.2
 
-# $FreeBSD: release/10.0.0/tools/kerneldoc/subsys/common-Doxyfile 240518 2012-09-14 21:28:56Z eadler $
+# $FreeBSD$
 
 #---------------------------------------------------------------------------
 # Project related configuration options

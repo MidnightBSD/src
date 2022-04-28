@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/bm/Makefile 179645 2008-06-07 22:58:32Z marcel $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/bm
+.PATH: ${SRCTOP}/sys/dev/bm
 
 KMOD=	if_bm
 SRCS=	if_bm.c

@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/cron/cron/do_command.c 228990 2011-12-30 10:58:14Z uqs $";
+  "$FreeBSD$";
 #endif
 
 
@@ -38,28 +38,29 @@ static const char rcsid[] =
 #endif
 
 
-static void		child_process(entry *, user *),
-			do_univ(user *);
+static void		child_process(entry *, user *);
 
+static WAIT_T		wait_on_child(PID_T, const char *);
 
 void
 do_command(e, u)
 	entry	*e;
 	user	*u;
 {
+	pid_t pid;
+
 	Debug(DPROC, ("[%d] do_command(%s, (%s,%d,%d))\n",
 		getpid(), e->cmd, u->name, e->uid, e->gid))
 
 	/* fork to become asynchronous -- parent process is done immediately,
 	 * and continues to run the normal cron code, which means return to
 	 * tick().  the child and grandchild don't leave this function, alive.
-	 *
-	 * vfork() is unsuitable, since we have much to do, and the parent
-	 * needs to be able to run off and fork other processes.
 	 */
-	switch (fork()) {
+	switch ((pid = fork())) {
 	case -1:
 		log_it("CRON",getpid(),"error","can't fork");
+		if (e->flags & INTERVAL)
+			e->lastexit = time(NULL);
 		break;
 	case 0:
 		/* child process */
@@ -70,6 +71,12 @@ do_command(e, u)
 		break;
 	default:
 		/* parent process */
+		Debug(DPROC, ("[%d] main process forked child #%d, "
+		    "returning to work\n", getpid(), pid))
+		if (e->flags & INTERVAL) {
+			e->lastexit = 0;
+			e->child = pid;
+		}
 		break;
 	}
 	Debug(DPROC, ("[%d] main process returning to work\n", getpid()))
@@ -83,8 +90,11 @@ child_process(e, u)
 {
 	int		stdin_pipe[2], stdout_pipe[2];
 	register char	*input_data;
-	char		*usernm, *mailto;
-	int		children = 0;
+	char		*usernm, *mailto, *mailfrom;
+	PID_T		jobpid, stdinjob, mailpid;
+	register FILE	*mail;
+	register int	bytes = 1;
+	int		status = 0;
 # if defined(LOGIN_CAP)
 	struct passwd	*pwd;
 	login_cap_t *lc;
@@ -101,6 +111,7 @@ child_process(e, u)
 	 */
 	usernm = env_get("LOGNAME", e->envp);
 	mailto = env_get("MAILTO", e->envp);
+	mailfrom = env_get("MAILFROM", e->envp);
 
 #ifdef PAM
 	/* use PAM to see if the user's account is available,
@@ -161,8 +172,10 @@ child_process(e, u)
 
 	/* create some pipes to talk to our future child
 	 */
-	pipe(stdin_pipe);	/* child's stdin */
-	pipe(stdout_pipe);	/* child's stdout */
+	if (pipe(stdin_pipe) != 0 || pipe(stdout_pipe) != 0) {
+		log_it("CRON", getpid(), "error", "can't pipe");
+		exit(ERROR_EXIT);
+	}
 
 	/* since we are a forked process, we can diddle the command string
 	 * we were passed -- nobody else is going to use it again, right?
@@ -203,13 +216,13 @@ child_process(e, u)
 
 	/* fork again, this time so we can exec the user's command.
 	 */
-	switch (vfork()) {
+	switch (jobpid = fork()) {
 	case -1:
-		log_it("CRON",getpid(),"error","can't vfork");
+		log_it("CRON",getpid(),"error","can't fork");
 		exit(ERROR_EXIT);
 		/*NOTREACHED*/
 	case 0:
-		Debug(DPROC, ("[%d] grandchild process Vfork()'ed\n",
+		Debug(DPROC, ("[%d] grandchild process fork()'ed\n",
 			      getpid()))
 
 		if (e->uid == ROOT_UID)
@@ -224,7 +237,7 @@ child_process(e, u)
 		 * the actual user command shell was going to get and the
 		 * PID is part of the log message.
 		 */
-		/*local*/{
+		if ((e->flags & DONT_LOG) == 0) {
 			char *x = mkprints((u_char *)e->cmd, strlen(e->cmd));
 
 			log_it(usernm, getpid(), "CMD", x);
@@ -262,12 +275,6 @@ child_process(e, u)
 		close(stdin_pipe[READ_PIPE]);
 		close(stdout_pipe[WRITE_PIPE]);
 
-		/* set our login universe.  Do this in the grandchild
-		 * so that the child can invoke /usr/lib/sendmail
-		 * without surprises.
-		 */
-		do_univ(u);
-
 # if defined(LOGIN_CAP)
 		/* Set user's entire context, but skip the environment
 		 * as cron provides a separate interface for this
@@ -294,24 +301,24 @@ child_process(e, u)
 			if (setgid(e->gid) != 0) {
 				log_it(usernm, getpid(),
 				    "error", "setgid failed");
-				exit(ERROR_EXIT);
+				_exit(ERROR_EXIT);
 			}
 # if defined(BSD)
 			if (initgroups(usernm, e->gid) != 0) {
 				log_it(usernm, getpid(),
 				    "error", "initgroups failed");
-				exit(ERROR_EXIT);
+				_exit(ERROR_EXIT);
 			}
 # endif
 			if (setlogin(usernm) != 0) {
 				log_it(usernm, getpid(),
 				    "error", "setlogin failed");
-				exit(ERROR_EXIT);
+				_exit(ERROR_EXIT);
 			}
 			if (setuid(e->uid) != 0) {
 				log_it(usernm, getpid(),
 				    "error", "setuid failed");
-				exit(ERROR_EXIT);
+				_exit(ERROR_EXIT);
 			}
 			/* we aren't root after this..*/
 #if defined(LOGIN_CAP)
@@ -335,8 +342,9 @@ child_process(e, u)
 				_exit(OK_EXIT);
 			}
 # endif /*DEBUGGING*/
-			execle(shell, shell, "-c", e->cmd, (char *)0, e->envp);
-			warn("execl: couldn't exec `%s'", shell);
+			execle(shell, shell, "-c", e->cmd, (char *)NULL,
+			    e->envp);
+			warn("execle: couldn't exec `%s'", shell);
 			_exit(ERROR_EXIT);
 		}
 		break;
@@ -344,8 +352,6 @@ child_process(e, u)
 		/* parent process */
 		break;
 	}
-
-	children++;
 
 	/* middle process, child of original cron, parent of process running
 	 * the user's command.
@@ -370,7 +376,7 @@ child_process(e, u)
 	 * we would block here.  thus we must fork again.
 	 */
 
-	if (*input_data && fork() == 0) {
+	if (*input_data && (stdinjob = fork()) == 0) {
 		register FILE	*out = fdopen(stdin_pipe[WRITE_PIPE], "w");
 		register int	need_newline = FALSE;
 		register int	escaped = FALSE;
@@ -426,8 +432,6 @@ child_process(e, u)
 	 */
 	close(stdin_pipe[WRITE_PIPE]);
 
-	children++;
-
 	/*
 	 * read output from the grandchild.  it's stderr has been redirected to
 	 * it's stdout, which has been redirected to our pipe.  if there is any
@@ -446,12 +450,10 @@ child_process(e, u)
 			_exit(ERROR_EXIT);
 		}
 
+		mail = NULL;
+
 		ch = getc(in);
 		if (ch != EOF) {
-			register FILE	*mail;
-			register int	bytes = 1;
-			int		status = 0;
-
 			Debug(DPROC|DEXT,
 				("[%d] got data (%x:%c) from grandchild\n",
 					getpid(), ch, ch))
@@ -481,14 +483,21 @@ child_process(e, u)
 				auto char	mailcmd[MAX_COMMAND];
 				auto char	hostname[MAXHOSTNAMELEN];
 
-				(void) gethostname(hostname, MAXHOSTNAMELEN);
+				if (gethostname(hostname, MAXHOSTNAMELEN) == -1)
+					hostname[0] = '\0';
+				hostname[sizeof(hostname) - 1] = '\0';
 				(void) snprintf(mailcmd, sizeof(mailcmd),
 					       MAILARGS, MAILCMD);
-				if (!(mail = cron_popen(mailcmd, "w", e))) {
+				if (!(mail = cron_popen(mailcmd, "w", e, &mailpid))) {
 					warn("%s", MAILCMD);
 					(void) _exit(ERROR_EXIT);
 				}
-				fprintf(mail, "From: %s (Cron Daemon)\n", usernm);
+				if (mailfrom == NULL || *mailfrom == '\0')
+					fprintf(mail, "From: Cron Daemon <%s@%s>\n",
+					    usernm, hostname);
+				else
+					fprintf(mail, "From: Cron Daemon <%s>\n",
+					    mailfrom);
 				fprintf(mail, "To: %s\n", mailto);
 				fprintf(mail, "Subject: Cron <%s@%s> %s\n",
 					usernm, first_word(hostname, "."),
@@ -514,31 +523,59 @@ child_process(e, u)
 
 			while (EOF != (ch = getc(in))) {
 				bytes++;
-				if (mailto)
+				if (mail)
 					putc(ch, mail);
 			}
+		}
+		/*if data from grandchild*/
 
-			/* only close pipe if we opened it -- i.e., we're
-			 * mailing...
+		Debug(DPROC, ("[%d] got EOF from grandchild\n", getpid()))
+
+		/* also closes stdout_pipe[READ_PIPE] */
+		fclose(in);
+	}
+
+	/* wait for children to die.
+	 */
+	if (jobpid > 0) {
+		WAIT_T	waiter;
+
+		waiter = wait_on_child(jobpid, "grandchild command job");
+
+		/* If everything went well, and -n was set, _and_ we have mail,
+		 * we won't be mailing... so shoot the messenger!
+		 */
+		if (WIFEXITED(waiter) && WEXITSTATUS(waiter) == 0
+		    && (e->flags & MAIL_WHEN_ERR) == MAIL_WHEN_ERR
+		    && mail) {
+			Debug(DPROC, ("[%d] %s executed successfully, mail suppressed\n",
+				getpid(), "grandchild command job"))
+			kill(mailpid, SIGKILL);
+			(void)fclose(mail);
+			mail = NULL;
+		}
+
+
+		/* only close pipe if we opened it -- i.e., we're
+		 * mailing...
+		 */
+
+		if (mail) {
+			Debug(DPROC, ("[%d] closing pipe to mail\n",
+				getpid()))
+			/* Note: the pclose will probably see
+			 * the termination of the grandchild
+			 * in addition to the mail process, since
+			 * it (the grandchild) is likely to exit
+			 * after closing its stdout.
 			 */
-
-			if (mailto) {
-				Debug(DPROC, ("[%d] closing pipe to mail\n",
-					getpid()))
-				/* Note: the pclose will probably see
-				 * the termination of the grandchild
-				 * in addition to the mail process, since
-				 * it (the grandchild) is likely to exit
-				 * after closing its stdout.
-				 */
-				status = cron_pclose(mail);
-			}
+			status = cron_pclose(mail);
 
 			/* if there was output and we could not mail it,
 			 * log the facts so the poor user can figure out
 			 * what's going on.
 			 */
-			if (mailto && status) {
+			if (status) {
 				char buf[MAX_TEMPSTR];
 
 				snprintf(buf, sizeof(buf),
@@ -547,71 +584,36 @@ child_process(e, u)
 					status);
 				log_it(usernm, getpid(), "MAIL", buf);
 			}
-
-		} /*if data from grandchild*/
-
-		Debug(DPROC, ("[%d] got EOF from grandchild\n", getpid()))
-
-		fclose(in);	/* also closes stdout_pipe[READ_PIPE] */
-	}
-
-	/* wait for children to die.
-	 */
-	for (;  children > 0;  children--)
-	{
-		WAIT_T		waiter;
-		PID_T		pid;
-
-		Debug(DPROC, ("[%d] waiting for grandchild #%d to finish\n",
-			getpid(), children))
-		pid = wait(&waiter);
-		if (pid < OK) {
-			Debug(DPROC, ("[%d] no more grandchildren--mail written?\n",
-				getpid()))
-			break;
 		}
-		Debug(DPROC, ("[%d] grandchild #%d finished, status=%04x",
-			getpid(), pid, WEXITSTATUS(waiter)))
-		if (WIFSIGNALED(waiter) && WCOREDUMP(waiter))
-			Debug(DPROC, (", dumped core"))
-		Debug(DPROC, ("\n"))
 	}
+
+	if (*input_data && stdinjob > 0)
+		wait_on_child(stdinjob, "grandchild stdinjob");
 }
 
+static WAIT_T
+wait_on_child(PID_T childpid, const char *name) {
+	WAIT_T	waiter;
+	PID_T	pid;
 
-static void
-do_univ(u)
-	user	*u;
-{
-#if defined(sequent)
-/* Dynix (Sequent) hack to put the user associated with
- * the passed user structure into the ATT universe if
- * necessary.  We have to dig the gecos info out of
- * the user's password entry to see if the magic
- * "universe(att)" string is present.
- */
+	Debug(DPROC, ("[%d] waiting for %s (%d) to finish\n",
+		getpid(), name, childpid))
 
-	struct	passwd	*p;
-	char	*s;
-	int	i;
-
-	p = getpwuid(u->uid);
-	(void) endpwent();
-
-	if (p == NULL)
-		return;
-
-	s = p->pw_gecos;
-
-	for (i = 0; i < 4; i++)
-	{
-		if ((s = strchr(s, ',')) == NULL)
-			return;
-		s++;
-	}
-	if (strcmp(s, "universe(att)"))
-		return;
-
-	(void) universe(U_ATT);
+#ifdef POSIX
+	while ((pid = waitpid(childpid, &waiter, 0)) < 0 && errno == EINTR)
+#else
+	while ((pid = wait4(childpid, &waiter, 0, NULL)) < 0 && errno == EINTR)
 #endif
+		;
+
+	if (pid < OK)
+		return waiter;
+
+	Debug(DPROC, ("[%d] %s (%d) finished, status=%04x",
+		getpid(), name, pid, WEXITSTATUS(waiter)))
+	if (WIFSIGNALED(waiter) && WCOREDUMP(waiter))
+		Debug(DPROC, (", dumped core"))
+	Debug(DPROC, ("\n"))
+
+	return waiter;
 }

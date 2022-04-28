@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/sys/modules/isp/Makefile 178762 2008-05-04 14:59:25Z marius $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/isp
+.PATH: ${SRCTOP}/sys/dev/isp
 
 KMOD=	isp
 SRCS=	bus_if.h device_if.h pci_if.h \
-	opt_cam.h opt_ddb.h opt_isp.h \
+	opt_cam.h opt_compat.h opt_ddb.h opt_isp.h \
 	isp.c isp_library.c isp_target.c isp_freebsd.c isp_pci.c
 
 .if ${MACHINE} == sparc64

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/parseconfig.sh 247705 2013-03-03 09:47:47Z jpaetzel $
+# $FreeBSD$
 
 # Main install configuration parsing script
 #

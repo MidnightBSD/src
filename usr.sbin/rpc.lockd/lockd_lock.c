@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rpc.lockd/lockd_lock.c 240350 2012-09-11 07:35:24Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #define LOCKD_DEBUG
 
@@ -1426,6 +1426,7 @@ lock_partialfilelock(struct file_lock *fl)
 		break;
 	case NFS_RESERR:
 		retval = PFL_NFSRESERR;
+		break;
 	default:
 		debuglog("Unmatched lnlstatus %d\n");
 		retval = PFL_NFSDENIED_NOLOCK;
@@ -1600,6 +1601,7 @@ unlock_partialfilelock(const struct file_lock *fl)
 				 */
 
 				deallocate_file_lock(releasedfl);
+				releasedfl = NULL;
 			}
 		}
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/raid/g_raid.c 254275 2013-08-13 07:56:40Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,50 +53,35 @@ static MALLOC_DEFINE(M_RAID, "raid_data", "GEOM_RAID Data");
 SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, raid, CTLFLAG_RW, 0, "GEOM_RAID stuff");
 int g_raid_enable = 1;
-TUNABLE_INT("kern.geom.raid.enable", &g_raid_enable);
-SYSCTL_INT(_kern_geom_raid, OID_AUTO, enable, CTLFLAG_RW,
+SYSCTL_INT(_kern_geom_raid, OID_AUTO, enable, CTLFLAG_RWTUN,
     &g_raid_enable, 0, "Enable on-disk metadata taste");
 u_int g_raid_aggressive_spare = 0;
-TUNABLE_INT("kern.geom.raid.aggressive_spare", &g_raid_aggressive_spare);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, aggressive_spare, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, aggressive_spare, CTLFLAG_RWTUN,
     &g_raid_aggressive_spare, 0, "Use disks without metadata as spare");
 u_int g_raid_debug = 0;
-TUNABLE_INT("kern.geom.raid.debug", &g_raid_debug);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, debug, CTLFLAG_RW, &g_raid_debug, 0,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, debug, CTLFLAG_RWTUN, &g_raid_debug, 0,
     "Debug level");
 int g_raid_read_err_thresh = 10;
-TUNABLE_INT("kern.geom.raid.read_err_thresh", &g_raid_read_err_thresh);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, read_err_thresh, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, read_err_thresh, CTLFLAG_RWTUN,
     &g_raid_read_err_thresh, 0,
     "Number of read errors equated to disk failure");
 u_int g_raid_start_timeout = 30;
-TUNABLE_INT("kern.geom.raid.start_timeout", &g_raid_start_timeout);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, start_timeout, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, start_timeout, CTLFLAG_RWTUN,
     &g_raid_start_timeout, 0,
     "Time to wait for all array components");
 static u_int g_raid_clean_time = 5;
-TUNABLE_INT("kern.geom.raid.clean_time", &g_raid_clean_time);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, clean_time, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, clean_time, CTLFLAG_RWTUN,
     &g_raid_clean_time, 0, "Mark volume as clean when idling");
 static u_int g_raid_disconnect_on_failure = 1;
-TUNABLE_INT("kern.geom.raid.disconnect_on_failure",
-    &g_raid_disconnect_on_failure);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, disconnect_on_failure, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, disconnect_on_failure, CTLFLAG_RWTUN,
     &g_raid_disconnect_on_failure, 0, "Disconnect component on I/O failure.");
 static u_int g_raid_name_format = 0;
-TUNABLE_INT("kern.geom.raid.name_format", &g_raid_name_format);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, name_format, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, name_format, CTLFLAG_RWTUN,
     &g_raid_name_format, 0, "Providers name format.");
 static u_int g_raid_idle_threshold = 1000000;
-TUNABLE_INT("kern.geom.raid.idle_threshold", &g_raid_idle_threshold);
-SYSCTL_UINT(_kern_geom_raid, OID_AUTO, idle_threshold, CTLFLAG_RW,
+SYSCTL_UINT(_kern_geom_raid, OID_AUTO, idle_threshold, CTLFLAG_RWTUN,
     &g_raid_idle_threshold, 1000000,
     "Time in microseconds to consider a volume idle.");
-static u_int ar_legacy_aliases = 1;
-SYSCTL_INT(_kern_geom_raid, OID_AUTO, legacy_aliases, CTLFLAG_RW,
-           &ar_legacy_aliases, 0, "Create aliases named as the legacy ataraid style.");
-TUNABLE_INT("kern.geom_raid.legacy_aliases", &ar_legacy_aliases);
-
 
 #define	MSLEEP(rv, ident, mtx, priority, wmesg, timeout)	do {	\
 	G_RAID_DEBUG(4, "%s: Sleeping %p.", __func__, (ident));		\
@@ -792,6 +777,7 @@ g_raid_open_consumer(struct g_raid_softc *sc, const char *name)
 	if (pp == NULL)
 		return (NULL);
 	cp = g_new_consumer(sc->sc_geom);
+	cp->flags |= G_CF_DIRECT_RECEIVE;
 	if (g_attach(cp, pp) != 0) {
 		g_destroy_consumer(cp);
 		return (NULL);
@@ -993,20 +979,15 @@ g_raid_tr_flush_common(struct g_raid_tr_object *tr, struct bio *bp)
 		cbp->bio_caller1 = sd;
 		bioq_insert_tail(&queue, cbp);
 	}
-	for (cbp = bioq_first(&queue); cbp != NULL;
-	    cbp = bioq_first(&queue)) {
-		bioq_remove(&queue, cbp);
+	while ((cbp = bioq_takefirst(&queue)) != NULL) {
 		sd = cbp->bio_caller1;
 		cbp->bio_caller1 = NULL;
 		g_raid_subdisk_iostart(sd, cbp);
 	}
 	return;
 failure:
-	for (cbp = bioq_first(&queue); cbp != NULL;
-	    cbp = bioq_first(&queue)) {
-		bioq_remove(&queue, cbp);
+	while ((cbp = bioq_takefirst(&queue)) != NULL)
 		g_destroy_bio(cbp);
-	}
 	if (bp->bio_error == 0)
 		bp->bio_error = ENOMEM;
 	g_raid_iodone(bp, bp->bio_error);
@@ -1030,7 +1011,7 @@ g_raid_tr_kerneldump_common(struct g_raid_tr_object *tr,
 	vol = tr->tro_volume;
 	sc = vol->v_softc;
 
-	bzero(&bp, sizeof(bp));
+	g_reset_bio(&bp);
 	bp.bio_cmd = BIO_WRITE;
 	bp.bio_done = g_raid_tr_kerneldump_common_done;
 	bp.bio_attribute = NULL;
@@ -1147,7 +1128,7 @@ g_raid_start(struct bio *bp)
 		return;
 	}
 	mtx_lock(&sc->sc_queue_mtx);
-	bioq_disksort(&sc->sc_queue, bp);
+	bioq_insert_tail(&sc->sc_queue, bp);
 	mtx_unlock(&sc->sc_queue_mtx);
 	if (!dumping) {
 		G_RAID_DEBUG1(4, sc, "Waking up %p.", sc);
@@ -1359,7 +1340,7 @@ g_raid_unlock_range(struct g_raid_volume *vol, off_t off, off_t len)
 			    (intmax_t)(lp->l_offset+lp->l_length));
 			mtx_lock(&sc->sc_queue_mtx);
 			while ((bp = bioq_takefirst(&vol->v_locked)) != NULL)
-				bioq_disksort(&sc->sc_queue, bp);
+				bioq_insert_tail(&sc->sc_queue, bp);
 			mtx_unlock(&sc->sc_queue_mtx);
 			free(lp, M_RAID);
 			return (0);
@@ -1453,7 +1434,7 @@ g_raid_disk_done(struct bio *bp)
 	sd = bp->bio_caller1;
 	sc = sd->sd_softc;
 	mtx_lock(&sc->sc_queue_mtx);
-	bioq_disksort(&sc->sc_queue, bp);
+	bioq_insert_tail(&sc->sc_queue, bp);
 	mtx_unlock(&sc->sc_queue_mtx);
 	if (!dumping)
 		wakeup(sc);
@@ -1639,11 +1620,12 @@ static void
 g_raid_launch_provider(struct g_raid_volume *vol)
 {
 	struct g_raid_disk *disk;
+	struct g_raid_subdisk *sd;
 	struct g_raid_softc *sc;
 	struct g_provider *pp;
 	char name[G_RAID_MAX_VOLUMENAME];
-	char   announce_buf[80], buf1[32];
 	off_t off;
+	int i;
 
 	sc = vol->v_softc;
 	sx_assert(&sc->sc_lock, SX_LOCKED);
@@ -1657,22 +1639,19 @@ g_raid_launch_provider(struct g_raid_volume *vol)
 		snprintf(name, sizeof(name), "raid/r%d", vol->v_global_id);
 	}
 
-	/*
-	 * Create a /dev/ar%d that the old ataraid(4) stack once
-	 * created as an alias for /dev/raid/r%d if requested.
-	 * This helps going from stable/7 ataraid devices to newer
-	 * FreeBSD releases. sbruno 07 MAY 2013
-	 */
-
-        if (ar_legacy_aliases) {
-		snprintf(announce_buf, sizeof(announce_buf),
-                        "kern.devalias.%s", name);
-                snprintf(buf1, sizeof(buf1),
-                        "ar%d", vol->v_global_id);
-                setenv(announce_buf, buf1);
-        }
-
 	pp = g_new_providerf(sc->sc_geom, "%s", name);
+	pp->flags |= G_PF_DIRECT_RECEIVE;
+	if (vol->v_tr->tro_class->trc_accept_unmapped) {
+		pp->flags |= G_PF_ACCEPT_UNMAPPED;
+		for (i = 0; i < vol->v_disks_count; i++) {
+			sd = &vol->v_subdisks[i];
+			if (sd->sd_state == G_RAID_SUBDISK_S_NONE)
+				continue;
+			if ((sd->sd_disk->d_consumer->provider->flags &
+			    G_PF_ACCEPT_UNMAPPED) == 0)
+				pp->flags &= ~G_PF_ACCEPT_UNMAPPED;
+		}
+	}
 	pp->private = vol;
 	pp->mediasize = vol->v_mediasize;
 	pp->sectorsize = vol->v_sectorsize;
@@ -2241,15 +2220,19 @@ g_raid_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		return (NULL);
 	G_RAID_DEBUG(2, "Tasting provider %s.", pp->name);
 
+	geom = NULL;
+	status = G_RAID_MD_TASTE_FAIL;
 	gp = g_new_geomf(mp, "raid:taste");
 	/*
 	 * This orphan function should be never called.
 	 */
 	gp->orphan = g_raid_taste_orphan;
 	cp = g_new_consumer(gp);
+	cp->flags |= G_CF_DIRECT_RECEIVE;
 	g_attach(cp, pp);
+	if (g_access(cp, 1, 0, 0) != 0)
+		goto ofail;
 
-	geom = NULL;
 	LIST_FOREACH(class, &g_raid_md_classes, mdc_list) {
 		if (!class->mdc_enable)
 			continue;
@@ -2265,6 +2248,9 @@ g_raid_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 			break;
 	}
 
+	if (status == G_RAID_MD_TASTE_FAIL)
+		(void)g_access(cp, -1, 0, 0);
+ofail:
 	g_detach(cp);
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
@@ -2476,7 +2462,6 @@ g_raid_shutdown_post_sync(void *arg, int howto)
 	struct g_raid_volume *vol;
 
 	mp = arg;
-	DROP_GIANT();
 	g_topology_lock();
 	g_raid_shutdown = 1;
 	LIST_FOREACH_SAFE(gp, &mp->geom, geom, gp2) {
@@ -2491,7 +2476,6 @@ g_raid_shutdown_post_sync(void *arg, int howto)
 		g_topology_lock();
 	}
 	g_topology_unlock();
-	PICKUP_GIANT();
 }
 
 static void

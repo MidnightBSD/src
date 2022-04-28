@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)qdivrem.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/quad/qdivrem.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Multiprecision divide.  This algorithm is from Knuth vol. 2 (2nd ed),
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/quad/qdivrem.c 165903 2007-01-09 00:
 
 #include "quad.h"
 
-#define	B	(1 << HALF_BITS)	/* digit base */
+#define	B	(1L << HALF_BITS)	/* digit base */
 
 /* Combine two `digits' to make a single two-digit number. */
 #define	COMBINE(a, b) (((u_long)(a) << HALF_BITS) | (b))

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/vmm/intel/vmx.h 256869 2013-10-22 00:58:51Z neel $
+ * $FreeBSD$
  */
 
 #ifndef _VMX_H_
@@ -33,12 +33,7 @@
 
 struct pmap;
 
-#define	GUEST_MSR_MAX_ENTRIES	64		/* arbitrary */
-
 struct vmxctx {
-	register_t	tmpstk[32];		/* vmx_return() stack */
-	register_t	tmpstktop;
-
 	register_t	guest_rdi;		/* Guest state */
 	register_t	guest_rsi;
 	register_t	guest_rdx;
@@ -55,6 +50,11 @@ struct vmxctx {
 	register_t	guest_r14;
 	register_t	guest_r15;
 	register_t	guest_cr2;
+	register_t	guest_dr0;
+	register_t	guest_dr1;
+	register_t	guest_dr2;
+	register_t	guest_dr3;
+	register_t	guest_dr6;
 
 	register_t	host_r15;		/* Host state */
 	register_t	host_r14;
@@ -63,21 +63,21 @@ struct vmxctx {
 	register_t	host_rbp;
 	register_t	host_rsp;
 	register_t	host_rbx;
-	register_t	host_rip;
-	/*
-	 * XXX todo debug registers and fpu state
-	 */
-	
-	int		launched;		/* vmcs launch state */
-	int		launch_error;
+	register_t	host_dr0;
+	register_t	host_dr1;
+	register_t	host_dr2;
+	register_t	host_dr3;
+	register_t	host_dr6;
+	register_t	host_dr7;
+	uint64_t	host_debugctl;
+	int		host_tf;
 
-	long		eptgen[MAXCPU];		/* cached pmap->pm_eptgen */
+	int		inst_fail_status;
 
 	/*
-	 * The 'eptp' and the 'pmap' do not change during the lifetime of
-	 * the VM so it is safe to keep a copy in each vcpu's vmxctx.
+	 * The pmap needs to be deactivated in vmx_enter_guest()
+	 * so keep a copy of the 'pmap' in each vmxctx.
 	 */
-	vm_paddr_t	eptp;
 	struct pmap	*pmap;
 };
 
@@ -88,46 +88,66 @@ struct vmxcap {
 };
 
 struct vmxstate {
+	uint64_t nextrip;	/* next instruction to be executed by guest */
 	int	lastcpu;	/* host cpu that this 'vcpu' last ran on */
 	uint16_t vpid;
+};
+
+struct apic_page {
+	uint32_t reg[PAGE_SIZE / 4];
+};
+CTASSERT(sizeof(struct apic_page) == PAGE_SIZE);
+
+/* Posted Interrupt Descriptor (described in section 29.6 of the Intel SDM) */
+struct pir_desc {
+	uint64_t	pir[4];
+	uint64_t	pending;
+	uint64_t	unused[3];
+} __aligned(64);
+CTASSERT(sizeof(struct pir_desc) == 64);
+
+/* Index into the 'guest_msrs[]' array */
+enum {
+	IDX_MSR_LSTAR,
+	IDX_MSR_CSTAR,
+	IDX_MSR_STAR,
+	IDX_MSR_SF_MASK,
+	IDX_MSR_KGSBASE,
+	IDX_MSR_PAT,
+	GUEST_MSR_NUM		/* must be the last enumeration */
 };
 
 /* virtual machine softc */
 struct vmx {
 	struct vmcs	vmcs[VM_MAXCPU];	/* one vmcs per virtual cpu */
+	struct apic_page apic_page[VM_MAXCPU];	/* one apic page per vcpu */
 	char		msr_bitmap[PAGE_SIZE];
-	struct msr_entry guest_msrs[VM_MAXCPU][GUEST_MSR_MAX_ENTRIES];
+	struct pir_desc	pir_desc[VM_MAXCPU];
+	uint64_t	guest_msrs[VM_MAXCPU][GUEST_MSR_NUM];
 	struct vmxctx	ctx[VM_MAXCPU];
 	struct vmxcap	cap[VM_MAXCPU];
 	struct vmxstate	state[VM_MAXCPU];
 	uint64_t	eptp;
 	struct vm	*vm;
+	long		eptgen[MAXCPU];		/* cached pmap->pm_eptgen */
 };
 CTASSERT((offsetof(struct vmx, vmcs) & PAGE_MASK) == 0);
 CTASSERT((offsetof(struct vmx, msr_bitmap) & PAGE_MASK) == 0);
-CTASSERT((offsetof(struct vmx, guest_msrs) & 15) == 0);
+CTASSERT((offsetof(struct vmx, pir_desc[0]) & 63) == 0);
 
-#define	VMX_RETURN_DIRECT	0
-#define	VMX_RETURN_LONGJMP	1
-#define	VMX_RETURN_VMRESUME	2
-#define	VMX_RETURN_VMLAUNCH	3
-#define	VMX_RETURN_AST		4
-#define	VMX_RETURN_INVEPT	5
-/*
- * vmx_setjmp() returns:
- * - 0 when it returns directly
- * - 1 when it returns from vmx_longjmp
- * - 2 when it returns from vmx_resume (which would only be in the error case)
- * - 3 when it returns from vmx_launch (which would only be in the error case)
- * - 4 when it returns from vmx_resume or vmx_launch because of AST pending
- * - 5 when it returns from vmx_launch/vmx_resume because of invept error
- */
-int	vmx_setjmp(struct vmxctx *ctx);
-void	vmx_longjmp(void);			/* returns via vmx_setjmp */
-void	vmx_launch(struct vmxctx *ctx) __dead2;	/* may return via vmx_setjmp */
-void	vmx_resume(struct vmxctx *ctx) __dead2;	/* may return via vmx_setjmp */
+#define	VMX_GUEST_VMEXIT	0
+#define	VMX_VMRESUME_ERROR	1
+#define	VMX_VMLAUNCH_ERROR	2
+#define	VMX_INVEPT_ERROR	3
+int	vmx_enter_guest(struct vmxctx *ctx, struct vmx *vmx, int launched);
+void	vmx_call_isr(uintptr_t entry);
 
 u_long	vmx_fix_cr0(u_long cr0);
 u_long	vmx_fix_cr4(u_long cr4);
+
+int	vmx_set_tsc_offset(struct vmx *vmx, int vcpu, uint64_t offset);
+
+extern char	vmx_exit_guest[];
+extern char	vmx_exit_guest_flush_rsb[];
 
 #endif

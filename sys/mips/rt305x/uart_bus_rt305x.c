@@ -35,7 +35,7 @@
 #include "opt_uart.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rt305x/uart_bus_rt305x.c 220297 2011-04-03 14:39:55Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,27 +75,19 @@ static driver_t uart_rt305x_driver = {
 	sizeof(struct uart_softc),
 };
 
-extern SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs;
-
 static int
 uart_rt305x_probe(device_t dev)
 {
 	struct uart_softc *sc;
 
 	sc = device_get_softc(dev);
-	sc->sc_sysdev = SLIST_FIRST(&uart_sysdevs);
 	sc->sc_class = &uart_rt305x_uart_class;
-	bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
-	sc->sc_sysdev->bas.regshft = 2;
-	sc->sc_sysdev->bas.bst = mips_bus_space_generic;
-	sc->sc_sysdev->bas.bsh = 
-	    MIPS_PHYS_TO_KSEG1(device_get_unit(dev)?UARTLITE_BASE:UART_BASE);
 	sc->sc_bas.regshft = 2;
 	sc->sc_bas.bst = mips_bus_space_generic;
 	sc->sc_bas.bsh = 
 	    MIPS_PHYS_TO_KSEG1(device_get_unit(dev)?UARTLITE_BASE:UART_BASE);
 
-	return (uart_bus_probe(dev, 2, SYSTEM_CLOCK, 0, 0));
+	return (uart_bus_probe(dev, 2, 0, SYSTEM_CLOCK, 0, 0, 0));
 }
 
 DRIVER_MODULE(uart, obio, uart_rt305x_driver, uart_devclass, 0, 0);

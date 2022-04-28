@@ -23,31 +23,36 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_endian.h 238856 2012-07-28 06:38:44Z mm $
+ * $FreeBSD$
  *
  * Borrowed from FreeBSD's <sys/endian.h>
  */
 
-#ifndef __LIBARCHIVE_BUILD
-#error This header is only to be used internally to libarchive.
-#endif
+#ifndef ARCHIVE_ENDIAN_H_INCLUDED
+#define ARCHIVE_ENDIAN_H_INCLUDED
 
 /* Note:  This is a purely internal header! */
 /* Do not use this outside of libarchive internal code! */
 
-#ifndef ARCHIVE_ENDIAN_H_INCLUDED
-#define ARCHIVE_ENDIAN_H_INCLUDED
-
+#ifndef __LIBARCHIVE_BUILD
+#error This header is only to be used internally to libarchive.
+#endif
 
 /*
  * Disabling inline keyword for compilers known to choke on it:
  * - Watcom C++ in C code.  (For any version?)
  * - SGI MIPSpro
  * - Microsoft Visual C++ 6.0 (supposedly newer versions too)
+ * - IBM VisualAge 6 (XL v6)
+ * - Sun WorkShop C (SunPro) before 5.9
  */
 #if defined(__WATCOMC__) || defined(__sgi) || defined(__hpux) || defined(__BORLANDC__)
 #define	inline
-#elif defined(_MSC_VER)
+#elif defined(__IBMC__) && __IBMC__ < 700
+#define	inline
+#elif defined(__SUNPRO_C) && __SUNPRO_C < 0x590
+#define inline
+#elif defined(_MSC_VER) || defined(__osf__)
 #define inline __inline
 #endif
 
@@ -58,7 +63,13 @@ archive_be16dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return ((p[0] << 8) | p[1]);
+	/* Store into unsigned temporaries before left shifting, to avoid
+	promotion to signed int and then left shifting into the sign bit,
+	which is undefined behaviour. */
+	unsigned int p1 = p[1];
+	unsigned int p0 = p[0];
+
+	return ((p0 << 8) | p1);
 }
 
 static inline uint32_t
@@ -66,7 +77,15 @@ archive_be32dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
+	/* Store into unsigned temporaries before left shifting, to avoid
+	promotion to signed int and then left shifting into the sign bit,
+	which is undefined behaviour. */
+	unsigned int p3 = p[3];
+	unsigned int p2 = p[2];
+	unsigned int p1 = p[1];
+	unsigned int p0 = p[0];
+
+	return ((p0 << 24) | (p1 << 16) | (p2 << 8) | p3);
 }
 
 static inline uint64_t
@@ -82,7 +101,13 @@ archive_le16dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return ((p[1] << 8) | p[0]);
+	/* Store into unsigned temporaries before left shifting, to avoid
+	promotion to signed int and then left shifting into the sign bit,
+	which is undefined behaviour. */
+	unsigned int p1 = p[1];
+	unsigned int p0 = p[0];
+
+	return ((p1 << 8) | p0);
 }
 
 static inline uint32_t
@@ -90,7 +115,15 @@ archive_le32dec(const void *pp)
 {
 	unsigned char const *p = (unsigned char const *)pp;
 
-	return ((p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0]);
+	/* Store into unsigned temporaries before left shifting, to avoid
+	promotion to signed int and then left shifting into the sign bit,
+	which is undefined behaviour. */
+	unsigned int p3 = p[3];
+	unsigned int p2 = p[2];
+	unsigned int p1 = p[1];
+	unsigned int p0 = p[0];
+
+	return ((p3 << 24) | (p2 << 16) | (p1 << 8) | p0);
 }
 
 static inline uint64_t

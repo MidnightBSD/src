@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/test-live.sh 214192 2010-10-22 00:11:55Z imp $
+# $FreeBSD$
 
 # Script which checks if we are running from install media, or real system
 #############################################################################

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/include/asmacros.h 181775 2008-08-15 20:51:31Z kmacy $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -146,17 +146,13 @@
 	pushl	$0 ;		/* dummy error code */			\
 	pushl	$0 ;		/* dummy trap type */			\
 	pushal ;		/* 8 ints */				\
-	pushl	%ds ;		/* save data and extra segments ... */	\
-	pushl	%es ;							\
-	pushl	%fs
+	pushl	$0 ;		/* save data and extra segments ... */	\
+	movw	%ds,(%esp) ;						\
+	pushl	$0 ;							\
+	movw	%es,(%esp) ;						\
+	pushl	$0 ;							\
+	movw	%fs,(%esp)
 	
-#define	POP_FRAME							\
-	popl	%fs ;							\
-	popl	%es ;							\
-	popl	%ds ;							\
-	popal ;								\
-	addl	$4+4,%esp
-
 /*
  * Access per-CPU data.
  */
@@ -175,37 +171,6 @@
 	movl	%eax, %es ;						\
 	movl	$KPSEL, %eax ;	/* reload with per-CPU data segment */	\
 	movl	%eax, %fs
-
-#ifdef XEN
-#define LOAD_CR3(reg)          \
-        movl    reg,PCPU(CR3); \
-        pushl   %ecx ;         \
-        pushl   %edx ;         \
-        pushl   %esi ;         \
-        pushl   reg ;          \
-        call    xen_load_cr3 ;     \
-        addl    $4,%esp ;      \
-        popl    %esi ;         \
-        popl    %edx ;         \
-        popl    %ecx ;         \
- 
-#define READ_CR3(reg)   movl PCPU(CR3),reg;
-#define LLDT(arg)                 \
-        pushl   %edx ;                    \
-        pushl   %eax ;                    \
-        xorl    %eax,%eax ;               \
-        movl    %eax,%gs ;                \
-        call    i386_reset_ldt ;          \
-        popl    %eax ;                    \
-        popl    %edx 
-#define CLI             call ni_cli
-#else
-#define LOAD_CR3(reg)   movl reg,%cr3; 
-#define READ_CR3(reg)   movl %cr3,reg; 
-#define LLDT(arg)       lldt arg; 
-#define CLI             cli 
-#endif /* !XEN */ 
-
 
 #endif /* LOCORE */
 

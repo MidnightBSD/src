@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipf.h 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -12,11 +12,6 @@
 #ifndef	__IPF_H__
 #define	__IPF_H__
 
-#if defined(__osf__)
-# define radix_mask ipf_radix_mask
-# define radix_node ipf_radix_node
-# define radix_node_head ipf_radix_node_head
-#endif
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -31,9 +26,6 @@
 # define _KERNEL
 # define KERNEL
 #endif
-#ifdef __OpenBSD__
-struct file;
-#endif
 #include <sys/uio.h>
 #ifdef ADD_KERNEL
 # undef _KERNEL
@@ -42,16 +34,12 @@ struct file;
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
+
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#ifndef	TCP_PAWS_IDLE	/* IRIX */
 # include <netinet/tcp.h>
-#endif
 #include <netinet/udp.h>
 
 #include <arpa/inet.h>
@@ -192,9 +180,8 @@ typedef	struct	proxyrule {
 } proxyrule_t;
 
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || \
-        (_BSDI_VERSION >= 199701) || (__FreeBSD_version >= 300000) || \
-	SOLARIS || defined(__sgi) || defined(__osf__) || defined(linux)
+#if defined(__NetBSD__) || defined(__FreeBSD_version) || \
+	SOLARIS
 # include <stdarg.h>
 typedef	int	(* ioctlfunc_t) __P((int, ioctlcmd_t, ...));
 #else
@@ -204,14 +191,7 @@ typedef	int	(* addfunc_t) __P((int, ioctlfunc_t, void *));
 typedef	int	(* copyfunc_t) __P((void *, void *, size_t));
 
 
-/*
- * SunOS4
- */
-#if defined(sun) && !defined(__SVR4) && !defined(__svr4__)
-extern	int	ioctl __P((int, int, void *));
-#endif
-
-extern	char	thishost[];
+extern	char	thishost[MAXHOSTNAMELEN];
 extern	char	flagset[];
 extern	u_char	flags[];
 extern	struct ipopt_names ionames[];

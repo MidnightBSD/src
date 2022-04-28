@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/iomap.h 233545 2012-03-27 14:05:12Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_HAL_IOMAP_H__

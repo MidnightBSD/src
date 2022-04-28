@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/fwcontrol/fwdv.c 216948 2011-01-04 02:52:22Z emaste $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -407,7 +407,6 @@ again:
 			err(1, "write failed");
 		}
 	}
-	close(fd);
 	fprintf(stderr, "\n");
 send_end:
 	gettimeofday(&end, NULL);
@@ -415,4 +414,5 @@ send_end:
 			+ (end.tv_usec - start.tv_usec) * 1e-6;
 	fprintf(stderr, "%d frames, %.2f secs, %.2f frames/sec\n",
 			frames, rtime, frames/rtime);
+	close(fd);
 }

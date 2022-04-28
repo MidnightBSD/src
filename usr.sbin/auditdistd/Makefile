@@ -1,8 +1,8 @@
 #
-# $FreeBSD: release/10.0.0/usr.sbin/auditdistd/Makefile 249657 2013-04-19 19:45:00Z ed $
+# $FreeBSD$
 #
 
-OPENBSMDIR=${.CURDIR}/../../contrib/openbsm
+OPENBSMDIR=${SRCTOP}/contrib/openbsm
 .PATH: ${OPENBSMDIR}/bin/auditdistd
 
 # Addition of auditdistd because otherwise generated parse.c can't find
@@ -21,13 +21,14 @@ SRCS+=	sandbox.c sender.c subr.c
 SRCS+=	token.l trail.c
 MAN=	auditdistd.8 auditdistd.conf.5
 
-DPADD=	${LIBL} ${LIBPTHREAD} ${LIBUTIL}
-LDADD=	-ll -lpthread -lutil
-DPADD+=	${LIBCRYPTO} ${LIBSSL}
-LDADD+=	-lcrypto -lssl
+LIBADD+=	l pthread util crypto ssl
 
 YFLAGS+=-v
 
 CLEANFILES=parse.c parse.h parse.output
+
+# auditdistd cannot use FreeBSD specific lock annotation macros. Disable
+# thread safety analysis completely.
+NO_WTHREAD_SAFETY=
 
 .include <bsd.prog.mk>

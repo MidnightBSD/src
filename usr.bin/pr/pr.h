@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)pr.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/pr/pr.h 74575 2001-03-21 14:32:02Z ache $
+ * $FreeBSD$
  */
 
 /*

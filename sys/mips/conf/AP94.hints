@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/AP94.hints 234219 2012-04-13 08:52:25Z adrian $
+# $FreeBSD$
 
 hint.arge.0.phymask=0x000c
 hint.arge.0.media=100

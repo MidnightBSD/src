@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/broadcom/bcm2835/bcm2835_dma.h 247496 2013-02-28 19:48:19Z gonzo $
+ * $FreeBSD$
  */
 
 #ifndef	_BCM2835_DMA_H_
@@ -37,8 +37,6 @@
 /* request CH for any nubmer */
 #define	BCM_DMA_CH_INVALID	(-1)
 #define	BCM_DMA_CH_ANY		(-1)
-#define	BCM_DMA_CH_FAST1	(2)
-#define	BCM_DMA_CH_FAST2	(3)
 
 /* Peripheral DREQ Signals (4.2.1.3) */
 #define	BCM_DMA_DREQ_NONE	0

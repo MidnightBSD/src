@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/geom_vfs.h 183754 2008-10-10 21:23:50Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _GEOM_GEOM_VFS_H_

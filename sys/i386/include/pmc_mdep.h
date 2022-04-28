@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/include/pmc_mdep.h 233628 2012-03-28 20:58:30Z fabient $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PMC_MDEP_H
@@ -69,6 +69,7 @@ struct pmc_mdep;
 #define	PMC_MDEP_CLASS_INDEX_TSC	1
 #define	PMC_MDEP_CLASS_INDEX_K7		2
 #define	PMC_MDEP_CLASS_INDEX_K8		2
+#define	PMC_MDEP_CLASS_INDEX_F17H	2
 #define	PMC_MDEP_CLASS_INDEX_P4		2
 #define	PMC_MDEP_CLASS_INDEX_P5		2
 #define	PMC_MDEP_CLASS_INDEX_P6		2
@@ -138,8 +139,7 @@ struct pmc_mdep;
 
 #define	PMC_IN_KERNEL_STACK(S,START,END)		\
 	((S) >= (START) && (S) < (END))
-#define	PMC_IN_KERNEL(va) (((va) >= USRSTACK) &&	\
-	((va) < VM_MAX_KERNEL_ADDRESS))
+#define	PMC_IN_KERNEL(va)	INKERNEL(va)
 
 #define	PMC_IN_USERSPACE(va) ((va) <= VM_MAXUSER_ADDRESS)
 

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/arcmsr/Makefile 144411 2005-03-31 18:19:55Z scottl $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/arcmsr
+.PATH: ${SRCTOP}/sys/dev/arcmsr
 
 KMOD=	arcmsr
 SRCS=	arcmsr.c

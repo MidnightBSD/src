@@ -1,5 +1,6 @@
-# $FreeBSD: release/10.0.0/sbin/devfs/Makefile 203916 2010-02-15 14:07:40Z uqs $
+# $FreeBSD$
 
+PACKAGE=runtime
 PROG=	devfs
 SRCS=	devfs.c rule.c
 MAN=	devfs.8

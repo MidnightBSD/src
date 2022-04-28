@@ -25,8 +25,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/bin/auditreduce/auditreduce.h#7 $
  */
 
 #ifndef _AUDITREDUCE_H_
@@ -59,6 +57,7 @@ struct re_entry {
 #define OPT_u	0x00010000
 #define OPT_A	0x00020000
 #define OPT_v	0x00040000
+#define OPT_z	0x00080000
 
 #define FILEOBJ "file"
 #define MSGQIDOBJ "msgqid"

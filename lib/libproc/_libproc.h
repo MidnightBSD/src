@@ -23,33 +23,39 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libproc/_libproc.h 210688 2010-07-31 16:10:20Z rpaulo $
+ * $FreeBSD$
  */
 
-#include <sys/cdefs.h>
-#include <sys/param.h>
+#ifndef __LIBPROC_H_
+#define	__LIBPROC_H_
+
 #include <sys/types.h>
-#include <sys/event.h>
 #include <sys/ptrace.h>
+
 #include <rtld_db.h>
 
 #include "libproc.h"
 
 struct proc_handle {
 	pid_t	pid;			/* Process ID. */
-	int	kq;			/* Kernel event queue ID. */
 	int	flags;			/* Process flags. */
 	int	status;			/* Process status (PS_*). */
 	int	wstat;			/* Process wait status. */
 	rd_agent_t *rdap;		/* librtld_db agent */
-	rd_loadobj_t *rdobjs;
-	size_t	rdobjsz;
-	size_t	nobjs;
-	struct lwpstatus lwps;
+	rd_loadobj_t *rdobjs;		/* Array of loaded objects. */
+	size_t	rdobjsz;		/* Array size. */
+	size_t	nobjs;			/* Num. objects currently loaded. */
+	rd_loadobj_t *rdexec;		/* rdobj for program executable. */
+	struct lwpstatus lwps;		/* Process status. */
+	char	execname[MAXPATHLEN];	/* Path to program executable. */
 };
 
 #ifdef DEBUG
-#define DPRINTF(fmt, ...) 	warn(fmt, __VA_ARGS__)
+#define	DPRINTF(...) 	warn(__VA_ARGS__)
+#define	DPRINTFX(...)	warnx(__VA_ARGS__)
 #else
-#define DPRINTF(fmt, ...)
+#define	DPRINTF(...)    do { } while (0)
+#define	DPRINTFX(...)   do { } while (0)
 #endif
+
+#endif /* __LIBPROC_H_ */

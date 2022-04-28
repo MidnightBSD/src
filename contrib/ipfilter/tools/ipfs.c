@@ -1,19 +1,10 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/tools/ipfs.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
-#ifdef	__FreeBSD__
-# ifndef __FreeBSD_cc_version
-#  include <osreldate.h>
-# else
-#  if __FreeBSD_cc_version < 430000
-#   include <osreldate.h>
-#  endif
-# endif
-#endif
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -33,9 +24,6 @@
 #include <netinet/in_systm.h>
 #include <sys/time.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <netinet/ip.h>
 #include <netdb.h>
 #include <arpa/nameser.h>

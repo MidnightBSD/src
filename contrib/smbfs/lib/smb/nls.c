@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/smbfs/lib/smb/nls.c 258125 2013-11-14 09:25:29Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -102,7 +102,7 @@ nls_setrecode(const char *local, const char *external)
 }
 
 char *
-nls_str_toloc(char *dst, const char *src)
+nls_str_toloc(char *dst, char *src)
 {
 #ifdef HAVE_ICONV
 	char *p = dst;
@@ -125,7 +125,7 @@ nls_str_toloc(char *dst, const char *src)
 }
 
 char *
-nls_str_toext(char *dst, const char *src)
+nls_str_toext(char *dst, char *src)
 {
 #ifdef HAVE_ICONV
 	char *p = dst;
@@ -148,11 +148,11 @@ nls_str_toext(char *dst, const char *src)
 }
 
 void *
-nls_mem_toloc(void *dst, const void *src, int size)
+nls_mem_toloc(void *dst, void *src, int size)
 {
 #ifdef HAVE_ICONV
 	char *p = dst;
-	const char *s = src;
+	char *s = src;
 	size_t inlen, outlen;
 
 	if (size == 0)
@@ -174,11 +174,11 @@ nls_mem_toloc(void *dst, const void *src, int size)
 }
 
 void *
-nls_mem_toext(void *dst, const void *src, int size)
+nls_mem_toext(void *dst, void *src, int size)
 {
 #ifdef HAVE_ICONV
 	char *p = dst;
-	const char *s = src;
+	char *s = src;
 	size_t inlen, outlen;
 
 	if (size == 0)

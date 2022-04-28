@@ -22,7 +22,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/ofw_machdep.h 230632 2012-01-27 22:35:53Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_OFW_MACHDEP_H_
@@ -33,6 +33,9 @@
 #include <dev/ofw/openfirm.h>
 
 typedef uint64_t cell_t;
+
+/* sparc64 doesn't use the interrupt parent #address-cells in interrupt maps */
+#define OFW_IMAP_NO_IPARENT_ADDR_CELLS
 
 int  OF_decode_addr(phandle_t, int, int *, bus_addr_t *);
 void OF_getetheraddr(device_t, u_char *);

@@ -1,14 +1,20 @@
-# $FreeBSD: release/10.0.0/lib/csu/mips/Makefile 234502 2012-04-20 21:00:39Z dim $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../common
+.PATH: ${.CURDIR:H}/common
 
 SRCS=		crt1.c crti.S crtn.S
 OBJS=		${SRCS:N*.h:R:S/$/.o/g}
 OBJS+=		Scrt1.o gcrt1.o
-CFLAGS+=	-I${.CURDIR}/../common \
-		-I${.CURDIR}/../../libc/include
+CFLAGS+=	-I${.CURDIR:H}/common \
+		-I${SRCTOP}/lib/libc/include
 
-all: ${OBJS}
+FILES=		${OBJS}
+FILESMODE=	${LIBMODE}
+FILESOWN=	${LIBOWN}
+FILESGRP=	${LIBGRP}
+FILESDIR=	${LIBDIR}
+# These FILES qualify as libraries for the purpose of LIBRARIES_ONLY.
+.undef LIBRARIES_ONLY
 
 CLEANFILES=	${OBJS}
 CLEANFILES+=	crt1.s gcrt1.s Scrt1.s
@@ -36,9 +42,5 @@ Scrt1.s: crt1.c
 
 Scrt1.o: Scrt1.s
 	${CC} ${ACFLAGS} -c -o ${.TARGET} Scrt1.s
-
-realinstall:
-	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
-	    ${OBJS} ${DESTDIR}${LIBDIR}
 
 .include <bsd.lib.mk>

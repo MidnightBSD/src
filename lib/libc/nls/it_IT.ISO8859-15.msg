@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/it_IT.ISO8859-15.msg 189765 2009-03-13 10:40:38Z gabor $
+$ $FreeBSD$
 $
 $ Message catalog for it_IT.ISO8859-15 locale
 $

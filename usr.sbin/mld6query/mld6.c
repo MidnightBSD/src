@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mld6query/mld6.c 216586 2010-12-20 08:54:30Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/uio.h>
@@ -42,7 +42,6 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/mld6query/mld6.c 216586 2010-12-20 0
 #include <signal.h>
 
 #include <net/if.h>
-#include <net/if_var.h>
 
 #include <netinet/in.h>
 #include <netinet/ip6.h>

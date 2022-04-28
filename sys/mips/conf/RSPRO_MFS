@@ -1,8 +1,10 @@
 #
 # Ubiquiti Routerstation Pro: boot from MFS
 #
-# $FreeBSD: release/10.0.0/sys/mips/conf/RSPRO_MFS 228944 2011-12-29 05:51:48Z adrian $
+# $FreeBSD$
 #
+
+#NO_UNIVERSE
 
 include		"AR71XX_BASE"
 ident		"RSPRO_MFS"
@@ -13,11 +15,11 @@ device		pcf2123_rtc
 
 # GEOM modules
 device		geom_redboot	# to get access to the SPI flash partitions
-device		geom_uzip	# compressed in-memory filesystem hackery!
-options		GEOM_UZIP
+device		xz
+options 	GEOM_UZIP
 
 # Boot from the first MFS uzip
-options		ROOTDEVNAME=\"ufs:md0.uzip\"
+options 	ROOTDEVNAME=\"ufs:md0.uzip\"
 
-options		MD_ROOT
-options		MD_ROOT_SIZE="6144"
+options 	MD_ROOT
+options 	MD_ROOT_SIZE="6144"

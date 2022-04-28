@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tools/zfsboottest/zfsboottest.sh 253068 2013-07-09 08:30:31Z avg $
+# $FreeBSD$
 
 if [ $# -ne 1 ]; then
 	echo "usage: zfsboottest.sh <pool>" >&2

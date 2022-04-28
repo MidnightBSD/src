@@ -1,6 +1,8 @@
 /*	$NetBSD: iso9660_rrip.h,v 1.5 2009/01/10 22:06:29 bjh21 Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
  * Perez-Rathke and Ram Vedam.  All rights reserved.
  *
@@ -31,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/iso9660_rrip.h 214921 2010-11-07 16:05:04Z cognet $
+ * $FreeBSD$
  */
 #ifndef __ISO9660_RRIP_H__
 #define __ISO9660_RRIP_H__
@@ -103,7 +105,7 @@ typedef struct {
 	u_char links		[ISODCL(13,20)];
 	u_char uid		[ISODCL(21,28)];
 	u_char gid		[ISODCL(29,36)];
-	u_char serial		[ISODCL(37,44)];/* Not used */
+	u_char serial		[ISODCL(37,44)];
 } ISO_RRIP_PX;
 
 typedef struct {
@@ -217,10 +219,10 @@ struct ISO_SUSP_ATTRIBUTES {
 	((int) ((entry)->attr.su_entry.SP.h.length[0]))
 
 /* Recursive function - move later to func pointer code*/
-int cd9660_susp_finalize(cd9660node *);
+int cd9660_susp_finalize(iso9660_disk *, cd9660node *);
 
 /* These two operate on single nodes */
-int cd9660_susp_finalize_node(cd9660node *);
+int cd9660_susp_finalize_node(iso9660_disk *, cd9660node *);
 int cd9660_rrip_finalize_node(cd9660node *);
 
 /* POSIX File attribute */
@@ -272,15 +274,17 @@ struct ISO_SUSP_ATTRIBUTES *cd9660_susp_ES(struct ISO_SUSP_ATTRIBUTES*,
 /* Helper functions */
 
 /* Common SUSP/RRIP functions */
-int cd9660_susp_initialize(cd9660node *, cd9660node *, cd9660node *);
-int cd9660_susp_initialize_node(cd9660node *);
+int cd9660_susp_initialize(iso9660_disk *, cd9660node *, cd9660node *,
+    cd9660node *);
+int cd9660_susp_initialize_node(iso9660_disk *, cd9660node *);
 struct ISO_SUSP_ATTRIBUTES *cd9660node_susp_create_node(int, int, const char *,
     int);
 struct ISO_SUSP_ATTRIBUTES *cd9660node_susp_add_entry(cd9660node *,
     struct ISO_SUSP_ATTRIBUTES *, struct ISO_SUSP_ATTRIBUTES *, int);
 
 /* RRIP specific functions */
-int cd9660_rrip_initialize_node(cd9660node *, cd9660node *, cd9660node *);
+int cd9660_rrip_initialize_node(iso9660_disk *, cd9660node *, cd9660node *,
+    cd9660node *);
 void cd9660_createSL(cd9660node *);
 
 /* Functions that probably can be removed */

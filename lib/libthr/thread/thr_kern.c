@@ -23,9 +23,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_kern.c 245630 2013-01-18 23:08:40Z jilles $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/signalvar.h>
@@ -61,7 +62,7 @@ _thr_setthreaded(int threaded)
 }
 
 void
-_thr_assert_lock_level()
+_thr_assert_lock_level(void)
 {
 	PANIC("locklevel <= 0");
 }

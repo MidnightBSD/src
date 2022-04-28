@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_GROFF 218941 2011-02-22 08:13:49Z uqs $
+.\" $FreeBSD$
 Set to not build
 .Xr groff 1
 and

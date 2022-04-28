@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part_apm.c 253938 2013-08-04 21:00:22Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/apm.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part_apm.c 253938 2013-08-04 
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <geom/geom.h>
+#include <geom/geom_int.h>
 #include <geom/part/g_part.h>
 
 #include "g_part_if.h"
@@ -104,6 +105,7 @@ static struct g_part_scheme g_part_apm_scheme = {
 	.gps_maxent = 4096,
 };
 G_PART_SCHEME_DECLARE(g_part_apm);
+MODULE_VERSION(geom_part_apm, 0);
 
 static void
 swab(char *buf, size_t bufsz)
@@ -146,11 +148,6 @@ apm_parse_type(const char *type, char *buf, size_t bufsz)
 	alias = g_part_alias_name(G_PART_ALIAS_APPLE_UFS);
 	if (!strcasecmp(type, alias)) {
 		strcpy(buf, APM_ENT_TYPE_APPLE_UFS);
-		return (0);
-	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_BOOT);
-	if (!strcasecmp(type, alias)) {
-		strcpy(buf, APM_ENT_TYPE_APPLE_BOOT);
 		return (0);
 	}
 	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD);
@@ -211,7 +208,7 @@ apm_read_ent(struct g_consumer *cp, uint32_t blk, struct apm_ent *ent,
 }
 
 static int
-g_part_apm_add(struct g_part_table *basetable, struct g_part_entry *baseentry, 
+g_part_apm_add(struct g_part_table *basetable, struct g_part_entry *baseentry,
     struct g_part_parms *gpp)
 {
 	struct g_part_apm_entry *entry;
@@ -310,10 +307,14 @@ g_part_apm_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 		/* confxml: partition entry information */
 		strncpy(u.name, entry->ent.ent_name, APM_ENT_NAMELEN);
 		u.name[APM_ENT_NAMELEN] = '\0';
-		sbuf_printf(sb, "%s<label>%s</label>\n", indent, u.name);
+		sbuf_printf(sb, "%s<label>", indent);
+		g_conf_printf_escaped(sb, "%s", u.name);
+		sbuf_printf(sb, "</label>\n");
 		strncpy(u.type, entry->ent.ent_type, APM_ENT_TYPELEN);
 		u.type[APM_ENT_TYPELEN] = '\0';
-		sbuf_printf(sb, "%s<rawtype>%s</rawtype>\n", indent, u.type);
+		sbuf_printf(sb, "%s<rawtype>", indent);
+		g_conf_printf_escaped(sb, "%s", u.type);
+		sbuf_printf(sb, "</rawtype>\n");
 	} else {
 		/* confxml: scheme information */
 	}
@@ -359,6 +360,14 @@ g_part_apm_resize(struct g_part_table *basetable,
     struct g_part_entry *baseentry, struct g_part_parms *gpp)
 {
 	struct g_part_apm_entry *entry;
+	struct g_provider *pp;
+
+	if (baseentry == NULL) {
+		pp = LIST_FIRST(&basetable->gpt_gp->consumer)->provider;
+		basetable->gpt_last = MIN(pp->mediasize / pp->sectorsize,
+		    UINT32_MAX) - 1;
+		return (0);
+	}
 
 	entry = (struct g_part_apm_entry *)baseentry;
 	baseentry->gpe_end = baseentry->gpe_start + gpp->gpp_size - 1;

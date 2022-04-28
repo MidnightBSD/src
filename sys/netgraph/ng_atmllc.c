@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_atmllc.c 243882 2012-12-05 08:04:20Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -158,7 +158,7 @@ ng_atmllc_rcvdata(hook_p hook, item_p item)
 	padding = 0;
 
 	if (hook == priv->atm) {
-		/* Ditch the psuedoheader. */
+		/* Ditch the pseudoheader. */
 		hdr = mtod(m, struct atmllc *);
 		/* m_adj(m, sizeof(struct atm_pseudohdr)); */
 

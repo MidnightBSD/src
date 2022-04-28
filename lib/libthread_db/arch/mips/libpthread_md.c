@@ -28,9 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libthread_db/arch/mips/libpthread_md.c 182372 2008-08-28 15:41:12Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
+#define	_WANT_MIPS_REGNUM
 #include <sys/procfs.h>
 #include <ucontext.h>
 #include <string.h>

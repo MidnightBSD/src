@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/pred.h 78189 2001-06-13 21:52:19Z brian $
+ * $FreeBSD$
  */
 
 extern const struct ccp_algorithm Pred1Algorithm;

@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libmd/sha0c.c 154479 2006-01-17 15:35:57Z phk $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

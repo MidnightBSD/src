@@ -31,7 +31,7 @@
 static const char sccsid[] = "@(#)inet_netof.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_netof.c 170244 2007-06-03 17:20:27Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include "port_before.h"
 
@@ -46,8 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/inet/inet_netof.c 170244 2007-06-03 
  * address; handles class a/b/c network #'s.
  */
 in_addr_t
-inet_netof(in)
-	struct in_addr in;
+inet_netof(struct in_addr in)
 {
 	in_addr_t i = ntohl(in.s_addr);
 

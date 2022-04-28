@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/virtio/virtqueue.h 255109 2013-09-01 04:16:43Z bryanv $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_VIRTQUEUE_H
@@ -31,12 +31,6 @@
 
 struct virtqueue;
 struct sglist;
-
-/* Support for indirect buffer descriptors. */
-#define VIRTIO_RING_F_INDIRECT_DESC	(1 << 28)
-
-/* Support to suppress interrupt until specific index is reached. */
-#define VIRTIO_RING_F_EVENT_IDX		(1 << 29)
 
 /* Device callback for a virtqueue interrupt. */
 typedef void virtqueue_intr_t(void *);
@@ -88,10 +82,15 @@ void	 virtqueue_disable_intr(struct virtqueue *vq);
 
 /* Get physical address of the virtqueue ring. */
 vm_paddr_t virtqueue_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_desc_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_avail_paddr(struct virtqueue *vq);
+vm_paddr_t virtqueue_used_paddr(struct virtqueue *vq);
 
+uint16_t virtqueue_index(struct virtqueue *vq);
 int	 virtqueue_full(struct virtqueue *vq);
 int	 virtqueue_empty(struct virtqueue *vq);
 int	 virtqueue_size(struct virtqueue *vq);
+int	 virtqueue_nfree(struct virtqueue *vq);
 int	 virtqueue_nused(struct virtqueue *vq);
 void	 virtqueue_notify(struct virtqueue *vq);
 void	 virtqueue_dump(struct virtqueue *vq);

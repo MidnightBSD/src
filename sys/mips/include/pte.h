@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/pte.h 257523 2013-11-01 20:30:19Z brooks $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_PTE_H_
@@ -188,4 +188,17 @@ typedef	pt_entry_t *pd_entry_t;
 #endif
 
 #endif /* LOCORE */
+
+/* PageMask Register (CP0 Register 5, Select 0) Values */
+#define	MIPS3_PGMASK_MASKX	0x00001800
+#define	MIPS3_PGMASK_4K		0x00000000
+#define	MIPS3_PGMASK_16K	0x00006000
+#define	MIPS3_PGMASK_64K	0x0001e000
+#define	MIPS3_PGMASK_256K	0x0007e000
+#define	MIPS3_PGMASK_1M		0x001fe000
+#define	MIPS3_PGMASK_4M		0x007fe000
+#define	MIPS3_PGMASK_16M	0x01ffe000
+#define	MIPS3_PGMASK_64M	0x07ffe000
+#define	MIPS3_PGMASK_256M	0x1fffe000
+
 #endif /* !_MACHINE_PTE_H_ */

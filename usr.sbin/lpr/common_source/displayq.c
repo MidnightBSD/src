@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)displayq.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/displayq.c 242091 2012-10-25 20:16:38Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -415,7 +415,7 @@ inform(const struct printer *pp, char *cf)
 	file[0] = '\0';
 	savedname[0] = '\0';
 	jnum = calc_jobnum(cf, NULL);
-	while (getline(cfp)) {
+	while (get_line(cfp)) {
 		switch (line[0]) {
 		case 'P': /* Was this file specified in the user's list? */
 			if (!inlist(line+1, cf)) {
@@ -445,7 +445,7 @@ inform(const struct printer *pp, char *cf)
 			}
 			copycnt++;
 			/*
-			 * deliberately 'continue' to another getline(), so
+			 * deliberately 'continue' to another get_line(), so
 			 * all format-spec lines for this datafile are read
 			 * in and counted before calling show()
 			 */

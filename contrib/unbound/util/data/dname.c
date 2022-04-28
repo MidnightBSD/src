@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -45,17 +45,18 @@
 #include "util/data/msgparse.h"
 #include "util/log.h"
 #include "util/storage/lookup3.h"
+#include "sldns/sbuffer.h"
 
 /* determine length of a dname in buffer, no compression pointers allowed */
 size_t
-query_dname_len(ldns_buffer* query)
+query_dname_len(sldns_buffer* query)
 {
 	size_t len = 0;
 	size_t labellen;
 	while(1) {
-		if(ldns_buffer_remaining(query) < 1)
+		if(sldns_buffer_remaining(query) < 1)
 			return 0; /* parse error, need label len */
-		labellen = ldns_buffer_read_u8(query);
+		labellen = sldns_buffer_read_u8(query);
 		if(labellen&0xc0)
 			return 0; /* no compression allowed in queries */
 		len += labellen + 1;
@@ -63,9 +64,9 @@ query_dname_len(ldns_buffer* query)
 			return 0; /* too long */
 		if(labellen == 0)
 			return len;
-		if(ldns_buffer_remaining(query) < labellen)
+		if(sldns_buffer_remaining(query) < labellen)
 			return 0; /* parse error, need content */
-		ldns_buffer_skip(query, (ssize_t)labellen);
+		sldns_buffer_skip(query, (ssize_t)labellen);
 	}
 }
 
@@ -74,6 +75,8 @@ dname_valid(uint8_t* dname, size_t maxlen)
 {
 	size_t len = 0;
 	size_t labellen;
+	if(maxlen == 0)
+		return 0; /* too short, shortest is '0' root label */
 	labellen = *dname++;
 	while(labellen) {
 		if(labellen&0xc0)
@@ -113,8 +116,8 @@ query_dname_compare(register uint8_t* d1, register uint8_t* d2)
 		while(lab1--) {
 			/* compare bytes first for speed */
 			if(*d1 != *d2 && 
-				tolower((int)*d1) != tolower((int)*d2)) {
-				if(tolower((int)*d1) < tolower((int)*d2))
+				tolower((unsigned char)*d1) != tolower((unsigned char)*d2)) {
+				if(tolower((unsigned char)*d1) < tolower((unsigned char)*d2))
 					return -1;
 				return 1;
 			}
@@ -137,7 +140,7 @@ query_dname_tolower(uint8_t* dname)
 	while(labellen) {
 		dname++;
 		while(labellen--) {
-			*dname = (uint8_t)tolower((int)*dname);
+			*dname = (uint8_t)tolower((unsigned char)*dname);
 			dname++;
 		}
 		labellen = *dname;
@@ -145,31 +148,31 @@ query_dname_tolower(uint8_t* dname)
 }
 
 void 
-pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname)
+pkt_dname_tolower(sldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 	int count = 0;
-	if(dname >= ldns_buffer_end(pkt))
+	if(dname >= sldns_buffer_end(pkt))
 		return;
 	lablen = *dname++;
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
 			if((size_t)PTR_OFFSET(lablen, *dname) 
-				>= ldns_buffer_limit(pkt))
+				>= sldns_buffer_limit(pkt))
 				return;
-			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
+			dname = sldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			if(count++ > MAX_COMPRESS_PTRS)
 				return;
 			continue;
 		}
-		if(dname+lablen >= ldns_buffer_end(pkt))
+		if(dname+lablen >= sldns_buffer_end(pkt))
 			return;
 		while(lablen--) {
-			*dname = (uint8_t)tolower((int)*dname);
+			*dname = (uint8_t)tolower((unsigned char)*dname);
 			dname++;
 		}
-		if(dname >= ldns_buffer_end(pkt))
+		if(dname >= sldns_buffer_end(pkt))
 			return;
 		lablen = *dname++;
 	}
@@ -177,7 +180,7 @@ pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname)
 
 
 size_t
-pkt_dname_len(ldns_buffer* pkt)
+pkt_dname_len(sldns_buffer* pkt)
 {
 	size_t len = 0;
 	int ptrcount = 0;
@@ -188,22 +191,22 @@ pkt_dname_len(ldns_buffer* pkt)
 	/* check compression pointers, loops, out of bounds */
 	while(1) {
 		/* read next label */
-		if(ldns_buffer_remaining(pkt) < 1)
+		if(sldns_buffer_remaining(pkt) < 1)
 			return 0;
-		labellen = ldns_buffer_read_u8(pkt);
+		labellen = sldns_buffer_read_u8(pkt);
 		if(LABEL_IS_PTR(labellen)) {
 			/* compression ptr */
 			uint16_t ptr;
-			if(ldns_buffer_remaining(pkt) < 1)
+			if(sldns_buffer_remaining(pkt) < 1)
 				return 0;
-			ptr = PTR_OFFSET(labellen, ldns_buffer_read_u8(pkt));
+			ptr = PTR_OFFSET(labellen, sldns_buffer_read_u8(pkt));
 			if(ptrcount++ > MAX_COMPRESS_PTRS)
 				return 0; /* loop! */
-			if(ldns_buffer_limit(pkt) <= ptr)
+			if(sldns_buffer_limit(pkt) <= ptr)
 				return 0; /* out of bounds! */
 			if(!endpos)
-				endpos = ldns_buffer_position(pkt);
-			ldns_buffer_set_position(pkt, ptr);
+				endpos = sldns_buffer_position(pkt);
+			sldns_buffer_set_position(pkt, ptr);
 		} else {
 			/* label contents */
 			if(labellen > 0x3f)
@@ -215,19 +218,19 @@ pkt_dname_len(ldns_buffer* pkt)
 				/* end of dname */
 				break;
 			}
-			if(ldns_buffer_remaining(pkt) < labellen)
+			if(sldns_buffer_remaining(pkt) < labellen)
 				return 0;
-			ldns_buffer_skip(pkt, (ssize_t)labellen);
+			sldns_buffer_skip(pkt, (ssize_t)labellen);
 		}
 	}
 	if(endpos)
-		ldns_buffer_set_position(pkt, endpos);
+		sldns_buffer_set_position(pkt, endpos);
 
 	return len;
 }
 
 int 
-dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
+dname_pkt_compare(sldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 {
 	uint8_t len1, len2;
 	log_assert(pkt && d1 && d2);
@@ -236,12 +239,12 @@ dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 	while( len1 != 0 || len2 != 0 ) {
 		/* resolve ptrs */
 		if(LABEL_IS_PTR(len1)) {
-			d1 = ldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
+			d1 = sldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
 			len1 = *d1++;
 			continue;
 		}
 		if(LABEL_IS_PTR(len2)) {
-			d2 = ldns_buffer_at(pkt, PTR_OFFSET(len2, *d2));
+			d2 = sldns_buffer_at(pkt, PTR_OFFSET(len2, *d2));
 			len2 = *d2++;
 			continue;
 		}
@@ -255,11 +258,13 @@ dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 		log_assert(len1 == len2 && len1 != 0);
 		/* compare labels */
 		while(len1--) {
-			if(tolower((int)*d1++) != tolower((int)*d2++)) {
-				if(tolower((int)d1[-1]) < tolower((int)d2[-1]))
+			if(tolower((unsigned char)*d1) != tolower((unsigned char)*d2)) {
+				if(tolower((unsigned char)*d1) < tolower((unsigned char)*d2))
 					return -1;
 				return 1;
 			}
+			d1++;
+			d2++;
 		}
 		len1 = *d1++;
 		len2 = *d2++;
@@ -267,8 +272,8 @@ dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 	return 0;
 }
 
-hashvalue_t 
-dname_query_hash(uint8_t* dname, hashvalue_t h)
+hashvalue_type
+dname_query_hash(uint8_t* dname, hashvalue_type h)
 {
 	uint8_t labuf[LDNS_MAX_LABELLEN+1];
 	uint8_t lablen;
@@ -280,8 +285,10 @@ dname_query_hash(uint8_t* dname, hashvalue_t h)
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		labuf[0] = lablen;
 		i=0;
-		while(lablen--)
-			labuf[++i] = (uint8_t)tolower((int)*dname++);
+		while(lablen--) {
+			labuf[++i] = (uint8_t)tolower((unsigned char)*dname);
+			dname++;
+		}
 		h = hashlittle(labuf, labuf[0] + 1, h);
 		lablen = *dname++;
 	}
@@ -289,8 +296,8 @@ dname_query_hash(uint8_t* dname, hashvalue_t h)
 	return h;
 }
 
-hashvalue_t 
-dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
+hashvalue_type
+dname_pkt_hash(sldns_buffer* pkt, uint8_t* dname, hashvalue_type h)
 {
 	uint8_t labuf[LDNS_MAX_LABELLEN+1];
 	uint8_t lablen;
@@ -301,15 +308,17 @@ dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
 			/* follow pointer */
-			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
+			dname = sldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
 		}
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		labuf[0] = lablen;
 		i=0;
-		while(lablen--)
-			labuf[++i] = (uint8_t)tolower((int)*dname++);
+		while(lablen--) {
+			labuf[++i] = (uint8_t)tolower((unsigned char)*dname);
+			dname++;
+		}
 		h = hashlittle(labuf, labuf[0] + 1, h);
 		lablen = *dname++;
 	}
@@ -317,18 +326,28 @@ dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
 	return h;
 }
 
-void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
+void dname_pkt_copy(sldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 {
 	/* copy over the dname and decompress it at the same time */
+	size_t comprcount = 0;
 	size_t len = 0;
 	uint8_t lablen;
 	lablen = *dname++;
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
+			if(comprcount++ > MAX_COMPRESS_PTRS) {
+				/* too many compression pointers */
+				*to = 0; /* end the result prematurely */
+				return;
+			}
 			/* follow pointer */
-			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
+			dname = sldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
+		}
+		if(lablen > LDNS_MAX_LABELLEN) {
+			*to = 0; /* end the result prematurely */
+			return;
 		}
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		len += (size_t)lablen+1;
@@ -347,7 +366,7 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 	*to = 0;
 }
 
-void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname)
+void dname_print(FILE* out, struct sldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 	if(!out) out = stdout;
@@ -363,7 +382,7 @@ void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname)
 				fputs("??compressionptr??", out);
 				return;
 			}
-			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
+			dname = sldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
 		}
@@ -422,8 +441,8 @@ static int
 memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
 {
 	while(len--) {
-		if(*p1 != *p2 && tolower((int)*p1) != tolower((int)*p2)) {
-			if(tolower((int)*p1) < tolower((int)*p2))
+		if(*p1 != *p2 && tolower((unsigned char)*p1) != tolower((unsigned char)*p2)) {
+			if(tolower((unsigned char)*p1) < tolower((unsigned char)*p2))
 				return -1;
 			return 1;
 		}
@@ -479,10 +498,10 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 			 *	lastdiff = c;
 			 *	lastmlabs = atlabel; } apart from d1++,d2++ */
 			while(len1) {
-				if(*d1 != *d2 && tolower((int)*d1) 
-					!= tolower((int)*d2)) {
-					if(tolower((int)*d1) < 
-						tolower((int)*d2)) {
+				if(*d1 != *d2 && tolower((unsigned char)*d1) 
+					!= tolower((unsigned char)*d2)) {
+					if(tolower((unsigned char)*d1) < 
+						tolower((unsigned char)*d2)) {
 						lastdiff = -1;
 						lastmlabs = atlabel;
 						d1 += len1;
@@ -516,22 +535,45 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 	return lastdiff;
 }
 
+int
+dname_lab_startswith(uint8_t* label, char* prefix, char** endptr)
+{
+	size_t plen = strlen(prefix);
+	size_t orig_plen = plen;
+	size_t lablen = (size_t)*label;
+	if(plen > lablen)
+		return 0;
+	label++;
+	while(plen--) {
+		if(*prefix != tolower((unsigned char)*label)) {
+			return 0;
+		}
+		prefix++; label++;
+	}
+	if(orig_plen < lablen)
+		*endptr = (char *)label;
+	else
+		/* prefix length == label length */
+		*endptr = NULL;
+	return 1;
+}
+
 int 
-dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
+dname_buffer_write(sldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 
-	if(ldns_buffer_remaining(pkt) < 1)
+	if(sldns_buffer_remaining(pkt) < 1)
 		return 0;
 	lablen = *dname++;
-	ldns_buffer_write_u8(pkt, lablen);
+	sldns_buffer_write_u8(pkt, lablen);
 	while(lablen) {
-		if(ldns_buffer_remaining(pkt) < (size_t)lablen+1)
+		if(sldns_buffer_remaining(pkt) < (size_t)lablen+1)
 			return 0;
-		ldns_buffer_write(pkt, dname, lablen);
+		sldns_buffer_write(pkt, dname, lablen);
 		dname += lablen;
 		lablen = *dname++;
-		ldns_buffer_write_u8(pkt, lablen);
+		sldns_buffer_write_u8(pkt, lablen);
 	}
 	return 1;
 }
@@ -560,7 +602,7 @@ void dname_str(uint8_t* dname, char* str)
 			return;
 		}
 		while(lablen--) {
-			if(isalnum((int)*dname) 
+			if(isalnum((unsigned char)*dname) 
 				|| *dname == '-' || *dname == '_' 
 				|| *dname == '*')
 				*s++ = *(char*)dname++;

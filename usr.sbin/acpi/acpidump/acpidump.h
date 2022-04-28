@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Doug Rabson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/usr.sbin/acpi/acpidump/acpidump.h 211196 2010-08-11 23:21:25Z takawata $
+ *	$FreeBSD$
  */
 
 #ifndef _ACPIDUMP_H_

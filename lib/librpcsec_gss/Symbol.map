@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/librpcsec_gss/Symbol.map 181344 2008-08-06 14:02:05Z dfr $
+ * $FreeBSD$
  */
 FBSD_1.1 {
 	rpc_gss_seccreate;

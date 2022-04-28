@@ -1,16 +1,16 @@
 #!/bin/sh -
 #
-# $FreeBSD: release/10.0.0/usr.sbin/periodic/periodic.sh 255178 2013-09-03 13:40:24Z jlh $
+# $FreeBSD$
 #
 # Run nightly periodic scripts
 #
-# usage: periodic { daily | weekly | monthly } - run standard periodic scripts
+# usage: periodic { daily | weekly | monthly | security } - run standard scripts
 #        periodic /absolute/path/to/directory  - run periodic scripts in dir
 #
 
 usage () {
     echo "usage: $0 <directory of files to execute>" 1>&2
-    echo "or     $0 { daily | weekly | monthly }"    1>&2
+    echo "or     $0 { daily | weekly | monthly | security }"    1>&2
     exit 1
 }
 
@@ -30,7 +30,7 @@ if [ $# -lt 1 ] ; then
     usage
 fi
 
-# If possible, check the global system configuration file, 
+# If possible, check the global system configuration file,
 # to see if there are additional dirs to check
 if [ -r /etc/defaults/periodic.conf ]; then
     . /etc/defaults/periodic.conf
@@ -43,7 +43,7 @@ export host
 # If we were called normally, then create a lock file for each argument
 # in turn and reinvoke ourselves with the LOCKED argument.  This prevents
 # very long running jobs from being overlapped by another run as this is
-# will lead the system running progressivly slower and more and more jobs 
+# will lead the system running progressivly slower and more and more jobs
 # are run at once.
 if [ $1 != "LOCKED" ]; then
     ret=0
@@ -76,6 +76,17 @@ fi
 shift
 arg=$1
 
+if [ -z "$PERIODIC_ANTICONGESTION_FILE" ] ; then
+	export PERIODIC_ANTICONGESTION_FILE=`mktemp ${TMPDIR:-/tmp}/periodic.anticongestion.XXXXXXXXXX`
+	remove_periodic_anticongestion_file=yes
+else
+	# We might be in a recursive invocation; let the top-level invocation
+	# remove the file.
+	remove_periodic_anticongestion_file=no
+fi
+if [ -t 0 ]; then
+	export PERIODIC_IS_INTERACTIVE=1
+fi
 tmp_output=`mktemp ${TMPDIR:-/tmp}/periodic.XXXXXXXXXX`
 context="$PERIODIC"
 export PERIODIC="$arg${PERIODIC:+ }${PERIODIC}"
@@ -96,8 +107,8 @@ case $arg in
 /*) if [ -d "$arg" ]; then
         dirlist="$arg"
     else
-        echo "$0: $arg not found" >&2 
-        continue
+        echo "$0: $arg not found" >&2
+        exit 1
     fi
     ;;
 *)  dirlist=
@@ -141,3 +152,6 @@ esac
 } | output_pipe $arg "$context"
 
 rm -f $tmp_output
+if [ $remove_periodic_anticongestion_file = "yes" ] ; then
+	rm -f $PERIODIC_ANTICONGESTION_FILE
+fi

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/fstat/functions.h 221807 2011-05-12 10:11:39Z stas $
+ * $FreeBSD$
  */
 #ifndef __FUNCTIONS_H__
 #define	__FUNCTIONS_H__

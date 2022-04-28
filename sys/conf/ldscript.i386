@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/conf/ldscript.i386 218822 2011-02-18 20:54:12Z dim $ */
+/* $FreeBSD$ */
 OUTPUT_FORMAT("elf32-i386-freebsd", "elf32-i386-freebsd", "elf32-i386-freebsd")
 OUTPUT_ARCH(i386)
 ENTRY(btext)
@@ -44,7 +44,7 @@ SECTIONS
   .init           :
   {
     KEEP (*(.init))
-  } =0x90909090
+  } =0xCCCCCCCC
   .plt            : { *(.plt) }
   .text           :
   {
@@ -52,11 +52,11 @@ SECTIONS
     KEEP (*(.text.*personality*))
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
-  } =0x90909090
+  } =0xCCCCCCCC
   .fini           :
   {
     KEEP (*(.fini))
-  } =0x90909090
+  } =0xCCCCCCCC
   PROVIDE (__etext = .);
   PROVIDE (_etext = .);
   PROVIDE (etext = .);
@@ -137,13 +137,12 @@ SECTIONS
   {
     *(.data .data.* .gnu.linkonce.d.*)
     KEEP (*(.gnu.linkonce.d.*personality*))
-    SORT(CONSTRUCTORS)
   }
   .data1          : { *(.data1) }
   _edata = .; PROVIDE (edata = .);
-  __bss_start = .;
   .bss            :
   {
+   __bss_start = .;
    *(.dynbss)
    *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
@@ -153,6 +152,7 @@ SECTIONS
       FIXME: Why do we need it? When there is no .bss section, we don't
       pad the .data section.  */
    . = ALIGN(. != 0 ? 32 / 8 : 1);
+   __bss_end = .;
   }
   . = ALIGN(32 / 8);
   . = ALIGN(32 / 8);

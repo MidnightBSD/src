@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/qlxgb/qla_inline.h 250340 2013-05-07 22:58:42Z davidcs $
+ * $FreeBSD$
  */
 /*
  * File: qla_inline.h

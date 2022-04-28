@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/errata/Makefile 241096 2012-10-01 11:26:49Z gabor $
+# $FreeBSD$
 
 RELN_ROOT?= ${.CURDIR}/../..
 .ifdef NO_LANGCODE_IN_DESTDIR

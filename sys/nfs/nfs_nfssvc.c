@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/nfs/nfs_nfssvc.c 243782 2012-12-02 01:16:04Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_nfs.h"
 
@@ -70,7 +70,7 @@ int (*nfsd_call_nfscl)(struct thread *, struct nfssvc_args *) = NULL;
 int (*nfsd_call_nfsd)(struct thread *, struct nfssvc_args *) = NULL;
 
 /*
- * Nfs server psuedo system call for the nfsd's
+ * Nfs server pseudo system call for the nfsd's
  */
 int
 sys_nfssvc(struct thread *td, struct nfssvc_args *uap)
@@ -92,7 +92,7 @@ sys_nfssvc(struct thread *td, struct nfssvc_args *uap)
 	    nfsd_call_nfsserver != NULL)
 		error = (*nfsd_call_nfsserver)(td, uap);
 	else if ((uap->flag & (NFSSVC_CBADDSOCK | NFSSVC_NFSCBD |
-	    NFSSVC_DUMPMNTOPTS)) && nfsd_call_nfscl != NULL)
+	    NFSSVC_DUMPMNTOPTS | NFSSVC_FORCEDISM)) && nfsd_call_nfscl != NULL)
 		error = (*nfsd_call_nfscl)(td, uap);
 	else if ((uap->flag & (NFSSVC_IDNAME | NFSSVC_GETSTATS |
 	    NFSSVC_GSSDADDPORT | NFSSVC_GSSDADDFIRST | NFSSVC_GSSDDELETEALL |
@@ -123,7 +123,7 @@ nfssvc_modevent(module_t mod, int type, void *data)
 	switch (type) {
 	case MOD_LOAD:
 		error = syscall_register(&nfssvc_offset, &nfssvc_sysent,
-		    &nfssvc_prev_sysent);
+		    &nfssvc_prev_sysent, SY_THR_STATIC_KLD);
 		if (error)
 			break;
 		registered = 1;

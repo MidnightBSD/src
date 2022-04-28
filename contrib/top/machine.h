@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/contrib/top/machine.h 237656 2012-06-27 18:08:48Z jhb $
+ * $FreeBSD$
  */
 
 /*
@@ -7,6 +7,10 @@
  *  module.  It is NOT machine dependent and should not need to be changed
  *  for any specific machine.
  */
+#ifndef MACHINE_H
+#define MACHINE_H
+
+#include "top.h"
 
 /*
  * the statics struct is filled in by machine_init
@@ -17,6 +21,7 @@ struct statics
     char **cpustate_names;
     char **memory_names;
     char **arc_names;
+    char **carc_names;
     char **swap_names;
 #ifdef ORDER
     char **order_names;
@@ -44,6 +49,7 @@ struct system_info
     int    *cpustates;
     int    *memory;
     int    *arc;
+    int    *carc;
     int    *swap;
     struct timeval boottime;
     int    ncpus;
@@ -64,17 +70,26 @@ struct process_select
     int self;		/* show self */
     int system;		/* show system processes */
     int thread;		/* show threads */
-    int uid;		/* only this uid (unless uid == -1) */
+#define TOP_MAX_UIDS 8
+    int uid[TOP_MAX_UIDS];	/* only these uids (unless uid[0] == -1) */
     int wcpu;		/* show weighted cpu */
+    int jid;		/* only this jid (unless jid == -1) */
     int jail;		/* show jail ID */
+    int swap;		/* show swap usage */
     int kidle;		/* show per-CPU idle threads */
     char *command;	/* only this command (unless == NULL) */
 };
 
 /* routines defined by the machine dependent module */
 
-char *format_header();
-char *format_next_process();
+char	*format_header();
+char	*format_next_process();
+void	 toggle_pcpustats(void);
+void	 get_system_info(struct system_info *si);
+int	 machine_init(struct statics *statics, char do_unames);
+int	 proc_owner(int pid);
 
 /* non-int routines typically used by the machine dependent module */
-char *printable();
+char	*printable();
+
+#endif /* MACHINE_H */

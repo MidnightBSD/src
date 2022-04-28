@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen.h 245380 2013-01-13 16:57:11Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_ALTERA_AVALON_H_

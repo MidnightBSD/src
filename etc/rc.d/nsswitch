@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/nsswitch 213202 2010-09-27 15:55:39Z imp $
+# $FreeBSD$
 #
 
 # PROVIDE: nsswitch
@@ -33,6 +33,7 @@
 . /etc/rc.subr
 
 name="nsswitch"
+desc="Name-service switch"
 start_cmd="nsswitch_start"
 stop_cmd=":"
 

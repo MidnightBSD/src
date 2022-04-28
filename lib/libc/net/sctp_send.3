@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/net/sctp_send.3 251067 2013-05-28 20:37:48Z emaste $
+.\" $FreeBSD$
 .\"
 .Dd December 15, 2006
 .Dt SCTP_SEND 3
@@ -105,8 +105,8 @@ struct sctp_sndrcvinfo {
 The
 .Fa sinfo->sinfo_ppid
 argument is an opaque 32 bit value that is passed transparently
-through the stack to the peer endpoint. It will be available on
-reception of a message (see
+through the stack to the peer endpoint.
+It will be available on reception of a message (see
 .Xr sctp_recvmsg 3 ) .
 Note that the stack passes this value without regard to byte
 order.
@@ -337,7 +337,7 @@ is not connected and is a one-to-one style socket.
 .Xr select 2 ,
 .Xr sendmsg 2 ,
 .Xr socket 2 ,
-.Xr write 2
+.Xr write 2 ,
 .Xr sctp_connectx 3 ,
 .Xr sctp_recvmsg 3 ,
 .Xr sctp_sendmsg 3 ,

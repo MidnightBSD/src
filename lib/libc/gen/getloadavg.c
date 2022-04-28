@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)getloadavg.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getloadavg.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -48,9 +48,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/getloadavg.c 165903 2007-01-09 0
  * Return number of samples retrieved, or -1 on error.
  */
 int
-getloadavg(loadavg, nelem)
-	double loadavg[];
-	int nelem;
+getloadavg(double loadavg[], int nelem)
 {
 	struct loadavg loadinfo;
 	int i, mib[2];

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/i2c/controllers/pcf/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/pcf
+.PATH: ${SRCTOP}/sys/dev/pcf
 
 KMOD=	pcf
 SRCS=	${envctrl} pcf.c ${pcf_ebus} ${pcf_isa}

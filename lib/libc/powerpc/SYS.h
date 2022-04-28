@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$NetBSD: SYS.h,v 1.8 2002/01/14 00:55:56 thorpej Exp $
- * $FreeBSD: release/10.0.0/lib/libc/powerpc/SYS.h 231044 2012-02-05 20:04:43Z andreast $
+ * $FreeBSD$
  */
 
 #include <sys/syscall.h>
@@ -36,24 +36,24 @@
 #define	_SYSCALL(name)						\
 	.text;							\
 	.align 2;						\
-	li	0,(__CONCAT(SYS_, name));			\
+	li	0,(SYS_##name);					\
 	sc
 
 #define	SYSCALL(name)						\
 	.text;							\
 	.align 2;						\
 2:	b	PIC_PLT(CNAME(HIDENAME(cerror)));		\
-ENTRY(__CONCAT(__sys_, name));				\
-	WEAK_REFERENCE(__CONCAT(__sys_, name), name);		\
-	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+ENTRY(__sys_##name);						\
+	WEAK_REFERENCE(__sys_##name, name);			\
+	WEAK_REFERENCE(__sys_##name, _##name);			\
 	_SYSCALL(name);						\
 	bso	2b
 
 #define	PSEUDO(name)						\
 	.text;							\
 	.align 2;						\
-ENTRY(__CONCAT(__sys_, name));				\
-	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+ENTRY(__sys_##name);						\
+	WEAK_REFERENCE(__sys_##name, _##name);			\
 	_SYSCALL(name);						\
 	bnslr;							\
 	b	PIC_PLT(CNAME(HIDENAME(cerror)))
@@ -62,9 +62,9 @@ ENTRY(__CONCAT(__sys_, name));				\
 	.text;							\
 	.align 2;						\
 2:	b	PIC_PLT(CNAME(HIDENAME(cerror)));		\
-ENTRY(__CONCAT(__sys_, name));				\
-	WEAK_REFERENCE(__CONCAT(__sys_, name), name);		\
-	WEAK_REFERENCE(__CONCAT(__sys_, name), __CONCAT(_, name));\
+ENTRY(__sys_##name);						\
+	WEAK_REFERENCE(__sys_##name, name);			\
+	WEAK_REFERENCE(__sys_##name, _##name);			\
 	_SYSCALL(name);						\
 	bnslr;							\
 	b	PIC_PLT(CNAME(HIDENAME(cerror)))

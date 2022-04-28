@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/p1003_1b/p26.c 57257 2000-02-16 14:28:42Z dufault $
+ * $FreeBSD$
  */
 #define _POSIX_SOURCE
 #define _POSIX_C_SOURCE 199309L

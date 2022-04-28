@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_gcpio_compat.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD$");
 
 static void
 unpack_test(const char *from, const char *options, const char *se)
@@ -71,7 +71,7 @@ unpack_test(const char *from, const char *options, const char *se)
 
 	/* Symlink */
 	if (canSymlink())
-		assertIsSymlink("symlink", "file");
+		assertIsSymlink("symlink", "file", 0);
 
 	/* dir */
 	assertIsDir("dir", 0775);

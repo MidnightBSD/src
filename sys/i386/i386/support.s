@@ -26,14 +26,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/i386/support.s 253328 2013-07-13 19:42:52Z kib $
+ * $FreeBSD$
  */
-
-#include "opt_npx.h"
 
 #include <machine/asmacros.h>
 #include <machine/cputypes.h>
-#include <machine/intr_machdep.h>
 #include <machine/pmap.h>
 #include <machine/specialreg.h>
 
@@ -53,7 +50,6 @@ ENTRY(bzero)
 	movl	12(%esp),%ecx
 	xorl	%eax,%eax
 	shrl	$2,%ecx
-	cld
 	rep
 	stosl
 	movl	12(%esp),%ecx
@@ -62,8 +58,8 @@ ENTRY(bzero)
 	stosb
 	popl	%edi
 	ret
-END(bzero)	
-	
+END(bzero)
+
 ENTRY(sse2_pagezero)
 	pushl	%ebx
 	movl	8(%esp),%ecx
@@ -86,7 +82,6 @@ ENTRY(i686_pagezero)
 
 	movl	12(%esp),%edi
 	movl	$1024,%ecx
-	cld
 
 	ALIGN_TEXT
 1:
@@ -137,7 +132,6 @@ ENTRY(fillw)
 	movl	8(%esp),%eax
 	movl	12(%esp),%edi
 	movl	16(%esp),%ecx
-	cld
 	rep
 	stosw
 	popl	%edi
@@ -154,7 +148,6 @@ ENTRY(bcopyb)
 	subl	%esi,%eax
 	cmpl	%ecx,%eax			/* overlapping && src < dst? */
 	jb	1f
-	cld					/* nope, copy forwards */
 	rep
 	movsb
 	popl	%edi
@@ -195,7 +188,6 @@ ENTRY(bcopy)
 	jb	1f
 
 	shrl	$2,%ecx				/* copy by 32-bit words */
-	cld					/* nope, copy forwards */
 	rep
 	movsl
 	movl	16(%ebp),%ecx
@@ -241,7 +233,6 @@ ENTRY(memcpy)
 	movl	20(%esp),%ecx
 	movl	%edi,%eax
 	shrl	$2,%ecx				/* copy by 32-bit words */
-	cld					/* nope, copy forwards */
 	rep
 	movsl
 	movl	20(%esp),%ecx
@@ -287,12 +278,11 @@ ENTRY(copyout)
 	jz	done_copyout
 
 	/*
-	 * Check explicitly for non-user addresses.  If 486 write protection
-	 * is being used, this check is essential because we are in kernel
-	 * mode so the h/w does not provide any protection against writing
-	 * kernel addresses.
+	 * Check explicitly for non-user addresses.  This check is essential
+	 * because it prevents usermode from writing into the kernel.  We do
+	 * not verify anywhere else that the user did not specify a rogue
+	 * address.
 	 */
-
 	/*
 	 * First, prevent address wrapping.
 	 */
@@ -312,7 +302,6 @@ ENTRY(copyout)
 	movl	%ebx,%ecx
 
 	shrl	$2,%ecx
-	cld
 	rep
 	movsl
 	movb	%bl,%cl
@@ -363,7 +352,6 @@ ENTRY(copyin)
 
 	movb	%cl,%al
 	shrl	$2,%ecx				/* copy longword-wise */
-	cld
 	rep
 	movsl
 	movb	%al,%cl
@@ -389,16 +377,16 @@ copyin_fault:
 	ret
 
 /*
- * casuword.  Compare and set user word.  Returns -1 or the current value.
+ * casueword.  Compare and set user word.  Returns -1 on fault,
+ * 0 on non-faulting access.  The current value is in *oldp.
  */
-
-ALTENTRY(casuword32)
-ENTRY(casuword)
+ALTENTRY(casueword32)
+ENTRY(casueword)
 	movl	PCPU(CURPCB),%ecx
 	movl	$fusufault,PCB_ONFAULT(%ecx)
 	movl	4(%esp),%edx			/* dst */
 	movl	8(%esp),%eax			/* old */
-	movl	12(%esp),%ecx			/* new */
+	movl	16(%esp),%ecx			/* new */
 
 	cmpl	$VM_MAXUSER_ADDRESS-4,%edx	/* verify address is valid */
 	ja	fusufault
@@ -416,17 +404,20 @@ ENTRY(casuword)
 
 	movl	PCPU(CURPCB),%ecx
 	movl	$0,PCB_ONFAULT(%ecx)
+	movl	12(%esp),%edx			/* oldp */
+	movl	%eax,(%edx)
+	xorl	%eax,%eax
 	ret
-END(casuword32)
-END(casuword)
+END(casueword32)
+END(casueword)
 
 /*
  * Fetch (load) a 32-bit word, a 16-bit word, or an 8-bit byte from user
- * memory.  All these functions are MPSAFE.
+ * memory.
  */
 
-ALTENTRY(fuword32)
-ENTRY(fuword)
+ALTENTRY(fueword32)
+ENTRY(fueword)
 	movl	PCPU(CURPCB),%ecx
 	movl	$fusufault,PCB_ONFAULT(%ecx)
 	movl	4(%esp),%edx			/* from */
@@ -436,9 +427,12 @@ ENTRY(fuword)
 
 	movl	(%edx),%eax
 	movl	$0,PCB_ONFAULT(%ecx)
+	movl	8(%esp),%edx
+	movl	%eax,(%edx)
+	xorl	%eax,%eax
 	ret
-END(fuword32)
-END(fuword)
+END(fueword32)
+END(fueword)
 
 /*
  * fuswintr() and suswintr() are specialized variants of fuword16() and
@@ -546,7 +540,7 @@ END(subyte)
 /*
  * copyinstr(from, to, maxlen, int *lencopied) - MP SAFE
  *
- *	copy a string from from to to, stop when a 0 character is reached.
+ *	copy a string from 'from' to 'to', stop when a 0 character is reached.
  *	return ENAMETOOLONG if string is longer than maxlen, and
  *	EFAULT on protection violations. If lencopied is non-zero,
  *	return the actual length in *lencopied.
@@ -574,7 +568,6 @@ ENTRY(copyinstr)
 	movl	%eax,20(%esp)
 1:
 	incl	%edx
-	cld
 
 2:
 	decl	%edx
@@ -627,7 +620,6 @@ ENTRY(copystr)
 	movl	16(%esp),%edi			/* %edi = to */
 	movl	20(%esp),%edx			/* %edx = maxlen */
 	incl	%edx
-	cld
 1:
 	decl	%edx
 	jz	4f
@@ -667,7 +659,6 @@ ENTRY(bcmp)
 
 	movl	%edx,%ecx
 	shrl	$2,%ecx
-	cld					/* compare forwards */
 	repe
 	cmpsl
 	jne	1f
@@ -689,12 +680,10 @@ END(bcmp)
  */
 /* void lgdt(struct region_descriptor *rdp); */
 ENTRY(lgdt)
-#ifndef XEN
 	/* reload the descriptor table */
 	movl	4(%esp),%eax
 	lgdt	(%eax)
-#endif
-	
+
 	/* flush the prefetch q */
 	jmp	1f
 	nop
@@ -740,13 +729,13 @@ END(ssdtosd)
 
 /* void reset_dbregs() */
 ENTRY(reset_dbregs)
-	movl    $0,%eax
-	movl    %eax,%dr7     /* disable all breapoints first */
-	movl    %eax,%dr0
-	movl    %eax,%dr1
-	movl    %eax,%dr2
-	movl    %eax,%dr3
-	movl    %eax,%dr6
+	movl	$0,%eax
+	movl	%eax,%dr7	/* disable all breakpoints first */
+	movl	%eax,%dr0
+	movl	%eax,%dr1
+	movl	%eax,%dr2
+	movl	%eax,%dr3
+	movl	%eax,%dr6
 	ret
 END(reset_dbregs)
 
@@ -829,3 +818,195 @@ msr_onfault:
 	movl	$0,PCB_ONFAULT(%ecx)
 	movl	$EFAULT,%eax
 	ret
+
+ENTRY(handle_ibrs_entry)
+	ret
+END(handle_ibrs_entry)
+
+ENTRY(handle_ibrs_exit)
+	ret
+END(handle_ibrs_exit)
+
+ENTRY(mds_handler_void)
+	ret
+END(mds_handler_void)
+
+ENTRY(mds_handler_verw)
+	subl	$4, %esp
+	movw	%ds, (%esp)
+	verw	(%esp)
+	addl	$4, %esp
+	ret
+END(mds_handler_verw)
+
+ENTRY(mds_handler_ivb)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %edx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	lfence
+	orpd	(%edx), %xmm0
+	orpd	(%edx), %xmm0
+	mfence
+	movl	$40, %ecx
+	addl	$16, %edx
+2:	movntdq	%xmm0, (%edx)
+	addl	$16, %edx
+	decl	%ecx
+	jnz	2b
+	mfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_ivb)
+
+ENTRY(mds_handler_bdw)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %ebx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	movl	%ebx, %edi
+	movl	%ebx, %esi
+	movl	$40, %ecx
+2:	movntdq	%xmm0, (%ebx)
+	addl	$16, %ebx
+	decl	%ecx
+	jnz	2b
+	mfence
+	movl	$1536, %ecx
+	rep; movsb
+	lfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_bdw)
+
+ENTRY(mds_handler_skl_sse)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %edi
+	movl	PCPU(MDS_BUF64), %edx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	lfence
+	orpd	(%edx), %xmm0
+	orpd	(%edx), %xmm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%edi, %eax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	movdqa	PCPU(MDS_TMP), %xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_skl_sse)
+
+ENTRY(mds_handler_skl_avx)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %edi
+	movl	PCPU(MDS_BUF64), %edx
+	vmovdqa	%ymm0, PCPU(MDS_TMP)
+	vpxor	%ymm0, %ymm0, %ymm0
+
+	lfence
+	vorpd	(%edx), %ymm0, %ymm0
+	vorpd	(%edx), %ymm0, %ymm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%edi, %eax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	vmovdqa	PCPU(MDS_TMP), %ymm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_skl_avx)
+
+ENTRY(mds_handler_skl_avx512)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %edi
+	movl	PCPU(MDS_BUF64), %edx
+	vmovdqa64	%zmm0, PCPU(MDS_TMP)
+	vpxor	%zmm0, %zmm0, %zmm0
+
+	lfence
+	vorpd	(%edx), %zmm0, %zmm0
+	vorpd	(%edx), %zmm0, %zmm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%edi, %eax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	vmovdqa64	PCPU(MDS_TMP), %zmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_skl_avx512)
+
+ENTRY(mds_handler_silvermont)
+	movl	%cr0, %eax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movl	PCPU(MDS_BUF), %edx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	movl	$16, %ecx
+2:	movntdq	%xmm0, (%edx)
+	addl	$16, %edx
+	decl	%ecx
+	jnz	2b
+	mfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movl	%eax, %cr0
+3:	ret
+END(mds_handler_silvermont)

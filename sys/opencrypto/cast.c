@@ -7,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/opencrypto/cast.c 171238 2007-07-05 06:59:14Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <opencrypto/cast.h>
@@ -127,7 +127,7 @@ u_int32_t t, l, r;
 }
 
 
-/***** Key Schedual *****/
+/***** Key Schedule *****/
 
 void cast_setkey(cast_key* key, u_int8_t* rawkey, int keybytes)
 {

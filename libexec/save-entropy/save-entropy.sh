@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/libexec/save-entropy/save-entropy.sh 240090 2012-09-04 16:00:51Z dougb $
+# $FreeBSD$
 
 # This script is called by cron to store bits of randomness which are
 # then used to seed /dev/random on boot.
@@ -42,6 +42,8 @@ elif [ -r /etc/rc.conf ]; then
 	. /etc/rc.conf 2>/dev/null
 fi
 
+[ $(/sbin/sysctl -n security.jail.jailed) = 0 ] || exit 0
+
 case ${entropy_dir} in
 [Nn][Oo])
 	exit 0
@@ -51,7 +53,7 @@ case ${entropy_dir} in
 	;;
 esac
 
-entropy_save_sz=${entropy_save_sz:-2048}
+entropy_save_sz=${entropy_save_sz:-4096}
 entropy_save_num=${entropy_save_num:-8}
 
 if [ ! -d "${entropy_dir}" ]; then
@@ -67,24 +69,61 @@ cd "${entropy_dir}" || {
 
 for f in saved-entropy.*; do
 	case "${f}" in saved-entropy.\*) continue ;; esac	# No files match
-	[ ${f#saved-entropy\.} -ge ${entropy_save_num} ] && unlink ${f}
+	[ ${f#saved-entropy\.} -gt ${entropy_save_num} ] && unlink ${f}
 done
 
-umask 377
+umask 177
 
-n=$(( ${entropy_save_num} - 1 ))
-while [ ${n} -ge 1 ]; do
-	if [ -f "saved-entropy.${n}" ]; then
-		mv "saved-entropy.${n}" "saved-entropy.$(( ${n} + 1 ))"
-	elif [ -e "saved-entropy.${n}" -o -L "saved-entropy.${n}" ]; then
+# Scan slots [1..$entropy_save_num), picking an empty slot or the oldest
+# existing file if no empty slot was available.
+#
+# 1. Find out the first regular file or empty slot (and its serial number)
+#
+n=1
+while [ ${n} -le ${entropy_save_num} ]; do
+	save_file="saved-entropy.${n}"
+	if [ ! -e "${save_file}" -o -f "${save_file}" ]; then
+		break
+	else
 		logger -is -t "$0" \
-	"${entropy_dir}/saved-entropy.${n}" is not a regular file, and so \
-	    it will not be rotated. Entropy file rotation is aborted.
-		exit 1
+		    "${save_file}" is not a regular file, skipped.
 	fi
-	n=$(( ${n} - 1 ))
+	n=$(( ${n} + 1 ))
 done
+#
+# 2. Start from (serial number + 1), and check if the slot is empty
+#    or is an older regular file, update save_file pointer in either
+#    case, and break early if we found an empty slot.
+#
+if [ -f ${save_file} ]; then
+	n=$(( ${n} + 1 ))
+	while [ ${n} -le ${entropy_save_num} ]; do
+		next_file=saved-entropy.${n}
+		if [ -f "${next_file}" ]; then
+			[ "${next_file}" -ot "${save_file}" ] && \
+			    save_file="${next_file}"
+		elif [ ! -e "${next_file}" ]; then
+			save_file="${next_file}"
+			break
+		else
+			logger -is -t "$0" \
+			    "${next_file}" is not a regular file, skipped.
+		fi
+		n=$(( ${n} + 1 ))
+	done
+fi
+#
+# 3. Check if the pointer we have in hand is really a regular file or
+#    an empty slot, and bail out as that means there is no available slot.
+#
+if [ -e "${save_file}" -a ! -f "${save_file}" ]; then
+	logger -is -t "$0" \
+		No available slot in "${entropy_dir}", save entropy is aborted.
+	exit 1
+fi
 
-dd if=/dev/random of=saved-entropy.1 bs=${entropy_save_sz} count=1 2>/dev/null
+# Save entropy to the selected slot.
+chmod 600 "${save_file}" 2>/dev/null || :
+dd if=/dev/random of="${save_file}" bs=${entropy_save_sz} count=1 2>/dev/null
 
 exit 0

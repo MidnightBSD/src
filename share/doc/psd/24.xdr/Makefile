@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/doc/psd/24.xdr/Makefile 216178 2010-12-04 10:11:20Z uqs $
+# $FreeBSD$
 
 VOLUME=		psd/24.xdr
 SRCS=		stubs xdr.nts.ms

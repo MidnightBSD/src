@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/bios/mca_machdep.c 134582 2004-08-31 21:51:51Z mdodd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,7 +33,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/i386/bios/mca_machdep.c 134582 2004-08-31
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
-#include <machine/pmap.h>
 #include <machine/md_var.h>
 #include <machine/vm86.h>
 #include <machine/pc/bios.h>

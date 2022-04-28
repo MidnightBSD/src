@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/audit/audit_syscalls.c 241896 2012-10-22 17:50:54Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -241,7 +241,7 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 	case A_OLDSETPOLICY:
 	case A_SETPOLICY:
 		if (uap->length == sizeof(udata.au_policy64)) {
-			if (udata.au_policy & (~AUDIT_CNT|AUDIT_AHLT|
+			if (udata.au_policy & ~(AUDIT_CNT|AUDIT_AHLT|
 			    AUDIT_ARGV|AUDIT_ARGE))
 				return (EINVAL);
 			audit_fail_stop = ((udata.au_policy64 & AUDIT_CNT) ==
@@ -303,8 +303,8 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 			    (udata.au_qctrl64.aq64_lowater >=
 			    udata.au_qctrl.aq_hiwater) ||
 			    (udata.au_qctrl64.aq64_bufsz > AQ_MAXBUFSZ) ||
-			    (udata.au_qctrl64.aq64_minfree < 0) ||
-			    (udata.au_qctrl64.aq64_minfree > 100))
+			    (udata.au_qctrl64.aq64_minfree > 100) ||
+			    (udata.au_qctrl64.aq64_minfree < 0))
 				return (EINVAL);
 			audit_qctrl.aq_hiwater =
 			    (int)udata.au_qctrl64.aq64_hiwater;
@@ -461,7 +461,7 @@ sys_auditon(struct thread *td, struct auditon_args *uap)
 		    udata.au_aupinfo.ap_mask.am_success;
 		newcred->cr_audit.ai_mask.am_failure =
 		    udata.au_aupinfo.ap_mask.am_failure;
-		td->td_proc->p_ucred = newcred;
+		proc_set_cred(tp, newcred);
 		PROC_UNLOCK(tp);
 		crfree(oldcred);
 		break;
@@ -600,7 +600,7 @@ sys_setauid(struct thread *td, struct setauid_args *uap)
 	if (error)
 		goto fail;
 	newcred->cr_audit.ai_auid = id;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);
@@ -671,7 +671,7 @@ sys_setaudit(struct thread *td, struct setaudit_args *uap)
 	newcred->cr_audit.ai_termid.at_addr[0] = ai.ai_termid.machine;
 	newcred->cr_audit.ai_termid.at_port = ai.ai_termid.port;
 	newcred->cr_audit.ai_termid.at_type = AU_IPv4;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);
@@ -728,7 +728,7 @@ sys_setaudit_addr(struct thread *td, struct setaudit_addr_args *uap)
 	if (error)
 		goto fail;
 	newcred->cr_audit = aia;
-	td->td_proc->p_ucred = newcred;
+	proc_set_cred(td->td_proc, newcred);
 	PROC_UNLOCK(td->td_proc);
 	crfree(oldcred);
 	return (0);

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2010 Daniel Braniss <danny@cs.huji.ac.il>
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/iscontrol/fsm.c 254657 2013-08-22 14:02:34Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -199,6 +201,7 @@ tcpConnect(isess_t *sess)
      perror("connect");
      switch(sv_errno) {
      case ECONNREFUSED:
+     case EHOSTUNREACH:
      case ENETUNREACH:
      case ETIMEDOUT:
 	  if((sess->flags & SESS_REDIRECT) == 0) {
@@ -371,7 +374,7 @@ doCAM(isess_t *sess)
 	  debug(2, "pathstr=%s", pathstr);
 
 	  ccb = cam_getccb(sess->camdev);
-	  bzero(&(&ccb->ccb_h)[1], sizeof(struct ccb_relsim) - sizeof(struct ccb_hdr));
+	  CCB_CLEAR_ALL_EXCEPT_HDR(&ccb->crs);
 	  ccb->ccb_h.func_code = XPT_REL_SIMQ;
 	  ccb->crs.release_flags = RELSIM_ADJUST_OPENINGS;
 	  ccb->crs.openings = sess->op->tags;

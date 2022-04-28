@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netgraph/ng_ipfw.h 201124 2009-12-28 12:29:13Z luigi $
+ * $FreeBSD$
  */
 
 #ifndef _NG_IPFW_H

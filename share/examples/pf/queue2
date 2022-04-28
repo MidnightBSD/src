@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/examples/pf/queue2 173536 2007-11-11 01:16:51Z mlaier $
+# $FreeBSD$
 # $OpenBSD: queue2,v 1.4 2006/10/07 04:48:01 mcbride Exp $
 # advanced queue example.
 # give interactive ssh traffic priority over ssh bulk transfers (scp, sftp)

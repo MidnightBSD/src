@@ -26,7 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
  * NETLOGIC_BSD
- * $FreeBSD: release/10.0.0/sys/mips/nlm/hal/cop2.h 227783 2011-11-21 08:12:36Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __NLM_HAL_COP2_H__

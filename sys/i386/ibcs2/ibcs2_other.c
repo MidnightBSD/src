@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_other.c 225617 2011-09-16 13:58:51Z kmacy $");
+__FBSDID("$FreeBSD$");
 
 /*
  * IBCS2 compatibility module.
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_other.c 225617 2011-09-1
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/fcntl.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/syscallsubr.h>
@@ -67,7 +68,7 @@ ibcs2_secure(struct thread *td, struct ibcs2_secure_args *uap)
 }
 
 int
-ibcs2_lseek(struct thread *td, register struct ibcs2_lseek_args *uap)
+ibcs2_lseek(struct thread *td, struct ibcs2_lseek_args *uap)
 {
 	struct lseek_args largs;
 	int error;
@@ -107,7 +108,7 @@ spx_open(struct thread *td)
 	sun.sun_len = sizeof(struct sockaddr_un) - sizeof(sun.sun_path) +
 	    strlen(sun.sun_path) + 1;
 
-	error = kern_connect(td, fd, (struct sockaddr *)&sun);
+	error = kern_connectat(td, AT_FDCWD, fd, (struct sockaddr *)&sun);
 	if (error) {
 		kern_close(td, fd);
 		return error;

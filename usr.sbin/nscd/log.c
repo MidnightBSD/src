@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/nscd/log.c 194093 2009-06-13 00:43:56Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <stdarg.h>

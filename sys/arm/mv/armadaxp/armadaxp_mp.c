@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/mv/armadaxp/armadaxp_mp.c 254025 2013-08-07 06:21:20Z jeff $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -36,7 +36,11 @@
 #include <vm/vm.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_extern.h>
+#include <vm/pmap.h>
 
+#include <dev/fdt/fdt_common.h>
+
+#include <machine/cpu.h>
 #include <machine/smp.h>
 #include <machine/fdt.h>
 #include <machine/armreg.h>
@@ -79,50 +83,38 @@ void
 platform_mp_setmaxid(void)
 {
 
-	mp_maxid = 3;
-}
-
-int
-platform_mp_probe(void)
-{
-
 	mp_ncpus = platform_get_ncpus();
-
-	return (mp_ncpus > 1);
+	mp_maxid = mp_ncpus - 1;
 }
 
-void
-platform_mp_init_secondary(void)
-{
-}
-
-void mpentry(void);
 void mptramp(void);
-
-
+void mptramp_end(void);
+extern vm_offset_t mptramp_pmu_boot;
 
 void
 platform_mp_start_ap(void)
 {
 	uint32_t reg, *src, *dst, cpu_num, div_val, cputype;
-	vm_offset_t smp_boot;
+	vm_offset_t pmu_boot_off;
 	/*
 	 * Initialization procedure depends on core revision,
 	 * in this step CHIP ID is checked to choose proper procedure
 	 */
-	cputype = cpufunc_id();
+	cputype = cpu_ident();
 	cputype &= CPU_ID_CPU_MASK;
 
-	smp_boot = kva_alloc(PAGE_SIZE);
-	pmap_kenter_nocache(smp_boot, 0xffff0000);
-	dst = (uint32_t *) smp_boot;
-
-	for (src = (uint32_t *)mptramp; src < (uint32_t *)mpentry;
+	/*
+	 * Set the PA of CPU0 Boot Address Redirect register used in
+	 * mptramp according to the actual SoC registers' base address.
+	 */
+	pmu_boot_off = (CPU_PMU(0) - MV_BASE) + CPU_PMU_BOOT;
+	mptramp_pmu_boot = fdt_immr_pa + pmu_boot_off;
+	dst = pmap_mapdev(0xffff0000, PAGE_SIZE);
+	for (src = (uint32_t *)mptramp; src < (uint32_t *)mptramp_end;
 	    src++, dst++) {
 		*dst = *src;
 	}
-	kva_free(smp_boot, PAGE_SIZE);
-
+	pmap_unmapdev((vm_offset_t)dst, PAGE_SIZE);
 	if (cputype == CPU_ID_MV88SV584X_V7) {
 		/* Core rev A0 */
 		div_val = read_cpu_clkdiv(CPU_DIVCLK_CTRL2_RATIO_FULL1);
@@ -171,7 +163,7 @@ platform_mp_start_ap(void)
 		bus_space_write_4(fdtbus_bs_tag, CPU_PMU(cpu_num), CPU_PMU_BOOT,
 		    pmap_kextract((vm_offset_t)mpentry));
 
-	cpu_idcache_wbinv_all();
+	dcache_wbinv_poc_all();
 
 	for (cpu_num = 1; cpu_num < mp_ncpus; cpu_num++ )
 		bus_space_write_4(fdtbus_bs_tag, MP, MP_SW_RESET(cpu_num), 0);
@@ -181,11 +173,4 @@ platform_mp_start_ap(void)
 	DELAY(10);
 
 	armadaxp_init_coher_fabric();
-}
-
-void
-platform_ipi_send(cpuset_t cpus, u_int ipi)
-{
-
-	pic_ipi_send(cpus, ipi);
 }

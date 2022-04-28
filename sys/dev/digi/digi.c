@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/digi/digi.c 162711 2006-09-27 19:57:02Z ru $
+ * $FreeBSD$
  */
 
 /*-
@@ -1441,8 +1441,8 @@ digi_errortxt(int id)
 		"tty-level buffer overflow",
 	};
 
-	KASSERT(id >= 0 && id < sizeof(error_desc) / sizeof(error_desc[0]),
-	    ("Unexpected digi error id %d\n", id));
+	KASSERT(id >= 0 && id < nitems(error_desc),
+		("Unexpected digi error id %d\n", id));
 
 	return (error_desc[id]);
 }
@@ -1458,6 +1458,8 @@ digi_attach(struct digi_softc *sc)
 	digi_loadmoduledata(sc);
 	digi_init(sc);
 	digi_freemoduledata(sc);
+	device_printf(dev,
+	    "WARNING: This driver is deprecated and will be removed.\n");
 
 	return (0);
 }

@@ -38,7 +38,7 @@
 
 #include <mixer_if.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/hdspe-pcm.c 241066 2012-09-30 09:21:10Z kevlo $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 struct hdspe_latency {
 	uint32_t n;
@@ -668,7 +668,7 @@ hdspe_pcm_attach(device_t dev)
 		scp->chnum++;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%lx irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
 	    rman_get_start(scp->sc->cs),
 	    rman_get_start(scp->sc->irq),
 	    PCM_KLDSTRING(snd_hdspe));

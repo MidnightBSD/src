@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mii/ip1000phyreg.h 189567 2009-03-09 08:17:46Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_MII_IP1000PHYREG_H_

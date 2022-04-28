@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_entry_copy_stat.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -44,6 +44,10 @@ archive_entry_copy_stat(struct archive_entry *entry, const struct stat *st)
 	archive_entry_set_atime(entry, st->st_atime, st->st_atim.tv_nsec);
 	archive_entry_set_ctime(entry, st->st_ctime, st->st_ctim.tv_nsec);
 	archive_entry_set_mtime(entry, st->st_mtime, st->st_mtim.tv_nsec);
+#elif HAVE_STRUCT_STAT_ST_MTIME_NSEC
+	archive_entry_set_atime(entry, st->st_atime, st->st_atime_nsec);
+	archive_entry_set_ctime(entry, st->st_ctime, st->st_ctime_nsec);
+	archive_entry_set_mtime(entry, st->st_mtime, st->st_mtime_nsec);
 #elif HAVE_STRUCT_STAT_ST_MTIME_N
 	archive_entry_set_atime(entry, st->st_atime, st->st_atime_n);
 	archive_entry_set_ctime(entry, st->st_ctime, st->st_ctime_n);

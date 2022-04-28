@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_standard.c 212477 2010-09-11 18:55:00Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -230,7 +230,7 @@ ofw_std_peer(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.next);
 }
 
@@ -252,7 +252,7 @@ ofw_std_child(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.child);
 }
 
@@ -274,7 +274,7 @@ ofw_std_parent(ofw_t ofw, phandle_t node)
 
 	args.node = node;
 	if (openfirmware(&args) == -1)
-		return (-1);
+		return (0);
 	return (args.parent);
 }
 

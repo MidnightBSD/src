@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Advanced Computing Technologies LLC
+ * Copyright (c) 2009 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/_once_stub.c 199614 2009-11-20 20:43:34Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <pthread.h>

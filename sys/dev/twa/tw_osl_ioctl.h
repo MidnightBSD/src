@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twa/tw_osl_ioctl.h 169400 2007-05-09 04:16:32Z scottl $
+ *	$FreeBSD$
  */
 
 /*

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm/drm/Makefile 203287 2010-01-31 14:25:29Z rnoland $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../../dev/drm
+.PATH:	${SRCTOP}/sys/dev/drm
 KMOD	= drm
 SRCS	= \
 	ati_pcigart.c \

@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/10.0.0/sys/dev/mxge/mxge_mcp.h 188736 2009-02-17 22:15:58Z gallatin $
+$FreeBSD$
 ***************************************************************************/
 
 #ifndef _myri10ge_mcp_h
@@ -226,7 +226,7 @@ enum myri10ge_mcp_cmd_type {
      a power of 2 number of entries.  */
 
   MXGEFW_CMD_SET_INTRQ_SIZE = 13, 	/* in bytes */
-#define MXGEFW_CMD_SET_INTRQ_SIZE_FLAG_NO_STRICT_SIZE_CHECK  (1 << 31)
+#define MXGEFW_CMD_SET_INTRQ_SIZE_FLAG_NO_STRICT_SIZE_CHECK  (1U << 31)
 
   /* command to bring ethernet interface up.  Above parameters
      (plus mtu & mac address) must have been exchanged prior

@@ -1,5 +1,5 @@
 /* $Id: pathnames.h.in,v 8.7 2012/04/23 08:34:52 zy Exp $ */
-/* $FreeBSD: release/10.0.0/usr.bin/vi/pathnames.h 254225 2013-08-11 20:03:12Z peter $ */
+/* $FreeBSD$ */
 
 /* Read standard system paths first. */
 #include <paths.h>

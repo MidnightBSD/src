@@ -1,6 +1,8 @@
 /*	$NetBSD: progressbar.c,v 1.21 2009/04/12 10:18:52 lukem Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 1997-2012 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/camcontrol/progress.h 237285 2012-06-20 04:11:34Z scottl $
+ * $FreeBSD$
  */
 
 #ifndef PROGRESS_H_

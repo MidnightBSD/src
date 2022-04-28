@@ -37,15 +37,13 @@ static char sccsid[] = "@(#)pat_rep.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/pax/pat_rep.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
 #ifdef NET2_REGEX
 #include <regexp.h>
 #else
@@ -880,7 +878,7 @@ rep_name(char *name, int *nlen, int prnt)
 	 * (the user already saw that substitution go by)
 	 */
 	pt = rephead;
-	(void)strcpy(buf1, name);
+	(void)strlcpy(buf1, name, sizeof(buf1));
 	inpt = buf1;
 	outpt = nname;
 	endpt = outpt + PAXPATHLEN;

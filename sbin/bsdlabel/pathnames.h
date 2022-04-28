@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- * $FreeBSD: release/10.0.0/sbin/bsdlabel/pathnames.h 128073 2004-04-09 19:58:40Z markm $
+ * $FreeBSD$
  */
 
 #include <paths.h>

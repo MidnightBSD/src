@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
  * All rights reserved.
@@ -26,10 +28,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/sort/mem.c 251245 2013-06-02 09:43:48Z gabor $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 

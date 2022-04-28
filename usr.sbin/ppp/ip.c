@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/ip.c 134875 2004-09-06 23:54:54Z brian $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -224,7 +226,7 @@ FilterCheck(const unsigned char *packet,
   int match;			/* true if condition matched */
   int mindata;			/* minimum data size or zero */
   const struct filterent *fp = filter->rule;
-  char dbuff[100], dstip[16];
+  char dbuff[100], dstip[NCP_ASCIIBUFFERSIZE];
   struct ncpaddr srcaddr, dstaddr;
   const char *payload;		/* IP payload */
   int datalen;			/* IP datagram length */
@@ -473,7 +475,7 @@ FilterCheck(const unsigned char *packet,
                        ncpaddr_ntoa(&srcaddr), sport, dstip, dport);
           }
           return 1;
-        }		/* Explict match.  Deny this packet */
+        }		/* Explicit match.  Deny this packet */
       }
     } else {
       n++;

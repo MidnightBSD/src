@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/md_var.h,v 1.40 2001/07/12
- * $FreeBSD: release/10.0.0/sys/sparc64/include/md_var.h 228022 2011-11-27 15:43:40Z marius $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_MD_VAR_H_
@@ -47,9 +47,9 @@ extern	vm_paddr_t kstack0_phys;
 struct	pcpu;
 struct	md_utrap;
 
-const char *cpu_cpuid_prop(u_int cpu_impl);
 uint32_t cpu_get_mid(u_int cpu_impl);
 void	cpu_identify(u_long vers, u_int clock, u_int id);
+const char *cpu_portid_prop(u_int cpu_impl);
 void	cpu_setregs(struct pcpu *pc);
 int	is_physical_memory(vm_paddr_t addr);
 struct md_utrap *utrap_alloc(void);

@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/powerpc/regset.h 242723 2012-11-07 23:45:09Z jhibbits $ 
+ * $FreeBSD$ 
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

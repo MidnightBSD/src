@@ -24,8 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/include/fpmath.h 186461 2008-12-23 22:20:59Z marcel $
+ * $FreeBSD$
  */
+
+#ifndef _FPMATH_H_
+#define _FPMATH_H_
 
 #include <sys/endian.h>
 #include "_fpmath.h"
@@ -73,3 +76,5 @@ union IEEEd2bits {
 #endif
 	} bits;
 };
+
+#endif /* !_FPMATH_H */

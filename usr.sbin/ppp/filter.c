@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1996 - 2001 Brian Somers <brian@Awfulhak.org>
  *          based on work by Toshiharu OHNO <tony-o@iij.ad.jp>
  *                           Internet Initiative Japan, Inc (IIJ)
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/filter.c 134789 2004-09-05 01:46:52Z brian $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -80,7 +82,7 @@ ParsePort(const char *service, const char *proto)
   int port;
 
   servent = getservbyname(service, proto);
-  if (servent != 0)
+  if (servent != NULL)
     return ntohs(servent->s_port);
 
   port = strtol(service, &cp, 0);

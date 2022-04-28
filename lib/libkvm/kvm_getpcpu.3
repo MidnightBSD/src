@@ -26,13 +26,13 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libkvm/kvm_getpcpu.3 249361 2013-04-11 13:05:38Z joel $
+.\" $FreeBSD$
 .\"
-.Dd April 11, 2013
+.Dd March 15, 2017
 .Dt KVM_GETPCPU 3
 .Os
 .Sh NAME
-.Nm kvm_dpcpu_setcpu
+.Nm kvm_dpcpu_setcpu ,
 .Nm kvm_getmaxcpu ,
 .Nm kvm_getpcpu
 .Nd access per-CPU data
@@ -47,10 +47,12 @@
 .Fn kvm_dpcpu_setcpu "kvm_t *kd" "u_int cpu"
 .Ft int
 .Fn kvm_getmaxcpu "kvm_t *kd"
+.Ft int
+.Fn kvm_getncpus "kvm_t *kd"
 .Ft void *
 .Fn kvm_getpcpu "kvm_t *kd" "int cpu"
 .Ft ssize_t
-.Fn kvm_read_zpcpu "kvm_t *kd" "void *buf" "u_long base" "size_t size" "int cpu"
+.Fn kvm_read_zpcpu "kvm_t *kd" "u_long base" "void *buf" "size_t size" "int cpu"
 .Ft uint64_t
 .Fn kvm_counter_u64_fetch "kvm_t *kd" "u_long base"
 .Sh DESCRIPTION
@@ -71,6 +73,10 @@ accessed from.
 The
 .Fn kvm_getmaxcpu
 function returns the maximum number of CPUs supported by the kernel.
+.Pp
+The
+.Fn kvm_getncpus
+function returns the current number of CPUs in the kernel.
 .Pp
 The
 .Fn kvm_getpcpu
@@ -114,7 +120,7 @@ Symbols for dynamic per-CPU data are accessed via
 as with other symbols.
 .Nm libkvm
 maintains a notion of the "current CPU", set by
-.Xr kvm_dpcpu_setcpu ,
+.Fn kvm_dpcpu_setcpu ,
 which defaults to 0.
 Once another CPU is selected,
 .Xr kvm_nlist 3

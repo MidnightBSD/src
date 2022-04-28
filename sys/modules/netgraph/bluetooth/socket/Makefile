@@ -1,9 +1,9 @@
 # $Id: Makefile,v 1.2 2003/01/12 23:37:31 max Exp $
-# $FreeBSD: release/10.0.0/sys/modules/netgraph/bluetooth/socket/Makefile 181034 2008-07-30 22:42:17Z emax $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../netgraph/bluetooth/socket
+.PATH: ${SRCTOP}/sys/netgraph/bluetooth/socket
 
-CFLAGS+=	-I${.CURDIR}/../../../../netgraph/bluetooth/include
+CFLAGS+=	-I${SRCTOP}/sys/netgraph/bluetooth/include
 
 KMOD=		ng_btsocket
 SRCS=		ng_btsocket.c \

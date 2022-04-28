@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libgssapi/gss_add_cred.c 178828 2008-05-07 13:53:12Z dfr $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>
@@ -121,7 +121,7 @@ gss_add_cred(OM_uint32 *minor_status,
 	 * gss_add_cred for that mechanism, otherwise we copy the mc
 	 * to new_cred.
 	 */
-	target_mc = 0;
+	target_mc = NULL;
 	if (cred) {
 		SLIST_FOREACH(mc, &cred->gc_mc, gmc_link) {
 			if (gss_oid_equal(mc->gmc_mech_oid, desired_mech)) {
@@ -151,7 +151,7 @@ gss_add_cred(OM_uint32 *minor_status,
 			return (major_status);
 		}
 	} else {
-		mn = 0;
+		mn = NULL;
 	}
 
 	m = _gss_find_mech_switch(desired_mech);

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/opensm 221006 2011-04-25 05:57:01Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: opensm

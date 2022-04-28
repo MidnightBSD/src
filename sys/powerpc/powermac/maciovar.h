@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/maciovar.h 253825 2013-07-31 01:13:29Z jhibbits $
+ * $FreeBSD$
  */
 
 #ifndef _MACIO_MACIOVAR_H_
@@ -47,6 +47,9 @@
 
 #define FCR_ENET_ENABLE	0x60000000
 #define FCR_ENET_RESET	0x80000000
+
+#define FCR1_I2S0_CLK_ENABLE	0x00001000
+#define FCR1_I2S0_ENABLE	0x00002000
 
 /* Used only by macio_enable_wireless() for now. */
 #define KEYLARGO_GPIO_BASE	0x6a

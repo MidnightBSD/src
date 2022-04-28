@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libstdthreads/mtx.c 228904 2011-12-26 21:51:53Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libstdthreads/mtx.c 228904 2011-12-26 21:51:53Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <pthread.h>
@@ -96,7 +96,7 @@ int
 mtx_trylock(mtx_t *mtx)
 {
 
-	switch (pthread_mutex_lock(mtx)) {
+	switch (pthread_mutex_trylock(mtx)) {
 	case 0:
 		return (thrd_success);
 	case EBUSY:

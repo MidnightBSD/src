@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/freescale/imx/imx51_ssireg.h 250357 2013-05-08 09:42:50Z ray $
+ * $FreeBSD$
  */
 
 /* Registers definition for Freescale i.MX515 Synchronous Serial Interface */

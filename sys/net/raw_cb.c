@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/net/raw_cb.c 227309 2011-11-07 15:43:11Z ed $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -44,8 +44,8 @@
 #include <sys/systm.h>
 
 #include <net/if.h>
-#include <net/raw_cb.h>
 #include <net/vnet.h>
+#include <net/raw_cb.h>
 
 /*
  * Routines to manage the raw protocol control blocks.

@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man3/pthread_resume_np.3 172880 2007-10-22 10:08:01Z ru $
+.\" $FreeBSD$
 .\"
 .Dd February 13, 2003
 .Dt PTHREAD_RESUME_NP 3
@@ -57,7 +57,7 @@ function will fail if:
 The value specified by the
 .Fa tid
 argument is invalid.
-.It Bq ESRC
+.It Bq Er ESRCH
 No thread could be found corresponding to the thread ID specified by the
 .Fa tid
 argument.
@@ -69,4 +69,4 @@ argument.
 .Xr pthread_suspend_np 3
 .Sh AUTHORS
 This manual page was written by
-.An Alexey Zelkin Aq phantom@FreeBSD.org .
+.An Alexey Zelkin Aq Mt phantom@FreeBSD.org .

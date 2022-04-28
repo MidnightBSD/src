@@ -4,6 +4,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -29,10 +31,11 @@
  * SUCH DAMAGE.
  *
  * $Id: parser.y,v 1.7 2006/09/07 21:06:53 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/bthidd/parser.y 235789 2012-05-22 16:33:10Z bapt $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <dev/usb/usb.h>
 #include <dev/usb/usbhid.h>

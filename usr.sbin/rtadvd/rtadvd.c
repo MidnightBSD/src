@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.sbin/rtadvd/rtadvd.c 253970 2013-08-05 20:13:02Z hrs $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: rtadvd.c,v 1.82 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -51,7 +51,6 @@
 
 #include <arpa/inet.h>
 
-#include <net/if_var.h>
 #include <netinet/in_var.h>
 #include <netinet6/nd6.h>
 
@@ -242,14 +241,6 @@ main(int argc, char *argv[])
 	/* timer initialization */
 	rtadvd_timer_init();
 
-#ifndef HAVE_ARC4RANDOM
-	/* random value initialization */
-#ifdef __FreeBSD__
-	srandomdev();
-#else
-	srandom((unsigned long)time(NULL));
-#endif
-#endif
 	pfh = pidfile_open(pidfilename, 0600, &otherpid);
 	if (pfh == NULL) {
 		if (errno == EEXIST)
@@ -1016,11 +1007,7 @@ set_short_delay(struct ifinfo *ifi)
 	 * delay and send the advertisement at the
 	 * already-scheduled time. RFC 4861 6.2.6
 	 */
-#ifdef HAVE_ARC4RANDOM
 	delay = arc4random_uniform(MAX_RA_DELAY_TIME);
-#else
-	delay = random() % MAX_RA_DELAY_TIME;
-#endif
 	interval.tv_sec = 0;
 	interval.tv_nsec = delay * 1000;
 	rest = rtadvd_timer_rest(ifi->ifi_ra_timer);
@@ -1230,7 +1217,13 @@ ra_input(int len, struct nd_router_advert *nra,
 	return;
 }
 
-/* return a non-zero value if the received prefix is inconsitent with ours */
+static uint32_t
+udiff(uint32_t u, uint32_t v)
+{
+	return (u >= v ? u - v : v - u);
+}
+
+/* return a non-zero value if the received prefix is inconsistent with ours */
 static int
 prefix_check(struct nd_opt_prefix_info *pinfo,
 	struct rainfo *rai, struct sockaddr_in6 *from)
@@ -1288,7 +1281,7 @@ prefix_check(struct nd_opt_prefix_info *pinfo,
 		preferred_time += now.tv_sec;
 
 		if (!pfx->pfx_timer && rai->rai_clockskew &&
-		    abs(preferred_time - pfx->pfx_pltimeexpire) > rai->rai_clockskew) {
+		    udiff(preferred_time, pfx->pfx_pltimeexpire) > rai->rai_clockskew) {
 			syslog(LOG_INFO,
 			    "<%s> preferred lifetime for %s/%d"
 			    " (decr. in real time) inconsistent on %s:"
@@ -1321,7 +1314,7 @@ prefix_check(struct nd_opt_prefix_info *pinfo,
 		valid_time += now.tv_sec;
 
 		if (!pfx->pfx_timer && rai->rai_clockskew &&
-		    abs(valid_time - pfx->pfx_vltimeexpire) > rai->rai_clockskew) {
+		    udiff(valid_time, pfx->pfx_vltimeexpire) > rai->rai_clockskew) {
 			syslog(LOG_INFO,
 			    "<%s> valid lifetime for %s/%d"
 			    " (decr. in real time) inconsistent on %s:"
@@ -1888,13 +1881,8 @@ ra_timer_update(void *arg, struct timespec *tm)
 		 * MaxRtrAdvInterval (RFC4861 6.2.4).
 		 */
 		interval = rai->rai_mininterval;
-#ifdef HAVE_ARC4RANDOM
 		interval += arc4random_uniform(rai->rai_maxinterval -
 		    rai->rai_mininterval);
-#else
-		interval += random() % (rai->rai_maxinterval -
-		    rai->rai_mininterval);
-#endif
 		break;
 	case IFI_STATE_TRANSITIVE:
 		/*

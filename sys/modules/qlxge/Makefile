@@ -29,10 +29,10 @@
 # * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
 # */
 #
-# $FreeBSD: release/10.0.0/sys/modules/qlxge/Makefile 252206 2013-06-25 17:50:22Z davidcs $
+# $FreeBSD$
 #
 
-.PATH: ${.CURDIR}/../../dev/qlxge
+.PATH: ${SRCTOP}/sys/dev/qlxge
 
 KMOD=if_qlxge
 SRCS=qls_os.c qls_dbg.c qls_hw.c qls_isr.c qls_dump.c
@@ -40,11 +40,6 @@ SRCS+=qls_ioctl.c
 SRCS+= device_if.h bus_if.h pci_if.h
 
 CFLAGS += -DQL_DBG
-
-clean:
-	rm -f opt_bdg.h device_if.h bus_if.h pci_if.h export_syms
-	rm -f *.o *.kld *.ko
-	rm -f @ machine x86
 
 .include <bsd.kmod.mk>
 

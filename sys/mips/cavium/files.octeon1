@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/cavium/files.octeon1 242955 2012-11-13 07:39:49Z jmallett $
+# $FreeBSD$
 # Octeon Support Files
 #
 mips/cavium/asm_octeon.S			optional smp

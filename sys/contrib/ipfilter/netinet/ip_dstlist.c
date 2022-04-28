@@ -9,9 +9,6 @@
 # define        KERNEL	1
 # define        _KERNEL	1
 #endif
-#if defined(__osf__)
-# define _PROTO_NET_H_
-#endif
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/param.h>
@@ -21,9 +18,6 @@
 # include <stdlib.h>
 # include <string.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #else
@@ -33,14 +27,12 @@ struct file;
 # endif
 #endif
 #include <sys/time.h>
-#if !defined(linux)
 # include <sys/protosw.h>
-#endif
 #include <sys/socket.h>
-#if defined(_KERNEL) && (!defined(__SVR4) && !defined(__svr4__))
+#if defined(_KERNEL) && !defined(__SVR4)
 # include <sys/mbuf.h>
 #endif
-#if defined(__SVR4) || defined(__svr4__)
+#if defined(__SVR4)
 # include <sys/filio.h>
 # include <sys/byteorder.h>
 # ifdef _KERNEL
@@ -49,7 +41,7 @@ struct file;
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version)
 # include <sys/malloc.h>
 #endif
 
@@ -690,6 +682,7 @@ ipf_dstlist_node_del(softc, arg, op, uid)
 	err = COPYIN(op->iplo_struct, temp, size);
 	if (err != 0) {
 		IPFERROR(120027);
+		KFREES(temp, size);
 		return EFAULT;
 	}
 
@@ -1134,7 +1127,7 @@ ipf_dstlist_select(fin, d)
 	int family;
 	int x;
 
-	if (d->ipld_dests == NULL || *d->ipld_dests == NULL)
+	if (d == NULL || d->ipld_dests == NULL || *d->ipld_dests == NULL)
 		return NULL;
 
 	family = fin->fin_family;
@@ -1193,7 +1186,7 @@ ipf_dstlist_select(fin, d)
 		MD5Update(&ctx, (u_char *)&fin->fin_dst6,
 			  sizeof(fin->fin_dst6));
 		MD5Final((u_char *)hash, &ctx);
-		x = hash[0] % d->ipld_nodes;
+		x = ntohl(hash[0]) % d->ipld_nodes;
 		sel = d->ipld_dests[x];
 		break;
 
@@ -1203,7 +1196,7 @@ ipf_dstlist_select(fin, d)
 		MD5Update(&ctx, (u_char *)&fin->fin_src6,
 			  sizeof(fin->fin_src6));
 		MD5Final((u_char *)hash, &ctx);
-		x = hash[0] % d->ipld_nodes;
+		x = ntohl(hash[0]) % d->ipld_nodes;
 		sel = d->ipld_dests[x];
 		break;
 
@@ -1213,7 +1206,7 @@ ipf_dstlist_select(fin, d)
 		MD5Update(&ctx, (u_char *)&fin->fin_dst6,
 			  sizeof(fin->fin_dst6));
 		MD5Final((u_char *)hash, &ctx);
-		x = hash[0] % d->ipld_nodes;
+		x = ntohl(hash[0]) % d->ipld_nodes;
 		sel = d->ipld_dests[x];
 		break;
 
@@ -1222,7 +1215,7 @@ ipf_dstlist_select(fin, d)
 		break;
 	}
 
-	if (sel->ipfd_dest.fd_addr.adf_family != family)
+	if (sel && sel->ipfd_dest.fd_addr.adf_family != family)
 		sel = NULL;
 	d->ipld_selected = sel;
 

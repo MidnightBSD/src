@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/mount.h 219089 2011-02-27 19:41:40Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_MOUNT_H_

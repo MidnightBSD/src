@@ -12,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: ds2153.h,v 1.2.4.1 2003/11/12 17:22:33 rik Exp $
- * $FreeBSD: release/10.0.0/sys/dev/ctau/ds2153.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 /*

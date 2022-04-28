@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/cron/lib/misc.c 241125 2012-10-02 09:23:16Z pluknet $";
+  "$FreeBSD$";
 #endif
 
 /* vix 26jan87 [RCS has the rest of the log]
@@ -385,11 +385,7 @@ out:	if (allow)
 
 
 void
-log_it(username, xpid, event, detail)
-	char	*username;
-	int	xpid;
-	char	*event;
-	char	*detail;
+log_it(char *username, int xpid, char *event, const char *detail)
 {
 #if defined(LOG_FILE) || DEBUGGING
 	PID_T			pid = xpid;

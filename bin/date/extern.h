@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.1 (Berkeley) 5/31/93
- * $FreeBSD: release/10.0.0/bin/date/extern.h 241737 2012-10-19 14:49:42Z ed $
+ * $FreeBSD$
  */
 
 extern int retval;

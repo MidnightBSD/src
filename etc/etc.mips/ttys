@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/etc/etc.mips/ttys 220154 2011-03-30 08:22:29Z ed $
+# $FreeBSD$
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
 # This file specifies various information about terminals on the system.
@@ -30,7 +30,7 @@
 console	none				unknown	off secure
 # Serial terminals
 # The 'dialup' keyword identifies dialin lines to login, fingerd etc.
-ttyu0	"/usr/libexec/getty std.115200"	dialup	on  secure
-ttyu1	"/usr/libexec/getty std.115200"	dialup	off secure
-ttyu2	"/usr/libexec/getty std.115200"	dialup	off secure
-ttyu3	"/usr/libexec/getty std.115200"	dialup	off secure
+ttyu0	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyu1	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyu2	"/usr/libexec/getty 3wire"	vt100	onifconsole secure
+ttyu3	"/usr/libexec/getty 3wire"	vt100	onifconsole secure

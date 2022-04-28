@@ -30,13 +30,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)fflush.3	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/stdio/fflush.3 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 1993
+.Dd January 23, 2020
 .Dt FFLUSH 3
 .Os
 .Sh NAME
 .Nm fflush ,
+.Nm fflush_unlocked ,
 .Nm fpurge
 .Nd flush a stream
 .Sh LIBRARY
@@ -45,6 +46,8 @@
 .In stdio.h
 .Ft int
 .Fn fflush "FILE *stream"
+.Ft int
+.Fn fflush_unlocked "FILE *stream"
 .Ft int
 .Fn fpurge "FILE *stream"
 .Sh DESCRIPTION
@@ -63,6 +66,16 @@ argument is
 flushes
 .Em all
 open output streams.
+.Pp
+The
+.Fn fflush_unlocked
+function is equivalent to
+.Fn fflush ,
+except that the caller is responsible for locking the stream with
+.Xr flockfile 3
+before calling it.
+This function may be used to avoid the overhead of locking the stream and to
+prevent races when multiple threads are operating on the same stream.
 .Pp
 The function
 .Fn fpurge
@@ -87,9 +100,7 @@ is set to indicate the error.
 The
 .Fa stream
 argument
-is not an open stream, or, in the case of
-.Fn fflush ,
-not a stream open for writing.
+is not an open stream.
 .El
 .Pp
 The function
@@ -97,7 +108,12 @@ The function
 may also fail and set
 .Va errno
 for any of the errors specified for the routine
-.Xr write 2 .
+.Xr write 2 ,
+except that in case of
+.Fa stream
+being a read-only descriptor,
+.Fn fflush
+returns 0.
 .Sh SEE ALSO
 .Xr write 2 ,
 .Xr fclose 3 ,

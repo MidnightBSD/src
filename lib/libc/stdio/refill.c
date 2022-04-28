@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)refill.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/refill.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <errno.h>
@@ -53,9 +53,9 @@ lflush(FILE *fp)
 	int	ret = 0;
 
 	if ((fp->_flags & (__SLBF|__SWR)) == (__SLBF|__SWR)) {
-		FLOCKFILE(fp);
+		FLOCKFILE_CANCELSAFE(fp);
 		ret = __sflush(fp);
-		FUNLOCKFILE(fp);
+		FUNLOCKFILE_CANCELSAFE();
 	}
 	return (ret);
 }

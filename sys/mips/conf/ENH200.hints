@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/ENH200.hints 252691 2013-07-04 08:42:20Z adrian $
+# $FreeBSD$
 
 # arge0 MDIO bus
 hint.argemdio.0.at="nexus0"

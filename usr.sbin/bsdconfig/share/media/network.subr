@@ -24,7 +24,7 @@ if [ ! "$_MEDIA_NETWORK_SUBR" ]; then _MEDIA_NETWORK_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/share/media/network.subr 252987 2013-07-07 18:51:44Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ktrace.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/ktrace.2 235140 2012-05-08 18:56:21Z gjb $
+.\" $FreeBSD$
 .\"
-.Dd October 10, 2011
+.Dd March 31, 2016
 .Dt KTRACE 2
 .Os
 .Sh NAME
@@ -94,6 +94,8 @@ generate much output).
 .It KTRFAC_PROCCTOR Ta "Trace process construction."
 .It KTRFAC_PROCDTOR Ta "Trace process destruction."
 .It KTRFAC_CAPFAIL Ta "Trace capability failures."
+.It KTRFAC_FAULT Ta "Trace page faults."
+.It KTRFAC_FAULTEND Ta "Trace the end of page faults."
 .It KTRFAC_INHERIT Ta "Inherit tracing to future children."
 .El
 .Pp

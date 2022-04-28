@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/amr/amr_cam.c 246713 2013-02-12 16:57:20Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -323,9 +323,9 @@ amr_cam_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->max_target = AMR_MAX_TARGETS;
 		cpi->max_lun = 0 /* AMR_MAX_LUNS*/;
 		cpi->initiator_id = 7;		  /* XXX variable? */
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "LSI", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "LSI", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 132 * 1024;  /* XXX */

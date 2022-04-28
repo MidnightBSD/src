@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/sc_machdep.h 239684 2012-08-25 17:57:50Z rwatson $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_SC_MACHDEP_H_

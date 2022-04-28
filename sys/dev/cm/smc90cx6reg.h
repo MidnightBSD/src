@@ -1,5 +1,5 @@
 /*	$NetBSD: smc90cx6reg.h,v 1.7 1999/02/16 23:34:13 is Exp $ */
-/*	$FreeBSD: release/10.0.0/sys/dev/cm/smc90cx6reg.h 204520 2010-03-01 16:52:11Z joel $ */
+/*	$FreeBSD$ */
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.

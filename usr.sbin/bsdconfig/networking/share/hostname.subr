@@ -24,7 +24,7 @@ if [ ! "$_NETWORKING_HOSTNAME_SUBR" ]; then _NETWORKING_HOSTNAME_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/networking/share/hostname.subr 256181 2013-10-09 08:12:26Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -95,6 +95,7 @@ f_dialog_validate_hostname()
 #
 f_dialog_input_hostname()
 {
+	local funcname=f_dialog_input_hostname
 	local hostname="$( f_sysrc_get 'hostname:-$(hostname)' )"
 	local hostname_orig="$hostname" # for change-tracking
 
@@ -120,7 +121,8 @@ f_dialog_input_hostname()
 	#
 	if [ "$hostname" != "$hostname_orig" ]; then
 		f_dialog_info "$msg_saving_hostname"
-		f_sysrc_set hostname "$hostname"
+		f_eval_catch $funcname f_sysrc_set \
+			'f_sysrc_set hostname "%s"' "$hostname"
 	fi
 
 	#

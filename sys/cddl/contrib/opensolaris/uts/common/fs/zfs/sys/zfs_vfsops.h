@@ -64,17 +64,18 @@ struct zfsvfs {
 	int		z_norm;		/* normalization flags */
 	boolean_t	z_atime;	/* enable atimes mount option */
 	boolean_t	z_unmounted;	/* unmounted */
-	rrwlock_t	z_teardown_lock;
+	rrmlock_t	z_teardown_lock;
 	krwlock_t	z_teardown_inactive_lock;
 	list_t		z_all_znodes;	/* all vnodes in the fs */
 	kmutex_t	z_znodes_lock;	/* lock for z_all_znodes */
-	vnode_t		*z_ctldir;	/* .zfs directory pointer */
+	struct zfsctl_root	*z_ctldir;	/* .zfs directory pointer */
 	boolean_t	z_show_ctldir;	/* expose .zfs in the root dir */
 	boolean_t	z_issnap;	/* true if this is a snapshot */
 	boolean_t	z_vscan;	/* virus scan on/off */
 	boolean_t	z_use_fuids;	/* version allows fuids */
 	boolean_t	z_replay;	/* set during ZIL replay */
 	boolean_t	z_use_sa;	/* version allow system attributes */
+	boolean_t	z_use_namecache;/* make use of FreeBSD name cache */
 	uint64_t	z_version;	/* ZPL version */
 	uint64_t	z_shares_dir;	/* hidden shares dir */
 	kmutex_t	z_lock;
@@ -84,6 +85,9 @@ struct zfsvfs {
 	sa_attr_type_t	*z_attr_table;	/* SA attr mapping->id */
 #define	ZFS_OBJ_MTX_SZ	64
 	kmutex_t	z_hold_mtx[ZFS_OBJ_MTX_SZ];	/* znode hold locks */
+#if defined(__FreeBSD__)
+	struct task	z_unlinked_drain_task;
+#endif
 };
 
 /*
@@ -141,7 +145,7 @@ extern uint_t zfs_fsyncer_key;
 extern int zfs_super_owner;
 
 extern int zfs_suspend_fs(zfsvfs_t *zfsvfs);
-extern int zfs_resume_fs(zfsvfs_t *zfsvfs, const char *osname);
+extern int zfs_resume_fs(zfsvfs_t *zfsvfs, struct dsl_dataset *ds);
 extern int zfs_userspace_one(zfsvfs_t *zfsvfs, zfs_userquota_prop_t type,
     const char *domain, uint64_t rid, uint64_t *valuep);
 extern int zfs_userspace_many(zfsvfs_t *zfsvfs, zfs_userquota_prop_t type,
@@ -154,6 +158,7 @@ extern boolean_t zfs_fuid_overquota(zfsvfs_t *zfsvfs, boolean_t isgroup,
     uint64_t fuid);
 extern int zfs_set_version(zfsvfs_t *zfsvfs, uint64_t newvers);
 extern int zfsvfs_create(const char *name, zfsvfs_t **zfvp);
+extern int zfsvfs_create_impl(zfsvfs_t **zfvp, zfsvfs_t *zfsvfs, objset_t *os);
 extern void zfsvfs_free(zfsvfs_t *zfsvfs);
 extern int zfs_check_global_label(const char *dsname, const char *hexsl);
 

@@ -15,7 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ah_regdomain.h 219442 2011-03-10 03:13:56Z adrian $
+ * $FreeBSD$
  */
 #ifndef	__AH_REGDOMAIN_H__
 #define	__AH_REGDOMAIN_H__
@@ -157,7 +157,8 @@ typedef struct regDomain {
 } REG_DOMAIN;
 
 struct cmode {
-	u_int	mode;
-	u_int	flags;
+	u_int		mode;
+	u_int		flags;
+	REG_DMN_FREQ_BAND *freqs;
 };
 #endif

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__RCSID("$FreeBSD: release/10.0.0/usr.sbin/mptutil/mptutil.c 213672 2010-10-10 20:37:38Z randi $");
+__RCSID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -111,6 +111,10 @@ main(int ac, char **av)
 	/* getopt() eats av[0], so we can't use mpt_table_handler() directly. */
 	if (ac == 0)
 		usage();
+
+#if BYTE_ORDER == BIG_ENDIAN
+	warnx("mptutil is known to be broken on big-endian architectures");
+#endif
 
 	SET_FOREACH(cmd, MPT_DATASET(top)) {
 		if (strcmp((*cmd)->name, av[0]) == 0) {

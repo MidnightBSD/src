@@ -26,13 +26,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)pipe.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/pipe.2 250161 2013-05-01 22:47:47Z jilles $
+.\" $FreeBSD$
 .\"
-.Dd May 1, 2013
+.Dd December 1, 2017
 .Dt PIPE 2
 .Os
 .Sh NAME
-.Nm pipe
+.Nm pipe ,
+.Nm pipe2
 .Nd create descriptor pair for interprocess communication
 .Sh LIBRARY
 .Lb libc
@@ -45,7 +46,7 @@
 .Sh DESCRIPTION
 The
 .Fn pipe
-system call
+function
 creates a
 .Em pipe ,
 which is an object allowing
@@ -108,6 +109,18 @@ The bidirectional nature of this implementation of pipes is not
 portable to older systems, so it is recommended to use the convention
 for using the endpoints in the traditional manner when using a
 pipe in one direction.
+.Sh IMPLEMENTATION NOTES
+The
+.Fn pipe
+function calls the
+.Fn pipe2
+system call.
+As a result, system call traces such as those captured by
+.Xr dtrace 1
+or
+.Xr ktrace 1
+will show calls to
+.Fn pipe2 .
 .Sh RETURN VALUES
 .Rv -std pipe
 .Sh ERRORS
@@ -117,6 +130,9 @@ and
 .Fn pipe2
 system calls will fail if:
 .Bl -tag -width Er
+.It Bq Er EFAULT
+.Ar fildes
+argument points to an invalid memory location.
 .It Bq Er EMFILE
 Too many descriptors are active.
 .It Bq Er ENFILE
@@ -153,3 +169,10 @@ The
 .Fn pipe2
 function appeared in
 .Fx 10.0 .
+.Pp
+The
+.Fn pipe
+function became a wrapper around
+.Fn pipe2
+in
+.Fx 11.0 .

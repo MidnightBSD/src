@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/si_blit_shaders.c 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 
@@ -251,4 +251,4 @@ const u32 si_default_state[] =
 	0x00000010, /*  */
 };
 
-const u32 si_default_size = DRM_ARRAY_SIZE(si_default_state);
+const u32 si_default_size = ARRAY_SIZE(si_default_state);

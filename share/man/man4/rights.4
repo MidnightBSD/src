@@ -30,9 +30,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/rights.4 258324 2013-11-18 22:37:01Z pjd $
+.\" $FreeBSD$
 .\"
-.Dd September 23, 2013
+.Dd August 17, 2016
 .Dt RIGHTS 4
 .Os
 .Sh NAME
@@ -69,10 +69,9 @@ type is used to store list of capability rights.
 The
 .Xr cap_rights_init 3
 family of functions should be used to manage the structure.
-.Pp
 .Sh RIGHTS
 The following rights may be specified in a rights mask:
-.Bl -tag -width CAP_EXTATTR_DELETE
+.Bl -tag -width CAP_RENAMEAT_SOURCE
 .It Dv CAP_ACCEPT
 Permit
 .Xr accept 2
@@ -213,7 +212,7 @@ with the
 .Dv O_EXEC
 flag;
 .Dv CAP_READ
-is also be required.
+is also required.
 .It Dv CAP_FLOCK
 Permit
 .Xr flock 2 ,
@@ -255,6 +254,7 @@ Permit
 .It Dv CAP_FSYNC
 Permit
 .Xr aio_fsync 2 ,
+.Xr fdatasync 2 ,
 .Xr fsync 2
 and
 .Xr openat 2
@@ -273,9 +273,13 @@ with the
 flag.
 .It Dv CAP_FUTIMES
 Permit
-.Xr futimes 2
+.Xr futimens 2
 and
+.Xr futimes 2 ,
+and permit
 .Xr futimesat 2
+and
+.Xr utimensat 2
 if the
 .Dv CAP_LOOKUP
 right is also present.
@@ -325,12 +329,28 @@ argument is non-NULL).
 .Dv CAP_EVENT
 is also required on file descriptors that will be monitored using
 .Xr kevent 2 .
-.It Dv CAP_LINKAT
+.It Dv CAP_LINKAT_SOURCE
 Permit
 .Xr linkat 2
-and
-.Xr renameat 2
-on the destination directory descriptor.
+on the source directory descriptor.
+This right includes the
+.Dv CAP_LOOKUP
+right.
+.Pp
+Warning:
+.Dv CAP_LINKAT_SOURCE
+makes it possible to link files in a directory for which file
+descriptors exist that have additional rights.
+For example,
+a file stored in a directory that does not allow
+.Dv CAP_READ
+may be linked in another directory that does allow
+.Dv CAP_READ ,
+thereby granting read access to a file that is otherwise unreadable.
+.It Dv CAP_LINKAT_TARGET
+Permit
+.Xr linkat 2
+on the target directory descriptor.
 This right includes the
 .Dv CAP_LOOKUP
 right.
@@ -471,10 +491,28 @@ is also required) and related system calls.
 .It Dv CAP_RECV
 An alias to
 .Dv CAP_READ .
-.It Dv CAP_RENAMEAT
+.It Dv CAP_RENAMEAT_SOURCE
 Permit
-.Xr renameat 2 .
-This right is required on the source directory descriptor.
+.Xr renameat 2
+on the source directory descriptor.
+This right includes the
+.Dv CAP_LOOKUP
+right.
+.Pp
+Warning:
+.Dv CAP_RENAMEAT_SOURCE
+makes it possible to move files to a directory for which file
+descriptors exist that have additional rights.
+For example,
+a file stored in a directory that does not allow
+.Dv CAP_READ
+may be moved to another directory that does allow
+.Dv CAP_READ ,
+thereby granting read access to a file that is otherwise unreadable.
+.It Dv CAP_RENAMEAT_TARGET
+Permit
+.Xr renameat 2
+on the target directory descriptor.
 This right includes the
 .Dv CAP_LOOKUP
 right.
@@ -666,9 +704,10 @@ Support for capabilities and capabilities mode was developed as part of the
 .Tn TrustedBSD
 Project.
 .Sh AUTHORS
+.An -nosplit
 This manual page was created by
-.An Pawel Jakub Dawidek Aq pawel@dawidek.net
-under sponsorship from the FreeBSD Foundation based on
+.An Pawel Jakub Dawidek Aq Mt pawel@dawidek.net
+under sponsorship from the FreeBSD Foundation based on the
 .Xr cap_new 2
 manual page by
-.An "Robert Watson" Aq rwatson@FreeBSD.org .
+.An Robert Watson Aq Mt rwatson@FreeBSD.org .

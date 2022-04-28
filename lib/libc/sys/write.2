@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)write.2	8.5 (Berkeley) 4/2/94
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/write.2 255486 2013-09-12 00:53:38Z bdrewery $
+.\" $FreeBSD$
 .\"
-.Dd September 11, 2013
+.Dd October 23, 2017
 .Dt WRITE 2
 .Os
 .Sh NAME
@@ -40,7 +40,6 @@
 .Sh LIBRARY
 .Lb libc
 .Sh SYNOPSIS
-.In sys/types.h
 .In unistd.h
 .Ft ssize_t
 .Fn write "int fd" "const void *buf" "size_t nbytes"
@@ -200,7 +199,12 @@ to enable writing on the disk label area.
 The value
 .Fa nbytes
 is greater than
-.Dv INT_MAX .
+.Dv SSIZE_MAX
+(or greater than
+.Dv INT_MAX ,
+if the sysctl
+.Va debug.iosize_max_clamp
+is non-zero).
 .El
 .Pp
 In addition,

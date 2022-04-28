@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/wpa_supplicant 196436 2009-08-23 05:47:19Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: wpa_supplicant
@@ -11,6 +11,7 @@
 . /etc/network.subr
 
 name="wpa_supplicant"
+desc="WPA/802.11i Supplicant for wireless network devices"
 rcvar=
 
 ifn="$2"

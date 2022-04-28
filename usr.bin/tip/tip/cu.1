@@ -28,9 +28,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tip.1	8.4 (Berkeley) 4/18/94
-.\" $FreeBSD: release/10.0.0/usr.bin/tip/tip/cu.1 244040 2012-12-08 22:16:36Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd September 1, 2006
+.Dd April 22, 2017
 .Dt CU 1
 .Os
 .Sh NAME
@@ -494,6 +494,11 @@ line access log
 lock file to avoid conflicts with
 .Xr uucp 1 Pq Pa ports/net/freebsd-uucp
 .El
+.Sh EXAMPLES
+Connect to the first USB serial port at the speed of 115200 baud:
+.Bd -literal -offset indent
+cu -s 115200 -l /dev/cuaU0
+.Ed
 .Sh SEE ALSO
 .Xr tip 1
 .Sh HISTORY

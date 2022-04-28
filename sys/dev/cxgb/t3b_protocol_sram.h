@@ -26,7 +26,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/t3b_protocol_sram.h 176613 2008-02-26 23:05:05Z kmacy $
+$FreeBSD$
 
 ***************************************************************************/
 

@@ -23,7 +23,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91_rtcreg.h 241307 2012-10-07 01:58:32Z imp $ */
+/* $FreeBSD$ */
 
 #ifndef ARM_AT91_AT91_RTCREG_H
 #define ARM_AT91_AT91_RTCREG_H

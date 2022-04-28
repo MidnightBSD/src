@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: release/10.0.0/sys/i386/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
+ * $FreeBSD$
  */
 
 
@@ -64,9 +64,15 @@
 #endif
 
 /*
- * The physical address space is densely populated.
+ * Choose between DENSE and SPARSE based on whether lower execution time or
+ * lower kernel address space consumption is desired.  Under PAE, kernel
+ * address space is often in short supply.
  */
+#ifdef PAE
+#define	VM_PHYSSEG_SPARSE
+#else
 #define	VM_PHYSSEG_DENSE
+#endif
 
 /*
  * The number of PHYSSEG entries must be one greater than the number
@@ -77,13 +83,12 @@
 #define	VM_PHYSSEG_MAX		17
 
 /*
- * Create two free page pools.  Since the i386 kernel virtual address
+ * Create one free page pool.  Since the i386 kernel virtual address
  * space does not include a mapping onto the machine's entire physical
  * memory, VM_FREEPOOL_DIRECT is defined as an alias for the default
  * pool, VM_FREEPOOL_DEFAULT.
  */
-#define	VM_NFREEPOOL		2
-#define	VM_FREEPOOL_CACHE	1
+#define	VM_NFREEPOOL		1
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	0
 
@@ -114,11 +119,11 @@
 #endif
 
 /*
- * Level 0 reservations consist of 512 pages under PAE and 1024 pages
- * otherwise.
+ * Level 0 reservations consist of 512 pages when PAE pagetables are
+ * used, and 1024 pages otherwise.
  */
 #ifndef	VM_LEVEL_0_ORDER
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 #define	VM_LEVEL_0_ORDER	9
 #else
 #define	VM_LEVEL_0_ORDER	10
@@ -129,11 +134,7 @@
  * Kernel physical load address.
  */
 #ifndef KERNLOAD
-#if defined(XEN) && !defined(XEN_PRIVILEGED_GUEST)
-#define	KERNLOAD		0
-#else
 #define	KERNLOAD		(1 << PDRSHIFT)
-#endif
 #endif /* !defined(KERNLOAD) */
 
 /*
@@ -143,11 +144,7 @@
  * messy at times, but hey, we'll do anything to save a page :-)
  */
 
-#ifdef XEN
-#define VM_MAX_KERNEL_ADDRESS	HYPERVISOR_VIRT_START
-#else
 #define VM_MAX_KERNEL_ADDRESS	VADDR(KPTDI+NKPDE-1, NPTEPG-1)
-#endif
 
 #define VM_MIN_KERNEL_ADDRESS	VADDR(PTDPTDI, PTDPTDI)
 
@@ -164,24 +161,23 @@
 #define VM_MAX_ADDRESS		VADDR(PTDPTDI, PTDPTDI)
 #define VM_MIN_ADDRESS		((vm_offset_t)0)
 
-/* virtual sizes (bytes) for various kernel submaps */
-#ifndef VM_KMEM_SIZE
-#define VM_KMEM_SIZE		(12 * 1024 * 1024)
-#endif
-
 /*
- * How many physical pages per KVA page allocated.
- * min(max(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE),
- *     VM_KMEM_SIZE_MIN), VM_KMEM_SIZE_MAX)
- * is the total KVA space allocated for kmem_map.
+ * How many physical pages per kmem arena virtual page.
  */
 #ifndef VM_KMEM_SIZE_SCALE
 #define	VM_KMEM_SIZE_SCALE	(3)
 #endif
 
 /*
- * Ceiling on the amount of kmem_map KVA space: 40% of the entire KVA space
- * rounded to the nearest multiple of the superpage size.
+ * Optional floor (in bytes) on the size of the kmem arena.
+ */
+#ifndef VM_KMEM_SIZE_MIN
+#define	VM_KMEM_SIZE_MIN	(12 * 1024 * 1024)
+#endif
+
+/*
+ * Optional ceiling (in bytes) on the size of the kmem arena: 40% of the
+ * kernel map rounded to the nearest multiple of the superpage size.
  */
 #ifndef VM_KMEM_SIZE_MAX
 #define	VM_KMEM_SIZE_MAX	(((((VM_MAX_KERNEL_ADDRESS - \
@@ -198,5 +194,10 @@
 #ifndef VM_MAX_AUTOTUNE_MAXUSERS
 #define VM_MAX_AUTOTUNE_MAXUSERS 384
 #endif
+
+#define	SFBUF
+#define	SFBUF_MAP
+#define	SFBUF_CPUSET
+#define	SFBUF_PROCESS_PAGE
 
 #endif /* _MACHINE_VMPARAM_H_ */

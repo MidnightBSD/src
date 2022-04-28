@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/contrib/bzip2/FREEBSD-Xlist 240373 2012-09-11 21:16:22Z delphij $
+# $FreeBSD$
 *Makefile*
 *README.XML.STUFF
 *bz-common.xsl

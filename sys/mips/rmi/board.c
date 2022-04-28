@@ -28,7 +28,7 @@
  *
  * *****************************RMI_2**********************************/
 #include <sys/cdefs.h>		/* RCS ID & Copyright macro defns */
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/rmi/board.c 216390 2010-12-12 06:00:26Z jchandra $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * from: src/lib/libthr/arch/arm/include/pthread_md.h,v 1.3 2005/10/29 13:40:31 davidxu
- * $FreeBSD: release/10.0.0/lib/libthr/arch/mips/include/pthread_md.h 232579 2012-03-06 03:27:58Z gonzo $
+ * $FreeBSD$
  */
 
 /*
@@ -50,12 +50,6 @@ struct tcb {
 	struct pthread		*tcb_thread;
 };
 
-/*
- * The tcb constructors.
- */
-struct tcb	*_tcb_ctor(struct pthread *, int);
-void		_tcb_dtor(struct tcb *);
-
 /* Called from the thread to set its private data. */
 static __inline void
 _tcb_set(struct tcb *tcb)
@@ -75,8 +69,6 @@ _tcb_get(void)
 	sysarch(MIPS_GET_TLS, &tcb);
 	return tcb;
 }
-
-extern struct pthread *_thr_initial;
 
 static __inline struct pthread *
 _get_curthread(void)

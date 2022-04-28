@@ -27,13 +27,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)syslimits.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: release/10.0.0/sys/sys/syslimits.h 194498 2009-06-19 17:10:35Z brooks $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SYSLIMITS_H_
 #define _SYS_SYSLIMITS_H_
 
-#if !defined(_KERNEL) && !defined(_LIMITS_H_) && !defined(_SYS_PARAM_H_)
+#if !defined(_STANDALONE) && !defined(_KERNEL) && !defined(_LIMITS_H_) && !defined(_SYS_PARAM_H_)
 #ifndef _SYS_CDEFS_H_
 #error this file needs sys/cdefs.h as a prerequisite
 #endif

@@ -1,5 +1,7 @@
-/*
+/*-
  * node.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: node.c,v 1.6 2003/07/22 21:14:02 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hccontrol/node.c 158834 2006-05-22 17:58:09Z markus $
+ * $FreeBSD$
  */
 
 #include <sys/ioctl.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <netgraph/ng_message.h>
@@ -591,7 +594,7 @@ struct hci_command	node_commands[] = {
 "Write the value of the Role Switch parameter for the HCI node. By default,\n" \
 "if Role Switch is supported, local device will try to perform Role Switch\n" \
 "and become Master on incoming connection. Some devices do not support Role\n" \
-"Switch and thus incomming connections from such devices will fail. Setting\n" \
+"Switch and thus incoming connections from such devices will fail. Setting\n" \
 "this parameter to zero will prevent Role Switch and thus accepting device\n" \
 "will remain Slave",
 &hci_write_node_role_switch

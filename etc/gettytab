@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/etc/gettytab 241708 2012-10-18 22:20:02Z peterj $
+# $FreeBSD$
 #	from: @(#)gettytab	5.14 (Berkeley) 3/27/91
 #
 # Most of the table entries here are just copies of the old getty table,
@@ -49,6 +49,8 @@ default:\
 #	autobaud code in getty, and likewise can
 #	be assigned to any table desired (hopefully the same speed).
 #
+std:\
+	:np:sp#0:
 a|std.110|110-baud:\
 	:np:nd#1:cd#1:uc:sp#110:
 b|std.134|134.5-baud:\
@@ -214,11 +216,15 @@ al.115200:\
 	:al=root:tc=std.115200:
 al.230400:\
 	:al=root:tc=std.230400:
+al.Pc:\
+	:al=root:tc=Pc
 
 #
 # Entries for 3-wire serial terminals.  These don't supply carrier, so
 # clocal needs to be set, and crtscts needs to be unset.
 #
+3wire:\
+	:np:nc:sp#0:
 3wire.9600|9600-3wire:\
 	:np:nc:sp#9600:
 3wire.19200|19200-3wire:\

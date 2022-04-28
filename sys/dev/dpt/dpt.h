@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/dpt/dpt.h 249348 2013-04-10 23:20:09Z sbruno $
+ * $FreeBSD$
  */
 
 /*
@@ -1083,7 +1083,7 @@ typedef struct dpt_softc {
 
 	/*
 	 * Every object on a unit can have a receiver, if it treats
-	 * us as a target.  We do that so that separate and independant
+	 * us as a target.  We do that so that separate and independent
 	 * clients can consume received buffers.
 	 */
 
@@ -1245,7 +1245,7 @@ dpt_softc_t *dpt_minor2softc(int minor_no);
 #endif /* _KERNEL */
 
 /*
- * This function substracts one timval structure from another,
+ * This function subtracts one timval structure from another,
  * Returning the result in usec.
  * It assumes that less than 4 billion usecs passed form start to end.
  * If times are sensless, ~0 is returned.

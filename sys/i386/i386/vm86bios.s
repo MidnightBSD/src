@@ -23,10 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/i386/vm86bios.s 217587 2011-01-19 17:09:07Z jkim $
+ * $FreeBSD$
  */
-
-#include "opt_npx.h"
 
 #include <machine/asmacros.h>		/* miscellaneous asm macros */
 #include <machine/trap.h>
@@ -63,14 +61,9 @@ ENTRY(vm86_bioscall)
 	pushl	%edi
 	pushl	%gs
 
-#ifdef DEV_NPX
-	pushfl
-	cli
 	movl	PCPU(CURTHREAD),%ecx
 	cmpl	%ecx,PCPU(FPCURTHREAD)	/* do we need to save fp? */
 	jne	1f
-	testl	%ecx,%ecx
-	je 	1f			/* no curproc/npxproc */
 	pushl	%edx
 	movl	TD_PCB(%ecx),%ecx
 	pushl	PCB_SAVEFPU(%ecx)
@@ -78,9 +71,6 @@ ENTRY(vm86_bioscall)
 	addl	$4,%esp
 	popl	%edx			/* recover our pcb */
 1:
-	popfl
-#endif
-
 	movl	SCR_VMFRAME(%edx),%ebx	/* target frame location */
 	movl	%ebx,%edi		/* destination */
 	movl    SCR_ARGFRAME(%edx),%esi	/* source (set on entry) */
@@ -122,7 +112,7 @@ ENTRY(vm86_bioscall)
 	movl	SCR_NEWPTD(%edx),%eax	/* mapping for vm86 page table */
 	movl	%eax,0(%ebx)		/* ... install as PTD entry 0 */
 
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	IdlePDPT,%ecx
 #endif
 	movl	%ecx,%cr3		/* new page tables */

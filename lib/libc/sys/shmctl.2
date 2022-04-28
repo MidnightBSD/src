@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/shmctl.2 216508 2010-12-17 21:10:08Z brucec $
+.\" $FreeBSD$
 .\"
-.Dd July 17, 1995
+.Dd October 10, 2015
 .Dt SHMCTL 2
 .Os
 .Sh NAME
@@ -72,15 +72,18 @@ or it must have superuser privileges.
 .It Dv IPC_RMID
 Removes the segment from the system.
 The removal will not take
-effect until all processes having attached the segment have exited;
-however, once the IPC_RMID operation has taken place, no further
-processes will be allowed to attach the segment.
+effect until all processes having attached the segment have exited.
 For the operation
 to succeed, the calling process's effective uid must match
 .Fa shm_perm.uid
 or
 .Fa shm_perm.cuid ,
 or the process must have superuser privileges.
+If the
+.Va kern.ipc.shm_allow_removed
+.Xr sysctl 3
+variable is set to 0, once the IPC_RMID operation has taken place,
+no further processes will be allowed to attach the segment.
 .\" .It Dv SHM_LOCK
 .\" Locks the segment in memory.  The calling process must have
 .\" superuser privileges. Not implemented in FreeBSD.

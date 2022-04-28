@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2002, 2004, 2008 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2002, 2004, 2008 Proofpoint, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1992 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -14,13 +14,13 @@
 #include <sm/gen.h>
 
 SM_IDSTR(copyright,
-"@(#) Copyright (c) 1998-2002, 2004 Sendmail, Inc. and its suppliers.\n\
+"@(#) Copyright (c) 1998-2002, 2004 Proofpoint, Inc. and its suppliers.\n\
 	All rights reserved.\n\
      Copyright (c) 1992 Eric P. Allman.  All rights reserved.\n\
      Copyright (c) 1992, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: makemap.c,v 8.181 2013/03/12 15:24:51 ca Exp $")
+SM_IDSTR(id, "@(#)$Id: makemap.c,v 8.183 2013-11-22 20:51:52 ca Exp $")
 
 
 #include <sys/types.h>

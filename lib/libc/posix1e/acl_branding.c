@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_branding.c 208034 2010-05-13 16:44:27Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
 #include <errno.h>

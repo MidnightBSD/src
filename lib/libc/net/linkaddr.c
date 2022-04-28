@@ -31,10 +31,11 @@
 static char sccsid[] = "@(#)linkaddr.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/linkaddr.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <net/if_dl.h>
 #include <string.h>
 
@@ -50,9 +51,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/linkaddr.c 165903 2007-01-09 00:
 #define LETTER	(4*3)
 
 void
-link_addr(addr, sdl)
-	const char *addr;
-	struct sockaddr_dl *sdl;
+link_addr(const char *addr, struct sockaddr_dl *sdl)
 {
 	char *cp = sdl->sdl_data;
 	char *cplim = sdl->sdl_len + (char *)sdl;
@@ -118,38 +117,52 @@ link_addr(addr, sdl)
 	return;
 }
 
-static char hexlist[] = "0123456789abcdef";
+static const char hexlist[] = "0123456789abcdef";
 
 char *
-link_ntoa(sdl)
-	const struct sockaddr_dl *sdl;
+link_ntoa(const struct sockaddr_dl *sdl)
 {
 	static char obuf[64];
-	char *out = obuf;
-	int i;
-	u_char *in = (u_char *)LLADDR(sdl);
-	u_char *inlim = in + sdl->sdl_alen;
-	int firsttime = 1;
+	_Static_assert(sizeof(obuf) >= IFNAMSIZ + 20, "obuf is too small");
+	char *out;
+	const u_char *in, *inlim;
+	int namelen, i, rem;
 
-	if (sdl->sdl_nlen) {
-		bcopy(sdl->sdl_data, obuf, sdl->sdl_nlen);
-		out += sdl->sdl_nlen;
-		if (sdl->sdl_alen)
+	namelen = (sdl->sdl_nlen <= IFNAMSIZ) ? sdl->sdl_nlen : IFNAMSIZ;
+
+	out = obuf;
+	rem = sizeof(obuf);
+	if (namelen > 0) {
+		bcopy(sdl->sdl_data, out, namelen);
+		out += namelen;
+		rem -= namelen;
+		if (sdl->sdl_alen > 0) {
 			*out++ = ':';
+			rem--;
+		}
 	}
-	while (in < inlim) {
-		if (firsttime)
-			firsttime = 0;
-		else
+
+	in = (const u_char *)sdl->sdl_data + sdl->sdl_nlen;
+	inlim = in + sdl->sdl_alen;
+
+	while (in < inlim && rem > 1) {
+		if (in != (const u_char *)sdl->sdl_data + sdl->sdl_nlen) {
 			*out++ = '.';
+			rem--;
+		}
 		i = *in++;
 		if (i > 0xf) {
-			out[1] = hexlist[i & 0xf];
-			i >>= 4;
-			out[0] = hexlist[i];
-			out += 2;
-		} else
+			if (rem < 3)
+				break;
+			*out++ = hexlist[i >> 4];
+			*out++ = hexlist[i & 0xf];
+			rem -= 2;
+		} else {
+			if (rem < 2)
+				break;
 			*out++ = hexlist[i];
+			rem--;
+		}
 	}
 	*out = 0;
 	return (obuf);

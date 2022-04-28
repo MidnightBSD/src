@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/cavium/octeon_pmc.c 233417 2012-03-24 06:28:15Z gonzo $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/cavium/octeon_pmc.c 233417 2012-03-24 06:28:15Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +71,7 @@ octeon_pmc_probe(device_t dev)
 		return (ENXIO);
 
 	device_set_desc(dev, "Cavium Octeon Performance Counters");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

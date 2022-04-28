@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2009-2012 Semihalf
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/nandsim/nandsim_cfgparse.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD$
  */
 
 #ifndef _NANDSIM_CONFPARSER_H_

@@ -4,9 +4,117 @@
  *
  *****************************************************************************/
 
-/*
- * Copyright (C) 2000 - 2013, Intel Corp.
+/******************************************************************************
+ *
+ * 1. Copyright Notice
+ *
+ * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
  * All rights reserved.
+ *
+ * 2. License
+ *
+ * 2.1. This is your license from Intel Corp. under its intellectual property
+ * rights. You may have additional license terms from the party that provided
+ * you this software, covering your right to use that party's intellectual
+ * property rights.
+ *
+ * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
+ * copy of the source code appearing in this file ("Covered Code") an
+ * irrevocable, perpetual, worldwide license under Intel's copyrights in the
+ * base code distributed originally by Intel ("Original Intel Code") to copy,
+ * make derivatives, distribute, use and display any portion of the Covered
+ * Code in any form, with the right to sublicense such rights; and
+ *
+ * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
+ * license (with the right to sublicense), under only those claims of Intel
+ * patents that are infringed by the Original Intel Code, to make, use, sell,
+ * offer to sell, and import the Covered Code and derivative works thereof
+ * solely to the minimum extent necessary to exercise the above copyright
+ * license, and in no event shall the patent license extend to any additions
+ * to or modifications of the Original Intel Code. No other license or right
+ * is granted directly or by implication, estoppel or otherwise;
+ *
+ * The above copyright and patent license is granted only if the following
+ * conditions are met:
+ *
+ * 3. Conditions
+ *
+ * 3.1. Redistribution of Source with Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification with rights to further distribute source must include
+ * the above Copyright Notice, the above License, this list of Conditions,
+ * and the following Disclaimer and Export Compliance provision. In addition,
+ * Licensee must cause all Covered Code to which Licensee contributes to
+ * contain a file documenting the changes Licensee made to create that Covered
+ * Code and the date of any change. Licensee must include in that file the
+ * documentation of any changes made by any predecessor Licensee. Licensee
+ * must include a prominent statement that the modification is derived,
+ * directly or indirectly, from Original Intel Code.
+ *
+ * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification without rights to further distribute source must
+ * include the following Disclaimer and Export Compliance provision in the
+ * documentation and/or other materials provided with distribution. In
+ * addition, Licensee may not authorize further sublicense of source of any
+ * portion of the Covered Code, and must include terms to the effect that the
+ * license from Licensee to its licensee is limited to the intellectual
+ * property embodied in the software Licensee provides to its licensee, and
+ * not to intellectual property embodied in modifications its licensee may
+ * make.
+ *
+ * 3.3. Redistribution of Executable. Redistribution in executable form of any
+ * substantial portion of the Covered Code or modification must reproduce the
+ * above Copyright Notice, and the following Disclaimer and Export Compliance
+ * provision in the documentation and/or other materials provided with the
+ * distribution.
+ *
+ * 3.4. Intel retains all right, title, and interest in and to the Original
+ * Intel Code.
+ *
+ * 3.5. Neither the name Intel nor any other trademark owned or controlled by
+ * Intel shall be used in advertising or otherwise to promote the sale, use or
+ * other dealings in products derived from or relating to the Covered Code
+ * without prior written authorization from Intel.
+ *
+ * 4. Disclaimer and Export Compliance
+ *
+ * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
+ * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
+ * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
+ * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
+ * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
+ * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+ * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
+ * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
+ * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
+ * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
+ * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
+ * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
+ * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
+ * LIMITED REMEDY.
+ *
+ * 4.3. Licensee shall not export, either directly or indirectly, any of this
+ * software or system incorporating such software without first obtaining any
+ * required license or other approval from the U. S. Department of Commerce or
+ * any other agency or department of the United States Government. In the
+ * event Licensee exports any such software from the United States or
+ * re-exports any such software from a foreign destination, Licensee shall
+ * ensure that the distribution and export/re-export of the software is in
+ * compliance with all laws, regulations, orders, or other restrictions of the
+ * U.S. Export Administration Regulations. Licensee agrees that neither it nor
+ * any of its subsidiaries will export/re-export any technical data, process,
+ * software, or service, directly or indirectly, to any country for which the
+ * United States government or any agency thereof requires an export license,
+ * other governmental approval, or letter of assurance, without first obtaining
+ * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,25 +131,23 @@
  *    of any contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * Alternatively, this software may be distributed under the terms of the
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
  * GNU General Public License ("GPL") version 2 as published by the Free
  * Software Foundation.
  *
- * NO WARRANTY
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGES.
- */
-
-#define __TBUTILS_C__
+ *****************************************************************************/
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -77,7 +183,7 @@ ACPI_STATUS
 AcpiTbInitializeFacs (
     void)
 {
-    ACPI_STATUS             Status;
+    ACPI_TABLE_FACS         *Facs;
 
 
     /* If Hardware Reduced flag is set, there is no FACS */
@@ -87,39 +193,25 @@ AcpiTbInitializeFacs (
         AcpiGbl_FACS = NULL;
         return (AE_OK);
     }
-
-    Status = AcpiGetTableByIndex (ACPI_TABLE_INDEX_FACS,
-                ACPI_CAST_INDIRECT_PTR (ACPI_TABLE_HEADER, &AcpiGbl_FACS));
-    return (Status);
-}
-#endif /* !ACPI_REDUCED_HARDWARE */
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiTbTablesLoaded
- *
- * PARAMETERS:  None
- *
- * RETURN:      TRUE if required ACPI tables are loaded
- *
- * DESCRIPTION: Determine if the minimum required ACPI tables are present
- *              (FADT, FACS, DSDT)
- *
- ******************************************************************************/
-
-BOOLEAN
-AcpiTbTablesLoaded (
-    void)
-{
-
-    if (AcpiGbl_RootTableList.CurrentTableCount >= 3)
+    else if (AcpiGbl_FADT.XFacs &&
+         (!AcpiGbl_FADT.Facs || !AcpiGbl_Use32BitFacsAddresses))
     {
-        return (TRUE);
+        (void) AcpiGetTableByIndex (AcpiGbl_XFacsIndex,
+            ACPI_CAST_INDIRECT_PTR (ACPI_TABLE_HEADER, &Facs));
+        AcpiGbl_FACS = Facs;
+    }
+    else if (AcpiGbl_FADT.Facs)
+    {
+        (void) AcpiGetTableByIndex (AcpiGbl_FacsIndex,
+            ACPI_CAST_INDIRECT_PTR (ACPI_TABLE_HEADER, &Facs));
+        AcpiGbl_FACS = Facs;
     }
 
-    return (FALSE);
+    /* If there is no FACS, just continue. There was already an error msg */
+
+    return (AE_OK);
 }
+#endif /* !ACPI_REDUCED_HARDWARE */
 
 
 /*******************************************************************************
@@ -149,6 +241,7 @@ AcpiTbCheckDsdtHeader (
         ACPI_BIOS_ERROR ((AE_INFO,
             "The DSDT has been corrupted or replaced - "
             "old, new headers below"));
+
         AcpiTbPrintTableHeader (0, &AcpiGbl_OriginalDsdtHeader);
         AcpiTbPrintTableHeader (0, AcpiGbl_DSDT);
 
@@ -164,9 +257,9 @@ AcpiTbCheckDsdtHeader (
  *
  * FUNCTION:    AcpiTbCopyDsdt
  *
- * PARAMETERS:  TableDesc           - Installed table to copy
+ * PARAMETERS:  TableIndex          - Index of installed table to copy
  *
- * RETURN:      None
+ * RETURN:      The copied DSDT
  *
  * DESCRIPTION: Implements a subsystem option to copy the DSDT to local memory.
  *              Some very bad BIOSs are known to either corrupt the DSDT or
@@ -192,135 +285,19 @@ AcpiTbCopyDsdt (
         return (NULL);
     }
 
-    ACPI_MEMCPY (NewTable, TableDesc->Pointer, TableDesc->Length);
-    AcpiTbDeleteTable (TableDesc);
-    TableDesc->Pointer = NewTable;
-    TableDesc->Flags = ACPI_TABLE_ORIGIN_ALLOCATED;
+    memcpy (NewTable, TableDesc->Pointer, TableDesc->Length);
+    AcpiTbUninstallTable (TableDesc);
 
-    ACPI_INFO ((AE_INFO,
+    AcpiTbInitTableDescriptor (
+        &AcpiGbl_RootTableList.Tables[AcpiGbl_DsdtIndex],
+        ACPI_PTR_TO_PHYSADDR (NewTable),
+        ACPI_TABLE_ORIGIN_INTERNAL_VIRTUAL, NewTable);
+
+    ACPI_INFO ((
         "Forced DSDT copy: length 0x%05X copied locally, original unmapped",
         NewTable->Length));
 
     return (NewTable);
-}
-
-
-/*******************************************************************************
- *
- * FUNCTION:    AcpiTbInstallTable
- *
- * PARAMETERS:  Address                 - Physical address of DSDT or FACS
- *              Signature               - Table signature, NULL if no need to
- *                                        match
- *              TableIndex              - Index into root table array
- *
- * RETURN:      None
- *
- * DESCRIPTION: Install an ACPI table into the global data structure. The
- *              table override mechanism is called to allow the host
- *              OS to replace any table before it is installed in the root
- *              table array.
- *
- ******************************************************************************/
-
-void
-AcpiTbInstallTable (
-    ACPI_PHYSICAL_ADDRESS   Address,
-    char                    *Signature,
-    UINT32                  TableIndex)
-{
-    ACPI_TABLE_HEADER       *Table;
-    ACPI_TABLE_HEADER       *FinalTable;
-    ACPI_TABLE_DESC         *TableDesc;
-
-
-    if (!Address)
-    {
-        ACPI_ERROR ((AE_INFO, "Null physical address for ACPI table [%s]",
-            Signature));
-        return;
-    }
-
-    /* Map just the table header */
-
-    Table = AcpiOsMapMemory (Address, sizeof (ACPI_TABLE_HEADER));
-    if (!Table)
-    {
-        ACPI_ERROR ((AE_INFO, "Could not map memory for table [%s] at %p",
-            Signature, ACPI_CAST_PTR (void, Address)));
-        return;
-    }
-
-    /* If a particular signature is expected (DSDT/FACS), it must match */
-
-    if (Signature &&
-        !ACPI_COMPARE_NAME (Table->Signature, Signature))
-    {
-        ACPI_BIOS_ERROR ((AE_INFO,
-            "Invalid signature 0x%X for ACPI table, expected [%s]",
-            *ACPI_CAST_PTR (UINT32, Table->Signature), Signature));
-        goto UnmapAndExit;
-    }
-
-    /*
-     * Initialize the table entry. Set the pointer to NULL, since the
-     * table is not fully mapped at this time.
-     */
-    TableDesc = &AcpiGbl_RootTableList.Tables[TableIndex];
-
-    TableDesc->Address = Address;
-    TableDesc->Pointer = NULL;
-    TableDesc->Length = Table->Length;
-    TableDesc->Flags = ACPI_TABLE_ORIGIN_MAPPED;
-    ACPI_MOVE_32_TO_32 (TableDesc->Signature.Ascii, Table->Signature);
-
-    /*
-     * ACPI Table Override:
-     *
-     * Before we install the table, let the host OS override it with a new
-     * one if desired. Any table within the RSDT/XSDT can be replaced,
-     * including the DSDT which is pointed to by the FADT.
-     *
-     * NOTE: If the table is overridden, then FinalTable will contain a
-     * mapped pointer to the full new table. If the table is not overridden,
-     * or if there has been a physical override, then the table will be
-     * fully mapped later (in verify table). In any case, we must
-     * unmap the header that was mapped above.
-     */
-    FinalTable = AcpiTbTableOverride (Table, TableDesc);
-    if (!FinalTable)
-    {
-        FinalTable = Table; /* There was no override */
-    }
-
-    AcpiTbPrintTableHeader (TableDesc->Address, FinalTable);
-
-    /* Set the global integer width (based upon revision of the DSDT) */
-
-    if (TableIndex == ACPI_TABLE_INDEX_DSDT)
-    {
-        AcpiUtSetIntegerWidth (FinalTable->Revision);
-    }
-
-    /*
-     * If we have a physical override during this early loading of the ACPI
-     * tables, unmap the table for now. It will be mapped again later when
-     * it is actually used. This supports very early loading of ACPI tables,
-     * before virtual memory is fully initialized and running within the
-     * host OS. Note: A logical override has the ACPI_TABLE_ORIGIN_OVERRIDE
-     * flag set and will not be deleted below.
-     */
-    if (FinalTable != Table)
-    {
-        AcpiTbDeleteTable (TableDesc);
-    }
-
-
-UnmapAndExit:
-
-    /* Always unmap the table header that we mapped above */
-
-    AcpiOsUnmapMemory (Table, sizeof (ACPI_TABLE_HEADER));
 }
 
 
@@ -353,13 +330,14 @@ AcpiTbGetRootTableEntry (
      * Get the table physical address (32-bit for RSDT, 64-bit for XSDT):
      * Note: Addresses are 32-bit aligned (not 64) in both RSDT and XSDT
      */
-    if (TableEntrySize == sizeof (UINT32))
+    if (TableEntrySize == ACPI_RSDT_ENTRY_SIZE)
     {
         /*
          * 32-bit platform, RSDT: Return 32-bit table entry
          * 64-bit platform, RSDT: Expand 32-bit to 64-bit and return
          */
-        return ((ACPI_PHYSICAL_ADDRESS) (*ACPI_CAST_PTR (UINT32, TableEntry)));
+        return ((ACPI_PHYSICAL_ADDRESS) (*ACPI_CAST_PTR (
+            UINT32, TableEntry)));
     }
     else
     {
@@ -390,7 +368,7 @@ AcpiTbGetRootTableEntry (
  *
  * FUNCTION:    AcpiTbParseRootTable
  *
- * PARAMETERS:  Rsdp                    - Pointer to the RSDP
+ * PARAMETERS:  RsdpAddress         - Pointer to the RSDP
  *
  * RETURN:      Status
  *
@@ -403,7 +381,7 @@ AcpiTbGetRootTableEntry (
  *
  ******************************************************************************/
 
-ACPI_STATUS
+ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiTbParseRootTable (
     ACPI_PHYSICAL_ADDRESS   RsdpAddress)
 {
@@ -416,14 +394,14 @@ AcpiTbParseRootTable (
     UINT32                  Length;
     UINT8                   *TableEntry;
     ACPI_STATUS             Status;
+    UINT32                  TableIndex;
 
 
     ACPI_FUNCTION_TRACE (TbParseRootTable);
 
 
-    /*
-     * Map the entire RSDP and extract the address of the RSDT or XSDT
-     */
+    /* Map the entire RSDP and extract the address of the RSDT or XSDT */
+
     Rsdp = AcpiOsMapMemory (RsdpAddress, sizeof (ACPI_TABLE_RSDP));
     if (!Rsdp)
     {
@@ -433,24 +411,26 @@ AcpiTbParseRootTable (
     AcpiTbPrintTableHeader (RsdpAddress,
         ACPI_CAST_PTR (ACPI_TABLE_HEADER, Rsdp));
 
-    /* Differentiate between RSDT and XSDT root tables */
+    /* Use XSDT if present and not overridden. Otherwise, use RSDT */
 
-    if (Rsdp->Revision > 1 && Rsdp->XsdtPhysicalAddress)
+    if ((Rsdp->Revision > 1) &&
+        Rsdp->XsdtPhysicalAddress &&
+        !AcpiGbl_DoNotUseXsdt)
     {
         /*
-         * Root table is an XSDT (64-bit physical addresses). We must use the
-         * XSDT if the revision is > 1 and the XSDT pointer is present, as per
-         * the ACPI specification.
+         * RSDP contains an XSDT (64-bit physical addresses). We must use
+         * the XSDT if the revision is > 1 and the XSDT pointer is present,
+         * as per the ACPI specification.
          */
         Address = (ACPI_PHYSICAL_ADDRESS) Rsdp->XsdtPhysicalAddress;
-        TableEntrySize = sizeof (UINT64);
+        TableEntrySize = ACPI_XSDT_ENTRY_SIZE;
     }
     else
     {
         /* Root table is an RSDT (32-bit physical addresses) */
 
         Address = (ACPI_PHYSICAL_ADDRESS) Rsdp->RsdtPhysicalAddress;
-        TableEntrySize = sizeof (UINT32);
+        TableEntrySize = ACPI_RSDT_ENTRY_SIZE;
     }
 
     /*
@@ -458,7 +438,6 @@ AcpiTbParseRootTable (
      * so unmap the RSDP here before mapping other tables
      */
     AcpiOsUnmapMemory (Rsdp, sizeof (ACPI_TABLE_RSDP));
-
 
     /* Map the RSDT/XSDT table header to get the full table length */
 
@@ -470,12 +449,14 @@ AcpiTbParseRootTable (
 
     AcpiTbPrintTableHeader (Address, Table);
 
-    /* Get the length of the full table, verify length and map entire table */
-
+    /*
+     * Validate length of the table, and map entire table.
+     * Minimum length table must contain at least one entry.
+     */
     Length = Table->Length;
     AcpiOsUnmapMemory (Table, sizeof (ACPI_TABLE_HEADER));
 
-    if (Length < sizeof (ACPI_TABLE_HEADER))
+    if (Length < (sizeof (ACPI_TABLE_HEADER) + TableEntrySize))
     {
         ACPI_BIOS_ERROR ((AE_INFO,
             "Invalid table length 0x%X in RSDT/XSDT", Length));
@@ -497,71 +478,152 @@ AcpiTbParseRootTable (
         return_ACPI_STATUS (Status);
     }
 
-    /* Calculate the number of tables described in the root table */
+    /* Get the number of entries and pointer to first entry */
 
     TableCount = (UINT32) ((Table->Length - sizeof (ACPI_TABLE_HEADER)) /
         TableEntrySize);
+    TableEntry = ACPI_ADD_PTR (UINT8, Table, sizeof (ACPI_TABLE_HEADER));
 
-    /*
-     * First two entries in the table array are reserved for the DSDT
-     * and FACS, which are not actually present in the RSDT/XSDT - they
-     * come from the FADT
-     */
-    TableEntry = ACPI_CAST_PTR (UINT8, Table) + sizeof (ACPI_TABLE_HEADER);
-    AcpiGbl_RootTableList.CurrentTableCount = 2;
+    /* Initialize the root table array from the RSDT/XSDT */
 
-    /*
-     * Initialize the root table array from the RSDT/XSDT
-     */
     for (i = 0; i < TableCount; i++)
     {
-        if (AcpiGbl_RootTableList.CurrentTableCount >=
-            AcpiGbl_RootTableList.MaxTableCount)
-        {
-            /* There is no more room in the root table array, attempt resize */
-
-            Status = AcpiTbResizeRootTableList ();
-            if (ACPI_FAILURE (Status))
-            {
-                ACPI_WARNING ((AE_INFO, "Truncating %u table entries!",
-                    (unsigned) (TableCount -
-                    (AcpiGbl_RootTableList.CurrentTableCount - 2))));
-                break;
-            }
-        }
-
         /* Get the table physical address (32-bit for RSDT, 64-bit for XSDT) */
 
-        AcpiGbl_RootTableList.Tables[AcpiGbl_RootTableList.CurrentTableCount].Address =
-            AcpiTbGetRootTableEntry (TableEntry, TableEntrySize);
+        Address = AcpiTbGetRootTableEntry (TableEntry, TableEntrySize);
+
+        /* Skip NULL entries in RSDT/XSDT */
+
+        if (!Address)
+        {
+            goto NextTable;
+        }
+
+        Status = AcpiTbInstallStandardTable (Address,
+            ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE, &TableIndex);
+
+        if (ACPI_SUCCESS (Status) &&
+            ACPI_COMPARE_NAME (
+                &AcpiGbl_RootTableList.Tables[TableIndex].Signature,
+                ACPI_SIG_FADT))
+        {
+            AcpiGbl_FadtIndex = TableIndex;
+            AcpiTbParseFadt ();
+        }
+
+NextTable:
 
         TableEntry += TableEntrySize;
-        AcpiGbl_RootTableList.CurrentTableCount++;
     }
 
-    /*
-     * It is not possible to map more than one entry in some environments,
-     * so unmap the root table here before mapping other tables
-     */
     AcpiOsUnmapMemory (Table, Length);
+    return_ACPI_STATUS (AE_OK);
+}
 
-    /*
-     * Complete the initialization of the root table array by examining
-     * the header of each table
-     */
-    for (i = 2; i < AcpiGbl_RootTableList.CurrentTableCount; i++)
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiTbGetTable
+ *
+ * PARAMETERS:  TableDesc           - Table descriptor
+ *              OutTable            - Where the pointer to the table is returned
+ *
+ * RETURN:      Status and pointer to the requested table
+ *
+ * DESCRIPTION: Increase a reference to a table descriptor and return the
+ *              validated table pointer.
+ *              If the table descriptor is an entry of the root table list,
+ *              this API must be invoked with ACPI_MTX_TABLES acquired.
+ *
+ ******************************************************************************/
+
+ACPI_STATUS
+AcpiTbGetTable (
+    ACPI_TABLE_DESC        *TableDesc,
+    ACPI_TABLE_HEADER      **OutTable)
+{
+    ACPI_STATUS            Status;
+
+
+    ACPI_FUNCTION_TRACE (AcpiTbGetTable);
+
+
+    if (TableDesc->ValidationCount == 0)
     {
-        AcpiTbInstallTable (AcpiGbl_RootTableList.Tables[i].Address,
-            NULL, i);
+        /* Table need to be "VALIDATED" */
 
-        /* Special case for FADT - get the DSDT and FACS */
-
-        if (ACPI_COMPARE_NAME (
-                &AcpiGbl_RootTableList.Tables[i].Signature, ACPI_SIG_FADT))
+        Status = AcpiTbValidateTable (TableDesc);
+        if (ACPI_FAILURE (Status))
         {
-            AcpiTbParseFadt (i);
+            return_ACPI_STATUS (Status);
         }
     }
 
+    if (TableDesc->ValidationCount < ACPI_MAX_TABLE_VALIDATIONS)
+    {
+        TableDesc->ValidationCount++;
+
+        /*
+         * Detect ValidationCount overflows to ensure that the warning
+         * message will only be printed once.
+         */
+        if (TableDesc->ValidationCount >= ACPI_MAX_TABLE_VALIDATIONS)
+        {
+            ACPI_WARNING((AE_INFO,
+                "Table %p, Validation count overflows\n", TableDesc));
+        }
+    }
+
+    *OutTable = TableDesc->Pointer;
     return_ACPI_STATUS (AE_OK);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiTbPutTable
+ *
+ * PARAMETERS:  TableDesc           - Table descriptor
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Decrease a reference to a table descriptor and release the
+ *              validated table pointer if no references.
+ *              If the table descriptor is an entry of the root table list,
+ *              this API must be invoked with ACPI_MTX_TABLES acquired.
+ *
+ ******************************************************************************/
+
+void
+AcpiTbPutTable (
+    ACPI_TABLE_DESC        *TableDesc)
+{
+
+    ACPI_FUNCTION_TRACE (AcpiTbPutTable);
+
+
+    if (TableDesc->ValidationCount < ACPI_MAX_TABLE_VALIDATIONS)
+    {
+        TableDesc->ValidationCount--;
+
+        /*
+         * Detect ValidationCount underflows to ensure that the warning
+         * message will only be printed once.
+         */
+        if (TableDesc->ValidationCount >= ACPI_MAX_TABLE_VALIDATIONS)
+        {
+            ACPI_WARNING ((AE_INFO,
+                "Table %p, Validation count underflows\n", TableDesc));
+            return_VOID;
+        }
+    }
+
+    if (TableDesc->ValidationCount == 0)
+    {
+        /* Table need to be "INVALIDATED" */
+
+        AcpiTbInvalidateTable (TableDesc);
+    }
+
+    return_VOID;
 }

@@ -27,10 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cs/if_cs_isa.c 179618 2008-06-06 16:10:10Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/lock.h>
 #include <sys/kernel.h>
+#include <sys/mutex.h>
 #include <sys/socket.h>
 
 #include <sys/module.h>
@@ -41,7 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/cs/if_cs_isa.c 179618 2008-06-06 16:1
 
 #include <net/ethernet.h> 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_media.h>
 
 #include <isa/isavar.h>
 

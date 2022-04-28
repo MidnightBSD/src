@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -53,11 +53,11 @@ struct ub_packed_rrset_key;
 struct regional;
 
 /** The special type, packed rrset. Not allowed to be used for other memory */
-typedef struct ub_packed_rrset_key alloc_special_t;
+typedef struct ub_packed_rrset_key alloc_special_type;
 /** clean the special type. Pass pointer. */
 #define alloc_special_clean(x) (x)->id = 0;
 /** access next pointer. (in available spot). Pass pointer. */
-#define alloc_special_next(x) ((alloc_special_t*)((x)->entry.overflow_next))
+#define alloc_special_next(x) ((alloc_special_type*)((x)->entry.overflow_next))
 /** set next pointer. (in available spot). Pass pointers. */
 #define alloc_set_special_next(x, y) \
 	((x)->entry.overflow_next) = (struct lruhash_entry*)(y);
@@ -71,11 +71,11 @@ typedef struct ub_packed_rrset_key alloc_special_t;
  */
 struct alloc_cache {
 	/** lock, only used for the super. */
-	lock_quick_t lock;
+	lock_quick_type lock;
 	/** global allocator above this one. NULL for none (malloc/free) */
 	struct alloc_cache* super;
 	/** singly linked lists of special type. These are free for use. */
-	alloc_special_t* quar;
+	alloc_special_type* quar;
 	/** number of items in quarantine. */
 	size_t num_quar;
 	/** thread number for id creation */
@@ -116,20 +116,28 @@ void alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
 void alloc_clear(struct alloc_cache* alloc);
 
 /**
- * Get a new special_t element.
+ * Free the special alloced items.  The rrset and message caches must be
+ * empty, there must be no more references to rrset pointers into the
+ * rrset cache.
+ * @param alloc: the special allocs are freed.
+ */
+void alloc_clear_special(struct alloc_cache* alloc);
+
+/**
+ * Get a new special_type element.
  * @param alloc: where to alloc it.
  * @return: memory block. Will not return NULL (instead fatal_exit).
  *    The block is zeroed.
  */
-alloc_special_t* alloc_special_obtain(struct alloc_cache* alloc);
+alloc_special_type* alloc_special_obtain(struct alloc_cache* alloc);
 
 /**
- * Return special_t back to pool.
+ * Return special_type back to pool.
  * The block is cleaned up (zeroed) which also invalidates the ID inside.
  * @param alloc: where to alloc it.
  * @param mem: block to free.
  */
-void alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem);
+void alloc_special_release(struct alloc_cache* alloc, alloc_special_type* mem);
 
 /**
  * Set ID number of special type to a fresh new ID number.
@@ -177,8 +185,8 @@ void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
 	void* arg);
 
 #ifdef UNBOUND_ALLOC_LITE
-#  include <ldns/ldns.h>
-#  include <ldns/packet.h>
+#  include <sldns/ldns.h>
+#  include <sldns/packet.h>
 #  ifdef HAVE_OPENSSL_SSL_H
 #    include <openssl/ssl.h>
 #  endif
@@ -201,15 +209,15 @@ void *unbound_stat_realloc_lite(void *ptr, size_t size, const char* file,
 char* unbound_strdup_lite(const char* s, const char* file, int line, 
 	const char* func);
 char* unbound_lite_wrapstr(char* s);
-#  define ldns_rr2str(rr) unbound_lite_wrapstr(ldns_rr2str(rr))
-#  define ldns_rdf2str(rdf) unbound_lite_wrapstr(ldns_rdf2str(rdf))
-#  define ldns_rr_type2str(t) unbound_lite_wrapstr(ldns_rr_type2str(t))
-#  define ldns_rr_class2str(c) unbound_lite_wrapstr(ldns_rr_class2str(c))
-#  define ldns_rr_list2str(r) unbound_lite_wrapstr(ldns_rr_list2str(r))
-#  define ldns_pkt2str(p) unbound_lite_wrapstr(ldns_pkt2str(p))
-#  define ldns_pkt_rcode2str(r) unbound_lite_wrapstr(ldns_pkt_rcode2str(r))
-#  define ldns_pkt2wire(a, r, s) unbound_lite_pkt2wire(a, r, s)
-ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, size_t *size);
+#  define sldns_rr2str(rr) unbound_lite_wrapstr(sldns_rr2str(rr))
+#  define sldns_rdf2str(rdf) unbound_lite_wrapstr(sldns_rdf2str(rdf))
+#  define sldns_rr_type2str(t) unbound_lite_wrapstr(sldns_rr_type2str(t))
+#  define sldns_rr_class2str(c) unbound_lite_wrapstr(sldns_rr_class2str(c))
+#  define sldns_rr_list2str(r) unbound_lite_wrapstr(sldns_rr_list2str(r))
+#  define sldns_pkt2str(p) unbound_lite_wrapstr(sldns_pkt2str(p))
+#  define sldns_pkt_rcode2str(r) unbound_lite_wrapstr(sldns_pkt_rcode2str(r))
+#  define sldns_pkt2wire(a, r, s) unbound_lite_pkt2wire(a, r, s)
+sldns_status unbound_lite_pkt2wire(uint8_t **dest, const sldns_pkt *p, size_t *size);
 #  define i2d_DSA_SIG(d, s) unbound_lite_i2d_DSA_SIG(d, s)
 int unbound_lite_i2d_DSA_SIG(DSA_SIG* dsasig, unsigned char** sig);
 #endif /* UNBOUND_ALLOC_LITE */

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/vr/if_vrreg.h 235334 2012-05-12 14:37:25Z rpaulo $
+ * $FreeBSD$
  */
 
 /*

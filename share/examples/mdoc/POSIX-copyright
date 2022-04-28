@@ -1,5 +1,4 @@
 .\" Copyright (c) [year] [your name]
-.\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -32,5 +31,5 @@
 .\" the referee document.  The original Standard can be obtained online at
 .\"	http://www.opengroup.org/unix/online.html.
 .\"
-.\" $FreeBSD: release/10.0.0/share/examples/mdoc/POSIX-copyright 139989 2005-01-10 18:09:17Z simon $
+.\" $FreeBSD$
 .\"

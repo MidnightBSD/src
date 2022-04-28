@@ -1,5 +1,7 @@
 #! /bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+#
 #  Copyright (c) 2010 Gordon Tetlow
 #  All rights reserved.
 #
@@ -24,7 +26,7 @@
 #  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 #  SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.bin/man/man.sh 245514 2013-01-16 23:20:24Z brooks $
+# $FreeBSD$
 
 # Usage: add_to_manpath path
 # Adds a variable to manpath while ensuring we don't have duplicates.
@@ -68,7 +70,23 @@ build_manpath() {
 
 	# If the user has set a manpath, who are we to argue.
 	if [ -n "$MANPATH" ]; then
-		return
+		case "$MANPATH" in
+		*:) PREPEND_MANPATH=${MANPATH} ;;
+		:*) APPEND_MANPATH=${MANPATH} ;;
+		*::*)
+			PREPEND_MANPATH=${MANPATH%%::*}
+			APPEND_MANPATH=${MANPATH#*::}
+			;;
+		*) return ;;
+		esac
+	fi
+
+	if [ -n "$PREPEND_MANPATH" ]; then
+		IFS=:
+		for path in $PREPEND_MANPATH; do
+			add_to_manpath "$path"
+		done
+		unset IFS
 	fi
 
 	search_path
@@ -82,6 +100,13 @@ build_manpath() {
 
 	parse_configs
 
+	if [ -n "$APPEND_MANPATH" ]; then
+		IFS=:
+		for path in $APPEND_MANPATH; do
+			add_to_manpath "$path"
+		done
+		unset IFS
+	fi
 	# Trim leading colon
 	MANPATH=${manpath#:}
 
@@ -176,7 +201,7 @@ find_file() {
 		catroot="$catroot/$3"
 	fi
 
-	if [ ! -d "$manroot" ]; then
+	if [ ! -d "$manroot" -a ! -d "$catroot" ]; then
 		return 1
 	fi
 	decho "  Searching directory $manroot" 2
@@ -238,10 +263,6 @@ manpath_usage() {
 # Usage: manpath_warnings
 # Display some warnings to stderr.
 manpath_warnings() {
-	if [ -z "$Lflag" -a -n "$MANPATH" ]; then
-		echo "(Warning: MANPATH environment variable set)" >&2
-	fi
-
 	if [ -n "$Lflag" -a -n "$MANLOCALES" ]; then
 		echo "(Warning: MANLOCALES environment variable set)" >&2
 	fi
@@ -255,6 +276,9 @@ man_check_for_so() {
 	local IFS line tstr
 
 	unset IFS
+	if [ -n "$catpage" ]; then
+		return 0
+	fi
 
 	# We need to loop to accommodate multiple .so directives.
 	while true
@@ -279,8 +303,7 @@ man_check_for_so() {
 # Usage: man_display_page
 # Display either the manpage or catpage depending on the use_cat variable
 man_display_page() {
-	local EQN NROFF PIC TBL TROFF REFER VGRIND
-	local IFS l nroff_dev pipeline preproc_arg tool
+	local IFS pipeline testline
 
 	# We are called with IFS set to colon. This causes really weird
 	# things to happen for the variables that have spaces in them.
@@ -311,6 +334,43 @@ man_display_page() {
 		ret=0
 		return
 	fi
+
+	if [ -n "$use_width" ]; then
+		mandoc_args="-O width=${use_width}"
+	fi
+	testline="mandoc -Tlint -Wunsupp >/dev/null 2>&1"
+	if [ -n "$tflag" ]; then
+		pipeline="mandoc -Tps $mandoc_args"
+	else
+		pipeline="mandoc $mandoc_args | $MANPAGER"
+	fi
+
+	if ! eval "$cattool $manpage | $testline" ;then
+		if which -s groff; then
+			man_display_page_groff
+		else
+			echo "This manpage needs groff(1) to be rendered" >&2
+			echo "First install groff(1): " >&2
+			echo "pkg install groff " >&2
+			ret=1
+		fi
+		return
+	fi
+
+	if [ $debug -gt 0 ]; then
+		decho "Command: $cattool $manpage | $pipeline"
+		ret=0
+	else
+		eval "$cattool $manpage | $pipeline"
+		ret=$?
+	fi
+}
+
+# Usage: man_display_page_groff
+# Display the manpage using groff
+man_display_page_groff() {
+	local EQN NROFF PIC TBL TROFF REFER VGRIND
+	local IFS l nroff_dev pipeline preproc_arg tool
 
 	# So, we really do need to parse the manpage. First, figure out the
 	# device flag (-T) we have to pass to eqn(1) and groff(1). Then,
@@ -735,6 +795,8 @@ search_path() {
 				case "$path" in
 				*/bin)	p="${path%/bin}/man"
 					add_to_manpath "$p"
+					p="${path%/bin}/share/man"
+					add_to_manpath "$p"
 					;;
 				*)	;;
 				esac
@@ -893,6 +955,8 @@ whatis_usage() {
 
 # Supported commands
 do_apropos() {
+	[ $(stat -f %i /usr/bin/man) -ne $(stat -f %i /usr/bin/apropos) ] && \
+		exec apropos "$@"
 	search_whatis apropos "$@"
 }
 
@@ -928,6 +992,8 @@ do_manpath() {
 }
 
 do_whatis() {
+	[ $(stat -f %i /usr/bin/man) -ne $(stat -f %i /usr/bin/whatis) ] && \
+		exec whatis "$@"
 	search_whatis whatis "$@"
 }
 

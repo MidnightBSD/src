@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/digi/Xem.fepos.h 145975 2005-05-06 20:53:34Z anholt $
+ * $FreeBSD$
  */
 
 static const u_char Xem_fepos[] = {

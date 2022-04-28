@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 Dag-Erling Smørgrav
+ * Copyright (c) 2011-2014 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: openpam_dump_policy.c 648 2013-03-05 17:54:27Z des $
+ * $OpenPAM: openpam_dump_policy.c 938 2017-04-30 21:34:42Z des $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,7 +64,7 @@ openpam_facility_index_name(pam_facility_t fclt)
 	if (asprintf(&name, "PAM_%s", facility) == -1)
 		return (NULL);
 	for (p = name + 4; *p; ++p)
-		*p = toupper(*p);
+		*p = toupper((unsigned char)*p);
 	return (name);
 }
 

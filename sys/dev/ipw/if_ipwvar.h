@@ -1,4 +1,4 @@
-/*      $FreeBSD: release/10.0.0/sys/dev/ipw/if_ipwvar.h 232874 2012-03-12 18:15:08Z scottl $	*/
+/*      $FreeBSD$	*/
 
 /*-
  * Copyright (c) 2004-2006
@@ -55,11 +55,12 @@ struct ipw_soft_buf {
 struct ipw_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
 	uint8_t		wr_flags;
+	uint8_t		wr_pad;
 	uint16_t	wr_chan_freq;
 	uint16_t	wr_chan_flags;
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
-};
+} __packed __aligned(8);
 
 #define IPW_RX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -70,9 +71,10 @@ struct ipw_rx_radiotap_header {
 struct ipw_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
 	uint8_t		wt_flags;
+	uint8_t		wt_pad;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-};
+} __packed;
 
 #define IPW_TX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -87,7 +89,8 @@ struct ipw_vap {
 #define	IPW_VAP(vap)	((struct ipw_vap *)(vap))
 
 struct ipw_softc {
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 
 	struct mtx			sc_mtx;
@@ -104,9 +107,8 @@ struct ipw_softc {
 #define	IPW_FLAG_BUSY			0x0040
 #define	IPW_FLAG_ASSOCIATING		0x0080
 #define	IPW_FLAG_ASSOCIATED		0x0100
+#define	IPW_FLAG_RUNNING		0x0200
 
-	int				irq_rid;
-	int				mem_rid;
 	struct resource			*irq;
 	struct resource			*mem;
 	bus_space_tag_t			sc_st;
@@ -156,6 +158,8 @@ struct ipw_softc {
 	uint32_t			txold;
 	uint32_t			rxcur;
 	int				txfree;
+
+	uint16_t			chanmask;
 
 	struct ipw_rx_radiotap_header	sc_rxtap;
 	struct ipw_tx_radiotap_header	sc_txtap;

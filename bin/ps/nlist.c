@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)nlist.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/ps/nlist.c 127958 2004-04-06 20:06:54Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/xen/pcifront/pcifront.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -78,7 +78,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/xen/pcifront/pcifront.c 227843 2011-1
 
 #define INVALID_GRANT_REF (0)
 #define INVALID_EVTCHN    (-1)
-#define virt_to_mfn(x) (vtomach(x) >> PAGE_SHIFT)
+#define virt_to_mfn(x) (vtophys(x) >> PAGE_SHIFT)
 
 struct pcifront_device {
 	STAILQ_ENTRY(pcifront_device) next;
@@ -441,7 +441,7 @@ xpcife_probe(device_t dev)
 	struct pcifront_device *pdev = (struct pcifront_device *)device_get_ivars(dev);
 	DPRINTF("xpcife probe (unit=%d)\n", pdev->unit);
 #endif
-	return 0;
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 /* Newbus xpcife device driver attach */
@@ -559,7 +559,7 @@ xpcib_attach(device_t dev)
 
 	DPRINTF("xpcib attach (bus=%d)\n", sc->bus);
 
-	device_add_child(dev, "pci", sc->bus);
+	device_add_child(dev, "pci", -1);
 	return bus_generic_attach(dev);
 }
 

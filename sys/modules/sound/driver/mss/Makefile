@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/mss/Makefile 106497 2002-11-06 13:47:00Z nyan $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/isa
+.PATH: ${SRCTOP}/sys/dev/sound/isa
 
 KMOD=	snd_mss
 SRCS=	device_if.h bus_if.h isa_if.h pci_if.h

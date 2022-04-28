@@ -27,7 +27,7 @@
  *                    and Ryusuke Konishi <ryusuke@osrg.net>
  * From: NetBSD: nandfs_fs.h,v 1.1 2009/07/18 16:31:42 reinoud
  *
- * $FreeBSD: release/10.0.0/sys/fs/nandfs/nandfs_fs.h 235537 2012-05-17 10:11:18Z gber $
+ * $FreeBSD$
  */
 
 #ifndef _NANDFS_FS_H
@@ -343,7 +343,7 @@ struct nandfs_segment_summary {
 /*
  * Structure of DAT/inode file.
  *
- * A DAT file is devided into groups. The maximum number of groups is the
+ * A DAT file is divided into groups. The maximum number of groups is the
  * number of block group descriptors that fit into one block; this descriptor
  * only gives the number of free entries in the associated group.
  *

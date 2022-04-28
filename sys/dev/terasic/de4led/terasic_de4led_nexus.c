@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/terasic/de4led/terasic_de4led_nexus.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -58,7 +58,7 @@ terasic_de4led_nexus_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Terasic DE4 8-element LED");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

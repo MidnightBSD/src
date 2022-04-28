@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_UTILS_H
 #define ITERATOR_ITER_UTILS_H
 #include "iterator/iter_resptype.h"
-#include <ldns/buffer.h>
+struct sldns_buffer;
 struct iter_env;
 struct iter_hints;
 struct iter_forwards;
@@ -87,13 +87,18 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  * @param open_target: number of currently outstanding target queries.
  * 	If we wait for these, perhaps more server addresses become available.
  * @param blacklist: the IP blacklist to use.
+ * @param prefetch: if not 0, prefetch is in use for this query.
+ * 	This means the query can have different timing, because prefetch is
+ * 	not waited upon by the downstream client, and thus a good time to
+ * 	perform exploration of other targets.
  * @return best target or NULL if no target.
  *	if not null, that target is removed from the result list in the dp.
  */
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
 	size_t namelen, uint16_t qtype, int* dnssec_lame,
-	int* chase_to_rd, int open_target, struct sock_list* blacklist);
+	int* chase_to_rd, int open_target, struct sock_list* blacklist,
+	time_t prefetch);
 
 /**
  * Allocate dns_msg from parsed msg, in regional.
@@ -102,7 +107,7 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
  * @param regional: regional to use for allocation.
  * @return newly allocated dns_msg, or NULL on memory error.
  */
-struct dns_msg* dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
+struct dns_msg* dns_alloc_msg(struct sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* regional);
 
 /**
@@ -124,6 +129,7 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * @param pside: true if dp is parentside, thus message is 'fresh' and NS
  * 	can be prefetch-updates.
  * @param region: to copy modified (cache is better) rrs back to.
+ * @param flags: with BIT_CD for dns64 AAAA translated queries.
  * @return void, because we are not interested in alloc errors,
  * 	the iterator and validator can operate on the results in their
  * 	scratch space (the qstate.region) and are not dependent on the cache.
@@ -131,8 +137,8 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * 	but the query resolution can continue without cache storage.
  */
 void iter_dns_store(struct module_env* env, struct query_info* qinf,
-	struct reply_info* rep, int is_referral, uint32_t leeway, int pside,
-	struct regional* region);
+	struct reply_info* rep, int is_referral, time_t leeway, int pside,
+	struct regional* region, uint16_t flags);
 
 /**
  * Select randomly with n/m probability.
@@ -173,6 +179,17 @@ int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
 	struct delegpt* dp);
 
 /**
+ * See if qname has DNSSEC needs.  This is true if there is a trust anchor above
+ * it.  Whether there is an insecure delegation to the data is unknown.
+ * @param env: environment with anchors.
+ * @param qinfo: query name and class.
+ * @return true if trust anchor above qname, false if no anchor or insecure
+ * point above qname.
+ */
+int iter_qname_indicates_dnssec(struct module_env* env,
+	struct query_info *qinfo);
+
+/**
  * See if delegation is expected to have DNSSEC information (RRSIGs) in 
  * its answers, or not. Inspects delegation point (name), trust anchors,
  * and delegation message (DS RRset) to determine this.
@@ -180,7 +197,7 @@ int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
  * @param dp: delegation point.
  * @param msg: delegation message, with DS if a secure referral.
  * @param dclass: class of query.
- * @return 1 if dnssec is expected, 0 if not.
+ * @return 1 if dnssec is expected, 0 if not or insecure point above qname.
  */
 int iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
 	struct dns_msg* msg, uint16_t dclass);
@@ -216,13 +233,30 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
  * @param p: reply one. The reply has rrset data pointers in region.
  * 	Does not check rrset-IDs
  * @param q: reply two
- * @param buf: scratch buffer.
+ * @param region: scratch buffer.
  * @return if one and two are equal.
  */
-int reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* buf);
+int reply_equal(struct reply_info* p, struct reply_info* q, struct regional* region);
 
 /**
- * Store parent-side rrset in seperate rrset cache entries for later 
+ * Remove unused bits from the reply if possible.
+ * So that caps-for-id (0x20) fallback is more likely to be successful.
+ * This removes like, the additional section, and NS record in the authority
+ * section if those records are gratuitous (not for a referral).
+ * @param rep: the reply to strip stuff out of.
+ */
+void caps_strip_reply(struct reply_info* rep);
+
+/**
+ * see if reply has a 'useful' rcode for capsforid comparison, so
+ * not SERVFAIL or REFUSED, and thus NOERROR or NXDOMAIN.
+ * @param rep: reply to check.
+ * @return true if the rcode is a bad type of message.
+ */
+int caps_failed_rcode(struct reply_info* rep);
+
+/**
+ * Store parent-side rrset in separate rrset cache entries for later 
  * last-resort * lookups in case the child-side versions of this information 
  * fails.
  * @param env: environment with cache, time, ...
@@ -301,6 +335,13 @@ void iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns,
 	uint8_t* z);
 
 /**
+ * Prepare an NXDOMAIN message to be used for a subdomain answer by removing all
+ * RRs from the ANSWER section.
+ * @param msg: the response to scrub.
+ */
+void iter_scrub_nxdomain(struct dns_msg* msg);
+
+/**
  * Remove query attempts from all available ips. For 0x20.
  * @param dp: delegpt.
  * @param d: decrease.
@@ -334,5 +375,14 @@ int iter_ds_toolow(struct dns_msg* msg, struct delegpt* dp);
  * the current response seems to be the one and only, best possible, response.
  */
 int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
+
+/** 
+ * Lookup if no_cache is set in stub or fwd.
+ * @param qstate: query state with env with hints and fwds.
+ * @param qinf: query name to lookup for.
+ * @return true if no_cache is set in stub or fwd.
+ */
+int iter_stub_fwd_no_cache(struct module_qstate *qstate,
+	struct query_info *qinf);
 
 #endif /* ITERATOR_ITER_UTILS_H */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/iconv/__iconv.c 258750 2013-11-29 19:44:30Z gjb $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -31,7 +31,7 @@
 #include "iconv-internal.h"
 
 size_t
-__iconv(iconv_t a, const char **b, size_t *c, char **d,
+__iconv(iconv_t a, char **b, size_t *c, char **d,
      size_t *e, __uint32_t f, size_t *g)
 {
 	return __bsd___iconv(a, b, c, d, e, f, g);

@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/fpu/fpu_sqrt.c 178030 2008-04-09 08:50:37Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -274,7 +274,7 @@ fpu_sqrt(struct fpemu *fe)
 	 * double x correctly while doing the `known q=1.0'.
 	 *
 	 * We do this one mantissa-word at a time, as noted above, to
-	 * save work.  To avoid `(1 << 31) << 1', we also do the top bit
+	 * save work.  To avoid `(1U << 31) << 1', we also do the top bit
 	 * outside of each per-word loop.
 	 *
 	 * The calculation `t = y + bit' breaks down into `t0 = y0, ...,

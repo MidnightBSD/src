@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright © 2002, Jörg Wunsch
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +34,7 @@
 
 #include <sys/types.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/whereis/whereis.c 228991 2011-12-30 10:59:15Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -207,7 +209,7 @@ decolonify(char *s, ccharp **cppp, int *ip)
 			*cp = '\0';
 		if (strlen(s) && !contains(*cppp, s)) {
 			*cppp = realloc(*cppp, (*ip + 2) * sizeof(char *));
-			if (cppp == NULL)
+			if (*cppp == NULL)
 				abort();
 			(*cppp)[*ip] = s;
 			(*cppp)[*ip + 1] = NULL;
@@ -265,7 +267,7 @@ defaults(void)
 		opt_b = opt_m = opt_s = 1;
 
 	/* -b defaults to default path + /usr/libexec +
-	 * /usr/games + user's path */
+	 * user's path */
 	if (!bindirs) {
 		if (sysctlbyname("user.cs_path", (void *)NULL, &s,
 				 (void *)NULL, 0) == -1)
@@ -276,17 +278,16 @@ defaults(void)
 			err(EX_OSERR, "sysctlbyname(\"user.cs_path\")");
 		nele = 0;
 		decolonify(b, &bindirs, &nele);
-		bindirs = realloc(bindirs, (nele + 3) * sizeof(char *));
+		bindirs = realloc(bindirs, (nele + 2) * sizeof(char *));
 		if (bindirs == NULL)
 			abort();
 		bindirs[nele++] = PATH_LIBEXEC;
-		bindirs[nele++] = PATH_GAMES;
 		bindirs[nele] = NULL;
 		if ((cp = getenv("PATH")) != NULL) {
 			/* don't destroy the original environment... */
-			if ((b = malloc(strlen(cp) + 1)) == NULL)
+			b = strdup(cp);
+			if (b == NULL)
 				abort();
-			strcpy(b, cp);
 			decolonify(b, &bindirs, &nele);
 		}
 	}
@@ -300,18 +301,18 @@ defaults(void)
 			err(EX_OSERR, "error processing manpath results");
 		if ((b = strchr(buf, '\n')) != NULL)
 			*b = '\0';
-		if ((b = malloc(strlen(buf) + 1)) == NULL)
+		b = strdup(buf);
+		if (b == NULL)
 			abort();
-		strcpy(b, buf);
 		nele = 0;
 		decolonify(b, &mandirs, &nele);
 	}
 
 	/* -s defaults to precompiled list, plus subdirs of /usr/ports */
 	if (!sourcedirs) {
-		if ((b = malloc(strlen(sourcepath) + 1)) == NULL)
+		b = strdup(sourcepath);
+		if (b == NULL)
 			abort();
-		strcpy(b, sourcepath);
 		nele = 0;
 		decolonify(b, &sourcedirs, &nele);
 
@@ -462,7 +463,7 @@ main(int argc, char **argv)
 						nlen = strlen(cp);
 						bin = realloc(bin, 
 							      olen + nlen + 2);
-						if (bin == 0)
+						if (bin == NULL)
 							abort();
 						strcat(bin, " ");
 						strcat(bin, cp);
@@ -506,7 +507,7 @@ main(int argc, char **argv)
 					    (rlen = matches[1].rm_eo - 
 					     matches[1].rm_so) > 0) {
 						/*
-						 * man -w found formated
+						 * man -w found formatted
 						 * page, need to pick up
 						 * source page name.
 						 */
@@ -522,11 +523,9 @@ main(int argc, char **argv)
 						 * man -w found plain source
 						 * page, use it.
 						 */
-						s = strlen(buf);
-						cp2 = malloc(s + 1);
+						cp2 = strdup(buf);
 						if (cp2 == NULL)
 							abort();
-						strcpy(cp2, buf);
 					}
 
 					if (man == NULL) {
@@ -536,7 +535,7 @@ main(int argc, char **argv)
 						nlen = strlen(cp2);
 						man = realloc(man, 
 							      olen + nlen + 2);
-						if (man == 0)
+						if (man == NULL)
 							abort();
 						strcat(man, " ");
 						strcat(man, cp2);
@@ -575,7 +574,7 @@ main(int argc, char **argv)
 						nlen = strlen(cp);
 						src = realloc(src, 
 							      olen + nlen + 2);
-						if (src == 0)
+						if (src == NULL)
 							abort();
 						strcat(src, " ");
 						strcat(src, cp);
@@ -644,7 +643,7 @@ main(int argc, char **argv)
 							src = realloc(src, 
 								      olen + 
 								      nlen + 2);
-							if (src == 0)
+							if (src == NULL)
 								abort();
 							strcat(src, " ");
 							strcat(src, buf);

@@ -1,4 +1,4 @@
-/* $NetBSD: emit1.c,v 1.11 2002/01/31 19:36:54 tv Exp $ */
+/* $NetBSD: emit1.c,v 1.14 2004/06/20 22:20:16 jmc Exp $ */
 
 /*
  * Copyright (c) 1996 Christopher G. Demetriou.  All Rights Reserved.
@@ -34,9 +34,9 @@
 
 #include <sys/cdefs.h>
 #if defined(__RCSID) && !defined(lint)
-__RCSID("$NetBSD: emit1.c,v 1.11 2002/01/31 19:36:54 tv Exp $");
+__RCSID("$NetBSD: emit1.c,v 1.14 2004/06/20 22:20:16 jmc Exp $");
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/xlint/lint1/emit1.c 228992 2011-12-30 11:02:40Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <ctype.h>
 
@@ -117,7 +117,7 @@ outtype(type_t *tp)
 		case STRUCT:	t = 'T';	s = 's';	break;
 		case UNION:	t = 'T';	s = 'u';	break;
 		default:
-			lerror("outtyp() 1");
+			LERROR("outtyp()");
 		}
 		if (tp->t_const)
 			outchar('c');
@@ -257,7 +257,7 @@ outsym(sym_t *sym, scl_t sc, def_t def)
 		outchar('e');
 		break;
 	default:
-		lerror("outsym() 2");
+		LERROR("outsym()");
 	}
 	if (llibflg && def != DECL) {
 		/*
@@ -485,7 +485,7 @@ outfstrg(strg_t *strg)
 	u_char	*cp;
 
 	if (strg->st_tspec != CHAR)
-		lerror("outfstrg() 1");
+		LERROR("outfstrg()");
 
 	cp = strg->st_cp;
 

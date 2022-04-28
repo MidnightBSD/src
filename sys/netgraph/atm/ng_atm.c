@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netgraph/atm/ng_atm.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -872,7 +872,7 @@ text_status(node_p node, char *arg, u_int len)
 	sbuf_new(&sbuf, arg, len, SBUF_FIXEDLEN);
 	sbuf_printf(&sbuf, "interface: %s\n", priv->ifp->if_xname);
 
-	if (mib->device >= sizeof(devices) / sizeof(devices[0]))
+	if (mib->device >= nitems(devices))
 		sbuf_printf(&sbuf, "device=unknown\nvendor=unknown\n");
 	else
 		sbuf_printf(&sbuf, "device=%s\nvendor=%s\n",
@@ -1343,7 +1343,7 @@ ng_atm_shutdown(node_p node)
 	}
 #else
 	/*
-	 * We are persistant - reinitialize
+	 * We are persistent - reinitialize.
 	 */
 	NG_NODE_REVIVE(node);
 #endif

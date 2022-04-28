@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/powerpc/powerpc/setjmp.S 230400 2012-01-20 22:34:19Z andreast $  */
+/*	$FreeBSD$  */
 /*	from:	NetBSD: setjmp.S,v 1.1 1998/01/27 15:13:12 sakamoto Exp $  */
 /*	from:	OpenBSD: setjmp.S,v 1.2 1996/12/28 06:22:18 rahnds Exp 	*/
 /* kernel version of this file, does not have signal goop */
@@ -40,7 +40,6 @@
 #define JMP_cr	22*REGWIDTH
 #define JMP_ctr	23*REGWIDTH
 #define JMP_xer	24*REGWIDTH
-#define JMP_sig	25*REGWIDTH
 
 ASENTRY_NOPROF(setjmp)
 	ST_REG 31, JMP_r31(3)

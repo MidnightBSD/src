@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nxge/include/xgehal-channel.h 230133 2012-01-15 13:23:33Z uqs $
+ * $FreeBSD$
  */
 
 #ifndef XGE_HAL_CHANNEL_H

@@ -1,5 +1,8 @@
-# $FreeBSD: release/10.0.0/sys/modules/bxe/Makefile 255736 2013-09-20 20:18:49Z davidch $
-BXE	= ${.CURDIR}/../../dev/bxe
+# $FreeBSD$
+
+SYSDIR	?= ${SRCTOP}/sys
+
+BXE	= ${SYSDIR}/dev/bxe
 .PATH:	${BXE}
 
 KMOD	= if_bxe

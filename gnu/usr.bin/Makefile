@@ -1,49 +1,27 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/Makefile 256198 2013-10-09 17:07:20Z gjb $
+# $FreeBSD$
 
-.include <bsd.own.mk>
-
-SUBDIR= ${_binutils} \
-	${_cc} \
-	dialog \
-	diff \
-	diff3 \
-	${_dtc} \
-	${_gdb} \
-	${_gperf} \
-	grep \
-	${_groff} \
-	${_rcs} \
-	sdiff \
-	send-pr \
-	${_texinfo}
+.include <src.opts.mk>
 
 .if ${MK_CXX} != "no"
-_gperf=		gperf
-.if ${MK_GROFF} != "no"
-_groff=		groff
-.endif
+SUBDIR.${MK_GCC}+=	gperf
+SUBDIR.${MK_GROFF}+=	groff
 .endif
 
-.if ${MK_GPL_DTC} != "no"
-_dtc=		dtc
-.endif
-
-.if ${MK_INFO} != "no"
-_texinfo=	texinfo
-.endif
-
-.if ${MK_RCS} != "no"
-_rcs=		rcs
-.endif
+SUBDIR.${MK_BINUTILS}+=	binutils
+SUBDIR.${MK_DIALOG}+=	dialog
 
 .if ${MK_BINUTILS} != "no"
-_binutils=	binutils
+SUBDIR.${MK_GDB}+=	gdb
+SUBDIR_DEPEND_gdb=	binutils
 .endif
-.if ${MK_GCC} != "no"
-_cc=		cc
-.endif
-.if ${MK_GDB} != "no"
-_gdb=		gdb
-.endif
+
+SUBDIR.${MK_GCC}+=	cc
+SUBDIR.${MK_GNU_DIFF}+=	diff diff3
+SUBDIR.${MK_GNU_GREP}+=	grep
+SUBDIR.${MK_GPL_DTC}+=	dtc
+SUBDIR.${MK_RCS}+=	rcs
+SUBDIR.${MK_TESTS}+=	tests
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

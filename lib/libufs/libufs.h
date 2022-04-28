@@ -24,7 +24,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libufs/libufs.h 218601 2011-02-12 12:46:00Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	__LIBUFS_H__

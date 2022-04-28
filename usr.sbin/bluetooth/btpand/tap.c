@@ -1,6 +1,8 @@
 /*	$NetBSD: tap.c,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/tap.c 187938 2009-01-30 22:23:21Z emax $ */
+/* $FreeBSD$ */
 
 #include <sys/cdefs.h>
 __RCSID("$NetBSD: tap.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");
@@ -43,6 +45,7 @@ __RCSID("$NetBSD: tap.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");
 #include <stdio.h>
 #include <unistd.h>
 
+#define L2CAP_SOCKET_CHECKED
 #include "btpand.h"
 
 static bool tap_send(channel_t *, packet_t *);

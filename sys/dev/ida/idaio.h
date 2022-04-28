@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/sys/dev/ida/idaio.h 124540 2004-01-15 06:37:52Z mdodd $
+ * $FreeBSD$
  */
 
 #include <sys/ioccom.h>

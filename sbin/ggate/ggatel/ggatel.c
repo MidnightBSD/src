@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/ggate/ggatel/ggatel.c 241720 2012-10-19 05:43:38Z ed $
+ * $FreeBSD$
  */
 
 #include <stdio.h>
@@ -173,6 +175,7 @@ g_gatel_create(void)
 	fd = open(path, g_gate_openflags(flags) | O_DIRECT | O_FSYNC);
 	if (fd == -1)
 		err(EXIT_FAILURE, "Cannot open %s", path);
+	memset(&ggioc, 0, sizeof(ggioc));
 	ggioc.gctl_version = G_GATE_VERSION;
 	ggioc.gctl_unit = unit;
 	ggioc.gctl_mediasize = g_gate_mediasize(fd);

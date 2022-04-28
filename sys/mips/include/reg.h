@@ -36,7 +36,7 @@
  *	from: Utah Hdr: reg.h 1.1 90/07/09
  *	@(#)reg.h	8.2 (Berkeley) 1/11/94
  *	JNPR: reg.h,v 1.6 2006/09/15 12:52:34 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/reg.h 232449 2012-03-03 08:19:18Z jmallett $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_REG_H_
@@ -70,7 +70,7 @@ struct dbreg {
 	unsigned long junk;
 };
 
-#ifdef COMPAT_FREEBSD32
+#ifdef __LP64__
 /* Must match struct trapframe */
 struct reg32 {
 	uint32_t r_regs[NUMSAVEREGS];
@@ -83,6 +83,8 @@ struct fpreg32 {
 struct dbreg32 {
 	uint32_t junk;
 };
+
+#define __HAVE_REG32
 #endif
 
 #ifdef _KERNEL

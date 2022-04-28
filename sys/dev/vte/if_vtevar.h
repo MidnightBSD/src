@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/vte/if_vtevar.h 219938 2011-03-23 22:06:09Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_VTEVAR_H

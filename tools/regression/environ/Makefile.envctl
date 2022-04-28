@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/environ/Makefile.envctl 199983 2009-12-01 05:04:31Z green $
+# $FreeBSD$
 #
 SRCS=	envctl.c
 PROG=	envctl
@@ -8,7 +8,7 @@ CFLAGS+=-Wall -I../../../include
 
 CLEANFILES=	${PROG}.core
 
-NO_MAN=	yes
+MAN=
 
 .include <bsd.prog.mk>
 

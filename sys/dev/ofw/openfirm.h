@@ -54,13 +54,14 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ofw/openfirm.h 255596 2013-09-15 14:19:17Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_OPENFIRM_H_
 #define _DEV_OPENFIRM_H_
 
 #include <sys/types.h>
+#include <machine/_bus.h>
 
 /*
  * Prototypes for Open Firmware Interface Routines
@@ -105,11 +106,18 @@ phandle_t	OF_parent(phandle_t node);
 ssize_t		OF_getproplen(phandle_t node, const char *propname);
 ssize_t		OF_getprop(phandle_t node, const char *propname, void *buf,
 		    size_t len);
+ssize_t		OF_getencprop(phandle_t node, const char *prop, pcell_t *buf,
+		    size_t len); /* Same as getprop, but maintains endianness */
 int		OF_hasprop(phandle_t node, const char *propname);
 ssize_t		OF_searchprop(phandle_t node, const char *propname, void *buf,
 		    size_t len);
+ssize_t		OF_searchencprop(phandle_t node, const char *propname,
+		    void *buf, size_t len);
 ssize_t		OF_getprop_alloc(phandle_t node, const char *propname,
 		    int elsz, void **buf);
+ssize_t		OF_getencprop_alloc(phandle_t node, const char *propname,
+		    int elsz, void **buf);
+void		OF_prop_free(void *buf);
 int		OF_nextprop(phandle_t node, const char *propname, char *buf,
 		    size_t len);
 int		OF_setprop(phandle_t node, const char *name, const void *buf,
@@ -124,7 +132,19 @@ ssize_t		OF_package_to_path(phandle_t node, char *buf, size_t len);
  * real phandle. If one can't be found (or running on OF implementations
  * without this property), returns its input.
  */
-phandle_t	OF_xref_phandle(phandle_t xref);
+phandle_t	OF_node_from_xref(phandle_t xref);
+phandle_t	OF_xref_from_node(phandle_t node);
+
+/*
+ * When properties contain references to other nodes using xref handles it is
+ * often necessary to use interfaces provided by the driver for the referenced
+ * instance.  These routines allow a driver that provides such an interface to
+ * register its association with an xref handle, and for other drivers to obtain
+ * the device_t associated with an xref handle.
+ */
+device_t	OF_device_from_xref(phandle_t xref);
+phandle_t	OF_xref_from_device(device_t dev);
+int		OF_device_register_xref(phandle_t xref, device_t dev);
 
 /* Device I/O functions */
 ihandle_t	OF_open(const char *path);
@@ -148,6 +168,17 @@ void		OF_exit(void) __attribute__((noreturn));
 
 /* User interface functions */
 int		OF_interpret(const char *cmd, int nreturns, ...);
+
+/*
+ * Decode the Nth register property of the given device node and create a bus
+ * space tag and handle for accessing it.  This is for use in setting up things
+ * like early console output before newbus is available.  The implementation is
+ * machine-dependent, and sparc uses a different function signature as well.
+ */
+#ifndef __sparc64__
+int		OF_decode_addr(phandle_t dev, int regno, bus_space_tag_t *ptag,
+		    bus_space_handle_t *phandle, bus_size_t *sz);
+#endif
 
 #endif /* _KERNEL */
 #endif /* _DEV_OPENFIRM_H_ */

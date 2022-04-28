@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_fdt.c 228201 2011-12-02 15:24:39Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_fdt.c 228201 2011-12-02 15:24
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/ofwvar.h>
 #include <dev/ofw/openfirm.h>
+#include <dev/ofw/ofw_bus_subr.h>
 
 #include "ofw_if.h"
 
@@ -50,6 +51,15 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ofw/ofw_fdt.c 228201 2011-12-02 15:24
     printf(fmt,##args); } while (0)
 #else
 #define debugf(fmt, args...)
+#endif
+
+#if defined(__arm__)
+#if defined(SOC_MV_ARMADAXP) || defined(SOC_MV_ARMADA38X) || \
+    defined(SOC_MV_DISCOVERY) || defined(SOC_MV_DOVE) || \
+    defined(SOC_MV_FREY) || defined(SOC_MV_KIRKWOOD) || \
+    defined(SOC_MV_LOKIPLUS) || defined(SOC_MV_ORION)
+#define FDT_MARVELL
+#endif
 #endif
 
 static int ofw_fdt_init(ofw_t, void *);
@@ -137,31 +147,11 @@ fdt_phandle_offset(phandle_t p)
 	return (pint - dtoff);
 }
 
-static int
-fdt_pointer_offset(const void *ptr)
-{
-	uintptr_t dt_struct, p;
-	int offset;
-
-	p = (uintptr_t)ptr;
-	dt_struct = (uintptr_t)fdtp + fdt_off_dt_struct(fdtp);
-
-	if ((p < dt_struct) ||
-	    p > (dt_struct + fdt_size_dt_struct(fdtp)))
-		return (-1);
-
-	offset = p - dt_struct;
-	if (offset < 0)
-		return (-1);
-
-	return (offset);
-}
-
 /* Return the next sibling of this node or 0. */
 static phandle_t
 ofw_fdt_peer(ofw_t ofw, phandle_t node)
 {
-	int depth, offset;
+	int offset;
 
 	if (node == 0) {
 		/* Find root node */
@@ -173,39 +163,21 @@ ofw_fdt_peer(ofw_t ofw, phandle_t node)
 	offset = fdt_phandle_offset(node);
 	if (offset < 0)
 		return (0);
-
-	for (depth = 1, offset = fdt_next_node(fdtp, offset, &depth);
-	    offset >= 0;
-	    offset = fdt_next_node(fdtp, offset, &depth)) {
-		if (depth < 0)
-			return (0);
-		if (depth == 1)
-			return (fdt_offset_phandle(offset));
-	}
-
-	return (0);
+	offset = fdt_next_subnode(fdtp, offset);
+	return (fdt_offset_phandle(offset));
 }
 
 /* Return the first child of this node or 0. */
 static phandle_t
 ofw_fdt_child(ofw_t ofw, phandle_t node)
 {
-	int depth, offset;
+	int offset;
 
 	offset = fdt_phandle_offset(node);
 	if (offset < 0)
 		return (0);
-
-	for (depth = 0, offset = fdt_next_node(fdtp, offset, &depth);
-	    (offset >= 0) && (depth > 0);
-	    offset = fdt_next_node(fdtp, offset, &depth)) {
-		if (depth < 0)
-			return (0);
-		if (depth == 1)
-			return (fdt_offset_phandle(offset));
-	}
-
-	return (0);
+	offset = fdt_first_subnode(fdtp, offset);
+	return (fdt_offset_phandle(offset));
 }
 
 /* Return the parent of this node or 0. */
@@ -226,41 +198,40 @@ ofw_fdt_parent(ofw_t ofw, phandle_t node)
 static phandle_t
 ofw_fdt_instance_to_package(ofw_t ofw, ihandle_t instance)
 {
-	int offset;
 
-	/*
-	 * Note: FDT does not have the notion of instances, but we somewhat
-	 * abuse the semantics and let treat as 'instance' the internal
-	 * 'phandle' prop, so that ofw I/F consumers have a uniform way of
-	 * translation between internal representation (which appear in some
-	 * contexts as property values) and effective phandles.
-	 */
-	offset = fdt_node_offset_by_phandle(fdtp, instance);
-	if (offset < 0)
-		return (-1);
-
-	return (fdt_offset_phandle(offset));
+	/* Where real OF uses ihandles in the tree, FDT uses xref phandles */
+	return (OF_node_from_xref(instance));
 }
 
 /* Get the length of a property of a package. */
 static ssize_t
 ofw_fdt_getproplen(ofw_t ofw, phandle_t package, const char *propname)
 {
-	const struct fdt_property *prop;
+	const void *prop;
 	int offset, len;
 
 	offset = fdt_phandle_offset(package);
 	if (offset < 0)
 		return (-1);
 
-	if (strcmp(propname, "name") == 0) {
+	len = -1;
+	prop = fdt_getprop(fdtp, offset, propname, &len);
+
+	if (prop == NULL && strcmp(propname, "name") == 0) {
 		/* Emulate the 'name' property */
 		fdt_get_name(fdtp, offset, &len);
 		return (len + 1);
 	}
 
-	len = -1;
-	prop = fdt_get_property(fdtp, offset, propname, &len);
+	if (prop == NULL && offset == fdt_path_offset(fdtp, "/chosen")) {
+		if (strcmp(propname, "fdtbootcpu") == 0)
+			return (sizeof(cell_t));
+		if (strcmp(propname, "fdtmemreserv") == 0)
+			return (sizeof(uint64_t)*2*fdt_num_mem_rsv(fdtp));
+	}
+
+	if (prop == NULL)
+		return (-1);
 
 	return (len);
 }
@@ -273,12 +244,15 @@ ofw_fdt_getprop(ofw_t ofw, phandle_t package, const char *propname, void *buf,
 	const void *prop;
 	const char *name;
 	int len, offset;
+	uint32_t cpuid;
 
 	offset = fdt_phandle_offset(package);
 	if (offset < 0)
 		return (-1);
 
-	if (strcmp(propname, "name") == 0) {
+	prop = fdt_getprop(fdtp, offset, propname, &len);
+
+	if (prop == NULL && strcmp(propname, "name") == 0) {
 		/* Emulate the 'name' property */
 		name = fdt_get_name(fdtp, offset, &len);
 		strncpy(buf, name, buflen);
@@ -287,7 +261,18 @@ ofw_fdt_getprop(ofw_t ofw, phandle_t package, const char *propname, void *buf,
 		return (len + 1);
 	}
 
-	prop = fdt_getprop(fdtp, offset, propname, &len);
+	if (prop == NULL && offset == fdt_path_offset(fdtp, "/chosen")) {
+		if (strcmp(propname, "fdtbootcpu") == 0) {
+			cpuid = cpu_to_fdt32(fdt_boot_cpuid_phys(fdtp));
+			len = sizeof(cpuid);
+			prop = &cpuid;
+		}
+		if (strcmp(propname, "fdtmemreserv") == 0) {
+			prop = (char *)fdtp + fdt_off_mem_rsvmap(fdtp);
+			len = sizeof(uint64_t)*2*fdt_num_mem_rsv(fdtp);
+		}
+	}
+
 	if (prop == NULL)
 		return (-1);
 
@@ -297,51 +282,19 @@ ofw_fdt_getprop(ofw_t ofw, phandle_t package, const char *propname, void *buf,
 	return (len);
 }
 
-static int
-fdt_nextprop(int offset, char *buf, size_t size)
-{
-	const struct fdt_property *prop;
-	const char *name;
-	uint32_t tag;
-	int nextoffset, depth;
-
-	depth = 0;
-	tag = fdt_next_tag(fdtp, offset, &nextoffset);
-
-	/* Find the next prop */
-	do {
-		offset = nextoffset;
-		tag = fdt_next_tag(fdtp, offset, &nextoffset);
-
-		if (tag == FDT_BEGIN_NODE)
-			depth++;
-		else if (tag == FDT_END_NODE)
-			depth--;
-		else if ((tag == FDT_PROP) && (depth == 0)) {
-			prop =
-			    (const struct fdt_property *)fdt_offset_ptr(fdtp,
-			    offset, sizeof(*prop));
-			name = fdt_string(fdtp,
-			    fdt32_to_cpu(prop->nameoff));
-			strncpy(buf, name, size);
-			return (strlen(name));
-		} else
-			depth = -1;
-	} while (depth >= 0);
-
-	return (-1);
-}
-
 /*
- * Get the next property of a package. Return the actual len of retrieved
- * prop name.
+ * Get the next property of a package. Return values:
+ *  -1: package or previous property does not exist
+ *   0: no more properties
+ *   1: success
  */
 static int
 ofw_fdt_nextprop(ofw_t ofw, phandle_t package, const char *previous, char *buf,
     size_t size)
 {
-	const struct fdt_property *prop;
-	int offset, rv;
+	const void *prop;
+	const char *name;
+	int offset;
 
 	offset = fdt_phandle_offset(package);
 	if (offset < 0)
@@ -349,18 +302,30 @@ ofw_fdt_nextprop(ofw_t ofw, phandle_t package, const char *previous, char *buf,
 
 	if (previous == NULL)
 		/* Find the first prop in the node */
-		return (fdt_nextprop(offset, buf, size));
+		offset = fdt_first_property_offset(fdtp, offset);
+	else {
+		fdt_for_each_property_offset(offset, fdtp, offset) {
+			prop = fdt_getprop_by_offset(fdtp, offset, &name, NULL);
+			if (prop == NULL)
+				return (-1); /* Internal error */
+			/* Skip until we find 'previous', then bail out */
+			if (strcmp(name, previous) != 0)
+				continue;
+			offset = fdt_next_property_offset(fdtp, offset);
+			break;
+		}
+	}
 
-	/*
-	 * Advance to the previous prop
-	 */
-	prop = fdt_get_property(fdtp, offset, previous, NULL);
+	if (offset < 0)
+		return (0); /* No properties */
+
+	prop = fdt_getprop_by_offset(fdtp, offset, &name, &offset);
 	if (prop == NULL)
-		return (-1);
+		return (-1); /* Internal error */
 
-	offset = fdt_pointer_offset(prop);
-	rv = fdt_nextprop(offset, buf, size);
-	return (rv);
+	strncpy(buf, name, size);
+
+	return (1);
 }
 
 /* Set the value of a property of a package. */
@@ -374,7 +339,11 @@ ofw_fdt_setprop(ofw_t ofw, phandle_t package, const char *propname,
 	if (offset < 0)
 		return (-1);
 
-	return (fdt_setprop_inplace(fdtp, offset, propname, buf, len));
+	if (fdt_setprop_inplace(fdtp, offset, propname, buf, len) != 0)
+		/* Try to add property, when setting value inplace failed */
+		return (fdt_setprop(fdtp, offset, propname, buf, len));
+
+	return (0);
 }
 
 /* Convert a device specifier to a fully qualified pathname. */
@@ -401,8 +370,13 @@ ofw_fdt_finddevice(ofw_t ofw, const char *device)
 static ssize_t
 ofw_fdt_instance_to_path(ofw_t ofw, ihandle_t instance, char *buf, size_t len)
 {
+	phandle_t phandle;
 
-	return (-1);
+	phandle = OF_instance_to_package(instance);
+	if (phandle == -1)
+		return (-1);
+
+	return (OF_package_to_path(phandle, buf, len));
 }
 
 /* Return the fully qualified pathname corresponding to a package. */
@@ -413,6 +387,7 @@ ofw_fdt_package_to_path(ofw_t ofw, phandle_t package, char *buf, size_t len)
 	return (-1);
 }
 
+#if defined(FDT_MARVELL) || defined(__powerpc__)
 static int
 ofw_fdt_fixup(ofw_t ofw)
 {
@@ -438,7 +413,15 @@ ofw_fdt_fixup(ofw_t ofw)
 	for (i = 0; fdt_fixup_table[i].model != NULL; i++) {
 		if (strncmp(model, fdt_fixup_table[i].model,
 		    FDT_MODEL_LEN) != 0)
-			continue;
+			/*
+			 * Sometimes it's convenient to provide one
+			 * fixup entry that refers to many boards.
+			 * To handle this case, simply check if model
+			 * is compatible parameter
+			 */
+			if(!ofw_bus_node_is_compatible(root,
+			    fdt_fixup_table[i].model))
+				continue;
 
 		if (fdt_fixup_table[i].handler != NULL)
 			(*fdt_fixup_table[i].handler)(root);
@@ -446,10 +429,12 @@ ofw_fdt_fixup(ofw_t ofw)
 
 	return (0);
 }
+#endif
 
 static int
 ofw_fdt_interpret(ofw_t ofw, const char *cmd, int nret, cell_t *retvals)
 {
+#if defined(FDT_MARVELL) || defined(__powerpc__)
 	int rv;
 
 	/*
@@ -468,4 +453,7 @@ ofw_fdt_interpret(ofw_t ofw, const char *cmd, int nret, cell_t *retvals)
 		retvals[0] = rv;
 
 	return (rv);
+#else
+	return (0);
+#endif
 }

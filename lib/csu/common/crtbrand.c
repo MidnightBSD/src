@@ -24,9 +24,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/csu/common/crtbrand.c 232832 2012-03-11 20:04:09Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/elf_common.h>
 #include "notes.h"
 
 /*
@@ -60,7 +61,7 @@ static const struct {
 } abitag __attribute__ ((section (NOTE_SECTION), aligned(4))) __used = {
 	.namesz = sizeof(NOTE_FREEBSD_VENDOR),
 	.descsz = sizeof(int32_t),
-	.type = ABI_NOTETYPE,
+	.type = NT_FREEBSD_ABI_TAG,
 	.name = NOTE_FREEBSD_VENDOR,
 	.desc = __FreeBSD_version
 };

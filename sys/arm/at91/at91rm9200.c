@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91rm9200.c 248944 2013-03-31 12:51:56Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,6 +88,13 @@ static const int at91_irq_prio[32] =
  	0	/* Advanced Interrupt Controller (IRQ6) */
 };
 
+static const uint32_t at91_pio_base[] = {
+	AT91RM92_PIOA_BASE,
+	AT91RM92_PIOB_BASE,
+	AT91RM92_PIOC_BASE,
+	AT91RM92_PIOD_BASE,
+};
+
 #define DEVICE(_name, _id, _unit)		\
 	{					\
 		_name, _unit,			\
@@ -98,6 +105,7 @@ static const int at91_irq_prio[32] =
 
 static const struct cpu_devs at91_devs[] =
 {
+	DEVICE("at91_aic",   AIC,    0),
 	DEVICE("at91_pmc",   PMC,    0),
 	DEVICE("at91_st",    ST,     0),
 	DEVICE("at91_pio",   PIOA,   0),
@@ -120,7 +128,6 @@ static const struct cpu_devs at91_devs[] =
 	DEVICE("uart",       USART1, 2),
 	DEVICE("uart",       USART2, 3),
 	DEVICE("uart",       USART3, 4),
-	DEVICE("at91_aic",   AIC,    0),
 	DEVICE("at91_mc",    MC,     0),
 	DEVICE("at91_tc",    TC0,    0),
 	DEVICE("at91_tc",    TC1,    1),
@@ -195,6 +202,8 @@ static struct at91_soc_data soc_data = {
 	.soc_clock_init = at91_clock_init,
 	.soc_irq_prio = at91_irq_prio,
 	.soc_children = at91_devs,
+	.soc_pio_base = at91_pio_base,
+	.soc_pio_count = nitems(at91_pio_base),
 };
 
 AT91_SOC(AT91_T_RM9200, &soc_data);

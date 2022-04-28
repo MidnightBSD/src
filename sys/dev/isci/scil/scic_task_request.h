@@ -49,7 +49,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_task_request.h 231136 2012-02-07 17:43:58Z jimharris $
+ * $FreeBSD$
  */
 #ifndef _SCIC_TASK_REQUEST_H_
 #define _SCIC_TASK_REQUEST_H_
@@ -73,7 +73,7 @@ extern "C" {
 
 /**
  * @brief This method simply returns the size required to build an SCI
- *        based task managment request object.
+ *        based task management request object.
  *
  * @return Return the size of the SCIC task request object.
  */

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/periodic/security/100.chksetuid 254974 2013-08-27 21:20:28Z jlh $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.
@@ -45,8 +45,14 @@ if check_yesno_period security_status_chksetuid_enable
 then
 	echo ""
 	echo 'Checking setuid files and devices:'
-	MP=`mount -t ufs,zfs | awk '$0 !~ /no(suid|exec)/ { print $3 }'`
-	find -sx $MP /dev/null -type f \
+	IFS=$'\n'	# Don't split mount points with spaces or tabs
+	MP=`mount -t ufs,zfs | awk '
+		$0 !~ /no(suid|exec)/ {
+			sub(/^.* on \//, "/");
+			sub(/ \(.*\)/, "");
+			print $0
+		}'`
+	find -sx $MP /dev/null \( ! -fstype local \) -prune -o -type f \
 	    \( -perm -u+x -or -perm -g+x -or -perm -o+x \) \
 	    \( -perm -u+s -or -perm -g+s \) -exec ls -liTd \{\} \+ |
 	check_diff setuid - "${host} setuid diffs:"

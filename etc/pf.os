@@ -1,5 +1,5 @@
-# $FreeBSD: release/10.0.0/etc/pf.os 244096 2012-12-10 20:52:52Z delphij $
-# $OpenBSD: pf.os,v 1.26 2012/08/03 12:25:16 jsg Exp $
+# $FreeBSD$
+# $OpenBSD: pf.os,v 1.27 2016/09/03 17:08:57 sthen Exp $
 # passive OS fingerprinting
 # -------------------------
 #
@@ -314,6 +314,17 @@ S22:64:1:52:M*,N,N,S,N,W0:	Linux:2.2:ts:Linux 2.2 w/o timestamps
 
 16384:64:1:64:M*,N,N,S,N,W3,N,N,T:	OpenBSD:4.9::OpenBSD 4.9
 16384:64:0:64:M*,N,N,S,N,W3,N,N,T:	OpenBSD:4.9:no-df:OpenBSD 4.9 (scrub no-df)
+
+16384:64:1:64:M*,N,N,S,N,W6,N,N,T:      OpenBSD:6.1::OpenBSD 6.1
+16384:64:0:64:M*,N,N,S,N,W6,N,N,T:      OpenBSD:6.1:no-df:OpenBSD 6.1 (scrub no-df)
+
+# ----------------- DragonFly BSD -----------------
+
+57344:64:1:60:M*,N,W0,N,N,T:		DragonFly:1.0:A:DragonFly 1.0A
+57344:64:0:64:M*,N,W0,N,N,S,N,N,T:	DragonFly:1.2-1.12::DragonFly 1.2-1.12
+5840:64:1:60:M*,S,T,N,W4:			DragonFly:2.0-2.1::DragonFly 2.0-2.1
+57344:64:0:64:M*,N,W0,N,N,S,N,N,T:	DragonFly:2.2-2.3::DragonFly 2.2-2.3
+57344:64:0:64:M*,N,W5,N,N,S,N,N,T:	DragonFly:2.4-2.7::DragonFly 2.4-2.7
 
 # ----------------- Solaris -----------------
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/isa/pnpvar.h 139268 2004-12-24 22:08:57Z imp $
+ *	$FreeBSD$
  */
 
 #ifndef _ISA_PNPVAR_H_

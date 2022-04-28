@@ -1,5 +1,5 @@
 # ex:ts=8
-$FreeBSD: release/10.0.0/contrib/amd/FREEBSD-upgrade 174537 2007-12-11 19:16:51Z obrien $
+$FreeBSD$
 
 AMD (am-utils) 6.1.5
     originals can be found at: ftp://ftp.am-utils.org/pub/am-utils/

@@ -1,6 +1,6 @@
-/* $FreeBSD: release/10.0.0/contrib/less/forwback.c 238730 2012-07-24 01:09:11Z delphij $ */
+/* $FreeBSD$ */
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2019  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -21,6 +21,7 @@ public int screen_trashed;
 public int squished;
 public int no_back_scroll = 0;
 public int forw_prompt;
+public int same_pos_bell = 1;
 
 extern int sigs;
 extern int top_scroll;
@@ -34,6 +35,11 @@ extern int ignore_eoi;
 extern int clear_bg;
 extern int final_attr;
 extern int oldbot;
+#if HILITE_SEARCH
+extern int size_linebuf;
+extern int hilite_search;
+extern int status_col;
+#endif
 #if TAGS
 extern char *tagoption;
 #endif
@@ -42,7 +48,7 @@ extern char *tagoption;
  * Sound the bell to indicate user is trying to move past end of file.
  */
 	static void
-eof_bell()
+eof_bell(VOID_PARAM)
 {
 	if (quiet == NOT_QUIET)
 		bell();
@@ -54,7 +60,7 @@ eof_bell()
  * Check to see if the end of file is currently displayed.
  */
 	public int
-eof_displayed()
+eof_displayed(VOID_PARAM)
 {
 	POSITION pos;
 
@@ -81,7 +87,7 @@ eof_displayed()
  * Check to see if the entire file is currently displayed.
  */
 	public int
-entire_file_displayed()
+entire_file_displayed(VOID_PARAM)
 {
 	POSITION pos;
 
@@ -101,7 +107,7 @@ entire_file_displayed()
  * for the first time.
  */
 	public void
-squish_check()
+squish_check(VOID_PARAM)
 {
 	if (!squished)
 		return;
@@ -120,13 +126,12 @@ squish_check()
  */
 	public void
 forw(n, pos, force, only_last, nblank)
-	register int n;
+	int n;
 	POSITION pos;
 	int force;
 	int only_last;
 	int nblank;
 {
-	int eof = 0;
 	int nlines = 0;
 	int do_repaint;
 	static int first_time = 1;
@@ -144,6 +149,13 @@ forw(n, pos, force, only_last, nblank)
 	 */
 	do_repaint = (only_last && n > sc_height-1) || 
 		(forw_scroll >= 0 && n > forw_scroll && n != sc_height-1);
+
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite(pos, pos + 4*size_linebuf, ignore_eoi ? 1 : -1);
+		pos = next_unfiltered(pos);
+	}
+#endif
 
 	if (!do_repaint)
 	{
@@ -206,6 +218,9 @@ forw(n, pos, force, only_last, nblank)
 			 * Get the next line from the file.
 			 */
 			pos = forw_line(pos);
+#if HILITE_SEARCH
+			pos = next_unfiltered(pos);
+#endif
 			if (pos == NULL_POSITION)
 			{
 				/*
@@ -214,7 +229,6 @@ forw(n, pos, force, only_last, nblank)
 				 * Even if force is true, stop when the last
 				 * line in the file reaches the top of screen.
 				 */
-				eof = 1;
 				if (!force && position(TOP) != NULL_POSITION)
 					break;
 				if (!empty_lines(0, 0) && 
@@ -276,7 +290,7 @@ forw(n, pos, force, only_last, nblank)
 		forw_prompt = 1;
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && !ignore_eoi && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
@@ -289,7 +303,7 @@ forw(n, pos, force, only_last, nblank)
  */
 	public void
 back(n, pos, force, only_last)
-	register int n;
+	int n;
 	POSITION pos;
 	int force;
 	int only_last;
@@ -299,11 +313,20 @@ back(n, pos, force, only_last)
 
 	squish_check();
 	do_repaint = (n > get_back_scroll() || (only_last && n > sc_height-1));
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite((pos < 3*size_linebuf) ?  0 : pos - 3*size_linebuf, pos, -1);
+	}
+#endif
 	while (--n >= 0)
 	{
 		/*
 		 * Get the previous line of input.
 		 */
+#if HILITE_SEARCH
+		pos = prev_unfiltered(pos);
+#endif
+
 		pos = back_line(pos);
 		if (pos == NULL_POSITION)
 		{
@@ -327,7 +350,7 @@ back(n, pos, force, only_last)
 		}
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
@@ -416,7 +439,7 @@ backward(n, force, only_last)
  * top_scroll, as well as back_scroll.
  */
 	public int
-get_back_scroll()
+get_back_scroll(VOID_PARAM)
 {
 	if (no_back_scroll)
 		return (0);
@@ -425,4 +448,21 @@ get_back_scroll()
 	if (top_scroll)
 		return (sc_height - 2);
 	return (10000); /* infinity */
+}
+
+/*
+ * Will the entire file fit on one screen?
+ */
+	public int
+get_one_screen(VOID_PARAM)
+{
+	int nlines;
+	POSITION pos = ch_zero();
+
+	for (nlines = 0;  nlines < sc_height;  nlines++)
+	{
+		pos = forw_line(pos);
+		if (pos == NULL_POSITION) break;
+	}
+	return (nlines < sc_height);
 }

@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)keyserv.c	1.15	94/04/25 SMI";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/keyserv/keyserv.c 239991 2012-09-01 14:45:15Z ed $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -440,7 +440,7 @@ key_net_put_2_svc_prog(uid, arg)
 			arg->st_netname, (int)sizeof (arg->st_pub_key),
 			arg->st_pub_key, (int)sizeof (arg->st_priv_key),
 			arg->st_priv_key);
-	};
+	}
 
 	status = pk_netput(uid, arg);
 

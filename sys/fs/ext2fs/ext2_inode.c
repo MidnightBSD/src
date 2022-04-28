@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_inode.c	8.5 (Berkeley) 12/30/93
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/ext2_inode.c 254283 2013-08-13 15:40:43Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -53,6 +53,7 @@
 #include <fs/ext2fs/ext2fs.h>
 #include <fs/ext2fs/fs.h>
 #include <fs/ext2fs/ext2_extern.h>
+#include <fs/ext2fs/ext2_extattr.h>
 
 static int ext2_indirtrunc(struct inode *, daddr_t, daddr_t,
 	    daddr_t, int, e4fs_daddr_t *);
@@ -81,16 +82,20 @@ ext2_update(struct vnode *vp, int waitfor)
 		return (0);
 	ip->i_flag &= ~(IN_LAZYACCESS | IN_LAZYMOD | IN_MODIFIED);
 	fs = ip->i_e2fs;
-	if(fs->e2fs_ronly)
+	if (fs->e2fs_ronly)
 		return (0);
 	if ((error = bread(ip->i_devvp,
 	    fsbtodb(fs, ino_to_fsba(fs, ip->i_number)),
-		(int)fs->e2fs_bsize, NOCRED, &bp)) != 0) {
+	    (int)fs->e2fs_bsize, NOCRED, &bp)) != 0) {
 		brelse(bp);
 		return (error);
 	}
-	ext2_i2ei(ip, (struct ext2fs_dinode *)((char *)bp->b_data +
+	error = ext2_i2ei(ip, (struct ext2fs_dinode *)((char *)bp->b_data +
 	    EXT2_INODE_SIZE(fs) * ino_to_fsbo(fs, ip->i_number)));
+	if (error) {
+		brelse(bp);
+		return (error);
+	}
 	if (waitfor && !DOINGASYNC(vp))
 		return (bwrite(bp));
 	else {
@@ -115,21 +120,25 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 	struct inode *oip;
 	int32_t bn, lbn, lastiblock[NIADDR], indir_lbn[NIADDR];
 	uint32_t oldblks[NDADDR + NIADDR], newblks[NDADDR + NIADDR];
-	struct bufobj *bo;
 	struct m_ext2fs *fs;
 	struct buf *bp;
 	int offset, size, level;
 	e4fs_daddr_t count, nblocks, blocksreleased = 0;
 	int error, i, allerror;
 	off_t osize;
+#ifdef INVARIANTS
+	struct bufobj *bo;
+#endif
 
 	oip = VTOI(ovp);
+#ifdef INVARIANTS
 	bo = &ovp->v_bufobj;
+#endif
 
-	ASSERT_VOP_LOCKED(vp, "ext2_truncate");	
+	ASSERT_VOP_LOCKED(vp, "ext2_truncate");
 
 	if (length < 0)
-	    return (EINVAL);
+		return (EINVAL);
 
 	if (ovp->v_type == VLNK &&
 	    oip->i_size < ovp->v_mount->mnt_maxsymlinklen) {
@@ -179,7 +188,7 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 	}
 	/*
 	 * Shorten the size of the file. If the file is not being
-	 * truncated to a block boundry, the contents of the
+	 * truncated to a block boundary, the contents of the
 	 * partial block following the end of the file must be
 	 * zero'ed in case it ever become accessible again because
 	 * of subsequent file growth.
@@ -224,14 +233,18 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 	 * will be returned to the free list.  lastiblock values are also
 	 * normalized to -1 for calls to ext2_indirtrunc below.
 	 */
-	bcopy((caddr_t)&oip->i_db[0], (caddr_t)oldblks, sizeof(oldblks));
-	for (level = TRIPLE; level >= SINGLE; level--)
+	for (level = TRIPLE; level >= SINGLE; level--) {
+		oldblks[NDADDR + level] = oip->i_ib[level];
 		if (lastiblock[level] < 0) {
 			oip->i_ib[level] = 0;
 			lastiblock[level] = -1;
 		}
-	for (i = NDADDR - 1; i > lastblock; i--)
-		oip->i_db[i] = 0;
+	}
+	for (i = 0; i < NDADDR; i++) {
+		oldblks[i] = oip->i_db[i];
+		if (i > lastblock)
+			oip->i_db[i] = 0;
+	}
 	oip->i_flag |= IN_CHANGE | IN_UPDATE;
 	allerror = ext2_update(ovp, !DOINGASYNC(ovp));
 
@@ -241,14 +254,20 @@ ext2_truncate(struct vnode *vp, off_t length, int flags, struct ucred *cred,
 	 * Note that we save the new block configuration so we can check it
 	 * when we are done.
 	 */
-	bcopy((caddr_t)&oip->i_db[0], (caddr_t)newblks, sizeof(newblks));
-	bcopy((caddr_t)oldblks, (caddr_t)&oip->i_db[0], sizeof(oldblks));
+	for (i = 0; i < NDADDR; i++) {
+		newblks[i] = oip->i_db[i];
+		oip->i_db[i] = oldblks[i];
+	}
+	for (i = 0; i < NIADDR; i++) {
+		newblks[NDADDR + i] = oip->i_ib[i];
+		oip->i_ib[i] = oldblks[NDADDR + i];
+	}
 	oip->i_size = osize;
-	error = vtruncbuf(ovp, cred, length, (int)fs->e2fs_bsize);
+	error = vtruncbuf(ovp, length, (int)fs->e2fs_bsize);
 	if (error && (allerror == 0))
 		allerror = error;
 	vnode_pager_setsize(ovp, length);
-	
+
 	/*
 	 * Indirect blocks first.
 	 */
@@ -331,7 +350,7 @@ done:
 	    bo->bo_clean.bv_cnt != 0))
 		panic("itrunc3");
 	BO_UNLOCK(bo);
-#endif /* INVARIANTS */
+#endif	/* INVARIANTS */
 	/*
 	 * Put back the real size.
 	 */
@@ -404,12 +423,11 @@ ext2_indirtrunc(struct inode *ip, daddr_t lbn, daddr_t dbn,
 		*countp = 0;
 		return (error);
 	}
-
 	bap = (e2fs_daddr_t *)bp->b_data;
 	copy = malloc(fs->e2fs_bsize, M_TEMP, M_WAITOK);
 	bcopy((caddr_t)bap, (caddr_t)copy, (u_int)fs->e2fs_bsize);
 	bzero((caddr_t)&bap[last + 1],
-	  (NINDIR(fs) - (last + 1)) * sizeof(e2fs_daddr_t));
+	    (NINDIR(fs) - (last + 1)) * sizeof(e2fs_daddr_t));
 	if (last == -1)
 		bp->b_flags |= B_INVAL;
 	if (DOINGASYNC(vp)) {
@@ -474,6 +492,7 @@ ext2_inactive(struct vop_inactive_args *ap)
 	if (ip->i_mode == 0)
 		goto out;
 	if (ip->i_nlink <= 0) {
+		ext2_extattr_free(ip);
 		error = ext2_truncate(vp, (off_t)0, 0, NOCRED, td);
 		ip->i_rdev = 0;
 		mode = ip->i_mode;

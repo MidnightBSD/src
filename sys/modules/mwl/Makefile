@@ -26,10 +26,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: release/10.0.0/sys/modules/mwl/Makefile 234866 2012-05-01 07:38:40Z uqs $
+# $FreeBSD$
 #
 
-.PATH: ${.CURDIR}/../../dev/mwl
+.PATH: ${SRCTOP}/sys/dev/mwl
 
 KMOD=	if_mwl
 SRCS=	if_mwl.c if_mwl_pci.c mwlhal.c

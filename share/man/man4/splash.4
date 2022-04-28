@@ -24,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/splash.4 235317 2012-05-12 03:25:46Z gjb $
+.\" $FreeBSD$
 .\"
-.Dd November 29, 2010
+.Dd December 31, 2015
 .Dt SPLASH 4
 .Os
 .Sh NAME
@@ -66,7 +66,7 @@ Currently the following decoder modules are available:
 .Pp
 .Bl -tag -width splash_decoder -compact
 .It Pa splash_bmp.ko
-W*ndows BMP file decoder.
+Windows BMP file decoder.
 While the BMP file format allows images of various color depths, this
 decoder currently only handles 256 color bitmaps.
 Bitmaps of other color depths will not be displayed.
@@ -130,6 +130,8 @@ the screen will also be powered off.
 Animated graphical
 .Fx
 logo.
+.It Pa plasma_saver.ko
+Draws an animated interference pattern.
 .It Pa rain_saver.ko
 Draws a shower on the screen.
 .It Pa snake_saver.ko
@@ -259,29 +261,37 @@ driver first appeared in
 The
 .Nm
 driver and this manual page were written by
-.An Kazutaka Yokota Aq yokota@FreeBSD.org .
+.An Kazutaka Yokota Aq Mt yokota@FreeBSD.org .
 The
 .Pa splash_bmp
 module was written by
-.An Michael Smith Aq msmith@FreeBSD.org
+.An Michael Smith Aq Mt msmith@FreeBSD.org
 and
 .An Kazutaka Yokota .
 The
 .Pa splash_pcx
 module was written by
-.An Dag-Erling Sm\(/orgrav Aq des@FreeBSD.org
+.An Dag-Erling Sm\(/orgrav Aq Mt des@FreeBSD.org
 based on the
 .Pa splash_bmp
 code.
 The
 .Pa splash_txt
 module was written by
-.An Antony Mawer Aq antony@mawer.org
+.An Antony Mawer Aq Mt antony@mawer.org
 based on the
 .Pa splash_bmp
 code, with some additional inspiration from the
 .Pa daemon_saver
 code.
+The
+.Pa logo_saver ,
+.Pa plasma_saver ,
+.Pa rain_saver
+and
+.Pa warp_saver
+modules were written by
+.An Dag-Erling Sm\(/orgrav Aq Mt des@FreeBSD.org .
 .Sh CAVEATS
 Both the splash screen and the screen saver work with
 .Xr syscons 4

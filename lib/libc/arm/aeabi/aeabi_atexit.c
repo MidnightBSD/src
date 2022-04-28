@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/aeabi/aeabi_atexit.c 245655 2013-01-19 05:33:55Z andrew $");
+__FBSDID("$FreeBSD$");
 
 int __cxa_atexit(void (*)(void *), void *, void *);
 

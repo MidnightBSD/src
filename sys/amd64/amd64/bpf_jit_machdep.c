@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/bpf_jit_machdep.c 207081 2010-04-22 23:47:19Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #ifdef _KERNEL
 #include "opt_bpf.h"
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/amd64/amd64/bpf_jit_machdep.c 207081 2010
 #include <sys/kernel.h>
 #include <sys/socket.h>
 #include <sys/malloc.h>
+#include <sys/mbuf.h>
 #include <net/if.h>
 #else
 #include <stdlib.h>

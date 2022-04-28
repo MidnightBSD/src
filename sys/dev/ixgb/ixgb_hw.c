@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: release/10.0.0/sys/dev/ixgb/ixgb_hw.c 129794 2004-05-28 00:23:00Z tackerman $*/
+/*$FreeBSD$*/
 
 /* ixgb_hw.c
  * Shared functions for accessing and configuring the adapter
@@ -939,7 +939,7 @@ ixgb_check_for_link(struct ixgb_hw *hw)
 }
 
 /******************************************************************************
- * Check for a bad link condition that may have occured.
+ * Check for a bad link condition that may have occurred.
  * The indication is that the RFC / LFC registers may be incrementing
  * continually.  A full adapter reset is required to recover.
  *

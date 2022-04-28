@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_cosh.c 226598 2011-10-21 06:28:47Z das $");
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_cosh(x)
  * Method : 
@@ -34,6 +34,8 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_cosh.c 226598 2011-10-21 06:28
  *	cosh(x) is |x| if x is +INF, -INF, or NaN.
  *	only cosh(0)=1 is exact for finite x.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -77,3 +79,7 @@ __ieee754_cosh(double x)
     /* |x| > overflowthresold, cosh(x) overflow */
 	return huge*huge;
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(cosh, coshl);
+#endif

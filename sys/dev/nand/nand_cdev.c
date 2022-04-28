@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nand/nand_cdev.c 258554 2013-11-25 15:34:57Z gber $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,7 +99,7 @@ nand_make_dev(struct nand_chip *chip)
 	parent_unit = device_get_unit(parent);
 	unit = parent_unit * 4 + chip->num;
 	chip->cdev = make_dev(&nand_cdevsw, unit, UID_ROOT, GID_WHEEL,
-	    0666, "%s%d.%d", name, parent_unit, chip->num);
+	    0640, "%s%d.%d", name, parent_unit, chip->num);
 
 	if (chip->cdev == NULL)
 		return (ENXIO);
@@ -236,10 +236,10 @@ nand_strategy(struct bio *bp)
 	chip = dev->si_drv1;
 
 	nand_debug(NDBG_CDEV, "Strategy %s on chip %d [%p]\n",
-	    (bp->bio_cmd & BIO_READ) == BIO_READ ? "READ" : "WRITE",
+	    bp->bio_cmd == BIO_READ ? "READ" : "WRITE",
 	    chip->num, chip);
 
-	if ((bp->bio_cmd & BIO_READ) == BIO_READ) {
+	if (bp->bio_cmd == BIO_READ) {
 		err = nand_read(chip,
 		    bp->bio_offset & 0xffffffff,
 		    bp->bio_data, bp->bio_bcount);

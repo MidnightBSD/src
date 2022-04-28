@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/pci/pcivar.h 257493 2013-11-01 06:31:02Z kib $
+ * $FreeBSD$
  *
  */
 
@@ -31,6 +31,7 @@
 #define	_PCIVAR_H_
 
 #include <sys/queue.h>
+#include <sys/eventhandler.h>
 
 /* some PCI bus constants */
 #define	PCI_MAXMAPS_0	6	/* max. no. of memory/port maps */
@@ -38,6 +39,15 @@
 #define	PCI_MAXMAPS_2	1	/* max. no. of maps for CardBus bridge */
 
 typedef uint64_t pci_addr_t;
+
+/* Config registers for PCI-PCI and PCI-Cardbus bridges. */
+struct pcicfg_bridge {
+    uint8_t	br_seclat;
+    uint8_t	br_subbus;
+    uint8_t	br_secbus;
+    uint8_t	br_pribus;
+    uint16_t	br_control;
+};
 
 /* Interesting values for PCI power management */
 struct pcicfg_pp {
@@ -50,13 +60,14 @@ struct pcicfg_pp {
 struct pci_map {
     pci_addr_t	pm_value;	/* Raw BAR value */
     pci_addr_t	pm_size;
-    uint8_t	pm_reg;
+    uint16_t	pm_reg;
     STAILQ_ENTRY(pci_map) pm_link;
 };
 
 struct vpd_readonly {
     char	keyword[2];
     char	*value;
+    int		len;
 };
 
 struct vpd_write {
@@ -142,6 +153,26 @@ struct pcicfg_pcix {
     uint8_t	pcix_location;	/* Offset of PCI-X capability registers. */
 };
 
+struct pcicfg_vf {
+       int index;
+};
+
+struct pci_ea_entry {
+    int		eae_bei;
+    uint32_t	eae_flags;
+    uint64_t	eae_base;
+    uint64_t	eae_max_offset;
+    uint32_t	eae_cfg_offset;
+    STAILQ_ENTRY(pci_ea_entry) eae_link;
+};
+
+struct pcicfg_ea {
+    int ea_location;	/* Structure offset in Configuration Header */
+    STAILQ_HEAD(, pci_ea_entry) ea_entries;	/* EA entries */
+};
+
+#define	PCICFG_VF	0x0001 /* Device is an SR-IOV Virtual Function */
+
 /* config header information common to all header types */
 typedef struct pcicfg {
     struct device *dev;		/* device which owns this */
@@ -178,6 +209,9 @@ typedef struct pcicfg {
     uint8_t	slot;		/* config space slot address */
     uint8_t	func;		/* config space function number */
 
+    uint32_t	flags;		/* flags defined above */
+
+    struct pcicfg_bridge bridge; /* Bridges */
     struct pcicfg_pp pp;	/* Power management */
     struct pcicfg_vpd vpd;	/* Vital product data */
     struct pcicfg_msi msi;	/* PCI MSI */
@@ -185,14 +219,12 @@ typedef struct pcicfg {
     struct pcicfg_ht ht;	/* HyperTransport */
     struct pcicfg_pcie pcie;	/* PCI Express */
     struct pcicfg_pcix pcix;	/* PCI-X */
+    struct pcicfg_iov *iov;	/* SR-IOV */
+    struct pcicfg_vf vf;	/* SR-IOV Virtual Function */
+    struct pcicfg_ea ea;	/* Enhanced Allocation */
 } pcicfgregs;
 
 /* additional type 1 device config header information (PCI to PCI bridge) */
-
-#define	PCI_PPBMEMBASE(h,l)  ((((pci_addr_t)(h) << 32) + ((l)<<16)) & ~0xfffff)
-#define	PCI_PPBMEMLIMIT(h,l) ((((pci_addr_t)(h) << 32) + ((l)<<16)) | 0xfffff)
-#define	PCI_PPBIOBASE(h,l)   ((((h)<<16) + ((l)<<8)) & ~0xfff)
-#define	PCI_PPBIOLIMIT(h,l)  ((((h)<<16) + ((l)<<8)) | 0xfff)
 
 typedef struct {
     pci_addr_t	pmembase;	/* base address of prefetchable memory */
@@ -380,7 +412,7 @@ pci_get_vpd_readonly(device_t dev, const char *kw, const char **vptr)
  * Check if the address range falls within the VGA defined address range(s)
  */
 static __inline int
-pci_is_vga_ioport_range(u_long start, u_long end)
+pci_is_vga_ioport_range(rman_res_t start, rman_res_t end)
 {
  
 	return (((start >= 0x3b0 && end <= 0x3bb) ||
@@ -388,7 +420,7 @@ pci_is_vga_ioport_range(u_long start, u_long end)
 }
 
 static __inline int
-pci_is_vga_memory_range(u_long start, u_long end)
+pci_is_vga_memory_range(rman_res_t start, rman_res_t end)
 {
 
 	return ((start >= 0xa0000 && end <= 0xbffff) ? 1 : 0);
@@ -434,15 +466,36 @@ pci_find_cap(device_t dev, int capability, int *capreg)
 }
 
 static __inline int
+pci_find_next_cap(device_t dev, int capability, int start, int *capreg)
+{
+    return (PCI_FIND_NEXT_CAP(device_get_parent(dev), dev, capability, start,
+        capreg));
+}
+
+static __inline int
 pci_find_extcap(device_t dev, int capability, int *capreg)
 {
     return (PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg));
 }
 
 static __inline int
+pci_find_next_extcap(device_t dev, int capability, int start, int *capreg)
+{
+    return (PCI_FIND_NEXT_EXTCAP(device_get_parent(dev), dev, capability,
+        start, capreg));
+}
+
+static __inline int
 pci_find_htcap(device_t dev, int capability, int *capreg)
 {
     return (PCI_FIND_HTCAP(device_get_parent(dev), dev, capability, capreg));
+}
+
+static __inline int
+pci_find_next_htcap(device_t dev, int capability, int start, int *capreg)
+{
+    return (PCI_FIND_NEXT_HTCAP(device_get_parent(dev), dev, capability,
+        start, capreg));
 }
 
 static __inline int
@@ -455,6 +508,24 @@ static __inline int
 pci_alloc_msix(device_t dev, int *count)
 {
     return (PCI_ALLOC_MSIX(device_get_parent(dev), dev, count));
+}
+
+static __inline void
+pci_enable_msi(device_t dev, uint64_t address, uint16_t data)
+{
+    PCI_ENABLE_MSI(device_get_parent(dev), dev, address, data);
+}
+
+static __inline void
+pci_enable_msix(device_t dev, u_int index, uint64_t address, uint32_t data)
+{
+    PCI_ENABLE_MSIX(device_get_parent(dev), dev, index, address, data);
+}
+
+static __inline void
+pci_disable_msi(device_t dev)
+{
+    PCI_DISABLE_MSI(device_get_parent(dev), dev);
 }
 
 static __inline int
@@ -481,6 +552,47 @@ pci_msix_count(device_t dev)
     return (PCI_MSIX_COUNT(device_get_parent(dev), dev));
 }
 
+static __inline int
+pci_msix_pba_bar(device_t dev)
+{
+    return (PCI_MSIX_PBA_BAR(device_get_parent(dev), dev));
+}
+
+static __inline int
+pci_msix_table_bar(device_t dev)
+{
+    return (PCI_MSIX_TABLE_BAR(device_get_parent(dev), dev));
+}
+
+static __inline int
+pci_get_id(device_t dev, enum pci_id_type type, uintptr_t *id)
+{
+    return (PCI_GET_ID(device_get_parent(dev), dev, type, id));
+}
+
+/*
+ * This is the deprecated interface, there is no way to tell the difference
+ * between a failure and a valid value that happens to be the same as the
+ * failure value.
+ */
+static __inline uint16_t
+pci_get_rid(device_t dev)
+{
+    uintptr_t rid;
+
+    if (pci_get_id(dev, PCI_ID_RID, &rid) != 0)
+        return (0);
+
+    return (rid);
+}
+
+static __inline void
+pci_child_added(device_t dev)
+{
+
+    return (PCI_CHILD_ADDED(device_get_parent(dev), dev));
+}
+
 device_t pci_find_bsf(uint8_t, uint8_t, uint8_t);
 device_t pci_find_dbsf(uint32_t, uint8_t, uint8_t, uint8_t);
 device_t pci_find_device(uint16_t, uint16_t);
@@ -494,11 +606,23 @@ int	pci_msix_device_blacklisted(device_t dev);
 
 void	pci_ht_map_msi(device_t dev, uint64_t addr);
 
+device_t pci_find_pcie_root_port(device_t dev);
+int	pci_get_max_payload(device_t dev);
 int	pci_get_max_read_req(device_t dev);
 void	pci_restore_state(device_t dev);
 void	pci_save_state(device_t dev);
 int	pci_set_max_read_req(device_t dev, int size);
+int	pci_power_reset(device_t dev);
+uint32_t pcie_read_config(device_t dev, int reg, int width);
+void	pcie_write_config(device_t dev, int reg, uint32_t value, int width);
+uint32_t pcie_adjust_config(device_t dev, int reg, uint32_t mask,
+	    uint32_t value, int width);
+bool	pcie_flr(device_t dev, u_int max_delay, bool force);
+int	pcie_get_max_completion_timeout(device_t dev);
+bool	pcie_wait_for_pending_transactions(device_t dev, u_int max_delay);
+int	pcie_link_reset(device_t port, int pcie_location);
 
+void	pci_print_faulted_dev(void);
 
 #ifdef BUS_SPACE_MAXADDR
 #if (BUS_SPACE_MAXADDR > 0xFFFFFFFF)
@@ -525,6 +649,7 @@ extern uint32_t	pci_generation;
 
 struct pci_map *pci_find_bar(device_t dev, int reg);
 int	pci_bar_enabled(device_t dev, struct pci_map *pm);
+struct pcicfg_vpd *pci_fetch_vpd_list(device_t dev);
 
 #define	VGA_PCI_BIOS_SHADOW_ADDR	0xC0000
 #define	VGA_PCI_BIOS_SHADOW_SIZE	131072
@@ -532,5 +657,14 @@ int	pci_bar_enabled(device_t dev, struct pci_map *pm);
 int	vga_pci_is_boot_display(device_t dev);
 void *	vga_pci_map_bios(device_t dev, size_t *size);
 void	vga_pci_unmap_bios(device_t dev, void *bios);
+int	vga_pci_repost(device_t dev);
+
+/**
+ * Global eventhandlers invoked when PCI devices are added or removed
+ * from the system.
+ */
+typedef void (*pci_event_fn)(void *arg, device_t dev);
+EVENTHANDLER_DECLARE(pci_add_device, pci_event_fn);
+EVENTHANDLER_DECLARE(pci_delete_device, pci_event_fn);
 
 #endif /* _PCIVAR_H_ */

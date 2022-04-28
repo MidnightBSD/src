@@ -1,4 +1,0 @@
-# $FreeBSD: release/10.0.0/tools/regression/bin/sh/expansion/plus-minus2.0 206145 2010-04-03 20:55:56Z jilles $
-
-e=
-test "${e:-\}}" = '}'

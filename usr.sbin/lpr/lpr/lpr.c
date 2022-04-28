@@ -50,7 +50,7 @@ static char sccsid[] = "@(#)lpr.c	8.4 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lpr/lpr.c 241852 2012-10-22 03:31:22Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  *      lpr -- off line print
@@ -387,8 +387,8 @@ main(int argc, char *argv[])
 			continue;	/* file unreasonable */
 
 		if (sflag && (cp = linked(arg)) != NULL) {
-			(void)snprintf(buf, sizeof(buf), "%u %ju",
-			    statb.st_dev, (uintmax_t)statb.st_ino);
+			(void)snprintf(buf, sizeof(buf), "%ju %ju",
+			    (uintmax_t)statb.st_dev, (uintmax_t)statb.st_ino);
 			card('S', buf);
 			if (format == 'p')
 				card('T', title ? title : arg);

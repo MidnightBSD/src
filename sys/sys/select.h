@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/select.h 154090 2006-01-06 22:12:46Z marcel $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SELECT_H_
@@ -56,7 +56,7 @@ typedef	__sigset_t	sigset_t;
  * be enough for most uses.
  */
 #ifndef	FD_SETSIZE
-#define	FD_SETSIZE	1024U
+#define	FD_SETSIZE	1024
 #endif
 
 #define	_NFDBITS	(sizeof(__fd_mask) * 8)	/* bits per mask */

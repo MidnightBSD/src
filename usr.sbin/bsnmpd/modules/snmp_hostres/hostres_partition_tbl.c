@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_partition_tbl.c 160341 2006-07-14 09:07:56Z harti $
+ * $FreeBSD$
  */
 
 /*
@@ -177,7 +177,7 @@ partition_entry_create(int32_t ds_index, const char *chunk_name)
 
 		if (next_partition_index > INT_MAX) {
 			/* Unrecoverable error - die clean and quicly*/
-		        syslog(LOG_ERR, "%s: hrPartitionTable index wrap",
+			syslog(LOG_ERR, "%s: hrPartitionTable index wrap",
 			    __func__);
 			errx(EX_SOFTWARE, "hrPartitionTable index wrap");
 		}
@@ -316,7 +316,7 @@ handle_chunk(int32_t ds_index, const char *chunk_name, off_t chunk_size)
 
 	assert(chunk_name != NULL);
 	assert(chunk_name[0] != '\0');
-	if (chunk_name == NULL || chunk_name == '\0')
+	if (chunk_name == NULL || chunk_name[0] == '\0')
 		return;
 
 	HRDBG("ANALYZE chunk %s", chunk_name);

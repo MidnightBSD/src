@@ -4,7 +4,7 @@
 # Also used to verify resources are reclaimed properly
 # on vap destroy.
 #
-# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/setup.updown.wpa 178361 2008-04-20 20:43:42Z sam $
+# $FreeBSD$
 #
 PATH=.:$PATH
 . config

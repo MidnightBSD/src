@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2000, 2001 Michael Smith
  * Copyright (c) 2000 BSDi
  * All rights reserved.
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/devinfo/devinfo.c 227252 2011-11-06 19:01:48Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <err.h>
@@ -66,9 +68,9 @@ print_resource(struct devinfo_res *res)
 
 	rman = devinfo_handle_to_rman(res->dr_rman);
 	hexmode =  (rman->dm_size > 1000) || (rman->dm_size == 0);
-	printf(hexmode ? "0x%lx" : "%lu", res->dr_start);
+	printf(hexmode ? "0x%jx" : "%ju", res->dr_start);
 	if (res->dr_size > 1)
-		printf(hexmode ? "-0x%lx" : "-%lu",
+		printf(hexmode ? "-0x%jx" : "-%ju",
 		    res->dr_start + res->dr_size - 1);
 }
 
@@ -146,6 +148,10 @@ print_device(struct devinfo_dev *dev, void *arg)
 			printf(" pnpinfo %s", dev->dd_pnpinfo);
 		if (vflag && *dev->dd_location)
 			printf(" at %s", dev->dd_location);
+		if (!(dev->dd_flags & DF_ENABLED))
+			printf(" (disabled)");
+		else if (dev->dd_flags & DF_SUSPENDED)
+			printf(" (suspended)");
 		printf("\n");
 		if (rflag) {
 			ia.indent = indent + 4;

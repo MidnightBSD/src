@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/root 177062 2008-03-11 17:21:14Z delphij $
+# $FreeBSD$
 #
 
 # PROVIDE: root
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="root"
+desc="Mount root filesystem read/write"
 start_cmd="root_start"
 stop_cmd=":"
 

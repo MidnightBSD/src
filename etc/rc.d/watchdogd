@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/watchdogd 240336 2012-09-11 05:04:59Z obrien $
+# $FreeBSD$
 #
 
 # PROVIDE: watchdogd
@@ -34,9 +34,13 @@
 . /etc/rc.subr
 
 name="watchdogd"
+desc="Watchdog daemon"
 rcvar="watchdogd_enable"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 
 load_rc_config $name
+
+sig_stop="${watchdogd_sig_stop:-TERM}"
+
 run_rc_command "$1"

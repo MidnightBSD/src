@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/puc/puc_pccard.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/puc/puc_pccard.c 227843 2011-11-22 21
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/malloc.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>

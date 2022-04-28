@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/envy24/Makefile 162892 2006-09-30 18:12:33Z netchild $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_envy24
 SRCS=	device_if.h bus_if.h pci_if.h

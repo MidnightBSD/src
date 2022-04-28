@@ -1,9 +1,11 @@
-# $FreeBSD: release/10.0.0/share/doc/legal/Makefile 253139 2013-07-10 08:21:09Z hiren $
+# $FreeBSD$
 
 SUBDIR=	intel_ipw \
 	intel_iwi \
 	intel_iwn \
 	intel_wpi \
 	realtek
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

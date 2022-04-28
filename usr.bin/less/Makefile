@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/less/Makefile 207842 2010-05-10 06:59:50Z mm $
+# $FreeBSD$
 
 PROG=	less
 SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c cvt.c \
@@ -8,8 +8,7 @@ SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c cvt.c \
 	signal.c tags.c ttyin.c version.c
 SCRIPTS=lesspipe.sh zless.sh
 SCRIPTSNAME_lesspipe.sh=lesspipe.sh
-DPADD=	${LIBTERMCAP}
-LDADD=	-ltermcap
+LIBADD=	ncursesw
 LINKS=	${BINDIR}/less ${BINDIR}/more \
 	${BINDIR}/zless ${BINDIR}/bzless \
 	${BINDIR}/zless ${BINDIR}/xzless \

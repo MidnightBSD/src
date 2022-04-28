@@ -5,4 +5,4 @@ The framework should deal with this case gracefully.
 
 Andrzej Bialecki <abial@freebsd.org>
 
-$FreeBSD: release/10.0.0/share/examples/kld/dyn_sysctl/README 63212 2000-07-15 10:26:04Z abial $
+$FreeBSD$

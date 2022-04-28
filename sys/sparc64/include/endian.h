@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)endian.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/sparc64/include/endian.h 232745 2012-03-09 20:34:31Z dim $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ENDIAN_H_

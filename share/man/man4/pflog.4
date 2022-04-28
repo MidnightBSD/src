@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/pflog.4 240494 2012-09-14 11:51:49Z glebius $
+.\" $FreeBSD$
 .\"
-.Dd May 31 2007
+.Dd May 31, 2007
 .Dt PFLOG 4
 .Os
 .Sh NAME
@@ -91,13 +91,13 @@ and monitor all packets logged on it:
 # tcpdump -n -e -ttt -i pflog1
 .Ed
 .Sh SEE ALSO
+.Xr tcpdump 1 ,
 .Xr inet 4 ,
 .Xr inet6 4 ,
 .Xr netintro 4 ,
 .Xr pf 4 ,
 .Xr ifconfig 8 ,
-.Xr pflogd 8 ,
-.Xr tcpdump 1
+.Xr pflogd 8
 .Sh HISTORY
 The
 .Nm

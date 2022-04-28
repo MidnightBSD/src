@@ -25,13 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/ip17x/ip17x_vlans.c 253569 2013-07-23 13:56:38Z loos $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/socket.h>
 

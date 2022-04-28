@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/virtio/block/virtio_blk.h 252703 2013-07-04 17:53:02Z bryanv $
+ * $FreeBSD$
  */
 
 #ifndef _VIRTIO_BLK_H
@@ -67,7 +67,7 @@ struct virtio_blk_config {
 		uint8_t physical_block_exp;
 		uint8_t alignment_offset;
 		uint16_t min_io_size;
-		uint16_t opt_io_size;
+		uint32_t opt_io_size;
 	} topology;
 
 	/* Writeback mode (if VIRTIO_BLK_F_CONFIG_WCE) */

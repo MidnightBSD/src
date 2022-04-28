@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/cmdtab.c 161781 2006-08-31 19:19:44Z ru $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/ext2_extents.c 254260 2013-08-12 21:34:48Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -43,14 +43,16 @@
 #include <fs/ext2fs/ext2_extents.h>
 #include <fs/ext2fs/ext2_extern.h>
 
-static void ext4_ext_binsearch_index(struct inode *ip, struct ext4_extent_path
-		*path, daddr_t lbn)
-{
+static bool
+ext4_ext_binsearch_index(struct inode *ip, struct ext4_extent_path *path,
+    daddr_t lbn, daddr_t *first_lbn, daddr_t *last_lbn){
 	struct ext4_extent_header *ehp = path->ep_header;
-	struct ext4_extent_index *l, *r, *m;
+	struct ext4_extent_index *first, *last, *l, *r, *m;
 
-	l = (struct ext4_extent_index *)(char *)(ehp + 1);
-	r = (struct ext4_extent_index *)(char *)(ehp + 1) + ehp->eh_ecount - 1;
+	first = (struct ext4_extent_index *)(char *)(ehp + 1);
+	last = first + ehp->eh_ecount - 1;
+	l = first;
+	r = last;
 	while (l <= r) {
 		m = l + (r - l) / 2;
 		if (lbn < m->ei_blk)
@@ -59,20 +61,34 @@ static void ext4_ext_binsearch_index(struct inode *ip, struct ext4_extent_path
 			l = m + 1;
 	}
 
+	if (l == first) {
+		path->ep_sparse_ext.e_blk = *first_lbn;
+		path->ep_sparse_ext.e_len = first->ei_blk - *first_lbn;
+		path->ep_sparse_ext.e_start_hi = 0;
+		path->ep_sparse_ext.e_start_lo = 0;
+		path->ep_is_sparse = true;
+		return (true);
+	}
 	path->ep_index = l - 1;
+	*first_lbn = path->ep_index->ei_blk;
+	if (path->ep_index < last)
+		*last_lbn = l->ei_blk - 1;
+	return (false);
 }
 
 static void
-ext4_ext_binsearch(struct inode *ip, struct ext4_extent_path *path, daddr_t lbn)
+ext4_ext_binsearch(struct inode *ip, struct ext4_extent_path *path, daddr_t lbn,
+    daddr_t first_lbn, daddr_t last_lbn)
 {
 	struct ext4_extent_header *ehp = path->ep_header;
-	struct ext4_extent *l, *r, *m;
+	struct ext4_extent *first, *l, *r, *m;
 
 	if (ehp->eh_ecount == 0)
 		return;
 
-	l = (struct ext4_extent *)(char *)(ehp + 1);
-	r = (struct ext4_extent *)(char *)(ehp + 1) + ehp->eh_ecount - 1;
+	first = (struct ext4_extent *)(char *)(ehp + 1);
+	l = first;
+	r = first + ehp->eh_ecount - 1;
 	while (l <= r) {
 		m = l + (r - l) / 2;
 		if (lbn < m->e_blk)
@@ -81,7 +97,28 @@ ext4_ext_binsearch(struct inode *ip, struct ext4_extent_path *path, daddr_t lbn)
 			l = m + 1;
 	}
 
+	if (l == first) {
+		path->ep_sparse_ext.e_blk = first_lbn;
+		path->ep_sparse_ext.e_len = first->e_blk - first_lbn;
+		path->ep_sparse_ext.e_start_hi = 0;
+		path->ep_sparse_ext.e_start_lo = 0;
+		path->ep_is_sparse = true;
+		return;
+	}
 	path->ep_ext = l - 1;
+	if (path->ep_ext->e_blk + path->ep_ext->e_len <= lbn) {
+		path->ep_sparse_ext.e_blk = path->ep_ext->e_blk +
+		    path->ep_ext->e_len;
+		if (l <= (first + ehp->eh_ecount - 1))
+			path->ep_sparse_ext.e_len = l->e_blk -
+			    path->ep_sparse_ext.e_blk;
+		else
+			path->ep_sparse_ext.e_len = last_lbn -
+			    path->ep_sparse_ext.e_blk + 1;
+		path->ep_sparse_ext.e_start_hi = 0;
+		path->ep_sparse_ext.e_start_lo = 0;
+		path->ep_is_sparse = true;
+	}
 }
 
 /*
@@ -129,15 +166,13 @@ ext4_ext_put_cache(struct inode *ip, struct ext4_extent *ep, int type)
  */
 struct ext4_extent_path *
 ext4_ext_find_extent(struct m_ext2fs *fs, struct inode *ip,
-		     daddr_t lbn, struct ext4_extent_path *path)
+    daddr_t lbn, struct ext4_extent_path *path)
 {
-	struct vnode *vp;
 	struct ext4_extent_header *ehp;
 	uint16_t i;
 	int error, size;
 	daddr_t nblk;
 
-	vp = ITOV(ip);
 	ehp = (struct ext4_extent_header *)(char *)ip->i_db;
 
 	if (ehp->eh_magic != EXT4_EXT_MAGIC)
@@ -145,10 +180,16 @@ ext4_ext_find_extent(struct m_ext2fs *fs, struct inode *ip,
 
 	path->ep_header = ehp;
 
+	daddr_t first_lbn = 0;
+	daddr_t last_lbn = lblkno(ip->i_e2fs, ip->i_size);
+
 	for (i = ehp->eh_depth; i != 0; --i) {
-		ext4_ext_binsearch_index(ip, path, lbn);
-		path->ep_depth = 0;
+		path->ep_depth = i;
 		path->ep_ext = NULL;
+		if (ext4_ext_binsearch_index(ip, path, lbn, &first_lbn,
+		    &last_lbn)) {
+			return (path);
+		}
 
 		nblk = (daddr_t)path->ep_index->ei_leaf_hi << 32 |
 		    path->ep_index->ei_leaf_lo;
@@ -158,7 +199,7 @@ ext4_ext_find_extent(struct m_ext2fs *fs, struct inode *ip,
 			path->ep_bp = NULL;
 		}
 		error = bread(ip->i_devvp, fsbtodb(fs, nblk), size, NOCRED,
-			    &path->ep_bp);
+		    &path->ep_bp);
 		if (error) {
 			brelse(path->ep_bp);
 			path->ep_bp = NULL;
@@ -171,7 +212,8 @@ ext4_ext_find_extent(struct m_ext2fs *fs, struct inode *ip,
 	path->ep_depth = i;
 	path->ep_ext = NULL;
 	path->ep_index = NULL;
+	path->ep_is_sparse = false;
 
-	ext4_ext_binsearch(ip, path, lbn);
+	ext4_ext_binsearch(ip, path, lbn, first_lbn, last_lbn);
 	return (path);
 }

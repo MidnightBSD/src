@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/cs/Makefile 134745 2004-09-04 03:32:15Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/cs
+.PATH: ${SRCTOP}/sys/dev/cs
 
 KMOD=	if_cs
 SRCS=	if_cs.c if_cs_isa.c if_cs_pccard.c

@@ -1,9 +1,8 @@
-# $FreeBSD: release/10.0.0/kerberos5/lib/libgssapi_spnego/Makefile 236422 2012-06-01 21:26:28Z obrien $
+# $FreeBSD$
 
 LIB=	gssapi_spnego
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined
-LDADD=	-lgssapi -lheimbase -lasn1 -lroken
-DPADD=	${LIBGSSAPI} ${LIBHEIMBASE} ${LIBASN1} ${LIBROKEN}
+LIBADD=	gssapi heimbase asn1 roken
 SHLIB_MAJOR=	10
 
 SRCS=	accept_sec_context.c \
@@ -32,26 +31,28 @@ CFLAGS+=-I${KRB5DIR}/lib/gssapi
 CFLAGS+=-I${KRB5DIR}/lib/gssapi/gssapi
 CFLAGS+=-I${KRB5DIR}/lib/gssapi/spnego
 CFLAGS+=-I${KRB5DIR}/lib/asn1
-CFLAGS+=-I${.CURDIR}/../../../lib/libgssapi
+CFLAGS+=-I${SRCTOP}/lib/libgssapi
 CFLAGS+=-I${KRB5DIR}/lib/roken -I.
 
 CLEANFILES=	${GEN} ${GEN:S/.x$/.c/:S/.hx$/.h/} \
 		spnego_asn1_files spnego_asn1-template.c
 
+.ORDER: ${GEN}
+${GEN:[2..-1]}: .NOMETA
 ${GEN}: spnego.asn1 spnego.opt
 	${ASN1_COMPILE} --option-file=${.ALLSRC:M*.opt} \
 		${.ALLSRC:M*.asn1} spnego_asn1
 
 .SUFFIXES: .h .c .x .hx
 
-.x.c:   
-	cmp -s ${.IMPSRC} ${.TARGET} 2> /dev/null || cp ${.IMPSRC} ${.TARGET}
+.x.c:
+	${CP} ${.IMPSRC} ${.TARGET}
 
 .hx.h:
-	cmp -s ${.IMPSRC} ${.TARGET} 2> /dev/null || cp ${.IMPSRC} ${.TARGET}
+	${CP} ${.IMPSRC} ${.TARGET}
 
 .include <bsd.lib.mk>
 
 .SUFFIXES: .h .c .x .hx
 
-.PATH: ${KRB5DIR}/lib/gssapi/spnego ${.CURDIR}/../../../lib/libgssapi ${.CURDIR}/../libgssapi_krb5
+.PATH: ${KRB5DIR}/lib/gssapi/spnego ${SRCTOP}/lib/libgssapi ${.CURDIR:H}/libgssapi_krb5

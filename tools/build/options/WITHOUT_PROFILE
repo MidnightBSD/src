@@ -1,2 +1,3 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_PROFILE 228196 2011-12-02 09:09:54Z fjoe $
-Set to avoid compiling profiled libraries.
+.\" $FreeBSD$
+Set to not build profiled libraries for use with
+.Xr gprof 8 .

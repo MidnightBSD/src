@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/tools/tools/cxgbtool/reg_defs_t3.c 204267 2010-02-23 23:01:41Z np $
+ * $FreeBSD$
  */
 
 

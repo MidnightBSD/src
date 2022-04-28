@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/regression/atm/README 182531 2008-08-31 11:41:31Z rwatson $
+$FreeBSD$
 
 This directory contains tests for the ATM stuff.  All tests can be run
 from the top-level or from their sub-directories by starting RunTest.sh.

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bktr/bktr_card.c 218909 2011-02-21 09:01:34Z brucec $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -1217,7 +1217,7 @@ checkTuner:
 	} /* end switch(card) */
 
 
-	/* At this point, a goto checkDBX has not occured */
+	/* At this point, a goto checkDBX has not occurred */
 	/* We have not been able to select a Tuner */
 	/* Some cards make use of the tuner address to */
 	/* identify the make/model of tuner */

@@ -34,7 +34,7 @@
 # From src/sys/kern/makedevops.pl,v 1.12 1999/11/22 14:40:04 n_hibma Exp
 # From src/sys/kern/makeobjops.pl,v 1.8 2001/11/16 02:02:42 joe Exp
 #
-# $FreeBSD: release/10.0.0/sys/tools/makeobjops.awk 227385 2011-11-09 13:26:59Z ed $
+# $FreeBSD$
 
 #
 #   Script to produce kobj front-end sugar.

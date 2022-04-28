@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)regdef.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/mips/include/regdef.h 250138 2013-05-01 06:57:46Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_REGDEF_H

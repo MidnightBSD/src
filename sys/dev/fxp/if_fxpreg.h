@@ -25,10 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/fxp/if_fxpreg.h 233586 2012-03-28 01:27:27Z yongari $
+ * $FreeBSD$
  */
-
-#define FXP_VENDORID_INTEL	0x8086
 
 #define FXP_PCI_MMBA	0x10
 #define FXP_PCI_IOBA	0x14
@@ -250,7 +248,7 @@ struct fxp_cb_ucode {
 /*
  * Number of DMA segments in a TxCB.
  */
-#define FXP_NTXSEG	32
+#define FXP_NTXSEG	35
 
 struct fxp_tbd {
 	uint32_t tb_addr;
@@ -281,10 +279,15 @@ struct fxp_cb_tx {
 	uint16_t cb_status;
 	uint16_t cb_command;
 	uint32_t link_addr;
-	uint32_t tbd_array_addr;
-	uint16_t byte_count;
-	uint8_t tx_threshold;
-	uint8_t tbd_number;
+	union {
+		struct {
+			uint32_t tbd_array_addr;
+			uint16_t byte_count;
+			uint8_t tx_threshold;
+			uint8_t tbd_number;
+		};
+		struct fxp_tbd tbdtso;
+	};
 
 	/*
 	 * The following structure isn't actually part of the TxCB,

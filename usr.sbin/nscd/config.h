@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/nscd/config.h 238094 2012-07-04 09:02:12Z se $
+ * $FreeBSD$
  */
 
 #ifndef __NSCD_CONFIG_H__

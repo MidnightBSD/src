@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/string/stpncpy.c 189136 2009-02-28 06:00:58Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <string.h>
 

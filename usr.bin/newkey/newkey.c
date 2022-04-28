@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)newkey.c 1.8 91/03/11 Copyr 1986 Sun Micro";
  * Administrative tool to add a new user to the publickey database
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/newkey/newkey.c 189169 2009-02-28 16:16:37Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>

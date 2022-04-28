@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/via_3d_reg.h 203288 2010-01-31 14:30:39Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef VIA_3D_REG_H
 #define VIA_3D_REG_H

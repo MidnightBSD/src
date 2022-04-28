@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/bios/vpd.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * VPD decoder for IBM systems (Thinkpads)

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cam/cam_debug.h 255126 2013-09-01 17:37:19Z mav $
+ * $FreeBSD$
  */
 #ifndef	_CAM_CAM_DEBUG_H
 #define _CAM_CAM_DEBUG_H 1
@@ -61,13 +61,13 @@ typedef enum {
 #endif
 
 #ifndef CAM_DEBUG_BUS
-#define CAM_DEBUG_BUS		(-1)
+#define CAM_DEBUG_BUS		CAM_BUS_WILDCARD
 #endif
 #ifndef CAM_DEBUG_TARGET
-#define CAM_DEBUG_TARGET	(-1)
+#define CAM_DEBUG_TARGET	CAM_TARGET_WILDCARD
 #endif
 #ifndef CAM_DEBUG_LUN
-#define CAM_DEBUG_LUN		(-1)
+#define CAM_DEBUG_LUN		CAM_LUN_WILDCARD
 #endif
 
 #ifndef CAM_DEBUG_DELAY

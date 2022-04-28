@@ -1,12 +1,12 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ctm/ctm_dequeue/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../ctm_rmail
+.PATH: ${.CURDIR:H}/ctm_rmail
 
 PROG=	ctm_dequeue
-NO_MAN=
+MAN=
 SRCS=	ctm_dequeue.c error.c
 
-CFLAGS+= -I${.CURDIR}/../ctm_rmail
+CFLAGS+= -I${.CURDIR:H}/ctm_rmail
 
 WARNS?=	1
 

@@ -27,7 +27,7 @@
  **************************************************************************/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_sman.c 207118 2010-04-23 14:48:30Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Simple memory manager interface that keeps track on allocate regions on a

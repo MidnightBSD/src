@@ -23,27 +23,29 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libpmc/pmc.h 233321 2012-03-22 19:04:22Z jkoshy $
+ * $FreeBSD$
  */
 
 #ifndef _PMC_H_
 #define _PMC_H_
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
 #include <sys/pmc.h>
 
 /*
  * Driver statistics.
  */
 struct pmc_driverstats {
-	int	pm_intr_ignored;	/* #interrupts ignored */
-	int	pm_intr_processed;	/* #interrupts processed */
-	int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
-	int	pm_syscalls;		/* #syscalls */
-	int	pm_syscall_errors;	/* #syscalls with errors */
-	int	pm_buffer_requests;	/* #buffer requests */
-	int	pm_buffer_requests_failed; /* #failed buffer requests */
-	int	pm_log_sweeps;		/* #sample buffer processing passes */
+	unsigned int	pm_intr_ignored;	/* #interrupts ignored */
+	unsigned int	pm_intr_processed;	/* #interrupts processed */
+	unsigned int	pm_intr_bufferfull;	/* #interrupts with ENOSPC */
+	unsigned int	pm_syscalls;		/* #syscalls */
+	unsigned int	pm_syscall_errors;	/* #syscalls with errors */
+	unsigned int	pm_buffer_requests;	/* #buffer requests */
+	unsigned int	pm_buffer_requests_failed; /* #failed buffer requests */
+	unsigned int	pm_log_sweeps;		/* #sample buffer processing
+						   passes */
 };
 
 /*

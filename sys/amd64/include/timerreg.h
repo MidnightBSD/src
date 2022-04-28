@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/include/timerreg.h 177642 2008-03-26 20:09:21Z phk $
+ * $FreeBSD$
  */
 
 /*

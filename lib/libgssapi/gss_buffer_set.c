@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/lib/libgssapi/gss_buffer_set.c 178828 2008-05-07 13:53:12Z dfr $ */
+/* $FreeBSD$ */
 
 #include <gssapi/gssapi.h>
 #include <errno.h>
@@ -76,8 +76,8 @@ gss_add_buffer_set_member(OM_uint32 * minor_status,
 	}
 
 	set = *buffer_set;
-	set->elements = realloc(set->elements,
-	    (set->count + 1) * sizeof(set->elements[0]));
+	set->elements = reallocarray(set->elements, set->count + 1,
+	    sizeof(set->elements[0]));
 	if (set->elements == NULL) {
 		*minor_status = ENOMEM;
 		return (GSS_S_FAILURE);

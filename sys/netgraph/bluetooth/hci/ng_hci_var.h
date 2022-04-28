@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_hci_var.h,v 1.3 2003/04/26 22:35:21 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/hci/ng_hci_var.h 139823 2005-01-07 01:45:51Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_HCI_VAR_H_
@@ -205,6 +205,7 @@ typedef struct ng_hci_neighbor {
 	bdaddr_t			bdaddr;         /* address */
 	u_int8_t			features[NG_HCI_FEATURES_SIZE];
 					                /* LMP features */
+	u_int8_t 			addrtype;	/*Address Type*/
 
 	u_int8_t			page_scan_rep_mode; /* PS rep. mode */
 	u_int8_t			page_scan_mode; /* page scan mode */

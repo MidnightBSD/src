@@ -1,7 +1,9 @@
-# $FreeBSD: release/10.0.0/share/examples/perfmon/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
+PACKAGE=examples
+FILESDIR=${SHAREDIR}/examples/${PROG}
 PROG=	perfmon
-NO_MAN=
+MAN=
 
 install:
 

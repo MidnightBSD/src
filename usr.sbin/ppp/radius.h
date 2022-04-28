@@ -1,4 +1,6 @@
 /*
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright 1999 Internet Business Solutions Ltd., Switzerland
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/radius.h 169986 2007-05-25 13:45:49Z novel $
+ * $FreeBSD$
  */
 
 #define	MPPE_POLICY_ALLOWED	1

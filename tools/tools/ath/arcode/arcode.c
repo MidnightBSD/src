@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/arcode/arcode.c 244960 2013-01-02 18:03:19Z adrian $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

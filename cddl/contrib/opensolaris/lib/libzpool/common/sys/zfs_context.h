@@ -20,8 +20,11 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2016 by Delphix. All rights reserved.
  * Copyright (c) 2012, Joyent, Inc. All rights reserved.
+ */
+/*
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  */
 
 #ifndef _SYS_ZFS_CONTEXT_H
@@ -62,6 +65,8 @@ extern "C" {
 #include <inttypes.h>
 #include <fsshare.h>
 #include <pthread.h>
+#include <sched.h>
+#include <setjmp.h>
 #include <sys/debug.h>
 #include <sys/note.h>
 #include <sys/types.h>
@@ -122,8 +127,8 @@ extern void dprintf_setup(int *argc, char **argv);
 
 extern void cmn_err(int, const char *, ...);
 extern void vcmn_err(int, const char *, __va_list);
-extern void panic(const char *, ...);
-extern void vpanic(const char *, __va_list);
+extern void panic(const char *, ...)  __NORETURN;
+extern void vpanic(const char *, __va_list)  __NORETURN;
 
 #define	fm_panic	panic
 
@@ -131,8 +136,18 @@ extern int aok;
 
 /*
  * DTrace SDT probes have different signatures in userland than they do in
- * kernel.  If they're being used in kernel code, re-define them out of
+ * the kernel.  If they're being used in kernel code, re-define them out of
  * existence for their counterparts in libzpool.
+ *
+ * Here's an example of how to use the set-error probes in userland:
+ * zfs$target:::set-error /arg0 == EBUSY/ {stack();}
+ *
+ * Here's an example of how to use DTRACE_PROBE probes in userland:
+ * If there is a probe declared as follows:
+ * DTRACE_PROBE2(zfs__probe_name, uint64_t, blkid, dnode_t *, dn);
+ * Then you can use it as follows:
+ * zfs$target:::probe2 /copyinstr(arg0) == "zfs__probe_name"/
+ *     {printf("%u %p\n", arg1, arg2);}
  */
 
 #ifdef DTRACE_PROBE
@@ -201,6 +216,8 @@ extern int aok;
  */
 #define	curthread	((void *)(uintptr_t)thr_self())
 
+#define	kpreempt(x)	sched_yield()
+
 typedef struct kthread kthread_t;
 
 #define	thread_create(stk, stksize, func, arg, len, pp, state, pri)	\
@@ -220,7 +237,7 @@ extern struct proc p0;
 
 #define	PS_NONE		-1
 
-extern kthread_t *zk_thread_create(void (*func)(), void *arg);
+extern kthread_t *zk_thread_create(void (*func)(void*), void *arg);
 
 #define	issig(why)	(FALSE)
 #define	ISSIG(thr, why)	(FALSE)
@@ -308,6 +325,7 @@ extern gid_t *crgetgroups(cred_t *cr);
 typedef cond_t kcondvar_t;
 
 #define	CV_DEFAULT	USYNC_THREAD
+#define	CALLOUT_FLAG_ABSOLUTE	0x2
 
 extern void cv_init(kcondvar_t *cv, char *name, int type, void *arg);
 extern void cv_destroy(kcondvar_t *cv);
@@ -332,6 +350,7 @@ extern void cv_broadcast(kcondvar_t *cv);
 #define	KM_SLEEP		UMEM_NOFAIL
 #define	KM_PUSHPAGE		KM_SLEEP
 #define	KM_NOSLEEP		UMEM_DEFAULT
+#define	KM_NORMALPRI		0	/* not needed with UMEM_DEFAULT */
 #define	KMC_NODEBUG		UMC_NODEBUG
 #define	KMC_NOTOUCH		0	/* not needed for userland caches */
 #define	KM_NODEBUG		0
@@ -345,7 +364,8 @@ extern void cv_broadcast(kcondvar_t *cv);
 #define	kmem_cache_alloc(_c, _f) umem_cache_alloc(_c, _f)
 #define	kmem_cache_free(_c, _b)	umem_cache_free(_c, _b)
 #define	kmem_debugging()	0
-#define	kmem_cache_reap_now(_c)		/* nothing */
+#define	kmem_cache_reap_active()	(B_FALSE)
+#define	kmem_cache_reap_soon(_c)	/* nothing */
 #define	kmem_cache_set_move(_c, _cb)	/* nothing */
 #define	POINTER_INVALIDATE(_pp)		/* nothing */
 #define	POINTER_IS_VALID(_p)	0
@@ -367,6 +387,16 @@ typedef struct taskq taskq_t;
 typedef uintptr_t taskqid_t;
 typedef void (task_func_t)(void *);
 
+typedef struct taskq_ent {
+	struct taskq_ent	*tqent_next;
+	struct taskq_ent	*tqent_prev;
+	task_func_t		*tqent_func;
+	void			*tqent_arg;
+	uintptr_t		tqent_flags;
+} taskq_ent_t;
+
+#define	TQENT_FLAG_PREALLOC	0x1	/* taskq_dispatch_ent used */
+
 #define	TASKQ_PREPOPULATE	0x0001
 #define	TASKQ_CPR_SAFE		0x0002	/* Use CPR safe protocol */
 #define	TASKQ_DYNAMIC		0x0004	/* Use dynamic thread scheduling */
@@ -378,6 +408,8 @@ typedef void (task_func_t)(void *);
 #define	TQ_NOQUEUE	0x02		/* Do not enqueue if can't dispatch */
 #define	TQ_FRONT	0x08		/* Queue in front */
 
+#define TASKQID_INVALID         ((taskqid_t)0)
+
 extern taskq_t *system_taskq;
 
 extern taskq_t	*taskq_create(const char *, int, pri_t, int, int, uint_t);
@@ -386,8 +418,11 @@ extern taskq_t	*taskq_create(const char *, int, pri_t, int, int, uint_t);
 #define	taskq_create_sysdc(a, b, d, e, p, dc, f) \
 	    (taskq_create(a, b, maxclsyspri, d, e, f))
 extern taskqid_t taskq_dispatch(taskq_t *, task_func_t, void *, uint_t);
+extern void	taskq_dispatch_ent(taskq_t *, task_func_t, void *, uint_t,
+    taskq_ent_t *);
 extern void	taskq_destroy(taskq_t *);
 extern void	taskq_wait(taskq_t *);
+extern void	taskq_wait_id(taskq_t *, taskqid_t);
 extern int	taskq_member(taskq_t *, void *);
 extern void	system_taskq_init(void);
 extern void	system_taskq_fini(void);
@@ -405,8 +440,10 @@ typedef struct vnode {
 	uint64_t	v_size;
 	int		v_fd;
 	char		*v_path;
+	int		v_dump_fd;
 } vnode_t;
 
+extern char *vn_dumpdir;
 #define	AV_SCANSTAMP_SZ	32		/* length of anti-virus scanstamp */
 
 typedef struct xoptattr {
@@ -514,7 +551,7 @@ extern vnode_t *rootdir;
 extern void delay(clock_t ticks);
 
 #define	SEC_TO_TICK(sec)	((sec) * hz)
-#define	NSEC_TO_TICK(usec)	((usec) / (NANOSEC / hz))
+#define	NSEC_TO_TICK(nsec)	((nsec) / (NANOSEC / hz))
 
 #define	gethrestime_sec() time(NULL)
 #define	gethrestime(t) \
@@ -524,6 +561,7 @@ extern void delay(clock_t ticks);
 	} while (0);
 
 #define	max_ncpus	64
+#define	boot_ncpus	(sysconf(_SC_NPROCESSORS_ONLN))
 
 #define	minclsyspri	60
 #define	maxclsyspri	99
@@ -539,7 +577,7 @@ extern void delay(clock_t ticks);
 
 extern uint64_t physmem;
 
-extern int highbit(ulong_t i);
+extern int highbit64(uint64_t i);
 extern int random_get_bytes(uint8_t *ptr, size_t len);
 extern int random_get_pseudo_bytes(uint8_t *ptr, size_t len);
 
@@ -547,8 +585,9 @@ extern void kernel_init(int);
 extern void kernel_fini(void);
 
 struct spa;
-extern void nicenum(uint64_t num, char *buf);
+extern void nicenum(uint64_t num, char *buf, size_t);
 extern void show_pool_stats(struct spa *);
+extern int set_global_var(char *arg);
 
 typedef struct callb_cpr {
 	kmutex_t	*cc_lockp;
@@ -573,6 +612,7 @@ typedef struct callb_cpr {
 
 #define	zone_dataset_visible(x, y)	(1)
 #define	INGLOBALZONE(z)			(1)
+extern uint32_t zone_get_hostid(void *zonep);
 
 extern char *kmem_asprintf(const char *fmt, ...);
 #define	strfree(str) kmem_free((str), strlen(str) + 1)
@@ -624,18 +664,14 @@ extern int zfs_secpolicy_rename_perms(const char *from, const char *to,
 extern int zfs_secpolicy_destroy_perms(const char *name, cred_t *cr);
 extern zoneid_t getzoneid(void);
 /* Random compatibility stuff. */
-#define	lbolt	(gethrtime() >> 23)
-#define	lbolt64	(gethrtime() >> 23)
-
-extern uint64_t physmem;
-
-#define	gethrestime_sec()	time(NULL)
-
 #define	pwrite64(d, p, n, o)	pwrite(d, p, n, o)
 #define	readdir64(d)		readdir(d)
 #define	SIGPENDING(td)		(0)
 #define	root_mount_wait()	do { } while (0)
 #define	root_mounted()		(1)
+
+#define	noinline	__attribute__((noinline))
+#define	likely(x)	__builtin_expect((x), 1)
 
 struct file {
 	void *dummy;
@@ -758,6 +794,38 @@ extern cyclic_id_t cyclic_add(cyc_handler_t *, cyc_time_t *);
 extern void cyclic_remove(cyclic_id_t);
 extern int cyclic_reprogram(cyclic_id_t, hrtime_t);
 #endif	/* illumos */
+
+#ifdef illumos
+/*
+ * Buf structure
+ */
+#define	B_BUSY		0x0001
+#define	B_DONE		0x0002
+#define	B_ERROR		0x0004
+#define	B_READ		0x0040	/* read when I/O occurs */
+#define	B_WRITE		0x0100	/* non-read pseudo-flag */
+
+typedef struct buf {
+	int	b_flags;
+	size_t b_bcount;
+	union {
+		caddr_t b_addr;
+	} b_un;
+
+	lldaddr_t	_b_blkno;
+#define	b_lblkno	_b_blkno._f
+	size_t	b_resid;
+	size_t	b_bufsize;
+	int	(*b_iodone)(struct buf *);
+	int	b_error;
+	void	*b_private;
+} buf_t;
+
+extern void bioinit(buf_t *);
+extern void biodone(buf_t *);
+extern void bioerror(buf_t *, int);
+extern int geterror(buf_t *);
+#endif
 
 #ifdef	__cplusplus
 }

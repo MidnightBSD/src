@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -24,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/kerberos5/lib/libgssapi_krb5/pname_to_uid.c 250177 2013-05-02 12:52:49Z rmacklem $ */
+/* $FreeBSD$ */
 
 #include <errno.h>
 #include <pwd.h>

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/stge/Makefile 160642 2006-07-25 00:45:55Z yongari $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/stge
+.PATH: ${SRCTOP}/sys/dev/stge
 
 KMOD=	if_stge
 SRCS=	if_stge.c device_if.h bus_if.h pci_if.h

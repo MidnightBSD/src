@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/pf/pf_ruleset.c 244769 2012-12-28 09:19:49Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/pf/pf_ruleset.c 244769 2012-12-28
 #include <netinet/tcp.h>
 
 #include <net/if.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 
 #ifdef INET6

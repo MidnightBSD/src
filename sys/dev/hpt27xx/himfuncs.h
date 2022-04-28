@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2011 HighPoint Technologies, Inc.
+ * Copyright (c) 2005-2011 HighPoint Technologies, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hpt27xx/himfuncs.h 228940 2011-12-28 23:26:58Z delphij $
+ * $FreeBSD$
  */
 
 #include <dev/hpt27xx/hpt27xx_config.h>
@@ -101,6 +101,7 @@ _HIM_INTERFACE(int, get_enclosure_count, (void *adapter))
 _HIM_INTERFACE(int, get_enclosure_info, (void *adapter, int id, void *pinfo))
 _HIM_INTERFACE(int, get_enclosure_info_v2, (void *adapter, int id, void *pinfo))
 _HIM_INTERFACE(int, get_enclosure_info_v3, (void *adapter, int id, void *pinfo))
+_HIM_INTERFACE(int, get_enclosure_info_v4, (void *adapter, int enc_id, int ele_id, void *pinfo, void *pstatus))
 
 _HIM_INTERFACE(HPT_BOOL, flash_access, (void *adapter, HPT_U32 offset, void *value, int size, HPT_BOOL reading))
 

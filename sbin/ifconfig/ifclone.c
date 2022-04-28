@@ -29,12 +29,12 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/ifconfig/ifclone.c 194799 2009-06-23 23:49:52Z delphij $";
+  "$FreeBSD$";
 #endif /* not lint */
 
-#include <sys/queue.h>
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/ioctl.h>
+#include <sys/queue.h>
 #include <sys/socket.h>
 #include <net/if.h>
 
@@ -87,6 +87,7 @@ list_cloners(void)
 
 	putchar('\n');
 	free(buf);
+	close(s);
 }
 
 struct clone_defcb {
@@ -144,11 +145,12 @@ ifclonecreate(int s, void *arg)
 	}
 
 	/*
-	 * If we get a different name back than we put in, print it.
+	 * If we get a different name back than we put in, update record and
+	 * indicate it should be printed later.
 	 */
 	if (strncmp(name, ifr.ifr_name, sizeof(name)) != 0) {
 		strlcpy(name, ifr.ifr_name, sizeof(name));
-		printf("%s\n", name);
+		printifname = 1;
 	}
 }
 
@@ -161,7 +163,7 @@ DECL_CMD_FUNC(clone_create, arg, d)
 static
 DECL_CMD_FUNC(clone_destroy, arg, d)
 {
-	(void) strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	(void) strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCIFDESTROY, &ifr) < 0)
 		err(1, "SIOCIFDESTROY");
 }
@@ -184,11 +186,9 @@ static struct option clone_Copt = { .opt = "C", .opt_usage = "[-C]", .cb = clone
 static __constructor void
 clone_ctor(void)
 {
-#define	N(a)	(sizeof(a) / sizeof(a[0]))
 	size_t i;
 
-	for (i = 0; i < N(clone_cmds);  i++)
+	for (i = 0; i < nitems(clone_cmds);  i++)
 		cmd_register(&clone_cmds[i]);
 	opt_register(&clone_Copt);
-#undef N
 }

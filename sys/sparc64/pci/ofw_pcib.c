@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/pci/ofw_pcib.c 247573 2013-03-01 20:34:02Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ofw_pci.h"
 
@@ -149,8 +149,7 @@ ofw_pcib_attach(device_t dev)
 
 	ofw_pcib_gen_setup(dev);
 	pcib_attach_common(dev);
-	device_add_child(dev, "pci", -1);
-	return (bus_generic_attach(dev));
+	return (pcib_attach_child(dev));
 }
 
 static void

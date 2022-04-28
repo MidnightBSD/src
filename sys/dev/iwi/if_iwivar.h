@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/dev/iwi/if_iwivar.h 213729 2010-10-12 16:52:13Z bschmidt $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2004, 2005
@@ -36,7 +36,7 @@ struct iwi_rx_radiotap_header {
 	int8_t		wr_antsignal;
 	int8_t		wr_antnoise;
 	uint8_t		wr_antenna;
-};
+} __packed __aligned(8);
 
 #define IWI_RX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -49,9 +49,10 @@ struct iwi_rx_radiotap_header {
 struct iwi_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
 	uint8_t		wt_flags;
+	uint8_t		wt_pad;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-};
+} __packed;
 
 #define IWI_TX_RADIOTAP_PRESENT						\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -125,11 +126,13 @@ struct iwi_vap {
 #define	IWI_VAP(vap)	((struct iwi_vap *)(vap))
 
 struct iwi_softc {
-	struct ifnet		*sc_ifp;
-	void			(*sc_node_free)(struct ieee80211_node *);
+	struct mtx		sc_mtx;
+	struct ieee80211com	sc_ic;
+	struct mbufq		sc_snd;
 	device_t		sc_dev;
 
-	struct mtx		sc_mtx;
+	void			(*sc_node_free)(struct ieee80211_node *);
+
 	uint8_t			sc_mcast[IEEE80211_ADDR_LEN];
 	struct unrhdr		*sc_unr;
 
@@ -153,8 +156,6 @@ struct iwi_softc {
 	bus_space_tag_t		sc_st;
 	bus_space_handle_t	sc_sh;
 	void 			*sc_ih;
-	int			mem_rid;
-	int			irq_rid;
 
 	/*
 	 * The card needs external firmware images to work, which is made of a
@@ -192,10 +193,10 @@ struct iwi_softc {
 	struct task		sc_radiofftask;	/* radio off processing */
 	struct task		sc_restarttask;	/* restart adapter processing */
 	struct task		sc_disassoctask;
-	struct task		sc_wmetask;	/* set wme parameters */
 	struct task		sc_monitortask;
 
-	unsigned int		sc_softled : 1,	/* enable LED gpio status */
+	unsigned int		sc_running : 1,	/* initialized */
+				sc_softled : 1,	/* enable LED gpio status */
 				sc_ledstate: 1,	/* LED on/off state */
 				sc_blinking: 1;	/* LED blink operation active */
 	u_int			sc_nictype;	/* NIC type from EEPROM */
@@ -217,6 +218,9 @@ struct iwi_softc {
 
 	struct iwi_rx_radiotap_header sc_rxtap;
 	struct iwi_tx_radiotap_header sc_txtap;
+
+	struct iwi_notif_link_quality sc_linkqual;
+	int			sc_linkqual_valid;
 };
 
 #define	IWI_STATE_BEGIN(_sc, _state)	do {			\

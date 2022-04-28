@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/fstat/fstat.c 250223 2013-05-03 21:11:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/user.h>
@@ -298,6 +298,8 @@ print_file_info(struct procstat *procstat, struct filestat *fst,
 		break;
 	case PS_FST_TYPE_SEM:
 		print_sem_info(procstat, fst);
+		break;
+	case PS_FST_TYPE_DEV:
 		break;
 	default:	
 		if (vflg)

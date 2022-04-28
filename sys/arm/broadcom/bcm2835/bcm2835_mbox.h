@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/broadcom/bcm2835/bcm2835_mbox.h 253006 2013-07-07 21:23:58Z rpaulo $
+ * $FreeBSD$
  */
 
 #ifndef _BCM2835_MBOX_H_
@@ -36,6 +36,7 @@
 #define	BCM2835_MBOX_CHAN_LEDS		4
 #define	BCM2835_MBOX_CHAN_BUTTONS	5
 #define	BCM2835_MBOX_CHAN_TS		6
-#define	BCM2835_MBOX_CHANS		7
+#define	BCM2835_MBOX_CHAN_PROP		8
+#define	BCM2835_MBOX_CHANS		9
 
 #endif /* _BCM2835_MBOX_H_ */

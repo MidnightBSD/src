@@ -1,10 +1,12 @@
-# $FreeBSD: release/10.0.0/usr.bin/mkuzip/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
 
 PROG=	mkuzip
 MAN=	mkuzip.8
+SRCS=	mkuzip.c mkuz_blockcache.c mkuz_lzma.c mkuz_zlib.c mkuz_conveyor.c \
+	    mkuz_blk.c mkuz_fqueue.c mkuz_time.c mkuz_insize.c
 
-DPADD=	${LIBZ}
-LDADD=	-lz
+#CFLAGS+=	-DMKUZ_DEBUG
 
+LIBADD=	z md lzma pthread
 
 .include <bsd.prog.mk>

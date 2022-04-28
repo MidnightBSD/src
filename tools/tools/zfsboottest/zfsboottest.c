@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/tools/tools/zfsboottest/zfsboottest.c 253067 2013-07-09 08:29:14Z avg $ */
+/* $FreeBSD$ */
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -43,11 +43,12 @@
 
 #define NBBY 8
 
-void
+int
 pager_output(const char *line)
 {
 
 	fprintf(stderr, "%s", line);
+	return (0);
 }
 
 #define ZFS_TEST
@@ -136,18 +137,20 @@ main(int argc, char** argv)
 		}
 	}
 
+	STAILQ_FOREACH(spa, &zfs_pools, spa_link) {
+		if (zfs_spa_init(spa)) {
+			fprintf(stderr, "can't init pool %s\n", spa->spa_name);
+			exit(1);
+		}
+	}
+
+	spa_all_status();
+
 	spa = STAILQ_FIRST(&zfs_pools);
 	if (spa == NULL) {
 		fprintf(stderr, "no pools\n");
 		exit(1);
 	}
-
-	if (zfs_spa_init(spa)) {
-		fprintf(stderr, "can't init pool\n");
-		exit(1);
-	}
-
-	spa_all_status();
 
 #if 0
 	uint64_t rootobj;

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ed/if_ed_wd80x3.c 190483 2009-03-28 04:56:56Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ed.h"
 
@@ -97,7 +97,7 @@ ed_probe_WD80x3_generic(device_t dev, int flags, uint16_t *intr_vals[])
 	int     i;
 	u_int   memsize;
 	u_char  iptr, isa16bit, sum, totalsum;
-	u_long	irq, junk, pmem;
+	rman_res_t	irq, junk, pmem;
 
 	sc->chip_type = ED_CHIP_TYPE_DP8390;
 

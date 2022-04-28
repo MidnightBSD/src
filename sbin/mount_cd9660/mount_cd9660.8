@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount_cd9660.8	8.3 (Berkeley) 3/27/94
-.\" $FreeBSD: release/10.0.0/sbin/mount_cd9660/mount_cd9660.8 247859 2013-03-05 23:05:43Z jkim $
+.\" $FreeBSD$
 .\"
-.Dd March 5, 2013
+.Dd March 22, 2017
 .Dt MOUNT_CD9660 8
 .Os
 .Sh NAME
@@ -138,6 +138,7 @@ The following command can be used to mount a Kodak Photo-CD:
 .Xr cdcontrol 1 ,
 .Xr mount 2 ,
 .Xr unmount 2 ,
+.Xr cd9660 5 ,
 .Xr fstab 5 ,
 .Xr mount 8
 .Sh HISTORY
@@ -147,7 +148,7 @@ utility first appeared in
 .Bx 4.4 .
 .Pp
 The Unicode conversion routine was added by
-.An Ryuichiro Imura Aq imura@ryu16.org
+.An Ryuichiro Imura Aq Mt imura@ryu16.org
 in 2003.
 .Sh BUGS
 POSIX device node mapping is currently not supported.

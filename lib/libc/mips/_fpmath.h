@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/mips/_fpmath.h 178580 2008-04-26 12:08:02Z imp $
+ * $FreeBSD$
  */
 
 union IEEEl2bits {

@@ -23,10 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/modules/safe/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD$
 #
 
-.PATH:	${.CURDIR}/../../dev/safe
+.PATH:	${SRCTOP}/sys/dev/safe
 KMOD	= safe
 SRCS	= safe.c opt_safe.h
 SRCS   += device_if.h bus_if.h pci_if.h

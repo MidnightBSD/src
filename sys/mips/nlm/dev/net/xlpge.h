@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY BROADCOM ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/nlm/dev/net/xlpge.h 255368 2013-09-07 18:26:16Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __XLPGE_H__
@@ -108,7 +108,7 @@ struct nlm_xlpge_softc {
 	int		link;		/* Port link status */
 	int		 flowctrl;	/* Port flow control setting */
 
-	unsigned char	dev_addr[ETHER_ADDR_LEN]; 
+	unsigned char	dev_addr[ETHER_ADDR_LEN];
 	struct mtx	sc_lock;
 	int		if_flags;
 	struct nae_port_config *portcfg;

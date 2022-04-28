@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/kidmap.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_KIDMAP_H_

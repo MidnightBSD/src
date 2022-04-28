@@ -10,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of any co-contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -32,10 +29,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/x86/isa/atpic.c 255726 2013-09-20 05:06:03Z gibbs $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
+#include "opt_mca.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -57,9 +55,12 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/x86/isa/atpic.c 255726 2013-09-20 05:06:0
 #ifdef PC98
 #include <pc98/cbus/cbus.h>
 #else
-#include <x86/isa/isa.h>
+#include <isa/isareg.h>
 #endif
 #include <isa/isavar.h>
+#ifdef DEV_MCA
+#include <i386/bios/mca_machdep.h>
+#endif
 
 #ifdef __amd64__
 #define	SDT_ATPIC	SDT_SYSIGT
@@ -72,11 +73,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/x86/isa/atpic.c 255726 2013-09-20 05:06:0
 #define	MASTER	0
 #define	SLAVE	1
 
+#define	IMEN_MASK(ai)		(IRQ_MASK((ai)->at_irq))
+
 #define	NUM_ISA_IRQS		16
 
 static void	atpic_init(void *dummy);
-
-unsigned int imen;	/* XXX */
 
 inthand_t
 	IDTVEC(atpic_intr0), IDTVEC(atpic_intr1), IDTVEC(atpic_intr2),
@@ -85,37 +86,61 @@ inthand_t
 	IDTVEC(atpic_intr9), IDTVEC(atpic_intr10), IDTVEC(atpic_intr11),
 	IDTVEC(atpic_intr12), IDTVEC(atpic_intr13), IDTVEC(atpic_intr14),
 	IDTVEC(atpic_intr15);
+/* XXXKIB i386 uses stubs until pti comes */
+inthand_t
+	IDTVEC(atpic_intr0_pti), IDTVEC(atpic_intr1_pti),
+	IDTVEC(atpic_intr2_pti), IDTVEC(atpic_intr3_pti),
+	IDTVEC(atpic_intr4_pti), IDTVEC(atpic_intr5_pti),
+	IDTVEC(atpic_intr6_pti), IDTVEC(atpic_intr7_pti),
+	IDTVEC(atpic_intr8_pti), IDTVEC(atpic_intr9_pti),
+	IDTVEC(atpic_intr10_pti), IDTVEC(atpic_intr11_pti),
+	IDTVEC(atpic_intr12_pti), IDTVEC(atpic_intr13_pti),
+	IDTVEC(atpic_intr14_pti), IDTVEC(atpic_intr15_pti);
 
 #define	IRQ(ap, ai)	((ap)->at_irqbase + (ai)->at_irq)
 
-#define	ATPIC(io, base, eoi, imenptr)					\
-     	{ { atpic_enable_source, atpic_disable_source, (eoi),		\
-	    atpic_enable_intr, atpic_disable_intr, atpic_vector,	\
-	    atpic_source_pending, NULL,	atpic_resume, atpic_config_intr,\
-	    atpic_assign_cpu }, (io), (base), IDT_IO_INTS + (base),	\
-	    (imenptr) }
+#define	ATPIC(io, base, eoi) {						\
+		.at_pic = {						\
+			.pic_register_sources = atpic_register_sources,	\
+			.pic_enable_source = atpic_enable_source,	\
+			.pic_disable_source = atpic_disable_source,	\
+			.pic_eoi_source = (eoi),			\
+			.pic_enable_intr = atpic_enable_intr,		\
+			.pic_disable_intr = atpic_disable_intr,		\
+			.pic_vector = atpic_vector,			\
+			.pic_source_pending = atpic_source_pending,	\
+			.pic_resume = atpic_resume,			\
+			.pic_config_intr = atpic_config_intr,		\
+			.pic_assign_cpu = atpic_assign_cpu		\
+		},							\
+		.at_ioaddr = (io),					\
+		.at_irqbase = (base),					\
+		.at_intbase = IDT_IO_INTS + (base),			\
+		.at_imen = 0xff,					\
+	}
 
 #define	INTSRC(irq)							\
 	{ { &atpics[(irq) / 8].at_pic }, IDTVEC(atpic_intr ## irq ),	\
-	    (irq) % 8 }
+	    IDTVEC(atpic_intr ## irq ## _pti), (irq) % 8 }
 
 struct atpic {
 	struct pic at_pic;
 	int	at_ioaddr;
 	int	at_irqbase;
 	uint8_t	at_intbase;
-	uint8_t	*at_imen;
+	uint8_t	at_imen;
 };
 
 struct atpic_intsrc {
 	struct intsrc at_intsrc;
-	inthand_t *at_intr;
+	inthand_t *at_intr, *at_intr_pti;
 	int	at_irq;			/* Relative to PIC base. */
 	enum intr_trigger at_trigger;
 	u_long	at_count;
 	u_long	at_straycount;
 };
 
+static void atpic_register_sources(struct pic *pic);
 static void atpic_enable_source(struct intsrc *isrc);
 static void atpic_disable_source(struct intsrc *isrc, int eoi);
 static void atpic_eoi_master(struct intsrc *isrc);
@@ -131,8 +156,8 @@ static int atpic_assign_cpu(struct intsrc *isrc, u_int apic_id);
 static void i8259_init(struct atpic *pic, int slave);
 
 static struct atpic atpics[] = {
-	ATPIC(IO_ICU1, 0, atpic_eoi_master, (uint8_t *)&imen),
-	ATPIC(IO_ICU2, 8, atpic_eoi_slave, ((uint8_t *)&imen) + 1)
+	ATPIC(IO_ICU1, 0, atpic_eoi_master),
+	ATPIC(IO_ICU2, 8, atpic_eoi_slave)
 };
 
 static struct atpic_intsrc atintrs[] = {
@@ -154,7 +179,7 @@ static struct atpic_intsrc atintrs[] = {
 	INTSRC(15),
 };
 
-CTASSERT(sizeof(atintrs) / sizeof(atintrs[0]) == NUM_ISA_IRQS);
+CTASSERT(nitems(atintrs) == NUM_ISA_IRQS);
 
 static __inline void
 _atpic_eoi_master(struct intsrc *isrc)
@@ -186,15 +211,51 @@ _atpic_eoi_slave(struct intsrc *isrc)
 }
 
 static void
+atpic_register_sources(struct pic *pic)
+{
+	struct atpic *ap = (struct atpic *)pic;
+	struct atpic_intsrc *ai;
+	int i;
+
+	/*
+	 * If any of the ISA IRQs have an interrupt source already, then
+	 * assume that the I/O APICs are being used and don't register any
+	 * of our interrupt sources.  This makes sure we don't accidentally
+	 * use mixed mode.  The "accidental" use could otherwise occur on
+	 * machines that route the ACPI SCI interrupt to a different ISA
+	 * IRQ (at least one machine routes it to IRQ 13) thus disabling
+	 * that APIC ISA routing and allowing the ATPIC source for that IRQ
+	 * to leak through.  We used to depend on this feature for routing
+	 * IRQ0 via mixed mode, but now we don't use mixed mode at all.
+	 *
+	 * To avoid the slave not register sources after the master
+	 * registers its sources, register all IRQs when this function is
+	 * called on the master.
+	 */
+	if (ap != &atpics[MASTER])
+		return;
+	for (i = 0; i < NUM_ISA_IRQS; i++)
+		if (intr_lookup_source(i) != NULL)
+			return;
+
+	/* Loop through all interrupt sources and add them. */
+	for (i = 0, ai = atintrs; i < NUM_ISA_IRQS; i++, ai++) {
+		if (i == ICU_SLAVEID)
+			continue;
+		intr_register_source(&ai->at_intsrc);
+	}
+}
+
+static void
 atpic_enable_source(struct intsrc *isrc)
 {
 	struct atpic_intsrc *ai = (struct atpic_intsrc *)isrc;
 	struct atpic *ap = (struct atpic *)isrc->is_pic;
 
 	spinlock_enter();
-	if (*ap->at_imen & IMEN_MASK(ai)) {
-		*ap->at_imen &= ~IMEN_MASK(ai);
-		outb(ap->at_ioaddr + ICU_IMR_OFFSET, *ap->at_imen);
+	if (ap->at_imen & IMEN_MASK(ai)) {
+		ap->at_imen &= ~IMEN_MASK(ai);
+		outb(ap->at_ioaddr + ICU_IMR_OFFSET, ap->at_imen);
 	}
 	spinlock_exit();
 }
@@ -207,8 +268,8 @@ atpic_disable_source(struct intsrc *isrc, int eoi)
 
 	spinlock_enter();
 	if (ai->at_trigger != INTR_TRIGGER_EDGE) {
-		*ap->at_imen |= IMEN_MASK(ai);
-		outb(ap->at_ioaddr + ICU_IMR_OFFSET, *ap->at_imen);
+		ap->at_imen |= IMEN_MASK(ai);
+		outb(ap->at_ioaddr + ICU_IMR_OFFSET, ap->at_imen);
 	}
 
 	/*
@@ -402,7 +463,7 @@ i8259_init(struct atpic *pic, int slave)
 		outb(imr_addr, MASTER_MODE);
 
 	/* Set interrupt enable mask. */
-	outb(imr_addr, *pic->at_imen);
+	outb(imr_addr, pic->at_imen);
 
 	/* Reset is finished, default to IRR on read. */
 	outb(pic->at_ioaddr, OCW3_SEL | OCW3_RR);
@@ -422,7 +483,6 @@ atpic_startup(void)
 	int i;
 
 	/* Start off with all interrupts disabled. */
-	imen = 0xffff;
 	i8259_init(&atpics[MASTER], 0);
 	i8259_init(&atpics[SLAVE], 1);
 	atpic_enable_source((struct intsrc *)&atintrs[ICU_SLAVEID]);
@@ -434,7 +494,8 @@ atpic_startup(void)
 		ai->at_intsrc.is_count = &ai->at_count;
 		ai->at_intsrc.is_straycount = &ai->at_straycount;
 		setidt(((struct atpic *)ai->at_intsrc.is_pic)->at_intbase +
-		    ai->at_irq, ai->at_intr, SDT_ATPIC, SEL_KPL, GSEL_ATPIC);
+		    ai->at_irq, pti ? ai->at_intr_pti : ai->at_intr, SDT_ATPIC,
+		    SEL_KPL, GSEL_ATPIC);
 	}
 
 #ifdef DEV_MCA
@@ -494,8 +555,6 @@ atpic_startup(void)
 static void
 atpic_init(void *dummy __unused)
 {
-	struct atpic_intsrc *ai;
-	int i;
 
 	/*
 	 * Register our PICs, even if we aren't going to use any of their
@@ -505,29 +564,10 @@ atpic_init(void *dummy __unused)
 	    intr_register_pic(&atpics[1].at_pic) != 0)
 		panic("Unable to register ATPICs");
 
-	/*
-	 * If any of the ISA IRQs have an interrupt source already, then
-	 * assume that the APICs are being used and don't register any
-	 * of our interrupt sources.  This makes sure we don't accidentally
-	 * use mixed mode.  The "accidental" use could otherwise occur on
-	 * machines that route the ACPI SCI interrupt to a different ISA
-	 * IRQ (at least one machines routes it to IRQ 13) thus disabling
-	 * that APIC ISA routing and allowing the ATPIC source for that IRQ
-	 * to leak through.  We used to depend on this feature for routing
-	 * IRQ0 via mixed mode, but now we don't use mixed mode at all.
-	 */
-	for (i = 0; i < NUM_ISA_IRQS; i++)
-		if (intr_lookup_source(i) != NULL)
-			return;
-
-	/* Loop through all interrupt sources and add them. */
-	for (i = 0, ai = atintrs; i < NUM_ISA_IRQS; i++, ai++) {
-		if (i == ICU_SLAVEID)
-			continue;
-		intr_register_source(&ai->at_intsrc);
-	}
+	if (num_io_irqs == 0)
+		num_io_irqs = NUM_ISA_IRQS;
 }
-SYSINIT(atpic_init, SI_SUB_INTR, SI_ORDER_SECOND + 1, atpic_init, NULL);
+SYSINIT(atpic_init, SI_SUB_INTR, SI_ORDER_FOURTH, atpic_init, NULL);
 
 void
 atpic_handle_intr(u_int vector, struct trapframe *frame)

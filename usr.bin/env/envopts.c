@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/env/envopts.c 148142 2005-07-18 22:18:16Z gad $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -372,9 +374,9 @@ str_done:
 	*nextarg = NULL;
 
 	/* Update optind/argc/argv in the calling routine */
-	*origind = 1;
-	*origc += addcount;
+	*origc += addcount - *origind + 1;
 	*origv = newargv;
+	*origind = 1;
 }
 
 /**

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/net80211/ieee80211_crypto.h 209636 2010-07-01 20:50:12Z bschmidt $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_CRYPTO_H_
 #define _NET80211_IEEE80211_CRYPTO_H_
@@ -178,8 +178,8 @@ struct ieee80211_cipher {
 	void*	(*ic_attach)(struct ieee80211vap *, struct ieee80211_key *);
 	void	(*ic_detach)(struct ieee80211_key *);
 	int	(*ic_setkey)(struct ieee80211_key *);
-	int	(*ic_encap)(struct ieee80211_key *, struct mbuf *,
-			uint8_t keyid);
+	void	(*ic_setiv)(struct ieee80211_key *, uint8_t *);
+	int	(*ic_encap)(struct ieee80211_key *, struct mbuf *);
 	int	(*ic_decap)(struct ieee80211_key *, struct mbuf *, int);
 	int	(*ic_enmic)(struct ieee80211_key *, struct mbuf *, int);
 	int	(*ic_demic)(struct ieee80211_key *, struct mbuf *, int);
@@ -193,6 +193,10 @@ void	ieee80211_crypto_register(const struct ieee80211_cipher *);
 void	ieee80211_crypto_unregister(const struct ieee80211_cipher *);
 int	ieee80211_crypto_available(u_int cipher);
 
+uint8_t	ieee80211_crypto_get_keyid(struct ieee80211vap *vap,
+		struct ieee80211_key *k);
+struct ieee80211_key *ieee80211_crypto_get_txkey(struct ieee80211_node *,
+		struct mbuf *);
 struct ieee80211_key *ieee80211_crypto_encap(struct ieee80211_node *,
 		struct mbuf *);
 struct ieee80211_key *ieee80211_crypto_decap(struct ieee80211_node *,

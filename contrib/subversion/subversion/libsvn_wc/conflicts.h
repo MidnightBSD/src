@@ -401,13 +401,17 @@ svn_wc__conflict_create_markers(svn_skel_t **work_item,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Call the interactive conflict resolver RESOLVER_FUNC with RESOLVER_BATON to
-   allow resolving the conflicts on LOCAL_ABSPATH.
+/* Call the conflict resolver RESOLVER_FUNC with RESOLVER_BATON for each
+   of the conflicts on LOCAL_ABSPATH.  Depending on the results that
+   the callback returns, perhaps resolve the conflicts, and perhaps mark
+   them as resolved in the WC DB.
 
    Call RESOLVER_FUNC once for each property conflict, and again for any
    text conflict, and again for any tree conflict on the node.
 
    CONFLICT_SKEL contains the details of the conflicts on LOCAL_ABSPATH.
+
+   Use MERGE_OPTIONS when the resolver requests a merge.
 
    Resolver actions are directly applied to the in-db state of LOCAL_ABSPATH,
    so the conflict and the state in CONFLICT_SKEL must already be installed in
@@ -415,6 +419,7 @@ svn_wc__conflict_create_markers(svn_skel_t **work_item,
 svn_error_t *
 svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
                                  const char *local_abspath,
+                                 svn_node_kind_t kind,
                                  const svn_skel_t *conflict_skel,
                                  const apr_array_header_t *merge_options,
                                  svn_wc_conflict_resolver_func2_t resolver_func,
@@ -428,6 +433,8 @@ svn_wc__conflict_invoke_resolver(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__mark_resolved_text_conflict(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *scratch_pool);
 
 /* Mark as resolved any prop conflicts on the node at DB/LOCAL_ABSPATH.  */

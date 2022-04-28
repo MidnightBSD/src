@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/crypto/heimdal/FREEBSD-Xlist 178828 2008-05-07 13:53:12Z dfr $
+# $FreeBSD$
 TODO*
 *.info*
 *.cat[0-9]

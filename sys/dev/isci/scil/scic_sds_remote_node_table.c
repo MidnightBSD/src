@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scic_sds_remote_node_table.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -138,7 +138,7 @@ void scic_sds_remote_node_table_clear_group_index(
 }
 
 /**
- * This method will set the group index bit entry in the specified gropu index
+ * This method will set the group index bit entry in the specified group index
  * table.
  *
  * @param[in out] remote_node_table This the remote node table in which to set

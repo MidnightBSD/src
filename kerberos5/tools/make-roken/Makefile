@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/kerberos5/tools/make-roken/Makefile 233294 2012-03-22 08:48:42Z stas $
+# $FreeBSD$
 
 PROG=	make-roken
-NO_MAN=
+MAN=
 
 CLEANFILES= make-roken.c
 

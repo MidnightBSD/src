@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar9002/ar9285_cal.c 221806 2011-05-12 10:11:24Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 #include "ah.h"

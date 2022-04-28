@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/test/iconv/refgen/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../tablegen
 
 PROG=	refgen
-NO_MAN=	yes
+MAN=
 SRCS=	tablegen.c
 
 WARNS?=	3

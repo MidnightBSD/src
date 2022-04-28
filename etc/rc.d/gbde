@@ -3,7 +3,7 @@
 # This file, originally written by Garrett A. Wollman, is in the public
 # domain.
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/gbde 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: disks
@@ -12,6 +12,7 @@
 . /etc/rc.subr
 
 name="gbde"
+desc="GEOM Based Disk Encryption"
 start_precmd="find_gbde_devices start"
 stop_precmd="find_gbde_devices stop"
 start_cmd="gbde_start"

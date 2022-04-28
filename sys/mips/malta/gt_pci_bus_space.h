@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/malta/gt_pci_bus_space.h 255083 2013-08-30 20:28:35Z gonzo $
+ * $FreeBSD$
  *
  */
 

@@ -1,14 +1,15 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/10.0.0/share/Makefile 257572 2013-11-03 13:00:12Z bdrewery $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # Do not include `info' in the SUBDIR list, it is handled separately.
 
 SUBDIR=	${_colldef} \
+	${_ctypedef} \
 	${_dict} \
 	${_doc} \
-	dtrace \
+	${_dtrace} \
 	${_examples} \
 	${_i18n} \
 	keys \
@@ -16,7 +17,6 @@ SUBDIR=	${_colldef} \
 	${_me} \
 	misc \
 	${_mk} \
-	${_mklocale} \
 	${_monetdef} \
 	${_msgdef} \
 	${_numericdef} \
@@ -26,13 +26,19 @@ SUBDIR=	${_colldef} \
 	${_syscons} \
 	tabset \
 	termcap \
+	${_tests} \
 	${_timedef} \
+	${_vt} \
 	${_zoneinfo}
 
 # NB: keep these sorted by MK_* knobs
 
 .if ${MK_BSNMP} != "no"
 _snmp=		snmp
+.endif
+
+.if ${MK_CDDL} != "no"
+_dtrace=	dtrace
 .endif
 
 .if ${MK_DICT} != "no"
@@ -52,12 +58,12 @@ _i18n=		i18n
 .endif
 
 .if ${MK_LOCALES} != "no"
-_colldef =	colldef
-_mklocale =	mklocale
-_monetdef =	monetdef
-_msgdef =	msgdef
-_numericdef =	numericdef
-_timedef =	timedef
+_colldef=	colldef
+_ctypedef=	ctypedef
+_monetdef=	monetdef
+_msgdef=	msgdef
+_numericdef=	numericdef
+_timedef=	timedef
 .endif
 
 .if ${MK_MAKE} != "no"
@@ -80,8 +86,18 @@ _doc=		doc
 _syscons=	syscons
 .endif
 
+.if ${MK_TESTS} != "no"
+_tests=		tests
+.endif
+
+.if ${MK_VT} != "no"
+_vt=		vt
+.endif
+
 .if ${MK_ZONEINFO} != "no"
 _zoneinfo=	zoneinfo
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/msun/src/s_frexpl.c 143213 2005-03-07 04:54:51Z das $
+ * $FreeBSD$
  */
 
 #include <float.h>

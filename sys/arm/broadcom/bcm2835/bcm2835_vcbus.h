@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/broadcom/bcm2835/bcm2835_vcbus.h 247204 2013-02-23 22:46:26Z gonzo $
+ * $FreeBSD$
  */
 
 /*
@@ -37,14 +37,20 @@
 #define	BCM2835_VCBUS_IO_BASE		0x7E000000
 #define	BCM2835_VCBUS_SDRAM_UNCACHED	0xC0000000
 
+#ifdef SOC_BCM2836
+#define	BCM2835_ARM_IO_BASE		0x3f000000
+#define	BCM2835_VCBUS_SDRAM_BASE	BCM2835_VCBUS_SDRAM_UNCACHED
+#else
 #define	BCM2835_ARM_IO_BASE		0x20000000
-#define	BCM2835_ARM_IO_SIZE		0x02000000
+#define	BCM2835_VCBUS_SDRAM_BASE	BCM2835_VCBUS_SDRAM_CACHED
+#endif
+#define	BCM2835_ARM_IO_SIZE		0x01000000
 
 /*
  * Convert physical address to VC bus address. Should be used 
  * when submitting address over mailbox interface 
  */
-#define	PHYS_TO_VCBUS(pa)	((pa) + BCM2835_VCBUS_SDRAM_CACHED)
+#define	PHYS_TO_VCBUS(pa)	((pa) + BCM2835_VCBUS_SDRAM_BASE)
 
 /* Check whether pa bellong top IO window */
 #define BCM2835_ARM_IS_IO(pa)	(((pa) >= BCM2835_ARM_IO_BASE) && \
@@ -61,6 +67,6 @@
  * when address is returned by VC over mailbox interface. e.g.
  * framebuffer base
  */
-#define	VCBUS_TO_PHYS(vca)	((vca) - BCM2835_VCBUS_SDRAM_CACHED)
+#define	VCBUS_TO_PHYS(vca)	((vca) & ~(BCM2835_VCBUS_SDRAM_BASE))
 
 #endif /* _BCM2835_VCBUS_H_ */

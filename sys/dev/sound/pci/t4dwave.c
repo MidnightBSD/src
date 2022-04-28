@@ -35,7 +35,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/t4dwave.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* -------------------------------------------------------------------- */
 
@@ -823,7 +823,7 @@ static int
 tr_pci_attach(device_t dev)
 {
 	struct tr_info *tr;
-	struct ac97_info *codec = 0;
+	struct ac97_info *codec = NULL;
 	bus_addr_t	lowaddr;
 	int		i, dacn;
 	char 		status[SND_STATUSLEN];
@@ -948,7 +948,7 @@ tr_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, 64, "at io 0x%lx irq %ld %s",
+	snprintf(status, 64, "at io 0x%jx irq %jd %s",
 		 rman_get_start(tr->reg), rman_get_start(tr->irq),PCM_KLDSTRING(snd_t4dwave));
 
 	if (pcm_register(dev, tr, dacn, 1))

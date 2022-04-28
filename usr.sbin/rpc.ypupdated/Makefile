@@ -1,20 +1,19 @@
-# $FreeBSD: release/10.0.0/usr.sbin/rpc.ypupdated/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../ypserv ${.CURDIR}/../../libexec/ypxfr
+.PATH: ${SRCTOP}/usr.sbin/ypserv ${SRCTOP}/libexec/ypxfr
 
 PROG=	rpc.ypupdated
-NO_MAN=
+MAN=
 SRCS=	ypupdate_prot_svc.c ypupdate_prot.h ypupdated_main.c \
 	yp_error.c update.c ypupdated_server.c \
 	yp_dblookup.c yp_dbwrite.c yp_dbdelete.c yp_dbupdate.c
 
 #CFLAGS+= -DYP
-CFLAGS+= -I${.CURDIR}/../ypserv -I. -I${.CURDIR}/../../libexec/ypxfr
+CFLAGS+= -I${SRCTOP}/usr.sbin/ypserv -I. -I${SRCTOP}/libexec/ypxfr
 
 WARNS?=	1
 
-DPADD=	${LIBRPCSVC}
-LDADD=	-lrpcsvc
+LIBADD=	rpcsvc
 
 CLEANFILES= ypupdate_prot_svc.c ypupdate_prot.h
 
@@ -25,10 +24,10 @@ RPCGEN= RPCGEN_CPP=${CPP:Q} rpcgen -I -C
 # ypupdated_main.c can see it.
 ypupdate_prot_svc.c: ${RPCDIR}/ypupdate_prot.x
 	rm -f ${.TARGET}
-	${RPCGEN} -m ${RPCDIR}/ypupdate_prot.x | \
+	${RPCGEN} -m ${.ALLSRC} | \
 	sed s/"static int _rpcsvcstate"/"int _rpcsvcstate"/g > ${.TARGET}
 
 ypupdate_prot.h: ${RPCDIR}/ypupdate_prot.x
-	${RPCGEN} -h -o ${.TARGET} ${RPCDIR}/ypupdate_prot.x
+	${RPCGEN} -h -o ${.TARGET} ${.ALLSRC}
 
 .include <bsd.prog.mk>

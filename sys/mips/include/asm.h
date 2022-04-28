@@ -33,7 +33,7 @@
  *
  *	@(#)machAsmDefs.h	8.1 (Berkeley) 6/10/93
  *	JNPR: asm.h,v 1.10 2007/08/09 11:23:32 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/asm.h 256172 2013-10-09 00:27:12Z adrian $
+ * $FreeBSD$
  */
 
 /*
@@ -260,46 +260,6 @@ _C_LABEL(x):
 #define	ASMSTR(str)			\
 	.asciiz str;			\
 	.align	3
-
-/*
- * Call ast if required
- *
- * XXX Do we really need to disable interrupts?
- */
-#define DO_AST				             \
-44:				                     \
-	mfc0	t0, MIPS_COP_0_STATUS               ;\
-	and	a0, t0, MIPS_SR_INT_IE              ;\
-	xor	t0, a0, t0                          ;\
-	mtc0	t0, MIPS_COP_0_STATUS               ;\
-	COP0_SYNC                                   ;\
-	GET_CPU_PCPU(s1)                            ;\
-	PTR_L	s3, PC_CURPCB(s1)                   ;\
-	PTR_L	s1, PC_CURTHREAD(s1)                ;\
-	lw	s2, TD_FLAGS(s1)                    ;\
-	li	s0, TDF_ASTPENDING | TDF_NEEDRESCHED;\
-	and	s2, s0                              ;\
-	mfc0	t0, MIPS_COP_0_STATUS               ;\
-	or	t0, a0, t0                          ;\
-	mtc0	t0, MIPS_COP_0_STATUS               ;\
-	COP0_SYNC                                   ;\
-	beq	s2, zero, 4f                        ;\
-	nop                                         ;\
-	PTR_LA	s0, _C_LABEL(ast)                   ;\
-	jalr	s0                                  ;\
-	PTR_ADDU a0, s3, U_PCB_REGS                 ;\
-	j	44b		                    ;\
-        nop                                         ;\
-4:
-
-
-/*
- * XXX retain dialects XXX
- */
-#define	ALEAF(x)			XLEAF(x)
-#define	NLEAF(x)			LEAF_NOPROFILE(x)
-#define	NON_LEAF(x, fsize, retpc)	NESTED(x, fsize, retpc)
-#define	NNON_LEAF(x, fsize, retpc)	NESTED_NOPROFILE(x, fsize, retpc)
 
 #if defined(__mips_o32)
 #define	SZREG	4
@@ -706,6 +666,21 @@ _C_LABEL(x):
 /* Only valid with the _JB_MAGIC_SETJMP magic */
 
 #define _JB_SIGMASK		13
+#define	__JB_SIGMASK_REMAINDER	14	/* sigmask_t is 128-bits */
+
+#define _JB_FPREG_F20		15
+#define _JB_FPREG_F21		16
+#define _JB_FPREG_F22		17
+#define _JB_FPREG_F23		18
+#define _JB_FPREG_F24		19
+#define _JB_FPREG_F25		20
+#define _JB_FPREG_F26		21
+#define _JB_FPREG_F27		22
+#define _JB_FPREG_F28		23
+#define _JB_FPREG_F29		24
+#define _JB_FPREG_F30		25
+#define _JB_FPREG_F31		26
+#define _JB_FPREG_FCSR		27
 
 /*
  * Various macros for dealing with TLB hazards
@@ -725,7 +700,7 @@ _C_LABEL(x):
 #elif defined(CPU_RMI)
 #define	HAZARD_DELAY
 #define	ITLBNOPFIX
-#elif defined(CPU_MIPS74KC)
+#elif defined(CPU_MIPS74K)
 #define	HAZARD_DELAY	sll $0,$0,3
 #define	ITLBNOPFIX	sll $0,$0,3
 #else

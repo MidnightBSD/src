@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clkrpc.c 255216 2013-09-04 22:47:56Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kgssapi.h"
 
@@ -278,6 +278,11 @@ nfsrvd_cbinit(int terminating)
 		while (nfs_numnfscbd > 0)
 			msleep(&nfs_numnfscbd, NFSDLOCKMUTEXPTR, PZERO, 
 			    "nfscbdt", 0);
+		if (nfscbd_pool != NULL) {
+			NFSD_UNLOCK();
+			svcpool_close(nfscbd_pool);
+			NFSD_LOCK();
+		}
 	}
 
 	if (nfscbd_pool == NULL) {

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-micron.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-micron.c 249213 2013
 #include <ata_if.h>
 
 /*
- * Cenatek chipset support functions
+ * Micron chipset support functions
  */
 static int
 ata_micron_probe(device_t dev)
@@ -63,7 +63,7 @@ ata_micron_probe(device_t dev)
 	device_set_desc(dev,
 	    "RZ 100? ATA controller !WARNING! data loss/corruption risk");
 	ctlr->chipinit = ata_generic_chipinit;
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_LOW_PRIORITY);
     }
     return (ENXIO);
 }

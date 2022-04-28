@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/amd64/dtrace_isa.c 251238 2013-06-02 01:05:36Z markj $
+ * $FreeBSD$
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -48,6 +48,8 @@ uint8_t dtrace_fuword8_nocheck(void *);
 uint16_t dtrace_fuword16_nocheck(void *);
 uint32_t dtrace_fuword32_nocheck(void *);
 uint64_t dtrace_fuword64_nocheck(void *);
+
+int	dtrace_ustackdepth_max = 2048;
 
 void
 dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
@@ -87,8 +89,8 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 		}
 
 		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >=
-		    (vm_offset_t)rbp + KSTACK_PAGES * PAGE_SIZE)
+		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
+		    curthread->td_kstack_pages * PAGE_SIZE)
 			break;
 		frame = frame->f_frame;
 	}
@@ -102,14 +104,25 @@ static int
 dtrace_getustack_common(uint64_t *pcstack, int pcstack_limit, uintptr_t pc,
     uintptr_t sp)
 {
+	uintptr_t oldsp;
 	volatile uint16_t *flags =
 	    (volatile uint16_t *)&cpu_core[curcpu].cpuc_dtrace_flags;
 	int ret = 0;
 
 	ASSERT(pcstack == NULL || pcstack_limit > 0);
+	ASSERT(dtrace_ustackdepth_max > 0);
 
 	while (pc != 0) {
-		ret++;
+		/*
+		 * We limit the number of times we can go around this
+		 * loop to account for a circular stack.
+		 */
+		if (ret++ >= dtrace_ustackdepth_max) {
+			*flags |= CPU_DTRACE_BADSTACK;
+			cpu_core[curcpu].cpuc_dtrace_illval = sp;
+			break;
+		}
+
 		if (pcstack != NULL) {
 			*pcstack++ = (uint64_t)pc;
 			pcstack_limit--;
@@ -120,9 +133,17 @@ dtrace_getustack_common(uint64_t *pcstack, int pcstack_limit, uintptr_t pc,
 		if (sp == 0)
 			break;
 
+		oldsp = sp;
+
 		pc = dtrace_fuword64((void *)(sp +
 			offsetof(struct amd64_frame, f_retaddr)));
 		sp = dtrace_fuword64((void *)sp);
+
+		if (sp == oldsp) {
+			*flags |= CPU_DTRACE_BADSTACK;
+			cpu_core[curcpu].cpuc_dtrace_illval = sp;
+			break;
+		}
 
 		/*
 		 * This is totally bogus:  if we faulted, we're going to clear
@@ -349,7 +370,8 @@ dtrace_getarg(int arg, int aframes)
 	for (i = 1; i <= aframes; i++) {
 		fp = fp->f_frame;
 
-		if (fp->f_retaddr == (long)dtrace_invop_callsite) {
+		if (P2ROUNDUP(fp->f_retaddr, 16) ==
+		    (long)dtrace_invop_callsite) {
 			/*
 			 * In the case of amd64, we will use the pointer to the
 			 * regs structure that was pushed when we took the
@@ -360,16 +382,35 @@ dtrace_getarg(int arg, int aframes)
 			 * we'll pull the true stack pointer out of the saved
 			 * registers and decrement our argument by the number
 			 * of arguments passed in registers; if the argument
-			 * we're seeking is passed in regsiters, we can just
+			 * we're seeking is passed in registers, we can just
 			 * load it directly.
 			 */
-			struct reg *rp = (struct reg *)((uintptr_t)&fp[1] +
-			    sizeof (uintptr_t));
+			struct trapframe *tf = (struct trapframe *)&fp[1];
 
 			if (arg <= inreg) {
-				stack = (uintptr_t *)&rp->r_rdi;
+				switch (arg) {
+				case 0:
+					stack = (uintptr_t *)&tf->tf_rdi;
+					break;
+				case 1:
+					stack = (uintptr_t *)&tf->tf_rsi;
+					break;
+				case 2:
+					stack = (uintptr_t *)&tf->tf_rdx;
+					break;
+				case 3:
+					stack = (uintptr_t *)&tf->tf_rcx;
+					break;
+				case 4:
+					stack = (uintptr_t *)&tf->tf_r8;
+					break;
+				case 5:
+					stack = (uintptr_t *)&tf->tf_r9;
+					break;
+				}
+				arg = 0;
 			} else {
-				stack = (uintptr_t *)(rp->r_rsp);
+				stack = (uintptr_t *)(tf->tf_rsp);
 				arg -= inreg;
 			}
 			goto load;
@@ -398,7 +439,7 @@ dtrace_getarg(int arg, int aframes)
 	}
 
 	arg -= (inreg + 1);
-	stack = (uintptr_t *)fp + 2;
+	stack = (uintptr_t *)&fp[1];
 
 load:
 	DTRACE_CPUFLAG_SET(CPU_DTRACE_NOFAULT);
@@ -406,7 +447,6 @@ load:
 	DTRACE_CPUFLAG_CLEAR(CPU_DTRACE_NOFAULT);
 
 	return (val);
-	return (0);
 }
 
 int
@@ -427,8 +467,8 @@ dtrace_getstackdepth(int aframes)
 			break;
 		depth++;
 		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >=
-		    (vm_offset_t)rbp + KSTACK_PAGES * PAGE_SIZE)
+		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
+		    curthread->td_kstack_pages * PAGE_SIZE)
 			break;
 		frame = frame->f_frame;
 	}

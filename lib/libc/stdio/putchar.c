@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)putchar.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/putchar.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -54,11 +54,11 @@ putchar(int c)
 	int retval;
 	FILE *so = stdout;
 
-	FLOCKFILE(so);
+	FLOCKFILE_CANCELSAFE(so);
 	/* Orientation set by __sputc() when buffer is full. */
 	/* ORIENT(so, -1); */
 	retval = __sputc(c, so);
-	FUNLOCKFILE(so);
+	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }
 

@@ -30,12 +30,14 @@
  * FDT 'simple-bus' attachment for Freescale TSEC controller.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/tsec/if_tsec_fdt.c 232518 2012-03-04 19:22:52Z raj $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/endian.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
+#include <sys/mutex.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/socket.h>
@@ -48,9 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/tsec/if_tsec_fdt.c 232518 2012-03-04 
 
 #include <net/ethernet.h>
 #include <net/if.h>
-#include <net/if_dl.h>
 #include <net/if_media.h>
-#include <net/if_arp.h>
 
 #include <dev/fdt/fdt_common.h>
 #include <dev/mii/mii.h>
@@ -101,8 +101,6 @@ static driver_t tsec_fdt_driver = {
 };
 
 DRIVER_MODULE(tsec, simplebus, tsec_fdt_driver, tsec_devclass, 0, 0);
-MODULE_DEPEND(tsec, simplebus, 1, 1, 1);
-MODULE_DEPEND(tsec, ether, 1, 1, 1);
 
 static int
 tsec_fdt_probe(device_t dev)
@@ -110,30 +108,46 @@ tsec_fdt_probe(device_t dev)
 	struct tsec_softc *sc;
 	uint32_t id;
 
-	if (!ofw_bus_is_compatible(dev, "gianfar"))
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
+	if (ofw_bus_get_type(dev) == NULL ||
+	    strcmp(ofw_bus_get_type(dev), "network") != 0)
+		return (ENXIO);
+
+	if (!ofw_bus_is_compatible(dev, "gianfar") &&
+	    !ofw_bus_is_compatible(dev, "fsl,etsec2"))
 		return (ENXIO);
 
 	sc = device_get_softc(dev);
 
-	sc->sc_rrid = 0;
-	sc->sc_rres = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->sc_rrid,
-	    RF_ACTIVE);
-	if (sc->sc_rres == NULL)
-		return (ENXIO);
+	/*
+	 * Device trees with "fsl,etsec2" compatible nodes don't have a reg
+	 * property, as it's been relegated to the queue-group children.
+	 */
+	if (ofw_bus_is_compatible(dev, "fsl,etsec2"))
+		sc->is_etsec = 1;
+	else {
+		sc->sc_rrid = 0;
+		sc->sc_rres = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &sc->sc_rrid,
+		    RF_ACTIVE);
+		if (sc->sc_rres == NULL)
+			return (ENXIO);
 
-	sc->sc_bas.bsh = rman_get_bushandle(sc->sc_rres);
-	sc->sc_bas.bst = rman_get_bustag(sc->sc_rres);
+		sc->sc_bas.bsh = rman_get_bushandle(sc->sc_rres);
+		sc->sc_bas.bst = rman_get_bustag(sc->sc_rres);
 
-	/* Check if we are eTSEC (enhanced TSEC) */
-	id = TSEC_READ(sc, TSEC_REG_ID);
-	sc->is_etsec = ((id >> 16) == TSEC_ETSEC_ID) ? 1 : 0;
-	id |= TSEC_READ(sc, TSEC_REG_ID2);
+		/* Check if we are eTSEC (enhanced TSEC) */
+		id = TSEC_READ(sc, TSEC_REG_ID);
+		sc->is_etsec = ((id >> 16) == TSEC_ETSEC_ID) ? 1 : 0;
+		id |= TSEC_READ(sc, TSEC_REG_ID2);
 
-	bus_release_resource(dev, SYS_RES_MEMORY, sc->sc_rrid, sc->sc_rres);
+		bus_release_resource(dev, SYS_RES_MEMORY, sc->sc_rrid, sc->sc_rres);
 
-	if (id == 0) {
-		device_printf(dev, "could not identify TSEC type\n");
-		return (ENXIO);
+		if (id == 0) {
+			device_printf(dev, "could not identify TSEC type\n");
+			return (ENXIO);
+		}
 	}
 
 	if (sc->is_etsec)
@@ -148,16 +162,48 @@ static int
 tsec_fdt_attach(device_t dev)
 {
 	struct tsec_softc *sc;
+	struct resource_list *rl;
+	phandle_t child, mdio, phy;
+	int acells, scells;
 	int error = 0;
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
 	sc->node = ofw_bus_get_node(dev);
 
+	if (fdt_addrsize_cells(sc->node, &acells, &scells) != 0) {
+		acells = 1;
+		scells = 1;
+	}
+	if (ofw_bus_is_compatible(dev, "fsl,etsec2")) {
+		rl = BUS_GET_RESOURCE_LIST(device_get_parent(dev), dev);
+
+		/*
+		 * TODO: Add all children resources to the list.  Will be
+		 * required to support multigroup mode.
+		 */
+		child = OF_child(sc->node);
+		ofw_bus_reg_to_rl(dev, child, acells, scells, rl);
+		ofw_bus_intr_to_rl(dev, child, rl, NULL);
+	}
+
 	/* Get phy address from fdt */
-	if (fdt_get_phyaddr(sc->node, sc->dev, &sc->phyaddr,
-	    (void **)&sc->phy_sc) != 0)
+	if (OF_getencprop(sc->node, "phy-handle", &phy, sizeof(phy)) <= 0) {
+		device_printf(dev, "PHY not found in device tree");
 		return (ENXIO);
+	}
+
+	phy = OF_node_from_xref(phy);
+	mdio = OF_parent(phy);
+	OF_decode_addr(mdio, 0, &sc->phy_bst, &sc->phy_bsh, NULL);
+	OF_getencprop(phy, "reg", &sc->phyaddr, sizeof(sc->phyaddr));
+
+	/*
+	 * etsec2 MDIO nodes are given the MDIO module base address, so we need
+	 * to add the MII offset to get the PHY registers.
+	 */
+	if (ofw_bus_node_is_compatible(mdio, "fsl,etsec2-mdio"))
+		sc->phy_regoff = TSEC_REG_MIIBASE;
 
 	/* Init timer */
 	callout_init(&sc->tsec_callout, 1);
@@ -319,6 +365,13 @@ tsec_get_hwaddr(struct tsec_softc *sc, uint8_t *addr)
 
 	/* Retrieve the hardware address from the device tree. */
 	i = OF_getprop(sc->node, "local-mac-address", (void *)hw.addr, 6);
+	if (i == 6 && (hw.reg[0] != 0 || hw.reg[1] != 0)) {
+		bcopy(hw.addr, addr, 6);
+		return;
+	}
+
+	/* Also try the mac-address property, which is second-best */
+	i = OF_getprop(sc->node, "mac-address", (void *)hw.addr, 6);
 	if (i == 6 && (hw.reg[0] != 0 || hw.reg[1] != 0)) {
 		bcopy(hw.addr, addr, 6);
 		return;

@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_disk_set_standard_lookup.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -83,7 +83,7 @@ static const char *	lookup_uname_helper(struct name_cache *, id_t uid);
  * a simple cache to accelerate such lookups---into the archive_read_disk
  * object.  This is in a separate file because getpwuid()/getgrgid()
  * can pull in a LOT of library code (including NIS/LDAP functions, which
- * pull in DNS resolveers, etc).  This can easily top 500kB, which makes
+ * pull in DNS resolvers, etc).  This can easily top 500kB, which makes
  * it inappropriate for some space-constrained applications.
  *
  * Applications that are size-sensitive may want to just use the
@@ -232,6 +232,7 @@ static const char *
 lookup_uname_helper(struct name_cache *cache, id_t id)
 {
 	struct passwd	*result;
+	(void)cache; /* UNUSED */
 
 	result = getpwuid((uid_t)id);
 
@@ -298,6 +299,7 @@ static const char *
 lookup_gname_helper(struct name_cache *cache, id_t id)
 {
 	struct group	*result;
+	(void)cache; /* UNUSED */
 
 	result = getgrgid((gid_t)id);
 

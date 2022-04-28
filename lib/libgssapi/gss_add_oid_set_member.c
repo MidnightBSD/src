@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libgssapi/gss_add_oid_set_member.c 168340 2007-04-04 02:40:59Z kan $
+ *	$FreeBSD$
  */
 
 #include <gssapi/gssapi.h>

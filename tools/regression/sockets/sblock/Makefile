@@ -1,9 +1,9 @@
 #
-# $FreeBSD: release/10.0.0/tools/regression/sockets/sblock/Makefile 169311 2007-05-06 14:28:49Z rwatson $
+# $FreeBSD$
 #
 
 PROG=	sblock
-NO_MAN=
-WARNS?=	2
+MAN=
+WARNS?=	6
 
 .include <bsd.prog.mk>

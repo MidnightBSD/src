@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_set_format.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -36,9 +36,10 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_s
 
 #include "archive.h"
 #include "archive_private.h"
+#include "archive_write_set_format_private.h"
 
 /* A table that maps format codes to functions. */
-static
+static const
 struct { int code; int (*setter)(struct archive *); } codes[] =
 {
 	{ ARCHIVE_FORMAT_7ZIP,		archive_write_set_format_7zip },
@@ -47,6 +48,7 @@ struct { int code; int (*setter)(struct archive *); } codes[] =
 	{ ARCHIVE_FORMAT_CPIO_SVR4_NOCRC,	archive_write_set_format_cpio_newc },
 	{ ARCHIVE_FORMAT_ISO9660,	archive_write_set_format_iso9660 },
 	{ ARCHIVE_FORMAT_MTREE,		archive_write_set_format_mtree },
+	{ ARCHIVE_FORMAT_RAW,		archive_write_set_format_raw },
 	{ ARCHIVE_FORMAT_SHAR,		archive_write_set_format_shar },
 	{ ARCHIVE_FORMAT_SHAR_BASE,	archive_write_set_format_shar },
 	{ ARCHIVE_FORMAT_SHAR_DUMP,	archive_write_set_format_shar_dump },
@@ -56,8 +58,9 @@ struct { int code; int (*setter)(struct archive *); } codes[] =
 	{ ARCHIVE_FORMAT_TAR_PAX_RESTRICTED,
 				archive_write_set_format_pax_restricted },
 	{ ARCHIVE_FORMAT_TAR_USTAR,	archive_write_set_format_ustar },
+	{ ARCHIVE_FORMAT_WARC,		archive_write_set_format_warc },
 	{ ARCHIVE_FORMAT_XAR,		archive_write_set_format_xar },
-	{ ARCHIVE_FORMAT_ZIP,	archive_write_set_format_zip },
+	{ ARCHIVE_FORMAT_ZIP,		archive_write_set_format_zip },
 	{ 0,		NULL }
 };
 
@@ -73,4 +76,48 @@ archive_write_set_format(struct archive *a, int code)
 
 	archive_set_error(a, EINVAL, "No such format");
 	return (ARCHIVE_FATAL);
+}
+
+void
+__archive_write_entry_filetype_unsupported(struct archive *a,
+    struct archive_entry *entry, const char *format)
+{
+	const char *name = NULL;
+
+	switch (archive_entry_filetype(entry)) {
+	/*
+	 * All formats should be able to archive regular files (AE_IFREG)
+	 */
+	case AE_IFDIR:
+		name = "directories";
+		break;
+	case AE_IFLNK:
+		name = "symbolic links";
+		break;
+	case AE_IFCHR:
+		name = "character devices";
+		break;
+	case AE_IFBLK:
+		name = "block devices";
+		break;
+	case AE_IFIFO:
+		name = "named pipes";
+		break;
+	case AE_IFSOCK:
+		name = "sockets";
+		break;
+	default:
+		break;
+	}
+
+	if (name != NULL) {
+		archive_set_error(a, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "%s: %s format cannot archive %s",
+		    archive_entry_pathname(entry), format, name);
+	} else {
+		archive_set_error(a, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "%s: %s format cannot archive files with mode 0%lo",
+		    archive_entry_pathname(entry), format,
+		    (unsigned long)archive_entry_mode(entry));
+	}
 }

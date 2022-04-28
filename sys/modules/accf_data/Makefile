@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/accf_data/Makefile 70711 2001-01-06 14:00:42Z obrien $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../netinet
+.PATH: ${SRCTOP}/sys/netinet
 
 KMOD=	accf_data
 SRCS=	accf_data.c

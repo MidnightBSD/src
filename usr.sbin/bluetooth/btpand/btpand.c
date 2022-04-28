@@ -1,6 +1,8 @@
 /*	$NetBSD: btpand.c,v 1.1 2008/08/17 13:20:57 plunky Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2008 Iain Hibbert
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/btpand.c 192308 2009-05-18 16:00:18Z emax $ */
+/* $FreeBSD$ */
 
 #include <sys/cdefs.h>
 __COPYRIGHT("@(#) Copyright (c) 2008 Iain Hibbert. All rights reserved.");
@@ -33,6 +35,7 @@ __RCSID("$NetBSD: btpand.c,v 1.1 2008/08/17 13:20:57 plunky Exp $");
 
 #include <sys/wait.h>
 
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <fcntl.h>
@@ -65,7 +68,7 @@ static const struct {
 	const char *	desc;
 } services[] = {
 	{ "PANU", SDP_SERVICE_CLASS_PANU, "Personal Area Networking User" },
-	{ "NAP",  SDP_SERVICE_CLASS_NAP,  "Network Acess Point"		  },
+	{ "NAP",  SDP_SERVICE_CLASS_NAP,  "Network Access Point"		  },
 	{ "GN",	  SDP_SERVICE_CLASS_GN,   "Group Network"		  },
 };
 
@@ -170,7 +173,7 @@ main(int argc, char *argv[])
 		usage();
 
 	if (!bdaddr_any(&remote_bdaddr) && (server_limit != 0 ||
-	    control_path != 0 || (service_name != NULL && l2cap_psm != 0)))
+	    control_path != NULL || (service_name != NULL && l2cap_psm != 0)))
 		usage();
 
 	/* default options */

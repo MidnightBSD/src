@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  * $Id: mount_smbfs.c,v 1.17 2002/04/10 04:17:51 bp Exp $
- * $FreeBSD: release/10.0.0/contrib/smbfs/mount_smbfs/mount_smbfs.c 250236 2013-05-04 14:03:18Z davide $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -81,7 +81,7 @@ main(int argc, char *argv[])
 #else
 	struct xvfsconf vfc;
 #endif
-	char *next;
+	char *next, *p, *val;
 	int opt, error, mntflags, caseopt, fd;
 	uid_t uid;
 	gid_t gid;
@@ -194,6 +194,13 @@ main(int argc, char *argv[])
 		    };
 		    case 'o':
 			getmntopts(optarg, mopts, &mntflags, 0);
+			p = strchr(optarg, '=');
+			val = NULL;
+			if (p != NULL) {
+				*p = '\0';
+				val = p + 1;
+			}
+			build_iovec(&iov, &iovlen, optarg, val, (size_t)-1);
 			break;
 		    case 'c':
 			switch (optarg[0]) {

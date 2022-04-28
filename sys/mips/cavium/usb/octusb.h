@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/mips/cavium/usb/octusb.h 230405 2012-01-20 23:37:04Z gonzo $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.

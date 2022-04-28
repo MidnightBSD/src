@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_lookup.c	8.6 (Berkeley) 4/1/94
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/ext2_lookup.c 255338 2013-09-07 02:45:51Z pfg $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -121,7 +121,7 @@ static int
 ext2_is_dot_entry(struct componentname *cnp)
 {
 	if (cnp->cn_namelen <= 2 && cnp->cn_nameptr[0] == '.' &&
-	    (cnp->cn_nameptr[1] == '.' || cnp->cn_nameptr[1] == '0'))
+	    (cnp->cn_nameptr[1] == '.' || cnp->cn_nameptr[1] == '\0'))
 		return (1);
 	return (0);
 }
@@ -150,7 +150,10 @@ ext2_readdir(struct vop_readdir_args *ap)
 		return (EINVAL);
 	ip = VTOI(vp);
 	if (ap->a_ncookies != NULL) {
-		ncookies = uio->uio_resid;
+		if (uio->uio_resid < 0)
+			ncookies = 0;
+		else
+			ncookies = uio->uio_resid;
 		if (uio->uio_offset >= ip->i_size)
 			ncookies = 0;
 		else if (ip->i_size - uio->uio_offset < ncookies)
@@ -216,7 +219,7 @@ ext2_readdir(struct vop_readdir_args *ap)
 			dstdp.d_fileno = dp->e2d_ino;
 			dstdp.d_reclen = GENERIC_DIRSIZ(&dstdp);
 			bcopy(dp->e2d_name, dstdp.d_name, dstdp.d_namlen);
-			dstdp.d_name[dstdp.d_namlen] = '\0';
+			dirent_terminate(&dstdp);
 			if (dstdp.d_reclen > uio->uio_resid) {
 				if (uio->uio_resid == startresid)
 					error = EINVAL;
@@ -238,7 +241,7 @@ ext2_readdir(struct vop_readdir_args *ap)
 nextentry:
 			offset += dp->e2d_reclen;
 			dp = (struct ext2fs_direct_2 *)((caddr_t)dp +
-			   dp->e2d_reclen);
+			    dp->e2d_reclen);
 		}
 		bqrelse(bp);
 		uio->uio_offset = offset;
@@ -324,7 +327,7 @@ ext2_lookup_ino(struct vnode *vdp, struct vnode **vpp, struct componentname *cnp
 	int ltype;
 	int entry_found = 0;
 
-	int	DIRBLKSIZ = VTOI(vdp)->i_e2fs->e2fs_bsize;
+	int DIRBLKSIZ = VTOI(vdp)->i_e2fs->e2fs_bsize;
 
 	if (vpp != NULL)
 		*vpp = NULL;
@@ -343,7 +346,6 @@ restart:
 	 * we watch for a place to put the new file in
 	 * case it doesn't already exist.
 	 */
-	ino = 0;
 	i_diroff = dp->i_diroff;
 	ss.slotstatus = FOUND;
 	ss.slotfreespace = ss.slotsize = ss.slotneeded = 0;
@@ -351,11 +353,11 @@ restart:
 	    (flags & ISLASTCN)) {
 		ss.slotstatus = NONE;
 		ss.slotneeded = EXT2_DIR_REC_LEN(cnp->cn_namelen);
-		/* was
-		ss.slotneeded = (sizeof(struct direct) - MAXNAMLEN +
-			cnp->cn_namelen + 3) &~ 3; */
+		/*
+		 * was ss.slotneeded = (sizeof(struct direct) - MAXNAMLEN +
+		 * cnp->cn_namelen + 3) &~ 3;
+		 */
 	}
-
 	/*
 	 * Try to lookup dir entry using htree directory index.
 	 *
@@ -366,11 +368,11 @@ restart:
 		numdirpasses = 1;
 		entryoffsetinblock = 0;
 		switch (ext2_htree_lookup(dp, cnp->cn_nameptr, cnp->cn_namelen,
-				&bp, &entryoffsetinblock, &i_offset, &prevoff,
-				&enduseful, &ss)) {
+		    &bp, &entryoffsetinblock, &i_offset, &prevoff,
+		    &enduseful, &ss)) {
 		case 0:
 			ep = (struct ext2fs_direct_2 *)((char *)bp->b_data +
-				(i_offset & bmask));
+			    (i_offset & bmask));
 			goto foundentry;
 		case ENOENT:
 			i_offset = roundup2(dp->i_size, DIRBLKSIZ);
@@ -434,16 +436,16 @@ searchloop:
 			ss.slotfreespace = 0;
 		}
 		error = ext2_search_dirblock(dp, bp->b_data, &entry_found,
-				cnp->cn_nameptr, cnp->cn_namelen,
-				&entryoffsetinblock, &i_offset, &prevoff,
-				&enduseful, &ss);
+		    cnp->cn_nameptr, cnp->cn_namelen,
+		    &entryoffsetinblock, &i_offset, &prevoff,
+		    &enduseful, &ss);
 		if (error != 0) {
 			brelse(bp);
 			return (error);
 		}
 		if (entry_found) {
 			ep = (struct ext2fs_direct_2 *)((char *)bp->b_data +
-				(entryoffsetinblock & bmask));
+			    (entryoffsetinblock & bmask));
 foundentry:
 			ino = ep->e2d_ino;
 			goto found;
@@ -514,7 +516,7 @@ notfound:
 	/*
 	 * Insert name into cache (as non-existent) if appropriate.
 	 */
-	if ((cnp->cn_flags & MAKEENTRY) && nameiop != CREATE)
+	if ((cnp->cn_flags & MAKEENTRY) != 0)
 		cache_enter(vdp, NULL, cnp);
 	return (ENOENT);
 
@@ -528,9 +530,9 @@ found:
 	 * of this entry.
 	 */
 	if (entryoffsetinblock + EXT2_DIR_REC_LEN(ep->e2d_namlen)
-		> dp->i_size) {
+	    > dp->i_size) {
 		ext2_dirbad(dp, i_offset, "i_size too small");
-		dp->i_size = entryoffsetinblock+EXT2_DIR_REC_LEN(ep->e2d_namlen);
+		dp->i_size = entryoffsetinblock + EXT2_DIR_REC_LEN(ep->e2d_namlen);
 		dp->i_flag |= IN_CHANGE | IN_UPDATE;
 	}
 	brelse(bp);
@@ -541,7 +543,7 @@ found:
 	 * in the cache as to where the entry was found.
 	 */
 	if ((flags & ISLASTCN) && nameiop == LOOKUP)
-		dp->i_diroff = i_offset &~ (DIRBLKSIZ - 1);
+		dp->i_diroff = rounddown2(i_offset, DIRBLKSIZ);
 	/*
 	 * If deleting, and at end of pathname, return
 	 * parameters which can be used to remove file.
@@ -679,7 +681,7 @@ found:
 		if (ltype != VOP_ISLOCKED(vdp)) {
 			if (ltype == LK_EXCLUSIVE)
 				vn_lock(vdp, LK_UPGRADE | LK_RETRY);
-			else /* if (ltype == LK_SHARED) */
+			else	/* if (ltype == LK_SHARED) */
 				vn_lock(vdp, LK_DOWNGRADE | LK_RETRY);
 		}
 		*vpp = vdp;
@@ -700,9 +702,9 @@ found:
 
 int
 ext2_search_dirblock(struct inode *ip, void *data, int *foundp,
-	const char *name, int namelen, int *entryoffsetinblockp,
-	doff_t *offp, doff_t *prevoffp, doff_t *endusefulp,
-	struct ext2fs_searchslot *ssp)
+    const char *name, int namelen, int *entryoffsetinblockp,
+    doff_t *offp, doff_t *prevoffp, doff_t *endusefulp,
+    struct ext2fs_searchslot *ssp)
 {
 	struct vnode *vdp;
 	struct ext2fs_direct_2 *ep, *top;
@@ -714,7 +716,7 @@ ext2_search_dirblock(struct inode *ip, void *data, int *foundp,
 
 	ep = (struct ext2fs_direct_2 *)((char *)data + offset);
 	top = (struct ext2fs_direct_2 *)((char *)data +
-		bsize - EXT2_DIR_REC_LEN(0));
+	    bsize - EXT2_DIR_REC_LEN(0));
 
 	while (ep < top) {
 		/*
@@ -726,6 +728,7 @@ ext2_search_dirblock(struct inode *ip, void *data, int *foundp,
 		if (ep->e2d_reclen == 0 ||
 		    (dirchk && ext2_dirbadentry(vdp, ep, offset))) {
 			int i;
+
 			ext2_dirbad(ip, *offp, "mangled entry");
 			i = bsize - (offset & (bsize - 1));
 			*offp += i;
@@ -756,13 +759,12 @@ ext2_search_dirblock(struct inode *ip, void *data, int *foundp,
 					if (ssp->slotfreespace >= ssp->slotneeded) {
 						ssp->slotstatus = COMPACT;
 						ssp->slotsize = *offp +
-							ep->e2d_reclen -
-							ssp->slotoffset;
+						    ep->e2d_reclen -
+						    ssp->slotoffset;
 					}
 				}
 			}
 		}
-
 		/*
 		 * Check for a name match.
 		 */
@@ -801,11 +803,13 @@ ext2_dirbad(struct inode *ip, doff_t offset, char *how)
 
 	mp = ITOV(ip)->v_mount;
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		panic("ext2_dirbad: %s: bad dir ino %lu at offset %ld: %s\n",
-			mp->mnt_stat.f_mntonname, (u_long)ip->i_number,(long)offset, how);
+		panic("ext2_dirbad: %s: bad dir ino %ju at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 	else
-	(void)printf("%s: bad dir ino %lu at offset %ld: %s\n",
-            mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
+		(void)printf("%s: bad dir ino %ju at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (uintmax_t)ip->i_number,
+		    (long)offset, how);
 
 }
 
@@ -824,9 +828,9 @@ static int
 ext2_dirbadentry(struct vnode *dp, struct ext2fs_direct_2 *de,
     int entryoffsetinblock)
 {
-	int	DIRBLKSIZ = VTOI(dp)->i_e2fs->e2fs_bsize;
+	int DIRBLKSIZ = VTOI(dp)->i_e2fs->e2fs_bsize;
 
-	char * error_msg = NULL;
+	char *error_msg = NULL;
 
 	if (de->e2d_reclen < EXT2_DIR_REC_LEN(1))
 		error_msg = "rec_len is smaller than minimal";
@@ -884,12 +888,11 @@ ext2_direnter(struct inode *ip, struct vnode *dvp, struct componentname *cnp)
 	bcopy(cnp->cn_nameptr, newdir.e2d_name, (unsigned)cnp->cn_namelen + 1);
 	newentrysize = EXT2_DIR_REC_LEN(newdir.e2d_namlen);
 
-#ifdef EXT2FS_HTREE
 	if (ext2_htree_has_idx(dp)) {
 		error = ext2_htree_add_entry(dvp, &newdir, cnp);
 		if (error) {
-			dp->i_flags &= ~EXT4_INDEX;
-			dp->i_flags |= IN_CHANGE | IN_UPDATE;
+			dp->i_flag &= ~IN_E3INDEX;
+			dp->i_flag |= IN_CHANGE | IN_UPDATE;
 		}
 		return (error);
 	}
@@ -905,7 +908,6 @@ ext2_direnter(struct inode *ip, struct vnode *dvp, struct componentname *cnp)
 			return ext2_htree_create_index(dvp, cnp, &newdir);
 		}
 	}
-#endif	/* EXT2FS_HTREE */
 
 	if (dp->i_count == 0) {
 		/*
@@ -1202,9 +1204,9 @@ ext2_checkpath(struct inode *source, struct inode *target, struct ucred *cred)
 			break;
 		}
 		error = vn_rdwr(UIO_READ, vp, (caddr_t)&dirbuf,
-			sizeof(struct dirtemplate), (off_t)0, UIO_SYSSPACE,
-			IO_NODELOCKED | IO_NOMACCHECK, cred, NOCRED, NULL,
-			NULL);
+		    sizeof(struct dirtemplate), (off_t)0, UIO_SYSSPACE,
+		    IO_NODELOCKED | IO_NOMACCHECK, cred, NOCRED, NULL,
+		    NULL);
 		if (error != 0)
 			break;
 		namlen = dirbuf.dotdot_type;	/* like ufs little-endian */

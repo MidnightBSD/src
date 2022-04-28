@@ -43,9 +43,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/security/mac/mac_process.c 251391 2013-06-04 17:23:09Z alc $");
+__FBSDID("$FreeBSD$");
 
-#include "opt_kdtrace.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>

@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/FILESYSTEMS 240336 2012-09-11 05:04:59Z obrien $
+# $FreeBSD$
 #
 
 # PROVIDE: FILESYSTEMS
-# REQUIRE: root mountcritlocal cleanvar zfs
+# REQUIRE: root mountcritlocal cleanvar
 
-#	This is a dummy dependency, for services which require file systems
+#	This is a dummy dependency, for services which require filesystems
 #	to be mounted before starting.  It also serves as the default early /
 #	late divider; after this point, rc.d directories are rescanned to
-#	catch scripts from other file systems than /.
+#	catch scripts from other filesystems than /.

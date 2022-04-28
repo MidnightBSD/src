@@ -21,7 +21,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libpmc/pmc.xscale.3 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
 .Dd December 23, 2009
 .Dt PMC.XSCALE 3
@@ -132,9 +132,9 @@ and the underlying hardware events used.
 .El
 .Sh SEE ALSO
 .Xr pmc 3 ,
+.Xr pmc.soft 3 ,
 .Xr pmc_cpuinfo 3 ,
 .Xr pmclog 3 ,
-.Xr pmc.soft 3 ,
 .Xr hwpmc 4
 .Sh HISTORY
 The
@@ -144,14 +144,13 @@ library first appeared in
 Intel XScale support first appeared in
 .Fx 9.0 .
 .Sh AUTHORS
+.An -nosplit
 The
 .Lb libpmc
 library was written by
-.An "Joseph Koshy"
-.Aq jkoshy@FreeBSD.org .
+.An Joseph Koshy Aq Mt jkoshy@FreeBSD.org .
 .Pp
 Intel XScale support was added by
-.An "Rui Paulo"
-.Aq rpaulo@FreeBSD.org .
+.An Rui Paulo Aq Mt rpaulo@FreeBSD.org .
 .Sh CAVEATS
 The Intel XScale code does not yet support sampling.

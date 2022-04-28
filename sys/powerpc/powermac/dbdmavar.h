@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/dbdmavar.h 184382 2008-10-27 23:11:14Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _POWERPC_POWERMAC_DBDMAVAR_H_
@@ -60,6 +60,7 @@ struct dbdma_channel {
 
 	bus_dma_tag_t		sc_dmatag;
 	bus_dmamap_t		sc_dmamap;
+	uint32_t		sc_saved_regs[5];
 };
 	
 

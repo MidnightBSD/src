@@ -23,12 +23,12 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/if_atereg.h 213496 2010-10-06 22:25:21Z cognet $ */
+/* $FreeBSD$ */
 
 #ifndef ARM_AT91_IF_ATEREG_H
 #define ARM_AT91_IF_ATEREG_H
 
-/* deines begining ETHB_ are EMACB (newer SAM9 hardware) versions only */
+/* Defines beginning ETHB_ are EMACB (newer SAM9 hardware) versions only. */
 
 #define ETH_CTL		0x00		/* EMAC Control Register */
 #define ETH_CFG		0x04		/* EMAC Configuration Register */
@@ -191,7 +191,7 @@ typedef struct {
 #define ETH_MAC_LOCAL_3	(1U << 24)	/* Packet matched addr 3 */
 #define ETH_MAC_LOCAL_2	(1U << 25)	/* Packet matched addr 2 */
 #define ETH_MAC_LOCAL_1	(1U << 26)	/* Packet matched addr 1 */
-#define ETH_MAC_UNK	(1U << 27)	/* Unkown source address RFU */
+#define ETH_MAC_UNK	(1U << 27)	/* Unknown source address RFU */
 #define ETH_MAC_EXT	(1U << 28)	/* External Address */
 #define ETH_MAC_UCAST	(1U << 29)	/* Unicast hash match */
 #define ETH_MAC_MCAST	(1U << 30)	/* Multicast hash match */

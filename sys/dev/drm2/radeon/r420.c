@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/r420.c 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include "radeon_reg.h"
@@ -80,7 +80,7 @@ void r420_pm_init_profile(struct radeon_device *rdev)
 static void r420_set_reg_safe(struct radeon_device *rdev)
 {
 	rdev->config.r300.reg_safe_bm = r420_reg_safe_bm;
-	rdev->config.r300.reg_safe_bm_size = DRM_ARRAY_SIZE(r420_reg_safe_bm);
+	rdev->config.r300.reg_safe_bm_size = ARRAY_SIZE(r420_reg_safe_bm);
 }
 
 void r420_pipes_init(struct radeon_device *rdev)

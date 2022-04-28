@@ -28,7 +28,7 @@
 #define RV770_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv770d.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #define R7XX_MAX_SH_GPRS           256
 #define R7XX_MAX_TEMP_GPRS         16
@@ -82,7 +82,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv770d.h 254885 2013-08-2
 #define		RB_BUFSZ(x)					((x) << 0)
 #define		RB_BLKSZ(x)					((x) << 8)
 #define		RB_NO_UPDATE					(1 << 27)
-#define		RB_RPTR_WR_ENA					(1 << 31)
+#define		RB_RPTR_WR_ENA					(1U << 31)
 #define		BUF_SWAP_32BIT					(2 << 16)
 #define	CP_RB_RPTR					0x8700
 #define	CP_RB_RPTR_ADDR					0xC10C
@@ -312,7 +312,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv770d.h 254885 2013-08-2
 #define		SYNC_WALKER					(1 << 25)
 #define		SYNC_ALIGNER					(1 << 26)
 #define		BILINEAR_PRECISION_6_BIT			(0 << 31)
-#define		BILINEAR_PRECISION_8_BIT			(1 << 31)
+#define		BILINEAR_PRECISION_8_BIT			(1U << 31)
 
 #define	TCP_CNTL					0x9610
 #define	TCP_CHAN_STEER					0x9614
@@ -537,7 +537,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv770d.h 254885 2013-08-2
 #       define AFMT_AUDIO_CRC_EN             (1 << 0)
 #define AFMT_RAMP_CONTROL0                   0x74e0
 #       define AFMT_RAMP_MAX_COUNT(x)        (((x) & 0xffffff) << 0)
-#       define AFMT_RAMP_DATA_SIGN           (1 << 31)
+#       define AFMT_RAMP_DATA_SIGN           (1U << 31)
 #define AFMT_RAMP_CONTROL1                   0x74e4
 #       define AFMT_RAMP_MIN_COUNT(x)        (((x) & 0xffffff) << 0)
 #       define AFMT_AUDIO_TEST_CH_DISABLE(x) (((x) & 0xff) << 24)
@@ -622,7 +622,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/rv770d.h 254885 2013-08-2
 #       define PIN1_AUDIO_ENABLED                         (1 << 25)
 #       define PIN2_AUDIO_ENABLED                         (1 << 26)
 #       define PIN3_AUDIO_ENABLED                         (1 << 27)
-#       define AUDIO_ENABLED                              (1 << 31)
+#       define AUDIO_ENABLED                              (1U << 31)
 
 
 #define D1GRPH_PRIMARY_SURFACE_ADDRESS                    0x6110

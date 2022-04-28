@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/p1003_1b/memlock.c 57257 2000-02-16 14:28:42Z dufault $
+ * $FreeBSD$
  */
 #include <unistd.h>
 #include <stdio.h>

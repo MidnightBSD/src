@@ -1,24 +1,8 @@
-# $FreeBSD: release/10.0.0/usr.bin/clang/llvm-link/Makefile 249423 2013-04-12 17:57:40Z dim $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+PROG_CXX=	llvm-link
 
-PROG_CXX=llvm-link
+SRCDIR=		llvm/tools/llvm-link
+SRCS+=		llvm-link.cpp
 
-SRCDIR=	tools/llvm-link
-SRCS=	llvm-link.cpp
-
-LIBDEPS=llvmirreader \
-	llvmasmparser \
-	llvmbitwriter \
-	llvmbitreader \
-	llvmlinker \
-	llvmtransformutils \
-	llvmipa \
-	llvmanalysis \
-	llvmtarget \
-	llvmmc \
-	llvmobject \
-	llvmcore \
-	llvmsupport
-
-.include "../clang.prog.mk"
+.include "../llvm.prog.mk"

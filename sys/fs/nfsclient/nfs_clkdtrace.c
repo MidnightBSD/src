@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clkdtrace.c 244042 2012-12-08 22:52:39Z rmacklem $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/fs/nfsclient/nfs_clkdtrace.c 244042 2012-
 
 /*
  * dtnfscl is a DTrace provider that tracks the intent to perform RPCs
- * in the NFS client, as well as acess to and maintenance of the access and
+ * in the NFS client, as well as access to and maintenance of the access and
  * attribute caches.  This is not quite the same as RPCs, because NFS may
  * issue multiple RPC transactions in the event that authentication fails,
  * there's a jukebox error, or none at all if the access or attribute cache
@@ -162,34 +162,19 @@ static char	*dtnfsclient_miss_str = "miss";
 static char	*dtnfsclient_start_str = "start";
 
 static dtrace_pops_t dtnfsclient_pops = {
-	dtnfsclient_provide,
-	NULL,
-	dtnfsclient_enable,
-	dtnfsclient_disable,
-	NULL,
-	NULL,
-	dtnfsclient_getargdesc,
-	NULL,
-	NULL,
-	dtnfsclient_destroy
+	.dtps_provide =		dtnfsclient_provide,
+	.dtps_provide_module =	NULL,
+	.dtps_enable =		dtnfsclient_enable,
+	.dtps_disable =		dtnfsclient_disable,
+	.dtps_suspend =		NULL,
+	.dtps_resume =		NULL,
+	.dtps_getargdesc =	dtnfsclient_getargdesc,
+	.dtps_getargval =	NULL,
+	.dtps_usermode =	NULL,
+	.dtps_destroy =		dtnfsclient_destroy
 };
 
 static dtrace_provider_id_t	dtnfsclient_id;
-
-/*
- * Most probes are generated from the above RPC table, but for access and
- * attribute caches, we have specific IDs we recognize and handle specially
- * in various spots.
- */
-extern uint32_t	nfscl_accesscache_flush_done_id;
-extern uint32_t	nfscl_accesscache_get_hit_id;
-extern uint32_t	nfscl_accesscache_get_miss_id;
-extern uint32_t	nfscl_accesscache_load_done_id;
-
-extern uint32_t	nfscl_attrcache_flush_done_id;
-extern uint32_t	nfscl_attrcache_get_hit_id;
-extern uint32_t	nfscl_attrcache_get_miss_id;
-extern uint32_t	nfscl_attrcache_load_done_id;
 
 /*
  * When tracing on a procedure is enabled, the DTrace ID for an RPC event is

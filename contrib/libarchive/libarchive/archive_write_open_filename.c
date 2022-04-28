@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_open_filename.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -243,7 +243,10 @@ file_close(struct archive *a, void *client_data)
 	struct write_file_data	*mine = (struct write_file_data *)client_data;
 
 	(void)a; /* UNUSED */
-	close(mine->fd);
+
+	if (mine->fd >= 0)
+		close(mine->fd);
+
 	archive_mstring_clean(&mine->filename);
 	free(mine);
 	return (ARCHIVE_OK);

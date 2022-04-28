@@ -29,7 +29,7 @@ you didn't get a copy, you may request one from <license@inner.net>.
 		Bug fixes.
 	Created at NRL for OPIE 2.2.
 
-$FreeBSD: release/10.0.0/contrib/opie/libopie/generator.c 92914 2002-03-21 23:42:52Z markm $
+$FreeBSD$
 */
 
 #include "opie_cfg.h"
@@ -49,6 +49,7 @@ $FreeBSD: release/10.0.0/contrib/opie/libopie/generator.c 92914 2002-03-21 23:42
 #if DEBUG
 #include <syslog.h>
 #endif /* DEBUG */
+#include <stdio.h>
 #include "opie.h"
 
 static char *algids[] = { NULL, NULL, NULL, "sha1", "md4", "md5" };

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-ite.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -77,7 +77,7 @@ ata_ite_probe(device_t dev)
 
     ata_set_desc(dev);
     ctlr->chipinit = ata_ite_chipinit;
-    return (BUS_PROBE_DEFAULT);
+    return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static int
@@ -103,7 +103,7 @@ ata_ite_chipinit(device_t dev)
 	pci_write_config(dev, 0x56, 0x31, 1);
 
 	ctlr->setmode = ata_ite_821x_setmode;
-	/* No timing restrictions initally. */
+	/* No timing restrictions initially. */
 	ctlr->chipset_data = NULL;
     }
     ctlr->ch_attach = ata_ite_ch_attach;

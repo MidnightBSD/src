@@ -138,7 +138,13 @@ svn_client__pathrev_fspath(const svn_client__pathrev_t *pathrev,
 svn_client_commit_item3_t *
 svn_client_commit_item3_create(apr_pool_t *pool)
 {
-  return apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  svn_client_commit_item3_t *item = apr_pcalloc(pool, sizeof(*item));
+
+  item->revision = SVN_INVALID_REVNUM;
+  item->copyfrom_rev = SVN_INVALID_REVNUM;
+  item->kind = svn_node_unknown;
+
+  return item;
 }
 
 svn_client_commit_item3_t *
@@ -166,6 +172,13 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
     new_item->outgoing_prop_changes =
       svn_prop_array_dup(new_item->outgoing_prop_changes, pool);
 
+  if (new_item->session_relpath)
+    new_item->session_relpath = apr_pstrdup(pool, new_item->session_relpath);
+
+  if (new_item->moved_from_abspath)
+    new_item->moved_from_abspath = apr_pstrdup(pool,
+                                               new_item->moved_from_abspath);
+
   return new_item;
 }
 
@@ -188,7 +201,6 @@ svn_client__wc_node_get_base(svn_client__pathrev_t **base_p,
                                 NULL,
                                 wc_ctx, wc_abspath,
                                 TRUE /* ignore_enoent */,
-                                TRUE /* show_hidden */,
                                 result_pool, scratch_pool));
   if ((*base_p)->repos_root_url && relpath)
     {
@@ -218,7 +230,8 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                   &relpath,
                                   &(*origin_p)->repos_root_url,
                                   &(*origin_p)->repos_uuid,
-                                  NULL, ctx->wc_ctx, wc_abspath,
+                                  NULL, NULL,
+                                  ctx->wc_ctx, wc_abspath,
                                   FALSE /* scan_deleted */,
                                   result_pool, scratch_pool));
   if ((*origin_p)->repos_root_url && relpath)

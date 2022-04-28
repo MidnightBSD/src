@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)div.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/div.c 251069 2013-05-28 20:57:40Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>		/* div_t */
 
@@ -46,6 +46,7 @@ div(num, denom)
 
 	r.quot = num / denom;
 	r.rem = num % denom;
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
 	/*
 	 * The ANSI standard says that |r.quot| <= |n/d|, where
 	 * n/d is to be computed in infinite precision.  In other
@@ -73,5 +74,6 @@ div(num, denom)
 		r.quot++;
 		r.rem -= denom;
 	}
+#endif
 	return (r);
 }

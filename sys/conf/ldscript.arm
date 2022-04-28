@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/conf/ldscript.arm 248122 2013-03-10 00:47:19Z andrew $ */
+/* $FreeBSD$ */
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 
@@ -76,7 +76,6 @@ SECTIONS
   {
     *(.data)
     *(.gnu.linkonce.d*)
-    CONSTRUCTORS
   }
   .data1   : { *(.data1) }
   . = ALIGN(32 / 8);
@@ -107,6 +106,12 @@ SECTIONS
    *(.dynbss)
    *(.bss)
    *(COMMON)
+   . = ALIGN(32 / 8);
+   _ebss = .;
+   /* A section for the initial page table, it doesn't need to be in the
+      kernel file, however unlike normal .bss entries should not be zeroed
+      out as we use it before the .bss section is cleared. */
+   *(.init_pagetable)
   }
   . = ALIGN(32 / 8);
   _end = . ;

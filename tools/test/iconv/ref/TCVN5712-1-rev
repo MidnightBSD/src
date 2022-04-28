@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/test/iconv/ref/TCVN5712-1-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x0000 = 0x0000
 0x0003 = 0x0003
 0x0007 = 0x0007

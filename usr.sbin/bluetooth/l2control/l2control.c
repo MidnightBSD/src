@@ -1,5 +1,7 @@
-/*
+/*-
  * l2control.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: l2control.c,v 1.6 2003/09/05 00:38:25 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/l2control/l2control.c 220840 2011-04-19 16:21:57Z emax $
+ * $FreeBSD$
  */
 
 #include <assert.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <err.h>
 #include <errno.h>

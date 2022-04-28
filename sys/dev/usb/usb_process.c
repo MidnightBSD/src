@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_process.c 246360 2013-02-05 13:30:07Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -90,9 +90,8 @@ static int usb_pcount;
 static int usb_proc_debug;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, proc, CTLFLAG_RW, 0, "USB process");
-SYSCTL_INT(_hw_usb_proc, OID_AUTO, debug, CTLFLAG_RW | CTLFLAG_TUN, &usb_proc_debug, 0,
+SYSCTL_INT(_hw_usb_proc, OID_AUTO, debug, CTLFLAG_RWTUN, &usb_proc_debug, 0,
     "Debug level");
-TUNABLE_INT("hw.usb.proc.debug", &usb_proc_debug);
 #endif
 
 /*------------------------------------------------------------------------*
@@ -455,14 +454,15 @@ usb_proc_drain(struct usb_process *up)
 			up->up_csleep = 0;
 			cv_signal(&up->up_cv);
 		}
+#ifndef EARLY_AP_STARTUP
 		/* Check if we are still cold booted */
-
 		if (cold) {
 			USB_THREAD_SUSPEND(up->up_ptr);
 			printf("WARNING: A USB process has "
 			    "been left suspended\n");
 			break;
 		}
+#endif
 		cv_wait(&up->up_cv, up->up_mtx);
 	}
 	/* Check if someone is waiting - should not happen */
@@ -500,4 +500,16 @@ usb_proc_rewakeup(struct usb_process *up)
 		/* re-wakeup */
 		cv_signal(&up->up_cv);
 	}
+}
+
+/*------------------------------------------------------------------------*
+ *	usb_proc_is_called_from
+ *
+ * This function will return non-zero if called from inside the USB
+ * process passed as first argument. Else this function returns zero.
+ *------------------------------------------------------------------------*/
+int
+usb_proc_is_called_from(struct usb_process *up)
+{
+	return (up->up_curtd == curthread);
 }

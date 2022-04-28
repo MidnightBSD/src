@@ -1,4 +1,4 @@
-/*	$OpenBSD: inout.c,v 1.15 2009/10/27 23:59:37 deraadt Exp $	*/
+/*	$OpenBSD: inout.c,v 1.17 2012/11/07 11:06:14 otto Exp $	*/
 
 /*
  * Copyright (c) 2003, Otto Moerbeek <otto@drijf.net>
@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/dc/inout.c 244861 2012-12-30 15:20:27Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include <openssl/ssl.h>
 #include <ctype.h>
@@ -216,12 +216,7 @@ readnumber(struct source *src, u_int base)
 			n->scale++;
 
 		bn_check(BN_mul_word(n->number, base));
-
-#if 0
-		/* work around a bug in BN_add_word: 0 += 0 is buggy.... */
-		if (v > 0)
-#endif
-			bn_check(BN_add_word(n->number, v));
+		bn_check(BN_add_word(n->number, v));
 	}
 	if (base != 10) {
 		scale_number(n->number, n->scale);

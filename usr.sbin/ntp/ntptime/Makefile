@@ -1,13 +1,16 @@
-# $FreeBSD: release/10.0.0/usr.sbin/ntp/ntptime/Makefile 140941 2005-01-28 16:08:11Z ru $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../contrib/ntp/util
+.PATH: ${SRCTOP}/contrib/ntp/util
 
 PROG=	ntptime
-NO_MAN=
+MAN=
 
-CFLAGS+= -I${.CURDIR}/../../../contrib/ntp/include -I${.CURDIR}/../
+CFLAGS+= -I${SRCTOP}/contrib/ntp/include \
+	-I${SRCTOP}/contrib/ntp/lib/isc/include/ \
+	-I${SRCTOP}/contrib/ntp/lib/isc/unix/include/ \
+	-I${SRCTOP}/contrib/ntp/lib/isc/pthreads/include \
+	-I${.CURDIR:H}
 
-DPADD=	${LIBNTP}
-LDADD=	${LIBNTP}
+LIBADD=	m ntp pthread
 
 .include <bsd.prog.mk>

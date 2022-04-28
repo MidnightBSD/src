@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/hdspe/Makefile 232337 2012-03-01 13:10:18Z mav $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_hdspe
 SRCS=	device_if.h bus_if.h pci_if.h

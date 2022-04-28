@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/RSPRO.hints 242718 2012-11-07 22:46:30Z ray $
+# $FreeBSD$
 
 # arge0 mdio bus
 hint.argemdio.0.at="nexus0"

@@ -35,20 +35,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/pf/pf_lb.c 255143 2013-09-02 10:14:25Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pf.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/vnet.h>
 #include <net/pfvar.h>
 #include <net/if_pflog.h>
-#include <net/pf_mtag.h>
 
 #define DPFPRINTF(n, x)	if (V_pf_status.debug >= (n)) printf x
 
@@ -215,7 +217,6 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 {
 	struct pf_state_key_cmp	key;
 	struct pf_addr		init_addr;
-	uint16_t		cut;
 
 	bzero(&init_addr, sizeof(init_addr));
 	if (pf_map_addr(af, r, saddr, naddr, &init_addr, sn))
@@ -257,7 +258,8 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 				return (0);
 			}
 		} else {
-			uint16_t tmp;
+			uint32_t tmp;
+			uint16_t cut;
 
 			if (low > high) {
 				tmp = low;
@@ -265,9 +267,9 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 				high = tmp;
 			}
 			/* low < high */
-			cut = htonl(arc4random()) % (1 + high - low) + low;
+			cut = arc4random() % (1 + high - low) + low;
 			/* low <= cut <= high */
-			for (tmp = cut; tmp <= high; ++(tmp)) {
+			for (tmp = cut; tmp <= high && tmp <= 0xffff; ++tmp) {
 				key.port[1] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
 				    NULL) {
@@ -275,7 +277,8 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_rule *r,
 					return (0);
 				}
 			}
-			for (tmp = cut - 1; tmp >= low; --(tmp)) {
+			tmp = cut;
+			for (tmp -= 1; tmp >= low && tmp <= 0xffff; --tmp) {
 				key.port[1] = htons(tmp);
 				if (pf_find_state_all(&key, PF_IN, NULL) ==
 				    NULL) {
@@ -308,22 +311,36 @@ pf_map_addr(sa_family_t af, struct pf_rule *r, struct pf_addr *saddr,
 	struct pf_pool		*rpool = &r->rpool;
 	struct pf_addr		*raddr = NULL, *rmask = NULL;
 
+	/* Try to find a src_node if none was given and this
+	   is a sticky-address rule. */
 	if (*sn == NULL && r->rpool.opts & PF_POOL_STICKYADDR &&
-	    (r->rpool.opts & PF_POOL_TYPEMASK) != PF_POOL_NONE) {
+	    (r->rpool.opts & PF_POOL_TYPEMASK) != PF_POOL_NONE)
 		*sn = pf_find_src_node(saddr, r, af, 0);
-		if (*sn != NULL && !PF_AZERO(&(*sn)->raddr, af)) {
-			PF_ACPY(naddr, &(*sn)->raddr, af);
-			if (V_pf_status.debug >= PF_DEBUG_MISC) {
-				printf("pf_map_addr: src tracking maps ");
-				pf_print_host(saddr, 0, af);
-				printf(" to ");
-				pf_print_host(naddr, 0, af);
-				printf("\n");
-			}
-			return (0);
+
+	/* If a src_node was found or explicitly given and it has a non-zero
+	   route address, use this address. A zeroed address is found if the
+	   src node was created just a moment ago in pf_create_state and it
+	   needs to be filled in with routing decision calculated here. */
+	if (*sn != NULL && !PF_AZERO(&(*sn)->raddr, af)) {
+		/* If the supplied address is the same as the current one we've
+		 * been asked before, so tell the caller that there's no other
+		 * address to be had. */
+		if (PF_AEQ(naddr, &(*sn)->raddr, af))
+			return (1);
+
+		PF_ACPY(naddr, &(*sn)->raddr, af);
+		if (V_pf_status.debug >= PF_DEBUG_MISC) {
+			printf("pf_map_addr: src tracking maps ");
+			pf_print_host(saddr, 0, af);
+			printf(" to ");
+			pf_print_host(naddr, 0, af);
+			printf("\n");
 		}
+		return (0);
 	}
 
+	/* Find the route using chosen algorithm. Store the found route
+	   in src_node if it was given or found. */
 	if (rpool->cur->addr.type == PF_ADDR_NOROUTE)
 		return (1);
 	if (rpool->cur->addr.type == PF_ADDR_DYNIFTL) {
@@ -543,7 +560,7 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 		return (NULL);
 	*nkp = pf_state_key_clone(*skp);
 	if (*nkp == NULL) {
-		uma_zfree(V_pf_state_key_z, skp);
+		uma_zfree(V_pf_state_key_z, *skp);
 		*skp = NULL;
 		return (NULL);
 	}
@@ -663,6 +680,7 @@ notrans:
 	uma_zfree(V_pf_state_key_z, *nkp);
 	uma_zfree(V_pf_state_key_z, *skp);
 	*skp = *nkp = NULL;
+	*sn = NULL;
 
 	return (NULL);
 }

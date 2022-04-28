@@ -15,7 +15,7 @@ you didn't get a copy, you may request one from <license@inner.net>.
                 records. Set read flag.
 	Created by cmetz for OPIE 2.3.
 
-$FreeBSD: release/10.0.0/contrib/opie/libopie/readrec.c 208586 2010-05-27 03:15:04Z cperciva $
+$FreeBSD$
 */
 #include "opie_cfg.h"
 

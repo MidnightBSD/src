@@ -1,6 +1,8 @@
 /*	$NetBSD: getent.c,v 1.7 2005/08/24 14:31:02 ginsbach Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/getent/getent.c 250942 2013-05-23 20:52:30Z ghelmer $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/socket.h>
 #include <sys/param.h>
@@ -84,13 +86,13 @@ static struct getentdb {
 	{	"ethers",	ethers,		},
 	{	"group",	group,		},
 	{	"hosts",	hosts,		},
+	{	"netgroup",	netgroup,	},
 	{	"networks",	networks,	},
 	{	"passwd",	passwd,		},
 	{	"protocols",	protocols,	},
 	{	"rpc",		rpc,		},
 	{	"services",	services,	},
 	{	"shells",	shells,		},
-	{	"netgroup",	netgroup,	},
 	{	"utmpx",	utmpx,		},
 
 	{	NULL,		NULL,		},

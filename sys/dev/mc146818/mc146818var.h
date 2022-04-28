@@ -23,7 +23,7 @@
  *
  *	$NetBSD: mc146818var.h,v 1.7 2008/05/14 13:29:29 tsutsui Exp $
  *
- * $FreeBSD: release/10.0.0/sys/dev/mc146818/mc146818var.h 201009 2009-12-25 22:58:43Z marius $
+ * $FreeBSD$
  */
 
 struct mc146818_softc {

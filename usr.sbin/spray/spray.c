@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1993 Winning Strategies, Inc.
  * All rights reserved.
  *
@@ -30,7 +32,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/spray/spray.c 227261 2011-11-06 19:02:49Z ed $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <err.h>
@@ -143,7 +145,7 @@ main(int argc, char *argv[])
 
 
 	/* Spray server with packets */
-	printf ("sending %u packets of lnth %d to %s ...", count, length,
+	printf ("sending %u packets of length %d to %s ...", count, length,
 	    *argv);
 	fflush (stdout);
 

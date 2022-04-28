@@ -1,5 +1,3 @@
-/* $Id: port-linux.c,v 1.18 2013/06/01 22:07:32 dtucker Exp $ */
-
 /*
  * Copyright (c) 2005 Daniel Walsh <dwalsh@redhat.com>
  * Copyright (c) 2006 Damien Miller <djm@openbsd.org>
@@ -278,7 +276,7 @@ oom_adjust_setup(void)
 					verbose("error writing %s: %s",
 					   oom_adj_path, strerror(errno));
 				else
-					verbose("Set %s from %d to %d",
+					debug("Set %s from %d to %d",
 					   oom_adj_path, oom_adj_save, value);
 			}
 			fclose(fp);
@@ -302,7 +300,7 @@ oom_adjust_restore(void)
 	if (fprintf(fp, "%d\n", oom_adj_save) <= 0)
 		verbose("error writing %s: %s", oom_adj_path, strerror(errno));
 	else
-		verbose("Set %s to %d", oom_adj_path, oom_adj_save);
+		debug("Set %s to %d", oom_adj_path, oom_adj_save);
 
 	fclose(fp);
 	return;

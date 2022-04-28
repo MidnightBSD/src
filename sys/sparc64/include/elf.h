@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/elf.h 237430 2012-06-22 06:38:31Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_ELF_H_
@@ -92,8 +92,11 @@ __ElfType(Auxinfo);
 #define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
 #define	AT_TIMEKEEP	22	/* Pointer to timehands. */
 #define	AT_STACKPROT	23	/* Initial stack protection. */
+#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
+#define	AT_HWCAP	25	/* CPU feature flags. */
+#define	AT_HWCAP2	26	/* CPU feature flags 2. */
 
-#define	AT_COUNT	24	/* Count of defined aux entry types. */
+#define	AT_COUNT	27	/* Count of defined aux entry types. */
 
 /* Define "machine" characteristics */
 #if __ELF_WORD_SIZE == 32

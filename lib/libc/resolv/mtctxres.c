@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/resolv/mtctxres.c 165258 2006-12-15 20:59:55Z ume $");
+__FBSDID("$FreeBSD$");
 
 #include <port_before.h>
 #ifdef DO_PTHREADS
@@ -75,7 +75,7 @@ __res_init_ctx(void) {
 		return (0);
 	}
 
-	if ((mt = malloc(sizeof (mtctxres_t))) == 0) {
+	if ((mt = malloc(sizeof(mtctxres_t))) == NULL) {
 		errno = ENOMEM;
 		return (-1);
 	}
@@ -94,10 +94,7 @@ __res_init_ctx(void) {
 static void
 __res_destroy_ctx(void *value) {
 
-	mtctxres_t	*mt = (mtctxres_t *)value;
-
-	if (mt != 0)
-		free(mt);
+	free(value);
 }
 #endif
 
@@ -130,9 +127,9 @@ ___mtctxres(void) {
 	 * that fails return a global context.
 	 */
 	if (mt_key_initialized) {
-		if (((mt = pthread_getspecific(key)) != 0) ||
+		if (((mt = pthread_getspecific(key)) != NULL) ||
 		    (__res_init_ctx() == 0 &&
-		     (mt = pthread_getspecific(key)) != 0)) {
+		     (mt = pthread_getspecific(key)) != NULL)) {
 			return (mt);
 		}
 	}

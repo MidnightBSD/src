@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	$KAME: ip6_mroute.h,v 1.19 2001/06/14 06:12:55 suz Exp $
- * $FreeBSD: release/10.0.0/sys/netinet6/ip6_mroute.h 253081 2013-07-09 09:32:06Z ae $
+ * $FreeBSD$
  */
 
 /*	BSDI ip_mroute.h,v 2.5 1996/10/11 16:01:48 pjd Exp	*/
@@ -145,11 +145,6 @@ struct mrt6stat {
 struct omrt6msg {
 	u_long	    unused1;
 	u_char	    im6_msgtype;		/* what type of message	    */
-#if 0
-#define MRT6MSG_NOCACHE	1
-#define MRT6MSG_WRONGMIF	2
-#define MRT6MSG_WHOLEPKT	3		/* used for user level encap*/
-#endif
 	u_char	    im6_mbz;			/* must be zero		    */
 	u_char	    im6_mif;			/* mif rec'd on		    */
 	u_char	    unused2;
@@ -197,6 +192,20 @@ struct sioc_mif_req6 {
 	u_quad_t ocount;	/* Output packet count on mif		*/
 	u_quad_t ibytes;	/* Input byte count on mif		*/
 	u_quad_t obytes;	/* Output byte count on mif		*/
+};
+
+/*
+ * Structure to export 'struct mif6' to userland via sysctl.
+ */
+struct mif6_sctl {
+	u_char		m6_flags;	/* MIFF_ flags defined above         */
+	u_int		m6_rate_limit;	/* max rate			     */
+	struct in6_addr	m6_lcl_addr;	/* local interface address           */
+	uint32_t	m6_ifp;		/* interface index	             */
+	u_quad_t	m6_pkt_in;	/* # pkts in on interface            */
+	u_quad_t	m6_pkt_out;	/* # pkts out on interface           */
+	u_quad_t	m6_bytes_in;	/* # bytes in on interface	     */
+	u_quad_t	m6_bytes_out;	/* # bytes out on interface	     */
 };
 
 #if defined(_KERNEL) || defined(KERNEL)

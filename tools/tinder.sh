@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/tinder.sh 228066 2011-11-28 14:03:36Z fjoe $
+# $FreeBSD$
 #
 
 #
@@ -58,4 +58,4 @@ for i in "$@"; do
 		;;
 	esac
 done
-make tinderbox UNIVERSE_TARGET="_cleanobj _obj _depend everything" $MAKE_ARGS SUBDIR_OVERRIDE="$SUBDIR"
+make tinderbox UNIVERSE_TARGET="_cleanobj _obj everything" $MAKE_ARGS SUBDIR_OVERRIDE="$SUBDIR"

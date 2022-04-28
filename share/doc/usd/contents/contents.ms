@@ -9,11 +9,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -30,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)00.contents	8.2 (Berkeley) 4/20/94
-.\" $FreeBSD: release/10.0.0/share/doc/usd/contents/contents.ms 69341 2000-11-29 08:36:36Z ru $
+.\" $FreeBSD$
 .\"
 .de ND
 .KE
@@ -39,6 +35,7 @@
 ..
 .OH '''USD Contents'
 .EH 'USD Contents'''
+.ND
 .TL
 UNIX User's Supplementary Documents (USD)
 .if !r.U .nr .U 0

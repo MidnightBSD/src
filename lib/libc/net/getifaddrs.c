@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/getifaddrs.c 231506 2012-02-11 06:05:40Z bz $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -85,7 +85,7 @@ getifaddrs(struct ifaddrs **pif)
 	size_t needed;
 	char *buf;
 	char *next;
-	struct ifaddrs *cif = 0;
+	struct ifaddrs *cif;
 	char *p, *p0;
 	struct rt_msghdr *rtm;
 	struct if_msghdrl *ifm;
@@ -214,6 +214,7 @@ getifaddrs(struct ifaddrs **pif)
 	ift = ifa;
 
 	idx = 0;
+	cif = NULL;
 	for (next = buf; next < buf + needed; next += rtm->rtm_msglen) {
 		rtm = (struct rt_msghdr *)(void *)next;
 		if (rtm->rtm_version != RTM_VERSION)

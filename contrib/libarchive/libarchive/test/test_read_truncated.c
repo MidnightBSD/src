@@ -23,10 +23,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_truncated.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
-char buff[1000000];
-char buff2[100000];
+static char buff[1000000];
+static char buff2[100000];
 
 DEFINE_TEST(test_read_truncated)
 {

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/ath_ee_9287_print/9287.c 222322 2011-05-26 19:49:32Z adrian $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

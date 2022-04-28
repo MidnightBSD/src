@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)lpf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/filters/lpf.c 242091 2012-10-25 20:16:38Z ed $");
+__FBSDID("$FreeBSD$");
 
 /*
  * 	filter which reads the output of nroff and converts lines

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)systat.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/systat/systat.h 226396 2011-10-15 13:20:36Z ed $
+ * $FreeBSD$
  */
 
 #include <curses.h>
@@ -54,6 +54,7 @@ extern int use_kvm;
 
 #define	CF_INIT		0x1		/* been initialized */
 #define	CF_LOADAV	0x2		/* display w/ load average */
+#define	CF_ZFSARC	0x4		/* display w/ ZFS cache usage */
 
 #define	TCP	0x1
 #define	UDP	0x2

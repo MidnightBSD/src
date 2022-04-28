@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)strings.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/strings.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Mail -- a mail program
@@ -45,6 +45,8 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/strings.c 216564 2010-12-19 16:2
 
 #include "rcv.h"
 #include "extern.h"
+
+struct strings stringdope[NSPACE];
 
 /*
  * Allocate size more bytes of space and return the address of the

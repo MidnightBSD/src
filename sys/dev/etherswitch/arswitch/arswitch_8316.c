@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/etherswitch/arswitch/arswitch_8316.c 253572 2013-07-23 14:24:22Z loos $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -50,7 +50,7 @@
 #include <dev/iicbus/iicbus.h>
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
-#include <dev/etherswitch/mdio.h>
+#include <dev/mdio/mdio.h>
 
 #include <dev/etherswitch/etherswitch.h>
 
@@ -137,6 +137,7 @@ ar8316_hw_global_setup(struct arswitch_softc *sc)
 	arswitch_writereg(sc->sc_dev, AR8X16_REG_TAG_PRIO, 0xfa50);
 
 	/* Enable ARP frame acknowledge. */
+	/* XXX TODO: aging? */
 	arswitch_modifyreg(sc->sc_dev, AR8X16_REG_AT_CTRL, 0,
 	    AR8X16_AT_CTRL_ARP_EN);
 

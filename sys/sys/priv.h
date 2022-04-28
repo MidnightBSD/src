@@ -26,7 +26,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/priv.h 253915 2013-08-03 13:38:56Z trasz $
+ * $FreeBSD$
  */
 
 /*
@@ -45,8 +45,9 @@
  * loadable kernel module ABI, and should not be changed across minor
  * releases.
  *
- * When adding a new privilege, remember to determine if it's appropriate for
- * use in jail, and update the privilege switch in kern_jail.c as necessary.
+ * When adding a new privilege, remember to determine if it's appropriate
+ * for use in jail, and update the privilege switch in prison_priv_check()
+ * in kern_jail.c as necessary.
  */
 
 /*
@@ -111,6 +112,7 @@
 #define	PRIV_DEBUG_DIFFCRED	80	/* Exempt debugging other users. */
 #define	PRIV_DEBUG_SUGID	81	/* Exempt debugging setuid proc. */
 #define	PRIV_DEBUG_UNPRIV	82	/* Exempt unprivileged debug limit. */
+#define	PRIV_DEBUG_DENIED	83	/* Exempt P2_NOTRACE. */
 
 /*
  * Dtrace privileges.
@@ -132,7 +134,7 @@
 #define	PRIV_JAIL_REMOVE	112	/* Remove a jail. */
 
 /*
- * Kernel environment priveleges.
+ * Kernel environment privileges.
  */
 #define	PRIV_KENV_SET		120	/* Set kernel env. variables. */
 #define	PRIV_KENV_UNSET		121	/* Unset kernel env. variables. */
@@ -264,7 +266,7 @@
 #define	PRIV_VFS_GETFH		327	/* Can retrieve file handles. */
 #define	PRIV_VFS_GETQUOTA	328	/* getquota(). */
 #define	PRIV_VFS_LINK		329	/* bsd.hardlink_check_uid */
-#define	PRIV_VFS_MKNOD_BAD	330	/* Can mknod() to mark bad inodes. */
+#define	PRIV_VFS_MKNOD_BAD	330	/* Was: mknod() can mark bad inodes. */
 #define	PRIV_VFS_MKNOD_DEV	331	/* Can mknod() to create dev nodes. */
 #define	PRIV_VFS_MKNOD_WHT	332	/* Can mknod() to create whiteout. */
 #define	PRIV_VFS_MOUNT		333	/* Can mount(). */
@@ -339,6 +341,9 @@
 #define	PRIV_NET_SETIFVNET	417	/* Move interface to vnet. */
 #define	PRIV_NET_SETIFDESCR	418	/* Set interface description. */
 #define	PRIV_NET_SETIFFIB	419	/* Set interface fib. */
+#define	PRIV_NET_VXLAN		420	/* Administer vxlan. */
+#define	PRIV_NET_SETLANPCP	421	/* Set LAN priority. */
+#define	PRIV_NET_SETVLANPCP	PRIV_NET_SETLANPCP /* Alias Set VLAN priority */
 
 /*
  * 802.11-related privileges.
@@ -347,9 +352,9 @@
 #define	PRIV_NET80211_MANAGE	441	/* Administer 802.11. */
 
 /*
- * AppleTalk privileges.
+ * Placeholder for AppleTalk privileges, not supported anymore.
  */
-#define	PRIV_NETATALK_RESERVEDPORT	450	/* Bind low port number. */
+#define	_PRIV_NETATALK_RESERVEDPORT	450	/* Bind low port number. */
 
 /*
  * ATM privileges.
@@ -390,12 +395,13 @@
 #define	PRIV_NETINET_REUSEPORT	504	/* Allow [rapid] port/address reuse. */
 #define	PRIV_NETINET_SETHDROPTS	505	/* Set certain IPv4/6 header options. */
 #define	PRIV_NETINET_BINDANY	506	/* Allow bind to any address. */
+#define	PRIV_NETINET_HASHKEY	507	/* Get and set hash keys for IPv4/6. */
 
 /*
- * IPX/SPX privileges.
+ * Placeholders for IPX/SPX privileges, not supported any more.
  */
-#define	PRIV_NETIPX_RESERVEDPORT	520	/* Bind low port number. */
-#define	PRIV_NETIPX_RAW		521	/* Open netipx raw socket. */
+#define	_PRIV_NETIPX_RESERVEDPORT	520	/* Bind low port number. */
+#define	_PRIV_NETIPX_RAW		521	/* Open netipx raw socket. */
 
 /*
  * NCP privileges.

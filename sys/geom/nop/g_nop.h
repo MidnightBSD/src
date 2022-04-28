@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/nop/g_nop.h 249440 2013-04-13 19:02:58Z jmg $
+ * $FreeBSD$
  */
 
 #ifndef	_G_NOP_H_
@@ -32,6 +32,11 @@
 #define	G_NOP_CLASS_NAME	"NOP"
 #define	G_NOP_VERSION		4
 #define	G_NOP_SUFFIX		".nop"
+/*
+ * Special flag to instruct gnop to passthrough the underlying provider's
+ * physical path
+ */
+#define G_NOP_PHYSPATH_PASSTHROUGH "\255"
 
 #ifdef _KERNEL
 #define	G_NOP_DEBUG(lvl, ...)	do {					\
@@ -59,12 +64,22 @@ struct g_nop_softc {
 	int		sc_error;
 	off_t		sc_offset;
 	off_t		sc_explicitsize;
+	off_t		sc_stripesize;
+	off_t		sc_stripeoffset;
 	u_int		sc_rfailprob;
 	u_int		sc_wfailprob;
 	uintmax_t	sc_reads;
 	uintmax_t	sc_writes;
+	uintmax_t	sc_deletes;
+	uintmax_t	sc_getattrs;
+	uintmax_t	sc_flushes;
+	uintmax_t	sc_cmd0s;
+	uintmax_t	sc_cmd1s;
+	uintmax_t	sc_cmd2s;
 	uintmax_t	sc_readbytes;
 	uintmax_t	sc_wrotebytes;
+	char*		sc_physpath;
+	struct mtx	sc_lock;
 };
 #endif	/* _KERNEL */
 

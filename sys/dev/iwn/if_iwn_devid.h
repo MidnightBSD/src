@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/iwn/if_iwn_devid.h 253897 2013-08-02 21:23:28Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__IF_IWN_DEVID_H__
@@ -41,6 +41,20 @@
  * DEVICE ID BLOCK
  * ==========================================================================
 */
+
+/*
+ * --------------------------------------------------------------------------
+ * Device ID for 2x00 series
+ * --------------------------------------------------------------------------
+ */
+#define	IWN_DID_2x00_1		0x0890
+#define	IWN_DID_2x00_2		0x0891
+/* SubDevice ID */
+#define	IWN_SDID_2x00_1		0x4022
+#define	IWN_SDID_2x00_2		0x4222
+#define	IWN_SDID_2x00_3		0x4422
+#define	IWN_SDID_2x00_4		0x4822
+
 /*
  * --------------------------------------------------------------------------
  * Device ID for 2x30 series
@@ -156,6 +170,7 @@
 #define	IWN_SDID_6035_2		0x4260
 #define	IWN_SDID_6035_3		0x4460
 #define	IWN_SDID_6035_4		0x4860
+#define	IWN_SDID_6035_5		0x5260
 /*
  * --------------------------------------------------------------------------
  * Device ID for 1030 and 6030 Series
@@ -211,6 +226,31 @@
 #define	IWN_SDID_100_4		0x1017
 #define	IWN_SDID_100_5		0x1025
 #define	IWN_SDID_100_6		0x1027
+
+/*
+ * --------------------------------------------------------------------------
+ * Device ID for 105 Series
+ * --------------------------------------------------------------------------
+ */
+#define	IWN_DID_105_1		0x0894
+#define	IWN_DID_105_2		0x0895
+/* SubDevice ID */
+#define	IWN_SDID_105_1		0x0022
+#define	IWN_SDID_105_2		0x0222
+#define	IWN_SDID_105_3		0x0422
+#define	IWN_SDID_105_4		0x0822
+
+/*
+ * --------------------------------------------------------------------------
+ * Device ID for 135 Series
+ * --------------------------------------------------------------------------
+ */
+#define	IWN_DID_135_1		0x0892
+#define	IWN_DID_135_2		0x0893
+/* SubDevice ID */
+#define	IWN_SDID_135_1		0x0062
+#define	IWN_SDID_135_2		0x0262
+#define	IWN_SDID_135_3		0x0462
 
 /*
  * --------------------------------------------------------------------------

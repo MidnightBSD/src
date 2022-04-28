@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_busdma.h 246122 2013-01-30 15:26:04Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -62,7 +62,7 @@ typedef void (usb_dma_callback_t)(struct usb_dma_parent_tag *udpt);
  */
 struct usb_page {
 #if USB_HAVE_BUSDMA
-	bus_size_t physaddr;
+	bus_addr_t physaddr;
 	void   *buffer;			/* non Kernel Virtual Address */
 #endif
 };
@@ -75,7 +75,7 @@ struct usb_page {
 struct usb_page_search {
 	void   *buffer;
 #if USB_HAVE_BUSDMA
-	bus_size_t physaddr;
+	bus_addr_t physaddr;
 #endif
 	usb_size_t length;
 };
@@ -159,5 +159,8 @@ void	usb_pc_cpu_flush(struct usb_page_cache *pc);
 void	usb_pc_cpu_invalidate(struct usb_page_cache *pc);
 void	usb_pc_dmamap_destroy(struct usb_page_cache *pc);
 void	usb_pc_free_mem(struct usb_page_cache *pc);
+uint8_t	usb_pc_buffer_is_aligned(struct usb_page_cache *pc,
+	    usb_frlength_t offset, usb_frlength_t len,
+	    usb_frlength_t mask);
 
 #endif					/* _USB_BUSDMA_H_ */

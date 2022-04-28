@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdtime/timelocal.c 227753 2011-11-20 14:45:42Z theraven $");
+__FBSDID("$FreeBSD$");
 
 #include <stddef.h>
 
@@ -46,7 +46,7 @@ struct xlocale_time {
 
 struct xlocale_time __xlocale_global_time;
 
-#define LCTIME_SIZE (sizeof(struct lc_time_T) / sizeof(char *))
+#define	LCTIME_SIZE (sizeof(struct lc_time_T) / sizeof(char *))
 
 static const struct lc_time_T	_C_time_locale = {
 	{

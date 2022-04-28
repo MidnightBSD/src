@@ -49,7 +49,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/cc/cc_newreno.c 220560 2011-04-12 08:13:18Z lstewart $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -62,10 +62,10 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/cc/cc_newreno.c 220560 2011-04-12
 
 #include <net/vnet.h>
 
-#include <netinet/cc.h>
+#include <netinet/tcp.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_var.h>
-
+#include <netinet/cc/cc.h>
 #include <netinet/cc/cc_module.h>
 
 static void	newreno_ack_received(struct cc_var *ccv, uint16_t type);
@@ -214,6 +214,9 @@ newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 static void
 newreno_post_recovery(struct cc_var *ccv)
 {
+	int pipe;
+	pipe = 0;
+
 	if (IN_FASTRECOVERY(CCV(ccv, t_flags))) {
 		/*
 		 * Fast recovery will conclude after returning from this
@@ -224,10 +227,18 @@ newreno_post_recovery(struct cc_var *ccv)
 		 *
 		 * XXXLAS: Find a way to do this without needing curack
 		 */
-		if (SEQ_GT(ccv->curack + CCV(ccv, snd_ssthresh),
-		    CCV(ccv, snd_max)))
-			CCV(ccv, snd_cwnd) = CCV(ccv, snd_max) -
-			ccv->curack + CCV(ccv, t_maxseg);
+		if (V_tcp_do_rfc6675_pipe)
+			pipe = tcp_compute_pipe(ccv->ccvc.tcp);
+		else
+			pipe = CCV(ccv, snd_max) - ccv->curack;
+
+		if (pipe < CCV(ccv, snd_ssthresh))
+			/*
+			 * Ensure that cwnd does not collapse to 1 MSS under
+			 * adverse conditons. Implements RFC6582
+			 */
+			CCV(ccv, snd_cwnd) = max(pipe, CCV(ccv, t_maxseg)) +
+			    CCV(ccv, t_maxseg);
 		else
 			CCV(ccv, snd_cwnd) = CCV(ccv, snd_ssthresh);
 	}

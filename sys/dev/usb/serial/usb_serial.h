@@ -1,5 +1,5 @@
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$FreeBSD: release/10.0.0/sys/dev/usb/serial/usb_serial.h 250576 2013-05-12 16:43:26Z eadler $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -43,13 +43,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD
- *        Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -71,6 +64,7 @@
 #include <sys/serial.h>
 #include <sys/fcntl.h>
 #include <sys/sysctl.h>
+#include <sys/timepps.h>
 
 /* Module interface related macros */
 #define	UCOM_MODVER	1
@@ -162,6 +156,8 @@ struct ucom_softc {
 	struct ucom_cfg_task	sc_line_state_task[2];
 	struct ucom_cfg_task	sc_status_task[2];
 	struct ucom_param_task	sc_param_task[2];
+	/* pulse capturing support, PPS */
+	struct pps_state	sc_pps;
 	/* Used to set "UCOM_FLAG_GP_DATA" flag: */
 	struct usb_proc_msg	*sc_last_start_xfer;
 	const struct ucom_callback *sc_callback;
@@ -184,6 +180,7 @@ struct ucom_softc {
 #define	UCOM_FLAG_WAIT_REFS   0x0100	/* set if we must wait for refs */
 #define	UCOM_FLAG_FREE_UNIT   0x0200	/* set if we must free the unit */
 #define	UCOM_FLAG_INWAKEUP    0x0400	/* set if we are in the tsw_inwakeup callback */
+#define	UCOM_FLAG_LSRTXIDLE   0x0800	/* set if sc_lsr bits ULSR_TSRE+TXRDY work */
 	uint8_t	sc_lsr;
 	uint8_t	sc_msr;
 	uint8_t	sc_mcr;
@@ -202,7 +199,7 @@ struct ucom_softc {
 #define	UCOM_MTX_LOCK(sc) mtx_lock((sc)->sc_mtx)
 #define	UCOM_MTX_UNLOCK(sc) mtx_unlock((sc)->sc_mtx)
 #define	UCOM_UNLOAD_DRAIN(x) \
-SYSUNINIT(var, SI_SUB_KLD - 3, SI_ORDER_ANY, ucom_drain_all, 0)
+SYSUNINIT(var, SI_SUB_KLD - 2, SI_ORDER_ANY, ucom_drain_all, 0)
 
 #define	ucom_cfg_do_request(udev,com,req,ptr,flags,timo) \
     usbd_do_request_proc(udev,&(com)->sc_super->sc_tq,req,ptr,flags,NULL,timo)
@@ -222,4 +219,12 @@ void	ucom_drain(struct ucom_super_softc *);
 void	ucom_drain_all(void *);
 void	ucom_ref(struct ucom_super_softc *);
 int	ucom_unref(struct ucom_super_softc *);
+
+static inline void
+ucom_use_lsr_txbits(struct ucom_softc *sc)
+{
+
+	sc->sc_flag |= UCOM_FLAG_LSRTXIDLE;
+}
+
 #endif					/* _USB_SERIAL_H_ */

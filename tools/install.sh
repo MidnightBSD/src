@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/tools/install.sh 245893 2013-01-24 20:47:37Z brooks $
+# $FreeBSD$
 
 # parse install's options and ignore them completely.
 dirmode=""
@@ -63,7 +63,7 @@ fi
 # the remaining arguments are assumed to be files/dirs only.
 if [ -n "${linkmode}" ]; then
 	if [ "${linkmode}" = "symbolic" ]; then
-		ln -fsh "$@"
+		ln -fsn "$@"
 	else
 		ln -f "$@"
 	fi

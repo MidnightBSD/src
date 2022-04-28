@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,15 +28,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/iscsid/discovery.c 256194 2013-10-09 13:48:08Z trasz $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
 
@@ -62,11 +63,9 @@ text_receive(struct connection *conn)
 	 */
 	if ((bhstr->bhstr_flags & BHSTR_FLAGS_CONTINUE) != 0)
 		log_errx(1, "received Text PDU with unsupported \"C\" flag");
-	if (response->pdu_data_len == 0)
-		log_errx(1, "received Text PDU with empty data segment");
 	if (ntohl(bhstr->bhstr_statsn) != conn->conn_statsn + 1) {
 		log_errx(1, "received Text PDU with wrong StatSN: "
-		    "is %d, should be %d", ntohl(bhstr->bhstr_statsn),
+		    "is %u, should be %u", ntohl(bhstr->bhstr_statsn),
 		    conn->conn_statsn + 1);
 	}
 	conn->conn_statsn = ntohl(bhstr->bhstr_statsn);
@@ -112,7 +111,7 @@ logout_receive(struct connection *conn)
 		    ntohs(bhslr->bhslr_response));
 	if (ntohl(bhslr->bhslr_statsn) != conn->conn_statsn + 1) {
 		log_errx(1, "received Logout PDU with wrong StatSN: "
-		    "is %d, should be %d", ntohl(bhslr->bhslr_statsn),
+		    "is %u, should be %u", ntohl(bhslr->bhslr_statsn),
 		    conn->conn_statsn + 1);
 	}
 	conn->conn_statsn = ntohl(bhslr->bhslr_statsn);
@@ -208,6 +207,18 @@ discovery(struct connection *conn)
 
 	log_debugx("removing temporary discovery session");
 	kernel_remove(conn);
+
+#ifdef ICL_KERNEL_PROXY
+	if (conn->conn_conf.isc_iser == 1) {
+		/*
+		 * If we're going through the proxy, the kernel already
+		 * sent Logout PDU for us and destroyed the session,
+		 * so we can't send anything anymore.
+		 */
+		log_debugx("discovery session done");
+		return;
+	}
+#endif
 
 	log_debugx("discovery done; logging out");
 	request = logout_new_request(conn);

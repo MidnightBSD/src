@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_lookup.c 242569 2012-11-04 14:16:18Z avg $");
+__FBSDID("$FreeBSD$");
  
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -61,55 +61,4 @@ lookupnameat(char *dirname, enum uio_seg seg, enum symfollow follow,
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vn_lock(startvp, ltype | LK_RETRY);
 	return (error);
-}
-
-int
-traverse(vnode_t **cvpp, int lktype)
-{
-	vnode_t *cvp;
-	vnode_t *tvp;
-	vfs_t *vfsp;
-	int error;
-
-	cvp = *cvpp;
-	tvp = NULL;
-
-	/*
-	 * If this vnode is mounted on, then we transparently indirect
-	 * to the vnode which is the root of the mounted file system.
-	 * Before we do this we must check that an unmount is not in
-	 * progress on this vnode.
-	 */
-
-	for (;;) {
-		/*
-		 * Reached the end of the mount chain?
-		 */
-		vfsp = vn_mountedvfs(cvp);
-		if (vfsp == NULL)
-			break;
-		error = vfs_busy(vfsp, 0);
-		/*
-		 * tvp is NULL for *cvpp vnode, which we can't unlock.
-		 */
-		if (tvp != NULL)
-			vput(cvp);
-		else
-			vrele(cvp);
-		if (error)
-			return (error);
-
-		/*
-		 * The read lock must be held across the call to VFS_ROOT() to
-		 * prevent a concurrent unmount from destroying the vfs.
-		 */
-		error = VFS_ROOT(vfsp, lktype, &tvp);
-		vfs_unbusy(vfsp);
-		if (error != 0)
-			return (error);
-		cvp = tvp;
-	}
-
-	*cvpp = cvp;
-	return (0);
 }

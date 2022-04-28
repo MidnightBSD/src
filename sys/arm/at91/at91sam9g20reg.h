@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/arm/at91/at91sam9g20reg.h 238330 2012-07-10 02:14:50Z imp $ */
+/* $FreeBSD$ */
 
 #ifndef AT91SAM9G20REG_H_
 #define AT91SAM9G20REG_H_
@@ -165,7 +165,7 @@
  * 8: USART 2
  * 9: MMC Interface
  * 10: USB device port
- * 11: Two-wirte interface
+ * 11: Two-wire interface
  * 12: SPI 0
  * 13: SPI 1
  * 14: SSC
@@ -221,6 +221,7 @@
 #define AT91SAM9G20_IRQ_RSTC 	AT91SAM9G20_IRQ_SYSTEM
 #define AT91SAM9G20_IRQ_OHCI 	AT91SAM9G20_IRQ_UHP
 #define AT91SAM9G20_IRQ_NAND 	(-1)
+#define AT91SAM9G20_IRQ_AIC	(-1)
 
 #define AT91SAM9G20_AIC_BASE	0xffff000
 #define AT91SAM9G20_AIC_SIZE	0x200
@@ -252,14 +253,13 @@
  * other * soc's so phyical and vm address
  * mapping are unique. XXX
  */
-#define AT91SAM9G20_OHCI_BASE	  0xdfc00000
-#define AT91SAM9G20_OHCI_PA_BASE  0x00500000
-#define AT91SAM9G20_OHCI_SIZE	  0x00100000
+#define AT91SAM9G20_OHCI_VA_BASE  0xdfc00000
+#define AT91SAM9G20_OHCI_BASE	0x00500000
+#define AT91SAM9G20_OHCI_SIZE	0x00100000
 
-#define AT91SAM9G20_NAND_BASE     0xe0000000
-#define AT91SAM9G20_NAND_PA_BASE  0x40000000
-#define AT91SAM9G20_NAND_SIZE     0x10000000
-
+#define AT91SAM9G20_NAND_VA_BASE 0xe0000000
+#define AT91SAM9G20_NAND_BASE	0x40000000
+#define AT91SAM9G20_NAND_SIZE	0x10000000
 
 /* SDRAMC */
 #define AT91SAM9G20_SDRAMC_BASE	0xfffea00

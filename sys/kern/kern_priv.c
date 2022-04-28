@@ -28,10 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "opt_kdtrace.h"
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_priv.c 252855 2013-07-06 00:10:52Z jamie $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -55,18 +53,21 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_priv.c 252855 2013-07-06 00:10:
  * the consequences.
  */
 static int	suser_enabled = 1;
-SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RW,
+SYSCTL_INT(_security_bsd, OID_AUTO, suser_enabled, CTLFLAG_RWTUN,
     &suser_enabled, 0, "processes with uid 0 have privilege");
-TUNABLE_INT("security.bsd.suser_enabled", &suser_enabled);
 
 static int	unprivileged_mlock = 1;
-SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RW|CTLFLAG_TUN,
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_mlock, CTLFLAG_RWTUN,
     &unprivileged_mlock, 0, "Allow non-root users to call mlock(2)");
-TUNABLE_INT("security.bsd.unprivileged_mlock", &unprivileged_mlock);
+
+static int	unprivileged_read_msgbuf = 1;
+SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_read_msgbuf,
+    CTLFLAG_RW, &unprivileged_read_msgbuf, 0,
+    "Unprivileged processes may read the kernel message buffer");
 
 SDT_PROVIDER_DEFINE(priv);
-SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv_ok, priv-ok, "int");
-SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv_err, priv-err, "int");
+SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv__ok, "int");
+SDT_PROBE_DEFINE1(priv, kernel, priv_check, priv__err, "int");
 
 /*
  * Check a credential for privilege.  Lots of good reasons to deny privilege;
@@ -106,6 +107,17 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 		switch (priv) {
 		case PRIV_VM_MLOCK:
 		case PRIV_VM_MUNLOCK:
+			error = 0;
+			goto out;
+		}
+	}
+
+	if (unprivileged_read_msgbuf) {
+		/*
+		 * Allow an unprivileged user to read the kernel message
+		 * buffer.
+		 */
+		if (priv == PRIV_MSGBUF) {
 			error = 0;
 			goto out;
 		}
@@ -169,9 +181,9 @@ priv_check_cred(struct ucred *cred, int priv, int flags)
 	error = EPERM;
 out:
 	if (error)
-		SDT_PROBE1(priv, kernel, priv_check, priv_err, priv);
+		SDT_PROBE1(priv, kernel, priv_check, priv__err, priv);
 	else
-		SDT_PROBE1(priv, kernel, priv_check, priv_ok, priv);
+		SDT_PROBE1(priv, kernel, priv_check, priv__ok, priv);
 	return (error);
 }
 

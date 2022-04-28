@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/g_audio/Makefile 253544 2013-07-22 13:39:33Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/usb/gadget
+.PATH: ${SRCTOP}/sys/dev/usb/gadget
 
 KMOD=	g_audio
 

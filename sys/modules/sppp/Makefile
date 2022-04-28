@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/sys/modules/sppp/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../net
+.PATH: ${SRCTOP}/sys/net
 
 KMOD=	sppp
 SRCS=	if_spppfr.c if_spppsubr.c slcompress.c
-SRCS+=	opt_inet.h opt_inet6.h opt_ipx.h
+SRCS+=	opt_inet.h opt_inet6.h
 
 EXPORT_SYMS=	sppp_attach	\
 		sppp_detach	\
@@ -14,16 +14,5 @@ EXPORT_SYMS=	sppp_attach	\
 		sppp_pick	\
 		sppp_isempty	\
 		sppp_flush
-
-.if !defined(KERNBUILDDIR)
-opt_inet.h:
-	echo "#define INET 1" > ${.TARGET}
-
-opt_inet6.h:
-	echo "#define INET6 1" > ${.TARGET}
-
-opt_ipx.h:
-	echo "#define IPX 1" > ${.TARGET}
-.endif
 
 .include <bsd.kmod.mk>

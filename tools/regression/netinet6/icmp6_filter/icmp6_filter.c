@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/netinet6/icmp6_filter/icmp6_filter.c 180967 2008-07-29 18:38:37Z rwatson $
+ * $FreeBSD$
  */
 
 /*

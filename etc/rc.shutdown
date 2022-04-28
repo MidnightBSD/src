@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/etc/rc.shutdown 250804 2013-05-19 04:10:34Z jamie $
+# $FreeBSD$
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,
@@ -45,7 +45,7 @@ export HOME PATH
 
 . /etc/rc.subr
 
-load_rc_config 'XXX'
+load_rc_config
 
 # reverse_list list
 #	print the list in reverse order

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_xscale.h 200928 2009-12-23 23:16:54Z rpaulo $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_HWPMC_XSCALE_H_

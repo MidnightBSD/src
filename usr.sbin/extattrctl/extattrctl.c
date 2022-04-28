@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999-2002 Robert N. M. Watson
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/extattrctl/extattrctl.c 216292 2010-12-08 10:27:07Z kevlo $
+ * $FreeBSD$
  */
 /*
  * Developed by the TrustedBSD Project.

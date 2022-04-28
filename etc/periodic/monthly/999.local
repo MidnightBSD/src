@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $FreeBSD: release/10.0.0/etc/periodic/monthly/999.local 77592 2001-06-01 16:40:57Z dougb $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.
@@ -17,7 +17,12 @@ do
     echo ''
     case "$script" in
 	/*)
-	    if [ -f "$script" ]
+	    if [ -x "$script" ]
+	    then
+		echo "Running $script:"
+
+		$script || rc=3
+	    elif [ -f "$script" ]
 	    then
 		echo "Running $script:"
 

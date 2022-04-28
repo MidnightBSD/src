@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/savecore 254992 2013-08-28 15:12:15Z gavin $
+# $FreeBSD$
 #
 
 # PROVIDE: savecore
@@ -10,6 +10,8 @@
 . /etc/rc.subr
 
 name="savecore"
+rcvar="savecore_enable"
+desc="Save a core dump of the operating system"
 start_cmd="savecore_start"
 start_precmd="savecore_prestart"
 stop_cmd=":"

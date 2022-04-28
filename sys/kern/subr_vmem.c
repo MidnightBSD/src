@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_vmem.c 254558 2013-08-20 11:06:56Z pho $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
 
@@ -70,7 +70,10 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/subr_vmem.c 254558 2013-08-20 11:06:
 #include <vm/vm_param.h>
 #include <vm/vm_pageout.h>
 
-#define	VMEM_MAXORDER		(sizeof(vmem_size_t) * NBBY)
+#define	VMEM_OPTORDER		5
+#define	VMEM_OPTVALUE		(1 << VMEM_OPTORDER)
+#define	VMEM_MAXORDER						\
+    (VMEM_OPTVALUE - 1 + sizeof(vmem_size_t) * NBBY - VMEM_OPTORDER)
 
 #define	VMEM_HASHSIZE_MIN	16
 #define	VMEM_HASHSIZE_MAX	131072
@@ -169,7 +172,7 @@ struct vmem_btag {
 
 #if defined(DIAGNOSTIC)
 static int enable_vmem_check = 1;
-SYSCTL_INT(_debug, OID_AUTO, vmem_check, CTLFLAG_RW,
+SYSCTL_INT(_debug, OID_AUTO, vmem_check, CTLFLAG_RWTUN,
     &enable_vmem_check, 0, "Enable vmem check");
 static void vmem_check(vmem_t *);
 #endif
@@ -178,7 +181,7 @@ static struct callout	vmem_periodic_ch;
 static int		vmem_periodic_interval;
 static struct task	vmem_periodic_wk;
 
-static struct mtx_padalign vmem_list_lock;
+static struct mtx_padalign __exclusive_cache_line vmem_list_lock;
 static LIST_HEAD(, vmem) vmem_list = LIST_HEAD_INITIALIZER(vmem_list);
 
 /* ---- misc */
@@ -200,8 +203,10 @@ static LIST_HEAD(, vmem) vmem_list = LIST_HEAD_INITIALIZER(vmem_list);
 #define	VMEM_CROSS_P(addr1, addr2, boundary) \
 	((((addr1) ^ (addr2)) & -(boundary)) != 0)
 
-#define	ORDER2SIZE(order)	((vmem_size_t)1 << (order))
-#define	SIZE2ORDER(size)	((int)flsl(size) - 1)
+#define	ORDER2SIZE(order)	((order) < VMEM_OPTVALUE ? ((order) + 1) : \
+    (vmem_size_t)1 << ((order) - (VMEM_OPTVALUE - VMEM_OPTORDER - 1)))
+#define	SIZE2ORDER(size)	((size) <= VMEM_OPTVALUE ? ((size) - 1) : \
+    (flsl(size) + (VMEM_OPTVALUE - VMEM_OPTORDER - 2)))
 
 /*
  * Maximum number of boundary tags that may be required to satisfy an
@@ -334,11 +339,14 @@ bt_free(vmem_t *vm, bt_t *bt)
 
 /*
  * freelist[0] ... [1, 1]
- * freelist[1] ... [2, 3]
- * freelist[2] ... [4, 7]
- * freelist[3] ... [8, 15]
+ * freelist[1] ... [2, 2]
  *  :
- * freelist[n] ... [(1 << n), (1 << (n + 1)) - 1]
+ * freelist[29] ... [30, 30]
+ * freelist[30] ... [31, 31]
+ * freelist[31] ... [32, 63]
+ * freelist[33] ... [64, 127]
+ *  :
+ * freelist[n] ... [(1 << (n - 26)), (1 << (n - 25)) - 1]
  *  :
  */
 
@@ -494,7 +502,8 @@ qc_import(void *arg, void **store, int cnt, int flags)
 	int i;
 
 	qc = arg;
-	flags |= M_BESTFIT;
+	if ((flags & VMEM_FITMASK) == 0)
+		flags |= M_BESTFIT;
 	for (i = 0; i < cnt; i++) {
 		if (vmem_xalloc(qc->qc_vmem, qc->qc_size, 0, 0, 0,
 		    VMEM_ADDR_MIN, VMEM_ADDR_MAX, flags, &addr) != 0)
@@ -571,7 +580,7 @@ qc_drain(vmem_t *vm)
 
 #ifndef UMA_MD_SMALL_ALLOC
 
-static struct mtx_padalign vmem_bt_lock;
+static struct mtx_padalign __exclusive_cache_line vmem_bt_lock;
 
 /*
  * vmem_bt_alloc:  Allocate a new page of boundary tags.
@@ -600,7 +609,7 @@ static struct mtx_padalign vmem_bt_lock;
  * we are really out of KVA.
  */
 static void *
-vmem_bt_alloc(uma_zone_t zone, int bytes, uint8_t *pflag, int wait)
+vmem_bt_alloc(uma_zone_t zone, vm_size_t bytes, uint8_t *pflag, int wait)
 {
 	vmem_addr_t addr;
 
@@ -738,6 +747,12 @@ vmem_periodic(void *unused, int pending)
 		/* Grow in powers of two.  Shrink less aggressively. */
 		if (desired >= current * 2 || desired * 4 <= current)
 			vmem_rehash(vm, desired);
+
+		/*
+		 * Periodically wake up threads waiting for resources,
+		 * so they could ask for reclamation again.
+		 */
+		VMEM_CONDVAR_BROADCAST(vm);
 	}
 	mtx_unlock(&vmem_list_lock);
 
@@ -751,7 +766,7 @@ vmem_start_callout(void *unused)
 
 	TASK_INIT(&vmem_periodic_wk, 0, vmem_periodic, NULL);
 	vmem_periodic_interval = hz * 10;
-	callout_init(&vmem_periodic_ch, CALLOUT_MPSAFE);
+	callout_init(&vmem_periodic_ch, 1);
 	callout_reset(&vmem_periodic_ch, vmem_periodic_interval,
 	    vmem_periodic_kick, NULL);
 }
@@ -979,6 +994,7 @@ vmem_init(vmem_t *vm, const char *name, vmem_addr_t base, vmem_size_t size,
 	int i;
 
 	MPASS(quantum > 0);
+	MPASS((quantum & (quantum - 1)) == 0);
 
 	bzero(vm, sizeof(*vm));
 
@@ -988,8 +1004,7 @@ vmem_init(vmem_t *vm, const char *name, vmem_addr_t base, vmem_size_t size,
 	LIST_INIT(&vm->vm_freetags);
 	strlcpy(vm->vm_name, name, sizeof(vm->vm_name));
 	vm->vm_quantum_mask = quantum - 1;
-	vm->vm_quantum_shift = SIZE2ORDER(quantum);
-	MPASS(ORDER2SIZE(vm->vm_quantum_shift) == quantum);
+	vm->vm_quantum_shift = flsl(quantum) - 1;
 	vm->vm_nbusytag = 0;
 	vm->vm_size = 0;
 	vm->vm_inuse = 0;
@@ -1031,10 +1046,8 @@ vmem_create(const char *name, vmem_addr_t base, vmem_size_t size,
 	if (vm == NULL)
 		return (NULL);
 	if (vmem_init(vm, name, base, size, quantum, qcache_max,
-	    flags) == NULL) {
-		free(vm, M_VMEM);
+	    flags) == NULL)
 		return (NULL);
-	}
 	return (vm);
 }
 
@@ -1305,6 +1318,7 @@ vmem_add(vmem_t *vm, vmem_addr_t addr, vmem_size_t size, int flags)
 vmem_size_t
 vmem_size(vmem_t *vm, int typemask)
 {
+	int i;
 
 	switch (typemask) {
 	case VMEM_ALLOC:
@@ -1313,6 +1327,17 @@ vmem_size(vmem_t *vm, int typemask)
 		return vm->vm_size - vm->vm_inuse;
 	case VMEM_FREE|VMEM_ALLOC:
 		return vm->vm_size;
+	case VMEM_MAXFREE:
+		VMEM_LOCK(vm);
+		for (i = VMEM_MAXORDER - 1; i >= 0; i--) {
+			if (LIST_EMPTY(&vm->vm_freelist[i]))
+				continue;
+			VMEM_UNLOCK(vm);
+			return ((vmem_size_t)ORDER2SIZE(i) <<
+			    vm->vm_quantum_shift);
+		}
+		VMEM_UNLOCK(vm);
+		return (0);
 	default:
 		panic("vmem_size");
 	}
@@ -1381,6 +1406,8 @@ vmem_dump(const vmem_t *vm , int (*pr)(const char *, ...) __printflike(1, 2))
 #endif /* defined(DDB) || defined(DIAGNOSTIC) */
 
 #if defined(DDB)
+#include <ddb/ddb.h>
+
 static bt_t *
 vmem_whatis_lookup(vmem_t *vm, vmem_addr_t addr)
 {
@@ -1433,6 +1460,78 @@ vmem_print(vmem_addr_t addr, const char *modif, int (*pr)(const char *, ...))
 	const vmem_t *vm = (const void *)addr;
 
 	vmem_dump(vm, pr);
+}
+
+DB_SHOW_COMMAND(vmemdump, vmemdump)
+{
+
+	if (!have_addr) {
+		db_printf("usage: show vmemdump <addr>\n");
+		return;
+	}
+
+	vmem_dump((const vmem_t *)addr, db_printf);
+}
+
+DB_SHOW_ALL_COMMAND(vmemdump, vmemdumpall)
+{
+	const vmem_t *vm;
+
+	LIST_FOREACH(vm, &vmem_list, vm_alllist)
+		vmem_dump(vm, db_printf);
+}
+
+DB_SHOW_COMMAND(vmem, vmem_summ)
+{
+	const vmem_t *vm = (const void *)addr;
+	const bt_t *bt;
+	size_t ft[VMEM_MAXORDER], ut[VMEM_MAXORDER];
+	size_t fs[VMEM_MAXORDER], us[VMEM_MAXORDER];
+	int ord;
+
+	if (!have_addr) {
+		db_printf("usage: show vmem <addr>\n");
+		return;
+	}
+
+	db_printf("vmem %p '%s'\n", vm, vm->vm_name);
+	db_printf("\tquantum:\t%zu\n", vm->vm_quantum_mask + 1);
+	db_printf("\tsize:\t%zu\n", vm->vm_size);
+	db_printf("\tinuse:\t%zu\n", vm->vm_inuse);
+	db_printf("\tfree:\t%zu\n", vm->vm_size - vm->vm_inuse);
+	db_printf("\tbusy tags:\t%d\n", vm->vm_nbusytag);
+	db_printf("\tfree tags:\t%d\n", vm->vm_nfreetags);
+
+	memset(&ft, 0, sizeof(ft));
+	memset(&ut, 0, sizeof(ut));
+	memset(&fs, 0, sizeof(fs));
+	memset(&us, 0, sizeof(us));
+	TAILQ_FOREACH(bt, &vm->vm_seglist, bt_seglist) {
+		ord = SIZE2ORDER(bt->bt_size >> vm->vm_quantum_shift);
+		if (bt->bt_type == BT_TYPE_BUSY) {
+			ut[ord]++;
+			us[ord] += bt->bt_size;
+		} else if (bt->bt_type == BT_TYPE_FREE) {
+			ft[ord]++;
+			fs[ord] += bt->bt_size;
+		}
+	}
+	db_printf("\t\t\tinuse\tsize\t\tfree\tsize\n");
+	for (ord = 0; ord < VMEM_MAXORDER; ord++) {
+		if (ut[ord] == 0 && ft[ord] == 0)
+			continue;
+		db_printf("\t%-15zu %zu\t%-15zu %zu\t%-16zu\n",
+		    ORDER2SIZE(ord) << vm->vm_quantum_shift,
+		    ut[ord], us[ord], ft[ord], fs[ord]);
+	}
+}
+
+DB_SHOW_ALL_COMMAND(vmem, vmem_summall)
+{
+	const vmem_t *vm;
+
+	LIST_FOREACH(vm, &vmem_list, vm_alllist)
+		vmem_summ((db_expr_t)vm, TRUE, count, modif);
 }
 #endif /* defined(DDB) */
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3disk.c 227309 2011-11-07 15:43:11Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ps3/ps3disk.c 227309 2011-11-07 1
 #include <machine/pio.h>
 #include <machine/bus.h>
 #include <machine/platform.h>
-#include <machine/pmap.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
 #include <sys/rman.h>

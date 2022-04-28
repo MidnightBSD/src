@@ -1,5 +1,8 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_INSTALLLIB 174497 2007-12-09 21:56:21Z dougb $
-Set this if you do not want to install optional libraries.
-For example when creating a
+.\" $FreeBSD$
+Set this if to not install optional libraries.
+For example, when creating a
 .Xr nanobsd 8
 image.
+.Bf -symbolic
+The option does not work for build targets.
+.Ef

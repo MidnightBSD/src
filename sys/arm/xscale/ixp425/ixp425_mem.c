@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/xscale/ixp425/ixp425_mem.c 186352 2008-12-20 03:26:09Z sam $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -76,7 +76,7 @@ ixp425_sdram_size(void)
 		size = sdram_other[MCU_SDR_CONFIG_MCONF(sdr_config)];
 
 	if (size == 0) {
-		printf("** SDR_CONFIG retuns unknown value, using 32M\n");
+		printf("** SDR_CONFIG returns unknown value, using 32M\n");
 		size = 32 * 1024 * 1024;
 	}
 

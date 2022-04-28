@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/led.4 213573 2010-10-08 12:40:16Z uqs $
+.\" $FreeBSD$
 .\"
 .Dd April 24, 2007
 .Dt LED 4
@@ -170,7 +170,7 @@ flashes
 .Pp
 .Dl *_*__**_
 .Bd -literal
-/usr/games/morse -l "Soekris rocks" > /dev/led/error
+/usr/bin/morse -l "Soekris rocks" > /dev/led/error
 .Ed
 .Sh SEE ALSO
 .Xr morse 6
@@ -182,12 +182,9 @@ driver first appeared in
 .Sh AUTHORS
 .An -nosplit
 This software was written by
-.An Poul-Henning Kamp
-.Aq phk@FreeBSD.org .
+.An Poul-Henning Kamp Aq Mt phk@FreeBSD.org .
 .Pp
 This manual page was written by
-.An Sergey A. Osokin
-.Aq osa@FreeBSD.org
+.An Sergey A. Osokin Aq Mt osa@FreeBSD.org
 and
-.An Poul-Henning Kamp
-.Aq phk@FreeBSD.org .
+.An Poul-Henning Kamp Aq Mt phk@FreeBSD.org .

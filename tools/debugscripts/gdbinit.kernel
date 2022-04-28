@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/debugscripts/gdbinit.kernel 137923 2004-11-20 02:32:42Z das $
+# $FreeBSD$
 # General kernel macros
 
 # Print the command name of the current process

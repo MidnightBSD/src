@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/ich/Makefile 245952 2013-01-26 22:08:21Z pfg $
+# $FreeBSD$
 
-.PATH:		${.CURDIR}/../../../../dev/sound/pci
+.PATH:		${SRCTOP}/sys/dev/sound/pci
 KMOD		= snd_ich
 SRCS		= device_if.h bus_if.h pci_if.h
 SRCS		+= ich.c

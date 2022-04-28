@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pcm/sound.h 193979 2009-06-11 09:06:09Z ariff $
+ * $FreeBSD$
  */
 
 /*
@@ -53,9 +53,6 @@
 #include <sys/errno.h>
 #include <sys/malloc.h>
 #include <sys/bus.h>
-#if __FreeBSD_version < 500000
-#include <sys/buf.h>
-#endif
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
@@ -120,11 +117,7 @@ struct snd_mixer;
 #define PCMCHAN(x)		(snd_unit2c(dev2unit(x)))
 
 /* XXX unit2minor compat */
-#if __FreeBSD_version >= 800062
 #define PCMMINOR(x)	(x)
-#else
-#define PCMMINOR(x)	unit2minor(x)
-#endif
 
 /*
  * By design, limit possible channels for each direction.
@@ -135,15 +128,8 @@ struct snd_mixer;
 #define SD_F_SIMPLEX		0x00000001
 #define SD_F_AUTOVCHAN		0x00000002
 #define SD_F_SOFTPCMVOL		0x00000004
-/*
- * Obsolete due to better matrixing
- */
-#if 0
-#define SD_F_PSWAPLR		0x00000008
-#define SD_F_RSWAPLR		0x00000010
-#endif
 #define SD_F_DYING		0x00000008
-#define SD_F_SUICIDE		0x00000010
+#define SD_F_DETACHING		0x00000010
 #define SD_F_BUSY		0x00000020
 #define SD_F_MPSAFE		0x00000040
 #define SD_F_REGISTERED		0x00000080
@@ -169,7 +155,7 @@ struct snd_mixer;
 				"\002AUTOVCHAN"				\
 				"\003SOFTPCMVOL"			\
 				"\004DYING"				\
-				"\005SUICIDE"				\
+				"\005DETACHING"				\
 				"\006BUSY"				\
 				"\007MPSAFE"				\
 				"\010REGISTERED"			\
@@ -187,6 +173,8 @@ struct snd_mixer;
 				 !((x)->flags & SD_F_DYING))
 #define PCM_REGISTERED(x)	(PCM_ALIVE(x) &&			\
 				 ((x)->flags & SD_F_REGISTERED))
+
+#define	PCM_DETACHING(x)	((x)->flags & SD_F_DETACHING)
 
 /* many variables should be reduced to a range. Here define a macro */
 #define RANGE(var, low, high) (var) = \
@@ -220,10 +208,12 @@ struct snd_mixer;
  * ~(0xb00ff7ff)
  */
 #define AFMT_ENCODING_MASK	0xf00fffff
-#define AFMT_CHANNEL_MASK	0x01f00000
+#define AFMT_CHANNEL_MASK	0x07f00000
 #define AFMT_CHANNEL_SHIFT	20
-#define AFMT_EXTCHANNEL_MASK	0x0e000000
-#define AFMT_EXTCHANNEL_SHIFT	25
+#define AFMT_CHANNEL_MAX	0x7f
+#define AFMT_EXTCHANNEL_MASK	0x08000000
+#define AFMT_EXTCHANNEL_SHIFT	27
+#define AFMT_EXTCHANNEL_MAX	1
 
 #define AFMT_ENCODING(v)	((v) & AFMT_ENCODING_MASK)
 
@@ -355,8 +345,6 @@ void snd_mtxassert(void *m);
 #define	snd_mtxunlock(m) mtx_unlock(m)
 
 typedef int (*sndstat_handler)(struct sbuf *s, device_t dev, int verbose);
-int sndstat_acquire(struct thread *td);
-int sndstat_release(struct thread *td);
 int sndstat_register(device_t dev, char *str, sndstat_handler handler);
 int sndstat_registerfile(char *str);
 int sndstat_unregister(device_t dev);

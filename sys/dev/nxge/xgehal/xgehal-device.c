@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nxge/xgehal/xgehal-device.c 242692 2012-11-07 07:00:59Z kevlo $
+ * $FreeBSD$
  */
 
 #include <dev/nxge/include/xgehal-device.h>
@@ -3321,7 +3321,6 @@ __hal_update_bimodal(xge_hal_device_t *hldev, int ring_no)
 	iwl_txcnt = (hldev->irq_workload_txcnt[ring_no] ?
 	                 hldev->irq_workload_txcnt[ring_no] : 1);
 	iwl_cnt = iwl_rxcnt + iwl_txcnt;
-	iwl_cnt = iwl_cnt; /* just to remove the lint warning */
 
 	/*
 	 * we need to take hldev->config.isr_polling_cnt into account
@@ -5571,7 +5570,7 @@ __hal_device_get_vpd_data(xge_hal_device_t *hldev)
 	xge_os_strcpy((char *) hldev->vpd_data.serial_num, "not available");
 
 	vpd_data = ( u8*) xge_os_malloc(hldev->pdev, XGE_HAL_VPD_BUFFER_SIZE + 16);
-	if ( vpd_data == 0 )
+	if ( vpd_data == NULL )
 	    return;
 
 	for (index = 0; index < XGE_HAL_VPD_BUFFER_SIZE; index +=4 ) {

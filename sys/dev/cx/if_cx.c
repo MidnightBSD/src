@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cx/if_cx.c 250460 2013-05-10 16:41:26Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/cx/if_cx.c 250460 2013-05-10 16:41:26
 #include <vm/vm.h>
 #include <vm/pmap.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <machine/cpufunc.h>
 #include <machine/cserial.h>
 #include <machine/resource.h>
@@ -231,22 +232,6 @@ static struct cdevsw cx_cdevsw = {
 static int MY_SOFT_INTR;
 
 /*
- * Print the mbuf chain, for debug purposes only.
- */
-static void printmbuf (struct mbuf *m)
-{
-	printf ("mbuf:");
-	for (; m; m=m->m_next) {
-		if (m->m_flags & M_PKTHDR)
-			printf (" HDR %d:", m->m_pkthdr.len);
-		if (m->m_flags & M_EXT)
-			printf (" EXT:");
-		printf (" %d", m->m_len);
-	}
-	printf ("\n");
-}
-
-/*
  * Make an mbuf from data.
  */
 static struct mbuf *makembuf (void *buf, u_int len)
@@ -420,13 +405,12 @@ static short porttab [] = {
 static char dmatab [] = { 7, 6, 5, 0 };
 static char irqtab [] = { 5, 10, 11, 7, 3, 15, 12, 0 };
 
-static int cx_is_free_res (device_t dev, int rid, int type, u_long start,
-	u_long end, u_long count)
+static int cx_is_free_res (device_t dev, int rid, int type, rman_res_t start,
+	rman_res_t end, rman_res_t count)
 {
 	struct resource *res;
 	
-	if (!(res = bus_alloc_resource (dev, type, &rid, start, end, count,
-	    RF_ALLOCATED)))
+	if (!(res = bus_alloc_resource (dev, type, &rid, start, end, count, 0)))
 		return 0;
 		
 	bus_release_resource (dev, type, rid, res);
@@ -436,7 +420,7 @@ static int cx_is_free_res (device_t dev, int rid, int type, u_long start,
 
 static void cx_identify (driver_t *driver, device_t dev)
 {
-	u_long iobase, rescount;
+	rman_res_t iobase, rescount;
 	int devcount;
 	device_t *devices;
 	device_t child;
@@ -546,7 +530,7 @@ static int cx_probe (device_t dev)
 {
 	int unit = device_get_unit (dev);
 	int i;
-	u_long iobase, rescount;
+	rman_res_t iobase, rescount;
 
 	if (!device_get_desc (dev) ||
 	    strcmp (device_get_desc (dev), "Cronyx Sigma"))
@@ -645,7 +629,7 @@ cx_bus_dma_mem_free (cx_dma_mem_t *dmem)
 static int cx_attach (device_t dev)
 {
 	bdrv_t *bd = device_get_softc (dev);
-	u_long iobase, drq, irq, rescount;
+	rman_res_t iobase, drq, irq, rescount;
 	int unit = device_get_unit (dev);
 	char *cx_ln = CX_LOCK_NAME;
 	cx_board_t *b;
@@ -762,7 +746,7 @@ static int cx_attach (device_t dev)
  		return ENXIO;
 	}
 	b->sys = bd;
-	callout_init (&led_timo[b->num], CALLOUT_MPSAFE);
+	callout_init (&led_timo[b->num], 1);
 	s = splhigh ();
 	if (bus_setup_intr (dev, bd->irq_res,
 			   INTR_TYPE_NET|INTR_MPSAFE,
@@ -812,7 +796,7 @@ static int cx_attach (device_t dev)
 		case T_UNIV_RS232:
 		case T_UNIV_RS449:
 		case T_UNIV_V35:
-		callout_init (&d->timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&d->timeout_handle, 1);
 #ifdef NETGRAPH
 		if (ng_make_node_common (&typestruct, &d->node) != 0) {
 			printf ("%s: cannot make common node\n", d->name);
@@ -883,10 +867,11 @@ static int cx_attach (device_t dev)
 		ttycreate(d->tty, TS_CALLOUT, "x%r%r", b->num, c->num);
 		d->devt = make_dev (&cx_cdevsw, b->num*NCHAN + c->num + 64, UID_ROOT, GID_WHEEL, 0600, "cx%d", b->num*NCHAN + c->num);
 		d->devt->si_drv1 = d;
-		callout_init (&d->dcd_timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&d->dcd_timeout_handle, 1);
 	}
 	splx (s);
 
+	gone_in_dev(dev, 13, "sync serial (T1/E1) ISA card drivers");
 	return 0;
 }
 
@@ -1007,8 +992,8 @@ static int cx_detach (device_t dev)
 		/* Deallocate buffers. */
 		cx_bus_dma_mem_free (&d->dmamem);
 	}
-	bd->board = 0;
-	adapter [b->num] = 0;
+	bd->board = NULL;
+	adapter [b->num] = NULL;
 	free (b, M_DEVBUF);
 	splx (s);
 
@@ -1266,7 +1251,7 @@ static void cx_transmit (cx_chan_t *c, void *attachment, int len)
 	}
 	d->timeout = 0;
 #ifndef NETGRAPH
-	++d->ifp->if_opackets;
+	if_inc_counter(d->ifp, IFCOUNTER_OPACKETS, 1);
 	d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #endif
 	cx_start (d);
@@ -1319,21 +1304,21 @@ static void cx_receive (cx_chan_t *c, char *data, int len)
 	if (! m) {
 		CX_DEBUG (d, ("no memory for packet\n"));
 #ifndef NETGRAPH
-		++d->ifp->if_iqdrops;
+		if_inc_counter(d->ifp, IFCOUNTER_IQDROPS, 1);
 #endif
 		return;
 	}
 	if (c->debug > 1)
-		printmbuf (m);
+		m_print (m, 0);
 #ifdef NETGRAPH
 	m->m_pkthdr.rcvif = 0;
 	NG_SEND_DATA_ONLY (error, d->hook, m);
 #else
-	++d->ifp->if_ipackets;
+	if_inc_counter(d->ifp, IFCOUNTER_IPACKETS, 1);
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	BPF_TAP (d->ifp, data, len);
+	BPF_MTAP(d->ifp, m);
 	IF_ENQUEUE (&d->queue, m);
 #endif
 }
@@ -1372,7 +1357,7 @@ static void cx_error (cx_chan_t *c, int data)
 		}
 #ifndef NETGRAPH
 		else
-			++d->ifp->if_ierrors;
+			if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CX_CRC:
@@ -1389,7 +1374,7 @@ static void cx_error (cx_chan_t *c, int data)
 		}
 #ifndef NETGRAPH
 		else
-			++d->ifp->if_ierrors;
+			if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CX_OVERRUN:
@@ -1406,8 +1391,8 @@ static void cx_error (cx_chan_t *c, int data)
 #endif
 #ifndef NETGRAPH
 		else {
-			++d->ifp->if_collisions;
-			++d->ifp->if_ierrors;
+			if_inc_counter(d->ifp, IFCOUNTER_COLLISIONS, 1);
+			if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 		}
 #endif
 		break;
@@ -1415,7 +1400,7 @@ static void cx_error (cx_chan_t *c, int data)
 		CX_DEBUG (d, ("overflow error\n"));
 #ifndef NETGRAPH
 		if (c->mode != M_ASYNC)
-			++d->ifp->if_ierrors;
+			if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	case CX_UNDERRUN:
@@ -1423,7 +1408,7 @@ static void cx_error (cx_chan_t *c, int data)
 		if (c->mode != M_ASYNC) {
 			d->timeout = 0;
 #ifndef NETGRAPH
-			++d->ifp->if_oerrors;
+			if_inc_counter(d->ifp, IFCOUNTER_OERRORS, 1);
 			d->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 #endif
 			cx_start (d);
@@ -1442,7 +1427,7 @@ static void cx_error (cx_chan_t *c, int data)
 		}
 #ifndef NETGRAPH
 		else
-			++d->ifp->if_ierrors;
+			if_inc_counter(d->ifp, IFCOUNTER_IERRORS, 1);
 #endif
 		break;
 	default:
@@ -2436,7 +2421,6 @@ static int ng_cx_rcvdata (hook_p hook, item_p item)
 	CX_LOCK (bd);
 	IF_LOCK (q);
 	if (_IF_QFULL (q)) {
-		_IF_DROP (q);
 		IF_UNLOCK (q);
 		CX_UNLOCK (bd);
 		splx (s);
@@ -2470,7 +2454,7 @@ static int ng_cx_rmnode (node_p node)
 		NG_NODE_SET_PRIVATE (node, NULL);
 		NG_NODE_UNREF (node);
 	}
-	NG_NODE_REVIVE(node);		/* Persistant node */
+	NG_NODE_REVIVE(node);		/* Persistent node */
 #endif
 	return 0;
 }
@@ -2514,7 +2498,7 @@ static int cx_modevent (module_t mod, int type, void *unused)
 #endif
 		++load_count;
 
-		callout_init (&timeout_handle, CALLOUT_MPSAFE);
+		callout_init (&timeout_handle, 1);
 		callout_reset (&timeout_handle, hz*5, cx_timeout, 0);
 		/* Software interrupt. */
 		swi_add(&tty_intr_event, "cx", cx_softintr, NULL, SWI_TTY,

@@ -25,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/iscsid/iscsid.8 255575 2013-09-14 21:43:18Z joel $
+.\" $FreeBSD$
 .\"
-.Dd September 20, 2012
+.Dd May 28, 2017
 .Dt ISCSID 8
 .Os
 .Sh NAME
@@ -43,18 +43,22 @@
 .Sh DESCRIPTION
 The
 .Nm
-daemon is responsible for performing the Login Phase of iSCSI connections,
-as well as performing SendTargets discovery.
+daemon is the userspace component of the iSCSI initiator,
+responsible for performing the Login Phase
+of iSCSI connections and the SendTargets discovery.
 .Pp
 Upon startup, the
 .Nm
-daemon opens the iSCSI initiator device file and waits for kernel requests.
-It doesn't use any configuration file; all the information it needs it gets
-from the kernel.
+daemon opens the iSCSI initiator device file and waits for requests
+from the kernel component,
+.Xr iscsi 4 .
+.Nm
+does not use any configuration files.
+All needed information is supplied by the kernel.
 .Pp
 When the
 .Nm
-damon is not running, already established iSCSI connections continue
+daemon is not running, already established iSCSI connections continue
 to work.
 However, establishing new connections, or recovering existing ones in case
 of connection error, is not possible.
@@ -67,9 +71,9 @@ The default location is
 .Pa /var/run/iscsid.pid .
 .It Fl d
 Debug mode.
-The server sends verbose debug output to standard error, and does not
+The daemon sends verbose debug output to standard error, and does not
 put itself in the background.
-The server will also not fork and will exit after processing one connection.
+The daemon will also not fork and will exit after processing one connection.
 This option is only intended for debugging the initiator.
 .It Fl l Ar loglevel
 Specifies debug level.
@@ -99,6 +103,7 @@ The
 .Nm
 utility exits 0 on success, and >0 if an error occurs.
 .Sh SEE ALSO
+.Xr iscsi 4 ,
 .Xr iscsictl 8
 .Sh HISTORY
 The
@@ -108,6 +113,6 @@ command appeared in
 .Sh AUTHORS
 The
 .Nm
-was developed by
-.An Edward Tomasz Napierala Aq trasz@FreeBSD.org
+utility was developed by
+.An Edward Tomasz Napierala Aq Mt trasz@FreeBSD.org
 under sponsorship from the FreeBSD Foundation.

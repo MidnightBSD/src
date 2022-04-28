@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/periodic/daily/401.status-graid 249095 2013-04-04 15:03:12Z mav $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.

@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/librpcsvc/yp_update.c 121529 2003-10-26 03:43:35Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <rpc/rpc.h>

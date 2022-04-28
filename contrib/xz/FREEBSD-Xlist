@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/xz/FREEBSD-Xlist 223935 2011-07-11 14:15:27Z mm $
+$FreeBSD$
 */*/*/Makefile.*
 */*/Makefile.*
 */.gitignore
@@ -30,8 +30,9 @@ lib/
 m4/
 macosx/
 makefile.am
+po/
+po4a/
 src/*/*.rc
-src/liblzma/liblzma.pc.in
 src/scripts/
 tests/
 version.sh

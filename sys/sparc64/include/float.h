@@ -14,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +32,7 @@
  *
  *	@(#)float.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: float.h,v 1.3 2001/09/21 20:48:02 eeh Exp
- * $FreeBSD: release/10.0.0/sys/sparc64/include/float.h 230475 2012-01-23 06:36:41Z das $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_FLOAT_H_

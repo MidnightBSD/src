@@ -28,7 +28,7 @@
  * Dummynet portions related to packet handling.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_dn_io.c 241913 2012-10-22 21:09:03Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet6.h"
 
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_dn_io.c 241913 2012-10-22
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/rwlock.h>
@@ -62,6 +63,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netpfil/ipfw/ip_dn_io.c 241913 2012-10-22
 #include <netpfil/ipfw/ip_fw_private.h>
 #include <netpfil/ipfw/dn_heap.h>
 #include <netpfil/ipfw/ip_dn_private.h>
+#ifdef NEW_AQM
+#include <netpfil/ipfw/dn_aqm.h>
+#endif
 #include <netpfil/ipfw/dn_sched.h>
 
 /*
@@ -83,8 +87,12 @@ static long tick_diff;
 
 static unsigned long	io_pkt;
 static unsigned long	io_pkt_fast;
-static unsigned long	io_pkt_drop;
 
+#ifdef NEW_AQM
+unsigned long	io_pkt_drop;
+#else
+static unsigned long	io_pkt_drop;
+#endif
 /*
  * We use a heap to store entities for which we have pending timer events.
  * The heap is checked at every tick and all entities with expired events
@@ -147,7 +155,11 @@ SYSBEGIN(f4)
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet_ip);
+#ifdef NEW_AQM
+SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
+#else
 static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
+#endif
 
 /* wrapper to pass dn_cfg fields to SYSCTL_* */
 //#define DC(x)	(&(VNET_NAME(_base_dn_cfg).x))
@@ -225,30 +237,21 @@ SYSEND
 static void	dummynet_send(struct mbuf *);
 
 /*
- * Packets processed by dummynet have an mbuf tag associated with
- * them that carries their dummynet state.
- * Outside dummynet, only the 'rule' field is relevant, and it must
- * be at the beginning of the structure.
- */
-struct dn_pkt_tag {
-	struct ipfw_rule_ref rule;	/* matching rule	*/
-
-	/* second part, dummynet specific */
-	int dn_dir;		/* action when packet comes out.*/
-				/* see ip_fw_private.h		*/
-	uint64_t output_time;	/* when the pkt is due for delivery*/
-	struct ifnet *ifp;	/* interface, for ip_output	*/
-	struct _ip6dn_args ip6opt;	/* XXX ipv6 options	*/
-};
-
-/*
  * Return the mbuf tag holding the dummynet state (it should
  * be the first one on the list).
  */
-static struct dn_pkt_tag *
+struct dn_pkt_tag *
 dn_tag_get(struct mbuf *m)
 {
 	struct m_tag *mtag = m_tag_first(m);
+#ifdef NEW_AQM
+	/* XXX: to skip ts m_tag. For Debugging only*/
+	if (mtag != NULL && mtag->m_tag_id == DN_AQM_MTAG_TS) {
+		m_tag_delete(m,mtag); 
+		mtag = m_tag_first(m);
+		D("skip TS tag");
+	}
+#endif
 	KASSERT(mtag != NULL &&
 	    mtag->m_tag_cookie == MTAG_ABI_COMPAT &&
 	    mtag->m_tag_id == PACKET_TAG_DUMMYNET,
@@ -256,16 +259,47 @@ dn_tag_get(struct mbuf *m)
 	return (struct dn_pkt_tag *)(mtag+1);
 }
 
+#ifndef NEW_AQM
 static inline void
 mq_append(struct mq *q, struct mbuf *m)
 {
+#ifdef USERSPACE
+	// buffers from netmap need to be copied
+	// XXX note that the routine is not expected to fail
+	ND("append %p to %p", m, q);
+	if (m->m_flags & M_STACK) {
+		struct mbuf *m_new;
+		void *p;
+		int l, ofs;
+
+		ofs = m->m_data - m->__m_extbuf;
+		// XXX allocate
+		MGETHDR(m_new, M_NOWAIT, MT_DATA);
+		ND("*** WARNING, volatile buf %p ext %p %d dofs %d m_new %p",
+			m, m->__m_extbuf, m->__m_extlen, ofs, m_new);
+		p = m_new->__m_extbuf;	/* new pointer */
+		l = m_new->__m_extlen;	/* new len */
+		if (l <= m->__m_extlen) {
+			panic("extlen too large");
+		}
+
+		*m_new = *m;	// copy
+		m_new->m_flags &= ~M_STACK;
+		m_new->__m_extbuf = p; // point to new buffer
+		_pkt_copy(m->__m_extbuf, p, m->__m_extlen);
+		m_new->m_data = p + ofs;
+		m = m_new;
+	}
+#endif /* USERSPACE */
 	if (q->head == NULL)
 		q->head = m;
 	else
 		q->tail->m_nextpkt = m;
+	q->count++;
 	q->tail = m;
 	m->m_nextpkt = NULL;
 }
+#endif
 
 /*
  * Dispose a list of packet. Use a functions so if we need to do
@@ -337,6 +371,8 @@ red_drops (struct dn_queue *q, int len)
 		return (0);	/* accept packet */
 	}
 	if (q->avg >= fs->max_th) {	/* average queue >=  max threshold */
+		if (fs->fs.flags & DN_IS_ECN)
+			return (1);
 		if (fs->fs.flags & DN_IS_GENTLE_RED) {
 			/*
 			 * According to Gentle-RED, if avg is greater than
@@ -352,6 +388,8 @@ red_drops (struct dn_queue *q, int len)
 			return (1);
 		}
 	} else if (q->avg > fs->min_th) {
+		if (fs->fs.flags & DN_IS_ECN)
+			return (1);
 		/*
 		 * We compute p_b using the linear dropping function
 		 *	 p_b = c_1 * avg - c_2
@@ -381,6 +419,64 @@ red_drops (struct dn_queue *q, int len)
 
 	return (0);	/* accept */
 
+}
+
+/*
+ * ECN/ECT Processing (partially adopted from altq)
+ */
+#ifndef NEW_AQM
+static
+#endif
+int
+ecn_mark(struct mbuf* m)
+{
+	struct ip *ip;
+	ip = (struct ip *)mtodo(m, dn_tag_get(m)->iphdr_off);
+
+	switch (ip->ip_v) {
+	case IPVERSION:
+	{
+		uint16_t old;
+
+		if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_NOTECT)
+			return (0);	/* not-ECT */
+		if ((ip->ip_tos & IPTOS_ECN_MASK) == IPTOS_ECN_CE)
+			return (1);	/* already marked */
+
+		/*
+		 * ecn-capable but not marked,
+		 * mark CE and update checksum
+		 */
+		old = *(uint16_t *)ip;
+		ip->ip_tos |= IPTOS_ECN_CE;
+		ip->ip_sum = cksum_adjust(ip->ip_sum, old, *(uint16_t *)ip);
+		return (1);
+	}
+#ifdef INET6
+	case (IPV6_VERSION >> 4):
+	{
+		struct ip6_hdr *ip6 = (struct ip6_hdr *)ip;
+		u_int32_t flowlabel;
+
+		flowlabel = ntohl(ip6->ip6_flow);
+		if ((flowlabel >> 28) != 6)
+			return (0);	/* version mismatch! */
+		if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		    (IPTOS_ECN_NOTECT << 20))
+			return (0);	/* not-ECT */
+		if ((flowlabel & (IPTOS_ECN_MASK << 20)) ==
+		    (IPTOS_ECN_CE << 20))
+			return (1);	/* already marked */
+		/*
+		 * ecn-capable but not marked, mark CE
+		 */
+		flowlabel |= (IPTOS_ECN_CE << 20);
+		ip6->ip6_flow = htonl(flowlabel);
+		return (1);
+	}
+#endif
+	}
+	return (0);
 }
 
 /*
@@ -414,8 +510,15 @@ dn_enqueue(struct dn_queue *q, struct mbuf* m, int drop)
 		goto drop;
 	if (f->plr && random() < f->plr)
 		goto drop;
-	if (f->flags & DN_IS_RED && red_drops(q, m->m_pkthdr.len))
-		goto drop;
+#ifdef NEW_AQM
+	/* Call AQM enqueue function */
+	if (q->fs->aqmfp)
+		return q->fs->aqmfp->enqueue(q ,m);
+#endif
+	if (f->flags & DN_IS_RED && red_drops(q, m->m_pkthdr.len)) {
+		if (!(f->flags & DN_IS_ECN) || !ecn_mark(m))
+			goto drop;
+	}
 	if (f->flags & DN_QSIZE_BYTES) {
 		if (q->ni.len_bytes > f->qsize)
 			goto drop;
@@ -427,14 +530,14 @@ dn_enqueue(struct dn_queue *q, struct mbuf* m, int drop)
 	q->ni.len_bytes += len;
 	ni->length++;
 	ni->len_bytes += len;
-	return 0;
+	return (0);
 
 drop:
 	io_pkt_drop++;
 	q->ni.drops++;
 	ni->drops++;
 	FREE_PKT(m);
-	return 1;
+	return (1);
 }
 
 /*
@@ -454,6 +557,7 @@ transmit_event(struct mq *q, struct delay_line *dline, uint64_t now)
 		if (!DN_KEY_LEQ(pkt->output_time, now))
 			break;
 		dline->mq.head = m->m_nextpkt;
+		dline->mq.count--;
 		mq_append(q, m);
 	}
 	if (m != NULL) {
@@ -619,8 +723,8 @@ dummynet_task(void *context, int pending)
 		dn_drain_queue();
 	}
 
-	DN_BH_WUNLOCK();
 	dn_reschedule();
+	DN_BH_WUNLOCK();
 	if (q.head != NULL)
 		dummynet_send(q.head);
 	CURVNET_RESTORE();
@@ -650,10 +754,15 @@ dummynet_send(struct mbuf *m)
 			/* extract the dummynet info, rename the tag
 			 * to carry reinject info.
 			 */
-			dst = pkt->dn_dir;
-			ifp = pkt->ifp;
-			tag->m_tag_cookie = MTAG_IPFW_RULE;
-			tag->m_tag_id = 0;
+			if (pkt->dn_dir == (DIR_OUT | PROTO_LAYER2) &&
+				pkt->ifp == NULL) {
+				dst = DIR_DROP;
+			} else {
+				dst = pkt->dn_dir;
+				ifp = pkt->ifp;
+				tag->m_tag_cookie = MTAG_IPFW_RULE;
+				tag->m_tag_id = 0;
+			}
 		}
 
 		switch (dst) {
@@ -698,7 +807,7 @@ dummynet_send(struct mbuf *m)
 			ether_demux(m->m_pkthdr.rcvif, m);
 			break;
 
-		case DIR_OUT | PROTO_LAYER2: /* N_TO_ETH_OUT: */
+		case DIR_OUT | PROTO_LAYER2: /* DN_TO_ETH_OUT: */
 			ether_output_frame(ifp, m);
 			break;
 
@@ -733,6 +842,7 @@ tag_mbuf(struct mbuf *m, int dir, struct ip_fw_args *fwa)
 	dt->ifp = fwa->oif;
 	/* dt->output tame is updated as we move through */
 	dt->output_time = dn_cfg.curr_time;
+	dt->iphdr_off = (dir & PROTO_LAYER2) ? ETHER_HDR_LEN : 0;
 	return 0;
 }
 
@@ -793,6 +903,10 @@ dummynet_io(struct mbuf **m0, int dir, struct ip_fw_args *fwa)
 	if (fs->sched->fp->enqueue(si, q, m)) {
 		/* packet was dropped by enqueue() */
 		m = *m0 = NULL;
+
+		/* dn_enqueue already increases io_pkt_drop */
+		io_pkt_drop--;
+
 		goto dropit;
 	}
 

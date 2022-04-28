@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/concat/geom_concat.c 213662 2010-10-09 20:20:27Z ae $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -117,6 +119,7 @@ concat_label(struct gctl_req *req)
 	const char *name;
 	int error, i, hardcode, nargs;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 2) {
 		gctl_error(req, "Too few arguments.");

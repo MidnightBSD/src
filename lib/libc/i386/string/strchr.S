@@ -29,7 +29,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/string/strchr.S 249582 2013-04-17 11:40:10Z gabor $");
+__FBSDID("$FreeBSD$");
 
 /*
  * strchr(s, c)
@@ -63,6 +63,6 @@ L2:
 	ret
 END(strchr)
 
-WEAK_ALIAS(index, strchr)
+WEAK_REFERENCE(strchr, index)
 
 	.section .note.GNU-stack,"",%progbits

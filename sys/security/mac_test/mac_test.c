@@ -39,7 +39,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/security/mac_test/mac_test.c 254603 2013-08-21 17:45:00Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -1016,17 +1016,6 @@ test_mount_init_label(struct label *label)
 
 	LABEL_INIT(label, MAGIC_MOUNT);
 	COUNTER_INC(mount_init_label);
-}
-
-COUNTER_DECL(netatalk_aarp_send);
-static void
-test_netatalk_aarp_send(struct ifnet *ifp, struct label *ifplabel,
-    struct mbuf *m, struct label *mlabel)
-{
-
-	LABEL_CHECK(ifplabel, MAGIC_IFNET);
-	LABEL_CHECK(mlabel, MAGIC_MBUF);
-	COUNTER_INC(netatalk_aarp_send);
 }
 
 COUNTER_DECL(netinet_arp_send);
@@ -3103,8 +3092,6 @@ static struct mac_policy_ops test_ops =
 	.mpo_mount_create = test_mount_create,
 	.mpo_mount_destroy_label = test_mount_destroy_label,
 	.mpo_mount_init_label = test_mount_init_label,
-
-	.mpo_netatalk_aarp_send = test_netatalk_aarp_send,
 
 	.mpo_netinet_arp_send = test_netinet_arp_send,
 	.mpo_netinet_fragment = test_netinet_fragment,

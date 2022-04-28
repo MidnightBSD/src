@@ -1,12 +1,12 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: release/10.0.0/lib/libc/gmon/Makefile.inc 163739 2006-10-28 13:34:35Z bde $
+# $FreeBSD$
 
 # gmon sources
-.PATH: ${.CURDIR}/gmon
+.PATH: ${LIBC_SRCTOP}/gmon
 
 SRCS+=	gmon.c mcount.c
 
-SYM_MAPS+=${.CURDIR}/gmon/Symbol.map
+SYM_MAPS+=${LIBC_SRCTOP}/gmon/Symbol.map
 
 MAN+=	moncontrol.3
 

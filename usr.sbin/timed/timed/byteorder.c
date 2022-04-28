@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)byteorder.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/usr.sbin/timed/timed/byteorder.c 246209 2013-02-01 14:26:54Z charnier $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include "globals.h"

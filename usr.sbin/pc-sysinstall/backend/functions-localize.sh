@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend/functions-localize.sh 236330 2012-05-30 20:44:04Z jpaetzel $
+# $FreeBSD$
 
 # Functions which runs commands on the system
 

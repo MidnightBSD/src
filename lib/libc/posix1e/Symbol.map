@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/posix1e/Symbol.map 194955 2009-06-25 12:46:59Z trasz $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {

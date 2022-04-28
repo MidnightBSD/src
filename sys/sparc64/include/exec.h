@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/exec.h 81334 2001-08-09 02:09:34Z obrien $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_EXEC_H_

@@ -42,7 +42,7 @@
  *
  * Created      : 08/02/95
  *
- * $FreeBSD: release/10.0.0/sys/arm/include/undefined.h 167752 2007-03-21 03:28:16Z kevlo $
+ * $FreeBSD$
  */
 
 
@@ -52,7 +52,9 @@
 
 #include <sys/queue.h>
 
-typedef int (*undef_handler_t) (unsigned int, unsigned int, trapframe_t *, int);
+struct trapframe;
+
+typedef int (*undef_handler_t) (unsigned int, unsigned int, struct trapframe *, int);
 
 #define FP_COPROC	1
 #define FP_COPROC2	2

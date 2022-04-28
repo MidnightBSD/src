@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/9/93
- * $FreeBSD: release/10.0.0/usr.bin/login/pathnames.h 216370 2010-12-11 08:32:16Z joel $
+ * $FreeBSD$
  */
 
 #include <paths.h>

@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 2009 Yahoo! Inc.
- * Copyright (c) 2012 LSI Corp.
+ * Copyright (c) 2011-2015 LSI Corp.
+ * Copyright (c) 2013-2015 Avago Technologies
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,15 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * LSI MPT-Fusion Host Adapter FreeBSD
+ * Avago Technologies (LSI) MPT-Fusion Host Adapter FreeBSD
  *
- * $FreeBSD: release/10.0.0/sys/dev/mps/mps.c 254117 2013-08-09 01:10:33Z scottl $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mps/mps.c 254117 2013-08-09 01:10:33Z scottl $");
+__FBSDID("$FreeBSD$");
 
-/* Communications core for LSI MPT2 */
+/* Communications core for Avago Technologies (LSI) MPT2 */
 
 /* TODO Move headers to mpsvar */
 #include <sys/types.h>
@@ -75,7 +76,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/mps/mps.c 254117 2013-08-09 01:10:33Z
 #include <dev/mps/mps_ioctl.h>
 #include <dev/mps/mpsvar.h>
 #include <dev/mps/mps_table.h>
-#include <dev/mps/mps_sas.h>
 
 static int mps_diag_reset(struct mps_softc *sc, int sleep_flag);
 static int mps_init_queues(struct mps_softc *sc);
@@ -141,6 +141,7 @@ mps_diag_reset(struct mps_softc *sc,int sleep_flag)
 {
 	uint32_t reg;
 	int i, error, tries = 0;
+	uint8_t first_wait_done = FALSE;
 
 	mps_dprint(sc, MPS_TRACE, "%s\n", __func__);
 
@@ -183,15 +184,32 @@ mps_diag_reset(struct mps_softc *sc,int sleep_flag)
 
 	/* Wait up to 300 seconds in 50ms intervals */
 	error = ETIMEDOUT;
-	for (i = 0; i < 60000; i++) {
-		/* wait 50 msec */
-		if (mtx_owned(&sc->mps_mtx) && sleep_flag == CAN_SLEEP)
-			msleep(&sc->msleep_fake_chan, &sc->mps_mtx, 0,
-			    "mpsdiag", hz/20);
-		else if (sleep_flag == CAN_SLEEP)
-			pause("mpsdiag", hz/20);
-		else
-			DELAY(50 * 1000);
+	for (i = 0; i < 6000; i++) {
+		/*
+		 * Wait 50 msec. If this is the first time through, wait 256
+		 * msec to satisfy Diag Reset timing requirements.
+		 */
+		if (first_wait_done) {
+			if (mtx_owned(&sc->mps_mtx) && sleep_flag == CAN_SLEEP)
+				msleep(&sc->msleep_fake_chan, &sc->mps_mtx, 0,
+				    "mpsdiag", hz/20);
+			else if (sleep_flag == CAN_SLEEP)
+				pause("mpsdiag", hz/20);
+			else
+				DELAY(50 * 1000);
+		} else {
+			DELAY(256 * 1000);
+			first_wait_done = TRUE;
+		}
+		/*
+		 * Check for the RESET_ADAPTER bit to be cleared first, then
+		 * wait for the RESET state to be cleared, which takes a little
+		 * longer.
+		 */
+		reg = mps_regread(sc, MPI2_HOST_DIAGNOSTIC_OFFSET);
+		if (reg & MPI2_DIAG_RESET_ADAPTER) {
+			continue;
+		}
 		reg = mps_regread(sc, MPI2_DOORBELL_OFFSET);
 		if ((reg & MPI2_IOC_STATE_MASK) != MPI2_IOC_STATE_RESET) {
 			error = 0;
@@ -237,7 +255,7 @@ mps_transition_ready(struct mps_softc *sc)
 	sleep_flags = (sc->mps_flags & MPS_FLAGS_ATTACH_DONE)
 					? CAN_SLEEP:NO_SLEEP;
 	error = 0;
-	while (tries++ < 5) {
+	while (tries++ < 1200) {
 		reg = mps_regread(sc, MPI2_DOORBELL_OFFSET);
 		mps_dprint(sc, MPS_INIT, "Doorbell= 0x%x\n", reg);
 
@@ -328,11 +346,9 @@ mps_transition_operational(struct mps_softc *sc)
 static int
 mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 {
-	int error, i;
+	int error;
 	Mpi2IOCFactsReply_t saved_facts;
 	uint8_t saved_mode, reallocating;
-	struct mpssas_lun *lun, *lun_tmp;
-	struct mpssas_target *targ;
 
 	mps_dprint(sc, MPS_TRACE, "%s\n", __func__);
 
@@ -357,7 +373,7 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 		}
 	}
 
-	mps_print_iocfacts(sc, sc->facts);
+	MPS_DPRINT_PAGE(sc, MPS_XINFO, iocfacts, sc->facts);
 
 	snprintf(sc->fw_version, sizeof(sc->fw_version), 
 	    "%02d.%02d.%02d.%02d", 
@@ -411,6 +427,8 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 
 	/* Only deallocate and reallocate if relevant IOC Facts have changed */
 	reallocating = FALSE;
+	sc->mps_flags &= ~MPS_FLAGS_REALLOCATED;
+
 	if ((!attaching) &&
 	    ((saved_facts.MsgVersion != sc->facts->MsgVersion) ||
 	    (saved_facts.HeaderVersion != sc->facts->HeaderVersion) ||
@@ -431,6 +449,9 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 	    (saved_facts.MaxPersistentEntries !=
 	    sc->facts->MaxPersistentEntries))) {
 		reallocating = TRUE;
+
+		/* Record that we reallocated everything */
+		sc->mps_flags |= MPS_FLAGS_REALLOCATED;
 	}
 
 	/*
@@ -468,7 +489,10 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 		 * Size the queues. Since the reply queues always need one free
 		 * entry, we'll just deduct one reply message here.
 		 */
-		sc->num_reqs = MIN(MPS_REQ_FRAMES, sc->facts->RequestCredit);
+		sc->num_prireqs = MIN(MPS_PRI_REQ_FRAMES,
+		    sc->facts->HighPriorityCredit);
+		sc->num_reqs = MIN(MPS_REQ_FRAMES, sc->facts->RequestCredit) +
+		    sc->num_prireqs;
 		sc->num_replies = MIN(MPS_REPLY_FRAMES + MPS_EVT_REPLY_FRAMES,
 		    sc->facts->MaxReplyDescriptorPostQueueDepth) - 1;
 
@@ -489,27 +513,8 @@ mps_iocfacts_allocate(struct mps_softc *sc, uint8_t attaching)
 	 */
 	if (reallocating) {
 		mps_iocfacts_free(sc);
-
-		/*
-		 * The number of targets is based on IOC Facts, so free all of
-		 * the allocated LUNs for each target and then the target buffer
-		 * itself.
-		 */
-		for (i=0; i< saved_facts.MaxTargets; i++) {
-			targ = &sc->sassc->targets[i];
-			SLIST_FOREACH_SAFE(lun, &targ->luns, lun_link,
-			    lun_tmp) {
-				free(lun, M_MPT2);
-			}
-		}
-		free(sc->sassc->targets, M_MPT2);
-
-		sc->sassc->targets = malloc(sizeof(struct mpssas_target) *
-		    sc->facts->MaxTargets, M_MPT2, M_WAITOK|M_ZERO);
-		if (!sc->sassc->targets) {
-			panic("%s failed to alloc targets with error %d\n",
-			    __func__, ENOMEM);
-		}
+		mpssas_realloc_targets(sc, saved_facts.MaxTargets +
+		    saved_facts.MaxVolumes);
 	}
 
 	/*
@@ -615,10 +620,10 @@ mps_iocfacts_free(struct mps_softc *sc)
 
 	mps_dprint(sc, MPS_TRACE, "%s\n", __func__);
 
-	if (sc->post_busaddr != 0)
+	if (sc->free_busaddr != 0)
 		bus_dmamap_unload(sc->queues_dmat, sc->queues_map);
-	if (sc->post_queue != NULL)
-		bus_dmamem_free(sc->queues_dmat, sc->post_queue,
+	if (sc->free_queue != NULL)
+		bus_dmamem_free(sc->queues_dmat, sc->free_queue,
 		    sc->queues_map);
 	if (sc->queues_dmat != NULL)
 		bus_dma_tag_destroy(sc->queues_dmat);
@@ -679,6 +684,9 @@ int
 mps_reinit(struct mps_softc *sc)
 {
 	int error;
+	struct mpssas_softc *sassc;
+
+	sassc = sc->sassc;
 
 	MPS_FUNCTRACE(sc);
 
@@ -759,6 +767,8 @@ mps_reinit(struct mps_softc *sc)
 	mps_dprint(sc, MPS_INFO, "%s finished sc %p post %u free %u\n", 
 	    __func__, sc, sc->replypostindex, sc->replyfreeindex);
 
+	mpssas_release_simq_reinit(sassc);
+
 	return 0;
 }
 
@@ -781,7 +791,7 @@ mps_wait_db_ack(struct mps_softc *sc, int timeout, int sleep_flag)
 		int_status = mps_regread(sc, MPI2_HOST_INTERRUPT_STATUS_OFFSET);
 		if (!(int_status & MPI2_HIS_SYS2IOC_DB_STATUS)) {
 			mps_dprint(sc, MPS_INIT, 
-			"%s: successfull count(%d), timeout(%d)\n",
+			"%s: successful count(%d), timeout(%d)\n",
 			__func__, count, timeout);
 		return 0;
 		} else if (int_status & MPI2_HIS_IOC2SYS_DB_STATUS) {
@@ -1079,8 +1089,8 @@ mps_alloc_queues(struct mps_softc *sc)
 	 *
 	 * These two queues are allocated together for simplicity.
 	 */
-	sc->fqdepth = roundup2((sc->num_replies + 1), 16);
-	sc->pqdepth = roundup2((sc->num_replies + 1), 16);
+	sc->fqdepth = roundup2(sc->num_replies + 1, 16);
+	sc->pqdepth = roundup2(sc->num_replies + 1, 16);
 	fqsize= sc->fqdepth * 4;
 	pqsize = sc->pqdepth * 8;
 	qsize = fqsize + pqsize;
@@ -1296,7 +1306,7 @@ mps_alloc_requests(struct mps_softc *sc)
 
 		/* XXX Is a failure here a critical problem? */
 		if (bus_dmamap_create(sc->buffer_dmat, 0, &cm->cm_dmamap) == 0)
-			if (i <= sc->facts->HighPriorityCredit)
+			if (i <= sc->num_prireqs)
 				mps_free_high_priority_command(sc, cm);
 			else
 				mps_free_command(sc, cm);
@@ -1339,7 +1349,7 @@ mps_init_queues(struct mps_softc *sc)
  * Next are the global settings, if they exist.  Highest are the per-unit
  * settings, if they exist.
  */
-static void
+void
 mps_get_tunables(struct mps_softc *sc)
 {
 	char tmpstr[80];
@@ -1349,6 +1359,10 @@ mps_get_tunables(struct mps_softc *sc)
 	sc->disable_msix = 0;
 	sc->disable_msi = 0;
 	sc->max_chains = MPS_CHAIN_FRAMES;
+	sc->max_io_pages = MPS_MAXIO_PAGES;
+	sc->enable_ssu = MPS_SSU_ENABLE_SSD_DISABLE_HDD;
+	sc->spinup_wait_time = DEFAULT_SPINUP_WAIT;
+	sc->use_phynum = 1;
 
 	/*
 	 * Grab the global variables.
@@ -1357,6 +1371,10 @@ mps_get_tunables(struct mps_softc *sc)
 	TUNABLE_INT_FETCH("hw.mps.disable_msix", &sc->disable_msix);
 	TUNABLE_INT_FETCH("hw.mps.disable_msi", &sc->disable_msi);
 	TUNABLE_INT_FETCH("hw.mps.max_chains", &sc->max_chains);
+	TUNABLE_INT_FETCH("hw.mps.max_io_pages", &sc->max_io_pages);
+	TUNABLE_INT_FETCH("hw.mps.enable_ssu", &sc->enable_ssu);
+	TUNABLE_INT_FETCH("hw.mps.spinup_wait_time", &sc->spinup_wait_time);
+	TUNABLE_INT_FETCH("hw.mps.use_phy_num", &sc->use_phynum);
 
 	/* Grab the unit-instance variables */
 	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.debug_level",
@@ -1375,10 +1393,26 @@ mps_get_tunables(struct mps_softc *sc)
 	    device_get_unit(sc->mps_dev));
 	TUNABLE_INT_FETCH(tmpstr, &sc->max_chains);
 
+	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.max_io_pages",
+	    device_get_unit(sc->mps_dev));
+	TUNABLE_INT_FETCH(tmpstr, &sc->max_io_pages);
+
 	bzero(sc->exclude_ids, sizeof(sc->exclude_ids));
 	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.exclude_ids",
 	    device_get_unit(sc->mps_dev));
 	TUNABLE_STR_FETCH(tmpstr, sc->exclude_ids, sizeof(sc->exclude_ids));
+
+	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.enable_ssu",
+	    device_get_unit(sc->mps_dev));
+	TUNABLE_INT_FETCH(tmpstr, &sc->enable_ssu);
+
+	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.spinup_wait_time",
+	    device_get_unit(sc->mps_dev));
+	TUNABLE_INT_FETCH(tmpstr, &sc->spinup_wait_time);
+
+	snprintf(tmpstr, sizeof(tmpstr), "dev.mps.%d.use_phy_num",
+	    device_get_unit(sc->mps_dev));
+	TUNABLE_INT_FETCH(tmpstr, &sc->use_phynum);
 }
 
 static void
@@ -1424,7 +1458,7 @@ mps_setup_sysctl(struct mps_softc *sc)
 	    "Disable the use of MSI interrupts");
 
 	SYSCTL_ADD_STRING(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
-	    OID_AUTO, "firmware_version", CTLFLAG_RW, &sc->fw_version,
+	    OID_AUTO, "firmware_version", CTLFLAG_RW, sc->fw_version,
 	    strlen(sc->fw_version), "firmware version");
 
 	SYSCTL_ADD_STRING(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
@@ -1451,11 +1485,35 @@ mps_setup_sysctl(struct mps_softc *sc)
 	    OID_AUTO, "max_chains", CTLFLAG_RD,
 	    &sc->max_chains, 0,"maximum chain frames that will be allocated");
 
-#if __FreeBSD_version >= 900030
+	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "max_io_pages", CTLFLAG_RD,
+	    &sc->max_io_pages, 0,"maximum pages to allow per I/O (if <1 use "
+	    "IOCFacts)");
+
+	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "enable_ssu", CTLFLAG_RW, &sc->enable_ssu, 0,
+	    "enable SSU to SATA SSD/HDD at shutdown");
+
 	SYSCTL_ADD_UQUAD(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
 	    OID_AUTO, "chain_alloc_fail", CTLFLAG_RD,
 	    &sc->chain_alloc_fail, "chain allocation failures");
-#endif //FreeBSD_version >= 900030
+
+	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "spinup_wait_time", CTLFLAG_RD,
+	    &sc->spinup_wait_time, DEFAULT_SPINUP_WAIT, "seconds to wait for "
+	    "spinup after SATA ID error");
+
+	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "mapping_table_dump", CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
+	    mps_mapping_dump, "A", "Mapping Table Dump");
+
+	SYSCTL_ADD_PROC(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "encl_table_dump", CTLTYPE_STRING | CTLFLAG_RD, sc, 0,
+	    mps_mapping_encl_dump, "A", "Enclosure Table Dump");
+
+	SYSCTL_ADD_INT(sysctl_ctx, SYSCTL_CHILDREN(sysctl_tree),
+	    OID_AUTO, "use_phy_num", CTLFLAG_RD, &sc->use_phynum, 0,
+	    "Use the phy number for enumeration");
 }
 
 int
@@ -1463,12 +1521,11 @@ mps_attach(struct mps_softc *sc)
 {
 	int error;
 
-	mps_get_tunables(sc);
-
 	MPS_FUNCTRACE(sc);
 
 	mtx_init(&sc->mps_mtx, "MPT2SAS lock", NULL, MTX_DEF);
 	callout_init_mtx(&sc->periodic, &sc->mps_mtx, 0);
+	callout_init_mtx(&sc->device_check_callout, &sc->mps_mtx, 0);
 	TAILQ_INIT(&sc->event_list);
 	timevalclear(&sc->lastfail);
 
@@ -1574,7 +1631,7 @@ mps_log_evt_handler(struct mps_softc *sc, uintptr_t data,
 {
 	MPI2_EVENT_DATA_LOG_ENTRY_ADDED *entry;
 
-	mps_print_event(sc, event);
+	MPS_DPRINT_EVENT(sc, generic, event);
 
 	switch (event->Event) {
 	case MPI2_EVENT_LOG_DATA:
@@ -1633,6 +1690,7 @@ mps_free(struct mps_softc *sc)
 	mps_unlock(sc);
 	/* Lock must not be held for this */
 	callout_drain(&sc->periodic);
+	callout_drain(&sc->device_check_callout);
 
 	if (((error = mps_detach_log(sc)) != 0) ||
 	    ((error = mps_detach_sas(sc)) != 0))
@@ -1879,7 +1937,7 @@ mps_intr_locked(void *data)
 				       sc->reply_frames, sc->fqdepth,
 				       sc->facts->ReplyFrameSize * 4);
 				printf("%s: baddr %#x,\n", __func__, baddr);
-				/* LSI-TODO. See Linux Code. Need Gracefull exit*/
+				/* LSI-TODO. See Linux Code. Need Graceful exit*/
 				panic("Reply address out of range");
 			}
 			if (le16toh(desc->AddressReply.SMID) == 0) {
@@ -1894,9 +1952,10 @@ mps_intr_locked(void *data)
 					 */
 					rel_rep =
 					    (MPI2_DIAG_RELEASE_REPLY *)reply;
-					if (le16toh(rel_rep->IOCStatus) ==
+					if ((le16toh(rel_rep->IOCStatus) &
+					    MPI2_IOCSTATUS_MASK) ==
 					    MPI2_IOCSTATUS_DIAGNOSTIC_RELEASED)
-					    {
+					{
 						pBuffer =
 						    &sc->fw_diag_buffer_list[
 						    rel_rep->BufferType];
@@ -1982,7 +2041,7 @@ mps_reregister_events_complete(struct mps_softc *sc, struct mps_command *cm)
 	mps_dprint(sc, MPS_TRACE, "%s\n", __func__);
 
 	if (cm->cm_reply)
-		mps_print_event(sc,
+		MPS_DPRINT_EVENT(sc, generic,
 			(MPI2_EVENT_NOTIFICATION_REPLY *)cm->cm_reply);
 
 	mps_free_command(sc, cm);
@@ -2024,7 +2083,7 @@ mps_update_events(struct mps_softc *sc, struct mps_event_handle *handle,
     u32 *mask)
 {
 	MPI2_EVENT_NOTIFICATION_REQUEST *evtreq;
-	MPI2_EVENT_NOTIFICATION_REPLY *reply;
+	MPI2_EVENT_NOTIFICATION_REPLY *reply = NULL;
 	struct mps_command *cm;
 	int error, i;
 
@@ -2062,15 +2121,20 @@ mps_update_events(struct mps_softc *sc, struct mps_event_handle *handle,
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 	cm->cm_data = NULL;
 
-	error = mps_request_polled(sc, cm);
-	reply = (MPI2_EVENT_NOTIFICATION_REPLY *)cm->cm_reply;
+	error = mps_wait_command(sc, &cm, 60, 0);
+	if (cm != NULL)
+		reply = (MPI2_EVENT_NOTIFICATION_REPLY *)cm->cm_reply;
 	if ((reply == NULL) ||
 	    (reply->IOCStatus & MPI2_IOCSTATUS_MASK) != MPI2_IOCSTATUS_SUCCESS)
 		error = ENXIO;
-	mps_print_event(sc, reply);
+
+	if (reply)
+		MPS_DPRINT_EVENT(sc, generic, reply);
+
 	mps_dprint(sc, MPS_TRACE, "%s finished error %d\n", __func__, error);
 
-	mps_free_command(sc, cm);
+	if (cm != NULL)
+		mps_free_command(sc, cm);
 	return (error);
 }
 
@@ -2164,7 +2228,7 @@ mps_add_chain(struct mps_command *cm)
 	 *	sgc->Flags = ( MPI2_SGE_FLAGS_CHAIN_ELEMENT | MPI2_SGE_FLAGS_64_BIT_ADDRESSING |
 	 *	            MPI2_SGE_FLAGS_SYSTEM_ADDRESS) << MPI2_SGE_FLAGS_SHIFT
 	 *	This is fine.. because we are not using simple element. In case of 
-	 *	MPI2_SGE_CHAIN32, we have seperate Length and Flags feild.
+	 *	MPI2_SGE_CHAIN32, we have separate Length and Flags feild.
  	 */
 	sgc->Flags = MPI2_SGE_FLAGS_CHAIN_ELEMENT;
 	sgc->Address = htole32(chain->chain_busaddr);
@@ -2476,29 +2540,41 @@ mps_map_command(struct mps_softc *sc, struct mps_command *cm)
  * be executed and enqueued automatically.  Other errors come from msleep().
  */
 int
-mps_wait_command(struct mps_softc *sc, struct mps_command *cm, int timeout,
+mps_wait_command(struct mps_softc *sc, struct mps_command **cmp, int timeout,
     int sleep_flag)
 {
 	int error, rc;
 	struct timeval cur_time, start_time;
+	struct mps_command *cm = *cmp;
 
 	if (sc->mps_flags & MPS_FLAGS_DIAGRESET) 
 		return  EBUSY;
 
 	cm->cm_complete = NULL;
-	cm->cm_flags |= (MPS_CM_FLAGS_WAKEUP + MPS_CM_FLAGS_POLLED);
+	cm->cm_flags |= MPS_CM_FLAGS_POLLED;
 	error = mps_map_command(sc, cm);
 	if ((error != 0) && (error != EINPROGRESS))
 		return (error);
 
-	// Check for context and wait for 50 mSec at a time until time has
-	// expired or the command has finished.  If msleep can't be used, need
-	// to poll.
+	/*
+	 * Check for context and wait for 50 mSec at a time until time has
+	 * expired or the command has finished.  If msleep can't be used, need
+	 * to poll.
+	 */
 	if (curthread->td_no_sleeping != 0)
 		sleep_flag = NO_SLEEP;
-	getmicrotime(&start_time);
+	getmicrouptime(&start_time);
 	if (mtx_owned(&sc->mps_mtx) && sleep_flag == CAN_SLEEP) {
+		cm->cm_flags |= MPS_CM_FLAGS_WAKEUP;
 		error = msleep(cm, &sc->mps_mtx, 0, "mpswait", timeout*hz);
+		if (error == EWOULDBLOCK) {
+			/*
+			 * Record the actual elapsed time in the case of a
+			 * timeout for the message below.
+			 */
+			getmicrouptime(&cur_time);
+			timevalsub(&cur_time, &start_time);
+		}
 	} else {
 		while ((cm->cm_flags & MPS_CM_FLAGS_COMPLETE) == 0) {
 			mps_intr_locked(sc);
@@ -2507,8 +2583,9 @@ mps_wait_command(struct mps_softc *sc, struct mps_command *cm, int timeout,
 			else
 				DELAY(50000);
 		
-			getmicrotime(&cur_time);
-			if ((cur_time.tv_sec - start_time.tv_sec) > timeout) {
+			getmicrouptime(&cur_time);
+			timevalsub(&cur_time, &start_time);
+			if (cur_time.tv_sec > timeout) {
 				error = EWOULDBLOCK;
 				break;
 			}
@@ -2516,54 +2593,27 @@ mps_wait_command(struct mps_softc *sc, struct mps_command *cm, int timeout,
 	}
 
 	if (error == EWOULDBLOCK) {
-		mps_dprint(sc, MPS_FAULT, "Calling Reinit from %s\n", __func__);
+		mps_dprint(sc, MPS_FAULT, "Calling Reinit from %s, timeout=%d,"
+		    " elapsed=%jd\n", __func__, timeout,
+		    (intmax_t)cur_time.tv_sec);
 		rc = mps_reinit(sc);
 		mps_dprint(sc, MPS_FAULT, "Reinit %s\n", (rc == 0) ? "success" :
 		    "failed");
+		if (sc->mps_flags & MPS_FLAGS_REALLOCATED) {
+			/*
+			 * Tell the caller that we freed the command in a
+			 * reinit.
+			 */
+			*cmp = NULL;
+		}
 		error = ETIMEDOUT;
 	}
 	return (error);
 }
 
 /*
- * This is the routine to enqueue a command synchonously and poll for
- * completion.  Its use should be rare.
- */
-int
-mps_request_polled(struct mps_softc *sc, struct mps_command *cm)
-{
-	int error, timeout = 0, rc;
-
-	error = 0;
-
-	cm->cm_flags |= MPS_CM_FLAGS_POLLED;
-	cm->cm_complete = NULL;
-	mps_map_command(sc, cm);
-
-	while ((cm->cm_flags & MPS_CM_FLAGS_COMPLETE) == 0) {
-		mps_intr_locked(sc);
-
-		DELAY(50 * 1000);
-		if (timeout++ > 1000) {
-			mps_dprint(sc, MPS_FAULT, "polling failed\n");
-			error = ETIMEDOUT;
-			break;
-		}
-	}
-	
-	if (error) {
-		mps_dprint(sc, MPS_FAULT, "Calling Reinit from %s\n", __func__);
-		rc = mps_reinit(sc);
-		mps_dprint(sc, MPS_FAULT, "Reinit %s\n", 
-				(rc == 0) ? "success" : "failed");
-	}
-
-	return (error);
-}
-
-/*
  * The MPT driver had a verbose interface for config pages.  In this driver,
- * reduce it to much simplier terms, similar to the Linux driver.
+ * reduce it to much simpler terms, similar to the Linux driver.
  */
 int
 mps_read_config_page(struct mps_softc *sc, struct mps_config_params *params)
@@ -2609,9 +2659,12 @@ mps_read_config_page(struct mps_softc *sc, struct mps_config_params *params)
 
 	cm->cm_data = params->buffer;
 	cm->cm_length = params->length;
-	cm->cm_sge = &req->PageBufferSGE;
-	cm->cm_sglsize = sizeof(MPI2_SGE_IO_UNION);
-	cm->cm_flags = MPS_CM_FLAGS_SGE_SIMPLE | MPS_CM_FLAGS_DATAIN;
+	if (cm->cm_data != NULL) {
+		cm->cm_sge = &req->PageBufferSGE;
+		cm->cm_sglsize = sizeof(MPI2_SGE_IO_UNION);
+		cm->cm_flags = MPS_CM_FLAGS_SGE_SIMPLE | MPS_CM_FLAGS_DATAIN;
+	} else
+		cm->cm_sge = NULL;
 	cm->cm_desc.Default.RequestFlags = MPI2_REQ_DESCRIPT_FLAGS_DEFAULT_TYPE;
 
 	cm->cm_complete_data = params;
@@ -2619,11 +2672,12 @@ mps_read_config_page(struct mps_softc *sc, struct mps_config_params *params)
 		cm->cm_complete = mps_config_complete;
 		return (mps_map_command(sc, cm));
 	} else {
-		error = mps_wait_command(sc, cm, 0, CAN_SLEEP);
+		error = mps_wait_command(sc, &cm, 0, CAN_SLEEP);
 		if (error) {
 			mps_dprint(sc, MPS_FAULT,
 			    "Error %d reading config page\n", error);
-			mps_free_command(sc, cm);
+			if (cm != NULL)
+				mps_free_command(sc, cm);
 			return (error);
 		}
 		mps_config_complete(sc, cm);
@@ -2668,9 +2722,12 @@ mps_config_complete(struct mps_softc *sc, struct mps_command *cm)
 		goto done;
 	}
 	params->status = reply->IOCStatus;
-	if (params->hdr.Ext.ExtPageType != 0) {
+	if (params->hdr.Struct.PageType == MPI2_CONFIG_PAGETYPE_EXTENDED) {
 		params->hdr.Ext.ExtPageType = reply->ExtPageType;
 		params->hdr.Ext.ExtPageLength = reply->ExtPageLength;
+		params->hdr.Ext.PageType = reply->Header.PageType;
+		params->hdr.Ext.PageNumber = reply->Header.PageNumber;
+		params->hdr.Ext.PageVersion = reply->Header.PageVersion;
 	} else {
 		params->hdr.Struct.PageType = reply->Header.PageType;
 		params->hdr.Struct.PageNumber = reply->Header.PageNumber;

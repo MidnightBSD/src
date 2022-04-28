@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/i915_drm.h 183573 2008-10-03 16:59:11Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _I915_DRM_H_
 #define _I915_DRM_H_

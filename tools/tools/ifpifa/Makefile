@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/tools/tools/ifpifa/Makefile 236644 2012-06-05 21:35:47Z emax $
+# $FreeBSD$
 
 PROG=	ifpifa
-NO_MAN=
+MAN=
 WARNS?=6
 BINDIR?=/usr/local/bin
-DPADD=${LIBKVM}
-LDADD=-lkvm
+LIBADD=kvm
 
 .include <bsd.prog.mk>

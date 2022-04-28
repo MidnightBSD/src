@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,29 +32,27 @@
 static char sccsid[] = "@(#)from: subr.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/libexec/getty/subr.c 131091 2004-06-25 10:11:28Z phk $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
  * Melbourne getty.
  */
-#ifdef DEBUG
-#include <stdio.h>
-#endif
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <sys/time.h>
+
+#include <poll.h>
+#include <regex.h>
+#include <stdlib.h>
+#include <string.h>
 #include <syslog.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "gettytab.h"
 #include "pathnames.h"
 #include "extern.h"
-
-
 
 /*
  * Get a table entry.
@@ -78,7 +72,7 @@ gettable(const char *name, char *buf)
 	static int firsttime = 1;
 
 	dba[0] = _PATH_GETTYTAB;
-	dba[1] = 0;
+	dba[1] = NULL;
 
 	if (firsttime) {
 		/*
@@ -164,17 +158,6 @@ gettable(const char *name, char *buf)
 			fp->value = 1 ^ fp->invrt;
 		}
 	}
-
-#ifdef DEBUG
-	printf("name=\"%s\", buf=\"%s\"\r\n", name, buf);
-	for (sp = gettystrs; sp->field; sp++)
-		printf("cgetstr: %s=%s\r\n", sp->field, sp->value);
-	for (np = gettynums; np->field; np++)
-		printf("cgetnum: %s=%d\r\n", np->field, np->value);
-	for (fp = gettyflags; fp->field; fp++)
-		printf("cgetflags: %s='%c' set='%c'\r\n", fp->field, 
-		       fp->value + '0', fp->set + '0');
-#endif /* DEBUG */
 }
 
 void
@@ -485,42 +468,48 @@ adelay(int ms, struct delayval *dp)
 char	editedhost[MAXHOSTNAMELEN];
 
 void
-edithost(const char *pat)
+edithost(const char *pattern)
 {
-	const char *host = HN;
-	char *res = editedhost;
+	regex_t regex;
+	regmatch_t *match;
+	int found;
 
-	if (!pat)
-		pat = "";
-	while (*pat) {
-		switch (*pat) {
+	if (pattern == NULL || *pattern == '\0')
+		goto copyasis;
+	if (regcomp(&regex, pattern, REG_EXTENDED) != 0)
+		goto copyasis;
 
-		case '#':
-			if (*host)
-				host++;
-			break;
-
-		case '@':
-			if (*host)
-				*res++ = *host++;
-			break;
-
-		default:
-			*res++ = *pat;
-			break;
-
-		}
-		if (res == &editedhost[sizeof editedhost - 1]) {
-			*res = '\0';
-			return;
-		}
-		pat++;
+	match = calloc(regex.re_nsub + 1, sizeof(*match));
+	if (match == NULL) {
+		regfree(&regex);
+		goto copyasis;
 	}
-	if (*host)
-		strncpy(res, host, sizeof editedhost - (res - editedhost) - 1);
-	else
-		*res = '\0';
-	editedhost[sizeof editedhost - 1] = '\0';
+
+	found = !regexec(&regex, HN, regex.re_nsub + 1, match, 0);
+	if (found) {
+		size_t subex, totalsize;
+
+		/*
+		 * We found a match.  If there were no parenthesized
+		 * subexpressions in the pattern, use entire matched
+		 * string as ``editedhost''; otherwise use the first
+		 * matched subexpression.
+		 */
+		subex = !!regex.re_nsub;
+		totalsize = match[subex].rm_eo - match[subex].rm_so + 1;
+		strlcpy(editedhost, HN + match[subex].rm_so, totalsize >
+		    sizeof(editedhost) ? sizeof(editedhost) : totalsize);
+	}
+	free(match);
+	regfree(&regex);
+	if (found)
+		return;
+	/*
+	 * In case of any errors, or if the pattern did not match, pass
+	 * the original hostname as is.
+	 */
+ copyasis:
+	strlcpy(editedhost, HN, sizeof(editedhost));
 }
 
 static struct speedtab {
@@ -611,7 +600,7 @@ struct	portselect {
 	{ "B4800",	"std.4800" },
 	{ "B9600",	"std.9600" },
 	{ "B19200",	"std.19200" },
-	{ 0 }
+	{ NULL, NULL }
 };
 
 const char *
@@ -620,7 +609,7 @@ portselector(void)
 	char c, baud[20];
 	const char *type = "default";
 	struct portselect *ps;
-	int len;
+	size_t len;
 
 	alarm(5*60);
 	for (len = 0; len < sizeof (baud) - 1; len++) {
@@ -651,24 +640,21 @@ portselector(void)
 const char *
 autobaud(void)
 {
-	int rfds;
-	struct timeval timeout;
+	struct pollfd set[1];
+	struct timespec timeout;
 	char c;
 	const char *type = "9600-baud";
 
 	(void)tcflush(0, TCIOFLUSH);
-	rfds = 1 << 0;
-	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
-	if (select(32, (fd_set *)&rfds, (fd_set *)NULL,
-	    (fd_set *)NULL, &timeout) <= 0)
+	set[0].fd = STDIN_FILENO;
+	set[0].events = POLLIN;
+	if (poll(set, 1, 5000) <= 0)
 		return (type);
 	if (read(STDIN_FILENO, &c, sizeof(char)) != sizeof(char))
 		return (type);
 	timeout.tv_sec = 0;
-	timeout.tv_usec = 20;
-	(void) select(32, (fd_set *)NULL, (fd_set *)NULL,
-	    (fd_set *)NULL, &timeout);
+	timeout.tv_nsec = 20000;
+	(void)nanosleep(&timeout, NULL);
 	(void)tcflush(0, TCIOFLUSH);
 	switch (c & 0377) {
 

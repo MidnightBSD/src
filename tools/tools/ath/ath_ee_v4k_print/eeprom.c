@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/ath/ath_ee_v4k_print/eeprom.c 217770 2011-01-24 06:46:03Z adrian $
+ * $FreeBSD$
  */
 
 #include <stdio.h>

@@ -1,6 +1,8 @@
-/* $FreeBSD: release/10.0.0/usr.bin/grep/regex/fastmatch.c 226035 2011-10-05 09:56:43Z gabor $ */
+/* $FreeBSD$ */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011 Gabor Kovesdan <gabor@FreeBSD.org>
  * All rights reserved.
  *
@@ -34,7 +36,6 @@
 #include <string.h>
 
 #include "tre-fastmatch.h"
-#include "xmalloc.h"
 
 int
 tre_fixncomp(fastmatch_t *preg, const char *regex, size_t n, int cflags)

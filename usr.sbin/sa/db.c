@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Diomidis Spinellis
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/sa/db.c 228681 2011-12-18 01:08:25Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/acct.h>
@@ -44,7 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/sa/db.c 228681 2011-12-18 01:08:25Z 
 #include "extern.h"
 
 /* Key used to store the version of the database data elements. */
-#define VERSION_KEY "\0VERSION"
+static char VERSION_KEY[] = "\0VERSION";
 
 /*
  * Create the in-memory database, *mdb.

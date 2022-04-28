@@ -27,7 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/tools/tools/makeroot/makeroot.8 251056 2013-05-28 09:33:46Z joel $
+.\" $FreeBSD$
 .Dd May 20, 2013
 .Dt MAKEROOT 8
 .Os
@@ -41,6 +41,7 @@
 .Op Fl e Ar extras-manifest
 .Op Fl f Ar filelist
 .Op Fl k Ar keydir Op Fl K Ar user
+.Op Fl l Ar label
 .Op Fl p Ar master.passwd Op Fl g Ar group
 .Op Fl s Ar size
 .Ar image-file
@@ -94,6 +95,8 @@ If no
 .Fl K
 argument is supplied then the files will be installed in the root user's
 directory.
+.It Fl l Ar label
+Set the file system volume label.
 .It Fl p Ar master.passwd Op Fl g Ar group
 Install an alternate
 .Ar master.passwd

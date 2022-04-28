@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cxgb/ulp/tom/cxgb_tom.c 241394 2012-10-10 08:36:38Z kevlo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_inet.h"
 

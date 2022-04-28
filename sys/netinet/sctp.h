@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp.h 254248 2013-08-12 13:52:15Z tuexen $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
@@ -43,13 +43,13 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/sctp.h 254248 2013-08-12 13:52:15
 #define SCTP_PACKED __attribute__((packed))
 
 /*
- * SCTP protocol - RFC2960.
+ * SCTP protocol - RFC4960.
  */
 struct sctphdr {
 	uint16_t src_port;	/* source port */
 	uint16_t dest_port;	/* destination port */
 	uint32_t v_tag;		/* verification tag of packet */
-	uint32_t checksum;	/* Adler32 C-Sum */
+	uint32_t checksum;	/* CRC32C checksum */
 	/* chunks follow... */
 }       SCTP_PACKED;
 
@@ -121,6 +121,14 @@ struct sctp_paramhdr {
 #define SCTP_DEFAULT_PRINFO             0x00000022
 #define SCTP_PEER_ADDR_THLDS            0x00000023
 #define SCTP_REMOTE_UDP_ENCAPS_PORT     0x00000024
+#define SCTP_ECN_SUPPORTED              0x00000025
+#define SCTP_PR_SUPPORTED               0x00000026
+#define SCTP_AUTH_SUPPORTED             0x00000027
+#define SCTP_ASCONF_SUPPORTED           0x00000028
+#define SCTP_RECONFIG_SUPPORTED         0x00000029
+#define SCTP_NRSACK_SUPPORTED           0x00000030
+#define SCTP_PKTDROP_SUPPORTED          0x00000031
+#define SCTP_MAX_CWND                   0x00000032
 
 /*
  * read-only options
@@ -133,6 +141,8 @@ struct sctp_paramhdr {
 #define SCTP_GET_ASSOC_NUMBER           0x00000104	/* ro */
 #define SCTP_GET_ASSOC_ID_LIST          0x00000105	/* ro */
 #define SCTP_TIMEOUTS                   0x00000106
+#define SCTP_PR_STREAM_STATUS           0x00000107
+#define SCTP_PR_ASSOC_STATUS            0x00000108
 
 /*
  * user socket options: BSD implementation specific
@@ -186,6 +196,9 @@ struct sctp_paramhdr {
 #define SCTP_SS_VALUE			0x00001204
 #define SCTP_CC_OPTION			0x00001205	/* Options for CC
 							 * modules */
+/* For I-DATA */
+#define SCTP_INTERLEAVING_SUPPORTED	0x00001206
+
 /* read only */
 #define SCTP_GET_SNDBUF_USE		0x00001101
 #define SCTP_GET_STAT_LOG		0x00001103
@@ -365,6 +378,12 @@ struct sctp_paramhdr {
 /*
  * error cause parameters (user visible)
  */
+struct sctp_gen_error_cause {
+	uint16_t code;
+	uint16_t length;
+	uint8_t info[];
+}                    SCTP_PACKED;
+
 struct sctp_error_cause {
 	uint16_t code;
 	uint16_t length;
@@ -372,35 +391,44 @@ struct sctp_error_cause {
 }                SCTP_PACKED;
 
 struct sctp_error_invalid_stream {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_INVALID_STREAM */
 	uint16_t stream_id;	/* stream id of the DATA in error */
 	uint16_t reserved;
 }                         SCTP_PACKED;
 
 struct sctp_error_missing_param {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_MISSING_PARAM */
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_MISSING_PARAM */
 	uint32_t num_missing_params;	/* number of missing parameters */
-	/* uint16_t param_type's follow */
+	uint16_t type[];
 }                        SCTP_PACKED;
 
 struct sctp_error_stale_cookie {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_STALE_COOKIE */
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_STALE_COOKIE */
 	uint32_t stale_time;	/* time in usec of staleness */
 }                       SCTP_PACKED;
 
 struct sctp_error_out_of_resource {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_OUT_OF_RESOURCES */
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_OUT_OF_RESOURCES */
 }                          SCTP_PACKED;
 
 struct sctp_error_unresolv_addr {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRESOLVABLE_ADDR */
-
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_UNRESOLVABLE_ADDR */
 }                        SCTP_PACKED;
 
 struct sctp_error_unrecognized_chunk {
-	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRECOG_CHUNK */
-	struct sctp_chunkhdr ch;/* header from chunk in error */
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_UNRECOG_CHUNK */
+	struct sctp_chunkhdr ch;	/* header from chunk in error */
 }                             SCTP_PACKED;
+
+struct sctp_error_no_user_data {
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_NO_USER_DATA */
+	uint32_t tsn;		/* TSN of the empty data chunk */
+}                       SCTP_PACKED;
+
+struct sctp_error_auth_invalid_hmac {
+	struct sctp_error_cause cause;	/* code=SCTP_CAUSE_UNSUPPORTED_HMACID */
+	uint16_t hmac_id;
+}                            SCTP_PACKED;
 
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
@@ -427,6 +455,7 @@ struct sctp_error_unrecognized_chunk {
 /* EY nr_sack chunk id*/
 #define SCTP_NR_SELECTIVE_ACK	0x10
 /************0x40 series ***********/
+#define SCTP_IDATA		0x40
 /************0x80 series ***********/
 /* RFC5061 */
 #define	SCTP_ASCONF_ACK		0x80
@@ -442,7 +471,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_FORWARD_CUM_TSN	0xc0
 /* RFC5061 */
 #define SCTP_ASCONF		0xc1
-
+#define SCTP_IFORWARD_CUM_TSN	0xc2
 
 /* ABORT and SHUTDOWN COMPLETE FLAG */
 #define SCTP_HAD_NO_TCB		0x01
@@ -460,6 +489,7 @@ struct sctp_error_unrecognized_chunk {
 					 * time */
 #define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
 					 * in sat */
+#define SCTP_MAX_SENDALL_LIMIT 1024
 
 /* Data Chuck Specific Flags */
 #define SCTP_DATA_FRAG_MASK        0x03
@@ -485,6 +515,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
 #define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
 #define SCTP_PCB_FLAGS_UNBOUND		0x00000010
+#define SCTP_PCB_FLAGS_SND_ITERATOR_UP  0x00000020
 #define SCTP_PCB_FLAGS_CLOSE_IP         0x00040000
 #define SCTP_PCB_FLAGS_WAS_CONNECTED    0x00080000
 #define SCTP_PCB_FLAGS_WAS_ABORTED      0x00100000
@@ -516,7 +547,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_INTERLEAVE_STRMS  0x0000000000000010
 #define SCTP_PCB_FLAGS_DO_ASCONF         0x0000000000000020
 #define SCTP_PCB_FLAGS_AUTO_ASCONF       0x0000000000000040
-#define SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE  0x0000000000000080
 /* socket options */
 #define SCTP_PCB_FLAGS_NODELAY           0x0000000000000100
 #define SCTP_PCB_FLAGS_AUTOCLOSE         0x0000000000000200
@@ -553,8 +583,10 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_MOBILITY_PRIM_DELETED       0x00000004
 
 
-#define SCTP_SMALLEST_PMTU 512	/* smallest pmtu allowed when disabling PMTU
-				 * discovery */
+/* Smallest PMTU allowed when disabling PMTU discovery */
+#define SCTP_SMALLEST_PMTU 512
+/* Largest PMTU allowed when disabling PMTU discovery */
+#define SCTP_LARGEST_PMTU  65536
 
 #undef SCTP_PACKED
 

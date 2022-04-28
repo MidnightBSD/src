@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)lpd.c	8.7 (Berkeley) 5/10/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lpd/lpd.c 216372 2010-12-11 09:38:12Z joel $");
+__FBSDID("$FreeBSD$");
 
 /*
  * lpd -- line printer daemon.
@@ -657,11 +657,7 @@ chkhost(struct sockaddr *f, int ch_opts)
 	char hostbuf[NI_MAXHOST], ip[NI_MAXHOST];
 	char serv[NI_MAXSERV];
 	char *syserr, *usererr;
-	int error, errsav, fpass, good, wantsl;
-
-	wantsl = 0;
-	if (ch_opts & LPD_LOGCONNERR)
-		wantsl = 1;			/* also syslog the errors */
+	int error, errsav, fpass, good;
 
 	from_host = ".na.";
 

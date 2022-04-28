@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -55,7 +55,7 @@
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
  *	from: FreeBSD: src/sys/alpha/include/in_cksum.h,v 1.5 2000/05/06
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/in_cksum.h 235941 2012-05-24 22:00:48Z bz $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_

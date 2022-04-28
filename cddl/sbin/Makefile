@@ -1,12 +1,18 @@
-# $FreeBSD: release/10.0.0/cddl/sbin/Makefile 168792 2007-04-16 21:20:26Z ru $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
-SUBDIR=	${_zfs} ${_zpool}
+SUBDIR=	${_tests} ${_zfs} ${_zpool}
+
+.if ${MK_TESTS} != "no"
+_tests=	tests
+.endif
 
 .if ${MK_ZFS} != "no"
 _zfs=	zfs
 _zpool=	zpool
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

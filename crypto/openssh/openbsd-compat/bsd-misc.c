@@ -28,9 +28,8 @@
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
-
-#include "xmalloc.h"
 
 #ifndef HAVE___PROGNAME
 char *__progname;
@@ -42,13 +41,12 @@ char *__progname;
  */
 char *ssh_get_progname(char *argv0)
 {
+	char *p, *q;
 #ifdef HAVE___PROGNAME
 	extern char *__progname;
 
-	return xstrdup(__progname);
+	p = __progname;
 #else
-	char *p;
-
 	if (argv0 == NULL)
 		return ("unknown");	/* XXX */
 	p = strrchr(argv0, '/');
@@ -56,9 +54,12 @@ char *ssh_get_progname(char *argv0)
 		p = argv0;
 	else
 		p++;
-
-	return (xstrdup(p));
 #endif
+	if ((q = strdup(p)) == NULL) {
+		perror("strdup");
+		exit(1);
+	}
+	return q;
 }
 
 #ifndef HAVE_SETLOGIN
@@ -69,8 +70,8 @@ int setlogin(const char *name)
 #endif /* !HAVE_SETLOGIN */
 
 #ifndef HAVE_INNETGR
-int innetgr(const char *netgroup, const char *host, 
-            const char *user, const char *domain)
+int innetgr(const char *netgroup, const char *host,
+	    const char *user, const char *domain)
 {
 	return (0);
 }
@@ -95,7 +96,7 @@ const char *strerror(int e)
 {
 	extern int sys_nerr;
 	extern char *sys_errlist[];
-	
+
 	if ((e >= 0) && (e < sys_nerr))
 		return (sys_errlist[e]);
 
@@ -110,10 +111,10 @@ int utimes(char *filename, struct timeval *tvp)
 
 	ub.actime = tvp[0].tv_sec;
 	ub.modtime = tvp[1].tv_sec;
-	
+
 	return (utime(filename, &ub));
 }
-#endif 
+#endif
 
 #ifndef HAVE_TRUNCATE
 int truncate(const char *path, off_t length)
@@ -148,9 +149,9 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 		saverrno = errno;
 		(void) gettimeofday (&tstop, NULL);
 		errno = saverrno;
-		tremain.tv_sec = time2wait.tv_sec - 
+		tremain.tv_sec = time2wait.tv_sec -
 			(tstop.tv_sec - tstart.tv_sec);
-		tremain.tv_usec = time2wait.tv_usec - 
+		tremain.tv_usec = time2wait.tv_usec -
 			(tstop.tv_usec - tstart.tv_usec);
 		tremain.tv_sec += tremain.tv_usec / 1000000L;
 		tremain.tv_usec %= 1000000L;
@@ -273,5 +274,38 @@ getpgid(pid_t pid)
 
 	errno = ESRCH;
 	return -1;
+}
+#endif
+
+#ifndef HAVE_PLEDGE
+int
+pledge(const char *promises, const char *paths[])
+{
+	return 0;
+}
+#endif
+
+#ifndef HAVE_MBTOWC
+/* a mbtowc that only supports ASCII */
+int
+mbtowc(wchar_t *pwc, const char *s, size_t n)
+{
+	if (s == NULL || *s == '\0')
+		return 0;	/* ASCII is not state-dependent */
+	if (*s < 0 || *s > 0x7f || n < 1) {
+		errno = EOPNOTSUPP;
+		return -1;
+	}
+	if (pwc != NULL)
+		*pwc = *s;
+	return 1;
+}
+#endif
+
+#ifndef HAVE_LLABS
+long long
+llabs(long long j)
+{
+	return (j < 0 ? -j : j);
 }
 #endif

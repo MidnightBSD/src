@@ -1,5 +1,5 @@
-# $FreeBSD: release/10.0.0/sys/modules/hptnr/Makefile 252867 2013-07-06 07:49:41Z delphij $
-HPTNR=	${.CURDIR}/../../dev/hptnr
+# $FreeBSD$
+HPTNR=	${SRCTOP}/sys/dev/hptnr
 .PATH:	${HPTNR}
 
 KMOD=	hptnr

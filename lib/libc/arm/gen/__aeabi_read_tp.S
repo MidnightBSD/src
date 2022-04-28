@@ -26,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/gen/__aeabi_read_tp.S 239271 2012-08-15 03:09:00Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/sysarch.h>
 
@@ -38,9 +38,11 @@ ENTRY(__aeabi_read_tp)
 	mrc	p15, 0, r0, c13, c0, 3
 #endif
 	RET
+END(__aeabi_read_tp)
 
 #ifdef ARM_TP_ADDRESS
 .Larm_tp_address:
 	.word ARM_TP_ADDRESS
 #endif
 
+	.section .note.GNU-stack,"",%progbits

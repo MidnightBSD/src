@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/devctl.4 160964 2006-08-04 07:56:35Z yar $
+.\" $FreeBSD$
 .\"
-.Dd February 11, 2003
+.Dd March 26, 2014
 .Dt DEVCTL 4
 .Os
 .Sh NAME
@@ -73,9 +73,10 @@ If you try to read this device a character at a time, you will lose
 the rest of the data.
 Listening programs are expected to cope.
 .Pp
-The sysctl and boot parameter
-.Va hw.bus.devctl_disable
-is used to disable
+The sysctl
+.Va hw.bus.devctl_queue
+can be used to control queue length.
+It is set to 0 to disable
 .Nm
 when no
 .Xr devd 8

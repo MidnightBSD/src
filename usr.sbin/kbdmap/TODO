@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/usr.sbin/kbdmap/TODO 65807 2000-09-13 09:16:57Z dwmalone $
+$FreeBSD$
 
 o remember some hackers to translate Languages.phrases into
   Norwegian, Russian, Danish, Swedish

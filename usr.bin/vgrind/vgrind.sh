@@ -29,7 +29,7 @@
 #
 #       @(#)vgrind.sh	8.1 (Berkeley) 6/6/93
 #
-# $FreeBSD: release/10.0.0/usr.bin/vgrind/vgrind.sh 216370 2010-12-11 08:32:16Z joel $
+# $FreeBSD$
 #
 
 voptions=""

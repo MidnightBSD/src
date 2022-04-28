@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/in_cksum.c 238941 2012-07-31 08:04:49Z luigi $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -48,9 +48,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netinet/in_cksum.c 238941 2012-07-31 08:0
 int
 in_cksum(struct mbuf *m, int len)
 {
-	register u_short *w;
-	register int sum = 0;
-	register int mlen = 0;
+	u_short *w;
+	int sum = 0;
+	int mlen = 0;
 	int byte_swapped = 0;
 
 	union {

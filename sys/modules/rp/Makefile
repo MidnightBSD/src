@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/rp/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/rp
+.PATH: ${SRCTOP}/sys/dev/rp
 
 KMOD=	rp
 SRCS=	rp.c rp_pci.c device_if.h bus_if.h pci_if.h opt_compat.h

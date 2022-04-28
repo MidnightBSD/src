@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/smbfs/lib/smb/mbuf.c 150312 2005-09-19 08:07:18Z imura $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/endian.h>

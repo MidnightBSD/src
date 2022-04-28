@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/memguard.9 226619 2011-10-21 20:23:40Z glebius $
+.\" $FreeBSD$
 .\"
-.Dd October 21, 2011
+.Dd March 22, 2017
 .Dt MEMGUARD 9
 .Os
 .Sh NAME
@@ -54,7 +54,7 @@ can take over
 and
 .Fn uma_free
 for a single
-.Xr uma
+.Xr uma 9
 zone.
 Also
 .Nm
@@ -129,7 +129,7 @@ memory
 .Nm
 is allowed to consume.
 The default is 10, so up to
-.Va cnt.v_page_count Ns /10
+.Va vm_cnt.v_page_count Ns /10
 pages can be used.
 .Nm
 will reserve
@@ -172,7 +172,7 @@ has the 2 bit set.
 This option is off by default.
 By default
 .Nm
-doesn't guard those
+does not guard
 .Xr uma 9
 zones that have been initialized with the
 .Dv UMA_ZONE_NOFREE
@@ -196,25 +196,11 @@ first appeared in
 .An -nosplit
 .Nm
 was originally written by
-.An Bosko Milekic Aq bmilekic@FreeBSD.org .
+.An Bosko Milekic Aq Mt bmilekic@FreeBSD.org .
 This manual page was originally written by
-.An Christian Brueffer Aq brueffer@FreeBSD.org .
+.An Christian Brueffer Aq Mt brueffer@FreeBSD.org .
 Additions have been made by
-.An Matthew Fleming Aq mdf@FreeBSD.org
+.An Matthew Fleming Aq Mt mdf@FreeBSD.org
 and
-.An Gleb Smirnoff Aq glebius@FreeBSD.org
+.An Gleb Smirnoff Aq Mt glebius@FreeBSD.org
 to both the implementation and the documentation.
-.Sh BUGS
-It is not possible to guard allocations that really expect themselves to be
-allocated from
-.Xr uma 9 ,
-utilizing additional interfaces apart from
-.Fn uma_zalloc
-and
-.Fn uma_free ,
-for example
-.Fn uma_find_refcnt .
-For the moment of writing only
-.Xr mbuf 9
-cluster zones belong to that kind of allocations.
-Attempt to guard them would lead to kernel panic.

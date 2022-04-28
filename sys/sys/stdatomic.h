@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/stdatomic.h 254497 2013-08-18 19:37:35Z tijl $
+ * $FreeBSD$
  */
 
 #ifndef _STDATOMIC_H_
@@ -198,7 +198,7 @@ typedef _Atomic(long long)		atomic_llong;
 typedef _Atomic(unsigned long long)	atomic_ullong;
 typedef _Atomic(__char16_t)		atomic_char16_t;
 typedef _Atomic(__char32_t)		atomic_char32_t;
-typedef _Atomic(__wchar_t)		atomic_wchar_t;
+typedef _Atomic(___wchar_t)		atomic_wchar_t;
 typedef _Atomic(__int_least8_t)		atomic_int_least8_t;
 typedef _Atomic(__uint_least8_t)	atomic_uint_least8_t;
 typedef _Atomic(__int_least16_t)	atomic_int_least16_t;

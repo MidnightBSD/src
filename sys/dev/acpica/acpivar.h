@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/acpica/acpivar.h 242922 2012-11-12 18:09:25Z sbruno $
+ * $FreeBSD$
  */
 
 #ifndef _ACPIVAR_H_
@@ -185,7 +185,7 @@ extern struct mtx			acpi_mutex;
  * Various features and capabilities for the acpi_get_features() method.
  * In particular, these are used for the ACPI 3.0 _PDC and _OSC methods.
  * See the Intel document titled "Intel Processor Vendor-Specific ACPI",
- * number 302223-005.
+ * number 302223-007.
  */
 #define	ACPI_CAP_PERF_MSRS	(1 << 0)  /* Intel SpeedStep PERF_CTL MSRs */
 #define	ACPI_CAP_C1_IO_HALT	(1 << 1)  /* Intel C1 "IO then halt" sequence */
@@ -198,6 +198,9 @@ extern struct mtx			acpi_mutex;
 #define	ACPI_CAP_SMP_C1_NATIVE	(1 << 8)  /* MP C1 support other than halt */
 #define	ACPI_CAP_SMP_C3_NATIVE	(1 << 9)  /* MP C2 and C3 support */
 #define	ACPI_CAP_PX_HW_COORD	(1 << 11) /* Intel P-state HW coordination */
+#define	ACPI_CAP_INTR_CPPC	(1 << 12) /* Native Interrupt Handling for
+	     Collaborative Processor Performance Control notifications */
+#define	ACPI_CAP_HW_DUTY_C	(1 << 13) /* Hardware Duty Cycling */
 
 /*
  * Quirk flags.
@@ -332,6 +335,9 @@ ACPI_STATUS	acpi_FindIndexedResource(ACPI_BUFFER *buf, int index,
 		    ACPI_RESOURCE **resp);
 ACPI_STATUS	acpi_AppendBufferResource(ACPI_BUFFER *buf,
 		    ACPI_RESOURCE *res);
+ACPI_STATUS	acpi_EvaluateOSC(ACPI_HANDLE handle, uint8_t *uuid,
+		    int revision, int count, uint32_t *caps_in,
+		    uint32_t *caps_out, bool query);
 ACPI_STATUS	acpi_OverrideInterruptLevel(UINT32 InterruptNumber);
 ACPI_STATUS	acpi_SetIntrModel(int model);
 int		acpi_ReqSleepState(struct acpi_softc *sc, int state);
@@ -380,7 +386,8 @@ ACPI_STATUS	acpi_lookup_irq_resource(device_t dev, int rid,
 ACPI_STATUS	acpi_parse_resources(device_t dev, ACPI_HANDLE handle,
 		    struct acpi_parse_resource_set *set, void *arg);
 struct resource *acpi_alloc_sysres(device_t child, int type, int *rid,
-		    u_long start, u_long end, u_long count, u_int flags);
+		    rman_res_t start, rman_res_t end, rman_res_t count,
+		    u_int flags);
 
 /* ACPI event handling */
 UINT32		acpi_event_power_button_sleep(void *context);
@@ -437,6 +444,8 @@ int		acpi_wakeup_machdep(struct acpi_softc *sc, int state,
 int		acpi_table_quirks(int *quirks);
 int		acpi_machdep_quirks(int *quirks);
 
+uint32_t	hpet_get_uid(device_t dev);
+
 /* Battery Abstraction. */
 struct acpi_battinfo;
 
@@ -445,7 +454,7 @@ int		acpi_battery_remove(device_t dev);
 int		acpi_battery_get_units(void);
 int		acpi_battery_get_info_expire(void);
 int		acpi_battery_bst_valid(struct acpi_bst *bst);
-int		acpi_battery_bif_valid(struct acpi_bif *bif);
+int		acpi_battery_bix_valid(struct acpi_bix *bix);
 int		acpi_battery_get_battinfo(device_t dev,
 		    struct acpi_battinfo *info);
 
@@ -459,11 +468,17 @@ int		acpi_acad_get_acline(int *);
 #define ACPI_PKG_VALID(pkg, size)				\
     ((pkg) != NULL && (pkg)->Type == ACPI_TYPE_PACKAGE &&	\
      (pkg)->Package.Count >= (size))
+#define	ACPI_PKG_VALID_EQ(pkg, size)				\
+    ((pkg) != NULL && (pkg)->Type == ACPI_TYPE_PACKAGE &&	\
+     (pkg)->Package.Count == (size))
 int		acpi_PkgInt(ACPI_OBJECT *res, int idx, UINT64 *dst);
 int		acpi_PkgInt32(ACPI_OBJECT *res, int idx, uint32_t *dst);
+int		acpi_PkgInt16(ACPI_OBJECT *res, int idx, uint16_t *dst);
 int		acpi_PkgStr(ACPI_OBJECT *res, int idx, void *dst, size_t size);
 int		acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type,
 		    int *rid, struct resource **dst, u_int flags);
+int		acpi_PkgFFH_IntelCpu(ACPI_OBJECT *res, int idx, int *vendor,
+		    int *class, uint64_t *address, int *accsize);
 ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 
 /*
@@ -476,7 +491,7 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 
 /* Default maximum number of tasks to enqueue. */
 #ifndef ACPI_MAX_TASKS
-#define	ACPI_MAX_TASKS		MAX(32, MAXCPU * 2)
+#define	ACPI_MAX_TASKS		MAX(32, MAXCPU * 4)
 #endif
 
 /* Default number of task queue threads to start. */
@@ -488,6 +503,16 @@ ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 #define	KTR_ACPI		KTR_DEV
 
 SYSCTL_DECL(_debug_acpi);
+
+/*
+ * Map a PXM to a VM domain.
+ *
+ * Returns the VM domain ID if found, or -1 if not found / invalid.
+ */
+int		acpi_map_pxm_to_vm_domainid(int pxm);
+int		acpi_get_cpus(device_t dev, device_t child, enum cpu_sets op,
+		    size_t setsize, cpuset_t *cpuset);
+int		acpi_get_domain(device_t dev, device_t child, int *domain);
 
 #endif /* _KERNEL */
 #endif /* !_ACPIVAR_H_ */

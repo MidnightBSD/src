@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/drm_vm.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /** @file drm_vm.c
  * Support code for mmaping of DRM maps.
@@ -43,7 +43,7 @@ int drm_mmap(struct cdev *kdev, vm_ooffset_t offset, vm_paddr_t *paddr,
 
 	/* d_mmap gets called twice, we can only reference file_priv during
 	 * the first call.  We need to assume that if error is EBADF the
-	 * call was succesful and the client is authenticated.
+	 * call was successful and the client is authenticated.
 	 */
 	error = devfs_get_cdevpriv((void **)&file_priv);
 	if (error == ENOENT) {

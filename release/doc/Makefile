@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/doc/Makefile 251085 2013-05-28 23:46:13Z gjb $
+# $FreeBSD$
 #
 # The user can override the default language to build and install
 # with the RELNOTES_LANG variable.
@@ -12,31 +12,27 @@ SUBDIR+=	share/xml
 
 RELN_ROOT?= ${.CURDIR}
 
+.if exists(/usr/local/bin/svn)
 SVN?=		/usr/local/bin/svn
+.elif exists(/usr/bin/svn)
+SVN?=		/usr/bin/svn
+.else
+SVN?=		/usr/bin/svnlite
+.endif
+
 SVNFLAGS?=	-r HEAD
 
 update:
-.if (defined(CVS_UPDATE) || defined(SUP_UPDATE)) && !defined(SVN_UPDATE)
-	@echo "--------------------------------------------------------------"
-	@echo "CVS_UPDATE and SUP_UPDATE are no longer supported."
-	@echo "Please see: https://wiki.freebsd.org/CvsIsDeprecated"
-	@echo "--------------------------------------------------------------"
-	@exit 1
-.endif
-.if defined(SVN_UPDATE)
-. if !exists(${SVN})
+.if !exists(${SVN})
 	@echo "--------------------------------------------------------------"
 	@echo ">>> Updating ${RELN_ROOT} requires ${SVN}."
 	@echo "--------------------------------------------------------------"
 	@exit 1
-. endif
+.endif
 	@echo "--------------------------------------------------------------"
-	@echo ">>> Updating ${.CURDIR} using Subversion"
+	@echo ">>> Updating ${.CURDIR}"
 	@echo "--------------------------------------------------------------"
 	@(cd ${.CURDIR} && ${SVN} update ${SVNFLAGS})
-.else
-	@echo "Error: Please define SVN_UPDATE first."
-.endif
 
 .include "${RELN_ROOT}/share/mk/doc.relnotes.mk"
 .include "${DOC_PREFIX}/share/mk/doc.subdir.mk"

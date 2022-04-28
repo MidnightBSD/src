@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/splash/pcx/Makefile 133226 2004-08-06 20:37:08Z des $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../../dev/fb
+.PATH:	${SRCTOP}/sys/dev/fb
 
 KMOD=	splash_pcx
 SRCS=	splash_pcx.c

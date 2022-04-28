@@ -16,10 +16,13 @@ static char sccsid[] = "@(#) shell_cmd.c 1.5 94/12/28 17:42:44";
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 extern void exit();
 
@@ -29,7 +32,7 @@ extern void exit();
 
 /* Forward declarations. */
 
-static void do_child();
+static void do_child(char *command);
 
 /* shell_cmd - execute shell command */
 
@@ -59,8 +62,7 @@ char   *command;
 
 /* do_child - exec command with { stdin, stdout, stderr } to /dev/null */
 
-static void do_child(command)
-char   *command;
+static void do_child(char *command)
 {
     char   *error;
     int     tmp_fd;

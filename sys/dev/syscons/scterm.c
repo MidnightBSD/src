@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/syscons/scterm.c 186681 2009-01-01 13:26:53Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_syscons.h"
 

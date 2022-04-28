@@ -84,7 +84,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/name6.c 255328 2013-09-06 21:02:06Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -94,7 +94,6 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/name6.c 255328 2013-09-06 21:02:
 #include <netinet/in.h>
 #ifdef INET6
 #include <net/if.h>
-#include <net/if_var.h>
 #include <sys/sysctl.h>
 #include <sys/ioctl.h>
 #include <netinet6/in6_var.h>	/* XXX */
@@ -186,6 +185,7 @@ struct hp_order {
 #define aio_sa aio_un.aiou_sa
 	int aio_matchlen;
 	char *aio_h_addr;
+	int aio_initial_sequence;
 };
 
 static struct	 hostent *_hpcopy(struct hostent *, int *);
@@ -240,8 +240,8 @@ getipnodebyname(const char *name, int af, int flags, int *errp)
 		/*
 		 * TODO:
 		 * Note that implementation dependent test for address
-		 * configuration should be done everytime called
-		 * (or apropriate interval),
+		 * configuration should be done every time called
+		 * (or appropriate interval),
 		 * because addresses will be dynamically assigned or deleted.
 		 */
 		_close(s);
@@ -331,7 +331,7 @@ getipnodebyaddr(const void *src, size_t len, int af, int *errp)
 			*errp = NO_RECOVERY;
 			return NULL;
 		}
-		if ((long)src & ~(sizeof(struct in_addr) - 1)) {
+		if (rounddown2((long)src, sizeof(struct in_addr))) {
 			memcpy(&addrbuf, src, len);
 			src = &addrbuf;
 		}
@@ -344,7 +344,8 @@ getipnodebyaddr(const void *src, size_t len, int af, int *errp)
 			*errp = NO_RECOVERY;
 			return NULL;
 		}
-		if ((long)src & ~(sizeof(struct in6_addr) / 2 - 1)) {	/*XXX*/
+		if (rounddown2((long)src, sizeof(struct in6_addr) / 2)) {
+			/* XXX */
 			memcpy(&addrbuf, src, len);
 			src = &addrbuf;
 		}
@@ -655,7 +656,6 @@ _hpreorder(struct hostent *hp)
 #endif
 		break;
 	default:
-		free_addrselectpolicy(&policyhead);
 		return hp;
 	}
 
@@ -712,6 +712,7 @@ _hpreorder(struct hostent *hp)
 		aio[i].aio_dstscope = gai_addr2scopetype(sa);
 		aio[i].aio_dstpolicy = match_addrselectpolicy(sa, &policyhead);
 		set_source(&aio[i], &policyhead);
+		aio[i].aio_initial_sequence = i;
 	}
 
 	/* perform sorting. */
@@ -736,11 +737,11 @@ get_addrselectpolicy(struct policyhead *head)
 	char *buf;
 	struct in6_addrpolicy *pol, *ep;
 
-	if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), NULL, &l, NULL, 0) < 0)
+	if (sysctl(mib, nitems(mib), NULL, &l, NULL, 0) < 0)
 		return (0);
 	if ((buf = malloc(l)) == NULL)
 		return (0);
-	if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), buf, &l, NULL, 0) < 0) {
+	if (sysctl(mib, nitems(mib), buf, &l, NULL, 0) < 0) {
 		free(buf);
 		return (0);
 	}
@@ -795,10 +796,9 @@ match_addrselectpolicy(struct sockaddr *addr, struct policyhead *head)
 		memset(&key, 0, sizeof(key));
 		key.sin6_family = AF_INET6;
 		key.sin6_len = sizeof(key);
-		key.sin6_addr.s6_addr[10] = 0xff;
-		key.sin6_addr.s6_addr[11] = 0xff;
-		memcpy(&key.sin6_addr.s6_addr[12],
-		       &((struct sockaddr_in *)addr)->sin_addr, 4);
+		_map_v4v6_address(
+		    (char *)&((struct sockaddr_in *)addr)->sin_addr,
+		    (char *)&key.sin6_addr);
 		break;
 	default:
 		return(NULL);
@@ -930,7 +930,7 @@ matchlen(struct sockaddr *src, struct sockaddr *dst)
 
 	while (s < lim)
 		if ((r = (*d++ ^ *s++)) != 0) {
-			while (r < addrlen * 8) {
+			while ((r & 0x80) == 0) {
 				match++;
 				r <<= 1;
 			}
@@ -1047,6 +1047,23 @@ comp_dst(const void *arg1, const void *arg2)
 	}
 
 	/* Rule 10: Otherwise, leave the order unchanged. */
+
+	/* 
+	 * Note that qsort is unstable; so, we can't return zero and 
+	 * expect the order to be unchanged.
+	 * That also means we can't depend on the current position of
+	 * dst2 being after dst1.  We must enforce the initial order
+	 * with an explicit compare on the original position.
+	 * The qsort specification requires that "When the same objects 
+	 * (consisting of width bytes, irrespective of their current 
+	 * positions in the array) are passed more than once to the 
+	 * comparison function, the results shall be consistent with one 
+	 * another."  
+	 * In other words, If A < B, then we must also return B > A.
+	 */
+	if (dst2->aio_initial_sequence < dst1->aio_initial_sequence)
+		return(1);
+
 	return(-1);
 }
 

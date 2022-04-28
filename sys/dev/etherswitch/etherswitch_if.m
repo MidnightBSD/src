@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/dev/etherswitch/etherswitch_if.m 250381 2013-05-08 20:46:54Z adrian $
+# $FreeBSD$
 
 #include <sys/bus.h>
 

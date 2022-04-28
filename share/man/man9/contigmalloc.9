@@ -23,9 +23,9 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/contigmalloc.9 232359 2012-03-01 20:19:21Z jhb $
+.\" $FreeBSD$
 .\"
-.Dd July 19, 2007
+.Dd January 29, 2015
 .Dt CONTIGMALLOC 9
 .Os
 .Sh NAME
@@ -100,6 +100,13 @@ However, unless
 .Dv M_NOWAIT
 is specified, it may select a page for reclamation that must first be
 written to backing storage, causing it to sleep.
+.Pp
+The
+.Fn contigfree
+function does not accept
+.Dv NULL
+as an address input, unlike
+.Xr free 9 .
 .Sh RETURN VALUES
 The
 .Fn contigmalloc

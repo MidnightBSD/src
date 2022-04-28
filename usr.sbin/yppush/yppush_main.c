@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/yppush/yppush_main.c 201389 2010-01-02 11:06:39Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <signal.h>
@@ -58,15 +58,15 @@ int debug = 1;
 int _rpcpmstart = 0;
 char *yp_dir = _PATH_YP;
 
-char *yppush_mapname = NULL;	/* Map to transfer. */
-char *yppush_domain = NULL;	/* Domain in which map resides. */
-char *yppush_master = NULL;	/* Master NIS server for said domain. */
-int skip_master = 0;		/* Do not attempt to push map to master. */
-int verbose = 0;		/* Toggle verbose mode. */
-unsigned long yppush_transid = 0;
-int yppush_timeout = 80;	/* Default timeout. */
-int yppush_jobs = 1;		/* Number of allowed concurrent jobs. */
-int yppush_running_jobs = 0;	/* Number of currently running jobs. */
+static char *yppush_mapname = NULL;	/* Map to transfer. */
+static char *yppush_domain = NULL;	/* Domain in which map resides. */
+static char *yppush_master = NULL;	/* Master NIS server for said domain. */
+static int skip_master = 0;		/* Do not attempt to push map to master. */
+static int verbose = 0;		/* Toggle verbose mode. */
+static unsigned long yppush_transid = 0;
+static int yppush_timeout = 80;	/* Default timeout. */
+static int yppush_jobs = 1;		/* Number of allowed concurrent jobs. */
+static int yppush_running_jobs = 0;	/* Number of currently running jobs. */
 
 /* Structure for holding information about a running job. */
 struct jobs {
@@ -80,8 +80,7 @@ struct jobs {
 	struct jobs *next;
 };
 
-struct jobs *yppush_joblist;	/* Linked list of running jobs. */
-
+static struct jobs *yppush_joblist;	/* Linked list of running jobs. */
 static int yppush_svc_run(int);
 
 /*
@@ -137,11 +136,11 @@ yppush_show_status(ypxfrstat status, unsigned long tid)
 								job->tid);
 	}
 
-	if (status != YPPUSH_SUCC || verbose) {
+	if (status != YPXFR_SUCC || verbose) {
 		yp_error("transfer of map %s to server %s %s",
-		 	job->map, job->server, status == YPPUSH_SUCC ?
+		 	job->map, job->server, status == YPXFR_SUCC ?
 		 	"succeeded" : "failed");
-		yp_error("status returned by ypxfr: %s", status > YPPUSH_AGE ?
+		yp_error("status returned by ypxfr: %s", status > YPXFR_AGE ?
 			yppusherr_string(status) :
 			ypxfrerr_string(status));
 	}
@@ -365,7 +364,7 @@ create udp handle to NIS server"));
  * request to the internal list, send the YPPROC_XFR request to ypserv
  * do other magic things.
  */
-int
+static int
 yp_push(char *server, char *map, unsigned long tid)
 {
 	unsigned long prognum;
@@ -433,18 +432,29 @@ yp_push(char *server, char *map, unsigned long tid)
  * Called for each entry in the ypservers map from yp_get_map(), which
  * is our private yp_all() routine.
  */
-int
+static int
 yppush_foreach(int status, char *key, int keylen, char *val, int vallen,
     char *data)
 {
-	char server[YPMAXRECORD + 2];
+	char *server;
 
 	if (status != YP_TRUE)
 		return (status);
 
-	snprintf(server, sizeof(server), "%.*s", vallen, val);
-	if (skip_master && strcasecmp(server, yppush_master) == 0)
+	asprintf(&server, "%.*s", vallen, val);
+
+	/*
+	 * Do not stop the iteration on the allocation failure.  We
+	 * cannot usefully react on low memory condition anyway, and
+	 * the failure is more likely due to insane val.
+	 */
+	if (server == NULL)
 		return (0);
+
+	if (skip_master && strcasecmp(server, yppush_master) == 0) {
+		free(server);
+		return (0);
+	}
 
 	/*
 	 * Restrict the number of concurrent jobs: if yppush_jobs number
@@ -455,16 +465,20 @@ yppush_foreach(int status, char *key, int keylen, char *val, int vallen,
 		;
 
 	/* Cleared for takeoff: set everything in motion. */
-	if (yp_push(server, yppush_mapname, yppush_transid))
+	if (yp_push(server, yppush_mapname, yppush_transid)) {
+		free(server);
 		return(yp_errno);
+	}
 
 	/* Bump the job counter and transaction ID. */
 	yppush_running_jobs++;
 	yppush_transid++;
+	free(server);
 	return (0);
 }
 
-static void usage()
+static void
+usage()
 {
 	fprintf (stderr, "%s\n%s\n",
 	"usage: yppush [-d domain] [-t timeout] [-j #parallel jobs] [-h host]",

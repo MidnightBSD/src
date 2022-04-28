@@ -1,27 +1,17 @@
-# $FreeBSD: release/10.0.0/tools/build/Makefile 245311 2013-01-11 20:51:02Z brooks $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../include
 
 LIB=		egacy
 SRC=
-INCSGROUPS=	INCS
+INCSGROUPS=	INCS SYSINCS
 INCS=
+
+SYSINCSDIR=	${INCLUDEDIR}/sys
 
 BOOTSTRAPPING?=	0
 
-_WITH_GETLINE!=	grep -c _WITH_GETLINE /usr/include/stdio.h || true
-.if ${_WITH_GETLINE} == 0
-.PATH: ${.CURDIR}/../../contrib/file ${.CURDIR}/../../lib/libmagic
-SRCS=		getline.c config.h
-CFLAGS+=	-DHAVE_CONFIG_H -I.
-CLEANFILES+=	config.h
-
-${SRCS:N*.h:R:S/$/.o/}: config.h
-config.h: ${.CURDIR}/../../lib/libmagic/config.h
-	grep -v HAVE_GETLINE ${.ALLSRC} > ${.TARGET}
-.endif
-
-_WITH_PWCACHEDB!= grep -c pwcache_groupdb /usr/include/pwd.h || true
+_WITH_PWCACHEDB!= grep -c pwcache_groupdb /usr/include/grp.h || true
 .if ${_WITH_PWCACHEDB} == 0
 .PATH: ${.CURDIR}/../../contrib/libc-pwcache
 CFLAGS+=	-I${.CURDIR}/../../contrib/libc-pwcache \
@@ -37,6 +27,20 @@ CFLAGS+=	-I${.CURDIR}/../../contrib/libc-vis \
 		-I${.CURDIR}/../../lib/libc/include
 .endif
 
+_WITH_REALLOCARRAY!= grep -c reallocarray /usr/include/stdlib.h || true
+.if ${_WITH_REALLOCARRAY} == 0
+.PATH: ${.CURDIR}/../../lib/libc/stdlib
+INCS+=		stdlib.h
+SRCS+=		reallocarray.c
+CFLAGS+=	-I${.CURDIR}/../../lib/libc/include
+.endif
+
+_WITH_UTIMENS!= grep -c utimensat /usr/include/sys/stat.h || true
+.if ${_WITH_UTIMENS} == 0
+SYSINCS+=	stat.h
+SRCS+=		futimens.c utimensat.c
+.endif
+
 .if empty(SRCS)
 SRCS=		dummy.c
 .endif
@@ -44,5 +48,8 @@ SRCS=		dummy.c
 .if defined(CROSS_BUILD_TESTING)
 SUBDIR=		cross-build
 .endif
+
+# Needed to build config (since it uses libnv)
+SYSINCS+=	${SRCTOP}/sys/sys/nv.h ${SRCTOP}/sys/sys/cnv.h
 
 .include <bsd.lib.mk>

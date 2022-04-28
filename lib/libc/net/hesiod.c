@@ -49,9 +49,8 @@
 static char *orig_rcsid = "$NetBSD: hesiod.c,v 1.9 1999/02/11 06:16:38 simonb Exp $";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/hesiod.c 254700 2013-08-23 13:59:47Z jilles $");
+__FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <netinet/in.h>
 #include <arpa/nameser.h>

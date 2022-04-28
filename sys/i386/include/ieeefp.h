@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  * 	from: @(#) ieeefp.h 	1.0 (Berkeley) 9/23/93
- * $FreeBSD: release/10.0.0/sys/i386/include/ieeefp.h 226607 2011-10-21 06:41:46Z das $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IEEEFP_H_
@@ -114,6 +114,8 @@ typedef enum {
 #define	__fnstcw(addr)	__asm __volatile("fnstcw %0" : "=m" (*(addr)))
 #define	__fnstenv(addr)	__asm __volatile("fnstenv %0" : "=m" (*(addr)))
 #define	__fnstsw(addr)	__asm __volatile("fnstsw %0" : "=m" (*(addr)))
+#define	__ldmxcsr(addr)	__asm __volatile("ldmxcsr %0" : : "m" (*(addr)))
+#define	__stmxcsr(addr)	__asm __volatile("stmxcsr %0" : "=m" (*(addr)))
 
 /*
  * Load the control word.  Be careful not to trap if there is a currently

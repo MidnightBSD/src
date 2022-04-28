@@ -177,7 +177,7 @@ Report problems and direct all questions to:
 
 #include "rcsbase.h"
 
-libId(fnmsId, "$FreeBSD: release/10.0.0/gnu/usr.bin/rcs/lib/rcsfnms.c 76301 2001-05-06 03:07:12Z kris $")
+libId(fnmsId, "$FreeBSD$")
 
 static char const *bindex P((char const*,int));
 static int fin2open P((char const*, size_t, char const*, size_t, char const*, size_t, RILE*(*)P((struct buf*,struct stat*,int)), int));

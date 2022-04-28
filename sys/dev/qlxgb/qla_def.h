@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/qlxgb/qla_def.h 250340 2013-05-07 22:58:42Z davidcs $
+ * $FreeBSD$
  */
 
 /*
@@ -105,7 +105,7 @@ typedef struct qla_ivec qla_ivec_t;
 #define QLA_WATCHDOG_CALLOUT_TICKS	1
 
 /*
- * Adapter structure contains the hardware independant information of the
+ * Adapter structure contains the hardware independent information of the
  * pci function.
  */
 struct qla_host {

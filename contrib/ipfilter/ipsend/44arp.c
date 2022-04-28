@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipsend/44arp.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Based upon 4.4BSD's /usr/sbin/arp
@@ -8,14 +8,9 @@
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
-# include <net/if_var.h>
-#endif
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#ifndef __osf__
 # include <net/route.h>
-#endif
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>

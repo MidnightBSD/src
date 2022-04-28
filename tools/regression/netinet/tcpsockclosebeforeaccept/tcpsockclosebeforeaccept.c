@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/netinet/tcpsockclosebeforeaccept/tcpsockclosebeforeaccept.c 157428 2006-04-03 11:57:41Z rwatson $
+ * $FreeBSD$
  */
 
 /*

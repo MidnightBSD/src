@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/tools/test/iconv/ref/UTF-16BE-rev 219019 2011-02-25 00:04:39Z gabor $
+$FreeBSD$
 0x00 = 0x0000
 0x01 = 0x0100
 0x02 = 0x0200

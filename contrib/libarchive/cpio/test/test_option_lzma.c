@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/cpio/test/test_option_lzma.c 228763 2011-12-21 11:13:29Z mm $");
+__FBSDID("$FreeBSD$");
 
 DEFINE_TEST(test_option_lzma)
 {
@@ -43,14 +43,18 @@ DEFINE_TEST(test_option_lzma)
 		if (strstr(p, "compression not available") != NULL) {
 			skipping("This version of bsdcpio was compiled "
 			    "without lzma support");
+			free(p);
 			return;
 		}
 		failure("--lzma option is broken");
 		assertEqualInt(r, 0);
+		free(p);
 		return;
 	}
+	free(p);
 	/* Check that the archive file has an lzma signature. */
 	p = slurpfile(&s, "archive.out");
 	assert(s > 2);
 	assertEqualMem(p, "\x5d\00\00", 3);
+	free(p);
 }

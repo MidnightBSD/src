@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/ld80/s_exp2l.c 251046 2013-05-27 22:45:05Z kargl $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 #include <stdint.h>

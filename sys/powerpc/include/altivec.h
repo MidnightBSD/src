@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/altivec.h 213456 2010-10-05 18:08:07Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_ALTIVEC_H_
@@ -34,6 +34,7 @@
 
 void    enable_vec(struct thread *);
 void    save_vec(struct thread *);
+void    save_vec_nodrop(struct thread *);
 
 #endif	/* _MACHINE_ALTIVEC_H_ */
 

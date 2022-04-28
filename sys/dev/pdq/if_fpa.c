@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pdq/if_fpa.c 199542 2009-11-19 19:25:47Z jhb $");
+__FBSDID("$FreeBSD$");
 
 /*
  * DEC PDQ FDDI Controller; code for BSD derived operating systems
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/pdq/if_fpa.c 199542 2009-11-19 19:25:
 #include <sys/rman.h> 
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h> 
 #include <net/fddi.h>
 
@@ -155,6 +156,7 @@ pdq_pci_attach(device_t dev)
     }
 
 
+    gone_in_dev(dev, 12, "fpa(4) driver");
     return (0);
 bad:
     pdq_free(dev);

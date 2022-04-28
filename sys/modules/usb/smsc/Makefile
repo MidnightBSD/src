@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/smsc/Makefile 246585 2013-02-09 06:31:22Z delphij $
+# $FreeBSD$
 #
 # Copyright (c) 2011 Ben Gray. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-S=     ${.CURDIR}/../../..
+S=     ${SRCTOP}/sys
 
 .PATH: $S/dev/usb/net
 

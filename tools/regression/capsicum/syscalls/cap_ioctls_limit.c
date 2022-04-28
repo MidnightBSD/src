@@ -28,10 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/regression/capsicum/syscalls/cap_ioctls_limit.c 247676 2013-03-02 23:40:42Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/ioctl.h>
 #include <sys/procdesc.h>
 #include <sys/socket.h>

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/isci_timer.c 231136 2012-02-07 17:43:58Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/isci/isci.h>
 
@@ -79,8 +79,8 @@ scif_cb_timer_start(SCI_CONTROLLER_HANDLE_T controller, void *timer,
 
 	isci_timer->is_started = TRUE;
 	isci_log_message(3, "TIMER", "start %p %d\n", timer, milliseconds);
-	callout_reset(&isci_timer->callout, (milliseconds * hz)/1000,
-	    isci_timer_timeout, timer);
+	callout_reset_sbt(&isci_timer->callout, SBT_1MS * milliseconds, 0,
+	    isci_timer_timeout, timer, 0);
 }
 
 /**
@@ -144,7 +144,7 @@ scif_cb_timer_create(SCI_CONTROLLER_HANDLE_T scif_controller,
 }
 
 /**
- * @brief This callback method asks the user to destory the supplied timer.
+ * @brief This callback method asks the user to destroy the supplied timer.
  *
  * @param[in]  controller This parameter specifies the controller with
  *             which this timer is to associated.

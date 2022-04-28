@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/bhyveload/bhyveload.8 259496 2013-12-17 06:39:48Z grehan $
+.\" $FreeBSD$
 .\"
-.Dd January 7, 2012
+.Dd June 24, 2016
 .Dt BHYVELOAD 8
 .Os
 .Sh NAME
@@ -35,11 +35,14 @@
 guest inside a bhyve virtual machine
 .Sh SYNOPSIS
 .Nm
-.Op Fl m Ar mem-size
-.Op Fl d Ar disk-path
-.Op Fl h Ar host-path
-.Op Fl e Ar name=value
+.Op Fl C
+.Op Fl S
 .Op Fl c Ar cons-dev
+.Op Fl d Ar disk-path
+.Op Fl e Ar name=value
+.Op Fl h Ar host-path
+.Op Fl l Ar os-loader
+.Op Fl m Ar memsize Ns Op Ar K|k|M|m|G|g|T|t
 .Ar vmname
 .Sh DESCRIPTION
 .Nm
@@ -55,6 +58,7 @@ is based on
 and will present an interface identical to the
 .Fx
 loader on the user's terminal.
+This behavior can be changed by specifying a different OS loader.
 .Pp
 The virtual machine is identified as
 .Ar vmname
@@ -62,45 +66,6 @@ and will be created if it does not already exist.
 .Sh OPTIONS
 The following options are available:
 .Bl -tag -width indent
-.It Fl m Ar mem-size Xo
-.Sm off
-.Op Cm K | k | M | m | G | g | T | t
-.Xc
-.Sm on
-.Ar mem-size
-is the amount of memory allocated to the guest.
-.Pp
-The
-.Ar mem-size
-argument may be suffixed with one of
-.Cm K ,
-.Cm M ,
-.Cm G
-or
-.Cm T
-(either upper or lower case) to indicate a multiple of
-Kilobytes, Megabytes, Gigabytes or Terabytes
-respectively.
-.Pp
-The default value of
-.Ar mem-size
-is 256M.
-.It Fl d Ar disk-path
-The
-.Ar disk-path
-is the pathname of the guest's boot disk image.
-.It Fl h Ar host-path
-The
-.Ar host-path
-is the directory at the top of the guest's boot filesystem.
-.It Fl e Ar name=value
-Set the FreeBSD loader environment variable
-.Ar name
-to
-.Ar value .
-.Pp
-The option may be used more than once to set more than one environment
-variable.
 .It Fl c Ar cons-dev
 .Ar cons-dev
 is a
@@ -111,6 +76,59 @@ terminal I/O.
 .Pp
 The text string "stdio" is also accepted and selects the use of
 unbuffered standard I/O. This is the default value.
+.It Fl d Ar disk-path
+The
+.Ar disk-path
+is the pathname of the guest's boot disk image.
+.It Fl e Ar name=value
+Set the
+.Fx
+loader environment variable
+.Ar name
+to
+.Ar value .
+.Pp
+The option may be used more than once to set more than one environment
+variable.
+.It Fl h Ar host-path
+The
+.Ar host-path
+is the directory at the top of the guest's boot filesystem.
+.It Fl l Ar os-loader
+Specify a different OS loader.
+By default
+.Nm
+will use
+.Pa /boot/userboot.so ,
+which presents a standard
+.Fx
+loader.
+.It Fl m Ar memsize Ns Op Ar K|k|M|m|G|g|T|t
+.Ar memsize
+is the amount of memory allocated to the guest.
+.Pp
+The
+.Ar memsize
+argument may be suffixed with one of
+.Cm K ,
+.Cm M ,
+.Cm G
+or
+.Cm T
+(either upper or lower case) to indicate a multiple of
+Kilobytes, Megabytes, Gigabytes or Terabytes
+respectively.
+.Pp
+.Ar memsize
+defaults to 256M.
+.It Fl C
+Include guest memory in the core file when
+.Nm
+dumps core.
+This is intended for debugging an OS loader as it allows inspection of
+the guest memory.
+.It Fl S
+Wire guest memory.
 .El
 .Sh EXAMPLES
 To create a virtual machine named
@@ -134,10 +152,10 @@ device
 .Dl "bhyveload -m 256MB -h /usr/images/test -c /dev/nmdm1B test-vm"
 .Sh SEE ALSO
 .Xr bhyve 4 ,
+.Xr nmdm 4 ,
+.Xr vmm 4 ,
 .Xr bhyve 8 ,
-.Xr loader 8 ,
-.Xr nmdm 4,
-.Xr vmm 4
+.Xr loader 8
 .Sh HISTORY
 .Nm
 first appeared in
@@ -147,9 +165,9 @@ and was developed at NetApp Inc.
 .Nm
 was developed by
 .An -nosplit
-.An "Neel Natu" Aq neel@FreeBSD.org
+.An Neel Natu Aq Mt neel@FreeBSD.org
 at NetApp Inc with a lot of help from
-.An Doug Rabson Aq dfr@FreeBSD.org
+.An Doug Rabson Aq Mt dfr@FreeBSD.org .
 .Sh BUGS
 .Nm
 can only load

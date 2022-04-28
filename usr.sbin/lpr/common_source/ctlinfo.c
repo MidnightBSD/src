@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2001,2011  - Garance Alistair Drosehn <gad@FreeBSD.org>.
  * All rights reserved.
@@ -32,7 +34,7 @@
  */
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/common_source/ctlinfo.c 220586 2011-04-13 00:36:19Z gad $");
+__FBSDID("$FreeBSD$");
 
 /*
  * ctlinfo - This collection of routines will know everything there is to

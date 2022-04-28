@@ -1,5 +1,5 @@
-/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_none.c 252583 2013-07-03 18:27:45Z peter $ */
-/* $NetBSD: citrus_none.c,v 1.18 2008/06/14 16:01:07 tnozaki Exp $ */
+/* $FreeBSD$ */
+/*	$NetBSD: citrus_none.c,v 1.22 2017/07/13 16:00:30 christos Exp $	*/
 
 /*-
  * Copyright (c) 2002 Citrus Project,
@@ -83,7 +83,7 @@ _citrus_NONE_stdenc_init_state(struct _citrus_stdenc * __restrict ce __unused,
 
 static int
 _citrus_NONE_stdenc_mbtocs(struct _citrus_stdenc * __restrict ce __unused,
-    _csid_t *csid, _index_t *idx, const char **s, size_t n,
+    _csid_t *csid, _index_t *idx, char **s, size_t n,
     void *ps __unused, size_t *nresult, struct iconv_hooks *hooks)
 {
 
@@ -142,7 +142,7 @@ _citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,
 		s[2] = (char)(idx >> 16);
 		*nresult = 3;
 	} else {
-		if (n < 3) {
+		if (n < 4) {
 			*nresult = (size_t)-1;
 			return (E2BIG);
 		}
@@ -159,12 +159,12 @@ _citrus_NONE_stdenc_cstomb(struct _citrus_stdenc * __restrict ce __unused,
 
 static int
 _citrus_NONE_stdenc_mbtowc(struct _citrus_stdenc * __restrict ce __unused,
-    _wc_t * __restrict pwc, const char ** __restrict s, size_t n,
+    _wc_t * __restrict pwc, char ** __restrict s, size_t n,
     void * __restrict pspriv __unused, size_t * __restrict nresult,
     struct iconv_hooks *hooks)
 {
 
-	if (s == NULL) {
+	if (*s == NULL) {
 		*nresult = 0;
 		return (0);
 	}
@@ -176,7 +176,7 @@ _citrus_NONE_stdenc_mbtowc(struct _citrus_stdenc * __restrict ce __unused,
 	if (pwc != NULL)
 		*pwc = (_wc_t)(unsigned char) **s;
 
-	*nresult = *s == '\0' ? 0 : 1;
+	*nresult = **s == '\0' ? 0 : 1;
 
 	if ((hooks != NULL) && (hooks->wc_hook != NULL))
 		hooks->wc_hook(*pwc, hooks->data);

@@ -1,10 +1,8 @@
-# $FreeBSD: release/10.0.0/kerberos5/lib/libgssapi_krb5/Makefile 236337 2012-05-30 22:21:25Z obrien $
+# $FreeBSD$
 
 LIB=	gssapi_krb5
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined
-LDADD=	-lgssapi -lkrb5 -lhx509 -lcrypto -lroken -lasn1 -lcom_err -lcrypt
-DPADD=	${LIBGSSAPI} ${LIBKRB5} ${LIBHX509} ${LIBCRYPTO} ${LIBROKEN} ${LIBASN1} \
-	${LIBCOM_ERR} ${LIBCRYPT}
+LIBADD=	gssapi krb5 crypto roken asn1 com_err
 SHLIB_MAJOR=	10
 
 INCS=	${KRB5DIR}/lib/gssapi/gssapi/gssapi_krb5.h
@@ -80,8 +78,10 @@ CFLAGS+=-I${KRB5DIR}/lib/gssapi/krb5
 CFLAGS+=-I${KRB5DIR}/lib/gssapi/gssapi
 CFLAGS+=-I${KRB5DIR}/lib/krb5
 CFLAGS+=-I${KRB5DIR}/lib/asn1
-CFLAGS+=-I${KRB5DIR}/lib/roken -I.
+CFLAGS+=-I${KRB5DIR}/lib/roken
+CFLAGS+=-I${SRCTOP}/contrib/com_err
+CFLAGS+=-I.
 
 .include <bsd.lib.mk>
 
-.PATH: ${KRB5DIR}/lib/gssapi/krb5 ${.CURDIR}/../../../lib/libgssapi
+.PATH: ${KRB5DIR}/lib/gssapi/krb5 ${SRCTOP}/lib/libgssapi

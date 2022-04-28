@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_state.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$ */
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -20,7 +20,7 @@
 #include <sys/param.h>
 #include <sys/file.h>
 #if defined(_KERNEL) && defined(__FreeBSD_version) && \
-    (__FreeBSD_version >= 400000) && !defined(KLD_MODULE)
+    !defined(KLD_MODULE)
 #include "opt_inet6.h"
 #endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
@@ -28,30 +28,25 @@
 # include <stdlib.h>
 # include <string.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && defined(__FreeBSD_version)
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
 # include <sys/ioctl.h>
 #endif
 #include <sys/time.h>
-#if !defined(linux)
 # include <sys/protosw.h>
-#endif
 #include <sys/socket.h>
 #if defined(_KERNEL)
 # include <sys/systm.h>
-# if !defined(__SVR4) && !defined(__svr4__)
+# if !defined(__SVR4)
 #  include <sys/mbuf.h>
 # endif
 #endif
-#if defined(__SVR4) || defined(__svr4__)
+#if defined(__SVR4)
 # include <sys/filio.h>
 # include <sys/byteorder.h>
 # ifdef _KERNEL
@@ -69,9 +64,7 @@ struct file;
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
-#if !defined(__hpux) && !defined(linux)
 # include <netinet/tcp_fsm.h>
-#endif
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #if !defined(_KERNEL)
@@ -89,7 +82,7 @@ struct file;
 #ifdef	USE_INET6
 #include <netinet/icmp6.h>
 #endif
-#if FREEBSD_GE_REV(300000)
+#ifdef __FreeBSD_version
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -301,6 +294,32 @@ ipf_state_soft_destroy(softc, arg)
 	KFREE(softs);
 }
 
+static void *
+ipf_state_seed_alloc(u_int state_size, u_int state_max)
+{
+	u_int i;
+	u_long *state_seed;
+	KMALLOCS(state_seed, u_long *, state_size * sizeof(*state_seed));
+	if (state_seed == NULL)
+		return NULL;
+
+	for (i = 0; i < state_size; i++) {
+		/*
+		 * XXX - ipf_state_seed[X] should be a random number of sorts.
+		 */
+#ifdef __FreeBSD_version
+		state_seed[i] = arc4random();
+#else
+		state_seed[i] = ((u_long)state_seed + i) * state_size;
+		state_seed[i] ^= 0xa5a55a5a;
+		state_seed[i] *= (u_long)state_seed;
+		state_seed[i] ^= 0x5a5aa5a5;
+		state_seed[i] *= state_max;
+#endif
+	}
+	return state_seed;
+}
+
 
 /* ------------------------------------------------------------------------ */
 /* Function:    ipf_state_soft_init                                         */
@@ -333,26 +352,10 @@ ipf_state_soft_init(softc, arg)
 	bzero((char *)softs->ipf_state_table,
 	      softs->ipf_state_size * sizeof(ipstate_t *));
 
-	KMALLOCS(softs->ipf_state_seed, u_long *,
-		 softs->ipf_state_size * sizeof(*softs->ipf_state_seed));
+	softs->ipf_state_seed = ipf_state_seed_alloc(softs->ipf_state_size,
+	    softs->ipf_state_max);
 	if (softs->ipf_state_seed == NULL)
 		return -2;
-
-	for (i = 0; i < softs->ipf_state_size; i++) {
-		/*
-		 * XXX - ipf_state_seed[X] should be a random number of sorts.
-		 */
-#if  FREEBSD_GE_REV(400000)
-		softs->ipf_state_seed[i] = arc4random();
-#else
-		softs->ipf_state_seed[i] = ((u_long)softs->ipf_state_seed + i) *
-				    softs->ipf_state_size;
-		softs->ipf_state_seed[i] ^= 0xa5a55a5a;
-		softs->ipf_state_seed[i] *= (u_long)softs->ipf_state_seed;
-		softs->ipf_state_seed[i] ^= 0x5a5aa5a5;
-		softs->ipf_state_seed[i] *= softs->ipf_state_max;
-#endif
-	}
 
 	KMALLOCS(softs->ipf_state_stats.iss_bucketlen, u_int *,
 		 softs->ipf_state_size * sizeof(u_int));
@@ -483,7 +486,7 @@ ipf_state_soft_fini(softc, arg)
 
 
 /* ------------------------------------------------------------------------ */
-/* Function:    ipf_state_set_lock                                          */
+/* Function:    ipf_state_setlock                                           */
 /* Returns:     Nil                                                         */
 /* Parameters:  arg(I) - pointer to local context to use                    */
 /*              tmp(I) - new value for lock                                 */
@@ -972,17 +975,17 @@ ipf_state_putent(softc, softs, data)
 		/*
 		 * Look up all the interface names in the rule.
 		 */
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < FR_NUM(fr->fr_ifnames); i++) {
 			if (fr->fr_ifnames[i] == -1) {
 				fr->fr_ifas[i] = NULL;
 				continue;
 			}
-			name = fr->fr_names + fr->fr_ifnames[i];
+			name = FR_NAME(fr, fr_ifnames[i]);
 			fr->fr_ifas[i] = ipf_resolvenic(softc, name,
 							fr->fr_family);
 		}
 
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < FR_NUM(isn->is_ifname); i++) {
 			name = isn->is_ifname[i];
 			isn->is_ifp[i] = ipf_resolvenic(softc, name,
 							isn->is_v);
@@ -1054,7 +1057,7 @@ ipf_state_putent(softc, softs, data)
 /* to pointers and adjusts running stats for the hash table as appropriate. */
 /*                                                                          */
 /* This function can fail if the filter rule has had a population policy of */
-/* IP addresses used with stateful filteirng assigned to it.                */
+/* IP addresses used with stateful filtering assigned to it.                */
 /*                                                                          */
 /* Locking: it is assumed that some kind of lock on ipf_state is held.      */
 /*          Exits with is_lock initialised and held - *EVEN IF ERROR*.      */
@@ -1073,7 +1076,7 @@ ipf_state_insert(softc, is, rev)
 	/*
 	 * Look up all the interface names in the state entry.
 	 */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < FR_NUM(is->is_ifp); i++) {
 		if (is->is_ifp[i] != NULL)
 			continue;
 		is->is_ifp[i] = ipf_resolvenic(softc, is->is_ifname[i],
@@ -1081,7 +1084,7 @@ ipf_state_insert(softc, is, rev)
 	}
 
 	/*
-	 * If we could trust is_hv, then the modulous would not be needed,
+	 * If we could trust is_hv, then the modulus would not be needed,
 	 * but when running with IPFILTER_SYNC, this stops bad values.
 	 */
 	hv = is->is_hv % softs->ipf_state_size;
@@ -1383,10 +1386,10 @@ ipf_state_add(softc, fin, stsave, flags)
 	int out;
 
 	/*
-	 * If a packet that was created locally is trying to go out but we
-	 * do not match here here because of this lock, it is likely that
-	 * the policy will block it and return network unreachable back up
-	 * the stack. To mitigate this error, EAGAIN is returned instead,
+	 * If a locally created packet is trying to egress but it
+	 * does not match because of this lock, it is likely that
+	 * the policy will block it and return network unreachable further
+	 * up the stack. To mitigate this error, EAGAIN is returned instead,
 	 * telling the IP stack to try sending this packet again later.
 	 */
 	if (softs->ipf_state_lock) {
@@ -1449,7 +1452,7 @@ ipf_state_add(softc, fin, stsave, flags)
 	is->is_die = 1 + softc->ipf_ticks;
 	/*
 	 * We want to check everything that is a property of this packet,
-	 * but we don't (automatically) care about it's fragment status as
+	 * but we don't (automatically) care about its fragment status as
 	 * this may change.
 	 */
 	is->is_pass = pass;
@@ -1611,8 +1614,10 @@ ipf_state_add(softc, fin, stsave, flags)
 			    TH_SYN &&
 			    (TCP_OFF(tcp) > (sizeof(tcphdr_t) >> 2))) {
 				if (ipf_tcpoptions(softs, fin, tcp,
-					      &is->is_tcp.ts_data[0]) == -1)
+					      &is->is_tcp.ts_data[0]) == -1) {
 					fin->fin_flx |= FI_BAD;
+					DT1(ipf_fi_bad_tcpoptions_th_fin_ack_ecnall, fr_info_t *, fin);
+				}
 			}
 
 			if ((fin->fin_out != 0) && (pass & FR_NEWISN) != 0) {
@@ -1672,6 +1677,10 @@ ipf_state_add(softc, fin, stsave, flags)
 		SBUMPD(ipf_state_stats, iss_bucket_full);
 		return 4;
 	}
+
+	/*
+	 * No existing state; create new
+	 */
 	KMALLOC(is, ipstate_t *);
 	if (is == NULL) {
 		SBUMPD(ipf_state_stats, iss_nomem);
@@ -1683,7 +1692,7 @@ ipf_state_add(softc, fin, stsave, flags)
 	is->is_rule = fr;
 
 	/*
-	 * Do not do the modulous here, it is done in ipf_state_insert().
+	 * Do not do the modulus here, it is done in ipf_state_insert().
 	 */
 	if (fr != NULL) {
 		ipftq_t *tq;
@@ -1711,7 +1720,7 @@ ipf_state_add(softc, fin, stsave, flags)
 	/*
 	 * It may seem strange to set is_ref to 2, but if stsave is not NULL
 	 * then a copy of the pointer is being stored somewhere else and in
-	 * the end, it will expect to be able to do osmething with it.
+	 * the end, it will expect to be able to do something with it.
 	 */
 	is->is_me = stsave;
 	if (stsave != NULL) {
@@ -1785,7 +1794,7 @@ ipf_state_add(softc, fin, stsave, flags)
 		     fr->fr_names[fr->fr_ifnames[out << 1] + 1] == '\0')) {
 			is->is_ifp[out << 1] = fr->fr_ifas[0];
 			strncpy(is->is_ifname[out << 1],
-				fr->fr_names + fr->fr_ifnames[0],
+				FR_NAME(fr, fr_ifnames[0]),
 				sizeof(fr->fr_ifnames[0]));
 		} else {
 			is->is_ifp[out << 1] = fin->fin_ifp;
@@ -1796,21 +1805,21 @@ ipf_state_add(softc, fin, stsave, flags)
 		is->is_ifp[(out << 1) + 1] = fr->fr_ifas[1];
 		if (fr->fr_ifnames[1] != -1) {
 			strncpy(is->is_ifname[(out << 1) + 1],
-				fr->fr_names + fr->fr_ifnames[1],
+				FR_NAME(fr, fr_ifnames[1]),
 				sizeof(fr->fr_ifnames[1]));
 		}
 
 		is->is_ifp[(1 - out) << 1] = fr->fr_ifas[2];
 		if (fr->fr_ifnames[2] != -1) {
 			strncpy(is->is_ifname[((1 - out) << 1)],
-				fr->fr_names + fr->fr_ifnames[2],
+				FR_NAME(fr, fr_ifnames[2]),
 				sizeof(fr->fr_ifnames[2]));
 		}
 
 		is->is_ifp[((1 - out) << 1) + 1] = fr->fr_ifas[3];
 		if (fr->fr_ifnames[3] != -1) {
 			strncpy(is->is_ifname[((1 - out) << 1) + 1],
-				fr->fr_names + fr->fr_ifnames[3],
+				FR_NAME(fr, fr_ifnames[3]),
 				sizeof(fr->fr_ifnames[3]));
 		}
 	} else {
@@ -2064,8 +2073,10 @@ ipf_state_tcp(softc, softs, fin, tcp, is)
 			is->is_s0[!source] = ntohl(tcp->th_seq) + 1;
 			if ((TCP_OFF(tcp) > (sizeof(tcphdr_t) >> 2))) {
 				if (ipf_tcpoptions(softs, fin, tcp,
-						   fdata) == -1)
+						   fdata) == -1) {
 					fin->fin_flx |= FI_BAD;
+					DT1(ipf_fi_bad_winscale_syn_ack, fr_info_t *, fin);
+				}
 			}
 			if ((fin->fin_out != 0) && (is->is_pass & FR_NEWISN))
 				ipf_checknewisn(fin, is);
@@ -2073,8 +2084,10 @@ ipf_state_tcp(softc, softs, fin, tcp, is)
 			is->is_s0[source] = ntohl(tcp->th_seq) + 1;
 			if ((TCP_OFF(tcp) > (sizeof(tcphdr_t) >> 2))) {
 				if (ipf_tcpoptions(softs, fin, tcp,
-						   fdata) == -1)
+						   fdata) == -1) {
 					fin->fin_flx |= FI_BAD;
+					DT1(ipf_fi_bad_winscale_syn, fr_info_t *, fin);
+				}
 			}
 
 			if ((fin->fin_out != 0) && (is->is_pass & FR_NEWISN))
@@ -3404,7 +3417,8 @@ ipf_state_check(fin, passp)
 	 * If this packet is a fragment and the rule says to track fragments,
 	 * then create a new fragment cache entry.
 	 */
-	if ((fin->fin_flx & FI_FRAG) && FR_ISPASS(is->is_pass))
+	if (fin->fin_flx & FI_FRAG && FR_ISPASS(is->is_pass) &&
+	   is->is_pass & FR_KEEPFRAG)
 		(void) ipf_frag_new(softc, fin, is->is_pass);
 
 	/*
@@ -3560,7 +3574,7 @@ ipf_state_sync(softc, ifp)
 		/*
 		 * Look up all the interface names in the state entry.
 		 */
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < FR_NUM(is->is_ifp); i++) {
 			if (ifp == NULL || ifp == is->is_ifp[i])
 				is->is_ifp[i] = ipf_resolvenic(softc,
 							      is->is_ifname[i],
@@ -3642,17 +3656,16 @@ ipf_state_del(softc, is, why)
 		is->is_me = NULL;
 		is->is_ref--;
 	}
-	if (is->is_ref > 1) {
+	is->is_ref--;
+	if (is->is_ref > 0) {
 		int refs;
 
-		is->is_ref--;
 		refs = is->is_ref;
 		MUTEX_EXIT(&is->is_lock);
 		if (!orphan)
 			softs->ipf_state_stats.iss_orphan++;
 		return refs;
 	}
-	MUTEX_EXIT(&is->is_lock);
 
 	fr = is->is_rule;
 	is->is_rule = NULL;
@@ -3663,7 +3676,8 @@ ipf_state_del(softc, is, why)
 		}
 	}
 
-	is->is_ref = 0;
+	ASSERT(is->is_ref == 0);
+	MUTEX_EXIT(&is->is_lock);
 
 	if (is->is_tqehead[0] != NULL) {
 		if (ipf_deletetimeoutqueue(is->is_tqehead[0]) == 0)
@@ -5248,6 +5262,7 @@ ipf_state_rehash(softc, t, p)
 {
 	ipf_state_softc_t *softs = softc->ipf_state_soft;
 	ipstate_t **newtab, *is;
+	u_long *newseed;
 	u_int *bucketlens;
 	u_int maxbucket;
 	u_int newsize;
@@ -5274,6 +5289,14 @@ ipf_state_rehash(softc, t, p)
 		return ENOMEM;
 	}
 
+	newseed = ipf_state_seed_alloc(newsize, softs->ipf_state_max);
+	if (newseed == NULL) {
+		KFREES(bucketlens, newsize * sizeof(*bucketlens));
+		KFREES(newtab, newsize * sizeof(*newtab));
+		IPFERROR(100037);
+		return ENOMEM;
+	}
+
 	for (maxbucket = 0, i = newsize; i > 0; i >>= 1)
 		maxbucket++;
 	maxbucket *= 2;
@@ -5288,6 +5311,12 @@ ipf_state_rehash(softc, t, p)
 		       softs->ipf_state_size * sizeof(*softs->ipf_state_table));
 	}
 	softs->ipf_state_table = newtab;
+
+	if (softs->ipf_state_seed != NULL) {
+		KFREES(softs->ipf_state_seed,
+		       softs->ipf_state_size * sizeof(*softs->ipf_state_seed));
+	}
+	softs->ipf_state_seed = newseed;
 
 	if (softs->ipf_state_stats.iss_bucketlen != NULL) {
 		KFREES(softs->ipf_state_stats.iss_bucketlen,

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/share/examples/scsi_target/scsi_target.h 196955 2009-09-07 23:16:27Z sbruno $
+ * $FreeBSD$
  */
 
 #ifndef _SCSI_TARGET_H

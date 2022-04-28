@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/ps/print.c 238488 2012-07-15 15:22:13Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: release/10.0.0/bin/ps/print.c 238488 2012-07-15 15:22:13Z ji
 
 #include <err.h>
 #include <grp.h>
+#include <jail.h>
 #include <langinfo.h>
 #include <locale.h>
 #include <math.h>
@@ -61,6 +62,7 @@ __FBSDID("$FreeBSD: release/10.0.0/bin/ps/print.c 238488 2012-07-15 15:22:13Z ji
 #include <string.h>
 #include <unistd.h>
 #include <vis.h>
+#include <libxo/xo.h>
 
 #include "ps.h"
 
@@ -85,15 +87,15 @@ printheader(void)
 		v = vent->var;
 		if (v->flag & LJUST) {
 			if (STAILQ_NEXT(vent, next_ve) == NULL)	/* last one */
-				(void)printf("%s", vent->header);
+				xo_emit("{T:/%s}", vent->header);
 			else
-				(void)printf("%-*s", v->width, vent->header);
+				xo_emit("{T:/%-*s}", v->width, vent->header);
 		} else
-			(void)printf("%*s", v->width, vent->header);
+			xo_emit("{T:/%*s}", v->width, vent->header);
 		if (STAILQ_NEXT(vent, next_ve) != NULL)
-			(void)putchar(' ');
+			xo_emit("{P: }");
 	}
-	(void)putchar('\n');
+	xo_emit("\n");
 }
 
 char *
@@ -102,7 +104,7 @@ arguments(KINFO *k, VARENT *ve)
 	char *vis_args;
 
 	if ((vis_args = malloc(strlen(k->ki_args) * 4 + 1)) == NULL)
-		errx(1, "malloc failed");
+		xo_errx(1, "malloc failed");
 	strvis(vis_args, k->ki_args, VIS_TAB | VIS_NL | VIS_NOSLASH);
 
 	if (STAILQ_NEXT(ve, next_ve) != NULL && strlen(vis_args) > ARGUMENTS_WIDTH)
@@ -119,18 +121,19 @@ command(KINFO *k, VARENT *ve)
 	if (cflag) {
 		/* If it is the last field, then don't pad */
 		if (STAILQ_NEXT(ve, next_ve) == NULL) {
-			asprintf(&str, "%s%s%s%s",
+			asprintf(&str, "%s%s%s%s%s",
 			    k->ki_d.prefix ? k->ki_d.prefix : "",
 			    k->ki_p->ki_comm,
 			    (showthreads && k->ki_p->ki_numthreads > 1) ? "/" : "",
-			    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_tdname : "");
+			    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_tdname : "",
+			    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_moretdname : "");
 		} else
 			str = strdup(k->ki_p->ki_comm);
 
 		return (str);
 	}
 	if ((vis_args = malloc(strlen(k->ki_args) * 4 + 1)) == NULL)
-		errx(1, "malloc failed");
+		xo_errx(1, "malloc failed");
 	strvis(vis_args, k->ki_args, VIS_TAB | VIS_NL | VIS_NOSLASH);
 
 	if (STAILQ_NEXT(ve, next_ve) == NULL) {
@@ -139,7 +142,7 @@ command(KINFO *k, VARENT *ve)
 		if (k->ki_env) {
 			if ((vis_env = malloc(strlen(k->ki_env) * 4 + 1))
 			    == NULL)
-				errx(1, "malloc failed");
+				xo_errx(1, "malloc failed");
 			strvis(vis_env, k->ki_env,
 			    VIS_TAB | VIS_NL | VIS_NOSLASH);
 		} else
@@ -171,14 +174,16 @@ ucomm(KINFO *k, VARENT *ve)
 	char *str;
 
 	if (STAILQ_NEXT(ve, next_ve) == NULL) {	/* last field, don't pad */
-		asprintf(&str, "%s%s%s%s",
+		asprintf(&str, "%s%s%s%s%s",
 		    k->ki_d.prefix ? k->ki_d.prefix : "",
 		    k->ki_p->ki_comm,
 		    (showthreads && k->ki_p->ki_numthreads > 1) ? "/" : "",
-		    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_tdname : "");
+		    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_tdname : "",
+		    (showthreads && k->ki_p->ki_numthreads > 1) ? k->ki_p->ki_moretdname : "");
 	} else {
 		if (showthreads && k->ki_p->ki_numthreads > 1)
-			asprintf(&str, "%s/%s", k->ki_p->ki_comm, k->ki_p->ki_tdname);
+			asprintf(&str, "%s/%s%s", k->ki_p->ki_comm,
+			    k->ki_p->ki_tdname, k->ki_p->ki_moretdname);
 		else
 			str = strdup(k->ki_p->ki_comm);
 	}
@@ -191,7 +196,8 @@ tdnam(KINFO *k, VARENT *ve __unused)
 	char *str;
 
 	if (showthreads && k->ki_p->ki_numthreads > 1)
-		str = strdup(k->ki_p->ki_tdname);
+		asprintf(&str, "%s%s", k->ki_p->ki_tdname,
+		    k->ki_p->ki_moretdname);
 	else
 		str = strdup("      ");
 
@@ -210,12 +216,12 @@ logname(KINFO *k, VARENT *ve __unused)
 char *
 state(KINFO *k, VARENT *ve __unused)
 {
-	int flag, tdflags;
+	long flag, tdflags;
 	char *cp, *buf;
 
 	buf = malloc(16);
 	if (buf == NULL)
-		errx(1, "malloc failed");
+		xo_errx(1, "malloc failed");
 
 	flag = k->ki_p->ki_flag;
 	tdflags = k->ki_p->ki_tdflags;	/* XXXKSE */
@@ -257,9 +263,9 @@ state(KINFO *k, VARENT *ve __unused)
 	cp++;
 	if (!(flag & P_INMEM))
 		*cp++ = 'W';
-	if (k->ki_p->ki_nice < NZERO)
+	if (k->ki_p->ki_nice < NZERO || k->ki_p->ki_pri.pri_class == PRI_REALTIME)
 		*cp++ = '<';
-	else if (k->ki_p->ki_nice > NZERO)
+	else if (k->ki_p->ki_nice > NZERO || k->ki_p->ki_pri.pri_class == PRI_IDLE)
 		*cp++ = 'N';
 	if (flag & P_TRACED)
 		*cp++ = 'X';
@@ -269,6 +275,8 @@ state(KINFO *k, VARENT *ve __unused)
 		*cp++ = 'V';
 	if ((flag & P_SYSTEM) || k->ki_p->ki_lock > 0)
 		*cp++ = 'L';
+	if ((k->ki_p->ki_cr_flags & CRED_FLAG_CAPMODE) != 0)
+		*cp++ = 'C';
 	if (k->ki_p->ki_kiflag & KI_SLEADER)
 		*cp++ = 's';
 	if ((flag & P_CONTROLT) && k->ki_p->ki_pgid == k->ki_p->ki_tpgid)
@@ -383,7 +391,6 @@ started(KINFO *k, VARENT *ve __unused)
 {
 	time_t then;
 	struct tm *tp;
-	static int use_ampm = -1;
 	size_t buflen = 100;
 	char *buf;
 
@@ -392,18 +399,14 @@ started(KINFO *k, VARENT *ve __unused)
 
 	buf = malloc(buflen);
 	if (buf == NULL)
-		errx(1, "malloc failed");
+		xo_errx(1, "malloc failed");
 
-	if (use_ampm < 0)
-		use_ampm = (*nl_langinfo(T_FMT_AMPM) != '\0');
 	then = k->ki_p->ki_start.tv_sec;
 	tp = localtime(&then);
 	if (now - k->ki_p->ki_start.tv_sec < 24 * 3600) {
-		(void)strftime(buf, buflen,
-		    use_ampm ? "%l:%M%p" : "%k:%M  ", tp);
+		(void)strftime(buf, buflen, "%H:%M  ", tp);
 	} else if (now - k->ki_p->ki_start.tv_sec < 7 * 86400) {
-		(void)strftime(buf, buflen,
-		    use_ampm ? "%a%I%p" : "%a%H  ", tp);
+		(void)strftime(buf, buflen, "%a%H  ", tp);
 	} else
 		(void)strftime(buf, buflen, "%e%b%y", tp);
 	return (buf);
@@ -421,7 +424,7 @@ lstarted(KINFO *k, VARENT *ve __unused)
 
 	buf = malloc(buflen);
 	if (buf == NULL)
-		errx(1, "malloc failed");
+		xo_errx(1, "malloc failed");
 
 	then = k->ki_p->ki_start.tv_sec;
 	(void)strftime(buf, buflen, "%c", localtime(&then));
@@ -767,7 +770,7 @@ printval(void *bp, VAR *v)
 		(void)asprintf(&str, ofmt, ps_pgtok(*(u_long *)bp));
 		break;
 	default:
-		errx(1, "unknown type %d", v->type);
+		xo_errx(1, "unknown type %d", v->type);
 	}
 
 	return (str);
@@ -797,8 +800,6 @@ char *
 emulname(KINFO *k, VARENT *ve __unused)
 {
 
-	if (k->ki_p->ki_emul == NULL)
-		return (NULL);
 	return (strdup(k->ki_p->ki_emul));
 }
 
@@ -811,7 +812,7 @@ label(KINFO *k, VARENT *ve __unused)
 
 	string = NULL;
 	if (mac_prepare_process_label(&proclabel) == -1) {
-		warn("mac_prepare_process_label");
+		xo_warn("mac_prepare_process_label");
 		goto out;
 	}
 	error = mac_get_pid(k->ki_p->ki_pid, proclabel);
@@ -827,7 +828,6 @@ out:
 char *
 loginclass(KINFO *k, VARENT *ve __unused)
 {
-	char *s;
 
 	/*
 	 * Don't display login class for system processes;
@@ -837,8 +837,18 @@ loginclass(KINFO *k, VARENT *ve __unused)
 	if (k->ki_p->ki_flag & P_SYSTEM) {
 		return (strdup("-"));
 	}
-	s = k->ki_p->ki_loginclass;
-	if (s == NULL)
-		return (NULL);
-	return (strdup(s));
+	return (strdup(k->ki_p->ki_loginclass));
+}
+
+char *
+jailname(KINFO *k, VARENT *ve __unused)
+{
+	char *name;
+
+	if (k->ki_p->ki_jid == 0)
+		return (strdup("-"));
+	name = jail_getname(k->ki_p->ki_jid);
+	if (name == NULL)
+		return (strdup("-"));
+	return (name);
 }

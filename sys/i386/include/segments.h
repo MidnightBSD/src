@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)segments.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: release/10.0.0/sys/i386/include/segments.h 233203 2012-03-19 21:24:50Z tijl $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_SEGMENTS_H_
@@ -82,14 +82,8 @@ struct region_descriptor {
 
 #ifdef _KERNEL
 extern int	_default_ldt;
-#ifdef XEN
-extern struct proc_ldt default_proc_ldt;
-extern union descriptor *gdt;
-extern union descriptor *ldt;
-#else
 extern union descriptor gdt[];
 extern union descriptor ldt[NLDT];
-#endif
 extern struct soft_segment_descriptor gdt_segs[];
 extern struct gate_descriptor *idt;
 extern struct region_descriptor r_gdt, r_idt;

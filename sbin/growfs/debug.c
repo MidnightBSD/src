@@ -41,7 +41,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/growfs/debug.c 234312 2012-04-15 15:13:29Z trasz $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -518,7 +518,8 @@ dbg_dump_frmap(struct fs *sb, const char *comment, struct cg *cgr)
 
 	cp = (unsigned char *)cg_blksfree(cgr);
 	if (sb->fs_old_nspf)
-		e = howmany((sb->fs_old_cpg * sb->fs_old_spc / sb->fs_old_nspf), CHAR_BIT);
+		e = howmany(sb->fs_old_cpg * sb->fs_old_spc / sb->fs_old_nspf,
+		    CHAR_BIT);
 	else
 		e = 0;
 	for (j = 0; j < e; j += 32) {
@@ -765,7 +766,7 @@ dbg_dump_ufs2_ino(struct fs *sb, const char *comment, struct ufs2_dinode *ino)
 	fprintf(dbg_log, "gen        int32_t        0x%08x\n", ino->di_gen);
 	fprintf(dbg_log, "kernflags  u_int32_t      0x%08x\n", ino->di_kernflags);
 	fprintf(dbg_log, "flags      u_int32_t      0x%08x\n", ino->di_flags);
-	fprintf(dbg_log, "extsize    int32_t        0x%08x\n", ino->di_extsize);
+	fprintf(dbg_log, "extsize    u_int32_t      0x%08x\n", ino->di_extsize);
 
 	/* XXX: What do we do with di_extb[NXADDR]? */
 

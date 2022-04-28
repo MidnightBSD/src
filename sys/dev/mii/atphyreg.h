@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/mii/atphyreg.h 179098 2008-05-19 01:12:10Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_DEV_MII_ATPHYREG_H_

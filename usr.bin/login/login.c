@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/login/login.c 221374 2011-05-03 10:18:27Z dfr $");
+__FBSDID("$FreeBSD$");
 
 /*
  * login [ name ]
@@ -63,7 +63,6 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/login/login.c 221374 2011-05-03 10:18
 #include <err.h>
 #include <errno.h>
 #include <grp.h>
-#include <libutil.h>
 #include <login_cap.h>
 #include <pwd.h>
 #include <setjmp.h>
@@ -83,6 +82,7 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.bin/login/login.c 221374 2011-05-03 10:18
 
 static int		 auth_pam(void);
 static void		 bail(int, int);
+static void		 bail_internal(int, int, int);
 static int		 export(const char *);
 static void		 export_pam_environment(void);
 static int		 motd(const char *);
@@ -94,6 +94,7 @@ static void		 refused(const char *, const char *, int);
 static const char	*stypeof(char *);
 static void		 sigint(int);
 static void		 timedout(int);
+static void		 bail_sig(int);
 static void		 usage(void);
 
 #define	TTYGRPNAME		"tty"			/* group to own ttys */
@@ -103,8 +104,8 @@ static void		 usage(void);
 #define	DEFAULT_PASSWD_PROMPT	"Password:"
 #define	TERM_UNKNOWN		"su"
 #define	DEFAULT_WARN		(2L * 7L * 86400L)	/* Two weeks */
-#define NO_SLEEP_EXIT		0
-#define SLEEP_EXIT		5
+#define	NO_SLEEP_EXIT		0
+#define	SLEEP_EXIT		5
 
 /*
  * This bounds the time given to login.  Not a define so it can
@@ -172,13 +173,18 @@ main(int argc, char *argv[])
 	login_cap_t *lc = NULL;
 	login_cap_t *lc_user = NULL;
 	pid_t pid;
+	sigset_t mask, omask;
+	struct sigaction sa;
 #ifdef USE_BSM_AUDIT
 	char auditsuccess = 1;
 #endif
 
-	(void)signal(SIGQUIT, SIG_IGN);
-	(void)signal(SIGINT, SIG_IGN);
-	(void)signal(SIGHUP, SIG_IGN);
+	sa.sa_flags = SA_RESTART;
+	(void)sigfillset(&sa.sa_mask);
+	sa.sa_handler = SIG_IGN;
+	(void)sigaction(SIGQUIT, &sa, NULL);
+	(void)sigaction(SIGINT, &sa, NULL);
+	(void)sigaction(SIGHUP, &sa, NULL);
 	if (setjmp(timeout_buf)) {
 		if (failures)
 			badlogin(username);
@@ -186,11 +192,12 @@ main(int argc, char *argv[])
 		    timeout);
 		bail(NO_SLEEP_EXIT, 0);
 	}
-	(void)signal(SIGALRM, timedout);
+	sa.sa_handler = timedout;
+	(void)sigaction(SIGALRM, &sa, NULL);
 	(void)alarm(timeout);
 	(void)setpriority(PRIO_PROCESS, 0, 0);
 
-	openlog("login", LOG_ODELAY, LOG_AUTH);
+	openlog("login", 0, LOG_AUTH);
 
 	uid = getuid();
 	euid = geteuid();
@@ -370,7 +377,14 @@ main(int argc, char *argv[])
 
 	/* committed to login -- turn off timeout */
 	(void)alarm((u_int)0);
-	(void)signal(SIGHUP, SIG_DFL);
+
+	(void)sigemptyset(&mask);
+	(void)sigaddset(&mask, SIGHUP);
+	(void)sigaddset(&mask, SIGTERM);
+	(void)sigprocmask(SIG_BLOCK, &mask, &omask);
+	sa.sa_handler = bail_sig;
+	(void)sigaction(SIGHUP, &sa, NULL);
+	(void)sigaction(SIGTERM, &sa, NULL);
 
 	endpwent();
 
@@ -380,12 +394,12 @@ main(int argc, char *argv[])
 		au_login_success();
 #endif
 
-        /*
-         * This needs to happen before login_getpwclass to support
-         * home directories on GSS-API authenticated NFS where the
-         * kerberos credentials need to be saved so that the kernel
-         * can authenticate to the NFS server.
-         */
+	/*
+	 * This needs to happen before login_getpwclass to support
+	 * home directories on GSS-API authenticated NFS where the
+	 * kerberos credentials need to be saved so that the kernel
+	 * can authenticate to the NFS server.
+	 */
 	pam_err = pam_setcred(pamh, pam_silent|PAM_ESTABLISH_CRED);
 	if (pam_err != PAM_SUCCESS) {
 		pam_syslog("pam_setcred()");
@@ -474,14 +488,6 @@ main(int argc, char *argv[])
 		if (errno != EROFS)
 			syslog(LOG_ERR, "chown(%s): %m", ttyn);
 
-	/*
-	 * Exclude cons/vt/ptys only, assume dialup otherwise
-	 * TODO: Make dialup tty determination a library call
-	 * for consistency (finger etc.)
-	 */
-	if (hflag && isdialuptty(tty))
-		syslog(LOG_INFO, "DIALUP %s, %s", tty, pwd->pw_name);
-
 #ifdef LOGALL
 	/*
 	 * Syslog each successful login, so we don't have to watch
@@ -550,10 +556,17 @@ main(int argc, char *argv[])
 		/*
 		 * Parent: wait for child to finish, then clean up
 		 * session.
+		 *
+		 * If we get SIGHUP or SIGTERM, clean up the session
+		 * and exit right away. This will make the terminal
+		 * inaccessible and send SIGHUP to the foreground
+		 * process group.
 		 */
 		int status;
 		setproctitle("-%s [pam]", getprogname());
+		(void)sigprocmask(SIG_SETMASK, &omask, NULL);
 		waitpid(pid, &status, 0);
+		(void)sigprocmask(SIG_BLOCK, &mask, NULL);
 		bail(NO_SLEEP_EXIT, 0);
 	}
 
@@ -627,10 +640,15 @@ main(int argc, char *argv[])
 	login_close(lc_user);
 	login_close(lc);
 
-	(void)signal(SIGALRM, SIG_DFL);
-	(void)signal(SIGQUIT, SIG_DFL);
-	(void)signal(SIGINT, SIG_DFL);
-	(void)signal(SIGTSTP, SIG_IGN);
+	sa.sa_handler = SIG_DFL;
+	(void)sigaction(SIGALRM, &sa, NULL);
+	(void)sigaction(SIGQUIT, &sa, NULL);
+	(void)sigaction(SIGINT, &sa, NULL);
+	(void)sigaction(SIGTERM, &sa, NULL);
+	(void)sigaction(SIGHUP, &sa, NULL);
+	sa.sa_handler = SIG_IGN;
+	(void)sigaction(SIGTSTP, &sa, NULL);
+	(void)sigprocmask(SIG_SETMASK, &omask, NULL);
 
 	/*
 	 * Login shells have a leading '-' in front of argv[0]
@@ -847,17 +865,20 @@ sigint(int signo __unused)
 static int
 motd(const char *motdfile)
 {
-	sig_t oldint;
+	struct sigaction newint, oldint;
 	FILE *f;
 	int ch;
 
 	if ((f = fopen(motdfile, "r")) == NULL)
 		return (-1);
 	motdinterrupt = 0;
-	oldint = signal(SIGINT, sigint);
+	newint.sa_handler = sigint;
+	newint.sa_flags = 0;
+	sigfillset(&newint.sa_mask);
+	sigaction(SIGINT, &newint, &oldint);
 	while ((ch = fgetc(f)) != EOF && !motdinterrupt)
 		putchar(ch);
-	signal(SIGINT, oldint);
+	sigaction(SIGINT, &oldint, NULL);
 	if (ch != EOF || ferror(f)) {
 		fclose(f);
 		return (-1);
@@ -966,12 +987,10 @@ pam_cleanup(void)
 	}
 }
 
-/*
- * Exit, optionally after sleeping a few seconds
- */
-void
-bail(int sec, int eval)
+static void
+bail_internal(int sec, int eval, int signo)
 {
+	struct sigaction sa;
 
 	pam_cleanup();
 #ifdef USE_BSM_AUDIT
@@ -979,5 +998,36 @@ bail(int sec, int eval)
 		audit_logout();
 #endif
 	(void)sleep(sec);
-	exit(eval);
+	if (signo == 0)
+		exit(eval);
+	else {
+		sa.sa_handler = SIG_DFL;
+		sa.sa_flags = 0;
+		(void)sigemptyset(&sa.sa_mask);
+		(void)sigaction(signo, &sa, NULL);
+		(void)sigaddset(&sa.sa_mask, signo);
+		(void)sigprocmask(SIG_UNBLOCK, &sa.sa_mask, NULL);
+		raise(signo);
+		exit(128 + signo);
+	}
+}
+
+/*
+ * Exit, optionally after sleeping a few seconds
+ */
+static void
+bail(int sec, int eval)
+{
+	bail_internal(sec, eval, 0);
+}
+
+/*
+ * Exit because of a signal.
+ * This is not async-signal safe, so only call async-signal safe functions
+ * while the signal is unmasked.
+ */
+static void
+bail_sig(int signo)
+{
+	bail_internal(NO_SLEEP_EXIT, 0, signo);
 }

@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: release/10.0.0/sys/dev/ixgb/if_ixgb_osdep.h 158651 2006-05-16 14:37:58Z phk $*/
+/*$FreeBSD$*/
 
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_

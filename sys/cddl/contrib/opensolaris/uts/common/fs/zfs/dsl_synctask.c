@@ -20,7 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2017 by Delphix. All rights reserved.
  */
 
 #include <sys/dmu.h>
@@ -37,6 +37,63 @@ static int
 dsl_null_checkfunc(void *arg, dmu_tx_t *tx)
 {
 	return (0);
+}
+
+static int
+dsl_sync_task_common(const char *pool, dsl_checkfunc_t *checkfunc,
+    dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check, boolean_t early)
+{
+	spa_t *spa;
+	dmu_tx_t *tx;
+	int err;
+	dsl_sync_task_t dst = { 0 };
+	dsl_pool_t *dp;
+
+	err = spa_open(pool, &spa, FTAG);
+	if (err != 0)
+		return (err);
+	dp = spa_get_dsl(spa);
+
+top:
+	tx = dmu_tx_create_dd(dp->dp_mos_dir);
+	VERIFY0(dmu_tx_assign(tx, TXG_WAIT));
+
+	dst.dst_pool = dp;
+	dst.dst_txg = dmu_tx_get_txg(tx);
+	dst.dst_space = blocks_modified << DST_AVG_BLKSHIFT;
+	dst.dst_space_check = space_check;
+	dst.dst_checkfunc = checkfunc != NULL ? checkfunc : dsl_null_checkfunc;
+	dst.dst_syncfunc = syncfunc;
+	dst.dst_arg = arg;
+	dst.dst_error = 0;
+	dst.dst_nowaiter = B_FALSE;
+
+	dsl_pool_config_enter(dp, FTAG);
+	err = dst.dst_checkfunc(arg, tx);
+	dsl_pool_config_exit(dp, FTAG);
+
+	if (err != 0) {
+		dmu_tx_commit(tx);
+		spa_close(spa, FTAG);
+		return (err);
+	}
+
+	txg_list_t *task_list = (early) ?
+	    &dp->dp_early_sync_tasks : &dp->dp_sync_tasks;
+	VERIFY(txg_list_add_tail(task_list, &dst, dst.dst_txg));
+
+	dmu_tx_commit(tx);
+
+	txg_wait_synced(dp, dst.dst_txg);
+
+	if (dst.dst_error == EAGAIN) {
+		txg_wait_synced(dp, dst.dst_txg + TXG_DEFER_SIZE);
+		goto top;
+	}
+
+	spa_close(spa, FTAG);
+	return (dst.dst_error);
 }
 
 /*
@@ -64,73 +121,71 @@ dsl_null_checkfunc(void *arg, dmu_tx_t *tx)
  */
 int
 dsl_sync_task(const char *pool, dsl_checkfunc_t *checkfunc,
-    dsl_syncfunc_t *syncfunc, void *arg, int blocks_modified)
+    dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check)
 {
-	spa_t *spa;
-	dmu_tx_t *tx;
-	int err;
-	dsl_sync_task_t dst = { 0 };
-	dsl_pool_t *dp;
-
-	err = spa_open(pool, &spa, FTAG);
-	if (err != 0)
-		return (err);
-	dp = spa_get_dsl(spa);
-
-top:
-	tx = dmu_tx_create_dd(dp->dp_mos_dir);
-	VERIFY0(dmu_tx_assign(tx, TXG_WAIT));
-
-	dst.dst_pool = dp;
-	dst.dst_txg = dmu_tx_get_txg(tx);
-	dst.dst_space = blocks_modified << DST_AVG_BLKSHIFT;
-	dst.dst_checkfunc = checkfunc != NULL ? checkfunc : dsl_null_checkfunc;
-	dst.dst_syncfunc = syncfunc;
-	dst.dst_arg = arg;
-	dst.dst_error = 0;
-	dst.dst_nowaiter = B_FALSE;
-
-	dsl_pool_config_enter(dp, FTAG);
-	err = dst.dst_checkfunc(arg, tx);
-	dsl_pool_config_exit(dp, FTAG);
-
-	if (err != 0) {
-		dmu_tx_commit(tx);
-		spa_close(spa, FTAG);
-		return (err);
-	}
-
-	VERIFY(txg_list_add_tail(&dp->dp_sync_tasks, &dst, dst.dst_txg));
-
-	dmu_tx_commit(tx);
-
-	txg_wait_synced(dp, dst.dst_txg);
-
-	if (dst.dst_error == EAGAIN) {
-		txg_wait_synced(dp, dst.dst_txg + TXG_DEFER_SIZE);
-		goto top;
-	}
-
-	spa_close(spa, FTAG);
-	return (dst.dst_error);
+	return (dsl_sync_task_common(pool, checkfunc, syncfunc, arg,
+	    blocks_modified, space_check, B_FALSE));
 }
 
-void
-dsl_sync_task_nowait(dsl_pool_t *dp, dsl_syncfunc_t *syncfunc, void *arg,
-    int blocks_modified, dmu_tx_t *tx)
+/*
+ * An early synctask works exactly as a standard synctask with one important
+ * difference on the way it is handled during syncing context. Standard
+ * synctasks run after we've written out all the dirty blocks of dirty
+ * datasets. Early synctasks are executed before writing out any dirty data,
+ * and thus before standard synctasks.
+ *
+ * For that reason, early synctasks can affect the process of writing dirty
+ * changes to disk for the txg that they run and should be used with caution.
+ * In addition, early synctasks should not dirty any metaslabs as this would
+ * invalidate the precodition/invariant for subsequent early synctasks.
+ * [see dsl_pool_sync() and dsl_early_sync_task_verify()]
+ */
+int
+dsl_early_sync_task(const char *pool, dsl_checkfunc_t *checkfunc,
+    dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check)
+{
+	return (dsl_sync_task_common(pool, checkfunc, syncfunc, arg,
+	    blocks_modified, space_check, B_TRUE));
+}
+
+static void
+dsl_sync_task_nowait_common(dsl_pool_t *dp, dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check, dmu_tx_t *tx,
+    boolean_t early)
 {
 	dsl_sync_task_t *dst = kmem_zalloc(sizeof (*dst), KM_SLEEP);
 
 	dst->dst_pool = dp;
 	dst->dst_txg = dmu_tx_get_txg(tx);
 	dst->dst_space = blocks_modified << DST_AVG_BLKSHIFT;
+	dst->dst_space_check = space_check;
 	dst->dst_checkfunc = dsl_null_checkfunc;
 	dst->dst_syncfunc = syncfunc;
 	dst->dst_arg = arg;
 	dst->dst_error = 0;
 	dst->dst_nowaiter = B_TRUE;
 
-	VERIFY(txg_list_add_tail(&dp->dp_sync_tasks, dst, dst->dst_txg));
+	txg_list_t *task_list = (early) ?
+	    &dp->dp_early_sync_tasks : &dp->dp_sync_tasks;
+	VERIFY(txg_list_add_tail(task_list, dst, dst->dst_txg));
+}
+
+void
+dsl_sync_task_nowait(dsl_pool_t *dp, dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check, dmu_tx_t *tx)
+{
+	dsl_sync_task_nowait_common(dp, syncfunc, arg,
+	    blocks_modified, space_check, tx, B_FALSE);
+}
+
+void
+dsl_early_sync_task_nowait(dsl_pool_t *dp, dsl_syncfunc_t *syncfunc, void *arg,
+    int blocks_modified, zfs_space_check_t space_check, dmu_tx_t *tx)
+{
+	dsl_sync_task_nowait_common(dp, syncfunc, arg,
+	    blocks_modified, space_check, tx, B_TRUE);
 }
 
 /*
@@ -140,25 +195,34 @@ void
 dsl_sync_task_sync(dsl_sync_task_t *dst, dmu_tx_t *tx)
 {
 	dsl_pool_t *dp = dst->dst_pool;
-	uint64_t quota, used;
 
 	ASSERT0(dst->dst_error);
 
 	/*
-	 * Check for sufficient space.  We just check against what's
-	 * on-disk; we don't want any in-flight accounting to get in our
-	 * way, because open context may have already used up various
-	 * in-core limits (arc_tempreserve, dsl_pool_tempreserve).
+	 * Check for sufficient space.
+	 *
+	 * When the sync task was created, the caller specified the
+	 * type of space checking required.  See the comment in
+	 * zfs_space_check_t for details on the semantics of each
+	 * type of space checking.
+	 *
+	 * We just check against what's on-disk; we don't want any
+	 * in-flight accounting to get in our way, because open context
+	 * may have already used up various in-core limits
+	 * (arc_tempreserve, dsl_pool_tempreserve).
 	 */
-	quota = dsl_pool_adjustedsize(dp, B_FALSE) -
-	    metaslab_class_get_deferred(spa_normal_class(dp->dp_spa));
-	used = dp->dp_root_dir->dd_phys->dd_used_bytes;
-	/* MOS space is triple-dittoed, so we multiply by 3. */
-	if (dst->dst_space > 0 && used + dst->dst_space * 3 > quota) {
-		dst->dst_error = SET_ERROR(ENOSPC);
-		if (dst->dst_nowaiter)
-			kmem_free(dst, sizeof (*dst));
-		return;
+	if (dst->dst_space_check != ZFS_SPACE_CHECK_NONE) {
+		uint64_t quota = dsl_pool_unreserved_space(dp,
+		    dst->dst_space_check);
+		uint64_t used = dsl_dir_phys(dp->dp_root_dir)->dd_used_bytes;
+
+		/* MOS space is triple-dittoed, so we multiply by 3. */
+		if (used + dst->dst_space * 3 > quota) {
+			dst->dst_error = SET_ERROR(ENOSPC);
+			if (dst->dst_nowaiter)
+				kmem_free(dst, sizeof (*dst));
+			return;
+		}
 	}
 
 	/*

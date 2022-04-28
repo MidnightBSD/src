@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_throttle.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -96,7 +96,7 @@ static void	acpi_throttle_identify(driver_t *driver, device_t parent);
 static int	acpi_throttle_probe(device_t dev);
 static int	acpi_throttle_attach(device_t dev);
 static int	acpi_throttle_evaluate(struct acpi_throttle_softc *sc);
-static int	acpi_throttle_quirks(struct acpi_throttle_softc *sc);
+static void	acpi_throttle_quirks(struct acpi_throttle_softc *sc);
 static int	acpi_thr_settings(device_t dev, struct cf_setting *sets,
 		    int *count);
 static int	acpi_thr_set(device_t dev, const struct cf_setting *set);
@@ -314,9 +314,10 @@ acpi_throttle_evaluate(struct acpi_throttle_softc *sc)
 	return (0);
 }
 
-static int
+static void
 acpi_throttle_quirks(struct acpi_throttle_softc *sc)
 {
+#ifdef __i386__
 	device_t acpi_dev;
 
 	/* Look for various quirks of the PIIX4 part. */
@@ -339,8 +340,7 @@ acpi_throttle_quirks(struct acpi_throttle_softc *sc)
 			break;
 		}
 	}
-
-	return (0);
+#endif
 }
 
 static int

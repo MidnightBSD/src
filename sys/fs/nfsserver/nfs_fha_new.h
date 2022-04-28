@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/sys/fs/nfsserver/nfs_fha_new.h 249592 2013-04-17 21:00:22Z ken $ */
+/* $FreeBSD$ */
 
 #ifndef	_NFS_FHA_NEW_H
 #define	_NFS_FHA_NEW_H 1

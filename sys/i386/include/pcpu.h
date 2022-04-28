@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/include/pcpu.h 256073 2013-10-05 23:11:01Z gibbs $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -36,6 +36,9 @@
 #include <machine/segments.h>
 #include <machine/tss.h>
 
+#include <sys/_lock.h>
+#include <sys/_mutex.h>
+
 /*
  * The SMP parts are setup in pmap.c and locore.s for the BSP, and
  * mp_machdep.c sets up the data for the AP's to "see" when they awake.
@@ -43,34 +46,6 @@
  * to each CPU's data can be set up for things like "check curproc on all
  * other processors"
  */
-
-#if defined(XEN)
-
-/* These are peridically updated in shared_info, and then copied here. */
-struct shadow_time_info {
-	uint64_t tsc_timestamp;     /* TSC at last update of time vals.  */
-	uint64_t system_timestamp;  /* Time, in nanosecs, since boot.    */
-	uint32_t tsc_to_nsec_mul;
-	uint32_t tsc_to_usec_mul;
-	int tsc_shift;
-	uint32_t version;
-};
-
-#define	PCPU_XEN_FIELDS							\
-	;								\
-	u_int	pc_cr3;		/* track cr3 for R1/R3*/		\
-	vm_paddr_t *pc_pdir_shadow;					\
-	uint64_t pc_processed_system_time;				\
-	struct shadow_time_info pc_shadow_time;				\
-	char	__pad[185]
-
-#else /* !XEN */
-
-#define PCPU_XEN_FIELDS							\
-	;								\
-	char	__pad[233]
-
-#endif
 
 #define	PCPU_MD_FIELDS							\
 	char	pc_monitorbuf[128] __aligned(128); /* cache line */	\
@@ -85,8 +60,20 @@ struct shadow_time_info {
 	u_int	pc_apic_id;						\
 	int	pc_private_tss;		/* Flag indicating private tss*/\
 	u_int	pc_cmci_mask;		/* MCx banks for CMCI */	\
-	u_int	pc_vcpu_id		/* Xen vCPU ID */		\
-	PCPU_XEN_FIELDS
+	u_int	pc_vcpu_id;		/* Xen vCPU ID */		\
+	struct	mtx pc_cmap_lock;					\
+	void	*pc_cmap_pte1;						\
+	void	*pc_cmap_pte2;						\
+	caddr_t	pc_cmap_addr1;						\
+	caddr_t	pc_cmap_addr2;						\
+	vm_offset_t pc_qmap_addr;	/* KVA for temporary mappings */\
+	uint32_t pc_smp_tlb_done;	/* TLB op acknowledgement */	\
+	uint32_t pc_ibpb_set;						\
+	void	*pc_mds_buf;						\
+	void	*pc_mds_buf64;						\
+	uint32_t pc_pad[12];						\
+	uint8_t	pc_mds_tmp[64];						\
+	char	__pad[153]
 
 #ifdef _KERNEL
 
@@ -94,6 +81,7 @@ struct shadow_time_info {
 
 extern struct pcpu *pcpup;
 
+#define	get_pcpu()		(pcpup)
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
 #define	PCPU_ADD(member, val)	(pcpup->pc_ ## member += (val))
 #define	PCPU_INC(member)	PCPU_ADD(member, 1)
@@ -214,6 +202,15 @@ extern struct pcpu *pcpup;
 	}								\
 } while (0)
 
+#define	get_pcpu() __extension__ ({					\
+	struct pcpu *__pc;						\
+									\
+	__asm __volatile("movl %%fs:%1,%0"				\
+	    : "=r" (__pc)						\
+	    : "m" (*(struct pcpu *)(__pcpu_offset(pc_prvspace))));	\
+	__pc;								\
+})
+
 #define	PCPU_GET(member)	__PCPU_GET(pc_ ## member)
 #define	PCPU_ADD(member, val)	__PCPU_ADD(pc_ ## member, val)
 #define	PCPU_INC(member)	__PCPU_INC(pc_ ## member)
@@ -249,6 +246,8 @@ __curpcb(void)
 	return (pcb);
 }
 #define	curpcb		(__curpcb())
+
+#define	IS_BSP()	(PCPU_GET(cpuid) == 0)
 
 #else /* !lint || defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF) */
 

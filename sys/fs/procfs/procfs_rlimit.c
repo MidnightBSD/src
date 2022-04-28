@@ -36,7 +36,7 @@
  *
  *	@(#)procfs_status.c	8.4 (Berkeley) 6/15/94
  *
- * $FreeBSD: release/10.0.0/sys/fs/procfs/procfs_rlimit.c 139776 2005-01-06 18:10:42Z imp $
+ * $FreeBSD$
  */
 
 /*

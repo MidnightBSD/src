@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bm/if_bm.c 243857 2012-12-04 09:32:43Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/bm/if_bm.c 243857 2012-12-04 09:32:43
 
 #include <net/bpf.h>
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>
 #include <net/if_dl.h>
@@ -480,6 +481,8 @@ bm_attach(device_t dev)
 	ether_ifattach(ifp, sc->sc_enaddr);
 	ifp->if_hwassist = 0;
 
+	gone_by_fcp101_dev(dev);
+
 	return (0);
 }
 
@@ -607,7 +610,7 @@ bm_rxintr(void *xsc)
 		m = sc->sc_rxsoft[i].rxs_mbuf;
 
 		if (bm_add_rxbuf(sc, i)) {
-			ifp->if_ierrors++;
+			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			m = NULL;
 			continue;
 		}
@@ -615,7 +618,7 @@ bm_rxintr(void *xsc)
 		if (m == NULL)
 			continue;
 
-		ifp->if_ipackets++;
+		if_inc_counter(ifp, IFCOUNTER_IPACKETS, 1);
 		m->m_pkthdr.rcvif = ifp;
 		m->m_len -= (dbdma_get_residuals(sc->sc_rxdma, i) + 2);
 		m->m_pkthdr.len = m->m_len;
@@ -677,7 +680,7 @@ bm_txintr(void *xsc)
 
 		STAILQ_INSERT_TAIL(&sc->sc_txfreeq, txs, txs_q);
 
-		ifp->if_opackets++;
+		if_inc_counter(ifp, IFCOUNTER_OPACKETS, 1);
 		progress = 1;
 	}
 
@@ -1195,12 +1198,13 @@ bm_tick(void *arg)
 	struct bm_softc *sc = arg;
 
 	/* Read error counters */
-	sc->sc_ifp->if_collisions += CSR_READ_2(sc, BM_TX_NCCNT) +
-	    CSR_READ_2(sc, BM_TX_FCCNT) + CSR_READ_2(sc, BM_TX_EXCNT) +
-	    CSR_READ_2(sc, BM_TX_LTCNT);
+	if_inc_counter(sc->sc_ifp, IFCOUNTER_COLLISIONS,
+	    CSR_READ_2(sc, BM_TX_NCCNT) + CSR_READ_2(sc, BM_TX_FCCNT) +
+	    CSR_READ_2(sc, BM_TX_EXCNT) + CSR_READ_2(sc, BM_TX_LTCNT));
 
-	sc->sc_ifp->if_ierrors += CSR_READ_2(sc, BM_RX_LECNT) +
-	    CSR_READ_2(sc, BM_RX_AECNT) + CSR_READ_2(sc, BM_RX_FECNT);
+	if_inc_counter(sc->sc_ifp, IFCOUNTER_IERRORS,
+	    CSR_READ_2(sc, BM_RX_LECNT) + CSR_READ_2(sc, BM_RX_AECNT) +
+	    CSR_READ_2(sc, BM_RX_FECNT));
 
 	/* Zero collision counters */
 	CSR_WRITE_2(sc, BM_TX_NCCNT, 0);

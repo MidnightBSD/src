@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/isci/scil/scif_sas_remote_device_ready_substates.c 231296 2012-02-09 17:50:24Z jimharris $");
+__FBSDID("$FreeBSD$");
 
 /**
  * @file
@@ -245,7 +245,7 @@ void scif_sas_remote_device_ready_ncq_error_substate_enter(
       pending_request =
          (SCIF_SAS_REQUEST_T*) sci_fast_list_get_object(pending_request_element);
 
-      // The current element may be deleted from the list becasue of
+      // The current element may be deleted from the list because of
       // IO completion so advance to the next element early
       pending_request_element = sci_fast_list_get_next(pending_request_element);
 

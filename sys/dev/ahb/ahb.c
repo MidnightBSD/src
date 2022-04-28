@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ahb/ahb.c 246713 2013-02-12 16:57:20Z kib $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -298,7 +298,7 @@ ahbattach(device_t dev)
 				/* highaddr	*/ BUS_SPACE_MAXADDR,
 				/* filter	*/ NULL,
 				/* filterarg	*/ NULL,
-				/* maxsize	*/ MAXBSIZE,
+				/* maxsize	*/ DFLTPHYS,
 				/* nsegments	*/ AHB_NSEG,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_32BIT,
 				/* flags	*/ BUS_DMA_ALLOCNOW,
@@ -421,7 +421,6 @@ ahbfree(struct ahb_softc *ahb)
 	case 3:
 		bus_dmamem_free(ahb->ecb_dmat, ahb->ecb_array,
 				ahb->ecb_dmamap);
-		bus_dmamap_destroy(ahb->ecb_dmat, ahb->ecb_dmamap);
 	case 2:
 		bus_dma_tag_destroy(ahb->ecb_dmat);
 	case 1:
@@ -617,9 +616,9 @@ ahbhandleimmed(struct ahb_softc *ahb, u_int32_t mbox, u_int intstat)
 			xpt_done(ccb);
 		} else if (ahb->immed_ecb != NULL) {
 			/* Re-instate timeout */
-			callout_reset(&pending_ecb->timer, 
-			    (ccb->ccb_h.timeout * hz) / 1000,
-			    ahbtimeout, pending_ecb);
+			callout_reset_sbt(&pending_ecb->timer,
+			    SBT_1MS * ccb->ccb_h.timeout, 0, ahbtimeout,
+			    pending_ecb, 0);
 		}
 	}
 
@@ -886,7 +885,7 @@ ahbintr_locked(struct ahb_softc *ahb)
 				xpt_async(AC_BUS_RESET, ahb->path, NULL);
 				break;
 			}
-			printf("Unsupported initiator selection AEN occured\n");
+			printf("Unsupported initiator selection AEN occurred\n");
 			break;
 		case INTSTAT_IMMED_OK:
 		case INTSTAT_IMMED_ERR:
@@ -986,8 +985,8 @@ ahbexecuteecb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	/* Tell the adapter about this command */
 	ahbqueuembox(ahb, ecb_paddr, ATTN_STARTECB|ccb->ccb_h.target_id);
 
-	callout_reset(&ecb->timer, (ccb->ccb_h.timeout * hz) / 1000, ahbtimeout,
-	    ecb);
+	callout_reset_sbt(&ecb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    ahbtimeout, ecb, 0);
 }
 
 static void
@@ -1179,14 +1178,14 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = ahb->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1236,7 +1235,7 @@ ahbtimeout(void *arg)
 	 * means that the driver attempts to clear only one error
 	 * condition at a time.  In general, timeouts that occur
 	 * close together are related anyway, so there is no benefit
-	 * in attempting to handle errors in parrallel.  Timeouts will
+	 * in attempting to handle errors in parallel.  Timeouts will
 	 * be reinstated when the recovery process ends.
 	 */
 	if ((ecb->state & ECB_DEVICE_RESET) == 0) {

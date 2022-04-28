@@ -1,5 +1,5 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_pf/Makefile 205607 2010-03-24 16:07:33Z syrinx $
-# 
+# $FreeBSD$
+#
 # Author: Philip Paeps <philip@freebsd.org>
 
 MOD=	pf

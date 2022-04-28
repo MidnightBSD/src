@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/wtap/plugins/visibility.c 243857 2012-12-04 09:32:43Z glebius $
+ * $FreeBSD$
  */
 #include <sys/param.h>
 #include <sys/module.h>
@@ -41,7 +41,6 @@
 #include <sys/ucred.h>
 #include <sys/jail.h>
 
-#include <sys/types.h>
 #include <sys/sockio.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -231,7 +230,7 @@ vis_ioctl(struct cdev *sdev, u_long cmd, caddr_t data,
 #endif
 		break;
 	default:
-		DWTAP_PRINTF("Unkown WTAP IOCTL\n");
+		DWTAP_PRINTF("Unknown WTAP IOCTL\n");
 		error = EINVAL;
 	}
 

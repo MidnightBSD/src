@@ -12,7 +12,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_sinh.c 226598 2011-10-21 06:28:47Z das $");
+__FBSDID("$FreeBSD$");
 
 /* __ieee754_sinh(x)
  * Method : 
@@ -31,6 +31,8 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/e_sinh.c 226598 2011-10-21 06:28
  *	sinh(x) is |x| if x is +INF, -INF, or NaN.
  *	only sinh(0)=0 is exact for finite x.
  */
+
+#include <float.h>
 
 #include "math.h"
 #include "math_private.h"
@@ -71,3 +73,7 @@ __ieee754_sinh(double x)
     /* |x| > overflowthresold, sinh(x) overflow */
 	return x*shuge;
 }
+
+#if (LDBL_MANT_DIG == 53)
+__weak_reference(sinh, sinhl);
+#endif

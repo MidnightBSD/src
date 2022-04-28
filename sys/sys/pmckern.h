@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pmckern.h 254813 2013-08-24 21:13:38Z markj $
+ * $FreeBSD$
  */
 
 /*
@@ -110,7 +110,7 @@ struct pmckern_soft {
 #ifdef PMC_FAKE_TRAPFRAME
 #define PMC_SOFT_CALL(pr, mo, fu, na)						\
 do {										\
-	if (pmc_##pr##_##mo##_##fu##_##na.ps_running) {				\
+	if (__predict_false(pmc_##pr##_##mo##_##fu##_##na.ps_running)) {	\
 		struct pmckern_soft ks;						\
 		register_t intr;						\
 		intr = intr_disable();						\
@@ -135,7 +135,7 @@ do {										\
  */
 #define PMC_SOFT_CALL_TF(pr, mo, fu, na, tf)					\
 do {										\
-	if (pmc_##pr##_##mo##_##fu##_##na.ps_running) {				\
+	if (__predict_false(pmc_##pr##_##mo##_##fu##_##na.ps_running)) {	\
 		struct pmckern_soft ks;						\
 		register_t intr;						\
 		intr = intr_disable();						\
@@ -173,6 +173,9 @@ extern const int pmc_kernel_version;
 
 /* PMC soft per cpu trapframe */
 extern struct trapframe pmc_tf[MAXCPU];
+
+/* Quick check if preparatory work is necessary */
+#define	PMC_HOOK_INSTALLED(cmd)	__predict_false(pmc_hook != NULL)
 
 /* Hook invocation; for use within the kernel */
 #define	PMC_CALL_HOOK(t, cmd, arg)		\

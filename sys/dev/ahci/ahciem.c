@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ahci/ahciem.c 249089 2013-04-04 09:15:19Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -65,7 +65,7 @@ ahci_em_probe(device_t dev)
 {
 
 	device_set_desc_copy(dev, "AHCI enclosure management bridge");
-	return (0);
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
@@ -85,8 +85,10 @@ ahci_em_attach(device_t dev)
 	mtx_init(&enc->mtx, "AHCI enclosure lock", NULL, MTX_DEF);
 	rid = 0;
 	if (!(enc->r_memc = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &rid, RF_ACTIVE)))
+	    &rid, RF_ACTIVE))) {
+		mtx_destroy(&enc->mtx);
 		return (ENXIO);
+	}
 	enc->capsem = ATA_INL(enc->r_memc, 0);
 	rid = 1;
 	if (!(enc->r_memt = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
@@ -271,14 +273,14 @@ static device_method_t ahciem_methods[] = {
 	DEVMETHOD(device_detach,    ahci_em_detach),
 	DEVMETHOD(device_suspend,   ahci_em_suspend),
 	DEVMETHOD(device_resume,    ahci_em_resume),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 static driver_t ahciem_driver = {
         "ahciem",
         ahciem_methods,
         sizeof(struct ahci_enclosure)
 };
-DRIVER_MODULE(ahciem, ahci, ahciem_driver, ahciem_devclass, 0, 0);
+DRIVER_MODULE(ahciem, ahci, ahciem_driver, ahciem_devclass, NULL, NULL);
 
 static void
 ahci_em_setleds(device_t dev, int c)
@@ -290,14 +292,14 @@ ahci_em_setleds(device_t dev, int c)
 	enc = device_get_softc(dev);
 
 	val = 0;
-	if (enc->status[c][2] & 0x80)		/* Activity */
+	if (enc->status[c][2] & SESCTL_RQSACT)		/* Activity */
 		val |= (1 << 0);
-	if (enc->status[c][2] & SESCTL_RQSID)	/* Identification */
+	if (enc->status[c][1] & SESCTL_RQSRR)		/* Rebuild */
+		val |= (1 << 6) | (1 << 3);
+	else if (enc->status[c][2] & SESCTL_RQSID)	/* Identification */
 		val |= (1 << 3);
 	else if (enc->status[c][3] & SESCTL_RQSFLT)	/* Fault */
 		val |= (1 << 6);
-	else if (enc->status[c][1] & 0x02)		/* Rebuild */
-		val |= (1 << 6) | (1 << 3);
 
 	timeout = 10000;
 	while (ATA_INL(enc->r_memc, 0) & (AHCI_EM_TM | AHCI_EM_RST) &&
@@ -342,7 +344,7 @@ ahci_em_led(void *priv, int onoff)
 }
 
 static int
-ahci_check_ids(device_t dev, union ccb *ccb)
+ahci_check_ids(union ccb *ccb)
 {
 
 	if (ccb->ccb_h.target_id != 0) {
@@ -362,9 +364,12 @@ static void
 ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 {
 	struct ahci_enclosure *enc;
+	struct ahci_channel *ch;
 	struct ses_status_page *page;
 	struct ses_status_array_dev_slot *ads, *ads0;
 	struct ses_elm_desc_hdr *elmd;
+	struct ses_elm_addlstatus_eip_hdr *elma;
+	struct ses_elm_ata_hdr *elmb;
 	uint8_t *buf;
 	int i;
 
@@ -387,7 +392,7 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 		strncpy(&buf[3], device_get_nameunit(dev), 7);
 		strncpy(&buf[10], "AHCI    ", SID_VENDOR_SIZE);
 		strncpy(&buf[18], "SGPIO Enclosure ", SID_PRODUCT_SIZE);
-		strncpy(&buf[34], "1.00", SID_REVISION_SIZE);
+		strncpy(&buf[34], "2.00", SID_REVISION_SIZE);
 		strncpy(&buf[39], "0001", 4);
 		strncpy(&buf[43], "S-E-S ", 6);
 		strncpy(&buf[49], "2.00", 4);
@@ -399,14 +404,15 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 	page = (struct ses_status_page *)buf;
 	if (ccb->ataio.cmd.lba_low == 0x02 &&
 	    ccb->ataio.cmd.features == 0x00 &&
-	    ccb->ataio.cmd.sector_count >= 2) {
+	    ccb->ataio.cmd.sector_count >= 3) {
 		bzero(buf, ccb->ataio.dxfer_len);
 		page->hdr.page_code = 0;
-		scsi_ulto2b(4, page->hdr.length);
-		buf[4] = 0;
-		buf[5] = 1;
-		buf[6] = 2;
-		buf[7] = 7;
+		scsi_ulto2b(5, page->hdr.length);
+		buf[4] = 0x00;
+		buf[5] = 0x01;
+		buf[6] = 0x02;
+		buf[7] = 0x07;
+		buf[8] = 0x0a;
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		goto out;
 	}
@@ -414,26 +420,30 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 	/* SEMB RECEIVE DIAGNOSTIC RESULT (1) */
 	if (ccb->ataio.cmd.lba_low == 0x02 &&
 	    ccb->ataio.cmd.features == 0x01 &&
-	    ccb->ataio.cmd.sector_count >= 13) {
+	    ccb->ataio.cmd.sector_count >= 16) {
 		struct ses_enc_desc *ed;
 		struct ses_elm_type_desc *td;
 
 		bzero(buf, ccb->ataio.dxfer_len);
 		page->hdr.page_code = 0x01;
-		scsi_ulto2b(4 + 4 + 36 + 4, page->hdr.length);
+		scsi_ulto2b(4 + sizeof(*ed) + sizeof(*td) + 11,
+		    page->hdr.length);
 		ed = (struct ses_enc_desc *)&buf[8];
 		ed->byte0 = 0x11;
 		ed->subenc_id = 0;
 		ed->num_types = 1;
 		ed->length = 36;
+		ed->logical_id[0] = 0x30;	/* NAA Locally Assigned. */
+		strncpy(&ed->logical_id[1], device_get_nameunit(dev), 7);
 		strncpy(ed->vendor_id, "AHCI    ", SID_VENDOR_SIZE);
 		strncpy(ed->product_id, "SGPIO Enclosure ", SID_PRODUCT_SIZE);
-		strncpy(ed->product_rev, "    ", SID_REVISION_SIZE);
+		strncpy(ed->product_rev, "2.00", SID_REVISION_SIZE);
 		td = (struct ses_elm_type_desc *)ses_enc_desc_next(ed);
 		td->etype_elm_type = 0x17;
 		td->etype_maxelt = enc->channels;
 		td->etype_subenc = 0;
-		td->etype_txt_len = 0;
+		td->etype_txt_len = 11;
+		snprintf((char *)(td + 1), 12, "Drive Slots");
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		goto out;
 	}
@@ -449,10 +459,22 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 		for (i = 0; i < enc->channels; i++) {
 			ads = &page->elements[i + 1].array_dev_slot;
 			memcpy(ads, enc->status[i], 4);
-			ads->common.bytes[0] |=
-			    (enc->ichannels & (1 << i)) ?
-			     SES_OBJSTAT_UNKNOWN :
-			     SES_OBJSTAT_NOTINSTALLED;
+			ch = ahci_getch(device_get_parent(dev), i);
+			if (ch == NULL) {
+				ads->common.bytes[0] |= SES_OBJSTAT_UNKNOWN;
+				continue;
+			}
+			if (ch->pm_present)
+				ads->common.bytes[0] |= SES_OBJSTAT_UNKNOWN;
+			else if (ch->devices)
+				ads->common.bytes[0] |= SES_OBJSTAT_OK;
+			else if (ch->disablephy)
+				ads->common.bytes[0] |= SES_OBJSTAT_NOTAVAIL;
+			else
+				ads->common.bytes[0] |= SES_OBJSTAT_NOTINSTALLED;
+			if (ch->disablephy)
+				ads->common.bytes[3] |= SESCTL_DEVOFF;
+			ahci_putch(ch);
 		}
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		goto out;
@@ -467,21 +489,21 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 			ads = &page->elements[i + 1].array_dev_slot;
 			if (ads->common.bytes[0] & SESCTL_CSEL) {
 				enc->status[i][0] = 0;
-				enc->status[i][1] = 
-				    ads->bytes[0] & 0x02;
-				enc->status[i][2] =
-				    ads->bytes[1] & (0x80 | SESCTL_RQSID);
-				enc->status[i][3] =
-				    ads->bytes[2] & SESCTL_RQSFLT;
+				enc->status[i][1] = ads->bytes[0] &
+				    SESCTL_RQSRR;
+				enc->status[i][2] = ads->bytes[1] &
+				    (SESCTL_RQSACT | SESCTL_RQSID);
+				enc->status[i][3] = ads->bytes[2] &
+				    SESCTL_RQSFLT;
 				ahci_em_setleds(dev, i);
 			} else if (ads0->common.bytes[0] & SESCTL_CSEL) {
 				enc->status[i][0] = 0;
-				enc->status[i][1] = 
-				    ads0->bytes[0] & 0x02;
-				enc->status[i][2] =
-				    ads0->bytes[1] & (0x80 | SESCTL_RQSID);
-				enc->status[i][3] =
-				    ads0->bytes[2] & SESCTL_RQSFLT;
+				enc->status[i][1] = ads0->bytes[0] &
+				    SESCTL_RQSRR;
+				enc->status[i][2] = ads0->bytes[1] &
+				    (SESCTL_RQSACT | SESCTL_RQSID);
+				enc->status[i][3] = ads0->bytes[2] &
+				    SESCTL_RQSFLT;
 				ahci_em_setleds(dev, i);
 			}
 		}
@@ -492,15 +514,48 @@ ahci_em_emulate_ses_on_led(device_t dev, union ccb *ccb)
 	/* SEMB RECEIVE DIAGNOSTIC RESULT (7) */
 	if (ccb->ataio.cmd.lba_low == 0x02 &&
 	    ccb->ataio.cmd.features == 0x07 &&
-	    ccb->ataio.cmd.sector_count >= (3 + 3 * enc->channels)) {
+	    ccb->ataio.cmd.sector_count >= (6 + 3 * enc->channels)) {
 		bzero(buf, ccb->ataio.dxfer_len);
 		page->hdr.page_code = 0x07;
-		scsi_ulto2b(4 + 4 + 12 * enc->channels,
+		scsi_ulto2b(4 + 15 + 11 * enc->channels, page->hdr.length);
+		elmd = (struct ses_elm_desc_hdr *)&buf[8];
+		scsi_ulto2b(11, elmd->length);
+		snprintf((char *)(elmd + 1), 12, "Drive Slots");
+		for (i = 0; i < enc->channels; i++) {
+			elmd = (struct ses_elm_desc_hdr *)&buf[8 + 15 + 11 * i];
+			scsi_ulto2b(7, elmd->length);
+			snprintf((char *)(elmd + 1), 8, "Slot %02d", i);
+		}
+		ccb->ccb_h.status = CAM_REQ_CMP;
+		goto out;
+	}
+
+	/* SEMB RECEIVE DIAGNOSTIC RESULT (a) */
+	if (ccb->ataio.cmd.lba_low == 0x02 &&
+	    ccb->ataio.cmd.features == 0x0a &&
+	    ccb->ataio.cmd.sector_count >= (2 + 3 * enc->channels)) {
+		bzero(buf, ccb->ataio.dxfer_len);
+		page->hdr.page_code = 0x0a;
+		scsi_ulto2b(4 + (sizeof(*elma) + sizeof(*elmb)) * enc->channels,
 		    page->hdr.length);
 		for (i = 0; i < enc->channels; i++) {
-			elmd = (struct ses_elm_desc_hdr *)&buf[8 + 4 + 12 * i];
-			scsi_ulto2b(8, elmd->length);
-			snprintf((char *)(elmd + 1), 9, "SLOT %03d", i);
+			elma = (struct ses_elm_addlstatus_eip_hdr *)&buf[
+			    8 + (sizeof(*elma) + sizeof(*elmb)) * i];
+			elma->base.byte0 = 0x10 | SPSP_PROTO_ATA;
+			elma->base.length = 2 + sizeof(*elmb);
+			elma->byte2 = 0x01;
+			elma->element_index = 1 + i;
+			ch = ahci_getch(device_get_parent(dev), i);
+			if (ch == NULL) {
+				elma->base.byte0 |= 0x80;
+				continue;
+			}
+			if (ch->devices == 0 || ch->pm_present)
+				elma->base.byte0 |= 0x80;
+			elmb = (struct ses_elm_ata_hdr *)(elma + 1);
+			scsi_ulto4b(cam_sim_path(ch->sim), elmb->bus);
+			scsi_ulto4b(0, elmb->target);
+			ahci_putch(ch);
 		}
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		goto out;
@@ -552,7 +607,7 @@ ahciemaction(struct cam_sim *sim, union ccb *ccb)
 	dev = enc->dev;
 	switch (ccb->ccb_h.func_code) {
 	case XPT_ATA_IO:	/* Execute the requested I/O operation */
-		if (ahci_check_ids(dev, ccb))
+		if (ahci_check_ids(ccb))
 			return;
 		ahci_em_begin_transaction(dev, ccb);
 		return;
@@ -576,9 +631,9 @@ ahciemaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 150000;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "AHCI", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "AHCI", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->transport = XPORT_SATA;
 		cpi->transport_version = XPORT_VERSION_UNSPECIFIED;

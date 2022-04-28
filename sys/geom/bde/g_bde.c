@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/bde/g_bde.c 243333 2012-11-20 12:32:18Z jh $
+ * $FreeBSD$
  *
  */
 
@@ -44,7 +44,7 @@
 #include <sys/sysctl.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 #define BDE_CLASS_NAME "BDE"
@@ -85,7 +85,7 @@ g_bde_orphan(struct g_consumer *cp)
 	sc = gp->softc;
 	gp->flags |= G_GEOM_WITHER;
 	LIST_FOREACH(pp, &gp->provider, provider)
-		g_orphan_provider(pp, ENXIO);
+		g_wither_provider(pp, ENXIO);
 	bzero(sc, sizeof(struct g_bde_softc));	/* destroy evidence */
 	return;
 }
@@ -204,6 +204,23 @@ g_bde_create_geom(struct gctl_req *req, struct g_class *mp, struct g_provider *p
 	if (gp->softc != NULL)
 		g_free(gp->softc);
 	g_destroy_geom(gp);
+	switch (error) {
+	case ENOENT:
+		gctl_error(req, "Lock was destroyed");
+		break;
+	case ESRCH:
+		gctl_error(req, "Lock was nuked");
+		break;
+	case EINVAL:
+		gctl_error(req, "Could not open lock");
+		break;
+	case ENOTDIR:
+		gctl_error(req, "Lock not found");
+		break;
+	default:
+		gctl_error(req, "Could not open lock (%d)", error);
+		break;
+	}
 	return;
 }
 
@@ -273,3 +290,4 @@ static struct g_class g_bde_class	= {
 };
 
 DECLARE_GEOM_CLASS(g_bde_class, g_bde);
+MODULE_VERSION(geom_bde, 0);

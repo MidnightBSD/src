@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/pmc/Makefile 146049 2005-05-10 12:02:18Z nyan $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../pc98/cbus
 

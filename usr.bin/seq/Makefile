@@ -1,8 +1,13 @@
 #       $NetBSD: Makefile,v 1.3 2009/04/14 22:15:26 lukem Exp $
-# $FreeBSD: release/10.0.0/usr.bin/seq/Makefile 204103 2010-02-19 23:54:12Z delphij $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	seq
-DPADD=	${LIBM}
-LDADD=	-lm
+
+LIBADD=	m
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+=	tests
 
 .include <bsd.prog.mk>

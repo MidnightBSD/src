@@ -41,7 +41,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/csapcm.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* Buffer size on dma transfer. Fixed for CS416x. */
 #define CS461x_BUFFSIZE   (4 * 1024)
@@ -821,7 +821,7 @@ pcmcsa_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	snprintf(status, SND_STATUSLEN, "at irq %ld %s",
+	snprintf(status, SND_STATUSLEN, "at irq %jd %s",
 			rman_get_start(resp->irq),PCM_KLDSTRING(snd_csa));
 
 	/* Enable interrupt. */

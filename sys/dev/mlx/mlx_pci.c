@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mlx/mlx_pci.c 240963 2012-09-26 14:17:14Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -189,7 +189,8 @@ mlx_pci_attach(device_t dev)
 			       BUS_SPACE_MAXADDR_32BIT, /* lowaddr */
 			       BUS_SPACE_MAXADDR, 	/* highaddr */
 			       NULL, NULL, 		/* filter, filterarg */
-			       MAXBSIZE, MLX_NSEG,	/* maxsize, nsegments */
+			       BUS_SPACE_MAXSIZE_32BIT, /* maxsize */
+			       BUS_SPACE_UNRESTRICTED,	/* nsegments */
 			       BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
 			       BUS_DMA_ALLOCNOW,	/* flags */
 			       NULL,			/* lockfunc */

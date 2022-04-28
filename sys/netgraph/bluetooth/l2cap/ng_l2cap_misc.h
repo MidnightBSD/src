@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_misc.h,v 1.3 2003/09/08 19:11:45 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_misc.h 184205 2008-10-23 15:53:51Z des $
+ * $FreeBSD$
  */
 
 #ifndef _NETGRAPH_L2CAP_MISC_H_
@@ -40,10 +40,10 @@ void           ng_l2cap_send_hook_info (node_p, hook_p, void *, int);
  * ACL Connections
  */
 
-ng_l2cap_con_p ng_l2cap_new_con       (ng_l2cap_p, bdaddr_p);
+ng_l2cap_con_p ng_l2cap_new_con       (ng_l2cap_p, bdaddr_p, int);
 void           ng_l2cap_con_ref       (ng_l2cap_con_p);
 void           ng_l2cap_con_unref     (ng_l2cap_con_p);
-ng_l2cap_con_p ng_l2cap_con_by_addr   (ng_l2cap_p, bdaddr_p);
+ng_l2cap_con_p ng_l2cap_con_by_addr   (ng_l2cap_p, bdaddr_p, unsigned int);
 ng_l2cap_con_p ng_l2cap_con_by_handle (ng_l2cap_p, u_int16_t);
 void           ng_l2cap_free_con      (ng_l2cap_con_p);
 
@@ -51,8 +51,10 @@ void           ng_l2cap_free_con      (ng_l2cap_con_p);
  * L2CAP channels
  */
 
-ng_l2cap_chan_p ng_l2cap_new_chan     (ng_l2cap_p, ng_l2cap_con_p, u_int16_t);
-ng_l2cap_chan_p ng_l2cap_chan_by_scid (ng_l2cap_p, u_int16_t);
+ng_l2cap_chan_p ng_l2cap_new_chan     (ng_l2cap_p, ng_l2cap_con_p, u_int16_t, int);
+ng_l2cap_chan_p ng_l2cap_chan_by_scid (ng_l2cap_p, u_int16_t, int);
+ng_l2cap_chan_p ng_l2cap_chan_by_conhandle(ng_l2cap_p , uint16_t , u_int16_t);
+
 void            ng_l2cap_free_chan    (ng_l2cap_chan_p);
 
 /*

@@ -1,4 +1,3 @@
-
 /*-
  * Copyright (c) 2010 Damien Bergamini <damien.bergamini@free.fr>
  *
@@ -15,11 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * $OpenBSD: if_rsureg.h,v 1.3 2013/04/15 09:23:01 mglocker Exp $
- * $FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_rsureg.h 253789 2013-07-30 02:07:57Z rpaulo $
+ * $FreeBSD$
  */
-
-/* Maximum number of pipes is 11. */
-#define R92S_MAX_EP	11
 
 /* USB Requests. */
 #define R92S_REQ_REGS	0x05
@@ -162,6 +158,20 @@
 	(((var) & ~field##_M) | SM(field, val))
 
 /*
+ * ROM field with RF config.
+ */
+enum {
+	RTL8712_RFCONFIG_1T = 0x10,
+	RTL8712_RFCONFIG_2T = 0x20,
+	RTL8712_RFCONFIG_1R = 0x01,
+	RTL8712_RFCONFIG_2R = 0x02,
+	RTL8712_RFCONFIG_1T1R = 0x11,
+	RTL8712_RFCONFIG_1T2R = 0x12,
+	RTL8712_RFCONFIG_TURBO = 0x92,
+	RTL8712_RFCONFIG_2T2R = 0x22
+};
+
+/*
  * Firmware image header.
  */
 struct r92s_fw_priv {
@@ -177,6 +187,7 @@ struct r92s_fw_priv {
 	uint8_t		chip_version;
 	uint16_t	custid;
 	uint8_t		rf_config;
+//0x11:  1T1R, 0x12: 1T2R, 0x92: 1T2R turbo, 0x22: 2T2R
 	uint8_t		nendpoints;
 	/* QWORD1 */
 	uint32_t	regulatory;
@@ -519,7 +530,7 @@ struct r92s_rx_stat {
 
 	uint32_t	rxdw4;
 	uint32_t	rxdw5;
-} __packed __attribute__((aligned(4)));
+} __packed __aligned(4);
 
 /* Rx PHY descriptor. */
 struct r92s_rx_phystat {
@@ -531,7 +542,7 @@ struct r92s_rx_phystat {
 	uint32_t	phydw5;
 	uint32_t	phydw6;
 	uint32_t	phydw7;
-} __packed __attribute__((aligned(4)));
+} __packed __aligned(4);
 
 /* Rx PHY CCK descriptor. */
 struct r92s_rx_cck {
@@ -595,18 +606,23 @@ struct r92s_tx_desc {
 
 	uint16_t	txbufsize;
 	uint16_t	reserved1;
-} __packed __attribute__((aligned(4)));
+} __packed __aligned(4);
 
+struct r92s_add_ba_event {
+	uint8_t mac_addr[IEEE80211_ADDR_LEN];
+	uint16_t ssn;
+	uint8_t tid;
+};
+
+struct r92s_add_ba_req {
+	uint32_t tid;
+};
 
 /*
  * Driver definitions.
  */
-#define RSU_RX_LIST_COUNT	1
-#ifdef __OpenBSD__
-#define RSU_TX_LIST_COUNT	(8 + 1)	/* NB: +1 for FW commands. */
-#else
+#define RSU_RX_LIST_COUNT	100
 #define RSU_TX_LIST_COUNT	32
-#endif
 
 #define RSU_HOST_CMD_RING_COUNT	32
 
@@ -673,9 +689,10 @@ struct rsu_rx_radiotap_header {
 struct rsu_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
 	uint8_t		wt_flags;
+	uint8_t		wt_pad;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-} __packed __aligned(8);
+} __packed;
 
 #define RSU_TX_RADIOTAP_PRESENT			\
 	(1 << IEEE80211_RADIOTAP_FLAGS |	\
@@ -706,11 +723,10 @@ struct rsu_host_cmd_ring {
 
 enum {
 	RSU_BULK_RX,
-	RSU_BULK_TX_BE,	/* = WME_AC_BE */
-	RSU_BULK_TX_BK,	/* = WME_AC_BK */
-	RSU_BULK_TX_VI,	/* = WME_AC_VI */
-	RSU_BULK_TX_VO,	/* = WME_AC_VI */
-	RSU_N_TRANSFER = 5,
+	RSU_BULK_TX_BE_BK,	/* = WME_AC_BE/BK */
+	RSU_BULK_TX_VI_VO,	/* = WME_AC_VI/VO */
+	RSU_BULK_TX_H2C,	/* H2C */
+	RSU_N_TRANSFER,
 };
 
 struct rsu_data {
@@ -724,7 +740,6 @@ struct rsu_data {
 
 struct rsu_vap {
 	struct ieee80211vap		vap;
-	struct ieee80211_beacon_offsets bo;
 
 	int				(*newstate)(struct ieee80211vap *,
 					    enum ieee80211_state, int);
@@ -736,49 +751,53 @@ struct rsu_vap {
 #define	RSU_ASSERT_LOCKED(sc)		mtx_assert(&(sc)->sc_mtx, MA_OWNED)
 
 struct rsu_softc {
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 	struct usb_device		*sc_udev;
 	int				(*sc_newstate)(struct ieee80211com *,
 					    enum ieee80211_state, int);
 	struct usbd_interface		*sc_iface;
 	struct timeout_task		calib_task;
-	struct callout			sc_watchdog_ch;
-	struct usbd_pipe		*pipe[R92S_MAX_EP];
-	int				npipes;
+	struct task			tx_task;
 	const uint8_t			*qid2idx;
 	struct mtx			sc_mtx;
+	int				sc_ht;
+	int				sc_nendpoints;
+	int				sc_curpwrstate;
+	int				sc_currssi;
 
+	u_int				sc_running:1,
+					sc_calibrating:1,
+					sc_scanning:1,
+					sc_scan_pass:1;
 	u_int				cut;
-	int				scan_pass;
-	int				sc_tx_timer;
+	uint8_t				sc_rftype;
+	int8_t				sc_nrxstream;
+	int8_t				sc_ntxstream;
 	struct rsu_host_cmd_ring	cmdq;
 	struct rsu_data			sc_rx[RSU_RX_LIST_COUNT];
 	struct rsu_data			sc_tx[RSU_TX_LIST_COUNT];
 	struct rsu_data			*fwcmd_data;
 	uint8_t				cmd_seq;
 	uint8_t				rom[128];
-	uint8_t				sc_bssid[IEEE80211_ADDR_LEN];
 	struct usb_xfer			*sc_xfer[RSU_N_TRANSFER];
-	uint8_t				sc_calibrating;
 
 	STAILQ_HEAD(, rsu_data)		sc_rx_active;
 	STAILQ_HEAD(, rsu_data)		sc_rx_inactive;
-	STAILQ_HEAD(, rsu_data)		sc_tx_active;
+	STAILQ_HEAD(, rsu_data)		sc_tx_active[RSU_N_TRANSFER];
 	STAILQ_HEAD(, rsu_data)		sc_tx_inactive;
-	STAILQ_HEAD(, rsu_data)		sc_tx_pending;
+	STAILQ_HEAD(, rsu_data)		sc_tx_pending[RSU_N_TRANSFER];
 
 	union {
 		struct rsu_rx_radiotap_header th;
 		uint8_t	pad[64];
 	}				sc_rxtapu;
 #define sc_rxtap	sc_rxtapu.th
-	int				sc_rxtap_len;
 
 	union {
 		struct rsu_tx_radiotap_header th;
 		uint8_t	pad[64];
 	}				sc_txtapu;
 #define sc_txtap	sc_txtapu.th
-	int				sc_txtap_len;
 };

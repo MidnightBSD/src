@@ -3,6 +3,8 @@
  */
 
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/usr.sbin/bluetooth/btpand/event.h 228990 2011-12-30 10:58:14Z uqs $ */
+/* $FreeBSD$ */
 
 /*
  * Hack to provide libevent (see devel/libevent port) like API.

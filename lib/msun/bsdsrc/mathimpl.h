@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mathimpl.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: release/10.0.0/lib/msun/bsdsrc/mathimpl.h 152566 2005-11-18 05:03:12Z bde $
+ * $FreeBSD$
  */
 
 #ifndef _MATHIMPL_H_

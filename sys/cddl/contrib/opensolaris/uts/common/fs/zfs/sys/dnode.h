@@ -20,7 +20,8 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2013 by Delphix. All rights reserved.
+ * Copyright (c) 2012, 2018 by Delphix. All rights reserved.
+ * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  */
 
 #ifndef	_SYS_DNODE_H
@@ -34,6 +35,7 @@
 #include <sys/refcount.h>
 #include <sys/dmu_zfetch.h>
 #include <sys/zrlock.h>
+#include <sys/multilist.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -56,8 +58,14 @@ extern "C" {
  * Fixed constants.
  */
 #define	DNODE_SHIFT		9	/* 512 bytes */
-#define	DN_MIN_INDBLKSHIFT	10	/* 1k */
-#define	DN_MAX_INDBLKSHIFT	14	/* 16k */
+#define	DN_MIN_INDBLKSHIFT	12	/* 4k */
+/*
+ * If we ever increase this value beyond 20, we need to revisit all logic that
+ * does x << level * ebps to handle overflow.  With a 1M indirect block size,
+ * 4 levels of indirect blocks would not be able to guarantee addressing an
+ * entire object, so 5 levels will be used, but 5 * (20 - 7) = 65.
+ */
+#define	DN_MAX_INDBLKSHIFT	17	/* 128k */
 #define	DNODE_BLOCK_SHIFT	14	/* 16k */
 #define	DNODE_CORE_SIZE		64	/* 64 bytes for dnode sans blkptrs */
 #define	DN_MAX_OBJECT_SHIFT	48	/* 256 trillion (zfs_fid_t limit) */
@@ -87,6 +95,11 @@ extern "C" {
 
 #define	DNODES_PER_BLOCK_SHIFT	(DNODE_BLOCK_SHIFT - DNODE_SHIFT)
 #define	DNODES_PER_BLOCK	(1ULL << DNODES_PER_BLOCK_SHIFT)
+
+/*
+ * This is inaccurate if the indblkshift of the particular object is not the
+ * max.  But it's only used by userland to calculate the zvol reservation.
+ */
 #define	DNODES_PER_LEVEL_SHIFT	(DN_MAX_INDBLKSHIFT - SPA_BLKPTRSHIFT)
 #define	DNODES_PER_LEVEL	(1ULL << DNODES_PER_LEVEL_SHIFT)
 
@@ -143,7 +156,7 @@ typedef struct dnode_phys {
 	blkptr_t dn_spill;
 } dnode_phys_t;
 
-typedef struct dnode {
+struct dnode {
 	/*
 	 * Protects the structure of the dnode, including the number of levels
 	 * of indirection (dn_nlevels), dn_maxblkid, and dn_next_*
@@ -178,6 +191,7 @@ typedef struct dnode {
 	uint16_t dn_datablkszsec;	/* in 512b sectors */
 	uint32_t dn_datablksz;		/* in bytes */
 	uint64_t dn_maxblkid;
+	uint8_t dn_next_type[TXG_SIZE];
 	uint8_t dn_next_nblkptr[TXG_SIZE];
 	uint8_t dn_next_nlevels[TXG_SIZE];
 	uint8_t dn_next_indblkshift[TXG_SIZE];
@@ -188,16 +202,14 @@ typedef struct dnode {
 
 	/* protected by dn_dbufs_mtx; declared here to fill 32-bit hole */
 	uint32_t dn_dbufs_count;	/* count of dn_dbufs */
-	/* There are no level-0 blocks of this blkid or higher in dn_dbufs */
-	uint64_t dn_unlisted_l0_blkid;
 
 	/* protected by os_lock: */
-	list_node_t dn_dirty_link[TXG_SIZE];	/* next on dataset's dirty */
+	multilist_node_t dn_dirty_link[TXG_SIZE]; /* next on dataset's dirty */
 
 	/* protected by dn_mtx: */
 	kmutex_t dn_mtx;
 	list_t dn_dirty_records[TXG_SIZE];
-	avl_tree_t dn_ranges[TXG_SIZE];
+	struct range_tree *dn_free_ranges[TXG_SIZE];
 	uint64_t dn_allocated_txg;
 	uint64_t dn_free_txg;
 	uint64_t dn_assigned_txg;
@@ -210,7 +222,18 @@ typedef struct dnode {
 	refcount_t dn_holds;
 
 	kmutex_t dn_dbufs_mtx;
-	list_t dn_dbufs;		/* descendent dbufs */
+	/*
+	 * Descendent dbufs, ordered by dbuf_compare. Note that dn_dbufs
+	 * can contain multiple dbufs of the same (level, blkid) when a
+	 * dbuf is marked DB_EVICTING without being removed from
+	 * dn_dbufs. To maintain the avl invariant that there cannot be
+	 * duplicate entries, we order the dbufs by an arbitrary value -
+	 * their address in memory. This means that dn_dbufs cannot be used to
+	 * directly look up a dbuf. Instead, callers must use avl_walk, have
+	 * a reference to the dbuf, or look up a non-existant node with
+	 * db_state = DB_SEARCH (see dbuf_free_range for an example).
+	 */
+	avl_tree_t dn_dbufs;
 
 	/* protected by dn_struct_rwlock */
 	struct dmu_buf_impl *dn_bonus;	/* bonus buffer dbuf */
@@ -229,7 +252,7 @@ typedef struct dnode {
 
 	/* holds prefetch structure */
 	struct zfetch	dn_zfetch;
-} dnode_t;
+};
 
 /*
  * Adds a level of indirection between the dbuf and the dnode to avoid
@@ -243,8 +266,9 @@ typedef struct dnode_handle {
 } dnode_handle_t;
 
 typedef struct dnode_children {
+	dmu_buf_user_t dnc_dbu;		/* User evict data */
 	size_t dnc_count;		/* number of children */
-	dnode_handle_t dnc_children[1];	/* sized dynamically */
+	dnode_handle_t dnc_children[];	/* sized dynamically */
 } dnode_children_t;
 
 typedef struct free_range {
@@ -253,7 +277,7 @@ typedef struct free_range {
 	uint64_t fr_nblks;
 } free_range_t;
 
-dnode_t *dnode_special_open(struct objset *dd, dnode_phys_t *dnp,
+void dnode_special_open(struct objset *dd, dnode_phys_t *dnp,
     uint64_t object, dnode_handle_t *dnh);
 void dnode_special_close(dnode_handle_t *dnh);
 
@@ -267,6 +291,7 @@ int dnode_hold_impl(struct objset *dd, uint64_t object, int flag,
     void *ref, dnode_t **dnp);
 boolean_t dnode_add_ref(dnode_t *dn, void *ref);
 void dnode_rele(dnode_t *dn, void *ref);
+void dnode_rele_and_unlock(dnode_t *dn, void *tag, boolean_t evicting);
 void dnode_setdirty(dnode_t *dn, dmu_tx_t *tx);
 void dnode_sync(dnode_t *dn, dmu_tx_t *tx);
 void dnode_allocate(dnode_t *dn, dmu_object_type_t ot, int blocksize, int ibs,
@@ -279,10 +304,7 @@ void dnode_buf_byteswap(void *buf, size_t size);
 void dnode_verify(dnode_t *dn);
 int dnode_set_blksz(dnode_t *dn, uint64_t size, int ibs, dmu_tx_t *tx);
 void dnode_free_range(dnode_t *dn, uint64_t off, uint64_t len, dmu_tx_t *tx);
-void dnode_clear_range(dnode_t *dn, uint64_t blkid,
-    uint64_t nblks, dmu_tx_t *tx);
 void dnode_diduse_space(dnode_t *dn, int64_t space);
-void dnode_willuse_space(dnode_t *dn, int64_t space, dmu_tx_t *tx);
 void dnode_new_blkid(dnode_t *dn, uint64_t blkid, dmu_tx_t *tx, boolean_t);
 uint64_t dnode_block_freed(dnode_t *dn, uint64_t blkid);
 void dnode_init(void);
@@ -290,6 +312,17 @@ void dnode_fini(void);
 int dnode_next_offset(dnode_t *dn, int flags, uint64_t *off,
     int minlvl, uint64_t blkfill, uint64_t txg);
 void dnode_evict_dbufs(dnode_t *dn);
+void dnode_evict_bonus(dnode_t *dn);
+boolean_t dnode_needs_remap(const dnode_t *dn);
+
+#define	DNODE_IS_CACHEABLE(_dn)						\
+	((_dn)->dn_objset->os_primary_cache == ZFS_CACHE_ALL ||		\
+	(DMU_OT_IS_METADATA((_dn)->dn_type) &&				\
+	(_dn)->dn_objset->os_primary_cache == ZFS_CACHE_METADATA))
+
+#define	DNODE_META_IS_CACHEABLE(_dn)					\
+	((_dn)->dn_objset->os_primary_cache == ZFS_CACHE_ALL ||		\
+	(_dn)->dn_objset->os_primary_cache == ZFS_CACHE_METADATA)
 
 #ifdef ZFS_DEBUG
 

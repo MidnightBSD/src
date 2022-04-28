@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/part/g_part_bsd.c 236023 2012-05-25 20:33:34Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -72,7 +72,7 @@ static int g_part_bsd_destroy(struct g_part_table *, struct g_part_parms *);
 static void g_part_bsd_dumpconf(struct g_part_table *, struct g_part_entry *,
     struct sbuf *, const char *);
 static int g_part_bsd_dumpto(struct g_part_table *, struct g_part_entry *);
-static int g_part_bsd_modify(struct g_part_table *, struct g_part_entry *,  
+static int g_part_bsd_modify(struct g_part_table *, struct g_part_entry *,
     struct g_part_parms *);
 static const char *g_part_bsd_name(struct g_part_table *, struct g_part_entry *,
     char *, size_t);
@@ -111,6 +111,20 @@ static struct g_part_scheme g_part_bsd_scheme = {
 	.gps_bootcodesz = BBSIZE,
 };
 G_PART_SCHEME_DECLARE(g_part_bsd);
+MODULE_VERSION(geom_part_bsd, 0);
+
+static struct g_part_bsd_alias {
+	uint8_t		type;
+	int		alias;
+} bsd_alias_match[] = {
+	{ FS_BSDFFS,	G_PART_ALIAS_FREEBSD_UFS },
+	{ FS_SWAP,	G_PART_ALIAS_FREEBSD_SWAP },
+	{ FS_ZFS,	G_PART_ALIAS_FREEBSD_ZFS },
+	{ FS_VINUM,	G_PART_ALIAS_FREEBSD_VINUM },
+	{ FS_NANDFS,	G_PART_ALIAS_FREEBSD_NANDFS },
+	{ FS_HAMMER,	G_PART_ALIAS_DFBSD_HAMMER },
+	{ FS_HAMMER2,	G_PART_ALIAS_DFBSD_HAMMER2 },
+};
 
 static int
 bsd_parse_type(const char *type, uint8_t *fstype)
@@ -118,6 +132,7 @@ bsd_parse_type(const char *type, uint8_t *fstype)
 	const char *alias;
 	char *endp;
 	long lt;
+	int i;
 
 	if (type[0] == '!') {
 		lt = strtol(type + 1, &endp, 0);
@@ -126,30 +141,12 @@ bsd_parse_type(const char *type, uint8_t *fstype)
 		*fstype = (u_int)lt;
 		return (0);
 	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_NANDFS);
-	if (!strcasecmp(type, alias)) {
-		*fstype = FS_NANDFS;
-		return (0);
-	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_SWAP);
-	if (!strcasecmp(type, alias)) {
-		*fstype = FS_SWAP;
-		return (0);
-	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_UFS);
-	if (!strcasecmp(type, alias)) {
-		*fstype = FS_BSDFFS;
-		return (0);
-	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_VINUM);
-	if (!strcasecmp(type, alias)) {
-		*fstype = FS_VINUM;
-		return (0);
-	}
-	alias = g_part_alias_name(G_PART_ALIAS_FREEBSD_ZFS);
-	if (!strcasecmp(type, alias)) {
-		*fstype = FS_ZFS;
-		return (0);
+	for (i = 0; i < nitems(bsd_alias_match); i++) {
+		alias = g_part_alias_name(bsd_alias_match[i].alias);
+		if (strcasecmp(type, alias) == 0) {
+			*fstype = bsd_alias_match[i].type;
+			return (0);
+		}
 	}
 	return (EINVAL);
 }
@@ -260,7 +257,7 @@ g_part_bsd_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 }
 
 static void
-g_part_bsd_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry, 
+g_part_bsd_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
     struct sbuf *sb, const char *indent)
 {
 	struct g_part_bsd_entry *entry;
@@ -279,7 +276,7 @@ g_part_bsd_dumpconf(struct g_part_table *table, struct g_part_entry *baseentry,
 }
 
 static int
-g_part_bsd_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)  
+g_part_bsd_dumpto(struct g_part_table *table, struct g_part_entry *baseentry)
 {
 	struct g_part_bsd_entry *entry;
 
@@ -304,12 +301,40 @@ g_part_bsd_modify(struct g_part_table *basetable,
 	return (0);
 }
 
+static void
+bsd_set_rawsize(struct g_part_table *basetable, struct g_provider *pp)
+{
+	struct g_part_bsd_table *table;
+	struct g_part_bsd_entry *entry;
+	struct g_part_entry *baseentry;
+	uint32_t msize;
+
+	table = (struct g_part_bsd_table *)basetable;
+	msize = MIN(pp->mediasize / pp->sectorsize, UINT32_MAX);
+	le32enc(table->bbarea + pp->sectorsize + 60, msize); /* d_secperunit */
+	basetable->gpt_last = msize - 1;
+	LIST_FOREACH(baseentry, &basetable->gpt_entry, gpe_entry) {
+		if (baseentry->gpe_index != RAW_PART + 1)
+			continue;
+		baseentry->gpe_end = basetable->gpt_last;
+		entry = (struct g_part_bsd_entry *)baseentry;
+		entry->part.p_size = msize;
+		return;
+	}
+}
+
 static int
 g_part_bsd_resize(struct g_part_table *basetable,
     struct g_part_entry *baseentry, struct g_part_parms *gpp)
 {
 	struct g_part_bsd_entry *entry;
+	struct g_provider *pp;
 
+	if (baseentry == NULL) {
+		pp = LIST_FIRST(&basetable->gpt_gp->consumer)->provider;
+		bsd_set_rawsize(basetable, pp);
+		return (0);
+	}
 	entry = (struct g_part_bsd_entry *)baseentry;
 	baseentry->gpe_end = baseentry->gpe_start + gpp->gpp_size - 1;
 	entry->part.p_size = gpp->gpp_size;
@@ -447,7 +472,7 @@ g_part_bsd_read(struct g_part_table *basetable, struct g_consumer *cp)
 }
 
 static const char *
-g_part_bsd_type(struct g_part_table *basetable, struct g_part_entry *baseentry, 
+g_part_bsd_type(struct g_part_table *basetable, struct g_part_entry *baseentry,
     char *buf, size_t bufsz)
 {
 	struct g_part_bsd_entry *entry;

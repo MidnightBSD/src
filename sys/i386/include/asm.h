@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $FreeBSD: release/10.0.0/sys/i386/include/asm.h 254463 2013-08-17 19:24:58Z jilles $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -91,11 +91,15 @@
 #endif
 
 /*
- * WEAK_ALIAS: create a weak alias.
+ * WEAK_REFERENCE(): create a weak reference alias from sym.
+ * The macro is not a general asm macro that takes arbitrary names,
+ * but one that takes only C names. It does the non-null name
+ * translation inside the macro.
  */
-#define	WEAK_ALIAS(alias,sym)						\
-	.weak alias;							\
-	alias = sym
+
+#define	WEAK_REFERENCE(sym, alias)					\
+	.weak CNAME(alias);						\
+	.equ CNAME(alias),CNAME(sym)
 
 /*
  * STRONG_ALIAS: create a strong alias.

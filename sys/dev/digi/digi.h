@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/digi/digi.h 136516 2004-10-14 18:37:59Z phk $
+ * $FreeBSD$
  */
 
 #define	W(p)				(*(u_int16_t *)(p))

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_mapper_local.h 250938 2013-05-23 18:07:01Z ed $ */
+/* $FreeBSD$ */
 /* $NetBSD: citrus_mapper_local.h,v 1.2 2008/02/09 14:56:20 junyoung Exp $ */
 
 /*-

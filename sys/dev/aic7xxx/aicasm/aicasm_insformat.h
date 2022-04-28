@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm_insformat.h#11 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm_insformat.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  */
 
 struct ins_format1 {

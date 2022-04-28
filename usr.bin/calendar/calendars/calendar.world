@@ -1,7 +1,7 @@
 /*
  * World wide calendar files, except national calendars
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/calendar.world 110933 2003-02-15 10:57:20Z seanc $
+ * $FreeBSD$
  */
 
 #ifndef _calendar_world_

@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/xlint/arch/powerpc64/targparam.h 209921 2010-07-12 00:54:41Z nwhitehorn $
+ * $FreeBSD$
  */
 
 /*

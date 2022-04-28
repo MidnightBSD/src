@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
- * Copyright (c) 2004-2011 Dag-Erling Smørgrav
+ * Copyright (c) 2004-2017 Dag-Erling Smørgrav
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project by ThinkSec AS and
@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: openpam_dispatch.c 649 2013-03-05 17:58:33Z des $
+ * $OpenPAM: openpam_dispatch.c 938 2017-04-30 21:34:42Z des $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -40,6 +40,8 @@
 #endif
 
 #include <sys/param.h>
+
+#include <stdint.h>
 
 #include <security/pam_appl.h>
 
@@ -63,12 +65,10 @@ openpam_dispatch(pam_handle_t *pamh,
 	int flags)
 {
 	pam_chain_t *chain;
-	int err, fail, r;
+	int err, fail, nsuccess, r;
 	int debug;
 
 	ENTER();
-	if (pamh == NULL)
-		RETURNC(PAM_SYSTEM_ERR);
 
 	/* prevent recursion */
 	if (pamh->current != NULL) {
@@ -101,11 +101,13 @@ openpam_dispatch(pam_handle_t *pamh,
 	}
 
 	/* execute */
-	for (err = fail = 0; chain != NULL; chain = chain->next) {
+	err = PAM_SUCCESS;
+	fail = nsuccess = 0;
+	for (; chain != NULL; chain = chain->next) {
 		if (chain->module->func[primitive] == NULL) {
 			openpam_log(PAM_LOG_ERROR, "%s: no %s()",
 			    chain->module->path, pam_sm_func_name[primitive]);
-			r = PAM_SYSTEM_ERR;
+			r = PAM_SYMBOL_ERR;
 		} else {
 			pamh->primitive = primitive;
 			pamh->current = chain;
@@ -115,7 +117,7 @@ openpam_dispatch(pam_handle_t *pamh,
 			openpam_log(PAM_LOG_LIBDEBUG, "calling %s() in %s",
 			    pam_sm_func_name[primitive], chain->module->path);
 			r = (chain->module->func[primitive])(pamh, flags,
-			    chain->optc, (const char **)chain->optv);
+			    chain->optc, (const char **)(intptr_t)chain->optv);
 			pamh->current = NULL;
 			openpam_log(PAM_LOG_LIBDEBUG, "%s: %s(): %s",
 			    chain->module->path, pam_sm_func_name[primitive],
@@ -127,6 +129,7 @@ openpam_dispatch(pam_handle_t *pamh,
 		if (r == PAM_IGNORE)
 			continue;
 		if (r == PAM_SUCCESS) {
+			++nsuccess;
 			/*
 			 * For pam_setcred() and pam_chauthtok() with the
 			 * PAM_PRELIM_CHECK flag, treat "sufficient" as
@@ -148,7 +151,7 @@ openpam_dispatch(pam_handle_t *pamh,
 		 * fail.  If a required module fails, record the
 		 * return code from the first required module to fail.
 		 */
-		if (err == 0)
+		if (err == PAM_SUCCESS)
 			err = r;
 		if ((chain->flag == PAM_REQUIRED ||
 		    chain->flag == PAM_BINDING) && !fail) {
@@ -170,6 +173,18 @@ openpam_dispatch(pam_handle_t *pamh,
 
 	if (!fail && err != PAM_NEW_AUTHTOK_REQD)
 		err = PAM_SUCCESS;
+
+	/*
+	 * Require the chain to be non-empty, and at least one module
+	 * in the chain to be successful, so that we don't fail open.
+	 */
+	if (err == PAM_SUCCESS && nsuccess < 1) {
+		openpam_log(PAM_LOG_ERROR,
+		    "all modules were unsuccessful for %s()",
+		    pam_sm_func_name[primitive]);
+		err = PAM_SYSTEM_ERR;
+	}
+
 	RETURNC(err);
 }
 

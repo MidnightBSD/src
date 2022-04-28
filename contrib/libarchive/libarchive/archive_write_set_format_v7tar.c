@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD$");
 #include "archive_entry_locale.h"
 #include "archive_private.h"
 #include "archive_write_private.h"
+#include "archive_write_set_format_private.h"
 
 struct v7tar {
 	uint64_t	entry_bytes_remaining;
@@ -98,9 +99,9 @@ static const char template_header[] = {
 	'0','0','0','0','0','0', ' ','\0',
 	/* gid, space-null termination: 8 bytes */
 	'0','0','0','0','0','0', ' ','\0',
-	/* size, space termation: 12 bytes */
+	/* size, space termination: 12 bytes */
 	'0','0','0','0','0','0','0','0','0','0','0', ' ',
-	/* mtime, space termation: 12 bytes */
+	/* mtime, space termination: 12 bytes */
 	'0','0','0','0','0','0','0','0','0','0','0', ' ',
 	/* Initial checksum value: 8 spaces */
 	' ',' ',' ',' ',' ',' ',' ',' ',
@@ -161,13 +162,12 @@ archive_write_set_format_v7tar(struct archive *_a)
 		return (ARCHIVE_FATAL);
 	}
 
-	v7tar = (struct v7tar *)malloc(sizeof(*v7tar));
+	v7tar = (struct v7tar *)calloc(1, sizeof(*v7tar));
 	if (v7tar == NULL) {
 		archive_set_error(&a->archive, ENOMEM,
 		    "Can't allocate v7tar data");
 		return (ARCHIVE_FATAL);
 	}
-	memset(v7tar, 0, sizeof(*v7tar));
 	a->format_data = v7tar;
 	a->format_name = "tar (non-POSIX)";
 	a->format_options = archive_write_v7tar_options;
@@ -285,7 +285,7 @@ archive_write_v7tar_header(struct archive_write *a, struct archive_entry *entry)
 		 * case getting WCS failed. On POSIX, this is a
 		 * normal operation.
 		 */
-		if (p != NULL && p[strlen(p) - 1] != '/') {
+		if (p != NULL && p[0] != '\0' && p[strlen(p) - 1] != '/') {
 			struct archive_string as;
 
 			archive_string_init(&as);
@@ -314,7 +314,7 @@ archive_write_v7tar_header(struct archive_write *a, struct archive_entry *entry)
 	}
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-	/* Make sure the path separators in pahtname, hardlink and symlink
+	/* Make sure the path separators in pathname, hardlink and symlink
 	 * are all slash '/', not the Windows path separator '\'. */
 	entry_main = __la_win_entry_in_posix_pathseparator(entry);
 	if (entry_main == NULL) {
@@ -331,14 +331,12 @@ archive_write_v7tar_header(struct archive_write *a, struct archive_entry *entry)
 #endif
 	ret = format_header_v7tar(a, buff, entry, 1, sconv);
 	if (ret < ARCHIVE_WARN) {
-		if (entry_main)
-			archive_entry_free(entry_main);
+		archive_entry_free(entry_main);
 		return (ret);
 	}
 	ret2 = __archive_write_output(a, buff, 512);
 	if (ret2 < ARCHIVE_WARN) {
-		if (entry_main)
-			archive_entry_free(entry_main);
+		archive_entry_free(entry_main);
 		return (ret2);
 	}
 	if (ret2 < ret)
@@ -346,8 +344,7 @@ archive_write_v7tar_header(struct archive_write *a, struct archive_entry *entry)
 
 	v7tar->entry_bytes_remaining = archive_entry_size(entry);
 	v7tar->entry_padding = 0x1ff & (-(int64_t)v7tar->entry_bytes_remaining);
-	if (entry_main)
-		archive_entry_free(entry_main);
+	archive_entry_free(entry_main);
 	return (ret);
 }
 
@@ -495,31 +492,11 @@ format_header_v7tar(struct archive_write *a, char h[512],
 		case AE_IFLNK:
 			h[V7TAR_typeflag_offset] = '2';
 			break;
-		case AE_IFCHR:
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "tar format cannot archive character device");
-			return (ARCHIVE_FAILED);
-		case AE_IFBLK:
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "tar format cannot archive block device");
-			return (ARCHIVE_FAILED);
-		case AE_IFIFO:
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "tar format cannot archive fifo");
-			return (ARCHIVE_FAILED);
-		case AE_IFSOCK:
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "tar format cannot archive socket");
-			return (ARCHIVE_FAILED);
 		default:
-			archive_set_error(&a->archive,
-			    ARCHIVE_ERRNO_FILE_FORMAT,
-			    "tar format cannot archive this (mode=0%lo)",
-			    (unsigned long)archive_entry_mode(entry));
+			/* AE_IFBLK, AE_IFCHR, AE_IFIFO, AE_IFSOCK
+			 * and unknown */
+			__archive_write_entry_filetype_unsupported(
+			    &a->archive, entry, "v7tar");
 			ret = ARCHIVE_FAILED;
 		}
 	}

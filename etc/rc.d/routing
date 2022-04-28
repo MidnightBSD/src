@@ -2,17 +2,18 @@
 #
 # Configure routing and miscellaneous network tunables
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/routing 255163 2013-09-02 23:52:25Z delphij $
+# $FreeBSD$
 #
 
 # PROVIDE: routing
-# REQUIRE: faith netif ppp stf
+# REQUIRE: netif ppp stf
 # KEYWORD: nojailvnet
 
 . /etc/rc.subr
 . /etc/network.subr
 
 name="routing"
+desc="Routing setup"
 start_cmd="routing_start doall"
 stop_cmd="routing_stop"
 extra_commands="options static"
@@ -23,32 +24,33 @@ ROUTE_CMD="/sbin/route"
 
 routing_start()
 {
-	local _cmd _af _if _a
+	local _cmd _af _if _a _ret
 	_cmd=$1
 	_af=$2
 	_if=$3
+	_ret=0
 
 	case $_if in
 	""|[Aa][Ll][Ll]|[Aa][Nn][Yy])	_if="" ;;
 	esac
 
 	case $_af in
-	inet|inet6|ipx|atm)
+	""|[Aa][Ll][Ll]|[Aa][Nn][Yy])
+		for _a in inet inet6 atm; do
+			afexists $_a || continue
+			setroutes $_cmd $_a $_if || _ret=1
+		done
+	;;
+	*)
 		if afexists $_af; then
-			setroutes $_cmd $_af $_if
+			setroutes $_cmd $_af $_if || _ret=1
 		else
 			err 1 "Unsupported address family: $_af."
 		fi
-		;;
-	""|[Aa][Ll][Ll]|[Aa][Nn][Yy])
-		for _a in inet inet6 ipx atm; do
-			afexists $_a && setroutes $_cmd $_a $_if
-		done
-		;;
-	*)
-		err 1 "Unsupported address family: $_af."
-		;;
+	;;
 	esac
+
+	return $_ret
 }
 
 routing_stop()
@@ -62,7 +64,17 @@ routing_stop()
 	esac
 
 	case $_af in
-	inet|inet6|ipx|atm)
+	""|[Aa][Ll][Ll]|[Aa][Nn][Yy])
+		for _a in inet inet6 atm; do
+			afexists $_a || continue
+			eval static_${_a} delete $_if
+			# When $_if is specified, do not flush routes.
+			if ! [ -n "$_if" ]; then
+				eval routing_stop_${_a}
+			fi
+		done
+	;;
+	*)
 		if afexists $_af; then
 			eval static_${_af} delete $_if 
 			# When $_if is specified, do not flush routes.
@@ -72,37 +84,29 @@ routing_stop()
 		else
 			err 1 "Unsupported address family: $_af."
 		fi
-		;;
-	""|[Aa][Ll][Ll]|[Aa][Nn][Yy])
-		for _a in inet inet6 ipx atm; do
-			afexists $_a || continue
-			eval static_${_a} delete $_if
-			# When $_if is specified, do not flush routes.
-			if ! [ -n "$_if" ]; then
-				eval routing_stop_${_a}
-			fi
-		done
-		;;
-	*)
-		err 1 "Unsupported address family: $_af."
-		;;
+	;;
 	esac
 }
 
 setroutes()
 {
+	local _ret
+	_ret=0
 	case $1 in
 	static)
 		static_$2 add $3
+		_ret=$?
 		;;
 	options)
 		options_$2
 		;;
 	doall)
 		static_$2 add $3
+		_ret=$?
 		options_$2
 		;;
 	esac
+	return $_ret
 }
 
 routing_stop_inet()
@@ -127,16 +131,30 @@ routing_stop_atm()
 	return 0
 }
 
-routing_stop_ipx()
+get_fibmod()
 {
-	return 0
+	local _fibs
+
+	_fibs=$((`${SYSCTL_N} net.fibs` - 1))
+	if [ ${_fibs} -gt 0 ]; then
+		echo "-fib 0-${_fibs}"
+	else
+		echo
+	fi
 }
 
 static_inet()
 {
-	local _action _if _skip
+	local _action _if _skip _fibmod
 	_action=$1
 	_if=$2
+
+	_fibmod=`get_fibmod`
+
+	# Provide loopback route in all routing tables.  This has to come
+	# first so that any following routes can be added.
+	static_routes="_loopback ${static_routes}"
+	route__loopback="-inet 127.0.0.1 -iface lo0 ${_fibmod}"
 
 	# Add default route.
 	case ${defaultrouter} in
@@ -172,25 +190,23 @@ static_inet()
 
 static_inet6()
 {
-	local _action _if _skip fibmod fibs
+	local _action _if _skip fibmod allfibs
 	_action=$1
 	_if=$2
 
-	# get the number of FIBs supported.
-	fibs=$((`${SYSCTL_N} net.fibs` - 1))
-	if [ "$fibs" -gt 0 ]; then
-		fibmod="-fib 0-$fibs"
-	else
-		fibmod=
-	fi
+	fibmod=`get_fibmod`
 
 	# Add pre-defined static routes first.
 	ipv6_static_routes="_v4mapped _v4compat ${ipv6_static_routes}"
 	ipv6_static_routes="_lla _llma ${ipv6_static_routes}"
+	ipv6_static_routes="_loopback ${ipv6_static_routes}"
 
 	# disallow "internal" addresses to appear on the wire
 	ipv6_route__v4mapped="::ffff:0.0.0.0 -prefixlen 96 ::1 -reject ${fibmod}"
 	ipv6_route__v4compat="::0.0.0.0 -prefixlen 96 ::1 -reject ${fibmod}"
+
+	# Create a loopback route in every fib
+	ipv6_route__loopback="::1 -prefixlen 128 -iface lo0 ${fibmod}"
 
 	# Disallow link-local unicast packets without outgoing scope
 	# identifiers.  However, if you set "ipv6_default_interface",
@@ -252,7 +268,7 @@ static_inet6()
 			[Nn][Oo][Nn][Ee])
 				return
 				;;
-			lo0|faith[0-9]*)
+			lo0)
 				continue
 				;;
 			esac
@@ -270,7 +286,7 @@ static_inet6()
 	esac
 
 	ifconfig ${ipv6_default_interface} inet6 defaultif
-	sysctl net.inet6.ip6.use_defaultzone=1
+	${SYSCTL} net.inet6.ip6.use_defaultzone=1 > /dev/null
 }
 
 static_atm()
@@ -288,11 +304,6 @@ static_atm()
 			fi
 		done
 	fi
-}
-
-static_ipx()
-{
-	:
 }
 
 ropts_init()
@@ -383,21 +394,6 @@ options_inet6()
 options_atm()
 {
 	_ropts_initdone=
-
-	[ -n "${_ropts_initdone}" ] && echo '.'
-}
-
-options_ipx()
-{
-	_ropts_initdone=
-
-	if checkyesno ipxgateway_enable; then
-		ropts_init ipx
-		echo -n ' gateway=YES'
-		${SYSCTL} net.ipx.ipx.ipxforwarding=1 > /dev/null
-	else
-		${SYSCTL} net.ipx.ipx.ipxforwarding=0 > /dev/null
-	fi
 
 	[ -n "${_ropts_initdone}" ] && echo '.'
 }

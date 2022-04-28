@@ -24,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # from: src/sys/kern/bus_if.m,v 1.21 2002/04/21 11:16:10 markm Exp
-# $FreeBSD: release/10.0.0/sys/powerpc/powerpc/pic_if.m 222813 2011-06-07 08:46:13Z attilio $
+# $FreeBSD$
 #
 
 #include <sys/bus.h>
@@ -33,11 +33,30 @@
 
 INTERFACE pic;
 
+CODE {
+	static pic_translate_code_t pic_translate_code_default;
+
+	static void pic_translate_code_default(device_t dev, u_int irq,
+	    int code, enum intr_trigger *trig, enum intr_polarity *pol)
+	{
+		*trig = INTR_TRIGGER_CONFORM;
+		*pol = INTR_POLARITY_CONFORM;
+	}
+};
+
 METHOD void bind {
 	device_t	dev;
 	u_int		irq;
 	cpuset_t	cpumask;
 };
+
+METHOD void translate_code {
+	device_t	dev;
+	u_int		irq;
+	int		code;
+	enum intr_trigger *trig;
+	enum intr_polarity *pol;
+} DEFAULT pic_translate_code_default;
 
 METHOD void config {
 	device_t	dev;

@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/uipc_mbuf2.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*#define PULLDOWN_DEBUG*/
 
@@ -99,8 +99,8 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	int writable;
 
 	/* check invalid arguments. */
-	if (m == NULL)
-		panic("m == NULL in m_pulldown()");
+	KASSERT(m != NULL, ("%s: fix caller: m is NULL off %d len %d offp %p\n",
+	    __func__, off, len, offp));
 	if (len > MCLBYTES) {
 		m_freem(m);
 		return NULL;	/* impossible */
@@ -131,6 +131,8 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	}
 
 	/*
+	 * The following comment is dated but still partially applies:
+	 *
 	 * XXX: This code is flawed because it considers a "writable" mbuf
 	 *      data region to require all of the following:
 	 *	  (i) mbuf _has_ to have M_EXT set; if it is just a regular
@@ -141,16 +143,12 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	 *      Ideally, the requirement should only be (iii).
 	 *
 	 * If we're writable, we're sure we're writable, because the ref. count
-	 * cannot increase from 1, as that would require posession of mbuf
+	 * cannot increase from 1, as that would require possession of mbuf
 	 * n by someone else (which is impossible). However, if we're _not_
 	 * writable, we may eventually become writable )if the ref. count drops
 	 * to 1), but we'll fail to notice it unless we re-evaluate
 	 * M_WRITABLE(). For now, we only evaluate once at the beginning and
 	 * live with this.
-	 */
-	/*
-	 * XXX: This is dumb. If we're just a regular mbuf with no M_EXT,
-	 *      then we're not "writable," according to this code.
 	 */
 	writable = 0;
 	if ((n->m_flags & M_EXT) == 0 ||
@@ -161,7 +159,7 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 	 * the target data is on <n, off>.
 	 * if we got enough data on the mbuf "n", we're done.
 	 */
-	if ((off == 0 || offp) && len <= n->m_len - off && writable)
+	if ((off == 0 || offp) && len <= n->m_len - off)
 		goto ok;
 
 	/*
@@ -216,7 +214,7 @@ m_pulldown(struct mbuf *m, int off, int len, int *offp)
 		goto ok;
 	}
 	if ((off == 0 || offp) && M_LEADINGSPACE(n->m_next) >= hlen
-	 && writable) {
+	 && writable && n->m_next->m_len >= tlen) {
 		n->m_next->m_data -= hlen;
 		n->m_next->m_len += hlen;
 		bcopy(mtod(n, caddr_t) + off, mtod(n->m_next, caddr_t), hlen);
@@ -429,7 +427,7 @@ m_tag_copy(struct m_tag *t, int how)
  * destination mbuf.
  */
 int
-m_tag_copy_chain(struct mbuf *to, struct mbuf *from, int how)
+m_tag_copy_chain(struct mbuf *to, const struct mbuf *from, int how)
 {
 	struct m_tag *p, *t, *tprev = NULL;
 

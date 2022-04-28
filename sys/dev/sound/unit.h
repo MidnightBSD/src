@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/unit.h 170159 2007-05-31 18:35:24Z ariff $
+ * $FreeBSD$
  */
 
 #ifndef _SND_UNIT_H_

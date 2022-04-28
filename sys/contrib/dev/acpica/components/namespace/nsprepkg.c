@@ -4,9 +4,117 @@
  *
  *****************************************************************************/
 
-/*
- * Copyright (C) 2000 - 2013, Intel Corp.
+/******************************************************************************
+ *
+ * 1. Copyright Notice
+ *
+ * Some or all of this work - Copyright (c) 1999 - 2017, Intel Corp.
  * All rights reserved.
+ *
+ * 2. License
+ *
+ * 2.1. This is your license from Intel Corp. under its intellectual property
+ * rights. You may have additional license terms from the party that provided
+ * you this software, covering your right to use that party's intellectual
+ * property rights.
+ *
+ * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
+ * copy of the source code appearing in this file ("Covered Code") an
+ * irrevocable, perpetual, worldwide license under Intel's copyrights in the
+ * base code distributed originally by Intel ("Original Intel Code") to copy,
+ * make derivatives, distribute, use and display any portion of the Covered
+ * Code in any form, with the right to sublicense such rights; and
+ *
+ * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
+ * license (with the right to sublicense), under only those claims of Intel
+ * patents that are infringed by the Original Intel Code, to make, use, sell,
+ * offer to sell, and import the Covered Code and derivative works thereof
+ * solely to the minimum extent necessary to exercise the above copyright
+ * license, and in no event shall the patent license extend to any additions
+ * to or modifications of the Original Intel Code. No other license or right
+ * is granted directly or by implication, estoppel or otherwise;
+ *
+ * The above copyright and patent license is granted only if the following
+ * conditions are met:
+ *
+ * 3. Conditions
+ *
+ * 3.1. Redistribution of Source with Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification with rights to further distribute source must include
+ * the above Copyright Notice, the above License, this list of Conditions,
+ * and the following Disclaimer and Export Compliance provision. In addition,
+ * Licensee must cause all Covered Code to which Licensee contributes to
+ * contain a file documenting the changes Licensee made to create that Covered
+ * Code and the date of any change. Licensee must include in that file the
+ * documentation of any changes made by any predecessor Licensee. Licensee
+ * must include a prominent statement that the modification is derived,
+ * directly or indirectly, from Original Intel Code.
+ *
+ * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
+ * Redistribution of source code of any substantial portion of the Covered
+ * Code or modification without rights to further distribute source must
+ * include the following Disclaimer and Export Compliance provision in the
+ * documentation and/or other materials provided with distribution. In
+ * addition, Licensee may not authorize further sublicense of source of any
+ * portion of the Covered Code, and must include terms to the effect that the
+ * license from Licensee to its licensee is limited to the intellectual
+ * property embodied in the software Licensee provides to its licensee, and
+ * not to intellectual property embodied in modifications its licensee may
+ * make.
+ *
+ * 3.3. Redistribution of Executable. Redistribution in executable form of any
+ * substantial portion of the Covered Code or modification must reproduce the
+ * above Copyright Notice, and the following Disclaimer and Export Compliance
+ * provision in the documentation and/or other materials provided with the
+ * distribution.
+ *
+ * 3.4. Intel retains all right, title, and interest in and to the Original
+ * Intel Code.
+ *
+ * 3.5. Neither the name Intel nor any other trademark owned or controlled by
+ * Intel shall be used in advertising or otherwise to promote the sale, use or
+ * other dealings in products derived from or relating to the Covered Code
+ * without prior written authorization from Intel.
+ *
+ * 4. Disclaimer and Export Compliance
+ *
+ * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
+ * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
+ * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
+ * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
+ * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
+ * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+ * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
+ * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
+ * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
+ * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
+ * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
+ * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
+ * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
+ * LIMITED REMEDY.
+ *
+ * 4.3. Licensee shall not export, either directly or indirectly, any of this
+ * software or system incorporating such software without first obtaining any
+ * required license or other approval from the U. S. Department of Commerce or
+ * any other agency or department of the United States Government. In the
+ * event Licensee exports any such software from the United States or
+ * re-exports any such software from a foreign destination, Licensee shall
+ * ensure that the distribution and export/re-export of the software is in
+ * compliance with all laws, regulations, orders, or other restrictions of the
+ * U.S. Export Administration Regulations. Licensee agrees that neither it nor
+ * any of its subsidiaries will export/re-export any technical data, process,
+ * software, or service, directly or indirectly, to any country for which the
+ * United States government or any agency thereof requires an export license,
+ * other governmental approval, or letter of assurance, without first obtaining
+ * such license, approval or letter.
+ *
+ *****************************************************************************
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
+ * following license:
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,23 +131,23 @@
  *    of any contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * Alternatively, this software may be distributed under the terms of the
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, you may choose to be licensed under the terms of the
  * GNU General Public License ("GPL") version 2 as published by the Free
  * Software Foundation.
  *
- * NO WARRANTY
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDERS OR CONTRIBUTORS BE LIABLE FOR SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
- * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGES.
- */
+ *****************************************************************************/
 
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/accommon.h>
@@ -69,6 +177,12 @@ AcpiNsCheckPackageElements (
     UINT8                       Type2,
     UINT32                      Count2,
     UINT32                      StartIndex);
+
+static ACPI_STATUS
+AcpiNsCustomPackage (
+    ACPI_EVALUATE_INFO          *Info,
+    ACPI_OPERAND_OBJECT         **Elements,
+    UINT32                      Count);
 
 
 /*******************************************************************************
@@ -144,13 +258,18 @@ AcpiNsCheckPackage (
      * Decode the type of the expected package contents
      *
      * PTYPE1 packages contain no subpackages
-     * PTYPE2 packages contain sub-packages
+     * PTYPE2 packages contain subpackages
      */
     switch (Package->RetInfo.Type)
     {
+    case ACPI_PTYPE_CUSTOM:
+
+        Status = AcpiNsCustomPackage (Info, Elements, Count);
+        break;
+
     case ACPI_PTYPE1_FIXED:
         /*
-         * The package count is fixed and there are no sub-packages
+         * The package count is fixed and there are no subpackages
          *
          * If package is too small, exit.
          * If package is larger than expected, issue warning but continue
@@ -171,30 +290,31 @@ AcpiNsCheckPackage (
         /* Validate all elements of the returned package */
 
         Status = AcpiNsCheckPackageElements (Info, Elements,
-                    Package->RetInfo.ObjectType1, Package->RetInfo.Count1,
-                    Package->RetInfo.ObjectType2, Package->RetInfo.Count2, 0);
+            Package->RetInfo.ObjectType1, Package->RetInfo.Count1,
+            Package->RetInfo.ObjectType2, Package->RetInfo.Count2, 0);
         break;
 
     case ACPI_PTYPE1_VAR:
         /*
-         * The package count is variable, there are no sub-packages, and all
+         * The package count is variable, there are no subpackages, and all
          * elements must be of the same type
          */
         for (i = 0; i < Count; i++)
         {
             Status = AcpiNsCheckObjectType (Info, Elements,
-                        Package->RetInfo.ObjectType1, i);
+                Package->RetInfo.ObjectType1, i);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
             }
+
             Elements++;
         }
         break;
 
     case ACPI_PTYPE1_OPTION:
         /*
-         * The package count is variable, there are no sub-packages. There are
+         * The package count is variable, there are no subpackages. There are
          * a fixed number of required elements, and a variable number of
          * optional elements.
          *
@@ -215,7 +335,7 @@ AcpiNsCheckPackage (
                 /* These are the required package elements (0, 1, or 2) */
 
                 Status = AcpiNsCheckObjectType (Info, Elements,
-                            Package->RetInfo3.ObjectType[i], i);
+                    Package->RetInfo3.ObjectType[i], i);
                 if (ACPI_FAILURE (Status))
                 {
                     return (Status);
@@ -226,12 +346,13 @@ AcpiNsCheckPackage (
                 /* These are the optional package elements */
 
                 Status = AcpiNsCheckObjectType (Info, Elements,
-                            Package->RetInfo3.TailObjectType, i);
+                    Package->RetInfo3.TailObjectType, i);
                 if (ACPI_FAILURE (Status))
                 {
                     return (Status);
                 }
             }
+
             Elements++;
         }
         break;
@@ -240,8 +361,8 @@ AcpiNsCheckPackage (
 
         /* First element is the (Integer) revision */
 
-        Status = AcpiNsCheckObjectType (Info, Elements,
-                    ACPI_RTYPE_INTEGER, 0);
+        Status = AcpiNsCheckObjectType (
+            Info, Elements, ACPI_RTYPE_INTEGER, 0);
         if (ACPI_FAILURE (Status))
         {
             return (Status);
@@ -250,17 +371,17 @@ AcpiNsCheckPackage (
         Elements++;
         Count--;
 
-        /* Examine the sub-packages */
+        /* Examine the subpackages */
 
         Status = AcpiNsCheckPackageList (Info, Package, Elements, Count);
         break;
 
     case ACPI_PTYPE2_PKG_COUNT:
 
-        /* First element is the (Integer) count of sub-packages to follow */
+        /* First element is the (Integer) count of subpackages to follow */
 
-        Status = AcpiNsCheckObjectType (Info, Elements,
-                    ACPI_RTYPE_INTEGER, 0);
+        Status = AcpiNsCheckObjectType (
+            Info, Elements, ACPI_RTYPE_INTEGER, 0);
         if (ACPI_FAILURE (Status))
         {
             return (Status);
@@ -279,7 +400,7 @@ AcpiNsCheckPackage (
         Count = ExpectedCount;
         Elements++;
 
-        /* Examine the sub-packages */
+        /* Examine the subpackages */
 
         Status = AcpiNsCheckPackageList (Info, Package, Elements, Count);
         break;
@@ -291,9 +412,9 @@ AcpiNsCheckPackage (
     case ACPI_PTYPE2_FIX_VAR:
         /*
          * These types all return a single Package that consists of a
-         * variable number of sub-Packages.
+         * variable number of subpackages.
          *
-         * First, ensure that the first element is a sub-Package. If not,
+         * First, ensure that the first element is a subpackage. If not,
          * the BIOS may have incorrectly returned the object as a single
          * package instead of a Package of Packages (a common error if
          * there is only one entry). We may be able to repair this by
@@ -303,7 +424,8 @@ AcpiNsCheckPackage (
         {
             /* Create the new outer package and populate it */
 
-            Status = AcpiNsWrapWithPackage (Info, ReturnObject, ReturnObjectPtr);
+            Status = AcpiNsWrapWithPackage (
+                Info, ReturnObject, ReturnObjectPtr);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
@@ -316,9 +438,56 @@ AcpiNsCheckPackage (
             Count = 1;
         }
 
-        /* Examine the sub-packages */
+        /* Examine the subpackages */
 
         Status = AcpiNsCheckPackageList (Info, Package, Elements, Count);
+        break;
+
+    case ACPI_PTYPE2_VAR_VAR:
+        /*
+         * Returns a variable list of packages, each with a variable list
+         * of objects.
+         */
+        break;
+
+    case ACPI_PTYPE2_UUID_PAIR:
+
+        /* The package must contain pairs of (UUID + type) */
+
+        if (Count & 1)
+        {
+            ExpectedCount = Count + 1;
+            goto PackageTooSmall;
+        }
+
+        while (Count > 0)
+        {
+            Status = AcpiNsCheckObjectType(Info, Elements,
+                Package->RetInfo.ObjectType1, 0);
+            if (ACPI_FAILURE(Status))
+            {
+                return (Status);
+            }
+
+            /* Validate length of the UUID buffer */
+
+            if ((*Elements)->Buffer.Length != 16)
+            {
+                ACPI_WARN_PREDEFINED ((AE_INFO, Info->FullPathname,
+                    Info->NodeFlags, "Invalid length for UUID Buffer"));
+                return (AE_AML_OPERAND_VALUE);
+            }
+
+            Status = AcpiNsCheckObjectType(Info, Elements + 1,
+                Package->RetInfo.ObjectType2, 0);
+            if (ACPI_FAILURE(Status))
+            {
+                return (Status);
+            }
+
+            Elements += 2;
+            Count -= 2;
+        }
         break;
 
     default:
@@ -379,9 +548,9 @@ AcpiNsCheckPackageList (
 
 
     /*
-     * Validate each sub-Package in the parent Package
+     * Validate each subpackage in the parent Package
      *
-     * NOTE: assumes list of sub-packages contains no NULL elements.
+     * NOTE: assumes list of subpackages contains no NULL elements.
      * Any NULL elements should have been removed by earlier call
      * to AcpiNsRemoveNullElements.
      */
@@ -394,13 +563,13 @@ AcpiNsCheckPackageList (
         /* Each sub-object must be of type Package */
 
         Status = AcpiNsCheckObjectType (Info, &SubPackage,
-                    ACPI_RTYPE_PACKAGE, i);
+            ACPI_RTYPE_PACKAGE, i);
         if (ACPI_FAILURE (Status))
         {
             return (Status);
         }
 
-        /* Examine the different types of expected sub-packages */
+        /* Examine the different types of expected subpackages */
 
         Info->ParentPackage = SubPackage;
         switch (Package->RetInfo.Type)
@@ -418,10 +587,10 @@ AcpiNsCheckPackageList (
             }
 
             Status = AcpiNsCheckPackageElements (Info, SubElements,
-                        Package->RetInfo.ObjectType1,
-                        Package->RetInfo.Count1,
-                        Package->RetInfo.ObjectType2,
-                        Package->RetInfo.Count2, 0);
+                Package->RetInfo.ObjectType1,
+                Package->RetInfo.Count1,
+                Package->RetInfo.ObjectType2,
+                Package->RetInfo.Count2, 0);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
@@ -440,19 +609,25 @@ AcpiNsCheckPackageList (
             }
 
             Status = AcpiNsCheckPackageElements (Info, SubElements,
-                        Package->RetInfo.ObjectType1,
-                        Package->RetInfo.Count1,
-                        Package->RetInfo.ObjectType2,
-                        SubPackage->Package.Count - Package->RetInfo.Count1, 0);
+                Package->RetInfo.ObjectType1,
+                Package->RetInfo.Count1,
+                Package->RetInfo.ObjectType2,
+                SubPackage->Package.Count - Package->RetInfo.Count1, 0);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
             }
             break;
 
+        case ACPI_PTYPE2_VAR_VAR:
+            /*
+             * Each subpackage has a fixed or variable number of elements
+             */
+            break;
+
         case ACPI_PTYPE2_FIXED:
 
-            /* Each sub-package has a fixed length */
+            /* Each subpackage has a fixed length */
 
             ExpectedCount = Package->RetInfo2.Count;
             if (SubPackage->Package.Count < ExpectedCount)
@@ -460,12 +635,12 @@ AcpiNsCheckPackageList (
                 goto PackageTooSmall;
             }
 
-            /* Check the type of each sub-package element */
+            /* Check the type of each subpackage element */
 
             for (j = 0; j < ExpectedCount; j++)
             {
                 Status = AcpiNsCheckObjectType (Info, &SubElements[j],
-                            Package->RetInfo2.ObjectType[j], j);
+                    Package->RetInfo2.ObjectType[j], j);
                 if (ACPI_FAILURE (Status))
                 {
                     return (Status);
@@ -475,7 +650,7 @@ AcpiNsCheckPackageList (
 
         case ACPI_PTYPE2_MIN:
 
-            /* Each sub-package has a variable but minimum length */
+            /* Each subpackage has a variable but minimum length */
 
             ExpectedCount = Package->RetInfo.Count1;
             if (SubPackage->Package.Count < ExpectedCount)
@@ -483,11 +658,11 @@ AcpiNsCheckPackageList (
                 goto PackageTooSmall;
             }
 
-            /* Check the type of each sub-package element */
+            /* Check the type of each subpackage element */
 
             Status = AcpiNsCheckPackageElements (Info, SubElements,
-                        Package->RetInfo.ObjectType1,
-                        SubPackage->Package.Count, 0, 0, 0);
+                Package->RetInfo.ObjectType1,
+                SubPackage->Package.Count, 0, 0, 0);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
@@ -500,7 +675,7 @@ AcpiNsCheckPackageList (
              * the count field (the ACPI name is NumElements)
              */
             Status = AcpiNsCheckObjectType (Info, SubElements,
-                        ACPI_RTYPE_INTEGER, 0);
+                ACPI_RTYPE_INTEGER, 0);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
@@ -515,11 +690,13 @@ AcpiNsCheckPackageList (
             {
                 goto PackageTooSmall;
             }
+
             if (SubPackage->Package.Count < Package->RetInfo.Count1)
             {
                 ExpectedCount = Package->RetInfo.Count1;
                 goto PackageTooSmall;
             }
+
             if (ExpectedCount == 0)
             {
                 /*
@@ -532,11 +709,11 @@ AcpiNsCheckPackageList (
                 (*SubElements)->Integer.Value = ExpectedCount;
             }
 
-            /* Check the type of each sub-package element */
+            /* Check the type of each subpackage element */
 
             Status = AcpiNsCheckPackageElements (Info, (SubElements + 1),
-                        Package->RetInfo.ObjectType1,
-                        (ExpectedCount - 1), 0, 0, 1);
+                Package->RetInfo.ObjectType1,
+                (ExpectedCount - 1), 0, 0, 1);
             if (ACPI_FAILURE (Status))
             {
                 return (Status);
@@ -545,6 +722,8 @@ AcpiNsCheckPackageList (
 
         default: /* Should not get here, type was validated by caller */
 
+            ACPI_ERROR ((AE_INFO, "Invalid Package type: %X",
+                Package->RetInfo.Type));
             return (AE_AML_INTERNAL);
         }
 
@@ -556,13 +735,99 @@ AcpiNsCheckPackageList (
 
 PackageTooSmall:
 
-    /* The sub-package count was smaller than required */
+    /* The subpackage count was smaller than required */
 
     ACPI_WARN_PREDEFINED ((AE_INFO, Info->FullPathname, Info->NodeFlags,
-        "Return Sub-Package[%u] is too small - found %u elements, expected %u",
+        "Return SubPackage[%u] is too small - found %u elements, expected %u",
         i, SubPackage->Package.Count, ExpectedCount));
 
     return (AE_AML_OPERAND_VALUE);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiNsCustomPackage
+ *
+ * PARAMETERS:  Info                - Method execution information block
+ *              Elements            - Pointer to the package elements array
+ *              Count               - Element count for the package
+ *
+ * RETURN:      Status
+ *
+ * DESCRIPTION: Check a returned package object for the correct count and
+ *              correct type of all sub-objects.
+ *
+ * NOTE: Currently used for the _BIX method only. When needed for two or more
+ * methods, probably a detect/dispatch mechanism will be required.
+ *
+ ******************************************************************************/
+
+static ACPI_STATUS
+AcpiNsCustomPackage (
+    ACPI_EVALUATE_INFO          *Info,
+    ACPI_OPERAND_OBJECT         **Elements,
+    UINT32                      Count)
+{
+    UINT32                      ExpectedCount;
+    UINT32                      Version;
+    ACPI_STATUS                 Status = AE_OK;
+
+
+    ACPI_FUNCTION_NAME (NsCustomPackage);
+
+
+    /* Get version number, must be Integer */
+
+    if ((*Elements)->Common.Type != ACPI_TYPE_INTEGER)
+    {
+        ACPI_WARN_PREDEFINED ((AE_INFO, Info->FullPathname, Info->NodeFlags,
+            "Return Package has invalid object type for version number"));
+        return_ACPI_STATUS (AE_AML_OPERAND_TYPE);
+    }
+
+    Version = (UINT32) (*Elements)->Integer.Value;
+    ExpectedCount = 21;         /* Version 1 */
+
+    if (Version == 0)
+    {
+        ExpectedCount = 20;     /* Version 0 */
+    }
+
+    if (Count < ExpectedCount)
+    {
+        ACPI_WARN_PREDEFINED ((AE_INFO, Info->FullPathname, Info->NodeFlags,
+            "Return Package is too small - found %u elements, expected %u",
+            Count, ExpectedCount));
+        return_ACPI_STATUS (AE_AML_OPERAND_VALUE);
+    }
+    else if (Count > ExpectedCount)
+    {
+        ACPI_DEBUG_PRINT ((ACPI_DB_REPAIR,
+            "%s: Return Package is larger than needed - "
+            "found %u, expected %u\n",
+            Info->FullPathname, Count, ExpectedCount));
+    }
+
+    /* Validate all elements of the returned package */
+
+    Status = AcpiNsCheckPackageElements (Info, Elements,
+        ACPI_RTYPE_INTEGER, 16,
+        ACPI_RTYPE_STRING, 4, 0);
+    if (ACPI_FAILURE (Status))
+    {
+        return_ACPI_STATUS (Status);
+    }
+
+    /* Version 1 has a single trailing integer */
+
+    if (Version > 0)
+    {
+        Status = AcpiNsCheckPackageElements (Info, Elements + 20,
+            ACPI_RTYPE_INTEGER, 1, 0, 0, 20);
+    }
+
+    return_ACPI_STATUS (Status);
 }
 
 
@@ -608,22 +873,24 @@ AcpiNsCheckPackageElements (
     for (i = 0; i < Count1; i++)
     {
         Status = AcpiNsCheckObjectType (Info, ThisElement,
-                    Type1, i + StartIndex);
+            Type1, i + StartIndex);
         if (ACPI_FAILURE (Status))
         {
             return (Status);
         }
+
         ThisElement++;
     }
 
     for (i = 0; i < Count2; i++)
     {
         Status = AcpiNsCheckObjectType (Info, ThisElement,
-                    Type2, (i + Count1 + StartIndex));
+            Type2, (i + Count1 + StartIndex));
         if (ACPI_FAILURE (Status))
         {
             return (Status);
         }
+
         ThisElement++;
     }
 

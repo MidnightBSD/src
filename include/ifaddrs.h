@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/include/ifaddrs.h 250887 2013-05-21 21:20:10Z ed $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (c) 1995, 1999

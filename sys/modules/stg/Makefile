@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/stg/Makefile 150636 2005-09-27 18:10:43Z mlaier $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/stg
+.PATH: ${SRCTOP}/sys/dev/stg
 
 KMOD=	stg
 SRCS=	tmc18c30.c tmc18c30_subr.c \

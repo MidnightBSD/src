@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/vm/memguard.c 254307 2013-08-13 22:40:43Z jeff $");
+__FBSDID("$FreeBSD$");
 
 /*
  * MemGuard is a simple replacement allocator for debugging only
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/vm/memguard.c 254307 2013-08-13 22:40:43Z
 #include <sys/malloc.h>
 #include <sys/sysctl.h>
 #include <sys/vmem.h>
+#include <sys/vmmeter.h>
 
 #include <vm/vm.h>
 #include <vm/uma.h>
@@ -67,9 +68,9 @@ static SYSCTL_NODE(_vm, OID_AUTO, memguard, CTLFLAG_RW, NULL, "MemGuard data");
  * reserved for MemGuard.
  */
 static u_int vm_memguard_divisor;
-SYSCTL_UINT(_vm_memguard, OID_AUTO, divisor, CTLFLAG_RDTUN,
+SYSCTL_UINT(_vm_memguard, OID_AUTO, divisor, CTLFLAG_RDTUN | CTLFLAG_NOFETCH,
     &vm_memguard_divisor,
-    0, "(kmem_size/memguard_divisor) == memguard submap size");     
+    0, "(kmem_size/memguard_divisor) == memguard submap size");
 
 /*
  * Short description (ks_shortdesc) of memory type to monitor.
@@ -89,9 +90,7 @@ memguard_sysctl_desc(SYSCTL_HANDLER_ARGS)
 		return (error);
 
 	mtx_lock(&malloc_mtx);
-	/*
-	 * If mtp is NULL, it will be initialized in memguard_cmp().
-	 */
+	/* If mtp is NULL, it will be initialized in memguard_cmp() */
 	vm_memguard_mtype = malloc_desc2type(desc);
 	strlcpy(vm_memguard_desc, desc, sizeof(vm_memguard_desc));
 	mtx_unlock(&malloc_mtx);
@@ -132,8 +131,7 @@ SYSCTL_ULONG(_vm_memguard, OID_AUTO, fail_pgs, CTLFLAG_RD,
 #define MG_GUARD_ALLLARGE	0x002
 #define MG_GUARD_NOFREE		0x004
 static int memguard_options = MG_GUARD_AROUND;
-TUNABLE_INT("vm.memguard.options", &memguard_options);
-SYSCTL_INT(_vm_memguard, OID_AUTO, options, CTLFLAG_RW,
+SYSCTL_INT(_vm_memguard, OID_AUTO, options, CTLFLAG_RWTUN,
     &memguard_options, 0,
     "MemGuard options:\n"
     "\t0x001 - add guard pages around each allocation\n"
@@ -149,8 +147,7 @@ SYSCTL_ULONG(_vm_memguard, OID_AUTO, minsize_reject, CTLFLAG_RD,
 
 static u_int memguard_frequency;
 static u_long memguard_frequency_hits;
-TUNABLE_INT("vm.memguard.frequency", &memguard_frequency);
-SYSCTL_UINT(_vm_memguard, OID_AUTO, frequency, CTLFLAG_RW,
+SYSCTL_UINT(_vm_memguard, OID_AUTO, frequency, CTLFLAG_RWTUN,
     &memguard_frequency, 0, "Times in 100000 that MemGuard will randomly run");
 SYSCTL_ULONG(_vm_memguard, OID_AUTO, frequency_hits, CTLFLAG_RD,
     &memguard_frequency_hits, 0, "# times MemGuard randomly chose");
@@ -166,6 +163,7 @@ memguard_fudge(unsigned long km_size, const struct vm_map *parent_map)
 	u_long mem_pgs, parent_size;
 
 	vm_memguard_divisor = 10;
+	/* CTFLAG_RDTUN doesn't work during the early boot process. */
 	TUNABLE_INT_FETCH("vm.memguard.divisor", &vm_memguard_divisor);
 
 	parent_size = vm_map_max(parent_map) - vm_map_min(parent_map) +
@@ -181,7 +179,7 @@ memguard_fudge(unsigned long km_size, const struct vm_map *parent_map)
 	 * This prevents memguard's page promotions from completely
 	 * using up memory, since most malloc(9) calls are sub-page.
 	 */
-	mem_pgs = cnt.v_page_count;
+	mem_pgs = vm_cnt.v_page_count;
 	memguard_physlimit = (mem_pgs / vm_memguard_divisor) * PAGE_SIZE;
 	/*
 	 * We want as much KVA as we can take safely.  Use at most our
@@ -228,9 +226,9 @@ memguard_sysinit(void)
 
 	parent = SYSCTL_STATIC_CHILDREN(_vm_memguard);
 
-	SYSCTL_ADD_ULONG(NULL, parent, OID_AUTO, "mapstart", CTLFLAG_RD,
+	SYSCTL_ADD_UAUTO(NULL, parent, OID_AUTO, "mapstart", CTLFLAG_RD,
 	    &memguard_base, "MemGuard KVA base");
-	SYSCTL_ADD_ULONG(NULL, parent, OID_AUTO, "maplimit", CTLFLAG_RD,
+	SYSCTL_ADD_UAUTO(NULL, parent, OID_AUTO, "maplimit", CTLFLAG_RD,
 	    &memguard_mapsize, "MemGuard KVA size");
 #if 0
 	SYSCTL_ADD_ULONG(NULL, parent, OID_AUTO, "mapused", CTLFLAG_RD,
@@ -286,7 +284,7 @@ v2sizev(vm_offset_t va)
 void *
 memguard_alloc(unsigned long req_size, int flags)
 {
-	vm_offset_t addr;
+	vm_offset_t addr, origaddr;
 	u_long size_p, size_v;
 	int do_guard, rv;
 
@@ -330,7 +328,7 @@ memguard_alloc(unsigned long req_size, int flags)
 	for (;;) {
 		if (vmem_xalloc(memguard_arena, size_v, 0, 0, 0,
 		    memguard_cursor, VMEM_ADDR_MAX,
-		    M_BESTFIT | M_NOWAIT, &addr) == 0)
+		    M_BESTFIT | M_NOWAIT, &origaddr) == 0)
 			break;
 		/*
 		 * The map has no space.  This may be due to
@@ -345,11 +343,12 @@ memguard_alloc(unsigned long req_size, int flags)
 		memguard_wrap++;
 		memguard_cursor = memguard_base;
 	}
+	addr = origaddr;
 	if (do_guard)
 		addr += PAGE_SIZE;
 	rv = kmem_back(kmem_object, addr, size_p, flags);
 	if (rv != KERN_SUCCESS) {
-		vmem_xfree(memguard_arena, addr, size_v);
+		vmem_xfree(memguard_arena, origaddr, size_v);
 		memguard_fail_pgs++;
 		addr = (vm_offset_t)NULL;
 		goto out;
@@ -504,7 +503,7 @@ int
 memguard_cmp_zone(uma_zone_t zone)
 {
 
-	 if ((memguard_options & MG_GUARD_NOFREE) == 0 &&
+	if ((memguard_options & MG_GUARD_NOFREE) == 0 &&
 	    zone->uz_flags & UMA_ZONE_NOFREE)
 		return (0);
 

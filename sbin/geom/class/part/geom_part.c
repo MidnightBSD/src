@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/part/geom_part.c 251588 2013-06-09 23:34:26Z marcel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/stat.h>
 #include <sys/vtoc.h>
@@ -73,6 +75,7 @@ volatile sig_atomic_t undo_restore;
 
 static struct gclass *find_class(struct gmesh *, const char *);
 static struct ggeom * find_geom(struct gclass *, const char *);
+static int geom_is_withered(struct ggeom *);
 static const char *find_geomcfg(struct ggeom *, const char *);
 static const char *find_provcfg(struct gprovider *, const char *);
 static struct gprovider *find_provider(struct ggeom *, off_t);
@@ -81,7 +84,7 @@ static int gpart_autofill(struct gctl_req *);
 static int gpart_autofill_resize(struct gctl_req *);
 static void gpart_bootcode(struct gctl_req *, unsigned int);
 static void *gpart_bootfile_read(const char *, ssize_t *);
-static void gpart_issue(struct gctl_req *, unsigned int);
+static _Noreturn void gpart_issue(struct gctl_req *, unsigned int);
 static void gpart_show(struct gctl_req *, unsigned int);
 static void gpart_show_geom(struct ggeom *, const char *, int);
 static int gpart_show_hasopt(struct gctl_req *, const char *, const char *);
@@ -207,15 +210,32 @@ find_class(struct gmesh *mesh, const char *name)
 static struct ggeom *
 find_geom(struct gclass *classp, const char *name)
 {
-	struct ggeom *gp;
+	struct ggeom *gp, *wgp;
 
 	if (strncmp(name, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
 		name += sizeof(_PATH_DEV) - 1;
+	wgp = NULL;
 	LIST_FOREACH(gp, &classp->lg_geom, lg_geom) {
-		if (strcmp(gp->lg_name, name) == 0)
+		if (strcmp(gp->lg_name, name) != 0)
+			continue;
+		if (!geom_is_withered(gp))
 			return (gp);
+		else
+			wgp = gp;
 	}
-	return (NULL);
+	return (wgp);
+}
+
+static int
+geom_is_withered(struct ggeom *gp)
+{
+	struct gconfig *gc;
+
+	LIST_FOREACH(gc, &gp->lg_config, lg_config) {
+		if (!strcmp(gc->lg_name, "wither"))
+			return (1);
+	}
+	return (0);
 }
 
 static const char *
@@ -364,7 +384,11 @@ gpart_autofill_resize(struct gctl_req *req)
 	}
 
 	offset = (pp->lg_stripeoffset / pp->lg_sectorsize) % alignment;
-	last = (off_t)strtoimax(find_geomcfg(gp, "last"), NULL, 0);
+	s = find_geomcfg(gp, "last");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Final block not found for geom %s",
+		    gp->lg_name);
+	last = (off_t)strtoimax(s, NULL, 0);
 	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
 		s = find_provcfg(pp, "index");
 		if (s == NULL)
@@ -450,8 +474,19 @@ gpart_autofill(struct gctl_req *req)
 	if (s == NULL)
 		abort();
 	gp = find_geom(cp, s);
-	if (gp == NULL)
-		errx(EXIT_FAILURE, "No such geom: %s.", s);
+	if (gp == NULL) {
+		if (g_device_path(s) == NULL) {
+			errx(EXIT_FAILURE, "No such geom %s.", s);
+		} else {
+			/*
+			 * We don't free memory allocated by g_device_path() as
+			 * we are about to exit.
+			 */
+			errx(EXIT_FAILURE,
+			    "No partitioning scheme found on geom %s. Create one first using 'gpart create'.",
+			    s);
+		}
+	}
 	pp = LIST_FIRST(&gp->lg_consumer)->lg_provider;
 	if (pp == NULL)
 		errx(EXIT_FAILURE, "Provider for geom %s not found.", s);
@@ -502,11 +537,19 @@ gpart_autofill(struct gctl_req *req)
 	if (size > alignment)
 		size = ALIGNDOWN(size, alignment);
 
-	first = (off_t)strtoimax(find_geomcfg(gp, "first"), NULL, 0);
-	last = (off_t)strtoimax(find_geomcfg(gp, "last"), NULL, 0);
+	s = find_geomcfg(gp, "first");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Starting block not found for geom %s",
+		    gp->lg_name);
+	first = (off_t)strtoimax(s, NULL, 0);
+	s = find_geomcfg(gp, "last");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Final block not found for geom %s",
+		    gp->lg_name);
+	last = (off_t)strtoimax(s, NULL, 0);
 	grade = ~0ULL;
 	a_first = ALIGNUP(first + offset, alignment);
-	last = ALIGNDOWN(last + offset, alignment);
+	last = ALIGNDOWN(last + offset + 1, alignment) - 1;
 	if (a_first < start)
 		a_first = start;
 	while ((pp = find_provider(gp, first)) != NULL) {
@@ -538,7 +581,7 @@ gpart_autofill(struct gctl_req *req)
 
 		s = find_provcfg(pp, "end");
 		first = (off_t)strtoimax(s, NULL, 0) + 1;
-		if (first > a_first)
+		if (first + offset > a_first)
 			a_first = ALIGNUP(first + offset, alignment);
 	}
 	if (a_first <= last) {
@@ -586,13 +629,25 @@ gpart_show_geom(struct ggeom *gp, const char *element, int show_providers)
 	off_t length, secsz;
 	int idx, wblocks, wname, wmax;
 
+	if (geom_is_withered(gp))
+		return;
 	scheme = find_geomcfg(gp, "scheme");
+	if (scheme == NULL)
+		errx(EXIT_FAILURE, "Scheme not found for geom %s", gp->lg_name);
 	s = find_geomcfg(gp, "first");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Starting block not found for geom %s",
+		    gp->lg_name);
 	first = (off_t)strtoimax(s, NULL, 0);
 	s = find_geomcfg(gp, "last");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Final block not found for geom %s",
+		    gp->lg_name);
 	last = (off_t)strtoimax(s, NULL, 0);
 	wblocks = strlen(s);
 	s = find_geomcfg(gp, "state");
+	if (s == NULL)
+		errx(EXIT_FAILURE, "State not found for geom %s", gp->lg_name);
 	if (s != NULL && *s != 'C')
 		s = NULL;
 	wmax = strlen(gp->lg_name);
@@ -748,6 +803,8 @@ gpart_backup(struct gctl_req *req, unsigned int fl __unused)
 		abort();
 	pp = LIST_FIRST(&gp->lg_consumer)->lg_provider;
 	s = find_geomcfg(gp, "last");
+	if (s == NULL)
+		abort();
 	wblocks = strlen(s);
 	wtype = 0;
 	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
@@ -757,6 +814,8 @@ gpart_backup(struct gctl_req *req, unsigned int fl __unused)
 			wtype = i;
 	}
 	s = find_geomcfg(gp, "entries");
+	if (s == NULL)
+		abort();
 	windex = strlen(s);
 	printf("%s %s\n", scheme, s);
 	LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
@@ -1062,14 +1121,11 @@ gpart_write_partcode(struct ggeom *gp, int idx, void *code, ssize_t size)
 
 	if (pp != NULL) {
 		snprintf(dsf, sizeof(dsf), "/dev/%s", pp->lg_name);
+		if (pp->lg_mediasize < size)
+			errx(EXIT_FAILURE, "%s: not enough space", dsf);
 		fd = open(dsf, O_WRONLY);
 		if (fd == -1)
 			err(EXIT_FAILURE, "%s", dsf);
-		if (lseek(fd, size, SEEK_SET) != size)
-			errx(EXIT_FAILURE, "%s: not enough space", dsf);
-		if (lseek(fd, 0, SEEK_SET) != 0)
-			err(EXIT_FAILURE, "%s", dsf);
-
 		/*
 		 * When writing to a disk device, the write must be
 		 * sector aligned and not write to any partial sectors,
@@ -1085,6 +1141,7 @@ gpart_write_partcode(struct ggeom *gp, int idx, void *code, ssize_t size)
 			err(EXIT_FAILURE, "%s", dsf);
 		free(buf);
 		close(fd);
+		printf("partcode written to %s\n", pp->lg_name);
 	} else
 		errx(EXIT_FAILURE, "invalid partition index");
 }
@@ -1108,11 +1165,11 @@ gpart_write_partcode_vtoc8(struct ggeom *gp, int idx, void *code)
 		if (pp->lg_sectorsize != sizeof(struct vtoc8))
 			errx(EXIT_FAILURE, "%s: unexpected sector "
 			    "size (%d)\n", dsf, pp->lg_sectorsize);
+		if (pp->lg_mediasize < VTOC_BOOTSIZE)
+			continue;
 		fd = open(dsf, O_WRONLY);
 		if (fd == -1)
 			err(EXIT_FAILURE, "%s", dsf);
-		if (lseek(fd, VTOC_BOOTSIZE, SEEK_SET) != VTOC_BOOTSIZE)
-			continue;
 		/*
 		 * We ignore the first VTOC_BOOTSIZE bytes of boot code in
 		 * order to avoid overwriting the label.
@@ -1131,6 +1188,9 @@ gpart_write_partcode_vtoc8(struct ggeom *gp, int idx, void *code)
 	}
 	if (installed == 0)
 		errx(EXIT_FAILURE, "%s: no partitions", gp->lg_name);
+	else
+		printf("partcode written to %s\n",
+		    idx != 0 ? pp->lg_name: gp->lg_name);
 }
 
 static void
@@ -1152,10 +1212,8 @@ gpart_bootcode(struct gctl_req *req, unsigned int fl)
 		    bootcode);
 		if (error)
 			errc(EXIT_FAILURE, error, "internal error");
-	} else {
+	} else
 		bootcode = NULL;
-		bootsize = 0;
-	}
 
 	s = gctl_get_ascii(req, "class");
 	if (s == NULL)
@@ -1177,21 +1235,25 @@ gpart_bootcode(struct gctl_req *req, unsigned int fl)
 	if (gp == NULL)
 		errx(EXIT_FAILURE, "No such geom: %s.", s);
 	s = find_geomcfg(gp, "scheme");
-	vtoc8 = 0;
+	if (s == NULL)
+		errx(EXIT_FAILURE, "Scheme not found for geom %s", gp->lg_name);
 	if (strcmp(s, "VTOC8") == 0)
 		vtoc8 = 1;
+	else
+		vtoc8 = 0;
 
 	if (gctl_has_param(req, GPART_PARAM_PARTCODE)) {
 		s = gctl_get_ascii(req, GPART_PARAM_PARTCODE);
-		partsize = vtoc8 != 0 ? VTOC_BOOTSIZE : bootsize * 1024;
+		if (vtoc8 != 0)
+			partsize = VTOC_BOOTSIZE;
+		else
+			partsize = 1024 * 1024;		/* Arbitrary limit. */
 		partcode = gpart_bootfile_read(s, &partsize);
 		error = gctl_delete_param(req, GPART_PARAM_PARTCODE);
 		if (error)
 			errc(EXIT_FAILURE, error, "internal error");
-	} else {
+	} else
 		partcode = NULL;
-		partsize = 0;
-	}
 
 	if (gctl_has_param(req, GPART_PARAM_INDEX)) {
 		if (partcode == NULL)
@@ -1223,6 +1285,7 @@ gpart_bootcode(struct gctl_req *req, unsigned int fl)
 		gpart_issue(req, fl);
 
 	geom_deletetree(&mesh);
+	free(partcode);
 }
 
 static void
@@ -1243,7 +1306,7 @@ gpart_print_error(const char *errstr)
 		warnx("%s", errmsg);
 }
 
-static void
+static _Noreturn void
 gpart_issue(struct gctl_req *req, unsigned int fl __unused)
 {
 	char buf[4096];

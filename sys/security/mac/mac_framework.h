@@ -38,7 +38,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/security/mac/mac_framework.h 254603 2013-08-21 17:45:00Z kib $
+ * $FreeBSD$
  */
 
 /*
@@ -194,8 +194,6 @@ int	mac_mount_check_stat(struct ucred *cred, struct mount *mp);
 void	mac_mount_create(struct ucred *cred, struct mount *mp);
 void	mac_mount_destroy(struct mount *);
 void	mac_mount_init(struct mount *);
-
-void	mac_netatalk_aarp_send(struct ifnet *ifp, struct mbuf *m);
 
 void	mac_netinet_arp_send(struct ifnet *ifp, struct mbuf *m);
 void	mac_netinet_firewall_reply(struct mbuf *mrecv, struct mbuf *msend);

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libiconv_modules/mapper_646/citrus_mapper_646.c 219019 2011-02-25 00:04:39Z gabor $ */
+/* $FreeBSD$ */
 /*	$NetBSD: citrus_mapper_646.c,v 1.4 2003/07/14 11:37:49 tshiozak Exp $	*/
 
 /*-

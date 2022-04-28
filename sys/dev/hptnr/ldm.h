@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/hptnr/ldm.h 252867 2013-07-06 07:49:41Z delphij $
+ * $FreeBSD$
  */
 #include <dev/hptnr/hptnr_config.h>
 #ifndef _HPT_LDM_H_
@@ -57,9 +57,6 @@ extern "C" {
 #if defined(__MAX_PARTITIONS_PER_DISK) && MAX_PARTITIONS_PER_DISK > __MAX_PARTITIONS_PER_DISK
 #error "Please redefine MAX_PARTITIONS_PER_DISK!!!"
 #endif
-
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define MIN(a,b) (((a)<(b))?(a):(b))
 
 
 typedef char check_HPT_TIME_is_unsigned[ (HPT_TIME)(-1) > 0 ? 1 : -1 ];
@@ -243,7 +240,9 @@ typedef struct hpt_raw_disk
 #endif
 	__HPT_RAW_LBA real_capacity;
 	__HPT_RAW_LBA head_position;
-
+	HPT_U32	logical_sector_size;
+	HPT_U8   logicalsectors_per_physicalsector;
+	HPT_U16 lowest_aligned;
 	HPT_U16 max_sectors_per_cmd;
 	HPT_U8  max_queue_depth;
 	HPT_U8  user_select_mode;

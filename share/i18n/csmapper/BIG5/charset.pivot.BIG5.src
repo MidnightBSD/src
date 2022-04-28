@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/BIG5/charset.pivot.BIG5.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: charset.pivot.BIG5.src,v 1.2 2007/03/05 16:57:12 tnozaki Exp $
 
 Big5-2003	UCS		1

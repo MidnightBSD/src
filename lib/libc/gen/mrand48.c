@@ -12,7 +12,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/mrand48.c 92986 2002-03-22 21:53:29Z obrien $");
+__FBSDID("$FreeBSD$");
+
+#include <stdint.h>
 
 #include "rand48.h"
 
@@ -21,6 +23,8 @@ extern unsigned short _rand48_seed[3];
 long
 mrand48(void)
 {
+
 	_dorand48(_rand48_seed);
-	return ((long) _rand48_seed[2] << 16) + (long) _rand48_seed[1];
+	return ((int32_t)(((uint32_t)_rand48_seed[2] << 16) |
+	    (uint32_t)_rand48_seed[1]));
 }

@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_endian.h 246122 2013-01-30 15:26:04Z hselasky $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *

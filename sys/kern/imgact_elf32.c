@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/imgact_elf32.c 116182 2003-06-11 00:56:59Z obrien $");
+__FBSDID("$FreeBSD$");
 
 #define __ELF_WORD_SIZE 32
 #include <kern/imgact_elf.c>

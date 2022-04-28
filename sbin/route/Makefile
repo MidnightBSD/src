@@ -1,8 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: release/10.0.0/sbin/route/Makefile 253427 2013-07-17 14:05:20Z hrs $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=runtime
 PROG=	route
 MAN=	route.8
 SRCS=	route.c keywords.h

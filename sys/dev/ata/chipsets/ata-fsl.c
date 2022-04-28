@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ata/chipsets/ata-fsl.c 249213 2013-04-06 19:12:49Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/module.h>
@@ -69,13 +69,17 @@ imx_ata_probe(device_t dev)
 {
 	struct ata_pci_controller *ctrl;
 
-	if (!ofw_bus_is_compatible(dev, "fsl,imx51-ata"))
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
+
+	if (!ofw_bus_is_compatible(dev, "fsl,imx51-ata") &&
+	    !ofw_bus_is_compatible(dev, "fsl,imx53-ata"))
 		return (ENXIO);
 
 	ctrl = device_get_softc(dev);
 
 	device_set_desc(dev, "Freescale Integrated PATA Controller");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_LOW_PRIORITY);
 }
 
 static void

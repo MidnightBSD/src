@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/sys/dev/vxge/README 221167 2011-04-28 14:33:15Z gnn $
+$FreeBSD$
 ''_Readme for FreeBSD X3100 Series 10GbE PCIe I/O Virtualized Server Adapter Drivers_'''
 
 === Introduction ===

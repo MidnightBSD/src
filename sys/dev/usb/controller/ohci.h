@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/ohci.h 228483 2011-12-14 00:28:54Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.

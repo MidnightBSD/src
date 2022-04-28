@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sbin/ggate/Makefile 177714 2008-03-29 17:44:40Z ru $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 SUBDIR=	${_ggatec} \
 	${_ggated} \

@@ -23,29 +23,42 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/vmm/io/iommu.c 245678 2013-01-20 03:42:49Z neel $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/vmm/io/iommu.c 245678 2013-01-20 03:42:49Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/sysctl.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
 
+#include <machine/cpu.h>
 #include <machine/md_var.h>
 
 #include "vmm_util.h"
 #include "vmm_mem.h"
 #include "iommu.h"
 
-static boolean_t iommu_avail;
+SYSCTL_DECL(_hw_vmm);
+SYSCTL_NODE(_hw_vmm, OID_AUTO, iommu, CTLFLAG_RW, 0, "bhyve iommu parameters");
+
+static int iommu_avail;
+SYSCTL_INT(_hw_vmm_iommu, OID_AUTO, initialized, CTLFLAG_RD, &iommu_avail,
+    0, "bhyve iommu initialized?");
+
+static int iommu_enable = 1;
+SYSCTL_INT(_hw_vmm_iommu, OID_AUTO, enable, CTLFLAG_RDTUN, &iommu_enable, 0,
+    "Enable use of I/O MMU (required for PCI passthrough).");
+
 static struct iommu_ops *ops;
 static void *host_domain;
+static eventhandler_tag add_tag, delete_tag;
 
 static __inline int
 IOMMU_INIT(void)
@@ -102,19 +115,19 @@ IOMMU_REMOVE_MAPPING(void *domain, vm_paddr_t gpa, uint64_t len)
 }
 
 static __inline void
-IOMMU_ADD_DEVICE(void *domain, int bus, int slot, int func)
+IOMMU_ADD_DEVICE(void *domain, uint16_t rid)
 {
 
 	if (ops != NULL && iommu_avail)
-		(*ops->add_device)(domain, bus, slot, func);
+		(*ops->add_device)(domain, rid);
 }
 
 static __inline void
-IOMMU_REMOVE_DEVICE(void *domain, int bus, int slot, int func)
+IOMMU_REMOVE_DEVICE(void *domain, uint16_t rid)
 {
 
 	if (ops != NULL && iommu_avail)
-		(*ops->remove_device)(domain, bus, slot, func);
+		(*ops->remove_device)(domain, rid);
 }
 
 static __inline void
@@ -141,13 +154,31 @@ IOMMU_DISABLE(void)
 		(*ops->disable)();
 }
 
-void
+static void
+iommu_pci_add(void *arg, device_t dev)
+{
+
+	/* Add new devices to the host domain. */
+	iommu_add_device(host_domain, pci_get_rid(dev));
+}
+
+static void
+iommu_pci_delete(void *arg, device_t dev)
+{
+
+	iommu_remove_device(host_domain, pci_get_rid(dev));
+}
+
+static void
 iommu_init(void)
 {
 	int error, bus, slot, func;
 	vm_paddr_t maxaddr;
-	const char *name;
+	devclass_t dc;
 	device_t dev;
+
+	if (!iommu_enable)
+		return;
 
 	if (vmm_is_intel())
 		ops = &iommu_ops_intel;
@@ -160,15 +191,20 @@ iommu_init(void)
 	if (error)
 		return;
 
-	iommu_avail = TRUE;
+	iommu_avail = 1;
 
 	/*
 	 * Create a domain for the devices owned by the host
 	 */
 	maxaddr = vmm_mem_maxaddr();
 	host_domain = IOMMU_CREATE_DOMAIN(maxaddr);
-	if (host_domain == NULL)
-		panic("iommu_init: unable to create a host domain");
+	if (host_domain == NULL) {
+		printf("iommu_init: unable to create a host domain");
+		IOMMU_CLEANUP();
+		ops = NULL;
+		iommu_avail = 0;
+		return;
+	}
 
 	/*
 	 * Create 1:1 mappings from '0' to 'maxaddr' for devices assigned to
@@ -176,6 +212,10 @@ iommu_init(void)
 	 */
 	iommu_create_mapping(host_domain, 0, 0, maxaddr);
 
+	add_tag = EVENTHANDLER_REGISTER(pci_add_device, iommu_pci_add, NULL, 0);
+	delete_tag = EVENTHANDLER_REGISTER(pci_delete_device, iommu_pci_delete,
+	    NULL, 0);
+	dc = devclass_find("ppt");
 	for (bus = 0; bus <= PCI_BUSMAX; bus++) {
 		for (slot = 0; slot <= PCI_SLOTMAX; slot++) {
 			for (func = 0; func <= PCI_FUNCMAX; func++) {
@@ -183,13 +223,17 @@ iommu_init(void)
 				if (dev == NULL)
 					continue;
 
-				/* skip passthrough devices */
-				name = device_get_name(dev);
-				if (name != NULL && strcmp(name, "ppt") == 0)
+				/* Skip passthrough devices. */
+				if (dc != NULL &&
+				    device_get_devclass(dev) == dc)
 					continue;
 
-				/* everything else belongs to the host domain */
-				iommu_add_device(host_domain, bus, slot, func);
+				/*
+				 * Everything else belongs to the host
+				 * domain.
+				 */
+				iommu_add_device(host_domain,
+				    pci_get_rid(dev));
 			}
 		}
 	}
@@ -200,6 +244,15 @@ iommu_init(void)
 void
 iommu_cleanup(void)
 {
+
+	if (add_tag != NULL) {
+		EVENTHANDLER_DEREGISTER(pci_add_device, add_tag);
+		add_tag = NULL;
+	}
+	if (delete_tag != NULL) {
+		EVENTHANDLER_DEREGISTER(pci_delete_device, delete_tag);
+		delete_tag = NULL;
+	}
 	IOMMU_DISABLE();
 	IOMMU_DESTROY_DOMAIN(host_domain);
 	IOMMU_CLEANUP();
@@ -208,7 +261,16 @@ iommu_cleanup(void)
 void *
 iommu_create_domain(vm_paddr_t maxaddr)
 {
+	static volatile int iommu_initted;
 
+	if (iommu_initted < 2) {
+		if (atomic_cmpset_int(&iommu_initted, 0, 1)) {
+			iommu_init();
+			atomic_store_rel_int(&iommu_initted, 2);
+		} else
+			while (iommu_initted == 1)
+				cpu_spinwait();
+	}
 	return (IOMMU_CREATE_DOMAIN(maxaddr));
 }
 
@@ -256,17 +318,17 @@ iommu_host_domain(void)
 }
 
 void
-iommu_add_device(void *dom, int bus, int slot, int func)
+iommu_add_device(void *dom, uint16_t rid)
 {
 
-	IOMMU_ADD_DEVICE(dom, bus, slot, func);
+	IOMMU_ADD_DEVICE(dom, rid);
 }
 
 void
-iommu_remove_device(void *dom, int bus, int slot, int func)
+iommu_remove_device(void *dom, uint16_t rid)
 {
 
-	IOMMU_REMOVE_DEVICE(dom, bus, slot, func);
+	IOMMU_REMOVE_DEVICE(dom, rid);
 }
 
 void

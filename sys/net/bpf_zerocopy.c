@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf_zerocopy.c 239065 2012-08-05 14:11:42Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_bpf.h"
 
@@ -114,8 +114,7 @@ zbuf_page_free(vm_page_t pp)
 {
 
 	vm_page_lock(pp);
-	vm_page_unwire(pp, 0);
-	if (pp->wire_count == 0 && pp->object == NULL)
+	if (vm_page_unwire(pp, PQ_INACTIVE) && pp->object == NULL)
 		vm_page_free(pp);
 	vm_page_unlock(pp);
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/mambo/mambo.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,7 +75,7 @@ static driver_t mambobus_driver = {
 
 static devclass_t mambobus_devclass;
 
-DRIVER_MODULE(mambo, nexus, mambobus_driver, mambobus_devclass, 0, 0);
+DRIVER_MODULE(mambo, ofwbus, mambobus_driver, mambobus_devclass, 0, 0);
 
 static int
 mambobus_probe(device_t dev)

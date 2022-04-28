@@ -1,7 +1,7 @@
 /*
  * extensions to ioctl_meteor.h for the bt848 cards
  *
- * $FreeBSD: release/10.0.0/sys/dev/bktr/ioctl_bt848.h 205781 2010-03-28 00:10:09Z gibbs $
+ * $FreeBSD$
  */
 
 #ifndef  _DEV_BKTR_IOCTL_BT848_H_

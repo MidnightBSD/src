@@ -69,10 +69,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: src/sys/alpha/include/bus.h,v 1.5 1999/08/28 00:38:40 peter
- * $FreeBSD: release/10.0.0/sys/mips/malta/gt_pci_bus_space.c 255083 2013-08-30 20:28:35Z gonzo $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/malta/gt_pci_bus_space.c 255083 2013-08-30 20:28:35Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

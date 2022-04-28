@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/include/dbdma.h 183411 2008-09-27 15:41:16Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_DBDMA_H_
@@ -146,5 +146,8 @@ void dbdma_insert_nop(dbdma_channel_t *chan, int slot);
 void dbdma_insert_branch(dbdma_channel_t *chan, int slot, int to_slot);
 
 void dbdma_sync_commands(dbdma_channel_t *chan, bus_dmasync_op_t op);
+
+void dbdma_save_state(dbdma_channel_t *chan);
+void dbdma_restore_state(dbdma_channel_t *chan);
 
 #endif /* _MACHINE_DBDMA_H_ */

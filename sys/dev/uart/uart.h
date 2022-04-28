@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/uart/uart.h 254598 2013-08-21 14:33:02Z ian $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_UART_H_
@@ -41,9 +41,12 @@ struct uart_bas {
 	u_int	chan;
 	u_int	rclk;
 	u_int	regshft;
+	u_int	regiowidth;
+	u_int	busy_detect;
 };
 
 #define	uart_regofs(bas, reg)		((reg) << (bas)->regshft)
+#define	uart_regiowidth(bas)		((bas)->regiowidth)
 
 #define	uart_getreg(bas, reg)		\
 	bus_space_read_1((bas)->bst, (bas)->bsh, uart_regofs(bas, reg))
@@ -64,17 +67,12 @@ struct uart_bas {
  */
 struct uart_class;
 
-extern struct uart_class uart_imx_class __attribute__((weak));
 extern struct uart_class uart_ns8250_class __attribute__((weak));
 extern struct uart_class uart_quicc_class __attribute__((weak));
 extern struct uart_class uart_s3c2410_class __attribute__((weak));
 extern struct uart_class uart_sab82532_class __attribute__((weak));
 extern struct uart_class uart_sbbc_class __attribute__((weak));
 extern struct uart_class uart_z8530_class __attribute__((weak));
-extern struct uart_class uart_lpc_class __attribute__((weak));
-extern struct uart_class uart_pl011_class __attribute__((weak));
-extern struct uart_class uart_cdnc_class __attribute__((weak));
-extern struct uart_class uart_ti8250_class __attribute__((weak));
 
 #ifdef PC98
 struct uart_class *uart_pc98_getdev(u_long port);

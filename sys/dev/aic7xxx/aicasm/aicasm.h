@@ -39,7 +39,7 @@
  *
  * $Id: //depot/aic7xxx/aic7xxx/aicasm/aicasm.h#14 $
  *
- * $FreeBSD: release/10.0.0/sys/dev/aic7xxx/aicasm/aicasm.h 224046 2011-07-15 00:36:47Z emaste $
+ * $FreeBSD$
  */
 
 #include <sys/queue.h>

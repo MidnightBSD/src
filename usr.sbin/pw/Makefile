@@ -1,14 +1,19 @@
-# $FreeBSD: release/10.0.0/usr.sbin/pw/Makefile 242349 2012-10-30 08:00:53Z bapt $
+# $FreeBSD$
 
 PROG=	pw
 MAN=	pw.conf.5 pw.8
 SRCS=	pw.c pw_conf.c pw_user.c pw_group.c pw_log.c pw_nis.c pw_vpw.c \
-	grupd.c pwupd.c fileupd.c psdate.c \
-	bitmap.c cpdir.c rm_r.c
+	grupd.c pwupd.c psdate.c bitmap.c cpdir.c rm_r.c strtounum.c \
+	pw_utils.c
 
-WARNS?=	2
+WARNS?=	3
 
-DPADD=	${LIBCRYPT} ${LIBUTIL}
-LDADD=	-lcrypt -lutil
+LIBADD=	crypt util sbuf
+
+.include <src.opts.mk>
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

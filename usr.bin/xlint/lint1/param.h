@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/xlint/lint1/param.h 177927 2008-04-04 21:35:13Z imp $
+ * $FreeBSD$
  */
 
 /*
@@ -62,10 +62,7 @@
  * Should be set to 1 if the difference of two pointers is of type long
  * or the value of sizeof is of type unsigned long.
  */
-#ifdef __ia64__
-#define PTRDIFF_IS_LONG		1
-#define SIZEOF_IS_ULONG		1
-#elif __amd64__
+#if __amd64__
 #define PTRDIFF_IS_LONG		1
 #define SIZEOF_IS_ULONG		1
 #elif __alpha__
@@ -83,6 +80,9 @@
 #elif __powerpc__
 #define PTRDIFF_IS_LONG		0
 #define SIZEOF_IS_ULONG		0
+#elif __riscv__
+#define PTRDIFF_IS_LONG		1
+#define SIZEOF_IS_ULONG		1
 #elif __sparc__
 #define PTRDIFF_IS_LONG		0
 #define SIZEOF_IS_ULONG		0
@@ -98,6 +98,9 @@
 #elif __mips__
 #define PTRDIFF_IS_LONG		0
 #define SIZEOF_IS_ULONG		0
+#elif __aarch64__
+#define PTRDIFF_IS_LONG		1
+#define SIZEOF_IS_ULONG		1
 #else
 #error unknown machine type
 #endif

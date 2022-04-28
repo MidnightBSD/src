@@ -23,10 +23,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/libexec/atf/Makefile.inc 241823 2012-10-22 01:18:41Z marcel $
-
-ATF = ${.CURDIR}/../../../contrib/atf
+# $FreeBSD$
 
 CFLAGS+=	-DHAVE_CONFIG_H
 
 WARNS?=		3
+
+.include "../Makefile.inc"

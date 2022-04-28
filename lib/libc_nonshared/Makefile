@@ -1,12 +1,12 @@
-# $FreeBSD: release/10.0.0/lib/libc_nonshared/Makefile 258750 2013-11-29 19:44:30Z gjb $
+# $FreeBSD$
 
 # We're actually creating a libc_noshared.a that is PIC along side libc.so.*
 # It is used exclusively with libc.so.* - there is no need for any other
 # compile modes.
 # bsd.lib.mk doesn't have an easy way to express that.
-NO_PROFILE?=
-.include <bsd.own.mk>
-NO_PIC=	
+MK_PROFILE?=no
+.include <src.opts.mk>
+NO_PIC=
 # -fpic on some platforms, -fPIC on others.
 CFLAGS+=${PICFLAG} -DPIC -fvisibility=hidden
 
@@ -18,9 +18,9 @@ LIBC_NONSHARED_SRCS=
 SRCS=	__stub.c
 
 .if ${MK_ICONV} == "yes"
-.PATH: ${.CURDIR}/../libc/iconv
+.PATH: ${SRCTOP}/lib/libc/iconv
 .include "Makefile.iconv"
-CFLAGS+=-I${.CURDIR}/../libc/iconv
+CFLAGS+=-I${SRCTOP}/lib/libc/iconv
 .endif
 
 SRCS+=	${LIBC_NONSHARED_SRCS}

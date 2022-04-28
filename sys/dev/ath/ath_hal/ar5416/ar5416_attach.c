@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5416/ar5416_attach.c 251483 2013-06-07 05:17:58Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -103,8 +103,8 @@ ar5416InitState(struct ath_hal_5416 *ahp5416, uint16_t devid, HAL_SOFTC sc,
 	ah->ah_configPCIE		= ar5416ConfigPCIE;
 	ah->ah_disablePCIE		= ar5416DisablePCIE;
 	ah->ah_perCalibration		= ar5416PerCalibration;
-	ah->ah_perCalibrationN		= ar5416PerCalibrationN,
-	ah->ah_resetCalValid		= ar5416ResetCalValid,
+	ah->ah_perCalibrationN		= ar5416PerCalibrationN;
+	ah->ah_resetCalValid		= ar5416ResetCalValid;
 	ah->ah_setTxPowerLimit		= ar5416SetTxPowerLimit;
 	ah->ah_setTxPower		= ar5416SetTransmitPower;
 	ah->ah_setBoardValues		= ar5416SetBoardValues;
@@ -297,7 +297,7 @@ ar5416GetRadioRev(struct ath_hal *ah)
 static struct ath_hal *
 ar5416Attach(uint16_t devid, HAL_SOFTC sc,
 	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
-	HAL_STATUS *status)
+	HAL_OPS_CONFIG *ah_config, HAL_STATUS *status)
 {
 	struct ath_hal_5416 *ahp5416;
 	struct ath_hal_5212 *ahp;
@@ -937,13 +937,7 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 
 	pCap->halCompressSupport = AH_FALSE;
 	pCap->halBurstSupport = AH_TRUE;
-	/*
-	 * This is disabled for now; the net80211 layer needs to be
-	 * taught when it is and isn't appropriate to enable FF processing
-	 * with 802.11n NICs (it tries to enable both A-MPDU and
-	 * fast frames, with very tragic crash-y results.)
-	 */
-	pCap->halFastFramesSupport = AH_FALSE;
+	pCap->halFastFramesSupport = AH_TRUE;
 	pCap->halChapTuningSupport = AH_TRUE;
 	pCap->halTurboPrimeSupport = AH_TRUE;
 
@@ -1058,6 +1052,11 @@ ar5416FillCapabilityInfo(struct ath_hal *ah)
 	 */
 	if (! AH_PRIVATE(ah)->ah_ispcie)
 		pCap->halSerialiseRegWar = 1;
+
+	/*
+	 * AR5416 and later NICs support MYBEACON filtering.
+	 */
+	pCap->halRxDoMyBeacon = AH_TRUE;
 
 	return AH_TRUE;
 }

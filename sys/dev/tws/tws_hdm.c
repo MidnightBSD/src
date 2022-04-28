@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_hdm.c 247551 2013-03-01 15:48:31Z kevlo $
+ * $FreeBSD$
  */
 
 
@@ -161,7 +161,7 @@ tws_init_connect(struct tws_softc *sc, u_int16_t mcreadits )
     req->error_code = TWS_REQ_RET_INVALID;
     req->cb = NULL;
     req->ccb_ptr = NULL;
-    req->thandle.callout = NULL;
+    callout_stop(&req->timeout);
     req->next = req->prev = NULL;
     req->state = TWS_REQ_STATE_BUSY;
 #endif // 0
@@ -312,7 +312,7 @@ tws_submit_command(struct tws_softc *sc, struct tws_request *req)
         TWS_TRACE_DEBUG(sc, "inbound fifo empty", mfa, 0);
 
         /* 
-         * Generaly we should not get here.
+         * Generally we should not get here.
          * If the fifo was empty we can't do any thing much 
          * retry later 
          */
@@ -428,7 +428,7 @@ tws_turn_on_interrupts(struct tws_softc *sc)
 {
 
     TWS_TRACE_DEBUG(sc, "entry", 0, 0);
-    /* turn on responce and db interrupt only */
+    /* turn on response and db interrupt only */
     tws_write_reg(sc, TWS_I2O0_HIMASK, TWS_BIT0, 4);
 
 }

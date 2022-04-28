@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cmx/cmx.c 176868 2008-03-06 08:09:45Z rink $");
+__FBSDID("$FreeBSD$");
 
 /*
  * OMNIKEY CardMan 4040 a.k.a. CardMan eXtended (cmx) driver.
@@ -235,7 +235,7 @@ cmx_release_resources(device_t dev)
 }
 
 /*
- * Bus independant device attachment routine.  Creates the
+ * Bus independent device attachment routine.  Creates the
  * character device node.
  */
 int
@@ -258,7 +258,7 @@ cmx_attach(device_t dev)
 }
 
 /*
- * Bus independant device detachment routine.  Makes sure all
+ * Bus independent device detachment routine.  Makes sure all
  * allocated resources are freed, callouts disabled and waiting
  * processes unblocked.
  */

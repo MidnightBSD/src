@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Qlogic Corporation
+ * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/qlxgbe/ql_dbg.h 250661 2013-05-15 17:03:09Z davidcs $
+ * $FreeBSD$
  */
 
 /*
@@ -42,16 +42,22 @@ extern void ql_dump_buf16(qla_host_t *ha, const char *str, void *dbuf,
 extern void ql_dump_buf32(qla_host_t *ha, const char *str, void *dbuf,
 		uint32_t len32);
 
-#define INJCT_RX_RXB_INVAL		0x00001
-#define INJCT_RX_MP_NULL		0x00002
-#define INJCT_LRO_RXB_INVAL		0x00003
-#define INJCT_LRO_MP_NULL		0x00004
-#define INJCT_NUM_HNDLE_INVALID		0x00005
-#define INJCT_RDWR_INDREG_FAILURE	0x00006
-#define INJCT_RDWR_OFFCHIPMEM_FAILURE	0x00007
-#define INJCT_MBX_CMD_FAILURE		0x00008
-#define INJCT_HEARTBEAT_FAILURE		0x00009
-#define INJCT_TEMPERATURE_FAILURE	0x0000A
+#define INJCT_RX_RXB_INVAL				0x00001
+#define INJCT_RX_MP_NULL				0x00002
+#define INJCT_LRO_RXB_INVAL				0x00003
+#define INJCT_LRO_MP_NULL				0x00004
+#define INJCT_NUM_HNDLE_INVALID				0x00005
+#define INJCT_RDWR_INDREG_FAILURE			0x00006
+#define INJCT_RDWR_OFFCHIPMEM_FAILURE			0x00007
+#define INJCT_MBX_CMD_FAILURE				0x00008
+#define INJCT_HEARTBEAT_FAILURE				0x00009
+#define INJCT_TEMPERATURE_FAILURE			0x0000A
+#define INJCT_M_GETCL_M_GETJCL_FAILURE			0x0000B
+#define INJCT_INV_CONT_OPCODE				0x0000C
+#define INJCT_SGL_RCV_INV_DESC_COUNT			0x0000D
+#define INJCT_SGL_LRO_INV_DESC_COUNT			0x0000E
+#define INJCT_PEER_PORT_FAILURE_ERR_RECOVERY		0x0000F
+#define INJCT_TXBUF_MBUF_NON_NULL			0x00010
 
 #ifdef QL_DBG
 

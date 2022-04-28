@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/cc/cc_int/Makefile 245539 2013-01-17 05:56:28Z andrew $
+# $FreeBSD$
 
 .include <bsd.own.mk>
 
@@ -24,6 +24,7 @@ OBJS-common = \
  tree-outof-ssa.o tree-ssa-ccp.o tree-vn.o tree-ssa-uncprop.o		   \
  tree-ssa-dce.o  tree-ssa-copy.o tree-nrv.o tree-ssa-copyrename.o	   \
  tree-ssa-pre.o tree-ssa-live.o tree-ssa-operands.o tree-ssa-alias.o       \
+ tree-ssa-alias-warnings.o						   \
  tree-ssa-phiopt.o tree-ssa-forwprop.o tree-nested.o tree-ssa-dse.o	   \
  tree-ssa-dom.o domwalk.o tree-tailcall.o gimple-low.o tree-iterator.o	   \
  omp-low.o tree-phinodes.o tree-ssanames.o tree-sra.o tree-complex.o	   \

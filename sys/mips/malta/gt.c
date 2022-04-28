@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/malta/gt.c 227843 2011-11-22 21:28:20Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +51,7 @@ static int
 gt_probe(device_t dev)
 {
 	device_set_desc(dev, "GT64120 chip");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static void
@@ -76,7 +76,7 @@ gt_attach(device_t dev)
 
 static struct resource *
 gt_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	return (BUS_ALLOC_RESOURCE(device_get_parent(dev), child,
 		    type, rid, start, end, count, flags));

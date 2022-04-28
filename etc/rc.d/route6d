@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/route6d 230099 2012-01-14 02:18:41Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: route6d
@@ -10,6 +10,7 @@
 . /etc/rc.subr
 
 name="route6d"
+desc="RIP6 routing daemon"
 rcvar="route6d_enable"
 
 set_rcvar_obsolete ipv6_router_enable route6d_enable

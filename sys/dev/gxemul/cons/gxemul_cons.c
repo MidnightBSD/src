@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/gxemul/cons/gxemul_cons.c 255212 2013-09-04 20:34:36Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/cons.h>
@@ -279,7 +279,7 @@ gxemul_cons_ttyinit(void *unused)
 	tp = tty_alloc(&gxemul_cons_ttydevsw, NULL);
 	tty_init_console(tp, 0);
 	tty_makedev(tp, NULL, "%s", "ttyu0");
-	callout_init(&gxemul_cons_callout, CALLOUT_MPSAFE);
+	callout_init(&gxemul_cons_callout, 1);
 	callout_reset(&gxemul_cons_callout, gxemul_cons_polltime,
 	    gxemul_cons_timeout, tp);
 

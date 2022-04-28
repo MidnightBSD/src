@@ -1,6 +1,10 @@
-# $FreeBSD: release/10.0.0/sys/modules/bios/Makefile 112798 2003-03-29 15:20:45Z mdodd $
+# $FreeBSD$
 #
 
-SUBDIR=	smapi smbios vpd
+SUBDIR=	smbios vpd
+
+.if ${MACHINE_ARCH} == "i386"
+SUBDIR+=	smapi
+.endif
 
 .include <bsd.subdir.mk>

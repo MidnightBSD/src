@@ -12,7 +12,7 @@
  * software for any purpose.  It is provided "as is" without
  * express or implied warranty.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/locore.h 232615 2012-03-06 19:01:32Z jmallett $
+ * $FreeBSD$
  */
 
 /*

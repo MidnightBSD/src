@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cmx/cmxreg.h 176868 2008-03-06 08:09:45Z rink $
+ * $FreeBSD$
  */
 
 /* I/O port registers */

@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/vfwprintf.c 249808 2013-04-23 13:33:13Z emaste $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Actual wprintf innards.
@@ -356,14 +356,14 @@ vfwprintf_l(FILE * __restrict fp, locale_t locale,
 {
 	int ret;
 	FIX_LOCALE(locale);
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	/* optimise fprintf(stderr) (and other unbuffered Unix files) */
 	if ((fp->_flags & (__SNBF|__SWR|__SRW)) == (__SNBF|__SWR) &&
 	    fp->_file >= 0)
 		ret = __sbprintf(fp, locale, fmt0, ap);
 	else
 		ret = __vfwprintf(fp, locale, fmt0, ap);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (ret);
 }
 int
@@ -444,6 +444,7 @@ __vfwprintf(FILE *fp, locale_t locale, const wchar_t *fmt0, va_list ap)
 	int nextarg;		/* 1-based argument index */
 	va_list orgap;		/* original argument pointer */
 	wchar_t *convbuf;	/* multibyte to wide conversion result */
+	int savserr;
 
 	static const char xdigs_lower[16] = "0123456789abcdef";
 	static const char xdigs_upper[16] = "0123456789ABCDEF";
@@ -531,8 +532,13 @@ __vfwprintf(FILE *fp, locale_t locale, const wchar_t *fmt0, va_list ap)
 
 
 	/* sorry, fwprintf(read_only_file, L"") returns WEOF, not 0 */
-	if (prepwrite(fp) != 0)
+	if (prepwrite(fp) != 0) {
+		errno = EBADF;
 		return (EOF);
+	}
+
+	savserr = fp->_flags & __SERR;
+	fp->_flags &= ~__SERR;
 
 	convbuf = NULL;
 	fmt = (wchar_t *)fmt0;
@@ -1094,6 +1100,8 @@ error:
 		free(convbuf);
 	if (__sferror(fp))
 		ret = EOF;
+	else
+		fp->_flags |= savserr;
 	if ((argtable != NULL) && (argtable != statargtable))
 		free (argtable);
 	return (ret);

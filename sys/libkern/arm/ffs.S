@@ -29,8 +29,9 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/arm/ffs.S 248367 2013-03-16 04:08:01Z andrew $");
+__FBSDID("$FreeBSD$");
 
+	.syntax	unified
 
 /*
  * ffs - find first set bit, this algorithm isolates the first set
@@ -62,7 +63,7 @@ ENTRY(ffs)
 	rsbne   r0, r0, r0, lsl #16 /* r0 = X * 0x0450fbaf */
               
 	/* now lookup in table indexed on top 6 bits of r0 */
-	ldrneb  r0, [ r2, r0, lsr #26 ]
+	ldrbne  r0, [ r2, r0, lsr #26 ]
 
 	RET
 .text;

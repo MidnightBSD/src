@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vmmeter.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: release/10.0.0/sys/sys/vmmeter.h 254304 2013-08-13 21:56:16Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_VMMETER_H_
@@ -75,9 +75,10 @@ struct vmmeter {
 	u_int v_vnodepgsin;	/* (p) vnode_pager pages paged in */
 	u_int v_vnodepgsout;	/* (p) vnode pager pages paged out */
 	u_int v_intrans;	/* (p) intransit blocking page faults */
-	u_int v_reactivated;	/* (f) pages reactivated from free list */
-	u_int v_pdwakeups;	/* (f) times daemon has awaken from sleep */
+	u_int v_reactivated;	/* (p) pages reactivated by the pagedaemon */
+	u_int v_pdwakeups;	/* (p) times daemon has awaken from sleep */
 	u_int v_pdpages;	/* (p) pages analyzed by daemon */
+	u_int v_pdshortfalls;	/* (p) page reclamation shortfalls */
 
 	u_int v_tcached;	/* (p) total pages cached */
 	u_int v_dfree;		/* (p) pages freed by daemon */
@@ -96,9 +97,8 @@ struct vmmeter {
 	u_int v_active_count;	/* (q) pages active */
 	u_int v_inactive_target; /* (c) pages desired inactive */
 	u_int v_inactive_count;	/* (q) pages inactive */
+	u_int v_laundry_count;	/* (q) pages eligible for laundering */
 	u_int v_cache_count;	/* (f) pages on cache queue */
-	u_int v_cache_min;	/* (c) min pages desired on cache queue */
-	u_int v_cache_max;	/* (c) max pages in cached obj (unused) */
 	u_int v_pageout_free_min;   /* (c) min pages reserved for kernel */
 	u_int v_interrupt_free_min; /* (c) reserved pages for int code */
 	u_int v_free_severe;	/* (c) severe page depletion point */
@@ -116,9 +116,9 @@ struct vmmeter {
 };
 #ifdef _KERNEL
 
-extern struct vmmeter cnt;
+extern struct vmmeter vm_cnt;
 
-extern int vm_pageout_wakeup_thresh;
+extern u_int vm_pageout_wakeup_thresh;
 
 /*
  * Return TRUE if we are under our severe low-free-pages threshold
@@ -126,12 +126,11 @@ extern int vm_pageout_wakeup_thresh;
  * This routine is typically used at the user<->system interface to determine
  * whether we need to block in order to avoid a low memory deadlock.
  */
-
-static __inline 
-int
+static inline int
 vm_page_count_severe(void)
 {
-    return (cnt.v_free_severe > (cnt.v_free_count + cnt.v_cache_count));
+
+	return (vm_cnt.v_free_severe > vm_cnt.v_free_count);
 }
 
 /*
@@ -141,60 +140,74 @@ vm_page_count_severe(void)
  * we can execute potentially very expensive code in terms of memory.  It
  * is also used by the pageout daemon to calculate when to sleep, when
  * to wake waiters up, and when (after making a pass) to become more
- * desparate.
+ * desperate.
  */
-
-static __inline 
-int
+static inline int
 vm_page_count_min(void)
 {
-    return (cnt.v_free_min > (cnt.v_free_count + cnt.v_cache_count));
+
+	return (vm_cnt.v_free_min > vm_cnt.v_free_count);
 }
 
 /*
  * Return TRUE if we have not reached our free page target during
  * free page recovery operations.
  */
-
-static __inline 
-int
+static inline int
 vm_page_count_target(void)
 {
-    return (cnt.v_free_target > (cnt.v_free_count + cnt.v_cache_count));
+
+	return (vm_cnt.v_free_target > vm_cnt.v_free_count);
 }
 
 /*
  * Return the number of pages we need to free-up or cache
  * A positive number indicates that we do not have enough free pages.
  */
-
-static __inline 
-int
+static inline int
 vm_paging_target(void)
 {
-    return (cnt.v_free_target - (cnt.v_free_count + cnt.v_cache_count));
+
+	return (vm_cnt.v_free_target - vm_cnt.v_free_count);
 }
 
 /*
  * Returns TRUE if the pagedaemon needs to be woken up.
  */
-
-static __inline 
-int
-vm_paging_needed(void)
+static inline int
+vm_paging_needed(u_int free_count)
 {
-    return (cnt.v_free_count + cnt.v_cache_count < vm_pageout_wakeup_thresh);
+
+	return (free_count < vm_pageout_wakeup_thresh);
 }
+
+/*
+ * Return the number of pages we need to launder.
+ * A positive number indicates that we have a shortfall of clean pages.
+ */
+static inline int
+vm_laundry_target(void)
+{
+
+	return (vm_paging_target());
+}
+
+/*
+ * Obtain the value of a per-CPU counter.
+ */
+#define	VM_METER_PCPU_CNT(member)					\
+	vm_meter_cnt(__offsetof(struct vmmeter, member))
+
+u_int	vm_meter_cnt(size_t);
 
 #endif
 
-/* systemwide totals computed every five seconds */
 struct vmtotal {
 	int16_t	t_rq;		/* length of the run queue */
-	int16_t	t_dw;		/* jobs in ``disk wait'' (neg priority) */
-	int16_t	t_pw;		/* jobs in page wait */
-	int16_t	t_sl;		/* jobs sleeping in core */
-	int16_t	t_sw;		/* swapped out runnable/short block jobs */
+	int16_t	t_dw;		/* threads in ``disk wait'' (neg priority) */
+	int16_t	t_pw;		/* threads in page wait */
+	int16_t	t_sl;		/* threads sleeping in core */
+	int16_t	t_sw;		/* swapped out runnable/short block threads */
 	int32_t	t_vm;		/* total virtual memory */
 	int32_t	t_avm;		/* active virtual memory */
 	int32_t	t_rm;		/* total real memory in use */

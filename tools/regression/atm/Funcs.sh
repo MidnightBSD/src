@@ -1,5 +1,5 @@
 #!/bin/sh
-# $FreeBSD: release/10.0.0/tools/regression/atm/Funcs.sh 125204 2004-01-29 16:01:57Z harti $
+# $FreeBSD$
 
 fatal() {
 	echo -e "$*" >&2

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/sparc64/sparc64/spitfire.c 223719 2011-07-02 11:14:54Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pmap.h"
 
@@ -130,7 +130,7 @@ spitfire_icache_page_inval(vm_paddr_t pa)
 		    : "=r" (tag) : "r" (addr), "n" (ASI_ICACHE_TAG));
 		if (((tag >> IC_VALID_SHIFT) & IC_VALID_MASK) == 0)
 			continue;
-		tag &= IC_TAG_MASK << IC_TAG_SHIFT;
+		tag &= (u_long)IC_TAG_MASK << IC_TAG_SHIFT;
 		if (tag == target) {
 			PMAP_STATS_INC(spitfire_icache_npage_inval_match);
 			stxa_sync(addr, ASI_ICACHE_TAG, tag);

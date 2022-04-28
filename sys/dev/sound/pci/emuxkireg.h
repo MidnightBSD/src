@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/sound/pci/emuxkireg.h 229981 2012-01-11 21:17:14Z pfg $ */
+/* $FreeBSD$ */
 /*	$NetBSD: emuxkireg.h,v 1.8 2008/04/28 20:23:54 martin Exp $	*/
 
 /*-

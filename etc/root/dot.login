@@ -1,9 +1,12 @@
-# $FreeBSD: release/10.0.0/etc/root/dot.login 243153 2012-11-16 14:25:13Z eadler $
+# $FreeBSD$
 #
 # .login - csh login script, read by login shell, after `.cshrc' at login.
 #
-# see also csh(1), environ(7).
+# See also csh(1), environ(7).
 #
 
-# Uncomment to display a random cookie each login:
-# if ( -x /usr/games/fortune ) /usr/games/fortune -s
+# Query terminal size; useful for serial lines.
+if ( -x /usr/bin/resizewin ) /usr/bin/resizewin -z
+
+# Uncomment to display a random cookie on each login.
+# if ( -x /usr/bin/fortune ) /usr/bin/fortune -s

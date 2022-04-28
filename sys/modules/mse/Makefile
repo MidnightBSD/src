@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mse/Makefile 138755 2004-12-12 20:05:50Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/mse
+.PATH: ${SRCTOP}/sys/dev/mse
 
 KMOD=	mse
 SRCS=	mse.c device_if.h bus_if.h isa_if.h

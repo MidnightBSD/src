@@ -36,7 +36,7 @@
 
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/bcopy.S 255367 2013-09-07 16:31:30Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 #include <machine/endian.h>
 
@@ -72,8 +72,8 @@ LEAF(memcpy)
 	move	a0, a1
 	move	a1, v0
 
-ALEAF(bcopy)
-ALEAF(ovbcopy)
+XLEAF(bcopy)
+XLEAF(ovbcopy)
 	/*
 	 *	Make sure we can copy forwards.
 	 */

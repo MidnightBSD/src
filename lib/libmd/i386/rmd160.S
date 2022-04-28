@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/lib/libmd/i386/rmd160.S 169547 2007-05-14 05:00:37Z cperciva $ */
+/* $FreeBSD$ */
 /* Run the C pre-processor over this file with one of the following defined
  * ELF - elf object files,
  * OUT - a.out object files,

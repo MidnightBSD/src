@@ -1,4 +1,4 @@
-/*	$OpenBSD: x86emu.c,v 1.5 2010/02/17 15:09:47 pirofti Exp $	*/
+/*	$OpenBSD: x86emu.c,v 1.9 2014/06/15 11:04:49 pirofti Exp $	*/
 /*	$NetBSD: x86emu.c,v 1.7 2009/02/03 19:26:29 joerg Exp $	*/
 
 /*
@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/contrib/x86emu/x86emu.c 204934 2010-03-09 22:42:24Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <contrib/x86emu/x86emu.h>
 #include <contrib/x86emu/x86emu_regs.h>
@@ -2151,21 +2151,24 @@ x86emuOp_mov_word_RM_SR(struct x86emu *emu)
 static void
 x86emuOp_lea_word_R_M(struct x86emu *emu)
 {
-	uint16_t *srcreg;
 	uint32_t destoffset;
 
-/*
- * TODO: Need to handle address size prefix!
- *
- * lea  eax,[eax+ebx*2] ??
- */
 	fetch_decode_modrm(emu);
 	if (emu->cur_mod == 3)
 		x86emu_halt_sys(emu);
 
-	srcreg = decode_rh_word_register(emu);
 	destoffset = decode_rl_address(emu);
-	*srcreg = (uint16_t) destoffset;
+	if (emu->x86.mode & SYSMODE_PREFIX_ADDR) {
+		uint32_t *srcreg;
+
+		srcreg = decode_rh_long_register(emu);
+		*srcreg = (uint32_t) destoffset;
+	} else {
+		uint16_t *srcreg;
+
+		srcreg = decode_rh_word_register(emu);
+		*srcreg = (uint16_t) destoffset;
+	}
 }
 
 /*
@@ -3750,12 +3753,19 @@ x86emuOp_out_word_IMM_AX(struct x86emu *emu)
 static void
 x86emuOp_call_near_IMM(struct x86emu *emu)
 {
-	int16_t ip;
-
-	ip = (int16_t) fetch_word_imm(emu);
-	ip += (int16_t) emu->x86.R_IP;	/* CHECK SIGN */
-	push_word(emu, emu->x86.R_IP);
-	emu->x86.R_IP = ip;
+	if (emu->x86.mode & SYSMODE_PREFIX_DATA) {
+		int32_t ip;
+		ip = (int32_t) fetch_long_imm(emu);
+		ip += (int32_t) emu->x86.R_EIP;
+		push_long(emu, emu->x86.R_EIP);
+		emu->x86.R_EIP = ip;
+	} else {
+		int16_t ip;
+		ip = (int16_t) fetch_word_imm(emu);
+		ip += (int16_t) emu->x86.R_IP;	/* CHECK SIGN */
+		push_word(emu, emu->x86.R_IP);
+		emu->x86.R_IP = ip;
+	}
 }
 
 /*
@@ -5240,7 +5250,7 @@ x86emuOp2_pop_FS(struct x86emu *emu)
 static void
 hw_cpuid(uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
-	__asm__ __volatile__("cpuid"
+	__asm__ volatile("cpuid"
 			     : "=a" (*a), "=b" (*b),
 			       "=c" (*c), "=d" (*d)
 			     : "a" (*a), "c" (*c)
@@ -5610,6 +5620,7 @@ x86emuOp2_32_movsx_byte_R_RM(struct x86emu *emu)
 {
 	uint32_t *destreg;
 
+	fetch_decode_modrm(emu);
 	destreg = decode_rh_long_register(emu);
 	*destreg = (int32_t)(int8_t)decode_and_fetch_byte(emu);
 }
@@ -6984,15 +6995,13 @@ rol_byte(struct x86emu *emu, uint8_t d, uint8_t s)
 		mask = (1 << cnt) - 1;
 		res |= (d >> (8 - cnt)) & mask;
 
-		/* set the new carry flag, Note that it is the low order bit
-		 * of the result!!!                               */
-		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
 		/* OVERFLOW is set *IFF* s==1, then it is the xor of CF and
 		 * the most significant bit.  Blecck. */
 		CONDITIONAL_SET_FLAG(s == 1 &&
 		    XOR2((res & 0x1) + ((res >> 6) & 0x2)),
 		    F_OF);
-	} if (s != 0) {
+	}
+	if (s != 0) {
 		/* set the new carry flag, Note that it is the low order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
@@ -7014,11 +7023,11 @@ rol_word(struct x86emu *emu, uint16_t d, uint8_t s)
 		res = (d << cnt);
 		mask = (1 << cnt) - 1;
 		res |= (d >> (16 - cnt)) & mask;
-		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
 		CONDITIONAL_SET_FLAG(s == 1 &&
 		    XOR2((res & 0x1) + ((res >> 14) & 0x2)),
 		    F_OF);
-	} if (s != 0) {
+	}
+	if (s != 0) {
 		/* set the new carry flag, Note that it is the low order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
@@ -7040,11 +7049,11 @@ rol_long(struct x86emu *emu, uint32_t d, uint8_t s)
 		res = (d << cnt);
 		mask = (1 << cnt) - 1;
 		res |= (d >> (32 - cnt)) & mask;
-		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
 		CONDITIONAL_SET_FLAG(s == 1 &&
 		    XOR2((res & 0x1) + ((res >> 30) & 0x2)),
 		    F_OF);
-	} if (s != 0) {
+	}
+	if (s != 0) {
 		/* set the new carry flag, Note that it is the low order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x1, F_CF);
@@ -7082,14 +7091,12 @@ ror_byte(struct x86emu *emu, uint8_t d, uint8_t s)
 		mask = (1 << (8 - cnt)) - 1;
 		res |= (d >> (cnt)) & mask;
 
-		/* set the new carry flag, Note that it is the low order bit
-		 * of the result!!!                               */
-		CONDITIONAL_SET_FLAG(res & 0x80, F_CF);
 		/* OVERFLOW is set *IFF* s==1, then it is the xor of the two
 		 * most significant bits.  Blecck. */
 		CONDITIONAL_SET_FLAG(s == 1 && XOR2(res >> 6), F_OF);
-	} else if (s != 0) {
-		/* set the new carry flag, Note that it is the low order bit
+	}
+	if (s != 0) {
+		/* set the new carry flag, Note that it is the high order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x80, F_CF);
 	}
@@ -7110,10 +7117,10 @@ ror_word(struct x86emu *emu, uint16_t d, uint8_t s)
 		res = (d << (16 - cnt));
 		mask = (1 << (16 - cnt)) - 1;
 		res |= (d >> (cnt)) & mask;
-		CONDITIONAL_SET_FLAG(res & 0x8000, F_CF);
 		CONDITIONAL_SET_FLAG(s == 1 && XOR2(res >> 14), F_OF);
-	} else if (s != 0) {
-		/* set the new carry flag, Note that it is the low order bit
+	}
+	if (s != 0) {
+		/* set the new carry flag, Note that it is the high order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x8000, F_CF);
 	}
@@ -7134,10 +7141,10 @@ ror_long(struct x86emu *emu, uint32_t d, uint8_t s)
 		res = (d << (32 - cnt));
 		mask = (1 << (32 - cnt)) - 1;
 		res |= (d >> (cnt)) & mask;
-		CONDITIONAL_SET_FLAG(res & 0x80000000, F_CF);
 		CONDITIONAL_SET_FLAG(s == 1 && XOR2(res >> 30), F_OF);
-	} else if (s != 0) {
-		/* set the new carry flag, Note that it is the low order bit
+	}
+	if (s != 0) {
+		/* set the new carry flag, Note that it is the high order bit
 		 * of the result!!!                               */
 		CONDITIONAL_SET_FLAG(res & 0x80000000, F_CF);
 	}

@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libc/stdio/xprintf_int.c 153641 2005-12-22 14:23:54Z cognet $
+ * $FreeBSD$
  */
 
 #include <namespace.h>
@@ -258,8 +258,8 @@ __printf_render_int(struct __printf_io *io, const struct printf_info *pi, const 
 	const union arg *argp;
 	char buf[BUF];
 	char *p, *pe;
-	char ns, l;
-	int rdx, sign, zext, ngrp;
+	char ns;
+	int l, ngrp, rdx, sign, zext;
 	const char *nalt, *digit;
 	char thousands_sep;	/* locale specific thousands separator */
 	const char *grouping;	/* locale specific numeric grouping rules */

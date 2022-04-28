@@ -22,22 +22,21 @@
 # specific prior written permission.
 # 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+# TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # settings:
 
 # directory for files
-prefix=
-DESTDIR=${prefix}/etc/unbound
+DESTDIR=/var/unbound
 
 # issuer and subject name for certificates
 SERVERNAME=unbound
@@ -47,7 +46,7 @@ CLIENTNAME=unbound-control
 DAYS=7200
 
 # size of keys in bits
-BITS=1536
+BITS=3072
 
 # hash algorithm
 HASH=sha256
@@ -108,16 +107,15 @@ else
 fi
 
 # create self-signed cert for server
-cat >request.cfg <<EOF
-[req]
-default_bits=$BITS
-default_md=$HASH
-prompt=no
-distinguished_name=req_distinguished_name
+echo "[req]" > request.cfg
+echo "default_bits=$BITS" >> request.cfg
+echo "default_md=$HASH" >> request.cfg
+echo "prompt=no" >> request.cfg
+echo "distinguished_name=req_distinguished_name" >> request.cfg
+echo "" >> request.cfg
+echo "[req_distinguished_name]" >> request.cfg
+echo "commonName=$SERVERNAME" >> request.cfg
 
-[req_distinguished_name]
-commonName=$SERVERNAME
-EOF
 test -f request.cfg || error "could not create request.cfg"
 
 echo "create $SVR_BASE.pem (self signed certificate)"
@@ -126,16 +124,15 @@ openssl req -key $SVR_BASE.key -config request.cfg  -new -x509 -days $DAYS -out 
 openssl x509 -in $SVR_BASE.pem -addtrust serverAuth -out $SVR_BASE"_trust.pem"
 
 # create client request and sign it, piped
-cat >request.cfg <<EOF
-[req]
-default_bits=$BITS
-default_md=$HASH
-prompt=no
-distinguished_name=req_distinguished_name
+echo "[req]" > request.cfg
+echo "default_bits=$BITS" >> request.cfg
+echo "default_md=$HASH" >> request.cfg
+echo "prompt=no" >> request.cfg
+echo "distinguished_name=req_distinguished_name" >> request.cfg
+echo "" >> request.cfg
+echo "[req_distinguished_name]" >> request.cfg
+echo "commonName=$CLIENTNAME" >> request.cfg
 
-[req_distinguished_name]
-commonName=$CLIENTNAME
-EOF
 test -f request.cfg || error "could not create request.cfg"
 
 echo "create $CTL_BASE.pem (signed client certificate)"
@@ -151,8 +148,8 @@ test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # echo "empty password is used, simply click OK on the password dialog box."
 # openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
 
-# remove unused permissions
-chmod o-rw $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
+# set desired permissions
+chmod 0640 $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
 
 # remove crap
 rm -f request.cfg

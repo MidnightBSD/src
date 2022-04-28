@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/objfs.h 178414 2008-04-22 07:43:00Z jb $
+ * $FreeBSD$
  */
 
 #ifndef _COMPAT_OPENSOLARIS_SYS_OBJFS_H

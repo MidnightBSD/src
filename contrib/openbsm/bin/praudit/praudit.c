@@ -26,8 +26,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $P4: //depot/projects/trustedbsd/openbsm/bin/praudit/praudit.c#16 $
  */
 
 /*
@@ -171,5 +169,5 @@ main(int argc, char **argv)
 	if (oflags & AU_OFLAG_XML)
 		au_print_xml_footer(stdout);
 
-	return (1);
+	return (0);
 }

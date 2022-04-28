@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <DISKIMAGE>
-  <FreeBSD>$FreeBSD: release/10.0.0/tools/regression/geom/Data/disk.alpha.da0.xml 93293 2002-03-27 21:21:29Z phk $</FreeBSD>
+  <FreeBSD>$FreeBSD$</FreeBSD>
   <comment>
     Yet an alpha disklabel.
   </comment>

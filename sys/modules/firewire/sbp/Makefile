@@ -1,8 +1,8 @@
-# $FreeBSD: release/10.0.0/sys/modules/firewire/sbp/Makefile 155824 2006-02-18 23:49:28Z yar $
+# $FreeBSD$
 
 # Makefile for the SBP-II (Serial Bus Protocol 2/SCSI over IEEE1394)
 
-.PATH: ${.CURDIR}/../../../dev/firewire
+.PATH: ${SRCTOP}/sys/dev/firewire
 
 KMOD	= sbp
 SRCS	= bus_if.h device_if.h \

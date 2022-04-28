@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/tools/net80211/w00t/assoc/assoc.c 195848 2009-07-24 15:31:22Z sam $
+ * $FreeBSD$
  */
 #include <sys/time.h>
 #include <stdlib.h>
@@ -368,7 +368,7 @@ void generic_process(struct ieee80211_frame *wh, struct params *p, int len)
 		
 		ptr = (char*) (wh + 1);
 
-		if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
+		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 			if (!p->wep_len) {
 				char srca[3*6];
 				char dsta[3*6];
@@ -676,7 +676,7 @@ void read_tap(struct params *p)
 	wh->i_fc[0] |= IEEE80211_FC0_TYPE_DATA;
 	wh->i_fc[1] |= IEEE80211_FC1_DIR_TODS;
 	if (p->wep_len)
-		wh->i_fc[1] |= IEEE80211_FC1_WEP;
+		wh->i_fc[1] |= IEEE80211_FC1_PROTECTED;
 
 	/* LLC & SNAP */
 	ptr = (char*) (wh+1);

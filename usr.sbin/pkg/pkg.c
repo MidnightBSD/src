@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2012-2013 Baptiste Daroussin <bapt@FreeBSD.org>
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2012-2014 Baptiste Daroussin <bapt@FreeBSD.org>
  * Copyright (c) 2013 Bryan Drewery <bdrewery@FreeBSD.org>
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg/pkg.c 258773 2013-11-30 17:33:49Z gjb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -47,9 +49,8 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pkg/pkg.c 258773 2013-11-30 17:33:49
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
-#include <yaml.h>
+#include <ucl.h>
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
@@ -66,16 +67,21 @@ struct sig_cert {
 	bool trusted;
 };
 
+struct pubkey {
+	unsigned char *sig;
+	int siglen;
+};
+
 typedef enum {
-       HASH_UNKNOWN,
-       HASH_SHA256,
+	HASH_UNKNOWN,
+	HASH_SHA256,
 } hash_t;
 
 struct fingerprint {
-       hash_t type;
-       char *name;
-       char hash[BUFSIZ];
-       STAILQ_ENTRY(fingerprint) next;
+	hash_t type;
+	char *name;
+	char hash[BUFSIZ];
+	STAILQ_ENTRY(fingerprint) next;
 };
 
 STAILQ_HEAD(fingerprint_list, fingerprint);
@@ -126,7 +132,8 @@ extract_pkg_static(int fd, char *p, int sz)
 	if (r == ARCHIVE_OK)
 		ret = 0;
 	else
-		warnx("fail to extract pkg-static");
+		warnx("failed to extract pkg-static: %s",
+		    archive_error_string(a));
 
 cleanup:
 	archive_read_free(a);
@@ -176,14 +183,11 @@ fetch_to_fd(const char *url, char *path)
 	/* To store _https._tcp. + hostname + \0 */
 	int fd;
 	int retry, max_retry;
-	off_t done, r;
-	time_t now, last;
+	ssize_t r;
 	char buf[10240];
 	char zone[MAXHOSTNAMELEN + 13];
 	static const char *mirror_type = NULL;
 
-	done = 0;
-	last = 0;
 	max_retry = 3;
 	current = mirrors = NULL;
 	remote = NULL;
@@ -201,7 +205,11 @@ fetch_to_fd(const char *url, char *path)
 
 	retry = max_retry;
 
-	u = fetchParseURL(url);
+	if ((u = fetchParseURL(url)) == NULL) {
+		warn("fetchParseURL('%s')", url);
+		return (-1);
+	}
+
 	while (remote == NULL) {
 		if (retry == max_retry) {
 			if (strcmp(u->scheme, "file") != 0 &&
@@ -233,22 +241,16 @@ fetch_to_fd(const char *url, char *path)
 		}
 	}
 
-	if (remote == NULL)
-		goto fetchfail;
-
-	while (done < st.size) {
-		if ((r = fread(buf, 1, sizeof(buf), remote)) < 1)
-			break;
-
+	while ((r = fread(buf, 1, sizeof(buf), remote)) > 0) {
 		if (write(fd, buf, r) != r) {
 			warn("write()");
 			goto fetchfail;
 		}
+	}
 
-		done += r;
-		now = time(NULL);
-		if (now > last || done == st.size)
-			last = now;
+	if (r != 0) {
+		warn("An error occurred while fetching pkg(8)");
+		goto fetchfail;
 	}
 
 	if (ferror(remote))
@@ -271,38 +273,28 @@ cleanup:
 }
 
 static struct fingerprint *
-parse_fingerprint(yaml_document_t *doc, yaml_node_t *node)
+parse_fingerprint(ucl_object_t *obj)
 {
-	yaml_node_pair_t *pair;
-	yaml_char_t *function, *fp;
+	const ucl_object_t *cur;
+	ucl_object_iter_t it = NULL;
+	const char *function, *fp, *key;
 	struct fingerprint *f;
 	hash_t fct = HASH_UNKNOWN;
 
 	function = fp = NULL;
 
-	pair = node->data.mapping.pairs.start;
-	while (pair < node->data.mapping.pairs.top) {
-		yaml_node_t *key = yaml_document_get_node(doc, pair->key);
-		yaml_node_t *val = yaml_document_get_node(doc, pair->value);
-
-		if (key->data.scalar.length <= 0) {
-			++pair;
+	while ((cur = ucl_iterate_object(obj, &it, true))) {
+		key = ucl_object_key(cur);
+		if (cur->type != UCL_STRING)
+			continue;
+		if (strcasecmp(key, "function") == 0) {
+			function = ucl_object_tostring(cur);
 			continue;
 		}
-
-		if (val->type != YAML_SCALAR_NODE) {
-			++pair;
+		if (strcasecmp(key, "fingerprint") == 0) {
+			fp = ucl_object_tostring(cur);
 			continue;
 		}
-
-		if (strcasecmp(key->data.scalar.value, "function") == 0)
-			function = val->data.scalar.value;
-		else if (strcasecmp(key->data.scalar.value, "fingerprint")
-		    == 0)
-			fp = val->data.scalar.value;
-
-		++pair;
-		continue;
 	}
 
 	if (fp == NULL || function == NULL)
@@ -312,7 +304,7 @@ parse_fingerprint(yaml_document_t *doc, yaml_node_t *node)
 		fct = HASH_SHA256;
 
 	if (fct == HASH_UNKNOWN) {
-		fprintf(stderr, "Unsupported hashing function: %s\n", function);
+		warnx("Unsupported hashing function: %s", function);
 		return (NULL);
 	}
 
@@ -329,8 +321,7 @@ free_fingerprint_list(struct fingerprint_list* list)
 	struct fingerprint *fingerprint, *tmp;
 
 	STAILQ_FOREACH_SAFE(fingerprint, list, next, tmp) {
-		if (fingerprint->name)
-			free(fingerprint->name);
+		free(fingerprint->name);
 		free(fingerprint);
 	}
 	free(list);
@@ -339,10 +330,8 @@ free_fingerprint_list(struct fingerprint_list* list)
 static struct fingerprint *
 load_fingerprint(const char *dir, const char *filename)
 {
-	yaml_parser_t parser;
-	yaml_document_t doc;
-	yaml_node_t *node;
-	FILE *fp;
+	ucl_object_t *obj = NULL;
+	struct ucl_parser *p = NULL;
 	struct fingerprint *f;
 	char path[MAXPATHLEN];
 
@@ -350,24 +339,23 @@ load_fingerprint(const char *dir, const char *filename)
 
 	snprintf(path, MAXPATHLEN, "%s/%s", dir, filename);
 
-	if ((fp = fopen(path, "r")) == NULL)
+	p = ucl_parser_new(0);
+	if (!ucl_parser_add_file(p, path)) {
+		warnx("%s: %s", path, ucl_parser_get_error(p));
+		ucl_parser_free(p);
 		return (NULL);
+	}
 
-	yaml_parser_initialize(&parser);
-	yaml_parser_set_input_file(&parser, fp);
-	yaml_parser_load(&parser, &doc);
+	obj = ucl_parser_get_object(p);
 
-	node = yaml_document_get_root_node(&doc);
-	if (node == NULL || node->type != YAML_MAPPING_NODE)
-		goto out;
+	if (obj->type == UCL_OBJECT)
+		f = parse_fingerprint(obj);
 
-	f = parse_fingerprint(&doc, node);
-	f->name = strdup(filename);
+	if (f != NULL)
+		f->name = strdup(filename);
 
-out:
-	yaml_document_delete(&doc);
-	yaml_parser_delete(&parser);
-	fclose(fp);
+	ucl_object_unref(obj);
+	ucl_parser_free(p);
 
 	return (f);
 }
@@ -387,8 +375,11 @@ load_fingerprints(const char *path, int *count)
 		return (NULL);
 	STAILQ_INIT(fingerprints);
 
-	if ((d = opendir(path)) == NULL)
+	if ((d = opendir(path)) == NULL) {
+		free(fingerprints);
+
 		return (NULL);
+	}
 
 	while ((ent = readdir(d))) {
 		if (strcmp(ent->d_name, ".") == 0 ||
@@ -486,6 +477,25 @@ cleanup:
 }
 
 static EVP_PKEY *
+load_public_key_file(const char *file)
+{
+	EVP_PKEY *pkey;
+	BIO *bp;
+	char errbuf[1024];
+
+	bp = BIO_new_file(file, "r");
+	if (!bp)
+		errx(EXIT_FAILURE, "Unable to read %s", file);
+
+	if ((pkey = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL)) == NULL)
+		warnx("ici: %s", ERR_error_string(ERR_get_error(), errbuf));
+
+	BIO_free(bp);
+
+	return (pkey);
+}
+
+static EVP_PKEY *
 load_public_key_buf(const unsigned char *cert, int certlen)
 {
 	EVP_PKEY *pkey;
@@ -503,8 +513,8 @@ load_public_key_buf(const unsigned char *cert, int certlen)
 }
 
 static bool
-rsa_verify_cert(int fd, const unsigned char *key, int keylen,
-    unsigned char *sig, int siglen)
+rsa_verify_cert(int fd, const char *sigfile, const unsigned char *key,
+    int keylen, unsigned char *sig, int siglen)
 {
 	EVP_MD_CTX *mdctx;
 	EVP_PKEY *pkey;
@@ -516,6 +526,8 @@ rsa_verify_cert(int fd, const unsigned char *key, int keylen,
 	mdctx = NULL;
 	ret = false;
 
+	SSL_load_error_strings();
+
 	/* Compute SHA256 of the package. */
 	if (lseek(fd, 0, 0) == -1) {
 		warn("lseek");
@@ -526,9 +538,16 @@ rsa_verify_cert(int fd, const unsigned char *key, int keylen,
 		goto cleanup;
 	}
 
-	if ((pkey = load_public_key_buf(key, keylen)) == NULL) {
-		warnx("Error reading public key");
-		goto cleanup;
+	if (sigfile != NULL) {
+		if ((pkey = load_public_key_file(sigfile)) == NULL) {
+			warnx("Error reading public key");
+			goto cleanup;
+		}
+	} else {
+		if ((pkey = load_public_key_buf(key, keylen)) == NULL) {
+			warnx("Error reading public key");
+			goto cleanup;
+		}
 	}
 
 	/* Verify signature of the SHA256(pkg) is valid. */
@@ -566,6 +585,35 @@ cleanup:
 	ERR_free_strings();
 
 	return (ret);
+}
+
+static struct pubkey *
+read_pubkey(int fd)
+{
+	struct pubkey *pk;
+	struct sbuf *sig;
+	char buf[4096];
+	int r;
+
+	if (lseek(fd, 0, 0) == -1) {
+		warn("lseek");
+		return (NULL);
+	}
+
+	sig = sbuf_new_auto();
+
+	while ((r = read(fd, buf, sizeof(buf))) >0) {
+		sbuf_bcat(sig, buf, r);
+	}
+
+	sbuf_finish(sig);
+	pk = calloc(1, sizeof(struct pubkey));
+	pk->siglen = sbuf_len(sig);
+	pk->sig = calloc(1, pk->siglen);
+	memcpy(pk->sig, sbuf_data(sig), pk->siglen);
+	sbuf_delete(sig);
+
+	return (pk);
 }
 
 static struct sig_cert *
@@ -638,6 +686,45 @@ parse_cert(int fd) {
 	sbuf_delete(cert);
 
 	return (sc);
+}
+
+static bool
+verify_pubsignature(int fd_pkg, int fd_sig)
+{
+	struct pubkey *pk;
+	const char *pubkey;
+	bool ret;
+
+	pk = NULL;
+	pubkey = NULL;
+	ret = false;
+	if (config_string(PUBKEY, &pubkey) != 0) {
+		warnx("No CONFIG_PUBKEY defined");
+		goto cleanup;
+	}
+
+	if ((pk = read_pubkey(fd_sig)) == NULL) {
+		warnx("Error reading signature");
+		goto cleanup;
+	}
+
+	/* Verify the signature. */
+	printf("Verifying signature with public key %s... ", pubkey);
+	if (rsa_verify_cert(fd_pkg, pubkey, NULL, 0, pk->sig,
+	    pk->siglen) == false) {
+		fprintf(stderr, "Signature is not valid\n");
+		goto cleanup;
+	}
+
+	ret = true;
+
+cleanup:
+	if (pk) {
+		free(pk->sig);
+		free(pk);
+	}
+
+	return (ret);
 }
 
 static bool
@@ -718,7 +805,7 @@ verify_signature(int fd_pkg, int fd_sig)
 
 	/* Verify the signature. */
 	printf("Verifying signature with trusted certificate %s... ", sc->name);
-	if (rsa_verify_cert(fd_pkg, sc->cert, sc->certlen, sc->sig,
+	if (rsa_verify_cert(fd_pkg, NULL, sc->cert, sc->certlen, sc->sig,
 	    sc->siglen) == false) {
 		fprintf(stderr, "Signature is not valid\n");
 		goto cleanup;
@@ -732,12 +819,9 @@ cleanup:
 	if (revoked)
 		free_fingerprint_list(revoked);
 	if (sc) {
-		if (sc->cert)
-			free(sc->cert);
-		if (sc->sig)
-			free(sc->sig);
-		if (sc->name)
-			free(sc->name);
+		free(sc->cert);
+		free(sc->sig);
+		free(sc->name);
 		free(sc);
 	}
 
@@ -786,19 +870,43 @@ bootstrap_pkg(bool force)
 		goto fetchfail;
 
 	if (signature_type != NULL &&
-	    strcasecmp(signature_type, "FINGERPRINTS") == 0) {
-		snprintf(tmpsig, MAXPATHLEN, "%s/pkg.txz.sig.XXXXXX",
-		    getenv("TMPDIR") ? getenv("TMPDIR") : _PATH_TMP);
-		snprintf(url, MAXPATHLEN, "%s/Latest/pkg.txz.sig",
-		    packagesite);
+	    strcasecmp(signature_type, "NONE") != 0) {
+		if (strcasecmp(signature_type, "FINGERPRINTS") == 0) {
 
-		if ((fd_sig = fetch_to_fd(url, tmpsig)) == -1) {
-			fprintf(stderr, "Signature for pkg not available.\n");
-			goto fetchfail;
-		}
+			snprintf(tmpsig, MAXPATHLEN, "%s/pkg.txz.sig.XXXXXX",
+			    getenv("TMPDIR") ? getenv("TMPDIR") : _PATH_TMP);
+			snprintf(url, MAXPATHLEN, "%s/Latest/pkg.txz.sig",
+			    packagesite);
 
-		if (verify_signature(fd_pkg, fd_sig) == false)
+			if ((fd_sig = fetch_to_fd(url, tmpsig)) == -1) {
+				fprintf(stderr, "Signature for pkg not "
+				    "available.\n");
+				goto fetchfail;
+			}
+
+			if (verify_signature(fd_pkg, fd_sig) == false)
+				goto cleanup;
+		} else if (strcasecmp(signature_type, "PUBKEY") == 0) {
+
+			snprintf(tmpsig, MAXPATHLEN,
+			    "%s/pkg.txz.pubkeysig.XXXXXX",
+			    getenv("TMPDIR") ? getenv("TMPDIR") : _PATH_TMP);
+			snprintf(url, MAXPATHLEN, "%s/Latest/pkg.txz.pubkeysig",
+			    packagesite);
+
+			if ((fd_sig = fetch_to_fd(url, tmpsig)) == -1) {
+				fprintf(stderr, "Signature for pkg not "
+				    "available.\n");
+				goto fetchfail;
+			}
+
+			if (verify_pubsignature(fd_pkg, fd_sig) == false)
+				goto cleanup;
+		} else {
+			warnx("Signature type %s is not supported for "
+			    "bootstrapping.", signature_type);
 			goto cleanup;
+		}
 	}
 
 	if ((ret = extract_pkg_static(fd_pkg, pkgstatic, MAXPATHLEN)) == 0)
@@ -818,8 +926,11 @@ cleanup:
 		close(fd_sig);
 		unlink(tmpsig);
 	}
-	close(fd_pkg);
-	unlink(tmppkg);
+
+	if (fd_pkg != -1) {
+		close(fd_pkg);
+		unlink(tmppkg);
+	}
 
 	return (ret);
 }
@@ -827,6 +938,11 @@ cleanup:
 static const char confirmation_message[] =
 "The package management tool is not yet installed on your system.\n"
 "Do you want to fetch and install it now? [y/N]: ";
+
+static const char non_interactive_message[] =
+"The package management tool is not yet installed on your system.\n"
+"Please set ASSUME_ALWAYS_YES=yes environment variable to be able to bootstrap "
+"in non-interactive (stdin not being a tty)\n";
 
 static int
 pkg_query_yes_no(void)
@@ -863,19 +979,41 @@ bootstrap_pkg_local(const char *pkgpath, bool force)
 
 	if (config_string(SIGNATURE_TYPE, &signature_type) != 0) {
 		warnx("Error looking up SIGNATURE_TYPE");
-		return (-1);
+		goto cleanup;
 	}
 	if (signature_type != NULL &&
-	    strcasecmp(signature_type, "FINGERPRINTS") == 0) {
-		snprintf(path, sizeof(path), "%s.sig", pkgpath);
+	    strcasecmp(signature_type, "NONE") != 0) {
+		if (strcasecmp(signature_type, "FINGERPRINTS") == 0) {
 
-		if ((fd_sig = open(path, O_RDONLY)) == -1) {
-			fprintf(stderr, "Signature for pkg not available.\n");
+			snprintf(path, sizeof(path), "%s.sig", pkgpath);
+
+			if ((fd_sig = open(path, O_RDONLY)) == -1) {
+				fprintf(stderr, "Signature for pkg not "
+				    "available.\n");
+				goto cleanup;
+			}
+
+			if (verify_signature(fd_pkg, fd_sig) == false)
+				goto cleanup;
+
+		} else if (strcasecmp(signature_type, "PUBKEY") == 0) {
+
+			snprintf(path, sizeof(path), "%s.pubkeysig", pkgpath);
+
+			if ((fd_sig = open(path, O_RDONLY)) == -1) {
+				fprintf(stderr, "Signature for pkg not "
+				    "available.\n");
+				goto cleanup;
+			}
+
+			if (verify_pubsignature(fd_pkg, fd_sig) == false)
+				goto cleanup;
+
+		} else {
+			warnx("Signature type %s is not supported for "
+			    "bootstrapping.", signature_type);
 			goto cleanup;
 		}
-
-		if (verify_signature(fd_pkg, fd_sig) == false)
-			goto cleanup;
 	}
 
 	if ((ret = extract_pkg_static(fd_pkg, pkgstatic, MAXPATHLEN)) == 0)
@@ -890,7 +1028,7 @@ cleanup:
 }
 
 int
-main(__unused int argc, char *argv[])
+main(int argc, char *argv[])
 {
 	char pkgpath[MAXPATHLEN];
 	const char *pkgarg;
@@ -946,10 +1084,12 @@ main(__unused int argc, char *argv[])
 		 */
 		config_bool(ASSUME_ALWAYS_YES, &yes);
 		if (!yes) {
-			printf("%s", confirmation_message);
-			if (!isatty(fileno(stdin)))
+			if (!isatty(fileno(stdin))) {
+				fprintf(stderr, non_interactive_message);
 				exit(EXIT_FAILURE);
+			}
 
+			printf("%s", confirmation_message);
 			if (pkg_query_yes_no() == 0)
 				exit(EXIT_FAILURE);
 		}

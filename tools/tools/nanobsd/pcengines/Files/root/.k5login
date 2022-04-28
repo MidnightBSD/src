@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/nanobsd/pcengines/Files/root/.k5login 199536 2009-11-19 16:27:51Z mr $
+# $FreeBSD$
 #
 # user1/root@YOUR.REALM.WHEREVER
 # user2/root@YOUR.REALM.WHEREVER

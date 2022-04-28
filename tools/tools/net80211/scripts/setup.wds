@@ -4,7 +4,7 @@
 # Assumes an ap vap is already setup.
 # Can be run multiple times to create multiple WDS vaps.
 #
-# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/setup.wds 178361 2008-04-20 20:43:42Z sam $
+# $FreeBSD$
 #
 PATH=.:$PATH
 . config

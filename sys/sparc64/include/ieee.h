@@ -32,7 +32,7 @@
  *
  *	@(#)ieee.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: ieee.h,v 1.1.1.1 1998/06/20 04:58:51 eeh Exp
- * $FreeBSD: release/10.0.0/sys/sparc64/include/ieee.h 139825 2005-01-07 02:29:27Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_IEEE_H_

@@ -5,7 +5,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/amd64/string/memset.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: memset.S,v 1.3 2004/02/26 20:50:06 drochner Exp $")

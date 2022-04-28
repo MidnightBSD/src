@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)ualarm.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/ualarm.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -44,9 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/ualarm.c 165903 2007-01-09 00:28
  * every ``reload'' microseconds after the first signal.
  */
 useconds_t
-ualarm(usecs, reload)
-	useconds_t usecs;
-	useconds_t reload;
+ualarm(useconds_t usecs, useconds_t reload)
 {
 	struct itimerval new, old;
 
@@ -58,6 +56,5 @@ ualarm(usecs, reload)
 
 	if (setitimer(ITIMER_REAL, &new, &old) == 0)
 		return (old.it_value.tv_sec * USPS + old.it_value.tv_usec);
-	/* else */
-		return (-1);
+	return (-1);
 }

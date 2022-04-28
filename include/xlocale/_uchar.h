@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/xlocale/_uchar.h 250883 2013-05-21 19:59:37Z ed $
+ * $FreeBSD$
  */
 
 #ifndef _LOCALE_T_DEFINED

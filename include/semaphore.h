@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/semaphore.h 201546 2010-01-05 02:37:59Z davidxu $
+ * $FreeBSD$
  */
 
 /* semaphore.h: POSIX 1003.1b semaphores */
@@ -36,9 +36,12 @@
 #include <sys/_types.h>
 #include <sys/_umtx.h>
 
+#include <machine/_limits.h>
+
 struct _sem {
 	__uint32_t	_magic;
-	struct _usem	_kern;
+	struct _usem2	_kern;
+	__uint32_t	_padding;	/* Preserve structure size */
 };
 
 typedef	struct _sem	sem_t;
@@ -49,6 +52,10 @@ typedef	struct _sem	sem_t;
 struct timespec;
 
 __BEGIN_DECLS
+#if __BSD_VISIBLE
+int	 sem_clockwait_np(sem_t * __restrict, __clockid_t, int,
+	    const struct timespec *, struct timespec *);
+#endif
 int	 sem_close(sem_t *);
 int	 sem_destroy(sem_t *);
 int	 sem_getvalue(sem_t * __restrict, int * __restrict);

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/syslogd 258121 2013-11-14 09:14:33Z glebius $
+# $FreeBSD$
 #
 
 # netif is required for lo0 because syslogd tries to open a local socket
@@ -12,6 +12,7 @@
 . /etc/rc.subr
 
 name="syslogd"
+desc="System log daemon"
 rcvar="syslogd_enable"
 pidfile="/var/run/syslog.pid"
 command="/usr/sbin/${name}"
@@ -28,7 +29,7 @@ syslogd_precmd()
 
 	#	Transitional symlink for old binaries
 	#
-	if [ ! -L /dev/log ]; then
+	if [ ! -L /dev/log ] && ! check_jail jailed; then
 		ln -sf /var/run/log /dev/log
 	fi
 	rm -f /var/run/log

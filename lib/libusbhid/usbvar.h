@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/lib/libusbhid/usbvar.h 213920 2010-10-16 11:20:53Z hselasky $
+ * $FreeBSD$
  *
  */
 

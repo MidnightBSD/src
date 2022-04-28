@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Nathan Whitehorn
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/scripted.c 245796 2013-01-22 17:06:28Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -109,7 +111,7 @@ part_config(char *disk, const char *scheme, char *config)
 
 	/* Create partitions */
 	if (config == NULL) {
-		wizard_makeparts(&mesh, disk, 0);
+		wizard_makeparts(&mesh, disk, "ufs", 0);
 		goto finished;
 	}
 

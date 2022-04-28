@@ -33,14 +33,37 @@ __FBSDID("$FreeBSD$");
 #endif
 
 /*
- * Test if the current filesytem is mounted with noatime option.
+ * Test if the current filesystem is mounted with noatime option.
  */
 static int
 atimeIsUpdated(void)
 {
 	const char *fn = "fs_noatime";
 	struct stat st;
+#if defined(_WIN32) && !defined(CYGWIN)
+	char *buff = NULL;
+	char *ptr;
+	int r;
 
+	r = systemf("fsutil behavior query disableLastAccess > query_atime");
+	if (r == 0) {
+		buff = slurpfile(NULL, "query_atime");
+		if (buff != NULL) {
+			ptr = buff;
+			while(*ptr != '\0' && !isdigit(*ptr)) {
+				ptr++;
+			}
+			if (*ptr == '0') {
+				free(buff);
+				return(1);
+			} else if (*ptr == '1' || *ptr == '2') {
+				free(buff);
+				return(0);
+			}
+			free(buff);
+		}
+	}
+#endif
 	if (!assertMakeFile(fn, 0666, "a"))
 		return (0);
 	if (!assertUtimes(fn, 1, 0, 1, 0))
@@ -500,8 +523,8 @@ test_basic(void)
 
 	/*
 	 * We should be on the initial directory where we performed
-	 * archive_read_disk_new() after we perfome archive_read_free()
-	 *  even if we broke off the directory traversals.
+	 * archive_read_disk_new() after we perform archive_read_free()
+	 * even if we broke off the directory traversals.
 	 */
 
 	/* Save current working directory. */
@@ -570,13 +593,13 @@ test_symlink_hybrid(void)
 	assertMakeDir("h", 0755);
 	assertChdir("h");
 	assertMakeDir("d1", 0755);
-	assertMakeSymlink("ld1", "d1");
+	assertMakeSymlink("ld1", "d1", 1);
 	assertMakeFile("d1/file1", 0644, "d1/file1");
 	assertMakeFile("d1/file2", 0644, "d1/file2");
-	assertMakeSymlink("d1/link1", "file1");
-	assertMakeSymlink("d1/linkX", "fileX");
-	assertMakeSymlink("link2", "d1/file2");
-	assertMakeSymlink("linkY", "d1/fileY");
+	assertMakeSymlink("d1/link1", "file1", 0);
+	assertMakeSymlink("d1/linkX", "fileX", 0);
+	assertMakeSymlink("link2", "d1/file2", 0);
+	assertMakeSymlink("linkY", "d1/fileY", 0);
 	assertChdir("..");
 
 	assert((ae = archive_entry_new()) != NULL);
@@ -727,16 +750,17 @@ test_symlink_logical(void)
 	assertMakeDir("l", 0755);
 	assertChdir("l");
 	assertMakeDir("d1", 0755);
-	assertMakeSymlink("ld1", "d1");
+	assertMakeSymlink("ld1", "d1", 1);
 	assertMakeFile("d1/file1", 0644, "d1/file1");
 	assertMakeFile("d1/file2", 0644, "d1/file2");
-	assertMakeSymlink("d1/link1", "file1");
-	assertMakeSymlink("d1/linkX", "fileX");
-	assertMakeSymlink("link2", "d1/file2");
-	assertMakeSymlink("linkY", "d1/fileY");
+	assertMakeSymlink("d1/link1", "file1", 0);
+	assertMakeSymlink("d1/linkX", "fileX", 0);
+	assertMakeSymlink("link2", "d1/file2", 0);
+	assertMakeSymlink("linkY", "d1/fileY", 0);
 	assertChdir("..");
 
-	assert((ae = archive_entry_new()) != NULL);
+	/* Note: this test uses archive_read_next_header()
+	   instead of archive_read_next_header2() */
 	assert((a = archive_read_disk_new()) != NULL);
 	assertEqualIntA(a, ARCHIVE_OK,
 	    archive_read_disk_set_symlink_logical(a));
@@ -748,7 +772,7 @@ test_symlink_logical(void)
 	file_count = 5;
 
 	while (file_count--) {
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 		if (strcmp(archive_entry_pathname(ae), "l/ld1") == 0) {
 			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
 		} else if (strcmp(archive_entry_pathname(ae),
@@ -802,7 +826,7 @@ test_symlink_logical(void)
 		}
 	}
 	/* There is no entry. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	/* Close the disk object. */
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 
@@ -813,7 +837,7 @@ test_symlink_logical(void)
 	file_count = 13;
 
 	while (file_count--) {
-		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 		if (strcmp(archive_entry_pathname(ae), "l") == 0) {
 			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
 		} else if (strcmp(archive_entry_pathname(ae), "l/d1") == 0) {
@@ -928,12 +952,11 @@ test_symlink_logical(void)
 		}
 	}
 	/* There is no entry. */
-	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 	/* Close the disk object. */
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 	/* Destroy the disk object. */
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
-	archive_entry_free(ae);
 }
 
 static void
@@ -961,8 +984,8 @@ test_symlink_logical_loop(void)
 	assertMakeDir("d1/d2/d3", 0755);
 	assertMakeDir("d2", 0755);
 	assertMakeFile("d2/file1", 0644, "d2/file1");
-	assertMakeSymlink("d1/d2/ld1", "../../d1");
-	assertMakeSymlink("d1/d2/ld2", "../../d2");
+	assertMakeSymlink("d1/d2/ld1", "../../d1", 1);
+	assertMakeSymlink("d1/d2/ld2", "../../d2", 1);
 	assertChdir("..");
 
 	assert((ae = archive_entry_new()) != NULL);
@@ -1090,8 +1113,10 @@ test_restore_atime(void)
 	failure("There must be no entry");
 	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
 
-	failure("Atime should be restored");
-	assertFileAtimeRecent("at");
+	/* On FreeBSD (and likely other systems), atime on
+	   dirs does not change when it is read. */
+	/* failure("Atime should be restored"); */
+	/* assertFileAtimeRecent("at"); */
 	failure("Atime should be restored");
 	assertFileAtimeRecent("at/f1");
 	failure("Atime should be restored");
@@ -1226,11 +1251,11 @@ test_restore_atime(void)
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 
 	/*
-	 * Test4: Traversals with archive_read_disk_set_atime_restored() and
-	 * archive_read_disk_honor_nodump().
+	 * Test4: Traversals with ARCHIVE_READDISK_RESTORE_ATIME and
+	 * ARCHIVE_READDISK_HONOR_NODUMP
 	 */
-	assertNodump("at/f1");
-	assertNodump("at/f2");
+	assertSetNodump("at/f1");
+	assertSetNodump("at/f2");
 	assertUtimes("at/f1", 886600, 0, 886600, 0);
 	assertUtimes("at/f2", 886611, 0, 886611, 0);
 	assertUtimes("at/fe", 886611, 0, 886611, 0);
@@ -1318,13 +1343,16 @@ test_callbacks(void)
 	assertUtimes("cb", 886622, 0, 886622, 0);
 
 	assert((ae = archive_entry_new()) != NULL);
-	if (assert((a = archive_read_disk_new()) != NULL)) {
+	assert((a = archive_read_disk_new()) != NULL);
+	if (a == NULL) {
 		archive_entry_free(ae);
 		return;
 	}
-	if (assert((m = archive_match_new()) != NULL)) {
+	assert((m = archive_match_new()) != NULL);
+	if (m == NULL) {
 		archive_entry_free(ae);
 		archive_read_free(a);
+		archive_match_free(m);
 		return;
 	}
 
@@ -1374,6 +1402,10 @@ test_callbacks(void)
 	/* Close the disk object. */
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 
+	/* Reset name filter */
+	assertEqualIntA(a, ARCHIVE_OK,
+	    archive_read_disk_set_matching(a, NULL, NULL, NULL));
+
 	/*
 	 * Test2: Traversals with a metadata filter.
 	 */
@@ -1391,7 +1423,7 @@ test_callbacks(void)
 	while (file_count--) {
 		archive_entry_clear(ae);
 		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
-		failure("File 'cb/f1' should be exclueded");
+		failure("File 'cb/f1' should be excluded");
 		assert(strcmp(archive_entry_pathname(ae), "cb/f1") != 0);
 		if (strcmp(archive_entry_pathname(ae), "cb") == 0) {
 			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
@@ -1441,7 +1473,7 @@ test_nodump(void)
 	assertMakeFile("nd/f1", 0644, "0123456789");
 	assertMakeFile("nd/f2", 0644, "hello world");
 	assertMakeFile("nd/fe", 0644, NULL);
-	assertNodump("nd/f2");
+	assertSetNodump("nd/f2");
 	assertUtimes("nd/f1", 886600, 0, 886600, 0);
 	assertUtimes("nd/f2", 886611, 0, 886611, 0);
 	assertUtimes("nd/fe", 886611, 0, 886611, 0);
@@ -1451,7 +1483,7 @@ test_nodump(void)
 	assert((a = archive_read_disk_new()) != NULL);
 
 	/*
-	 * Test1: Traversals without archive_read_disk_honor_nodump().
+	 * Test1: Traversals without ARCHIVE_READDISK_HONOR_NODUMP
 	 */
 	failure("Directory traversals should work as well");
 	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "nd"));
@@ -1504,7 +1536,7 @@ test_nodump(void)
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 
 	/*
-	 * Test2: Traversals with archive_read_disk_honor_nodump().
+	 * Test2: Traversals with ARCHIVE_READDISK_HONOR_NODUMP
 	 */
 	assertUtimes("nd/f1", 886600, 0, 886600, 0);
 	assertUtimes("nd/f2", 886611, 0, 886611, 0);
@@ -1558,15 +1590,264 @@ test_nodump(void)
 	archive_entry_free(ae);
 }
 
+static void
+test_parent(void)
+{
+	struct archive *a;
+	struct archive_entry *ae;
+	const void *p;
+	size_t size;
+	int64_t offset;
+	int file_count;
+	int match_count;
+	int r;
+
+	assertMakeDir("lock", 0311);
+	assertMakeDir("lock/dir1", 0755);
+	assertMakeFile("lock/dir1/f1", 0644, "0123456789");
+	assertMakeDir("lock/lock2", 0311);
+	assertMakeDir("lock/lock2/dir1", 0755);
+	assertMakeFile("lock/lock2/dir1/f1", 0644, "0123456789");
+
+	assert((ae = archive_entry_new()) != NULL);
+	assert((a = archive_read_disk_new()) != NULL);
+
+	/*
+	 * Test1: Traverse lock/dir1 as .
+	 */
+	assertChdir("lock/dir1");
+
+	failure("Directory traversals should work as well");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "."));
+
+	file_count = 2;
+	match_count = 0;
+	while (file_count--) {
+		archive_entry_clear(ae);
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+		if (strcmp(archive_entry_pathname(ae), ".") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
+			++match_count;
+		} else if (strcmp(archive_entry_pathname(ae), "./f1") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+			assertEqualInt(archive_entry_size(ae), 10);
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 10);
+			assertEqualInt((int)offset, 0);
+			assertEqualMem(p, "0123456789", 10);
+			assertEqualInt(ARCHIVE_EOF,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 0);
+			assertEqualInt((int)offset, 10);
+			++match_count;
+		}
+		if (archive_read_disk_can_descend(a)) {
+			/* Descend into the current object */
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_disk_descend(a));
+		}
+	}
+	failure("Did not match expected filenames");
+	assertEqualInt(match_count, 2);
+	/*
+	 * There is no entry. This will however fail if the directory traverse
+	 * tries to ascend past the initial directory, since it lacks permission
+	 * to do so.
+	 */
+	failure("There should be no entry and no error");
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+
+	/* Close the disk object. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+
+	assertChdir("../..");
+
+	/*
+	 * Test2: Traverse lock/dir1 directly
+	 */
+	failure("Directory traversals should work as well");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "lock/dir1"));
+
+	file_count = 2;
+	match_count = 0;
+	while (file_count--) {
+		archive_entry_clear(ae);
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+		if (strcmp(archive_entry_pathname(ae), "lock/dir1") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
+			++match_count;
+		} else if (strcmp(archive_entry_pathname(ae), "lock/dir1/f1") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+			assertEqualInt(archive_entry_size(ae), 10);
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 10);
+			assertEqualInt((int)offset, 0);
+			assertEqualMem(p, "0123456789", 10);
+			assertEqualInt(ARCHIVE_EOF,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 0);
+			assertEqualInt((int)offset, 10);
+			++match_count;
+		}
+		if (archive_read_disk_can_descend(a)) {
+			/* Descend into the current object */
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_disk_descend(a));
+		}
+	}
+	failure("Did not match expected filenames");
+	assertEqualInt(match_count, 2);
+	/*
+	 * There is no entry. This will however fail if the directory traverse
+	 * tries to ascend past the initial directory, since it lacks permission
+	 * to do so.
+	 */
+	failure("There should be no entry and no error");
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+
+	/* Close the disk object. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+
+	/*
+	 * Test3: Traverse lock/dir1/.
+	 */
+	failure("Directory traversals should work as well");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "lock/dir1/."));
+
+	file_count = 2;
+	match_count = 0;
+	while (file_count--) {
+		archive_entry_clear(ae);
+		assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header2(a, ae));
+		if (strcmp(archive_entry_pathname(ae), "lock/dir1/.") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFDIR);
+			++match_count;
+		} else if (strcmp(archive_entry_pathname(ae), "lock/dir1/./f1") == 0) {
+			assertEqualInt(archive_entry_filetype(ae), AE_IFREG);
+			assertEqualInt(archive_entry_size(ae), 10);
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 10);
+			assertEqualInt((int)offset, 0);
+			assertEqualMem(p, "0123456789", 10);
+			assertEqualInt(ARCHIVE_EOF,
+			    archive_read_data_block(a, &p, &size, &offset));
+			assertEqualInt((int)size, 0);
+			assertEqualInt((int)offset, 10);
+			++match_count;
+		}
+		if (archive_read_disk_can_descend(a)) {
+			/* Descend into the current object */
+			assertEqualIntA(a, ARCHIVE_OK,
+			    archive_read_disk_descend(a));
+		}
+	}
+	failure("Did not match expected filenames");
+	assertEqualInt(match_count, 2);
+	/*
+	 * There is no entry. This will however fail if the directory traverse
+	 * tries to ascend past the initial directory, since it lacks permission
+	 * to do so.
+	 */
+	failure("There should be no entry and no error");
+	assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header2(a, ae));
+
+	/* Close the disk object. */
+	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+
+	/*
+	 * Test4: Traverse lock/lock2/dir1 from inside lock.
+	 *
+	 * This test is expected to fail on platforms with no O_EXEC or
+	 * equivalent (e.g. O_PATH on Linux or O_SEARCH on SunOS), because
+	 * the current traversal code can't handle the case where it can't
+	 * obtain an open fd for the initial current directory. We need to
+	 * check that condition here, because if O_EXEC _does_ exist, we don't
+	 * want to overlook any failure.
+	 */
+	assertChdir("lock");
+
+	failure("Directory traversals should work as well");
+	assertEqualIntA(a, ARCHIVE_OK, archive_read_disk_open(a, "lock2/dir1"));
+
+	archive_entry_clear(ae);
+	r = archive_read_next_header2(a, ae);
+	if (r == ARCHIVE_FAILED) {
+#if defined(O_PATH) || defined(O_SEARCH) || \
+ (defined(__FreeBSD__) && defined(O_EXEC))
+		assertEqualIntA(a, ARCHIVE_OK, r);
+#endif
+		/* Close the disk object. */
+		archive_read_close(a);
+	} else {
+		file_count = 2;
+		match_count = 0;
+		while (file_count--) {
+			if (file_count == 0)
+				assertEqualIntA(a, ARCHIVE_OK,
+				    archive_read_next_header2(a, ae));
+			if (strcmp(archive_entry_pathname(ae),
+				"lock2/dir1") == 0) {
+				assertEqualInt(archive_entry_filetype(ae),
+				    AE_IFDIR);
+				++match_count;
+			} else if (strcmp(archive_entry_pathname(ae),
+				"lock2/dir1/f1") == 0) {
+				assertEqualInt(archive_entry_filetype(ae),
+				    AE_IFREG);
+				assertEqualInt(archive_entry_size(ae), 10);
+				assertEqualIntA(a, ARCHIVE_OK,
+				    archive_read_data_block(a, &p, &size,
+					&offset));
+				assertEqualInt((int)size, 10);
+				assertEqualInt((int)offset, 0);
+				assertEqualMem(p, "0123456789", 10);
+				assertEqualInt(ARCHIVE_EOF,
+				    archive_read_data_block(a, &p, &size,
+					&offset));
+				assertEqualInt((int)size, 0);
+				assertEqualInt((int)offset, 10);
+				++match_count;
+			}
+			if (archive_read_disk_can_descend(a)) {
+				/* Descend into the current object */
+				assertEqualIntA(a, ARCHIVE_OK,
+				    archive_read_disk_descend(a));
+			}
+		}
+		failure("Did not match expected filenames");
+		assertEqualInt(match_count, 2);
+		/*
+		 * There is no entry. This will however fail if the directory
+		 * traverse tries to ascend past the initial directory, since
+		 * it lacks permission to do so.
+		 */
+		failure("There should be no entry and no error");
+		assertEqualIntA(a, ARCHIVE_EOF,
+		    archive_read_next_header2(a, ae));
+
+		/* Close the disk object. */
+		assertEqualInt(ARCHIVE_OK, archive_read_close(a));
+	}
+
+	assertChdir("..");
+
+	/* Destroy the disk object. */
+	assertEqualInt(ARCHIVE_OK, archive_read_free(a));
+	archive_entry_free(ae);
+}
+
 DEFINE_TEST(test_read_disk_directory_traversals)
 {
 	/* Basic test. */
 	test_basic();
-	/* Test hybird mode; follow symlink initially, then not. */
+	/* Test hybrid mode; follow symlink initially, then not. */
 	test_symlink_hybrid();
-	/* Test logcal mode; follow all symlinks. */
+	/* Test logical mode; follow all symlinks. */
 	test_symlink_logical();
-	/* Test logcal mode; prevent loop in symlinks. */ 
+	/* Test logical mode; prevent loop in symlinks. */
 	test_symlink_logical_loop();
 	/* Test to restore atime. */
 	test_restore_atime();
@@ -1574,4 +1855,6 @@ DEFINE_TEST(test_read_disk_directory_traversals)
 	test_callbacks();
 	/* Test nodump. */
 	test_nodump();
+	/* Test parent overshoot. */
+	test_parent();
 }

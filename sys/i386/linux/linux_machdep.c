@@ -27,47 +27,48 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/linux/linux_machdep.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/capability.h>
-#include <sys/file.h>
+#include <sys/capsicum.h>
 #include <sys/fcntl.h>
+#include <sys/file.h>
 #include <sys/imgact.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mman.h>
 #include <sys/mutex.h>
-#include <sys/sx.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
+#include <sys/sched.h>
 #include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
+#include <sys/systm.h>
+#include <sys/sx.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
-#include <sys/sched.h>
 
 #include <machine/frame.h>
 #include <machine/psl.h>
 #include <machine/segments.h>
 #include <machine/sysarch.h>
 
-#include <vm/vm.h>
 #include <vm/pmap.h>
+#include <vm/vm.h>
 #include <vm/vm_map.h>
 
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
+#include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_ipc.h>
 #include <compat/linux/linux_misc.h>
+#include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
-#include <compat/linux/linux_emul.h>
 
 #include <i386/include/pcb.h>			/* needed for pcb definition in linux_set_thread_area */
 
@@ -95,40 +96,13 @@ struct l_old_select_argv {
 	struct l_timeval	*timeout;
 };
 
-static int	linux_mmap_common(struct thread *td, l_uintptr_t addr,
-		    l_size_t len, l_int prot, l_int flags, l_int fd,
-		    l_loff_t pos);
-
-int
-linux_to_bsd_sigaltstack(int lsa)
-{
-	int bsa = 0;
-
-	if (lsa & LINUX_SS_DISABLE)
-		bsa |= SS_DISABLE;
-	if (lsa & LINUX_SS_ONSTACK)
-		bsa |= SS_ONSTACK;
-	return (bsa);
-}
-
-int
-bsd_to_linux_sigaltstack(int bsa)
-{
-	int lsa = 0;
-
-	if (bsa & SS_DISABLE)
-		lsa |= LINUX_SS_DISABLE;
-	if (bsa & SS_ONSTACK)
-		lsa |= LINUX_SS_ONSTACK;
-	return (lsa);
-}
 
 int
 linux_execve(struct thread *td, struct linux_execve_args *args)
 {
-	int error;
-	char *newpath;
 	struct image_args eargs;
+	char *newpath;
+	int error;
 
 	LCONVPATHEXIST(td, args->path, &newpath);
 
@@ -141,15 +115,7 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 	    args->argp, args->envp);
 	free(newpath, M_TEMP);
 	if (error == 0)
-		error = kern_execve(td, &eargs, NULL);
-	if (error == 0)
-	   	/* linux process can exec fbsd one, dont attempt
-		 * to create emuldata for such process using
-		 * linux_proc_init, this leads to a panic on KASSERT
-		 * because such process has p->p_emuldata == NULL
-		 */
-		if (SV_PROC_ABI(td->td_proc) == SV_ABI_LINUX)
-   			error = linux_proc_init(td, 0, 0);
+		error = linux_common_execve(td, &eargs);
 	return (error);
 }
 
@@ -167,7 +133,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		struct linux_semop_args a;
 
 		a.semid = args->arg1;
-		a.tsops = args->ptr;
+		a.tsops = PTRIN(args->ptr);
 		a.nsops = args->arg2;
 		return (linux_semop(td, &a));
 	}
@@ -186,7 +152,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		a.semid = args->arg1;
 		a.semnum = args->arg2;
 		a.cmd = args->arg3;
-		error = copyin(args->ptr, &a.arg, sizeof(a.arg));
+		error = copyin(PTRIN(args->ptr), &a.arg, sizeof(a.arg));
 		if (error)
 			return (error);
 		return (linux_semctl(td, &a));
@@ -195,7 +161,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		struct linux_msgsnd_args a;
 
 		a.msqid = args->arg1;
-		a.msgp = args->ptr;
+		a.msgp = PTRIN(args->ptr);
 		a.msgsz = args->arg2;
 		a.msgflg = args->arg3;
 		return (linux_msgsnd(td, &a));
@@ -210,15 +176,15 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 			struct l_ipc_kludge tmp;
 			int error;
 
-			if (args->ptr == NULL)
+			if (args->ptr == 0)
 				return (EINVAL);
-			error = copyin(args->ptr, &tmp, sizeof(tmp));
+			error = copyin(PTRIN(args->ptr), &tmp, sizeof(tmp));
 			if (error)
 				return (error);
-			a.msgp = tmp.msgp;
+			a.msgp = PTRIN(tmp.msgp);
 			a.msgtyp = tmp.msgtyp;
 		} else {
-			a.msgp = args->ptr;
+			a.msgp = PTRIN(args->ptr);
 			a.msgtyp = args->arg5;
 		}
 		return (linux_msgrcv(td, &a));
@@ -235,22 +201,29 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 		a.msqid = args->arg1;
 		a.cmd = args->arg2;
-		a.buf = args->ptr;
+		a.buf = PTRIN(args->ptr);
 		return (linux_msgctl(td, &a));
 	}
 	case LINUX_SHMAT: {
 		struct linux_shmat_args a;
+		l_uintptr_t addr;
+		int error;
 
 		a.shmid = args->arg1;
-		a.shmaddr = args->ptr;
+		a.shmaddr = PTRIN(args->ptr);
 		a.shmflg = args->arg2;
-		a.raddr = (l_ulong *)args->arg3;
-		return (linux_shmat(td, &a));
+		error = linux_shmat(td, &a);
+		if (error != 0)
+			return (error);
+		addr = td->td_retval[0];
+		error = copyout(&addr, PTRIN(args->arg3), sizeof(addr));
+		td->td_retval[0] = 0;
+		return (error);
 	}
 	case LINUX_SHMDT: {
 		struct linux_shmdt_args a;
 
-		a.shmaddr = args->ptr;
+		a.shmaddr = PTRIN(args->ptr);
 		return (linux_shmdt(td, &a));
 	}
 	case LINUX_SHMGET: {
@@ -266,7 +239,7 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 		a.shmid = args->arg1;
 		a.cmd = args->arg2;
-		a.buf = args->ptr;
+		a.buf = PTRIN(args->ptr);
 		return (linux_shmctl(td, &a));
 	}
 	default:
@@ -314,7 +287,7 @@ linux_set_cloned_tls(struct thread *td, void *desc)
 	} else {
 		idx = info.entry_number;
 
-		/* 
+		/*
 		 * looks like we're getting the idx we returned
 		 * in the set_thread_area() syscall
 		 */
@@ -325,8 +298,8 @@ linux_set_cloned_tls(struct thread *td, void *desc)
 
 		/* this doesnt happen in practice */
 		if (idx == 6) {
-	   		/* we might copy out the entry_number as 3 */
-		   	info.entry_number = 3;
+			/* we might copy out the entry_number as 3 */
+			info.entry_number = 3;
 			error = copyout(&info, desc, sizeof(struct l_user_desc));
 			if (error)
 				printf(LMSG("copyout failed!"));
@@ -360,13 +333,16 @@ int
 linux_set_upcall_kse(struct thread *td, register_t stack)
 {
 
-	td->td_frame->tf_esp = stack;
+	if (stack)
+		td->td_frame->tf_esp = stack;
 
+	/*
+	 * The newly created Linux thread returns
+	 * to the user space by the same path that a parent do.
+	 */
+	td->td_frame->tf_eax = 0;
 	return (0);
 }
-
-#define STACK_SIZE  (2 * 1024 * 1024)
-#define GUARD_SIZE  (4 * PAGE_SIZE)
 
 int
 linux_mmap2(struct thread *td, struct linux_mmap2_args *args)
@@ -406,187 +382,11 @@ linux_mmap(struct thread *td, struct linux_mmap_args *args)
 	    (uint32_t)linux_args.pgoff));
 }
 
-static int
-linux_mmap_common(struct thread *td, l_uintptr_t addr, l_size_t len, l_int prot,
-    l_int flags, l_int fd, l_loff_t pos)
-{
-	struct proc *p = td->td_proc;
-	struct mmap_args /* {
-		caddr_t addr;
-		size_t len;
-		int prot;
-		int flags;
-		int fd;
-		long pad;
-		off_t pos;
-	} */ bsd_args;
-	int error;
-	struct file *fp;
-	cap_rights_t rights;
-
-	error = 0;
-	bsd_args.flags = 0;
-	fp = NULL;
-
-	/*
-	 * Linux mmap(2):
-	 * You must specify exactly one of MAP_SHARED and MAP_PRIVATE
-	 */
-	if (!((flags & LINUX_MAP_SHARED) ^ (flags & LINUX_MAP_PRIVATE)))
-		return (EINVAL);
-
-	if (flags & LINUX_MAP_SHARED)
-		bsd_args.flags |= MAP_SHARED;
-	if (flags & LINUX_MAP_PRIVATE)
-		bsd_args.flags |= MAP_PRIVATE;
-	if (flags & LINUX_MAP_FIXED)
-		bsd_args.flags |= MAP_FIXED;
-	if (flags & LINUX_MAP_ANON) {
-		/* Enforce pos to be on page boundary, then ignore. */
-		if ((pos & PAGE_MASK) != 0)
-			return (EINVAL);
-		pos = 0;
-		bsd_args.flags |= MAP_ANON;
-	} else
-		bsd_args.flags |= MAP_NOSYNC;
-	if (flags & LINUX_MAP_GROWSDOWN)
-		bsd_args.flags |= MAP_STACK;
-
-	/*
-	 * PROT_READ, PROT_WRITE, or PROT_EXEC implies PROT_READ and PROT_EXEC
-	 * on Linux/i386. We do this to ensure maximum compatibility.
-	 * Linux/ia64 does the same in i386 emulation mode.
-	 */
-	bsd_args.prot = prot;
-	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
-		bsd_args.prot |= PROT_READ | PROT_EXEC;
-
-	/* Linux does not check file descriptor when MAP_ANONYMOUS is set. */
-	bsd_args.fd = (bsd_args.flags & MAP_ANON) ? -1 : fd;
-	if (bsd_args.fd != -1) {
-		/*
-		 * Linux follows Solaris mmap(2) description:
-		 * The file descriptor fildes is opened with
-		 * read permission, regardless of the
-		 * protection options specified.
-		 *
-		 * Checking just CAP_MMAP is fine here, since the real work
-		 * is done in the FreeBSD mmap().
-		 */
-
-		error = fget(td, bsd_args.fd,
-		    cap_rights_init(&rights, CAP_MMAP), &fp);
-		if (error != 0)
-			return (error);
-		if (fp->f_type != DTYPE_VNODE) {
-			fdrop(fp, td);
-			return (EINVAL);
-		}
-
-		/* Linux mmap() just fails for O_WRONLY files */
-		if (!(fp->f_flag & FREAD)) {
-			fdrop(fp, td);
-			return (EACCES);
-		}
-
-		fdrop(fp, td);
-	}
-
-	if (flags & LINUX_MAP_GROWSDOWN) {
-		/* 
-		 * The Linux MAP_GROWSDOWN option does not limit auto
-		 * growth of the region.  Linux mmap with this option
-		 * takes as addr the inital BOS, and as len, the initial
-		 * region size.  It can then grow down from addr without
-		 * limit.  However, linux threads has an implicit internal
-		 * limit to stack size of STACK_SIZE.  Its just not
-		 * enforced explicitly in linux.  But, here we impose
-		 * a limit of (STACK_SIZE - GUARD_SIZE) on the stack
-		 * region, since we can do this with our mmap.
-		 *
-		 * Our mmap with MAP_STACK takes addr as the maximum
-		 * downsize limit on BOS, and as len the max size of
-		 * the region.  It them maps the top SGROWSIZ bytes,
-		 * and auto grows the region down, up to the limit
-		 * in addr.
-		 *
-		 * If we don't use the MAP_STACK option, the effect
-		 * of this code is to allocate a stack region of a
-		 * fixed size of (STACK_SIZE - GUARD_SIZE).
-		 */
-
-		if ((caddr_t)PTRIN(addr) + len > p->p_vmspace->vm_maxsaddr) {
-			/* 
-			 * Some linux apps will attempt to mmap
-			 * thread stacks near the top of their
-			 * address space.  If their TOS is greater
-			 * than vm_maxsaddr, vm_map_growstack()
-			 * will confuse the thread stack with the
-			 * process stack and deliver a SEGV if they
-			 * attempt to grow the thread stack past their
-			 * current stacksize rlimit.  To avoid this,
-			 * adjust vm_maxsaddr upwards to reflect
-			 * the current stacksize rlimit rather
-			 * than the maximum possible stacksize.
-			 * It would be better to adjust the
-			 * mmap'ed region, but some apps do not check
-			 * mmap's return value.
-			 */
-			PROC_LOCK(p);
-			p->p_vmspace->vm_maxsaddr = (char *)USRSTACK -
-			    lim_cur(p, RLIMIT_STACK);
-			PROC_UNLOCK(p);
-		}
-
-		/*
-		 * This gives us our maximum stack size and a new BOS.
-		 * If we're using VM_STACK, then mmap will just map
-		 * the top SGROWSIZ bytes, and let the stack grow down
-		 * to the limit at BOS.  If we're not using VM_STACK
-		 * we map the full stack, since we don't have a way
-		 * to autogrow it.
-		 */
-		if (len > STACK_SIZE - GUARD_SIZE) {
-			bsd_args.addr = (caddr_t)PTRIN(addr);
-			bsd_args.len = len;
-		} else {
-			bsd_args.addr = (caddr_t)PTRIN(addr) -
-			    (STACK_SIZE - GUARD_SIZE - len);
-			bsd_args.len = STACK_SIZE - GUARD_SIZE;
-		}
-	} else {
-		bsd_args.addr = (caddr_t)PTRIN(addr);
-		bsd_args.len  = len;
-	}
-	bsd_args.pos = pos;
-
-#ifdef DEBUG
-	if (ldebug(mmap))
-		printf("-> %s(%p, %d, %d, 0x%08x, %d, 0x%x)\n",
-		    __func__,
-		    (void *)bsd_args.addr, bsd_args.len, bsd_args.prot,
-		    bsd_args.flags, bsd_args.fd, (int)bsd_args.pos);
-#endif
-	error = sys_mmap(td, &bsd_args);
-#ifdef DEBUG
-	if (ldebug(mmap))
-		printf("-> %s() return: 0x%x (0x%08x)\n",
-			__func__, error, (u_int)td->td_retval[0]);
-#endif
-	return (error);
-}
-
 int
 linux_mprotect(struct thread *td, struct linux_mprotect_args *uap)
 {
-	struct mprotect_args bsd_args;
 
-	bsd_args.addr = uap->addr;
-	bsd_args.len = uap->len;
-	bsd_args.prot = uap->prot;
-	if (bsd_args.prot & (PROT_READ | PROT_WRITE | PROT_EXEC))
-		bsd_args.prot |= PROT_READ | PROT_EXEC;
-	return (sys_mprotect(td, &bsd_args));
+	return (linux_mprotect_common(td, PTROUT(uap->addr), uap->len, uap->prot));
 }
 
 int
@@ -702,7 +502,7 @@ linux_sigaction(struct thread *td, struct linux_sigaction_args *args)
 		act.lsa_flags = osa.lsa_flags;
 		act.lsa_restorer = osa.lsa_restorer;
 		LINUX_SIGEMPTYSET(act.lsa_mask);
-		act.lsa_mask.__bits[0] = osa.lsa_mask;
+		act.lsa_mask.__mask = osa.lsa_mask;
 	}
 
 	error = linux_do_sigaction(td, args->sig, args->nsa ? &act : NULL,
@@ -712,7 +512,7 @@ linux_sigaction(struct thread *td, struct linux_sigaction_args *args)
 		osa.lsa_handler = oact.lsa_handler;
 		osa.lsa_flags = oact.lsa_flags;
 		osa.lsa_restorer = oact.lsa_restorer;
-		osa.lsa_mask = oact.lsa_mask.__bits[0];
+		osa.lsa_mask = oact.lsa_mask.__mask;
 		error = copyout(&osa, args->osa, sizeof(l_osigaction_t));
 	}
 
@@ -736,7 +536,7 @@ linux_sigsuspend(struct thread *td, struct linux_sigsuspend_args *args)
 #endif
 
 	LINUX_SIGEMPTYSET(mask);
-	mask.__bits[0] = args->mask;
+	mask.__mask = args->mask;
 	linux_to_bsd_sigset(&mask, &sigmask);
 	return (kern_sigsuspend(td, sigmask));
 }
@@ -818,7 +618,6 @@ linux_sigaltstack(struct thread *td, struct linux_sigaltstack_args *uap)
 int
 linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 {
-	struct ftruncate_args sa;
 
 #ifdef DEBUG
 	if (ldebug(ftruncate64))
@@ -826,9 +625,7 @@ linux_ftruncate64(struct thread *td, struct linux_ftruncate64_args *args)
 		    (intmax_t)args->length);
 #endif
 
-	sa.fd = args->fd;
-	sa.length = args->length;
-	return sys_ftruncate(td, &sa);
+	return (kern_ftruncate(td, args->fd, args->length));
 }
 
 int
@@ -846,51 +643,51 @@ linux_set_thread_area(struct thread *td, struct linux_set_thread_area_args *args
 
 #ifdef DEBUG
 	if (ldebug(set_thread_area))
-	   	printf(ARGS(set_thread_area, "%i, %x, %x, %i, %i, %i, %i, %i, %i\n"),
+		printf(ARGS(set_thread_area, "%i, %x, %x, %i, %i, %i, %i, %i, %i\n"),
 		      info.entry_number,
-      		      info.base_addr,
-      		      info.limit,
-      		      info.seg_32bit,
+		      info.base_addr,
+		      info.limit,
+		      info.seg_32bit,
 		      info.contents,
-      		      info.read_exec_only,
-      		      info.limit_in_pages,
-      		      info.seg_not_present,
-      		      info.useable);
+		      info.read_exec_only,
+		      info.limit_in_pages,
+		      info.seg_not_present,
+		      info.useable);
 #endif
 
 	idx = info.entry_number;
-	/* 
-	 * Semantics of linux version: every thread in the system has array of
-	 * 3 tls descriptors. 1st is GLIBC TLS, 2nd is WINE, 3rd unknown. This 
+	/*
+	 * Semantics of Linux version: every thread in the system has array of
+	 * 3 tls descriptors. 1st is GLIBC TLS, 2nd is WINE, 3rd unknown. This
 	 * syscall loads one of the selected tls decriptors with a value and
 	 * also loads GDT descriptors 6, 7 and 8 with the content of the
 	 * per-thread descriptors.
 	 *
-	 * Semantics of fbsd version: I think we can ignore that linux has 3 
+	 * Semantics of FreeBSD version: I think we can ignore that Linux has 3
 	 * per-thread descriptors and use just the 1st one. The tls_array[]
 	 * is used only in set/get-thread_area() syscalls and for loading the
-	 * GDT descriptors. In fbsd we use just one GDT descriptor for TLS so
-	 * we will load just one. 
+	 * GDT descriptors. In FreeBSD we use just one GDT descriptor for TLS
+	 * so we will load just one.
 	 *
 	 * XXX: this doesn't work when a user space process tries to use more
-	 * than 1 TLS segment. Comment in the linux sources says wine might do
+	 * than 1 TLS segment. Comment in the Linux sources says wine might do
 	 * this.
 	 */
 
-	/* 
-	 * we support just GLIBC TLS now 
+	/*
+	 * we support just GLIBC TLS now
 	 * we should let 3 proceed as well because we use this segment so
 	 * if code does two subsequent calls it should succeed
 	 */
 	if (idx != 6 && idx != -1 && idx != 3)
 		return (EINVAL);
 
-	/* 
+	/*
 	 * we have to copy out the GDT entry we use
 	 * FreeBSD uses GDT entry #3 for storing %gs so load that
 	 *
 	 * XXX: what if a user space program doesn't check this value and tries
-	 * to use 6, 7 or 8? 
+	 * to use 6, 7 or 8?
 	 */
 	idx = info.entry_number = 3;
 	error = copyout(&info, args->desc, sizeof(struct l_user_desc));
@@ -908,7 +705,7 @@ linux_set_thread_area(struct thread *td, struct linux_set_thread_area_args *args
 	memcpy(&sd, &a, sizeof(a));
 #ifdef DEBUG
 	if (ldebug(set_thread_area))
-	   	printf("Segment created in set_thread_area: lobase: %x, hibase: %x, lolimit: %x, hilimit: %x, type: %i, dpl: %i, p: %i, xx: %i, def32: %i, gran: %i\n", sd.sd_lobase,
+		printf("Segment created in set_thread_area: lobase: %x, hibase: %x, lolimit: %x, hilimit: %x, type: %i, dpl: %i, p: %i, xx: %i, def32: %i, gran: %i\n", sd.sd_lobase,
 			sd.sd_hibase,
 			sd.sd_lolimit,
 			sd.sd_hilimit,
@@ -927,14 +724,14 @@ linux_set_thread_area(struct thread *td, struct linux_set_thread_area_args *args
 	PCPU_GET(fsgs_gdt)[1] = sd;
 	load_gs(GSEL(GUGS_SEL, SEL_UPL));
 	critical_exit();
-   
+
 	return (0);
 }
 
 int
 linux_get_thread_area(struct thread *td, struct linux_get_thread_area_args *args)
 {
-   	
+
 	struct l_user_desc info;
 	int error;
 	int idx;
@@ -975,40 +772,9 @@ linux_get_thread_area(struct thread *td, struct linux_get_thread_area_args *args
 
 	error = copyout(&info, args->desc, sizeof(struct l_user_desc));
 	if (error)
-	   	return (EFAULT);
+		return (EFAULT);
 
 	return (0);
-}
-
-/* copied from kern/kern_time.c */
-int
-linux_timer_create(struct thread *td, struct linux_timer_create_args *args)
-{
-   	return sys_ktimer_create(td, (struct ktimer_create_args *) args);
-}
-
-int
-linux_timer_settime(struct thread *td, struct linux_timer_settime_args *args)
-{
-   	return sys_ktimer_settime(td, (struct ktimer_settime_args *) args);
-}
-
-int
-linux_timer_gettime(struct thread *td, struct linux_timer_gettime_args *args)
-{
-   	return sys_ktimer_gettime(td, (struct ktimer_gettime_args *) args);
-}
-
-int
-linux_timer_getoverrun(struct thread *td, struct linux_timer_getoverrun_args *args)
-{
-   	return sys_ktimer_getoverrun(td, (struct ktimer_getoverrun_args *) args);
-}
-
-int
-linux_timer_delete(struct thread *td, struct linux_timer_delete_args *args)
-{
-   	return sys_ktimer_delete(td, (struct ktimer_delete_args *) args);
 }
 
 /* XXX: this wont work with module - convert it */
@@ -1016,7 +782,7 @@ int
 linux_mq_open(struct thread *td, struct linux_mq_open_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return sys_kmq_open(td, (struct kmq_open_args *) args);
+	return (sys_kmq_open(td, (struct kmq_open_args *)args));
 #else
 	return (ENOSYS);
 #endif
@@ -1026,7 +792,7 @@ int
 linux_mq_unlink(struct thread *td, struct linux_mq_unlink_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return sys_kmq_unlink(td, (struct kmq_unlink_args *) args);
+	return (sys_kmq_unlink(td, (struct kmq_unlink_args *)args));
 #else
 	return (ENOSYS);
 #endif
@@ -1036,7 +802,7 @@ int
 linux_mq_timedsend(struct thread *td, struct linux_mq_timedsend_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return sys_kmq_timedsend(td, (struct kmq_timedsend_args *) args);
+	return (sys_kmq_timedsend(td, (struct kmq_timedsend_args *)args));
 #else
 	return (ENOSYS);
 #endif
@@ -1046,7 +812,7 @@ int
 linux_mq_timedreceive(struct thread *td, struct linux_mq_timedreceive_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return sys_kmq_timedreceive(td, (struct kmq_timedreceive_args *) args);
+	return (sys_kmq_timedreceive(td, (struct kmq_timedreceive_args *)args));
 #else
 	return (ENOSYS);
 #endif
@@ -1056,7 +822,7 @@ int
 linux_mq_notify(struct thread *td, struct linux_mq_notify_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-	return sys_kmq_notify(td, (struct kmq_notify_args *) args);
+	return (sys_kmq_notify(td, (struct kmq_notify_args *)args));
 #else
 	return (ENOSYS);
 #endif
@@ -1066,39 +832,8 @@ int
 linux_mq_getsetattr(struct thread *td, struct linux_mq_getsetattr_args *args)
 {
 #ifdef P1003_1B_MQUEUE
-   	return sys_kmq_setattr(td, (struct kmq_setattr_args *) args);
+	return (sys_kmq_setattr(td, (struct kmq_setattr_args *)args));
 #else
 	return (ENOSYS);
 #endif
-}
-
-int
-linux_wait4(struct thread *td, struct linux_wait4_args *args)
-{
-	int error, options;
-	struct rusage ru, *rup;
-
-#ifdef DEBUG
-	if (ldebug(wait4))
-		printf(ARGS(wait4, "%d, %p, %d, %p"),
-		    args->pid, (void *)args->status, args->options,
-		    (void *)args->rusage);
-#endif
-
-	options = (args->options & (WNOHANG | WUNTRACED));
-	/* WLINUXCLONE should be equal to __WCLONE, but we make sure */
-	if (args->options & __WCLONE)
-		options |= WLINUXCLONE;
-
-	if (args->rusage != NULL)
-		rup = &ru;
-	else
-		rup = NULL;
-	error = linux_common_wait(td, args->pid, args->status, options, rup);
-	if (error)
-		return (error);
-	if (args->rusage != NULL)
-		error = copyout(&ru, args->rusage, sizeof(ru));
-
-	return (error);
 }

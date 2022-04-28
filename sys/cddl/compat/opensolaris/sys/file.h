@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/file.h 255240 2013-09-05 11:58:12Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_FILE_H_
@@ -36,7 +36,7 @@
 #ifdef _KERNEL
 typedef	struct file	file_t;
 
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 
 static __inline file_t *
 getf(int fd, cap_rights_t *rightsp)
@@ -52,9 +52,10 @@ static __inline void
 releasef(int fd)
 {
 	struct file *fp;
+	cap_rights_t rights;
 
 	/* No CAP_ rights required, as we're only releasing. */
-	if (fget(curthread, fd, NULL, &fp) == 0) {
+	if (fget(curthread, fd, cap_rights_init(&rights), &fp) == 0) {
 		fdrop(fp, curthread);
 		fdrop(fp, curthread);
 	}

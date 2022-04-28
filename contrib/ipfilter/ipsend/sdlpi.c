@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipsend/sdlpi.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * (C)opyright 1992-1998 Darren Reed. (from tcplog)
@@ -25,14 +25,7 @@
 # include <sys/pfmod.h>
 # include <sys/bufmod.h>
 #endif
-#ifdef __osf__
-# include <sys/dlpihdr.h>
-#else
 # include <sys/dlpi.h>
-#endif
-#ifdef __hpux
-# include <sys/dlpi_ext.h>
-#endif
 
 #include <net/if.h>
 #include <netinet/in.h>

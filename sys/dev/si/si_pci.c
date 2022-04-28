@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/si/si_pci.c 174136 2007-12-01 20:39:47Z peter $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,7 +86,7 @@ si_pci_attach(device_t dev)
 		device_printf(dev, "couldn't map memory\n");
 		goto fail;
 	}
-	sc->sc_paddr = (caddr_t)rman_get_start(sc->sc_mem_res);
+	sc->sc_paddr = (caddr_t)(uintptr_t)rman_get_start(sc->sc_mem_res);
 	sc->sc_maddr = rman_get_virtual(sc->sc_mem_res);
 
 	sc->sc_irq_rid = 0;

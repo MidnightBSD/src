@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: release/10.0.0/sys/dev/hptnr/array.h 252867 2013-07-06 07:49:41Z delphij $
+ * $FreeBSD$
  */
 #include <dev/hptnr/hptnr_config.h>
 #ifndef _HPT_ARRAY_H_

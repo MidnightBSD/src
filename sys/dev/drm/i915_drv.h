@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/i915_drv.h 228443 2011-12-12 18:43:24Z mdf $");
+__FBSDID("$FreeBSD$");
 
 #ifndef _I915_DRV_H_
 #define _I915_DRV_H_
@@ -307,7 +307,7 @@ typedef struct drm_i915_private {
 		 * Flag if the hardware appears to be wedged.
 		 *
 		 * This is set when attempts to idle the device timeout.
-		 * It prevents command submission from occuring and makes
+		 * It prevents command submission from occurring and makes
 		 * every pending request fail
 		 */
 		int wedged;

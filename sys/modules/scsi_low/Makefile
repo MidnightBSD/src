@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/scsi_low/Makefile 240327 2012-09-10 21:57:40Z gnn $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../cam/scsi
+.PATH: ${SRCTOP}/sys/cam/scsi
 KMOD=	scsi_low
 SRCS=	scsi_low.c 
 SRCS+=  opt_ddb.h opt_scsi.h opt_cam.h bus_if.h device_if.h

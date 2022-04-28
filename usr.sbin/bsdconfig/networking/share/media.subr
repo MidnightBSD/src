@@ -24,7 +24,7 @@ if [ ! "$_NETWORKING_MEDIA_SUBR" ]; then _NETWORKING_MEDIA_SUBR=1
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/networking/share/media.subr 256181 2013-10-09 08:12:26Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -115,13 +115,15 @@ f_dialog_input_options()
 	# the system may hang (if any NFS mounts are using that interface).
 	#
 	if f_nfs_mounted && ! f_jailed; then
-		local setting="$( printf "$msg_current_options" \
-		                         "$interface" "$options" )"
+		local setting
+		f_sprintf setting "$msg_current_options" \
+		                  "$interface" "$options"
 		f_noyes "$msg_nfs_mounts_may_cause_hang" "$setting" ||
 			return $DIALOG_CANCEL
 	fi
 
-	local msg="$( printf "$msg_please_enter_mediaopts" "$interface" )"
+	local msg
+	f_sprintf msg "$msg_please_enter_mediaopts" "$interface"
 	local hline="$hline_alnum_punc_tab_enter"
 
 	local _options
@@ -162,8 +164,9 @@ f_dialog_menu_media_options()
 	# the system may hang (if any NFS mounts are using that interface).
 	#
 	if f_nfs_mounted && ! f_jailed; then
-		local setting="$( printf "$msg_current_options" \
-		                         "$interface" "$_options" )"
+		local setting
+		f_sprintf setting "$msg_current_options" \
+		                  "$interface" "$_options"
 		f_noyes "$msg_nfs_mounts_may_cause_hang" "$setting" ||
 			return $DIALOG_CANCEL
 	fi
@@ -177,18 +180,18 @@ f_dialog_menu_media_options()
 		f_ifconfig_media $interface | \
 		( index=1
 
-		  echo "'$( f_substr "$DIALOG_MENU_TAGS" $index 1 )'"
-		  echo "'$opt_none'" 
+		  f_substr -v tagn "$DIALOG_MENU_TAGS" $index 1
+		  echo "'$tagn' '$opt_none'"
 		  index=$(( $index + 1 ))
 
-		  echo "'$( f_substr "$DIALOG_MENU_TAGS" $index 1 )'"
-		  echo "'$opt_cust'" 
+		  f_substr -v tagn "$DIALOG_MENU_TAGS" $index 1
+		  echo "'$tagn' '$opt_cust'"
 		  index=$(( $index + 1 ))
 
 		  while read media_options; do
 		  	[ $index -lt ${#DIALOG_MENU_TAGS} ] || break
-		  	echo "'$( f_substr "$DIALOG_MENU_TAGS" $index 1 )'"
-		  	echo "'$media_options'"
+		  	f_substr -v tagn "$DIALOG_MENU_TAGS" $index 1
+		  	echo "'$tagn' '$media_options'"
 		  	index=$(( $index + 1 ))
 		  done
 		)
@@ -196,11 +199,11 @@ f_dialog_menu_media_options()
 
 	local msg
 	if [ "$USE_XDIALOG" ]; then
-		msg=$( printf "$xmsg_supported_media_options" \
-		       		"$interface" "$interface" )
+		f_sprintf msg "$xmsg_supported_media_options" \
+		              "$interface" "$interface"
 	else
-		msg=$( printf "$msg_supported_media_options" \
-		       		"$interface" "$interface" )
+		f_sprintf msg "$msg_supported_media_options" \
+		              "$interface" "$interface"
 	fi
 
 	local hline="$hline_arrows_tab_enter"

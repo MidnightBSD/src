@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/atheros/ar934xreg.h 256175 2013-10-09 03:19:05Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__AR934X_REG_H__
@@ -103,16 +103,38 @@
 #define	AR934X_RESET_REG_BOOTSTRAP		(AR71XX_RST_BLOCK_BASE + 0xb0)
 #define	AR934X_RESET_REG_PCIE_WMAC_INT_STATUS	(AR71XX_RST_BLOCK_BASE + 0xac)
 
+#define	AR934X_RESET_HOST		(1U << 31)
+#define	AR934X_RESET_SLIC		(1 << 30)
+#define	AR934X_RESET_HDMA		(1 << 29)
+#define	AR934X_RESET_EXTERNAL		(1 << 28)
+#define	AR934X_RESET_RTC		(1 << 27)
+#define	AR934X_RESET_PCIE_EP_INT	(1 << 26)
+#define	AR934X_RESET_CHKSUM_ACC		(1 << 25)
+#define	AR934X_RESET_FULL_CHIP		(1 << 24)
 #define	AR934X_RESET_GE1_MDIO		(1 << 23)
 #define	AR934X_RESET_GE0_MDIO		(1 << 22)
+#define	AR934X_RESET_CPU_NMI		(1 << 21)
+#define	AR934X_RESET_CPU_COLD		(1 << 20)
+#define	AR934X_RESET_HOST_RESET_INT	(1 << 19)
+#define	AR934X_RESET_PCIE_EP		(1 << 18)
+#define	AR934X_RESET_UART1		(1 << 17)
+#define	AR934X_RESET_DDR		(1 << 16)
+#define	AR934X_RESET_USB_PHY_PLL_PWD_EXT	(1 << 15)
+#define	AR934X_RESET_NANDF		(1 << 14)
 #define	AR934X_RESET_GE1_MAC		(1 << 13)
 #define	AR934X_RESET_ETH_SWITCH_ANALOG	(1 << 12)
 #define	AR934X_RESET_USB_PHY_ANALOG	(1 << 11)
+#define	AR934X_RESET_HOST_DMA_INT	(1 << 10)
 #define	AR934X_RESET_GE0_MAC		(1 << 9)
 #define	AR934X_RESET_ETH_SWITCH		(1 << 8)
+#define	AR934X_RESET_PCIE_PHY		(1 << 7)
+#define	AR934X_RESET_PCIE		(1 << 6)
 #define	AR934X_RESET_USB_HOST		(1 << 5)
 #define	AR934X_RESET_USB_PHY		(1 << 4)
 #define	AR934X_RESET_USBSUS_OVERRIDE	(1 << 3)
+#define	AR934X_RESET_LUT		(1 << 2)
+#define	AR934X_RESET_MBOX		(1 << 1)
+#define	AR934X_RESET_I2S		(1 << 0)
 
 #define	AR934X_BOOTSTRAP_SW_OPTION8	(1 << 23)
 #define	AR934X_BOOTSTRAP_SW_OPTION7	(1 << 22)
@@ -157,8 +179,36 @@
 /*
  * GPIO block
  */
+#define	AR934X_GPIO_REG_OUT_FUNC0	0x2c
+#define	AR934X_GPIO_REG_OUT_FUNC1	0x30
+#define	AR934X_GPIO_REG_OUT_FUNC2	0x34
+#define	AR934X_GPIO_REG_OUT_FUNC3	0x38
+#define	AR934X_GPIO_REG_OUT_FUNC4	0x3c
+#define	AR934X_GPIO_REG_OUT_FUNC5	0x40
 #define	AR934X_GPIO_REG_FUNC		0x6c
 #define	AR934X_GPIO_COUNT		23
+
+/* GPIO functions */
+#define	AR934X_GPIO_FUNC_CLK_OBS7_EN           (1 << 9)
+#define	AR934X_GPIO_FUNC_CLK_OBS6_EN           (1 << 8)
+#define	AR934X_GPIO_FUNC_CLK_OBS5_EN           (1 << 7)
+#define	AR934X_GPIO_FUNC_CLK_OBS4_EN           (1 << 6)
+#define	AR934X_GPIO_FUNC_CLK_OBS3_EN           (1 << 5)
+#define	AR934X_GPIO_FUNC_CLK_OBS2_EN           (1 << 4)
+#define	AR934X_GPIO_FUNC_CLK_OBS1_EN           (1 << 3)
+#define	AR934X_GPIO_FUNC_CLK_OBS0_EN           (1 << 2)
+#define	AR934X_GPIO_FUNC_JTAG_DISABLE          (1 << 1)
+
+/* GPIO MUX output function: AR934X_GPIO_REG_OUT_FUNCx */
+#define	AR934X_GPIO_OUT_GPIO		0	/* I'm a GPIO */
+#define	AR934X_GPIO_OUT_SPI_CS1		7	/* I'm SPI CS1 */
+#define	AR934X_GPIO_OUT_LED_LINK0	41	/* I'm switch phy link0 */
+#define	AR934X_GPIO_OUT_LED_LINK1	42
+#define	AR934X_GPIO_OUT_LED_LINK2	43
+#define	AR934X_GPIO_OUT_LED_LINK3	44
+#define	AR934X_GPIO_OUT_LED_LINK4	45
+#define	AR934X_GPIO_OUT_EXT_LNA0	46	/* I'm WMAC EXT LNA chain 0 */
+#define	AR934X_GPIO_OUT_EXT_LNA1	47	/* I'm WMAC EXT LNA chain 1 */
 
 /*
  * SRIF block

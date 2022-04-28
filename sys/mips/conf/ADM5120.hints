@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/ADM5120.hints 202175 2010-01-12 21:36:08Z imp $
+# $FreeBSD$
 # device.hints
 hint.obio.0.at="nexus0"
 hint.obio.0.maddr=0x0

@@ -9,7 +9,7 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/softfloat/negxf2.c 230363 2012-01-20 06:16:14Z das $");
+__FBSDID("$FreeBSD$");
 
 #ifdef FLOATX80
 

@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/modules/uchcom/Makefile 172748 2007-10-18 10:51:06Z takawata $
+# $FreeBSD$
 
-S=	${.CURDIR}/../..
-.PATH: $S/dev/usb
+S=	${SRCTOP}/sys
+.PATH: $S/dev/usb/serial
 
 KMOD=	uchcom
 SRCS=	uchcom.c opt_usb.h device_if.h bus_if.h usbdevs.h

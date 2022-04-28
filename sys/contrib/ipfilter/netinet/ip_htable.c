@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_htable.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -20,22 +20,18 @@
 # include <stdlib.h>
 # include <string.h>
 # define _KERNEL
-# ifdef __OpenBSD__
-struct file;
-# endif
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
 #include <sys/socket.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version)
 # include <sys/malloc.h>
 #endif
 #if defined(__FreeBSD__)
 #  include <sys/cdefs.h>
 #  include <sys/proc.h>
 #endif
-#if !defined(__svr4__) && !defined(__SVR4) && !defined(__hpux) && \
-    !defined(linux)
+#if !defined(__SVR4)
 # include <sys/mbuf.h>
 #endif
 #if defined(_KERNEL)

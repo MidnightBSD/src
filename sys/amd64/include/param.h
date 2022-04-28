@@ -36,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: release/10.0.0/sys/amd64/include/param.h 250338 2013-05-07 22:46:24Z attilio $
+ * $FreeBSD$
  */
 
 
@@ -65,14 +65,14 @@
 
 #if defined(SMP) || defined(KLD_MODULE)
 #ifndef MAXCPU
-#define MAXCPU		64
+#define MAXCPU		256
 #endif
 #else
 #define MAXCPU		1
 #endif
 
 #ifndef MAXMEMDOM
-#define	MAXMEMDOM	1
+#define	MAXMEMDOM	8
 #endif
 
 #define	ALIGNBYTES		_ALIGNBYTES
@@ -120,6 +120,12 @@
 #define	MAXPAGESIZES	3	/* maximum number of supported page sizes */
 
 #define IOPAGES	2		/* pages of i/o permission bitmap */
+/*
+ * I/O permission bitmap has a bit for each I/O port plus an additional
+ * byte at the end with all bits set. See section "I/O Permission Bit Map"
+ * in the Intel SDM for more details.
+ */
+#define	IOPERM_BITMAP_SIZE	(IOPAGES * PAGE_SIZE + 1)
 
 #ifndef	KSTACK_PAGES
 #define	KSTACK_PAGES	4	/* pages of kstack (with pcb) */
@@ -142,5 +148,8 @@
 #define	amd64_ptob(x)	((unsigned long)(x) << PAGE_SHIFT)
 
 #define	pgtok(x)	((unsigned long)(x) * (PAGE_SIZE / 1024)) 
+
+#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
+    || ((va) >= VM_MIN_KERNEL_ADDRESS && (va) < VM_MAX_KERNEL_ADDRESS))
 
 #endif /* !_AMD64_INCLUDE_PARAM_H_ */

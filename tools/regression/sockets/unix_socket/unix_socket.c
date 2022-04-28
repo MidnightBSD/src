@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/sockets/unix_socket/unix_socket.c 157602 2006-04-09 14:30:11Z rwatson $
+ * $FreeBSD$
  */
 
 /*
@@ -40,7 +40,7 @@
 #include <unistd.h>
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	int sock, socks[2];
 
@@ -59,7 +59,7 @@ main(int argc, char *argv[])
 		close(sock);
 		errx(-1, "socket(PF_LOCAL, SOCK_RAW, 0) returned %d", sock);
 	}
-	if (errno != EPROTONOSUPPORT)
+	if (errno != EPROTOTYPE)
 		err(-1, "socket(PF_LOCAL, SOCK_RAW, 0)");
 
 	if (socketpair(PF_LOCAL, SOCK_STREAM, 0, socks) < 0)

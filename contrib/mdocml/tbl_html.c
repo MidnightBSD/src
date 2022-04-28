@@ -1,6 +1,7 @@
-/*	$Id: tbl_html.c,v 1.9 2011/09/18 14:14:15 schwarze Exp $ */
+/*	$Id: tbl_html.c,v 1.23 2017/07/31 16:14:10 schwarze Exp $ */
 /*
  * Copyright (c) 2011 Kristaps Dzonsons <kristaps@bsd.lv>
+ * Copyright (c) 2014, 2015, 2017 Ingo Schwarze <schwarze@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,9 +15,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
+
+#include <sys/types.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -30,51 +31,71 @@
 static	void	 html_tblopen(struct html *, const struct tbl_span *);
 static	size_t	 html_tbl_len(size_t, void *);
 static	size_t	 html_tbl_strlen(const char *, void *);
+static	size_t	 html_tbl_sulen(const struct roffsu *, void *);
 
-/* ARGSUSED */
+
 static size_t
 html_tbl_len(size_t sz, void *arg)
 {
-	
-	return(sz);
+	return sz;
 }
 
-/* ARGSUSED */
 static size_t
 html_tbl_strlen(const char *p, void *arg)
 {
+	return strlen(p);
+}
 
-	return(strlen(p));
+static size_t
+html_tbl_sulen(const struct roffsu *su, void *arg)
+{
+	if (su->scale < 0.0)
+		return 0;
+
+	switch (su->unit) {
+	case SCALE_FS:  /* 2^16 basic units */
+		return su->scale * 65536.0 / 24.0;
+	case SCALE_IN:  /* 10 characters per inch */
+		return su->scale * 10.0;
+	case SCALE_CM:  /* 2.54 cm per inch */
+		return su->scale * 10.0 / 2.54;
+	case SCALE_PC:  /* 6 pica per inch */
+	case SCALE_VS:
+		return su->scale * 10.0 / 6.0;
+	case SCALE_EN:
+	case SCALE_EM:
+		return su->scale;
+	case SCALE_PT:  /* 12 points per pica */
+		return su->scale * 10.0 / 6.0 / 12.0;
+	case SCALE_BU:  /* 24 basic units per character */
+		return su->scale / 24.0;
+	case SCALE_MM:  /* 1/1000 inch */
+		return su->scale / 100.0;
+	default:
+		abort();
+	}
 }
 
 static void
 html_tblopen(struct html *h, const struct tbl_span *sp)
 {
-	const struct tbl_head *hp;
-	struct htmlpair	 tag;
-	struct roffsu	 su;
-	struct roffcol	*col;
+	struct tag	*t;
+	int		 ic;
 
-	if (TBL_SPAN_FIRST & sp->flags) {
+	if (h->tbl.cols == NULL) {
 		h->tbl.len = html_tbl_len;
 		h->tbl.slen = html_tbl_strlen;
-		tblcalc(&h->tbl, sp);
+		h->tbl.sulen = html_tbl_sulen;
+		tblcalc(&h->tbl, sp, 0, 0);
 	}
 
 	assert(NULL == h->tblt);
-	PAIR_CLASS_INIT(&tag, "tbl");
-	h->tblt = print_otag(h, TAG_TABLE, 1, &tag);
+	h->tblt = print_otag(h, TAG_TABLE, "c", "tbl");
 
-	for (hp = sp->head; hp; hp = hp->next) {
-		bufinit(h);
-		col = &h->tbl.cols[hp->ident];
-		SCALE_HS_INIT(&su, col->width);
-		bufcat_su(h, "width", &su);
-		PAIR_STYLE_INIT(&tag, h);
-		print_otag(h, TAG_COL, 1, &tag);
-	}
-
-	print_otag(h, TAG_TBODY, 0, NULL);
+	t = print_otag(h, TAG_COLGROUP, "");
+	for (ic = 0; ic < sp->opts->cols; ic++)
+		print_otag(h, TAG_COL, "shw", h->tbl.cols[ic].width);
+	print_tagq(h, t);
 }
 
 void
@@ -89,14 +110,13 @@ print_tblclose(struct html *h)
 void
 print_tbl(struct html *h, const struct tbl_span *sp)
 {
-	const struct tbl_head *hp;
 	const struct tbl_dat *dp;
-	struct htmlpair	 tag;
 	struct tag	*tt;
+	int		 ic;
 
 	/* Inhibit printing of spaces: we do padding ourselves. */
 
-	if (NULL == h->tblt)
+	if (h->tblt == NULL)
 		html_tblopen(h, sp);
 
 	assert(h->tblt);
@@ -104,35 +124,25 @@ print_tbl(struct html *h, const struct tbl_span *sp)
 	h->flags |= HTML_NONOSPACE;
 	h->flags |= HTML_NOSPACE;
 
-	tt = print_otag(h, TAG_TR, 0, NULL);
+	tt = print_otag(h, TAG_TR, "");
 
 	switch (sp->pos) {
-	case (TBL_SPAN_HORIZ):
-		/* FALLTHROUGH */
-	case (TBL_SPAN_DHORIZ):
-		PAIR_INIT(&tag, ATTR_COLSPAN, "0");
-		print_otag(h, TAG_TD, 1, &tag);
+	case TBL_SPAN_HORIZ:
+	case TBL_SPAN_DHORIZ:
+		print_otag(h, TAG_TD, "?", "colspan", "0");
 		break;
 	default:
 		dp = sp->first;
-		for (hp = sp->head; hp; hp = hp->next) {
+		for (ic = 0; ic < sp->opts->cols; ic++) {
 			print_stagq(h, tt);
-			print_otag(h, TAG_TD, 0, NULL);
+			print_otag(h, TAG_TD, "");
 
-			switch (hp->pos) {
-			case (TBL_HEAD_VERT):
-				/* FALLTHROUGH */
-			case (TBL_HEAD_DVERT):
+			if (dp == NULL || dp->layout->col > ic)
 				continue;
-			case (TBL_HEAD_DATA):
-				if (NULL == dp)
-					break;
-				if (TBL_CELL_DOWN != dp->layout->pos)
-					if (dp->string)
-						print_text(h, dp->string);
-				dp = dp->next;
-				break;
-			}
+			if (dp->layout->pos != TBL_CELL_DOWN)
+				if (dp->string != NULL)
+					print_text(h, dp->string);
+			dp = dp->next;
 		}
 		break;
 	}
@@ -141,7 +151,7 @@ print_tbl(struct html *h, const struct tbl_span *sp)
 
 	h->flags &= ~HTML_NONOSPACE;
 
-	if (TBL_SPAN_LAST & sp->flags) {
+	if (sp->next == NULL) {
 		assert(h->tbl.cols);
 		free(h->tbl.cols);
 		h->tbl.cols = NULL;

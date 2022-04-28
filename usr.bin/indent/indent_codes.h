@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1985 Sun Microsystems, Inc.
  * Copyright (c) 1980, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)indent_codes.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/indent/indent_codes.h 69796 2000-12-09 09:52:52Z obrien $
+ * $FreeBSD$
  */
 
 #define newline		1
@@ -68,3 +68,4 @@
 #define ifhead		30
 #define elsehead	31
 #define period		32
+#define strpfx		33

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/msun/src/s_exp2.c 251024 2013-05-27 08:50:10Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 
@@ -376,14 +376,14 @@ exp2(double x)
 	/* Compute r = exp2(y) = exp2t[i0] * p(z - eps[i]). */
 	t = tbl[i0];		/* exp2t[i0] */
 	z -= tbl[i0 + 1];	/* eps[i0]   */
-	if (k >= -1021 << 20)
+	if (k >= -(1021 << 20))
 		INSERT_WORDS(twopk, 0x3ff00000 + k, 0);
 	else
 		INSERT_WORDS(twopkp1000, 0x3ff00000 + k + (1000 << 20), 0);
 	r = t + t * z * (P1 + z * (P2 + z * (P3 + z * (P4 + z * P5))));
 
 	/* Scale by 2**(k>>20). */
-	if(k >= -1021 << 20) {
+	if(k >= -(1021 << 20)) {
 		if (k == 1024 << 20)
 			return (r * 2.0 * 0x1p1023);
 		return (r * twopk);

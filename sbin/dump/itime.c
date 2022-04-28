@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)itime.c	8.1 (Berkeley) 6/5/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/dump/itime.c 226520 2011-10-18 18:42:26Z mckusick $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -58,7 +58,7 @@ struct dumptime {
 	SLIST_ENTRY(dumptime) dt_list;
 };
 SLIST_HEAD(dthead, dumptime) dthead = SLIST_HEAD_INITIALIZER(dthead);
-struct	dumpdates **ddatev = 0;
+struct	dumpdates **ddatev = NULL;
 int	nddates = 0;
 
 static	void dumprecout(FILE *, const struct dumpdates *);
@@ -118,8 +118,7 @@ readdumptimes(FILE *df)
 	 *	arrayify the list, leaving enough room for the additional
 	 *	record that we may have to add to the ddate structure
 	 */
-	ddatev = (struct dumpdates **)
-		calloc((unsigned) (nddates + 1), sizeof (struct dumpdates *));
+	ddatev = calloc((unsigned) (nddates + 1), sizeof (struct dumpdates *));
 	dtwalk = SLIST_FIRST(&dthead);
 	for (i = nddates - 1; i >= 0; i--, dtwalk = SLIST_NEXT(dtwalk, dt_list))
 		ddatev[i] = &dtwalk->dt_value;
@@ -174,8 +173,8 @@ putdumptime(void)
 	fd = fileno(df);
 	(void) flock(fd, LOCK_EX);
 	fname = disk;
-	free((char *)ddatev);
-	ddatev = 0;
+	free(ddatev);
+	ddatev = NULL;
 	nddates = 0;
 	readdumptimes(df);
 	if (fseek(df, 0L, 0) < 0)

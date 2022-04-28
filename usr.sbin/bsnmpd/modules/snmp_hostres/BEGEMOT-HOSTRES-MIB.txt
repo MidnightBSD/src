@@ -26,7 +26,7 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/modules/snmp_hostres/BEGEMOT-HOSTRES-MIB.txt 154137 2006-01-09 13:01:26Z harti $
+-- $FreeBSD$
 --
 -- Additional stuff for the HOST-RESOURCES MIB.
 --
@@ -54,6 +54,9 @@ begemotHostres MODULE-IDENTITY
 	     E-mail:	harti@freebsd.org"
     DESCRIPTION
 	    "The MIB for additional HOST-RESOURCES data."
+    REVISION	"200601030000Z"
+    DESCRIPTION
+		"Initial revision."
     ::= { begemot 202 }
 
 begemotHostresObjects	OBJECT IDENTIFIER ::= { begemotHostres 1 }

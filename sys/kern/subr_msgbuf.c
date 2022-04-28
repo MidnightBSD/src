@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/kern/subr_msgbuf.c 233135 2012-03-19 00:36:32Z eadler $
+ * $FreeBSD$
  */
 
 /*
@@ -50,12 +50,11 @@ static u_int msgbuf_cksum(struct msgbuf *mbp);
 
 /*
  * Timestamps in msgbuf are useful when trying to diagnose when core dumps
- * or other actions occured.
+ * or other actions occurred.
  */
 static int msgbuf_show_timestamp = 0;
-SYSCTL_INT(_kern, OID_AUTO, msgbuf_show_timestamp, CTLFLAG_RW | CTLFLAG_TUN,
+SYSCTL_INT(_kern, OID_AUTO, msgbuf_show_timestamp, CTLFLAG_RWTUN,
     &msgbuf_show_timestamp, 0, "Show timestamp in msgbuf");
-TUNABLE_INT("kern.msgbuf_show_timestamp", &msgbuf_show_timestamp);
 
 /*
  * Initialize a message buffer of the specified size at the specified
@@ -180,7 +179,7 @@ msgbuf_addchar(struct msgbuf *mbp, int c)
  * carriage returns down this path.  So do we still need it?
  */
 void
-msgbuf_addstr(struct msgbuf *mbp, int pri, char *str, int filter_cr)
+msgbuf_addstr(struct msgbuf *mbp, int pri, const char *str, int filter_cr)
 {
 	u_int seq;
 	size_t len, prefix_len;

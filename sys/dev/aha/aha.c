@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/aha/aha.c 246713 2013-02-12 16:57:20Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -207,7 +207,6 @@ aha_free(struct aha_softc *aha)
 	case 7:
 		bus_dmamap_unload(aha->ccb_dmat, aha->ccb_dmamap);
 	case 6:
-		bus_dmamap_destroy(aha->ccb_dmat, aha->ccb_dmamap);
 		bus_dmamem_free(aha->ccb_dmat, aha->aha_ccb_array,
 		    aha->ccb_dmamap);
 	case 5:
@@ -217,7 +216,6 @@ aha_free(struct aha_softc *aha)
 	case 3:
 		bus_dmamem_free(aha->mailbox_dmat, aha->in_boxes,
 		    aha->mailbox_dmamap);
-		bus_dmamap_destroy(aha->mailbox_dmat, aha->mailbox_dmamap);
 	case 2:
 		bus_dma_tag_destroy(aha->buffer_dmat);
 	case 1:
@@ -303,7 +301,7 @@ aha_probe(struct aha_softc* aha)
 	 * This really should be replaced with the esetup command, since
 	 * that appears to be more reliable.  This becomes more and more
 	 * true over time as we discover more cards that don't read the
-	 * geometry register consistantly.
+	 * geometry register consistently.
 	 */
 	if (aha->boardid <= 0x42) {
 		/* Wait 10ms before reading */
@@ -460,7 +458,7 @@ aha_init(struct aha_softc* aha)
 				/* highaddr	*/ BUS_SPACE_MAXADDR,
 				/* filter	*/ NULL,
 				/* filterarg	*/ NULL,
-				/* maxsize	*/ MAXBSIZE,
+				/* maxsize	*/ DFLTPHYS,
 				/* nsegments	*/ AHA_NSEG,
 				/* maxsegsz	*/ BUS_SPACE_MAXSIZE_24BIT,
 				/* flags	*/ BUS_DMA_ALLOCNOW,
@@ -840,10 +838,6 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		}
 		break;
 	}
-	case XPT_EN_LUN:		/* Enable LUN as a target */
-	case XPT_TARGET_IO:		/* Execute target I/O request */
-	case XPT_ACCEPT_TARGET_IO:	/* Accept Host Target Mode CDB */
-	case XPT_CONT_TARGET_IO:	/* Continue Host Target I/O Connection*/
 	case XPT_ABORT:			/* Abort the specified CCB */
 		/* XXX Implement */
 		ccb->ccb_h.status = CAM_REQ_INVALID;
@@ -949,14 +943,14 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = aha->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
-		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
-		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
+		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-                cpi->transport = XPORT_SPI;
-                cpi->transport_version = 2;
-                cpi->protocol = PROTO_SCSI;
-                cpi->protocol_version = SCSI_REV_2;
+		cpi->transport = XPORT_SPI;
+		cpi->transport_version = 2;
+		cpi->protocol = PROTO_SCSI;
+		cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1049,8 +1043,8 @@ ahaexecuteccb(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 	ccb->ccb_h.status |= CAM_SIM_QUEUED;
 	LIST_INSERT_HEAD(&aha->pending_ccbs, &ccb->ccb_h, sim_links.le);
 
-	callout_reset(&accb->timer, (ccb->ccb_h.timeout * hz) / 1000,
-	    ahatimeout, accb);
+	callout_reset_sbt(&accb->timer, SBT_1MS * ccb->ccb_h.timeout, 0,
+	    ahatimeout, accb, 0);
 
 	/* Tell the adapter about this command */
 	if (aha->cur_outbox->action_code != AMBO_FREE) {
@@ -1163,13 +1157,15 @@ ahadone(struct aha_softc *aha, struct aha_ccb *accb, aha_mbi_comp_code_t comp_co
 		struct ccb_hdr *ccb_h;
 		cam_status error;
 
-		/* Notify all clients that a BDR occured */
+		/* Notify all clients that a BDR occurred */
 		error = xpt_create_path(&path, /*periph*/NULL,
 		    cam_sim_path(aha->sim), accb->hccb.target,
 		    CAM_LUN_WILDCARD);
 
-		if (error == CAM_REQ_CMP)
+		if (error == CAM_REQ_CMP) {
 			xpt_async(AC_SENT_BDR, path, NULL);
+			xpt_free_path(path);
+		}
 
 		ccb_h = LIST_FIRST(&aha->pending_ccbs);
 		while (ccb_h != NULL) {
@@ -1181,9 +1177,9 @@ ahadone(struct aha_softc *aha, struct aha_ccb *accb, aha_mbi_comp_code_t comp_co
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 				ahadone(aha, pending_accb, AMBI_ERROR);
 			} else {
-				callout_reset(&pending_accb->timer,
-				    (ccb_h->timeout * hz) / 1000,
-				    ahatimeout, pending_accb);
+				callout_reset_sbt(&pending_accb->timer,
+				    SBT_1MS * ccb_h->timeout, 0, ahatimeout,
+				    pending_accb, 0);
 				ccb_h = LIST_NEXT(ccb_h, sim_links.le);
 			}
 		}
@@ -1204,7 +1200,7 @@ ahadone(struct aha_softc *aha, struct aha_ccb *accb, aha_mbi_comp_code_t comp_co
 		break;
 	case AMBI_ABORT:
 	case AMBI_ERROR:
-		/* An error occured */
+		/* An error occurred */
 		if (accb->hccb.opcode < INITIATOR_CCB_WRESID)
 			csio->resid = 0;
 		else
@@ -1747,7 +1743,7 @@ ahatimeout(void *arg)
 	 * means that the driver attempts to clear only one error
 	 * condition at a time.  In general, timeouts that occur
 	 * close together are related anyway, so there is no benefit
-	 * in attempting to handle errors in parrallel.  Timeouts will
+	 * in attempting to handle errors in parallel.  Timeouts will
 	 * be reinstated when the recovery process ends.
 	 */
 	if ((accb->flags & ACCB_DEVICE_RESET) == 0) {

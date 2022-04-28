@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/SWARM.hints 202171 2010-01-12 20:52:41Z rpaulo $
+# $FreeBSD$
 hint.zbbus.0.at="nexus0"
 hint.zbpci.0.at="zbbus0"
 hint.scd.0.at="zbbus0"

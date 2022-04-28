@@ -31,6 +31,9 @@
  * - LZ4 homepage : http://fastcompression.blogspot.com/p/lz4.html
  * - LZ4 source repository : http://code.google.com/p/lz4/
  */
+/*
+ * Copyright (c) 2016 by Delphix. All rights reserved.
+ */
 
 #include <sys/zfs_context.h>
 
@@ -43,6 +46,8 @@ static int LZ4_compressCtx(void *ctx, const char *source, char *dest,
     int isize, int osize);
 static int LZ4_compress64kCtx(void *ctx, const char *source, char *dest,
     int isize, int osize);
+
+static kmem_cache_t *lz4_ctx_cache;
 
 /*ARGSUSED*/
 size_t
@@ -84,7 +89,7 @@ lz4_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 
 	/*
 	 * Returns 0 on success (decompression function returned non-negative)
-	 * and non-zero on failure (decompression function returned negative.
+	 * and non-zero on failure (decompression function returned negative).
 	 */
 	return (LZ4_uncompress_unknownOutputSize(&src[sizeof (bufsiz)],
 	    d_start, bufsiz, d_len) < 0);
@@ -185,21 +190,18 @@ lz4_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
     defined(__amd64) || defined(__ppc64__) || defined(_WIN64) || \
     defined(__LP64__) || defined(_LP64))
 #define	LZ4_ARCH64 1
+#else
+#define	LZ4_ARCH64 0
+#endif
+
 /*
- * Illumos: On amd64 we have 20k of stack and 24k on sun4u and sun4v, so we
- * can spend 16k on the algorithm
+ * Limits the amount of stack space that the algorithm may consume to hold
+ * the compression lookup table. The value `9' here means we'll never use
+ * more than 2k of stack (see above for a description of COMPRESSIONLEVEL).
+ * If more memory is needed, it is allocated from the heap.
  */
 /* FreeBSD: Use heap for all platforms for now */
 #define	STACKLIMIT 0
-#else
-#define	LZ4_ARCH64 0
-/*
- * Illumos: On i386 we only have 12k of stack, so in order to maintain the
- * same COMPRESSIONLEVEL we have to use heap allocation. Performance will
- * suck, but alas, it's ZFS on 32-bit we're talking about, so...
- */
-#define	STACKLIMIT 0
-#endif
 
 /*
  * Little Endian or Big Endian?
@@ -840,7 +842,7 @@ static int
 real_LZ4_compress(const char *source, char *dest, int isize, int osize)
 {
 #if HEAPMODE
-	void *ctx = kmem_zalloc(sizeof (struct refTables), KM_NOSLEEP);
+	void *ctx = kmem_cache_alloc(lz4_ctx_cache, KM_NOSLEEP);
 	int result;
 
 	/*
@@ -850,12 +852,13 @@ real_LZ4_compress(const char *source, char *dest, int isize, int osize)
 	if (ctx == NULL)
 		return (0);
 
+	bzero(ctx, sizeof(struct refTables));
 	if (isize < LZ4_64KLIMIT)
 		result = LZ4_compress64kCtx(ctx, source, dest, isize, osize);
 	else
 		result = LZ4_compressCtx(ctx, source, dest, isize, osize);
 
-	kmem_free(ctx, sizeof (struct refTables));
+	kmem_cache_free(lz4_ctx_cache, ctx);
 	return (result);
 #else
 	if (isize < (int)LZ4_64KLIMIT)
@@ -867,7 +870,7 @@ real_LZ4_compress(const char *source, char *dest, int isize, int osize)
 /* Decompression functions */
 
 /*
- * Note: The decoding functionLZ4_uncompress_unknownOutputSize() is safe
+ * Note: The decoding function LZ4_uncompress_unknownOutputSize() is safe
  *	against "buffer overflow" attack type. They will never write nor
  *	read outside of the provided output buffers.
  *	LZ4_uncompress_unknownOutputSize() also insures that it will never
@@ -910,6 +913,9 @@ LZ4_uncompress_unknownOutputSize(const char *source, char *dest, int isize,
 		}
 		/* copy literals */
 		cpy = op + length;
+		/* CORNER-CASE: cpy might overflow. */
+		if (cpy < op)
+			goto _output_error;	/* cpy was overflowed, bail! */
 		if ((cpy > oend - COPYLENGTH) ||
 		    (ip + length > iend - COPYLENGTH)) {
 			if (cpy > oend)
@@ -1000,4 +1006,23 @@ LZ4_uncompress_unknownOutputSize(const char *source, char *dest, int isize,
 	/* write overflow error detected */
 	_output_error:
 	return (int)(-(((char *)ip) - source));
+}
+
+extern void
+lz4_init(void)
+{
+
+#if HEAPMODE
+	lz4_ctx_cache = kmem_cache_create("lz4_ctx", sizeof(struct refTables),
+	    0, NULL, NULL, NULL, NULL, NULL, 0);
+#endif
+}
+
+extern void
+lz4_fini(void)
+{
+
+#if HEAPMODE
+	kmem_cache_destroy(lz4_ctx_cache);
+#endif
 }

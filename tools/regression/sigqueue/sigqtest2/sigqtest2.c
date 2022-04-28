@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/regression/sigqueue/sigqtest2/sigqtest2.c 197965 2009-10-11 17:04:13Z kib $ */
+/* $FreeBSD$ */
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <err.h>

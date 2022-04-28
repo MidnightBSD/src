@@ -27,11 +27,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/vfs_extattr.c 255219 2013-09-05 00:09:56Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capability.h>
+#include <sys/capsicum.h>
 #include <sys/lock.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
@@ -165,6 +165,9 @@ extattr_set_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	ssize_t cnt;
 	int error;
 
+	if (nbytes > IOSIZE_MAX)
+		return (EINVAL);
+
 	error = vn_start_write(vp, &mp, V_WAIT | PCATCH);
 	if (error)
 		return (error);
@@ -175,10 +178,6 @@ extattr_set_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	auio.uio_iov = &aiov;
 	auio.uio_iovcnt = 1;
 	auio.uio_offset = 0;
-	if (nbytes > IOSIZE_MAX) {
-		error = EINVAL;
-		goto done;
-	}
 	auio.uio_resid = nbytes;
 	auio.uio_rw = UIO_WRITE;
 	auio.uio_segflg = UIO_USERSPACE;
@@ -197,7 +196,9 @@ extattr_set_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	cnt -= auio.uio_resid;
 	td->td_retval[0] = cnt;
 
+#ifdef MAC
 done:
+#endif
 	VOP_UNLOCK(vp, 0);
 	vn_finished_write(mp);
 	return (error);
@@ -226,7 +227,7 @@ sys_extattr_set_fd(td, uap)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td->td_proc->p_fd, uap->fd,
+	error = getvnode(td, uap->fd,
 	    cap_rights_init(&rights, CAP_EXTATTR_SET), &fp);
 	if (error)
 		return (error);
@@ -328,6 +329,9 @@ extattr_get_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	size_t size, *sizep;
 	int error;
 
+	if (nbytes > IOSIZE_MAX)
+		return (EINVAL);
+
 	vn_lock(vp, LK_SHARED | LK_RETRY);
 
 	/*
@@ -344,10 +348,6 @@ extattr_get_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 		auio.uio_iov = &aiov;
 		auio.uio_iovcnt = 1;
 		auio.uio_offset = 0;
-		if (nbytes > IOSIZE_MAX) {
-			error = EINVAL;
-			goto done;
-		}
 		auio.uio_resid = nbytes;
 		auio.uio_rw = UIO_READ;
 		auio.uio_segflg = UIO_USERSPACE;
@@ -372,8 +372,9 @@ extattr_get_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 		td->td_retval[0] = cnt;
 	} else
 		td->td_retval[0] = size;
-
+#ifdef MAC
 done:
+#endif
 	VOP_UNLOCK(vp, 0);
 	return (error);
 }
@@ -401,7 +402,7 @@ sys_extattr_get_fd(td, uap)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td->td_proc->p_fd, uap->fd,
+	error = getvnode(td, uap->fd,
 	    cap_rights_init(&rights, CAP_EXTATTR_GET), &fp);
 	if (error)
 		return (error);
@@ -545,7 +546,7 @@ sys_extattr_delete_fd(td, uap)
 		return (error);
 	AUDIT_ARG_TEXT(attrname);
 
-	error = getvnode(td->td_proc->p_fd, uap->fd,
+	error = getvnode(td, uap->fd,
 	    cap_rights_init(&rights, CAP_EXTATTR_DELETE), &fp);
 	if (error)
 		return (error);
@@ -636,6 +637,9 @@ extattr_list_vp(struct vnode *vp, int attrnamespace, void *data,
 	ssize_t cnt;
 	int error;
 
+	if (nbytes > IOSIZE_MAX)
+		return (EINVAL);
+
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
 
 	auiop = NULL;
@@ -647,10 +651,6 @@ extattr_list_vp(struct vnode *vp, int attrnamespace, void *data,
 		auio.uio_iov = &aiov;
 		auio.uio_iovcnt = 1;
 		auio.uio_offset = 0;
-		if (nbytes > IOSIZE_MAX) {
-			error = EINVAL;
-			goto done;
-		}
 		auio.uio_resid = nbytes;
 		auio.uio_rw = UIO_READ;
 		auio.uio_segflg = UIO_USERSPACE;
@@ -674,8 +674,9 @@ extattr_list_vp(struct vnode *vp, int attrnamespace, void *data,
 		td->td_retval[0] = cnt;
 	} else
 		td->td_retval[0] = size;
-
+#ifdef MAC
 done:
+#endif
 	VOP_UNLOCK(vp, 0);
 	return (error);
 }
@@ -697,7 +698,7 @@ sys_extattr_list_fd(td, uap)
 
 	AUDIT_ARG_FD(uap->fd);
 	AUDIT_ARG_VALUE(uap->attrnamespace);
-	error = getvnode(td->td_proc->p_fd, uap->fd,
+	error = getvnode(td, uap->fd,
 	    cap_rights_init(&rights, CAP_EXTATTR_LIST), &fp);
 	if (error)
 		return (error);

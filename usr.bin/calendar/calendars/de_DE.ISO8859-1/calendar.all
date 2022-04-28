@@ -1,7 +1,7 @@
 /*
  * deutscher Kalender
  *
- * $FreeBSD: release/10.0.0/usr.bin/calendar/calendars/de_DE.ISO8859-1/calendar.all 78047 2001-06-11 03:08:46Z ache $
+ * $FreeBSD$
  */
 
 #ifndef _de_DE_ISO8859_1_all_

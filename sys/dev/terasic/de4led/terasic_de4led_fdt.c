@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/terasic/de4led/terasic_de4led_fdt.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -61,6 +61,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/terasic/de4led/terasic_de4led_fdt.c 2
 static int
 terasic_de4led_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (ofw_bus_is_compatible(dev, "sri-cambridge,de4led")) {
 		device_set_desc(dev, "Terasic DE4 8-element LED");

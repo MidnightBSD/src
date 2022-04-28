@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/lib/libproc/Makefile 240156 2012-09-06 03:19:48Z rpaulo $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=lib${LIB}
 LIB=	proc
 
 SRCS=	proc_bkpt.c		\
@@ -15,16 +16,32 @@ INCS=	libproc.h
 
 CFLAGS+=	-I${.CURDIR}
 
-.if ${MK_LIBCPLUSPLUS} != "no"
-LDADD+=		-lcxxrt
-DPADD+=		${LIBCXXRT}
+.if ${MK_CXX} == "no"
+CFLAGS+=	-DNO_CXA_DEMANGLE
+.elif ${MK_LIBCPLUSPLUS} != "no"
+LIBADD+=		cxxrt
 .else
-LDADD+=		-lsupc++
-DPADD+=		${LIBSTDCPLUSPLUS}
+LIBADD+=	supcplusplus
 .endif
 
-SHLIB_MAJOR=	2
+LIBADD+=	elf rtld_db util
 
-WITHOUT_MAN=
+.if ${MK_CDDL} != "no"
+LIBADD+=	ctf
+IGNORE_PRAGMA=	YES
+CFLAGS+=	-I${SRCTOP}/cddl/contrib/opensolaris/lib/libctf/common \
+		-I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common \
+		-I${SRCTOP}/sys/cddl/compat/opensolaris
+.else
+CFLAGS+=	-DNO_CTF
+.endif
+
+SHLIB_MAJOR=	3
+
+MAN=
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.lib.mk>

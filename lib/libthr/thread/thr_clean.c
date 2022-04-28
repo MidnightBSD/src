@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libthr/thread/thr_clean.c 213163 2010-09-25 09:43:24Z davidxu $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <signal.h>
@@ -84,7 +85,7 @@ _pthread_cleanup_push(void (*routine) (void *), void *arg)
 	curthread->unwind_disabled = 1;
 #endif
 	if ((newbuf = (struct pthread_cleanup *)
-	    malloc(sizeof(struct _pthread_cleanup_info))) != NULL) {
+	    malloc(sizeof(struct pthread_cleanup))) != NULL) {
 		newbuf->routine = routine;
 		newbuf->routine_arg = arg;
 		newbuf->onheap = 1;

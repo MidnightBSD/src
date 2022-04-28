@@ -1,21 +1,16 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/tools/bsnmptools/Makefile 216323 2010-12-09 12:25:45Z syrinx $
+# $FreeBSD$
 # Author: Shteryana Shopova <syrinx@FreeBSD.org>
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 .PATH: ${.CURDIR}
 
 PROG=	bsnmpget
 
-DPADD+=	${LIBBSNMP} ${LIBBSNMPTOOLS}
-LDADD+=	-lbsnmp -lbsnmptools
-CFLAGS+=	-I${.CURDIR}/../libbsnmptools
-LDFLAGS+=	-L${LIBBSNMPTOOLSDIR}
+LIBADD=	bsnmp bsnmptools
 
-.if ${MK_OPENSSL} != "no"
-DPADD+= ${LIBCRYPTO}
-LDADD+= -lcrypto
-.endif
+CFLAGS+=	-I${.CURDIR:H}/libbsnmptools
+LDFLAGS+=	-L${.OBJDIR:H}/libbsnmptools
 
 LINKS=  ${BINDIR}/bsnmpget ${BINDIR}/bsnmpwalk
 LINKS+=  ${BINDIR}/bsnmpget ${BINDIR}/bsnmpset

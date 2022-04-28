@@ -1,5 +1,5 @@
-/* $FreeBSD: release/10.0.0/lib/libc/iconv/citrus_bcs_strtol.c 219019 2011-02-25 00:04:39Z gabor $ */
-/* $NetBSD: citrus_bcs_strtol.c,v 1.2 2009/01/11 02:46:24 christos Exp $ */
+/* $FreeBSD$ */
+/* $NetBSD: citrus_bcs_strtol.c,v 1.4 2013/04/26 21:20:47 joerg Exp $ */
 
 /*-
  * Copyright (c) 2005 The DragonFly Project.  All rights reserved.

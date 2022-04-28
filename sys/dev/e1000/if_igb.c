@@ -1,6 +1,6 @@
 /******************************************************************************
 
-  Copyright (c) 2001-2013, Intel Corporation 
+  Copyright (c) 2001-2015, Intel Corporation 
   All rights reserved.
   
   Redistribution and use in source and binary forms, with or without 
@@ -30,78 +30,24 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: release/10.0.0/sys/dev/e1000/if_igb.c 256200 2013-10-09 17:32:52Z jfv $*/
+/*$FreeBSD$*/
 
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_rss.h"
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
 #include "opt_altq.h"
 #endif
 
-#include <sys/param.h>
-#include <sys/systm.h>
-#ifndef IGB_LEGACY_TX
-#include <sys/buf_ring.h>
-#endif
-#include <sys/bus.h>
-#include <sys/endian.h>
-#include <sys/kernel.h>
-#include <sys/kthread.h>
-#include <sys/malloc.h>
-#include <sys/mbuf.h>
-#include <sys/module.h>
-#include <sys/rman.h>
-#include <sys/socket.h>
-#include <sys/sockio.h>
-#include <sys/sysctl.h>
-#include <sys/taskqueue.h>
-#include <sys/eventhandler.h>
-#include <sys/pcpu.h>
-#include <sys/smp.h>
-#include <machine/smp.h>
-#include <machine/bus.h>
-#include <machine/resource.h>
-
-#include <net/bpf.h>
-#include <net/ethernet.h>
-#include <net/if.h>
-#include <net/if_arp.h>
-#include <net/if_dl.h>
-#include <net/if_media.h>
-
-#include <net/if_types.h>
-#include <net/if_vlan_var.h>
-
-#include <netinet/in_systm.h>
-#include <netinet/in.h>
-#include <netinet/if_ether.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <netinet/tcp.h>
-#include <netinet/tcp_lro.h>
-#include <netinet/udp.h>
-
-#include <machine/in_cksum.h>
-#include <dev/led/led.h>
-#include <dev/pci/pcivar.h>
-#include <dev/pci/pcireg.h>
-
-#include "e1000_api.h"
-#include "e1000_82575.h"
 #include "if_igb.h"
-
-/*********************************************************************
- *  Set this to one to display debug statistics
- *********************************************************************/
-int	igb_display_debug_stats = 0;
 
 /*********************************************************************
  *  Driver version:
  *********************************************************************/
-char igb_driver_version[] = "version - 2.4.0";
+char igb_driver_version[] = "2.5.3-k";
 
 
 /*********************************************************************
@@ -116,60 +62,47 @@ char igb_driver_version[] = "version - 2.4.0";
 
 static igb_vendor_info_t igb_vendor_info_array[] =
 {
-	{ 0x8086, E1000_DEV_ID_82575EB_COPPER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82575EB_FIBER_SERDES,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82575GB_QUAD_COPPER,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576,		PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_NS,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_NS_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_FIBER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_SERDES_QUAD,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_QUAD_COPPER,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_QUAD_COPPER_ET2,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82576_VF,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_COPPER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_FIBER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_SGMII,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_COPPER_DUAL,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_82580_QUAD_FIBER,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_DH89XXCC_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_DH89XXCC_SGMII,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_DH89XXCC_SFP,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_DH89XXCC_BACKPLANE,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I350_COPPER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I350_FIBER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I350_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I350_SGMII,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I350_VF,		PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_COPPER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_COPPER_IT,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_COPPER_OEM1,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_COPPER_FLASHLESS,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_SERDES_FLASHLESS,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_FIBER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_SERDES,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I210_SGMII,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I211_COPPER,	PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I354_BACKPLANE_1GBPS,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I354_BACKPLANE_2_5GBPS,
-						PCI_ANY_ID, PCI_ANY_ID, 0},
-	{ 0x8086, E1000_DEV_ID_I354_SGMII,	PCI_ANY_ID, PCI_ANY_ID, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82575EB_COPPER, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82575EB_FIBER_SERDES, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82575GB_QUAD_COPPER, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_NS, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_NS_SERDES, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_FIBER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_SERDES, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_SERDES_QUAD, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_QUAD_COPPER, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_QUAD_COPPER_ET2, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82576_VF, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_COPPER, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_FIBER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_SERDES, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_SGMII,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_COPPER_DUAL, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_82580_QUAD_FIBER, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_DH89XXCC_SERDES, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_DH89XXCC_SGMII, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_DH89XXCC_SFP, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_DH89XXCC_BACKPLANE, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I350_COPPER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I350_FIBER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I350_SERDES,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I350_SGMII,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I350_VF, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_COPPER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_COPPER_IT, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_COPPER_OEM1, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_COPPER_FLASHLESS, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_SERDES_FLASHLESS, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_FIBER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_SERDES,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I210_SGMII,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I211_COPPER,	0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I354_BACKPLANE_1GBPS, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I354_BACKPLANE_2_5GBPS, 0, 0, 0},
+	{IGB_INTEL_VENDOR_ID, E1000_DEV_ID_I354_SGMII,	0, 0, 0},
 	/* required last entry */
-	{ 0, 0, 0, 0, 0}
+	{0, 0, 0, 0, 0}
 };
 
 /*********************************************************************
@@ -199,6 +132,7 @@ static void	igb_start(struct ifnet *);
 static void	igb_start_locked(struct tx_ring *, struct ifnet *ifp);
 #endif
 static int	igb_ioctl(struct ifnet *, u_long, caddr_t);
+static uint64_t	igb_get_counter(if_t, ift_counter);
 static void	igb_init(void *);
 static void	igb_init_locked(struct adapter *);
 static void	igb_stop(void *);
@@ -316,6 +250,9 @@ static devclass_t igb_devclass;
 DRIVER_MODULE(igb, pci, igb_driver, igb_devclass, 0, 0);
 MODULE_DEPEND(igb, pci, 1, 1, 1);
 MODULE_DEPEND(igb, ether, 1, 1, 1);
+#ifdef DEV_NETMAP
+MODULE_DEPEND(igb, netmap, 1, 1, 1);
+#endif /* DEV_NETMAP */
 
 /*********************************************************************
  *  Tunable default values.
@@ -326,8 +263,6 @@ static SYSCTL_NODE(_hw, OID_AUTO, igb, CTLFLAG_RD, 0, "IGB driver parameters");
 /* Descriptor defaults */
 static int igb_rxd = IGB_DEFAULT_RXD;
 static int igb_txd = IGB_DEFAULT_TXD;
-TUNABLE_INT("hw.igb.rxd", &igb_rxd);
-TUNABLE_INT("hw.igb.txd", &igb_txd);
 SYSCTL_INT(_hw_igb, OID_AUTO, rxd, CTLFLAG_RDTUN, &igb_rxd, 0,
     "Number of receive descriptors per queue");
 SYSCTL_INT(_hw_igb, OID_AUTO, txd, CTLFLAG_RDTUN, &igb_txd, 0,
@@ -340,8 +275,7 @@ SYSCTL_INT(_hw_igb, OID_AUTO, txd, CTLFLAG_RDTUN, &igb_txd, 0,
 ** traffic for that interrupt vector
 */
 static int igb_enable_aim = TRUE;
-TUNABLE_INT("hw.igb.enable_aim", &igb_enable_aim);
-SYSCTL_INT(_hw_igb, OID_AUTO, enable_aim, CTLFLAG_RW, &igb_enable_aim, 0,
+SYSCTL_INT(_hw_igb, OID_AUTO, enable_aim, CTLFLAG_RWTUN, &igb_enable_aim, 0,
     "Enable adaptive interrupt moderation");
 
 /*
@@ -349,7 +283,6 @@ SYSCTL_INT(_hw_igb, OID_AUTO, enable_aim, CTLFLAG_RW, &igb_enable_aim, 0,
  * but this allows it to be forced off for testing.
  */         
 static int igb_enable_msix = 1;
-TUNABLE_INT("hw.igb.enable_msix", &igb_enable_msix);
 SYSCTL_INT(_hw_igb, OID_AUTO, enable_msix, CTLFLAG_RDTUN, &igb_enable_msix, 0,
     "Enable MSI-X interrupts");
 
@@ -357,7 +290,6 @@ SYSCTL_INT(_hw_igb, OID_AUTO, enable_msix, CTLFLAG_RDTUN, &igb_enable_msix, 0,
 ** Tuneable Interrupt rate
 */
 static int igb_max_interrupt_rate = 8000;
-TUNABLE_INT("hw.igb.max_interrupt_rate", &igb_max_interrupt_rate);
 SYSCTL_INT(_hw_igb, OID_AUTO, max_interrupt_rate, CTLFLAG_RDTUN,
     &igb_max_interrupt_rate, 0, "Maximum interrupts per second");
 
@@ -366,21 +298,19 @@ SYSCTL_INT(_hw_igb, OID_AUTO, max_interrupt_rate, CTLFLAG_RDTUN,
 ** Tuneable number of buffers in the buf-ring (drbr_xxx)
 */
 static int igb_buf_ring_size = IGB_BR_SIZE;
-TUNABLE_INT("hw.igb.buf_ring_size", &igb_buf_ring_size);
 SYSCTL_INT(_hw_igb, OID_AUTO, buf_ring_size, CTLFLAG_RDTUN,
     &igb_buf_ring_size, 0, "Size of the bufring");
 #endif
 
 /*
 ** Header split causes the packet header to
-** be dma'd to a seperate mbuf from the payload.
+** be dma'd to a separate mbuf from the payload.
 ** this can have memory alignment benefits. But
 ** another plus is that small packets often fit
 ** into the header and thus use no cluster. Its
 ** a very workload dependent type feature.
 */
 static int igb_header_split = FALSE;
-TUNABLE_INT("hw.igb.hdr_split", &igb_header_split);
 SYSCTL_INT(_hw_igb, OID_AUTO, header_split, CTLFLAG_RDTUN, &igb_header_split, 0,
     "Enable receive mbuf header split");
 
@@ -390,7 +320,6 @@ SYSCTL_INT(_hw_igb, OID_AUTO, header_split, CTLFLAG_RDTUN, &igb_header_split, 0,
 ** MSIX messages if left at 0.
 */
 static int igb_num_queues = 0;
-TUNABLE_INT("hw.igb.num_queues", &igb_num_queues);
 SYSCTL_INT(_hw_igb, OID_AUTO, num_queues, CTLFLAG_RDTUN, &igb_num_queues, 0,
     "Number of queues to configure, 0 indicates autoconfigure");
 
@@ -403,10 +332,15 @@ static int igb_last_bind_cpu = -1;
 
 /* How many packets rxeof tries to clean at a time */
 static int igb_rx_process_limit = 100;
-TUNABLE_INT("hw.igb.rx_process_limit", &igb_rx_process_limit);
 SYSCTL_INT(_hw_igb, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
     &igb_rx_process_limit, 0,
     "Maximum number of received packets to process at a time, -1 means unlimited");
+
+/* How many packets txeof tries to clean at a time */
+static int igb_tx_process_limit = -1;
+SYSCTL_INT(_hw_igb, OID_AUTO, tx_process_limit, CTLFLAG_RDTUN,
+    &igb_tx_process_limit, 0,
+    "Maximum number of sent packets to process at a time, -1 means unlimited");
 
 #ifdef DEV_NETMAP	/* see ixgbe.c for details */
 #include <dev/netmap/if_igb_netmap.h>
@@ -423,7 +357,7 @@ SYSCTL_INT(_hw_igb, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
 static int
 igb_probe(device_t dev)
 {
-	char		adapter_name[60];
+	char		adapter_name[256];
 	uint16_t	pci_vendor_id = 0;
 	uint16_t	pci_device_id = 0;
 	uint16_t	pci_subvendor_id = 0;
@@ -433,7 +367,7 @@ igb_probe(device_t dev)
 	INIT_DEBUGOUT("igb_probe: begin");
 
 	pci_vendor_id = pci_get_vendor(dev);
-	if (pci_vendor_id != IGB_VENDOR_ID)
+	if (pci_vendor_id != IGB_INTEL_VENDOR_ID)
 		return (ENXIO);
 
 	pci_device_id = pci_get_device(dev);
@@ -446,11 +380,11 @@ igb_probe(device_t dev)
 		    (pci_device_id == ent->device_id) &&
 
 		    ((pci_subvendor_id == ent->subvendor_id) ||
-		    (ent->subvendor_id == PCI_ANY_ID)) &&
+		    (ent->subvendor_id == 0)) &&
 
 		    ((pci_subdevice_id == ent->subdevice_id) ||
-		    (ent->subdevice_id == PCI_ANY_ID))) {
-			sprintf(adapter_name, "%s %s",
+		    (ent->subdevice_id == 0))) {
+			sprintf(adapter_name, "%s, Version - %s",
 				igb_strings[ent->index],
 				igb_driver_version);
 			device_set_desc_copy(dev, adapter_name);
@@ -458,7 +392,6 @@ igb_probe(device_t dev)
 		}
 		ent++;
 	}
-
 	return (ENXIO);
 }
 
@@ -490,7 +423,7 @@ igb_attach(device_t dev)
 	adapter->dev = adapter->osdep.dev = dev;
 	IGB_CORE_LOCK_INIT(adapter, device_get_nameunit(dev));
 
-	/* SYSCTL stuff */
+	/* SYSCTLs */
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 	    OID_AUTO, "nvm", CTLTYPE_INT|CTLFLAG_RW, adapter, 0,
@@ -526,10 +459,14 @@ igb_attach(device_t dev)
 
 	e1000_get_bus_info(&adapter->hw);
 
-	/* Sysctl for limiting the amount of work done in the taskqueue */
+	/* Sysctls for limiting the amount of work done in the taskqueues */
 	igb_set_sysctl_value(adapter, "rx_processing_limit",
 	    "max number of rx packets to process",
 	    &adapter->rx_process_limit, igb_rx_process_limit);
+
+	igb_set_sysctl_value(adapter, "tx_processing_limit",
+	    "max number of tx packets to process",
+	    &adapter->tx_process_limit, igb_tx_process_limit);
 
 	/*
 	 * Validate number of transmit and receive descriptors. It
@@ -614,9 +551,9 @@ igb_attach(device_t dev)
 		    "Disable Energy Efficient Ethernet");
 		if (adapter->hw.phy.media_type == e1000_media_type_copper) {
 			if (adapter->hw.mac.type == e1000_i354)
-				e1000_set_eee_i354(&adapter->hw);
+				e1000_set_eee_i354(&adapter->hw, TRUE, TRUE);
 			else
-				e1000_set_eee_i350(&adapter->hw);
+				e1000_set_eee_i350(&adapter->hw, TRUE, TRUE);
 		}
 	}
 
@@ -722,7 +659,8 @@ igb_attach(device_t dev)
 	return (0);
 
 err_late:
-	igb_detach(dev);
+	if (igb_detach(dev) == 0) /* igb_detach() already did the cleanup */
+		return(error);
 	igb_free_transmit_structures(adapter);
 	igb_free_receive_structures(adapter);
 	igb_release_hw_control(adapter);
@@ -781,12 +719,6 @@ igb_detach(device_t dev)
 	igb_release_manageability(adapter);
 	igb_release_hw_control(adapter);
 
-	if (adapter->wol) {
-		E1000_WRITE_REG(&adapter->hw, E1000_WUC, E1000_WUC_PME_EN);
-		E1000_WRITE_REG(&adapter->hw, E1000_WUFC, adapter->wol);
-		igb_enable_wakeup(dev);
-	}
-
 	/* Unregister VLAN events */
 	if (adapter->vlan_attach != NULL)
 		EVENTHANDLER_DEREGISTER(vlan_config, adapter->vlan_attach);
@@ -838,12 +770,7 @@ igb_suspend(device_t dev)
 
         igb_release_manageability(adapter);
 	igb_release_hw_control(adapter);
-
-        if (adapter->wol) {
-                E1000_WRITE_REG(&adapter->hw, E1000_WUC, E1000_WUC_PME_EN);
-                E1000_WRITE_REG(&adapter->hw, E1000_WUFC, adapter->wol);
-                igb_enable_wakeup(dev);
-        }
+	igb_enable_wakeup(dev);
 
 	IGB_CORE_UNLOCK(adapter);
 
@@ -975,12 +902,33 @@ igb_mq_start(struct ifnet *ifp, struct mbuf *m)
 	struct igb_queue	*que;
 	struct tx_ring		*txr;
 	int 			i, err = 0;
+#ifdef	RSS
+	uint32_t		bucket_id;
+#endif
 
 	/* Which queue to use */
-	if ((m->m_flags & M_FLOWID) != 0)
-		i = m->m_pkthdr.flowid % adapter->num_queues;
-	else
+	/*
+	 * When doing RSS, map it to the same outbound queue
+	 * as the incoming flow would be mapped to.
+	 *
+	 * If everything is setup correctly, it should be the
+	 * same bucket that the current CPU we're on is.
+	 */
+	if (M_HASHTYPE_GET(m) != M_HASHTYPE_NONE) {
+#ifdef	RSS
+		if (rss_hash2bucket(m->m_pkthdr.flowid,
+		    M_HASHTYPE_GET(m), &bucket_id) == 0) {
+			/* XXX TODO: spit out something if bucket_id > num_queues? */
+			i = bucket_id % adapter->num_queues;
+		} else {
+#endif
+			i = m->m_pkthdr.flowid % adapter->num_queues;
+#ifdef	RSS
+		}
+#endif
+	} else {
 		i = curcpu % adapter->num_queues;
+	}
 	txr = &adapter->tx_rings[i];
 	que = &adapter->queues[i];
 
@@ -988,12 +936,12 @@ igb_mq_start(struct ifnet *ifp, struct mbuf *m)
 	if (err)
 		return (err);
 	if (IGB_TX_TRYLOCK(txr)) {
-		err = igb_mq_start_locked(ifp, txr);
+		igb_mq_start_locked(ifp, txr);
 		IGB_TX_UNLOCK(txr);
 	} else
 		taskqueue_enqueue(que->tq, &txr->txq_task);
 
-	return (err);
+	return (0);
 }
 
 static int
@@ -1008,7 +956,6 @@ igb_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 	if (((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) ||
 	    adapter->link_active == 0)
 		return (ENETDOWN);
-
 
 	/* Process the queue */
 	while ((next = drbr_peek(ifp, txr->br)) != NULL) {
@@ -1028,9 +975,8 @@ igb_mq_start_locked(struct ifnet *ifp, struct tx_ring *txr)
 		}
 		drbr_advance(ifp, txr->br);
 		enq++;
-		ifp->if_obytes += next->m_pkthdr.len;
-		if (next->m_flags & M_MCAST)
-			ifp->if_omcasts++;
+		if (next->m_flags & M_MCAST && adapter->vf_ifp)
+			if_inc_counter(ifp, IFCOUNTER_OMCASTS, 1);
 		ETHER_BPF_MTAP(ifp, next);
 		if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
 			break;
@@ -1149,7 +1095,8 @@ igb_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		ifp->if_mtu = ifr->ifr_mtu;
 		adapter->max_frame_size =
 		    ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
-		igb_init_locked(adapter);
+		if ((ifp->if_drv_flags & IFF_DRV_RUNNING))
+			igb_init_locked(adapter);
 		IGB_CORE_UNLOCK(adapter);
 		break;
 	    }
@@ -1228,10 +1175,27 @@ igb_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			}
 		}
 #endif
+#if __FreeBSD_version >= 1000000
+		/* HW cannot turn these on/off separately */
+		if (mask & (IFCAP_RXCSUM | IFCAP_RXCSUM_IPV6)) {
+			ifp->if_capenable ^= IFCAP_RXCSUM;
+			ifp->if_capenable ^= IFCAP_RXCSUM_IPV6;
+			reinit = 1;
+		}
+		if (mask & IFCAP_TXCSUM) {
+			ifp->if_capenable ^= IFCAP_TXCSUM;
+			reinit = 1;
+		}
+		if (mask & IFCAP_TXCSUM_IPV6) {
+			ifp->if_capenable ^= IFCAP_TXCSUM_IPV6;
+			reinit = 1;
+		}
+#else
 		if (mask & IFCAP_HWCSUM) {
 			ifp->if_capenable ^= IFCAP_HWCSUM;
 			reinit = 1;
 		}
+#endif
 		if (mask & IFCAP_TSO4) {
 			ifp->if_capenable ^= IFCAP_TSO4;
 			reinit = 1;
@@ -1255,6 +1219,14 @@ igb_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		if (mask & IFCAP_LRO) {
 			ifp->if_capenable ^= IFCAP_LRO;
 			reinit = 1;
+		}
+		if (mask & IFCAP_WOL) {
+			if (mask & IFCAP_WOL_MAGIC)
+				ifp->if_capenable ^= IFCAP_WOL_MAGIC;
+			if (mask & IFCAP_WOL_MCAST)
+				ifp->if_capenable ^= IFCAP_WOL_MCAST;
+			if (mask & IFCAP_WOL_UCAST)
+				ifp->if_capenable ^= IFCAP_WOL_UCAST;
 		}
 		if (reinit && (ifp->if_drv_flags & IFF_DRV_RUNNING))
 			igb_init(adapter);
@@ -1310,15 +1282,31 @@ igb_init_locked(struct adapter *adapter)
 	/* Set hardware offload abilities */
 	ifp->if_hwassist = 0;
 	if (ifp->if_capenable & IFCAP_TXCSUM) {
+#if __FreeBSD_version >= 1000000
+		ifp->if_hwassist |= (CSUM_IP_TCP | CSUM_IP_UDP);
+		if (adapter->hw.mac.type != e1000_82575)
+			ifp->if_hwassist |= CSUM_IP_SCTP;
+#else
 		ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP);
 #if __FreeBSD_version >= 800000
-		if (adapter->hw.mac.type == e1000_82576)
+		if (adapter->hw.mac.type != e1000_82575)
 			ifp->if_hwassist |= CSUM_SCTP;
+#endif
 #endif
 	}
 
+#if __FreeBSD_version >= 1000000
+	if (ifp->if_capenable & IFCAP_TXCSUM_IPV6) {
+		ifp->if_hwassist |= (CSUM_IP6_TCP | CSUM_IP6_UDP);
+		if (adapter->hw.mac.type != e1000_82575)
+			ifp->if_hwassist |= CSUM_IP6_SCTP;
+	}
+#endif
 	if (ifp->if_capenable & IFCAP_TSO)
 		ifp->if_hwassist |= CSUM_TSO;
+
+	/* Clear bad data from Rx FIFOs */
+	e1000_rx_fifo_flush_82575(&adapter->hw);
 
 	/* Configure for OS presence */
 	igb_init_manageability(adapter);
@@ -1336,10 +1324,15 @@ igb_init_locked(struct adapter *adapter)
 	*/
 	if (adapter->max_frame_size <= 2048)
 		adapter->rx_mbuf_sz = MCLBYTES;
+#ifndef CONTIGMALLOC_WORKS
+       else
+               adapter->rx_mbuf_sz = MJUMPAGESIZE;
+#else
 	else if (adapter->max_frame_size <= 4096)
 		adapter->rx_mbuf_sz = MJUMPAGESIZE;
 	else
 		adapter->rx_mbuf_sz = MJUM9BYTES;
+#endif
 
 	/* Prepare receive descriptors and buffers */
 	if (igb_setup_receive_structures(adapter)) {
@@ -1383,9 +1376,9 @@ igb_init_locked(struct adapter *adapter)
 	/* Set Energy Efficient Ethernet */
 	if (adapter->hw.phy.media_type == e1000_media_type_copper) {
 		if (adapter->hw.mac.type == e1000_i354)
-			e1000_set_eee_i354(&adapter->hw);
+			e1000_set_eee_i354(&adapter->hw, TRUE, TRUE);
 		else
-			e1000_set_eee_i350(&adapter->hw);
+			e1000_set_eee_i350(&adapter->hw, TRUE, TRUE);
 	}
 }
 
@@ -1877,7 +1870,8 @@ retry:
 			/* Try it again? - one try */
 			if (remap == TRUE) {
 				remap = FALSE;
-				m = m_defrag(*m_headp, M_NOWAIT);
+				m = m_collapse(*m_headp, M_NOWAIT,
+				    IGB_MAX_SCATTER);
 				if (m == NULL) {
 					adapter->mbuf_defrag_failed++;
 					m_freem(*m_headp);
@@ -1888,9 +1882,6 @@ retry:
 				goto retry;
 			} else
 				return (error);
-		case ENOMEM:
-			txr->no_tx_dma_setup++;
-			return (error);
 		default:
 			txr->no_tx_dma_setup++;
 			m_freem(*m_headp);
@@ -1900,7 +1891,7 @@ retry:
 	}
 
 	/* Make certain there are enough descriptors */
-	if (nsegs > txr->tx_avail - 2) {
+	if (txr->tx_avail < (nsegs + 2)) {
 		txr->no_desc_avail++;
 		bus_dmamap_unload(txr->txtag, map);
 		return (ENOBUFS);
@@ -2301,7 +2292,7 @@ igb_stop(void *arg)
 	}
 
 	e1000_reset_hw(&adapter->hw);
-	E1000_WRITE_REG(&adapter->hw, E1000_WUC, 0);
+	E1000_WRITE_REG(&adapter->hw, E1000_WUFC, 0);
 
 	e1000_led_off(&adapter->hw);
 	e1000_cleanup_led(&adapter->hw);
@@ -2380,7 +2371,9 @@ igb_allocate_legacy(struct adapter *adapter)
 {
 	device_t		dev = adapter->dev;
 	struct igb_queue	*que = adapter->queues;
+#ifndef IGB_LEGACY_TX
 	struct tx_ring		*txr = adapter->tx_rings;
+#endif
 	int			error, rid = 0;
 
 	/* Turn off all interrupts */
@@ -2439,10 +2432,36 @@ igb_allocate_msix(struct adapter *adapter)
 	device_t		dev = adapter->dev;
 	struct igb_queue	*que = adapter->queues;
 	int			error, rid, vector = 0;
+	int			cpu_id = 0;
+#ifdef	RSS
+	cpuset_t cpu_mask;
+#endif
 
 	/* Be sure to start with all interrupts disabled */
 	E1000_WRITE_REG(&adapter->hw, E1000_IMC, ~0);
 	E1000_WRITE_FLUSH(&adapter->hw);
+
+#ifdef	RSS
+	/*
+	 * If we're doing RSS, the number of queues needs to
+	 * match the number of RSS buckets that are configured.
+	 *
+	 * + If there's more queues than RSS buckets, we'll end
+	 *   up with queues that get no traffic.
+	 *
+	 * + If there's more RSS buckets than queues, we'll end
+	 *   up having multiple RSS buckets map to the same queue,
+	 *   so there'll be some contention.
+	 */
+	if (adapter->num_queues != rss_getnumbuckets()) {
+		device_printf(dev,
+		    "%s: number of queues (%d) != number of RSS buckets (%d)"
+		    "; performance will be impacted.\n",
+		    __func__,
+		    adapter->num_queues,
+		    rss_getnumbuckets());
+	}
+#endif
 
 	for (int i = 0; i < adapter->num_queues; i++, vector++, que++) {
 		rid = vector +1;
@@ -2470,19 +2489,42 @@ igb_allocate_msix(struct adapter *adapter)
 			que->eims = E1000_EICR_TX_QUEUE0 << i;
 		else
 			que->eims = 1 << vector;
+
+#ifdef	RSS
 		/*
-		** Bind the msix vector, and thus the
-		** rings to the corresponding cpu.
-		*/
+		 * The queue ID is used as the RSS layer bucket ID.
+		 * We look up the queue ID -> RSS CPU ID and select
+		 * that.
+		 */
+		cpu_id = rss_getcpu(i % rss_getnumbuckets());
+#else
+		/*
+		 * Bind the msix vector, and thus the
+		 * rings to the corresponding cpu.
+		 *
+		 * This just happens to match the default RSS round-robin
+		 * bucket -> queue -> CPU allocation.
+		 */
 		if (adapter->num_queues > 1) {
 			if (igb_last_bind_cpu < 0)
 				igb_last_bind_cpu = CPU_FIRST();
-			bus_bind_intr(dev, que->res, igb_last_bind_cpu);
+			cpu_id = igb_last_bind_cpu;
+		}
+#endif
+
+		if (adapter->num_queues > 1) {
+			bus_bind_intr(dev, que->res, cpu_id);
+#ifdef	RSS
+			device_printf(dev,
+				"Bound queue %d to RSS bucket %d\n",
+				i, cpu_id);
+#else
 			device_printf(dev,
 				"Bound queue %d to cpu %d\n",
-				i,igb_last_bind_cpu);
-			igb_last_bind_cpu = CPU_NEXT(igb_last_bind_cpu);
+				i, cpu_id);
+#endif
 		}
+
 #ifndef IGB_LEGACY_TX
 		TASK_INIT(&que->txr->txq_task, 0, igb_deferred_mq_start,
 		    que->txr);
@@ -2491,8 +2533,35 @@ igb_allocate_msix(struct adapter *adapter)
 		TASK_INIT(&que->que_task, 0, igb_handle_que, que);
 		que->tq = taskqueue_create("igb_que", M_NOWAIT,
 		    taskqueue_thread_enqueue, &que->tq);
-		taskqueue_start_threads(&que->tq, 1, PI_NET, "%s que",
-		    device_get_nameunit(adapter->dev));
+		if (adapter->num_queues > 1) {
+			/*
+			 * Only pin the taskqueue thread to a CPU if
+			 * RSS is in use.
+			 *
+			 * This again just happens to match the default RSS
+			 * round-robin bucket -> queue -> CPU allocation.
+			 */
+#ifdef	RSS
+			CPU_SETOF(cpu_id, &cpu_mask);
+			taskqueue_start_threads_cpuset(&que->tq, 1, PI_NET,
+			    &cpu_mask,
+			    "%s que (bucket %d)",
+			    device_get_nameunit(adapter->dev),
+			    cpu_id);
+#else
+			taskqueue_start_threads(&que->tq, 1, PI_NET,
+			    "%s que (qid %d)",
+			    device_get_nameunit(adapter->dev),
+			    cpu_id);
+#endif
+		} else {
+			taskqueue_start_threads(&que->tq, 1, PI_NET, "%s que",
+			    device_get_nameunit(adapter->dev));
+		}
+
+		/* Finally update the last bound CPU id */
+		if (adapter->num_queues > 1)
+			igb_last_bind_cpu = CPU_NEXT(igb_last_bind_cpu);
 	}
 
 	/* And Link */
@@ -2766,12 +2835,18 @@ igb_setup_msix(struct adapter *adapter)
 		goto msi;
 	}
 
-	/* Figure out a reasonable auto config value */
 	queues = (mp_ncpus > (msgs-1)) ? (msgs-1) : mp_ncpus;
 
-	/* Manual override */
+	/* Override via tuneable */
 	if (igb_num_queues != 0)
 		queues = igb_num_queues;
+
+#ifdef	RSS
+	/* If we're doing RSS, clamp at the number of RSS buckets */
+	if (queues > rss_getnumbuckets())
+		queues = rss_getnumbuckets();
+#endif
+
 
 	/* Sanity check based on HW */
 	switch (adapter->hw.mac.type) {
@@ -2794,12 +2869,10 @@ igb_setup_msix(struct adapter *adapter)
 			maxqueues = 1;
 			break;
 	}
+
+	/* Final clamp on the actual hardware capability */
 	if (queues > maxqueues)
 		queues = maxqueues;
-
-	/* Manual override */
-	if (igb_num_queues != 0)
-		queues = igb_num_queues;
 
 	/*
 	** One vector (RX/TX pair) per queue
@@ -2830,7 +2903,7 @@ igb_setup_msix(struct adapter *adapter)
 msi:
        	if (adapter->msix_mem != NULL) {
 		bus_release_resource(dev, SYS_RES_MEMORY,
-		    PCIR_BAR(IGB_MSIX_BAR), adapter->msix_mem);
+		    adapter->memrid, adapter->msix_mem);
 		adapter->msix_mem = NULL;
 	}
        	msgs = 1;
@@ -2884,7 +2957,7 @@ igb_init_dmac(struct adapter *adapter, u32 pba)
 			dmac = pba - 10;
 		reg = E1000_READ_REG(hw, E1000_DMACR);
 		reg &= ~E1000_DMACR_DMACTHR_MASK;
-		reg = ((dmac << E1000_DMACR_DMACTHR_SHIFT)
+		reg |= ((dmac << E1000_DMACR_DMACTHR_SHIFT)
 		    & E1000_DMACR_DMACTHR_MASK);
 
 		/* transition to L0x or L1 if available..*/
@@ -2909,21 +2982,6 @@ igb_init_dmac(struct adapter *adapter, u32 pba)
 
 		E1000_WRITE_REG(hw, E1000_DMACR, reg);
 
-#ifdef I210_OBFF_SUPPORT
-		/*
-		 * Set the OBFF Rx threshold to DMA Coalescing Rx
-		 * threshold - 2KB and enable the feature in the
-		 * hardware for I210.
-		 */
-		if (hw->mac.type == e1000_i210) {
-			int obff = dmac - 2;
-			reg = E1000_READ_REG(hw, E1000_DOBFFCTL);
-			reg &= ~E1000_DOBFFCTL_OBFFTHR_MASK;
-			reg |= (obff & E1000_DOBFFCTL_OBFFTHR_MASK)
-			    | E1000_DOBFFCTL_EXIT_ACT_MASK;
-			E1000_WRITE_REG(hw, E1000_DOBFFCTL, reg);
-		}
-#endif
 		E1000_WRITE_REG(hw, E1000_DMCRTRH, 0);
 
 		/* Set the interval before transition */
@@ -3070,7 +3128,7 @@ igb_reset(struct adapter *adapter)
 
 	/* Issue a global reset */
 	e1000_reset_hw(hw);
-	E1000_WRITE_REG(hw, E1000_WUC, 0);
+	E1000_WRITE_REG(hw, E1000_WUFC, 0);
 
 	/* Reset for AutoMediaDetect */
 	if (adapter->flags & IGB_MEDIA_RESET) {
@@ -3113,13 +3171,20 @@ igb_setup_interface(device_t dev, struct adapter *adapter)
 	ifp->if_softc = adapter;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = igb_ioctl;
+	ifp->if_get_counter = igb_get_counter;
+
+	/* TSO parameters */
+	ifp->if_hw_tsomax = IP_MAXPACKET;
+	ifp->if_hw_tsomaxsegcount = IGB_MAX_SCATTER;
+	ifp->if_hw_tsomaxsegsize = IGB_TSO_SEG_SIZE;
+
 #ifndef IGB_LEGACY_TX
 	ifp->if_transmit = igb_mq_start;
 	ifp->if_qflush = igb_qflush;
 #else
 	ifp->if_start = igb_start;
 	IFQ_SET_MAXLEN(&ifp->if_snd, adapter->num_tx_desc - 1);
-	ifp->if_snd.ifq_drv_maxlen = adapter->num_tx_desc - 1;
+	ifp->if_snd.ifq_drv_maxlen = 0;
 	IFQ_SET_READY(&ifp->if_snd);
 #endif
 
@@ -3128,6 +3193,9 @@ igb_setup_interface(device_t dev, struct adapter *adapter)
 	ifp->if_capabilities = ifp->if_capenable = 0;
 
 	ifp->if_capabilities = IFCAP_HWCSUM | IFCAP_VLAN_HWCSUM;
+#if __FreeBSD_version >= 1000000
+	ifp->if_capabilities |= IFCAP_HWCSUM_IPV6;
+#endif
 	ifp->if_capabilities |= IFCAP_TSO;
 	ifp->if_capabilities |= IFCAP_JUMBO_MTU;
 	ifp->if_capenable = ifp->if_capabilities;
@@ -3143,13 +3211,20 @@ igb_setup_interface(device_t dev, struct adapter *adapter)
 	 * Tell the upper layer(s) we
 	 * support full VLAN capability.
 	 */
-	ifp->if_data.ifi_hdrlen = sizeof(struct ether_vlan_header);
+	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 	ifp->if_capabilities |= IFCAP_VLAN_HWTAGGING
 			     |  IFCAP_VLAN_HWTSO
 			     |  IFCAP_VLAN_MTU;
 	ifp->if_capenable |= IFCAP_VLAN_HWTAGGING
 			  |  IFCAP_VLAN_HWTSO
 			  |  IFCAP_VLAN_MTU;
+
+	/*
+	 * Enable only WOL MAGIC by default if WOL is enabled in EEPROM.
+	 */
+	ifp->if_capabilities |= IFCAP_WOL;
+	if (adapter->wol)
+		ifp->if_capenable |= IFCAP_WOL_MAGIC;
 
 	/*
 	** Don't turn this on by default, if vlans are
@@ -3256,7 +3331,6 @@ fail_2:
 	bus_dmamem_free(dma->dma_tag, dma->dma_vaddr, dma->dma_map);
 	bus_dma_tag_destroy(dma->dma_tag);
 fail_0:
-	dma->dma_map = NULL;
 	dma->dma_tag = NULL;
 
 	return (error);
@@ -3267,12 +3341,15 @@ igb_dma_free(struct adapter *adapter, struct igb_dma_alloc *dma)
 {
 	if (dma->dma_tag == NULL)
 		return;
-	if (dma->dma_map != NULL) {
+	if (dma->dma_paddr != 0) {
 		bus_dmamap_sync(dma->dma_tag, dma->dma_map,
 		    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 		bus_dmamap_unload(dma->dma_tag, dma->dma_map);
+		dma->dma_paddr = 0;
+	}
+	if (dma->dma_vaddr != NULL) {
 		bus_dmamem_free(dma->dma_tag, dma->dma_vaddr, dma->dma_map);
-		dma->dma_map = NULL;
+		dma->dma_vaddr = NULL;
 	}
 	bus_dma_tag_destroy(dma->dma_tag);
 	dma->dma_tag = NULL;
@@ -3527,9 +3604,9 @@ igb_setup_transmit_ring(struct tx_ring *txr)
 		}
 #ifdef DEV_NETMAP
 		if (slot) {
-			int si = netmap_idx_n2k(&na->tx_rings[txr->me], i);
+			int si = netmap_idx_n2k(na->tx_rings[txr->me], i);
 			/* no need to set the address */
-			netmap_load_map(txr->txtag, txbuf->map, NMB(slot + si));
+			netmap_load_map(na, txr->txtag, txbuf->map, NMB(na, slot + si));
 		}
 #endif /* DEV_NETMAP */
 		/* clear the watch index */
@@ -3761,9 +3838,10 @@ igb_tso_setup(struct tx_ring *txr, struct mbuf *mp,
 		break;
 #endif
 	default:
-		panic("%s: CSUM_TSO but no supported IP version (0x%04x)",
-		    __func__, ntohs(eh_type));
-		break;
+		device_printf(adapter->dev,
+		    "CSUM_TSO but no supported IP version (0x%04x)",
+		    ntohs(eh_type));
+		return (ENXIO);
 	}
 
 	ctxd = txr->next_avail_desc;
@@ -3830,16 +3908,12 @@ igb_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp,
 	int	ehdrlen, ip_hlen = 0;
 	u16	etype;
 	u8	ipproto = 0;
-	int	offload = TRUE;
 	int	ctxd = txr->next_avail_desc;
 	u16	vtag = 0;
 
 	/* First check if TSO is to be used */
 	if (mp->m_pkthdr.csum_flags & CSUM_TSO)
 		return (igb_tso_setup(txr, mp, cmd_type_len, olinfo_status));
-
-	if ((mp->m_pkthdr.csum_flags & CSUM_OFFLOAD) == 0)
-		offload = FALSE;
 
 	/* Indicate the whole packet as payload when not doing TSO */
        	*olinfo_status |= mp->m_pkthdr.len << E1000_ADVTXD_PAYLEN_SHIFT;
@@ -3855,8 +3929,9 @@ igb_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp,
 	if (mp->m_flags & M_VLANTAG) {
 		vtag = htole16(mp->m_pkthdr.ether_vtag);
 		vlan_macip_lens |= (vtag << E1000_ADVTXD_VLAN_SHIFT);
-	} else if (offload == FALSE) /* ... no offload to do */
+	} else if ((mp->m_pkthdr.csum_flags & CSUM_OFFLOAD) == 0) {
 		return (0);
+	}
 
 	/*
 	 * Determine where frame payload starts.
@@ -3890,7 +3965,6 @@ igb_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp,
 			type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_IPV6;
 			break;
 		default:
-			offload = FALSE;
 			break;
 	}
 
@@ -3899,27 +3973,41 @@ igb_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp,
 
 	switch (ipproto) {
 		case IPPROTO_TCP:
-			if (mp->m_pkthdr.csum_flags & CSUM_TCP)
+#if __FreeBSD_version >= 1000000
+			if (mp->m_pkthdr.csum_flags & (CSUM_IP_TCP | CSUM_IP6_TCP)) {
+#else
+			if (mp->m_pkthdr.csum_flags & CSUM_TCP) {
+#endif
 				type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_TCP;
+				*olinfo_status |= E1000_TXD_POPTS_TXSM << 8;
+			}
 			break;
 		case IPPROTO_UDP:
-			if (mp->m_pkthdr.csum_flags & CSUM_UDP)
+#if __FreeBSD_version >= 1000000
+			if (mp->m_pkthdr.csum_flags & (CSUM_IP_UDP | CSUM_IP6_UDP)) {
+#else
+			if (mp->m_pkthdr.csum_flags & CSUM_UDP) {
+#endif
 				type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_UDP;
+				*olinfo_status |= E1000_TXD_POPTS_TXSM << 8;
+			}
 			break;
 
 #if __FreeBSD_version >= 800000
 		case IPPROTO_SCTP:
-			if (mp->m_pkthdr.csum_flags & CSUM_SCTP)
+#if __FreeBSD_version >= 1000000
+			if (mp->m_pkthdr.csum_flags & (CSUM_IP_SCTP | CSUM_IP6_SCTP)) {
+#else
+			if (mp->m_pkthdr.csum_flags & CSUM_SCTP) {
+#endif
 				type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_SCTP;
+				*olinfo_status |= E1000_TXD_POPTS_TXSM << 8;
+			}
 			break;
 #endif
 		default:
-			offload = FALSE;
 			break;
 	}
-
-	if (offload) /* For the TX descriptor setup */
-		*olinfo_status |= E1000_TXD_POPTS_TXSM << 8;
 
 	/* 82575 needs the queue index added */
 	if (adapter->hw.mac.type == e1000_82575)
@@ -3952,17 +4040,18 @@ static bool
 igb_txeof(struct tx_ring *txr)
 {
 	struct adapter		*adapter = txr->adapter;
+#ifdef DEV_NETMAP
 	struct ifnet		*ifp = adapter->ifp;
+#endif /* DEV_NETMAP */
 	u32			work, processed = 0;
-	u16			limit = txr->process_limit;
+	int			limit = adapter->tx_process_limit;
 	struct igb_tx_buf	*buf;
 	union e1000_adv_tx_desc *txd;
 
 	mtx_assert(&txr->tx_mtx, MA_OWNED);
 
 #ifdef DEV_NETMAP
-	if (netmap_tx_irq(ifp, txr->me |
-	    (NETMAP_LOCKED_ENTER|NETMAP_LOCKED_EXIT)))
+	if (netmap_tx_irq(ifp, txr->me))
 		return (FALSE);
 #endif /* DEV_NETMAP */
 
@@ -3996,7 +4085,6 @@ igb_txeof(struct tx_ring *txr)
 			    buf->map);
 			m_freem(buf->m_head);
 			buf->m_head = NULL;
-			buf->map = NULL;
 		}
 		buf->eop = NULL;
 		++txr->tx_avail;
@@ -4022,7 +4110,6 @@ igb_txeof(struct tx_ring *txr)
 				    buf->map);
 				m_freem(buf->m_head);
 				buf->m_head = NULL;
-				buf->map = NULL;
 			}
 			++txr->tx_avail;
 			buf->eop = NULL;
@@ -4030,7 +4117,6 @@ igb_txeof(struct tx_ring *txr)
 		}
 		++txr->packets;
 		++processed;
-		++ifp->if_opackets;
 		txr->watchdog_time = ticks;
 
 		/* Try the next packet */
@@ -4230,15 +4316,13 @@ igb_allocate_receive_buffers(struct rx_ring *rxr)
 
 	for (i = 0; i < adapter->num_rx_desc; i++) {
 		rxbuf = &rxr->rx_buffers[i];
-		error = bus_dmamap_create(rxr->htag,
-		    BUS_DMA_NOWAIT, &rxbuf->hmap);
+		error = bus_dmamap_create(rxr->htag, 0, &rxbuf->hmap);
 		if (error) {
 			device_printf(dev,
 			    "Unable to create RX head DMA maps\n");
 			goto fail;
 		}
-		error = bus_dmamap_create(rxr->ptag,
-		    BUS_DMA_NOWAIT, &rxbuf->pmap);
+		error = bus_dmamap_create(rxr->ptag, 0, &rxbuf->pmap);
 		if (error) {
 			device_printf(dev,
 			    "Unable to create RX packet DMA maps\n");
@@ -4333,13 +4417,13 @@ igb_setup_receive_ring(struct rx_ring *rxr)
 		rxbuf = &rxr->rx_buffers[j];
 #ifdef DEV_NETMAP
 		if (slot) {
-			/* slot sj is mapped to the i-th NIC-ring entry */
-			int sj = netmap_idx_n2k(&na->rx_rings[rxr->me], j);
+			/* slot sj is mapped to the j-th NIC-ring entry */
+			int sj = netmap_idx_n2k(na->rx_rings[rxr->me], j);
 			uint64_t paddr;
 			void *addr;
 
-			addr = PNMB(slot + sj, &paddr);
-			netmap_load_map(rxr->ptag, rxbuf->pmap, addr);
+			addr = PNMB(na, slot + sj, &paddr);
+			netmap_load_map(na, rxr->ptag, rxbuf->pmap, addr);
 			/* Update descriptor */
 			rxr->rx_base[j].read.pkt_addr = htole64(paddr);
 			continue;
@@ -4400,7 +4484,6 @@ skip_head:
 
 	rxr->fmp = NULL;
 	rxr->lmp = NULL;
-	rxr->discard = FALSE;
 
 	bus_dmamap_sync(rxr->rxdma.dma_tag, rxr->rxdma.dma_map,
 	    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
@@ -4409,7 +4492,7 @@ skip_head:
 	** Now set up the LRO interface, we
 	** also only do head split when LRO
 	** is enabled, since so often they
-	** are undesireable in similar setups.
+	** are undesirable in similar setups.
 	*/
 	if (ifp->if_capenable & IFCAP_LRO) {
 		error = tcp_lro_init(lro);
@@ -4462,6 +4545,106 @@ fail:
 	}
 
 	return (ENOBUFS);
+}
+
+/*
+ * Initialise the RSS mapping for NICs that support multiple transmit/
+ * receive rings.
+ */
+static void
+igb_initialise_rss_mapping(struct adapter *adapter)
+{
+	struct e1000_hw *hw = &adapter->hw;
+	int i;
+	int queue_id;
+	u32 reta;
+	u32 rss_key[10], mrqc, shift = 0;
+
+	/* XXX? */
+	if (adapter->hw.mac.type == e1000_82575)
+		shift = 6;
+
+	/*
+	 * The redirection table controls which destination
+	 * queue each bucket redirects traffic to.
+	 * Each DWORD represents four queues, with the LSB
+	 * being the first queue in the DWORD.
+	 *
+	 * This just allocates buckets to queues using round-robin
+	 * allocation.
+	 *
+	 * NOTE: It Just Happens to line up with the default
+	 * RSS allocation method.
+	 */
+
+	/* Warning FM follows */
+	reta = 0;
+	for (i = 0; i < 128; i++) {
+#ifdef	RSS
+		queue_id = rss_get_indirection_to_bucket(i);
+		/*
+		 * If we have more queues than buckets, we'll
+		 * end up mapping buckets to a subset of the
+		 * queues.
+		 *
+		 * If we have more buckets than queues, we'll
+		 * end up instead assigning multiple buckets
+		 * to queues.
+		 *
+		 * Both are suboptimal, but we need to handle
+		 * the case so we don't go out of bounds
+		 * indexing arrays and such.
+		 */
+		queue_id = queue_id % adapter->num_queues;
+#else
+		queue_id = (i % adapter->num_queues);
+#endif
+		/* Adjust if required */
+		queue_id = queue_id << shift;
+
+		/*
+		 * The low 8 bits are for hash value (n+0);
+		 * The next 8 bits are for hash value (n+1), etc.
+		 */
+		reta = reta >> 8;
+		reta = reta | ( ((uint32_t) queue_id) << 24);
+		if ((i & 3) == 3) {
+			E1000_WRITE_REG(hw, E1000_RETA(i >> 2), reta);
+			reta = 0;
+		}
+	}
+
+	/* Now fill in hash table */
+
+	/*
+	 * MRQC: Multiple Receive Queues Command
+	 * Set queuing to RSS control, number depends on the device.
+	 */
+	mrqc = E1000_MRQC_ENABLE_RSS_8Q;
+
+#ifdef	RSS
+	/* XXX ew typecasting */
+	rss_getkey((uint8_t *) &rss_key);
+#else
+	arc4rand(&rss_key, sizeof(rss_key), 0);
+#endif
+	for (i = 0; i < 10; i++)
+		E1000_WRITE_REG_ARRAY(hw,
+		    E1000_RSSRK(0), i, rss_key[i]);
+
+	/*
+	 * Configure the RSS fields to hash upon.
+	 */
+	mrqc |= (E1000_MRQC_RSS_FIELD_IPV4 |
+	    E1000_MRQC_RSS_FIELD_IPV4_TCP);
+	mrqc |= (E1000_MRQC_RSS_FIELD_IPV6 |
+	    E1000_MRQC_RSS_FIELD_IPV6_TCP);
+	mrqc |=( E1000_MRQC_RSS_FIELD_IPV4_UDP |
+	    E1000_MRQC_RSS_FIELD_IPV6_UDP);
+	mrqc |=( E1000_MRQC_RSS_FIELD_IPV6_UDP_EX |
+	    E1000_MRQC_RSS_FIELD_IPV6_TCP_EX);
+
+	E1000_WRITE_REG(hw, E1000_MRQC, mrqc);
 }
 
 /*********************************************************************
@@ -4520,6 +4703,18 @@ igb_initialize_receive_units(struct adapter *adapter)
 		rctl |= E1000_RCTL_SZ_2048;
 	}
 
+	/*
+	 * If TX flow control is disabled and there's >1 queue defined,
+	 * enable DROP.
+	 *
+	 * This drops frames rather than hanging the RX MAC for all queues.
+	 */
+	if ((adapter->num_queues > 1) &&
+	    (adapter->fc == e1000_fc_none ||
+	     adapter->fc == e1000_fc_rx_pause)) {
+		srrctl |= E1000_SRRCTL_DROP_EN;
+	}
+
 	/* Setup the Base and Length of the Rx Descriptor Rings */
 	for (int i = 0; i < adapter->num_queues; i++, rxr++) {
 		u64 bus_addr = rxr->rxdma.dma_paddr;
@@ -4547,39 +4742,9 @@ igb_initialize_receive_units(struct adapter *adapter)
 	*/
 	rxcsum = E1000_READ_REG(hw, E1000_RXCSUM);
 	if (adapter->num_queues >1) {
-		u32 random[10], mrqc, shift = 0;
-		union igb_reta {
-			u32 dword;
-			u8  bytes[4];
-		} reta;
 
-		arc4rand(&random, sizeof(random), 0);
-		if (adapter->hw.mac.type == e1000_82575)
-			shift = 6;
-		/* Warning FM follows */
-		for (int i = 0; i < 128; i++) {
-			reta.bytes[i & 3] =
-			    (i % adapter->num_queues) << shift;
-			if ((i & 3) == 3)
-				E1000_WRITE_REG(hw,
-				    E1000_RETA(i >> 2), reta.dword);
-		}
-		/* Now fill in hash table */
-		mrqc = E1000_MRQC_ENABLE_RSS_4Q;
-		for (int i = 0; i < 10; i++)
-			E1000_WRITE_REG_ARRAY(hw,
-			    E1000_RSSRK(0), i, random[i]);
-
-		mrqc |= (E1000_MRQC_RSS_FIELD_IPV4 |
-		    E1000_MRQC_RSS_FIELD_IPV4_TCP);
-		mrqc |= (E1000_MRQC_RSS_FIELD_IPV6 |
-		    E1000_MRQC_RSS_FIELD_IPV6_TCP);
-		mrqc |=( E1000_MRQC_RSS_FIELD_IPV4_UDP |
-		    E1000_MRQC_RSS_FIELD_IPV6_UDP);
-		mrqc |=( E1000_MRQC_RSS_FIELD_IPV6_UDP_EX |
-		    E1000_MRQC_RSS_FIELD_IPV6_TCP_EX);
-
-		E1000_WRITE_REG(hw, E1000_MRQC, mrqc);
+		/* rss setup */
+		igb_initialise_rss_mapping(adapter);
 
 		/*
 		** NOTE: Receive Full-Packet Checksum Offload 
@@ -4590,8 +4755,8 @@ igb_initialize_receive_units(struct adapter *adapter)
 		rxcsum |= E1000_RXCSUM_PCSD;
 #if __FreeBSD_version >= 800000
 		/* For SCTP Offload */
-		if ((hw->mac.type == e1000_82576)
-		    && (ifp->if_capenable & IFCAP_RXCSUM))
+		if ((hw->mac.type != e1000_82575) &&
+		    (ifp->if_capenable & IFCAP_RXCSUM))
 			rxcsum |= E1000_RXCSUM_CRCOFL;
 #endif
 	} else {
@@ -4599,7 +4764,7 @@ igb_initialize_receive_units(struct adapter *adapter)
 		if (ifp->if_capenable & IFCAP_RXCSUM) {
 			rxcsum |= E1000_RXCSUM_IPPCSE;
 #if __FreeBSD_version >= 800000
-			if (adapter->hw.mac.type == e1000_82576)
+			if (adapter->hw.mac.type != e1000_82575)
 				rxcsum |= E1000_RXCSUM_CRCOFL;
 #endif
 		} else
@@ -4634,13 +4799,13 @@ igb_initialize_receive_units(struct adapter *adapter)
 		 * an init() while a netmap client is active must
 		 * preserve the rx buffers passed to userspace.
 		 * In this driver it means we adjust RDT to
-		 * somthing different from next_to_refresh
+		 * something different from next_to_refresh
 		 * (which is not used in netmap mode).
 		 */
 		if (ifp->if_capenable & IFCAP_NETMAP) {
 			struct netmap_adapter *na = NA(adapter->ifp);
-			struct netmap_kring *kring = &na->rx_rings[i];
-			int t = rxr->next_to_refresh - kring->nr_hwavail;
+			struct netmap_kring *kring = na->rx_rings[i];
+			int t = rxr->next_to_refresh - nm_kr_rxspace(kring);
 
 			if (t >= adapter->num_rx_desc)
 				t -= adapter->num_rx_desc;
@@ -4758,11 +4923,13 @@ igb_rx_discard(struct rx_ring *rxr, int i)
 	if (rbuf->m_head) {
 		m_free(rbuf->m_head);
 		rbuf->m_head = NULL;
+		bus_dmamap_unload(rxr->htag, rbuf->hmap);
 	}
 
 	if (rbuf->m_pack) {
 		m_free(rbuf->m_pack);
 		rbuf->m_pack = NULL;
+		bus_dmamap_unload(rxr->ptag, rbuf->pmap);
 	}
 
 	return;
@@ -4817,7 +4984,6 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 	struct rx_ring		*rxr = que->rxr;
 	struct ifnet		*ifp = adapter->ifp;
 	struct lro_ctrl		*lro = &rxr->lro;
-	struct lro_entry	*queued;
 	int			i, processed = 0, rxdone = 0;
 	u32			ptype, staterr = 0;
 	union e1000_adv_rx_desc	*cur;
@@ -4828,15 +4994,17 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 	    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 
 #ifdef DEV_NETMAP
-	if (netmap_rx_irq(ifp, rxr->me | NETMAP_LOCKED_ENTER, &processed))
+	if (netmap_rx_irq(ifp, rxr->me, &processed)) {
+		IGB_RX_UNLOCK(rxr);
 		return (FALSE);
+	}
 #endif /* DEV_NETMAP */
 
 	/* Main clean loop */
 	for (i = rxr->next_to_check; count != 0;) {
 		struct mbuf		*sendmp, *mh, *mp;
 		struct igb_rx_buf	*rxbuf;
-		u16			hlen, plen, hdr, vtag;
+		u16			hlen, plen, hdr, vtag, pkt_info;
 		bool			eop = FALSE;
  
 		cur = &rxr->rx_base[i];
@@ -4858,17 +5026,19 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 		else
 			vtag = le16toh(cur->wb.upper.vlan);
 		hdr = le16toh(cur->wb.lower.lo_dword.hs_rss.hdr_info);
+		pkt_info = le16toh(cur->wb.lower.lo_dword.hs_rss.pkt_info);
 		eop = ((staterr & E1000_RXD_STAT_EOP) == E1000_RXD_STAT_EOP);
 
-		/* Make sure all segments of a bad packet are discarded */
-		if (((staterr & E1000_RXDEXT_ERR_FRAME_ERR_MASK) != 0) ||
-		    (rxr->discard)) {
+		/*
+		 * Free the frame (all segments) if we're at EOP and
+		 * it's an error.
+		 *
+		 * The datasheet states that EOP + status is only valid for
+		 * the final segment in a multi-segment frame.
+		 */
+		if (eop && ((staterr & E1000_RXDEXT_ERR_FRAME_ERR_MASK) != 0)) {
 			adapter->dropped_pkts++;
 			++rxr->rx_discarded;
-			if (!eop) /* Catch subsequent segs */
-				rxr->discard = TRUE;
-			else
-				rxr->discard = FALSE;
 			igb_rx_discard(rxr, i);
 			goto next_desc;
 		}
@@ -4885,6 +5055,7 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 		** case only the first header is valid.
 		*/
 		if (rxr->hdr_split && rxr->fmp == NULL) {
+			bus_dmamap_unload(rxr->htag, rxbuf->hmap);
 			hlen = (hdr & E1000_RXDADV_HDRBUFLEN_MASK) >>
 			    E1000_RXDADV_HDRBUFLEN_SHIFT;
 			if (hlen > IGB_HDR_BUF)
@@ -4917,6 +5088,7 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 			/* clear buf info for refresh */
 			rxbuf->m_pack = NULL;
 		}
+		bus_dmamap_unload(rxr->ptag, rxbuf->pmap);
 
 		++processed; /* So we know when to refresh */
 
@@ -4940,7 +5112,6 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 
 		if (eop) {
 			rxr->fmp->m_pkthdr.rcvif = ifp;
-			ifp->if_ipackets++;
 			rxr->rx_packets++;
 			/* capture data for AIM */
 			rxr->packets++;
@@ -4955,10 +5126,51 @@ igb_rxeof(struct igb_queue *que, int count, int *done)
 				rxr->fmp->m_pkthdr.ether_vtag = vtag;
 				rxr->fmp->m_flags |= M_VLANTAG;
 			}
+
+			/*
+			 * In case of multiqueue, we have RXCSUM.PCSD bit set
+			 * and never cleared. This means we have RSS hash
+			 * available to be used.
+			 */
+			if (adapter->num_queues > 1) {
+				rxr->fmp->m_pkthdr.flowid = 
+				    le32toh(cur->wb.lower.hi_dword.rss);
+				switch (pkt_info & E1000_RXDADV_RSSTYPE_MASK) {
+					case E1000_RXDADV_RSSTYPE_IPV4_TCP:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_TCP_IPV4);
+					break;
+					case E1000_RXDADV_RSSTYPE_IPV4:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_IPV4);
+					break;
+					case E1000_RXDADV_RSSTYPE_IPV6_TCP:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_TCP_IPV6);
+					break;
+					case E1000_RXDADV_RSSTYPE_IPV6_EX:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_IPV6_EX);
+					break;
+					case E1000_RXDADV_RSSTYPE_IPV6:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_IPV6);
+					break;
+					case E1000_RXDADV_RSSTYPE_IPV6_TCP_EX:
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_RSS_TCP_IPV6_EX);
+					break;
+					default:
+						/* XXX fallthrough */
+						M_HASHTYPE_SET(rxr->fmp,
+						    M_HASHTYPE_OPAQUE_HASH);
+				}
+			} else {
 #ifndef IGB_LEGACY_TX
-			rxr->fmp->m_pkthdr.flowid = que->msix;
-			rxr->fmp->m_flags |= M_FLOWID;
+				rxr->fmp->m_pkthdr.flowid = que->msix;
+				M_HASHTYPE_SET(rxr->fmp, M_HASHTYPE_OPAQUE);
 #endif
+			}
 			sendmp = rxr->fmp;
 			/* Make sure to set M_PKTHDR. */
 			sendmp->m_flags |= M_PKTHDR;
@@ -4999,10 +5211,7 @@ next_desc:
 	/*
 	 * Flush any outstanding LRO work
 	 */
-	while ((queued = SLIST_FIRST(&lro->lro_active)) != NULL) {
-		SLIST_REMOVE_HEAD(&lro->lro_active, next);
-		tcp_lro_flush(lro, queued);
-	}
+	tcp_lro_flush_all(lro);
 
 	if (done != NULL)
 		*done += rxdone;
@@ -5297,22 +5506,61 @@ igb_is_valid_ether_addr(uint8_t *addr)
 static void
 igb_enable_wakeup(device_t dev)
 {
-	u16     cap, status;
-	u8      id;
+	struct adapter	*adapter = device_get_softc(dev);
+	struct ifnet	*ifp = adapter->ifp;
+	u32		pmc, ctrl, ctrl_ext, rctl, wuc;
+	u16		status;
 
-	/* First find the capabilities pointer*/
-	cap = pci_read_config(dev, PCIR_CAP_PTR, 2);
-	/* Read the PM Capabilities */
-	id = pci_read_config(dev, cap, 1);
-	if (id != PCIY_PMG)     /* Something wrong */
+	if (pci_find_cap(dev, PCIY_PMG, &pmc) != 0)
 		return;
-	/* OK, we have the power capabilities, so
-	   now get the status register */
-	cap += PCIR_POWER_STATUS;
-	status = pci_read_config(dev, cap, 2);
-	status |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
-	pci_write_config(dev, cap, status, 2);
-	return;
+
+	adapter->wol = E1000_READ_REG(&adapter->hw, E1000_WUFC);
+	if (ifp->if_capenable & IFCAP_WOL_MAGIC)
+		adapter->wol |=  E1000_WUFC_MAG;
+	else
+		adapter->wol &= ~E1000_WUFC_MAG;
+
+	if (ifp->if_capenable & IFCAP_WOL_MCAST) {
+		adapter->wol |=  E1000_WUFC_MC;
+		rctl = E1000_READ_REG(&adapter->hw, E1000_RCTL);
+		rctl |= E1000_RCTL_MPE;
+		E1000_WRITE_REG(&adapter->hw, E1000_RCTL, rctl);
+	} else
+		adapter->wol &= ~E1000_WUFC_MC;
+
+	if (ifp->if_capenable & IFCAP_WOL_UCAST)
+		adapter->wol |=  E1000_WUFC_EX;
+	else
+		adapter->wol &= ~E1000_WUFC_EX;
+
+	if (!(adapter->wol & (E1000_WUFC_EX | E1000_WUFC_MAG | E1000_WUFC_MC)))
+		goto pme;
+
+	/* Advertise the wakeup capability */
+	ctrl = E1000_READ_REG(&adapter->hw, E1000_CTRL);
+	ctrl |= (E1000_CTRL_SWDPIN2 | E1000_CTRL_SWDPIN3);
+	E1000_WRITE_REG(&adapter->hw, E1000_CTRL, ctrl);
+
+	/* Keep the laser running on Fiber adapters */
+	if (adapter->hw.phy.media_type == e1000_media_type_fiber ||
+	    adapter->hw.phy.media_type == e1000_media_type_internal_serdes) {
+		ctrl_ext = E1000_READ_REG(&adapter->hw, E1000_CTRL_EXT);
+		ctrl_ext |= E1000_CTRL_EXT_SDP3_DATA;
+		E1000_WRITE_REG(&adapter->hw, E1000_CTRL_EXT, ctrl_ext);
+	}
+
+	/* Enable wakeup by the MAC */
+	wuc = E1000_READ_REG(&adapter->hw, E1000_WUC);
+	wuc |= E1000_WUC_PME_EN | E1000_WUC_APME;
+	E1000_WRITE_REG(&adapter->hw, E1000_WUC, wuc);
+	E1000_WRITE_REG(&adapter->hw, E1000_WUFC, adapter->wol);
+
+pme:
+	status = pci_read_config(dev, pmc + PCIR_POWER_STATUS, 2);
+	status &= ~(PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE);
+	if (ifp->if_capenable & IFCAP_WOL)
+		status |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+	pci_write_config(dev, pmc + PCIR_POWER_STATUS, status, 2);
 }
 
 static void
@@ -5331,6 +5579,100 @@ igb_led_func(void *arg, int onoff)
 	IGB_CORE_UNLOCK(adapter);
 }
 
+static uint64_t
+igb_get_vf_counter(if_t ifp, ift_counter cnt)
+{
+	struct adapter *adapter;
+	struct e1000_vf_stats *stats;
+#ifndef IGB_LEGACY_TX
+	struct tx_ring *txr;
+	uint64_t rv;
+#endif
+
+	adapter = if_getsoftc(ifp);
+	stats = (struct e1000_vf_stats *)adapter->stats;
+
+	switch (cnt) {
+	case IFCOUNTER_IPACKETS:
+		return (stats->gprc);
+	case IFCOUNTER_OPACKETS:
+		return (stats->gptc);
+	case IFCOUNTER_IBYTES:
+		return (stats->gorc);
+	case IFCOUNTER_OBYTES:
+		return (stats->gotc);
+	case IFCOUNTER_IMCASTS:
+		return (stats->mprc);
+	case IFCOUNTER_IERRORS:
+		return (adapter->dropped_pkts);
+	case IFCOUNTER_OERRORS:
+		return (adapter->watchdog_events);
+#ifndef IGB_LEGACY_TX
+	case IFCOUNTER_OQDROPS:
+		rv = 0;
+		txr = adapter->tx_rings;
+		for (int i = 0; i < adapter->num_queues; i++, txr++)
+			rv += txr->br->br_drops;
+		return (rv);
+#endif
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
+}
+
+static uint64_t
+igb_get_counter(if_t ifp, ift_counter cnt)
+{
+	struct adapter *adapter;
+	struct e1000_hw_stats *stats;
+#ifndef IGB_LEGACY_TX
+	struct tx_ring *txr;
+	uint64_t rv;
+#endif
+
+	adapter = if_getsoftc(ifp);
+	if (adapter->vf_ifp)
+		return (igb_get_vf_counter(ifp, cnt));
+
+	stats = (struct e1000_hw_stats *)adapter->stats;
+
+	switch (cnt) {
+	case IFCOUNTER_IPACKETS:
+		return (stats->gprc);
+	case IFCOUNTER_OPACKETS:
+		return (stats->gptc);
+	case IFCOUNTER_IBYTES:
+		return (stats->gorc);
+	case IFCOUNTER_OBYTES:
+		return (stats->gotc);
+	case IFCOUNTER_IMCASTS:
+		return (stats->mprc);
+	case IFCOUNTER_OMCASTS:
+		return (stats->mptc);
+	case IFCOUNTER_IERRORS:
+		return (adapter->dropped_pkts + stats->rxerrc +
+		    stats->crcerrs + stats->algnerrc +
+		    stats->ruc + stats->roc + stats->cexterr);
+	case IFCOUNTER_OERRORS:
+		return (stats->ecol + stats->latecol +
+		    adapter->watchdog_events);
+	case IFCOUNTER_COLLISIONS:
+		return (stats->colc);
+	case IFCOUNTER_IQDROPS:
+		return (stats->mpc);
+#ifndef IGB_LEGACY_TX
+	case IFCOUNTER_OQDROPS:
+		rv = 0;
+		txr = adapter->tx_rings;
+		for (int i = 0; i < adapter->num_queues; i++, txr++)
+			rv += txr->br->br_drops;
+		return (rv);
+#endif
+	default:
+		return (if_get_counter_default(ifp, cnt));
+	}
+}
+
 /**********************************************************************
  *
  *  Update the board statistics counters.
@@ -5339,7 +5681,6 @@ igb_led_func(void *arg, int onoff)
 static void
 igb_update_stats_counters(struct adapter *adapter)
 {
-	struct ifnet		*ifp;
         struct e1000_hw		*hw = &adapter->hw;
 	struct e1000_hw_stats	*stats;
 
@@ -5355,7 +5696,7 @@ igb_update_stats_counters(struct adapter *adapter)
 
 	stats = (struct e1000_hw_stats	*)adapter->stats;
 
-	if(adapter->hw.phy.media_type == e1000_media_type_copper ||
+	if (adapter->hw.phy.media_type == e1000_media_type_copper ||
 	   (E1000_READ_REG(hw, E1000_STATUS) & E1000_STATUS_LU)) {
 		stats->symerrs +=
 		    E1000_READ_REG(hw,E1000_SYMERRS);
@@ -5407,8 +5748,14 @@ igb_update_stats_counters(struct adapter *adapter)
 	stats->roc += E1000_READ_REG(hw, E1000_ROC);
 	stats->rjc += E1000_READ_REG(hw, E1000_RJC);
 
-	stats->tor += E1000_READ_REG(hw, E1000_TORH);
-	stats->tot += E1000_READ_REG(hw, E1000_TOTH);
+	stats->mgprc += E1000_READ_REG(hw, E1000_MGTPRC);
+	stats->mgpdc += E1000_READ_REG(hw, E1000_MGTPDC);
+	stats->mgptc += E1000_READ_REG(hw, E1000_MGTPTC);
+
+	stats->tor += E1000_READ_REG(hw, E1000_TORL) +
+	    ((u64)E1000_READ_REG(hw, E1000_TORH) << 32);
+	stats->tot += E1000_READ_REG(hw, E1000_TOTL) +
+	    ((u64)E1000_READ_REG(hw, E1000_TOTH) << 32);
 
 	stats->tpr += E1000_READ_REG(hw, E1000_TPR);
 	stats->tpt += E1000_READ_REG(hw, E1000_TPT);
@@ -5456,18 +5803,6 @@ igb_update_stats_counters(struct adapter *adapter)
 	stats->cexterr += E1000_READ_REG(hw, E1000_CEXTERR);
 	stats->tsctc += E1000_READ_REG(hw, E1000_TSCTC);
 	stats->tsctfc += E1000_READ_REG(hw, E1000_TSCTFC);
-
-	ifp = adapter->ifp;
-	ifp->if_collisions = stats->colc;
-
-	/* Rx Errors */
-	ifp->if_ierrors = adapter->dropped_pkts + stats->rxerrc +
-	    stats->crcerrs + stats->algnerrc +
-	    stats->ruc + stats->roc + stats->mpc + stats->cexterr;
-
-	/* Tx Errors */
-	ifp->if_oerrors = stats->ecol +
-	    stats->latecol + adapter->watchdog_events;
 
 	/* Driver specific counters */
 	adapter->device_control = E1000_READ_REG(hw, E1000_CTRL);
@@ -5587,12 +5922,15 @@ igb_add_hw_stats(struct adapter *adapter)
 	char namebuf[QUEUE_NAME_LEN];
 
 	/* Driver Statistics */
-	SYSCTL_ADD_UINT(ctx, child, OID_AUTO, "link_irq", 
-			CTLFLAG_RD, &adapter->link_irq, 0,
-			"Link MSIX IRQ Handled");
 	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "dropped", 
 			CTLFLAG_RD, &adapter->dropped_pkts,
 			"Driver dropped packets");
+	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "link_irq", 
+			CTLFLAG_RD, &adapter->link_irq,
+			"Link MSIX IRQ Handled");
+	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "mbuf_defrag_fail",
+			CTLFLAG_RD, &adapter->mbuf_defrag_failed,
+			"Defragmenting mbuf chain failed");
 	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "tx_dma_fail", 
 			CTLFLAG_RD, &adapter->no_tx_dma_setup,
 			"Driver tx dma failure in xmit");
@@ -5637,32 +5975,32 @@ igb_add_hw_stats(struct adapter *adapter)
 		queue_list = SYSCTL_CHILDREN(queue_node);
 
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "interrupt_rate", 
-				CTLFLAG_RD, &adapter->queues[i],
+				CTLTYPE_UINT | CTLFLAG_RD, &adapter->queues[i],
 				sizeof(&adapter->queues[i]),
 				igb_sysctl_interrupt_rate_handler,
 				"IU", "Interrupt Rate");
 
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "txd_head", 
-				CTLFLAG_RD, adapter, E1000_TDH(txr->me),
+				CTLTYPE_UINT | CTLFLAG_RD, adapter, E1000_TDH(txr->me),
 				igb_sysctl_reg_handler, "IU",
  				"Transmit Descriptor Head");
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "txd_tail", 
-				CTLFLAG_RD, adapter, E1000_TDT(txr->me),
+				CTLTYPE_UINT | CTLFLAG_RD, adapter, E1000_TDT(txr->me),
 				igb_sysctl_reg_handler, "IU",
  				"Transmit Descriptor Tail");
 		SYSCTL_ADD_QUAD(ctx, queue_list, OID_AUTO, "no_desc_avail", 
 				CTLFLAG_RD, &txr->no_desc_avail,
-				"Queue No Descriptor Available");
+				"Queue Descriptors Unavailable");
 		SYSCTL_ADD_UQUAD(ctx, queue_list, OID_AUTO, "tx_packets",
 				CTLFLAG_RD, &txr->total_packets,
 				"Queue Packets Transmitted");
 
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "rxd_head", 
-				CTLFLAG_RD, adapter, E1000_RDH(rxr->me),
+				CTLTYPE_UINT | CTLFLAG_RD, adapter, E1000_RDH(rxr->me),
 				igb_sysctl_reg_handler, "IU",
 				"Receive Descriptor Head");
 		SYSCTL_ADD_PROC(ctx, queue_list, OID_AUTO, "rxd_tail", 
-				CTLFLAG_RD, adapter, E1000_RDT(rxr->me),
+				CTLTYPE_UINT | CTLFLAG_RD, adapter, E1000_RDT(rxr->me),
 				igb_sysctl_reg_handler, "IU",
 				"Receive Descriptor Tail");
 		SYSCTL_ADD_QUAD(ctx, queue_list, OID_AUTO, "rx_packets",
@@ -5671,10 +6009,10 @@ igb_add_hw_stats(struct adapter *adapter)
 		SYSCTL_ADD_QUAD(ctx, queue_list, OID_AUTO, "rx_bytes",
 				CTLFLAG_RD, &rxr->rx_bytes,
 				"Queue Bytes Received");
-		SYSCTL_ADD_UINT(ctx, queue_list, OID_AUTO, "lro_queued",
+		SYSCTL_ADD_U64(ctx, queue_list, OID_AUTO, "lro_queued",
 				CTLFLAG_RD, &lro->lro_queued, 0,
 				"LRO Queued");
-		SYSCTL_ADD_UINT(ctx, queue_list, OID_AUTO, "lro_flushed",
+		SYSCTL_ADD_U64(ctx, queue_list, OID_AUTO, "lro_flushed",
 				CTLFLAG_RD, &lro->lro_flushed, 0,
 				"LRO Flushed");
 	}
@@ -5735,6 +6073,9 @@ igb_add_hw_stats(struct adapter *adapter)
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "missed_packets",
 			CTLFLAG_RD, &stats->mpc,
 			"Missed Packets");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "recv_length_errors",
+			CTLFLAG_RD, &stats->rlec,
+			"Receive Length Errors");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "recv_no_buff",
 			CTLFLAG_RD, &stats->rnbc,
 			"Receive No Buffers");
@@ -5743,7 +6084,7 @@ igb_add_hw_stats(struct adapter *adapter)
 			"Receive Undersize");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "recv_fragmented",
 			CTLFLAG_RD, &stats->rfc,
-			"Fragmented Packets Received ");
+			"Fragmented Packets Received");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "recv_oversize",
 			CTLFLAG_RD, &stats->roc,
 			"Oversized Packets Received");
@@ -5759,6 +6100,9 @@ igb_add_hw_stats(struct adapter *adapter)
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "alignment_errs",
 			CTLFLAG_RD, &stats->algnerrc,
 			"Alignment Errors");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "tx_no_crs",
+			CTLFLAG_RD, &stats->tncrs,
+			"Transmit with No CRS");
 	/* On 82575 these are collision counts */
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "coll_ext_errs",
 			CTLFLAG_RD, &stats->cexterr,
@@ -5775,10 +6119,22 @@ igb_add_hw_stats(struct adapter *adapter)
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "xoff_txd",
 			CTLFLAG_RD, &stats->xofftxc,
 			"XOFF Transmitted");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "unsupported_fc_recvd",
+			CTLFLAG_RD, &stats->fcruc,
+			"Unsupported Flow Control Received");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_recvd",
+			CTLFLAG_RD, &stats->mgprc,
+			"Management Packets Received");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_drop",
+			CTLFLAG_RD, &stats->mgpdc,
+			"Management Packets Dropped");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "mgmt_pkts_txd",
+			CTLFLAG_RD, &stats->mgptc,
+			"Management Packets Transmitted");
 	/* Packet Reception Stats */
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "total_pkts_recvd",
 			CTLFLAG_RD, &stats->tpr,
-			"Total Packets Received ");
+			"Total Packets Received");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "good_pkts_recvd",
 			CTLFLAG_RD, &stats->gprc,
 			"Good Packets Received");
@@ -5790,7 +6146,7 @@ igb_add_hw_stats(struct adapter *adapter)
 			"Multicast Packets Received");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "rx_frames_64",
 			CTLFLAG_RD, &stats->prc64,
-			"64 byte frames received ");
+			"64 byte frames received");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "rx_frames_65_127",
 			CTLFLAG_RD, &stats->prc127,
 			"65-127 byte frames received");
@@ -5808,12 +6164,18 @@ igb_add_hw_stats(struct adapter *adapter)
 			"1023-1522 byte frames received");
  	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "good_octets_recvd", 
  			CTLFLAG_RD, &stats->gorc, 
- 			"Good Octets Received"); 
+			"Good Octets Received");
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "total_octets_recvd", 
+			CTLFLAG_RD, &stats->tor, 
+			"Total Octets Received");
 
 	/* Packet Transmission Stats */
  	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "good_octets_txd", 
  			CTLFLAG_RD, &stats->gotc, 
  			"Good Octets Transmitted"); 
+	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "total_octets_txd", 
+			CTLFLAG_RD, &stats->tot, 
+			"Total Octets Transmitted");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "total_pkts_txd",
 			CTLFLAG_RD, &stats->tpt,
 			"Total Packets Transmitted");
@@ -5828,7 +6190,7 @@ igb_add_hw_stats(struct adapter *adapter)
 			"Multicast Packets Transmitted");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "tx_frames_64",
 			CTLFLAG_RD, &stats->ptc64,
-			"64 byte frames transmitted ");
+			"64 byte frames transmitted");
 	SYSCTL_ADD_QUAD(ctx, stat_list, OID_AUTO, "tx_frames_65_127",
 			CTLFLAG_RD, &stats->ptc127,
 			"65-127 byte frames transmitted");
@@ -6012,7 +6374,7 @@ igb_set_sysctl_value(struct adapter *adapter, const char *name,
 	*limit = value;
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(adapter->dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(adapter->dev)),
-	    OID_AUTO, name, CTLTYPE_INT|CTLFLAG_RW, limit, value, description);
+	    OID_AUTO, name, CTLFLAG_RW, limit, value, description);
 }
 
 /*
@@ -6050,6 +6412,7 @@ igb_set_flowcntl(SYSCTL_HANDLER_ARGS)
 
 	adapter->hw.fc.current_mode = adapter->hw.fc.requested_mode;
 	e1000_force_mac_fc(&adapter->hw);
+	/* XXX TODO: update DROP_EN on each RX queue if appropriate */
 	return (error);
 }
 
@@ -6073,7 +6436,7 @@ igb_sysctl_dmac(SYSCTL_HANDLER_ARGS)
 
 	switch (adapter->dmac) {
 		case 0:
-			/*Disabling */
+			/* Disabling */
 			break;
 		case 1: /* Just enable and use default */
 			adapter->dmac = 1000;

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2010 Edward Tomasz Napierala <trasz@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/mountver/geom_mountver.c 212554 2010-09-13 13:48:18Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include <stdint.h>
@@ -43,14 +45,14 @@ struct g_command class_commands[] = {
 	    {
 		G_OPT_SENTINEL
 	    },
-	    "[-v] dev ..."
+	    "[-v] prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
 		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] prov ..."
+	    "[-fv] name"
 	},
 	G_CMD_SENTINEL
 };

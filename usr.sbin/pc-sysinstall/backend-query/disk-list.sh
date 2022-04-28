@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/pc-sysinstall/backend-query/disk-list.sh 249094 2013-04-04 12:03:30Z mav $
+# $FreeBSD$
 
 ARGS=$1
 FLAGS_MD=""
@@ -82,8 +82,8 @@ do
     esac
   fi
 
-  # Try and find some identification information with camcontrol
-  NEWLINE=$(camcontrol identify $DEV 2>/dev/null | sed -ne 's/^device model *//p')
+  # Try and get some identification information from GEOM
+  NEWLINE=$(geom disk list $DEV 2>/dev/null | sed -ne 's/^   descr: *//p')
   if [ -z "$NEWLINE" ]; then
     	NEWLINE=" <Unknown Device>"
   fi

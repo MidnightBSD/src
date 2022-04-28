@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cfi/cfi_var.h 255207 2013-09-04 17:19:21Z brooks $
+ * $FreeBSD$
  */
 
 #ifndef _DEV_CFI_VAR_H_

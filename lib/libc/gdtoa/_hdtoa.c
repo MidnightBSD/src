@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gdtoa/_hdtoa.c 178154 2008-04-12 14:53:52Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <float.h>
 #include <limits.h>

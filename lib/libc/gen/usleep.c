@@ -31,12 +31,16 @@
 static char sccsid[] = "@(#)usleep.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/usleep.c 200150 2009-12-05 19:31:38Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <time.h>
 #include <unistd.h>
 #include "un-namespace.h"
+
+#include "libc_private.h"
+
+int __usleep(useconds_t);
 
 int
 __usleep(useconds_t useconds)
@@ -45,7 +49,8 @@ __usleep(useconds_t useconds)
 
 	time_to_sleep.tv_nsec = (useconds % 1000000) * 1000;
 	time_to_sleep.tv_sec = useconds / 1000000;
-	return (_nanosleep(&time_to_sleep, NULL));
+	return (((int (*)(const struct timespec *, struct timespec *))
+	    __libc_interposing[INTERPOS_nanosleep])(&time_to_sleep, NULL));
 }
 
 __weak_reference(__usleep, usleep);

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ep/if_ep_pccard.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -235,3 +235,4 @@ static driver_t ep_pccard_driver = {
 extern devclass_t ep_devclass;
 
 DRIVER_MODULE(ep, pccard, ep_pccard_driver, ep_devclass, 0, 0);
+PCCARD_PNP_INFO(ep_pccard_products);

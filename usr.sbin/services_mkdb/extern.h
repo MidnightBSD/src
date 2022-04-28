@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ *
  * Copyright (c) 2007 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
@@ -26,9 +28,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/services_mkdb/extern.h 241778 2012-10-20 10:34:55Z ed $
+ * $FreeBSD$
  */
 
-extern const HASHINFO hinfo;
+extern HASHINFO hinfo;
 
 void uniq(const char *);

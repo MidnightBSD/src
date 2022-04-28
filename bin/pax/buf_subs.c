@@ -37,14 +37,13 @@ static char sccsid[] = "@(#)buf_subs.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/pax/buf_subs.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "pax.h"
 #include "extern.h"
@@ -853,10 +852,13 @@ buf_fill(void)
 
 		/*
 		 * errors require resync, EOF goes to next archive
+		 * but in case we have not determined yet the format,
+		 * this means that we have a very short file, so we
+		 * are done again.
 		 */
 		if (cnt < 0)
 			break;
-		if (ar_next() < 0) {
+		if (frmt == NULL || ar_next() < 0) {
 			fini = 1;
 			return(0);
 		}

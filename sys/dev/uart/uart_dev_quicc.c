@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/uart/uart_dev_quicc.c 248965 2013-04-01 00:44:20Z ian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -245,6 +245,8 @@ static int quicc_bus_probe(struct uart_softc *);
 static int quicc_bus_receive(struct uart_softc *);
 static int quicc_bus_setsig(struct uart_softc *, int);
 static int quicc_bus_transmit(struct uart_softc *);
+static void quicc_bus_grab(struct uart_softc *);
+static void quicc_bus_ungrab(struct uart_softc *);
 
 static kobj_method_t quicc_methods[] = {
 	KOBJMETHOD(uart_attach,		quicc_bus_attach),
@@ -258,6 +260,8 @@ static kobj_method_t quicc_methods[] = {
 	KOBJMETHOD(uart_receive,	quicc_bus_receive),
 	KOBJMETHOD(uart_setsig,		quicc_bus_setsig),
 	KOBJMETHOD(uart_transmit,	quicc_bus_transmit),
+	KOBJMETHOD(uart_grab,		quicc_bus_grab),
+	KOBJMETHOD(uart_ungrab,		quicc_bus_ungrab),
 	{ 0, 0 }
 };
 
@@ -267,7 +271,8 @@ struct uart_class uart_quicc_class = {
 	sizeof(struct quicc_softc),
 	.uc_ops = &uart_quicc_ops,
 	.uc_range = 2,
-	.uc_rclk = DEFAULT_RCLK
+	.uc_rclk = DEFAULT_RCLK,
+	.uc_rshift = 0
 };
 
 #define	SIGCHG(c, i, s, d)				\
@@ -485,3 +490,34 @@ quicc_bus_transmit(struct uart_softc *sc)
 	uart_unlock(sc->sc_hwmtx);
 	return (0);
 }
+
+static void
+quicc_bus_grab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+	uint16_t st, rb;
+
+	/* Disable interrupts on the receive buffer. */
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	rb = quicc_read2(bas, QUICC_PRAM_SCC_RBASE(bas->chan - 1));
+	st = quicc_read2(bas, rb);
+	quicc_write2(bas, rb, st & ~0x9000);
+	uart_unlock(sc->sc_hwmtx);
+}
+
+static void
+quicc_bus_ungrab(struct uart_softc *sc)
+{
+	struct uart_bas *bas;
+	uint16_t st, rb;
+
+	/* Enable interrupts on the receive buffer. */
+	bas = &sc->sc_bas;
+	uart_lock(sc->sc_hwmtx);
+	rb = quicc_read2(bas, QUICC_PRAM_SCC_RBASE(bas->chan - 1));
+	st = quicc_read2(bas, rb);
+	quicc_write2(bas, rb, st | 0x9000);
+	uart_unlock(sc->sc_hwmtx);
+}
+

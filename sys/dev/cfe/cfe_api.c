@@ -48,7 +48,7 @@
     ********************************************************************* */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/cfe/cfe_api.c 202091 2010-01-11 17:16:06Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/cfe/cfe_api.h>
 #include <dev/cfe/cfe_api_int.h>

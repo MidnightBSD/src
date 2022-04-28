@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/drm_fixed.h 254853 2013-08-25 12:27:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #ifndef DRM_FIXED_H
 #define DRM_FIXED_H

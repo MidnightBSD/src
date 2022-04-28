@@ -20,8 +20,13 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2012 by Delphix. All rights reserved.
+ * Copyright (c) 2011, 2018 by Delphix. All rights reserved.
  * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
+ * Copyright 2013 Saso Kiselkov. All rights reserved.
+ * Copyright (c) 2014 Integros [integros.com]
+ * Copyright 2017 Joyent, Inc.
+ * Copyright (c) 2017 Datto Inc.
  */
 
 #ifndef _SYS_SPA_H
@@ -30,9 +35,11 @@
 #include <sys/avl.h>
 #include <sys/zfs_context.h>
 #include <sys/nvpair.h>
+#include <sys/sysevent.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/fs/zfs.h>
+#include <sys/dmu.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -65,35 +72,57 @@ struct dsl_dataset;
 #define	BF32_GET(x, low, len)		BF32_DECODE(x, low, len)
 #define	BF64_GET(x, low, len)		BF64_DECODE(x, low, len)
 
-#define	BF32_SET(x, low, len, val)	\
-	((x) ^= BF32_ENCODE((x >> low) ^ (val), low, len))
-#define	BF64_SET(x, low, len, val)	\
-	((x) ^= BF64_ENCODE((x >> low) ^ (val), low, len))
+#define	BF32_SET(x, low, len, val) do { \
+	ASSERT3U(val, <, 1U << (len)); \
+	ASSERT3U(low + len, <=, 32); \
+	(x) ^= BF32_ENCODE((x >> low) ^ (val), low, len); \
+_NOTE(CONSTCOND) } while (0)
+
+#define	BF64_SET(x, low, len, val) do { \
+	ASSERT3U(val, <, 1ULL << (len)); \
+	ASSERT3U(low + len, <=, 64); \
+	((x) ^= BF64_ENCODE((x >> low) ^ (val), low, len)); \
+_NOTE(CONSTCOND) } while (0)
 
 #define	BF32_GET_SB(x, low, len, shift, bias)	\
 	((BF32_GET(x, low, len) + (bias)) << (shift))
 #define	BF64_GET_SB(x, low, len, shift, bias)	\
 	((BF64_GET(x, low, len) + (bias)) << (shift))
 
-#define	BF32_SET_SB(x, low, len, shift, bias, val)	\
-	BF32_SET(x, low, len, ((val) >> (shift)) - (bias))
-#define	BF64_SET_SB(x, low, len, shift, bias, val)	\
-	BF64_SET(x, low, len, ((val) >> (shift)) - (bias))
+#define	BF32_SET_SB(x, low, len, shift, bias, val) do { \
+	ASSERT(IS_P2ALIGNED(val, 1U << shift)); \
+	ASSERT3S((val) >> (shift), >=, bias); \
+	BF32_SET(x, low, len, ((val) >> (shift)) - (bias)); \
+_NOTE(CONSTCOND) } while (0)
+#define	BF64_SET_SB(x, low, len, shift, bias, val) do { \
+	ASSERT(IS_P2ALIGNED(val, 1ULL << shift)); \
+	ASSERT3S((val) >> (shift), >=, bias); \
+	BF64_SET(x, low, len, ((val) >> (shift)) - (bias)); \
+_NOTE(CONSTCOND) } while (0)
 
 /*
- * We currently support nine block sizes, from 512 bytes to 128K.
- * We could go higher, but the benefits are near-zero and the cost
- * of COWing a giant block to modify one byte would become excessive.
+ * We currently support block sizes from 512 bytes to 16MB.
+ * The benefits of larger blocks, and thus larger IO, need to be weighed
+ * against the cost of COWing a giant block to modify one byte, and the
+ * large latency of reading or writing a large block.
+ *
+ * Note that although blocks up to 16MB are supported, the recordsize
+ * property can not be set larger than zfs_max_recordsize (default 1MB).
+ * See the comment near zfs_max_recordsize in dsl_dataset.c for details.
+ *
+ * Note that although the LSIZE field of the blkptr_t can store sizes up
+ * to 32MB, the dnode's dn_datablkszsec can only store sizes up to
+ * 32MB - 512 bytes.  Therefore, we limit SPA_MAXBLOCKSIZE to 16MB.
  */
 #define	SPA_MINBLOCKSHIFT	9
-#define	SPA_MAXBLOCKSHIFT	17
+#define	SPA_OLD_MAXBLOCKSHIFT	17
+#define	SPA_MAXBLOCKSHIFT	24
 #define	SPA_MINBLOCKSIZE	(1ULL << SPA_MINBLOCKSHIFT)
+#define	SPA_OLD_MAXBLOCKSIZE	(1ULL << SPA_OLD_MAXBLOCKSHIFT)
 #define	SPA_MAXBLOCKSIZE	(1ULL << SPA_MAXBLOCKSHIFT)
 
-#define	SPA_BLOCKSIZES		(SPA_MAXBLOCKSHIFT - SPA_MINBLOCKSHIFT + 1)
-
 /*
- * Maximum supported logical ashift.
+ * Default maximum supported logical ashift.
  *
  * The current 8k allocation block size limit is due to the 8k
  * aligned/sized operations performed by vdev_probe() on
@@ -102,6 +131,11 @@ struct dsl_dataset;
  * only having 8 available uberblocks in the label area.
  */
 #define	SPA_MAXASHIFT		13
+
+/*
+ * Default minimum supported logical ashift.
+ */
+#define SPA_MINASHIFT		SPA_MINBLOCKSHIFT
 
 /*
  * Size of block to hold the configuration data (a packed nvlist)
@@ -119,6 +153,9 @@ struct dsl_dataset;
 #define	SPA_PSIZEBITS		16	/* PSIZE up to 32M (2^16 * 512)	*/
 #define	SPA_ASIZEBITS		24	/* ASIZE up to 64 times larger	*/
 
+#define	SPA_COMPRESSBITS	7
+#define	SPA_VDEVBITS		24
+
 /*
  * All SPA data is represented by 128-bit data virtual addresses (DVAs).
  * The members of the dva_t should be considered opaque outside the SPA.
@@ -135,24 +172,32 @@ typedef struct zio_cksum {
 } zio_cksum_t;
 
 /*
+ * Some checksums/hashes need a 256-bit initialization salt. This salt is kept
+ * secret and is suitable for use in MAC algorithms as the key.
+ */
+typedef struct zio_cksum_salt {
+	uint8_t		zcs_bytes[32];
+} zio_cksum_salt_t;
+
+/*
  * Each block is described by its DVAs, time of birth, checksum, etc.
  * The word-by-word, bit-by-bit layout of the blkptr is as follows:
  *
  *	64	56	48	40	32	24	16	8	0
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
- * 0	|		vdev1		| GRID  |	  ASIZE		|
+ * 0	|  pad  |	  vdev1         | GRID  |	  ASIZE		|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
  * 1	|G|			 offset1				|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
- * 2	|		vdev2		| GRID  |	  ASIZE		|
+ * 2	|  pad  |	  vdev2         | GRID  |	  ASIZE		|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
  * 3	|G|			 offset2				|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
- * 4	|		vdev3		| GRID  |	  ASIZE		|
+ * 4	|  pad  |	  vdev3         | GRID  |	  ASIZE		|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
  * 5	|G|			 offset3				|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
- * 6	|BDX|lvl| type	| cksum | comp	|     PSIZE	|     LSIZE	|
+ * 6	|BDX|lvl| type	| cksum |E| comp|    PSIZE	|     LSIZE	|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
  * 7	|			padding					|
  *	+-------+-------+-------+-------+-------+-------+-------+-------+
@@ -186,17 +231,125 @@ typedef struct zio_cksum {
  * G		gang block indicator
  * B		byteorder (endianness)
  * D		dedup
- * X		unused
+ * X		encryption (on version 30, which is not supported)
+ * E		blkptr_t contains embedded data (see below)
  * lvl		level of indirection
  * type		DMU object type
- * phys birth	txg of block allocation; zero if same as logical birth txg
+ * phys birth	txg when dva[0] was written; zero if same as logical birth txg
+ *              note that typically all the dva's would be written in this
+ *              txg, but they could be different if they were moved by
+ *              device removal.
  * log. birth	transaction group in which the block was logically born
  * fill count	number of non-zero blocks under this bp
  * checksum[4]	256-bit checksum of the data this bp describes
  */
+
+/*
+ * "Embedded" blkptr_t's don't actually point to a block, instead they
+ * have a data payload embedded in the blkptr_t itself.  See the comment
+ * in blkptr.c for more details.
+ *
+ * The blkptr_t is laid out as follows:
+ *
+ *	64	56	48	40	32	24	16	8	0
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ * 0	|      payload                                                  |
+ * 1	|      payload                                                  |
+ * 2	|      payload                                                  |
+ * 3	|      payload                                                  |
+ * 4	|      payload                                                  |
+ * 5	|      payload                                                  |
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ * 6	|BDX|lvl| type	| etype |E| comp| PSIZE|              LSIZE	|
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ * 7	|      payload                                                  |
+ * 8	|      payload                                                  |
+ * 9	|      payload                                                  |
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ * a	|			logical birth txg			|
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ * b	|      payload                                                  |
+ * c	|      payload                                                  |
+ * d	|      payload                                                  |
+ * e	|      payload                                                  |
+ * f	|      payload                                                  |
+ *	+-------+-------+-------+-------+-------+-------+-------+-------+
+ *
+ * Legend:
+ *
+ * payload		contains the embedded data
+ * B (byteorder)	byteorder (endianness)
+ * D (dedup)		padding (set to zero)
+ * X			encryption (set to zero; see above)
+ * E (embedded)		set to one
+ * lvl			indirection level
+ * type			DMU object type
+ * etype		how to interpret embedded data (BP_EMBEDDED_TYPE_*)
+ * comp			compression function of payload
+ * PSIZE		size of payload after compression, in bytes
+ * LSIZE		logical size of payload, in bytes
+ *			note that 25 bits is enough to store the largest
+ *			"normal" BP's LSIZE (2^16 * 2^9) in bytes
+ * log. birth		transaction group in which the block was logically born
+ *
+ * Note that LSIZE and PSIZE are stored in bytes, whereas for non-embedded
+ * bp's they are stored in units of SPA_MINBLOCKSHIFT.
+ * Generally, the generic BP_GET_*() macros can be used on embedded BP's.
+ * The B, D, X, lvl, type, and comp fields are stored the same as with normal
+ * BP's so the BP_SET_* macros can be used with them.  etype, PSIZE, LSIZE must
+ * be set with the BPE_SET_* macros.  BP_SET_EMBEDDED() should be called before
+ * other macros, as they assert that they are only used on BP's of the correct
+ * "embedded-ness".
+ */
+
+#define	BPE_GET_ETYPE(bp)	\
+	(ASSERT(BP_IS_EMBEDDED(bp)), \
+	BF64_GET((bp)->blk_prop, 40, 8))
+#define	BPE_SET_ETYPE(bp, t)	do { \
+	ASSERT(BP_IS_EMBEDDED(bp)); \
+	BF64_SET((bp)->blk_prop, 40, 8, t); \
+_NOTE(CONSTCOND) } while (0)
+
+#define	BPE_GET_LSIZE(bp)	\
+	(ASSERT(BP_IS_EMBEDDED(bp)), \
+	BF64_GET_SB((bp)->blk_prop, 0, 25, 0, 1))
+#define	BPE_SET_LSIZE(bp, x)	do { \
+	ASSERT(BP_IS_EMBEDDED(bp)); \
+	BF64_SET_SB((bp)->blk_prop, 0, 25, 0, 1, x); \
+_NOTE(CONSTCOND) } while (0)
+
+#define	BPE_GET_PSIZE(bp)	\
+	(ASSERT(BP_IS_EMBEDDED(bp)), \
+	BF64_GET_SB((bp)->blk_prop, 25, 7, 0, 1))
+#define	BPE_SET_PSIZE(bp, x)	do { \
+	ASSERT(BP_IS_EMBEDDED(bp)); \
+	BF64_SET_SB((bp)->blk_prop, 25, 7, 0, 1, x); \
+_NOTE(CONSTCOND) } while (0)
+
+typedef enum bp_embedded_type {
+	BP_EMBEDDED_TYPE_DATA,
+	BP_EMBEDDED_TYPE_RESERVED, /* Reserved for an unintegrated feature. */
+	NUM_BP_EMBEDDED_TYPES = BP_EMBEDDED_TYPE_RESERVED
+} bp_embedded_type_t;
+
+#define	BPE_NUM_WORDS 14
+#define	BPE_PAYLOAD_SIZE (BPE_NUM_WORDS * sizeof (uint64_t))
+#define	BPE_IS_PAYLOADWORD(bp, wp) \
+	((wp) != &(bp)->blk_prop && (wp) != &(bp)->blk_birth)
+
 #define	SPA_BLKPTRSHIFT	7		/* blkptr_t is 128 bytes	*/
 #define	SPA_DVAS_PER_BP	3		/* Number of DVAs in a bp	*/
+#define	SPA_SYNC_MIN_VDEVS 3		/* min vdevs to update during sync */
 
+/*
+ * A block is a hole when it has either 1) never been written to, or
+ * 2) is zero-filled. In both cases, ZFS can return all zeroes for all reads
+ * without physically allocating disk space. Holes are represented in the
+ * blkptr_t structure by zeroed blk_dva. Correct checking for holes is
+ * done through the BP_IS_HOLE macro. For holes, the logical size, level,
+ * DMU object type, and birth times are all also stored for holes that
+ * were written to at some point (i.e. were punched after having been filled).
+ */
 typedef struct blkptr {
 	dva_t		blk_dva[SPA_DVAS_PER_BP]; /* Data Virtual Addresses */
 	uint64_t	blk_prop;	/* size, compression, type, etc	    */
@@ -211,15 +364,17 @@ typedef struct blkptr {
  * Macros to get and set fields in a bp or DVA.
  */
 #define	DVA_GET_ASIZE(dva)	\
-	BF64_GET_SB((dva)->dva_word[0], 0, 24, SPA_MINBLOCKSHIFT, 0)
+	BF64_GET_SB((dva)->dva_word[0], 0, SPA_ASIZEBITS, SPA_MINBLOCKSHIFT, 0)
 #define	DVA_SET_ASIZE(dva, x)	\
-	BF64_SET_SB((dva)->dva_word[0], 0, 24, SPA_MINBLOCKSHIFT, 0, x)
+	BF64_SET_SB((dva)->dva_word[0], 0, SPA_ASIZEBITS, \
+	SPA_MINBLOCKSHIFT, 0, x)
 
 #define	DVA_GET_GRID(dva)	BF64_GET((dva)->dva_word[0], 24, 8)
 #define	DVA_SET_GRID(dva, x)	BF64_SET((dva)->dva_word[0], 24, 8, x)
 
-#define	DVA_GET_VDEV(dva)	BF64_GET((dva)->dva_word[0], 32, 32)
-#define	DVA_SET_VDEV(dva, x)	BF64_SET((dva)->dva_word[0], 32, 32, x)
+#define	DVA_GET_VDEV(dva)	BF64_GET((dva)->dva_word[0], 32, SPA_VDEVBITS)
+#define	DVA_SET_VDEV(dva, x)	\
+	BF64_SET((dva)->dva_word[0], 32, SPA_VDEVBITS, x)
 
 #define	DVA_GET_OFFSET(dva)	\
 	BF64_GET_SB((dva)->dva_word[1], 0, 63, SPA_MINBLOCKSHIFT, 0)
@@ -230,20 +385,39 @@ typedef struct blkptr {
 #define	DVA_SET_GANG(dva, x)	BF64_SET((dva)->dva_word[1], 63, 1, x)
 
 #define	BP_GET_LSIZE(bp)	\
-	BF64_GET_SB((bp)->blk_prop, 0, 16, SPA_MINBLOCKSHIFT, 1)
-#define	BP_SET_LSIZE(bp, x)	\
-	BF64_SET_SB((bp)->blk_prop, 0, 16, SPA_MINBLOCKSHIFT, 1, x)
+	(BP_IS_EMBEDDED(bp) ?	\
+	(BPE_GET_ETYPE(bp) == BP_EMBEDDED_TYPE_DATA ? BPE_GET_LSIZE(bp) : 0): \
+	BF64_GET_SB((bp)->blk_prop, 0, SPA_LSIZEBITS, SPA_MINBLOCKSHIFT, 1))
+#define	BP_SET_LSIZE(bp, x)	do { \
+	ASSERT(!BP_IS_EMBEDDED(bp)); \
+	BF64_SET_SB((bp)->blk_prop, \
+	    0, SPA_LSIZEBITS, SPA_MINBLOCKSHIFT, 1, x); \
+_NOTE(CONSTCOND) } while (0)
 
 #define	BP_GET_PSIZE(bp)	\
-	BF64_GET_SB((bp)->blk_prop, 16, 16, SPA_MINBLOCKSHIFT, 1)
-#define	BP_SET_PSIZE(bp, x)	\
-	BF64_SET_SB((bp)->blk_prop, 16, 16, SPA_MINBLOCKSHIFT, 1, x)
+	(BP_IS_EMBEDDED(bp) ? 0 : \
+	BF64_GET_SB((bp)->blk_prop, 16, SPA_PSIZEBITS, SPA_MINBLOCKSHIFT, 1))
+#define	BP_SET_PSIZE(bp, x)	do { \
+	ASSERT(!BP_IS_EMBEDDED(bp)); \
+	BF64_SET_SB((bp)->blk_prop, \
+	    16, SPA_PSIZEBITS, SPA_MINBLOCKSHIFT, 1, x); \
+_NOTE(CONSTCOND) } while (0)
 
-#define	BP_GET_COMPRESS(bp)		BF64_GET((bp)->blk_prop, 32, 8)
-#define	BP_SET_COMPRESS(bp, x)		BF64_SET((bp)->blk_prop, 32, 8, x)
+#define	BP_GET_COMPRESS(bp)		\
+	BF64_GET((bp)->blk_prop, 32, SPA_COMPRESSBITS)
+#define	BP_SET_COMPRESS(bp, x)		\
+	BF64_SET((bp)->blk_prop, 32, SPA_COMPRESSBITS, x)
 
-#define	BP_GET_CHECKSUM(bp)		BF64_GET((bp)->blk_prop, 40, 8)
-#define	BP_SET_CHECKSUM(bp, x)		BF64_SET((bp)->blk_prop, 40, 8, x)
+#define	BP_IS_EMBEDDED(bp)		BF64_GET((bp)->blk_prop, 39, 1)
+#define	BP_SET_EMBEDDED(bp, x)		BF64_SET((bp)->blk_prop, 39, 1, x)
+
+#define	BP_GET_CHECKSUM(bp)		\
+	(BP_IS_EMBEDDED(bp) ? ZIO_CHECKSUM_OFF : \
+	BF64_GET((bp)->blk_prop, 40, 8))
+#define	BP_SET_CHECKSUM(bp, x)		do { \
+	ASSERT(!BP_IS_EMBEDDED(bp)); \
+	BF64_SET((bp)->blk_prop, 40, 8, x); \
+_NOTE(CONSTCOND) } while (0)
 
 #define	BP_GET_TYPE(bp)			BF64_GET((bp)->blk_prop, 48, 8)
 #define	BP_SET_TYPE(bp, x)		BF64_SET((bp)->blk_prop, 48, 8, x)
@@ -251,41 +425,48 @@ typedef struct blkptr {
 #define	BP_GET_LEVEL(bp)		BF64_GET((bp)->blk_prop, 56, 5)
 #define	BP_SET_LEVEL(bp, x)		BF64_SET((bp)->blk_prop, 56, 5, x)
 
-#define	BP_GET_PROP_BIT_61(bp)		BF64_GET((bp)->blk_prop, 61, 1)
-#define	BP_SET_PROP_BIT_61(bp, x)	BF64_SET((bp)->blk_prop, 61, 1, x)
-
 #define	BP_GET_DEDUP(bp)		BF64_GET((bp)->blk_prop, 62, 1)
 #define	BP_SET_DEDUP(bp, x)		BF64_SET((bp)->blk_prop, 62, 1, x)
 
-#define	BP_GET_BYTEORDER(bp)		(0 - BF64_GET((bp)->blk_prop, 63, 1))
+#define	BP_GET_BYTEORDER(bp)		BF64_GET((bp)->blk_prop, 63, 1)
 #define	BP_SET_BYTEORDER(bp, x)		BF64_SET((bp)->blk_prop, 63, 1, x)
 
 #define	BP_PHYSICAL_BIRTH(bp)		\
-	((bp)->blk_phys_birth ? (bp)->blk_phys_birth : (bp)->blk_birth)
+	(BP_IS_EMBEDDED(bp) ? 0 : \
+	(bp)->blk_phys_birth ? (bp)->blk_phys_birth : (bp)->blk_birth)
 
 #define	BP_SET_BIRTH(bp, logical, physical)	\
 {						\
+	ASSERT(!BP_IS_EMBEDDED(bp));		\
 	(bp)->blk_birth = (logical);		\
 	(bp)->blk_phys_birth = ((logical) == (physical) ? 0 : (physical)); \
 }
 
-#define	BP_GET_ASIZE(bp)	\
-	(DVA_GET_ASIZE(&(bp)->blk_dva[0]) + DVA_GET_ASIZE(&(bp)->blk_dva[1]) + \
-		DVA_GET_ASIZE(&(bp)->blk_dva[2]))
+#define	BP_GET_FILL(bp) (BP_IS_EMBEDDED(bp) ? 1 : (bp)->blk_fill)
 
-#define	BP_GET_UCSIZE(bp) \
-	((BP_GET_LEVEL(bp) > 0 || DMU_OT_IS_METADATA(BP_GET_TYPE(bp))) ? \
-	BP_GET_PSIZE(bp) : BP_GET_LSIZE(bp))
+#define	BP_IS_METADATA(bp)	\
+	(BP_GET_LEVEL(bp) > 0 || DMU_OT_IS_METADATA(BP_GET_TYPE(bp)))
+
+#define	BP_GET_ASIZE(bp)	\
+	(BP_IS_EMBEDDED(bp) ? 0 : \
+	DVA_GET_ASIZE(&(bp)->blk_dva[0]) + \
+	DVA_GET_ASIZE(&(bp)->blk_dva[1]) + \
+	DVA_GET_ASIZE(&(bp)->blk_dva[2]))
+
+#define	BP_GET_UCSIZE(bp)	\
+	(BP_IS_METADATA(bp) ? BP_GET_PSIZE(bp) : BP_GET_LSIZE(bp))
 
 #define	BP_GET_NDVAS(bp)	\
-	(!!DVA_GET_ASIZE(&(bp)->blk_dva[0]) + \
+	(BP_IS_EMBEDDED(bp) ? 0 : \
+	!!DVA_GET_ASIZE(&(bp)->blk_dva[0]) + \
 	!!DVA_GET_ASIZE(&(bp)->blk_dva[1]) + \
 	!!DVA_GET_ASIZE(&(bp)->blk_dva[2]))
 
 #define	BP_COUNT_GANG(bp)	\
+	(BP_IS_EMBEDDED(bp) ? 0 : \
 	(DVA_GET_GANG(&(bp)->blk_dva[0]) + \
 	DVA_GET_GANG(&(bp)->blk_dva[1]) + \
-	DVA_GET_GANG(&(bp)->blk_dva[2]))
+	DVA_GET_GANG(&(bp)->blk_dva[2])))
 
 #define	DVA_EQUAL(dva1, dva2)	\
 	((dva1)->dva_word[1] == (dva2)->dva_word[1] && \
@@ -293,6 +474,7 @@ typedef struct blkptr {
 
 #define	BP_EQUAL(bp1, bp2)	\
 	(BP_PHYSICAL_BIRTH(bp1) == BP_PHYSICAL_BIRTH(bp2) &&	\
+	(bp1)->blk_birth == (bp2)->blk_birth &&			\
 	DVA_EQUAL(&(bp1)->blk_dva[0], &(bp2)->blk_dva[0]) &&	\
 	DVA_EQUAL(&(bp1)->blk_dva[1], &(bp2)->blk_dva[1]) &&	\
 	DVA_EQUAL(&(bp1)->blk_dva[2], &(bp2)->blk_dva[2]))
@@ -302,6 +484,19 @@ typedef struct blkptr {
 	((zc1).zc_word[1] - (zc2).zc_word[1]) | \
 	((zc1).zc_word[2] - (zc2).zc_word[2]) | \
 	((zc1).zc_word[3] - (zc2).zc_word[3])))
+
+#define	ZIO_CHECKSUM_IS_ZERO(zc) \
+	(0 == ((zc)->zc_word[0] | (zc)->zc_word[1] | \
+	(zc)->zc_word[2] | (zc)->zc_word[3]))
+
+#define	ZIO_CHECKSUM_BSWAP(zcp)					\
+{								\
+	(zcp)->zc_word[0] = BSWAP_64((zcp)->zc_word[0]);	\
+	(zcp)->zc_word[1] = BSWAP_64((zcp)->zc_word[1]);	\
+	(zcp)->zc_word[2] = BSWAP_64((zcp)->zc_word[2]);	\
+	(zcp)->zc_word[3] = BSWAP_64((zcp)->zc_word[3]);	\
+}
+
 
 #define	DVA_IS_VALID(dva)	(DVA_GET_ASIZE(dva) != 0)
 
@@ -313,9 +508,13 @@ typedef struct blkptr {
 	(zcp)->zc_word[3] = w3;			\
 }
 
-#define	BP_IDENTITY(bp)		(&(bp)->blk_dva[0])
-#define	BP_IS_GANG(bp)		DVA_GET_GANG(BP_IDENTITY(bp))
-#define	BP_IS_HOLE(bp)		((bp)->blk_birth == 0)
+#define	BP_IDENTITY(bp)		(ASSERT(!BP_IS_EMBEDDED(bp)), &(bp)->blk_dva[0])
+#define	BP_IS_GANG(bp)		\
+	(BP_IS_EMBEDDED(bp) ? B_FALSE : DVA_GET_GANG(BP_IDENTITY(bp)))
+#define	DVA_IS_EMPTY(dva)	((dva)->dva_word[0] == 0ULL &&	\
+				(dva)->dva_word[1] == 0ULL)
+#define	BP_IS_HOLE(bp) \
+	(!BP_IS_EMBEDDED(bp) && DVA_IS_EMPTY(BP_IDENTITY(bp)))
 
 /* BP_IS_RAIDZ(bp) assumes no block compression */
 #define	BP_IS_RAIDZ(bp)		(DVA_GET_ASIZE(&(bp)->blk_dva[0]) > \
@@ -338,14 +537,10 @@ typedef struct blkptr {
 	ZIO_SET_CHECKSUM(&(bp)->blk_cksum, 0, 0, 0, 0);	\
 }
 
-/*
- * Note: the byteorder is either 0 or -1, both of which are palindromes.
- * This simplifies the endianness handling a bit.
- */
 #if BYTE_ORDER == _BIG_ENDIAN
 #define	ZFS_HOST_BYTEORDER	(0ULL)
 #else
-#define	ZFS_HOST_BYTEORDER	(-1ULL)
+#define	ZFS_HOST_BYTEORDER	(1ULL)
 #endif
 
 #define	BP_SHOULD_BYTESWAP(bp)	(BP_GET_BYTEORDER(bp) != ZFS_HOST_BYTEORDER)
@@ -357,18 +552,34 @@ typedef struct blkptr {
  * 'func' is either snprintf() or mdb_snprintf().
  * 'ws' (whitespace) can be ' ' for single-line format, '\n' for multi-line.
  */
-#define	SPRINTF_BLKPTR(func, ws, buf, bp, type, checksum, compress)	\
+#define	SNPRINTF_BLKPTR(func, ws, buf, size, bp, type, checksum, compress) \
 {									\
 	static const char *copyname[] =					\
 	    { "zero", "single", "double", "triple" };			\
-	int size = BP_SPRINTF_LEN;					\
 	int len = 0;							\
 	int copies = 0;							\
 									\
 	if (bp == NULL) {						\
-		len = func(buf + len, size - len, "<NULL>");		\
+		len += func(buf + len, size - len, "<NULL>");		\
 	} else if (BP_IS_HOLE(bp)) {					\
-		len = func(buf + len, size - len, "<hole>");		\
+		len += func(buf + len, size - len,			\
+		    "HOLE [L%llu %s] "					\
+		    "size=%llxL birth=%lluL",				\
+		    (u_longlong_t)BP_GET_LEVEL(bp),			\
+		    type,						\
+		    (u_longlong_t)BP_GET_LSIZE(bp),			\
+		    (u_longlong_t)bp->blk_birth);			\
+	} else if (BP_IS_EMBEDDED(bp)) {				\
+		len = func(buf + len, size - len,			\
+		    "EMBEDDED [L%llu %s] et=%u %s "			\
+		    "size=%llxL/%llxP birth=%lluL",			\
+		    (u_longlong_t)BP_GET_LEVEL(bp),			\
+		    type,						\
+		    (int)BPE_GET_ETYPE(bp),				\
+		    compress,						\
+		    (u_longlong_t)BPE_GET_LSIZE(bp),			\
+		    (u_longlong_t)BPE_GET_PSIZE(bp),			\
+		    (u_longlong_t)bp->blk_birth);			\
 	} else {							\
 		for (int d = 0; d < BP_GET_NDVAS(bp); d++) {		\
 			const dva_t *dva = &bp->blk_dva[d];		\
@@ -402,7 +613,7 @@ typedef struct blkptr {
 		    (u_longlong_t)BP_GET_PSIZE(bp),			\
 		    (u_longlong_t)bp->blk_birth,			\
 		    (u_longlong_t)BP_PHYSICAL_BIRTH(bp),		\
-		    (u_longlong_t)bp->blk_fill,				\
+		    (u_longlong_t)BP_GET_FILL(bp),			\
 		    ws,							\
 		    (u_longlong_t)bp->blk_cksum.zc_word[0],		\
 		    (u_longlong_t)bp->blk_cksum.zc_word[1],		\
@@ -412,11 +623,8 @@ typedef struct blkptr {
 	ASSERT(len < size);						\
 }
 
-#include <sys/dmu.h>
-
 #define	BP_GET_BUFC_TYPE(bp)						\
-	(((BP_GET_LEVEL(bp) > 0) || (DMU_OT_IS_METADATA(BP_GET_TYPE(bp)))) ? \
-	ARC_BUFC_METADATA : ARC_BUFC_DATA)
+	(BP_IS_METADATA(bp) ? ARC_BUFC_METADATA : ARC_BUFC_DATA)
 
 typedef enum spa_import_type {
 	SPA_IMPORT_EXISTING,
@@ -431,7 +639,7 @@ extern int spa_get_stats(const char *pool, nvlist_t **config, char *altroot,
     size_t buflen);
 extern int spa_create(const char *pool, nvlist_t *config, nvlist_t *props,
     nvlist_t *zplprops);
-#if defined(sun)
+#ifdef illumos
 extern int spa_import_rootpool(char *devpath, char *devid);
 #else
 extern int spa_import_rootpool(const char *name);
@@ -440,6 +648,8 @@ extern int spa_import(const char *pool, nvlist_t *config, nvlist_t *props,
     uint64_t flags);
 extern nvlist_t *spa_tryimport(nvlist_t *tryconfig);
 extern int spa_destroy(char *pool);
+extern int spa_checkpoint(const char *pool);
+extern int spa_checkpoint_discard(const char *pool);
 extern int spa_export(char *pool, nvlist_t **oldconfig, boolean_t force,
     boolean_t hardforce);
 extern int spa_reset(char *pool);
@@ -460,6 +670,7 @@ extern int spa_scan_get_stats(spa_t *spa, pool_scan_stat_t *ps);
 #define	SPA_ASYNC_AUTOEXPAND	0x20
 #define	SPA_ASYNC_REMOVE_DONE	0x40
 #define	SPA_ASYNC_REMOVE_STOP	0x80
+#define	SPA_ASYNC_INITIALIZE_RESTART	0x100
 
 /*
  * Controls the behavior of spa_vdev_remove().
@@ -475,6 +686,7 @@ extern int spa_vdev_detach(spa_t *spa, uint64_t guid, uint64_t pguid,
     int replace_done);
 extern int spa_vdev_remove(spa_t *spa, uint64_t guid, boolean_t unspare);
 extern boolean_t spa_vdev_remove_active(spa_t *spa);
+extern int spa_vdev_initialize(spa_t *spa, uint64_t guid, uint64_t cmd_type);
 extern int spa_vdev_setpath(spa_t *spa, uint64_t guid, const char *newpath);
 extern int spa_vdev_setfru(spa_t *spa, uint64_t guid, const char *newfru);
 extern int spa_vdev_split_mirror(spa_t *spa, char *newname, nvlist_t *config,
@@ -496,6 +708,7 @@ extern void spa_l2cache_drop(spa_t *spa);
 /* scanning */
 extern int spa_scan(spa_t *spa, pool_scan_func_t func);
 extern int spa_scan_stop(spa_t *spa);
+extern int spa_scrub_pause_resume(spa_t *spa, pool_scrub_cmd_t flag);
 
 /* spa syncing */
 extern void spa_sync(spa_t *spa, uint64_t txg); /* only for DMU use */
@@ -511,7 +724,7 @@ extern kmutex_t spa_namespace_lock;
 #define	SPA_CONFIG_UPDATE_POOL	0
 #define	SPA_CONFIG_UPDATE_VDEVS	1
 
-extern void spa_config_sync(spa_t *, boolean_t, boolean_t);
+extern void spa_write_cachefile(spa_t *, boolean_t, boolean_t);
 extern void spa_config_load(void);
 extern nvlist_t *spa_all_configs(uint64_t *);
 extern void spa_config_set(spa_t *spa, nvlist_t *config);
@@ -532,6 +745,7 @@ extern spa_t *spa_next(spa_t *prev);
 /* Refcount functions */
 extern void spa_open_ref(spa_t *spa, void *tag);
 extern void spa_close(spa_t *spa, void *tag);
+extern void spa_async_close(spa_t *spa, void *tag);
 extern boolean_t spa_refcount_zero(spa_t *spa);
 
 #define	SCL_NONE	0x00
@@ -573,7 +787,7 @@ typedef enum spa_log_state {
 
 extern spa_log_state_t spa_get_log_state(spa_t *spa);
 extern void spa_set_log_state(spa_t *spa, spa_log_state_t state);
-extern int spa_offline_log(spa_t *spa);
+extern int spa_reset_logs(spa_t *spa);
 
 /* Log claim callback */
 extern void spa_claim_notify(zio_t *zio);
@@ -582,6 +796,7 @@ extern void spa_claim_notify(zio_t *zio);
 extern boolean_t spa_shutting_down(spa_t *spa);
 extern struct dsl_pool *spa_get_dsl(spa_t *spa);
 extern boolean_t spa_is_initializing(spa_t *spa);
+extern boolean_t spa_indirect_vdevs_loaded(spa_t *spa);
 extern blkptr_t *spa_get_rootblkptr(spa_t *spa);
 extern void spa_set_rootblkptr(spa_t *spa, const blkptr_t *bp);
 extern void spa_altroot(spa_t *, char *, size_t);
@@ -592,17 +807,23 @@ extern uint64_t spa_load_guid(spa_t *spa);
 extern uint64_t spa_last_synced_txg(spa_t *spa);
 extern uint64_t spa_first_txg(spa_t *spa);
 extern uint64_t spa_syncing_txg(spa_t *spa);
+extern uint64_t spa_final_dirty_txg(spa_t *spa);
 extern uint64_t spa_version(spa_t *spa);
 extern pool_state_t spa_state(spa_t *spa);
 extern spa_load_state_t spa_load_state(spa_t *spa);
 extern uint64_t spa_freeze_txg(spa_t *spa);
-extern uint64_t spa_get_asize(spa_t *spa, uint64_t lsize);
+extern uint64_t spa_get_worst_case_asize(spa_t *spa, uint64_t lsize);
 extern uint64_t spa_get_dspace(spa_t *spa);
+extern uint64_t spa_get_checkpoint_space(spa_t *spa);
+extern uint64_t spa_get_slop_space(spa_t *spa);
 extern void spa_update_dspace(spa_t *spa);
 extern uint64_t spa_version(spa_t *spa);
 extern boolean_t spa_deflate(spa_t *spa);
 extern metaslab_class_t *spa_normal_class(spa_t *spa);
 extern metaslab_class_t *spa_log_class(spa_t *spa);
+extern void spa_evicting_os_register(spa_t *, objset_t *os);
+extern void spa_evicting_os_deregister(spa_t *, objset_t *os);
+extern void spa_evicting_os_wait(spa_t *spa);
 extern int spa_max_replication(spa_t *spa);
 extern int spa_prev_software_version(spa_t *spa);
 extern int spa_busy(void);
@@ -612,9 +833,13 @@ extern uint64_t spa_bootfs(spa_t *spa);
 extern uint64_t spa_delegation(spa_t *spa);
 extern objset_t *spa_meta_objset(spa_t *spa);
 extern uint64_t spa_deadman_synctime(spa_t *spa);
+extern uint64_t spa_dirty_data(spa_t *spa);
 
 /* Miscellaneous support routines */
-extern void spa_activate_mos_feature(spa_t *spa, const char *feature);
+extern void spa_load_failed(spa_t *spa, const char *fmt, ...);
+extern void spa_load_note(spa_t *spa, const char *fmt, ...);
+extern void spa_activate_mos_feature(spa_t *spa, const char *feature,
+    dmu_tx_t *tx);
 extern void spa_deactivate_mos_feature(spa_t *spa, const char *feature);
 extern int spa_rename(const char *oldname, const char *newname);
 extern spa_t *spa_by_guid(uint64_t pool_guid, uint64_t device_guid);
@@ -623,7 +848,7 @@ extern char *spa_strdup(const char *);
 extern void spa_strfree(char *);
 extern uint64_t spa_get_random(uint64_t range);
 extern uint64_t spa_generate_guid(spa_t *spa);
-extern void sprintf_blkptr(char *buf, const blkptr_t *bp);
+extern void snprintf_blkptr(char *buf, size_t buflen, const blkptr_t *bp);
 extern void spa_freeze(spa_t *spa);
 extern int spa_change_guid(spa_t *spa);
 extern void spa_upgrade(spa_t *spa, uint64_t version);
@@ -637,10 +862,27 @@ extern uint64_t bp_get_dsize(spa_t *spa, const blkptr_t *bp);
 extern boolean_t spa_has_slogs(spa_t *spa);
 extern boolean_t spa_is_root(spa_t *spa);
 extern boolean_t spa_writeable(spa_t *spa);
+extern boolean_t spa_has_pending_synctask(spa_t *spa);
+extern int spa_maxblocksize(spa_t *spa);
+extern boolean_t spa_has_checkpoint(spa_t *spa);
+extern boolean_t spa_importing_readonly_checkpoint(spa_t *spa);
+extern boolean_t spa_suspend_async_destroy(spa_t *spa);
+extern uint64_t spa_min_claim_txg(spa_t *spa);
+extern void zfs_blkptr_verify(spa_t *spa, const blkptr_t *bp);
+extern boolean_t zfs_dva_valid(spa_t *spa, const dva_t *dva,
+    const blkptr_t *bp);
+typedef void (*spa_remap_cb_t)(uint64_t vdev, uint64_t offset, uint64_t size,
+    void *arg);
+extern boolean_t spa_remap_blkptr(spa_t *spa, blkptr_t *bp,
+    spa_remap_cb_t callback, void *arg);
+extern uint64_t spa_get_last_removal_txg(spa_t *spa);
+extern boolean_t spa_trust_config(spa_t *spa);
+extern uint64_t spa_missing_tvds_allowed(spa_t *spa);
+extern void spa_set_missing_tvds(spa_t *spa, uint64_t missing);
+extern boolean_t spa_top_vdevs_spacemap_addressable(spa_t *spa);
 
 extern int spa_mode(spa_t *spa);
 extern uint64_t zfs_strtonum(const char *str, char **nptr);
-#define	strtonum(str, nptr)	zfs_strtonum((str), (nptr))
 
 extern char *spa_his_ievent_table[];
 
@@ -658,7 +900,7 @@ extern void spa_history_log_internal_dd(dsl_dir_t *dd, const char *operation,
     dmu_tx_t *tx, const char *fmt, ...);
 
 /* error handling */
-struct zbookmark;
+struct zbookmark_phys;
 extern void spa_log_error(spa_t *spa, zio_t *zio);
 extern void zfs_ereport_post(const char *cls, spa_t *spa, vdev_t *vd,
     zio_t *zio, uint64_t stateoroffset, uint64_t length);
@@ -679,7 +921,7 @@ extern void vdev_cache_stat_fini(void);
 /* Initialization and termination */
 extern void spa_init(int flags);
 extern void spa_fini(void);
-extern void spa_boot_init();
+extern void spa_boot_init(void);
 
 /* properties */
 extern int spa_prop_set(spa_t *spa, nvlist_t *nvp);
@@ -688,13 +930,18 @@ extern void spa_prop_clear_bootfs(spa_t *spa, uint64_t obj, dmu_tx_t *tx);
 extern void spa_configfile_set(spa_t *, nvlist_t *, boolean_t);
 
 /* asynchronous event notification */
-extern void spa_event_notify(spa_t *spa, vdev_t *vdev, const char *name);
+extern void spa_event_notify(spa_t *spa, vdev_t *vdev, nvlist_t *hist_nvl,
+    const char *name);
+extern sysevent_t *spa_event_create(spa_t *spa, vdev_t *vd, nvlist_t *hist_nvl,
+    const char *name);
+extern void spa_event_post(sysevent_t *ev);
+extern void spa_event_discard(sysevent_t *ev);
 
 #ifdef ZFS_DEBUG
 #define	dprintf_bp(bp, fmt, ...) do {				\
-	if (zfs_flags & ZFS_DEBUG_DPRINTF) { 			\
+	if (zfs_flags & ZFS_DEBUG_DPRINTF) {			\
 	char *__blkbuf = kmem_alloc(BP_SPRINTF_LEN, KM_SLEEP);	\
-	sprintf_blkptr(__blkbuf, (bp));				\
+	snprintf_blkptr(__blkbuf, BP_SPRINTF_LEN, (bp));	\
 	dprintf(fmt " %s\n", __VA_ARGS__, __blkbuf);		\
 	kmem_free(__blkbuf, BP_SPRINTF_LEN);			\
 	} \
@@ -702,13 +949,6 @@ _NOTE(CONSTCOND) } while (0)
 #else
 #define	dprintf_bp(bp, fmt, ...)
 #endif
-
-extern boolean_t spa_debug_enabled(spa_t *spa);
-#define	spa_dbgmsg(spa, ...)			\
-{						\
-	if (spa_debug_enabled(spa))		\
-		zfs_dbgmsg(__VA_ARGS__);	\
-}
 
 extern int spa_mode_global;			/* mode, e.g. FREAD | FWRITE */
 

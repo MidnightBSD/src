@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/jtag_uart/altera_jtag_uart_nexus.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -62,7 +62,7 @@ altera_jtag_uart_nexus_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Altera JTAG UART");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

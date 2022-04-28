@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_fixup.h 234485 2012-04-20 08:26:05Z adrian $
+ * $FreeBSD$
  */
 
 #ifndef	__ATHEROS_AR71XX_FIXUP_H__

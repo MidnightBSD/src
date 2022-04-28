@@ -32,7 +32,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/arm/xscale/pxa/pxareg.h 236987 2012-06-13 04:38:09Z imp $
+ * $FreeBSD$
  */
 
 
@@ -46,9 +46,6 @@
  */
 #ifndef _ARM_XSCALE_PXAREG_H_
 #define _ARM_XSCALE_PXAREG_H_
-
-/* Borrow some register definitions from sa11x0 */
-#include <arm/sa11x0/sa11x0_reg.h>
 
 #ifndef _LOCORE
 #include <sys/types.h>		/* for uint32_t */

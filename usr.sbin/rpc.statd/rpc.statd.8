@@ -11,11 +11,7 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
-.\" 4. Neither the name of the University nor the names of its contributors
+.\" 3. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -31,9 +27,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/rpc.statd/rpc.statd.8 173263 2007-11-01 20:13:33Z matteo $
+.\" $FreeBSD$
 .\"
-.Dd November 1, 2007
+.Dd November 21, 2019
 .Dt RPC.STATD 8
 .Os
 .Sh NAME
@@ -42,6 +38,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl d
+.Op Fl F
 .Op Fl h Ar bindip
 .Op Fl p Ar port
 .Sh DESCRIPTION
@@ -75,6 +72,17 @@ These messages are logged with level
 LOG_DEBUG and facility LOG_DAEMON.
 Error conditions are logged irrespective
 of this option, using level LOG_ERR.
+.It Fl F
+Run
+.Nm
+in the foreground, rather than going into daemon mode.
+This is useful if some other process uses
+.Xr fork 2
+and
+.Xr exec 3
+to run
+.Nm ,
+and wants to monitor when and how it exits.
 .It Fl h Ar bindip
 Specify specific IP addresses to bind to.
 This option may be specified multiple times.

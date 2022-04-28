@@ -26,9 +26,19 @@ xrealloc(void *ptr, size_t size)
 {
 	assert(size > 0);
 
+	// Save ptr so that we can free it if realloc fails.
+	// The point is that message_fatal ends up calling stdio functions
+	// which in some libc implementations might allocate memory from
+	// the heap. Freeing ptr improves the chances that there's free
+	// memory for stdio functions if they need it.
+	void *p = ptr;
 	ptr = realloc(ptr, size);
-	if (ptr == NULL)
-		message_fatal("%s", strerror(errno));
+
+	if (ptr == NULL) {
+		const int saved_errno = errno;
+		free(p);
+		message_fatal("%s", strerror(saved_errno));
+	}
 
 	return ptr;
 }
@@ -69,7 +79,7 @@ str_to_uint64(const char *name, const char *value, uint64_t min, uint64_t max)
 		result *= 10;
 
 		// Another overflow check
-		const uint32_t add = *value - '0';
+		const uint32_t add = (uint32_t)(*value - '0');
 		if (UINT64_MAX - add < result)
 			goto error;
 
@@ -132,14 +142,24 @@ round_up_to_mib(uint64_t n)
 }
 
 
-/// Check if thousand separator is supported. Run-time checking is easiest,
-/// because it seems to be sometimes lacking even on POSIXish system.
+/// Check if thousands separator is supported. Run-time checking is easiest
+/// because it seems to be sometimes lacking even on a POSIXish system.
+/// Note that trying to use thousands separators when snprintf() doesn't
+/// support them results in undefined behavior. This just has happened to
+/// work well enough in practice.
+///
+/// DJGPP 2.05 added support for thousands separators but it's broken
+/// at least under WinXP with Finnish locale that uses a non-breaking space
+/// as the thousands separator. Workaround by disabling thousands separators
+/// for DJGPP builds.
 static void
 check_thousand_sep(uint32_t slot)
 {
 	if (thousand == UNKNOWN) {
 		bufs[slot][0] = '\0';
+#ifndef __DJGPP__
 		snprintf(bufs[slot], sizeof(bufs[slot]), "%'u", 1U);
+#endif
 		thousand = bufs[slot][0] == '1' ? WORKS : BROKEN;
 	}
 
@@ -233,7 +253,7 @@ my_snprintf(char **pos, size_t *left, const char *fmt, ...)
 		*left = 0;
 	} else {
 		*pos += len;
-		*left -= len;
+		*left -= (size_t)(len);
 	}
 
 	return;

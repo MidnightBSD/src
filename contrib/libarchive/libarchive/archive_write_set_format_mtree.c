@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_set_format_mtree.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_s
 #include <string.h>
 
 #include "archive.h"
-#include "archive_crypto_private.h"
+#include "archive_digest_private.h"
 #include "archive_entry.h"
 #include "archive_private.h"
 #include "archive_rb.h"
@@ -128,6 +128,9 @@ struct mtree_entry {
 	unsigned long fflags_clear;
 	dev_t rdevmajor;
 	dev_t rdevminor;
+	dev_t devmajor;
+	dev_t devminor;
+	int64_t ino;
 };
 
 struct mtree_writer {
@@ -183,7 +186,7 @@ struct mtree_writer {
 #endif
 	/* Keyword options */
 	int keys;
-#define	F_CKSUM		0x00000001		/* check sum */
+#define	F_CKSUM		0x00000001		/* checksum */
 #define	F_DEV		0x00000002		/* device type */
 #define	F_DONE		0x00000004		/* directory done */
 #define	F_FLAGS		0x00000008		/* file flags */
@@ -210,6 +213,9 @@ struct mtree_writer {
 #define	F_SHA256	0x00800000		/* SHA-256 digest */
 #define	F_SHA384	0x01000000		/* SHA-384 digest */
 #define	F_SHA512	0x02000000		/* SHA-512 digest */
+#define	F_INO		0x04000000		/* inode number */
+#define	F_RESDEV	0x08000000		/* device ID on which the
+						 * entry resides */
 
 	/* Options */
 	int dironly;		/* If it is set, ignore all files except
@@ -365,7 +371,7 @@ mtree_quote(struct archive_string *s, const char *str)
 }
 
 /*
- * Indent a line as mtree utility to be readable for people.
+ * Indent a line as the mtree utility does so it is readable for people.
  */
 static void
 mtree_indent(struct mtree_writer *mtree)
@@ -440,8 +446,8 @@ mtree_indent(struct mtree_writer *mtree)
 
 /*
  * Write /set keyword.
- * Set most used value of uid,gid,mode and fflags, which are
- * collected by attr_counter_set_collect() function.
+ * Set the most used value of uid, gid, mode and fflags, which are
+ * collected by the attr_counter_set_collect() function.
  */
 static void
 write_global(struct mtree_writer *mtree)
@@ -633,7 +639,7 @@ attr_counter_inc(struct attr_counter **top, struct attr_counter *ac,
 			*top = ac;
 			ac->next->prev = ac;
 		}
-	} else {
+	} else if (last != NULL) {
 		ac = attr_counter_new(me, last);
 		if (ac == NULL)
 			return (-1);
@@ -643,7 +649,7 @@ attr_counter_inc(struct attr_counter **top, struct attr_counter *ac,
 }
 
 /*
- * Tabulate uid,gid,mode and fflags of a entry in order to be used for /set.
+ * Tabulate uid, gid, mode and fflags of a entry in order to be used for /set.
  */
 static int
 attr_counter_set_collect(struct mtree_writer *mtree, struct mtree_entry *me)
@@ -823,8 +829,11 @@ mtree_entry_new(struct archive_write *a, struct archive_entry *entry,
 	archive_entry_fflags(entry, &me->fflags_set, &me->fflags_clear);
 	me->mtime = archive_entry_mtime(entry);
 	me->mtime_nsec = archive_entry_mtime_nsec(entry);
-	me->rdevmajor =	archive_entry_rdevmajor(entry);
+	me->rdevmajor = archive_entry_rdevmajor(entry);
 	me->rdevminor = archive_entry_rdevminor(entry);
+	me->devmajor = archive_entry_devmajor(entry);
+	me->devminor = archive_entry_devminor(entry);
+	me->ino = archive_entry_ino(entry);
 	me->size = archive_entry_size(entry);
 	if (me->filetype == AE_IFDIR) {
 		me->dir_info = calloc(1, sizeof(*me->dir_info));
@@ -882,7 +891,7 @@ archive_write_mtree_header(struct archive_write *a,
 		mtree->first = 0;
 		archive_strcat(&mtree->buf, "#mtree\n");
 		if ((mtree->keys & SET_KEYS) == 0)
-			mtree->output_global_set = 0;/* Disalbed. */
+			mtree->output_global_set = 0;/* Disabled. */
 	}
 
 	mtree->entry_bytes_remaining = archive_entry_size(entry);
@@ -903,7 +912,7 @@ archive_write_mtree_header(struct archive_write *a,
 
 	/* If the current file is a regular file, we have to
 	 * compute the sum of its content.
-	 * Initialize a bunch of sum check context. */
+	 * Initialize a bunch of checksum context. */
 	if (mtree_entry->reg_info)
 		sum_init(mtree);
 
@@ -982,6 +991,15 @@ write_mtree_entry(struct archive_write *a, struct mtree_entry *me)
 		archive_string_sprintf(str, " gid=%jd", (intmax_t)me->gid);
 	if ((keys & F_UID) != 0)
 		archive_string_sprintf(str, " uid=%jd", (intmax_t)me->uid);
+
+	if ((keys & F_INO) != 0)
+		archive_string_sprintf(str, " inode=%jd", (intmax_t)me->ino);
+	if ((keys & F_RESDEV) != 0) {
+		archive_string_sprintf(str,
+		    " resdevice=native,%ju,%ju",
+		    (uintmax_t)me->devmajor,
+		    (uintmax_t)me->devminor);
+	}
 
 	switch (me->filetype) {
 	case AE_IFLNK:
@@ -1097,7 +1115,7 @@ write_mtree_entry_tree(struct archive_write *a)
 	do {
 		if (mtree->output_global_set) {
 			/*
-			 * Collect attribute infomation to know which value
+			 * Collect attribute information to know which value
 			 * is frequently used among the children.
 			 */
 			attr_counter_set_reset(mtree);
@@ -1117,7 +1135,7 @@ write_mtree_entry_tree(struct archive_write *a)
 		} else {
 			/* Whenever output_global_set is enabled
 			 * output global value(/set keywords)
-			 * even if the directory entry is not allowd
+			 * even if the directory entry is not allowed
 			 * to be written because the global values
 			 * can be used for the children. */
 			if (mtree->output_global_set)
@@ -1247,7 +1265,7 @@ archive_write_mtree_free(struct archive_write *a)
 	if (mtree == NULL)
 		return (ARCHIVE_OK);
 
-	/* Make sure we dot not leave any entries. */
+	/* Make sure we do not leave any entries. */
 	mtree_entry_register_free(mtree);
 	archive_string_free(&mtree->cur_dirstr);
 	archive_string_free(&mtree->ebuf);
@@ -1296,6 +1314,8 @@ archive_write_mtree_options(struct archive_write *a, const char *key,
 		if (strcmp(key, "indent") == 0) {
 			mtree->indent = (value != NULL)? 1: 0;
 			return (ARCHIVE_OK);
+		} else if (strcmp(key, "inode") == 0) {
+			keybit = F_INO;
 		}
 		break;
 	case 'l':
@@ -1314,7 +1334,9 @@ archive_write_mtree_options(struct archive_write *a, const char *key,
 			keybit = F_NLINK;
 		break;
 	case 'r':
-		if (strcmp(key, "ripemd160digest") == 0 ||
+		if (strcmp(key, "resdevice") == 0) {
+			keybit = F_RESDEV;
+		} else if (strcmp(key, "ripemd160digest") == 0 ||
 		    strcmp(key, "rmd160") == 0 ||
 		    strcmp(key, "rmd160digest") == 0)
 			keybit = F_RMD160;
@@ -1788,10 +1810,10 @@ mtree_entry_setup_filenames(struct archive_write *a, struct mtree_entry *file,
 		if (p[0] == '/') {
 			if (p[1] == '/')
 				/* Convert '//' --> '/' */
-				strcpy(p, p+1);
+				memmove(p, p+1, strlen(p+1) + 1);
 			else if (p[1] == '.' && p[2] == '/')
 				/* Convert '/./' --> '/' */
-				strcpy(p, p+2);
+				memmove(p, p+2, strlen(p+2) + 1);
 			else if (p[1] == '.' && p[2] == '.' && p[3] == '/') {
 				/* Convert 'dir/dir1/../dir2/'
 				 *     --> 'dir/dir2/'
@@ -1818,9 +1840,9 @@ mtree_entry_setup_filenames(struct archive_write *a, struct mtree_entry *file,
 	len = strlen(p);
 
 	/*
-	 * Add "./" prefiex.
+	 * Add "./" prefix.
 	 * NOTE: If the pathname does not have a path separator, we have
-	 * to add "./" to the head of the pathename because mtree reader
+	 * to add "./" to the head of the pathname because mtree reader
 	 * will suppose that it is v1(a.k.a classic) mtree format and
 	 * change the directory unexpectedly and so it will make a wrong
 	 * path.
@@ -1855,9 +1877,9 @@ mtree_entry_setup_filenames(struct archive_write *a, struct mtree_entry *file,
 		return (ret);
 	}
 
-	/* Make a basename from dirname and slash */
+	/* Make a basename from file->parentdir.s and slash */
 	*slash  = '\0';
-	file->parentdir.length = slash - dirname;
+	file->parentdir.length = slash - file->parentdir.s;
 	archive_strcpy(&(file->basename),  slash + 1);
 	return (ret);
 }
@@ -2002,7 +2024,7 @@ mtree_entry_tree_add(struct archive_write *a, struct mtree_entry **filep)
 
 	if (file->parentdir.length == 0) {
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-		    "Internal programing error "
+		    "Internal programming error "
 		    "in generating canonical name for %s",
 		    file->pathname.s);
 		return (ARCHIVE_FAILED);
@@ -2198,6 +2220,9 @@ mtree_entry_exchange_same_entry(struct archive_write *a, struct mtree_entry *np,
 	np->mtime_nsec = file->mtime_nsec;
 	np->rdevmajor = file->rdevmajor;
 	np->rdevminor = file->rdevminor;
+	np->devmajor = file->devmajor;
+	np->devminor = file->devminor;
+	np->ino = file->ino;
 
 	return (ARCHIVE_WARN);
 }

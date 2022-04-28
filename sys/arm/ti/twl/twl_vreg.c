@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/twl/twl_vreg.c 239281 2012-08-15 06:31:32Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.
@@ -63,9 +63,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/ti/twl/twl_vreg.c 239281 2012-08-15 0
 #include <sys/malloc.h>
 
 #include <machine/bus.h>
-#include <machine/cpu.h>
-#include <machine/cpufunc.h>
-#include <machine/frame.h>
 #include <machine/resource.h>
 #include <machine/intr.h>
 
@@ -139,6 +136,7 @@ static const uint16_t twl4030_vsim_voltages[] = {
 static const uint16_t twl4030_vdac_voltages[] = {
 	1200, 1300, 1800, 1800
 };
+#if 0 /* vdd1, vdd2, vdio, not currently used. */
 static const uint16_t twl4030_vdd1_voltages[] = {
 	800, 1450
 };
@@ -148,6 +146,7 @@ static const uint16_t twl4030_vdd2_voltages[] = {
 static const uint16_t twl4030_vio_voltages[] = {
 	1800, 1850
 };
+#endif
 static const uint16_t twl4030_vintana2_voltages[] = {
 	2500, 2750
 };

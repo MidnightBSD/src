@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/share/doc/legal/realtek/Makefile 253139 2013-07-10 08:21:09Z hiren $
+# $FreeBSD$
 
-NO_OBJ=
 FILES=		${.CURDIR}/../../../../sys/contrib/dev/urtwn/LICENSE
-FILESDIR=	${SHAREDIR}/doc/legal/realtek
+FILESDIR=	${SHAREDIR}/doc/legal
+FILESNAME=	realtek.LICENSE
 
 .include <bsd.prog.mk>

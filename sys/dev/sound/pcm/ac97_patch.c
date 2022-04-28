@@ -32,7 +32,7 @@
 #include <dev/sound/pcm/ac97.h>
 #include <dev/sound/pcm/ac97_patch.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/ac97_patch.c 193640 2009-06-07 19:12:08Z ariff $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 void ad1886_patch(struct ac97_info* codec)
 {

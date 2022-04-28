@@ -1,3 +1,3 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/atapci/chipsets/Makefile.inc 183724 2008-10-09 12:56:57Z sos $
+# $FreeBSD$
 
 .include "../Makefile.inc"

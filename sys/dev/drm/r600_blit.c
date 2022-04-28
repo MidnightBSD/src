@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/r600_blit.c 207066 2010-04-22 18:21:25Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -1428,12 +1428,12 @@ set_scissors(drm_radeon_private_t *dev_priv, int x1, int y1, int x2, int y2)
 
 	OUT_RING(CP_PACKET3(R600_IT_SET_CONTEXT_REG, 2));
         OUT_RING((R600_PA_SC_GENERIC_SCISSOR_TL - R600_SET_CONTEXT_REG_OFFSET) >> 2);
-	OUT_RING((x1 << 0) | (y1 << 16) | (1 << 31));
+	OUT_RING((x1 << 0) | (y1 << 16) | (1U << 31));
 	OUT_RING((x2 << 0) | (y2 << 16));
 
 	OUT_RING(CP_PACKET3(R600_IT_SET_CONTEXT_REG, 2));
         OUT_RING((R600_PA_SC_WINDOW_SCISSOR_TL - R600_SET_CONTEXT_REG_OFFSET) >> 2);
-	OUT_RING((x1 << 0) | (y1 << 16) | (1 << 31));
+	OUT_RING((x1 << 0) | (y1 << 16) | (1U << 31));
 	OUT_RING((x2 << 0) | (y2 << 16));
 	ADVANCE_RING();
 }

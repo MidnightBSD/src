@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/_mutex.h 242901 2012-11-11 23:25:47Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _SYS__MUTEX_H_

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/10.0.0/usr.bin/whois/Makefile 116229 2003-06-12 02:46:47Z mike $
+# $FreeBSD$
 
 PROG=	whois
 

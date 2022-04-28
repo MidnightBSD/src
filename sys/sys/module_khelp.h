@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/module_khelp.h 251789 2013-06-15 10:38:31Z lstewart $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_MODULE_KHELP_H_

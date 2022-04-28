@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/teken/stress/Makefile 221698 2011-05-09 16:27:39Z ed $
+# $FreeBSD$
 
 PROG=	teken_stress
 LDADD=	-lteken

@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libopie/opieextra.c 92918 2002-03-22 00:12:20Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <stdio.h>

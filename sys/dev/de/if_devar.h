@@ -1,6 +1,6 @@
 /*	$NetBSD: if_devar.h,v 1.32 1999/04/01 14:55:25 tsubai Exp $	*/
 
-/* $FreeBSD: release/10.0.0/sys/dev/de/if_devar.h 199378 2009-11-17 14:13:30Z jhb $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 1994-1997 Matt Thomas (matt@3am-software.com)
@@ -842,7 +842,7 @@ static const struct {
 
 /*
  * This driver supports a maximum of 32 tulip boards.
- * This should be enough for the forseeable future.
+ * This should be enough for the foreseeable future.
  */
 #define	TULIP_MAX_DEVICES	32
 
@@ -873,11 +873,6 @@ static const struct {
 	_TULIP_MAP_SYNC(ri, di, BUS_DMASYNC_PREWRITE)
 #define	TULIP_TXMAP_POSTSYNC(ri, di)					\
 	_TULIP_MAP_SYNC(ri, di, BUS_DMASYNC_POSTWRITE)
-
-#ifdef notyet
-#define	SIOCGADDRROM		_IOW('i', 240, struct ifreq)	/* get 128 bytes of ROM */
-#define	SIOCGCHIPID		_IOWR('i', 241, struct ifreq)	/* get chipid */
-#endif
 
 #if defined(TULIP_HDR_DATA)
 static tulip_softc_t	*tulips[TULIP_MAX_DEVICES];

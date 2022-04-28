@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -36,7 +32,7 @@
 static char sccsid[] = "@(#)table.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/libexec/talkd/table.c 241777 2012-10-20 10:33:15Z ed $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 /*
@@ -64,7 +60,7 @@ static const char rcsid[] =
 
 #define NIL ((TABLE_ENTRY *)0)
 
-static struct timeval tp;
+static struct timespec ts;
 
 typedef struct table_entry TABLE_ENTRY;
 
@@ -86,14 +82,15 @@ static TABLE_ENTRY *table = NIL;
 CTL_MSG *
 find_match(CTL_MSG *request)
 {
-	TABLE_ENTRY *ptr;
+	TABLE_ENTRY *ptr, *next;
 	time_t current_time;
 
-	gettimeofday(&tp, NULL);
-	current_time = tp.tv_sec;
+	clock_gettime(CLOCK_MONOTONIC_FAST, &ts);
+	current_time = ts.tv_sec;
 	if (debug)
 		print_request("find_match", request);
-	for (ptr = table; ptr != NIL; ptr = ptr->next) {
+	for (ptr = table; ptr != NIL; ptr = next) {
+		next = ptr->next;
 		if ((ptr->time - current_time) > MAX_LIFE) {
 			/* the entry is too old */
 			if (debug)
@@ -119,18 +116,19 @@ find_match(CTL_MSG *request)
 CTL_MSG *
 find_request(CTL_MSG *request)
 {
-	TABLE_ENTRY *ptr;
+	TABLE_ENTRY *ptr, *next;
 	time_t current_time;
 
-	gettimeofday(&tp, NULL);
-	current_time = tp.tv_sec;
+	clock_gettime(CLOCK_MONOTONIC_FAST, &ts);
+	current_time = ts.tv_sec;
 	/*
 	 * See if this is a repeated message, and check for
 	 * out of date entries in the table while we are it.
 	 */
 	if (debug)
 		print_request("find_request", request);
-	for (ptr = table; ptr != NIL; ptr = ptr->next) {
+	for (ptr = table; ptr != NIL; ptr = next) {
+		next = ptr->next;
 		if ((ptr->time - current_time) > MAX_LIFE) {
 			/* the entry is too old */
 			if (debug)
@@ -159,8 +157,8 @@ insert_table(CTL_MSG *request, CTL_RESPONSE *response)
 	TABLE_ENTRY *ptr;
 	time_t current_time;
 
-	gettimeofday(&tp, NULL);
-	current_time = tp.tv_sec;
+	clock_gettime(CLOCK_MONOTONIC_FAST, &ts);
+	current_time = ts.tv_sec;
 	request->id_num = new_id();
 	response->id_num = htonl(request->id_num);
 	/* insert a new entry into the top of the list */
@@ -201,7 +199,6 @@ delete_invite(u_int32_t id_num)
 {
 	TABLE_ENTRY *ptr;
 
-	ptr = table;
 	if (debug)
 		syslog(LOG_DEBUG, "delete_invite(%d)", id_num);
 	for (ptr = table; ptr != NIL; ptr = ptr->next) {

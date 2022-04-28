@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/bde/g_bde_work.c 172836 2007-10-20 23:23:23Z julian $
+ * $FreeBSD$
  */
 /*
  * This source file contains the state-engine which makes things happen in the
@@ -71,7 +71,7 @@
 #include <sys/kthread.h>
 
 #include <crypto/rijndael/rijndael-api-fst.h>
-#include <crypto/sha2/sha2.h>
+#include <crypto/sha2/sha512.h>
 #include <geom/geom.h>
 #include <geom/bde/g_bde.h>
 

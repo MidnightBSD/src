@@ -25,12 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet6/send.c 254889 2013-08-25 21:54:41Z markj $");
-
-#include "opt_kdtrace.h"
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/priv.h>
@@ -165,6 +164,7 @@ send_output(struct mbuf *m, struct ifnet *ifp, int direction)
 			nd6_ra_input(m, sizeof(struct ip6_hdr), icmp6len);
 			break;
 		default:
+			m_freem(m);
 			return (ENOSYS);
 		}
 		return (0);

@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: release/10.0.0/sys/dev/firewire/iec68113.h 139749 2005-01-06 01:43:34Z imp $
+ * $FreeBSD$
  *
  */
 
@@ -97,7 +97,7 @@ struct ciphdr {
 	} fdf;
 
 };
-struct dvdbc{
+struct dvdbc {
 #if BYTE_ORDER == BIG_ENDIAN
 	uint8_t sct:3,		/* Section type */
 		:1,		/* Reserved */

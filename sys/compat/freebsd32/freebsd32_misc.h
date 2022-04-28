@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/compat/freebsd32/freebsd32_misc.h 254490 2013-08-18 13:34:11Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef	_COMPAT_FREEBSD32_MISC_H_

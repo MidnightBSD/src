@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  * 
  * $DragonFly: src/sys/dev/netif/bwi/if_bwireg.h,v 1.4 2007/10/19 14:27:04 sephe Exp $
- * $FreeBSD: release/10.0.0/sys/dev/bwi/if_bwireg.h 192279 2009-05-18 01:07:38Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _IF_BWIREG_H

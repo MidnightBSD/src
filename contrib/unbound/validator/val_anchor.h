@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -48,6 +48,7 @@ struct config_file;
 struct ub_packed_rrset_key;
 struct autr_point_data;
 struct autr_global_data;
+struct sldns_buffer;
 
 /**
  * Trust anchor store.
@@ -58,14 +59,14 @@ struct autr_global_data;
  */
 struct val_anchors {
 	/** lock on trees */
-	lock_basic_t lock;
+	lock_basic_type lock;
 	/**
 	 * Anchors are store in this tree. Sort order is chosen, so that
 	 * dnames are in nsec-like order. A lookup on class, name will return
 	 * an exact match of the closest match, with the ancestor needed.
 	 * contents of type trust_anchor.
 	 */
-	rbtree_t* tree;
+	rbtree_type* tree;
 	/** The DLV trust anchor (if one is configured, else NULL) */
 	struct trust_anchor* dlv_anchor;
 	/** Autotrust global data, anchors sorted by next probe time */
@@ -92,9 +93,9 @@ struct ta_key {
  */
 struct trust_anchor {
 	/** rbtree node, key is this structure */
-	rbnode_t node;
+	rbnode_type node;
 	/** lock on the entire anchor and its keys; for autotrust changes */
-	lock_basic_t lock;
+	lock_basic_type lock;
 	/** name of this trust anchor */
 	uint8_t* name;
 	/** length of name */
@@ -184,7 +185,7 @@ struct trust_anchor* anchor_find(struct val_anchors* anchors,
  * @return NULL on error.
  */
 struct trust_anchor* anchor_store_str(struct val_anchors* anchors, 
-	ldns_buffer* buffer, const char* str);
+	struct sldns_buffer* buffer, const char* str);
 
 /**
  * Get memory in use by the trust anchor storage
@@ -214,5 +215,31 @@ int anchors_add_insecure(struct val_anchors* anchors, uint16_t c, uint8_t* nm);
  */
 void anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 	uint8_t* nm);
+
+/**
+ * Get a list of keytags for the trust anchor.  Zero tags for insecure points.
+ * @param ta: trust anchor (locked by caller).
+ * @param list: array of uint16_t.
+ * @param num: length of array.
+ * @return number of keytags filled into array.  If total number of keytags is
+ * bigger than the array, it is truncated at num.  On errors, less keytags
+ * are filled in.  The array is sorted.
+ */
+size_t anchor_list_keytags(struct trust_anchor* ta, uint16_t* list, size_t num);
+
+/**
+ * Check if there is a trust anchor for given zone with this keytag.
+ *
+ * @param anchors: anchor storage
+ * @param name: name of trust anchor (wireformat)
+ * @param namelabs: labels in name
+ * @param namelen: length of name
+ * @param dclass: class of trust anchor
+ * @param keytag: keytag
+ * @return 1 if there is a trust anchor in the trustachor store for this zone
+ * and keytag, else 0.
+ */
+int anchor_has_keytag(struct val_anchors* anchors, uint8_t* name, int namelabs,
+	size_t namelen, uint16_t dclass, uint16_t keytag);
 
 #endif /* VALIDATOR_VAL_ANCHOR_H */

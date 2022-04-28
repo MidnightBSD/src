@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_set_format_by_name.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_write_s
 #include "archive_private.h"
 
 /* A table that maps names to functions. */
-static
+static const
 struct { const char *name; int (*setter)(struct archive *); } names[] =
 {
 	{ "7zip",	archive_write_set_format_7zip },
@@ -63,12 +63,14 @@ struct { const char *name; int (*setter)(struct archive *); } names[] =
 	{ "pax",	archive_write_set_format_pax },
 	{ "paxr",	archive_write_set_format_pax_restricted },
 	{ "posix",	archive_write_set_format_pax },
+	{ "raw",	archive_write_set_format_raw },
 	{ "rpax",	archive_write_set_format_pax_restricted },
 	{ "shar",	archive_write_set_format_shar },
 	{ "shardump",	archive_write_set_format_shar_dump },
 	{ "ustar",	archive_write_set_format_ustar },
 	{ "v7tar",	archive_write_set_format_v7tar },
 	{ "v7",		archive_write_set_format_v7tar },
+	{ "warc",	archive_write_set_format_warc },
 	{ "xar",	archive_write_set_format_xar },
 	{ "zip",	archive_write_set_format_zip },
 	{ NULL,		NULL }

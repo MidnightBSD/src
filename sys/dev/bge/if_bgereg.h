@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/bge/if_bgereg.h 258959 2013-12-05 06:13:59Z yongari $
+ * $FreeBSD$
  */
 
 /*
@@ -329,6 +329,7 @@
 #define	BGE_CHIPID_BCM57780_A1		0x57780001
 #define	BGE_CHIPID_BCM5717_A0		0x05717000
 #define	BGE_CHIPID_BCM5717_B0		0x05717100
+#define	BGE_CHIPID_BCM5717_C0		0x05717200
 #define	BGE_CHIPID_BCM5719_A0		0x05719000
 #define	BGE_CHIPID_BCM5720_A0		0x05720000
 #define	BGE_CHIPID_BCM5762_A0		0x05762000
@@ -2452,6 +2453,7 @@ struct bge_status_block {
 #define	BCOM_DEVICEID_BCM5715		0x1678
 #define	BCOM_DEVICEID_BCM5715S		0x1679
 #define	BCOM_DEVICEID_BCM5717		0x1655
+#define	BCOM_DEVICEID_BCM5717C		0x1665
 #define	BCOM_DEVICEID_BCM5718		0x1656
 #define	BCOM_DEVICEID_BCM5719		0x1657
 #define	BCOM_DEVICEID_BCM5720_PP	0x1658	/* Not released to public. */
@@ -2852,7 +2854,7 @@ struct bge_gib {
  */
 
 #define	BGE_NSEG_JUMBO	4
-#define	BGE_NSEG_NEW	32
+#define	BGE_NSEG_NEW	35
 #define	BGE_TSOSEG_SZ	4096
 
 /* Maximum DMA address for controllers that have 40bit DMA address bug. */

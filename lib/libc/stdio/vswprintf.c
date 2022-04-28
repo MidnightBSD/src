@@ -36,7 +36,7 @@
 #if 0
 __FBSDID("FreeBSD: src/lib/libc/stdio/vasprintf.c,v 1.16 2002/08/21 16:19:57 mike Exp ");
 #endif
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/vswprintf.c 234531 2012-04-21 06:10:18Z das $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <limits.h>

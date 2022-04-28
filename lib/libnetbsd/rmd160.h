@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/lib/libnetbsd/rmd160.h 244557 2012-12-21 20:37:38Z brooks $	 */
+/*	$FreeBSD$	 */
 
 /*-
  * Copyright (c) 2012 SRI International

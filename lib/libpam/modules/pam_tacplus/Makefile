@@ -22,13 +22,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/lib/libpam/modules/pam_tacplus/Makefile 112044 2003-03-09 20:06:38Z obrien $
+# $FreeBSD$
 
 LIB=	pam_tacplus
 SRCS=	pam_tacplus.c
 MAN=	pam_tacplus.8
 
-DPADD=	${LIBTACPLUS}
-LDADD=	-ltacplus
+LIBADD+=	tacplus
 
 .include <bsd.lib.mk>

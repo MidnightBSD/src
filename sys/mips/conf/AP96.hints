@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/mips/conf/AP96.hints 242724 2012-11-07 23:50:28Z adrian $
+# $FreeBSD$
 
 # arge0 MDIO bus - there's no arge1 MDIO bus for AR71xx
 hint.argemdio.0.at="nexus0"

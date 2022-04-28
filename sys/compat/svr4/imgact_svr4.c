@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/compat/svr4/imgact_svr4.c 255426 2013-09-09 18:11:59Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,7 +109,7 @@ exec_svr4_imgact(imgp)
      */
     PROC_LOCK(imgp->proc);
     if (a_out->a_text > maxtsiz ||
-	a_out->a_data + bss_size > lim_cur(imgp->proc, RLIMIT_DATA) ||
+	a_out->a_data + bss_size > lim_cur_proc(imgp->proc, RLIMIT_DATA) ||
 	racct_set(imgp->proc, RACCT_DATA, a_out->a_data + bss_size) != 0) {
     	PROC_UNLOCK(imgp->proc);
 	return (ENOMEM);

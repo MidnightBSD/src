@@ -1,5 +1,5 @@
 # From:	@(#)Makefile	8.3 (Berkeley) 4/2/94
-# $FreeBSD: release/10.0.0/release/picobsd/tinyware/passwd/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD$
 
 # Only NO_PAM is used by PicoBSD and supported here
 
@@ -11,8 +11,7 @@ GENSRCS=yp.h yp_clnt.c yppasswd.h yppasswd_clnt.c \
 	yppasswd_private.h yppasswd_private_clnt.c yppasswd_private_xdr.c
 CFLAGS+=-Wall
 
-DPADD=	${LIBCRYPT} ${LIBUTIL}
-LDADD=	-lcrypt -lutil
+LIBADD=	crypt util
 .PATH:  ${.CURDIR}/../../../../usr.bin/chpass \
 #	${.CURDIR}/../../../../usr.sbin/vipw \
 #	${.CURDIR}/../../../../usr.bin/passwd

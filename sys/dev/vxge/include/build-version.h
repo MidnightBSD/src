@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/vxge/include/build-version.h 221389 2011-05-03 15:58:24Z gnn $ */
+/* $FreeBSD$ */
 
 #ifndef	BUILD_VERSION_H
 #define	BUILD_VERSION_H

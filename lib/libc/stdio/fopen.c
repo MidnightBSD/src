@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fopen.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fopen.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -91,7 +91,9 @@ fopen(const char * __restrict file, const char * __restrict mode)
 	 * we can do about this.  (We could set __SAPP and check in
 	 * fseek and ftell.)
 	 */
-	if (oflags & O_APPEND)
+	if (oflags & O_APPEND) {
+		fp->_flags2 |= __S2OAP;
 		(void)_sseek(fp, (fpos_t)0, SEEK_END);
+	}
 	return (fp);
 }

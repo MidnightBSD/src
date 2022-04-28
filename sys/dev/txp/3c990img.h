@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/dev/txp/3c990img.h 189022 2009-02-25 01:12:56Z yongari $	*/	
+/*	$FreeBSD$	*/	
 
 /*-
  * Copyright 1999-2003 3Com Corporation.  All Rights Reserved.    

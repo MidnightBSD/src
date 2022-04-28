@@ -1,4 +1,0 @@
-#!/bin/sh -x
-# $FreeBSD: release/10.0.0/tools/regression/execve/tests/scriptarg-nospace 159097 2006-05-31 11:13:10Z maxim $
-
-echo succeeded

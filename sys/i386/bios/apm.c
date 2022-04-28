@@ -17,7 +17,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/bios/apm.c 241885 2012-10-22 13:06:09Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -134,8 +134,7 @@ SYSCTL_INT(_machdep, OID_AUTO, apm_suspend_delay, CTLFLAG_RW, &apm_suspend_delay
 SYSCTL_INT(_machdep, OID_AUTO, apm_standby_delay, CTLFLAG_RW, &apm_standby_delay, 1, "");
 SYSCTL_INT(_debug, OID_AUTO, apm_debug, CTLFLAG_RW, &apm_debug, 0, "");
 
-TUNABLE_INT("machdep.apm_swab_batt_minutes", &apm_swab_batt_minutes);
-SYSCTL_INT(_machdep, OID_AUTO, apm_swab_batt_minutes, CTLFLAG_RW,
+SYSCTL_INT(_machdep, OID_AUTO, apm_swab_batt_minutes, CTLFLAG_RWTUN,
 	   &apm_swab_batt_minutes, 0, "Byte swap battery time value.");
 
 #ifdef PC98
@@ -1590,4 +1589,4 @@ apm_pm_register(void *arg)
 		power_pm_register(POWER_PM_TYPE_APM, apm_pm_func, NULL);
 }
 
-SYSINIT(power, SI_SUB_KLD, SI_ORDER_ANY, apm_pm_register, 0);
+SYSINIT(power, SI_SUB_KLD, SI_ORDER_ANY, apm_pm_register, NULL);

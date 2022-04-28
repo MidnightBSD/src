@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/mips/atheros/pcf2123reg.h 202839 2010-01-22 22:14:12Z gonzo $ */
+/* $FreeBSD$ */
 
 #ifndef __PCF2123REG_H__
 #define	__PCF2123REG_H__

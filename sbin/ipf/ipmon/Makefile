@@ -1,14 +1,14 @@
-#	$FreeBSD: release/10.0.0/sbin/ipf/ipmon/Makefile 162199 2006-09-10 08:58:47Z obrien $
+#	$FreeBSD$
 
+PACKAGE=	ipf
 PROG=		ipmon
 SRCS=		${GENHDRS} ipmon.c ipmon_y.c ipmon_l.c
-MAN=		ipmon.8
+MAN=		ipmon.5 ipmon.8
+MLINKS=		ipmon.5 ipmon.conf.5
 
 CFLAGS+=	-DLOGFAC=LOG_LOCAL0 -I.
 
 GENHDRS+=	ipmon_l.h ipmon_y.h
-DPSRCS+=	${GENHDRS}
-
 CLEANFILES+=	${GENHDRS} ipmon_y.c ipmon_l.c
 
 ipmon_y.c: ipmon_y.y

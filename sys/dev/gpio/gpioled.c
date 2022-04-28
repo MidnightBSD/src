@@ -25,22 +25,23 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/gpio/gpioled.c 214971 2010-11-08 03:08:01Z thompsa $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_platform.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/bio.h>
 #include <sys/bus.h>
-#include <sys/conf.h>
+#include <sys/gpio.h>
 #include <sys/kernel.h>
-#include <sys/kthread.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 
+#include <dev/gpio/gpiobusvar.h>
 #include <dev/led/led.h>
-#include <sys/gpio.h>
+
 #include "gpiobus_if.h"
 
 /*
@@ -48,12 +49,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/gpio/gpioled.c 214971 2010-11-08 03:0
  */
 #define	GPIOLED_PIN	0
 
-#define GPIOLED_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
+#define	GPIOLED_LOCK(_sc)		mtx_lock(&(_sc)->sc_mtx)
 #define	GPIOLED_UNLOCK(_sc)		mtx_unlock(&(_sc)->sc_mtx)
-#define GPIOLED_LOCK_INIT(_sc) \
-	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->sc_dev), \
-	    "gpioled", MTX_DEF)
-#define GPIOLED_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
+#define	GPIOLED_LOCK_INIT(_sc)		mtx_init(&(_sc)->sc_mtx,	\
+    device_get_nameunit((_sc)->sc_dev), "gpioled", MTX_DEF)
+#define	GPIOLED_LOCK_DESTROY(_sc)	mtx_destroy(&(_sc)->sc_mtx)
 
 struct gpioled_softc 
 {
@@ -71,14 +71,15 @@ static int gpioled_detach(device_t);
 static void 
 gpioled_control(void *priv, int onoff)
 {
-	struct gpioled_softc *sc = priv;
+	struct gpioled_softc *sc;
+
+	sc = (struct gpioled_softc *)priv;
 	GPIOLED_LOCK(sc);
-	GPIOBUS_LOCK_BUS(sc->sc_busdev);
-	GPIOBUS_ACQUIRE_BUS(sc->sc_busdev, sc->sc_dev);
-	GPIOBUS_PIN_SET(sc->sc_busdev, sc->sc_dev, GPIOLED_PIN, 
-	    onoff ? GPIO_PIN_HIGH : GPIO_PIN_LOW);
-	GPIOBUS_RELEASE_BUS(sc->sc_busdev, sc->sc_dev);
-	GPIOBUS_UNLOCK_BUS(sc->sc_busdev);
+	if (GPIOBUS_PIN_SETFLAGS(sc->sc_busdev, sc->sc_dev, GPIOLED_PIN,
+	    GPIO_PIN_OUTPUT) == 0) {
+		GPIOBUS_PIN_SET(sc->sc_busdev, sc->sc_dev, GPIOLED_PIN,
+		    onoff ? GPIO_PIN_HIGH : GPIO_PIN_LOW);
+	}
 	GPIOLED_UNLOCK(sc);
 }
 
@@ -86,28 +87,32 @@ static int
 gpioled_probe(device_t dev)
 {
 	device_set_desc(dev, "GPIO led");
-	return (0);
+
+	return (BUS_PROBE_DEFAULT);
 }
 
 static int
 gpioled_attach(device_t dev)
 {
 	struct gpioled_softc *sc;
+	int state;
 	const char *name;
 
 	sc = device_get_softc(dev);
 	sc->sc_dev = dev;
 	sc->sc_busdev = device_get_parent(dev);
 	GPIOLED_LOCK_INIT(sc);
+
+	state = 0;
+
 	if (resource_string_value(device_get_name(dev), 
 	    device_get_unit(dev), "name", &name))
 		name = NULL;
+	resource_int_value(device_get_name(dev),
+	    device_get_unit(dev), "state", &state);
 
-	GPIOBUS_PIN_SETFLAGS(sc->sc_busdev, sc->sc_dev, GPIOLED_PIN,
-	    GPIO_PIN_OUTPUT);
-
-	sc->sc_leddev = led_create(gpioled_control, sc, name ? name :
-	    device_get_nameunit(dev));
+	sc->sc_leddev = led_create_state(gpioled_control, sc, name ? name :
+	    device_get_nameunit(dev), state);
 
 	return (0);
 }
@@ -134,7 +139,7 @@ static device_method_t gpioled_methods[] = {
 	DEVMETHOD(device_attach,	gpioled_attach),
 	DEVMETHOD(device_detach,	gpioled_detach),
 
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t gpioled_driver = {
@@ -144,3 +149,5 @@ static driver_t gpioled_driver = {
 };
 
 DRIVER_MODULE(gpioled, gpiobus, gpioled_driver, gpioled_devclass, 0, 0);
+MODULE_DEPEND(gpioled, gpiobus, 1, 1, 1);
+MODULE_VERSION(gpioled, 1);

@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2012-2013 Intel Corporation
+ * Copyright (C) 2012-2016 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nvme/nvme_ctrlr.c 257707 2013-11-05 15:54:52Z jimharris $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_cam.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,21 +44,20 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/nvme/nvme_ctrlr.c 257707 2013-11-05 1
 
 #include "nvme_private.h"
 
+#define B4_CHK_RDY_DELAY_MS	2300		/* work arond controller bug */
+
 static void nvme_ctrlr_construct_and_submit_aer(struct nvme_controller *ctrlr,
 						struct nvme_async_event_request *aer);
+static void nvme_ctrlr_setup_interrupts(struct nvme_controller *ctrlr);
 
 static int
 nvme_ctrlr_allocate_bar(struct nvme_controller *ctrlr)
 {
 
-	/* Chatham puts the NVMe MMRs behind BAR 2/3, not BAR 0/1. */
-	if (pci_get_devid(ctrlr->dev) == CHATHAM_PCI_ID)
-		ctrlr->resource_id = PCIR_BAR(2);
-	else
-		ctrlr->resource_id = PCIR_BAR(0);
+	ctrlr->resource_id = PCIR_BAR(0);
 
-	ctrlr->resource = bus_alloc_resource(ctrlr->dev, SYS_RES_MEMORY,
-	    &ctrlr->resource_id, 0, ~0, 1, RF_ACTIVE);
+	ctrlr->resource = bus_alloc_resource_any(ctrlr->dev, SYS_RES_MEMORY,
+	    &ctrlr->resource_id, RF_ACTIVE);
 
 	if(ctrlr->resource == NULL) {
 		nvme_printf(ctrlr, "unable to allocate pci resource\n");
@@ -75,128 +76,18 @@ nvme_ctrlr_allocate_bar(struct nvme_controller *ctrlr)
 	 *  bus_alloc_resource() will just return NULL which is OK.
 	 */
 	ctrlr->bar4_resource_id = PCIR_BAR(4);
-	ctrlr->bar4_resource = bus_alloc_resource(ctrlr->dev, SYS_RES_MEMORY,
-	    &ctrlr->bar4_resource_id, 0, ~0, 1, RF_ACTIVE);
+	ctrlr->bar4_resource = bus_alloc_resource_any(ctrlr->dev, SYS_RES_MEMORY,
+	    &ctrlr->bar4_resource_id, RF_ACTIVE);
 
 	return (0);
 }
 
-#ifdef CHATHAM2
 static int
-nvme_ctrlr_allocate_chatham_bar(struct nvme_controller *ctrlr)
-{
-
-	ctrlr->chatham_resource_id = PCIR_BAR(CHATHAM_CONTROL_BAR);
-	ctrlr->chatham_resource = bus_alloc_resource(ctrlr->dev,
-	    SYS_RES_MEMORY, &ctrlr->chatham_resource_id, 0, ~0, 1,
-	    RF_ACTIVE);
-
-	if(ctrlr->chatham_resource == NULL) {
-		nvme_printf(ctrlr, "unable to alloc pci resource\n");
-		return (ENOMEM);
-	}
-
-	ctrlr->chatham_bus_tag = rman_get_bustag(ctrlr->chatham_resource);
-	ctrlr->chatham_bus_handle =
-	    rman_get_bushandle(ctrlr->chatham_resource);
-
-	return (0);
-}
-
-static void
-nvme_ctrlr_setup_chatham(struct nvme_controller *ctrlr)
-{
-	uint64_t reg1, reg2, reg3;
-	uint64_t temp1, temp2;
-	uint32_t temp3;
-	uint32_t use_flash_timings = 0;
-
-	DELAY(10000);
-
-	temp3 = chatham_read_4(ctrlr, 0x8080);
-
-	device_printf(ctrlr->dev, "Chatham version: 0x%x\n", temp3);
-
-	ctrlr->chatham_lbas = chatham_read_4(ctrlr, 0x8068) - 0x110;
-	ctrlr->chatham_size = ctrlr->chatham_lbas * 512;
-
-	device_printf(ctrlr->dev, "Chatham size: %jd\n",
-	    (intmax_t)ctrlr->chatham_size);
-
-	reg1 = reg2 = reg3 = ctrlr->chatham_size - 1;
-
-	TUNABLE_INT_FETCH("hw.nvme.use_flash_timings", &use_flash_timings);
-	if (use_flash_timings) {
-		device_printf(ctrlr->dev, "Chatham: using flash timings\n");
-		temp1 = 0x00001b58000007d0LL;
-		temp2 = 0x000000cb00000131LL;
-	} else {
-		device_printf(ctrlr->dev, "Chatham: using DDR timings\n");
-		temp1 = temp2 = 0x0LL;
-	}
-
-	chatham_write_8(ctrlr, 0x8000, reg1);
-	chatham_write_8(ctrlr, 0x8008, reg2);
-	chatham_write_8(ctrlr, 0x8010, reg3);
-
-	chatham_write_8(ctrlr, 0x8020, temp1);
-	temp3 = chatham_read_4(ctrlr, 0x8020);
-
-	chatham_write_8(ctrlr, 0x8028, temp2);
-	temp3 = chatham_read_4(ctrlr, 0x8028);
-
-	chatham_write_8(ctrlr, 0x8030, temp1);
-	chatham_write_8(ctrlr, 0x8038, temp2);
-	chatham_write_8(ctrlr, 0x8040, temp1);
-	chatham_write_8(ctrlr, 0x8048, temp2);
-	chatham_write_8(ctrlr, 0x8050, temp1);
-	chatham_write_8(ctrlr, 0x8058, temp2);
-
-	DELAY(10000);
-}
-
-static void
-nvme_chatham_populate_cdata(struct nvme_controller *ctrlr)
-{
-	struct nvme_controller_data *cdata;
-
-	cdata = &ctrlr->cdata;
-
-	cdata->vid = 0x8086;
-	cdata->ssvid = 0x2011;
-
-	/*
-	 * Chatham2 puts garbage data in these fields when we
-	 *  invoke IDENTIFY_CONTROLLER, so we need to re-zero
-	 *  the fields before calling bcopy().
-	 */
-	memset(cdata->sn, 0, sizeof(cdata->sn));
-	memcpy(cdata->sn, "2012", strlen("2012"));
-	memset(cdata->mn, 0, sizeof(cdata->mn));
-	memcpy(cdata->mn, "CHATHAM2", strlen("CHATHAM2"));
-	memset(cdata->fr, 0, sizeof(cdata->fr));
-	memcpy(cdata->fr, "0", strlen("0"));
-	cdata->rab = 8;
-	cdata->aerl = 3;
-	cdata->lpa.ns_smart = 1;
-	cdata->sqes.min = 6;
-	cdata->sqes.max = 6;
-	cdata->sqes.min = 4;
-	cdata->sqes.max = 4;
-	cdata->nn = 1;
-
-	/* Chatham2 doesn't support DSM command */
-	cdata->oncs.dsm = 0;
-
-	cdata->vwc.present = 1;
-}
-#endif /* CHATHAM2 */
-
-static void
 nvme_ctrlr_construct_admin_qpair(struct nvme_controller *ctrlr)
 {
 	struct nvme_qpair	*qpair;
 	uint32_t		num_entries;
+	int			error;
 
 	qpair = &ctrlr->adminq;
 
@@ -217,12 +108,13 @@ nvme_ctrlr_construct_admin_qpair(struct nvme_controller *ctrlr)
 	 * The admin queue's max xfer size is treated differently than the
 	 *  max I/O xfer size.  16KB is sufficient here - maybe even less?
 	 */
-	nvme_qpair_construct(qpair, 
-			     0, /* qpair ID */
-			     0, /* vector */
-			     num_entries,
-			     NVME_ADMIN_TRACKERS,
-			     ctrlr);
+	error = nvme_qpair_construct(qpair, 
+				     0, /* qpair ID */
+				     0, /* vector */
+				     num_entries,
+				     NVME_ADMIN_TRACKERS,
+				     ctrlr);
+	return (error);
 }
 
 static int
@@ -230,7 +122,7 @@ nvme_ctrlr_construct_io_qpairs(struct nvme_controller *ctrlr)
 {
 	struct nvme_qpair	*qpair;
 	union cap_lo_register	cap_lo;
-	int			i, num_entries, num_trackers;
+	int			i, error, num_entries, num_trackers;
 
 	num_entries = NVME_IO_ENTRIES;
 	TUNABLE_INT_FETCH("hw.nvme.io_entries", &num_entries);
@@ -255,6 +147,21 @@ nvme_ctrlr_construct_io_qpairs(struct nvme_controller *ctrlr)
 	 */
 	num_trackers = min(num_trackers, (num_entries-1));
 
+	/*
+	 * Our best estimate for the maximum number of I/Os that we should
+	 * noramlly have in flight at one time. This should be viewed as a hint,
+	 * not a hard limit and will need to be revisitted when the upper layers
+	 * of the storage system grows multi-queue support.
+	 */
+	ctrlr->max_hw_pend_io = num_trackers * ctrlr->num_io_queues * 3 / 4;
+
+	/*
+	 * This was calculated previously when setting up interrupts, but
+	 *  a controller could theoretically support fewer I/O queues than
+	 *  MSI-X vectors.  So calculate again here just to be safe.
+	 */
+	ctrlr->num_cpus_per_ioq = howmany(mp_ncpus, ctrlr->num_io_queues);
+
 	ctrlr->ioq = malloc(ctrlr->num_io_queues * sizeof(struct nvme_qpair),
 	    M_NVME, M_ZERO | M_WAITOK);
 
@@ -268,15 +175,22 @@ nvme_ctrlr_construct_io_qpairs(struct nvme_controller *ctrlr)
 		 * For I/O queues, use the controller-wide max_xfer_size
 		 *  calculated in nvme_attach().
 		 */
-		nvme_qpair_construct(qpair,
+		error = nvme_qpair_construct(qpair,
 				     i+1, /* qpair ID */
 				     ctrlr->msix_enabled ? i+1 : 0, /* vector */
 				     num_entries,
 				     num_trackers,
 				     ctrlr);
+		if (error)
+			return (error);
 
-		if (ctrlr->per_cpu_io_queues)
-			bus_bind_intr(ctrlr->dev, qpair->res, i);
+		/*
+		 * Do not bother binding interrupts if we only have one I/O
+		 *  interrupt thread for this controller.
+		 */
+		if (ctrlr->num_io_queues > 1)
+			bus_bind_intr(ctrlr->dev, qpair->res,
+			    i * ctrlr->num_cpus_per_ioq);
 	}
 
 	return (0);
@@ -288,9 +202,14 @@ nvme_ctrlr_fail(struct nvme_controller *ctrlr)
 	int i;
 
 	ctrlr->is_failed = TRUE;
+	nvme_admin_qpair_disable(&ctrlr->adminq);
 	nvme_qpair_fail(&ctrlr->adminq);
-	for (i = 0; i < ctrlr->num_io_queues; i++)
-		nvme_qpair_fail(&ctrlr->ioq[i]);
+	if (ctrlr->ioq != NULL) {
+		for (i = 0; i < ctrlr->num_io_queues; i++) {
+			nvme_io_qpair_disable(&ctrlr->ioq[i]);
+			nvme_qpair_fail(&ctrlr->ioq[i]);
+		}
+	}
 	nvme_notify_fail_consumers(ctrlr);
 }
 
@@ -312,60 +231,81 @@ nvme_ctrlr_fail_req_task(void *arg, int pending)
 	struct nvme_request	*req;
 
 	mtx_lock(&ctrlr->lock);
-	while (!STAILQ_EMPTY(&ctrlr->fail_req)) {
-		req = STAILQ_FIRST(&ctrlr->fail_req);
+	while ((req = STAILQ_FIRST(&ctrlr->fail_req)) != NULL) {
 		STAILQ_REMOVE_HEAD(&ctrlr->fail_req, stailq);
+		mtx_unlock(&ctrlr->lock);
 		nvme_qpair_manual_complete_request(req->qpair, req,
-		    NVME_SCT_GENERIC, NVME_SC_ABORTED_BY_REQUEST, TRUE);
+		    NVME_SCT_GENERIC, NVME_SC_ABORTED_BY_REQUEST);
+		mtx_lock(&ctrlr->lock);
 	}
 	mtx_unlock(&ctrlr->lock);
 }
 
 static int
-nvme_ctrlr_wait_for_ready(struct nvme_controller *ctrlr)
+nvme_ctrlr_wait_for_ready(struct nvme_controller *ctrlr, int desired_val)
 {
 	int ms_waited;
-	union cc_register cc;
 	union csts_register csts;
 
-	cc.raw = nvme_mmio_read_4(ctrlr, cc);
-	csts.raw = nvme_mmio_read_4(ctrlr, csts);
-
-	if (!cc.bits.en) {
-		nvme_printf(ctrlr, "%s called with cc.en = 0\n", __func__);
-		return (ENXIO);
-	}
-
 	ms_waited = 0;
-
-	while (!csts.bits.rdy) {
-		DELAY(1000);
+	while (1) {
+		csts.raw = nvme_mmio_read_4(ctrlr, csts);
+		if (csts.raw == 0xffffffff)		/* Hot unplug. */
+			return (ENXIO);
+		if (csts.bits.rdy == desired_val)
+			break;
 		if (ms_waited++ > ctrlr->ready_timeout_in_ms) {
-			nvme_printf(ctrlr, "controller did not become ready "
-			    "within %d ms\n", ctrlr->ready_timeout_in_ms);
+			nvme_printf(ctrlr, "controller ready did not become %d "
+			    "within %d ms\n", desired_val, ctrlr->ready_timeout_in_ms);
 			return (ENXIO);
 		}
-		csts.raw = nvme_mmio_read_4(ctrlr, csts);
+		DELAY(1000);
 	}
 
 	return (0);
 }
 
-static void
+static int
 nvme_ctrlr_disable(struct nvme_controller *ctrlr)
 {
 	union cc_register cc;
 	union csts_register csts;
+	int err;
 
 	cc.raw = nvme_mmio_read_4(ctrlr, cc);
 	csts.raw = nvme_mmio_read_4(ctrlr, csts);
 
-	if (cc.bits.en == 1 && csts.bits.rdy == 0)
-		nvme_ctrlr_wait_for_ready(ctrlr);
+	/*
+	 * Per 3.1.5 in NVME 1.3 spec, transitioning CC.EN from 0 to 1
+	 * when CSTS.RDY is 1 or transitioning CC.EN from 1 to 0 when
+	 * CSTS.RDY is 0 "has undefined results" So make sure that CSTS.RDY
+	 * isn't the desired value. Short circuit if we're already disabled.
+	 */
+	if (cc.bits.en == 1) {
+		if (csts.bits.rdy == 0) {
+			/* EN == 1, wait for  RDY == 1 or fail */
+			err = nvme_ctrlr_wait_for_ready(ctrlr, 1);
+			if (err != 0)
+				return (err);
+		}
+	} else {
+		/* EN == 0 already wait for RDY == 0 */
+		if (csts.bits.rdy == 0)
+			return (0);
+		else
+			return (nvme_ctrlr_wait_for_ready(ctrlr, 0));
+	}
 
 	cc.bits.en = 0;
 	nvme_mmio_write_4(ctrlr, cc, cc.raw);
-	DELAY(5000);
+	/*
+	 * Some drives have issues with accessing the mmio after we
+	 * disable, so delay for a bit after we write the bit to
+	 * cope with these issues.
+	 */
+	if (ctrlr->quirks & QUIRK_DELAY_B4_CHK_RDY)
+		pause("nvmeR", B4_CHK_RDY_DELAY_MS * hz / 1000);
+	return (nvme_ctrlr_wait_for_ready(ctrlr, 0));
 }
 
 static int
@@ -374,15 +314,24 @@ nvme_ctrlr_enable(struct nvme_controller *ctrlr)
 	union cc_register	cc;
 	union csts_register	csts;
 	union aqa_register	aqa;
+	int			err;
 
 	cc.raw = nvme_mmio_read_4(ctrlr, cc);
 	csts.raw = nvme_mmio_read_4(ctrlr, csts);
 
+	/*
+	 * See note in nvme_ctrlr_disable. Short circuit if we're already enabled.
+	 */
 	if (cc.bits.en == 1) {
 		if (csts.bits.rdy == 1)
 			return (0);
 		else
-			return (nvme_ctrlr_wait_for_ready(ctrlr));
+			return (nvme_ctrlr_wait_for_ready(ctrlr, 1));
+	} else {
+		/* EN == 0 already wait for RDY == 0 or fail */
+		err = nvme_ctrlr_wait_for_ready(ctrlr, 0);
+		if (err != 0)
+			return (err);
 	}
 
 	nvme_mmio_write_8(ctrlr, asq, ctrlr->adminq.cmd_bus_addr);
@@ -408,23 +357,31 @@ nvme_ctrlr_enable(struct nvme_controller *ctrlr)
 	cc.bits.mps = (PAGE_SIZE >> 13);
 
 	nvme_mmio_write_4(ctrlr, cc, cc.raw);
-	DELAY(5000);
 
-	return (nvme_ctrlr_wait_for_ready(ctrlr));
+	return (nvme_ctrlr_wait_for_ready(ctrlr, 1));
 }
 
 int
 nvme_ctrlr_hw_reset(struct nvme_controller *ctrlr)
 {
-	int i;
+	int i, err;
 
 	nvme_admin_qpair_disable(&ctrlr->adminq);
-	for (i = 0; i < ctrlr->num_io_queues; i++)
-		nvme_io_qpair_disable(&ctrlr->ioq[i]);
+	/*
+	 * I/O queues are not allocated before the initial HW
+	 *  reset, so do not try to disable them.  Use is_initialized
+	 *  to determine if this is the initial HW reset.
+	 */
+	if (ctrlr->is_initialized) {
+		for (i = 0; i < ctrlr->num_io_queues; i++)
+			nvme_io_qpair_disable(&ctrlr->ioq[i]);
+	}
 
 	DELAY(100*1000);
 
-	nvme_ctrlr_disable(ctrlr);
+	err = nvme_ctrlr_disable(ctrlr);
+	if (err != 0)
+		return err;
 	return (nvme_ctrlr_enable(ctrlr));
 }
 
@@ -451,20 +408,15 @@ nvme_ctrlr_identify(struct nvme_controller *ctrlr)
 {
 	struct nvme_completion_poll_status	status;
 
-	status.done = FALSE;
+	status.done = 0;
 	nvme_ctrlr_cmd_identify_controller(ctrlr, &ctrlr->cdata,
 	    nvme_completion_poll_cb, &status);
-	while (status.done == FALSE)
+	while (!atomic_load_acq_int(&status.done))
 		pause("nvme", 1);
 	if (nvme_completion_is_error(&status.cpl)) {
 		nvme_printf(ctrlr, "nvme_identify_controller failed!\n");
 		return (ENXIO);
 	}
-
-#ifdef CHATHAM2
-	if (pci_get_devid(ctrlr->dev) == CHATHAM_PCI_ID)
-		nvme_chatham_populate_cdata(ctrlr);
-#endif
 
 	/*
 	 * Use MDTS to ensure our default max_xfer_size doesn't exceed what the
@@ -481,15 +433,15 @@ static int
 nvme_ctrlr_set_num_qpairs(struct nvme_controller *ctrlr)
 {
 	struct nvme_completion_poll_status	status;
-	int					cq_allocated, i, sq_allocated;
+	int					cq_allocated, sq_allocated;
 
-	status.done = FALSE;
+	status.done = 0;
 	nvme_ctrlr_cmd_set_num_queues(ctrlr, ctrlr->num_io_queues,
 	    nvme_completion_poll_cb, &status);
-	while (status.done == FALSE)
+	while (!atomic_load_acq_int(&status.done))
 		pause("nvme", 1);
 	if (nvme_completion_is_error(&status.cpl)) {
-		nvme_printf(ctrlr, "nvme_set_num_queues failed!\n");
+		nvme_printf(ctrlr, "nvme_ctrlr_set_num_qpairs failed!\n");
 		return (ENXIO);
 	}
 
@@ -502,26 +454,12 @@ nvme_ctrlr_set_num_qpairs(struct nvme_controller *ctrlr)
 	cq_allocated = (status.cpl.cdw0 >> 16) + 1;
 
 	/*
-	 * Check that the controller was able to allocate the number of
-	 *  queues we requested.  If not, revert to one IO queue pair.
+	 * Controller may allocate more queues than we requested,
+	 *  so use the minimum of the number requested and what was
+	 *  actually allocated.
 	 */
-	if (sq_allocated < ctrlr->num_io_queues ||
-	    cq_allocated < ctrlr->num_io_queues) {
-
-		/*
-		 * Destroy extra IO queue pairs that were created at
-		 *  controller construction time but are no longer
-		 *  needed.  This will only happen when a controller
-		 *  supports fewer queues than MSI-X vectors.  This
-		 *  is not the normal case, but does occur with the
-		 *  Chatham prototype board.
-		 */
-		for (i = 1; i < ctrlr->num_io_queues; i++)
-			nvme_io_qpair_destroy(&ctrlr->ioq[i]);
-
-		ctrlr->num_io_queues = 1;
-		ctrlr->per_cpu_io_queues = 0;
-	}
+	ctrlr->num_io_queues = min(ctrlr->num_io_queues, sq_allocated);
+	ctrlr->num_io_queues = min(ctrlr->num_io_queues, cq_allocated);
 
 	return (0);
 }
@@ -536,20 +474,20 @@ nvme_ctrlr_create_qpairs(struct nvme_controller *ctrlr)
 	for (i = 0; i < ctrlr->num_io_queues; i++) {
 		qpair = &ctrlr->ioq[i];
 
-		status.done = FALSE;
+		status.done = 0;
 		nvme_ctrlr_cmd_create_io_cq(ctrlr, qpair, qpair->vector,
 		    nvme_completion_poll_cb, &status);
-		while (status.done == FALSE)
+		while (!atomic_load_acq_int(&status.done))
 			pause("nvme", 1);
 		if (nvme_completion_is_error(&status.cpl)) {
 			nvme_printf(ctrlr, "nvme_create_io_cq failed!\n");
 			return (ENXIO);
 		}
 
-		status.done = FALSE;
+		status.done = 0;
 		nvme_ctrlr_cmd_create_io_sq(qpair->ctrlr, qpair,
 		    nvme_completion_poll_cb, &status);
-		while (status.done == FALSE)
+		while (!atomic_load_acq_int(&status.done))
 			pause("nvme", 1);
 		if (nvme_completion_is_error(&status.cpl)) {
 			nvme_printf(ctrlr, "nvme_create_io_sq failed!\n");
@@ -561,16 +499,42 @@ nvme_ctrlr_create_qpairs(struct nvme_controller *ctrlr)
 }
 
 static int
+nvme_ctrlr_destroy_qpair(struct nvme_controller *ctrlr, struct nvme_qpair *qpair)
+{
+	struct nvme_completion_poll_status	status;
+
+	status.done = 0;
+	nvme_ctrlr_cmd_delete_io_sq(ctrlr, qpair,
+	    nvme_completion_poll_cb, &status);
+	while (!atomic_load_acq_int(&status.done))
+		pause("nvme", 1);
+	if (nvme_completion_is_error(&status.cpl)) {
+		nvme_printf(ctrlr, "nvme_destroy_io_sq failed!\n");
+		return (ENXIO);
+	}
+
+	status.done = 0;
+	nvme_ctrlr_cmd_delete_io_cq(ctrlr, qpair,
+	    nvme_completion_poll_cb, &status);
+	while (!atomic_load_acq_int(&status.done))
+		pause("nvme", 1);
+	if (nvme_completion_is_error(&status.cpl)) {
+		nvme_printf(ctrlr, "nvme_destroy_io_cq failed!\n");
+		return (ENXIO);
+	}
+
+	return (0);
+}
+
+static int
 nvme_ctrlr_construct_namespaces(struct nvme_controller *ctrlr)
 {
 	struct nvme_namespace	*ns;
-	int			i, status;
+	uint32_t 		i;
 
-	for (i = 0; i < ctrlr->cdata.nn; i++) {
+	for (i = 0; i < min(ctrlr->cdata.nn, NVME_MAX_NAMESPACES); i++) {
 		ns = &ctrlr->ns[i];
-		status = nvme_ns_construct(ns, i+1, ctrlr);
-		if (status != 0)
-			return (status);
+		nvme_ns_construct(ns, i+1, ctrlr);
 	}
 
 	return (0);
@@ -761,10 +725,10 @@ nvme_ctrlr_configure_aer(struct nvme_controller *ctrlr)
 	ctrlr->async_event_config.raw = 0xFF;
 	ctrlr->async_event_config.bits.reserved = 0;
 
-	status.done = FALSE;
+	status.done = 0;
 	nvme_ctrlr_cmd_get_feature(ctrlr, NVME_FEAT_TEMPERATURE_THRESHOLD,
 	    0, NULL, 0, nvme_completion_poll_cb, &status);
-	while (status.done == FALSE)
+	while (!atomic_load_acq_int(&status.done))
 		pause("nvme", 1);
 	if (nvme_completion_is_error(&status.cpl) ||
 	    (status.cpl.cdw0 & 0xFFFF) == 0xFFFF ||
@@ -778,10 +742,6 @@ nvme_ctrlr_configure_aer(struct nvme_controller *ctrlr)
 
 	/* aerl is a zero-based value, so we need to add 1 here. */
 	ctrlr->num_aers = min(NVME_MAX_ASYNC_EVENTS, (ctrlr->cdata.aerl+1));
-
-	/* Chatham doesn't support AERs. */
-	if (pci_get_devid(ctrlr->dev) == CHATHAM_PCI_ID)
-		ctrlr->num_aers = 0;
 
 	for (i = 0; i < ctrlr->num_aers; i++) {
 		aer = &ctrlr->aer[i];
@@ -809,9 +769,20 @@ static void
 nvme_ctrlr_start(void *ctrlr_arg)
 {
 	struct nvme_controller *ctrlr = ctrlr_arg;
+	uint32_t old_num_io_queues;
 	int i;
 
-	nvme_qpair_reset(&ctrlr->adminq);
+	/*
+	 * Only reset adminq here when we are restarting the
+	 *  controller after a reset.  During initialization,
+	 *  we have already submitted admin commands to get
+	 *  the number of I/O queues supported, so cannot reset
+	 *  the adminq again here.
+	 */
+	if (ctrlr->is_resetting) {
+		nvme_qpair_reset(&ctrlr->adminq);
+	}
+
 	for (i = 0; i < ctrlr->num_io_queues; i++)
 		nvme_qpair_reset(&ctrlr->ioq[i]);
 
@@ -822,9 +793,25 @@ nvme_ctrlr_start(void *ctrlr_arg)
 		return;
 	}
 
-	if (nvme_ctrlr_set_num_qpairs(ctrlr) != 0) {
-		nvme_ctrlr_fail(ctrlr);
-		return;
+	/*
+	 * The number of qpairs are determined during controller initialization,
+	 *  including using NVMe SET_FEATURES/NUMBER_OF_QUEUES to determine the
+	 *  HW limit.  We call SET_FEATURES again here so that it gets called
+	 *  after any reset for controllers that depend on the driver to
+	 *  explicit specify how many queues it will use.  This value should
+	 *  never change between resets, so panic if somehow that does happen.
+	 */
+	if (ctrlr->is_resetting) {
+		old_num_io_queues = ctrlr->num_io_queues;
+		if (nvme_ctrlr_set_num_qpairs(ctrlr) != 0) {
+			nvme_ctrlr_fail(ctrlr);
+			return;
+		}
+
+		if (old_num_io_queues != ctrlr->num_io_queues) {
+			panic("num_io_queues changed from %u to %u",
+			      old_num_io_queues, ctrlr->num_io_queues);
+		}
 	}
 
 	if (nvme_ctrlr_create_qpairs(ctrlr) != 0) {
@@ -842,16 +829,6 @@ nvme_ctrlr_start(void *ctrlr_arg)
 
 	for (i = 0; i < ctrlr->num_io_queues; i++)
 		nvme_io_qpair_enable(&ctrlr->ioq[i]);
-
-	/*
-	 * Clear software progress marker to 0, to indicate to pre-boot
-	 *  software that OS driver load was successful.
-	 *
-	 * Chatham does not support this feature.
-	 */
-	if (pci_get_devid(ctrlr->dev) != CHATHAM_PCI_ID)
-		nvme_ctrlr_cmd_set_feature(ctrlr,
-		    NVME_FEAT_SOFTWARE_PROGRESS_MARKER, 0, NULL, 0, NULL, NULL);
 }
 
 void
@@ -859,8 +836,20 @@ nvme_ctrlr_start_config_hook(void *arg)
 {
 	struct nvme_controller *ctrlr = arg;
 
-	nvme_ctrlr_start(ctrlr);
+	nvme_qpair_reset(&ctrlr->adminq);
+	nvme_admin_qpair_enable(&ctrlr->adminq);
+
+	if (nvme_ctrlr_set_num_qpairs(ctrlr) == 0 &&
+	    nvme_ctrlr_construct_io_qpairs(ctrlr) == 0)
+		nvme_ctrlr_start(ctrlr);
+	else
+		nvme_ctrlr_fail(ctrlr);
+
+	nvme_sysctl_initialize_ctrlr(ctrlr);
 	config_intrhook_disestablish(&ctrlr->config_hook);
+
+	ctrlr->is_initialized = 1;
+	nvme_notify_new_controller(ctrlr);
 }
 
 static void
@@ -888,18 +877,33 @@ nvme_ctrlr_reset_task(void *arg, int pending)
 	atomic_cmpset_32(&ctrlr->is_resetting, 1, 0);
 }
 
-static void
+/*
+ * Poll all the queues enabled on the device for completion.
+ */
+void
+nvme_ctrlr_poll(struct nvme_controller *ctrlr)
+{
+	int i;
+
+	nvme_qpair_process_completions(&ctrlr->adminq);
+
+	for (i = 0; i < ctrlr->num_io_queues; i++)
+		if (ctrlr->ioq && ctrlr->ioq[i].cpl)
+			nvme_qpair_process_completions(&ctrlr->ioq[i]);
+}
+
+/*
+ * Poll the single-vector intertrupt case: num_io_queues will be 1 and
+ * there's only a single vector. While we're polling, we mask further
+ * interrupts in the controller.
+ */
+void
 nvme_ctrlr_intx_handler(void *arg)
 {
 	struct nvme_controller *ctrlr = arg;
 
 	nvme_mmio_write_4(ctrlr, intms, 1);
-
-	nvme_qpair_process_completions(&ctrlr->adminq);
-
-	if (ctrlr->ioq[0].cpl)
-		nvme_qpair_process_completions(&ctrlr->ioq[0]);
-
+	nvme_ctrlr_poll(ctrlr);
 	nvme_mmio_write_4(ctrlr, intmc, 1);
 }
 
@@ -907,8 +911,9 @@ static int
 nvme_ctrlr_configure_intx(struct nvme_controller *ctrlr)
 {
 
+	ctrlr->msix_enabled = 0;
 	ctrlr->num_io_queues = 1;
-	ctrlr->per_cpu_io_queues = 0;
+	ctrlr->num_cpus_per_ioq = mp_ncpus;
 	ctrlr->rid = 0;
 	ctrlr->res = bus_alloc_resource_any(ctrlr->dev, SYS_RES_IRQ,
 	    &ctrlr->rid, RF_SHAREABLE | RF_ACTIVE);
@@ -934,15 +939,17 @@ static void
 nvme_pt_done(void *arg, const struct nvme_completion *cpl)
 {
 	struct nvme_pt_command *pt = arg;
+	struct mtx *mtx = pt->driver_lock;
 
 	bzero(&pt->cpl, sizeof(pt->cpl));
 	pt->cpl.cdw0 = cpl->cdw0;
 	pt->cpl.status = cpl->status;
 	pt->cpl.status.p = 0;
 
-	mtx_lock(pt->driver_lock);
+	mtx_lock(mtx);
+	pt->driver_lock = NULL;
 	wakeup(pt);
-	mtx_unlock(pt->driver_lock);
+	mtx_unlock(mtx);
 }
 
 int
@@ -954,8 +961,20 @@ nvme_ctrlr_passthrough_cmd(struct nvme_controller *ctrlr,
 	struct mtx		*mtx;
 	struct buf		*buf = NULL;
 	int			ret = 0;
+	vm_offset_t		addr, end;
 
 	if (pt->len > 0) {
+		/*
+		 * vmapbuf calls vm_fault_quick_hold_pages which only maps full
+		 * pages. Ensure this request has fewer than MAXPHYS bytes when
+		 * extended to full pages.
+		 */
+		addr = (vm_offset_t)pt->buf;
+		end = round_page(addr + pt->len);
+		addr = trunc_page(addr);
+		if (end - addr > MAXPHYS)
+			return EIO;
+
 		if (pt->len > ctrlr->max_xfer_size) {
 			nvme_printf(ctrlr, "pt->len (%d) "
 			    "exceeds max_xfer_size (%d)\n", pt->len,
@@ -969,15 +988,10 @@ nvme_ctrlr_passthrough_cmd(struct nvme_controller *ctrlr,
 			 */
 			PHOLD(curproc);
 			buf = getpbuf(NULL);
-			buf->b_saveaddr = buf->b_data;
 			buf->b_data = pt->buf;
 			buf->b_bufsize = pt->len;
 			buf->b_iocmd = pt->is_read ? BIO_READ : BIO_WRITE;
-#ifdef NVME_UNMAPPED_BIO_SUPPORT
 			if (vmapbuf(buf, 1) < 0) {
-#else
-			if (vmapbuf(buf) < 0) {
-#endif
 				ret = EFAULT;
 				goto err;
 			}
@@ -990,6 +1004,8 @@ nvme_ctrlr_passthrough_cmd(struct nvme_controller *ctrlr,
 		req = nvme_allocate_request_null(nvme_pt_done, pt);
 
 	req->cmd.opc	= pt->cmd.opc;
+	req->cmd.rsvd2	= pt->cmd.rsvd2;
+	req->cmd.rsvd3	= pt->cmd.rsvd3;
 	req->cmd.cdw10	= pt->cmd.cdw10;
 	req->cmd.cdw11	= pt->cmd.cdw11;
 	req->cmd.cdw12	= pt->cmd.cdw12;
@@ -999,12 +1015,7 @@ nvme_ctrlr_passthrough_cmd(struct nvme_controller *ctrlr,
 
 	req->cmd.nsid = nsid;
 
-	if (is_admin_cmd)
-		mtx = &ctrlr->lock;
-	else
-		mtx = &ctrlr->ns[nsid-1].lock;
-
-	mtx_lock(mtx);
+	mtx = mtx_pool_find(mtxpool_sleep, pt);
 	pt->driver_lock = mtx;
 
 	if (is_admin_cmd)
@@ -1012,10 +1023,10 @@ nvme_ctrlr_passthrough_cmd(struct nvme_controller *ctrlr,
 	else
 		nvme_ctrlr_submit_io_request(ctrlr, req);
 
-	mtx_sleep(pt, mtx, PRIBIO, "nvme_pt", 0);
+	mtx_lock(mtx);
+	while (pt->driver_lock != NULL)
+		mtx_sleep(pt, mtx, PRIBIO, "nvme_pt", 0);
 	mtx_unlock(mtx);
-
-	pt->driver_lock = NULL;
 
 err:
 	if (buf != NULL) {
@@ -1043,6 +1054,14 @@ nvme_ctrlr_ioctl(struct cdev *cdev, u_long cmd, caddr_t arg, int flag,
 		pt = (struct nvme_pt_command *)arg;
 		return (nvme_ctrlr_passthrough_cmd(ctrlr, pt, pt->cmd.nsid,
 		    1 /* is_user_buffer */, 1 /* is_admin_cmd */));
+	case NVME_GET_NSID:
+	{
+		struct nvme_get_nsid *gnsid = (struct nvme_get_nsid *)arg;
+		strncpy(gnsid->cdev, device_get_nameunit(ctrlr->dev),
+		    sizeof(gnsid->cdev));
+		gnsid->nsid = 0;
+		break;
+	}
 	default:
 		return (ENOTTY);
 	}
@@ -1056,13 +1075,95 @@ static struct cdevsw nvme_ctrlr_cdevsw = {
 	.d_ioctl =	nvme_ctrlr_ioctl
 };
 
+static void
+nvme_ctrlr_setup_interrupts(struct nvme_controller *ctrlr)
+{
+	device_t	dev;
+	int		per_cpu_io_queues;
+	int		min_cpus_per_ioq;
+	int		num_vectors_requested, num_vectors_allocated;
+	int		num_vectors_available;
+
+	dev = ctrlr->dev;
+	min_cpus_per_ioq = 1;
+	TUNABLE_INT_FETCH("hw.nvme.min_cpus_per_ioq", &min_cpus_per_ioq);
+
+	if (min_cpus_per_ioq < 1) {
+		min_cpus_per_ioq = 1;
+	} else if (min_cpus_per_ioq > mp_ncpus) {
+		min_cpus_per_ioq = mp_ncpus;
+	}
+
+	per_cpu_io_queues = 1;
+	TUNABLE_INT_FETCH("hw.nvme.per_cpu_io_queues", &per_cpu_io_queues);
+
+	if (per_cpu_io_queues == 0) {
+		min_cpus_per_ioq = mp_ncpus;
+	}
+
+	ctrlr->force_intx = 0;
+	TUNABLE_INT_FETCH("hw.nvme.force_intx", &ctrlr->force_intx);
+
+	/*
+	 * FreeBSD currently cannot allocate more than about 190 vectors at
+	 *  boot, meaning that systems with high core count and many devices
+	 *  requesting per-CPU interrupt vectors will not get their full
+	 *  allotment.  So first, try to allocate as many as we may need to
+	 *  understand what is available, then immediately release them.
+	 *  Then figure out how many of those we will actually use, based on
+	 *  assigning an equal number of cores to each I/O queue.
+	 */
+
+	/* One vector for per core I/O queue, plus one vector for admin queue. */
+	num_vectors_available = min(pci_msix_count(dev), mp_ncpus + 1);
+	if (pci_alloc_msix(dev, &num_vectors_available) != 0) {
+		num_vectors_available = 0;
+	}
+	pci_release_msi(dev);
+
+	if (ctrlr->force_intx || num_vectors_available < 2) {
+		nvme_ctrlr_configure_intx(ctrlr);
+		return;
+	}
+
+	/*
+	 * Do not use all vectors for I/O queues - one must be saved for the
+	 *  admin queue.
+	 */
+	ctrlr->num_cpus_per_ioq = max(min_cpus_per_ioq,
+	    howmany(mp_ncpus, num_vectors_available - 1));
+
+	ctrlr->num_io_queues = howmany(mp_ncpus, ctrlr->num_cpus_per_ioq);
+	num_vectors_requested = ctrlr->num_io_queues + 1;
+	num_vectors_allocated = num_vectors_requested;
+
+	/*
+	 * Now just allocate the number of vectors we need.  This should
+	 *  succeed, since we previously called pci_alloc_msix()
+	 *  successfully returning at least this many vectors, but just to
+	 *  be safe, if something goes wrong just revert to INTx.
+	 */
+	if (pci_alloc_msix(dev, &num_vectors_allocated) != 0) {
+		nvme_ctrlr_configure_intx(ctrlr);
+		return;
+	}
+
+	if (num_vectors_allocated < num_vectors_requested) {
+		pci_release_msi(dev);
+		nvme_ctrlr_configure_intx(ctrlr);
+		return;
+	}
+
+	ctrlr->msix_enabled = 1;
+}
+
 int
 nvme_ctrlr_construct(struct nvme_controller *ctrlr, device_t dev)
 {
+	struct make_dev_args	md_args;
 	union cap_lo_register	cap_lo;
 	union cap_hi_register	cap_hi;
-	int			num_vectors, per_cpu_io_queues, status = 0;
-	int			timeout_period;
+	int			status, timeout_period;
 
 	ctrlr->dev = dev;
 
@@ -1072,15 +1173,6 @@ nvme_ctrlr_construct(struct nvme_controller *ctrlr, device_t dev)
 
 	if (status != 0)
 		return (status);
-
-#ifdef CHATHAM2
-	if (pci_get_devid(dev) == CHATHAM_PCI_ID) {
-		status = nvme_ctrlr_allocate_chatham_bar(ctrlr);
-		if (status != 0)
-			return (status);
-		nvme_ctrlr_setup_chatham(ctrlr);
-	}
-#endif
 
 	/*
 	 * Software emulators may set the doorbell stride to something
@@ -1105,69 +1197,38 @@ nvme_ctrlr_construct(struct nvme_controller *ctrlr, device_t dev)
 	nvme_retry_count = NVME_DEFAULT_RETRY_COUNT;
 	TUNABLE_INT_FETCH("hw.nvme.retry_count", &nvme_retry_count);
 
-	per_cpu_io_queues = 1;
-	TUNABLE_INT_FETCH("hw.nvme.per_cpu_io_queues", &per_cpu_io_queues);
-	ctrlr->per_cpu_io_queues = per_cpu_io_queues ? TRUE : FALSE;
-
-	if (ctrlr->per_cpu_io_queues)
-		ctrlr->num_io_queues = mp_ncpus;
-	else
-		ctrlr->num_io_queues = 1;
-
-	ctrlr->force_intx = 0;
-	TUNABLE_INT_FETCH("hw.nvme.force_intx", &ctrlr->force_intx);
-
 	ctrlr->enable_aborts = 0;
 	TUNABLE_INT_FETCH("hw.nvme.enable_aborts", &ctrlr->enable_aborts);
 
-	ctrlr->msix_enabled = 1;
-
-	if (ctrlr->force_intx) {
-		ctrlr->msix_enabled = 0;
-		goto intx;
-	}
-
-	/* One vector per IO queue, plus one vector for admin queue. */
-	num_vectors = ctrlr->num_io_queues + 1;
-
-	if (pci_msix_count(dev) < num_vectors) {
-		ctrlr->msix_enabled = 0;
-		goto intx;
-	}
-
-	if (pci_alloc_msix(dev, &num_vectors) != 0)
-		ctrlr->msix_enabled = 0;
-
-intx:
-
-	if (!ctrlr->msix_enabled)
-		nvme_ctrlr_configure_intx(ctrlr);
+	nvme_ctrlr_setup_interrupts(ctrlr);
 
 	ctrlr->max_xfer_size = NVME_MAX_XFER_SIZE;
-	nvme_ctrlr_construct_admin_qpair(ctrlr);
-	status = nvme_ctrlr_construct_io_qpairs(ctrlr);
-
-	if (status != 0)
-		return (status);
-
-	ctrlr->cdev = make_dev(&nvme_ctrlr_cdevsw, device_get_unit(dev),
-	    UID_ROOT, GID_WHEEL, 0600, "nvme%d", device_get_unit(dev));
-
-	if (ctrlr->cdev == NULL)
+	if (nvme_ctrlr_construct_admin_qpair(ctrlr) != 0)
 		return (ENXIO);
-
-	ctrlr->cdev->si_drv1 = (void *)ctrlr;
 
 	ctrlr->taskqueue = taskqueue_create("nvme_taskq", M_WAITOK,
 	    taskqueue_thread_enqueue, &ctrlr->taskqueue);
 	taskqueue_start_threads(&ctrlr->taskqueue, 1, PI_DISK, "nvme taskq");
 
 	ctrlr->is_resetting = 0;
+	ctrlr->is_initialized = 0;
+	ctrlr->notification_sent = 0;
 	TASK_INIT(&ctrlr->reset_task, 0, nvme_ctrlr_reset_task, ctrlr);
-
 	TASK_INIT(&ctrlr->fail_req_task, 0, nvme_ctrlr_fail_req_task, ctrlr);
 	STAILQ_INIT(&ctrlr->fail_req);
 	ctrlr->is_failed = FALSE;
+
+	make_dev_args_init(&md_args);
+	md_args.mda_devsw = &nvme_ctrlr_cdevsw;
+	md_args.mda_uid = UID_ROOT;
+	md_args.mda_gid = GID_WHEEL;
+	md_args.mda_mode = 0600;
+	md_args.mda_unit = device_get_unit(dev);
+	md_args.mda_si_drv1 = (void *)ctrlr;
+	status = make_dev_s(&md_args, &ctrlr->cdev, "nvme%d",
+	    device_get_unit(dev));
+	if (status != 0)
+		return (ENXIO);
 
 	return (0);
 }
@@ -1175,25 +1236,20 @@ intx:
 void
 nvme_ctrlr_destruct(struct nvme_controller *ctrlr, device_t dev)
 {
-	int				i;
+	int	gone, i;
+
+	if (ctrlr->resource == NULL)
+		goto nores;
 
 	/*
-	 *  Notify the controller of a shutdown, even though this is due to
-	 *   a driver unload, not a system shutdown (this path is not invoked
-	 *   during shutdown).  This ensures the controller receives a
-	 *   shutdown notification in case the system is shutdown before
-	 *   reloading the driver.
-	 *
-	 *  Chatham does not let you re-enable the controller after shutdown
-	 *   notification has been received, so do not send it in this case.
-	 *   This is OK because Chatham does not depend on the shutdown
-	 *   notification anyways.
+	 * Check whether it is a hot unplug or a clean driver detach.
+	 * If device is not there any more, skip any shutdown commands.
 	 */
-	if (pci_get_devid(ctrlr->dev) != CHATHAM_PCI_ID)
-		nvme_ctrlr_shutdown(ctrlr);
-
-	nvme_ctrlr_disable(ctrlr);
-	taskqueue_free(ctrlr->taskqueue);
+	gone = (nvme_mmio_read_4(ctrlr, csts) == 0xffffffff);
+	if (gone)
+		nvme_ctrlr_fail(ctrlr);
+	else
+		nvme_notify_fail_consumers(ctrlr);
 
 	for (i = 0; i < NVME_MAX_NAMESPACES; i++)
 		nvme_ns_destruct(&ctrlr->ns[i]);
@@ -1202,29 +1258,28 @@ nvme_ctrlr_destruct(struct nvme_controller *ctrlr, device_t dev)
 		destroy_dev(ctrlr->cdev);
 
 	for (i = 0; i < ctrlr->num_io_queues; i++) {
+		if (!gone)
+			nvme_ctrlr_destroy_qpair(ctrlr, &ctrlr->ioq[i]);
 		nvme_io_qpair_destroy(&ctrlr->ioq[i]);
 	}
-
 	free(ctrlr->ioq, M_NVME);
-
 	nvme_admin_qpair_destroy(&ctrlr->adminq);
 
-	if (ctrlr->resource != NULL) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    ctrlr->resource_id, ctrlr->resource);
-	}
+	/*
+	 *  Notify the controller of a shutdown, even though this is due to
+	 *   a driver unload, not a system shutdown (this path is not invoked
+	 *   during shutdown).  This ensures the controller receives a
+	 *   shutdown notification in case the system is shutdown before
+	 *   reloading the driver.
+	 */
+	if (!gone)
+		nvme_ctrlr_shutdown(ctrlr);
 
-	if (ctrlr->bar4_resource != NULL) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    ctrlr->bar4_resource_id, ctrlr->bar4_resource);
-	}
+	if (!gone)
+		nvme_ctrlr_disable(ctrlr);
 
-#ifdef CHATHAM2
-	if (ctrlr->chatham_resource != NULL) {
-		bus_release_resource(dev, SYS_RES_MEMORY,
-		    ctrlr->chatham_resource_id, ctrlr->chatham_resource);
-	}
-#endif
+	if (ctrlr->taskqueue)
+		taskqueue_free(ctrlr->taskqueue);
 
 	if (ctrlr->tag)
 		bus_teardown_intr(ctrlr->dev, ctrlr->res, ctrlr->tag);
@@ -1235,6 +1290,17 @@ nvme_ctrlr_destruct(struct nvme_controller *ctrlr, device_t dev)
 
 	if (ctrlr->msix_enabled)
 		pci_release_msi(dev);
+
+	if (ctrlr->bar4_resource != NULL) {
+		bus_release_resource(dev, SYS_RES_MEMORY,
+		    ctrlr->bar4_resource_id, ctrlr->bar4_resource);
+	}
+
+	bus_release_resource(dev, SYS_RES_MEMORY,
+	    ctrlr->resource_id, ctrlr->resource);
+
+nores:
+	mtx_destroy(&ctrlr->lock);
 }
 
 void
@@ -1247,14 +1313,19 @@ nvme_ctrlr_shutdown(struct nvme_controller *ctrlr)
 	cc.raw = nvme_mmio_read_4(ctrlr, cc);
 	cc.bits.shn = NVME_SHN_NORMAL;
 	nvme_mmio_write_4(ctrlr, cc, cc.raw);
-	csts.raw = nvme_mmio_read_4(ctrlr, csts);
-	while ((csts.bits.shst != NVME_SHST_COMPLETE) && (ticks++ < 5*hz)) {
-		pause("nvme shn", 1);
+	while (1) {
 		csts.raw = nvme_mmio_read_4(ctrlr, csts);
+		if (csts.raw == 0xffffffff)		/* Hot unplug. */
+			break;
+		if (csts.bits.shst == NVME_SHST_COMPLETE)
+			break;
+		if (ticks++ > 5*hz) {
+			nvme_printf(ctrlr, "did not complete shutdown within"
+			    " 5 seconds of notification\n");
+			break;
+		}
+		pause("nvme shn", 1);
 	}
-	if (csts.bits.shst != NVME_SHST_COMPLETE)
-		nvme_printf(ctrlr, "did not complete shutdown within 5 seconds "
-		    "of notification\n");
 }
 
 void
@@ -1271,11 +1342,7 @@ nvme_ctrlr_submit_io_request(struct nvme_controller *ctrlr,
 {
 	struct nvme_qpair       *qpair;
 
-	if (ctrlr->per_cpu_io_queues)
-		qpair = &ctrlr->ioq[curcpu];
-	else
-		qpair = &ctrlr->ioq[0];
-
+	qpair = &ctrlr->ioq[curcpu / ctrlr->num_cpus_per_ioq];
 	nvme_qpair_submit_request(qpair, req);
 }
 

@@ -35,7 +35,7 @@
  *
  *	@(#)varargs.h	8.2 (Berkeley) 3/22/94
  *	JNPR: varargs.h,v 1.1 2006/08/07 05:38:57 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/varargs.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MIPS_VARARGS_H_

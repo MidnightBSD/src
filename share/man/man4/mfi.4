@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/mfi.4 253362 2013-07-15 14:28:59Z pluknet $
+.\" $FreeBSD$
 .\"
 .Dd July 15, 2013
 .Dt MFI 4
@@ -72,6 +72,18 @@ If the sysctl
 .Va dev.mfi.%d.delete_busy_volumes
 is set to 1,
 then the driver will allow mounted volumes to be removed.
+.Pp
+A tunable is provided to adjust the
+.Nm
+driver's behaviour when attaching to a card.
+By default the driver will attach to all known cards with high probe priority.
+If the tunable
+.Va hw.mfi.mrsas_enable
+is set to 1,
+then the driver will reduce its probe priority to allow
+.Cd mrsas
+to attach to the card instead of
+.Nm .
 .Sh HARDWARE
 The
 .Nm
@@ -132,6 +144,6 @@ driver first appeared in
 The
 .Nm
 driver and this manual page were written by
-.An Scott Long Aq scottl@FreeBSD.org .
+.An Scott Long Aq Mt scottl@FreeBSD.org .
 .Sh BUGS
 The driver does not support big-endian architectures at this time.

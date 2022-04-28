@@ -31,19 +31,34 @@
 static char sccsid[] = "@(#)rewinddir.c	8.1 (Berkeley) 6/8/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/rewinddir.c 235647 2012-05-19 12:44:27Z gleb $");
+__FBSDID("$FreeBSD$");
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <dirent.h>
+#include <pthread.h>
+#include <unistd.h>
+#include "un-namespace.h"
 
+#include "libc_private.h"
 #include "gen-private.h"
 #include "telldir.h"
 
 void
-rewinddir(dirp)
-	DIR *dirp;
+rewinddir(DIR *dirp)
 {
 
-	_seekdir(dirp, dirp->dd_rewind);
-	dirp->dd_rewind = telldir(dirp);
+	if (__isthreaded)
+		_pthread_mutex_lock(&dirp->dd_lock);
+	dirp->dd_flags &= ~__DTF_SKIPREAD; /* current contents are invalid */
+	if (dirp->dd_flags & __DTF_READALL)
+		_filldir(dirp, false);
+	else {
+		(void) lseek(dirp->dd_fd, 0, SEEK_SET);
+		dirp->dd_seek = 0;
+	}
+	dirp->dd_loc = 0;
+	_reclaim_telldir(dirp);
+	if (__isthreaded)
+		_pthread_mutex_unlock(&dirp->dd_lock);
 }

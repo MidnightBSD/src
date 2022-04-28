@@ -57,11 +57,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/ncurses/ncurses/termcap.c 166130 2007-01-20 07:46:45Z rafan $");
+__FBSDID("$FreeBSD$");
 
+#if 0
 #ifndef lint
 static const char sccsid[] = "@(#)termcap.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
+#endif
 
 #include <stdio.h>
 #include <ctype.h>

@@ -26,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kgssapi/krb5/kcrypto.c 184588 2008-11-03 10:38:00Z dfr $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/kobj.h>
 #include <sys/mbuf.h>
+#include <sys/sysctl.h>
 
 #include <kgssapi/gssapi.h>
 #include <kgssapi/gssapi_impl.h>
@@ -47,6 +48,11 @@ static struct krb5_encryption_class *krb5_encryption_classes[] = {
 	&krb5_arcfour_56_encryption_class,
 	NULL
 };
+
+struct timeval krb5_warn_interval = { .tv_sec = 3600, .tv_usec = 0 };
+SYSCTL_TIMEVAL_SEC(_kern, OID_AUTO, kgssapi_warn_interval, CTLFLAG_RW,
+    &krb5_warn_interval,
+    "Delay in seconds between warnings of deprecated KGSSAPI crypto.");
 
 struct krb5_encryption_class *
 krb5_find_encryption_class(int etype)
@@ -202,8 +208,7 @@ krb5_derive_key(struct krb5_key_state *inkey,
 	 * Generate enough bytes for keybits rounded up to a multiple
 	 * of blocklen.
 	 */
-	randomlen = ((ec->ec_keybits/8 + ec->ec_blocklen - 1) / ec->ec_blocklen)
-		* ec->ec_blocklen;
+	randomlen = roundup(ec->ec_keybits / 8, ec->ec_blocklen);
 	bytes = malloc(randomlen, M_GSSAPI, M_WAITOK);
 	MGET(m, M_WAITOK, MT_DATA);
 	m->m_len = ec->ec_blocklen;

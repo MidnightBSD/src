@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)genassym.c	5.11 (Berkeley) 5/10/91
- * $FreeBSD: release/10.0.0/sys/powerpc/powerpc/genassym.c 236141 2012-05-27 10:25:20Z raj $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -52,7 +52,6 @@
 #include <vm/vm_map.h>
 
 #include <machine/pcb.h>
-#include <machine/pmap.h>
 #include <machine/psl.h>
 #include <machine/sigframe.h>
 
@@ -62,6 +61,7 @@ ASSYM(PC_CURPMAP, offsetof(struct pcpu, pc_curpmap));
 ASSYM(PC_TEMPSAVE, offsetof(struct pcpu, pc_tempsave));
 ASSYM(PC_DISISAVE, offsetof(struct pcpu, pc_disisave));
 ASSYM(PC_DBSAVE, offsetof(struct pcpu, pc_dbsave));
+ASSYM(PC_RESTORE, offsetof(struct pcpu, pc_restore));
 
 #if defined(BOOKE)
 ASSYM(PC_BOOKE_CRITSAVE, offsetof(struct pcpu, pc_booke_critsave));
@@ -118,10 +118,14 @@ ASSYM(USER_SR, USER_SR);
 #endif
 #elif defined(BOOKE)
 ASSYM(PM_PDIR, offsetof(struct pmap, pm_pdir));
-ASSYM(PTE_RPN, offsetof(struct pte, rpn));
-ASSYM(PTE_FLAGS, offsetof(struct pte, flags));
+/*
+ * With pte_t being a bitfield struct, these fields cannot be addressed via
+ * offsetof().
+ */
+ASSYM(PTE_RPN, 0);
+ASSYM(PTE_FLAGS, sizeof(uint32_t));
 #if defined(BOOKE_E500)
-ASSYM(TLB0_ENTRY_SIZE, sizeof(struct tlb_entry));
+ASSYM(TLB_ENTRY_SIZE, sizeof(struct tlb_entry));
 #endif
 #endif
 
@@ -170,9 +174,9 @@ ASSYM(FRAME_XER, offsetof(struct trapframe, xer));
 ASSYM(FRAME_SRR0, offsetof(struct trapframe, srr0));
 ASSYM(FRAME_SRR1, offsetof(struct trapframe, srr1));
 ASSYM(FRAME_EXC, offsetof(struct trapframe, exc));
-ASSYM(FRAME_AIM_DAR, offsetof(struct trapframe, cpu.aim.dar));
+ASSYM(FRAME_AIM_DAR, offsetof(struct trapframe, dar));
 ASSYM(FRAME_AIM_DSISR, offsetof(struct trapframe, cpu.aim.dsisr));
-ASSYM(FRAME_BOOKE_DEAR, offsetof(struct trapframe, cpu.booke.dear));
+ASSYM(FRAME_BOOKE_DEAR, offsetof(struct trapframe, dar));
 ASSYM(FRAME_BOOKE_ESR, offsetof(struct trapframe, cpu.booke.esr));
 ASSYM(FRAME_BOOKE_DBCR0, offsetof(struct trapframe, cpu.booke.dbcr0));
 
@@ -192,8 +196,6 @@ ASSYM(PCB_FPU, PCB_FPU);
 ASSYM(PCB_VEC, PCB_VEC);
 
 ASSYM(PCB_AIM_USR_VSID, offsetof(struct pcb, pcb_cpu.aim.usr_vsid));
-ASSYM(PCB_BOOKE_CTR, offsetof(struct pcb, pcb_cpu.booke.ctr));
-ASSYM(PCB_BOOKE_XER, offsetof(struct pcb, pcb_cpu.booke.xer));
 ASSYM(PCB_BOOKE_DBCR0, offsetof(struct pcb, pcb_cpu.booke.dbcr0));
 
 ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
@@ -214,28 +216,25 @@ ASSYM(SF_UC, offsetof(struct sigframe, sf_uc));
 ASSYM(KERNBASE, KERNBASE);
 ASSYM(MAXCOMLEN, MAXCOMLEN);
 
-#if defined(BOOKE)
 ASSYM(PSL_DE, PSL_DE);
 ASSYM(PSL_DS, PSL_DS);
 ASSYM(PSL_IS, PSL_IS);
 ASSYM(PSL_CE, PSL_CE);
-#endif
-#if defined(BOOKE_E500)
 ASSYM(PSL_UCLE, PSL_UCLE);
-ASSYM(PSL_SPE, PSL_SPE);
 ASSYM(PSL_WE, PSL_WE);
 ASSYM(PSL_UBLE, PSL_UBLE);
 
+#if defined(BOOKE_E500)
 ASSYM(PSL_KERNSET_INIT, PSL_KERNSET_INIT);
-#elif defined(AIM)
-#ifdef __powerpc64__
+#endif
+
+#if defined(AIM) && defined(__powerpc64__)
 ASSYM(PSL_SF, PSL_SF);
 ASSYM(PSL_HV, PSL_HV);
 #endif
-ASSYM(PSL_VEC, PSL_VEC);
+
 ASSYM(PSL_POW, PSL_POW);
 ASSYM(PSL_ILE, PSL_ILE);
-ASSYM(PSL_BE, PSL_BE);
 ASSYM(PSL_LE, PSL_LE);
 ASSYM(PSL_SE, PSL_SE);
 ASSYM(PSL_RI, PSL_RI);
@@ -248,18 +247,16 @@ ASSYM(PSL_FE_NONREC, PSL_FE_NONREC);
 ASSYM(PSL_FE_PREC, PSL_FE_PREC);
 ASSYM(PSL_FE_REC, PSL_FE_REC);
 
-ASSYM(PSL_USERSTATIC, PSL_USERSTATIC);
-#endif
-
+ASSYM(PSL_VEC, PSL_VEC);
+ASSYM(PSL_BE, PSL_BE);
 ASSYM(PSL_EE, PSL_EE);
 ASSYM(PSL_FE0, PSL_FE0);
 ASSYM(PSL_FE1, PSL_FE1);
 ASSYM(PSL_FP, PSL_FP);
 ASSYM(PSL_ME, PSL_ME);
 ASSYM(PSL_PR, PSL_PR);
-#if defined(BOOKE_E500)
 ASSYM(PSL_PMM, PSL_PMM);
-#endif
 ASSYM(PSL_KERNSET, PSL_KERNSET);
 ASSYM(PSL_USERSET, PSL_USERSET);
+ASSYM(PSL_USERSTATIC, PSL_USERSTATIC);
 

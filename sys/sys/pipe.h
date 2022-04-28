@@ -18,7 +18,7 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: release/10.0.0/sys/sys/pipe.h 238936 2012-07-31 05:48:35Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_PIPE_H_
@@ -142,6 +142,6 @@ struct pipepair {
 #define PIPE_LOCK_ASSERT(pipe, type)  mtx_assert(PIPE_MTX(pipe), (type))
 
 void	pipe_dtor(struct pipe *dpipe);
-int	pipe_named_ctor(struct pipe **ppipe, struct thread *td);
+void	pipe_named_ctor(struct pipe **ppipe, struct thread *td);
 void	pipeselwakeup(struct pipe *cpipe);
 #endif /* !_SYS_PIPE_H_ */

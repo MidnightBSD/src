@@ -30,18 +30,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/scanc.c 128019 2004-04-07 20:46:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 
 int
 scanc(size, cp, table, mask0)
 	u_int size;
-	register const u_char *cp, table[];
+	const u_char *cp, table[];
 	int mask0;
 {
-	register const u_char *end;
-	register u_char mask;
+	const u_char *end;
+	u_char mask;
 
 	mask = mask0;
 	for (end = &cp[size]; cp < end; ++cp) {

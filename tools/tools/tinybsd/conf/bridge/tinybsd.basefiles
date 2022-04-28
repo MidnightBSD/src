@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/tinybsd/conf/bridge/tinybsd.basefiles 171131 2007-07-01 10:25:07Z thompsa $
+# $FreeBSD$
 # contents of ${WORKDIR}/boot
 boot/boot0
 boot/boot1

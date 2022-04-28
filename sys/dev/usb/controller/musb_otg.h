@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/musb_otg.h 257043 2013-10-24 07:38:32Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -388,7 +388,7 @@ struct musbotg_flags {
 struct musbotg_softc {
 	struct usb_bus sc_bus;
 	union musbotg_hub_temp sc_hub_temp;
-	struct usb_hw_ep_profile sc_hw_ep_profile[16];
+	struct usb_hw_ep_profile sc_hw_ep_profile[MUSB2_EP_MAX];
 
 	struct usb_device *sc_devices[MUSB2_MAX_DEVICES];
 	struct resource *sc_io_res;

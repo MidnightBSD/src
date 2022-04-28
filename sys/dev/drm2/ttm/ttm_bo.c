@@ -29,12 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/ttm/ttm_bo.c 259754 2013-12-22 23:41:14Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/drm2/drmP.h>
 #include <dev/drm2/ttm/ttm_module.h>
 #include <dev/drm2/ttm/ttm_bo_driver.h>
 #include <dev/drm2/ttm/ttm_placement.h>
+#include <vm/vm_pageout.h>
 
 #define TTM_ASSERT_LOCKED(param)
 #define TTM_DEBUG(fmt, arg...)
@@ -147,7 +148,7 @@ ttm_bo_wait_unreserved_locked(struct ttm_buffer_object *bo, bool interruptible)
 	}
 	while (ttm_bo_is_reserved(bo)) {
 		ret = -msleep(bo, &bo->glob->lru_lock, flags, wmsg, 0);
-		if (ret == -EINTR)
+		if (ret == -EINTR || ret == -ERESTART)
 			ret = -ERESTARTSYS;
 		if (ret != 0)
 			break;
@@ -218,7 +219,7 @@ int ttm_bo_reserve_nolru(struct ttm_buffer_object *bo,
 			 * Already reserved by a thread that will not back
 			 * off for us. We need to back off.
 			 */
-			if (unlikely(sequence - bo->val_seq < (1 << 31)))
+			if (unlikely(sequence - bo->val_seq < (1U << 31)))
 				return -EAGAIN;
 		}
 
@@ -237,7 +238,7 @@ int ttm_bo_reserve_nolru(struct ttm_buffer_object *bo,
 		 * Wake up waiters that may need to recheck for deadlock,
 		 * if we decreased the sequence number.
 		 */
-		if (unlikely((bo->val_seq - sequence < (1 << 31))
+		if (unlikely((bo->val_seq - sequence < (1U << 31))
 			     || !bo->seq_valid))
 			wake_up = true;
 
@@ -315,7 +316,7 @@ int ttm_bo_reserve_slowpath_nolru(struct ttm_buffer_object *bo,
 			return ret;
 	}
 
-	if ((bo->val_seq - sequence < (1 << 31)) || !bo->seq_valid)
+	if ((bo->val_seq - sequence < (1U << 31)) || !bo->seq_valid)
 		wake_up = true;
 
 	/**
@@ -788,8 +789,7 @@ int ttm_bo_lock_delayed_workqueue(struct ttm_bo_device *bdev)
 {
 	int pending;
 
-	taskqueue_cancel_timeout(taskqueue_thread, &bdev->wq, &pending);
-	if (pending)
+	if (taskqueue_cancel_timeout(taskqueue_thread, &bdev->wq, &pending))
 		taskqueue_drain_timeout(taskqueue_thread, &bdev->wq);
 	return (pending);
 }
@@ -815,7 +815,7 @@ static int ttm_bo_evict(struct ttm_buffer_object *bo, bool interruptible,
 	mtx_unlock(&bdev->fence_lock);
 
 	if (unlikely(ret != 0)) {
-		if (ret != -ERESTART) {
+		if (ret != -ERESTARTSYS) {
 			printf("[TTM] Failed to expire sync object before buffer eviction\n");
 		}
 		goto out;
@@ -836,7 +836,7 @@ static int ttm_bo_evict(struct ttm_buffer_object *bo, bool interruptible,
 	ret = ttm_bo_mem_space(bo, &placement, &evict_mem, interruptible,
 				no_wait_gpu);
 	if (ret) {
-		if (ret != -ERESTART) {
+		if (ret != -ERESTARTSYS) {
 			printf("[TTM] Failed to find memory space for buffer 0x%p eviction\n",
 			       bo);
 			ttm_bo_mem_space_debug(bo, &placement);
@@ -847,7 +847,7 @@ static int ttm_bo_evict(struct ttm_buffer_object *bo, bool interruptible,
 	ret = ttm_bo_handle_move_mem(bo, &evict_mem, true, interruptible,
 				     no_wait_gpu);
 	if (ret) {
-		if (ret != -ERESTART)
+		if (ret != -ERESTARTSYS)
 			printf("[TTM] Buffer eviction failed\n");
 		ttm_bo_mem_put(bo, &evict_mem);
 		goto out;
@@ -1095,10 +1095,10 @@ int ttm_bo_mem_space(struct ttm_buffer_object *bo,
 			mem->placement = cur_flags;
 			return 0;
 		}
-		if (ret == -ERESTART)
+		if (ret == -ERESTARTSYS)
 			has_erestartsys = true;
 	}
-	ret = (has_erestartsys) ? -ERESTART : -ENOMEM;
+	ret = (has_erestartsys) ? -ERESTARTSYS : -ENOMEM;
 	return ret;
 }
 
@@ -1488,16 +1488,24 @@ int ttm_bo_global_init(struct drm_global_reference *ref)
 	struct ttm_bo_global_ref *bo_ref =
 		container_of(ref, struct ttm_bo_global_ref, ref);
 	struct ttm_bo_global *glob = ref->object;
-	int ret;
+	int req, ret;
+	int tries;
 
 	sx_init(&glob->device_list_mutex, "ttmdlm");
 	mtx_init(&glob->lru_lock, "ttmlru", NULL, MTX_DEF);
 	glob->mem_glob = bo_ref->mem_glob;
-	glob->dummy_read_page = vm_page_alloc_contig(NULL, 0,
-	    VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ,
+	req = VM_ALLOC_NORMAL | VM_ALLOC_NOOBJ;
+	tries = 0;
+retry:
+	glob->dummy_read_page = vm_page_alloc_contig(NULL, 0, req,
 	    1, 0, VM_MAX_ADDRESS, PAGE_SIZE, 0, VM_MEMATTR_UNCACHEABLE);
 
 	if (unlikely(glob->dummy_read_page == NULL)) {
+		if (tries < 1 && vm_page_reclaim_contig(req, 1,
+		    0, VM_MAX_ADDRESS, PAGE_SIZE, 0)) {
+			tries++;
+			goto retry;
+		}
 		ret = -ENOMEM;
 		goto out_no_drp;
 	}

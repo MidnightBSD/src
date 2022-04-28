@@ -1,5 +1,5 @@
 /*	$OpenBSD: if_uathvar.h,v 1.3 2006/09/20 19:47:17 damien Exp $	*/
-/*	$FreeBSD: release/10.0.0/sys/dev/usb/wlan/if_uathvar.h 253757 2013-07-29 05:54:13Z hselasky $	*/
+/*	$FreeBSD$	*/
 
 /*-
  * Copyright (c) 2006
@@ -67,9 +67,10 @@ struct uath_rx_radiotap_header {
 struct uath_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
 	uint8_t		wt_flags;
+	uint8_t		wt_pad;
 	uint16_t	wt_chan_freq;
 	uint16_t	wt_chan_flags;
-} __packed __aligned(8);
+} __packed;
 
 #define	UATH_TX_RADIOTAP_PRESENT					\
 	((1 << IEEE80211_RADIOTAP_FLAGS) |				\
@@ -102,7 +103,6 @@ struct uath_wme_settings {
 	uint8_t				logcwmin;
 	uint8_t				logcwmax;
 	uint16_t			txop;
-#define	UATH_TXOP_TO_US(txop)		((txop) << 5)
 	uint8_t				acm;
 };
 
@@ -183,7 +183,8 @@ struct uath_vap {
 #define	UATH_VAP(vap)			((struct uath_vap *)(vap))
 
 struct uath_softc {
-	struct ifnet			*sc_ifp;
+	struct ieee80211com		sc_ic;
+	struct mbufq			sc_snd;
 	device_t			sc_dev;
 	struct usb_device		*sc_udev;
 	void				*sc_cmd_dma_buf;
@@ -230,9 +231,7 @@ struct uath_softc {
 #define	UATH_FLAG_INITDONE		(1 << 2)
 
 	struct	uath_rx_radiotap_header	sc_rxtap;
-	int				sc_rxtap_len;
 	struct	uath_tx_radiotap_header	sc_txtap;
-	int				sc_txtap_len;
 };
 
 #define	UATH_LOCK(sc)			mtx_lock(&(sc)->sc_mtx)

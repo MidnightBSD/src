@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 Geoffrey M. Rehmet
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lptcontrol/lptcontrol.c 140814 2005-01-25 14:25:18Z ssouhlal $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/ppbus/lptio.h>
 

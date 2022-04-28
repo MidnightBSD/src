@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/iscsid/iscsid.h 255570 2013-09-14 15:29:06Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef ISCSID_H
@@ -42,17 +44,20 @@
 #define	CONN_DIGEST_NONE		0
 #define	CONN_DIGEST_CRC32C		1
 
-#define CONN_MUTUAL_CHALLENGE_LEN	1024
+#define	CONN_MUTUAL_CHALLENGE_LEN	1024
+#define	SOCKBUF_SIZE			1048576
+#define	MAX_BURST_LENGTH		(256 * 1024)
+#define	FIRST_BURST_LENGTH		(128 * 1024)
 
 struct connection {
 	int			conn_iscsi_fd;
-#ifndef ICL_KERNEL_PROXY
 	int			conn_socket;
-#endif
 	unsigned int		conn_session_id;
 	struct iscsi_session_conf	conn_conf;
+	struct iscsi_session_limits	conn_limits;
 	char			conn_target_alias[ISCSI_ADDR_LEN];
 	uint8_t			conn_isid[6];
+	uint16_t		conn_tsih;
 	uint32_t		conn_statsn;
 	int			conn_header_digest;
 	int			conn_data_digest;
@@ -61,8 +66,7 @@ struct connection {
 	size_t			conn_max_data_segment_length;
 	size_t			conn_max_burst_length;
 	size_t			conn_first_burst_length;
-	char			conn_mutual_challenge[CONN_MUTUAL_CHALLENGE_LEN];
-	unsigned char		conn_mutual_id;
+	struct chap		*conn_mutual_chap;
 };
 
 struct pdu {
@@ -81,12 +85,41 @@ struct keys {
 	size_t			keys_data_len;
 };
 
+#define	CHAP_CHALLENGE_LEN	1024
+#define	CHAP_DIGEST_LEN		16 /* Equal to MD5 digest size. */
+
+struct chap {
+	unsigned char	chap_id;
+	char		chap_challenge[CHAP_CHALLENGE_LEN];
+	char		chap_response[CHAP_DIGEST_LEN];
+};
+
+struct rchap {
+	char		*rchap_secret;
+	unsigned char	rchap_id;
+	void		*rchap_challenge;
+	size_t		rchap_challenge_len;
+};
+
+struct chap		*chap_new(void);
+char			*chap_get_id(const struct chap *chap);
+char			*chap_get_challenge(const struct chap *chap);
+int			chap_receive(struct chap *chap, const char *response);
+int			chap_authenticate(struct chap *chap,
+			    const char *secret);
+void			chap_delete(struct chap *chap);
+
+struct rchap		*rchap_new(const char *secret);
+int			rchap_receive(struct rchap *rchap,
+			    const char *id, const char *challenge);
+char			*rchap_get_response(struct rchap *rchap);
+void			rchap_delete(struct rchap *rchap);
+
 struct keys		*keys_new(void);
 void			keys_delete(struct keys *key);
 void			keys_load(struct keys *keys, const struct pdu *pdu);
 void			keys_save(struct keys *keys, struct pdu *pdu);
 const char		*keys_find(struct keys *keys, const char *name);
-int			keys_find_int(struct keys *keys, const char *name);
 void			keys_add(struct keys *keys,
 			    const char *name, const char *value);
 void			keys_add_int(struct keys *keys,
@@ -106,12 +139,12 @@ void			log_init(int level);
 void			log_set_peer_name(const char *name);
 void			log_set_peer_addr(const char *addr);
 void			log_err(int, const char *, ...)
-			    __dead2 __printf0like(2, 3);
+			    __dead2 __printflike(2, 3);
 void			log_errx(int, const char *, ...)
-			    __dead2 __printf0like(2, 3);
-void			log_warn(const char *, ...) __printf0like(1, 2);
+			    __dead2 __printflike(2, 3);
+void			log_warn(const char *, ...) __printflike(1, 2);
 void			log_warnx(const char *, ...) __printflike(1, 2);
-void			log_debugx(const char *, ...) __printf0like(1, 2);
+void			log_debugx(const char *, ...) __printflike(1, 2);
 
 char			*checked_strdup(const char *);
 bool			timed_out(void);

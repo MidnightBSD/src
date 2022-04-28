@@ -52,7 +52,7 @@
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pcm/feeder_matrix.c 243138 2012-11-16 07:05:57Z mav $");
+SND_DECLARE_FILE("$FreeBSD$");
 #endif
 
 #define FEEDMATRIX_RESERVOIR	(SND_CHN_MAX * PCM_32_BPS)
@@ -750,8 +750,8 @@ feeder_matrix_oss_get_channel_order(struct pcmchan_matrix *m,
 
 	tmpmap = 0x0000000000000000ULL;
 
-	for (i = 0; m->map[i].type != SND_CHN_T_MAX &&
-	    i < SND_CHN_OSS_MAX; i++) {
+	for (i = 0; i < SND_CHN_OSS_MAX && m->map[i].type != SND_CHN_T_MAX;
+	    i++) {
 		if ((1 << m->map[i].type) & ~SND_CHN_OSS_VALIDMASK)
 			return (EINVAL);
 		tmpmap |=

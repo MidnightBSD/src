@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libc/posix1e/acl_delete_flag_np.3 204725 2010-03-04 19:38:24Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 10, 2001
+.Dd October 30, 2014
 .Dt ACL_DELETE_FLAG_NP 3
 .Os
 .Sh NAME
@@ -42,7 +42,7 @@
 The
 .Fn acl_delete_flag_np
 function
-is a non-portable call that removes specific flags from flagset
+is a non-portable call that removes specific NFSv4 ACL flags from flagset
 .Fa flags .
 .Sh RETURN VALUES
 .Rv -std acl_delete_flag_np
@@ -64,7 +64,7 @@ value.
 .Sh SEE ALSO
 .Xr acl 3 ,
 .Xr acl_add_flag_np 3 ,
-.Xr acl_clear_flag_nps 3 ,
+.Xr acl_clear_flags_np 3 ,
 .Xr acl_get_flagset_np 3 ,
 .Xr acl_set_flagset_np 3 ,
 .Xr posix1e 3
@@ -81,4 +81,4 @@ function was added in
 The
 .Fn acl_delete_flag_np
 function was written by
-.An Edward Tomasz Napierala Aq trasz@FreeBSD.org .
+.An Edward Tomasz Napierala Aq Mt trasz@FreeBSD.org .

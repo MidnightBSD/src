@@ -1,9 +1,0 @@
-#StrongARM SA11x0 common options
-#$FreeBSD: release/10.0.0/sys/arm/sa11x0/std.sa11x0 239362 2012-08-18 05:48:19Z andrew $
-files		"../sa11x0/files.sa11x0"
-cpu		CPU_SA1100
-cpu		CPU_SA1110
-machine 	arm
-makeoptions	KERNPHYSADDR=0xc0000000
-makeoptions	KERNVIRTADDR=0xc0000000
-options		NO_EVENTTIMERS

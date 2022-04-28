@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)v7.local.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/mail/v7.local.c 216564 2010-12-19 16:25:23Z charnier $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Mail -- a mail program
@@ -68,9 +68,12 @@ findmail(char *user, char *buf, int buflen)
 void
 demail(void)
 {
+	int fd;
 
 	if (value("keep") != NULL || rm(mailname) < 0)
-		(void)close(open(mailname, O_CREAT | O_TRUNC | O_WRONLY, 0600));
+		if ((fd = open(mailname, O_CREAT | O_TRUNC | O_WRONLY, 0600)) >=
+		    0)
+			(void)close(fd);
 }
 
 /*

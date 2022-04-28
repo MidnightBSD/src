@@ -15,7 +15,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/arm/gen/divsi3.S 137464 2004-11-09 16:49:14Z cognet $");
+__FBSDID("$FreeBSD$");
 
 /* 
  * stack is aligned as there's a possibility of branching to L_overflow
@@ -29,6 +29,7 @@ ENTRY(__umodsi3)
 	add	sp, sp, #4	/* unalign stack */
 	mov	r0, r1
 	ldmfd	sp!, {pc}
+END(__umodsi3)
 
 ENTRY(__modsi3)
 	stmfd	sp!, {lr}
@@ -48,6 +49,7 @@ ENTRY(__modsi3)
 	mvn	r0, #0
 #endif
 	RET
+END(__modsi3)
 
 ENTRY(__udivsi3)
 .L_udivide:				/* r0 = r0 / r1; r1 = r0 % r1 */
@@ -70,6 +72,7 @@ ENTRY(__udivsi3)
 	mov	r0, r1
 	mov	r1, #0
 	RET
+END(__udivsi3)
 
 ENTRY(__divsi3)
 .L_divide:				/* r0 = r0 / r1; r1 = r0 % r1 */
@@ -385,3 +388,6 @@ ENTRY(__divsi3)
 	addhs	r3, r3, r2
 	mov	r0, r3
 	RET
+END(__divsi3)
+
+	.section .note.GNU-stack,"",%progbits

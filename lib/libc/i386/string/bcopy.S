@@ -30,7 +30,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/i386/string/bcopy.S 217106 2011-01-07 16:08:40Z kib $");
+__FBSDID("$FreeBSD$");
 
 #if 0
 	RCSID("$NetBSD: bcopy.S,v 1.6 1996/11/12 00:50:06 jtc Exp $")

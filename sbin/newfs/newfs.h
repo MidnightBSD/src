@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/newfs/newfs.h 248623 2013-03-22 21:45:28Z mckusick $
+ * $FreeBSD$
  */
 
 #include <libufs.h>

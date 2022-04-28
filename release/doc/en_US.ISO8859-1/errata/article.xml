@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE article PUBLIC "-//FreeBSD//DTD DocBook XML V5.0-Based Extension//EN"
-        "../../../share/xml/freebsd50.dtd" [
-<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN" "release.ent">
+	"http://www.FreeBSD.org/XML/share/xml/freebsd50.dtd" [
+<!ENTITY % release PUBLIC "-//FreeBSD//ENTITIES Release Specification//EN"
+	"http://www.FreeBSD.org/release/XML/release.ent">
 %release;
+<!ENTITY % sponsor PUBLIC "-//FreeBSD//ENTITIES Sponsor Specification//EN" "sponsor.ent">
+%sponsor;
+<!ENTITY % vendor PUBLIC "-//FreeBSD//ENTITIES Vendor Specification//EN" "vendor.ent">
+%vendor;
+<!ENTITY security SYSTEM "../../share/xml/security.xml">
+<!ENTITY errata SYSTEM "../../share/xml/errata.xml">
 ]>
-<!--
-	FreeBSD errata document.  Unlike some of the other RELNOTESng
-	files, this file should remain as a single SGML file, so that
-	the dollar FreeBSD dollar header has a meaningful modification
-	time.  This file is all but useless without a datestamp on it,
-	so we'll take some extra care to make sure it has one.
 
-	(If we didn't do this, then the file with the datestamp might
-	not be the one that received the last change in the document.)
+<article xmlns="http://docbook.org/ns/docbook"
+	xmlns:xlink="http://www.w3.org/1999/xlink"
+	xml:id="top"
+	version="5.0">
+  <info>
+    <title>&os; &release; Errata</title>
 
--->
-<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
-  <info><title>&os; &release; Errata </title>
-    
+    <author><orgname>The &os; Project</orgname></author>
 
-    <author><orgname>
-    The &os; Project
-    </orgname></author>
-
-    <pubdate>$FreeBSD: release/10.0.0/release/doc/en_US.ISO8859-1/errata/article.xml 260657 2014-01-14 23:58:50Z hrs $</pubdate>
+    <pubdate>$FreeBSD$</pubdate>
 
     <copyright>
-      <year>2014</year>
-      <holder role="mailto:doc@FreeBSD.org">The &os; Documentation Project</holder>
+      <year>2020</year>
+
+      <holder role="mailto:doc@FreeBSD.org">The &os; Documentation
+	Project</holder>
     </copyright>
 
     <legalnotice xml:id="trademarks" role="trademarks">
@@ -37,74 +37,128 @@
       &tm-attrib.general;
     </legalnotice>
 
-  <abstract>
-    <para>This document lists errata items for &os; &release;,
-      containing significant information discovered after the release
-      or too late in the release cycle to be otherwise included in the
-      release documentation.
-      This information includes security advisories, as well as news
-      relating to the software or documentation that could affect its
-      operation or usability.  An up-to-date version of this document
-      should always be consulted before installing this version of
-      &os;.</para>
+    <abstract>
+      <para>This document lists errata items for &os; &release;,
+	containing significant information discovered after the
+	release or too late in the release cycle to be otherwise
+	included in the release documentation.  This information
+	includes security advisories, as well as news relating to the
+	software or documentation that could affect its operation or
+	usability.  An up-to-date version of this document should
+	always be consulted before installing this version of
+	&os;.</para>
 
-    <para>This errata document for &os; &release;
-      will be maintained until the release of &os; &release.next;.</para>
-  </abstract>
+      <para>This errata document for &os; &release; will be maintained
+	until the release of &os; &release.next; (if
+	applicable).</para>
+    </abstract>
   </info>
 
   <sect1 xml:id="intro">
     <title>Introduction</title>
 
-    <para>This errata document contains <quote>late-breaking news</quote>
-      about &os; &release;
-      Before installing this version, it is important to consult this
-      document to learn about any post-release discoveries or problems
-      that may already have been found and fixed.</para>
+    <para>This errata document contains <quote>late-breaking
+	news</quote> about &os; &release;.  Before installing this
+      version, it is important to consult this document to learn about
+      any post-release discoveries or problems that may already have
+      been found and fixed.</para>
 
     <para>Any version of this errata document actually distributed
       with the release (for example, on a CDROM distribution) will be
       out of date by definition, but other copies are kept updated on
       the Internet and should be consulted as the <quote>current
-      errata</quote> for this release.  These other copies of the
-      errata are located at <uri xlink:href="http://www.FreeBSD.org/releases/">http://www.FreeBSD.org/releases/</uri>, plus any sites
-      which keep up-to-date mirrors of this location.</para>
+	errata</quote> for this release.  These other copies of the
+      errata are located at <link
+	xlink:href="https://www.FreeBSD.org/releases/" />, plus any
+      sites which keep up-to-date mirrors of this location.</para>
 
     <para>Source and binary snapshots of &os; &release.branch; also
       contain up-to-date copies of this document (as of the time of
       the snapshot).</para>
 
-    <para>For a list of all &os; CERT security advisories, see <uri xlink:href="http://www.FreeBSD.org/security/">http://www.FreeBSD.org/security/</uri> or <uri xlink:href="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/">ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/</uri>.</para>
-
+    <para>For a list of all &os; CERT security advisories, see <link
+	xlink:href="https://www.FreeBSD.org/security/"/>.</para>
   </sect1>
 
   <sect1 xml:id="security">
     <title>Security Advisories</title>
 
-    <para releasetype="current">No advisories.</para>
+    &security;
+  </sect1>
 
-    <para releasetype="release">No advisories.</para>
+  <sect1 xml:id="errata">
+    <title>Errata Notices</title>
 
-    <para releasetype="snapshot">No advisories.</para>
+    &errata;
   </sect1>
 
   <sect1 xml:id="open-issues">
     <title>Open Issues</title>
 
-    <para releasetype="current">No open issues.</para>
+    <itemizedlist>
+      <listitem>
+	<para>[2019-07-04] An issue which can cause a crash when
+	  connecting to a &man.bhyve.4; instance with
+	  a <acronym>VNC</acronym> client under certain circumstances
+	  had been reported.  An errata notice is planned
+	  post-release.</para>
+      </listitem>
 
-    <para releasetype="release">No open issues.</para>
+      <listitem>
+	<para>[2019-07-04] An issue booting &man.bhyve.4; virtual
+	  machines compiled with &man.clang.1; version 8.0.0 or later
+	  had been reported late in the release cycle.  An errata
+	  notice is planned post-release.</para>
 
-    <para releasetype="snapshot">No open issues.</para>
+	<para>This issue is believed to only affect OpenBSD virtual
+	  machines compiled with &man.clang.1;.</para>
+      </listitem>
+
+      <listitem>
+	<para>[2019-07-04] An issue when upgrading from &os;&nbsp;11.3
+	  to &os;&nbsp;12.0 (which occurred earlier in time,
+	  comparatively), had been reported where the
+	  <literal>com.delphix:spacemap_v2</literal> &man.zpool.8;
+	  feature does not exist on &os;&nbsp;12.0, will fail to
+	  import the <acronym>ZFS</acronym> pool.</para>
+
+	<para>At this time, it is advised to defer migrating from
+	  &os;&nbsp;11.3 to &os;&nbsp;12.x until &os;&nbsp;12.1 is
+	  available.</para>
+
+	<para>Upgrading from earlier &os;&nbsp;11.x releases to
+	  &os;&nbsp;12.0 are believed to be unaffected.</para>
+      </listitem>
+    </itemizedlist>
   </sect1>
 
   <sect1 xml:id="late-news">
     <title>Late-Breaking News</title>
 
-    <para releasetype="current">No news.</para>
+    <itemizedlist>
+      <listitem>
+	<para>[2019-12-06] An issue has been reported with the
+	  &os;&nbsp;11.3-RELEASE images on the Google Compute Engine
+	  platform which causes virtual machines to fail to start
+	  properly.</para>
 
-    <para releasetype="release">No news.</para>
+	<para>While we intend to investigate how to handle similar
+	  situations should they arise in the future, updated images
+	  will not be provided as of this time.</para>
 
-    <para releasetype="snapshot">No news.</para>
+	<para>Users wanting to use &os; in Google Compute Engine are
+	  advised to use 12.0-RELEASE or 12.1-RELEASE, or for those
+	  who wish to track 11.<replaceable>X</replaceable>, the
+	  <literal>freebsd-11-3-stable-amd64-v20190801</literal>
+	  snapshot from <literal>stable/11</literal> has been
+	  <link
+	    xlink:href="https://github.com/cirruslabs/cirrus-ci-docs/issues/359#issuecomment-519314652">
+	    reported to work correctly</link>.</para>
+
+	<para>More details can be found in <link
+	    xlink:href="https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=242303">PR
+	    242303</link>.</para>
+      </listitem>
+    </itemizedlist>
   </sect1>
 </article>

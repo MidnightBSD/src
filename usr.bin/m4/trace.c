@@ -1,5 +1,7 @@
 /* $OpenBSD: trace.c,v 1.16 2010/09/07 19:58:09 marco Exp $ */
 /*
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
  * Copyright (c) 2001 Marc Espie.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/m4/trace.c 228063 2011-11-28 13:32:39Z bapt $");
+__FBSDID("$FreeBSD$");
 
 #include <err.h>
 #include <stddef.h>

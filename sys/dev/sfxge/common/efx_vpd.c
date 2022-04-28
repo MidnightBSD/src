@@ -1,35 +1,37 @@
 /*-
- * Copyright 2009 Solarflare Communications Inc.  All rights reserved.
+ * Copyright (c) 2009-2016 Solarflare Communications Inc.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ * modification, are permitted provided that the following conditions are met:
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation are
+ * those of the authors and should not be interpreted as representing official
+ * policies, either expressed or implied, of the FreeBSD Project.
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/sfxge/common/efx_vpd.c 228078 2011-11-28 17:19:05Z philip $");
+__FBSDID("$FreeBSD$");
 
-#include "efsys.h"
 #include "efx.h"
-#include "efx_types.h"
-#include "efx_regs.h"
 #include "efx_impl.h"
 
 #if EFSYS_OPT_VPD
@@ -52,26 +54,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/sfxge/common/efx_vpd.c 228078 2011-11
 #define	TAG_NAME_VPD_R_DECODE 0x10
 #define	TAG_NAME_VPD_W_DECODE 0x11
 
-#if EFSYS_OPT_FALCON
-
-static efx_vpd_ops_t	__cs	__efx_vpd_falcon_ops = {
-	NULL,			/* evpdo_init */
-	falcon_vpd_size,	/* evpdo_size */
-	falcon_vpd_read,	/* evpdo_read */
-	falcon_vpd_verify,	/* evpdo_verify */
-	NULL,			/* evpdo_reinit */
-	falcon_vpd_get,		/* evpdo_get */
-	falcon_vpd_set,		/* evpdo_set */
-	falcon_vpd_next,	/* evpdo_next */
-	falcon_vpd_write,	/* evpdo_write */
-	NULL,			/* evpdo_fini */
-};
-
-#endif	/* EFSYS_OPT_FALCON */
-
 #if EFSYS_OPT_SIENA
 
-static efx_vpd_ops_t	__cs	__efx_vpd_siena_ops = {
+static const efx_vpd_ops_t	__efx_vpd_siena_ops = {
 	siena_vpd_init,		/* evpdo_init */
 	siena_vpd_size,		/* evpdo_size */
 	siena_vpd_read,		/* evpdo_read */
@@ -86,29 +71,52 @@ static efx_vpd_ops_t	__cs	__efx_vpd_siena_ops = {
 
 #endif	/* EFSYS_OPT_SIENA */
 
-	__checkReturn		int
+#if EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD
+
+static const efx_vpd_ops_t	__efx_vpd_ef10_ops = {
+	ef10_vpd_init,		/* evpdo_init */
+	ef10_vpd_size,		/* evpdo_size */
+	ef10_vpd_read,		/* evpdo_read */
+	ef10_vpd_verify,	/* evpdo_verify */
+	ef10_vpd_reinit,	/* evpdo_reinit */
+	ef10_vpd_get,		/* evpdo_get */
+	ef10_vpd_set,		/* evpdo_set */
+	ef10_vpd_next,		/* evpdo_next */
+	ef10_vpd_write,		/* evpdo_write */
+	ef10_vpd_fini,		/* evpdo_fini */
+};
+
+#endif	/* EFSYS_OPT_HUNTINGTON || EFSYS_OPT_MEDFORD */
+
+	__checkReturn		efx_rc_t
 efx_vpd_init(
 	__in			efx_nic_t *enp)
 {
-	efx_vpd_ops_t *evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);
 	EFSYS_ASSERT(!(enp->en_mod_flags & EFX_MOD_VPD));
 
 	switch (enp->en_family) {
-#if EFSYS_OPT_FALCON
-	case EFX_FAMILY_FALCON:
-		evpdop = (efx_vpd_ops_t *)&__efx_vpd_falcon_ops;
-		break;
-#endif	/* EFSYS_OPT_FALCON */
-
 #if EFSYS_OPT_SIENA
 	case EFX_FAMILY_SIENA:
-		evpdop = (efx_vpd_ops_t *)&__efx_vpd_siena_ops;
+		evpdop = &__efx_vpd_siena_ops;
 		break;
 #endif	/* EFSYS_OPT_SIENA */
+
+#if EFSYS_OPT_HUNTINGTON
+	case EFX_FAMILY_HUNTINGTON:
+		evpdop = &__efx_vpd_ef10_ops;
+		break;
+#endif	/* EFSYS_OPT_HUNTINGTON */
+
+#if EFSYS_OPT_MEDFORD
+	case EFX_FAMILY_MEDFORD:
+		evpdop = &__efx_vpd_ef10_ops;
+		break;
+#endif	/* EFSYS_OPT_MEDFORD */
 
 	default:
 		EFSYS_ASSERT(0);
@@ -129,18 +137,18 @@ efx_vpd_init(
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_size(
 	__in			efx_nic_t *enp,
 	__out			size_t *sizep)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -151,19 +159,19 @@ efx_vpd_size(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_read(
 	__in			efx_nic_t *enp,
 	__out_bcount(size)	caddr_t data,
 	__in			size_t size)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -174,19 +182,19 @@ efx_vpd_read(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_verify(
 	__in			efx_nic_t *enp,
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -197,19 +205,19 @@ efx_vpd_verify(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_reinit(
 	__in			efx_nic_t *enp,
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -227,44 +235,48 @@ efx_vpd_reinit(
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_get(
 	__in			efx_nic_t *enp,
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
 	__inout			efx_vpd_value_t *evvp)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
 
-	if ((rc = evpdop->evpdo_get(enp, data, size, evvp)) != 0)
+	if ((rc = evpdop->evpdo_get(enp, data, size, evvp)) != 0) {
+		if (rc == ENOENT)
+			return (rc);
+
 		goto fail1;
+	}
 
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_set(
 	__in			efx_nic_t *enp,
 	__inout_bcount(size)	caddr_t data,
 	__in			size_t size,
 	__in			efx_vpd_value_t *evvp)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -275,12 +287,12 @@ efx_vpd_set(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_next(
 	__in			efx_nic_t *enp,
 	__inout_bcount(size)	caddr_t data,
@@ -288,8 +300,8 @@ efx_vpd_next(
 	__out			efx_vpd_value_t *evvp,
 	__inout			unsigned int *contp)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -300,19 +312,19 @@ efx_vpd_next(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_write(
 	__in			efx_nic_t *enp,
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
-	int rc;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	efx_rc_t rc;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_VPD);
@@ -323,12 +335,12 @@ efx_vpd_write(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-static	__checkReturn		int
+static	__checkReturn		efx_rc_t
 efx_vpd_next_tag(
 	__in			caddr_t data,
 	__in			size_t size,
@@ -341,7 +353,7 @@ efx_vpd_next_tag(
 	uint8_t name;
 	uint16_t length;
 	size_t headlen;
-	int rc;
+	efx_rc_t rc;
 
 	if (*offsetp >= size) {
 		rc = EFAULT;
@@ -408,12 +420,12 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-static	__checkReturn		int
+static	__checkReturn		efx_rc_t
 efx_vpd_next_keyword(
 	__in_bcount(size)	caddr_t tag,
 	__in			size_t size,
@@ -423,7 +435,7 @@ efx_vpd_next_keyword(
 {
 	efx_vpd_keyword_t keyword;
 	uint8_t length;
-	int rc;
+	efx_rc_t rc;
 
 	if (pos + 3U > size) {
 		rc = EFAULT;
@@ -446,12 +458,12 @@ efx_vpd_next_keyword(
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_hunk_length(
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
@@ -460,7 +472,7 @@ efx_vpd_hunk_length(
 	efx_vpd_tag_t tag;
 	unsigned int offset;
 	uint16_t taglen;
-	int rc;
+	efx_rc_t rc;
 
 	offset = 0;
 	_NOTE(CONSTANTCONDITION)
@@ -478,12 +490,12 @@ efx_vpd_hunk_length(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_hunk_verify(
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
@@ -498,7 +510,7 @@ efx_vpd_hunk_verify(
 	uint8_t keylen;
 	uint8_t cksum;
 	boolean_t cksummed = B_FALSE;
-	int rc;
+	efx_rc_t rc;
 
 	/*
 	 * Parse every tag,keyword in the existing VPD. If the csum is present,
@@ -517,8 +529,10 @@ efx_vpd_hunk_verify(
 
 		for (pos = 0; pos != taglen; pos += 3 + keylen) {
 			/* RV keyword must be the last in the block */
-			if (cksummed)
+			if (cksummed) {
+				rc = EFAULT;
 				goto fail2;
+			}
 
 			if ((rc = efx_vpd_next_keyword(data + offset,
 			    taglen, pos, &keyword, &keylen)) != 0)
@@ -561,19 +575,19 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-static	uint8_t	__cs	__efx_vpd_blank_pid[] = {
+static	uint8_t	__efx_vpd_blank_pid[] = {
 	/* Large resource type ID length 1 */
 	0x82, 0x01, 0x00,
 	/* Product name ' ' */
 	0x32,
 };
 
-static uint8_t __cs	__efx_vpd_blank_r[] = {
+static uint8_t __efx_vpd_blank_r[] = {
 	/* Large resource type VPD-R length 4 */
 	0x90, 0x04, 0x00,
 	/* RV keyword length 1 */
@@ -582,9 +596,9 @@ static uint8_t __cs	__efx_vpd_blank_r[] = {
 	0x00,
 };
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_hunk_reinit(
-	__in			caddr_t data,
+	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
 	__in			boolean_t wantpid)
 {
@@ -592,7 +606,7 @@ efx_vpd_hunk_reinit(
 	unsigned int pos;
 	efx_byte_t byte;
 	uint8_t cksum;
-	int rc;
+	efx_rc_t rc;
 
 	if (size < 0x100) {
 		rc = ENOSPC;
@@ -625,18 +639,18 @@ efx_vpd_hunk_reinit(
 	return (0);
 
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn			int
+	__checkReturn			efx_rc_t
 efx_vpd_hunk_next(
 	__in_bcount(size)		caddr_t data,
 	__in				size_t size,
 	__out				efx_vpd_tag_t *tagp,
 	__out				efx_vpd_keyword_t *keywordp,
-	__out_bcount_opt(*paylenp)	unsigned int *payloadp,
+	__out_opt			unsigned int *payloadp,
 	__out_opt			uint8_t *paylenp,
 	__inout				unsigned int *contp)
 {
@@ -648,7 +662,7 @@ efx_vpd_hunk_next(
 	uint16_t taglen;
 	uint8_t keylen;
 	uint8_t paylen;
-	int rc;
+	efx_rc_t rc;
 
 	offset = index = 0;
 	_NOTE(CONSTANTCONDITION)
@@ -656,12 +670,18 @@ efx_vpd_hunk_next(
 		if ((rc = efx_vpd_next_tag(data, size, &offset,
 		    &tag, &taglen)) != 0)
 			goto fail1;
-		if (tag == EFX_VPD_END)
+
+		if (tag == EFX_VPD_END) {
+			keyword = 0;
+			paylen = 0;
+			index = 0;
 			break;
+		}
 
 		if (tag == EFX_VPD_ID) {
-			if (index == *contp) {
+			if (index++ == *contp) {
 				EFSYS_ASSERT3U(taglen, <, 0x100);
+				keyword = 0;
 				paylen = (uint8_t)MIN(taglen, 0xff);
 
 				goto done;
@@ -672,7 +692,7 @@ efx_vpd_hunk_next(
 				    taglen, pos, &keyword, &keylen)) != 0)
 					goto fail2;
 
-				if (index == *contp) {
+				if (index++ == *contp) {
 					offset += pos + 3;
 					paylen = keylen;
 
@@ -684,9 +704,6 @@ efx_vpd_hunk_next(
 		offset += taglen;
 	}
 
-	*contp = 0;
-	return (0);
-
 done:
 	*tagp = tag;
 	*keywordp = keyword;
@@ -695,18 +712,18 @@ done:
 	if (paylenp != NULL)
 		*paylenp = paylen;
 
-	++(*contp);
+	*contp = index;
 	return (0);
 
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_hunk_get(
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
@@ -721,7 +738,7 @@ efx_vpd_hunk_get(
 	unsigned int pos;
 	uint16_t taglen;
 	uint8_t keylen;
-	int rc;
+	efx_rc_t rc;
 
 	offset = 0;
 	_NOTE(CONSTANTCONDITION)
@@ -763,12 +780,12 @@ efx_vpd_hunk_get(
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
 
-	__checkReturn		int
+	__checkReturn		efx_rc_t
 efx_vpd_hunk_set(
 	__in_bcount(size)	caddr_t data,
 	__in			size_t size,
@@ -787,7 +804,7 @@ efx_vpd_hunk_set(
 	uint8_t keylen;
 	uint8_t cksum;
 	size_t used;
-	int rc;
+	efx_rc_t rc;
 
 	switch (evvp->evv_tag) {
 	case EFX_VPD_ID:
@@ -914,7 +931,7 @@ efx_vpd_hunk_set(
 		}
 
 		/* Modify tag length (large resource type) */
-		taglen += (dest - source);
+		taglen += (uint16_t)(dest - source);
 		EFX_POPULATE_WORD_1(word, EFX_WORD_0, taglen);
 		data[offset - 2] = EFX_WORD_FIELD(word, EFX_BYTE_0);
 		data[offset - 1] = EFX_WORD_FIELD(word, EFX_BYTE_1);
@@ -977,7 +994,7 @@ fail3:
 fail2:
 	EFSYS_PROBE(fail2);
 fail1:
-	EFSYS_PROBE1(fail1, int, rc);
+	EFSYS_PROBE1(fail1, efx_rc_t, rc);
 
 	return (rc);
 }
@@ -986,7 +1003,7 @@ fail1:
 efx_vpd_fini(
 	__in			efx_nic_t *enp)
 {
-	efx_vpd_ops_t *evpdop = enp->en_evpdop;
+	const efx_vpd_ops_t *evpdop = enp->en_evpdop;
 
 	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
 	EFSYS_ASSERT3U(enp->en_mod_flags, &, EFX_MOD_PROBE);

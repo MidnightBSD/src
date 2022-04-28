@@ -1,6 +1,8 @@
 /*	$NetBSD: pathnames.h,v 1.1 1995/08/17 16:37:20 thorpej Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1995 Jason R. Thorpe.
  * All rights reserved.
  *
@@ -31,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/ccdconfig/pathnames.h 109421 2003-01-17 14:53:53Z phk $
+ * $FreeBSD$
  */
 
 #define _PATH_CCDCONF		"/etc/ccd.conf"

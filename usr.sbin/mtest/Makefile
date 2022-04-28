@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/usr.sbin/mtest/Makefile 191651 2009-04-29 09:50:04Z bms $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 PROG=	mtest
 MAN=	mtest.8

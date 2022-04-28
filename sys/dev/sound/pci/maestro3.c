@@ -67,7 +67,7 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
-SND_DECLARE_FILE("$FreeBSD: release/10.0.0/sys/dev/sound/pci/maestro3.c 254263 2013-08-12 23:30:01Z scottl $");
+SND_DECLARE_FILE("$FreeBSD$");
 
 /* -------------------------------------------------------------------- */
 
@@ -1440,7 +1440,7 @@ m3_pci_attach(device_t dev)
 			goto bad;
 		}
 	}
- 	snprintf(status, SND_STATUSLEN, "at %s 0x%lx irq %ld %s",
+ 	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
 	    (sc->regtype == SYS_RES_IOPORT)? "io" : "memory",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
 	    PCM_KLDSTRING(snd_maestro3));

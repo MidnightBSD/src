@@ -39,7 +39,7 @@
 static char sccsid[] = "@(#)vscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/vscanf.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -54,9 +54,9 @@ vscanf_l(locale_t locale, const char * __restrict fmt, __va_list ap)
 	int retval;
 	FIX_LOCALE(locale);
 
-	FLOCKFILE(stdin);
+	FLOCKFILE_CANCELSAFE(stdin);
 	retval = __svfscanf(stdin, locale, fmt, ap);
-	FUNLOCKFILE(stdin);
+	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }
 int

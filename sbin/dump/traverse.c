@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)traverse.c	8.7 (Berkeley) 6/15/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/dump/traverse.c 241013 2012-09-27 23:31:06Z mdf $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -673,7 +673,12 @@ ufs2_blksout(union dinode *dp, ufs2_daddr_t *blkp, int frags, ino_t ino,
 	 */
 	blks = howmany(frags * sblock->fs_fsize, TP_BSIZE);
 	if (last) {
-		resid = howmany(fragoff(sblock, dp->dp2.di_size), TP_BSIZE);
+		if (writingextdata)
+			resid = howmany(fragoff(sblock, spcl.c_extsize),
+			    TP_BSIZE);
+		else
+			resid = howmany(fragoff(sblock, dp->dp2.di_size),
+			    TP_BSIZE);
 		if (resid > 0)
 			blks -= howmany(sblock->fs_fsize, TP_BSIZE) - resid;
 	}
@@ -923,7 +928,7 @@ loop:
 		if (cnt == size)
 			return;
 	} else {
-		if (tmpbuf == NULL && (tmpbuf = malloc(secsize)) == 0)
+		if (tmpbuf == NULL && (tmpbuf = malloc(secsize)) == NULL)
 			quit("buffer malloc failed\n");
 		xfer = 0;
 		bytes = size;

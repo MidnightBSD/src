@@ -1,14 +1,14 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: release/10.0.0/lib/libc/quad/Makefile.inc 245644 2013-01-19 02:33:57Z andrew $
+# $FreeBSD$
 
 # Quad support, if needed
-.PATH: ${.CURDIR}/${LIBC_ARCH}/quad ${.CURDIR}/quad
+.PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/quad ${LIBC_SRCTOP}/quad
 
 .if ${LIBC_ARCH} == "i386"
 
 SRCS+=	cmpdi2.c divdi3.c moddi3.c qdivrem.c ucmpdi2.c udivdi3.c umoddi3.c
 
-.elif ${LIBC_ARCH} == "arm" && ${MK_ARM_EABI} != "no"
+.elif ${LIBC_ARCH} == "arm"
 
 SRCS+=	adddi3.c anddi3.c floatunsdidf.c iordi3.c lshldi3.c notdi2.c \
 	qdivrem.c subdi3.c xordi3.c
@@ -22,4 +22,4 @@ SRCS+=	adddi3.c anddi3.c ashldi3.c ashrdi3.c cmpdi2.c divdi3.c fixdfdi.c \
 
 .endif
 
-SYM_MAPS+=${.CURDIR}/quad/Symbol.map
+SYM_MAPS+=${LIBC_SRCTOP}/quad/Symbol.map

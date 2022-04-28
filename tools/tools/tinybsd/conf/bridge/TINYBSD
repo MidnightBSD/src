@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/tools/tinybsd/conf/bridge/TINYBSD 171923 2007-08-22 18:45:00Z remko $
+# $FreeBSD$
 
 machine		i386
 cpu		I486_CPU

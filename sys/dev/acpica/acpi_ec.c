@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_ec.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -181,16 +181,13 @@ ACPI_SERIAL_DECL(ec, "ACPI embedded controller");
 static SYSCTL_NODE(_debug_acpi, OID_AUTO, ec, CTLFLAG_RD, NULL, "EC debugging");
 
 static int	ec_burst_mode;
-TUNABLE_INT("debug.acpi.ec.burst", &ec_burst_mode);
-SYSCTL_INT(_debug_acpi_ec, OID_AUTO, burst, CTLFLAG_RW, &ec_burst_mode, 0,
+SYSCTL_INT(_debug_acpi_ec, OID_AUTO, burst, CTLFLAG_RWTUN, &ec_burst_mode, 0,
     "Enable use of burst mode (faster for nearly all systems)");
 static int	ec_polled_mode;
-TUNABLE_INT("debug.acpi.ec.polled", &ec_polled_mode);
-SYSCTL_INT(_debug_acpi_ec, OID_AUTO, polled, CTLFLAG_RW, &ec_polled_mode, 0,
+SYSCTL_INT(_debug_acpi_ec, OID_AUTO, polled, CTLFLAG_RWTUN, &ec_polled_mode, 0,
     "Force use of polled mode (only if interrupt mode doesn't work)");
 static int	ec_timeout = EC_TIMEOUT;
-TUNABLE_INT("debug.acpi.ec.timeout", &ec_timeout);
-SYSCTL_INT(_debug_acpi_ec, OID_AUTO, timeout, CTLFLAG_RW, &ec_timeout,
+SYSCTL_INT(_debug_acpi_ec, OID_AUTO, timeout, CTLFLAG_RWTUN, &ec_timeout,
     EC_TIMEOUT, "Total time spent waiting for a response (poll+sleep)");
 
 static ACPI_STATUS
@@ -437,9 +434,7 @@ out:
 		 params->gpe_bit, (params->glk) ? ", GLK" : "",
 		 ecdt ? ", ECDT" : "");
 	device_set_desc_copy(dev, desc);
-    }
-
-    if (ret > 0 && params)
+    } else
 	free(params, M_TEMP);
     if (buf.Pointer)
 	AcpiOsFree(buf.Pointer);
@@ -618,16 +613,14 @@ EcCheckStatus(struct acpi_ec_softc *sc, const char *msg, EC_EVENT event)
 }
 
 static void
-EcGpeQueryHandler(void *Context)
+EcGpeQueryHandlerSub(struct acpi_ec_softc *sc)
 {
-    struct acpi_ec_softc	*sc = (struct acpi_ec_softc *)Context;
     UINT8			Data;
     ACPI_STATUS			Status;
-    int				retry, sci_enqueued;
+    int				retry;
     char			qxx[5];
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
-    KASSERT(Context != NULL, ("EcGpeQueryHandler called with NULL"));
 
     /* Serialize user access with EcSpaceHandler(). */
     Status = EcLock(sc);
@@ -644,18 +637,14 @@ EcGpeQueryHandler(void *Context)
      * that may arise from running the query from causing another query
      * to be queued, we clear the pending flag only after running it.
      */
-    sci_enqueued = sc->ec_sci_pend;
     for (retry = 0; retry < 2; retry++) {
 	Status = EcCommand(sc, EC_COMMAND_QUERY);
 	if (ACPI_SUCCESS(Status))
 	    break;
-	if (ACPI_SUCCESS(EcCheckStatus(sc, "retr_check",
+	if (ACPI_FAILURE(EcCheckStatus(sc, "retr_check",
 	    EC_EVENT_INPUT_BUFFER_EMPTY)))
-	    continue;
-	else
 	    break;
     }
-    sc->ec_sci_pend = FALSE;
     if (ACPI_FAILURE(Status)) {
 	EcUnlock(sc);
 	device_printf(sc->ec_dev, "GPE query failed: %s\n",
@@ -684,14 +673,29 @@ EcGpeQueryHandler(void *Context)
 	device_printf(sc->ec_dev, "evaluation of query method %s failed: %s\n",
 	    qxx, AcpiFormatException(Status));
     }
+}
 
-    /* Reenable runtime GPE if its execution was deferred. */
-    if (sci_enqueued) {
-	Status = AcpiFinishGpe(sc->ec_gpehandle, sc->ec_gpebit);
-	if (ACPI_FAILURE(Status))
-	    device_printf(sc->ec_dev, "reenabling runtime GPE failed: %s\n",
-		AcpiFormatException(Status));
-    }
+static void
+EcGpeQueryHandler(void *Context)
+{
+    struct acpi_ec_softc *sc = (struct acpi_ec_softc *)Context;
+    int pending;
+
+    KASSERT(Context != NULL, ("EcGpeQueryHandler called with NULL"));
+
+    do {
+	/* Read the current pending count */
+	pending = atomic_load_acq_int(&sc->ec_sci_pend);
+
+	/* Call GPE handler function */
+	EcGpeQueryHandlerSub(sc);
+
+	/*
+	 * Try to reset the pending count to zero. If this fails we
+	 * know another GPE event has occurred while handling the
+	 * current GPE event and need to loop.
+	 */
+    } while (!atomic_cmpset_int(&sc->ec_sci_pend, pending, 0));
 }
 
 /*
@@ -722,14 +726,14 @@ EcGpeHandler(ACPI_HANDLE GpeDevice, UINT32 GpeNumber, void *Context)
      * It will run the query and _Qxx method later, under the lock.
      */
     EcStatus = EC_GET_CSR(sc);
-    if ((EcStatus & EC_EVENT_SCI) && !sc->ec_sci_pend) {
+    if ((EcStatus & EC_EVENT_SCI) &&
+	atomic_fetchadd_int(&sc->ec_sci_pend, 1) == 0) {
 	CTR0(KTR_ACPI, "ec gpe queueing query handler");
 	Status = AcpiOsExecute(OSL_GPE_HANDLER, EcGpeQueryHandler, Context);
-	if (ACPI_SUCCESS(Status)) {
-	    sc->ec_sci_pend = TRUE;
-	    return (0);
-	} else
+	if (ACPI_FAILURE(Status)) {
 	    printf("EcGpeHandler: queuing GPE query handler failed\n");
+	    atomic_store_rel_int(&sc->ec_sci_pend, 0);
+	}
     }
     return (ACPI_REENABLE_GPE);
 }
@@ -776,7 +780,8 @@ EcSpaceHandler(UINT32 Function, ACPI_PHYSICAL_ADDRESS Address, UINT32 Width,
      * we call it directly here since our thread taskq is not active yet.
      */
     if (cold || rebooting || sc->ec_suspending) {
-	if ((EC_GET_CSR(sc) & EC_EVENT_SCI)) {
+	if ((EC_GET_CSR(sc) & EC_EVENT_SCI) &&
+	    atomic_fetchadd_int(&sc->ec_sci_pend, 1) == 0) {
 	    CTR0(KTR_ACPI, "ec running gpe handler directly");
 	    EcGpeQueryHandler(sc);
 	}
@@ -976,15 +981,13 @@ EcRead(struct acpi_ec_softc *sc, UINT8 Address, UINT8 *Data)
 	gen_count = sc->ec_gencount;
 	EC_SET_DATA(sc, Address);
 	status = EcWaitEvent(sc, EC_EVENT_OUTPUT_BUFFER_FULL, gen_count);
-	if (ACPI_FAILURE(status)) {
-	    if (ACPI_SUCCESS(EcCheckStatus(sc, "retr_check",
-		EC_EVENT_INPUT_BUFFER_EMPTY)))
-		continue;
-	    else
-		break;
+	if (ACPI_SUCCESS(status)) {
+	    *Data = EC_GET_DATA(sc);
+	    return (AE_OK);
 	}
-	*Data = EC_GET_DATA(sc);
-	return (AE_OK);
+	if (ACPI_FAILURE(EcCheckStatus(sc, "retr_check",
+	    EC_EVENT_INPUT_BUFFER_EMPTY)))
+	    break;
     }
     device_printf(sc->ec_dev, "EcRead: failed waiting to get data\n");
     return (status);

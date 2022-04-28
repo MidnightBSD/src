@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rrenumd/parser.y 173412 2007-11-07 10:53:41Z kevlo $
+ * $FreeBSD$
  */
 
 %{
@@ -39,9 +39,6 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
-#if defined(__FreeBSD__) && __FreeBSD__ >= 3
-#include <net/if_var.h>
-#endif /* __FreeBSD__ >= 3 */
 
 #include <netinet/in.h>
 #include <netinet/in_var.h>

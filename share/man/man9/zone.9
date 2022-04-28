@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/zone.9 249373 2013-04-11 18:46:41Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 21, 2013
+.Dd April 26, 2017
 .Dt ZONE 9
 .Os
 .Sh NAME
@@ -34,12 +34,12 @@
 .Nm uma_zalloc_arg ,
 .Nm uma_zfree ,
 .Nm uma_zfree_arg ,
-.Nm uma_find_refcnt ,
 .Nm uma_zdestroy ,
-.Nm uma_zone_set_max,
-.Nm uma_zone_get_max,
-.Nm uma_zone_get_cur,
-.Nm uma_zone_set_warning
+.Nm uma_zone_set_max ,
+.Nm uma_zone_get_max ,
+.Nm uma_zone_get_cur ,
+.Nm uma_zone_set_warning ,
+.Nm uma_zone_set_maxaction
 .Nd zone allocator
 .Sh SYNOPSIS
 .In sys/param.h
@@ -59,8 +59,6 @@
 .Fn uma_zfree "uma_zone_t zone" "void *item"
 .Ft void
 .Fn uma_zfree_arg "uma_zone_t zone" "void *item" "void *arg"
-.Ft "uint32_t *"
-.Fn uma_find_refcnt "uma_zone_t zone" "void *item"
 .Ft void
 .Fn uma_zdestroy "uma_zone_t zone"
 .Ft int
@@ -71,6 +69,13 @@
 .Fn uma_zone_get_cur "uma_zone_t zone"
 .Ft void
 .Fn uma_zone_set_warning "uma_zone_t zone" "const char *warning"
+.Ft void
+.Fn uma_zone_set_maxaction "uma_zone_t zone" "void (*maxaction)(uma_zone_t)"
+.In sys/sysctl.h
+.Fn SYSCTL_UMA_MAX parent nbr name access zone descr
+.Fn SYSCTL_ADD_UMA_MAX ctx parent nbr name access zone descr
+.Fn SYSCTL_UMA_CUR parent nbr name access zone descr
+.Fn SYSCTL_ADD_UMA_CUR ctx parent nbr name access zone descr
 .Sh DESCRIPTION
 The zone allocator provides an efficient interface for managing
 dynamically-sized collections of items of similar size.
@@ -147,10 +152,6 @@ is a subset of the following flags:
 .Bl -tag -width "foo"
 .It Dv UMA_ZONE_NOFREE
 Slabs of the zone are never returned back to VM.
-.It Dv UMA_ZONE_REFCNT
-Each item in the zone would have internal reference counter associated with it.
-See
-.Fn uma_find_refcnt .
 .It Dv UMA_ZONE_NODUMP
 Pages belonging to the zone will not be included into mini-dumps.
 .It Dv UMA_ZONE_PCPU
@@ -179,7 +180,7 @@ This flag requires either
 or
 .Dv UMA_ZONE_HASH ,
 since subsystem requires a mechanism to find a book-keeping structure
-to an item beeing freed.
+to an item being freed.
 The subsystem may choose to prefer offpage book-keeping for certain zones
 implicitly.
 .It Dv UMA_ZONE_ZINIT
@@ -249,13 +250,6 @@ and
 .Dv dtor
 functions, respectively.
 .Pp
-If zone was created with
-.Dv UMA_ZONE_REFCNT
-flag, then pointer to reference counter for an item can be retrieved with
-help of the
-.Fn uma_find_refcnt
-function.
-.Pp
 Created zones,
 which are empty,
 can be destroyed using
@@ -302,11 +296,53 @@ The
 .Fn uma_zone_set_warning
 function sets a warning that will be printed on the system console when the
 given zone becomes full and fails to allocate an item.
-The warning will be printed not often than every five minutes.
+The warning will be printed no more often than every five minutes.
 Warnings can be turned off globally by setting the
 .Va vm.zone_warnings
 sysctl tunable to
 .Va 0 .
+.Pp
+The
+.Fn uma_zone_set_maxaction
+function sets a function that will be called when the given zone becomes full
+and fails to allocate an item.
+The function will be called with the zone locked.
+Also, the function
+that called the allocation function may have held additional locks.
+Therefore,
+this function should do very little work (similar to a signal handler).
+.Pp
+The
+.Fn SYSCTL_UMA_MAX parent nbr name access zone descr
+macro declares a static
+.Xr sysctl
+oid that exports the effective upper limit number of items for a zone.
+The
+.Fa zone
+argument should be a pointer to
+.Vt uma_zone_t .
+A read of the oid returns value obtained through
+.Fn uma_zone_get_max .
+A write to the oid sets new value via
+.Fn uma_zone_set_max .
+The
+.Fn SYSCTL_ADD_UMA_MAX ctx parent nbr name access zone descr
+macro is provided to create this type of oid dynamically.
+.Pp
+The
+.Fn SYSCTL_UMA_CUR parent nbr name access zone descr
+macro declares a static read-only
+.Xr sysctl
+oid that exports the approximate current occupancy of the zone.
+The
+.Fa zone
+argument should be a pointer to
+.Vt uma_zone_t .
+A read of the oid returns value obtained through
+.Fn uma_zone_get_cur .
+The
+.Fn SYSCTL_ADD_UMA_CUR ctx parent nbr name zone descr
+macro is provided to create this type of oid dynamically.
 .Sh RETURN VALUES
 The
 .Fn uma_zalloc
@@ -329,10 +365,10 @@ to function as a slab allocator.
 The zone allocator was written by
 .An John S. Dyson .
 The zone allocator was rewritten in large parts by
-.An Jeff Roberson Aq jeff@FreeBSD.org
+.An Jeff Roberson Aq Mt jeff@FreeBSD.org
 to function as a slab allocator.
 .Pp
 This manual page was written by
-.An Dag-Erling Sm\(/orgrav Aq des@FreeBSD.org .
+.An Dag-Erling Sm\(/orgrav Aq Mt des@FreeBSD.org .
 Changes for UMA by
-.An Jeroen Ruigrok van der Werven Aq asmodai@FreeBSD.org .
+.An Jeroen Ruigrok van der Werven Aq Mt asmodai@FreeBSD.org .

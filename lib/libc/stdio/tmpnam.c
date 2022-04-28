@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)tmpnam.c	8.3 (Berkeley) 3/28/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/tmpnam.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

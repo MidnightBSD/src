@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2007 Kai Wang
  * Copyright (c) 2007 Tim Kientzle
  * All rights reserved.
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/ar/read.c 248612 2013-03-22 10:17:42Z mm $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -94,7 +96,8 @@ read_archive(struct bsdar *bsdar, char mode)
 		r = archive_read_next_header(a, &entry);
 		if (r == ARCHIVE_WARN || r == ARCHIVE_RETRY ||
 		    r == ARCHIVE_FATAL)
-			bsdar_warnc(bsdar, 0, "%s", archive_error_string(a));
+			bsdar_warnc(bsdar, archive_errno(a), "%s",
+			    archive_error_string(a));
 		if (r == ARCHIVE_EOF || r == ARCHIVE_FATAL)
 			break;
 		if (r == ARCHIVE_RETRY) {
@@ -102,10 +105,12 @@ read_archive(struct bsdar *bsdar, char mode)
 			continue;
 		}
 
-		name = archive_entry_pathname(entry);
+		if ((name = archive_entry_pathname(entry)) == NULL)
+			break;
 
 		/* Skip pseudo members. */
-		if (strcmp(name, "/") == 0 || strcmp(name, "//") == 0)
+		if (strcmp(name, "/") == 0 || strcmp(name, "//") == 0 ||
+		    strcmp(name, "/SYM64/") == 0)
 			continue;
 
 		if (bsdar->argc > 0) {
@@ -148,7 +153,7 @@ read_archive(struct bsdar *bsdar, char mode)
 			if (r == ARCHIVE_WARN || r == ARCHIVE_RETRY ||
 			    r == ARCHIVE_FATAL) {
 				(void)fprintf(stdout, "\n");
-				bsdar_warnc(bsdar, 0, "%s",
+				bsdar_warnc(bsdar, archive_errno(a), "%s",
 				    archive_error_string(a));
 			}
 
@@ -186,7 +191,15 @@ read_archive(struct bsdar *bsdar, char mode)
 
 				if (bsdar->options & AR_V)
 					(void)fprintf(stdout, "x - %s\n", name);
-				flags = 0;
+				/* Disallow absolute paths. */
+				if (name[0] == '/') {
+					bsdar_warnc(bsdar, 0,
+					    "Absolute path '%s'", name);
+					continue;
+				}
+				/* Basic path security flags. */
+				flags = ARCHIVE_EXTRACT_SECURE_SYMLINKS |
+				    ARCHIVE_EXTRACT_SECURE_NODOTDOT;
 				if (bsdar->options & AR_O)
 					flags |= ARCHIVE_EXTRACT_TIME;
 
@@ -194,7 +207,7 @@ read_archive(struct bsdar *bsdar, char mode)
 			}
 
 			if (r)
-				bsdar_warnc(bsdar, 0, "%s",
+				bsdar_warnc(bsdar, archive_errno(a), "%s",
 				    archive_error_string(a));
 		}
 	}

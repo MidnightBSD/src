@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/snp/Makefile 184689 2008-11-05 15:04:03Z ed $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/snp
+.PATH: ${SRCTOP}/sys/dev/snp
 
 KMOD=	snp
 SRCS=	snp.c

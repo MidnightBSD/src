@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/wtap/plugins/wtap_plugin.h 229970 2012-01-11 17:41:14Z adrian $
+ * $FreeBSD$
  */
 #ifndef _WTAP_PLUGIN_H_
 #define _WTAP_PLUGIN_H_

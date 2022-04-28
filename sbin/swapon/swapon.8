@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)swapon.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: release/10.0.0/sbin/swapon/swapon.8 252310 2013-06-27 18:28:45Z hrs $
+.\" $FreeBSD$
 .\"
-.Dd June 21, 2013
+.Dd October 21, 2016
 .Dt SWAPON 8
 .Os
 .Sh NAME
@@ -60,9 +60,7 @@ At boot time all swap entries in
 .Pa /etc/fstab
 are added automatically when the system goes multi-user.
 Swap devices use a fixed interleave; the maximum number of devices
-is specified by the kernel configuration option
-.Dv NSWAPDEV ,
-which is typically set to 4.
+is unlimited.
 There is no priority mechanism.
 .Pp
 The
@@ -98,15 +96,13 @@ option is used, all swap devices in
 .Pa /etc/fstab
 will be removed, unless their
 .Dq noauto
-or
-.Dq late
 option is also set.
 If the
 .Fl L
 option is specified,
-swap devices with the
+only swap devices with the
 .Dq late
-option will be removed as well as ones with no option.
+option will be removed.
 If the
 .Fl q
 option is used,
@@ -193,8 +189,8 @@ overridden.
 512 byte blocks are used by default.
 .El
 .Sh FILES
-.Bl -tag -width ".Pa /dev/{ad,da}?s?b" -compact
-.It Pa /dev/{ad,da}?s?b
+.Bl -tag -width ".Pa /dev/{ada,da}?s?b" -compact
+.It Pa /dev/{ada,da}?s?b
 standard paging devices
 .It Pa /dev/md?
 memory disk devices

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_alq.c 251838 2013-06-17 09:49:07Z lstewart $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mac.h"
 
@@ -488,10 +488,12 @@ alq_open(struct alq **alqp, const char *file, struct ucred *cred, int cmode,
 	KASSERT((count >= 0), ("%s: count < 0", __func__));
 
 	if (count > 0) {
-		ret = alq_open_flags(alqp, file, cred, cmode, size*count, 0);
-		(*alqp)->aq_flags |= AQ_LEGACY;
-		(*alqp)->aq_entmax = count;
-		(*alqp)->aq_entlen = size;
+		if ((ret = alq_open_flags(alqp, file, cred, cmode,
+		    size*count, 0)) == 0) {
+			(*alqp)->aq_flags |= AQ_LEGACY;
+			(*alqp)->aq_entmax = count;
+			(*alqp)->aq_entlen = size;
+		}
 	} else
 		ret = alq_open_flags(alqp, file, cred, cmode, size, 0);
 
@@ -967,5 +969,5 @@ static moduledata_t alq_mod =
 	NULL
 };
 
-DECLARE_MODULE(alq, alq_mod, SI_SUB_SMP, SI_ORDER_ANY);
+DECLARE_MODULE(alq, alq_mod, SI_SUB_LAST, SI_ORDER_ANY);
 MODULE_VERSION(alq, 1);

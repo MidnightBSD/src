@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/samples/userauth.c 145519 2005-04-25 18:20:15Z darrenr $	*/
+/*	$FreeBSD$	*/
 
 #include <sys/types.h>
 #include <sys/socket.h>

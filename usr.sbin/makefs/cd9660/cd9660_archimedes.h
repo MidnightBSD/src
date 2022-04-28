@@ -1,6 +1,8 @@
 /* $NetBSD: cd9660_archimedes.h,v 1.1 2009/01/10 22:06:29 bjh21 Exp $ */
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1998, 2009 Ben Harris
  * All rights reserved.
  *
@@ -29,7 +31,7 @@
 /*
  * cd9660_archimedes.c - support for RISC OS "ARCHIMEDES" extension
  *
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/cd9660/cd9660_archimedes.h 214921 2010-11-07 16:05:04Z cognet $
+ * $FreeBSD$
  */
 
 struct ISO_ARCHIMEDES {

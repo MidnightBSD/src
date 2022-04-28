@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_gtar_sparse.c 232153 2012-02-25 10:58:02Z mm $");
+__FBSDID("$FreeBSD$");
 
 
 struct contents {
@@ -200,6 +200,8 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 		}
 		failure("Name mismatch in archive %s", name);
 		assertEqualString(ac->filename, archive_entry_pathname(ae));
+		assertEqualInt(archive_entry_is_encrypted(ae), 0);
+		assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 
 		expect = *cts++;
 		while (0 == (err = archive_read_data_block(a,
@@ -212,8 +214,9 @@ verify_archive_file(const char *name, struct archive_contents *ac)
 					 * Any byte before the expected
 					 * data must be NULL.
 					 */
-					failure("%s: pad at offset %d "
-					    "should be zero", name, actual.o);
+					failure("%s: pad at offset %jd "
+						"should be zero", name,
+						(intmax_t)actual.o);
 					assertEqualInt(c, 0);
 				} else if (actual.o == expect.o) {
 					/*

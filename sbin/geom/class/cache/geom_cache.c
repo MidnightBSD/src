@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2006 Ruslan Ermilov <ru@FreeBSD.org>
  * All rights reserved.
  *
@@ -25,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/geom/class/cache/geom_cache.c 212554 2010-09-13 13:48:18Z pjd $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdio.h>
@@ -135,6 +137,7 @@ cache_label(struct gctl_req *req)
 	int error, nargs;
 	intmax_t val;
 
+	bzero(sector, sizeof(sector));
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 2) {
 		gctl_error(req, "Invalid number of arguments.");

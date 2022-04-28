@@ -23,15 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/vmm/intel/vmcs.c 256072 2013-10-05 21:22:35Z neel $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/amd64/vmm/intel/vmcs.c 256072 2013-10-05 21:22:35Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
+#include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/pcpu.h>
 
@@ -39,18 +40,22 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/amd64/vmm/intel/vmcs.c 256072 2013-10-05 
 #include <vm/pmap.h>
 
 #include <machine/segments.h>
-#include <machine/pmap.h>
-
 #include <machine/vmm.h>
 #include "vmm_host.h"
-#include "vmcs.h"
 #include "vmx_cpufunc.h"
+#include "vmcs.h"
 #include "ept.h"
 #include "vmx.h"
 
 #ifdef DDB
 #include <ddb/ddb.h>
 #endif
+
+SYSCTL_DECL(_hw_vmm_vmx);
+
+static int no_flush_rsb;
+SYSCTL_INT(_hw_vmm_vmx, OID_AUTO, no_flush_rsb, CTLFLAG_RW,
+    &no_flush_rsb, 0, "Do not flush RSB upon vmexit");
 
 static uint64_t
 vmcs_fix_regval(uint32_t encoding, uint64_t val)
@@ -105,6 +110,14 @@ vmcs_field_encoding(int ident)
 		return (VMCS_GUEST_LDTR_SELECTOR);
 	case VM_REG_GUEST_EFER:
 		return (VMCS_GUEST_IA32_EFER);
+	case VM_REG_GUEST_PDPTE0:
+		return (VMCS_GUEST_PDPTE0);
+	case VM_REG_GUEST_PDPTE1:
+		return (VMCS_GUEST_PDPTE1);
+	case VM_REG_GUEST_PDPTE2:
+		return (VMCS_GUEST_PDPTE2);
+	case VM_REG_GUEST_PDPTE3:
+		return (VMCS_GUEST_PDPTE3);
 	default:
 		return (-1);
 	}
@@ -233,7 +246,7 @@ vmcs_setreg(struct vmcs *vmcs, int running, int ident, uint64_t val)
 }
 
 int
-vmcs_setdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
+vmcs_setdesc(struct vmcs *vmcs, int running, int seg, struct seg_desc *desc)
 {
 	int error;
 	uint32_t base, limit, access;
@@ -242,7 +255,8 @@ vmcs_setdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
 	if (error != 0)
 		panic("vmcs_setdesc: invalid segment register %d", seg);
 
-	VMPTRLD(vmcs);
+	if (!running)
+		VMPTRLD(vmcs);
 	if ((error = vmwrite(base, desc->base)) != 0)
 		goto done;
 
@@ -254,12 +268,13 @@ vmcs_setdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
 			goto done;
 	}
 done:
-	VMCLEAR(vmcs);
+	if (!running)
+		VMCLEAR(vmcs);
 	return (error);
 }
 
 int
-vmcs_getdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
+vmcs_getdesc(struct vmcs *vmcs, int running, int seg, struct seg_desc *desc)
 {
 	int error;
 	uint32_t base, limit, access;
@@ -269,7 +284,8 @@ vmcs_getdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
 	if (error != 0)
 		panic("vmcs_getdesc: invalid segment register %d", seg);
 
-	VMPTRLD(vmcs);
+	if (!running)
+		VMPTRLD(vmcs);
 	if ((error = vmread(base, &u64)) != 0)
 		goto done;
 	desc->base = u64;
@@ -284,7 +300,8 @@ vmcs_getdesc(struct vmcs *vmcs, int seg, struct seg_desc *desc)
 		desc->access = u64;
 	}
 done:
-	VMCLEAR(vmcs);
+	if (!running)
+		VMCLEAR(vmcs);
 	return (error);
 }
 
@@ -317,16 +334,11 @@ done:
 }
 
 int
-vmcs_set_defaults(struct vmcs *vmcs,
-		  u_long host_rip, u_long host_rsp, uint64_t eptp,
-		  uint32_t pinbased_ctls, uint32_t procbased_ctls,
-		  uint32_t procbased_ctls2, uint32_t exit_ctls,
-		  uint32_t entry_ctls, u_long msr_bitmap, uint16_t vpid)
+vmcs_init(struct vmcs *vmcs)
 {
 	int error, codesel, datasel, tsssel;
 	u_long cr0, cr4, efer;
 	uint64_t pat, fsbase, idtrbase;
-	uint32_t exc_bitmap;
 
 	codesel = vmm_get_host_codesel();
 	datasel = vmm_get_host_datasel();
@@ -336,34 +348,6 @@ vmcs_set_defaults(struct vmcs *vmcs,
 	 * Make sure we have a "current" VMCS to work with.
 	 */
 	VMPTRLD(vmcs);
-
-	/*
-	 * Load the VMX controls
-	 */
-	if ((error = vmwrite(VMCS_PIN_BASED_CTLS, pinbased_ctls)) != 0)
-		goto done;
-	if ((error = vmwrite(VMCS_PRI_PROC_BASED_CTLS, procbased_ctls)) != 0)
-		goto done;
-	if ((error = vmwrite(VMCS_SEC_PROC_BASED_CTLS, procbased_ctls2)) != 0)
-		goto done;
-	if ((error = vmwrite(VMCS_EXIT_CTLS, exit_ctls)) != 0)
-		goto done;
-	if ((error = vmwrite(VMCS_ENTRY_CTLS, entry_ctls)) != 0)
-		goto done;
-
-	/* Guest state */
-
-	/* Initialize guest IA32_PAT MSR with the default value */
-	pat = PAT_VALUE(0, PAT_WRITE_BACK)	|
-	      PAT_VALUE(1, PAT_WRITE_THROUGH)	|
-	      PAT_VALUE(2, PAT_UNCACHED)	|
-	      PAT_VALUE(3, PAT_UNCACHEABLE)	|
-	      PAT_VALUE(4, PAT_WRITE_BACK)	|
-	      PAT_VALUE(5, PAT_WRITE_THROUGH)	|
-	      PAT_VALUE(6, PAT_UNCACHED)	|
-	      PAT_VALUE(7, PAT_UNCACHEABLE);
-	if ((error = vmwrite(VMCS_GUEST_IA32_PAT, pat)) != 0)
-		goto done;
 
 	/* Host state */
 
@@ -424,29 +408,15 @@ vmcs_set_defaults(struct vmcs *vmcs,
 		goto done;
 
 	/* instruction pointer */
-	if ((error = vmwrite(VMCS_HOST_RIP, host_rip)) != 0)
-		goto done;
-
-	/* stack pointer */
-	if ((error = vmwrite(VMCS_HOST_RSP, host_rsp)) != 0)
-		goto done;
-
-	/* eptp */
-	if ((error = vmwrite(VMCS_EPTP, eptp)) != 0)
-		goto done;
-
-	/* vpid */
-	if ((error = vmwrite(VMCS_VPID, vpid)) != 0)
-		goto done;
-
-	/* msr bitmap */
-	if ((error = vmwrite(VMCS_MSR_BITMAP, msr_bitmap)) != 0)
-		goto done;
-
-	/* exception bitmap */
-	exc_bitmap = 1 << IDT_MC;
-	if ((error = vmwrite(VMCS_EXCEPTION_BITMAP, exc_bitmap)) != 0)
-		goto done;
+	if (no_flush_rsb) {
+		if ((error = vmwrite(VMCS_HOST_RIP,
+		    (u_long)vmx_exit_guest)) != 0)
+			goto done;
+	} else {
+		if ((error = vmwrite(VMCS_HOST_RIP,
+		    (u_long)vmx_exit_guest_flush_rsb)) != 0)
+			goto done;
+	}
 
 	/* link pointer */
 	if ((error = vmwrite(VMCS_LINK_POINTER, ~0)) != 0)
@@ -454,19 +424,6 @@ vmcs_set_defaults(struct vmcs *vmcs,
 done:
 	VMCLEAR(vmcs);
 	return (error);
-}
-
-uint64_t
-vmcs_read(uint32_t encoding)
-{
-	int error;
-	uint64_t val;
-
-	error = vmread(encoding, &val);
-	if (error != 0)
-		panic("vmcs_read(%u) error %d", encoding, error);
-
-	return (val);
 }
 
 #ifdef DDB
@@ -524,7 +481,7 @@ DB_SHOW_COMMAND(vmcs, db_show_vmcs)
 	switch (exit & 0x8000ffff) {
 	case EXIT_REASON_EXCEPTION:
 	case EXIT_REASON_EXT_INTR:
-		val = vmcs_read(VMCS_EXIT_INTERRUPTION_INFO);
+		val = vmcs_read(VMCS_EXIT_INTR_INFO);
 		db_printf("Interrupt Type: ");
 		switch (val >> 8 & 0x7) {
 		case 0:
@@ -546,7 +503,7 @@ DB_SHOW_COMMAND(vmcs, db_show_vmcs)
 		db_printf("  Vector: %lu", val & 0xff);
 		if (val & 0x800)
 			db_printf("  Error Code: %lx",
-			    vmcs_read(VMCS_EXIT_INTERRUPTION_ERROR));
+			    vmcs_read(VMCS_EXIT_INTR_ERRCODE));
 		db_printf("\n");
 		break;
 	case EXIT_REASON_EPT_FAULT:

@@ -34,7 +34,7 @@
  *
  * From:
  *	$Id: procfs_status.c,v 3.1 1993/12/15 09:40:17 jsp Exp $
- * $FreeBSD: release/10.0.0/sys/fs/procfs/procfs_status.c 230145 2012-01-15 18:47:24Z trociny $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -70,6 +70,7 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 	const char *wmesg;
 	char *pc;
 	char *sep;
+	struct timeval boottime;
 	int pid, ppid, pgid, sid;
 	int i;
 
@@ -125,10 +126,11 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 	if (p->p_flag & P_INMEM) {
 		struct timeval start, ut, st;
 
-		PROC_SLOCK(p);
+		PROC_STATLOCK(p);
 		calcru(p, &ut, &st);
-		PROC_SUNLOCK(p);
+		PROC_STATUNLOCK(p);
 		start = p->p_stats->p_start;
+		getboottime(&boottime);
 		timevaladd(&start, &boottime);
 		sbuf_printf(sb, " %jd,%ld %jd,%ld %jd,%ld",
 		    (intmax_t)start.tv_sec, start.tv_usec,

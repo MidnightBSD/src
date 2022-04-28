@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sbin/atm/atmconfig/atm_oid.list 133565 2004-08-12 12:31:43Z harti $
+# $FreeBSD$
 begemotAtmIfTable
 begemotAtmIfName
 begemotAtmIfNodeId

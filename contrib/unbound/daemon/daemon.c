@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -56,12 +56,16 @@
 #include <openssl/engine.h>
 #endif
 
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
+
 #ifdef HAVE_NSS
 /* nss3 */
 #include "nss.h"
 #endif
 
-#include <ldns/ldns.h>
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/remote.h"
@@ -69,18 +73,28 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
+#include "util/shm_side/shm_main.h"
 #include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
+#include "util/tcp_conn_limit.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/localzone.h"
+#include "services/view.h"
 #include "services/modstack.h"
+#include "services/authzone.h"
 #include "util/module.h"
 #include "util/random.h"
 #include "util/tube.h"
 #include "util/net_help.h"
+#include "sldns/keyraw.h"
+#include "respip/respip.h"
 #include <signal.h>
+
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
 
 /** How many quit requests happened. */
 static int sig_record_quit = 0;
@@ -91,10 +105,8 @@ static int sig_record_reload = 0;
 /** cleaner ssl memory freeup */
 static void* comp_meth = NULL;
 #endif
-#ifdef LEX_HAS_YYLEX_DESTROY
 /** remove buffers for parsing and init */
 int ub_c_lex_destroy(void);
-#endif
 
 /** used when no other sighandling happens, so we don't die
   * when multiple signals in quick succession are sent to us. 
@@ -104,8 +116,9 @@ int ub_c_lex_destroy(void);
 static RETSIGTYPE record_sigh(int sig)
 {
 #ifdef LIBEVENT_SIGNAL_PROBLEM
-	verbose(VERB_OPS, "quit on signal, no cleanup and statistics, "
-		"because installed libevent version is not threadsafe");
+	/* cannot log, verbose here because locks may be held */
+	/* quit on signal, no cleanup and statistics, 
+	   because installed libevent version is not threadsafe */
 	exit(0);
 #endif 
 	switch(sig)
@@ -130,7 +143,8 @@ static RETSIGTYPE record_sigh(int sig)
 			break;
 #endif
 		default:
-			log_err("ignoring signal %d", sig);
+			/* ignoring signal */
+			break;
 	}
 }
 
@@ -197,20 +211,33 @@ daemon_init(void)
 	signal_handling_record();
 	checklock_start();
 #ifdef HAVE_SSL
+#  ifdef HAVE_ERR_LOAD_CRYPTO_STRINGS
 	ERR_load_crypto_strings();
+#  endif
+#if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 	ERR_load_SSL_strings();
-#  ifdef HAVE_OPENSSL_CONFIG
-	OPENSSL_config("unbound");
-#  endif
+#endif
 #  ifdef USE_GOST
-	(void)ldns_key_EVP_load_gost_id();
+	(void)sldns_key_EVP_load_gost_id();
 #  endif
+#  if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_CRYPTO)
+#    ifndef S_SPLINT_S
 	OpenSSL_add_all_algorithms();
+#    endif
+#  else
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS
+		| OPENSSL_INIT_ADD_ALL_DIGESTS
+		| OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+#  endif
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
 	/* grab the COMP method ptr because openssl leaks it */
 	comp_meth = (void*)SSL_COMP_get_compression_methods();
 #  endif
+#  if OPENSSL_VERSION_NUMBER < 0x10100000 || !defined(HAVE_OPENSSL_INIT_SSL)
 	(void)SSL_library_init();
+#  else
+	(void)OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
+#  endif
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	if(!ub_openssl_lock_init())
 		fatal_exit("could not init openssl locks");
@@ -223,8 +250,6 @@ daemon_init(void)
 	/* init timezone info while we are not chrooted yet */
 	tzset();
 #endif
-	/* open /dev/random if needed */
-	ub_systemseed((unsigned)time(NULL)^(unsigned)getpid()^0xe67);
 	daemon->need_to_exit = 0;
 	modstack_init(&daemon->mods);
 	if(!(daemon->env = (struct module_env*)calloc(1, 
@@ -232,9 +257,24 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+	/* init edns_known_options */
+	if(!edns_known_options_init(daemon->env)) {
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	alloc_init(&daemon->superalloc, NULL, 0);
 	daemon->acl = acl_list_create();
 	if(!daemon->acl) {
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	daemon->tcl = tcl_list_create();
+	if(!daemon->tcl) {
+		acl_list_delete(daemon->acl);
+		edns_known_options_delete(daemon->env);
 		free(daemon->env);
 		free(daemon);
 		return NULL;
@@ -242,6 +282,14 @@ daemon_init(void)
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 	daemon->time_last_stat = daemon->time_boot;
+	if((daemon->env->auth_zones = auth_zones_create()) == 0) {
+		acl_list_delete(daemon->acl);
+		tcl_list_delete(daemon->tcl);
+		edns_known_options_delete(daemon->env);
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	return daemon;	
 }
 
@@ -250,9 +298,56 @@ daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
 	if(daemon->cfg->port != daemon->listening_port) {
-		listening_ports_free(daemon->ports);
-		if(!(daemon->ports=listening_ports_open(daemon->cfg)))
+		size_t i;
+		struct listen_port* p0;
+		daemon->reuseport = 0;
+		/* free and close old ports */
+		if(daemon->ports != NULL) {
+			for(i=0; i<daemon->num_ports; i++)
+				listening_ports_free(daemon->ports[i]);
+			free(daemon->ports);
+			daemon->ports = NULL;
+		}
+		/* see if we want to reuseport */
+#ifdef SO_REUSEPORT
+		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
+			daemon->reuseport = 1;
+#endif
+		/* try to use reuseport */
+		p0 = listening_ports_open(daemon->cfg, &daemon->reuseport);
+		if(!p0) {
+			listening_ports_free(p0);
 			return 0;
+		}
+		if(daemon->reuseport) {
+			/* reuseport was successful, allocate for it */
+			daemon->num_ports = (size_t)daemon->cfg->num_threads;
+		} else {
+			/* do the normal, singleportslist thing,
+			 * reuseport not enabled or did not work */
+			daemon->num_ports = 1;
+		}
+		if(!(daemon->ports = (struct listen_port**)calloc(
+			daemon->num_ports, sizeof(*daemon->ports)))) {
+			listening_ports_free(p0);
+			return 0;
+		}
+		daemon->ports[0] = p0;
+		if(daemon->reuseport) {
+			/* continue to use reuseport */
+			for(i=1; i<daemon->num_ports; i++) {
+				if(!(daemon->ports[i]=
+					listening_ports_open(daemon->cfg,
+						&daemon->reuseport))
+					|| !daemon->reuseport ) {
+					for(i=0; i<daemon->num_ports; i++)
+						listening_ports_free(daemon->ports[i]);
+					free(daemon->ports);
+					daemon->ports = NULL;
+					return 0;
+				}
+			}
+		}
 		daemon->listening_port = daemon->cfg->port;
 	}
 	if(!daemon->cfg->remote_control_enable && daemon->rc_port) {
@@ -284,6 +379,7 @@ static void daemon_setup_modules(struct daemon* daemon)
 		daemon->env)) {
 		fatal_exit("failed to setup modules");
 	}
+	log_edns_known_options(VERB_ALGO, daemon->env);
 }
 
 /**
@@ -331,13 +427,11 @@ daemon_create_workers(struct daemon* daemon)
 	int* shufport;
 	log_assert(daemon && daemon->cfg);
 	if(!daemon->rand) {
-		unsigned int seed = (unsigned int)time(NULL) ^ 
-			(unsigned int)getpid() ^ 0x438;
-		daemon->rand = ub_initstate(seed, NULL);
+		daemon->rand = ub_initstate(NULL);
 		if(!daemon->rand)
 			fatal_exit("could not init random generator");
+		hash_set_raninit((uint32_t)ub_random(daemon->rand));
 	}
-	hash_set_raninit((uint32_t)ub_random(daemon->rand));
 	shufport = (int*)calloc(65536, sizeof(int));
 	if(!shufport)
 		fatal_exit("out of memory during daemon init");
@@ -345,8 +439,27 @@ daemon_create_workers(struct daemon* daemon)
 	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
 	
 	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
+	if(daemon->reuseport && (int)daemon->num < (int)daemon->num_ports) {
+		log_warn("cannot reduce num-threads to %d because so-reuseport "
+			"so continuing with %d threads.", (int)daemon->num,
+			(int)daemon->num_ports);
+		daemon->num = (int)daemon->num_ports;
+	}
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
+	if(!daemon->workers)
+		fatal_exit("out of memory during daemon init");
+	if(daemon->cfg->dnstap) {
+#ifdef USE_DNSTAP
+		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,
+			(unsigned int)daemon->num);
+		if (!daemon->dtenv)
+			fatal_exit("dt_create failed");
+		dt_apply_cfg(daemon->dtenv, daemon->cfg);
+#else
+		fatal_exit("dnstap enabled in config but not built with dnstap support");
+#endif
+	}
 	for(i=0; i<daemon->num; i++) {
 		if(!(daemon->workers[i] = worker_create(daemon, i,
 			shufport+numport*i/daemon->num, 
@@ -389,6 +502,7 @@ static void*
 thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
+	int port_num = 0;
 	log_thread_set(&worker->thread_num);
 	ub_thread_blocksigs();
 #ifdef THREADS_DISABLED
@@ -396,7 +510,14 @@ thread_start(void* arg)
 	tube_close_write(worker->cmd);
 	close_other_pipes(worker->daemon, worker->thread_num);
 #endif
-	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports, 0))
+#ifdef SO_REUSEPORT
+	if(worker->daemon->cfg->so_reuseport)
+		port_num = worker->thread_num % worker->daemon->num_ports;
+	else
+		port_num = 0;
+#endif
+	if(!worker_init(worker, worker->daemon->cfg,
+			worker->daemon->ports[port_num], 0))
 		fatal_exit("Could not initialize thread");
 
 	worker_work(worker);
@@ -451,16 +572,63 @@ daemon_stop_others(struct daemon* daemon)
 void 
 daemon_fork(struct daemon* daemon)
 {
+	int have_view_respip_cfg = 0;
+#ifdef HAVE_SYSTEMD
+	int ret;
+#endif
+
 	log_assert(daemon);
-	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
+	if(!(daemon->views = views_create()))
+		fatal_exit("Could not create views: out of memory");
+	/* create individual views and their localzone/data trees */
+	if(!views_apply_cfg(daemon->views, daemon->cfg))
+		fatal_exit("Could not set up views");
+
+	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg, daemon->views))
 		fatal_exit("Could not setup access control list");
+	if(!tcl_list_apply_cfg(daemon->tcl, daemon->cfg))
+		fatal_exit("Could not setup TCP connection limits");
+	if(daemon->cfg->dnscrypt) {
+#ifdef USE_DNSCRYPT
+		daemon->dnscenv = dnsc_create();
+		if (!daemon->dnscenv)
+			fatal_exit("dnsc_create failed");
+		dnsc_apply_cfg(daemon->dnscenv, daemon->cfg);
+#else
+		fatal_exit("dnscrypt enabled in config but unbound was not built with "
+				   "dnscrypt support");
+#endif
+	}
+	/* create global local_zones */
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
 		fatal_exit("Could not set up local zones");
 
+	/* process raw response-ip configuration data */
+	if(!(daemon->respip_set = respip_set_create()))
+		fatal_exit("Could not create response IP set");
+	if(!respip_global_apply_cfg(daemon->respip_set, daemon->cfg))
+		fatal_exit("Could not set up response IP set");
+	if(!respip_views_apply_cfg(daemon->views, daemon->cfg,
+		&have_view_respip_cfg))
+		fatal_exit("Could not set up per-view response IP sets");
+	daemon->use_response_ip = !respip_set_is_empty(daemon->respip_set) ||
+		have_view_respip_cfg;
+	
+	/* read auth zonefiles */
+	if(!auth_zones_apply_cfg(daemon->env->auth_zones, daemon->cfg, 1))
+		fatal_exit("auth_zones could not be setup");
+
 	/* setup modules */
 	daemon_setup_modules(daemon);
+
+	/* response-ip-xxx options don't work as expected without the respip
+	 * module.  To avoid run-time operational surprise we reject such
+	 * configuration. */
+	if(daemon->use_response_ip &&
+		modstack_find(&daemon->mods, "respip") < 0)
+		fatal_exit("response-ip options require respip module");
 
 	/* first create all the worker structures, so we can pass
 	 * them to the newly created threads. 
@@ -469,7 +637,7 @@ daemon_fork(struct daemon* daemon)
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
 		fatal_exit("Could not initialize main thread");
 #endif
 	
@@ -483,18 +651,38 @@ daemon_fork(struct daemon* daemon)
 	 */
 #if !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 	/* libevent has the last inited base get signals (or any base) */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
 		fatal_exit("Could not initialize main thread");
 #endif
 	signal_handling_playback(daemon->workers[0]);
 
+	if (!shm_main_init(daemon))
+		log_warn("SHM has failed");
+
 	/* Start resolver service on main thread. */
+#ifdef HAVE_SYSTEMD
+	ret = sd_notify(0, "READY=1");
+	if(ret <= 0 && getenv("NOTIFY_SOCKET"))
+		fatal_exit("sd_notify failed %s: %s. Make sure that unbound has "
+				"access/permission to use the socket presented by systemd.",
+				getenv("NOTIFY_SOCKET"),
+				(ret==0?"no $NOTIFY_SOCKET": strerror(-ret)));
+#endif
 	log_info("start of service (%s).", PACKAGE_STRING);
 	worker_work(daemon->workers[0]);
+#ifdef HAVE_SYSTEMD
+	if (daemon->workers[0]->need_to_exit)
+		sd_notify(0, "STOPPING=1");
+	else
+		sd_notify(0, "RELOADING=1");
+#endif
 	log_info("service stopped (%s).", PACKAGE_STRING);
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
+
+	/* Shutdown SHM */
+	shm_main_shutdown(daemon);
 
 	daemon->need_to_exit = daemon->workers[0]->need_to_exit;
 }
@@ -510,73 +698,104 @@ daemon_cleanup(struct daemon* daemon)
 	log_thread_set(NULL);
 	/* clean up caches because
 	 * a) RRset IDs will be recycled after a reload, causing collisions
-	 * b) validation config can change, thus rrset, msg, keycache clear 
-	 * The infra cache is kept, the timing and edns info is still valid */
+	 * b) validation config can change, thus rrset, msg, keycache clear */
 	slabhash_clear(&daemon->env->rrset_cache->table);
 	slabhash_clear(daemon->env->msg_cache);
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
-	/* key cache is cleared by module desetup during next daemon_init() */
+	respip_set_delete(daemon->respip_set);
+	daemon->respip_set = NULL;
+	views_delete(daemon->views);
+	daemon->views = NULL;
+	if(daemon->env->auth_zones)
+		auth_zones_cleanup(daemon->env->auth_zones);
+	/* key cache is cleared by module desetup during next daemon_fork() */
 	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
 	daemon->workers = NULL;
 	daemon->num = 0;
+	alloc_clear_special(&daemon->superalloc);
+#ifdef USE_DNSTAP
+	dt_delete(daemon->dtenv);
+	daemon->dtenv = NULL;
+#endif
+#ifdef USE_DNSCRYPT
+	dnsc_delete(daemon->dnscenv);
+	daemon->dnscenv = NULL;
+#endif
 	daemon->cfg = NULL;
 }
 
 void 
 daemon_delete(struct daemon* daemon)
 {
+	size_t i;
 	if(!daemon)
 		return;
 	modstack_desetup(&daemon->mods, daemon->env);
 	daemon_remote_delete(daemon->rc);
-	listening_ports_free(daemon->ports);
+	for(i = 0; i < daemon->num_ports; i++)
+		listening_ports_free(daemon->ports[i]);
+	free(daemon->ports);
 	listening_ports_free(daemon->rc_ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
+		edns_known_options_delete(daemon->env);
+		auth_zones_delete(daemon->env->auth_zones);
 	}
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
+	tcl_list_delete(daemon->tcl);
 	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);
 #ifdef HAVE_SSL
+	listen_sslctx_delete_ticket_keys();
 	SSL_CTX_free((SSL_CTX*)daemon->listen_sslctx);
 	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
 #endif
 	free(daemon);
-#ifdef LEX_HAS_YYLEX_DESTROY
 	/* lex cleanup */
 	ub_c_lex_destroy();
-#endif
 	/* libcrypto cleanup */
 #ifdef HAVE_SSL
 #  if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
-	ldns_key_EVP_unload_gost();
+	sldns_key_EVP_unload_gost();
 #  endif
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
 #    ifndef S_SPLINT_S
+#      if OPENSSL_VERSION_NUMBER < 0x10100000
 	sk_SSL_COMP_pop_free(comp_meth, (void(*)())CRYPTO_free);
+#      endif
 #    endif
 #  endif
 #  ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
+#  if (OPENSSL_VERSION_NUMBER < 0x10100000) && !defined(OPENSSL_NO_ENGINE)
 	ENGINE_cleanup();
+#  endif
 	CONF_modules_free();
 #  endif
+#  ifdef HAVE_CRYPTO_CLEANUP_ALL_EX_DATA
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
-	ERR_remove_state(0);
+#  endif
+#  ifdef HAVE_ERR_FREE_STRINGS
 	ERR_free_strings();
+#  endif
+#  if OPENSSL_VERSION_NUMBER < 0x10100000
 	RAND_cleanup();
+#  endif
 #  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	ub_openssl_lock_delete();
 #  endif
+#ifndef HAVE_ARC4RANDOM
+	_ARC4_LOCK_DESTROY();
+#endif
 #elif defined(HAVE_NSS)
 	NSS_Shutdown();
 #endif /* HAVE_SSL or HAVE_NSS */
@@ -593,9 +812,8 @@ void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg)
 {
         daemon->cfg = cfg;
 	config_apply(cfg);
-	if(!daemon->env->msg_cache ||
-	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
-	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
+	if(!slabhash_is_size(daemon->env->msg_cache, cfg->msg_cache_size,
+	   	cfg->msg_cache_slabs)) {
 		slabhash_delete(daemon->env->msg_cache);
 		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size,

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD: release/10.0.0/sys/i386/i386/locore.s 228535 2011-12-15 17:54:23Z alc $
+ * $FreeBSD$
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -44,7 +44,6 @@
 #include "opt_nfsroot.h"
 #include "opt_pmap.h"
 
-#include <sys/syscall.h>
 #include <sys/reboot.h>
 
 #include <machine/asmacros.h>
@@ -99,7 +98,7 @@ physfree:	.long	0		/* phys addr of next free page */
 	.globl	IdlePTD
 IdlePTD:	.long	0		/* phys addr of kernel PTD */
 
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	.globl	IdlePDPT
 IdlePDPT:	.long	0		/* phys addr of kernel PDPT */
 #endif
@@ -222,8 +221,8 @@ NON_GPROF_ENTRY(btext)
  * inactive from now until we switch to new ones, since we don't load any
  * more segment registers or permit interrupts until after the switch.
  */
-	movl	$R(end),%ecx
-	movl	$R(edata),%edi
+	movl	$R(__bss_end),%ecx
+	movl	$R(__bss_start),%edi
 	subl	%edi,%ecx
 	xorl	%eax,%eax
 	cld
@@ -281,7 +280,7 @@ NON_GPROF_ENTRY(btext)
 1:
 
 /* Now enable paging */
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	R(IdlePDPT), %eax
 	movl	%eax, %cr3
 	movl	%cr4, %eax
@@ -302,17 +301,14 @@ NON_GPROF_ENTRY(btext)
 begin:
 	/* set up bootstrap stack */
 	movl	proc0kstack,%eax	/* location of in-kernel stack */
-			/* bootstrap stack end location */
-	leal	(KSTACK_PAGES*PAGE_SIZE-PCB_SIZE)(%eax),%esp
+
+	/*
+	 * Only use bottom page for init386().  init386() calculates the
+	 * PCB + FPU save area size and returns the true top of stack.
+	 */
+	leal	PAGE_SIZE(%eax),%esp
 
 	xorl	%ebp,%ebp		/* mark end of frames */
-
-#ifdef PAE
-	movl	IdlePDPT,%esi
-#else
-	movl	IdlePTD,%esi
-#endif
-	movl	%esi,(KSTACK_PAGES*PAGE_SIZE-PCB_SIZE+PCB_CR3)(%eax)
 
 	pushl	physfree		/* value of first for init386(first) */
 	call	init386			/* wire 386 chip for unix operation */
@@ -324,80 +320,12 @@ begin:
 	 */
 	addl	$4,%esp
 
+	/* Switch to true top of stack. */
+	movl	%eax,%esp
+
 	call	mi_startup		/* autoconfiguration, mountroot etc */
 	/* NOTREACHED */
 	addl	$0,%esp			/* for db_numargs() again */
-
-/*
- * Signal trampoline, copied to top of user stack
- */
-NON_GPROF_ENTRY(sigcode)
-	calll	*SIGF_HANDLER(%esp)
-	leal	SIGF_UC(%esp),%eax	/* get ucontext */
-	pushl	%eax
-	testl	$PSL_VM,UC_EFLAGS(%eax)
-	jne	1f
-	mov	UC_GS(%eax),%gs		/* restore %gs */
-1:
-	movl	$SYS_sigreturn,%eax
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-					/* on stack */
-1:
-	jmp	1b
-
-#ifdef COMPAT_FREEBSD4
-	ALIGN_TEXT
-freebsd4_sigcode:
-	calll	*SIGF_HANDLER(%esp)
-	leal	SIGF_UC4(%esp),%eax	/* get ucontext */
-	pushl	%eax
-	testl	$PSL_VM,UC4_EFLAGS(%eax)
-	jne	1f
-	mov	UC4_GS(%eax),%gs	/* restore %gs */
-1:
-	movl	$344,%eax		/* 4.x SYS_sigreturn */
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-					/* on stack */
-1:
-	jmp	1b
-#endif
-
-#ifdef COMPAT_43
-	ALIGN_TEXT
-osigcode:
-	call	*SIGF_HANDLER(%esp)	/* call signal handler */
-	lea	SIGF_SC(%esp),%eax	/* get sigcontext */
-	pushl	%eax
-	testl	$PSL_VM,SC_PS(%eax)
-	jne	9f
-	mov	SC_GS(%eax),%gs		/* restore %gs */
-9:
-	movl	$103,%eax		/* 3.x SYS_sigreturn */
-	pushl	%eax			/* junk to fake return addr. */
-	int	$0x80			/* enter kernel with args */
-0:	jmp	0b
-#endif /* COMPAT_43 */
-
-	ALIGN_TEXT
-esigcode:
-
-	.data
-	.globl	szsigcode
-szsigcode:
-	.long	esigcode-sigcode
-#ifdef COMPAT_FREEBSD4
-	.globl	szfreebsd4_sigcode
-szfreebsd4_sigcode:
-	.long	esigcode-freebsd4_sigcode
-#endif
-#ifdef COMPAT_43
-	.globl	szosigcode
-szosigcode:
-	.long	esigcode-osigcode
-#endif
-	.text
 
 /**********************************************************************
  *
@@ -558,7 +486,9 @@ olddiskboot:
  * Identify the CPU and initialize anything special about it
  *
  */
-identify_cpu:
+ENTRY(identify_cpu)
+
+	pushl	%ebx
 
 	/* Try to toggle alignment check flag; does not exist on 386. */
 	pushfl
@@ -679,7 +609,9 @@ trycpuid:	/* Use the `cpuid' instruction. */
 	/* Greater than Pentium...call it a Pentium Pro */
 	movl	$CPU_686,R(cpu)
 3:
+	popl	%ebx
 	ret
+END(identify_cpu)
 
 
 /**********************************************************************
@@ -722,7 +654,7 @@ no_kernend:
 	movl	%esi,R(KPTmap)
 
 /* Allocate Page Table Directory */
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	/* XXX only need 32 bytes (easier for now) */
 	ALLOCPAGES(1)
 	movl	%esi,R(IdlePDPT)
@@ -731,7 +663,7 @@ no_kernend:
 	movl	%esi,R(IdlePTD)
 
 /* Allocate KSTACK */
-	ALLOCPAGES(KSTACK_PAGES)
+	ALLOCPAGES(TD0_KSTACK_PAGES)
 	movl	%esi,R(p0kpa)
 	addl	$KERNBASE, %esi
 	movl	%esi, R(proc0kstack)
@@ -788,7 +720,7 @@ no_kernend:
 	fillkptphys($PG_RW)
 
 /* Map page directory. */
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	R(IdlePDPT), %eax
 	movl	$1, %ecx
 	fillkptphys($PG_RW)
@@ -800,7 +732,7 @@ no_kernend:
 
 /* Map proc0's KSTACK in the physical way ... */
 	movl	R(p0kpa), %eax
-	movl	$(KSTACK_PAGES), %ecx
+	movl	$(TD0_KSTACK_PAGES), %ecx
 	fillkptphys($PG_RW)
 
 /* Map ISA hole */
@@ -890,7 +822,7 @@ done_pde:
 	movl	$NPGPTD,%ecx
 	fillkpt(R(IdlePTD), $PG_RW)
 
-#ifdef PAE
+#if defined(PAE) || defined(PAE_TABLES)
 	movl	R(IdlePTD), %eax
 	xorl	%ebx, %ebx
 	movl	$NPGPTD, %ecx
@@ -898,3 +830,12 @@ done_pde:
 #endif
 
 	ret
+
+#ifdef XENHVM
+/* Xen Hypercall page */
+	.text
+.p2align PAGE_SHIFT, 0x90	/* Hypercall_page needs to be PAGE aligned */
+
+NON_GPROF_ENTRY(hypercall_page)
+	.skip	0x1000, 0x90	/* Fill with "nop"s */
+#endif

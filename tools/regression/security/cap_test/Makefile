@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/tools/regression/security/cap_test/Makefile 224989 2011-08-18 23:15:04Z jonathan $
+# $FreeBSD$
 
 PROG=	cap_test
 SRCS=	cap_test.c \
@@ -11,7 +11,7 @@ SRCS=	cap_test.c \
 	cap_test_sysctl.c \
 
 WARNS=	3
-NO_MAN=
+MAN=
 
 # Use headers and libc from the build, if available.
 KERNCONF?=	GENERIC

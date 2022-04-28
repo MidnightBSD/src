@@ -1,5 +1,5 @@
 #
-# $FreeBSD: release/10.0.0/sys/modules/usb/usie/Makefile 223864 2011-07-08 10:58:56Z hselasky $
+# $FreeBSD$
 #
 # Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
 #
@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 
-.PATH: ${.CURDIR}/../../../dev/usb/net
+.PATH: ${SRCTOP}/sys/dev/usb/net
 
 KMOD = usie
 SRCS = if_usie.c

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/mly/mlyio.h 79695 2001-07-14 00:12:23Z msmith $
+ *	$FreeBSD$
  */
 
 /********************************************************************************

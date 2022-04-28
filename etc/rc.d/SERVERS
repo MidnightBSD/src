@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/SERVERS 231563 2012-02-12 14:58:50Z avg $
+# $FreeBSD$
 #
 
 # PROVIDE: SERVERS

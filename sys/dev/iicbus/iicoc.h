@@ -25,7 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/iicbus/iicoc.h 233539 2012-03-27 10:44:32Z jchandra $
+ * $FreeBSD$
  */
 
 #ifndef __OPENCORE_I2C_H__

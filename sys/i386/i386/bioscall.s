@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/i386/i386/bioscall.s 103436 2002-09-17 01:49:00Z peter $
+ * $FreeBSD$
  */
 
 /*

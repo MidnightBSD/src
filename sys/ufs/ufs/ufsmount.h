@@ -27,13 +27,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufsmount.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: release/10.0.0/sys/ufs/ufs/ufsmount.h 243245 2012-11-18 18:57:19Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef _UFS_UFS_UFSMOUNT_H_
-#define _UFS_UFS_UFSMOUNT_H_
-
-#include <sys/buf.h>	/* XXX For struct workhead. */
+#define	_UFS_UFS_UFSMOUNT_H_
 
 /*
  * Arguments to mount UFS-based filesystems
@@ -52,6 +50,7 @@ MALLOC_DECLARE(M_UFSMNT);
 struct buf;
 struct inode;
 struct nameidata;
+struct taskqueue;
 struct timeval;
 struct ucred;
 struct uio;
@@ -78,19 +77,7 @@ struct ufsmount {
 	u_long	um_seqinc;			/* inc between seq blocks */
 	struct	mtx um_lock;			/* Protects ufsmount & fs */
 	pid_t	um_fsckpid;			/* PID permitted fsck sysctls */
-	long	um_numindirdeps;		/* outstanding indirdeps */
-	struct	workhead softdep_workitem_pending; /* softdep work queue */
-	struct	worklist *softdep_worklist_tail; /* Tail pointer for above */
-	struct	workhead softdep_journal_pending; /* journal work queue */
-	struct	worklist *softdep_journal_tail;	/* Tail pointer for above */
-	struct	jblocks *softdep_jblocks;	/* Journal block information */
-	struct	inodedeplst softdep_unlinked;	/* Unlinked inodes */
-	struct	bmsafemaphd softdep_dirtycg;	/* Dirty CGs */
-	int	softdep_on_journal;		/* Items on the journal list */
-	int	softdep_on_worklist;		/* Items on the worklist */
-	int	softdep_deps;			/* Total dependency count */
-	int	softdep_accdeps;		/* accumulated dep count */
-	int	softdep_req;			/* Wakeup when deps hits 0. */
+	struct	mount_softdeps *um_softdep;	/* softdep mgmt structure */
 	struct	vnode *um_quotas[MAXQUOTAS];	/* pointer to quota files */
 	struct	ucred *um_cred[MAXQUOTAS];	/* quota file access cred */
 	time_t	um_btime[MAXQUOTAS];		/* block quota time limit */
@@ -99,26 +86,30 @@ struct ufsmount {
 	int64_t	um_savedmaxfilesize;		/* XXX - limit maxfilesize */
 	int	um_candelete;			/* devvp supports TRIM */
 	int	um_writesuspended;		/* suspension in progress */
-	int	(*um_balloc)(struct vnode *, off_t, int, struct ucred *, int, struct buf **);
+	u_int	um_trim_inflight;
+	struct taskqueue *um_trim_tq;
+	int	(*um_balloc)(struct vnode *, off_t, int, struct ucred *,
+		    int, struct buf **);
 	int	(*um_blkatoff)(struct vnode *, off_t, char **, struct buf **);
 	int	(*um_truncate)(struct vnode *, off_t, int, struct ucred *);
 	int	(*um_update)(struct vnode *, int);
-	int	(*um_valloc)(struct vnode *, int, struct ucred *, struct vnode **);
+	int	(*um_valloc)(struct vnode *, int, struct ucred *,
+		    struct vnode **);
 	int	(*um_vfree)(struct vnode *, ino_t, int);
 	void	(*um_ifree)(struct ufsmount *, struct inode *);
 	int	(*um_rdonly)(struct inode *);
 	void	(*um_snapgone)(struct inode *);
 };
 
-#define UFS_BALLOC(aa, bb, cc, dd, ee, ff) VFSTOUFS((aa)->v_mount)->um_balloc(aa, bb, cc, dd, ee, ff)
-#define UFS_BLKATOFF(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_blkatoff(aa, bb, cc, dd)
-#define UFS_TRUNCATE(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_truncate(aa, bb, cc, dd)
-#define UFS_UPDATE(aa, bb) VFSTOUFS((aa)->v_mount)->um_update(aa, bb)
-#define UFS_VALLOC(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_valloc(aa, bb, cc, dd)
-#define UFS_VFREE(aa, bb, cc) VFSTOUFS((aa)->v_mount)->um_vfree(aa, bb, cc)
-#define UFS_IFREE(aa, bb) ((aa)->um_ifree(aa, bb))
-#define	UFS_RDONLY(aa) ((aa)->i_ump->um_rdonly(aa))
-#define	UFS_SNAPGONE(aa) ((aa)->i_ump->um_snapgone(aa))
+#define	UFS_BALLOC(aa, bb, cc, dd, ee, ff) VFSTOUFS((aa)->v_mount)->um_balloc(aa, bb, cc, dd, ee, ff)
+#define	UFS_BLKATOFF(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_blkatoff(aa, bb, cc, dd)
+#define	UFS_TRUNCATE(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_truncate(aa, bb, cc, dd)
+#define	UFS_UPDATE(aa, bb) VFSTOUFS((aa)->v_mount)->um_update(aa, bb)
+#define	UFS_VALLOC(aa, bb, cc, dd) VFSTOUFS((aa)->v_mount)->um_valloc(aa, bb, cc, dd)
+#define	UFS_VFREE(aa, bb, cc) VFSTOUFS((aa)->v_mount)->um_vfree(aa, bb, cc)
+#define	UFS_IFREE(aa, bb) ((aa)->um_ifree(aa, bb))
+#define	UFS_RDONLY(aa) (ITOUMP(aa)->um_rdonly(aa))
+#define	UFS_SNAPGONE(aa) (ITOUMP(aa)->um_snapgone(aa))
 
 #define	UFS_LOCK(aa)	mtx_lock(&(aa)->um_lock)
 #define	UFS_UNLOCK(aa)	mtx_unlock(&(aa)->um_lock)
@@ -127,25 +118,25 @@ struct ufsmount {
 /*
  * Filesystem types
  */
-#define UFS1	1
-#define UFS2	2
+#define	UFS1	1
+#define	UFS2	2
 
 /*
  * Flags describing the state of quotas.
  */
 #define	QTF_OPENING	0x01			/* Q_QUOTAON in progress */
 #define	QTF_CLOSING	0x02			/* Q_QUOTAOFF in progress */
-#define QTF_64BIT	0x04			/* 64-bit quota file */
+#define	QTF_64BIT	0x04			/* 64-bit quota file */
 
 /* Convert mount ptr to ufsmount ptr. */
-#define VFSTOUFS(mp)	((struct ufsmount *)((mp)->mnt_data))
+#define	VFSTOUFS(mp)	((struct ufsmount *)((mp)->mnt_data))
 #define	UFSTOVFS(ump)	(ump)->um_mountp
 
 /*
  * Macros to access filesystem parameters in the ufsmount structure.
  * Used by ufs_bmap.
  */
-#define MNINDIR(ump)			((ump)->um_nindir)
+#define	MNINDIR(ump)			((ump)->um_nindir)
 #define	blkptrtodb(ump, b)		((b) << (ump)->um_bptrtodb)
 #define	is_sequential(ump, a, b)	((b) == (a) + ump->um_seqinc)
 #endif /* _KERNEL */

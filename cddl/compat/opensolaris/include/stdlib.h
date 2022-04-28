@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/cddl/compat/opensolaris/include/stdlib.h 234856 2012-04-30 23:12:16Z rmh $
+ * $FreeBSD$
  *
  */
 

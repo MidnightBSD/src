@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 2008, 2009 Yahoo!, Inc.
  * All rights reserved.
  *
@@ -26,13 +28,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/mfiutil/mfi_evt.c 237260 2012-06-19 06:18:42Z eadler $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <err.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -534,10 +537,12 @@ show_events(int ac, char **av)
 	struct mfi_evt_log_state info;
 	struct mfi_evt_list *list;
 	union mfi_evt filter;
+	bool first;
 	long val;
 	char *cp;
 	ssize_t size;
 	uint32_t seq, start, stop;
+	uint16_t locale;
 	uint8_t status;
 	int ch, error, fd, num_events, verbose;
 	u_int i;
@@ -578,12 +583,13 @@ show_events(int ac, char **av)
 			}
 			break;
 		case 'l':
-			if (parse_locale(optarg, &filter.members.locale) < 0) {
+			if (parse_locale(optarg, &locale) < 0) {
 				error = errno;
 				warn("Error parsing event locale");
 				close(fd);
 				return (error);
 			}
+			filter.members.locale = locale;
 			break;
 		case 'n':
 			val = strtol(optarg, &cp, 0);
@@ -640,7 +646,9 @@ show_events(int ac, char **av)
 		close(fd);
 		return (ENOMEM);
 	}
-	for (seq = start;;) {
+	first = true;
+	seq = start;
+	for (;;) {
 		if (mfi_get_events(fd, list, num_events, filter, seq,
 		    &status) < 0) {
 			error = errno;
@@ -650,8 +658,6 @@ show_events(int ac, char **av)
 			return (error);
 		}
 		if (status == MFI_STAT_NOT_FOUND) {
-			if (seq == start)
-				warnx("No matching events found");
 			break;
 		}
 		if (status != MFI_STAT_OK) {
@@ -669,13 +675,14 @@ show_events(int ac, char **av)
 			 * the case that our stop point is earlier in
 			 * the buffer than our start point.
 			 */
-			if (list->event[i].seq >= stop) {
+			if (list->event[i].seq > stop) {
 				if (start <= stop)
-					break;
+					goto finish;
 				else if (list->event[i].seq < start)
-					break;
+					goto finish;
 			}
 			mfi_decode_evt(fd, &list->event[i], verbose);
+			first = false;
 		}
 
 		/*
@@ -686,6 +693,9 @@ show_events(int ac, char **av)
 		seq = list->event[list->count - 1].seq + 1;
 			
 	}
+finish:
+	if (first)
+		warnx("No matching events found");
 
 	free(list);
 	close(fd);

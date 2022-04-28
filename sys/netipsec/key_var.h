@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/netipsec/key_var.h 254925 2013-08-26 18:16:05Z jhb $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: key_var.h,v 1.11 2001/09/12 23:05:07 sakane Exp $	*/
 
 /*-
@@ -46,7 +46,6 @@
 #define KEYCTL_ESP_AUTH			10
 #define KEYCTL_AH_KEYMIN		11
 #define KEYCTL_PREFERED_OLDSA		12
-#define KEYCTL_MAXID			13
 
 #ifdef _KERNEL
 #define _ARRAYLEN(p) (sizeof(p)/sizeof(p[0]))

@@ -77,7 +77,7 @@ static char sccsid[] = "@(#)cache.c	8.1 (Berkeley) 5/31/93";
 __RCSID("$NetBSD: pwcache.c,v 1.31 2010/03/23 20:28:59 drochner Exp $");
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libc-pwcache/pwcache.c 241731 2012-10-19 12:44:22Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 

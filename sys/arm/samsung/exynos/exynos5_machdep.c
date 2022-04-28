@@ -28,77 +28,57 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/samsung/exynos/exynos5_machdep.c 255967 2013-10-01 12:01:20Z br $");
+__FBSDID("$FreeBSD$");
 
-#define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/devmap.h>
 
 #include <vm/vm.h>
-#include <vm/pmap.h>
 
+#include <machine/armreg.h>
 #include <machine/bus.h>
-#include <machine/frame.h> /* For trapframe_t, used in <machine/machdep.h> */
 #include <machine/machdep.h>
-#include <machine/pmap.h>
-
-#include <dev/fdt/fdt_common.h>
-
-#define	DEVMAP_BOOTSTRAP_MAP_START 0xF0000000
+#include <machine/platform.h> 
 
 vm_offset_t
-initarm_lastaddr(void)
+platform_lastaddr(void)
 {
 
-	return (DEVMAP_BOOTSTRAP_MAP_START - ARM_NOCACHE_KVA_SIZE);
+	return (devmap_lastaddr());
 }
 
 void
-initarm_gpio_init(void)
+platform_probe_and_attach(void)
 {
+
 }
 
 void
-initarm_late_init(void)
+platform_gpio_init(void)
 {
+
 }
 
-#define FDT_DEVMAP_MAX	(1 + 2 + 1 + 1)	/* FIXME */
-static struct pmap_devmap fdt_devmap[FDT_DEVMAP_MAX] = {
-	{ 0, 0, 0, 0, 0, }
-};
+void
+platform_late_init(void)
+{
 
-/*
- * Construct pmap_devmap[] with DT-derived config data.
- */
+}
+
 int
 platform_devmap_init(void)
 {
-	int i;
 
-	i = 0;
-	fdt_devmap[i].pd_va = 0xf2C00000;
-	fdt_devmap[i].pd_pa = 0x12C00000;
-	fdt_devmap[i].pd_size = 0x100000;
-	fdt_devmap[i].pd_prot = VM_PROT_READ | VM_PROT_WRITE;
-	fdt_devmap[i].pd_cache = PTE_NOCACHE;
-	i++;
+	/* CHIP ID */
+	devmap_add_entry(0x10000000, 0x100000);
 
-	pmap_devmap_bootstrap_table = &fdt_devmap[0];
-	return (0);
-}
+	/* UART */
+	devmap_add_entry(0x12C00000, 0x100000);
 
-struct arm32_dma_range *
-bus_dma_get_range(void)
-{
-
-	return (NULL);
-}
-
-int
-bus_dma_get_range_nb(void)
-{
+	/* DWMMC */
+	devmap_add_entry(0x12200000, 0x100000);
 
 	return (0);
 }

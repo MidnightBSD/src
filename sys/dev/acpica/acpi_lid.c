@@ -28,9 +28,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_lid.c 246128 2013-01-30 18:01:20Z sbz $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_acpi.h"
+#include "opt_evdev.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -42,6 +43,11 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/acpica/acpi_lid.c 246128 2013-01-30 1
 
 #include <dev/acpica/acpivar.h>
 
+#ifdef EVDEV_SUPPORT
+#include <dev/evdev/input.h>
+#include <dev/evdev/evdev.h>
+#endif
+
 /* Hooks for the ACPI CA debugging infrastructure */
 #define _COMPONENT	ACPI_BUTTON
 ACPI_MODULE_NAME("LID")
@@ -50,7 +56,12 @@ struct acpi_lid_softc {
     device_t	lid_dev;
     ACPI_HANDLE	lid_handle;
     int		lid_status;	/* open or closed */
+#ifdef EVDEV_SUPPORT
+    struct evdev_dev *lid_evdev;
+#endif
 };
+
+ACPI_HANDLE acpi_lid_handle;
 
 ACPI_SERIAL_DECL(lid, "ACPI lid");
 
@@ -82,6 +93,33 @@ static devclass_t acpi_lid_devclass;
 DRIVER_MODULE(acpi_lid, acpi, acpi_lid_driver, acpi_lid_devclass, 0, 0);
 MODULE_DEPEND(acpi_lid, acpi, 1, 1, 1);
 
+static void
+acpi_lid_status_update(struct acpi_lid_softc *sc)
+{
+	ACPI_STATUS status;
+	int lid_status;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+	/*
+	 * Evaluate _LID and check the return value, update lid status.
+	 *	Zero:		The lid is closed
+	 *	Non-zero:	The lid is open
+	 */
+	status = acpi_GetInteger(sc->lid_handle, "_LID", &lid_status);
+	if (ACPI_FAILURE(status))
+		lid_status = 1;		/* assume lid is opened */
+
+	/* range check value */
+	sc->lid_status = lid_status ? 1 : 0;
+
+#ifdef EVDEV_SUPPORT
+	/* Notify evdev about lid status */
+	evdev_push_sw(sc->lid_evdev, SW_LID, lid_status ? 0 : 1);
+	evdev_sync(sc->lid_evdev);
+#endif
+}
+
 static int
 acpi_lid_probe(device_t dev)
 {
@@ -105,7 +143,21 @@ acpi_lid_attach(device_t dev)
 
     sc = device_get_softc(dev);
     sc->lid_dev = dev;
-    sc->lid_handle = acpi_get_handle(dev);
+    acpi_lid_handle = sc->lid_handle = acpi_get_handle(dev);
+
+#ifdef EVDEV_SUPPORT
+    /* Register evdev device before initial status update */
+    sc->lid_evdev = evdev_alloc();
+    evdev_set_name(sc->lid_evdev, device_get_desc(dev));
+    evdev_set_phys(sc->lid_evdev, device_get_nameunit(dev));
+    evdev_set_id(sc->lid_evdev, BUS_HOST, 0, 0, 1);
+    evdev_support_event(sc->lid_evdev, EV_SYN);
+    evdev_support_event(sc->lid_evdev, EV_SW);
+    evdev_support_sw(sc->lid_evdev, SW_LID);
+
+    if (evdev_register(sc->lid_evdev))
+        return (ENXIO);
+#endif
 
     /*
      * If a system does not get lid events, it may make sense to change
@@ -120,6 +172,17 @@ acpi_lid_attach(device_t dev)
     if (acpi_parse_prw(sc->lid_handle, &prw) == 0)
 	AcpiEnableGpe(prw.gpe_handle, prw.gpe_bit);
 
+    /* Get the initial lid status */
+    acpi_lid_status_update(sc);
+
+    /*
+     * Export the lid status
+     */
+    SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	SYSCTL_CHILDREN(device_get_sysctl_tree(dev)), OID_AUTO,
+	"state", CTLFLAG_RD, &sc->lid_status, 0,
+	"Device state (0 = closed, 1 = open)");
+
     return (0);
 }
 
@@ -132,6 +195,13 @@ acpi_lid_suspend(device_t dev)
 static int
 acpi_lid_resume(device_t dev)
 {
+    struct acpi_lid_softc	*sc;
+
+    sc = device_get_softc(dev);
+
+    /* Update lid status, if any */
+    acpi_lid_status_update(sc);
+
     return (0);
 }
 
@@ -140,21 +210,14 @@ acpi_lid_notify_status_changed(void *arg)
 {
     struct acpi_lid_softc	*sc;
     struct acpi_softc		*acpi_sc;
-    ACPI_STATUS			status;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     sc = (struct acpi_lid_softc *)arg;
     ACPI_SERIAL_BEGIN(lid);
 
-    /*
-     * Evaluate _LID and check the return value, update lid status.
-     *	Zero:		The lid is closed
-     *	Non-zero:	The lid is open
-     */
-    status = acpi_GetInteger(sc->lid_handle, "_LID", &sc->lid_status);
-    if (ACPI_FAILURE(status))
-	goto out;
+    /* Update lid status, if any */
+    acpi_lid_status_update(sc);
 
     acpi_sc = acpi_device_get_parent_softc(sc->lid_dev);
     if (acpi_sc == NULL)

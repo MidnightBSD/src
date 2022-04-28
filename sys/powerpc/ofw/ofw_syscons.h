@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_syscons.h 255904 2013-09-26 22:47:02Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #ifndef _OFW_SYSCONS_H_

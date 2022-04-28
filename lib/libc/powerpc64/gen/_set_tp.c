@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/lib/libc/powerpc64/gen/_set_tp.c 209878 2010-07-10 14:45:03Z nwhitehorn $
+ *	$FreeBSD$
  */
+#include "libc_private.h"
 
 void
 _set_tp(void *tpval)
 {
-	register void *tp __asm__("r13");
 
-	__asm __volatile("mr %0,%1" : "=r"(tp) : "r"((char*)tpval + 0x7010));
+	__asm __volatile("mr 13,%0" :: "r"((char*)tpval + 0x7010));
 }

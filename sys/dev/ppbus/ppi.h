@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ppbus/ppi.h 185003 2008-11-16 17:42:02Z jhb $
+ * $FreeBSD$
  *
  */
 #ifndef __PPI_H

@@ -1,7 +1,8 @@
-# $FreeBSD: release/10.0.0/sbin/hastd/Makefile 250503 2013-05-11 09:51:44Z trociny $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=hast
 PROG=	hastd
 SRCS=	activemap.c
 SRCS+=	control.c crc32.c
@@ -30,11 +31,9 @@ CFLAGS+=-DINET
 CFLAGS+=-DINET6
 .endif
 
-DPADD=	${LIBGEOM} ${LIBBSDXML} ${LIBSBUF} ${LIBL} ${LIBPTHREAD} ${LIBUTIL}
-LDADD=	-lgeom -lbsdxml -lsbuf -lpthread -lutil
+LIBADD=	geom pthread util
 .if ${MK_OPENSSL} != "no"
-DPADD+=	${LIBCRYPTO}
-LDADD+=	-lcrypto
+LIBADD+=	crypto
 CFLAGS+=-DHAVE_CRYPTO
 .endif
 

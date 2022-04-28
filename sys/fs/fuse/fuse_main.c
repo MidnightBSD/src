@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/fuse/fuse_main.c 241519 2012-10-13 23:54:26Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/module.h>
@@ -93,9 +93,9 @@ static struct vfsconf fuse_vfsconf = {
 };
 
 SYSCTL_INT(_vfs_fuse, OID_AUTO, kernelabi_major, CTLFLAG_RD,
-    0, FUSE_KERNEL_VERSION, "FUSE kernel abi major version");
+    SYSCTL_NULL_INT_PTR, FUSE_KERNEL_VERSION, "FUSE kernel abi major version");
 SYSCTL_INT(_vfs_fuse, OID_AUTO, kernelabi_minor, CTLFLAG_RD,
-    0, FUSE_KERNEL_MINOR_VERSION, "FUSE kernel abi minor version");
+    SYSCTL_NULL_INT_PTR, FUSE_KERNEL_MINOR_VERSION, "FUSE kernel abi minor version");
 
 /******************************
  *

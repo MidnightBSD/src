@@ -53,7 +53,7 @@
  *              Hans Verkuil <hverkuil@xs4all.nl>
  *		et al.
  *
- * $FreeBSD: release/10.0.0/sys/contrib/v4l/videodev2.h 253144 2013-07-10 10:40:52Z netchild $
+ * $FreeBSD$
  */
 #ifndef __LINUX_VIDEODEV2_H
 #define __LINUX_VIDEODEV2_H

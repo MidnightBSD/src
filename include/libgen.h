@@ -1,5 +1,5 @@
 /*	$OpenBSD: libgen.h,v 1.4 1999/05/28 22:00:22 espie Exp $	*/
-/*	$FreeBSD: release/10.0.0/include/libgen.h 197804 2009-10-06 14:05:57Z rwatson $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -29,22 +29,14 @@
  */
 
 #ifndef _LIBGEN_H_
-#define _LIBGEN_H_
+#define	_LIBGEN_H_
 
 #include <sys/cdefs.h>
 
 __BEGIN_DECLS
-
 char	*basename(const char *);
 char	*basename_r(const char *, char *);
 char	*dirname(const char *);
-#if 0
-char	*regcmp(const char *, ...);
-char	*regex(const char *, const char *, ...);
-
-extern char *__loc1;
-#endif
-
 __END_DECLS
 
-#endif /* _LIBGEN_H_ */
+#endif /* !_LIBGEN_H_ */

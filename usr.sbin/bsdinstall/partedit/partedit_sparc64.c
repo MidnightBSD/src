@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/partedit_sparc64.c 218799 2011-02-18 14:54:34Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <string.h>
@@ -42,6 +44,15 @@ is_scheme_bootable(const char *part_type) {
 	return (0);
 }
 
+int
+is_fs_bootable(const char *part_type, const char *fs)
+{
+	if (strcmp(fs, "freebsd-ufs") == 0 || strcmp(fs, "freebsd-zfs") == 0)
+		return (1);
+	return (0);
+}
+
+
 size_t
 bootpart_size(const char *part_type) {
 	/* No standalone boot partition */
@@ -50,14 +61,24 @@ bootpart_size(const char *part_type) {
 }
 
 const char *
+bootpart_type(const char *scheme) {
+	return ("freebsd-boot");
+}
+
+const char *
 bootcode_path(const char *part_type) {
 	return (NULL);
 }
-	
+
 const char *
-partcode_path(const char *part_type) {
-	if (strcmp(part_type, "VTOC8") == 0)
-		return ("/boot/boot1");
+partcode_path(const char *part_type, const char *fs_type) {
+	if (strcmp(part_type, "VTOC8") == 0) {
+		if (strcmp(fs_type, "ufs") == 0) {
+			return ("/boot/boot1");
+		} else if (strcmp(fs_type, "zfs") == 0) {
+			return ("/boot/zfsboot");
+		}
+	}
 	return (NULL);
 }
 

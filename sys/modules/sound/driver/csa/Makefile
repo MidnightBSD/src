@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/csa/Makefile 110498 2003-02-07 13:56:33Z nyan $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/pci
+.PATH: ${SRCTOP}/sys/dev/sound/pci
 
 KMOD=	snd_csa
-SRCS=	device_if.h bus_if.h pci_if.h
-SRCS+=	csa.c csapcm.c
+SRCS=	device_if.h bus_if.h mpufoi_if.h pci_if.h
+SRCS+=	csa.c csamidi.c csapcm.c
 
 .include <bsd.kmod.mk>

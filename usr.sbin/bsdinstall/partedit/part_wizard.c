@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
  *
@@ -23,13 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bsdinstall/partedit/part_wizard.c 245796 2013-01-22 17:06:28Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
+#include <sys/sysctl.h>
 #include <errno.h>
-#include <libutil.h>
 #include <inttypes.h>
+#include <libutil.h>
+#include <string.h>
 
 #include <libgeom.h>
 #include <dialog.h>
@@ -44,10 +48,17 @@ static char *boot_disk(struct gmesh *mesh);
 static char *wizard_partition(struct gmesh *mesh, const char *disk);
 
 int
-part_wizard(void) {
-	int error;
-	struct gmesh mesh;
+part_wizard(const char *fsreq)
+{
 	char *disk, *schemeroot;
+	const char *fstype;
+	struct gmesh mesh;
+	int error;
+
+	if (fsreq != NULL)
+		fstype = fsreq;
+	else
+		fstype = "ufs";
 
 startwizard:
 	error = geom_gettree(&mesh);
@@ -70,11 +81,11 @@ startwizard:
 	dlg_put_backtitle();
 	error = geom_gettree(&mesh);
 
-	error = wizard_makeparts(&mesh, schemeroot, 1);
+	error = wizard_makeparts(&mesh, schemeroot, fstype, 1);
 	if (error)
 		goto startwizard;
 	free(schemeroot);
-	
+
 	geom_deletetree(&mesh);
 
 	return (0);
@@ -106,9 +117,9 @@ boot_disk(struct gmesh *mesh)
 			LIST_FOREACH(pp, &gp->lg_provider, lg_provider) {
 				desc = type = NULL;
 				LIST_FOREACH(gc, &pp->lg_config, lg_config) {
-					if (strcmp(gc->lg_name, "type") == 0) 
+					if (strcmp(gc->lg_name, "type") == 0)
 						type = gc->lg_val;
-					if (strcmp(gc->lg_name, "descr") == 0) 
+					if (strcmp(gc->lg_name, "descr") == 0)
 						desc = gc->lg_val;
 				}
 
@@ -190,9 +201,9 @@ wizard_partition(struct gmesh *mesh, const char *disk)
 	struct gclass *classp;
 	struct ggeom *gpart = NULL;
 	struct gconfig *gc;
-	char message[512];
-	const char *scheme = NULL;
 	char *retval = NULL;
+	const char *scheme = NULL;
+	char message[512];
 	int choice;
 
 	LIST_FOREACH(classp, &mesh->lg_class, lg_class)
@@ -200,7 +211,7 @@ wizard_partition(struct gmesh *mesh, const char *disk)
 			break;
 
 	if (classp != NULL) {
-		LIST_FOREACH(gpart, &classp->lg_geom, lg_geom) 
+		LIST_FOREACH(gpart, &classp->lg_geom, lg_geom)
 			if (strcmp(gpart->lg_name, disk) == 0)
 				break;
 	}
@@ -248,8 +259,10 @@ query:
 			goto query;
 
 		gpart_destroy(gpart);
-		gpart_partition(disk, default_scheme());
-		scheme = default_scheme();
+		scheme = choose_part_type(default_scheme());
+		if (scheme == NULL)
+			return NULL;
+		gpart_partition(disk, scheme);
 	}
 
 	if (scheme == NULL || choice == 0) {
@@ -263,8 +276,10 @@ query:
 			gpart_destroy(gpart);
 		}
 
-		gpart_partition(disk, default_scheme());
-		scheme = default_scheme();
+		scheme = choose_part_type(default_scheme());
+		if (scheme == NULL)
+			return NULL;
+		gpart_partition(disk, scheme);
 	}
 
 	if (strcmp(scheme, "PC98") == 0 || strcmp(scheme, "MBR") == 0) {
@@ -282,21 +297,31 @@ query:
 }
 
 int
-wizard_makeparts(struct gmesh *mesh, const char *disk, int interactive)
+wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
+    int interactive)
 {
-	struct gmesh submesh;
 	struct gclass *classp;
 	struct ggeom *gp;
 	struct gprovider *pp;
-	intmax_t swapsize, available;
+	char *fsnames[] = {"freebsd-ufs", "freebsd-zfs"};
+	char *fsname;
+	struct gmesh submesh;
 	char swapsizestr[10], rootsizestr[10];
+	intmax_t swapsize, available;
 	int retval;
+
+	if (strcmp(fstype, "zfs") == 0) {
+		fsname = fsnames[1];
+	} else {
+		/* default to UFS */
+		fsname = fsnames[0];
+	}
 
 	LIST_FOREACH(classp, &mesh->lg_class, lg_class)
 		if (strcmp(classp->lg_name, "PART") == 0)
 			break;
 
-	LIST_FOREACH(gp, &classp->lg_geom, lg_geom) 
+	LIST_FOREACH(gp, &classp->lg_geom, lg_geom)
 		if (strcmp(gp->lg_name, disk) == 0)
 			break;
 
@@ -331,7 +356,7 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, int interactive)
 
 	geom_gettree(&submesh);
 	pp = provider_for_name(&submesh, disk);
-	gpart_create(pp, "freebsd-ufs", rootsizestr, "/", NULL, 0);
+	gpart_create(pp, fsname, rootsizestr, "/", NULL, 0);
 	geom_deletetree(&submesh);
 
 	geom_gettree(&submesh);
@@ -341,4 +366,3 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, int interactive)
 
 	return (0);
 }
-

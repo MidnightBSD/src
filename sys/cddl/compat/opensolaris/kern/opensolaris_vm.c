@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_vm.c 248084 2013-03-09 02:32:23Z attilio $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -40,6 +40,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/kern/opensolaris_
 const int zfs_vm_pagerret_bad = VM_PAGER_BAD;
 const int zfs_vm_pagerret_error = VM_PAGER_ERROR;
 const int zfs_vm_pagerret_ok = VM_PAGER_OK;
+const int zfs_vm_pagerput_sync = VM_PAGER_PUT_SYNC;
+const int zfs_vm_pagerput_inval = VM_PAGER_PUT_INVAL;
 
 void
 zfs_vmobject_assert_wlocked(vm_object_t object)

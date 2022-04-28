@@ -23,9 +23,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/sleep.9 254436 2013-08-17 01:17:51Z mjacob $
+.\" $FreeBSD$
 .\"
-.Dd February 19, 2013
+.Dd June 19, 2019
 .Dt SLEEP 9
 .Os
 .Sh NAME
@@ -34,10 +34,13 @@
 .Nm msleep_spin ,
 .Nm msleep_spin_sbt ,
 .Nm pause ,
+.Nm pause_sig ,
 .Nm pause_sbt ,
 .Nm tsleep ,
 .Nm tsleep_sbt ,
-.Nm wakeup
+.Nm wakeup ,
+.Nm wakeup_one ,
+.Nm wakeup_any
 .Nd wait for events
 .Sh SYNOPSIS
 .In sys/param.h
@@ -53,9 +56,11 @@
 .Ft int
 .Fn msleep_spin_sbt "void *chan" "struct mtx *mtx" "const char *wmesg" \
 "sbintime_t sbt" "sbintime_t pr" "int flags"
-.Ft void
+.Ft int
 .Fn pause "const char *wmesg" "int timo"
-.Ft void
+.Ft int
+.Fn pause_sig "const char *wmesg" "int timo"
+.Ft int
 .Fn pause_sbt "const char *wmesg" "sbintime_t sbt" "sbintime_t pr" \
  "int flags"
 .Ft int
@@ -67,23 +72,30 @@
 .Fn wakeup "void *chan"
 .Ft void
 .Fn wakeup_one "void *chan"
+.Ft void
+.Fn wakeup_any "void *chan"
 .Sh DESCRIPTION
 The functions
 .Fn tsleep ,
 .Fn msleep ,
 .Fn msleep_spin ,
 .Fn pause ,
+.Fn pause_sig ,
+.Fn pause_sbt ,
 .Fn wakeup ,
+.Fn wakeup_one ,
 and
-.Fn wakeup_one
+.Fn wakeup_any
 handle event-based thread blocking.
 If a thread must wait for an
 external event, it is put to sleep by
 .Fn tsleep ,
 .Fn msleep ,
 .Fn msleep_spin ,
+.Fn pause ,
+.Fn pause_sig ,
 or
-.Fn pause .
+.Fn pause_sbt .
 Threads may also wait using one of the locking primitive sleep routines
 .Xr mtx_sleep 9 ,
 .Xr rw_sleep 9 ,
@@ -130,19 +142,6 @@ possible, and
 is returned if the system call should be interrupted by the signal
 (return
 .Er EINTR ) .
-If the
-.Dv PBDRY
-flag is specified in addition to
-.Dv PCATCH ,
-then the sleeping thread is not stopped when
-.Dv SIGSTOP
-becomes pending
-or some other stop action occurs while it is sleeping.
-Instead, it is woken up, with the assumption
-that the stop will occur on reaching a stop
-point when returning to usermode.
-The flag should be used when the sleeping thread owns resources, for instance
-vnode locks, that should be released in a timely fashion.
 .Pp
 The parameter
 .Fa wmesg
@@ -258,14 +257,20 @@ function is a wrapper around
 .Fn tsleep
 that suspends execution of the current thread for the indicated timeout.
 The thread can not be awakened early by signals or calls to
-.Fn wakeup
+.Fn wakeup ,
+.Fn wakeup_one
 or
-.Fn wakeup_one .
+.Fn wakeup_any .
+The
+.Fn pause_sig
+function is a variant of
+.Fn pause
+which can be awakened early by signals.
 .Pp
 The
 .Fn wakeup_one
-function makes the first thread in the queue that is sleeping on the
-parameter
+function makes the first highest priority thread in the queue that is
+sleeping on the parameter
 .Fa chan
 runnable.
 This reduces the load when a large number of threads are sleeping on
@@ -293,6 +298,31 @@ to
 pay particular attention to ensure that no other threads wait on the
 same
 .Fa chan .
+.Pp
+The
+.Fn wakeup_any
+function is similar to
+.Fn wakeup_one ,
+except that it makes runnable last thread on the queue (sleeping less),
+ignoring fairness.
+It can be used when threads sleeping on the
+.Fa chan
+are known to be identical and there is no reason to be fair.
+.Pp
+If the timeout given by
+.Fa timo
+or
+.Fa sbt
+is based on an absolute real-time clock value,
+then the thread should copy the global
+.Va rtc_generation
+into its
+.Va td_rtcgen
+member before reading the RTC.
+If the real-time clock is adjusted, these functions will set
+.Va td_rtcgen
+to zero and return zero.
+The caller should reconsider its orientation with the new RTC value.
 .Sh RETURN VALUES
 When awakened by a call to
 .Fn wakeup
@@ -311,6 +341,9 @@ the
 .Fn msleep_spin ,
 .Fn tsleep ,
 and locking primitive sleep functions return 0.
+Zero can also be returned when the real-time clock is adjusted;
+see above regarding
+.Va td_rtcgen .
 Otherwise, a non-zero error code is returned.
 .Sh ERRORS
 .Fn msleep ,
@@ -380,7 +413,11 @@ The
 .Fn pause
 function appeared in
 .Fx 7.0 .
+The
+.Fn pause_sig
+function appeared in
+.Fx 12.0 .
 .Sh AUTHORS
 .An -nosplit
 This manual page was written by
-.An J\(:org Wunsch Aq joerg@FreeBSD.org .
+.An J\(:org Wunsch Aq Mt joerg@FreeBSD.org .

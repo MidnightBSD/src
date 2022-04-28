@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/powerpc/powermac/macio.c 253825 2013-07-31 01:13:29Z jhibbits $
+ * $FreeBSD$
  */
 
 /*
@@ -44,7 +44,6 @@
 
 #include <machine/bus.h>
 #include <machine/intr_machdep.h>
-#include <machine/pmap.h>
 #include <machine/resource.h>
 #include <machine/vmparam.h>
 
@@ -78,7 +77,8 @@ static int  macio_attach(device_t);
 static int  macio_print_child(device_t dev, device_t child);
 static void macio_probe_nomatch(device_t, device_t);
 static struct   resource *macio_alloc_resource(device_t, device_t, int, int *,
-					       u_long, u_long, u_long, u_int);
+					       rman_res_t, rman_res_t, rman_res_t,
+					       u_int);
 static int  macio_activate_resource(device_t, device_t, int, int,
 				    struct resource *);
 static int  macio_deactivate_resource(device_t, device_t, int, int,
@@ -201,10 +201,6 @@ macio_add_intr(phandle_t devnode, struct macio_devinfo *dinfo)
 		return;
 	}
 
-	if (OF_searchprop(devnode, "#interrupt-cells", &icells, sizeof(icells))
-	    <= 0)
-		icells = 1;
-
 	nintr = OF_getprop_alloc(devnode, "interrupts", sizeof(*intr), 
 		(void **)&intr);
 	if (nintr == -1) {
@@ -221,6 +217,10 @@ macio_add_intr(phandle_t devnode, struct macio_devinfo *dinfo)
 	    <= 0)
 		panic("Interrupt but no interrupt parent!\n");
 
+	if (OF_getprop(OF_node_from_xref(iparent), "#interrupt-cells", &icells,
+	    sizeof(icells)) <= 0)
+		icells = 1;
+
 	for (i = 0; i < nintr; i+=icells) {
 		u_int irq = MAP_IRQ(iparent, intr[i]);
 
@@ -236,12 +236,44 @@ macio_add_intr(phandle_t devnode, struct macio_devinfo *dinfo)
 static void
 macio_add_reg(phandle_t devnode, struct macio_devinfo *dinfo)
 {
-	struct	macio_reg *reg;
-	int	i, nreg;
+	struct		macio_reg *reg, *regp;
+	phandle_t 	child;
+	char		buf[8];
+	int		i, layout_id = 0, nreg, res;
 
 	nreg = OF_getprop_alloc(devnode, "reg", sizeof(*reg), (void **)&reg);
 	if (nreg == -1)
 		return;
+
+        /*
+         *  Some G5's have broken properties in the i2s-a area. If so we try
+         *  to fix it. Right now we know of two different cases, one for
+         *  sound layout-id 36 and the other one for sound layout-id 76.
+         *  What is missing is the base address for the memory addresses.
+         *  We take them from the parent node (i2s) and use the size
+         *  information from the child. 
+         */
+
+        if (reg[0].mr_base == 0) {
+		child = OF_child(devnode);
+		while (child != 0) {
+			res = OF_getprop(child, "name", buf, sizeof(buf));
+			if (res > 0 && strcmp(buf, "sound") == 0)
+				break;
+			child = OF_peer(child);
+		}
+
+                res = OF_getprop(child, "layout-id", &layout_id,
+				sizeof(layout_id));
+
+                if (res > 0 && (layout_id == 36 || layout_id == 76)) {
+                        res = OF_getprop_alloc(OF_parent(devnode), "reg",
+						sizeof(*regp), (void **)&regp);
+                        reg[0] = regp[0];
+                        reg[1].mr_base = regp[1].mr_base;
+                        reg[2].mr_base = regp[1].mr_base + reg[1].mr_size;
+                }
+        } 
 
 	for (i = 0; i < nreg; i++) {
 		resource_list_add(&dinfo->mdi_resources, SYS_RES_MEMORY, i,
@@ -284,6 +316,7 @@ macio_attach(device_t dev)
 	phandle_t  subchild;
         device_t cdev;
         u_int reg[3];
+	char compat[32];
 	int error, quirks;
 
 	sc = device_get_softc(dev);
@@ -296,6 +329,9 @@ macio_attach(device_t dev)
 		       reg, sizeof(reg)) < (ssize_t)sizeof(reg)) {
 		return (ENXIO);
 	}
+
+	/* Used later to see if we have to enable the I2S part. */
+	OF_getprop(root, "compatible", compat, sizeof(compat));
 
 	sc->sc_base = reg[2];
 	sc->sc_size = MACIO_REG_SIZE;
@@ -378,6 +414,21 @@ macio_attach(device_t dev)
 			
 			bus_write_4(sc->sc_memr, HEATHROW_FCR, fcr);
 		}
+
+		/*
+		 * Make sure the I2S0 and the I2S0_CLK are enabled.
+		 * On certain G5's they are not.
+		 */
+		if ((strcmp(ofw_bus_get_name(cdev), "i2s") == 0) &&
+		    (strcmp(compat, "K2-Keylargo") == 0)) {
+
+			uint32_t fcr1;
+
+			fcr1 = bus_read_4(sc->sc_memr, KEYLARGO_FCR1);
+			fcr1 |= FCR1_I2S0_CLK_ENABLE | FCR1_I2S0_ENABLE;
+			bus_write_4(sc->sc_memr, KEYLARGO_FCR1, fcr1);
+		}
+
 	}
 
 	return (bus_generic_attach(dev));
@@ -396,8 +447,8 @@ macio_print_child(device_t dev, device_t child)
 
         retval += bus_print_child_header(dev, child);
 
-        retval += resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#lx");
-        retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+        retval += resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#jx");
+        retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%jd");
 
         retval += bus_print_child_footer(dev, child);
 
@@ -419,8 +470,8 @@ macio_probe_nomatch(device_t dev, device_t child)
 		if ((type = ofw_bus_get_type(child)) == NULL)
 			type = "(unknown)";
 		device_printf(dev, "<%s, %s>", type, ofw_bus_get_name(child));
-		resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#lx");
-		resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+		resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#jx");
+		resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%jd");
 		printf(" (no driver attached)\n");
 	}
 }
@@ -428,7 +479,8 @@ macio_probe_nomatch(device_t dev, device_t child)
 
 static struct resource *
 macio_alloc_resource(device_t bus, device_t child, int type, int *rid,
-		     u_long start, u_long end, u_long count, u_int flags)
+		     rman_res_t start, rman_res_t end, rman_res_t count,
+		     u_int flags)
 {
 	struct		macio_softc *sc;
 	int		needactivate;

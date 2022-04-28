@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/age/if_agereg.h 190499 2009-03-28 07:39:35Z yongari $
+ * $FreeBSD$
  */
 
 #ifndef	_IF_AGEREG_H

@@ -36,7 +36,7 @@
  *
  *	@(#)ar.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: release/10.0.0/include/ar.h 203964 2010-02-16 19:39:50Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _AR_H_

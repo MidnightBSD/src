@@ -1,6 +1,8 @@
-# $FreeBSD: release/10.0.0/usr.sbin/traceroute/Makefile 216184 2010-12-04 14:19:27Z uqs $
+# $FreeBSD$
 
-TRACEROUTE_DISTDIR?= ${.CURDIR}/../../contrib/traceroute
+.include <src.opts.mk>
+
+TRACEROUTE_DISTDIR?= ${SRCTOP}/contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
 PROG=	traceroute
@@ -13,7 +15,7 @@ CLEANFILES=	version.c
 CFLAGS+= -DHAVE_SYS_SELECT_H=1 -DHAVE_SYS_SOCKIO_H=1 \
 	 -DHAVE_NET_ROUTE_H=1 -DHAVE_NET_IF_DL_H=1 \
 	 -DHAVE_STRERROR=1 -DHAVE_USLEEP=1 \
-	 -DHAVE_SYS_SYSCTL_H=1 \
+	 -DHAVE_SYS_SYSCTL_H=1 -DBYTESWAP_IP_HDR=1 \
 	 -DHAVE_SETLINEBUF=1 -DHAVE_RAW_OPTIONS=1 \
 	 -DHAVE_SOCKADDR_SA_LEN=1 -DHAVE_ICMP_NEXTMTU=1
 .if !defined(TRACEROUTE_NO_IPSEC)
@@ -25,8 +27,13 @@ CFLAGS+= -DIPSEC
 # CFLAGS+= -DSANE_PRECISION
 
 .if !defined(TRACEROUTE_NO_IPSEC)
-DPADD=	${LIBIPSEC}
-LDADD=	-lipsec
+LIBADD+=	ipsec
+.endif
+
+.if ${MK_CASPER} != "no"
+LIBADD+=	casper
+LIBADD+=	cap_dns
+CFLAGS+=-DHAVE_LIBCASPER
 .endif
 
 CFLAGS+= -I${TRACEROUTE_DISTDIR}

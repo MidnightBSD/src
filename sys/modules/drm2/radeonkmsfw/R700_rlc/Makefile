@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/drm2/radeonkmsfw/R700_rlc/Makefile 254885 2013-08-25 19:37:15Z dumbbell $
+# $FreeBSD$
 
 KMOD=	radeonkmsfw_R700_rlc
 IMG=	R700_rlc

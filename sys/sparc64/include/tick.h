@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/tick.h 214071 2010-10-19 19:44:05Z marius $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_TICK_H_

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_wdog.c 211476 2010-08-19 02:03:12Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,7 +92,7 @@ ar71xx_wdog_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Atheros AR71XX watchdog timer");
-	return (0);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static void

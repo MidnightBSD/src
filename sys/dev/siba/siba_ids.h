@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/siba/siba_ids.h 203319 2010-01-31 21:18:22Z weongyo $
+ * $FreeBSD$
  */
 
 #ifndef _SIBA_SIBA_IDS_H_

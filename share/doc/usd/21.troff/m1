@@ -36,7 +36,7 @@
 .\"
 .\"	@(#)m1	8.1 (Berkeley) 8/14/93
 .\"
-.\" $FreeBSD: release/10.0.0/share/doc/usd/21.troff/m1 108533 2003-01-01 18:49:04Z schweikh $
+.\" $FreeBSD$
 .nr p 0 1
 .tr |
 .tr ~|

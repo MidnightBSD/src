@@ -1,4 +1,4 @@
-$FreeBSD: release/10.0.0/contrib/xz/FREEBSD-upgrade 223935 2011-07-11 14:15:27Z mm $
+$FreeBSD$
 
 xz
 
@@ -15,6 +15,9 @@ For the import files and directories were pruned by:
 sh -c 'for F in `cat FREEBSD-Xlist | grep -v FreeBSD`; do rm -rf ./$F ; done'
 
 You may check if there are any new files that we don't need.
+
+You should run ``configure'' to make sure you use a more recent
+config.h.  Running ``make check'' in the xz source tree is also useful.
 
 The instructions for importing new release and merging to HEAD can be found
 at FreeBSD wiki:

@@ -1,10 +1,10 @@
-# $FreeBSD: release/10.0.0/sbin/geom/class/raid/Makefile 219974 2011-03-24 21:31:32Z mav $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../misc
+PACKAGE=runtime
+.PATH: ${.CURDIR:H:H}/misc
 
 GEOM_CLASS=	raid
 
-DPADD=	${LIBMD}
-LDADD=	-lmd
+LIBADD=	md
 
 .include <bsd.lib.mk>

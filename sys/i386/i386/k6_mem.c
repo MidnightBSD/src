@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/i386/i386/k6_mem.c 189903 2009-03-17 00:48:11Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -78,7 +78,7 @@ static __inline int
 k6_mrmake(struct mem_range_desc *desc, u_int32_t *mtrr)
 {
 	u_int32_t len = 0, wc, uc;
-	register int bit;
+	int bit;
 
 	if (desc->mr_base &~ 0xfffe0000)
 		return (EINVAL);

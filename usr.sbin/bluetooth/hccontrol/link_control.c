@@ -1,5 +1,7 @@
-/*
+/*-
  * link_control.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2001-2002 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,9 +28,10 @@
  * SUCH DAMAGE.
  *
  * $Id: link_control.c,v 1.4 2003/08/18 19:19:54 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/hccontrol/link_control.c 250460 2013-05-10 16:41:26Z eadler $
+ * $FreeBSD$
  */
 
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <stdio.h>

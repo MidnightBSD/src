@@ -1,9 +1,9 @@
-# $FreeBSD: release/10.0.0/sys/modules/siba_bwn/Makefile 203319 2010-01-31 21:18:22Z weongyo $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/siba
+.PATH: ${SRCTOP}/sys/dev/siba
 
 KMOD=	siba_bwn
 SRCS=	siba_core.c siba_bwn.c sibareg.h sibavar.h
-SRCS+=	device_if.h bus_if.h pci_if.h
+SRCS+=	device_if.h bus_if.h pci_if.h opt_siba.h
 
 .include <bsd.kmod.mk>

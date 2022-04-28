@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/usr.sbin/gstat/gstat.8 189739 2009-03-12 13:17:46Z maxim $
+.\" $FreeBSD$
 .\"
-.Dd March 12, 2009
+.Dd November 10, 2016
 .Dt GSTAT 8
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd print statistics about GEOM disks
 .Sh SYNOPSIS
 .Nm
-.Op Fl abcd
+.Op Fl abBcdops
 .Op Fl f Ar filter
 .Op Fl I Ar interval
 .Sh DESCRIPTION
@@ -50,6 +50,10 @@ Only display providers that are at least 0.1% busy.
 Batch mode.
 Collect numbers, print and exit.
 Default if stdout is not a tty.
+.It Fl B
+Endless batch mode.
+Same as batch mode, but does not exit after collecting
+the first set of data.
 .It Fl c
 Enable display of
 .Xr geom 4
@@ -69,6 +73,11 @@ Only devices with the names matching
 will be displayed.
 The format of the regular expression is described in
 .Xr re_format 7 .
+.It Fl o
+Enable display of statistics for other operations
+.Pq Dv BIO_FLUSH .
+.It Fl s
+Enable blocks' size statistics.
 .It Fl I Ar interval
 Refresh the
 .Nm
@@ -81,6 +90,8 @@ or
 .Cm us
 (the default) indicates that the update interval is specified in
 seconds, milliseconds, or microseconds, respectively.
+.It Fl p
+Only display physical providers (those with rank of 1).
 .El
 .Sh EXIT STATUS
 .Ex -std

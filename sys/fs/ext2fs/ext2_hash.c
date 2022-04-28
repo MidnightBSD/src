@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/ext2fs/ext2_hash.c 254104 2013-08-08 22:07:59Z pfg $
+ * $FreeBSD$
  */
 
 /*
@@ -192,14 +192,14 @@ ext2_legacy_hash(const char *name, int len, int unsigned_char)
 
 static void
 ext2_prep_hashbuf(const char *src, int slen, uint32_t *dst, int dlen,
-	     int unsigned_char)
+    int unsigned_char)
 {
 	uint32_t padding = slen | (slen << 8) | (slen << 16) | (slen << 24);
 	uint32_t buf_val;
-	int len, i;
-	int buf_byte;
 	const unsigned char *ubuf = (const unsigned char *)src;
 	const signed char *sbuf = (const signed char *)src;
+	int len, i;
+	int buf_byte;
 
 	if (slen > dlen)
 		len = dlen;
@@ -240,8 +240,8 @@ ext2_prep_hashbuf(const char *src, int slen, uint32_t *dst, int dlen,
 
 int
 ext2_htree_hash(const char *name, int len,
-		uint32_t *hash_seed, int hash_version,
-		uint32_t *hash_major, uint32_t *hash_minor)
+    uint32_t *hash_seed, int hash_version,
+    uint32_t *hash_major, uint32_t *hash_minor)
 {
 	uint32_t hash[4];
 	uint32_t data[8];
@@ -265,6 +265,7 @@ ext2_htree_hash(const char *name, int len,
 	switch (hash_version) {
 	case EXT2_HTREE_TEA_UNSIGNED:
 		unsigned_char = 1;
+		/* FALLTHROUGH */
 	case EXT2_HTREE_TEA:
 		while (len > 0) {
 			ext2_prep_hashbuf(name, len, data, 16, unsigned_char);
@@ -277,11 +278,13 @@ ext2_htree_hash(const char *name, int len,
 		break;
 	case EXT2_HTREE_LEGACY_UNSIGNED:
 		unsigned_char = 1;
+		/* FALLTHROUGH */
 	case EXT2_HTREE_LEGACY:
 		major = ext2_legacy_hash(name, len, unsigned_char);
 		break;
 	case EXT2_HTREE_HALF_MD4_UNSIGNED:
 		unsigned_char = 1;
+		/* FALLTHROUGH */
 	case EXT2_HTREE_HALF_MD4:
 		while (len > 0) {
 			ext2_prep_hashbuf(name, len, data, 32, unsigned_char);
@@ -289,8 +292,8 @@ ext2_htree_hash(const char *name, int len,
 			len -= 32;
 			name += 32;
 		}
-		major = hash[0];
-		minor = hash[1];
+		major = hash[1];
+		minor = hash[2];
 		break;
 	default:
 		goto error;

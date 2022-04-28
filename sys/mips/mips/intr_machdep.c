@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/intr_machdep.c 233318 2012-03-22 17:47:52Z gonzo $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_hwpmc_hooks.h"
 

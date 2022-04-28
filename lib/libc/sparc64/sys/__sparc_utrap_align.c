@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/sys/__sparc_utrap_align.c 96548 2002-05-13 22:48:01Z jake $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <machine/cpufunc.h>

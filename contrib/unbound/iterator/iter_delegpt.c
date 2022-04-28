@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -47,6 +47,8 @@
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
 #include "util/net_help.h"
+#include "sldns/rrdef.h"
+#include "sldns/sbuffer.h"
 
 struct delegpt* 
 delegpt_create(struct regional* region)
@@ -70,8 +72,9 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		return NULL;
 	copy->bogus = dp->bogus;
 	copy->has_parent_side_NS = dp->has_parent_side_NS;
+	copy->ssl_upstream = dp->ssl_upstream;
 	for(ns = dp->nslist; ns; ns = ns->next) {
-		if(!delegpt_add_ns(copy, region, ns->name, (int)ns->lame))
+		if(!delegpt_add_ns(copy, region, ns->name, ns->lame))
 			return NULL;
 		copy->nslist->resolved = ns->resolved;
 		copy->nslist->got4 = ns->got4;
@@ -81,7 +84,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
 		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen, 
-			a->bogus, a->lame))
+			a->bogus, a->lame, a->tls_auth_name))
 			return NULL;
 	}
 	return copy;
@@ -98,7 +101,7 @@ delegpt_set_name(struct delegpt* dp, struct regional* region, uint8_t* name)
 
 int 
 delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
-	int lame)
+	uint8_t lame)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -119,7 +122,7 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
-	ns->lame = (uint8_t)lame;
+	ns->lame = lame;
 	ns->done_pside4 = 0;
 	ns->done_pside6 = 0;
 	return ns->name != 0;
@@ -145,7 +148,9 @@ delegpt_find_addr(struct delegpt* dp, struct sockaddr_storage* addr,
 {
 	struct delegpt_addr* p = dp->target_list;
 	while(p) {
-		if(sockaddr_cmp_addr(addr, addrlen, &p->addr, p->addrlen)==0) {
+		if(sockaddr_cmp_addr(addr, addrlen, &p->addr, p->addrlen)==0
+			&& ((struct sockaddr_in*)addr)->sin_port ==
+			   ((struct sockaddr_in*)&p->addr)->sin_port) {
 			return p;
 		}
 		p = p->next_target;
@@ -156,7 +161,7 @@ delegpt_find_addr(struct delegpt* dp, struct sockaddr_storage* addr,
 int 
 delegpt_add_target(struct delegpt* dp, struct regional* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int bogus, int lame)
+	socklen_t addrlen, uint8_t bogus, uint8_t lame)
 {
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
 	log_assert(!dp->dp_type_mlc);
@@ -171,13 +176,13 @@ delegpt_add_target(struct delegpt* dp, struct regional* region,
 		if(ns->got4 && ns->got6)
 			ns->resolved = 1;
 	}
-	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame);
+	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame, NULL);
 }
 
 int 
 delegpt_add_addr(struct delegpt* dp, struct regional* region, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, 
-	int lame)
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus, 
+	uint8_t lame, char* tls_auth_name)
 {
 	struct delegpt_addr* a;
 	log_assert(!dp->dp_type_mlc);
@@ -204,6 +209,14 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	a->attempts = 0;
 	a->bogus = bogus;
 	a->lame = lame;
+	a->dnsseclame = 0;
+	if(tls_auth_name) {
+		a->tls_auth_name = regional_strdup(region, tls_auth_name);
+		if(!a->tls_auth_name)
+			return 0;
+	} else {
+		a->tls_auth_name = NULL;
+	}
 	return 1;
 }
 
@@ -270,11 +283,16 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 			(ns->done_pside6?" PSIDE_AAAA":""));
 		}
 		for(a = dp->target_list; a; a = a->next_target) {
+			char s[128];
 			const char* str = "  ";
 			if(a->bogus && a->lame) str = "  BOGUS ADDR_LAME ";
 			else if(a->bogus) str = "  BOGUS ";
 			else if(a->lame) str = "  ADDR_LAME ";
-			log_addr(VERB_ALGO, str, &a->addr, a->addrlen);
+			if(a->tls_auth_name)
+				snprintf(s, sizeof(s), "%s[%s]", str,
+					a->tls_auth_name);
+			else snprintf(s, sizeof(s), "%s", str);
+			log_addr(VERB_ALGO, s, &a->addr, a->addrlen);
 		}
 	}
 }
@@ -376,7 +394,7 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 
 int 
 delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
-        struct ub_packed_rrset_key* ns_rrset, int lame)
+        struct ub_packed_rrset_key* ns_rrset, uint8_t lame)
 {
 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
 		ns_rrset->entry.data;
@@ -387,7 +405,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 	for(i=0; i<nsdata->count; i++) {
 		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
 		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) !=
-			(size_t)ldns_read_uint16(nsdata->rr_data[i]))
+			(size_t)sldns_read_uint16(nsdata->rr_data[i]))
 			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
 		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame))
@@ -398,7 +416,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
-	struct ub_packed_rrset_key* ak, int lame)
+	struct ub_packed_rrset_key* ak, uint8_t lame)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
         size_t i;
@@ -422,7 +440,7 @@ delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
-	struct ub_packed_rrset_key* ak, int lame)
+	struct ub_packed_rrset_key* ak, uint8_t lame)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
         size_t i;
@@ -446,7 +464,7 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset(struct delegpt* dp, struct regional* region,
-        struct ub_packed_rrset_key* rrset, int lame)
+        struct ub_packed_rrset_key* rrset, uint8_t lame)
 {
 	if(!rrset)
 		return 1;
@@ -533,6 +551,7 @@ void delegpt_free_mlc(struct delegpt* dp)
 	a = dp->target_list;
 	while(a) {
 		na = a->next_target;
+		free(a->tls_auth_name);
 		free(a);
 		a = na;
 	}
@@ -548,7 +567,7 @@ int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name)
 	return (dp->name != NULL);
 }
 
-int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame)
+int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -579,7 +598,7 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame)
 }
 
 int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
-	socklen_t addrlen, int bogus, int lame)
+	socklen_t addrlen, uint8_t bogus, uint8_t lame, char* tls_auth_name)
 {
 	struct delegpt_addr* a;
 	log_assert(dp->dp_type_mlc);
@@ -605,11 +624,22 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	a->attempts = 0;
 	a->bogus = bogus;
 	a->lame = lame;
+	a->dnsseclame = 0;
+	if(tls_auth_name) {
+		a->tls_auth_name = strdup(tls_auth_name);
+		if(!a->tls_auth_name) {
+			free(a);
+			return 0;
+		}
+	} else {
+		a->tls_auth_name = NULL;
+	}
 	return 1;
 }
 
 int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame)
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t bogus,
+	uint8_t lame)
 {
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
 	log_assert(dp->dp_type_mlc);
@@ -624,7 +654,7 @@ int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
 		if(ns->got4 && ns->got6)
 			ns->resolved = 1;
 	}
-	return delegpt_add_addr_mlc(dp, addr, addrlen, bogus, lame);
+	return delegpt_add_addr_mlc(dp, addr, addrlen, bogus, lame, NULL);
 }
 
 size_t delegpt_get_mem(struct delegpt* dp)

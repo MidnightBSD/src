@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2003,2004 Joseph Koshy
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmccontrol/pmccontrol.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -141,16 +143,14 @@ pmcc_do_enable_disable(struct pmcc_op_list *op_list)
 			err(EX_OSERR,
 			    "Unable to determine the number of PMCs in CPU %d",
 			    c);
-		npmc = t > npmc ? t : npmc;
+		npmc = MAX(t, npmc);
 	}
 
 	if (npmc == 0)
 		errx(EX_CONFIG, "No PMCs found");
 
-	if ((map = malloc(npmc * ncpu)) == NULL)
+	if ((map = calloc(npmc, ncpu)) == NULL)
 		err(EX_SOFTWARE, "Out of memory");
-
-	(void) memset(map, PMCC_OP_IGNORE, npmc*ncpu);
 
 	error = 0;
 	STAILQ_FOREACH(np, op_list, op_next) {

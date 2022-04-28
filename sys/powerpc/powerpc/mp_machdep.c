@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/mp_machdep.c 255417 2013-09-09 12:49:19Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powerpc/mp_machdep.c 255417 2013-
 #include <machine/pcb.h>
 #include <machine/platform.h>
 #include <machine/md_var.h>
+#include <machine/setjmp.h>
 #include <machine/smp.h>
 
 #include "pic_if.h"
@@ -70,8 +71,6 @@ struct pcb stoppcbs[MAXCPU];
 void
 machdep_ap_bootstrap(void)
 {
-	/* Set up important bits on the CPU (HID registers, etc.) */
-	cpudep_ap_setup();
 
 	/* Set PIR */
 	PCPU_SET(pir, mfspr(SPR_PIR));
@@ -114,20 +113,16 @@ cpu_mp_setmaxid(void)
 	int error;
 
 	mp_ncpus = 0;
+	mp_maxid = 0;
 	error = platform_smp_first_cpu(&cpuref);
 	while (!error) {
 		mp_ncpus++;
+		mp_maxid = max(cpuref.cr_cpuid, mp_maxid);
 		error = platform_smp_next_cpu(&cpuref);
 	}
 	/* Sanity. */
 	if (mp_ncpus == 0)
 		mp_ncpus = 1;
-
-	/*
-	 * Set the largest cpuid we're going to use. This is necessary
-	 * for VM initialization.
-	 */
-	mp_maxid = min(mp_ncpus, MAXCPU) - 1;
 }
 
 int
@@ -213,6 +208,9 @@ cpu_mp_unleash(void *dummy)
 
 	cpus = 0;
 	smp_cpus = 0;
+#ifdef BOOKE
+	tlb1_ap_prep();
+#endif
 	STAILQ_FOREACH(pc, &cpuhead, pc_allcpu) {
 		cpus++;
 		if (!pc->pc_bsp) {
@@ -267,7 +265,7 @@ cpu_mp_unleash(void *dummy)
 	/* Let the APs get into the scheduler */
 	DELAY(10000);
 
-	smp_active = 1;
+	/* XXX Atomic set operation? */
 	smp_started = 1;
 }
 
@@ -336,6 +334,7 @@ ipi_send(struct pcpu *pc, int ipi)
 	    pc, pc->pc_cpuid, ipi);
 
 	atomic_set_32(&pc->pc_ipimask, (1 << ipi));
+	powerpc_sync();
 	PIC_IPI(root_pic, pc->pc_cpuid);
 
 	CTR1(KTR_SMP, "%s: sent", __func__);

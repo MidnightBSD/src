@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2008 Poul-Henning Kamp
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/fifolog/lib/fifolog_write_poll.c 219123 2011-03-01 08:52:10Z phk $
+ * $FreeBSD$
  */
 
 #include <assert.h>
@@ -45,7 +47,7 @@
 static int fifolog_write_gzip(struct fifolog_writer *f, time_t now);
 
 #define ALLOC(ptr, size) do {                   \
-	(*(ptr)) = calloc(size, 1);             \
+	(*(ptr)) = calloc(1, size);             \
 	assert(*(ptr) != NULL);                 \
 } while (0)
 

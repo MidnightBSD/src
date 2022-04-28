@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/macio/davbusreg.h 187692 2009-01-25 18:20:15Z nwhitehorn $
+ * $FreeBSD$
  */
 
 /*

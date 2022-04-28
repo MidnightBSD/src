@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/adb/adb_bus.c 199888 2009-11-28 17:48:25Z nwhitehorn $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

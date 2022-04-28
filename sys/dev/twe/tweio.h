@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: release/10.0.0/sys/dev/twe/tweio.h 142025 2005-02-17 19:05:42Z vkashyap $
+ *	$FreeBSD$
  */
 
 

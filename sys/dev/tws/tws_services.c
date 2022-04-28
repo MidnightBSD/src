@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/tws/tws_services.c 226887 2011-10-28 17:53:34Z delphij $
+ * $FreeBSD$
  */
 
 #include <dev/tws/tws.h>
@@ -395,7 +395,6 @@ tws_print_stats(void *arg)
                                       , sc->stats.num_intrs);
     TWS_TRACE(sc, "reqs(ioctls, scsi)", sc->stats.ioctls
                                       , sc->stats.scsi_ios);
-    timeout(tws_print_stats, sc, 300*hz);
-
+    callout_reset(&sc->stats_timer, 300 * hz, tws_print_stats, sc);
 }
 /* --------------------- misc service end --------------------- */

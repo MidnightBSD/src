@@ -1,6 +1,6 @@
 #! /bin/sh
 # Emulate nroff with groff.
-# $FreeBSD: release/10.0.0/contrib/groff/src/roff/nroff/nroff.sh 151503 2005-10-20 10:53:15Z ru $
+# $FreeBSD$
 
 prog="$0"
 # Default device.

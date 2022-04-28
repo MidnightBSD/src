@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/syscons/Makefile 211690 2010-08-23 06:13:29Z imp $
+# $FreeBSD$
 
 SUBDIR=	${_apm} \
 	${_beastie} \
@@ -9,6 +9,7 @@ SUBDIR=	${_apm} \
 	${_fire} \
 	green \
 	${_logo} \
+	${_plasma} \
 	${_rain} \
 	${_snake} \
 	${_star} \
@@ -25,6 +26,7 @@ _daemon=	daemon
 _dragon=	dragon
 _fire=		fire
 _logo=		logo
+_plasma=	plasma
 _rain=		rain
 _snake=		snake
 _star=		star

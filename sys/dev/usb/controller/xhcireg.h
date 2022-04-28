@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/controller/xhcireg.h 251252 2013-06-02 12:00:16Z hselasky $ */
+/* $FreeBSD$ */
 
 /*-
  * Copyright (c) 2010 Hans Petter Selasky. All rights reserved.
@@ -35,7 +35,9 @@
 #define	PCI_XHCI_FLADJ		0x61	/* RW frame length adjust */
 
 #define	PCI_XHCI_INTEL_XUSB2PR	0xD0	/* Intel USB2 Port Routing */
+#define	PCI_XHCI_INTEL_USB2PRM	0xD4	/* Intel USB2 Port Routing Mask */
 #define	PCI_XHCI_INTEL_USB3_PSSEN 0xD8	/* Intel USB3 Port SuperSpeed Enable */
+#define	PCI_XHCI_INTEL_USB3PRM	0xDC	/* Intel USB3 Port Routing Mask */
 
 /* XHCI capability registers */
 #define	XHCI_CAPLENGTH		0x00	/* RO capability */
@@ -43,16 +45,16 @@
 #define	XHCI_HCIVERSION		0x02	/* RO Interface version number */
 #define	XHCI_HCIVERSION_0_9	0x0090	/* xHCI version 0.9 */
 #define	XHCI_HCIVERSION_1_0	0x0100	/* xHCI version 1.0 */
-#define	XHCI_HCSPARAMS1		0x04	/* RO structual parameters 1 */
+#define	XHCI_HCSPARAMS1		0x04	/* RO structural parameters 1 */
 #define	XHCI_HCS1_DEVSLOT_MAX(x)((x) & 0xFF)
 #define	XHCI_HCS1_IRQ_MAX(x)	(((x) >> 8) & 0x3FF)
 #define	XHCI_HCS1_N_PORTS(x)	(((x) >> 24) & 0xFF)
-#define	XHCI_HCSPARAMS2		0x08	/* RO structual parameters 2 */
+#define	XHCI_HCSPARAMS2		0x08	/* RO structural parameters 2 */
 #define	XHCI_HCS2_IST(x)	((x) & 0xF)
 #define	XHCI_HCS2_ERST_MAX(x)	(((x) >> 4) & 0xF)
-#define	XHCI_HCS2_SPR(x)	(((x) >> 24) & 0x1)
-#define	XHCI_HCS2_SPB_MAX(x)	(((x) >> 27) & 0x7F)
-#define	XHCI_HCSPARAMS3		0x0C	/* RO structual parameters 3 */
+#define	XHCI_HCS2_SPR(x)	(((x) >> 26) & 0x1)
+#define	XHCI_HCS2_SPB_MAX(x)	((((x) >> 16) & 0x3E0) | (((x) >> 27) & 0x1F))
+#define	XHCI_HCSPARAMS3		0x0C	/* RO structural parameters 3 */
 #define	XHCI_HCS3_U1_DEL(x)	((x) & 0xFF)
 #define	XHCI_HCS3_U2_DEL(x)	(((x) >> 16) & 0xFFFF)
 #define	XHCI_HCSPARAMS0		0x10	/* RO capability parameters */
@@ -166,7 +168,8 @@
 #define	XHCI_IMOD_IVAL_SET(x)	(((x) & 0xFFFF) << 0)	/* 250ns unit */
 #define	XHCI_IMOD_ICNT_GET(x)	(((x) >> 16) & 0xFFFF)	/* 250ns unit */
 #define	XHCI_IMOD_ICNT_SET(x)	(((x) & 0xFFFF) << 16)	/* 250ns unit */
-#define	XHCI_IMOD_DEFAULT	0x000003E8U	/* 8000 IRQ/second */
+#define	XHCI_IMOD_DEFAULT	0x000001F4U	/* 8000 IRQs/second */
+#define	XHCI_IMOD_DEFAULT_LP 	0x000003F8U	/* 4000 IRQs/second - LynxPoint */
 #define	XHCI_ERSTSZ(n)		(0x0028 + (0x20 * (n)))	/* XHCI event ring segment table size */
 #define	XHCI_ERSTS_GET(x)	((x) & 0xFFFF)
 #define	XHCI_ERSTS_SET(x)	((x) & 0xFFFF)

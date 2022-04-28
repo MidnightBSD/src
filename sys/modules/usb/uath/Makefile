@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/usb/uath/Makefile 190688 2009-04-04 11:23:00Z weongyo $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../dev/usb/wlan
+.PATH: ${SRCTOP}/sys/dev/usb/wlan
 
 KMOD    = if_uath
 SRCS    = if_uath.c if_uathvar.h if_uathreg.h	\

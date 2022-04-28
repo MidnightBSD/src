@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5416/ar5416.h 249580 2013-04-17 07:31:53Z adrian $
+ * $FreeBSD$
  */
 #ifndef _ATH_AR5416_H_
 #define _ATH_AR5416_H_
@@ -303,7 +303,9 @@ extern	HAL_STATUS ar5416ProcRxDesc(struct ath_hal *ah, struct ath_desc *,
 
 extern	HAL_BOOL ar5416Reset(struct ath_hal *ah, HAL_OPMODE opmode,
 		struct ieee80211_channel *chan,
-		HAL_BOOL bChannelChange, HAL_STATUS *status);
+		HAL_BOOL bChannelChange,
+		HAL_RESET_TYPE,
+		HAL_STATUS *status);
 extern	HAL_BOOL ar5416PhyDisable(struct ath_hal *ah);
 extern	HAL_RFGAIN ar5416GetRfgain(struct ath_hal *ah);
 extern	HAL_BOOL ar5416Disable(struct ath_hal *ah);

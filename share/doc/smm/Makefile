@@ -1,7 +1,7 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/10/93
-# $FreeBSD: release/10.0.0/share/doc/smm/Makefile 239739 2012-08-27 17:15:14Z jhb $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
 # The following modules do not describe FreeBSD:
 # 14.uucpimpl, 15.uucpnet
@@ -31,5 +31,7 @@ _08.sendmailop=	08.sendmailop
 .if ${MK_LPR} != "no"
 _07.lpd=	07.lpd
 .endif
+
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

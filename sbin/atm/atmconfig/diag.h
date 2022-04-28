@@ -26,7 +26,7 @@
  *
  * Author: Hartmut Brandt <harti@freebsd.org>
  *
- * $FreeBSD: release/10.0.0/sbin/atm/atmconfig/diag.h 125018 2004-01-26 12:17:49Z harti $
+ * $FreeBSD$
  */
 
 struct diagif {

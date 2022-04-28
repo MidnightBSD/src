@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/test/test_read_format_cpio_bin_gz.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 static unsigned char archive[] = {
 31,139,8,0,244,'M','p','C',0,3,';','^','(',202,178,177,242,173,227,11,230,
@@ -53,6 +53,8 @@ DEFINE_TEST(test_read_format_cpio_bin_gz)
 	assertEqualInt(ARCHIVE_OK, archive_read_next_header(a, &ae));
 	assertEqualInt(archive_filter_code(a, 0),
 	    ARCHIVE_FILTER_GZIP);
+	assertEqualInt(archive_entry_is_encrypted(ae), 0);
+	assertEqualIntA(a, archive_read_has_encrypted_entries(a), ARCHIVE_READ_FORMAT_ENCRYPTION_UNSUPPORTED);
 	assertEqualInt(archive_format(a), ARCHIVE_FORMAT_CPIO_BIN_LE);
 	assertEqualInt(ARCHIVE_OK, archive_read_close(a));
 	assertEqualInt(ARCHIVE_OK, archive_read_free(a));

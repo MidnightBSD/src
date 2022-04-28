@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2009-2010 The FreeBSD Foundation
  * All rights reserved.
  *
@@ -28,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/hastd/nv.c 233392 2012-03-23 20:18:48Z trociny $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -566,7 +568,7 @@ nv_get_string(struct nv *nv, const char *namefmt, ...)
 		return (NULL);
 	PJDLOG_ASSERT((nvh->nvh_type & NV_ORDER_MASK) == NV_ORDER_HOST);
 	PJDLOG_ASSERT(nvh->nvh_dsize >= 1);
-	str = NVH_DATA(nvh);
+	str = (char *)NVH_DATA(nvh);
 	PJDLOG_ASSERT(str[nvh->nvh_dsize - 1] == '\0');
 	PJDLOG_ASSERT(strlen(str) == nvh->nvh_dsize - 1);
 	return (str);

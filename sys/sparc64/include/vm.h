@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sparc64/include/vm.h 195649 2009-07-12 23:31:20Z alc $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VM_H_
@@ -31,5 +31,6 @@
 
 /* Memory attribute configuration is not (yet) implemented. */
 #define	VM_MEMATTR_DEFAULT	0
+#define	VM_MEMATTR_UNCACHEABLE	0
 
 #endif /* !_MACHINE_VM_H_ */

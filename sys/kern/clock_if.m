@@ -22,7 +22,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 # USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/sys/kern/clock_if.m 139804 2005-01-06 23:35:40Z imp $
+# $FreeBSD$
 
 #include <sys/bus.h>
 #include <sys/time.h>

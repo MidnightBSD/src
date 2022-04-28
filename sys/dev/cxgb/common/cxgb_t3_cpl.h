@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: release/10.0.0/sys/dev/cxgb/common/cxgb_t3_cpl.h 194521 2009-06-19 23:34:32Z kmacy $
+$FreeBSD$
 
 ***************************************************************************/
 #ifndef T3_CPL_H

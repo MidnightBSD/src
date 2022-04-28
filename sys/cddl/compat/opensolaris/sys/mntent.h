@@ -19,7 +19,7 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/mntent.h 185029 2008-11-17 20:49:29Z pjd $
+ * $FreeBSD$
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -46,7 +46,7 @@
 #define	MNTOPT_NODEVICES	"nodevices"	/* Device-special disallowed */
 #define	MNTOPT_SETUID	"setuid"	/* Set uid allowed */
 #define	MNTOPT_NOSETUID	"nosetuid"	/* Set uid not allowed */
-#define	MNTOPT_REMOUNT	"remount"	/* Change mount options */
+#define	MNTOPT_REMOUNT	"update"	/* Change mount options */
 #define	MNTOPT_ATIME	"atime"		/* update atime for files */
 #define	MNTOPT_NOATIME  "noatime"	/* do not update atime for files */
 #define	MNTOPT_XATTR	"xattr"		/* enable extended attributes */

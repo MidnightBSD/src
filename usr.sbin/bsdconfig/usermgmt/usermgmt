@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/usermgmt/usermgmt 256181 2013-10-09 08:12:26Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -40,8 +40,8 @@ f_include_lang $BSDCFG_LIBE/$APP_DIR/include/messages.subr
 
 USERMGMT_HELPFILE=$BSDCFG_LIBE/$APP_DIR/include/usermgmt.hlp
 
-ipgm=$( f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" )
-[ $? -eq $SUCCESS -a "$ipgm" ] && pgm="$ipgm"
+f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" ipgm &&
+	pgm="${ipgm:-$pgm}"
 
 ############################################################ FUNCTIONS
 

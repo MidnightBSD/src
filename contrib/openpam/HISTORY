@@ -1,3 +1,70 @@
+OpenPAM Tabebuia						2019-02-24
+
+ - BUGFIX: Fix off-by-one bug in pam_getenv(3) which was introduced in
+   OpenPAM Radula.
+
+ - ENHANCE: Add unit tests for pam_{get,put,set}env(3).
+============================================================================
+OpenPAM Resedacea						2017-04-30
+
+ - BUGFIX: Reinstore the NULL check in pam_end(3) which was removed in
+   OpenPAM Radula, as it breaks common error-handling constructs.
+
+ - BUGFIX: Return PAM_SYMBOL_ERR instead of PAM_SYSTEM_ERR from the
+   dispatcher when the required service function could not be found.
+
+ - ENHANCE: Introduce the PAM_BAD_HANDLE error code for when pamh is
+   NULL in API functions that have a NULL check.
+
+ - ENHANCE: Introduce the PAM_BAD_ITEM, PAM_BAD_FEATURE and
+   PAM_BAD_CONSTANT error codes for situations where we previously
+   incorrectly used PAM_SYMBOL_ERR to denote that an invalid constant
+   had been passed to an API function.
+
+ - ENHANCE: Improve the RETURN VALUES section in API man pages,
+   especially for functions that cannot fail, which were incorrectly
+   documented as returning -1 on failure.
+============================================================================
+OpenPAM Radula							2017-02-19
+
+ - BUGFIX: Fix an inverted test which prevented pam_get_authtok(3) and
+   pam_get_user(3) from using application-provided custom prompts.
+
+ - BUGFIX: Plug a memory leak in pam_set_item(3).
+
+ - BUGFIX: Plug a potential memory leak in openpam_readlinev(3).
+
+ - BUGFIX: In openpam_readword(3), support line continuations within
+   whitespace.
+
+ - ENHANCE: Add a feature flag to control fallback to "other" policy.
+
+ - ENHANCE: Add a pam_return(8) module which returns an arbitrary
+   code specified in the module options.
+
+ - ENHANCE: More and better unit tests.
+============================================================================
+OpenPAM Ourouparia						2014-09-12
+
+ - ENHANCE: When executing a chain, require at least one service
+   function to succeed.  This mitigates fail-open scenarios caused by
+   misconfigurations or missing modules.
+
+ - ENHANCE: Make sure to overwrite buffers which may have contained an
+   authentication token when they're no longer needed.
+
+ - BUGFIX: Under certain circumstances, specifying a non-existent
+   module (or misspelling the name of a module) in a policy could
+   result in a fail-open scenario.  (CVE-2014-3879)
+
+ - FEATURE: Add a search path for modules.  This was implemented in
+   Nummularia but inadvertently left out of the release notes.
+
+ - BUGFIX: The is_upper() predicate only accepted the letter A as an
+   upper-case character instead of the entire A-Z range.  As a result,
+   service and module names containing upper-case letters other than A
+   would be rejected.
+============================================================================
 OpenPAM Nummularia						2013-09-07
 
  - ENHANCE: Rewrite the dynamic loader to improve readability and
@@ -97,7 +164,7 @@ OpenPAM Lycopsida						2011-12-18
    module before loading it.
 
  - ENHANCE: added / improved input validation in many cases, including
-   the policy file and some function arguments.
+   the policy file and some function arguments.  (CVE-2011-4122)
 ============================================================================
 OpenPAM Hydrangea						2007-12-21
 
@@ -427,5 +494,3 @@ Fixed a number of bugs in the previous release, including:
 OpenPAM Calamite						2002-02-09
 
 First (beta) release.
-============================================================================
-$Id: HISTORY 737 2013-09-07 12:53:55Z des $

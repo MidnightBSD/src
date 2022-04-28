@@ -1,7 +1,9 @@
-# $FreeBSD: release/10.0.0/usr.sbin/extattr/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 
 PROG=	rmextattr
 MAN=	rmextattr.8
+
+LIBADD=	sbuf
 
 LINKS+=	${BINDIR}/rmextattr ${BINDIR}/getextattr
 LINKS+=	${BINDIR}/rmextattr ${BINDIR}/setextattr
@@ -10,5 +12,11 @@ LINKS+=	${BINDIR}/rmextattr ${BINDIR}/lsextattr
 MLINKS+=	rmextattr.8 setextattr.8
 MLINKS+=	rmextattr.8 getextattr.8
 MLINKS+=	rmextattr.8 lsextattr.8
+
+.include <src.opts.mk>
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

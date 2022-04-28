@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man4/ng_pred1.4 242997 2012-11-13 20:41:36Z joel $
+.\" $FreeBSD$
 .\"
 .Dd December 24, 2006
 .Dt NG_PRED1 4
@@ -138,8 +138,9 @@ control message, or when hook have been disconnected.
 .%O RFC 1661
 .Re
 .Sh AUTHORS
-.An Alexander Motin Aq mav@alkar.net
+.An Alexander Motin Aq Mt mav@alkar.net
 .Sh BUGS
 Due to nature of netgraph PPP implementation there are possible race conditions
-between data packet and ResetAck CCP packet in case of packet loss. As result,
+between data packet and ResetAck CCP packet in case of packet loss.
+As result,
 packet loss can produce bigger performance degradation than supposed by protocol.

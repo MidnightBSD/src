@@ -3,34 +3,28 @@
 #	All rights reserved.
 # Author: Harti Brandt <brandt@fokus.gmd.de>
 #
-# $FreeBSD: release/10.0.0/sbin/atm/atmconfig/Makefile 226440 2011-10-16 16:58:28Z cognet $
+# $FreeBSD$
 
-.include <bsd.own.mk>
+.include <src.opts.mk>
 
+PACKAGE=atm
 PROG=	atmconfig
-.ifndef RESCUE
-SRCS=	${.OBJDIR}/oid.h
-.endif
-SRCS+=	main.c diag.c natm.c
-.ifndef RESCUE
-SRCS+=	atmconfig_device.c
-.endif
+SRCS=	main.c diag.c natm.c
 MAN=	atmconfig.8
-# CFLAGS+= -DPATH_HELP='".:/usr/share/doc/atm:/usr/local/share/doc/atm"'
+# CFLAGS+= -DPATH_HELP='".:${SHAREDIR}/doc/atm:/usr/local/share/doc/atm"'
 
 CFLAGS+= -I${.OBJDIR}
 
-.ifndef RESCUE
-DPADD=	${LIBBSNMP}
-LDADD=	-lbsnmp
+.if !defined(RESCUE) && ${MK_BSNMP} != "no"
+CFLAGS+=	-DWITH_BSNMP
+SRCS+=	oid.h atmconfig_device.c
+LIBADD+=	bsnmp
 . if ${MK_DYNAMICROOT} == "no" && ${MK_OPENSSL} != "no"
-LDADD+= -lcrypto
+LIBADD+=	crypto
 . endif
 .endif
 
-.ifndef RESCUE
 CLEANFILES+= oid.h
-.endif
 
 # XXX - this is verboten
 .if ${MACHINE_CPUARCH} == "arm"
@@ -38,13 +32,13 @@ WARNS?= 3
 .endif
 
 FILES=	atmconfig.help atmconfig_device.help
-FILESDIR= /usr/share/doc/atm
+FILESDIR= ${SHAREDIR}/doc/atm
 
-SNMP_ATM_DEF= ${.CURDIR}/../../../contrib/ngatm/snmp_atm/atm_tree.def	\
-	${.CURDIR}/../../../usr.sbin/bsnmpd/modules/snmp_atm/atm_freebsd.def
+SNMP_ATM_DEF= ${SRCTOP}/contrib/ngatm/snmp_atm/atm_tree.def	\
+	${SRCTOP}/usr.sbin/bsnmpd/modules/snmp_atm/atm_freebsd.def
 
-${.OBJDIR}/oid.h: atm_oid.list ${SNMP_ATM_DEF}
+oid.h: atm_oid.list ${SNMP_ATM_DEF}
 	cat ${SNMP_ATM_DEF} | gensnmptree -e `tail -n +2 ${.CURDIR}/atm_oid.list` \
-		> ${.OBJDIR}/oid.h
+		> ${.TARGET}
 
 .include <bsd.prog.mk>

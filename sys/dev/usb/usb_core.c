@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/usb_core.c 246123 2013-01-30 15:46:26Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
  *
@@ -63,6 +63,5 @@ const struct usb_string_lang usb_string_lang_en = {
 
 MALLOC_DEFINE(M_USB, "USB", "USB");
 MALLOC_DEFINE(M_USBDEV, "USBdev", "USB device");
-MALLOC_DEFINE(M_USBHC, "USBHC", "USB host controller");
 
 MODULE_VERSION(usb, 1);

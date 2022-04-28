@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/adb/adb_kbd.c 237480 2012-06-23 13:52:44Z jhibbits $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
@@ -162,7 +162,7 @@ keycode2scancode(int keycode, int shift, int up)
 	int scancode;
 
 	scancode = keycode;
-	if ((keycode >= 89) && (keycode < 89 + sizeof(scan) / sizeof(scan[0])))
+	if ((keycode >= 89) && (keycode < 89 + nitems(scan)))
 	scancode = scan[keycode - 89] | SCAN_PREFIX_E0;
 	/* pause/break */
 	if ((keycode == 104) && !(shift & CTLS))
@@ -194,25 +194,23 @@ static kbd_set_state_t  akbd_set_state;
 static kbd_poll_mode_t  akbd_poll;
 
 keyboard_switch_t akbdsw = {
-        akbd_probe,
-        akbd_init,
-        akbd_term,
-        akbd_interrupt,
-        akbd_test_if,
-        akbd_enable,
-        akbd_disable,
-        akbd_read,
-        akbd_check,
-        akbd_read_char,
-        akbd_check_char,
-        akbd_ioctl,
-        akbd_lock,
-        akbd_clear_state,
-        akbd_get_state,
-        akbd_set_state,
-        genkbd_get_fkeystr,
-        akbd_poll,
-        genkbd_diag,
+        .probe =	akbd_probe,
+        .init =		akbd_init,
+        .term =		akbd_term,
+        .intr =		akbd_interrupt,
+        .test_if =	akbd_test_if,
+        .enable =	akbd_enable,
+        .disable =	akbd_disable,
+        .read =		akbd_read,
+        .check =	akbd_check,
+        .read_char =	akbd_read_char,
+        .check_char =	akbd_check_char,
+        .ioctl =	akbd_ioctl,
+        .lock =		akbd_lock,
+        .clear_state =	akbd_clear_state,
+        .get_state =	akbd_get_state,
+        .set_state =	akbd_set_state,
+        .poll =		akbd_poll,
 };
 
 KEYBOARD_DRIVER(akbd, akbdsw, akbd_configure);
@@ -304,7 +302,7 @@ adb_kbd_attach(device_t dev)
 	/* Try stepping forward to the extended keyboard protocol */
 	adb_set_device_handler(dev,3);
 
-	mtx_init(&sc->sc_mutex,KBD_DRIVER_NAME,MTX_DEF,0);
+	mtx_init(&sc->sc_mutex, KBD_DRIVER_NAME, NULL, MTX_DEF);
 	cv_init(&sc->sc_cv,KBD_DRIVER_NAME);
 	callout_init(&sc->sc_repeater, 0);
 
@@ -424,7 +422,7 @@ adb_kbd_receive_packet(device_t dev, u_char status,
 
 	mtx_lock(&sc->sc_mutex);
 		/* 0x7f is always the power button */
-		if (data[0] == 0x7f && devctl_process_running()) {
+		if (data[0] == 0x7f) {
 			devctl_notify("PMU", "Button", "pressed", NULL);
 			mtx_unlock(&sc->sc_mutex);
 			return (0);
@@ -621,7 +619,7 @@ akbd_read_char(keyboard_t *kbd, int wait)
 
 	if (!sc->buffers) {
 		mtx_unlock(&sc->sc_mutex);
-		return (0);
+		return (NOKEY);
 	}
 
 	adb_code = sc->buffer[0];

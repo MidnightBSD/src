@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tail.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: release/10.0.0/usr.bin/tail/tail.1 248414 2013-03-17 06:57:25Z joel $
+.\" $FreeBSD$
 .\"
-.Dd March 16, 2013
+.Dd March 22, 2020
 .Dt TAIL 1
 .Os
 .Sh NAME
@@ -73,11 +73,11 @@ or the last 10 lines of the input.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
-.It Fl b Ar number
+.It Fl b Ar number , Fl -blocks Ns = Ns Ar number
 The location is
 .Ar number
 512-byte blocks.
-.It Fl c Ar number
+.It Fl c Ar number , Fl -bytes Ns = Ns Ar number
 The location is
 .Ar number
 bytes.
@@ -112,7 +112,7 @@ The
 option is the same as the
 .Fl f
 option if reading from standard input rather than a file.
-.It Fl n Ar number
+.It Fl n Ar number , Fl -lines Ns = Ns Ar number
 The location is
 .Ar number
 lines.
@@ -157,7 +157,7 @@ Keep
 .Pa /var/log/messages
 open, displaying to the standard output anything appended to the file:
 .Pp
-.Dl $ tail -f /var/log/messages
+.Dl $ tail -F /var/log/messages
 .Sh SEE ALSO
 .Xr cat 1 ,
 .Xr head 1 ,

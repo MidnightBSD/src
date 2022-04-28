@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/setprogname.c 93399 2002-03-29 22:43:43Z markm $");
+__FBSDID("$FreeBSD$");
 
 #include <stdlib.h>
 #include <string.h>

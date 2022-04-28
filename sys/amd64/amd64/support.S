@@ -1,7 +1,12 @@
 /*-
+ * Copyright (c) 2018-2019 The FreeBSD Foundation
  * Copyright (c) 2003 Peter Wemm.
  * Copyright (c) 1993 The Regents of the University of California.
  * All rights reserved.
+ *
+ * Portions of this software were developed by
+ * Konstantin Belousov <kib@FreeBSD.org> under sponsorship from
+ * the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +32,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/amd64/support.S 249439 2013-04-13 15:20:33Z kib $
+ * $FreeBSD$
  */
 
 #include "opt_ddb.h"
 
 #include <machine/asmacros.h>
-#include <machine/intr_machdep.h>
+#include <machine/specialreg.h>
 #include <machine/pmap.h>
 
 #include "assym.s"
@@ -47,39 +52,35 @@
 
 /* done */
 ENTRY(bzero)
+	PUSH_FRAME_POINTER
 	movq	%rsi,%rcx
 	xorl	%eax,%eax
 	shrq	$3,%rcx
-	cld
 	rep
 	stosq
 	movq	%rsi,%rcx
 	andq	$7,%rcx
 	rep
 	stosb
+	POP_FRAME_POINTER
 	ret
 END(bzero)
-	
+
 /* Address: %rdi */
 ENTRY(pagezero)
-	movq	$-PAGE_SIZE,%rdx
-	subq	%rdx,%rdi
+	PUSH_FRAME_POINTER
+	movq	$PAGE_SIZE/8,%rcx
 	xorl	%eax,%eax
-1:
-	movnti	%rax,(%rdi,%rdx)
-	movnti	%rax,8(%rdi,%rdx)
-	movnti	%rax,16(%rdi,%rdx)
-	movnti	%rax,24(%rdi,%rdx)
-	addq	$32,%rdx
-	jne	1b
-	sfence
+	rep
+	stosq
+	POP_FRAME_POINTER
 	ret
 END(pagezero)
 
 ENTRY(bcmp)
+	PUSH_FRAME_POINTER
 	movq	%rdx,%rcx
 	shrq	$3,%rcx
-	cld					/* compare forwards */
 	repe
 	cmpsq
 	jne	1f
@@ -91,6 +92,7 @@ ENTRY(bcmp)
 1:
 	setne	%al
 	movsbl	%al,%eax
+	POP_FRAME_POINTER
 	ret
 END(bcmp)
 
@@ -100,6 +102,7 @@ END(bcmp)
  *  ws@tools.de     (Wolfgang Solfrank, TooLs GmbH) +49-228-985800
  */
 ENTRY(bcopy)
+	PUSH_FRAME_POINTER
 	xchgq	%rsi,%rdi
 	movq	%rdx,%rcx
 
@@ -109,13 +112,13 @@ ENTRY(bcopy)
 	jb	1f
 
 	shrq	$3,%rcx				/* copy by 64-bit words */
-	cld					/* nope, copy forwards */
 	rep
 	movsq
 	movq	%rdx,%rcx
 	andq	$7,%rcx				/* any bytes left? */
 	rep
 	movsb
+	POP_FRAME_POINTER
 	ret
 
 	/* ALIGN_TEXT */
@@ -135,22 +138,25 @@ ENTRY(bcopy)
 	rep
 	movsq
 	cld
+	POP_FRAME_POINTER
 	ret
 END(bcopy)
-	
+
 /*
  * Note: memcpy does not support overlapping copies
  */
 ENTRY(memcpy)
+	PUSH_FRAME_POINTER
+	movq	%rdi,%rax
 	movq	%rdx,%rcx
 	shrq	$3,%rcx				/* copy by 64-bit words */
-	cld					/* copy forwards */
 	rep
 	movsq
 	movq	%rdx,%rcx
 	andq	$7,%rcx				/* any bytes left? */
 	rep
 	movsb
+	POP_FRAME_POINTER
 	ret
 END(memcpy)
 
@@ -158,6 +164,7 @@ END(memcpy)
  * pagecopy(%rdi=from, %rsi=to)
  */
 ENTRY(pagecopy)
+	PUSH_FRAME_POINTER
 	movq	$-PAGE_SIZE,%rax
 	movq	%rax,%rdx
 	subq	%rax,%rdi
@@ -178,18 +185,20 @@ ENTRY(pagecopy)
 	addq	$32,%rdx
 	jne	2b
 	sfence
+	POP_FRAME_POINTER
 	ret
 END(pagecopy)
 
-/* fillw(pat, base, cnt) */  
+/* fillw(pat, base, cnt) */
 /*       %rdi,%rsi, %rdx */
 ENTRY(fillw)
-	movq	%rdi,%rax   
+	PUSH_FRAME_POINTER
+	movq	%rdi,%rax
 	movq	%rsi,%rdi
 	movq	%rdx,%rcx
-	cld
 	rep
 	stosw
+	POP_FRAME_POINTER
 	ret
 END(fillw)
 
@@ -206,22 +215,22 @@ END(fillw)
  */
 
 /*
- * copyout(from_kernel, to_user, len)  - MP SAFE
+ * copyout(from_kernel, to_user, len)
  *         %rdi,        %rsi,    %rdx
  */
 ENTRY(copyout)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rax
 	movq	$copyout_fault,PCB_ONFAULT(%rax)
 	testq	%rdx,%rdx			/* anything to do? */
 	jz	done_copyout
 
 	/*
-	 * Check explicitly for non-user addresses.  If 486 write protection
-	 * is being used, this check is essential because we are in kernel
-	 * mode so the h/w does not provide any protection against writing
-	 * kernel addresses.
+	 * Check explicitly for non-user addresses.  This check is essential
+	 * because it prevents usermode from writing into the kernel.  We do
+	 * not verify anywhere else that the user did not specify a rogue
+	 * address.
 	 */
-
 	/*
 	 * First, prevent address wrapping.
 	 */
@@ -243,7 +252,6 @@ ENTRY(copyout)
 	movq	%rdx,%rcx
 
 	shrq	$3,%rcx
-	cld
 	rep
 	movsq
 	movb	%dl,%cl
@@ -255,6 +263,7 @@ done_copyout:
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rdx
 	movq	%rax,PCB_ONFAULT(%rdx)
+	POP_FRAME_POINTER
 	ret
 
 	ALIGN_TEXT
@@ -262,14 +271,16 @@ copyout_fault:
 	movq	PCPU(CURPCB),%rdx
 	movq	$0,PCB_ONFAULT(%rdx)
 	movq	$EFAULT,%rax
+	POP_FRAME_POINTER
 	ret
 END(copyout)
 
 /*
- * copyin(from_user, to_kernel, len) - MP SAFE
+ * copyin(from_user, to_kernel, len)
  *        %rdi,      %rsi,      %rdx
  */
 ENTRY(copyin)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rax
 	movq	$copyin_fault,PCB_ONFAULT(%rax)
 	testq	%rdx,%rdx			/* anything to do? */
@@ -289,7 +300,6 @@ ENTRY(copyin)
 	movq	%rdx,%rcx
 	movb	%cl,%al
 	shrq	$3,%rcx				/* copy longword-wise */
-	cld
 	rep
 	movsq
 	movb	%al,%cl
@@ -301,6 +311,7 @@ done_copyin:
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rdx
 	movq	%rax,PCB_ONFAULT(%rdx)
+	POP_FRAME_POINTER
 	ret
 
 	ALIGN_TEXT
@@ -308,16 +319,19 @@ copyin_fault:
 	movq	PCPU(CURPCB),%rdx
 	movq	$0,PCB_ONFAULT(%rdx)
 	movq	$EFAULT,%rax
+	POP_FRAME_POINTER
 	ret
 END(copyin)
 
 /*
- * casuword32.  Compare and set user integer.  Returns -1 or the current value.
- *        dst = %rdi, old = %rsi, new = %rdx
+ * casueword32.  Compare and set user integer.  Returns -1 on fault,
+ *        0 if access was successful.  Old value is written to *oldp.
+ *        dst = %rdi, old = %esi, oldp = %rdx, new = %ecx
  */
-ENTRY(casuword32)
-	movq	PCPU(CURPCB),%rcx
-	movq	$fusufault,PCB_ONFAULT(%rcx)
+ENTRY(casueword32)
+	PUSH_FRAME_POINTER
+	movq	PCPU(CURPCB),%r8
+	movq	$fusufault,PCB_ONFAULT(%r8)
 
 	movq	$VM_MAXUSER_ADDRESS-4,%rax
 	cmpq	%rax,%rdi			/* verify address is valid */
@@ -327,26 +341,36 @@ ENTRY(casuword32)
 #ifdef SMP
 	lock
 #endif
-	cmpxchgl %edx,(%rdi)			/* new = %edx */
+	cmpxchgl %ecx,(%rdi)			/* new = %ecx */
 
 	/*
 	 * The old value is in %eax.  If the store succeeded it will be the
 	 * value we expected (old) from before the store, otherwise it will
-	 * be the current value.
+	 * be the current value.  Save %eax into %esi to prepare the return
+	 * value.
 	 */
+	movl	%eax,%esi
+	xorl	%eax,%eax
+	movq	%rax,PCB_ONFAULT(%r8)
 
-	movq	PCPU(CURPCB),%rcx
-	movq	$0,PCB_ONFAULT(%rcx)
+	/*
+	 * Access the oldp after the pcb_onfault is cleared, to correctly
+	 * catch corrupted pointer.
+	 */
+	movl	%esi,(%rdx)			/* oldp = %rdx */
+	POP_FRAME_POINTER
 	ret
-END(casuword32)
+END(casueword32)
 
 /*
- * casuword.  Compare and set user word.  Returns -1 or the current value.
- *        dst = %rdi, old = %rsi, new = %rdx
+ * casueword.  Compare and set user long.  Returns -1 on fault,
+ *        0 if access was successful.  Old value is written to *oldp.
+ *        dst = %rdi, old = %rsi, oldp = %rdx, new = %rcx
  */
-ENTRY(casuword)
-	movq	PCPU(CURPCB),%rcx
-	movq	$fusufault,PCB_ONFAULT(%rcx)
+ENTRY(casueword)
+	PUSH_FRAME_POINTER
+	movq	PCPU(CURPCB),%r8
+	movq	$fusufault,PCB_ONFAULT(%r8)
 
 	movq	$VM_MAXUSER_ADDRESS-4,%rax
 	cmpq	%rax,%rdi			/* verify address is valid */
@@ -356,28 +380,30 @@ ENTRY(casuword)
 #ifdef SMP
 	lock
 #endif
-	cmpxchgq %rdx,(%rdi)			/* new = %rdx */
+	cmpxchgq %rcx,(%rdi)			/* new = %rcx */
 
 	/*
-	 * The old value is in %eax.  If the store succeeded it will be the
+	 * The old value is in %rax.  If the store succeeded it will be the
 	 * value we expected (old) from before the store, otherwise it will
 	 * be the current value.
 	 */
-
-	movq	PCPU(CURPCB),%rcx
-	movq	$fusufault,PCB_ONFAULT(%rcx)
-	movq	$0,PCB_ONFAULT(%rcx)
+	movq	%rax,%rsi
+	xorl	%eax,%eax
+	movq	%rax,PCB_ONFAULT(%r8)
+	movq	%rsi,(%rdx)
+	POP_FRAME_POINTER
 	ret
-END(casuword)
+END(casueword)
 
 /*
  * Fetch (load) a 64-bit word, a 32-bit word, a 16-bit word, or an 8-bit
- * byte from user memory.  All these functions are MPSAFE.
- * addr = %rdi
+ * byte from user memory.
+ * addr = %rdi, valp = %rsi
  */
 
-ALTENTRY(fuword64)
-ENTRY(fuword)
+ALTENTRY(fueword64)
+ENTRY(fueword)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -385,13 +411,17 @@ ENTRY(fuword)
 	cmpq	%rax,%rdi			/* verify address is valid */
 	ja	fusufault
 
-	movq	(%rdi),%rax
-	movq	$0,PCB_ONFAULT(%rcx)
+	xorl	%eax,%eax
+	movq	(%rdi),%r11
+	movq	%rax,PCB_ONFAULT(%rcx)
+	movq	%r11,(%rsi)
+	POP_FRAME_POINTER
 	ret
-END(fuword64)	
-END(fuword)
+END(fueword64)
+END(fueword)
 
-ENTRY(fuword32)
+ENTRY(fueword32)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -399,10 +429,13 @@ ENTRY(fuword32)
 	cmpq	%rax,%rdi			/* verify address is valid */
 	ja	fusufault
 
-	movl	(%rdi),%eax
-	movq	$0,PCB_ONFAULT(%rcx)
+	xorl	%eax,%eax
+	movl	(%rdi),%r11d
+	movq	%rax,PCB_ONFAULT(%rcx)
+	movl	%r11d,(%rsi)
+	POP_FRAME_POINTER
 	ret
-END(fuword32)
+END(fueword32)
 
 /*
  * fuswintr() and suswintr() are specialized variants of fuword16() and
@@ -419,6 +452,7 @@ END(suswintr)
 END(fuswintr)
 
 ENTRY(fuword16)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -428,10 +462,12 @@ ENTRY(fuword16)
 
 	movzwl	(%rdi),%eax
 	movq	$0,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(fuword16)
 
 ENTRY(fubyte)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -441,6 +477,7 @@ ENTRY(fubyte)
 
 	movzbl	(%rdi),%eax
 	movq	$0,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(fubyte)
 
@@ -450,15 +487,17 @@ fusufault:
 	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%rcx)
 	decq	%rax
+	POP_FRAME_POINTER
 	ret
 
 /*
  * Store a 64-bit word, a 32-bit word, a 16-bit word, or an 8-bit byte to
- * user memory.  All these functions are MPSAFE.
+ * user memory.
  * addr = %rdi, value = %rsi
  */
 ALTENTRY(suword64)
 ENTRY(suword)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -470,11 +509,13 @@ ENTRY(suword)
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx
 	movq	%rax,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(suword64)
 END(suword)
 
 ENTRY(suword32)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -486,10 +527,12 @@ ENTRY(suword32)
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx
 	movq	%rax,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(suword32)
 
 ENTRY(suword16)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -501,10 +544,12 @@ ENTRY(suword16)
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx		/* restore trashed register */
 	movq	%rax,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(suword16)
 
 ENTRY(subyte)
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -517,19 +562,21 @@ ENTRY(subyte)
 	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx		/* restore trashed register */
 	movq	%rax,PCB_ONFAULT(%rcx)
+	POP_FRAME_POINTER
 	ret
 END(subyte)
 
 /*
- * copyinstr(from, to, maxlen, int *lencopied) - MP SAFE
+ * copyinstr(from, to, maxlen, int *lencopied)
  *           %rdi, %rsi, %rdx, %rcx
  *
- *	copy a string from from to to, stop when a 0 character is reached.
+ *	copy a string from 'from' to 'to', stop when a 0 character is reached.
  *	return ENAMETOOLONG if string is longer than maxlen, and
  *	EFAULT on protection violations. If lencopied is non-zero,
  *	return the actual length in *lencopied.
  */
 ENTRY(copyinstr)
+	PUSH_FRAME_POINTER
 	movq	%rdx,%r8			/* %r8 = maxlen */
 	movq	%rcx,%r9			/* %r9 = *len */
 	xchgq	%rdi,%rsi			/* %rdi = from, %rsi = to */
@@ -549,7 +596,6 @@ ENTRY(copyinstr)
 	movq	%rax,%r8
 1:
 	incq	%rdx
-	cld
 
 2:
 	decq	%rdx
@@ -586,19 +632,20 @@ cpystrflt_x:
 	subq	%rdx,%r8
 	movq	%r8,(%r9)
 1:
+	POP_FRAME_POINTER
 	ret
 END(copyinstr)
 
 /*
- * copystr(from, to, maxlen, int *lencopied) - MP SAFE
+ * copystr(from, to, maxlen, int *lencopied)
  *         %rdi, %rsi, %rdx, %rcx
  */
 ENTRY(copystr)
+	PUSH_FRAME_POINTER
 	movq	%rdx,%r8			/* %r8 = maxlen */
 
 	xchgq	%rdi,%rsi
 	incq	%rdx
-	cld
 1:
 	decq	%rdx
 	jz	4f
@@ -623,12 +670,12 @@ ENTRY(copystr)
 	subq	%rdx,%r8
 	movq	%r8,(%rcx)
 7:
+	POP_FRAME_POINTER
 	ret
 END(copystr)
 
 /*
  * Handling of special amd64 registers and descriptor tables etc
- * %rdi
  */
 /* void lgdt(struct region_descriptor *rdp); */
 ENTRY(lgdt)
@@ -692,6 +739,7 @@ END(longjmp)
  */
 ENTRY(rdmsr_safe)
 /* int rdmsr_safe(u_int msr, uint64_t *data) */
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%r8
 	movq	$msr_onfault,PCB_ONFAULT(%r8)
 	movl	%edi,%ecx
@@ -703,6 +751,7 @@ ENTRY(rdmsr_safe)
 	movq	%rax,(%rsi)
 	xorq	%rax,%rax
 	movq	%rax,PCB_ONFAULT(%r8)
+	POP_FRAME_POINTER
 	ret
 
 /*
@@ -710,6 +759,7 @@ ENTRY(rdmsr_safe)
  */
 ENTRY(wrmsr_safe)
 /* int wrmsr_safe(u_int msr, uint64_t data) */
+	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%r8
 	movq	$msr_onfault,PCB_ONFAULT(%r8)
 	movl	%edi,%ecx
@@ -720,6 +770,7 @@ ENTRY(wrmsr_safe)
 				   hi byte in edx, lo in %eax. */
 	xorq	%rax,%rax
 	movq	%rax,PCB_ONFAULT(%r8)
+	POP_FRAME_POINTER
 	ret
 
 /*
@@ -729,4 +780,389 @@ ENTRY(wrmsr_safe)
 msr_onfault:
 	movq	$0,PCB_ONFAULT(%r8)
 	movl	$EFAULT,%eax
+	POP_FRAME_POINTER
 	ret
+
+/*
+ * void pmap_pti_pcid_invalidate(uint64_t ucr3, uint64_t kcr3);
+ * Invalidates address space addressed by ucr3, then returns to kcr3.
+ * Done in assembler to ensure no other memory accesses happen while
+ * on ucr3.
+ */
+	ALIGN_TEXT
+ENTRY(pmap_pti_pcid_invalidate)
+	pushfq
+	cli
+	movq	%rdi,%cr3	/* to user page table */
+	movq	%rsi,%cr3	/* back to kernel */
+	popfq
+	retq
+
+/*
+ * void pmap_pti_pcid_invlpg(uint64_t ucr3, uint64_t kcr3, vm_offset_t va);
+ * Invalidates virtual address va in address space ucr3, then returns to kcr3.
+ */
+	ALIGN_TEXT
+ENTRY(pmap_pti_pcid_invlpg)
+	pushfq
+	cli
+	movq	%rdi,%cr3	/* to user page table */
+	invlpg	(%rdx)
+	movq	%rsi,%cr3	/* back to kernel */
+	popfq
+	retq
+
+/*
+ * void pmap_pti_pcid_invlrng(uint64_t ucr3, uint64_t kcr3, vm_offset_t sva,
+ *     vm_offset_t eva);
+ * Invalidates virtual addresses between sva and eva in address space ucr3,
+ * then returns to kcr3.
+ */
+	ALIGN_TEXT
+ENTRY(pmap_pti_pcid_invlrng)
+	pushfq
+	cli
+	movq	%rdi,%cr3	/* to user page table */
+1:	invlpg	(%rdx)
+	addq	$PAGE_SIZE,%rdx
+	cmpq	%rdx,%rcx
+	ja	1b
+	movq	%rsi,%cr3	/* back to kernel */
+	popfq
+	retq
+
+	.altmacro
+	.macro	ibrs_seq_label l
+handle_ibrs_\l:
+	.endm
+	.macro	ibrs_call_label l
+	call	handle_ibrs_\l
+	.endm
+	.macro	ibrs_seq count
+	ll=1
+	.rept	\count
+	ibrs_call_label	%(ll)
+	nop
+	ibrs_seq_label %(ll)
+	addq	$8,%rsp
+	ll=ll+1
+	.endr
+	.endm
+
+/* all callers already saved %rax, %rdx, and %rcx */
+ENTRY(handle_ibrs_entry)
+	cmpb	$0,hw_ibrs_ibpb_active(%rip)
+	je	1f
+	movl	$MSR_IA32_SPEC_CTRL,%ecx
+	rdmsr
+	orl	$(IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP),%eax
+	orl	$(IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP)>>32,%edx
+	wrmsr
+	movb	$1,PCPU(IBPB_SET)
+	testl	$CPUID_STDEXT_SMEP,cpu_stdext_feature(%rip)
+	jne	1f
+	ibrs_seq 32
+1:	ret
+END(handle_ibrs_entry)
+
+ENTRY(handle_ibrs_exit)
+	cmpb	$0,PCPU(IBPB_SET)
+	je	1f
+	movl	$MSR_IA32_SPEC_CTRL,%ecx
+	rdmsr
+	andl	$~(IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP),%eax
+	andl	$~((IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP)>>32),%edx
+	wrmsr
+	movb	$0,PCPU(IBPB_SET)
+1:	ret
+END(handle_ibrs_exit)
+
+/* registers-neutral version, but needs stack */
+ENTRY(handle_ibrs_exit_rs)
+	cmpb	$0,PCPU(IBPB_SET)
+	je	1f
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+	movl	$MSR_IA32_SPEC_CTRL,%ecx
+	rdmsr
+	andl	$~(IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP),%eax
+	andl	$~((IA32_SPEC_CTRL_IBRS|IA32_SPEC_CTRL_STIBP)>>32),%edx
+	wrmsr
+	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	movb	$0,PCPU(IBPB_SET)
+1:	ret
+END(handle_ibrs_exit_rs)
+
+	.noaltmacro
+
+/*
+ * Flush L1D cache.  Load enough of the data from the kernel text
+ * to flush existing L1D content.
+ *
+ * N.B. The function does not follow ABI calling conventions, it corrupts %rbx.
+ * The vmm.ko caller expects that only %rax, %rdx, %rbx, %rcx, %r9, and %rflags
+ * registers are clobbered.  The NMI handler caller only needs %r13 preserved.
+ */
+ENTRY(flush_l1d_sw)
+#define	L1D_FLUSH_SIZE	(64 * 1024)
+	movq	$KERNBASE, %r9
+	movq	$-L1D_FLUSH_SIZE, %rcx
+	/*
+	 * pass 1: Preload TLB.
+	 * Kernel text is mapped using superpages.  TLB preload is
+	 * done for the benefit of older CPUs which split 2M page
+	 * into 4k TLB entries.
+	 */
+1:	movb	L1D_FLUSH_SIZE(%r9, %rcx), %al
+	addq	$PAGE_SIZE, %rcx
+	jne	1b
+	xorl	%eax, %eax
+	cpuid
+	movq	$-L1D_FLUSH_SIZE, %rcx
+	/* pass 2: Read each cache line. */
+2:	movb	L1D_FLUSH_SIZE(%r9, %rcx), %al
+	addq	$64, %rcx
+	jne	2b
+	lfence
+	ret
+#undef	L1D_FLUSH_SIZE
+END(flush_l1d_sw)
+
+ENTRY(mds_handler_void)
+	retq
+END(mds_handler_void)
+
+ENTRY(mds_handler_verw)
+	subq	$8, %rsp
+	movw	%ds, (%rsp)
+	verw	(%rsp)
+	addq	$8, %rsp
+	retq
+END(mds_handler_verw)
+
+ENTRY(mds_handler_ivb)
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rdx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	lfence
+	orpd	(%rdx), %xmm0
+	orpd	(%rdx), %xmm0
+	mfence
+	movl	$40, %ecx
+	addq	$16, %rdx
+2:	movntdq	%xmm0, (%rdx)
+	addq	$16, %rdx
+	decl	%ecx
+	jnz	2b
+	mfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	retq
+END(mds_handler_ivb)
+
+ENTRY(mds_handler_bdw)
+	pushq	%rax
+	pushq	%rbx
+	pushq	%rcx
+	pushq	%rdi
+	pushq	%rsi
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rbx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	movq	%rbx, %rdi
+	movq	%rbx, %rsi
+	movl	$40, %ecx
+2:	movntdq	%xmm0, (%rbx)
+	addq	$16, %rbx
+	decl	%ecx
+	jnz	2b
+	mfence
+	movl	$1536, %ecx
+	rep; movsb
+	lfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rsi
+	popq	%rdi
+	popq	%rcx
+	popq	%rbx
+	popq	%rax
+	retq
+END(mds_handler_bdw)
+
+ENTRY(mds_handler_skl_sse)
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%rdi
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rdi
+	movq	PCPU(MDS_BUF64), %rdx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	lfence
+	orpd	(%rdx), %xmm0
+	orpd	(%rdx), %xmm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%rdi, %rax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	movdqa	PCPU(MDS_TMP), %xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rdi
+	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	retq
+END(mds_handler_skl_sse)
+
+ENTRY(mds_handler_skl_avx)
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%rdi
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rdi
+	movq	PCPU(MDS_BUF64), %rdx
+	vmovdqa	%ymm0, PCPU(MDS_TMP)
+	vpxor	%ymm0, %ymm0, %ymm0
+
+	lfence
+	vorpd	(%rdx), %ymm0, %ymm0
+	vorpd	(%rdx), %ymm0, %ymm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%rdi, %rax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	vmovdqa	PCPU(MDS_TMP), %ymm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rdi
+	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	retq
+END(mds_handler_skl_avx)
+
+ENTRY(mds_handler_skl_avx512)
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%rdi
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rdi
+	movq	PCPU(MDS_BUF64), %rdx
+	vmovdqa64	%zmm0, PCPU(MDS_TMP)
+	vpxor	%zmm0, %zmm0, %zmm0
+
+	lfence
+	vorpd	(%rdx), %zmm0, %zmm0
+	vorpd	(%rdx), %zmm0, %zmm0
+	xorl	%eax, %eax
+2:	clflushopt	5376(%rdi, %rax, 8)
+	addl	$8, %eax
+	cmpl	$8 * 12, %eax
+	jb	2b
+	sfence
+	movl	$6144, %ecx
+	xorl	%eax, %eax
+	rep; stosb
+	mfence
+
+	vmovdqa64	PCPU(MDS_TMP), %zmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rdi
+	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	retq
+END(mds_handler_skl_avx512)
+
+ENTRY(mds_handler_silvermont)
+	pushq	%rax
+	pushq	%rdx
+	pushq	%rcx
+
+	movq	%cr0, %rax
+	testb	$CR0_TS, %al
+	je	1f
+	clts
+1:	movq	PCPU(MDS_BUF), %rdx
+	movdqa	%xmm0, PCPU(MDS_TMP)
+	pxor	%xmm0, %xmm0
+
+	movl	$16, %ecx
+2:	movntdq	%xmm0, (%rdx)
+	addq	$16, %rdx
+	decl	%ecx
+	jnz	2b
+	mfence
+
+	movdqa	PCPU(MDS_TMP),%xmm0
+	testb	$CR0_TS, %al
+	je	3f
+	movq	%rax, %cr0
+3:	popq	%rcx
+	popq	%rdx
+	popq	%rax
+	retq
+END(mds_handler_silvermont)

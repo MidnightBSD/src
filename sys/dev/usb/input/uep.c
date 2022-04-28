@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/usb/input/uep.c 233774 2012-04-02 10:50:42Z hselasky $
+ * $FreeBSD$
  */
 
 /*
- *  http://home.eeti.com.tw/web20/drivers/Software%20Programming%20Guide_v2.0.pdf
+ *  http://www.eeti.com.tw/pdf/Software%20Programming%20Guide_v2.0.pdf
  */
 
 #include <sys/param.h>
@@ -49,7 +49,6 @@
 
 #include <sys/ioccom.h>
 #include <sys/fcntl.h>
-#include <sys/tty.h>
 
 #define USB_DEBUG_VAR uep_debug
 #include <dev/usb/usb_debug.h>
@@ -58,7 +57,7 @@
 static int uep_debug = 0;
 
 static SYSCTL_NODE(_hw_usb, OID_AUTO, uep, CTLFLAG_RW, 0, "USB uep");
-SYSCTL_INT(_hw_usb_uep, OID_AUTO, debug, CTLFLAG_RW,
+SYSCTL_INT(_hw_usb_uep, OID_AUTO, debug, CTLFLAG_RWTUN,
     &uep_debug, 0, "Debug level");
 #endif
 
@@ -441,3 +440,4 @@ static driver_t uep_driver = {
 DRIVER_MODULE(uep, uhub, uep_driver, uep_devclass, NULL, NULL);
 MODULE_DEPEND(uep, usb, 1, 1, 1);
 MODULE_VERSION(uep, 1);
+USB_PNP_HOST_INFO(uep_devs);

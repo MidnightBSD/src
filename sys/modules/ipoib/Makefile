@@ -1,31 +1,17 @@
-# $FreeBSD: release/10.0.0/sys/modules/ipoib/Makefile 255932 2013-09-29 00:35:03Z alfred $
-.PATH:  ${.CURDIR}/../../ofed/drivers/infiniband/ulp/ipoib
-.PATH:  ${.CURDIR}/../../ofed/include/linux
+# $FreeBSD$
+.PATH:  ${SRCTOP}/sys/ofed/drivers/infiniband/ulp/ipoib
 
-.include <bsd.own.mk>
+KMOD=	ipoib
+SRCS= 	ipoib_cm.c ipoib_ib.c ipoib_main.c \
+	ipoib_multicast.c ipoib_verbs.c
+SRCS+=	${LINUXKPI_GENSRCS}
+SRCS+=	opt_inet.h opt_inet6.h opt_ofed.h
 
-KMOD    = ipoib
-SRCS    = device_if.h bus_if.h opt_ofed.h vnode_if.h opt_inet.h opt_inet6.h
-SRCS    += ipoib_cm.c ipoib_ib.c ipoib_main.c ipoib_multicast.c ipoib_verbs.c ipoib.h
-SRCS+=  linux_compat.c linux_radix.c linux_idr.c
-
-CFLAGS+= -I${.CURDIR}/../../ofed/drivers/infiniband/ulp/ipoib
-CFLAGS+= -I${.CURDIR}/../ibcore
-CFLAGS+= -I${.CURDIR}/../../ofed/include/
-CFLAGS+= -DINET6 -DINET -DOFED
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
+CFLAGS+= -I${SRCTOP}/sys/ofed/drivers/infiniband/ulp/ipoib
+CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
+CFLAGS+= -I${SRCTOP}/sys/compat/linuxkpi/common/include
 
 .include <bsd.kmod.mk>
 
-CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -fms-extensions
+CFLAGS+= -Wno-cast-qual -Wno-pointer-arith

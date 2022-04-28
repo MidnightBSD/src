@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_fixup.c 234485 2012-04-20 08:26:05Z adrian $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ar71xx.h"
 
@@ -49,7 +49,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/atheros/ar71xx_fixup.c 234485 2012-0
 #include <machine/bus.h>
 #include <machine/cpu.h>
 #include <machine/intr_machdep.h>
-#include <machine/pmap.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>

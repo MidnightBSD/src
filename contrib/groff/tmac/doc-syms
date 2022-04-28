@@ -659,6 +659,8 @@
 .as doc-str-St--susv2          " (\*[Lq]\*[doc-Tn-font-size]SUSv2\*[doc-str-St]\*[Rq])
 .ds doc-str-St--susv3          Version\~3 of the Single \*[doc-Tn-font-size]UNIX\*[doc-str-St] Specification
 .as doc-str-St--susv3          " (\*[Lq]\*[doc-Tn-font-size]SUSv3\*[doc-str-St]\*[Rq])
+.ds doc-str-St--susv4          Version\~4 of the Single \*[doc-Tn-font-size]UNIX\*[doc-str-St] Specification
+.as doc-str-St--susv4          " (\*[Lq]\*[doc-Tn-font-size]SUSv4\*[doc-str-St]\*[Rq])
 .ds doc-str-St--svid4          System\~V Interface Definition, Fourth Edition
 .as doc-str-St--svid4          " (\*[Lq]\*[doc-Tn-font-size]SVID\*[doc-str-St]\^4\*[Rq])
 .ds doc-str-St--xbd5           \*[doc-Tn-font-size]X/Open\*[doc-str-St] Base Definitions Issue\~5
@@ -780,7 +782,6 @@
 .ds doc-str-Lb-libfetch    File Transfer Library for URLs (libfetch, \-lfetch)
 .ds doc-str-Lb-libform     Curses Form Library (libform, \-lform)
 .ds doc-str-Lb-libgeom     Userland API Library for kernel GEOM subsystem (libgeom, \-lgeom)
-.ds doc-str-Lb-libgpib     General-Purpose Instrument Bus (GPIB) library (libgpib, \-lgpib)
 .ds doc-str-Lb-libi386     i386 Architecture Library (libi386, \-li386)
 .ds doc-str-Lb-libintl     Internationalized Message Handling Library (libintl, \-lintl)
 .ds doc-str-Lb-libipsec    IPsec Policy Control Library (libipsec, \-lipsec)
@@ -796,6 +797,7 @@
 .ds doc-str-Lb-libmd       Message Digest (MD4, MD5, etc.) Support Library (libmd, \-lmd)
 .ds doc-str-Lb-libmemstat  Kernel Memory Allocator Statistics Library (libmemstat, \-lmemstat)
 .ds doc-str-Lb-libmenu     Curses Menu Library (libmenu, \-lmenu)
+.ds doc-str-Lb-libmt       Magnetic Tape Library (libmt, \-lmt)
 .ds doc-str-Lb-libnetgraph Netgraph User Library (libnetgraph, \-lnetgraph)
 .ds doc-str-Lb-libnetpgp   Netpgp signing, verification, encryption and decryption (libnetpgp, \-lnetpgp)
 .ds doc-str-Lb-libossaudio OSS Audio Emulation Library (libossaudio, \-lossaudio)
@@ -812,7 +814,6 @@
 .ds doc-str-Lb-librpcsec_gss RPC GSS-API Authentication Library (librpcsec_gss, \-lrpcsec_gss)
 .ds doc-str-Lb-librpcsvc   RPC Service Library (librpcsvc, \-lrpcsvc)
 .ds doc-str-Lb-librt       \*[Px] \*[doc-str-Lb]Real-time Library (librt, \-lrt)
-.ds doc-str-Lb-libsbuf     Safe String Composition Library (libsbuf, \-lsbuf)
 .ds doc-str-Lb-libsdp      Bluetooth Service Discovery Protocol User Library (libsdp, \-lsdp)
 .ds doc-str-Lb-libssp      Buffer Overflow Protection Library (libssp, \-lssp)
 .ds doc-str-Lb-libSystem   System Library (libSystem, \-lSystem)

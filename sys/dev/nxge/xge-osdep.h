@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/nxge/xge-osdep.h 185162 2008-11-22 05:55:56Z kmacy $
+ * $FreeBSD$
  */
 
 #ifndef XGE_OSDEP_H
@@ -406,7 +406,6 @@ xge_os_dma_free(pci_dev_h pdev, const void *vaddr, int size,
 	XGE_OS_MEMORY_CHECK_FREE(p_dmah->dma_viraddr, size);
 	bus_dmamem_free(p_dmah->dma_tag, p_dmah->dma_viraddr, p_dmah->dma_map);
 	bus_dma_tag_destroy(p_dmah->dma_tag);
-	p_dmah->dma_map = NULL;
 	p_dmah->dma_tag = NULL;
 	p_dmah->dma_viraddr = NULL;
 	return;

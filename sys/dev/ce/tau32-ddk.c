@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ce/tau32-ddk.c 156143 2006-03-01 09:50:20Z rik $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __noinline
 #	ifdef __GNUC__

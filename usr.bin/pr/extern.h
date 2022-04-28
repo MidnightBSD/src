@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *      @(#)extern.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/pr/extern.h 227175 2011-11-06 08:16:24Z ed $
+ * $FreeBSD$
  */
 
 extern int eopterr;

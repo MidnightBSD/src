@@ -2,7 +2,7 @@
 #
 # Script for testing traffic to the local host (as opposed to bridged).
 #
-# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/setup.local 178361 2008-04-20 20:43:42Z sam $
+# $FreeBSD$
 #
 PATH=.:$PATH
 . config

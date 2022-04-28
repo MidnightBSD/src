@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/usr.bin/units/README 50477 1999-08-28 01:08:13Z peter $
+# $FreeBSD$
 
 This is a program which I wrote as a clone of the UNIX 'units'
 command.  I threw it together in a couple days, but it seems to work,

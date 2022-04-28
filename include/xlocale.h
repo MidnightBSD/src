@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/xlocale.h 232498 2012-03-04 15:31:13Z theraven $
+ * $FreeBSD$
  */
 
 #ifndef _XLOCALE_H_

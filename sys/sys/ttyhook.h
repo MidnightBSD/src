@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/ttyhook.h 186056 2008-12-13 21:17:46Z mav $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_TTYHOOK_H_

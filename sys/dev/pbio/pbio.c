@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pbio/pbio.c 183397 2008-09-27 08:51:18Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -170,8 +170,8 @@ pbioprobe(device_t dev)
 	if (isa_get_logicalid(dev))		/* skip PnP probes */
 		return (ENXIO);
 	rid = 0;
-	scp->res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0, ~0, IO_PBIOSIZE, RF_ACTIVE);
+	scp->res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    IO_PBIOSIZE, RF_ACTIVE);
 	if (scp->res == NULL)
 		return (ENXIO);
 
@@ -225,8 +225,8 @@ pbioattach (device_t dev)
 	sc = device_get_softc(dev);
 	unit = device_get_unit(dev);
 	rid = 0;
-	sc->res = bus_alloc_resource(dev, SYS_RES_IOPORT, &rid,
-	    0, ~0, IO_PBIOSIZE, RF_ACTIVE);
+	sc->res = bus_alloc_resource_anywhere(dev, SYS_RES_IOPORT, &rid,
+	    IO_PBIOSIZE, RF_ACTIVE);
 	if (sc->res == NULL)
 		return (ENXIO);
 	sc->bst = rman_get_bustag(sc->res);

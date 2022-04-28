@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/ufs/ufs/ufs_lookup.c 248561 2013-03-20 17:57:00Z mckusick $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"
@@ -75,32 +75,6 @@ SYSCTL_INT(_debug, OID_AUTO, dircheck, CTLFLAG_RW, &dirchk, 0, "");
 
 /* true if old FS format...*/
 #define OFSFMT(vp)	((vp)->v_mount->mnt_maxsymlinklen <= 0)
-
-#ifdef QUOTA
-static int
-ufs_lookup_upgrade_lock(struct vnode *vp)
-{
-	int error;
-
-	ASSERT_VOP_LOCKED(vp, __FUNCTION__);
-	if (VOP_ISLOCKED(vp) == LK_EXCLUSIVE)
-		return (0);
-
-	error = 0;
-
-	/*
-	 * Upgrade vnode lock, since getinoquota()
-	 * requires exclusive lock to modify inode.
-	 */
-	vhold(vp);
-	vn_lock(vp, LK_UPGRADE | LK_RETRY);
-	VI_LOCK(vp);
-	if (vp->v_iflag & VI_DOOMED)
-		error = ENOENT;
-	vdropl(vp);
-	return (error);
-}
-#endif
 
 static int
 ufs_delete_denied(struct vnode *vdp, struct vnode *tdp, struct ucred *cred,
@@ -259,12 +233,25 @@ ufs_lookup_ino(struct vnode *vdp, struct vnode **vpp, struct componentname *cnp,
 	vnode_create_vobject(vdp, DIP(dp, i_size), cnp->cn_thread);
 
 	bmask = VFSTOUFS(vdp->v_mount)->um_mountp->mnt_stat.f_iosize - 1;
-#ifdef QUOTA
-	if ((nameiop == DELETE || nameiop == RENAME) && (flags & ISLASTCN)) {
-		error = ufs_lookup_upgrade_lock(vdp);
-		if (error != 0)
-			return (error);
-	}
+
+#ifdef DEBUG_VFS_LOCKS
+	/*
+	 * Assert that the directory vnode is locked, and locked
+	 * exclusively for the last component lookup for modifying
+	 * operations.
+	 *
+	 * The directory-modifying operations need to save
+	 * intermediate state in the inode between namei() call and
+	 * actual directory manipulations.  See fields in the struct
+	 * inode marked as 'used during directory lookup'.  We must
+	 * ensure that upgrade in namei() does not happen, since
+	 * upgrade might need to unlock vdp.  If quotas are enabled,
+	 * getinoquota() also requires exclusive lock to modify inode.
+	 */
+	ASSERT_VOP_LOCKED(vdp, "ufs_lookup1");
+	if ((nameiop == CREATE || nameiop == DELETE || nameiop == RENAME) &&
+	    (flags & (LOCKPARENT | ISLASTCN)) == (LOCKPARENT | ISLASTCN))
+		ASSERT_VOP_ELOCKED(vdp, "ufs_lookup2");
 #endif
 
 restart:
@@ -550,7 +537,7 @@ notfound:
 	/*
 	 * Insert name into cache (as non-existent) if appropriate.
 	 */
-	if ((cnp->cn_flags & MAKEENTRY) && nameiop != CREATE)
+	if ((cnp->cn_flags & MAKEENTRY) != 0)
 		cache_enter(vdp, NULL, cnp);
 	return (ENOENT);
 
@@ -577,7 +564,7 @@ found:
 	 * in the cache as to where the entry was found.
 	 */
 	if ((flags & ISLASTCN) && nameiop == LOOKUP)
-		dp->i_diroff = i_offset &~ (DIRBLKSIZ - 1);
+		dp->i_diroff = rounddown2(i_offset, DIRBLKSIZ);
 
 	/*
 	 * If deleting, and at end of pathname, return
@@ -836,14 +823,21 @@ ufs_makedirentry(ip, cnp, newdirp)
 	struct componentname *cnp;
 	struct direct *newdirp;
 {
+	u_int namelen;
 
-#ifdef INVARIANTS
-	if ((cnp->cn_flags & SAVENAME) == 0)
-		panic("ufs_makedirentry: missing name");
-#endif
+	namelen = (unsigned)cnp->cn_namelen;
+	KASSERT((cnp->cn_flags & SAVENAME) != 0,
+		("ufs_makedirentry: missing name"));
+	KASSERT(namelen <= MAXNAMLEN,
+		("ufs_makedirentry: name too long"));
 	newdirp->d_ino = ip->i_number;
-	newdirp->d_namlen = cnp->cn_namelen;
-	bcopy(cnp->cn_nameptr, newdirp->d_name, (unsigned)cnp->cn_namelen + 1);
+	newdirp->d_namlen = namelen;
+
+	/* Zero out after-name padding */
+	*(u_int32_t *)(&newdirp->d_name[namelen & ~(DIR_ROUNDUP - 1)]) = 0;
+
+	bcopy(cnp->cn_nameptr, newdirp->d_name, namelen);
+
 	if (ITOV(ip)->v_mount->mnt_maxsymlinklen > 0)
 		newdirp->d_type = IFTODT(ip->i_mode);
 	else {
@@ -881,6 +875,7 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 	struct buf *bp;
 	u_int dsize;
 	struct direct *ep, *nep;
+	u_int64_t old_isize;
 	int error, ret, blkoff, loc, spacefree, flags, namlen;
 	char *dirbuf;
 
@@ -909,16 +904,19 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 			return (error);
 		}
 #endif
+		old_isize = dp->i_size;
+		vnode_pager_setsize(dvp, (u_long)dp->i_offset + DIRBLKSIZ);
 		if ((error = UFS_BALLOC(dvp, (off_t)dp->i_offset, DIRBLKSIZ,
 		    cr, flags, &bp)) != 0) {
 			if (DOINGSOFTDEP(dvp) && newdirbp != NULL)
 				bdwrite(newdirbp);
+			vnode_pager_setsize(dvp, (u_long)old_isize);
 			return (error);
 		}
 		dp->i_size = dp->i_offset + DIRBLKSIZ;
 		DIP_SET(dp, i_size, dp->i_size);
+		dp->i_endoff = dp->i_size;
 		dp->i_flag |= IN_CHANGE | IN_UPDATE;
-		vnode_pager_setsize(dvp, (u_long)dp->i_size);
 		dirp->d_reclen = DIRBLKSIZ;
 		blkoff = dp->i_offset &
 		    (VFSTOUFS(dvp->v_mount)->um_mountp->mnt_stat.f_iosize - 1);
@@ -1100,7 +1098,7 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 	if (dp->i_dirhash != NULL)
 		ufsdirhash_checkblock(dp, dirbuf -
 		    (dp->i_offset & (DIRBLKSIZ - 1)),
-		    dp->i_offset & ~(DIRBLKSIZ - 1));
+		    rounddown2(dp->i_offset, DIRBLKSIZ));
 #endif
 
 	if (DOINGSOFTDEP(dvp)) {
@@ -1130,12 +1128,17 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp, isrename)
 	    dp->i_endoff && dp->i_endoff < dp->i_size) {
 		if (tvp != NULL)
 			VOP_UNLOCK(tvp, 0);
+		error = UFS_TRUNCATE(dvp, (off_t)dp->i_endoff,
+		    IO_NORMAL | (DOINGASYNC(dvp) ? 0 : IO_SYNC), cr);
+		if (error != 0)
+			vn_printf(dvp,
+			    "ufs_direnter: failed to truncate, error %d\n",
+			    error);
 #ifdef UFS_DIRHASH
-		if (dp->i_dirhash != NULL)
+		if (error == 0 && dp->i_dirhash != NULL)
 			ufsdirhash_dirtrunc(dp, dp->i_endoff);
 #endif
-		(void) UFS_TRUNCATE(dvp, (off_t)dp->i_endoff,
-		    IO_NORMAL | IO_SYNC, cr);
+		error = 0;
 		if (tvp != NULL)
 			vn_lock(tvp, LK_EXCLUSIVE | LK_RETRY);
 	}
@@ -1164,6 +1167,7 @@ ufs_dirremove(dvp, ip, flags, isrmdir)
 	struct inode *dp;
 	struct direct *ep, *rep;
 	struct buf *bp;
+	off_t offset;
 	int error;
 
 	dp = VTOI(dvp);
@@ -1173,6 +1177,7 @@ ufs_dirremove(dvp, ip, flags, isrmdir)
 	 */
 	if (ip) {
 		ip->i_effnlink--;
+		ip->i_flag |= IN_CHANGE;
 		if (DOINGSOFTDEP(dvp)) {
 			softdep_setup_unlink(dp, ip);
 		} else {
@@ -1181,22 +1186,32 @@ ufs_dirremove(dvp, ip, flags, isrmdir)
 			ip->i_flag |= IN_CHANGE;
 		}
 	}
+	if (flags & DOWHITEOUT)
+		offset = dp->i_offset;
+	else
+		offset = dp->i_offset - dp->i_count;
+	if ((error = UFS_BLKATOFF(dvp, offset, (char **)&ep, &bp)) != 0) {
+		if (ip) {
+			ip->i_effnlink++;
+			ip->i_flag |= IN_CHANGE;
+			if (DOINGSOFTDEP(dvp)) {
+				softdep_change_linkcnt(ip);
+			} else {
+				ip->i_nlink++;
+				DIP_SET(ip, i_nlink, ip->i_nlink);
+				ip->i_flag |= IN_CHANGE;
+			}
+		}
+		return (error);
+	}
 	if (flags & DOWHITEOUT) {
 		/*
 		 * Whiteout entry: set d_ino to WINO.
 		 */
-		if ((error =
-		    UFS_BLKATOFF(dvp, (off_t)dp->i_offset, (char **)&ep, &bp)) != 0)
-			return (error);
 		ep->d_ino = WINO;
 		ep->d_type = DT_WHT;
 		goto out;
 	}
-
-	if ((error = UFS_BLKATOFF(dvp,
-	    (off_t)(dp->i_offset - dp->i_count), (char **)&ep, &bp)) != 0)
-		return (error);
-
 	/* Set 'rep' to the entry being removed. */
 	if (dp->i_count == 0)
 		rep = ep;
@@ -1213,22 +1228,27 @@ ufs_dirremove(dvp, ip, flags, isrmdir)
 	if (ip && rep->d_ino != ip->i_number)
 		panic("ufs_dirremove: ip %ju does not match dirent ino %ju\n",
 		    (uintmax_t)ip->i_number, (uintmax_t)rep->d_ino);
-	if (dp->i_count == 0) {
-		/*
-		 * First entry in block: set d_ino to zero.
-		 */
-		ep->d_ino = 0;
-	} else {
+	/*
+	 * Zero out the file directory entry metadata to reduce disk
+	 * scavenging disclosure.
+	 */
+	bzero(&rep->d_name[0], rep->d_namlen);
+	rep->d_namlen = 0;
+	rep->d_type = 0;
+	rep->d_ino = 0;
+
+	if (dp->i_count != 0) {
 		/*
 		 * Collapse new free space into previous entry.
 		 */
 		ep->d_reclen += rep->d_reclen;
+		rep->d_reclen = 0;
 	}
 #ifdef UFS_DIRHASH
 	if (dp->i_dirhash != NULL)
 		ufsdirhash_checkblock(dp, (char *)ep -
 		    ((dp->i_offset - dp->i_count) & (DIRBLKSIZ - 1)),
-		    dp->i_offset & ~(DIRBLKSIZ - 1));
+		    rounddown2(dp->i_offset, DIRBLKSIZ));
 #endif
 out:
 	error = 0;
@@ -1253,7 +1273,8 @@ out:
 	 * drop its snapshot reference so that it will be reclaimed
 	 * when last open reference goes away.
 	 */
-	if (ip != 0 && (ip->i_flags & SF_SNAPSHOT) != 0 && ip->i_effnlink == 0)
+	if (ip != NULL && (ip->i_flags & SF_SNAPSHOT) != 0 &&
+	    ip->i_effnlink == 0)
 		UFS_SNAPGONE(ip);
 	return (error);
 }
@@ -1280,6 +1301,7 @@ ufs_dirrewrite(dp, oip, newinum, newtype, isrmdir)
 	 * necessary.
 	 */
 	oip->i_effnlink--;
+	oip->i_flag |= IN_CHANGE;
 	if (DOINGSOFTDEP(vdp)) {
 		softdep_setup_unlink(dp, oip);
 	} else {
@@ -1289,12 +1311,22 @@ ufs_dirrewrite(dp, oip, newinum, newtype, isrmdir)
 	}
 
 	error = UFS_BLKATOFF(vdp, (off_t)dp->i_offset, (char **)&ep, &bp);
-	if (error)
-		return (error);
-	if (ep->d_namlen == 2 && ep->d_name[1] == '.' && ep->d_name[0] == '.' &&
-	    ep->d_ino != oip->i_number) {
+	if (error == 0 && ep->d_namlen == 2 && ep->d_name[1] == '.' &&
+	    ep->d_name[0] == '.' && ep->d_ino != oip->i_number) {
 		brelse(bp);
-		return (EIDRM);
+		error = EIDRM;
+	}
+	if (error) {
+		oip->i_effnlink++;
+		oip->i_flag |= IN_CHANGE;
+		if (DOINGSOFTDEP(vdp)) {
+			softdep_change_linkcnt(oip);
+		} else {
+			oip->i_nlink++;
+			DIP_SET(oip, i_nlink, oip->i_nlink);
+			oip->i_flag |= IN_CHANGE;
+		}
+		return (error);
 	}
 	ep->d_ino = newinum;
 	if (!OFSFMT(vdp))
@@ -1472,7 +1504,8 @@ ufs_checkpath(ino_t source_ino, ino_t parent_ino, struct inode *target, struct u
 			}
 		}
 		KASSERT(dd_ino == VTOI(vp1)->i_number,
-		    ("directory %d reparented\n", VTOI(vp1)->i_number));
+		    ("directory %ju reparented\n",
+		    (uintmax_t)VTOI(vp1)->i_number));
 		if (vp != tvp)
 			vput(vp);
 		vp = vp1;

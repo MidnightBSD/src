@@ -31,10 +31,9 @@
 static char sccsid[] = "@(#)getservent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/net/getservent.c 254700 2013-08-23 13:59:47Z jilles $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <db.h>
@@ -321,7 +320,7 @@ files_servent(void *retval, void *mdata, va_list ap)
 		break;
 	default:
 		return NS_NOTFOUND;
-	};
+	}
 
 	serv = va_arg(ap, struct servent *);
 	buffer  = va_arg(ap, char *);
@@ -406,14 +405,14 @@ files_servent(void *retval, void *mdata, va_list ap)
 
 			continue;
 		gotname:
-			if (proto == 0 || strcmp(serv->s_proto, proto) == 0)
+			if (proto == NULL || strcmp(serv->s_proto, proto) == 0)
 				rv = NS_SUCCESS;
 			break;
 		case nss_lt_id:
 			if (port != serv->s_port)
 				continue;
 
-			if (proto == 0 || strcmp(serv->s_proto, proto) == 0)
+			if (proto == NULL || strcmp(serv->s_proto, proto) == 0)
 				rv = NS_SUCCESS;
 			break;
 		case nss_lt_all:
@@ -445,7 +444,7 @@ files_setservent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETSERVENT:
 		f = va_arg(ap,int);
 		if (st->fp == NULL)
@@ -463,7 +462,7 @@ files_setservent(void *retval, void *mdata, va_list ap)
 		break;
 	default:
 		break;
-	};
+	}
 
 	st->compat_mode_active = 0;
 	return (NS_UNAVAIL);
@@ -508,7 +507,7 @@ db_servent(void *retval, void *mdata, va_list ap)
 
 	name = NULL;
 	proto = NULL;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -522,7 +521,7 @@ db_servent(void *retval, void *mdata, va_list ap)
 		break;
 	default:
 		return NS_NOTFOUND;
-	};
+	}
 
 	serv = va_arg(ap, struct servent *);
 	buffer  = va_arg(ap, char *);
@@ -625,7 +624,7 @@ db_setservent(void *retval, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETSERVENT:
 		f = va_arg(ap, int);
 		st->stayopen |= f;
@@ -641,7 +640,7 @@ db_setservent(void *retval, void *mdata, va_list ap)
 		break;
 	default:
 		break;
-	};
+	}
 
 	return (NS_UNAVAIL);
 }
@@ -663,7 +662,7 @@ nis_servent(void *retval, void *mdata, va_list ap)
 {
 	char *resultbuf, *lastkey;
 	int resultbuflen;
-	char buf[YPMAXRECORD + 2];
+	char *buf;
 
 	struct nis_state *st;
 	int rv;
@@ -680,7 +679,8 @@ nis_servent(void *retval, void *mdata, va_list ap)
 
 	name = NULL;
 	proto = NULL;
-	how = (enum nss_lookup_type)mdata;
+	buf = NULL;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -694,7 +694,7 @@ nis_servent(void *retval, void *mdata, va_list ap)
 		break;
 	default:
 		return NS_NOTFOUND;
-	};
+	}
 
 	serv = va_arg(ap, struct servent *);
 	buffer  = va_arg(ap, char *);
@@ -715,7 +715,10 @@ nis_servent(void *retval, void *mdata, va_list ap)
 	do {
 		switch (how) {
 		case nss_lt_name:
-			snprintf(buf, sizeof(buf), "%s/%s", name, proto);
+			free(buf);
+			asprintf(&buf, "%s/%s", name, proto);
+			if (buf == NULL)
+				return (NS_TRYAGAIN);
 			if (yp_match(st->yp_domain, "services.byname", buf,
 			    strlen(buf), &resultbuf, &resultbuflen)) {
 				rv = NS_NOTFOUND;
@@ -723,8 +726,10 @@ nis_servent(void *retval, void *mdata, va_list ap)
 			}
 			break;
 		case nss_lt_id:
-			snprintf(buf, sizeof(buf), "%d/%s", ntohs(port),
-			    proto);
+			free(buf);
+			asprintf(&buf, "%d/%s", ntohs(port), proto);
+			if (buf == NULL)
+				return (NS_TRYAGAIN);
 
 			/*
 			 * We have to be a little flexible
@@ -781,7 +786,7 @@ nis_servent(void *retval, void *mdata, va_list ap)
 				}
 			}
 			break;
-		};
+		}
 
 		rv = parse_result(serv, buffer, bufsize, resultbuf,
 		    resultbuflen, errnop);
@@ -790,6 +795,7 @@ nis_servent(void *retval, void *mdata, va_list ap)
 	} while (!(rv & NS_TERMINATE) && how == nss_lt_all);
 
 fin:
+	free(buf);
 	if (rv == NS_SUCCESS && retval != NULL)
 		*(struct servent **)retval = serv;
 
@@ -806,7 +812,7 @@ nis_setservent(void *result, void *mdata, va_list ap)
 	if (rv != 0)
 		return (NS_UNAVAIL);
 
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETSERVENT:
 	case ENDSERVENT:
 		free(st->yp_key);
@@ -815,7 +821,7 @@ nis_setservent(void *result, void *mdata, va_list ap)
 		break;
 	default:
 		break;
-	};
+	}
 
 	return (NS_UNAVAIL);
 }
@@ -842,7 +848,7 @@ compat_setservent(void *retval, void *mdata, va_list ap)
 
 	(void)files_setservent(retval, mdata, ap);
 
-	switch ((enum constants)mdata) {
+	switch ((enum constants)(uintptr_t)mdata) {
 	case SETSERVENT:
 		f = va_arg(ap,int);
 		(void)nsdispatch(retval, compat_dtab, NSDB_SERVICES_COMPAT,
@@ -871,7 +877,7 @@ serv_id_func(char *buffer, size_t *buffer_size, va_list ap, void *cache_mdata)
 	enum nss_lookup_type lookup_type;
 	int res = NS_UNAVAIL;
 
-	lookup_type = (enum nss_lookup_type)cache_mdata;
+	lookup_type = (enum nss_lookup_type)(uintptr_t)cache_mdata;
 	switch (lookup_type) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
@@ -953,7 +959,7 @@ serv_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
 	size_t size;
 	size_t aliases_size;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		proto = va_arg(ap, char *);
@@ -1050,7 +1056,7 @@ serv_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
 	size_t orig_buf_size;
 	int *ret_errno;
 
-	switch ((enum nss_lookup_type)cache_mdata) {
+	switch ((enum nss_lookup_type)(uintptr_t)cache_mdata) {
 	case nss_lt_name:
 		name = va_arg(ap, char *);
 		proto = va_arg(ap, char *);
@@ -1241,7 +1247,7 @@ setservent(int stayopen)
 }
 
 void
-endservent()
+endservent(void)
 {
 #ifdef NS_CACHING
 	static const nss_cache_info cache_info = NS_MP_CACHE_INFO_INITIALIZER(
@@ -1362,7 +1368,7 @@ getservbyport(int port, const char *proto)
 }
 
 struct servent *
-getservent()
+getservent(void)
 {
 	struct key key;
 

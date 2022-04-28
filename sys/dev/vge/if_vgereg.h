@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/vge/if_vgereg.h 225440 2011-09-07 16:57:43Z yongari $
+ * $FreeBSD$
  */
 
 /*

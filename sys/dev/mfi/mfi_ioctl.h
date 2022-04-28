@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_ioctl.h 233805 2012-04-02 19:13:02Z ambrisko $");
+__FBSDID("$FreeBSD$");
 
 #include <dev/mfi/mfireg.h>
 

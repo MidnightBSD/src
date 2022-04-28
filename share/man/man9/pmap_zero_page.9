@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man9/pmap_zero_page.9 131681 2004-07-06 07:02:31Z ru $
+.\" $FreeBSD$
 .\"
 .Dd July 21, 2003
 .Dt PMAP_ZERO 9
@@ -52,7 +52,6 @@ The
 function is used to zero-fill an area of a page.
 The range specified must not cross a page boundary; it must be contained
 entirely within a single page.
-.Pp
 The
 .Fn pmap_zero_page_idle
 interface is used by the
@@ -69,4 +68,4 @@ This function is required to be implemented for each architecture supported by
 .Xr pmap 9
 .Sh AUTHORS
 This manual page was written by
-.An Bruce M Simpson Aq bms@spc.org .
+.An Bruce M Simpson Aq Mt bms@spc.org .

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/include/tls.h 232583 2012-03-06 07:47:28Z jmallett $
+ * $FreeBSD$
  * 
  */
 

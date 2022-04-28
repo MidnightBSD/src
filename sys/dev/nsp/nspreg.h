@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/dev/nsp/nspreg.h 139749 2005-01-06 01:43:34Z imp $	*/
+/*	$FreeBSD$	*/
 /*	$NecBSD: nspreg.h,v 1.4.14.3 2001/06/29 06:27:53 honda Exp $	*/
 /*	$NetBSD$	*/
 

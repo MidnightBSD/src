@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/geom/journal/g_journal.h 185693 2008-12-06 11:33:10Z trasz $
+ * $FreeBSD$
  */
 
 #ifndef	_G_JOURNAL_H_
@@ -182,6 +182,17 @@ struct g_journal_softc {
 		(pbp)->bio_next = (bp);					\
 	}								\
 } while (0)
+#define GJQ_LAST(head, bp) do {						\
+	struct bio *_bp;						\
+									\
+	if ((head) == NULL) {						\
+		(bp) = (head);						\
+		break;							\
+	}								\
+	for (_bp = (head); _bp->bio_next != NULL; _bp = _bp->bio_next)	\
+		continue;						\
+	(bp) = (_bp);							\
+} while (0)
 #define	GJQ_FIRST(head)	(head)
 #define	GJQ_REMOVE(head, bp)	do {					\
 	struct bio *_bp;						\
@@ -224,7 +235,7 @@ struct g_journal_entry {
 #define	GJ_VALIDATE_OFFSET(offset, sc)	do {				\
 	if ((offset) + GJ_RECORD_MAX_SIZE(sc) >= (sc)->sc_jend) {	\
 		(offset) = (sc)->sc_jstart;				\
-		GJ_DEBUG(2, "Starting from the begining (%s).",		\
+		GJ_DEBUG(2, "Starting from the beginning (%s).",		\
 		    (sc)->sc_name);					\
 	}								\
 } while (0)

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/pseries/vdevice.c 255927 2013-09-28 15:46:03Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -103,7 +103,7 @@ static driver_t vdevice_driver = {
 
 static devclass_t vdevice_devclass;
 
-DRIVER_MODULE(vdevice, nexus, vdevice_driver, vdevice_devclass, 0, 0);
+DRIVER_MODULE(vdevice, ofwbus, vdevice_driver, vdevice_devclass, 0, 0);
 
 static int 
 vdevice_probe(device_t dev) 
@@ -128,11 +128,13 @@ vdevice_attach(device_t dev)
 {
 	phandle_t root, child;
 	device_t cdev;
-	int icells, i, nintr, *intr;
-	phandle_t iparent;
 	struct vdevice_devinfo *dinfo;
 
 	root = ofw_bus_get_node(dev);
+
+	/* The XICP (root PIC) will handle all our interrupts */
+	powerpc_register_pic(root_pic, OF_xref_from_node(root),
+	    1 << 24 /* 24-bit XIRR field */, 1 /* Number of IPIs */, FALSE);
 
 	for (child = OF_child(root); child != 0; child = OF_peer(child)) {
 		dinfo = malloc(sizeof(*dinfo), M_DEVBUF, M_WAITOK | M_ZERO);
@@ -144,24 +146,7 @@ vdevice_attach(device_t dev)
                 }
 		resource_list_init(&dinfo->mdi_resources);
 
-		if (OF_searchprop(child, "#interrupt-cells", &icells,
-		    sizeof(icells)) <= 0)
-			icells = 2;
-		if (OF_getprop(child, "interrupt-parent", &iparent,
-		    sizeof(iparent)) <= 0)
-			iparent = -1;
-		nintr = OF_getprop_alloc(child, "interrupts", sizeof(*intr),
-		    (void **)&intr);
-		if (nintr > 0) {
-			for (i = 0; i < nintr; i += icells) {
-				u_int irq = intr[i];
-				if (iparent != -1)
-					irq = MAP_IRQ(iparent, intr[i]);
-
-				resource_list_add(&dinfo->mdi_resources,
-				    SYS_RES_IRQ, i, irq, irq, i);
-			}
-		}
+		ofw_bus_intr_to_rl(dev, child, &dinfo->mdi_resources, NULL);
 
                 cdev = device_add_child(dev, NULL, -1);
                 if (cdev == NULL) {
@@ -195,7 +180,7 @@ vdevice_print_child(device_t dev, device_t child)
 
 	retval += bus_print_child_header(dev, child);
 
-	retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+	retval += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%jd");
 
 	retval += bus_print_child_footer(dev, child);
 

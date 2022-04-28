@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: release/10.0.0/usr.sbin/bsdconfig/docsinstall/docsinstall 252987 2013-07-07 18:51:44Z dteske $
+# $FreeBSD$
 #
 ############################################################ INCLUDES
 
@@ -37,8 +37,8 @@ f_include $BSDCFG_SHARE/mustberoot.subr
 BSDCFG_LIBE="/usr/libexec/bsdconfig" APP_DIR="020.docsinstall"
 f_include_lang $BSDCFG_LIBE/$APP_DIR/include/messages.subr
 
-ipgm=$( f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" )
-[ $? -eq $SUCCESS -a "$ipgm" ] && pgm="$ipgm"
+f_index_menusel_keyword $BSDCFG_LIBE/$APP_DIR/INDEX "$pgm" ipgm &&
+	pgm="${ipgm:-$pgm}"
 
 ############################################################ CONFIGURATION
 

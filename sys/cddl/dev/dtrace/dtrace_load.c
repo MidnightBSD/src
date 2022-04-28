@@ -18,10 +18,11 @@
  *
  * CDDL HEADER END
  *
- * $FreeBSD: release/10.0.0/sys/cddl/dev/dtrace/dtrace_load.c 256148 2013-10-08 12:56:46Z markj $
+ * $FreeBSD$
  *
  */
 
+#ifndef EARLY_AP_STARTUP
 static void
 dtrace_ap_start(void *dummy)
 {
@@ -41,11 +42,26 @@ dtrace_ap_start(void *dummy)
 }
 
 SYSINIT(dtrace_ap_start, SI_SUB_SMP, SI_ORDER_ANY, dtrace_ap_start, NULL);
+#endif
 
 static void
 dtrace_load(void *dummy)
 {
 	dtrace_provider_id_t id;
+#ifdef EARLY_AP_STARTUP
+	int i;
+#endif
+
+#ifndef illumos
+	/*
+	 * DTrace uses negative logic for the destructive mode switch, so it
+	 * is required to translate from the sysctl which uses positive logic.
+	 */ 
+	if (dtrace_allow_destructive)
+		dtrace_destructive_disallow = 0;
+	else
+		dtrace_destructive_disallow = 1;
+#endif
 
 	/* Hook into the trap handler. */
 	dtrace_trap_func = dtrace_trap;
@@ -57,6 +73,8 @@ dtrace_load(void *dummy)
 	dtrace_invop_init();
 
 	dtrace_taskq = taskq_create("dtrace_taskq", 1, maxclsyspri, 0, 0, 0);
+
+	dtrace_arena = new_unrhdr(1, INT_MAX, &dtrace_unr_mtx);
 
 	/* Register callbacks for linker file load and unload events. */
 	dtrace_kld_load_tag = EVENTHANDLER_REGISTER(kld_load,
@@ -84,8 +102,6 @@ dtrace_load(void *dummy)
 	mutex_enter(&cpu_lock);
 
 	ASSERT(MUTEX_HELD(&cpu_lock));
-
-	dtrace_arena = new_unrhdr(1, INT_MAX, &dtrace_unr_mtx);
 
 	dtrace_state_cache = kmem_cache_create("dtrace_state_cache",
 	    sizeof (dtrace_dstate_percpu_t) * NCPU, DTRACE_STATE_ALIGN,
@@ -137,39 +153,26 @@ dtrace_load(void *dummy)
 
 	mutex_exit(&cpu_lock);
 
-	/*
-	 * If DTrace helper tracing is enabled, we need to allocate the
-	 * trace buffer and initialize the values.
-	 */
-	if (dtrace_helptrace_enabled) {
-		ASSERT(dtrace_helptrace_buffer == NULL);
-		dtrace_helptrace_buffer =
-		    kmem_zalloc(dtrace_helptrace_bufsize, KM_SLEEP);
-		dtrace_helptrace_next = 0;
-	}
-
 	mutex_exit(&dtrace_lock);
 	mutex_exit(&dtrace_provider_lock);
 
 	mutex_enter(&cpu_lock);
 
+#ifdef EARLY_AP_STARTUP
+	CPU_FOREACH(i) {
+		(void) dtrace_cpu_setup(CPU_CONFIG, i);
+	}
+#else
 	/* Setup the boot CPU */
 	(void) dtrace_cpu_setup(CPU_CONFIG, 0);
+#endif
 
 	mutex_exit(&cpu_lock);
 
-#if __FreeBSD_version < 800039
-	/* Enable device cloning. */
-	clone_setup(&dtrace_clones);
-
-	/* Setup device cloning events. */
-	eh_tag = EVENTHANDLER_REGISTER(dev_clone, dtrace_clone, 0, 1000);
-#else
 	dtrace_dev = make_dev(&dtrace_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600,
 	    "dtrace/dtrace");
 	helper_dev = make_dev(&helper_cdevsw, 0, UID_ROOT, GID_WHEEL, 0660,
 	    "dtrace/helper");
-#endif
 
 	return;
 }

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/10.0.0/sys/i386/include/exec.h 142107 2005-02-19 21:16:48Z ru $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_EXEC_H_

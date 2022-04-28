@@ -1,6 +1,8 @@
 /*	$NetBSD: fsdb.h,v 1.2 1995/10/08 23:18:11 thorpej Exp $	*/
 
-/*
+/*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *  Copyright (c) 1995 John T. Kohl
  *  All rights reserved.
  * 
@@ -27,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sbin/fsdb/fsdb.h 163846 2006-10-31 22:07:29Z pjd $
+ * $FreeBSD$
  */
 
 extern int blread(int fd, char *buf, ufs2_daddr_t blk, long size);

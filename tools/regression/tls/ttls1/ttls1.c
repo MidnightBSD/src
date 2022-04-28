@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/tools/regression/tls/ttls1/ttls1.c 133162 2004-08-05 08:07:40Z dfr $ */
+/* $FreeBSD$ */
 
 #include <stdio.h>
 

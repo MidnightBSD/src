@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)cmds.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/lpr/lpc/cmds.c 241852 2012-10-22 03:31:22Z eadler $");
+__FBSDID("$FreeBSD$");
 
 /*
  * lpc -- line printer control program -- commands:
@@ -306,7 +306,7 @@ kill_qtask(const char *lf)
 	}
 
 	/* If the lock file is empty, then there is no daemon to kill */
-	if (getline(fp) == 0)
+	if (get_line(fp) == 0)
 		goto killdone;
 
 	/*
@@ -1292,7 +1292,7 @@ doarg(char *job)
 		PRIV_END
 		if (fp == NULL)
 			continue;
-		while (getline(fp) > 0)
+		while (get_line(fp) > 0)
 			if (line[0] == 'P')
 				break;
 		(void) fclose(fp);

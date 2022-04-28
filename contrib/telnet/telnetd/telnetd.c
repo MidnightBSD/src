@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -37,7 +33,7 @@ static const char sccsid[] = "@(#)telnetd.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnetd/telnetd.c 202214 2010-01-13 18:46:50Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "telnetd.h"
 #include "pathnames.h"
@@ -52,7 +48,6 @@ __FBSDID("$FreeBSD: release/10.0.0/contrib/telnet/telnetd/telnetd.c 202214 2010-
 
 #ifdef	AUTHENTICATION
 #include <libtelnet/auth.h>
-int	auth_level = 0;
 #endif
 #ifdef	ENCRYPTION
 #include <libtelnet/encrypt.h>
@@ -740,6 +735,10 @@ telnet(int f, int p, char *host)
 	char *HE;
 	char *HN;
 	char *IM;
+	char *IF;
+	char *if_buf;
+	int if_fd = -1;
+	struct stat statbuf;
 	int nfd;
 
 	/*
@@ -905,8 +904,13 @@ telnet(int f, int p, char *host)
 		HE = Getstr("he", &cp);
 		HN = Getstr("hn", &cp);
 		IM = Getstr("im", &cp);
+		IF = Getstr("if", &cp);
 		if (HN && *HN)
 			(void) strlcpy(host_name, HN, sizeof(host_name));
+		if (IF) {
+		    if_fd = open(IF, O_RDONLY, 000);
+		    IM = 0;
+		}
 		if (IM == 0)
 			IM = strdup("");
 	} else {
@@ -916,6 +920,17 @@ telnet(int f, int p, char *host)
 	edithost(HE, host_name);
 	if (hostinfo && *IM)
 		putf(IM, ptyibuf2);
+	if (if_fd != -1) {
+		if (fstat(if_fd, &statbuf) != -1 && statbuf.st_size > 0) {
+			if_buf = (char *) mmap (0, statbuf.st_size,
+			    PROT_READ, 0, if_fd, 0);
+			if (if_buf != MAP_FAILED) {
+				putf(if_buf, ptyibuf2);
+				munmap(if_buf, statbuf.st_size);
+			}
+		}
+		close (if_fd);
+	}
 
 	if (pcc)
 		(void) strncat(ptyibuf2, ptyip, pcc+1);

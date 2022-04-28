@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mac_biba/Makefile 105725 2002-10-22 17:10:15Z rwatson $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../security/mac_biba
+.PATH: ${SRCTOP}/sys/security/mac_biba
 
 KMOD=	mac_biba
 SRCS=	vnode_if.h \

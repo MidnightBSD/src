@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mii/Makefile 239275 2012-08-15 04:03:55Z gonzo $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/mii
+.PATH: ${SRCTOP}/sys/dev/mii
 
 KMOD=	miibus
 SRCS=	acphy.c amphy.c atphy.c axphy.c bmtphy.c brgphy.c bus_if.h

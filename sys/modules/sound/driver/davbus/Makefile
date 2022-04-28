@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/sound/driver/davbus/Makefile 187692 2009-01-25 18:20:15Z nwhitehorn $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../../../dev/sound/macio
+.PATH: ${SRCTOP}/sys/dev/sound/macio
 
 KMOD=	snd_davbus
 SRCS=	device_if.h bus_if.h ofw_bus_if.h

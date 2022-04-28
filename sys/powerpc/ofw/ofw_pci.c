@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_pci.c 231149 2012-02-07 19:14:13Z nwhitehorn $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
@@ -62,8 +62,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_pci.c 231149 2012-02-07 1
 static int		ofw_pci_read_ivar(device_t, device_t, int,
 			    uintptr_t *);
 static struct		resource * ofw_pci_alloc_resource(device_t bus,
-			    device_t child, int type, int *rid, u_long start,
-			    u_long end, u_long count, u_int flags);
+			    device_t child, int type, int *rid, rman_res_t start,
+			    rman_res_t end, rman_res_t count, u_int flags);
 static int		ofw_pci_release_resource(device_t bus, device_t child,
     			    int type, int rid, struct resource *res);
 static int		ofw_pci_activate_resource(device_t bus, device_t child,
@@ -72,8 +72,8 @@ static int		ofw_pci_deactivate_resource(device_t bus,
     			    device_t child, int type, int rid,
     			    struct resource *res);
 static int		ofw_pci_adjust_resource(device_t bus, device_t child,
-			    int type, struct resource *res, u_long start,
-			    u_long end);
+			    int type, struct resource *res, rman_res_t start,
+			    rman_res_t end);
 
 /*
  * pcib interface.
@@ -124,7 +124,7 @@ static device_method_t	ofw_pci_methods[] = {
 DEFINE_CLASS_0(ofw_pci, ofw_pci_driver, ofw_pci_methods, 0);
 
 int
-ofw_pci_attach(device_t dev)
+ofw_pci_init(device_t dev)
 {
 	struct		ofw_pci_softc *sc;
 	phandle_t	node;
@@ -134,11 +134,9 @@ ofw_pci_attach(device_t dev)
 
 	node = ofw_bus_get_node(dev);
 	sc = device_get_softc(dev);
+	sc->sc_initialized = 1;
 
-	if (OF_getprop(node, "reg", &sc->sc_pcir, sizeof(sc->sc_pcir)) == -1)
-		return (ENXIO);
-
-	if (OF_getprop(node, "bus-range", busrange, sizeof(busrange)) != 8)
+	if (OF_getencprop(node, "bus-range", busrange, sizeof(busrange)) != 8)
 		busrange[0] = 0;
 
 	sc->sc_dev = dev;
@@ -217,14 +215,29 @@ ofw_pci_attach(device_t dev)
 			    "error = %d\n", rp->pci_hi &
 			    OFW_PCI_PHYS_HI_SPACEMASK, rp->pci,
 			    rp->pci + rp->size - 1, error);
-			panic("AHOY");
 			return (error);
 		}
 	}
 
 	ofw_bus_setup_iinfo(node, &sc->sc_pci_iinfo, sizeof(cell_t));
 
-	device_add_child(dev, "pci", device_get_unit(dev));
+	return (error);
+}
+
+int
+ofw_pci_attach(device_t dev)
+{
+	struct ofw_pci_softc *sc;
+	int error;
+
+	sc = device_get_softc(dev);
+	if (!sc->sc_initialized) {
+		error = ofw_pci_init(dev);
+		if (error)
+			return (error);
+	}
+
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }
 
@@ -240,16 +253,26 @@ ofw_pci_route_interrupt(device_t bus, device_t dev, int pin)
 {
 	struct ofw_pci_softc *sc;
 	struct ofw_pci_register reg;
-	uint32_t pintr, mintr;
+	uint32_t pintr, mintr[2];
+	int intrcells;
 	phandle_t iparent;
-	uint8_t maskbuf[sizeof(reg) + sizeof(pintr)];
 
 	sc = device_get_softc(bus);
 	pintr = pin;
-	if (ofw_bus_lookup_imap(ofw_bus_get_node(dev), &sc->sc_pci_iinfo, &reg,
-	    sizeof(reg), &pintr, sizeof(pintr), &mintr, sizeof(mintr),
-	    &iparent, maskbuf))
-		return (MAP_IRQ(iparent, mintr));
+
+	/* Fabricate imap information in case this isn't an OFW device */
+	bzero(&reg, sizeof(reg));
+	reg.phys_hi = (pci_get_bus(dev) << OFW_PCI_PHYS_HI_BUSSHIFT) |
+	    (pci_get_slot(dev) << OFW_PCI_PHYS_HI_DEVICESHIFT) |
+	    (pci_get_function(dev) << OFW_PCI_PHYS_HI_FUNCTIONSHIFT);
+
+	intrcells = ofw_bus_lookup_imap(ofw_bus_get_node(dev),
+	    &sc->sc_pci_iinfo, &reg, sizeof(reg), &pintr, sizeof(pintr),
+	    mintr, sizeof(mintr), &iparent);
+	if (intrcells) {
+		pintr = ofw_bus_map_intr(dev, iparent, intrcells, mintr);
+		return (pintr);
+	}
 
 	/* Maybe it's a real interrupt, not an intpin */
 	if (pin > 4)
@@ -281,7 +304,7 @@ ofw_pci_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 
 static struct resource *
 ofw_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct			ofw_pci_softc *sc;
 	struct			resource *rv;
@@ -361,10 +384,10 @@ ofw_pci_activate_resource(device_t bus, device_t child, int type, int rid,
 	}
 	if (type == SYS_RES_MEMORY || type == SYS_RES_IOPORT) {
 		struct ofw_pci_range *rp;
-		vm_offset_t start;
+		vm_paddr_t start;
 		int space;
 
-		start = (vm_offset_t)rman_get_start(res);
+		start = (vm_paddr_t)rman_get_start(res);
 
 		/*
 		 * Map this through the ranges list
@@ -393,8 +416,8 @@ ofw_pci_activate_resource(device_t bus, device_t child, int type, int rid,
 		}
 
 		if (bootverbose)
-			printf("ofw_pci mapdev: start %zx, len %ld\n", start,
-			    rman_get_size(res));
+			printf("ofw_pci mapdev: start %jx, len %jd\n",
+			    (rman_res_t)start, rman_get_size(res));
 
 		p = pmap_mapdev(start, (vm_size_t)rman_get_size(res));
 		if (p == NULL)
@@ -427,7 +450,7 @@ ofw_pci_deactivate_resource(device_t bus, device_t child, int type, int rid,
 
 static int
 ofw_pci_adjust_resource(device_t bus, device_t child, int type,
-    struct resource *res, u_long start, u_long end)
+    struct resource *res, rman_res_t start, rman_res_t end)
 {
 	struct rman *rm = NULL;
 	struct ofw_pci_softc *sc = device_get_softc(bus);
@@ -472,11 +495,11 @@ ofw_pci_nranges(phandle_t node)
 	int host_address_cells = 1, pci_address_cells = 3, size_cells = 2;
 	ssize_t nbase_ranges;
 
-	OF_getprop(OF_parent(node), "#address-cells", &host_address_cells,
+	OF_getencprop(OF_parent(node), "#address-cells", &host_address_cells,
 	    sizeof(host_address_cells));
-	OF_getprop(node, "#address-cells", &pci_address_cells,
+	OF_getencprop(node, "#address-cells", &pci_address_cells,
 	    sizeof(pci_address_cells));
-	OF_getprop(node, "#size-cells", &size_cells, sizeof(size_cells));
+	OF_getencprop(node, "#size-cells", &size_cells, sizeof(size_cells));
 
 	nbase_ranges = OF_getproplen(node, "ranges");
 	if (nbase_ranges <= 0)
@@ -495,11 +518,11 @@ ofw_pci_fill_ranges(phandle_t node, struct ofw_pci_range *ranges)
 	int nranges;
 	int i, j, k;
 
-	OF_getprop(OF_parent(node), "#address-cells", &host_address_cells,
+	OF_getencprop(OF_parent(node), "#address-cells", &host_address_cells,
 	    sizeof(host_address_cells));
-	OF_getprop(node, "#address-cells", &pci_address_cells,
+	OF_getencprop(node, "#address-cells", &pci_address_cells,
 	    sizeof(pci_address_cells));
-	OF_getprop(node, "#size-cells", &size_cells, sizeof(size_cells));
+	OF_getencprop(node, "#size-cells", &size_cells, sizeof(size_cells));
 
 	nbase_ranges = OF_getproplen(node, "ranges");
 	if (nbase_ranges <= 0)
@@ -508,7 +531,7 @@ ofw_pci_fill_ranges(phandle_t node, struct ofw_pci_range *ranges)
 	    (pci_address_cells + host_address_cells + size_cells);
 
 	base_ranges = malloc(nbase_ranges, M_DEVBUF, M_WAITOK);
-	OF_getprop(node, "ranges", base_ranges, nbase_ranges);
+	OF_getencprop(node, "ranges", base_ranges, nbase_ranges);
 
 	for (i = 0, j = 0; i < nranges; i++) {
 		ranges[i].pci_hi = base_ranges[j++];

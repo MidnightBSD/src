@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netsmb/smb_iod.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD$");
  
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -87,8 +87,6 @@ smb_iod_invrq(struct smbiod *iod)
 	 */
 	SMB_IOD_RQLOCK(iod);
 	TAILQ_FOREACH(rqp, &iod->iod_rqlist, sr_link) {
-		if (rqp->sr_flags & SMBR_INTERNAL)
-			SMBRQ_SUNLOCK(rqp);
 		rqp->sr_flags |= SMBR_RESTART;
 		smb_iod_rqprocessed(rqp, ENOTCONN);
 	}
@@ -661,6 +659,11 @@ smb_iod_thread(void *arg)
 			break;
 		tsleep(&iod->iod_flags, PWAIT, "90idle", iod->iod_sleeptimo);
 	}
+
+	/* We can now safely destroy the mutexes and free the iod structure. */
+	smb_sl_destroy(&iod->iod_rqlock);
+	smb_sl_destroy(&iod->iod_evlock);
+	free(iod, M_SMBIOD);
 	mtx_unlock(&Giant);
 	kproc_exit(0);
 }
@@ -687,6 +690,9 @@ smb_iod_create(struct smb_vc *vcp)
 	    RFNOWAIT, 0, "smbiod%d", iod->iod_id);
 	if (error) {
 		SMBERROR("can't start smbiod: %d", error);
+		vcp->vc_iod = NULL;
+		smb_sl_destroy(&iod->iod_rqlock);
+		smb_sl_destroy(&iod->iod_evlock);
 		free(iod, M_SMBIOD);
 		return error;
 	}
@@ -697,9 +703,6 @@ int
 smb_iod_destroy(struct smbiod *iod)
 {
 	smb_iod_request(iod, SMBIOD_EV_SHUTDOWN | SMBIOD_EV_SYNC, NULL);
-	smb_sl_destroy(&iod->iod_rqlock);
-	smb_sl_destroy(&iod->iod_evlock);
-	free(iod, M_SMBIOD);
 	return 0;
 }
 

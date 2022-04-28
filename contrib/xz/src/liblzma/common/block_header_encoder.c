@@ -17,7 +17,7 @@
 extern LZMA_API(lzma_ret)
 lzma_block_header_size(lzma_block *block)
 {
-	if (block->version != 0)
+	if (block->version > 1)
 		return LZMA_OPTIONS_ERROR;
 
 	// Block Header Size + Block Flags + CRC32.
@@ -126,7 +126,7 @@ lzma_block_header_encode(const lzma_block *block, uint8_t *out)
 	memzero(out + out_pos, out_size - out_pos);
 
 	// CRC32
-	unaligned_write32le(out + out_size, lzma_crc32(out, out_size, 0));
+	write32le(out + out_size, lzma_crc32(out, out_size, 0));
 
 	return LZMA_OK;
 }

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/mfi/mfi_syspd.c 254330 2013-08-14 15:50:34Z sbruno $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_mfi.h"
 
@@ -143,6 +143,7 @@ mfi_syspd_attach(device_t dev)
 		sc->pd_disk->d_fwheads = 64;
 		sc->pd_disk->d_fwsectors = 32;
 	}
+	sc->pd_disk->d_flags = DISKFLAG_UNMAPPED_BIO;
 	disk_create(sc->pd_disk, DISK_VERSION);
 
 	device_printf(dev, " SYSPD volume attached\n");

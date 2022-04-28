@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/mevent.c 259496 2013-12-17 06:39:48Z grehan $
+ * $FreeBSD$
  */
 
 /*
@@ -32,16 +34,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/mevent.c 259496 2013-12-17 06:39:48Z grehan $");
+__FBSDID("$FreeBSD$");
 
 #include <assert.h>
+#include <err.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
 #include <sys/types.h>
+#ifndef WITHOUT_CAPSICUM
+#include <sys/capsicum.h>
+#endif
 #include <sys/event.h>
 #include <sys/time.h>
 
@@ -52,9 +59,10 @@ __FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/mevent.c 259496 2013-12-17 06:
 
 #define	MEVENT_MAX	64
 
-#define MEV_ENABLE	1
-#define MEV_DISABLE	2
-#define MEV_DEL_PENDING	3
+#define	MEV_ADD		1
+#define	MEV_ENABLE	2
+#define	MEV_DISABLE	3
+#define	MEV_DEL_PENDING	4
 
 extern char *vmname;
 
@@ -63,7 +71,7 @@ static int mevent_timid = 43;
 static int mevent_pipefd[2];
 static pthread_mutex_t mevent_lmutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct mevent {	
+struct mevent {
 	void	(*me_func)(int, enum ev_type, void *);
 #define me_msecs me_fd
 	int	me_fd;
@@ -73,7 +81,7 @@ struct mevent {
 	int	me_cq;
 	int	me_state;
 	int	me_closefd;
-	LIST_ENTRY(mevent) me_list;			   
+	LIST_ENTRY(mevent) me_list;
 };
 
 static LIST_HEAD(listhead, mevent) global_head, change_head;
@@ -135,6 +143,9 @@ mevent_kq_filter(struct mevent *mevp)
 	if (mevp->me_type == EVF_TIMER)
 		retval = EVFILT_TIMER;
 
+	if (mevp->me_type == EVF_SIGNAL)
+		retval = EVFILT_SIGNAL;
+
 	return (retval);
 }
 
@@ -144,16 +155,20 @@ mevent_kq_flags(struct mevent *mevp)
 	int ret;
 
 	switch (mevp->me_state) {
+	case MEV_ADD:
+		ret = EV_ADD;		/* implicitly enabled */
+		break;
 	case MEV_ENABLE:
-		ret = EV_ADD;
-		if (mevp->me_type == EVF_TIMER)
-			ret |= EV_ENABLE;
+		ret = EV_ENABLE;
 		break;
 	case MEV_DISABLE:
 		ret = EV_DISABLE;
 		break;
 	case MEV_DEL_PENDING:
 		ret = EV_DELETE;
+		break;
+	default:
+		assert(0);
 		break;
 	}
 
@@ -265,12 +280,11 @@ mevent_add(int tfd, enum ev_type type,
 	/*
 	 * Allocate an entry, populate it, and add it to the change list.
 	 */
-	mevp = malloc(sizeof(struct mevent));
+	mevp = calloc(1, sizeof(struct mevent));
 	if (mevp == NULL) {
 		goto exit;
 	}
 
-	memset(mevp, 0, sizeof(struct mevent));
 	if (type == EVF_TIMER) {
 		mevp->me_msecs = tfd;
 		mevp->me_timid = mevent_timid++;
@@ -282,7 +296,7 @@ mevent_add(int tfd, enum ev_type type,
 
 	LIST_INSERT_HEAD(&change_head, mevp, me_list);
 	mevp->me_cq = 1;
-	mevp->me_state = MEV_ENABLE;
+	mevp->me_state = MEV_ADD;
 	mevent_notify();
 
 exit:
@@ -394,12 +408,21 @@ mevent_dispatch(void)
 	int mfd;
 	int numev;
 	int ret;
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_t rights;
+#endif
 
 	mevent_tid = pthread_self();
 	mevent_set_name();
 
 	mfd = kqueue();
 	assert(mfd > 0);
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_KQUEUE);
+	if (cap_rights_limit(mfd, &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	/*
 	 * Open the pipe that will be used for other threads to force
@@ -411,6 +434,14 @@ mevent_dispatch(void)
 		perror("pipe");
 		exit(0);
 	}
+
+#ifndef WITHOUT_CAPSICUM
+	cap_rights_init(&rights, CAP_EVENT, CAP_READ, CAP_WRITE);
+	if (cap_rights_limit(mevent_pipefd[0], &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+	if (cap_rights_limit(mevent_pipefd[1], &rights) == -1 && errno != ENOSYS)
+		errx(EX_OSERR, "Unable to apply rights for sandbox");
+#endif
 
 	/*
 	 * Add internal event handler for the pipe write fd
@@ -437,7 +468,7 @@ mevent_dispatch(void)
 		 * Block awaiting events
 		 */
 		ret = kevent(mfd, NULL, 0, eventlist, MEVENT_MAX, NULL);
-		if (ret == -1) {
+		if (ret == -1 && errno != EINTR) {
 			perror("Error return from kevent monitor");
 		}
 		

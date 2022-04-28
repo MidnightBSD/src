@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)locate.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: release/10.0.0/usr.bin/locate/locate/locate.h 215752 2010-11-23 15:08:56Z nwhitehorn $
+ * $FreeBSD$
  */
 
 /* Symbolic constants shared by locate.c and code.c */
@@ -63,7 +63,7 @@
    define TOLOWER(ch)	  tolower(ch)
 #else
 
-u_char myctype[UCHAR_MAX + 1];
+extern u_char myctype[UCHAR_MAX + 1];
 #define TOLOWER(ch)	(myctype[ch])
 #endif
 

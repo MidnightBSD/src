@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/net80211/ieee80211_power.h 241138 2012-10-02 17:45:19Z adrian $
+ * $FreeBSD$
  */
 #ifndef _NET80211_IEEE80211_POWER_H_
 #define _NET80211_IEEE80211_POWER_H_
@@ -79,6 +79,9 @@ int	ieee80211_node_psq_age(struct ieee80211_node *);
 int	ieee80211_pwrsave(struct ieee80211_node *, struct mbuf *);
 void	ieee80211_node_pwrsave(struct ieee80211_node *, int enable);
 void	ieee80211_sta_pwrsave(struct ieee80211vap *, int enable);
+void	ieee80211_sta_tim_notify(struct ieee80211vap *vap, int set);
+void	ieee80211_sta_ps_timer_check(struct ieee80211vap *vap);
 
+/* XXX what's this? */
 void	ieee80211_power_poll(struct ieee80211com *);
 #endif /* _NET80211_IEEE80211_POWER_H_ */

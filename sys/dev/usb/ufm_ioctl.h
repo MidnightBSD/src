@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/ufm_ioctl.h 246115 2013-01-30 10:59:42Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2001 M. Warner Losh
  * All rights reserved.

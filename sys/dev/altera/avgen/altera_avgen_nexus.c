@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen_nexus.c 245380 2013-01-13 16:57:11Z rwatson $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/altera/avgen/altera_avgen_nexus.c 245
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/vm.h>
 
 #include <vm/vm.h>
 
@@ -58,7 +57,7 @@ altera_avgen_nexus_probe(device_t dev)
 {
 
 	device_set_desc(dev, "Generic Altera Avalon device attachment");
-	return (BUS_PROBE_DEFAULT);
+	return (BUS_PROBE_NOWILDCARD);
 }
 
 static int

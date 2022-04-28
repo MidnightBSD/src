@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -8,7 +8,7 @@
  * Simple FTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * $FreeBSD: release/10.0.0/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c 255332 2013-09-06 23:11:19Z cy $
+ * $FreeBSD$
  * Id: ip_ftp_pxy.c,v 2.88.2.19 2006/04/01 10:14:53 darrenr Exp $
  */
 
@@ -1308,11 +1308,7 @@ ipf_p_ftp_process(softf, fin, nat, ftp, rv)
 	t = &ftp->ftp_side[1 - rv];
 	thseq = ntohl(tcp->th_seq);
 	thack = ntohl(tcp->th_ack);
-#ifdef __sgi
-	mlen = fin->fin_plen - off;
-#else
 	mlen = MSGDSIZE(m) - off;
-#endif
 
 	DT3(process_debug, tcphdr_t *, tcp, int, off, int, mlen);
 	if (softf->ipf_p_ftp_debug & DEBUG_INFO)
@@ -1609,11 +1605,7 @@ whilemore:
 	if (tcp->th_flags & TH_FIN)
 		f->ftps_seq[1]++;
 	if (softf->ipf_p_ftp_debug & DEBUG_PARSE_INFO) {
-#ifdef __sgi
-		mlen = fin->fin_plen;
-#else
 		mlen = MSGDSIZE(m);
-#endif
 		mlen -= off;
 		printf("ftps_seq[1] = %x inc %d len %d\n",
 		       f->ftps_seq[1], inc, mlen);
@@ -1951,10 +1943,6 @@ ipf_p_ftp_epsv(softf, fin, ip, nat, ftp, dlen)
 		ap += *s++ - '0';
 	}
 
-	if (!s) {
-		return 0;
-}
-
 	if (*s == '|')
 		s++;
 	if (*s == ')')
@@ -2140,7 +2128,7 @@ ipf_p_ftp_eprt6(softf, fin, ip, nat, ftp, dlen)
 	SNPRINTF(s, left, "%x:%x", a >> 16, a & 0xffff);
 	left -= strlen(s);
 	s += strlen(s);
-	sprintf(s, "|%d|\r\n", port);
+	SNPRINTF(s, left, "|%d|\r\n", port);
 #else
 	(void) sprintf(s, "EPRT %c2%c", delim, delim);
 	s += strlen(s);

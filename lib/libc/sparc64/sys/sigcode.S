@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/sparc64/sys/sigcode.S 105709 2002-10-22 15:15:39Z jake $");
+__FBSDID("$FreeBSD$");
 
 #include "assym.s"
 

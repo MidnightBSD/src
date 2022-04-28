@@ -34,7 +34,7 @@
 static char sccsid[] = "@(#)fgetc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fgetc.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <stdio.h>
@@ -46,10 +46,10 @@ int
 fgetc(FILE *fp)
 {
 	int retval;
-	FLOCKFILE(fp);
+	FLOCKFILE_CANCELSAFE(fp);
 	/* Orientation set by __sgetc() when buffer is empty. */
 	/* ORIENT(fp, -1); */
 	retval = __sgetc(fp);
-	FUNLOCKFILE(fp);
+	FUNLOCKFILE_CANCELSAFE();
 	return (retval);
 }

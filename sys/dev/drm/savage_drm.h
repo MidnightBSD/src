@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/savage_drm.h 182080 2008-08-23 20:59:12Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __SAVAGE_DRM_H__
 #define __SAVAGE_DRM_H__
@@ -32,7 +32,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/savage_drm.h 182080 2008-08-23 20
 #ifndef __SAVAGE_SAREA_DEFINES__
 #define __SAVAGE_SAREA_DEFINES__
 
-/* 2 heaps (1 for card, 1 for agp), each divided into upto 128
+/* 2 heaps (1 for card, 1 for agp), each divided into up to 128
  * regions, subject to a minimum region size of (1<<16) == 64k.
  *
  * Clients may subdivide regions internally, but when sharing between

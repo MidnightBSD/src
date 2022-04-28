@@ -1,7 +1,7 @@
 /*-
  * Test 0017:	BPF_JMP+BPF_JGE+BPF_K
  *
- * $FreeBSD: release/10.0.0/tools/regression/bpf/bpf_filter/tests/test0017.h 182393 2008-08-28 18:38:55Z jkim $
+ * $FreeBSD$
  */
 
 /* BPF program */

@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1997 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/ppp/server.c 162389 2006-09-18 03:50:30Z ume $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -248,7 +250,7 @@ server_LocalOpen(struct bundle *bundle, const char *name, mode_t mask)
 
   oldmask = (mode_t)-1;		/* Silence compiler */
 
-  if (server.cfg.sockname && !strcmp(server.cfg.sockname, name))
+  if (server.cfg.sockname[0] != '\0' && !strcmp(server.cfg.sockname, name))
     server_Close(bundle);
 
   memset(&ifsun, '\0', sizeof ifsun);

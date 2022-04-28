@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Qlogic Corporation
+ * Copyright (c) 2013-2016 Qlogic Corporation
  * All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
  * Author : David C Somayajulu, Qlogic Corporation, Aliso Viejo, CA 92656.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/qlxgbe/ql_dbg.c 250661 2013-05-15 17:03:09Z davidcs $");
+__FBSDID("$FreeBSD$");
 
 #include "ql_os.h"
 #include "ql_hw.h"

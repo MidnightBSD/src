@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/crypto/camellia/camellia-api.c 169425 2007-05-09 19:37:02Z gnn $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>

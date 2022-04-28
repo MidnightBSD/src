@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/esdb/UTF/UTF.alias 258396 2013-11-20 18:58:07Z peter $ 
+# $FreeBSD$ 
 # $NetBSD: UTF.alias,v 1.5 2007/12/17 14:06:57 joerg Exp $
 
 7		csunicode11utf7
@@ -28,7 +28,6 @@
 16LE		utf16le
 
 32-INTERNAL	ucs-4-internal
-32-INTERNAL	wchar_t
 
 32-SWAPPED	ucs-4-swapped
 

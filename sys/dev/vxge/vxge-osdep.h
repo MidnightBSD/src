@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/*$FreeBSD: release/10.0.0/sys/dev/vxge/vxge-osdep.h 228443 2011-12-12 18:43:24Z mdf $*/
+/*$FreeBSD$*/
 
 /* LINTLIBRARY */
 
@@ -615,7 +615,6 @@ vxge_dma_free(pci_dev_h pdev, const void *vaddr, u_long size,
 	bus_dmamem_free(p_dmah->dma_tag, p_dmah->dma_vaddr, p_dmah->dma_map);
 	bus_dma_tag_destroy(p_dmah->dma_tag);
 
-	p_dmah->dma_map = NULL;
 	p_dmah->dma_tag = NULL;
 	p_dmah->dma_vaddr = NULL;
 }

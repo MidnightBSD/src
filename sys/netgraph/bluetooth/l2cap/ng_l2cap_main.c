@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: ng_l2cap_main.c,v 1.2 2003/04/28 21:44:59 max Exp $
- * $FreeBSD: release/10.0.0/sys/netgraph/bluetooth/l2cap/ng_l2cap_main.c 220768 2011-04-18 09:12:27Z glebius $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -350,7 +350,9 @@ ng_l2cap_lower_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		case NGM_HCI_LP_QOS_IND:
 			error = ng_l2cap_lp_qos_ind(l2cap, msg);
 			break;
-
+		case NGM_HCI_LP_ENC_CHG:
+			error = ng_l2cap_lp_enc_change(l2cap, msg);
+			break;
 		default:
 			error = EINVAL;
 			break;

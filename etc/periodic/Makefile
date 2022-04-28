@@ -1,5 +1,6 @@
-# $FreeBSD: release/10.0.0/etc/periodic/Makefile 87514 2001-12-07 23:57:39Z cjc $
+# $FreeBSD$
 
 SUBDIR=	daily security weekly monthly
+SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

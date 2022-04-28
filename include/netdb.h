@@ -51,7 +51,7 @@
 /*
  *      @(#)netdb.h	8.1 (Berkeley) 6/2/93
  *      From: Id: netdb.h,v 8.9 1996/11/19 08:39:29 vixie Exp $
- * $FreeBSD: release/10.0.0/include/netdb.h 228468 2011-12-13 13:32:56Z ed $
+ * $FreeBSD$
  */
 
 #ifndef _NETDB_H_
@@ -59,6 +59,16 @@
 
 #include <sys/cdefs.h>
 #include <sys/_types.h>
+
+#ifndef _IN_ADDR_T_DECLARED
+typedef	__uint32_t	in_addr_t;
+#define	_IN_ADDR_T_DECLARED
+#endif
+
+#ifndef _IN_PORT_T_DECLARED
+typedef	__uint16_t	in_port_t;
+#define	_IN_PORT_T_DECLARED
+#endif
 
 #ifndef _SIZE_T_DECLARED
 typedef	__size_t	size_t;
@@ -122,7 +132,7 @@ struct protoent {
 
 struct addrinfo {
 	int	ai_flags;	/* AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST */
-	int	ai_family;	/* PF_xxx */
+	int	ai_family;	/* AF_xxx */
 	int	ai_socktype;	/* SOCK_xxx */
 	int	ai_protocol;	/* 0 or IPPROTO_xxx for IPv4 and IPv6 */
 	socklen_t ai_addrlen;	/* length of ai_addr */
@@ -130,6 +140,8 @@ struct addrinfo {
 	struct	sockaddr *ai_addr;	/* binary address */
 	struct	addrinfo *ai_next;	/* next structure in linked list */
 };
+
+#define	IPPORT_RESERVED	1024
 
 /*
  * Error return codes from gethostbyname() and gethostbyaddr()
@@ -179,7 +191,7 @@ struct addrinfo {
 /* valid flags for addrinfo (not a standard def, apps should not use it) */
 #define AI_MASK \
     (AI_PASSIVE | AI_CANONNAME | AI_NUMERICHOST | AI_NUMERICSERV | \
-    AI_ADDRCONFIG)
+    AI_ADDRCONFIG | AI_ALL | AI_V4MAPPED)
 
 #define	AI_ALL		0x00000100 /* IPv6 and IPv4-mapped (with AI_V4MAPPED) */
 #define	AI_V4MAPPED_CFG	0x00000200 /* accept IPv4-mapped if kernel supports */
@@ -263,6 +275,7 @@ int		getnetbyname_r(const char *, struct netent *, char *, size_t,
 int		getnetent_r(struct netent *, char *, size_t, struct netent **,
     int *);
 int		getnetgrent(char **, char **, char **);
+int		getnetgrent_r(char **, char **, char **, char *, size_t);
 int		getprotobyname_r(const char *, struct protoent *, char *,
     size_t, struct protoent **);
 int		getprotobynumber_r(int, struct protoent *, char *, size_t,

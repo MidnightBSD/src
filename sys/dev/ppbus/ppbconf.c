@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ppbus/ppbconf.c 249585 2013-04-17 11:45:15Z gabor $");
+__FBSDID("$FreeBSD$");
 #include "opt_ppb_1284.h"
 
 #include <sys/param.h>
@@ -206,7 +206,7 @@ search_token(char *str, int slen, char *token)
 static int
 ppb_pnp_detect(device_t bus)
 {
-	char *token, *class = 0;
+	char *token, *class = NULL;
 	int i, len, error;
 	int class_id = -1;
 	char str[PPB_PnP_STRING_SIZE+1];

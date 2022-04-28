@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/fs/udf/udf_vnops.c 248282 2013-03-14 20:28:26Z kib $
+ * $FreeBSD$
  */
 
 /* udf_vnops.c */
@@ -100,6 +100,7 @@ struct vop_vector udf_fifoops = {
 	.vop_default =		&fifo_specops,
 	.vop_access =		udf_access,
 	.vop_getattr =		udf_getattr,
+	.vop_pathconf =		udf_pathconf,
 	.vop_print =		udf_print,
 	.vop_reclaim =		udf_reclaim,
 	.vop_setattr =		udf_setattr,
@@ -383,20 +384,29 @@ udf_pathconf(struct vop_pathconf_args *a)
 {
 
 	switch (a->a_name) {
+	case _PC_FILESIZEBITS:
+		*a->a_retval = 64;
+		return (0);
 	case _PC_LINK_MAX:
 		*a->a_retval = 65535;
 		return (0);
 	case _PC_NAME_MAX:
 		*a->a_retval = NAME_MAX;
 		return (0);
-	case _PC_PATH_MAX:
-		*a->a_retval = PATH_MAX;
+	case _PC_SYMLINK_MAX:
+		*a->a_retval = MAXPATHLEN;
 		return (0);
 	case _PC_NO_TRUNC:
 		*a->a_retval = 1;
 		return (0);
-	default:
+	case _PC_PIPE_BUF:
+		if (a->a_vp->v_type == VDIR || a->a_vp->v_type == VFIFO) {
+			*a->a_retval = PIPE_BUF;
+			return (0);
+		}
 		return (EINVAL);
+	default:
+		return (vop_stdpathconf(a));
 	}
 }
 
@@ -487,11 +497,11 @@ udf_read(struct vop_read_args *ap)
 		} else {
 			error = bread(vp, lbn, size, NOCRED, &bp);
 		}
-		n = min(n, size - bp->b_resid);
-		if (error) {
+		if (error != 0) {
 			brelse(bp);
 			return (error);
 		}
+		n = min(n, size - bp->b_resid);
 
 		error = uiomove(bp->b_data + on, (int)n, uio);
 		brelse(bp);
@@ -526,8 +536,9 @@ udf_transname(char *cs0string, char *destname, int len, struct udf_mnt *udfmp)
 		}
 
 		while (unilen > 0 && destleft > 0) {
-			udf_iconv->conv(udfmp->im_d2l, (const char **)&unibuf,
-				(size_t *)&unilen, (char **)&destname, &destleft);
+			udf_iconv->conv(udfmp->im_d2l, __DECONST(const char **,
+			    &unibuf), (size_t *)&unilen, (char **)&destname,
+			    &destleft);
 			/* Unconverted character found */
 			if (unilen > 0 && destleft > 0) {
 				*destname++ = '?';
@@ -830,9 +841,9 @@ udf_readdir(struct vop_readdir_args *a)
 			dir.d_fileno = node->hash_id;
 			dir.d_type = DT_DIR;
 			dir.d_name[0] = '.';
-			dir.d_name[1] = '\0';
 			dir.d_namlen = 1;
 			dir.d_reclen = GENERIC_DIRSIZ(&dir);
+			dirent_terminate(&dir);
 			uiodir.dirent = &dir;
 			error = udf_uiodir(&uiodir, dir.d_reclen, uio, 1);
 			if (error)
@@ -842,9 +853,9 @@ udf_readdir(struct vop_readdir_args *a)
 			dir.d_type = DT_DIR;
 			dir.d_name[0] = '.';
 			dir.d_name[1] = '.';
-			dir.d_name[2] = '\0';
 			dir.d_namlen = 2;
 			dir.d_reclen = GENERIC_DIRSIZ(&dir);
+			dirent_terminate(&dir);
 			uiodir.dirent = &dir;
 			error = udf_uiodir(&uiodir, dir.d_reclen, uio, 2);
 		} else {
@@ -854,6 +865,7 @@ udf_readdir(struct vop_readdir_args *a)
 			dir.d_type = (fid->file_char & UDF_FILE_CHAR_DIR) ?
 			    DT_DIR : DT_UNKNOWN;
 			dir.d_reclen = GENERIC_DIRSIZ(&dir);
+			dirent_terminate(&dir);
 			uiodir.dirent = &dir;
 			error = udf_uiodir(&uiodir, dir.d_reclen, uio,
 			    ds->this_off);

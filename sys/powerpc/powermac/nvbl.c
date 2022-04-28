@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/nvbl.c 255100 2013-08-31 16:31:48Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -38,6 +38,9 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/nvbl.c 255100 2013-08-31
 #include <machine/bus.h>
 
 #include <dev/ofw/openfirm.h>
+#include <dev/pci/pcivar.h>
+
+#define PCI_VENDOR_ID_NVIDIA	0x10de
 
 #define NVIDIA_BRIGHT_MIN     (0x0ec)
 #define NVIDIA_BRIGHT_MAX     (0x538)
@@ -46,7 +49,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/powermac/nvbl.c 255100 2013-08-31
 #define NVIDIA_MMIO_PMC       (0x0)
 #define  NVIDIA_PMC_OFF         (NVIDIA_MMIO_PMC + 0x10f0)
 #define   NVIDIA_PMC_BL_SHIFT    (16)
-#define   NVIDIA_PMC_BL_EN       (1 << 31)
+#define   NVIDIA_PMC_BL_EN       (1U << 31)
 
 
 struct nvbl_softc {
@@ -102,7 +105,8 @@ nvbl_probe(device_t dev)
 	if (OF_getprop(handle, "backlight-control", &control, sizeof(control)) < 0)
 		return (ENXIO);
 
-	if (strcmp(control, "mnca") != 0)
+	if ((strcmp(control, "mnca") != 0) ||
+	    pci_get_vendor(device_get_parent(dev)) != PCI_VENDOR_ID_NVIDIA)
 		return (ENXIO);
 
 	device_set_desc(dev, "PowerBook backlight for nVidia graphics");

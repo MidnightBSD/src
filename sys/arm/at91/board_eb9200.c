@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/board_eb9200.c 239324 2012-08-16 05:03:59Z imp $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 
@@ -65,4 +65,4 @@ board_init(void)
 	return (at91_ramsize());
 }
 
-ARM_BOARD(KB9200, "Kwikbyte KB920x")
+ARM_BOARD(ATEB9200, "Embest ATEB9200")

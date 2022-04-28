@@ -29,7 +29,7 @@
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
  *
- * $FreeBSD: release/10.0.0/sys/i386/ibcs2/ibcs2_util.h 160241 2006-07-10 17:59:26Z jhb $
+ * $FreeBSD$
  */
 
 /*

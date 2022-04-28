@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.2 (Berkeley) 1/7/94
- * $FreeBSD: release/10.0.0/sys/sys/unistd.h 239347 2012-08-17 02:26:31Z davidxu $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_UNISTD_H_
@@ -50,7 +50,7 @@
  * returns -1, the functions may be stubbed out.
  */
 #define	_POSIX_ADVISORY_INFO		200112L
-#define	_POSIX_ASYNCHRONOUS_IO		0
+#define	_POSIX_ASYNCHRONOUS_IO		200112L
 #define	_POSIX_CHOWN_RESTRICTED		1
 #define	_POSIX_CLOCK_SELECTION		(-1)
 #define	_POSIX_CPUTIME			200112L
@@ -65,7 +65,7 @@
 #define	_POSIX_MONOTONIC_CLOCK		200112L
 #define	_POSIX_NO_TRUNC			1
 #define	_POSIX_PRIORITIZED_IO		(-1)
-#define	_POSIX_PRIORITY_SCHEDULING	200112L
+#define	_POSIX_PRIORITY_SCHEDULING	0
 #define	_POSIX_RAW_SOCKETS		200112L
 #define	_POSIX_REALTIME_SIGNALS		200112L
 #define	_POSIX_SEMAPHORES		200112L
@@ -186,11 +186,14 @@
 #define	RFTSIGNUM(flags)	(((flags) >> RFTSIGSHIFT) & RFTSIGMASK)
 #define	RFTSIGFLAGS(signum)	((signum) << RFTSIGSHIFT)
 #define	RFPROCDESC	(1<<28)	/* return a process descriptor */
-#define	RFPPWAIT	(1<<31)	/* parent sleeps until child exits (vfork) */
+/* kernel: parent sleeps until child exits (vfork) */
+#define	RFPPWAIT	(1<<31)
+/* user: vfork(2) semantics, clear signals */
+#define	RFSPAWN		(1U<<31)
 #define	RFFLAGS		(RFFDG | RFPROC | RFMEM | RFNOWAIT | RFCFDG | \
     RFTHREAD | RFSIGSHARE | RFLINUXTHPN | RFSTOPPED | RFHIGHPID | RFTSIGZMB | \
-    RFPROCDESC | RFPPWAIT)
-#define	RFKERNELONLY	(RFSTOPPED | RFHIGHPID | RFPPWAIT | RFPROCDESC)
+    RFPROCDESC | RFSPAWN | RFPPWAIT)
+#define	RFKERNELONLY	(RFSTOPPED | RFHIGHPID | RFPROCDESC)
 
 #endif /* __BSD_VISIBLE */
 

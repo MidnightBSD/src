@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/gnu/usr.bin/groff/font/Makefile 75592 2001-04-17 12:37:18Z ru $
+# $FreeBSD$
 
 SUBDIR=		devX100 devX100-12 devX75 devX75-12 \
 		devascii devcp1047 devdvi devhtml devkoi8-r \

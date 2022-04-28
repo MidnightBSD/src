@@ -2,7 +2,7 @@
 #
 # Add additional swap files
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/addswap 252310 2013-06-27 18:28:45Z hrs $
+# $FreeBSD$
 #
 
 # PROVIDE: addswap

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sys/modules/ata/atacbus/Makefile 251114 2013-05-29 23:56:49Z marius $
+# $FreeBSD$
 
 .PATH: ${.CURDIR}/../../../dev/ata
 

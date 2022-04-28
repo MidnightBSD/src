@@ -23,7 +23,7 @@ Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 This paragraph is here to try to keep Sun CC from dying.
 The number of chars here seems crucial!!!!  */
 
-/* $FreeBSD: release/10.0.0/contrib/gcc/gcc.c 231336 2012-02-10 05:05:42Z kientzle $ */
+/* $FreeBSD$ */
 
 /* This program is the user interface to the C compiler and possibly to
 other compilers.  It is used because compilation is a complicated procedure
@@ -240,7 +240,7 @@ static const char *spec_machine = DEFAULT_TARGET_MACHINE;
 /* Nonzero if cross-compiling.
    When -b is used, the value comes from the `specs' file.  */
 
-#ifdef CROSS_COMPILE
+#ifdef CROSS_DIRECTORY_STRUCTURE
 static const char *cross_compile = "1";
 #else
 static const char *cross_compile = "0";
@@ -680,7 +680,7 @@ proper position among the other output files.  */
 #ifdef TARGET_LIBC_PROVIDES_SSP
 #define LINK_SSP_SPEC "%{fstack-protector:}"
 #else
-#define LINK_SSP_SPEC "%{fstack-protector|fstack-protector-all:-lssp_nonshared -lssp}"
+#define LINK_SSP_SPEC "%{fstack-protector|fstack-protector-strong|fstack-protector-all:-lssp_nonshared -lssp}"
 #endif
 #endif
 
@@ -1469,7 +1469,7 @@ static const char *gcc_libexec_prefix;
 #define STANDARD_STARTFILE_PREFIX_2 "/usr/lib/"
 #endif
 
-#ifdef CROSS_COMPILE  /* Don't use these prefixes for a cross compiler.  */
+#ifdef CROSS_DIRECTORY_STRUCTURE  /* Don't use these prefixes for a cross compiler.  */
 #undef MD_EXEC_PREFIX
 #undef MD_STARTFILE_PREFIX
 #undef MD_STARTFILE_PREFIX_1
@@ -2974,7 +2974,7 @@ execute (void)
       if (errmsg != NULL)
 	{
 	  if (err == 0)
-	    fatal (errmsg);
+	    fatal ("%s", errmsg);
 	  else
 	    {
 	      errno = err;
@@ -6525,7 +6525,7 @@ main (int argc, char **argv)
 
       if (! verbose_flag)
 	{
-	  printf (_("\nFor bug reporting instructions, please see:\n"));
+	  printf ("%s", _("\nFor bug reporting instructions, please see:\n"));
 	  printf ("%s.\n", bug_report_url);
 
 	  return (0);

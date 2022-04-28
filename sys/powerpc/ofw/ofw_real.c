@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_real.c 253588 2013-07-24 02:01:01Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -71,7 +71,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/powerpc/ofw/ofw_real.c 253588 2013-07-24 
 #include <machine/bus.h>
 #include <machine/md_var.h>
 #include <machine/ofw_machdep.h>
-#include <machine/pmap.h>
 #include <machine/stdarg.h>
 
 #include <dev/ofw/openfirm.h>
@@ -300,7 +299,7 @@ ofw_real_init(ofw_t ofw, void *openfirm)
 {
 	openfirmware = (int (*)(void *))openfirm;
 
-	mtx_init(&of_bounce_mtx, "OF Bounce Page", MTX_DEF, 0);
+	mtx_init(&of_bounce_mtx, "OF Bounce Page", NULL, MTX_DEF);
 	of_bounce_virt = NULL;
 	return (0);
 }
@@ -365,7 +364,7 @@ ofw_real_peer(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();
@@ -394,7 +393,7 @@ ofw_real_child(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();
@@ -423,7 +422,7 @@ ofw_real_parent(ofw_t ofw, phandle_t node)
 	argsptr = ofw_real_map(&args, sizeof(args));
 	if (openfirmware((void *)argsptr) == -1) {
 		ofw_real_stop();
-		return (-1);
+		return (0);
 	}
 	ofw_real_unmap(argsptr, &args, sizeof(args));
 	ofw_real_stop();

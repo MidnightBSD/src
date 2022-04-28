@@ -27,11 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_powerpc.c 255228 2013-09-05 01:13:26Z jhibbits $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/pmc.h>
 #include <sys/pmckern.h>
+#include <sys/sysent.h>
 #include <sys/systm.h>
 
 #include <machine/pmc_mdep.h>
@@ -39,12 +40,15 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/hwpmc/hwpmc_powerpc.c 255228 2013-09-
 #include <machine/pte.h>
 #include <machine/sr.h>
 #include <machine/cpu.h>
-#include <machine/vmparam.h> /* For VM_MIN_KERNEL_ADDRESS/VM_MAX_KERNEL_ADDRESS */
+#include <machine/stack.h>
 
 #include "hwpmc_powerpc.h"
 
-#define INKERNEL(x)	(((vm_offset_t)(x)) <= VM_MAX_KERNEL_ADDRESS && \
-		((vm_offset_t)(x)) >= VM_MIN_KERNEL_ADDRESS)
+#ifdef __powerpc64__
+#define OFFSET 4 /* Account for the TOC reload slot */
+#else
+#define OFFSET 0
+#endif
 
 struct powerpc_cpu **powerpc_pcpu;
 
@@ -52,16 +56,35 @@ int
 pmc_save_kernel_callchain(uintptr_t *cc, int maxsamples,
     struct trapframe *tf)
 {
+	uintptr_t *osp, *sp;
+	uintptr_t pc;
 	int frames = 0;
-	uintptr_t *sp;
 
-	cc[frames++] = tf->srr0;
-	sp = (uintptr_t *)tf->fixreg[1];
+	cc[frames++] = PMC_TRAPFRAME_TO_PC(tf);
+	sp = (uintptr_t *)PMC_TRAPFRAME_TO_FP(tf);
+	osp = (uintptr_t *)PAGE_SIZE;
 
-	for (frames = 1; frames < maxsamples; frames++) {
-		if (!INKERNEL(sp))
+	for (; frames < maxsamples; frames++) {
+		if (sp <= osp)
 			break;
-		cc[frames++] = *(sp + 1);
+	    #ifdef __powerpc64__
+		pc = sp[2];
+	    #else
+		pc = sp[1];
+	    #endif
+		if ((pc & 3) || (pc < 0x100))
+			break;
+
+		/*
+		 * trapexit() and asttrapexit() are sentinels
+		 * for kernel stack tracing.
+		 * */
+		if (pc + OFFSET == (uintptr_t) &trapexit ||
+		    pc + OFFSET == (uintptr_t) &asttrapexit)
+			break;
+
+		cc[frames] = pc;
+		osp = sp;
 		sp = (uintptr_t *)*sp;
 	}
 	return (frames);
@@ -70,12 +93,14 @@ pmc_save_kernel_callchain(uintptr_t *cc, int maxsamples,
 static int
 powerpc_switch_in(struct pmc_cpu *pc, struct pmc_process *pp)
 {
+
 	return (0);
 }
 
 static int
 powerpc_switch_out(struct pmc_cpu *pc, struct pmc_process *pp)
 {
+
 	return (0);
 }
 
@@ -94,7 +119,7 @@ powerpc_describe(int cpu, int ri, struct pmc_info *pi, struct pmc **ppmc)
 	if ((error = copystr(powerpc_name, pi->pm_name, PMC_NAME_MAX,
 	    NULL)) != 0)
 		return error;
-	pi->pm_class = PMC_CLASS_PPC7450;
+	pi->pm_class = powerpc_pcpu[cpu]->pc_class;
 	if (phw->phw_state & PMC_PHW_FLAG_IS_ENABLED) {
 		pi->pm_enabled = TRUE;
 		*ppmc          = phw->phw_pmc;
@@ -109,6 +134,7 @@ powerpc_describe(int cpu, int ri, struct pmc_info *pi, struct pmc **ppmc)
 int
 powerpc_get_config(int cpu, int ri, struct pmc **ppm)
 {
+
 	*ppm = powerpc_pcpu[cpu]->pc_ppcpmcs[ri].phw_pmc;
 
 	return (0);
@@ -131,8 +157,6 @@ pmc_md_initialize()
 	/* Just one class */
 	pmc_mdep = pmc_mdep_alloc(1);
 
-	pmc_mdep->pmd_cputype = PMC_CPU_PPC_7450;
-
 	vers = mfpvr() >> 16;
 
 	pmc_mdep->pmd_switch_in  = powerpc_switch_in;
@@ -145,9 +169,18 @@ pmc_md_initialize()
 	case MPC7455:
 	case MPC7457:
 		error = pmc_mpc7xxx_initialize(pmc_mdep);
+		break;
 	case IBM970:
 	case IBM970FX:
 	case IBM970MP:
+		error = pmc_ppc970_initialize(pmc_mdep);
+		break;
+	case FSL_E500v1:
+	case FSL_E500v2:
+	case FSL_E500mc:
+	case FSL_E5500:
+		error = pmc_e500_initialize(pmc_mdep);
+		break;
 	default:
 		error = -1;
 		break;
@@ -156,7 +189,6 @@ pmc_md_initialize()
 	if (error != 0) {
 		pmc_mdep_free(pmc_mdep);
 		pmc_mdep = NULL;
-		return NULL;
 	}
 
 	return (pmc_mdep);
@@ -165,15 +197,40 @@ pmc_md_initialize()
 void
 pmc_md_finalize(struct pmc_mdep *md)
 {
-	free(md, M_PMC);
+
+	free(powerpc_pcpu, M_PMC);
+	powerpc_pcpu = NULL;
 }
 
 int
 pmc_save_user_callchain(uintptr_t *cc, int maxsamples,
     struct trapframe *tf)
 {
-	(void) cc;
-	(void) maxsamples;
-	(void) tf;
-	return (0);
+	uintptr_t *osp, *sp;
+	int frames = 0;
+
+	cc[frames++] = PMC_TRAPFRAME_TO_PC(tf);
+	sp = (uintptr_t *)PMC_TRAPFRAME_TO_FP(tf);
+	osp = NULL;
+
+	for (; frames < maxsamples; frames++) {
+		if (sp <= osp)
+			break;
+		osp = sp;
+#ifdef __powerpc64__
+		/* Check if 32-bit mode. */
+		if (!(tf->srr1 & PSL_SF)) {
+			cc[frames] = fuword32((uint32_t *)sp + 1);
+			sp = (uintptr_t *)(uintptr_t)fuword32(sp);
+		} else {
+			cc[frames] = fuword(sp + 2);
+			sp = (uintptr_t *)fuword(sp);
+		}
+#else
+		cc[frames] = fuword32((uint32_t *)sp + 1);
+		sp = (uintptr_t *)fuword32(sp);
+#endif
+	}
+
+	return (frames);
 }

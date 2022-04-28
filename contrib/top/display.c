@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: release/10.0.0/contrib/top/display.c 237656 2012-06-27 18:08:48Z jhb $
+ * $FreeBSD$
  */
 
 /*
@@ -29,9 +29,14 @@
  */
 
 #include "os.h"
-#include <ctype.h>
-#include <time.h>
+
 #include <sys/time.h>
+
+#include <curses.h>
+#include <ctype.h>
+#include <termcap.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "screen.h"		/* interface to screen package */
 #include "layout.h"		/* defines for screen position layout */
@@ -56,7 +61,6 @@ static int display_width = MAX_COLS;
 
 #define lineindex(l) ((l)*display_width)
 
-char *printable();
 
 /* things initialized by display_init and used thruout */
 
@@ -67,6 +71,7 @@ static char **procstate_names;
 static char **cpustate_names;
 static char **memory_names;
 static char **arc_names;
+static char **carc_names;
 static char **swap_names;
 
 static int num_procstates;
@@ -103,6 +108,8 @@ int  x_mem =		5;
 int  y_mem =		3;
 int  x_arc =		5;
 int  y_arc =		4;
+int  x_carc =		5;
+int  y_carc =		5;
 int  x_swap =		6;
 int  y_swap =		4;
 int  y_message =	5;
@@ -220,6 +227,7 @@ struct statics *statics;
 	lmemory = (int *)malloc(num_memory * sizeof(int));
 
 	arc_names = statics->arc_names;
+	carc_names = statics->carc_names;
 	
 	/* calculate starting columns where needed */
 	cpustate_total_length = 0;
@@ -239,6 +247,7 @@ struct statics *statics;
     return(lines);
 }
 
+void
 i_loadave(mpid, avenrun)
 
 int mpid;
@@ -248,7 +257,7 @@ double *avenrun;
     register int i;
 
     /* i_loadave also clears the screen, since it is first */
-    clear();
+    top_clear();
 
     /* mpid == -1 implies this system doesn't have an _mpid */
     if (mpid != -1)
@@ -267,6 +276,7 @@ double *avenrun;
     lmpid = mpid;
 }
 
+void
 u_loadave(mpid, avenrun)
 
 int mpid;
@@ -306,6 +316,7 @@ double *avenrun;
     }
 }
 
+void
 i_timeofday(tod)
 
 time_t *tod;
@@ -351,6 +362,7 @@ static char procstates_buffer[MAX_COLS];
  *		  lastline is valid
  */
 
+void
 i_procstates(total, brkdn)
 
 int total;
@@ -378,6 +390,7 @@ int *brkdn;
     memcpy(lprocstates, brkdn, num_procstates * sizeof(int));
 }
 
+void
 u_procstates(total, brkdn)
 
 int total;
@@ -460,9 +473,10 @@ char *cpustates_tag()
 }
 #endif
 
+void
 i_cpustates(states)
 
-register int *states;
+int *states;
 
 {
     register int i = 0;
@@ -505,9 +519,10 @@ for (cpu = 0; cpu < num_cpus; cpu++) {
     memcpy(lcpustates, states, num_cpustates * sizeof(int) * num_cpus);
 }
 
+void
 u_cpustates(states)
 
-register int *states;
+int *states;
 
 {
     register int value;
@@ -557,6 +572,7 @@ for (cpu = 0; cpu < num_cpus; cpu++) {
 }
 }
 
+void
 z_cpustates()
 
 {
@@ -606,6 +622,7 @@ for (cpu = 0; cpu < num_cpus; cpu++) {
 
 char memory_buffer[MAX_COLS];
 
+void
 i_memory(stats)
 
 int *stats;
@@ -619,6 +636,7 @@ int *stats;
     fputs(memory_buffer, stdout);
 }
 
+void
 u_memory(stats)
 
 int *stats;
@@ -639,13 +657,14 @@ int *stats;
  */
 char arc_buffer[MAX_COLS];
 
+void
 i_arc(stats)
 
 int *stats;
 
 {
     if (arc_names == NULL)
-	return (0);
+	return;
 
     fputs("\nARC: ", stdout);
     lastline++;
@@ -655,6 +674,7 @@ int *stats;
     fputs(arc_buffer, stdout);
 }
 
+void
 u_arc(stats)
 
 int *stats;
@@ -663,13 +683,54 @@ int *stats;
     static char new[MAX_COLS];
 
     if (arc_names == NULL)
-	return (0);
+	return;
 
     /* format the new line */
     summary_format(new, stats, arc_names);
     line_update(arc_buffer, new, x_arc, y_arc);
 }
 
+
+/*
+ *  *_carc(stats) - print "Compressed ARC: " followed by the summary string
+ *
+ *  Assumptions:  cursor is on "lastline"
+ *                for i_carc ONLY: cursor is on the previous line
+ */
+char carc_buffer[MAX_COLS];
+
+void
+i_carc(stats)
+
+int *stats;
+
+{
+    if (carc_names == NULL)
+	return;
+
+    fputs("\n     ", stdout);
+    lastline++;
+
+    /* format and print the memory summary */
+    summary_format(carc_buffer, stats, carc_names);
+    fputs(carc_buffer, stdout);
+}
+
+void
+u_carc(stats)
+
+int *stats;
+
+{
+    static char new[MAX_COLS];
+
+    if (carc_names == NULL)
+	return;
+
+    /* format the new line */
+    summary_format(new, stats, carc_names);
+    line_update(carc_buffer, new, x_carc, y_carc);
+}
  
 /*
  *  *_swap(stats) - print "Swap: " followed by the swap summary string
@@ -680,6 +741,7 @@ int *stats;
 
 char swap_buffer[MAX_COLS];
 
+void
 i_swap(stats)
 
 int *stats;
@@ -693,6 +755,7 @@ int *stats;
     fputs(swap_buffer, stdout);
 }
 
+void
 u_swap(stats)
 
 int *stats;
@@ -724,6 +787,7 @@ static int msglen = 0;
 /* Invariant: msglen is always the length of the message currently displayed
    on the screen (even when next_msg doesn't contain that message). */
 
+void
 i_message()
 
 {
@@ -734,7 +798,7 @@ i_message()
     }
     if (next_msg[0] != '\0')
     {
-	standout(next_msg);
+	top_standout(next_msg);
 	msglen = strlen(next_msg);
 	next_msg[0] = '\0';
     }
@@ -745,6 +809,7 @@ i_message()
     }
 }
 
+void
 u_message()
 
 {
@@ -786,6 +851,7 @@ char *text;
  *  Assumptions:  cursor is on the previous line and lastline is consistent
  */
 
+void
 i_header(text)
 
 char *text;
@@ -811,9 +877,10 @@ char *text;
 }
 
 /*ARGSUSED*/
+void
 u_header(text)
 
-char *text;		/* ignored */
+char *text __unused;		/* ignored */
 
 {
 
@@ -832,6 +899,7 @@ char *text;		/* ignored */
  *  Assumptions:  lastline is consistent
  */
 
+void
 i_process(line, thisline)
 
 int line;
@@ -862,6 +930,7 @@ char *thisline;
     memzero(p, display_width - (p - base));
 }
 
+void
 u_process(line, newline)
 
 int line;
@@ -909,9 +978,10 @@ char *newline;
     }
 }
 
+void
 u_endscreen(hi)
 
-register int hi;
+int hi;
 
 {
     register int screen_line = hi + Header_lines;
@@ -969,6 +1039,7 @@ register int hi;
     }
 }
 
+void
 display_header(t)
 
 int t;
@@ -985,6 +1056,7 @@ int t;
 }
 
 /*VARARGS2*/
+void
 new_message(type, msgfmt, a1, a2, a3)
 
 int type;
@@ -1006,7 +1078,7 @@ caddr_t a1, a2, a3;
 	    i = strlen(next_msg);
 	    if ((type & MT_delayed) == 0)
 	    {
-		type & MT_standout ? standout(next_msg) :
+		type & MT_standout ? top_standout(next_msg) :
 		                     fputs(next_msg, stdout);
 		(void) clear_eol(msglen - i);
 		msglen = i;
@@ -1018,13 +1090,14 @@ caddr_t a1, a2, a3;
     {
 	if ((type & MT_delayed) == 0)
 	{
-	    type & MT_standout ? standout(next_msg) : fputs(next_msg, stdout);
+	    type & MT_standout ? top_standout(next_msg) : fputs(next_msg, stdout);
 	    msglen = strlen(next_msg);
 	    next_msg[0] = '\0';
 	}
     }
 }
 
+void
 clear_message()
 
 {
@@ -1034,6 +1107,7 @@ clear_message()
     }
 }
 
+int
 readline(buffer, size, numeric)
 
 char *buffer;
@@ -1147,6 +1221,7 @@ register char **names;
     register int num;
     register char *thisname;
     register int useM = No;
+    char rbuf[6];
 
     /* format each number followed by its string */
     p = str;
@@ -1166,6 +1241,14 @@ register char **names;
 
 		/* skip over the K, since it was included by format_k */
 		p = strecpy(p, thisname+1);
+	    }
+	    /* is this number a ratio? */
+	    else if (thisname[0] == ':')
+	    {
+		(void) snprintf(rbuf, sizeof(rbuf), "%.2f", 
+		    (float)*(numbers - 2) / (float)num);
+		p = strecpy(p, rbuf);
+		p = strecpy(p, thisname);
 	    }
 	    else
 	    {
@@ -1336,6 +1419,7 @@ char *str;
     return(str);
 }
 
+void
 i_uptime(bt, tod)
 
 struct timeval* bt;

@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sbin/mount_fusefs/Makefile 241519 2012-10-13 23:54:26Z attilio $
+# $FreeBSD$
 
 .if defined(DEBUG)
 DEBUG_FLAGS+= -D_DEBUG -g
@@ -20,12 +20,12 @@ DEBUG_FLAGS+= -D_DEBUG_MSG
 DEBUG_FLAGS+= -DFUSE4BSD_VERSION="\"${F4BVERS}\""
 .endif
 
+PACKAGE=runtime
 PROG=	mount_fusefs
 SRCS=	mount_fusefs.c getmntopts.c
 MAN8=	mount_fusefs.8
-NO_MANCOMPRESS?=	yes
 
-MOUNT=	${.CURDIR}/../mount
+MOUNT=	${.CURDIR:H}/mount
 CFLAGS+=	-I${MOUNT}
 
 .PATH: ${MOUNT}

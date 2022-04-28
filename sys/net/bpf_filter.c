@@ -35,10 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf_filter.c 224044 2011-07-14 21:06:22Z mp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
+#if !defined(_KERNEL)
+#include <strings.h>
+#endif
 #if !defined(_KERNEL) || defined(sun)
 #include <netinet/in.h>
 #endif
@@ -71,7 +74,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bpf_filter.c 224044 2011-07-14 21:06:
 #ifdef _KERNEL
 #define MINDEX(m, k) \
 { \
-	register int len = m->m_len; \
+	int len = m->m_len; \
  \
 	while (k >= len) { \
 		k -= len; \
@@ -96,7 +99,7 @@ m_xword(struct mbuf *m, bpf_u_int32 k, int *err)
 	while (k >= len) {
 		k -= len;
 		m = m->m_next;
-		if (m == 0)
+		if (m == NULL)
 			goto bad;
 		len = m->m_len;
 	}
@@ -106,7 +109,7 @@ m_xword(struct mbuf *m, bpf_u_int32 k, int *err)
 		return (EXTRACT_LONG(cp));
 	}
 	m0 = m->m_next;
-	if (m0 == 0 || m0->m_len + len - k < 4)
+	if (m0 == NULL || m0->m_len + len - k < 4)
 		goto bad;
 	*err = 0;
 	np = mtod(m0, u_char *);
@@ -145,7 +148,7 @@ m_xhalf(struct mbuf *m, bpf_u_int32 k, int *err)
 	while (k >= len) {
 		k -= len;
 		m = m->m_next;
-		if (m == 0)
+		if (m == NULL)
 			goto bad;
 		len = m->m_len;
 	}
@@ -155,7 +158,7 @@ m_xhalf(struct mbuf *m, bpf_u_int32 k, int *err)
 		return (EXTRACT_SHORT(cp));
 	}
 	m0 = m->m_next;
-	if (m0 == 0)
+	if (m0 == NULL)
 		goto bad;
 	*err = 0;
 	return ((cp[0] << 8) | mtod(m0, u_char *)[0]);
@@ -338,7 +341,7 @@ bpf_filter(const struct bpf_insn *pc, u_char *p, u_int wirelen, u_int buflen)
 			k = pc->k;
 			if (k >= buflen) {
 #ifdef _KERNEL
-				register struct mbuf *m;
+				struct mbuf *m;
 
 				if (buflen != 0)
 					return (0);
@@ -528,8 +531,8 @@ static const u_short	bpf_code_map[] = {
 int
 bpf_validate(const struct bpf_insn *f, int len)
 {
-	register int i;
-	register const struct bpf_insn *p;
+	int i;
+	const struct bpf_insn *p;
 
 	/* Do not accept negative length filter. */
 	if (len < 0)
@@ -551,7 +554,7 @@ bpf_validate(const struct bpf_insn *f, int len)
 		 * the code block.
 		 */
 		if (BPF_CLASS(p->code) == BPF_JMP) {
-			register u_int offset;
+			u_int offset;
 
 			if (p->code == (BPF_JMP|BPF_JA))
 				offset = p->k;

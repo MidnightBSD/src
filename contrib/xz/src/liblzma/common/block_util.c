@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-/// \file       block_header.c
+/// \file       block_util.c
 /// \brief      Utility functions to handle lzma_block
 //
 //  Author:     Lasse Collin
@@ -51,7 +51,7 @@ lzma_block_unpadded_size(const lzma_block *block)
 	// NOTE: This function is used for validation too, so it is
 	// essential that these checks are always done even if
 	// Compressed Size is unknown.
-	if (block == NULL || block->version != 0
+	if (block == NULL || block->version > 1
 			|| block->header_size < LZMA_BLOCK_HEADER_SIZE_MIN
 			|| block->header_size > LZMA_BLOCK_HEADER_SIZE_MAX
 			|| (block->header_size & 3)

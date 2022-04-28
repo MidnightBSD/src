@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 Baptiste Daroussin <bapt@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/pkg/config.h 259614 2013-12-19 13:44:07Z bdrewery $
+ * $FreeBSD$
  */
 
 #ifndef _PKG_CONFIG_H
@@ -40,6 +42,7 @@ typedef enum {
 	SIGNATURE_TYPE,
 	FINGERPRINTS,
 	REPOS_DIR,
+	PUBKEY,
 	CONFIG_SIZE
 } pkg_config_key;
 

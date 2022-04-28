@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/sound/pci/es137x.h 204875 2010-03-08 18:51:28Z joel $
+ * $FreeBSD$
  */
 
 /* This supports the ENSONIQ AudioPCI board based on the ES1370. */

@@ -1,10 +1,9 @@
 # XScale PXA generic configuration
-# $FreeBSD: release/10.0.0/sys/arm/xscale/pxa/std.pxa 239362 2012-08-18 05:48:19Z andrew $
+# $FreeBSD$
 files		"../xscale/pxa/files.pxa"
 include		"../xscale/std.xscale"
 makeoptions	KERNPHYSADDR=0xa0200000
 makeoptions	KERNVIRTADDR=0xc0200000
 makeoptions	CONF_CFLAGS=-mcpu=xscale
 options		XSCALE_CACHE_READ_WRITE_ALLOCATE
-options		ARM_USE_SMALL_ALLOC
 machine 	arm

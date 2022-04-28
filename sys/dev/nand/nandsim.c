@@ -27,7 +27,7 @@
 /* Simulated NAND controller driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nand/nandsim.c 237605 2012-06-26 18:08:03Z takawata $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,6 +71,7 @@ static struct nandsim_chip *get_nandsim_chip(uint8_t, uint8_t);
 
 static struct cdevsw nandsim_cdevsw = {
 	.d_version =    D_VERSION,
+	.d_flags =	D_NEEDGIANT,
 	.d_ioctl =      nandsim_ioctl,
 	.d_name =       "nandsim",
 };
@@ -292,7 +293,7 @@ nandsim_chip_status(struct sim_chip *chip)
 	nand_debug(NDBG_SIM,"status for chip num:%d at ctrl:%d", chip->num,
 	    chip->ctrl_num);
 
-	if (chip->ctrl_num >= MAX_SIM_DEV &&
+	if (chip->ctrl_num >= MAX_SIM_DEV ||
 	    chip->num >= MAX_CTRL_CS)
 		return (EINVAL);
 
@@ -639,7 +640,7 @@ nandsim_modevent(module_t mod __unused, int type, void *data __unused)
 	switch (type) {
 	case MOD_LOAD:
 		nandsim_dev = make_dev(&nandsim_cdevsw, 0,
-		    UID_ROOT, GID_WHEEL, 0666, "nandsim.ioctl");
+		    UID_ROOT, GID_WHEEL, 0600, "nandsim.ioctl");
 		break;
 	case MOD_UNLOAD:
 		for (i = 0; i < MAX_SIM_DEV; i++) {

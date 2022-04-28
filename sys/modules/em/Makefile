@@ -1,10 +1,9 @@
-# $FreeBSD: release/10.0.0/sys/modules/em/Makefile 253303 2013-07-12 22:36:26Z jfv $
+# $FreeBSD$
 
-.include <bsd.own.mk>
-
-.PATH:  ${.CURDIR}/../../dev/e1000
+.PATH:  ${SRCTOP}/sys/dev/e1000
 KMOD    = if_em
-SRCS    = device_if.h bus_if.h pci_if.h opt_inet.h opt_inet6.h
+SRCS    = device_if.h bus_if.h pci_if.h opt_ddb.h opt_em.h opt_inet.h \
+	  opt_inet6.h 
 SRCS    += $(CORE_SRC) $(LEGACY_SRC)
 SRCS	+= $(COMMON_SHARED) $(LEGACY_SHARED) $(PCIE_SHARED)
 CORE_SRC = if_em.c e1000_osdep.c
@@ -16,21 +15,9 @@ COMMON_SHARED = e1000_api.c e1000_phy.c e1000_nvm.c e1000_mac.c \
 PCIE_SHARED = e1000_80003es2lan.c e1000_ich8lan.c e1000_82571.c e1000_82575.c
 LEGACY_SHARED = e1000_82540.c e1000_82542.c e1000_82541.c e1000_82543.c
 
-CFLAGS += -I${.CURDIR}/../../dev/e1000
+CFLAGS += -I${SRCTOP}/sys/dev/e1000
 
 # DEVICE_POLLING for a non-interrupt-driven method
 #CFLAGS  += -DDEVICE_POLLING
-
-.if !defined(KERNBUILDDIR)
-.if ${MK_INET_SUPPORT} != "no"
-opt_inet.h:
-	@echo "#define INET 1" > ${.TARGET}
-.endif
-
-.if ${MK_INET6_SUPPORT} != "no"
-opt_inet6.h:
-	@echo "#define INET6 1" > ${.TARGET}
-.endif
-.endif
 
 .include <bsd.kmod.mk>

@@ -1,20 +1,21 @@
-# $FreeBSD: release/10.0.0/lib/libc/gdtoa/Makefile.inc 178140 2008-04-12 03:11:36Z das $
+# $FreeBSD$
 
 # netlib gdtoa sources
-.PATH: ${.CURDIR}/gdtoa
+.PATH: ${LIBC_SRCTOP}/gdtoa
 
 MISRCS+=_hdtoa.c _hldtoa.c _ldtoa.c glue.c
 GDTOASRCS+=dmisc.c dtoa.c gdtoa.c gethex.c gmisc.c \
 	hd_init.c hexnan.c misc.c smisc.c \
 	strtod.c strtodg.c strtof.c strtord.c sum.c ulp.c
 
-SYM_MAPS+=${.CURDIR}/gdtoa/Symbol.map
+SYM_MAPS+=${LIBC_SRCTOP}/gdtoa/Symbol.map
 
-CFLAGS+=-I${.CURDIR}/../../contrib/gdtoa
+CFLAGS+=-I${SRCTOP}/contrib/gdtoa
 
 .for src in ${GDTOASRCS}
 MISRCS+=gdtoa_${src}
 CLEANFILES+=gdtoa_${src}
-gdtoa_${src}:
-	ln -sf ${.CURDIR}/../../contrib/gdtoa/${src} ${.TARGET}
+gdtoa_${src}: ${SRCTOP}/contrib/gdtoa/${src} .NOMETA
+	ln -sf ${.ALLSRC} ${.TARGET}
+CFLAGS.gdtoa_${src}+=-fno-strict-aliasing
 .endfor

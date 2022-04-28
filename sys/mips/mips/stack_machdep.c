@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/stack_machdep.c 250576 2013-05-12 16:43:26Z eadler $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -35,7 +35,6 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/stack_machdep.c 250576 2013-05-
 
 #include <machine/mips_opcode.h>
 
-#include <machine/param.h>
 #include <machine/pcb.h>
 #include <machine/regnum.h>
 
@@ -140,6 +139,13 @@ stack_save_td(struct stack *st, struct thread *td)
 	pc = td->td_pcb->pcb_regs.pc;
 	sp = td->td_pcb->pcb_regs.sp;
 	stack_capture(st, pc, sp);
+}
+
+int
+stack_save_td_running(struct stack *st, struct thread *td)
+{
+
+	return (EOPNOTSUPP);
 }
 
 void

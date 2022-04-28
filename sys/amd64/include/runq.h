@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/amd64/include/runq.h 139731 2005-01-05 20:17:21Z imp $
+ * $FreeBSD$
  */
 
 #ifndef	_MACHINE_RUNQ_H_

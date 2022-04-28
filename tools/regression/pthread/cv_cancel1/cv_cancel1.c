@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/tools/regression/pthread/cv_cancel1/cv_cancel1.c 253384 2013-07-16 09:22:50Z kevlo $
+ * $FreeBSD$
  *
  */
 #include <pthread.h>

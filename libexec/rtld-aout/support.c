@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *-
- * $FreeBSD: release/10.0.0/libexec/rtld-aout/support.c 201217 2009-12-29 21:07:17Z ed $
+ * $FreeBSD$
  */
 #include <sys/types.h>
 #include <string.h>

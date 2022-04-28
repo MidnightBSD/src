@@ -1,8 +1,8 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
-# $FreeBSD: release/10.0.0/usr.sbin/bootparamd/callbootd/Makefile 231118 2012-02-07 09:27:07Z dim $
+# $FreeBSD$
 
 PROG=	callbootd
-NO_MAN=
+MAN=
 SRCS=	callbootd.c ${GENSRCS}
 GENSRCS=bootparam_prot.h bootparam_prot_clnt.c bootparam_prot_xdr.c
 

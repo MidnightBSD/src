@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/netinet/pim_var.h 254925 2013-08-26 18:16:05Z jhb $
+ * $FreeBSD$
  */
 
 #ifndef _NETINET_PIM_VAR_H_
@@ -66,14 +66,13 @@ struct pimstat {
 #endif
 
 /*
- * Names for PIM sysctl objects
+ * Identifiers for PIM sysctl nodes
  */
 #define PIMCTL_STATS		1	/* statistics (read-only) */
-#define PIMCTL_MAXID		2
 
 #ifdef _KERNEL
 
-void pim_input(struct mbuf *, int);
+int pim_input(struct mbuf **, int *, int);
 SYSCTL_DECL(_net_inet_pim);
 #endif
 

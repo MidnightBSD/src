@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/mpt/Makefile 178814 2008-05-06 20:49:53Z jhb $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/mpt
+.PATH: ${SRCTOP}/sys/dev/mpt
 
 KMOD=	mpt
 SRCS=	bus_if.h device_if.h pci_if.h \

@@ -1,8 +1,8 @@
-# $FreeBSD: release/10.0.0/usr.sbin/bsnmpd/gensnmptree/Makefile 201390 2010-01-02 11:07:44Z ed $
+# $FreeBSD$
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-CONTRIB=${.CURDIR}/../../../contrib/bsnmp
+CONTRIB=${SRCTOP}/contrib/bsnmp
 .PATH: ${CONTRIB}/gensnmptree
 
 PROG=	gensnmptree

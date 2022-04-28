@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/auditd 229701 2012-01-06 14:00:31Z pjd $
+# $FreeBSD$
 #
 # Start up for the Audit daemon.
 #
@@ -13,6 +13,7 @@
 . /etc/rc.subr
 
 name="auditd"
+desc="Audit daemon"
 stop_cmd="auditd_stop"
 command="/usr/sbin/${name}"
 rcvar="auditd_enable"

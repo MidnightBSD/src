@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)gprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/gprof/aout.c 246783 2013-02-14 08:16:03Z charnier $");
+__FBSDID("$FreeBSD$");
 
 #include <netinet/in.h>
 
@@ -132,7 +132,7 @@ getsymtab(FILE *nfile, const char *filename)
 	errx( 1 , "%s: no symbols" , filename );
     askfor = nname + 1;
     nl = (nltype *) calloc( askfor , sizeof(nltype) );
-    if (nl == 0)
+    if (nl == NULL)
 	errx( 1 , "no room for %zu bytes of symbol table" ,
 		askfor * sizeof(nltype) );
 
@@ -173,7 +173,7 @@ gettextspace(FILE *nfile)
 {
 
     textspace = (u_char *) malloc( xbuf.a_text );
-    if ( textspace == 0 ) {
+    if ( textspace == NULL ) {
 	warnx("no room for %u bytes of text space: can't do -c" ,
 		  xbuf.a_text );
 	return;

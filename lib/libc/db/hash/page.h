@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)page.h	8.2 (Berkeley) 5/31/94
- * $FreeBSD: release/10.0.0/lib/libc/db/hash/page.h 189327 2009-03-04 00:58:04Z delphij $
+ * $FreeBSD$
  */
 
 /*

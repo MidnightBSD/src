@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)umount.8	8.2 (Berkeley) 5/8/95
-.\" $FreeBSD: release/10.0.0/sbin/umount/umount.8 222541 2011-05-31 18:27:18Z rmacklem $
+.\" $FreeBSD$
 .\"
-.Dd May 31, 2011
+.Dd April 14, 2020
 .Dt UMOUNT 8
 .Os
 .Sh NAME
@@ -36,12 +36,12 @@
 .Nd unmount file systems
 .Sh SYNOPSIS
 .Nm
-.Op Fl fv
+.Op Fl fNnv
 .Ar special ... | node ... | fsid ...
 .Nm
 .Fl a | A
 .Op Fl F Ar fstab
-.Op Fl fv
+.Op Fl fnv
 .Op Fl h Ar host
 .Op Fl t Ar type
 .Sh DESCRIPTION
@@ -52,7 +52,9 @@ utility calls the
 system call to remove a file system from the file system tree.
 The file system can be specified by its
 .Ar special
-device or remote node (rhost:path), the path to the mount point
+device or remote node
+.Pq Ar rhost Ns Cm \& : Ns Ar path ,
+the path to the mount point
 .Ar node
 or by the file system ID
 .Ar fsid
@@ -61,7 +63,7 @@ as reported by
 when run by root.
 .Pp
 The options are as follows:
-.Bl -tag -width indent
+.Bl -tag -width "-F fstab"
 .It Fl a
 All the file systems described in
 .Xr fstab 5
@@ -81,6 +83,18 @@ The root file system cannot be forcibly unmounted.
 For NFS, a forced dismount can take up to 1 minute or more to
 complete against an unresponsive server and may throw away
 data not yet written to the server for this case.
+If a process, such as
+.Nm
+without the
+.Fl f
+flag is hung on an
+.Tn NFS
+mount point, use the
+.Fl N
+flag instead.
+Also, doing a forced dismount of an NFSv3 mount when
+.Xr rpc.lockd 8
+is running is unsafe and can result in a crash.
 .It Fl h Ar host
 Only file systems mounted from the specified host will be
 unmounted.
@@ -91,6 +105,33 @@ option and, unless otherwise specified with the
 option, will only unmount
 .Tn NFS
 file systems.
+.It Fl N
+Do a forced dismount of an
+.Tn NFS
+mount point without checking the mount path.
+This option can only be used with the path to the mount point
+.Ar node
+and the path must be specified exactly as it was at mount time.
+This option is useful when a process is hung waiting for an unresponsive
+.Tn NFS
+server while holding a vnode lock on the mounted-on vnode, such that
+.Nm
+with the
+.Fl f
+flag can't complete.
+Using this option can result in a loss of file updates that have not been
+flushed to the
+.Tn NFS
+server.
+.It Fl n
+Unless the
+.Fl f
+is used, the
+.Nm
+will not unmount an active file system.
+It will, however, perform a flush.
+This flag disables this behaviour, preventing the flush
+if there are any files open.
 .It Fl t Ar type
 Is used to indicate the actions should only be taken on
 file systems of the specified type.
@@ -140,6 +181,7 @@ file system table
 .Sh SEE ALSO
 .Xr unmount 2 ,
 .Xr fstab 5 ,
+.Xr autounmountd 8 ,
 .Xr mount 8
 .Sh HISTORY
 A

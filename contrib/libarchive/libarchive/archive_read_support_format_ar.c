@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: release/10.0.0/contrib/libarchive/libarchive/archive_read_support_format_ar.c 248616 2013-03-22 13:36:03Z mm $");
+__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -104,13 +104,12 @@ archive_read_support_format_ar(struct archive *_a)
 	archive_check_magic(_a, ARCHIVE_READ_MAGIC,
 	    ARCHIVE_STATE_NEW, "archive_read_support_format_ar");
 
-	ar = (struct ar *)malloc(sizeof(*ar));
+	ar = (struct ar *)calloc(1, sizeof(*ar));
 	if (ar == NULL) {
 		archive_set_error(&a->archive, ENOMEM,
 		    "Can't allocate ar data");
 		return (ARCHIVE_FATAL);
 	}
-	memset(ar, 0, sizeof(*ar));
 	ar->strtab = NULL;
 
 	r = __archive_read_register_format(a,
@@ -122,7 +121,9 @@ archive_read_support_format_ar(struct archive *_a)
 	    archive_read_format_ar_read_data,
 	    archive_read_format_ar_skip,
 	    NULL,
-	    archive_read_format_ar_cleanup);
+	    archive_read_format_ar_cleanup,
+	    NULL,
+	    NULL);
 
 	if (r != ARCHIVE_OK) {
 		free(ar);
@@ -137,8 +138,7 @@ archive_read_format_ar_cleanup(struct archive_read *a)
 	struct ar *ar;
 
 	ar = (struct ar *)(a->format->data);
-	if (ar->strtab)
-		free(ar->strtab);
+	free(ar->strtab);
 	free(ar);
 	(a->format->data) = NULL;
 	return (ARCHIVE_OK);
@@ -178,7 +178,7 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 	if (strncmp(h + AR_fmag_offset, "`\n", 2) != 0) {
 		archive_set_error(&a->archive, EINVAL,
 		    "Incorrect file header signature");
-		return (ARCHIVE_WARN);
+		return (ARCHIVE_FATAL);
 	}
 
 	/* Copy filename into work buffer. */
@@ -237,8 +237,15 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 	 * and are not terminated in '/', so we don't trim anything
 	 * that starts with '/'.)
 	 */
-	if (filename[0] != '/' && *p == '/')
+	if (filename[0] != '/' && p > filename && *p == '/') {
 		*p = '\0';
+	}
+
+	if (p < filename) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "Found entry with empty filename");
+		return (ARCHIVE_FATAL);
+	}
 
 	/*
 	 * '//' is the GNU filename table.
@@ -251,7 +258,7 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 		archive_entry_set_filetype(entry, AE_IFREG);
 		/* Get the size of the filename table. */
 		number = ar_atol10(h + AR_size_offset, AR_size_size);
-		if (number > SIZE_MAX) {
+		if (number > SIZE_MAX || number > 1024 * 1024 * 1024) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Filename table too large");
 			return (ARCHIVE_FATAL);
@@ -260,12 +267,12 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 		if (entry_size == 0) {
 			archive_set_error(&a->archive, EINVAL,
 			    "Invalid string table");
-			return (ARCHIVE_WARN);
+			return (ARCHIVE_FATAL);
 		}
 		if (ar->strtab != NULL) {
 			archive_set_error(&a->archive, EINVAL,
 			    "More than one string tables exist");
-			return (ARCHIVE_WARN);
+			return (ARCHIVE_FATAL);
 		}
 
 		/* Read the filename table into memory. */
@@ -307,13 +314,13 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 		 * If we can't look up the real name, warn and return
 		 * the entry with the wrong name.
 		 */
-		if (ar->strtab == NULL || number > ar->strtab_size) {
+		if (ar->strtab == NULL || number >= ar->strtab_size) {
 			archive_set_error(&a->archive, EINVAL,
-			    "Can't find long filename for entry");
+			    "Can't find long filename for GNU/SVR4 archive entry");
 			archive_entry_copy_pathname(entry, filename);
 			/* Parse the time, owner, mode, size fields. */
 			ar_parse_common_header(ar, entry, h);
-			return (ARCHIVE_WARN);
+			return (ARCHIVE_FATAL);
 		}
 
 		archive_entry_copy_pathname(entry, &ar->strtab[(size_t)number]);
@@ -333,16 +340,19 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 
 		/* Parse the size of the name, adjust the file size. */
 		number = ar_atol10(h + AR_name_offset + 3, AR_name_size - 3);
-		bsd_name_length = (size_t)number;
-		/* Guard against the filename + trailing NUL
-		 * overflowing a size_t and against the filename size
-		 * being larger than the entire entry. */
-		if (number > (uint64_t)(bsd_name_length + 1)
-		    || (int64_t)bsd_name_length > ar->entry_bytes_remaining) {
+		/* Sanity check the filename length:
+		 *   = Must be <= SIZE_MAX - 1
+		 *   = Must be <= 1MB
+		 *   = Cannot be bigger than the entire entry
+		 */
+		if (number > SIZE_MAX - 1
+		    || number > 1024 * 1024
+		    || (int64_t)number > ar->entry_bytes_remaining) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Bad input file size");
 			return (ARCHIVE_FATAL);
 		}
+		bsd_name_length = (size_t)number;
 		ar->entry_bytes_remaining -= bsd_name_length;
 		/* Adjust file size reported to client. */
 		archive_entry_set_size(entry, ar->entry_bytes_remaining);
@@ -377,9 +387,10 @@ _ar_read_header(struct archive_read *a, struct archive_entry *entry,
 
 	/*
 	 * "/" is the SVR4/GNU archive symbol table.
+	 * "/SYM64/" is the SVR4/GNU 64-bit variant archive symbol table.
 	 */
-	if (strcmp(filename, "/") == 0) {
-		archive_entry_copy_pathname(entry, "/");
+	if (strcmp(filename, "/") == 0 || strcmp(filename, "/SYM64/") == 0) {
+		archive_entry_copy_pathname(entry, filename);
 		/* Parse the time, owner, mode, size fields. */
 		r = ar_parse_common_header(ar, entry, h);
 		/* Force the file type to a regular file. */
@@ -448,6 +459,7 @@ ar_parse_common_header(struct ar *ar, struct archive_entry *entry,
 	uint64_t n;
 
 	/* Copy remaining header */
+	archive_entry_set_filetype(entry, AE_IFREG);
 	archive_entry_set_mtime(entry,
 	    (time_t)ar_atol10(h + AR_date_offset, AR_date_size), 0L);
 	archive_entry_set_uid(entry,
@@ -571,7 +583,7 @@ bad_string_table:
 	    "Invalid string table");
 	free(ar->strtab);
 	ar->strtab = NULL;
-	return (ARCHIVE_WARN);
+	return (ARCHIVE_FATAL);
 }
 
 static uint64_t

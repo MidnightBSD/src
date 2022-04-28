@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/bin/csh/config_p.h 231990 2012-02-22 03:36:15Z mp $ */
+/* $FreeBSD$ */
 /*
  * config.h -- configure various defines for tcsh
  *
@@ -9,7 +9,7 @@
 
 #ifndef _h_config
 #define _h_config
-/****************** System dependant compilation flags ****************/
+/****************** System dependent compilation flags ****************/
 /*
  * POSIX	This system supports IEEE Std 1003.1-1988 (POSIX).
  */
@@ -34,7 +34,8 @@
  *		Note that some machines eg. rs6000 have a vfork, but not
  *		with the berkeley semantics, so we cannot use it there either.
  */
-#define VFORK
+/* #define VFORK */
+#define	vfork fork
 
 /*
  * BSDJOBS	You have BSD-style job control (both process groups and

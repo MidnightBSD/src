@@ -3,7 +3,7 @@
 # Script for testing DFS; setup an AP vap on a DFS channel
 # then simulate a radar event and verify operation.
 #
-# $FreeBSD: release/10.0.0/tools/tools/net80211/scripts/setup.dfs 181195 2008-08-02 18:01:58Z sam $
+# $FreeBSD$
 #
 PATH=.:$PATH
 . config

@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/tools/regression/nfsmmap/test2/Makefile 139103 2004-12-21 08:47:35Z ru $
+# $FreeBSD$
 
 PROG= test2
-NO_MAN=
+MAN=
 NFSSERVER?= herring.nlsystems.com
 CLEANFILES= test2.zeros test2.good test2.data test2.scratch
 

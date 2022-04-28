@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/usr.sbin/rtadvd/if.h 224144 2011-07-17 19:24:54Z hrs $	*/
+/*	$FreeBSD$	*/
 /*	$KAME: if.h,v 1.10 2003/02/24 11:29:10 ono Exp $	*/
 
 /*

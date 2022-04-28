@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/nfs/nfssvc.h 243782 2012-12-02 01:16:04Z rmacklem $
+ * $FreeBSD$
  */
 
 #ifndef _NFS_NFSSVC_H_
@@ -69,6 +69,8 @@
 #define	NFSSVC_SUSPENDNFSD	0x04000000
 #define	NFSSVC_RESUMENFSD	0x08000000
 #define	NFSSVC_DUMPMNTOPTS	0x10000000
+#define	NFSSVC_NEWSTRUCT	0x20000000
+#define	NFSSVC_FORCEDISM	0x40000000
 
 /* Argument structure for NFSSVC_DUMPMNTOPTS. */
 struct nfscl_dumpmntopts {

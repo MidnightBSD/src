@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/lib/libiconv_modules/UTF8/Makefile 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 
 SHLIB=	UTF8
 SRCS+=	citrus_utf8.c

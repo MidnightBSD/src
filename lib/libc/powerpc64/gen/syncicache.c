@@ -33,7 +33,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/lib/libc/powerpc64/gen/syncicache.c 253750 2013-07-28 18:44:17Z avg $";
+  "$FreeBSD$";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -66,8 +66,8 @@ getcachelinesize()
 
 	clen = sizeof(cacheline_size);
 
-	if (sysctl(cachemib, sizeof(cachemib) / sizeof(cachemib[0]),
-	    &cacheline_size, &clen, NULL, 0) < 0 || !cacheline_size) {
+	if (sysctl(cachemib, nitems(cachemib), &cacheline_size, &clen,
+	    NULL, 0) < 0 || !cacheline_size) {
 		abort();
 	}
 }

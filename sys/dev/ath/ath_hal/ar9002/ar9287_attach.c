@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar9002/ar9287_attach.c 244943 2013-01-02 00:38:01Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -111,6 +111,7 @@ ar9287AniSetup(struct ath_hal *ah)
 static struct ath_hal *
 ar9287Attach(uint16_t devid, HAL_SOFTC sc,
 	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
+	HAL_OPS_CONFIG *ah_config,
 	HAL_STATUS *status)
 {
 	struct ath_hal_9287 *ahp9287;

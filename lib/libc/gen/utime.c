@@ -31,16 +31,14 @@
 static char sccsid[] = "@(#)utime.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/gen/utime.c 165903 2007-01-09 00:28:16Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/time.h>
 
 #include <utime.h>
 
 int
-utime(path, times)
-	const char *path;
-	const struct utimbuf *times;
+utime(const char *path, const struct utimbuf *times)
 {
 	struct timeval tv[2], *tvp;
 

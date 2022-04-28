@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netinet/accf_data.c 193272 2009-06-01 21:17:03Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #define ACCEPT_FILTER_MOD
 

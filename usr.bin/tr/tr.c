@@ -29,7 +29,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tr/tr.c 245767 2013-01-22 05:39:34Z andrew $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 static const char copyright[] =
@@ -272,10 +272,11 @@ endloop:
 			if (Cflag && !iswrune(cnt))
 				continue;
 			if (cmap_lookup(map, cnt) == OOBCH) {
-				if (next(&s2))
+				if (next(&s2)) {
 					cmap_add(map, cnt, s2.lastch);
-				if (sflag)
-					cset_add(squeeze, s2.lastch);
+					if (sflag)
+						cset_add(squeeze, s2.lastch);
+				}
 			} else
 				cmap_add(map, cnt, cnt);
 			if ((s2.state == EOS || s2.state == INFINITE) &&

@@ -1,4 +1,4 @@
-$ $FreeBSD: release/10.0.0/lib/libc/nls/es_ES.ISO8859-1.msg 200077 2009-12-03 19:27:12Z gabor $
+$ $FreeBSD$
 $
 $ Message catalog for es_ES.ISO8859-1 locale
 $

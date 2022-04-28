@@ -28,11 +28,11 @@
  *
  *	@(#)defs.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: release/10.0.0/sbin/routed/defs.h 190718 2009-04-05 17:33:07Z phk $
+ * $FreeBSD$
  */
 
 #ifdef  sgi
-#ident "$FreeBSD: release/10.0.0/sbin/routed/defs.h 190718 2009-04-05 17:33:07Z phk $"
+#ident "$FreeBSD$"
 #endif
 
 /* Definitions for RIPv2 routing process.
@@ -462,6 +462,7 @@ extern int	ridhosts;		/* 1=reduce host routes */
 extern int	mhome;			/* 1=want multi-homed host route */
 extern int	advertise_mhome;	/* 1=must continue advertising it */
 extern int	auth_ok;		/* 1=ignore auth if we do not care */
+extern int	insecure;		/* Reply to special queries or not */
 
 extern struct timeval clk;		/* system clock's idea of time */
 extern struct timeval epoch;		/* system clock when started */

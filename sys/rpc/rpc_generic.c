@@ -1,32 +1,31 @@
 /*	$NetBSD: rpc_generic.c,v 1.4 2000/09/28 09:07:04 kleink Exp $	*/
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
  * 
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- * 
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- * 
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- * 
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 /*
  * Copyright (c) 1986-1991 by Sun Microsystems Inc. 
@@ -34,7 +33,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/rpc/rpc_generic.c 248195 2013-03-12 12:17:19Z glebius $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -312,6 +311,8 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 
 	switch (af) {
 	case AF_INET:
+		if (nbuf->len < sizeof(*sin))
+			return NULL;
 		sin = nbuf->buf;
 		if (inet_ntop(af, &sin->sin_addr, namebuf, sizeof namebuf)
 		    == NULL)
@@ -324,6 +325,8 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 		break;
 #ifdef INET6
 	case AF_INET6:
+		if (nbuf->len < sizeof(*sin6))
+			return NULL;
 		sin6 = nbuf->buf;
 		if (inet_ntop(af, &sin6->sin6_addr, namebuf6, sizeof namebuf6)
 		    == NULL)
@@ -367,6 +370,10 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 
 	port = 0;
 	sin = NULL;
+
+	if (uaddr == NULL)
+		return NULL;
+
 	addrstr = strdup(uaddr, M_RPC);
 	if (addrstr == NULL)
 		return NULL;
@@ -391,15 +398,11 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 	}
 
 	ret = (struct netbuf *)malloc(sizeof *ret, M_RPC, M_WAITOK);
-	if (ret == NULL)
-		goto out;
 	
 	switch (af) {
 	case AF_INET:
 		sin = (struct sockaddr_in *)malloc(sizeof *sin, M_RPC,
 		    M_WAITOK);
-		if (sin == NULL)
-			goto out;
 		memset(sin, 0, sizeof *sin);
 		sin->sin_family = AF_INET;
 		sin->sin_port = htons(port);
@@ -416,8 +419,6 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 	case AF_INET6:
 		sin6 = (struct sockaddr_in6 *)malloc(sizeof *sin6, M_RPC,
 		    M_WAITOK);
-		if (sin6 == NULL)
-			goto out;
 		memset(sin6, 0, sizeof *sin6);
 		sin6->sin6_family = AF_INET6;
 		sin6->sin6_port = htons(port);
@@ -434,8 +435,6 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 	case AF_LOCAL:
 		sun = (struct sockaddr_un *)malloc(sizeof *sun, M_RPC,
 		    M_WAITOK);
-		if (sun == NULL)
-			goto out;
 		memset(sun, 0, sizeof *sun);
 		sun->sun_family = AF_LOCAL;
 		strncpy(sun->sun_path, addrstr, sizeof(sun->sun_path) - 1);
@@ -704,7 +703,9 @@ __rpc_sockisbound(struct socket *so)
 	struct sockaddr *sa;
 	int error, bound;
 
+	CURVNET_SET(so->so_vnet);
 	error = so->so_proto->pr_usrreqs->pru_sockaddr(so, &sa);
+	CURVNET_RESTORE();
 	if (error)
 		return (0);
 
@@ -792,7 +793,9 @@ bindresvport(struct socket *so, struct sockaddr *sa)
 	socklen_t salen;
 
 	if (sa == NULL) {
+		CURVNET_SET(so->so_vnet);
 		error = so->so_proto->pr_usrreqs->pru_sockaddr(so, &sa);
+		CURVNET_RESTORE();
 		if (error)
 			return (error);
 		freesa = TRUE;

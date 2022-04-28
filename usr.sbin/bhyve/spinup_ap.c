@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
  *
@@ -23,11 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/bhyve/spinup_ap.c 256869 2013-10-22 00:58:51Z neel $
+ * $FreeBSD$
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/bhyve/spinup_ap.c 256869 2013-10-22 00:58:51Z neel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -98,7 +100,7 @@ spinup_ap(struct vmctx *ctx, int vcpu, int newcpu, uint64_t rip)
 
 	spinup_ap_realmode(ctx, newcpu, &rip);
 
-	fbsdrun_addcpu(ctx, newcpu, rip);
+	fbsdrun_addcpu(ctx, vcpu, newcpu, rip);
 
 	return (newcpu);
 }

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_entry.c 208783 2010-06-03 14:16:58Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -91,7 +91,7 @@ acl_create_entry_np(acl_t *acl_p, acl_entry_t *entry_p, int offset)
 		return (-1);
 	}
 
-	if (offset < 0 || offset >= acl_int->acl_cnt) {
+	if (offset < 0 || offset > acl_int->acl_cnt) {
 		errno = EINVAL;
 		return (-1);
 	}

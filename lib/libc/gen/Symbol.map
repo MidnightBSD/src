@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: release/10.0.0/lib/libc/gen/Symbol.map 254499 2013-08-18 20:11:34Z pjd $
+ * $FreeBSD$
  */
 
 FBSD_1.0 {
@@ -365,6 +365,7 @@ FBSD_1.2 {
 	getutxid;
 	getutxline;
 	getutxuser;
+	pthread_getthreadid_np;
 	pututxline;
 	sem_close;
 	sem_destroy;
@@ -407,6 +408,27 @@ FBSD_1.3 {
 	uid_from_user;
 	unvis;
 	waitid;
+};
+
+FBSD_1.4 {
+	getnetgrent_r;
+	pthread_mutex_consistent;
+	pthread_mutexattr_getrobust;
+	pthread_mutexattr_setrobust;
+	scandir_b;
+	stravis;
+};
+
+FBSD_1.5 {
+	elf_aux_info;
+	sem_clockwait_np;
+	setproctitle_fast;
+};
+
+FBSD_1.6 {
+	sigandset;
+	sigisemptyset;
+	sigorset;
 };
 
 FBSDprivate_1.0 {
@@ -476,13 +498,13 @@ FBSDprivate_1.0 {
 	_pthread_sigmask;
 	_pthread_testcancel;
 	_spinlock;
-	_spinlock_debug;
 	_spinunlock;
 	_rtld_addr_phdr;
 	_rtld_atfork_pre;
 	_rtld_atfork_post;
 	_rtld_error;		/* for private use */
 	_rtld_get_stack_prot;
+	_rtld_is_dlopened;
 	_rtld_thread_init;	/* for private use */
 	__elf_phdr_match_addr;
 	_err;
@@ -497,7 +519,6 @@ FBSDprivate_1.0 {
 	__opendir2;
 	__pause;
 	_pause;
-	__pw_scan;	/* Used by (at least) libutil */
 	__raise;
 	_raise;
 	__sleep;
@@ -528,7 +549,10 @@ FBSDprivate_1.0 {
 	_libc_sem_post_compat;
 	_libc_sem_getvalue_compat;
 
+	__libc_tcdrain;
+
 	__elf_aux_vector;
+	__pthread_distribute_static_tls;
 	__pthread_map_stacks_exec;
 	__fillcontextx;
 	__fillcontextx2;

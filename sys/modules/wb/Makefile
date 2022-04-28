@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/wb/Makefile 181741 2008-08-14 21:26:29Z imp $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/wb
+.PATH: ${SRCTOP}/sys/dev/wb
 
 KMOD=	if_wb
 SRCS=	if_wb.c device_if.h

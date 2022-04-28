@@ -36,15 +36,18 @@
  *
  * machdep.c
  *
- * Machine dependant functions for kernel setup
+ * Machine dependent functions for kernel setup
  *
  * This file needs a lot of work.
  *
  * Created      : 17/09/94
  */
 
+#include "opt_kstack_pages.h"
+#include "opt_platform.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_machdep.c 259746 2013-12-22 22:20:17Z imp $");
+__FBSDID("$FreeBSD$");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -68,6 +71,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_machdep.c 259746 2013-12-22
 #include <sys/exec.h>
 #include <sys/kdb.h>
 #include <sys/msgbuf.h>
+#include <sys/devmap.h>
+#include <machine/physmem.h>
 #include <machine/reg.h>
 #include <machine/cpu.h>
 #include <machine/board.h>
@@ -109,42 +114,22 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/at91/at91_machdep.c 259746 2013-12-22
 /* this should be evenly divisable by PAGE_SIZE / L2_TABLE_SIZE_REAL (or 4) */
 #define NUM_KERNEL_PTS		(KERNEL_PT_AFKERNEL + KERNEL_PT_AFKERNEL_NUM)
 
-extern u_int data_abort_handler_address;
-extern u_int prefetch_abort_handler_address;
-extern u_int undefined_handler_address;
-
 struct pv_addr kernel_pt_table[NUM_KERNEL_PTS];
 
-/* Physical and virtual addresses for some global pages */
-
-vm_paddr_t phys_avail[10];
-vm_paddr_t dump_avail[4];
-
-struct pv_addr systempage;
-struct pv_addr msgbufpv;
-struct pv_addr irqstack;
-struct pv_addr undstack;
-struct pv_addr abtstack;
-struct pv_addr kernelstack;
-
 /* Static device mappings. */
-const struct pmap_devmap at91_devmap[] = {
+const struct devmap_entry at91_devmap[] = {
 	/*
-	 * Map the on-board devices VA == PA so that we can access them
-	 * with the MMU on or off.
+	 * Map the critical on-board devices. The interrupt vector at
+	 * 0xffff0000 makes it impossible to map them PA == VA, so we map all
+	 * 0xfffxxxxx addresses to 0xdffxxxxx. This covers all critical devices
+	 * on all members of the AT91SAM9 and AT91RM9200 families.
 	 */
 	{
-		/*
-		 * This at least maps the interrupt controller, the UART
-		 * and the timer. Other devices should use newbus to
-		 * map their memory anyway.
-		 */
 		0xdff00000,
 		0xfff00000,
 		0x00100000,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
+	/* There's a notion that we should do the rest of these lazily. */
 	/*
 	 * We can't just map the OHCI registers VA == PA, because
 	 * AT91xx_xxx_BASE belongs to the userland address space.
@@ -162,19 +147,15 @@ const struct pmap_devmap at91_devmap[] = {
 		 * on this chip select for a VA/PA mapping.
 		 */
 		/* Internal Memory 1MB  */
+		AT91RM92_OHCI_VA_BASE,
 		AT91RM92_OHCI_BASE,
-		AT91RM92_OHCI_PA_BASE,
 		0x00100000,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{
 		/* CompactFlash controller. Portion of EBI CS4 1MB */
+		AT91RM92_CF_VA_BASE,
 		AT91RM92_CF_BASE,
-		AT91RM92_CF_PA_BASE,
 		0x00100000,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	/*
 	 * The next two should be good for the 9260, 9261 and 9G20 since
@@ -182,38 +163,31 @@ const struct pmap_devmap at91_devmap[] = {
 	 */
 	{
 		/* Internal Memory 1MB  */
+		AT91SAM9G20_OHCI_VA_BASE,
 		AT91SAM9G20_OHCI_BASE,
-		AT91SAM9G20_OHCI_PA_BASE,
 		0x00100000,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	{
 		/* EBI CS3 256MB */
+		AT91SAM9G20_NAND_VA_BASE,
 		AT91SAM9G20_NAND_BASE,
-		AT91SAM9G20_NAND_PA_BASE,
 		AT91SAM9G20_NAND_SIZE,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
 	/*
 	 * The next should be good for the 9G45.
 	 */
 	{
 		/* Internal Memory 1MB  */
+		AT91SAM9G45_OHCI_VA_BASE,
 		AT91SAM9G45_OHCI_BASE,
-		AT91SAM9G45_OHCI_PA_BASE,
 		0x00100000,
-		VM_PROT_READ|VM_PROT_WRITE,
-		PTE_NOCACHE,
 	},
-	{ 0, 0, 0, 0, 0, }
+	{ 0, 0, 0, }
 };
 
 #ifdef LINUX_BOOT_ABI
-extern int membanks;
-extern int memstart[];
-extern int memsize[];
+static int membanks;
+static int memsize[];
 #endif
 
 long
@@ -431,7 +405,7 @@ at91_try_id(uint32_t dbgu_base)
 	return (1);
 }
 
-static void
+void
 at91_soc_id(void)
 {
 
@@ -451,6 +425,16 @@ board_init(void)
 }
 #endif
 
+#ifndef FDT
+/* Physical and virtual addresses for some global pages */
+
+struct pv_addr msgbufpv;
+struct pv_addr kernelstack;
+struct pv_addr systempage;
+struct pv_addr irqstack;
+struct pv_addr abtstack;
+struct pv_addr undstack;
+
 void *
 initarm(struct arm_boot_params *abp)
 {
@@ -464,6 +448,7 @@ initarm(struct arm_boot_params *abp)
 	vm_offset_t lastaddr;
 
 	lastaddr = parse_boot_param(abp);
+	arm_physmem_kernaddr = abp->abp_physaddr;
 	set_cpufuncs();
 	pcpu0_init();
 
@@ -474,7 +459,7 @@ initarm(struct arm_boot_params *abp)
 	/* Define a macro to simplify memory allocation */
 #define valloc_pages(var, np)						\
 	alloc_pages((var).pv_va, (np));					\
-	(var).pv_pa = (var).pv_va + (KERNPHYSADDR - KERNVIRTADDR);
+	(var).pv_pa = (var).pv_va + (abp->abp_physaddr - KERNVIRTADDR);
 
 #define alloc_pages(var, np)						\
 	(var) = freemempos;						\
@@ -494,7 +479,7 @@ initarm(struct arm_boot_params *abp)
 			    L2_TABLE_SIZE_REAL;
 			kernel_pt_table[i].pv_pa =
 			    kernel_pt_table[i].pv_va - KERNVIRTADDR +
-			    KERNPHYSADDR;
+			    abp->abp_physaddr;
 		}
 	}
 	/*
@@ -512,7 +497,7 @@ initarm(struct arm_boot_params *abp)
 	valloc_pages(irqstack, IRQ_STACK_SIZE * MAXCPU);
 	valloc_pages(abtstack, ABT_STACK_SIZE * MAXCPU);
 	valloc_pages(undstack, UND_STACK_SIZE * MAXCPU);
-	valloc_pages(kernelstack, KSTACK_PAGES * MAXCPU);
+	valloc_pages(kernelstack, kstack_pages * MAXCPU);
 	valloc_pages(msgbufpv, round_page(msgbufsize) / PAGE_SIZE);
 
 	/*
@@ -529,9 +514,9 @@ initarm(struct arm_boot_params *abp)
 		pmap_link_l2pt(l1pagetable, KERNBASE + i * L1_S_SIZE,
 		    &kernel_pt_table[KERNEL_PT_KERN + i]);
 	pmap_map_chunk(l1pagetable, KERNBASE, PHYSADDR,
-	   (((uint32_t)lastaddr - KERNBASE) + PAGE_SIZE) & ~(PAGE_SIZE - 1),
-	    VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
-	afterkern = round_page((lastaddr + L1_S_SIZE) & ~(L1_S_SIZE - 1));
+	   rounddown2(((uint32_t)lastaddr - KERNBASE) + PAGE_SIZE, PAGE_SIZE),
+	   VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	afterkern = round_page(rounddown2(lastaddr + L1_S_SIZE, L1_S_SIZE));
 	for (i = 0; i < KERNEL_PT_AFKERNEL_NUM; i++) {
 		pmap_link_l2pt(l1pagetable, afterkern + i * L1_S_SIZE,
 		    &kernel_pt_table[KERNEL_PT_AFKERNEL + i]);
@@ -553,7 +538,7 @@ initarm(struct arm_boot_params *abp)
 	pmap_map_chunk(l1pagetable, undstack.pv_va, undstack.pv_pa,
 	    UND_STACK_SIZE * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 	pmap_map_chunk(l1pagetable, kernelstack.pv_va, kernelstack.pv_pa,
-	    KSTACK_PAGES * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
+	    kstack_pages * PAGE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_CACHE);
 
 	pmap_map_chunk(l1pagetable, kernel_l1pt.pv_va, kernel_l1pt.pv_pa,
 	    L1_TABLE_SIZE, VM_PROT_READ|VM_PROT_WRITE, PTE_PAGETABLE);
@@ -566,9 +551,9 @@ initarm(struct arm_boot_params *abp)
 		    VM_PROT_READ|VM_PROT_WRITE, PTE_PAGETABLE);
 	}
 
-	pmap_devmap_bootstrap(l1pagetable, at91_devmap);
+	devmap_bootstrap(l1pagetable, at91_devmap);
 	cpu_domains((DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL * 2)) | DOMAIN_CLIENT);
-	setttb(kernel_l1pt.pv_pa);
+	cpu_setttb(kernel_l1pt.pv_pa);
 	cpu_tlb_flushID();
 	cpu_domains(DOMAIN_CLIENT << (PMAP_DOMAIN_KERNEL * 2));
 
@@ -592,7 +577,15 @@ initarm(struct arm_boot_params *abp)
 		printf("Warning: No soc support for %s found.\n", soc_info.name);
 
 	memsize = board_init();
-	physmem = memsize / PAGE_SIZE;
+	if (memsize == -1) {
+		printf("board_init() failed, cannot determine ram size; "
+		    "assuming 16MB\n");
+		memsize = 16 * 1024 * 1024;
+	}
+
+	/* Enable MMU (set SCTLR), and do other cpu-specific setup. */
+	cpu_control(CPU_CONTROL_MMU_ENABLE, CPU_CONTROL_MMU_ENABLE);
+	cpu_setup();
 
 	/*
 	 * Pages were allocated during the secondary bootstrap for the
@@ -602,14 +595,12 @@ initarm(struct arm_boot_params *abp)
 	 * Since the ARM stacks use STMFD etc. we must set r13 to the top end
 	 * of the stack memory.
 	 */
-	cpu_control(CPU_CONTROL_MMU_ENABLE, CPU_CONTROL_MMU_ENABLE);
-
 	set_stackptrs(0);
 
 	/*
 	 * We must now clean the cache again....
 	 * Cleaning may be done by reading new data to displace any
-	 * dirty data in the cache. This will have happened in setttb()
+	 * dirty data in the cache. This will have happened in cpu_setttb()
 	 * but since we are boot strapping the addresses used for the read
 	 * may have just been remapped and thus the cache could be out
 	 * of sync. A re-clean after the switch will cure this.
@@ -618,11 +609,6 @@ initarm(struct arm_boot_params *abp)
 	 */
 	cpu_idcache_wbinv_all();
 
-	/* Set stack for exception handlers */
-
-	data_abort_handler_address = (u_int)data_abort_handler;
-	prefetch_abort_handler_address = (u_int)prefetch_abort_handler;
-	undefined_handler_address = (u_int)undefinedinstruction_bounce;
 	undefined_init();
 
 	init_proc0(kernelstack.pv_va);
@@ -630,7 +616,6 @@ initarm(struct arm_boot_params *abp)
 	arm_vector_init(ARM_VECTORS_HIGH, ARM_VEC_ALL);
 
 	pmap_curmaxkvaddr = afterkern + L1_S_SIZE * (KERNEL_PT_KERN_NUM - 1);
-	arm_dump_avail_init(memsize, sizeof(dump_avail)/sizeof(dump_avail[0]));
 	/* Always use the 256MB of KVA we have available between the kernel and devices */
 	vm_max_kernel_address = KERNVIRTADDR + (256 << 20);
 	pmap_bootstrap(freemempos, &kernel_l1pt);
@@ -638,20 +623,27 @@ initarm(struct arm_boot_params *abp)
 	msgbufinit(msgbufp, msgbufsize);
 	mutex_init();
 
-	i = 0;
-#if PHYSADDR != KERNPHYSADDR
-	phys_avail[i++] = PHYSADDR;
-	phys_avail[i++] = KERNPHYSADDR;
-#endif
-	phys_avail[i++] = virtual_avail - KERNVIRTADDR + KERNPHYSADDR;
-	phys_avail[i++] = PHYSADDR + memsize;
-	phys_avail[i++] = 0;
-	phys_avail[i++] = 0;
+	/*
+	 * Add the physical ram we have available.
+	 *
+	 * Exclude the kernel, and all the things we allocated which immediately
+	 * follow the kernel, from the VM allocation pool but not from crash
+	 * dumps.  virtual_avail is a global variable which tracks the kva we've
+	 * "allocated" while setting up pmaps.
+	 *
+	 * Prepare the list of physical memory available to the vm subsystem.
+	 */
+	arm_physmem_hardware_region(PHYSADDR, memsize);
+	arm_physmem_exclude_region(abp->abp_physaddr, 
+	    virtual_avail - KERNVIRTADDR, EXFLAG_NOALLOC);
+	arm_physmem_init_kernel_globals();
+
 	init_param2(physmem);
 	kdb_init();
 	return ((void *)(kernelstack.pv_va + USPACE_SVC_STACK_TOP -
 	    sizeof(struct pcb)));
 }
+#endif
 
 /*
  * These functions are handled elsewhere, so make them nops here.

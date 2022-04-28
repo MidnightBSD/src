@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/cam/ata/ata_pmp.c 257049 2013-10-24 10:33:31Z mav $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 
@@ -139,15 +139,12 @@ static int pmp_hide_special = PMP_DEFAULT_HIDE_SPECIAL;
 
 static SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD, 0,
             "CAM Direct Access Disk driver");
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RWTUN,
            &pmp_retry_count, 0, "Normal I/O retry count");
-TUNABLE_INT("kern.cam.pmp.retry_count", &pmp_retry_count);
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, default_timeout, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, default_timeout, CTLFLAG_RWTUN,
            &pmp_default_timeout, 0, "Normal I/O timeout (in seconds)");
-TUNABLE_INT("kern.cam.pmp.default_timeout", &pmp_default_timeout);
-SYSCTL_INT(_kern_cam_pmp, OID_AUTO, hide_special, CTLFLAG_RW,
+SYSCTL_INT(_kern_cam_pmp, OID_AUTO, hide_special, CTLFLAG_RWTUN,
            &pmp_hide_special, 0, "Hide extra ports");
-TUNABLE_INT("kern.cam.pmp.hide_special", &pmp_hide_special);
 
 static struct periph_driver pmpdriver =
 {
@@ -157,8 +154,6 @@ static struct periph_driver pmpdriver =
 };
 
 PERIPHDRIVER_DECLARE(pmp, pmpdriver);
-
-static MALLOC_DEFINE(M_ATPMP, "ata_pmp", "ata_pmp buffers");
 
 static void
 pmpinit(void)
@@ -293,7 +288,7 @@ pmpasync(void *callback_arg, u_int32_t code,
 		status = cam_periph_alloc(pmpregister, pmponinvalidate,
 					  pmpcleanup, pmpstart,
 					  "pmp", CAM_PERIPH_BIO,
-					  cgd->ccb_h.path, pmpasync,
+					  path, pmpasync,
 					  AC_FOUND_DEVICE, cgd);
 
 		if (status != CAM_REQ_CMP
@@ -318,13 +313,17 @@ pmpasync(void *callback_arg, u_int32_t code,
 		if (code == AC_SENT_BDR || code == AC_BUS_RESET)
 			softc->found = 0; /* We have to reset everything. */
 		if (softc->state == PMP_STATE_NORMAL) {
-			if (softc->pm_pid == 0x37261095 ||
-			    softc->pm_pid == 0x38261095)
-				softc->state = PMP_STATE_PM_QUIRKS_1;
-			else
-				softc->state = PMP_STATE_PRECONFIG;
-			cam_periph_acquire(periph);
-			xpt_schedule(periph, CAM_PRIORITY_DEV);
+			if (cam_periph_acquire(periph) == CAM_REQ_CMP) {
+				if (softc->pm_pid == 0x37261095 ||
+				    softc->pm_pid == 0x38261095)
+					softc->state = PMP_STATE_PM_QUIRKS_1;
+				else
+					softc->state = PMP_STATE_PRECONFIG;
+				xpt_schedule(periph, CAM_PRIORITY_DEV);
+			} else {
+				pmprelease(periph, softc->found);
+				xpt_release_boot();
+			}
 		} else
 			softc->restart = 1;
 		break;
@@ -339,7 +338,7 @@ pmpsysctlinit(void *context, int pending)
 {
 	struct cam_periph *periph;
 	struct pmp_softc *softc;
-	char tmpstr[80], tmpstr2[80];
+	char tmpstr[32], tmpstr2[16];
 
 	periph = (struct cam_periph *)context;
 	if (cam_periph_acquire(periph) != CAM_REQ_CMP)

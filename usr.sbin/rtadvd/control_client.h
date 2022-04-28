@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (C) 2011 Hiroki Sato <hrs@FreeBSD.org>
  * All rights reserved.
  *
@@ -23,7 +25,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.sbin/rtadvd/control_client.h 225519 2011-09-12 23:52:55Z hrs $
+ * $FreeBSD$
  *
  */
 

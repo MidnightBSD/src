@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/virtio/virtqueue.c 255166 2013-09-03 02:26:57Z bryanv $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -367,11 +367,45 @@ virtqueue_paddr(struct virtqueue *vq)
 	return (vtophys(vq->vq_ring_mem));
 }
 
+vm_paddr_t
+virtqueue_desc_paddr(struct virtqueue *vq)
+{
+
+	return (vtophys(vq->vq_ring.desc));
+}
+
+vm_paddr_t
+virtqueue_avail_paddr(struct virtqueue *vq)
+{
+
+	return (vtophys(vq->vq_ring.avail));
+}
+
+vm_paddr_t
+virtqueue_used_paddr(struct virtqueue *vq)
+{
+
+	return (vtophys(vq->vq_ring.used));
+}
+
+uint16_t
+virtqueue_index(struct virtqueue *vq)
+{
+	return (vq->vq_queue_index);
+}
+
 int
 virtqueue_size(struct virtqueue *vq)
 {
 
 	return (vq->vq_nentries);
+}
+
+int
+virtqueue_nfree(struct virtqueue *vq)
+{
+
+	return (vq->vq_free_cnt);
 }
 
 int
@@ -560,8 +594,11 @@ virtqueue_poll(struct virtqueue *vq, uint32_t *len)
 {
 	void *cookie;
 
-	while ((cookie = virtqueue_dequeue(vq, len)) == NULL)
+	VIRTIO_BUS_POLL(vq->vq_dev);
+	while ((cookie = virtqueue_dequeue(vq, len)) == NULL) {
 		cpu_spinwait();
+		VIRTIO_BUS_POLL(vq->vq_dev);
+	}
 
 	return (cookie);
 }
@@ -598,11 +635,13 @@ virtqueue_dump(struct virtqueue *vq)
 
 	printf("VQ: %s - size=%d; free=%d; used=%d; queued=%d; "
 	    "desc_head_idx=%d; avail.idx=%d; used_cons_idx=%d; "
-	    "used.idx=%d; avail.flags=0x%x; used.flags=0x%x\n",
+	    "used.idx=%d; used_event_idx=%d; avail.flags=0x%x; used.flags=0x%x\n",
 	    vq->vq_name, vq->vq_nentries, vq->vq_free_cnt,
 	    virtqueue_nused(vq), vq->vq_queued_cnt, vq->vq_desc_head_idx,
 	    vq->vq_ring.avail->idx, vq->vq_used_cons_idx,
-	    vq->vq_ring.used->idx, vq->vq_ring.avail->flags,
+	    vq->vq_ring.used->idx,
+		vring_used_event(&vq->vq_ring),
+	    vq->vq_ring.avail->flags,
 	    vq->vq_ring.used->flags);
 }
 

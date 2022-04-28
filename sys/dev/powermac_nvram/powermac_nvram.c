@@ -23,7 +23,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/powermac_nvram/powermac_nvram.c 235678 2012-05-20 02:43:54Z jhibbits $
+ * $FreeBSD$
  */
 
 #include <sys/param.h>
@@ -84,7 +84,7 @@ static driver_t	powermac_nvram_driver = {
 
 static devclass_t powermac_nvram_devclass;
 
-DRIVER_MODULE(powermac_nvram, nexus, powermac_nvram_driver, powermac_nvram_devclass, 0, 0);
+DRIVER_MODULE(powermac_nvram, ofwbus, powermac_nvram_driver, powermac_nvram_devclass, 0, 0);
 
 /*
  * Cdev methods.

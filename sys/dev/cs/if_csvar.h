@@ -22,14 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/cs/if_csvar.h 218055 2011-01-29 00:53:58Z andrew $
+ * $FreeBSD$
  */
 
 #ifndef _IF_CSVAR_H
 #define _IF_CSVAR_H
-
-#include <net/if_arp.h>
-#include <net/if_media.h>
 
 /*
  * cs_softc: per line info and status

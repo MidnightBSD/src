@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/tools/test/testfloat/sparc64/fpu_util.c 207151 2010-04-24 12:11:41Z marius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 

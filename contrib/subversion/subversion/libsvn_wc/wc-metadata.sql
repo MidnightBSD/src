@@ -108,7 +108,7 @@ CREATE TABLE PRISTINE (
   );
 
 CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
-  
+
 /* ------------------------------------------------------------------------- */
 
 /* The ACTUAL_NODE table describes text changes and property changes
@@ -150,7 +150,7 @@ CREATE TABLE ACTUAL_NODE (
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
-  
+
   /* ### need to determine values. "unknown" (no info), "admin" (they
      ### used something like 'svn edit'), "noticed" (saw a mod while
      ### scanning the filesystem). */
@@ -170,7 +170,7 @@ CREATE TABLE ACTUAL_NODE (
   /* stsp: This is meant for text conflicts, right? What about property
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
-           conflict_data as well? 
+           conflict_data as well?
      rhuijben: Because that won't allow triggers to handle refcounts.
                We would have to scan all conflict skels before cleaning up the
                a single file from the pristine stor */
@@ -200,7 +200,7 @@ CREATE TABLE LOCK (
   lock_owner  TEXT,
   lock_comment  TEXT,
   lock_date  INTEGER,   /* an APR date/time (usec since 1970) */
-  
+
   PRIMARY KEY (repos_id, repos_relpath)
   );
 
@@ -553,7 +553,7 @@ CREATE TABLE EXTERNALS (
   /* the kind of the external. */
   kind  TEXT NOT NULL,
 
-  /* The local relpath of the directory NODE defining this external 
+  /* The local relpath of the directory NODE defining this external
      (Defaults to the parent directory of the file external after upgrade) */
   def_local_relpath         TEXT NOT NULL,
 
@@ -572,6 +572,62 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
+/* ------------------------------------------------------------------------- */
+/* This statement provides SQLite with the necessary information about our
+   indexes to make better decisions in the query planner.
+
+   For every interesting index this contains a number of rows where the
+   statistics are calculated for and then for every column in the index the
+   average number of rows with the same value in all columns left of this
+   column including the column itself.
+
+   See http://www.sqlite.org/fileformat2.html#stat1tab for more details.
+
+   The important thing here is that this tells Sqlite that the wc_id column
+   of the NODES and ACTUAL_NODE table is usually a single value, so queries
+   should use more than one column for index usage.
+
+   The current hints describe NODES+ACTUAL_NODE as a working copy with
+   8000 nodes in 1 a single working copy(=wc_id), 10 nodes per directory
+   and an average of 2 op-depth layers per node.
+
+   The number of integers must be number of index columns + 1, which is
+   verified via the test_schema_statistics() test.
+ */
+-- STMT_INSTALL_SCHEMA_STATISTICS
+ANALYZE sqlite_master; /* Creates empty sqlite_stat1 if necessary */
+
+DELETE FROM sqlite_stat1
+WHERE tbl in ('NODES', 'ACTUAL_NODE', 'LOCK', 'WC_LOCK', 'EXTERNALS');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'sqlite_autoindex_NODES_1',               '8000 8000 2 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'I_NODES_PARENT',                         '8000 8000 10 2 1');
+/* Tell a lie: We ignore that 99.9% of all moved_to values are NULL */
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('NODES', 'I_NODES_MOVED',                          '8000 8000 1 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('ACTUAL_NODE', 'sqlite_autoindex_ACTUAL_NODE_1',   '8000 8000 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('ACTUAL_NODE', 'I_ACTUAL_PARENT',                  '8000 8000 10 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('LOCK', 'sqlite_autoindex_LOCK_1',                 '100 100 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('WC_LOCK', 'sqlite_autoindex_WC_LOCK_1',           '100 100 1');
+
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','sqlite_autoindex_EXTERNALS_1',        '100 100 1');
+INSERT INTO sqlite_stat1(tbl, idx, stat) VALUES
+    ('EXTERNALS','I_EXTERNALS_DEFINED',                 '100 100 3 1');
+
+/* sqlite_autoindex_WORK_QUEUE_1 doesn't exist because WORK_QUEUE is
+   a INTEGER PRIMARY KEY AUTOINCREMENT table */
+
+ANALYZE sqlite_master; /* Loads sqlite_stat1 data for query optimizer */
 /* ------------------------------------------------------------------------- */
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
@@ -723,7 +779,7 @@ LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 28 involves no schema changes, it only converts MD5 pristine 
+/* Format 28 involves no schema changes, it only converts MD5 pristine
    references to SHA1. */
 
 -- STMT_UPGRADE_TO_28

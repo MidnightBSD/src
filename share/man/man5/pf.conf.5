@@ -1,4 +1,4 @@
-.\"    $FreeBSD: release/10.0.0/share/man/man5/pf.conf.5 250604 2013-05-13 18:13:50Z joel $
+.\"    $FreeBSD$
 .\"	$OpenBSD: pf.conf.5,v 1.406 2009/01/31 19:37:12 sobrado Exp $
 .\"
 .\" Copyright (c) 2002, Daniel Hartmeier
@@ -28,7 +28,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd June 29 2012
+.Dd January 5, 2019
 .Dt PF.CONF 5
 .Os
 .Sh NAME
@@ -342,7 +342,6 @@ set limit states 10000
 .Pp
 With 9000 state table entries, the timeout values are scaled to 50%
 (tcp.first 60, tcp.established 43200).
-.Pp
 .It Ar set loginterface
 Enable collection of packet and byte count statistics for the given
 interface or interface group.
@@ -362,7 +361,6 @@ One can disable the loginterface using:
 .Bd -literal -offset indent
 set loginterface none
 .Ed
-.Pp
 .It Ar set limit
 Sets hard limits on the memory pools used by the packet filter.
 See
@@ -415,7 +413,6 @@ Various limits can be combined on a single line:
 .Bd -literal -offset indent
 set limit { states 20000, frags 20000, src-nodes 2000 }
 .Ed
-.Pp
 .It Ar set ruleset-optimization
 .Bl -tag -width xxxxxxxx -compact
 .It Ar none
@@ -481,7 +478,6 @@ For example:
 .Bd -literal -offset indent
 set optimization aggressive
 .Ed
-.Pp
 .It Ar set block-policy
 The
 .Ar block-policy
@@ -502,6 +498,31 @@ For example:
 .Bd -literal -offset indent
 set block-policy return
 .Ed
+
+.It Ar set fail-policy
+The
+.Ar fail-policy
+option sets the behaviour of rules which should pass a packet but were unable to
+do so. This might happen when a nat or route-to rule uses an empty table as list
+of targets or if a rule fails to create state or source node.
+The following
+.Ar block
+actions are possible:
+.Pp
+.Bl -tag -width xxxxxxxx -compact
+.It Ar drop
+Incoming packet is silently dropped.
+.It Ar return
+Incoming packet is dropped and TCP RST is returned for TCP packets,
+an ICMP UNREACHABLE is returned for UDP packets,
+and no response is sent for other packets.
+.El
+.Pp
+For example:
+.Bd -literal -offset indent
+set fail-policy return
+.Ed
+
 .It Ar set state-policy
 The
 .Ar state-policy
@@ -526,7 +547,7 @@ without an explicit
 .Ar keep state .
 For example:
 .Bd -literal -offset indent
-set state-defaults pflow, no-sync
+set state-defaults no-sync
 .Ed
 .It Ar set hostid
 The 32-bit
@@ -573,7 +594,6 @@ ruleset finishes loading.
 For example:
 .Pp
 .Dl set fingerprints \&"/etc/pf.os.devel\&"
-.Pp
 .It Ar set skip on Aq Ar ifspec
 List interfaces for which packets should not be filtered.
 Packets passing in or out on such interfaces are passed as if pf was
@@ -583,7 +603,6 @@ packet filtering is not desired and can have unexpected effects.
 For example:
 .Pp
 .Dl set skip on lo0
-.Pp
 .It Ar set debug
 Set the debug
 .Ar level
@@ -672,34 +691,6 @@ packet, and only the completed packet is passed on to the filter.
 The advantage is that filter rules have to deal only with complete
 packets, and can ignore fragments.
 The drawback of caching fragments is the additional memory cost.
-But the full reassembly method is the only method that currently works
-with NAT.
-This is the default behavior of a
-.Ar scrub
-rule if no fragmentation modifier is supplied.
-.It Ar fragment crop
-The default fragment reassembly method is expensive, hence the option
-to crop is provided.
-In this case,
-.Xr pf 4
-will track the fragments and cache a small range descriptor.
-Duplicate fragments are dropped and overlaps are cropped.
-Thus data will only occur once on the wire with ambiguities resolving to
-the first occurrence.
-Unlike the
-.Ar fragment reassemble
-modifier, fragments are not buffered, they are passed as soon as they
-are received.
-The
-.Ar fragment crop
-reassembly mechanism does not yet work with NAT.
-.Pp
-.It Ar fragment drop-ovl
-This option is similar to the
-.Ar fragment crop
-modifier except that all overlapping or duplicate fragments will be
-dropped, and all further corresponding fragments will be
-dropped as well.
 .It Ar reassemble tcp
 Statefully normalizes TCP connections.
 .Ar scrub reassemble tcp
@@ -1819,6 +1810,25 @@ For example:
 pass in proto tcp to port 25 queue mail
 pass in proto tcp to port 22 queue(ssh_bulk, ssh_prio)
 .Ed
+.Pp
+.It Cm set prio Ar priority | Pq Ar priority , priority
+Packets matching this rule will be assigned a specific queueing priority.
+Priorities are assigned as integers 0 through 7.
+If the packet is transmitted on a
+.Xr vlan 4
+interface, the queueing priority will be written as the priority
+code point in the 802.1Q VLAN header.
+If two priorities are given, packets which have a TOS of
+.Cm lowdelay
+and TCP ACKs with no data payload will be assigned to the second one.
+.Pp
+For example:
+.Bd -literal -offset indent
+pass in proto tcp to port 25 set prio 2
+pass in proto tcp to port 22 set prio (2, 5)
+.Ed
+.Pp
+
 .It Ar tag Aq Ar string
 Packets matching this rule will be tagged with the
 specified string.
@@ -1879,6 +1889,9 @@ For example, the following rule will drop 20% of incoming ICMP packets:
 .Bd -literal -offset indent
 block in proto icmp probability 20%
 .Ed
+.It Ar prio Aq Ar number
+Only match packets which have the given queueing priority assigned.
+.Pp
 .El
 .Sh ROUTING
 If a packet matches a rule with a route option set, the packet filter will
@@ -2114,10 +2127,6 @@ easier.
 This is intended to be used in situations where one does not see all
 packets of a connection, e.g. in asymmetric routing situations.
 Cannot be used with modulate or synproxy state.
-.It Ar pflow
-States created by this rule are exported on the
-.Xr pflow 4
-interface.
 .El
 .Pp
 Multiple options can be specified, separated by commas:
@@ -2388,8 +2397,10 @@ Once this limit is reached, fragments that would have to be cached
 are dropped until other entries time out.
 The timeout value can also be adjusted.
 .Pp
-Currently, only IPv4 fragments are supported and IPv6 fragments
-are blocked unconditionally.
+When forwarding reassembled IPv6 packets, pf refragments them with
+the original maximum fragment size.
+This allows the sender to determine the optimal fragment size by
+path MTU discovery.
 .Sh ANCHORS
 Besides the main ruleset,
 .Xr pfctl 8
@@ -2863,8 +2874,9 @@ filteropt      = user | group | flags | icmp-type | icmp6-type | "tos" tos |
                  "max-mss" number | "random-id" | "reassemble tcp" |
                  fragmentation | "allow-opts" |
                  "label" string | "tag" string | [ ! ] "tagged" string |
+                 "set prio" ( number | "(" number [ [ "," ] number ] ")" ) |
                  "queue" ( string | "(" string [ [ "," ] string ] ")" ) |
-                 "rtable" number | "probability" number"%"
+                 "rtable" number | "probability" number"%" | "prio" number
 
 nat-rule       = [ "no" ] "nat" [ "pass" [ "log" [ "(" logopts ")" ] ] ]
                  [ "on" ifspec ] [ af ]
@@ -2984,7 +2996,7 @@ tos            = ( "lowdelay" | "throughput" | "reliability" |
                  [ "0x" ] number )
 
 state-opts     = state-opt [ [ "," ] state-opts ]
-state-opt      = ( "max" number | "no-sync" | timeout | "sloppy" | "pflow" |
+state-opt      = ( "max" number | "no-sync" | timeout | "sloppy" |
                  "source-track" [ ( "rule" | "global" ) ] |
                  "max-src-nodes" number | "max-src-states" number |
                  "max-src-conn" number |
@@ -2992,8 +3004,7 @@ state-opt      = ( "max" number | "no-sync" | timeout | "sloppy" | "pflow" |
                  "overload" "\*(Lt" string "\*(Gt" [ "flush" ] |
                  "if-bound" | "floating" )
 
-fragmentation  = [ "fragment reassemble" | "fragment crop" |
-                 "fragment drop-ovl" ]
+fragmentation  = [ "fragment reassemble" ]
 
 timeout-list   = timeout [ [ "," ] timeout-list ]
 timeout        = ( "tcp.first" | "tcp.opening" | "tcp.established" |
@@ -3048,7 +3059,6 @@ Service name database.
 .Xr ip 4 ,
 .Xr ip6 4 ,
 .Xr pf 4 ,
-.Xr pflow 4 ,
 .Xr pfsync 4 ,
 .Xr tcp 4 ,
 .Xr udp 4 ,
@@ -3058,7 +3068,7 @@ Service name database.
 .Xr services 5 ,
 .Xr ftp-proxy 8 ,
 .Xr pfctl 8 ,
-.Xr pflogd 8 ,
+.Xr pflogd 8
 .Sh HISTORY
 The
 .Nm

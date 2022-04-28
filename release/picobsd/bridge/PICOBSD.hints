@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/release/picobsd/bridge/PICOBSD.hints 188834 2009-02-19 23:29:05Z luigi $
+# $FreeBSD$
 hint.fdc.0.at="isa"
 hint.fdc.0.port="0x3F0"
 hint.fdc.0.irq="6"

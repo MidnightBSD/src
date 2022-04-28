@@ -25,7 +25,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/label/g_label.c 249508 2013-04-15 16:09:24Z ivoras $");
+__FBSDID("$FreeBSD$");
+
+#include "opt_geom.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +40,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/geom/label/g_label.c 249508 2013-04-15 16
 #include <sys/malloc.h>
 #include <sys/libkern.h>
 #include <sys/sbuf.h>
+#include <sys/stddef.h>
 #include <sys/sysctl.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
@@ -48,8 +51,7 @@ FEATURE(geom_label, "GEOM labeling support");
 SYSCTL_DECL(_kern_geom);
 SYSCTL_NODE(_kern_geom, OID_AUTO, label, CTLFLAG_RW, 0, "GEOM_LABEL stuff");
 u_int g_label_debug = 0;
-TUNABLE_INT("kern.geom.label.debug", &g_label_debug);
-SYSCTL_UINT(_kern_geom_label, OID_AUTO, debug, CTLFLAG_RW, &g_label_debug, 0,
+SYSCTL_UINT(_kern_geom_label, OID_AUTO, debug, CTLFLAG_RWTUN, &g_label_debug, 0,
     "Debug level");
 
 static int g_label_destroy_geom(struct gctl_req *req, struct g_class *mp,
@@ -80,6 +82,9 @@ struct g_class g_label_class = {
  * 6. Add your file system to manual page sbin/geom/class/label/glabel.8.
  */
 const struct g_label_desc *g_labels[] = {
+	&g_label_gpt,
+	&g_label_gpt_uuid,
+#ifdef GEOM_LABEL
 	&g_label_ufs_id,
 	&g_label_ufs_volume,
 	&g_label_iso9660,
@@ -87,12 +92,26 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_ext2fs,
 	&g_label_reiserfs,
 	&g_label_ntfs,
-	&g_label_gpt,
-	&g_label_gpt_uuid,
 	&g_label_disk_ident,
+	&g_label_flashmap,
+#endif
 	NULL
 };
 
+void
+g_label_rtrim(char *label, size_t size)
+{
+	ptrdiff_t i;
+
+	for (i = size - 1; i >= 0; i--) {
+		if (label[i] == '\0')
+			continue;
+		else if (label[i] == ' ')
+			label[i] = '\0';
+		else
+			break;
+	}
+}
 
 static int
 g_label_destroy_geom(struct gctl_req *req __unused, struct g_class *mp,
@@ -122,6 +141,17 @@ g_label_spoiled(struct g_consumer *cp)
 	G_LABEL_DEBUG(1, "Label %s removed.",
 	    LIST_FIRST(&cp->geom->provider)->name);
 	g_slice_spoiled(cp);
+}
+
+static void
+g_label_resize(struct g_consumer *cp)
+{
+
+	G_LABEL_DEBUG(1, "Label %s resized.",
+	    LIST_FIRST(&cp->geom->provider)->name);
+
+	g_slice_config(cp->geom, 0, G_SLICE_CONFIG_FORCE, (off_t)0,
+	    cp->provider->mediasize, cp->provider->sectorsize, "notused");
 }
 
 static int
@@ -208,6 +238,7 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 	}
 	gp->orphan = g_label_orphan;
 	gp->spoiled = g_label_spoiled;
+	gp->resize = g_label_resize;
 	g_access(cp, -1, 0, 0);
 	g_slice_config(gp, 0, G_SLICE_CONFIG_SET, (off_t)0, mediasize,
 	    pp->sectorsize, "%s", name);
@@ -520,3 +551,4 @@ g_label_config(struct gctl_req *req, struct g_class *mp, const char *verb)
 }
 
 DECLARE_GEOM_CLASS(g_label_class, g_label);
+MODULE_VERSION(geom_label, 0);

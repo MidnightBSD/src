@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfr_main.c 228600 2011-12-16 22:05:10Z dim $");
+__FBSDID("$FreeBSD$");
 
 #include <errno.h>
 #include <stdio.h>
@@ -51,15 +51,17 @@ __FBSDID("$FreeBSD: release/10.0.0/libexec/ypxfr/ypxfr_main.c 228600 2011-12-16 
 #include <rpcsvc/ypxfrd.h>
 #include "ypxfr_extern.h"
 
+int debug = 1;
+
 char *progname = "ypxfr";
 char *yp_dir = _PATH_YP;
 int _rpcpmstart = 0;
-int ypxfr_use_yplib = 0; /* Assume the worst. */
-int ypxfr_clear = 1;
-int ypxfr_prognum = 0;
-struct sockaddr_in ypxfr_callback_addr;
-struct yppushresp_xfr ypxfr_resp;
-DB *dbp;
+static int ypxfr_use_yplib = 0; /* Assume the worst. */
+static int ypxfr_clear = 1;
+static int ypxfr_prognum = 0;
+static struct sockaddr_in ypxfr_callback_addr;
+static struct yppushresp_xfr ypxfr_resp;
+static DB *dbp;
 
 static void
 ypxfr_exit(ypxfrstat retval, char *temp)
@@ -173,8 +175,6 @@ main(int argc, char *argv[])
 	int remoteport;
 	int interdom = 0;
 	int secure = 0;
-
-	debug = 1;
 
 	if (!isatty(fileno(stderr))) {
 		openlog("ypxfr", LOG_PID, LOG_DAEMON);
@@ -357,7 +357,7 @@ the local domain name isn't set");
 					     ypxfr_mapname,
 					     ypxfr_master, 0)) == 0) {
 		yp_error("failed to get order number of %s: %s",
-				ypxfr_mapname, yp_errno == YPXFR_SUCC ?
+				ypxfr_mapname, yp_errno == YP_TRUE ?
 				"map has order 0" :
 				ypxfrerr_string((ypxfrstat)yp_errno));
 		ypxfr_exit(YPXFR_YPERR,NULL);
@@ -533,7 +533,7 @@ leave:
 					     ypxfr_mapname,
 					     ypxfr_master, 0)) == 0) {
 		yp_error("failed to get order number of %s: %s",
-				ypxfr_mapname, yp_errno == YPXFR_SUCC ?
+				ypxfr_mapname, yp_errno == YP_TRUE ?
 				"map has order 0" :
 				ypxfrerr_string((ypxfrstat)yp_errno));
 		ypxfr_exit(YPXFR_YPERR,ypxfr_temp_map);

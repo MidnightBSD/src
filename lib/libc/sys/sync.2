@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)sync.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: release/10.0.0/lib/libc/sys/sync.2 165903 2007-01-09 00:28:16Z imp $
+.\" $FreeBSD$
 .\"
-.Dd June 4, 1993
+.Dd December 1, 2017
 .Dt SYNC 2
 .Os
 .Sh NAME
@@ -52,7 +52,7 @@ As information in the cache is lost after a system crash, a
 .Fn sync
 system call is issued
 frequently
-by the user process
+by the kernel process
 .Xr syncer 4
 (about every 30 seconds).
 .Pp
@@ -69,7 +69,7 @@ attributes.
 The
 .Fn sync
 function appeared in
-.At v6 .
+.At v3 .
 .Sh BUGS
 The
 .Fn sync

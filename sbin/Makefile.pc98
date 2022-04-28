@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/sbin/Makefile.pc98 212527 2010-09-13 02:25:21Z imp $
+# $FreeBSD$
 
 SUBDIR += bsdlabel
 SUBDIR += fdisk_pc98

@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/4/94
- * $FreeBSD: release/10.0.0/libexec/ftpd/extern.h 190828 2009-04-07 20:34:34Z obrien $
+ * $FreeBSD$
  */
 
 #include <sys/types.h>
@@ -46,7 +42,7 @@ void	fatalerror(char *);
 void    ftpd_logwtmp(char *, char *, struct sockaddr *addr);
 int	ftpd_pclose(FILE *);
 FILE   *ftpd_popen(char *, char *);
-int	getline(char *, int, FILE *);
+int	get_line(char *, int, FILE *);
 void	lreply(int, const char *, ...) __printflike(2, 3);
 void	makedir(char *);
 void	nack(char *);

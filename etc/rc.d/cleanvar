@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/cleanvar 240336 2012-09-11 05:04:59Z obrien $
+# $FreeBSD$
 #
 
 # PROVIDE: cleanvar
@@ -9,6 +9,7 @@
 . /etc/rc.subr
 
 name="cleanvar"
+desc="Purge /var directory"
 rcvar="cleanvar_enable"
 
 start_precmd="${name}_prestart"
@@ -17,34 +18,6 @@ stop_cmd=":"
 
 extra_commands="reload"
 reload_cmd="${name}_start"
-
-purgedir()
-{
-	local dir file
-
-	if [ $# -eq 0 ]; then
-		purgedir .
-	else
-		for dir
-		do
-		(
-			cd "$dir" && for file in .* *
-			do
-				# Skip over logging sockets
-				[ -S "$file" -a "$file" = "log" ] && continue
-				[ -S "$file" -a "$file" = "logpriv" ] && continue
-				[ ."$file" = .. -o ."$file" = ... ] && continue
-				if [ -d "$file" -a ! -L "$file" ]
-				then
-					purgedir "$file"
-				else
-					rm -f -- "$file"
-				fi
-			done
-		)
-		done
-	fi
-}
 
 cleanvar_prestart()
 {
@@ -57,14 +30,17 @@ cleanvar_prestart()
 cleanvar_start()
 {
 	if [ -d /var/run -a ! -f /var/run/clean_var ]; then
-		purgedir /var/run
+		# Skip over logging sockets
+		find /var/run \( -type f -or -type s ! -name log -and ! -name logpriv \) -delete
 		>/var/run/clean_var
 	fi
 	if [ -d /var/spool/lock -a ! -f /var/spool/lock/clean_var ]; then
-		purgedir /var/spool/lock
+		find /var/spool/lock -type f -delete
 		>/var/spool/lock/clean_var
 	fi
-	rm -rf /var/spool/uucp/.Temp/*
+	if [ -d /var/spool/uucp/.Temp ]; then
+		find /var/spool/uucp/.Temp -delete
+	fi
 }
 
 load_rc_config $name

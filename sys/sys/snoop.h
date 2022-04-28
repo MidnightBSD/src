@@ -12,7 +12,7 @@
  *
  * Snoop stuff.
  *
- * $FreeBSD: release/10.0.0/sys/sys/snoop.h 150298 2005-09-18 19:23:35Z cognet $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_SNOOP_H_

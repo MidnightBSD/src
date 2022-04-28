@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: release/10.0.0/tools/tools/vhba/vhba.h 253750 2013-07-28 18:44:17Z avg $ */
+/* $FreeBSD$ */
 /*
  * Virtual HBA defines
  */

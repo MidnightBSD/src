@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/pci/hostb_pci.c 232472 2012-03-03 18:08:57Z jhb $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -51,7 +51,7 @@ pci_hostb_probe(device_t dev)
 
 	switch (id) {
 
-	/* VIA VT82C596 Power Managment Function */
+	/* VIA VT82C596 Power Management Function */
 	case 0x30501106:
 		return (ENXIO);
 
@@ -102,7 +102,7 @@ pci_hostb_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
 
 static struct resource *
 pci_hostb_alloc_resource(device_t dev, device_t child, int type, int *rid,
-    u_long start, u_long end, u_long count, u_int flags)
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 
 	return (bus_alloc_resource(dev, type, rid, start, end, count, flags));
@@ -205,6 +205,14 @@ pci_hostb_find_cap(device_t dev, device_t child, int capability,
 }
 
 static int
+pci_hostb_find_next_cap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_cap(dev, capability, start, capreg));
+}
+
+static int
 pci_hostb_find_extcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
@@ -213,11 +221,27 @@ pci_hostb_find_extcap(device_t dev, device_t child, int capability,
 }
 
 static int
+pci_hostb_find_next_extcap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_extcap(dev, capability, start, capreg));
+}
+
+static int
 pci_hostb_find_htcap(device_t dev, device_t child, int capability,
     int *capreg)
 {
 
 	return (pci_find_htcap(dev, capability, capreg));
+}
+
+static int
+pci_hostb_find_next_htcap(device_t dev, device_t child, int capability,
+    int start, int *capreg)
+{
+
+	return (pci_find_next_htcap(dev, capability, start, capreg));
 }
 
 static device_method_t pci_hostb_methods[] = {
@@ -250,8 +274,11 @@ static device_method_t pci_hostb_methods[] = {
 	DEVMETHOD(pci_set_powerstate,	pci_hostb_set_powerstate),
 	DEVMETHOD(pci_assign_interrupt,	pci_hostb_assign_interrupt),
 	DEVMETHOD(pci_find_cap,		pci_hostb_find_cap),
+	DEVMETHOD(pci_find_next_cap,	pci_hostb_find_next_cap),
 	DEVMETHOD(pci_find_extcap,	pci_hostb_find_extcap),
+	DEVMETHOD(pci_find_next_extcap,	pci_hostb_find_next_extcap),
 	DEVMETHOD(pci_find_htcap,	pci_hostb_find_htcap),
+	DEVMETHOD(pci_find_next_htcap,	pci_hostb_find_next_htcap),
 
 	{ 0, 0 }
 };

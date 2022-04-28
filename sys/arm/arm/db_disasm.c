@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/db_disasm.c 236991 2012-06-13 04:59:55Z imp $");
+__FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <machine/db_machdep.h>
 #include <ddb/ddb.h>
@@ -70,7 +70,7 @@ db_disasm_printaddr(u_int address)
 }
 
 vm_offset_t
-db_disasm(vm_offset_t loc, boolean_t altfmt)
+db_disasm(vm_offset_t loc, bool altfmt)
 {
 
 	return disasm(&db_disasm_interface, loc, altfmt);

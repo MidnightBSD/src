@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode_pager.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: release/10.0.0/sys/vm/vnode_pager.h 232071 2012-02-23 21:07:16Z kib $
+ * $FreeBSD$
  */
 
 #ifndef	_VNODE_PAGER_
@@ -41,14 +41,17 @@
 #ifdef _KERNEL
 
 int vnode_pager_generic_getpages(struct vnode *vp, vm_page_t *m,
-					  int count, int reqpage);
+    int count, int *rbehind, int *rahead, vop_getpages_iodone_t iodone,
+    void *arg);
 int vnode_pager_generic_putpages(struct vnode *vp, vm_page_t *m,
-					  int count, boolean_t sync,
-					  int *rtvals);
-
+    int count, int flags, int *rtvals);
+int vnode_pager_local_getpages(struct vop_getpages_args *ap);
+int vnode_pager_local_getpages_async(struct vop_getpages_async_args *ap);
+int vnode_pager_putpages_ioflags(int pager_flags);
 void vnode_pager_release_writecount(vm_object_t object, vm_offset_t start,
     vm_offset_t end);
-void vnode_pager_undirty_pages(vm_page_t *ma, int *rtvals, int written);
+void vnode_pager_undirty_pages(vm_page_t *ma, int *rtvals, int written,
+    off_t eof, int lpos);
 void vnode_pager_update_writecount(vm_object_t object, vm_offset_t start,
     vm_offset_t end);
 

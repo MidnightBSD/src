@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/share/i18n/csmapper/CP/CP932VDC@IBM%UCS.src 219019 2011-02-25 00:04:39Z gabor $
+# $FreeBSD$
 # $NetBSD: CP932VDC@IBM%UCS.src,v 1.1 2006/11/04 03:46:19 tnozaki Exp $
 
 TYPE		ROWCOL

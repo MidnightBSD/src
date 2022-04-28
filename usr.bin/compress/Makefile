@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/17/94
-# $FreeBSD: release/10.0.0/usr.bin/compress/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	compress
 SRCS=	compress.c zopen.c
@@ -8,5 +10,9 @@ MLINKS=	compress.1 uncompress.1
 
 # XXX zopen is not part of libc
 # MAN=zopen.3
+
+.if ${MK_TESTS} != "no"
+SUBDIR+=	tests
+.endif
 
 .include <bsd.prog.mk>

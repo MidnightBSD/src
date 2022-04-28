@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: release/10.0.0/sys/kgssapi/gssd.x 184588 2008-11-03 10:38:00Z dfr $ */
+/* $FreeBSD$ */
 
 #ifdef RPC_HDR
 

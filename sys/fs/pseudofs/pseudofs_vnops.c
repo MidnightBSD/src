@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/fs/pseudofs/pseudofs_vnops.c 232541 2012-03-05 11:38:02Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_pseudofs.h"
 
@@ -104,7 +104,8 @@ pfs_visible_proc(struct thread *td, struct pfs_node *pn, struct proc *proc)
 }
 
 static int
-pfs_visible(struct thread *td, struct pfs_node *pn, pid_t pid, struct proc **p)
+pfs_visible(struct thread *td, struct pfs_node *pn, pid_t pid,
+    bool allproc_locked, struct proc **p)
 {
 	struct proc *proc;
 
@@ -115,7 +116,8 @@ pfs_visible(struct thread *td, struct pfs_node *pn, pid_t pid, struct proc **p)
 		*p = NULL;
 	if (pid == NO_PID)
 		PFS_RETURN (1);
-	if ((proc = pfind(pid)) == NULL)
+	proc = allproc_locked ? pfind_locked(pid) : pfind(pid);
+	if (proc == NULL)
 		PFS_RETURN (0);
 	if (pfs_visible_proc(td, pn, proc)) {
 		if (p)
@@ -202,7 +204,7 @@ pfs_getattr(struct vop_getattr_args *va)
 	PFS_TRACE(("%s", pn->pn_name));
 	pfs_assert_not_owned(pn);
 
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, false, &proc))
 		PFS_RETURN (ENOENT);
 
 	vap->va_type = vn->v_type;
@@ -293,7 +295,7 @@ pfs_ioctl(struct vop_ioctl_args *va)
 	 * This is necessary because process' privileges may
 	 * have changed since the open() call.
 	 */
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc)) {
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, false, &proc)) {
 		VOP_UNLOCK(vn, 0);
 		PFS_RETURN (EIO);
 	}
@@ -326,7 +328,7 @@ pfs_getextattr(struct vop_getextattr_args *va)
 	 * This is necessary because either process' privileges may
 	 * have changed since the open() call.
 	 */
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, false, &proc))
 		PFS_RETURN (EIO);
 
 	if (pn->pn_getextattr == NULL)
@@ -444,10 +446,6 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 		PFS_RETURN (ENOTDIR);
 	KASSERT_PN_IS_DIR(pd);
 
-	error = VOP_ACCESS(vn, VEXEC, cnp->cn_cred, cnp->cn_thread);
-	if (error)
-		PFS_RETURN (error);
-
 	/*
 	 * Don't support DELETE or RENAME.  CREATE is supported so
 	 * that O_CREAT will work, but the lookup will still fail if
@@ -462,7 +460,7 @@ pfs_lookup(struct vop_cachedlookup_args *va)
 		PFS_RETURN (ENOENT);
 
 	/* check that parent directory is visible... */
-	if (!pfs_visible(curthread, pd, pvd->pvd_pid, NULL))
+	if (!pfs_visible(curthread, pd, pvd->pvd_pid, false, NULL))
 		PFS_RETURN (ENOENT);
 
 	/* self */
@@ -546,7 +544,7 @@ pfs_lookup(struct vop_cachedlookup_args *va)
  got_pnode:
 	pfs_assert_not_owned(pd);
 	pfs_assert_not_owned(pn);
-	visible = pfs_visible(curthread, pn, pid, NULL);
+	visible = pfs_visible(curthread, pn, pid, false, NULL);
 	if (!visible) {
 		error = ENOENT;
 		goto failed;
@@ -616,8 +614,7 @@ pfs_read(struct vop_read_args *va)
 	struct proc *proc;
 	struct sbuf *sb = NULL;
 	int error, locked;
-	off_t offset;
-	ssize_t buflen, resid;
+	off_t buflen;
 
 	PFS_TRACE(("%s", pn->pn_name));
 	pfs_assert_not_owned(pn);
@@ -636,7 +633,7 @@ pfs_read(struct vop_read_args *va)
 	 * This is necessary because either process' privileges may
 	 * have changed since the open() call.
 	 */
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, false, &proc))
 		PFS_RETURN (EIO);
 	if (proc != NULL) {
 		_PHOLD(proc);
@@ -654,14 +651,12 @@ pfs_read(struct vop_read_args *va)
 		goto ret;
 	}
 
-	/* beaucoup sanity checks so we don't ask for bogus allocation */
-	if (uio->uio_offset < 0 || uio->uio_resid < 0 ||
-	    (offset = uio->uio_offset) != uio->uio_offset ||
-	    (resid = uio->uio_resid) != uio->uio_resid ||
-	    (buflen = offset + resid) < offset || buflen >= INT_MAX) {
+	if (uio->uio_resid < 0 || uio->uio_offset < 0 ||
+	    uio->uio_resid > OFF_MAX - uio->uio_offset) {
 		error = EINVAL;
 		goto ret;
 	}
+	buflen = uio->uio_offset + uio->uio_resid;
 	if (buflen > MAXPHYS)
 		buflen = MAXPHYS;
 
@@ -794,7 +789,7 @@ pfs_readdir(struct vop_readdir_args *va)
 	pfs_lock(pd);
 
         /* check if the directory is visible to the caller */
-        if (!pfs_visible(curthread, pd, pid, &proc)) {
+        if (!pfs_visible(curthread, pd, pid, true, &proc)) {
 		sx_sunlock(&allproc_lock);
 		pfs_unlock(pd);
                 PFS_RETURN (ENOENT);
@@ -827,7 +822,6 @@ pfs_readdir(struct vop_readdir_args *va)
 		/* PFS_DELEN was picked to fit PFS_NAMLEN */
 		for (i = 0; i < PFS_NAMELEN - 1 && pn->pn_name[i] != '\0'; ++i)
 			pfsent->entry.d_name[i] = pn->pn_name[i];
-		pfsent->entry.d_name[i] = 0;
 		pfsent->entry.d_namlen = i;
 		switch (pn->pn_type) {
 		case pfstype_procdir:
@@ -852,6 +846,7 @@ pfs_readdir(struct vop_readdir_args *va)
 			panic("%s has unexpected node type: %d", pn->pn_name, pn->pn_type);
 		}
 		PFS_TRACE(("%s", pfsent->entry.d_name));
+		dirent_terminate(&pfsent->entry);
 		STAILQ_INSERT_TAIL(&lst, pfsent, link);
 		offset += PFS_DELEN;
 		resid -= PFS_DELEN;
@@ -998,7 +993,7 @@ pfs_write(struct vop_write_args *va)
 	 * This is necessary because either process' privileges may
 	 * have changed since the open() call.
 	 */
-	if (!pfs_visible(curthread, pn, pvd->pvd_pid, &proc))
+	if (!pfs_visible(curthread, pn, pvd->pvd_pid, false, &proc))
 		PFS_RETURN (EIO);
 	if (proc != NULL) {
 		_PHOLD(proc);

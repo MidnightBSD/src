@@ -1,9 +1,5 @@
 /*-
- * Copyright (c) 2007-2013 Broadcom Corporation. All rights reserved.
- *
- * Eric Davis        <edavis@broadcom.com>
- * David Christensen <davidch@broadcom.com>
- * Gary Zambrano     <zambrano@broadcom.com>
+ * Copyright (c) 2007-2017 QLogic Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,11 +10,8 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Broadcom Corporation nor the name of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written consent.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS'
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
@@ -32,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/bxe/ecore_init.h 258203 2013-11-16 00:31:32Z edavis $");
+__FBSDID("$FreeBSD$");
 
 #ifndef ECORE_INIT_H
 #define ECORE_INIT_H
@@ -328,7 +321,7 @@ static inline void ecore_dcb_config_qm(struct bxe_softc *sc, enum cos_mode mode,
 
 
 /*
- * congestion managment port init api description
+ * congestion management port init api description
  * the api works as follows:
  * the driver should pass the cmng_init_input struct, the port_init function
  * will prepare the required internal ram structure which will be passed back

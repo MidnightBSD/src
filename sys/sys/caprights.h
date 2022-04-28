@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/caprights.h 255219 2013-09-05 00:09:56Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_CAPRIGHTS_H_

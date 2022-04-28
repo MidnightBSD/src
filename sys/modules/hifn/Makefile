@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/hifn/Makefile 182668 2008-09-01 23:59:00Z imp $
+# $FreeBSD$
 
-.PATH:	${.CURDIR}/../../dev/hifn
+.PATH:	${SRCTOP}/sys/dev/hifn
 KMOD	= hifn
 SRCS	= hifn7751.c opt_hifn.h
 SRCS   += device_if.h bus_if.h pci_if.h

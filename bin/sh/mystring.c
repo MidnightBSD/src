@@ -36,13 +36,12 @@ static char sccsid[] = "@(#)mystring.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/sh/mystring.c 229219 2012-01-01 22:15:38Z jilles $");
+__FBSDID("$FreeBSD$");
 
 /*
  * String functions.
  *
  *	equal(s1, s2)		Return true if strings are equal.
- *	scopy(from, to)		Copy a string.
  *	number(s)		Convert a string of digits to an integer.
  *	is_number(s)		Return true if s is a string of digits.
  */
@@ -59,25 +58,6 @@ char nullstr[1];		/* zero length string */
 /*
  * equal - #defined in mystring.h
  */
-
-/*
- * scopy - #defined in mystring.h
- */
-
-
-/*
- * prefix -- see if pfx is a prefix of string.
- */
-
-int
-prefix(const char *pfx, const char *string)
-{
-	while (*pfx) {
-		if (*pfx++ != *string++)
-			return 0;
-	}
-	return 1;
-}
 
 
 /*
@@ -102,9 +82,17 @@ number(const char *s)
 int
 is_number(const char *p)
 {
-	do {
-		if (! is_digit(*p))
+	const char *q;
+
+	if (*p == '\0')
+		return 0;
+	while (*p == '0')
+		p++;
+	for (q = p; *q != '\0'; q++)
+		if (! is_digit(*q))
 			return 0;
-	} while (*++p != '\0');
+	if (q - p > 10 ||
+	    (q - p == 10 && memcmp(p, "2147483647", 10) > 0))
+		return 0;
 	return 1;
 }

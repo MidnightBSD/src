@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-4-Clause
+ *
  * Copyright (c) 1994 David Greenman
  * Copyright (c) 1994 Henrik Vestergaard Draboel (hvd@terry.ping.dk)
  * All rights reserved.
@@ -33,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rtprio/rtprio.c 235293 2012-05-11 21:52:05Z delphij $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/rtprio.h>

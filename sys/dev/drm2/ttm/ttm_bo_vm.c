@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/ttm/ttm_bo_vm.c 255044 2013-08-29 22:46:21Z jkim $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_vm.h"
 
@@ -76,13 +76,16 @@ static struct ttm_buffer_object *ttm_bo_vm_lookup_rb(struct ttm_bo_device *bdev,
 	struct ttm_buffer_object *bo;
 	struct ttm_buffer_object *best_bo = NULL;
 
-	RB_FOREACH(bo, ttm_bo_device_buffer_objects, &bdev->addr_space_rb) {
+	bo = RB_ROOT(&bdev->addr_space_rb);
+	while (bo != NULL) {
 		cur_offset = bo->vm_node->start;
 		if (page_start >= cur_offset) {
 			best_bo = bo;
 			if (page_start == cur_offset)
 				break;
-		}
+			bo = RB_RIGHT(bo, vm_rb);
+		} else
+			bo = RB_LEFT(bo, vm_rb);
 	}
 
 	if (unlikely(best_bo == NULL))
@@ -103,21 +106,18 @@ ttm_bo_vm_fault(vm_object_t vm_obj, vm_ooffset_t offset,
 	struct ttm_buffer_object *bo = vm_obj->handle;
 	struct ttm_bo_device *bdev = bo->bdev;
 	struct ttm_tt *ttm = NULL;
-	vm_page_t m, m1, oldm;
+	vm_page_t m, m1;
 	int ret;
 	int retval = VM_PAGER_OK;
 	struct ttm_mem_type_manager *man =
 		&bdev->man[bo->mem.mem_type];
 
 	vm_object_pip_add(vm_obj, 1);
-	oldm = *mres;
-	if (oldm != NULL) {
-		vm_page_lock(oldm);
-		vm_page_remove(oldm);
-		vm_page_unlock(oldm);
-		*mres = NULL;
-	} else
-		oldm = NULL;
+	if (*mres != NULL) {
+		vm_page_lock(*mres);
+		vm_page_remove(*mres);
+		vm_page_unlock(*mres);
+	}
 retry:
 	VM_OBJECT_WUNLOCK(vm_obj);
 	m = NULL;
@@ -126,7 +126,7 @@ reserve:
 	ret = ttm_bo_reserve(bo, false, false, false, 0);
 	if (unlikely(ret != 0)) {
 		if (ret == -EBUSY) {
-			kern_yield(0);
+			kern_yield(PRI_USER);
 			goto reserve;
 		}
 	}
@@ -137,9 +137,9 @@ reserve:
 		case 0:
 			break;
 		case -EBUSY:
-		case -ERESTART:
+		case -ERESTARTSYS:
 		case -EINTR:
-			kern_yield(0);
+			kern_yield(PRI_USER);
 			goto reserve;
 		default:
 			retval = VM_PAGER_ERROR;
@@ -213,8 +213,12 @@ reserve:
 	}
 
 	if (bo->mem.bus.is_iomem) {
-		m = vm_phys_fictitious_to_vm_page(bo->mem.bus.base +
-		    bo->mem.bus.offset + offset);
+		m = PHYS_TO_VM_PAGE(bo->mem.bus.base + bo->mem.bus.offset +
+		    offset);
+		KASSERT((m->flags & PG_FICTITIOUS) != 0,
+		    ("physical address %#jx not fictitious",
+		    (uintmax_t)(bo->mem.bus.base + bo->mem.bus.offset
+		    + offset)));
 		pmap_page_set_memattr(m, ttm_io_prot(bo->mem.placement));
 	} else {
 		ttm = bo->ttm;
@@ -232,7 +236,7 @@ reserve:
 	if (vm_page_busied(m)) {
 		vm_page_lock(m);
 		VM_OBJECT_WUNLOCK(vm_obj);
-		vm_page_busy_sleep(m, "ttmpbs");
+		vm_page_busy_sleep(m, "ttmpbs", false);
 		VM_OBJECT_WLOCK(vm_obj);
 		ttm_mem_io_unlock(man);
 		ttm_bo_unreserve(bo);
@@ -254,14 +258,14 @@ reserve:
 		    bo, m, m1, (uintmax_t)offset));
 	}
 	m->valid = VM_PAGE_BITS_ALL;
-	*mres = m;
 	vm_page_xbusy(m);
-
-	if (oldm != NULL) {
-		vm_page_lock(oldm);
-		vm_page_free(oldm);
-		vm_page_unlock(oldm);
+	if (*mres != NULL) {
+		KASSERT(*mres != m, ("losing %p %p", *mres, m));
+		vm_page_lock(*mres);
+		vm_page_free(*mres);
+		vm_page_unlock(*mres);
 	}
+	*mres = m;
 
 out_io_unlock1:
 	ttm_mem_io_unlock(man);
@@ -292,7 +296,7 @@ ttm_bo_vm_ctor(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	 * acquired either in ttm_bo_mmap() or ttm_bo_vm_open(). It's
 	 * then released in ttm_bo_vm_close().
 	 *
-	 * Here, this function is called during mmap() intialization.
+	 * Here, this function is called during mmap() initialization.
 	 * Thus, the reference acquired in ttm_bo_mmap_single() is
 	 * sufficient.
 	 */
@@ -332,22 +336,22 @@ ttm_bo_mmap_single(struct ttm_bo_device *bdev, vm_ooffset_t *offset, vm_size_t s
 
 	if (unlikely(bo == NULL)) {
 		printf("[TTM] Could not find buffer object to map\n");
-		return (EINVAL);
+		return (-EINVAL);
 	}
 
 	driver = bo->bdev->driver;
 	if (unlikely(!driver->verify_access)) {
-		ret = EPERM;
+		ret = -EPERM;
 		goto out_unref;
 	}
-	ret = -driver->verify_access(bo);
+	ret = driver->verify_access(bo);
 	if (unlikely(ret != 0))
 		goto out_unref;
 
 	vm_obj = cdev_pager_allocate(bo, OBJT_MGTDEVICE, &ttm_pager_ops,
 	    size, nprot, 0, curthread->td_ucred);
 	if (vm_obj == NULL) {
-		ret = EINVAL;
+		ret = -EINVAL;
 		goto out_unref;
 	}
 	/*

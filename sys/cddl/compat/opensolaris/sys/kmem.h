@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/cddl/compat/opensolaris/sys/kmem.h 254025 2013-08-07 06:21:20Z jeff $
+ * $FreeBSD$
  */
 
 #ifndef _OPENSOLARIS_SYS_KMEM_H_
@@ -33,6 +33,7 @@
 #include <sys/proc.h>
 #include <sys/malloc.h>
 #include <sys/vmem.h>
+#include <sys/vmmeter.h>
 
 #include <vm/uma.h>
 #include <vm/vm.h>
@@ -47,6 +48,7 @@ MALLOC_DECLARE(M_SOLARIS);
 #define	KM_PUSHPAGE		M_WAITOK
 #define	KM_NOSLEEP		M_NOWAIT
 #define	KM_NODEBUG		M_NODUMP
+#define	KM_NORMALPRI		0
 #define	KMC_NODEBUG		UMA_ZONE_NODUMP
 #define	KMC_NOTOUCH		0
 
@@ -65,18 +67,21 @@ typedef struct kmem_cache {
 void *zfs_kmem_alloc(size_t size, int kmflags);
 void zfs_kmem_free(void *buf, size_t size);
 uint64_t kmem_size(void);
-uint64_t kmem_used(void);
 kmem_cache_t *kmem_cache_create(char *name, size_t bufsize, size_t align,
     int (*constructor)(void *, void *, int), void (*destructor)(void *, void *),
     void (*reclaim)(void *) __unused, void *private, vmem_t *vmp, int cflags);
 void kmem_cache_destroy(kmem_cache_t *cache);
 void *kmem_cache_alloc(kmem_cache_t *cache, int flags);
 void kmem_cache_free(kmem_cache_t *cache, void *buf);
-void kmem_cache_reap_now(kmem_cache_t *cache);
+boolean_t kmem_cache_reap_active(void);
+void kmem_cache_reap_soon(kmem_cache_t *);
 void kmem_reap(void);
 int kmem_debugging(void);
 void *calloc(size_t n, size_t s);
 
+#define	freemem				vm_cnt.v_free_count
+#define	minfree				vm_cnt.v_free_min
+#define	heap_arena			kmem_arena
 #define	kmem_alloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags))
 #define	kmem_zalloc(size, kmflags)	zfs_kmem_alloc((size), (kmflags) | M_ZERO)
 #define	kmem_free(buf, size)		zfs_kmem_free((buf), (size))

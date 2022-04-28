@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2005-2007, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
  * All rights reserved.
@@ -34,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/pmcstat/pmcstat_log.c 241737 2012-10-19 14:49:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -149,6 +151,7 @@ struct pmcstat_process *pmcstat_kernproc; /* kernel 'process' */
 #include "pmcpl_gprof.h"
 #include "pmcpl_callgraph.h"
 #include "pmcpl_annotate.h"
+#include "pmcpl_annotate_cg.h"
 #include "pmcpl_calltree.h"
 
 static struct pmc_plugins  {
@@ -213,6 +216,11 @@ static struct pmc_plugins  {
 		.pl_topkeypress		= pmcpl_ct_topkeypress,
 		.pl_topdisplay		= pmcpl_ct_topdisplay
 	},
+	{
+		.pl_name		= "annotate_cg",
+		.pl_process		= pmcpl_annotate_cg_process
+	},
+
 	{
 		.pl_name		= NULL
 	}
@@ -301,10 +309,10 @@ pmcstat_stats_reset(int reset_global)
 static int
 pmcstat_string_compute_hash(const char *s)
 {
-	int hash;
+	unsigned hash;
 
-	for (hash = 0; *s; s++)
-		hash ^= *s;
+	for (hash = 2166136261; *s; s++)
+		hash = (hash ^ *s) * 16777619;
 
 	return (hash & PMCSTAT_HASH_MASK);
 }
@@ -529,8 +537,8 @@ pmcstat_image_add_symbols(struct pmcstat_image *image, Elf *e,
 	 * Allocate space for the new entries.
 	 */
 	firsttime = image->pi_symbols == NULL;
-	symptr = realloc(image->pi_symbols,
-	    sizeof(*symptr) * (image->pi_symcount + nfuncsyms));
+	symptr = reallocarray(image->pi_symbols,
+	    image->pi_symcount + nfuncsyms, sizeof(*symptr));
 	if (symptr == image->pi_symbols) /* realloc() failed. */
 		return;
 	image->pi_symbols = symptr;
@@ -581,8 +589,8 @@ pmcstat_image_add_symbols(struct pmcstat_image *image, Elf *e,
 	 * Return space to the system if there were duplicates.
 	 */
 	if (newsyms < nfuncsyms)
-		image->pi_symbols = realloc(image->pi_symbols,
-		    sizeof(*symptr) * image->pi_symcount);
+		image->pi_symbols = reallocarray(image->pi_symbols,
+		    image->pi_symcount, sizeof(*symptr));
 
 	/*
 	 * Keep the list of symbols sorted.
@@ -710,7 +718,8 @@ pmcstat_image_get_elf_params(struct pmcstat_image *image)
 				        ph.p_offset);
 				break;
 			case PT_LOAD:
-				if ((ph.p_offset & (-ph.p_align)) == 0)
+				if ((ph.p_flags & PF_X) != 0 &&
+				    (ph.p_offset & (-ph.p_align)) == 0)
 					image->pi_vaddr = ph.p_vaddr & (-ph.p_align);
 				break;
 			}
@@ -959,21 +968,32 @@ pmcstat_image_addr2line(struct pmcstat_image *image, uintfptr_t addr,
     char *funcname, size_t funcname_len)
 {
 	static int addr2line_warn = 0;
-	unsigned l;
 
 	char *sep, cmdline[PATH_MAX], imagepath[PATH_MAX];
+	unsigned l;
 	int fd;
 
 	if (image->pi_addr2line == NULL) {
-		snprintf(imagepath, sizeof(imagepath), "%s%s.symbols",
+		/* Try default debug file location. */
+		snprintf(imagepath, sizeof(imagepath),
+		    "/usr/lib/debug/%s%s.debug",
 		    args.pa_fsroot,
 		    pmcstat_string_unintern(image->pi_fullpath));
 		fd = open(imagepath, O_RDONLY);
 		if (fd < 0) {
-			snprintf(imagepath, sizeof(imagepath), "%s%s",
+			/* Old kernel symbol path. */
+			snprintf(imagepath, sizeof(imagepath), "%s%s.symbols",
 			    args.pa_fsroot,
 			    pmcstat_string_unintern(image->pi_fullpath));
-		} else
+			fd = open(imagepath, O_RDONLY);
+			if (fd < 0) {
+				snprintf(imagepath, sizeof(imagepath), "%s%s",
+				    args.pa_fsroot,
+				    pmcstat_string_unintern(
+				        image->pi_fullpath));
+			}
+		}
+		if (fd >= 0)
 			close(fd);
 		/*
 		 * New addr2line support recursive inline function with -i
@@ -1354,7 +1374,7 @@ pmcstat_analyze_log(void)
 	assert(args.pa_flags & FLAG_DO_ANALYSIS);
 
 	if (elf_version(EV_CURRENT) == EV_NONE)
-		err(EX_UNAVAILABLE, "Elf library intialization failed");
+		err(EX_UNAVAILABLE, "Elf library initialization failed");
 
 	while (pmclog_read(args.pa_logparser, &ev) == 0) {
 		assert(ev.pl_state == PMCLOG_OK);
@@ -1525,7 +1545,9 @@ pmcstat_analyze_log(void)
 				free(ppm);
 			}
 
-			/* associate this process  image */
+			/*
+			 * Associate this process image.
+			 */
 			image_path = pmcstat_string_intern(
 				ev.pl_u.pl_x.pl_pathname);
 			assert(image_path != NULL);

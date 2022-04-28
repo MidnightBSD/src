@@ -1,4 +1,6 @@
-/*
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 1999 Martin Blapp
  * All rights reserved.
  *
@@ -26,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.sbin/rpc.umntall/mounttab.c 201252 2009-12-30 06:36:42Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/syslog.h>
 

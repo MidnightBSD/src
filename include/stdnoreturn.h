@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/include/stdnoreturn.h 229437 2012-01-03 23:05:23Z ed $
+ * $FreeBSD$
  */
 
 #ifdef __cplusplus

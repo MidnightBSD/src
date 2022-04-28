@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)abort.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/abort.c 251069 2013-05-28 20:57:40Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <signal.h>
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/abort.c 251069 2013-05-28 20:
 #include "libc_private.h"
 
 void
-abort()
+abort(void)
 {
 	struct sigaction act;
 
@@ -61,7 +61,7 @@ abort()
 	 * any errors -- ISO C doesn't allow abort to return anyway.
 	 */
 	sigdelset(&act.sa_mask, SIGABRT);
-	(void)_sigprocmask(SIG_SETMASK, &act.sa_mask, NULL);
+	(void)__libc_sigprocmask(SIG_SETMASK, &act.sa_mask, NULL);
 	(void)raise(SIGABRT);
 
 	/*
@@ -71,9 +71,9 @@ abort()
 	act.sa_handler = SIG_DFL;
 	act.sa_flags = 0;
 	sigfillset(&act.sa_mask);
-	(void)_sigaction(SIGABRT, &act, NULL);
+	(void)__libc_sigaction(SIGABRT, &act, NULL);
 	sigdelset(&act.sa_mask, SIGABRT);
-	(void)_sigprocmask(SIG_SETMASK, &act.sa_mask, NULL);
+	(void)__libc_sigprocmask(SIG_SETMASK, &act.sa_mask, NULL);
 	(void)raise(SIGABRT);
 	exit(1);
 }

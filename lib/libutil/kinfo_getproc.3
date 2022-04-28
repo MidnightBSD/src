@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/lib/libutil/kinfo_getproc.3 247534 2013-03-01 07:39:14Z ru $
+.\" $FreeBSD$
 .\"
-.Dd March 1, 2013
+.Dd May 27, 2015
 .Dt KINFO_GETPROC 3
 .Os
 .Sh NAME
@@ -35,6 +35,7 @@
 .Lb libutil
 .Sh SYNOPSIS
 .In sys/types.h
+.In sys/user.h
 .In libutil.h
 .Ft struct kinfo_proc *
 .Fn kinfo_getproc "pid_t pid"

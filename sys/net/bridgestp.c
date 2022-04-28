@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/net/bridgestp.c 248324 2013-03-15 12:55:30Z glebius $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bridgestp.c 248324 2013-03-15 12:55:3
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/kernel.h>
+#include <sys/malloc.h>
 #include <sys/callout.h>
 #include <sys/module.h>
 #include <sys/proc.h>
@@ -51,6 +52,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/net/bridgestp.c 248324 2013-03-15 12:55:3
 #include <sys/taskqueue.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include <net/if_llc.h>
@@ -787,7 +789,7 @@ bstp_assign_roles(struct bstp_state *bs)
 	bs->bs_root_htime = bs->bs_bridge_htime;
 	bs->bs_root_port = NULL;
 
-	/* check if any recieved info supersedes us */
+	/* check if any received info supersedes us */
 	LIST_FOREACH(bp, &bs->bs_bplist, bp_next) {
 		if (bp->bp_infois != BSTP_INFO_RECEIVED)
 			continue;
@@ -2269,4 +2271,7 @@ bstp_destroy(struct bstp_port *bp)
 	taskqueue_drain(taskqueue_swi, &bp->bp_statetask);
 	taskqueue_drain(taskqueue_swi, &bp->bp_rtagetask);
 	taskqueue_drain(taskqueue_swi, &bp->bp_mediatask);
+
+	if (bp->bp_bs->bs_root_port == bp)
+		bstp_assign_roles(bp->bp_bs);
 }

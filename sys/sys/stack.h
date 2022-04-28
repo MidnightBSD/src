@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/sys/stack.h 227581 2011-11-16 19:06:55Z pjd $
+ * $FreeBSD$
  */
 
 #ifndef _SYS_STACK_H_
@@ -56,9 +56,10 @@ void		 stack_ktr(u_int, const char *, int, const struct stack *,
 #define	CTRSTACK(m, st, depth, cheap)
 #endif
 
-/* MD Routine. */
+/* MD Routines. */
 struct thread;
 void		 stack_save(struct stack *);
 void		 stack_save_td(struct stack *, struct thread *);
+int		 stack_save_td_running(struct stack *, struct thread *);
 
 #endif

@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/etc/root/dot.profile 199243 2009-11-13 05:54:55Z ed $
+# $FreeBSD$
 #
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:~/bin
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:~/bin
 export PATH
 HOME=/root
 export HOME
@@ -8,3 +8,9 @@ TERM=${TERM:-xterm}
 export TERM
 PAGER=more
 export PAGER
+
+# Query terminal size; useful for serial lines.
+if [ -x /usr/bin/resizewin ] ; then /usr/bin/resizewin -z ; fi
+
+# Uncomment to display a random cookie on each login.
+# if [ -x /usr/bin/fortune ] ; then /usr/bin/fortune -s ; fi

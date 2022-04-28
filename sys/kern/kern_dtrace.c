@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_dtrace.c 227293 2011-11-07 06:44:47Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include "opt_kdb.h"
 
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/kern/kern_dtrace.c 227293 2011-11-07 06:4
 #include <sys/proc.h>
 #include <sys/dtrace_bsd.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 
 #define KDTRACE_PROC_SIZE	64
 #define	KDTRACE_THREAD_SIZE	256
@@ -46,6 +47,14 @@ FEATURE(kdtrace_hooks,
     "Kernel DTrace hooks which are required to load DTrace kernel modules");
 
 static MALLOC_DEFINE(M_KDTRACE, "kdtrace", "DTrace hooks");
+
+/* Hooks used in the machine-dependent trap handlers. */
+dtrace_trap_func_t		dtrace_trap_func;
+dtrace_doubletrap_func_t	dtrace_doubletrap_func;
+dtrace_pid_probe_ptr_t		dtrace_pid_probe_ptr;
+dtrace_return_probe_ptr_t	dtrace_return_probe_ptr;
+
+systrace_probe_func_t __read_frequently	systrace_probe_func;
 
 /* Return the DTrace process data size compiled in the kernel hooks. */
 size_t

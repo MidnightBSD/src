@@ -1,4 +1,4 @@
-.\" $FreeBSD: release/10.0.0/tools/build/options/WITHOUT_PC_SYSINSTALL 245606 2013-01-18 15:57:09Z eadler $
+.\" $FreeBSD$
 Set to not build
 .Xr pc-sysinstall 8
 and related programs.

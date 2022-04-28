@@ -37,15 +37,13 @@ static char sccsid[] = "@(#)tar.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/bin/pax/tar.c 222177 2011-05-22 14:03:38Z uqs $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include "pax.h"
 #include "extern.h"
 #include "tar.h"

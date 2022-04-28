@@ -1,4 +1,6 @@
 /*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
  * Copyright (c) 2013 David Chisnall
  * All rights reserved.
  *
@@ -27,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/usr.bin/dtc/dtc.cc 254522 2013-08-19 12:37:13Z theraven $
+ * $FreeBSD$
  */
 
 #include <sys/resource.h>
@@ -36,50 +38,64 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
 
 #include "fdt.hh"
 #include "checking.hh"
+#include "util.hh"
 
 using namespace dtc;
+using std::string;
+
+namespace {
 
 /**
  * The current major version of the tool.
  */
 int version_major = 0;
+int version_major_compatible = 1;
 /**
  * The current minor version of the tool.
  */
-int version_minor = 4;
+int version_minor = 5;
+int version_minor_compatible = 4;
 /**
  * The current patch level of the tool.
  */
 int version_patch = 0;
+int version_patch_compatible = 7;
 
-static void usage(const char* argv0)
+void usage(const string &argv0)
 {
 	fprintf(stderr, "Usage:\n"
-		"\t%s\t[-fhsv] [-b boot_cpu_id] [-d dependency_file]"
+		"\t%s\t[-fhsv@] [-b boot_cpu_id] [-d dependency_file]"
 			"[-E [no-]checker_name]\n"
 		"\t\t[-H phandle_format] [-I input_format]"
 			"[-O output_format]\n"
 		"\t\t[-o output_file] [-R entries] [-S bytes] [-p bytes]"
 			"[-V blob_version]\n"
-		"\t\t-W [no-]checker_name] input_file\n", basename(argv0));
+		"\t\t-W [no-]checker_name] input_file\n", basename(argv0).c_str());
 }
 
 /**
  * Prints the current version of this program..
  */
-static void version(const char* progname)
+void version(const char* progname)
 {
-	fprintf(stderr, "Version: %s %d.%d.%d\n", progname, version_major,
-			version_minor, version_patch);
+	fprintf(stdout, "Version: %s %d.%d.%d compatible with gpl dtc %d.%d.%d\n", progname,
+		version_major, version_minor, version_patch,
+		version_major_compatible, version_minor_compatible,
+		version_patch_compatible);
 }
 
+} // Anonymous namespace
+
 using fdt::device_tree;
+using fdt::tree_write_fn_ptr;
+using fdt::tree_read_fn_ptr;
 
 int
 main(int argc, char **argv)
@@ -90,17 +106,16 @@ main(int argc, char **argv)
 	const char *in_file = "-";
 	FILE *depfile = 0;
 	bool debug_mode = false;
-	void (device_tree::*write_fn)(int) = &device_tree::write_binary;
-	void (device_tree::*read_fn)(const char*, FILE*) =
-		&device_tree::parse_dts;
-	uint32_t boot_cpu;
+	tree_write_fn_ptr write_fn = nullptr;
+	tree_read_fn_ptr read_fn = nullptr;
+	uint32_t boot_cpu = 0;
 	bool boot_cpu_specified = false;
 	bool keep_going = false;
 	bool sort = false;
 	clock_t c0 = clock();
 	class device_tree tree;
 	fdt::checking::check_manager checks;
-	const char *options = "hqI:O:o:V:d:R:S:p:b:fisvH:W:E:DP:";
+	const char *options = "@hqI:O:o:V:d:R:S:p:b:fi:svH:W:E:DP:";
 
 	// Don't forget to update the man page if any more options are added.
 	while ((ch = getopt(argc, argv, options)) != -1)
@@ -113,14 +128,21 @@ main(int argc, char **argv)
 		case 'v':
 			version(argv[0]);
 			return EXIT_SUCCESS;
+		case '@':
+			tree.write_symbols = true;
+			break;
 		case 'I':
 		{
-			string arg = string(optarg);
-			if (arg == string("dtb"))
+			string arg(optarg);
+			if (arg == "dtb")
 			{
 				read_fn = &device_tree::parse_dtb;
+				if (write_fn == nullptr)
+				{
+					write_fn = &device_tree::write_dts;
+				}
 			}
-			else if (arg == string("dts"))
+			else if (arg == "dts")
 			{
 				read_fn = &device_tree::parse_dts;
 			}
@@ -133,18 +155,22 @@ main(int argc, char **argv)
 		}
 		case 'O':
 		{
-			string arg = string(optarg);
-			if (arg == string("dtb"))
+			string arg(optarg);
+			if (arg == "dtb")
 			{
 				write_fn = &device_tree::write_binary;
 			}
-			else if (arg == string("asm"))
+			else if (arg == "asm")
 			{
 				write_fn = &device_tree::write_asm;
 			}
-			else if (arg == string("dts"))
+			else if (arg == "dts")
 			{
 				write_fn = &device_tree::write_dts;
+				if (read_fn == nullptr)
+				{
+					read_fn = &device_tree::parse_dtb;
+				}
 			}
 			else
 			{
@@ -156,11 +182,14 @@ main(int argc, char **argv)
 		case 'o':
 		{
 			outfile_name = optarg;
-			outfile = open(optarg, O_CREAT | O_TRUNC | O_WRONLY, 0666);
-			if (outfile == -1)
+			if (strcmp(outfile_name, "-") != 0)
 			{
-				perror("Unable to open output file");
-				return EXIT_FAILURE;
+				outfile = open(optarg, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+				if (outfile == -1)
+				{
+					perror("Unable to open output file");
+					return EXIT_FAILURE;
+				}
 			}
 			break;
 		}
@@ -168,7 +197,7 @@ main(int argc, char **argv)
 			debug_mode = true;
 			break;
 		case 'V':
-			if (string(optarg) != string("17"))
+			if (string(optarg) != "17")
 			{
 				fprintf(stderr, "Unknown output format version: %s\n", optarg);
 				return EXIT_FAILURE;
@@ -180,7 +209,7 @@ main(int argc, char **argv)
 			{
 				fclose(depfile);
 			}
-			if (string(optarg) == string("-"))
+			if (string(optarg) == "-")
 			{
 				depfile = stdout;
 			}
@@ -197,16 +226,16 @@ main(int argc, char **argv)
 		}
 		case 'H':
 		{
-			string arg = string(optarg);
-			if (arg == string("both"))
+			string arg(optarg);
+			if (arg == "both")
 			{
 				tree.set_phandle_format(device_tree::BOTH);
 			}
-			else if (arg == string("epapr"))
+			else if (arg == "epapr")
 			{
 				tree.set_phandle_format(device_tree::EPAPR);
 			}
-			else if (arg == string("linux"))
+			else if (arg == "linux")
 			{
 				tree.set_phandle_format(device_tree::LINUX);
 			}
@@ -229,7 +258,7 @@ main(int argc, char **argv)
 		case 'W':
 		case 'E':
 		{
-			string arg = string(optarg);
+			string arg(optarg);
 			if ((arg.size() > 3) && (strncmp(optarg, "no-", 3) == 0))
 			{
 				arg = string(optarg+3);
@@ -279,6 +308,14 @@ main(int argc, char **argv)
 			return EXIT_FAILURE;
 		}
 	}
+	if (read_fn == nullptr)
+	{
+		read_fn = &device_tree::parse_dts;
+	}
+	if (write_fn == nullptr)
+	{
+		write_fn = &device_tree::write_binary;
+	}
 	if (optind < argc)
 	{
 		in_file = argv[optind];
@@ -307,7 +344,7 @@ main(int argc, char **argv)
 	}
 	if (!(tree.is_valid() || keep_going))
 	{
-		fprintf(stderr, "Failed to parse tree.  Unhappy face!\n");
+		fprintf(stderr, "Failed to parse tree.\n");
 		return EXIT_FAILURE;
 	}
 	clock_t c2 = clock();

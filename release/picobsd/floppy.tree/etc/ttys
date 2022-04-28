@@ -1,7 +1,7 @@
 #
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
-# $FreeBSD: release/10.0.0/release/picobsd/floppy.tree/etc/ttys 199251 2009-11-13 11:32:14Z ed $
+# $FreeBSD$
 #
 # name	getty				type	status		comments
 #
@@ -32,4 +32,5 @@ ttyp6	none			network secure
 ttyp7	none			network secure
 ttyp8	none			network secure
 ttyp9	none			network secure
-ttyu0   "/usr/libexec/getty std.9600"   dialup  on secure
+ttyu0   "/usr/libexec/getty 3wire"   dialup  on secure
+ttyu1   "/usr/libexec/getty 3wire"   dialup  on secure

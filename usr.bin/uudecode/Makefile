@@ -1,8 +1,14 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: release/10.0.0/usr.bin/uudecode/Makefile 201386 2010-01-02 10:27:05Z ed $
+# $FreeBSD$
+
+.include <src.opts.mk>
 
 PROG=	uudecode
 LINKS=	${BINDIR}/uudecode ${BINDIR}/b64decode
-NO_MAN=
+MAN=
+
+.if ${MK_TESTS} != "no"
+SUBDIR+= tests
+.endif
 
 .include <bsd.prog.mk>

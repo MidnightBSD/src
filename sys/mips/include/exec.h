@@ -29,7 +29,7 @@
  *	@(#)exec.h	8.1 (Berkeley) 6/11/93
  *	from: src/sys/i386/include/exec.h,v 1.8 1999/08/28 00:44:11 peter
  *	JNPR: exec.h,v 1.3 2006/08/07 05:38:57 katta
- * $FreeBSD: release/10.0.0/sys/mips/include/exec.h 202175 2010-01-12 21:36:08Z imp $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_EXEC_H_

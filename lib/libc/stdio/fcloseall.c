@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/fcloseall.c 157963 2006-04-22 16:47:59Z deischen $");
+__FBSDID("$FreeBSD$");
 
 #include <stdio.h>
 #include "local.h"

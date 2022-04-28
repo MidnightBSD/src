@@ -22,12 +22,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: release/10.0.0/lib/libproc/proc_create.c 224632 2011-08-03 09:55:59Z avg $
  */
 
-#include "_libproc.h"
-#include <stdio.h>
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
+
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/wait.h>
+
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -35,7 +38,37 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/wait.h>
+
+#include "_libproc.h"
+
+static int	proc_init(pid_t, int, int, struct proc_handle *);
+
+static int
+proc_init(pid_t pid, int flags, int status, struct proc_handle *phdl)
+{
+	int mib[4], error;
+	size_t len;
+
+	memset(phdl, 0, sizeof(*phdl));
+	phdl->pid = pid;
+	phdl->flags = flags;
+	phdl->status = status;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PATHNAME;
+	mib[3] = pid;
+	len = sizeof(phdl->execname);
+	if (sysctl(mib, 4, phdl->execname, &len, NULL, 0) != 0) {
+		error = errno;
+		DPRINTF("ERROR: cannot get pathname for child process %d", pid);
+		return (error);
+	}
+	if (len == 0)
+		phdl->execname[0] = '\0';
+
+	return (0);
+}
 
 int
 proc_attach(pid_t pid, int flags, struct proc_handle **pphdl)
@@ -54,11 +87,11 @@ proc_attach(pid_t pid, int flags, struct proc_handle **pphdl)
 	if ((phdl = malloc(sizeof(struct proc_handle))) == NULL)
 		return (ENOMEM);
 
-	memset(phdl, 0, sizeof(struct proc_handle));
-	phdl->pid = pid;
-	phdl->flags = flags;
-	phdl->status = PS_RUN;
 	elf_version(EV_CURRENT);
+
+	error = proc_init(pid, flags, PS_RUN, phdl);
+	if (error != 0)
+		goto out;
 
 	if (ptrace(PT_ATTACH, phdl->pid, 0, 0) != 0) {
 		error = errno;
@@ -75,7 +108,7 @@ proc_attach(pid_t pid, int flags, struct proc_handle **pphdl)
 
 	/* Check for an unexpected status. */
 	if (WIFSTOPPED(status) == 0)
-		DPRINTF("ERROR: child process %d status 0x%x", pid, status);
+		DPRINTFX("ERROR: child process %d status 0x%x", pid, status);
 	else
 		phdl->status = PS_STOP;
 
@@ -123,21 +156,21 @@ proc_create(const char *file, char * const *argv, proc_child_func *pcf,
 		_exit(2);
 	} else {
 		/* The parent owns the process handle. */
-		memset(phdl, 0, sizeof(struct proc_handle));
-		phdl->pid = pid;
-		phdl->status = PS_IDLE;
+		error = proc_init(pid, 0, PS_IDLE, phdl);
+		if (error != 0)
+			goto bad;
 
 		/* Wait for the child process to stop. */
 		if (waitpid(pid, &status, WUNTRACED) == -1) {
 			error = errno;
-                	DPRINTF("ERROR: child process %d didn't stop as expected", pid);
+			DPRINTF("ERROR: child process %d didn't stop as expected", pid);
 			goto bad;
 		}
 
 		/* Check for an unexpected status. */
 		if (WIFSTOPPED(status) == 0) {
 			error = errno;
-                	DPRINTF("ERROR: child process %d status 0x%x", pid, status);
+			DPRINTFX("ERROR: child process %d status 0x%x", pid, status);
 			goto bad;
 		} else
 			phdl->status = PS_STOP;

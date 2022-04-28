@@ -36,14 +36,13 @@
 static char sccsid[] = "@(#)strtol.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdlib/strtol.c 251672 2013-06-13 00:19:30Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include <limits.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
 #include "xlocale_private.h"
-
 
 /*
  * Convert a string to a long integer.
@@ -150,9 +149,4 @@ long
 strtol(const char * __restrict nptr, char ** __restrict endptr, int base)
 {
 	return strtol_l(nptr, endptr, base, __get_locale());
-}
-long double
-strtold(const char * __restrict nptr, char ** __restrict endptr)
-{
-	return strtold_l(nptr, endptr, __get_locale());
 }

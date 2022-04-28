@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: release/10.0.0/sys/mips/mips/octeon_cop2_swtch.S 229677 2012-01-06 01:23:26Z gonzo $
+ * $FreeBSD$
  */
 
 #include <machine/asm.h>

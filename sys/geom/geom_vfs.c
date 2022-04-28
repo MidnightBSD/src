@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/geom/geom_vfs.c 248508 2013-03-19 14:13:12Z kib $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -102,14 +102,10 @@ g_vfs_done(struct bio *bip)
 	/*
 	 * Collect statistics on synchronous and asynchronous read
 	 * and write counts for disks that have associated filesystems.
-	 * Since this run by the g_up thread it is single threaded and
-	 * we do not need to use atomic increments on the counters.
 	 */
 	bp = bip->bio_caller2;
 	vp = bp->b_vp;
-	if (vp == NULL) {
-		mp = NULL;
-	} else {
+	if (vp != NULL) {
 		/*
 		 * If not a disk vnode, use its associated mount point
 		 * otherwise use the mountpoint associated with the disk.
@@ -122,20 +118,20 @@ g_vfs_done(struct bio *bip)
 			mp = vp->v_mount;
 		else
 			mp = cdevp->si_mountpt;
-		VI_UNLOCK(vp);
-	}
-	if (mp != NULL) {
-		if (bp->b_iocmd == BIO_WRITE) {
-			if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
-				mp->mnt_stat.f_asyncwrites++;
-			else
-				mp->mnt_stat.f_syncwrites++;
-		} else {
-			if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
-				mp->mnt_stat.f_asyncreads++;
-			else
-				mp->mnt_stat.f_syncreads++;
+		if (mp != NULL) {
+			if (bp->b_iocmd == BIO_READ) {
+				if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
+					mp->mnt_stat.f_asyncreads++;
+				else
+					mp->mnt_stat.f_syncreads++;
+			} else if (bp->b_iocmd == BIO_WRITE) {
+				if (LK_HOLDER(bp->b_lock.lk_lock) == LK_KERNPROC)
+					mp->mnt_stat.f_asyncwrites++;
+				else
+					mp->mnt_stat.f_syncwrites++;
+			}
 		}
+		VI_UNLOCK(vp);
 	}
 
 	cp = bip->bio_from;
@@ -172,7 +168,7 @@ g_vfs_strategy(struct bufobj *bo, struct buf *bp)
 	sc = cp->geom->softc;
 
 	/*
-	 * If the provider has orphaned us, just return EXIO.
+	 * If the provider has orphaned us, just return ENXIO.
 	 */
 	mtx_lock(&sc->sc_mtx);
 	if (sc->sc_orphaned) {
@@ -260,6 +256,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 	vnode_create_vobject(vp, pp->mediasize, curthread);
 	*cpp = cp;
 	cp->private = vp;
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 	bo->bo_ops = g_vfs_bufops;
 	bo->bo_private = cp;
 	bo->bo_bsize = pp->sectorsize;

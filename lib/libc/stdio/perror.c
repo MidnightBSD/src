@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)perror.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/stdio/perror.c 249810 2013-04-23 14:36:44Z emaste $");
+__FBSDID("$FreeBSD$");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -67,9 +67,9 @@ perror(const char *s)
 	v++;
 	v->iov_base = "\n";
 	v->iov_len = 1;
-	FLOCKFILE(stderr);
+	FLOCKFILE_CANCELSAFE(stderr);
 	__sflush(stderr);
 	(void)_writev(stderr->_file, iov, (v - iov) + 1);
 	stderr->_flags &= ~__SOFF;
-	FUNLOCKFILE(stderr);
+	FUNLOCKFILE_CANCELSAFE();
 }

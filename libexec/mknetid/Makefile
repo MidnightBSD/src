@@ -1,4 +1,4 @@
-# $FreeBSD: release/10.0.0/libexec/mknetid/Makefile 201380 2010-01-02 09:50:19Z ed $
+# $FreeBSD$
 
 PROG=	mknetid
 SRCS=	mknetid.c hash.c parse_group.c

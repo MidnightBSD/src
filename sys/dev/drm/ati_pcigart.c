@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm/ati_pcigart.c 207069 2010-04-22 18:47:30Z rnoland $");
+__FBSDID("$FreeBSD$");
 
 /** @file ati_pcigart.c
  * Implementation of ATI's PCIGART, which provides an aperture in card virtual
@@ -116,6 +116,7 @@ drm_ati_free_pcigart_table(struct drm_device *dev,
 {
 	struct drm_dma_handle *dmah = gart_info->dmah;
 
+	bus_dmamap_unload(dmah->tag, dmah->map);
 	bus_dmamem_free(dmah->tag, dmah->vaddr, dmah->map);
 	bus_dma_tag_destroy(dmah->tag);
 	free(dmah, DRM_MEM_DMA);

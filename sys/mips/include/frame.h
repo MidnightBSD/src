@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	JNPR: frame.h,v 1.6.2.1 2007/09/10 08:14:57 girish
- * $FreeBSD: release/10.0.0/sys/mips/include/frame.h 249790 2013-04-23 09:38:18Z imp $
+ * $FreeBSD$
  *
  */
 #ifndef _MACHINE_FRAME_H_

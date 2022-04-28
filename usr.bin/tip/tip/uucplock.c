@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/tip/tip/uucplock.c 178736 2008-05-03 02:29:02Z bms $");
+__FBSDID("$FreeBSD$");
 
 #ifndef lint
 #if 0

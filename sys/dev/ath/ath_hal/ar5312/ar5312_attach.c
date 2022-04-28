@@ -14,7 +14,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_hal/ar5312/ar5312_attach.c 225883 2011-09-30 05:17:57Z adrian $
+ * $FreeBSD$
  */
 #include "opt_ah.h"
 
@@ -62,7 +62,7 @@ ar5312AniSetup(struct ath_hal *ah)
 static struct ath_hal *
 ar5312Attach(uint16_t devid, HAL_SOFTC sc,
 	HAL_BUS_TAG st, HAL_BUS_HANDLE sh, uint16_t *eepromdata,
-	HAL_STATUS *status)
+	HAL_OPS_CONFIG *ah_config, HAL_STATUS *status)
 {
 	struct ath_hal_5212 *ahp = AH_NULL;
 	struct ath_hal *ah;

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/libkern/strcpy.c 139815 2005-01-07 00:24:33Z imp $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/libkern.h>
 

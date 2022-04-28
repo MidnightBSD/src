@@ -44,7 +44,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)mount_union.c	8.5 (Berkeley) 3/27/94";
 #else
 static const char rcsid[] =
-  "$FreeBSD: release/10.0.0/sbin/mount_unionfs/mount_unionfs.c 247856 2013-03-05 22:41:35Z jkim $";
+  "$FreeBSD$";
 #endif
 #endif /* not lint */
 

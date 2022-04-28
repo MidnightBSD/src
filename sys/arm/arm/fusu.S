@@ -34,15 +34,16 @@
  */
 
 #include <machine/asm.h>
-#include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include "assym.s"
-__FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fusu.S 248361 2013-03-16 02:48:49Z andrew $");
+__FBSDID("$FreeBSD$");
 
-#ifdef _ARM_ARCH_6
+	.syntax	unified
+
+#if __ARM_ARCH >= 6
 #define GET_PCB(tmp) \
 	mrc p15, 0, tmp, c13, c0, 4; \
-	add	tmp, tmp, #(PC_CURPCB)
+	add	tmp, tmp, #(TD_PCB)
 #else
 .Lcurpcb:
 	.word	_C_LABEL(__pcpu) + PC_CURPCB
@@ -51,33 +52,51 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/arm/arm/fusu.S 248361 2013-03-16 02:48:49
 #endif
 
 /*
- * fuword(caddr_t uaddr);
- * Fetch an int from the user's address space.
+ * casueword32(volatile uint32_t *base, uint32_t oldval, uint32_t *oldvalp,
+ *    uint32_t newval);
  */
 
-ENTRY_NP(casuword32)
-ENTRY(casuword)
-	GET_PCB(r3)
-	ldr	r3, [r3]
+ENTRY(casueword)
+EENTRY_NP(casueword32)
+	stmfd	sp!, {r4, r5, r6}
+
+	ldr	r4, =(VM_MAXUSER_ADDRESS-3)
+	cmp	r0, r4
+	mvncs	r0, #0
+	bcs	2f
+
+	GET_PCB(r6)
+	ldr	r6, [r6]
 
 #ifdef DIAGNOSTIC
-	teq	r3, #0x00000000
+	teq	r6, #0x00000000
+	ldmfdeq	sp!, {r4, r5, r6}
 	beq	.Lfusupcbfault
 #endif
-	stmfd	sp!, {r4, r5}
+
 	adr	r4, .Lcasuwordfault
-	str	r4, [r3, #PCB_ONFAULT]
-	ldrt	r5, [r0]
-	cmp	r5, r1
-	movne	r0, r5
-	streqt	r2, [r0]
-	moveq	r0, r1
-	ldmfd	sp!, {r4, r5}
-	mov	r1, #0x00000000
-	str	r1, [r3, #PCB_ONFAULT]
+	str	r4, [r6, #PCB_ONFAULT]
+
+#if __ARM_ARCH >= 6
+1:
+	ldrex	r4, [r0]
+	cmp	r4, r1
+	strexeq	r5, r3, [r0]
+	cmpeq	r5, #1
+	beq	1b
+#else
+	ldrt	r4, [r0]
+	cmp	r4, r1
+	strteq	r3, [r0]
+#endif
+	str	r4, [r2]
+	mov	r0, #0
+	str	r0, [r6, #PCB_ONFAULT]
+2:
+	ldmfd	sp!, {r4, r5, r6}
 	RET
-END(casuword32)
-END(casuword)
+EEND(casueword32)
+END(casueword)
 
 /*
  * Handle faults from casuword.  Clean up and return -1.
@@ -85,18 +104,23 @@ END(casuword)
 
 .Lcasuwordfault:
 	mov	r0, #0x00000000
-	str	r0, [r3, #PCB_ONFAULT]
-	mvn	r0, #0x00000000
-	ldmfd	sp!, {r4, r5}
-	RET	
+	str	r0, [r6, #PCB_ONFAULT]
+	mvn	r0, #0
+	ldmfd	sp!, {r4, r5, r6}
+	RET
 
 /*
- * fuword(caddr_t uaddr);
+ * fueword(caddr_t uaddr, long *val);
  * Fetch an int from the user's address space.
  */
 
-ENTRY_NP(fuword32)
-ENTRY(fuword)
+ENTRY(fueword)
+EENTRY_NP(fueword32)
+	ldr	r3, =(VM_MAXUSER_ADDRESS-3)
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -105,17 +129,17 @@ ENTRY(fuword)
 	beq	.Lfusupcbfault
 #endif
 
-	adr	r1, .Lfusufault
-	str	r1, [r2, #PCB_ONFAULT]
+	adr	r3, .Lfusufault
+	str	r3, [r2, #PCB_ONFAULT]
 
 	ldrt	r3, [r0]
+	str	r3, [r1]
 
-	mov	r1, #0x00000000
-	str	r1, [r2, #PCB_ONFAULT]
-	mov	r0, r3
+	mov	r0, #0x00000000
+	str	r0, [r2, #PCB_ONFAULT]
 	RET
-END(fuword32)
-END(fuword)
+EEND(fueword32)
+END(fueword)
 
 /*
  * fusword(caddr_t uaddr);
@@ -123,6 +147,11 @@ END(fuword)
  */
 
 ENTRY(fusword)
+	ldr	r3, =(VM_MAXUSER_ADDRESS-1)
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -153,45 +182,9 @@ END(fusword)
  */
 
 ENTRY(fuswintr)
-	ldr	r2, Lblock_userspace_access
-	ldr	r2, [r2]
-	teq	r2, #0
-	mvnne	r0, #0x00000000
-	RETne
-
-	GET_PCB(r2)
-	ldr	r2, [r2]
-
-#ifdef DIAGNOSTIC
-	teq	r2, #0x00000000
-	beq	.Lfusupcbfault
-#endif
-
-	adr	r1, _C_LABEL(fusubailout)
-	str	r1, [r2, #PCB_ONFAULT]
-
-	ldrbt	r3, [r0], #1
-	ldrbt	ip, [r0]
-#ifdef __ARMEB__
-	orr	r0, ip, r3, asl #8
-#else
-	orr	r0, r3, ip, asl #8
-#endif
-
-	mov	r1, #0x00000000
-	str	r1, [r2, #PCB_ONFAULT]
+	mov	r0, #-1
 	RET
 END(fuswintr)
-
-Lblock_userspace_access:
-	.word	_C_LABEL(block_userspace_access)
-
-	.data
-	.align	0
-	.global	_C_LABEL(block_userspace_access)
-_C_LABEL(block_userspace_access):
-	.word	0
-	.text
 
 /*
  * fubyte(caddr_t uaddr);
@@ -199,6 +192,11 @@ _C_LABEL(block_userspace_access):
  */
 
 ENTRY(fubyte)
+	ldr	r3, =VM_MAXUSER_ADDRESS
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -228,20 +226,6 @@ END(fubyte)
 	mvn	r0, #0x00000000
 	RET
 
-/*
- * Handle faults from [fs]u*().  Clean up and return -1.  This differs from
- * fusufault() in that trap() will recognise it and return immediately rather
- * than trying to page fault.
- */
-
-/* label must be global as fault.c references it */
-	.global	_C_LABEL(fusubailout)
-_C_LABEL(fusubailout):
-	mov	r0, #0x00000000
-	str	r0, [r2, #PCB_ONFAULT]
-	mvn	r0, #0x00000000
-	RET
-
 #ifdef DIAGNOSTIC
 /*
  * Handle earlier faults from [fs]u*(), due to no pcb
@@ -254,7 +238,7 @@ _C_LABEL(fusubailout):
 
 fusupcbfaulttext:
 	.asciz	"Yikes - no valid PCB during fusuxxx() addr=%08x\n"
-	.align	0
+	.align	2
 #endif
 
 /*
@@ -262,8 +246,13 @@ fusupcbfaulttext:
  * Store an int in the user's address space.
  */
 
-ENTRY_NP(suword32)
 ENTRY(suword)
+EENTRY_NP(suword32)
+	ldr	r3, =(VM_MAXUSER_ADDRESS-3)
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -280,7 +269,7 @@ ENTRY(suword)
 	mov	r0, #0x00000000
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
-END(suword32)
+EEND(suword32)
 END(suword)
 
 /*
@@ -290,34 +279,7 @@ END(suword)
  */
 
 ENTRY(suswintr)
-	ldr	r2, Lblock_userspace_access
-	ldr	r2, [r2]
-	teq	r2, #0
-	mvnne	r0, #0x00000000
-	RETne
-
-	GET_PCB(r2)
-	ldr	r2, [r2]
-
-#ifdef DIAGNOSTIC
-	teq	r2, #0x00000000
-	beq	.Lfusupcbfault
-#endif
-
-	adr	r3, _C_LABEL(fusubailout)
-	str	r3, [r2, #PCB_ONFAULT]
-
-#ifdef __ARMEB__
-	mov	ip, r1, lsr #8
-	strbt	ip, [r0], #1
-#else
-	strbt	r1, [r0], #1
-	mov	r1, r1, lsr #8
-#endif
-	strbt	r1, [r0]
-
-	mov	r0, #0x00000000
-	str	r0, [r2, #PCB_ONFAULT]
+	mov	r0, #-1
 	RET
 END(suswintr)
 
@@ -327,6 +289,11 @@ END(suswintr)
  */
 
 ENTRY(susword)
+	ldr	r3, =(VM_MAXUSER_ADDRESS-1)
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -358,6 +325,11 @@ END(susword)
  */
 
 ENTRY(subyte)
+	ldr	r3, =VM_MAXUSER_ADDRESS
+	cmp	r0, r3
+	mvncs	r0, #0
+	RETc(cs)
+
 	GET_PCB(r2)
 	ldr	r2, [r2]
 
@@ -375,4 +347,3 @@ ENTRY(subyte)
 	str	r0, [r2, #PCB_ONFAULT]
 	RET
 END(subyte)
-

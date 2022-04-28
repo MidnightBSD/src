@@ -29,7 +29,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	$NetBSD: vmparam.h,v 1.11 2000/02/11 19:25:16 thorpej Exp $
- * $FreeBSD: release/10.0.0/sys/powerpc/include/vmparam.h 250338 2013-05-07 22:46:24Z attilio $
+ * $FreeBSD$
  */
 
 #ifndef _MACHINE_VMPARAM_H_
@@ -38,7 +38,7 @@
 #define	USRSTACK	SHAREDPAGE
 
 #ifndef	MAXTSIZ
-#define	MAXTSIZ		(64*1024*1024)		/* max text size */
+#define	MAXTSIZ		(1*1024*1024*1024)		/* max text size */
 #endif
 
 #ifndef	DFLDSIZ
@@ -108,16 +108,11 @@
 
 #else /* Book-E */
 
-/*
- * Kernel CCSRBAR location. We make this the reset location.
- */
-#define	CCSRBAR_VA		0xfef00000
-#define	CCSRBAR_SIZE		0x00100000
-
 #define	KERNBASE		0xc0000000	/* start of kernel virtual */
 
 #define	VM_MIN_KERNEL_ADDRESS	KERNBASE
-#define	VM_MAX_KERNEL_ADDRESS	0xf8000000
+#define	VM_MAX_KERNEL_ADDRESS	0xffffffff
+#define	VM_MAX_SAFE_KERNEL_ADDRESS	VM_MAX_KERNEL_ADDRESS
 
 #endif /* AIM/E500 */
 
@@ -141,13 +136,12 @@ struct pmap_physseg {
 #endif
 
 /*
- * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * Create two free page pools: VM_FREEPOOL_DEFAULT is the default pool
  * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
  * the pool from which physical pages for small UMA objects are
  * allocated.
  */
-#define	VM_NFREEPOOL		3
-#define	VM_FREEPOOL_CACHE	2
+#define	VM_NFREEPOOL		2
 #define	VM_FREEPOOL_DEFAULT	0
 #define	VM_FREEPOOL_DIRECT	1
 
@@ -177,20 +171,44 @@ struct pmap_physseg {
 #define	SGROWSIZ	(128UL*1024)		/* amount to grow stack */
 #endif
 
-#ifndef VM_KMEM_SIZE
-#define	VM_KMEM_SIZE		(12 * 1024 * 1024)
-#endif
-
-#ifdef __powerpc64__
+/*
+ * How many physical pages per kmem arena virtual page.
+ */
 #ifndef VM_KMEM_SIZE_SCALE
-#define VM_KMEM_SIZE_SCALE      (3)
+#define	VM_KMEM_SIZE_SCALE	(3)
 #endif
 
-#ifndef VM_KMEM_SIZE_MAX
-#define VM_KMEM_SIZE_MAX        0x1c0000000  /* 7 GB */
+/*
+ * Optional floor (in bytes) on the size of the kmem arena.
+ */
+#ifndef VM_KMEM_SIZE_MIN
+#define	VM_KMEM_SIZE_MIN	(12 * 1024 * 1024)
 #endif
+
+/*
+ * Optional ceiling (in bytes) on the size of the kmem arena: 40% of the
+ * usable KVA space.
+ */
+#ifndef VM_KMEM_SIZE_MAX
+#define VM_KMEM_SIZE_MAX	((VM_MAX_SAFE_KERNEL_ADDRESS - \
+    VM_MIN_KERNEL_ADDRESS + 1) * 2 / 5)
 #endif
 
 #define	ZERO_REGION_SIZE	(64 * 1024)	/* 64KB */
 
+/*
+ * On 32-bit OEA, the only purpose for which sf_buf is used is to implement
+ * an opaque pointer required by the machine-independent parts of the kernel.
+ * That pointer references the vm_page that is "mapped" by the sf_buf.  The
+ * actual mapping is provided by the direct virtual-to-physical mapping.
+ *
+ * On OEA64 and Book-E, we need to do something a little more complicated. Use
+ * the runtime-detected hw_direct_map to pick between the two cases. Our
+ * friends in vm_machdep.c will do the same to ensure nothing gets confused.
+ */
+#define	SFBUF
+#define	SFBUF_NOMD
+#define	SFBUF_OPTIONAL_DIRECT_MAP	hw_direct_map
+#define	SFBUF_PHYS_DMAP(x)		(x)
+ 
 #endif /* _MACHINE_VMPARAM_H_ */

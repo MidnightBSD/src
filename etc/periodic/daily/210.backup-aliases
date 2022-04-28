@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/periodic/daily/210.backup-aliases 65843 2000-09-14 17:19:15Z brian $
+# $FreeBSD$
 #
 
 # If there is a global system configuration file, suck it in.

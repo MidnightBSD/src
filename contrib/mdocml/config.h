@@ -1,58 +1,55 @@
-#ifndef	MANDOC_CONFIG_H
-#define	MANDOC_CONFIG_H
-
-#if defined(__linux__) || defined(__MINT__)
-# define _GNU_SOURCE /* strptime(), getsubopt() */
+#ifdef __cplusplus
+#error "Do not use C++.  See the INSTALL file."
 #endif
 
-#include <stdio.h>
+#if !defined(__GNUC__) || (__GNUC__ < 4)
+#define __attribute__(x)
+#endif
 
-#define HAVE_FGETLN
-#define HAVE_STRPTIME
-#define HAVE_GETSUBOPT
-#define HAVE_STRLCAT
-#define HAVE_MMAP
-#define HAVE_STRLCPY
+#if defined(__linux__) || defined(__MINT__)
+#define _GNU_SOURCE	/* See test-*.c what needs this. */
+#endif
 
 #include <sys/types.h>
 
-#if !defined(__BEGIN_DECLS)
-#  ifdef __cplusplus
-#  define	__BEGIN_DECLS		extern "C" {
-#  else
-#  define	__BEGIN_DECLS
-#  endif
-#endif
-#if !defined(__END_DECLS)
-#  ifdef __cplusplus
-#  define	__END_DECLS		}
-#  else
-#  define	__END_DECLS
-#  endif
-#endif
+#define MAN_CONF_FILE "/etc/man.conf"
+#define MANPATH_BASE "/usr/share/man"
+#define MANPATH_DEFAULT "/usr/share/man:/usr/local/man"
+#define UTF8_LOCALE "en_US.UTF-8"
+#define HAVE_CMSG_XPG42 0
+#define HAVE_DIRENT_NAMLEN 1
+#define HAVE_ENDIAN 0
+#define HAVE_ERR 1
+#define HAVE_FTS 1
+#define HAVE_FTS_COMPARE_CONST 1
+#define HAVE_GETLINE 1
+#define HAVE_GETSUBOPT 1
+#define HAVE_ISBLANK 1
+#define HAVE_MKDTEMP 1
+#define HAVE_NTOHL 1
+#define HAVE_PLEDGE 0
+#define HAVE_PROGNAME 1
+#define HAVE_REALLOCARRAY 1
+#define HAVE_RECALLOCARRAY 0
+#define HAVE_REWB_BSD 1
+#define HAVE_REWB_SYSV 1
+#define HAVE_SANDBOX_INIT 0
+#define HAVE_STRCASESTR 1
+#define HAVE_STRINGLIST 1
+#define HAVE_STRLCAT 1
+#define HAVE_STRLCPY 1
+#define HAVE_STRPTIME 1
+#define HAVE_STRSEP 1
+#define HAVE_STRTONUM 1
+#define HAVE_SYS_ENDIAN 1
+#define HAVE_VASPRINTF 1
+#define HAVE_WCHAR 1
+#define HAVE_OHASH 1
 
-#if defined(__APPLE__)
-# define htobe32(x) OSSwapHostToBigInt32(x)
-# define betoh32(x) OSSwapBigToHostInt32(x)
-# define htobe64(x) OSSwapHostToBigInt64(x)
-# define betoh64(x) OSSwapBigToHostInt64(x)
-#elif defined(__linux__)
-# define betoh32(x) be32toh(x)
-# define betoh64(x) be64toh(x)
-#endif
+#define BINM_APROPOS "apropos"
+#define BINM_MAKEWHATIS "makewhatis"
+#define BINM_MAN "man"
+#define BINM_SOELIM "soelim"
+#define BINM_WHATIS "whatis"
 
-#ifndef HAVE_STRLCAT
-extern	size_t	  strlcat(char *, const char *, size_t);
-#endif
-#ifndef HAVE_STRLCPY
-extern	size_t	  strlcpy(char *, const char *, size_t);
-#endif
-#ifndef HAVE_GETSUBOPT
-extern	int	  getsubopt(char **, char * const *, char **);
-extern	char	 *suboptarg;
-#endif
-#ifndef HAVE_FGETLN
-extern	char	 *fgetln(FILE *, size_t *);
-#endif
-
-#endif /* MANDOC_CONFIG_H */
+extern	void	 *recallocarray(void *, size_t, size_t, size_t);

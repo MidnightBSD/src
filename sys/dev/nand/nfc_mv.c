@@ -27,7 +27,7 @@
 /* Integrated NAND controller driver */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/nand/nfc_mv.c 235537 2012-05-17 10:11:18Z gber $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>

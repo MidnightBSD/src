@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/mips/mips/mem.c 226459 2011-10-17 05:42:53Z jchandra $");
+__FBSDID("$FreeBSD$");
 
 /*
  * Memory special file
@@ -84,8 +84,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 
 	cnt = 0;
 	error = 0;
-
-	GIANT_REQUIRED;
 
 	pmap_page_init(&m);
 	while (uio->uio_resid > 0 && !error) {
@@ -153,12 +151,6 @@ int
 memmmap(struct cdev *dev, vm_ooffset_t offset, vm_paddr_t *paddr,
     int prot, vm_memattr_t *memattr)
 {
-	/*
-	 * /dev/mem is the only one that makes sense through this
-	 * interface.  For /dev/kmem any physaddr we return here
-	 * could be transient and hence incorrect or invalid at
-	 * a later time.
-	 */
 	if (dev2unit(dev) != CDEV_MINOR_MEM)
 		return (-1);
 

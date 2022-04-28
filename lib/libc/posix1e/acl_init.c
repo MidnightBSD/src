@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/posix1e/acl_init.c 194955 2009-06-25 12:46:59Z trasz $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -67,8 +67,10 @@ acl_init(int count)
 
 	error = posix_memalign((void *)&acl, 1 << _ACL_T_ALIGNMENT_BITS,
 	    sizeof(struct acl_t_struct));
-	if (error)
+	if (error) {
+		errno = error;
 		return (NULL);
+	}
 
 	bzero(acl, sizeof(struct acl_t_struct));
 	acl->ats_brand = ACL_BRAND_UNKNOWN;

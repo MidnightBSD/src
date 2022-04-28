@@ -26,10 +26,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: release/10.0.0/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01-02 01:36:10Z adrian $
+ * $FreeBSD$
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 2013-01-02 01:36:10Z adrian $");
+__FBSDID("$FreeBSD$");
 
 /*
  * This implements an empty DFS module.
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 20
 #include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/errno.h>
 
@@ -53,6 +54,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/ath/ath_dfs/null/dfs_null.c 244946 20
 #include <sys/socket.h>
  
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_media.h>
 #include <net/if_arp.h>
 #include <net/ethernet.h>		/* XXX for ether_sprintf */
@@ -179,7 +181,7 @@ ath_dfs_process_phy_err(struct ath_softc *sc, struct mbuf *m,
 }
 
 /*
- * Process the radar events and determine whether a DFS event has occured.
+ * Process the radar events and determine whether a DFS event has occurred.
  *
  * This is designed to run outside of the RX processing path.
  * The RX path will call ath_dfs_tasklet_needed() to see whether

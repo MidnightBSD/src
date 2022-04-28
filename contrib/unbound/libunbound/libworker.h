@@ -1,5 +1,5 @@
 /*
- * libunbound/worker.h - worker thread or process that resolves
+ * libunbound/libworker.h - worker thread or process that resolves
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -57,6 +57,9 @@ struct comm_point;
 struct comm_reply;
 struct regional;
 struct tube;
+struct sldns_buffer;
+struct ub_event_base;
+struct query_info;
 
 /** 
  * The library-worker status structure
@@ -72,6 +75,8 @@ struct libworker {
 	int is_bg;
 	/** is this a bg worker that is threaded (not forked)? */
 	int is_bg_thread;
+	/** want to quit, stop handling new content */
+	int want_quit;
 
 	/** copy of the module environment with worker local entries. */
 	struct module_env* env;
@@ -106,6 +111,31 @@ int libworker_bg(struct ub_ctx* ctx);
  */
 int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q);
 
+/**
+ * create worker for event-based interface.
+ * @param ctx: context with config.
+ * @param eb: event base.
+ * @return new worker or NULL.
+ */
+struct libworker* libworker_create_event(struct ub_ctx* ctx,
+	struct ub_event_base* eb);
+
+/**
+ * Attach context_query to mesh for callback in event-driven setup.
+ * @param ctx: context
+ * @param q: context query entry
+ * @param async_id: store query num if query takes long.
+ * @return 0 if finished OK, else error.
+ */
+int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
+	int* async_id);
+
+/** 
+ * delete worker for event-based interface.  does not free the event_base.
+ * @param w: event-based worker to delete.
+ */
+void libworker_delete_event(struct libworker* w);
+
 /** cleanup the cache to remove all rrset IDs from it, arg is libworker */
 void libworker_alloc_cleanup(void* arg);
 
@@ -118,7 +148,7 @@ void libworker_alloc_cleanup(void* arg);
  *   On error, the res may contain a different status 
  *   (out of memory is not secure, not bogus).
  */
-void libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
+void libworker_enter_result(struct ub_result* res, struct sldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security);
 
 #endif /* LIBUNBOUND_LIBWORKER_H */

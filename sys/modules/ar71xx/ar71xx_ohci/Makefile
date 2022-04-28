@@ -26,18 +26,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: release/10.0.0/sys/modules/ar71xx/ar71xx_ohci/Makefile 230151 2012-01-15 19:42:55Z adrian $
+# $FreeBSD$
 #
 
-.PATH:	${.CURDIR}/../../../mips/atheros/
+.PATH:	${SRCTOP}/sys/mips/atheros/
 
 KMOD=	ar71xx_ohci
 SRCS=	ar71xx_ohci.c
 SRCS+=	device_if.h bus_if.h usb_if.h opt_usb.h opt_bus.h
 
-CFLAGS+=  -I. -I${.CURDIR}/../../../mips/atheros
+CFLAGS+=  -I. -I${SRCTOP}/sys/mips/atheros
 
-.PATH:	${.CURDIR}/../../../dev/usb/controller/
+.PATH:	${SRCTOP}/sys/dev/usb/controller/
 SRCS+=	 ohci.c
 
 .include <bsd.kmod.mk>

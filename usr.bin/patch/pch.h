@@ -24,18 +24,20 @@
  * behaviour
  *
  * $OpenBSD: pch.h,v 1.9 2003/10/31 20:20:45 millert Exp $
- * $FreeBSD: release/10.0.0/usr.bin/patch/pch.h 246091 2013-01-29 20:05:16Z delphij $
+ * $FreeBSD$
  */
 
-#define OLD_FILE	0
-#define NEW_FILE	1
-#define INDEX_FILE	2
-#define MAX_FILE	3
+#define	OLD_FILE	0
+#define	NEW_FILE	1
+#define	INDEX_FILE	2
+#define	MAX_FILE	3
 
 struct file_name {
 	char *path;
 	bool exists;
 };
+
+extern char	*source_file;
 
 void		re_patch(void);
 void		open_patch_file(const char *);
@@ -44,7 +46,7 @@ bool		there_is_another_patch(void);
 bool		another_hunk(void);
 bool		pch_swap(void);
 char		*pfetch(LINENUM);
-short		pch_line_len(LINENUM);
+unsigned short	pch_line_len(LINENUM);
 LINENUM		pch_first(void);
 LINENUM		pch_ptrn_lines(void);
 LINENUM		pch_newfirst(void);

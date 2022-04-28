@@ -29,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)sed.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: release/10.0.0/usr.bin/sed/sed.1 233648 2012-03-29 05:02:12Z eadler $
+.\" $FreeBSD$
 .\"
-.Dd May 24, 2009
+.Dd March 27, 2017
 .Dt SED 1
 .Os
 .Sh NAME
@@ -39,7 +39,7 @@
 .Nd stream editor
 .Sh SYNOPSIS
 .Nm
-.Op Fl Ealnr
+.Op Fl Ealnru
 .Ar command
 .Op Ar
 .Nm
@@ -148,6 +148,8 @@ option suppresses this behavior.
 Same as
 .Fl E
 for compatibility with GNU sed.
+.It Fl u
+Make output unbuffered.
 .El
 .Pp
 The form of a
@@ -507,7 +509,7 @@ Append the pattern space to
 if a replacement was made.
 If the replacement string is identical to that which it replaces, it
 is still considered to have been a replacement.
-.It I
+.It i or I
 Match the regular expression in a case-insensitive way.
 .El
 .Pp
@@ -584,6 +586,36 @@ as described in
 .Xr environ 7 .
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Replace
+.Ql bar
+with
+.Ql baz
+when piped from another command:
+.Bd -literal -offset indent
+echo "An alternate word, like bar, is sometimes used in examples." | sed 's/bar/baz/'
+.Ed
+.Pp
+Using backlashes can sometimes be hard to read and follow:
+.Bd -literal -offset indent
+echo "/home/example" | sed  's/\\/home\\/example/\\/usr\\/local\\/example/'
+.Ed
+.Pp
+Using a different separator can be handy when working with paths:
+.Bd -literal -offset indent
+echo "/home/example" | sed 's#/home/example#/usr/local/example#'
+.Ed
+.Pp
+Replace all occurances of
+.Ql foo
+with
+.Ql bar
+in the file
+.Pa test.txt ,
+without creating a backup of the file:
+.Bd -literal -offset indent
+sed -i '' -e 's/foo/bar/g' test.txt
+.Ed
 .Sh SEE ALSO
 .Xr awk 1 ,
 .Xr ed 1 ,
@@ -618,7 +650,7 @@ command, written by
 appeared in
 .At v7 .
 .Sh AUTHORS
-.An "Diomidis D. Spinellis" Aq dds@FreeBSD.org
+.An Diomidis D. Spinellis Aq Mt dds@FreeBSD.org
 .Sh BUGS
 Multibyte characters containing a byte with value 0x5C
 .Tn ( ASCII

@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/tools/ipfcomp.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * Copyright (C) 2012 by Darren Reed.
@@ -965,7 +965,7 @@ void printC(dir)
 	frgroup_t *g;
 
 	if (m == NULL)
-		m = (mc_t *)calloc(1, sizeof(*m) * FRC_MAX);
+		m = (mc_t *)calloc(FRC_MAX, sizeof(*m));
 
 	for (g = groups; g != NULL; g = g->fg_next) {
 		if ((dir == 0) && ((g->fg_flags & FR_INQUE) != 0))

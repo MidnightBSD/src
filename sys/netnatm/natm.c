@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/netnatm/natm.c 255442 2013-09-10 10:05:59Z des $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -78,6 +78,7 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/netnatm/natm.c 255442 2013-09-10 10:05:59
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/if_var.h>
 #include <net/if_atm.h>
 #include <net/netisr.h>
 

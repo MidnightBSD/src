@@ -1,4 +1,4 @@
-/*	$FreeBSD: release/10.0.0/contrib/ipfilter/ipsend/lsock.c 255332 2013-09-06 23:11:19Z cy $	*/
+/*	$FreeBSD$	*/
 
 /*
  * lsock.c (C) 1995-1998 Darren Reed
@@ -163,7 +163,7 @@ struct	sock	*find_tcp(fd, ti)
 		return NULL;
 
 	fs = p->files;
-	o = (struct file **)calloc(1, sizeof(*o) * (fs->count + 1));
+	o = (struct file **)calloc(fs->count + 1, sizeof(*o));
 	if (KMCPY(o, fs->fd, (fs->count + 1) * sizeof(*o)) == -1)
 	    {
 		fprintf(stderr, "read(%#x,%#x,%d) - fd - failed\n",

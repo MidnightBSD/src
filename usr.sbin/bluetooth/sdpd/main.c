@@ -1,5 +1,7 @@
-/*
+/*-
  * main.c
+ *
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -26,10 +28,11 @@
  * SUCH DAMAGE.
  *
  * $Id: main.c,v 1.8 2004/01/13 19:31:54 max Exp $
- * $FreeBSD: release/10.0.0/usr.sbin/bluetooth/sdpd/main.c 124758 2004-01-20 20:48:26Z emax $
+ * $FreeBSD$
  */
 
 #include <sys/select.h>
+#define L2CAP_SOCKET_CHECKED
 #include <bluetooth.h>
 #include <errno.h>
 #include <grp.h>

@@ -1,32 +1,31 @@
 /*	$NetBSD: rpc_generic.c,v 1.4 2000/09/28 09:07:04 kleink Exp $	*/
 
-/*
- * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
- * unrestricted use provided that this legend is included on all tape
- * media and as a part of the software program in whole or part.  Users
- * may copy or modify Sun RPC without charge, but are not authorized
- * to license or distribute it to anyone else except as part of a product or
- * program developed by the user.
+/*-
+ * Copyright (c) 2009, Sun Microsystems, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without 
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of Sun Microsystems, Inc. nor the names of its 
+ *   contributors may be used to endorse or promote products derived 
+ *   from this software without specific prior written permission.
  * 
- * SUN RPC IS PROVIDED AS IS WITH NO WARRANTIES OF ANY KIND INCLUDING THE
- * WARRANTIES OF DESIGN, MERCHANTIBILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE, OR ARISING FROM A COURSE OF DEALING, USAGE OR TRADE PRACTICE.
- * 
- * Sun RPC is provided with no support and without any obligation on the
- * part of Sun Microsystems, Inc. to assist in its use, correction,
- * modification or enhancement.
- * 
- * SUN MICROSYSTEMS, INC. SHALL HAVE NO LIABILITY WITH RESPECT TO THE
- * INFRINGEMENT OF COPYRIGHTS, TRADE SECRETS OR ANY PATENTS BY SUN RPC
- * OR ANY PART THEREOF.
- * 
- * In no event will Sun Microsystems, Inc. be liable for any lost revenue
- * or profits or other special, indirect and consequential damages, even if
- * Sun has been advised of the possibility of such damages.
- * 
- * Sun Microsystems, Inc.
- * 2550 Garcia Avenue
- * Mountain View, California  94043
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 /*
  * Copyright (c) 1986-1991 by Sun Microsystems Inc. 
@@ -34,7 +33,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/rpc_generic.c 241142 2012-10-02 19:03:21Z pfg $");
+__FBSDID("$FreeBSD$");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -43,7 +42,6 @@ __FBSDID("$FreeBSD: release/10.0.0/lib/libc/rpc/rpc_generic.c 241142 2012-10-02 
 
 #include "namespace.h"
 #include "reentrant.h"
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -112,7 +110,7 @@ static int getnettype(const char *);
  * expensive call every time.
  */
 int
-__rpc_dtbsize()
+__rpc_dtbsize(void)
 {
 	static int tbsize;
 	struct rlimit rl;
@@ -133,12 +131,12 @@ __rpc_dtbsize()
 
 /*
  * Find the appropriate buffer size
+ *
+ * size - Size requested
  */
 u_int
 /*ARGSUSED*/
-__rpc_get_t_size(af, proto, size)
-	int af, proto;
-	int size;	/* Size requested */
+__rpc_get_t_size(int af, int proto, int size)
 {
 	int maxsize, defsize;
 
@@ -165,8 +163,7 @@ __rpc_get_t_size(af, proto, size)
  * Find the appropriate address buffer size
  */
 u_int
-__rpc_get_a_size(af)
-	int af;
+__rpc_get_a_size(int af)
 {
 	switch (af) {
 	case AF_INET:
@@ -185,8 +182,7 @@ __rpc_get_a_size(af)
 
 #if 0
 static char *
-strlocase(p)
-	char *p;
+strlocase(char *p)
 {
 	char *t = p;
 
@@ -202,8 +198,7 @@ strlocase(p)
  * If nettype is NULL, it defaults to NETPATH.
  */
 static int
-getnettype(nettype)
-	const char *nettype;
+getnettype(const char *nettype)
 {
 	int i;
 
@@ -238,8 +233,7 @@ keys_init(void)
  * This should be freed by calling freenetconfigent()
  */
 struct netconfig *
-__rpc_getconfip(nettype)
-	const char *nettype;
+__rpc_getconfip(const char *nettype)
 {
 	char *netid;
 	char *netid_tcp = (char *) NULL;
@@ -310,8 +304,7 @@ __rpc_getconfip(nettype)
  * __rpc_getconf().
  */
 void *
-__rpc_setconf(nettype)
-	const char *nettype;
+__rpc_setconf(const char *nettype)
 {
 	struct handle *handle;
 
@@ -354,8 +347,7 @@ failed:
  * __rpc_setconf() should have been called previously.
  */
 struct netconfig *
-__rpc_getconf(vhandle)
-	void *vhandle;
+__rpc_getconf(void *vhandle)
 {
 	struct handle *handle;
 	struct netconfig *nconf;
@@ -431,8 +423,7 @@ __rpc_getconf(vhandle)
 }
 
 void
-__rpc_endconf(vhandle)
-	void * vhandle;
+__rpc_endconf(void *vhandle)
 {
 	struct handle *handle;
 
@@ -453,8 +444,7 @@ __rpc_endconf(vhandle)
  * Returns NULL if fails, else a non-NULL pointer.
  */
 void *
-rpc_nullproc(clnt)
-	CLIENT *clnt;
+rpc_nullproc(CLIENT *clnt)
 {
 	struct timeval TIMEOUT = {25, 0};
 
@@ -470,8 +460,7 @@ rpc_nullproc(clnt)
  * one succeeds in finding the netconf for the given fd.
  */
 struct netconfig *
-__rpcgettp(fd)
-	int fd;
+__rpcgettp(int fd)
 {
 	const char *netid;
 	struct __rpc_sockinfo si;
@@ -620,6 +609,8 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 
 	switch (af) {
 	case AF_INET:
+		if (nbuf->len < sizeof(*sin))
+			return NULL;
 		sin = nbuf->buf;
 		if (inet_ntop(af, &sin->sin_addr, namebuf, sizeof namebuf)
 		    == NULL)
@@ -631,6 +622,8 @@ __rpc_taddr2uaddr_af(int af, const struct netbuf *nbuf)
 		break;
 #ifdef INET6
 	case AF_INET6:
+		if (nbuf->len < sizeof(*sin6))
+			return NULL;
 		sin6 = nbuf->buf;
 		if (inet_ntop(af, &sin6->sin6_addr, namebuf6, sizeof namebuf6)
 		    == NULL)
@@ -669,6 +662,10 @@ __rpc_uaddr2taddr_af(int af, const char *uaddr)
 
 	port = 0;
 	sin = NULL;
+
+	if (uaddr == NULL)
+		return NULL;
+
 	addrstr = strdup(uaddr);
 	if (addrstr == NULL)
 		return NULL;

@@ -35,7 +35,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: release/10.0.0/usr.sbin/makefs/ffs/ufs_inode.h 186334 2008-12-19 18:45:43Z sam $
+ * $FreeBSD$
  */
 
 union dinode {

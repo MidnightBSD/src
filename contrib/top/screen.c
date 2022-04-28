@@ -8,7 +8,7 @@
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
  *
- * $FreeBSD: release/10.0.0/contrib/top/screen.c 210386 2010-07-22 18:52:29Z rpaulo $
+ * $FreeBSD$
  */
 
 /*  This file contains the routines that interface to termcap and stty/gtty.
@@ -45,12 +45,13 @@
 #  endif
 # endif
 #endif
+#include <curses.h>
+#include <termcap.h>
 #include "screen.h"
 #include "boolean.h"
 
 extern char *myname;
 
-int putstdout();
 
 int  overstrike;
 int  screen_length;
@@ -236,6 +237,7 @@ int interactive;
 #endif
 }
 
+void
 init_screen()
 
 {
@@ -326,6 +328,7 @@ init_screen()
     }
 }
 
+void
 end_screen()
 
 {
@@ -356,6 +359,7 @@ end_screen()
     }
 }
 
+void
 reinit_screen()
 
 {
@@ -383,6 +387,7 @@ reinit_screen()
     }
 }
 
+void
 get_screensize()
 
 {
@@ -428,10 +433,8 @@ get_screensize()
     lower_left[sizeof(lower_left) - 1] = '\0';
 }
 
-standout(msg)
-
-char *msg;
-
+void
+top_standout(char *msg)
 {
     if (smart_terminal)
     {
@@ -445,8 +448,8 @@ char *msg;
     }
 }
 
-clear()
-
+void
+top_clear()
 {
     if (smart_terminal)
     {
@@ -454,10 +457,8 @@ clear()
     }
 }
 
-clear_eol(len)
-
-int len;
-
+int
+clear_eol(int len)
 {
     if (smart_terminal && !overstrike && len > 0)
     {
@@ -478,6 +479,7 @@ int len;
     return(-1);
 }
 
+void
 go_home()
 
 {
@@ -489,11 +491,8 @@ go_home()
 
 /* This has to be defined as a subroutine for tputs (instead of a macro) */
 
-putstdout(ch)
-
-char ch;
-
+int
+putstdout(int ch)
 {
-    putchar(ch);
+    return putchar(ch);
 }
-

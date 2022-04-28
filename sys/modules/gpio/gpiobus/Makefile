@@ -26,15 +26,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: release/10.0.0/sys/modules/gpio/gpiobus/Makefile 230150 2012-01-15 19:40:59Z adrian $
+# $FreeBSD$
 #
 
-.PATH:	${.CURDIR}/../../../dev/gpio/
+.PATH:	${SRCTOP}/sys/dev/gpio/
 
 KMOD=	gpiobus
-SRCS=	gpiobus.c
-SRCS+=	device_if.h bus_if.h gpio_if.h gpiobus_if.h
+SRCS=	gpiobus.c gpioc.c
+SRCS+=	gpio_if.c gpio_if.h gpiobus_if.c gpiobus_if.h ofw_bus_if.h
+SRCS+=	device_if.h bus_if.h opt_platform.h
 
-CFLAGS+=  -I. -I${.CURDIR}/../../../dev/gpio/
+CFLAGS+=  -I. -I${SRCTOP}/sys/dev/gpio/
 
 .include <bsd.kmod.mk>

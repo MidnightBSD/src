@@ -40,10 +40,12 @@ static char sccsid[] = "@(#)printenv.c	8.2 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/printenv/printenv.c 216370 2010-12-11 08:32:16Z joel $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 
+#include <capsicum_helpers.h>
+#include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -65,6 +67,9 @@ main(int argc, char *argv[])
 	size_t len;
 	int ch;
 
+	if (caph_limit_stdio() < 0 || (cap_enter() < 0 && errno != ENOSYS))
+		err(1, "capsicum");
+
 	while ((ch = getopt(argc, argv, "")) != -1)
 		switch(ch) {
 		case '?':
@@ -83,8 +88,8 @@ main(int argc, char *argv[])
 	for (ep = environ; *ep; ep++)
 		if (!memcmp(*ep, *argv, len)) {
 			cp = *ep + len;
-			if (!*cp || *cp == '=') {
-				(void)printf("%s\n", *cp ? cp + 1 : cp);
+			if (*cp == '=') {
+				(void)printf("%s\n", cp + 1);
 				exit(0);
 			}
 		}

@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)cksum.c	8.2 (Berkeley) 4/28/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/usr.bin/cksum/cksum.c 229403 2012-01-03 18:51:58Z ed $");
+__FBSDID("$FreeBSD$");
 
 #include <sys/types.h>
 

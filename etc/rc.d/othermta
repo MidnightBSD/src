@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: release/10.0.0/etc/rc.d/othermta 180563 2008-07-16 19:22:48Z dougb $
+# $FreeBSD$
 #
 
 # PROVIDE: mail
@@ -10,7 +10,7 @@
 #
 . /etc/rc.subr
 
-load_rc_config 'XXX'
+load_rc_config
 
 if [ -n "${mta_start_script}" ]; then
 	[ "${mta_start_script}" != "/etc/rc.sendmail" ] && \

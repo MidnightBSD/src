@@ -25,9 +25,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: release/10.0.0/share/man/man5/style.Makefile.5 233515 2012-03-26 16:40:45Z joel $
+.\" $FreeBSD$
 .\"
-.Dd January 8, 2005
+.Dd October 21, 2015
 .Dt STYLE.MAKEFILE 5
 .Os
 .Sh NAME
@@ -116,6 +116,13 @@ All variable assignments are spelled
 i.e., no space between the variable name and the
 .Ic = .
 Keep values sorted alphabetically, if possible.
+.It
+Variables are expanded with
+.Sy {} ,
+not
+.Sy () .
+Such as
+.Va ${VARIABLE} .
 .It
 Do not use
 .Ic +=

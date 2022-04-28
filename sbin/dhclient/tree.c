@@ -41,11 +41,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sbin/dhclient/tree.c 149399 2005-08-23 23:59:55Z brooks $");
+__FBSDID("$FreeBSD$");
 
 #include "dhcpd.h"
-
-extern int h_errno;
 
 pair
 cons(caddr_t car, pair cdr)

@@ -1,9 +1,8 @@
-# $FreeBSD: release/10.0.0/usr.bin/mkesdb/Makefile 250938 2013-05-23 18:07:01Z ed $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../lib/libc/iconv
+.PATH: ${SRCTOP}/lib/libc/iconv
 
 PROG=	mkesdb
-LDFLAGS+= -L${.OBJDIR}/../../lib/libc
 
 NO_WMISSING_VARIABLE_DECLARATIONS=
 

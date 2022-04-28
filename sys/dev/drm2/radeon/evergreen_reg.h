@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/evergreen_reg.h 254885 2013-08-25 19:37:15Z dumbbell $");
+__FBSDID("$FreeBSD$");
 
 #ifndef __EVERGREEN_REG_H__
 #define __EVERGREEN_REG_H__
@@ -229,6 +229,8 @@ __FBSDID("$FreeBSD: release/10.0.0/sys/dev/drm2/radeon/evergreen_reg.h 254885 20
 #define EVERGREEN_CRTC_STATUS_POSITION                  0x6e90
 #define EVERGREEN_MASTER_UPDATE_MODE                    0x6ef8
 #define EVERGREEN_CRTC_UPDATE_LOCK                      0x6ed4
+#define EVERGREEN_MASTER_UPDATE_LOCK                    0x6ef4
+#define EVERGREEN_MASTER_UPDATE_MODE                    0x6ef8
 
 #define EVERGREEN_DC_GPIO_HPD_MASK                      0x64b0
 #define EVERGREEN_DC_GPIO_HPD_A                         0x64b4

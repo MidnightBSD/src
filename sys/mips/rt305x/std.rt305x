@@ -1,7 +1,7 @@
-# $FreeBSD: release/10.0.0/sys/mips/rt305x/std.rt305x 232896 2012-03-12 21:25:32Z jmallett $
+# $FreeBSD$
 # Standard include file for RT305XF SoC
 
 files	"../rt305x/files.rt305x"
 
-cpu		CPU_MIPS4KC
+cpu		CPU_MIPS24K
 

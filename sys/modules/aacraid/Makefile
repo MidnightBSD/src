@@ -1,6 +1,6 @@
-# $FreeBSD: release/10.0.0/sys/modules/aacraid/Makefile 250963 2013-05-24 09:22:43Z achim $
+# $FreeBSD$
 
-.PATH: ${.CURDIR}/../../dev/aacraid
+.PATH: ${SRCTOP}/sys/dev/aacraid
 
 .if ${MACHINE_CPUARCH} == "i386"
 SUBDIR= aacraid_linux
@@ -8,7 +8,7 @@ SUBDIR= aacraid_linux
 
 KMOD=	aacraid
 SRCS=	aacraid.c aacraid_pci.c aacraid_cam.c
-SRCS+=	opt_scsi.h opt_cam.h opt_aacraid.h
+SRCS+=	opt_scsi.h opt_cam.h opt_compat.h opt_aacraid.h
 SRCS+=	device_if.h bus_if.h pci_if.h
 
 # To enable debug output from the driver, uncomment these two lines.

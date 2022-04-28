@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)atexit.h	8.2 (Berkeley) 7/3/94
- * $FreeBSD: release/10.0.0/lib/libc/stdlib/atexit.h 251069 2013-05-28 20:57:40Z emaste $
+ * $FreeBSD$
  */
 
 /* must be at least 32 to guarantee ANSI conformance */

@@ -1,7 +1,7 @@
-#	$FreeBSD: release/10.0.0/tools/tools/ath/Makefile.inc 252207 2013-06-25 17:50:48Z adrian $
+#	$FreeBSD$
 
 BINDIR=	/usr/local/bin
-NO_MAN=
+MAN=
 
 ATH_DEFAULT=	ath0
 

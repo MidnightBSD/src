@@ -1,4 +1,4 @@
-/* $FreeBSD: release/10.0.0/sys/dev/usb/template/usb_template.c 250207 2013-05-03 11:10:04Z hselasky $ */
+/* $FreeBSD$ */
 /*-
  * Copyright (c) 2007 Hans Petter Selasky. All rights reserved.
  *
@@ -63,6 +63,7 @@
 #include <dev/usb/usb_busdma.h>
 #include <dev/usb/usb_process.h>
 #include <dev/usb/usb_device.h>
+#include <dev/usb/usb_util.h>
 
 #define	USB_DEBUG_VAR usb_debug
 #include <dev/usb/usb_debug.h>
@@ -72,6 +73,9 @@
 #include <dev/usb/usb_request.h>
 #include <dev/usb/template/usb_template.h>
 #endif			/* USB_GLOBAL_INCLUDE_FILE */
+
+SYSCTL_NODE(_hw_usb, OID_AUTO, templates, CTLFLAG_RW, 0,
+    "USB device side templates");
 
 MODULE_DEPEND(usb_template, usb, 1, 1, 1);
 MODULE_VERSION(usb_template, 1);
@@ -112,6 +116,50 @@ static usb_error_t usb_temp_setup_by_index(struct usb_device *,
 static void	usb_temp_init(void *);
 
 /*------------------------------------------------------------------------*
+ *	usb_decode_str_desc
+ *
+ * Helper function to decode string descriptors into a C string.
+ *------------------------------------------------------------------------*/
+void
+usb_decode_str_desc(struct usb_string_descriptor *sd, char *buf, size_t buflen)
+{
+	size_t i;
+
+	for (i = 0; i < buflen - 1 && i < sd->bLength / 2; i++)
+		buf[i] = UGETW(sd->bString[i]);
+
+	buf[i] = '\0';
+}
+
+/*------------------------------------------------------------------------*
+ *	usb_temp_sysctl
+ *
+ * Callback for SYSCTL_PROC(9), to set and retrieve template string
+ * descriptors.
+ *------------------------------------------------------------------------*/
+int
+usb_temp_sysctl(SYSCTL_HANDLER_ARGS)
+{
+	char buf[128];
+	struct usb_string_descriptor *sd = arg1;
+	size_t len, sdlen = arg2;
+	int error;
+
+	usb_decode_str_desc(sd, buf, sizeof(buf));
+
+	error = sysctl_handle_string(oidp, buf, sizeof(buf), req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+
+	len = usb_make_str_desc(sd, sdlen, buf);
+	if (len == 0)
+		return (EINVAL);
+
+	return (0);
+}
+
+
+/*------------------------------------------------------------------------*
  *	usb_make_raw_desc
  *
  * This function will insert a raw USB descriptor into the generated
@@ -135,7 +183,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got a CDC union descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_cdc_union_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_cdc_union_descriptor)) &&
 			    (raw[1] == UDESC_CS_INTERFACE) &&
 			    (raw[2] == UDESCSUB_CDC_UNION)) {
 				struct usb_cdc_union_descriptor *ud = (void *)dst;
@@ -150,7 +198,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got an interface association descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_interface_assoc_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_interface_assoc_descriptor)) &&
 			    (raw[1] == UDESC_IFACE_ASSOC)) {
 				struct usb_interface_assoc_descriptor *iad = (void *)dst;
 
@@ -162,7 +210,7 @@ usb_make_raw_desc(struct usb_temp_setup *temp,
 
 			/* check if we have got a call management descriptor */
 
-			if ((raw[0] >= sizeof(struct usb_cdc_cm_descriptor)) &&
+			if ((raw[0] == sizeof(struct usb_cdc_cm_descriptor)) &&
 			    (raw[1] == UDESC_CS_INTERFACE) &&
 			    (raw[2] == UDESCSUB_CDC_CM)) {
 				struct usb_cdc_cm_descriptor *ccd = (void *)dst;
@@ -522,8 +570,8 @@ usb_make_device_desc(struct usb_temp_setup *temp,
  *	usb_hw_ep_match
  *
  * Return values:
- *    0: The endpoint profile does not match the criterias
- * Else: The endpoint profile matches the criterias
+ *    0: The endpoint profile does not match the criteria
+ * Else: The endpoint profile matches the criteria
  *------------------------------------------------------------------------*/
 static uint8_t
 usb_hw_ep_match(const struct usb_hw_ep_profile *pf,
@@ -846,7 +894,7 @@ usb_hw_ep_resolve(struct usb_device *udev,
 	struct usb_hw_ep_scratch *ues;
 	struct usb_hw_ep_scratch_sub *ep;
 	const struct usb_hw_ep_profile *pf;
-	struct usb_bus_methods *methods;
+	const struct usb_bus_methods *methods;
 	struct usb_device_descriptor *dd;
 	uint16_t mps;
 
@@ -1245,7 +1293,7 @@ usb_temp_setup(struct usb_device *udev,
 		return (0);
 
 	/* Protect scratch area */
-	do_unlock = usbd_enum_lock(udev);
+	do_unlock = usbd_ctrl_lock(udev);
 
 	uts = udev->scratch.temp_setup;
 
@@ -1324,7 +1372,7 @@ done:
 	if (error)
 		usb_temp_unsetup(udev);
 	if (do_unlock)
-		usbd_enum_unlock(udev);
+		usbd_ctrl_unlock(udev);
 	return (error);
 }
 
@@ -1367,6 +1415,15 @@ usb_temp_setup_by_index(struct usb_device *udev, uint16_t index)
 		break;
 	case USB_TEMP_MOUSE:
 		err = usb_temp_setup(udev, &usb_template_mouse);
+		break;
+	case USB_TEMP_PHONE:
+		err = usb_temp_setup(udev, &usb_template_phone);
+		break;
+	case USB_TEMP_SERIALNET:
+		err = usb_temp_setup(udev, &usb_template_serialnet);
+		break;
+	case USB_TEMP_MIDI:
+		err = usb_temp_setup(udev, &usb_template_midi);
 		break;
 	default:
 		return (USB_ERR_INVAL);
