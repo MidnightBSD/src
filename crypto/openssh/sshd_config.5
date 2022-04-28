@@ -34,7 +34,8 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $OpenBSD: sshd_config.5,v 1.282 2018/09/20 03:28:06 djm Exp $
-.Dd $Mdocdate: September 20 2018 $
+.\" $FreeBSD$
+.Dd $Mdocdate: July 28 2020 $
 .Dt SSHD_CONFIG 5
 .Os
 .Sh NAME
@@ -494,7 +495,8 @@ The default is:
 .Bd -literal -offset indent
 chacha20-poly1305@openssh.com,
 aes128-ctr,aes192-ctr,aes256-ctr,
-aes128-gcm@openssh.com,aes256-gcm@openssh.com
+aes128-gcm@openssh.com,aes256-gcm@openssh.com,
+aes128-cbc,aes192-cbc,aes256-cbc
 .Ed
 .Pp
 The list of available ciphers may also be obtained using
@@ -780,7 +782,7 @@ files will not be used in
 .Pp
 .Pa /etc/hosts.equiv
 and
-.Pa /etc/shosts.equiv
+.Pa /etc/ssh/shosts.equiv
 are still used.
 The default is
 .Cm yes .
@@ -1193,8 +1195,10 @@ The probability increases linearly and all connection attempts
 are refused if the number of unauthenticated connections reaches full (60).
 .It Cm PasswordAuthentication
 Specifies whether password authentication is allowed.
+See also
+.Cm UsePAM .
 The default is
-.Cm yes .
+.Cm no .
 .It Cm PermitEmptyPasswords
 When password authentication is allowed, it specifies whether the
 server allows login to accounts with empty password strings.
@@ -1285,7 +1289,14 @@ The argument must be
 or
 .Cm no .
 The default is
-.Cm prohibit-password .
+.Cm no .
+Note that if
+.Cm ChallengeResponseAuthentication
+and
+.Cm UsePAM
+are both
+.Cm yes ,
+this setting may be overridden by the PAM policy.
 .Pp
 If this option is set to
 .Cm prohibit-password
@@ -1583,6 +1594,20 @@ for authentication using
 .Cm TrustedUserCAKeys .
 For more details on certificates, see the CERTIFICATES section in
 .Xr ssh-keygen 1 .
+.It Cm UseBlacklist
+Specifies whether
+.Xr sshd 8
+attempts to send authentication success and failure messages
+to the
+.Xr blacklistd 8
+daemon.
+The default is
+.Cm no .
+For forward compatibility with an upcoming
+.Xr blacklistd
+rename, the
+.Cm UseBlocklist
+alias can be used instead.
 .It Cm UseDNS
 Specifies whether
 .Xr sshd 8
@@ -1591,8 +1616,8 @@ the resolved host name for the remote IP address maps back to the
 very same IP address.
 .Pp
 If this option is set to
-.Cm no
-(the default) then only addresses and not host names may be used in
+.Cm no ,
+then only addresses and not host names may be used in
 .Pa ~/.ssh/authorized_keys
 .Cm from
 and
@@ -1600,6 +1625,8 @@ and
 .Cm Match
 .Cm Host
 directives.
+The default is
+.Dq yes .
 .It Cm UsePAM
 Enables the Pluggable Authentication Module interface.
 If set to
@@ -1623,12 +1650,15 @@ is enabled, you will not be able to run
 .Xr sshd 8
 as a non-root user.
 The default is
-.Cm no .
+.Cm yes .
 .It Cm VersionAddendum
 Optionally specifies additional text to append to the SSH protocol banner
 sent by the server upon connection.
 The default is
-.Cm none .
+.Qq FreeBSD-20180909 .
+The value
+.Cm none
+may be used to disable this.
 .It Cm X11DisplayOffset
 Specifies the first display number available for
 .Xr sshd 8 Ns 's
@@ -1642,7 +1672,7 @@ The argument must be
 or
 .Cm no .
 The default is
-.Cm no .
+.Cm yes .
 .Pp
 When X11 forwarding is enabled, there may be additional exposure to
 the server and to client displays if the
@@ -1698,7 +1728,7 @@ program, or
 .Cm none
 to not use one.
 The default is
-.Pa /usr/X11R6/bin/xauth .
+.Pa /usr/local/bin/xauth .
 .El
 .Sh TIME FORMATS
 .Xr sshd 8
