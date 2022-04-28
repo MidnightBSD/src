@@ -14,6 +14,7 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -608,8 +609,10 @@ static void
 send_client_banner(int connection_out, int minor1)
 {
 	/* Send our own protocol version identification. */
-	xasprintf(&client_version_string, "SSH-%d.%d-%.100s\r\n",
-	    PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION);
+	xasprintf(&client_version_string, "SSH-%d.%d-%.100s%s%s\n",
+	    PROTOCOL_MAJOR_2, PROTOCOL_MINOR_2, SSH_VERSION,
+	    *options.version_addendum == '\0' ? "" : " ",
+	    options.version_addendum);
 	if (atomicio(vwrite, connection_out, client_version_string,
 	    strlen(client_version_string)) != strlen(client_version_string))
 		fatal("write: %.100s", strerror(errno));

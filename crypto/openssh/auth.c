@@ -75,6 +75,7 @@
 #include "ssherr.h"
 #include "compat.h"
 #include "channels.h"
+#include "blacklist_client.h"
 
 /* import */
 extern ServerOptions options;
@@ -330,8 +331,11 @@ auth_log(Authctxt *authctxt, int authenticated, int partial,
 		authmsg = "Postponed";
 	else if (partial)
 		authmsg = "Partial";
-	else
+	else {
 		authmsg = authenticated ? "Accepted" : "Failed";
+		if (authenticated)
+			BLACKLIST_NOTIFY(BLACKLIST_AUTH_OK, "ssh");
+	}
 
 	if ((extra = format_method_key(authctxt)) == NULL) {
 		if (authctxt->auth_method_info != NULL)
@@ -598,6 +602,7 @@ getpwnamallow(const char *user)
 	}
 #endif
 	if (pw == NULL) {
+		BLACKLIST_NOTIFY(BLACKLIST_BAD_USER, user);
 		logit("Invalid user %.100s from %.100s port %d",
 		    user, ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 #ifdef CUSTOM_FAILED_LOGIN
@@ -612,7 +617,7 @@ getpwnamallow(const char *user)
 	if (!allowed_user(pw))
 		return (NULL);
 #ifdef HAVE_LOGIN_CAP
-	if ((lc = login_getclass(pw->pw_class)) == NULL) {
+	if ((lc = login_getpwclass(pw)) == NULL) {
 		debug("unable to get login class: %s", user);
 		return (NULL);
 	}

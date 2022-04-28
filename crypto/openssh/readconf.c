@@ -15,6 +15,9 @@
 #include "includes.h"
 
 #include <sys/types.h>
+#ifdef VMWARE_GUEST_WORKAROUND
+#include <sys/sysctl.h>
+#endif
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -67,6 +70,7 @@
 #include "uidswap.h"
 #include "myproposal.h"
 #include "digest.h"
+#include "version.h"
 
 /* Format of the configuration file:
 
@@ -142,6 +146,7 @@ static int process_config_line_depth(Options *options, struct passwd *pw,
 
 typedef enum {
 	oBadOption,
+	oVersionAddendum,
 	oHost, oMatch, oInclude,
 	oForwardAgent, oForwardX11, oForwardX11Trusted, oForwardX11Timeout,
 	oGatewayPorts, oExitOnForwardFailure,
@@ -309,6 +314,14 @@ static struct {
 	{ "pubkeyacceptedkeytypes", oPubkeyAcceptedKeyTypes },
 	{ "ignoreunknown", oIgnoreUnknown },
 	{ "proxyjump", oProxyJump },
+
+	{ "hpndisabled", oDeprecated },
+	{ "hpnbuffersize", oDeprecated },
+	{ "tcprcvbufpoll", oDeprecated },
+	{ "tcprcvbuf", oDeprecated },
+	{ "noneenabled", oUnsupported },
+	{ "noneswitch", oUnsupported },
+	{ "versionaddendum", oVersionAddendum },
 
 	{ NULL, oBadOption }
 };
@@ -1590,6 +1603,22 @@ parse_keytypes:
 		multistate_ptr = multistate_requesttty;
 		goto parse_multistate;
 
+	case oVersionAddendum:
+		if (s == NULL)
+			fatal("%.200s line %d: Missing argument.", filename,
+			    linenum);
+		len = strspn(s, WHITESPACE);
+		if (*activep && options->version_addendum == NULL) {
+			if (strcasecmp(s + len, "none") == 0)
+				options->version_addendum = xstrdup("");
+			else if (strchr(s + len, '\r') != NULL)
+				fatal("%.200s line %d: Invalid argument",
+				    filename, linenum);
+			else
+				options->version_addendum = xstrdup(s + len);
+		}
+		return 0;
+
 	case oIgnoreUnknown:
 		charptr = &options->ignored_unknown;
 		goto parse_string;
@@ -1827,6 +1856,7 @@ void
 initialize_options(Options * options)
 {
 	memset(options, 'X', sizeof(*options));
+	options->version_addendum = NULL;
 	options->forward_agent = -1;
 	options->forward_x11 = -1;
 	options->forward_x11_trusted = -1;
@@ -1952,6 +1982,15 @@ fill_default_options(Options * options)
 {
 	char *all_cipher, *all_mac, *all_kex, *all_key, *all_sig;
 	int r;
+#ifdef VMWARE_GUEST_WORKAROUND
+	char scval[7];	/* "vmware\0" */
+	size_t scsiz = sizeof(scval);
+	int vmwguest = 0;
+
+	if (sysctlbyname("kern.vm_guest", scval, &scsiz, NULL, 0) == 0 &&
+	    strcmp(scval, "vmware") == 0)
+		vmwguest = 1;
+#endif
 
 	if (options->forward_agent == -1)
 		options->forward_agent = 0;
@@ -1999,7 +2038,7 @@ fill_default_options(Options * options)
 	if (options->batch_mode == -1)
 		options->batch_mode = 0;
 	if (options->check_host_ip == -1)
-		options->check_host_ip = 1;
+		options->check_host_ip = 0;
 	if (options->strict_host_key_checking == -1)
 		options->strict_host_key_checking = SSH_STRICT_HOSTKEY_ASK;
 	if (options->compression == -1)
@@ -2055,8 +2094,14 @@ fill_default_options(Options * options)
 		options->rekey_limit = 0;
 	if (options->rekey_interval == -1)
 		options->rekey_interval = 0;
+#if HAVE_LDNS
+	if (options->verify_host_key_dns == -1)
+		/* automatically trust a verified SSHFP record */
+		options->verify_host_key_dns = 1;
+#else
 	if (options->verify_host_key_dns == -1)
 		options->verify_host_key_dns = 0;
+#endif
 	if (options->server_alive_interval == -1)
 		options->server_alive_interval = 0;
 	if (options->server_alive_count_max == -1)
@@ -2080,8 +2125,18 @@ fill_default_options(Options * options)
 	if (options->visual_host_key == -1)
 		options->visual_host_key = 0;
 	if (options->ip_qos_interactive == -1)
+#ifdef VMWARE_GUEST_WORKAROUND
+		if (vmwguest)
+			options->ip_qos_interactive = IPTOS_LOWDELAY;
+		else
+#endif
 		options->ip_qos_interactive = IPTOS_DSCP_AF21;
 	if (options->ip_qos_bulk == -1)
+#ifdef VMWARE_GUEST_WORKAROUND
+		if (vmwguest)
+			options->ip_qos_bulk = IPTOS_THROUGHPUT;
+		else
+#endif
 		options->ip_qos_bulk = IPTOS_DSCP_CS1;
 	if (options->request_tty == -1)
 		options->request_tty = REQUEST_TTY_AUTO;
@@ -2146,6 +2201,8 @@ fill_default_options(Options * options)
 	/* options->hostname will be set in the main program if appropriate */
 	/* options->host_key_alias should not be set by default */
 	/* options->preferred_authentications will be set in ssh */
+	if (options->version_addendum == NULL)
+		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 }
 
 struct fwdarg {

@@ -1,4 +1,5 @@
 .\" $OpenBSD: ssh-agent.1,v 1.64 2016/11/30 06:54:26 jmc Exp $
+.\" $FreeBSD$
 .\"
 .\" Author: Tatu Ylonen <ylo@cs.hut.fi>
 .\" Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -43,7 +44,7 @@
 .Sh SYNOPSIS
 .Nm ssh-agent
 .Op Fl c | s
-.Op Fl \&Dd
+.Op Fl \&Ddx
 .Op Fl a Ar bind_address
 .Op Fl E Ar fingerprint_hash
 .Op Fl P Ar pkcs11_whitelist
@@ -148,6 +149,8 @@ A lifetime specified for an identity with
 .Xr ssh-add 1
 overrides this value.
 Without this option the default maximum lifetime is forever.
+.It Fl x
+Exit after the last client has disconnected.
 .El
 .Pp
 If a command line is given, this is executed as a subprocess of the agent.

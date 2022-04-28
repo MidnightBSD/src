@@ -25,7 +25,7 @@
 #   GSSAPIAuthentication no
 #   GSSAPIDelegateCredentials no
 #   BatchMode no
-#   CheckHostIP yes
+#   CheckHostIP no
 #   AddressFamily any
 #   ConnectTimeout 0
 #   StrictHostKeyChecking ask
@@ -44,3 +44,5 @@
 #   VisualHostKey no
 #   ProxyCommand ssh -q -W %h:%p gateway.example.com
 #   RekeyLimit 1G 1h
+#   VerifyHostKeyDNS yes
+#   VersionAddendum MidnightBSD-20211221

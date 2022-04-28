@@ -41,6 +41,7 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_STAT_H
@@ -813,14 +814,14 @@ main(int ac, char **av)
 			}
 			break;
 		case 'V':
-			fprintf(stderr, "%s, %s\n",
-			    SSH_RELEASE,
-#ifdef WITH_OPENSSL
-			    SSLeay_version(SSLEAY_VERSION)
-#else
-			    "without OpenSSL"
-#endif
-			);
+			if (options.version_addendum &&
+			    *options.version_addendum != '\0')
+				fprintf(stderr, "%s %s, %s\n", SSH_RELEASE,
+				    options.version_addendum,
+				    OPENSSL_VERSION_STRING);
+			else
+				fprintf(stderr, "%s, %s\n", SSH_RELEASE,
+				    OPENSSL_VERSION_STRING);
 			if (opt == 'V')
 				exit(0);
 			break;
@@ -1083,13 +1084,8 @@ main(int ac, char **av)
 	    !use_syslog);
 
 	if (debug_flag)
-		logit("%s, %s", SSH_RELEASE,
-#ifdef WITH_OPENSSL
-		    SSLeay_version(SSLEAY_VERSION)
-#else
-		    "without OpenSSL"
-#endif
-		);
+		/* version_addendum is always NULL at this point */
+		logit("%s, %s", SSH_RELEASE, OPENSSL_VERSION_STRING);
 
 	/* Parse the configuration files */
 	process_config_files(host_arg, pw, 0);
@@ -1277,6 +1273,23 @@ main(int ac, char **av)
 	snprintf(portstr, sizeof(portstr), "%d", options.port);
 	snprintf(uidstr, sizeof(uidstr), "%llu",
 	    (unsigned long long)pw->pw_uid);
+
+	/* Find canonic host name. */
+	if (strchr(host, '.') == 0) {
+		struct addrinfo hints;
+		struct addrinfo *ai = NULL;
+		int errgai;
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = options.address_family;
+		hints.ai_flags = AI_CANONNAME;
+		hints.ai_socktype = SOCK_STREAM;
+		errgai = getaddrinfo(host, NULL, &hints, &ai);
+		if (errgai == 0) {
+			if (ai->ai_canonname != NULL)
+				host = xstrdup(ai->ai_canonname);
+			freeaddrinfo(ai);
+		}
+	}
 
 	if ((md = ssh_digest_start(SSH_DIGEST_SHA1)) == NULL ||
 	    ssh_digest_update(md, thishost, strlen(thishost)) < 0 ||
