@@ -257,6 +257,8 @@ servconf_add_hostkey(const char *file, const int line,
 {
 	char *apath = derelativise_path(path);
 
+	if (file == defaultkey && access(path, R_OK) != 0)
+		return;
 	opt_array_append2(file, line, "HostKey",
 	    &options->host_key_files, &options->host_key_file_userprovided,
 	    &options->num_host_key_files, apath, userprovided);
@@ -286,16 +288,16 @@ fill_default_server_options(ServerOptions *options)
 	/* Standard Options */
 	if (options->num_host_key_files == 0) {
 		/* fill default hostkeys for protocols */
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_RSA_KEY_FILE, 0);
 #ifdef OPENSSL_HAS_ECC
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_ECDSA_KEY_FILE, 0);
 #endif
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_ED25519_KEY_FILE, 0);
 #ifdef WITH_XMSS
-		servconf_add_hostkey("[default]", 0, options,
+		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_XMSS_KEY_FILE, 0);
 #endif /* WITH_XMSS */
 	}
@@ -418,11 +420,11 @@ fill_default_server_options(ServerOptions *options)
 	if (options->client_alive_count_max == -1)
 		options->client_alive_count_max = 3;
 	if (options->num_authkeys_files == 0) {
-		opt_array_append("[default]", 0, "AuthorizedKeysFiles",
+		opt_array_append(defaultkey, 0, "AuthorizedKeysFiles",
 		    &options->authorized_keys_files,
 		    &options->num_authkeys_files,
 		    _PATH_SSH_USER_PERMITTED_KEYS);
-		opt_array_append("[default]", 0, "AuthorizedKeysFiles",
+		opt_array_append(defaultkey, 0, "AuthorizedKeysFiles",
 		    &options->authorized_keys_files,
 		    &options->num_authkeys_files,
 		    _PATH_SSH_USER_PERMITTED_KEYS2);
@@ -447,6 +449,8 @@ fill_default_server_options(ServerOptions *options)
 		options->expose_userauth_info = 0;
 	if (options->sk_provider == NULL)
 		options->sk_provider = xstrdup("internal");
+	if (options->use_blacklist == -1)
+		options->use_blacklist = 0;
 
 	assemble_algorithms(options);
 
@@ -523,6 +527,7 @@ typedef enum {
 	sStreamLocalBindMask, sStreamLocalBindUnlink,
 	sAllowStreamLocalForwarding, sFingerprintHash, sDisableForwarding,
 	sExposeAuthInfo, sRDomain, sPubkeyAuthOptions, sSecurityKeyProvider,
+	sUseBlacklist,
 	sDeprecated, sIgnore, sUnsupported
 } ServerOpCodes;
 
@@ -682,6 +687,12 @@ static struct {
 	{ "rdomain", sRDomain, SSHCFG_ALL },
 	{ "casignaturealgorithms", sCASignatureAlgorithms, SSHCFG_ALL },
 	{ "securitykeyprovider", sSecurityKeyProvider, SSHCFG_GLOBAL },
+	{ "useblacklist", sUseBlacklist, SSHCFG_GLOBAL },
+	{ "useblocklist", sUseBlacklist, SSHCFG_GLOBAL }, /* alias */
+	{ "noneenabled", sUnsupported, SSHCFG_ALL },
+	{ "hpndisabled", sDeprecated, SSHCFG_ALL },
+	{ "hpnbuffersize", sDeprecated, SSHCFG_ALL },
+	{ "tcprcvbufpoll", sDeprecated, SSHCFG_ALL },
 	{ NULL, sBadOption, 0 }
 };
 

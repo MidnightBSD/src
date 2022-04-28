@@ -1,4 +1,5 @@
 #	$OpenBSD: sshd_config,v 1.104 2021/07/02 05:11:21 dtucker Exp $
+#	$FreeBSD$
 
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
@@ -60,7 +61,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #PasswordAuthentication no
 #PermitEmptyPasswords no
 
-# Change to no to disable s/key passwords
+# Change to no to disable PAM authentication
 #KbdInteractiveAuthentication yes
 
 # Kerberos options
@@ -82,7 +83,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 # If you just want the PAM account and session checks to run without
 # PAM authentication, then enable this but set PasswordAuthentication
 # and KbdInteractiveAuthentication to 'no'.
-#UsePAM no
+#UsePAM yes
 
 #AllowAgentForwarding yes
 #AllowTcpForwarding yes

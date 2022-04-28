@@ -13,6 +13,7 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD$");
 
 #include <sys/types.h>
 #ifdef VMWARE_GUEST_WORKAROUND
@@ -1977,6 +1978,22 @@ parse_pubkey_algos:
 		intptr = &options->fork_after_authentication;
 		goto parse_flag;
 
+	case oVersionAddendum:
+		if (str == NULL)
+			fatal("%.200s line %d: Missing argument.", filename,
+			    linenum);
+		len = strspn(str, WHITESPACE);
+		if (*activep && options->version_addendum == NULL) {
+			if (strcasecmp(str + len, "none") == 0)
+				options->version_addendum = xstrdup("");
+			else if (strchr(str + len, '\r') != NULL)
+				fatal("%.200s line %d: Invalid argument",
+				    filename, linenum);
+			else
+				options->version_addendum = xstrdup(str + len);
+		}
+		return 0;
+
 	case oIgnoreUnknown:
 		charptr = &options->ignored_unknown;
 		goto parse_string;
@@ -2719,6 +2736,8 @@ fill_default_options(Options * options)
 	/* options->hostname will be set in the main program if appropriate */
 	/* options->host_key_alias should not be set by default */
 	/* options->preferred_authentications will be set in ssh */
+	if (options->version_addendum == NULL)
+		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 
 	/* success */
 	ret = 0;

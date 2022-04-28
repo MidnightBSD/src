@@ -87,7 +87,7 @@ __RCSID("$FreeBSD$");
 #include <prot.h>
 #endif
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <resolv.h>
 #if defined(GSSAPI) && defined(HAVE_GSSAPI_GSSAPI_H)
 #include <gssapi/gssapi.h>
@@ -136,6 +136,14 @@ __RCSID("$FreeBSD$");
 #include "sk-api.h"
 #include "srclimit.h"
 #include "dh.h"
+#include "blacklist_client.h"
+
+#ifdef LIBWRAP
+#include <tcpd.h>
+#include <syslog.h>
+int allow_severity;
+int deny_severity;
+#endif /* LIBWRAP */
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -377,7 +385,7 @@ grace_alarm_handler(int sig)
 		kill(0, SIGTERM);
 	}
 
-	BLACKLIST_NOTIFY(BLACKLIST_AUTH_FAIL, "ssh");
+	BLACKLIST_NOTIFY(the_active_state, BLACKLIST_AUTH_FAIL, "ssh");
 
 	/* Log error and exit. */
 	if (use_privsep && pmonitor != NULL && pmonitor->m_pid <= 0)
@@ -916,7 +924,14 @@ drop_connection(int sock, int startups, int notify_pipe)
 static void
 usage(void)
 {
-	fprintf(stderr, "%s, %s\n", SSH_RELEASE, SSH_OPENSSL_VERSION);
+	if (options.version_addendum != NULL &&
+	    *options.version_addendum != '\0')
+		fprintf(stderr, "%s %s, %s\n",
+		    SSH_RELEASE,
+		    options.version_addendum, OPENSSL_VERSION_STRING);
+	else
+		fprintf(stderr, "%s, %s\n",
+		    SSH_RELEASE, OPENSSL_VERSION_STRING);
 	fprintf(stderr,
 "usage: sshd [-46DdeiqTt] [-C connection_spec] [-c host_cert_file]\n"
 "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
@@ -2045,6 +2060,10 @@ main(int ac, char **av)
 	/* Reinitialize the log (because of the fork above). */
 	log_init(__progname, options.log_level, options.log_facility, log_stderr);
 
+	/* Avoid killing the process in high-pressure swapping environments. */
+	if (!inetd_flag && madvise(NULL, 0, MADV_PROTECT) != 0)
+		debug("madvise(): %.200s", strerror(errno));
+
 	/*
 	 * Chdir to the root directory so that the current disk can be
 	 * unmounted if desired.
@@ -2152,7 +2171,7 @@ main(int ac, char **av)
 	ssh_signal(SIGCHLD, SIG_DFL);
 	ssh_signal(SIGINT, SIG_DFL);
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * Initialize the resolver.  This may not happen automatically
 	 * before privsep chroot().
@@ -2223,7 +2242,7 @@ main(int ac, char **av)
 	allow_severity = options.log_facility|LOG_INFO;
 	deny_severity = options.log_facility|LOG_WARNING;
 	/* Check whether logins are denied from this host. */
-	if (packet_connection_is_on_socket()) {
+	if (ssh_packet_connection_is_on_socket(ssh)) {
 		struct request_info req;
 
 		request_init(&req, RQ_DAEMON, __progname, RQ_FILE, sock_in, 0);

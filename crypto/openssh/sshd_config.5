@@ -34,6 +34,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $OpenBSD: sshd_config.5,v 1.335 2021/09/03 05:25:50 dtucker Exp $
+.\" 
 .Dd $Mdocdate: September 3 2021 $
 .Dt SSHD_CONFIG 5
 .Os
@@ -795,7 +796,7 @@ files during
 The system-wide
 .Pa /etc/hosts.equiv
 and
-.Pa /etc/shosts.equiv
+.Pa /etc/ssh/shosts.equiv
 are still used regardless of this setting.
 .Pp
 Accepted values are
@@ -1805,7 +1806,7 @@ The default is
 Optionally specifies additional text to append to the SSH protocol banner
 sent by the server upon connection.
 The default is
-.Qq FreeBSD-20180909 .
+.Qq MidnightBSD-20211221 .
 The value
 .Cm none
 may be used to disable this.

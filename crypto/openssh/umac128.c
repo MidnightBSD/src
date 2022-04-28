@@ -8,6 +8,13 @@
 #undef umac_delete
 #undef umac_ctx
 
+/* undo ssh_namespace.h munging */
+#undef umac_new
+#undef umac_update
+#undef umac_final
+#undef umac_delete
+#undef umac_ctx
+
 #define UMAC_OUTPUT_LEN	16
 #define umac_new	umac128_new
 #define umac_update	umac128_update
