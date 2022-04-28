@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/secure/libexec/ssh-pkcs11-helper/Makefile 296633 2016-03-11 00:15:29Z des $
+# $FreeBSD$
 
 .include <src.opts.mk>
+.include "${SRCTOP}/secure/ssh.mk"
 
 PROG=	ssh-pkcs11-helper
 SRCS=	ssh-pkcs11.c ssh-pkcs11-helper.c
 MAN=	ssh-pkcs11-helper.8
-CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
-SRCS+=	ssh_namespace.h
 
 LIBADD=	ssh
 

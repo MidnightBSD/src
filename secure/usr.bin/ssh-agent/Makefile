@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/secure/usr.bin/ssh-agent/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 .include <src.opts.mk>
+.include "${SRCTOP}/secure/ssh.mk"
 
 PROG=	ssh-agent
 SRCS=	ssh-agent.c
 PACKAGE=	ssh
-CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
-SRCS+=	ssh_namespace.h
 
 LIBADD=	ssh
 
