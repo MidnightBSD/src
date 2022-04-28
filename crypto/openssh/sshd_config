@@ -1,4 +1,5 @@
 #	$OpenBSD: sshd_config,v 1.104 2021/07/02 05:11:21 dtucker Exp $
+#	$FreeBSD$
 
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
@@ -9,6 +10,9 @@
 # OpenSSH is to specify options with their default value where
 # possible, but leave them commented.  Uncommented options override the
 # default value.
+
+# Note that some of FreeBSD's defaults differ from OpenBSD's, and
+# FreeBSD has a few additional options.
 
 #Port 22
 #AddressFamily any
@@ -29,7 +33,7 @@
 # Authentication:
 
 #LoginGraceTime 2m
-#PermitRootLogin prohibit-password
+#PermitRootLogin no
 #StrictModes yes
 #MaxAuthTries 6
 #MaxSessions 10
@@ -53,11 +57,11 @@ AuthorizedKeysFile	.ssh/authorized_keys
 # Don't read the user's ~/.rhosts and ~/.shosts files
 #IgnoreRhosts yes
 
-# To disable tunneled clear text passwords, change to no here!
-#PasswordAuthentication yes
+# Change to yes to enable built-in password authentication.
+#PasswordAuthentication no
 #PermitEmptyPasswords no
 
-# Change to no to disable s/key passwords
+# Change to no to disable PAM authentication
 #KbdInteractiveAuthentication yes
 
 # Kerberos options
@@ -70,7 +74,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #GSSAPIAuthentication no
 #GSSAPICleanupCredentials yes
 
-# Set this to 'yes' to enable PAM authentication, account processing,
+# Set this to 'no' to disable PAM authentication, account processing,
 # and session processing. If this is enabled, PAM authentication will
 # be allowed through the KbdInteractiveAuthentication and
 # PasswordAuthentication.  Depending on your PAM configuration,
@@ -79,12 +83,12 @@ AuthorizedKeysFile	.ssh/authorized_keys
 # If you just want the PAM account and session checks to run without
 # PAM authentication, then enable this but set PasswordAuthentication
 # and KbdInteractiveAuthentication to 'no'.
-#UsePAM no
+#UsePAM yes
 
 #AllowAgentForwarding yes
 #AllowTcpForwarding yes
 #GatewayPorts no
-#X11Forwarding no
+#X11Forwarding yes
 #X11DisplayOffset 10
 #X11UseLocalhost yes
 #PermitTTY yes
@@ -95,12 +99,13 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #Compression delayed
 #ClientAliveInterval 0
 #ClientAliveCountMax 3
-#UseDNS no
+#UseDNS yes
 #PidFile /var/run/sshd.pid
 #MaxStartups 10:30:100
 #PermitTunnel no
 #ChrootDirectory none
-#VersionAddendum none
+#UseBlacklist no
+#VersionAddendum FreeBSD-20211221
 
 # no default banner path
 #Banner none

@@ -1577,6 +1577,61 @@ else
 	AC_MSG_RESULT([no])
 fi
 
+# Check whether user wants TCP wrappers support
+TCPW_MSG="no"
+AC_ARG_WITH([tcp-wrappers],
+	[  --with-tcp-wrappers[[=PATH]] Enable tcpwrappers support (optionally in PATH)],
+	[
+		if test "x$withval" != "xno" ; then
+			saved_LIBS="$LIBS"
+			saved_LDFLAGS="$LDFLAGS"
+			saved_CPPFLAGS="$CPPFLAGS"
+			if test -n "${withval}" && \
+			    test "x${withval}" != "xyes"; then
+				if test -d "${withval}/lib"; then
+					if test -n "${need_dash_r}"; then
+						LDFLAGS="-L${withval}/lib -R${withval}/lib ${LDFLAGS}"
+					else
+						LDFLAGS="-L${withval}/lib ${LDFLAGS}"
+					fi
+				else
+					if test -n "${need_dash_r}"; then
+						LDFLAGS="-L${withval} -R${withval} ${LDFLAGS}"
+					else
+						LDFLAGS="-L${withval} ${LDFLAGS}"
+					fi
+				fi
+				if test -d "${withval}/include"; then
+					CPPFLAGS="-I${withval}/include ${CPPFLAGS}"
+				else
+					CPPFLAGS="-I${withval} ${CPPFLAGS}"
+				fi
+			fi
+			LIBS="-lwrap $LIBS"
+			AC_MSG_CHECKING([for libwrap])
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <tcpd.h>
+int deny_severity = 0, allow_severity = 0;
+				]], [[
+	hosts_access(0);
+				]])], [
+					AC_MSG_RESULT([yes])
+					AC_DEFINE([LIBWRAP], [1],
+						[Define if you want
+						TCP Wrappers support])
+					SSHDLIBS="$SSHDLIBS -lwrap"
+					TCPW_MSG="yes"
+				], [
+					AC_MSG_ERROR([*** libwrap missing])
+			])
+			LIBS="$saved_LIBS"
+		fi
+	]
+)
+
 # Check whether user wants to use ldns
 LDNS_MSG="no"
 AC_ARG_WITH(ldns,
@@ -1795,6 +1850,8 @@ AC_SUBST([PICFLAG])
 
 dnl    Checks for library functions. Please keep in alphabetical order
 AC_CHECK_FUNCS([ \
+	auth_hostok \
+	auth_timeok \
 	Blowfish_initstate \
 	Blowfish_expandstate \
 	Blowfish_expand0state \
@@ -5558,6 +5615,7 @@ echo "                       PAM support: $PAM_MSG"
 echo "                   OSF SIA support: $SIA_MSG"
 echo "                 KerberosV support: $KRB5_MSG"
 echo "                   SELinux support: $SELINUX_MSG"
+echo "              TCP Wrappers support: $TCPW_MSG"
 echo "              MD5 password support: $MD5_MSG"
 echo "                   libedit support: $LIBEDIT_MSG"
 echo "                   libldns support: $LDNS_MSG"

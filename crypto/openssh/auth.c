@@ -76,6 +76,7 @@
 #include "ssherr.h"
 #include "compat.h"
 #include "channels.h"
+#include "blacklist_client.h"
 
 /* import */
 extern ServerOptions options;
@@ -331,8 +332,11 @@ auth_log(struct ssh *ssh, int authenticated, int partial,
 		authmsg = "Postponed";
 	else if (partial)
 		authmsg = "Partial";
-	else
+	else {
 		authmsg = authenticated ? "Accepted" : "Failed";
+		if (authenticated)
+			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_OK, "ssh");
+	}
 
 	if ((extra = format_method_key(authctxt)) == NULL) {
 		if (authctxt->auth_method_info != NULL)
@@ -565,6 +569,9 @@ getpwnamallow(struct ssh *ssh, const char *user)
 {
 #ifdef HAVE_LOGIN_CAP
 	extern login_cap_t *lc;
+#ifdef HAVE_AUTH_HOSTOK
+	const char *from_host, *from_ip;
+#endif
 #ifdef BSD_AUTH
 	auth_session_t *as;
 #endif
@@ -592,6 +599,7 @@ getpwnamallow(struct ssh *ssh, const char *user)
 	aix_restoreauthdb();
 #endif
 	if (pw == NULL) {
+		BLACKLIST_NOTIFY(ssh, BLACKLIST_BAD_USER, user);
 		logit("Invalid user %.100s from %.100s port %d",
 		    user, ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 #ifdef CUSTOM_FAILED_LOGIN
@@ -610,6 +618,21 @@ getpwnamallow(struct ssh *ssh, const char *user)
 		debug("unable to get login class: %s", user);
 		return (NULL);
 	}
+#ifdef HAVE_AUTH_HOSTOK
+	from_host = auth_get_canonical_hostname(ssh, options.use_dns);
+	from_ip = ssh_remote_ipaddr(ssh);
+	if (!auth_hostok(lc, from_host, from_ip)) {
+		debug("Denied connection for %.200s from %.200s [%.200s].",
+		    pw->pw_name, from_host, from_ip);
+		return (NULL);
+	}
+#endif /* HAVE_AUTH_HOSTOK */
+#ifdef HAVE_AUTH_TIMEOK
+	if (!auth_timeok(lc, time(NULL))) {
+		debug("LOGIN %.200s REFUSED (TIME)", pw->pw_name);
+		return (NULL);
+	}
+#endif /* HAVE_AUTH_TIMEOK */
 #ifdef BSD_AUTH
 	if ((as = auth_open()) == NULL || auth_setpwd(as, pw) != 0 ||
 	    auth_approval(as, lc, pw->pw_name, "ssh") <= 0) {

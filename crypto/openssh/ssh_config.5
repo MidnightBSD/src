@@ -34,6 +34,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $OpenBSD: ssh_config.5,v 1.366 2021/09/25 09:40:33 kn Exp $
+.\" $FreeBSD$
 .Dd $Mdocdate: September 25 2021 $
 .Dt SSH_CONFIG 5
 .Os
@@ -435,7 +436,7 @@ directives will add to the list of certificates used for
 authentication.
 .It Cm CheckHostIP
 If set to
-.Cm yes
+.Cm yes ,
 .Xr ssh 1
 will additionally check the host IP address in the
 .Pa known_hosts
@@ -449,6 +450,8 @@ If the option is set to
 .Cm no
 (the default),
 the check will not be executed.
+The default is
+.Cm no .
 .It Cm Ciphers
 Specifies the ciphers allowed and their order of preference.
 Multiple ciphers must be comma-separated.
@@ -879,11 +882,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 The
@@ -925,11 +929,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ecdsa-sha2-nistp256@openssh.com,
 sk-ssh-ed25519@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 If hostkeys are known for the destination host then this default is modified
@@ -1507,11 +1512,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+-ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 The list of available signature algorithms may also be obtained using
@@ -1955,12 +1961,23 @@ need to confirm new host keys according to the
 .Cm StrictHostKeyChecking
 option.
 The default is
-.Cm no .
+.Cm yes
+if compiled with LDNS and
+.Cm no
+otherwise.
 .Pp
 See also
 .Sx VERIFYING HOST KEYS
 in
 .Xr ssh 1 .
+.It Cm VersionAddendum
+Specifies a string to append to the regular version string to identify
+OS- or site-specific modifications.
+The default is
+.Dq FreeBSD-20211221 .
+The value
+.Cm none
+may be used to disable this.
 .It Cm VisualHostKey
 If this flag is set to
 .Cm yes ,
@@ -1977,7 +1994,7 @@ Specifies the full pathname of the
 .Xr xauth 1
 program.
 The default is
-.Pa /usr/X11R6/bin/xauth .
+.Pa /usr/local/bin/xauth .
 .El
 .Sh PATTERNS
 A

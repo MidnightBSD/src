@@ -34,6 +34,7 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $OpenBSD: sshd.8,v 1.317 2021/09/10 11:38:38 dtucker Exp $
+.\" $FreeBSD$
 .Dd $Mdocdate: September 10 2021 $
 .Dt SSHD 8
 .Os
@@ -64,7 +65,7 @@ over an insecure network.
 .Nm
 listens for connections from clients.
 It is normally started at boot from
-.Pa /etc/rc .
+.Pa /etc/rc.d/sshd .
 It forks a new
 daemon for each incoming connection.
 The forked daemons handle
@@ -335,8 +336,9 @@ section).
 If the login is on a tty, records login time.
 .It
 Checks
-.Pa /etc/nologin ;
-if it exists, prints contents and quits
+.Pa /etc/nologin and
+.Pa /var/run/nologin ;
+if one exists, it prints the contents and quits
 (unless root).
 .It
 Changes to run with normal user privileges.
@@ -908,6 +910,12 @@ the user's home directory becomes accessible.
 This file should be writable only by the user, and need not be
 readable by anyone else.
 .Pp
+.It Pa /etc/hosts.allow
+.It Pa /etc/hosts.deny
+Access controls that should be enforced by tcp-wrappers are defined here.
+Further details are described in
+.Xr hosts_access 5 .
+.Pp
 .It Pa /etc/hosts.equiv
 This file is for host-based authentication (see
 .Xr ssh 1 ) .
@@ -1010,6 +1018,7 @@ The content of this file is not sensitive; it can be world-readable.
 .Xr ssh-keygen 1 ,
 .Xr ssh-keyscan 1 ,
 .Xr chroot 2 ,
+.Xr hosts_access 5 ,
 .Xr login.conf 5 ,
 .Xr moduli 5 ,
 .Xr sshd_config 5 ,

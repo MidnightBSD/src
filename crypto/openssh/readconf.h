@@ -1,4 +1,5 @@
 /* $OpenBSD: readconf.h,v 1.145 2021/09/15 06:56:01 djm Exp $ */
+/* $FreeBSD$ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -168,6 +169,8 @@ typedef struct {
 
 	char   *hostbased_accepted_algos;
 	char   *pubkey_accepted_algos;
+
+	char   *version_addendum; /* Appended to SSH banner */
 
 	char   *jump_user;
 	char   *jump_host;

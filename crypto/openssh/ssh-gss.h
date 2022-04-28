@@ -1,4 +1,5 @@
 /* $OpenBSD: ssh-gss.h,v 1.15 2021/01/27 10:05:28 djm Exp $ */
+/* $FreeBSD$ */
 /*
  * Copyright (c) 2001-2003 Simon Wilkinson. All rights reserved.
  *
@@ -28,10 +29,10 @@
 
 #ifdef GSSAPI
 
-#ifdef HAVE_GSSAPI_H
-#include <gssapi.h>
-#elif defined(HAVE_GSSAPI_GSSAPI_H)
+#ifdef HAVE_GSSAPI_GSSAPI_H
 #include <gssapi/gssapi.h>
+#elif defined(HAVE_GSSAPI_H)
+#include <gssapi.h>
 #endif
 
 #ifdef KRB5
