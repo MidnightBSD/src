@@ -421,9 +421,80 @@ static int ec_mul_consttime(const EC_GROUP *group, EC_POINT *r,
         || (bn_wexpand(&r->Z, group_top) == NULL))
         goto err;
 
-    /* top bit is a 1, in a fixed pos */
-    if (!EC_POINT_copy(r, s))
-        goto err;
+    if (group->meth->field_type == NID_X9_62_prime_field) {
+        /*
+         * Apply blinding independently to r and s: use point r as temporary
+         * variable.
+         *
+         * Blinding requires using a projective representation, and later we
+         * implement the ladder step using EC_POINT_add() and EC_POINT_dbl():
+         * this requires EC_METHODs that support projective coordinates in their
+         * point addition and point doubling implementations.
+         *
+         * All the built-in EC_METHODs for prime curves at the moment satisfy
+         * this condition, while the EC_METHOD for binary curves does not.
+         *
+         * This is why we check for a prime field to apply blinding.
+         */
+
+        /* first randomize r->Z to blind s. */
+        do {
+            if (!BN_rand_range(&r->Z, &group->field)) {
+                ECerr(EC_F_EC_MUL_CONSTTIME, ERR_R_BN_LIB);
+                goto err;
+            }
+        } while (BN_is_zero(&r->Z));
+
+        /* convert r->Z to the correct field representation. */
+        if (group->meth->field_encode != NULL
+            && !group->meth->field_encode(group, &r->Z, &r->Z, ctx)) {
+            goto err;
+        }
+
+        /* scale s->X and s->Y by r->Z^2 and r->Z^3, respectively. */
+        if (!group->meth->field_sqr(group, &r->X, &r->Z, ctx)
+            || !group->meth->field_mul(group, &r->Y, &r->X, &r->Z, ctx)) {
+            goto err;
+        }
+        if (!group->meth->field_mul(group, &s->X, &s->X, &r->X, ctx)
+            || !group->meth->field_mul(group, &s->Y, &s->Y, &r->Y, ctx)
+            || !group->meth->field_mul(group, &s->Z, &s->Z, &r->Z, ctx)) {
+            goto err;
+        }
+        /* mark the flag in s to full projective coordinates. */
+        s->Z_is_one = 0;
+
+        /* blinding: now rerandomize r->Z to make r a blinded copy of s. */
+        do {
+            if (!BN_rand_range(&r->Z, &group->field)) {
+                ECerr(EC_F_EC_MUL_CONSTTIME, ERR_R_BN_LIB);
+                goto err;
+            }
+        } while (BN_is_zero(&r->Z));
+
+        /* convert r->Z to the correct field representation. */
+        if (group->meth->field_encode != NULL
+            && !group->meth->field_encode(group, &r->Z, &r->Z, ctx)) {
+            goto err;
+        }
+
+        /* scale r->X and r->Y by r->Z^2 and r->Z^3, respectively. */
+        if (!group->meth->field_sqr(group, &r->X, &r->Z, ctx)
+            || !group->meth->field_mul(group, &r->Y, &r->X, &r->Z, ctx)) {
+            goto err;
+        }
+        if (!group->meth->field_mul(group, &r->X, &s->X, &r->X, ctx)
+            || !group->meth->field_mul(group, &r->Y, &s->Y, &r->Y, ctx)
+            || !group->meth->field_mul(group, &r->Z, &s->Z, &r->Z, ctx)) {
+            goto err;
+        }
+        /* mark the flag in s to full projective coordinates. */
+        r->Z_is_one = 0;
+    } else {
+        /* top bit is a 1, in a fixed pos; binary curves are not blinded here */
+        if (!EC_POINT_copy(r, s))
+            goto err;
+    }
 
     EC_POINT_BN_set_flags(r, BN_FLG_CONSTTIME);
 
