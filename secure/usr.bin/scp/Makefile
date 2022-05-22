@@ -1,12 +1,11 @@
-# $FreeBSD: stable/11/secure/usr.bin/scp/Makefile 298107 2016-04-16 07:45:30Z gjb $
+# $FreeBSD$
 
 .include <src.opts.mk>
+.include "${SRCTOP}/secure/ssh.mk"
 
 PROG=	scp
-SRCS=	scp.c
+SRCS=	scp.c sftp-common.c sftp-client.c sftp-glob.c progressmeter.c
 PACKAGE=	ssh
-CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
-SRCS+=	ssh_namespace.h
 
 LIBADD=	ssh
 

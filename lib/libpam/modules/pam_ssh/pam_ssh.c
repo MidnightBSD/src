@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: head/lib/libpam/modules/pam_ssh/pam_ssh.c 338561 2018-09-10 
 #include "sshkey.h"
 
 #define ssh_add_identity(auth, key, comment) \
-	ssh_add_identity_constrained(auth, key, comment, 0, 0, 0)
+	ssh_add_identity_constrained(auth, key, comment, 0, 0, 0, NULL)
 
 extern char **environ;
 
