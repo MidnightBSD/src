@@ -194,7 +194,6 @@
 #define HAVE_ARC4RANDOM_BUF 1
 
 /* Define to 1 if you have the `arc4random_stir' function. */
-/* #undef HAVE_ARC4RANDOM_STIR */
 #define HAVE_ARC4RANDOM_STIR 1
 
 /* Define to 1 if you have the `arc4random_uniform' function. */
@@ -216,10 +215,10 @@
 /* #undef HAVE_AUG_GET_MACHINE */
 
 /* Define to 1 if you have the `auth_hostok' function. */
-// #define HAVE_AUTH_HOSTOK 1
+#define HAVE_AUTH_HOSTOK 1
 
 /* Define to 1 if you have the `auth_timeok' function. */
-// #define HAVE_AUTH_TIMEOK 1
+#define HAVE_AUTH_TIMEOK 1
 
 /* Define to 1 if you have the `b64_ntop' function. */
 /* #undef HAVE_B64_NTOP */
@@ -297,7 +296,7 @@
 #define HAVE_CONTROL_IN_MSGHDR 1
 
 /* Define to 1 if you have the `crypt' function. */
-#define HAVE_CRYPT 1
+/* #undef HAVE_CRYPT */
 
 /* Define to 1 if you have the <crypto/sha2.h> header file. */
 /* #undef HAVE_CRYPTO_SHA2_H */
@@ -417,19 +416,19 @@
 /* #undef HAVE_DEV_PTS_AND_PTC */
 
 /* Define to 1 if you have the `DH_get0_key' function. */
-// #define HAVE_DH_GET0_KEY 1
+/* #undef HAVE_DH_GET0_KEY */
 
 /* Define to 1 if you have the `DH_get0_pqg' function. */
-// #define HAVE_DH_GET0_PQG 1
+/* #undef HAVE_DH_GET0_PQG */
 
 /* Define to 1 if you have the `DH_set0_key' function. */
-// #define HAVE_DH_SET0_KEY 1
+/* #undef HAVE_DH_SET0_KEY */
 
 /* Define to 1 if you have the `DH_set0_pqg' function. */
-// #define HAVE_DH_SET0_PQG 1
+/* #undef HAVE_DH_SET0_PQG */
 
 /* Define to 1 if you have the `DH_set_length' function. */
-// #define HAVE_DH_SET_LENGTH 1
+/* #undef HAVE_DH_SET_LENGTH */
 
 /* Define to 1 if you have the <dirent.h> header file. */
 #define HAVE_DIRENT_H 1
@@ -447,31 +446,31 @@
 #define HAVE_DSA_GENERATE_PARAMETERS_EX 1
 
 /* Define to 1 if you have the `DSA_get0_key' function. */
-// #define HAVE_DSA_GET0_KEY 1
+/* #undef HAVE_DSA_GET0_KEY */
 
 /* Define to 1 if you have the `DSA_get0_pqg' function. */
-// #define HAVE_DSA_GET0_PQG 1
+/* #undef HAVE_DSA_GET0_PQG */
 
 /* Define to 1 if you have the `DSA_set0_key' function. */
-// #define HAVE_DSA_SET0_KEY 1
+/* #undef HAVE_DSA_SET0_KEY */
 
 /* Define to 1 if you have the `DSA_set0_pqg' function. */
-// #define HAVE_DSA_SET0_PQG 1
+/* #undef HAVE_DSA_SET0_PQG */
 
 /* Define to 1 if you have the `DSA_SIG_get0' function. */
-// #define HAVE_DSA_SIG_GET0 1
+/* #undef HAVE_DSA_SIG_GET0 */
 
 /* Define to 1 if you have the `DSA_SIG_set0' function. */
-// #define HAVE_DSA_SIG_SET0 1
+/* #undef HAVE_DSA_SIG_SET0 */
 
 /* Define to 1 if you have the `ECDSA_SIG_get0' function. */
-// #define HAVE_ECDSA_SIG_GET0 1
+/* #undef HAVE_ECDSA_SIG_GET0 */
 
 /* Define to 1 if you have the `ECDSA_SIG_set0' function. */
-// #define HAVE_ECDSA_SIG_SET0 1
+/* #undef HAVE_ECDSA_SIG_SET0 */
 
 /* Define to 1 if you have the `EC_KEY_METHOD_new' function. */
-// #define HAVE_EC_KEY_METHOD_NEW 1
+/* #undef HAVE_EC_KEY_METHOD_NEW */
 
 /* Define to 1 if you have the <elf.h> header file. */
 #define HAVE_ELF_H 1
@@ -501,7 +500,7 @@
 /* #undef HAVE_ETC_DEFAULT_LOGIN */
 
 /* Define to 1 if you have the `EVP_chacha20' function. */
-// #define HAVE_EVP_CHACHA20 1
+/* #undef HAVE_EVP_CHACHA20 */
 
 /* Define to 1 if you have the `EVP_CIPHER_CTX_ctrl' function. */
 #define HAVE_EVP_CIPHER_CTX_CTRL 1
@@ -513,10 +512,10 @@
 /* #undef HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV */
 
 /* Define to 1 if you have the `EVP_CIPHER_CTX_iv' function. */
-// #define HAVE_EVP_CIPHER_CTX_IV 1
+/* #undef HAVE_EVP_CIPHER_CTX_IV */
 
 /* Define to 1 if you have the `EVP_CIPHER_CTX_iv_noconst' function. */
-#define HAVE_EVP_CIPHER_CTX_IV_NOCONST 1
+/* #undef HAVE_EVP_CIPHER_CTX_IV_NOCONST */
 
 /* Define to 1 if you have the `EVP_CIPHER_CTX_set_iv' function. */
 /* #undef HAVE_EVP_CIPHER_CTX_SET_IV */
@@ -528,24 +527,22 @@
 #define HAVE_EVP_DIGESTINIT_EX 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_cleanup' function. */
-/* #undef HAVE_EVP_MD_CTX_CLEANUP */
 #define HAVE_EVP_MD_CTX_CLEANUP 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_copy_ex' function. */
 #define HAVE_EVP_MD_CTX_COPY_EX 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_free' function. */
-// #define HAVE_EVP_MD_CTX_FREE 1
+/* #undef HAVE_EVP_MD_CTX_FREE */
 
 /* Define to 1 if you have the `EVP_MD_CTX_init' function. */
-/* #undef HAVE_EVP_MD_CTX_INIT */
 #define HAVE_EVP_MD_CTX_INIT 1
 
 /* Define to 1 if you have the `EVP_MD_CTX_new' function. */
-// #define HAVE_EVP_MD_CTX_NEW 1
+/* #undef HAVE_EVP_MD_CTX_NEW */
 
 /* Define to 1 if you have the `EVP_PKEY_get0_RSA' function. */
-// #define HAVE_EVP_PKEY_GET0_RSA 1
+/* #undef HAVE_EVP_PKEY_GET0_RSA */
 
 /* Define to 1 if you have the `EVP_sha256' function. */
 #define HAVE_EVP_SHA256 1
@@ -701,7 +698,7 @@
 /* #undef HAVE_GETPWANAM */
 
 /* Define to 1 if you have the `getrandom' function. */
-#define HAVE_GETRANDOM 1
+/* #undef HAVE_GETRANDOM */
 
 /* Define to 1 if you have the `getrlimit' function. */
 #define HAVE_GETRLIMIT 1
@@ -776,7 +773,6 @@
 #define HAVE_HEADER_AD 1
 
 /* Define to 1 if you have the `HMAC_CTX_init' function. */
-/* #undef HAVE_HMAC_CTX_INIT */
 #define HAVE_HMAC_CTX_INIT 1
 
 /* Define if you have ut_host in utmp.h */
@@ -861,7 +857,7 @@
 /* #undef HAVE_LIBCRYPT */
 
 /* Define to 1 if you have the `dl' library (-ldl). */
-// #define HAVE_LIBDL 1
+#define HAVE_LIBDL 1
 
 /* Define to 1 if you have the <libgen.h> header file. */
 #define HAVE_LIBGEN_H 1
@@ -1025,13 +1021,13 @@
 #define HAVE_OPENSSL_ADD_ALL_ALGORITHMS 1
 
 /* Define to 1 if you have the `OPENSSL_init_crypto' function. */
-// #define HAVE_OPENSSL_INIT_CRYPTO 1
+/* #undef HAVE_OPENSSL_INIT_CRYPTO */
 
 /* Define to 1 if you have the `OpenSSL_version' function. */
-// #define HAVE_OPENSSL_VERSION 1
+/* #undef HAVE_OPENSSL_VERSION */
 
 /* Define to 1 if you have the `OpenSSL_version_num' function. */
-// #define HAVE_OPENSSL_VERSION_NUM 1
+/* #undef HAVE_OPENSSL_VERSION_NUM */
 
 /* Define if you have Digital Unix Security Integration Architecture */
 /* #undef HAVE_OSF_SIA */
@@ -1134,46 +1130,46 @@
 #define HAVE_RSA_GENERATE_KEY_EX 1
 
 /* Define to 1 if you have the `RSA_get0_crt_params' function. */
-// #define HAVE_RSA_GET0_CRT_PARAMS 1
+/* #undef HAVE_RSA_GET0_CRT_PARAMS */
 
 /* Define to 1 if you have the `RSA_get0_factors' function. */
-// #define HAVE_RSA_GET0_FACTORS 1
+/* #undef HAVE_RSA_GET0_FACTORS */
 
 /* Define to 1 if you have the `RSA_get0_key' function. */
-// #define HAVE_RSA_GET0_KEY 1
+/* #undef HAVE_RSA_GET0_KEY */
 
 /* Define to 1 if you have the `RSA_get_default_method' function. */
 #define HAVE_RSA_GET_DEFAULT_METHOD 1
 
 /* Define to 1 if you have the `RSA_meth_dup' function. */
-// #define HAVE_RSA_METH_DUP 1
+/* #undef HAVE_RSA_METH_DUP */
 
 /* Define to 1 if you have the `RSA_meth_free' function. */
-// #define HAVE_RSA_METH_FREE 1
+/* #undef HAVE_RSA_METH_FREE */
 
 /* Define to 1 if you have the `RSA_meth_get_finish' function. */
-// #define HAVE_RSA_METH_GET_FINISH 1
+/* #undef HAVE_RSA_METH_GET_FINISH */
 
 /* Define to 1 if you have the `RSA_meth_set1_name' function. */
-// #define HAVE_RSA_METH_SET1_NAME 1
+/* #undef HAVE_RSA_METH_SET1_NAME */
 
 /* Define to 1 if you have the `RSA_meth_set_finish' function. */
-// #define HAVE_RSA_METH_SET_FINISH 1
+/* #undef HAVE_RSA_METH_SET_FINISH */
 
 /* Define to 1 if you have the `RSA_meth_set_priv_dec' function. */
-#define HAVE_RSA_METH_SET_PRIV_DEC 1
+/* #undef HAVE_RSA_METH_SET_PRIV_DEC */
 
 /* Define to 1 if you have the `RSA_meth_set_priv_enc' function. */
-#define HAVE_RSA_METH_SET_PRIV_ENC 1
+/* #undef HAVE_RSA_METH_SET_PRIV_ENC */
 
 /* Define to 1 if you have the `RSA_set0_crt_params' function. */
-// #define HAVE_RSA_SET0_CRT_PARAMS 1
+/* #undef HAVE_RSA_SET0_CRT_PARAMS */
 
 /* Define to 1 if you have the `RSA_set0_factors' function. */
-// #define HAVE_RSA_SET0_FACTORS 1
+/* #undef HAVE_RSA_SET0_FACTORS */
 
 /* Define to 1 if you have the `RSA_set0_key' function. */
-// #define HAVE_RSA_SET0_KEY 1
+/* #undef HAVE_RSA_SET0_KEY */
 
 /* Define to 1 if you have the <sandbox.h> header file. */
 /* #undef HAVE_SANDBOX_H */
@@ -1759,7 +1755,7 @@
 /* #undef LLONG_MIN */
 
 /* Account locked with pw(1) */
-// #define LOCKED_PASSWD_PREFIX "*LOCKED*"
+/* #undef LOCKED_PASSWD_PREFIX */
 
 /* String used in /etc/passwd to denote locked account */
 /* #undef LOCKED_PASSWD_STRING */
@@ -1880,7 +1876,7 @@
 /* #undef SANDBOX_SKIP_RLIMIT_FSIZE */
 
 /* define if setrlimit RLIMIT_NOFILE breaks things */
-#define SANDBOX_SKIP_RLIMIT_NOFILE 1
+/* #undef SANDBOX_SKIP_RLIMIT_NOFILE */
 
 /* Sandbox using Solaris/Illumos privileges */
 /* #undef SANDBOX_SOLARIS */
@@ -1938,7 +1934,7 @@
 /* #undef SSH_TUN_COMPAT_AF */
 
 /* Open tunnel devices the FreeBSD way */
-#define SSH_TUN_FREEBSD 1
+/* #undef SSH_TUN_FREEBSD */
 
 /* Open tunnel devices the Linux tun/tap way */
 /* #undef SSH_TUN_LINUX */
@@ -1986,7 +1982,7 @@
 /* #undef USE_LINUX_AUDIT */
 
 /* Enable OpenSSL engine support */
-// #define USE_OPENSSL_ENGINE 1
+#define USE_OPENSSL_ENGINE 1
 
 /* Define if you want to enable PAM support */
 #define USE_PAM 1
