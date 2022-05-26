@@ -10,8 +10,7 @@ export PKGCMD="/usr/sbin/mport"
 export PORTSDIR="${PORTSDIR:-/usr/mports}"
 
 _DVD_PACKAGES="archivers/unzip
-devel/subversion
-devel/subversion-static
+devel/git
 emulators/linux_base-c6
 graphics/drm-fbsd11.2-kmod
 net/mpd5
