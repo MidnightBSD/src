@@ -6,14 +6,13 @@ use strict;
 
 our($VERSION, @ISA, @EXPORT_OK);
 
-$VERSION = "1.47";
+$VERSION = "1.57";
 
 use Carp;
-use Exporter ();
+use Exporter 'import';
 use XSLoader;
 
 BEGIN {
-    @ISA = qw(Exporter);
     @EXPORT_OK = qw(
 	opset ops_to_opset
 	opset_to_ops opset_to_hex invert_opset
@@ -116,6 +115,13 @@ The Opcode module is not usually used directly. See the ops pragma and
 Safe modules for more typical uses.
 
 =head1 WARNING
+
+The Opcode module does not implement an effective sandbox for
+evaluating untrusted code with the perl interpreter.
+
+Bugs in the perl interpreter that could be abused to bypass
+Opcode restrictions are not treated as vulnerabilities. See
+L<perlsecpolicy> for additional information.
 
 The authors make B<no warranty>, implied or otherwise, about the
 suitability of this software for safety or security purposes.
@@ -347,6 +353,9 @@ invert_opset function.
 
     cmpchain_and cmpchain_dup
 
+    is_bool
+    is_weak weaken unweaken
+
     leaveeval -- needed for Safe to operate, is safe
 		 without entereval
 
@@ -408,6 +417,7 @@ These are a hotchpotch of opcodes still waiting to be considered
     once
 
     rv2gv refgen srefgen ref refassign lvref lvrefslice lvavref
+    blessed refaddr reftype
 
     bless -- could be used to change ownership of objects
 	     (reblessing)
@@ -428,13 +438,18 @@ These are a hotchpotch of opcodes still waiting to be considered
     localtime gmtime
 
     entertry leavetry -- can be used to 'hide' fatal errors
+    entertrycatch poptry catch leavetrycatch -- similar
 
     entergiven leavegiven
     enterwhen leavewhen
     break continue
     smartmatch
 
+    pushdefer
+
     custom -- where should this go
+
+    ceil floor
 
 =item :base_math
 
@@ -603,4 +618,3 @@ Split out from Safe module version 1, named opcode tags and other
 changes added by Tim Bunce.
 
 =cut
-

@@ -10,7 +10,8 @@ BEGIN {
 }
 
 use strict;
-use Test::More tests => 51;
+use warnings;
+use Test::More tests => 52;
 use MakeMaker::Test::Utils;
 use MakeMaker::Test::Setup::BFD;
 use ExtUtils::MakeMaker;

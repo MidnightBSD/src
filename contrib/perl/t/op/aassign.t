@@ -386,9 +386,9 @@ SKIP: {
 
     # both keys and values stealable
     @a = (%h = (split /-/, "abc-def")[0,1,0,1]);
-    is (join(':', keys   %h), "abc",     "NOSTEAL split G_ARRAY keys");
-    is (join(':', values %h), "def",     "NOSTEAL split G_ARRAY values");
-    is (join(':', @a),        "abc:def", "NOSTEAL split G_ARRAY result");
+    is (join(':', keys   %h), "abc",     "NOSTEAL split list-context keys");
+    is (join(':', values %h), "def",     "NOSTEAL split list-context values");
+    is (join(':', @a),        "abc:def", "NOSTEAL split list-context result");
 }
 
 {
@@ -593,5 +593,23 @@ SKIP: {
     is ($aref, 1, "RT #130132 array 1");
     is ($fill, 2, "RT #130132 array 2");
 }
+
+{
+    # GH #17816
+    # don't use the "1-arg on LHS can't be common" optimisation
+    # when there are undef's there
+    my $x = 1;
+    my @a = (($x, undef) = (2 => $x));
+    is("@a", "2 1", "GH #17816");
+}
+
+{
+    # GH #16685
+    # honour trailing undef's in list context
+    my $x = 1;
+    my @a = (($x, undef, undef) = (1));
+    is(scalar @a, 3, "GH #16685");
+}
+
 
 done_testing();

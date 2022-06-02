@@ -47,7 +47,7 @@ my $extract_version = sprintf("%vd", $^V);
 print OUT <<"!GROK!THIS!";
 $Config{startperl}
     eval 'exec $Config{perlpath} -S \$0 \${1+"\$@"}'
-	if \$running_under_some_shell;
+	if 0; # ^ Run only under a shell
 
 my \$config_tag1 = '$extract_version - $Config{cf_time}';
 
@@ -1315,9 +1315,6 @@ those which indicate you haven't also tested the current stable
 release of Perl, are likely to receive less attention from the
 volunteers who build and maintain Perl than reports about bugs in
 the current release.
-
-This tool isn't appropriate for reporting bugs in any version
-prior to Perl 5.0.
 
 =item Are you sure what you have is a bug?
 
