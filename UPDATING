@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20220602:
+	Perl 5.36.0
+
+20220428:
+	OpenSSH 8.8p1
+
 20220427:
 	sqlite 3.38.2
 
