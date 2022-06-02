@@ -62,9 +62,9 @@ install.perl:
 	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installperl --destdir=${DESTDIR}
 
 .if ${TARGET_ARCH} == "i386"
-	 ln -fs ${LIBDIR}/perl5/5.32.0/${TARGET_ARCH}-midnightbsd-64int/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
+	 ln -fs ${LIBDIR}/perl5/5.36.0/${TARGET_ARCH}-midnightbsd-64int/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
 .else
-	 ln -fs ${LIBDIR}/perl5/5.32.0/${TARGET_ARCH}-midnightbsd-thread-multi/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
+	 ln -fs ${LIBDIR}/perl5/5.36.0/${TARGET_ARCH}-midnightbsd-thread-multi/CORE/libperl.so ${DESTDIR}${LIBDIR}/libperl.so
 .endif
 
 #

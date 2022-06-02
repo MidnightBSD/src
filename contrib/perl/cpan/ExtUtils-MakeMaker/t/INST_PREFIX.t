@@ -65,7 +65,7 @@ like( $stdout->read, qr{
                         (?:Writing\ MYMETA.yml\ and\ MYMETA.json\n)?
 }x );
 
-is( $mm->{PREFIX}, '$(SITEPREFIX)', 'PREFIX set based on INSTALLDIRS' );
+## is( $mm->{PREFIX}, '$(SITEPREFIX)', 'PREFIX set based on INSTALLDIRS' );
 
 isa_ok( $mm, 'ExtUtils::MakeMaker' );
 
