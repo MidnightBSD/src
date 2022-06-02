@@ -25,7 +25,7 @@ fi
 
 
 case $1 in
-wmaker|startxfce4|gnome-shell|twm|etoile)
+wmaker|startxfce4|gnome-shell|cinnamon-session|twm|etoile)
 	exec $1
 	;;
 Lumina-DE)
