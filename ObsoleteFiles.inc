@@ -3283,8 +3283,6 @@ OLD_FILES+=usr/bin/yyfix
 OLD_FILES+=usr/share/man/man1/yyfix.1.gz
 OLD_FILES+=usr/share/misc/magic.mime
 OLD_FILES+=usr/share/misc/magic.mime.mgc
-# 20180123: mandoc old file removal
-OLD_FILES+=usr/share/man/man1/makewhatis.1.gz
 # 20171220: new clang import which bumps version from 3.4 to 3.4.1.
 OLD_FILES+=usr/include/clang/3.4/__wmmintrin_aes.h
 OLD_FILES+=usr/include/clang/3.4/__wmmintrin_pclmul.h
@@ -3324,7 +3322,6 @@ OLD_FILES+=usr/include/clang/3.4/module.map
 OLD_DIRS+=usr/include/clang/3.4
 # 20171219: new clang import which bumps version from 3.3 to 3.4.
 OLD_FILES+=usr/bin/llvm-prof
-OLD_FILES+=usr/bin/llvm-ranlib
 OLD_FILES+=usr/include/clang/3.3/__wmmintrin_aes.h
 OLD_FILES+=usr/include/clang/3.3/__wmmintrin_pclmul.h
 OLD_FILES+=usr/include/clang/3.3/altivec.h
@@ -3357,7 +3354,6 @@ OLD_FILES+=usr/include/clang/3.3/x86intrin.h
 OLD_FILES+=usr/include/clang/3.3/xmmintrin.h
 OLD_FILES+=usr/include/clang/3.3/xopintrin.h
 OLD_FILES+=usr/share/man/man1/llvm-prof.1.gz
-OLD_FILES+=usr/share/man/man1/llvm-ranlib.1.gz
 OLD_DIRS+=usr/include/clang/3.3
 # 20170326:
 OLD_FILES+=etc/sudoers
@@ -7707,9 +7703,7 @@ OLD_FILES+=usr/share/man/man1/x509.1.gz
 OLD_FILES+=usr/share/man/man3/SSL_COMP_add_compression_method.3.gz
 OLD_FILES+=usr/share/man/man3/SSL_CTX_get_ex_new_index.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_dup.3.gz
-OLD_FILES+=usr/share/man/man3/archive_entry_hardlink_w.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_set_tartype.3.gz
-OLD_FILES+=usr/share/man/man3/archive_entry_symlink_w.3.gz
 OLD_FILES+=usr/share/man/man3/archive_entry_tartype.3.gz
 OLD_FILES+=usr/share/man/man3/archive_read_data_into_file.3.gz
 OLD_FILES+=usr/share/man/man3/archive_read_open_tar.3.gz
