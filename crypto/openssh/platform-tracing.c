@@ -41,7 +41,7 @@ platform_disable_tracing(int strict)
 	int disable_trace = PROC_TRACE_CTL_DISABLE;
 
 	if (procctl(P_PID, 0, PROC_TRACE_CTL, &disable_trace) && strict)
-		fatal("unable to make the process untraceable");
+		verbose("unable to make the process untraceable");
 #endif
 #if defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)
 	/* Disable ptrace on Linux without sgid bit */
