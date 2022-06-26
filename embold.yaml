@@ -1,3 +1,4 @@
+version: 1
 sources:
   #Files or Directories to be Excluded are mentioned in exclusions
   exclusions:
