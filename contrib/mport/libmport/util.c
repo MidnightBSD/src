@@ -218,8 +218,10 @@ mport_copy_file(const char *fromName, const char *toName)
         RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open source file for copying %s: %s", fromName, strerror(errno));
 
     FILE *fdest = fopen(toName, "we");
-    if (fdest == NULL)
+    if (fdest == NULL) {
+        fclose(fsrc);
         RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open destination file for copying %s: %s", toName, strerror(errno));
+    }
 
     while ((size = fread(buf, 1, BUFSIZ, fsrc)) > 0) {
         fwrite(buf, 1, size, fdest);
@@ -693,6 +695,7 @@ mport_get_osrelease_userland(void) {
 #endif
 
 	posix_spawn_file_actions_destroy(&action);
+	close(cout_pipe[0]), close(cerr_pipe[0]);
 
 	version[3] = '\0'; /* force major version only for now */
 
