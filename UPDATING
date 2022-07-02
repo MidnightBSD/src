@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20220702:
+	MidnightBSD 2.2.1 RELEASE
+
+	Fix a resource leak in libmport that was causing
+	crashes and hangs when doing a large upgrade.
+
+	Also includes a workaround for scp/sftp server
+	issues found in 2.2.0 release.
+
 20220607:
 	MidnightBSD 2.2.0 RELEASE
 
