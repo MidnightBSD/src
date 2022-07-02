@@ -1,9 +1,0 @@
-version: 1
-sources:
-  #Files or Directories to be Excluded are mentioned in exclusions
-  exclusions:
-    - 'test'
-    - 'build'
-    - '.git'
-    - 'contrib'
-    - 'crypto'
