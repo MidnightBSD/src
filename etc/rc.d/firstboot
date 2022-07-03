@@ -1,6 +1,4 @@
 #!/bin/sh
-#
-# $MidnightBSD$
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING FILESYSTEMS
@@ -27,6 +25,10 @@ firstboot_start()
 	if [ ! -f ${receipt} ]; then
 		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
 		echo "This utility requires an active Internet connection."
+
+		echo -e "\r${yellow}Set your preferred package mirror? (us,us2,us3,uk,jp)${lsuffix}"
+		read mportmirror
+		/usr/sbin/mport config set mirror_region ${mportmirror}
 
 		echo -e "\r${yellow}Would you like to report your install via bsdstats? (yes or no)${lsuffix}"
 		read installbstat
