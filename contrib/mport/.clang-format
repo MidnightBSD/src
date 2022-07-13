@@ -60,7 +60,7 @@ PointerAlignment: Right
 ContinuationIndentWidth: 4
 IndentWidth: 8
 TabWidth: 8
-ColumnLimit: 80
+ColumnLimit: 100
 UseTab: Always
 SpaceAfterCStyleCast: false
 SortIncludes: false

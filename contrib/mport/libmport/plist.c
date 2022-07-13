@@ -264,6 +264,8 @@ parse_command(const char *s) {
         return ASSET_IGNORE;
     if (STRING_EQ(s, "ignore_inst"))
         return ASSET_IGNORE_INST;
+    if (STRING_EQ(s, "info"))
+        return ASSET_INFO;
     if (STRING_EQ(s, "name"))
         return ASSET_NAME;
     if (STRING_EQ(s, "display"))
