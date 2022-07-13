@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20220713:
+	mport 2.2.3
+
+20220711:
+	Bring in some llvm fixes
+
+20220703:
+	set mport mirror in firstboot script
+
 20220702:
 	MidnightBSD 2.2.1 RELEASE
 
