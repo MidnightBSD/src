@@ -1,5 +1,6 @@
-# $FreeBSD: stable/11/usr.sbin/portsnap/portsnap/Makefile 161809 2006-09-01 09:49:09Z cperciva $
+# $FreeBSD$
 
+CONFS=	portsnap.conf
 SCRIPTS=portsnap.sh
 MAN=	portsnap.8
 
