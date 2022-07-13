@@ -259,6 +259,13 @@ main(int argc, char *argv[]) {
 			resultCode = configSet(mport,
 			                       argv[3], argv[4]);
 		}
+	} else if (!strcmp(argv[1], "mirror")) {
+		if (!strcmp(argv[2], "list")) {
+			loadIndex(mport);
+			printf("To set a mirror, use the following command:\n");
+			printf("mport set config mirror_region <country>\n\n");
+			resultCode = mport_index_print_mirror_list(mport);
+		}
 	} else if (!strcmp(argv[1], "cpe")) {
 		resultCode = cpeList(mport);
 	} else if (!strcmp(argv[1], "deleteall")) {
@@ -322,6 +329,7 @@ usage(void) {
 	        "       mport list [updates|prime]\n"
 	        "       mport lock [package name]\n"
 	        "       mport locks\n"
+			"       mport mirror list\n"
 	        "       mport search [query ...]\n"
 	        "       mport stats\n"
 	        "       mport unlock [package name]\n"

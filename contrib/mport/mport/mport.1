@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd October 13, 2021
+.Dd July 3, 2022
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -70,6 +70,8 @@
 .Nm
 .Cm install
 .Op Ar name
+.Nm
+.Cm mirror list
 .Nm
 .Cm search
 .Op Ar name ...
@@ -135,6 +137,8 @@ Force a download of the index to refresh it without waiting for the timeout inte
 allows the user to get the latest list of packages.
 .It Cm install
 Fetch and install a package
+.It Cm mirror list
+Lists all available package mirrors.
 .It Cm search
 Search package names and descriptions.  Supports globbing queries such as 
 "*php*".
@@ -152,7 +156,7 @@ The
 .Nm
 command has the following settings that modify it's behavior:
 .It Cm mirror_region
-Determines which mirror region to use to fetch packages.  Valid values are currently us, uk, jp
+Determines which mirror region to use to fetch packages.  Valid values are currently us, us2, us3, uk, jp
 The current list is always available in the mport index file in /var/db/mport/index.db in the mirrors table
 .It Cm target_os
 Override the OS version used to fetch packages and install them. If undefined, we try /bin/midnightbsd-version first and

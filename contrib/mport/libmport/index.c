@@ -304,6 +304,36 @@ mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size
 	return MPORT_OK;
 }
 
+MPORT_PUBLIC_API int
+mport_index_print_mirror_list(mportInstance *mport)
+{
+	
+	int ret;
+	sqlite3_stmt *stmt;
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT country, mirror FROM idx.mirrors ORDER BY country") != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	mport_call_msg_cb(mport, "Country\tURL\n");
+	while (1) {
+		ret = sqlite3_step(stmt);
+
+		if (ret == SQLITE_ROW) {
+			mport_call_msg_cb(mport, "%s\t%s\n", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 1));
+		} else if (ret == SQLITE_DONE) {
+			break;
+		} else {
+			sqlite3_finalize(stmt);
+			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		}
+	}
+
+	sqlite3_finalize(stmt);
+	return MPORT_OK;
+}
+
 /*
  * Looks up a pkgname from the index and fills a vector of index entries
  * with the result.
